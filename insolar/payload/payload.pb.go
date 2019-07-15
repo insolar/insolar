@@ -344,7 +344,6 @@ func (m *Pass) GetOrigin() []byte {
 type SetCode struct {
 	Polymorph uint32 `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
 	Record    []byte `protobuf:"bytes,20,opt,name=Record,proto3" json:"Record,omitempty"`
-	Code      []byte `protobuf:"bytes,21,opt,name=Code,proto3" json:"Code,omitempty"`
 }
 
 func (m *SetCode) Reset()      { *m = SetCode{} }
@@ -389,13 +388,6 @@ func (m *SetCode) GetPolymorph() uint32 {
 func (m *SetCode) GetRecord() []byte {
 	if m != nil {
 		return m.Record
-	}
-	return nil
-}
-
-func (m *SetCode) GetCode() []byte {
-	if m != nil {
-		return m.Code
 	}
 	return nil
 }
@@ -454,7 +446,6 @@ func (m *Index) GetIndex() []byte {
 type Code struct {
 	Polymorph uint32 `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
 	Record    []byte `protobuf:"bytes,20,opt,name=Record,proto3" json:"Record,omitempty"`
-	Code      []byte `protobuf:"bytes,21,opt,name=Code,proto3" json:"Code,omitempty"`
 }
 
 func (m *Code) Reset()      { *m = Code{} }
@@ -499,13 +490,6 @@ func (m *Code) GetPolymorph() uint32 {
 func (m *Code) GetRecord() []byte {
 	if m != nil {
 		return m.Record
-	}
-	return nil
-}
-
-func (m *Code) GetCode() []byte {
-	if m != nil {
-		return m.Code
 	}
 	return nil
 }
@@ -760,6 +744,60 @@ func (m *SetOutgoingRequest) GetRequest() record.Virtual {
 	return record.Virtual{}
 }
 
+// SagaCallAcceptNotification informs virtual node that it's time to call saga Accept method.
+type SagaCallAcceptNotification struct {
+	Polymorph uint32                                `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
+	ObjectID  github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"ObjectID"`
+	// Request contains original OutgoingRequest registered by VE
+	Request []byte `protobuf:"bytes,21,opt,name=Request,proto3" json:"Request,omitempty"`
+}
+
+func (m *SagaCallAcceptNotification) Reset()      { *m = SagaCallAcceptNotification{} }
+func (*SagaCallAcceptNotification) ProtoMessage() {}
+func (*SagaCallAcceptNotification) Descriptor() ([]byte, []int) {
+	return fileDescriptor_33334fec96407f54, []int{14}
+}
+func (m *SagaCallAcceptNotification) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SagaCallAcceptNotification) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SagaCallAcceptNotification.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *SagaCallAcceptNotification) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SagaCallAcceptNotification.Merge(m, src)
+}
+func (m *SagaCallAcceptNotification) XXX_Size() int {
+	return m.Size()
+}
+func (m *SagaCallAcceptNotification) XXX_DiscardUnknown() {
+	xxx_messageInfo_SagaCallAcceptNotification.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SagaCallAcceptNotification proto.InternalMessageInfo
+
+func (m *SagaCallAcceptNotification) GetPolymorph() uint32 {
+	if m != nil {
+		return m.Polymorph
+	}
+	return 0
+}
+
+func (m *SagaCallAcceptNotification) GetRequest() []byte {
+	if m != nil {
+		return m.Request
+	}
+	return nil
+}
+
 type SetResult struct {
 	Polymorph uint32 `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
 	Result    []byte `protobuf:"bytes,20,opt,name=Result,proto3" json:"Result,omitempty"`
@@ -768,7 +806,7 @@ type SetResult struct {
 func (m *SetResult) Reset()      { *m = SetResult{} }
 func (*SetResult) ProtoMessage() {}
 func (*SetResult) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33334fec96407f54, []int{14}
+	return fileDescriptor_33334fec96407f54, []int{15}
 }
 func (m *SetResult) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -820,7 +858,7 @@ type Activate struct {
 func (m *Activate) Reset()      { *m = Activate{} }
 func (*Activate) ProtoMessage() {}
 func (*Activate) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33334fec96407f54, []int{15}
+	return fileDescriptor_33334fec96407f54, []int{16}
 }
 func (m *Activate) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -870,6 +908,124 @@ func (m *Activate) GetResult() []byte {
 	return nil
 }
 
+type Deactivate struct {
+	Polymorph uint32 `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
+	Record    []byte `protobuf:"bytes,20,opt,name=Record,proto3" json:"Record,omitempty"`
+	Result    []byte `protobuf:"bytes,21,opt,name=Result,proto3" json:"Result,omitempty"`
+}
+
+func (m *Deactivate) Reset()      { *m = Deactivate{} }
+func (*Deactivate) ProtoMessage() {}
+func (*Deactivate) Descriptor() ([]byte, []int) {
+	return fileDescriptor_33334fec96407f54, []int{17}
+}
+func (m *Deactivate) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *Deactivate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_Deactivate.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *Deactivate) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Deactivate.Merge(m, src)
+}
+func (m *Deactivate) XXX_Size() int {
+	return m.Size()
+}
+func (m *Deactivate) XXX_DiscardUnknown() {
+	xxx_messageInfo_Deactivate.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Deactivate proto.InternalMessageInfo
+
+func (m *Deactivate) GetPolymorph() uint32 {
+	if m != nil {
+		return m.Polymorph
+	}
+	return 0
+}
+
+func (m *Deactivate) GetRecord() []byte {
+	if m != nil {
+		return m.Record
+	}
+	return nil
+}
+
+func (m *Deactivate) GetResult() []byte {
+	if m != nil {
+		return m.Result
+	}
+	return nil
+}
+
+type Update struct {
+	Polymorph uint32 `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
+	Record    []byte `protobuf:"bytes,20,opt,name=Record,proto3" json:"Record,omitempty"`
+	Result    []byte `protobuf:"bytes,21,opt,name=Result,proto3" json:"Result,omitempty"`
+}
+
+func (m *Update) Reset()      { *m = Update{} }
+func (*Update) ProtoMessage() {}
+func (*Update) Descriptor() ([]byte, []int) {
+	return fileDescriptor_33334fec96407f54, []int{18}
+}
+func (m *Update) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *Update) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_Update.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *Update) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Update.Merge(m, src)
+}
+func (m *Update) XXX_Size() int {
+	return m.Size()
+}
+func (m *Update) XXX_DiscardUnknown() {
+	xxx_messageInfo_Update.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Update proto.InternalMessageInfo
+
+func (m *Update) GetPolymorph() uint32 {
+	if m != nil {
+		return m.Polymorph
+	}
+	return 0
+}
+
+func (m *Update) GetRecord() []byte {
+	if m != nil {
+		return m.Record
+	}
+	return nil
+}
+
+func (m *Update) GetResult() []byte {
+	if m != nil {
+		return m.Result
+	}
+	return nil
+}
+
 type GetFilament struct {
 	Polymorph uint32                                         `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
 	ObjectID  github_com_insolar_insolar_insolar.ID          `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"ObjectID"`
@@ -880,7 +1036,7 @@ type GetFilament struct {
 func (m *GetFilament) Reset()      { *m = GetFilament{} }
 func (*GetFilament) ProtoMessage() {}
 func (*GetFilament) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33334fec96407f54, []int{16}
+	return fileDescriptor_33334fec96407f54, []int{19}
 }
 func (m *GetFilament) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -925,7 +1081,7 @@ type FilamentSegment struct {
 func (m *FilamentSegment) Reset()      { *m = FilamentSegment{} }
 func (*FilamentSegment) ProtoMessage() {}
 func (*FilamentSegment) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33334fec96407f54, []int{17}
+	return fileDescriptor_33334fec96407f54, []int{20}
 }
 func (m *FilamentSegment) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -979,7 +1135,7 @@ type RequestInfo struct {
 func (m *RequestInfo) Reset()      { *m = RequestInfo{} }
 func (*RequestInfo) ProtoMessage() {}
 func (*RequestInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33334fec96407f54, []int{18}
+	return fileDescriptor_33334fec96407f54, []int{21}
 }
 func (m *RequestInfo) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1029,102 +1185,6 @@ func (m *RequestInfo) GetResult() []byte {
 	return nil
 }
 
-type GetRequest struct {
-	Polymorph uint32                                `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
-	RequestID github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=RequestID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"RequestID"`
-}
-
-func (m *GetRequest) Reset()      { *m = GetRequest{} }
-func (*GetRequest) ProtoMessage() {}
-func (*GetRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33334fec96407f54, []int{19}
-}
-func (m *GetRequest) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *GetRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_GetRequest.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *GetRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetRequest.Merge(m, src)
-}
-func (m *GetRequest) XXX_Size() int {
-	return m.Size()
-}
-func (m *GetRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_GetRequest.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_GetRequest proto.InternalMessageInfo
-
-func (m *GetRequest) GetPolymorph() uint32 {
-	if m != nil {
-		return m.Polymorph
-	}
-	return 0
-}
-
-type Request struct {
-	Polymorph uint32                                `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
-	RequestID github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=RequestID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"RequestID"`
-	Request   record.Virtual                        `protobuf:"bytes,21,opt,name=Request,proto3" json:"Request"`
-}
-
-func (m *Request) Reset()      { *m = Request{} }
-func (*Request) ProtoMessage() {}
-func (*Request) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33334fec96407f54, []int{20}
-}
-func (m *Request) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *Request) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_Request.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *Request) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Request.Merge(m, src)
-}
-func (m *Request) XXX_Size() int {
-	return m.Size()
-}
-func (m *Request) XXX_DiscardUnknown() {
-	xxx_messageInfo_Request.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_Request proto.InternalMessageInfo
-
-func (m *Request) GetPolymorph() uint32 {
-	if m != nil {
-		return m.Polymorph
-	}
-	return 0
-}
-
-func (m *Request) GetRequest() record.Virtual {
-	if m != nil {
-		return m.Request
-	}
-	return record.Virtual{}
-}
-
 func init() {
 	proto.RegisterType((*Meta)(nil), "payload.Meta")
 	proto.RegisterType((*Error)(nil), "payload.Error")
@@ -1140,73 +1200,74 @@ func init() {
 	proto.RegisterType((*Jet)(nil), "payload.Jet")
 	proto.RegisterType((*SetIncomingRequest)(nil), "payload.SetIncomingRequest")
 	proto.RegisterType((*SetOutgoingRequest)(nil), "payload.SetOutgoingRequest")
+	proto.RegisterType((*SagaCallAcceptNotification)(nil), "payload.SagaCallAcceptNotification")
 	proto.RegisterType((*SetResult)(nil), "payload.SetResult")
 	proto.RegisterType((*Activate)(nil), "payload.Activate")
+	proto.RegisterType((*Deactivate)(nil), "payload.Deactivate")
+	proto.RegisterType((*Update)(nil), "payload.Update")
 	proto.RegisterType((*GetFilament)(nil), "payload.GetFilament")
 	proto.RegisterType((*FilamentSegment)(nil), "payload.FilamentSegment")
 	proto.RegisterType((*RequestInfo)(nil), "payload.RequestInfo")
-	proto.RegisterType((*GetRequest)(nil), "payload.GetRequest")
-	proto.RegisterType((*Request)(nil), "payload.Request")
 }
 
 func init() { proto.RegisterFile("insolar/payload/payload.proto", fileDescriptor_33334fec96407f54) }
 
 var fileDescriptor_33334fec96407f54 = []byte{
-	// 849 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x56, 0x41, 0x6f, 0xdc, 0x44,
-	0x14, 0x5e, 0x6f, 0xb3, 0xbb, 0xd9, 0xb7, 0x94, 0x20, 0x93, 0xdd, 0x9a, 0x0a, 0x9c, 0x68, 0x24,
-	0xa4, 0x1c, 0xe8, 0x06, 0xb5, 0x55, 0x2f, 0x80, 0x50, 0xd3, 0x6d, 0x16, 0x97, 0x86, 0xac, 0xc6,
-	0x2d, 0x70, 0xf5, 0x7a, 0x5f, 0x1c, 0x23, 0xdb, 0x13, 0xc6, 0xe3, 0xd2, 0xdc, 0x38, 0x73, 0xe2,
-	0xca, 0x0f, 0x40, 0xe2, 0x2f, 0x20, 0xfe, 0x40, 0x2f, 0x48, 0x39, 0x56, 0x1c, 0x2a, 0xb2, 0xb9,
-	0x70, 0x2c, 0x07, 0xee, 0xc8, 0xe3, 0xf1, 0x3a, 0xa9, 0x10, 0xb6, 0x76, 0xd3, 0x3d, 0x79, 0x9e,
-	0xfd, 0xbe, 0xef, 0xbd, 0x79, 0xf3, 0xbd, 0x37, 0x86, 0xf7, 0xfc, 0x28, 0x66, 0x81, 0xc3, 0xb7,
-	0x8f, 0x9c, 0xe3, 0x80, 0x39, 0x93, 0xfc, 0xd9, 0x3f, 0xe2, 0x4c, 0x30, 0xbd, 0xa5, 0xcc, 0xeb,
-	0x37, 0x3c, 0x5f, 0x1c, 0x26, 0xe3, 0xbe, 0xcb, 0xc2, 0x6d, 0x8f, 0x79, 0x6c, 0x5b, 0x7e, 0x1f,
-	0x27, 0x07, 0xd2, 0x92, 0x86, 0x5c, 0x65, 0xb8, 0xeb, 0x77, 0xce, 0xb9, 0xe7, 0x11, 0x5e, 0x7d,
-	0x72, 0x74, 0x19, 0x9f, 0xa8, 0x47, 0x86, 0x23, 0x7f, 0xd7, 0x61, 0x65, 0x0f, 0x85, 0xa3, 0xbf,
-	0x0b, 0xed, 0x11, 0x0b, 0x8e, 0x43, 0xc6, 0x8f, 0x0e, 0x8d, 0xb7, 0x36, 0xb5, 0xad, 0xab, 0xb4,
-	0x78, 0xa1, 0x1b, 0xd0, 0x1a, 0x65, 0x89, 0x19, 0xeb, 0x9b, 0xda, 0xd6, 0x1b, 0x34, 0x37, 0xf5,
-	0x87, 0xd0, 0xb4, 0x31, 0x9a, 0x20, 0x37, 0xba, 0xe9, 0x87, 0x9d, 0xdb, 0xcf, 0x5e, 0x6c, 0xd4,
-	0xfe, 0x78, 0xb1, 0xf1, 0x41, 0x79, 0x42, 0x7d, 0x8a, 0x07, 0xc8, 0x31, 0x72, 0x91, 0x2a, 0x0e,
-	0x7d, 0x04, 0xab, 0x14, 0x5d, 0xf4, 0x9f, 0x20, 0x37, 0x7a, 0x0b, 0xf0, 0xcd, 0x58, 0xf4, 0x87,
-	0xd0, 0x18, 0x25, 0x41, 0x8c, 0xc6, 0x35, 0x49, 0x77, 0x47, 0xd1, 0xf5, 0x2b, 0xd0, 0x49, 0xdc,
-	0x17, 0x49, 0x38, 0x46, 0x4e, 0x33, 0x12, 0xfd, 0x4d, 0xa8, 0x5b, 0x03, 0xc3, 0x90, 0x25, 0xa8,
-	0x5b, 0x03, 0xfd, 0x16, 0xc0, 0x3e, 0xf7, 0x3d, 0x3f, 0xfa, 0xcc, 0x89, 0x0f, 0x8d, 0x77, 0x64,
-	0x88, 0xb7, 0x55, 0x88, 0xce, 0x1e, 0xc6, 0xb1, 0xe3, 0x61, 0xfa, 0x89, 0x9e, 0x73, 0x23, 0x7b,
-	0xd0, 0xb8, 0xcf, 0x39, 0xe3, 0x25, 0x35, 0xd7, 0x61, 0xe5, 0x1e, 0x9b, 0xa0, 0x2c, 0xf8, 0x55,
-	0x2a, 0xd7, 0xe9, 0xbb, 0x47, 0xf8, 0x54, 0xc8, 0x5a, 0xb7, 0xa9, 0x5c, 0x93, 0xdf, 0x35, 0x68,
-	0x0f, 0x51, 0xec, 0x8f, 0xbf, 0x41, 0x57, 0x94, 0x70, 0x5a, 0xb0, 0x9a, 0xf9, 0x59, 0x83, 0xec,
-	0x20, 0x77, 0x6e, 0xa8, 0x6c, 0xdf, 0xaf, 0x50, 0x10, 0x6b, 0x40, 0x67, 0x70, 0xfd, 0x2b, 0x58,
-	0xcb, 0xd6, 0x14, 0xbf, 0x4d, 0x30, 0x4e, 0x19, 0xbb, 0xf3, 0x30, 0xbe, 0xca, 0x42, 0x22, 0x68,
-	0x0d, 0x51, 0xc8, 0xed, 0xfe, 0xff, 0x66, 0xee, 0x43, 0x33, 0xf5, 0x9a, 0x77, 0x2b, 0x0a, 0x4c,
-	0x7e, 0xd0, 0xa0, 0x3d, 0x72, 0xe2, 0xd8, 0x16, 0x8e, 0x28, 0x0b, 0xd9, 0x83, 0x66, 0x76, 0x90,
-	0xaa, 0x0d, 0x94, 0xa5, 0x0f, 0xa1, 0x25, 0xe1, 0xf3, 0x16, 0x21, 0x47, 0x93, 0x8f, 0x61, 0x25,
-	0xcd, 0x65, 0xbe, 0x34, 0x88, 0x0d, 0x2d, 0xbb, 0x52, 0xe9, 0x7a, 0xd0, 0xa4, 0x72, 0x0c, 0xe4,
-	0x04, 0x99, 0x35, 0xd3, 0x9c, 0xdc, 0x44, 0xa6, 0x39, 0xf2, 0x11, 0x34, 0xac, 0x68, 0x82, 0x4f,
-	0x4b, 0x28, 0xd7, 0x95, 0x9b, 0x62, 0xcc, 0x0c, 0x32, 0xca, 0x08, 0x2f, 0x31, 0x9d, 0xc7, 0xd0,
-	0xa8, 0x78, 0x52, 0xff, 0x49, 0xd9, 0x83, 0xe6, 0x1e, 0x86, 0x8c, 0x1f, 0x2b, 0x52, 0x65, 0x11,
-	0x27, 0xed, 0xec, 0x12, 0xce, 0x4f, 0x64, 0xf7, 0xcf, 0x25, 0xb6, 0xba, 0x35, 0x20, 0xbf, 0x6a,
-	0x70, 0xe5, 0x01, 0x96, 0xb5, 0xe8, 0x2e, 0x34, 0x1e, 0x60, 0xd1, 0x9f, 0x1f, 0xaa, 0x38, 0x5b,
-	0x15, 0xe2, 0x48, 0x1c, 0xcd, 0xe0, 0xc5, 0xe0, 0xeb, 0x5e, 0xc2, 0xe0, 0x23, 0x2e, 0xe8, 0x36,
-	0x0a, 0x2b, 0x72, 0x59, 0xe8, 0x47, 0x9e, 0x6a, 0xd6, 0x92, 0x9d, 0x6c, 0x43, 0x4b, 0x39, 0xca,
-	0xbd, 0x74, 0x6e, 0xae, 0xf5, 0xd5, 0xdd, 0xf3, 0xa5, 0xcf, 0x45, 0xe2, 0x04, 0x3b, 0x2b, 0x69,
-	0x52, 0x34, 0xf7, 0x52, 0x41, 0xf6, 0x13, 0xe1, 0xb1, 0xd7, 0x17, 0xe4, 0x2e, 0xb4, 0x6d, 0x14,
-	0x14, 0xe3, 0x24, 0x10, 0x55, 0x34, 0x94, 0xfa, 0x15, 0x1a, 0x4a, 0x2d, 0xf2, 0x35, 0xac, 0xde,
-	0x75, 0x85, 0xff, 0x64, 0x21, 0x15, 0x2a, 0xe6, 0xee, 0x05, 0xe6, 0x9f, 0xea, 0xd0, 0x19, 0xa2,
-	0xd8, 0xf5, 0x03, 0x27, 0xc4, 0x68, 0x89, 0xd3, 0xfc, 0x73, 0x68, 0xdb, 0xc2, 0xe1, 0x62, 0x97,
-	0xb3, 0x70, 0xbe, 0x11, 0x56, 0xe0, 0xf5, 0x47, 0xd0, 0xa6, 0xe8, 0x4c, 0x1e, 0x47, 0xc2, 0x0f,
-	0xd4, 0x35, 0x3e, 0xaf, 0xfc, 0x0a, 0x22, 0xf2, 0x9b, 0x06, 0x6b, 0x79, 0x61, 0x6c, 0xf4, 0x96,
-	0x5b, 0x9f, 0x4f, 0x53, 0x99, 0xa5, 0x47, 0x17, 0x1b, 0xdd, 0xcd, 0x2b, 0x5b, 0x9d, 0x9b, 0x1b,
-	0xb9, 0xcc, 0xee, 0xb1, 0xf0, 0x88, 0xc5, 0xbe, 0xc0, 0x3c, 0xb7, 0xcc, 0xaf, 0x90, 0x9d, 0x44,
-	0x91, 0x7f, 0x34, 0xe8, 0xe4, 0x77, 0x5c, 0x74, 0xc0, 0x96, 0x7a, 0xb2, 0x0b, 0xde, 0xd0, 0x05,
-	0x3e, 0xfd, 0x0f, 0xcc, 0xbb, 0xad, 0x97, 0xfd, 0x07, 0xe6, 0x5d, 0x5a, 0x28, 0xfa, 0xda, 0x05,
-	0x45, 0x7f, 0x07, 0x30, 0x44, 0x51, 0xad, 0x97, 0x2f, 0xa4, 0xba, 0xbe, 0x58, 0xaa, 0xe4, 0x67,
-	0x6d, 0x96, 0xeb, 0x12, 0xc3, 0x9e, 0x9f, 0x47, 0xdd, 0x2a, 0xf3, 0x68, 0xe7, 0xf6, 0xc9, 0xa9,
-	0x59, 0x7b, 0x7e, 0x6a, 0xd6, 0x5e, 0x9e, 0x9a, 0xda, 0xf7, 0x53, 0x53, 0xfb, 0x65, 0x6a, 0x6a,
-	0xcf, 0xa6, 0xa6, 0x76, 0x32, 0x35, 0xb5, 0x3f, 0xa7, 0xa6, 0xf6, 0xd7, 0xd4, 0xac, 0xbd, 0x9c,
-	0x9a, 0xda, 0x8f, 0x67, 0x66, 0xed, 0xe4, 0xcc, 0xac, 0x3d, 0x3f, 0x33, 0x6b, 0xe3, 0xa6, 0xfc,
-	0x7d, 0xbf, 0xf5, 0x6f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x88, 0x62, 0x87, 0x04, 0x4f, 0x0c, 0x00,
-	0x00,
+	// 858 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x56, 0x3f, 0x6f, 0xdb, 0x46,
+	0x14, 0x17, 0x15, 0x4b, 0xb2, 0x9e, 0x9a, 0xba, 0x60, 0x23, 0x87, 0x35, 0x5a, 0xda, 0x20, 0x50,
+	0xc0, 0x43, 0x23, 0x17, 0x49, 0x90, 0xa5, 0x2d, 0x02, 0xdb, 0x8a, 0x5d, 0xa6, 0x71, 0x2c, 0x1c,
+	0xe3, 0xb4, 0xe8, 0x76, 0xa2, 0x9e, 0x68, 0x16, 0x24, 0x4f, 0x3d, 0x1e, 0x83, 0x78, 0xeb, 0xdc,
+	0xa9, 0x6b, 0xa7, 0xae, 0xfd, 0x0a, 0x45, 0xbf, 0x40, 0x96, 0x02, 0x1e, 0x83, 0x0e, 0x41, 0x2d,
+	0x2f, 0x1d, 0xd3, 0xa1, 0x7b, 0xc1, 0xe3, 0xd1, 0x54, 0x82, 0x22, 0x14, 0xa4, 0x58, 0x13, 0xef,
+	0xdd, 0xbd, 0xdf, 0xef, 0xbd, 0x7b, 0xff, 0x78, 0xf0, 0x91, 0x1f, 0xc5, 0x2c, 0xa0, 0x7c, 0x6b,
+	0x44, 0x4f, 0x02, 0x46, 0x07, 0xf9, 0xb7, 0x33, 0xe2, 0x4c, 0x30, 0xbd, 0xa1, 0xc4, 0xb5, 0x1b,
+	0x9e, 0x2f, 0x8e, 0x93, 0x7e, 0xc7, 0x65, 0xe1, 0x96, 0xc7, 0x3c, 0xb6, 0x25, 0xcf, 0xfb, 0xc9,
+	0x50, 0x4a, 0x52, 0x90, 0xab, 0x0c, 0xb7, 0x76, 0x67, 0x42, 0x3d, 0xb7, 0xf0, 0xfa, 0x97, 0xa3,
+	0xcb, 0xf8, 0x40, 0x7d, 0x32, 0x9c, 0xf5, 0x4f, 0x15, 0x96, 0x0e, 0x50, 0x50, 0xfd, 0x43, 0x68,
+	0xf6, 0x58, 0x70, 0x12, 0x32, 0x3e, 0x3a, 0x36, 0xde, 0xdb, 0xd0, 0x36, 0xaf, 0x92, 0x62, 0x43,
+	0x37, 0xa0, 0xd1, 0xcb, 0x1c, 0x33, 0xae, 0x6d, 0x68, 0x9b, 0xef, 0x90, 0x5c, 0xd4, 0x1f, 0x40,
+	0xdd, 0xc1, 0x68, 0x80, 0xdc, 0x68, 0xa7, 0x07, 0x3b, 0xb7, 0x9f, 0xbd, 0x58, 0xaf, 0xfc, 0xf9,
+	0x62, 0xfd, 0x93, 0x72, 0x87, 0x3a, 0x04, 0x87, 0xc8, 0x31, 0x72, 0x91, 0x28, 0x0e, 0xbd, 0x07,
+	0xcb, 0x04, 0x5d, 0xf4, 0x9f, 0x20, 0x37, 0x56, 0xe7, 0xe0, 0xbb, 0x60, 0xd1, 0x1f, 0x40, 0xad,
+	0x97, 0x04, 0x31, 0x1a, 0xd7, 0x25, 0xdd, 0x1d, 0x45, 0xd7, 0x99, 0x82, 0x4e, 0xe2, 0x1e, 0x26,
+	0x61, 0x1f, 0x39, 0xc9, 0x48, 0xf4, 0x77, 0xa1, 0x6a, 0x77, 0x0d, 0x43, 0x86, 0xa0, 0x6a, 0x77,
+	0xf5, 0x5b, 0x00, 0x87, 0xdc, 0xf7, 0xfc, 0xe8, 0x4b, 0x1a, 0x1f, 0x1b, 0x1f, 0x48, 0x13, 0xef,
+	0x2b, 0x13, 0xad, 0x03, 0x8c, 0x63, 0xea, 0x61, 0x7a, 0x44, 0x26, 0xd4, 0xac, 0x03, 0xa8, 0xdd,
+	0xe3, 0x9c, 0xf1, 0x92, 0x98, 0xeb, 0xb0, 0xb4, 0xcb, 0x06, 0x28, 0x03, 0x7e, 0x95, 0xc8, 0x75,
+	0xba, 0xf7, 0x08, 0x9f, 0x0a, 0x19, 0xeb, 0x26, 0x91, 0x6b, 0xeb, 0x0f, 0x0d, 0x9a, 0xfb, 0x28,
+	0x0e, 0xfb, 0xdf, 0xa1, 0x2b, 0x4a, 0x38, 0x6d, 0x58, 0xce, 0xf4, 0xec, 0x6e, 0x96, 0xc8, 0x9d,
+	0x1b, 0xca, 0xdb, 0x8f, 0xa7, 0x08, 0x88, 0xdd, 0x25, 0x17, 0x70, 0xfd, 0x6b, 0x58, 0xc9, 0xd6,
+	0x04, 0xbf, 0x4f, 0x30, 0x4e, 0x19, 0xdb, 0xb3, 0x30, 0xbe, 0xce, 0x62, 0x45, 0xd0, 0xd8, 0x47,
+	0x21, 0xaf, 0xfb, 0xe6, 0xcb, 0xdc, 0x83, 0x7a, 0xaa, 0x35, 0xeb, 0x55, 0x14, 0xd8, 0xfa, 0x51,
+	0x83, 0x66, 0x8f, 0xc6, 0xb1, 0x23, 0xa8, 0x28, 0x33, 0xb9, 0x0a, 0xf5, 0x2c, 0x91, 0xaa, 0x0d,
+	0x94, 0xa4, 0xef, 0x43, 0x43, 0xc2, 0x67, 0x0d, 0x42, 0x8e, 0xb6, 0x3e, 0x87, 0xa5, 0xd4, 0x97,
+	0xd9, 0xdc, 0xb0, 0xee, 0x42, 0xc3, 0x99, 0x2a, 0x74, 0xab, 0x50, 0x27, 0x72, 0x0c, 0xe4, 0x04,
+	0x99, 0x64, 0x7d, 0x06, 0x35, 0x3b, 0x1a, 0xe0, 0xd3, 0x12, 0xf8, 0x35, 0xa5, 0xa6, 0xd0, 0x99,
+	0x90, 0xfa, 0x3e, 0x87, 0xe9, 0x23, 0xa8, 0x4d, 0x99, 0x81, 0xff, 0x83, 0xa7, 0xfb, 0x07, 0x18,
+	0x32, 0x7e, 0x92, 0x25, 0x80, 0x28, 0xc9, 0xa2, 0x69, 0xc7, 0x96, 0x70, 0x7e, 0x21, 0xbb, 0x7a,
+	0xa6, 0x22, 0xaa, 0xda, 0x5d, 0xeb, 0x37, 0x0d, 0xae, 0xdc, 0xc7, 0xb2, 0xd6, 0xdb, 0x83, 0xda,
+	0x7d, 0x2c, 0xfa, 0xee, 0x53, 0x65, 0x67, 0x73, 0x0a, 0x3b, 0x12, 0x47, 0x32, 0x78, 0x31, 0xd0,
+	0xda, 0x6f, 0x61, 0xa0, 0x59, 0x2e, 0xe8, 0x0e, 0x0a, 0x3b, 0x72, 0x59, 0xe8, 0x47, 0x9e, 0x6a,
+	0xc2, 0x92, 0x9b, 0x6c, 0x41, 0x43, 0x29, 0xca, 0xbb, 0xb4, 0x6e, 0xae, 0x74, 0xd4, 0x3f, 0xe5,
+	0xb1, 0xcf, 0x45, 0x42, 0x83, 0x9d, 0xa5, 0xd4, 0x29, 0x92, 0x6b, 0x29, 0x23, 0x87, 0x89, 0xf0,
+	0xd8, 0xe5, 0x19, 0xf9, 0x45, 0x83, 0x35, 0x87, 0x7a, 0x74, 0x97, 0x06, 0xc1, 0xb6, 0xeb, 0xe2,
+	0x48, 0x3c, 0x64, 0xc2, 0x1f, 0xfa, 0x2e, 0x15, 0x3e, 0x8b, 0x16, 0x37, 0x17, 0x8d, 0xc2, 0xf1,
+	0xac, 0x12, 0x2f, 0x3c, 0xdc, 0x86, 0xa6, 0x83, 0x82, 0x60, 0x9c, 0x04, 0x62, 0x9a, 0x2a, 0x4f,
+	0xf5, 0x8a, 0x2a, 0x4f, 0x25, 0xeb, 0x1b, 0x58, 0xde, 0x76, 0x85, 0xff, 0x64, 0xae, 0x3e, 0x51,
+	0xcc, 0xed, 0x57, 0x98, 0xbf, 0x05, 0xe8, 0x22, 0xbd, 0x1c, 0xee, 0xc7, 0x50, 0x3f, 0x1a, 0x0d,
+	0xde, 0x3e, 0xef, 0xcf, 0x55, 0x68, 0xed, 0xa3, 0xd8, 0xf3, 0x03, 0x1a, 0x62, 0xb4, 0xc0, 0x7f,
+	0xdf, 0x57, 0xd0, 0x74, 0x04, 0xe5, 0x62, 0x8f, 0xb3, 0x70, 0xb6, 0x81, 0x5f, 0xe0, 0xf5, 0x47,
+	0xd0, 0x24, 0x48, 0x07, 0x47, 0x91, 0xf0, 0x03, 0xf5, 0xe8, 0x99, 0xb5, 0xa9, 0x0b, 0x22, 0xeb,
+	0x77, 0x0d, 0x56, 0xf2, 0xc0, 0x38, 0xe8, 0x2d, 0x36, 0x3e, 0x77, 0xd3, 0x1e, 0x48, 0x53, 0x17,
+	0x1b, 0xed, 0x8d, 0x2b, 0x9b, 0xad, 0x9b, 0xeb, 0x79, 0xf3, 0xee, 0xb2, 0x70, 0xc4, 0x62, 0x5f,
+	0x60, 0xee, 0x5b, 0xa6, 0x57, 0x34, 0xb3, 0x44, 0x59, 0xff, 0x6a, 0xd0, 0xca, 0x5f, 0x04, 0xd1,
+	0x90, 0x2d, 0x34, 0xb3, 0x73, 0xbe, 0x67, 0x0a, 0xfc, 0xe4, 0x28, 0x58, 0x7d, 0x65, 0x14, 0x4c,
+	0x54, 0xf4, 0xf5, 0xc9, 0x8a, 0xde, 0xb9, 0x7d, 0x7a, 0x66, 0x56, 0x9e, 0x9f, 0x99, 0x95, 0x97,
+	0x67, 0xa6, 0xf6, 0xc3, 0xd8, 0xd4, 0x7e, 0x1d, 0x9b, 0xda, 0xb3, 0xb1, 0xa9, 0x9d, 0x8e, 0x4d,
+	0xed, 0xaf, 0xb1, 0xa9, 0xfd, 0x3d, 0x36, 0x2b, 0x2f, 0xc7, 0xa6, 0xf6, 0xd3, 0xb9, 0x59, 0x39,
+	0x3d, 0x37, 0x2b, 0xcf, 0xcf, 0xcd, 0x4a, 0xbf, 0x2e, 0xdf, 0xf2, 0xb7, 0xfe, 0x0b, 0x00, 0x00,
+	0xff, 0xff, 0xae, 0x71, 0xbd, 0xbe, 0x5c, 0x0c, 0x00, 0x00,
 }
 
 func (this *Meta) Equal(that interface{}) bool {
@@ -1420,9 +1481,6 @@ func (this *SetCode) Equal(that interface{}) bool {
 	if !bytes.Equal(this.Record, that1.Record) {
 		return false
 	}
-	if !bytes.Equal(this.Code, that1.Code) {
-		return false
-	}
 	return true
 }
 func (this *Index) Equal(that interface{}) bool {
@@ -1475,9 +1533,6 @@ func (this *Code) Equal(that interface{}) bool {
 		return false
 	}
 	if !bytes.Equal(this.Record, that1.Record) {
-		return false
-	}
-	if !bytes.Equal(this.Code, that1.Code) {
 		return false
 	}
 	return true
@@ -1623,6 +1678,36 @@ func (this *SetOutgoingRequest) Equal(that interface{}) bool {
 	}
 	return true
 }
+func (this *SagaCallAcceptNotification) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*SagaCallAcceptNotification)
+	if !ok {
+		that2, ok := that.(SagaCallAcceptNotification)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Polymorph != that1.Polymorph {
+		return false
+	}
+	if !this.ObjectID.Equal(that1.ObjectID) {
+		return false
+	}
+	if !bytes.Equal(this.Request, that1.Request) {
+		return false
+	}
+	return true
+}
 func (this *SetResult) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
@@ -1658,6 +1743,66 @@ func (this *Activate) Equal(that interface{}) bool {
 	that1, ok := that.(*Activate)
 	if !ok {
 		that2, ok := that.(Activate)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Polymorph != that1.Polymorph {
+		return false
+	}
+	if !bytes.Equal(this.Record, that1.Record) {
+		return false
+	}
+	if !bytes.Equal(this.Result, that1.Result) {
+		return false
+	}
+	return true
+}
+func (this *Deactivate) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*Deactivate)
+	if !ok {
+		that2, ok := that.(Deactivate)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Polymorph != that1.Polymorph {
+		return false
+	}
+	if !bytes.Equal(this.Record, that1.Record) {
+		return false
+	}
+	if !bytes.Equal(this.Result, that1.Result) {
+		return false
+	}
+	return true
+}
+func (this *Update) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*Update)
+	if !ok {
+		that2, ok := that.(Update)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1784,63 +1929,6 @@ func (this *RequestInfo) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *GetRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*GetRequest)
-	if !ok {
-		that2, ok := that.(GetRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Polymorph != that1.Polymorph {
-		return false
-	}
-	if !this.RequestID.Equal(that1.RequestID) {
-		return false
-	}
-	return true
-}
-func (this *Request) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Request)
-	if !ok {
-		that2, ok := that.(Request)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Polymorph != that1.Polymorph {
-		return false
-	}
-	if !this.RequestID.Equal(that1.RequestID) {
-		return false
-	}
-	if !this.Request.Equal(&that1.Request) {
-		return false
-	}
-	return true
-}
 func (this *Meta) GoString() string {
 	if this == nil {
 		return "nil"
@@ -1919,11 +2007,10 @@ func (this *SetCode) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 7)
+	s := make([]string, 0, 6)
 	s = append(s, "&payload.SetCode{")
 	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
 	s = append(s, "Record: "+fmt.Sprintf("%#v", this.Record)+",\n")
-	s = append(s, "Code: "+fmt.Sprintf("%#v", this.Code)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -1942,11 +2029,10 @@ func (this *Code) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 7)
+	s := make([]string, 0, 6)
 	s = append(s, "&payload.Code{")
 	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
 	s = append(s, "Record: "+fmt.Sprintf("%#v", this.Record)+",\n")
-	s = append(s, "Code: "+fmt.Sprintf("%#v", this.Code)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -2007,6 +2093,18 @@ func (this *SetOutgoingRequest) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
+func (this *SagaCallAcceptNotification) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 7)
+	s = append(s, "&payload.SagaCallAcceptNotification{")
+	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
+	s = append(s, "ObjectID: "+fmt.Sprintf("%#v", this.ObjectID)+",\n")
+	s = append(s, "Request: "+fmt.Sprintf("%#v", this.Request)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
 func (this *SetResult) GoString() string {
 	if this == nil {
 		return "nil"
@@ -2024,6 +2122,30 @@ func (this *Activate) GoString() string {
 	}
 	s := make([]string, 0, 7)
 	s = append(s, "&payload.Activate{")
+	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
+	s = append(s, "Record: "+fmt.Sprintf("%#v", this.Record)+",\n")
+	s = append(s, "Result: "+fmt.Sprintf("%#v", this.Result)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *Deactivate) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 7)
+	s = append(s, "&payload.Deactivate{")
+	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
+	s = append(s, "Record: "+fmt.Sprintf("%#v", this.Record)+",\n")
+	s = append(s, "Result: "+fmt.Sprintf("%#v", this.Result)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *Update) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 7)
+	s = append(s, "&payload.Update{")
 	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
 	s = append(s, "Record: "+fmt.Sprintf("%#v", this.Record)+",\n")
 	s = append(s, "Result: "+fmt.Sprintf("%#v", this.Result)+",\n")
@@ -2072,29 +2194,6 @@ func (this *RequestInfo) GoString() string {
 	s = append(s, "RequestID: "+fmt.Sprintf("%#v", this.RequestID)+",\n")
 	s = append(s, "Request: "+fmt.Sprintf("%#v", this.Request)+",\n")
 	s = append(s, "Result: "+fmt.Sprintf("%#v", this.Result)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *GetRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&payload.GetRequest{")
-	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
-	s = append(s, "RequestID: "+fmt.Sprintf("%#v", this.RequestID)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *Request) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&payload.Request{")
-	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
-	s = append(s, "RequestID: "+fmt.Sprintf("%#v", this.RequestID)+",\n")
-	s = append(s, "Request: "+strings.Replace(this.Request.GoString(), `&`, ``, 1)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -2413,14 +2512,6 @@ func (m *SetCode) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintPayload(dAtA, i, uint64(len(m.Record)))
 		i += copy(dAtA[i:], m.Record)
 	}
-	if len(m.Code) > 0 {
-		dAtA[i] = 0xaa
-		i++
-		dAtA[i] = 0x1
-		i++
-		i = encodeVarintPayload(dAtA, i, uint64(len(m.Code)))
-		i += copy(dAtA[i:], m.Code)
-	}
 	return i, nil
 }
 
@@ -2486,14 +2577,6 @@ func (m *Code) MarshalTo(dAtA []byte) (int, error) {
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(len(m.Record)))
 		i += copy(dAtA[i:], m.Record)
-	}
-	if len(m.Code) > 0 {
-		dAtA[i] = 0xaa
-		i++
-		dAtA[i] = 0x1
-		i++
-		i = encodeVarintPayload(dAtA, i, uint64(len(m.Code)))
-		i += copy(dAtA[i:], m.Code)
 	}
 	return i, nil
 }
@@ -2689,6 +2772,49 @@ func (m *SetOutgoingRequest) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
+func (m *SagaCallAcceptNotification) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SagaCallAcceptNotification) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.Polymorph != 0 {
+		dAtA[i] = 0x80
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintPayload(dAtA, i, uint64(m.Polymorph))
+	}
+	dAtA[i] = 0xa2
+	i++
+	dAtA[i] = 0x1
+	i++
+	i = encodeVarintPayload(dAtA, i, uint64(m.ObjectID.Size()))
+	n14, err := m.ObjectID.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n14
+	if len(m.Request) > 0 {
+		dAtA[i] = 0xaa
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintPayload(dAtA, i, uint64(len(m.Request)))
+		i += copy(dAtA[i:], m.Request)
+	}
+	return i, nil
+}
+
 func (m *SetResult) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -2763,6 +2889,88 @@ func (m *Activate) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
+func (m *Deactivate) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *Deactivate) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.Polymorph != 0 {
+		dAtA[i] = 0x80
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintPayload(dAtA, i, uint64(m.Polymorph))
+	}
+	if len(m.Record) > 0 {
+		dAtA[i] = 0xa2
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintPayload(dAtA, i, uint64(len(m.Record)))
+		i += copy(dAtA[i:], m.Record)
+	}
+	if len(m.Result) > 0 {
+		dAtA[i] = 0xaa
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintPayload(dAtA, i, uint64(len(m.Result)))
+		i += copy(dAtA[i:], m.Result)
+	}
+	return i, nil
+}
+
+func (m *Update) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *Update) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.Polymorph != 0 {
+		dAtA[i] = 0x80
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintPayload(dAtA, i, uint64(m.Polymorph))
+	}
+	if len(m.Record) > 0 {
+		dAtA[i] = 0xa2
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintPayload(dAtA, i, uint64(len(m.Record)))
+		i += copy(dAtA[i:], m.Record)
+	}
+	if len(m.Result) > 0 {
+		dAtA[i] = 0xaa
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintPayload(dAtA, i, uint64(len(m.Result)))
+		i += copy(dAtA[i:], m.Result)
+	}
+	return i, nil
+}
+
 func (m *GetFilament) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -2790,31 +2998,31 @@ func (m *GetFilament) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintPayload(dAtA, i, uint64(m.ObjectID.Size()))
-	n14, err := m.ObjectID.MarshalTo(dAtA[i:])
+	n15, err := m.ObjectID.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n14
+	i += n15
 	dAtA[i] = 0xaa
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintPayload(dAtA, i, uint64(m.StartFrom.Size()))
-	n15, err := m.StartFrom.MarshalTo(dAtA[i:])
+	n16, err := m.StartFrom.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n15
+	i += n16
 	dAtA[i] = 0xb2
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintPayload(dAtA, i, uint64(m.ReadUntil.Size()))
-	n16, err := m.ReadUntil.MarshalTo(dAtA[i:])
+	n17, err := m.ReadUntil.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n16
+	i += n17
 	return i, nil
 }
 
@@ -2845,11 +3053,11 @@ func (m *FilamentSegment) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintPayload(dAtA, i, uint64(m.ObjectID.Size()))
-	n17, err := m.ObjectID.MarshalTo(dAtA[i:])
+	n18, err := m.ObjectID.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n17
+	i += n18
 	if len(m.Records) > 0 {
 		for _, msg := range m.Records {
 			dAtA[i] = 0xaa
@@ -2894,21 +3102,21 @@ func (m *RequestInfo) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintPayload(dAtA, i, uint64(m.ObjectID.Size()))
-	n18, err := m.ObjectID.MarshalTo(dAtA[i:])
+	n19, err := m.ObjectID.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n18
+	i += n19
 	dAtA[i] = 0xaa
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintPayload(dAtA, i, uint64(m.RequestID.Size()))
-	n19, err := m.RequestID.MarshalTo(dAtA[i:])
+	n20, err := m.RequestID.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n19
+	i += n20
 	if len(m.Request) > 0 {
 		dAtA[i] = 0xb2
 		i++
@@ -2925,86 +3133,6 @@ func (m *RequestInfo) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintPayload(dAtA, i, uint64(len(m.Result)))
 		i += copy(dAtA[i:], m.Result)
 	}
-	return i, nil
-}
-
-func (m *GetRequest) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *GetRequest) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	if m.Polymorph != 0 {
-		dAtA[i] = 0x80
-		i++
-		dAtA[i] = 0x1
-		i++
-		i = encodeVarintPayload(dAtA, i, uint64(m.Polymorph))
-	}
-	dAtA[i] = 0xa2
-	i++
-	dAtA[i] = 0x1
-	i++
-	i = encodeVarintPayload(dAtA, i, uint64(m.RequestID.Size()))
-	n20, err := m.RequestID.MarshalTo(dAtA[i:])
-	if err != nil {
-		return 0, err
-	}
-	i += n20
-	return i, nil
-}
-
-func (m *Request) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *Request) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	if m.Polymorph != 0 {
-		dAtA[i] = 0x80
-		i++
-		dAtA[i] = 0x1
-		i++
-		i = encodeVarintPayload(dAtA, i, uint64(m.Polymorph))
-	}
-	dAtA[i] = 0xa2
-	i++
-	dAtA[i] = 0x1
-	i++
-	i = encodeVarintPayload(dAtA, i, uint64(m.RequestID.Size()))
-	n21, err := m.RequestID.MarshalTo(dAtA[i:])
-	if err != nil {
-		return 0, err
-	}
-	i += n21
-	dAtA[i] = 0xaa
-	i++
-	dAtA[i] = 0x1
-	i++
-	i = encodeVarintPayload(dAtA, i, uint64(m.Request.Size()))
-	n22, err := m.Request.MarshalTo(dAtA[i:])
-	if err != nil {
-		return 0, err
-	}
-	i += n22
 	return i, nil
 }
 
@@ -3141,10 +3269,6 @@ func (m *SetCode) Size() (n int) {
 	if l > 0 {
 		n += 2 + l + sovPayload(uint64(l))
 	}
-	l = len(m.Code)
-	if l > 0 {
-		n += 2 + l + sovPayload(uint64(l))
-	}
 	return n
 }
 
@@ -3174,10 +3298,6 @@ func (m *Code) Size() (n int) {
 		n += 2 + sovPayload(uint64(m.Polymorph))
 	}
 	l = len(m.Record)
-	if l > 0 {
-		n += 2 + l + sovPayload(uint64(l))
-	}
-	l = len(m.Code)
 	if l > 0 {
 		n += 2 + l + sovPayload(uint64(l))
 	}
@@ -3262,6 +3382,24 @@ func (m *SetOutgoingRequest) Size() (n int) {
 	return n
 }
 
+func (m *SagaCallAcceptNotification) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Polymorph != 0 {
+		n += 2 + sovPayload(uint64(m.Polymorph))
+	}
+	l = m.ObjectID.Size()
+	n += 2 + l + sovPayload(uint64(l))
+	l = len(m.Request)
+	if l > 0 {
+		n += 2 + l + sovPayload(uint64(l))
+	}
+	return n
+}
+
 func (m *SetResult) Size() (n int) {
 	if m == nil {
 		return 0
@@ -3279,6 +3417,46 @@ func (m *SetResult) Size() (n int) {
 }
 
 func (m *Activate) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Polymorph != 0 {
+		n += 2 + sovPayload(uint64(m.Polymorph))
+	}
+	l = len(m.Record)
+	if l > 0 {
+		n += 2 + l + sovPayload(uint64(l))
+	}
+	l = len(m.Result)
+	if l > 0 {
+		n += 2 + l + sovPayload(uint64(l))
+	}
+	return n
+}
+
+func (m *Deactivate) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Polymorph != 0 {
+		n += 2 + sovPayload(uint64(m.Polymorph))
+	}
+	l = len(m.Record)
+	if l > 0 {
+		n += 2 + l + sovPayload(uint64(l))
+	}
+	l = len(m.Result)
+	if l > 0 {
+		n += 2 + l + sovPayload(uint64(l))
+	}
+	return n
+}
+
+func (m *Update) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -3357,36 +3535,6 @@ func (m *RequestInfo) Size() (n int) {
 	if l > 0 {
 		n += 2 + l + sovPayload(uint64(l))
 	}
-	return n
-}
-
-func (m *GetRequest) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Polymorph != 0 {
-		n += 2 + sovPayload(uint64(m.Polymorph))
-	}
-	l = m.RequestID.Size()
-	n += 2 + l + sovPayload(uint64(l))
-	return n
-}
-
-func (m *Request) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Polymorph != 0 {
-		n += 2 + sovPayload(uint64(m.Polymorph))
-	}
-	l = m.RequestID.Size()
-	n += 2 + l + sovPayload(uint64(l))
-	l = m.Request.Size()
-	n += 2 + l + sovPayload(uint64(l))
 	return n
 }
 
@@ -3484,7 +3632,6 @@ func (this *SetCode) String() string {
 	s := strings.Join([]string{`&SetCode{`,
 		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
 		`Record:` + fmt.Sprintf("%v", this.Record) + `,`,
-		`Code:` + fmt.Sprintf("%v", this.Code) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -3507,7 +3654,6 @@ func (this *Code) String() string {
 	s := strings.Join([]string{`&Code{`,
 		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
 		`Record:` + fmt.Sprintf("%v", this.Record) + `,`,
-		`Code:` + fmt.Sprintf("%v", this.Code) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -3569,6 +3715,18 @@ func (this *SetOutgoingRequest) String() string {
 	}, "")
 	return s
 }
+func (this *SagaCallAcceptNotification) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&SagaCallAcceptNotification{`,
+		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
+		`ObjectID:` + fmt.Sprintf("%v", this.ObjectID) + `,`,
+		`Request:` + fmt.Sprintf("%v", this.Request) + `,`,
+		`}`,
+	}, "")
+	return s
+}
 func (this *SetResult) String() string {
 	if this == nil {
 		return "nil"
@@ -3585,6 +3743,30 @@ func (this *Activate) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&Activate{`,
+		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
+		`Record:` + fmt.Sprintf("%v", this.Record) + `,`,
+		`Result:` + fmt.Sprintf("%v", this.Result) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *Deactivate) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&Deactivate{`,
+		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
+		`Record:` + fmt.Sprintf("%v", this.Record) + `,`,
+		`Result:` + fmt.Sprintf("%v", this.Result) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *Update) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&Update{`,
 		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
 		`Record:` + fmt.Sprintf("%v", this.Record) + `,`,
 		`Result:` + fmt.Sprintf("%v", this.Result) + `,`,
@@ -3627,29 +3809,6 @@ func (this *RequestInfo) String() string {
 		`RequestID:` + fmt.Sprintf("%v", this.RequestID) + `,`,
 		`Request:` + fmt.Sprintf("%v", this.Request) + `,`,
 		`Result:` + fmt.Sprintf("%v", this.Result) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *GetRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&GetRequest{`,
-		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
-		`RequestID:` + fmt.Sprintf("%v", this.RequestID) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Request) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Request{`,
-		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
-		`RequestID:` + fmt.Sprintf("%v", this.RequestID) + `,`,
-		`Request:` + strings.Replace(strings.Replace(this.Request.String(), "Virtual", "record.Virtual", 1), `&`, ``, 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -4627,40 +4786,6 @@ func (m *SetCode) Unmarshal(dAtA []byte) error {
 				m.Record = []byte{}
 			}
 			iNdEx = postIndex
-		case 21:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Code", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPayload
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthPayload
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthPayload
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Code = append(m.Code[:0], dAtA[iNdEx:postIndex]...)
-			if m.Code == nil {
-				m.Code = []byte{}
-			}
-			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipPayload(dAtA[iNdEx:])
@@ -4871,40 +4996,6 @@ func (m *Code) Unmarshal(dAtA []byte) error {
 			m.Record = append(m.Record[:0], dAtA[iNdEx:postIndex]...)
 			if m.Record == nil {
 				m.Record = []byte{}
-			}
-			iNdEx = postIndex
-		case 21:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Code", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPayload
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthPayload
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthPayload
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Code = append(m.Code[:0], dAtA[iNdEx:postIndex]...)
-			if m.Code == nil {
-				m.Code = []byte{}
 			}
 			iNdEx = postIndex
 		default:
@@ -5524,6 +5615,145 @@ func (m *SetOutgoingRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *SagaCallAcceptNotification) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPayload
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SagaCallAcceptNotification: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SagaCallAcceptNotification: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 16:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Polymorph", wireType)
+			}
+			m.Polymorph = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Polymorph |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 20:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ObjectID", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPayload
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.ObjectID.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 21:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Request", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPayload
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Request = append(m.Request[:0], dAtA[iNdEx:postIndex]...)
+			if m.Request == nil {
+				m.Request = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPayload(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func (m *SetResult) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -5657,6 +5887,286 @@ func (m *Activate) Unmarshal(dAtA []byte) error {
 		}
 		if fieldNum <= 0 {
 			return fmt.Errorf("proto: Activate: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 16:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Polymorph", wireType)
+			}
+			m.Polymorph = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Polymorph |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 20:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Record", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPayload
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Record = append(m.Record[:0], dAtA[iNdEx:postIndex]...)
+			if m.Record == nil {
+				m.Record = []byte{}
+			}
+			iNdEx = postIndex
+		case 21:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Result", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPayload
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Result = append(m.Result[:0], dAtA[iNdEx:postIndex]...)
+			if m.Result == nil {
+				m.Result = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPayload(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *Deactivate) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPayload
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: Deactivate: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: Deactivate: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 16:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Polymorph", wireType)
+			}
+			m.Polymorph = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Polymorph |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 20:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Record", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPayload
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Record = append(m.Record[:0], dAtA[iNdEx:postIndex]...)
+			if m.Record == nil {
+				m.Record = []byte{}
+			}
+			iNdEx = postIndex
+		case 21:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Result", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPayload
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Result = append(m.Result[:0], dAtA[iNdEx:postIndex]...)
+			if m.Result == nil {
+				m.Result = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPayload(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *Update) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPayload
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: Update: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: Update: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 16:
@@ -6260,249 +6770,6 @@ func (m *RequestInfo) Unmarshal(dAtA []byte) error {
 			m.Result = append(m.Result[:0], dAtA[iNdEx:postIndex]...)
 			if m.Result == nil {
 				m.Result = []byte{}
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipPayload(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthPayload
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthPayload
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *GetRequest) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowPayload
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: GetRequest: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: GetRequest: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 16:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Polymorph", wireType)
-			}
-			m.Polymorph = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPayload
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Polymorph |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 20:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field RequestID", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPayload
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthPayload
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthPayload
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if err := m.RequestID.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipPayload(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthPayload
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthPayload
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *Request) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowPayload
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Request: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Request: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 16:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Polymorph", wireType)
-			}
-			m.Polymorph = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPayload
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Polymorph |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 20:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field RequestID", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPayload
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthPayload
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthPayload
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if err := m.RequestID.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 21:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Request", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPayload
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthPayload
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthPayload
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if err := m.Request.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
 			}
 			iNdEx = postIndex
 		default:

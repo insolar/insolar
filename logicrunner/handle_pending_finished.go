@@ -19,9 +19,11 @@ package logicrunner
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
@@ -30,45 +32,31 @@ import (
 type HandlePendingFinished struct {
 	dep *Dependencies
 
-	Message bus.Message
+	Message payload.Meta
+	Parcel  insolar.Parcel
 }
 
 func (h *HandlePendingFinished) Present(ctx context.Context, f flow.Flow) error {
-	parcel := h.Message.Parcel
-	ctx = loggerWithTargetID(ctx, parcel)
+	ctx = loggerWithTargetID(ctx, h.Parcel)
 	lr := h.dep.lr
 	inslogger.FromContext(ctx).Debug("HandlePendingFinished.Present starts ...")
-	replyOk := bus.Reply{Reply: &reply.OK{}, Err: nil}
+	replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})
 
-	msg := parcel.Message().(*message.PendingFinished)
+	msg := h.Parcel.Message().(*message.PendingFinished)
 	ref := msg.DefaultTarget()
-	os := lr.StateStorage.UpsertObjectState(*ref)
 
-	os.Lock()
-	if os.ExecutionState == nil {
-		// we are first, strange, soon ExecuteResults message should come
-		os.ExecutionState = NewExecutionState(*ref)
-		os.ExecutionState.pending = message.NotPending
-		os.ExecutionState.RegisterLogicRunner(lr)
-		os.Unlock()
+	broker := lr.StateStorage.UpsertExecutionState(*ref)
 
-		h.Message.ReplyTo <- replyOk
-		return nil
-	}
-	es := os.ExecutionState
-	os.Unlock()
-
-	es.Lock()
-	es.pending = message.NotPending
-	if !es.Broker.currentList.Empty() {
-		es.Unlock()
+	broker.executionState.Lock()
+	broker.executionState.pending = message.NotPending
+	if !broker.currentList.Empty() {
+		broker.executionState.Unlock()
 		return errors.New("[ HandlePendingFinished ] received PendingFinished when we are already executing")
 	}
-	es.Unlock()
+	broker.executionState.Unlock()
 
-	es.Broker.StartProcessorIfNeeded(ctx)
+	broker.StartProcessorIfNeeded(ctx)
 
-	h.Message.ReplyTo <- replyOk
+	h.dep.Sender.Reply(ctx, h.Message, replyOk)
 	return nil
-
 }

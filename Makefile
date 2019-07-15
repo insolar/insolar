@@ -237,3 +237,17 @@ regen-builtin: $(BININSGOCC)
 
 build-track:
 	$(GOBUILD) -o $(BIN_DIR)/track ./scripts/cmd/track/track.go
+
+generate-introspector-proto: ## generate api for introspector
+#	./scripts/build/fetchdeps github.com/grpc-ecosystem/grpc-gateway/ v1.9.3
+	protoc -I/usr/local/include -I./ \
+		-I$(GOPATH)/src \
+		-I$(GOPATH)/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
+		--go_out=plugins=grpc:./  \
+		--grpc-gateway_out=logtostderr=true:. \
+		--swagger_out=logtostderr=true:. \
+		instrumentation/introspector/introproto/*.proto
+	GOPATH=`go env GOPATH` go generate -x ./instrumentation/introspector
+
+help: ## Display this help screen
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'

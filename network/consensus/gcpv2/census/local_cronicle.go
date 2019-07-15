@@ -51,6 +51,7 @@
 package census
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/network/consensus/common"
@@ -88,6 +89,20 @@ func (c *localChronicles) GetLatestCensus() OperationalCensus {
 		return c.expected
 	}
 	return c.active
+}
+
+func (c *localChronicles) GetRecentCensus(pn common.PulseNumber) OperationalCensus {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
+
+	if c.expected != nil && pn == c.expected.GetPulseNumber() {
+		return c.expected
+	}
+
+	if pn == c.active.GetPulseNumber() {
+		return c.active
+	}
+	panic(fmt.Sprintf("recent census is missing for pulse (%v)", pn))
 }
 
 func (c *localChronicles) GetActiveCensus() ActiveCensus {

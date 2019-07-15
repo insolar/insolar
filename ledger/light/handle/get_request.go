@@ -21,7 +21,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/pkg/errors"
@@ -29,20 +28,20 @@ import (
 
 type GetRequest struct {
 	dep     *proc.Dependencies
-	replyTo chan<- bus.Reply
+	meta    payload.Meta
 	request insolar.ID
 }
 
-func NewGetRequest(dep *proc.Dependencies, rep chan<- bus.Reply, request insolar.ID) *GetRequest {
+func NewGetRequest(dep *proc.Dependencies, meta payload.Meta, request insolar.ID) *GetRequest {
 	return &GetRequest{
 		dep:     dep,
 		request: request,
-		replyTo: rep,
+		meta:    meta,
 	}
 }
 
 func (s *GetRequest) Present(ctx context.Context, f flow.Flow) error {
-	code := proc.NewGetRequest(s.request, s.replyTo)
+	code := proc.NewGetRequest(s.request, s.meta)
 	s.dep.GetRequest(code)
 	return f.Procedure(ctx, code, false)
 }

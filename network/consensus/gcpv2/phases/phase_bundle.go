@@ -51,7 +51,10 @@
 package phases
 
 import (
+	"fmt"
 	"time"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/common"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
@@ -88,26 +91,55 @@ func (r *RegularPhaseBundle) GetPrepPhaseControllers() []core.PrepPhaseControlle
 	}
 }
 
-func (r *RegularPhaseBundle) GetNodeUpdateCallback() core.NodeUpdateCallback {
-	return nil
+type regularCallback struct {
+	qNshReady    chan *core.NodeAppearance
+	qTrustLvlUpd chan TrustUpdateSignal
 }
 
-func (r *RegularPhaseBundle) GetFullPhaseControllers(nodeCount int) []core.PhaseController {
+func (p *regularCallback) OnCustomEvent(n *core.NodeAppearance, event interface{}) {
+	if te, ok := event.(TrustUpdateSignal); ok && te.IsPingSignal() {
+		p.qTrustLvlUpd <- te
+		return
+	}
+	panic(fmt.Sprintf("unknown custom event: %v", event))
+}
+
+func (p *regularCallback) OnTrustUpdated(n *core.NodeAppearance, trustBefore, trustAfter common.NodeTrustLevel) {
+	switch {
+	case trustBefore < common.TrustByNeighbors && trustAfter >= common.TrustByNeighbors:
+		trustAfter = common.TrustByNeighbors
+	case trustBefore < common.TrustBySome && trustAfter >= common.TrustBySome:
+		trustAfter = common.TrustBySome
+	case !trustBefore.IsNegative() && trustAfter.IsNegative():
+	default:
+		return
+	}
+	p.qTrustLvlUpd <- TrustUpdateSignal{NewTrustLevel: trustAfter, UpdatedNode: n}
+}
+
+func (p *regularCallback) OnNodeStateAssigned(n *core.NodeAppearance) {
+	p.qNshReady <- n
+	p.qTrustLvlUpd <- TrustUpdateSignal{NewTrustLevel: common.UnknownTrust, UpdatedNode: n}
+}
+
+func (r *RegularPhaseBundle) GetFullPhaseControllers(nodeCount int) ([]core.PhaseController, core.NodeUpdateCallback) {
 
 	/* Ensure sufficient sizes of queues to avoid lockups */
-	qNshReady := make(chan *core.NodeAppearance, nodeCount)
-	qTrustLvlUpd := make(chan TrustUpdateSignal, nodeCount*3) // up-to ~3 updates for every node
+	rcb := &regularCallback{
+		qNshReady:    make(chan *core.NodeAppearance, nodeCount),
+		qTrustLvlUpd: make(chan TrustUpdateSignal, nodeCount*3), // up-to ~3 updates for every node
+	}
 
 	consensusStrategy := NewSimpleConsensusSelectionStrategy()
 
-	ph1 := NewPhase1Controller(r.packetPrepareOptions, qNshReady /*<-*/)
+	ph1 := NewPhase1Controller(r.packetPrepareOptions)
 	return []core.PhaseController{
 		NewPulseController(),
 		NewPhase0Controller(),
 		// NB! Phase0 sending is actually a part of Phase1 logic and is controlled there
 		ph1,
-		NewPhase2Controller(r.packetPrepareOptions, qNshReady /*->*/, qTrustLvlUpd /*<-*/),
-		NewPhase3Controller(r.packetPrepareOptions, qTrustLvlUpd /*->*/, consensusStrategy),
+		NewPhase2Controller(r.packetPrepareOptions, rcb.qNshReady /*->*/),
+		NewPhase3Controller(r.packetPrepareOptions, rcb.qTrustLvlUpd /*->*/, consensusStrategy),
 		NewReqPhase1Controller(r.packetPrepareOptions, ph1),
-	}
+	}, rcb
 }

@@ -54,7 +54,6 @@ message SetCode {
     uint32 Polymorph = 16;
 
     bytes Record = 20;
-    bytes Code   = 21;
 }
 
 message Index {
@@ -67,7 +66,6 @@ message Code {
     uint32 Polymorph = 16;
 
     bytes Record   = 20;
-    bytes Code     = 21;
 }
 
 message State {
@@ -102,6 +100,16 @@ message SetOutgoingRequest {
     record.Virtual Request = 20 [(gogoproto.nullable) = false];
 }
 
+// SagaCallAcceptNotification informs virtual node that it's time to call saga Accept method.
+message SagaCallAcceptNotification {
+    uint32 Polymorph = 16;
+
+    bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+
+    // Request contains original OutgoingRequest registered by VE
+    bytes Request  = 21;
+}
+
 message SetResult {
     uint32 Polymorph = 16;
 
@@ -109,6 +117,20 @@ message SetResult {
 }
 
 message Activate {
+    uint32 Polymorph = 16;
+
+    bytes Record = 20;
+    bytes Result = 21;
+}
+
+message Deactivate {
+    uint32 Polymorph = 16;
+
+    bytes Record = 20;
+    bytes Result = 21;
+}
+
+message Update {
     uint32 Polymorph = 16;
 
     bytes Record = 20;

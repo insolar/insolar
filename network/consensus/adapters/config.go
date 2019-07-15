@@ -72,6 +72,12 @@ var defaultRoundTimings = common2.RoundTimings{
 	BeforeInPhase3ChasingDelay: 0 * time.Millisecond,
 }
 
+type LocalNodeConfiguration struct {
+	ctx            context.Context
+	timings        common2.RoundTimings
+	secretKeyStore common.SecretKeyStore
+}
+
 func NewLocalNodeConfiguration(ctx context.Context, keyStore insolar.KeyStore) *LocalNodeConfiguration {
 	privateKey, err := keyStore.GetPrivateKey("")
 	if err != nil {
@@ -85,12 +91,6 @@ func NewLocalNodeConfiguration(ctx context.Context, keyStore insolar.KeyStore) *
 		timings:        defaultRoundTimings,
 		secretKeyStore: NewECDSASecretKeyStore(ecdsaPrivateKey),
 	}
-}
-
-type LocalNodeConfiguration struct {
-	ctx            context.Context
-	timings        common2.RoundTimings
-	secretKeyStore common.SecretKeyStore
 }
 
 func (c *LocalNodeConfiguration) GetParentContext() context.Context {
@@ -117,4 +117,10 @@ func (c *LocalNodeConfiguration) GetConsensusTimings(nextPulseDelta uint16, isJo
 
 func (c *LocalNodeConfiguration) GetSecretKeyStore() common.SecretKeyStore {
 	return c.secretKeyStore
+}
+
+type ConsensusConfiguration struct{}
+
+func NewConsensusConfiguration() *ConsensusConfiguration {
+	return &ConsensusConfiguration{}
 }

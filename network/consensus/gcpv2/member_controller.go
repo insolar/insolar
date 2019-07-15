@@ -52,7 +52,10 @@ package gcpv2
 
 import (
 	"context"
+	"fmt"
 	"sync"
+
+	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 
 	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
@@ -62,103 +65,148 @@ import (
 )
 
 func NewConsensusMemberController(chronicle census.ConsensusChronicles, upstream core.UpstreamPulseController,
-	roundFactory core.RoundControllerFactory) core.ConsensusController {
+	roundFactory core.RoundControllerFactory, candidateFeeder core.CandidateControlFeeder,
+	controlFeeder core.ConsensusControlFeeder) core.ConsensusController {
 
 	return &ConsensusMemberController{
-		upstreamPulseController: upstream,
-		chronicle:               chronicle,
-		roundFactory:            roundFactory,
+		upstream:        upstream,
+		chronicle:       chronicle,
+		roundFactory:    roundFactory,
+		candidateFeeder: candidateFeeder,
+		controlFeeder:   controlFeeder,
 	}
 }
 
-type upstreamPulseController core.UpstreamPulseController
+type controlFeeder core.ConsensusControlFeeder
 
 type ConsensusMemberController struct {
 	/* No mutex needed. Set on construction */
-	upstreamPulseController
-	chronicle    census.ConsensusChronicles
-	roundFactory core.RoundControllerFactory
+	controlFeeder
+
+	chronicle       census.ConsensusChronicles
+	roundFactory    core.RoundControllerFactory
+	candidateFeeder core.CandidateControlFeeder
+	upstream        core.UpstreamPulseController
 
 	mutex sync.RWMutex
 	/* mutex needed */
-	currentRound core.RoundController
+	prevRound, currentRound core.RoundController
+	isTerminated            bool
+	isRoundRunning          bool
 }
 
-func (h *ConsensusMemberController) getCurrentRound() core.RoundController {
+func (h *ConsensusMemberController) Abort() {
+	h.discardRound(true, nil)
+}
+
+func (h *ConsensusMemberController) GetActivePowerLimit() (common2.MemberPower, common.PulseNumber) {
+	actCensus := h.chronicle.GetActiveCensus()
+	//TODO adjust power by state
+	return actCensus.GetOnlinePopulation().GetLocalProfile().GetDeclaredPower(), actCensus.GetPulseNumber()
+}
+
+func (h *ConsensusMemberController) getCurrentRound() (core.RoundController, bool) {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
-	return h.currentRound
+	return h.currentRound, h.isRoundRunning
 }
 
-func (h *ConsensusMemberController) ensureRound() (core.RoundController, bool) {
-	r := h.getCurrentRound()
+func (h *ConsensusMemberController) ensureRound() (core.RoundController, bool, bool) {
+	r, isRunning := h.getCurrentRound()
 	if r != nil {
-		return r, false
+		return r, false, isRunning
 	}
 	return h._getOrCreateRound()
 }
 
-func (h *ConsensusMemberController) _getOrCreateRound() (core.RoundController, bool) {
+func (h *ConsensusMemberController) _getOrCreateRound() (core.RoundController, bool, bool) {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 
 	if h.currentRound != nil {
-		return h.currentRound, false
+		return h.currentRound, false, h.isRoundRunning
 	}
 
-	h.currentRound = h.roundFactory.CreateConsensusRound(h.chronicle)
-	h.currentRound.StartConsensusRound(h)
-	return h.currentRound, true
+	h.isRoundRunning = false
+
+	if h.isTerminated {
+		return nil, false, false
+	}
+
+	h.currentRound = h.roundFactory.CreateConsensusRound(h.chronicle, h, h.candidateFeeder, h.prevRound)
+	h.prevRound = nil
+	h.currentRound.StartConsensusRound(h.upstream)
+	return h.currentRound, true, h.isRoundRunning
 }
 
-func (h *ConsensusMemberController) _discardRound() core.RoundController {
+func (h *ConsensusMemberController) _discardRound(terminateMember bool, toBeDiscarded core.RoundController) core.RoundController {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 
 	round := h.currentRound
+	if round == nil || toBeDiscarded != nil && toBeDiscarded != round {
+		//This round was already discarded
+		return nil
+	}
+	h.isRoundRunning = false
 	h.currentRound = nil
+	if terminateMember {
+		h.prevRound = nil
+		h.isTerminated = true
+	} else {
+		h.prevRound = round
+	}
 
 	return round
 }
 
-func (h *ConsensusMemberController) discardRound() {
-	round := h._discardRound()
+func (h *ConsensusMemberController) discardRound(terminateMember bool, toBeDiscarded core.RoundController) {
+	round := h._discardRound(terminateMember, toBeDiscarded)
 	if round != nil {
 		go round.StopConsensusRound()
 	}
 }
 
-func (h *ConsensusMemberController) _processPacket(ctx context.Context, payload packets.PacketParser, from common.HostIdentityHolder, repeated bool) (bool, error) {
-	round, created := h.ensureRound()
+func (h *ConsensusMemberController) _processPacket(ctx context.Context, payload packets.PacketParser, from common.HostIdentityHolder) (core.RoundController, bool, error) {
+	round, created, isRunning := h.ensureRound()
+
+	if round == nil {
+		//terminated
+		return nil, false, fmt.Errorf("member controller is terminated")
+	}
+
 	err := round.HandlePacket(ctx, payload, from)
 
-	if ok, _ := errors.IsNextPulseArrivedError(err); ok {
-		if repeated || created {
-			return false, err
-		}
-		return false, nil
+	if err == nil && !isRunning {
+		h.mutex.Lock()
+		defer h.mutex.Unlock()
+
+		h.isRoundRunning = true
 	}
-	return err == nil, err
+
+	return round, created, err
 }
 
 func (h *ConsensusMemberController) ProcessPacket(ctx context.Context, payload packets.PacketParser, from common.HostIdentityHolder) error {
 
-	ok, err := h._processPacket(ctx, payload, from, false)
-	if ok || err != nil {
+	round, created, err := h._processPacket(ctx, payload, from)
+
+	if created || err == nil {
 		return err
 	}
-	h.discardRound()
 
-	_, err = h._processPacket(ctx, payload, from, true)
+	if isNextPulse, _ := errors.IsNextPulseArrivedError(err); !isNextPulse {
+		return err
+	}
+
+	h.discardRound(false, round)
+	_, _, err = h._processPacket(ctx, payload, from)
 	return err
 }
 
-func (h *ConsensusMemberController) MembershipConfirmed(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
-	// h.discardRound()
-	h.upstreamPulseController.MembershipConfirmed(report, expectedCensus)
-}
-
-func (h *ConsensusMemberController) MembershipLost(graceful bool) {
-	h.discardRound()
-	h.upstreamPulseController.MembershipLost(graceful)
+func (h *ConsensusMemberController) ConsensusFinished(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
+	if expectedCensus == nil || report.MemberMode.IsEvicted() {
+		h.discardRound(true, nil)
+	}
+	h.controlFeeder.ConsensusFinished(report, expectedCensus)
 }

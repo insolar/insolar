@@ -66,15 +66,17 @@ func TestMarshalUnmarshal(t *testing.T) {
 		// {tp: payload.TypeSetIncomingRequest, pl: &payload.SetIncomingRequest{}},
 		{tp: payload.TypeSetResult, pl: &payload.SetResult{}},
 		{tp: payload.TypeActivate, pl: &payload.Activate{}},
+		{tp: payload.TypeDeactivate, pl: &payload.Deactivate{}},
+		{tp: payload.TypeUpdate, pl: &payload.Update{}},
 	}
 
 	for _, d := range table {
 		t.Run(d.tp.String(), func(t *testing.T) {
 			fuzz.New().Fuzz(d.pl)
 			encoded, err := payload.Marshal(d.pl)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			decoded, err := payload.Unmarshal(encoded)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, d.pl, decoded)
 		})
 	}

@@ -27,12 +27,11 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 
-	wmBus "github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/log"
 
 	"github.com/insolar/insolar/configuration"
@@ -40,7 +39,6 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -53,54 +51,18 @@ const maxQueueLength = 10
 
 type Ref = insolar.Reference
 
-// Context of one contract execution
-type ObjectState struct {
-	sync.Mutex
-
-	ExecutionState *ExecutionState
-	Validation     *ExecutionState
-}
-
-func (st *ObjectState) GetModeState(mode insolar.CallMode) (rv *ExecutionState, err error) {
-	switch mode {
-	case insolar.ExecuteCallMode:
-		rv = st.ExecutionState
-	case insolar.ValidateCallMode:
-		rv = st.Validation
-	default:
-		err = errors.Errorf("'%d' is unknown object processing mode", mode)
-	}
-
-	if rv == nil && err != nil {
-		err = errors.Errorf("object is not in '%s' mode", mode)
-	}
-	return rv, err
-}
-
-func (st *ObjectState) MustModeState(mode insolar.CallMode) *ExecutionState {
-	res, err := st.GetModeState(mode)
-	if err != nil {
-		panic(err)
-	}
-	if res.Broker.currentList.Empty() {
-		panic("object " + res.Ref.String() + " has no Current")
-	}
-	return res
-}
-
 func makeWMMessage(ctx context.Context, payLoad watermillMsg.Payload, msgType string) *watermillMsg.Message {
 	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payLoad)
-	wmMsg.Metadata.Set(wmBus.MetaTraceID, inslogger.TraceID(ctx))
+	wmMsg.Metadata.Set(bus.MetaTraceID, inslogger.TraceID(ctx))
 
 	sp, err := instracer.Serialize(ctx)
 	if err == nil {
-		wmMsg.Metadata.Set(wmBus.MetaSpanData, string(sp))
+		wmMsg.Metadata.Set(bus.MetaSpanData, string(sp))
 	} else {
 		inslogger.FromContext(ctx).Error(err)
 	}
 
-	wmMsg.Metadata.Set(MessageTypeField, msgType)
-
+	wmMsg.Metadata.Set(bus.MetaType, msgType)
 	return wmMsg
 }
 
@@ -117,6 +79,8 @@ type LogicRunner struct {
 	JetCoordinator             jet.Coordinator                    `inject:""`
 	RequestsExecutor           RequestsExecutor                   `inject:""`
 	MachinesManager            MachinesManager                    `inject:""`
+	Publisher                  watermillMsg.Publisher
+	Sender                     bus.Sender
 	StateStorage               StateStorage
 
 	Cfg *configuration.LogicRunner
@@ -130,89 +94,62 @@ type LogicRunner struct {
 	// Inner dispatcher will be merged with FlowDispatcher after
 	// complete migration to watermill.
 	FlowDispatcher      *dispatcher.Dispatcher
-	innerFlowDispatcher *dispatcher.Dispatcher
-	publisher           watermillMsg.Publisher
-	router              *watermillMsg.Router
+	InnerFlowDispatcher *dispatcher.Dispatcher
 }
 
 // NewLogicRunner is constructor for LogicRunner
-func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
+func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publisher, sender bus.Sender) (*LogicRunner, error) {
 	if cfg == nil {
 		return nil, errors.New("LogicRunner have nil configuration")
 	}
 	res := LogicRunner{
-		Cfg:          cfg,
-		StateStorage: NewStateStorage(),
+		Cfg:       cfg,
+		Publisher: publisher,
+		Sender:    sender,
 	}
 
-	err := initHandlers(&res)
-	if err != nil {
-		return nil, errors.Wrap(err, "Error while init handlers for logic runner:")
-	}
+	initHandlers(&res)
 
 	return &res, nil
 }
 
 func (lr *LogicRunner) LRI() {}
 
-func initHandlers(lr *LogicRunner) error {
-	wmLogger := log.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
-	pubSub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
-
+func initHandlers(lr *LogicRunner) {
 	dep := &Dependencies{
-		Publisher: pubSub,
+		Publisher: lr.Publisher,
 		lr:        lr,
+		Sender:    lr.Sender,
 	}
 
-	initHandle := func(msg bus.Message) *Init {
+	initHandle := func(msg *watermillMsg.Message) *Init {
 		return &Init{
 			dep:     dep,
 			Message: msg,
 		}
 	}
-	lr.FlowDispatcher = dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
+	lr.FlowDispatcher = dispatcher.NewDispatcher(func(msg *watermillMsg.Message) flow.Handle {
 		return initHandle(msg).Present
-	}, func(msg bus.Message) flow.Handle {
+	}, func(msg *watermillMsg.Message) flow.Handle {
 		return initHandle(msg).Future
+	}, func(msg *watermillMsg.Message) flow.Handle {
+		return initHandle(msg).Past
 	})
 
-	innerInitHandle := func(msg bus.Message) *InnerInit {
-		innerMsg := msg.WatermillMsg
+	innerInitHandle := func(msg *watermillMsg.Message) *InnerInit {
 		return &InnerInit{
 			dep:     dep,
-			Message: innerMsg,
+			Message: msg,
 		}
 	}
 
-	lr.innerFlowDispatcher = dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
+	lr.InnerFlowDispatcher = dispatcher.NewDispatcher(func(msg *watermillMsg.Message) flow.Handle {
 		return innerInitHandle(msg).Present
-	}, func(msg bus.Message) flow.Handle {
+	}, func(msg *watermillMsg.Message) flow.Handle {
+		return innerInitHandle(msg).Present
+	}, func(msg *watermillMsg.Message) flow.Handle {
 		return innerInitHandle(msg).Present
 	})
-
-	router, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, wmLogger)
-	if err != nil {
-		return errors.Wrap(err, "Error while creating new watermill router")
-	}
-
-	router.AddNoPublisherHandler(
-		"InnerMsgHandler",
-		InnerMsgTopic,
-		pubSub,
-		lr.innerFlowDispatcher.InnerSubscriber,
-	)
-	go func() {
-		if err := router.Run(); err != nil {
-			ctx := context.Background()
-			inslogger.FromContext(ctx).Error("Error while running router", err)
-		}
-	}()
-	<-router.Running()
-
-	lr.router = router
-	lr.publisher = pubSub
-
-	return nil
 }
 
 func (lr *LogicRunner) initializeBuiltin(_ context.Context) error {
@@ -246,6 +183,7 @@ func (lr *LogicRunner) initializeGoPlugin(ctx context.Context) error {
 }
 
 func (lr *LogicRunner) Init(ctx context.Context) error {
+	lr.StateStorage = NewStateStorage(lr.Publisher, lr.RequestsExecutor, lr.MessageBus, lr.JetCoordinator, lr.PulseAccessor)
 	lr.rpc = lrCommon.NewRPC(
 		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage),
 		lr.Cfg,
@@ -273,27 +211,14 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 	}
 
 	lr.ArtifactManager.InjectFinish()
-	lr.RegisterHandlers()
 
 	return nil
-}
-
-func (lr *LogicRunner) RegisterHandlers() {
-	lr.MessageBus.MustRegister(insolar.TypeCallMethod, lr.FlowDispatcher.WrapBusHandle)
-	lr.MessageBus.MustRegister(insolar.TypeExecutorResults, lr.FlowDispatcher.WrapBusHandle)
-	lr.MessageBus.MustRegister(insolar.TypePendingFinished, lr.FlowDispatcher.WrapBusHandle)
-	lr.MessageBus.MustRegister(insolar.TypeAdditionalCallFromPreviousExecutor, lr.FlowDispatcher.WrapBusHandle)
-	lr.MessageBus.MustRegister(insolar.TypeStillExecuting, lr.FlowDispatcher.WrapBusHandle)
-	lr.MessageBus.MustRegister(insolar.TypeAbandonedRequestsNotification, lr.FlowDispatcher.WrapBusHandle)
 }
 
 // Stop stops logic runner component and its executors
 func (lr *LogicRunner) Stop(ctx context.Context) error {
 	reterr := error(nil)
 	if err := lr.rpc.Stop(ctx); err != nil {
-		return err
-	}
-	if err := lr.router.Close(); err != nil {
 		return err
 	}
 
@@ -361,18 +286,18 @@ func (lr *LogicRunner) CheckExecutionLoop(
 		return false
 	}
 
-	es := lr.StateStorage.GetExecutionState(*request.Object)
-	if es == nil {
+	broker := lr.StateStorage.GetExecutionState(*request.Object)
+	if broker == nil {
 		return false
 	}
 
-	es.Lock()
-	defer es.Unlock()
+	broker.executionState.Lock()
+	defer broker.executionState.Unlock()
 
-	if es.Broker.currentList.Empty() {
+	if broker.currentList.Empty() {
 		return false
 	}
-	if es.Broker.currentList.Check(noLoopCheckerPredicate, request.APIRequestID) {
+	if broker.currentList.Check(noLoopCheckerPredicate, request.APIRequestID) {
 		return false
 	}
 
@@ -380,18 +305,11 @@ func (lr *LogicRunner) CheckExecutionLoop(
 	return true
 }
 
-func (lr *LogicRunner) startGetLedgerPendingRequest(ctx context.Context, es *ExecutionState) {
-	err := lr.publisher.Publish(InnerMsgTopic, makeWMMessage(ctx, es.Ref.Bytes(), getLedgerPendingRequestMsg))
-	if err != nil {
-		inslogger.FromContext(ctx).Warnf("can't send getLedgerPendingRequestMsg: ", err)
-	}
-}
-
 func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 	lr.StateStorage.Lock()
 
 	lr.FlowDispatcher.ChangePulse(ctx, pulse)
-	lr.innerFlowDispatcher.ChangePulse(ctx, pulse)
+	lr.InnerFlowDispatcher.ChangePulse(ctx, pulse)
 
 	ctx, span := instracer.StartSpan(ctx, "pulse.logicrunner")
 	defer span.End()
@@ -406,29 +324,26 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 		)
 		state.Lock()
 
-		if es := state.ExecutionState; es != nil {
-			es.Lock()
+		if broker := state.ExecutionBroker; broker != nil {
+			broker.executionState.Lock()
 
-			toSend := es.OnPulse(ctx, meNext)
+			toSend := state.ExecutionBroker.OnPulse(ctx, meNext)
 			messages = append(messages, toSend...)
 
-			if !meNext {
-				if es.Broker.currentList.Empty() {
-					state.ExecutionState = nil
-				}
-			} else {
-				if es.pending == message.NotPending && es.LedgerHasMoreRequests {
-					lr.startGetLedgerPendingRequest(ctx, es)
-				}
-				if es.pending == message.NotPending {
-					es.Broker.StartProcessorIfNeeded(ctx)
-				}
+			if !meNext && state.ExecutionBroker.currentList.Empty() {
+				// we're not executing and we have nothing to process
+				state.ExecutionBroker = nil
+			} else if meNext && broker.executionState.pending == message.NotPending {
+				// we're executing, micro optimization, check pending
+				// status, reset ledger check status and start execution
+				state.ExecutionBroker.ResetLedgerCheck()
+				state.ExecutionBroker.StartProcessorIfNeeded(ctx)
 			}
 
-			es.Unlock()
+			broker.executionState.Unlock()
 		}
 
-		if state.ExecutionState == nil && state.Validation == nil {
+		if state.Validation == nil && state.ExecutionBroker == nil {
 			lr.StateStorage.DeleteObjectState(ref)
 		}
 
@@ -461,14 +376,6 @@ func (lr *LogicRunner) stopIfNeeded(ctx context.Context) {
 	}
 }
 
-func (lr *LogicRunner) HandleAbandonedRequestsNotificationMessage(
-	ctx context.Context, parcel insolar.Parcel,
-) (
-	insolar.Reply, error,
-) {
-	return lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
-}
-
 func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, messages []insolar.Message) {
 	ctx, spanMessages := instracer.StartSpan(ctx, "pulse.logicrunner sending messages")
 	spanMessages.AddAttributes(trace.StringAttribute("numMessages", strconv.Itoa(len(messages))))
@@ -497,8 +404,9 @@ func convertQueueToMessageQueue(ctx context.Context, queue []*Transcript) []mess
 	var traces string
 	for _, elem := range queue {
 		mq = append(mq, message.ExecutionQueueElement{
-			RequestRef: *elem.RequestRef,
-			Request:    *elem.Request,
+			RequestRef:  elem.RequestRef,
+			Request:     *elem.Request,
+			ServiceData: serviceDataFromContext(elem.Context),
 		})
 
 		traces += inslogger.TraceID(elem.Context) + ", "
@@ -515,4 +423,26 @@ func (lr *LogicRunner) pulse(ctx context.Context) *insolar.Pulse {
 		panic(err)
 	}
 	return &p
+}
+
+func contextFromServiceData(data message.ServiceData) context.Context {
+	ctx := inslogger.ContextWithTrace(context.Background(), data.LogTraceID)
+	ctx = inslogger.WithLoggerLevel(ctx, data.LogLevel)
+	if data.TraceSpanData != nil {
+		parentSpan := instracer.MustDeserialize(data.TraceSpanData)
+		return instracer.WithParentSpan(ctx, parentSpan)
+	}
+	return ctx
+}
+
+func serviceDataFromContext(ctx context.Context) message.ServiceData {
+	if ctx == nil {
+		log.Error("nil context, can't create correct ServiceData")
+		return message.ServiceData{}
+	}
+	return message.ServiceData{
+		LogTraceID:    inslogger.TraceID(ctx),
+		LogLevel:      inslogger.GetLoggerLevel(ctx),
+		TraceSpanData: instracer.MustSerialize(ctx),
+	}
 }
