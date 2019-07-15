@@ -60,7 +60,7 @@ func (p *GetRequestWM) Proceed(ctx context.Context) error {
 
 	msg, err := payload.NewMessage(&payload.Request{
 		RequestID: p.requestID,
-		Request:   record.Wrap(rec),
+		Request:   *rec.Virtual,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create reply")

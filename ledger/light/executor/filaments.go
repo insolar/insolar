@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -595,11 +596,18 @@ func (c *FilamentCalculatorDefault) checkReason(ctx context.Context, reason inso
 	if err != nil {
 		return false, errors.Wrap(err, "failed to unmarshal reply")
 	}
-	_, ok = pl.(*payload.Request)
-	if !ok {
+
+	switch concrete := pl.(type) {
+	case *payload.Request:
+		return true, nil
+	case *payload.Error:
+		if strings.Contains(concrete.Text, object.ErrNotFound.Error()) {
+			return true, nil
+		}
+		return false, errors.New(concrete.Text)
+	default:
 		return false, fmt.Errorf("unexpected reply %T", pl)
 	}
-	return true, nil
 }
 
 type fetchingIterator struct {
