@@ -914,10 +914,35 @@ func TestFilamentCalculatorDefault_RequestDuplicate(t *testing.T) {
 
 	resetComponents()
 	t.Run("returns request and result", func(t *testing.T) {
+		coordinator.IsBeyondLimitMock.Return(true, nil)
+		hNode := gen.Reference()
+		coordinator.HeavyMock.Return(&hNode, nil)
+
 		b := newFilamentBuilder(ctx, pcs, records)
-		req := record.IncomingRequest{Nonce: rand.Uint64(), Reason: *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, nil))}
+		reason := *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, nil))
+		req := record.IncomingRequest{Nonce: rand.Uint64(), Reason: reason}
 		req1 := b.Append(insolar.FirstPulseNumber+1, req)
 		res1 := b.Append(insolar.FirstPulseNumber+2, record.Result{Request: *insolar.NewReference(req1.RecordID)})
+
+		sender.SendTargetFunc = func(_ context.Context, inMsg *message.Message, inNode insolar.Reference) (<-chan *message.Message, func()) {
+			getReq := payload.GetRequest{}
+			err := getReq.Unmarshal(inMsg.Payload)
+			require.NoError(t, err)
+
+			require.Equal(t, *reason.Record(), getReq.RequestID)
+			require.Equal(t, hNode, inNode)
+
+			reqMsg, err := payload.NewMessage(&payload.Request{})
+			require.NoError(t, err)
+
+			meta := payload.Meta{Payload: reqMsg.Payload}
+			buf, err := meta.Marshal()
+			require.NoError(t, err)
+			reqMsg.Payload = buf
+			ch := make(chan *message.Message, 1)
+			ch <- reqMsg
+			return ch, func() {}
+		}
 
 		objectID := gen.ID()
 		fromPulse := res1.MetaID.Pulse()
@@ -939,11 +964,36 @@ func TestFilamentCalculatorDefault_RequestDuplicate(t *testing.T) {
 
 	resetComponents()
 	t.Run("returns only request", func(t *testing.T) {
+		coordinator.IsBeyondLimitMock.Return(true, nil)
+		hNode := gen.Reference()
+		coordinator.HeavyMock.Return(&hNode, nil)
+
 		b := newFilamentBuilder(ctx, pcs, records)
-		reqR := record.IncomingRequest{Nonce: rand.Uint64(), Reason: *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, nil))}
+		reason := *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, nil))
+		reqR := record.IncomingRequest{Nonce: rand.Uint64(), Reason: reason}
 		req1 := b.Append(insolar.FirstPulseNumber+1, reqR)
 		reqR2 := record.IncomingRequest{Nonce: rand.Uint64(), Reason: *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, nil))}
 		req2 := b.Append(insolar.FirstPulseNumber+2, reqR2)
+
+		sender.SendTargetFunc = func(_ context.Context, inMsg *message.Message, inNode insolar.Reference) (<-chan *message.Message, func()) {
+			getReq := payload.GetRequest{}
+			err := getReq.Unmarshal(inMsg.Payload)
+			require.NoError(t, err)
+
+			require.Equal(t, *reason.Record(), getReq.RequestID)
+			require.Equal(t, hNode, inNode)
+
+			reqMsg, err := payload.NewMessage(&payload.Request{})
+			require.NoError(t, err)
+
+			meta := payload.Meta{Payload: reqMsg.Payload}
+			buf, err := meta.Marshal()
+			require.NoError(t, err)
+			reqMsg.Payload = buf
+			ch := make(chan *message.Message, 1)
+			ch <- reqMsg
+			return ch, func() {}
+		}
 
 		objectID := gen.ID()
 		fromPulse := req1.MetaID.Pulse()

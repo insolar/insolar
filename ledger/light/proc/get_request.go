@@ -66,7 +66,7 @@ func (p *GetRequestWM) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to create reply")
 	}
 
-	go p.Dep.Sender.Reply(ctx, p.message, msg)
+	p.Dep.Sender.Reply(ctx, p.message, msg)
 	inslogger.FromContext(ctx).Info("sending request")
 
 	return nil
