@@ -124,7 +124,7 @@ func (js *JetSplitterDefault) Do(
 		result = append(result, leftJetID, rightJetID)
 
 		inslog.WithFields(map[string]interface{}{
-			"left_child": leftJetID.DebugString(), "right_child": rightJetID.DebugString(),
+			"jet_left": leftJetID.DebugString(), "jet_right": rightJetID.DebugString(),
 		}).Info("jet split performed")
 	}
 
@@ -140,8 +140,9 @@ func (js *JetSplitterDefault) createDrop(
 		Pulse: pn,
 		JetID: jetID,
 	}
+
 	// skip any thresholds calculation for split if jet depth for jetID reached limit.
-	if jetID.Depth() > js.cfg.DepthLimit {
+	if jetID.Depth() >= js.cfg.DepthLimit {
 		return false, js.dropModifier.Set(ctx, block)
 	}
 

@@ -26,7 +26,6 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
@@ -52,7 +51,10 @@ type jetConfig struct {
 	hasSplit bool
 }
 
-var defaultDepthLimit uint8 = 2
+var (
+	initialDepth      uint8 = 2
+	defaultDepthLimit       = initialDepth + 2
+)
 
 // initial jets
 var (
@@ -64,12 +66,8 @@ var (
 // children jets
 var (
 	// left and right children for jet10
-	children = map[insolar.JetID]map[string]insolar.JetID{
-		jet10: {
-			"left":  jet.NewIDFromString("100"),
-			"right": jet.NewIDFromString("101"),
-		},
-	}
+	jet10_left  = jet.NewIDFromString("100")
+	jet10_right = jet.NewIDFromString("101")
 )
 
 var cases = []splitCase{
@@ -124,15 +122,16 @@ var cases = []splitCase{
 		},
 	},
 	{
+		// expect here only one split has preformed
 		name: "split_with_depth_limit",
 		cfg: configuration.JetSplit{
 			ThresholdRecordsCount:  4,
 			ThresholdOverflowCount: 0,
-			DepthLimit:             2,
+			DepthLimit:             initialDepth + 1,
 		},
 		pulses: []map[insolar.JetID]jetConfig{
 			{jet10: {5, 1, true}},
-			{children[jet10]["left"]: {5, 0, false}},
+			{jet10_left: {5, 0, false}},
 		},
 	},
 }
@@ -140,19 +139,10 @@ var cases = []splitCase{
 func TestJetSplitter(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	// prepare initial pulses
-	pn := gen.PulseNumber()
-	// just avoid special pulses
-	if pn < 60000 {
-		pn += 60000
-	}
-	previousPulse, endedPulse, newPulse := pn, pn+1, pn+2
-
-	initialJets := []insolar.JetID{
-		jet.NewIDFromString("0"),
-		jet.NewIDFromString("10"),
-		jet.NewIDFromString("11"),
-	}
+	// prepare initial pulses and jets
+	var initalPulse insolar.PulseNumber = 60000
+	previousPulse, endedPulse, newPulse := initalPulse, initalPulse+1, initalPulse+2
+	initialJets := []insolar.JetID{jet0, jet10, jet11}
 
 	checkCase := func(t *testing.T, sc splitCase) {
 		// real components
