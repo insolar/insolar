@@ -78,11 +78,11 @@ func (r *EmuUpstreamPulseController) PreparePulseChange(report api.UpstreamRepor
 	c := make(chan proofs.NodeStateHash, 1)
 	nsh := NewEmuNodeStateHash(rand.Uint64())
 	if r.nshDelay == 0 {
-		c <- &nsh
+		c <- nsh
 		close(c)
 	} else {
 		time.AfterFunc(r.nshDelay, func() {
-			c <- &nsh
+			c <- nsh
 			close(c)
 		})
 	}
@@ -98,8 +98,8 @@ func (*EmuUpstreamPulseController) CancelPulseChange() {
 func (*EmuUpstreamPulseController) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
 }
 
-func NewEmuNodeStateHash(v uint64) EmuNodeStateHash {
-	return EmuNodeStateHash{Bits64: longbits.NewBits64(v)}
+func NewEmuNodeStateHash(v uint64) *EmuNodeStateHash {
+	return &EmuNodeStateHash{Bits64: longbits.NewBits64(v)}
 }
 
 var _ proofs.NodeStateHash = &EmuNodeStateHash{}

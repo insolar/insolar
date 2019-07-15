@@ -51,111 +51,28 @@
 package core
 
 import (
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
+
+func NewSimpleProfileIntroFactory(pksFactory cryptkit.KeyStoreFactory) profiles.Factory {
+	return &SimpleProfileIntroFactory{pksFactory}
+}
 
 var _ profiles.Factory = &SimpleProfileIntroFactory{}
 
 type SimpleProfileIntroFactory struct {
+	pksFactory cryptkit.KeyStoreFactory
 }
 
 func (p *SimpleProfileIntroFactory) CreateBriefIntroProfile(candidate profiles.BriefCandidateProfile) profiles.NodeIntroProfile {
-	return &SimpleNodeIntroProfile{}
+
+	pks := p.pksFactory.GetPublicKeyStore(candidate.GetNodePublicKey())
+	return profiles.NewNodeIntroProfileOfBrief(candidate, pks)
 }
 
 func (p *SimpleProfileIntroFactory) CreateFullIntroProfile(candidate profiles.CandidateProfile) profiles.NodeIntroProfile {
-	panic("implement me")
-}
 
-type SimpleNodeIntroProfile struct {
-	endpoints         []endpoints.Outbound
-	nodeID            insolar.ShortNodeID
-	primaryRole       member.PrimaryRole
-	specialRoles      member.SpecialRole
-	pk                cryptkit.SignatureKeyHolder
-	startPower        member.Power
-	announceSignature cryptkit.SignatureHolder
-	isFull            bool
-	powerSet          member.PowerSet
-	nodeRef           insolar.Reference
-}
-
-func (p *SimpleNodeIntroProfile) ensureFull() {
-	if p.isFull {
-		return
-	}
-	panic("illegal state")
-}
-
-func (p *SimpleNodeIntroProfile) GetReference() insolar.Reference {
-	p.ensureFull()
-	return p.nodeRef
-}
-
-func (p *SimpleNodeIntroProfile) IsAllowedPower(pw member.Power) bool {
-	p.ensureFull()
-	return p.powerSet.IsAllowed(pw)
-}
-
-func (p *SimpleNodeIntroProfile) ConvertPowerRequest(request power.Request) member.Power {
-	p.ensureFull()
-	if ok, cl := request.AsCapacityLevel(); ok {
-		return p.powerSet.ForLevel(cl)
-	}
-	_, pw := request.AsMemberPower()
-	return p.powerSet.FindNearestValid(pw)
-}
-
-func (p *SimpleNodeIntroProfile) GetDefaultEndpoint() endpoints.Outbound {
-	return p.endpoints[0]
-}
-
-func (p *SimpleNodeIntroProfile) GetPublicKeyStore() cryptkit.PublicKeyStore {
-	return nil // TODO
-}
-
-func (p *SimpleNodeIntroProfile) IsAcceptableHost(from endpoints.Inbound) bool {
-	for _, ep := range p.endpoints {
-		if ep.CanAccept(from) {
-			return true
-		}
-	}
-	return false
-}
-
-func (p *SimpleNodeIntroProfile) GetShortNodeID() insolar.ShortNodeID {
-	return p.nodeID
-}
-
-func (p *SimpleNodeIntroProfile) GetPrimaryRole() member.PrimaryRole {
-	return p.primaryRole
-}
-
-func (p *SimpleNodeIntroProfile) GetSpecialRoles() member.SpecialRole {
-	return p.specialRoles
-}
-
-func (p *SimpleNodeIntroProfile) GetNodePublicKey() cryptkit.SignatureKeyHolder {
-	return p.pk
-}
-
-func (p *SimpleNodeIntroProfile) GetStartPower() member.Power {
-	return p.startPower
-}
-
-func (p *SimpleNodeIntroProfile) GetAnnouncementSignature() cryptkit.SignatureHolder {
-	return p.announceSignature
-}
-
-func (p *SimpleNodeIntroProfile) HasIntroduction() bool {
-	return p.isFull
-}
-
-func (p *SimpleNodeIntroProfile) GetIntroduction() profiles.NodeIntroduction {
-	return p
+	pks := p.pksFactory.GetPublicKeyStore(candidate.GetNodePublicKey())
+	return profiles.NewNodeIntroProfileOfFull(candidate, pks)
 }

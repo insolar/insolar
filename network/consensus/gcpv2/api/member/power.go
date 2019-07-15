@@ -51,6 +51,7 @@
 package member
 
 import (
+	"math"
 	"math/bits"
 
 	"github.com/insolar/insolar/network/consensus/common/capacity"
@@ -95,6 +96,23 @@ func (v Power) PercentAndMin(percent int, min Power) Power {
 		return min
 	}
 	return PowerOf(uint16(vv))
+}
+
+func (v Power) Delta(o Power) uint16 {
+	if v == o {
+		return 0
+	}
+	return v.ToLinearValue() - o.ToLinearValue()
+}
+
+func (v Power) AbsDelta(o Power) uint16 {
+	if v == o {
+		return 0
+	}
+	if v > o {
+		return v.ToLinearValue() - o.ToLinearValue()
+	}
+	return o.ToLinearValue() - v.ToLinearValue()
 }
 
 /*
@@ -280,43 +298,60 @@ func (v PowerSet) ForLevelWithPercents(lvl capacity.Level, pMinimal, pReduced, p
 }
 
 /*
-Only for normalized
+Chooses the nearest allowed value. Prefers higher values. Returns zero only for a zero value or for a zero range.
+Only for normalized set.
 */
 
 func (v PowerSet) FindNearestValid(p Power) Power {
 
-	panic("not implemented")
+	left := uint8(0)
+	right := uint8(3)
+	switch {
+	case p == 0 || v[0] == p || v[1] == p || v[2] == p || v[3] == p:
+		return p
+	case p >= v[3]:
+		return v[3]
+	case p <= v[0]:
+		return v[0]
+	case v[2] == 0: // [min, ?, 0, max]
+		if v[0] == 0 || v[1] == 0 { // [0, _, 0, max] or [min, 0, 0, max]
+			return p
+		}
+		// [v0, min, 0, max]
+		if v[1] > p {
+			return p
+		}
+		// get nearest of v[0], v[1]
+		right = 1
+	case v[1] == 0: // [?, 0, p2, max]
+		if v[2] < p {
+			// get nearest of v[2], v[3]
+			left = 2
+			break
+		}
+		if v[0] < p { // [min, 0, p2, _]
+			return p
+		}
+		return v[0]
+	case v[0] == 0: // [0, p1, p2, p3]
+		if v[1] > p { // [0, p1, p2, p3]
+			return p
+		}
+		// get nearest of v[1], v[2], v[3]
+		left = 1
+	default: // [p0, p1, p2, p3]
+	}
 
-	//switch {
-	//case p == 0 || v[0] == p || v[1] == p || v[2] == p || v[3] == p:
-	//	return p
-	//case p >= v[3]:
-	//	return v[3]
-	//
-	//}
-	//
-	//if p >= v[3] {
-	//}
-	//if p <= v[0] {
-	//	return v[0]
-	//}
-	//
-	//if v[2] == 0 { // [min, ?, 0, max]
-	//	if v[0] == 0 || v[1] == 0 {
-	//		return true
-	//	} // [0, ?0, 0, max] or [min, 0, 0, max]
-	//
-	//	// [min, p1, 0, max]
-	//	return v[1] <= p
-	//}
-	//
-	//if v[1] == 0 { // [?, 0, p2, max]
-	//	if v[0] == 0 { // [0, 0, p2, max]
-	//		return p <= v[2] || p == v[3]
-	//	}
-	//	// [min, 0, p2, max]
-	//	return v[3] == p || v[2] >= p
-	//}
-	//// [min, p1, p2, max]
-	//return false
+	var nearest Power
+	for delta := uint16(math.MaxUint16); right >= left; right-- {
+		next := v[right]
+		nextDelta := p.AbsDelta(next)
+		if delta > nextDelta {
+			delta = nextDelta
+			nearest = next
+		} else {
+			return nearest
+		}
+	}
+	panic("impossible")
 }

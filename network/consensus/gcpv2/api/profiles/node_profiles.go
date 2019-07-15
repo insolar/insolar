@@ -52,16 +52,14 @@ package profiles
 
 import (
 	"fmt"
-	"time"
-
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
-
-	"github.com/insolar/insolar/insolar"
+	"time"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.Host -o . -s _mock.go
@@ -141,16 +139,14 @@ type BriefCandidateProfile interface {
 type CandidateProfile interface {
 	BriefCandidateProfile
 
-	GetIssuedAtPulse() pulse.Number // =0 when a node was connected during zeronet
-	GetIssuedAtTime() time.Time
-
 	GetPowerLevels() member.PowerSet
-
 	GetExtraEndpoints() []endpoints.Outbound
 
 	GetReference() insolar.Reference
 	// NodeRefProof	[]common.Bits512
 
+	GetIssuedAtPulse() pulse.Number // =0 when a node was connected during zeronet
+	GetIssuedAtTime() time.Time
 	GetIssuerID() insolar.ShortNodeID
 	GetIssuerSignature() cryptkit.SignatureHolder
 }

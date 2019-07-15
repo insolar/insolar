@@ -81,12 +81,12 @@ type Operational interface {
 
 	GetMisbehaviorRegistry() MisbehaviorRegistry
 	GetMandateRegistry() MandateRegistry
+	GetProfileFactory(ksf cryptkit.KeyStoreFactory) profiles.Factory
 }
 
 type Active interface {
 	Operational
 	GetPulseData() pulse.Data
-	GetProfileFactory(ksf cryptkit.KeyStoreFactory) profiles.Factory
 }
 
 type Expected interface {

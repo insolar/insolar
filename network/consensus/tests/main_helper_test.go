@@ -53,6 +53,7 @@ package tests
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
@@ -66,7 +67,7 @@ func newEmuNetworkBuilder(ctx context.Context, netStrategy NetStrategy,
 	r := emuNetworkBuilder{}
 	r.network = NewEmuNetwork(netStrategy, ctx)
 	r.config = NewEmuLocalConfig(ctx)
-	r.primingCloudStateHash = NewEmuNodeStateHash(1234567890)
+	r.primingCloudStateHash = EmuPrimingHash
 	r.strategyFactory = roundStrategyFactory
 	return r
 }
@@ -74,7 +75,7 @@ func newEmuNetworkBuilder(ctx context.Context, netStrategy NetStrategy,
 type emuNetworkBuilder struct {
 	network               *EmuNetwork
 	config                api.LocalNodeConfiguration
-	primingCloudStateHash EmuNodeStateHash
+	primingCloudStateHash cryptkit.DigestHolder
 	strategyFactory       core.RoundStrategyFactory
 }
 
@@ -117,7 +118,7 @@ func (p *emuNetworkBuilder) connectEmuNode(nodes []profiles.NodeIntroProfile, se
 		controlFeeder.leaveReason = uint32(selfIndex) //simulate leave
 	}
 
-	chronicles := NewEmuChronicles(nodes, selfIndex, &p.primingCloudStateHash)
+	chronicles := NewEmuChronicles(nodes, selfIndex, p.primingCloudStateHash)
 	self := nodes[selfIndex]
 	node := NewConsensusHost(self.GetDefaultEndpoint().GetNameAddress())
 	node.ConnectTo(chronicles, p.network, p.strategyFactory, candidateFeeder, controlFeeder, p.config)

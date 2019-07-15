@@ -52,6 +52,8 @@ package censusimpl
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"sync"
 
 	"github.com/insolar/insolar/network/consensus/common/pulse"
@@ -59,8 +61,8 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 )
 
-func NewLocalChronicles() LocalConsensusChronicles {
-	return &localChronicles{}
+func NewLocalChronicles(profileFactory profiles.Factory) LocalConsensusChronicles {
+	return &localChronicles{profileFactory: profileFactory}
 }
 
 type LocalConsensusChronicles interface {
@@ -81,6 +83,7 @@ type localChronicles struct {
 	active              localActiveCensus
 	expected            census.Expected
 	expectedPulseNumber pulse.Number
+	profileFactory      profiles.Factory
 }
 
 func (c *localChronicles) GetLatestCensus() census.Operational {
@@ -168,4 +171,8 @@ func (c *localChronicles) makeExpected(ce census.Expected) {
 	}
 
 	c.expected = ce
+}
+
+func (c *localChronicles) GetProfileFactory(factory cryptkit.KeyStoreFactory) profiles.Factory {
+	return c.profileFactory
 }

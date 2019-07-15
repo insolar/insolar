@@ -52,6 +52,7 @@ package tests
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -73,12 +74,12 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-func NewEmuChronicles(intros []profiles.NodeIntroProfile, localNodeIndex int, primingCloudStateHash proofs.CloudStateHash) api.ConsensusChronicles {
+func NewEmuChronicles(intros []profiles.NodeIntroProfile, localNodeIndex int,
+	primingCloudStateHash proofs.CloudStateHash) api.ConsensusChronicles {
+
 	pop := censusimpl.NewManyNodePopulation(intros[localNodeIndex], intros)
-	chronicles := censusimpl.NewLocalChronicles()
-	censusimpl.NewPrimingCensus(
-		&pop,
-		&EmuProfileFactory{},
+	chronicles := censusimpl.NewLocalChronicles(core.NewSimpleProfileIntroFactory(EmuDefaultCryptography))
+	censusimpl.NewPrimingCensus(&pop,
 		&EmuVersionedRegistries{primingCloudStateHash: primingCloudStateHash},
 	).SetAsActiveTo(chronicles)
 	return chronicles
@@ -204,7 +205,7 @@ type EmuNodeIntro struct {
 }
 
 func (c *EmuNodeIntro) GetJoinerSignature() cryptkit.SignatureHolder {
-	panic("implement me")
+	return nil
 }
 
 func (c *EmuNodeIntro) GetIssuedAtPulse() pulse.Number {
@@ -220,15 +221,15 @@ func (c *EmuNodeIntro) GetPowerLevels() member.PowerSet {
 }
 
 func (c *EmuNodeIntro) GetExtraEndpoints() []endpoints.Outbound {
-	panic("implement me")
+	return nil
 }
 
 func (c *EmuNodeIntro) GetIssuerID() insolar.ShortNodeID {
-	panic("implement me")
+	return 0
 }
 
 func (c *EmuNodeIntro) GetIssuerSignature() cryptkit.SignatureHolder {
-	panic("implement me")
+	return nil
 }
 
 func (c *EmuNodeIntro) GetNodePublicKey() cryptkit.SignatureKeyHolder {
@@ -243,7 +244,7 @@ func (c *EmuNodeIntro) GetStartPower() member.Power {
 }
 
 func (c *EmuNodeIntro) GetReference() insolar.Reference {
-	panic("unsupported")
+	return insolar.Reference{}
 }
 
 func (c *EmuNodeIntro) HasIntroduction() bool {

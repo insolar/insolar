@@ -202,7 +202,11 @@ func (p *StateAndRankSequenceCalc) hashMemberEntry(v memberEntry, roleIndex uint
 		p.nodeFullRank = fr
 	}
 
-	p.digester.AddNext(v.state.GetNodeStateHash(), fr)
+	if v.state == nil {
+		p.digester.AddNext(nil, fr)
+	} else {
+		p.digester.AddNext(v.state.GetNodeStateHash(), fr)
+	}
 }
 
 func (p *StateAndRankSequenceCalc) flushRoleMembers() {

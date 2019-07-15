@@ -73,12 +73,11 @@ type PrimingCensusTemplate struct {
 	evicted    census.EvictedPopulation
 	pd         pulse.Data
 
-	registries     census.VersionedRegistries
-	profileFactory profiles.Factory
+	registries census.VersionedRegistries
 }
 
 func (c *PrimingCensusTemplate) GetProfileFactory(ksf cryptkit.KeyStoreFactory) profiles.Factory {
-	return c.profileFactory
+	return c.chronicles.profileFactory
 }
 
 func (c *PrimingCensusTemplate) setVersionedRegistries(vr census.VersionedRegistries) {
@@ -92,18 +91,17 @@ func (c *PrimingCensusTemplate) getVersionedRegistries() census.VersionedRegistr
 	return c.registries
 }
 
-func NewPrimingCensus(population copyToOnlinePopulation, pf profiles.Factory, registries census.VersionedRegistries) *PrimingCensusTemplate {
+func NewPrimingCensus(population copyToOnlinePopulation, registries census.VersionedRegistries) *PrimingCensusTemplate {
 	// TODO HACK - ugly sorting impl to establish initial node ordering
 	dp := NewDynamicPopulation(population)
 	sortedPopulation := ManyNodePopulation{}
 	sortedPopulation.makeCopyOfMapAndSort(dp.slotByID, dp.local, lessForNodeProfile)
 
 	r := &PrimingCensusTemplate{
-		registries:     registries,
-		online:         &sortedPopulation,
-		evicted:        &evictedPopulation{},
-		profileFactory: pf,
-		pd:             registries.GetVersionPulseData(),
+		registries: registries,
+		online:     &sortedPopulation,
+		evicted:    &evictedPopulation{},
+		pd:         registries.GetVersionPulseData(),
 	}
 	return r
 }
@@ -246,6 +244,10 @@ type ExpectedCensusTemplate struct {
 	gsh        proofs.GlobulaStateHash
 	csh        proofs.CloudStateHash
 	pn         pulse.Number
+}
+
+func (c *ExpectedCensusTemplate) GetProfileFactory(ksf cryptkit.KeyStoreFactory) profiles.Factory {
+	return c.chronicles.GetProfileFactory(ksf)
 }
 
 func (c *ExpectedCensusTemplate) GetEvictedPopulation() census.EvictedPopulation {
