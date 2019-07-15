@@ -127,8 +127,6 @@ type EvictedNode interface {
 	GetLeaveReason() uint32
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.CandidateProfile -o . -s _mock.go
-
 type BriefCandidateProfile interface {
 	nodeIntroProfile
 

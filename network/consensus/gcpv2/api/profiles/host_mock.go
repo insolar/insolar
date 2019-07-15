@@ -25,10 +25,10 @@ type HostMock struct {
 	GetDefaultEndpointPreCounter uint64
 	GetDefaultEndpointMock       mHostMockGetDefaultEndpoint
 
-	GetNodePublicKeyStoreFunc       func() (r cryptkit.PublicKeyStore)
-	GetNodePublicKeyStoreCounter    uint64
-	GetNodePublicKeyStorePreCounter uint64
-	GetNodePublicKeyStoreMock       mHostMockGetNodePublicKeyStore
+	GetPublicKeyStoreFunc       func() (r cryptkit.PublicKeyStore)
+	GetPublicKeyStoreCounter    uint64
+	GetPublicKeyStorePreCounter uint64
+	GetPublicKeyStoreMock       mHostMockGetPublicKeyStore
 
 	IsAcceptableHostFunc       func(p endpoints.Inbound) (r bool)
 	IsAcceptableHostCounter    uint64
@@ -45,7 +45,7 @@ func NewHostMock(t minimock.Tester) *HostMock {
 	}
 
 	m.GetDefaultEndpointMock = mHostMockGetDefaultEndpoint{mock: m}
-	m.GetNodePublicKeyStoreMock = mHostMockGetNodePublicKeyStore{mock: m}
+	m.GetPublicKeyStoreMock = mHostMockGetPublicKeyStore{mock: m}
 	m.IsAcceptableHostMock = mHostMockIsAcceptableHost{mock: m}
 
 	return m
@@ -185,82 +185,82 @@ func (m *HostMock) GetDefaultEndpointFinished() bool {
 	return true
 }
 
-type mHostMockGetNodePublicKeyStore struct {
+type mHostMockGetPublicKeyStore struct {
 	mock              *HostMock
-	mainExpectation   *HostMockGetNodePublicKeyStoreExpectation
-	expectationSeries []*HostMockGetNodePublicKeyStoreExpectation
+	mainExpectation   *HostMockGetPublicKeyStoreExpectation
+	expectationSeries []*HostMockGetPublicKeyStoreExpectation
 }
 
-type HostMockGetNodePublicKeyStoreExpectation struct {
-	result *HostMockGetNodePublicKeyStoreResult
+type HostMockGetPublicKeyStoreExpectation struct {
+	result *HostMockGetPublicKeyStoreResult
 }
 
-type HostMockGetNodePublicKeyStoreResult struct {
+type HostMockGetPublicKeyStoreResult struct {
 	r cryptkit.PublicKeyStore
 }
 
-//Expect specifies that invocation of Host.GetNodePublicKeyStore is expected from 1 to Infinity times
-func (m *mHostMockGetNodePublicKeyStore) Expect() *mHostMockGetNodePublicKeyStore {
-	m.mock.GetNodePublicKeyStoreFunc = nil
+//Expect specifies that invocation of Host.GetPublicKeyStore is expected from 1 to Infinity times
+func (m *mHostMockGetPublicKeyStore) Expect() *mHostMockGetPublicKeyStore {
+	m.mock.GetPublicKeyStoreFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &HostMockGetNodePublicKeyStoreExpectation{}
+		m.mainExpectation = &HostMockGetPublicKeyStoreExpectation{}
 	}
 
 	return m
 }
 
-//Return specifies results of invocation of Host.GetNodePublicKeyStore
-func (m *mHostMockGetNodePublicKeyStore) Return(r cryptkit.PublicKeyStore) *HostMock {
-	m.mock.GetNodePublicKeyStoreFunc = nil
+//Return specifies results of invocation of Host.GetPublicKeyStore
+func (m *mHostMockGetPublicKeyStore) Return(r cryptkit.PublicKeyStore) *HostMock {
+	m.mock.GetPublicKeyStoreFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &HostMockGetNodePublicKeyStoreExpectation{}
+		m.mainExpectation = &HostMockGetPublicKeyStoreExpectation{}
 	}
-	m.mainExpectation.result = &HostMockGetNodePublicKeyStoreResult{r}
+	m.mainExpectation.result = &HostMockGetPublicKeyStoreResult{r}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of Host.GetNodePublicKeyStore is expected once
-func (m *mHostMockGetNodePublicKeyStore) ExpectOnce() *HostMockGetNodePublicKeyStoreExpectation {
-	m.mock.GetNodePublicKeyStoreFunc = nil
+//ExpectOnce specifies that invocation of Host.GetPublicKeyStore is expected once
+func (m *mHostMockGetPublicKeyStore) ExpectOnce() *HostMockGetPublicKeyStoreExpectation {
+	m.mock.GetPublicKeyStoreFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &HostMockGetNodePublicKeyStoreExpectation{}
+	expectation := &HostMockGetPublicKeyStoreExpectation{}
 
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *HostMockGetNodePublicKeyStoreExpectation) Return(r cryptkit.PublicKeyStore) {
-	e.result = &HostMockGetNodePublicKeyStoreResult{r}
+func (e *HostMockGetPublicKeyStoreExpectation) Return(r cryptkit.PublicKeyStore) {
+	e.result = &HostMockGetPublicKeyStoreResult{r}
 }
 
-//Set uses given function f as a mock of Host.GetNodePublicKeyStore method
-func (m *mHostMockGetNodePublicKeyStore) Set(f func() (r cryptkit.PublicKeyStore)) *HostMock {
+//Set uses given function f as a mock of Host.GetPublicKeyStore method
+func (m *mHostMockGetPublicKeyStore) Set(f func() (r cryptkit.PublicKeyStore)) *HostMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.GetNodePublicKeyStoreFunc = f
+	m.mock.GetPublicKeyStoreFunc = f
 	return m.mock
 }
 
-//GetNodePublicKeyStore implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.Host interface
-func (m *HostMock) GetNodePublicKeyStore() (r cryptkit.PublicKeyStore) {
-	counter := atomic.AddUint64(&m.GetNodePublicKeyStorePreCounter, 1)
-	defer atomic.AddUint64(&m.GetNodePublicKeyStoreCounter, 1)
+//GetPublicKeyStore implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.Host interface
+func (m *HostMock) GetPublicKeyStore() (r cryptkit.PublicKeyStore) {
+	counter := atomic.AddUint64(&m.GetPublicKeyStorePreCounter, 1)
+	defer atomic.AddUint64(&m.GetPublicKeyStoreCounter, 1)
 
-	if len(m.GetNodePublicKeyStoreMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetNodePublicKeyStoreMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to HostMock.GetNodePublicKeyStore.")
+	if len(m.GetPublicKeyStoreMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetPublicKeyStoreMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to HostMock.GetPublicKeyStore.")
 			return
 		}
 
-		result := m.GetNodePublicKeyStoreMock.expectationSeries[counter-1].result
+		result := m.GetPublicKeyStoreMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the HostMock.GetNodePublicKeyStore")
+			m.t.Fatal("No results are set for the HostMock.GetPublicKeyStore")
 			return
 		}
 
@@ -269,11 +269,11 @@ func (m *HostMock) GetNodePublicKeyStore() (r cryptkit.PublicKeyStore) {
 		return
 	}
 
-	if m.GetNodePublicKeyStoreMock.mainExpectation != nil {
+	if m.GetPublicKeyStoreMock.mainExpectation != nil {
 
-		result := m.GetNodePublicKeyStoreMock.mainExpectation.result
+		result := m.GetPublicKeyStoreMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the HostMock.GetNodePublicKeyStore")
+			m.t.Fatal("No results are set for the HostMock.GetPublicKeyStore")
 		}
 
 		r = result.r
@@ -281,39 +281,39 @@ func (m *HostMock) GetNodePublicKeyStore() (r cryptkit.PublicKeyStore) {
 		return
 	}
 
-	if m.GetNodePublicKeyStoreFunc == nil {
-		m.t.Fatalf("Unexpected call to HostMock.GetNodePublicKeyStore.")
+	if m.GetPublicKeyStoreFunc == nil {
+		m.t.Fatalf("Unexpected call to HostMock.GetPublicKeyStore.")
 		return
 	}
 
-	return m.GetNodePublicKeyStoreFunc()
+	return m.GetPublicKeyStoreFunc()
 }
 
-//GetNodePublicKeyStoreMinimockCounter returns a count of HostMock.GetNodePublicKeyStoreFunc invocations
-func (m *HostMock) GetNodePublicKeyStoreMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetNodePublicKeyStoreCounter)
+//GetPublicKeyStoreMinimockCounter returns a count of HostMock.GetPublicKeyStoreFunc invocations
+func (m *HostMock) GetPublicKeyStoreMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetPublicKeyStoreCounter)
 }
 
-//GetNodePublicKeyStoreMinimockPreCounter returns the value of HostMock.GetNodePublicKeyStore invocations
-func (m *HostMock) GetNodePublicKeyStoreMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetNodePublicKeyStorePreCounter)
+//GetPublicKeyStoreMinimockPreCounter returns the value of HostMock.GetPublicKeyStore invocations
+func (m *HostMock) GetPublicKeyStoreMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetPublicKeyStorePreCounter)
 }
 
-//GetNodePublicKeyStoreFinished returns true if mock invocations count is ok
-func (m *HostMock) GetNodePublicKeyStoreFinished() bool {
+//GetPublicKeyStoreFinished returns true if mock invocations count is ok
+func (m *HostMock) GetPublicKeyStoreFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetNodePublicKeyStoreMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetNodePublicKeyStoreCounter) == uint64(len(m.GetNodePublicKeyStoreMock.expectationSeries))
+	if len(m.GetPublicKeyStoreMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetPublicKeyStoreCounter) == uint64(len(m.GetPublicKeyStoreMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.GetNodePublicKeyStoreMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetNodePublicKeyStoreCounter) > 0
+	if m.GetPublicKeyStoreMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetPublicKeyStoreCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.GetNodePublicKeyStoreFunc != nil {
-		return atomic.LoadUint64(&m.GetNodePublicKeyStoreCounter) > 0
+	if m.GetPublicKeyStoreFunc != nil {
+		return atomic.LoadUint64(&m.GetPublicKeyStoreCounter) > 0
 	}
 
 	return true
@@ -474,8 +474,8 @@ func (m *HostMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to HostMock.GetDefaultEndpoint")
 	}
 
-	if !m.GetNodePublicKeyStoreFinished() {
-		m.t.Fatal("Expected call to HostMock.GetNodePublicKeyStore")
+	if !m.GetPublicKeyStoreFinished() {
+		m.t.Fatal("Expected call to HostMock.GetPublicKeyStore")
 	}
 
 	if !m.IsAcceptableHostFinished() {
@@ -503,8 +503,8 @@ func (m *HostMock) MinimockFinish() {
 		m.t.Fatal("Expected call to HostMock.GetDefaultEndpoint")
 	}
 
-	if !m.GetNodePublicKeyStoreFinished() {
-		m.t.Fatal("Expected call to HostMock.GetNodePublicKeyStore")
+	if !m.GetPublicKeyStoreFinished() {
+		m.t.Fatal("Expected call to HostMock.GetPublicKeyStore")
 	}
 
 	if !m.IsAcceptableHostFinished() {
@@ -526,7 +526,7 @@ func (m *HostMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.GetDefaultEndpointFinished()
-		ok = ok && m.GetNodePublicKeyStoreFinished()
+		ok = ok && m.GetPublicKeyStoreFinished()
 		ok = ok && m.IsAcceptableHostFinished()
 
 		if ok {
@@ -540,8 +540,8 @@ func (m *HostMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to HostMock.GetDefaultEndpoint")
 			}
 
-			if !m.GetNodePublicKeyStoreFinished() {
-				m.t.Error("Expected call to HostMock.GetNodePublicKeyStore")
+			if !m.GetPublicKeyStoreFinished() {
+				m.t.Error("Expected call to HostMock.GetPublicKeyStore")
 			}
 
 			if !m.IsAcceptableHostFinished() {
@@ -564,7 +564,7 @@ func (m *HostMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.GetNodePublicKeyStoreFinished() {
+	if !m.GetPublicKeyStoreFinished() {
 		return false
 	}
 

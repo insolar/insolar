@@ -192,7 +192,7 @@ func (npf *NodeProfileFactory) createProfile(candidate profiles.BriefCandidatePr
 		candidate.GetPrimaryRole(),
 		candidate.GetSpecialRoles(),
 		intro,
-		candidate.GetNodeEndpoint(),
+		candidate.GetDefaultEndpoint(),
 		store,
 		keyHolder,
 		signature,

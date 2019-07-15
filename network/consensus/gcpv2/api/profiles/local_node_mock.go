@@ -52,11 +52,6 @@ type LocalNodeMock struct {
 	GetNodePublicKeyPreCounter uint64
 	GetNodePublicKeyMock       mLocalNodeMockGetNodePublicKey
 
-	GetNodePublicKeyStoreFunc       func() (r cryptkit.PublicKeyStore)
-	GetNodePublicKeyStoreCounter    uint64
-	GetNodePublicKeyStorePreCounter uint64
-	GetNodePublicKeyStoreMock       mLocalNodeMockGetNodePublicKeyStore
-
 	GetOpModeFunc       func() (r member.OpMode)
 	GetOpModeCounter    uint64
 	GetOpModePreCounter uint64
@@ -66,6 +61,11 @@ type LocalNodeMock struct {
 	GetPrimaryRoleCounter    uint64
 	GetPrimaryRolePreCounter uint64
 	GetPrimaryRoleMock       mLocalNodeMockGetPrimaryRole
+
+	GetPublicKeyStoreFunc       func() (r cryptkit.PublicKeyStore)
+	GetPublicKeyStoreCounter    uint64
+	GetPublicKeyStorePreCounter uint64
+	GetPublicKeyStoreMock       mLocalNodeMockGetPublicKeyStore
 
 	GetShortNodeIDFunc       func() (r insolar.ShortNodeID)
 	GetShortNodeIDCounter    uint64
@@ -122,9 +122,9 @@ func NewLocalNodeMock(t minimock.Tester) *LocalNodeMock {
 	m.GetIndexMock = mLocalNodeMockGetIndex{mock: m}
 	m.GetIntroductionMock = mLocalNodeMockGetIntroduction{mock: m}
 	m.GetNodePublicKeyMock = mLocalNodeMockGetNodePublicKey{mock: m}
-	m.GetNodePublicKeyStoreMock = mLocalNodeMockGetNodePublicKeyStore{mock: m}
 	m.GetOpModeMock = mLocalNodeMockGetOpMode{mock: m}
 	m.GetPrimaryRoleMock = mLocalNodeMockGetPrimaryRole{mock: m}
+	m.GetPublicKeyStoreMock = mLocalNodeMockGetPublicKeyStore{mock: m}
 	m.GetShortNodeIDMock = mLocalNodeMockGetShortNodeID{mock: m}
 	m.GetSignatureVerifierMock = mLocalNodeMockGetSignatureVerifier{mock: m}
 	m.GetSpecialRolesMock = mLocalNodeMockGetSpecialRoles{mock: m}
@@ -941,140 +941,6 @@ func (m *LocalNodeMock) GetNodePublicKeyFinished() bool {
 	return true
 }
 
-type mLocalNodeMockGetNodePublicKeyStore struct {
-	mock              *LocalNodeMock
-	mainExpectation   *LocalNodeMockGetNodePublicKeyStoreExpectation
-	expectationSeries []*LocalNodeMockGetNodePublicKeyStoreExpectation
-}
-
-type LocalNodeMockGetNodePublicKeyStoreExpectation struct {
-	result *LocalNodeMockGetNodePublicKeyStoreResult
-}
-
-type LocalNodeMockGetNodePublicKeyStoreResult struct {
-	r cryptkit.PublicKeyStore
-}
-
-//Expect specifies that invocation of LocalNode.GetNodePublicKeyStore is expected from 1 to Infinity times
-func (m *mLocalNodeMockGetNodePublicKeyStore) Expect() *mLocalNodeMockGetNodePublicKeyStore {
-	m.mock.GetNodePublicKeyStoreFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &LocalNodeMockGetNodePublicKeyStoreExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of LocalNode.GetNodePublicKeyStore
-func (m *mLocalNodeMockGetNodePublicKeyStore) Return(r cryptkit.PublicKeyStore) *LocalNodeMock {
-	m.mock.GetNodePublicKeyStoreFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &LocalNodeMockGetNodePublicKeyStoreExpectation{}
-	}
-	m.mainExpectation.result = &LocalNodeMockGetNodePublicKeyStoreResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of LocalNode.GetNodePublicKeyStore is expected once
-func (m *mLocalNodeMockGetNodePublicKeyStore) ExpectOnce() *LocalNodeMockGetNodePublicKeyStoreExpectation {
-	m.mock.GetNodePublicKeyStoreFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &LocalNodeMockGetNodePublicKeyStoreExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *LocalNodeMockGetNodePublicKeyStoreExpectation) Return(r cryptkit.PublicKeyStore) {
-	e.result = &LocalNodeMockGetNodePublicKeyStoreResult{r}
-}
-
-//Set uses given function f as a mock of LocalNode.GetNodePublicKeyStore method
-func (m *mLocalNodeMockGetNodePublicKeyStore) Set(f func() (r cryptkit.PublicKeyStore)) *LocalNodeMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetNodePublicKeyStoreFunc = f
-	return m.mock
-}
-
-//GetNodePublicKeyStore implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.LocalNode interface
-func (m *LocalNodeMock) GetNodePublicKeyStore() (r cryptkit.PublicKeyStore) {
-	counter := atomic.AddUint64(&m.GetNodePublicKeyStorePreCounter, 1)
-	defer atomic.AddUint64(&m.GetNodePublicKeyStoreCounter, 1)
-
-	if len(m.GetNodePublicKeyStoreMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetNodePublicKeyStoreMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to LocalNodeMock.GetNodePublicKeyStore.")
-			return
-		}
-
-		result := m.GetNodePublicKeyStoreMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the LocalNodeMock.GetNodePublicKeyStore")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetNodePublicKeyStoreMock.mainExpectation != nil {
-
-		result := m.GetNodePublicKeyStoreMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the LocalNodeMock.GetNodePublicKeyStore")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetNodePublicKeyStoreFunc == nil {
-		m.t.Fatalf("Unexpected call to LocalNodeMock.GetNodePublicKeyStore.")
-		return
-	}
-
-	return m.GetNodePublicKeyStoreFunc()
-}
-
-//GetNodePublicKeyStoreMinimockCounter returns a count of LocalNodeMock.GetNodePublicKeyStoreFunc invocations
-func (m *LocalNodeMock) GetNodePublicKeyStoreMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetNodePublicKeyStoreCounter)
-}
-
-//GetNodePublicKeyStoreMinimockPreCounter returns the value of LocalNodeMock.GetNodePublicKeyStore invocations
-func (m *LocalNodeMock) GetNodePublicKeyStoreMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetNodePublicKeyStorePreCounter)
-}
-
-//GetNodePublicKeyStoreFinished returns true if mock invocations count is ok
-func (m *LocalNodeMock) GetNodePublicKeyStoreFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetNodePublicKeyStoreMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetNodePublicKeyStoreCounter) == uint64(len(m.GetNodePublicKeyStoreMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetNodePublicKeyStoreMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetNodePublicKeyStoreCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetNodePublicKeyStoreFunc != nil {
-		return atomic.LoadUint64(&m.GetNodePublicKeyStoreCounter) > 0
-	}
-
-	return true
-}
-
 type mLocalNodeMockGetOpMode struct {
 	mock              *LocalNodeMock
 	mainExpectation   *LocalNodeMockGetOpModeExpectation
@@ -1338,6 +1204,140 @@ func (m *LocalNodeMock) GetPrimaryRoleFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetPrimaryRoleFunc != nil {
 		return atomic.LoadUint64(&m.GetPrimaryRoleCounter) > 0
+	}
+
+	return true
+}
+
+type mLocalNodeMockGetPublicKeyStore struct {
+	mock              *LocalNodeMock
+	mainExpectation   *LocalNodeMockGetPublicKeyStoreExpectation
+	expectationSeries []*LocalNodeMockGetPublicKeyStoreExpectation
+}
+
+type LocalNodeMockGetPublicKeyStoreExpectation struct {
+	result *LocalNodeMockGetPublicKeyStoreResult
+}
+
+type LocalNodeMockGetPublicKeyStoreResult struct {
+	r cryptkit.PublicKeyStore
+}
+
+//Expect specifies that invocation of LocalNode.GetPublicKeyStore is expected from 1 to Infinity times
+func (m *mLocalNodeMockGetPublicKeyStore) Expect() *mLocalNodeMockGetPublicKeyStore {
+	m.mock.GetPublicKeyStoreFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &LocalNodeMockGetPublicKeyStoreExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of LocalNode.GetPublicKeyStore
+func (m *mLocalNodeMockGetPublicKeyStore) Return(r cryptkit.PublicKeyStore) *LocalNodeMock {
+	m.mock.GetPublicKeyStoreFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &LocalNodeMockGetPublicKeyStoreExpectation{}
+	}
+	m.mainExpectation.result = &LocalNodeMockGetPublicKeyStoreResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of LocalNode.GetPublicKeyStore is expected once
+func (m *mLocalNodeMockGetPublicKeyStore) ExpectOnce() *LocalNodeMockGetPublicKeyStoreExpectation {
+	m.mock.GetPublicKeyStoreFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &LocalNodeMockGetPublicKeyStoreExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *LocalNodeMockGetPublicKeyStoreExpectation) Return(r cryptkit.PublicKeyStore) {
+	e.result = &LocalNodeMockGetPublicKeyStoreResult{r}
+}
+
+//Set uses given function f as a mock of LocalNode.GetPublicKeyStore method
+func (m *mLocalNodeMockGetPublicKeyStore) Set(f func() (r cryptkit.PublicKeyStore)) *LocalNodeMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetPublicKeyStoreFunc = f
+	return m.mock
+}
+
+//GetPublicKeyStore implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.LocalNode interface
+func (m *LocalNodeMock) GetPublicKeyStore() (r cryptkit.PublicKeyStore) {
+	counter := atomic.AddUint64(&m.GetPublicKeyStorePreCounter, 1)
+	defer atomic.AddUint64(&m.GetPublicKeyStoreCounter, 1)
+
+	if len(m.GetPublicKeyStoreMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetPublicKeyStoreMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to LocalNodeMock.GetPublicKeyStore.")
+			return
+		}
+
+		result := m.GetPublicKeyStoreMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the LocalNodeMock.GetPublicKeyStore")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetPublicKeyStoreMock.mainExpectation != nil {
+
+		result := m.GetPublicKeyStoreMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the LocalNodeMock.GetPublicKeyStore")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetPublicKeyStoreFunc == nil {
+		m.t.Fatalf("Unexpected call to LocalNodeMock.GetPublicKeyStore.")
+		return
+	}
+
+	return m.GetPublicKeyStoreFunc()
+}
+
+//GetPublicKeyStoreMinimockCounter returns a count of LocalNodeMock.GetPublicKeyStoreFunc invocations
+func (m *LocalNodeMock) GetPublicKeyStoreMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetPublicKeyStoreCounter)
+}
+
+//GetPublicKeyStoreMinimockPreCounter returns the value of LocalNodeMock.GetPublicKeyStore invocations
+func (m *LocalNodeMock) GetPublicKeyStoreMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetPublicKeyStorePreCounter)
+}
+
+//GetPublicKeyStoreFinished returns true if mock invocations count is ok
+func (m *LocalNodeMock) GetPublicKeyStoreFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetPublicKeyStoreMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetPublicKeyStoreCounter) == uint64(len(m.GetPublicKeyStoreMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetPublicKeyStoreMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetPublicKeyStoreCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetPublicKeyStoreFunc != nil {
+		return atomic.LoadUint64(&m.GetPublicKeyStoreCounter) > 0
 	}
 
 	return true
@@ -2432,16 +2432,16 @@ func (m *LocalNodeMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to LocalNodeMock.GetNodePublicKey")
 	}
 
-	if !m.GetNodePublicKeyStoreFinished() {
-		m.t.Fatal("Expected call to LocalNodeMock.GetNodePublicKeyStore")
-	}
-
 	if !m.GetOpModeFinished() {
 		m.t.Fatal("Expected call to LocalNodeMock.GetOpMode")
 	}
 
 	if !m.GetPrimaryRoleFinished() {
 		m.t.Fatal("Expected call to LocalNodeMock.GetPrimaryRole")
+	}
+
+	if !m.GetPublicKeyStoreFinished() {
+		m.t.Fatal("Expected call to LocalNodeMock.GetPublicKeyStore")
 	}
 
 	if !m.GetShortNodeIDFinished() {
@@ -2517,16 +2517,16 @@ func (m *LocalNodeMock) MinimockFinish() {
 		m.t.Fatal("Expected call to LocalNodeMock.GetNodePublicKey")
 	}
 
-	if !m.GetNodePublicKeyStoreFinished() {
-		m.t.Fatal("Expected call to LocalNodeMock.GetNodePublicKeyStore")
-	}
-
 	if !m.GetOpModeFinished() {
 		m.t.Fatal("Expected call to LocalNodeMock.GetOpMode")
 	}
 
 	if !m.GetPrimaryRoleFinished() {
 		m.t.Fatal("Expected call to LocalNodeMock.GetPrimaryRole")
+	}
+
+	if !m.GetPublicKeyStoreFinished() {
+		m.t.Fatal("Expected call to LocalNodeMock.GetPublicKeyStore")
 	}
 
 	if !m.GetShortNodeIDFinished() {
@@ -2581,9 +2581,9 @@ func (m *LocalNodeMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetIndexFinished()
 		ok = ok && m.GetIntroductionFinished()
 		ok = ok && m.GetNodePublicKeyFinished()
-		ok = ok && m.GetNodePublicKeyStoreFinished()
 		ok = ok && m.GetOpModeFinished()
 		ok = ok && m.GetPrimaryRoleFinished()
+		ok = ok && m.GetPublicKeyStoreFinished()
 		ok = ok && m.GetShortNodeIDFinished()
 		ok = ok && m.GetSignatureVerifierFinished()
 		ok = ok && m.GetSpecialRolesFinished()
@@ -2624,16 +2624,16 @@ func (m *LocalNodeMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to LocalNodeMock.GetNodePublicKey")
 			}
 
-			if !m.GetNodePublicKeyStoreFinished() {
-				m.t.Error("Expected call to LocalNodeMock.GetNodePublicKeyStore")
-			}
-
 			if !m.GetOpModeFinished() {
 				m.t.Error("Expected call to LocalNodeMock.GetOpMode")
 			}
 
 			if !m.GetPrimaryRoleFinished() {
 				m.t.Error("Expected call to LocalNodeMock.GetPrimaryRole")
+			}
+
+			if !m.GetPublicKeyStoreFinished() {
+				m.t.Error("Expected call to LocalNodeMock.GetPublicKeyStore")
 			}
 
 			if !m.GetShortNodeIDFinished() {
@@ -2704,15 +2704,15 @@ func (m *LocalNodeMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.GetNodePublicKeyStoreFinished() {
-		return false
-	}
-
 	if !m.GetOpModeFinished() {
 		return false
 	}
 
 	if !m.GetPrimaryRoleFinished() {
+		return false
+	}
+
+	if !m.GetPublicKeyStoreFinished() {
 		return false
 	}
 

@@ -75,10 +75,10 @@ func TestRemoveJoinCandidate(t *testing.T) {
 	s := &SequentialCandidateFeeder{buf: make([]profiles.CandidateProfile, 1)}
 	c := profiles.NewCandidateProfileMock(t)
 	s.buf[0] = c
-	c.GetNodeIDMock.Set(func() insolar.ShortNodeID { return insolar.ShortNodeID(1) })
+	c.GetShortNodeIDMock.Set(func() insolar.ShortNodeID { return insolar.ShortNodeID(1) })
 	require.False(t, s.RemoveJoinCandidate(false, insolar.ShortNodeID(2)))
 
-	c.GetNodeIDMock.Set(func() insolar.ShortNodeID { return insolar.ShortNodeID(1) })
+	c.GetShortNodeIDMock.Set(func() insolar.ShortNodeID { return insolar.ShortNodeID(1) })
 	require.True(t, s.RemoveJoinCandidate(false, insolar.ShortNodeID(1)))
 
 	require.Equal(t, []profiles.CandidateProfile(nil), s.buf)

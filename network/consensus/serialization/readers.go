@@ -446,15 +446,15 @@ type FullIntroductionReader struct {
 	intro NodeFullIntro
 }
 
-func (r *FullIntroductionReader) GetNodeID() insolar.ShortNodeID {
+func (r *FullIntroductionReader) GetShortNodeID() insolar.ShortNodeID {
 	return r.intro.ShortID
 }
 
-func (r *FullIntroductionReader) GetNodePrimaryRole() member.PrimaryRole {
+func (r *FullIntroductionReader) GetPrimaryRole() member.PrimaryRole {
 	return r.intro.getPrimaryRole()
 }
 
-func (r *FullIntroductionReader) GetNodeSpecialRoles() member.SpecialRole {
+func (r *FullIntroductionReader) GetSpecialRoles() member.SpecialRole {
 	return r.intro.SpecialRoles
 }
 
@@ -462,14 +462,14 @@ func (r *FullIntroductionReader) GetStartPower() member.Power {
 	return r.intro.StartPower
 }
 
-func (r *FullIntroductionReader) GetNodePK() cryptkit.SignatureKeyHolder {
+func (r *FullIntroductionReader) GetNodePublicKey() cryptkit.SignatureKeyHolder {
 	return adapters.NewECDSASignatureKeyHolderFromBits(r.intro.NodePK, r.keyProcessor)
 }
 
-func (r *FullIntroductionReader) GetNodeEndpoint() endpoints.Outbound {
+func (r *FullIntroductionReader) GetDefaultEndpoint() endpoints.Outbound {
 	ip := int2ip(r.intro.PrimaryIPv4)
 
-	return adapters.NewNodeEndpoint(fmt.Sprintf("%s:%d", ip.String(), r.intro.BasePort))
+	return adapters.NewOutbound(fmt.Sprintf("%s:%d", ip.String(), r.intro.BasePort))
 }
 
 func (r *FullIntroductionReader) GetJoinerSignature() cryptkit.SignatureHolder {
