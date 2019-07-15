@@ -38,23 +38,30 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentModifier -o ./ -s _mock.go
 
 type FilamentModifier interface {
+	// SetRequest creates request record. Idempotent operation.
 	SetRequest(ctx context.Context, reqID insolar.ID, jetID insolar.JetID, request record.Request) (foundRequest *record.CompositeFilamentRecord, foundResult *record.CompositeFilamentRecord, err error)
+	// SetResult creates result record.
 	SetResult(ctx context.Context, resID insolar.ID, jetID insolar.JetID, result record.Result) (foundResult *record.CompositeFilamentRecord, err error)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCalculator -o ./ -s _mock.go
 
 type FilamentCalculator interface {
-	// Requests goes to network.
+	// Requests returns request records for objectID's chain, starts from provided id until provided pulse.
+	// TODO: remove calcPulse param
 	Requests(
 		ctx context.Context,
 		objectID, from insolar.ID,
 		readUntil, calcPulse insolar.PulseNumber,
 	) ([]record.CompositeFilamentRecord, error)
 
-	// PendingRequests only looks locally.
+	// PendingRequests returns all pending requests of object for provided pulse.
 	PendingRequests(ctx context.Context, pulse insolar.PulseNumber, objectID insolar.ID) ([]insolar.ID, error)
 
+	// RequestDuplicate searches two records on objectID's chain:
+	// First one with same ID as requestID param.
+	// Second is a Result record which Request field equals requestID param.
+	// Uses request parameter only for setting pulse scan limit (pulse value for reason field)
 	RequestDuplicate(
 		ctx context.Context,
 		startFrom insolar.PulseNumber,
