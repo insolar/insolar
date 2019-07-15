@@ -21,17 +21,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 )
 
 func TestNewThread(t *testing.T) {
 	t.Parallel()
-	msg := bus.Message{}
+	msg := &message.Message{}
 	ch := make(chan struct{})
 	controller := &Controller{
 		cancel: ch,

@@ -82,9 +82,9 @@ func NewRoundStrategy(
 
 func (rs *RoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse common2.PulseNumber, self common.LocalNodeProfile) context.Context {
 	ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
-		"node_id":   self.GetShortNodeID(),
-		"pulse":     expectedPulse,
-		"is_joiner": self.IsJoiner(),
+		"node_id": self.GetShortNodeID(),
+		"pulse":   expectedPulse,
+		// "is_joiner": self.IsRecentlyJoiner(),
 	})
 	return ctx
 }
@@ -93,12 +93,8 @@ func (rs *RoundStrategy) GetPrepPhaseControllers() []core.PrepPhaseController {
 	return rs.bundle.GetPrepPhaseControllers()
 }
 
-func (rs *RoundStrategy) GetFullPhaseControllers(nodeCount int) []core.PhaseController {
+func (rs *RoundStrategy) GetFullPhaseControllers(nodeCount int) ([]core.PhaseController, core.NodeUpdateCallback) {
 	return rs.bundle.GetFullPhaseControllers(nodeCount)
-}
-
-func (rs *RoundStrategy) GetNodeUpdateCallback() core.NodeUpdateCallback {
-	return rs.bundle.GetNodeUpdateCallback()
 }
 
 func (rs *RoundStrategy) RandUint32() uint32 {

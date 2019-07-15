@@ -76,7 +76,7 @@ func FakeHandler(response http.ResponseWriter, req *http.Request) {
 
 	var respData = Result{}
 
-	if params.Method == "contract.createMember" {
+	if params.Method == "member.create" {
 		respData.ContractResult = TESTREFERENCE
 	} else {
 		respData.ContractResult = TESTSEED
@@ -99,11 +99,11 @@ func FakeRPCHandler(response http.ResponseWriter, req *http.Request) {
 	}
 
 	switch rpcReq.Method {
-	case "node.GetStatus":
+	case "node.getStatus":
 		answer["result"] = testStatusResponse
-	case "network.GetInfo":
+	case "network.getInfo":
 		answer["result"] = testInfoResponse
-	case "node.GetSeed":
+	case "node.getSeed":
 		answer["result"] = testSeedResponse
 	}
 	writeReponse(response, answer)
@@ -238,7 +238,7 @@ func readConfigs(t *testing.T) (*UserConfigJSON, *Request) {
 func TestSend(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSend")
 	userConf, reqConf := readConfigs(t)
-	reqConf.Method = "contract.createMember"
+	reqConf.Method = "member.create"
 	resp, err := Send(ctx, URL, userConf, reqConf)
 	require.NoError(t, err)
 	require.Contains(t, string(resp), TESTREFERENCE)
@@ -247,7 +247,7 @@ func TestSend(t *testing.T) {
 func TestSendWithSeed(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed")
 	userConf, reqConf := readConfigs(t)
-	reqConf.Method = "contract.createMember"
+	reqConf.Method = "member.create"
 	resp, err := SendWithSeed(ctx, URL+"/call", userConf, reqConf, TESTSEED)
 	require.NoError(t, err)
 	require.Contains(t, string(resp), TESTREFERENCE)

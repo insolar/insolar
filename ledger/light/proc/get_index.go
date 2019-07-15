@@ -21,9 +21,9 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/insolar"
-	wbus "github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/bus"
+
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
@@ -33,66 +33,67 @@ import (
 	"github.com/pkg/errors"
 )
 
-type GetIndex struct {
+type EnsureIndex struct {
 	object  insolar.Reference
 	jet     insolar.JetID
-	replyTo chan<- bus.Reply
+	message payload.Meta
 	pn      insolar.PulseNumber
 
-	Result struct {
-		Index object.Lifeline
-	}
-
 	Dep struct {
-		Index       object.LifelineIndex
-		IndexState  object.LifelineStateModifier
-		Locker      object.IDLocker
-		Coordinator jet.Coordinator
-		Bus         insolar.MessageBus
+		IndexLocker   object.IndexLocker
+		IndexAccessor object.IndexAccessor
+		IndexModifier object.IndexModifier
+		Coordinator   jet.Coordinator
+		Bus           insolar.MessageBus
+		Sender        bus.Sender
 	}
 }
 
-func NewGetIndex(obj insolar.Reference, jetID insolar.JetID, rep chan<- bus.Reply, pn insolar.PulseNumber) *GetIndex {
-	return &GetIndex{
+func NewEnsureIndex(obj insolar.Reference, jetID insolar.JetID, msg payload.Meta, pn insolar.PulseNumber) *EnsureIndex {
+	return &EnsureIndex{
 		object:  obj,
 		jet:     jetID,
-		replyTo: rep,
+		message: msg,
 		pn:      pn,
 	}
 }
 
-func (p *GetIndex) Proceed(ctx context.Context) error {
+func (p *EnsureIndex) Proceed(ctx context.Context) error {
 	err := p.process(ctx)
 	if err != nil {
-		p.replyTo <- bus.Reply{Err: err}
+		msg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
+		if err != nil {
+			return err
+		}
+		go p.Dep.Sender.Reply(ctx, p.message, msg)
 	}
 	return err
 }
 
-func (p *GetIndex) process(ctx context.Context) error {
+func (p *EnsureIndex) process(ctx context.Context) error {
 	objectID := *p.object.Record()
 	logger := inslogger.FromContext(ctx)
 
-	p.Dep.Locker.Lock(&objectID)
-	defer p.Dep.Locker.Unlock(&objectID)
+	p.Dep.IndexLocker.Lock(&objectID)
+	defer p.Dep.IndexLocker.Unlock(&objectID)
 
-	idx, err := p.Dep.Index.ForID(ctx, p.pn, objectID)
+	idx, err := p.Dep.IndexAccessor.ForID(ctx, p.pn, objectID)
 	if err == nil {
-		p.Result.Index = idx
 		if flow.Pulse(ctx) == p.pn {
-			err = p.Dep.IndexState.SetLifelineUsage(ctx, p.pn, objectID)
+			idx.LifelineLastUsed = p.pn
+			err = p.Dep.IndexModifier.SetIndex(ctx, p.pn, idx)
 			if err != nil {
 				return errors.Wrap(err, "failed to update lifeline usage")
 			}
 		}
 		return nil
 	}
-	if err != object.ErrLifelineNotFound {
+	if err != object.ErrIndexNotFound {
 		return errors.Wrap(err, "failed to fetch index")
 	}
 
 	logger.Debug("failed to fetch index (fetching from heavy)")
-	heavy, err := p.Dep.Coordinator.Heavy(ctx, flow.Pulse(ctx))
+	heavy, err := p.Dep.Coordinator.Heavy(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate heavy")
 	}
@@ -113,52 +114,53 @@ func (p *GetIndex) process(ctx context.Context) error {
 		return fmt.Errorf("failed to fetch index from heavy: unexpected reply type %T", genericReply)
 	}
 
-	p.Result.Index, err = object.DecodeIndex(rep.Index)
+	lfl, err := object.DecodeLifeline(rep.Index)
 	if err != nil {
 		return errors.Wrap(err, "failed to decode index")
 	}
 
-	p.Result.Index.JetID = p.jet
-	err = p.Dep.Index.Set(ctx, flow.Pulse(ctx), objectID, p.Result.Index)
+	err = p.Dep.IndexModifier.SetIndex(ctx, flow.Pulse(ctx), object.FilamentIndex{
+		LifelineLastUsed: p.pn,
+		Lifeline:         lfl,
+		PendingRecords:   []insolar.ID{},
+		ObjID:            *p.object.Record(),
+	})
 	if err != nil {
 		return errors.Wrap(err, "failed to save lifeline")
-	}
-	err = p.Dep.IndexState.SetLifelineUsage(ctx, flow.Pulse(ctx), objectID)
-	if err != nil {
-		return errors.Wrap(err, "failed to update lifeline usage")
 	}
 
 	return nil
 }
 
-type GetIndexWM struct {
+type EnsureIndexWM struct {
 	object  insolar.ID
 	jet     insolar.JetID
 	message payload.Meta
 
 	Result struct {
-		Index object.Lifeline
+		Lifeline object.Lifeline
 	}
 
 	Dep struct {
-		Index       object.LifelineIndex
-		IndexState  object.LifelineStateModifier
-		Locker      object.IDLocker
+		IndexLocker   object.IndexLocker
+		IndexModifier object.IndexModifier
+		IndexAccessor object.IndexAccessor
+
 		Coordinator jet.Coordinator
 		Bus         insolar.MessageBus
-		Sender      wbus.Sender
+		Sender      bus.Sender
 	}
 }
 
-func NewGetIndexWM(obj insolar.ID, jetID insolar.JetID, msg payload.Meta) *GetIndexWM {
-	return &GetIndexWM{
+func NewEnsureIndexWM(obj insolar.ID, jetID insolar.JetID, msg payload.Meta) *EnsureIndexWM {
+	return &EnsureIndexWM{
 		object:  obj,
 		jet:     jetID,
 		message: msg,
 	}
 }
 
-func (p *GetIndexWM) Proceed(ctx context.Context) error {
+func (p *EnsureIndexWM) Proceed(ctx context.Context) error {
 	err := p.process(ctx)
 	if err != nil {
 		msg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
@@ -170,27 +172,29 @@ func (p *GetIndexWM) Proceed(ctx context.Context) error {
 	return err
 }
 
-func (p *GetIndexWM) process(ctx context.Context) error {
+func (p *EnsureIndexWM) process(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 
-	p.Dep.Locker.Lock(&p.object)
-	defer p.Dep.Locker.Unlock(&p.object)
+	p.Dep.IndexLocker.Lock(&p.object)
+	defer p.Dep.IndexLocker.Unlock(&p.object)
 
-	idx, err := p.Dep.Index.ForID(ctx, flow.Pulse(ctx), p.object)
+	idx, err := p.Dep.IndexAccessor.ForID(ctx, flow.Pulse(ctx), p.object)
 	if err == nil {
-		p.Result.Index = idx
-		err = p.Dep.IndexState.SetLifelineUsage(ctx, flow.Pulse(ctx), p.object)
+		p.Result.Lifeline = idx.Lifeline
+
+		idx.LifelineLastUsed = flow.Pulse(ctx)
+		err = p.Dep.IndexModifier.SetIndex(ctx, flow.Pulse(ctx), idx)
 		if err != nil {
 			return errors.Wrap(err, "failed to update lifeline usage")
 		}
 		return nil
 	}
-	if err != object.ErrLifelineNotFound {
+	if err != object.ErrIndexNotFound {
 		return errors.Wrap(err, "failed to fetch index")
 	}
 
 	logger.Debug("failed to fetch index (fetching from heavy)")
-	heavy, err := p.Dep.Coordinator.Heavy(ctx, flow.Pulse(ctx))
+	heavy, err := p.Dep.Coordinator.Heavy(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate heavy")
 	}
@@ -211,19 +215,19 @@ func (p *GetIndexWM) process(ctx context.Context) error {
 		return fmt.Errorf("failed to fetch index from heavy: unexpected reply type %T", genericReply)
 	}
 
-	p.Result.Index, err = object.DecodeIndex(rep.Index)
+	p.Result.Lifeline, err = object.DecodeLifeline(rep.Index)
 	if err != nil {
 		return errors.Wrap(err, "failed to decode index")
 	}
 
-	p.Result.Index.JetID = p.jet
-	err = p.Dep.Index.Set(ctx, flow.Pulse(ctx), p.object, p.Result.Index)
+	err = p.Dep.IndexModifier.SetIndex(ctx, flow.Pulse(ctx), object.FilamentIndex{
+		LifelineLastUsed: flow.Pulse(ctx),
+		Lifeline:         p.Result.Lifeline,
+		PendingRecords:   []insolar.ID{},
+		ObjID:            p.object,
+	})
 	if err != nil {
 		return errors.Wrap(err, "failed to save lifeline")
-	}
-	err = p.Dep.IndexState.SetLifelineUsage(ctx, flow.Pulse(ctx), p.object)
-	if err != nil {
-		return errors.Wrap(err, "failed to update lifeline usage")
 	}
 
 	return nil

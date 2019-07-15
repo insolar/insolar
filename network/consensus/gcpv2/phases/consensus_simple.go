@@ -74,7 +74,8 @@ func (*simpleSimpleConsensusSelectionStrategy) SelectOnStopped(globulaStats *sta
 	if globulaStats.ColumnCount() != realm.GetNodeCount() {
 		panic("illegal state")
 	}
-	bftMajority := uint16(realm.GetBftMajorityCount())
+	pop := realm.GetPopulation()
+	bftMajority := uint16(pop.GetBftMajorityCount())
 
 	resultSet := nodeset.NewConsensusBitsetRow(globulaStats.ColumnCount())
 	for i := 0; i < resultSet.ColumnCount(); i++ {
@@ -85,8 +86,9 @@ func (*simpleSimpleConsensusSelectionStrategy) SelectOnStopped(globulaStats *sta
 			decision = nodeset.CbsFraud
 		case tc.GetSummaryByValue(nodeset.ConsensusStatTrusted)+tc.GetSummaryByValue(nodeset.ConsensusStatDoubted) >= bftMajority:
 			decision = nodeset.CbsIncluded
-		case realm.GetNodeAppearanceByIndex(i).GetProfile().GetState().IsSuspect():
-			decision = nodeset.CbsExcluded
+			// TODO suspect markings etc must be by consensus decision
+			//case pop.GetNodeAppearanceByIndex(i).GetProfile().GetState().IsSuspect():
+			//	decision = nodeset.CbsExcluded
 		}
 		resultSet.Set(i, decision)
 	}

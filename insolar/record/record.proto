@@ -45,10 +45,13 @@ enum ReturnMode {
     // ReturnNoWait - call method and return without results
     ReturnNoWait = 1;
 
+    // ReturnSaga - call saga method
+    ReturnSaga = 2;
+
     // ReturnValidated (not yet) - return result only when it's validated
 }
 
-message Request { // TODO rename to IncomingRequest when filaments will be done, see INS-2707
+message IncomingRequest {
     option (gogoproto.face) = true;
 
     int32 polymorph = 16;
@@ -56,7 +59,6 @@ message Request { // TODO rename to IncomingRequest when filaments will be done,
     bytes Caller = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes CallerPrototype = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     uint64 Nonce = 23;
-    uint64 Sequence = 24;
     ReturnMode ReturnMode = 25;
     bool Immutable = 26;
 
@@ -68,6 +70,7 @@ message Request { // TODO rename to IncomingRequest when filaments will be done,
     bytes Arguments = 31;
     bytes Sender = 32 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     string APIRequestID = 33;
+    bytes Reason = 34 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
 }
 
 message OutgoingRequest {
@@ -78,7 +81,6 @@ message OutgoingRequest {
     bytes Caller = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes CallerPrototype = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     uint64 Nonce = 23;
-    uint64 Sequence = 24;
     ReturnMode ReturnMode = 25;
     bool Immutable = 26;
 
@@ -90,6 +92,7 @@ message OutgoingRequest {
     bytes Arguments = 31;
     bytes Sender = 32 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     string APIRequestID = 33;
+    bytes Reason = 34 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
 }
 
 message Result {
@@ -128,7 +131,7 @@ message Activate {
 
     bytes Domain = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes Request = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    bytes Memory = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes Memory = 22;
     bytes Image = 23 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bool IsPrototype = 24;
     bytes Parent = 25 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
@@ -140,7 +143,7 @@ message Amend {
 
     bytes Domain = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes Request = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    bytes Memory = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes Memory = 22;
     bytes Image = 23 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bool IsPrototype = 24;
     bytes PrevState = 25 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
@@ -169,14 +172,15 @@ message Virtual {
         Genesis Genesis = 101;
         Child Child = 102;
         Jet Jet = 103;
-        Request Request = 104;
-        Result Result = 105;
-        Type Type = 106;
-        Code Code = 107;
-        Activate Activate = 108;
-        Amend Amend = 109;
-        Deactivate Deactivate = 110;
-        PendingFilament PendingFilament = 111;
+        IncomingRequest IncomingRequest = 104;
+        OutgoingRequest OutgoingRequest = 105;
+        Result Result = 106;
+        Type Type = 107;
+        Code Code = 108;
+        Activate Activate = 109;
+        Amend Amend = 110;
+        Deactivate Deactivate = 111;
+        PendingFilament PendingFilament = 112;
     }
 
     bytes Signature = 200;
@@ -189,4 +193,14 @@ message Material {
     bytes JetID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
 
     bytes Signature = 200;
+}
+
+message CompositeFilamentRecord {
+    int32 polymorph = 16;
+
+    bytes RecordID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    Material Record = 21 [(gogoproto.nullable) = false];
+
+    bytes MetaID = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    Material Meta = 23 [(gogoproto.nullable) = false];
 }

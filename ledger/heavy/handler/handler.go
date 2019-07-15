@@ -17,19 +17,21 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/blob"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/heavy/replica"
+	"github.com/insolar/insolar/ledger/heavy/executor"
 
 	"github.com/insolar/insolar/ledger/heavy/proc"
 	"github.com/pkg/errors"
@@ -43,50 +45,60 @@ import (
 
 // Handler is a base struct for heavy's methods
 type Handler struct {
-	WmBus                 bus.Bus
-	Bus                   insolar.MessageBus
-	JetCoordinator        jet.Coordinator
-	PCS                   insolar.PlatformCryptographyScheme
-	BlobAccessor          blob.Accessor
-	BlobModifier          blob.Modifier
-	RecordAccessor        object.RecordAccessor
-	RecordModifier        object.RecordModifier
-	IndexLifelineAccessor object.LifelineAccessor
-	IndexBucketModifier   object.IndexBucketModifier
-	DropModifier          drop.Modifier
-	PulseAccessor         pulse.Accessor
-	JetModifier           jet.Modifier
-	JetKeeper             replica.JetKeeper
-	Sender                bus.Sender
+	cfg configuration.Ledger
+
+	Bus            insolar.MessageBus
+	JetCoordinator jet.Coordinator
+	PCS            insolar.PlatformCryptographyScheme
+	RecordAccessor object.RecordAccessor
+	RecordModifier object.RecordModifier
+
+	IndexAccessor object.IndexAccessor
+	IndexModifier object.IndexModifier
+
+	DropModifier  drop.Modifier
+	PulseAccessor pulse.Accessor
+	JetModifier   jet.Modifier
+	JetAccessor   jet.Accessor
+	JetKeeper     executor.JetKeeper
+
+	Sender bus.Sender
 
 	jetID insolar.JetID
 	dep   *proc.Dependencies
 }
 
 // New creates a new handler.
-func New() *Handler {
+func New(cfg configuration.Ledger) *Handler {
 	h := &Handler{
+		cfg:   cfg,
 		jetID: insolar.ZeroJetID,
 	}
 	dep := proc.Dependencies{
 		PassState: func(p *proc.PassState) {
-			p.Dep.Blobs = h.BlobAccessor
 			p.Dep.Records = h.RecordAccessor
 			p.Dep.Sender = h.Sender
 		},
 		GetCode: func(p *proc.GetCode) {
 			p.Dep.Sender = h.Sender
 			p.Dep.RecordAccessor = h.RecordAccessor
-			p.Dep.BlobAccessor = h.BlobAccessor
+		},
+		SendRequests: func(p *proc.SendRequests) {
+			p.Dep(h.Sender, h.RecordAccessor, h.IndexAccessor)
 		},
 	}
 	h.dep = &dep
 	return h
-
 }
 
 func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(bus.MetaTraceID))
+	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
+	if err == nil {
+		ctx = instracer.WithParentSpan(ctx, parentSpan)
+	} else {
+		inslogger.FromContext(ctx).Error(err)
+	}
 
 	for k, v := range msg.Metadata {
 		ctx, _ = inslogger.WithField(ctx, k, v)
@@ -94,9 +106,9 @@ func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, e
 	logger := inslogger.FromContext(ctx)
 
 	meta := payload.Meta{}
-	err := meta.Unmarshal(msg.Payload)
+	err = meta.Unmarshal(msg.Payload)
 	if err != nil {
-		inslogger.FromContext(ctx).Error(err)
+		logger.Error(err)
 	}
 
 	err = h.handle(ctx, msg)
@@ -107,7 +119,51 @@ func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, e
 	return nil, nil
 }
 
+func (h *Handler) handleParcel(ctx context.Context, msg *watermillMsg.Message) error {
+	meta := payload.Meta{}
+	err := meta.Unmarshal(msg.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal meta")
+	}
+
+	parcel, err := message.DeserializeParcel(bytes.NewBuffer(meta.Payload))
+	if err != nil {
+		return errors.Wrap(err, "can't deserialize payload to parcel")
+	}
+
+	msgType := msg.Metadata.Get(bus.MetaType)
+	ctx, _ = inslogger.WithField(ctx, "msg_type", msgType)
+	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("Present %v", parcel.Message().Type().String()))
+	defer span.End()
+
+	var rep insolar.Reply
+	switch msgType {
+	case insolar.TypeGetRequest.String():
+		rep, err = h.handleGetRequest(ctx, parcel)
+	case insolar.TypeGetChildren.String():
+		rep, err = h.handleGetChildren(ctx, parcel)
+	case insolar.TypeGetDelegate.String():
+		rep, err = h.handleGetDelegate(ctx, parcel)
+	case insolar.TypeGetJet.String():
+		rep, err = h.handleGetJet(ctx, parcel)
+	default:
+		err = fmt.Errorf("no handler for message type %s", msgType)
+	}
+	if err != nil {
+		h.replyError(ctx, meta, errors.Wrap(err, "error while handle parcel"))
+	} else {
+		resAsMsg := bus.ReplyAsMessage(ctx, rep)
+		h.Sender.Reply(ctx, meta, resAsMsg)
+	}
+	return err
+}
+
 func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
+	msgType := msg.Metadata.Get(bus.MetaType)
+	if msgType != "" {
+		return h.handleParcel(ctx, msg)
+	}
+
 	var err error
 
 	meta := payload.Meta{}
@@ -122,6 +178,10 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
 
 	switch payloadType {
+	case payload.TypeGetFilament:
+		p := proc.NewSendRequests(meta)
+		h.dep.SendRequests(p)
+		return p.Proceed(ctx)
 	case payload.TypePassState:
 		p := proc.NewPassState(meta)
 		h.dep.PassState(p)
@@ -197,23 +257,19 @@ func (h *Handler) replyError(ctx context.Context, replyTo payload.Meta, err erro
 
 func (h *Handler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(insolar.TypeHeavyPayload, h.handleHeavyPayload)
-
-	h.Bus.MustRegister(insolar.TypeGetDelegate, h.handleGetDelegate)
-	h.Bus.MustRegister(insolar.TypeGetChildren, h.handleGetChildren)
 	h.Bus.MustRegister(insolar.TypeGetObjectIndex, h.handleGetObjectIndex)
-	h.Bus.MustRegister(insolar.TypeGetRequest, h.handleGetRequest)
 	return nil
 }
 
 func (h *Handler) handleGetDelegate(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetDelegate)
 
-	idx, err := h.IndexLifelineAccessor.ForID(ctx, parcel.Pulse(), *msg.Head.Record())
+	idx, err := h.IndexAccessor.ForID(ctx, parcel.Pulse(), *msg.Head.Record())
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch index for %v", msg.Head.Record()))
 	}
 
-	delegateRef, ok := idx.DelegateByKey(msg.AsType)
+	delegateRef, ok := idx.Lifeline.DelegateByKey(msg.AsType)
 	if !ok {
 		return nil, errors.New("the object has no delegate for this type")
 	}
@@ -229,7 +285,7 @@ func (h *Handler) handleGetChildren(
 ) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetChildren)
 
-	idx, err := h.IndexLifelineAccessor.ForID(ctx, parcel.Pulse(), *msg.Parent.Record())
+	idx, err := h.IndexAccessor.ForID(ctx, parcel.Pulse(), *msg.Parent.Record())
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch index for %v", msg.Parent.Record()))
 	}
@@ -243,7 +299,7 @@ func (h *Handler) handleGetChildren(
 	if msg.FromChild != nil {
 		currentChild = msg.FromChild
 	} else {
-		currentChild = idx.ChildPointer
+		currentChild = idx.Lifeline.ChildPointer
 	}
 
 	// The object has no children.
@@ -310,7 +366,7 @@ func (h *Handler) handleGetRequest(ctx context.Context, parcel insolar.Parcel) (
 
 	virtRec := rec.Virtual
 	concrete := record.Unwrap(virtRec)
-	_, ok := concrete.(*record.Request)
+	_, ok := concrete.(*record.IncomingRequest)
 	if !ok {
 		return nil, errors.New("failed to decode request")
 	}
@@ -328,15 +384,22 @@ func (h *Handler) handleGetRequest(ctx context.Context, parcel insolar.Parcel) (
 	return &rep, nil
 }
 
+func (h *Handler) handleGetJet(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
+	msg := parcel.Message().(*message.GetJet)
+	jet, actual := h.JetAccessor.ForID(ctx, msg.Pulse, msg.Object)
+
+	return &reply.Jet{ID: insolar.ID(jet), Actual: actual}, nil
+}
+
 func (h *Handler) handleGetObjectIndex(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetObjectIndex)
 
-	idx, err := h.IndexLifelineAccessor.ForID(ctx, parcel.Pulse(), *msg.Object.Record())
+	idx, err := h.IndexAccessor.ForID(ctx, parcel.Pulse(), *msg.Object.Record())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch object index for %v", msg.Object.Record().String())
 	}
 
-	buf := object.EncodeIndex(idx)
+	buf := object.EncodeLifeline(idx.Lifeline)
 
 	return &reply.ObjectIndex{Index: buf}, nil
 }
@@ -346,7 +409,7 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 	msg := genericMsg.Message().(*message.HeavyPayload)
 
 	storeRecords(ctx, h.RecordModifier, h.PCS, msg.PulseNum, msg.Records)
-	if err := storeIndexBuckets(ctx, h.IndexBucketModifier, msg.IndexBuckets, msg.PulseNum); err != nil {
+	if err := storeIndexBuckets(ctx, h.IndexModifier, msg.IndexBuckets, msg.PulseNum); err != nil {
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
 
@@ -360,9 +423,8 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 		logger.Error(errors.Wrapf(err, "failed to store drop"))
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
-	if drop.Split {
+	if drop.SplitThresholdExceeded > h.cfg.JetSplit.ThresholdOverflowCount {
 		_, _, err = h.JetModifier.Split(ctx, futurePulse, drop.JetID)
-
 	} else {
 		err = h.JetModifier.Update(ctx, futurePulse, false, drop.JetID)
 	}
@@ -375,8 +437,6 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 		logger.Error(errors.Wrapf(err, "failed to add jet to JetKeeper jet=%v", msg.JetID.DebugString()))
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
-
-	storeBlobs(ctx, h.BlobModifier, h.PCS, msg.PulseNum, msg.Blobs)
 
 	stats.Record(ctx,
 		statReceivedHeavyPayloadCount.M(1),

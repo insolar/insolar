@@ -27,8 +27,10 @@ import (
 
 // Client is a high level storage interface.
 type Client interface {
-	// RegisterRequest creates request record in storage.
-	RegisterRequest(ctx context.Context, request record.Request) (*insolar.ID, error)
+	// RegisterIncomingRequest creates an incoming request record in storage.
+	RegisterIncomingRequest(ctx context.Context, request *record.IncomingRequest) (*insolar.ID, error)
+	// RegisterIncomingRequest creates an outgoing request record in storage.
+	RegisterOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) (*insolar.ID, error)
 
 	// RegisterValidation marks provided object state as approved or disapproved.
 	//
@@ -50,7 +52,7 @@ type Client interface {
 	GetObject(ctx context.Context, head insolar.Reference) (ObjectDescriptor, error)
 
 	// GetPendingRequest returns a pending request for object.
-	GetPendingRequest(ctx context.Context, objectID insolar.ID) (*insolar.Reference, insolar.Parcel, error)
+	GetPendingRequest(ctx context.Context, objectID insolar.ID) (*insolar.Reference, *record.IncomingRequest, error)
 
 	// HasPendingRequests returns true if object has unclosed requests.
 	HasPendingRequests(ctx context.Context, object insolar.Reference) (bool, error)

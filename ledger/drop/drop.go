@@ -64,8 +64,8 @@ type Drop struct {
 	// JetID represents data about JetID of the current jet.Drop.
 	JetID insolar.JetID
 
-	// Split indicates that current jet was split.
-	Split bool
+	// SplitThresholdExceeded is a counter, which stores how many times in the row jet records count exceeds `ThresholdRecordsCount`.
+	SplitThresholdExceeded int
 }
 
 // MustEncode serializes jet drop.
@@ -88,11 +88,4 @@ func Decode(buf []byte) (*Drop, error) {
 		return nil, err
 	}
 	return &drop, nil
-}
-
-// MustDecode deserializes a jet.Drop
-func MustDecode(buf []byte) (dr Drop) {
-	dec := codec.NewDecoderBytes(buf, &codec.CborHandle{})
-	dec.MustDecode(&dr)
-	return dr
 }

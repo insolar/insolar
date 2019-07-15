@@ -104,7 +104,7 @@ func (r *Tariff) GetPrototype() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -134,7 +134,7 @@ func (r *Tariff) GetCode() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetCode", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetCode", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -154,8 +154,8 @@ func (r *Tariff) GetCode() (insolar.Reference, error) {
 	return r.Code, nil
 }
 
-// GetCommission is proxy generated method
-func (r *Tariff) GetCommission(amountStr string) (string, error) {
+// CalcCommission is proxy generated method
+func (r *Tariff) CalcCommission(amountStr string) (string, error) {
 	var args [1]interface{}
 	args[0] = amountStr
 
@@ -172,7 +172,7 @@ func (r *Tariff) GetCommission(amountStr string) (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetCommission", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "CalcCommission", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -188,8 +188,8 @@ func (r *Tariff) GetCommission(amountStr string) (string, error) {
 	return ret0, nil
 }
 
-// GetCommissionNoWait is proxy generated method
-func (r *Tariff) GetCommissionNoWait(amountStr string) error {
+// CalcCommissionNoWait is proxy generated method
+func (r *Tariff) CalcCommissionNoWait(amountStr string) error {
 	var args [1]interface{}
 	args[0] = amountStr
 
@@ -200,7 +200,7 @@ func (r *Tariff) GetCommissionNoWait(amountStr string) error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetCommission", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "CalcCommission", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -208,8 +208,8 @@ func (r *Tariff) GetCommissionNoWait(amountStr string) error {
 	return nil
 }
 
-// GetCommissionAsImmutable is proxy generated method
-func (r *Tariff) GetCommissionAsImmutable(amountStr string) (string, error) {
+// CalcCommissionAsImmutable is proxy generated method
+func (r *Tariff) CalcCommissionAsImmutable(amountStr string) (string, error) {
 	var args [1]interface{}
 	args[0] = amountStr
 
@@ -226,7 +226,7 @@ func (r *Tariff) GetCommissionAsImmutable(amountStr string) (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetCommission", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "CalcCommission", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}

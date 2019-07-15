@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
 )
@@ -48,7 +47,6 @@ type LightCleaner struct {
 	jetCleaner   jet.Cleaner
 	nodeModifier node.Modifier
 	dropCleaner  drop.Cleaner
-	blobCleaner  blob.Cleaner
 	recCleaner   object.RecordCleaner
 	indexCleaner object.IndexCleaner
 	pulseShifter pulse.Shifter
@@ -63,7 +61,6 @@ func NewCleaner(
 	jetCleaner jet.Cleaner,
 	nodeModifier node.Modifier,
 	dropCleaner drop.Cleaner,
-	blobCleaner blob.Cleaner,
 	recCleaner object.RecordCleaner,
 	indexCleaner object.IndexCleaner,
 	pulseShifter pulse.Shifter,
@@ -74,7 +71,6 @@ func NewCleaner(
 		jetCleaner:      jetCleaner,
 		nodeModifier:    nodeModifier,
 		dropCleaner:     dropCleaner,
-		blobCleaner:     blobCleaner,
 		recCleaner:      recCleaner,
 		indexCleaner:    indexCleaner,
 		pulseShifter:    pulseShifter,
@@ -100,7 +96,13 @@ func (c *LightCleaner) clean(ctx context.Context) {
 		ctx, logger := inslogger.WithTraceField(ctx, utils.RandTraceID())
 		logger.Debugf("[Cleaner][NotifyAboutPulse] start cleaning pulse - %v", pn)
 
-		expiredPn, err := c.pulseCalculator.Backwards(ctx, pn, c.lightChainLimit)
+		// One more step back to eliminate race conditions on pulse change.
+		// Message handlers don't hold locks on data. A particular case is when we check if data is beyond limit
+		// and then access nodes. Between message receive and data access cleaner can remove data for the
+		// pulse on lightChainLimit. This will lead to data fetch failure. We need to give handlers time to
+		// finish before removing data.
+		cleanFrom := c.lightChainLimit + 1
+		expiredPn, err := c.pulseCalculator.Backwards(ctx, pn, cleanFrom)
 		if err == pulse.ErrNotFound {
 			logger.Warnf("[Cleaner][NotifyAboutPulse] expiredPn for pn - %v doesn't exist. limit - %v",
 				pn, c.lightChainLimit)
@@ -117,7 +119,6 @@ func (c *LightCleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
 	inslogger.FromContext(ctx).Debugf("[Cleaner][cleanPulse] start cleaning. pn - %v", pn)
 	c.nodeModifier.DeleteForPN(pn)
 	c.dropCleaner.DeleteForPN(ctx, pn)
-	c.blobCleaner.DeleteForPN(ctx, pn)
 	c.recCleaner.DeleteForPN(ctx, pn)
 
 	c.jetCleaner.DeleteForPN(ctx, pn)

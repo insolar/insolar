@@ -27,7 +27,6 @@ import (
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/stretchr/testify/require"
@@ -49,9 +48,6 @@ func TestCleaner_cleanPulse(t *testing.T) {
 	dc := drop.NewCleanerMock(ctrl)
 	dc.DeleteForPNMock.Expect(ctx, inputPulse.PulseNumber)
 
-	bc := blob.NewCleanerMock(ctrl)
-	bc.DeleteForPNMock.Expect(ctx, inputPulse.PulseNumber)
-
 	rc := object.NewRecordCleanerMock(ctrl)
 	rc.DeleteForPNMock.Expect(ctx, inputPulse.PulseNumber)
 
@@ -61,7 +57,7 @@ func TestCleaner_cleanPulse(t *testing.T) {
 	ps := pulse.NewShifterMock(ctrl)
 	ps.ShiftMock.Expect(ctx, inputPulse.PulseNumber).Return(nil)
 
-	cleaner := NewCleaner(jm, nm, dc, bc, rc, ic, ps, nil, 0)
+	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, nil, 0)
 
 	cleaner.cleanPulse(ctx, inputPulse.PulseNumber)
 
@@ -92,11 +88,6 @@ func TestCleaner_clean(t *testing.T) {
 	dc := drop.NewCleanerMock(ctrl)
 	dc.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
 
-	bc := blob.NewCleanerMock(ctrl)
-	bc.DeleteForPNFunc = func(p context.Context, pn insolar.PulseNumber) {
-		require.Equal(t, calculatedPulse.PulseNumber, pn)
-	}
-
 	rc := object.NewRecordCleanerMock(ctrl)
 	rc.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
 
@@ -112,11 +103,11 @@ func TestCleaner_clean(t *testing.T) {
 	pc := pulse.NewCalculatorMock(ctrl)
 	pc.BackwardsFunc = func(p context.Context, pn insolar.PulseNumber, l int) (r insolar.Pulse, r1 error) {
 		require.Equal(t, inputPulse.PulseNumber, pn)
-		require.Equal(t, limit, l)
+		require.Equal(t, limit+1, l)
 		return calculatedPulse, nil
 	}
 
-	cleaner := NewCleaner(jm, nm, dc, bc, rc, ic, ps, pc, limit)
+	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, pc, limit)
 	defer close(cleaner.pulseForClean)
 
 	go cleaner.clean(ctx)
@@ -143,9 +134,6 @@ func TestLightCleaner_NotifyAboutPulse(t *testing.T) {
 	dc := drop.NewCleanerMock(ctrl)
 	dc.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
 
-	bc := blob.NewCleanerMock(ctrl)
-	bc.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
-
 	rc := object.NewRecordCleanerMock(ctrl)
 	rc.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
 
@@ -161,11 +149,11 @@ func TestLightCleaner_NotifyAboutPulse(t *testing.T) {
 	pc := pulse.NewCalculatorMock(ctrl)
 	pc.BackwardsFunc = func(p context.Context, pn insolar.PulseNumber, l int) (r insolar.Pulse, r1 error) {
 		require.Equal(t, inputPulse.PulseNumber, pn)
-		require.Equal(t, limit, l)
+		require.Equal(t, limit+1, l)
 		return calculatedPulse, nil
 	}
 
-	cleaner := NewCleaner(jm, nm, dc, bc, rc, ic, ps, pc, limit)
+	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, pc, limit)
 	defer close(cleaner.pulseForClean)
 
 	go cleaner.NotifyAboutPulse(ctx, inputPulse.PulseNumber)

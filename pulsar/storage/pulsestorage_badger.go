@@ -38,14 +38,12 @@ const (
 // Creates database in provided dir or in current directory if dir parameter is empty.
 func NewStorageBadger(conf configuration.Pulsar, opts *badger.Options) (PulsarStorage, error) {
 	gob.Register(insolar.Pulse{})
-	opts = setOptions(opts)
 	dir, err := filepath.Abs(conf.Storage.DataDirectory)
 	if err != nil {
 		return nil, err
 	}
 
-	opts.Dir = dir
-	opts.ValueDir = dir
+	opts = setOptions(opts, dir)
 
 	bdb, err := badger.Open(*opts)
 	if err != nil {
@@ -71,12 +69,14 @@ func NewStorageBadger(conf configuration.Pulsar, opts *badger.Options) (PulsarSt
 	return db, nil
 }
 
-func setOptions(o *badger.Options) *badger.Options {
+func setOptions(o *badger.Options, dir string) *badger.Options {
 	newo := &badger.Options{}
 	if o != nil {
 		*newo = *o
+		newo.Dir = dir
+		newo.ValueDir = dir
 	} else {
-		*newo = badger.DefaultOptions
+		*newo = badger.DefaultOptions(dir)
 	}
 	return newo
 }
@@ -93,19 +93,14 @@ func (storage *BadgerStorageImpl) GetLastPulse() (*insolar.Pulse, error) {
 		if err != nil {
 			return err
 		}
-		val, err := item.Value()
-		if err != nil {
-			return err
-		}
 
-		r := bytes.NewBuffer(val)
-		decoder := gob.NewDecoder(r)
-		err = decoder.Decode(&pulseNumber)
-		if err != nil {
+		err = item.Value(func(val []byte) error {
+			r := bytes.NewBuffer(val)
+			decoder := gob.NewDecoder(r)
+			err = decoder.Decode(&pulseNumber)
 			return err
-		}
-
-		return nil
+		})
+		return err
 	})
 	return &pulseNumber, err
 }

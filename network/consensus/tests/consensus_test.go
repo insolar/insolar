@@ -54,6 +54,7 @@ import (
 	"context"
 	"errors"
 	"math/rand"
+	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/gcpv2"
@@ -67,7 +68,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common"
 )
 
-func NewConsensusNode(hostAddr common.HostAddress) *EmuHostConsensusAdapter {
+func NewConsensusHost(hostAddr common.HostAddress) *EmuHostConsensusAdapter {
 	return &EmuHostConsensusAdapter{hostAddr: hostAddr}
 }
 
@@ -79,14 +80,19 @@ type EmuHostConsensusAdapter struct {
 	outbound chan<- Packet
 }
 
-func (h *EmuHostConsensusAdapter) ConnectTo(chronicles census.ConsensusChronicles, network *EmuNetwork, config core.LocalNodeConfiguration) {
+func (h *EmuHostConsensusAdapter) ConnectTo(chronicles census.ConsensusChronicles, network *EmuNetwork,
+	strategyFactory core.RoundStrategyFactory, candidateFeeder core.CandidateControlFeeder,
+	controlFeeder core.ConsensusControlFeeder, config core.LocalNodeConfiguration) {
 	ctx := network.ctx
 	// &EmuConsensusStrategy{ctx: ctx}
 	upstream := NewEmuUpstreamPulseController(ctx, defaultNshGenerationDelay)
-	var strategyFactory core.RoundStrategyFactory = &EmuRoundStrategyFactory{}
 
-	h.controller = gcpv2.NewConsensusMemberController(chronicles, upstream,
-		core.NewPhasedRoundControllerFactory(config, NewEmuTransport(h), strategyFactory))
+	h.controller = gcpv2.NewConsensusMemberController(
+		chronicles, upstream,
+		core.NewPhasedRoundControllerFactory(config, NewEmuTransport(h), strategyFactory),
+		candidateFeeder,
+		controlFeeder,
+	)
 
 	h.inbound, h.outbound = network.AddHost(ctx, h.hostAddr)
 	go h.run(ctx)
@@ -94,8 +100,9 @@ func (h *EmuHostConsensusAdapter) ConnectTo(chronicles census.ConsensusChronicle
 
 func (h *EmuHostConsensusAdapter) run(ctx context.Context) {
 	defer func() {
-		r := recover()
-		inslogger.FromContext(ctx).Errorf("host has died: %v, %v", h.hostAddr, r)
+		//r := recover()
+		//inslogger.FromContext(ctx).Errorf("host has died: %v, %v", h.hostAddr, r)
+		//TODO print stacktrace
 		close(h.outbound)
 	}()
 
@@ -140,9 +147,9 @@ func (h *EmuHostConsensusAdapter) receive(ctx context.Context) (payload interfac
 	return packet.Payload, &packet.Host, nil
 }
 
-func (h *EmuHostConsensusAdapter) send(target common.HostAddress, payload interface{}) {
+func (h *EmuHostConsensusAdapter) send(target common.NodeEndpoint, payload interface{}) {
 	parser := payload.(packets.PacketParser)
-	pkt := Packet{Host: target, Payload: WrapPacketParser(parser)}
+	pkt := Packet{Host: target.GetNameAddress(), Payload: WrapPacketParser(parser)}
 	h.outbound <- pkt
 }
 
@@ -164,10 +171,6 @@ type EmuRoundStrategy struct {
 	bundle core.PhaseControllersBundle
 }
 
-func (c *EmuRoundStrategy) GetNodeUpdateCallback() core.NodeUpdateCallback {
-	return c.bundle.GetNodeUpdateCallback()
-}
-
 func (*EmuRoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse common.PulseNumber, self common2.LocalNodeProfile) context.Context {
 	return ctx
 }
@@ -176,7 +179,7 @@ func (c *EmuRoundStrategy) GetPrepPhaseControllers() []core.PrepPhaseController 
 	return c.bundle.GetPrepPhaseControllers()
 }
 
-func (c *EmuRoundStrategy) GetFullPhaseControllers(nodeCount int) []core.PhaseController {
+func (c *EmuRoundStrategy) GetFullPhaseControllers(nodeCount int) ([]core.PhaseController, core.NodeUpdateCallback) {
 	return c.bundle.GetFullPhaseControllers(nodeCount)
 }
 
@@ -193,4 +196,36 @@ func (*EmuRoundStrategy) IsEphemeralPulseAllowed() bool {
 }
 
 func (*EmuRoundStrategy) AdjustConsensusTimings(timings *common2.RoundTimings) {
+}
+
+var _ core.ConsensusControlFeeder = &EmuControlFeeder{}
+
+type EmuControlFeeder struct {
+	leaveReason uint32
+}
+
+func (*EmuControlFeeder) SetTrafficLimit(level common.CapacityLevel, duration time.Duration) {
+}
+
+func (*EmuControlFeeder) ResumeTraffic() {
+}
+
+func (*EmuControlFeeder) PulseDetected() {
+}
+
+func (*EmuControlFeeder) ConsensusFinished(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
+}
+
+func (*EmuControlFeeder) GetRequiredPowerLevel() common2.PowerRequest {
+	return common2.NewPowerRequestByLevel(common.LevelNormal)
+}
+
+func (*EmuControlFeeder) OnAppliedPowerLevel(pw common2.MemberPower, effectiveSince common.PulseNumber) {
+}
+
+func (p *EmuControlFeeder) GetRequiredGracefulLeave() (bool, uint32) {
+	return p.leaveReason != 0, p.leaveReason
+}
+
+func (*EmuControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince common.PulseNumber) {
 }

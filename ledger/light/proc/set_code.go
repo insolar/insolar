@@ -27,7 +27,6 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
 )
@@ -42,17 +41,15 @@ type SetCode struct {
 	dep struct {
 		writer  hot.WriteAccessor
 		records object.RecordModifier
-		blobs   blob.Modifier
 		pcs     insolar.PlatformCryptographyScheme
 		sender  bus.Sender
 	}
 }
 
-func NewSetCode(msg payload.Meta, rec record.Virtual, code []byte, recID insolar.ID, jetID insolar.JetID) *SetCode {
+func NewSetCode(msg payload.Meta, rec record.Virtual, recID insolar.ID, jetID insolar.JetID) *SetCode {
 	return &SetCode{
 		message:  msg,
 		record:   rec,
-		code:     code,
 		recordID: recID,
 		jetID:    jetID,
 	}
@@ -61,13 +58,11 @@ func NewSetCode(msg payload.Meta, rec record.Virtual, code []byte, recID insolar
 func (p *SetCode) Dep(
 	w hot.WriteAccessor,
 	r object.RecordModifier,
-	b blob.Modifier,
 	pcs insolar.PlatformCryptographyScheme,
 	s bus.Sender,
 ) {
 	p.dep.writer = w
 	p.dep.records = r
-	p.dep.blobs = b
 	p.dep.pcs = pcs
 	p.dep.sender = s
 }

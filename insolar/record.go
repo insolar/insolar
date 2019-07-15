@@ -57,6 +57,13 @@ func NewID(pulse PulseNumber, hash []byte) *ID {
 	return &id
 }
 
+func NewIDFromBytes(raw []byte) *ID {
+	id := ID{}
+	copy(id[:], raw)
+
+	return &id
+}
+
 // Bytes returns byte slice of ID.
 func (id ID) Bytes() []byte {
 	return id[:]
@@ -66,6 +73,11 @@ func (id ID) Bytes() []byte {
 func (id *ID) Pulse() PulseNumber {
 	pulse := binary.BigEndian.Uint32(id[:PulseNumberSize])
 	return PulseNumber(pulse)
+}
+
+// SetPulse sets IDs pulse.
+func (id *ID) SetPulse(pn PulseNumber) {
+	copy(id[:PulseNumberSize], pn.Bytes())
 }
 
 // Hash returns a copy of Hash part of ID.

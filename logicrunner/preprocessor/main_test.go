@@ -376,6 +376,42 @@ func (a *A) Get(
 	s.Contains(bufWrapper.String(), "args[3] = &args3")
 }
 
+func (s *PreprocessorSuite) TestConstructorsWrapper() {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	s.NoError(err)
+	defer os.RemoveAll(tmpDir) //nolint: errcheck
+
+	testContract := "/test.go"
+
+	err = goplugintestutils.WriteFile(tmpDir, testContract, `
+package main
+
+type A struct{
+	foundation.BaseContract
+}
+
+func New() (*A, error) {
+    return &A{}, nil
+}
+
+func NewWithNumber(i int) (*A, error) {
+    return &A{}, nil
+}
+`)
+	s.NoError(err)
+
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	s.NoError(err)
+
+	var bufWrapper bytes.Buffer
+	err = parsed.WriteWrapper(&bufWrapper, parsed.ContractName())
+	s.NoError(err)
+
+	str := bufWrapper.String()
+	s.Contains(str, "INSCONSTRUCTOR_New(")
+	s.Contains(str, "INSCONSTRUCTOR_NewWithNumber(")
+}
+
 func (s *PreprocessorSuite) TestContractOnlyIfEmbedBaseContract() {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	s.NoError(err)
@@ -656,263 +692,6 @@ func (s *PreprocessorSuite) TestProxyGeneration() {
 			a.NoError(err, string(out))
 		})
 	}
-}
-
-var sagaTestContract = `
-package main
-
-import (
-"fmt"
-"errors"
-
-"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-)
-
-type SagaTestWallet struct {
-	foundation.BaseContract
-	Amount int
-}
-
-//ins:saga(TheRollbackMethod)
-func (w *SagaTestWallet) TheAcceptMethod(amount int) error {
-	w.Amount += amount
-}
-
-func (w *SagaTestWallet) TheRollbackMethod(amount int) error {
-	w.Amount -= amount
-}
-`
-
-// Make sure proxy doesn't contain:
-// 1. Rollback method of the saga
-// 2. AsImmutable-versions of Accept/Rollback methods
-// 3. NoWait-versions of Accept/Rollback methods
-func (s *PreprocessorSuite) TestSagaAdditionalMethodsAreMissingInProxy() {
-	tmpDir, err := ioutil.TempDir("", "test-")
-	s.NoError(err)
-	defer os.RemoveAll(tmpDir)
-
-	testContract := "/test.go"
-	err = goplugintestutils.WriteFile(tmpDir, testContract, sagaTestContract)
-	s.NoError(err)
-
-	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
-	s.NoError(err)
-
-	var bufProxy bytes.Buffer
-	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
-	s.NoError(err)
-	proxyCode := bufProxy.String()
-	s.Contains(proxyCode, "TheAcceptMethod")
-	s.NotContains(proxyCode, "TheRollbackMethod")
-	s.NotContains(proxyCode, "TheAcceptMethodNoWait")
-	s.NotContains(proxyCode, "TheRollbackMethodNoWait")
-	s.NotContains(proxyCode, "TheAcceptMethodAsImmutable")
-	s.NotContains(proxyCode, "TheRollbackMethodAsImmutable")
-}
-
-// Make sure wrapper contains meta information about saga
-func (s *PreprocessorSuite) TestSagaMetaInfoIsPresentInProxy() {
-	tmpDir, err := ioutil.TempDir("", "test-")
-	s.NoError(err)
-	defer os.RemoveAll(tmpDir)
-
-	testContract := "/test.go"
-	err = goplugintestutils.WriteFile(tmpDir, testContract, sagaTestContract)
-	s.NoError(err)
-
-	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
-	s.NoError(err)
-
-	var bufProxy bytes.Buffer
-	err = parsed.WriteWrapper(&bufProxy, parsed.ContractName())
-	s.NoError(err)
-	proxyCode := bufProxy.String()
-	s.Contains(proxyCode, "INSMETHOD_TheAcceptMethod")
-	s.Contains(proxyCode, "INSMETHOD_TheRollbackMethod")
-	s.Contains(proxyCode, `
-func INS_META_INFO() []map[string]string {
-	result := make([]map[string]string, 0)
-
-	{
-		info := make(map[string]string, 3)
-		info["Type"] = "SagaInfo"
-		info["MethodName"] = "TheAcceptMethod"
-		info["RollbackMethodName"] = "TheRollbackMethod"
-		result = append(result, info)
-	}
-
-	return result
-}
-`)
-}
-
-// Make sure saga doesn't compile when saga's rollback method doesn't exist
-func (s *PreprocessorSuite) TestSagaDoesntCompileWhenRollbackIsMissing() {
-	var testSaga = `
-package main
-
-import (
-"fmt"
-"errors"
-
-"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-)
-
-type SagaTestWallet struct {
-	foundation.BaseContract
-	Amount int
-}
-
-//ins:saga(TheRollbackMethod)
-func (w *SagaTestWallet) TheAcceptMethod(amount int) error {
-	w.Amount += amount
-    return nil
-}
-`
-	tmpDir, err := ioutil.TempDir("", "test-")
-	s.NoError(err)
-	defer os.RemoveAll(tmpDir)
-
-	testContract := "/test.go"
-	err = goplugintestutils.WriteFile(tmpDir, testContract, testSaga)
-	s.NoError(err)
-
-	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
-	s.NoError(err)
-
-	var bufProxy bytes.Buffer
-	err = parsed.WriteWrapper(&bufProxy, parsed.ContractName())
-	s.Error(err)
-	s.Equal("Semantic error: 'TheAcceptMethod' is a saga with rollback method 'TheRollbackMethod', "+
-		"but 'TheRollbackMethod' is not declared. Maybe a typo?", err.Error())
-
-	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
-	s.Error(err)
-	s.Equal("Semantic error: 'TheAcceptMethod' is a saga with rollback method 'TheRollbackMethod', "+
-		"but 'TheRollbackMethod' is not declared. Maybe a typo?", err.Error())
-}
-
-// Make sure saga doesn't compile if the accept method has more then one argument
-func (s *PreprocessorSuite) TestSagaDoesntCompileWhenAcceptHasMultipleArguments() {
-	var testSaga = `
-package main
-
-import (
-"fmt"
-"errors"
-
-"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-)
-
-type SagaTestWallet struct {
-	foundation.BaseContract
-	Amount int
-}
-
-//ins:saga(TheRollbackMethod)
-func (w *SagaTestWallet) TheAcceptMethod(arg1 int, arg2 string) error {
-    return nil
-}
-
-func (w *SagaTestWallet) TheRollbackMethod(arg1 int, arg2 string) error {
-    return nil
-}
-`
-	tmpDir, err := ioutil.TempDir("", "test-")
-	s.NoError(err)
-	defer os.RemoveAll(tmpDir)
-
-	testContract := "/test.go"
-	err = goplugintestutils.WriteFile(tmpDir, testContract, testSaga)
-	s.NoError(err)
-
-	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
-	s.NoError(err)
-
-	var bufProxy bytes.Buffer
-	err = parsed.WriteWrapper(&bufProxy, parsed.ContractName())
-	s.Error(err)
-	s.Equal("Semantic error: 'TheAcceptMethod' is a saga with 2 arguments. Currently only one argument is allowed.",
-		err.Error())
-
-	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
-	s.Error(err)
-	s.Equal("Semantic error: 'TheAcceptMethod' is a saga with 2 arguments. Currently only one argument is allowed.",
-		err.Error())
-}
-
-// Make sure saga doesn't compile when saga's rollback method has arguments that don't match
-func (s *PreprocessorSuite) TestSagaDoesntCompileWhenRollbackArgumentsDontMatch() {
-	var testSaga = `
-package main
-
-import (
-"fmt"
-"errors"
-
-"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-)
-
-type SagaTestWallet struct {
-	foundation.BaseContract
-	Amount int
-}
-
-//ins:saga(TheRollbackMethod)
-func (w *SagaTestWallet) TheAcceptMethod(amount int) error {
-	w.Amount += amount
-    return nil
-}
-
-func (w *SagaTestWallet) TheRollbackMethod(amount string) error {
-	return nil
-}
-`
-	tmpDir, err := ioutil.TempDir("", "test-")
-	s.NoError(err)
-	defer os.RemoveAll(tmpDir)
-
-	testContract := "/test.go"
-	err = goplugintestutils.WriteFile(tmpDir, testContract, testSaga)
-	s.NoError(err)
-
-	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
-	s.NoError(err)
-
-	var bufProxy bytes.Buffer
-	err = parsed.WriteWrapper(&bufProxy, parsed.ContractName())
-	s.Error(err)
-	s.Equal("Semantic error: 'TheAcceptMethod' is a saga with arguments 'amount int' and rollback method "+
-		"'TheRollbackMethod', but 'TheRollbackMethod' arguments 'amount string' dont't match. "+
-		"They should be exactly the same.", err.Error())
-
-	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
-	s.Error(err)
-	s.Equal("Semantic error: 'TheAcceptMethod' is a saga with arguments 'amount int' and rollback method "+
-		"'TheRollbackMethod', but 'TheRollbackMethod' arguments 'amount string' dont't match. "+
-		"They should be exactly the same.", err.Error())
-}
-
-// Low-level tests for extractSagaInfoFromComment procedure
-func (s *PreprocessorSuite) TestExtractSagaInfoFromComment() {
-	info := &SagaInfo{}
-	res := extractSagaInfoFromComment("", info)
-	s.Require().False(res)
-	s.Require().False(info.IsSaga)
-
-	res = extractSagaInfoFromComment("ololo", info)
-	s.Require().False(res)
-	s.Require().False(info.IsSaga)
-
-	res = extractSagaInfoFromComment("//ins:saga()", info)
-	s.Require().False(res)
-	s.Require().False(info.IsSaga)
-
-	res = extractSagaInfoFromComment("//ins:saga(SomeRollbackMethodName) ", info)
-	s.Require().True(res)
-	s.Require().True(info.IsSaga)
-	s.Require().Equal(info.RollbackMethodName, "SomeRollbackMethodName")
 }
 
 func TestPreprocessor(t *testing.T) {

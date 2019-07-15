@@ -24,15 +24,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"regexp"
+	"runtime"
 	"strings"
 
 	"io/ioutil"
 	"net/http"
 	"testing"
 
-	"github.com/gorilla/rpc/v2/json2"
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/testutils"
+
+	"github.com/insolar/rpc/v2/json2"
 
 	"github.com/stretchr/testify/require"
 
@@ -44,7 +48,12 @@ import (
 
 const sendRetryCount = 5
 
-var contracts map[string]*insolar.Reference
+type contractInfo struct {
+	reference *insolar.Reference
+	testName  string
+}
+
+var contracts map[string]*contractInfo
 
 type postParams map[string]interface{}
 
@@ -101,18 +110,17 @@ func createMember(t *testing.T) *user {
 	require.NoError(t, err)
 	member.ref = root.ref
 
-	addBurnAddress(t)
-
-	result, err := retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, true)
+	result, err := retryableCreateMember(member, "member.create", true)
 	require.NoError(t, err)
-	ref, ok := result.(string)
+	ref, ok := result.(map[string]interface{})["reference"].(string)
 	require.True(t, ok)
 	member.ref = ref
 	return member
 }
 
 func addBurnAddress(t *testing.T) {
-	_, err := signedRequest(&migrationAdmin, "wallet.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{"fake_ba"}})
+	ba := testutils.RandomString()
+	_, err := signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
 	require.NoError(t, err)
 }
 
@@ -147,7 +155,7 @@ func getRPSResponseBody(t *testing.T, postParams map[string]interface{}) []byte 
 func getSeed(t *testing.T) string {
 	body := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
-		"method":  "node.GetSeed",
+		"method":  "node.getSeed",
 		"id":      "",
 	})
 	getSeedResponse := &getSeedResponse{}
@@ -159,7 +167,7 @@ func getSeed(t *testing.T) string {
 func getInfo(t *testing.T) infoResponse {
 	pp := postParams{
 		"jsonrpc": "2.0",
-		"method":  "network.GetInfo",
+		"method":  "network.getInfo",
 		"id":      "",
 	}
 	body := getRPSResponseBody(t, pp)
@@ -172,7 +180,7 @@ func getInfo(t *testing.T) infoResponse {
 func getStatus(t *testing.T) statusResponse {
 	body := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
-		"method":  "node.GetStatus",
+		"method":  "node.getStatus",
 		"id":      "",
 	})
 	rpcStatusResponse := &rpcStatusResponse{}
@@ -193,13 +201,21 @@ func unmarshalCallResponse(t *testing.T, body []byte, response *requester.Contra
 	require.NoError(t, err)
 }
 
-func retryableCreateMember(user *user, method string, params map[string]interface{}, updatePublicKey bool) (interface{}, error) {
+func retryableMemberCreate(user *user, updatePublicKey bool) (interface{}, error) {
+	return retryableCreateMember(user, "member.create", updatePublicKey)
+}
+
+func retryableMemberMigrationCreate(user *user, updatePublicKey bool) (interface{}, error) {
+	return retryableCreateMember(user, "member.migrationCreate", updatePublicKey)
+}
+
+func retryableCreateMember(user *user, method string, updatePublicKey bool) (interface{}, error) {
 	// TODO: delete this after deduplication (INS-2778)
 	var result interface{}
 	var err error
 	currentIterNum := 1
 	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
-		result, err = signedRequest(user, method, params)
+		result, err = signedRequest(user, method, nil)
 		if err == nil || !strings.Contains(err.Error(), "member for this publicKey already exist") {
 			return result, err
 		}
@@ -216,20 +232,35 @@ func retryableCreateMember(user *user, method string, params map[string]interfac
 	return result, err
 }
 
-func signedRequest(user *user, method string, params map[string]interface{}) (interface{}, error) {
+func signedRequest(user *user, method string, params interface{}) (interface{}, error) {
 	ctx := context.TODO()
-	rootCfg, err := requester.CreateUserConfig(user.ref, user.privKey)
+	rootCfg, err := requester.CreateUserConfig(user.ref, user.privKey, user.pubKey)
 	if err != nil {
 		return nil, err
 	}
+
+	var caller string
+	fpcs := make([]uintptr, 1)
+	for i := 2; i < 10; i++ {
+		if n := runtime.Callers(i, fpcs); n == 0 {
+			break
+		}
+		caller = runtime.FuncForPC(fpcs[0] - 1).Name()
+		if ok, _ := regexp.MatchString(`\.Test`, caller); ok {
+			break
+		}
+		caller = ""
+	}
+
 	var resp requester.ContractAnswer
 	currentIterNum := 1
 	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
 		res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.Request{
 			JSONRPC: "2.0",
 			ID:      1,
-			Method:  "call.api",
+			Method:  "api.call",
 			Params:  requester.Params{CallSite: method, CallParams: params, PublicKey: user.pubKey},
+			Test:    caller,
 		})
 
 		if err != nil {
@@ -283,18 +314,27 @@ func newUserWithKeys() (*user, error) {
 	}, nil
 }
 
-// this is needed for running tests with count
+// uploadContractOnce is needed for running tests with count
+// use unique names when uploading contracts otherwise your contract won't be uploaded
 func uploadContractOnce(t *testing.T, name string, code string) *insolar.Reference {
 	if _, ok := contracts[name]; !ok {
-		contracts[name] = uploadContract(t, name, code)
+		ref := uploadContract(t, name, code)
+		contracts[name] = &contractInfo{
+			reference: ref,
+			testName:  t.Name(),
+		}
 	}
-	return contracts[name]
+	require.Equal(
+		t, contracts[name].testName, t.Name(),
+		"[ uploadContractOnce ] You cant use name of contract multiple times: "+contracts[name].testName,
+	)
+	return contracts[name].reference
 }
 
 func uploadContract(t *testing.T, contractName string, contractCode string) *insolar.Reference {
 	uploadBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
-		"method":  "contract.Upload",
+		"method":  "contract.upload",
 		"id":      "",
 		"params": map[string]string{
 			"name": contractName,
@@ -323,13 +363,18 @@ func uploadContract(t *testing.T, contractName string, contractCode string) *ins
 	return prototypeRef
 }
 
-func callConstructor(t *testing.T, prototypeRef *insolar.Reference) *insolar.Reference {
+func callConstructor(t *testing.T, prototypeRef *insolar.Reference, method string, args ...interface{}) *insolar.Reference {
+	argsSerialized, err := insolar.Serialize(args)
+	require.NoError(t, err)
+
 	objectBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
-		"method":  "contract.CallConstructor",
+		"method":  "contract.callConstructor",
 		"id":      "",
-		"params": map[string]string{
+		"params": map[string]interface{}{
 			"PrototypeRefString": prototypeRef.String(),
+			"Method":             method,
+			"MethodArgs":         argsSerialized,
 		},
 	})
 	require.NotEmpty(t, objectBody)
@@ -341,7 +386,7 @@ func callConstructor(t *testing.T, prototypeRef *insolar.Reference) *insolar.Ref
 		Error   json2.Error              `json:"error"`
 	}{}
 
-	err := json.Unmarshal(objectBody, &callConstructorRes)
+	err = json.Unmarshal(objectBody, &callConstructorRes)
 	require.NoError(t, err)
 	require.Empty(t, callConstructorRes.Error)
 
@@ -353,13 +398,27 @@ func callConstructor(t *testing.T, prototypeRef *insolar.Reference) *insolar.Ref
 	return objectRef
 }
 
+type callRes struct {
+	Version string              `json:"jsonrpc"`
+	ID      string              `json:"id"`
+	Result  api.CallMethodReply `json:"result"`
+	Error   json2.Error         `json:"error"`
+}
+
 func callMethod(t *testing.T, objectRef *insolar.Reference, method string, args ...interface{}) api.CallMethodReply {
+	callRes := callMethodNoChecks(t, objectRef, method, args...)
+	require.Empty(t, callRes.Error)
+
+	return callRes.Result
+}
+
+func callMethodNoChecks(t *testing.T, objectRef *insolar.Reference, method string, args ...interface{}) callRes {
 	argsSerialized, err := insolar.Serialize(args)
 	require.NoError(t, err)
 
 	callMethodBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
-		"method":  "contract.CallMethod",
+		"method":  "contract.callMethod",
 		"id":      "",
 		"params": map[string]interface{}{
 			"ObjectRefString": objectRef.String(),
@@ -378,7 +437,6 @@ func callMethod(t *testing.T, objectRef *insolar.Reference, method string, args 
 
 	err = json.Unmarshal(callMethodBody, &callRes)
 	require.NoError(t, err)
-	require.Empty(t, callRes.Error)
 
-	return callRes.Result
+	return callRes
 }

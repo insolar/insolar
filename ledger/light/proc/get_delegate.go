@@ -18,36 +18,56 @@ package proc
 
 import (
 	"context"
-	"errors"
 
-	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/payload"
+	"github.com/pkg/errors"
+
+	wmBus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/object"
 )
 
 type GetDelegate struct {
-	replyTo chan<- bus.Reply
-	idx     *object.Lifeline
+	message payload.Meta
 	msg     *message.GetDelegate
+	Dep     struct {
+		Sender        wmBus.Sender
+		IndexAccessor object.IndexAccessor
+	}
 }
 
-func NewGetDelegate(msg *message.GetDelegate, idx *object.Lifeline, rep chan<- bus.Reply) *GetDelegate {
+func NewGetDelegate(msg *message.GetDelegate, message payload.Meta) *GetDelegate {
 	return &GetDelegate{
 		msg:     msg,
-		replyTo: rep,
-		idx:     idx,
+		message: message,
 	}
 }
 
 func (s *GetDelegate) Proceed(ctx context.Context) error {
-	delegateRef, ok := s.idx.DelegateByKey(s.msg.AsType)
-	if !ok {
-		err := errors.New("the object has no delegate for this type")
-		s.replyTo <- bus.Reply{Reply: nil, Err: err}
+	idx, err := s.Dep.IndexAccessor.ForID(ctx, flow.Pulse(ctx), *s.msg.Head.Record())
+	if err != nil {
+		msg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
+		if err != nil {
+			return err
+		}
+		s.Dep.Sender.Reply(ctx, s.message, msg)
 		return err
 	}
 
-	s.replyTo <- bus.Reply{Reply: &reply.Delegate{Head: delegateRef}, Err: nil}
+	delegateRef, ok := idx.Lifeline.DelegateByKey(s.msg.AsType)
+	if !ok {
+		err := errors.New("the object has no delegate for this type")
+		msg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
+		if err != nil {
+			return err
+		}
+		s.Dep.Sender.Reply(ctx, s.message, msg)
+		return err
+	}
+
+	msg := wmBus.ReplyAsMessage(ctx, &reply.Delegate{Head: delegateRef})
+	s.Dep.Sender.Reply(ctx, s.message, msg)
 	return nil
 }

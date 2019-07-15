@@ -22,8 +22,8 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"go.opencensus.io/trace"
@@ -32,15 +32,15 @@ import (
 type GetPendingRequests struct {
 	dep      *proc.Dependencies
 	msg      *message.GetPendingRequests
-	replyTo  chan<- bus.Reply
+	meta     payload.Meta
 	reqPulse insolar.PulseNumber
 }
 
-func NewGetPendingRequests(dep *proc.Dependencies, rep chan<- bus.Reply, parcel insolar.Parcel) *GetPendingRequests {
+func NewGetPendingRequests(dep *proc.Dependencies, meta payload.Meta, parcel insolar.Parcel) *GetPendingRequests {
 	return &GetPendingRequests{
 		dep:      dep,
 		msg:      parcel.Message().(*message.GetPendingRequests),
-		replyTo:  rep,
+		meta:     meta,
 		reqPulse: parcel.Pulse(),
 	}
 }
@@ -52,26 +52,19 @@ func (s *GetPendingRequests) Present(ctx context.Context, f flow.Flow) error {
 	)
 	defer span.End()
 
-	jet := proc.NewFetchJet(*s.msg.DefaultTarget().Record(), flow.Pulse(ctx), s.replyTo)
+	jet := proc.NewFetchJet(*s.msg.DefaultTarget().Record(), flow.Pulse(ctx), s.meta)
 	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, false); err != nil {
 		return err
 	}
 
-	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.replyTo)
+	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.meta)
 	s.dep.WaitHot(hot)
 	if err := f.Procedure(ctx, hot, false); err != nil {
 		return err
 	}
 
-	// refreshPendingsState := proc.NewRefreshPendingFilament(s.replyTo, s.reqPulse, *s.msg.Object.Record())
-	// s.dep.RefreshPendingFilament(refreshPendingsState)
-	// if err := f.Procedure(ctx, refreshPendingsState, false); err != nil {
-	// 	panic(errors.Wrap(err, "something broken"))
-	// 	return err
-	// }
-
-	getPendingRequests := proc.NewGetPendingRequests(jet.Result.Jet, s.replyTo, s.msg, s.reqPulse)
+	getPendingRequests := proc.NewGetPendingRequests(jet.Result.Jet, s.meta, s.msg, s.reqPulse)
 	s.dep.GetPendingRequests(getPendingRequests)
 	return f.Procedure(ctx, getPendingRequests, false)
 }

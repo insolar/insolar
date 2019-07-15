@@ -31,7 +31,6 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
@@ -90,10 +89,6 @@ func Test_NotifyAboutPulse(t *testing.T) {
 		Pulse: expectPN,
 		Hash:  []byte{4, 2, 3},
 	}
-	expectBlob := blob.Blob{
-		JetID: gen.JetID(),
-		Value: []byte{1, 2, 3, 4, 5, 6, 7},
-	}
 	expectIndexes := []object.FilamentIndex{
 		{ObjID: gen.ID()},
 		{ObjID: gen.ID()},
@@ -108,7 +103,6 @@ func Test_NotifyAboutPulse(t *testing.T) {
 		PulseNum:     expectPN,
 		IndexBuckets: convertIndexBuckets(ctx, expectIndexes),
 		Drop:         drop.MustEncode(&expectDrop),
-		Blobs:        convertBlobs([]blob.Blob{expectBlob}),
 		Records:      convertRecords(ctx, expectRecords),
 	}
 
@@ -137,17 +131,12 @@ func Test_NotifyAboutPulse(t *testing.T) {
 		return expectDrop, nil
 	}
 
-	blobAccessor := blob.NewCollectionAccessorMock(ctrl)
-	blobAccessor.ForPulseFunc = func(_ context.Context, _ insolar.JetID, _ insolar.PulseNumber) (r []blob.Blob) {
-		return []blob.Blob{expectBlob}
-	}
-
 	recordAccessor := object.NewRecordCollectionAccessorMock(ctrl)
 	recordAccessor.ForPulseFunc = func(_ context.Context, _ insolar.JetID, _ insolar.PulseNumber) (r []record.Material) {
 		return expectRecords
 	}
 
-	indexAccessor := object.NewIndexBucketAccessorMock(ctrl)
+	indexAccessor := object.NewIndexAccessorMock(ctrl)
 	indexAccessor.ForPulseFunc = func(_ context.Context, _ insolar.PulseNumber) []object.FilamentIndex {
 		return expectIndexes
 	}
@@ -163,7 +152,6 @@ func Test_NotifyAboutPulse(t *testing.T) {
 		mb,
 		pulseCalc,
 		dropAccessor,
-		blobAccessor,
 		recordAccessor,
 		indexAccessor,
 		jetAccessor,

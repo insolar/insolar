@@ -20,27 +20,30 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
 type HotData struct {
 	dep     *proc.Dependencies
-	replyTo chan<- bus.Reply
+	meta    payload.Meta
 	message *message.HotData
 }
 
-func NewHotData(dep *proc.Dependencies, rep chan<- bus.Reply, msg *message.HotData) *HotData {
+func NewHotData(dep *proc.Dependencies, meta payload.Meta, msg *message.HotData) *HotData {
 	return &HotData{
 		dep:     dep,
-		replyTo: rep,
+		meta:    meta,
 		message: msg,
 	}
 }
 
 func (s *HotData) Present(ctx context.Context, f flow.Flow) error {
-	proc := proc.NewHotData(s.message, s.replyTo)
-	s.dep.HotData(proc)
-	return f.Procedure(ctx, proc, false)
+	hdProc := proc.NewHotData(s.message, s.meta)
+	s.dep.HotData(hdProc)
+	if err := f.Procedure(ctx, hdProc, false); err != nil {
+		return err
+	}
+	return nil
 }

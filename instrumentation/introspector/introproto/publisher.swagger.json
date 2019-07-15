@@ -1,0 +1,170 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "instrumentation/introspector/introproto/publisher.proto",
+    "version": "version not set"
+  },
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/getMessagesFilters": {
+      "post": {
+        "summary": "GetMessagesFilters returns map with filter state for every message type.",
+        "operationId": "GetMessagesFilters",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/introprotoAllMessageFilterStats"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/introprotoEmptyArgs"
+            }
+          }
+        ],
+        "tags": [
+          "Publisher"
+        ]
+      }
+    },
+    "/getMessagesStat": {
+      "post": {
+        "summary": "GetMessagesStat returns statistic for published messages by type.",
+        "operationId": "GetMessagesStat",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/introprotoAllMessageStatByType"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/introprotoEmptyArgs"
+            }
+          }
+        ],
+        "tags": [
+          "Publisher"
+        ]
+      }
+    },
+    "/setMessagesFilter": {
+      "post": {
+        "summary": "SetMessagesFilter enables/disables messages publishing by type.",
+        "operationId": "SetMessagesFilter",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/introprotoMessageFilterByType"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/introprotoMessageFilterByType"
+            }
+          }
+        ],
+        "tags": [
+          "Publisher"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "introprotoAllMessageFilterStats": {
+      "type": "object",
+      "properties": {
+        "Filters": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/introprotoMessageFilterWithStat"
+          }
+        }
+      },
+      "description": "AllMessageFilterStats map of MessageFilterWithStat per message type."
+    },
+    "introprotoAllMessageStatByType": {
+      "type": "object",
+      "properties": {
+        "Counters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/introprotoMessageStatByType"
+          }
+        }
+      },
+      "description": "AllMessageStatByType is a list of counters per message type."
+    },
+    "introprotoEmptyArgs": {
+      "type": "object",
+      "description": "EmptyArgs is just a stub for grpc methods without arguments."
+    },
+    "introprotoMessageFilterByType": {
+      "type": "object",
+      "properties": {
+        "Name": {
+          "type": "string"
+        },
+        "Enable": {
+          "type": "boolean",
+          "format": "boolean"
+        }
+      },
+      "description": "MessageFilterByType represents filter state for message type."
+    },
+    "introprotoMessageFilterWithStat": {
+      "type": "object",
+      "properties": {
+        "Enable": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "Filtered": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "description": "MessageFilterWithStat represents filter state and count of filtered messages."
+    },
+    "introprotoMessageStatByType": {
+      "type": "object",
+      "properties": {
+        "Name": {
+          "type": "string"
+        },
+        "Count": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "description": "MessageStatByType is a counter for message type."
+    }
+  }
+}

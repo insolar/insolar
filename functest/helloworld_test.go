@@ -42,12 +42,12 @@ func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
 		return nil, err
 	}
 
-	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey)
+	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
-		Method:  "call.api",
-		Params:  requester.Params{CallSite: "CreateHelloWorld", CallParams: map[string]interface{}{}},
+		Method:  "api.call",
+		Params:  requester.Params{CallSite: "CreateHelloWorld", CallParams: map[string]interface{}{}, PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
 		return nil, err
@@ -81,12 +81,12 @@ func (i *HelloWorldInstance) Greet(ctx context.Context, name string) (string, er
 		return "", err
 	}
 
-	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey)
+	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
-		Method:  "call.api",
-		Params:  requester.Params{CallSite: "Greet", CallParams: map[string]interface{}{"name": name}},
+		Method:  "api.call",
+		Params:  requester.Params{CallSite: "Greet", CallParams: map[string]interface{}{"name": name}, PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
 		return "", err
@@ -113,12 +113,12 @@ func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
 		return 0, err
 	}
 
-	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey)
+	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
-		Method:  "call.api",
-		Params:  requester.Params{CallSite: "Count", CallParams: map[string]interface{}{}},
+		Method:  "api.call",
+		Params:  requester.Params{CallSite: "Count", CallParams: map[string]interface{}{}, PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
 		return 0, err
@@ -145,12 +145,12 @@ func (i *HelloWorldInstance) CreateChild(ctx context.Context) (*HelloWorldInstan
 		return nil, err
 	}
 
-	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey)
+	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
-		Method:  "call.api",
-		Params:  requester.Params{CallSite: "CreateChild", CallParams: map[string]interface{}{}},
+		Method:  "api.call",
+		Params:  requester.Params{CallSite: "CreateChild", CallParams: map[string]interface{}{}, PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
 		return nil, err
@@ -184,12 +184,12 @@ func (i *HelloWorldInstance) CountChild(ctx context.Context) (int, error) {
 		return 0, err
 	}
 
-	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey)
+	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
-		Method:  "call.api",
-		Params:  requester.Params{CallSite: "CreateChild", CallParams: map[string]interface{}{}},
+		Method:  "api.call",
+		Params:  requester.Params{CallSite: "CreateChild", CallParams: map[string]interface{}{}, PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
 		return 0, err
@@ -208,6 +208,38 @@ func (i *HelloWorldInstance) CountChild(ctx context.Context) (int, error) {
 		return 0, errors.Errorf("[ CountChild ] Failed to decode result: expected float64, got %T", result.Result)
 	}
 	return int(rv), nil
+}
+
+func (i *HelloWorldInstance) ReturnObj(ctx context.Context) (map[string]interface{}, error) {
+	seed, err := requester.GetSeed(TestAPIURL)
+	if err != nil {
+		return nil, err
+	}
+
+	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
+	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
+		JSONRPC: "2.0",
+		ID:      1,
+		Method:  "api.call",
+		Params:  requester.Params{CallSite: "ReturnObj", CallParams: map[string]interface{}{}, PublicKey: rootCfg.PublicKey},
+	}, seed)
+	if err != nil {
+		return nil, err
+	}
+
+	var result requester.ContractAnswer
+	err = json.Unmarshal(res, &result)
+	if err != nil {
+		return nil, err
+	} else if result.Error != nil {
+		return nil, errors.Errorf("[ CountChild ] Failed to execute: %s", result.Error.Message)
+	}
+
+	rv, ok := result.Result.ContractResult.(map[string]interface{})
+	if !ok {
+		return nil, errors.Errorf("[ CountChild ] Failed to decode result: expected map[string]interface{}, got %T", result.Result.ContractResult)
+	}
+	return rv, nil
 }
 
 func TestCallHelloWorld(t *testing.T) {
@@ -269,4 +301,17 @@ func TestCallHelloWorldChild(t *testing.T) {
 	countOverall, err := hw.CountChild(ctx)
 	r.NoError(err)
 	a.Equal(countOverall, childrenCnt)
+}
+
+func TestCallHelloWorldReturnObj(t *testing.T) {
+	a, r := assert.New(t), require.New(t)
+	ctx := context.TODO()
+
+	hw, err := NewHelloWorld(ctx)
+	r.NoError(err, "Unexpected error")
+	a.NotEmpty(hw.Ref, "Ref doesn't exists")
+
+	val, err := hw.ReturnObj(ctx)
+	r.NoError(err)
+	r.Equal(val["message"].(map[string]interface{})["someText"], "Hello world")
 }

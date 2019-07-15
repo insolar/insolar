@@ -30,21 +30,21 @@ import (
 type GetObject struct {
 	dep *proc.Dependencies
 
-	message payload.Meta
-	passed  bool
+	meta   payload.Meta
+	passed bool
 }
 
-func NewGetObject(dep *proc.Dependencies, msg payload.Meta, passed bool) *GetObject {
+func NewGetObject(dep *proc.Dependencies, meta payload.Meta, passed bool) *GetObject {
 	return &GetObject{
-		dep:     dep,
-		message: msg,
-		passed:  passed,
+		dep:    dep,
+		meta:   meta,
+		passed: passed,
 	}
 }
 
 func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 	msg := payload.GetObject{}
-	err := msg.Unmarshal(s.message.Payload)
+	err := msg.Unmarshal(s.meta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal GetObject message")
 	}
@@ -52,7 +52,7 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 	ctx, _ = inslogger.WithField(ctx, "object", msg.ObjectID.DebugString())
 
 	passIfNotExecutor := !s.passed
-	jet := proc.NewCheckJet(msg.ObjectID, flow.Pulse(ctx), s.message, passIfNotExecutor)
+	jet := proc.NewCheckJet(msg.ObjectID, flow.Pulse(ctx), s.meta, passIfNotExecutor)
 	s.dep.CheckJet(jet)
 	if err := f.Procedure(ctx, jet, false); err != nil {
 		if err == proc.ErrNotExecutor && passIfNotExecutor {
@@ -62,19 +62,19 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 	}
 	objJetID := jet.Result.Jet
 
-	hot := proc.NewWaitHotWM(objJetID, flow.Pulse(ctx), s.message)
+	hot := proc.NewWaitHotWM(objJetID, flow.Pulse(ctx), s.meta)
 	s.dep.WaitHotWM(hot)
 	if err := f.Procedure(ctx, hot, false); err != nil {
 		return err
 	}
 
-	idx := proc.NewGetIndexWM(msg.ObjectID, objJetID, s.message)
-	s.dep.GetIndexWM(idx)
+	idx := proc.NewEnsureIndexWM(msg.ObjectID, objJetID, s.meta)
+	s.dep.EnsureIndex(idx)
 	if err := f.Procedure(ctx, idx, false); err != nil {
 		return err
 	}
 
-	send := proc.NewSendObject(s.message, msg.ObjectID, idx.Result.Index)
+	send := proc.NewSendObject(s.meta, msg.ObjectID, idx.Result.Lifeline)
 	s.dep.SendObject(send)
 	return f.Procedure(ctx, send, false)
 }

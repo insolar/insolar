@@ -23,8 +23,9 @@ import (
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 
-	"github.com/insolar/insolar/ledger/heavy/replica"
+	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/server/internal"
 
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 
@@ -51,7 +52,6 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/keystore"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/heavy/handler"
 	"github.com/insolar/insolar/ledger/heavy/pulsemanager"
@@ -66,9 +66,12 @@ import (
 )
 
 type components struct {
-	cmp      component.Manager
-	NodeRef  string
-	NodeRole string
+	cmp       component.Manager
+	NodeRef   string
+	NodeRole  string
+	rollback  *executor.DBRollback
+	inRouter  *watermillMsg.Router
+	outRouter *watermillMsg.Router
 }
 
 func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg insolar.GenesisHeavyConfig) (*components, error) {
@@ -116,6 +119,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	logger := inslogger.FromContext(ctx)
 	wmLogger := log.NewWatermillLogAdapter(logger)
 	pubSub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
+	pubSub = internal.PubSubWrapper(ctx, &c.cmp, cfg.Introspection, pubSub)
 
 	// Network.
 	var (
@@ -230,10 +234,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	{
 		records := object.NewRecordDB(DB)
 		indexes := object.NewIndexDB(DB)
-		blobs := blob.NewDB(DB)
 		drops := drop.NewDB(DB)
 		jets := jet.NewDBStore(DB)
-		jetKeeper := replica.NewJetKeeper(jets, DB)
+		jetKeeper := executor.NewJetKeeper(jets, DB)
+		c.rollback = executor.NewDBRollback(jetKeeper, Pulses, drops, records, indexes, jets, Pulses)
 
 		pm := pulsemanager.NewPulseManager()
 		pm.Bus = Bus
@@ -244,19 +248,18 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		pm.PulseAccessor = Pulses
 		pm.JetModifier = jets
 
-		h := handler.New()
+		h := handler.New(cfg.Ledger)
 		h.RecordAccessor = records
 		h.RecordModifier = records
 		h.JetCoordinator = Coordinator
-		h.IndexLifelineAccessor = indexes
-		h.IndexBucketModifier = indexes
+		h.IndexAccessor = indexes
+		h.IndexModifier = indexes
 		h.Bus = Bus
-		h.BlobAccessor = blobs
-		h.BlobModifier = blobs
 		h.DropModifier = drops
 		h.PCS = CryptoScheme
 		h.PulseAccessor = Pulses
 		h.JetModifier = jets
+		h.JetAccessor = jets
 		h.JetKeeper = jetKeeper
 		h.Sender = WmBus
 
@@ -264,23 +267,22 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Handler = h
 
 		artifactManager := &artifact.Scope{
-			PulseNumber:      insolar.FirstPulseNumber,
-			PCS:              CryptoScheme,
-			BlobStorage:      blobs,
-			RecordAccessor:   records,
-			RecordModifier:   records,
-			LifelineModifier: indexes,
-			LifelineAccessor: indexes,
+			PulseNumber:    insolar.FirstPulseNumber,
+			PCS:            CryptoScheme,
+			RecordAccessor: records,
+			RecordModifier: records,
+			IndexModifier:  indexes,
+			IndexAccessor:  indexes,
 		}
 		Genesis = &genesis.Genesis{
 			ArtifactManager: artifactManager,
 			BaseRecord: &genesis.BaseRecord{
-				DB:                    DB,
-				DropModifier:          drops,
-				PulseAppender:         Pulses,
-				PulseAccessor:         Pulses,
-				RecordModifier:        records,
-				IndexLifelineModifier: indexes,
+				DB:             DB,
+				DropModifier:   drops,
+				PulseAppender:  Pulses,
+				PulseAccessor:  Pulses,
+				RecordModifier: records,
+				IndexModifier:  indexes,
 			},
 
 			DiscoveryNodes:  genesisCfg.DiscoveryNodes,
@@ -324,20 +326,32 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		}
 	}
 
-	startWatermill(ctx, wmLogger, pubSub, WmBus, NetworkService.SendMessageHandler, Handler.Process)
+	c.startWatermill(ctx, wmLogger, pubSub, WmBus, NetworkService.SendMessageHandler, Handler.Process)
 
 	return c, nil
 }
 
 func (c *components) Start(ctx context.Context) error {
+	err := c.rollback.Start(ctx)
+	if err != nil {
+		return errors.Wrap(err, "rollback.Start return error: ")
+	}
 	return c.cmp.Start(ctx)
 }
 
 func (c *components) Stop(ctx context.Context) error {
+	err := c.inRouter.Close()
+	if err != nil {
+		inslogger.FromContext(ctx).Error("Error while closing router", err)
+	}
+	err = c.outRouter.Close()
+	if err != nil {
+		inslogger.FromContext(ctx).Error("Error while closing router", err)
+	}
 	return c.cmp.Stop(ctx)
 }
 
-func startWatermill(
+func (c *components) startWatermill(
 	ctx context.Context,
 	logger watermill.LoggerAdapter,
 	pubSub watermillMsg.PubSub,
@@ -373,7 +387,9 @@ func startWatermill(
 	)
 
 	startRouter(ctx, inRouter)
+	c.inRouter = inRouter
 	startRouter(ctx, outRouter)
+	c.outRouter = outRouter
 }
 
 func startRouter(ctx context.Context, router *watermillMsg.Router) {

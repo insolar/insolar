@@ -20,7 +20,8 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/object"
@@ -28,18 +29,19 @@ import (
 )
 
 type GetRequest struct {
-	replyTo chan<- bus.Reply
+	message payload.Meta
 	request insolar.ID
 
 	Dep struct {
 		RecordAccessor object.RecordAccessor
+		Sender         bus.Sender
 	}
 }
 
-func NewGetRequest(request insolar.ID, replyTo chan<- bus.Reply) *GetRequest {
+func NewGetRequest(request insolar.ID, message payload.Meta) *GetRequest {
 	return &GetRequest{
 		request: request,
-		replyTo: replyTo,
+		message: message,
 	}
 }
 
@@ -51,7 +53,7 @@ func (p *GetRequest) Proceed(ctx context.Context) error {
 
 	virtRec := rec.Virtual
 	concrete := record.Unwrap(virtRec)
-	_, ok := concrete.(*record.Request)
+	_, ok := concrete.(*record.IncomingRequest)
 	if !ok {
 		return errors.New("failed to decode request")
 	}
@@ -66,6 +68,7 @@ func (p *GetRequest) Proceed(ctx context.Context) error {
 		Record: data,
 	}
 
-	p.replyTo <- bus.Reply{Reply: rep}
+	msg := bus.ReplyAsMessage(ctx, rep)
+	go p.Dep.Sender.Reply(ctx, p.message, msg)
 	return nil
 }
