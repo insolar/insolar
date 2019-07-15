@@ -62,7 +62,7 @@ type gshDigester struct {
 	lastSeed int64
 }
 
-func (s *gshDigester) AddNext(digest cryptkit.DigestHolder) {
+func (s *gshDigester) AddNext(digest longbits.FoldableReader) {
 	// it is a dirty emulation of digest
 	if s.rnd == nil {
 		s.rnd = rand.New(rand.NewSource(0))
