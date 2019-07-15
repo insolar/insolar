@@ -107,12 +107,12 @@ func (p *emuNetworkBuilder) StartPulsar(pulseCount int, pulseDelta uint16, pulsa
 func (p *emuNetworkBuilder) connectEmuNode(nodes []profiles.NodeIntroProfile, selfIndex int) {
 
 	controlFeeder := &EmuControlFeeder{}
-	candidateFeeder := &core.SequencialCandidateFeeder{}
+	candidateFeeder := &core.SequentialCandidateFeeder{}
 	switch {
-	case selfIndex%7 == 1:
-		introID := 8000 + selfIndex
-		intro := NewEmuNodeIntroByName(introID, fmt.Sprintf("v%04d", introID))
-		candidateFeeder.AddJoinCandidate(intro)
+	//case selfIndex%7 == 1:
+	//	introID := 8000 + selfIndex
+	//	intro := NewEmuNodeIntroByName(introID, fmt.Sprintf("v%04d", introID))
+	//	candidateFeeder.AddJoinCandidate(intro)
 	case selfIndex%5 == 2:
 		controlFeeder.leaveReason = uint32(selfIndex) //simulate leave
 	}
