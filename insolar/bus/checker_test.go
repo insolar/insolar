@@ -41,7 +41,7 @@ func TestCheckOKSender_SendRole_RetryExceeded(t *testing.T) {
 	require.NoError(t, err)
 
 	tries := 3
-	c := NewCheckOKSender(sender, accessorMock(t), uint(tries))
+	c := NewCheckOKAndRetrySender(sender, accessorMock(t), uint(tries))
 
 	c.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
 
@@ -72,7 +72,7 @@ func TestCheckOKSender_SendRole_RetryOnce(t *testing.T) {
 	}
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
-	c := NewCheckOKSender(sender, accessorMock(t), 3)
+	c := NewCheckOKAndRetrySender(sender, accessorMock(t), 3)
 
 	c.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
 
@@ -90,7 +90,7 @@ func TestCheckOKSender_SendRole_OK(t *testing.T) {
 
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
-	c := NewCheckOKSender(sender, accessorMock(t), 3)
+	c := NewCheckOKAndRetrySender(sender, accessorMock(t), 3)
 
 	c.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
 
@@ -109,7 +109,7 @@ func TestCheckOKSender_SendRole_NotOK(t *testing.T) {
 
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
-	c := NewCheckOKSender(sender, accessorMock(t), 3)
+	c := NewCheckOKAndRetrySender(sender, accessorMock(t), 3)
 
 	c.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
 

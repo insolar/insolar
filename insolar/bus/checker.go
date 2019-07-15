@@ -31,24 +31,26 @@ import (
 
 // CheckOKSender allows to send messaged via provided Sender with retries and check that reply.OK was received.
 type CheckOKSender struct {
-	sender *RetrySender
+	sender Sender
+}
+
+// NewCheckOKAndRetrySender creates CheckOKSender instance with RetrySender as Sender.
+func NewCheckOKAndRetrySender(sender Sender, pulseAccessor pulse.Accessor, tries uint) *CheckOKSender {
+	r := NewRetrySender(sender, pulseAccessor, tries)
+	c := NewCheckOKSender(r)
+	return c
 }
 
 // NewCheckOKSender creates CheckOKSender instance with provided values.
-func NewCheckOKSender(sender Sender, pulseAccessor pulse.Accessor, tries uint) *CheckOKSender {
-	r := &RetrySender{
-		sender:        sender,
-		pulseAccessor: pulseAccessor,
-		tries:         tries,
-	}
+func NewCheckOKSender(sender Sender) *CheckOKSender {
 	c := &CheckOKSender{
-		sender: r,
+		sender: sender,
 	}
 	return c
 }
 
 // SendRole sends message to specified role, using provided Sender.SendRole. It waiting for reply.OK and
-// close replies channel after getting it. If error with CodeFlowCanceled was received, it retries request.
+// close replies channel after getting it. If
 func (c *CheckOKSender) SendRole(
 	ctx context.Context, msg *message.Message, role insolar.DynamicRole, ref insolar.Reference,
 ) {
