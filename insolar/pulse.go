@@ -165,6 +165,8 @@ const (
 	FirstPulseNumber = 65537
 	// PulseNumberJet is a special pulse number value that signifies jet ID.
 	PulseNumberJet = PulseNumber(1)
+	// PulseNumberApiRequest is a special pulse number value that signifies api request
+	PulseNumberApiRequest = PulseNumber(2)
 	// BuiltinContractPulseNumber declares special pulse number that creates namespace for builtin contracts
 	BuiltinContractPulseNumber = PulseNumber(200)
 )
