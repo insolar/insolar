@@ -54,6 +54,18 @@ func (p *GetRequest) Proceed(ctx context.Context) error {
 	}
 
 	rec, err := p.dep.records.ForID(ctx, msg.RequestID)
+	if err == object.ErrNotFound {
+		msg, err := payload.NewMessage(&payload.Error{
+			Text: object.ErrNotFound.Error(),
+			Code: payload.CodeObjectNotFound,
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to create reply")
+		}
+
+		p.dep.sender.Reply(ctx, p.meta, msg)
+		return nil
+	}
 	if err != nil {
 		return errors.Wrap(err, "failed to find a request")
 	}

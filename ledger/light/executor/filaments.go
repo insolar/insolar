@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"strings"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -531,7 +530,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 		if bytes.Equal(rec.RecordID.Hash(), requestID.Hash()) {
 			foundRequest = &rec
 		}
-		if bytes.Equal(rec.RecordID.Bytes(), reason.Record().Bytes()) {
+		if rec.RecordID == *reason.Record() {
 			isReasonFound = true
 		}
 
@@ -601,7 +600,7 @@ func (c *FilamentCalculatorDefault) checkReason(ctx context.Context, reason inso
 	case *payload.Request:
 		return true, nil
 	case *payload.Error:
-		if strings.Contains(concrete.Text, object.ErrNotFound.Error()) {
+		if concrete.Code == payload.CodeObjectNotFound {
 			inslogger.FromContext(ctx).Errorf("reason is wrong. %v", concrete.Text)
 			return true, nil
 		}

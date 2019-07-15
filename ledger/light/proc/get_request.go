@@ -47,6 +47,18 @@ func NewGetRequest(msg payload.Meta, requestID insolar.ID) *GetRequest {
 
 func (p *GetRequest) Proceed(ctx context.Context) error {
 	rec, err := p.Dep.RecordAccessor.ForID(ctx, p.requestID)
+	if err == object.ErrNotFound {
+		msg, err := payload.NewMessage(&payload.Error{
+			Text: object.ErrNotFound.Error(),
+			Code: payload.CodeObjectNotFound,
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to create reply")
+		}
+
+		p.Dep.Sender.Reply(ctx, p.message, msg)
+		return nil
+	}
 	if err != nil {
 		return errors.Wrap(err, "failed to fetch request")
 	}
