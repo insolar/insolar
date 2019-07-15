@@ -581,6 +581,7 @@ func (q *ExecutionBroker) Execute(ctx context.Context, transcript *Transcript) {
 
 	logger := inslogger.FromContext(ctx)
 
+	logger.Warn("IP3: execute ", transcript.RequestRef)
 	reply, err := q.requestsExecutor.ExecuteAndSave(ctx, transcript)
 	if err != nil {
 		logger.Warn("contract execution error: ", err)

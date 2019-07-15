@@ -34,6 +34,7 @@ const (
 type ReturnResults struct {
 	Target     insolar.Reference
 	RequestRef insolar.Reference
+	Reason     insolar.Reference
 	Reply      insolar.Reply
 	Error      string
 }

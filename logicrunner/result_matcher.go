@@ -6,23 +6,22 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type resultsMatcher struct {
-	mb insolar.MessageBus
-	// me                insolar.Reference
+	// mb                insolar.MessageBus
+	lr                *LogicRunner
 	lock              *sync.RWMutex
 	executionNodes    map[insolar.Reference]insolar.Reference
 	unwantedResponses map[insolar.Reference]message.ReturnResults
 }
 
-func NewResultsMatcher(mb insolar.MessageBus, jc jet.Coordinator) resultsMatcher {
+func NewResultsMatcher(lr *LogicRunner) resultsMatcher {
 	return resultsMatcher{
-		mb: mb,
-		// me:                jc.Me(),
+		lr: lr,
+		// mb:                mb,
 		lock:              &sync.RWMutex{},
 		executionNodes:    make(map[insolar.Reference]insolar.Reference),
 		unwantedResponses: make(map[insolar.Reference]message.ReturnResults),
@@ -40,7 +39,11 @@ func (rm *resultsMatcher) AddStillExecution(ctx context.Context, msg *message.St
 			// todo check errors? retry?
 			inslogger.FromContext(ctx).Warn("IP1: Send StillExecution", reqRef)
 			// go
-			rm.mb.Send(ctx, &response, &insolar.MessageSendOptions{
+			if rm.lr.MessageBus == nil {
+				panic("NO MESSAGE BUS")
+			}
+
+			rm.lr.MessageBus.Send(ctx, &response, &insolar.MessageSendOptions{
 				Receiver: &msg.Executor,
 			})
 			// j, _ := json.Marshal(rr)
@@ -53,23 +56,30 @@ func (rm *resultsMatcher) AddStillExecution(ctx context.Context, msg *message.St
 
 func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg insolar.Message) {
 	response := msg.(*message.ReturnResults)
-	inslogger.FromContext(ctx).Warn("IP1: Receive UnwantedResponse", response.RequestRef)
+	inslogger.FromContext(ctx).Warn("IP1: Receive UnwantedResponse", response.Reason)
+
+	if response.Reason.IsEmpty() {
+		panic("EMPTY REASON")
+	}
 
 	rm.lock.Lock()
 	defer rm.lock.Unlock()
-	if node, ok := rm.executionNodes[response.RequestRef]; ok {
+	if node, ok := rm.executionNodes[response.Reason]; ok {
 		// response.Target = *node
 		// todo maybe call rm.mb.Send in goroutine
 		// todo check errors? retry?
 		// rm.mb.Send(ctx, response, nil)
-		inslogger.FromContext(ctx).Warn("IP1: Send UnwantedResponse", response.RequestRef)
+		inslogger.FromContext(ctx).Warn("IP1: Send UnwantedResponse", response.Reason)
 		// go
-		rm.mb.Send(ctx, response, &insolar.MessageSendOptions{
+		if rm.lr.MessageBus == nil {
+			panic("NO MESSAGE BUS")
+		}
+		rm.lr.MessageBus.Send(ctx, response, &insolar.MessageSendOptions{
 			Receiver: &node,
 		})
 		return
 	}
-	rm.unwantedResponses[response.RequestRef] = *response
+	rm.unwantedResponses[response.Reason] = *response
 }
 
 func (rm *resultsMatcher) Clear() {

@@ -165,17 +165,20 @@ func (e *requestsExecutor) SendReply(
 		errstr = err.Error()
 	}
 	if transcript.Request.Sender.IsEmpty() {
+		inslogger.FromContext(ctx).Debug("IP2: Send by caller", transcript.RequestRef)
 		_, err = e.MessageBus.Send(
 			ctx,
 			&message.ReturnResults{
 				Target:     transcript.Request.Caller,
 				RequestRef: transcript.RequestRef,
+				Reason:     transcript.Request.Reason,
 				Reply:      re,
 				Error:      errstr,
 			},
 			&insolar.MessageSendOptions{},
 		)
 	} else {
+		inslogger.FromContext(ctx).Debug("IP2: Send by sender", transcript.RequestRef, " to ", transcript.Request.Sender)
 		_, err = e.MessageBus.Send(
 			ctx,
 			&message.ReturnResults{
