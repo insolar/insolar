@@ -602,6 +602,7 @@ func (c *FilamentCalculatorDefault) checkReason(ctx context.Context, reason inso
 		return true, nil
 	case *payload.Error:
 		if strings.Contains(concrete.Text, object.ErrNotFound.Error()) {
+			inslogger.FromContext(ctx).Errorf("reason is wrong. %v", concrete.Text)
 			return true, nil
 		}
 		return false, errors.New(concrete.Text)
