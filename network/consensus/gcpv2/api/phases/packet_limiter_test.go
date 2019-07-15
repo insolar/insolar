@@ -48,63 +48,60 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 ///
 
-package ph2ctl
+package phases
 
-import (
-	"math"
-	"testing"
-
-	"github.com/stretchr/testify/require"
-)
-
-func TestNewNeighbourWeightScalerInt64(t *testing.T) {
-	require.Panics(t, func() { NewNeighbourWeightScalerInt64(-1) })
-
-	fullRange := int64(0)
-	n1 := NewNeighbourWeightScalerInt64(fullRange)
-	require.Equal(t, uint32(fullRange), n1.max)
-
-	require.Equal(t, uint8(0), n1.shift)
-
-	fullRange = int64(1 << 32)
-	n2 := NewNeighbourWeightScalerInt64(fullRange)
-	require.Equal(t, uint8(1), n2.shift)
-
-	require.Equal(t, uint32(fullRange>>1), n2.max)
-}
-
-func TestNewNeighbourWeightScalerUint64(t *testing.T) {
-	fullRange := uint64(0)
-	n1 := NewNeighbourWeightScalerUint64(fullRange)
-	require.Equal(t, uint32(fullRange), n1.max)
-
-	require.Equal(t, uint8(0), n1.shift)
-
-	fullRange = uint64(1 << 32)
-	n2 := NewNeighbourWeightScalerUint64(fullRange)
-	require.Equal(t, uint8(1), n2.shift)
-
-	require.Equal(t, uint32(fullRange>>1), n2.max)
-}
-
-func TestScaleInt64(t *testing.T) {
-	n1 := NewNeighbourWeightScalerInt64(0)
-	require.Equal(t, uint32(0), n1.ScaleInt64(-1))
-
-	require.Equal(t, uint32(math.MaxUint32), n1.ScaleInt64(0))
-
-	n2 := NewNeighbourWeightScalerInt64(1 << 32)
-	require.Equal(t, uint32(math.MaxUint32), n2.ScaleInt64(1<<32))
-
-	require.Equal(t, uint32(0x3fffffff), n2.ScaleInt64(1<<30))
-}
-
-func TestScaleUint64(t *testing.T) {
-	n1 := NewNeighbourWeightScalerUint64(0)
-	require.Equal(t, uint32(math.MaxUint32), n1.ScaleUint64(0))
-
-	n2 := NewNeighbourWeightScalerUint64(1 << 32)
-	require.Equal(t, uint32(math.MaxUint32), n2.ScaleUint64(1<<32))
-
-	require.Equal(t, uint32(0x3fffffff), n2.ScaleUint64(1<<30))
-}
+// func TestSetReceivedPhase(t *testing.T) {
+// 	lp := profiles.NewLocalNodeMock(t)
+// 	lp.LocalNodeProfileMock.Set(func() {})
+// 	callback := &nodeContext{}
+// 	r := NewNodeAppearanceAsSelf(lp, callback)
+// 	require.True(t, r.SetReceivedPhase(member.Phase1))
+//
+// 	require.False(t, r.SetReceivedPhase(member.Phase1))
+// }
+//
+// func TestSetReceivedByPacketType(t *testing.T) {
+// 	lp := profiles.NewLocalNodeMock(t)
+// 	lp.LocalNodeProfileMock.Set(func() {})
+// 	callback := &nodeContext{}
+// 	r := NewNodeAppearanceAsSelf(lp, callback)
+// 	require.True(t, r.SetReceivedByPacketType(member.PacketPhase1))
+//
+// 	require.False(t, r.SetReceivedByPacketType(member.PacketPhase1))
+//
+// 	require.False(t, r.SetReceivedByPacketType(member.MaxPacketType))
+// }
+//
+// func TestSetSentPhase(t *testing.T) {
+// 	lp := profiles.NewLocalNodeMock(t)
+// 	lp.LocalNodeProfileMock.Set(func() {})
+// 	callback := &nodeContext{}
+// 	r := NewNodeAppearanceAsSelf(lp, callback)
+// 	require.True(t, r.SetSentPhase(member.Phase1))
+//
+// 	require.False(t, r.SetSentPhase(member.Phase1))
+// }
+//
+// func TestSetSentByPacketType(t *testing.T) {
+// 	lp := profiles.NewLocalNodeMock(t)
+// 	lp.LocalNodeProfileMock.Set(func() {})
+// 	callback := &nodeContext{}
+// 	r := NewNodeAppearanceAsSelf(lp, callback)
+// 	require.True(t, r.SetSentByPacketType(member.PacketPhase1))
+//
+// 	require.True(t, r.SetSentByPacketType(member.PacketPhase1))
+//
+// 	require.False(t, r.SetSentByPacketType(member.MaxPacketType))
+// }
+//
+// func TestSetReceivedWithDupCheck(t *testing.T) {
+// 	lp := profiles.NewLocalNodeMock(t)
+// 	lp.LocalNodeProfileMock.Set(func() {})
+// 	callback := &nodeContext{}
+// 	r := NewNodeAppearanceAsSelf(lp, callback)
+// 	require.Equal(t, r.SetReceivedWithDupCheck(member.PacketPhase1), nil)
+//
+// 	require.Equal(t, r.SetReceivedWithDupCheck(member.PacketPhase1), errors.ErrRepeatedPhasePacket)
+//
+// 	require.Equal(t, r.SetReceivedWithDupCheck(member.MaxPacketType), errors.ErrRepeatedPhasePacket)
+// }

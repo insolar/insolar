@@ -69,7 +69,6 @@ func TestNewNodeAppearanceAsSelf(t *testing.T) {
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
-	// require.Equal(t, member.NodeStateLocalActive, r.state)
 
 	require.Equal(t, member.SelfTrust, r.trust)
 
@@ -87,7 +86,6 @@ func TestInit(t *testing.T) {
 	require.Panics(t, func() { r.init(nil, callback, 0, 0) })
 
 	r.init(lp, callback, 0, 0)
-	// require.Equal(t, member.NodeStateLocalActive, r.state)
 
 	require.Equal(t, member.SelfTrust, r.trust)
 
@@ -129,14 +127,12 @@ func TestCopySelfTo(t *testing.T) {
 	source.stateEvidence = proofs.NewNodeStateHashEvidenceMock(t)
 	source.announceSignature = proofs.NewMemberAnnouncementSignatureMock(t)
 	source.requestedPower = 1
-	// source.state = member.NodeStateLocalActive
 	source.trust = member.TrustBySome
 
 	target := NewNodeAppearanceAsSelf(lp, callback)
 	target.stateEvidence = proofs.NewNodeStateHashEvidenceMock(t)
 	target.announceSignature = proofs.NewMemberAnnouncementSignatureMock(t)
 	target.requestedPower = 2
-	// target.state = member.NodeStateReceivedPhases
 	target.trust = member.TrustByNeighbors
 
 	target.copySelfTo(source)
