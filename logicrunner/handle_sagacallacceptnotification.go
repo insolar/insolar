@@ -25,9 +25,6 @@ func (h *HandleSagaCallAcceptNotification) Present(ctx context.Context, f flow.F
 		return err
 	}
 
-	cr := h.dep.lr.ContractRequester
-	am := h.dep.lr.ArtifactManager
-
 	outgoing := record.OutgoingRequest{}
 	err = outgoing.Unmarshal(msg.Request)
 	if err != nil {
@@ -53,18 +50,16 @@ func (h *HandleSagaCallAcceptNotification) Present(ctx context.Context, f flow.F
 
 	// Make a call to the second VE.
 	callMsg := &message.CallMethod{IncomingRequest: incoming}
+	cr := h.dep.lr.ContractRequester
 	res, err := cr.CallMethod(ctx, callMsg)
 	if err != nil {
 		return err
 	}
 
-	// Register result of the outgoing method
+	// Register result of the outgoing method.
 	outgoingReqRef := insolar.NewReference(msg.OutgoingReqID)
 	result := res.(*reply.CallMethod).Result
+	am := h.dep.lr.ArtifactManager
 	_, err = am.RegisterResult(ctx, outgoing.Caller, *outgoingReqRef, result)
 	return err
-
-	// replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})
-	// h.dep.Sender.Reply(ctx, h.meta, replyOk)
-	// return nil
 }
