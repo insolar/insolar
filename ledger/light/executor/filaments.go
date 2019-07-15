@@ -58,10 +58,10 @@ type FilamentCalculator interface {
 	// PendingRequests returns all pending requests of object for provided pulse.
 	PendingRequests(ctx context.Context, pulse insolar.PulseNumber, objectID insolar.ID) ([]insolar.ID, error)
 
-	// RequestDuplicate searches two records on objectID's chain:
+	// RequestDuplicate searches two records on objectID chain:
 	// First one with same ID as requestID param.
-	// Second is a Result record which Request field equals requestID param.
-	// Uses request parameter only for setting pulse scan limit (pulse value for reason field)
+	// Second is the Result record Request field of which equals requestID param.
+	// Uses request parameter to check if Reason is not empty and to set pulse for scan limit.
 	RequestDuplicate(
 		ctx context.Context,
 		startFrom insolar.PulseNumber,
@@ -82,10 +82,7 @@ type FilamentCleaner interface {
 	Clear(objID insolar.ID)
 }
 
-func isDetached(rm record.ReturnMode) bool {
-	return rm == record.ReturnSaga
-}
-
+// NewFilamentModifier creates FilamentModifierDefault with all required components.
 func NewFilamentModifier(
 	indexes object.IndexStorage,
 	recordStorage object.RecordModifier,
@@ -102,6 +99,7 @@ func NewFilamentModifier(
 	}
 }
 
+// FilamentModifierDefault implements FilamentModifier.
 type FilamentModifierDefault struct {
 	calculator FilamentCalculator
 	indexes    object.IndexStorage
@@ -209,18 +207,19 @@ func (m *FilamentModifierDefault) SetRequest(
 		if err != nil {
 			return err
 		}
-		reason := req.ReasonRef().Record()
+		reason := req.ReasonRef()
 		for _, p := range pendings {
-			if p == *reason {
+			if p == *reason.Record() {
 				return nil
 			}
 		}
-		return errors.Errorf("object ID %v not found in pendings for request %v", objectID, requestID)
+		return errors.Errorf("reason ID %v not found in pendings for object %v",
+			reason.Record().DebugString(), objectID.DebugString())
 	}
 
 	switch r := request.(type) {
 	case *record.IncomingRequest:
-		if isDetached(r.ReturnMode) {
+		if r.IsDetached() {
 			return nil, nil, errors.Errorf("incoming request can't be detached, has wrong reason %v", r.ReturnMode)
 		}
 	case *record.OutgoingRequest:
@@ -469,11 +468,10 @@ func (c *FilamentCalculatorDefault) PendingRequests(
 		// 1) after reason's request (before while iterating)
 		// 2) before reason's request Result. (after while iterating)
 		case *record.OutgoingRequest:
-			// check only detached outgoing requests
-			if !isDetached(r.ReturnMode) {
+			// Add only detached outgoing requests with incoming request which has result.
+			if !r.IsDetached() {
 				break
 			}
-			// has incoming request with result.
 			if _, ok := hasResult[*r.Reason.Record()]; !ok {
 				pending = append(pending, rec.RecordID)
 			}
@@ -567,7 +565,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	if request.ReasonRef().IsEmpty() {
 		return nil, nil, ErrEmptyReason
 	}
-	reason := request.ReasonRef().Record()
+	reason := request.ReasonRef()
 	idx, err := c.indexes.ForID(ctx, startFrom, objectID)
 	if err != nil {
 		return nil, nil, err
@@ -585,7 +583,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 		cache,
 		objectID,
 		*idx.Lifeline.PendingPointer,
-		reason.Pulse(),
+		reason.Record().Pulse(),
 		c.jetFetcher,
 		c.coordinator,
 		c.sender,
