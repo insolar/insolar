@@ -183,7 +183,14 @@ func (lr *LogicRunner) initializeGoPlugin(ctx context.Context) error {
 }
 
 func (lr *LogicRunner) Init(ctx context.Context) error {
-	lr.StateStorage = NewStateStorage(lr.Publisher, lr.RequestsExecutor, lr.MessageBus, lr.JetCoordinator, lr.PulseAccessor)
+	lr.StateStorage = NewStateStorage(
+		lr.Publisher,
+		lr.RequestsExecutor,
+		lr.MessageBus,
+		lr.JetCoordinator,
+		lr.PulseAccessor,
+		lr.ArtifactManager,
+	)
 	lr.rpc = lrCommon.NewRPC(
 		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage),
 		lr.Cfg,

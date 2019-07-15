@@ -395,13 +395,62 @@ func (m *client) GetObject(
 	return desc, err
 }
 
-// GetPendingRequest returns an unclosed pending request
-// It takes an id from current LME
-// Then goes either to a light node or heavy node
-func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (*insolar.Reference, *record.IncomingRequest, error) {
+func (m *client) GetIncomingRequest(
+	ctx context.Context, object, reqRef insolar.Reference,
+) (*record.IncomingRequest, error) {
 	var err error
-	instrumenter := instrument(ctx, "GetRegisterRequest").err(&err)
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetRegisterRequest")
+	instrumenter := instrument(ctx, "GetRequest").err(&err)
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetRequest")
+	defer func() {
+		if err != nil {
+			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+		}
+		span.End()
+		instrumenter.end()
+	}()
+
+	requestID := reqRef.Record()
+	node, err := m.JetCoordinator.NodeForObject(ctx, *object.Record(), requestID.Pulse())
+	if err != nil {
+		return nil, err
+	}
+
+	msg, err := payload.NewMessage(&payload.GetRequest{
+		RequestID: *requestID,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create a message")
+	}
+	reps, done := m.sender.SendTarget(ctx, msg, *node)
+	defer done()
+	res, ok := <-reps
+	if !ok {
+		return nil, errors.New("no reply while fetching request")
+	}
+
+	pl, err := payload.UnmarshalFromMeta(res.Payload)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal reply")
+	}
+	req, ok := pl.(*payload.Request)
+	if !ok {
+		return nil, fmt.Errorf("unexpected reply %T", pl)
+	}
+
+	concrete := record.Unwrap(&req.Request)
+	castedRecord, ok := concrete.(*record.IncomingRequest)
+	if !ok {
+		return nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", concrete)
+	}
+
+	return castedRecord, nil
+}
+
+// GetPendings returns a list of pending requests
+func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]insolar.Reference, error) {
+	var err error
+	instrumenter := instrument(ctx, "GetPendings").err(&err)
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetPendings")
 	defer func() {
 		if err != nil {
 			span.AddAttributes(trace.StringAttribute("error", err.Error()))
@@ -417,56 +466,28 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (*i
 	)
 
 	genericReply, err := sender(ctx, &message.GetPendingRequestID{
-		ObjectID: objectID,
+		ObjectID: *object.Record(),
 	}, nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	var requestID insolar.ID
+	var IDs []insolar.ID
 	switch r := genericReply.(type) {
-	case *reply.ID:
-		requestID = r.ID
+	case *reply.IDs:
+		IDs = r.IDs
 	case *reply.Error:
-		return nil, nil, r.Error()
+		return nil, r.Error()
 	default:
-		return nil, nil, fmt.Errorf("GetPendingRequest: unexpected reply: %#v", genericReply)
+		return nil, fmt.Errorf("GetPendingRequest: unexpected reply: %#v", genericReply)
 	}
 
-	node, err := m.JetCoordinator.NodeForObject(ctx, objectID, requestID.Pulse())
-	if err != nil {
-		return nil, nil, err
+	res := make([]insolar.Reference, len(IDs))
+	for i := range IDs {
+		res[i] = *insolar.NewReference(IDs[i])
 	}
 
-	msg, err := payload.NewMessage(&payload.GetRequest{
-		RequestID: requestID,
-	})
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to create a message")
-	}
-	reps, done := m.sender.SendTarget(ctx, msg, *node)
-	defer done()
-	res, ok := <-reps
-	if !ok {
-		return nil, nil, errors.New("no reply while fetching request")
-	}
-
-	pl, err := payload.UnmarshalFromMeta(res.Payload)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to unmarshal reply")
-	}
-	req, ok := pl.(*payload.Request)
-	if !ok {
-		return nil, nil, fmt.Errorf("unexpected reply %T", pl)
-	}
-
-	concrete := record.Unwrap(&req.Request)
-	castedRecord, ok := concrete.(*record.IncomingRequest)
-	if !ok {
-		return nil, nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", concrete)
-	}
-
-	return insolar.NewReference(requestID), castedRecord, nil
+	return res, nil
 }
 
 // HasPendingRequests returns true if object has unclosed requests.
