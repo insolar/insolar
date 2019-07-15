@@ -79,6 +79,6 @@ func (*dummyLocker) RUnlock() {
 func (*dummyLocker) RLock() {
 }
 
-func (dummyLocker) String() string {
+func (*dummyLocker) String() string {
 	return "dummyLocker"
 }
