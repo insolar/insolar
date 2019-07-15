@@ -1,4 +1,4 @@
-package ph3alt
+package ph3ctl
 
 import (
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"

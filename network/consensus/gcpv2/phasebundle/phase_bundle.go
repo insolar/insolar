@@ -51,8 +51,11 @@
 package phasebundle
 
 import (
+	"fmt"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/ph2ctl"
+	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/ph3ctl"
 	"time"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
@@ -90,52 +93,52 @@ func (r *RegularPhaseBundle) GetPrepPhaseControllers() []core.PrepPhaseControlle
 }
 
 type regularCallback struct {
-	qNshReady chan *core.NodeAppearance
-	//qTrustLvlUpd chan ph2ctl.TrustUpdateSignal
+	qNshReady    chan *core.NodeAppearance
+	qTrustLvlUpd chan ph2ctl.TrustUpdateSignal
 }
 
 func (p *regularCallback) OnCustomEvent(populationVersion uint32, n *core.NodeAppearance, event interface{}) {
-	//if te, ok := event.(ph2ctl.TrustUpdateSignal); ok && te.IsPingSignal() {
-	//	p.qTrustLvlUpd <- te
-	//	return
-	//}
-	//panic(fmt.Sprintf("unknown custom event: %v", event))
+	if te, ok := event.(ph2ctl.TrustUpdateSignal); ok && te.IsPingSignal() {
+		p.qTrustLvlUpd <- te
+		return
+	}
+	panic(fmt.Sprintf("unknown custom event: %v", event))
 }
 
 func (p *regularCallback) OnTrustUpdated(populationVersion uint32, n *core.NodeAppearance, trustBefore, trustAfter member.TrustLevel) {
-	//switch {
-	//case trustBefore < member.TrustByNeighbors && trustAfter >= member.TrustByNeighbors:
-	//	trustAfter = member.TrustByNeighbors
-	//case trustBefore < member.TrustBySome && trustAfter >= member.TrustBySome:
-	//	trustAfter = member.TrustBySome
-	//case !trustBefore.IsNegative() && trustAfter.IsNegative():
-	//default:
-	//	return
-	//}
-	//p.qTrustLvlUpd <- ph2ctl.TrustUpdateSignal{NewTrustLevel: trustAfter, UpdatedNode: n}
+	switch {
+	case trustBefore < member.TrustByNeighbors && trustAfter >= member.TrustByNeighbors:
+		trustAfter = member.TrustByNeighbors
+	case trustBefore < member.TrustBySome && trustAfter >= member.TrustBySome:
+		trustAfter = member.TrustBySome
+	case !trustBefore.IsNegative() && trustAfter.IsNegative():
+	default:
+		return
+	}
+	p.qTrustLvlUpd <- ph2ctl.TrustUpdateSignal{NewTrustLevel: trustAfter, UpdatedNode: n}
 }
 
 func (p *regularCallback) OnNodeStateAssigned(populationVersion uint32, n *core.NodeAppearance) {
-	//p.qNshReady <- n
-	//p.qTrustLvlUpd <- ph2ctl.TrustUpdateSignal{NewTrustLevel: member.UnknownTrust, UpdatedNode: n}
+	p.qNshReady <- n
+	p.qTrustLvlUpd <- ph2ctl.TrustUpdateSignal{NewTrustLevel: member.UnknownTrust, UpdatedNode: n}
 }
 
 func (r *RegularPhaseBundle) GetFullPhaseControllers(nodeCount int) ([]core.PhaseController, core.NodeUpdateCallback) {
 
 	/* Ensure sufficient sizes of queues to avoid lockups */
 	rcb := &regularCallback{
-		qNshReady: make(chan *core.NodeAppearance, nodeCount),
-		//qTrustLvlUpd: make(chan ph2ctl.TrustUpdateSignal, nodeCount*3), // up-to ~3 updates for every node
+		qNshReady:    make(chan *core.NodeAppearance, nodeCount),
+		qTrustLvlUpd: make(chan ph2ctl.TrustUpdateSignal, nodeCount*3), // up-to ~3 updates for every node
 	}
 
-	//consensusStrategy := ph3ctl.NewSimpleConsensusSelectionStrategy()
-	//inspectionFactory := ph3alt.NewVectorInspectionFactory(0)
+	consensusStrategy := ph3ctl.NewSimpleConsensusSelectionStrategy()
+	inspectionFactory := ph3ctl.NewVectorInspectionFactory(0)
 
 	return []core.PhaseController{
 		NewPulseController(),
 		NewPhase01Controller(r.packetPrepareOptions),
-		//ph2ctl.NewPhase2Controller(loopingMinimalDelay, r.packetPrepareOptions, rcb.qNshReady /*->*/),
-		//ph3alt.NewPhase3Controller(loopingMinimalDelay, r.packetPrepareOptions, rcb.qTrustLvlUpd, /*->*/
-		//	consensusStrategy, inspectionFactory),
+		ph2ctl.NewPhase2Controller(loopingMinimalDelay, r.packetPrepareOptions, rcb.qNshReady /*->*/),
+		ph3ctl.NewPhase3Controller(loopingMinimalDelay, r.packetPrepareOptions, rcb.qTrustLvlUpd, /*->*/
+			consensusStrategy, inspectionFactory),
 	}, rcb
 }

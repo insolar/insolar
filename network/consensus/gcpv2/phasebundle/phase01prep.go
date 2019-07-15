@@ -59,32 +59,29 @@ import (
 )
 
 func NewPhase01PrepController(s PulseSelectionStrategy) *Phase01PrepController {
-	return &Phase01PrepController{dispatcher: packetPrepPhase01Dispatcher{pulseStrategy: s}}
+	return &Phase01PrepController{pulseStrategy: s}
 }
 
 var _ core.PrepPhaseController = &Phase01PrepController{}
 
 type Phase01PrepController struct {
 	core.PrepPhaseControllerTemplate
-	dispatcher packetPrepPhase01Dispatcher
+	core.HostPacketDispatcher
+
+	realm         *core.PrepRealm
+	pulseStrategy PulseSelectionStrategy
 }
 
 func (r *Phase01PrepController) CreatePacketDispatcher(pt phases.PacketType, realm *core.PrepRealm) core.PacketDispatcher {
-	r.dispatcher.realm = realm
-	return &r.dispatcher
+	r.realm = realm
+	return r
 }
 
 func (*Phase01PrepController) GetPacketType() []phases.PacketType {
 	return []phases.PacketType{phases.PacketPhase0, phases.PacketPhase1}
 }
 
-type packetPrepPhase01Dispatcher struct {
-	core.HostPacketDispatcher
-	realm         *core.PrepRealm
-	pulseStrategy PulseSelectionStrategy
-}
-
-func (p *packetPrepPhase01Dispatcher) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
+func (p *Phase01PrepController) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
 	from endpoints.Inbound, flags core.PacketVerifyFlags) error {
 	switch packet.GetPacketType() {
 	case phases.PacketPhase0:
