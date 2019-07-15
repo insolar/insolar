@@ -139,11 +139,12 @@ func SendPacket(ctx context.Context, pool pool.ConnectionPool, p *packet.Packet)
 	n, err := conn.Write(data)
 	if err != nil {
 		// retry
+		inslogger.FromContext(ctx).Warn("[ SendPacket ] retry conn.Write")
 		pool.CloseConnection(ctx, p.Receiver)
 		conn, err = pool.GetConnection(ctx, p.Receiver)
 
 		if err != nil {
-			return errors.Wrap(err, "[ SendBuffer ] Failed to get connection")
+			return errors.Wrap(err, "[ SendPacket ] Failed to get connection")
 		}
 		n, err = conn.Write(data)
 	}
@@ -151,5 +152,5 @@ func SendPacket(ctx context.Context, pool pool.ConnectionPool, p *packet.Packet)
 		metrics.NetworkSentSize.Add(float64(n))
 		return nil
 	}
-	return errors.Wrap(err, "[ send ] Failed to write data")
+	return errors.Wrap(err, "[ SendPacket ] Failed to write data")
 }
