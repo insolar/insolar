@@ -71,6 +71,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
+	"github.com/insolar/insolar/network/pulsenetwork"
 	"github.com/insolar/insolar/network/transport"
 	mock "github.com/insolar/insolar/testutils/network"
 )
@@ -164,6 +165,8 @@ func (d *testnode) pingHost(ctx context.Context, host *host.Host) error {
 }
 
 func TestPingerStress(t *testing.T) {
+	// defer leaktest.Check(t)()
+
 	nodes := make([]*testnode, 0)
 	nodes = append(nodes, newNode(t, "A"))
 	nodes = append(nodes, newNode(t, "B"))
@@ -174,9 +177,15 @@ func TestPingerStress(t *testing.T) {
 	for _, n := range nodes {
 		require.NoError(t, n.start())
 	}
+	// defer func() {
+	// 	for _, n := range nodes {
+	// 		require.NoError(t, n.stop())
+	// 	}
+	// }()
 
 	pinger := newNode(t, "Pinger")
 	require.NoError(t, pinger.start())
+	// defer require.NoError(t, pinger.stop())
 
 	// <-time.After(time.Second)
 
@@ -188,5 +197,34 @@ func TestPingerStress(t *testing.T) {
 		require.NoError(t, pinger.hostNetwork.Stop(pinger.ctx))
 		require.NoError(t, pinger.hostNetwork.Start(pinger.ctx))
 	}
+}
 
+func TestDistributorStress(t *testing.T) {
+	cfg := configuration.NewPulsar().PulseDistributor
+
+	nodes := make([]*testnode, 0)
+	nodes = append(nodes, newNode(t, "A"))
+	nodes = append(nodes, newNode(t, "B"))
+	nodes = append(nodes, newNode(t, "C"))
+	nodes = append(nodes, newNode(t, "D"))
+	nodes = append(nodes, newNode(t, "E"))
+
+	for _, n := range nodes {
+		require.NoError(t, n.start())
+		cfg.BootstrapHosts = append(cfg.BootstrapHosts, n.host.Address.String())
+	}
+
+	pulsarCtx := context.Background()
+	connFactory := transport.NewFactory(configuration.NewHostNetwork().Transport)
+	pulsar, err := pulsenetwork.NewDistributor(cfg)
+	require.NoError(t, err)
+
+	cm := component.NewManager(nil)
+	cm.Inject(pulsar, connFactory)
+	require.NoError(t, cm.Init(pulsarCtx))
+	require.NoError(t, cm.Start(pulsarCtx))
+
+	for i := 0; i < 50; i++ {
+		pulsar.Distribute(pulsarCtx, *insolar.GenesisPulse)
+	}
 }
