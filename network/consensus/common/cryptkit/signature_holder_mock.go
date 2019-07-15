@@ -3,10 +3,10 @@ package cryptkit
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "SignatureHolder" can be found in github.com/insolar/insolar/network/consensus/common
+The original interface "SignatureHolder" can be found in github.com/insolar/insolar/network/consensus/common/cryptkit
 */
 import (
-	"io"
+	io "io"
 	"sync/atomic"
 	"time"
 
@@ -15,7 +15,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//SignatureHolderMock implements github.com/insolar/insolar/network/consensus/common.SignatureHolder
+//SignatureHolderMock implements github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureHolder
 type SignatureHolderMock struct {
 	t minimock.Tester
 
@@ -65,7 +65,7 @@ type SignatureHolderMock struct {
 	WriteToMock       mSignatureHolderMockWriteTo
 }
 
-//NewSignatureHolderMock returns a mock for github.com/insolar/insolar/network/consensus/common.SignatureHolder
+//NewSignatureHolderMock returns a mock for github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureHolder
 func NewSignatureHolderMock(t minimock.Tester) *SignatureHolderMock {
 	m := &SignatureHolderMock{t: t}
 
@@ -148,7 +148,7 @@ func (m *mSignatureHolderMockAsByteString) Set(f func() (r string)) *SignatureHo
 	return m.mock
 }
 
-//AsByteString implements github.com/insolar/insolar/network/consensus/common.SignatureHolder interface
+//AsByteString implements github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureHolder interface
 func (m *SignatureHolderMock) AsByteString() (r string) {
 	counter := atomic.AddUint64(&m.AsByteStringPreCounter, 1)
 	defer atomic.AddUint64(&m.AsByteStringCounter, 1)
@@ -282,7 +282,7 @@ func (m *mSignatureHolderMockAsBytes) Set(f func() (r []byte)) *SignatureHolderM
 	return m.mock
 }
 
-//AsBytes implements github.com/insolar/insolar/network/consensus/common.SignatureHolder interface
+//AsBytes implements github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureHolder interface
 func (m *SignatureHolderMock) AsBytes() (r []byte) {
 	counter := atomic.AddUint64(&m.AsBytesPreCounter, 1)
 	defer atomic.AddUint64(&m.AsBytesCounter, 1)
@@ -416,7 +416,7 @@ func (m *mSignatureHolderMockCopyOfSignature) Set(f func() (r Signature)) *Signa
 	return m.mock
 }
 
-//CopyOfSignature implements github.com/insolar/insolar/network/consensus/common.SignatureHolder interface
+//CopyOfSignature implements github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureHolder interface
 func (m *SignatureHolderMock) CopyOfSignature() (r Signature) {
 	counter := atomic.AddUint64(&m.CopyOfSignaturePreCounter, 1)
 	defer atomic.AddUint64(&m.CopyOfSignatureCounter, 1)
@@ -555,7 +555,7 @@ func (m *mSignatureHolderMockEquals) Set(f func(p SignatureHolder) (r bool)) *Si
 	return m.mock
 }
 
-//Equals implements github.com/insolar/insolar/network/consensus/common.SignatureHolder interface
+//Equals implements github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureHolder interface
 func (m *SignatureHolderMock) Equals(p SignatureHolder) (r bool) {
 	counter := atomic.AddUint64(&m.EqualsPreCounter, 1)
 	defer atomic.AddUint64(&m.EqualsCounter, 1)
@@ -697,7 +697,7 @@ func (m *mSignatureHolderMockFixedByteSize) Set(f func() (r int)) *SignatureHold
 	return m.mock
 }
 
-//FixedByteSize implements github.com/insolar/insolar/network/consensus/common.SignatureHolder interface
+//FixedByteSize implements github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureHolder interface
 func (m *SignatureHolderMock) FixedByteSize() (r int) {
 	counter := atomic.AddUint64(&m.FixedByteSizePreCounter, 1)
 	defer atomic.AddUint64(&m.FixedByteSizeCounter, 1)
@@ -831,7 +831,7 @@ func (m *mSignatureHolderMockFoldToUint64) Set(f func() (r uint64)) *SignatureHo
 	return m.mock
 }
 
-//FoldToUint64 implements github.com/insolar/insolar/network/consensus/common.SignatureHolder interface
+//FoldToUint64 implements github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureHolder interface
 func (m *SignatureHolderMock) FoldToUint64() (r uint64) {
 	counter := atomic.AddUint64(&m.FoldToUint64PreCounter, 1)
 	defer atomic.AddUint64(&m.FoldToUint64Counter, 1)
@@ -965,7 +965,7 @@ func (m *mSignatureHolderMockGetSignatureMethod) Set(f func() (r SignatureMethod
 	return m.mock
 }
 
-//GetSignatureMethod implements github.com/insolar/insolar/network/consensus/common.SignatureHolder interface
+//GetSignatureMethod implements github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureHolder interface
 func (m *SignatureHolderMock) GetSignatureMethod() (r SignatureMethod) {
 	counter := atomic.AddUint64(&m.GetSignatureMethodPreCounter, 1)
 	defer atomic.AddUint64(&m.GetSignatureMethodCounter, 1)
@@ -1105,7 +1105,7 @@ func (m *mSignatureHolderMockRead) Set(f func(p []byte) (r int, r1 error)) *Sign
 	return m.mock
 }
 
-//Read implements github.com/insolar/insolar/network/consensus/common.SignatureHolder interface
+//Read implements github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureHolder interface
 func (m *SignatureHolderMock) Read(p []byte) (r int, r1 error) {
 	counter := atomic.AddUint64(&m.ReadPreCounter, 1)
 	defer atomic.AddUint64(&m.ReadCounter, 1)
@@ -1255,7 +1255,7 @@ func (m *mSignatureHolderMockWriteTo) Set(f func(p io.Writer) (r int64, r1 error
 	return m.mock
 }
 
-//WriteTo implements github.com/insolar/insolar/network/consensus/common.SignatureHolder interface
+//WriteTo implements github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureHolder interface
 func (m *SignatureHolderMock) WriteTo(p io.Writer) (r int64, r1 error) {
 	counter := atomic.AddUint64(&m.WriteToPreCounter, 1)
 	defer atomic.AddUint64(&m.WriteToCounter, 1)

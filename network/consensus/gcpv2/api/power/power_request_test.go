@@ -48,73 +48,52 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 ///
 
-package proofs
+package power
 
 import (
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"testing"
+
+	"github.com/insolar/insolar/network/consensus/common/capacity"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/stretchr/testify/require"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.NodeStateHash -o . -s _mock.go
-
-type NodeStateHash interface {
-	cryptkit.DigestHolder
+func TestNewRequestByLevel(t *testing.T) {
+	require.Equal(t, -Request(capacity.LevelMinimal), NewRequestByLevel(capacity.LevelMinimal))
 }
 
-type GlobulaAnnouncementHash interface {
-	cryptkit.DigestHolder
+func TestNewRequest(t *testing.T) {
+	require.Equal(t, Request(1), NewRequest(member.Power(1)))
 }
 
-type GlobulaStateHash interface {
-	cryptkit.DigestHolder
+func TestAsCapacityLevel(t *testing.T) {
+	b, l := Request(-1).AsCapacityLevel()
+	require.True(t, b)
+	require.Equal(t, capacity.Level(1), l)
+
+	b, l = Request(1).AsCapacityLevel()
+	require.False(t, b)
+
+	r := Request(1)
+	require.Equal(t, capacity.Level(-r), l)
+
+	b, l = Request(0).AsCapacityLevel()
+	require.False(t, b)
+	require.Equal(t, capacity.Level(0), l)
 }
 
-type CloudStateHash interface {
-	cryptkit.DigestHolder
-}
+func TestAsMemberPower(t *testing.T) {
+	b, l := Request(1).AsMemberPower()
+	require.True(t, b)
+	require.Equal(t, member.Power(1), l)
 
-type GlobulaStateSignature interface {
-	cryptkit.SignatureHolder
-}
+	b, l = Request(-1).AsMemberPower()
+	require.False(t, b)
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.MemberAnnouncementSignature -o . -s _mock.go
+	r := Request(-1)
+	require.Equal(t, member.Power(r), l)
 
-type MemberAnnouncementSignature interface {
-	cryptkit.SignatureHolder
-}
-
-type NodeAnnouncedState struct {
-	StateEvidence     NodeStateHashEvidence
-	AnnounceSignature MemberAnnouncementSignature
-	//
-	//NodeInternalState common.Digest
-	//NodeStateSignature common.Signature
-	//AnnounceSignature *common.Signature
-}
-
-func (p *NodeAnnouncedState) IsEmpty() bool {
-	return p.StateEvidence == nil
-}
-
-func NewNodeStateHashEvidence(sd cryptkit.SignedDigest) NodeStateHashEvidence {
-	return &nodeStateHashEvidence{sd}
-}
-
-type nodeStateHashEvidence struct {
-	cryptkit.SignedDigest
-}
-
-func (c *nodeStateHashEvidence) GetNodeStateHash() NodeStateHash {
-	return c.GetDigestHolder()
-}
-
-func (c *nodeStateHashEvidence) GetGlobulaNodeStateSignature() cryptkit.SignatureHolder {
-	return c.GetSignatureHolder()
-}
-
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.NodeStateHashEvidence -o . -s _mock.go
-
-// TODO revisit and rework
-type NodeStateHashEvidence interface {
-	GetNodeStateHash() NodeStateHash
-	GetGlobulaNodeStateSignature() cryptkit.SignatureHolder
+	b, l = Request(0).AsMemberPower()
+	require.True(t, b)
+	require.Equal(t, member.Power(0), l)
 }

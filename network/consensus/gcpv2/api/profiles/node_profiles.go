@@ -52,18 +52,19 @@ package profiles
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
-	"time"
 
 	"github.com/insolar/insolar/insolar"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.HostProfile -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.Host -o . -s _mock.go
 
 type Host interface {
 	GetDefaultEndpoint() endpoints.Outbound
@@ -79,7 +80,7 @@ type NodeIntroduction interface { //full intro
 	ConvertPowerRequest(request power.Request) member.Power
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.NodeIntroProfile -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.NodeIntroProfile -o . -s _mock.go
 
 type NodeIntroProfile interface { //brief intro
 	Host
@@ -94,8 +95,6 @@ type NodeIntroProfile interface { //brief intro
 	GetIntroduction() NodeIntroduction //not null, full intro, will panic when HasIntroduction() == false
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.ActiveNode -o . -s _mock.go
-
 type BaseNode interface { //TODO Rename
 	NodeIntroProfile
 	GetSignatureVerifier() cryptkit.SignatureVerifier
@@ -105,6 +104,8 @@ type BaseNode interface { //TODO Rename
 const NodeIndexBits = 10 //DO NOT change it, otherwise nasty consequences will come
 const NodeIndexMask = 1<<NodeIndexBits - 1
 const MaxNodeIndex = NodeIndexMask
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.ActiveNode -o . -s _mock.go
 
 type ActiveNode interface { //TODO Rename
 	BaseNode
@@ -129,7 +130,7 @@ type BriefCandidateProfile interface {
 	GetJoinerSignature() cryptkit.SignatureHolder
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.CandidateProfile -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.CandidateProfile -o . -s _mock.go
 
 type CandidateProfile interface {
 	BriefCandidateProfile
@@ -154,7 +155,7 @@ type Factory interface {
 	CreateFullIntroProfile(candidate CandidateProfile) NodeIntroProfile
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/common.LocalNode -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.LocalNode -o . -s _mock.go
 
 type LocalNode interface {
 	ActiveNode

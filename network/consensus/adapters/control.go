@@ -52,15 +52,15 @@ package adapters
 
 import (
 	"context"
+	"time"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
-	"time"
-
-	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type ConsensusControlFeeder struct{}

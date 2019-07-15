@@ -3,10 +3,10 @@ package cryptkit
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "SignatureVerifier" can be found in github.com/insolar/insolar/network/consensus/common
+The original interface "SignatureVerifier" can be found in github.com/insolar/insolar/network/consensus/common/cryptkit
 */
 import (
-	"io"
+	io "io"
 	"sync/atomic"
 	"time"
 
@@ -15,7 +15,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//SignatureVerifierMock implements github.com/insolar/insolar/network/consensus/common.SignatureVerifier
+//SignatureVerifierMock implements github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureVerifier
 type SignatureVerifierMock struct {
 	t minimock.Tester
 
@@ -45,7 +45,7 @@ type SignatureVerifierMock struct {
 	IsValidDigestSignatureMock       mSignatureVerifierMockIsValidDigestSignature
 }
 
-//NewSignatureVerifierMock returns a mock for github.com/insolar/insolar/network/consensus/common.SignatureVerifier
+//NewSignatureVerifierMock returns a mock for github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureVerifier
 func NewSignatureVerifierMock(t minimock.Tester) *SignatureVerifierMock {
 	m := &SignatureVerifierMock{t: t}
 
@@ -129,7 +129,7 @@ func (m *mSignatureVerifierMockIsDigestMethodSupported) Set(f func(p DigestMetho
 	return m.mock
 }
 
-//IsDigestMethodSupported implements github.com/insolar/insolar/network/consensus/common.SignatureVerifier interface
+//IsDigestMethodSupported implements github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureVerifier interface
 func (m *SignatureVerifierMock) IsDigestMethodSupported(p DigestMethod) (r bool) {
 	counter := atomic.AddUint64(&m.IsDigestMethodSupportedPreCounter, 1)
 	defer atomic.AddUint64(&m.IsDigestMethodSupportedCounter, 1)
@@ -276,7 +276,7 @@ func (m *mSignatureVerifierMockIsSignMethodSupported) Set(f func(p SignMethod) (
 	return m.mock
 }
 
-//IsSignMethodSupported implements github.com/insolar/insolar/network/consensus/common.SignatureVerifier interface
+//IsSignMethodSupported implements github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureVerifier interface
 func (m *SignatureVerifierMock) IsSignMethodSupported(p SignMethod) (r bool) {
 	counter := atomic.AddUint64(&m.IsSignMethodSupportedPreCounter, 1)
 	defer atomic.AddUint64(&m.IsSignMethodSupportedCounter, 1)
@@ -423,7 +423,7 @@ func (m *mSignatureVerifierMockIsSignOfSignatureMethodSupported) Set(f func(p Si
 	return m.mock
 }
 
-//IsSignOfSignatureMethodSupported implements github.com/insolar/insolar/network/consensus/common.SignatureVerifier interface
+//IsSignOfSignatureMethodSupported implements github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureVerifier interface
 func (m *SignatureVerifierMock) IsSignOfSignatureMethodSupported(p SignatureMethod) (r bool) {
 	counter := atomic.AddUint64(&m.IsSignOfSignatureMethodSupportedPreCounter, 1)
 	defer atomic.AddUint64(&m.IsSignOfSignatureMethodSupportedCounter, 1)
@@ -571,7 +571,7 @@ func (m *mSignatureVerifierMockIsValidDataSignature) Set(f func(p io.Reader, p1 
 	return m.mock
 }
 
-//IsValidDataSignature implements github.com/insolar/insolar/network/consensus/common.SignatureVerifier interface
+//IsValidDataSignature implements github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureVerifier interface
 func (m *SignatureVerifierMock) IsValidDataSignature(p io.Reader, p1 SignatureHolder) (r bool) {
 	counter := atomic.AddUint64(&m.IsValidDataSignaturePreCounter, 1)
 	defer atomic.AddUint64(&m.IsValidDataSignatureCounter, 1)
@@ -719,7 +719,7 @@ func (m *mSignatureVerifierMockIsValidDigestSignature) Set(f func(p DigestHolder
 	return m.mock
 }
 
-//IsValidDigestSignature implements github.com/insolar/insolar/network/consensus/common.SignatureVerifier interface
+//IsValidDigestSignature implements github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureVerifier interface
 func (m *SignatureVerifierMock) IsValidDigestSignature(p DigestHolder, p1 SignatureHolder) (r bool) {
 	counter := atomic.AddUint64(&m.IsValidDigestSignaturePreCounter, 1)
 	defer atomic.AddUint64(&m.IsValidDigestSignatureCounter, 1)

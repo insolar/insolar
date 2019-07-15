@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,75 +46,90 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
-package proofs
+package member
 
 import (
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.NodeStateHash -o . -s _mock.go
+func TestIsMaterial(t *testing.T) {
+	require.False(t, PrimaryRoleInactive.IsMaterial())
 
-type NodeStateHash interface {
-	cryptkit.DigestHolder
+	require.False(t, PrimaryRoleNeutral.IsMaterial())
+
+	require.True(t, PrimaryRoleHeavyMaterial.IsMaterial())
+
+	require.True(t, PrimaryRoleLightMaterial.IsMaterial())
+
+	require.False(t, PrimaryRoleVirtual.IsMaterial())
 }
 
-type GlobulaAnnouncementHash interface {
-	cryptkit.DigestHolder
+func TestIsHeavyMaterial(t *testing.T) {
+	require.False(t, PrimaryRoleInactive.IsHeavyMaterial())
+
+	require.False(t, PrimaryRoleNeutral.IsHeavyMaterial())
+
+	require.True(t, PrimaryRoleHeavyMaterial.IsHeavyMaterial())
+
+	require.False(t, PrimaryRoleLightMaterial.IsHeavyMaterial())
+
+	require.False(t, PrimaryRoleVirtual.IsHeavyMaterial())
 }
 
-type GlobulaStateHash interface {
-	cryptkit.DigestHolder
+func TestIsLightMaterial(t *testing.T) {
+	require.False(t, PrimaryRoleInactive.IsLightMaterial())
+
+	require.False(t, PrimaryRoleNeutral.IsLightMaterial())
+
+	require.False(t, PrimaryRoleHeavyMaterial.IsLightMaterial())
+
+	require.True(t, PrimaryRoleLightMaterial.IsLightMaterial())
+
+	require.False(t, PrimaryRoleVirtual.IsLightMaterial())
 }
 
-type CloudStateHash interface {
-	cryptkit.DigestHolder
+func TestIsVirtual(t *testing.T) {
+	require.False(t, PrimaryRoleInactive.IsVirtual())
+
+	require.False(t, PrimaryRoleNeutral.IsVirtual())
+
+	require.False(t, PrimaryRoleHeavyMaterial.IsVirtual())
+
+	require.False(t, PrimaryRoleLightMaterial.IsVirtual())
+
+	require.True(t, PrimaryRoleVirtual.IsVirtual())
 }
 
-type GlobulaStateSignature interface {
-	cryptkit.SignatureHolder
+func TestIsNeutral(t *testing.T) {
+	require.False(t, PrimaryRoleInactive.IsNeutral())
+
+	require.True(t, PrimaryRoleNeutral.IsNeutral())
+
+	require.False(t, PrimaryRoleHeavyMaterial.IsNeutral())
+
+	require.False(t, PrimaryRoleLightMaterial.IsNeutral())
+
+	require.False(t, PrimaryRoleVirtual.IsNeutral())
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.MemberAnnouncementSignature -o . -s _mock.go
+func TestIsInactive(t *testing.T) {
+	require.True(t, PrimaryRoleInactive.IsInactive())
 
-type MemberAnnouncementSignature interface {
-	cryptkit.SignatureHolder
+	require.False(t, PrimaryRoleNeutral.IsInactive())
+
+	require.False(t, PrimaryRoleHeavyMaterial.IsInactive())
+
+	require.False(t, PrimaryRoleLightMaterial.IsInactive())
+
+	require.False(t, PrimaryRoleVirtual.IsInactive())
 }
 
-type NodeAnnouncedState struct {
-	StateEvidence     NodeStateHashEvidence
-	AnnounceSignature MemberAnnouncementSignature
-	//
-	//NodeInternalState common.Digest
-	//NodeStateSignature common.Signature
-	//AnnounceSignature *common.Signature
-}
+func TestIsDiscovery(t *testing.T) {
+	require.False(t, SpecialRoleNone.IsDiscovery())
 
-func (p *NodeAnnouncedState) IsEmpty() bool {
-	return p.StateEvidence == nil
-}
-
-func NewNodeStateHashEvidence(sd cryptkit.SignedDigest) NodeStateHashEvidence {
-	return &nodeStateHashEvidence{sd}
-}
-
-type nodeStateHashEvidence struct {
-	cryptkit.SignedDigest
-}
-
-func (c *nodeStateHashEvidence) GetNodeStateHash() NodeStateHash {
-	return c.GetDigestHolder()
-}
-
-func (c *nodeStateHashEvidence) GetGlobulaNodeStateSignature() cryptkit.SignatureHolder {
-	return c.GetSignatureHolder()
-}
-
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.NodeStateHashEvidence -o . -s _mock.go
-
-// TODO revisit and rework
-type NodeStateHashEvidence interface {
-	GetNodeStateHash() NodeStateHash
-	GetGlobulaNodeStateSignature() cryptkit.SignatureHolder
+	require.True(t, SpecialRoleDiscovery.IsDiscovery())
 }

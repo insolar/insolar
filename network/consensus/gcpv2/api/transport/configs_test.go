@@ -48,73 +48,42 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 ///
 
-package proofs
+package transport
 
 import (
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"math"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.NodeStateHash -o . -s _mock.go
+func TestVerifySizes(t *testing.T) {
+	ns := &NeighbourhoodSizes{}
+	ns.NeighbourhoodSize = 1
+	require.Panics(t, ns.VerifySizes)
 
-type NodeStateHash interface {
-	cryptkit.DigestHolder
-}
+	ns.NeighbourhoodSize = 5
+	ns.NeighbourhoodTrustThreshold = 0
+	require.Panics(t, ns.VerifySizes)
 
-type GlobulaAnnouncementHash interface {
-	cryptkit.DigestHolder
-}
+	ns.NeighbourhoodTrustThreshold = math.MaxUint8 + 1
+	require.Panics(t, ns.VerifySizes)
 
-type GlobulaStateHash interface {
-	cryptkit.DigestHolder
-}
+	ns.NeighbourhoodTrustThreshold = 1
+	ns.JoinersPerNeighbourhood = 0
+	require.Panics(t, ns.VerifySizes)
 
-type CloudStateHash interface {
-	cryptkit.DigestHolder
-}
+	ns.JoinersPerNeighbourhood = 1
+	require.Panics(t, ns.VerifySizes)
 
-type GlobulaStateSignature interface {
-	cryptkit.SignatureHolder
-}
+	ns.JoinersPerNeighbourhood = 2
+	ns.JoinersBoost = -1
+	require.Panics(t, ns.VerifySizes)
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.MemberAnnouncementSignature -o . -s _mock.go
+	ns.JoinersBoost = 0
+	ns.NeighbourhoodSize = 0
+	require.Panics(t, ns.VerifySizes)
 
-type MemberAnnouncementSignature interface {
-	cryptkit.SignatureHolder
-}
-
-type NodeAnnouncedState struct {
-	StateEvidence     NodeStateHashEvidence
-	AnnounceSignature MemberAnnouncementSignature
-	//
-	//NodeInternalState common.Digest
-	//NodeStateSignature common.Signature
-	//AnnounceSignature *common.Signature
-}
-
-func (p *NodeAnnouncedState) IsEmpty() bool {
-	return p.StateEvidence == nil
-}
-
-func NewNodeStateHashEvidence(sd cryptkit.SignedDigest) NodeStateHashEvidence {
-	return &nodeStateHashEvidence{sd}
-}
-
-type nodeStateHashEvidence struct {
-	cryptkit.SignedDigest
-}
-
-func (c *nodeStateHashEvidence) GetNodeStateHash() NodeStateHash {
-	return c.GetDigestHolder()
-}
-
-func (c *nodeStateHashEvidence) GetGlobulaNodeStateSignature() cryptkit.SignatureHolder {
-	return c.GetSignatureHolder()
-}
-
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.NodeStateHashEvidence -o . -s _mock.go
-
-// TODO revisit and rework
-type NodeStateHashEvidence interface {
-	GetNodeStateHash() NodeStateHash
-	GetGlobulaNodeStateSignature() cryptkit.SignatureHolder
+	ns.NeighbourhoodSize = 5
+	require.NotPanics(t, ns.VerifySizes)
 }

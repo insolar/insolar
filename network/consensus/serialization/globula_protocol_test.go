@@ -54,8 +54,9 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"testing"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 
 	"github.com/stretchr/testify/require"
 )
@@ -195,7 +196,7 @@ func TestGlobulaConsensusPacket_SerializeTo_EmptyPacket(t *testing.T) {
 		EncryptableBody: &GlobulaConsensusPacketBody{},
 	}
 	p.Header.setProtocolType(ProtocolTypeGlobulaConsensus)
-	p.Header.setPacketType(phases.PacketTypeCount) // To emulate empty packet
+	p.Header.setPacketType(phases.PacketType(phases.PacketTypeCount)) // To emulate empty packet
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
 	s, err := p.SerializeTo(context.Background(), buf, digester, signer)

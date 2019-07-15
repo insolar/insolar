@@ -53,6 +53,7 @@ package adapters
 import (
 	"crypto/ecdsa"
 	"fmt"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
@@ -246,6 +247,10 @@ func (p *NodeEndpoint) GetNameAddress() endpoints.Name {
 
 func (p *NodeEndpoint) GetIPAddress() packets.NodeAddress {
 	return p.addr
+}
+
+func (p *NodeEndpoint) AsByteString() string {
+	return p.addr.String()
 }
 
 func NewNodeIntroProfileList(nodes []insolar.NetworkNode, certificate insolar.Certificate, keyProcessor insolar.KeyProcessor) []profiles.NodeIntroProfile {

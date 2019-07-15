@@ -52,9 +52,9 @@ package adapters
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
@@ -126,7 +126,7 @@ func (op *OfflinePopulation) FindRegisteredProfile(identity endpoints.Inbound) p
 type VersionedRegistries struct {
 	mandateRegistry     census.MandateRegistry
 	misbehaviorRegistry census.MisbehaviorRegistry
-	offlinePopulation   api.OfflinePopulation
+	offlinePopulation   census.OfflinePopulation
 
 	pulseData pulse.Data
 }
@@ -134,7 +134,7 @@ type VersionedRegistries struct {
 func NewVersionedRegistries(
 	mandateRegistry census.MandateRegistry,
 	misbehaviorRegistry census.MisbehaviorRegistry,
-	offlinePopulation api.OfflinePopulation,
+	offlinePopulation census.OfflinePopulation,
 ) *VersionedRegistries {
 	return &VersionedRegistries{
 		mandateRegistry:     mandateRegistry,
@@ -158,7 +158,7 @@ func (c *VersionedRegistries) GetMandateRegistry() census.MandateRegistry {
 	return c.mandateRegistry
 }
 
-func (c *VersionedRegistries) GetOfflinePopulation() api.OfflinePopulation {
+func (c *VersionedRegistries) GetOfflinePopulation() census.OfflinePopulation {
 	return c.offlinePopulation
 }
 

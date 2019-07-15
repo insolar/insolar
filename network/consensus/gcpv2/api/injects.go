@@ -52,6 +52,8 @@ package api
 
 import (
 	"context"
+	"time"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -62,7 +64,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"time"
 )
 
 type ConsensusController interface {
@@ -77,6 +78,7 @@ type ConsensusController interface {
 	GetActivePowerLimit() (member.Power, pulse.Number)
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api.CandidateControlFeeder -o . -s _mock.go
 type CandidateControlFeeder interface {
 	PickNextJoinCandidate() profiles.CandidateProfile
 	RemoveJoinCandidate(candidateAdded bool, nodeID insolar.ShortNodeID) bool

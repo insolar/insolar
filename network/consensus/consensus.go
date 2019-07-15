@@ -53,13 +53,14 @@ package consensus
 import (
 	"context"
 	"fmt"
+	"reflect"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	census2 "github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	transport2 "github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"reflect"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
@@ -94,12 +95,12 @@ func (cd *Dep) verify() {
 }
 
 type Consensus struct {
-	population                   censusimpl.ManyNodePopulation  // TODO: there should be interface
-	consensusConfiguration       census2.ConsensusConfiguration // TODO: there should be interface
-	mandateRegistry              census2.MandateRegistry
-	misbehaviorRegistry          census2.MisbehaviorRegistry
-	offlinePopulation            api.OfflinePopulation
-	versionedRegistries          census2.VersionedRegistries
+	population                   censusimpl.ManyNodePopulation // TODO: there should be interface
+	consensusConfiguration       census.ConsensusConfiguration // TODO: there should be interface
+	mandateRegistry              census.MandateRegistry
+	misbehaviorRegistry          census.MisbehaviorRegistry
+	offlinePopulation            census.OfflinePopulation
+	versionedRegistries          census.VersionedRegistries
 	nodeProfileFactory           profiles.Factory
 	consensusChronicles          api.ConsensusChronicles
 	localNodeConfiguration       api.LocalNodeConfiguration

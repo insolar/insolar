@@ -48,89 +48,59 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package common
+package member
 
 import (
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestIsMaterial(t *testing.T) {
-	require.False(t, member.PrimaryRoleInactive.IsMaterial())
-
-	require.False(t, member.PrimaryRoleNeutral.IsMaterial())
-
-	require.True(t, member.PrimaryRoleHeavyMaterial.IsMaterial())
-
-	require.True(t, member.PrimaryRoleLightMaterial.IsMaterial())
-
-	require.False(t, member.PrimaryRoleVirtual.IsMaterial())
+func TestGetPower(t *testing.T) {
+	require.Equal(t, Rank(1).GetPower(), Power(1))
 }
 
-func TestIsHeavyMaterial(t *testing.T) {
-	require.False(t, member.PrimaryRoleInactive.IsHeavyMaterial())
+func TestGetIndex(t *testing.T) {
+	require.Equal(t, uint16(0), Rank((1<<8)-1).GetIndex())
 
-	require.False(t, member.PrimaryRoleNeutral.IsHeavyMaterial())
-
-	require.True(t, member.PrimaryRoleHeavyMaterial.IsHeavyMaterial())
-
-	require.False(t, member.PrimaryRoleLightMaterial.IsHeavyMaterial())
-
-	require.False(t, member.PrimaryRoleVirtual.IsHeavyMaterial())
+	require.Equal(t, uint16(1), Rank(1<<8).GetIndex())
 }
 
-func TestIsLightMaterial(t *testing.T) {
-	require.False(t, member.PrimaryRoleInactive.IsLightMaterial())
+func TestGetTotalCount(t *testing.T) {
+	require.Equal(t, uint16(0), Rank((1<<18)-1).GetTotalCount())
 
-	require.False(t, member.PrimaryRoleNeutral.IsLightMaterial())
-
-	require.False(t, member.PrimaryRoleHeavyMaterial.IsLightMaterial())
-
-	require.True(t, member.PrimaryRoleLightMaterial.IsLightMaterial())
-
-	require.False(t, member.PrimaryRoleVirtual.IsLightMaterial())
+	require.Equal(t, uint16(1), Rank(1<<18).GetTotalCount())
 }
 
-func TestIsVirtual(t *testing.T) {
-	require.False(t, member.PrimaryRoleInactive.IsVirtual())
+func TestIsJoiner(t *testing.T) {
+	require.False(t, Rank(1).IsJoiner())
 
-	require.False(t, member.PrimaryRoleNeutral.IsVirtual())
-
-	require.False(t, member.PrimaryRoleHeavyMaterial.IsVirtual())
-
-	require.False(t, member.PrimaryRoleLightMaterial.IsVirtual())
-
-	require.True(t, member.PrimaryRoleVirtual.IsVirtual())
+	require.True(t, JoinerRank.IsJoiner())
 }
 
-func TestIsNeutral(t *testing.T) {
-	require.False(t, member.PrimaryRoleInactive.IsNeutral())
+func TestString(t *testing.T) {
+	joiner := "{joiner}"
 
-	require.True(t, member.PrimaryRoleNeutral.IsNeutral())
-
-	require.False(t, member.PrimaryRoleHeavyMaterial.IsNeutral())
-
-	require.False(t, member.PrimaryRoleLightMaterial.IsNeutral())
-
-	require.False(t, member.PrimaryRoleVirtual.IsNeutral())
+	require.Equal(t, JoinerRank.String(), joiner)
+	require.NotEqual(t, Rank(1).String(), joiner)
+	require.Equal(t, joiner, JoinerRank.String())
+	require.NotEqual(t, joiner, Rank(1).String())
 }
 
-func TestIsInactive(t *testing.T) {
-	require.True(t, member.PrimaryRoleInactive.IsInactive())
+func TestNewMembershipRank(t *testing.T) {
+	require.Panics(t, func() { NewMembershipRank(ModeNormal, Power(1), 1, 1) })
 
-	require.False(t, member.PrimaryRoleNeutral.IsInactive())
+	require.Panics(t, func() { NewMembershipRank(ModeNormal, Power(1), 0x03FF+1, 1) })
 
-	require.False(t, member.PrimaryRoleHeavyMaterial.IsInactive())
+	require.Panics(t, func() { NewMembershipRank(ModeNormal, Power(1), 1, 0x03FF+1) })
 
-	require.False(t, member.PrimaryRoleLightMaterial.IsInactive())
+	require.Panics(t, func() { NewMembershipRank(ModeNormal, Power(1), 1, 0x03FF+1) })
 
-	require.False(t, member.PrimaryRoleVirtual.IsInactive())
+	require.Equal(t, Rank(0x80101), NewMembershipRank(ModeNormal, Power(1), 1, 2))
 }
 
-func TestIsDiscovery(t *testing.T) {
-	require.False(t, member.SpecialRoleNone.IsDiscovery())
+func TestEnsureNodeIndex(t *testing.T) {
+	require.Panics(t, func() { ensureNodeIndex(0x03FF + 1) })
 
-	require.True(t, member.SpecialRoleDiscovery.IsDiscovery())
+	require.Equal(t, uint32(2), ensureNodeIndex(2))
 }

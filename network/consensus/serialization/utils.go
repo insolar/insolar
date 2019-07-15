@@ -53,6 +53,7 @@ package serialization
 import (
 	"encoding/binary"
 	"io"
+	"net"
 )
 
 func setBit(n uint, pos uint) uint {
@@ -85,4 +86,17 @@ func read(reader io.Reader, data interface{}) error {
 
 func write(writer io.Writer, data interface{}) error {
 	return binary.Write(writer, defaultByteOrder, data)
+}
+
+func int2ip(nn uint32) net.IP {
+	ip := make(net.IP, 4)
+	defaultByteOrder.PutUint32(ip, nn)
+	return ip
+}
+
+func ip2int(ip net.IP) uint32 {
+	if len(ip) == 16 {
+		return defaultByteOrder.Uint32(ip[12:16])
+	}
+	return defaultByteOrder.Uint32(ip)
 }

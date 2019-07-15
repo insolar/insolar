@@ -3,7 +3,7 @@ package cryptkit
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "DigestHolder" can be found in github.com/insolar/insolar/network/consensus/common
+The original interface "DigestHolder" can be found in github.com/insolar/insolar/network/consensus/common/cryptkit
 */
 import (
 	io "io"
@@ -15,7 +15,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//DigestHolderMock implements github.com/insolar/insolar/network/consensus/common.DigestHolder
+//DigestHolderMock implements github.com/insolar/insolar/network/consensus/common/cryptkit.DigestHolder
 type DigestHolderMock struct {
 	t minimock.Tester
 
@@ -70,7 +70,7 @@ type DigestHolderMock struct {
 	WriteToMock       mDigestHolderMockWriteTo
 }
 
-//NewDigestHolderMock returns a mock for github.com/insolar/insolar/network/consensus/common.DigestHolder
+//NewDigestHolderMock returns a mock for github.com/insolar/insolar/network/consensus/common/cryptkit.DigestHolder
 func NewDigestHolderMock(t minimock.Tester) *DigestHolderMock {
 	m := &DigestHolderMock{t: t}
 
@@ -154,7 +154,7 @@ func (m *mDigestHolderMockAsByteString) Set(f func() (r string)) *DigestHolderMo
 	return m.mock
 }
 
-//AsByteString implements github.com/insolar/insolar/network/consensus/common.DigestHolder interface
+//AsByteString implements github.com/insolar/insolar/network/consensus/common/cryptkit.DigestHolder interface
 func (m *DigestHolderMock) AsByteString() (r string) {
 	counter := atomic.AddUint64(&m.AsByteStringPreCounter, 1)
 	defer atomic.AddUint64(&m.AsByteStringCounter, 1)
@@ -288,7 +288,7 @@ func (m *mDigestHolderMockAsBytes) Set(f func() (r []byte)) *DigestHolderMock {
 	return m.mock
 }
 
-//AsBytes implements github.com/insolar/insolar/network/consensus/common.DigestHolder interface
+//AsBytes implements github.com/insolar/insolar/network/consensus/common/cryptkit.DigestHolder interface
 func (m *DigestHolderMock) AsBytes() (r []byte) {
 	counter := atomic.AddUint64(&m.AsBytesPreCounter, 1)
 	defer atomic.AddUint64(&m.AsBytesCounter, 1)
@@ -422,7 +422,7 @@ func (m *mDigestHolderMockCopyOfDigest) Set(f func() (r Digest)) *DigestHolderMo
 	return m.mock
 }
 
-//CopyOfDigest implements github.com/insolar/insolar/network/consensus/common.DigestHolder interface
+//CopyOfDigest implements github.com/insolar/insolar/network/consensus/common/cryptkit.DigestHolder interface
 func (m *DigestHolderMock) CopyOfDigest() (r Digest) {
 	counter := atomic.AddUint64(&m.CopyOfDigestPreCounter, 1)
 	defer atomic.AddUint64(&m.CopyOfDigestCounter, 1)
@@ -561,7 +561,7 @@ func (m *mDigestHolderMockEquals) Set(f func(p DigestHolder) (r bool)) *DigestHo
 	return m.mock
 }
 
-//Equals implements github.com/insolar/insolar/network/consensus/common.DigestHolder interface
+//Equals implements github.com/insolar/insolar/network/consensus/common/cryptkit.DigestHolder interface
 func (m *DigestHolderMock) Equals(p DigestHolder) (r bool) {
 	counter := atomic.AddUint64(&m.EqualsPreCounter, 1)
 	defer atomic.AddUint64(&m.EqualsCounter, 1)
@@ -703,7 +703,7 @@ func (m *mDigestHolderMockFixedByteSize) Set(f func() (r int)) *DigestHolderMock
 	return m.mock
 }
 
-//FixedByteSize implements github.com/insolar/insolar/network/consensus/common.DigestHolder interface
+//FixedByteSize implements github.com/insolar/insolar/network/consensus/common/cryptkit.DigestHolder interface
 func (m *DigestHolderMock) FixedByteSize() (r int) {
 	counter := atomic.AddUint64(&m.FixedByteSizePreCounter, 1)
 	defer atomic.AddUint64(&m.FixedByteSizeCounter, 1)
@@ -837,7 +837,7 @@ func (m *mDigestHolderMockFoldToUint64) Set(f func() (r uint64)) *DigestHolderMo
 	return m.mock
 }
 
-//FoldToUint64 implements github.com/insolar/insolar/network/consensus/common.DigestHolder interface
+//FoldToUint64 implements github.com/insolar/insolar/network/consensus/common/cryptkit.DigestHolder interface
 func (m *DigestHolderMock) FoldToUint64() (r uint64) {
 	counter := atomic.AddUint64(&m.FoldToUint64PreCounter, 1)
 	defer atomic.AddUint64(&m.FoldToUint64Counter, 1)
@@ -971,7 +971,7 @@ func (m *mDigestHolderMockGetDigestMethod) Set(f func() (r DigestMethod)) *Diges
 	return m.mock
 }
 
-//GetDigestMethod implements github.com/insolar/insolar/network/consensus/common.DigestHolder interface
+//GetDigestMethod implements github.com/insolar/insolar/network/consensus/common/cryptkit.DigestHolder interface
 func (m *DigestHolderMock) GetDigestMethod() (r DigestMethod) {
 	counter := atomic.AddUint64(&m.GetDigestMethodPreCounter, 1)
 	defer atomic.AddUint64(&m.GetDigestMethodCounter, 1)
@@ -1111,7 +1111,7 @@ func (m *mDigestHolderMockRead) Set(f func(p []byte) (r int, r1 error)) *DigestH
 	return m.mock
 }
 
-//Read implements github.com/insolar/insolar/network/consensus/common.DigestHolder interface
+//Read implements github.com/insolar/insolar/network/consensus/common/cryptkit.DigestHolder interface
 func (m *DigestHolderMock) Read(p []byte) (r int, r1 error) {
 	counter := atomic.AddUint64(&m.ReadPreCounter, 1)
 	defer atomic.AddUint64(&m.ReadCounter, 1)
@@ -1260,7 +1260,7 @@ func (m *mDigestHolderMockSignWith) Set(f func(p DigestSigner) (r SignedDigest))
 	return m.mock
 }
 
-//SignWith implements github.com/insolar/insolar/network/consensus/common.DigestHolder interface
+//SignWith implements github.com/insolar/insolar/network/consensus/common/cryptkit.DigestHolder interface
 func (m *DigestHolderMock) SignWith(p DigestSigner) (r SignedDigest) {
 	counter := atomic.AddUint64(&m.SignWithPreCounter, 1)
 	defer atomic.AddUint64(&m.SignWithCounter, 1)
@@ -1408,7 +1408,7 @@ func (m *mDigestHolderMockWriteTo) Set(f func(p io.Writer) (r int64, r1 error)) 
 	return m.mock
 }
 
-//WriteTo implements github.com/insolar/insolar/network/consensus/common.DigestHolder interface
+//WriteTo implements github.com/insolar/insolar/network/consensus/common/cryptkit.DigestHolder interface
 func (m *DigestHolderMock) WriteTo(p io.Writer) (r int64, r1 error) {
 	counter := atomic.AddUint64(&m.WriteToPreCounter, 1)
 	defer atomic.AddUint64(&m.WriteToCounter, 1)

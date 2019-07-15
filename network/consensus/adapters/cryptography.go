@@ -52,11 +52,11 @@ package adapters
 
 import (
 	"crypto/ecdsa"
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"io"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/common/longbits"
 )
 
 const (
@@ -242,6 +242,18 @@ func NewECDSASignatureKeyHolder(publicKey *ecdsa.PublicKey, processor insolar.Ke
 	return &ECDSASignatureKeyHolder{
 		Bits512:   *bits,
 		publicKey: publicKey,
+	}
+}
+
+func NewECDSASignatureKeyHolderFromBits(publicKeyBytes longbits.Bits512, processor insolar.KeyProcessor) *ECDSASignatureKeyHolder {
+	publicKey, err := processor.ImportPublicKeyBinary(publicKeyBytes.AsBytes())
+	if err != nil {
+		panic(err)
+	}
+
+	return &ECDSASignatureKeyHolder{
+		Bits512:   publicKeyBytes,
+		publicKey: publicKey.(*ecdsa.PublicKey),
 	}
 }
 

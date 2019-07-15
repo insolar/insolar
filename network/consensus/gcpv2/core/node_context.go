@@ -51,10 +51,11 @@
 package core
 
 import (
+	"sync/atomic"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
-	"sync/atomic"
 )
 
 func (p *nodeContext) initPrep(signatureVerifierFactory cryptkit.SignatureVerifierFactory, capture misbehavior.ReportFunc) {

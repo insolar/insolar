@@ -51,18 +51,21 @@
 package adapters
 
 import (
+	"math/rand"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
-	"math/rand"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
 
-type gshDigester struct {
+type seqDigester struct {
 	// TODO do test or a proper digest calc
 	rnd      *rand.Rand
 	lastSeed int64
 }
 
-func (s *gshDigester) AddNext(digest cryptkit.DigestHolder) {
+func (s *seqDigester) AddNext(digest longbits.FoldableReader) {
 	// it is a dirty emulation of digest
 	if s.rnd == nil {
 		s.rnd = rand.New(rand.NewSource(0))
@@ -71,23 +74,43 @@ func (s *gshDigester) AddNext(digest cryptkit.DigestHolder) {
 	s.rnd.Seed(s.lastSeed)
 }
 
-func (s *gshDigester) GetDigestMethod() cryptkit.DigestMethod {
+func (s *seqDigester) GetDigestMethod() cryptkit.DigestMethod {
 	return "emuDigest64"
 }
 
-func (s *gshDigester) ForkSequence() cryptkit.SequenceDigester {
-	cp := gshDigester{}
+func (s *seqDigester) ForkSequence() cryptkit.SequenceDigester {
+	cp := seqDigester{}
 	if s.rnd != nil {
 		cp.rnd = rand.New(rand.NewSource(s.lastSeed))
 	}
 	return &cp
 }
 
-func (s *gshDigester) FinishSequence() cryptkit.Digest {
+func (s *seqDigester) FinishSequence() cryptkit.Digest {
 	if s.rnd == nil {
 		panic("nothing")
 	}
 	bits := longbits.NewBits64(s.rnd.Uint64())
 	s.rnd = nil
 	return cryptkit.NewDigest(&bits, s.GetDigestMethod())
+}
+
+type gshDigester struct {
+	sd cryptkit.SequenceDigester
+}
+
+func (p *gshDigester) AddNext(digest longbits.FoldableReader, fullRank member.FullRank) {
+	p.sd.AddNext(digest)
+}
+
+func (p *gshDigester) GetDigestMethod() cryptkit.DigestMethod {
+	return p.sd.GetDigestMethod()
+}
+
+func (p *gshDigester) ForkSequence() transport.StateDigester {
+	return &gshDigester{p.sd.ForkSequence()}
+}
+
+func (p *gshDigester) FinishSequence() cryptkit.Digest {
+	return p.sd.FinishSequence()
 }

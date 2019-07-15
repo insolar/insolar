@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,79 +46,64 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package chaser
 
-//<<<<<<< HEAD:network/consensus/common/chaser/chasing_delay_test.go
-//func TestNewChasingTimer(t *testing.T) {
-//	chasingDelay := time.Second
-//	ct := NewChasingTimer(chasingDelay)
-//	require.Equal(t, chasingDelay, chasingDelay)
-//}
-//
-//func TestIsEnabled(t *testing.T) {
-//	ct := NewChasingTimer(time.Second)
-//	require.True(t, IsEnabled())
-//
-//	ct = NewChasingTimer(0)
-//	require.False(t, IsEnabled())
-//
-//	ct = NewChasingTimer(-time.Second)
-//	require.False(t, IsEnabled())
-//}
-//
-//func TestWasStarted(t *testing.T) {
-//	ct := NewChasingTimer(time.Second)
-//	require.False(t, WasStarted())
-//
-//	timer = time.NewTimer(time.Second)
-//	require.True(t, WasStarted())
-//}
-//
-//func TestRestartChase(t *testing.T) {
-//	ct := NewChasingTimer(-time.Second)
-//	RestartChase()
-//	require.True(t, timer == nil)
-//
-//	ct = NewChasingTimer(0)
-//	RestartChase()
-//	require.True(t, timer == nil)
-//
-//	ct = NewChasingTimer(time.Microsecond)
-//	RestartChase()
-//	require.True(t, timer != nil)
-//
-//	RestartChase()
-//	require.True(t, timer != nil)
-//}
-//
-//func TestChannel(t *testing.T) {
-//	ct := NewChasingTimer(0)
-//	require.True(t, Channel() == nil)
-//
-//	ct = NewChasingTimer(time.Microsecond)
-//	RestartChase()
-//	require.True(t, Channel() != nil)
-//}
-//=======
-//func TestNewNodeStateHashEvidence(t *testing.T) {
-//	sd := common.NewSignedDigest(common.Digest{}, common.Signature{})
-//	sh := NewNodeStateHashEvidence(sd)
-//	require.Equal(t, sd, sh.(*nodeStateHashEvidence).SignedDigest)
-//}
-//
-//func TestGetNodeStateHash(t *testing.T) {
-//	fr := common.NewFoldableReaderMock(t)
-//	sd := common.NewSignedDigest(common.NewDigest(fr, common.DigestMethod("testDigest")), common.NewSignature(fr, common.SignatureMethod("testSignature")))
-//	sh := NewNodeStateHashEvidence(sd)
-//	require.Equal(t, sd.GetDigest().AsDigestHolder().GetDigestMethod(), sh.GetNodeStateHash().GetDigestMethod())
-//}
-//
-//func TestGetGlobulaNodeStateSignature(t *testing.T) {
-//	fr := common.NewFoldableReaderMock(t)
-//	sd := common.NewSignedDigest(common.NewDigest(fr, common.DigestMethod("testDigest")), common.NewSignature(fr, common.SignatureMethod("testSignature")))
-//	sh := NewNodeStateHashEvidence(sd)
-//	require.Equal(t, sd.GetSignature().AsSignatureHolder().GetSignatureMethod(), sh.GetGlobulaNodeStateSignature().GetSignatureMethod())
-//}
-//>>>>>>> 57e8ec4518ff891a196423b89dc5b1c0f1a5e1de:network/consensus/gcpv2/common/hashes_test.go
+import (
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+)
+
+func TestNewChasingTimer(t *testing.T) {
+	chasingDelay := time.Second
+	ct := NewChasingTimer(chasingDelay)
+	require.Equal(t, chasingDelay, ct.chasingDelay)
+}
+
+func TestIsEnabled(t *testing.T) {
+	ct := NewChasingTimer(time.Second)
+	require.True(t, ct.IsEnabled())
+
+	ct = NewChasingTimer(0)
+	require.False(t, ct.IsEnabled())
+
+	ct = NewChasingTimer(-time.Second)
+	require.False(t, ct.IsEnabled())
+}
+
+func TestWasStarted(t *testing.T) {
+	ct := NewChasingTimer(time.Second)
+	require.False(t, ct.WasStarted())
+
+	ct.timer = time.NewTimer(time.Second)
+	require.True(t, ct.WasStarted())
+}
+
+func TestRestartChase(t *testing.T) {
+	ct := NewChasingTimer(-time.Second)
+	ct.RestartChase()
+	require.True(t, ct.timer == nil)
+
+	ct = NewChasingTimer(0)
+	ct.RestartChase()
+	require.True(t, ct.timer == nil)
+
+	ct = NewChasingTimer(time.Microsecond)
+	ct.RestartChase()
+	require.True(t, ct.timer != nil)
+
+	ct.RestartChase()
+	require.True(t, ct.timer != nil)
+}
+
+func TestChannel(t *testing.T) {
+	ct := NewChasingTimer(0)
+	require.True(t, ct.Channel() == nil)
+
+	ct = NewChasingTimer(time.Microsecond)
+	ct.RestartChase()
+	require.True(t, ct.Channel() != nil)
+}
