@@ -51,41 +51,43 @@
 package endpoints
 
 import (
+	"fmt"
 	"github.com/insolar/insolar/insolar"
 
-	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensusv1/packets"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.NodeEndpoint -o . -s _mock.go
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.HostIdentityHolder -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.Outbound -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common.Inbound -o . -s _mock.go
 
-type HostAddress string
+type Name string
 
-func (addr *HostAddress) IsLocalHost() bool {
+func (addr *Name) IsLocalHost() bool {
 	return addr != nil && len(*addr) == 0
 }
 
-func (addr *HostAddress) Equals(o HostAddress) bool {
+func (addr *Name) Equals(o Name) bool {
 	return addr != nil && *addr == o
 }
 
-func (addr *HostAddress) EqualsToString(o string) bool {
-	return addr.Equals(HostAddress(o))
+func (addr *Name) EqualsToString(o string) bool {
+	return addr.Equals(Name(o))
 }
 
-func (addr HostAddress) String() string {
+func (addr Name) String() string {
 	return string(addr)
 }
 
-type NodeEndpoint interface {
+type Outbound interface {
 	GetEndpointType() NodeEndpointType
 	GetRelayID() insolar.ShortNodeID
-	GetNameAddress() HostAddress
+	GetNameAddress() Name
 	GetIPAddress() packets.NodeAddress
+	AsByteString() string
 }
 
-func EqualNodeEndpoints(p, o NodeEndpoint) bool {
+func EqualEndpoints(p, o Outbound) bool {
 	if p == nil || o == nil {
 		return false
 	}
@@ -115,36 +117,47 @@ const (
 	RelayEndpoint
 )
 
-type HostIdentityHolder interface {
-	GetHostAddress() HostAddress
-	GetTransportKey() cryptography_containers.SignatureKeyHolder
-	GetTransportCert() cryptography_containers.CertificateHolder
+type Inbound interface {
+	GetNameAddress() Name
+	//	GetIPAddress() packets.NodeAddress // TODO
+	GetTransportKey() cryptkit.SignatureKeyHolder
+	GetTransportCert() cryptkit.CertificateHolder
+	AsByteString() string
 }
 
-var _ HostIdentityHolder = &HostIdentity{}
+var _ Inbound = &InboundConnection{}
 
-func NewHostIdentityFromHolder(h HostIdentityHolder) HostIdentity {
-	return HostIdentity{
-		Addr: h.GetHostAddress(),
+func NewHostIdentityFromHolder(h Inbound) InboundConnection {
+	return InboundConnection{
+		Addr: h.GetNameAddress(),
 		Key:  h.GetTransportKey(),
 		Cert: h.GetTransportCert(),
 	}
 }
 
-type HostIdentity struct {
-	Addr HostAddress
-	Key  cryptography_containers.SignatureKeyHolder
-	Cert cryptography_containers.CertificateHolder
+type InboundConnection struct {
+	Addr Name
+	Key  cryptkit.SignatureKeyHolder
+	Cert cryptkit.CertificateHolder
 }
 
-func (v *HostIdentity) GetHostAddress() HostAddress {
+func ShortNodeIDAsByteString(nodeID insolar.ShortNodeID) string {
+	return fmt.Sprintf("node:%s",
+		string([]byte{byte(nodeID), byte(nodeID >> 8), byte(nodeID >> 16), byte(nodeID >> 24)}))
+}
+
+func (v *InboundConnection) AsByteString() string {
+	return fmt.Sprintf("name:%s", v.Addr)
+}
+
+func (v *InboundConnection) GetNameAddress() Name {
 	return v.Addr
 }
 
-func (v *HostIdentity) GetTransportKey() cryptography_containers.SignatureKeyHolder {
+func (v *InboundConnection) GetTransportKey() cryptkit.SignatureKeyHolder {
 	return v.Key
 }
 
-func (v *HostIdentity) GetTransportCert() cryptography_containers.CertificateHolder {
+func (v *InboundConnection) GetTransportCert() cryptkit.CertificateHolder {
 	return v.Cert
 }

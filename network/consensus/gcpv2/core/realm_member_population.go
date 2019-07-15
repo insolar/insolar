@@ -53,13 +53,14 @@ package core
 import (
 	"context"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common/consensus_tools"
-	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
+	"github.com/insolar/insolar/network/consensus/common/consensuskit"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
 
-func NewMemberRealmPopulation(strategy RoundStrategy, population api.OnlinePopulation,
+func NewMemberRealmPopulation(strategy RoundStrategy, population census.OnlinePopulation, phase2ExtLimit uint8,
 	fn NodeInitFunc) *MemberRealmPopulation {
 
 	nodeCount := population.GetCount()
@@ -73,9 +74,9 @@ func NewMemberRealmPopulation(strategy RoundStrategy, population api.OnlinePopul
 			nodeIndex:      make([]*NodeAppearance, nodeCount),
 			nodeShuffle:    make([]*NodeAppearance, nodeCount-1),
 		}},
-		bftMajorityCount: consensus_tools.BftMajority(nodeCount),
+		bftMajorityCount: consensuskit.BftMajority(nodeCount),
 	}
-	r.initPopulation()
+	r.initPopulation(phase2ExtLimit)
 	ShuffleNodeProjections(strategy, r.nodeShuffle)
 
 	return r
@@ -87,7 +88,7 @@ type dynPop struct{ DynamicRealmPopulation }
 
 type MemberRealmPopulation struct {
 	dynPop
-	population api.OnlinePopulation
+	population census.OnlinePopulation
 
 	bftMajorityCount int
 }
@@ -96,18 +97,22 @@ func (r *MemberRealmPopulation) IsComplete() bool {
 	return true
 }
 
-func (r *MemberRealmPopulation) initPopulation() {
-	profiles := r.population.GetProfiles()
+func (r *MemberRealmPopulation) initPopulation(phase2ExtLimit uint8) {
+	activeProfiles := r.population.GetProfiles()
 	thisNodeID := r.population.GetLocalProfile().GetShortNodeID()
 
 	nodes := make([]NodeAppearance, r.indexedCount)
 
 	var j = 0
-	for i, p := range profiles {
+	for i, p := range activeProfiles {
 		n := &nodes[i]
 		r.nodeIndex[i] = n
 
-		n.init(p, nil, r.baselineWeight)
+		if p.GetOpMode().IsEvicted() {
+			panic("illegal state")
+		}
+
+		n.init(p, nil, r.baselineWeight, phase2ExtLimit)
 		r.nodeInit(context.Background(), n)
 
 		if p.GetShortNodeID() == thisNodeID {
@@ -116,7 +121,7 @@ func (r *MemberRealmPopulation) initPopulation() {
 			}
 			r.self = n
 		} else {
-			if j == len(profiles) {
+			if j == len(activeProfiles) {
 				panic("didnt find myself among active nodes")
 			}
 			r.nodeShuffle[j] = n
@@ -172,28 +177,35 @@ func (r *MemberRealmPopulation) AddToDynamics(n *NodeAppearance) (*NodeAppearanc
 	return r.dynPop.AddToDynamics(n)
 }
 
-var _ gcp_types.NodeProfile = &joiningNodeProfile{}
+func (r *MemberRealmPopulation) CreateVectorHelper() *RealmVectorHelper {
+
+	v := r.DynamicRealmPopulation.CreateVectorHelper()
+	v.realmPopulation = r
+	return v
+}
+
+var _ profiles.ActiveNode = &joiningNodeProfile{}
 
 type joiningNodeProfile struct {
-	gcp_types.NodeIntroProfile
+	profiles.NodeIntroProfile
 }
 
 func (p *joiningNodeProfile) IsJoiner() bool {
 	return true
 }
 
-func (p *joiningNodeProfile) GetOpMode() gcp_types.MemberOpMode {
-	return gcp_types.MemberModeNormal
+func (p *joiningNodeProfile) GetOpMode() member.OpMode {
+	return member.ModeNormal
 }
 
 func (p *joiningNodeProfile) GetIndex() int {
 	return 0
 }
 
-func (p *joiningNodeProfile) GetDeclaredPower() gcp_types.MemberPower {
+func (p *joiningNodeProfile) GetDeclaredPower() member.Power {
 	return p.GetStartPower()
 }
 
-func (*joiningNodeProfile) GetSignatureVerifier() cryptography_containers.SignatureVerifier {
+func (*joiningNodeProfile) GetSignatureVerifier() cryptkit.SignatureVerifier {
 	return nil
 }

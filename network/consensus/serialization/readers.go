@@ -54,23 +54,25 @@ import (
 	"bytes"
 	"context"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
-	"github.com/insolar/insolar/network/consensus/common/long_bits"
-	"github.com/insolar/insolar/network/consensus/common/pulse_data"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"io"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 	"github.com/insolar/insolar/network/utils"
 )
 
 type PacketParser struct {
 	packetData
-	digester   cryptography_containers.DataDigester
-	signMethod cryptography_containers.SignMethod
+	digester   cryptkit.DataDigester
+	signMethod cryptkit.SignMethod
 }
 
-func newPacketParser(ctx context.Context, reader io.Reader, digester cryptography_containers.DataDigester, signMethod cryptography_containers.SignMethod) (*PacketParser, error) {
+func newPacketParser(ctx context.Context, reader io.Reader, digester cryptkit.DataDigester, signMethod cryptkit.SignMethod) (*PacketParser, error) {
 	capture := utils.NewCapturingReader(reader)
 	parser := &PacketParser{
 		packetData: packetData{
@@ -91,22 +93,22 @@ func newPacketParser(ctx context.Context, reader io.Reader, digester cryptograph
 }
 
 type PacketParserFactory struct {
-	digester   cryptography_containers.DataDigester
-	signMethod cryptography_containers.SignMethod
+	digester   cryptkit.DataDigester
+	signMethod cryptkit.SignMethod
 }
 
-func NewPacketParserFactory(digester cryptography_containers.DataDigester, signMethod cryptography_containers.SignMethod) *PacketParserFactory {
+func NewPacketParserFactory(digester cryptkit.DataDigester, signMethod cryptkit.SignMethod) *PacketParserFactory {
 	return &PacketParserFactory{
 		digester:   digester,
 		signMethod: signMethod,
 	}
 }
 
-func (f *PacketParserFactory) ParsePacket(ctx context.Context, reader io.Reader) (packets.PacketParser, error) {
+func (f *PacketParserFactory) ParsePacket(ctx context.Context, reader io.Reader) (transport.PacketParser, error) {
 	return newPacketParser(ctx, reader, f.digester, f.signMethod)
 }
 
-func (p *PacketParser) GetPulsePacket() packets.PulsePacketReader {
+func (p *PacketParser) GetPulsePacket() transport.PulsePacketReader {
 	return &PulsePacketReader{
 		data:        p.packetData.data,
 		pulseNumber: p.packet.getPulseNumber(),
@@ -114,7 +116,7 @@ func (p *PacketParser) GetPulsePacket() packets.PulsePacketReader {
 	}
 }
 
-func (p *PacketParser) GetMemberPacket() packets.MemberPacketReader {
+func (p *PacketParser) GetMemberPacket() transport.MemberPacketReader {
 	return &MemberPacketReader{
 		PacketParser: *p,
 		body:         p.packet.EncryptableBody.(*GlobulaConsensusPacketBody),
@@ -133,7 +135,7 @@ func (p *PacketParser) GetTargetID() insolar.ShortNodeID {
 	return insolar.ShortNodeID(p.packet.Header.TargetID)
 }
 
-func (p *PacketParser) GetPacketType() gcp_types.PacketType {
+func (p *PacketParser) GetPacketType() phases.PacketType {
 	return p.packet.Header.GetPacketType()
 }
 
@@ -141,28 +143,28 @@ func (p *PacketParser) IsRelayForbidden() bool {
 	return p.packet.Header.IsRelayRestricted()
 }
 
-func (p *PacketParser) GetPacketSignature() cryptography_containers.SignedDigest {
-	signature := cryptography_containers.NewSignature(&p.packet.PacketSignature, p.digester.GetDigestMethod().SignedBy(p.signMethod))
+func (p *PacketParser) GetPacketSignature() cryptkit.SignedDigest {
+	signature := cryptkit.NewSignature(&p.packet.PacketSignature, p.digester.GetDigestMethod().SignedBy(p.signMethod))
 	digest := p.digester.GetDigestOf(bytes.NewReader(p.data))
-	return cryptography_containers.NewSignedDigest(digest, signature)
+	return cryptkit.NewSignedDigest(digest, signature)
 }
 
 type PulsePacketReader struct {
 	data        []byte
 	body        *PulsarPacketBody
-	pulseNumber pulse_data.PulseNumber
+	pulseNumber pulse.Number
 }
 
-func (r *PulsePacketReader) GetPulseData() pulse_data.PulseData {
-	return pulse_data.PulseData{
-		PulseNumber:  r.pulseNumber,
-		PulseDataExt: r.body.PulseDataExt,
+func (r *PulsePacketReader) GetPulseData() pulse.Data {
+	return pulse.Data{
+		PulseNumber: r.pulseNumber,
+		DataExt:     r.body.PulseDataExt,
 	}
 }
 
-func (r *PulsePacketReader) GetPulseDataEvidence() packets.OriginalPulsarPacket {
+func (r *PulsePacketReader) GetPulseDataEvidence() proofs.OriginalPulsarPacket {
 	return &originalPulsarPacket{
-		FixedReader: long_bits.NewFixedReader(r.data),
+		FixedReader: longbits.NewFixedReader(r.data),
 	}
 }
 
@@ -171,19 +173,19 @@ type MemberPacketReader struct {
 	body *GlobulaConsensusPacketBody
 }
 
-func (r *MemberPacketReader) AsPhase0Packet() packets.Phase0PacketReader {
+func (r *MemberPacketReader) AsPhase0Packet() transport.Phase0PacketReader {
 	return &Phase0PacketReader{*r}
 }
 
-func (r *MemberPacketReader) AsPhase1Packet() packets.Phase1PacketReader {
+func (r *MemberPacketReader) AsPhase1Packet() transport.Phase1PacketReader {
 	return &Phase1PacketReader{*r}
 }
 
-func (r *MemberPacketReader) AsPhase2Packet() packets.Phase2PacketReader {
+func (r *MemberPacketReader) AsPhase2Packet() transport.Phase2PacketReader {
 	return &Phase2PacketReader{*r}
 }
 
-func (r *MemberPacketReader) AsPhase3Packet() packets.Phase3PacketReader {
+func (r *MemberPacketReader) AsPhase3Packet() transport.Phase3PacketReader {
 	return &Phase3PacketReader{*r}
 }
 
@@ -191,11 +193,11 @@ type Phase0PacketReader struct {
 	MemberPacketReader
 }
 
-func (r *Phase0PacketReader) GetNodeRank() gcp_types.MembershipRank {
+func (r *Phase0PacketReader) GetNodeRank() member.Rank {
 	return r.body.CurrentRank
 }
 
-func (r *Phase0PacketReader) GetEmbeddedPulsePacket() packets.PulsePacketReader {
+func (r *Phase0PacketReader) GetEmbeddedPulsePacket() transport.PulsePacketReader {
 	return &PulsePacketReader{
 		data:        r.body.PulsarPacket.Data,
 		pulseNumber: r.GetPulseNumber(),
@@ -211,7 +213,7 @@ func (r *Phase1PacketReader) HasPulseData() bool {
 	return r.packet.Header.hasFlag(0)
 }
 
-func (r *Phase1PacketReader) GetEmbeddedPulsePacket() packets.PulsePacketReader {
+func (r *Phase1PacketReader) GetEmbeddedPulsePacket() transport.PulsePacketReader {
 	return &PulsePacketReader{
 		data:        r.body.PulsarPacket.Data,
 		pulseNumber: r.GetPulseNumber(),
@@ -219,15 +221,15 @@ func (r *Phase1PacketReader) GetEmbeddedPulsePacket() packets.PulsePacketReader 
 	}
 }
 
-func (r *Phase1PacketReader) GetCloudIntroduction() packets.CloudIntroductionReader {
+func (r *Phase1PacketReader) GetCloudIntroduction() transport.CloudIntroductionReader {
 	return &CloudIntroductionReader{r.MemberPacketReader}
 }
 
-func (r *Phase1PacketReader) GetFullIntroduction() packets.FullIntroductionReader {
+func (r *Phase1PacketReader) GetFullIntroduction() transport.FullIntroductionReader {
 	panic("implement me")
 }
 
-func (r *Phase1PacketReader) GetAnnouncementReader() packets.MembershipAnnouncementReader {
+func (r *Phase1PacketReader) GetAnnouncementReader() transport.MembershipAnnouncementReader {
 	panic("implement me")
 }
 
@@ -235,15 +237,15 @@ type Phase2PacketReader struct {
 	MemberPacketReader
 }
 
-func (r *Phase2PacketReader) GetBriefIntroduction() packets.BriefIntroductionReader {
+func (r *Phase2PacketReader) GetBriefIntroduction() transport.BriefIntroductionReader {
 	panic("implement me")
 }
 
-func (r *Phase2PacketReader) GetAnnouncementReader() packets.MembershipAnnouncementReader {
+func (r *Phase2PacketReader) GetAnnouncementReader() transport.MembershipAnnouncementReader {
 	panic("implement me")
 }
 
-func (r *Phase2PacketReader) GetNeighbourhood() []packets.MembershipAnnouncementReader {
+func (r *Phase2PacketReader) GetNeighbourhood() []transport.MembershipAnnouncementReader {
 	panic("implement me")
 }
 
@@ -251,23 +253,23 @@ type Phase3PacketReader struct {
 	MemberPacketReader
 }
 
-func (r *Phase3PacketReader) GetTrustedGlobulaAnnouncementHash() gcp_types.GlobulaAnnouncementHash {
+func (r *Phase3PacketReader) GetTrustedGlobulaAnnouncementHash() proofs.GlobulaAnnouncementHash {
 	panic("implement me")
 }
 
-func (r *Phase3PacketReader) GetTrustedGlobulaStateSignature() gcp_types.GlobulaStateSignature {
+func (r *Phase3PacketReader) GetTrustedGlobulaStateSignature() proofs.GlobulaStateSignature {
 	panic("implement me")
 }
 
-func (r *Phase3PacketReader) GetDoubtedGlobulaAnnouncementHash() gcp_types.GlobulaAnnouncementHash {
+func (r *Phase3PacketReader) GetDoubtedGlobulaAnnouncementHash() proofs.GlobulaAnnouncementHash {
 	panic("implement me")
 }
 
-func (r *Phase3PacketReader) GetDoubtedGlobulaStateSignature() gcp_types.GlobulaStateSignature {
+func (r *Phase3PacketReader) GetDoubtedGlobulaStateSignature() proofs.GlobulaStateSignature {
 	panic("implement me")
 }
 
-func (r *Phase3PacketReader) GetBitset() gcp_types.NodeBitset {
+func (r *Phase3PacketReader) GetBitset() member.StateBitset {
 	return r.body.Vectors.StateVectorMask.GetBitset()
 }
 
@@ -275,27 +277,27 @@ type CloudIntroductionReader struct {
 	MemberPacketReader
 }
 
-func (r *CloudIntroductionReader) GetLastCloudStateHash() cryptography_containers.DigestHolder {
-	digest := cryptography_containers.NewDigest(&r.body.CloudIntro.LastCloudStateHash, r.digester.GetDigestMethod())
+func (r *CloudIntroductionReader) GetLastCloudStateHash() cryptkit.DigestHolder {
+	digest := cryptkit.NewDigest(&r.body.CloudIntro.LastCloudStateHash, r.digester.GetDigestMethod())
 	return digest.AsDigestHolder()
 }
 
-func (r *CloudIntroductionReader) GetJoinerSecret() cryptography_containers.DigestHolder {
+func (r *CloudIntroductionReader) GetJoinerSecret() cryptkit.DigestHolder {
 	if r.packet.Header.GetFlagRangeInt(1, 2) != 3 {
 		return nil
 	}
 
-	digest := cryptography_containers.NewDigest(&r.body.JoinerSecret, r.digester.GetDigestMethod())
+	digest := cryptkit.NewDigest(&r.body.JoinerSecret, r.digester.GetDigestMethod())
 	return digest.AsDigestHolder()
 }
 
-func (r *CloudIntroductionReader) GetCloudIdentity() cryptography_containers.DigestHolder {
-	digest := cryptography_containers.NewDigest(&r.body.CloudIntro.CloudIdentity, r.digester.GetDigestMethod())
+func (r *CloudIntroductionReader) GetCloudIdentity() cryptkit.DigestHolder {
+	digest := cryptkit.NewDigest(&r.body.CloudIntro.CloudIdentity, r.digester.GetDigestMethod())
 	return digest.AsDigestHolder()
 }
 
 type originalPulsarPacket struct {
-	long_bits.FixedReader
+	longbits.FixedReader
 }
 
 func (p *originalPulsarPacket) OriginalPulsarPacket() {}
@@ -305,6 +307,6 @@ type packetData struct {
 	packet *Packet
 }
 
-func (p *packetData) GetPulseNumber() pulse_data.PulseNumber {
+func (p *packetData) GetPulseNumber() pulse.Number {
 	return p.packet.getPulseNumber()
 }

@@ -54,8 +54,8 @@ import (
 	"bytes"
 	"crypto/rand"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/long_bits"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
+	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -64,22 +64,22 @@ import (
 func TestNodeBriefIntro_getPrimaryRole(t *testing.T) {
 	ni := NodeBriefIntro{}
 
-	require.Equal(t, gcp_types.PrimaryRoleInactive, ni.getPrimaryRole())
+	require.Equal(t, member.PrimaryRoleInactive, ni.getPrimaryRole())
 
 	ni.PrimaryRoleAndFlags = 1
-	require.Equal(t, gcp_types.PrimaryRoleNeutral, ni.getPrimaryRole())
+	require.Equal(t, member.PrimaryRoleNeutral, ni.getPrimaryRole())
 
 	ni.PrimaryRoleAndFlags = 2
-	require.Equal(t, gcp_types.PrimaryRoleHeavyMaterial, ni.getPrimaryRole())
+	require.Equal(t, member.PrimaryRoleHeavyMaterial, ni.getPrimaryRole())
 }
 
 func TestNodeBriefIntro_setPrimaryRole(t *testing.T) {
 	ni := NodeBriefIntro{}
 
-	require.Equal(t, gcp_types.PrimaryRoleInactive, ni.getPrimaryRole())
+	require.Equal(t, member.PrimaryRoleInactive, ni.getPrimaryRole())
 
-	ni.setPrimaryRole(gcp_types.PrimaryRoleVirtual)
-	require.Equal(t, gcp_types.PrimaryRoleVirtual, ni.getPrimaryRole())
+	ni.setPrimaryRole(member.PrimaryRoleVirtual)
+	require.Equal(t, member.PrimaryRoleVirtual, ni.getPrimaryRole())
 }
 
 func TestNodeBriefIntro_setPrimaryRole_Panic(t *testing.T) {
@@ -125,7 +125,7 @@ func TestNodeBriefIntro_SerializeTo(t *testing.T) {
 func TestNodeBriefIntro_DeserializeFrom(t *testing.T) {
 	ni1 := NodeBriefIntro{
 		PrimaryRoleAndFlags: 64,
-		SpecialRoles:        gcp_types.SpecialRoleDiscovery,
+		SpecialRoles:        member.SpecialRoleDiscovery,
 		StartPower:          10,
 		BasePort:            1400,
 		PrimaryIPv4:         123123412,
@@ -152,7 +152,7 @@ func TestNodeBriefIntro_DeserializeFrom_NoShortID(t *testing.T) {
 	ni1 := NodeBriefIntro{
 		ShortID:             123,
 		PrimaryRoleAndFlags: 64,
-		SpecialRoles:        gcp_types.SpecialRoleDiscovery,
+		SpecialRoles:        member.SpecialRoleDiscovery,
 		StartPower:          10,
 		BasePort:            1400,
 		PrimaryIPv4:         123123412,
@@ -193,7 +193,7 @@ func TestNodeFullIntro_DeserializeFrom(t *testing.T) {
 	ni1 := NodeFullIntro{
 		NodeBriefIntro: NodeBriefIntro{
 			PrimaryRoleAndFlags: 64,
-			SpecialRoles:        gcp_types.SpecialRoleDiscovery,
+			SpecialRoles:        member.SpecialRoleDiscovery,
 			StartPower:          10,
 			BasePort:            1400,
 			PrimaryIPv4:         123123412,
@@ -221,7 +221,7 @@ func TestNodeFullIntro_DeserializeFrom_NoShortID(t *testing.T) {
 	ni1 := NodeFullIntro{
 		NodeBriefIntro: NodeBriefIntro{
 			PrimaryRoleAndFlags: 64,
-			SpecialRoles:        gcp_types.SpecialRoleDiscovery,
+			SpecialRoles:        member.SpecialRoleDiscovery,
 			StartPower:          10,
 			BasePort:            1400,
 			PrimaryIPv4:         123123412,
@@ -253,7 +253,7 @@ func TestNodeFullIntro_DeserializeFrom_Slices(t *testing.T) {
 	ni1 := NodeFullIntro{
 		NodeBriefIntro: NodeBriefIntro{
 			PrimaryRoleAndFlags: 64,
-			SpecialRoles:        gcp_types.SpecialRoleDiscovery,
+			SpecialRoles:        member.SpecialRoleDiscovery,
 			StartPower:          10,
 			BasePort:            1400,
 			PrimaryIPv4:         123123412,
@@ -261,7 +261,7 @@ func TestNodeFullIntro_DeserializeFrom_Slices(t *testing.T) {
 		EndpointLen:    2,
 		ExtraEndpoints: make([]uint16, 2),
 		ProofLen:       2,
-		NodeRefProof:   make([]long_bits.Bits512, 2),
+		NodeRefProof:   make([]longbits.Bits512, 2),
 	}
 
 	b := make([]byte, 64)

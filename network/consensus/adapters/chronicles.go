@@ -52,16 +52,17 @@ package adapters
 
 import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
+	census2 "github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/gcpv2/censusimpl"
 )
 
-func NewChronicles(pop census.ManyNodePopulation, pf gcp_types.NodeProfileFactory, vc api.VersionedRegistries) api.ConsensusChronicles {
-	chronicles := census.NewLocalChronicles()
-	census.NewPrimingCensus(&pop, pf, vc).SetAsActiveTo(chronicles)
+func NewChronicles(pop censusimpl.ManyNodePopulation, pf profiles.Factory, vc census2.VersionedRegistries) api.ConsensusChronicles {
+	chronicles := censusimpl.NewLocalChronicles()
+	censusimpl.NewPrimingCensus(&pop, pf, vc).SetAsActiveTo(chronicles)
 	return chronicles
 }
 
-func NewPopulation(localNode gcp_types.NodeIntroProfile, nodes []gcp_types.NodeIntroProfile) census.ManyNodePopulation {
-	return census.NewManyNodePopulation(localNode, nodes)
+func NewPopulation(localNode profiles.NodeIntroProfile, nodes []profiles.NodeIntroProfile) censusimpl.ManyNodePopulation {
+	return censusimpl.NewManyNodePopulation(localNode, nodes)
 }

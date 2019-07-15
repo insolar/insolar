@@ -54,16 +54,17 @@ import (
 	"context"
 	"fmt"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/pulse_data"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"sync"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/errors"
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
 )
 
-func NewConsensusMemberController(chronicle api.ConsensusChronicles, upstream api.UpstreamPulseController,
+func NewConsensusMemberController(chronicle api.ConsensusChronicles, upstream api.UpstreamController,
 	roundFactory api.RoundControllerFactory, candidateFeeder api.CandidateControlFeeder,
 	controlFeeder api.ConsensusControlFeeder) api.ConsensusController {
 
@@ -85,7 +86,7 @@ type ConsensusMemberController struct {
 	chronicle       api.ConsensusChronicles
 	roundFactory    api.RoundControllerFactory
 	candidateFeeder api.CandidateControlFeeder
-	upstream        api.UpstreamPulseController
+	upstream        api.UpstreamController
 
 	mutex sync.RWMutex
 	/* mutex needed */
@@ -98,7 +99,7 @@ func (h *ConsensusMemberController) Abort() {
 	h.discardRound(true, nil)
 }
 
-func (h *ConsensusMemberController) GetActivePowerLimit() (gcp_types.MemberPower, pulse_data.PulseNumber) {
+func (h *ConsensusMemberController) GetActivePowerLimit() (member.Power, pulse.Number) {
 	actCensus := h.chronicle.GetActiveCensus()
 	//TODO adjust power by state
 	return actCensus.GetOnlinePopulation().GetLocalProfile().GetDeclaredPower(), actCensus.GetPulseNumber()
@@ -166,7 +167,7 @@ func (h *ConsensusMemberController) discardRound(terminateMember bool, toBeDisca
 	}
 }
 
-func (h *ConsensusMemberController) _processPacket(ctx context.Context, payload packets.PacketParser, from endpoints.HostIdentityHolder) (api.RoundController, bool, error) {
+func (h *ConsensusMemberController) _processPacket(ctx context.Context, payload transport.PacketParser, from endpoints.Inbound) (api.RoundController, bool, error) {
 	round, created, isRunning := h.ensureRound()
 
 	if round == nil {
@@ -186,7 +187,7 @@ func (h *ConsensusMemberController) _processPacket(ctx context.Context, payload 
 	return round, created, err
 }
 
-func (h *ConsensusMemberController) ProcessPacket(ctx context.Context, payload packets.PacketParser, from endpoints.HostIdentityHolder) error {
+func (h *ConsensusMemberController) ProcessPacket(ctx context.Context, payload transport.PacketParser, from endpoints.Inbound) error {
 
 	round, created, err := h._processPacket(ctx, payload, from)
 
@@ -203,7 +204,7 @@ func (h *ConsensusMemberController) ProcessPacket(ctx context.Context, payload p
 	return err
 }
 
-func (h *ConsensusMemberController) ConsensusFinished(report api.MembershipUpstreamReport, expectedCensus api.OperationalCensus) {
+func (h *ConsensusMemberController) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
 	if expectedCensus == nil || report.MemberMode.IsEvicted() {
 		h.discardRound(true, nil)
 	}

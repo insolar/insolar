@@ -54,15 +54,19 @@ import (
 	"context"
 	"fmt"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/pulse_data"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"sync"
 	"time"
-
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
 // hides embedded pointer from external access
@@ -79,14 +83,17 @@ type coreRealm struct {
 	roundContext  context.Context
 	strategy      RoundStrategy
 	config        api.LocalNodeConfiguration
-	initialCensus api.OperationalCensus
+	initialCensus census.Operational
 
 	/* Derived from the ones provided externally - set at init() or start(). Don't need mutex */
-	signer          cryptography_containers.DigestSigner
-	digest          cryptography_containers.DigestFactory
-	verifierFactory api.TransportCryptographyFactory
-	upstream        api.UpstreamPulseController
+	signer          cryptkit.DigestSigner
+	digest          transport.ConsensusDigestFactory
+	verifierFactory transport.CryptographyFactory
+	upstream        api.UpstreamController
 	roundStartedAt  time.Time
+
+	expectedPopulationSize uint16
+	nbhSizes               transport.NeighbourhoodSizes
 
 	self *NodeAppearance /* Special case - this field is set twice, by start() of PrepRealm and FullRealm */
 
@@ -94,12 +101,12 @@ type coreRealm struct {
 		Other fields - need mutex during PrepRealm, unless accessed by start() of PrepRealm
 		FullRealm doesnt need a lock to read them
 	*/
-	pulseData     pulse_data.PulseData
-	originalPulse packets.OriginalPulsarPacket
+	pulseData     pulse.Data
+	originalPulse proofs.OriginalPulsarPacket
 }
 
-func (r *coreRealm) init(hLocker hLocker, strategy RoundStrategy, transport api.TransportFactory,
-	config api.LocalNodeConfiguration, initialCensus api.OperationalCensus, powerRequest gcp_types.PowerRequest) {
+func (r *coreRealm) init(hLocker hLocker, strategy RoundStrategy, transport transport.Factory,
+	config api.LocalNodeConfiguration, initialCensus census.Operational) {
 
 	r.hLocker = hLocker
 
@@ -112,7 +119,11 @@ func (r *coreRealm) init(hLocker hLocker, strategy RoundStrategy, transport api.
 
 	sks := config.GetSecretKeyStore()
 	r.signer = r.verifierFactory.GetNodeSigner(sks)
+}
 
+func (r *coreRealm) initPopulation(powerRequest power.Request, nbhSizes transport.NeighbourhoodSizes) {
+
+	r.nbhSizes = nbhSizes
 	population := r.initialCensus.GetOnlinePopulation()
 
 	/*
@@ -131,30 +142,32 @@ func (r *coreRealm) init(hLocker hLocker, strategy RoundStrategy, transport api.
 	r.self = NewNodeAppearanceAsSelf(profile, nodeContext)
 	r.self.requestedPower = profile.GetIntroduction().ConvertPowerRequest(powerRequest)
 
-	nodeContext.initPrep(
-		func(report gcp_types.MisbehaviorReport) interface{} {
+	nodeContext.initPrep(r.verifierFactory,
+		func(report misbehavior.Report) interface{} {
 			r.initialCensus.GetMisbehaviorRegistry().AddReport(report)
 			return nil
 		})
+
+	r.expectedPopulationSize = uint16(population.GetCount())
 }
 
 func (r *coreRealm) GetStrategy() RoundStrategy {
 	return r.strategy
 }
 
-func (r *coreRealm) GetVerifierFactory() cryptography_containers.SignatureVerifierFactory {
+func (r *coreRealm) GetVerifierFactory() cryptkit.SignatureVerifierFactory {
 	return r.verifierFactory
 }
 
-func (r *coreRealm) GetDigestFactory() cryptography_containers.DigestFactory {
+func (r *coreRealm) GetDigestFactory() transport.ConsensusDigestFactory {
 	return r.digest
 }
 
-func (r *coreRealm) GetSigner() cryptography_containers.DigestSigner {
+func (r *coreRealm) GetSigner() cryptkit.DigestSigner {
 	return r.signer
 }
 
-func (r *coreRealm) GetSignatureVerifier(pks cryptography_containers.PublicKeyStore) cryptography_containers.SignatureVerifier {
+func (r *coreRealm) GetSignatureVerifier(pks cryptkit.PublicKeyStore) cryptkit.SignatureVerifier {
 	return r.verifierFactory.GetSignatureVerifierWithPKS(pks)
 }
 
@@ -186,11 +199,11 @@ func (r *coreRealm) GetSelf() *NodeAppearance {
 	return r.self
 }
 
-func (r *coreRealm) GetPrimingCloudHash() gcp_types.CloudStateHash {
+func (r *coreRealm) GetPrimingCloudHash() proofs.CloudStateHash {
 	return r.initialCensus.GetMandateRegistry().GetPrimingCloudHash()
 }
 
-func (r *coreRealm) VerifyPacketAuthenticity(packet packets.PacketParser, from endpoints.HostIdentityHolder, strictFrom bool) error {
+func (r *coreRealm) VerifyPacketAuthenticity(packet transport.PacketParser, from endpoints.Inbound, strictFrom bool) error {
 	nr := r.initialCensus.GetOfflinePopulation().FindRegisteredProfile(from)
 	if nr == nil {
 		nr = r.initialCensus.GetMandateRegistry().FindRegisteredProfile(from)
@@ -202,8 +215,38 @@ func (r *coreRealm) VerifyPacketAuthenticity(packet packets.PacketParser, from e
 	return VerifyPacketAuthenticityBy(packet, nr, sf, from, strictFrom)
 }
 
-func VerifyPacketAuthenticityBy(packet packets.PacketParser, nr gcp_types.HostProfile, sf cryptography_containers.SignatureVerifier,
-	from endpoints.HostIdentityHolder, strictFrom bool) error {
+func VerifyPacketRoute(ctx context.Context, packet transport.PacketParser, selfID insolar.ShortNodeID) (bool, error) {
+
+	sid := packet.GetSourceID()
+	if sid == selfID {
+		return false, fmt.Errorf("loopback, SourceID(%v) == thisNodeID(%v)", sid, selfID)
+	}
+
+	rid := packet.GetReceiverID()
+	if rid != selfID {
+		return false, fmt.Errorf("receiverID(%v) != thisNodeID(%v)", rid, selfID)
+	}
+
+	tid := packet.GetTargetID()
+	if tid != selfID {
+		//Relaying
+		if packet.IsRelayForbidden() {
+			return false, fmt.Errorf("sender doesn't allow relaying for targetID(%v)", tid)
+		}
+
+		//TODO relay support
+		err := fmt.Errorf("unsupported: relay is required for targetID(%v)", tid)
+		inslogger.FromContext(ctx).Errorf(err.Error())
+		//allow sender to be different from source
+		return false, err
+	}
+
+	//sender must be source
+	return packet.IsRelayForbidden(), nil
+}
+
+func VerifyPacketAuthenticityBy(packet transport.PacketParser, nr profiles.Host, sf cryptkit.SignatureVerifier,
+	from endpoints.Inbound, strictFrom bool) error {
 
 	if strictFrom && !nr.IsAcceptableHost(from) {
 		return fmt.Errorf("host is not allowed by node registration: node=%v, host=%v", nr, from)

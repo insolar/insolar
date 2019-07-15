@@ -53,10 +53,13 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/pulse_data"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"sync"
 )
 
 /*
@@ -72,27 +75,109 @@ type PrepRealm struct {
 	postponedPacketFn postponedPacketFunc
 
 	/* Derived from the provided externally - set at init() or start(). Don't need mutex */
-	handlers    []PrepPhasePacketHandler
-	queueToFull chan postponedPacket
+	packetDispatchers []PacketDispatcher
+	queueToFull       chan postponedPacket
+	phase2ExtLimit    uint8
+
+	limiters sync.Map
 
 	/* Other fields - need mutex */
 	// 	censusBuilder census.Builder
 }
 
+func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
+	_ interface{}) error {
+
+	pt := packet.GetPacketType()
+	verifyFlags := DefaultVerify
+
+	var limiterKey string
+	switch {
+	case pt.GetLimitPerSender() == 0:
+		return fmt.Errorf("packet type (%v) is unknown", pt)
+	case pt.IsMemberPacket():
+		strict, err := VerifyPacketRoute(ctx, packet, p.GetSelfNodeID())
+		if err != nil {
+			return err
+		}
+		if strict {
+			verifyFlags = RequireStrictVerify
+		}
+		limiterKey = endpoints.ShortNodeIDAsByteString(packet.GetSourceID())
+	default:
+		limiterKey = from.AsByteString()
+
+		//TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
+		verifyFlags = SkipVerify
+	}
+
+	/*
+		We use limiter here explicitly to ensure that the node's postpone queue can't be overflown during PrepPhase
+	*/
+	limiter := phases.NewAtomicPacketLimiter(phases.NewPacketLimiter(p.nbhSizes.ExtendingNeighbourhoodLimit))
+	{
+		limiterI, _ := p.limiters.LoadOrStore(limiterKey, limiter)
+		limiter = limiterI.(*phases.AtomicPacketLimiter)
+	}
+
+	if !limiter.GetPacketLimiter().CanReceivePacket(pt) {
+		return fmt.Errorf("packet type (%v) limit exceeded: from=%v", pt, from)
+	}
+
+	if verifyFlags&SkipVerify == 0 {
+		err := p.coreRealm.VerifyPacketAuthenticity(packet, from, verifyFlags&RequireStrictVerify != 0)
+		if err != nil {
+			return err
+		}
+	}
+
+	if !limiter.SetPacketReceived(pt) {
+		return fmt.Errorf("packet type (%v) limit exceeded: from=%v", pt, from)
+	}
+
+	if int(pt) < len(p.packetDispatchers) {
+		pd := p.packetDispatchers[pt]
+		if pd != nil {
+			err := pd.DispatchHostPacket(ctx, packet, from, verifyFlags)
+			if err != nil {
+				// TODO an error to ignore postpone?
+				return err
+			}
+		}
+	}
+
+	if !p.postponePacket(packet, from) {
+		inslogger.FromContext(ctx).Warnf("unable to postpone packet: type=%v", pt)
+	}
+	return nil
+}
+
 /* LOCK - runs under RoundController lock */
-func (p *PrepRealm) start(ctx context.Context, controllers []PrepPhaseController, prepToFullQueueSize int) {
+func (p *PrepRealm) start(ctx context.Context, controllers []PrepPhaseController) {
 
 	if p.postponedPacketFn != nil {
+		limiter := phases.NewPacketLimiter(p.nbhSizes.ExtendingNeighbourhoodLimit)
+		packetsPerSender := limiter.GetRemainingPacketCount(5)
+
+		prepToFullQueueSize := int(packetsPerSender) * int(p.expectedPopulationSize)
+		switch {
+		case prepToFullQueueSize < 100:
+			prepToFullQueueSize = 100
+		case prepToFullQueueSize > 10000:
+			inslogger.FromContext(ctx).Warnf("estimated postponed packet count (%d) is too high", prepToFullQueueSize)
+			prepToFullQueueSize = 10000
+		}
 		p.queueToFull = make(chan postponedPacket, prepToFullQueueSize)
 	}
 
-	p.handlers = make([]PrepPhasePacketHandler, gcp_types.MaxPacketType)
+	p.packetDispatchers = make([]PacketDispatcher, phases.PacketTypeCount)
 	for _, ctl := range controllers {
-		pt := ctl.GetPacketType()
-		if p.handlers[pt] != nil {
-			panic("multiple handlers for packet type")
+		for _, pt := range ctl.GetPacketType() {
+			if p.packetDispatchers[pt] != nil {
+				panic("multiple controllers for packet type")
+			}
+			p.packetDispatchers[pt] = ctl.CreatePacketDispatcher(pt, p)
 		}
-		p.handlers[pt] = ctl.HandleHostPacket
 	}
 
 	for _, ctl := range controllers {
@@ -114,11 +199,11 @@ func (p *PrepRealm) stop() {
 	}
 }
 
-type postponedPacketFunc func(packet packets.PacketParser, from endpoints.HostIdentityHolder)
+type postponedPacketFunc func(packet transport.PacketParser, from endpoints.Inbound)
 
 type postponedPacket struct {
-	packet packets.PacketParser
-	from   endpoints.HostIdentityHolder
+	packet transport.PacketParser
+	from   endpoints.Inbound
 }
 
 func flushQueueTo(ctx context.Context, in chan postponedPacket, out postponedPacketFunc) {
@@ -135,7 +220,7 @@ func flushQueueTo(ctx context.Context, in chan postponedPacket, out postponedPac
 	}
 }
 
-func (p *PrepRealm) GetOriginalPulse() packets.OriginalPulsarPacket {
+func (p *PrepRealm) GetOriginalPulse() proofs.OriginalPulsarPacket {
 	p.RLock()
 	defer p.RUnlock()
 
@@ -143,7 +228,7 @@ func (p *PrepRealm) GetOriginalPulse() packets.OriginalPulsarPacket {
 	return p.coreRealm.originalPulse
 }
 
-func (p *PrepRealm) ApplyPulseData(pp packets.PulsePacketReader, fromPulsar bool) error {
+func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bool) error {
 	pd := pp.GetPulseData()
 
 	p.Lock()
@@ -179,34 +264,11 @@ func (p *PrepRealm) ApplyPulseData(pp packets.PulsePacketReader, fromPulsar bool
 	return nil
 }
 
-func (p *PrepRealm) GetExpectedPulseNumber() pulse_data.PulseNumber {
+func (p *PrepRealm) GetExpectedPulseNumber() pulse.Number {
 	return p.initialCensus.GetExpectedPulseNumber()
 }
 
-func (p *PrepRealm) handleHostPacket(ctx context.Context, packet packets.PacketParser, from endpoints.HostIdentityHolder) error {
-	pt := packet.GetPacketType()
-	h := p.handlers[pt]
-
-	var explicitPostpone = false
-	var err error
-
-	if h != nil {
-		explicitPostpone, err = h(ctx, packet, from)
-		if !explicitPostpone || err != nil {
-			return err
-		}
-	}
-	// if packet is not handled, then we may need to leave it for FullRealm
-	if p.postponePacket(packet, from) {
-		return nil
-	}
-	if explicitPostpone {
-		return fmt.Errorf("unable to postpone packet explicitly: type=%v", pt)
-	}
-	return errPacketIsNotAllowed
-}
-
-func (p *PrepRealm) postponePacket(packet packets.PacketParser, from endpoints.HostIdentityHolder) bool {
+func (p *PrepRealm) postponePacket(packet transport.PacketParser, from endpoints.Inbound) bool {
 	if p.queueToFull == nil {
 		return false
 	}

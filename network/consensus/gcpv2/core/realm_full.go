@@ -53,43 +53,114 @@ package core
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/pulse_data"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
+	census2 "github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
-
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/censusimpl"
 )
 
 type FullRealm struct {
 	coreRealm
-	nodeContext
+	nodeContext nodeContext
 
 	/* Derived from the ones provided externally - set at init() or start(). Don't need mutex */
-	packetBuilder   api.PacketBuilder
-	packetSender    api.PacketSender
+	packetBuilder   transport.PacketBuilder
+	packetSender    transport.PacketSender
 	controlFeeder   api.ConsensusControlFeeder
 	candidateFeeder api.CandidateControlFeeder
-	profileFactory  gcp_types.NodeProfileFactory
+	profileFactory  profiles.Factory
 
-	handlers []packetDispatcher
+	timings api.RoundTimings
 
-	timings  gcp_types.RoundTimings
-	nbhSizes gcp_types.NeighbourhoodSizes
-
-	census     api.ActiveCensus
+	census     census2.Active
 	population RealmPopulation
+
+	packetDispatchers []PacketDispatcher
 
 	/* Other fields - need mutex */
 	isFinished bool
 }
 
+func (p *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
+	verificationProof interface{}) error {
+
+	pt := packet.GetPacketType()
+	verifyFlags := DefaultVerify
+	if verificationProof != nil {
+		verifyFlags = SkipVerify
+	}
+
+	var sourceNode *NodeAppearance
+
+	switch {
+	case pt.GetLimitPerSender() == 0 || int(pt) >= len(p.packetDispatchers) || p.packetDispatchers[pt] == nil:
+		return fmt.Errorf("packet type (%v) is unknown", pt)
+	case pt.IsMemberPacket():
+		strict, err := VerifyPacketRoute(ctx, packet, p.GetSelfNodeID())
+		if err != nil {
+			return err
+		}
+		if strict {
+			verifyFlags |= RequireStrictVerify
+		}
+		sourceID := packet.GetSourceID()
+		sourceNode = p.GetPopulation().GetNodeAppearance(sourceID)
+	default:
+		//TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
+		verifyFlags |= SkipVerify
+	}
+
+	if sourceNode != nil && !sourceNode.CanReceivePacket(pt) {
+		return fmt.Errorf("packet type (%v) limit exceeded: from=%v(%v)", pt, sourceNode.GetShortNodeID(), from)
+	}
+
+	if verifyFlags&SkipVerify == 0 {
+		var err error
+		strict := verifyFlags&RequireStrictVerify != 0
+		if sourceNode == nil {
+			err = p.coreRealm.VerifyPacketAuthenticity(packet, from, strict)
+		} else {
+			err = sourceNode.VerifyPacketAuthenticity(packet, from, strict)
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	pd := p.packetDispatchers[pt] //was checked above for != nil
+
+	if pt.IsMemberPacket() {
+		//now it is safe to parse the rest of the packet
+		memberPacket := packet.GetMemberPacket()
+		if memberPacket == nil {
+			return fmt.Errorf("packet type (%v) can't be parsed: from=%v", pt, from)
+		}
+
+		if sourceNode == nil {
+			panic("joiners are not yet supported") // TODO joiners
+		}
+
+		if !sourceNode.SetPacketReceived(pt) {
+			return fmt.Errorf("packet type (%v) limit exceeded: from=%v(%v)", pt, sourceNode.GetShortNodeID(), from)
+		}
+
+		return pd.DispatchMemberPacket(ctx, memberPacket, sourceNode)
+	} else {
+		return pd.DispatchHostPacket(ctx, packet, from, verifyFlags)
+	}
+}
+
 /* LOCK - runs under RoundController lock */
-func (r *FullRealm) start(census api.ActiveCensus, population api.OnlinePopulation) {
+func (r *FullRealm) start(census census2.Active, population census2.OnlinePopulation) {
 	r.initBasics(census)
 	allCtls, perNodeCtls := r.initHandlers(population.GetCount())
 	r.initPopulation(population, perNodeCtls)
@@ -97,14 +168,16 @@ func (r *FullRealm) start(census api.ActiveCensus, population api.OnlinePopulati
 	r.startWorkers(allCtls)
 }
 
-func (r *FullRealm) init(transport api.TransportFactory, controlFeeder api.ConsensusControlFeeder, candidateFeeder api.CandidateControlFeeder) {
+func (r *FullRealm) init(transport transport.Factory, controlFeeder api.ConsensusControlFeeder,
+	candidateFeeder api.CandidateControlFeeder) transport.NeighbourhoodSizes {
 	r.packetSender = transport.GetPacketSender()
 	r.packetBuilder = transport.GetPacketBuilder(r.signer)
 	r.controlFeeder = controlFeeder
 	r.candidateFeeder = candidateFeeder
+	return r.packetBuilder.GetNeighbourhoodSize()
 }
 
-func (r *FullRealm) initBasics(census api.ActiveCensus) {
+func (r *FullRealm) initBasics(census census2.Active) {
 
 	r.census = census
 	r.profileFactory = census.GetProfileFactory(r.verifierFactory)
@@ -112,49 +185,48 @@ func (r *FullRealm) initBasics(census api.ActiveCensus) {
 	r.timings = r.config.GetConsensusTimings(r.pulseData.NextPulseDelta, r.IsJoiner())
 	r.strategy.AdjustConsensusTimings(&r.timings)
 
-	r.nbhSizes = r.packetBuilder.GetNeighbourhoodSize()
-
-	r.nodeContext.initFull(uint8(r.nbhSizes.NeighbourhoodTrustThreshold),
-		func(report gcp_types.MisbehaviorReport) interface{} {
+	r.nodeContext.initFull(r.verifierFactory, uint8(r.nbhSizes.NeighbourhoodTrustThreshold),
+		func(report misbehavior.Report) interface{} {
 			r.census.GetMisbehaviorRegistry().AddReport(report)
 			return nil
 		})
 }
 
-func (r *FullRealm) initHandlers(nodeCount int) (allControllers []PhaseController, perNodeControllers []PhaseController) {
-	r.handlers = make([]packetDispatcher, gcp_types.MaxPacketType)
+func (r *FullRealm) initHandlers(nodeCount int) ([]PhaseController, []PerNodePacketDispatcherFactory) {
 
+	r.packetDispatchers = make([]PacketDispatcher, phases.PacketTypeCount)
 	controllers, nodeCallback := r.strategy.GetFullPhaseControllers(nodeCount)
 
 	if len(controllers) == 0 {
 		panic("no phase controllers")
 	}
 	r.nodeContext.setNodeToPhaseCallback(nodeCallback)
-	individualHandlers := make([]PhaseController, 0, len(controllers))
+	individualHandlers := make([]PerNodePacketDispatcherFactory, 0, len(controllers))
 
 	for _, ctl := range controllers {
-		pt := ctl.GetPacketType()
-		dh := &r.handlers[pt]
-		if dh.init(r, ctl) {
-			dh.setRedirectHandler(len(individualHandlers))
-			individualHandlers = append(individualHandlers, ctl)
-		}
-		if dh.HasMemberHandler() && !pt.IsMemberPacket() {
-			panic("only member packet types can be handled as member/per-node")
+		for _, pt := range ctl.GetPacketType() {
+			if r.packetDispatchers[pt] != nil {
+				panic("multiple controllers for packet type")
+			}
+			pd, nf := ctl.CreatePacketDispatcher(pt, len(individualHandlers), r)
+			r.packetDispatchers[pt] = pd
+			if nf != nil {
+				individualHandlers = append(individualHandlers, nf)
+			}
 		}
 	}
 
 	return controllers, individualHandlers
 }
 
-func (r *FullRealm) initPopulation(population api.OnlinePopulation, individualHandlers []PhaseController) {
+func (r *FullRealm) initPopulation(population census2.OnlinePopulation, individualHandlers []PerNodePacketDispatcherFactory) {
 
-	r.population = NewMemberRealmPopulation(r.strategy, population,
+	r.population = NewMemberRealmPopulation(r.strategy, population, r.nbhSizes.ExtendingNeighbourhoodLimit,
 		func(ctx context.Context, n *NodeAppearance) {
 			n.callback = &r.nodeContext
 			for k, ctl := range individualHandlers {
 				var ph PhasePerNodePacketFunc
-				ph, ctx = ctl.CreatePerNodePacketHandler(ctx, k, n, r)
+				ctx, ph = ctl.CreatePerNodePacketHandler(ctx, n)
 				if ph == nil {
 					continue
 				}
@@ -203,11 +275,11 @@ func (r *FullRealm) pickNextJoinCandidate() *NodeAppearance {
 
 		nip := r.profileFactory.CreateFullIntroProfile(cp)
 		sv := r.GetSignatureVerifier(nip.GetNodePublicKeyStore())
-		np := census.NewJoinerProfile(nip, sv, nip.GetStartPower())
+		np := censusimpl.NewJoinerProfile(nip, sv, nip.GetStartPower())
 		na := r.population.CreateNodeAppearance(r.roundContext, &np)
 		nna, nodes := r.population.AddToDynamics(na)
 
-		if !gcp_types.EqualIntroProfiles(nna.profile, na.profile) {
+		if !profiles.EqualIntroProfiles(nna.profile, na.profile) {
 			nodes = append(nodes, na)
 			nna = nil
 		}
@@ -230,15 +302,23 @@ func (r *FullRealm) startWorkers(controllers []PhaseController) {
 	}
 }
 
-func (r *FullRealm) GetPacketSender() api.PacketSender {
+func (r *FullRealm) GetFraudFactory() misbehavior.FraudFactory {
+	return r.nodeContext.fraudFactory
+}
+
+func (r *FullRealm) GetBlameFactory() misbehavior.BlameFactory {
+	return r.nodeContext.blameFactory
+}
+
+func (r *FullRealm) GetPacketSender() transport.PacketSender {
 	return r.packetSender
 }
 
-func (r *FullRealm) GetPacketBuilder() api.PacketBuilder {
+func (r *FullRealm) GetPacketBuilder() transport.PacketBuilder {
 	return r.packetBuilder
 }
 
-func (r *FullRealm) GetSigner() cryptography_containers.DigestSigner {
+func (r *FullRealm) GetSigner() cryptkit.DigestSigner {
 	return r.signer
 }
 
@@ -255,34 +335,34 @@ func (r *FullRealm) GetNodeCount() int {
 	return r.population.GetNodeCount()
 }
 
-func (r *FullRealm) GetPulseNumber() pulse_data.PulseNumber {
+func (r *FullRealm) GetPulseNumber() pulse.Number {
 	return r.pulseData.PulseNumber
 }
 
-func (r *FullRealm) GetNextPulseNumber() pulse_data.PulseNumber {
+func (r *FullRealm) GetNextPulseNumber() pulse.Number {
 	return r.pulseData.GetNextPulseNumber()
 }
 
-func (r *FullRealm) GetOriginalPulse() packets.OriginalPulsarPacket {
+func (r *FullRealm) GetOriginalPulse() proofs.OriginalPulsarPacket {
 	// NB! locks for this field are only needed for PrepRealm
 	return r.coreRealm.originalPulse
 }
 
-func (r *FullRealm) GetPulseData() pulse_data.PulseData {
+func (r *FullRealm) GetPulseData() pulse.Data {
 	return r.pulseData
 }
 
-func (r *FullRealm) GetLastCloudStateHash() gcp_types.CloudStateHash {
+func (r *FullRealm) GetLastCloudStateHash() proofs.CloudStateHash {
 	return r.census.GetCloudStateHash()
 }
 
-func (r *coreRealm) UpstreamPreparePulseChange() <-chan gcp_types.NodeStateHash {
+func (r *coreRealm) UpstreamPreparePulseChange() <-chan proofs.NodeStateHash {
 	if !r.pulseData.PulseNumber.IsTimePulse() {
 		panic("pulse number was not set")
 	}
 
 	sp := r.GetSelf().GetProfile()
-	report := api.MembershipUpstreamReport{
+	report := api.UpstreamReport{
 		r.pulseData.PulseNumber,
 		sp.GetDeclaredPower(),
 		sp.GetOpMode(),
@@ -290,46 +370,46 @@ func (r *coreRealm) UpstreamPreparePulseChange() <-chan gcp_types.NodeStateHash 
 	return r.upstream.PreparePulseChange(report)
 }
 
-func (r *FullRealm) GetTimings() gcp_types.RoundTimings {
+func (r *FullRealm) GetTimings() api.RoundTimings {
 	return r.timings
 }
 
-func (r *FullRealm) GetNeighbourhoodSizes() gcp_types.NeighbourhoodSizes {
+func (r *FullRealm) GetNeighbourhoodSizes() transport.NeighbourhoodSizes {
 	return r.nbhSizes
 }
 
-func (r *FullRealm) GetLocalProfile() gcp_types.LocalNodeProfile {
-	return r.self.profile.(gcp_types.LocalNodeProfile)
+func (r *FullRealm) GetLocalProfile() profiles.LocalNode {
+	return r.self.profile.(profiles.LocalNode)
 }
 
-func (r *FullRealm) PrepareAndSetLocalNodeStateHashEvidence(nsh gcp_types.NodeStateHash) {
+func (r *FullRealm) PrepareAndSetLocalNodeStateHashEvidence(nsh proofs.NodeStateHash) {
 	// TODO use r.GetLastCloudStateHash() + digest(PulseData) + r.digest.GetGshDigester() to build digest for signing
 
 	//TODO Hack! MUST provide announcement hash
-	nas := cryptography_containers.NewSignature(nsh, "stubSign")
+	nas := cryptkit.NewSignature(nsh, "stubSign")
 
 	v := nsh.SignWith(r.signer)
-	r.self.SetLocalNodeStateHashEvidence(gcp_types.NewNodeStateHashEvidence(v), &nas)
+	r.self.SetLocalNodeStateHashEvidence(proofs.NewNodeStateHashEvidence(v), &nas)
 }
 
-func (r *FullRealm) CreateAnnouncement(n *NodeAppearance) *packets.NodeAnnouncementProfile {
+func (r *FullRealm) CreateAnnouncement(n *NodeAppearance) *transport.NodeAnnouncementProfile {
 	ma := n.GetRequestedAnnouncement()
 	if ma.Membership.IsEmpty() {
 		panic("illegal state")
 	}
 
-	return packets.NewNodeAnnouncement(n.profile, ma, r.GetNodeCount(), r.pulseData.PulseNumber)
+	return transport.NewNodeAnnouncement(n.profile, ma, r.GetNodeCount(), r.pulseData.PulseNumber)
 }
 
-func (r *FullRealm) CreateLocalAnnouncement() *packets.NodeAnnouncementProfile {
+func (r *FullRealm) CreateLocalAnnouncement() *transport.NodeAnnouncementProfile {
 	return r.CreateAnnouncement(r.self)
 }
 
-func (r *FullRealm) CreateNextCensusBuilder() api.Builder {
+func (r *FullRealm) CreateNextCensusBuilder() census2.Builder {
 	return r.census.CreateBuilder(r.GetNextPulseNumber(), true)
 }
 
-func (r *FullRealm) preparePrimingMembers(pop api.PopulationBuilder) {
+func (r *FullRealm) preparePrimingMembers(pop census2.PopulationBuilder) {
 	for _, p := range pop.GetUnorderedProfiles() {
 		if p.GetSignatureVerifier() != nil {
 			continue
@@ -340,7 +420,7 @@ func (r *FullRealm) preparePrimingMembers(pop api.PopulationBuilder) {
 }
 
 /* deprecated */
-func (r *FullRealm) prepareRegularMembers(pop api.PopulationBuilder) {
+func (r *FullRealm) prepareRegularMembers(pop census2.PopulationBuilder) {
 	//cc := r.census.GetMandateRegistry().GetConsensusConfiguration()
 
 	for _, p := range pop.GetUnorderedProfiles() {
@@ -359,14 +439,13 @@ func (r *FullRealm) prepareRegularMembers(pop api.PopulationBuilder) {
 		} else {
 			na = r.population.GetNodeAppearanceByIndex(p.GetIndex())
 		}
-		leave, _, _, m, _ := na.GetRequestedState()
-		if !leave {
-			p.SetPower(m.RequestedPower)
-		}
+		rs := na.GetRequestedState()
+		p.SetPower(rs.RequestedPower)
+		p.SetOpMode(rs.RequestedMode)
 	}
 }
 
-func (r *FullRealm) FinishRound(builder api.Builder, csh gcp_types.CloudStateHash) {
+func (r *FullRealm) FinishRound(builder census2.Builder, csh proofs.CloudStateHash) {
 	r.Lock()
 	defer r.Unlock()
 
@@ -375,17 +454,20 @@ func (r *FullRealm) FinishRound(builder api.Builder, csh gcp_types.CloudStateHas
 	}
 	r.isFinished = true
 
-	if csh == nil {
-		r.notifyConsensusFinished(builder.GetPopulationBuilder().GetLocalProfile(), nil)
+	local := builder.GetPopulationBuilder().GetLocalProfile()
+	r.prepareRegularMembers(builder.GetPopulationBuilder())
+
+	if local.GetOpMode().IsEvicted() {
+		r.notifyConsensusFinished(local, nil)
 		return
 	}
-	r.prepareRegularMembers(builder.GetPopulationBuilder())
+
 	expected := builder.BuildAndMakeExpected(csh)
 	r.notifyConsensusFinished(expected.GetOnlinePopulation().GetLocalProfile(), expected)
 }
 
-func (r *FullRealm) notifyConsensusFinished(newSelf gcp_types.NodeProfile, expectedCensus api.OperationalCensus) {
-	report := api.MembershipUpstreamReport{
+func (r *FullRealm) notifyConsensusFinished(newSelf profiles.ActiveNode, expectedCensus census2.Operational) {
+	report := api.UpstreamReport{
 		r.pulseData.PulseNumber,
 		newSelf.GetDeclaredPower(),
 		newSelf.GetOpMode(),
@@ -395,18 +477,11 @@ func (r *FullRealm) notifyConsensusFinished(newSelf gcp_types.NodeProfile, expec
 	r.upstream.ConsensusFinished(report, expectedCensus)
 }
 
-func (r *FullRealm) getPacketDispatcher(pt gcp_types.PacketType) (*packetDispatcher, error) {
-	if int(pt) >= len(r.handlers) || !r.handlers[pt].IsEnabled() {
-		return nil, fmt.Errorf("packet type (%v) has no handler", pt)
-	}
-	return &r.handlers[pt], nil
-}
-
-func (r *FullRealm) GetProfileFactory() gcp_types.NodeProfileFactory {
+func (r *FullRealm) GetProfileFactory() profiles.Factory {
 	return r.profileFactory
 }
 
-func (r *FullRealm) CreatePurgatoryNode(ctx context.Context, intro packets.BriefIntroductionReader, from endpoints.HostIdentityHolder) (*NodeAppearance, error) {
+func (r *FullRealm) CreatePurgatoryNode(ctx context.Context, intro transport.BriefIntroductionReader, from endpoints.Inbound) (*NodeAppearance, error) {
 
 	panic("not implemented")
 	//nip := r.profileFactory.CreateBriefIntroProfile(intro, intro.GetJoinerSignature())

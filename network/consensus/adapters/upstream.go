@@ -52,11 +52,12 @@ package adapters
 
 import (
 	"context"
-	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
-	"github.com/insolar/insolar/network/consensus/common/long_bits"
-	"github.com/insolar/insolar/network/consensus/common/pulse_data"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/utils"
@@ -88,7 +89,7 @@ func NewUpstreamPulseController(stateGetter StateGetter, pulseChanger PulseChang
 	}
 }
 
-func (u *UpstreamPulseController) ConsensusFinished(report api.MembershipUpstreamReport, expectedCensus api.OperationalCensus) {
+func (u *UpstreamPulseController) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
 	// TODO: use nodekeeper in chronicles and remove setting sync list from here
 
 	ctx := contextFromReport(report)
@@ -104,15 +105,15 @@ func (u *UpstreamPulseController) ConsensusFinished(report api.MembershipUpstrea
 	)
 }
 
-func (u *UpstreamPulseController) PreparePulseChange(report api.MembershipUpstreamReport) <-chan gcp_types.NodeStateHash {
-	nshChan := make(chan gcp_types.NodeStateHash)
+func (u *UpstreamPulseController) PreparePulseChange(report api.UpstreamReport) <-chan proofs.NodeStateHash {
+	nshChan := make(chan proofs.NodeStateHash)
 
 	go awaitState(nshChan, u.stateGetter)
 
 	return nshChan
 }
 
-func (u *UpstreamPulseController) CommitPulseChange(report api.MembershipUpstreamReport, pulseData pulse_data.PulseData, activeCensus api.OperationalCensus) {
+func (u *UpstreamPulseController) CommitPulseChange(report api.UpstreamReport, pulseData pulse.Data, activeCensus census.Operational) {
 	ctx := contextFromReport(report)
 	pulse := NewPulse(pulseData)
 
@@ -123,10 +124,10 @@ func (u *UpstreamPulseController) CancelPulseChange() {
 	panic("implement me")
 }
 
-func awaitState(c chan<- gcp_types.NodeStateHash, stater StateGetter) {
-	c <- cryptography_containers.NewDigest(long_bits.NewBits512FromBytes(stater.State()), SHA3512Digest).AsDigestHolder()
+func awaitState(c chan<- proofs.NodeStateHash, stater StateGetter) {
+	c <- cryptkit.NewDigest(longbits.NewBits512FromBytes(stater.State()), SHA3512Digest).AsDigestHolder()
 }
 
-func contextFromReport(report api.MembershipUpstreamReport) context.Context {
+func contextFromReport(report api.UpstreamReport) context.Context {
 	return utils.NewPulseContext(context.Background(), uint32(report.PulseNumber))
 }

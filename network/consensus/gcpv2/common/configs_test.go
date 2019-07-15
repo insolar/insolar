@@ -51,7 +51,7 @@
 package common
 
 import (
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"math"
 	"testing"
 
@@ -59,7 +59,7 @@ import (
 )
 
 func TestVerifySizes(t *testing.T) {
-	ns := &gcp_types.NeighbourhoodSizes{}
+	ns := &transport.NeighbourhoodSizes{}
 	ns.NeighbourhoodSize = 1
 	require.Panics(t, ns.VerifySizes)
 

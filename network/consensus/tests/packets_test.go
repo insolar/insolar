@@ -53,27 +53,30 @@ package tests
 import (
 	"fmt"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
-	"github.com/insolar/insolar/network/consensus/common/long_bits"
-	"github.com/insolar/insolar/network/consensus/common/pulse_data"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/statevector"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"io"
-
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
 type EmuPacketWrapper struct {
-	parser packets.PacketParser
+	parser transport.PacketParser
 }
 
-func UnwrapPacketParser(payload interface{}) packets.PacketParser {
+func UnwrapPacketParser(payload interface{}) transport.PacketParser {
 	if v, ok := payload.(EmuPacketWrapper); ok {
 		return v.parser
 	}
 	return nil
 }
 
-func WrapPacketParser(payload packets.PacketParser) interface{} {
+func WrapPacketParser(payload transport.PacketParser) interface{} {
 	return EmuPacketWrapper{parser: payload}
 }
 
@@ -81,12 +84,12 @@ func (v EmuPacketWrapper) String() string {
 	return fmt.Sprintf("Wrap{%v}", v.parser)
 }
 
-var _ packets.PulsePacketReader = &EmuPulsarNetPacket{}
-var _ packets.OriginalPulsarPacket = &EmuPulsarNetPacket{}
-var _ packets.PacketParser = &EmuPulsarNetPacket{}
+var _ transport.PulsePacketReader = &EmuPulsarNetPacket{}
+var _ proofs.OriginalPulsarPacket = &EmuPulsarNetPacket{}
+var _ transport.PacketParser = &EmuPulsarNetPacket{}
 
 type EmuPulsarNetPacket struct {
-	pulseData pulse_data.PulseData
+	pulseData pulse.Data
 }
 
 func (r *EmuPulsarNetPacket) IsRelayForbidden() bool {
@@ -128,31 +131,31 @@ func (r *EmuPulsarNetPacket) GetTargetID() insolar.ShortNodeID {
 func (r *EmuPulsarNetPacket) OriginalPulsarPacket() {
 }
 
-func (r *EmuPulsarNetPacket) GetPacketSignature() cryptography_containers.SignedDigest {
-	return cryptography_containers.SignedDigest{}
+func (r *EmuPulsarNetPacket) GetPacketSignature() cryptkit.SignedDigest {
+	return cryptkit.SignedDigest{}
 }
 
-func (*EmuPulsarNetPacket) GetPacketType() gcp_types.PacketType {
-	return gcp_types.PacketPulse
+func (*EmuPulsarNetPacket) GetPacketType() phases.PacketType {
+	return phases.PacketPulse
 }
 
-func (*EmuPulsarNetPacket) GetMemberPacket() packets.MemberPacketReader {
+func (*EmuPulsarNetPacket) GetMemberPacket() transport.MemberPacketReader {
 	return nil
 }
 
-func (r *EmuPulsarNetPacket) GetPulseData() pulse_data.PulseData {
+func (r *EmuPulsarNetPacket) GetPulseData() pulse.Data {
 	return r.pulseData
 }
 
-func (r *EmuPulsarNetPacket) GetPulseDataEvidence() packets.OriginalPulsarPacket {
+func (r *EmuPulsarNetPacket) GetPulseDataEvidence() proofs.OriginalPulsarPacket {
 	return r
 }
 
-func (r *EmuPulsarNetPacket) GetPulseNumber() pulse_data.PulseNumber {
+func (r *EmuPulsarNetPacket) GetPulseNumber() pulse.Number {
 	return r.pulseData.PulseNumber
 }
 
-func (r *EmuPulsarNetPacket) GetPulsePacket() packets.PulsePacketReader {
+func (r *EmuPulsarNetPacket) GetPulsePacket() transport.PulsePacketReader {
 	return r
 }
 
@@ -162,18 +165,18 @@ func (r *EmuPulsarNetPacket) String() string {
 
 // var _ gcp_v2.PhasePacketReader = &basePacket{}
 // var _ gcp_v2.MemberPacketReader = &basePacket{}
-var _ cryptography_containers.SignedEvidenceHolder = &basePacket{}
+var _ cryptkit.SignedEvidenceHolder = &basePacket{}
 
 type basePacket struct {
 	src         insolar.ShortNodeID
 	tgt         insolar.ShortNodeID
 	nodeCount   uint16
-	mp          gcp_types.MembershipProfile
+	mp          profiles.MembershipProfile
 	isLeaving   bool
 	leaveReason uint32
 }
 
-func (r *basePacket) GetRequestedPower() gcp_types.MemberPower {
+func (r *basePacket) GetRequestedPower() member.Power {
 	return r.mp.RequestedPower
 }
 
@@ -189,15 +192,15 @@ func (r *basePacket) GetJoinerID() insolar.ShortNodeID {
 	return 0
 }
 
-func (r *basePacket) GetJoinerAnnouncement() packets.JoinerAnnouncementReader {
+func (r *basePacket) GetJoinerAnnouncement() transport.JoinerAnnouncementReader {
 	return nil
 }
 
-func (r *basePacket) GetNodeStateHashEvidence() gcp_types.NodeStateHashEvidence {
+func (r *basePacket) GetNodeStateHashEvidence() proofs.NodeStateHashEvidence {
 	return r.mp.StateEvidence
 }
 
-func (r *basePacket) GetAnnouncementSignature() gcp_types.MemberAnnouncementSignature {
+func (r *basePacket) GetAnnouncementSignature() proofs.MemberAnnouncementSignature {
 	return r.mp.AnnounceSignature
 }
 
@@ -205,19 +208,19 @@ func (r *basePacket) GetNodeID() insolar.ShortNodeID {
 	return r.tgt
 }
 
-func (r *basePacket) GetNodeRank() gcp_types.MembershipRank {
-	return gcp_types.NewMembershipRank(r.mp.Mode, r.mp.Power, r.mp.Index, r.nodeCount)
+func (r *basePacket) GetNodeRank() member.Rank {
+	return member.NewMembershipRank(r.mp.Mode, r.mp.Power, r.mp.Index, r.nodeCount)
 }
 
-func (r *basePacket) GetAnnouncementReader() packets.MembershipAnnouncementReader {
+func (r *basePacket) GetAnnouncementReader() transport.MembershipAnnouncementReader {
 	return r
 }
 
-func (r *basePacket) GetEvidence() cryptography_containers.SignedData {
-	v := long_bits.NewBits64(0)
-	d := cryptography_containers.NewDigest(&v, "stub")
-	s := cryptography_containers.NewSignature(&v, "stub")
-	return cryptography_containers.NewSignedData(&v, d, s)
+func (r *basePacket) GetEvidence() cryptkit.SignedData {
+	v := longbits.NewBits64(0)
+	d := cryptkit.NewDigest(&v, "stub")
+	s := cryptkit.NewSignature(&v, "stub")
+	return cryptkit.NewSignedData(&v, d, s)
 }
 
 func (r *basePacket) GetSourceID() insolar.ShortNodeID {
@@ -236,27 +239,27 @@ func (r *basePacket) IsRelayForbidden() bool {
 	return true
 }
 
-func (r *basePacket) GetPacketSignature() cryptography_containers.SignedDigest {
-	return cryptography_containers.SignedDigest{}
+func (r *basePacket) GetPacketSignature() cryptkit.SignedDigest {
+	return cryptkit.SignedDigest{}
 }
 
-func (r *basePacket) GetPulsePacket() packets.PulsePacketReader {
+func (r *basePacket) GetPulsePacket() transport.PulsePacketReader {
 	return nil
 }
 
-func (r *basePacket) AsPhase0Packet() packets.Phase0PacketReader {
+func (r *basePacket) AsPhase0Packet() transport.Phase0PacketReader {
 	return nil
 }
 
-func (r *basePacket) AsPhase1Packet() packets.Phase1PacketReader {
+func (r *basePacket) AsPhase1Packet() transport.Phase1PacketReader {
 	return nil
 }
 
-func (r *basePacket) AsPhase2Packet() packets.Phase2PacketReader {
+func (r *basePacket) AsPhase2Packet() transport.Phase2PacketReader {
 	return nil
 }
 
-func (r *basePacket) AsPhase3Packet() packets.Phase3PacketReader {
+func (r *basePacket) AsPhase3Packet() transport.Phase3PacketReader {
 	return nil
 }
 
@@ -268,37 +271,37 @@ func (r *basePacket) String() string {
 	return fmt.Sprintf("s:%v t:%v%s", r.src, r.tgt, leaving)
 }
 
-var _ packets.Phase0PacketReader = &EmuPhase0NetPacket{}
-var _ packets.MemberPacketReader = &EmuPhase0NetPacket{}
-var _ packets.PacketParser = &EmuPhase0NetPacket{}
+var _ transport.Phase0PacketReader = &EmuPhase0NetPacket{}
+var _ transport.MemberPacketReader = &EmuPhase0NetPacket{}
+var _ transport.PacketParser = &EmuPhase0NetPacket{}
 var _ emuPackerCloner = &EmuPhase0NetPacket{}
 
 type EmuPhase0NetPacket struct {
 	basePacket
 	pulsePacket *EmuPulsarNetPacket
-	pn          pulse_data.PulseNumber
+	pn          pulse.Number
 }
 
-func (r *EmuPhase0NetPacket) GetPacketType() gcp_types.PacketType {
-	return gcp_types.PacketPhase0
+func (r *EmuPhase0NetPacket) GetPacketType() phases.PacketType {
+	return phases.PacketPhase0
 }
 
-func (r *EmuPhase0NetPacket) GetMemberPacket() packets.MemberPacketReader {
+func (r *EmuPhase0NetPacket) GetMemberPacket() transport.MemberPacketReader {
 	return r
 }
 
-func (r *EmuPhase0NetPacket) AsPhase0Packet() packets.Phase0PacketReader {
+func (r *EmuPhase0NetPacket) AsPhase0Packet() transport.Phase0PacketReader {
 	return r
 }
 
-func (r *EmuPhase0NetPacket) GetPulseNumber() pulse_data.PulseNumber {
+func (r *EmuPhase0NetPacket) GetPulseNumber() pulse.Number {
 	if r.pulsePacket == nil {
 		return r.pn
 	}
 	return r.pulsePacket.pulseData.PulseNumber
 }
 
-func (r *EmuPhase0NetPacket) GetEmbeddedPulsePacket() packets.PulsePacketReader {
+func (r *EmuPhase0NetPacket) GetEmbeddedPulsePacket() transport.PulsePacketReader {
 	return r.pulsePacket
 }
 
@@ -306,9 +309,9 @@ func (r *EmuPhase0NetPacket) String() string {
 	return fmt.Sprintf("ph:0 %v pulsePkt: {%v} mp:{%v} nc:%d ", r.basePacket.String(), r.pulsePacket, r.mp, r.nodeCount)
 }
 
-var _ packets.Phase1PacketReader = &EmuPhase1NetPacket{}
-var _ packets.MemberPacketReader = &EmuPhase1NetPacket{}
-var _ packets.PacketParser = &EmuPhase1NetPacket{}
+var _ transport.Phase1PacketReader = &EmuPhase1NetPacket{}
+var _ transport.MemberPacketReader = &EmuPhase1NetPacket{}
+var _ transport.PacketParser = &EmuPhase1NetPacket{}
 
 type EmuPhase1NetPacket struct {
 	EmuPhase0NetPacket
@@ -328,15 +331,15 @@ func (r *EmuPhase1NetPacket) HasJoinerSecret() bool {
 	return false
 }
 
-func (r *EmuPhase1NetPacket) GetJoinerSecret() cryptography_containers.SignatureHolder {
+func (r *EmuPhase1NetPacket) GetJoinerSecret() cryptkit.SignatureHolder {
 	panic("implement me")
 }
 
-func (r *EmuPhase1NetPacket) GetCloudIntroduction() packets.CloudIntroductionReader {
+func (r *EmuPhase1NetPacket) GetCloudIntroduction() transport.CloudIntroductionReader {
 	panic("implement me")
 }
 
-func (r *EmuPhase1NetPacket) GetFullIntroduction() packets.FullIntroductionReader {
+func (r *EmuPhase1NetPacket) GetFullIntroduction() transport.FullIntroductionReader {
 	panic("implement me")
 }
 
@@ -348,23 +351,23 @@ func (r *EmuPhase1NetPacket) String() string {
 	return fmt.Sprintf("ph:1%s %s pulsePkt:{%v} mp:{%v} nc:%d", suffix, r.basePacket.String(), r.pulsePacket, r.mp, r.nodeCount)
 }
 
-func (r *EmuPhase1NetPacket) GetPacketType() gcp_types.PacketType {
+func (r *EmuPhase1NetPacket) GetPacketType() phases.PacketType {
 	if r.isRequest {
-		return gcp_types.PacketReqPhase1
+		return phases.PacketReqPhase1
 	} else {
-		return gcp_types.PacketPhase1
+		return phases.PacketPhase1
 	}
 }
 
-func (r *EmuPhase1NetPacket) AsPhase0Packet() packets.Phase0PacketReader {
+func (r *EmuPhase1NetPacket) AsPhase0Packet() transport.Phase0PacketReader {
 	return nil
 }
 
-func (r *EmuPhase1NetPacket) AsPhase1Packet() packets.Phase1PacketReader {
+func (r *EmuPhase1NetPacket) AsPhase1Packet() transport.Phase1PacketReader {
 	return r
 }
 
-func (r *EmuPhase1NetPacket) GetNodeStateHashEvidence() gcp_types.NodeStateHashEvidence {
+func (r *EmuPhase1NetPacket) GetNodeStateHashEvidence() proofs.NodeStateHashEvidence {
 	return r.mp.StateEvidence
 }
 
@@ -372,25 +375,25 @@ func (r *EmuPhase1NetPacket) HasPulseData() bool {
 	return r.pulsePacket != nil
 }
 
-func (r *EmuPhase1NetPacket) GetMemberPacket() packets.MemberPacketReader {
+func (r *EmuPhase1NetPacket) GetMemberPacket() transport.MemberPacketReader {
 	return r
 }
 
-var _ packets.Phase2PacketReader = &EmuPhase2NetPacket{}
-var _ packets.MemberPacketReader = &EmuPhase2NetPacket{}
-var _ packets.PacketParser = &EmuPhase2NetPacket{}
+var _ transport.Phase2PacketReader = &EmuPhase2NetPacket{}
+var _ transport.MemberPacketReader = &EmuPhase2NetPacket{}
+var _ transport.PacketParser = &EmuPhase2NetPacket{}
 
 type EmuPhase2NetPacket struct {
 	basePacket
-	pulseNumber   pulse_data.PulseNumber
-	neighbourhood []packets.MembershipAnnouncementReader
+	pulseNumber   pulse.Number
+	neighbourhood []transport.MembershipAnnouncementReader
 }
 
 func (r *EmuPhase2NetPacket) HasFullIntro() bool {
 	return false
 }
 
-func (r *EmuPhase2NetPacket) GetFullIntroduction() packets.FullIntroductionReader {
+func (r *EmuPhase2NetPacket) GetFullIntroduction() transport.FullIntroductionReader {
 	panic("implement me")
 }
 
@@ -398,7 +401,7 @@ func (r *EmuPhase2NetPacket) HasCloudIntro() bool {
 	return false
 }
 
-func (r *EmuPhase2NetPacket) GetCloudIntroduction() packets.CloudIntroductionReader {
+func (r *EmuPhase2NetPacket) GetCloudIntroduction() transport.CloudIntroductionReader {
 	panic("implement me")
 }
 
@@ -406,11 +409,11 @@ func (r *EmuPhase2NetPacket) HasJoinerSecret() bool {
 	return false
 }
 
-func (r *EmuPhase2NetPacket) GetJoinerSecret() cryptography_containers.SignatureHolder {
+func (r *EmuPhase2NetPacket) GetJoinerSecret() cryptkit.SignatureHolder {
 	panic("implement me")
 }
 
-func (r *EmuPhase2NetPacket) GetBriefIntroduction() packets.BriefIntroductionReader {
+func (r *EmuPhase2NetPacket) GetBriefIntroduction() transport.BriefIntroductionReader {
 	panic("implement me")
 }
 
@@ -418,58 +421,58 @@ func (r *EmuPhase2NetPacket) String() string {
 	return fmt.Sprintf("ph:2 %s pn:%v mp:{%v} nc:%d ngbh:%v", r.basePacket.String(), r.pulseNumber, r.mp, r.nodeCount, r.neighbourhood)
 }
 
-func (r *EmuPhase2NetPacket) GetNeighbourhood() []packets.MembershipAnnouncementReader {
+func (r *EmuPhase2NetPacket) GetNeighbourhood() []transport.MembershipAnnouncementReader {
 	return r.neighbourhood
 }
 
-func (r *EmuPhase2NetPacket) GetPacketType() gcp_types.PacketType {
-	return gcp_types.PacketPhase2
+func (r *EmuPhase2NetPacket) GetPacketType() phases.PacketType {
+	return phases.PacketPhase2
 }
 
-func (r *EmuPhase2NetPacket) AsPhase2Packet() packets.Phase2PacketReader {
+func (r *EmuPhase2NetPacket) AsPhase2Packet() transport.Phase2PacketReader {
 	return r
 }
 
-func (r *EmuPhase2NetPacket) GetPulseNumber() pulse_data.PulseNumber {
+func (r *EmuPhase2NetPacket) GetPulseNumber() pulse.Number {
 	return r.pulseNumber
 }
 
-func (r *EmuPhase2NetPacket) GetMemberPacket() packets.MemberPacketReader {
+func (r *EmuPhase2NetPacket) GetMemberPacket() transport.MemberPacketReader {
 	return r
 }
 
-var _ packets.Phase3PacketReader = &EmuPhase3NetPacket{}
-var _ packets.MemberPacketReader = &EmuPhase3NetPacket{}
-var _ packets.PacketParser = &EmuPhase3NetPacket{}
+var _ transport.Phase3PacketReader = &EmuPhase3NetPacket{}
+var _ transport.MemberPacketReader = &EmuPhase3NetPacket{}
+var _ transport.PacketParser = &EmuPhase3NetPacket{}
 
 type EmuPhase3NetPacket struct {
 	basePacket
-	pulseNumber pulse_data.PulseNumber
-	vectors     gcp_types.HashedNodeVector
+	pulseNumber pulse.Number
+	vectors     statevector.Vector
 }
 
-func (r *EmuPhase3NetPacket) GetTrustedExpectedRank() gcp_types.MembershipRank {
-	panic("implement me")
+func (r *EmuPhase3NetPacket) GetTrustedExpectedRank() member.Rank {
+	return r.vectors.Trusted.ExpectedRank
 }
 
-func (r *EmuPhase3NetPacket) GetDoubtedExpectedRank() gcp_types.MembershipRank {
-	panic("implement me")
+func (r *EmuPhase3NetPacket) GetDoubtedExpectedRank() member.Rank {
+	return r.vectors.Doubted.ExpectedRank
 }
 
-func (r *EmuPhase3NetPacket) GetTrustedGlobulaAnnouncementHash() gcp_types.GlobulaAnnouncementHash {
-	return r.vectors.TrustedAnnouncementVector
+func (r *EmuPhase3NetPacket) GetTrustedGlobulaAnnouncementHash() proofs.GlobulaAnnouncementHash {
+	return r.vectors.Trusted.AnnouncementHash
 }
 
-func (r *EmuPhase3NetPacket) GetTrustedGlobulaStateSignature() gcp_types.GlobulaStateSignature {
-	return r.vectors.TrustedGlobulaStateVectorSignature
+func (r *EmuPhase3NetPacket) GetTrustedGlobulaStateSignature() proofs.GlobulaStateSignature {
+	return r.vectors.Trusted.StateSignature
 }
 
-func (r *EmuPhase3NetPacket) GetDoubtedGlobulaAnnouncementHash() gcp_types.GlobulaAnnouncementHash {
-	return r.vectors.DoubtedAnnouncementVector
+func (r *EmuPhase3NetPacket) GetDoubtedGlobulaAnnouncementHash() proofs.GlobulaAnnouncementHash {
+	return r.vectors.Doubted.AnnouncementHash
 }
 
-func (r *EmuPhase3NetPacket) GetDoubtedGlobulaStateSignature() gcp_types.GlobulaStateSignature {
-	return r.vectors.DoubtedGlobulaStateVectorSignature
+func (r *EmuPhase3NetPacket) GetDoubtedGlobulaStateSignature() proofs.GlobulaStateSignature {
+	return r.vectors.Doubted.StateSignature
 }
 
 func (r *EmuPhase3NetPacket) String() string {
@@ -477,22 +480,22 @@ func (r *EmuPhase3NetPacket) String() string {
 		r.vectors.Bitset, r.GetTrustedGlobulaAnnouncementHash(), r.GetDoubtedGlobulaAnnouncementHash())
 }
 
-func (r *EmuPhase3NetPacket) GetBitset() gcp_types.NodeBitset {
+func (r *EmuPhase3NetPacket) GetBitset() member.StateBitset {
 	return r.vectors.Bitset
 }
 
-func (r *EmuPhase3NetPacket) GetPacketType() gcp_types.PacketType {
-	return gcp_types.PacketPhase3
+func (r *EmuPhase3NetPacket) GetPacketType() phases.PacketType {
+	return phases.PacketPhase3
 }
 
-func (r *EmuPhase3NetPacket) AsPhase3Packet() packets.Phase3PacketReader {
+func (r *EmuPhase3NetPacket) AsPhase3Packet() transport.Phase3PacketReader {
 	return r
 }
 
-func (r *EmuPhase3NetPacket) GetPulseNumber() pulse_data.PulseNumber {
+func (r *EmuPhase3NetPacket) GetPulseNumber() pulse.Number {
 	return r.pulseNumber
 }
 
-func (r *EmuPhase3NetPacket) GetMemberPacket() packets.MemberPacketReader {
+func (r *EmuPhase3NetPacket) GetMemberPacket() transport.MemberPacketReader {
 	return r
 }

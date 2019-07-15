@@ -53,7 +53,7 @@ package core
 import (
 	"context"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
 
 type RealmPopulation interface {
@@ -73,12 +73,12 @@ type RealmPopulation interface {
 
 	GetSelf() *NodeAppearance
 
-	CreateNodeAppearance(ctx context.Context, inp gcp_types.NodeProfile) *NodeAppearance
+	CreateNodeAppearance(ctx context.Context, inp profiles.ActiveNode) *NodeAppearance
 
 	AddToPurgatory(n *NodeAppearance) (*NodeAppearance, PurgatoryNodeState)
 	AddToDynamics(n *NodeAppearance) (*NodeAppearance, []*NodeAppearance)
 
-	SetOrUpdateVectorHelper(v *RealmVectorHelper) *RealmVectorHelper
+	CreateVectorHelper() *RealmVectorHelper
 }
 
 type PurgatoryNodeState int

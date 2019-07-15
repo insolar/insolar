@@ -51,14 +51,14 @@
 package serialization
 
 import (
-	"github.com/insolar/insolar/network/consensus/common/pulse_data"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"io"
 )
 
 type PulsarPacketBody struct {
 	// ByteSize>=108
-	PulseDataExt          pulse_data.PulseDataExt // ByteSize=44
-	PulsarConsensusProofs []byte                  // variable lengths >=0
+	PulseDataExt          pulse.DataExt // ByteSize=44
+	PulsarConsensusProofs []byte        // variable lengths >=0
 }
 
 func (b *PulsarPacketBody) SerializeTo(_ SerializeContext, writer io.Writer) error {

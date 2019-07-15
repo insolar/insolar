@@ -53,24 +53,26 @@ package tests
 import (
 	"bytes"
 	"context"
-	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/statevector"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 
 	"github.com/insolar/insolar/network/consensus/adapters"
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
 type emuPackerCloner interface {
-	clonePacketFor(target gcp_types.NodeProfile, sendOptions api.PacketSendOptions) packets.PacketParser
+	clonePacketFor(target profiles.ActiveNode, sendOptions transport.PacketSendOptions) transport.PacketParser
 }
 
 type emuPacketSender struct {
 	cloner emuPackerCloner
 }
 
-func (r *emuPacketSender) SendToMany(ctx context.Context, targetCount int, sender api.PacketSender,
-	filter func(ctx context.Context, targetIndex int) (gcp_types.NodeProfile, api.PacketSendOptions)) {
+func (r *emuPacketSender) SendToMany(ctx context.Context, targetCount int, sender transport.PacketSender,
+	filter func(ctx context.Context, targetIndex int) (profiles.ActiveNode, transport.PacketSendOptions)) {
 	for i := 0; i < targetCount; i++ {
 		sendTo, sendOptions := filter(ctx, i)
 		if sendTo != nil {
@@ -86,37 +88,37 @@ func (r *emuPacketSender) SendToMany(ctx context.Context, targetCount int, sende
 	}
 }
 
-func (r *emuPacketSender) SendTo(ctx context.Context, t gcp_types.NodeProfile, sendOptions api.PacketSendOptions, s api.PacketSender) {
+func (r *emuPacketSender) SendTo(ctx context.Context, t profiles.ActiveNode, sendOptions transport.PacketSendOptions, s transport.PacketSender) {
 	c := r.cloner.clonePacketFor(t, sendOptions)
 	s.SendPacketToTransport(ctx, t, sendOptions, c)
 }
 
 type emuPacketBuilder struct {
-	crypto      api.TransportCryptographyFactory
+	crypto      transport.CryptographyFactory
 	localConfig api.LocalNodeConfiguration
 }
 
-func NewEmuPacketBuilder(crypto api.TransportCryptographyFactory, localConfig api.LocalNodeConfiguration) api.PacketBuilder {
+func NewEmuPacketBuilder(crypto transport.CryptographyFactory, localConfig api.LocalNodeConfiguration) transport.PacketBuilder {
 	return &emuPacketBuilder{
 		crypto:      crypto,
 		localConfig: localConfig,
 	}
 }
 
-func (r *emuPacketBuilder) GetNeighbourhoodSize() gcp_types.NeighbourhoodSizes {
-	return gcp_types.NeighbourhoodSizes{NeighbourhoodSize: 5, NeighbourhoodTrustThreshold: 2, JoinersPerNeighbourhood: 2, JoinersBoost: 1}
+func (r *emuPacketBuilder) GetNeighbourhoodSize() transport.NeighbourhoodSizes {
+	return transport.NeighbourhoodSizes{NeighbourhoodSize: 5, NeighbourhoodTrustThreshold: 2, JoinersPerNeighbourhood: 2, JoinersBoost: 1}
 }
 
-func (r *emuPacketBuilder) defaultSign() cryptography_containers.SignedDigest {
+func (r *emuPacketBuilder) defaultSign() cryptkit.SignedDigest {
 	digester := r.crypto.GetDigestFactory().GetPacketDigester()
 	digest := digester.GetDigestOf(bytes.NewReader([]byte{1, 3, 3, 7}))
 	signer := r.crypto.GetNodeSigner(r.localConfig.GetSecretKeyStore())
 	signature := signer.SignDigest(digest)
-	sd := cryptography_containers.NewSignedDigest(digest, signature)
+	sd := cryptkit.NewSignedDigest(digest, signature)
 	return sd
 }
 
-func (r *emuPacketBuilder) defaultBasePacket(sender *packets.NodeAnnouncementProfile) basePacket {
+func (r *emuPacketBuilder) defaultBasePacket(sender *transport.NodeAnnouncementProfile) basePacket {
 	sd := r.defaultSign()
 
 	return basePacket{
@@ -127,8 +129,8 @@ func (r *emuPacketBuilder) defaultBasePacket(sender *packets.NodeAnnouncementPro
 	}
 }
 
-func (r *emuPacketBuilder) PreparePhase0Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket packets.OriginalPulsarPacket,
-	options api.PacketSendOptions) api.PreparedPacketSender {
+func (r *emuPacketBuilder) PreparePhase0Packet(sender *transport.NodeAnnouncementProfile, pulsarPacket proofs.OriginalPulsarPacket,
+	options transport.PacketSendOptions) transport.PreparedPacketSender {
 	v := EmuPhase0NetPacket{
 		basePacket:  r.defaultBasePacket(sender),
 		pulsePacket: pulsarPacket,
@@ -136,14 +138,14 @@ func (r *emuPacketBuilder) PreparePhase0Packet(sender *packets.NodeAnnouncementP
 	return &emuPacketSender{&v}
 }
 
-func (r *EmuPhase0NetPacket) clonePacketFor(t gcp_types.NodeProfile, sendOptions api.PacketSendOptions) packets.PacketParser {
+func (r *EmuPhase0NetPacket) clonePacketFor(t profiles.ActiveNode, sendOptions transport.PacketSendOptions) transport.PacketParser {
 	c := *r
 	c.tgt = t.GetShortNodeID()
 	return &c
 }
 
-func (r *emuPacketBuilder) PreparePhase1Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket packets.OriginalPulsarPacket,
-	options api.PacketSendOptions) api.PreparedPacketSender {
+func (r *emuPacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncementProfile, pulsarPacket proofs.OriginalPulsarPacket,
+	options transport.PacketSendOptions) transport.PreparedPacketSender {
 
 	pp := pulsarPacket.(*adapters.PulsePacketReader)
 	pulseData := pp.GetPulseData()
@@ -158,28 +160,28 @@ func (r *emuPacketBuilder) PreparePhase1Packet(sender *packets.NodeAnnouncementP
 		},
 	}
 	v.pn = pulseData.PulseNumber
-	v.isRequest = options&api.RequestForPhase1 != 0
-	if v.isRequest || options&api.SendWithoutPulseData != 0 {
+	v.isRequest = options&transport.RequestForPhase1 != 0
+	if v.isRequest || options&transport.SendWithoutPulseData != 0 {
 		v.pulsePacket = nil
 	}
 
 	return &emuPacketSender{&v}
 }
 
-func (r *EmuPhase1NetPacket) clonePacketFor(t gcp_types.NodeProfile, sendOptions api.PacketSendOptions) packets.PacketParser {
+func (r *EmuPhase1NetPacket) clonePacketFor(t profiles.ActiveNode, sendOptions transport.PacketSendOptions) transport.PacketParser {
 	c := *r
 	c.tgt = t.GetShortNodeID()
 
-	if sendOptions&api.SendWithoutPulseData != 0 {
+	if sendOptions&transport.SendWithoutPulseData != 0 {
 		c.pulsePacket = nil
 	}
 
 	return &c
 }
 
-func (r *emuPacketBuilder) PreparePhase2Packet(sender *packets.NodeAnnouncementProfile,
-	neighbourhood []packets.MembershipAnnouncementReader,
-	options api.PacketSendOptions) api.PreparedPacketSender {
+func (r *emuPacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncementProfile,
+	neighbourhood []transport.MembershipAnnouncementReader,
+	options transport.PacketSendOptions) transport.PreparedPacketSender {
 
 	v := EmuPhase2NetPacket{
 		basePacket:    r.defaultBasePacket(sender),
@@ -189,15 +191,15 @@ func (r *emuPacketBuilder) PreparePhase2Packet(sender *packets.NodeAnnouncementP
 	return &emuPacketSender{&v}
 }
 
-func (r *EmuPhase2NetPacket) clonePacketFor(t gcp_types.NodeProfile, sendOptions api.PacketSendOptions) packets.PacketParser {
+func (r *EmuPhase2NetPacket) clonePacketFor(t profiles.ActiveNode, sendOptions transport.PacketSendOptions) transport.PacketParser {
 	c := *r
 	c.tgt = t.GetShortNodeID()
 	return &c
 }
 
-func (r *emuPacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementProfile, vectors gcp_types.HashedNodeVector,
+func (r *emuPacketBuilder) PreparePhase3Packet(sender *transport.NodeAnnouncementProfile, vectors statevector.Vector,
 	// bitset nodeset.NodeBitset, gshTrusted common2.GlobulaStateHash, gshDoubted common2.GlobulaStateHash,
-	options api.PacketSendOptions) api.PreparedPacketSender {
+	options transport.PacketSendOptions) transport.PreparedPacketSender {
 
 	v := EmuPhase3NetPacket{
 		basePacket: r.defaultBasePacket(sender),
@@ -206,7 +208,7 @@ func (r *emuPacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementP
 	return &emuPacketSender{&v}
 }
 
-func (r *EmuPhase3NetPacket) clonePacketFor(t gcp_types.NodeProfile, sendOptions api.PacketSendOptions) packets.PacketParser {
+func (r *EmuPhase3NetPacket) clonePacketFor(t profiles.ActiveNode, sendOptions transport.PacketSendOptions) transport.PacketParser {
 	c := *r
 	c.tgt = t.GetShortNodeID()
 	return &c

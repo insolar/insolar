@@ -54,17 +54,18 @@ import (
 	"context"
 	"fmt"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common/consensus_tools"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
+	"github.com/insolar/insolar/network/consensus/common/consensuskit"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"sync"
 )
 
-func NewDynamicRealmPopulation(baselineWeight uint32, local gcp_types.NodeProfile, nodeCountHint int,
+func NewDynamicRealmPopulation(baselineWeight uint32, local profiles.ActiveNode, nodeCountHint int, phase2ExtLimit uint8,
 	fn NodeInitFunc) *DynamicRealmPopulation {
 
 	r := &DynamicRealmPopulation{
 		nodeInit:       fn,
 		baselineWeight: baselineWeight,
+		phase2ExtLimit: phase2ExtLimit,
 	}
 	r.initPopulation(local, nodeCountHint)
 
@@ -76,6 +77,7 @@ var _ RealmPopulation = &DynamicRealmPopulation{}
 type DynamicRealmPopulation struct {
 	nodeInit       NodeInitFunc
 	baselineWeight uint32
+	phase2ExtLimit uint8
 	self           *NodeAppearance
 
 	rw sync.RWMutex
@@ -90,7 +92,7 @@ type DynamicRealmPopulation struct {
 	purgatoryByID map[insolar.ShortNodeID]*[]*NodeAppearance
 }
 
-func (r *DynamicRealmPopulation) initPopulation(local gcp_types.NodeProfile, nodeCountHint int) {
+func (r *DynamicRealmPopulation) initPopulation(local profiles.ActiveNode, nodeCountHint int) {
 	r.self = r.CreateNodeAppearance(context.Background(), local)
 	r.dynamicNodes = make(map[insolar.ShortNodeID]*NodeAppearance, nodeCountHint)
 }
@@ -116,7 +118,7 @@ func (r *DynamicRealmPopulation) GetOthersCount() int {
 }
 
 func (r *DynamicRealmPopulation) GetBftMajorityCount() int {
-	return consensus_tools.BftMajority(r.GetNodeCount())
+	return consensuskit.BftMajority(r.GetNodeCount())
 }
 
 func (r *DynamicRealmPopulation) GetNodeAppearance(id insolar.ShortNodeID) *NodeAppearance {
@@ -188,10 +190,10 @@ func (r *DynamicRealmPopulation) GetIndexedNodesWithCheck() ([]*NodeAppearance, 
 	return cp, len(r.nodeIndex) == r.indexedCount
 }
 
-func (r *DynamicRealmPopulation) CreateNodeAppearance(ctx context.Context, np gcp_types.NodeProfile) *NodeAppearance {
+func (r *DynamicRealmPopulation) CreateNodeAppearance(ctx context.Context, np profiles.ActiveNode) *NodeAppearance {
 
 	n := &NodeAppearance{}
-	n.init(np, nil, r.baselineWeight)
+	n.init(np, nil, r.baselineWeight, r.phase2ExtLimit)
 	r.nodeInit(ctx, n)
 
 	return n
@@ -295,13 +297,12 @@ func (r *DynamicRealmPopulation) AddToDynamics(n *NodeAppearance) (*NodeAppearan
 }
 
 //
-func (r *DynamicRealmPopulation) SetOrUpdateVectorHelper(v *RealmVectorHelper) *RealmVectorHelper {
-	if v.HasSameVersion(r.self.callback.GetPopulationVersion()) {
-		return v
-	}
-
+func (r *DynamicRealmPopulation) CreateVectorHelper() *RealmVectorHelper {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 
-	return v.SetOrUpdateNodes(r.nodeIndex, r.joinerCount, r.self.callback.GetPopulationVersion())
+	v := &RealmVectorHelper{realmPopulation: r}
+	v.setArrayNodes(r.nodeIndex, r.joinerCount, r.self.callback.GetPopulationVersion())
+	v.realmPopulation = r
+	return v
 }

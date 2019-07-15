@@ -54,17 +54,19 @@ import (
 	"context"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/capacity"
-	"github.com/insolar/insolar/network/consensus/common/cryptography_containers"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/pulse_data"
-	"github.com/insolar/insolar/network/consensus/gcpv2/gcp_types"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"time"
-
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 )
 
 type ConsensusController interface {
-	ProcessPacket(ctx context.Context, payload packets.PacketParser, from endpoints.HostIdentityHolder) error
+	ProcessPacket(ctx context.Context, payload transport.PacketParser, from endpoints.Inbound) error
 
 	/* Ungraceful stop */
 	Abort()
@@ -72,11 +74,11 @@ type ConsensusController interface {
 	//RequestLeave()
 
 	/* This node power in the active population, and pulse number of such. Without active population returns (0,0) */
-	GetActivePowerLimit() (gcp_types.MemberPower, pulse_data.PulseNumber)
+	GetActivePowerLimit() (member.Power, pulse.Number)
 }
 
 type CandidateControlFeeder interface {
-	PickNextJoinCandidate() gcp_types.CandidateProfile
+	PickNextJoinCandidate() profiles.CandidateProfile
 	RemoveJoinCandidate(candidateAdded bool, nodeID insolar.ShortNodeID) bool
 }
 
@@ -93,27 +95,27 @@ type TrafficControlFeeder interface {
 type ConsensusControlFeeder interface {
 	TrafficControlFeeder
 
-	GetRequiredPowerLevel() gcp_types.PowerRequest
-	OnAppliedPowerLevel(pw gcp_types.MemberPower, effectiveSince pulse_data.PulseNumber)
+	GetRequiredPowerLevel() power.Request
+	OnAppliedPowerLevel(pw member.Power, effectiveSince pulse.Number)
 
 	GetRequiredGracefulLeave() (bool, uint32)
-	OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse_data.PulseNumber)
+	OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse.Number)
 
 	/* Called on receiving seem-to-be-valid Pulsar or Phase0 packets. Can be called multiple time in sequence.
 	Application MUST NOT consider it as a new pulse. */
 	PulseDetected()
 
 	/* Consensus is finished. If expectedCensus == 0 then this node was evicted from consensus.	*/
-	ConsensusFinished(report MembershipUpstreamReport, expectedCensus OperationalCensus)
+	ConsensusFinished(report UpstreamReport, expectedCensus census.Operational)
 
 	///* Consensus has stopped abnormally	*/
-	//ConsensusFailed(report MembershipUpstreamReport)
+	//ConsensusFailed(report UpstreamReport)
 }
 
 type RoundController interface {
-	HandlePacket(ctx context.Context, packet packets.PacketParser, from endpoints.HostIdentityHolder) error
+	HandlePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound) error
 	StopConsensusRound()
-	StartConsensusRound(upstream UpstreamPulseController)
+	StartConsensusRound(upstream UpstreamController)
 }
 
 type RoundControllerFactory interface {
@@ -123,20 +125,7 @@ type RoundControllerFactory interface {
 }
 
 type LocalNodeConfiguration interface {
-	GetConsensusTimings(nextPulseDelta uint16, isJoiner bool) gcp_types.RoundTimings
-	GetSecretKeyStore() cryptography_containers.SecretKeyStore
+	GetConsensusTimings(nextPulseDelta uint16, isJoiner bool) RoundTimings
+	GetSecretKeyStore() cryptkit.SecretKeyStore
 	GetParentContext() context.Context
 }
-
-type PacketSender interface {
-	SendPacketToTransport(ctx context.Context, t gcp_types.NodeProfile, sendOptions PacketSendOptions, payload interface{})
-}
-
-type PacketSendOptions uint32
-
-const (
-	SendWithoutPulseData PacketSendOptions = 1 << iota
-	RequestForPhase1
-)
-
-//type PreparedIntro interface {}

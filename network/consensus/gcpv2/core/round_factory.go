@@ -52,17 +52,18 @@ package core
 
 import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
 
 var _ api.RoundControllerFactory = &PhasedRoundControllerFactory{}
 
-func NewPhasedRoundControllerFactory(config api.LocalNodeConfiguration, t api.TransportFactory, strategyFactory RoundStrategyFactory) *PhasedRoundControllerFactory {
+func NewPhasedRoundControllerFactory(config api.LocalNodeConfiguration, t transport.Factory, strategyFactory RoundStrategyFactory) *PhasedRoundControllerFactory {
 	return &PhasedRoundControllerFactory{strategyFactory: strategyFactory, transport: t, config: config}
 }
 
 type PhasedRoundControllerFactory struct {
 	strategyFactory RoundStrategyFactory
-	transport       api.TransportFactory
+	transport       transport.Factory
 	config          api.LocalNodeConfiguration
 }
 
