@@ -172,6 +172,10 @@ type emuEndpoint struct {
 	name endpoints.Name
 }
 
+func (p *emuEndpoint) CanAccept(connection endpoints.Inbound) bool {
+	return p.name == connection.GetNameAddress()
+}
+
 func (p *emuEndpoint) AsByteString() string {
 	return fmt.Sprintf("out:name:%s", p.name)
 }

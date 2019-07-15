@@ -279,13 +279,44 @@ func (v PowerSet) ForLevelWithPercents(lvl capacity.Level, pMinimal, pReduced, p
 	}
 }
 
-func (v PowerSet) FindNearestValid(pw Power) Power {
+/*
+Only for normalized
+*/
 
-	panic("unsupported")
-	if pw == 0 {
-		return 0
-	}
-	if pw >= v[3] {
-		return v[3]
-	}
+func (v PowerSet) FindNearestValid(p Power) Power {
+
+	panic("not implemented")
+
+	//switch {
+	//case p == 0 || v[0] == p || v[1] == p || v[2] == p || v[3] == p:
+	//	return p
+	//case p >= v[3]:
+	//	return v[3]
+	//
+	//}
+	//
+	//if p >= v[3] {
+	//}
+	//if p <= v[0] {
+	//	return v[0]
+	//}
+	//
+	//if v[2] == 0 { // [min, ?, 0, max]
+	//	if v[0] == 0 || v[1] == 0 {
+	//		return true
+	//	} // [0, ?0, 0, max] or [min, 0, 0, max]
+	//
+	//	// [min, p1, 0, max]
+	//	return v[1] <= p
+	//}
+	//
+	//if v[1] == 0 { // [?, 0, p2, max]
+	//	if v[0] == 0 { // [0, 0, p2, max]
+	//		return p <= v[2] || p == v[3]
+	//	}
+	//	// [min, 0, p2, max]
+	//	return v[3] == p || v[2] >= p
+	//}
+	//// [min, p1, p2, max]
+	//return false
 }
