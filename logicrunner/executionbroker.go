@@ -581,7 +581,6 @@ func (q *ExecutionBroker) Execute(ctx context.Context, transcript *Transcript) {
 
 	logger := inslogger.FromContext(ctx)
 
-	logger.Warn("IP3: execute ", transcript.RequestRef)
 	reply, err := q.requestsExecutor.ExecuteAndSave(ctx, transcript)
 	if err != nil {
 		logger.Warn("contract execution error: ", err)
@@ -690,10 +689,6 @@ func (q *ExecutionBroker) onPulseWeNotNext(ctx context.Context) []insolar.Messag
 			LedgerHasMoreRequests: ledgerHasMoreRequests,
 		}
 		messages = append(messages, resultsMsg)
-		for _, k := range messagesQueue {
-			logger.Warn("IP1: Send by ExecutorResults ", k.RequestRef)
-		}
-
 	}
 
 	return messages

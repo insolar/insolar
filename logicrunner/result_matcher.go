@@ -11,7 +11,6 @@ import (
 )
 
 type resultsMatcher struct {
-	// mb                insolar.MessageBus
 	lr                *LogicRunner
 	lock              *sync.RWMutex
 	executionNodes    map[insolar.Reference]insolar.Reference
@@ -20,8 +19,7 @@ type resultsMatcher struct {
 
 func NewResultsMatcher(lr *LogicRunner) resultsMatcher {
 	return resultsMatcher{
-		lr: lr,
-		// mb:                mb,
+		lr:                lr,
 		lock:              &sync.RWMutex{},
 		executionNodes:    make(map[insolar.Reference]insolar.Reference),
 		unwantedResponses: make(map[insolar.Reference]message.ReturnResults),
@@ -34,20 +32,10 @@ func (rm *resultsMatcher) AddStillExecution(ctx context.Context, msg *message.St
 	defer rm.lock.Unlock()
 	for _, reqRef := range msg.RequestRefs {
 		if response, ok := rm.unwantedResponses[reqRef]; ok {
-			// response.Target = *node
-			// todo maybe call rm.mb.Send in goroutine
-			// todo check errors? retry?
 			inslogger.FromContext(ctx).Warn("IP1: Send StillExecution", reqRef)
-			// go
-			if rm.lr.MessageBus == nil {
-				panic("NO MESSAGE BUS")
-			}
-
-			rm.lr.MessageBus.Send(ctx, &response, &insolar.MessageSendOptions{
+			go rm.lr.MessageBus.Send(ctx, &response, &insolar.MessageSendOptions{
 				Receiver: &msg.Executor,
 			})
-			// j, _ := json.Marshal(rr)
-			// fmt.Println("XZ2: ", err, string(j))
 			continue
 		}
 		rm.executionNodes[reqRef] = msg.Executor
@@ -57,24 +45,11 @@ func (rm *resultsMatcher) AddStillExecution(ctx context.Context, msg *message.St
 func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg insolar.Message) {
 	response := msg.(*message.ReturnResults)
 	inslogger.FromContext(ctx).Warn("IP1: Receive UnwantedResponse", response.Reason)
-
-	if response.Reason.IsEmpty() {
-		panic("EMPTY REASON")
-	}
-
 	rm.lock.Lock()
 	defer rm.lock.Unlock()
 	if node, ok := rm.executionNodes[response.Reason]; ok {
-		// response.Target = *node
-		// todo maybe call rm.mb.Send in goroutine
-		// todo check errors? retry?
-		// rm.mb.Send(ctx, response, nil)
 		inslogger.FromContext(ctx).Warn("IP1: Send UnwantedResponse", response.Reason)
-		// go
-		if rm.lr.MessageBus == nil {
-			panic("NO MESSAGE BUS")
-		}
-		rm.lr.MessageBus.Send(ctx, response, &insolar.MessageSendOptions{
+		go rm.lr.MessageBus.Send(ctx, response, &insolar.MessageSendOptions{
 			Receiver: &node,
 		})
 		return
