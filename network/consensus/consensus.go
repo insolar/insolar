@@ -96,7 +96,7 @@ func (cd *Dep) verify() {
 
 type Consensus struct {
 	population                   censusimpl.ManyNodePopulation // TODO: there should be interface
-	consensusConfiguration       census.ConsensusConfiguration // TODO: there should be interface
+	consensusConfiguration       census.ConsensusConfiguration
 	mandateRegistry              census.MandateRegistry
 	misbehaviorRegistry          census.MisbehaviorRegistry
 	offlinePopulation            census.OfflinePopulation
