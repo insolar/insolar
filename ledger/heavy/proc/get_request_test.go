@@ -54,11 +54,18 @@ func TestGetRequest_Proceed(t *testing.T) {
 
 	resetComponents()
 	t.Run("request does not exist", func(t *testing.T) {
+		sender.ReplyFunc = func(_ context.Context, _ payload.Meta, msg *message.Message) {
+			rep := payload.Error{}
+			err := rep.Unmarshal(msg.Payload)
+			require.NoError(t, err)
+			require.Equal(t, int(rep.Code), payload.CodeObjectNotFound)
+			require.Equal(t, rep.Text, object.ErrNotFound.Error())
+		}
 		p := newProc(payload.Meta{})
 		records.ForIDMock.Return(record.Material{}, object.ErrNotFound)
 
 		err := p.Proceed(ctx)
-		require.Error(t, err)
+		require.NoError(t, err)
 
 		mc.Finish()
 	})
