@@ -217,7 +217,7 @@ func NewMessageHandler(
 			p.Dep.Jets = h.JetStorage
 			p.Dep.Sender = h.Sender
 		},
-		HotData: func(p *proc.HotData) {
+		HotObjects: func(p *proc.HotObjects) {
 			p.Dep.DropModifier = h.DropModifier
 			p.Dep.MessageBus = h.Bus
 			p.Dep.IndexModifier = h.IndexStorage

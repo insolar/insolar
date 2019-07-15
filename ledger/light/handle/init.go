@@ -122,6 +122,8 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		err = s.handlePass(ctx, f, meta)
 	case payload.TypeError:
 		err = f.Handle(ctx, NewError(s.message).Present)
+	case payload.TypeHotObjects:
+		err = f.Handle(ctx, NewHotObjects(s.dep, meta).Present)
 	default:
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())
 	}
@@ -168,10 +170,6 @@ func (s *Init) handleParcel(ctx context.Context, f flow.Flow) error {
 	case insolar.TypeGetJet.String():
 		msg := parcel.Message().(*message.GetJet)
 		h := NewGetJet(s.dep, meta, msg)
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeHotRecords.String():
-		msg := parcel.Message().(*message.HotData)
-		h := NewHotData(s.dep, meta, msg)
 		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("no handler for message type %s (from parcel)", msgType)

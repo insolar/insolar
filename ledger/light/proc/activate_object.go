@@ -110,8 +110,8 @@ func (a *ActivateObject) Proceed(ctx context.Context) error {
 	}
 
 	// We are activating the object. There is no index for it anywhere.
-	idx := object.FilamentIndex{
-		Lifeline: object.Lifeline{
+	idx := record.Index{
+		Lifeline: record.Lifeline{
 			LatestState:  &a.activateID,
 			StateID:      a.activate.ID(),
 			Parent:       a.activate.Parent,

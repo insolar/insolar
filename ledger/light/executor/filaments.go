@@ -98,7 +98,7 @@ type FilamentModifierDefault struct {
 	pulses     pulse.Calculator
 }
 
-func (m *FilamentModifierDefault) checkObject(ctx context.Context, currentPN insolar.PulseNumber, untilPN insolar.PulseNumber, requestID insolar.ID) (object.FilamentIndex, error) {
+func (m *FilamentModifierDefault) checkObject(ctx context.Context, currentPN insolar.PulseNumber, untilPN insolar.PulseNumber, requestID insolar.ID) (record.Index, error) {
 	for {
 		idx, err := m.indexes.ForID(ctx, currentPN, requestID)
 		if err != nil && err != object.ErrIndexNotFound {
@@ -110,12 +110,12 @@ func (m *FilamentModifierDefault) checkObject(ctx context.Context, currentPN ins
 
 		tmpPN, err := m.pulses.Backwards(ctx, currentPN, 1)
 		if err != nil {
-			return object.FilamentIndex{}, object.ErrIndexNotFound
+			return record.Index{}, object.ErrIndexNotFound
 		}
 
 		currentPN = tmpPN.PulseNumber
 		if currentPN > untilPN {
-			return object.FilamentIndex{}, object.ErrIndexNotFound
+			return record.Index{}, object.ErrIndexNotFound
 		}
 	}
 }
@@ -127,7 +127,7 @@ func (m *FilamentModifierDefault) prepareCreationRequest(ctx context.Context, re
 
 	_, err := m.checkObject(ctx, currentPN, untilPN, requestID)
 	if err == object.ErrIndexNotFound {
-		idx := object.FilamentIndex{
+		idx := record.Index{
 			ObjID:            requestID,
 			PendingRecords:   []insolar.ID{},
 			LifelineLastUsed: requestID.Pulse(),

@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
+	record "github.com/insolar/insolar/insolar/record"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexModifier -o ./ -s _mock.go
@@ -29,16 +30,16 @@ import (
 // With using of IndexModifier there is a possibility to set buckets from outside of an index.
 type IndexModifier interface {
 	// SetIndex adds a bucket with provided pulseNumber and ID
-	SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket FilamentIndex) error
+	SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket record.Index) error
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexAccessor -o ./ -s _mock.go
 
 // IndexAccessor provides an interface for fetching buckets from an index.
 type IndexAccessor interface {
-	ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (FilamentIndex, error)
+	ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (record.Index, error)
 	// ForPulse returns a collection of buckets for a provided pn and jetID
-	ForPulse(ctx context.Context, pn insolar.PulseNumber) []FilamentIndex
+	ForPulse(ctx context.Context, pn insolar.PulseNumber) []record.Index
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexStorage -o ./ -s _mock.go
