@@ -9,7 +9,7 @@ contracts:
   outdir: "{{ .BaseDir }}/plugins/"
 root_balance: "100000000000000000000"
 md_balance: "100000000000000000000"
-majority_rule: 5
+majority_rule: 0
 min_roles:
   virtual:  1
   heavy_material: 1
