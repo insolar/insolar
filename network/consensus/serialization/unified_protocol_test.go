@@ -363,6 +363,6 @@ func TestPacket_DeserializeFrom_NilBody(t *testing.T) {
 
 	n, err := p.DeserializeFrom(context.Background(), buf)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), ErrNilBody.Error())
+	require.Contains(t, err.Error(), ErrInvalidProtocol.Error())
 	require.EqualValues(t, 0, n)
 }

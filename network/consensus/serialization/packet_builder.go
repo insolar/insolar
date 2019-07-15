@@ -280,6 +280,7 @@ type PreparedPacketSender struct {
 
 func (p *PreparedPacketSender) SendTo(ctx context.Context, target profiles.ActiveNode, sendOptions transport.PacketSendOptions, sender transport.PacketSender) {
 	p.packet.Header.TargetID = uint32(target.GetShortNodeID())
+	p.packet.Header.ReceiverID = uint32(target.GetShortNodeID())
 
 	if (sendOptions & transport.SendWithoutPulseData) != 0 {
 		p.packet.Header.ClearFlag(FlagHasPulsePacket)

@@ -112,7 +112,10 @@ func (pt ProtocolType) NewBody() PacketBody {
 	return nil
 }
 
-var ErrNilBody = errors.New("body is nil")
+var (
+	ErrNilBody         = errors.New("body is nil")
+	ErrInvalidProtocol = errors.New("invalid protocol")
+)
 
 /*
 	ByteSize=16
@@ -316,7 +319,7 @@ func (p *Packet) DeserializeFrom(ctx context.Context, reader io.Reader) (int64, 
 
 	p.EncryptableBody = packetCtx.GetProtocolType().NewBody()
 	if p.EncryptableBody == nil {
-		return 0, ErrMalformedPacketBody(ErrNilBody)
+		return 0, ErrMalformedPacketBody(ErrInvalidProtocol)
 	}
 
 	if err := p.EncryptableBody.DeserializeFrom(deserializeCtx, deserializeCtx); err != nil {

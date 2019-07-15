@@ -98,7 +98,11 @@ func TestConsensusMain(t *testing.T) {
 		nodeKeeper.SetInitialSnapshot(nodes)
 		certificateManager := initCrypto(n, discoveryNodes)
 		datagramHandler := adapters.NewDatagramHandler()
-		transportFactory := transport2.NewFactory(configuration.NewHostNetwork().Transport)
+
+		conf := configuration.NewHostNetwork().Transport
+		conf.Address = n.Address()
+
+		transportFactory := transport2.NewFactory(conf)
 		transport, _ := transportFactory.CreateDatagramTransport(datagramHandler)
 
 		// consensusAdapter := NewEmuHostConsensusAdapter(n.Address())

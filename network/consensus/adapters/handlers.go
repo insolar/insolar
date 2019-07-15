@@ -94,7 +94,7 @@ func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, b
 
 	packetParser, err := dh.packetParserFactory.ParsePacket(ctx, bytes.NewReader(buf))
 	if err != nil {
-		logger.Error("Failed to get PacketParser")
+		logger.Error("Failed to get PacketParser: ", err)
 		return
 	}
 
@@ -103,7 +103,7 @@ func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, b
 	}
 	err = dh.packetProcessor.ProcessPacket(ctx, packetParser, &hostIdentity)
 	if err != nil {
-		logger.Error("Failed to process packet")
+		logger.Error("Failed to process packet: ", err)
 		return
 	}
 }
