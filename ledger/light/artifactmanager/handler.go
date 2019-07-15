@@ -184,10 +184,6 @@ func NewMessageHandler(
 			p.Dep.JetFetcher = h.jetTreeUpdater
 			p.Dep.Sender = h.Sender
 		},
-		GetRequest: func(p *proc.GetRequest) {
-			p.Dep.RecordAccessor = h.Records
-			p.Dep.Sender = h.Sender
-		},
 		GetRequestWM: func(p *proc.GetRequestWM) {
 			p.Dep.RecordAccessor = h.Records
 			p.Dep.Sender = h.Sender

@@ -302,7 +302,6 @@ type FilamentCalculatorDefault struct {
 	coordinator jet.Coordinator
 	jetFetcher  jet.Fetcher
 	sender      bus.Sender
-	pulse       pulse.Accessor
 }
 
 func NewFilamentCalculator(
@@ -558,18 +557,13 @@ func (c *FilamentCalculatorDefault) Clear(objID insolar.ID) {
 }
 
 func (c *FilamentCalculatorDefault) checkReason(ctx context.Context, reason insolar.Reference) (bool, error) {
-	currentPulse, err := c.pulse.Latest(ctx)
-	if err != nil {
-		return false, errors.Wrap(err, "failed to get pulse")
-	}
-
-	isBeyond, err := c.coordinator.IsBeyondLimit(ctx, currentPulse.PulseNumber, reason.Record().Pulse())
+	isBeyond, err := c.coordinator.IsBeyondLimit(ctx, reason.Record().Pulse())
 	if err != nil {
 		return false, errors.Wrap(err, "failed to calculate limit")
 	}
 	var node *insolar.Reference
 	if isBeyond {
-		node, err = c.coordinator.Heavy(ctx, reason.Record().Pulse())
+		node, err = c.coordinator.Heavy(ctx)
 		if err != nil {
 			return false, errors.Wrap(err, "failed to calculate node")
 		}
@@ -578,7 +572,7 @@ func (c *FilamentCalculatorDefault) checkReason(ctx context.Context, reason inso
 		if err != nil {
 			return false, errors.Wrap(err, "failed to fetch jet")
 		}
-		node, err = c.coordinator.NodeForJet(ctx, *jetID, currentPulse.PulseNumber, reason.Record().Pulse())
+		node, err = c.coordinator.NodeForJet(ctx, *jetID, reason.Record().Pulse())
 		if err != nil {
 			return false, errors.Wrap(err, "failed to calculate node")
 		}

@@ -25,7 +25,6 @@ type Dependencies struct {
 	EnsureIndex         func(*EnsureIndexWM)
 	SendObject          func(*SendObject)
 	GetCode             func(*GetCode)
-	GetRequest          func(*GetRequest)
 	GetRequestWM        func(*GetRequestWM)
 	SetRequest          func(*SetRequest)
 	SetResult           func(*SetResult)
@@ -58,7 +57,6 @@ func NewDependenciesMock() *Dependencies {
 		EnsureIndex:         func(*EnsureIndexWM) {},
 		SendObject:          func(*SendObject) {},
 		GetCode:             func(*GetCode) {},
-		GetRequest:          func(*GetRequest) {},
 		SetRequest:          func(*SetRequest) {},
 		SetResult:           func(*SetResult) {},
 		ActivateObject:      func(*ActivateObject) {},

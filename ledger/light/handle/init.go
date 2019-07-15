@@ -149,10 +149,6 @@ func (s *Init) handleParcel(ctx context.Context, f flow.Flow) error {
 	defer span.End()
 
 	switch msgType {
-	case insolar.TypeGetRequest.String():
-		msg := parcel.Message().(*message.GetRequest)
-		h := NewGetRequest(s.dep, meta, msg.Request)
-		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetChildren.String():
 		h := NewGetChildren(s.dep, meta, parcel)
 		return f.Handle(ctx, h.Present)

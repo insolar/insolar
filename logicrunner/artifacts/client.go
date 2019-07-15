@@ -439,41 +439,35 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (*i
 		return nil, nil, err
 	}
 
-	sender = messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryJetSender(m.JetStorage),
-	)
-	genericReply, err = sender(
-		ctx,
-		&message.GetRequest{
-			Request: requestID,
-		}, &insolar.MessageSendOptions{
-			Receiver: node,
-		},
-	)
+	msg, err := payload.NewMessage(&payload.GetRequest{
+		RequestID: requestID,
+	})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrap(err, "failed to create a message")
+	}
+	reps, done := m.sender.SendTarget(ctx, msg, *node)
+	defer done()
+	res, ok := <-reps
+	if !ok {
+		return nil, nil, errors.New("no reply while fetching request")
 	}
 
-	switch r := genericReply.(type) {
-	case *reply.Request:
-		rec := record.Virtual{}
-		err = rec.Unmarshal(r.Record)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "GetPendingRequest: can't deserialize record")
-		}
-		concrete := record.Unwrap(&rec)
-		castedRecord, ok := concrete.(*record.IncomingRequest)
-		if !ok {
-			return nil, nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", r)
-		}
-
-		return insolar.NewReference(requestID), castedRecord, nil
-	case *reply.Error:
-		return nil, nil, r.Error()
-	default:
-		return nil, nil, fmt.Errorf("GetPendingRequest: unexpected reply: %#v", genericReply)
+	pl, err := payload.UnmarshalFromMeta(res.Payload)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to unmarshal reply")
 	}
+	req, ok := pl.(*payload.Request)
+	if !ok {
+		return nil, nil, fmt.Errorf("unexpected reply %T", pl)
+	}
+
+	concrete := record.Unwrap(&req.Request)
+	castedRecord, ok := concrete.(*record.IncomingRequest)
+	if !ok {
+		return nil, nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", concrete)
+	}
+
+	return insolar.NewReference(requestID), castedRecord, nil
 }
 
 // HasPendingRequests returns true if object has unclosed requests.

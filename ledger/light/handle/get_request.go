@@ -19,32 +19,11 @@ package handle
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/pkg/errors"
 )
-
-type GetRequest struct {
-	dep     *proc.Dependencies
-	meta    payload.Meta
-	request insolar.ID
-}
-
-func NewGetRequest(dep *proc.Dependencies, meta payload.Meta, request insolar.ID) *GetRequest {
-	return &GetRequest{
-		dep:     dep,
-		request: request,
-		meta:    meta,
-	}
-}
-
-func (s *GetRequest) Present(ctx context.Context, f flow.Flow) error {
-	code := proc.NewGetRequest(s.request, s.meta)
-	s.dep.GetRequest(code)
-	return f.Procedure(ctx, code, false)
-}
 
 type GetRequestWM struct {
 	dep *proc.Dependencies

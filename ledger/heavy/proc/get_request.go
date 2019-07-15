@@ -21,6 +21,7 @@ import (
 
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
@@ -55,6 +56,13 @@ func (p *GetRequest) Proceed(ctx context.Context) error {
 	rec, err := p.dep.records.ForID(ctx, msg.RequestID)
 	if err != nil {
 		return errors.Wrap(err, "failed to find a request")
+	}
+
+	concrete := record.Unwrap(rec.Virtual)
+	_, isIncoming := concrete.(*record.IncomingRequest)
+	_, isOutgoing := concrete.(*record.IncomingRequest)
+	if !isIncoming && !isOutgoing {
+		return errors.New("failed to decode request")
 	}
 
 	rep, err := payload.NewMessage(&payload.Request{

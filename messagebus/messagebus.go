@@ -51,7 +51,6 @@ const deliverRPCMethodName = "MessageBus.Deliver"
 var transferredToWatermill = map[insolar.MessageType]struct{}{
 	insolar.TypeSetBlob:                            {},
 	insolar.TypeGetChildren:                        {},
-	insolar.TypeGetRequest:                         {},
 	insolar.TypeUpdateObject:                       {},
 	insolar.TypeGetPendingRequests:                 {},
 	insolar.TypeRegisterChild:                      {},

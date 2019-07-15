@@ -20,11 +20,9 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/bus"
 	wmbus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
@@ -52,6 +50,14 @@ func (p *GetRequestWM) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to fetch request")
 	}
+
+	concrete := record.Unwrap(rec.Virtual)
+	_, isIncoming := concrete.(*record.IncomingRequest)
+	_, isOutgoing := concrete.(*record.IncomingRequest)
+	if !isIncoming && !isOutgoing {
+		return errors.New("failed to decode request")
+	}
+
 	msg, err := payload.NewMessage(&payload.Request{
 		RequestID: p.requestID,
 		Request:   record.Wrap(rec),
@@ -63,50 +69,5 @@ func (p *GetRequestWM) Proceed(ctx context.Context) error {
 	go p.Dep.Sender.Reply(ctx, p.message, msg)
 	inslogger.FromContext(ctx).Info("sending request")
 
-	return nil
-}
-
-type GetRequest struct {
-	message payload.Meta
-	request insolar.ID
-
-	Dep struct {
-		RecordAccessor object.RecordAccessor
-		Sender         bus.Sender
-	}
-}
-
-func NewGetRequest(request insolar.ID, message payload.Meta) *GetRequest {
-	return &GetRequest{
-		request: request,
-		message: message,
-	}
-}
-
-func (p *GetRequest) Proceed(ctx context.Context) error {
-	rec, err := p.Dep.RecordAccessor.ForID(ctx, p.request)
-	if err != nil {
-		return errors.Wrap(err, "failed to fetch request")
-	}
-
-	virtRec := rec.Virtual
-	concrete := record.Unwrap(virtRec)
-	_, ok := concrete.(*record.IncomingRequest)
-	if !ok {
-		return errors.New("failed to decode request")
-	}
-
-	data, err := virtRec.Marshal()
-	if err != nil {
-		return errors.Wrap(err, "can't serialize record")
-	}
-
-	rep := &reply.Request{
-		ID:     p.request,
-		Record: data,
-	}
-
-	msg := bus.ReplyAsMessage(ctx, rep)
-	go p.Dep.Sender.Reply(ctx, p.message, msg)
 	return nil
 }
