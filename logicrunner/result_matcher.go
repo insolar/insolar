@@ -17,7 +17,7 @@ type resultsMatcher struct {
 	unwantedResponses map[insolar.Reference]message.ReturnResults
 }
 
-func NewResultsMatcher(lr *LogicRunner) resultsMatcher {
+func newResultsMatcher(lr *LogicRunner) resultsMatcher {
 	return resultsMatcher{
 		lr:                lr,
 		lock:              &sync.RWMutex{},

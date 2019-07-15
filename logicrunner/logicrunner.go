@@ -110,7 +110,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publi
 	}
 
 	initHandlers(&res)
-	res.resultsMatcher = NewResultsMatcher(&res)
+	res.resultsMatcher = newResultsMatcher(&res)
 
 	return &res, nil
 }
