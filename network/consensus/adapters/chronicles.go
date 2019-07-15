@@ -58,8 +58,8 @@ import (
 )
 
 func NewChronicles(pop censusimpl.ManyNodePopulation, pf profiles.Factory, vc census2.VersionedRegistries) api.ConsensusChronicles {
-	chronicles := censusimpl.NewLocalChronicles()
-	censusimpl.NewPrimingCensus(&pop, pf, vc).SetAsActiveTo(chronicles)
+	chronicles := censusimpl.NewLocalChronicles(pf)
+	censusimpl.NewPrimingCensus(&pop, vc).SetAsActiveTo(chronicles)
 	return chronicles
 }
 

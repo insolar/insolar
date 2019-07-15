@@ -232,5 +232,7 @@ func (cdf *ConsensusDigestFactory) GetAnnouncementDigester() cryptkit.SequenceDi
 }
 
 func (cdf *ConsensusDigestFactory) GetGlobulaStateDigester() transport.StateDigester {
-	return &gshDigester{&seqDigester{}}
+	return &gshDigester{
+		sd: &seqDigester{},
+	}
 }

@@ -413,7 +413,7 @@ func TestGlobulaConsensusPacketBody_Phases_Flag1(t *testing.T) {
 		{
 			"phase2",
 			phases.PacketPhase2,
-			226,
+			238,
 			p,
 		},
 		{
@@ -480,13 +480,13 @@ func TestGlobulaConsensusPacketBody_Phases_Flag2(t *testing.T) {
 		{
 			"phase1",
 			phases.PacketPhase1,
-			441,
+			453,
 			p,
 		},
 		{
 			"phase2",
 			phases.PacketPhase2,
-			440,
+			452,
 			p,
 		},
 		{
@@ -553,13 +553,13 @@ func TestGlobulaConsensusPacketBody_Phases_Flag12(t *testing.T) {
 		{
 			"phase1",
 			phases.PacketPhase1,
-			505,
+			517,
 			p,
 		},
 		{
 			"phase2",
 			phases.PacketPhase2,
-			504,
+			516,
 			p,
 		},
 		{

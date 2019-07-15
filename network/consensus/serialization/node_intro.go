@@ -88,9 +88,10 @@ type NodeBriefIntro struct {
 
 	// 4 | 6 | 18 bytes
 	// InboundRelayID common.ShortNodeID `insolar-transport:"AddrMode=2"`
-	BasePort    uint16 `insolar-transport:"AddrMode=0,1"`
-	PrimaryIPv4 uint32 `insolar-transport:"AddrMode=0"`
+	// BasePort    uint16 `insolar-transport:"AddrMode=0,1"`
+	// PrimaryIPv4 uint32 `insolar-transport:"AddrMode=0"`
 	// PrimaryIPv6    [4]uint32          `insolar-transport:"AddrMode=1"`
+	Endpoint [18]byte
 
 	// 128 bytes
 	NodePK          longbits.Bits512 // works as a unique node identity
@@ -133,12 +134,8 @@ func (bi *NodeBriefIntro) SerializeTo(ctx SerializeContext, writer io.Writer) er
 		return errors.Wrap(err, "failed to serialize StartPower")
 	}
 
-	if err := write(writer, bi.BasePort); err != nil {
-		return errors.Wrap(err, "failed to serialize BasePort")
-	}
-
-	if err := write(writer, bi.PrimaryIPv4); err != nil {
-		return errors.Wrap(err, "failed to serialize PrimaryIPv4")
+	if err := write(writer, bi.Endpoint); err != nil {
+		return errors.Wrap(err, "failed to serialize Endpoint")
 	}
 
 	if err := write(writer, bi.NodePK); err != nil {
@@ -165,12 +162,8 @@ func (bi *NodeBriefIntro) DeserializeFrom(ctx DeserializeContext, reader io.Read
 		return errors.Wrap(err, "failed to deserialize StartPower")
 	}
 
-	if err := read(reader, &bi.BasePort); err != nil {
+	if err := read(reader, &bi.Endpoint); err != nil {
 		return errors.Wrap(err, "failed to deserialize BasePort")
-	}
-
-	if err := read(reader, &bi.PrimaryIPv4); err != nil {
-		return errors.Wrap(err, "failed to deserialize PrimaryIPv4")
 	}
 
 	if err := read(reader, &bi.NodePK); err != nil {
