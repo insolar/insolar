@@ -200,7 +200,7 @@ func (emuNet *EmuNetwork) CreateSendToAllChannel() chan<- Packet {
 	return inbound
 }
 
-func (emuNet *EmuNetwork) CreateSendToAllFromOneChannel(sender endpoints.Name) chan<- interface{} {
+func (emuNet *EmuNetwork) CreateChannelSendToAllFromOne(sender endpoints.Name) chan<- interface{} {
 	inbound := make(chan interface{})
 	go func() {
 		for {
@@ -214,7 +214,7 @@ func (emuNet *EmuNetwork) CreateSendToAllFromOneChannel(sender endpoints.Name) c
 	return inbound
 }
 
-func (emuNet *EmuNetwork) CreateSendToRandomChannel(sender endpoints.Name, attempts int) chan<- interface{} {
+func (emuNet *EmuNetwork) CreateChannelSendToRandom(sender endpoints.Name, attempts int) chan<- interface{} {
 	inbound := make(chan interface{})
 	go func() {
 		for {
