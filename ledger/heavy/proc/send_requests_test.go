@@ -119,7 +119,6 @@ func TestSendRequests_Proceed(t *testing.T) {
 
 		mc.Wait(10 * time.Minute)
 		mc.Finish()
-		_, _ = rec1, rec2
 	})
 }
 

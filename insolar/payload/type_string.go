@@ -25,15 +25,17 @@ func _() {
 	_ = x[TypeSetIncomingRequest-14]
 	_ = x[TypeSetOutgoingRequest-15]
 	_ = x[TypeGetFilament-16]
-	_ = x[TypeFilamentSegment-17]
-	_ = x[TypeSetResult-18]
-	_ = x[TypeActivate-19]
-	_ = x[TypeRequestInfo-20]
+	_ = x[TypeGetRequest-17]
+	_ = x[TypeRequest-18]
+	_ = x[TypeFilamentSegment-19]
+	_ = x[TypeSetResult-20]
+	_ = x[TypeActivate-21]
+	_ = x[TypeRequestInfo-22]
 }
 
-const _Type_name = "TypeUnknownTypeMetaTypeErrorTypeIDTypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndexTypePassTypeGetCodeTypeCodeTypeSetCodeTypeSetIncomingRequestTypeSetOutgoingRequestTypeGetFilamentTypeFilamentSegmentTypeSetResultTypeActivateTypeRequestInfo"
+const _Type_name = "TypeUnknownTypeMetaTypeErrorTypeIDTypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndexTypePassTypeGetCodeTypeCodeTypeSetCodeTypeSetIncomingRequestTypeSetOutgoingRequestTypeGetFilamentTypeGetRequestTypeRequestTypeFilamentSegmentTypeSetResultTypeActivateTypeRequestInfo"
 
-var _Type_index = [...]uint16{0, 11, 19, 28, 34, 43, 56, 69, 81, 93, 102, 110, 121, 129, 140, 162, 184, 199, 218, 231, 243, 258}
+var _Type_index = [...]uint16{0, 11, 19, 28, 34, 43, 56, 69, 81, 93, 102, 110, 121, 129, 140, 162, 184, 199, 213, 224, 243, 256, 268, 283}
 
 func (i Type) String() string {
 	if i >= Type(len(_Type_index)-1) {

@@ -84,6 +84,9 @@ func New() *Handler {
 		SendRequests: func(p *proc.SendRequests) {
 			p.Dep(h.Sender, h.RecordAccessor, h.IndexAccessor)
 		},
+		GetRequest: func(p *proc.GetRequest) {
+			p.Dep(h.RecordAccessor, h.Sender)
+		},
 	}
 	h.dep = &dep
 	return h
@@ -133,7 +136,9 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 
 	switch payloadType {
 	case payload.TypeGetRequest:
-		asdfsdfdsf
+		p := proc.NewGetRequest(meta)
+		h.dep.GetRequest(p)
+		return p.Proceed(ctx)
 	case payload.TypeGetFilament:
 		p := proc.NewSendRequests(meta)
 		h.dep.SendRequests(p)
