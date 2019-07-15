@@ -18,6 +18,7 @@ package contracts
 
 import (
 	"fmt"
+	"math/big"
 	"strconv"
 
 	"github.com/insolar/insolar/insolar"
@@ -67,7 +68,7 @@ func rootDomain() insolar.GenesisContractState {
 			MigrationAdminMember:   genesisrefs.ContractMigrationAdminMember,
 			MigrationWallet:        genesisrefs.ContractMigrationWallet,
 			CostCenter:             genesisrefs.ContractCostCenter,
-			CommissionWallet:       genesisrefs.ContractCommissionWallet,
+			FeeWallet:              genesisrefs.ContractFeeWallet,
 			BurnAddressMap:         map[string]insolar.Reference{},
 			PublicKeyMap:           map[string]insolar.Reference{},
 			FreeBurnAddresses:      []string{},
@@ -116,7 +117,7 @@ func getWalletGenesisContractState(balance string, name string, parent string) i
 }
 
 func getCostCenterGenesisContractState() insolar.GenesisContractState {
-	cc, err := costcenter.New(genesisrefs.ContractCommissionWallet, genesisrefs.ContractTariff)
+	cc, err := costcenter.New(genesisrefs.ContractFeeWallet, genesisrefs.ContractTariff)
 	if err != nil {
 		panic("failed to create cost center instance")
 	}
@@ -131,7 +132,7 @@ func getCostCenterGenesisContractState() insolar.GenesisContractState {
 }
 
 func getTariffGenesisContractState() insolar.GenesisContractState {
-	t, err := tariff.New("5000000")
+	t, err := tariff.New(big.NewInt(1000 * 1000 * 1000).String())
 	if err != nil {
 		panic("failed to create tariff instance")
 	}

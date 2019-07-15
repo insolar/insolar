@@ -21,7 +21,11 @@ import (
 	"math/big"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/contract/member"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/wallet/safemath"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/costcenter"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/tariff"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
@@ -40,7 +44,7 @@ func New(balance string) (*Wallet, error) {
 }
 
 // Transfer transfers money to given wallet.
-func (w *Wallet) Transfer(amountStr string, toMember *insolar.Reference) (interface{}, error) {
+func (w *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toMember *insolar.Reference) (interface{}, error) {
 
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {
@@ -50,6 +54,27 @@ func (w *Wallet) Transfer(amountStr string, toMember *insolar.Reference) (interf
 	if amount.Cmp(zero) == -1 {
 		return nil, fmt.Errorf("amount must be larger then zero")
 	}
+
+	rd := rootdomain.GetObject(rootDomainRef)
+	ccRef, err := rd.GetCostCenter()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get cost center reference: %s", err.Error())
+	}
+
+	cc := costcenter.GetObject(ccRef)
+	tRef, err := cc.GetCurrentTariff()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tariff reference: %s", err.Error())
+	}
+
+	t := tariff.GetObject(tRef)
+	feeStr, err := t.CalcFee(amountStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to calculate fee for amount: %s", err.Error())
+	}
+	fee, _ := new(big.Int).SetString(feeStr, 10)
+
+	amountWithFee := new(big.Int).Add(fee, amount)
 
 	balance, ok := new(big.Int).SetString(w.Balance, 10)
 	if !ok {
@@ -61,18 +86,38 @@ func (w *Wallet) Transfer(amountStr string, toMember *insolar.Reference) (interf
 		return nil, fmt.Errorf("failed to get implementation: %s", err.Error())
 	}
 
-	newBalance, err := safemath.Sub(balance, amount)
+	newBalance, err := safemath.Sub(balance, amountWithFee)
 	if err != nil {
 		return nil, fmt.Errorf("not enough balance for transfer: %s", err.Error())
 	}
 	w.Balance = newBalance.String()
 
-	acceptErr := toWallet.Accept(amount.String())
-	if acceptErr == nil {
-		return "", nil
+	fwRef, err := rd.GetFeeWalletRef()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get fee wallet reference: %s", err.Error())
 	}
 
-	newBalance, err = safemath.Add(balance, amount)
+	feeWallet, err := wallet.GetImplementationFrom(fwRef)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get implementation: %s", err.Error())
+	}
+
+	acceptFeeErr := feeWallet.Accept(feeStr)
+	if acceptFeeErr != nil {
+		newBalance, err = safemath.Add(balance, amountWithFee)
+		if err != nil {
+			return nil, fmt.Errorf("failed to add amount back to balance: %s", err.Error())
+		}
+		w.Balance = newBalance.String()
+		return nil, fmt.Errorf("failed to transfer fee: %s", err.Error())
+	}
+
+	acceptErr := toWallet.Accept(amount.String())
+	if acceptErr == nil {
+		return member.TransferResponse{Fee: feeStr}, nil
+	}
+
+	newBalance, err = safemath.Add(balance, amountWithFee)
 	if err != nil {
 		return nil, fmt.Errorf("failed to add amount back to balance: %s", err.Error())
 	}

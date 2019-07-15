@@ -103,11 +103,13 @@ func INSMETHOD_Transfer(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	args := [2]interface{}{}
-	var args0 string
+	args := [3]interface{}{}
+	var args0 insolar.Reference
 	args[0] = &args0
-	var args1 *insolar.Reference
+	var args1 string
 	args[1] = &args1
+	var args2 *insolar.Reference
+	args[2] = &args2
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
@@ -115,7 +117,7 @@ func INSMETHOD_Transfer(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.Transfer(args0, args1)
+	ret0, ret1 := self.Transfer(args0, args1, args2)
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)

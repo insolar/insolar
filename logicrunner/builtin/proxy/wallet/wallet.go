@@ -155,10 +155,11 @@ func (r *Wallet) GetCode() (insolar.Reference, error) {
 }
 
 // Transfer is proxy generated method
-func (r *Wallet) Transfer(amountStr string, toMember *insolar.Reference) (interface{}, error) {
-	var args [2]interface{}
-	args[0] = amountStr
-	args[1] = toMember
+func (r *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toMember *insolar.Reference) (interface{}, error) {
+	var args [3]interface{}
+	args[0] = rootDomainRef
+	args[1] = amountStr
+	args[2] = toMember
 
 	var argsSerialized []byte
 
@@ -190,10 +191,11 @@ func (r *Wallet) Transfer(amountStr string, toMember *insolar.Reference) (interf
 }
 
 // TransferNoWait is proxy generated method
-func (r *Wallet) TransferNoWait(amountStr string, toMember *insolar.Reference) error {
-	var args [2]interface{}
-	args[0] = amountStr
-	args[1] = toMember
+func (r *Wallet) TransferNoWait(rootDomainRef insolar.Reference, amountStr string, toMember *insolar.Reference) error {
+	var args [3]interface{}
+	args[0] = rootDomainRef
+	args[1] = amountStr
+	args[2] = toMember
 
 	var argsSerialized []byte
 
@@ -211,10 +213,11 @@ func (r *Wallet) TransferNoWait(amountStr string, toMember *insolar.Reference) e
 }
 
 // TransferAsImmutable is proxy generated method
-func (r *Wallet) TransferAsImmutable(amountStr string, toMember *insolar.Reference) (interface{}, error) {
-	var args [2]interface{}
-	args[0] = amountStr
-	args[1] = toMember
+func (r *Wallet) TransferAsImmutable(rootDomainRef insolar.Reference, amountStr string, toMember *insolar.Reference) (interface{}, error) {
+	var args [3]interface{}
+	args[0] = rootDomainRef
+	args[1] = amountStr
+	args[2] = toMember
 
 	var argsSerialized []byte
 

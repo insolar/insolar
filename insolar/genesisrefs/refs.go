@@ -42,8 +42,8 @@ var (
 	ContractTariff = rootdomain.GenesisRef(insolar.GenesisNameTariff)
 	// ContractCostCenter is the cost center contract reference.
 	ContractCostCenter = rootdomain.GenesisRef(insolar.GenesisNameCostCenter)
-	// ContractCommissionWallet is the commission wallet contract reference.
-	ContractCommissionWallet = rootdomain.GenesisRef(insolar.GenesisNameCommissionWallet)
+	// ContractFeeWallet is the commission wallet contract reference.
+	ContractFeeWallet = rootdomain.GenesisRef(insolar.GenesisNameCommissionWallet)
 
 	// ContractMigrationDaemonMembers is the migration daemon members contracts references.
 	ContractMigrationDaemonMembers = func() (result []insolar.Reference) {

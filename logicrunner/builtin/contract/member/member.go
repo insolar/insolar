@@ -147,7 +147,7 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 		return m.addBurnAddressesCall(params)
 	case "wallet.getBalance":
 		return getBalanceCall(params)
-	case "wallet.transfer":
+	case "member.transfer":
 		return m.transferCall(params)
 	case "deposit.migration":
 		return m.migrationCall(params)
@@ -186,12 +186,12 @@ func (m *Member) addBurnAddressesCall(params map[string]interface{}) (interface{
 	}
 
 	rootDomain := rootdomain.GetObject(m.RootDomain)
-	migrationAdminRef, err := rootDomain.GetMigrationAdminMemberRef()
+	migrationAdminRef, err := rootDomain.GetMigrationAdminMember()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get migration daemon admin reference from root domain: %s", err.Error())
 	}
 
-	if m.GetReference() != *migrationAdminRef {
+	if m.GetReference() != migrationAdminRef {
 		return nil, fmt.Errorf("only migration daemon admin can call this method")
 	}
 
@@ -231,6 +231,11 @@ func getBalanceCall(params map[string]interface{}) (interface{}, error) {
 
 	return b, nil
 }
+
+type TransferResponse struct {
+	Fee string `json:"fee"`
+}
+
 func (m *Member) transferCall(params map[string]interface{}) (interface{}, error) {
 
 	recipientReferenceStr, ok := params["toMemberReference"].(string)
@@ -256,7 +261,7 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 		return nil, fmt.Errorf("failed to get wallet implementation of sender: %s", err.Error())
 	}
 
-	return w.Transfer(amount, recipientReference)
+	return w.Transfer(m.RootDomain, amount, recipientReference)
 }
 func (m *Member) migrationCall(params map[string]interface{}) (interface{}, error) {
 
@@ -326,6 +331,7 @@ func (m *Member) getNodeRef(publicKey string) (interface{}, error) {
 	return nodeRef, nil
 }
 
+// Create member methods.
 type CreateResponse struct {
 	Reference string `json:"reference"`
 }
@@ -334,7 +340,6 @@ type MigrationCreateResponse struct {
 	BurnAddress string `json:"migrationAddress"`
 }
 
-// Create member methods.
 func (m *Member) memberMigrationCreate(key string) (*MigrationCreateResponse, error) {
 
 	rootDomain := rootdomain.GetObject(m.RootDomain)

@@ -35,8 +35,8 @@ func New(commissionRate string) (*Tariff, error) {
 	}, nil
 }
 
-// CalcCommission calculates commission for amount.
-func (t Tariff) CalcCommission(amountStr string) (string, error) {
+// CalcFee calculates fee for amount. Returns fee.
+func (t Tariff) CalcFee(amountStr string) (string, error) {
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {
 		return "", fmt.Errorf("can't parse amount")
@@ -48,7 +48,14 @@ func (t Tariff) CalcCommission(amountStr string) (string, error) {
 	}
 
 	preResult := new(big.Int).Mul(amount, commissionRate)
-	result := new(big.Int).Div(preResult, big.NewInt(10000000000))
+
+	capacity := big.NewInt(10 * 1000 * 1000 * 1000)
+	result := new(big.Int).Div(preResult, capacity)
+
+	mod := new(big.Int).Mod(preResult, capacity)
+	if mod.Cmp(big.NewInt(0)) == 1 {
+		result = new(big.Int).Add(result, big.NewInt(1))
+	}
 
 	return result.String(), nil
 }
