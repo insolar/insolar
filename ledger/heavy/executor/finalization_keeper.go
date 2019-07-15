@@ -28,21 +28,21 @@ import (
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/heavy/executor.FinalizationKeeper -o ./ -s _gen_mock.go
 
-// FinalizationKeeper check how far last finalized pulse and current one from each other
+// FinalizationKeeper check how far from each other last finalized pulse and current one
 // and if distance is more than limit it stops network
 type FinalizationKeeper interface {
 	OnPulse(ctx context.Context, current insolar.PulseNumber) error
 }
 
-type finalizationKeeper struct {
+type FinalizationKeeperDefault struct {
 	jetKeeper       JetKeeper
 	networkStopper  insolar.TerminationHandler
 	limit           int
 	pulseCalculator pulse.Calculator
 }
 
-func NewFinalizationKeeper(jk JetKeeper, ns insolar.TerminationHandler, pc pulse.Calculator, limit int) *finalizationKeeper {
-	return &finalizationKeeper{
+func NewFinalizationKeeperDefault(jk JetKeeper, ns insolar.TerminationHandler, pc pulse.Calculator, limit int) *FinalizationKeeperDefault {
+	return &FinalizationKeeperDefault{
 		jetKeeper:       jk,
 		networkStopper:  ns,
 		limit:           limit - 1,
@@ -50,7 +50,7 @@ func NewFinalizationKeeper(jk JetKeeper, ns insolar.TerminationHandler, pc pulse
 	}
 }
 
-func (f *finalizationKeeper) OnPulse(ctx context.Context, current insolar.PulseNumber) error {
+func (f *FinalizationKeeperDefault) OnPulse(ctx context.Context, current insolar.PulseNumber) error {
 	logger := inslogger.FromContext(ctx)
 	bottomLevel, err := f.pulseCalculator.Backwards(ctx, current, f.limit)
 	if err != nil {

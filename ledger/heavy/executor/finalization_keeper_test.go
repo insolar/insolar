@@ -40,7 +40,7 @@ func TestFinalizationKeeper_WeAreTooYoung(t *testing.T) {
 		return insolar.Pulse{}, pulse.ErrNotFound
 	}
 
-	fk := NewFinalizationKeeper(jkMock, nil, calcMock, 100)
+	fk := NewFinalizationKeeperDefault(jkMock, nil, calcMock, 100)
 	err := fk.OnPulse(context.Background(), testPulse)
 	require.NoError(t, err)
 }
@@ -59,7 +59,7 @@ func TestFinalizationKeeper_CalculatorReturnError(t *testing.T) {
 		return insolar.Pulse{}, testError
 	}
 
-	fk := NewFinalizationKeeper(jkMock, nil, calcMock, 100)
+	fk := NewFinalizationKeeperDefault(jkMock, nil, calcMock, 100)
 	err := fk.OnPulse(context.Background(), testPulse)
 	require.Contains(t, err.Error(), testError.Error())
 }
@@ -74,7 +74,7 @@ func TestFinalizationKeeper_OldCurrentPulse(t *testing.T) {
 	calcMock := network.NewPulseCalculatorMock(t)
 	calcMock.BackwardsMock.Return(insolar.Pulse{PulseNumber: testPulse + insolar.PulseNumber(limit)}, nil)
 
-	fk := NewFinalizationKeeper(jkMock, nil, calcMock, limit)
+	fk := NewFinalizationKeeperDefault(jkMock, nil, calcMock, limit)
 	err := fk.OnPulse(context.Background(), testPulse)
 	require.EqualError(t, err, "Current pulse ( 65537 ) is less than last confirmed ( 65538 )")
 }
@@ -93,7 +93,7 @@ func TestFinalizationKeeper_LimitExceeded(t *testing.T) {
 		return insolar.Pulse{PulseNumber: p1 - insolar.PulseNumber(p2)}, nil
 	}
 
-	fk := NewFinalizationKeeper(jkMock, networkMock, calcMock, limit)
+	fk := NewFinalizationKeeperDefault(jkMock, networkMock, calcMock, limit)
 	err := fk.OnPulse(context.Background(), testPulse+insolar.PulseNumber(limit*10))
 	require.Contains(t, err.Error(), "last finalized pulse falls behind too much")
 }
@@ -110,7 +110,7 @@ func TestFinalizationKeeper_HappyPath(t *testing.T) {
 	calcMock := network.NewPulseCalculatorMock(t)
 	calcMock.BackwardsMock.Return(insolar.Pulse{PulseNumber: testPulse - 1}, nil)
 
-	fk := NewFinalizationKeeper(jkMock, networkMock, calcMock, limit)
+	fk := NewFinalizationKeeperDefault(jkMock, networkMock, calcMock, limit)
 	err := fk.OnPulse(context.Background(), testPulse+insolar.PulseNumber(limit))
 	require.NoError(t, err)
 }

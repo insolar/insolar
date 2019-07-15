@@ -247,7 +247,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		pm.PulseAppender = Pulses
 		pm.PulseAccessor = Pulses
 		pm.JetModifier = jets
-		pm.FinalizationKeeper = executor.NewFinalizationKeeper(jetKeeper, Termination, Pulses, cfg.Ledger.LightChainLimit)
+		pm.FinalizationKeeper = executor.NewFinalizationKeeperDefault(jetKeeper, Termination, Pulses, cfg.Ledger.LightChainLimit)
 
 		h := handler.New()
 		h.RecordAccessor = records
