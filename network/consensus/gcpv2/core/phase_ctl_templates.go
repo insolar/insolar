@@ -62,7 +62,7 @@ type PhaseControllerTemplate struct {
 func (c *PhaseControllerTemplate) BeforeStart(realm *FullRealm) {
 }
 
-func (*PhaseControllerTemplate) StartWorker(ctx context.Context) {
+func (*PhaseControllerTemplate) StartWorker(ctx context.Context, realm *FullRealm) {
 }
 
 type PrepPhaseControllerTemplate struct {
@@ -71,7 +71,7 @@ type PrepPhaseControllerTemplate struct {
 func (c *PrepPhaseControllerTemplate) BeforeStart(realm *PrepRealm) {
 }
 
-func (*PrepPhaseControllerTemplate) StartWorker(ctx context.Context) {
+func (*PrepPhaseControllerTemplate) StartWorker(ctx context.Context, realm *PrepRealm) {
 }
 
 //var _ PacketDispatcher = &HostPacketDispatcher{}

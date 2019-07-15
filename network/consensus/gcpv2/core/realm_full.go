@@ -298,7 +298,7 @@ func (r *FullRealm) startWorkers(controllers []PhaseController) {
 		ctl.BeforeStart(r)
 	}
 	for _, ctl := range controllers {
-		ctl.StartWorker(r.roundContext)
+		ctl.StartWorker(r.roundContext, r)
 	}
 }
 

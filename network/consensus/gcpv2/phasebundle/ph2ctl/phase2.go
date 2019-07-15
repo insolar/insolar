@@ -79,7 +79,7 @@ func NewPhase2Controller(loopingMinimalDelay time.Duration, packetPrepareOptions
 var _ core.PhaseController = &Phase2Controller{}
 
 type Phase2Controller struct {
-	joinctl.PhaseControllerWithJoinersTemplate
+	//joinctl.PhaseControllerWithJoinersTemplate
 	packetPrepareOptions transport.PacketSendOptions
 	queueNshReady        <-chan *core.NodeAppearance
 	loopingMinimalDelay  time.Duration

@@ -52,7 +52,7 @@ package phasebundle
 
 import (
 	"context"
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"fmt"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
@@ -63,89 +63,54 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
-func NewPhase0Controller() *Phase0Controller {
-	return &Phase0Controller{}
+/*
+Does Phase0/Phase1/Phase1Rq processing
+*/
+func NewPhase01Controller(packetPrepareOptions transport.PacketSendOptions) *Phase01Controller {
+	return &Phase01Controller{packetPrepareOptions: packetPrepareOptions}
 }
 
-func NewPhase1Controller(packetPrepareOptions transport.PacketSendOptions) *Phase1Controller {
-	return &Phase1Controller{packetPrepareOptions: packetPrepareOptions}
-}
+func (p *packetPhase0Dispatcher) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, n *core.NodeAppearance) error {
 
-func NewReqPhase1Controller(packetPrepareOptions transport.PacketSendOptions, delegate *Phase1Controller) *ReqPhase1Controller {
-	return &ReqPhase1Controller{packetPrepareOptions: packetPrepareOptions, delegate: delegate}
-}
-
-var _ core.PhaseController = &Phase0Controller{}
-
-type Phase0Controller struct {
-	core.PhaseControllerTemplate
-}
-
-func (*Phase0Controller) GetPacketType() []phases.PacketType {
-	return []phases.PacketType{phases.PacketPhase0}
-}
-
-func (c *Phase0Controller) CreatePacketDispatcher(pt phases.PacketType, ctlIndex int,
-	realm *core.FullRealm) (core.PacketDispatcher, core.PerNodePacketDispatcherFactory) {
-
-	return &packetPhase0Dispatcher{}, nil
-}
-
-type packetPhase0Dispatcher struct {
-}
-
-func (p *packetPhase0Dispatcher) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
-	from endpoints.Inbound, flags core.PacketVerifyFlags) error {
-
-	p0 := packet.GetMemberPacket().AsPhase0Packet()
-	pp := p0.GetEmbeddedPulsePacket()
-
+	p0 := packet.AsPhase0Packet()
 	//TODO check NodeRank - especially for suspected node
-
 	//TODO when PulseDataExt is bigger than ~1.5KB - ignore it, as we will not be able to resend it within Ph0/Ph1 packets
-
-	err := n.SetPacketReceivedWithDupError(c.GetPacketType())
-	return handleEmbeddedPulsePacket(ctx, p, pp, n, c.R, err)
+	return p.ctl.handlePulseData(ctx, packet, p0.GetEmbeddedPulsePacket(), n)
 }
 
-func handleEmbeddedPulsePacket(ctx context.Context, p transport.MemberPacketReader, pp transport.PulsePacketReader, n *core.NodeAppearance,
-	r *core.FullRealm, defErr error) error {
-
-	// TODO validate pulse data
-	pp.GetPulseDataEvidence()
-	p.GetPacketSignature()
-	_ = ctx.Err()
-
-	if r.GetPulseData() == pp.GetPulseData() {
-		return defErr
+func (c *packetPhase1Dispatcher) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, n *core.NodeAppearance) error {
+	p1 := packet.AsPhase1Packet()
+	err := c.ctl.handleNodeData(p1, n)
+	if err != nil {
+		return err
 	}
-	return n.Blames().NewMismatchedPulsePacket(n.GetProfile(), r.GetOriginalPulse(), pp.GetPulseDataEvidence())
-}
 
-var _ core.PhaseController = &Phase1Controller{}
-
-type Phase1Controller struct {
-	packetPrepareOptions transport.PacketSendOptions
-}
-
-func (*Phase1Controller) GetPacketType() []phases.PacketType {
-	return []phases.PacketType{phases.PacketPhase1, phases.PacketReqPhase1}
-}
-
-func (c *Phase1Controller) HandleMemberPacket(ctx context.Context, p transport.MemberPacketReader, n *core.NodeAppearance) error {
-	p1 := p.AsPhase1Packet()
-	err := c.handleNodeData(p1, n)
-
-	if err == nil && p1.HasPulseData() {
+	if p1.HasPulseData() {
 		pp := p1.GetEmbeddedPulsePacket()
-		err = handleEmbeddedPulsePacket(ctx, p, pp, n, c.R, nil)
+		err = c.ctl.handlePulseData(ctx, packet, pp, n)
 	}
 	return err
 }
 
-/* Is also used by ReqPhase1Controller */
-func (c *Phase1Controller) handleNodeData(p1 transport.Phase1PacketReader, n *core.NodeAppearance) error {
-	dupErr := n.SetPacketReceivedWithDupError(c.GetPacketType())
+func (c *packetPhase1RqDispatcher) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, n *core.NodeAppearance) error {
+
+	p1 := packet.AsPhase1Packet()
+	err := c.ctl.handleNodeData(p1, n)
+	if err != nil {
+		return err
+	}
+	if p1.HasPulseData() {
+		return fmt.Errorf("pulse data is not expected")
+	}
+	if !c.ctl.R.GetSelf().IsNshRequired() {
+		c.ctl.sendReqReply(ctx, n)
+	} else {
+		inslogger.FromContext(ctx).Warn("got Phase1Req, but NSH is still unavailable")
+	}
+	return nil
+}
+
+func (c *Phase01Controller) handleNodeData(p1 transport.Phase1PacketReader, n *core.NodeAppearance) error {
 
 	// if p1.HasSelfIntro() {
 	// TODO register protocol misbehavior - IntroClaim was not expected
@@ -173,18 +138,63 @@ func (c *Phase1Controller) handleNodeData(p1 transport.Phase1PacketReader, n *co
 	}
 
 	_, err := n.ApplyNodeMembership(ma)
-
-	if err != nil {
-		return err
-	}
-	return dupErr
+	return err
 }
 
-func (c *Phase1Controller) StartWorker(ctx context.Context) {
+var _ core.PhaseController = &Phase01Controller{}
+
+type Phase01Controller struct {
+	core.PhaseControllerTemplate
+	packetPrepareOptions transport.PacketSendOptions
+	R                    *core.FullRealm
+}
+
+func (c *Phase01Controller) CreatePacketDispatcher(pt phases.PacketType, ctlIndex int, realm *core.FullRealm) (core.PacketDispatcher, core.PerNodePacketDispatcherFactory) {
+	switch pt {
+	case phases.PacketPhase0:
+		return &packetPhase0Dispatcher{packetPhase01Dispatcher{ctl: c}}, nil
+	case phases.PacketPhase1:
+		return &packetPhase1Dispatcher{packetPhase01Dispatcher{ctl: c}}, nil
+	case phases.PacketReqPhase1:
+		return &packetPhase1RqDispatcher{packetPhase01Dispatcher{ctl: c}}, nil
+	default:
+		panic("illegal value")
+	}
+}
+
+func (*Phase01Controller) GetPacketType() []phases.PacketType {
+	return []phases.PacketType{phases.PacketPhase0, phases.PacketPhase1, phases.PacketReqPhase1}
+}
+
+func (c *Phase01Controller) sendReqReply(ctx context.Context, target *core.NodeAppearance) {
+
+	p1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
+		c.R.GetOriginalPulse(), nil, transport.SendWithoutPulseData|c.packetPrepareOptions)
+
+	p1.SendTo(ctx, target.GetProfile(), 0, c.R.GetPacketSender())
+	target.SetPacketSent(phases.PacketPhase1)
+}
+
+func (c *Phase01Controller) handlePulseData(ctx context.Context, packet transport.MemberPacketReader,
+	pp transport.PulsePacketReader, n *core.NodeAppearance) error {
+
+	// TODO validate pulse data
+	pp.GetPulseDataEvidence()
+	packet.GetPacketSignature()
+	_ = ctx.Err()
+
+	if c.R.GetPulseData() == pp.GetPulseData() {
+		return nil
+	}
+	return n.Blames().NewMismatchedPulsePacket(n.GetProfile(), c.R.GetOriginalPulse(), pp.GetPulseDataEvidence())
+}
+
+func (c *Phase01Controller) StartWorker(ctx context.Context, realm *core.FullRealm) {
+	c.R = realm
 	go c.workerPhase01(ctx)
 }
 
-func (c *Phase1Controller) workerPhase01(ctx context.Context) {
+func (c *Phase01Controller) workerPhase01(ctx context.Context) {
 	nsh, startIndex := c.workerSendPhase0(ctx)
 	if startIndex < 0 {
 		return
@@ -194,7 +204,7 @@ func (c *Phase1Controller) workerPhase01(ctx context.Context) {
 	c.workerSendPhase1(ctx, startIndex)
 }
 
-func (c *Phase1Controller) workerSendPhase0(ctx context.Context) (proofs.NodeStateHash, int) {
+func (c *Phase01Controller) workerSendPhase0(ctx context.Context) (proofs.NodeStateHash, int) {
 
 	nshChannel := c.R.UpstreamPreparePulseChange()
 	/*
@@ -242,7 +252,7 @@ func (c *Phase1Controller) workerSendPhase0(ctx context.Context) (proofs.NodeSta
 	}
 }
 
-func (c *Phase1Controller) workerSendPhase1(ctx context.Context, startIndex int) {
+func (c *Phase01Controller) workerSendPhase1(ctx context.Context, startIndex int) {
 
 	p1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
 		c.R.GetOriginalPulse(), nil, c.packetPrepareOptions)
@@ -253,7 +263,7 @@ func (c *Phase1Controller) workerSendPhase1(ctx context.Context, startIndex int)
 	p1.SendToMany(ctx, len(otherNodes)-startIndex, c.R.GetPacketSender(),
 		func(ctx context.Context, targetIdx int) (profiles.ActiveNode, transport.PacketSendOptions) {
 			target := otherNodes[targetIdx+startIndex]
-			target.SetPacketSent(c.GetPacketType())
+			target.SetPacketSent(phases.PacketPhase1)
 
 			if target.HasAnyPacketReceived() {
 				return target.GetProfile(), transport.SendWithoutPulseData
@@ -264,7 +274,7 @@ func (c *Phase1Controller) workerSendPhase1(ctx context.Context, startIndex int)
 	p1.SendToMany(ctx, startIndex, c.R.GetPacketSender(),
 		func(ctx context.Context, targetIdx int) (profiles.ActiveNode, transport.PacketSendOptions) {
 			target := otherNodes[targetIdx]
-			target.SetPacketSent(c.GetPacketType())
+			target.SetPacketSent(phases.PacketPhase1)
 
 			if target.HasAnyPacketReceived() {
 				return target.GetProfile(), transport.SendWithoutPulseData
@@ -273,37 +283,19 @@ func (c *Phase1Controller) workerSendPhase1(ctx context.Context, startIndex int)
 		})
 }
 
-var _ core.PhaseController = &ReqPhase1Controller{}
-
-type ReqPhase1Controller struct {
-	core.PhaseControllerPerMemberTemplate
-	delegate             *Phase1Controller
-	packetPrepareOptions transport.PacketSendOptions
+type packetPhase01Dispatcher struct {
+	core.MemberPacketDispatcher
+	ctl *Phase01Controller
 }
 
-func (c *ReqPhase1Controller) GetPacketType() phases.PacketType {
-	return phases.PacketReqPhase1
+type packetPhase0Dispatcher struct {
+	packetPhase01Dispatcher
 }
 
-func (c *ReqPhase1Controller) HandleMemberPacket(ctx context.Context, p transport.MemberPacketReader, n *core.NodeAppearance) error {
-	p1 := p.AsPhase1Packet()
-	err := c.delegate.handleNodeData(p1, n)
-	if err != nil {
-		return err
-	}
-	if !c.R.GetSelf().IsNshRequired() {
-		c.sendReqPhase1Reply(ctx, n)
-	} else {
-		inslogger.FromContext(ctx).Warn("got Phase1 request, but NSH is still unavailable")
-	}
-	return nil
+type packetPhase1Dispatcher struct {
+	packetPhase01Dispatcher
 }
 
-func (c *ReqPhase1Controller) sendReqPhase1Reply(ctx context.Context, target *core.NodeAppearance) {
-
-	p1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
-		c.R.GetOriginalPulse(), nil, transport.SendWithoutPulseData|c.packetPrepareOptions)
-
-	p1.SendTo(ctx, target.GetProfile(), 0, c.R.GetPacketSender())
-	target.SetPacketSent(c.GetPacketType())
+type packetPhase1RqDispatcher struct {
+	packetPhase01Dispatcher
 }

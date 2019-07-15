@@ -58,58 +58,42 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
-func NewPhase0PrepController(s PulseSelectionStrategy) *Phase0PrepController {
-	return &Phase0PrepController{pulseStrategy: s}
+func NewPhase01PrepController(s PulseSelectionStrategy) *Phase01PrepController {
+	return &Phase01PrepController{dispatcher: packetPrepPhase01Dispatcher{pulseStrategy: s}}
 }
 
-func NewPhase1PrepController(s PulseSelectionStrategy) *Phase1PrepController {
-	return &Phase1PrepController{pulseStrategy: s}
+var _ core.PrepPhaseController = &Phase01PrepController{}
+
+type Phase01PrepController struct {
+	core.PrepPhaseControllerTemplate
+	dispatcher packetPrepPhase01Dispatcher
 }
 
-var _ core.PrepPhaseController = &Phase0PrepController{}
+func (r *Phase01PrepController) CreatePacketDispatcher(pt phases.PacketType, realm *core.PrepRealm) core.PacketDispatcher {
+	r.dispatcher.realm = realm
+	return &r.dispatcher
+}
 
-type Phase0PrepController struct {
-	pulseStrategy PulseSelectionStrategy
+func (*Phase01PrepController) GetPacketType() []phases.PacketType {
+	return []phases.PacketType{phases.PacketPhase0, phases.PacketPhase1}
+}
+
+type packetPrepPhase01Dispatcher struct {
+	core.HostPacketDispatcher
 	realm         *core.PrepRealm
-}
-
-func (r *Phase0PrepController) BeforeStart(realm *core.PrepRealm) {
-	r.realm = realm
-}
-
-func (*Phase0PrepController) GetPacketType() phases.PacketType {
-	return phases.PacketPhase0
-}
-
-func (r *Phase0PrepController) HandleHostPacket(ctx context.Context, reader transport.PacketParser, from endpoints.Inbound) (postpone bool, err error) {
-	p := reader.GetMemberPacket().AsPhase0Packet()
-	err = r.pulseStrategy.HandlePrepPulsarPacket(ctx, p.GetEmbeddedPulsePacket(), from, r.realm, false)
-	return err == nil, err
-}
-
-func (*Phase0PrepController) StartWorker(ctx context.Context) {
-}
-
-var _ core.PrepPhaseController = &Phase1PrepController{}
-
-type Phase1PrepController struct {
 	pulseStrategy PulseSelectionStrategy
-	realm         *core.PrepRealm
 }
 
-func (r *Phase1PrepController) BeforeStart(realm *core.PrepRealm) {
-	r.realm = realm
-}
-
-func (*Phase1PrepController) GetPacketType() phases.PacketType {
-	return phases.PacketPhase1
-}
-
-func (r *Phase1PrepController) HandleHostPacket(ctx context.Context, reader transport.PacketParser, from endpoints.Inbound) (postpone bool, err error) {
-	p := reader.GetMemberPacket().AsPhase1Packet()
-	err = r.pulseStrategy.HandlePrepPulsarPacket(ctx, p.GetEmbeddedPulsePacket(), from, r.realm, false)
-	return err == nil, err
-}
-
-func (*Phase1PrepController) StartWorker(ctx context.Context) {
+func (p *packetPrepPhase01Dispatcher) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
+	from endpoints.Inbound, flags core.PacketVerifyFlags) error {
+	switch packet.GetPacketType() {
+	case phases.PacketPhase0:
+		p0 := packet.GetMemberPacket().AsPhase0Packet()
+		return p.pulseStrategy.HandlePrepPulsarPacket(ctx, p0.GetEmbeddedPulsePacket(), from, p.realm, false)
+	case phases.PacketPhase1:
+		p1 := packet.GetMemberPacket().AsPhase1Packet()
+		return p.pulseStrategy.HandlePrepPulsarPacket(ctx, p1.GetEmbeddedPulsePacket(), from, p.realm, false)
+	default:
+		panic("illegal value")
+	}
 }

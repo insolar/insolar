@@ -84,7 +84,7 @@ type PrepPhaseController interface {
 	//HandleHostPacket(ctx context.Context, reader transport.PacketParser, from endpoints.Inbound) (postpone bool, err error)
 
 	BeforeStart(realm *PrepRealm)
-	StartWorker(ctx context.Context)
+	StartWorker(ctx context.Context, realm *PrepRealm)
 }
 
 /* realm is provided for this handler to avoid being replicated in individual handlers */
@@ -98,7 +98,7 @@ type PhaseController interface {
 	//HandleUnknownMemberPacket(ctx context.Context, reader transport.MemberPacketReader, from endpoints.Inbound) (*NodeAppearance, error) // GetHandlerType() == PacketHandlerTypeMemberFromUnknown
 
 	BeforeStart(realm *FullRealm)
-	StartWorker(ctx context.Context)
+	StartWorker(ctx context.Context, realm *FullRealm)
 }
 
 type PhaseControllersBundle interface {

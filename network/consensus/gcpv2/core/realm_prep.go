@@ -184,7 +184,7 @@ func (p *PrepRealm) start(ctx context.Context, controllers []PrepPhaseController
 		ctl.BeforeStart(p)
 	}
 	for _, ctl := range controllers {
-		ctl.StartWorker(ctx)
+		ctl.StartWorker(ctx, p)
 	}
 }
 

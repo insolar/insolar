@@ -165,6 +165,10 @@ type emuEndpoint struct {
 	name endpoints.Name
 }
 
+func (p *emuEndpoint) AsByteString() string {
+	return fmt.Sprintf("out:name:%s", p.name)
+}
+
 func (p *emuEndpoint) GetIPAddress() packets.NodeAddress {
 	panic("implement me")
 }
