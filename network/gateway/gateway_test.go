@@ -68,7 +68,7 @@ import (
 )
 
 func emtygateway(t *testing.T) network.Gateway {
-	return NewNoNetwork(testnet.NewGatewayerMock(t),
+	return NewNoNetwork(testnet.NewGatewayerMock(t), mockPulseManager(t),
 		testnet.NewNodeKeeperMock(t), testutils.NewContractRequesterMock(t),
 		testutils.NewCryptographyServiceMock(t), testnet.NewHostNetworkMock(t),
 		testutils.NewCertificateManagerMock(t))
@@ -79,8 +79,9 @@ func TestSWitch(t *testing.T) {
 
 	nodekeeper := testnet.NewNodeKeeperMock(t)
 	gatewayer := testnet.NewGatewayerMock(t)
+	pm := mockPulseManager(t)
 
-	ge := NewNoNetwork(gatewayer,
+	ge := NewNoNetwork(gatewayer, pm,
 		nodekeeper, testutils.NewContractRequesterMock(t),
 		testutils.NewCryptographyServiceMock(t), testnet.NewHostNetworkMock(t),
 		testutils.NewCertificateManagerMock(t))
@@ -128,7 +129,8 @@ func TestDumbComplete_GetCert(t *testing.T) {
 
 	CR := testutils.NewContractRequesterMock(t)
 	CM := testutils.NewCertificateManagerMock(t)
-	ge := NewNoNetwork(gatewayer,
+	pm := mockPulseManager(t)
+	ge := NewNoNetwork(gatewayer, pm,
 		nodekeeper, CR,
 		testutils.NewCryptographyServiceMock(t),
 		testnet.NewHostNetworkMock(t),
