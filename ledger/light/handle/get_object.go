@@ -76,7 +76,7 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	if idx.Result.Lifeline.StateID == record.StateDeactivation {
-		return errors.New("object deactivated")
+		return errors.New("object is deactivated")
 	}
 
 	send := proc.NewSendObject(s.meta, msg.ObjectID, idx.Result.Lifeline)

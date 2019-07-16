@@ -56,7 +56,7 @@ func Test_AllOperations(t *testing.T) {
 	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
 	s.Pulse(ctx)
 
-	// Save and check request.
+	// Save and check code.
 	{
 		codeID, codeRecord := setCode(t, s)
 		codeRec := getCode(t, s, codeID)
