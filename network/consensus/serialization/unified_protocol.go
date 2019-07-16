@@ -178,6 +178,7 @@ func (h *Header) setPayloadLength(payloadLength uint16) {
 		panic("invalid payload length")
 	}
 
+	h.HeaderAndPayloadLength ^= h.HeaderAndPayloadLength & payloadLengthMask
 	h.HeaderAndPayloadLength |= payloadLength
 }
 

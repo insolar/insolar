@@ -64,10 +64,11 @@ type PacketParserMock struct {
 	IsRelayForbiddenCounter    uint64
 	IsRelayForbiddenPreCounter uint64
 	IsRelayForbiddenMock       mPacketParserMockIsRelayForbidden
-}
 
-func (m *PacketParserMock) ParsePacketBody() (PacketParser, error) {
-	return nil, nil
+	ParsePacketBodyFunc       func() (r PacketParser, r1 error)
+	ParsePacketBodyCounter    uint64
+	ParsePacketBodyPreCounter uint64
+	ParsePacketBodyMock       mPacketParserMockParsePacketBody
 }
 
 //NewPacketParserMock returns a mock for github.com/insolar/insolar/network/consensus/gcpv2/api/transport.PacketParser
@@ -87,6 +88,7 @@ func NewPacketParserMock(t minimock.Tester) *PacketParserMock {
 	m.GetSourceIDMock = mPacketParserMockGetSourceID{mock: m}
 	m.GetTargetIDMock = mPacketParserMockGetTargetID{mock: m}
 	m.IsRelayForbiddenMock = mPacketParserMockIsRelayForbidden{mock: m}
+	m.ParsePacketBodyMock = mPacketParserMockParsePacketBody{mock: m}
 
 	return m
 }
@@ -1297,6 +1299,143 @@ func (m *PacketParserMock) IsRelayForbiddenFinished() bool {
 	return true
 }
 
+type mPacketParserMockParsePacketBody struct {
+	mock              *PacketParserMock
+	mainExpectation   *PacketParserMockParsePacketBodyExpectation
+	expectationSeries []*PacketParserMockParsePacketBodyExpectation
+}
+
+type PacketParserMockParsePacketBodyExpectation struct {
+	result *PacketParserMockParsePacketBodyResult
+}
+
+type PacketParserMockParsePacketBodyResult struct {
+	r  PacketParser
+	r1 error
+}
+
+//Expect specifies that invocation of PacketParser.ParsePacketBody is expected from 1 to Infinity times
+func (m *mPacketParserMockParsePacketBody) Expect() *mPacketParserMockParsePacketBody {
+	m.mock.ParsePacketBodyFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PacketParserMockParsePacketBodyExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of PacketParser.ParsePacketBody
+func (m *mPacketParserMockParsePacketBody) Return(r PacketParser, r1 error) *PacketParserMock {
+	m.mock.ParsePacketBodyFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PacketParserMockParsePacketBodyExpectation{}
+	}
+	m.mainExpectation.result = &PacketParserMockParsePacketBodyResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of PacketParser.ParsePacketBody is expected once
+func (m *mPacketParserMockParsePacketBody) ExpectOnce() *PacketParserMockParsePacketBodyExpectation {
+	m.mock.ParsePacketBodyFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &PacketParserMockParsePacketBodyExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *PacketParserMockParsePacketBodyExpectation) Return(r PacketParser, r1 error) {
+	e.result = &PacketParserMockParsePacketBodyResult{r, r1}
+}
+
+//Set uses given function f as a mock of PacketParser.ParsePacketBody method
+func (m *mPacketParserMockParsePacketBody) Set(f func() (r PacketParser, r1 error)) *PacketParserMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.ParsePacketBodyFunc = f
+	return m.mock
+}
+
+//ParsePacketBody implements github.com/insolar/insolar/network/consensus/gcpv2/api/transport.PacketParser interface
+func (m *PacketParserMock) ParsePacketBody() (r PacketParser, r1 error) {
+	counter := atomic.AddUint64(&m.ParsePacketBodyPreCounter, 1)
+	defer atomic.AddUint64(&m.ParsePacketBodyCounter, 1)
+
+	if len(m.ParsePacketBodyMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.ParsePacketBodyMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to PacketParserMock.ParsePacketBody.")
+			return
+		}
+
+		result := m.ParsePacketBodyMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the PacketParserMock.ParsePacketBody")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.ParsePacketBodyMock.mainExpectation != nil {
+
+		result := m.ParsePacketBodyMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the PacketParserMock.ParsePacketBody")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.ParsePacketBodyFunc == nil {
+		m.t.Fatalf("Unexpected call to PacketParserMock.ParsePacketBody.")
+		return
+	}
+
+	return m.ParsePacketBodyFunc()
+}
+
+//ParsePacketBodyMinimockCounter returns a count of PacketParserMock.ParsePacketBodyFunc invocations
+func (m *PacketParserMock) ParsePacketBodyMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.ParsePacketBodyCounter)
+}
+
+//ParsePacketBodyMinimockPreCounter returns the value of PacketParserMock.ParsePacketBody invocations
+func (m *PacketParserMock) ParsePacketBodyMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.ParsePacketBodyPreCounter)
+}
+
+//ParsePacketBodyFinished returns true if mock invocations count is ok
+func (m *PacketParserMock) ParsePacketBodyFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.ParsePacketBodyMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.ParsePacketBodyCounter) == uint64(len(m.ParsePacketBodyMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.ParsePacketBodyMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.ParsePacketBodyCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.ParsePacketBodyFunc != nil {
+		return atomic.LoadUint64(&m.ParsePacketBodyCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *PacketParserMock) ValidateCallCounters() {
@@ -1335,6 +1474,10 @@ func (m *PacketParserMock) ValidateCallCounters() {
 
 	if !m.IsRelayForbiddenFinished() {
 		m.t.Fatal("Expected call to PacketParserMock.IsRelayForbidden")
+	}
+
+	if !m.ParsePacketBodyFinished() {
+		m.t.Fatal("Expected call to PacketParserMock.ParsePacketBody")
 	}
 
 }
@@ -1390,6 +1533,10 @@ func (m *PacketParserMock) MinimockFinish() {
 		m.t.Fatal("Expected call to PacketParserMock.IsRelayForbidden")
 	}
 
+	if !m.ParsePacketBodyFinished() {
+		m.t.Fatal("Expected call to PacketParserMock.ParsePacketBody")
+	}
+
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -1413,6 +1560,7 @@ func (m *PacketParserMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetSourceIDFinished()
 		ok = ok && m.GetTargetIDFinished()
 		ok = ok && m.IsRelayForbiddenFinished()
+		ok = ok && m.ParsePacketBodyFinished()
 
 		if ok {
 			return
@@ -1455,6 +1603,10 @@ func (m *PacketParserMock) MinimockWait(timeout time.Duration) {
 
 			if !m.IsRelayForbiddenFinished() {
 				m.t.Error("Expected call to PacketParserMock.IsRelayForbidden")
+			}
+
+			if !m.ParsePacketBodyFinished() {
+				m.t.Error("Expected call to PacketParserMock.ParsePacketBody")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -1502,6 +1654,10 @@ func (m *PacketParserMock) AllMocksCalled() bool {
 	}
 
 	if !m.IsRelayForbiddenFinished() {
+		return false
+	}
+
+	if !m.ParsePacketBodyFinished() {
 		return false
 	}
 

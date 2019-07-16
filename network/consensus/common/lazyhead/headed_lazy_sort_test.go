@@ -237,6 +237,17 @@ func TestGetReversedHead(t *testing.T) {
 	require.Equal(t, 2, k.(int))
 }
 
+func TestHasFullHead(t *testing.T) {
+	hl := NewHeadedLazySortedList(1, lessTestFn, 1)
+	require.Panics(t, func() { hl.HasFullHead(-1) })
+
+	require.Panics(t, func() { hl.HasFullHead(2) })
+
+	require.True(t, hl.HasFullHead(1))
+
+	require.False(t, hl.HasFullHead(0))
+}
+
 func TestCheckHeadLen(t *testing.T) {
 	hl := NewHeadedLazySortedList(3, lessTestFn, 1)
 	hl.Add(2)

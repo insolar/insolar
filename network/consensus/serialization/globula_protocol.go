@@ -56,7 +56,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
@@ -85,9 +84,9 @@ type GlobulaConsensusPacketBody struct {
 	PulsarPacket EmbeddedPulsarData     `insolar-transport:"Packet=0,1;optional=PacketFlags[0]"` // ByteSize>=124
 	Announcement MembershipAnnouncement `insolar-transport:"Packet=1,2"`                         // ByteSize= (JOINER) 5, (MEMBER) 201, 205 (MEMBER+JOINER) 196, 198, 208
 
-	//TODO implement an additional field and serialization of NodeExtendedIntro
-	//This field can be included by sender who has introduced a joiner to facilitate joining process, and contains full intro data of the joiner
-	//This field  is not mandatory and can be omitted, e.g. when network is stable or some space is required for claims
+	// TODO implement an additional field and serialization of NodeExtendedIntro
+	// This field can be included by sender who has introduced a joiner to facilitate joining process, and contains full intro data of the joiner
+	// This field  is not mandatory and can be omitted, e.g. when network is stable or some space is required for claims
 	JoinerExt NodeExtendedIntro `insolar-transport:"Packet=1;optional=PacketFlags[3]"`
 
 	/*
@@ -116,7 +115,7 @@ func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io
 	}
 
 	if packetType == phases.PacketPhase0 || packetType == phases.PacketPhase1 {
-		if ctx.HasFlag(0) { // valid for Phase 0, 1: HasPulsarData : full pulsar data data is present
+		if ctx.HasFlag(FlagHasPulsePacket) { // valid for Phase 0, 1: HasPulsarData : full pulsar data data is present
 			if err := b.PulsarPacket.SerializeTo(ctx, writer); err != nil {
 				return errors.Wrap(err, "failed to serialize PulsarPacket")
 			}
@@ -126,6 +125,14 @@ func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io
 	if packetType == phases.PacketPhase1 || packetType == phases.PacketPhase2 {
 		if err := b.Announcement.SerializeTo(ctx, writer); err != nil {
 			return errors.Wrap(err, "failed to serialize Announcement")
+		}
+	}
+
+	if packetType == phases.PacketPhase1 {
+		if ctx.HasFlag(3) {
+			if err := b.JoinerExt.SerializeTo(ctx, writer); err != nil {
+				return errors.Wrap(err, "failed to serialize JoinerExt")
+			}
 		}
 	}
 
@@ -186,7 +193,7 @@ func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, rea
 	}
 
 	if packetType == phases.PacketPhase0 || packetType == phases.PacketPhase1 {
-		if ctx.HasFlag(0) { // valid for Phase 0, 1: HasPulsarData : full pulsar data data is present
+		if ctx.HasFlag(FlagHasPulsePacket) { // valid for Phase 0, 1: HasPulsarData : full pulsar data data is present
 			if err := b.PulsarPacket.DeserializeFrom(ctx, reader); err != nil {
 				return errors.Wrap(err, "failed to deserialize PulsarPacket")
 			}
@@ -196,6 +203,14 @@ func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, rea
 	if packetType == phases.PacketPhase1 || packetType == phases.PacketPhase2 {
 		if err := b.Announcement.DeserializeFrom(ctx, reader); err != nil {
 			return errors.Wrap(err, "failed to deserialize Announcement")
+		}
+	}
+
+	if packetType == phases.PacketPhase1 {
+		if ctx.HasFlag(3) {
+			if err := b.JoinerExt.DeserializeFrom(ctx, reader); err != nil {
+				return errors.Wrap(err, "failed to deserialize JoinerExt")
+			}
 		}
 	}
 
@@ -278,9 +293,12 @@ type EmbeddedPulsarData struct {
 	// PulsarSignature  longbits.Bits512                  `insolar-transport:"ignore=send"` // ByteSize=64
 }
 
-func (pd *EmbeddedPulsarData) SerializeTo(ctx SerializeContext, writer io.Writer) error {
-	pd.Size = uint16(len(pd.Data))
+func (pd *EmbeddedPulsarData) setData(data []byte) {
+	pd.Size = uint16(len(data))
+	pd.Data = data
+}
 
+func (pd *EmbeddedPulsarData) SerializeTo(ctx SerializeContext, writer io.Writer) error {
 	if err := write(writer, pd.Size); err != nil {
 		return errors.Wrap(err, "failed to serialize Data")
 	}
@@ -298,7 +316,7 @@ func (pd *EmbeddedPulsarData) DeserializeFrom(ctx DeserializeContext, reader io.
 	}
 
 	if pd.Size == 0 {
-		return nil
+		return errors.New("failed to deserialize PulseDataExt")
 	}
 
 	pd.Data = make([]byte, pd.Size)
@@ -306,7 +324,7 @@ func (pd *EmbeddedPulsarData) DeserializeFrom(ctx DeserializeContext, reader io.
 		return errors.Wrap(err, "failed to deserialize Data")
 	}
 
-	p, err := packet.DeserializePacket(inslogger.FromContext(ctx), bytes.NewReader(pd.Data))
+	p, err := packet.DeserializePacketRaw(bytes.NewReader(pd.Data))
 	if err != nil {
 		return errors.Wrap(err, "failed to deserialize PulsarPacket")
 	}
@@ -385,8 +403,7 @@ type NeighbourAnnouncement struct {
 
 		The field "Joiner" MUST BE OMITTED when	this joiner is introduced by the sending node
 	*/
-	Joiner JoinAnnouncement `insolar-transport:"optional=CurrentRank==0"` // ByteSize = 135, 137, 147
-	// TODO implement for serialization
+	Joiner             JoinAnnouncement    `insolar-transport:"optional=CurrentRank==0"` // ByteSize = 135, 137, 147
 	JoinerIntroducedBy insolar.ShortNodeID `insolar-transport:"optional=CurrentRank==0"`
 
 	/* For non-joiner */
@@ -414,6 +431,9 @@ func (na *NeighbourAnnouncement) SerializeTo(ctx SerializeContext, writer io.Wri
 			if err := na.Joiner.SerializeTo(ctx, writer); err != nil {
 				return errors.Wrap(err, "failed to serialize Joiner")
 			}
+		}
+		if err := write(writer, na.JoinerIntroducedBy); err != nil {
+			return errors.Wrap(err, "failed to serialize JoinerIntroducedBy")
 		}
 	} else {
 		ctx.SetInContext(ContextNeighbourAnnouncement)
@@ -451,6 +471,9 @@ func (na *NeighbourAnnouncement) DeserializeFrom(ctx DeserializeContext, reader 
 			if err := na.Joiner.DeserializeFrom(ctx, reader); err != nil {
 				return errors.Wrap(err, "failed to deserialize Joiner")
 			}
+		}
+		if err := read(reader, &na.JoinerIntroducedBy); err != nil {
+			return errors.Wrap(err, "failed to deserialize JoinerIntroducedBy")
 		}
 	} else {
 		ctx.SetInContext(ContextNeighbourAnnouncement)
@@ -521,6 +544,9 @@ func (ma *MembershipAnnouncement) DeserializeFrom(ctx DeserializeContext, reader
 	}
 
 	if ma.CurrentRank != 0 {
+		ctx.SetInContext(ContextMembershipAnnouncement)
+		defer ctx.SetInContext(NoContext)
+
 		if err := read(reader, &ma.RequestedPower); err != nil {
 			return errors.Wrap(err, "failed to deserialize RequestedPower")
 		}
@@ -591,7 +617,7 @@ func (na *NodeAnnouncement) SerializeTo(ctx SerializeContext, writer io.Writer) 
 			if err := na.Leaver.SerializeTo(ctx, writer); err != nil {
 				return errors.Wrap(err, "failed to serialize Leaver")
 			}
-		} else if na.AnnounceID != 0 {
+		} else if !na.AnnounceID.IsAbsent() {
 			if err := na.Joiner.SerializeTo(ctx, writer); err != nil {
 				return errors.Wrap(err, "failed to serialize Joiner")
 			}
@@ -624,7 +650,7 @@ func (na *NodeAnnouncement) DeserializeFrom(ctx DeserializeContext, reader io.Re
 			if err := na.Leaver.DeserializeFrom(ctx, reader); err != nil {
 				return errors.Wrap(err, "failed to deserialize Leaver")
 			}
-		} else if na.AnnounceID != 0 {
+		} else if !na.AnnounceID.IsAbsent() {
 			if err := na.Joiner.DeserializeFrom(ctx, reader); err != nil {
 				return errors.Wrap(err, "failed to deserialize Joiner")
 			}
