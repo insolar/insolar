@@ -33,6 +33,8 @@ func (de decodeError) Error() string {
 		de.metadataType, de.err.Error())
 }
 
+// decodeType tries to decode message.Message as protobuf, return annotated error with type of legacy message.
+// ignore protobuf decoding errors, it will happen until legacy messages exist
 func decodeType(m *message.Message) (payload.Type, error) {
 	var meta payload.Meta
 	err := meta.Unmarshal(m.Payload)
