@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,58 +46,43 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-//
+///
 
-package phasebundle
+package transport
 
 import (
-	"context"
-
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
 
-func NewPhase01PrepController(s PulseSelectionStrategy) *Phase01PrepController {
-	return &Phase01PrepController{pulseStrategy: s}
-}
-
-var _ core.PrepPhaseController = &Phase01PrepController{}
-
-type Phase01PrepController struct {
-	core.PrepPhaseControllerTemplate
-	core.HostPacketDispatcherTemplate
-
-	realm         *core.PrepRealm
-	pulseStrategy PulseSelectionStrategy
-}
-
-func (c *Phase01PrepController) CreatePacketDispatcher(pt phases.PacketType, realm *core.PrepRealm) core.PacketDispatcher {
-	c.realm = realm
-	return c
-}
-
-func (c *Phase01PrepController) GetPacketType() []phases.PacketType {
-	return []phases.PacketType{phases.PacketPhase0, phases.PacketPhase1}
-}
-
-func (c *Phase01PrepController) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
-	from endpoints.Inbound, flags core.PacketVerifyFlags) error {
-
-	// TODO check ranks?
-
-	switch packet.GetPacketType() {
-	case phases.PacketPhase0:
-		p0 := packet.GetMemberPacket().AsPhase0Packet()
-		return c.pulseStrategy.HandlePrepPulsarPacket(ctx, p0.GetEmbeddedPulsePacket(), from, c.realm, false)
-	case phases.PacketPhase1:
-		p1 := packet.GetMemberPacket().AsPhase1Packet()
-		if !p1.HasPulseData() {
-			return nil
-		}
-		return c.pulseStrategy.HandlePrepPulsarPacket(ctx, p1.GetEmbeddedPulsePacket(), from, c.realm, false)
-	default:
-		panic("illegal value")
+func NewJoinerAnnouncement(np profiles.StaticProfile, announcerID insolar.ShortNodeID,
+	joinerSignature cryptkit.SignatureHolder) *JoinerAnnouncement {
+	return &JoinerAnnouncement{
+		privStaticProfile: np,
+		announcerID:       announcerID,
+		joinerSignature:   joinerSignature,
 	}
+}
+
+var _ JoinerAnnouncementReader = &JoinerAnnouncement{}
+
+type privStaticProfile profiles.StaticProfile
+
+type JoinerAnnouncement struct {
+	privStaticProfile
+	announcerID     insolar.ShortNodeID
+	joinerSignature cryptkit.SignatureHolder
+}
+
+func (p *JoinerAnnouncement) GetJoinerSignature() cryptkit.SignatureHolder {
+	return p.joinerSignature
+}
+
+func (p *JoinerAnnouncement) GetBriefIntroduction() BriefIntroductionReader {
+	return p
+}
+
+func (p *JoinerAnnouncement) GetAnnouncerID() insolar.ShortNodeID {
+	return p.announcerID
 }

@@ -117,11 +117,8 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		}
 
 		sourceID = packet.GetSourceID()
-		sourceNode = r.GetPopulation().GetNodeAppearance(sourceID)
 
-		if sourceNode == nil {
-			sourceNode = r.GetPurgatoryNode(sourceID)
-		}
+		sourceNode = r.getMemberReceiver(sourceID)
 	default:
 		// TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
 		verifyFlags |= SkipVerify
@@ -414,7 +411,16 @@ func (r *FullRealm) CreateAnnouncement(n *NodeAppearance) *transport.NodeAnnounc
 		panic("illegal state")
 	}
 
-	return transport.NewNodeAnnouncement(n.profile, ma, r.GetNodeCount(), r.pulseData.PulseNumber)
+	var joiner *transport.JoinerAnnouncement
+	if !ma.JoinerID.IsAbsent() {
+		//jna := r.GetPopulation().GetNodeAppearance(ma.JoinerID)
+		//if jna != nil {
+		//	jp := jna.GetProfile().GetStatic()
+		//	joiner = transport.NewJoinerAnnouncement(jp, n.GetNodeID(), jp.GetAnnouncementSignature())
+		//}
+	}
+
+	return transport.NewNodeAnnouncement(n.profile, ma, r.GetNodeCount(), r.pulseData.PulseNumber, joiner)
 }
 
 func (r *FullRealm) CreateLocalAnnouncement() *transport.NodeAnnouncementProfile {
@@ -535,6 +541,15 @@ func (r *FullRealm) GetPurgatoryNode(id insolar.ShortNodeID) MemberPacketReceive
 
 func (r *FullRealm) GetOrCreatePurgatoryNode(id insolar.ShortNodeID, reader transport.MemberPacketReader, dispatcher PacketDispatcher) MemberPacketReceiver {
 	return nil // TODO
+}
+
+func (r *FullRealm) getMemberReceiver(id insolar.ShortNodeID) MemberPacketReceiver {
+	//Purgatory MUST be checked first to avoid "missing" a node during its transition between the purgatory and the normal population
+	node := r.GetPurgatoryNode(id)
+	if node != nil {
+		return node
+	}
+	return r.GetPopulation().GetNodeAppearance(id)
 }
 
 // func (r *FullRealm) getPurgatoryNode(profile common2.BriefCandidateProfile) *NodeAppearance {

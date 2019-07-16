@@ -173,16 +173,21 @@ func (r *EmuPulsarNetPacket) String() string {
 var _ cryptkit.SignedEvidenceHolder = &basePacket{}
 
 type basePacket struct {
-	src         insolar.ShortNodeID
-	tgt         insolar.ShortNodeID
-	nodeCount   uint16
-	mp          profiles.MembershipProfile
-	isLeaving   bool
-	leaveReason uint32
+	src             insolar.ShortNodeID
+	tgt             insolar.ShortNodeID
+	nodeCount       uint16
+	mp              profiles.MembershipProfile
+	isLeaving       bool
+	leaveReason     uint32
+	joiner          transport.JoinerAnnouncementReader
+	joinerAnnouncer insolar.ShortNodeID
 }
 
 func (r *basePacket) GetJoinerIntroducedByID() insolar.ShortNodeID {
-	return insolar.AbsentShortNodeID
+	if r.joiner == nil {
+		return insolar.AbsentShortNodeID
+	}
+	return r.joinerAnnouncer
 }
 
 func (r *basePacket) ParsePacketBody() (transport.PacketParser, error) {
@@ -202,11 +207,14 @@ func (r *basePacket) GetLeaveReason() uint32 {
 }
 
 func (r *basePacket) GetJoinerID() insolar.ShortNodeID {
-	return 0
+	if r.joiner == nil {
+		return insolar.AbsentShortNodeID
+	}
+	return r.joiner.GetBriefIntroduction().GetStaticNodeID()
 }
 
 func (r *basePacket) GetJoinerAnnouncement() transport.JoinerAnnouncementReader {
-	return nil
+	return r.joiner
 }
 
 func (r *basePacket) GetNodeStateHashEvidence() proofs.NodeStateHashEvidence {

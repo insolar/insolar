@@ -52,7 +52,6 @@ package transport
 
 import (
 	"fmt"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
@@ -61,12 +60,13 @@ import (
 )
 
 func NewNodeAnnouncement(np profiles.ActiveNode, ma profiles.MembershipAnnouncement, nodeCount int,
-	pn pulse.Number) *NodeAnnouncementProfile {
+	pn pulse.Number, joiner *JoinerAnnouncement) *NodeAnnouncementProfile {
 	return &NodeAnnouncementProfile{
 		nodeID:    np.GetNodeID(),
 		nodeCount: uint16(nodeCount),
 		ma:        ma,
 		pn:        pn,
+		joiner:    joiner,
 	}
 }
 
@@ -96,6 +96,7 @@ type NodeAnnouncementProfile struct {
 	nodeID    insolar.ShortNodeID
 	pn        pulse.Number
 	nodeCount uint16
+	joiner    *JoinerAnnouncement
 }
 
 func (c *NodeAnnouncementProfile) GetRequestedPower() member.Power {
@@ -114,12 +115,22 @@ func (c *NodeAnnouncementProfile) GetJoinerID() insolar.ShortNodeID {
 	return c.ma.JoinerID
 }
 
-func (c *NodeAnnouncementProfile) GetJoinerIntroducedByID() insolar.ShortNodeID {
-	return insolar.AbsentShortNodeID // TODO
+func (c *NodeAnnouncementProfile) GetJoinerAnnouncement() JoinerAnnouncementReader {
+	if c.joiner == nil {
+		return nil
+	}
+
+	if c.joiner.GetBriefIntroduction().GetStaticNodeID() == c.ma.JoinerID {
+		return c.joiner
+	}
+	panic("illegal state")
 }
 
-func (c *NodeAnnouncementProfile) GetJoinerAnnouncement() JoinerAnnouncementReader {
-	panic("unsupported")
+func (c *NodeAnnouncementProfile) GetJoinerIntroducedByID() insolar.ShortNodeID {
+	if c.joiner == nil {
+		return insolar.AbsentShortNodeID
+	}
+	return c.joiner.GetAnnouncerID()
 }
 
 func (c *NodeAnnouncementProfile) GetNodeRank() member.Rank {

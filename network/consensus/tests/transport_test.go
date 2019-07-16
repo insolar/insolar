@@ -155,11 +155,13 @@ func (r *emuPacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncemen
 	v := EmuPhase1NetPacket{
 		EmuPhase0NetPacket: EmuPhase0NetPacket{
 			basePacket: basePacket{
-				src:         sender.GetNodeID(),
-				nodeCount:   sender.GetNodeCount(),
-				mp:          sender.GetMembershipProfile(),
-				isLeaving:   sender.IsLeaving(),
-				leaveReason: sender.GetLeaveReason(),
+				src:             sender.GetNodeID(),
+				nodeCount:       sender.GetNodeCount(),
+				mp:              sender.GetMembershipProfile(),
+				isLeaving:       sender.IsLeaving(),
+				leaveReason:     sender.GetLeaveReason(),
+				joiner:          sender.GetJoinerAnnouncement(),
+				joinerAnnouncer: sender.GetJoinerIntroducedByID(),
 			},
 			pulsePacket: pp},
 	}
