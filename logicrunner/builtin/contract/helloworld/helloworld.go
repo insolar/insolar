@@ -77,38 +77,6 @@ func (hw *HelloWorld) CreateChild() (interface{}, error) {
 	return chw.GetReference().String(), nil
 }
 
-func (hw *HelloWorld) CountChild() (interface{}, error) {
-	count := 0
-
-	iterator, err := hw.NewChildrenTypedIterator(hwProxy.GetPrototype())
-	if err != nil {
-		return nil, fmt.Errorf("[ CountChild ] Can't get children: %s", err.Error())
-	}
-
-	for iterator.HasNext() {
-		cref, err := iterator.Next()
-		if err != nil {
-			return nil, fmt.Errorf("[ CountChild ] Can't get next child: %s", err.Error())
-		}
-
-		m := hwProxy.GetObject(cref)
-
-		childCountI, err := m.Count()
-		if err != nil {
-			return nil, fmt.Errorf("[ CountChild ] Can't get count of child: %s", err.Error())
-		}
-
-		childCount, ok := childCountI.(uint64)
-		if !ok {
-			return nil, fmt.Errorf("[ CountChild ] Bad childCount format, expected int got %T", childCountI)
-		}
-
-		count = count + int(childCount)
-	}
-
-	return count, nil
-}
-
 type Request struct {
 	JsonRpc  string `json:"jsonrpc"`
 	Id       int    `json:"id"`
@@ -150,8 +118,6 @@ func (hw *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
 		return hw.Errored()
 	case "CreateChild":
 		return hw.CreateChild()
-	case "CountChild":
-		return hw.CountChild()
 	case "ReturnObj":
 		return hw.ReturnObj()
 	case "NumberPulse":

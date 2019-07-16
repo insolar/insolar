@@ -323,45 +323,6 @@ func INSMETHOD_CreateChild(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
-func INSMETHOD_CountChild(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := common.CurrentProxyCtx
-
-	self := new(HelloWorld)
-
-	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeCountChild ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-	}
-
-	err := ph.Deserialize(object, self)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeCountChild ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
-	}
-
-	args := []interface{}{}
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeCountChild ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
-	}
-
-	ret0, ret1 := self.CountChild()
-
-	state := []byte{}
-	err = ph.Serialize(self, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret1 = ph.MakeErrorSerializable(ret1)
-
-	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
-
-	return state, ret, err
-}
-
 func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 
@@ -443,7 +404,6 @@ func Initialize() XXX_insolar.ContractWrapper {
 			"Errored":     INSMETHOD_Errored,
 			"NumberPulse": INSMETHOD_NumberPulse,
 			"CreateChild": INSMETHOD_CreateChild,
-			"CountChild":  INSMETHOD_CountChild,
 			"Call":        INSMETHOD_Call,
 		},
 		Constructors: XXX_insolar.ContractConstructors{

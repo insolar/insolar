@@ -144,7 +144,7 @@ func TestActivateObject_EmptyActivateRequestField(t *testing.T) {
 	handler := handle.NewActivateObject(proc.NewDependenciesMock(), msg, false)
 
 	err = handler.Present(ctx, f)
-	assert.EqualError(t, err, "request is nil")
+	assert.EqualError(t, err, "request is empty")
 }
 
 func TestActivateObject_IncorrectActivateResultPayload(t *testing.T) {

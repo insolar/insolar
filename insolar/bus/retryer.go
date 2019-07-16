@@ -46,6 +46,14 @@ func NewRetrySender(sender Sender, pulseAccessor pulse.Accessor, tries uint) *Re
 	return r
 }
 
+func (r *RetrySender) SendTarget(ctx context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func()) {
+	panic("not implemented")
+}
+
+func (r *RetrySender) Reply(ctx context.Context, origin payload.Meta, reply *message.Message) {
+	panic("not implemented")
+}
+
 // SendRole sends message to specified role, using provided Sender.SendRole. If error with CodeFlowCanceled
 // was received, it retries request after pulse on current node will be changed.
 // Replies will be written to the returned channel. Always read from the channel using multiple assignment
