@@ -131,8 +131,8 @@ func TestActivateObject_SetIndexErr(t *testing.T) {
 	recordsMock := object.NewRecordModifierMock(t)
 	recordsMock.SetMock.Return(nil)
 
-	idxModifierMock := object.NewIndexModifierMock(t)
-	idxModifierMock.SetIndexMock.Return(errors.New("something strange from SetIndex"))
+	idxStorageMock := object.NewIndexStorageMock(t)
+	idxStorageMock.SetIndexMock.Return(errors.New("something strange from SetIndex"))
 
 	p := proc.NewActivateObject(
 		payload.Meta{},
@@ -146,7 +146,7 @@ func TestActivateObject_SetIndexErr(t *testing.T) {
 		writeAccessor,
 		idxLockMock,
 		recordsMock,
-		idxModifierMock,
+		idxStorageMock,
 		nil,
 		nil,
 	)
@@ -174,8 +174,8 @@ func TestActivateObject_FilamentSetResultErr(t *testing.T) {
 	recordsMock := object.NewRecordModifierMock(t)
 	recordsMock.SetMock.Return(nil)
 
-	idxModifierMock := object.NewIndexModifierMock(t)
-	idxModifierMock.SetIndexMock.Return(nil)
+	idxStorageMock := object.NewIndexStorageMock(t)
+	idxStorageMock.SetIndexMock.Return(nil)
 
 	filaments := executor.NewFilamentModifierMock(t)
 	filaments.SetResultMock.Return(nil, errors.New("something strange from filament.SetResult"))
@@ -192,7 +192,7 @@ func TestActivateObject_FilamentSetResultErr(t *testing.T) {
 		writeAccessor,
 		idxLockMock,
 		recordsMock,
-		idxModifierMock,
+		idxStorageMock,
 		filaments,
 		nil,
 	)
@@ -220,8 +220,8 @@ func TestActivateObject_Proceed(t *testing.T) {
 	recordsMock := object.NewRecordModifierMock(t)
 	recordsMock.SetMock.Return(nil)
 
-	idxModifierMock := object.NewIndexModifierMock(t)
-	idxModifierMock.SetIndexMock.Return(nil)
+	idxStorageMock := object.NewIndexStorageMock(t)
+	idxStorageMock.SetIndexMock.Return(nil)
 
 	filaments := executor.NewFilamentModifierMock(t)
 	filaments.SetResultMock.Return(nil, nil)
@@ -241,7 +241,7 @@ func TestActivateObject_Proceed(t *testing.T) {
 		writeAccessor,
 		idxLockMock,
 		recordsMock,
-		idxModifierMock,
+		idxStorageMock,
 		filaments,
 		sender,
 	)
