@@ -22,7 +22,6 @@ import (
 	"sync"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/introspector/introproto"
 )
 
@@ -40,23 +39,12 @@ func NewMessageStatByType() *MessageStatByType {
 }
 
 // Filter counts published messages by type.
-func (ms *MessageStatByType) Filter(m *message.Message) *message.Message {
-	var meta payload.Meta
-	err := meta.Unmarshal(m.Payload)
-	if err != nil {
-		panic(err)
-	}
-
-	typ, err := payload.UnmarshalType(meta.Payload)
-	if err != nil {
-		panic(err)
-	}
-
+func (ms *MessageStatByType) Filter(m *message.Message) (*message.Message, error) {
+	typ, err := decodeType(m)
 	ms.Lock()
 	ms.stat[typ.String()]++
 	ms.Unlock()
-
-	return m
+	return m, err
 }
 
 // GetMessagesStat returns publish statistic per message type.

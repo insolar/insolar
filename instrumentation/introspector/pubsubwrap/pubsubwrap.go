@@ -17,12 +17,14 @@
 package pubsubwrap
 
 import (
+	"fmt"
+
 	"github.com/ThreeDotsLabs/watermill/message"
 )
 
 // FilterMiddleware an interface for message filtering and modification.
 type FilterMiddleware interface {
-	Filter(m *message.Message) *message.Message
+	Filter(m *message.Message) (*message.Message, error)
 }
 
 // PubSubWrapper wraps message Publisher and Subscriber.
@@ -50,9 +52,21 @@ func (p *PubSubWrapper) Middleware(fm ...FilterMiddleware) {
 func (p *PubSubWrapper) Publish(topic string, messages ...*message.Message) error {
 	out := make([]*message.Message, 0, len(messages))
 	for _, m := range messages {
+	FiltersLoop:
 		for _, f := range p.filters {
-			if m = f.Filter(m); m == nil {
-				break
+			m, err := f.Filter(m)
+			if err != nil {
+				switch err.(type) {
+				case decodeError:
+					fmt.Println("pubsubwrap: failed to decode message:", err)
+					break FiltersLoop
+				default:
+					panic("pubsubwrap: unexpected filter error: " + err.Error())
+				}
+			}
+			// message filtered, skip other filters
+			if m == nil {
+				break FiltersLoop
 			}
 		}
 		if m != nil {
