@@ -63,14 +63,6 @@ import (
 	"github.com/insolar/insolar/network/node"
 )
 
-// todo: remove
-// type BootstrapResult struct {
-// 	Host *host.Host
-// 	// FirstPulseTime    time.Time
-// 	ReconnectRequired bool
-// 	NetworkSize       int
-// }
-
 // RequestHandler handler function to process incoming requests from network and return responses to these requests.
 type RequestHandler func(ctx context.Context, request ReceivedPacket) (response Packet, err error)
 
@@ -95,9 +87,6 @@ type HostNetwork interface {
 	// BuildResponse create response to an incoming request with Data set to responseData.
 	BuildResponse(ctx context.Context, request Packet, responseData interface{}) Packet
 }
-
-// ConsensusPacketHandler callback function for consensus packets handling
-type ConsensusPacketHandler func(incomingPacket packets.ConsensusPacket, sender insolar.Reference)
 
 // Packet is a packet that is transported via network by HostNetwork.
 type Packet interface {
