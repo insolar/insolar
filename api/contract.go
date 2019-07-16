@@ -143,7 +143,7 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 			CallType:        record.CTSaveAsChild,
 			APIRequestID:    utils.TraceID(ctx),
 			Reason:          insolarApi.MakeReason(pulse.PulseNumber, args.MethodArgs),
-			Sender:          s.runner.JetCoordinator.Me(),
+			APINode:         s.runner.JetCoordinator.Me(),
 		},
 	}
 
@@ -201,7 +201,7 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 			Arguments:    args.MethodArgs,
 			APIRequestID: utils.TraceID(ctx),
 			Reason:       insolarApi.MakeReason(pulse.PulseNumber, args.MethodArgs),
-			Sender:       s.runner.JetCoordinator.Me(),
+			APINode:      s.runner.JetCoordinator.Me(),
 		},
 	}
 

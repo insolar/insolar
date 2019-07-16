@@ -105,7 +105,7 @@ func (cr *ContractRequester) SendRequestWithPulse(ctx context.Context, ref *inso
 			Arguments:    args,
 			APIRequestID: utils.TraceID(ctx),
 			Reason:       api.MakeReason(pulse, args),
-			Sender:       cr.JetCoordinator.Me(),
+			APINode:      cr.JetCoordinator.Me(),
 		},
 	}
 

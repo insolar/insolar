@@ -173,7 +173,7 @@ func (e *requestsExecutor) SendReply(
 		messagebus.RetryFlowCancelled(e.PulseAccessor),
 	)
 
-	if transcript.Request.Sender.IsEmpty() {
+	if transcript.Request.APINode.IsEmpty() {
 		inslogger.FromContext(ctx).Debug("IP2: Send by caller", transcript.RequestRef)
 		_, err = sender(
 			ctx,
@@ -187,7 +187,7 @@ func (e *requestsExecutor) SendReply(
 			&insolar.MessageSendOptions{},
 		)
 	} else {
-		inslogger.FromContext(ctx).Debug("IP2: Send by sender", transcript.RequestRef, " to ", transcript.Request.Sender)
+		inslogger.FromContext(ctx).Debug("IP2: Send by sender", transcript.RequestRef, " to ", transcript.Request.APINode)
 		_, err = sender(
 			ctx,
 			&message.ReturnResults{
@@ -196,7 +196,7 @@ func (e *requestsExecutor) SendReply(
 				Error:      errstr,
 			},
 			&insolar.MessageSendOptions{
-				Receiver: &transcript.Request.Sender,
+				Receiver: &transcript.Request.APINode,
 			},
 		)
 	}
