@@ -92,6 +92,7 @@ type Base struct {
 	BootstrapRequester  bootstrap.Requester         `inject:""`
 	PhaseManager        phases.PhaseManager         `inject:""`
 	Rules               network.Rules               `inject:""`
+	KeyProcessor        insolar.KeyProcessor        `inject:""`
 
 	// DiscoveryBootstrapper bootstrap.DiscoveryBootstrapper `inject:""`
 	bootstrapETA insolar.PulseNumber
@@ -294,6 +295,7 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.R
 	// TODO: get random reconnectHost
 	// nodes := g.NodeKeeper.GetAccessor().GetActiveNodes()
 	o := g.NodeKeeper.GetOrigin()
+
 	// workaround bootstrap to the origin node
 	reconnectHost, err := host.NewHostNS(o.Address(), o.ID(), o.ShortID())
 	if err != nil {
@@ -302,10 +304,16 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.R
 		return nil, err
 	}
 
-	// TODO: public key to bytes
+	pubKey, err := g.KeyProcessor.ExportPublicKeyPEM(o.PublicKey())
+	if err != nil {
+		err = errors.Wrap(err, "Failed to export public key")
+		inslogger.FromContext(ctx).Error(err.Error())
+		return nil, err
+	}
+
 	permit, err := bootstrap.CreatePermit(g.NodeKeeper.GetOrigin().ID(),
 		reconnectHost,
-		[]byte("public key"), /*TODO: cert.GetPublicKey() to string */
+		pubKey,
 		g.CryptographyService,
 	)
 	if err != nil {
