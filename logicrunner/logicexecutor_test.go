@@ -71,7 +71,6 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 					MemoryMock.Return(nil).
 					HeadRefMock.Return(&objRef).
 					StateIDMock.Return(&objRecordID).
-					IsPrototypeMock.Return(false).
 					PrototypeMock.Return(&protoRef, nil),
 				Request: &record.IncomingRequest{
 					Prototype: &protoRef,
@@ -167,7 +166,9 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 					nil,
 				),
 			res: &requestResult{
-				result: []byte{3, 2, 1},
+				sideEffectType:  artifacts.RequestSideEffectNone,
+				result:          []byte{3, 2, 1},
+				objectReference: objRef,
 			},
 		},
 		{
@@ -300,7 +301,6 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := inslogger.TestContext(t)
-			inslogger.FromContext(ctx).Info(test.name)
 
 			vs := &logicExecutor{MachinesManager: test.mm, DescriptorsCache: test.dc}
 			// using Execute to increase coverage, calls should only go to ExecuteMethod
@@ -318,7 +318,6 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
-	ctx := inslogger.TestContext(t)
 
 	protoRef := gen.Reference()
 	callerRef := gen.Reference()
@@ -459,6 +458,8 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			ctx := inslogger.TestContext(t)
+
 			vs := &logicExecutor{MachinesManager: test.mm, DescriptorsCache: test.dc}
 			res, err := vs.Execute(ctx, test.transcript)
 			if test.error {

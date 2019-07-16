@@ -32,6 +32,9 @@ type Client interface {
 	// RegisterIncomingRequest creates an outgoing request record in storage.
 	RegisterOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) (*insolar.ID, error)
 
+	// RegisterResult saves VM method call result and side-effect
+	RegisterResult(ctx context.Context, request insolar.Reference, result RequestResult) error
+
 	// RegisterValidation marks provided object state as approved or disapproved.
 	//
 	// When fetching object, validity can be specified.
@@ -89,8 +92,6 @@ type Client interface {
 	InjectObjectDescriptor(insolar.Reference, ObjectDescriptor)
 	// InjectFinish finalizes all injects, all next injects will panic
 	InjectFinish()
-
-	RegisterResult(ctx context.Context, request insolar.Reference, result RequestResult) error
 }
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.CodeDescriptor -o ./ -s _mock.go
@@ -156,8 +157,7 @@ type DescriptorsCache interface {
 type RequestResultType uint8
 
 const (
-	RequestSideEffectUnknown RequestResultType = iota
-	RequestSideEffectNone
+	RequestSideEffectNone RequestResultType = iota
 	RequestSideEffectActivate
 	RequestSideEffectAmend
 	RequestSideEffectDeactivate

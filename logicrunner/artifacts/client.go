@@ -911,7 +911,6 @@ func (m *client) RegisterResult(
 	var (
 		pl         payload.Payload
 		parentDesc ObjectDescriptor
-		objectRef  insolar.Reference
 		err        error
 	)
 
@@ -926,7 +925,9 @@ func (m *client) RegisterResult(
 	}()
 	span.AddAttributes(trace.StringAttribute("SideEffect", result.Type().String()))
 
+	objReference := result.ObjectReference()
 	resultRecord := record.Result{
+		Object:  *objReference.Record(),
 		Request: request,
 		Payload: result.Result(),
 	}
@@ -937,9 +938,6 @@ func (m *client) RegisterResult(
 	//
 	// Request reference will be this object's identifier and referred as "object head".
 	case RequestSideEffectActivate:
-		objectRef = request
-		resultRecord.Object = *objectRef.Record()
-
 		parentRef, imageRef, asDelegate, memory := result.Activate()
 
 		parentDesc, err = m.GetObject(ctx, parentRef)
@@ -973,9 +971,6 @@ func (m *client) RegisterResult(
 	//
 	// Returned reference will be the latest object state (exact) reference.
 	case RequestSideEffectAmend:
-		objectRef = result.ObjectReference()
-		resultRecord.Object = *objectRef.Record()
-
 		objectStateID, objectImage, memory := result.Amend()
 
 		vResultRecord := record.Wrap(resultRecord)
@@ -1003,9 +998,6 @@ func (m *client) RegisterResult(
 	//
 	// Deactivated object cannot be changed.
 	case RequestSideEffectDeactivate:
-		objectRef = result.ObjectReference()
-		resultRecord.Object = *objectRef.Record()
-
 		objectStateID := result.Deactivate()
 
 		vResultRecord := record.Wrap(resultRecord)
@@ -1026,9 +1018,6 @@ func (m *client) RegisterResult(
 		pl = &plTyped
 
 	case RequestSideEffectNone:
-		objectRef = result.ObjectReference()
-		resultRecord.Object = *objectRef.Record()
-
 		vResultRecord := record.Wrap(resultRecord)
 
 		plTyped := payload.SetResult{}
@@ -1042,7 +1031,7 @@ func (m *client) RegisterResult(
 		return errors.Errorf("RegisterResult: Unknown side effect %d", result.Type())
 	}
 
-	_, err = sendResult(pl, objectRef)
+	_, err = sendResult(pl, result.ObjectReference())
 	if err != nil {
 		return errors.Wrapf(err, "RegisterResult: Failed to send results: %s", result.Type().String())
 	}
@@ -1053,7 +1042,7 @@ func (m *client) RegisterResult(
 		var asType *insolar.Reference
 
 		child := record.Child{
-			Ref: objectRef,
+			Ref: result.ObjectReference(),
 		}
 
 		if parentDesc.ChildPointer() != nil {
@@ -1067,7 +1056,7 @@ func (m *client) RegisterResult(
 			ctx,
 			record.Wrap(child),
 			parentRef,
-			objectRef,
+			result.ObjectReference(),
 			asType,
 		)
 		if err != nil {

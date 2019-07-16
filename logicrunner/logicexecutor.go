@@ -88,8 +88,7 @@ func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *Transcri
 		return nil, errors.Wrap(err, "executor error")
 	}
 
-	res := newRequestResult(result)
-	res.SetNone(*objDesc.HeadRef())
+	res := newRequestResult(result, *objDesc.HeadRef())
 
 	if request.Immutable {
 		return res, nil
@@ -99,7 +98,7 @@ func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *Transcri
 	case transcript.Deactivate:
 		res.SetDeactivate(objDesc)
 	case !bytes.Equal(objDesc.Memory(), newData):
-		_ = res.SetAmend(objDesc, newData)
+		res.SetAmend(objDesc, newData)
 	}
 
 	return res, nil
@@ -140,8 +139,7 @@ func (le *logicExecutor) ExecuteConstructor(
 		return nil, errors.Wrap(err, "executor error")
 	}
 
-	res := newRequestResult(nil)
-	inslogger.FromContext(ctx).Info(request.Base, request.Prototype)
+	res := newRequestResult(nil, transcript.RequestRef)
 	res.SetActivate(
 		*request.Base,
 		*request.Prototype,

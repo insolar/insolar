@@ -235,8 +235,7 @@ func (m *executionProxyImplementation) RouteCall(
 
 	// Step 3. Register result of the outgoing method
 	outgoingReqRef := insolar.NewReference(*outgoingReqID)
-	reqResult := newRequestResult(rep.Result)
-	reqResult.SetNone(req.Callee)
+	reqResult := newRequestResult(rep.Result, req.Callee)
 	return m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
 }
 
@@ -267,8 +266,7 @@ func (m *executionProxyImplementation) SaveAsChild(
 
 	// Register result of the outgoing method
 	outgoingReqRef := insolar.NewReference(*outgoingReqID)
-	reqResult := newRequestResult(rep.Reference.Bytes())
-	reqResult.SetNone(req.Callee)
+	reqResult := newRequestResult(rep.Reference.Bytes(), req.Callee)
 	return m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
 }
 
@@ -299,8 +297,7 @@ func (m *executionProxyImplementation) SaveAsDelegate(
 
 	// Register result of the outgoing method
 	outgoingReqRef := insolar.NewReference(*outgoingReqID)
-	reqResult := newRequestResult(rep.Reference.Bytes())
-	reqResult.SetNone(req.Callee)
+	reqResult := newRequestResult(rep.Reference.Bytes(), req.Callee)
 	return m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
 }
 

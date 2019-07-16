@@ -17,8 +17,6 @@
 package logicrunner
 
 import (
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 )
@@ -35,8 +33,12 @@ type requestResult struct {
 	memory          []byte            // amend + activate
 }
 
-func newRequestResult(result []byte) *requestResult {
-	return &requestResult{result: result}
+func newRequestResult(result []byte, objectRef insolar.Reference) *requestResult {
+	return &requestResult{
+		sideEffectType:  artifacts.RequestSideEffectNone,
+		result:          result,
+		objectReference: objectRef,
+	}
 }
 
 func (s *requestResult) Result() []byte {
@@ -57,7 +59,6 @@ func (s *requestResult) Deactivate() insolar.ID {
 
 func (s *requestResult) SetActivate(parent, image insolar.Reference, asDelegate bool, memory []byte) {
 	s.sideEffectType = artifacts.RequestSideEffectActivate
-	// s.objectReference = parent
 
 	s.asDelegate = asDelegate
 	s.parentReference = parent
@@ -66,34 +67,18 @@ func (s *requestResult) SetActivate(parent, image insolar.Reference, asDelegate 
 
 }
 
-func (s *requestResult) SetAmend(object artifacts.ObjectDescriptor, memory []byte) error {
+func (s *requestResult) SetAmend(object artifacts.ObjectDescriptor, memory []byte) {
 	s.sideEffectType = artifacts.RequestSideEffectAmend
 	s.memory = memory
-	s.objectReference = *object.HeadRef()
 	s.objectStateID = *object.StateID()
 
-	if object.IsPrototype() {
-		return errors.New("Can't update prototype")
-	}
-
-	prototype, err := object.Prototype()
-	if err != nil {
-		return errors.Wrap(err, "Failed to obtain prototype/code of object")
-	}
-
+	prototype, _ := object.Prototype()
 	s.objectImage = *prototype
-	return nil
 }
 
 func (s *requestResult) SetDeactivate(object artifacts.ObjectDescriptor) {
 	s.sideEffectType = artifacts.RequestSideEffectDeactivate
-	s.objectReference = *object.HeadRef()
 	s.objectStateID = *object.StateID()
-}
-
-func (s *requestResult) SetNone(objectRef insolar.Reference) {
-	s.sideEffectType = artifacts.RequestSideEffectNone
-	s.objectReference = objectRef
 }
 
 func (s requestResult) Type() artifacts.RequestResultType {
