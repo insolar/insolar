@@ -52,10 +52,11 @@ package ph2ctl
 
 import (
 	"context"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
-	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/announce"
 	"math"
 	"time"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
+	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/announce"
 
 	"github.com/insolar/insolar/network/consensus/common/lazyhead"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
@@ -141,7 +142,7 @@ func (c *Phase2Controller) DispatchMemberPacket(ctx context.Context, reader tran
 			if nb.neighbour.IsJoiner() {
 				ja := neighbourhood[i].GetJoinerAnnouncement()
 				err = c.R.AdvancePurgatoryNode(nb.neighbour.GetShortNodeID(), ja.GetBriefIntroduction(), nil, nb.neighbour)
-			} else {
+			} else if !nb.ma.JoinerID.IsAbsent() {
 				err = c.R.AdvancePurgatoryNode(nb.ma.JoinerID, nil, nil, nb.neighbour)
 			}
 		}

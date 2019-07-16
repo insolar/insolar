@@ -57,7 +57,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/hostnetwork/host"
@@ -110,7 +109,7 @@ func (p *Pulsar) Pulse(ctx context.Context, attempts int) {
 	pp := pulsenetwork.NewPulsePacket(ctx, &pu, ph, th, 0)
 
 	bs, _ := packet.SerializePacket(pp)
-	rp, _ := packet.DeserializePacket(inslogger.FromContext(ctx), bytes.NewReader(bs))
+	rp, _ := packet.DeserializePacketRaw(bytes.NewReader(bs))
 
 	go func() {
 		for i := 0; i < attempts; i++ {

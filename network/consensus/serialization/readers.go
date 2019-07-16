@@ -600,7 +600,8 @@ func (r *MembershipAnnouncementReader) GetJoinerAnnouncement() transport.JoinerA
 		return nil
 	}
 
-	if r.body.Announcement.Member.AnnounceID == insolar.ShortNodeID(r.packet.Header.SourceID) || r.body.Announcement.Member.AnnounceID == 0 {
+	if r.body.Announcement.Member.AnnounceID == insolar.ShortNodeID(r.packet.Header.SourceID) ||
+		r.body.Announcement.Member.AnnounceID.IsAbsent() {
 		return nil
 	}
 

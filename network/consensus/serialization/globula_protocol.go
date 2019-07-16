@@ -56,7 +56,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
@@ -111,7 +110,7 @@ func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io
 	}
 
 	if packetType == phases.PacketPhase0 || packetType == phases.PacketPhase1 {
-		if ctx.HasFlag(0) { // valid for Phase 0, 1: HasPulsarData : full pulsar data data is present
+		if ctx.HasFlag(FlagHasPulsePacket) { // valid for Phase 0, 1: HasPulsarData : full pulsar data data is present
 			if err := b.PulsarPacket.SerializeTo(ctx, writer); err != nil {
 				return errors.Wrap(err, "failed to serialize PulsarPacket")
 			}
@@ -181,7 +180,7 @@ func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, rea
 	}
 
 	if packetType == phases.PacketPhase0 || packetType == phases.PacketPhase1 {
-		if ctx.HasFlag(0) { // valid for Phase 0, 1: HasPulsarData : full pulsar data data is present
+		if ctx.HasFlag(FlagHasPulsePacket) { // valid for Phase 0, 1: HasPulsarData : full pulsar data data is present
 			if err := b.PulsarPacket.DeserializeFrom(ctx, reader); err != nil {
 				return errors.Wrap(err, "failed to deserialize PulsarPacket")
 			}
@@ -273,9 +272,12 @@ type EmbeddedPulsarData struct {
 	// PulsarSignature  longbits.Bits512                  `insolar-transport:"ignore=send"` // ByteSize=64
 }
 
-func (pd *EmbeddedPulsarData) SerializeTo(ctx SerializeContext, writer io.Writer) error {
-	pd.Size = uint16(len(pd.Data))
+func (pd *EmbeddedPulsarData) setData(data []byte) {
+	pd.Size = uint16(len(data))
+	pd.Data = data
+}
 
+func (pd *EmbeddedPulsarData) SerializeTo(ctx SerializeContext, writer io.Writer) error {
 	if err := write(writer, pd.Size); err != nil {
 		return errors.Wrap(err, "failed to serialize Data")
 	}
@@ -293,7 +295,7 @@ func (pd *EmbeddedPulsarData) DeserializeFrom(ctx DeserializeContext, reader io.
 	}
 
 	if pd.Size == 0 {
-		return nil
+		return errors.New("failed to deserialize PulseDataExt")
 	}
 
 	pd.Data = make([]byte, pd.Size)
@@ -301,7 +303,7 @@ func (pd *EmbeddedPulsarData) DeserializeFrom(ctx DeserializeContext, reader io.
 		return errors.Wrap(err, "failed to deserialize Data")
 	}
 
-	p, err := packet.DeserializePacket(inslogger.FromContext(ctx), bytes.NewReader(pd.Data))
+	p, err := packet.DeserializePacketRaw(bytes.NewReader(pd.Data))
 	if err != nil {
 		return errors.Wrap(err, "failed to deserialize PulsarPacket")
 	}
@@ -514,6 +516,9 @@ func (ma *MembershipAnnouncement) DeserializeFrom(ctx DeserializeContext, reader
 	}
 
 	if ma.CurrentRank != 0 {
+		ctx.SetInContext(ContextMembershipAnnouncement)
+		defer ctx.SetInContext(NoContext)
+
 		if err := read(reader, &ma.RequestedPower); err != nil {
 			return errors.Wrap(err, "failed to deserialize RequestedPower")
 		}
@@ -584,7 +589,7 @@ func (na *NodeAnnouncement) SerializeTo(ctx SerializeContext, writer io.Writer) 
 			if err := na.Leaver.SerializeTo(ctx, writer); err != nil {
 				return errors.Wrap(err, "failed to serialize Leaver")
 			}
-		} else if na.AnnounceID != 0 {
+		} else if !na.AnnounceID.IsAbsent() {
 			if err := na.Joiner.SerializeTo(ctx, writer); err != nil {
 				return errors.Wrap(err, "failed to serialize Joiner")
 			}
@@ -617,7 +622,7 @@ func (na *NodeAnnouncement) DeserializeFrom(ctx DeserializeContext, reader io.Re
 			if err := na.Leaver.DeserializeFrom(ctx, reader); err != nil {
 				return errors.Wrap(err, "failed to deserialize Leaver")
 			}
-		} else if na.AnnounceID != 0 {
+		} else if !na.AnnounceID.IsAbsent() {
 			if err := na.Joiner.DeserializeFrom(ctx, reader); err != nil {
 				return errors.Wrap(err, "failed to deserialize Joiner")
 			}

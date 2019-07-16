@@ -121,7 +121,7 @@ func (pb *PacketBuilder) PreparePhase0Packet(sender *transport.NodeAnnouncementP
 
 	body := packet.EncryptableBody.(*GlobulaConsensusPacketBody)
 	body.CurrentRank = sender.GetNodeRank()
-	body.PulsarPacket.Data = pulsarPacket.AsBytes()
+	body.PulsarPacket.setData(pulsarPacket.AsBytes())
 
 	return pb.preparePacketSender(packet)
 }
@@ -135,12 +135,15 @@ func (pb *PacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncementP
 	}
 
 	body := packet.EncryptableBody.(*GlobulaConsensusPacketBody)
-	body.PulsarPacket.Data = pulsarPacket.AsBytes()
+	body.PulsarPacket.setData(pulsarPacket.AsBytes())
 
 	body.Announcement.ShortID = sender.GetNodeID()
 	body.Announcement.CurrentRank = sender.GetNodeRank()
 	body.Announcement.RequestedPower = sender.GetRequestedPower()
-	copy(body.Announcement.AnnounceSignature[:], sender.GetAnnouncementSignature().AsBytes())
+	copy(
+		body.Announcement.AnnounceSignature[:],
+		sender.GetAnnouncementSignature().AsBytes(),
+	)
 	copy(
 		body.Announcement.Member.NodeState.NodeStateHash[:],
 		sender.GetNodeStateHashEvidence().GetNodeStateHash().AsBytes(),
@@ -218,11 +221,11 @@ func (pb *PacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncementP
 		if neighbour.GetNodeRank() != 0 {
 			copy(
 				body.Neighbourhood.Neighbours[i].Member.NodeState.NodeStateHash[:],
-				sender.GetNodeStateHashEvidence().GetNodeStateHash().AsBytes(),
+				neighbour.GetNodeStateHashEvidence().GetNodeStateHash().AsBytes(),
 			)
 			copy(
 				body.Neighbourhood.Neighbours[i].Member.NodeState.GlobulaNodeStateSignature[:],
-				sender.GetNodeStateHashEvidence().GetGlobulaNodeStateSignature().AsBytes(),
+				neighbour.GetNodeStateHashEvidence().GetGlobulaNodeStateSignature().AsBytes(),
 			)
 		}
 
