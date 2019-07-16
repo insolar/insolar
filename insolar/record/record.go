@@ -143,6 +143,7 @@ type Request interface {
 	// of this Request.
 	ReasonRef() insolar.Reference
 	GetCallType() CallType
+	IsAPIReq() bool
 }
 
 func (r *IncomingRequest) AffinityRef() *insolar.Reference {
@@ -155,6 +156,10 @@ func (r *IncomingRequest) ReasonRef() insolar.Reference {
 	return r.Reason
 }
 
+func (r *IncomingRequest) IsAPIReq() bool {
+	return !r.APINode.IsEmpty()
+}
+
 func (r *OutgoingRequest) AffinityRef() *insolar.Reference {
 	// OutgoingRequests are affine to the Caller which created the Request.
 	return &r.Caller
@@ -162,6 +167,10 @@ func (r *OutgoingRequest) AffinityRef() *insolar.Reference {
 
 func (r *OutgoingRequest) ReasonRef() insolar.Reference {
 	return r.Reason
+}
+
+func (r *OutgoingRequest) IsAPIReq() bool {
+	return false
 }
 
 func (m *Lifeline) SetDelegate(key insolar.Reference, value insolar.Reference) {
