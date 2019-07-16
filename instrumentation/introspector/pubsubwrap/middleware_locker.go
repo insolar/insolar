@@ -73,24 +73,18 @@ func (ml *MessageLockerByType) typeIsFiltered(pt payload.Type) bool {
 }
 
 // Filter returns nil for filtered message types.
-func (ml *MessageLockerByType) Filter(m *message.Message) *message.Message {
-	var meta payload.Meta
-	err := meta.Unmarshal(m.Payload)
+func (ml *MessageLockerByType) Filter(m *message.Message) (*message.Message, error) {
+	typ, err := decodeType(m)
 	if err != nil {
-		panic(err)
-	}
-
-	typ, err := payload.UnmarshalType(meta.Payload)
-	if err != nil {
-		panic(err)
+		return m, err
 	}
 
 	if ml.typeIsFiltered(typ) {
 		ml.stat.inc(typ)
 		ml.log.Debugf("MessageLocker filtered '%v'", typ.String())
-		return nil
+		return nil, nil
 	}
-	return m
+	return m, nil
 }
 
 // SetMessagesFilter sets filter for provided message type.

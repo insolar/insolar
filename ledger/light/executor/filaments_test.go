@@ -77,8 +77,8 @@ func TestFilamentModifierDefault_SetRequest(t *testing.T) {
 		latestPendingID := gen.ID()
 		latestPendingID.SetPulse(insolar.FirstPulseNumber + 2)
 
-		err := indexes.SetIndex(ctx, reqID.Pulse(), object.FilamentIndex{
-			Lifeline: object.Lifeline{
+		err := indexes.SetIndex(ctx, reqID.Pulse(), record.Index{
+			Lifeline: record.Lifeline{
 				PendingPointer: &latestPendingID,
 			},
 		})
@@ -98,9 +98,9 @@ func TestFilamentModifierDefault_SetRequest(t *testing.T) {
 		latestPendingID.SetPulse(insolar.FirstPulseNumber + 1)
 		jetID := gen.JetID()
 
-		err := indexes.SetIndex(ctx, requestID.Pulse(), object.FilamentIndex{
+		err := indexes.SetIndex(ctx, requestID.Pulse(), record.Index{
 			ObjID: *validRequest.Object.Record(),
-			Lifeline: object.Lifeline{
+			Lifeline: record.Lifeline{
 				PendingPointer: &latestPendingID,
 			},
 		})
@@ -181,9 +181,9 @@ func TestFilamentModifierDefault_SetRequest_NewObject(t *testing.T) {
 		latestPendingID := gen.ID()
 		latestPendingID.SetPulse(insolar.FirstPulseNumber + 2)
 
-		err := indexes.SetIndex(ctx, reqID.Pulse(), object.FilamentIndex{
+		err := indexes.SetIndex(ctx, reqID.Pulse(), record.Index{
 			ObjID: reqID,
-			Lifeline: object.Lifeline{
+			Lifeline: record.Lifeline{
 				PendingPointer: &latestPendingID,
 			},
 		})
@@ -353,9 +353,9 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 		}
 
 		latestPendingPulse := latestPendingID.Pulse()
-		err := indexes.SetIndex(ctx, resultID.Pulse(), object.FilamentIndex{
+		err := indexes.SetIndex(ctx, resultID.Pulse(), record.Index{
 			ObjID: validResult.Object,
-			Lifeline: object.Lifeline{
+			Lifeline: record.Lifeline{
 				PendingPointer:      &latestPendingID,
 				EarliestOpenRequest: &latestPendingPulse,
 			},
@@ -400,9 +400,9 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 		}
 
 		latestPendingPulse := latestPendingID.Pulse()
-		err := indexes.SetIndex(ctx, resultID.Pulse(), object.FilamentIndex{
+		err := indexes.SetIndex(ctx, resultID.Pulse(), record.Index{
 			ObjID: validResult.Object,
-			Lifeline: object.Lifeline{
+			Lifeline: record.Lifeline{
 				PendingPointer:      &latestPendingID,
 				EarliestOpenRequest: &latestPendingPulse,
 			},
@@ -451,7 +451,7 @@ func TestFilamentCalculatorDefault_Requests(t *testing.T) {
 	t.Run("empty response", func(t *testing.T) {
 		objectID := gen.ID()
 		fromID := gen.ID()
-		err := indexes.SetIndex(ctx, fromID.Pulse(), object.FilamentIndex{
+		err := indexes.SetIndex(ctx, fromID.Pulse(), record.Index{
 			ObjID: objectID,
 		})
 		require.NoError(t, err)
@@ -476,9 +476,9 @@ func TestFilamentCalculatorDefault_Requests(t *testing.T) {
 		objectID := gen.ID()
 		fromID := storageRecs[3].MetaID
 		earliestPending := storageRecs[0].MetaID.Pulse()
-		err := indexes.SetIndex(ctx, fromID.Pulse(), object.FilamentIndex{
+		err := indexes.SetIndex(ctx, fromID.Pulse(), record.Index{
 			ObjID: objectID,
-			Lifeline: object.Lifeline{
+			Lifeline: record.Lifeline{
 				PendingPointer:      &storageRecs[3].MetaID,
 				EarliestOpenRequest: &earliestPending,
 			},
@@ -540,7 +540,7 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 	t.Run("empty response", func(t *testing.T) {
 		objectID := gen.ID()
 		fromPulse := gen.PulseNumber()
-		err := indexes.SetIndex(ctx, fromPulse, object.FilamentIndex{
+		err := indexes.SetIndex(ctx, fromPulse, record.Index{
 			ObjID: objectID,
 		})
 		require.NoError(t, err)
@@ -564,9 +564,9 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 		objectID := gen.ID()
 		fromPulse := rec4.MetaID.Pulse()
 		earliestPending := rec1.MetaID.Pulse()
-		err := indexes.SetIndex(ctx, fromPulse, object.FilamentIndex{
+		err := indexes.SetIndex(ctx, fromPulse, record.Index{
 			ObjID: objectID,
-			Lifeline: object.Lifeline{
+			Lifeline: record.Lifeline{
 				PendingPointer:      &rec4.MetaID,
 				EarliestOpenRequest: &earliestPending,
 			},
@@ -594,9 +594,9 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 		objectID := gen.ID()
 		fromPulse := rec4.MetaID.Pulse()
 		earliestPending := rec1.MetaID.Pulse()
-		err := indexes.SetIndex(ctx, fromPulse, object.FilamentIndex{
+		err := indexes.SetIndex(ctx, fromPulse, record.Index{
 			ObjID: objectID,
-			Lifeline: object.Lifeline{
+			Lifeline: record.Lifeline{
 				PendingPointer:      &rec4.MetaID,
 				EarliestOpenRequest: &earliestPending,
 			},
@@ -677,9 +677,9 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 		objectID := gen.ID()
 		fromPulse := rec4.MetaID.Pulse()
 		earliestPending := rec1.MetaID.Pulse()
-		err := indexes.SetIndex(ctx, fromPulse, object.FilamentIndex{
+		err := indexes.SetIndex(ctx, fromPulse, record.Index{
 			ObjID: objectID,
-			Lifeline: object.Lifeline{
+			Lifeline: record.Lifeline{
 				PendingPointer:      &rec4.MetaID,
 				EarliestOpenRequest: &earliestPending,
 			},
@@ -773,7 +773,7 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 	t.Run("no records", func(t *testing.T) {
 		objectID := gen.ID()
 		fromPulse := gen.PulseNumber()
-		err := indexes.SetIndex(ctx, fromPulse, object.FilamentIndex{
+		err := indexes.SetIndex(ctx, fromPulse, record.Index{
 			ObjID: objectID,
 		})
 		require.NoError(t, err)
@@ -796,9 +796,9 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 
 		objectID := gen.ID()
 		fromPulse := res1.MetaID.Pulse()
-		err := indexes.SetIndex(ctx, fromPulse, object.FilamentIndex{
+		err := indexes.SetIndex(ctx, fromPulse, record.Index{
 			ObjID: objectID,
-			Lifeline: object.Lifeline{
+			Lifeline: record.Lifeline{
 				PendingPointer: &res1.MetaID,
 			},
 		})
@@ -819,9 +819,9 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 
 		objectID := gen.ID()
 		fromPulse := res1.MetaID.Pulse()
-		err := indexes.SetIndex(ctx, fromPulse, object.FilamentIndex{
+		err := indexes.SetIndex(ctx, fromPulse, record.Index{
 			ObjID: objectID,
-			Lifeline: object.Lifeline{
+			Lifeline: record.Lifeline{
 				PendingPointer: &res1.MetaID,
 			},
 		})
@@ -844,9 +844,9 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 
 		objectID := gen.ID()
 		fromPulse := req1.MetaID.Pulse()
-		err := indexes.SetIndex(ctx, fromPulse, object.FilamentIndex{
+		err := indexes.SetIndex(ctx, fromPulse, record.Index{
 			ObjID: objectID,
-			Lifeline: object.Lifeline{
+			Lifeline: record.Lifeline{
 				PendingPointer: &req1.MetaID,
 			},
 		})
@@ -896,7 +896,7 @@ func TestFilamentCalculatorDefault_RequestDuplicate(t *testing.T) {
 	t.Run("no records", func(t *testing.T) {
 		objectID := gen.ID()
 		fromPulse := gen.PulseNumber()
-		err := indexes.SetIndex(ctx, fromPulse, object.FilamentIndex{
+		err := indexes.SetIndex(ctx, fromPulse, record.Index{
 			ObjID: objectID,
 		})
 		require.NoError(t, err)
@@ -914,16 +914,41 @@ func TestFilamentCalculatorDefault_RequestDuplicate(t *testing.T) {
 
 	resetComponents()
 	t.Run("returns request and result", func(t *testing.T) {
+		coordinator.IsBeyondLimitMock.Return(true, nil)
+		hNode := gen.Reference()
+		coordinator.HeavyMock.Return(&hNode, nil)
+
 		b := newFilamentBuilder(ctx, pcs, records)
-		req := record.IncomingRequest{Nonce: rand.Uint64(), Reason: *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, nil))}
+		reason := *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, nil))
+		req := record.IncomingRequest{Nonce: rand.Uint64(), Reason: reason}
 		req1 := b.Append(insolar.FirstPulseNumber+1, req)
 		res1 := b.Append(insolar.FirstPulseNumber+2, record.Result{Request: *insolar.NewReference(req1.RecordID)})
 
+		sender.SendTargetFunc = func(_ context.Context, inMsg *message.Message, inNode insolar.Reference) (<-chan *message.Message, func()) {
+			getReq := payload.GetRequest{}
+			err := getReq.Unmarshal(inMsg.Payload)
+			require.NoError(t, err)
+
+			require.Equal(t, *reason.Record(), getReq.RequestID)
+			require.Equal(t, hNode, inNode)
+
+			reqMsg, err := payload.NewMessage(&payload.Request{})
+			require.NoError(t, err)
+
+			meta := payload.Meta{Payload: reqMsg.Payload}
+			buf, err := meta.Marshal()
+			require.NoError(t, err)
+			reqMsg.Payload = buf
+			ch := make(chan *message.Message, 1)
+			ch <- reqMsg
+			return ch, func() {}
+		}
+
 		objectID := gen.ID()
 		fromPulse := res1.MetaID.Pulse()
-		err := indexes.SetIndex(ctx, fromPulse, object.FilamentIndex{
+		err := indexes.SetIndex(ctx, fromPulse, record.Index{
 			ObjID: objectID,
-			Lifeline: object.Lifeline{
+			Lifeline: record.Lifeline{
 				PendingPointer: &res1.MetaID,
 			},
 		})
@@ -939,17 +964,42 @@ func TestFilamentCalculatorDefault_RequestDuplicate(t *testing.T) {
 
 	resetComponents()
 	t.Run("returns only request", func(t *testing.T) {
+		coordinator.IsBeyondLimitMock.Return(true, nil)
+		hNode := gen.Reference()
+		coordinator.HeavyMock.Return(&hNode, nil)
+
 		b := newFilamentBuilder(ctx, pcs, records)
-		reqR := record.IncomingRequest{Nonce: rand.Uint64(), Reason: *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, nil))}
+		reason := *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, nil))
+		reqR := record.IncomingRequest{Nonce: rand.Uint64(), Reason: reason}
 		req1 := b.Append(insolar.FirstPulseNumber+1, reqR)
 		reqR2 := record.IncomingRequest{Nonce: rand.Uint64(), Reason: *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, nil))}
 		req2 := b.Append(insolar.FirstPulseNumber+2, reqR2)
 
+		sender.SendTargetFunc = func(_ context.Context, inMsg *message.Message, inNode insolar.Reference) (<-chan *message.Message, func()) {
+			getReq := payload.GetRequest{}
+			err := getReq.Unmarshal(inMsg.Payload)
+			require.NoError(t, err)
+
+			require.Equal(t, *reason.Record(), getReq.RequestID)
+			require.Equal(t, hNode, inNode)
+
+			reqMsg, err := payload.NewMessage(&payload.Request{})
+			require.NoError(t, err)
+
+			meta := payload.Meta{Payload: reqMsg.Payload}
+			buf, err := meta.Marshal()
+			require.NoError(t, err)
+			reqMsg.Payload = buf
+			ch := make(chan *message.Message, 1)
+			ch <- reqMsg
+			return ch, func() {}
+		}
+
 		objectID := gen.ID()
 		fromPulse := req1.MetaID.Pulse()
-		err := indexes.SetIndex(ctx, fromPulse, object.FilamentIndex{
+		err := indexes.SetIndex(ctx, fromPulse, record.Index{
 			ObjID: objectID,
-			Lifeline: object.Lifeline{
+			Lifeline: record.Lifeline{
 				PendingPointer: &req2.MetaID,
 			},
 		})

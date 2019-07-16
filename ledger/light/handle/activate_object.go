@@ -61,7 +61,7 @@ func (s *ActivateObject) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	if activate.Request.IsEmpty() {
-		return errors.New("request is nil")
+		return errors.New("request is empty")
 	}
 
 	calcAct := proc.NewCalculateID(msg.Record, flow.Pulse(ctx))

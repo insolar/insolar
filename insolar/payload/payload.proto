@@ -106,8 +106,12 @@ message SagaCallAcceptNotification {
 
     bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
 
+    // OutgoingReqID contains the id of registered outgoing request.
+    // VE needs it to register the result of the outgoing request.
+    bytes OutgoingReqID  = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+
     // Request contains original OutgoingRequest registered by VE
-    bytes Request  = 21;
+    bytes Request  = 22;
 }
 
 message SetResult {
@@ -159,4 +163,27 @@ message RequestInfo {
     bytes RequestID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
     bytes Request = 22;
     bytes Result = 23;
+}
+
+message HotObjects {
+    uint32 Polymorph = 16;
+
+    bytes JetID      = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
+    bytes Pulse      = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    bytes Drop       = 21;
+    repeated record.Index Indexes = 23 [(gogoproto.nullable) = false];
+}
+
+
+message GetRequest {
+    uint32 Polymorph = 16;
+
+    bytes RequestID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+}
+
+message Request {
+    uint32 Polymorph = 16;
+
+    bytes RequestID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    record.Virtual Request = 21 [(gogoproto.nullable) = false];
 }
