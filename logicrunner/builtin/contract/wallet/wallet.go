@@ -97,10 +97,7 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toM
 		return nil, fmt.Errorf("failed to get fee wallet reference: %s", err.Error())
 	}
 
-	feeWallet, err := wallet.GetImplementationFrom(fwRef)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get implementation: %s", err.Error())
-	}
+	feeWallet := wallet.GetObject(fwRef)
 
 	acceptFeeErr := feeWallet.Accept(feeStr)
 	if acceptFeeErr != nil {
@@ -123,6 +120,11 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toM
 	}
 	w.Balance = newBalance.String()
 
+	err = feeWallet.RollBack(amountStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to roll back fee: %s", err.Error())
+	}
+
 	return nil, fmt.Errorf("failed to accept balance to wallet: %s", acceptErr.Error())
 }
 
@@ -144,6 +146,30 @@ func (w *Wallet) Accept(amountStr string) (err error) {
 	b, err := safemath.Add(balance, amount)
 	if err != nil {
 		return fmt.Errorf("failed to add amount to balance: %s", err.Error())
+	}
+	w.Balance = b.String()
+
+	return nil
+}
+
+// RollBack rolls back transfer to balance.
+func (w *Wallet) RollBack(amountStr string) (err error) {
+
+	amount := new(big.Int)
+	amount, ok := amount.SetString(amountStr, 10)
+	if !ok {
+		return fmt.Errorf("can't parse input amount")
+	}
+
+	balance := new(big.Int)
+	balance, ok = balance.SetString(w.Balance, 10)
+	if !ok {
+		return fmt.Errorf("can't parse wallet balance")
+	}
+
+	b, err := safemath.Sub(balance, amount)
+	if err != nil {
+		return fmt.Errorf("failed to sub amount from balance: %s", err.Error())
 	}
 	w.Balance = b.String()
 

@@ -174,6 +174,47 @@ func INSMETHOD_Accept(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
+func INSMETHOD_RollBack(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+
+	self := new(Wallet)
+
+	if len(object) == 0 {
+		return nil, nil, &ExtendableError{S: "[ FakeRollBack ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeRollBack ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := [1]interface{}{}
+	var args0 string
+	args[0] = &args0
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeRollBack ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0 := self.RollBack(args0)
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret0 = ph.MakeErrorSerializable(ret0)
+
+	ret := []byte{}
+	err = ph.Serialize([]interface{}{ret0}, &ret)
+
+	return state, ret, err
+}
+
 func INSMETHOD_GetBalance(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 
@@ -251,6 +292,7 @@ func Initialize() XXX_insolar.ContractWrapper {
 		Methods: XXX_insolar.ContractMethods{
 			"Transfer":   INSMETHOD_Transfer,
 			"Accept":     INSMETHOD_Accept,
+			"RollBack":   INSMETHOD_RollBack,
 			"GetBalance": INSMETHOD_GetBalance,
 		},
 		Constructors: XXX_insolar.ContractConstructors{

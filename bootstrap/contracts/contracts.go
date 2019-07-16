@@ -42,6 +42,7 @@ func GenesisContractsStates(cfg insolar.GenesisContractsConfig) []insolar.Genesi
 		getWalletGenesisContractState(cfg.RootBalance, insolar.GenesisNameRootWallet, insolar.GenesisNameRootMember),
 		getMemberGenesisContractState(cfg.MigrationAdminPublicKey, insolar.GenesisNameMigrationAdminMember, insolar.GenesisNameRootDomain),
 		getWalletGenesisContractState(cfg.MDBalance, insolar.GenesisNameMigrationWallet, insolar.GenesisNameMigrationAdminMember),
+		getWalletGenesisContractState("0", insolar.GenesisNameFeeWallet, insolar.GenesisNameRootDomain),
 		getCostCenterGenesisContractState(),
 		getTariffGenesisContractState(),
 	}
@@ -117,7 +118,7 @@ func getWalletGenesisContractState(balance string, name string, parent string) i
 }
 
 func getCostCenterGenesisContractState() insolar.GenesisContractState {
-	cc, err := costcenter.New(genesisrefs.ContractFeeWallet, genesisrefs.ContractTariff)
+	cc, err := costcenter.New(genesisrefs.ContractFeeWallet, genesisrefs.ContractStandardTariff)
 	if err != nil {
 		panic("failed to create cost center instance")
 	}
@@ -132,7 +133,7 @@ func getCostCenterGenesisContractState() insolar.GenesisContractState {
 }
 
 func getTariffGenesisContractState() insolar.GenesisContractState {
-	t, err := tariff.New(big.NewInt(1000 * 1000 * 1000).String())
+	t, err := tariff.New(big.NewInt(1000 * 1000 * 1000).String()) // 10% fee
 	if err != nil {
 		panic("failed to create tariff instance")
 	}

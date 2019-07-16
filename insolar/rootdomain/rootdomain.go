@@ -41,7 +41,7 @@ var predefinedPrototypes = map[string]insolar.Reference{
 	insolar.GenesisNameRootMember + GenesisPrototypeSuffix:           *member.PrototypeReference,
 	insolar.GenesisNameRootWallet + GenesisPrototypeSuffix:           *wallet.PrototypeReference,
 	insolar.GenesisNameCostCenter + GenesisPrototypeSuffix:           *costcenter.PrototypeReference,
-	insolar.GenesisNameCommissionWallet + GenesisPrototypeSuffix:     *wallet.PrototypeReference,
+	insolar.GenesisNameFeeWallet + GenesisPrototypeSuffix:            *wallet.PrototypeReference,
 	insolar.GenesisNameDeposit + GenesisPrototypeSuffix:              *deposit.PrototypeReference,
 	insolar.GenesisNameMember + GenesisPrototypeSuffix:               *member.PrototypeReference,
 	insolar.GenesisNameMigrationAdminMember + GenesisPrototypeSuffix: *member.PrototypeReference,
