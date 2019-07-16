@@ -615,18 +615,13 @@ type JoinerAnnouncementReader struct {
 	joiner JoinAnnouncement
 }
 
-func (r *JoinerAnnouncementReader) GetBriefIntro() transport.BriefIntroductionReader {
+func (r *JoinerAnnouncementReader) GetBriefIntroduction() transport.BriefIntroductionReader {
 	return &FullIntroductionReader{
 		MemberPacketReader: r.MemberPacketReader,
 		intro: NodeFullIntro{
 			NodeBriefIntro: r.joiner.NodeBriefIntro,
 		},
 	}
-}
-
-func (r *JoinerAnnouncementReader) GetBriefIntroSignature() cryptkit.SignatureHolder {
-	// TODO:
-	return nil
 }
 
 type NeighbourAnnouncementReader struct {

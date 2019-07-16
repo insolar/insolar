@@ -52,7 +52,8 @@ package ph2ctl
 
 import (
 	"context"
-	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
+	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/announce"
 	"math"
 	"time"
 
@@ -108,65 +109,96 @@ func (c *Phase2Controller) CreatePacketDispatcher(pt phases.PacketType, ctlIndex
 	return c, nil
 }
 
-func (c *Phase2Controller) DispatchMemberPacket(ctx context.Context, reader transport.MemberPacketReader, n *core.NodeAppearance) error {
+type resolvedNeighbour struct {
+	neighbour *core.NodeAppearance
+	ma        profiles.MembershipAnnouncement
+}
+
+func (c *Phase2Controller) DispatchMemberPacket(ctx context.Context, reader transport.MemberPacketReader, sender *core.NodeAppearance) error {
 
 	p2 := reader.AsPhase2Packet()
-	// for _, ni := range p2.GetIntroductions() {
-	// TODO I'm joiner, lets add another joiner's profile
-	// and this enable the added other node for sending Ph2 by this node
-	// }
 
-	// TODO Verify neighbourhood first (incl presence of self) before applying it
-	var signalSent = false
-	for _, nb := range p2.GetNeighbourhood() {
+	signalSent, err := announce.ApplyMemberAnnouncement(ctx, p2, p2.GetBriefIntroduction(), sender, c.R)
+	if err != nil {
+		return err
+	}
 
-		nid := nb.GetNodeID()
-		neighbour := c.R.GetPopulation().GetNodeAppearance(nid)
-		if neighbour == nil {
-			// TODO unknown node - blame sender
-			panic(fmt.Errorf("unlisted neighbour node: %v", nid))
-			// R.GetBlameFactory().NewMultipleNshBlame()
+	neighbourhood := p2.GetNeighbourhood()
+	neighbours, err := c.verifyNeighbourhood(neighbourhood, sender)
+	if err != nil {
+		rep := misbehavior.FraudOf(err)
+		if rep != nil {
+			return sender.RegisterFraud(*rep)
 		}
+		return err
+	}
 
-		nr := nb.GetNodeRank()
-		mp := profiles.NewMembershipProfile(nr.GetMode(), nr.GetPower(), nr.GetIndex(), nb.GetNodeStateHashEvidence(),
-			nb.GetAnnouncementSignature(), nb.GetRequestedPower())
-
-		// TODO validate node proof - if fails, then fraud on sender
-		// neighbourProfile.IsValidPacketSignature(nshEvidence.GetSignature())
-		// TODO check NodeRank also
-		// if p1.HasSelfIntro() {
-		//	// TODO register protocol misbehavior - IntroClaim was not expected
-		// }
-
-		var ma profiles.MembershipAnnouncement
-		switch {
-		case nb.IsLeaving():
-			ma = profiles.NewMembershipAnnouncementWithLeave(mp, nb.GetLeaveReason())
-		case nb.GetJoinerID().IsAbsent():
-			ma = profiles.NewMembershipAnnouncement(mp)
-		default:
-			panic("not implemented") // TODO implement
-			// jar := na.GetJoinerAnnouncement()
-			// ma = common.NewMembershipAnnouncementWithJoiner(mp)
-		}
-
-		var modified bool
-		nc := c.R.GetNodeCount()
-		if nc != int(nr.GetTotalCount()) {
-			modified, _ = n.RegisterFraud(n.Frauds().NewMismatchedMembershipNodeCount(n.GetProfile(), mp, nc))
-		} else {
-			modified, _ = neighbour.ApplyNeighbourEvidence(n, ma)
-		}
-		if modified {
+	for i, nb := range neighbours {
+		modified, err := nb.neighbour.ApplyNeighbourEvidence(sender, nb.ma)
+		if err == nil && modified {
 			signalSent = true
+
+			if nb.neighbour.IsJoiner() {
+				ja := neighbourhood[i].GetJoinerAnnouncement()
+				err = c.R.AdvancePurgatoryNode(nb.neighbour.GetShortNodeID(), ja.GetBriefIntroduction(), nil, nb.neighbour)
+			} else {
+				err = c.R.AdvancePurgatoryNode(nb.ma.JoinerID, nil, nil, nb.neighbour)
+			}
+		}
+		if err != nil {
+			inslogger.FromContext(ctx).Error(err)
+			continue
 		}
 	}
 	if !signalSent {
-		n.NotifyOnCustom(pingSignal)
+		sender.NotifyOnCustom(pingSignal)
 	}
 
 	return nil
+}
+
+func (c *Phase2Controller) verifyNeighbourhood(neighbourhood []transport.MembershipAnnouncementReader,
+	n *core.NodeAppearance) ([]resolvedNeighbour, error) {
+
+	hasThis := false
+	hasSelf := false
+	neighbours := make([]resolvedNeighbour, len(neighbourhood))
+	nc := c.R.GetNodeCount()
+	localID := c.R.GetSelfNodeID()
+
+	for idx, nb := range neighbourhood {
+		nid := nb.GetNodeID()
+		if nid == n.GetShortNodeID() {
+			hasSelf = true
+		}
+		neighbour := c.R.GetPopulation().GetNodeAppearance(nid)
+		if neighbour == nil {
+			return nil, n.Frauds().NewUnknownNeighbour(n.GetProfile())
+		}
+		nr := nb.GetNodeRank()
+
+		if !profiles.MatchIntroAndRank(neighbour.GetProfile(), nc, nr) {
+			return nil, n.Frauds().NewMismatchedNeighbourRank(n.GetProfile())
+		}
+
+		// TODO validate node proof - if fails, then fraud on sender
+		// neighbourProfile.IsValidPacketSignature(nshEvidence.GetSignature())
+
+		neighbours[idx].ma = announce.AnnouncementFromReader(nb)
+		neighbours[idx].neighbour = neighbour
+
+		if nid == localID {
+			hasThis = true
+		}
+	}
+
+	if !hasThis || hasSelf {
+		return nil, n.Frauds().NewNeighbourMissingTarget(n.GetProfile())
+	}
+	if hasSelf {
+		return nil, n.Frauds().NewNeighbourContainsRource(n.GetProfile())
+	}
+	return neighbours, nil
 }
 
 func (c *Phase2Controller) StartWorker(ctx context.Context, realm *core.FullRealm) {

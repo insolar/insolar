@@ -111,10 +111,7 @@ func (c *NodeAnnouncementProfile) GetLeaveReason() uint32 {
 }
 
 func (c *NodeAnnouncementProfile) GetJoinerID() insolar.ShortNodeID {
-	if c.ma.Joiner == nil {
-		return insolar.AbsentShortNodeID
-	}
-	return c.ma.Joiner.GetShortNodeID()
+	return c.ma.JoinerID
 }
 
 func (c *NodeAnnouncementProfile) GetJoinerAnnouncement() JoinerAnnouncementReader {
@@ -122,7 +119,7 @@ func (c *NodeAnnouncementProfile) GetJoinerAnnouncement() JoinerAnnouncementRead
 }
 
 func (c *NodeAnnouncementProfile) GetNodeRank() member.Rank {
-	return member.NewMembershipRank(c.ma.Membership.Mode, c.ma.Membership.Power, c.ma.Membership.Index, c.nodeCount)
+	return c.ma.Membership.AsRankUint16(c.nodeCount)
 }
 
 func (c *NodeAnnouncementProfile) GetAnnouncementSignature() proofs.MemberAnnouncementSignature {

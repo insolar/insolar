@@ -53,6 +53,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -138,6 +139,13 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 	}
 
 	pd := r.packetDispatchers[pt] // was checked above for != nil
+
+	// TODO enable lazy parsing on packet interface
+	//var err error
+	//packet, err = packet.ParsePacketBody()
+	//if err != nil {
+	//	return err
+	//}
 
 	if pt.IsMemberPacket() {
 		// now it is safe to parse the rest of the packet
@@ -257,12 +265,16 @@ func (r *FullRealm) initSelf() {
 
 	if !newSelf.requestedLeave {
 		// leaver is not allowed to add new nodes
-		newSelf.requestedJoiner = r.pickNextJoinCandidate()
+		jc := r.registerNextJoinCandidate()
+		if jc != nil {
+			newSelf.requestedJoinerID = jc.GetShortNodeID()
+		}
 	}
 	newSelf.callback.updatePopulationVersion()
 }
 
-func (r *FullRealm) pickNextJoinCandidate() *NodeAppearance {
+func (r *FullRealm) registerNextJoinCandidate() *NodeAppearance {
+
 	if r.GetLocalProfile().GetOpMode().IsRestricted() {
 		// this node is not allowed to introduce joiners
 		return nil
@@ -438,7 +450,7 @@ func (r *FullRealm) prepareRegularMembers(pop census2.PopulationBuilder) {
 		if p.IsJoiner() {
 			na = r.population.GetJoinerNodeAppearance(p.GetShortNodeID())
 		} else {
-			na = r.population.GetNodeAppearanceByIndex(p.GetIndex())
+			na = r.population.GetNodeAppearanceByIndex(p.GetIndex().AsInt())
 		}
 		rs := na.GetRequestedState()
 		p.SetPower(rs.RequestedPower)
@@ -505,6 +517,13 @@ func (r *FullRealm) CreatePurgatoryNode(ctx context.Context, intro transport.Bri
 	//	break
 	// }
 
+}
+
+func (r *FullRealm) AdvancePurgatoryNode(purgatoryID insolar.ShortNodeID,
+	brief transport.BriefIntroductionReader, full transport.FullIntroductionReader,
+	advancedBy *NodeAppearance) error {
+
+	panic("not implemented") // TODO
 }
 
 // func (r *FullRealm) getPurgatoryNode(profile common2.BriefCandidateProfile) *NodeAppearance {

@@ -104,9 +104,9 @@ type NodeAppearance struct {
 	stateEvidence     proofs.NodeStateHashEvidence       // one-time set
 	requestedPower    member.Power                       // one-time set
 
-	requestedJoiner      *NodeAppearance // one-time set
-	requestedLeave       bool            // one-time set
-	requestedLeaveReason uint32          // one-time set
+	requestedJoinerID    insolar.ShortNodeID // one-time set
+	requestedLeave       bool                // one-time set
+	requestedLeaveReason uint32              // one-time set
 
 	firstFraudDetails *misbehavior.FraudError
 
@@ -137,7 +137,7 @@ func (c *NodeAppearance) copySelfTo(target *NodeAppearance) {
 	target.stateEvidence = c.stateEvidence
 	target.announceSignature = c.announceSignature
 	target.requestedPower = c.requestedPower
-	target.requestedJoiner = c.requestedJoiner
+	target.requestedJoinerID = c.requestedJoinerID
 	target.requestedLeave = c.requestedLeave
 	target.requestedLeaveReason = c.requestedLeaveReason
 	target.firstFraudDetails = c.firstFraudDetails
@@ -151,7 +151,7 @@ func (c *NodeAppearance) IsJoiner() bool {
 	return c.profile.IsJoiner()
 }
 
-func (c *NodeAppearance) GetIndex() int {
+func (c *NodeAppearance) GetIndex() member.Index {
 	return c.profile.GetIndex()
 }
 
@@ -218,6 +218,16 @@ func (c *NodeAppearance) CreateSignatureVerifier(vFactory cryptkit.SignatureVeri
 	return vFactory.GetSignatureVerifierWithPKS(c.profile.GetPublicKeyStore())
 }
 
+//func (c *NodeAppearance) ApplyMembershipRank(mr member.Rank) error {
+//	// TODO
+//	c.mutex.Lock()
+//	defer c.mutex.Unlock()
+//
+//	return c._applyMembershipRank(mr)
+//}
+//func (c *NodeAppearance) _applyMembershipRank(mr member.Rank) error {
+//}
+
 /* Evidence MUST be verified before this call */
 func (c *NodeAppearance) ApplyNodeMembership(mp profiles.MembershipAnnouncement) (bool, error) {
 
@@ -277,26 +287,20 @@ func (c *NodeAppearance) _applyNodeMembership(ma profiles.MembershipAnnouncement
 
 	if c.stateEvidence != nil {
 		lmp := c.getMembership()
-		var lma profiles.MembershipAnnouncement
+		//var lma profiles.MembershipAnnouncement
 		if ma.Membership.Equals(lmp) && ma.IsLeaving == c.requestedLeave {
 			switch {
 			case c.requestedLeave:
 				if ma.LeaveReason == c.requestedLeaveReason {
 					return false, nil
 				}
-				lma = profiles.NewMembershipAnnouncementWithLeave(lmp, c.requestedLeaveReason)
-			case c.requestedJoiner == nil:
-				if ma.Joiner == nil {
-					return false, nil
-				}
-				lma = profiles.NewMembershipAnnouncement(lmp)
 			default:
-				if profiles.EqualIntroProfiles(c.requestedJoiner.GetProfile(), ma.Joiner) {
+				if c.requestedJoinerID == ma.JoinerID {
 					return false, nil
 				}
-				lma = profiles.NewMembershipAnnouncementWithJoiner(lmp, c.requestedJoiner.profile)
 			}
 		}
+		lma := c.getMembershipAnnouncement()
 		return c.registerFraud(c.Frauds().NewInconsistentMembershipAnnouncement(c.GetProfile(), lma, ma))
 	}
 
@@ -305,8 +309,8 @@ func (c *NodeAppearance) _applyNodeMembership(ma profiles.MembershipAnnouncement
 	if ma.IsLeaving {
 		c.requestedLeave = true
 		c.requestedLeaveReason = ma.LeaveReason
-	} else if ma.Joiner != nil {
-		panic("not implemented") // TODO implement
+	} else {
+		c.requestedJoinerID = ma.JoinerID
 	}
 
 	c.neighbourWeight ^= longbits.FoldUint64(ma.Membership.StateEvidence.GetNodeStateHash().FoldToUint64())
@@ -398,7 +402,7 @@ func (c *NodeAppearance) registerFraud(fraud misbehavior.FraudError) (bool, erro
 	return false, fraud
 }
 
-func (c *NodeAppearance) RegisterFraud(fraud misbehavior.FraudError) (bool, error) {
+func (c *NodeAppearance) RegisterFraud(fraud misbehavior.FraudError) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -407,7 +411,8 @@ func (c *NodeAppearance) RegisterFraud(fraud misbehavior.FraudError) (bool, erro
 		panic("misplaced fraud")
 	}
 
-	return c.registerFraud(fraud)
+	_, err := c.registerFraud(fraud)
+	return err
 }
 
 // MUST BE NO LOCK
@@ -459,10 +464,10 @@ func (c *NodeAppearance) ResetPacketHandlers(indices ...int) {
 type NodeRequestedState struct {
 	profiles.MembershipProfile
 	LeaveReason   uint32
-	Joiner        *NodeAppearance
 	TrustLevel    member.TrustLevel
 	IsLeaving     bool
 	RequestedMode member.OpMode
+	JoinerID      insolar.ShortNodeID
 }
 
 func (c *NodeAppearance) GetRequestedState() NodeRequestedState {
@@ -473,7 +478,7 @@ func (c *NodeAppearance) GetRequestedState() NodeRequestedState {
 	if m.Mode.IsEvicted() {
 		panic("illegal state")
 	}
-	if m.Mode.IsRestricted() && c.requestedJoiner != nil {
+	if m.Mode.IsRestricted() && !c.requestedJoinerID.IsAbsent() {
 		panic("illegal state")
 	}
 
@@ -487,24 +492,25 @@ func (c *NodeAppearance) GetRequestedState() NodeRequestedState {
 	}
 
 	return NodeRequestedState{
-		m, c.requestedLeaveReason, c.requestedJoiner, c.trust,
-		c.requestedLeave, reqMode,
+		m, c.requestedLeaveReason, c.trust,
+		c.requestedLeave, reqMode, c.requestedJoinerID,
 	}
 }
 
-func (c *NodeAppearance) GetRequestedAnnouncement() profiles.MembershipAnnouncement {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
+func (c *NodeAppearance) getMembershipAnnouncement() profiles.MembershipAnnouncement {
 	mb := c.getMembership()
 	switch {
 	case c.requestedLeave:
 		return profiles.NewMembershipAnnouncementWithLeave(mb, c.requestedLeaveReason)
-	case c.requestedJoiner != nil:
-		return profiles.NewMembershipAnnouncementWithJoiner(mb, c.requestedJoiner.profile)
 	default:
-		return profiles.NewMembershipAnnouncement(mb)
+		return profiles.NewMembershipAnnouncementWithJoinerID(mb, c.requestedJoinerID)
 	}
+}
+func (c *NodeAppearance) GetRequestedAnnouncement() profiles.MembershipAnnouncement {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	return c.getMembershipAnnouncement()
 }
 
 func (c *NodeAppearance) getPacketLimiter() *phases.PacketLimiter {

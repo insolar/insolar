@@ -122,7 +122,7 @@ type StateAndRankSequenceCalc struct {
 	nodeFullRank member.FullRank
 
 	cursor              member.RankCursor
-	roleFirstTotalIndex uint16
+	roleFirstTotalIndex member.Index
 	entries             []memberEntry
 }
 
@@ -155,15 +155,15 @@ func (p *StateAndRankSequenceCalc) AddNext(nodeData VectorEntryData, zeroPower b
 		p.cursor = member.RankCursor{Role: orderingRole, TotalIndex: p.cursor.TotalIndex}
 	}
 
+	nodeID := nodeData.Profile.GetShortNodeID()
 	me := memberEntry{
 		state:        nodeData.StateEvidence,
-		capture:      p.nodeID == nodeData.Profile.GetShortNodeID(),
+		capture:      p.nodeID == nodeID,
 		SpecialRoles: np.GetSpecialRoles(),
 	}
 
 	if orderingRole == member.PrimaryRoleInactive {
 		me.OpMode = nodeData.RequestedMode
-
 		p.hashMemberEntry(me, 0)
 	} else {
 		me.OpMode = nodeData.RequestedMode
@@ -178,7 +178,7 @@ func (p *StateAndRankSequenceCalc) AddNext(nodeData VectorEntryData, zeroPower b
 	p.cursor.TotalIndex++
 }
 
-func (p *StateAndRankSequenceCalc) hashMemberEntry(v memberEntry, roleIndex uint16) {
+func (p *StateAndRankSequenceCalc) hashMemberEntry(v memberEntry, roleIndex member.Index) {
 	if p.digester == nil {
 		p.digester = p.digestFactory.GetGlobulaStateDigester()
 	}
@@ -195,7 +195,7 @@ func (p *StateAndRankSequenceCalc) hashMemberEntry(v memberEntry, roleIndex uint
 			Power:        v.Power,
 			OpMode:       v.OpMode,
 		},
-		RoleCount: p.cursor.RoleIndex,
+		RoleCount: p.cursor.RoleIndex.AsUint16(),
 		RolePower: p.cursor.RolePowerIndex,
 	}
 	if v.capture {
@@ -215,12 +215,12 @@ func (p *StateAndRankSequenceCalc) flushRoleMembers() {
 	}
 
 	for roleIndex, v := range p.entries {
-		p.hashMemberEntry(v, uint16(roleIndex))
+		p.hashMemberEntry(v, member.AsIndex(roleIndex))
 	}
 	p.entries = p.entries[:0]
 }
 
-func (p *StateAndRankSequenceCalc) FinishSequence() (cryptkit.DigestHolder, member.FullRank, uint16) {
+func (p *StateAndRankSequenceCalc) FinishSequence() (cryptkit.DigestHolder, member.FullRank, member.Index) {
 	p.flushRoleMembers()
 	if p.digester == nil {
 		return nil, p.nodeFullRank, 0

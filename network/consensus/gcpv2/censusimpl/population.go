@@ -52,6 +52,7 @@ package censusimpl
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"sort"
 
 	"github.com/insolar/insolar/insolar"
@@ -190,7 +191,7 @@ func (c *ManyNodePopulation) makeCopyOfMapAndSeparateEvicts(slots map[insolar.Sh
 	c.slotByID = make(map[insolar.ShortNodeID]*updatableSlot, maxSlotCount)
 	c.slots = c.slots[:maxSlotCount]
 
-	i := uint16(0)
+	i := member.Index(0)
 	for _, vv := range indexed {
 		if vv == nil {
 			continue
@@ -221,7 +222,7 @@ func (c *ManyNodePopulation) makeCopyOfMapAndSort(slots map[insolar.ShortNodeID]
 	sort.Sort(&slotArraySorter{values: c.slots, lessFn: less})
 	for i := range c.slots {
 		v := &c.slots[i]
-		v.SetIndex(i)
+		v.SetIndex(member.AsIndex(i))
 		c.slotByID[v.GetShortNodeID()] = v
 	}
 
@@ -240,7 +241,7 @@ func (c *ManyNodePopulation) makeOfProfiles(nodes []profiles.NodeIntroProfile, l
 	c.local.NodeIntroProfile = localNode
 	c.slotByID[localNode.GetShortNodeID()] = c.local
 
-	slotIndex := 1
+	slotIndex := member.AsIndex(1)
 
 	for _, n := range nodes {
 		id := n.GetShortNodeID()
@@ -346,7 +347,7 @@ func (c *DynamicPopulation) Sort(lessFn LessFunc) {
 	sorter := slotSorter{values: c.getUnorderedSlots(), lessFn: lessFn}
 	sort.Sort(&sorter)
 	for i, v := range sorter.values {
-		v.SetIndex(i)
+		v.SetIndex(member.AsIndex(i))
 	}
 }
 

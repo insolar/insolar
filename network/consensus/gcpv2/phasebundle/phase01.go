@@ -53,6 +53,7 @@ package phasebundle
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/announce"
 	"time"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
@@ -74,21 +75,27 @@ func NewPhase01Controller(packetPrepareOptions transport.PacketSendOptions) *Pha
 func (p *packetPhase0Dispatcher) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, n *core.NodeAppearance) error {
 
 	p0 := packet.AsPhase0Packet()
-	// TODO check NodeRank - especially for suspected node
-	// TODO when PulseDataExt is bigger than ~1.5KB - ignore it, as we will not be able to resend it within Ph0/Ph1 packets
-	return p.ctl.handlePulseData(ctx, packet, p0.GetEmbeddedPulsePacket(), n)
+	nr := p0.GetNodeRank()
+
+	if !profiles.MatchIntroAndRank(n.GetProfile(), p.ctl.R.GetNodeCount(), nr) {
+		return n.Frauds().NewMismatchedNeighbourRank(n.GetProfile())
+	}
+
+	pp := p0.GetEmbeddedPulsePacket()
+	return p.ctl.handlePulseData(ctx, pp, n)
 }
 
 func (c *packetPhase1Dispatcher) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, n *core.NodeAppearance) error {
+
 	p1 := packet.AsPhase1Packet()
-	err := c.ctl.handleNodeData(p1, n)
+	_, err := announce.ApplyMemberAnnouncement(ctx, p1, nil, n, c.ctl.R)
 	if err != nil {
 		return err
 	}
 
 	if p1.HasPulseData() {
 		pp := p1.GetEmbeddedPulsePacket()
-		err = c.ctl.handlePulseData(ctx, packet, pp, n)
+		err = c.ctl.handlePulseData(ctx, pp, n)
 	}
 	return err
 }
@@ -96,13 +103,16 @@ func (c *packetPhase1Dispatcher) DispatchMemberPacket(ctx context.Context, packe
 func (c *packetPhase1RqDispatcher) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, n *core.NodeAppearance) error {
 
 	p1 := packet.AsPhase1Packet()
-	err := c.ctl.handleNodeData(p1, n)
+
+	_, err := announce.ApplyMemberAnnouncement(ctx, p1, nil, n, c.ctl.R)
 	if err != nil {
 		return err
 	}
+
 	if p1.HasPulseData() {
 		return fmt.Errorf("pulse data is not expected")
 	}
+
 	if !c.ctl.R.GetSelf().IsNshRequired() {
 		c.ctl.sendReqReply(ctx, n)
 	} else {
@@ -111,35 +121,17 @@ func (c *packetPhase1RqDispatcher) DispatchMemberPacket(ctx context.Context, pac
 	return nil
 }
 
-func (c *Phase01Controller) handleNodeData(p1 transport.Phase1PacketReader, n *core.NodeAppearance) error {
+func (c *Phase01Controller) handlePulseData(ctx context.Context, pp transport.PulsePacketReader, n *core.NodeAppearance) error {
 
-	// if p1.HasSelfIntro() {
-	// TODO register protocol misbehavior - IntroClaim was not expected
+	// TODO when PulseDataExt is bigger than ~1.0KB - ignore it, as we will not be able to resend it within Ph0/Ph1 packets
+	// TODO validate pulse data
+	pp.GetPulseDataEvidence()
+	_ = ctx.Err()
 
-	na := p1.GetAnnouncementReader()
-	nr := na.GetNodeRank()
-	mp := profiles.NewMembershipProfile(nr.GetMode(), nr.GetPower(), nr.GetIndex(),
-		na.GetNodeStateHashEvidence(), na.GetAnnouncementSignature(), na.GetRequestedPower())
-
-	if c.R.GetNodeCount() != int(nr.GetTotalCount()) {
-		_, err := n.RegisterFraud(n.Frauds().NewMismatchedMembershipRank(n.GetProfile(), mp))
-		return err
+	if c.R.GetPulseData() == pp.GetPulseData() {
+		return nil
 	}
-
-	var ma profiles.MembershipAnnouncement
-	switch {
-	case na.IsLeaving():
-		ma = profiles.NewMembershipAnnouncementWithLeave(mp, na.GetLeaveReason())
-	case na.GetJoinerID().IsAbsent():
-		ma = profiles.NewMembershipAnnouncement(mp)
-	default:
-		panic("not implemented") // TODO implement
-		// jar := na.GetJoinerAnnouncement()
-		// ma = common.NewMembershipAnnouncementWithJoiner(mp)
-	}
-
-	_, err := n.ApplyNodeMembership(ma)
-	return err
+	return n.Blames().NewMismatchedPulsePacket(n.GetProfile(), c.R.GetOriginalPulse(), pp.GetPulseDataEvidence())
 }
 
 var _ core.PhaseController = &Phase01Controller{}
@@ -176,20 +168,6 @@ func (c *Phase01Controller) sendReqReply(ctx context.Context, target *core.NodeA
 	target.SetPacketSent(phases.PacketPhase1)
 }
 
-func (c *Phase01Controller) handlePulseData(ctx context.Context, packet transport.MemberPacketReader,
-	pp transport.PulsePacketReader, n *core.NodeAppearance) error {
-
-	// TODO validate pulse data
-	pp.GetPulseDataEvidence()
-	packet.GetPacketSignature()
-	_ = ctx.Err()
-
-	if c.R.GetPulseData() == pp.GetPulseData() {
-		return nil
-	}
-	return n.Blames().NewMismatchedPulsePacket(n.GetProfile(), c.R.GetOriginalPulse(), pp.GetPulseDataEvidence())
-}
-
 func (c *Phase01Controller) StartWorker(ctx context.Context, realm *core.FullRealm) {
 	c.R = realm
 	go c.workerPhase01(ctx)
@@ -209,7 +187,8 @@ func (c *Phase01Controller) workerSendPhase0(ctx context.Context) (proofs.NodeSt
 
 	nshChannel := c.R.UpstreamPreparePulseChange()
 	/*
-		TODO when PulseDataExt is bigger than ~1KB then it is too big for Ph1 and can only be distributed with Ph0 packets, so Ph0 phase should continue to run
+		TODO when PulseDataExt is bigger than ~0.7KB then it is too big for Ph1 and can only be distributed
+		with Ph0 packets, so Ph0 phase should continue to run
 		Also size of Ph1 claims should be considered too.
 	*/
 	var nsh proofs.NodeStateHash

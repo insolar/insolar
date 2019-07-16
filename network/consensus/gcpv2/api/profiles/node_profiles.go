@@ -105,16 +105,12 @@ type BaseNode interface {
 	GetOpMode() member.OpMode
 }
 
-const NodeIndexBits = 10 // DO NOT change it, otherwise nasty consequences will come
-const NodeIndexMask = 1<<NodeIndexBits - 1
-const MaxNodeIndex = NodeIndexMask
-
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.ActiveNode -o . -s _mock.go
 
 type ActiveNode interface {
 	// TODO Rename
 	BaseNode
-	GetIndex() int // 0 for joiners
+	GetIndex() member.Index
 	IsJoiner() bool
 	GetDeclaredPower() member.Power
 }
@@ -166,25 +162,32 @@ type Updatable interface {
 	ActiveNode
 	SetOpMode(m member.OpMode)
 	SetPower(declaredPower member.Power)
-	SetRank(index int, m member.OpMode, declaredPower member.Power)
+	SetRank(index member.Index, m member.OpMode, declaredPower member.Power)
 	SetSignatureVerifier(verifier cryptkit.SignatureVerifier)
 	// Update certificate / mandate
 
 	SetOpModeAndLeaveReason(exitCode uint32)
 	GetLeaveReason() uint32
-	SetIndex(index int)
+	SetIndex(index member.Index)
 }
 
 type MembershipProfile struct {
-	Index          uint16
+	Index          member.Index
 	Mode           member.OpMode
 	Power          member.Power
 	RequestedPower member.Power
 	proofs.NodeAnnouncedState
 }
 
-func NewMembershipProfile(mode member.OpMode, power member.Power, index uint16, nsh proofs.NodeStateHashEvidence, nas proofs.MemberAnnouncementSignature,
+// TODO support joiner in MembershipProfile
+//func (v MembershipProfile) IsJoiner() bool {
+//
+//}
+
+func NewMembershipProfile(mode member.OpMode, power member.Power, index member.Index,
+	nsh proofs.NodeStateHashEvidence, nas proofs.MemberAnnouncementSignature,
 	ep member.Power) MembershipProfile {
+
 	return MembershipProfile{
 		Index:          index,
 		Power:          power,
@@ -200,12 +203,34 @@ func NewMembershipProfile(mode member.OpMode, power member.Power, index uint16, 
 func NewMembershipProfileByNode(np ActiveNode, nsh proofs.NodeStateHashEvidence, nas proofs.MemberAnnouncementSignature,
 	ep member.Power) MembershipProfile {
 
-	return NewMembershipProfile(np.GetOpMode(), np.GetDeclaredPower(),
-		uint16(np.GetIndex()), nsh, nas, ep)
+	idx := member.JoinerIndex
+	if !np.IsJoiner() {
+		idx = np.GetIndex()
+	}
+
+	return NewMembershipProfile(np.GetOpMode(), np.GetDeclaredPower(), idx, nsh, nas, ep)
 }
 
 func (p MembershipProfile) IsEmpty() bool {
 	return p.StateEvidence == nil || p.AnnounceSignature == nil
+}
+
+func (p MembershipProfile) IsJoiner() bool {
+	return p.Index.IsJoiner()
+}
+
+func (p MembershipProfile) AsRank(nc int) member.Rank {
+	if p.Index.IsJoiner() {
+		return member.JoinerRank
+	}
+	return member.NewMembershipRank(p.Mode, p.Power, p.Index, member.AsIndex(nc).AsUint16())
+}
+
+func (p MembershipProfile) AsRankUint16(nc uint16) member.Rank {
+	if p.Index.IsJoiner() {
+		return member.JoinerRank
+	}
+	return member.NewMembershipRank(p.Mode, p.Power, p.Index, member.Index(nc).AsUint16())
 }
 
 func (p MembershipProfile) Equals(o MembershipProfile) bool {
@@ -241,7 +266,7 @@ type MembershipAnnouncement struct {
 	Membership  MembershipProfile
 	IsLeaving   bool
 	LeaveReason uint32
-	Joiner      NodeIntroProfile
+	JoinerID    insolar.ShortNodeID
 }
 
 func NewMembershipAnnouncement(mp MembershipProfile) MembershipAnnouncement {
@@ -250,10 +275,10 @@ func NewMembershipAnnouncement(mp MembershipProfile) MembershipAnnouncement {
 	}
 }
 
-func NewMembershipAnnouncementWithJoiner(mp MembershipProfile, joiner NodeIntroProfile) MembershipAnnouncement {
+func NewMembershipAnnouncementWithJoinerID(mp MembershipProfile, joinerID insolar.ShortNodeID) MembershipAnnouncement {
 	return MembershipAnnouncement{
 		Membership: mp,
-		Joiner:     joiner,
+		JoinerID:   joinerID,
 	}
 }
 
@@ -280,4 +305,13 @@ func EqualIntroProfiles(p NodeIntroProfile, o NodeIntroProfile) bool {
 	}
 
 	return endpoints.EqualEndpoints(p.GetDefaultEndpoint(), o.GetDefaultEndpoint())
+}
+
+func MatchIntroAndRank(np ActiveNode, nc int, nr member.Rank) bool {
+	if nr.IsJoiner() {
+		return np.IsJoiner()
+	}
+
+	return int(nr.GetTotalCount()) == nc && nr.GetIndex() == np.GetIndex() && nr.GetMode() == np.GetOpMode() &&
+		nr.GetPower() == np.GetDeclaredPower()
 }

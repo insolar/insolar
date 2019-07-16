@@ -57,6 +57,19 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
 
+func IsFraud(err error) bool {
+	_, ok := err.(*FraudError)
+	return ok
+}
+
+func FraudOf(err error) *FraudError {
+	rep, ok := err.(*FraudError)
+	if ok {
+		return rep
+	}
+	return nil
+}
+
 var _ Report = &FraudError{}
 
 type FraudError struct {
@@ -112,6 +125,7 @@ const (
 	_ = iota
 	FraudMultipleNsh
 	MismatchedRank
+	MismatchedNeighbour
 )
 
 func NewFraudFactory(capture ReportFunc) FraudFactory {
@@ -155,6 +169,22 @@ func (p FraudFactory) NewMismatchedMembershipRank(violator profiles.ActiveNode, 
 	return p.NewNodeFraud(MismatchedRank, "mismatched membership profile rank", violator, mp)
 }
 
-func (p FraudFactory) NewMismatchedMembershipNodeCount(violator profiles.ActiveNode, mp profiles.MembershipProfile, nodeCount int) FraudError {
+func (p FraudFactory) NewMismatchedMembershipRankOrNodeCount(violator profiles.ActiveNode, mp profiles.MembershipProfile, nodeCount int) FraudError {
 	return p.NewNodeFraud(MismatchedRank, "mismatched membership profile node count", violator, mp, nodeCount)
+}
+
+func (p FraudFactory) NewUnknownNeighbour(violator profiles.ActiveNode) error {
+	return p.NewNodeFraud(MismatchedNeighbour, "unknown neighbour", violator)
+}
+
+func (p FraudFactory) NewMismatchedNeighbourRank(violator profiles.ActiveNode) error {
+	return p.NewNodeFraud(MismatchedNeighbour, "mismatched neighbour rank", violator)
+}
+
+func (p FraudFactory) NewNeighbourMissingTarget(violator profiles.ActiveNode) error {
+	return p.NewNodeFraud(MismatchedNeighbour, "neighbour must include target node", violator)
+}
+
+func (p FraudFactory) NewNeighbourContainsRource(violator profiles.ActiveNode) error {
+	return p.NewNodeFraud(MismatchedNeighbour, "neighbour must NOT include source node", violator)
 }

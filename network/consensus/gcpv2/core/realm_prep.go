@@ -139,7 +139,14 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 	if int(pt) < len(p.packetDispatchers) {
 		pd := p.packetDispatchers[pt]
 		if pd != nil {
-			err := pd.DispatchHostPacket(ctx, packet, from, verifyFlags)
+			var err error
+			// TODO enable lazy parsing on the packet
+			//packet, err = packet.ParsePacketBody()
+			//if err != nil {
+			//	return err
+			//}
+
+			err = pd.DispatchHostPacket(ctx, packet, from, verifyFlags)
 			if err != nil {
 				// TODO an error to ignore postpone?
 				return err

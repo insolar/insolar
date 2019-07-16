@@ -51,8 +51,6 @@
 package censusimpl
 
 import (
-	"math"
-
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
@@ -60,27 +58,22 @@ import (
 
 var _ profiles.LocalNode = &NodeProfileSlot{}
 
-const joinerIndex = 0x8000
-
 type NodeProfileSlot struct {
 	profiles.NodeIntroProfile
 	verifier cryptkit.SignatureVerifier
-	index    uint16
+	index    member.Index
 	mode     member.OpMode
 	power    member.Power
 }
 
-func NewNodeProfile(index int, p profiles.NodeIntroProfile, verifier cryptkit.SignatureVerifier, pw member.Power) NodeProfileSlot {
+func NewNodeProfile(index member.Index, p profiles.NodeIntroProfile, verifier cryptkit.SignatureVerifier, pw member.Power) NodeProfileSlot {
 
-	if index < 0 || index > profiles.MaxNodeIndex {
-		panic("illegal value")
-	}
-	return NodeProfileSlot{index: uint16(index), NodeIntroProfile: p, verifier: verifier, power: pw}
+	return NodeProfileSlot{index: index.Ensure(), NodeIntroProfile: p, verifier: verifier, power: pw}
 }
 
 func NewJoinerProfile(p profiles.NodeIntroProfile, verifier cryptkit.SignatureVerifier, pw member.Power) NodeProfileSlot {
 
-	return NodeProfileSlot{index: joinerIndex, NodeIntroProfile: p, verifier: verifier, power: pw}
+	return NodeProfileSlot{index: member.JoinerIndex, NodeIntroProfile: p, verifier: verifier, power: pw}
 }
 
 func (c *NodeProfileSlot) GetDeclaredPower() member.Power {
@@ -94,12 +87,12 @@ func (c *NodeProfileSlot) GetOpMode() member.OpMode {
 func (c *NodeProfileSlot) LocalNodeProfile() {
 }
 
-func (c *NodeProfileSlot) GetIndex() int {
-	return int(c.index & profiles.NodeIndexMask)
+func (c *NodeProfileSlot) GetIndex() member.Index {
+	return c.index.Ensure()
 }
 
 func (c *NodeProfileSlot) IsJoiner() bool {
-	return c.index == joinerIndex
+	return c.index.IsJoiner()
 }
 
 func (c *NodeProfileSlot) GetSignatureVerifier() cryptkit.SignatureVerifier {
@@ -113,8 +106,8 @@ type updatableSlot struct {
 	leaveReason uint32
 }
 
-func (c *updatableSlot) SetRank(index int, m member.OpMode, power member.Power) {
-	c.SetIndex(index)
+func (c *updatableSlot) SetRank(index member.Index, m member.OpMode, power member.Power) {
+	c.index = index.Ensure()
 	c.power = power
 	c.mode = m
 }
@@ -139,11 +132,8 @@ func (c *updatableSlot) GetLeaveReason() uint32 {
 	return c.leaveReason
 }
 
-func (c *updatableSlot) SetIndex(index int) {
-	if index < 0 || index > math.MaxUint16 {
-		panic("wrong index")
-	}
-	c.index = uint16(index)
+func (c *updatableSlot) SetIndex(index member.Index) {
+	c.index = index.Ensure()
 }
 
 func (c *updatableSlot) SetSignatureVerifier(verifier cryptkit.SignatureVerifier) {

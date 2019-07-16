@@ -114,6 +114,7 @@ const (
 	_ = iota
 	BlameExcessiveIntro
 	MismatchedPulsarPacket
+	ProtocolViolation
 )
 
 func NewBlameFactory(capture ReportFunc) BlameFactory {
@@ -157,4 +158,8 @@ func (p BlameFactory) NewMismatchedPulsarPacket(from endpoints.Inbound, expected
 
 func (p BlameFactory) NewMismatchedPulsePacket(from profiles.ActiveNode, expected proofs.OriginalPulsarPacket, received proofs.OriginalPulsarPacket) error {
 	return p.NewNodeBlame(MismatchedPulsarPacket, "mixed pulsar pulses", from, expected, received)
+}
+
+func (p BlameFactory) NewProtocolViolation(violator profiles.ActiveNode, msg string) error {
+	return p.NewNodeBlame(ProtocolViolation, msg, violator)
 }

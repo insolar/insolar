@@ -180,23 +180,46 @@ func (p *RealmVectorProjection) ScanSortedWithFilter(apply func(nodeData nodeset
 	var skipped []postponedEntry
 	unorderedSkipped := false
 
+	prevID := insolar.AbsentShortNodeID
+
 	for _, se := range p.poweredSorted {
-		_, ve := se.chooseEntry(p.indexedRefs, p.joinersRefs)
-		postpone, filterValue := filter(int(ve.filterBy), p.indexedRefs[ve.filterBy].VectorEntryData)
+		joiner, valueEntry := se.chooseEntry(p.indexedRefs, p.joinersRefs)
+		filterEntry := p.indexedRefs[valueEntry.filterBy]
+		postpone, filterValue := filter(int(valueEntry.filterBy), filterEntry.VectorEntryData)
+
+		nodeID := valueEntry.Profile.GetShortNodeID()
+		if joiner {
+			if postpone {
+				// joiner MUST NOT appear when an introduction node is out
+				return
+			}
+			// joiner may appear multiple times in a powered section via multiple introducing nodes
+			// due to sorting all repetitions will come in sequence
+			if prevID == nodeID {
+				continue
+			}
+			postpone, _ = filter(-1, valueEntry.VectorEntryData)
+		} else {
+			if prevID == nodeID {
+				// regular nodes MUST NOT be multiplied
+				panic("illegal state")
+			}
+		}
+		prevID = nodeID
 
 		if postpone {
 			if skipped == nil {
 				skipped = make([]postponedEntry, 1, 1+len(p.poweredSorted)>>1)
-				skipped[0] = postponedEntry{ve, filterValue}
+				skipped[0] = postponedEntry{valueEntry, filterValue}
 			} else {
-				if skipped[len(skipped)-1].ve.Profile.GetShortNodeID() >= ve.Profile.GetShortNodeID() {
+				if skipped[len(skipped)-1].ve.Profile.GetShortNodeID() >= valueEntry.Profile.GetShortNodeID() {
 					unorderedSkipped = true
 				}
-				skipped = append(skipped, postponedEntry{ve, filterValue})
+				skipped = append(skipped, postponedEntry{valueEntry, filterValue})
 			}
 			continue
 		}
-		apply(ve.VectorEntryData, filterValue)
+		apply(valueEntry.VectorEntryData, filterValue)
 	}
 
 	if unorderedSkipped {
@@ -222,7 +245,8 @@ func (p *RealmVectorHelper) CreateUnsafeProjection() RealmVectorProjection {
 	return p.projection
 }
 
-func (p *RealmVectorHelper) setArrayNodes(nodeIndex []*NodeAppearance, joinerCountHint int, populationVersion uint32) {
+func (p *RealmVectorHelper) setArrayNodes(nodeIndex []*NodeAppearance,
+	dynamicNodes map[insolar.ShortNodeID]*NodeAppearance, populationVersion uint32) {
 
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
@@ -233,16 +257,13 @@ func (p *RealmVectorHelper) setArrayNodes(nodeIndex []*NodeAppearance, joinerCou
 	p.projection.origin = p
 
 	indCount := len(nodeIndex)
-	if joinerCountHint < 0 {
-		joinerCountHint = indCount
-	}
 
 	p.projection.populationVersion = populationVersion
 	p.members = make([]VectorEntry, indCount)
-	p.joiners = make([]VectorEntry, joinerCountHint)
+	p.joiners = make([]VectorEntry, len(dynamicNodes))
 
 	p.projection.indexedRefs = make([]*VectorEntry, indCount)
-	p.projection.poweredSorted = make([]sortedEntry, indCount+joinerCountHint)
+	p.projection.poweredSorted = make([]sortedEntry, indCount+len(dynamicNodes))
 
 	sortedCount := 0
 	joinerCount := 0
@@ -254,13 +275,18 @@ func (p *RealmVectorHelper) setArrayNodes(nodeIndex []*NodeAppearance, joinerCou
 
 		ve := &p.members[i]
 		p.projection.indexedRefs[i] = ve
-		joiner := ve.setValues(n)
+		joinerID := ve.setValues(n)
 		ve.filterBy = uint16(i)
 
 		p.projection.poweredSorted[sortedCount].setMember(ve, i)
 		sortedCount++
 
+		if joinerID.IsAbsent() {
+			continue
+		}
+		joiner := dynamicNodes[joinerID]
 		if joiner == nil {
+			panic("joiner is missing")
 			continue
 		}
 
@@ -270,8 +296,9 @@ func (p *RealmVectorHelper) setArrayNodes(nodeIndex []*NodeAppearance, joinerCou
 			p.projection.poweredSorted = append(p.projection.poweredSorted, sortedEntry{})
 		}
 		je := &p.joiners[joinerCount]
-		joiner = je.setValues(n)
-		if joiner != nil {
+
+		joinerID = je.setValues(joiner)
+		if !joinerID.IsAbsent() {
 			panic("illegal state")
 		}
 
@@ -298,7 +325,7 @@ func (p *RealmVectorHelper) forceEntryUpdate(index int) (*VectorEntry, *VectorEn
 	return nil, nil // TODO
 }
 
-func (p *VectorEntry) setValues(n *NodeAppearance) *NodeAppearance {
+func (p *VectorEntry) setValues(n *NodeAppearance) insolar.ShortNodeID {
 
 	np := n.GetProfile()
 	p.Profile = np
@@ -309,7 +336,7 @@ func (p *VectorEntry) setValues(n *NodeAppearance) *NodeAppearance {
 	p.AnnounceSignature = rs.AnnounceSignature
 	p.RequestedMode = rs.RequestedMode
 	p.RequestedPower = rs.RequestedPower
-	return rs.Joiner
+	return rs.JoinerID
 }
 
 type sortedEntry struct {

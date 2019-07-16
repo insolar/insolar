@@ -415,7 +415,7 @@ func (r *EmuPhase2NetPacket) GetJoinerSecret() cryptkit.SignatureHolder {
 }
 
 func (r *EmuPhase2NetPacket) GetBriefIntroduction() transport.BriefIntroductionReader {
-	panic("implement me")
+	return nil
 }
 
 func (r *EmuPhase2NetPacket) String() string {

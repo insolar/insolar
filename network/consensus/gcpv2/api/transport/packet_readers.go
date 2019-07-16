@@ -64,20 +64,19 @@ import (
 
 type PacketParser interface {
 	GetPacketType() phases.PacketType
-
 	/* Should return Unknown when it is not possible to identify it for a packet */
 	GetPulseNumber() pulse.Number
 
-	GetPulsePacket() PulsePacketReader
-	GetMemberPacket() MemberPacketReader
-
 	GetSourceID() insolar.ShortNodeID
 	GetReceiverID() insolar.ShortNodeID
-
-	IsRelayForbidden() bool
 	GetTargetID() insolar.ShortNodeID
+	IsRelayForbidden() bool
 
 	GetPacketSignature() cryptkit.SignedDigest
+	//ParsePacketBody() (PacketParser, error) //enables lazy parsing / parsing only after packet validation
+
+	GetPulsePacket() PulsePacketReader
+	GetMemberPacket() MemberPacketReader
 }
 
 type PulsePacketReader interface {
@@ -119,34 +118,34 @@ type ExtendedIntroReader interface {
 	GetJoinerSecret() cryptkit.SignatureHolder
 }
 
+type AnnouncementPacketReader interface {
+	ExtendedIntroReader
+	GetAnnouncementReader() MembershipAnnouncementReader
+}
+
 type Phase1PacketReader interface {
 	PhasePacketReader
-	ExtendedIntroReader
+	AnnouncementPacketReader
 
 	HasPulseData() bool /* PulseData/PulsarData is optional for Phase1 */
 	GetEmbeddedPulsePacket() PulsePacketReader
-
-	GetAnnouncementReader() MembershipAnnouncementReader
 }
 
 type Phase2PacketReader interface {
 	PhasePacketReader
-	ExtendedIntroReader
+	AnnouncementPacketReader
 
 	GetBriefIntroduction() BriefIntroductionReader
-	GetAnnouncementReader() MembershipAnnouncementReader
 	GetNeighbourhood() []MembershipAnnouncementReader
 }
 
 type HashedVectorReader interface {
 	GetBitset() member.StateBitset
 
-	// GetTrustedExpectedRank() common2.Rank
 	GetTrustedGlobulaAnnouncementHash() proofs.GlobulaAnnouncementHash
 	GetTrustedGlobulaStateSignature() proofs.GlobulaStateSignature
 	GetTrustedExpectedRank() member.Rank
 
-	// GetDoubtedExpectedRank() common2.Rank
 	GetDoubtedGlobulaAnnouncementHash() proofs.GlobulaAnnouncementHash
 	GetDoubtedGlobulaStateSignature() proofs.GlobulaStateSignature
 	GetDoubtedExpectedRank() member.Rank
@@ -178,8 +177,7 @@ type MembershipAnnouncementReader interface {
 }
 
 type JoinerAnnouncementReader interface {
-	GetBriefIntro() BriefIntroductionReader
-	GetBriefIntroSignature() cryptkit.SignatureHolder
+	GetBriefIntroduction() BriefIntroductionReader
 }
 
 type CloudIntroductionReader interface {

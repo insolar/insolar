@@ -86,11 +86,13 @@ type DynamicRealmPopulation struct {
 	joinerCount  int
 	indexedCount int
 
-	nodeIndex     []*NodeAppearance
-	nodeShuffle   []*NodeAppearance // excluding self
-	dynamicNodes  map[insolar.ShortNodeID]*NodeAppearance
+	nodeIndex    []*NodeAppearance
+	nodeShuffle  []*NodeAppearance // excluding self
+	dynamicNodes map[insolar.ShortNodeID]*NodeAppearance
+	//	purgatoryByEP map[string]*NodeAppearance
 	purgatoryByPK map[string]*NodeAppearance
 	purgatoryByID map[insolar.ShortNodeID]*[]*NodeAppearance
+	purgatoryOuts map[insolar.ShortNodeID]*NodeAppearance
 }
 
 func (r *DynamicRealmPopulation) initPopulation(local profiles.ActiveNode, nodeCountHint int) {
@@ -280,10 +282,10 @@ func (r *DynamicRealmPopulation) AddToDynamics(n *NodeAppearance) (*NodeAppearan
 	} else {
 		ni := np.GetIndex()
 		switch {
-		case ni == len(r.nodeIndex):
+		case ni.AsInt() == len(r.nodeIndex):
 			r.nodeIndex = append(r.nodeIndex, n)
-		case ni > len(r.nodeIndex):
-			r.nodeIndex = append(r.nodeIndex, make([]*NodeAppearance, 1+ni-len(r.nodeIndex))...)
+		case ni.AsInt() > len(r.nodeIndex):
+			r.nodeIndex = append(r.nodeIndex, make([]*NodeAppearance, 1+ni.AsInt()-len(r.nodeIndex))...)
 			r.nodeIndex[ni] = n
 		default:
 			if r.nodeIndex[ni] != nil {
@@ -303,7 +305,7 @@ func (r *DynamicRealmPopulation) CreateVectorHelper() *RealmVectorHelper {
 	defer r.rw.RUnlock()
 
 	v := &RealmVectorHelper{realmPopulation: r}
-	v.setArrayNodes(r.nodeIndex, r.joinerCount, r.self.callback.GetPopulationVersion())
+	v.setArrayNodes(r.nodeIndex, r.dynamicNodes, r.self.callback.GetPopulationVersion())
 	v.realmPopulation = r
 	return v
 }

@@ -63,6 +63,19 @@ type Report interface {
 	MisbehaviorType() Type
 }
 
+func Is(err error) bool {
+	_, ok := err.(Report)
+	return ok
+}
+
+func Of(err error) Report {
+	rep, ok := err.(Report)
+	if ok {
+		return rep
+	}
+	return nil
+}
+
 type ReportFunc func(report Report) interface{}
 
 type Type uint64

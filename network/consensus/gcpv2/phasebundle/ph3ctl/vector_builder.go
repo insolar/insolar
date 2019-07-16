@@ -162,15 +162,22 @@ func (p *VectorBuilder) buildGlobulaStateHash(trusted bool, nodeID insolar.Short
 			calc.AddNext(nodeData, filter == postponeEntry)
 		},
 		func(idx int, nodeData nodeset.VectorEntryData) (bool, uint32) {
-			b := p.bitset[idx]
-			if b.IsTimeout() || nodeData.RequestedPower == 0 || nodeData.RequestedMode.IsPowerless() || trusted && !b.IsTrusted() {
+			if nodeData.IsEmpty() || nodeData.RequestedPower == 0 || nodeData.RequestedMode.IsPowerless() {
+				return true, postponeEntry
+			}
+
+			if idx < 0 { //this is joiner check - it can only indicate "postpone"
+				return false, 0 /* filterValue is ignored for index < 0 */
+			}
+
+			if trusted && !p.bitset[idx].IsTrusted() {
 				return true, postponeEntry
 			}
 			return false, normalEntry
 		})
 
 	tHash, tRank, tCount := calc.FinishSequence()
-	return statevector.CalcStateWithRank{StateHash: tHash, ExpectedRank: tRank.AsMembershipRank(tCount)}
+	return statevector.CalcStateWithRank{StateHash: tHash, ExpectedRank: tRank.AsMembershipRank(tCount.AsUint16())}
 }
 
 func (p *VectorBuilder) BuildGlobulaAnnouncementHashes(buildTrusted, buildDoubted bool,

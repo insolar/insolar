@@ -52,7 +52,6 @@ package core
 
 import (
 	"context"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/consensuskit"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -146,7 +145,7 @@ func (r *MemberRealmPopulation) GetBftMajorityCount() int {
 func (r *MemberRealmPopulation) GetActiveNodeAppearance(id insolar.ShortNodeID) *NodeAppearance {
 	np := r.population.FindProfile(id)
 	if np != nil && !np.IsJoiner() {
-		return r.GetNodeAppearanceByIndex(np.GetIndex())
+		return r.GetNodeAppearanceByIndex(np.GetIndex().AsInt())
 	}
 	return nil
 }
@@ -188,8 +187,11 @@ func (r *MemberRealmPopulation) CreateVectorHelper() *RealmVectorHelper {
 var _ profiles.ActiveNode = &joiningNodeProfile{}
 
 type joiningNodeProfile struct {
+	//mutex sync.Mutex
 	profiles.NodeIntroProfile
 }
+
+// TODO access profiles.NodeIntroProfile under lock
 
 func (p *joiningNodeProfile) IsJoiner() bool {
 	return true
@@ -199,8 +201,8 @@ func (p *joiningNodeProfile) GetOpMode() member.OpMode {
 	return member.ModeNormal
 }
 
-func (p *joiningNodeProfile) GetIndex() int {
-	return 0
+func (p *joiningNodeProfile) GetIndex() member.Index {
+	return member.JoinerIndex.Ensure()
 }
 
 func (p *joiningNodeProfile) GetDeclaredPower() member.Power {

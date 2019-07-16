@@ -331,7 +331,7 @@ func (c *Phase3ControllerV2) workerRecvPhase3(ctx context.Context, localInspecto
 	statTbl := nodeset.NewConsensusStatTable(c.R.GetNodeCount())
 
 	// should it be updatable?
-	statTbl.PutRow(c.R.GetSelf().GetIndex(), nodeset.LocalToConsensusStatRow(localInspector.GetBitset()))
+	statTbl.PutRow(c.R.GetSelf().GetIndex().AsInt(), nodeset.LocalToConsensusStatRow(localInspector.GetBitset()))
 
 	remainingNodes := c.R.GetPopulation().GetOthersCount()
 
@@ -410,7 +410,7 @@ outer:
 					break
 				}
 
-				statTbl.PutRow(d.GetNode().GetIndex(), nodeStats)
+				statTbl.PutRow(d.GetNode().GetIndex().AsInt(), nodeStats)
 				remainingNodes--
 
 				if vr.AnyOf(nodeset.NvrDoubtedAlteredNodeSet) {

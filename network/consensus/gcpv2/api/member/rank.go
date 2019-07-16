@@ -67,12 +67,15 @@ func (v Rank) GetPower() Power {
 	return Power(v)
 }
 
-func (v Rank) GetIndex() uint16 {
-	return uint16(v>>8) & 0x03FF
+func (v Rank) GetIndex() Index {
+	if v == JoinerRank {
+		return JoinerIndex
+	}
+	return AsIndex(int(v>>8) & NodeIndexMask)
 }
 
 func (v Rank) GetTotalCount() uint16 {
-	return uint16(v>>18) & 0x03FF
+	return AsIndex(int(v>>18) & NodeIndexMask).AsUint16()
 }
 
 func (v Rank) GetMode() OpMode {
@@ -90,30 +93,30 @@ func (v Rank) String() string {
 	return fmt.Sprintf("{%v %d/%d pw:%v}", v.GetMode(), v.GetIndex(), v.GetTotalCount(), v.GetPower())
 }
 
-func NewMembershipRank(mode OpMode, pw Power, idx, count uint16) Rank {
-	if idx >= count {
+func NewMembershipRank(mode OpMode, pw Power, idx Index, count uint16) Rank {
+	idx.Ensure()
+	//if idx.IsJoiner() {
+	//	if mode != 0 || pw != 0 {
+	//		panic("illegal value")
+	//	}
+	//	return JoinerRank
+	//}
+	if idx.AsUint16() >= count {
 		panic("illegal value")
 	}
 
 	r := uint32(pw)
-	r |= ensureNodeIndex(idx) << 8
-	r |= ensureNodeIndex(count) << 18
+	r |= idx.AsUint32() << 8
+	r |= Index(count).AsUint32() << 18
 	r |= mode.AsUnit32() << 28
 	return Rank(r)
 }
 
-func ensureNodeIndex(v uint16) uint32 {
-	if v > 0x03FF {
-		panic("out of bounds")
-	}
-	return uint32(v & 0x03FF)
-}
-
 type RankCursor struct {
 	Role           PrimaryRole
-	RoleIndex      uint16
+	RoleIndex      Index
 	RolePowerIndex uint32
-	TotalIndex     uint16
+	TotalIndex     Index
 }
 
 type InterimRank struct {
