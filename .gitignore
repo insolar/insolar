@@ -55,3 +55,5 @@ network_cache
 /docs/build
 
 *.lock
+*.md
+/.vendor-new

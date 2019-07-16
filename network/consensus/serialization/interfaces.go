@@ -55,8 +55,9 @@ import (
 	"encoding/binary"
 	"io"
 
-	"github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 )
 
 var (
@@ -65,8 +66,8 @@ var (
 
 type PacketHeaderAccessor interface {
 	GetProtocolType() ProtocolType
-	GetPacketType() packets.PacketType
-	GetSourceID() common.ShortNodeID
+	GetPacketType() phases.PacketType
+	GetSourceID() insolar.ShortNodeID
 	HasFlag(flag Flag) bool
 	GetFlagRangeInt(from, to uint8) uint8
 	IsRelayRestricted() bool
@@ -97,10 +98,10 @@ type PacketContext interface {
 
 	InContext(ctx FieldContext) bool
 	SetInContext(ctx FieldContext)
-	GetNeighbourNodeID() common.ShortNodeID
-	SetNeighbourNodeID(nodeID common.ShortNodeID)
-	GetAnnouncedJoinerNodeID() common.ShortNodeID
-	SetAnnouncedJoinerNodeID(nodeID common.ShortNodeID)
+	GetNeighbourNodeID() insolar.ShortNodeID
+	SetNeighbourNodeID(nodeID insolar.ShortNodeID)
+	GetAnnouncedJoinerNodeID() insolar.ShortNodeID
+	SetAnnouncedJoinerNodeID(nodeID insolar.ShortNodeID)
 }
 
 type SerializeContext interface {
@@ -113,7 +114,7 @@ type DeserializeContext interface {
 }
 
 type SerializerTo interface {
-	SerializeTo(ctx context.Context, writer io.Writer, digester common.DataDigester, signer common.DigestSigner) (int64, error)
+	SerializeTo(ctx context.Context, writer io.Writer, digester cryptkit.DataDigester, signer cryptkit.DigestSigner) (int64, error)
 }
 
 type ContextSerializerTo interface {

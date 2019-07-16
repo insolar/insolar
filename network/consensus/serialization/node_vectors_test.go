@@ -57,7 +57,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -65,11 +66,11 @@ func TestNodeVectors_SerializeTo(t *testing.T) {
 	nv := NodeVectors{}
 
 	header := Header{}
-	pctx := newPacketContext(context.Background(), &header)
-	sctx := newSerializeContext(pctx, nil, nil, nil, nil)
+	packetCtx := newPacketContext(context.Background(), &header)
+	serializeCtx := newSerializeContext(packetCtx, nil, nil, nil, nil)
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
-	err := nv.SerializeTo(sctx, buf)
+	err := nv.SerializeTo(serializeCtx, buf)
 	require.NoError(t, err)
 }
 
@@ -77,16 +78,16 @@ func TestNodeVectors_DeserializeFrom(t *testing.T) {
 	nv := NodeVectors{}
 
 	header := Header{}
-	pctx := newPacketContext(context.Background(), &header)
-	sctx := newSerializeContext(pctx, nil, nil, nil, nil)
+	packetCtx := newPacketContext(context.Background(), &header)
+	serializeCtx := newSerializeContext(packetCtx, nil, nil, nil, nil)
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
-	err := nv.SerializeTo(sctx, buf)
+	err := nv.SerializeTo(serializeCtx, buf)
 	require.NoError(t, err)
 
-	dcxt := newDeserializeContext(pctx, nil, nil)
+	deserializeCtx := newDeserializeContext(packetCtx, nil, nil)
 	nv2 := NodeVectors{}
-	err = nv2.DeserializeFrom(dcxt, buf)
+	err = nv2.DeserializeFrom(deserializeCtx, buf)
 	require.NoError(t, err)
 
 	require.Equal(t, nv, nv2)
@@ -103,16 +104,16 @@ func TestNodeVectors_AdditionalVectors(t *testing.T) {
 	header.ClearFlag(1)
 	header.SetFlag(2)
 
-	pctx := newPacketContext(context.Background(), &header)
-	sctx := newSerializeContext(pctx, nil, nil, nil, nil)
+	packetCtx := newPacketContext(context.Background(), &header)
+	serializeCtx := newSerializeContext(packetCtx, nil, nil, nil, nil)
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
-	err := nv.SerializeTo(sctx, buf)
+	err := nv.SerializeTo(serializeCtx, buf)
 	require.NoError(t, err)
 
-	dcxt := newDeserializeContext(pctx, nil, nil)
+	deserializeCtx := newDeserializeContext(packetCtx, nil, nil)
 	nv2 := NodeVectors{}
-	err = nv2.DeserializeFrom(dcxt, buf)
+	err = nv2.DeserializeFrom(deserializeCtx, buf)
 	require.NoError(t, err)
 
 	require.Equal(t, nv, nv2)
@@ -264,12 +265,12 @@ func TestNodeAppearanceBitset_setLength_Panic(t *testing.T) {
 func TestNodeAppearanceBitset_SetBitset(t *testing.T) {
 	b := NodeAppearanceBitset{}
 
-	bitset := nodeset.NodeBitset{
-		nodeset.NbsHighTrust,
-		nodeset.NbsHighTrust,
-		nodeset.NbsTimeout,
-		nodeset.NbsFraud,
-		nodeset.NbsBaselineTrust,
+	bitset := member.StateBitset{
+		member.BeHighTrust,
+		member.BeHighTrust,
+		member.BeTimeout,
+		member.BeFraud,
+		member.BeBaselineTrust,
 	}
 
 	b.SetBitset(bitset)
@@ -281,7 +282,7 @@ func TestNodeAppearanceBitset_SetBitset(t *testing.T) {
 func TestNodeAppearanceBitset_SetBitset_Panic(t *testing.T) {
 	b := NodeAppearanceBitset{}
 
-	bitset := nodeset.NodeBitset(make([]nodeset.NodeBitsetEntry, math.MaxUint16+1))
+	bitset := member.StateBitset(make([]member.BitsetEntry, math.MaxUint16+1))
 
 	require.Panics(t, func() { b.SetBitset(bitset) })
 }
@@ -289,12 +290,12 @@ func TestNodeAppearanceBitset_SetBitset_Panic(t *testing.T) {
 func TestNodeAppearanceBitset_GetBitset(t *testing.T) {
 	b := NodeAppearanceBitset{}
 
-	bitset := nodeset.NodeBitset{
-		nodeset.NbsHighTrust,
-		nodeset.NbsHighTrust,
-		nodeset.NbsTimeout,
-		nodeset.NbsFraud,
-		nodeset.NbsBaselineTrust,
+	bitset := member.StateBitset{
+		member.BeHighTrust,
+		member.BeHighTrust,
+		member.BeTimeout,
+		member.BeFraud,
+		member.BeBaselineTrust,
 	}
 
 	b.SetBitset(bitset)
@@ -321,12 +322,12 @@ func TestNodeAppearanceBitset_Empty(t *testing.T) {
 func TestNodeAppearanceBitset_NoHiLength(t *testing.T) {
 	b := NodeAppearanceBitset{}
 
-	bitset := nodeset.NodeBitset{
-		nodeset.NbsHighTrust,
-		nodeset.NbsHighTrust,
-		nodeset.NbsTimeout,
-		nodeset.NbsFraud,
-		nodeset.NbsBaselineTrust,
+	bitset := member.StateBitset{
+		member.BeHighTrust,
+		member.BeHighTrust,
+		member.BeTimeout,
+		member.BeFraud,
+		member.BeBaselineTrust,
 	}
 
 	b.SetBitset(bitset)
@@ -348,7 +349,7 @@ func TestNodeAppearanceBitset_NoHiLength(t *testing.T) {
 func TestNodeAppearanceBitset_HasHiLength(t *testing.T) {
 	b := NodeAppearanceBitset{}
 
-	bitset := nodeset.NodeBitset(make([]nodeset.NodeBitsetEntry, loByteLengthMax+1))
+	bitset := member.StateBitset(make([]member.BitsetEntry, loByteLengthMax+1))
 
 	b.SetBitset(bitset)
 
@@ -382,7 +383,7 @@ func TestGlobulaStateVector_DeserializeFrom(t *testing.T) {
 	}
 
 	b := make([]byte, 64)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 
 	copy(v1.VectorHash[:], b)
 	copy(v1.SignedGlobulaStateHash[:], b)
