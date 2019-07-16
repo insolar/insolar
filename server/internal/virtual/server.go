@@ -88,7 +88,7 @@ func (s *Server) Serve() {
 	}
 	defer jaegerflush()
 
-	cm, th := initComponents(
+	cm, th, stopWatermill := initComponents(
 		ctx,
 		*cfg,
 		bootstrapComponents.CryptographyService,
@@ -96,7 +96,6 @@ func (s *Server) Serve() {
 		bootstrapComponents.KeyStore,
 		bootstrapComponents.KeyProcessor,
 		certManager,
-		false,
 	)
 
 	ctx, inslog = inslogger.WithField(ctx, "nodeid", certManager.GetCertificate().GetNodeRef().String())
@@ -117,11 +116,13 @@ func (s *Server) Serve() {
 		sig := <-gracefulStop
 		inslog.Debug("caught sig: ", sig)
 
-		inslog.Warn("GRACEFULL STOP APP")
+		inslog.Warn("GRACEFUL STOP APP")
 		th.Leave(ctx, 10)
 		inslog.Info("main leave ends ")
 		err = cm.GracefulStop(ctx)
 		checkError(ctx, err, "failed to graceful stop components")
+
+		stopWatermill()
 
 		err = cm.Stop(ctx)
 		checkError(ctx, err, "failed to stop components")

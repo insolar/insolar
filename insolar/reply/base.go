@@ -70,17 +70,12 @@ const (
 	TypeJetMiss
 	// TypePendingRequests contains unclosed requests for an object.
 	TypePendingRequests
-	// TypePendingRequestID contains ID of unclosed request for an object.
-	TypePendingRequestID
 	// TypeJet contains jet.
 	TypeJet
-	// TypeRequest contains request.
-	TypeRequest
-	TypePendingFilament
+	// TypeOpenRequestsOnHeavy returns open requests from a heavy
+	TypeOpenRequestsOnHeavy
 	// TypeHeavyError carries heavy record sync
 	TypeHeavyError
-
-	TypeNodeSign
 )
 
 // ErrType is used to determine and compare reply errors.
@@ -135,11 +130,6 @@ func getEmptyReply(t insolar.ReplyType) (insolar.Reply, error) {
 		return &HasPendingRequests{}, nil
 	case TypeJet:
 		return &Jet{}, nil
-	case TypeRequest:
-		return &Request{}, nil
-
-	case TypeNodeSign:
-		return &NodeSign{}, nil
 
 	default:
 		return nil, errors.Errorf("unimplemented reply type: '%d'", t)
@@ -201,7 +191,5 @@ func init() {
 	gob.Register(&GetChildrenRedirectReply{})
 	gob.Register(&HeavyError{})
 	gob.Register(&JetMiss{})
-	gob.Register(&NodeSign{})
 	gob.Register(&HasPendingRequests{})
-	gob.Register(&Request{})
 }

@@ -19,23 +19,19 @@ package sdk
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
+	"math/big"
 	"sync"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils"
-
-	"github.com/pkg/errors"
 )
-
-type response struct {
-	Error   string
-	Result  interface{}
-	TraceID string
-}
 
 type ringBuffer struct {
 	sync.Mutex
@@ -60,73 +56,100 @@ type memberKeys struct {
 
 // SDK is used to send messages to API
 type SDK struct {
-	apiURLs    *ringBuffer
-	rootMember *requester.UserConfigJSON
-	logLevel   interface{}
+	apiURLs                *ringBuffer
+	rootMember             *requester.UserConfigJSON
+	migrationAdminMember   *requester.UserConfigJSON
+	migrationDaemonMembers []*requester.UserConfigJSON
+	logLevel               interface{}
 }
 
 // NewSDK creates insSDK object
-func NewSDK(urls []string, rootMemberKeysPath string) (*SDK, error) {
+func NewSDK(urls []string, memberKeysDirPath string) (*SDK, error) {
 	buffer := &ringBuffer{urls: urls}
 
-	rawConf, err := ioutil.ReadFile(rootMemberKeysPath)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NewSDK ] can't read keys from file")
-	}
+	getMember := func(keyPath string, ref string) (*requester.UserConfigJSON, error) {
 
-	keys := memberKeys{}
-	err = json.Unmarshal(rawConf, &keys)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NewSDK ] can't unmarshal keys")
+		rawConf, err := ioutil.ReadFile(keyPath)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to read keys from file")
+		}
+
+		keys := memberKeys{}
+		err = json.Unmarshal(rawConf, &keys)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal keys")
+		}
+
+		return requester.CreateUserConfig(ref, keys.Private, keys.Public)
 	}
 
 	response, err := requester.Info(buffer.next())
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NewSDK ] can't get info")
+		return nil, errors.Wrap(err, "failed to get info")
 	}
 
-	rootMember, err := requester.CreateUserConfig(response.RootMember, keys.Private)
+	rootMember, err := getMember(memberKeysDirPath+"root_member_keys.json", response.RootMember)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NewSDK ] can't create user config")
+		return nil, errors.Wrap(err, "failed to get root member")
 	}
 
-	return &SDK{
-		apiURLs:    buffer,
-		rootMember: rootMember,
-		logLevel:   nil,
-	}, nil
+	migrationAdminMember, err := getMember(memberKeysDirPath+"migration_admin_member_keys.json", response.MigrationAdminMember)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get migration admin member")
+	}
 
+	result := &SDK{
+		apiURLs:                buffer,
+		rootMember:             rootMember,
+		migrationAdminMember:   migrationAdminMember,
+		migrationDaemonMembers: []*requester.UserConfigJSON{},
+		logLevel:               nil,
+	}
+
+	if len(response.MigrationDaemonMembers) < insolar.GenesisAmountActiveMigrationDaemonMembers {
+		return nil, errors.New(fmt.Sprintf("need at least '%d' migration daemons", insolar.GenesisAmountActiveMigrationDaemonMembers))
+	}
+
+	for i := 0; i < insolar.GenesisAmountActiveMigrationDaemonMembers; i++ {
+		m, err := getMember(memberKeysDirPath+bootstrap.GetMigrationDaemonPath(i), response.MigrationDaemonMembers[i])
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("failed to get migration daemon member; member's index: '%d'", i))
+		}
+		result.migrationDaemonMembers = append(result.migrationDaemonMembers, m)
+	}
+
+	return result, nil
 }
 
 func (sdk *SDK) SetLogLevel(logLevel string) error {
 	_, err := insolar.ParseLevel(logLevel)
 	if err != nil {
-		return errors.Wrap(err, "Invalid log level provided")
+		return errors.Wrap(err, "invalid log level provided")
 	}
 	sdk.logLevel = logLevel
 	return nil
 }
 
-func (sdk *SDK) sendRequest(ctx context.Context, method string, params []interface{}, userCfg *requester.UserConfigJSON) ([]byte, error) {
-	reqCfg := &requester.RequestConfigJSON{
-		Params:   params,
-		Method:   method,
-		LogLevel: sdk.logLevel,
+func (sdk *SDK) sendRequest(ctx context.Context, method string, params map[string]interface{}, userCfg *requester.UserConfigJSON) ([]byte, error) {
+	reqCfg := &requester.Request{
+		Params:   requester.Params{CallParams: params, CallSite: method, PublicKey: userCfg.PublicKey},
+		Method:   "api.call",
+		LogLevel: sdk.logLevel.(string),
 	}
 
 	body, err := requester.Send(ctx, sdk.apiURLs.next(), userCfg, reqCfg)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ sendRequest ] can not send request")
+		return nil, errors.Wrap(err, "failed to send request")
 	}
 
 	return body, nil
 }
 
-func (sdk *SDK) getResponse(body []byte) (*response, error) {
-	res := &response{}
+func (sdk *SDK) getResponse(body []byte) (*requester.ContractAnswer, error) {
+	res := &requester.ContractAnswer{}
 	err := json.Unmarshal(body, &res)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ getResponse ] problems with unmarshal response")
+		return nil, errors.Wrap(err, "problems with unmarshal response")
 	}
 
 	return res, nil
@@ -134,92 +157,129 @@ func (sdk *SDK) getResponse(body []byte) (*response, error) {
 
 // CreateMember api request creates member with new random keys
 func (sdk *SDK) CreateMember() (*Member, string, error) {
-	ctx := inslogger.ContextWithTrace(context.Background(), "CreateMember")
-	memberName := testutils.RandomString()
 	ks := platformpolicy.NewKeyProcessor()
 
 	privateKey, err := ks.GeneratePrivateKey()
 	if err != nil {
-		return nil, "", errors.Wrap(err, "[ CreateMember ] can't generate private key")
+		return nil, "", errors.Wrap(err, "failed to generate private key")
 	}
 
-	privateKeyStr, err := ks.ExportPrivateKeyPEM(privateKey)
+	privateKeyBytes, err := ks.ExportPrivateKeyPEM(privateKey)
 	if err != nil {
-		return nil, "", errors.Wrap(err, "[ CreateMember ] can't export private key")
+		return nil, "", errors.Wrap(err, "failed to export private key")
 	}
+	privateKeyStr := string(privateKeyBytes)
 
-	memberPubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privateKey))
+	publicKey, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privateKey))
 	if err != nil {
-		return nil, "", errors.Wrap(err, "[ CreateMember ] can't extract public key")
+		return nil, "", errors.Wrap(err, "failed to extract public key")
 	}
+	publicKeyStr := string(publicKey)
 
-	params := []interface{}{memberName, string(memberPubKeyStr)}
-	body, err := sdk.sendRequest(ctx, "CreateMember", params, sdk.rootMember)
+	userConfig, err := requester.CreateUserConfig(sdk.rootMember.Caller, privateKeyStr, publicKeyStr)
 	if err != nil {
-		return nil, "", errors.Wrap(err, "[ CreateMember ] can't send request")
+		return nil, "", errors.Wrap(err, "failed to create user config for request")
 	}
 
-	response, err := sdk.getResponse(body)
+	response, err := sdk.DoRequest(
+		userConfig,
+		"member.create",
+		map[string]interface{}{},
+	)
 	if err != nil {
-		return nil, "", errors.Wrap(err, "[ CreateMember ] can't get response")
+		return nil, "", errors.Wrap(err, "request was failed ")
 	}
 
-	if response.Error != "" {
-		return nil, response.TraceID, errors.New(response.Error)
+	var memberRef string
+	var contractResultCasted map[string]interface{}
+	var ok bool
+	if contractResultCasted, ok = response.ContractResult.(map[string]interface{}); !ok {
+		return nil, "", errors.Errorf("failed to cast result: expected map[string]interface{}, got %T", response.ContractResult)
+	}
+	if memberRef, ok = contractResultCasted["reference"].(string); !ok {
+		return nil, "", errors.Errorf("failed to cast reference: expected string, got %T", contractResultCasted["reference"])
 	}
 
-	return NewMember(response.Result.(string), string(privateKeyStr)), response.TraceID, nil
+	return NewMember(memberRef, privateKeyStr, publicKeyStr), response.TraceID, nil
+}
+
+// AddBurnAddresses method add burn addresses
+func (sdk *SDK) AddBurnAddresses(burnAddresses []string) (string, error) {
+	userConfig, err := requester.CreateUserConfig(sdk.migrationAdminMember.Caller, sdk.migrationAdminMember.PrivateKey, sdk.migrationAdminMember.PublicKey)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create user config for request")
+	}
+
+	response, err := sdk.DoRequest(
+		userConfig,
+		"migration.addBurnAddresses",
+		map[string]interface{}{"burnAddresses": burnAddresses},
+	)
+	if err != nil {
+		return "", errors.Wrap(err, "request was failed ")
+	}
+
+	return response.TraceID, nil
 }
 
 // Transfer method send money from one member to another
-func (sdk *SDK) Transfer(amount uint, from *Member, to *Member) (string, error) {
-	ctx := inslogger.ContextWithTrace(context.Background(), "Transfer")
-	params := []interface{}{amount, to.Reference}
-	config, err := requester.CreateUserConfig(from.Reference, from.PrivateKey)
+func (sdk *SDK) Transfer(amount string, from *Member, to *Member) (string, error) {
+	userConfig, err := requester.CreateUserConfig(from.Reference, from.PrivateKey, from.PublicKey)
 	if err != nil {
-		return "", errors.Wrap(err, "[ Transfer ] can't create user config")
+		return "", errors.Wrap(err, "failed to create user config for request")
 	}
-
-	body, err := sdk.sendRequest(ctx, "Transfer", params, config)
+	response, err := sdk.DoRequest(
+		userConfig,
+		"wallet.transfer",
+		map[string]interface{}{"amount": amount, "toMemberReference": to.Reference},
+	)
 	if err != nil {
-		return "", errors.Wrap(err, "[ Transfer ] can't send request")
-	}
-
-	response, err := sdk.getResponse(body)
-	if err != nil {
-		return "", errors.Wrap(err, "[ Transfer ] can't get response")
-	}
-
-	if response.Error != "" {
-		return response.TraceID, errors.New(response.Error)
+		return "", errors.Wrap(err, "request was failed ")
 	}
 
 	return response.TraceID, nil
 }
 
 // GetBalance returns current balance of the given member.
-func (sdk *SDK) GetBalance(m *Member) (uint64, error) {
-	ctx := inslogger.ContextWithTrace(context.Background(), "GetBalance")
-	params := []interface{}{m.Reference}
-	config, err := requester.CreateUserConfig(m.Reference, m.PrivateKey)
+func (sdk *SDK) GetBalance(m *Member) (*big.Int, error) {
+	userConfig, err := requester.CreateUserConfig(m.Reference, m.PrivateKey, m.PublicKey)
 	if err != nil {
-		return 0, errors.Wrap(err, "[ GetBalance ] can't create user config")
+		return nil, errors.Wrap(err, "failed to create user config for request")
+	}
+	response, err := sdk.DoRequest(
+		userConfig,
+		"wallet.getBalance",
+		map[string]interface{}{"reference": m.Reference},
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "request was failed ")
 	}
 
-	body, err := sdk.sendRequest(ctx, "GetBalance", params, config)
+	result, ok := new(big.Int).SetString(response.ContractResult.(string), 10)
+	if !ok {
+		return nil, errors.Errorf("can't parse returned balance")
+	}
+
+	return result, nil
+}
+
+func (sdk *SDK) DoRequest(user *requester.UserConfigJSON, method string, params map[string]interface{}) (*requester.Result, error) {
+	ctx := inslogger.ContextWithTrace(context.Background(), method)
+
+	body, err := sdk.sendRequest(ctx, method, params, user)
 	if err != nil {
-		return 0, errors.Wrap(err, "[ GetBalance ] can't send request")
+		return nil, errors.Wrap(err, "failed to send request")
 	}
 
 	response, err := sdk.getResponse(body)
 	if err != nil {
-		return 0, errors.Wrap(err, "[ GetBalance ] can't get response")
+		return nil, errors.Wrap(err, "failed to get response from body")
 	}
 
-	if response.Error != "" {
-		return 0, errors.New(response.Error + ". TraceId: " + response.TraceID)
+	if response.Error != nil {
+		return nil, errors.New(response.Error.Message + ". TraceId: " + response.Error.Data.TraceID)
 	}
 
-	// TODO FIXME don't transfer money in floats!
-	return uint64(response.Result.(float64)), nil
+	return response.Result, nil
+
 }

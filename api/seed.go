@@ -34,14 +34,14 @@ type SeedReply struct {
 	TraceID string
 }
 
-// SeedService is a service that provides API for getting new seed.
-type SeedService struct {
+// NodeService is a service that provides API for getting new seed and status.
+type NodeService struct {
 	runner *Runner
 }
 
-// NewSeedService creates new Seed service instance.
-func NewSeedService(runner *Runner) *SeedService {
-	return &SeedService{runner: runner}
+// NewNodeService creates new Node service instance.
+func NewNodeService(runner *Runner) *NodeService {
+	return &NodeService{runner: runner}
 }
 
 // Get returns new active seed.
@@ -49,7 +49,7 @@ func NewSeedService(runner *Runner) *SeedService {
 //   Request structure:
 //   {
 //     "jsonrpc": "2.0",
-//     "method": "seed.Get",
+//     "method": "node.getSeed",
 //     "id": str|int|null
 //   }
 //
@@ -63,17 +63,22 @@ func NewSeedService(runner *Runner) *SeedService {
 // 		"id": str|int|null // same as in request
 // 	}
 //
-func (s *SeedService) Get(r *http.Request, args *SeedArgs, reply *SeedReply) error {
+func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, reply *SeedReply) error {
 	traceID := utils.RandTraceID()
 	_, inslog := inslogger.WithTraceField(context.Background(), traceID)
 
-	inslog.Infof("[ SeedService.Get ] Incoming request: %s", r.RequestURI)
+	inslog.Infof("[ NodeService.GetSeed ] Incoming request: %s", r.RequestURI)
 
 	seed, err := s.runner.SeedGenerator.Next()
 	if err != nil {
-		return errors.Wrap(err, "[ GetSeed ]")
+		return errors.Wrap(err, "failed to get next seed")
 	}
-	s.runner.SeedManager.Add(*seed)
+
+	pulse, err := s.runner.PulseAccessor.Latest(context.Background())
+	if err != nil {
+		return errors.Wrap(err, "[ NodeService::GetSeed ] Couldn't receive pulse")
+	}
+	s.runner.SeedManager.Add(*seed, pulse.PulseNumber)
 
 	reply.Seed = seed[:]
 	reply.TraceID = traceID

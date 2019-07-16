@@ -20,45 +20,40 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill"
-	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
 
 type PassState struct {
-	message *message.Message
+	message payload.Meta
 
 	Dep struct {
 		Sender  bus.Sender
 		Records object.RecordAccessor
-		Blobs   blob.Accessor
 	}
 }
 
-func NewPassState(msg *message.Message) *PassState {
+func NewPassState(meta payload.Meta) *PassState {
 	return &PassState{
-		message: msg,
+		message: meta,
 	}
 }
 
 func (p *PassState) Proceed(ctx context.Context) error {
-	pl, err := payload.UnmarshalFromMeta(p.message.Payload)
+	pass := payload.PassState{}
+	err := pass.Unmarshal(p.message.Payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to decode payload")
-	}
-	pass, ok := pl.(*payload.PassState)
-	if !ok {
-		return fmt.Errorf("unexpected payload type %T", pl)
+		return errors.Wrap(err, "failed to decode PassState payload")
 	}
 
-	replyTo := message.NewMessage(watermill.NewUUID(), pass.Origin)
-	middleware.SetCorrelationID(string(pass.CorrelationID), replyTo)
+	origin := payload.Meta{}
+	err = origin.Unmarshal(pass.Origin)
+	if err != nil {
+		return errors.Wrap(err, "failed to decode origin message")
+	}
 
 	rec, err := p.Dep.Records.ForID(ctx, pass.StateID)
 	if err == object.ErrNotFound {
@@ -66,7 +61,8 @@ func (p *PassState) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
-		go p.Dep.Sender.Reply(ctx, replyTo, msg)
+
+		go p.Dep.Sender.Reply(ctx, origin, msg)
 		return nil
 	}
 	if err != nil {
@@ -85,30 +81,24 @@ func (p *PassState) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
-		go p.Dep.Sender.Reply(ctx, replyTo, msg)
+
+		go p.Dep.Sender.Reply(ctx, origin, msg)
 		return nil
 	}
 
-	var memory []byte
-	if state.GetMemory() != nil && state.GetMemory().NotEmpty() {
-		b, err := p.Dep.Blobs.ForID(ctx, *state.GetMemory())
-		if err != nil {
-			return errors.Wrap(err, "failed to fetch blob")
-		}
-		memory = b.Value
-	}
 	buf, err := rec.Marshal()
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal state record")
 	}
 	msg, err := payload.NewMessage(&payload.State{
 		Record: buf,
-		Memory: memory,
+		Memory: state.GetMemory(),
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create message")
 	}
-	go p.Dep.Sender.Reply(ctx, replyTo, msg)
+
+	go p.Dep.Sender.Reply(ctx, origin, msg)
 
 	return nil
 }

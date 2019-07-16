@@ -19,7 +19,6 @@ package message
 import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 )
 
 // FIXME: @andreyromancev. 21.12.18. Remove this and create 'LogicRunnerMessage' interface to get rid of 'GetCaller' in ledger.
@@ -143,9 +142,10 @@ func (*GetDelegate) Type() insolar.MessageType {
 type UpdateObject struct {
 	ledgerMessage
 
-	Record []byte
-	Object insolar.Reference
-	Memory []byte
+	Record       []byte
+	ResultRecord []byte
+	Object       insolar.Reference
+	Memory       []byte
 }
 
 // AllowedSenderObjectAndRole implements interface method
@@ -314,11 +314,10 @@ func (*GetObjectIndex) Type() insolar.MessageType {
 // HotData contains hot-data
 type HotData struct {
 	ledgerMessage
-	Jet             insolar.Reference
-	Drop            drop.Drop
-	HotIndexes      []HotIndex
-	PendingRequests map[insolar.ID]recentstorage.PendingObjectContext
-	PulseNumber     insolar.PulseNumber
+	Jet         insolar.Reference
+	Drop        drop.Drop
+	HotIndexes  []HotIndex
+	PulseNumber insolar.PulseNumber
 }
 
 // AllowedSenderObjectAndRole implements interface method
@@ -436,33 +435,6 @@ func (m *AbandonedRequestsNotification) DefaultTarget() *insolar.Reference {
 	return insolar.NewReference(m.Object)
 }
 
-// GetRequest fetches request from ledger.
-type GetRequest struct {
-	ledgerMessage
-
-	Request insolar.ID
-}
-
-// Type implementation of Message interface.
-func (*GetRequest) Type() insolar.MessageType {
-	return insolar.TypeGetRequest
-}
-
-// AllowedSenderObjectAndRole implements interface method
-func (m *GetRequest) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
-	return nil, insolar.DynamicRoleUndefined
-}
-
-// DefaultRole returns role for this event
-func (*GetRequest) DefaultRole() insolar.DynamicRole {
-	return insolar.DynamicRoleLightExecutor
-}
-
-// DefaultTarget returns of target of this event.
-func (m *GetRequest) DefaultTarget() *insolar.Reference {
-	return insolar.NewReference(m.Request)
-}
-
 // GetPendingRequestID fetches a pending request id for an object from current LME
 type GetPendingRequestID struct {
 	ledgerMessage
@@ -490,30 +462,29 @@ func (m *GetPendingRequestID) DefaultTarget() *insolar.Reference {
 	return insolar.NewReference(m.ObjectID)
 }
 
-// GetPendingFilament fetches a part of a pending-filament from another light
-type GetPendingFilament struct {
+type GetOpenRequests struct {
 	ledgerMessage
 
-	ObjectID insolar.ID
-	PN       insolar.PulseNumber
+	ObjID insolar.ID
+	PN    insolar.PulseNumber
 }
 
 // Type implementation of Message interface.
-func (*GetPendingFilament) Type() insolar.MessageType {
-	return insolar.TypeGetPendingFilament
+func (*GetOpenRequests) Type() insolar.MessageType {
+	return insolar.TypeGetOpenRequests
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (m *GetPendingFilament) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
+func (m *GetOpenRequests) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
 	return nil, insolar.DynamicRoleLightExecutor
 }
 
 // DefaultRole returns role for this event
-func (*GetPendingFilament) DefaultRole() insolar.DynamicRole {
+func (*GetOpenRequests) DefaultRole() insolar.DynamicRole {
 	return insolar.DynamicRoleLightExecutor
 }
 
 // DefaultTarget returns of target of this event.
-func (m *GetPendingFilament) DefaultTarget() *insolar.Reference {
-	return insolar.NewReference(m.ObjectID)
+func (m *GetOpenRequests) DefaultTarget() *insolar.Reference {
+	return insolar.NewReference(m.ObjID)
 }

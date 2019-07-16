@@ -18,59 +18,95 @@ package logicrunner
 
 import (
 	"context"
+	"reflect"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 )
 
-type CurrentExecution struct {
-	Context       context.Context
-	LogicContext  *insolar.LogicCallContext
-	RequestRef    *Ref
-	Request       *record.Request
-	RequesterNode *Ref
-	SentResult    bool
-	Nonce         uint64
-	Deactivate    bool
-
-	OutgoingRequests []OutgoingRequest
-}
-
 type OutgoingRequest struct {
-	Request   record.Request
+	Request   record.IncomingRequest
 	NewObject *Ref
 	Response  []byte
 	Error     error
 }
 
-func (ce *CurrentExecution) AddOutgoingRequest(
-	ctx context.Context, request record.Request, result []byte, newObject *Ref, err error,
+type Transcript struct {
+	ObjectDescriptor artifacts.ObjectDescriptor
+	Context          context.Context
+	LogicContext     *insolar.LogicCallContext
+	Request          *record.IncomingRequest
+	RequestRef       insolar.Reference
+	RequesterNode    *insolar.Reference
+	Nonce            uint64
+	Deactivate       bool
+	OutgoingRequests []OutgoingRequest
+	FromLedger       bool
+}
+
+func NewTranscript(
+	ctx context.Context,
+	requestRef insolar.Reference,
+	request record.IncomingRequest,
+) *Transcript {
+
+	return &Transcript{
+		Context:    ctx,
+		Request:    &request,
+		RequestRef: requestRef,
+		Nonce:      0,
+		Deactivate: false,
+
+		FromLedger: false,
+	}
+}
+
+func (t *Transcript) AddOutgoingRequest(
+	ctx context.Context, request record.IncomingRequest, result []byte, newObject *Ref, err error,
 ) {
 	rec := OutgoingRequest{
-		Request: request,
-		Response: result,
+		Request:   request,
+		Response:  result,
 		NewObject: newObject,
-		Error: err,
+		Error:     err,
 	}
-	ce.OutgoingRequests = append(ce.OutgoingRequests, rec)
+	t.OutgoingRequests = append(t.OutgoingRequests, rec)
+}
+
+func (t *Transcript) HasOutgoingRequest(
+	ctx context.Context, request record.IncomingRequest,
+) *OutgoingRequest {
+	for i := range t.OutgoingRequests {
+		if reflect.DeepEqual(t.OutgoingRequests[i].Request, request) {
+			return &t.OutgoingRequests[i]
+		}
+	}
+	return nil
 }
 
 type CurrentExecutionList struct {
 	lock       sync.RWMutex
-	executions map[insolar.Reference]*CurrentExecution
+	executions map[insolar.Reference]*Transcript
 }
 
-func (ces *CurrentExecutionList) Get(requestRef insolar.Reference) *CurrentExecution {
+func (ces *CurrentExecutionList) Get(requestRef insolar.Reference) *Transcript {
 	ces.lock.RLock()
 	rv := ces.executions[requestRef]
 	ces.lock.RUnlock()
 	return rv
 }
 
-func (ces *CurrentExecutionList) Set(requestRef insolar.Reference, ce *CurrentExecution) {
+func (ces *CurrentExecutionList) Set(requestRef insolar.Reference, ce *Transcript) {
 	ces.lock.Lock()
 	ces.executions[requestRef] = ce
+	ces.lock.Unlock()
+}
+
+func (ces *CurrentExecutionList) SetTranscript(t *Transcript) {
+	ces.lock.Lock()
+	ces.executions[t.RequestRef] = t
 	ces.lock.Unlock()
 }
 
@@ -80,22 +116,21 @@ func (ces *CurrentExecutionList) Delete(requestRef insolar.Reference) {
 	ces.lock.Unlock()
 }
 
-func (ces *CurrentExecutionList) GetByTraceID(traceid string) *CurrentExecution {
+func (ces *CurrentExecutionList) GetByTraceID(traceid string) *Transcript {
 	ces.lock.RLock()
+	defer ces.lock.RUnlock()
 	for _, ce := range ces.executions {
 		if ce.LogicContext.TraceID == traceid {
-			ces.lock.RUnlock()
 			return ce
 		}
 	}
-	ces.lock.RUnlock()
 	return nil
 }
 
-func (ces *CurrentExecutionList) GetMutable() *CurrentExecution {
+func (ces *CurrentExecutionList) GetMutable() *Transcript {
 	ces.lock.RLock()
 	for _, ce := range ces.executions {
-		if !ce.LogicContext.Immutable {
+		if !ce.Request.Immutable {
 			ces.lock.RUnlock()
 			return ce
 		}
@@ -106,7 +141,7 @@ func (ces *CurrentExecutionList) GetMutable() *CurrentExecution {
 
 func (ces *CurrentExecutionList) Cleanup() {
 	ces.lock.Lock()
-	ces.executions = make(map[insolar.Reference]*CurrentExecution)
+	ces.executions = make(map[insolar.Reference]*Transcript)
 	ces.lock.Unlock()
 }
 
@@ -121,7 +156,14 @@ func (ces *CurrentExecutionList) Empty() bool {
 	return ces.Length() == 0
 }
 
-type CurrentExecutionPredicate func(*CurrentExecution, interface{}) bool
+func (ces *CurrentExecutionList) Has(requestRef insolar.Reference) bool {
+	ces.lock.RLock()
+	defer ces.lock.RUnlock()
+	_, has := ces.executions[requestRef]
+	return has
+}
+
+type CurrentExecutionPredicate func(*Transcript, interface{}) bool
 
 func (ces *CurrentExecutionList) Check(predicate CurrentExecutionPredicate, args interface{}) bool {
 	rv := true

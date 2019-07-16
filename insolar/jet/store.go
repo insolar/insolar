@@ -89,7 +89,7 @@ func (s *Store) ForID(ctx context.Context, pulse insolar.PulseNumber, recordID i
 }
 
 // Update updates jet tree for specified pulse.
-func (s *Store) Update(ctx context.Context, pulse insolar.PulseNumber, setActual bool, ids ...insolar.JetID) {
+func (s *Store) Update(ctx context.Context, pulse insolar.PulseNumber, setActual bool, ids ...insolar.JetID) error {
 	s.Lock()
 	defer s.Unlock()
 
@@ -99,9 +99,9 @@ func (s *Store) Update(ctx context.Context, pulse insolar.PulseNumber, setActual
 	}
 	// required because TreeForPulse could return new tree.
 	s.trees[pulse] = ltree
+	return nil
 }
 
-// Split performs jet split and returns resulting jet ids.
 func (s *Store) Split(
 	ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID,
 ) (insolar.JetID, insolar.JetID, error) {
@@ -116,7 +116,7 @@ func (s *Store) Split(
 // Clone copies tree from one pulse to another. Use it to copy the past tree into new pulse.
 func (s *Store) Clone(
 	ctx context.Context, from, to insolar.PulseNumber,
-) {
+) error {
 	newTree := s.ltreeForPulse(from).clone(false)
 
 	s.Lock()
@@ -124,6 +124,7 @@ func (s *Store) Clone(
 		t: newTree,
 	}
 	s.Unlock()
+	return nil
 }
 
 // Delete jets for pulse (concurrent safe).

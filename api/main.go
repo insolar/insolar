@@ -27,11 +27,11 @@ import (
 
 	"github.com/insolar/insolar/network"
 
-	"github.com/gorilla/rpc/v2"
-	jsonrpc "github.com/gorilla/rpc/v2/json2"
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/rpc/v2"
+	jsonrpc "github.com/insolar/rpc/v2/json2"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api/seedmanager"
@@ -60,6 +60,7 @@ type Runner struct {
 	cfg                 *configuration.APIRunner
 	keyCache            map[string]crypto.PublicKey
 	cacheLock           *sync.RWMutex
+	timeout             time.Duration
 	SeedManager         *seedmanager.SeedManager
 	SeedGenerator       seedmanager.SeedGenerator
 }
@@ -77,27 +78,19 @@ func checkConfig(cfg *configuration.APIRunner) error {
 	if len(cfg.RPC) == 0 {
 		return errors.New("[ checkConfig ] RPC must exist")
 	}
-	if cfg.Timeout == 0 {
-		return errors.New("[ checkConfig ] Timeout must not be null")
-	}
 
 	return nil
 }
 
 func (ar *Runner) registerServices(rpcServer *rpc.Server) error {
-	err := rpcServer.RegisterService(NewSeedService(ar), "seed")
+	err := rpcServer.RegisterService(NewNodeService(ar), "node")
 	if err != nil {
-		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: seed")
+		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: node")
 	}
 
-	err = rpcServer.RegisterService(NewInfoService(ar), "info")
+	err = rpcServer.RegisterService(NewInfoService(ar), "network")
 	if err != nil {
-		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: info")
-	}
-
-	err = rpcServer.RegisterService(NewStatusService(ar), "status")
-	if err != nil {
-		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: status")
+		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: network")
 	}
 
 	err = rpcServer.RegisterService(NewNodeCertService(ar), "cert")
@@ -126,6 +119,7 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 		server:    &http.Server{Addr: addrStr},
 		rpcServer: rpcServer,
 		cfg:       cfg,
+		timeout:   30 * time.Second,
 		keyCache:  make(map[string]crypto.PublicKey),
 		cacheLock: &sync.RWMutex{},
 	}
@@ -147,10 +141,15 @@ func (ar *Runner) IsAPIRunner() bool {
 // Start runs api server
 func (ar *Runner) Start(ctx context.Context) error {
 	hc := NewHealthChecker(ar.CertificateManager, ar.NodeNetwork)
-	http.HandleFunc("/healthcheck", hc.CheckHandler)
+
+	router := http.NewServeMux()
+	ar.server.Handler = router
 	ar.SeedManager = seedmanager.New()
-	http.HandleFunc(ar.cfg.Call, ar.callHandler())
-	http.Handle(ar.cfg.RPC, ar.rpcServer)
+
+	router.HandleFunc("/healthcheck", hc.CheckHandler)
+	router.HandleFunc(ar.cfg.Call, ar.callHandler())
+	router.Handle(ar.cfg.RPC, ar.rpcServer)
+
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("Starting ApiRunner ...")
 	inslog.Info("Config: ", ar.cfg)

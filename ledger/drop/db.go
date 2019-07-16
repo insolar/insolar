@@ -21,7 +21,10 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/jbenet/go-base58"
+	"github.com/pkg/errors"
 )
 
 type DB struct {
@@ -43,7 +46,16 @@ func (dk *dropDbKey) Scope() store.Scope {
 }
 
 func (dk *dropDbKey) ID() []byte {
-	return bytes.Join([][]byte{dk.jetPrefix, dk.pn.Bytes()}, nil)
+	// order ( pn + jetPrefix ) is important: we use this logic for removing not finalized drops
+	return bytes.Join([][]byte{dk.pn.Bytes(), dk.jetPrefix}, nil)
+}
+
+func newDropDbKey(raw []byte) dropDbKey {
+	dk := dropDbKey{}
+	dk.pn = insolar.NewPulseNumber(raw)
+	dk.jetPrefix = raw[dk.pn.Size():]
+
+	return dk
 }
 
 // ForPulse returns a Drop for a provided pulse, that is stored in a db.
@@ -72,4 +84,27 @@ func (ds *DB) Set(ctx context.Context, drop Drop) error {
 
 	encoded := MustEncode(&drop)
 	return ds.db.Set(&k, encoded)
+}
+
+// TruncateHead remove all records after lastPulse
+func (ds *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
+	it := ds.db.NewIterator(&dropDbKey{jetPrefix: []byte{}, pn: from}, false)
+	defer it.Close()
+
+	var hasKeys bool
+	for it.Next() {
+		hasKeys = true
+		key := newDropDbKey(it.Key())
+		err := ds.db.Delete(&key)
+		if err != nil {
+			return errors.Wrapf(err, "can't delete key: %+v", key)
+		}
+
+		inslogger.FromContext(ctx).Debugf("Erased key. Pulse number: %s. Jet prefix: %s", key.pn.String(), base58.Encode(key.jetPrefix))
+	}
+	if !hasKeys {
+		return errors.New("No required pulse: " + from.String())
+	}
+
+	return nil
 }

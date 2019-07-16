@@ -18,38 +18,32 @@ package proc
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/object"
 )
 
 type GetCode struct {
-	message *message.Message
+	message payload.Meta
 	codeID  insolar.ID
 	pass    bool
 
 	Dep struct {
 		RecordAccessor object.RecordAccessor
 		Coordinator    jet.Coordinator
-		BlobAccessor   blob.Accessor
 		Sender         bus.Sender
 		JetFetcher     jet.Fetcher
 	}
 }
 
-func NewGetCode(msg *message.Message, codeID insolar.ID, pass bool) *GetCode {
+func NewGetCode(msg payload.Meta, codeID insolar.ID, pass bool) *GetCode {
 	return &GetCode{
 		message: msg,
 		codeID:  codeID,
@@ -58,48 +52,43 @@ func NewGetCode(msg *message.Message, codeID insolar.ID, pass bool) *GetCode {
 }
 
 func (p *GetCode) Proceed(ctx context.Context) error {
+	logger := inslogger.FromContext(ctx)
 	sendCode := func(rec record.Material) error {
-		virtual := record.Unwrap(rec.Virtual)
-		code, ok := virtual.(*record.Code)
-		if !ok {
-			return fmt.Errorf("invalid code record %#v", virtual)
-		}
-		b, err := p.Dep.BlobAccessor.ForID(ctx, code.Code)
-		if err != nil {
-			return errors.Wrap(err, "failed to fetch code blob")
-		}
 		buf, err := rec.Marshal()
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal record")
 		}
 		msg, err := payload.NewMessage(&payload.Code{
 			Record: buf,
-			Code:   b.Value,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create message")
 		}
+
 		go p.Dep.Sender.Reply(ctx, p.message, msg)
 
 		return nil
 	}
 
 	sendPassCode := func() error {
+		originMeta, err := p.message.Marshal()
+		if err != nil {
+			return errors.Wrap(err, "failed to marshal origin meta message")
+		}
 		msg, err := payload.NewMessage(&payload.Pass{
-			Origin:        p.message.Payload,
-			CorrelationID: []byte(middleware.MessageCorrelationID(p.message)),
+			Origin: originMeta,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
 
-		onHeavy, err := p.Dep.Coordinator.IsBeyondLimit(ctx, flow.Pulse(ctx), p.codeID.Pulse())
+		onHeavy, err := p.Dep.Coordinator.IsBeyondLimit(ctx, p.codeID.Pulse())
 		if err != nil {
 			return errors.Wrap(err, "failed to calculate pulse")
 		}
 		var node insolar.Reference
 		if onHeavy {
-			h, err := p.Dep.Coordinator.Heavy(ctx, flow.Pulse(ctx))
+			h, err := p.Dep.Coordinator.Heavy(ctx)
 			if err != nil {
 				return errors.Wrap(err, "failed to calculate heavy")
 			}
@@ -109,6 +98,7 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 			if err != nil {
 				return errors.Wrap(err, "failed to fetch jet")
 			}
+			logger.Debug("calculated jet for pass: %s", jetID.DebugString())
 			l, err := p.Dep.Coordinator.LightExecutorForJet(ctx, *jetID, p.codeID.Pulse())
 			if err != nil {
 				return errors.Wrap(err, "failed to calculate role")
@@ -119,15 +109,15 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 		go func() {
 			_, done := p.Dep.Sender.SendTarget(ctx, msg, node)
 			done()
+			logger.Debug("passed GetCode")
 		}()
 		return nil
 	}
 
-	logger := inslogger.FromContext(ctx)
 	rec, err := p.Dep.RecordAccessor.ForID(ctx, p.codeID)
 	switch err {
 	case nil:
-		logger.Info("sending code")
+		logger.Debug("sending code")
 		return sendCode(rec)
 	case object.ErrNotFound:
 		if p.pass {

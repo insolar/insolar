@@ -152,6 +152,7 @@ func (hn *hostNetwork) Start(ctx context.Context) error {
 // Stop listening to network requests.
 func (hn *hostNetwork) Stop(ctx context.Context) error {
 	if atomic.CompareAndSwapUint32(&hn.started, 1, 0) {
+		hn.pool.Reset()
 		err := hn.transport.Stop(ctx)
 		if err != nil {
 			return errors.Wrap(err, "Failed to stop transport.")
@@ -174,12 +175,17 @@ func (hn *hostNetwork) PublicAddress() string {
 	return hn.getOrigin().Address.String()
 }
 
-func (hn *hostNetwork) handleRequest(p *packet.Packet) {
-	ctx, logger := inslogger.WithTraceField(context.Background(), p.TraceID)
-	logger.Debugf("Got %s request from host %s; RequestID: %d", p.GetType(), p.Sender, p.RequestID)
+func (hn *hostNetwork) handleRequest(ctx context.Context, p *packet.ReceivedPacket) {
+	logger := inslogger.FromContext(ctx)
+	logger.Debugf("Got %s request from host %s; RequestID = %d", p.GetType(), p.Sender, p.RequestID)
 	handler, exist := hn.handlers[p.GetType()]
 	if !exist {
 		logger.Errorf("No handler set for packet type %s from node %s", p.GetType(), p.Sender.NodeID)
+		ep := hn.BuildResponse(ctx, p, &packet.ErrorResponse{Error: "UNKNOWN RPC ENDPOINT"}).(*packet.Packet)
+		ep.RequestID = p.RequestID
+		if err := SendPacket(ctx, hn.pool, ep); err != nil {
+			logger.Errorf("Error while returning error response for request %s from node %s: %s", p.GetType(), p.Sender.NodeID, err)
+		}
 		return
 	}
 	ctx, span := instracer.StartSpan(ctx, "hostTransport.processMessage")
@@ -192,6 +198,11 @@ func (hn *hostNetwork) handleRequest(p *packet.Packet) {
 	response, err := handler(ctx, p)
 	if err != nil {
 		logger.Errorf("Error handling request %s from node %s: %s", p.GetType(), p.Sender.NodeID, err)
+		ep := hn.BuildResponse(ctx, p, &packet.ErrorResponse{Error: err.Error()}).(*packet.Packet)
+		ep.RequestID = p.RequestID
+		if err = SendPacket(ctx, hn.pool, ep); err != nil {
+			logger.Errorf("Error while returning error response for request %s from node %s: %s", p.GetType(), p.Sender.NodeID, err)
+		}
 		return
 	}
 
@@ -213,7 +224,7 @@ func (hn *hostNetwork) SendRequestToHost(ctx context.Context, packetType types.P
 
 	p := hn.buildRequest(ctx, packetType, requestData, receiver)
 
-	inslogger.FromContext(ctx).Debugf("Send %s request to %s with RequestID = %d", p.Type, p.Receiver, p.RequestID)
+	inslogger.FromContext(ctx).Debugf("Send %s request to %s with RequestID = %d", p.GetType(), p.Receiver, p.RequestID)
 
 	f := hn.futureManager.Create(p)
 	err := SendPacket(ctx, hn.pool, p)
@@ -255,7 +266,7 @@ func (hn *hostNetwork) SendRequest(ctx context.Context, packetType types.PacketT
 
 // RegisterRequestHandler register a handler function to process incoming requests of a specific type.
 func (hn *hostNetwork) RegisterRequestHandler(t types.PacketType, handler network.RequestHandler) {
-	f := func(ctx context.Context, request network.Packet) (network.Packet, error) {
+	f := func(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 		hn.Resolver.AddToKnownHosts(request.GetSenderHost())
 		return handler(ctx, request)
 	}

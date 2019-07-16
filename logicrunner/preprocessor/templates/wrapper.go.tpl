@@ -21,7 +21,7 @@ import (
 	{{ $import }}
 {{- end }}
 {{ if $.GenerateInitialize -}}
-    XXX_preprocessor "github.com/insolar/insolar/logicrunner/preprocessor"
+    XXX_insolar "github.com/insolar/insolar/insolar"
 {{- end }}
 )
 
@@ -31,6 +31,22 @@ type ExtendableError struct{
 
 func ( e *ExtendableError ) Error() string{
 	return e.S
+}
+
+func INS_META_INFO() ([] map[string]string) {
+	result := make([]map[string] string, 0)
+	{{ range $method := .Methods }}
+		{{ if $method.SagaInfo.IsSaga }}
+        {
+		info := make(map[string] string, 3)
+		info["Type"] = "SagaInfo"
+		info["MethodName"] = "{{ $method.Name }}"
+		info["RollbackMethodName"] = "{{ $method.SagaInfo.RollbackMethodName }}"
+        result = append(result, info)
+        }
+		{{end}}
+	{{end}}
+	return result
 }
 
 func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
@@ -163,16 +179,16 @@ func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, error) {
 {{ end }}
 
 {{ if $.GenerateInitialize -}}
-func Initialize() XXX_preprocessor.ContractWrapper {
-    return XXX_preprocessor.ContractWrapper{
+func Initialize() XXX_insolar.ContractWrapper {
+    return XXX_insolar.ContractWrapper{
         GetCode: INSMETHOD_GetCode,
         GetPrototype: INSMETHOD_GetPrototype,
-        Methods: XXX_preprocessor.ContractMethods{
+        Methods: XXX_insolar.ContractMethods{
             {{ range $method := .Methods -}}
                     "{{ $method.Name }}": INSMETHOD_{{ $method.Name }},
             {{ end }}
         },
-        Constructors: XXX_preprocessor.ContractConstructors{
+        Constructors: XXX_insolar.ContractConstructors{
             {{ range $f := .Functions -}}
                     "{{ $f.Name }}": INSCONSTRUCTOR_{{ $f.Name }},
             {{ end }}

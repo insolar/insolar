@@ -127,7 +127,7 @@ func (f *fakeDatagramTransport) SendDatagram(ctx context.Context, address string
 
 	h := datagramHandlers[address]
 	if h != nil {
-		go h.HandleDatagram(f.address, data)
+		go h.HandleDatagram(ctx, f.address, data)
 	}
 
 	return nil
@@ -140,12 +140,15 @@ func (f *fakeDatagramTransport) Address() string {
 type fakeStreamTransport struct {
 	address string
 	handler StreamHandler
+	cancel  context.CancelFunc
+	ctx     context.Context
 }
 
 func (f *fakeStreamTransport) Start(ctx context.Context) error {
 	tcpMutex.Lock()
 	defer tcpMutex.Unlock()
 
+	f.ctx, f.cancel = context.WithCancel(ctx)
 	streamHandlers[f.address] = f.handler
 	return nil
 }
@@ -154,6 +157,7 @@ func (f *fakeStreamTransport) Stop(ctx context.Context) error {
 	tcpMutex.Lock()
 	defer tcpMutex.Unlock()
 
+	f.cancel()
 	streamHandlers[f.address] = nil
 	return nil
 }
@@ -167,11 +171,11 @@ func (f *fakeStreamTransport) Dial(ctx context.Context, address string) (io.Read
 	h := streamHandlers[address]
 
 	if h == nil {
-		return nil, errors.New("dial failed")
+		return nil, errors.New("fakeStreamTransport: dial failed")
 	}
 
 	conn1, conn2 := net.Pipe()
-	go h.HandleStream(f.address, conn2)
+	go h.HandleStream(f.ctx, f.address, conn2)
 
 	return conn1, nil
 }

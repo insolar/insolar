@@ -51,16 +51,19 @@
 package utils
 
 import (
+	"bytes"
+	"context"
 	"hash/crc32"
 	"io"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
+	"github.com/pkg/errors"
 )
 
 func WaitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
@@ -115,4 +118,37 @@ func IsConnectionClosed(err error) bool {
 	}
 	err = errors.Cause(err)
 	return strings.Contains(err.Error(), "use of closed network connection")
+}
+
+func IsClosedPipe(err error) bool {
+	if err == nil {
+		return false
+	}
+	err = errors.Cause(err)
+	return strings.Contains(err.Error(), "read/write on closed pipe")
+}
+
+func NewPulseContext(ctx context.Context, pulseNumber uint32) context.Context {
+	insTraceID := "pulse_" + strconv.FormatUint(uint64(pulseNumber), 10)
+	ctx = inslogger.ContextWithTrace(ctx, insTraceID)
+	return ctx
+}
+
+type CapturingReader struct {
+	io.Reader
+	buffer bytes.Buffer
+}
+
+func NewCapturingReader(reader io.Reader) *CapturingReader {
+	return &CapturingReader{Reader: reader}
+}
+
+func (r *CapturingReader) Read(p []byte) (int, error) {
+	n, err := r.Reader.Read(p)
+	r.buffer.Write(p)
+	return n, err
+}
+
+func (r *CapturingReader) Captured() []byte {
+	return r.buffer.Bytes()
 }

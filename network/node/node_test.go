@@ -54,7 +54,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
@@ -107,14 +107,11 @@ func TestClaimToNode(t *testing.T) {
 
 	claim := packets.NodeJoinClaim{
 		NodeRef:     testutils.RandomRef(),
-		NodePK:      testutils.BrokenPK(),
+		NodePK:      [packets.PublicKeyLength]byte{},
 		ShortNodeID: 10,
 		NodeAddress: address,
 	}
 
-	_, err = ClaimToNode("", &claim)
-	assert.Error(t, err)
-	claim.NodePK = [packets.PublicKeyLength]byte{}
 	n, err := ClaimToNode("", &claim)
 	assert.NoError(t, err)
 	assert.Equal(t, claim.NodeRef, n.ID())

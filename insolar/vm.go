@@ -18,7 +18,6 @@ package insolar
 
 import (
 	"context"
-	"time"
 )
 
 // MachineType is a type of virtual machine
@@ -54,31 +53,71 @@ type MachineLogicExecutor interface {
 	) (
 		objectState []byte, err error,
 	)
-	Stop() error
 }
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.LogicRunner -o ../testutils -s _mock.go
 
 // LogicRunner is an interface that should satisfy logic executor
 type LogicRunner interface {
-	HandleValidateCaseBindMessage(context.Context, Parcel) (res Reply, err error)
-	HandleValidationResultsMessage(context.Context, Parcel) (res Reply, err error)
-	HandleExecutorResultsMessage(context.Context, Parcel) (res Reply, err error)
+	LRI()
 	OnPulse(context.Context, Pulse) error
 }
 
-// LogicCallContext is a context of contract execution
+// CallMode indicates whether we execute or validate
+type CallMode int
+
+const (
+	ExecuteCallMode CallMode = iota
+	ValidateCallMode
+)
+
+func (m CallMode) String() string {
+	switch m {
+	case ExecuteCallMode:
+		return "execute"
+	case ValidateCallMode:
+		return "validate"
+	default:
+		return "unknown"
+	}
+}
+
+// LogicCallContext is a context of contract execution. Everything
+// that is required to implement foundation functions. This struct
+// shouldn't be used in core components.
 type LogicCallContext struct {
-	Mode            string     // either "execution" or "validation"
-	Callee          *Reference // Contract that was called
-	Request         *Reference // ref of request
-	Prototype       *Reference // Image of the callee
-	Code            *Reference // ref of contract code
-	CallerPrototype *Reference // Image of the caller
-	Parent          *Reference // Parent of the callee
+	Mode CallMode // either "execution" or "validation"
+
+	Request *Reference // reference of incoming request record
+
+	Callee    *Reference // Contract that is called
+	Parent    *Reference // Parent of the callee
+	Prototype *Reference // Prototype (base class) of the callee
+	Code      *Reference // Code reference of the callee
+
 	Caller          *Reference // Contract that made the call
-	Time            time.Time  // Time when call was made
-	Pulse           Pulse      // Number of the pulse
-	Immutable       bool
-	TraceID         string
+	CallerPrototype *Reference // Prototype (base class) of the caller
+
+	TraceID string // trace mark for Jaegar and friends
+}
+
+// ContractConstructor is a typedef for wrapper contract header
+type ContractMethod func([]byte, []byte) ([]byte, []byte, error)
+
+// ContractMethods maps name to contract method
+type ContractMethods map[string]ContractMethod
+
+// ContractConstructor is a typedef of typical contract constructor
+type ContractConstructor func([]byte) ([]byte, error)
+
+// ContractConstructors maps name to contract constructor
+type ContractConstructors map[string]ContractConstructor
+
+// ContractWrapper stores all needed about contract wrapper (it's methods/constructors)
+type ContractWrapper struct {
+	GetCode      ContractMethod
+	GetPrototype ContractMethod
+
+	Methods      ContractMethods
+	Constructors ContractConstructors
 }

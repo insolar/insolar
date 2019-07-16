@@ -54,6 +54,7 @@ type callerHookConfig struct {
 
 type zerologAdapter struct {
 	logger       zerolog.Logger
+	level        zerolog.Level
 	callerConfig callerHookConfig
 }
 
@@ -110,20 +111,46 @@ func InternalLevelToZerologLevel(level insolar.LogLevel) (zerolog.Level, error) 
 	return zerolog.NoLevel, errors.New("Unknown internal level")
 }
 
-func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
+func newDefaultTextOutput() io.Writer {
+	return zerolog.ConsoleWriter{
+		Out:          os.Stderr,
+		NoColor:      true,
+		TimeFormat:   timestampFormat,
+		PartsOrder:   fieldsOrder,
+		FormatCaller: formatCaller(),
+	}
+}
+
+func selectFormatter(format insolar.LogFormat) (io.Writer, error) {
 	var output io.Writer
-	switch strings.ToLower(cfg.Formatter) {
-	case "text":
-		output = zerolog.ConsoleWriter{Out: os.Stderr, NoColor: true, TimeFormat: timestampFormat, PartsOrder: fieldsOrder, FormatCaller: formatCaller()}
-	case "json":
+
+	switch format {
+	case insolar.TextFormat:
+		output = newDefaultTextOutput()
+	case insolar.JSONFormat:
 		output = os.Stderr
 	default:
-		return nil, errors.New("unknown formatter " + cfg.Formatter)
+		return nil, errors.New("unknown formatter " + format.String())
+	}
+
+	return output, nil
+}
+
+func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
+	format, err := insolar.ParseFormat(cfg.Formatter)
+	if err != nil {
+		return nil, err
+	}
+
+	output, err := selectFormatter(format)
+	if err != nil {
+		return nil, err
 	}
 
 	logger := zerolog.New(output).Level(zerolog.InfoLevel).With().Timestamp().Logger()
 	za := &zerologAdapter{
 		logger: logger,
+		level:  zerolog.InfoLevel,
 		callerConfig: callerHookConfig{
 			enabled:        true,
 			skipFrameCount: defaultCallerSkipFrameCount,
@@ -231,6 +258,7 @@ func (z *zerologAdapter) WithLevelNumber(level insolar.LogLevel) (insolar.Logger
 		return nil, err
 	}
 	zCopy := *z
+	zCopy.level = zerologLevel
 	zCopy.logger = z.logger.Level(zerologLevel)
 	return &zCopy, nil
 }
@@ -267,6 +295,16 @@ func (z *zerologAdapter) WithFuncName(flag bool) insolar.Logger {
 	return &zCopy
 }
 
+// WithFormat sets logger output format
+func (z *zerologAdapter) WithFormat(format insolar.LogFormat) (insolar.Logger, error) {
+	output, err := selectFormatter(format)
+	if err != nil {
+		return nil, err
+	}
+
+	return z.WithOutput(output), nil
+}
+
 func (z *zerologAdapter) loggerWithHooks() *zerolog.Logger {
 	l := z.logger
 	if z.callerConfig.funcname {
@@ -275,4 +313,13 @@ func (z *zerologAdapter) loggerWithHooks() *zerolog.Logger {
 		l = l.With().CallerWithSkipFrameCount(z.callerConfig.skipFrameCount).Logger()
 	}
 	return &l
+}
+
+func (z *zerologAdapter) Is(level insolar.LogLevel) bool {
+	zerologLevel, err := InternalLevelToZerologLevel(level)
+	if err != nil {
+		panic(err)
+	}
+
+	return zerologLevel >= z.level && zerologLevel >= zerolog.GlobalLevel()
 }

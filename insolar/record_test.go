@@ -22,12 +22,20 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/testutils"
-	base58 "github.com/jbenet/go-base58"
+	"github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 //ID and Reference serialization tests
+
+func TestNewIDFromBytes(t *testing.T) {
+	id := testutils.RandomID()
+	actualID := *insolar.NewIDFromBytes(id.Bytes())
+	require.Equal(t, id, actualID)
+
+	insolar.NewIDFromBytes(nil)
+}
 
 func TestNewIDFromBase58(t *testing.T) {
 	id := testutils.RandomID()

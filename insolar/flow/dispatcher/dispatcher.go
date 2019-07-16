@@ -18,20 +18,18 @@ package dispatcher
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"sync/atomic"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	wmBus "github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/flow/internal/pulse"
 	"github.com/insolar/insolar/insolar/flow/internal/thread"
 )
@@ -40,17 +38,19 @@ type Dispatcher struct {
 	handles struct {
 		present flow.MakeHandle
 		future  flow.MakeHandle
+		past    flow.MakeHandle
 	}
 	controller         *thread.Controller
 	currentPulseNumber uint32
 }
 
-func NewDispatcher(present flow.MakeHandle, future flow.MakeHandle) *Dispatcher {
+func NewDispatcher(present flow.MakeHandle, future flow.MakeHandle, past flow.MakeHandle) *Dispatcher {
 	d := &Dispatcher{
 		controller: thread.NewController(),
 	}
 	d.handles.present = present
 	d.handles.future = future
+	d.handles.past = past
 	d.currentPulseNumber = insolar.FirstPulseNumber
 	return d
 }
@@ -62,51 +62,31 @@ func (d *Dispatcher) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
 }
 
 func (d *Dispatcher) getHandleByPulse(msgPulseNumber insolar.PulseNumber) flow.MakeHandle {
-	if uint32(msgPulseNumber) > atomic.LoadUint32(&d.currentPulseNumber) {
+	currentPulse := atomic.LoadUint32(&d.currentPulseNumber)
+	if uint32(msgPulseNumber) > currentPulse {
 		return d.handles.future
+	}
+	if uint32(msgPulseNumber) < currentPulse {
+		return d.handles.past
 	}
 	return d.handles.present
 }
 
-func (d *Dispatcher) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := bus.Message{
-		ReplyTo: make(chan bus.Reply, 1),
-		Parcel:  parcel,
-	}
-
-	ctx = pulse.ContextWith(ctx, parcel.Pulse())
-
-	f := thread.NewThread(msg, d.controller)
-	handle := d.getHandleByPulse(parcel.Pulse())
-
-	err := f.Run(ctx, handle(msg))
-	var rep bus.Reply
-	select {
-	case rep = <-msg.ReplyTo:
-		return rep.Reply, rep.Err
-	default:
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return nil, errors.New("no reply from handler")
-}
-
-func (d *Dispatcher) InnerSubscriber(watermillMsg *message.Message) ([]*message.Message, error) {
-	msg := bus.Message{
-		WatermillMsg: watermillMsg,
-	}
-
+func (d *Dispatcher) InnerSubscriber(msg *message.Message) ([]*message.Message, error) {
 	ctx := context.Background()
-	ctx = inslogger.ContextWithTrace(ctx, watermillMsg.Metadata.Get(wmBus.MetaTraceID))
+	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(bus.MetaTraceID))
+	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
+	if err == nil {
+		ctx = instracer.WithParentSpan(ctx, parentSpan)
+	} else {
+		inslogger.FromContext(ctx).Error(err)
+	}
 	logger := inslogger.FromContext(ctx)
 	go func() {
 		f := thread.NewThread(msg, d.controller)
 		err := f.Run(ctx, d.handles.present(msg))
 		if err != nil {
-			logger.Error("Handling failed", err)
+			logger.Error("Handling failed: ", err)
 		}
 	}()
 	return nil, nil
@@ -115,25 +95,27 @@ func (d *Dispatcher) InnerSubscriber(watermillMsg *message.Message) ([]*message.
 // Process handles incoming message.
 func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 	ctx := context.Background()
-	msgBus := bus.Message{
-		WatermillMsg: msg,
-		ReplyTo:      make(chan bus.Reply),
-	}
 
-	meta := payload.Meta{}
-	err := meta.Unmarshal(msg.Payload)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal meta")
+	for k, v := range msg.Metadata {
+		ctx, _ = inslogger.WithField(ctx, k, v)
 	}
-	ctx, logger := inslogger.WithField(ctx, "pulse", fmt.Sprintf("%d", meta.Pulse))
-	ctx = pulse.ContextWith(ctx, meta.Pulse)
-	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(wmBus.MetaTraceID))
+	logger := inslogger.FromContext(ctx)
+
+	pn, err := insolar.NewPulseNumberFromStr(msg.Metadata.Get(bus.MetaPulse))
+	if err != nil {
+		logger.Error("failed to handle message: ", err)
+		return nil, nil
+	}
+	ctx = pulse.ContextWith(ctx, pn)
+	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(bus.MetaTraceID))
+	parentSpan := instracer.MustDeserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
+	ctx = instracer.WithParentSpan(ctx, parentSpan)
 	go func() {
-		f := thread.NewThread(msgBus, d.controller)
-		handle := d.getHandleByPulse(meta.Pulse)
-		err := f.Run(ctx, handle(msgBus))
+		f := thread.NewThread(msg, d.controller)
+		handle := d.getHandleByPulse(pn)
+		err := f.Run(ctx, handle(msg))
 		if err != nil {
-			logger.Error(errors.Wrap(err, "Handling failed"))
+			logger.Error(errors.Wrap(err, "Handling failed: "))
 		}
 	}()
 	return nil, nil

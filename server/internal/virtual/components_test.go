@@ -30,6 +30,8 @@ func TestInitComponents(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
 	cfg.CertificatePath = "testdata/certificate.json"
+	cfg.Metrics.ListenAddress = "0.0.0.0:0"
+	cfg.APIRunner.Address = "0.0.0.0:0"
 
 	bootstrapComponents := initBootstrapComponents(ctx, cfg)
 	cert := initCertificateManager(
@@ -39,7 +41,7 @@ func TestInitComponents(t *testing.T) {
 		bootstrapComponents.CryptographyService,
 		bootstrapComponents.KeyProcessor,
 	)
-	cm, _ := initComponents(
+	cm, _, stopWatermill := initComponents(
 		ctx,
 		cfg,
 		bootstrapComponents.CryptographyService,
@@ -47,9 +49,9 @@ func TestInitComponents(t *testing.T) {
 		bootstrapComponents.KeyStore,
 		bootstrapComponents.KeyProcessor,
 		cert,
-		false,
 	)
 	require.NotNil(t, cm)
+	require.NotNil(t, stopWatermill)
 
 	err := cm.Init(ctx)
 	require.NoError(t, err)

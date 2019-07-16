@@ -22,6 +22,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/pkg/errors"
 
@@ -150,7 +151,11 @@ func RetryJetSender(jetModifier jet.Modifier) PreSender {
 				}
 
 				if r, ok := rep.(*reply.JetMiss); ok {
-					jetModifier.Update(ctx, r.Pulse, true, insolar.JetID(r.JetID))
+					err := jetModifier.Update(ctx, r.Pulse, true, insolar.JetID(r.JetID))
+					if err != nil {
+						return nil, errors.Wrapf(err, "failed to update r.JetID=%v",
+							insolar.JetID(r.JetID).DebugString())
+					}
 				} else {
 					return rep, err
 				}
@@ -176,7 +181,7 @@ func RetryIncorrectPulse(accessor pulse.Accessor) PreSender {
 // RetryFlowCancelled retries message on next pulse when received flow cancelled error.
 func RetryFlowCancelled(accessor pulse.Accessor) PreSender {
 	return retryer(accessor, flowCancelledRetryCount,
-		"flow cancelled",
+		flow.ErrCancelled.Error(),
 		"[ RetryFlowCancelled ] flow cancelled, retrying",
 		"flow cancelled (retry limit exceeded on client)")
 }
@@ -191,11 +196,11 @@ func retryer(accessor pulse.Accessor, retriesCount int, errSubstr string, debugS
 
 				currentPulse, err := accessor.Latest(ctx)
 				if err != nil {
-					return nil, errors.Wrap(err, "[ RetryIncorrectPulse ] Can't get latest pulse")
+					return nil, errors.Wrap(err, "[ retryer ] Can't get latest pulse")
 				}
 
 				if currentPulse.PulseNumber == lastPulse {
-					inslogger.FromContext(ctx).Debugf("[ RetryIncorrectPulse ]  wait for pulse change. Current: %d", currentPulse)
+					inslogger.FromContext(ctx).Debugf("[ retryer ]  wait for pulse change. Current: %d", currentPulse)
 					time.Sleep(100 * time.Millisecond)
 					continue
 				}

@@ -159,8 +159,9 @@ func (bc *Bootstrap) Bootstrap(ctx context.Context) (*network.BootstrapResult, *
 	if len(discoveryNodes) == 0 {
 		return nil, nil, errors.New("There are 0 discovery nodes to connect to")
 	}
+	ctx, cancel := context.WithCancel(ctx)
 	ch := bc.getDiscoveryNodesChannel(ctx, discoveryNodes, 1)
-	result := bc.waitResultFromChannel(ctx, ch)
+	result := bc.waitResultFromChannel(ctx, cancel, ch)
 	if result == nil {
 		return nil, nil, errors.New("Failed to bootstrap to any of discovery nodes")
 	}
@@ -244,8 +245,9 @@ func (bc *Bootstrap) BootstrapDiscovery(ctx context.Context) (*network.Bootstrap
 	var bootstrapResults []*network.BootstrapResult
 	var hosts []*host.Host
 	for {
+		ctx, cancel := context.WithCancel(ctx)
 		ch := bc.getDiscoveryNodesChannel(ctx, discoveryNodes, discoveryCount)
-		bootstrapResults, hosts = bc.waitResultsFromChannel(ctx, ch, discoveryCount)
+		bootstrapResults, hosts = bc.waitResultsFromChannel(ctx, cancel, ch, discoveryCount)
 		if len(hosts) == discoveryCount {
 			// we connected to all discovery nodes
 			break
@@ -349,7 +351,14 @@ func (bc *Bootstrap) getDiscoveryNodesChannel(ctx context.Context, discoveryNode
 				inslogger.FromContext(ctx).Errorf("Error bootstrapping to address %s: %s", address, err.Error())
 				return
 			}
-			bootstrapResults <- bootstrapResult
+
+			select {
+			case bootstrapResults <- bootstrapResult:
+				return
+			case <-ctx.Done():
+				return
+			}
+
 		}(ctx, discoveryNode.GetHost())
 	}
 
@@ -385,19 +394,21 @@ func (bc *Bootstrap) getGenesisRequestsChannel(ctx context.Context, discoveryHos
 	return result
 }
 
-func (bc *Bootstrap) waitResultFromChannel(ctx context.Context, ch <-chan *network.BootstrapResult) *network.BootstrapResult {
+func (bc *Bootstrap) waitResultFromChannel(ctx context.Context, cancel context.CancelFunc, ch <-chan *network.BootstrapResult) *network.BootstrapResult {
 	for {
 		select {
 		case bootstrapHost := <-ch:
+			cancel()
 			return bootstrapHost
 		case <-time.After(bc.options.BootstrapTimeout):
 			inslogger.FromContext(ctx).Warn("Bootstrap timeout")
+			cancel()
 			return nil
 		}
 	}
 }
 
-func (bc *Bootstrap) waitResultsFromChannel(ctx context.Context, ch <-chan *network.BootstrapResult, count int) ([]*network.BootstrapResult, []*host.Host) {
+func (bc *Bootstrap) waitResultsFromChannel(ctx context.Context, cancel context.CancelFunc, ch <-chan *network.BootstrapResult, count int) ([]*network.BootstrapResult, []*host.Host) {
 	result := make([]*network.BootstrapResult, 0)
 	hosts := make([]*host.Host, 0)
 	for {
@@ -410,6 +421,7 @@ func (bc *Bootstrap) waitResultsFromChannel(ctx context.Context, ch <-chan *netw
 			}
 		case <-time.After(bc.options.BootstrapTimeout):
 			inslogger.FromContext(ctx).Warnf("Bootstrap timeout, successful bootstraps: %d/%d", len(result), count)
+			cancel()
 			return result, hosts
 		}
 	}
@@ -528,7 +540,7 @@ func (bc *Bootstrap) nodeShouldReconnectAsJoiner(nodeID insolar.Reference) bool 
 		utils.IsDiscovery(nodeID, bc.Certificate)
 }
 
-func (bc *Bootstrap) processBootstrap(ctx context.Context, request network.Packet) (network.Packet, error) {
+func (bc *Bootstrap) processBootstrap(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 	if request.GetRequest() == nil || request.GetRequest().GetBootstrap() == nil {
 		return nil, errors.Errorf("process bootstrap: got invalid protobuf request message: %s", request)
 	}
@@ -599,7 +611,7 @@ func (bc *Bootstrap) generatePermission(joinerPublicKey []byte) (*packet.Permiss
 	return &result, nil
 }
 
-func (bc *Bootstrap) processGenesis(ctx context.Context, request network.Packet) (network.Packet, error) {
+func (bc *Bootstrap) processGenesis(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 	if request.GetRequest() == nil || request.GetRequest().GetGenesis() == nil {
 		return nil, errors.Errorf("process genesis: got invalid protobuf request message: %s", request)
 	}
@@ -619,7 +631,8 @@ func (bc *Bootstrap) processGenesis(ctx context.Context, request network.Packet)
 func (bc *Bootstrap) Init(ctx context.Context) error {
 	bc.firstPulseTime = time.Now()
 	bc.pinger = pinger.NewPinger(bc.Network)
-	bc.Network.RegisterRequestHandler(types.Ping, func(ctx context.Context, request network.Packet) (network.Packet, error) {
+	bc.Network.RegisterRequestHandler(types.Ping, func(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
+		inslogger.FromContext(ctx).Infof("[ HandlePing ] response to ping from %s", request.GetSenderHost().String())
 		return bc.Network.BuildResponse(ctx, request, &packet.Ping{}), nil
 	})
 	bc.Network.RegisterRequestHandler(types.Bootstrap, bc.processBootstrap)

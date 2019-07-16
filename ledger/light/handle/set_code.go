@@ -18,24 +18,22 @@ package handle
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
 type SetCode struct {
 	dep     *proc.Dependencies
-	message *message.Message
+	message payload.Meta
 	passed  bool
 }
 
-func NewSetCode(dep *proc.Dependencies, msg *message.Message, passed bool) *SetCode {
+func NewSetCode(dep *proc.Dependencies, msg payload.Meta, passed bool) *SetCode {
 	return &SetCode{
 		dep:     dep,
 		message: msg,
@@ -44,13 +42,14 @@ func NewSetCode(dep *proc.Dependencies, msg *message.Message, passed bool) *SetC
 }
 
 func (s *SetCode) Present(ctx context.Context, f flow.Flow) error {
-	pl, err := payload.UnmarshalFromMeta(s.message.Payload)
+	msg := payload.SetCode{}
+	err := msg.Unmarshal(s.message.Payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal payload")
+		return errors.Wrap(err, "failed to unmarshal SetCode message")
 	}
-	msg, ok := pl.(*payload.SetCode)
-	if !ok {
-		return fmt.Errorf("unexpected payload type: %T", pl)
+
+	if len(msg.Record) == 0 {
+		return errors.New("empty record")
 	}
 
 	calc := proc.NewCalculateID(msg.Record, flow.Pulse(ctx))
@@ -64,16 +63,19 @@ func (s *SetCode) Present(ctx context.Context, f flow.Flow) error {
 	jet := proc.NewCheckJet(recID, flow.Pulse(ctx), s.message, passIfNotExecutor)
 	s.dep.CheckJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
+		if err == proc.ErrNotExecutor && passIfNotExecutor {
+			return nil
+		}
 		return err
 	}
 
-	rec := record.Code{}
+	rec := record.Virtual{}
 	err = rec.Unmarshal(msg.Record)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal record")
 	}
 
-	setCode := proc.NewSetCode(s.message, rec, msg.Code, recID, jet.Result.Jet)
+	setCode := proc.NewSetCode(s.message, rec, recID, jet.Result.Jet)
 	s.dep.SetCode(setCode)
 	return f.Procedure(ctx, setCode, false)
 }

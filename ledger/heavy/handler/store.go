@@ -22,7 +22,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
@@ -30,19 +29,19 @@ import (
 
 func storeIndexBuckets(
 	ctx context.Context,
-	indexes object.IndexBucketModifier,
+	indexes object.IndexModifier,
 	rawBuckets [][]byte,
 	pn insolar.PulseNumber,
 ) error {
 	for _, rwb := range rawBuckets {
-		buck := object.FilamentIndex{}
+		buck := record.Index{}
 		err := buck.Unmarshal(rwb)
 		if err != nil {
 			inslogger.FromContext(ctx).Error(err)
 			continue
 		}
 
-		err = indexes.SetBucket(ctx, pn, buck)
+		err = indexes.SetIndex(ctx, pn, buck)
 		if err != nil {
 			return errors.Wrapf(err, "heavyserver: index storing failed")
 		}
@@ -55,43 +54,18 @@ func storeDrop(
 	ctx context.Context,
 	drops drop.Modifier,
 	rawDrop []byte,
-) error {
+) (*drop.Drop, error) {
 	d, err := drop.Decode(rawDrop)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(err)
-		return err
+		return nil, err
 	}
 	err = drops.Set(ctx, *d)
 	if err != nil {
-		return errors.Wrapf(err, "heavyserver: drop storing failed")
+		return nil, errors.Wrapf(err, "heavyserver: drop storing failed")
 	}
 
-	return nil
-}
-
-func storeBlobs(
-	ctx context.Context,
-	blobs blob.Modifier,
-	pcs insolar.PlatformCryptographyScheme,
-	pn insolar.PulseNumber,
-	rawBlobs [][]byte,
-) {
-	inslog := inslogger.FromContext(ctx)
-
-	for _, rwb := range rawBlobs {
-		b, err := blob.Decode(rwb)
-		if err != nil {
-			inslog.Error(err, "heavyserver: deserialize blob failed")
-			continue
-		}
-
-		blobID := object.CalculateIDForBlob(pcs, pn, b.Value)
-		err = blobs.Set(ctx, *blobID, *b)
-		if err != nil {
-			inslog.Error(err, "heavyserver: blob storing failed")
-			continue
-		}
-	}
+	return d, nil
 }
 
 func storeRecords(

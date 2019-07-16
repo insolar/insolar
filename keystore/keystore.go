@@ -104,3 +104,15 @@ func NewKeyStore(path string) (insolar.KeyStore, error) {
 
 	return cachedKeyStore, nil
 }
+
+type inPlaceKeyStore struct {
+	privateKey crypto.PrivateKey
+}
+
+func (ipks *inPlaceKeyStore) GetPrivateKey(string) (crypto.PrivateKey, error) {
+	return ipks.privateKey, nil
+}
+
+func NewInplaceKeyStore(privateKey crypto.PrivateKey) insolar.KeyStore {
+	return &inPlaceKeyStore{privateKey: privateKey}
+}

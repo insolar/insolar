@@ -17,6 +17,7 @@
 package replication
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -26,9 +27,9 @@ import (
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCleaner_cleanPulse(t *testing.T) {
@@ -38,7 +39,7 @@ func TestCleaner_cleanPulse(t *testing.T) {
 
 	ctrl := minimock.NewController(t)
 
-	jm := jet.NewStorageMock(ctrl)
+	jm := jet.NewCleanerMock(ctrl)
 	jm.DeleteForPNMock.Expect(ctx, inputPulse.PulseNumber)
 
 	nm := node.NewModifierMock(ctrl)
@@ -46,9 +47,6 @@ func TestCleaner_cleanPulse(t *testing.T) {
 
 	dc := drop.NewCleanerMock(ctrl)
 	dc.DeleteForPNMock.Expect(ctx, inputPulse.PulseNumber)
-
-	bc := blob.NewCleanerMock(ctrl)
-	bc.DeleteForPNMock.Expect(ctx, inputPulse.PulseNumber)
 
 	rc := object.NewRecordCleanerMock(ctrl)
 	rc.DeleteForPNMock.Expect(ctx, inputPulse.PulseNumber)
@@ -59,11 +57,17 @@ func TestCleaner_cleanPulse(t *testing.T) {
 	ps := pulse.NewShifterMock(ctrl)
 	ps.ShiftMock.Expect(ctx, inputPulse.PulseNumber).Return(nil)
 
-	cleaner := NewCleaner(jm, nm, dc, bc, rc, ic, ps, nil, 0)
+	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, nil, 0)
 
 	cleaner.cleanPulse(ctx, inputPulse.PulseNumber)
 
 	ctrl.Finish()
+}
+
+func DeleteForPNMock(t *testing.T, expected insolar.PulseNumber) func(p context.Context, p1 insolar.PulseNumber) {
+	return func(ctx context.Context, actual insolar.PulseNumber) {
+		require.Equal(t, expected, actual)
+	}
 }
 
 func TestCleaner_clean(t *testing.T) {
@@ -75,31 +79,35 @@ func TestCleaner_clean(t *testing.T) {
 
 	ctrl := minimock.NewController(t)
 
-	jm := jet.NewStorageMock(ctrl)
-	jm.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
+	jm := jet.NewCleanerMock(ctrl)
+	jm.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
 
 	nm := node.NewModifierMock(ctrl)
 	nm.DeleteForPNMock.Expect(calculatedPulse.PulseNumber)
 
 	dc := drop.NewCleanerMock(ctrl)
-	dc.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
-
-	bc := blob.NewCleanerMock(ctrl)
-	bc.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
+	dc.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
 
 	rc := object.NewRecordCleanerMock(ctrl)
-	rc.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
+	rc.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
 
 	ic := object.NewIndexCleanerMock(ctrl)
-	ic.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
+	ic.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
 
 	ps := pulse.NewShifterMock(ctrl)
-	ps.ShiftMock.Expect(ctx, calculatedPulse.PulseNumber).Return(nil)
+	ps.ShiftFunc = func(p context.Context, pn insolar.PulseNumber) error {
+		require.Equal(t, calculatedPulse.PulseNumber, pn)
+		return nil
+	}
 
 	pc := pulse.NewCalculatorMock(ctrl)
-	pc.BackwardsMock.Expect(ctx, inputPulse.PulseNumber, limit).Return(calculatedPulse, nil)
+	pc.BackwardsFunc = func(p context.Context, pn insolar.PulseNumber, l int) (r insolar.Pulse, r1 error) {
+		require.Equal(t, inputPulse.PulseNumber, pn)
+		require.Equal(t, limit+1, l)
+		return calculatedPulse, nil
+	}
 
-	cleaner := NewCleaner(jm, nm, dc, bc, rc, ic, ps, pc, limit)
+	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, pc, limit)
 	defer close(cleaner.pulseForClean)
 
 	go cleaner.clean(ctx)
@@ -117,31 +125,35 @@ func TestLightCleaner_NotifyAboutPulse(t *testing.T) {
 
 	ctrl := minimock.NewController(t)
 
-	jm := jet.NewStorageMock(ctrl)
-	jm.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
+	jm := jet.NewCleanerMock(ctrl)
+	jm.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
 
 	nm := node.NewModifierMock(ctrl)
 	nm.DeleteForPNMock.Expect(calculatedPulse.PulseNumber)
 
 	dc := drop.NewCleanerMock(ctrl)
-	dc.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
-
-	bc := blob.NewCleanerMock(ctrl)
-	bc.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
+	dc.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
 
 	rc := object.NewRecordCleanerMock(ctrl)
-	rc.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
+	rc.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
 
 	ic := object.NewIndexCleanerMock(ctrl)
-	ic.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
+	ic.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
 
 	ps := pulse.NewShifterMock(ctrl)
-	ps.ShiftMock.Expect(ctx, calculatedPulse.PulseNumber).Return(nil)
+	ps.ShiftFunc = func(p context.Context, pn insolar.PulseNumber) error {
+		require.Equal(t, calculatedPulse.PulseNumber, pn)
+		return nil
+	}
 
 	pc := pulse.NewCalculatorMock(ctrl)
-	pc.BackwardsMock.Expect(ctx, inputPulse.PulseNumber, limit).Return(calculatedPulse, nil)
+	pc.BackwardsFunc = func(p context.Context, pn insolar.PulseNumber, l int) (r insolar.Pulse, r1 error) {
+		require.Equal(t, inputPulse.PulseNumber, pn)
+		require.Equal(t, limit+1, l)
+		return calculatedPulse, nil
+	}
 
-	cleaner := NewCleaner(jm, nm, dc, bc, rc, ic, ps, pc, limit)
+	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, pc, limit)
 	defer close(cleaner.pulseForClean)
 
 	go cleaner.NotifyAboutPulse(ctx, inputPulse.PulseNumber)

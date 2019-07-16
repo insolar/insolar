@@ -65,9 +65,11 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/network/servicenetwork"
-	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -77,8 +79,8 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus/packets"
-	"github.com/insolar/insolar/network/consensus/phases"
+	"github.com/insolar/insolar/network/consensusv1/packets"
+	"github.com/insolar/insolar/network/consensusv1/phases"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/platformpolicy"
@@ -288,14 +290,14 @@ func (s *consensusSuite) TearDownTest() {
 
 func (s *consensusSuite) waitForConsensus(consensusCount int) {
 	for i := 0; i < consensusCount; i++ {
-		for _, n := range s.fixture().bootstrapNodes {
+		for i, n := range s.fixture().bootstrapNodes {
 			err := <-n.consensusResult
-			s.NoError(err)
+			require.NoError(s.T(), err, "Failed to pass consensus on bootstrapNodes[%d] %s ", i, n.host)
 		}
 
 		for _, n := range s.fixture().networkNodes {
 			err := <-n.consensusResult
-			s.NoError(err)
+			require.NoError(s.T(), err, "Failed to pass consensus on networkNodes[%d] %s ", i, n.host)
 		}
 	}
 }
@@ -307,7 +309,7 @@ func (s *consensusSuite) waitForConsensusExcept(consensusCount int, exception in
 				continue
 			}
 			err := <-n.consensusResult
-			s.NoError(err)
+			require.NoError(s.T(), err, "Failed to pass consensus on bootstrapNodes[%d] %s ", i, n.host)
 		}
 
 		for _, n := range s.fixture().networkNodes {
@@ -315,7 +317,7 @@ func (s *consensusSuite) waitForConsensusExcept(consensusCount int, exception in
 				continue
 			}
 			err := <-n.consensusResult
-			s.NoError(err)
+			require.NoError(s.T(), err, "Failed to pass consensus on networkNodes[%d] %s ", i, n.host)
 		}
 	}
 }
@@ -456,7 +458,7 @@ func (p *pulseManagerMock) Latest(ctx context.Context) (insolar.Pulse, error) {
 	return p.pulse, nil
 }
 
-func (p *pulseManagerMock) Set(ctx context.Context, pulse insolar.Pulse, persist bool) error {
+func (p *pulseManagerMock) Set(ctx context.Context, pulse insolar.Pulse) error {
 	p.lock.Lock()
 	p.pulse = pulse
 	p.lock.Unlock()
@@ -465,10 +467,10 @@ func (p *pulseManagerMock) Set(ctx context.Context, pulse insolar.Pulse, persist
 }
 
 type staterMock struct {
-	stateFunc func() ([]byte, error)
+	stateFunc func() []byte
 }
 
-func (m staterMock) State() ([]byte, error) {
+func (m staterMock) State() []byte {
 	return m.stateFunc()
 }
 
@@ -497,12 +499,12 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	node.componentManager = &component.Manager{}
 	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme())
-	serviceNetwork, err := servicenetwork.NewServiceNetwork(cfg, node.componentManager, false)
+	serviceNetwork, err := servicenetwork.NewServiceNetwork(cfg, node.componentManager)
 	s.Require().NoError(err)
 
 	amMock := staterMock{
-		stateFunc: func() ([]byte, error) {
-			return make([]byte, packets.HashLength), nil
+		stateFunc: func() []byte {
+			return make([]byte, packets.HashLength)
 		},
 	}
 
@@ -515,7 +517,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	terminationHandler.OnLeaveApprovedFunc = func(p context.Context) {}
 	terminationHandler.AbortFunc = func(reason string) { log.Error(reason) }
 
-	mblocker := testutils.NewMessageBusLockerMock(t)
 	keyProc := platformpolicy.NewKeyProcessor()
 	pubMock := &PublisherMock{}
 	senderMock := bus.NewSenderMock(t)
@@ -534,7 +535,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	mb.MustRegisterMock.Return()
 
 	node.componentManager.Inject(realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)), pubMock,
-		&amMock, certManager, cryptographyService, mblocker, serviceNetwork, keyProc, terminationHandler,
+		&amMock, certManager, cryptographyService, serviceNetwork, keyProc, terminationHandler,
 		mb, testutils.NewContractRequesterMock(t), senderMock)
 
 	serviceNetwork.SetOperableFunc(func(ctx context.Context, operable bool) {

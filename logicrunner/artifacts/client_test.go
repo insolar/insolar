@@ -18,15 +18,18 @@ package artifacts
 
 import (
 	"context"
+	"io/ioutil"
 	"math/rand"
+	"os"
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/internal/ledger/store"
@@ -42,6 +45,8 @@ import (
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
+
+	wmMessage "github.com/ThreeDotsLabs/watermill/message"
 )
 
 type amSuite struct {
@@ -56,6 +61,12 @@ type amSuite struct {
 	jetStorage   jet.Storage
 	dropModifier drop.Modifier
 	dropAccessor drop.Accessor
+
+	tmpDir1 string
+	tmpDir2 string
+
+	badgerDB1 *store.BadgerDB
+	badgerDB2 *store.BadgerDB
 }
 
 func NewAmSuite() *amSuite {
@@ -77,14 +88,34 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	s.jetStorage = jet.NewStore()
 	s.nodeStorage = node.NewStorage()
 
-	dbStore := store.NewMemoryMockDB()
-	dropStorage := drop.NewDB(dbStore)
+	var err error
+	s.tmpDir1, err = ioutil.TempDir("", "bdb-test-")
+	if err != nil {
+		s.T().Error("Can't create TempDir", err)
+	}
+
+	s.badgerDB1, err = store.NewBadgerDB(s.tmpDir1)
+	if err != nil {
+		s.T().Error("Can't NewBadgerDB", err)
+	}
+
+	dropStorage := drop.NewDB(s.badgerDB1)
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 
+	s.tmpDir2, err = ioutil.TempDir("", "bdb-test-")
+	if err != nil {
+		s.T().Error("Can't create TempDir", err)
+	}
+
+	s.badgerDB2, err = store.NewBadgerDB(s.tmpDir2)
+	if err != nil {
+		s.T().Error("Can't create NewBadgerDB", err)
+	}
+
 	s.cm.Inject(
 		s.scheme,
-		store.NewMemoryMockDB(),
+		s.badgerDB2,
 		s.jetStorage,
 		s.nodeStorage,
 		pulse.NewStorageMem(),
@@ -92,7 +123,7 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 		s.dropModifier,
 	)
 
-	err := s.cm.Init(s.ctx)
+	err = s.cm.Init(s.ctx)
 	if err != nil {
 		s.T().Error("ComponentManager init failed", err)
 	}
@@ -107,6 +138,12 @@ func (s *amSuite) AfterTest(suiteName, testName string) {
 	if err != nil {
 		s.T().Error("ComponentManager stop failed", err)
 	}
+
+	os.RemoveAll(s.tmpDir1)
+	os.RemoveAll(s.tmpDir2)
+	s.badgerDB1.Stop(s.ctx)
+	// We don't call it explicitly since it's called by component manager
+	// s.badgerDB2.Stop(s.ctx)
 }
 
 func genRandomID(pulse insolar.PulseNumber) *insolar.ID {
@@ -158,59 +195,6 @@ func (s *amSuite) TestLedgerArtifactManager_GetChildren_FollowsRedirect() {
 	require.NoError(s.T(), err)
 }
 
-func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
-	mc := minimock.NewController(s.T())
-	defer mc.Finish()
-
-	cs := platformpolicy.NewPlatformCryptographyScheme()
-	am := NewClient(nil)
-	am.PCS = cs
-	pa := pulse.NewAccessorMock(s.T())
-	pa.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}, nil)
-
-	am.PulseAccessor = pa
-	am.JetStorage = s.jetStorage
-
-	s.T().Run("returns error on exceeding retry limit", func(t *testing.T) {
-		mb := testutils.NewMessageBusMock(mc)
-		am.DefaultBus = mb
-		mb.SendMock.Return(&reply.JetMiss{
-			JetID: insolar.ID(*insolar.NewJetID(5, []byte{1, 2, 3})),
-		}, nil)
-		ref := gen.Reference()
-		_, err := am.RegisterRequest(
-			s.ctx,
-			record.Request{Object: &ref},
-		)
-		require.Error(t, err)
-	})
-
-	s.T().Run("returns no error and updates tree when jet miss", func(t *testing.T) {
-		b_1101 := byte(0xD0)
-		b_11010101 := byte(0xD5)
-		mb := testutils.NewMessageBusMock(mc)
-		am.DefaultBus = mb
-		retries := 3
-		mb.SendFunc = func(c context.Context, m insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
-			if retries == 0 {
-				return &reply.ID{}, nil
-			}
-			retries--
-			return &reply.JetMiss{JetID: insolar.ID(*insolar.NewJetID(4, []byte{b_11010101})), Pulse: insolar.FirstPulseNumber}, nil
-		}
-		ref := gen.Reference()
-		_, err := am.RegisterRequest(s.ctx, record.Request{Object: &ref})
-		require.NoError(t, err)
-
-		jetID, actual := s.jetStorage.ForID(
-			s.ctx, insolar.FirstPulseNumber, *insolar.NewID(0, []byte{0xD5}),
-		)
-
-		assert.Equal(t, insolar.NewJetID(4, []byte{b_1101}), &jetID, "proper jet ID for record")
-		assert.True(t, actual, "jet ID is actual in tree")
-	})
-}
-
 func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 	// Arrange
 	mc := minimock.NewController(s.T())
@@ -226,13 +210,16 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 	pulseAccessor := pulse.NewAccessorMock(s.T())
 	pulseAccessor.LatestMock.Return(*insolar.GenesisPulse, nil)
 
-	req := record.Request{
+	req := record.IncomingRequest{
 		Method: "test",
 	}
-	virtRec := record.Wrap(req)
-	data, err := virtRec.Marshal()
+
+	finalResponse := &payload.Request{
+		RequestID: requestID,
+		Request:   record.Wrap(req),
+	}
+	reqMsg, err := payload.NewMessage(finalResponse)
 	require.NoError(s.T(), err)
-	finalResponse := &reply.Request{Record: data}
 
 	mb := testutils.NewMessageBusMock(s.T())
 	mb.SendFunc = func(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
@@ -242,26 +229,39 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 			require.Equal(s.T(), true, ok)
 			require.Equal(s.T(), objectID, casted.ObjectID)
 			return &reply.ID{ID: requestID}, nil
-		case 1:
-			casted, ok := p1.(*message.GetRequest)
-			require.Equal(s.T(), true, ok)
-			require.Equal(s.T(), requestID, casted.Request)
-			require.Equal(s.T(), node, *p2.Receiver)
-			return finalResponse, nil
 		default:
 			panic("test is totally broken")
 		}
+	}
+
+	sender := bus.NewSenderMock(s.T())
+	sender.SendTargetFunc = func(_ context.Context, msg *wmMessage.Message, n insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
+		getReq := payload.GetRequest{}
+		err := getReq.Unmarshal(msg.Payload)
+		require.NoError(s.T(), err)
+
+		require.Equal(s.T(), requestID, getReq.RequestID)
+		require.Equal(s.T(), node, n)
+
+		meta := payload.Meta{Payload: reqMsg.Payload}
+		buf, err := meta.Marshal()
+		require.NoError(s.T(), err)
+		reqMsg.Payload = buf
+		ch := make(chan *wmMessage.Message, 1)
+		ch <- reqMsg
+		return ch, func() {}
 	}
 
 	am := NewClient(nil)
 	am.JetCoordinator = jc
 	am.DefaultBus = mb
 	am.PulseAccessor = pulseAccessor
+	am.sender = sender
 
 	// Act
 	_, res, err := am.GetPendingRequest(inslogger.TestContext(s.T()), objectID)
 
 	// Assert
 	require.NoError(s.T(), err)
-	require.Equal(s.T(), "test", res.Message().(*message.CallMethod).Method)
+	require.Equal(s.T(), "test", res.Method)
 }

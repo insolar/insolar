@@ -53,7 +53,7 @@ package nodenetwork
 import (
 	"sync"
 
-	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/network/consensusv1/packets"
 )
 
 type claimQueue struct {
@@ -73,6 +73,7 @@ func (cq *claimQueue) Pop() packets.ReferendumClaim {
 		return nil
 	}
 	result := cq.data[0]
+	cq.data[0] = nil
 	cq.data = cq.data[1:]
 	return result
 }

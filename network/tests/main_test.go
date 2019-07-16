@@ -64,7 +64,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus/claimhandler"
+	"github.com/insolar/insolar/network/consensusv1/claimhandler"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/nodenetwork"
 )
@@ -79,11 +79,11 @@ func TestServiceNetworkManyBootstraps(t *testing.T) {
 	suite.Run(t, s)
 }
 
-func TestServiceNetworkManyNodes(t *testing.T) {
-	t.Skip("Long time setup, wait for mock bootstrap")
-	s := newConsensusSuite(5, 10)
-	suite.Run(t, s)
-}
+//func TestServiceNetworkManyNodes(t *testing.T) {
+//	t.Skip("Long time setup, wait for mock bootstrap")
+//	s := newConsensusSuite(5, 10)
+//	suite.Run(t, s)
+//}
 
 // Consensus suite tests
 

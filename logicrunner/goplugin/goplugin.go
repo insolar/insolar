@@ -70,11 +70,6 @@ func NewGoPlugin(conf *configuration.LogicRunner, eb insolar.MessageBus, am arti
 	return &gp, nil
 }
 
-// Stop stops runner(s) and RPC service
-func (gp *GoPlugin) Stop() error {
-	return nil
-}
-
 const timeout = time.Minute * 10
 
 // Downstream returns a connection to `ginsider`
@@ -89,6 +84,7 @@ func (gp *GoPlugin) Downstream(ctx context.Context) (*rpc.Client, error) {
 		return gp.client, nil
 	}
 
+	inslogger.FromContext(ctx).Debug("dialing insgorund")
 	client, err := rpc.Dial(gp.Cfg.GoPlugin.RunnerProtocol, gp.Cfg.GoPlugin.RunnerListen)
 	if err != nil {
 		return nil, errors.Wrapf(
@@ -113,19 +109,21 @@ func (gp *GoPlugin) CloseDownstream() {
 }
 
 func (gp *GoPlugin) callClientWithReconnect(ctx context.Context, method string, req interface{}, res interface{}) error {
-	inslogger.FromContext(ctx).Debug("GoPlugin.callClientWithReconnect starts")
 	var err error
 	var client *rpc.Client
 
 	for {
-		inslogger.FromContext(ctx).Info("Connect to insgorund")
 		client, err = gp.Downstream(ctx)
 		if err == nil {
 			ctx, span := instracer.StartSpan(ctx, "GoPlugin callClientWithReconnect")
 			defer span.End()
 
+			inslogger.FromContext(ctx).Debug("Sending request to insgorund")
+
 			call := <-client.Go(method, req, res, nil).Done
 			err = call.Error
+
+			inslogger.FromContext(ctx).Debug("insgorund replied")
 
 			if err != rpc.ErrShutdown {
 				break

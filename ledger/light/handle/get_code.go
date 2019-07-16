@@ -18,41 +18,37 @@ package handle
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
-	"github.com/pkg/errors"
 )
 
 type GetCode struct {
-	dep     *proc.Dependencies
-	message *message.Message
-	passed  bool
+	dep    *proc.Dependencies
+	meta   payload.Meta
+	passed bool
 }
 
-func NewGetCode(dep *proc.Dependencies, msg *message.Message, passed bool) *GetCode {
+func NewGetCode(dep *proc.Dependencies, meta payload.Meta, passed bool) *GetCode {
 	return &GetCode{
-		dep:     dep,
-		message: msg,
-		passed:  passed,
+		dep:    dep,
+		meta:   meta,
+		passed: passed,
 	}
 }
 
 func (s *GetCode) Present(ctx context.Context, f flow.Flow) error {
-	pl, err := payload.UnmarshalFromMeta(s.message.Payload)
+	msg := payload.GetCode{}
+	err := msg.Unmarshal(s.meta.Payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal payload")
-	}
-	msg, ok := pl.(*payload.GetCode)
-	if !ok {
-		return fmt.Errorf("unexpected payload type: %T", pl)
+		return errors.Wrap(err, "failed to unmarshal GetCode message")
 	}
 
 	passIfNotFound := !s.passed
-	code := proc.NewGetCode(s.message, msg.CodeID, passIfNotFound)
+	code := proc.NewGetCode(s.meta, msg.CodeID, passIfNotFound)
 	s.dep.GetCode(code)
 	return f.Procedure(ctx, code, false)
 }

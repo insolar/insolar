@@ -29,10 +29,14 @@ type Storage struct {
 	TxRetriesOnConflict int
 }
 
-// PulseManager holds configuration for PulseManager.
-type PulseManager struct {
-	// SplitThreshold is a drop size threshold in bytes to perform split.
-	SplitThreshold uint64
+// JetSplit holds configuration for jet split.
+type JetSplit struct {
+	// RecordsCountThreshold is a drop threshold in records to perform split for jet.
+	ThresholdRecordsCount int
+	// ThresholdOverflowCount is a how many times in row ThresholdRecordsCount should be surpassed.
+	ThresholdOverflowCount int
+	// DepthLimit limits jet tree depth (maximum possible jets = 2^DepthLimit)
+	DepthLimit uint8
 }
 
 // Backoff configures retry backoff algorithm
@@ -56,8 +60,8 @@ type Exporter struct {
 type Ledger struct {
 	// Storage defines storage configuration.
 	Storage Storage
-	// PulseManager holds configuration for PulseManager.
-	PulseManager PulseManager
+	// JetSplit holds jet split configuration.
+	JetSplit JetSplit
 
 	// common/sharable values:
 
@@ -69,10 +73,6 @@ type Ledger struct {
 
 	// Exporter holds configuration of Exporter
 	Exporter Exporter
-
-	// PendingRequestsLimit holds a number of pending requests, what can be stored in the system
-	// before they are declined
-	PendingRequestsLimit int
 }
 
 // NewLedger creates new default Ledger configuration.
@@ -83,15 +83,16 @@ func NewLedger() Ledger {
 			TxRetriesOnConflict: 3,
 		},
 
-		PulseManager: PulseManager{
-			SplitThreshold: 10 * 100, // 10 megabytes.
+		JetSplit: JetSplit{
+			// TODO: find best default values
+			ThresholdRecordsCount:  100,
+			ThresholdOverflowCount: 3,
+			DepthLimit:             10, // limit to 1024 jets
 		},
 		LightChainLimit: 5, // 5 pulses
 
 		Exporter: Exporter{
 			ExportLag: 40, // 40 seconds
 		},
-
-		PendingRequestsLimit: 1000,
 	}
 }

@@ -19,8 +19,43 @@ package rootdomain
 import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/costcenter"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/deposit"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/nodedomain"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/noderecord"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/tariff"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 	"github.com/insolar/insolar/platformpolicy"
 )
+
+const (
+	GenesisPrototypeSuffix = "_proto"
+)
+
+var predefinedPrototypes = map[string]insolar.Reference{
+	insolar.GenesisNameRootDomain + GenesisPrototypeSuffix:           *rootdomain.PrototypeReference,
+	insolar.GenesisNameNodeDomain + GenesisPrototypeSuffix:           *nodedomain.PrototypeReference,
+	insolar.GenesisNameNodeRecord + GenesisPrototypeSuffix:           *noderecord.PrototypeReference,
+	insolar.GenesisNameRootMember + GenesisPrototypeSuffix:           *member.PrototypeReference,
+	insolar.GenesisNameRootWallet + GenesisPrototypeSuffix:           *wallet.PrototypeReference,
+	insolar.GenesisNameCostCenter + GenesisPrototypeSuffix:           *costcenter.PrototypeReference,
+	insolar.GenesisNameCommissionWallet + GenesisPrototypeSuffix:     *wallet.PrototypeReference,
+	insolar.GenesisNameDeposit + GenesisPrototypeSuffix:              *deposit.PrototypeReference,
+	insolar.GenesisNameMember + GenesisPrototypeSuffix:               *member.PrototypeReference,
+	insolar.GenesisNameMigrationAdminMember + GenesisPrototypeSuffix: *member.PrototypeReference,
+	insolar.GenesisNameMigrationWallet + GenesisPrototypeSuffix:      *wallet.PrototypeReference,
+	insolar.GenesisNameStandardTariff + GenesisPrototypeSuffix:       *tariff.PrototypeReference,
+	insolar.GenesisNameTariff + GenesisPrototypeSuffix:               *tariff.PrototypeReference,
+	insolar.GenesisNameWallet + GenesisPrototypeSuffix:               *wallet.PrototypeReference,
+}
+
+func init() {
+	for _, el := range insolar.GenesisNameMigrationDaemonMembers {
+		predefinedPrototypes[el+GenesisPrototypeSuffix] = *member.PrototypeReference
+	}
+}
 
 var genesisPulse = insolar.GenesisPulse.PulseNumber
 
@@ -41,7 +76,7 @@ func (r Record) Ref() insolar.Reference {
 
 // ID returns insolar.ID  to root domain object.
 func (r Record) ID() insolar.ID {
-	req := record.Request{
+	req := record.IncomingRequest{
 		CallType: record.CTGenesis,
 		Method:   insolar.GenesisNameRootDomain,
 	}
@@ -52,8 +87,11 @@ func (r Record) ID() insolar.ID {
 
 // GenesisRef returns reference to any genesis records based on the root domain.
 func GenesisRef(name string) insolar.Reference {
+	if ref, ok := predefinedPrototypes[name]; ok {
+		return ref
+	}
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
-	req := record.Request{
+	req := record.IncomingRequest{
 		CallType: record.CTGenesis,
 		Method:   name,
 	}

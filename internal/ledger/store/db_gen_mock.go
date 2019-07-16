@@ -17,12 +17,17 @@ import (
 type DBMock struct {
 	t minimock.Tester
 
+	DeleteFunc       func(p Key) (r error)
+	DeleteCounter    uint64
+	DeletePreCounter uint64
+	DeleteMock       mDBMockDelete
+
 	GetFunc       func(p Key) (r []byte, r1 error)
 	GetCounter    uint64
 	GetPreCounter uint64
 	GetMock       mDBMockGet
 
-	NewIteratorFunc       func(p Scope) (r Iterator)
+	NewIteratorFunc       func(p Key, p1 bool) (r Iterator)
 	NewIteratorCounter    uint64
 	NewIteratorPreCounter uint64
 	NewIteratorMock       mDBMockNewIterator
@@ -41,11 +46,159 @@ func NewDBMock(t minimock.Tester) *DBMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.DeleteMock = mDBMockDelete{mock: m}
 	m.GetMock = mDBMockGet{mock: m}
 	m.NewIteratorMock = mDBMockNewIterator{mock: m}
 	m.SetMock = mDBMockSet{mock: m}
 
 	return m
+}
+
+type mDBMockDelete struct {
+	mock              *DBMock
+	mainExpectation   *DBMockDeleteExpectation
+	expectationSeries []*DBMockDeleteExpectation
+}
+
+type DBMockDeleteExpectation struct {
+	input  *DBMockDeleteInput
+	result *DBMockDeleteResult
+}
+
+type DBMockDeleteInput struct {
+	p Key
+}
+
+type DBMockDeleteResult struct {
+	r error
+}
+
+//Expect specifies that invocation of DB.Delete is expected from 1 to Infinity times
+func (m *mDBMockDelete) Expect(p Key) *mDBMockDelete {
+	m.mock.DeleteFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &DBMockDeleteExpectation{}
+	}
+	m.mainExpectation.input = &DBMockDeleteInput{p}
+	return m
+}
+
+//Return specifies results of invocation of DB.Delete
+func (m *mDBMockDelete) Return(r error) *DBMock {
+	m.mock.DeleteFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &DBMockDeleteExpectation{}
+	}
+	m.mainExpectation.result = &DBMockDeleteResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of DB.Delete is expected once
+func (m *mDBMockDelete) ExpectOnce(p Key) *DBMockDeleteExpectation {
+	m.mock.DeleteFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &DBMockDeleteExpectation{}
+	expectation.input = &DBMockDeleteInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *DBMockDeleteExpectation) Return(r error) {
+	e.result = &DBMockDeleteResult{r}
+}
+
+//Set uses given function f as a mock of DB.Delete method
+func (m *mDBMockDelete) Set(f func(p Key) (r error)) *DBMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.DeleteFunc = f
+	return m.mock
+}
+
+//Delete implements github.com/insolar/insolar/internal/ledger/store.DB interface
+func (m *DBMock) Delete(p Key) (r error) {
+	counter := atomic.AddUint64(&m.DeletePreCounter, 1)
+	defer atomic.AddUint64(&m.DeleteCounter, 1)
+
+	if len(m.DeleteMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.DeleteMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to DBMock.Delete. %v", p)
+			return
+		}
+
+		input := m.DeleteMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, DBMockDeleteInput{p}, "DB.Delete got unexpected parameters")
+
+		result := m.DeleteMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the DBMock.Delete")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.DeleteMock.mainExpectation != nil {
+
+		input := m.DeleteMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, DBMockDeleteInput{p}, "DB.Delete got unexpected parameters")
+		}
+
+		result := m.DeleteMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the DBMock.Delete")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.DeleteFunc == nil {
+		m.t.Fatalf("Unexpected call to DBMock.Delete. %v", p)
+		return
+	}
+
+	return m.DeleteFunc(p)
+}
+
+//DeleteMinimockCounter returns a count of DBMock.DeleteFunc invocations
+func (m *DBMock) DeleteMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.DeleteCounter)
+}
+
+//DeleteMinimockPreCounter returns the value of DBMock.Delete invocations
+func (m *DBMock) DeleteMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.DeletePreCounter)
+}
+
+//DeleteFinished returns true if mock invocations count is ok
+func (m *DBMock) DeleteFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.DeleteMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.DeleteCounter) == uint64(len(m.DeleteMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.DeleteMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.DeleteCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.DeleteFunc != nil {
+		return atomic.LoadUint64(&m.DeleteCounter) > 0
+	}
+
+	return true
 }
 
 type mDBMockGet struct {
@@ -210,7 +363,8 @@ type DBMockNewIteratorExpectation struct {
 }
 
 type DBMockNewIteratorInput struct {
-	p Scope
+	p  Key
+	p1 bool
 }
 
 type DBMockNewIteratorResult struct {
@@ -218,14 +372,14 @@ type DBMockNewIteratorResult struct {
 }
 
 //Expect specifies that invocation of DB.NewIterator is expected from 1 to Infinity times
-func (m *mDBMockNewIterator) Expect(p Scope) *mDBMockNewIterator {
+func (m *mDBMockNewIterator) Expect(p Key, p1 bool) *mDBMockNewIterator {
 	m.mock.NewIteratorFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &DBMockNewIteratorExpectation{}
 	}
-	m.mainExpectation.input = &DBMockNewIteratorInput{p}
+	m.mainExpectation.input = &DBMockNewIteratorInput{p, p1}
 	return m
 }
 
@@ -242,12 +396,12 @@ func (m *mDBMockNewIterator) Return(r Iterator) *DBMock {
 }
 
 //ExpectOnce specifies that invocation of DB.NewIterator is expected once
-func (m *mDBMockNewIterator) ExpectOnce(p Scope) *DBMockNewIteratorExpectation {
+func (m *mDBMockNewIterator) ExpectOnce(p Key, p1 bool) *DBMockNewIteratorExpectation {
 	m.mock.NewIteratorFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &DBMockNewIteratorExpectation{}
-	expectation.input = &DBMockNewIteratorInput{p}
+	expectation.input = &DBMockNewIteratorInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -257,7 +411,7 @@ func (e *DBMockNewIteratorExpectation) Return(r Iterator) {
 }
 
 //Set uses given function f as a mock of DB.NewIterator method
-func (m *mDBMockNewIterator) Set(f func(p Scope) (r Iterator)) *DBMock {
+func (m *mDBMockNewIterator) Set(f func(p Key, p1 bool) (r Iterator)) *DBMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -266,18 +420,18 @@ func (m *mDBMockNewIterator) Set(f func(p Scope) (r Iterator)) *DBMock {
 }
 
 //NewIterator implements github.com/insolar/insolar/internal/ledger/store.DB interface
-func (m *DBMock) NewIterator(p Scope) (r Iterator) {
+func (m *DBMock) NewIterator(p Key, p1 bool) (r Iterator) {
 	counter := atomic.AddUint64(&m.NewIteratorPreCounter, 1)
 	defer atomic.AddUint64(&m.NewIteratorCounter, 1)
 
 	if len(m.NewIteratorMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.NewIteratorMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to DBMock.NewIterator. %v", p)
+			m.t.Fatalf("Unexpected call to DBMock.NewIterator. %v %v", p, p1)
 			return
 		}
 
 		input := m.NewIteratorMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, DBMockNewIteratorInput{p}, "DB.NewIterator got unexpected parameters")
+		testify_assert.Equal(m.t, *input, DBMockNewIteratorInput{p, p1}, "DB.NewIterator got unexpected parameters")
 
 		result := m.NewIteratorMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -294,7 +448,7 @@ func (m *DBMock) NewIterator(p Scope) (r Iterator) {
 
 		input := m.NewIteratorMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, DBMockNewIteratorInput{p}, "DB.NewIterator got unexpected parameters")
+			testify_assert.Equal(m.t, *input, DBMockNewIteratorInput{p, p1}, "DB.NewIterator got unexpected parameters")
 		}
 
 		result := m.NewIteratorMock.mainExpectation.result
@@ -308,11 +462,11 @@ func (m *DBMock) NewIterator(p Scope) (r Iterator) {
 	}
 
 	if m.NewIteratorFunc == nil {
-		m.t.Fatalf("Unexpected call to DBMock.NewIterator. %v", p)
+		m.t.Fatalf("Unexpected call to DBMock.NewIterator. %v %v", p, p1)
 		return
 	}
 
-	return m.NewIteratorFunc(p)
+	return m.NewIteratorFunc(p, p1)
 }
 
 //NewIteratorMinimockCounter returns a count of DBMock.NewIteratorFunc invocations
@@ -497,6 +651,10 @@ func (m *DBMock) SetFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *DBMock) ValidateCallCounters() {
 
+	if !m.DeleteFinished() {
+		m.t.Fatal("Expected call to DBMock.Delete")
+	}
+
 	if !m.GetFinished() {
 		m.t.Fatal("Expected call to DBMock.Get")
 	}
@@ -526,6 +684,10 @@ func (m *DBMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *DBMock) MinimockFinish() {
 
+	if !m.DeleteFinished() {
+		m.t.Fatal("Expected call to DBMock.Delete")
+	}
+
 	if !m.GetFinished() {
 		m.t.Fatal("Expected call to DBMock.Get")
 	}
@@ -552,6 +714,7 @@ func (m *DBMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
+		ok = ok && m.DeleteFinished()
 		ok = ok && m.GetFinished()
 		ok = ok && m.NewIteratorFinished()
 		ok = ok && m.SetFinished()
@@ -562,6 +725,10 @@ func (m *DBMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
+
+			if !m.DeleteFinished() {
+				m.t.Error("Expected call to DBMock.Delete")
+			}
 
 			if !m.GetFinished() {
 				m.t.Error("Expected call to DBMock.Get")
@@ -586,6 +753,10 @@ func (m *DBMock) MinimockWait(timeout time.Duration) {
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *DBMock) AllMocksCalled() bool {
+
+	if !m.DeleteFinished() {
+		return false
+	}
 
 	if !m.GetFinished() {
 		return false

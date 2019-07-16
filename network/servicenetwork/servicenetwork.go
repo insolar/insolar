@@ -53,14 +53,12 @@ package servicenetwork
 import (
 	"bytes"
 	"context"
-	"github.com/insolar/insolar/network/gateway"
-	"github.com/insolar/insolar/network/storage"
-	"strconv"
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/network/gateway"
+
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/network/controller/common"
@@ -75,8 +73,8 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus/packets"
-	"github.com/insolar/insolar/network/consensus/phases"
+	"github.com/insolar/insolar/network/consensusv1/packets"
+	"github.com/insolar/insolar/network/consensusv1/phases"
 	"github.com/insolar/insolar/network/controller"
 	"github.com/insolar/insolar/network/controller/bootstrap"
 	"github.com/insolar/insolar/network/hostnetwork"
@@ -97,24 +95,22 @@ type ServiceNetwork struct {
 
 	// dependencies
 	CertificateManager  insolar.CertificateManager  `inject:""`
-	PulseManager        storage.PulseAppender       `inject:""`
-	DB                  storage.DB                  `inject:""`
-	PulseAccessor       storage.PulseAccessor       `inject:""`
+	PulseManager        insolar.PulseManager        `inject:""`
+	PulseAccessor       pulse.Accessor              `inject:""`
 	CryptographyService insolar.CryptographyService `inject:""`
 	NodeKeeper          network.NodeKeeper          `inject:""`
 	TerminationHandler  insolar.TerminationHandler  `inject:""`
 	Pub                 message.Publisher           `inject:""`
 	ContractRequester   insolar.ContractRequester   `inject:""`
-	Sender              bus.Sender                  `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager           `inject:"subcomponent"`
 	Bootstrapper bootstrap.NetworkBootstrapper `inject:"subcomponent"`
 	RPC          controller.RPCController      `inject:"subcomponent"`
 
+	HostNetwork  network.HostNetwork
 	OperableFunc func(ctx context.Context, operable bool)
 
-	isGenesis   bool
 	isDiscovery bool
 	skip        int
 
@@ -125,8 +121,8 @@ type ServiceNetwork struct {
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
-func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manager, isGenesis bool) (*ServiceNetwork, error) {
-	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, isGenesis: isGenesis, skip: conf.Service.Skip}
+func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manager) (*ServiceNetwork, error) {
+	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, skip: conf.Service.Skip}
 	return serviceNetwork, nil
 }
 
@@ -188,6 +184,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to create hostnetwork")
 	}
+	n.HostNetwork = hostNetwork
 
 	consensusNetwork, err := hostnetwork.NewConsensusNetwork(
 		n.CertificateManager.GetCertificate().GetNodeRef().String(),
@@ -248,7 +245,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	n.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
 
 	n.SetGateway(gateway.NewNoNetwork(n, n.NodeKeeper, n.ContractRequester,
-		n.CryptographyService, n.CertificateManager))
+		n.CryptographyService, n.HostNetwork, n.CertificateManager))
 
 	logger.Info("Service network started")
 	return nil
@@ -265,11 +262,10 @@ func (n *ServiceNetwork) GracefulStop(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	// node leaving from network
 	// all components need to do what they want over net in gracefulStop
-	if !n.isGenesis {
-		logger.Info("ServiceNetwork.GracefulStop wait for accepting leaving claim")
-		n.TerminationHandler.Leave(ctx, 0)
-		logger.Info("ServiceNetwork.GracefulStop - leaving claim accepted")
-	}
+
+	logger.Info("ServiceNetwork.GracefulStop wait for accepting leaving claim")
+	n.TerminationHandler.Leave(ctx, 0)
+	logger.Info("ServiceNetwork.GracefulStop - leaving claim accepted")
 
 	return nil
 }
@@ -280,23 +276,14 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 	return n.cm.Stop(ctx)
 }
 
-func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse) {
+func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse, _ network.ReceivedPacket) {
 	pulseTime := time.Unix(0, newPulse.PulseTimestamp)
 	logger := inslogger.FromContext(ctx)
 
 	n.lock.Lock()
 	defer n.lock.Unlock()
 
-	if n.isGenesis {
-		return
-	}
-
-	// Because we want to set InsTraceID (it's our custom traceID)
-	// Because @egorikas didn't have enough time for sending `insTraceID` from pulsar
-	// We calculate it 2 times, first time on a pulsar's side. Second time on a network's side
-	insTraceID := "pulse_" + strconv.FormatUint(uint64(newPulse.PulseNumber), 10)
-	ctx = inslogger.ContextWithTrace(ctx, insTraceID)
-
+	ctx = utils.NewPulseContext(ctx, uint32(newPulse.PulseNumber))
 	logger.Infof("Got new pulse number: %d", newPulse.PulseNumber)
 	ctx, span := instracer.StartSpan(ctx, "ServiceNetwork.Handlepulse")
 	span.AddAttributes(
@@ -323,6 +310,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	// Ignore insolar.ErrNotFound because
 	// sometimes we can't fetch current pulse in new nodes
 	// (for fresh bootstrapped light-material with in-memory pulse-tracker)
+	// TODO: remove pulse checks here after new consensus ready
 	if currentPulse, err := n.PulseAccessor.Latest(ctx); err != nil {
 		if err != pulse.ErrNotFound {
 			currentPulse = *insolar.GenesisPulse
@@ -334,18 +322,25 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 		}
 	}
 
+	n.ChangePulse(ctx, newPulse)
+
+	go n.phaseManagerOnPulse(ctx, newPulse, pulseTime)
+}
+
+func (n *ServiceNetwork) ChangePulse(ctx context.Context, newPulse insolar.Pulse) {
+	logger := inslogger.FromContext(ctx)
+
 	if err := n.Gateway().OnPulse(ctx, newPulse); err != nil {
 		logger.Error(errors.Wrap(err, "Failed to call OnPulse on Gateway"))
 	}
 
 	logger.Debugf("Before set new current pulse number: %d", newPulse.PulseNumber)
-	err := n.PulseManager.Append(ctx, newPulse)
+	err := n.PulseManager.Set(ctx, newPulse)
 	if err != nil {
 		logger.Fatalf("Failed to set new pulse: %s", err.Error())
 	}
 	logger.Infof("Set new current pulse number: %d", newPulse.PulseNumber)
 
-	go n.phaseManagerOnPulse(ctx, newPulse, pulseTime)
 }
 
 func (n *ServiceNetwork) shoudIgnorePulse(newPulse insolar.Pulse) bool {
@@ -371,31 +366,30 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insol
 // SendMessageHandler async sends message with confirmation of delivery.
 func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Message, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(bus.MetaTraceID))
-	logger := inslogger.FromContext(ctx)
-	msgType, err := payload.UnmarshalType(msg.Payload)
-	if err != nil {
-		logger.Error("failed to extract message type")
+	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
+	if err == nil {
+		ctx = instracer.WithParentSpan(ctx, parentSpan)
+	} else {
+		inslogger.FromContext(ctx).Error(err)
 	}
-
 	err = n.sendMessage(ctx, msg)
 	if err != nil {
-		n.replyError(ctx, msg, err)
-		return nil, nil
+		return nil, errors.Wrap(err, "failed to send message")
 	}
-
-	logger.WithFields(map[string]interface{}{
-		"msg_type":       msgType.String(),
-		"correlation_id": middleware.MessageCorrelationID(msg),
-	}).Info("Network sent message")
-
 	return nil, nil
 }
 
 func (n *ServiceNetwork) sendMessage(ctx context.Context, msg *message.Message) error {
-	node, err := n.wrapMeta(msg)
+	meta := payload.Meta{}
+	err := meta.Unmarshal(msg.Payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to send message")
+		return errors.Wrap(err, "failed to unwrap message")
 	}
+	if meta.Receiver.IsEmpty() {
+		return errors.New("failed to send message: Receiver in meta message not set")
+	}
+
+	node := meta.Receiver
 
 	// Short path when sending to self node. Skip serialization
 	origin := n.NodeKeeper.GetOrigin()
@@ -420,57 +414,6 @@ func (n *ServiceNetwork) sendMessage(ctx context.Context, msg *message.Message) 
 	return nil
 }
 
-func (n *ServiceNetwork) replyError(ctx context.Context, msg *message.Message, repErr error) {
-	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"correlation_id": middleware.MessageCorrelationID(msg),
-	})
-	errMsg, err := payload.NewMessage(&payload.Error{Text: repErr.Error()})
-	if err != nil {
-		logger.Error(errors.Wrapf(err, "failed to create error as reply (%s)", repErr.Error()))
-		return
-	}
-	wrapper := payload.Meta{
-		Payload: msg.Payload,
-		Sender:  n.NodeKeeper.GetOrigin().ID(),
-	}
-	buf, err := wrapper.Marshal()
-	if err != nil {
-		logger.Error(errors.Wrapf(err, "failed to wrap error message (%s)", repErr.Error()))
-		return
-	}
-	msg.Payload = buf
-	n.Sender.Reply(ctx, msg, errMsg)
-}
-
-func (n *ServiceNetwork) wrapMeta(msg *message.Message) (insolar.Reference, error) {
-	receiver := msg.Metadata.Get(bus.MetaReceiver)
-	if receiver == "" {
-		return insolar.Reference{}, errors.New("Receiver in msg.Metadata not set")
-	}
-	receiverRef, err := insolar.NewReferenceFromBase58(receiver)
-	if err != nil {
-		return insolar.Reference{}, errors.Wrap(err, "incorrect Receiver in msg.Metadata")
-	}
-
-	latestPulse, err := n.PulseAccessor.Latest(context.Background())
-	if err != nil {
-		return insolar.Reference{}, errors.Wrap(err, "failed to fetch pulse")
-	}
-	wrapper := payload.Meta{
-		Payload:  msg.Payload,
-		Receiver: *receiverRef,
-		Sender:   n.NodeKeeper.GetOrigin().ID(),
-		Pulse:    latestPulse.PulseNumber,
-	}
-	buf, err := wrapper.Marshal()
-	if err != nil {
-		return insolar.Reference{}, errors.Wrap(err, "failed to wrap message")
-	}
-	msg.Payload = buf
-
-	return *receiverRef, nil
-}
-
 func isNextPulse(currentPulse, newPulse *insolar.Pulse) bool {
 	return newPulse.PulseNumber > currentPulse.PulseNumber && newPulse.PulseNumber >= currentPulse.NextPulseNumber
 }
@@ -483,18 +426,11 @@ func (n *ServiceNetwork) processIncoming(ctx context.Context, args []byte) ([]by
 		logger.Error(err)
 		return nil, err
 	}
-	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(bus.MetaTraceID))
 	logger = inslogger.FromContext(ctx)
-	// TODO: check pulse here
-
-	msgType, err := payload.UnmarshalTypeFromMeta(msg.Payload)
-	if err != nil {
-		logger.Error("failed to extract message type")
+	if inslogger.TraceID(ctx) != msg.Metadata.Get(bus.MetaTraceID) {
+		logger.Errorf("traceID from context (%s) is different from traceID from message Metadata (%s)", inslogger.TraceID(ctx), msg.Metadata.Get(bus.MetaTraceID))
 	}
-	logger.WithFields(map[string]interface{}{
-		"msg_type":       msgType.String(),
-		"correlation_id": middleware.MessageCorrelationID(msg),
-	}).Info("Network received message")
+	// TODO: check pulse here
 
 	err = n.Pub.Publish(bus.TopicIncoming, msg)
 	if err != nil {

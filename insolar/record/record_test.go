@@ -120,7 +120,7 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 		f := fuzzer()
 		a := assert.New(t)
 		t.Parallel()
-		var record Request
+		var record IncomingRequest
 
 		for i := 0; i < 10; i++ {
 			f.Fuzz(&record)
@@ -132,7 +132,7 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 				a.NoError(err)
 				a.Equal(bin, binNew)
 
-				var recordNew Request
+				var recordNew IncomingRequest
 				err = recordNew.Unmarshal(binNew)
 				require.NoError(t, err)
 
@@ -290,4 +290,30 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestRequestInterface_IncomingRequest(t *testing.T) {
+	t.Parallel()
+	objref := gen.Reference()
+	req := &IncomingRequest{
+		Object: &objref,
+		Reason: gen.Reference(),
+	}
+	iface := Request(req)
+	require.Equal(t, req.Object, iface.AffinityRef())
+	require.Equal(t, req.Reason, iface.ReasonRef())
+}
+
+func TestRequestInterface_OutgoingRequest(t *testing.T) {
+	t.Parallel()
+	objref := gen.Reference()
+	callerref := gen.Reference()
+	req := &OutgoingRequest{
+		Caller: callerref,
+		Object: &objref,
+		Reason: gen.Reference(),
+	}
+	iface := Request(req)
+	require.Equal(t, &req.Caller, iface.AffinityRef())
+	require.Equal(t, req.Reason, iface.ReasonRef())
 }

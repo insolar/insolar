@@ -57,6 +57,13 @@ func NewID(pulse PulseNumber, hash []byte) *ID {
 	return &id
 }
 
+func NewIDFromBytes(raw []byte) *ID {
+	id := ID{}
+	copy(id[:], raw)
+
+	return &id
+}
+
 // Bytes returns byte slice of ID.
 func (id ID) Bytes() []byte {
 	return id[:]
@@ -66,6 +73,11 @@ func (id ID) Bytes() []byte {
 func (id *ID) Pulse() PulseNumber {
 	pulse := binary.BigEndian.Uint32(id[:PulseNumberSize])
 	return PulseNumber(pulse)
+}
+
+// SetPulse sets IDs pulse.
+func (id *ID) SetPulse(pn PulseNumber) {
+	copy(id[:PulseNumberSize], pn.Bytes())
 }
 
 // Hash returns a copy of Hash part of ID.
@@ -88,7 +100,7 @@ func (id ID) IsEmpty() bool {
 	return id.Equal(ID{})
 }
 
-// IsEmpty - check for void
+// NotEmpty - check for void
 func (id ID) NotEmpty() bool {
 	return !id.IsEmpty()
 }
@@ -104,7 +116,7 @@ func NewIDFromBase58(str string) (*ID, error) {
 	return &id, nil
 }
 
-// MarshalJSON serializes ID into JSON.
+// MarshalJSON serializes ID into JSONFormat.
 func (id *ID) MarshalJSON() ([]byte, error) {
 	if id == nil {
 		return json.Marshal(nil)
@@ -194,7 +206,7 @@ func NewReferenceFromBase58(str string) (*Reference, error) {
 	return NewReference(*recordID), nil
 }
 
-// MarshalJSON serializes reference into JSON.
+// MarshalJSON serializes reference into JSONFormat.
 func (ref *Reference) MarshalJSON() ([]byte, error) {
 	if ref == nil {
 		return json.Marshal(nil)

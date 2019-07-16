@@ -52,18 +52,15 @@ package pinger
 
 import (
 	"context"
-	"sync/atomic"
 	"testing"
 	"time"
 
-	"github.com/pkg/errors"
-
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/hostnetwork/future"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
-
-	"github.com/insolar/insolar/insolar"
 
 	testutils "github.com/insolar/insolar/testutils/network"
 
@@ -97,13 +94,8 @@ func TestPing_HappyPath(t *testing.T) {
 	n2, err := hostnetwork.NewHostNetwork(insolar.Reference{23}.String())
 	require.NoError(t, err)
 	defer n2.Stop(ctx)
-	var counter uint32
-	n2.RegisterRequestHandler(types.Ping, func(ctx context.Context, request network.Packet) (network.Packet, error) {
-		value := atomic.AddUint32(&counter, 1)
-		if value%2 == 1 {
-			return n2.BuildResponse(ctx, request, &packet.Ping{}), nil
-		}
-		return nil, errors.New("Receiving side could not process incoming packet")
+	n2.RegisterRequestHandler(types.Ping, func(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
+		return n2.BuildResponse(ctx, request, &packet.Ping{}), nil
 	})
 	resolver2 := testutils.NewRoutingTableMock(t)
 	resolver2.AddToKnownHostsFunc = func(*host.Host) {}
@@ -128,12 +120,55 @@ func TestPing_HappyPath(t *testing.T) {
 
 	pinger := NewPinger(n)
 
-	_, err = pinger.Ping(ctx, n2.PublicAddress(), time.Second*10)
+	_, err = pinger.Ping(ctx, n2.PublicAddress(), time.Minute)
 	assert.NoError(t, err)
-	_, err = pinger.Ping(ctx, n2.PublicAddress(), time.Millisecond*500)
-	assert.Error(t, err)
-	_, err = pinger.Ping(ctx, n2.PublicAddress(), time.Second*10)
-	assert.NoError(t, err)
-	_, err = pinger.Ping(ctx, n2.PublicAddress(), time.Millisecond*500)
-	assert.Error(t, err)
+}
+
+func TestPing_Timeout(t *testing.T) {
+	ctx := context.Background()
+
+	cm2 := component.NewManager(nil)
+	f2 := transport.NewFactory(configuration.NewHostNetwork().Transport)
+	n2, err := hostnetwork.NewHostNetwork(insolar.Reference{23}.String())
+	require.NoError(t, err)
+	defer n2.Stop(ctx)
+
+	startRespondig := make(chan struct{})
+	responded := make(chan struct{})
+	n2.RegisterRequestHandler(types.Ping, func(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
+		defer func() {
+			close(responded)
+		}()
+		<-startRespondig
+		return n2.BuildResponse(ctx, request, &packet.Ping{}), nil
+	})
+	resolver2 := testutils.NewRoutingTableMock(t)
+	resolver2.AddToKnownHostsFunc = func(*host.Host) {}
+	cm2.Inject(f2, n2, resolver2)
+	err = cm2.Init(ctx)
+	require.NoError(t, err)
+	err = cm2.Start(ctx)
+	require.NoError(t, err)
+
+	cm := component.NewManager(nil)
+	f := transport.NewFactory(configuration.NewHostNetwork().Transport)
+	n, err := hostnetwork.NewHostNetwork(insolar.Reference{12}.String())
+	defer n.Stop(ctx)
+	require.NoError(t, err)
+	resolver := testutils.NewRoutingTableMock(t)
+	resolver.AddToKnownHostsFunc = func(*host.Host) {}
+	cm.Inject(f, n, resolver)
+	err = cm.Init(ctx)
+	require.NoError(t, err)
+	err = cm.Start(ctx)
+	require.NoError(t, err)
+
+	pinger := NewPinger(n)
+
+	_, err = pinger.Ping(ctx, n2.PublicAddress(), time.Nanosecond)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), future.ErrTimeout.Error())
+	close(startRespondig)
+	<-responded
 }

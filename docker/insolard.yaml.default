@@ -31,7 +31,6 @@ apirunner:
   address: ""
   call: /api/call
   rpc: /api/rpc
-  timeout: 15
 versionmanager:
   minalowedversion: v0.3.0
 keyspath: ""

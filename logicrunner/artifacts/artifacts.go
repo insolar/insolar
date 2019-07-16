@@ -27,8 +27,10 @@ import (
 
 // Client is a high level storage interface.
 type Client interface {
-	// RegisterRequest creates request record in storage.
-	RegisterRequest(ctx context.Context, request record.Request) (*insolar.ID, error)
+	// RegisterIncomingRequest creates an incoming request record in storage.
+	RegisterIncomingRequest(ctx context.Context, request *record.IncomingRequest) (*insolar.ID, error)
+	// RegisterIncomingRequest creates an outgoing request record in storage.
+	RegisterOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) (*insolar.ID, error)
 
 	// RegisterValidation marks provided object state as approved or disapproved.
 	//
@@ -50,7 +52,7 @@ type Client interface {
 	GetObject(ctx context.Context, head insolar.Reference) (ObjectDescriptor, error)
 
 	// GetPendingRequest returns a pending request for object.
-	GetPendingRequest(ctx context.Context, objectID insolar.ID) (*insolar.Reference, insolar.Parcel, error)
+	GetPendingRequest(ctx context.Context, objectID insolar.ID) (*insolar.Reference, *record.IncomingRequest, error)
 
 	// HasPendingRequests returns true if object has unclosed requests.
 	HasPendingRequests(ctx context.Context, object insolar.Reference) (bool, error)
@@ -66,11 +68,6 @@ type Client interface {
 	// During iteration children refs will be fetched from remote source (parent object).
 	GetChildren(ctx context.Context, parent insolar.Reference, pulse *insolar.PulseNumber) (RefIterator, error)
 
-	// DeclareType creates new type record in storage.
-	//
-	// Type is a contract interface. It contains one method signature.
-	DeclareType(ctx context.Context, domain, request insolar.Reference, typeDec []byte) (*insolar.ID, error)
-
 	// DeployCode creates new code record in storage.
 	//
 	// Code records are used to activate prototype.
@@ -82,9 +79,9 @@ type Client interface {
 	// Request reference will be this object's identifier and referred as "object head".
 	ActivatePrototype(
 		ctx context.Context,
-		domain, request, parent, code insolar.Reference,
+		request, parent, code insolar.Reference,
 		memory []byte,
-	) (ObjectDescriptor, error)
+	) error
 
 	// ActivateObject creates activate object record in storage. If memory is not provided, the prototype default
 	// memory will be used.
@@ -92,22 +89,10 @@ type Client interface {
 	// Request reference will be this object's identifier and referred as "object head".
 	ActivateObject(
 		ctx context.Context,
-		domain, request, parent, prototype insolar.Reference,
+		request, parent, prototype insolar.Reference,
 		asDelegate bool,
 		memory []byte,
-	) (ObjectDescriptor, error)
-
-	// UpdatePrototype creates amend object record in storage. Provided reference should be a reference to the head of
-	// the prototype. Provided memory well be the new object memory.
-	//
-	// Returned reference will be the latest object state (exact) reference.
-	UpdatePrototype(
-		ctx context.Context,
-		domain, request insolar.Reference,
-		obj ObjectDescriptor,
-		memory []byte,
-		code *insolar.Reference,
-	) (ObjectDescriptor, error)
+	) error
 
 	// UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
 	// object. Provided memory well be the new object memory.
@@ -115,19 +100,25 @@ type Client interface {
 	// Returned reference will be the latest object state (exact) reference.
 	UpdateObject(
 		ctx context.Context,
-		domain, request insolar.Reference,
+		request insolar.Reference,
 		obj ObjectDescriptor,
 		memory []byte,
-	) (ObjectDescriptor, error)
+		result []byte,
+	) error
 
 	// DeactivateObject creates deactivate object record in storage. Provided reference should be a reference to the head
 	// of the object. If object is already deactivated, an error should be returned.
 	//
 	// Deactivated object cannot be changed.
-	DeactivateObject(ctx context.Context, domain, request insolar.Reference, obj ObjectDescriptor) (*insolar.ID, error)
+	DeactivateObject(
+		ctx context.Context,
+		request insolar.Reference,
+		obj ObjectDescriptor,
+		result []byte,
+	) error
 
 	// State returns hash state for artifact manager.
-	State() ([]byte, error)
+	State() []byte
 
 	InjectCodeDescriptor(insolar.Reference, CodeDescriptor)
 	InjectObjectDescriptor(insolar.Reference, ObjectDescriptor)
@@ -181,4 +172,15 @@ type ObjectDescriptor interface {
 type RefIterator interface {
 	Next() (*insolar.Reference, error)
 	HasNext() bool
+}
+
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.DescriptorsCache -o ./ -s _mock.go
+
+// DescriptorsCache provides convenient way to get prototype and code descriptors
+// of objects without fetching them twice
+type DescriptorsCache interface {
+	ByPrototypeRef(ctx context.Context, protoRef insolar.Reference) (ObjectDescriptor, CodeDescriptor, error)
+	ByObjectDescriptor(ctx context.Context, obj ObjectDescriptor) (ObjectDescriptor, CodeDescriptor, error)
+	GetPrototype(ctx context.Context, ref insolar.Reference) (ObjectDescriptor, error)
+	GetCode(ctx context.Context, ref insolar.Reference) (CodeDescriptor, error)
 }

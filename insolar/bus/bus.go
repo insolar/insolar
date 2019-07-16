@@ -23,12 +23,14 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -47,19 +49,19 @@ const (
 	// MetaType is key for Type
 	MetaType = "type"
 
-	// MetaReceiver is key for Receiver
-	MetaReceiver = "receiver"
-
 	// MetaSender is key for Sender
 	MetaSender = "sender"
 
 	// MetaTraceID is key for traceID
 	MetaTraceID = "TraceID"
+
+	// MetaSpanData is key for a span data
+	MetaSpanData = "SpanData"
 )
 
 const (
-	// TypeError is Type for messages with error in Payload
-	TypeError = "error"
+	// TypeReply is Type for messages with insolar.Reply in Payload
+	TypeReply = "reply"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/insolar/bus.Sender -o ./ -s _mock.go
@@ -78,7 +80,7 @@ type Sender interface {
 	// (rep, ok := <-ch) because the channel will be closed on timeout.
 	SendTarget(ctx context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func())
 	// Reply sends message in response to another message.
-	Reply(ctx context.Context, origin, reply *message.Message)
+	Reply(ctx context.Context, origin payload.Meta, reply *message.Message)
 }
 
 type lockedReply struct {
@@ -95,34 +97,43 @@ type Bus struct {
 	timeout     time.Duration
 	pulses      pulse.Accessor
 	coordinator jet.Coordinator
+	pcs         insolar.PlatformCryptographyScheme
 
 	repliesMutex sync.RWMutex
-	replies      map[string]*lockedReply
+	replies      map[payload.MessageHash]*lockedReply
 }
 
 // NewBus creates Bus instance with provided values.
-func NewBus(pub message.Publisher, pulses pulse.Accessor, jc jet.Coordinator) *Bus {
+func NewBus(pub message.Publisher, pulses pulse.Accessor, jc jet.Coordinator, pcs insolar.PlatformCryptographyScheme) *Bus {
 	return &Bus{
-		timeout:     time.Second * 8,
+		timeout:     time.Second * 15,
 		pub:         pub,
-		replies:     make(map[string]*lockedReply),
+		replies:     make(map[payload.MessageHash]*lockedReply),
 		pulses:      pulses,
 		coordinator: jc,
+		pcs:         pcs,
 	}
 }
 
-func (b *Bus) removeReplyChannel(ctx context.Context, id string, reply *lockedReply) {
+func (b *Bus) removeReplyChannel(ctx context.Context, h payload.MessageHash, reply *lockedReply) {
 	reply.once.Do(func() {
 		close(reply.done)
 
 		b.repliesMutex.Lock()
 		defer b.repliesMutex.Unlock()
-		delete(b.replies, id)
+		delete(b.replies, h)
 
 		reply.wg.Wait()
 		close(reply.messages)
-		inslogger.FromContext(ctx).Infof("close reply channel for message with correlationID %s", id)
+		inslogger.FromContext(ctx).Infof("close reply channel for message with hash %s", h.String())
 	})
+}
+
+func ReplyAsMessage(ctx context.Context, rep insolar.Reply) *message.Message {
+	resInBytes := reply.ToBytes(rep)
+	resAsMsg := message.NewMessage(watermill.NewUUID(), resInBytes)
+	resAsMsg.Metadata.Set(MetaType, TypeReply)
+	return resAsMsg
 }
 
 // SendRole sends message to specified role. Node will be calculated automatically for the latest pulse. Use this
@@ -156,11 +167,33 @@ func (b *Bus) SendRole(
 func (b *Bus) SendTarget(
 	ctx context.Context, msg *message.Message, target insolar.Reference,
 ) (<-chan *message.Message, func()) {
-	id := watermill.NewUUID()
-	middleware.SetCorrelationID(id, msg)
+	handleError := func(err error) (<-chan *message.Message, func()) {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to send message"))
+		res := make(chan *message.Message)
+		close(res)
+		return res, func() {}
+	}
+	logger := inslogger.FromContext(ctx)
+
 	msg.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
-	msg.Metadata.Set(MetaReceiver, target.String())
+
+	sp, err := instracer.Serialize(ctx)
+	if err == nil {
+		msg.Metadata.Set(MetaSpanData, string(sp))
+	} else {
+		logger.Error(err)
+	}
+
 	msg.SetContext(ctx)
+	wrapped, msg, err := b.wrapMeta(ctx, msg, target, payload.MessageHash{})
+	if err != nil {
+		return handleError(errors.Wrap(err, "can't wrap meta message"))
+	}
+	msgHash := payload.MessageHash{}
+	err = msgHash.Unmarshal(wrapped.ID)
+	if err != nil {
+		return handleError(errors.Wrap(err, "failed to unmarshal hash"))
+	}
 
 	reply := &lockedReply{
 		messages: make(chan *message.Message),
@@ -168,29 +201,32 @@ func (b *Bus) SendTarget(
 	}
 
 	done := func() {
-		b.removeReplyChannel(ctx, id, reply)
+		b.removeReplyChannel(ctx, msgHash, reply)
 	}
 
 	b.repliesMutex.Lock()
-	b.replies[id] = reply
+	b.replies[msgHash] = reply
 	b.repliesMutex.Unlock()
 
-	err := b.pub.Publish(TopicOutgoing, msg)
+	logger.Debugf("sending message %s", msgHash.String())
+	err = b.pub.Publish(TopicOutgoing, msg)
 	if err != nil {
-		inslogger.FromContext(ctx).Errorf("can't publish message to %s topic: %s", TopicOutgoing, err.Error())
 		done()
-		return nil, nil
+		return handleError(errors.Wrapf(err, "can't publish message to %s topic", TopicOutgoing))
 	}
 
 	go func() {
-		inslogger.FromContext(ctx).WithField("correlation_id", id).Info("waiting for reply")
+		logger.Debug("waiting for reply")
 		select {
 		case <-reply.done:
-			inslogger.FromContext(ctx).Infof("Done waiting replies for message with correlationID %s", id)
+			logger.Debugf("Done waiting replies for message with hash %s", msgHash.String())
 		case <-time.After(b.timeout):
-			inslogger.FromContext(ctx).Error(
+			logger.Error(
 				errors.Errorf(
-					"can't return result for message with correlationID %s: timeout for reading (%s) was exceeded", id, b.timeout),
+					"can't return result for message with hash %s: timeout for reading (%s) was exceeded",
+					msgHash.String(),
+					b.timeout,
+				),
 			)
 			done()
 		}
@@ -200,49 +236,127 @@ func (b *Bus) SendTarget(
 }
 
 // Reply sends message in response to another message.
-func (b *Bus) Reply(ctx context.Context, origin, reply *message.Message) {
-	id := middleware.MessageCorrelationID(origin)
-	middleware.SetCorrelationID(id, reply)
+func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Message) {
+	logger := inslogger.FromContext(ctx)
 
-	originMeta := payload.Meta{}
-	err := originMeta.Unmarshal(origin.Payload)
+	originHash := payload.MessageHash{}
+	err := originHash.Unmarshal(origin.ID)
 	if err != nil {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to send reply"))
+		logger.Error(errors.Wrap(err, "failed to unmarshal hash"))
 		return
 	}
 
-	reply.Metadata.Set(MetaReceiver, originMeta.Sender.String())
+	wrapped, reply, err := b.wrapMeta(ctx, reply, origin.Sender, originHash)
+	if err != nil {
+		logger.Error("can't wrap meta message ", err.Error())
+		return
+	}
+
+	replyHash := wrapped.ID
+
 	reply.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
+
+	sp, err := instracer.Serialize(ctx)
+	if err == nil {
+		reply.Metadata.Set(MetaSpanData, string(sp))
+	} else {
+		logger.Error(err)
+	}
+
 	reply.SetContext(ctx)
 
+	logger.Debugf("sending reply %s", base58.Encode(replyHash))
 	err = b.pub.Publish(TopicOutgoing, reply)
 	if err != nil {
-		inslogger.FromContext(ctx).Errorf("can't publish message to %s topic: %s", TopicOutgoing, err.Error())
+		logger.Errorf("can't publish message to %s topic: %s", TopicOutgoing, err.Error())
 	}
 }
 
 // IncomingMessageRouter is watermill middleware for incoming messages - it decides, how to handle it: as request or as reply.
-func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
+func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerFunc {
 	return func(msg *message.Message) ([]*message.Message, error) {
-		id := middleware.MessageCorrelationID(msg)
+		_, logger := inslogger.WithTraceField(context.Background(), msg.Metadata.Get(MetaTraceID))
 
-		b.repliesMutex.RLock()
-		reply, ok := b.replies[id]
-		if !ok {
-			b.repliesMutex.RUnlock()
-			return h(msg)
+		meta := payload.Meta{}
+		err := meta.Unmarshal(msg.Payload)
+		if err != nil {
+			logger.Error(errors.Wrap(err, "failed to receive message"))
+			return nil, nil
 		}
 
+		msgHash := payload.MessageHash{}
+		err = msgHash.Unmarshal(meta.ID)
+		if err != nil {
+			logger.Error(errors.Wrap(err, "failed to unmarshal message id"))
+			return nil, nil
+		}
+		msg.Metadata.Set("msg_hash", msgHash.String())
+		logger = logger.WithField("msg_hash", msgHash.String())
+
+		msg.Metadata.Set("pulse", meta.Pulse.String())
+
+		if meta.OriginHash.IsZero() {
+			logger.Debug("not a reply")
+			return handle(msg)
+		}
+
+		msg.Metadata.Set("msg_hash_origin", meta.OriginHash.String())
+		logger = logger.WithField("msg_hash_origin", meta.OriginHash.String())
+
+		b.repliesMutex.RLock()
+		reply, ok := b.replies[meta.OriginHash]
+		if !ok {
+			logger.Warn("reply discarded")
+			b.repliesMutex.RUnlock()
+			return nil, nil
+		}
+
+		logger.Debug("reply received")
 		reply.wg.Add(1)
 		b.repliesMutex.RUnlock()
 
 		select {
 		case reply.messages <- msg:
-			inslogger.FromContext(context.Background()).Infof("result for message with correlationID %s was send", id)
 		case <-reply.done:
 		}
 		reply.wg.Done()
 
 		return nil, nil
 	}
+}
+
+// wrapMeta wraps origin.Payload data with service fields
+// and set it as byte slice back to msg.Payload.
+// Note: this method has side effect - origin-argument mutating
+func (b *Bus) wrapMeta(
+	ctx context.Context,
+	msg *message.Message,
+	receiver insolar.Reference,
+	originHash payload.MessageHash,
+) (payload.Meta, *message.Message, error) {
+	msg = msg.Copy()
+	var pn insolar.PulseNumber
+	latestPulse, err := b.pulses.Latest(context.Background())
+	if err == nil {
+		pn = latestPulse.PulseNumber
+	} else {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to fetch pulse"))
+	}
+
+	meta := payload.Meta{
+		Payload:    msg.Payload,
+		Receiver:   receiver,
+		Sender:     b.coordinator.Me(),
+		Pulse:      pn,
+		OriginHash: originHash,
+		ID:         []byte(msg.UUID),
+	}
+
+	buf, err := meta.Marshal()
+	if err != nil {
+		return payload.Meta{}, nil, errors.Wrap(err, "failed to wrap message")
+	}
+	msg.Payload = buf
+
+	return meta, msg, nil
 }

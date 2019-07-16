@@ -18,23 +18,22 @@ package proc
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/pkg/errors"
 )
 
 type SetCode struct {
-	message  *message.Message
-	record   record.Code
+	message  payload.Meta
+	record   record.Virtual
 	code     []byte
 	recordID insolar.ID
 	jetID    insolar.JetID
@@ -42,17 +41,15 @@ type SetCode struct {
 	dep struct {
 		writer  hot.WriteAccessor
 		records object.RecordModifier
-		blobs   blob.Modifier
 		pcs     insolar.PlatformCryptographyScheme
 		sender  bus.Sender
 	}
 }
 
-func NewSetCode(msg *message.Message, rec record.Code, code []byte, recID insolar.ID, jetID insolar.JetID) *SetCode {
+func NewSetCode(msg payload.Meta, rec record.Virtual, recID insolar.ID, jetID insolar.JetID) *SetCode {
 	return &SetCode{
 		message:  msg,
 		record:   rec,
-		code:     code,
 		recordID: recID,
 		jetID:    jetID,
 	}
@@ -61,13 +58,11 @@ func NewSetCode(msg *message.Message, rec record.Code, code []byte, recID insola
 func (p *SetCode) Dep(
 	w hot.WriteAccessor,
 	r object.RecordModifier,
-	b blob.Modifier,
 	pcs insolar.PlatformCryptographyScheme,
 	s bus.Sender,
 ) {
 	p.dep.writer = w
 	p.dep.records = r
-	p.dep.blobs = b
 	p.dep.pcs = pcs
 	p.dep.sender = s
 }
@@ -82,30 +77,20 @@ func (p *SetCode) Proceed(ctx context.Context) error {
 	}
 	defer done()
 
-	h := p.dep.pcs.ReferenceHasher()
-	_, err = h.Write(p.code)
-	if err != nil {
-		return errors.Wrap(err, "failed to calculate code id")
-	}
-	blobID := *insolar.NewID(flow.Pulse(ctx), h.Sum(nil))
-	if blobID != p.record.Code {
-		return fmt.Errorf(
-			"received blob id %s does not match with %s",
-			p.record.Code.DebugString(),
-			blobID.DebugString(),
-		)
-	}
-	err = p.dep.blobs.Set(ctx, blobID, blob.Blob{Value: p.code, JetID: p.jetID})
-	if err != nil {
-		return errors.Wrap(err, "failed to store blob")
+	material := record.Material{
+		Virtual: &p.record,
+		JetID:   p.jetID,
 	}
 
-	virtual := record.Wrap(p.record)
-	material := record.Material{
-		Virtual: &virtual,
-	}
 	err = p.dep.records.Set(ctx, p.recordID, material)
-	if err != nil {
+	if err == object.ErrOverride {
+		inslogger.FromContext(ctx).Errorf("can't save record into storage: %s", err)
+		// Since there is no deduplication yet it's quite possible that there will be
+		// two writes by the same key. For this reason currently instead of reporting
+		// an error we return OK (nil error). When deduplication will be implemented
+		// we should change `nil` to `ErrOverride` here.
+		return nil
+	} else if err != nil {
 		return errors.Wrap(err, "failed to store record")
 	}
 
@@ -113,6 +98,7 @@ func (p *SetCode) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create reply")
 	}
+
 	go p.dep.sender.Reply(ctx, p.message, msg)
 
 	return nil

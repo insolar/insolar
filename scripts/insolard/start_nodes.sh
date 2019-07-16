@@ -1,6 +1,6 @@
-#! /usr/bin/env bash
+#!/usr/bin/env bash
 set -e
-echo "***** start_nodes.sh start *****"
+echo "***** Starting joiner nodes... *****"
 
 # configurable vars
 INSOLAR_ARTIFACTS_DIR=${INSOLAR_ARTIFACTS_DIR:-".artifacts"}/
@@ -28,6 +28,13 @@ ROLES=($(sed -n '/^nodes:/,$p' ./scripts/insolard/bootstrap_template.yaml | grep
 (>&2 echo "NUM_NODES=$NUM_NODES")
 #exit
 
+while getopts "g" opt; do
+	case "$opt" in
+	g)
+		GENESIS=1
+		;;
+	esac
+done
 
 create_nodes_dir()
 {
@@ -72,9 +79,12 @@ generate_nodes_certs()
     echo "generate_nodes_certs() end."
 }
 
-clear_dirs
-create_nodes_dir
-generate_nodes_certs
+if [[ "$GENESIS" == "1" ]]; then
+	echo "Script is running in genesis mode (-g) - cleaning up, generating configs, etc..."
+	clear_dirs
+	create_nodes_dir
+	generate_nodes_certs
+fi
 
 for i in `seq 1 $NUM_NODES`
 do

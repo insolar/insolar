@@ -13,7 +13,6 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-
 ### MacOS stuff
 .DS_Store
 
@@ -44,13 +43,15 @@ coverage.txt
 # GoReleaser dist dir
 /dist
 
-/scripts/monitor/prometheus
-
+# deploy stuff
 /ci/local-dev/logs
 /ci/local-dev/manifests/ks/lib
+
+# network tests artifacts
 network/servicenetwork/network_cache
 network_cache
 
 # Local doc build directory
 /docs/build
 
+*.lock

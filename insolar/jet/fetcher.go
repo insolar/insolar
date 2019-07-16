@@ -18,6 +18,7 @@ package jet
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -29,6 +30,8 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 )
+
+//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Fetcher -o ./ -s _mock.go
 
 // Fetcher can be used to get actual jets. It involves fetching jet from other nodes via network and updating local
 // jet tree.
@@ -155,7 +158,10 @@ func (tu *fetcher) Fetch(
 	}
 
 	// Updating local tree.
-	tu.JetStorage.Update(ctx, pulse, true, insolar.JetID(*resJet))
+	err = tu.JetStorage.Update(ctx, pulse, true, insolar.JetID(*resJet))
+	if err != nil {
+		return nil, err
+	}
 
 	return resJet, nil
 }
@@ -274,7 +280,10 @@ func (tu *fetcher) fetch(
 				"pulse":  pulse,
 				"object": target.DebugString(),
 			}).Error("all lights for pulse have no actual jet for object")
-			ch <- fetchResult{nil, errors.New("all lights for pulse have no actual jet for object")}
+			ch <- fetchResult{
+				nil,
+				fmt.Errorf("all lights for pulse %d have no actual jet for object", pulse),
+			}
 			close(ch)
 		} else if len(res) > 1 {
 			// We have multiple different opinions on the actual jet.
@@ -296,8 +305,16 @@ func (tu *fetcher) nodesForPulse(ctx context.Context, pulse insolar.PulseNumber)
 
 	res, err := tu.Nodes.InRole(pulse, insolar.StaticRoleLightMaterial)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("can't get node of 'light' role for pulse %s", pulse)
 	}
+
+	// we have to go to heavy when we get up on existing ledger
+	heavy, err := tu.Nodes.InRole(pulse, insolar.StaticRoleHeavyMaterial)
+	if err != nil {
+		return nil, fmt.Errorf("can't get node of 'heavy' role for pulse %s", pulse)
+	}
+
+	res = append(res, heavy...)
 
 	me := tu.coordinator.Me()
 	for i := range res {

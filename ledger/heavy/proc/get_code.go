@@ -18,55 +18,39 @@ package proc
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/pkg/errors"
 )
 
 type GetCode struct {
-	message *message.Message
+	message payload.Meta
 
 	Dep struct {
 		RecordAccessor object.RecordAccessor
-		BlobAccessor   blob.Accessor
 		Sender         bus.Sender
 	}
 }
 
-func NewGetCode(msg *message.Message) *GetCode {
+func NewGetCode(msg payload.Meta) *GetCode {
 	return &GetCode{
 		message: msg,
 	}
 }
 
 func (p *GetCode) Proceed(ctx context.Context) error {
-	pl, err := payload.UnmarshalFromMeta(p.message.Payload)
+	getCode := payload.GetCode{}
+	err := getCode.Unmarshal(p.message.Payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal payload")
-	}
-	getCode, ok := pl.(*payload.GetCode)
-	if !ok {
-		return fmt.Errorf("unexpected payload type: %T", pl)
+		return errors.Wrap(err, "failed to unmarshal GetCode message")
 	}
 
 	rec, err := p.Dep.RecordAccessor.ForID(ctx, getCode.CodeID)
 	if err != nil {
 		return errors.Wrap(err, "failed to fetch record")
-	}
-	virtual := record.Unwrap(rec.Virtual)
-	code, ok := virtual.(*record.Code)
-	if !ok {
-		return fmt.Errorf("invalid code record %#v", virtual)
-	}
-	b, err := p.Dep.BlobAccessor.ForID(ctx, code.Code)
-	if err != nil {
-		return errors.Wrap(err, "failed to fetch code blob")
 	}
 	buf, err := rec.Marshal()
 	if err != nil {
@@ -74,11 +58,11 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 	}
 	msg, err := payload.NewMessage(&payload.Code{
 		Record: buf,
-		Code:   b.Value,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create message")
 	}
+
 	go p.Dep.Sender.Reply(ctx, p.message, msg)
 
 	return nil

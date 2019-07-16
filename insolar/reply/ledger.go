@@ -18,7 +18,6 @@ package reply
 
 import (
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/record"
 )
 
 // Code is code from storage.
@@ -121,24 +120,13 @@ func (r *Jet) Type() insolar.ReplyType {
 	return TypeJet
 }
 
-// Request contains jet.
-type Request struct {
-	ID     insolar.ID
-	Record []byte
+// OpenRequestsOnHeavy contains
+type OpenRequestsOnHeavy struct {
+	ObjID    insolar.ID
+	Requests []insolar.ID // record.CompositeFilamentRecord
 }
 
 // Type implementation of Reply interface.
-func (r *Request) Type() insolar.ReplyType {
-	return TypeRequest
-}
-
-// PendingFilament contains data about a part/full pending filament
-type PendingFilament struct {
-	ObjID   insolar.ID
-	Records []record.CompositeFilamentRecord
-}
-
-// Type implementation of Reply interface.
-func (r *PendingFilament) Type() insolar.ReplyType {
-	return TypePendingFilament
+func (r *OpenRequestsOnHeavy) Type() insolar.ReplyType {
+	return TypeOpenRequestsOnHeavy
 }

@@ -16,49 +16,61 @@
 
 package proc
 
-import (
-	"context"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow/bus"
-)
-
 type Dependencies struct {
-	FetchJet               func(*FetchJet)
-	CheckJet               func(*CheckJet)
-	WaitHot                func(*WaitHot)
-	WaitHotWM              func(*WaitHotWM)
-	GetIndex               func(*GetIndex)
-	GetIndexWM             func(*GetIndexWM)
-	SendObject             func(*SendObject)
-	GetCode                func(*GetCode)
-	GetRequest             func(*GetRequest)
-	UpdateObject           func(*UpdateObject)
-	SetBlob                func(*SetBlob)
-	SetRecord              func(*SetRecord)
-	RegisterChild          func(*RegisterChild)
-	GetPendingRequests     func(*GetPendingRequests)
-	GetPendingRequestID    func(*GetPendingRequestID)
-	GetJet                 func(*GetJet)
-	GetChildren            func(*GetChildren)
-	HotData                func(*HotData)
-	PassState              func(*PassState)
-	CalculateID            func(*CalculateID)
-	SetCode                func(*SetCode)
-	GetPendingFilament     func(*GetPendingFilament)
-	RefreshPendingFilament func(*RefreshPendingFilament)
+	FetchJet            func(*FetchJet)
+	CheckJet            func(*CheckJet)
+	WaitHot             func(*WaitHot)
+	WaitHotWM           func(*WaitHotWM)
+	GetIndex            func(*EnsureIndex)
+	EnsureIndex         func(*EnsureIndexWM)
+	SendObject          func(*SendObject)
+	GetCode             func(*GetCode)
+	GetRequest          func(*GetRequest)
+	SetRequest          func(*SetRequest)
+	SetResult           func(*SetResult)
+	ActivateObject      func(*ActivateObject)
+	DeactivateObject    func(*DeactivateObject)
+	UpdateObject        func(*UpdateObject)
+	RegisterChild       func(*RegisterChild)
+	GetPendingRequests  func(*GetPendingRequests)
+	GetPendingRequestID func(*GetPendingRequestID)
+	GetJet              func(*GetJet)
+	GetChildren         func(*GetChildren)
+	HotObjects          func(*HotObjects)
+	PassState           func(*PassState)
+	CalculateID         func(*CalculateID)
+	SetCode             func(*SetCode)
+	SendRequests        func(*SendRequests)
+	GetDelegate         func(*GetDelegate)
 }
 
-type ReturnReply struct {
-	ReplyTo chan<- bus.Reply
-	Err     error
-	Reply   insolar.Reply
-}
-
-func (p *ReturnReply) Proceed(ctx context.Context) error {
-	select {
-	case p.ReplyTo <- bus.Reply{Reply: p.Reply, Err: p.Err}:
-	case <-ctx.Done():
+// NewDependenciesMock returns all dependencies for handlers.
+// It's all empty.
+// Use it ONLY for tests.
+func NewDependenciesMock() *Dependencies {
+	return &Dependencies{
+		FetchJet:            func(*FetchJet) {},
+		CheckJet:            func(*CheckJet) {},
+		WaitHot:             func(*WaitHot) {},
+		WaitHotWM:           func(*WaitHotWM) {},
+		GetIndex:            func(*EnsureIndex) {},
+		EnsureIndex:         func(*EnsureIndexWM) {},
+		SendObject:          func(*SendObject) {},
+		GetCode:             func(*GetCode) {},
+		SetRequest:          func(*SetRequest) {},
+		SetResult:           func(*SetResult) {},
+		ActivateObject:      func(*ActivateObject) {},
+		DeactivateObject:    func(*DeactivateObject) {},
+		UpdateObject:        func(*UpdateObject) {},
+		RegisterChild:       func(*RegisterChild) {},
+		GetPendingRequests:  func(*GetPendingRequests) {},
+		GetPendingRequestID: func(*GetPendingRequestID) {},
+		GetJet:              func(*GetJet) {},
+		GetChildren:         func(*GetChildren) {},
+		HotObjects:          func(*HotObjects) {},
+		PassState:           func(*PassState) {},
+		CalculateID:         func(*CalculateID) {},
+		SetCode:             func(*SetCode) {},
+		GetDelegate:         func(*GetDelegate) {},
 	}
-	return nil
 }

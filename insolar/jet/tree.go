@@ -25,6 +25,7 @@ import (
 )
 
 type jet struct {
+	// Active indicates what node is approved as last one, i.e. it's leaf (ignored for non leafs if set)
 	Actual bool
 	Left   *jet
 	Right  *jet
@@ -153,16 +154,10 @@ func (t *Tree) Split(id insolar.JetID) (insolar.JetID, insolar.JetID, error) {
 		return insolar.ZeroJetID, insolar.ZeroJetID, errors.New("failed to split: incorrect jet provided")
 	}
 
-	j.Left = &jet{}
-	leftPrefix := resetBits(prefix, depth)
-	left := insolar.NewJetID(depth+1, leftPrefix)
-
-	j.Right = &jet{}
-	rightPrefix := resetBits(prefix, depth)
-	setBit(rightPrefix, depth)
-	right := insolar.NewJetID(depth+1, rightPrefix)
-
-	return *left, *right, nil
+	left, right := Siblings(id)
+	j.Left = &jet{Actual: true}
+	j.Right = &jet{Actual: true}
+	return left, right, nil
 }
 
 func (t *Tree) LeafIDs() []insolar.JetID {

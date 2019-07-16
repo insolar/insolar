@@ -18,10 +18,20 @@ package api
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/insolar/insolar/metrics"
+
+	"github.com/insolar/insolar/api/requester"
 
 	"github.com/pkg/errors"
 
@@ -32,24 +42,12 @@ import (
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/metrics"
 )
 
-// Request is a representation of request struct to api
-type Request struct {
-	Reference string  `json:"reference"`
-	Method    string  `json:"method"`
-	Params    []byte  `json:"params"`
-	Seed      []byte  `json:"seed"`
-	Signature []byte  `json:"signature"`
-	LogLevel  *string `json:"logLevel,omitempty"`
-}
-
-type answer struct {
-	Error   string      `json:"error,omitempty"`
-	Result  interface{} `json:"result,omitempty"`
-	TraceID string      `json:"traceID,omitempty"`
-}
+const (
+	TimeoutError = 215
+	ResultError  = 217
+)
 
 // UnmarshalRequest unmarshals request to api
 func UnmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
@@ -68,33 +66,44 @@ func UnmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
 	return body, nil
 }
 
-func (ar *Runner) checkSeed(paramsSeed []byte) error {
-	seed := seedmanager.SeedFromBytes(paramsSeed)
+func (ar *Runner) checkSeed(paramsSeed string) (insolar.PulseNumber, error) {
+	decoded, err := base64.StdEncoding.DecodeString(paramsSeed)
+	if err != nil {
+		return 0, errors.New("[ checkSeed ] Failed to decode seed from string")
+	}
+	seed := seedmanager.SeedFromBytes(decoded)
 	if seed == nil {
-		return errors.New("[ checkSeed ] Bad seed param")
+		return 0, errors.New("[ checkSeed ] Bad seed param")
 	}
 
-	if !ar.SeedManager.Exists(*seed) {
-		return errors.New("[ checkSeed ] Incorrect seed")
+	if pulse, ok := ar.SeedManager.Pop(*seed); ok {
+		return pulse, nil
 	}
 
-	return nil
+	return 0, errors.New("[ checkSeed ] Incorrect seed")
 }
 
-func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, error) {
-	ctx, span := instracer.StartSpan(ctx, "SendRequest "+params.Method)
+func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBody []byte, signature string, pulseTimeStamp int64, seedPulse insolar.PulseNumber) (interface{}, error) {
+	ctx, span := instracer.StartSpan(ctx, "SendRequest "+request.Method)
 	defer span.End()
 
-	reference, err := insolar.NewReferenceFromBase58(params.Reference)
+	reference, err := insolar.NewReferenceFromBase58(request.Params.Reference)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] failed to parse params.Reference")
 	}
 
-	requestArgs := []interface{}{
-		*ar.CertificateManager.GetCertificate().GetRootDomainReference(),
-		params.Method, params.Params, params.Seed, params.Signature,
+	requestArgs, err := insolar.MarshalArgs(rawBody, signature, pulseTimeStamp)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ makeCall ] failed to marshal arguments")
 	}
-	res, err := ar.ContractRequester.SendRequest(ctx, reference, "Call", requestArgs)
+
+	res, err := ar.ContractRequester.SendRequestWithPulse(
+		ctx,
+		reference,
+		"Call",
+		[]interface{}{requestArgs},
+		seedPulse,
+	)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] Can't send request")
@@ -113,9 +122,57 @@ func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, er
 	return result, nil
 }
 
-func processError(err error, extraMsg string, resp *answer, insLog insolar.Logger) {
-	resp.Error = err.Error()
+func processError(err error, extraMsg string, resp *requester.ContractAnswer, insLog insolar.Logger, traceID string) {
+	errResponse := &requester.Error{Message: extraMsg, Code: ResultError, Data: requester.Data{TraceID: traceID}}
+	resp.Error = errResponse
 	insLog.Error(errors.Wrapf(err, "[ CallHandler ] %s", extraMsg))
+}
+
+func writeResponse(insLog assert.TestingT, response http.ResponseWriter, contractAnswer *requester.ContractAnswer) {
+	res, err := json.MarshalIndent(*contractAnswer, "", "    ")
+	if err != nil {
+		hcContractAnswer := requester.ContractAnswer{
+			JSONRPC: "2.0",
+			ID:      contractAnswer.ID,
+			Error:   &requester.Error{Message: fmt.Sprintf("can't marshal ContractAnswer to json; error: '%v'", err.Error())},
+		}
+		res, _ = json.MarshalIndent(hcContractAnswer, "", "    ")
+	}
+	response.Header().Add("Content-Type", "application/json")
+	_, err = response.Write(res)
+	if err != nil {
+		insLog.Errorf("Can't write response\n")
+	}
+}
+
+func observeResultStatus(requestMethod string, contractAnswer *requester.ContractAnswer, startTime time.Time) {
+	success := "success"
+	if contractAnswer.Error != nil {
+		success = "fail"
+	}
+	metrics.APIContractExecutionTime.WithLabelValues(requestMethod, success).Observe(time.Since(startTime).Seconds())
+}
+
+func processRequest(ctx context.Context,
+	req *http.Request, contractRequest *requester.Request, contractAnswer *requester.ContractAnswer) (context.Context, []byte, error) {
+
+	rawBody, err := UnmarshalRequest(req, contractRequest)
+	if err != nil {
+		return ctx, nil, errors.Wrap(err, "failed to unmarshal request")
+	}
+
+	contractAnswer.JSONRPC = contractRequest.JSONRPC
+	contractAnswer.ID = contractRequest.ID
+
+	if len(contractRequest.LogLevel) > 0 {
+		logLevelNumber, err := insolar.ParseLevel(contractRequest.LogLevel)
+		if err != nil {
+			return ctx, nil, errors.Wrap(err, "failed to parse logLevel")
+		}
+		ctx = inslogger.WithLoggerLevel(ctx, logLevelNumber)
+	}
+
+	return ctx, rawBody, nil
 }
 
 func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
@@ -126,76 +183,89 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		ctx, span := instracer.StartSpan(ctx, "callHandler")
 		defer span.End()
 
-		params := Request{}
-		resp := answer{}
+		contractRequest := &requester.Request{}
+		contractAnswer := &requester.ContractAnswer{}
+		defer writeResponse(insLog, response, contractAnswer)
 
 		startTime := time.Now()
-		defer func() {
-			success := "success"
-			if resp.Error != "" {
-				success = "fail"
-			}
-			metrics.APIContractExecutionTime.WithLabelValues(params.Method, success).Observe(time.Since(startTime).Seconds())
-		}()
+		defer observeResultStatus(contractRequest.Method, contractAnswer, startTime)
 
-		resp.TraceID = traceID
+		insLog.Infof("[ callHandler ] Incoming contractRequest: %s", req.RequestURI)
 
-		insLog.Infof("[ callHandler ] Incoming request: %s", req.RequestURI)
-
-		defer func() {
-			res, err := json.MarshalIndent(resp, "", "    ")
-			if err != nil {
-				res = []byte(`{"error": "can't marshal answer to json'"}`)
-			}
-			response.Header().Add("Content-Type", "application/json")
-			_, err = response.Write(res)
-			if err != nil {
-				insLog.Errorf("Can't write response\n")
-			}
-		}()
-
-		_, err := UnmarshalRequest(req, &params)
+		ctx, rawBody, err := processRequest(ctx, req, contractRequest, contractAnswer)
 		if err != nil {
-			processError(err, "Can't unmarshal request", &resp, insLog)
+			processError(err, err.Error(), contractAnswer, insLog, traceID)
 			return
 		}
 
-		if params.LogLevel != nil {
-			logLevelNumber, err := insolar.ParseLevel(*params.LogLevel)
-			if err != nil {
-				processError(err, "Can't parse logLevel", &resp, insLog)
-				return
-			}
-			ctx = inslogger.WithLoggerLevel(ctx, logLevelNumber)
+		if contractRequest.Test != "" {
+			insLog.Infof("Request related to %s", contractRequest.Test)
 		}
 
-		err = ar.checkSeed(params.Seed)
+		if contractRequest.Method != "api.call" {
+			err := errors.New("rpc method does not exist")
+			processError(err, err.Error(), contractAnswer, insLog, traceID)
+			return
+		}
+
+		signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), rawBody)
 		if err != nil {
-			processError(err, "Can't checkSeed", &resp, insLog)
+			processError(err, err.Error(), contractAnswer, insLog, traceID)
+			return
+		}
+
+		seedPulse, err := ar.checkSeed(contractRequest.Params.Seed)
+		if err != nil {
+			processError(err, err.Error(), contractAnswer, insLog, traceID)
 			return
 		}
 
 		var result interface{}
 		ch := make(chan interface{}, 1)
 		go func() {
-			result, err = ar.makeCall(ctx, params)
+			result, err = ar.makeCall(ctx, *contractRequest, rawBody, signature, 0, seedPulse)
 			ch <- nil
 		}()
 		select {
 
 		case <-ch:
 			if err != nil {
-				processError(err, "Can't makeCall", &resp, insLog)
+				processError(err, err.Error(), contractAnswer, insLog, traceID)
 				return
 			}
-			resp.Result = result
-
-		case <-time.After(time.Duration(ar.cfg.Timeout) * time.Second):
-			resp.Error = "Messagebus timeout exceeded"
+			contractResult := &requester.Result{ContractResult: result, TraceID: traceID}
+			contractAnswer.Result = contractResult
 			return
 
+		case <-time.After(ar.timeout):
+			errResponse := &requester.Error{Message: "API timeout exceeded", Code: TimeoutError, Data: requester.Data{TraceID: traceID}}
+			contractAnswer.Error = errResponse
+			return
 		}
-
-		resp.Result = result
 	}
+}
+
+func validateRequestHeaders(digest string, richSignature string, body []byte) (string, error) {
+	// Digest = "SHA-256=<hashString>"
+	// Signature = "keyId="member-pub-key", algorithm="ecdsa", headers="digest", signature=<signatureString>"
+	if len(digest) < 15 || strings.Count(digest, "=") < 2 || len(richSignature) == 15 ||
+		strings.Count(richSignature, "=") < 4 || len(body) == 0 {
+		return "", errors.Errorf("invalid input data length digest: %d, signature: %d, body: %d", len(digest),
+			len(richSignature), len(body))
+	}
+	h := sha256.New()
+	_, err := h.Write(body)
+	if err != nil {
+		return "", errors.Wrap(err, "Cant get hash")
+	}
+	sha := base64.StdEncoding.EncodeToString(h.Sum(nil))
+	if sha == digest[strings.IndexByte(digest, '=')+1:] {
+		sig := richSignature[strings.Index(richSignature, "signature=")+10:]
+		if len(sig) == 0 {
+			return "", errors.New("empty signature")
+		}
+		return sig, nil
+
+	}
+	return "", errors.New("cant get signature from header")
 }
