@@ -99,18 +99,25 @@ func (p *RealmVectorProjection) HasSameVersion(version uint32) bool {
 }
 
 func (p *RealmVectorProjection) ForceEntryUpdate(index int) bool {
-	if p == &p.origin.projection {
-		member, _ := p.origin.forceEntryUpdate(index)
-		return member != nil
-	}
-	member, joiner := p.origin.forceEntryUpdate(index)
-
-	if member == nil {
-		return false
-	}
-	p.updateEntry(index, member, joiner)
-	return true
+	//if p == &p.origin.projection {
+	//	member, _ := p.origin.forceEntryUpdate(index)
+	//	return member != nil
+	//}
+	//member, joiner := p.origin.forceEntryUpdate(index)
+	//
+	//if member == nil {
+	return false
+	//}
+	//p.updateEntry(index, member, joiner)
+	//return true
 }
+
+//func (p *RealmVectorHelper) forceEntryUpdate(index int) (*VectorEntry, *VectorEntry) {
+//	p.mutex.Lock()
+//	defer p.mutex.Lock()
+//
+//	return nil, nil
+//}
 
 func (p *RealmVectorProjection) updateEntry(index int, member, joiner *VectorEntry) {
 	if p.sharedIndexedRefs {
@@ -315,16 +322,6 @@ func (p *RealmVectorHelper) setArrayNodes(nodeIndex []*NodeAppearance,
 	for i := range p.joiners {
 		p.projection.joinersRefs[i] = &p.joiners[i]
 	}
-}
-
-func (p *RealmVectorHelper) forceEntryUpdate(index int) (*VectorEntry, *VectorEntry) {
-	p.mutex.Lock()
-	defer p.mutex.Lock()
-
-	if index == 0 {
-		return nil, nil // TODO
-	}
-	return nil, nil
 }
 
 func (p *VectorEntry) setValues(n *NodeAppearance) insolar.ShortNodeID {

@@ -131,10 +131,8 @@ func (p *VectorBuilder) buildGlobulaAnnouncementHashes() (proofs.GlobulaAnnounce
 				if calcDoubted.IsEmpty() {
 					return
 				}
-			} else {
-				if calcDoubted.IsEmpty() {
-					calcDoubted.ForkSequenceOf(calcTrusted)
-				}
+			} else if calcDoubted.IsEmpty() {
+				calcDoubted.ForkSequenceOf(calcTrusted)
 			}
 			calcDoubted.AddNext(nodeData, false)
 		})
