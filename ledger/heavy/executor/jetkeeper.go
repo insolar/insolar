@@ -20,11 +20,13 @@ import (
 	"context"
 	"sync"
 
+	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/storage"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
 )
 
@@ -38,28 +40,68 @@ type JetKeeper interface {
 	TopSyncPulse() insolar.PulseNumber
 }
 
-func NewJetKeeper(jets jet.Storage, db store.DB) JetKeeper {
-	return &dbJetKeeper{jetTrees: jets, db: db}
+func NewJetKeeper(jets jet.Storage, db store.DB, pulses pulse.Calculator) JetKeeper {
+	return &dbJetKeeper{
+		jetTrees: jets,
+		db:       db,
+		pulses:   pulses,
+	}
 }
 
 type dbJetKeeper struct {
 	jetTrees jet.Storage
 
+	pulses storage.PulseCalculator
+
 	sync.RWMutex
 	db store.DB
 }
 
-func (jk *dbJetKeeper) Add(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID) error {
+func (jk *dbJetKeeper) Add(ctx context.Context, pn insolar.PulseNumber, id insolar.JetID) error {
 	jk.Lock()
 	defer jk.Unlock()
 
-	if err := jk.add(pulse, id); err != nil {
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"pulse": pn,
+	})
+
+	logger.Debug(">>>>>>>>>>>>>>>>>.. HERE: pulse: ", pn, ". ID: ", id.DebugString())
+
+	if err := jk.add(pn, id); err != nil {
 		return errors.Wrapf(err, "failed to save updated jets")
 	}
 
-	if err := jk.checkPulseConsistency(ctx, pulse); err != nil {
-		return errors.Wrapf(err, "failed to check pulse consistency")
+	logger.Debug(">>>>>>>>>>>>>>>>>.. AFTER jk.add: pulse: ", pn, ". ID: ", id.DebugString())
+
+	prev, err := jk.pulses.Backwards(ctx, pn, 1)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get previous pulse for %d", pn)
 	}
+
+	top := jk.topSyncPulse()
+
+	logger.Debug(">>>>>>>>>>>>>>>>>.. AFTER Backwards: pulse: ", pn, ". ID: ", id.DebugString(),
+		". TOP: ", top, ". prev.PulseNumber: ", prev.PulseNumber)
+
+	if prev.PulseNumber == top || prev.PulseNumber == insolar.GenesisPulse.PulseNumber {
+		for jk.checkPulseConsistency(ctx, pn) {
+			err = jk.updateSyncPulse(pn)
+			if err != nil {
+				return errors.Wrapf(err, "failed to update consistent pulse")
+			}
+			logger.Debugf("pulse completed: %d", pn)
+
+			next, err := jk.pulses.Forwards(ctx, pn, 1)
+			if err == pulse.ErrNotFound {
+				return nil
+			}
+			if err != nil {
+				return errors.Wrapf(err, "failed to get next pulse for %d", pn)
+			}
+			pn = next.PulseNumber
+		}
+	}
+
 	return nil
 }
 
@@ -67,12 +109,15 @@ func (jk *dbJetKeeper) TopSyncPulse() insolar.PulseNumber {
 	jk.RLock()
 	defer jk.RUnlock()
 
-	it := jk.db.NewIterator(syncPulseKey(0xFFFFFFFF), true)
-	defer it.Close()
-	if it.Next() {
-		return insolar.NewPulseNumber(it.Key()[1:])
+	return jk.topSyncPulse()
+}
+
+func (jk *dbJetKeeper) topSyncPulse() insolar.PulseNumber {
+	val, err := jk.db.Get(syncPulseKey(insolar.GenesisPulse.PulseNumber))
+	if err != nil {
+		return insolar.GenesisPulse.PulseNumber
 	}
-	return insolar.GenesisPulse.PulseNumber
+	return insolar.NewPulseNumber(val)
 }
 
 func (jk *dbJetKeeper) add(pulse insolar.PulseNumber, id insolar.JetID) error {
@@ -84,34 +129,38 @@ func (jk *dbJetKeeper) add(pulse insolar.PulseNumber, id insolar.JetID) error {
 	return jk.set(pulse, jets)
 }
 
-func (jk *dbJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.PulseNumber) error {
-	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"pulse": pulse,
-	})
+func (jk *dbJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.PulseNumber) bool {
+	toSet := func(s []insolar.JetID) map[insolar.JetID]struct{} {
+		r := make(map[insolar.JetID]struct{}, len(s))
+		for _, el := range s {
+			r[el] = struct{}{}
+		}
+		return r
+	}
 
 	expectedJets := jk.jetTrees.All(ctx, pulse)
 	actualJets := jk.all(pulse)
-	actualMap := make(map[insolar.JetID]bool)
-	for _, jet := range actualJets {
-		actualMap[jet] = true
+
+	if len(expectedJets) != len(actualJets) {
+		if len(actualJets) > len(expectedJets) {
+			inslogger.FromContext(ctx).Warn("num actual jets is more then expected. It's strange. Pulse: ", pulse)
+		}
+		return false
 	}
 
-	for _, jet := range expectedJets {
-		if !actualMap[jet] {
-			logger.Debugf("[CheckPulseConsistency] noncomplete pulse=%v expected=%v actual=%v", pulse,
-				insolar.JetIDCollection(expectedJets).DebugString(),
-				insolar.JetIDCollection(actualJets).DebugString())
-			return nil
+	actualJetsSet := toSet(actualJets)
+
+	for k, _ := range toSet(expectedJets) {
+		if _, ok := actualJetsSet[k]; !ok {
+			inslogger.FromContext(ctx).Error("jet sets are different. it's too bad. Pulse: ", pulse,
+				". Expected: ", insolar.JetIDCollection(expectedJets).DebugString(),
+				". Actual: ", insolar.JetIDCollection(actualJets).DebugString())
+			return false
 		}
 	}
 
-	err := jk.updateSyncPulse(pulse)
-	if err != nil {
-		return errors.Wrapf(err, "failed to update consistent pulse")
-	}
+	return true
 
-	logger.Debugf("pulse #%v complete", pulse)
-	return nil
 }
 
 func (jk *dbJetKeeper) all(pulse insolar.PulseNumber) []insolar.JetID {
@@ -168,6 +217,6 @@ func (jk *dbJetKeeper) set(pn insolar.PulseNumber, jets []insolar.JetID) error {
 }
 
 func (jk *dbJetKeeper) updateSyncPulse(pn insolar.PulseNumber) error {
-	err := jk.db.Set(syncPulseKey(pn), []byte{})
+	err := jk.db.Set(syncPulseKey(insolar.GenesisPulse.PulseNumber), pn.Bytes())
 	return errors.Wrapf(err, "failed to set up new sync pulse")
 }
