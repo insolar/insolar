@@ -55,6 +55,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
@@ -233,6 +234,7 @@ func (cdf *ConsensusDigestFactory) GetAnnouncementDigester() cryptkit.SequenceDi
 
 func (cdf *ConsensusDigestFactory) GetGlobulaStateDigester() transport.StateDigester {
 	return &gshDigester{
-		sd: &seqDigester{},
+		sd:            &seqDigester{},
+		defaultDigest: cryptkit.NewDigest(longbits.NewBits512FromBytes(make([]byte, 64)), "stubHash").AsDigestHolder(),
 	}
 }

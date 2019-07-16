@@ -75,7 +75,7 @@ func (s *seqDigester) AddNext(digest longbits.FoldableReader) {
 }
 
 func (s *seqDigester) GetDigestMethod() cryptkit.DigestMethod {
-	return "emuDigest64"
+	return SHA3512Digest
 }
 
 func (s *seqDigester) ForkSequence() cryptkit.SequenceDigester {
@@ -90,9 +90,11 @@ func (s *seqDigester) FinishSequence() cryptkit.Digest {
 	if s.rnd == nil {
 		panic("nothing")
 	}
-	bits := longbits.NewBits64(s.rnd.Uint64())
+	var res longbits.Bits512
+	bits64 := longbits.NewBits64(s.rnd.Uint64())
+	copy(res[:], bits64[:])
 	s.rnd = nil
-	return cryptkit.NewDigest(&bits, s.GetDigestMethod())
+	return cryptkit.NewDigest(&res, s.GetDigestMethod())
 }
 
 type gshDigester struct {

@@ -149,9 +149,8 @@ func (f *PacketParserFactory) ParsePacket(ctx context.Context, reader io.Reader)
 
 func (p *PacketParser) GetPulsePacket() transport.PulsePacketReader {
 	return &PulsePacketReader{
-		data:        p.packetData.data,
-		pulseNumber: p.packet.getPulseNumber(),
-		body:        p.packet.EncryptableBody.(*PulsarPacketBody),
+		data: p.packetData.data,
+		body: p.packet.EncryptableBody.(*PulsarPacketBody),
 	}
 }
 
@@ -191,16 +190,12 @@ func (p *PacketParser) GetPacketSignature() cryptkit.SignedDigest {
 }
 
 type PulsePacketReader struct {
-	data        []byte
-	body        *PulsarPacketBody
-	pulseNumber pulse.Number
+	data []byte
+	body *PulsarPacketBody
 }
 
 func (r *PulsePacketReader) GetPulseData() pulse.Data {
-	return pulse.Data{
-		PulseNumber: r.pulseNumber,
-		DataExt:     r.body.PulseDataExt,
-	}
+	return r.body.getPulseData()
 }
 
 func (r *PulsePacketReader) GetPulseDataEvidence() proofs.OriginalPulsarPacket {
@@ -217,6 +212,9 @@ type MemberPacketReader struct {
 func (r *MemberPacketReader) AsPhase0Packet() transport.Phase0PacketReader {
 	return &Phase0PacketReader{
 		MemberPacketReader: *r,
+		EmbeddedPulseReader: EmbeddedPulseReader{
+			MemberPacketReader: *r,
+		},
 	}
 }
 
@@ -224,6 +222,9 @@ func (r *MemberPacketReader) AsPhase1Packet() transport.Phase1PacketReader {
 	return &Phase1PacketReader{
 		MemberPacketReader: *r,
 		ExtendedIntroReader: ExtendedIntroReader{
+			MemberPacketReader: *r,
+		},
+		EmbeddedPulseReader: EmbeddedPulseReader{
 			MemberPacketReader: *r,
 		},
 	}
@@ -242,20 +243,32 @@ func (r *MemberPacketReader) AsPhase3Packet() transport.Phase3PacketReader {
 	return &Phase3PacketReader{*r}
 }
 
+type EmbeddedPulseReader struct {
+	MemberPacketReader
+}
+
+func (r *EmbeddedPulseReader) HasPulseData() bool {
+	return r.packet.Header.HasFlag(FlagHasPulsePacket)
+}
+
+func (r *EmbeddedPulseReader) GetEmbeddedPulsePacket() transport.PulsePacketReader {
+	if !r.HasPulseData() {
+		return nil
+	}
+
+	return &PulsePacketReader{
+		data: r.body.PulsarPacket.Data,
+		body: &r.body.PulsarPacket.PulsarPacketBody,
+	}
+}
+
 type Phase0PacketReader struct {
 	MemberPacketReader
+	EmbeddedPulseReader
 }
 
 func (r *Phase0PacketReader) GetNodeRank() member.Rank {
 	return r.body.CurrentRank
-}
-
-func (r *Phase0PacketReader) GetEmbeddedPulsePacket() transport.PulsePacketReader {
-	return &PulsePacketReader{
-		data:        r.body.PulsarPacket.Data,
-		pulseNumber: r.GetPulseNumber(),
-		body:        &r.body.PulsarPacket.PulsarPacketBody,
-	}
 }
 
 type ExtendedIntroReader struct {
@@ -311,18 +324,7 @@ func (r *ExtendedIntroReader) GetJoinerSecret() cryptkit.SignatureHolder {
 type Phase1PacketReader struct {
 	MemberPacketReader
 	ExtendedIntroReader
-}
-
-func (r *Phase1PacketReader) HasPulseData() bool {
-	return r.packet.Header.hasFlag(0)
-}
-
-func (r *Phase1PacketReader) GetEmbeddedPulsePacket() transport.PulsePacketReader {
-	return &PulsePacketReader{
-		data:        r.body.PulsarPacket.Data,
-		pulseNumber: r.GetPulseNumber(),
-		body:        &r.body.PulsarPacket.PulsarPacketBody,
-	}
+	EmbeddedPulseReader
 }
 
 func (r *Phase1PacketReader) GetAnnouncementReader() transport.MembershipAnnouncementReader {
@@ -379,6 +381,7 @@ func (r *Phase3PacketReader) hasDoubtedVector() bool {
 func (r *Phase3PacketReader) GetTrustedGlobulaAnnouncementHash() proofs.GlobulaAnnouncementHash {
 	return cryptkit.NewDigest(&r.body.Vectors.MainStateVector.VectorHash, r.digester.GetDigestMethod()).AsDigestHolder()
 }
+
 func (r *Phase3PacketReader) GetTrustedExpectedRank() member.Rank {
 	return r.body.Vectors.MainStateVector.ExpectedRank
 }

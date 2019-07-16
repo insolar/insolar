@@ -58,6 +58,7 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
+	pulse2 "github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
@@ -288,7 +289,6 @@ type EmbeddedPulsarData struct {
 	// Header      Header       `insolar-transport:"ignore=send"`           // ByteSize=16
 	// PulseNumber pulse.Number `insolar-transport:"[30-31]=0;ignore=send"` // [30-31] MUST ==0, ByteSize=4
 
-	// PulseNumber common.PulseNumber //available externally
 	PulsarPacketBody `insolar-transport:"ignore=send"` // ByteSize>=108
 	// PulsarSignature  longbits.Bits512                  `insolar-transport:"ignore=send"` // ByteSize=64
 }
@@ -332,7 +332,8 @@ func (pd *EmbeddedPulsarData) DeserializeFrom(ctx DeserializeContext, reader io.
 	data := p.GetRequest().GetPulse()
 	pul := *pulse.FromProto(data.Pulse)
 
-	pd.PulseDataExt = adapters.NewPulseData(pul).DataExt
+	pd.PulsarPacketBody.PulseNumber = pulse2.Number(pul.PulseNumber)
+	pd.PulsarPacketBody.PulseDataExt = adapters.NewPulseData(pul).DataExt
 
 	return nil
 }
