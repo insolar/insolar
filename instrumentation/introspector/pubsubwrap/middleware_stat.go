@@ -41,8 +41,14 @@ func NewMessageStatByType() *MessageStatByType {
 // Filter counts published messages by type.
 func (ms *MessageStatByType) Filter(m *message.Message) (*message.Message, error) {
 	typ, err := decodeType(m)
+	key := typ.String()
+	if err != nil {
+		if de, ok := err.(decodeError); ok {
+			key = "legacy." + de.metadataType
+		}
+	}
 	ms.Lock()
-	ms.stat[typ.String()]++
+	ms.stat[key]++
 	ms.Unlock()
 	return m, err
 }
