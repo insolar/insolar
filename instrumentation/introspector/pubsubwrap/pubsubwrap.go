@@ -55,7 +55,8 @@ func (p *PubSubWrapper) Publish(topic string, messages ...*message.Message) erro
 	for _, m := range messages {
 	FiltersLoop:
 		for _, f := range p.filters {
-			m, err := f.Filter(m)
+			var err error
+			m, err = f.Filter(m)
 			if err != nil {
 				switch err.(type) {
 				case decodeError:
