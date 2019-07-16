@@ -98,8 +98,8 @@ type StaticProfile interface { //brief intro
 }
 
 type BaseNode interface {
-	StaticProfile
-	//GetShortNodeID() insolar.ShortNodeID
+	//StaticProfile
+	GetShortNodeID() insolar.ShortNodeID
 
 	/*
 		As dynamic nodes may update static part info, code inside consenus logic MUST access static profile

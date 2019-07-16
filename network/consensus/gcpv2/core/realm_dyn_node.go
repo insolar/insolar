@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,101 +46,105 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-//
+///
 
-package tests
+package core
 
 import (
-	"context"
-	"errors"
-	"runtime/debug"
-
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/consensus/adapters"
+	"sync"
 )
 
-type EmuHostConsensusAdapter struct {
-	packetProcessor adapters.PacketProcessor
+type updatableJoinerSlot struct {
+	nodeID insolar.ShortNodeID
+	sf     cryptkit.SignatureVerifier
 
-	hostAddr endpoints.Name
-	inbound  <-chan Packet
-	outbound chan<- Packet
+	mutex sync.RWMutex
+	intro profiles.StaticProfile
 }
 
-func NewEmuHostConsensusAdapter(hostAddr string) *EmuHostConsensusAdapter {
-	return &EmuHostConsensusAdapter{hostAddr: endpoints.Name(hostAddr)}
+func (p *updatableJoinerSlot) GetStatic() profiles.StaticProfile {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
+	return p.intro
 }
 
-func (h *EmuHostConsensusAdapter) SetPacketProcessor(packetProcessor adapters.PacketProcessor) {
-	h.packetProcessor = packetProcessor
-}
+func (p *updatableJoinerSlot) SetNodeIntroProfile(nip profiles.StaticProfile) {
 
-func (h *EmuHostConsensusAdapter) ConnectTo(network *EmuNetwork) {
-	ctx := network.ctx
-	h.inbound, h.outbound = network.AddHost(ctx, h.hostAddr)
-	go h.run(ctx)
-}
-
-func (h *EmuHostConsensusAdapter) run(ctx context.Context) {
-	defer func() {
-		if r := recover(); r != nil {
-			debug.PrintStack()
-			inslogger.FromContext(ctx).Errorf("host has died: %v, %v", h.hostAddr, r)
-			close(h.outbound)
-		}
-	}()
-
-	for {
-		var err error
-		payload, from, err := h.receive(ctx)
-		if err == nil {
-			var packet transport.PacketParser
-
-			packet, err = h.parsePayload(payload)
-			if err == nil {
-				if packet != nil {
-					hostFrom := endpoints.InboundConnection{Addr: *from}
-					err = h.packetProcessor.ProcessPacket(ctx, packet, &hostFrom)
-				}
-			}
-		}
-
-		if err != nil {
-			inslogger.FromContext(ctx).Error(err)
-		}
+	if p.nodeID != nip.GetShortNodeID() {
+		panic("illegal value")
 	}
+
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	p.intro = nip
 }
 
-func (h *EmuHostConsensusAdapter) SendPacketToTransport(ctx context.Context, t profiles.ActiveNode, sendOptions transport.PacketSendOptions, payload interface{}) {
-	h.send(t.GetStatic().GetDefaultEndpoint().GetNameAddress(), payload)
+func (p *updatableJoinerSlot) GetDefaultEndpoint() endpoints.Outbound {
+	return p.GetStatic().GetDefaultEndpoint()
 }
 
-func (h *EmuHostConsensusAdapter) receive(ctx context.Context) (payload interface{}, from *endpoints.Name, err error) {
-	packet, ok := <-h.inbound
-	if !ok {
-		panic(errors.New("connection closed"))
-	}
-	inslogger.FromContext(ctx).Infof("receivedBy: %s - %+v", h.hostAddr, packet)
-	if packet.Payload == nil {
-		return nil, &packet.Host, errors.New("missing payload")
-	}
-	err, ok = packet.Payload.(error)
-	if ok {
-		return nil, &packet.Host, err
-	}
-	return packet.Payload, &packet.Host, nil
+func (p *updatableJoinerSlot) GetPublicKeyStore() cryptkit.PublicKeyStore {
+	return p.GetStatic().GetPublicKeyStore()
 }
 
-func (h *EmuHostConsensusAdapter) send(target endpoints.Name, payload interface{}) {
-	parser := payload.(transport.PacketParser)
-	pkt := Packet{Host: target, Payload: WrapPacketParser(parser)}
-	h.outbound <- pkt
+func (p *updatableJoinerSlot) IsAcceptableHost(from endpoints.Inbound) bool {
+	return p.GetStatic().IsAcceptableHost(from)
 }
 
-func (h *EmuHostConsensusAdapter) parsePayload(payload interface{}) (transport.PacketParser, error) {
-	return UnwrapPacketParser(payload), nil
+func (p *updatableJoinerSlot) GetShortNodeID() insolar.ShortNodeID {
+	return p.nodeID
+}
+
+func (p *updatableJoinerSlot) GetStartPower() member.Power {
+	return p.GetStatic().GetStartPower()
+}
+
+func (p *updatableJoinerSlot) GetPrimaryRole() member.PrimaryRole {
+	return p.GetStatic().GetPrimaryRole()
+}
+
+func (p *updatableJoinerSlot) GetSpecialRoles() member.SpecialRole {
+	return p.GetStatic().GetSpecialRoles()
+}
+
+func (p *updatableJoinerSlot) GetNodePublicKey() cryptkit.SignatureKeyHolder {
+	return p.GetStatic().GetNodePublicKey()
+}
+
+func (p *updatableJoinerSlot) GetAnnouncementSignature() cryptkit.SignatureHolder {
+	return p.GetStatic().GetAnnouncementSignature()
+}
+
+func (p *updatableJoinerSlot) GetIntroduction() profiles.NodeIntroduction {
+	return p.GetStatic().GetIntroduction()
+}
+
+func (p *updatableJoinerSlot) GetSignatureVerifier() cryptkit.SignatureVerifier {
+	return p.sf
+}
+
+func (p *updatableJoinerSlot) GetOpMode() member.OpMode {
+	return member.ModeNormal
+}
+
+func (p *updatableJoinerSlot) GetIndex() member.Index {
+	return member.JoinerIndex.Ensure()
+}
+
+func (p *updatableJoinerSlot) IsJoiner() bool {
+	return true
+}
+
+func (p *updatableJoinerSlot) GetDeclaredPower() member.Power {
+	return 0
+}
+
+func (p *updatableJoinerSlot) GetLeaveReason() uint32 {
+	panic("illegal state")
 }

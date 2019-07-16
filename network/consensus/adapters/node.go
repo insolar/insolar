@@ -263,14 +263,15 @@ func NewNodeIntroProfileList(nodes []insolar.NetworkNode, certificate insolar.Ce
 }
 
 func NewNetworkNode(profile profiles.ActiveNode) insolar.NetworkNode {
-	store := profile.GetPublicKeyStore()
-	introduction := profile.GetIntroduction()
+	nip := profile.GetStatic()
+	store := nip.GetPublicKeyStore()
+	introduction := nip.GetIntroduction()
 
 	networkNode := node.NewNode(
 		introduction.GetReference(),
-		PrimaryRoleToStaticRole(profile.GetPrimaryRole()),
+		PrimaryRoleToStaticRole(nip.GetPrimaryRole()),
 		store.(*ECDSAPublicKeyStore).publicKey,
-		profile.GetDefaultEndpoint().GetNameAddress().String(),
+		nip.GetDefaultEndpoint().GetNameAddress().String(),
 		"",
 	)
 
@@ -278,7 +279,7 @@ func NewNetworkNode(profile profiles.ActiveNode) insolar.NetworkNode {
 
 	mutableNode.SetShortID(profile.GetShortNodeID())
 	mutableNode.SetState(insolar.NodeReady)
-	mutableNode.SetSignature(insolar.SignatureFromBytes(profile.GetAnnouncementSignature().AsBytes()))
+	mutableNode.SetSignature(insolar.SignatureFromBytes(nip.GetAnnouncementSignature().AsBytes()))
 
 	return networkNode
 }

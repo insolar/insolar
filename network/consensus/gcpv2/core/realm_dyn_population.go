@@ -310,3 +310,6 @@ func (r *DynamicRealmPopulation) CreateVectorHelper() *RealmVectorHelper {
 	v.realmPopulation = r
 	return v
 }
+
+type PurgatoryNode struct {
+}
