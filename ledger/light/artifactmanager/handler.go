@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/node"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/handle"
@@ -217,7 +216,7 @@ func NewMessageHandler(
 			p.Dep.Jets = h.JetStorage
 			p.Dep.Sender = h.Sender
 		},
-		HotData: func(p *proc.HotData) {
+		HotObjects: func(p *proc.HotObjects) {
 			p.Dep.DropModifier = h.DropModifier
 			p.Dep.MessageBus = h.Bus
 			p.Dep.IndexModifier = h.IndexStorage
@@ -277,20 +276,10 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 		h.filamentCalculator,
 		h.PulseCalculator,
 	)
-	h.setHandlersForLight()
 
 	return nil
 }
 
 func (h *MessageHandler) OnPulse(ctx context.Context, pn insolar.Pulse) {
 	h.FlowDispatcher.ChangePulse(ctx, pn)
-}
-
-func (h *MessageHandler) setHandlersForLight() {
-	// Generic.
-	h.Bus.MustRegister(insolar.TypeValidateRecord, h.handleValidateRecord)
-}
-
-func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	return &reply.OK{}, nil
 }

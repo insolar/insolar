@@ -20,10 +20,11 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/drop"
@@ -39,11 +40,11 @@ type HotSender interface {
 
 // HotSenderDefault implements HotSender.
 type HotSenderDefault struct {
-	bus             insolar.MessageBus
 	dropAccessor    drop.Accessor
 	indexAccessor   object.IndexAccessor
 	pulseCalculator pulse.Calculator
 	jetAccessor     jet.Accessor
+	sender          bus.Sender
 
 	// lightChainLimit is the LM-node cache limit configuration (how long index could be unused)
 	lightChainLimit int
@@ -51,19 +52,19 @@ type HotSenderDefault struct {
 
 // NewHotSender returns a new instance of a default HotSender implementation.
 func NewHotSender(
-	bus insolar.MessageBus,
 	dropAccessor drop.Accessor,
 	indexAccessor object.IndexAccessor,
 	pulseCalculator pulse.Calculator,
 	jetAccessor jet.Accessor,
 	lightChainLimit int,
+	sender bus.Sender,
 ) *HotSenderDefault {
 	return &HotSenderDefault{
-		bus:             bus,
 		dropAccessor:    dropAccessor,
 		indexAccessor:   indexAccessor,
 		pulseCalculator: pulseCalculator,
 		jetAccessor:     jetAccessor,
+		sender:          sender,
 
 		lightChainLimit: lightChainLimit,
 	}
@@ -71,7 +72,7 @@ func NewHotSender(
 
 func (m *HotSenderDefault) filterAndGroupIndexes(
 	ctx context.Context, currentPulse, newPulse insolar.PulseNumber,
-) (map[insolar.JetID][]object.FilamentIndex, error) {
+) (map[insolar.JetID][]record.Index, error) {
 	limitPN, err := m.pulseCalculator.Backwards(ctx, currentPulse, m.lightChainLimit)
 	if err == pulse.ErrNotFound {
 		limitPN = *insolar.GenesisPulse
@@ -87,10 +88,14 @@ func (m *HotSenderDefault) filterAndGroupIndexes(
 		if idx.LifelineLastUsed < limitPN.PulseNumber {
 			continue
 		}
-		filtered = append(filtered, idx)
+		filtered = append(filtered, record.Index{
+			Lifeline:         idx.Lifeline,
+			ObjID:            idx.ObjID,
+			LifelineLastUsed: idx.LifelineLastUsed,
+		})
 	}
 
-	byJet := map[insolar.JetID][]object.FilamentIndex{}
+	byJet := map[insolar.JetID][]record.Index{}
 	for _, idx := range filtered {
 		jetID, _ := m.jetAccessor.ForID(ctx, newPulse, idx.ObjID)
 		byJet[jetID] = append(byJet[jetID], idx)
@@ -139,31 +144,28 @@ func (m *HotSenderDefault) sendForJet(
 	ctx context.Context,
 	jetID insolar.JetID,
 	pn insolar.PulseNumber,
-	indexes []object.FilamentIndex,
+	indexes []record.Index,
 	block drop.Drop,
 ) error {
 	ctx, span := instracer.StartSpan(ctx, "hot_sender.send_hot")
 	defer span.End()
 
-	hots := m.hotDataForJet(ctx, indexes)
-	stats.Record(ctx, statHotObjectsTotal.M(int64(len(hots))))
+	stats.Record(ctx, statHotObjectsTotal.M(int64(len(indexes))))
 
-	msg := &message.HotData{
-		Jet:         *insolar.NewReference(insolar.ID(jetID)),
-		Drop:        block,
-		HotIndexes:  hots,
-		PulseNumber: pn,
-	}
-
-	genericRep, err := m.bus.Send(ctx, msg, nil)
+	buf := drop.MustEncode(&block)
+	msg, err := payload.NewMessage(&payload.HotObjects{
+		JetID:   jetID,
+		Drop:    buf,
+		Pulse:   pn,
+		Indexes: indexes,
+	})
 	if err != nil {
-		return errors.Wrapf(err, "failed to send hot data, method Send failed")
+		return errors.Wrap(err, "failed to create message")
 	}
-	if _, ok := genericRep.(*reply.OK); !ok {
-		return errors.Wrapf(err, "failed to send hot data, not OK reply")
-	}
+	_, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, *insolar.NewReference(insolar.ID(jetID)))
+	done()
 
-	stats.Record(ctx, statHotObjectsSend.M(int64(len(hots))))
+	stats.Record(ctx, statHotObjectsSend.M(int64(len(indexes))))
 	return nil
 }
 
@@ -182,27 +184,4 @@ func (m *HotSenderDefault) findDrop(
 		}
 	}
 	return block, err
-}
-
-// hotDataForJet prepares list of HotIndex struct from provided FilamentIndex struct.
-// if jetID provided, filters output records what only match this jet.
-func (m *HotSenderDefault) hotDataForJet(
-	ctx context.Context,
-	indexes []object.FilamentIndex,
-) []message.HotIndex {
-	hotIndexes := make([]message.HotIndex, 0, len(indexes))
-	for _, meta := range indexes {
-		encoded, err := meta.Lifeline.Marshal()
-		if err != nil {
-			inslogger.FromContext(ctx).Errorf("failed to marshal lifeline: %v", err)
-			continue
-		}
-
-		hotIndexes = append(hotIndexes, message.HotIndex{
-			LifelineLastUsed: meta.LifelineLastUsed,
-			ObjID:            meta.ObjID,
-			Index:            encoded,
-		})
-	}
-	return hotIndexes
 }

@@ -163,6 +163,38 @@ message PendingFilament {
     bytes PreviousRecord = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
 }
 
+message Lifeline {
+    int32  Polymorph  = 16;
+
+    bytes LatestState = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
+    bytes LatestStateApproved = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
+    bytes ChildPointer = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
+    bytes Parent = 23 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    repeated LifelineDelegate Delegates = 24 [(gogoproto.nullable) = false];
+    uint32 StateID = 25 [(gogoproto.customtype) = "StateID", (gogoproto.nullable) = false];
+    uint32 LatestUpdate = 26 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+
+    bytes PendingPointer = 27 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
+    bytes EarliestOpenRequest = 28 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = true];
+}
+
+message LifelineDelegate {
+    int32 Polymorph  = 16;
+
+    bytes Key = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes Value = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+}
+
+message Index {
+    int32 Polymorph  = 16;
+
+    bytes ObjID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+
+    Lifeline Lifeline = 21 [(gogoproto.nullable) = false];
+    uint32 LifelineLastUsed = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+
+    repeated bytes PendingRecords = 23 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+}
 
 message Virtual {
     int32 polymorph = 16;

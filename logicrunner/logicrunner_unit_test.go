@@ -809,7 +809,20 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 }
 
 func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
-	pl := &payload.SagaCallAcceptNotification{}
+	outgoing := record.OutgoingRequest{
+		Caller: gen.Reference(),
+		Reason: gen.Reference(),
+	}
+	outgoingBytes, err := outgoing.Marshal()
+	suite.Require().NoError(err)
+
+	outgoingReqId := gen.ID()
+	outgoingRequestRef := insolar.NewReference(outgoingReqId)
+
+	pl := &payload.SagaCallAcceptNotification{
+		OutgoingReqID: outgoingReqId,
+		Request:       outgoingBytes,
+	}
 	msg, err := payload.NewMessage(pl)
 	suite.Require().NoError(err)
 
@@ -825,18 +838,62 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 	buf, err := meta.Marshal()
 	msg.Payload = buf
 
-	replyChan := mockSender(suite)
+	dummyRequestRef := gen.Reference()
+	callMethodChan := make(chan struct{})
+	var usedCaller insolar.Reference
+	var usedReason insolar.Reference
+	var usedReturnMode record.ReturnMode
+
+	cr := testutils.NewContractRequesterMock(suite.T())
+	cr.CallMethodFunc = func(ctx context.Context, msg insolar.Message) (insolar.Reply, error) {
+		suite.Require().Equal(insolar.TypeCallMethod, msg.Type())
+		cm := msg.(*message.CallMethod)
+		usedCaller = cm.Caller
+		usedReason = cm.Reason
+		usedReturnMode = cm.ReturnMode
+
+		result := &reply.RegisterRequest{
+			Request: dummyRequestRef,
+		}
+		callMethodChan <- struct{}{}
+		return result, nil
+	}
+	suite.lr.ContractRequester = cr
+
+	registerResultChan := make(chan struct{})
+	var usedRequestRef insolar.Reference
+	var usedResult []byte
+
+	am := artifacts.NewClientMock(suite.T())
+	am.RegisterResultFunc = func(ctx context.Context, caller insolar.Reference, reqRef insolar.Reference, res []byte) (*insolar.ID, error) {
+		usedRequestRef = reqRef
+		usedResult = res
+		id := gen.ID()
+		registerResultChan <- struct{}{}
+		return &id, nil
+	}
+	suite.lr.ArtifactManager = am
+
 	_, err = suite.lr.FlowDispatcher.Process(msg)
 	suite.Require().NoError(err)
 
-	rep, err := getReply(suite, replyChan)
-	suite.Require().NoError(err)
+	<-callMethodChan
+	suite.Require().Equal(outgoing.Caller, usedCaller)
+	suite.Require().Equal(outgoing.Reason, usedReason)
+	suite.Require().Equal(record.ReturnNoWait, usedReturnMode)
 
-	// This is a temporary reply. It is required only to make sure that the
-	// message handler was executed. Actually LME doesn't need any reply.
-	suite.Require().Equal(&reply.OK{}, rep)
+	<-registerResultChan
+	suite.Require().Equal(outgoingRequestRef, &usedRequestRef)
+	suite.Require().Equal(dummyRequestRef.Bytes(), usedResult)
 
-	// work in progress...
+	// In this test LME doesn't need any reply from VE. But if an reply was
+	// required you could check it like this:
+	// ```
+	// replyChan = mockSender(suite)
+	// rep, err := getReply(suite, replyChan)
+	// suite.Require().NoError(err)
+	// suite.Require().Equal(&reply.OK{}, rep)
+	// ```
 }
 
 func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangePendingStatus() {

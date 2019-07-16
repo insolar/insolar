@@ -21,39 +21,40 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/record"
 	"go.opencensus.io/stats"
 )
 
 type IndexStorageMemory struct {
 	bucketsLock sync.RWMutex
-	buckets     map[insolar.PulseNumber]map[insolar.ID]*FilamentIndex
+	buckets     map[insolar.PulseNumber]map[insolar.ID]*record.Index
 }
 
 func NewIndexStorageMemory() *IndexStorageMemory {
 	return &IndexStorageMemory{
-		buckets: map[insolar.PulseNumber]map[insolar.ID]*FilamentIndex{},
+		buckets: map[insolar.PulseNumber]map[insolar.ID]*record.Index{},
 	}
 }
 
-func (i *IndexStorageMemory) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (FilamentIndex, error) {
+func (i *IndexStorageMemory) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (record.Index, error) {
 	i.bucketsLock.RLock()
 	defer i.bucketsLock.RUnlock()
 
 	objsByPn, ok := i.buckets[pn]
 	if !ok {
-		return FilamentIndex{}, ErrIndexNotFound
+		return record.Index{}, ErrIndexNotFound
 	}
 
 	idx, ok := objsByPn[objID]
 	if !ok {
-		return FilamentIndex{}, ErrIndexNotFound
+		return record.Index{}, ErrIndexNotFound
 	}
 
 	return clone(idx), nil
 }
 
 // ForPulse returns a collection of buckets for a provided pulse number.
-func (i *IndexStorageMemory) ForPulse(ctx context.Context, pn insolar.PulseNumber) []FilamentIndex {
+func (i *IndexStorageMemory) ForPulse(ctx context.Context, pn insolar.PulseNumber) []record.Index {
 	i.bucketsLock.RLock()
 	defer i.bucketsLock.RUnlock()
 
@@ -62,7 +63,7 @@ func (i *IndexStorageMemory) ForPulse(ctx context.Context, pn insolar.PulseNumbe
 		return nil
 	}
 
-	res := make([]FilamentIndex, 0, len(bucks))
+	res := make([]record.Index, 0, len(bucks))
 	for _, b := range bucks {
 		res = append(res, clone(b))
 	}
@@ -70,13 +71,13 @@ func (i *IndexStorageMemory) ForPulse(ctx context.Context, pn insolar.PulseNumbe
 }
 
 // SetIndex adds a bucket with provided pulseNumber and ID
-func (i *IndexStorageMemory) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket FilamentIndex) error {
+func (i *IndexStorageMemory) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket record.Index) error {
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
 
 	_, ok := i.buckets[pn]
 	if !ok {
-		i.buckets[pn] = map[insolar.ID]*FilamentIndex{}
+		i.buckets[pn] = map[insolar.ID]*record.Index{}
 	}
 
 	i.buckets[pn][bucket.ObjID] = &bucket
@@ -96,12 +97,12 @@ func (i *IndexStorageMemory) DeleteForPN(ctx context.Context, pn insolar.PulseNu
 	delete(i.buckets, pn)
 }
 
-func clone(index *FilamentIndex) FilamentIndex {
+func clone(index *record.Index) record.Index {
 	var clonedRecords []insolar.ID
 
 	clonedRecords = append(clonedRecords, index.PendingRecords...)
-	return FilamentIndex{
-		XPolymorph:       index.XPolymorph,
+	return record.Index{
+		Polymorph:        index.Polymorph,
 		ObjID:            index.ObjID,
 		Lifeline:         CloneLifeline(index.Lifeline),
 		LifelineLastUsed: index.LifelineLastUsed,

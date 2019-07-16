@@ -435,33 +435,6 @@ func (m *AbandonedRequestsNotification) DefaultTarget() *insolar.Reference {
 	return insolar.NewReference(m.Object)
 }
 
-// GetRequest fetches request from ledger.
-type GetRequest struct {
-	ledgerMessage
-
-	Request insolar.ID
-}
-
-// Type implementation of Message interface.
-func (*GetRequest) Type() insolar.MessageType {
-	return insolar.TypeGetRequest
-}
-
-// AllowedSenderObjectAndRole implements interface method
-func (m *GetRequest) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
-	return nil, insolar.DynamicRoleUndefined
-}
-
-// DefaultRole returns role for this event
-func (*GetRequest) DefaultRole() insolar.DynamicRole {
-	return insolar.DynamicRoleLightExecutor
-}
-
-// DefaultTarget returns of target of this event.
-func (m *GetRequest) DefaultTarget() *insolar.Reference {
-	return insolar.NewReference(m.Request)
-}
-
 // GetPendingRequestID fetches a pending request id for an object from current LME
 type GetPendingRequestID struct {
 	ledgerMessage

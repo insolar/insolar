@@ -77,7 +77,7 @@ func NewIndexDB(db store.DB) *IndexDB {
 }
 
 // SetIndex adds a bucket with provided pulseNumber and ID
-func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket FilamentIndex) error {
+func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket record.Index) error {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
@@ -122,31 +122,31 @@ func (i *IndexDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) er
 }
 
 // ForID returns a lifeline from a bucket with provided PN and ObjID
-func (i *IndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (FilamentIndex, error) {
-	var buck *FilamentIndex
+func (i *IndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (record.Index, error) {
+	var buck *record.Index
 	buck, err := i.getBucket(pn, objID)
 	if err == ErrIndexNotFound {
 		lastPN, err := i.getLastKnownPN(objID)
 		if err != nil {
-			return FilamentIndex{}, ErrIndexNotFound
+			return record.Index{}, ErrIndexNotFound
 		}
 
 		buck, err = i.getBucket(lastPN, objID)
 		if err != nil {
-			return FilamentIndex{}, err
+			return record.Index{}, err
 		}
 	} else if err != nil {
-		return FilamentIndex{}, err
+		return record.Index{}, err
 	}
 
 	return *buck, nil
 }
 
-func (i *IndexDB) ForPulse(ctx context.Context, pn insolar.PulseNumber) []FilamentIndex {
+func (i *IndexDB) ForPulse(ctx context.Context, pn insolar.PulseNumber) []record.Index {
 	panic("implement me")
 }
 
-func (i *IndexDB) setBucket(pn insolar.PulseNumber, objID insolar.ID, bucket *FilamentIndex) error {
+func (i *IndexDB) setBucket(pn insolar.PulseNumber, objID insolar.ID, bucket *record.Index) error {
 	key := indexKey{pn: pn, objID: objID}
 
 	buff, err := bucket.Marshal()
@@ -157,7 +157,7 @@ func (i *IndexDB) setBucket(pn insolar.PulseNumber, objID insolar.ID, bucket *Fi
 	return i.db.Set(key, buff)
 }
 
-func (i *IndexDB) getBucket(pn insolar.PulseNumber, objID insolar.ID) (*FilamentIndex, error) {
+func (i *IndexDB) getBucket(pn insolar.PulseNumber, objID insolar.ID) (*record.Index, error) {
 	buff, err := i.db.Get(indexKey{pn: pn, objID: objID})
 	if err == store.ErrNotFound {
 		return nil, ErrIndexNotFound
@@ -165,7 +165,7 @@ func (i *IndexDB) getBucket(pn insolar.PulseNumber, objID insolar.ID) (*Filament
 	if err != nil {
 		return nil, err
 	}
-	bucket := FilamentIndex{}
+	bucket := record.Index{}
 	err = bucket.Unmarshal(buff)
 	return &bucket, err
 }
@@ -183,7 +183,7 @@ func (i *IndexDB) getLastKnownPN(objID insolar.ID) (insolar.PulseNumber, error) 
 	return insolar.NewPulseNumber(buff), err
 }
 
-func (i *IndexDB) filament(b *FilamentIndex) ([]record.CompositeFilamentRecord, error) {
+func (i *IndexDB) filament(b *record.Index) ([]record.CompositeFilamentRecord, error) {
 	tempRes := make([]record.CompositeFilamentRecord, len(b.PendingRecords))
 	for idx, metaID := range b.PendingRecords {
 		metaRec, err := i.recordStore.get(metaID)
@@ -207,7 +207,7 @@ func (i *IndexDB) filament(b *FilamentIndex) ([]record.CompositeFilamentRecord, 
 	return tempRes, nil
 }
 
-func (i *IndexDB) nextFilament(b *FilamentIndex) (canContinue bool, nextPN insolar.PulseNumber, err error) {
+func (i *IndexDB) nextFilament(b *record.Index) (canContinue bool, nextPN insolar.PulseNumber, err error) {
 	firstRecord := b.PendingRecords[0]
 	metaRec, err := i.recordStore.get(firstRecord)
 	if err != nil {

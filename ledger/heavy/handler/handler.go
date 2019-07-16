@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
@@ -44,6 +45,8 @@ import (
 
 // Handler is a base struct for heavy's methods
 type Handler struct {
+	cfg configuration.Ledger
+
 	Bus            insolar.MessageBus
 	JetCoordinator jet.Coordinator
 	PCS            insolar.PlatformCryptographyScheme
@@ -66,8 +69,9 @@ type Handler struct {
 }
 
 // New creates a new handler.
-func New() *Handler {
+func New(cfg configuration.Ledger) *Handler {
 	h := &Handler{
+		cfg:   cfg,
 		jetID: insolar.ZeroJetID,
 	}
 	dep := proc.Dependencies{
@@ -81,6 +85,9 @@ func New() *Handler {
 		},
 		SendRequests: func(p *proc.SendRequests) {
 			p.Dep(h.Sender, h.RecordAccessor, h.IndexAccessor)
+		},
+		GetRequest: func(p *proc.GetRequest) {
+			p.Dep(h.RecordAccessor, h.Sender)
 		},
 	}
 	h.dep = &dep
@@ -134,14 +141,16 @@ func (h *Handler) handleParcel(ctx context.Context, msg *watermillMsg.Message) e
 
 	var rep insolar.Reply
 	switch msgType {
-	case insolar.TypeGetRequest.String():
-		rep, err = h.handleGetRequest(ctx, parcel)
 	case insolar.TypeGetChildren.String():
 		rep, err = h.handleGetChildren(ctx, parcel)
 	case insolar.TypeGetDelegate.String():
 		rep, err = h.handleGetDelegate(ctx, parcel)
 	case insolar.TypeGetJet.String():
 		rep, err = h.handleGetJet(ctx, parcel)
+	case insolar.TypeHeavyPayload.String():
+		rep, err = h.handleHeavyPayload(ctx, parcel)
+	case insolar.TypeGetObjectIndex.String():
+		rep, err = h.handleGetObjectIndex(ctx, parcel)
 	default:
 		err = fmt.Errorf("no handler for message type %s", msgType)
 	}
@@ -174,6 +183,10 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
 
 	switch payloadType {
+	case payload.TypeGetRequest:
+		p := proc.NewGetRequest(meta)
+		h.dep.GetRequest(p)
+		return p.Proceed(ctx)
 	case payload.TypeGetFilament:
 		p := proc.NewSendRequests(meta)
 		h.dep.SendRequests(p)
@@ -252,8 +265,6 @@ func (h *Handler) replyError(ctx context.Context, replyTo payload.Meta, err erro
 }
 
 func (h *Handler) Init(ctx context.Context) error {
-	h.Bus.MustRegister(insolar.TypeHeavyPayload, h.handleHeavyPayload)
-	h.Bus.MustRegister(insolar.TypeGetObjectIndex, h.handleGetObjectIndex)
 	return nil
 }
 
@@ -352,34 +363,6 @@ func (h *Handler) handleGetChildren(
 	return &reply.Children{Refs: refs, NextFrom: nil}, nil
 }
 
-func (h *Handler) handleGetRequest(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetRequest)
-
-	rec, err := h.RecordAccessor.ForID(ctx, msg.Request)
-	if err != nil {
-		return nil, errors.New("failed to fetch request")
-	}
-
-	virtRec := rec.Virtual
-	concrete := record.Unwrap(virtRec)
-	_, ok := concrete.(*record.IncomingRequest)
-	if !ok {
-		return nil, errors.New("failed to decode request")
-	}
-
-	data, err := virtRec.Marshal()
-	if err != nil {
-		return nil, errors.New("failed to serialize request")
-	}
-
-	rep := reply.Request{
-		ID:     msg.Request,
-		Record: data,
-	}
-
-	return &rep, nil
-}
-
 func (h *Handler) handleGetJet(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetJet)
 	jet, actual := h.JetAccessor.ForID(ctx, msg.Pulse, msg.Object)
@@ -419,9 +402,8 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 		logger.Error(errors.Wrapf(err, "failed to store drop"))
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
-	if drop.Split {
+	if drop.SplitThresholdExceeded > h.cfg.JetSplit.ThresholdOverflowCount {
 		_, _, err = h.JetModifier.Split(ctx, futurePulse, drop.JetID)
-
 	} else {
 		err = h.JetModifier.Update(ctx, futurePulse, false, drop.JetID)
 	}

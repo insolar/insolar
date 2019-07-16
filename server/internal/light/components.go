@@ -271,15 +271,17 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Jets,
 		)
 
-		jetSplitter := executor.NewJetSplitter(jetCalculator, Jets, Jets, drops, drops, Pulses)
+		jetSplitter := executor.NewJetSplitter(
+			conf.JetSplit, jetCalculator, Jets, Jets, drops, drops, Pulses, records,
+		)
 
 		hotSender := executor.NewHotSender(
-			Bus,
 			drops,
 			indexes,
 			Pulses,
 			Jets,
 			conf.LightChainLimit,
+			WmBus,
 		)
 
 		pm := pulsemanager.NewPulseManager(
