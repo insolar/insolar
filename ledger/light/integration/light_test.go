@@ -2,6 +2,8 @@ package integration_test
 
 import (
 	"crypto/rand"
+	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
@@ -14,6 +16,8 @@ import (
 )
 
 func Test_BootstrapCalls(t *testing.T) {
+	t.Parallel()
+
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg)
@@ -41,15 +45,13 @@ func Test_BootstrapCalls(t *testing.T) {
 	})
 }
 
-func Test_AllOperations(t *testing.T) {
+func Test_BasicOperations(t *testing.T) {
+	t.Parallel()
+
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg)
 	require.NoError(t, err)
-	received := make(chan payload.Payload)
-	s.Receive(func(meta payload.Meta, pl payload.Payload) {
-		received <- pl
-	})
 
 	// First pulse goes in storage then interrupts.
 	s.Pulse(ctx)
@@ -58,13 +60,18 @@ func Test_AllOperations(t *testing.T) {
 
 	// Save and check code.
 	{
-		codeID, codeRecord := setCode(t, s)
-		codeRec := getCode(t, s, codeID)
-		assert.Equal(t, &codeRecord, codeRec.Virtual)
+		codeID, sent := setCode(t, s)
+		received := getCode(t, s, codeID)
+		assert.Equal(t, &sent, received.Virtual)
 	}
-
-	// Set request for object.
-	objectID, _ := setIncomingRequest(t, s, record.CTSaveAsChild)
+	var objectID insolar.ID
+	// Set and get request.
+	{
+		id, sent := setIncomingRequest(t, s, record.CTSaveAsChild)
+		received := getRequest(t, s, id)
+		assert.Equal(t, sent, received)
+		objectID = id
+	}
 	// Activate and check object.
 	{
 		state := activateObject(t, s, objectID)
@@ -80,6 +87,7 @@ func Test_AllOperations(t *testing.T) {
 	// Deactivate and check object.
 	{
 		deactivateObject(t, s, objectID)
+		received := make(chan payload.Payload)
 		s.Receive(func(meta payload.Meta, pl payload.Payload) {
 			received <- pl
 		})
@@ -92,13 +100,85 @@ func Test_AllOperations(t *testing.T) {
 	}
 }
 
-func setCode(t *testing.T, s *Server) (insolar.ID, record.Virtual) {
-	received := make(chan payload.Payload)
-	s.Receive(func(meta payload.Meta, pl payload.Payload) {
-		if _, ok := pl.(*payload.ID); !ok {
-			return
+func Test_Concurrency(t *testing.T) {
+	t.Skip()
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	cfg := DefaultLightConfig()
+	s, err := NewServer(ctx, cfg)
+	require.NoError(t, err)
+
+	// First pulse goes in storage then interrupts.
+	s.Pulse(ctx)
+	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
+	s.Pulse(ctx)
+
+	runner := func() {
+		// Save and check code.
+		{
+			codeID, sent := setCode(t, s)
+			received := getCode(t, s, codeID)
+			assert.Equal(t, &sent, received.Virtual)
 		}
-		received <- pl
+		var objectID insolar.ID
+		// Set and get request.
+		{
+			id, sent := setIncomingRequest(t, s, record.CTSaveAsChild)
+			received := getRequest(t, s, id)
+			assert.Equal(t, sent, received)
+			objectID = id
+		}
+		// Activate and check object.
+		{
+			state := activateObject(t, s, objectID)
+			_, material := getObject(t, s, objectID)
+			require.Equal(t, &state, material.Virtual)
+		}
+		// Amend and check object.
+		{
+			state := amendObject(t, s, objectID)
+			_, material := getObject(t, s, objectID)
+			require.Equal(t, &state, material.Virtual)
+		}
+		// Deactivate and check object.
+		{
+			deactivateObject(t, s, objectID)
+			received := make(chan payload.Payload)
+			s.Receive(func(meta payload.Meta, pl payload.Payload) {
+				received <- pl
+			})
+			s.Send(&payload.GetObject{
+				ObjectID: objectID,
+			})
+			pl := <-received
+			_, ok := pl.(*payload.Error)
+			assert.True(t, ok)
+		}
+	}
+
+	count := 100
+	var wg sync.WaitGroup
+	wg.Add(count)
+	for i := 0; i < count; i++ {
+		go func() {
+			runner()
+			wg.Done()
+		}()
+	}
+
+	wg.Wait()
+}
+
+func setCode(t *testing.T, s *Server) (insolar.ID, record.Virtual) {
+	received := make(chan payload.ID)
+	s.Receive(func(meta payload.Meta, pl payload.Payload) {
+		switch p := pl.(type) {
+		case *payload.Error:
+			panic(p.Text)
+		case *payload.ID:
+			received <- *p
+		}
 	})
 
 	code := make([]byte, 100)
@@ -111,19 +191,18 @@ func setCode(t *testing.T, s *Server) (insolar.ID, record.Virtual) {
 		Record: buf,
 	})
 	pl := <-received
-	id, ok := pl.(*payload.ID)
-	require.True(t, ok)
-	return id.ID, rec
+	return pl.ID, rec
 }
 
 func getCode(t *testing.T, s *Server, id insolar.ID) record.Material {
 	received := make(chan payload.Payload)
 	s.Receive(func(meta payload.Meta, pl payload.Payload) {
-		if _, ok := pl.(*payload.Code); !ok {
-			return
+		switch p := pl.(type) {
+		case *payload.Error:
+			panic(p.Text)
+		case *payload.Code:
+			received <- pl
 		}
-
-		received <- pl
 	})
 
 	s.Send(&payload.GetCode{
@@ -138,20 +217,40 @@ func getCode(t *testing.T, s *Server, id insolar.ID) record.Material {
 	return material
 }
 
-func setIncomingRequest(t *testing.T, s *Server, ct record.CallType) (insolar.ID, record.Virtual) {
-	received := make(chan payload.Payload)
+func getRequest(t *testing.T, s *Server, requestID insolar.ID) record.Virtual {
+	received := make(chan payload.Request)
 	s.Receive(func(meta payload.Meta, pl payload.Payload) {
-		if _, ok := pl.(*payload.RequestInfo); !ok {
-			return
+		switch p := pl.(type) {
+		case *payload.Error:
+			panic(p.Text)
+		case *payload.Request:
+			received <- *p
 		}
+	})
 
-		received <- pl
+	s.Send(&payload.GetRequest{
+		RequestID: requestID,
+	})
+	pl := <-received
+	return pl.Request
+}
+
+func setIncomingRequest(t *testing.T, s *Server, ct record.CallType) (insolar.ID, record.Virtual) {
+	received := make(chan payload.RequestInfo)
+	s.Receive(func(meta payload.Meta, pl payload.Payload) {
+		switch p := pl.(type) {
+		case *payload.Error:
+			panic(p.Text)
+		case *payload.RequestInfo:
+			received <- *p
+		}
 	})
 
 	args := make([]byte, 100)
 	_, err := rand.Read(args)
 	require.NoError(t, err)
 	objRef := gen.Reference()
+	fmt.Println(objRef.Record().DebugString())
 	rec := record.Wrap(record.IncomingRequest{
 		Object:    &objRef,
 		Arguments: args,
@@ -162,19 +261,18 @@ func setIncomingRequest(t *testing.T, s *Server, ct record.CallType) (insolar.ID
 		Request: rec,
 	})
 	pl := <-received
-	id, ok := pl.(*payload.RequestInfo)
-	require.True(t, ok)
-	return id.RequestID, rec
+	return pl.RequestID, rec
 }
 
 func activateObject(t *testing.T, s *Server, objectID insolar.ID) record.Virtual {
-	received := make(chan payload.Payload)
+	received := make(chan payload.ID)
 	s.Receive(func(meta payload.Meta, pl payload.Payload) {
-		if _, ok := pl.(*payload.ID); !ok {
-			return
+		switch p := pl.(type) {
+		case *payload.Error:
+			panic(p.Text)
+		case *payload.ID:
+			received <- *p
 		}
-
-		received <- pl
 	})
 
 	mem := make([]byte, 100)
@@ -200,20 +298,19 @@ func activateObject(t *testing.T, s *Server, objectID insolar.ID) record.Virtual
 		Record: buf,
 		Result: resBuf,
 	})
-	pl := <-received
-	_, ok := pl.(*payload.ID)
-	require.True(t, ok)
+	<-received
 	return rec
 }
 
 func amendObject(t *testing.T, s *Server, objectID insolar.ID) record.Virtual {
-	received := make(chan payload.Payload)
+	received := make(chan payload.ID)
 	s.Receive(func(meta payload.Meta, pl payload.Payload) {
-		if _, ok := pl.(*payload.ID); !ok {
-			return
+		switch p := pl.(type) {
+		case *payload.Error:
+			panic(p.Text)
+		case *payload.ID:
+			received <- *p
 		}
-
-		received <- pl
 	})
 
 	mem := make([]byte, 100)
@@ -238,20 +335,19 @@ func amendObject(t *testing.T, s *Server, objectID insolar.ID) record.Virtual {
 		Record: buf,
 		Result: resBuf,
 	})
-	pl := <-received
-	_, ok := pl.(*payload.ID)
-	require.True(t, ok)
+	<-received
 	return rec
 }
 
 func deactivateObject(t *testing.T, s *Server, objectID insolar.ID) record.Virtual {
-	received := make(chan payload.Payload)
+	received := make(chan payload.ID)
 	s.Receive(func(meta payload.Meta, pl payload.Payload) {
-		if _, ok := pl.(*payload.ID); !ok {
-			return
+		switch p := pl.(type) {
+		case *payload.Error:
+			panic(p.Text)
+		case *payload.ID:
+			received <- *p
 		}
-
-		received <- pl
 	})
 
 	mem := make([]byte, 100)
@@ -276,15 +372,21 @@ func deactivateObject(t *testing.T, s *Server, objectID insolar.ID) record.Virtu
 		Record: buf,
 		Result: resBuf,
 	})
-	pl := <-received
-	_, ok := pl.(*payload.ID)
-	require.True(t, ok)
+	<-received
 	return rec
 }
 
 func getObject(t *testing.T, s *Server, objectID insolar.ID) (record.Lifeline, record.Material) {
 	received := make(chan payload.Payload)
 	s.Receive(func(meta payload.Meta, pl payload.Payload) {
+		switch p := pl.(type) {
+		case *payload.Error:
+			panic(p.Text)
+		case *payload.Index:
+			received <- pl
+		case *payload.State:
+			received <- pl
+		}
 		received <- pl
 	})
 
