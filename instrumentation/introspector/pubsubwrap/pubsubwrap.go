@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/pkg/errors"
 )
 
 // FilterMiddleware an interface for message filtering and modification.
@@ -58,10 +59,11 @@ func (p *PubSubWrapper) Publish(topic string, messages ...*message.Message) erro
 			if err != nil {
 				switch err.(type) {
 				case decodeError:
-					fmt.Println("pubsubwrap: failed to decode message:", err)
+					fmt.Printf("pubsubwrap [middleware %T]: failed to decode message: %v", f, err)
 					break FiltersLoop
 				default:
-					panic("pubsubwrap: unexpected filter error: " + err.Error())
+					panic(errors.Errorf(
+						"pubsubwrap [middleware %T]: unexpected filter error: %v", f, err))
 				}
 			}
 			// message filtered, skip other filters
