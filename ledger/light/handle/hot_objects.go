@@ -20,28 +20,42 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/proc"
+	"github.com/pkg/errors"
 )
 
-type HotData struct {
-	dep     *proc.Dependencies
-	replyTo chan<- bus.Reply
-	message *message.HotData
+type HotObjects struct {
+	dep  *proc.Dependencies
+	meta payload.Meta
 }
 
-func NewHotData(dep *proc.Dependencies, rep chan<- bus.Reply, msg *message.HotData) *HotData {
-	return &HotData{
-		dep:     dep,
-		replyTo: rep,
-		message: msg,
+func NewHotObjects(dep *proc.Dependencies, meta payload.Meta) *HotObjects {
+	return &HotObjects{
+		dep:  dep,
+		meta: meta,
 	}
 }
 
-func (s *HotData) Present(ctx context.Context, f flow.Flow) error {
-	hdProc := proc.NewHotData(s.message, s.replyTo)
-	s.dep.HotData(hdProc)
+func (s *HotObjects) Present(ctx context.Context, f flow.Flow) error {
+	msg, err := payload.Unmarshal(s.meta.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal message")
+	}
+
+	hots, ok := msg.(*payload.HotObjects)
+	if !ok {
+		return errors.New("received wrong message")
+	}
+
+	d, err := drop.Decode(hots.Drop)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal drop")
+	}
+
+	hdProc := proc.NewHotObjects(s.meta, hots.Pulse, hots.JetID, *d, hots.Indexes)
+	s.dep.HotObjects(hdProc)
 	if err := f.Procedure(ctx, hdProc, false); err != nil {
 		return err
 	}

@@ -66,10 +66,12 @@ import (
 )
 
 type components struct {
-	cmp      component.Manager
-	NodeRef  string
-	NodeRole string
-	rollback *executor.DBRollback
+	cmp       component.Manager
+	NodeRef   string
+	NodeRole  string
+	rollback  *executor.DBRollback
+	inRouter  *watermillMsg.Router
+	outRouter *watermillMsg.Router
 }
 
 func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg insolar.GenesisHeavyConfig) (*components, error) {
@@ -246,7 +248,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		pm.PulseAccessor = Pulses
 		pm.JetModifier = jets
 
-		h := handler.New()
+		h := handler.New(cfg.Ledger)
 		h.RecordAccessor = records
 		h.RecordModifier = records
 		h.JetCoordinator = Coordinator
@@ -324,7 +326,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		}
 	}
 
-	startWatermill(ctx, wmLogger, pubSub, WmBus, NetworkService.SendMessageHandler, Handler.Process)
+	c.startWatermill(ctx, wmLogger, pubSub, WmBus, NetworkService.SendMessageHandler, Handler.Process)
 
 	return c, nil
 }
@@ -338,10 +340,18 @@ func (c *components) Start(ctx context.Context) error {
 }
 
 func (c *components) Stop(ctx context.Context) error {
+	err := c.inRouter.Close()
+	if err != nil {
+		inslogger.FromContext(ctx).Error("Error while closing router", err)
+	}
+	err = c.outRouter.Close()
+	if err != nil {
+		inslogger.FromContext(ctx).Error("Error while closing router", err)
+	}
 	return c.cmp.Stop(ctx)
 }
 
-func startWatermill(
+func (c *components) startWatermill(
 	ctx context.Context,
 	logger watermill.LoggerAdapter,
 	pubSub watermillMsg.PubSub,
@@ -377,7 +387,9 @@ func startWatermill(
 	)
 
 	startRouter(ctx, inRouter)
+	c.inRouter = inRouter
 	startRouter(ctx, outRouter)
+	c.outRouter = outRouter
 }
 
 func startRouter(ctx context.Context, router *watermillMsg.Router) {

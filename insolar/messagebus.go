@@ -230,8 +230,6 @@ const (
 	TypeGetJet
 	// TypeAbandonedRequestsNotification informs virtual node about unclosed requests.
 	TypeAbandonedRequestsNotification
-	// TypeGetRequest fetches request from ledger.
-	TypeGetRequest
 	// TypeGetPendingRequestID fetches a pending request id from ledger
 	TypeGetPendingRequestID
 	// TypeGetOpenRequests fetches open pending requests from a heavy to a provided pulse

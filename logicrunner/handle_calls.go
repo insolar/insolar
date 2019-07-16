@@ -19,13 +19,15 @@ package logicrunner
 import (
 	"context"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -35,12 +37,12 @@ import (
 type HandleCall struct {
 	dep *Dependencies
 
-	Message bus.Message
+	Message payload.Meta
+	Parcel  insolar.Parcel
 }
 
 func (h *HandleCall) sendToNextExecutor(
 	ctx context.Context,
-	es *ExecutionState,
 	broker *ExecutionBroker,
 	requestRef *Ref,
 ) {
@@ -61,24 +63,24 @@ func (h *HandleCall) sendToNextExecutor(
 
 	logger := inslogger.FromContext(ctx)
 
-	es.Lock()
+	broker.executionState.Lock()
 	// We want to remove element we have just added to es.Queue to eliminate doubling
 	transcript := broker.GetByReference(ctx, requestRef)
-	es.Unlock()
+	broker.executionState.Unlock()
 
 	// it might be already collected in OnPulse, that is why it already might not be in es.Queue
 	if transcript != nil {
 		logger.Debug("Sending additional request to next executor")
 		additionalCallMsg := message.AdditionalCallFromPreviousExecutor{
-			ObjectReference: es.Ref,
+			ObjectReference: broker.Ref,
 			RequestRef:      *requestRef,
 			Request:         *transcript.Request,
 			ServiceData:     serviceDataFromContext(transcript.Context),
 		}
-		if es.pending == message.PendingUnknown {
+		if broker.executionState.pending == message.PendingUnknown {
 			additionalCallMsg.Pending = message.NotPending
 		} else {
-			additionalCallMsg.Pending = es.pending
+			additionalCallMsg.Pending = broker.executionState.pending
 		}
 
 		if _, err := h.dep.lr.MessageBus.Send(ctx, &additionalCallMsg, nil); err != nil {
@@ -139,21 +141,21 @@ func (h *HandleCall) handleActual(
 		return nil, errors.New("can't get object reference")
 	}
 
-	es, broker := lr.StateStorage.UpsertExecutionState(*objRef)
+	broker := lr.StateStorage.UpsertExecutionState(*objRef)
 
-	es.Lock()
+	broker.executionState.Lock()
 	broker.Put(ctx, false, NewTranscript(ctx, *requestRef, request))
-	es.Unlock()
+	broker.executionState.Unlock()
 
 	procClarifyPendingState := ClarifyPendingState{
-		es:              es,
+		broker:          broker,
 		request:         &request,
 		ArtifactManager: lr.ArtifactManager,
 	}
 
 	if err := f.Procedure(ctx, &procClarifyPendingState, true); err != nil {
 		if err == flow.ErrCancelled {
-			h.sendToNextExecutor(ctx, es, broker, requestRef)
+			h.sendToNextExecutor(ctx, broker, requestRef)
 		} else {
 			logger.Error(" HandleCall.handleActual ] ClarifyPendingState returns error: ", err)
 		}
@@ -169,11 +171,10 @@ func (h *HandleCall) handleActual(
 }
 
 func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
-	parcel := h.Message.Parcel
-	ctx = loggerWithTargetID(ctx, parcel)
+	ctx = loggerWithTargetID(ctx, h.Parcel)
 	inslogger.FromContext(ctx).Debug("HandleCall.Present starts ...")
 
-	msg, ok := parcel.Message().(*message.CallMethod)
+	msg, ok := h.Parcel.Message().(*message.CallMethod)
 	if !ok {
 		return errors.New("is not CallMethod message")
 	}
@@ -184,17 +185,28 @@ func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
 	)
 	defer span.End()
 
-	r := bus.Reply{}
-	r.Reply, r.Err = h.handleActual(ctx, msg, f)
+	rep, err := h.handleActual(ctx, msg, f)
 
-	h.Message.ReplyTo <- r
+	var repMsg *watermillMsg.Message
+	if err != nil {
+		var newErr error
+		repMsg, newErr = payload.NewMessage(&payload.Error{Text: err.Error()})
+		if newErr != nil {
+			return newErr
+		}
+	} else {
+		repMsg = bus.ReplyAsMessage(ctx, rep)
+	}
+	go h.dep.Sender.Reply(ctx, h.Message, repMsg)
+
 	return nil
 }
 
 type HandleAdditionalCallFromPreviousExecutor struct {
 	dep *Dependencies
 
-	Message bus.Message
+	Message payload.Meta
+	Parcel  insolar.Parcel
 }
 
 // This is basically a simplified version of HandleCall.handleActual().
@@ -210,18 +222,18 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 	f flow.Flow,
 ) {
 	lr := h.dep.lr
-	es, broker := lr.StateStorage.UpsertExecutionState(msg.ObjectReference)
+	broker := lr.StateStorage.UpsertExecutionState(msg.ObjectReference)
 
-	es.Lock()
+	broker.executionState.Lock()
 	if msg.Pending == message.NotPending {
-		es.pending = message.NotPending
+		broker.executionState.pending = message.NotPending
 	}
 
 	broker.Put(ctx, false, NewTranscript(ctx, msg.RequestRef, msg.Request))
-	es.Unlock()
+	broker.executionState.Unlock()
 
 	procClarifyPendingState := ClarifyPendingState{
-		es:              es,
+		broker:          broker,
 		request:         &msg.Request,
 		ArtifactManager: lr.ArtifactManager,
 	}
@@ -238,7 +250,9 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 }
 
 func (h *HandleAdditionalCallFromPreviousExecutor) Present(ctx context.Context, f flow.Flow) error {
-	parcel := h.Message.Parcel
+	parcel := h.Parcel
+	inslogger.FromContext(ctx).Debug("HandleAdditionalCallFromPreviousExecutor.Present starts ...")
+
 	msg, ok := parcel.Message().(*message.AdditionalCallFromPreviousExecutor)
 	if !ok {
 		return errors.New("is not AdditionalCallFromPreviousExecutor message")
@@ -255,6 +269,8 @@ func (h *HandleAdditionalCallFromPreviousExecutor) Present(ctx context.Context, 
 	h.handleActual(ctx, msg, f)
 
 	// we never return any other replies
-	h.Message.ReplyTo <- bus.Reply{Reply: &reply.OK{}}
+	repMsg := bus.ReplyAsMessage(ctx, &reply.OK{})
+	h.dep.Sender.Reply(ctx, h.Message, repMsg)
+
 	return nil
 }

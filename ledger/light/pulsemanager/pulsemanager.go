@@ -160,7 +160,7 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		}
 		fromNetwork := m.NodeNet.GetWorkingNodes()
 		if len(fromNetwork) == 0 {
-			logger.Warnf("received zero nodes for pulse %d", newPulse.PulseNumber)
+			logger.Errorf("received zero nodes for pulse %d", newPulse.PulseNumber)
 			return nil, insolar.Pulse{}, errZeroNodes
 		}
 		toSet := make([]insolar.Node, 0, len(fromNetwork))

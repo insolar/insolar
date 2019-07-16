@@ -31,7 +31,6 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/messagebus"
 
 	"github.com/pkg/errors"
@@ -274,7 +273,7 @@ func (m *client) GetCode(
 		desc = &codeDescriptor{
 			ref:         code,
 			machineType: codeRecord.MachineType,
-			code:        p.Code,
+			code:        codeRecord.Code,
 		}
 		return desc, nil
 	case *payload.Error:
@@ -327,7 +326,7 @@ func (m *client) GetObject(
 	defer done()
 
 	var (
-		index        *object.Lifeline
+		index        *record.Lifeline
 		statePayload *payload.State
 	)
 	success := func() bool {
@@ -343,7 +342,7 @@ func (m *client) GetObject(
 		switch p := replyPayload.(type) {
 		case *payload.Index:
 			logger.Debug("reply index")
-			index = &object.Lifeline{}
+			index = &record.Lifeline{}
 			err := index.Unmarshal(p.Index)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to unmarshal index")
@@ -439,41 +438,35 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (*i
 		return nil, nil, err
 	}
 
-	sender = messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryJetSender(m.JetStorage),
-	)
-	genericReply, err = sender(
-		ctx,
-		&message.GetRequest{
-			Request: requestID,
-		}, &insolar.MessageSendOptions{
-			Receiver: node,
-		},
-	)
+	msg, err := payload.NewMessage(&payload.GetRequest{
+		RequestID: requestID,
+	})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrap(err, "failed to create a message")
+	}
+	reps, done := m.sender.SendTarget(ctx, msg, *node)
+	defer done()
+	res, ok := <-reps
+	if !ok {
+		return nil, nil, errors.New("no reply while fetching request")
 	}
 
-	switch r := genericReply.(type) {
-	case *reply.Request:
-		rec := record.Virtual{}
-		err = rec.Unmarshal(r.Record)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "GetPendingRequest: can't deserialize record")
-		}
-		concrete := record.Unwrap(&rec)
-		castedRecord, ok := concrete.(*record.IncomingRequest)
-		if !ok {
-			return nil, nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", r)
-		}
-
-		return insolar.NewReference(requestID), castedRecord, nil
-	case *reply.Error:
-		return nil, nil, r.Error()
-	default:
-		return nil, nil, fmt.Errorf("GetPendingRequest: unexpected reply: %#v", genericReply)
+	pl, err := payload.UnmarshalFromMeta(res.Payload)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to unmarshal reply")
 	}
+	req, ok := pl.(*payload.Request)
+	if !ok {
+		return nil, nil, fmt.Errorf("unexpected reply %T", pl)
+	}
+
+	concrete := record.Unwrap(&req.Request)
+	castedRecord, ok := concrete.(*record.IncomingRequest)
+	if !ok {
+		return nil, nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", concrete)
+	}
+
+	return insolar.NewReference(requestID), castedRecord, nil
 }
 
 // HasPendingRequests returns true if object has unclosed requests.
@@ -623,7 +616,6 @@ func (m *client) DeployCode(
 
 	psc := &payload.SetCode{
 		Record: buf,
-		Code:   code,
 	}
 
 	pl, err := m.sendWithRetry(ctx, psc, insolar.DynamicRoleLightExecutor, *insolar.NewReference(recID), 3)

@@ -299,14 +299,14 @@ func (s *consensusSuite) TearDownTest() {
 
 func (s *consensusSuite) waitForConsensus(consensusCount int) {
 	for i := 0; i < consensusCount; i++ {
-		for _, n := range s.fixture().bootstrapNodes {
+		for i, n := range s.fixture().bootstrapNodes {
 			err := <-n.consensusResult
-			s.NoError(err)
+			require.NoError(s.T(), err, "Failed to pass consensus on bootstrapNodes[%d] %s ", i, n.host)
 		}
 
 		for _, n := range s.fixture().networkNodes {
 			err := <-n.consensusResult
-			s.NoError(err)
+			require.NoError(s.T(), err, "Failed to pass consensus on networkNodes[%d] %s ", i, n.host)
 		}
 	}
 }
@@ -318,7 +318,7 @@ func (s *consensusSuite) waitForConsensusExcept(consensusCount int, exception in
 				continue
 			}
 			err := <-n.consensusResult
-			s.NoError(err)
+			require.NoError(s.T(), err, "Failed to pass consensus on bootstrapNodes[%d] %s ", i, n.host)
 		}
 
 		for _, n := range s.fixture().networkNodes {
@@ -326,7 +326,7 @@ func (s *consensusSuite) waitForConsensusExcept(consensusCount int, exception in
 				continue
 			}
 			err := <-n.consensusResult
-			s.NoError(err)
+			require.NoError(s.T(), err, "Failed to pass consensus on networkNodes[%d] %s ", i, n.host)
 		}
 	}
 }
@@ -398,7 +398,6 @@ func incrementTestPort() int {
 func (n *networkNode) init() error {
 	err := n.componentManager.Init(n.ctx)
 	n.serviceNetwork.PhaseManager = &phaseManagerWrapper{original: n.serviceNetwork.PhaseManager, result: n.consensusResult}
-	n.serviceNetwork.BaseGateway.PhaseManager = n.serviceNetwork.PhaseManager
 	return err
 }
 
