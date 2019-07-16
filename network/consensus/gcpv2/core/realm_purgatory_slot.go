@@ -48,96 +48,130 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 ///
 
-package tests
+package core
 
 import (
-	"context"
-	"fmt"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-	"math/rand"
+	"sync"
 )
 
-func newEmuNetworkBuilder(ctx context.Context, netStrategy NetStrategy,
-	roundStrategyFactory core.RoundStrategyFactory) emuNetworkBuilder {
+type purgatorySlot struct {
+	nodeID insolar.ShortNodeID
+	svf    cryptkit.SignatureVerifierFactory
+	//limiter
 
-	r := emuNetworkBuilder{}
-	r.network = NewEmuNetwork(netStrategy, ctx)
-	r.config = NewEmuLocalConfig(ctx)
-	r.primingCloudStateHash = EmuPrimingHash
-	r.strategyFactory = roundStrategyFactory
-	return r
+	mutex sync.RWMutex
+	sv    cryptkit.SignatureVerifier
+	intro profiles.StaticProfile
+	index member.Index
+	mode  member.OpMode
+	pw    member.Power
 }
 
-type emuNetworkBuilder struct {
-	network               *EmuNetwork
-	config                api.LocalNodeConfiguration
-	primingCloudStateHash cryptkit.DigestHolder
-	strategyFactory       core.RoundStrategyFactory
+func (p *purgatorySlot) GetStatic() profiles.StaticProfile {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
+	return p.intro
 }
 
-func (p *emuNetworkBuilder) StartNetwork(ctx context.Context) {
-	p.network.Start(ctx)
-}
+func (p *purgatorySlot) SetNodeIntroProfile(nip profiles.StaticProfile) {
 
-func (p *emuNetworkBuilder) StartPulsar(pulseCount int, pulseDelta uint16, pulsarAddr endpoints.Name,
-	nodes []profiles.StaticProfile) {
-
-	attempts := 4 + len(nodes)/10
-
-	senderChan := make(chan interface{})
-	go func() {
-		for {
-			payload, ok := <-senderChan
-			if !ok {
-				return
-			}
-			for i := 0; i < attempts; i++ {
-				sendTo := nodes[rand.Intn(len(nodes))].GetDefaultEndpoint().GetNameAddress()
-				p.network.SendToHost(sendTo, payload, pulsarAddr)
-			}
-		}
-	}()
-
-	go CreateGenerator(pulseCount, pulseDelta, senderChan)
-}
-
-func (p *emuNetworkBuilder) connectEmuNode(nodes []profiles.StaticProfile, selfIndex int) {
-
-	controlFeeder := &EmuControlFeeder{}
-	candidateFeeder := &core.SequentialCandidateFeeder{}
-	switch {
-	//case selfIndex%7 == 1:
-	//	introID := 8000 + selfIndex
-	//	intro := NewEmuNodeIntroByName(introID, fmt.Sprintf("v%04d", introID))
-	//	candidateFeeder.AddJoinCandidate(intro)
-	case selfIndex%5 == 2:
-		controlFeeder.leaveReason = uint32(selfIndex) //simulate leave
+	if p.nodeID != nip.GetStaticNodeID() {
+		panic("illegal value")
 	}
 
-	chronicles := NewEmuChronicles(nodes, selfIndex, p.primingCloudStateHash)
-	self := nodes[selfIndex]
-	node := NewConsensusHost(self.GetDefaultEndpoint().GetNameAddress())
-	node.ConnectTo(chronicles, p.network, p.strategyFactory, candidateFeeder, controlFeeder, p.config)
-}
-
-func generateNameList(countNeutral, countHeavy, countLight, countVirtual int) []string {
-	r := make([]string, 0, countNeutral+countHeavy+countLight+countVirtual)
-
-	r = appendNameList(len(r), r, "n%04d", countNeutral)
-	r = appendNameList(len(r), r, "h%04d", countHeavy)
-	r = appendNameList(len(r), r, "l%04d", countLight)
-	r = appendNameList(len(r), r, "v%04d", countVirtual)
-
-	return r
-}
-
-func appendNameList(baseNum int, r []string, f string, count int) []string {
-	for i := 0; i < count; i++ {
-		r = append(r, fmt.Sprintf(f, baseNum+i))
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	if p.intro == nip {
+		return
 	}
-	return r
+	p.intro = nip
+	p.sv = nil
+}
+
+func (p *purgatorySlot) GetDefaultEndpoint() endpoints.Outbound {
+	return p.GetStatic().GetDefaultEndpoint()
+}
+
+func (p *purgatorySlot) GetPublicKeyStore() cryptkit.PublicKeyStore {
+	return p.GetStatic().GetPublicKeyStore()
+}
+
+func (p *purgatorySlot) IsAcceptableHost(from endpoints.Inbound) bool {
+	return p.GetStatic().IsAcceptableHost(from)
+}
+
+func (p *purgatorySlot) GetNodeID() insolar.ShortNodeID {
+	return p.nodeID
+}
+
+func (p *purgatorySlot) GetStartPower() member.Power {
+	return p.GetStatic().GetStartPower()
+}
+
+func (p *purgatorySlot) GetPrimaryRole() member.PrimaryRole {
+	return p.GetStatic().GetPrimaryRole()
+}
+
+func (p *purgatorySlot) GetSpecialRoles() member.SpecialRole {
+	return p.GetStatic().GetSpecialRoles()
+}
+
+func (p *purgatorySlot) GetNodePublicKey() cryptkit.SignatureKeyHolder {
+	return p.GetStatic().GetNodePublicKey()
+}
+
+func (p *purgatorySlot) GetAnnouncementSignature() cryptkit.SignatureHolder {
+	return p.GetStatic().GetAnnouncementSignature()
+}
+
+func (p *purgatorySlot) GetIntroduction() profiles.NodeIntroduction {
+	return p.GetStatic().GetIntroduction()
+}
+
+func (p *purgatorySlot) GetSignatureVerifier() cryptkit.SignatureVerifier {
+	p.mutex.RLock()
+	if p.sv != nil || p.svf == nil {
+		return p.sv
+	}
+	p.mutex.RUnlock()
+	return p.createSignatureVerifier()
+}
+
+func (p *purgatorySlot) createSignatureVerifier() cryptkit.SignatureVerifier {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	if p.sv == nil {
+		p.sv = p.svf.GetSignatureVerifierWithPKS(p.intro.GetPublicKeyStore())
+	}
+	return p.sv
+}
+
+func (p *purgatorySlot) GetOpMode() member.OpMode {
+	if p.index.IsJoiner() {
+		return member.ModeNormal
+	} else {
+		return p.mode
+	}
+}
+
+func (p *purgatorySlot) GetIndex() member.Index {
+	return p.index.Ensure()
+}
+
+func (p *purgatorySlot) IsJoiner() bool {
+	return p.index.IsJoiner()
+}
+
+func (p *purgatorySlot) GetDeclaredPower() member.Power {
+	if p.index.IsJoiner() || p.mode.IsPowerless() {
+		return 0
+	} else {
+		return p.pw
+	}
 }

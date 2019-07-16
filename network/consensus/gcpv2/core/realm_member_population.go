@@ -54,10 +54,7 @@ import (
 	"context"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/consensuskit"
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
 
 func NewMemberRealmPopulation(strategy RoundStrategy, population census.OnlinePopulation, phase2ExtLimit uint8,
@@ -99,7 +96,7 @@ func (r *MemberRealmPopulation) IsComplete() bool {
 
 func (r *MemberRealmPopulation) initPopulation(phase2ExtLimit uint8) {
 	activeProfiles := r.population.GetProfiles()
-	thisNodeID := r.population.GetLocalProfile().GetShortNodeID()
+	thisNodeID := r.population.GetLocalProfile().GetNodeID()
 
 	nodes := make([]NodeAppearance, r.indexedCount)
 
@@ -115,7 +112,7 @@ func (r *MemberRealmPopulation) initPopulation(phase2ExtLimit uint8) {
 		n.init(p, nil, r.baselineWeight, phase2ExtLimit)
 		r.nodeInit(context.Background(), n)
 
-		if p.GetShortNodeID() == thisNodeID {
+		if p.GetNodeID() == thisNodeID {
 			if r.self != nil {
 				panic("schizophrenia")
 			}
@@ -170,7 +167,7 @@ func (r *MemberRealmPopulation) GetIndexedNodes() []*NodeAppearance {
 	return r.nodeIndex
 }
 
-func (r *MemberRealmPopulation) AddToDynamics(n *NodeAppearance) (*NodeAppearance, []*NodeAppearance) {
+func (r *MemberRealmPopulation) AddToDynamics(n *NodeAppearance) *NodeAppearance {
 	if !n.profile.IsJoiner() {
 		panic("illegal value")
 	}
@@ -182,33 +179,4 @@ func (r *MemberRealmPopulation) CreateVectorHelper() *RealmVectorHelper {
 	v := r.DynamicRealmPopulation.CreateVectorHelper()
 	v.realmPopulation = r
 	return v
-}
-
-var _ profiles.ActiveNode = &joiningNodeProfile{}
-
-type joiningNodeProfile struct {
-	//mutex sync.Mutex
-	profiles.NodeIntroProfile
-}
-
-// TODO access profiles.NodeIntroProfile under lock
-
-func (p *joiningNodeProfile) IsJoiner() bool {
-	return true
-}
-
-func (p *joiningNodeProfile) GetOpMode() member.OpMode {
-	return member.ModeNormal
-}
-
-func (p *joiningNodeProfile) GetIndex() member.Index {
-	return member.JoinerIndex.Ensure()
-}
-
-func (p *joiningNodeProfile) GetDeclaredPower() member.Power {
-	return p.GetStartPower()
-}
-
-func (*joiningNodeProfile) GetSignatureVerifier() cryptkit.SignatureVerifier {
-	return nil
 }

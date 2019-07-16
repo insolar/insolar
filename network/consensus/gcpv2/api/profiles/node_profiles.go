@@ -73,34 +73,39 @@ type Host interface {
 
 type NodeIntroduction interface {
 	// full intro
-	GetShortNodeID() insolar.ShortNodeID
+	GetIntroNodeID() insolar.ShortNodeID
 	GetReference() insolar.Reference
 	IsAllowedPower(p member.Power) bool
 	ConvertPowerRequest(request power.Request) member.Power
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.NodeIntroProfile -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.StaticProfile -o . -s _mock.go
 
-type nodeIntroProfile interface {
-	GetShortNodeID() insolar.ShortNodeID
+type staticProfile interface {
+	GetStaticNodeID() insolar.ShortNodeID
 	GetPrimaryRole() member.PrimaryRole
 	GetSpecialRoles() member.SpecialRole
 	GetNodePublicKey() cryptkit.SignatureKeyHolder
 	GetStartPower() member.Power
 }
 
-type NodeIntroProfile interface { //brief intro
+type StaticProfile interface { //brief intro
 	Host
-	nodeIntroProfile
+	staticProfile
 	GetAnnouncementSignature() cryptkit.SignatureHolder
 
-	HasIntroduction() bool             // must be always true for LocalNode
-	GetIntroduction() NodeIntroduction // not null, full intro, will panic when HasIntroduction() == false
+	GetIntroduction() NodeIntroduction // must be always be not null for LocalNode, full intro, == nil when has no full
 }
 
 type BaseNode interface {
-	// TODO Rename
-	NodeIntroProfile
+	//StaticProfile
+	GetNodeID() insolar.ShortNodeID
+
+	/*
+		As dynamic nodes may update static part info, code inside consenus logic MUST access static profile
+		by getting it GetStatic() to ensure consistency among attributes
+	*/
+	GetStatic() StaticProfile
 	GetSignatureVerifier() cryptkit.SignatureVerifier
 	GetOpMode() member.OpMode
 }
@@ -108,7 +113,6 @@ type BaseNode interface {
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.ActiveNode -o . -s _mock.go
 
 type ActiveNode interface {
-	// TODO Rename
 	BaseNode
 	GetIndex() member.Index
 	IsJoiner() bool
@@ -116,13 +120,12 @@ type ActiveNode interface {
 }
 
 type EvictedNode interface {
-	// TODO Rename
 	BaseNode
 	GetLeaveReason() uint32
 }
 
 type BriefCandidateProfile interface {
-	nodeIntroProfile
+	staticProfile
 
 	GetDefaultEndpoint() endpoints.Outbound
 	GetJoinerSignature() cryptkit.SignatureHolder
@@ -146,9 +149,9 @@ type CandidateProfile interface {
 }
 
 type Factory interface {
-	CreateBriefIntroProfile(candidate BriefCandidateProfile) NodeIntroProfile
-	/* This method MUST: (1) ensure same values of both params; (2) create a new copy of NodeIntroProfile */
-	CreateFullIntroProfile(candidate CandidateProfile) NodeIntroProfile
+	CreateBriefIntroProfile(candidate BriefCandidateProfile) StaticProfile
+	/* This method MUST: (1) ensure same values of both params; (2) create a new copy of StaticProfile */
+	CreateFullIntroProfile(candidate CandidateProfile) StaticProfile
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.LocalNode -o . -s _mock.go
@@ -160,6 +163,9 @@ type LocalNode interface {
 
 type Updatable interface {
 	ActiveNode
+
+	AsActiveNode() ActiveNode
+
 	SetOpMode(m member.OpMode)
 	SetPower(declaredPower member.Power)
 	SetRank(index member.Index, m member.OpMode, declaredPower member.Power)
@@ -290,7 +296,7 @@ func NewMembershipAnnouncementWithLeave(mp MembershipProfile, leaveReason uint32
 	}
 }
 
-func EqualIntroProfiles(p NodeIntroProfile, o NodeIntroProfile) bool {
+func EqualIntroProfiles(p StaticProfile, o StaticProfile) bool {
 	if p == nil || o == nil {
 		return false
 	}
@@ -298,7 +304,7 @@ func EqualIntroProfiles(p NodeIntroProfile, o NodeIntroProfile) bool {
 		return true
 	}
 
-	if p.GetShortNodeID() != o.GetShortNodeID() || p.GetPrimaryRole() != o.GetPrimaryRole() ||
+	if p.GetStaticNodeID() != o.GetStaticNodeID() || p.GetPrimaryRole() != o.GetPrimaryRole() ||
 		p.GetSpecialRoles() != o.GetSpecialRoles() || p.GetStartPower() != o.GetStartPower() ||
 		!p.GetNodePublicKey().Equals(o.GetNodePublicKey()) {
 		return false

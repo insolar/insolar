@@ -72,8 +72,8 @@ type copyFromPopulation interface {
 
 var _ census.OnlinePopulation = &OneNodePopulation{}
 
-func NewOneNodePopulation(localNode profiles.NodeIntroProfile, verifier cryptkit.SignatureVerifier) OneNodePopulation {
-	localNode.GetShortNodeID()
+func NewOneNodePopulation(localNode profiles.StaticProfile, verifier cryptkit.SignatureVerifier) OneNodePopulation {
+	localNode.GetStaticNodeID()
 	return OneNodePopulation{
 		localNode: updatableSlot{
 			NodeProfileSlot: NewNodeProfile(0, localNode, verifier, localNode.GetStartPower()),
@@ -81,8 +81,8 @@ func NewOneNodePopulation(localNode profiles.NodeIntroProfile, verifier cryptkit
 	}
 }
 
-func NewManyNodePopulation(localNode profiles.NodeIntroProfile, nodes []profiles.NodeIntroProfile) ManyNodePopulation {
-	localNode.GetShortNodeID()
+func NewManyNodePopulation(localNode profiles.StaticProfile, nodes []profiles.StaticProfile) ManyNodePopulation {
+	localNode.GetStaticNodeID()
 	r := ManyNodePopulation{}
 	r.makeOfProfiles(nodes, localNode)
 	return r
@@ -108,7 +108,7 @@ func (c *OneNodePopulation) copyTo(p copyFromPopulation, fullCopy bool) {
 }
 
 func (c *OneNodePopulation) FindProfile(nodeID insolar.ShortNodeID) profiles.ActiveNode {
-	if c.localNode.GetShortNodeID() != nodeID {
+	if c.localNode.GetNodeID() != nodeID {
 		return nil
 	}
 	return &c.localNode
@@ -148,12 +148,12 @@ func (c *ManyNodePopulation) makeFullCopyOf(slots []updatableSlot, local *updata
 
 	for i := range c.slots {
 		v := &c.slots[i]
-		id := v.GetShortNodeID()
+		id := v.GetNodeID()
 		if _, ok := c.slotByID[id]; ok {
 			panic(fmt.Sprintf("duplicate ShortNodeID: %v", id))
 		}
 		c.slotByID[id] = v
-		if local.GetShortNodeID() == id {
+		if local.GetNodeID() == id {
 			c.local = v
 		}
 	}
@@ -198,11 +198,11 @@ func (c *ManyNodePopulation) makeCopyOfMapAndSeparateEvicts(slots map[insolar.Sh
 		}
 		c.slots[i] = *vv
 		c.slots[i].index = i
-		c.slotByID[vv.GetShortNodeID()] = &c.slots[i]
+		c.slotByID[vv.GetNodeID()] = &c.slots[i]
 		i++
 	}
 
-	c.local = c.slotByID[local.GetShortNodeID()]
+	c.local = c.slotByID[local.GetNodeID()]
 	if c.local == nil {
 		panic("illegal state")
 	}
@@ -223,29 +223,29 @@ func (c *ManyNodePopulation) makeCopyOfMapAndSort(slots map[insolar.ShortNodeID]
 	for i := range c.slots {
 		v := &c.slots[i]
 		v.SetIndex(member.AsIndex(i))
-		c.slotByID[v.GetShortNodeID()] = v
+		c.slotByID[v.GetNodeID()] = v
 	}
 
-	c.local = c.slotByID[local.GetShortNodeID()]
+	c.local = c.slotByID[local.GetNodeID()]
 	if c.local == nil {
 		panic("illegal state")
 	}
 }
 
-func (c *ManyNodePopulation) makeOfProfiles(nodes []profiles.NodeIntroProfile, localNode profiles.NodeIntroProfile) {
+func (c *ManyNodePopulation) makeOfProfiles(nodes []profiles.StaticProfile, localNode profiles.StaticProfile) {
 	buf := make([]updatableSlot, len(nodes)+1) // +1 local node may not be on the list
 	c.slotByID = make(map[insolar.ShortNodeID]*updatableSlot, len(nodes)+1)
 
 	c.local = &buf[0]
 	c.local.index = 0
-	c.local.NodeIntroProfile = localNode
-	c.slotByID[localNode.GetShortNodeID()] = c.local
+	c.local.StaticProfile = localNode
+	c.slotByID[localNode.GetStaticNodeID()] = c.local
 
 	slotIndex := member.AsIndex(1)
 
 	for _, n := range nodes {
-		id := n.GetShortNodeID()
-		if id == localNode.GetShortNodeID() {
+		id := n.GetStaticNodeID()
+		if id == localNode.GetStaticNodeID() {
 			continue
 		}
 		if _, ok := c.slotByID[id]; ok {
@@ -305,11 +305,11 @@ func NewDynamicPopulationCopySelf(src copyToPopulation) DynamicPopulation {
 func (c *DynamicPopulation) makeFullCopyOf(slots []updatableSlot, local *updatableSlot) {
 	c.slotByID = make(map[insolar.ShortNodeID]*updatableSlot, len(slots))
 
-	localID := local.GetShortNodeID()
+	localID := local.GetNodeID()
 
 	for i := range slots {
 		v := slots[i]
-		id := v.GetShortNodeID()
+		id := v.GetNodeID()
 		if _, ok := c.slotByID[id]; ok {
 			panic(fmt.Sprintf("duplicate ShortNodeID: %v", id))
 		}
@@ -326,7 +326,7 @@ func (c *DynamicPopulation) makeSelfCopyOf(slots []updatableSlot, local *updatab
 	v := *local
 	v.index = 0
 	c.local = &v
-	c.slotByID[v.GetShortNodeID()] = c.local
+	c.slotByID[v.GetNodeID()] = c.local
 }
 
 func (c *DynamicPopulation) FindProfile(nodeID insolar.ShortNodeID) profiles.ActiveNode {
@@ -394,8 +394,8 @@ func (c *DynamicPopulation) CopyAndSeparate() (*ManyNodePopulation, census.Evict
 	return &r, &evPop
 }
 
-func (c *DynamicPopulation) AddProfile(n profiles.NodeIntroProfile) profiles.Updatable {
-	id := n.GetShortNodeID()
+func (c *DynamicPopulation) AddProfile(n profiles.StaticProfile) profiles.Updatable {
+	id := n.GetStaticNodeID()
 	if _, ok := c.slotByID[id]; ok {
 		panic(fmt.Sprintf("duplicate ShortNodeID: %v", id))
 	}
@@ -410,7 +410,7 @@ func (c *DynamicPopulation) RemoveProfile(id insolar.ShortNodeID) {
 
 func (c *DynamicPopulation) RemoveOthers() {
 	c.slotByID = make(map[insolar.ShortNodeID]*updatableSlot)
-	c.slotByID[c.local.GetShortNodeID()] = c.local
+	c.slotByID[c.local.GetNodeID()] = c.local
 }
 
 type slotSorter struct {

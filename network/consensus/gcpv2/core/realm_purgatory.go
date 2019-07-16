@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,24 +46,53 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-//
+///
 
 package core
 
 import (
 	"context"
 	"fmt"
-	"sync"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/consensuskit"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
+	"sync"
 )
 
-func NewDynamicRealmPopulation(baselineWeight uint32, local profiles.ActiveNode, nodeCountHint int, phase2ExtLimit uint8,
-	fn NodeInitFunc) *DynamicRealmPopulation {
+type NodePhantasm struct {
+	mutex   sync.Mutex
+	limiter phases.PacketLimiter
 
-	r := &DynamicRealmPopulation{
+	//delayedPackets
+	visions map[string]*nodeVision
+
+	//callback *nodeContext
+}
+
+type nodeVision struct {
+	visionOf          *NodeAppearance
+	directAnnouncer   *NodeAppearance
+	indirectAnnouncer *NodeAppearance
+
+	profile profiles.ActiveNode // set by construction
+
+	announceSignature proofs.MemberAnnouncementSignature // one-time set
+	stateEvidence     proofs.NodeStateHashEvidence       // one-time set
+	requestedPower    member.Power                       // one-time set
+
+	firstFraudDetails *misbehavior.FraudError
+
+	neighborReports uint8
+}
+
+func NewRealmPurgatory(baselineWeight uint32, local profiles.ActiveNode, nodeCountHint int, phase2ExtLimit uint8,
+	fn NodeInitFunc) *RealmPurgatory {
+
+	r := &RealmPurgatory{
 		nodeInit:       fn,
 		baselineWeight: baselineWeight,
 		phase2ExtLimit: phase2ExtLimit,
@@ -73,9 +102,7 @@ func NewDynamicRealmPopulation(baselineWeight uint32, local profiles.ActiveNode,
 	return r
 }
 
-var _ RealmPopulation = &DynamicRealmPopulation{}
-
-type DynamicRealmPopulation struct {
+type RealmPurgatory struct {
 	nodeInit       NodeInitFunc
 	baselineWeight uint32
 	phase2ExtLimit uint8
@@ -89,45 +116,49 @@ type DynamicRealmPopulation struct {
 	nodeIndex    []*NodeAppearance
 	nodeShuffle  []*NodeAppearance // excluding self
 	dynamicNodes map[insolar.ShortNodeID]*NodeAppearance
+	//	purgatoryByEP map[string]*NodeAppearance
+	purgatoryByPK map[string]*NodeAppearance
+	purgatoryByID map[insolar.ShortNodeID]*[]*NodeAppearance
+	purgatoryOuts map[insolar.ShortNodeID]*NodeAppearance
 }
 
-func (r *DynamicRealmPopulation) initPopulation(local profiles.ActiveNode, nodeCountHint int) {
+func (r *RealmPurgatory) initPopulation(local profiles.ActiveNode, nodeCountHint int) {
 	r.self = r.CreateNodeAppearance(context.Background(), local)
 	r.dynamicNodes = make(map[insolar.ShortNodeID]*NodeAppearance, nodeCountHint)
 }
 
-func (r *DynamicRealmPopulation) GetSelf() *NodeAppearance {
+func (r *RealmPurgatory) GetSelf() *NodeAppearance {
 	return r.self
 }
 
-func (r *DynamicRealmPopulation) GetNodeCount() int {
+func (r *RealmPurgatory) GetNodeCount() int {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 	return len(r.nodeIndex)
 }
 
-func (r *DynamicRealmPopulation) GetJoinersCount() int {
+func (r *RealmPurgatory) GetJoinersCount() int {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 	return r.joinerCount
 }
 
-func (r *DynamicRealmPopulation) GetOthersCount() int {
+func (r *RealmPurgatory) GetOthersCount() int {
 	return r.GetNodeCount() - 1
 }
 
-func (r *DynamicRealmPopulation) GetBftMajorityCount() int {
+func (r *RealmPurgatory) GetBftMajorityCount() int {
 	return consensuskit.BftMajority(r.GetNodeCount())
 }
 
-func (r *DynamicRealmPopulation) GetNodeAppearance(id insolar.ShortNodeID) *NodeAppearance {
+func (r *RealmPurgatory) GetNodeAppearance(id insolar.ShortNodeID) *NodeAppearance {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 
 	return r.dynamicNodes[id]
 }
 
-func (r *DynamicRealmPopulation) GetActiveNodeAppearance(id insolar.ShortNodeID) *NodeAppearance {
+func (r *RealmPurgatory) GetActiveNodeAppearance(id insolar.ShortNodeID) *NodeAppearance {
 	na := r.GetNodeAppearance(id)
 	if !na.GetProfile().IsJoiner() {
 		return na
@@ -135,7 +166,7 @@ func (r *DynamicRealmPopulation) GetActiveNodeAppearance(id insolar.ShortNodeID)
 	return nil
 }
 
-func (r *DynamicRealmPopulation) GetJoinerNodeAppearance(id insolar.ShortNodeID) *NodeAppearance {
+func (r *RealmPurgatory) GetJoinerNodeAppearance(id insolar.ShortNodeID) *NodeAppearance {
 	na := r.GetNodeAppearance(id)
 	if !na.GetProfile().IsJoiner() {
 		return nil
@@ -143,7 +174,7 @@ func (r *DynamicRealmPopulation) GetJoinerNodeAppearance(id insolar.ShortNodeID)
 	return na
 }
 
-func (r *DynamicRealmPopulation) GetNodeAppearanceByIndex(idx int) *NodeAppearance {
+func (r *RealmPurgatory) GetNodeAppearanceByIndex(idx int) *NodeAppearance {
 	if idx < 0 {
 		panic("illegal value")
 	}
@@ -157,21 +188,21 @@ func (r *DynamicRealmPopulation) GetNodeAppearanceByIndex(idx int) *NodeAppearan
 	return r.nodeIndex[idx]
 }
 
-func (r *DynamicRealmPopulation) GetShuffledOtherNodes() []*NodeAppearance {
+func (r *RealmPurgatory) GetShuffledOtherNodes() []*NodeAppearance {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 
 	return r.nodeShuffle
 }
 
-func (r *DynamicRealmPopulation) IsComplete() bool {
+func (r *RealmPurgatory) IsComplete() bool {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 
 	return len(r.nodeIndex) == r.indexedCount
 }
 
-func (r *DynamicRealmPopulation) GetIndexedNodes() []*NodeAppearance {
+func (r *RealmPurgatory) GetIndexedNodes() []*NodeAppearance {
 	cp, _ := r.GetIndexedNodesWithCheck()
 	// if !ok {
 	//	panic("node set is incomplete")
@@ -179,7 +210,7 @@ func (r *DynamicRealmPopulation) GetIndexedNodes() []*NodeAppearance {
 	return cp
 }
 
-func (r *DynamicRealmPopulation) GetIndexedNodesWithCheck() ([]*NodeAppearance, bool) {
+func (r *RealmPurgatory) GetIndexedNodesWithCheck() ([]*NodeAppearance, bool) {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 
@@ -189,7 +220,7 @@ func (r *DynamicRealmPopulation) GetIndexedNodesWithCheck() ([]*NodeAppearance, 
 	return cp, len(r.nodeIndex) == r.indexedCount
 }
 
-func (r *DynamicRealmPopulation) CreateNodeAppearance(ctx context.Context, np profiles.ActiveNode) *NodeAppearance {
+func (r *RealmPurgatory) CreateNodeAppearance(ctx context.Context, np profiles.ActiveNode) *NodeAppearance {
 
 	n := &NodeAppearance{}
 	n.init(np, nil, r.baselineWeight, r.phase2ExtLimit)
@@ -198,7 +229,53 @@ func (r *DynamicRealmPopulation) CreateNodeAppearance(ctx context.Context, np pr
 	return n
 }
 
-func (r *DynamicRealmPopulation) AddToDynamics(n *NodeAppearance) *NodeAppearance {
+func (r *RealmPurgatory) AddToPurgatory(n *NodeAppearance) (*NodeAppearance, PurgatoryNodeState) {
+	nip := n.profile.GetStatic()
+	if nip.GetIntroduction() != nil {
+		panic("illegal value")
+	}
+
+	id := nip.GetStaticNodeID()
+	na := r.GetActiveNodeAppearance(id)
+	if na != nil {
+		return na, PurgatoryExistingMember
+	}
+
+	r.rw.Lock()
+	defer r.rw.Unlock()
+
+	nn := r.dynamicNodes[id]
+	if nn != nil {
+		return nn, PurgatoryExistingMember
+	}
+
+	if r.purgatoryByPK == nil {
+		r.purgatoryByPK = make(map[string]*NodeAppearance)
+		r.purgatoryByID = make(map[insolar.ShortNodeID]*[]*NodeAppearance)
+
+		r.purgatoryByPK[nip.GetNodePublicKey().AsByteString()] = n
+		r.purgatoryByID[nip.GetStaticNodeID()] = &[]*NodeAppearance{n}
+		return n, 0
+	}
+
+	pk := nip.GetNodePublicKey().AsByteString()
+	nn = r.purgatoryByPK[pk]
+	if nn != nil {
+		return nn, PurgatoryDuplicatePK
+	}
+
+	nodes := r.purgatoryByID[id]
+
+	if nodes == nil {
+		nodes = &[]*NodeAppearance{n}
+		r.purgatoryByID[id] = nodes
+		return n, 0
+	}
+	*nodes = append(*nodes, n)
+	return n, PurgatoryNodeState(len(*nodes) - 1)
+}
+
+func (r *RealmPurgatory) AddToDynamics(n *NodeAppearance) (*NodeAppearance, []*NodeAppearance) {
 	nip := n.profile.GetStatic()
 
 	if nip.GetIntroduction() == nil {
@@ -210,9 +287,22 @@ func (r *DynamicRealmPopulation) AddToDynamics(n *NodeAppearance) *NodeAppearanc
 
 	id := nip.GetStaticNodeID()
 
-	na := r.dynamicNodes[id]
+	delete(r.purgatoryByPK, nip.GetNodePublicKey().AsByteString())
+	nodes := r.purgatoryByID[id]
+	if nodes != nil {
+		delete(r.purgatoryByID, id)
+	} else {
+		nodes = &[]*NodeAppearance{}
+	}
+
+	na := r.GetActiveNodeAppearance(id)
 	if na != nil {
-		return na
+		return na, *nodes
+	}
+
+	na = r.dynamicNodes[id]
+	if na != nil {
+		return na, *nodes
 	}
 
 	if n.profile.IsJoiner() {
@@ -234,16 +324,17 @@ func (r *DynamicRealmPopulation) AddToDynamics(n *NodeAppearance) *NodeAppearanc
 		r.indexedCount++
 		r.nodeShuffle = append(r.nodeShuffle, n)
 	}
-	return n
+	return n, *nodes
 }
 
+////
+//func (r *RealmPurgatory) CreateVectorHelper() *RealmVectorHelper {
+//	r.rw.RLock()
+//	defer r.rw.RUnlock()
 //
-func (r *DynamicRealmPopulation) CreateVectorHelper() *RealmVectorHelper {
-	r.rw.RLock()
-	defer r.rw.RUnlock()
-
-	v := &RealmVectorHelper{realmPopulation: r}
-	v.setArrayNodes(r.nodeIndex, r.dynamicNodes, r.self.callback.GetPopulationVersion())
-	v.realmPopulation = r
-	return v
-}
+//	v := &RealmVectorHelper{realmPopulation: r}
+//	v.setArrayNodes(r.nodeIndex, r.dynamicNodes, r.self.callback.GetPopulationVersion())
+//	v.realmPopulation = r
+//	return v
+//}
+//

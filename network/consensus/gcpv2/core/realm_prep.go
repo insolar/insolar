@@ -139,12 +139,13 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 	if int(pt) < len(p.packetDispatchers) {
 		pd := p.packetDispatchers[pt]
 		if pd != nil {
+
+			//this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
 			var err error
-			// TODO enable lazy parsing on the packet
-			//packet, err = packet.ParsePacketBody()
-			//if err != nil {
-			//	return err
-			//}
+			packet, err = LazyPacketParse(packet)
+			if err != nil {
+				return err
+			}
 
 			err = pd.DispatchHostPacket(ctx, packet, from, verifyFlags)
 			if err != nil {

@@ -73,7 +73,7 @@ type PacketParser interface {
 	IsRelayForbidden() bool
 
 	GetPacketSignature() cryptkit.SignedDigest
-	//ParsePacketBody() (PacketParser, error) //enables lazy parsing / parsing only after packet validation
+	ParsePacketBody() (PacketParser, error) //enables lazy parsing / parsing only after packet validation
 
 	GetPulsePacket() PulsePacketReader
 	GetMemberPacket() MemberPacketReader
@@ -172,6 +172,7 @@ type MembershipAnnouncementReader interface {
 		If this reader is part of Neighbourhood then nonzero GetJoinerID() will be equal to GetNodeID()
 	*/
 	GetJoinerID() insolar.ShortNodeID
+	GetJoinerIntroducedByID() insolar.ShortNodeID
 	/* Can be nil when this reader is part of Neighbourhood - then joiner data is in the sender's announcement */
 	GetJoinerAnnouncement() JoinerAnnouncementReader
 }

@@ -65,14 +65,14 @@ type SimpleProfileIntroFactory struct {
 	pksFactory cryptkit.KeyStoreFactory
 }
 
-func (p *SimpleProfileIntroFactory) CreateBriefIntroProfile(candidate profiles.BriefCandidateProfile) profiles.NodeIntroProfile {
+func (p *SimpleProfileIntroFactory) CreateBriefIntroProfile(candidate profiles.BriefCandidateProfile) profiles.StaticProfile {
 
 	pks := p.pksFactory.GetPublicKeyStore(candidate.GetNodePublicKey())
-	return profiles.NewNodeIntroProfileOfBrief(candidate, pks)
+	return profiles.NewStaticProfileByBrief(candidate, pks)
 }
 
-func (p *SimpleProfileIntroFactory) CreateFullIntroProfile(candidate profiles.CandidateProfile) profiles.NodeIntroProfile {
+func (p *SimpleProfileIntroFactory) CreateFullIntroProfile(candidate profiles.CandidateProfile) profiles.StaticProfile {
 
 	pks := p.pksFactory.GetPublicKeyStore(candidate.GetNodePublicKey())
-	return profiles.NewNodeIntroProfileOfFull(candidate, pks)
+	return profiles.NewStaticProfileByFull(candidate, pks)
 }

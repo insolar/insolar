@@ -66,6 +66,10 @@ type PacketParserMock struct {
 	IsRelayForbiddenMock       mPacketParserMockIsRelayForbidden
 }
 
+func (m *PacketParserMock) ParsePacketBody() (PacketParser, error) {
+	return nil, nil
+}
+
 //NewPacketParserMock returns a mock for github.com/insolar/insolar/network/consensus/gcpv2/api/transport.PacketParser
 func NewPacketParserMock(t minimock.Tester) *PacketParserMock {
 	m := &PacketParserMock{t: t}

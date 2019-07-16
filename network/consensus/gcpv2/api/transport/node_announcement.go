@@ -63,7 +63,7 @@ import (
 func NewNodeAnnouncement(np profiles.ActiveNode, ma profiles.MembershipAnnouncement, nodeCount int,
 	pn pulse.Number) *NodeAnnouncementProfile {
 	return &NodeAnnouncementProfile{
-		nodeID:    np.GetShortNodeID(),
+		nodeID:    np.GetNodeID(),
 		nodeCount: uint16(nodeCount),
 		ma:        ma,
 		pn:        pn,
@@ -112,6 +112,10 @@ func (c *NodeAnnouncementProfile) GetLeaveReason() uint32 {
 
 func (c *NodeAnnouncementProfile) GetJoinerID() insolar.ShortNodeID {
 	return c.ma.JoinerID
+}
+
+func (c *NodeAnnouncementProfile) GetJoinerIntroducedByID() insolar.ShortNodeID {
+	return insolar.AbsentShortNodeID // TODO
 }
 
 func (c *NodeAnnouncementProfile) GetJoinerAnnouncement() JoinerAnnouncementReader {

@@ -140,7 +140,7 @@ func (r *emuPacketBuilder) PreparePhase0Packet(sender *transport.NodeAnnouncemen
 
 func (r *EmuPhase0NetPacket) clonePacketFor(t profiles.ActiveNode, sendOptions transport.PacketSendOptions) transport.PacketParser {
 	c := *r
-	c.tgt = t.GetShortNodeID()
+	c.tgt = t.GetNodeID()
 	return &c
 }
 
@@ -174,7 +174,7 @@ func (r *emuPacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncemen
 
 func (r *EmuPhase1NetPacket) clonePacketFor(t profiles.ActiveNode, sendOptions transport.PacketSendOptions) transport.PacketParser {
 	c := *r
-	c.tgt = t.GetShortNodeID()
+	c.tgt = t.GetNodeID()
 
 	// if !t.IsJoiner() {
 	//	c.selfIntro = nil
@@ -206,14 +206,14 @@ func (r *emuPacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncemen
 
 func (r *EmuPhase2NetPacket) clonePacketFor(t profiles.ActiveNode, sendOptions transport.PacketSendOptions) transport.PacketParser {
 	c := *r
-	c.tgt = t.GetShortNodeID()
+	c.tgt = t.GetNodeID()
 
 	// if !t.IsJoiner() || len(c.intros) == 1 /* the only joiner */ {
 	//	c.intros = nil
 	// } else {
 	//	c.intros = make([]common2.NodeIntroduction, 0, len(r.intros)-1)
 	//	for _, ni := range r.intros {
-	//		if ni.GetShortNodeID() == t.GetShortNodeID() {
+	//		if ni.GetNodeID() == t.GetNodeID() {
 	//			continue
 	//		}
 	//		c.intros = append(c.intros, ni)
@@ -239,7 +239,7 @@ func (r *emuPacketBuilder) PreparePhase3Packet(sender *transport.NodeAnnouncemen
 
 func (r *EmuPhase3NetPacket) clonePacketFor(t profiles.ActiveNode, sendOptions transport.PacketSendOptions) transport.PacketParser {
 	c := *r
-	c.tgt = t.GetShortNodeID()
+	c.tgt = t.GetNodeID()
 	return &c
 }
 

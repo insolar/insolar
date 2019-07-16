@@ -140,12 +140,12 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 
 	pd := r.packetDispatchers[pt] // was checked above for != nil
 
-	// TODO enable lazy parsing on packet interface
-	//var err error
-	//packet, err = packet.ParsePacketBody()
-	//if err != nil {
-	//	return err
-	//}
+	//this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
+	var err error
+	packet, err = LazyPacketParse(packet)
+	if err != nil {
+		return err
+	}
 
 	if pt.IsMemberPacket() {
 		// now it is safe to parse the rest of the packet
@@ -290,19 +290,16 @@ func (r *FullRealm) registerNextJoinCandidate() *NodeAppearance {
 		sv := r.GetSignatureVerifier(nip.GetPublicKeyStore())
 		np := censusimpl.NewJoinerProfile(nip, sv, nip.GetStartPower())
 		na := r.population.CreateNodeAppearance(r.roundContext, &np)
-		nna, nodes := r.population.AddToDynamics(na)
+		nna := r.population.AddToDynamics(na)
 
-		if !profiles.EqualIntroProfiles(nna.profile, na.profile) {
-			nodes = append(nodes, na)
-			nna = nil
-		}
-		if nodes != nil {
-			inslogger.FromContext(r.roundContext).Errorf("multiple joiners on same id(%v): %v", cp.GetShortNodeID(), nodes)
+		if !profiles.EqualIntroProfiles(nna.profile.GetStatic(), na.profile.GetStatic()) {
+			inslogger.FromContext(r.roundContext).Errorf("multiple joiners on same id(%v): %v", cp.GetStaticNodeID(),
+				[]*NodeAppearance{na, nna})
 		}
 		if nna != nil {
 			return nna
 		}
-		r.candidateFeeder.RemoveJoinCandidate(false, cp.GetShortNodeID())
+		r.candidateFeeder.RemoveJoinCandidate(false, cp.GetStaticNodeID())
 	}
 }
 
@@ -427,7 +424,7 @@ func (r *FullRealm) preparePrimingMembers(pop census2.PopulationBuilder) {
 		if p.GetSignatureVerifier() != nil {
 			continue
 		}
-		v := r.GetSignatureVerifier(p.GetPublicKeyStore())
+		v := r.GetSignatureVerifier(p.GetStatic().GetPublicKeyStore())
 		p.SetSignatureVerifier(v)
 	}
 }
@@ -438,7 +435,7 @@ func (r *FullRealm) prepareRegularMembers(pop census2.PopulationBuilder) {
 
 	for _, p := range pop.GetUnorderedProfiles() {
 		if p.GetSignatureVerifier() == nil {
-			v := r.GetSignatureVerifier(p.GetPublicKeyStore())
+			v := r.GetSignatureVerifier(p.GetStatic().GetPublicKeyStore())
 			p.SetSignatureVerifier(v)
 		}
 
@@ -448,7 +445,7 @@ func (r *FullRealm) prepareRegularMembers(pop census2.PopulationBuilder) {
 
 		var na *NodeAppearance
 		if p.IsJoiner() {
-			na = r.population.GetJoinerNodeAppearance(p.GetShortNodeID())
+			na = r.population.GetJoinerNodeAppearance(p.GetNodeID())
 		} else {
 			na = r.population.GetNodeAppearanceByIndex(p.GetIndex().AsInt())
 		}

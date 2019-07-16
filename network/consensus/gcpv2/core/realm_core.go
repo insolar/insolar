@@ -141,7 +141,7 @@ func (r *coreRealm) initPopulation(powerRequest power.Request, nbhSizes transpor
 	}
 
 	r.self = NewNodeAppearanceAsSelf(profile, nodeContext)
-	r.self.requestedPower = profile.GetIntroduction().ConvertPowerRequest(powerRequest)
+	r.self.requestedPower = profile.GetStatic().GetIntroduction().ConvertPowerRequest(powerRequest)
 
 	nodeContext.initPrep(r.verifierFactory,
 		func(report misbehavior.Report) interface{} {
@@ -193,7 +193,7 @@ func (r *coreRealm) IsJoiner() bool {
 }
 
 func (r *coreRealm) GetSelfNodeID() insolar.ShortNodeID {
-	return r.self.profile.GetShortNodeID()
+	return r.self.profile.GetNodeID()
 }
 
 func (r *coreRealm) GetSelf() *NodeAppearance {
@@ -261,4 +261,17 @@ func VerifyPacketAuthenticityBy(packet transport.PacketParser, nr profiles.Host,
 		return fmt.Errorf("packet signature doesn't match for sender: %v", from)
 	}
 	return nil
+}
+
+func LazyPacketParse(packet transport.PacketParser) (transport.PacketParser, error) {
+
+	//this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
+	newPacket, err := packet.ParsePacketBody()
+	if err != nil {
+		return packet, err
+	}
+	if newPacket == nil {
+		return packet, nil
+	}
+	return newPacket, nil
 }

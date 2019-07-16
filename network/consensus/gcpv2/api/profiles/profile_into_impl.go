@@ -60,10 +60,10 @@ import (
 	"time"
 )
 
-func NewNodeIntroProfileOfBrief(v BriefCandidateProfile, pks cryptkit.PublicKeyStore) NodeIntroProfile {
-	return &SimpleNodeIntroProfile{
+func NewStaticProfileByBrief(v BriefCandidateProfile, pks cryptkit.PublicKeyStore) StaticProfile {
+	return &NodeStaticProfile{
 		endpoints:         []endpoints.Outbound{v.GetDefaultEndpoint()},
-		nodeID:            v.GetShortNodeID(),
+		nodeID:            v.GetStaticNodeID(),
 		primaryRole:       v.GetPrimaryRole(),
 		specialRoles:      v.GetSpecialRoles(),
 		pk:                v.GetNodePublicKey(),
@@ -74,12 +74,12 @@ func NewNodeIntroProfileOfBrief(v BriefCandidateProfile, pks cryptkit.PublicKeyS
 	}
 }
 
-func NewNodeIntroProfileOfFull(v CandidateProfile, pks cryptkit.PublicKeyStore) NodeIntroProfile {
+func NewStaticProfileByFull(v CandidateProfile, pks cryptkit.PublicKeyStore) StaticProfile {
 
 	extraEndpoints := v.GetExtraEndpoints()
-	return &SimpleNodeIntroProfile{
+	return &NodeStaticProfile{
 		endpoints:         append(append(make([]endpoints.Outbound, len(extraEndpoints)+1), v.GetDefaultEndpoint()), extraEndpoints...),
-		nodeID:            v.GetShortNodeID(),
+		nodeID:            v.GetStaticNodeID(),
 		primaryRole:       v.GetPrimaryRole(),
 		specialRoles:      v.GetSpecialRoles(),
 		pk:                v.GetNodePublicKey(),
@@ -96,7 +96,7 @@ func NewNodeIntroProfileOfFull(v CandidateProfile, pks cryptkit.PublicKeyStore) 
 	}
 }
 
-type SimpleNodeIntroProfile struct {
+type NodeStaticProfile struct {
 	endpoints         []endpoints.Outbound
 	nodeID            insolar.ShortNodeID
 	primaryRole       member.PrimaryRole
@@ -116,44 +116,49 @@ type SimpleNodeIntroProfile struct {
 	issuerSignature cryptkit.SignatureHolder
 }
 
-func (p *SimpleNodeIntroProfile) ensureFull() {
+func (p *NodeStaticProfile) ensureFull() {
 	if p.isFull {
 		return
 	}
 	panic("illegal state")
 }
 
-func (p *SimpleNodeIntroProfile) GetIssuedAtPulse() pulse.Number {
+func (p *NodeStaticProfile) GetIssuedAtPulse() pulse.Number {
 	p.ensureFull()
 	return p.issuedAtPulse
 }
 
-func (p *SimpleNodeIntroProfile) GetIssuedAtTime() time.Time {
+func (p *NodeStaticProfile) GetIssuedAtTime() time.Time {
 	p.ensureFull()
 	return p.issuedAtTime
 }
 
-func (p *SimpleNodeIntroProfile) GetIssuerID() insolar.ShortNodeID {
+func (p *NodeStaticProfile) GetIssuerID() insolar.ShortNodeID {
 	p.ensureFull()
 	return p.issuerID
 }
 
-func (p *SimpleNodeIntroProfile) GetIssuerSignature() cryptkit.SignatureHolder {
+func (p *NodeStaticProfile) GetIssuerSignature() cryptkit.SignatureHolder {
 	p.ensureFull()
 	return p.issuerSignature
 }
 
-func (p *SimpleNodeIntroProfile) GetReference() insolar.Reference {
+func (p *NodeStaticProfile) GetReference() insolar.Reference {
 	p.ensureFull()
 	return p.nodeRef
 }
 
-func (p *SimpleNodeIntroProfile) IsAllowedPower(pw member.Power) bool {
+func (p *NodeStaticProfile) IsAllowedPower(pw member.Power) bool {
 	p.ensureFull()
 	return p.powerSet.IsAllowed(pw)
 }
 
-func (p *SimpleNodeIntroProfile) ConvertPowerRequest(request power.Request) member.Power {
+func (p *NodeStaticProfile) GetIntroNodeID() insolar.ShortNodeID {
+	p.ensureFull()
+	return p.nodeID
+}
+
+func (p *NodeStaticProfile) ConvertPowerRequest(request power.Request) member.Power {
 	p.ensureFull()
 	if ok, cl := request.AsCapacityLevel(); ok {
 		return p.powerSet.ForLevel(cl)
@@ -162,15 +167,15 @@ func (p *SimpleNodeIntroProfile) ConvertPowerRequest(request power.Request) memb
 	return p.powerSet.FindNearestValid(pw)
 }
 
-func (p *SimpleNodeIntroProfile) GetDefaultEndpoint() endpoints.Outbound {
+func (p *NodeStaticProfile) GetDefaultEndpoint() endpoints.Outbound {
 	return p.endpoints[0]
 }
 
-func (p *SimpleNodeIntroProfile) GetPublicKeyStore() cryptkit.PublicKeyStore {
+func (p *NodeStaticProfile) GetPublicKeyStore() cryptkit.PublicKeyStore {
 	return p.pks
 }
 
-func (p *SimpleNodeIntroProfile) IsAcceptableHost(from endpoints.Inbound) bool {
+func (p *NodeStaticProfile) IsAcceptableHost(from endpoints.Inbound) bool {
 	for _, ep := range p.endpoints {
 		if ep.CanAccept(from) {
 			return true
@@ -179,34 +184,33 @@ func (p *SimpleNodeIntroProfile) IsAcceptableHost(from endpoints.Inbound) bool {
 	return false
 }
 
-func (p *SimpleNodeIntroProfile) GetShortNodeID() insolar.ShortNodeID {
+func (p *NodeStaticProfile) GetStaticNodeID() insolar.ShortNodeID {
 	return p.nodeID
 }
 
-func (p *SimpleNodeIntroProfile) GetPrimaryRole() member.PrimaryRole {
+func (p *NodeStaticProfile) GetPrimaryRole() member.PrimaryRole {
 	return p.primaryRole
 }
 
-func (p *SimpleNodeIntroProfile) GetSpecialRoles() member.SpecialRole {
+func (p *NodeStaticProfile) GetSpecialRoles() member.SpecialRole {
 	return p.specialRoles
 }
 
-func (p *SimpleNodeIntroProfile) GetNodePublicKey() cryptkit.SignatureKeyHolder {
+func (p *NodeStaticProfile) GetNodePublicKey() cryptkit.SignatureKeyHolder {
 	return p.pk
 }
 
-func (p *SimpleNodeIntroProfile) GetStartPower() member.Power {
+func (p *NodeStaticProfile) GetStartPower() member.Power {
 	return p.startPower
 }
 
-func (p *SimpleNodeIntroProfile) GetAnnouncementSignature() cryptkit.SignatureHolder {
+func (p *NodeStaticProfile) GetAnnouncementSignature() cryptkit.SignatureHolder {
 	return p.announceSignature
 }
 
-func (p *SimpleNodeIntroProfile) HasIntroduction() bool {
-	return p.isFull
-}
-
-func (p *SimpleNodeIntroProfile) GetIntroduction() NodeIntroduction {
-	return p
+func (p *NodeStaticProfile) GetIntroduction() NodeIntroduction {
+	if p.isFull {
+		return p
+	}
+	return nil
 }

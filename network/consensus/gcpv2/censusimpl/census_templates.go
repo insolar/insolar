@@ -108,11 +108,11 @@ func NewPrimingCensus(population copyToOnlinePopulation, registries census.Versi
 
 func nodeProfileOrdering(np profiles.ActiveNode) (member.PrimaryRole, member.Power, insolar.ShortNodeID) {
 	p := np.GetDeclaredPower()
-	r := np.GetPrimaryRole()
+	r := np.GetStatic().GetPrimaryRole()
 	if p == 0 || np.GetOpMode().IsPowerless() {
-		return member.PrimaryRoleInactive, 0, np.GetShortNodeID()
+		return member.PrimaryRoleInactive, 0, np.GetNodeID()
 	}
-	return r, p, np.GetShortNodeID()
+	return r, p, np.GetNodeID()
 }
 
 func lessForNodeProfile(c profiles.ActiveNode, o profiles.ActiveNode) bool {

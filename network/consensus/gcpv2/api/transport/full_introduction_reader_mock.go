@@ -1606,7 +1606,7 @@ type FullIntroductionReaderMockGetShortNodeIDResult struct {
 	r insolar.ShortNodeID
 }
 
-//Expect specifies that invocation of FullIntroductionReader.GetShortNodeID is expected from 1 to Infinity times
+//Expect specifies that invocation of FullIntroductionReader.GetNodeID is expected from 1 to Infinity times
 func (m *mFullIntroductionReaderMockGetShortNodeID) Expect() *mFullIntroductionReaderMockGetShortNodeID {
 	m.mock.GetShortNodeIDFunc = nil
 	m.expectationSeries = nil
@@ -1618,7 +1618,7 @@ func (m *mFullIntroductionReaderMockGetShortNodeID) Expect() *mFullIntroductionR
 	return m
 }
 
-//Return specifies results of invocation of FullIntroductionReader.GetShortNodeID
+//Return specifies results of invocation of FullIntroductionReader.GetNodeID
 func (m *mFullIntroductionReaderMockGetShortNodeID) Return(r insolar.ShortNodeID) *FullIntroductionReaderMock {
 	m.mock.GetShortNodeIDFunc = nil
 	m.expectationSeries = nil
@@ -1630,7 +1630,7 @@ func (m *mFullIntroductionReaderMockGetShortNodeID) Return(r insolar.ShortNodeID
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of FullIntroductionReader.GetShortNodeID is expected once
+//ExpectOnce specifies that invocation of FullIntroductionReader.GetNodeID is expected once
 func (m *mFullIntroductionReaderMockGetShortNodeID) ExpectOnce() *FullIntroductionReaderMockGetShortNodeIDExpectation {
 	m.mock.GetShortNodeIDFunc = nil
 	m.mainExpectation = nil
@@ -1645,7 +1645,7 @@ func (e *FullIntroductionReaderMockGetShortNodeIDExpectation) Return(r insolar.S
 	e.result = &FullIntroductionReaderMockGetShortNodeIDResult{r}
 }
 
-//Set uses given function f as a mock of FullIntroductionReader.GetShortNodeID method
+//Set uses given function f as a mock of FullIntroductionReader.GetNodeID method
 func (m *mFullIntroductionReaderMockGetShortNodeID) Set(f func() (r insolar.ShortNodeID)) *FullIntroductionReaderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -1654,20 +1654,20 @@ func (m *mFullIntroductionReaderMockGetShortNodeID) Set(f func() (r insolar.Shor
 	return m.mock
 }
 
-//GetShortNodeID implements github.com/insolar/insolar/network/consensus/gcpv2/api/transport.FullIntroductionReader interface
-func (m *FullIntroductionReaderMock) GetShortNodeID() (r insolar.ShortNodeID) {
+//GetNodeID implements github.com/insolar/insolar/network/consensus/gcpv2/api/transport.FullIntroductionReader interface
+func (m *FullIntroductionReaderMock) GetStaticNodeID() (r insolar.ShortNodeID) {
 	counter := atomic.AddUint64(&m.GetShortNodeIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetShortNodeIDCounter, 1)
 
 	if len(m.GetShortNodeIDMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.GetShortNodeIDMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to FullIntroductionReaderMock.GetShortNodeID.")
+			m.t.Fatalf("Unexpected call to FullIntroductionReaderMock.GetNodeID.")
 			return
 		}
 
 		result := m.GetShortNodeIDMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the FullIntroductionReaderMock.GetShortNodeID")
+			m.t.Fatal("No results are set for the FullIntroductionReaderMock.GetNodeID")
 			return
 		}
 
@@ -1680,7 +1680,7 @@ func (m *FullIntroductionReaderMock) GetShortNodeID() (r insolar.ShortNodeID) {
 
 		result := m.GetShortNodeIDMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the FullIntroductionReaderMock.GetShortNodeID")
+			m.t.Fatal("No results are set for the FullIntroductionReaderMock.GetNodeID")
 		}
 
 		r = result.r
@@ -1689,7 +1689,7 @@ func (m *FullIntroductionReaderMock) GetShortNodeID() (r insolar.ShortNodeID) {
 	}
 
 	if m.GetShortNodeIDFunc == nil {
-		m.t.Fatalf("Unexpected call to FullIntroductionReaderMock.GetShortNodeID.")
+		m.t.Fatalf("Unexpected call to FullIntroductionReaderMock.GetNodeID.")
 		return
 	}
 
@@ -1701,7 +1701,7 @@ func (m *FullIntroductionReaderMock) GetShortNodeIDMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetShortNodeIDCounter)
 }
 
-//GetShortNodeIDMinimockPreCounter returns the value of FullIntroductionReaderMock.GetShortNodeID invocations
+//GetShortNodeIDMinimockPreCounter returns the value of FullIntroductionReaderMock.GetNodeID invocations
 func (m *FullIntroductionReaderMock) GetShortNodeIDMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetShortNodeIDPreCounter)
 }
@@ -2043,7 +2043,7 @@ func (m *FullIntroductionReaderMock) ValidateCallCounters() {
 	}
 
 	if !m.GetShortNodeIDFinished() {
-		m.t.Fatal("Expected call to FullIntroductionReaderMock.GetShortNodeID")
+		m.t.Fatal("Expected call to FullIntroductionReaderMock.GetNodeID")
 	}
 
 	if !m.GetSpecialRolesFinished() {
@@ -2116,7 +2116,7 @@ func (m *FullIntroductionReaderMock) MinimockFinish() {
 	}
 
 	if !m.GetShortNodeIDFinished() {
-		m.t.Fatal("Expected call to FullIntroductionReaderMock.GetShortNodeID")
+		m.t.Fatal("Expected call to FullIntroductionReaderMock.GetNodeID")
 	}
 
 	if !m.GetSpecialRolesFinished() {
@@ -2208,7 +2208,7 @@ func (m *FullIntroductionReaderMock) MinimockWait(timeout time.Duration) {
 			}
 
 			if !m.GetShortNodeIDFinished() {
-				m.t.Error("Expected call to FullIntroductionReaderMock.GetShortNodeID")
+				m.t.Error("Expected call to FullIntroductionReaderMock.GetNodeID")
 			}
 
 			if !m.GetSpecialRolesFinished() {

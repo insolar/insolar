@@ -141,7 +141,7 @@ func (r *emuPacketBuilder) PreparePhase0Packet(sender *transport.NodeAnnouncemen
 
 func (r *EmuPhase0NetPacket) clonePacketFor(t profiles.ActiveNode, sendOptions transport.PacketSendOptions) transport.PacketParser {
 	c := *r
-	c.tgt = t.GetShortNodeID()
+	c.tgt = t.GetNodeID()
 	return &c
 }
 
@@ -171,7 +171,7 @@ func (r *emuPacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncemen
 
 func (r *EmuPhase1NetPacket) clonePacketFor(t profiles.ActiveNode, sendOptions transport.PacketSendOptions) transport.PacketParser {
 	c := *r
-	c.tgt = t.GetShortNodeID()
+	c.tgt = t.GetNodeID()
 
 	if sendOptions&transport.SendWithoutPulseData != 0 {
 		c.pulsePacket = nil
@@ -193,7 +193,7 @@ func (r *emuPacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncemen
 
 func (r *EmuPhase2NetPacket) clonePacketFor(t profiles.ActiveNode, sendOptions transport.PacketSendOptions) transport.PacketParser {
 	c := *r
-	c.tgt = t.GetShortNodeID()
+	c.tgt = t.GetNodeID()
 	return &c
 }
 
@@ -210,6 +210,6 @@ func (r *emuPacketBuilder) PreparePhase3Packet(sender *transport.NodeAnnouncemen
 
 func (r *EmuPhase3NetPacket) clonePacketFor(t profiles.ActiveNode, sendOptions transport.PacketSendOptions) transport.PacketParser {
 	c := *r
-	c.tgt = t.GetShortNodeID()
+	c.tgt = t.GetNodeID()
 	return &c
 }

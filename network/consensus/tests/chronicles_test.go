@@ -74,7 +74,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-func NewEmuChronicles(intros []profiles.NodeIntroProfile, localNodeIndex int,
+func NewEmuChronicles(intros []profiles.StaticProfile, localNodeIndex int,
 	primingCloudStateHash proofs.CloudStateHash) api.ConsensusChronicles {
 
 	pop := censusimpl.NewManyNodePopulation(intros[localNodeIndex], intros)
@@ -85,8 +85,8 @@ func NewEmuChronicles(intros []profiles.NodeIntroProfile, localNodeIndex int,
 	return chronicles
 }
 
-func NewEmuNodeIntros(names ...string) []profiles.NodeIntroProfile {
-	r := make([]profiles.NodeIntroProfile, len(names))
+func NewEmuNodeIntros(names ...string) []profiles.StaticProfile {
+	r := make([]profiles.StaticProfile, len(names))
 	for i, n := range names {
 		r[i] = NewEmuNodeIntroByName(i, n)
 	}
@@ -247,10 +247,6 @@ func (c *EmuNodeIntro) GetReference() insolar.Reference {
 	return insolar.Reference{}
 }
 
-func (c *EmuNodeIntro) HasIntroduction() bool {
-	return true
-}
-
 func (c *EmuNodeIntro) ConvertPowerRequest(request power.Request) member.Power {
 	if ok, cl := request.AsCapacityLevel(); ok {
 		return member.PowerOf(uint16(cl.DefaultPercent()))
@@ -288,7 +284,11 @@ func (c *EmuNodeIntro) IsAcceptableHost(from endpoints.Inbound) bool {
 	return addr.Equals(from.GetNameAddress())
 }
 
-func (c *EmuNodeIntro) GetShortNodeID() insolar.ShortNodeID {
+func (c *EmuNodeIntro) GetStaticNodeID() insolar.ShortNodeID {
+	return c.id
+}
+
+func (c *EmuNodeIntro) GetIntroNodeID() insolar.ShortNodeID {
 	return c.id
 }
 

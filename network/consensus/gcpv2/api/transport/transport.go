@@ -110,6 +110,7 @@ type PacketSendOptions uint32
 const (
 	SendWithoutPulseData PacketSendOptions = 1 << iota
 	RequestForPhase1
+	AllowFullJoinerIntroForPhase1
 )
 
 // type PreparedIntro interface {}

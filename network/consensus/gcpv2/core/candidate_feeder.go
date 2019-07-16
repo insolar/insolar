@@ -77,7 +77,7 @@ func (p *SequentialCandidateFeeder) RemoveJoinCandidate(candidateAdded bool, nod
 	p.mx.Lock()
 	defer p.mx.Unlock()
 
-	if len(p.buf) == 0 || p.buf[0].GetShortNodeID() != nodeID {
+	if len(p.buf) == 0 || p.buf[0].GetStaticNodeID() != nodeID {
 		return false
 	}
 	if len(p.buf) == 1 {

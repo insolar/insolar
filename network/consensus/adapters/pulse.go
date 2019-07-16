@@ -125,6 +125,10 @@ type PulsePacketParser struct {
 	pulsePacket *PulsePacketReader
 }
 
+func (p *PulsePacketParser) ParsePacketBody() (transport.PacketParser, error) {
+	return nil, nil
+}
+
 func NewPulsePacketParser(pulse insolar.Pulse, data []byte) *PulsePacketParser {
 	return &PulsePacketParser{
 		pulse:       pulse,

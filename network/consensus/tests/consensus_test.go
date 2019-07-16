@@ -133,7 +133,7 @@ func (h *EmuHostConsensusAdapter) run(ctx context.Context) {
 }
 
 func (h *EmuHostConsensusAdapter) SendPacketToTransport(ctx context.Context, t profiles.ActiveNode, sendOptions transport.PacketSendOptions, payload interface{}) {
-	h.send(t.GetDefaultEndpoint(), payload)
+	h.send(t.GetStatic().GetDefaultEndpoint(), payload)
 }
 
 func (h *EmuHostConsensusAdapter) receive(ctx context.Context) (payload interface{}, from *endpoints.Name, err error) {

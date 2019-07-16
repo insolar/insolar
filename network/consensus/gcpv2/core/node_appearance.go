@@ -156,7 +156,7 @@ func (c *NodeAppearance) GetIndex() member.Index {
 }
 
 func (c *NodeAppearance) GetShortNodeID() insolar.ShortNodeID {
-	return c.profile.GetShortNodeID()
+	return c.profile.GetNodeID()
 }
 
 func (c *NodeAppearance) GetTrustLevel() member.TrustLevel {
@@ -170,7 +170,7 @@ func (c *NodeAppearance) GetProfile() profiles.ActiveNode {
 }
 
 func (c *NodeAppearance) VerifyPacketAuthenticity(packet transport.PacketParser, from endpoints.Inbound, strictFrom bool) error {
-	return VerifyPacketAuthenticityBy(packet, c.profile, c.profile.GetSignatureVerifier(), from, strictFrom)
+	return VerifyPacketAuthenticityBy(packet, c.profile.GetStatic(), c.profile.GetSignatureVerifier(), from, strictFrom)
 }
 
 func (c *NodeAppearance) SetPacketReceived(pt phases.PacketType) bool {
@@ -211,22 +211,9 @@ func (c *NodeAppearance) GetSignatureVerifier() cryptkit.SignatureVerifier {
 	if v != nil {
 		return v
 	}
-	return c.CreateSignatureVerifier(c.callback.GetSignatureVerifierFactory())
+	vFactory := c.callback.GetSignatureVerifierFactory()
+	return vFactory.GetSignatureVerifierWithPKS(c.profile.GetStatic().GetPublicKeyStore())
 }
-
-func (c *NodeAppearance) CreateSignatureVerifier(vFactory cryptkit.SignatureVerifierFactory) cryptkit.SignatureVerifier {
-	return vFactory.GetSignatureVerifierWithPKS(c.profile.GetPublicKeyStore())
-}
-
-//func (c *NodeAppearance) ApplyMembershipRank(mr member.Rank) error {
-//	// TODO
-//	c.mutex.Lock()
-//	defer c.mutex.Unlock()
-//
-//	return c._applyMembershipRank(mr)
-//}
-//func (c *NodeAppearance) _applyMembershipRank(mr member.Rank) error {
-//}
 
 /* Evidence MUST be verified before this call */
 func (c *NodeAppearance) ApplyNodeMembership(mp profiles.MembershipAnnouncement) (bool, error) {
@@ -337,9 +324,6 @@ func (c *NodeAppearance) GetNodeTrustAndMembershipOrEmpty() (profiles.Membership
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	// if c.stateEvidence == nil {
-	//	panic(fmt.Sprintf("illegal state: for=%v", c.GetShortNodeID()))
-	// }
 	return c.getMembership(), c.trust
 }
 
@@ -437,12 +421,14 @@ func (c *NodeAppearance) getPacketHandler(i int) PhasePerNodePacketFunc {
 	return c.handlers[i]
 }
 
+/* deprecated */
 func (c *NodeAppearance) ResetAllPacketHandlers() {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	c.handlers = nil
 }
 
+/* deprecated */
 func (c *NodeAppearance) ResetPacketHandlers(indices ...int) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()

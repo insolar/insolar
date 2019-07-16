@@ -180,8 +180,11 @@ func (bi *NodeBriefIntro) DeserializeFrom(ctx DeserializeContext, reader io.Read
 type NodeFullIntro struct {
 	// ByteSize= >=86 + (135, 137, 147) = >(221, 223, 233)
 
-	NodeBriefIntro // ByteSize= 135, 137, 147
+	NodeBriefIntro    // ByteSize= 135, 137, 147
+	NodeExtendedIntro // ByteSize>=86
+}
 
+type NodeExtendedIntro struct {
 	// ByteSize>=86
 	IssuedAtPulse pulse.Number // =0 when a node was connected during zeronet
 	IssuedAtTime  uint64
