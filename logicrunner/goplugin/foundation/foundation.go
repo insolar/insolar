@@ -83,11 +83,6 @@ func GetImplementationFor(object, ofType insolar.Reference) (insolar.Reference, 
 	return common.CurrentProxyCtx.GetDelegate(object, ofType)
 }
 
-// NewChildrenTypedIterator returns children with corresponding type iterator
-func (bc *BaseContract) NewChildrenTypedIterator(childPrototype insolar.Reference) (*common.ChildrenTypedIterator, error) {
-	return common.CurrentProxyCtx.GetObjChildrenIterator(bc.GetReference(), childPrototype, "")
-}
-
 // GetObject create proxy by address
 // unimplemented
 func GetObject(ref insolar.Reference) ProxyInterface {
