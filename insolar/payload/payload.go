@@ -126,6 +126,7 @@ func UnmarshalType(data []byte) (Type, error) {
 	if err != nil {
 		return TypeUnknown, errors.Wrap(err, "failed to decode polymorph")
 	}
+	// First 3 bits is a field type (see protobuf wire protocol docs), key is always varint
 	if fieldNumType != MorphFieldNum<<3|MorpyFieldType {
 		return TypeUnknown, errors.Errorf("wrong polymorph field number %d", fieldNumType)
 	}

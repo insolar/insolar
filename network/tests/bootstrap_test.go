@@ -55,10 +55,7 @@ package tests
 import (
 	"context"
 	"fmt"
-	"testing"
 	"time"
-
-	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -133,11 +130,11 @@ func newBootstraptSuite(bootstrapCount int) *bootstrapSuite {
 	}
 }
 
-func TestBootstrap(t *testing.T) {
-	t.Skip("fix in new consensus")
-	s := newBootstraptSuite(1)
-	suite.Run(t, s)
-}
+// func TestBootstrap(t *testing.T) {
+// 	t.Skip("fix in new consensus")
+// 	s := newBootstraptSuite(1)
+// 	suite.Run(t, s)
+// }
 
 func (s *bootstrapSuite) TestExample() {
 	s.T().Skip("fix me")

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	artifacts "github.com/insolar/insolar/logicrunner/artifacts"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -19,17 +20,17 @@ import (
 type LogicExecutorMock struct {
 	t minimock.Tester
 
-	ExecuteFunc       func(p context.Context, p1 *Transcript) (r *RequestResult, r1 error)
+	ExecuteFunc       func(p context.Context, p1 *Transcript) (r artifacts.RequestResult, r1 error)
 	ExecuteCounter    uint64
 	ExecutePreCounter uint64
 	ExecuteMock       mLogicExecutorMockExecute
 
-	ExecuteConstructorFunc       func(p context.Context, p1 *Transcript) (r *RequestResult, r1 error)
+	ExecuteConstructorFunc       func(p context.Context, p1 *Transcript) (r artifacts.RequestResult, r1 error)
 	ExecuteConstructorCounter    uint64
 	ExecuteConstructorPreCounter uint64
 	ExecuteConstructorMock       mLogicExecutorMockExecuteConstructor
 
-	ExecuteMethodFunc       func(p context.Context, p1 *Transcript) (r *RequestResult, r1 error)
+	ExecuteMethodFunc       func(p context.Context, p1 *Transcript) (r artifacts.RequestResult, r1 error)
 	ExecuteMethodCounter    uint64
 	ExecuteMethodPreCounter uint64
 	ExecuteMethodMock       mLogicExecutorMockExecuteMethod
@@ -67,7 +68,7 @@ type LogicExecutorMockExecuteInput struct {
 }
 
 type LogicExecutorMockExecuteResult struct {
-	r  *RequestResult
+	r  artifacts.RequestResult
 	r1 error
 }
 
@@ -84,7 +85,7 @@ func (m *mLogicExecutorMockExecute) Expect(p context.Context, p1 *Transcript) *m
 }
 
 //Return specifies results of invocation of LogicExecutor.Execute
-func (m *mLogicExecutorMockExecute) Return(r *RequestResult, r1 error) *LogicExecutorMock {
+func (m *mLogicExecutorMockExecute) Return(r artifacts.RequestResult, r1 error) *LogicExecutorMock {
 	m.mock.ExecuteFunc = nil
 	m.expectationSeries = nil
 
@@ -106,12 +107,12 @@ func (m *mLogicExecutorMockExecute) ExpectOnce(p context.Context, p1 *Transcript
 	return expectation
 }
 
-func (e *LogicExecutorMockExecuteExpectation) Return(r *RequestResult, r1 error) {
+func (e *LogicExecutorMockExecuteExpectation) Return(r artifacts.RequestResult, r1 error) {
 	e.result = &LogicExecutorMockExecuteResult{r, r1}
 }
 
 //Set uses given function f as a mock of LogicExecutor.Execute method
-func (m *mLogicExecutorMockExecute) Set(f func(p context.Context, p1 *Transcript) (r *RequestResult, r1 error)) *LogicExecutorMock {
+func (m *mLogicExecutorMockExecute) Set(f func(p context.Context, p1 *Transcript) (r artifacts.RequestResult, r1 error)) *LogicExecutorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -120,7 +121,7 @@ func (m *mLogicExecutorMockExecute) Set(f func(p context.Context, p1 *Transcript
 }
 
 //Execute implements github.com/insolar/insolar/logicrunner.LogicExecutor interface
-func (m *LogicExecutorMock) Execute(p context.Context, p1 *Transcript) (r *RequestResult, r1 error) {
+func (m *LogicExecutorMock) Execute(p context.Context, p1 *Transcript) (r artifacts.RequestResult, r1 error) {
 	counter := atomic.AddUint64(&m.ExecutePreCounter, 1)
 	defer atomic.AddUint64(&m.ExecuteCounter, 1)
 
@@ -218,7 +219,7 @@ type LogicExecutorMockExecuteConstructorInput struct {
 }
 
 type LogicExecutorMockExecuteConstructorResult struct {
-	r  *RequestResult
+	r  artifacts.RequestResult
 	r1 error
 }
 
@@ -235,7 +236,7 @@ func (m *mLogicExecutorMockExecuteConstructor) Expect(p context.Context, p1 *Tra
 }
 
 //Return specifies results of invocation of LogicExecutor.ExecuteConstructor
-func (m *mLogicExecutorMockExecuteConstructor) Return(r *RequestResult, r1 error) *LogicExecutorMock {
+func (m *mLogicExecutorMockExecuteConstructor) Return(r artifacts.RequestResult, r1 error) *LogicExecutorMock {
 	m.mock.ExecuteConstructorFunc = nil
 	m.expectationSeries = nil
 
@@ -257,12 +258,12 @@ func (m *mLogicExecutorMockExecuteConstructor) ExpectOnce(p context.Context, p1 
 	return expectation
 }
 
-func (e *LogicExecutorMockExecuteConstructorExpectation) Return(r *RequestResult, r1 error) {
+func (e *LogicExecutorMockExecuteConstructorExpectation) Return(r artifacts.RequestResult, r1 error) {
 	e.result = &LogicExecutorMockExecuteConstructorResult{r, r1}
 }
 
 //Set uses given function f as a mock of LogicExecutor.ExecuteConstructor method
-func (m *mLogicExecutorMockExecuteConstructor) Set(f func(p context.Context, p1 *Transcript) (r *RequestResult, r1 error)) *LogicExecutorMock {
+func (m *mLogicExecutorMockExecuteConstructor) Set(f func(p context.Context, p1 *Transcript) (r artifacts.RequestResult, r1 error)) *LogicExecutorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -271,7 +272,7 @@ func (m *mLogicExecutorMockExecuteConstructor) Set(f func(p context.Context, p1 
 }
 
 //ExecuteConstructor implements github.com/insolar/insolar/logicrunner.LogicExecutor interface
-func (m *LogicExecutorMock) ExecuteConstructor(p context.Context, p1 *Transcript) (r *RequestResult, r1 error) {
+func (m *LogicExecutorMock) ExecuteConstructor(p context.Context, p1 *Transcript) (r artifacts.RequestResult, r1 error) {
 	counter := atomic.AddUint64(&m.ExecuteConstructorPreCounter, 1)
 	defer atomic.AddUint64(&m.ExecuteConstructorCounter, 1)
 
@@ -369,7 +370,7 @@ type LogicExecutorMockExecuteMethodInput struct {
 }
 
 type LogicExecutorMockExecuteMethodResult struct {
-	r  *RequestResult
+	r  artifacts.RequestResult
 	r1 error
 }
 
@@ -386,7 +387,7 @@ func (m *mLogicExecutorMockExecuteMethod) Expect(p context.Context, p1 *Transcri
 }
 
 //Return specifies results of invocation of LogicExecutor.ExecuteMethod
-func (m *mLogicExecutorMockExecuteMethod) Return(r *RequestResult, r1 error) *LogicExecutorMock {
+func (m *mLogicExecutorMockExecuteMethod) Return(r artifacts.RequestResult, r1 error) *LogicExecutorMock {
 	m.mock.ExecuteMethodFunc = nil
 	m.expectationSeries = nil
 
@@ -408,12 +409,12 @@ func (m *mLogicExecutorMockExecuteMethod) ExpectOnce(p context.Context, p1 *Tran
 	return expectation
 }
 
-func (e *LogicExecutorMockExecuteMethodExpectation) Return(r *RequestResult, r1 error) {
+func (e *LogicExecutorMockExecuteMethodExpectation) Return(r artifacts.RequestResult, r1 error) {
 	e.result = &LogicExecutorMockExecuteMethodResult{r, r1}
 }
 
 //Set uses given function f as a mock of LogicExecutor.ExecuteMethod method
-func (m *mLogicExecutorMockExecuteMethod) Set(f func(p context.Context, p1 *Transcript) (r *RequestResult, r1 error)) *LogicExecutorMock {
+func (m *mLogicExecutorMockExecuteMethod) Set(f func(p context.Context, p1 *Transcript) (r artifacts.RequestResult, r1 error)) *LogicExecutorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -422,7 +423,7 @@ func (m *mLogicExecutorMockExecuteMethod) Set(f func(p context.Context, p1 *Tran
 }
 
 //ExecuteMethod implements github.com/insolar/insolar/logicrunner.LogicExecutor interface
-func (m *LogicExecutorMock) ExecuteMethod(p context.Context, p1 *Transcript) (r *RequestResult, r1 error) {
+func (m *LogicExecutorMock) ExecuteMethod(p context.Context, p1 *Transcript) (r artifacts.RequestResult, r1 error) {
 	counter := atomic.AddUint64(&m.ExecuteMethodPreCounter, 1)
 	defer atomic.AddUint64(&m.ExecuteMethodCounter, 1)
 
