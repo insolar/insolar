@@ -865,13 +865,12 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 	var usedResult []byte
 
 	am := artifacts.NewClientMock(suite.T())
-	am.RegisterResultFunc = func(ctx context.Context, caller insolar.Reference, reqRef insolar.Reference, res []byte) (*insolar.ID, error) {
+	am.RegisterResultMock.Set(func(ctx context.Context, reqRef insolar.Reference, reqResults artifacts.RequestResult) (r error) {
 		usedRequestRef = reqRef
-		usedResult = res
-		id := gen.ID()
+		usedResult = reqResults.Result()
 		registerResultChan <- struct{}{}
-		return &id, nil
-	}
+		return nil
+	})
 	suite.lr.ArtifactManager = am
 
 	_, err = suite.lr.FlowDispatcher.Process(msg)
