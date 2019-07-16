@@ -122,6 +122,10 @@ func (bi *NodeBriefIntro) setAddrMode(addrMode endpoints.NodeEndpointType) {
 }
 
 func (bi *NodeBriefIntro) SerializeTo(ctx SerializeContext, writer io.Writer) error {
+	// TODO: linter hack
+	bi.setPrimaryRole(bi.getPrimaryRole())
+	bi.setAddrMode(bi.getAddrMode())
+
 	if err := write(writer, bi.PrimaryRoleAndFlags); err != nil {
 		return errors.Wrap(err, "failed to serialize PrimaryRoleAndFlags")
 	}
