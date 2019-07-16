@@ -76,8 +76,8 @@ type RealmPopulation interface {
 
 	CreateNodeAppearance(ctx context.Context, inp profiles.ActiveNode) *NodeAppearance
 
-	AddToPurgatory(n *NodeAppearance) (*NodeAppearance, PurgatoryNodeState)
-	AddToDynamics(n *NodeAppearance) (*NodeAppearance, []*NodeAppearance)
+	//AddToPurgatory(n *NodeAppearance) (*NodeAppearance, PurgatoryNodeState)
+	AddToDynamics(n *NodeAppearance) *NodeAppearance
 
 	CreateVectorHelper() *RealmVectorHelper
 }

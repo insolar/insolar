@@ -167,7 +167,7 @@ func (r *MemberRealmPopulation) GetIndexedNodes() []*NodeAppearance {
 	return r.nodeIndex
 }
 
-func (r *MemberRealmPopulation) AddToDynamics(n *NodeAppearance) (*NodeAppearance, []*NodeAppearance) {
+func (r *MemberRealmPopulation) AddToDynamics(n *NodeAppearance) *NodeAppearance {
 	if !n.profile.IsJoiner() {
 		panic("illegal value")
 	}

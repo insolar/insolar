@@ -290,14 +290,11 @@ func (r *FullRealm) registerNextJoinCandidate() *NodeAppearance {
 		sv := r.GetSignatureVerifier(nip.GetPublicKeyStore())
 		np := censusimpl.NewJoinerProfile(nip, sv, nip.GetStartPower())
 		na := r.population.CreateNodeAppearance(r.roundContext, &np)
-		nna, nodes := r.population.AddToDynamics(na)
+		nna := r.population.AddToDynamics(na)
 
 		if !profiles.EqualIntroProfiles(nna.profile.GetStatic(), na.profile.GetStatic()) {
-			nodes = append(nodes, na)
-			nna = nil
-		}
-		if nodes != nil {
-			inslogger.FromContext(r.roundContext).Errorf("multiple joiners on same id(%v): %v", cp.GetStaticNodeID(), nodes)
+			inslogger.FromContext(r.roundContext).Errorf("multiple joiners on same id(%v): %v", cp.GetStaticNodeID(),
+				[]*NodeAppearance{na, nna})
 		}
 		if nna != nil {
 			return nna

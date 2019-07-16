@@ -89,10 +89,6 @@ type DynamicRealmPopulation struct {
 	nodeIndex    []*NodeAppearance
 	nodeShuffle  []*NodeAppearance // excluding self
 	dynamicNodes map[insolar.ShortNodeID]*NodeAppearance
-	//	purgatoryByEP map[string]*NodeAppearance
-	purgatoryByPK map[string]*NodeAppearance
-	purgatoryByID map[insolar.ShortNodeID]*[]*NodeAppearance
-	purgatoryOuts map[insolar.ShortNodeID]*NodeAppearance
 }
 
 func (r *DynamicRealmPopulation) initPopulation(local profiles.ActiveNode, nodeCountHint int) {
@@ -202,53 +198,7 @@ func (r *DynamicRealmPopulation) CreateNodeAppearance(ctx context.Context, np pr
 	return n
 }
 
-func (r *DynamicRealmPopulation) AddToPurgatory(n *NodeAppearance) (*NodeAppearance, PurgatoryNodeState) {
-	nip := n.profile.GetStatic()
-	if nip.GetIntroduction() != nil {
-		panic("illegal value")
-	}
-
-	id := nip.GetStaticNodeID()
-	na := r.GetActiveNodeAppearance(id)
-	if na != nil {
-		return na, PurgatoryExistingMember
-	}
-
-	r.rw.Lock()
-	defer r.rw.Unlock()
-
-	nn := r.dynamicNodes[id]
-	if nn != nil {
-		return nn, PurgatoryExistingMember
-	}
-
-	if r.purgatoryByPK == nil {
-		r.purgatoryByPK = make(map[string]*NodeAppearance)
-		r.purgatoryByID = make(map[insolar.ShortNodeID]*[]*NodeAppearance)
-
-		r.purgatoryByPK[nip.GetNodePublicKey().AsByteString()] = n
-		r.purgatoryByID[nip.GetStaticNodeID()] = &[]*NodeAppearance{n}
-		return n, 0
-	}
-
-	pk := nip.GetNodePublicKey().AsByteString()
-	nn = r.purgatoryByPK[pk]
-	if nn != nil {
-		return nn, PurgatoryDuplicatePK
-	}
-
-	nodes := r.purgatoryByID[id]
-
-	if nodes == nil {
-		nodes = &[]*NodeAppearance{n}
-		r.purgatoryByID[id] = nodes
-		return n, 0
-	}
-	*nodes = append(*nodes, n)
-	return n, PurgatoryNodeState(len(*nodes) - 1)
-}
-
-func (r *DynamicRealmPopulation) AddToDynamics(n *NodeAppearance) (*NodeAppearance, []*NodeAppearance) {
+func (r *DynamicRealmPopulation) AddToDynamics(n *NodeAppearance) *NodeAppearance {
 	nip := n.profile.GetStatic()
 
 	if nip.GetIntroduction() == nil {
@@ -260,22 +210,9 @@ func (r *DynamicRealmPopulation) AddToDynamics(n *NodeAppearance) (*NodeAppearan
 
 	id := nip.GetStaticNodeID()
 
-	delete(r.purgatoryByPK, nip.GetNodePublicKey().AsByteString())
-	nodes := r.purgatoryByID[id]
-	if nodes != nil {
-		delete(r.purgatoryByID, id)
-	} else {
-		nodes = &[]*NodeAppearance{}
-	}
-
-	na := r.GetActiveNodeAppearance(id)
+	na := r.dynamicNodes[id]
 	if na != nil {
-		return na, *nodes
-	}
-
-	na = r.dynamicNodes[id]
-	if na != nil {
-		return na, *nodes
+		return na
 	}
 
 	if n.profile.IsJoiner() {
@@ -297,7 +234,7 @@ func (r *DynamicRealmPopulation) AddToDynamics(n *NodeAppearance) (*NodeAppearan
 		r.indexedCount++
 		r.nodeShuffle = append(r.nodeShuffle, n)
 	}
-	return n, *nodes
+	return n
 }
 
 //
@@ -309,7 +246,4 @@ func (r *DynamicRealmPopulation) CreateVectorHelper() *RealmVectorHelper {
 	v.setArrayNodes(r.nodeIndex, r.dynamicNodes, r.self.callback.GetPopulationVersion())
 	v.realmPopulation = r
 	return v
-}
-
-type PurgatoryNode struct {
 }
