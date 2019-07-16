@@ -386,6 +386,8 @@ type NeighbourAnnouncement struct {
 		The field "Joiner" MUST BE OMITTED when	this joiner is introduced by the sending node
 	*/
 	Joiner JoinAnnouncement `insolar-transport:"optional=CurrentRank==0"` // ByteSize = 135, 137, 147
+	// TODO implement for serialization
+	JoinerIntroducedBy insolar.ShortNodeID `insolar-transport:"optional=CurrentRank==0"`
 
 	/* For non-joiner */
 	Member NodeAnnouncement `insolar-transport:"optional=CurrentRank!=0"` // ByteSize = 132, 136
