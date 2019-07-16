@@ -83,7 +83,10 @@ func TestNewMembershipProfile(t *testing.T) {
 func TestNewMembershipProfileByNode(t *testing.T) {
 	np := NewActiveNodeMock(t)
 	index := 1
-	np.GetIndexMock.Set(func() int { return index })
+	np.GetIndexMock.Set(func() member.Index { return member.Index(index) })
+	np.IsJoinerMock.Set(func() (r bool) {
+		return false
+	})
 	power := member.Power(2)
 	np.GetDeclaredPowerMock.Set(func() member.Power { return power })
 	np.GetOpModeMock.Set(func() (r member.OpMode) {
@@ -94,7 +97,7 @@ func TestNewMembershipProfileByNode(t *testing.T) {
 	nas := proofs.NewMemberAnnouncementSignatureMock(t)
 	ep := member.Power(3)
 	mp := NewMembershipProfileByNode(np, nsh, nas, ep)
-	require.Equal(t, uint16(index), mp.Index)
+	require.Equal(t, member.Index(index), mp.Index)
 
 	require.Equal(t, power, mp.Power)
 

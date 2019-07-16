@@ -74,7 +74,7 @@ func NewMisbehaviorRegistry() *MisbehaviorRegistry {
 func (mr *MisbehaviorRegistry) AddReport(report misbehavior.Report) {
 	ctx := context.TODO()
 
-	inslogger.FromContext(ctx).Warnf("Got Report")
+	inslogger.FromContext(ctx).Warnf("Got Report% %+v", report)
 }
 
 type MandateRegistry struct {

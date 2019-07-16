@@ -37,7 +37,7 @@ type ActiveNodeMock struct {
 	GetDefaultEndpointPreCounter uint64
 	GetDefaultEndpointMock       mActiveNodeMockGetDefaultEndpoint
 
-	GetIndexFunc       func() (r int)
+	GetIndexFunc       func() (r member.Index)
 	GetIndexCounter    uint64
 	GetIndexPreCounter uint64
 	GetIndexMock       mActiveNodeMockGetIndex
@@ -544,7 +544,7 @@ type ActiveNodeMockGetIndexExpectation struct {
 }
 
 type ActiveNodeMockGetIndexResult struct {
-	r int
+	r member.Index
 }
 
 //Expect specifies that invocation of ActiveNode.GetIndex is expected from 1 to Infinity times
@@ -560,7 +560,7 @@ func (m *mActiveNodeMockGetIndex) Expect() *mActiveNodeMockGetIndex {
 }
 
 //Return specifies results of invocation of ActiveNode.GetIndex
-func (m *mActiveNodeMockGetIndex) Return(r int) *ActiveNodeMock {
+func (m *mActiveNodeMockGetIndex) Return(r member.Index) *ActiveNodeMock {
 	m.mock.GetIndexFunc = nil
 	m.expectationSeries = nil
 
@@ -582,12 +582,12 @@ func (m *mActiveNodeMockGetIndex) ExpectOnce() *ActiveNodeMockGetIndexExpectatio
 	return expectation
 }
 
-func (e *ActiveNodeMockGetIndexExpectation) Return(r int) {
+func (e *ActiveNodeMockGetIndexExpectation) Return(r member.Index) {
 	e.result = &ActiveNodeMockGetIndexResult{r}
 }
 
 //Set uses given function f as a mock of ActiveNode.GetIndex method
-func (m *mActiveNodeMockGetIndex) Set(f func() (r int)) *ActiveNodeMock {
+func (m *mActiveNodeMockGetIndex) Set(f func() (r member.Index)) *ActiveNodeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -596,7 +596,7 @@ func (m *mActiveNodeMockGetIndex) Set(f func() (r int)) *ActiveNodeMock {
 }
 
 //GetIndex implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.ActiveNode interface
-func (m *ActiveNodeMock) GetIndex() (r int) {
+func (m *ActiveNodeMock) GetIndex() (r member.Index) {
 	counter := atomic.AddUint64(&m.GetIndexPreCounter, 1)
 	defer atomic.AddUint64(&m.GetIndexCounter, 1)
 

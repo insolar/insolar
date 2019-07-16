@@ -89,7 +89,7 @@ func (dh *DatagramHandler) SetPacketParserFactory(packetParserFactory PacketPars
 
 func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, buf []byte) {
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"address": address,
+		"sender_address": address,
 	})
 
 	packetParser, err := dh.packetParserFactory.ParsePacket(ctx, bytes.NewReader(buf))
@@ -97,6 +97,11 @@ func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, b
 		logger.Error("Failed to get PacketParser: ", err)
 		return
 	}
+
+	logger = inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"sender_id":   packetParser.GetSourceID(),
+		"packet_type": packetParser.GetPacketType(),
+	})
 
 	hostIdentity := endpoints.InboundConnection{
 		Addr: endpoints.Name(address),

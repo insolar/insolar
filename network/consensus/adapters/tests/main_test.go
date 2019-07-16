@@ -85,7 +85,6 @@ func TestConsensusMain(t *testing.T) {
 	startedAt := time.Now()
 
 	ctx := initLogger()
-	network := initNetwork(ctx)
 
 	nodeIdentities := generateNodeIdentities(0, 1, 3, 5)
 	nodeInfos := generateNodeInfos(nodeIdentities)
@@ -105,8 +104,6 @@ func TestConsensusMain(t *testing.T) {
 		transportFactory := transport2.NewFactory(conf)
 		transport, _ := transportFactory.CreateDatagramTransport(datagramHandler)
 
-		// consensusAdapter := NewEmuHostConsensusAdapter(n.Address())
-
 		pulseHandler := adapters.NewPulseHandler()
 		pulseHandlers = append(pulseHandlers, pulseHandler)
 
@@ -123,13 +120,14 @@ func TestConsensusMain(t *testing.T) {
 			DatagramTransport:     transport,
 		}).Install(datagramHandler, pulseHandler)
 
+		ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
+			"node_id":      n.ShortID(),
+			"node_address": n.Address(),
+		})
 		_ = transport.Start(ctx)
-		// consensusAdapter.ConnectTo(network)
 	}
 
 	fmt.Println("===", len(nodes), "=================================================")
-
-	network.Start(ctx)
 
 	pulsar := NewPulsar(2, pulseHandlers)
 	go func() {
@@ -154,17 +152,6 @@ func initLogger() context.Context {
 	logger, _ = logger.WithFormat(insolar.TextFormat)
 	ctx = inslogger.SetLogger(ctx, logger)
 	return ctx
-}
-
-func initNetwork(ctx context.Context) *EmuNetwork {
-	strategy := NewDelayNetStrategy(DelayStrategyConf{
-		MinDelay:         10 * time.Millisecond,
-		MaxDelay:         30 * time.Millisecond,
-		Variance:         0.2,
-		SpikeProbability: 0.1,
-	})
-	network := NewEmuNetwork(strategy, ctx)
-	return network
 }
 
 func generateNodeIdentities(countNeutral, countHeavy, countLight, countVirtual int) []nodeIdentity {

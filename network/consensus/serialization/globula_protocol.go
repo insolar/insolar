@@ -292,6 +292,10 @@ func (pd *EmbeddedPulsarData) DeserializeFrom(ctx DeserializeContext, reader io.
 		return errors.Wrap(err, "failed to deserialize Size")
 	}
 
+	if pd.Size == 0 {
+		return nil
+	}
+
 	pd.Data = make([]byte, pd.Size)
 	if err := read(reader, &pd.Data); err != nil {
 		return errors.Wrap(err, "failed to deserialize Data")

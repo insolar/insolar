@@ -37,7 +37,7 @@ type LocalNodeMock struct {
 	GetDefaultEndpointPreCounter uint64
 	GetDefaultEndpointMock       mLocalNodeMockGetDefaultEndpoint
 
-	GetIndexFunc       func() (r int)
+	GetIndexFunc       func() (r member.Index)
 	GetIndexCounter    uint64
 	GetIndexPreCounter uint64
 	GetIndexMock       mLocalNodeMockGetIndex
@@ -550,7 +550,7 @@ type LocalNodeMockGetIndexExpectation struct {
 }
 
 type LocalNodeMockGetIndexResult struct {
-	r int
+	r member.Index
 }
 
 //Expect specifies that invocation of LocalNode.GetIndex is expected from 1 to Infinity times
@@ -566,7 +566,7 @@ func (m *mLocalNodeMockGetIndex) Expect() *mLocalNodeMockGetIndex {
 }
 
 //Return specifies results of invocation of LocalNode.GetIndex
-func (m *mLocalNodeMockGetIndex) Return(r int) *LocalNodeMock {
+func (m *mLocalNodeMockGetIndex) Return(r member.Index) *LocalNodeMock {
 	m.mock.GetIndexFunc = nil
 	m.expectationSeries = nil
 
@@ -588,12 +588,12 @@ func (m *mLocalNodeMockGetIndex) ExpectOnce() *LocalNodeMockGetIndexExpectation 
 	return expectation
 }
 
-func (e *LocalNodeMockGetIndexExpectation) Return(r int) {
+func (e *LocalNodeMockGetIndexExpectation) Return(r member.Index) {
 	e.result = &LocalNodeMockGetIndexResult{r}
 }
 
 //Set uses given function f as a mock of LocalNode.GetIndex method
-func (m *mLocalNodeMockGetIndex) Set(f func() (r int)) *LocalNodeMock {
+func (m *mLocalNodeMockGetIndex) Set(f func() (r member.Index)) *LocalNodeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -602,7 +602,7 @@ func (m *mLocalNodeMockGetIndex) Set(f func() (r int)) *LocalNodeMock {
 }
 
 //GetIndex implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.LocalNode interface
-func (m *LocalNodeMock) GetIndex() (r int) {
+func (m *LocalNodeMock) GetIndex() (r member.Index) {
 	counter := atomic.AddUint64(&m.GetIndexPreCounter, 1)
 	defer atomic.AddUint64(&m.GetIndexCounter, 1)
 

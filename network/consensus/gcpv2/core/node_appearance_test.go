@@ -164,10 +164,10 @@ func TestGetIndex(t *testing.T) {
 	lp := profiles.NewLocalNodeMock(t)
 	lp.LocalNodeProfileMock.Set(func() {})
 	index := 1
-	lp.GetIndexMock.Set(func() int { return index })
+	lp.GetIndexMock.Set(func() member.Index { return member.Index(index) })
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
-	require.Equal(t, index, r.GetIndex())
+	require.Equal(t, member.Index(index), r.GetIndex())
 }
 
 func TestGetShortNodeID(t *testing.T) {
