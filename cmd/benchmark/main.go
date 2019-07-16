@@ -324,9 +324,9 @@ func calcFee(amount int64) int64 {
 
 	if mod > 0 {
 		return div + 1
-	} else {
-		return div
 	}
+
+	return div
 }
 
 func main() {
