@@ -51,6 +51,7 @@
 package censusimpl
 
 import (
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
@@ -64,6 +65,10 @@ type NodeProfileSlot struct {
 	index    member.Index
 	mode     member.OpMode
 	power    member.Power
+}
+
+func (c *NodeProfileSlot) GetNodeID() insolar.ShortNodeID {
+	return c.GetStaticNodeID()
 }
 
 func (c *NodeProfileSlot) GetStatic() profiles.StaticProfile {

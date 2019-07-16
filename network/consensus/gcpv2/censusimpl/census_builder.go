@@ -206,7 +206,7 @@ func (c *DynamicPopulationBuilder) GetCount() int {
 }
 
 func (c *DynamicPopulationBuilder) GetLocalProfile() profiles.Updatable {
-	return c.FindProfile(c.census.population.GetLocalProfile().GetShortNodeID())
+	return c.FindProfile(c.census.population.GetLocalProfile().GetNodeID())
 }
 
 func (c *DynamicPopulationBuilder) FindProfile(nodeID insolar.ShortNodeID) profiles.Updatable {

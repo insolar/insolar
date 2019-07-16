@@ -193,7 +193,7 @@ func (r *coreRealm) IsJoiner() bool {
 }
 
 func (r *coreRealm) GetSelfNodeID() insolar.ShortNodeID {
-	return r.self.profile.GetShortNodeID()
+	return r.self.profile.GetNodeID()
 }
 
 func (r *coreRealm) GetSelf() *NodeAppearance {

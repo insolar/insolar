@@ -63,7 +63,7 @@ import (
 func NewStaticProfileByBrief(v BriefCandidateProfile, pks cryptkit.PublicKeyStore) StaticProfile {
 	return &NodeStaticProfile{
 		endpoints:         []endpoints.Outbound{v.GetDefaultEndpoint()},
-		nodeID:            v.GetShortNodeID(),
+		nodeID:            v.GetStaticNodeID(),
 		primaryRole:       v.GetPrimaryRole(),
 		specialRoles:      v.GetSpecialRoles(),
 		pk:                v.GetNodePublicKey(),
@@ -79,7 +79,7 @@ func NewStaticProfileByFull(v CandidateProfile, pks cryptkit.PublicKeyStore) Sta
 	extraEndpoints := v.GetExtraEndpoints()
 	return &NodeStaticProfile{
 		endpoints:         append(append(make([]endpoints.Outbound, len(extraEndpoints)+1), v.GetDefaultEndpoint()), extraEndpoints...),
-		nodeID:            v.GetShortNodeID(),
+		nodeID:            v.GetStaticNodeID(),
 		primaryRole:       v.GetPrimaryRole(),
 		specialRoles:      v.GetSpecialRoles(),
 		pk:                v.GetNodePublicKey(),
@@ -153,6 +153,11 @@ func (p *NodeStaticProfile) IsAllowedPower(pw member.Power) bool {
 	return p.powerSet.IsAllowed(pw)
 }
 
+func (p *NodeStaticProfile) GetIntroNodeID() insolar.ShortNodeID {
+	p.ensureFull()
+	return p.nodeID
+}
+
 func (p *NodeStaticProfile) ConvertPowerRequest(request power.Request) member.Power {
 	p.ensureFull()
 	if ok, cl := request.AsCapacityLevel(); ok {
@@ -179,7 +184,7 @@ func (p *NodeStaticProfile) IsAcceptableHost(from endpoints.Inbound) bool {
 	return false
 }
 
-func (p *NodeStaticProfile) GetShortNodeID() insolar.ShortNodeID {
+func (p *NodeStaticProfile) GetStaticNodeID() insolar.ShortNodeID {
 	return p.nodeID
 }
 

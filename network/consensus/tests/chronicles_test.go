@@ -284,7 +284,11 @@ func (c *EmuNodeIntro) IsAcceptableHost(from endpoints.Inbound) bool {
 	return addr.Equals(from.GetNameAddress())
 }
 
-func (c *EmuNodeIntro) GetShortNodeID() insolar.ShortNodeID {
+func (c *EmuNodeIntro) GetStaticNodeID() insolar.ShortNodeID {
+	return c.id
+}
+
+func (c *EmuNodeIntro) GetIntroNodeID() insolar.ShortNodeID {
 	return c.id
 }
 

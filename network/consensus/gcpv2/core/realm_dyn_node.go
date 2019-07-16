@@ -76,7 +76,7 @@ func (p *updatableJoinerSlot) GetStatic() profiles.StaticProfile {
 
 func (p *updatableJoinerSlot) SetNodeIntroProfile(nip profiles.StaticProfile) {
 
-	if p.nodeID != nip.GetShortNodeID() {
+	if p.nodeID != nip.GetStaticNodeID() {
 		panic("illegal value")
 	}
 
@@ -97,7 +97,7 @@ func (p *updatableJoinerSlot) IsAcceptableHost(from endpoints.Inbound) bool {
 	return p.GetStatic().IsAcceptableHost(from)
 }
 
-func (p *updatableJoinerSlot) GetShortNodeID() insolar.ShortNodeID {
+func (p *updatableJoinerSlot) GetNodeID() insolar.ShortNodeID {
 	return p.nodeID
 }
 

@@ -103,6 +103,10 @@ type ActiveNodeMock struct {
 	IsJoinerMock       mActiveNodeMockIsJoiner
 }
 
+func (m *ActiveNodeMock) GetStaticNodeID() insolar.ShortNodeID {
+	return m.GetNodeID()
+}
+
 func (m *ActiveNodeMock) GetStatic() StaticProfile {
 	return m
 }
@@ -1355,7 +1359,7 @@ type ActiveNodeMockGetShortNodeIDResult struct {
 	r insolar.ShortNodeID
 }
 
-//Expect specifies that invocation of ActiveNode.GetShortNodeID is expected from 1 to Infinity times
+//Expect specifies that invocation of ActiveNode.GetNodeID is expected from 1 to Infinity times
 func (m *mActiveNodeMockGetShortNodeID) Expect() *mActiveNodeMockGetShortNodeID {
 	m.mock.GetShortNodeIDFunc = nil
 	m.expectationSeries = nil
@@ -1367,7 +1371,7 @@ func (m *mActiveNodeMockGetShortNodeID) Expect() *mActiveNodeMockGetShortNodeID 
 	return m
 }
 
-//Return specifies results of invocation of ActiveNode.GetShortNodeID
+//Return specifies results of invocation of ActiveNode.GetNodeID
 func (m *mActiveNodeMockGetShortNodeID) Return(r insolar.ShortNodeID) *ActiveNodeMock {
 	m.mock.GetShortNodeIDFunc = nil
 	m.expectationSeries = nil
@@ -1379,7 +1383,7 @@ func (m *mActiveNodeMockGetShortNodeID) Return(r insolar.ShortNodeID) *ActiveNod
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of ActiveNode.GetShortNodeID is expected once
+//ExpectOnce specifies that invocation of ActiveNode.GetNodeID is expected once
 func (m *mActiveNodeMockGetShortNodeID) ExpectOnce() *ActiveNodeMockGetShortNodeIDExpectation {
 	m.mock.GetShortNodeIDFunc = nil
 	m.mainExpectation = nil
@@ -1394,7 +1398,7 @@ func (e *ActiveNodeMockGetShortNodeIDExpectation) Return(r insolar.ShortNodeID) 
 	e.result = &ActiveNodeMockGetShortNodeIDResult{r}
 }
 
-//Set uses given function f as a mock of ActiveNode.GetShortNodeID method
+//Set uses given function f as a mock of ActiveNode.GetNodeID method
 func (m *mActiveNodeMockGetShortNodeID) Set(f func() (r insolar.ShortNodeID)) *ActiveNodeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -1403,20 +1407,20 @@ func (m *mActiveNodeMockGetShortNodeID) Set(f func() (r insolar.ShortNodeID)) *A
 	return m.mock
 }
 
-//GetShortNodeID implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.ActiveNode interface
-func (m *ActiveNodeMock) GetShortNodeID() (r insolar.ShortNodeID) {
+//GetNodeID implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.ActiveNode interface
+func (m *ActiveNodeMock) GetNodeID() (r insolar.ShortNodeID) {
 	counter := atomic.AddUint64(&m.GetShortNodeIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetShortNodeIDCounter, 1)
 
 	if len(m.GetShortNodeIDMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.GetShortNodeIDMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ActiveNodeMock.GetShortNodeID.")
+			m.t.Fatalf("Unexpected call to ActiveNodeMock.GetNodeID.")
 			return
 		}
 
 		result := m.GetShortNodeIDMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the ActiveNodeMock.GetShortNodeID")
+			m.t.Fatal("No results are set for the ActiveNodeMock.GetNodeID")
 			return
 		}
 
@@ -1429,7 +1433,7 @@ func (m *ActiveNodeMock) GetShortNodeID() (r insolar.ShortNodeID) {
 
 		result := m.GetShortNodeIDMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the ActiveNodeMock.GetShortNodeID")
+			m.t.Fatal("No results are set for the ActiveNodeMock.GetNodeID")
 		}
 
 		r = result.r
@@ -1438,7 +1442,7 @@ func (m *ActiveNodeMock) GetShortNodeID() (r insolar.ShortNodeID) {
 	}
 
 	if m.GetShortNodeIDFunc == nil {
-		m.t.Fatalf("Unexpected call to ActiveNodeMock.GetShortNodeID.")
+		m.t.Fatalf("Unexpected call to ActiveNodeMock.GetNodeID.")
 		return
 	}
 
@@ -1450,7 +1454,7 @@ func (m *ActiveNodeMock) GetShortNodeIDMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetShortNodeIDCounter)
 }
 
-//GetShortNodeIDMinimockPreCounter returns the value of ActiveNodeMock.GetShortNodeID invocations
+//GetShortNodeIDMinimockPreCounter returns the value of ActiveNodeMock.GetNodeID invocations
 func (m *ActiveNodeMock) GetShortNodeIDMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetShortNodeIDPreCounter)
 }
@@ -2333,7 +2337,7 @@ func (m *ActiveNodeMock) ValidateCallCounters() {
 	}
 
 	if !m.GetShortNodeIDFinished() {
-		m.t.Fatal("Expected call to ActiveNodeMock.GetShortNodeID")
+		m.t.Fatal("Expected call to ActiveNodeMock.GetNodeID")
 	}
 
 	if !m.GetSignatureVerifierFinished() {
@@ -2414,7 +2418,7 @@ func (m *ActiveNodeMock) MinimockFinish() {
 	}
 
 	if !m.GetShortNodeIDFinished() {
-		m.t.Fatal("Expected call to ActiveNodeMock.GetShortNodeID")
+		m.t.Fatal("Expected call to ActiveNodeMock.GetNodeID")
 	}
 
 	if !m.GetSignatureVerifierFinished() {
@@ -2516,7 +2520,7 @@ func (m *ActiveNodeMock) MinimockWait(timeout time.Duration) {
 			}
 
 			if !m.GetShortNodeIDFinished() {
-				m.t.Error("Expected call to ActiveNodeMock.GetShortNodeID")
+				m.t.Error("Expected call to ActiveNodeMock.GetNodeID")
 			}
 
 			if !m.GetSignatureVerifierFinished() {

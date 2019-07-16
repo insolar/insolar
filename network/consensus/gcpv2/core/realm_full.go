@@ -297,12 +297,12 @@ func (r *FullRealm) registerNextJoinCandidate() *NodeAppearance {
 			nna = nil
 		}
 		if nodes != nil {
-			inslogger.FromContext(r.roundContext).Errorf("multiple joiners on same id(%v): %v", cp.GetShortNodeID(), nodes)
+			inslogger.FromContext(r.roundContext).Errorf("multiple joiners on same id(%v): %v", cp.GetStaticNodeID(), nodes)
 		}
 		if nna != nil {
 			return nna
 		}
-		r.candidateFeeder.RemoveJoinCandidate(false, cp.GetShortNodeID())
+		r.candidateFeeder.RemoveJoinCandidate(false, cp.GetStaticNodeID())
 	}
 }
 
@@ -448,7 +448,7 @@ func (r *FullRealm) prepareRegularMembers(pop census2.PopulationBuilder) {
 
 		var na *NodeAppearance
 		if p.IsJoiner() {
-			na = r.population.GetJoinerNodeAppearance(p.GetShortNodeID())
+			na = r.population.GetJoinerNodeAppearance(p.GetNodeID())
 		} else {
 			na = r.population.GetNodeAppearanceByIndex(p.GetIndex().AsInt())
 		}

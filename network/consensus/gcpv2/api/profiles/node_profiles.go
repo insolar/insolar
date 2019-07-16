@@ -73,7 +73,7 @@ type Host interface {
 
 type NodeIntroduction interface {
 	// full intro
-	GetShortNodeID() insolar.ShortNodeID
+	GetIntroNodeID() insolar.ShortNodeID
 	GetReference() insolar.Reference
 	IsAllowedPower(p member.Power) bool
 	ConvertPowerRequest(request power.Request) member.Power
@@ -82,7 +82,7 @@ type NodeIntroduction interface {
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.StaticProfile -o . -s _mock.go
 
 type staticProfile interface {
-	GetShortNodeID() insolar.ShortNodeID
+	GetStaticNodeID() insolar.ShortNodeID
 	GetPrimaryRole() member.PrimaryRole
 	GetSpecialRoles() member.SpecialRole
 	GetNodePublicKey() cryptkit.SignatureKeyHolder
@@ -99,7 +99,7 @@ type StaticProfile interface { //brief intro
 
 type BaseNode interface {
 	//StaticProfile
-	GetShortNodeID() insolar.ShortNodeID
+	GetNodeID() insolar.ShortNodeID
 
 	/*
 		As dynamic nodes may update static part info, code inside consenus logic MUST access static profile
@@ -304,7 +304,7 @@ func EqualIntroProfiles(p StaticProfile, o StaticProfile) bool {
 		return true
 	}
 
-	if p.GetShortNodeID() != o.GetShortNodeID() || p.GetPrimaryRole() != o.GetPrimaryRole() ||
+	if p.GetStaticNodeID() != o.GetStaticNodeID() || p.GetPrimaryRole() != o.GetPrimaryRole() ||
 		p.GetSpecialRoles() != o.GetSpecialRoles() || p.GetStartPower() != o.GetStartPower() ||
 		!p.GetNodePublicKey().Equals(o.GetNodePublicKey()) {
 		return false

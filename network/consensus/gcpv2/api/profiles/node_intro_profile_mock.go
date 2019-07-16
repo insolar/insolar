@@ -919,7 +919,7 @@ type NodeIntroProfileMockGetShortNodeIDResult struct {
 	r insolar.ShortNodeID
 }
 
-//Expect specifies that invocation of StaticProfile.GetShortNodeID is expected from 1 to Infinity times
+//Expect specifies that invocation of StaticProfile.GetNodeID is expected from 1 to Infinity times
 func (m *mNodeIntroProfileMockGetShortNodeID) Expect() *mNodeIntroProfileMockGetShortNodeID {
 	m.mock.GetShortNodeIDFunc = nil
 	m.expectationSeries = nil
@@ -931,7 +931,7 @@ func (m *mNodeIntroProfileMockGetShortNodeID) Expect() *mNodeIntroProfileMockGet
 	return m
 }
 
-//Return specifies results of invocation of StaticProfile.GetShortNodeID
+//Return specifies results of invocation of StaticProfile.GetNodeID
 func (m *mNodeIntroProfileMockGetShortNodeID) Return(r insolar.ShortNodeID) *NodeIntroProfileMock {
 	m.mock.GetShortNodeIDFunc = nil
 	m.expectationSeries = nil
@@ -943,7 +943,7 @@ func (m *mNodeIntroProfileMockGetShortNodeID) Return(r insolar.ShortNodeID) *Nod
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of StaticProfile.GetShortNodeID is expected once
+//ExpectOnce specifies that invocation of StaticProfile.GetNodeID is expected once
 func (m *mNodeIntroProfileMockGetShortNodeID) ExpectOnce() *NodeIntroProfileMockGetShortNodeIDExpectation {
 	m.mock.GetShortNodeIDFunc = nil
 	m.mainExpectation = nil
@@ -958,7 +958,7 @@ func (e *NodeIntroProfileMockGetShortNodeIDExpectation) Return(r insolar.ShortNo
 	e.result = &NodeIntroProfileMockGetShortNodeIDResult{r}
 }
 
-//Set uses given function f as a mock of StaticProfile.GetShortNodeID method
+//Set uses given function f as a mock of StaticProfile.GetNodeID method
 func (m *mNodeIntroProfileMockGetShortNodeID) Set(f func() (r insolar.ShortNodeID)) *NodeIntroProfileMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -967,20 +967,20 @@ func (m *mNodeIntroProfileMockGetShortNodeID) Set(f func() (r insolar.ShortNodeI
 	return m.mock
 }
 
-//GetShortNodeID implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.StaticProfile interface
-func (m *NodeIntroProfileMock) GetShortNodeID() (r insolar.ShortNodeID) {
+//GetNodeID implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.StaticProfile interface
+func (m *NodeIntroProfileMock) GetStaticNodeID() (r insolar.ShortNodeID) {
 	counter := atomic.AddUint64(&m.GetShortNodeIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetShortNodeIDCounter, 1)
 
 	if len(m.GetShortNodeIDMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.GetShortNodeIDMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeIntroProfileMock.GetShortNodeID.")
+			m.t.Fatalf("Unexpected call to NodeIntroProfileMock.GetNodeID.")
 			return
 		}
 
 		result := m.GetShortNodeIDMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the NodeIntroProfileMock.GetShortNodeID")
+			m.t.Fatal("No results are set for the NodeIntroProfileMock.GetNodeID")
 			return
 		}
 
@@ -993,7 +993,7 @@ func (m *NodeIntroProfileMock) GetShortNodeID() (r insolar.ShortNodeID) {
 
 		result := m.GetShortNodeIDMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the NodeIntroProfileMock.GetShortNodeID")
+			m.t.Fatal("No results are set for the NodeIntroProfileMock.GetNodeID")
 		}
 
 		r = result.r
@@ -1002,7 +1002,7 @@ func (m *NodeIntroProfileMock) GetShortNodeID() (r insolar.ShortNodeID) {
 	}
 
 	if m.GetShortNodeIDFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeIntroProfileMock.GetShortNodeID.")
+		m.t.Fatalf("Unexpected call to NodeIntroProfileMock.GetNodeID.")
 		return
 	}
 
@@ -1014,7 +1014,7 @@ func (m *NodeIntroProfileMock) GetShortNodeIDMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetShortNodeIDCounter)
 }
 
-//GetShortNodeIDMinimockPreCounter returns the value of NodeIntroProfileMock.GetShortNodeID invocations
+//GetShortNodeIDMinimockPreCounter returns the value of NodeIntroProfileMock.GetNodeID invocations
 func (m *NodeIntroProfileMock) GetShortNodeIDMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetShortNodeIDPreCounter)
 }
@@ -1617,7 +1617,7 @@ func (m *NodeIntroProfileMock) ValidateCallCounters() {
 	}
 
 	if !m.GetShortNodeIDFinished() {
-		m.t.Fatal("Expected call to NodeIntroProfileMock.GetShortNodeID")
+		m.t.Fatal("Expected call to NodeIntroProfileMock.GetNodeID")
 	}
 
 	if !m.GetSpecialRolesFinished() {
@@ -1678,7 +1678,7 @@ func (m *NodeIntroProfileMock) MinimockFinish() {
 	}
 
 	if !m.GetShortNodeIDFinished() {
-		m.t.Fatal("Expected call to NodeIntroProfileMock.GetShortNodeID")
+		m.t.Fatal("Expected call to NodeIntroProfileMock.GetNodeID")
 	}
 
 	if !m.GetSpecialRolesFinished() {
@@ -1755,7 +1755,7 @@ func (m *NodeIntroProfileMock) MinimockWait(timeout time.Duration) {
 			}
 
 			if !m.GetShortNodeIDFinished() {
-				m.t.Error("Expected call to NodeIntroProfileMock.GetShortNodeID")
+				m.t.Error("Expected call to NodeIntroProfileMock.GetNodeID")
 			}
 
 			if !m.GetSpecialRolesFinished() {

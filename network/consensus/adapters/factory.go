@@ -188,7 +188,7 @@ func (npf *NodeProfileFactory) createProfile(candidate profiles.BriefCandidatePr
 	store := NewECDSAPublicKeyStore(pk.(*ecdsa.PublicKey))
 
 	return newNodeIntroProfile(
-		candidate.GetShortNodeID(),
+		candidate.GetStaticNodeID(),
 		candidate.GetPrimaryRole(),
 		candidate.GetSpecialRoles(),
 		intro,
@@ -204,7 +204,7 @@ func (npf *NodeProfileFactory) CreateBriefIntroProfile(candidate profiles.BriefC
 }
 
 func (npf *NodeProfileFactory) CreateFullIntroProfile(candidate profiles.CandidateProfile) profiles.StaticProfile {
-	intro := newNodeIntroduction(candidate.GetShortNodeID(), candidate.GetReference())
+	intro := newNodeIntroduction(candidate.GetStaticNodeID(), candidate.GetReference())
 
 	return npf.createProfile(candidate, candidate.GetJoinerSignature(), intro)
 }

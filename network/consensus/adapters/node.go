@@ -72,6 +72,10 @@ type NodeIntroduction struct {
 	ref     insolar.Reference
 }
 
+func (ni *NodeIntroduction) GetIntroNodeID() insolar.ShortNodeID {
+	return ni.shortID
+}
+
 func NewNodeIntroduction(networkNode insolar.NetworkNode) *NodeIntroduction {
 	return newNodeIntroduction(
 		networkNode.ShortID(),
@@ -200,7 +204,7 @@ func (nip *NodeIntroProfile) IsAcceptableHost(from endpoints.Inbound) bool {
 	return address.Equals(from.GetNameAddress())
 }
 
-func (nip *NodeIntroProfile) GetShortNodeID() insolar.ShortNodeID {
+func (nip *NodeIntroProfile) GetStaticNodeID() insolar.ShortNodeID {
 	return nip.shortID
 }
 
@@ -277,7 +281,7 @@ func NewNetworkNode(profile profiles.ActiveNode) insolar.NetworkNode {
 
 	mutableNode := networkNode.(node.MutableNode)
 
-	mutableNode.SetShortID(profile.GetShortNodeID())
+	mutableNode.SetShortID(profile.GetNodeID())
 	mutableNode.SetState(insolar.NodeReady)
 	mutableNode.SetSignature(insolar.SignatureFromBytes(nip.GetAnnouncementSignature().AsBytes()))
 

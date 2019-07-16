@@ -66,7 +66,7 @@ func newEvictedPopulation(evicts []*updatableSlot) evictedPopulation {
 	evictedNodes := make(map[insolar.ShortNodeID]profiles.EvictedNode, len(evicts))
 
 	for _, s := range evicts {
-		id := s.GetShortNodeID()
+		id := s.GetNodeID()
 		evictedNodes[id] = &evictedSlot{s.StaticProfile, s.verifier, s.mode,
 			s.leaveReason}
 	}
@@ -105,6 +105,10 @@ type evictedSlot struct {
 	sf          cryptkit.SignatureVerifier
 	mode        member.OpMode
 	leaveReason uint32
+}
+
+func (p *evictedSlot) GetNodeID() insolar.ShortNodeID {
+	return p.GetStaticNodeID()
 }
 
 func (p *evictedSlot) GetStatic() profiles.StaticProfile {

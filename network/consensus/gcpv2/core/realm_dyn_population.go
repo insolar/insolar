@@ -208,7 +208,7 @@ func (r *DynamicRealmPopulation) AddToPurgatory(n *NodeAppearance) (*NodeAppeara
 		panic("illegal value")
 	}
 
-	id := nip.GetShortNodeID()
+	id := nip.GetStaticNodeID()
 	na := r.GetActiveNodeAppearance(id)
 	if na != nil {
 		return na, PurgatoryExistingMember
@@ -227,7 +227,7 @@ func (r *DynamicRealmPopulation) AddToPurgatory(n *NodeAppearance) (*NodeAppeara
 		r.purgatoryByID = make(map[insolar.ShortNodeID]*[]*NodeAppearance)
 
 		r.purgatoryByPK[nip.GetNodePublicKey().AsByteString()] = n
-		r.purgatoryByID[nip.GetShortNodeID()] = &[]*NodeAppearance{n}
+		r.purgatoryByID[nip.GetStaticNodeID()] = &[]*NodeAppearance{n}
 		return n, 0
 	}
 
@@ -258,7 +258,7 @@ func (r *DynamicRealmPopulation) AddToDynamics(n *NodeAppearance) (*NodeAppearan
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
-	id := nip.GetShortNodeID()
+	id := nip.GetStaticNodeID()
 
 	delete(r.purgatoryByPK, nip.GetNodePublicKey().AsByteString())
 	nodes := r.purgatoryByID[id]

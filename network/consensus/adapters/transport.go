@@ -75,7 +75,7 @@ func (ps *PacketSender) SendPacketToTransport(ctx context.Context, to profiles.A
 
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"receiver_addr":    addr,
-		"receiver_node_id": to.GetShortNodeID(),
+		"receiver_node_id": to.GetNodeID(),
 		"options":          sendOptions,
 	})
 

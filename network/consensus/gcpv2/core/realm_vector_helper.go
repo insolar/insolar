@@ -187,7 +187,7 @@ func (p *RealmVectorProjection) ScanSortedWithFilter(apply func(nodeData nodeset
 		filterEntry := p.indexedRefs[valueEntry.filterBy]
 		postpone, filterValue := filter(int(valueEntry.filterBy), filterEntry.VectorEntryData)
 
-		nodeID := valueEntry.Profile.GetShortNodeID()
+		nodeID := valueEntry.Profile.GetNodeID()
 		if joiner {
 			if postpone {
 				// joiner MUST NOT appear when an introduction node is out
@@ -212,7 +212,7 @@ func (p *RealmVectorProjection) ScanSortedWithFilter(apply func(nodeData nodeset
 				skipped = make([]postponedEntry, 1, 1+len(p.poweredSorted)>>1)
 				skipped[0] = postponedEntry{valueEntry, filterValue}
 			} else {
-				if skipped[len(skipped)-1].ve.Profile.GetShortNodeID() >= valueEntry.Profile.GetShortNodeID() {
+				if skipped[len(skipped)-1].ve.Profile.GetNodeID() >= valueEntry.Profile.GetNodeID() {
 					unorderedSkipped = true
 				}
 				skipped = append(skipped, postponedEntry{valueEntry, filterValue})
@@ -361,7 +361,7 @@ func (v *sortedEntry) setJoiner(ve *VectorEntry, index int) {
 }
 
 func (v *sortedEntry) setMember(ve *VectorEntry, index int) {
-	v.id = ve.Profile.GetShortNodeID()
+	v.id = ve.Profile.GetNodeID()
 	v.index = int16(index)
 	// role of zero-power nodes is ignored for sorting
 	if ve.RequestedPower == 0 {
@@ -407,7 +407,7 @@ func (c *vectorIDSorter) Len() int {
 }
 
 func (c *vectorIDSorter) Less(i, j int) bool {
-	return c.values[i].ve.Profile.GetShortNodeID() < c.values[j].ve.Profile.GetShortNodeID()
+	return c.values[i].ve.Profile.GetNodeID() < c.values[j].ve.Profile.GetNodeID()
 }
 
 func (c *vectorIDSorter) Swap(i, j int) {

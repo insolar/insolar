@@ -452,7 +452,7 @@ type FullIntroductionReader struct {
 	intro NodeFullIntro
 }
 
-func (r *FullIntroductionReader) GetShortNodeID() insolar.ShortNodeID {
+func (r *FullIntroductionReader) GetStaticNodeID() insolar.ShortNodeID {
 	return r.intro.ShortID
 }
 

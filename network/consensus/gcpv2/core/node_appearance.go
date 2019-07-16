@@ -156,7 +156,7 @@ func (c *NodeAppearance) GetIndex() member.Index {
 }
 
 func (c *NodeAppearance) GetShortNodeID() insolar.ShortNodeID {
-	return c.profile.GetShortNodeID()
+	return c.profile.GetNodeID()
 }
 
 func (c *NodeAppearance) GetTrustLevel() member.TrustLevel {
@@ -338,7 +338,7 @@ func (c *NodeAppearance) GetNodeTrustAndMembershipOrEmpty() (profiles.Membership
 	defer c.mutex.Unlock()
 
 	// if c.stateEvidence == nil {
-	//	panic(fmt.Sprintf("illegal state: for=%v", c.GetShortNodeID()))
+	//	panic(fmt.Sprintf("illegal state: for=%v", c.GetNodeID()))
 	// }
 	return c.getMembership(), c.trust
 }

@@ -96,7 +96,7 @@ func (r *MemberRealmPopulation) IsComplete() bool {
 
 func (r *MemberRealmPopulation) initPopulation(phase2ExtLimit uint8) {
 	activeProfiles := r.population.GetProfiles()
-	thisNodeID := r.population.GetLocalProfile().GetShortNodeID()
+	thisNodeID := r.population.GetLocalProfile().GetNodeID()
 
 	nodes := make([]NodeAppearance, r.indexedCount)
 
@@ -112,7 +112,7 @@ func (r *MemberRealmPopulation) initPopulation(phase2ExtLimit uint8) {
 		n.init(p, nil, r.baselineWeight, phase2ExtLimit)
 		r.nodeInit(context.Background(), n)
 
-		if p.GetShortNodeID() == thisNodeID {
+		if p.GetNodeID() == thisNodeID {
 			if r.self != nil {
 				panic("schizophrenia")
 			}

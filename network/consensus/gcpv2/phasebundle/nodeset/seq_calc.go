@@ -155,7 +155,7 @@ func (p *StateAndRankSequenceCalc) AddNext(nodeData VectorEntryData, zeroPower b
 		p.cursor = member.RankCursor{Role: orderingRole, TotalIndex: p.cursor.TotalIndex}
 	}
 
-	nodeID := np.GetShortNodeID()
+	nodeID := np.GetStaticNodeID()
 	me := memberEntry{
 		state:        nodeData.StateEvidence,
 		capture:      p.nodeID == nodeID,
