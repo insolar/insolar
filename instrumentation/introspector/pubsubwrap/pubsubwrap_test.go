@@ -46,13 +46,13 @@ func (mi middleware) counter() int {
 	return c
 }
 
-func (mi middleware) Filter(m *message.Message) *message.Message {
+func (mi middleware) Filter(m *message.Message) (*message.Message, error) {
 	counter, _ := mi["counter"]
 	mi["counter"] = counter + 1
 	if counter%2 == 0 {
-		return nil
+		return nil, nil
 	}
-	return m
+	return m, nil
 }
 
 type pubsubMock struct {
