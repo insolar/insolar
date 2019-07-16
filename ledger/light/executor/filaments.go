@@ -596,7 +596,7 @@ func (c *FilamentCalculatorDefault) checkReason(ctx context.Context, reason inso
 	defer done()
 	res, ok := <-reps
 	if !ok {
-		return false, errors.New("no reply for filament fetch")
+		return false, errors.New("no reply for reason check")
 	}
 
 	pl, err := payload.UnmarshalFromMeta(res.Payload)
