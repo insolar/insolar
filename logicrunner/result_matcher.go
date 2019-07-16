@@ -39,18 +39,17 @@ func (rm *resultsMatcher) send(ctx context.Context, msg *message.ReturnResults, 
 		Receiver: receiver,
 	})
 	if err != nil {
-		inslogger.FromContext(ctx).Warn(errors.Wrap(err, "Couldn't resend response"))
+		inslogger.FromContext(ctx).Warn(errors.Wrap(err, "[ resultsMatcher::send ] Couldn't resend response"))
 	}
 }
 
 func (rm *resultsMatcher) AddStillExecution(ctx context.Context, msg *message.StillExecuting) {
-	inslogger.FromContext(ctx).Warn("IP1: Receive StillExecution", msg.RequestRefs, "from", msg.Executor)
 	rm.lock.Lock()
 	defer rm.lock.Unlock()
 
 	for _, reqRef := range msg.RequestRefs {
 		if response, ok := rm.unwantedResponses[reqRef]; ok {
-			inslogger.FromContext(ctx).Warn("IP1: Send StillExecution", reqRef)
+			inslogger.FromContext(ctx).Debug("[ resultsMatcher::AddStillExecution ] resend unwanted response ", reqRef)
 			go rm.send(ctx, &response, &msg.Executor)
 			delete(rm.executionNodes, reqRef)
 			continue
@@ -78,9 +77,8 @@ func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg insolar.M
 	if *node != rm.lr.JetCoordinator.Me() {
 		return flowCancelledError
 	}
-	inslogger.FromContext(ctx).Warn("IP1: Receive UnwantedResponse", response.Reason)
 	if node, ok := rm.executionNodes[response.Reason]; ok {
-		inslogger.FromContext(ctx).Warn("IP1: Send UnwantedResponse", response.Reason)
+		inslogger.FromContext(ctx).Debug("[ resultsMatcher::AddUnwantedResponse ] resend unwanted response ", response.Reason)
 		go rm.send(ctx, response, &node)
 		delete(rm.unwantedResponses, response.Reason)
 		return &reply.OK{}
