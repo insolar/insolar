@@ -506,7 +506,3 @@ func (c *NodeAppearance) GetRequestedAnnouncement() profiles.MembershipAnnouncem
 
 	return c.getMembershipAnnouncement()
 }
-
-func (c *NodeAppearance) getPacketLimiter() *phases.PacketLimiter {
-	return &c.limiter
-}
