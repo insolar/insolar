@@ -63,7 +63,6 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log" // TODO remove before merge
-	"github.com/insolar/insolar/network/consensusv1/phases"
 	"github.com/insolar/insolar/network/gateway/bootstrap"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
@@ -90,9 +89,9 @@ type Base struct {
 	PulseAccessor       pulse.Accessor              `inject:""`
 	PulseAppender       pulse.Appender              `inject:""`
 	BootstrapRequester  bootstrap.Requester         `inject:""`
-	PhaseManager        phases.PhaseManager         `inject:""`
-	Rules               network.Rules               `inject:""`
-	KeyProcessor        insolar.KeyProcessor        `inject:""`
+	//PhaseManager        phases.PhaseManager         `inject:""`
+	Rules        network.Rules        `inject:""`
+	KeyProcessor insolar.KeyProcessor `inject:""`
 
 	// DiscoveryBootstrapper bootstrap.DiscoveryBootstrapper `inject:""`
 	bootstrapETA insolar.PulseNumber

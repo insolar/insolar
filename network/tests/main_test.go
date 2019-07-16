@@ -91,7 +91,7 @@ func (s *consensusSuite) TestNetworkConsensus3Times() {
 	s.waitForConsensus(3)
 }
 
-func (s *consensusSuite) TestNodeConnect() {
+func (s *consensusSuite) TestJoinerNodeConnect() {
 	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
 
@@ -316,96 +316,96 @@ func (s *consensusSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 	s.Equal(s.getNodesCount()+1, len(newNodeWorkingNodes))
 }
 
-func (s *consensusSuite) TestFullTimeOut() {
-	s.CheckBootstrapCount()
-
-	s.SetCommunicationPolicy(FullTimeout)
-
-	s.waitForConsensus(2)
-	s.AssertWorkingNodesCountDelta(-1)
-}
+//func (s *consensusSuite) TestFullTimeOut() {
+//	s.CheckBootstrapCount()
+//
+//	s.SetCommunicationPolicy(FullTimeout)
+//
+//	s.waitForConsensus(2)
+//	s.AssertWorkingNodesCountDelta(-1)
+//}
 
 // Partial timeout
 
-func (s *consensusSuite) TestPartialPositive1PhaseTimeOut() {
-	s.CheckBootstrapCount()
-
-	s.SetCommunicationPolicy(PartialPositive1Phase)
-
-	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount(), len(activeNodes))
-}
-
-func (s *consensusSuite) TestPartialPositive2PhaseTimeOut() {
-	s.CheckBootstrapCount()
-
-	s.SetCommunicationPolicy(PartialPositive2Phase)
-
-	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount(), len(activeNodes))
-}
-
-func (s *consensusSuite) TestPartialNegative1PhaseTimeOut() {
-	s.CheckBootstrapCount()
-
-	s.SetCommunicationPolicy(PartialNegative1Phase)
-
-	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount()-1, len(activeNodes))
-}
-
-func (s *consensusSuite) TestPartialNegative2PhaseTimeOut() {
-	s.CheckBootstrapCount()
-
-	s.SetCommunicationPolicy(PartialNegative2Phase)
-
-	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount(), len(activeNodes))
-}
-
-func (s *consensusSuite) TestPartialNegative3PhaseTimeOut() {
-	s.CheckBootstrapCount()
-
-	s.SetCommunicationPolicy(PartialNegative3Phase)
-
-	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount(), len(activeNodes))
-}
-
-func (s *consensusSuite) TestPartialPositive3PhaseTimeOut() {
-	s.CheckBootstrapCount()
-
-	s.SetCommunicationPolicy(PartialPositive3Phase)
-
-	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount(), len(activeNodes))
-}
-
-func (s *consensusSuite) TestPartialNegative23PhaseTimeOut() {
-	s.CheckBootstrapCount()
-
-	s.SetCommunicationPolicy(PartialNegative23Phase)
-
-	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount(), len(activeNodes))
-}
-
-func (s *consensusSuite) TestPartialPositive23PhaseTimeOut() {
-	s.CheckBootstrapCount()
-
-	s.SetCommunicationPolicy(PartialPositive23Phase)
-
-	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount(), len(activeNodes))
-}
+//func (s *consensusSuite) TestPartialPositive1PhaseTimeOut() {
+//	s.CheckBootstrapCount()
+//
+//	s.SetCommunicationPolicy(PartialPositive1Phase)
+//
+//	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+//	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
+//	s.Equal(s.getNodesCount(), len(activeNodes))
+//}
+//
+//func (s *consensusSuite) TestPartialPositive2PhaseTimeOut() {
+//	s.CheckBootstrapCount()
+//
+//	s.SetCommunicationPolicy(PartialPositive2Phase)
+//
+//	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+//	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
+//	s.Equal(s.getNodesCount(), len(activeNodes))
+//}
+//
+//func (s *consensusSuite) TestPartialNegative1PhaseTimeOut() {
+//	s.CheckBootstrapCount()
+//
+//	s.SetCommunicationPolicy(PartialNegative1Phase)
+//
+//	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+//	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
+//	s.Equal(s.getNodesCount()-1, len(activeNodes))
+//}
+//
+//func (s *consensusSuite) TestPartialNegative2PhaseTimeOut() {
+//	s.CheckBootstrapCount()
+//
+//	s.SetCommunicationPolicy(PartialNegative2Phase)
+//
+//	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+//	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
+//	s.Equal(s.getNodesCount(), len(activeNodes))
+//}
+//
+//func (s *consensusSuite) TestPartialNegative3PhaseTimeOut() {
+//	s.CheckBootstrapCount()
+//
+//	s.SetCommunicationPolicy(PartialNegative3Phase)
+//
+//	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+//	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
+//	s.Equal(s.getNodesCount(), len(activeNodes))
+//}
+//
+//func (s *consensusSuite) TestPartialPositive3PhaseTimeOut() {
+//	s.CheckBootstrapCount()
+//
+//	s.SetCommunicationPolicy(PartialPositive3Phase)
+//
+//	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+//	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
+//	s.Equal(s.getNodesCount(), len(activeNodes))
+//}
+//
+//func (s *consensusSuite) TestPartialNegative23PhaseTimeOut() {
+//	s.CheckBootstrapCount()
+//
+//	s.SetCommunicationPolicy(PartialNegative23Phase)
+//
+//	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+//	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
+//	s.Equal(s.getNodesCount(), len(activeNodes))
+//}
+//
+//func (s *consensusSuite) TestPartialPositive23PhaseTimeOut() {
+//	s.CheckBootstrapCount()
+//
+//	s.SetCommunicationPolicy(PartialPositive23Phase)
+//
+//	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+//	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
+//	s.Equal(s.getNodesCount(), len(activeNodes))
+//}
 
 func (s *consensusSuite) TestDiscoveryDown() {
 	s.CheckBootstrapCount()
@@ -483,30 +483,30 @@ func (s *consensusSuite) TestDiscoveryRestartNoWait() {
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
-func (s *consensusSuite) TestJoinerSplitPackets() {
-	s.CheckBootstrapCount()
-
-	testNode := s.newNetworkNode("testNode")
-	s.SetCommunicationPolicyForNode(testNode.id, SplitCase)
-	s.preInitNode(testNode)
-
-	s.InitNode(testNode)
-	s.StartNode(testNode)
-	defer func(s *consensusSuite) {
-		s.StopNode(testNode)
-	}(s)
-
-	s.waitForConsensus(1)
-
-	s.AssertActiveNodesCountDelta(0)
-
-	s.waitForConsensus(1)
-
-	s.AssertActiveNodesCountDelta(1)
-	s.AssertWorkingNodesCountDelta(0)
-
-	s.waitForConsensus(2)
-
-	s.AssertActiveNodesCountDelta(1)
-	s.AssertWorkingNodesCountDelta(1)
-}
+//func (s *consensusSuite) TestJoinerSplitPackets() {
+//	s.CheckBootstrapCount()
+//
+//	testNode := s.newNetworkNode("testNode")
+//	s.SetCommunicationPolicyForNode(testNode.id, SplitCase)
+//	s.preInitNode(testNode)
+//
+//	s.InitNode(testNode)
+//	s.StartNode(testNode)
+//	defer func(s *consensusSuite) {
+//		s.StopNode(testNode)
+//	}(s)
+//
+//	s.waitForConsensus(1)
+//
+//	s.AssertActiveNodesCountDelta(0)
+//
+//	s.waitForConsensus(1)
+//
+//	s.AssertActiveNodesCountDelta(1)
+//	s.AssertWorkingNodesCountDelta(0)
+//
+//	s.waitForConsensus(2)
+//
+//	s.AssertActiveNodesCountDelta(1)
+//	s.AssertWorkingNodesCountDelta(1)
+//}

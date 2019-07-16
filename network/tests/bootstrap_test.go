@@ -55,10 +55,7 @@ package tests
 import (
 	"context"
 	"fmt"
-	"testing"
 	"time"
-
-	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -104,10 +101,10 @@ func (s *bootstrapSuite) SetupTest() {
 	}
 
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
-	for _, n := range s.fixture().bootstrapNodes {
-		n.serviceNetwork.PhaseManager.(*phaseManagerWrapper).original = &fakeConsensus{n, s}
-
-	}
+	//for _, n := range s.fixture().bootstrapNodes {
+	//	n.serviceNetwork.PhaseManager.(*phaseManagerWrapper).original = &fakeConsensus{n, s}
+	//
+	//}
 
 	pulseReceivers := make([]string, 0)
 	for _, node := range s.fixture().bootstrapNodes {
@@ -133,11 +130,11 @@ func newBootstraptSuite(bootstrapCount int) *bootstrapSuite {
 	}
 }
 
-func TestBootstrap(t *testing.T) {
-	t.Skip("fix in new consensus")
-	s := newBootstraptSuite(1)
-	suite.Run(t, s)
-}
+//func TestBootstrap(t *testing.T) {
+//	t.Skip("fix in new consensus")
+//	s := newBootstraptSuite(1)
+//	suite.Run(t, s)
+//}
 
 func (s *bootstrapSuite) TestExample() {
 	inslogger.FromContext(s.fixture().ctx).Info("Log -- ")

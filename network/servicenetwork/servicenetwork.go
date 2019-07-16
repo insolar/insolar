@@ -52,11 +52,9 @@ package servicenetwork
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/gateway"
 	"github.com/insolar/insolar/network/gateway/bootstrap"
 	"sync"
-	"time"
-
-	"github.com/insolar/insolar/network/gateway"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 
@@ -72,7 +70,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensusv1/packets"
-	"github.com/insolar/insolar/network/consensusv1/phases"
 	"github.com/insolar/insolar/network/controller"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/merkle"
@@ -98,9 +95,9 @@ type ServiceNetwork struct {
 	Pub message.Publisher `inject:""`
 
 	// subcomponents
-	PhaseManager phases.PhaseManager      `inject:"subcomponent"`
-	RPC          controller.RPCController `inject:"subcomponent"`
-	Rules        network.Rules            `inject:"subcomponent"`
+	//PhaseManager phases.PhaseManager      `inject:"subcomponent"`
+	RPC   controller.RPCController `inject:"subcomponent"`
+	Rules network.Rules            `inject:"subcomponent"`
 
 	HostNetwork network.HostNetwork
 
@@ -140,13 +137,13 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	}
 	n.HostNetwork = hostNetwork
 
-	consensusNetwork, err := hostnetwork.NewConsensusNetwork(
-		n.CertificateManager.GetCertificate().GetNodeRef().String(),
-		n.NodeKeeper.GetOrigin().ShortID(),
-	)
-	if err != nil {
-		return errors.Wrap(err, "Failed to create consensus network.")
-	}
+	//consensusNetwork, err := hostnetwork.NewConsensusNetwork(
+	//	n.CertificateManager.GetCertificate().GetNodeRef().String(),
+	//	n.NodeKeeper.GetOrigin().ShortID(),
+	//)
+	//if err != nil {
+	//	return errors.Wrap(err, "Failed to create consensus network.")
+	//}
 
 	options := common.ConfigureOptions(n.cfg)
 
@@ -165,12 +162,15 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		transport.NewFactory(n.cfg.Host.Transport),
 		hostNetwork,
 		merkle.NewCalculator(),
-		consensusNetwork,
-		phases.NewCommunicator(),
-		phases.NewFirstPhase(),
-		phases.NewSecondPhase(),
-		phases.NewThirdPhase(),
-		phases.NewPhaseManager(n.cfg.Service.Consensus),
+
+		// remove old consensus
+		//consensusNetwork,
+		//phases.NewCommunicator(),
+		//phases.NewFirstPhase(),
+		//phases.NewSecondPhase(),
+		//phases.NewThirdPhase(),
+		//phases.NewPhaseManager(n.cfg.Service.Consensus),
+
 		controller.NewRPCController(options),
 		controller.NewPulseController(),
 		bootstrap.NewRequester(options),
@@ -229,7 +229,7 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 }
 
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse, _ network.ReceivedPacket) {
-	pulseTime := time.Unix(0, newPulse.PulseTimestamp)
+	//pulseTime := time.Unix(0, newPulse.PulseTimestamp)
 	logger := inslogger.FromContext(ctx)
 
 	n.lock.Lock()
@@ -251,7 +251,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	if n.NodeKeeper.GetConsensusInfo().IsJoiner() {
 		// do not set pulse because otherwise we will set invalid active list
 		// pass consensus, prepare valid active list and set it on next pulse
-		go n.phaseManagerOnPulse(ctx, newPulse, pulseTime)
+		//go n.phaseManagerOnPulse(ctx, newPulse, pulseTime)
 		return
 	}
 
@@ -272,7 +272,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 
 	n.ChangePulse(ctx, newPulse)
 
-	go n.phaseManagerOnPulse(ctx, newPulse, pulseTime)
+	//go n.phaseManagerOnPulse(ctx, newPulse, pulseTime)
 }
 
 func (n *ServiceNetwork) ChangePulse(ctx context.Context, newPulse insolar.Pulse) {
@@ -291,20 +291,20 @@ func (n *ServiceNetwork) ChangePulse(ctx context.Context, newPulse insolar.Pulse
 
 }
 
-func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insolar.Pulse, pulseStartTime time.Time) {
-	logger := inslogger.FromContext(ctx)
-
-	if !n.cfg.Service.ConsensusEnabled {
-		logger.Warn("Consensus is disabled")
-		return
-	}
-
-	if err := n.PhaseManager.OnPulse(ctx, &newPulse, pulseStartTime); err != nil {
-		errMsg := "Failed to pass consensus: " + err.Error()
-		logger.Error(errMsg)
-		n.Gatewayer.SwitchState(insolar.NoNetworkState)
-	}
-}
+//func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insolar.Pulse, pulseStartTime time.Time) {
+//	logger := inslogger.FromContext(ctx)
+//
+//	if !n.cfg.Service.ConsensusEnabled {
+//		logger.Warn("Consensus is disabled")
+//		return
+//	}
+//
+//	if err := n.PhaseManager.OnPulse(ctx, &newPulse, pulseStartTime); err != nil {
+//		errMsg := "Failed to pass consensus: " + err.Error()
+//		logger.Error(errMsg)
+//		n.Gatewayer.SwitchState(insolar.NoNetworkState)
+//	}
+//}
 
 func isNextPulse(currentPulse, newPulse *insolar.Pulse) bool {
 	return newPulse.PulseNumber > currentPulse.PulseNumber && newPulse.PulseNumber >= currentPulse.NextPulseNumber
