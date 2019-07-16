@@ -185,7 +185,7 @@ func (p *NodeVectorHelper) buildGlobulaAnnouncementHashes() (proofs.GlobulaAnnou
 
 const (
 	skipEntry = iota
-	missingEntry
+	//missingEntry
 	trustedEntry
 	doubtedEntry
 )
@@ -198,9 +198,8 @@ func (p *NodeVectorHelper) stateFilter(idx int, nodeData VectorEntryData) (bool,
 	postpone := nodeData.RequestedMode.IsPowerless() || nodeData.RequestedPower == 0
 	if b.IsTrusted() {
 		return postpone, trustedEntry
-	} else {
-		return postpone, doubtedEntry
 	}
+	return postpone, doubtedEntry
 }
 
 func (p *NodeVectorHelper) buildGlobulaStateHash(trusted bool) proofs.GlobulaAnnouncementHash {

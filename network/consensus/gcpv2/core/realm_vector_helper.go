@@ -199,11 +199,9 @@ func (p *RealmVectorProjection) ScanSortedWithFilter(apply func(nodeData nodeset
 				continue
 			}
 			postpone, _ = filter(-1, valueEntry.VectorEntryData)
-		} else {
-			if prevID == nodeID {
-				// regular nodes MUST NOT be multiplied
-				panic("illegal state")
-			}
+		} else if prevID == nodeID {
+			// regular nodes MUST NOT be multiplied
+			panic("illegal state")
 		}
 		prevID = nodeID
 
@@ -287,7 +285,7 @@ func (p *RealmVectorHelper) setArrayNodes(nodeIndex []*NodeAppearance,
 		joiner := dynamicNodes[joinerID]
 		if joiner == nil {
 			panic("joiner is missing")
-			continue
+			//continue
 		}
 
 		if joinerCount >= len(p.joiners) {
@@ -322,7 +320,11 @@ func (p *RealmVectorHelper) setArrayNodes(nodeIndex []*NodeAppearance,
 func (p *RealmVectorHelper) forceEntryUpdate(index int) (*VectorEntry, *VectorEntry) {
 	p.mutex.Lock()
 	defer p.mutex.Lock()
-	return nil, nil // TODO
+
+	if index == 0 {
+		return nil, nil // TODO
+	}
+	return nil, nil
 }
 
 func (p *VectorEntry) setValues(n *NodeAppearance) insolar.ShortNodeID {

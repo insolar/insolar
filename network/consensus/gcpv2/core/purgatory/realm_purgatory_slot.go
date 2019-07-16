@@ -50,128 +50,119 @@
 
 package purgatory
 
-import (
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-	"sync"
-)
-
-type purgatorySlot struct {
-	nodeID insolar.ShortNodeID
-	svf    cryptkit.SignatureVerifierFactory
-	//limiter
-
-	mutex sync.RWMutex
-	sv    cryptkit.SignatureVerifier
-	intro profiles.StaticProfile
-	index member.Index
-	mode  member.OpMode
-	pw    member.Power
-}
-
-func (p *purgatorySlot) GetStatic() profiles.StaticProfile {
-	p.mutex.RLock()
-	defer p.mutex.RUnlock()
-
-	return p.intro
-}
-
-func (p *purgatorySlot) SetNodeIntroProfile(nip profiles.StaticProfile) {
-
-	if p.nodeID != nip.GetStaticNodeID() {
-		panic("illegal value")
-	}
-
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-	if p.intro == nip {
-		return
-	}
-	p.intro = nip
-	p.sv = nil
-}
-
-func (p *purgatorySlot) GetDefaultEndpoint() endpoints.Outbound {
-	return p.GetStatic().GetDefaultEndpoint()
-}
-
-func (p *purgatorySlot) GetPublicKeyStore() cryptkit.PublicKeyStore {
-	return p.GetStatic().GetPublicKeyStore()
-}
-
-func (p *purgatorySlot) IsAcceptableHost(from endpoints.Inbound) bool {
-	return p.GetStatic().IsAcceptableHost(from)
-}
-
-func (p *purgatorySlot) GetNodeID() insolar.ShortNodeID {
-	return p.nodeID
-}
-
-func (p *purgatorySlot) GetStartPower() member.Power {
-	return p.GetStatic().GetStartPower()
-}
-
-func (p *purgatorySlot) GetPrimaryRole() member.PrimaryRole {
-	return p.GetStatic().GetPrimaryRole()
-}
-
-func (p *purgatorySlot) GetSpecialRoles() member.SpecialRole {
-	return p.GetStatic().GetSpecialRoles()
-}
-
-func (p *purgatorySlot) GetNodePublicKey() cryptkit.SignatureKeyHolder {
-	return p.GetStatic().GetNodePublicKey()
-}
-
-func (p *purgatorySlot) GetAnnouncementSignature() cryptkit.SignatureHolder {
-	return p.GetStatic().GetAnnouncementSignature()
-}
-
-func (p *purgatorySlot) GetIntroduction() profiles.NodeIntroduction {
-	return p.GetStatic().GetIntroduction()
-}
-
-func (p *purgatorySlot) GetSignatureVerifier() cryptkit.SignatureVerifier {
-	p.mutex.RLock()
-	if p.sv != nil || p.svf == nil {
-		return p.sv
-	}
-	p.mutex.RUnlock()
-	return p.createSignatureVerifier()
-}
-
-func (p *purgatorySlot) createSignatureVerifier() cryptkit.SignatureVerifier {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-	if p.sv == nil {
-		p.sv = p.svf.GetSignatureVerifierWithPKS(p.intro.GetPublicKeyStore())
-	}
-	return p.sv
-}
-
-func (p *purgatorySlot) GetOpMode() member.OpMode {
-	if p.index.IsJoiner() {
-		return member.ModeNormal
-	} else {
-		return p.mode
-	}
-}
-
-func (p *purgatorySlot) GetIndex() member.Index {
-	return p.index.Ensure()
-}
-
-func (p *purgatorySlot) IsJoiner() bool {
-	return p.index.IsJoiner()
-}
-
-func (p *purgatorySlot) GetDeclaredPower() member.Power {
-	if p.index.IsJoiner() || p.mode.IsPowerless() {
-		return 0
-	} else {
-		return p.pw
-	}
-}
+//type purgatorySlot struct {
+//	nodeID insolar.ShortNodeID
+//	svf    cryptkit.SignatureVerifierFactory
+//	//limiter
+//
+//	mutex sync.RWMutex
+//	sv    cryptkit.SignatureVerifier
+//	intro profiles.StaticProfile
+//	index member.Index
+//	mode  member.OpMode
+//	pw    member.Power
+//}
+//
+//func (p *purgatorySlot) GetStatic() profiles.StaticProfile {
+//	p.mutex.RLock()
+//	defer p.mutex.RUnlock()
+//
+//	return p.intro
+//}
+//
+//func (p *purgatorySlot) SetNodeIntroProfile(nip profiles.StaticProfile) {
+//
+//	if p.nodeID != nip.GetStaticNodeID() {
+//		panic("illegal value")
+//	}
+//
+//	p.mutex.Lock()
+//	defer p.mutex.Unlock()
+//	if p.intro == nip {
+//		return
+//	}
+//	p.intro = nip
+//	p.sv = nil
+//}
+//
+//func (p *purgatorySlot) GetDefaultEndpoint() endpoints.Outbound {
+//	return p.GetStatic().GetDefaultEndpoint()
+//}
+//
+//func (p *purgatorySlot) GetPublicKeyStore() cryptkit.PublicKeyStore {
+//	return p.GetStatic().GetPublicKeyStore()
+//}
+//
+//func (p *purgatorySlot) IsAcceptableHost(from endpoints.Inbound) bool {
+//	return p.GetStatic().IsAcceptableHost(from)
+//}
+//
+//func (p *purgatorySlot) GetNodeID() insolar.ShortNodeID {
+//	return p.nodeID
+//}
+//
+//func (p *purgatorySlot) GetStartPower() member.Power {
+//	return p.GetStatic().GetStartPower()
+//}
+//
+//func (p *purgatorySlot) GetPrimaryRole() member.PrimaryRole {
+//	return p.GetStatic().GetPrimaryRole()
+//}
+//
+//func (p *purgatorySlot) GetSpecialRoles() member.SpecialRole {
+//	return p.GetStatic().GetSpecialRoles()
+//}
+//
+//func (p *purgatorySlot) GetNodePublicKey() cryptkit.SignatureKeyHolder {
+//	return p.GetStatic().GetNodePublicKey()
+//}
+//
+//func (p *purgatorySlot) GetAnnouncementSignature() cryptkit.SignatureHolder {
+//	return p.GetStatic().GetAnnouncementSignature()
+//}
+//
+//func (p *purgatorySlot) GetIntroduction() profiles.NodeIntroduction {
+//	return p.GetStatic().GetIntroduction()
+//}
+//
+//func (p *purgatorySlot) GetSignatureVerifier() cryptkit.SignatureVerifier {
+//	p.mutex.RLock()
+//	if p.sv != nil || p.svf == nil {
+//		return p.sv
+//	}
+//	p.mutex.RUnlock()
+//	return p.createSignatureVerifier()
+//}
+//
+//func (p *purgatorySlot) createSignatureVerifier() cryptkit.SignatureVerifier {
+//	p.mutex.Lock()
+//	defer p.mutex.Unlock()
+//	if p.sv == nil {
+//		p.sv = p.svf.GetSignatureVerifierWithPKS(p.intro.GetPublicKeyStore())
+//	}
+//	return p.sv
+//}
+//
+//func (p *purgatorySlot) GetOpMode() member.OpMode {
+//	if p.index.IsJoiner() {
+//		return member.ModeNormal
+//	} else {
+//		return p.mode
+//	}
+//}
+//
+//func (p *purgatorySlot) GetIndex() member.Index {
+//	return p.index.Ensure()
+//}
+//
+//func (p *purgatorySlot) IsJoiner() bool {
+//	return p.index.IsJoiner()
+//}
+//
+//func (p *purgatorySlot) GetDeclaredPower() member.Power {
+//	if p.index.IsJoiner() || p.mode.IsPowerless() {
+//		return 0
+//	} else {
+//		return p.pw
+//	}
+//}

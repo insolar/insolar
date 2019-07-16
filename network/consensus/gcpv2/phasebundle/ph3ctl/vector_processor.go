@@ -162,19 +162,19 @@ func newInspectedVectorAndPreInspect(p *vectorInspectorImpl, sender *core.NodeAp
 		// ...  check for updates or/and send requests
 		r.verifyResult |= nodeset.NvrMissingNodes
 		return r
-	} else {
-		if otherVector.Trusted.AnnouncementHash == nil && otherVector.Doubted.AnnouncementHash == nil {
-			r.verifyResult |= nodeset.NvrSenderFault
-			return r
-		}
+	}
 
-		r.trustedPart, r.doubtedPart = nodeset.PrepareSubVectorsComparison(r.comparedStats,
-			otherVector.Trusted.AnnouncementHash != nil,
-			otherVector.Doubted.AnnouncementHash != nil)
+	if otherVector.Trusted.AnnouncementHash == nil && otherVector.Doubted.AnnouncementHash == nil {
+		r.verifyResult |= nodeset.NvrSenderFault
+		return r
+	}
 
-		if p.maxPopulationForInlineHashing == 0 || p.maxPopulationForInlineHashing >= p.entryScanner.GetIndexedCount() {
-			r.Inspect()
-		}
+	r.trustedPart, r.doubtedPart = nodeset.PrepareSubVectorsComparison(r.comparedStats,
+		otherVector.Trusted.AnnouncementHash != nil,
+		otherVector.Doubted.AnnouncementHash != nil)
+
+	if p.maxPopulationForInlineHashing == 0 || p.maxPopulationForInlineHashing >= p.entryScanner.GetIndexedCount() {
+		r.Inspect()
 	}
 	return r
 }

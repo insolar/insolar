@@ -476,11 +476,12 @@ func (c *NodeAppearance) GetRequestedState() NodeRequestedState {
 	}
 
 	reqMode := member.ModeNormal
-	if c.requestedLeave {
+	switch {
+	case c.requestedLeave:
 		reqMode = member.ModeEvictedGracefully
-	} else if c.IsJoiner() {
+	case c.IsJoiner():
 		reqMode = member.ModeRestrictedAnnouncement
-	} else if m.Mode.IsSuspended() && m.IsEmpty() {
+	case m.Mode.IsSuspended() && m.IsEmpty():
 		reqMode = member.ModeEvictedAsSuspected
 	}
 

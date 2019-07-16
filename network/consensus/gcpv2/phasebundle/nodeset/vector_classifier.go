@@ -402,8 +402,7 @@ func (v NodeVerificationResult) StringPart(b *strings.Builder) {
 }
 
 func (v NodeVerificationResult) String() string {
-	switch v {
-	case NvrNotVerified:
+	if v == NvrNotVerified {
 		return "[unverified]"
 	}
 

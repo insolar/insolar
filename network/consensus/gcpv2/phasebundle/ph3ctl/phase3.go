@@ -297,6 +297,8 @@ func (c *Phase3ControllerV2) workerRescanForMissing(ctx context.Context, missing
 				continue
 			}
 			// TODO
+		case <-missing:
+			//TODO
 		}
 	}
 }
@@ -366,7 +368,7 @@ outer:
 					go c.workerRescanForMissing(ctx, queueMissing)
 				}
 				queueMissing <- d
-				break // do chasing
+				//break // do chasing
 			case !d.IsInspected():
 				d = d.Reinspect(localInspector)
 				if !d.IsInspected() {
@@ -379,7 +381,7 @@ outer:
 						if d.IsInspected() {
 							c.queuePh3Recv <- d
 						} else {
-							// TODO error
+							inslogger.FromContext(ctx).Errorf("unable to inspect vector: %v", d)
 						}
 					}()
 					break // do chasing

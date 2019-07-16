@@ -50,71 +50,59 @@
 
 package purgatory
 
-import (
-	"context"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-	"sync"
-)
-
-var _ core.MemberPacketReceiver = &NodePhantasm{}
-
+//var _ core.MemberPacketReceiver = &NodePhantasm{}
+//
 type NodePhantasm struct {
-	nodeID  insolar.ShortNodeID
-	mutex   sync.Mutex
-	limiter phases.PacketLimiter
-
-	visions map[string]*nodeVision
-
-	replayPackets []transport.PacketParser
-
-	//callback *nodeContext
+	//	nodeID  insolar.ShortNodeID
+	//	mutex   sync.Mutex
+	//	limiter phases.PacketLimiter
+	//
+	//	visions map[string]*nodeVision
+	//
+	//	replayPackets []transport.PacketParser
+	//
+	//	//callback *nodeContext
 }
 
-func (p *NodePhantasm) GetNodeID() insolar.ShortNodeID {
-	return p.nodeID
-}
-
-func (p *NodePhantasm) CanReceivePacket(pt phases.PacketType) bool {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-
-	return p.limiter.CanReceivePacket(pt)
-}
-
-func (p *NodePhantasm) VerifyPacketAuthenticity(packet transport.PacketParser, from endpoints.Inbound, strictFrom bool) error {
-	return nil
-}
-
-func (p *NodePhantasm) SetPacketReceived(pt phases.PacketType) bool {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-
-	var allowed bool
-	allowed, p.limiter = p.limiter.SetPacketReceived(pt)
-	return allowed
-}
-
-func (p *NodePhantasm) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, pd core.PacketDispatcher) error {
-	panic("implement me")
-}
-
-type nodeVision struct {
-	visionOf        *core.NodeAppearance
-	joinerAnnouncer insolar.ShortNodeID
-
-	profile profiles.ActiveNode // set by construction
-
-	announceSignature proofs.MemberAnnouncementSignature // one-time set
-	stateEvidence     proofs.NodeStateHashEvidence       // one-time set
-
-	firstFraudDetails *misbehavior.FraudError
-
-	neighborReports int
-}
+//
+//func (p *NodePhantasm) GetNodeID() insolar.ShortNodeID {
+//	return p.nodeID
+//}
+//
+//func (p *NodePhantasm) CanReceivePacket(pt phases.PacketType) bool {
+//	p.mutex.Lock()
+//	defer p.mutex.Unlock()
+//
+//	return p.limiter.CanReceivePacket(pt)
+//}
+//
+//func (p *NodePhantasm) VerifyPacketAuthenticity(packet transport.PacketParser, from endpoints.Inbound, strictFrom bool) error {
+//	return nil
+//}
+//
+//func (p *NodePhantasm) SetPacketReceived(pt phases.PacketType) bool {
+//	p.mutex.Lock()
+//	defer p.mutex.Unlock()
+//
+//	var allowed bool
+//	allowed, p.limiter = p.limiter.SetPacketReceived(pt)
+//	return allowed
+//}
+//
+//func (p *NodePhantasm) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, pd core.PacketDispatcher) error {
+//	panic("implement me")
+//}
+//
+//type nodeVision struct {
+//	visionOf        *core.NodeAppearance
+//	joinerAnnouncer insolar.ShortNodeID
+//
+//	profile profiles.ActiveNode // set by construction
+//
+//	announceSignature proofs.MemberAnnouncementSignature // one-time set
+//	stateEvidence     proofs.NodeStateHashEvidence       // one-time set
+//
+//	firstFraudDetails *misbehavior.FraudError
+//
+//	neighborReports int
+//}

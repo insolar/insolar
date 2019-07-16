@@ -166,9 +166,8 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		}
 
 		return sourceNode.DispatchMemberPacket(ctx, memberPacket, pd)
-	} else {
-		return pd.DispatchHostPacket(ctx, packet, from, verifyFlags)
 	}
+	return pd.DispatchHostPacket(ctx, packet, from, verifyFlags)
 }
 
 /* LOCK - runs under RoundController lock */
@@ -412,13 +411,13 @@ func (r *FullRealm) CreateAnnouncement(n *NodeAppearance) *transport.NodeAnnounc
 	}
 
 	var joiner *transport.JoinerAnnouncement
-	if !ma.JoinerID.IsAbsent() {
-		//jna := r.GetPopulation().GetNodeAppearance(ma.JoinerID)
-		//if jna != nil {
-		//	jp := jna.GetProfile().GetStatic()
-		//	joiner = transport.NewJoinerAnnouncement(jp, n.GetNodeID(), jp.GetAnnouncementSignature())
-		//}
-	}
+	//if !ma.JoinerID.IsAbsent() {
+	//jna := r.GetPopulation().GetNodeAppearance(ma.JoinerID)
+	//if jna != nil {
+	//	jp := jna.GetProfile().GetStatic()
+	//	joiner = transport.NewJoinerAnnouncement(jp, n.GetNodeID(), jp.GetAnnouncementSignature())
+	//}
+	//}
 
 	return transport.NewNodeAnnouncement(n.profile, ma, r.GetNodeCount(), r.pulseData.PulseNumber, joiner)
 }

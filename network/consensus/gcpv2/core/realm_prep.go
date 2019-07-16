@@ -78,7 +78,7 @@ type PrepRealm struct {
 	/* Derived from the provided externally - set at init() or start(). Don't need mutex */
 	packetDispatchers []PacketDispatcher
 	queueToFull       chan postponedPacket
-	phase2ExtLimit    uint8
+	//phase2ExtLimit    uint8
 
 	limiters sync.Map
 
