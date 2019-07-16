@@ -102,6 +102,7 @@ type hostNetwork struct {
 	started           uint32
 	transport         transport.StreamTransport
 	sequenceGenerator sequence.Generator
+	muHandlers        sync.RWMutex
 	handlers          map[types.PacketType]network.RequestHandler
 	futureManager     future.Manager
 	responseHandler   future.PacketHandler
@@ -174,7 +175,11 @@ func (hn *hostNetwork) PublicAddress() string {
 func (hn *hostNetwork) handleRequest(ctx context.Context, p *packet.ReceivedPacket) {
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("Got %s request from host %s; RequestID = %d", p.GetType(), p.Sender, p.RequestID)
+
+	hn.muHandlers.RLock()
 	handler, exist := hn.handlers[p.GetType()]
+	hn.muHandlers.RUnlock()
+
 	if !exist {
 		logger.Errorf("No handler set for packet type %s from node %s", p.GetType(), p.Sender.NodeID)
 		ep := hn.BuildResponse(ctx, p, &packet.ErrorResponse{Error: "UNKNOWN RPC ENDPOINT"}).(*packet.Packet)
@@ -234,6 +239,9 @@ func (hn *hostNetwork) SendRequestToHost(ctx context.Context, packetType types.P
 
 // RegisterPacketHandler register a handler function to process incoming request packets of a specific type.
 func (hn *hostNetwork) RegisterPacketHandler(t types.PacketType, handler network.RequestHandler) {
+	hn.muHandlers.Lock()
+	defer hn.muHandlers.Unlock()
+
 	_, exists := hn.handlers[t]
 	if exists {
 		log.Warnf("Multiple handlers for packet type %s are not supported! New handler will replace the old one!", t)
