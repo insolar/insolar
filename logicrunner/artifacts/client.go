@@ -779,7 +779,7 @@ func (m *client) DeactivateObject(
 	}
 
 	switch p := pl.(type) {
-	case *payload.ID:
+	case *payload.ResultInfo:
 		return nil
 	case *payload.Error:
 		return errors.New(p.Text)
@@ -853,7 +853,7 @@ func (m *client) UpdateObject(
 	}
 
 	switch p := pl.(type) {
-	case *payload.ID:
+	case *payload.ResultInfo:
 		return nil
 	case *payload.Error:
 		return errors.New(p.Text)
@@ -939,8 +939,8 @@ func (m *client) RegisterResult(
 	}
 
 	switch p := pl.(type) {
-	case *payload.ID:
-		return &p.ID, nil
+	case *payload.ResultInfo:
+		return &p.ResultID, nil
 	case *payload.Error:
 		return nil, errors.New(p.Text)
 	default:
@@ -1010,7 +1010,7 @@ func (m *client) activateObject(
 	}
 
 	switch p := pl.(type) {
-	case *payload.ID:
+	case *payload.ResultInfo:
 		var (
 			asType *insolar.Reference
 		)

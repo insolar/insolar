@@ -178,7 +178,7 @@ func TestActivateObject_FilamentSetResultErr(t *testing.T) {
 	idxModifierMock.SetIndexMock.Return(nil)
 
 	filaments := executor.NewFilamentModifierMock(t)
-	filaments.SetResultMock.Return(errors.New("something strange from filament.SetResult"))
+	filaments.SetResultMock.Return(nil, errors.New("something strange from filament.SetResult"))
 
 	p := proc.NewActivateObject(
 		payload.Meta{},
@@ -224,7 +224,7 @@ func TestActivateObject_Proceed(t *testing.T) {
 	idxModifierMock.SetIndexMock.Return(nil)
 
 	filaments := executor.NewFilamentModifierMock(t)
-	filaments.SetResultMock.Return(nil)
+	filaments.SetResultMock.Return(nil, nil)
 
 	sender := bus.NewSenderMock(t)
 	sender.ReplyMock.Return()

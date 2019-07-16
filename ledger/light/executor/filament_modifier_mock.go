@@ -6,13 +6,13 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "FilamentModifier" can be found in github.com/insolar/insolar/ledger/light/executor
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
-	record "github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/record"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -26,7 +26,7 @@ type FilamentModifierMock struct {
 	SetRequestPreCounter uint64
 	SetRequestMock       mFilamentModifierMockSetRequest
 
-	SetResultFunc       func(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.Result) (r error)
+	SetResultFunc       func(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.Result) (r *record.CompositeFilamentRecord, r1 error)
 	SetResultCounter    uint64
 	SetResultPreCounter uint64
 	SetResultMock       mFilamentModifierMockSetResult
@@ -221,7 +221,8 @@ type FilamentModifierMockSetResultInput struct {
 }
 
 type FilamentModifierMockSetResultResult struct {
-	r error
+	r  *record.CompositeFilamentRecord
+	r1 error
 }
 
 //Expect specifies that invocation of FilamentModifier.SetResult is expected from 1 to Infinity times
@@ -237,14 +238,14 @@ func (m *mFilamentModifierMockSetResult) Expect(p context.Context, p1 insolar.ID
 }
 
 //Return specifies results of invocation of FilamentModifier.SetResult
-func (m *mFilamentModifierMockSetResult) Return(r error) *FilamentModifierMock {
+func (m *mFilamentModifierMockSetResult) Return(r *record.CompositeFilamentRecord, r1 error) *FilamentModifierMock {
 	m.mock.SetResultFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &FilamentModifierMockSetResultExpectation{}
 	}
-	m.mainExpectation.result = &FilamentModifierMockSetResultResult{r}
+	m.mainExpectation.result = &FilamentModifierMockSetResultResult{r, r1}
 	return m.mock
 }
 
@@ -259,12 +260,12 @@ func (m *mFilamentModifierMockSetResult) ExpectOnce(p context.Context, p1 insola
 	return expectation
 }
 
-func (e *FilamentModifierMockSetResultExpectation) Return(r error) {
-	e.result = &FilamentModifierMockSetResultResult{r}
+func (e *FilamentModifierMockSetResultExpectation) Return(r *record.CompositeFilamentRecord, r1 error) {
+	e.result = &FilamentModifierMockSetResultResult{r, r1}
 }
 
 //Set uses given function f as a mock of FilamentModifier.SetResult method
-func (m *mFilamentModifierMockSetResult) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.Result) (r error)) *FilamentModifierMock {
+func (m *mFilamentModifierMockSetResult) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.Result) (r *record.CompositeFilamentRecord, r1 error)) *FilamentModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -273,7 +274,7 @@ func (m *mFilamentModifierMockSetResult) Set(f func(p context.Context, p1 insola
 }
 
 //SetResult implements github.com/insolar/insolar/ledger/light/executor.FilamentModifier interface
-func (m *FilamentModifierMock) SetResult(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.Result) (r error) {
+func (m *FilamentModifierMock) SetResult(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.Result) (r *record.CompositeFilamentRecord, r1 error) {
 	counter := atomic.AddUint64(&m.SetResultPreCounter, 1)
 	defer atomic.AddUint64(&m.SetResultCounter, 1)
 
@@ -293,6 +294,7 @@ func (m *FilamentModifierMock) SetResult(p context.Context, p1 insolar.ID, p2 in
 		}
 
 		r = result.r
+		r1 = result.r1
 
 		return
 	}
@@ -310,6 +312,7 @@ func (m *FilamentModifierMock) SetResult(p context.Context, p1 insolar.ID, p2 in
 		}
 
 		r = result.r
+		r1 = result.r1
 
 		return
 	}

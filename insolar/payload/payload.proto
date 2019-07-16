@@ -165,6 +165,14 @@ message RequestInfo {
     bytes Result = 23;
 }
 
+message ResultInfo {
+    uint32 Polymorph = 16;
+
+    bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes ResultID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes Result = 22;
+}
+
 message HotObjects {
     uint32 Polymorph = 16;
 
