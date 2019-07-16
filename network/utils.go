@@ -48,13 +48,15 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package utils
+package network
 
 import (
 	"bytes"
 	"context"
-	"hash/crc32"
+	"github.com/insolar/insolar/network/node"
 	"io"
+	"math"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"

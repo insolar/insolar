@@ -53,6 +53,7 @@ package hostnetwork
 import (
 	"context"
 	"github.com/fortytw2/leaktest"
+	"github.com/insolar/insolar/network"
 	"sync"
 	"testing"
 	"time"
@@ -65,7 +66,6 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"

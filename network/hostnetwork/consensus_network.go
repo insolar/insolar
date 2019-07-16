@@ -53,6 +53,8 @@ package hostnetwork
 import (
 	"bytes"
 	"context"
+	"github.com/insolar/insolar/network"
+
 	"sync"
 	"sync/atomic"
 
@@ -63,7 +65,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensusv1"
 	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/hostnetwork/host"

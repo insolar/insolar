@@ -52,9 +52,8 @@ package hostnetwork
 
 import (
 	"context"
+	"github.com/insolar/insolar/network"
 	"io"
-
-	"github.com/insolar/insolar/network/utils"
 
 	"github.com/pkg/errors"
 
@@ -92,7 +91,7 @@ func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader
 	// context cancel monitoring
 	go func() {
 		<-ctx.Done()
-		utils.CloseVerbose(reader)
+		network.CloseVerbose(reader)
 	}()
 
 	for {
@@ -101,11 +100,11 @@ func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				mainLogger.Info("[ HandleStream ] Connection closed by peer")
-				utils.CloseVerbose(reader)
+				network.CloseVerbose(reader)
 				return
 			}
 
-			if utils.IsConnectionClosed(err) || utils.IsClosedPipe(err) {
+			if network.IsConnectionClosed(err) || network.IsClosedPipe(err) {
 				mainLogger.Info("[ HandleStream ] Connection closed.")
 				return
 			}

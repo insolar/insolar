@@ -70,7 +70,6 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/consensusv1/phases"
@@ -80,10 +79,6 @@ import (
 	"github.com/insolar/insolar/network/routing"
 	"github.com/insolar/insolar/network/transport"
 )
-
-const deliverWatermillMsg = "ServiceNetwork.processIncoming"
-
-var ack = []byte{1}
 
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
@@ -248,14 +243,10 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	)
 	defer span.End()
 
-	if !n.NodeKeeper.IsBootstrapped() {
-		n.Bootstrapper.SetLastPulse(newPulse.NextPulseNumber)
-		return
-	}
-	if n.shoudIgnorePulse(newPulse) {
-		log.Infof("Ignore pulse %d: network is not yet initialized", newPulse.PulseNumber)
-		return
-	}
+	//if n.shoudIgnorePulse(newPulse) {
+	//	log.Infof("Ignore pulse %d: network is not yet initialized", newPulse.PulseNumber)
+	//	return
+	//}
 
 	if n.NodeKeeper.GetConsensusInfo().IsJoiner() {
 		// do not set pulse because otherwise we will set invalid active list
@@ -287,7 +278,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 func (n *ServiceNetwork) ChangePulse(ctx context.Context, newPulse insolar.Pulse) {
 	logger := inslogger.FromContext(ctx)
 
-	if err := n.Gateway().OnPulse(ctx, newPulse); err != nil {
+	if err := n.Gatewayer.Gateway().OnPulse(ctx, newPulse); err != nil {
 		logger.Error(errors.Wrap(err, "Failed to call OnPulse on Gateway"))
 	}
 
