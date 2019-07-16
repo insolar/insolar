@@ -128,6 +128,14 @@ func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io
 		}
 	}
 
+	if packetType == phases.PacketPhase1 {
+		if ctx.HasFlag(3) {
+			if err := b.JoinerExt.SerializeTo(ctx, writer); err != nil {
+				return errors.Wrap(err, "failed to serialize JoinerExt")
+			}
+		}
+	}
+
 	if packetType == phases.PacketPhase2 {
 		if ctx.GetFlagRangeInt(1, 2) == 1 { // [1:2] == 1 - has brief intro (this option is only allowed Phase 2 only)
 			if err := b.BriefSelfIntro.SerializeTo(ctx, writer); err != nil {
@@ -195,6 +203,14 @@ func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, rea
 	if packetType == phases.PacketPhase1 || packetType == phases.PacketPhase2 {
 		if err := b.Announcement.DeserializeFrom(ctx, reader); err != nil {
 			return errors.Wrap(err, "failed to deserialize Announcement")
+		}
+	}
+
+	if packetType == phases.PacketPhase1 {
+		if ctx.HasFlag(3) {
+			if err := b.JoinerExt.DeserializeFrom(ctx, reader); err != nil {
+				return errors.Wrap(err, "failed to deserialize JoinerExt")
+			}
 		}
 	}
 
@@ -387,8 +403,7 @@ type NeighbourAnnouncement struct {
 
 		The field "Joiner" MUST BE OMITTED when	this joiner is introduced by the sending node
 	*/
-	Joiner JoinAnnouncement `insolar-transport:"optional=CurrentRank==0"` // ByteSize = 135, 137, 147
-	// TODO implement for serialization
+	Joiner             JoinAnnouncement    `insolar-transport:"optional=CurrentRank==0"` // ByteSize = 135, 137, 147
 	JoinerIntroducedBy insolar.ShortNodeID `insolar-transport:"optional=CurrentRank==0"`
 
 	/* For non-joiner */
@@ -416,6 +431,9 @@ func (na *NeighbourAnnouncement) SerializeTo(ctx SerializeContext, writer io.Wri
 			if err := na.Joiner.SerializeTo(ctx, writer); err != nil {
 				return errors.Wrap(err, "failed to serialize Joiner")
 			}
+		}
+		if err := write(writer, na.JoinerIntroducedBy); err != nil {
+			return errors.Wrap(err, "failed to serialize JoinerIntroducedBy")
 		}
 	} else {
 		ctx.SetInContext(ContextNeighbourAnnouncement)
@@ -453,6 +471,9 @@ func (na *NeighbourAnnouncement) DeserializeFrom(ctx DeserializeContext, reader 
 			if err := na.Joiner.DeserializeFrom(ctx, reader); err != nil {
 				return errors.Wrap(err, "failed to deserialize Joiner")
 			}
+		}
+		if err := read(reader, &na.JoinerIntroducedBy); err != nil {
+			return errors.Wrap(err, "failed to deserialize JoinerIntroducedBy")
 		}
 	} else {
 		ctx.SetInContext(ContextNeighbourAnnouncement)
