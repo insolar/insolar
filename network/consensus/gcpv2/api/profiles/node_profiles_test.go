@@ -65,7 +65,7 @@ import (
 func TestNewMembershipProfile(t *testing.T) {
 	nsh := proofs.NewNodeStateHashEvidenceMock(t)
 	nas := proofs.NewMemberAnnouncementSignatureMock(t)
-	index := uint16(1)
+	index := member.AsIndex(1)
 	power := member.Power(2)
 	ep := member.Power(3)
 	mp := NewMembershipProfile(member.ModeNormal, power, index, nsh, nas, ep)
@@ -126,7 +126,7 @@ func TestEquals(t *testing.T) {
 	mp2 := MembershipProfile{}
 	require.False(t, mp1.Equals(mp2))
 
-	mp1.Index = uint16(1)
+	mp1.Index = member.AsIndex(1)
 	mp1.Power = member.Power(2)
 	mp1.RequestedPower = member.Power(3)
 	she1 := proofs.NewNodeStateHashEvidenceMock(t)
@@ -134,7 +134,7 @@ func TestEquals(t *testing.T) {
 	mp1.StateEvidence = she1
 	mp1.AnnounceSignature = mas1
 
-	mp2.Index = uint16(2)
+	mp2.Index = member.AsIndex(2)
 	mp2.Power = mp1.Power
 	mp2.RequestedPower = mp1.RequestedPower
 	mp2.StateEvidence = mp1.StateEvidence
