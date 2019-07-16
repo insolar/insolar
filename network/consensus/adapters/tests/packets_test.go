@@ -99,6 +99,10 @@ type basePacket struct {
 	sd cryptkit.SignedDigest
 }
 
+func (r *basePacket) GetJoinerIntroducedByID() insolar.ShortNodeID {
+	return insolar.AbsentShortNodeID
+}
+
 func (r *basePacket) ParsePacketBody() (transport.PacketParser, error) {
 	return nil, nil
 }

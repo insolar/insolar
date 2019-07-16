@@ -599,6 +599,10 @@ func (r *MembershipAnnouncementReader) GetJoinerID() insolar.ShortNodeID {
 	return r.body.Announcement.Member.AnnounceID
 }
 
+func (r *MembershipAnnouncementReader) GetJoinerIntroducedByID() insolar.ShortNodeID {
+	panic("implement me") // TODO
+}
+
 func (r *MembershipAnnouncementReader) GetJoinerAnnouncement() transport.JoinerAnnouncementReader {
 	if !r.hasRank() {
 		return nil
@@ -631,6 +635,10 @@ func (r *JoinerAnnouncementReader) GetBriefIntroduction() transport.BriefIntrodu
 type NeighbourAnnouncementReader struct {
 	MemberPacketReader
 	neighbour NeighbourAnnouncement
+}
+
+func (r *NeighbourAnnouncementReader) GetJoinerIntroducedByID() insolar.ShortNodeID {
+	panic("implement me") // TODO
 }
 
 func (r *NeighbourAnnouncementReader) hasRank() bool {

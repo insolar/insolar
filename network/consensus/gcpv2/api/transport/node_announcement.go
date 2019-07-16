@@ -114,6 +114,10 @@ func (c *NodeAnnouncementProfile) GetJoinerID() insolar.ShortNodeID {
 	return c.ma.JoinerID
 }
 
+func (c *NodeAnnouncementProfile) GetJoinerIntroducedByID() insolar.ShortNodeID {
+	return insolar.AbsentShortNodeID // TODO
+}
+
 func (c *NodeAnnouncementProfile) GetJoinerAnnouncement() JoinerAnnouncementReader {
 	panic("unsupported")
 }

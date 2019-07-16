@@ -78,7 +78,7 @@ func NewRegularPhaseBundle(packetPrepareOptions transport.PacketSendOptions, s P
 }
 
 func NewRegularPhaseBundleByDefault() core.PhaseControllersBundle {
-	return NewRegularPhaseBundle(0, NewTakeFirstSelectionStrategy())
+	return NewRegularPhaseBundle(transport.AllowFullJoinerIntroForPhase1, NewTakeFirstSelectionStrategy())
 }
 
 func (r *RegularPhaseBundle) GetPrepPhaseControllers() []core.PrepPhaseController {

@@ -249,10 +249,12 @@ func TestNodeFullIntro_DeserializeFrom_Slices(t *testing.T) {
 			SpecialRoles:        member.SpecialRoleDiscovery,
 			StartPower:          10,
 		},
-		EndpointLen:    2,
-		ExtraEndpoints: make([]uint16, 2),
-		ProofLen:       2,
-		NodeRefProof:   make([]longbits.Bits512, 2),
+		NodeExtendedIntro: NodeExtendedIntro{
+			EndpointLen:    2,
+			ExtraEndpoints: make([]uint16, 2),
+			ProofLen:       2,
+			NodeRefProof:   make([]longbits.Bits512, 2),
+		},
 	}
 
 	b := make([]byte, 64)
