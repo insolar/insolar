@@ -55,7 +55,6 @@ import (
 	"net"
 	"sync"
 
-	"github.com/insolar/insolar/network/consensusv1"
 	"github.com/insolar/insolar/network/hostnetwork/resolver"
 	"github.com/insolar/insolar/network/node"
 
@@ -282,7 +281,7 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context, number insolar.Pulse
 
 	nk.snapshot = node.NewSnapshot(number, mergeResult.ActiveList)
 	nk.accessor = node.NewAccessor(nk.snapshot)
-	stats.Record(ctx, consensusv1.ActiveNodes.M(int64(len(nk.accessor.GetActiveNodes()))))
+	stats.Record(ctx, network.ActiveNodes.M(int64(len(nk.accessor.GetActiveNodes()))))
 	nk.consensusInfo.Flush(mergeResult.NodesJoinedDuringPrevPulse)
 	nk.gracefulStopIfNeeded(ctx)
 	return nil

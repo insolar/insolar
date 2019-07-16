@@ -99,23 +99,6 @@ type HostNetwork interface {
 // ConsensusPacketHandler callback function for consensus packets handling
 type ConsensusPacketHandler func(incomingPacket packets.ConsensusPacket, sender insolar.Reference)
 
-//go:generate minimock -i github.com/insolar/insolar/network.ConsensusNetwork -o ../testutils/network -s _mock.go
-
-// ConsensusNetwork interface to send and handling consensus packets
-type ConsensusNetwork interface {
-	component.Initer
-	component.Starter
-	component.Stopper
-
-	// PublicAddress returns public address that can be published for all nodes.
-	PublicAddress() string
-
-	// SignAndSendPacket send request to a remote node.
-	SignAndSendPacket(packet packets.ConsensusPacket, receiver insolar.Reference, service insolar.CryptographyService) error
-	// RegisterPacketHandler register a handler function to process incoming requests of a specific type.
-	RegisterPacketHandler(t packets.PacketType, handler ConsensusPacketHandler)
-}
-
 // Packet is a packet that is transported via network by HostNetwork.
 type Packet interface {
 	GetSender() insolar.Reference
