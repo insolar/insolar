@@ -99,6 +99,10 @@ type basePacket struct {
 	sd cryptkit.SignedDigest
 }
 
+func (r *basePacket) ParsePacketBody() (transport.PacketParser, error) {
+	return nil, nil
+}
+
 func (r *basePacket) GetRequestedPower() member.Power {
 	return r.mp.RequestedPower
 }

@@ -170,7 +170,7 @@ func (c *NodeAppearance) GetProfile() profiles.ActiveNode {
 }
 
 func (c *NodeAppearance) VerifyPacketAuthenticity(packet transport.PacketParser, from endpoints.Inbound, strictFrom bool) error {
-	return VerifyPacketAuthenticityBy(packet, c.profile, c.profile.GetSignatureVerifier(), from, strictFrom)
+	return VerifyPacketAuthenticityBy(packet, c.profile.GetStatic(), c.profile.GetSignatureVerifier(), from, strictFrom)
 }
 
 func (c *NodeAppearance) SetPacketReceived(pt phases.PacketType) bool {
@@ -215,7 +215,7 @@ func (c *NodeAppearance) GetSignatureVerifier() cryptkit.SignatureVerifier {
 }
 
 func (c *NodeAppearance) CreateSignatureVerifier(vFactory cryptkit.SignatureVerifierFactory) cryptkit.SignatureVerifier {
-	return vFactory.GetSignatureVerifierWithPKS(c.profile.GetPublicKeyStore())
+	return vFactory.GetSignatureVerifierWithPKS(c.profile.GetStatic().GetPublicKeyStore())
 }
 
 //func (c *NodeAppearance) ApplyMembershipRank(mr member.Rank) error {

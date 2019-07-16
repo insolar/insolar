@@ -92,6 +92,10 @@ type PacketParser struct {
 	keyProcessor insolar.KeyProcessor
 }
 
+func (p *PacketParser) ParsePacketBody() (transport.PacketParser, error) {
+	return nil, nil
+}
+
 func newPacketParser(
 	ctx context.Context,
 	reader io.Reader,

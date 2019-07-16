@@ -174,10 +174,6 @@ func (nip *NodeIntroProfile) GetSpecialRoles() member.SpecialRole {
 	return nip.specialRole
 }
 
-func (nip *NodeIntroProfile) HasIntroduction() bool {
-	return nip.intro != nil
-}
-
 func (nip *NodeIntroProfile) GetIntroduction() profiles.NodeIntroduction {
 	return nip.intro
 }
@@ -257,8 +253,8 @@ func (p *Outbound) AsByteString() string {
 	return p.addr.String()
 }
 
-func NewNodeIntroProfileList(nodes []insolar.NetworkNode, certificate insolar.Certificate, keyProcessor insolar.KeyProcessor) []profiles.NodeIntroProfile {
-	intros := make([]profiles.NodeIntroProfile, len(nodes))
+func NewNodeIntroProfileList(nodes []insolar.NetworkNode, certificate insolar.Certificate, keyProcessor insolar.KeyProcessor) []profiles.StaticProfile {
+	intros := make([]profiles.StaticProfile, len(nodes))
 	for i, n := range nodes {
 		intros[i] = NewNodeIntroProfile(n, certificate, keyProcessor)
 	}

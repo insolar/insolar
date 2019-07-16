@@ -93,6 +93,10 @@ type EmuPulsarNetPacket struct {
 	pulseData pulse.Data
 }
 
+func (r *EmuPulsarNetPacket) ParsePacketBody() (transport.PacketParser, error) {
+	return nil, nil
+}
+
 func (r *EmuPulsarNetPacket) IsRelayForbidden() bool {
 	return false
 }
@@ -175,6 +179,10 @@ type basePacket struct {
 	mp          profiles.MembershipProfile
 	isLeaving   bool
 	leaveReason uint32
+}
+
+func (r *basePacket) ParsePacketBody() (transport.PacketParser, error) {
+	return nil, nil
 }
 
 func (r *basePacket) GetRequestedPower() member.Power {

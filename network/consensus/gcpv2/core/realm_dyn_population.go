@@ -203,11 +203,12 @@ func (r *DynamicRealmPopulation) CreateNodeAppearance(ctx context.Context, np pr
 }
 
 func (r *DynamicRealmPopulation) AddToPurgatory(n *NodeAppearance) (*NodeAppearance, PurgatoryNodeState) {
-	if n.profile.HasIntroduction() {
+	nip := n.profile.GetStatic()
+	if nip.GetIntroduction() != nil {
 		panic("illegal value")
 	}
 
-	id := n.profile.GetShortNodeID()
+	id := nip.GetShortNodeID()
 	na := r.GetActiveNodeAppearance(id)
 	if na != nil {
 		return na, PurgatoryExistingMember
@@ -225,12 +226,12 @@ func (r *DynamicRealmPopulation) AddToPurgatory(n *NodeAppearance) (*NodeAppeara
 		r.purgatoryByPK = make(map[string]*NodeAppearance)
 		r.purgatoryByID = make(map[insolar.ShortNodeID]*[]*NodeAppearance)
 
-		r.purgatoryByPK[n.profile.GetNodePublicKey().AsByteString()] = n
-		r.purgatoryByID[n.profile.GetShortNodeID()] = &[]*NodeAppearance{n}
+		r.purgatoryByPK[nip.GetNodePublicKey().AsByteString()] = n
+		r.purgatoryByID[nip.GetShortNodeID()] = &[]*NodeAppearance{n}
 		return n, 0
 	}
 
-	pk := n.profile.GetNodePublicKey().AsByteString()
+	pk := nip.GetNodePublicKey().AsByteString()
 	nn = r.purgatoryByPK[pk]
 	if nn != nil {
 		return nn, PurgatoryDuplicatePK
@@ -248,18 +249,18 @@ func (r *DynamicRealmPopulation) AddToPurgatory(n *NodeAppearance) (*NodeAppeara
 }
 
 func (r *DynamicRealmPopulation) AddToDynamics(n *NodeAppearance) (*NodeAppearance, []*NodeAppearance) {
-	np := n.profile
+	nip := n.profile.GetStatic()
 
-	if !np.HasIntroduction() {
+	if nip.GetIntroduction() == nil {
 		panic("illegal value")
 	}
 
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
-	id := np.GetShortNodeID()
+	id := nip.GetShortNodeID()
 
-	delete(r.purgatoryByPK, np.GetNodePublicKey().AsByteString())
+	delete(r.purgatoryByPK, nip.GetNodePublicKey().AsByteString())
 	nodes := r.purgatoryByID[id]
 	if nodes != nil {
 		delete(r.purgatoryByID, id)
@@ -277,10 +278,10 @@ func (r *DynamicRealmPopulation) AddToDynamics(n *NodeAppearance) (*NodeAppearan
 		return na, *nodes
 	}
 
-	if np.IsJoiner() {
+	if n.profile.IsJoiner() {
 		r.joinerCount++
 	} else {
-		ni := np.GetIndex()
+		ni := n.profile.GetIndex()
 		switch {
 		case ni.AsInt() == len(r.nodeIndex):
 			r.nodeIndex = append(r.nodeIndex, n)

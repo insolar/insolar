@@ -199,11 +199,11 @@ func (npf *NodeProfileFactory) createProfile(candidate profiles.BriefCandidatePr
 	)
 }
 
-func (npf *NodeProfileFactory) CreateBriefIntroProfile(candidate profiles.BriefCandidateProfile) profiles.NodeIntroProfile {
+func (npf *NodeProfileFactory) CreateBriefIntroProfile(candidate profiles.BriefCandidateProfile) profiles.StaticProfile {
 	return npf.createProfile(candidate, candidate.GetJoinerSignature(), nil)
 }
 
-func (npf *NodeProfileFactory) CreateFullIntroProfile(candidate profiles.CandidateProfile) profiles.NodeIntroProfile {
+func (npf *NodeProfileFactory) CreateFullIntroProfile(candidate profiles.CandidateProfile) profiles.StaticProfile {
 	intro := newNodeIntroduction(candidate.GetShortNodeID(), candidate.GetReference())
 
 	return npf.createProfile(candidate, candidate.GetJoinerSignature(), intro)

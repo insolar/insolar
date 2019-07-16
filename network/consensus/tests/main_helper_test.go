@@ -84,7 +84,7 @@ func (p *emuNetworkBuilder) StartNetwork(ctx context.Context) {
 }
 
 func (p *emuNetworkBuilder) StartPulsar(pulseCount int, pulseDelta uint16, pulsarAddr endpoints.Name,
-	nodes []profiles.NodeIntroProfile) {
+	nodes []profiles.StaticProfile) {
 
 	attempts := 4 + len(nodes)/10
 
@@ -105,7 +105,7 @@ func (p *emuNetworkBuilder) StartPulsar(pulseCount int, pulseDelta uint16, pulsa
 	go CreateGenerator(pulseCount, pulseDelta, senderChan)
 }
 
-func (p *emuNetworkBuilder) connectEmuNode(nodes []profiles.NodeIntroProfile, selfIndex int) {
+func (p *emuNetworkBuilder) connectEmuNode(nodes []profiles.StaticProfile, selfIndex int) {
 
 	controlFeeder := &EmuControlFeeder{}
 	candidateFeeder := &core.SequentialCandidateFeeder{}

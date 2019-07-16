@@ -72,7 +72,7 @@ type copyFromPopulation interface {
 
 var _ census.OnlinePopulation = &OneNodePopulation{}
 
-func NewOneNodePopulation(localNode profiles.NodeIntroProfile, verifier cryptkit.SignatureVerifier) OneNodePopulation {
+func NewOneNodePopulation(localNode profiles.StaticProfile, verifier cryptkit.SignatureVerifier) OneNodePopulation {
 	localNode.GetShortNodeID()
 	return OneNodePopulation{
 		localNode: updatableSlot{
@@ -81,7 +81,7 @@ func NewOneNodePopulation(localNode profiles.NodeIntroProfile, verifier cryptkit
 	}
 }
 
-func NewManyNodePopulation(localNode profiles.NodeIntroProfile, nodes []profiles.NodeIntroProfile) ManyNodePopulation {
+func NewManyNodePopulation(localNode profiles.StaticProfile, nodes []profiles.StaticProfile) ManyNodePopulation {
 	localNode.GetShortNodeID()
 	r := ManyNodePopulation{}
 	r.makeOfProfiles(nodes, localNode)
@@ -232,13 +232,13 @@ func (c *ManyNodePopulation) makeCopyOfMapAndSort(slots map[insolar.ShortNodeID]
 	}
 }
 
-func (c *ManyNodePopulation) makeOfProfiles(nodes []profiles.NodeIntroProfile, localNode profiles.NodeIntroProfile) {
+func (c *ManyNodePopulation) makeOfProfiles(nodes []profiles.StaticProfile, localNode profiles.StaticProfile) {
 	buf := make([]updatableSlot, len(nodes)+1) // +1 local node may not be on the list
 	c.slotByID = make(map[insolar.ShortNodeID]*updatableSlot, len(nodes)+1)
 
 	c.local = &buf[0]
 	c.local.index = 0
-	c.local.NodeIntroProfile = localNode
+	c.local.StaticProfile = localNode
 	c.slotByID[localNode.GetShortNodeID()] = c.local
 
 	slotIndex := member.AsIndex(1)
@@ -394,7 +394,7 @@ func (c *DynamicPopulation) CopyAndSeparate() (*ManyNodePopulation, census.Evict
 	return &r, &evPop
 }
 
-func (c *DynamicPopulation) AddProfile(n profiles.NodeIntroProfile) profiles.Updatable {
+func (c *DynamicPopulation) AddProfile(n profiles.StaticProfile) profiles.Updatable {
 	id := n.GetShortNodeID()
 	if _, ok := c.slotByID[id]; ok {
 		panic(fmt.Sprintf("duplicate ShortNodeID: %v", id))

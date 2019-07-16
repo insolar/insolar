@@ -108,6 +108,10 @@ type LocalNodeMock struct {
 	LocalNodeProfileMock       mLocalNodeMockLocalNodeProfile
 }
 
+func (m *LocalNodeMock) GetStatic() StaticProfile {
+	return m
+}
+
 //NewLocalNodeMock returns a mock for github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.LocalNode
 func NewLocalNodeMock(t minimock.Tester) *LocalNodeMock {
 	m := &LocalNodeMock{t: t}

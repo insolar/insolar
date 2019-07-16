@@ -67,7 +67,7 @@ func newEvictedPopulation(evicts []*updatableSlot) evictedPopulation {
 
 	for _, s := range evicts {
 		id := s.GetShortNodeID()
-		evictedNodes[id] = &evictedSlot{s.NodeIntroProfile, s.verifier, s.mode,
+		evictedNodes[id] = &evictedSlot{s.StaticProfile, s.verifier, s.mode,
 			s.leaveReason}
 	}
 
@@ -101,10 +101,14 @@ func (p *evictedPopulation) GetProfiles() []profiles.EvictedNode {
 var _ profiles.EvictedNode = &evictedSlot{}
 
 type evictedSlot struct {
-	profiles.NodeIntroProfile
+	profiles.StaticProfile
 	sf          cryptkit.SignatureVerifier
 	mode        member.OpMode
 	leaveReason uint32
+}
+
+func (p *evictedSlot) GetStatic() profiles.StaticProfile {
+	return p.StaticProfile
 }
 
 func (p *evictedSlot) GetSignatureVerifier() cryptkit.SignatureVerifier {

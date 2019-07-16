@@ -216,7 +216,7 @@ func (c *DynamicPopulationBuilder) FindProfile(nodeID insolar.ShortNodeID) profi
 	return c.census.population.FindUpdatableProfile(nodeID)
 }
 
-func (c *DynamicPopulationBuilder) AddJoinerProfile(intro profiles.NodeIntroProfile) profiles.Updatable {
+func (c *DynamicPopulationBuilder) AddJoinerProfile(intro profiles.StaticProfile) profiles.Updatable {
 	c.census.mutex.Lock()
 	defer c.census.mutex.Unlock()
 

@@ -51,29 +51,41 @@
 package censusimpl
 
 import (
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"sync"
 )
 
 var _ profiles.LocalNode = &NodeProfileSlot{}
 
 type NodeProfileSlot struct {
-	profiles.NodeIntroProfile
+	profiles.StaticProfile
 	verifier cryptkit.SignatureVerifier
 	index    member.Index
 	mode     member.OpMode
 	power    member.Power
 }
 
-func NewNodeProfile(index member.Index, p profiles.NodeIntroProfile, verifier cryptkit.SignatureVerifier, pw member.Power) NodeProfileSlot {
-
-	return NodeProfileSlot{index: index.Ensure(), NodeIntroProfile: p, verifier: verifier, power: pw}
+func (c *NodeProfileSlot) GetStatic() profiles.StaticProfile {
+	return c.StaticProfile
 }
 
-func NewJoinerProfile(p profiles.NodeIntroProfile, verifier cryptkit.SignatureVerifier, pw member.Power) NodeProfileSlot {
+func NewNodeProfile(index member.Index, p profiles.StaticProfile, verifier cryptkit.SignatureVerifier, pw member.Power) NodeProfileSlot {
 
-	return NodeProfileSlot{index: member.JoinerIndex, NodeIntroProfile: p, verifier: verifier, power: pw}
+	return NodeProfileSlot{index: index.Ensure(), StaticProfile: p, verifier: verifier, power: pw}
+}
+
+func NewJoinerProfile(p profiles.StaticProfile, verifier cryptkit.SignatureVerifier, pw member.Power) NodeProfileSlot {
+
+	return NodeProfileSlot{index: member.JoinerIndex, StaticProfile: p, verifier: verifier, power: pw}
+}
+
+func NewJoinerUpdatableProfile(p profiles.StaticProfile, verifier cryptkit.SignatureVerifier, pw member.Power) NodeProfileSlot {
+
+	return NodeProfileSlot{index: member.JoinerIndex, StaticProfile: p, verifier: verifier, power: pw}
 }
 
 func (c *NodeProfileSlot) GetDeclaredPower() member.Power {
@@ -104,6 +116,10 @@ var _ profiles.Updatable = &updatableSlot{}
 type updatableSlot struct {
 	NodeProfileSlot
 	leaveReason uint32
+}
+
+func (c *updatableSlot) AsActiveNode() profiles.ActiveNode {
+	return &c.NodeProfileSlot
 }
 
 func (c *updatableSlot) SetRank(index member.Index, m member.OpMode, power member.Power) {
@@ -138,4 +154,94 @@ func (c *updatableSlot) SetIndex(index member.Index) {
 
 func (c *updatableSlot) SetSignatureVerifier(verifier cryptkit.SignatureVerifier) {
 	c.verifier = verifier
+}
+
+type updatableJoinerSlot struct {
+	nodeID insolar.ShortNodeID
+	sf     cryptkit.SignatureVerifier
+
+	mutex sync.RWMutex
+	intro profiles.StaticProfile
+}
+
+func (p *updatableJoinerSlot) GetStatic() profiles.StaticProfile {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
+	return p.intro
+}
+
+func (p *updatableJoinerSlot) SetNodeIntroProfile(nip profiles.StaticProfile) {
+
+	if p.nodeID != nip.GetShortNodeID() {
+		panic("illegal value")
+	}
+
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	p.intro = nip
+}
+
+func (p *updatableJoinerSlot) GetDefaultEndpoint() endpoints.Outbound {
+	return p.GetStatic().GetDefaultEndpoint()
+}
+
+func (p *updatableJoinerSlot) GetPublicKeyStore() cryptkit.PublicKeyStore {
+	return p.GetStatic().GetPublicKeyStore()
+}
+
+func (p *updatableJoinerSlot) IsAcceptableHost(from endpoints.Inbound) bool {
+	return p.GetStatic().IsAcceptableHost(from)
+}
+
+func (p *updatableJoinerSlot) GetShortNodeID() insolar.ShortNodeID {
+	return p.nodeID
+}
+
+func (p *updatableJoinerSlot) GetStartPower() member.Power {
+	return p.GetStatic().GetStartPower()
+}
+
+func (p *updatableJoinerSlot) GetPrimaryRole() member.PrimaryRole {
+	return p.GetStatic().GetPrimaryRole()
+}
+
+func (p *updatableJoinerSlot) GetSpecialRoles() member.SpecialRole {
+	return p.GetStatic().GetSpecialRoles()
+}
+
+func (p *updatableJoinerSlot) GetNodePublicKey() cryptkit.SignatureKeyHolder {
+	return p.GetStatic().GetNodePublicKey()
+}
+
+func (p *updatableJoinerSlot) GetAnnouncementSignature() cryptkit.SignatureHolder {
+	return p.GetStatic().GetAnnouncementSignature()
+}
+
+func (p *updatableJoinerSlot) GetIntroduction() profiles.NodeIntroduction {
+	return p.GetStatic().GetIntroduction()
+}
+
+func (p *updatableJoinerSlot) GetSignatureVerifier() cryptkit.SignatureVerifier {
+	return p.sf
+}
+
+func (p *updatableJoinerSlot) GetOpMode() member.OpMode {
+	return member.ModeNormal
+}
+
+func (p *updatableJoinerSlot) GetIndex() member.Index {
+	return member.JoinerIndex.Ensure()
+}
+
+func (p *updatableJoinerSlot) IsJoiner() bool {
+	return true
+}
+
+func (p *updatableJoinerSlot) GetDeclaredPower() member.Power {
+	return 0
+}
+
+func (p *updatableJoinerSlot) GetLeaveReason() uint32 {
+	panic("illegal state")
 }

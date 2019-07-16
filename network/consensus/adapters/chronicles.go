@@ -63,6 +63,6 @@ func NewChronicles(pop censusimpl.ManyNodePopulation, pf profiles.Factory, vc ce
 	return chronicles
 }
 
-func NewPopulation(localNode profiles.NodeIntroProfile, nodes []profiles.NodeIntroProfile) censusimpl.ManyNodePopulation {
+func NewPopulation(localNode profiles.StaticProfile, nodes []profiles.StaticProfile) censusimpl.ManyNodePopulation {
 	return censusimpl.NewManyNodePopulation(localNode, nodes)
 }

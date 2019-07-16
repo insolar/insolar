@@ -54,10 +54,7 @@ import (
 	"context"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/consensuskit"
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
 
 func NewMemberRealmPopulation(strategy RoundStrategy, population census.OnlinePopulation, phase2ExtLimit uint8,
@@ -182,33 +179,4 @@ func (r *MemberRealmPopulation) CreateVectorHelper() *RealmVectorHelper {
 	v := r.DynamicRealmPopulation.CreateVectorHelper()
 	v.realmPopulation = r
 	return v
-}
-
-var _ profiles.ActiveNode = &joiningNodeProfile{}
-
-type joiningNodeProfile struct {
-	//mutex sync.Mutex
-	profiles.NodeIntroProfile
-}
-
-// TODO access profiles.NodeIntroProfile under lock
-
-func (p *joiningNodeProfile) IsJoiner() bool {
-	return true
-}
-
-func (p *joiningNodeProfile) GetOpMode() member.OpMode {
-	return member.ModeNormal
-}
-
-func (p *joiningNodeProfile) GetIndex() member.Index {
-	return member.JoinerIndex.Ensure()
-}
-
-func (p *joiningNodeProfile) GetDeclaredPower() member.Power {
-	return p.GetStartPower()
-}
-
-func (*joiningNodeProfile) GetSignatureVerifier() cryptkit.SignatureVerifier {
-	return nil
 }

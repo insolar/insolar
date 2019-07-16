@@ -138,7 +138,7 @@ type memberEntry struct {
 }
 
 func (p *StateAndRankSequenceCalc) AddNext(nodeData VectorEntryData, zeroPower bool) {
-	np := nodeData.Profile
+	np := nodeData.Profile.GetStatic()
 	orderingRole := np.GetPrimaryRole()
 	if orderingRole == member.PrimaryRoleInactive {
 		panic("illegal state")
@@ -155,7 +155,7 @@ func (p *StateAndRankSequenceCalc) AddNext(nodeData VectorEntryData, zeroPower b
 		p.cursor = member.RankCursor{Role: orderingRole, TotalIndex: p.cursor.TotalIndex}
 	}
 
-	nodeID := nodeData.Profile.GetShortNodeID()
+	nodeID := np.GetShortNodeID()
 	me := memberEntry{
 		state:        nodeData.StateEvidence,
 		capture:      p.nodeID == nodeID,

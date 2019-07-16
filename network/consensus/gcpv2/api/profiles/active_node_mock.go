@@ -103,6 +103,10 @@ type ActiveNodeMock struct {
 	IsJoinerMock       mActiveNodeMockIsJoiner
 }
 
+func (m *ActiveNodeMock) GetStatic() StaticProfile {
+	return m
+}
+
 //NewActiveNodeMock returns a mock for github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.ActiveNode
 func NewActiveNodeMock(t minimock.Tester) *ActiveNodeMock {
 	m := &ActiveNodeMock{t: t}

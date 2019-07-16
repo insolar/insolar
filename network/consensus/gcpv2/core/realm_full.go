@@ -140,12 +140,12 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 
 	pd := r.packetDispatchers[pt] // was checked above for != nil
 
-	// TODO enable lazy parsing on packet interface
-	//var err error
-	//packet, err = packet.ParsePacketBody()
-	//if err != nil {
-	//	return err
-	//}
+	//this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
+	var err error
+	packet, err = LazyPacketParse(packet)
+	if err != nil {
+		return err
+	}
 
 	if pt.IsMemberPacket() {
 		// now it is safe to parse the rest of the packet
@@ -292,7 +292,7 @@ func (r *FullRealm) registerNextJoinCandidate() *NodeAppearance {
 		na := r.population.CreateNodeAppearance(r.roundContext, &np)
 		nna, nodes := r.population.AddToDynamics(na)
 
-		if !profiles.EqualIntroProfiles(nna.profile, na.profile) {
+		if !profiles.EqualIntroProfiles(nna.profile.GetStatic(), na.profile.GetStatic()) {
 			nodes = append(nodes, na)
 			nna = nil
 		}
@@ -427,7 +427,7 @@ func (r *FullRealm) preparePrimingMembers(pop census2.PopulationBuilder) {
 		if p.GetSignatureVerifier() != nil {
 			continue
 		}
-		v := r.GetSignatureVerifier(p.GetPublicKeyStore())
+		v := r.GetSignatureVerifier(p.GetStatic().GetPublicKeyStore())
 		p.SetSignatureVerifier(v)
 	}
 }
@@ -438,7 +438,7 @@ func (r *FullRealm) prepareRegularMembers(pop census2.PopulationBuilder) {
 
 	for _, p := range pop.GetUnorderedProfiles() {
 		if p.GetSignatureVerifier() == nil {
-			v := r.GetSignatureVerifier(p.GetPublicKeyStore())
+			v := r.GetSignatureVerifier(p.GetStatic().GetPublicKeyStore())
 			p.SetSignatureVerifier(v)
 		}
 

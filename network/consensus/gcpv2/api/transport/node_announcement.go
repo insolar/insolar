@@ -63,7 +63,7 @@ import (
 func NewNodeAnnouncement(np profiles.ActiveNode, ma profiles.MembershipAnnouncement, nodeCount int,
 	pn pulse.Number) *NodeAnnouncementProfile {
 	return &NodeAnnouncementProfile{
-		nodeID:    np.GetShortNodeID(),
+		nodeID:    np.GetStatic().GetShortNodeID(),
 		nodeCount: uint16(nodeCount),
 		ma:        ma,
 		pn:        pn,

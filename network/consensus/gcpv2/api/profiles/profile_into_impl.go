@@ -60,7 +60,7 @@ import (
 	"time"
 )
 
-func NewNodeIntroProfileOfBrief(v BriefCandidateProfile, pks cryptkit.PublicKeyStore) NodeIntroProfile {
+func NewNodeIntroProfileOfBrief(v BriefCandidateProfile, pks cryptkit.PublicKeyStore) StaticProfile {
 	return &SimpleNodeIntroProfile{
 		endpoints:         []endpoints.Outbound{v.GetDefaultEndpoint()},
 		nodeID:            v.GetShortNodeID(),
@@ -74,7 +74,7 @@ func NewNodeIntroProfileOfBrief(v BriefCandidateProfile, pks cryptkit.PublicKeyS
 	}
 }
 
-func NewNodeIntroProfileOfFull(v CandidateProfile, pks cryptkit.PublicKeyStore) NodeIntroProfile {
+func NewNodeIntroProfileOfFull(v CandidateProfile, pks cryptkit.PublicKeyStore) StaticProfile {
 
 	extraEndpoints := v.GetExtraEndpoints()
 	return &SimpleNodeIntroProfile{
@@ -203,10 +203,9 @@ func (p *SimpleNodeIntroProfile) GetAnnouncementSignature() cryptkit.SignatureHo
 	return p.announceSignature
 }
 
-func (p *SimpleNodeIntroProfile) HasIntroduction() bool {
-	return p.isFull
-}
-
 func (p *SimpleNodeIntroProfile) GetIntroduction() NodeIntroduction {
-	return p
+	if p.isFull {
+		return p
+	}
+	return nil
 }

@@ -367,7 +367,7 @@ func (v *sortedEntry) setMember(ve *VectorEntry, index int) {
 	if ve.RequestedPower == 0 {
 		v.powerRole = 0
 	} else {
-		v.powerRole = uint16(ve.RequestedPower) | uint16(ve.Profile.GetPrimaryRole())<<8
+		v.powerRole = uint16(ve.RequestedPower) | uint16(ve.Profile.GetStatic().GetPrimaryRole())<<8
 	}
 }
 
