@@ -801,7 +801,7 @@ func (m *client) activateObject(
 	}
 
 	switch p := pl.(type) {
-	case *payload.ID:
+	case *payload.ResultInfo:
 		var (
 			asType *insolar.Reference
 		)
@@ -899,8 +899,8 @@ func (m *client) RegisterResult(
 		}
 
 		switch p := payloadOutput.(type) {
-		case *payload.ID:
-			return &payloadOutput.(*payload.ID).ID, nil
+		case *payload.ResultInfo:
+			return &payloadOutput.(*payload.ResultInfo).ResultID, nil
 		case *payload.Error:
 			return nil, errors.New(p.Text)
 		default:

@@ -307,7 +307,7 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 
 	resetComponents()
 	t.Run("object id is empty", func(t *testing.T) {
-		err := manager.SetResult(ctx, insolar.ID{}, gen.JetID(), validResult)
+		_, err := manager.SetResult(ctx, insolar.ID{}, gen.JetID(), validResult)
 		assert.Error(t, err)
 
 		mc.Finish()
@@ -315,7 +315,7 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 
 	resetComponents()
 	t.Run("jet is not valid", func(t *testing.T) {
-		err := manager.SetResult(ctx, gen.ID(), insolar.JetID{}, validResult)
+		_, err := manager.SetResult(ctx, gen.ID(), insolar.JetID{}, validResult)
 		assert.Error(t, err)
 
 		mc.Finish()
@@ -323,8 +323,25 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 
 	resetComponents()
 	t.Run("index does not exist", func(t *testing.T) {
-		err := manager.SetResult(ctx, gen.ID(), gen.JetID(), validResult)
+		_, err := manager.SetResult(ctx, gen.ID(), gen.JetID(), validResult)
 		assert.Error(t, err)
+
+		mc.Finish()
+	})
+
+	resetComponents()
+	t.Run("problems during duplicates searching", func(t *testing.T) {
+		calculator.ResultDuplicateMock.Return(nil, errors.New("smth terrible happened"))
+		resultID := gen.ID()
+		err := indexes.SetIndex(ctx, resultID.Pulse(), record.Index{
+			ObjID:    validResult.Object,
+			Lifeline: record.Lifeline{},
+		})
+		require.NoError(t, err)
+
+		_, err = manager.SetResult(ctx, resultID, gen.JetID(), validResult)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "smth terrible happened")
 
 		mc.Finish()
 	})
@@ -351,6 +368,12 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 
 			return []insolar.ID{expectedFilamentRecordID}, nil
 		}
+		calculator.ResultDuplicateFunc = func(_ context.Context, inPN insolar.PulseNumber, inObjID insolar.ID, inResID insolar.ID, inRes record.Result) (*record.CompositeFilamentRecord, error) {
+			require.Equal(t, inPN, resultID.Pulse())
+			require.Equal(t, validResult.Object, inObjID)
+			require.Equal(t, resultID, inResID)
+			return nil, nil
+		}
 
 		latestPendingPulse := latestPendingID.Pulse()
 		err := indexes.SetIndex(ctx, resultID.Pulse(), record.Index{
@@ -362,7 +385,7 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		err = manager.SetResult(ctx, resultID, jetID, validResult)
+		_, err = manager.SetResult(ctx, resultID, jetID, validResult)
 		assert.NoError(t, err)
 
 		idx, err := indexes.ForID(ctx, resultID.Pulse(), validResult.Object)
@@ -398,6 +421,13 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 
 			return []insolar.ID{}, nil
 		}
+		calculator.ResultDuplicateFunc = func(_ context.Context, pn insolar.PulseNumber, objID insolar.ID, inResID insolar.ID, _ record.Result) (*record.CompositeFilamentRecord, error) {
+			require.Equal(t, resultID, inResID)
+			require.Equal(t, validResult.Object, objID)
+			require.Equal(t, resultID.Pulse(), pn)
+
+			return nil, nil
+		}
 
 		latestPendingPulse := latestPendingID.Pulse()
 		err := indexes.SetIndex(ctx, resultID.Pulse(), record.Index{
@@ -409,7 +439,7 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		err = manager.SetResult(ctx, resultID, jetID, validResult)
+		_, err = manager.SetResult(ctx, resultID, jetID, validResult)
 		assert.NoError(t, err)
 
 		idx, err := indexes.ForID(ctx, resultID.Pulse(), validResult.Object)
