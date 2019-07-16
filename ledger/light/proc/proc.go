@@ -36,7 +36,7 @@ type Dependencies struct {
 	GetPendingRequestID func(*GetPendingRequestID)
 	GetJet              func(*GetJet)
 	GetChildren         func(*GetChildren)
-	HotData             func(*HotData)
+	HotObjects          func(*HotObjects)
 	PassState           func(*PassState)
 	CalculateID         func(*CalculateID)
 	SetCode             func(*SetCode)
@@ -57,7 +57,6 @@ func NewDependenciesMock() *Dependencies {
 		EnsureIndex:         func(*EnsureIndexWM) {},
 		SendObject:          func(*SendObject) {},
 		GetCode:             func(*GetCode) {},
-		GetRequest:          func(*GetRequest) {},
 		SetRequest:          func(*SetRequest) {},
 		SetResult:           func(*SetResult) {},
 		ActivateObject:      func(*ActivateObject) {},
@@ -68,7 +67,7 @@ func NewDependenciesMock() *Dependencies {
 		GetPendingRequestID: func(*GetPendingRequestID) {},
 		GetJet:              func(*GetJet) {},
 		GetChildren:         func(*GetChildren) {},
-		HotData:             func(*HotData) {},
+		HotObjects:          func(*HotObjects) {},
 		PassState:           func(*PassState) {},
 		CalculateID:         func(*CalculateID) {},
 		SetCode:             func(*SetCode) {},

@@ -34,7 +34,7 @@ import (
 type SendObject struct {
 	message  payload.Meta
 	objectID insolar.ID
-	index    object.Lifeline
+	index    record.Lifeline
 
 	Dep struct {
 		Coordinator    jet.Coordinator
@@ -49,7 +49,7 @@ type SendObject struct {
 func NewSendObject(
 	msg payload.Meta,
 	id insolar.ID,
-	idx object.Lifeline,
+	idx record.Lifeline,
 ) *SendObject {
 	return &SendObject{
 		message:  msg,

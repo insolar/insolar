@@ -36,6 +36,10 @@ const (
 	StateDeactivation
 )
 
+func (s *StateID) Equal(other StateID) bool {
+	return *s == other
+}
+
 // State is common object state record.
 type State interface {
 	// ID returns state id.
@@ -158,4 +162,25 @@ func (r *OutgoingRequest) AffinityRef() *insolar.Reference {
 
 func (r *OutgoingRequest) ReasonRef() insolar.Reference {
 	return r.Reason
+}
+
+func (m *Lifeline) SetDelegate(key insolar.Reference, value insolar.Reference) {
+	for _, d := range m.Delegates {
+		if d.Key == key {
+			d.Value = value
+			return
+		}
+	}
+
+	m.Delegates = append(m.Delegates, LifelineDelegate{Key: key, Value: value})
+}
+
+func (m *Lifeline) DelegateByKey(key insolar.Reference) (insolar.Reference, bool) {
+	for _, d := range m.Delegates {
+		if d.Key == key {
+			return d.Value, true
+		}
+	}
+
+	return [64]byte{}, false
 }

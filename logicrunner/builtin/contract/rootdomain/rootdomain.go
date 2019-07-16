@@ -75,12 +75,26 @@ func (rd *RootDomain) GetBurnAddress() (string, error) {
 
 // GetMemberByPublicKey gets member reference by public key.
 func (rd RootDomain) GetMemberByPublicKey(publicKey string) (insolar.Reference, error) {
-	return rd.PublicKeyMap[trimPublicKey(publicKey)], nil
+	var result insolar.Reference
+	var ok bool
+
+	if result, ok = rd.PublicKeyMap[trimPublicKey(publicKey)]; !ok {
+		return insolar.Reference{}, fmt.Errorf("member for this public key does not exist")
+	}
+
+	return result, nil
 }
 
 // GetMemberByBurnAddress gets member reference by burn address.
 func (rd RootDomain) GetMemberByBurnAddress(burnAddress string) (insolar.Reference, error) {
-	return rd.BurnAddressMap[trimBurnAddress(burnAddress)], nil
+	var result insolar.Reference
+	var ok bool
+
+	if result, ok = rd.BurnAddressMap[trimBurnAddress(burnAddress)]; !ok {
+		return insolar.Reference{}, fmt.Errorf("member for this migration address does not exist")
+	}
+
+	return result, nil
 }
 
 // GetCostCenter gets cost center reference.

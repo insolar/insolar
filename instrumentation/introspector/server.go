@@ -109,7 +109,7 @@ func (s *Server) run(ctx context.Context, l net.Listener) error {
 	go func() {
 		<-ctx.Done()
 		inslog.Debug("shutdown introspection server...")
-		s.fin <- srv.Shutdown(ctx)
+		s.fin <- srv.Shutdown(context.Background())
 	}()
 	go func() {
 		err = srv.Serve(l)

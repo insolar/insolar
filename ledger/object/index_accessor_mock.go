@@ -12,6 +12,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	insolar "github.com/insolar/insolar/insolar"
+	record "github.com/insolar/insolar/insolar/record"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,12 +21,12 @@ import (
 type IndexAccessorMock struct {
 	t minimock.Tester
 
-	ForIDFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r FilamentIndex, r1 error)
+	ForIDFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r record.Index, r1 error)
 	ForIDCounter    uint64
 	ForIDPreCounter uint64
 	ForIDMock       mIndexAccessorMockForID
 
-	ForPulseFunc       func(p context.Context, p1 insolar.PulseNumber) (r []FilamentIndex)
+	ForPulseFunc       func(p context.Context, p1 insolar.PulseNumber) (r []record.Index)
 	ForPulseCounter    uint64
 	ForPulsePreCounter uint64
 	ForPulseMock       mIndexAccessorMockForPulse
@@ -63,7 +64,7 @@ type IndexAccessorMockForIDInput struct {
 }
 
 type IndexAccessorMockForIDResult struct {
-	r  FilamentIndex
+	r  record.Index
 	r1 error
 }
 
@@ -80,7 +81,7 @@ func (m *mIndexAccessorMockForID) Expect(p context.Context, p1 insolar.PulseNumb
 }
 
 //Return specifies results of invocation of IndexAccessor.ForID
-func (m *mIndexAccessorMockForID) Return(r FilamentIndex, r1 error) *IndexAccessorMock {
+func (m *mIndexAccessorMockForID) Return(r record.Index, r1 error) *IndexAccessorMock {
 	m.mock.ForIDFunc = nil
 	m.expectationSeries = nil
 
@@ -102,12 +103,12 @@ func (m *mIndexAccessorMockForID) ExpectOnce(p context.Context, p1 insolar.Pulse
 	return expectation
 }
 
-func (e *IndexAccessorMockForIDExpectation) Return(r FilamentIndex, r1 error) {
+func (e *IndexAccessorMockForIDExpectation) Return(r record.Index, r1 error) {
 	e.result = &IndexAccessorMockForIDResult{r, r1}
 }
 
 //Set uses given function f as a mock of IndexAccessor.ForID method
-func (m *mIndexAccessorMockForID) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r FilamentIndex, r1 error)) *IndexAccessorMock {
+func (m *mIndexAccessorMockForID) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r record.Index, r1 error)) *IndexAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -116,7 +117,7 @@ func (m *mIndexAccessorMockForID) Set(f func(p context.Context, p1 insolar.Pulse
 }
 
 //ForID implements github.com/insolar/insolar/ledger/object.IndexAccessor interface
-func (m *IndexAccessorMock) ForID(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r FilamentIndex, r1 error) {
+func (m *IndexAccessorMock) ForID(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r record.Index, r1 error) {
 	counter := atomic.AddUint64(&m.ForIDPreCounter, 1)
 	defer atomic.AddUint64(&m.ForIDCounter, 1)
 
@@ -214,7 +215,7 @@ type IndexAccessorMockForPulseInput struct {
 }
 
 type IndexAccessorMockForPulseResult struct {
-	r []FilamentIndex
+	r []record.Index
 }
 
 //Expect specifies that invocation of IndexAccessor.ForPulse is expected from 1 to Infinity times
@@ -230,7 +231,7 @@ func (m *mIndexAccessorMockForPulse) Expect(p context.Context, p1 insolar.PulseN
 }
 
 //Return specifies results of invocation of IndexAccessor.ForPulse
-func (m *mIndexAccessorMockForPulse) Return(r []FilamentIndex) *IndexAccessorMock {
+func (m *mIndexAccessorMockForPulse) Return(r []record.Index) *IndexAccessorMock {
 	m.mock.ForPulseFunc = nil
 	m.expectationSeries = nil
 
@@ -252,12 +253,12 @@ func (m *mIndexAccessorMockForPulse) ExpectOnce(p context.Context, p1 insolar.Pu
 	return expectation
 }
 
-func (e *IndexAccessorMockForPulseExpectation) Return(r []FilamentIndex) {
+func (e *IndexAccessorMockForPulseExpectation) Return(r []record.Index) {
 	e.result = &IndexAccessorMockForPulseResult{r}
 }
 
 //Set uses given function f as a mock of IndexAccessor.ForPulse method
-func (m *mIndexAccessorMockForPulse) Set(f func(p context.Context, p1 insolar.PulseNumber) (r []FilamentIndex)) *IndexAccessorMock {
+func (m *mIndexAccessorMockForPulse) Set(f func(p context.Context, p1 insolar.PulseNumber) (r []record.Index)) *IndexAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -266,7 +267,7 @@ func (m *mIndexAccessorMockForPulse) Set(f func(p context.Context, p1 insolar.Pu
 }
 
 //ForPulse implements github.com/insolar/insolar/ledger/object.IndexAccessor interface
-func (m *IndexAccessorMock) ForPulse(p context.Context, p1 insolar.PulseNumber) (r []FilamentIndex) {
+func (m *IndexAccessorMock) ForPulse(p context.Context, p1 insolar.PulseNumber) (r []record.Index) {
 	counter := atomic.AddUint64(&m.ForPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.ForPulseCounter, 1)
 

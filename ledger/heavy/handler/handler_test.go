@@ -20,6 +20,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
@@ -46,7 +47,7 @@ func TestHandleGetJet(t *testing.T) {
 			testPulseNumber := insolar.PulseNumber(insolar.FirstPulseNumber + 797979)
 			testID := gen.ID()
 			testJetID := gen.JetID()
-			h := New()
+			h := New(configuration.NewLedger())
 			accessorMock := jet.NewAccessorMock(t)
 			accessorMock.ForIDFunc = func(ctx context.Context, pn insolar.PulseNumber, id insolar.ID) (r insolar.JetID, r1 bool) {
 				require.Equal(t, testPulseNumber, pn)

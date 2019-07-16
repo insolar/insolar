@@ -24,6 +24,8 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -43,6 +45,8 @@ import (
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
+
+	wmMessage "github.com/ThreeDotsLabs/watermill/message"
 )
 
 type amSuite struct {
@@ -209,10 +213,13 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 	req := record.IncomingRequest{
 		Method: "test",
 	}
-	virtRec := record.Wrap(req)
-	data, err := virtRec.Marshal()
+
+	finalResponse := &payload.Request{
+		RequestID: requestID,
+		Request:   record.Wrap(req),
+	}
+	reqMsg, err := payload.NewMessage(finalResponse)
 	require.NoError(s.T(), err)
-	finalResponse := &reply.Request{Record: data}
 
 	mb := testutils.NewMessageBusMock(s.T())
 	mb.SendFunc = func(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
@@ -222,21 +229,34 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 			require.Equal(s.T(), true, ok)
 			require.Equal(s.T(), objectID, casted.ObjectID)
 			return &reply.ID{ID: requestID}, nil
-		case 1:
-			casted, ok := p1.(*message.GetRequest)
-			require.Equal(s.T(), true, ok)
-			require.Equal(s.T(), requestID, casted.Request)
-			require.Equal(s.T(), node, *p2.Receiver)
-			return finalResponse, nil
 		default:
 			panic("test is totally broken")
 		}
+	}
+
+	sender := bus.NewSenderMock(s.T())
+	sender.SendTargetFunc = func(_ context.Context, msg *wmMessage.Message, n insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
+		getReq := payload.GetRequest{}
+		err := getReq.Unmarshal(msg.Payload)
+		require.NoError(s.T(), err)
+
+		require.Equal(s.T(), requestID, getReq.RequestID)
+		require.Equal(s.T(), node, n)
+
+		meta := payload.Meta{Payload: reqMsg.Payload}
+		buf, err := meta.Marshal()
+		require.NoError(s.T(), err)
+		reqMsg.Payload = buf
+		ch := make(chan *wmMessage.Message, 1)
+		ch <- reqMsg
+		return ch, func() {}
 	}
 
 	am := NewClient(nil)
 	am.JetCoordinator = jc
 	am.DefaultBus = mb
 	am.PulseAccessor = pulseAccessor
+	am.sender = sender
 
 	// Act
 	_, res, err := am.GetPendingRequest(inslogger.TestContext(s.T()), objectID)

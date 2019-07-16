@@ -18,13 +18,11 @@ package proc
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -54,18 +52,12 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to fetch record")
 	}
-	virtual := record.Unwrap(rec.Virtual)
-	code, ok := virtual.(*record.Code)
-	if !ok {
-		return fmt.Errorf("invalid code record %#v", virtual)
-	}
 	buf, err := rec.Marshal()
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal record")
 	}
 	msg, err := payload.NewMessage(&payload.Code{
 		Record: buf,
-		Code:   code.Code,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create message")

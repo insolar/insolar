@@ -338,8 +338,8 @@ func (m *Scope) updateStateObject(
 			return errors.Wrap(err, "index not found for updating non Activation state object")
 		}
 		// We are activating the object. There is no index for it yet.
-		idx = object.FilamentIndex{
-			Lifeline:       object.Lifeline{StateID: record.StateUndefined},
+		idx = record.Index{
+			Lifeline:       record.Lifeline{StateID: record.StateUndefined},
 			PendingRecords: []insolar.ID{},
 			ObjID:          *objRef.Record(),
 		}

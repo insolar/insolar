@@ -46,11 +46,10 @@ type SetCode struct {
 	}
 }
 
-func NewSetCode(msg payload.Meta, rec record.Virtual, code []byte, recID insolar.ID, jetID insolar.JetID) *SetCode {
+func NewSetCode(msg payload.Meta, rec record.Virtual, recID insolar.ID, jetID insolar.JetID) *SetCode {
 	return &SetCode{
 		message:  msg,
 		record:   rec,
-		code:     code,
 		recordID: recID,
 		jetID:    jetID,
 	}

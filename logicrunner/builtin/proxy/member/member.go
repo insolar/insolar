@@ -26,6 +26,10 @@ import (
 type CreateResponse struct {
 	Reference string `json:"reference"`
 }
+type GetResponse struct {
+	Reference   string `json:"reference"`
+	BurnAddress string `json:"migrationAddress,omitempty"`
+}
 type MigrationCreateResponse struct {
 	Reference   string `json:"reference"`
 	BurnAddress string `json:"migrationAddress"`
@@ -100,11 +104,12 @@ func GetImplementationFrom(object insolar.Reference) (*Member, error) {
 }
 
 // New is constructor
-func New(rootDomain insolar.Reference, name string, key string) *ContractConstructorHolder {
-	var args [3]interface{}
+func New(rootDomain insolar.Reference, name string, key string, burnAddress string) *ContractConstructorHolder {
+	var args [4]interface{}
 	args[0] = rootDomain
 	args[1] = name
 	args[2] = key
+	args[3] = burnAddress
 
 	var argsSerialized []byte
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
@@ -614,4 +619,89 @@ func (r *Member) SetDepositAsImmutable(reference insolar.Reference) error {
 		return ret0
 	}
 	return nil
+}
+
+// GetBurnAddress is proxy generated method
+func (r *Member) GetBurnAddress() (string, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 string
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetBurnAddress", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// GetBurnAddressNoWait is proxy generated method
+func (r *Member) GetBurnAddressNoWait() error {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetBurnAddress", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetBurnAddressAsImmutable is proxy generated method
+func (r *Member) GetBurnAddressAsImmutable() (string, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 string
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetBurnAddress", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }

@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/record"
 
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/jet"
@@ -119,7 +120,7 @@ func (p *EnsureIndex) process(ctx context.Context) error {
 		return errors.Wrap(err, "failed to decode index")
 	}
 
-	err = p.Dep.IndexModifier.SetIndex(ctx, flow.Pulse(ctx), object.FilamentIndex{
+	err = p.Dep.IndexModifier.SetIndex(ctx, flow.Pulse(ctx), record.Index{
 		LifelineLastUsed: p.pn,
 		Lifeline:         lfl,
 		PendingRecords:   []insolar.ID{},
@@ -138,7 +139,7 @@ type EnsureIndexWM struct {
 	message payload.Meta
 
 	Result struct {
-		Lifeline object.Lifeline
+		Lifeline record.Lifeline
 	}
 
 	Dep struct {
@@ -220,7 +221,7 @@ func (p *EnsureIndexWM) process(ctx context.Context) error {
 		return errors.Wrap(err, "failed to decode index")
 	}
 
-	err = p.Dep.IndexModifier.SetIndex(ctx, flow.Pulse(ctx), object.FilamentIndex{
+	err = p.Dep.IndexModifier.SetIndex(ctx, flow.Pulse(ctx), record.Index{
 		LifelineLastUsed: flow.Pulse(ctx),
 		Lifeline:         p.Result.Lifeline,
 		PendingRecords:   []insolar.ID{},

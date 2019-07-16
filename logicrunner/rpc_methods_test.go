@@ -17,6 +17,7 @@
 package logicrunner
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -27,12 +28,167 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
+	"github.com/insolar/insolar/testutils"
 )
 
-func TestValidationProxyImplementation_GetCode(t *testing.T) {
+func TestRPCMethods_New(t *testing.T) {
+	m := NewRPCMethods(
+		artifacts.NewClientMock(t),
+		artifacts.NewDescriptorsCacheMock(t),
+		testutils.NewContractRequesterMock(t),
+		NewStateStorageMock(t),
+	)
+	require.NotNil(t, m)
+}
+
+func genBaseData(t minimock.Tester, tr *Transcript) (
+	*RPCMethods, insolar.Reference, insolar.Reference,
+) {
+	reqRef := gen.Reference()
+	objRef := gen.Reference()
+
+	tr.RequestRef = reqRef
+
+	execList := NewCurrentExecutionList()
+	execList.Set(reqRef, tr)
+	ss := NewStateStorageMock(t).
+		GetExecutionStateMock.Set(func(ref insolar.Reference) (r *ExecutionBroker) {
+			if ref.Equal(objRef) {
+				return &ExecutionBroker{currentList: execList}
+			} else {
+				return nil
+			}
+	})
+
+	m := &RPCMethods{
+		ss:        ss,
+		execution: NewProxyImplementationMock(t),
+	}
+	return m, reqRef, objRef
+}
+
+func TestRPCMethods_DeactivateObject(t *testing.T) {
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	reqRef := gen.Reference()
+	objRef := gen.Reference()
+
+	tr := &Transcript{RequestRef: reqRef}
+
+	execList := NewCurrentExecutionList()
+	execList.Set(reqRef, tr)
+	ss := NewStateStorageMock(t).
+		GetExecutionStateMock.Set(func(ref insolar.Reference) (r *ExecutionBroker) {
+		if ref.Equal(objRef) {
+			return &ExecutionBroker{currentList: execList}
+		} else {
+			return nil
+		}
+	})
+
+	m := &RPCMethods{
+		ss:        ss,
+		execution: NewProxyImplementationMock(t),
+	}
+
+	m.execution.(*ProxyImplementationMock).
+		DeactivateObjectMock.Return(nil).
+		GetCodeMock.Return(nil).
+		RouteCallMock.Return(nil).
+		SaveAsChildMock.Return(nil).
+		SaveAsDelegateMock.Return(nil).
+		GetObjChildrenIteratorMock.Return(nil).
+		GetDelegateMock.Return(nil)
+
+	table := []struct {
+		name string
+		f func(rpctypes.UpBaseReq) error
+	}{
+		{
+			name: "deactivate",
+			f: func(baseReq rpctypes.UpBaseReq) error {
+				return m.DeactivateObject(
+					rpctypes.UpDeactivateObjectReq{UpBaseReq: baseReq},
+					&rpctypes.UpDeactivateObjectResp{},
+				)
+			},
+		},
+		{
+			name: "code",
+			f: func(baseReq rpctypes.UpBaseReq) error {
+				return m.GetCode(
+					rpctypes.UpGetCodeReq{UpBaseReq: baseReq},
+					&rpctypes.UpGetCodeResp{},
+				)
+			},
+		},
+		{
+			name: "call",
+			f: func(baseReq rpctypes.UpBaseReq) error {
+				return m.RouteCall(
+					rpctypes.UpRouteReq{UpBaseReq: baseReq},
+					&rpctypes.UpRouteResp{},
+				)
+			},
+		},
+		{
+			name: "as child",
+			f: func(baseReq rpctypes.UpBaseReq) error {
+				return m.SaveAsChild(
+					rpctypes.UpSaveAsChildReq{UpBaseReq: baseReq},
+					&rpctypes.UpSaveAsChildResp{},
+				)
+			},
+		},
+		{
+			name: "as delegate",
+			f: func(baseReq rpctypes.UpBaseReq) error {
+				return m.SaveAsDelegate(
+					rpctypes.UpSaveAsDelegateReq{UpBaseReq: baseReq},
+					&rpctypes.UpSaveAsDelegateResp{},
+				)
+			},
+		},
+		{
+			name: "child iter",
+			f: func(baseReq rpctypes.UpBaseReq) error {
+				return m.GetObjChildrenIterator(
+					rpctypes.UpGetObjChildrenIteratorReq{UpBaseReq: baseReq},
+					&rpctypes.UpGetObjChildrenIteratorResp{},
+				)
+			},
+		},
+		{
+			name: "get delegate",
+			f: func(baseReq rpctypes.UpBaseReq) error {
+				return m.GetDelegate(
+					rpctypes.UpGetDelegateReq{UpBaseReq: baseReq},
+					&rpctypes.UpGetDelegateResp{},
+				)
+			},
+		},
+	}
+
+	for _, test := range table {
+		t.Run(test.name, func(t *testing.T) {
+			err := test.f(rpctypes.UpBaseReq{Callee: objRef, Request: reqRef})
+			require.NoError(t, err)
+
+			err = test.f(rpctypes.UpBaseReq{Callee: objRef, Request: gen.Reference()})
+			require.Error(t, err)
+
+			err = test.f(rpctypes.UpBaseReq{Callee: gen.Reference(), Request: reqRef})
+			require.Error(t, err)
+		})
+	}
+}
+
+func TestProxyImplementation_GetCode(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	defer mc.Finish()
@@ -84,16 +240,21 @@ func TestValidationProxyImplementation_GetCode(t *testing.T) {
 	for _, test := range table {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
-			impl := &validationProxyImplementation{dc: test.dc}
-			result := rpctypes.UpGetCodeResp{}
-			err := impl.GetCode(ctx, test.transcript, test.req, &result)
-			if !test.error {
-				require.NoError(t, err)
-				require.NotNil(t, result)
-				require.Equal(t, test.result, result)
-			} else {
-				require.Error(t, err)
-				require.Equal(t, test.result, rpctypes.UpGetCodeResp{})
+			implementations := []ProxyImplementation{
+				&executionProxyImplementation{dc: test.dc},
+				&validationProxyImplementation{dc: test.dc},
+			}
+			for _, impl := range implementations {
+				result := rpctypes.UpGetCodeResp{}
+				err := impl.GetCode(ctx, test.transcript, test.req, &result)
+				if !test.error {
+					require.NoError(t, err)
+					require.NotNil(t, result)
+					require.Equal(t, test.result, result)
+				} else {
+					require.Error(t, err)
+					require.Equal(t, test.result, rpctypes.UpGetCodeResp{})
+				}
 			}
 		})
 	}
@@ -187,4 +348,165 @@ func TestValidationProxyImplementation_RouteCall(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
+	t.Parallel()
+
+	am := artifacts.NewClientMock(t)
+	dc := artifacts.NewDescriptorsCacheMock(t)
+	cr := testutils.NewContractRequesterMock(t)
+
+	requestRef := gen.Reference()
+
+	rpcm := NewExecutionProxyImplementation(dc, cr, am)
+	ctx := context.Background()
+	transcript := NewTranscript(ctx, requestRef, record.IncomingRequest{})
+	req := rpctypes.UpRouteReq{Wait: true}
+	resp := &rpctypes.UpRouteResp{}
+
+	var outreq *record.OutgoingRequest
+	outgoingReqID := gen.ID()
+	outgoingReqRef := insolar.NewReference(outgoingReqID)
+	// Make sure an outgoing request is registered
+	am.RegisterOutgoingRequestFunc = func(ctx context.Context, r *record.OutgoingRequest) (*insolar.ID, error) {
+		require.Nil(t, outreq)
+		require.Equal(t, record.ReturnResult, r.ReturnMode)
+		outreq = r
+		id := outgoingReqID
+		return &id, nil
+	}
+
+	cr.CallMethodMock.Return(&reply.CallMethod{}, nil)
+	// Make sure the result of the outgoing request is registered as well
+	am.RegisterResultFunc = func(ctx context.Context, objref insolar.Reference, reqref insolar.Reference, result []byte) (r *insolar.ID, r1 error) {
+		require.Equal(t, outgoingReqRef, &reqref)
+		id := gen.ID()
+		return &id, nil
+	}
+
+	err := rpcm.RouteCall(ctx, transcript, req, resp)
+	require.NoError(t, err)
+	require.NotNil(t, outreq)
+	require.Equal(t, requestRef, outreq.Reason)
+}
+
+func TestRouteCallRegistersSaga(t *testing.T) {
+	t.Parallel()
+
+	am := artifacts.NewClientMock(t)
+	dc := artifacts.NewDescriptorsCacheMock(t)
+	cr := testutils.NewContractRequesterMock(t)
+
+	requestRef := gen.Reference()
+
+	rpcm := NewExecutionProxyImplementation(dc, cr, am)
+	ctx := context.Background()
+	transcript := NewTranscript(ctx, requestRef, record.IncomingRequest{})
+	req := rpctypes.UpRouteReq{Saga: true}
+	resp := &rpctypes.UpRouteResp{}
+
+	var outreq *record.OutgoingRequest
+	outgoingReqID := gen.ID()
+	// Make sure an outgoing request is registered
+	am.RegisterOutgoingRequestFunc = func(ctx context.Context, r *record.OutgoingRequest) (*insolar.ID, error) {
+		require.Nil(t, outreq)
+		require.Equal(t, record.ReturnSaga, r.ReturnMode)
+		outreq = r
+		id := outgoingReqID
+		return &id, nil
+	}
+
+	// cr.CallMethod and am.RegisterResults are NOT called
+
+	err := rpcm.RouteCall(ctx, transcript, req, resp)
+	require.NoError(t, err)
+	require.NotNil(t, outreq)
+	require.Equal(t, requestRef, outreq.Reason)
+}
+
+func TestSaveAsChildRegistersOutgoingRequestWithValidReason(t *testing.T) {
+	t.Parallel()
+
+	am := artifacts.NewClientMock(t)
+	dc := artifacts.NewDescriptorsCacheMock(t)
+	cr := testutils.NewContractRequesterMock(t)
+
+	requestRef := gen.Reference()
+
+	rpcm := NewExecutionProxyImplementation(dc, cr, am)
+	ctx := context.Background()
+	transcript := NewTranscript(ctx, requestRef, record.IncomingRequest{})
+	req := rpctypes.UpSaveAsChildReq{}
+	resp := &rpctypes.UpSaveAsChildResp{}
+
+	var outreq *record.OutgoingRequest
+	outgoingReqID := gen.ID()
+	outgoingReqRef := insolar.NewReference(outgoingReqID)
+	// Make sure an outgoing request is registered
+	am.RegisterOutgoingRequestFunc = func(ctx context.Context, r *record.OutgoingRequest) (*insolar.ID, error) {
+		require.Nil(t, outreq)
+		outreq = r
+		id := outgoingReqID
+		return &id, nil
+	}
+
+	newObjRef := gen.Reference()
+	cr.CallConstructorMock.Return(&newObjRef, nil)
+
+	// Make sure the result of the outgoing request is registered as well
+	am.RegisterResultFunc = func(ctx context.Context, objref insolar.Reference, reqref insolar.Reference, result []byte) (r *insolar.ID, r1 error) {
+		require.Equal(t, outgoingReqRef, &reqref)
+		require.Equal(t, newObjRef.Bytes(), result)
+		id := gen.ID()
+		return &id, nil
+	}
+
+	err := rpcm.SaveAsChild(ctx, transcript, req, resp)
+	require.NoError(t, err)
+	require.NotNil(t, outreq)
+	require.Equal(t, requestRef, outreq.Reason)
+}
+
+func TestSaveAsDelegateRegistersOutgoingRequestWithValidReason(t *testing.T) {
+	t.Parallel()
+
+	am := artifacts.NewClientMock(t)
+	dc := artifacts.NewDescriptorsCacheMock(t)
+	cr := testutils.NewContractRequesterMock(t)
+
+	requestRef := gen.Reference()
+
+	rpcm := NewExecutionProxyImplementation(dc, cr, am)
+	ctx := context.Background()
+	transcript := NewTranscript(ctx, requestRef, record.IncomingRequest{})
+	req := rpctypes.UpSaveAsDelegateReq{}
+	resp := &rpctypes.UpSaveAsDelegateResp{}
+
+	var outreq *record.OutgoingRequest
+	outgoingReqID := gen.ID()
+	outgoingReqRef := insolar.NewReference(outgoingReqID)
+	// Make sure an outgoing request is registered
+	am.RegisterOutgoingRequestFunc = func(ctx context.Context, r *record.OutgoingRequest) (*insolar.ID, error) {
+		require.Nil(t, outreq)
+		outreq = r
+		id := outgoingReqID
+		return &id, nil
+	}
+
+	newObjRef := gen.Reference()
+	cr.CallConstructorMock.Return(&newObjRef, nil)
+
+	// Make sure the result of the outgoing request is registered as well
+	am.RegisterResultFunc = func(ctx context.Context, objref insolar.Reference, reqref insolar.Reference, result []byte) (r *insolar.ID, r1 error) {
+		require.Equal(t, outgoingReqRef, &reqref)
+		require.Equal(t, newObjRef.Bytes(), result)
+		id := gen.ID()
+		return &id, nil
+	}
+
+	err := rpcm.SaveAsDelegate(ctx, transcript, req, resp)
+	require.NoError(t, err)
+	require.NotNil(t, outreq)
+	require.Equal(t, requestRef, outreq.Reason)
 }
