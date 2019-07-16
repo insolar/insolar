@@ -517,8 +517,8 @@ func (r *HelloWorld) ErroredAsImmutable() (interface{}, error) {
 	return ret0, nil
 }
 
-// NumberPulse is proxy generated method
-func (r *HelloWorld) NumberPulse() (interface{}, error) {
+// PulseNumber is proxy generated method
+func (r *HelloWorld) PulseNumber() (interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -534,7 +534,7 @@ func (r *HelloWorld) NumberPulse() (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "NumberPulse", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "PulseNumber", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -550,8 +550,8 @@ func (r *HelloWorld) NumberPulse() (interface{}, error) {
 	return ret0, nil
 }
 
-// NumberPulseNoWait is proxy generated method
-func (r *HelloWorld) NumberPulseNoWait() error {
+// PulseNumberNoWait is proxy generated method
+func (r *HelloWorld) PulseNumberNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -561,7 +561,7 @@ func (r *HelloWorld) NumberPulseNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "NumberPulse", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "PulseNumber", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -569,8 +569,8 @@ func (r *HelloWorld) NumberPulseNoWait() error {
 	return nil
 }
 
-// NumberPulseAsImmutable is proxy generated method
-func (r *HelloWorld) NumberPulseAsImmutable() (interface{}, error) {
+// PulseNumberAsImmutable is proxy generated method
+func (r *HelloWorld) PulseNumberAsImmutable() (interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -586,7 +586,7 @@ func (r *HelloWorld) NumberPulseAsImmutable() (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "NumberPulse", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "PulseNumber", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}

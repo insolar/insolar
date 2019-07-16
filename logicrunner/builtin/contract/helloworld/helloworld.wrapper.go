@@ -245,18 +245,18 @@ func INSMETHOD_Errored(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
-func INSMETHOD_NumberPulse(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_PulseNumber(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 
 	self := new(HelloWorld)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeNumberPulse ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &ExtendableError{S: "[ FakePulseNumber ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeNumberPulse ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &ExtendableError{S: "[ FakePulseNumber ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -264,11 +264,11 @@ func INSMETHOD_NumberPulse(object []byte, data []byte) ([]byte, []byte, error) {
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeNumberPulse ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &ExtendableError{S: "[ FakePulseNumber ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.NumberPulse()
+	ret0, ret1 := self.PulseNumber()
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
@@ -402,7 +402,7 @@ func Initialize() XXX_insolar.ContractWrapper {
 			"Greet":       INSMETHOD_Greet,
 			"Count":       INSMETHOD_Count,
 			"Errored":     INSMETHOD_Errored,
-			"NumberPulse": INSMETHOD_NumberPulse,
+			"PulseNumber": INSMETHOD_PulseNumber,
 			"CreateChild": INSMETHOD_CreateChild,
 			"Call":        INSMETHOD_Call,
 		},

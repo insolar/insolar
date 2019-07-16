@@ -63,8 +63,8 @@ func (hw *HelloWorld) Errored() (interface{}, error) {
 }
 
 //Get number pulse from foundation
-func (hw *HelloWorld) NumberPulse() (interface{}, error) {
-	pulse := foundation.GetPulse()
+func (hw *HelloWorld) PulseNumber() (interface{}, error) {
+	pulse := foundation.GetPulseNumber()
 	return pulse, nil
 }
 
@@ -120,8 +120,8 @@ func (hw *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
 		return hw.CreateChild()
 	case "ReturnObj":
 		return hw.ReturnObj()
-	case "NumberPulse":
-		return hw.NumberPulse()
+	case "PulseNumber":
+		return hw.PulseNumber()
 	default:
 		return nil, errors.New("Unknown method " + request.Params.CallSite)
 	}
