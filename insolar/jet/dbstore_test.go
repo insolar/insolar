@@ -212,7 +212,7 @@ func TestDBStorage_CloneJetTree(t *testing.T) {
 	tree := dbTreeForPulse(s, 100)
 	assert.Equal(t, expectedZero, tree.LeafIDs(), "actual tree in string form: %v", tree.String())
 
-	err = s.Clone(ctx, 100, 101)
+	err = s.Clone(ctx, 100, 101, false)
 	require.NoError(t, err)
 
 	tree = dbTreeForPulse(s, 101)
