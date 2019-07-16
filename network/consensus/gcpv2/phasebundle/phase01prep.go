@@ -90,6 +90,9 @@ func (c *Phase01PrepController) DispatchHostPacket(ctx context.Context, packet t
 		return c.pulseStrategy.HandlePrepPulsarPacket(ctx, p0.GetEmbeddedPulsePacket(), from, c.realm, false)
 	case phases.PacketPhase1:
 		p1 := packet.GetMemberPacket().AsPhase1Packet()
+		if !p1.HasPulseData() {
+			return nil
+		}
 		return c.pulseStrategy.HandlePrepPulsarPacket(ctx, p1.GetEmbeddedPulsePacket(), from, c.realm, false)
 	default:
 		panic("illegal value")
