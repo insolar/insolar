@@ -206,7 +206,6 @@ func (m *FilamentModifierDefault) SetRequest(
 			RecordID:       requestID,
 			PreviousRecord: idx.Lifeline.PendingPointer,
 		}
-		inslogger.FromContext(ctx).Debugf("PROBLEM setRequest - %v, recordID - %v", requestID.DebugString(), rec.RecordID.DebugString())
 		virtual := record.Wrap(rec)
 		hash := record.HashVirtual(m.pcs.ReferenceHasher(), virtual)
 		id := *insolar.NewID(requestID.Pulse(), hash)
@@ -238,7 +237,6 @@ func (m *FilamentModifierDefault) SetRequest(
 }
 
 func (m *FilamentModifierDefault) SetResult(ctx context.Context, resultID insolar.ID, jetID insolar.JetID, result record.Result) (*record.CompositeFilamentRecord, error) {
-	inslogger.FromContext(ctx).Debugf("PROBLEM setResult for req - %v", result.Request.Record().DebugString())
 	if resultID.IsEmpty() {
 		return nil, errors.New("request id is empty")
 	}
@@ -479,7 +477,6 @@ func (c *FilamentCalculatorDefault) ResultDuplicate(
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to calculate pending")
 		}
-		logger.Debugf("iterator id - %v, reqID - %v", rec.RecordID.DebugString())
 
 		if bytes.Equal(rec.RecordID.Hash(), resultID.Hash()) {
 			foundResult = &rec
@@ -490,7 +487,7 @@ func (c *FilamentCalculatorDefault) ResultDuplicate(
 		}
 	}
 
-	return foundResult, errors.New(fmt.Sprintf("request for result is not found %v", result.Request.Record().DebugString()))
+	return foundResult, errors.New(fmt.Sprintf("request for result is not found"))
 }
 
 func (c *FilamentCalculatorDefault) RequestDuplicate(
