@@ -280,6 +280,13 @@ type PreparedPacketSender struct {
 	signer   cryptkit.DigestSigner
 }
 
+func (p *PreparedPacketSender) Copy() *PreparedPacketSender {
+	ppsCopy := *p
+	pCopy := *p.packet
+	ppsCopy.packet = &pCopy
+	return &ppsCopy
+}
+
 func (p *PreparedPacketSender) SendTo(ctx context.Context, target profiles.ActiveNode, sendOptions transport.PacketSendOptions, sender transport.PacketSender) {
 	p.packet.Header.TargetID = uint32(target.GetNodeID())
 	p.packet.Header.ReceiverID = uint32(target.GetNodeID())
@@ -302,7 +309,7 @@ func (p *PreparedPacketSender) SendToMany(ctx context.Context, targetCount int, 
 
 	for i := 0; i < targetCount; i++ {
 		if np, options := filter(ctx, i); np != nil {
-			p.SendTo(ctx, np, options, sender)
+			p.Copy().SendTo(ctx, np, options, sender)
 		}
 	}
 }

@@ -51,11 +51,16 @@
 package tests
 
 import (
+	"context"
 	"math/rand"
 	"time"
 
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/transport"
 )
+
+type NetStrategy interface {
+	GetLink(datagramTransport transport.DatagramTransport) transport.DatagramTransport
+}
 
 type DelayStrategyConf struct {
 	MinDelay         time.Duration
@@ -104,8 +109,9 @@ func (dns *delayNetStrategy) getDelay() time.Duration {
 	return 0
 }
 
-func (dns *delayNetStrategy) GetLinkStrategy(hostAddress endpoints.Name) LinkStrategy {
+func (dns *delayNetStrategy) GetLink(datagramTransport transport.DatagramTransport) transport.DatagramTransport {
 	return newDelayLinkStrategy(
+		datagramTransport,
 		dns.getDelay(),
 		dns.conf.SpikeDelay,
 		dns.conf.Variance,
@@ -114,6 +120,8 @@ func (dns *delayNetStrategy) GetLinkStrategy(hostAddress endpoints.Name) LinkStr
 }
 
 type delayLinkStrategy struct {
+	transport.DatagramTransport
+
 	normalDelay time.Duration
 	spikeDelay  time.Duration
 
@@ -123,8 +131,10 @@ type delayLinkStrategy struct {
 	spikeProbability float32
 }
 
-func newDelayLinkStrategy(normalDelay, spikeDelay time.Duration, variance, spikeProbability float32) *delayLinkStrategy {
+func newDelayLinkStrategy(transport transport.DatagramTransport, normalDelay, spikeDelay time.Duration, variance, spikeProbability float32) *delayLinkStrategy {
 	return &delayLinkStrategy{
+		DatagramTransport: transport,
+
 		normalDelay: normalDelay,
 		spikeDelay:  spikeDelay,
 
@@ -158,20 +168,17 @@ func (dls *delayLinkStrategy) calculateDelay() time.Duration {
 	return delay
 }
 
-func (dls *delayLinkStrategy) delay(tp string, packet *Packet, out PacketFunc) {
+func (dls *delayLinkStrategy) delay(f func()) {
 	if delay := dls.calculateDelay(); delay > 0 {
-		time.AfterFunc(delay, func() {
-			out(packet)
-		})
+		time.AfterFunc(delay, f)
 	} else {
-		out(packet)
+		f()
 	}
 }
 
-func (dls *delayLinkStrategy) BeforeSend(packet *Packet, out PacketFunc) {
-	dls.delay("OUT", packet, out)
-}
-
-func (dls *delayLinkStrategy) BeforeReceive(packet *Packet, out PacketFunc) {
-	out(packet)
+func (dls *delayLinkStrategy) SendDatagram(ctx context.Context, address string, data []byte) error {
+	dls.delay(func() {
+		_ = dls.DatagramTransport.SendDatagram(ctx, address, data)
+	})
+	return nil
 }
