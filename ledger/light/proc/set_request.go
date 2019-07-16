@@ -87,7 +87,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	var res *record.CompositeFilamentRecord
 	var objID insolar.ID
 
-	if p.request.GetCallType() == record.CTSaveAsChild || p.request.GetCallType() == record.CTSaveAsDelegate {
+	if p.request.IsCreationRequest() {
 		p.dep.locker.Lock(&p.requestID)
 		defer p.dep.locker.Unlock(&p.requestID)
 

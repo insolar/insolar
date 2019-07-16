@@ -158,7 +158,8 @@ func (m *FilamentModifierDefault) SetRequest(
 	}
 
 	var objectID insolar.ID
-	if request.GetCallType() == record.CTSaveAsChild || request.GetCallType() == record.CTSaveAsDelegate {
+
+	if request.IsCreationRequest() {
 		err := m.prepareCreationRequest(ctx, requestID, request)
 		if err != nil {
 			return nil, nil, err
@@ -227,6 +228,11 @@ func (m *FilamentModifierDefault) SetRequest(
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to update index")
 	}
+
+	inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"object_id":  objectID.DebugString(),
+		"request_id": requestID.DebugString(),
+	}).Debug("set request")
 
 	return nil, nil, nil
 }
@@ -302,6 +308,12 @@ func (m *FilamentModifierDefault) SetResult(ctx context.Context, resultID insola
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create a meta-record about pending request")
 	}
+
+	inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"object_id":  objectID.DebugString(),
+		"request_id": result.Request.Record().DebugString(),
+		"result_id":  resultID.DebugString(),
+	}).Debug("set result")
 
 	return nil, nil
 }
