@@ -75,21 +75,21 @@ func (c *PrepPhaseControllerTemplate) BeforeStart(realm *PrepRealm) {
 func (*PrepPhaseControllerTemplate) StartWorker(ctx context.Context, realm *PrepRealm) {
 }
 
-// var _ PacketDispatcher = &HostPacketDispatcher{}
+// var _ PacketDispatcher = &HostPacketDispatcherTemplate{}
 
-type HostPacketDispatcher struct {
+type HostPacketDispatcherTemplate struct {
 }
 
-func (*HostPacketDispatcher) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, source *NodeAppearance) error {
+func (*HostPacketDispatcherTemplate) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, source *NodeAppearance) error {
 	panic("illegal state")
 }
 
-// var _ PacketDispatcher = &MemberPacketDispatcher{}
+// var _ PacketDispatcher = &MemberPacketDispatcherTemplate{}
 
-type MemberPacketDispatcher struct {
+type MemberPacketDispatcherTemplate struct {
 }
 
-func (*MemberPacketDispatcher) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
+func (*MemberPacketDispatcherTemplate) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
 	from endpoints.Inbound, flags PacketVerifyFlags) error {
 	panic("illegal state")
 }

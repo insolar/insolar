@@ -82,7 +82,7 @@ var _ core.PhaseController = &Phase2Controller{}
 
 type Phase2Controller struct {
 	core.PhaseControllerTemplate
-	core.MemberPacketDispatcher
+	core.MemberPacketDispatcherTemplate
 	R                    *core.FullRealm
 	packetPrepareOptions transport.PacketSendOptions
 	queueNshReady        <-chan *core.NodeAppearance
@@ -140,7 +140,7 @@ func (c *Phase2Controller) DispatchMemberPacket(ctx context.Context, reader tran
 
 			if nb.neighbour.IsJoiner() {
 				ja := neighbourhood[i].GetJoinerAnnouncement()
-				err = c.R.AdvancePurgatoryNode(nb.neighbour.GetShortNodeID(), ja.GetBriefIntroduction(), nil, nb.neighbour)
+				err = c.R.AdvancePurgatoryNode(nb.neighbour.GetNodeID(), ja.GetBriefIntroduction(), nil, nb.neighbour)
 			} else {
 				err = c.R.AdvancePurgatoryNode(nb.ma.JoinerID, nil, nil, nb.neighbour)
 			}
@@ -168,7 +168,7 @@ func (c *Phase2Controller) verifyNeighbourhood(neighbourhood []transport.Members
 
 	for idx, nb := range neighbourhood {
 		nid := nb.GetNodeID()
-		if nid == n.GetShortNodeID() {
+		if nid == n.GetNodeID() {
 			hasSelf = true
 		}
 		neighbour := c.R.GetPopulation().GetNodeAppearance(nid)

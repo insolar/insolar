@@ -87,7 +87,7 @@ var _ core.PhaseController = &Phase3ControllerV2{}
 
 type Phase3ControllerV2 struct {
 	core.PhaseControllerTemplate
-	core.MemberPacketDispatcher
+	core.MemberPacketDispatcherTemplate
 	packetPrepareOptions transport.PacketSendOptions
 	queueTrustUpdated    <-chan ph2ctl.TrustUpdateSignal
 	queuePh3Recv         chan InspectedVector
@@ -401,7 +401,7 @@ outer:
 					na := d.GetNode()
 					log.Debugf(
 						"%s: s:%v t:%v idx:%d left:%d\n Here:%v\nThere:%v\n Comp:%v\nStats:%v\n",
-						logMsg, na.GetShortNodeID(), c.R.GetSelf().GetShortNodeID(), na.GetIndex(), remainingNodes,
+						logMsg, na.GetNodeID(), c.R.GetSelf().GetNodeID(), na.GetIndex(), remainingNodes,
 						localInspector.GetBitset(), d.GetBitset(), d, nodeStats,
 					)
 				}

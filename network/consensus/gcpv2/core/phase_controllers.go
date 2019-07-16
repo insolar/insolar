@@ -52,6 +52,7 @@ package core
 
 import (
 	"context"
+	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
@@ -63,6 +64,14 @@ type PacketDispatcher interface {
 	DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
 		from endpoints.Inbound, flags PacketVerifyFlags) error
 	DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, source *NodeAppearance) error
+}
+
+type MemberPacketReceiver interface {
+	GetNodeID() insolar.ShortNodeID
+	CanReceivePacket(pt phases.PacketType) bool
+	VerifyPacketAuthenticity(packet transport.PacketParser, from endpoints.Inbound, strictFrom bool) error
+	SetPacketReceived(pt phases.PacketType) bool
+	DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, pd PacketDispatcher) error
 }
 
 type PhasePerNodePacketFunc func(ctx context.Context, packet transport.MemberPacketReader, from *NodeAppearance, realm *FullRealm) error

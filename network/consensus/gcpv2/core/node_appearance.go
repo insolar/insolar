@@ -51,6 +51,7 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"sync"
@@ -89,6 +90,8 @@ func (c *NodeAppearance) init(np profiles.ActiveNode, callback NodeContextHolder
 	c.neighbourWeight = baselineWeight
 }
 
+var _ MemberPacketReceiver = &NodeAppearance{}
+
 type NodeAppearance struct {
 	mutex sync.Mutex
 
@@ -115,6 +118,10 @@ type NodeAppearance struct {
 	limiter         phases.PacketLimiter
 	trust           member.TrustLevel
 	neighborReports uint8
+}
+
+func (c *NodeAppearance) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, pd PacketDispatcher) error {
+	return pd.DispatchMemberPacket(ctx, packet, c)
 }
 
 func (c *NodeAppearance) String() string {
@@ -155,7 +162,7 @@ func (c *NodeAppearance) GetIndex() member.Index {
 	return c.profile.GetIndex()
 }
 
-func (c *NodeAppearance) GetShortNodeID() insolar.ShortNodeID {
+func (c *NodeAppearance) GetNodeID() insolar.ShortNodeID {
 	return c.profile.GetNodeID()
 }
 
@@ -233,7 +240,7 @@ func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp prof
 	trustBefore := c.trust
 	modified, err := c._applyNodeMembership(mp)
 
-	if err == nil && witness.GetShortNodeID() != c.GetShortNodeID() { // a node can't be a witness to itself
+	if err == nil && witness.GetNodeID() != c.GetNodeID() { // a node can't be a witness to itself
 		switch {
 		case c.neighborReports == 0:
 			c.trust.UpdateKeepNegative(member.TrustBySome)
@@ -269,7 +276,7 @@ func (c *NodeAppearance) Blames() misbehavior.BlameFactory {
 func (c *NodeAppearance) _applyNodeMembership(ma profiles.MembershipAnnouncement) (bool, error) {
 
 	if ma.Membership.IsEmpty() {
-		panic(fmt.Sprintf("membership evidence is nil: for=%v", c.GetShortNodeID()))
+		panic(fmt.Sprintf("membership evidence is nil: for=%v", c.GetNodeID()))
 	}
 
 	if c.stateEvidence != nil {
@@ -315,7 +322,7 @@ func (c *NodeAppearance) GetNodeMembershipProfile() profiles.MembershipProfile {
 	defer c.mutex.Unlock()
 
 	if c.stateEvidence == nil {
-		panic(fmt.Sprintf("illegal state: for=%v", c.GetShortNodeID()))
+		panic(fmt.Sprintf("illegal state: for=%v", c.GetNodeID()))
 	}
 	return c.getMembership()
 }
@@ -338,7 +345,7 @@ func (c *NodeAppearance) SetLocalNodeStateHashEvidence(evidence proofs.NodeState
 	defer c.mutex.Unlock()
 
 	if c.stateEvidence != nil {
-		panic(fmt.Sprintf("illegal state: for=%v", c.GetShortNodeID()))
+		panic(fmt.Sprintf("illegal state: for=%v", c.GetNodeID()))
 	}
 	if announce == nil {
 		panic("illegal param")

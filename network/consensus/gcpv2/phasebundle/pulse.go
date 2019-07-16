@@ -101,7 +101,7 @@ func (*PulsePrepController) GetPacketType() []phases.PacketType {
 }
 
 type pulsePacketPrepDispatcher struct {
-	core.HostPacketDispatcher
+	core.HostPacketDispatcherTemplate
 	pulseStrategy PulseSelectionStrategy
 	R             *core.PrepRealm
 }
@@ -121,6 +121,6 @@ func (*PulseController) GetPacketType() []phases.PacketType {
 }
 
 type pulsePacketDispatcher struct {
-	core.HostPacketDispatcher
+	core.HostPacketDispatcherTemplate
 	R *core.FullRealm
 }

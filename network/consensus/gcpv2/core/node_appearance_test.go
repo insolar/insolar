@@ -176,7 +176,7 @@ func TestGetShortNodeID(t *testing.T) {
 	lp.GetShortNodeIDMock.Set(func() insolar.ShortNodeID { return insolar.AbsentShortNodeID })
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
-	require.Equal(t, insolar.AbsentShortNodeID, r.GetShortNodeID())
+	require.Equal(t, insolar.AbsentShortNodeID, r.GetNodeID())
 }
 
 func TestGetTrustLevel(t *testing.T) {

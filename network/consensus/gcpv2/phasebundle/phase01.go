@@ -264,7 +264,7 @@ func (c *Phase01Controller) workerSendPhase1(ctx context.Context, startIndex int
 }
 
 type packetPhase01Dispatcher struct {
-	core.MemberPacketDispatcher
+	core.MemberPacketDispatcherTemplate
 	ctl *Phase01Controller
 }
 

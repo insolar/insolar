@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,52 +46,75 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-//
+///
 
-package phasebundle
+package purgatory
 
 import (
 	"context"
-
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
+	"sync"
 )
 
-func NewPhase01PrepController(s PulseSelectionStrategy) *Phase01PrepController {
-	return &Phase01PrepController{pulseStrategy: s}
+var _ core.MemberPacketReceiver = &NodePhantasm{}
+
+type NodePhantasm struct {
+	nodeID  insolar.ShortNodeID
+	mutex   sync.Mutex
+	limiter phases.PacketLimiter
+
+	visions map[string]*nodeVision
+
+	replayPackets []transport.PacketParser
+
+	//callback *nodeContext
 }
 
-var _ core.PrepPhaseController = &Phase01PrepController{}
-
-type Phase01PrepController struct {
-	core.PrepPhaseControllerTemplate
-	core.HostPacketDispatcherTemplate
-
-	realm         *core.PrepRealm
-	pulseStrategy PulseSelectionStrategy
+func (p *NodePhantasm) GetNodeID() insolar.ShortNodeID {
+	return p.nodeID
 }
 
-func (c *Phase01PrepController) CreatePacketDispatcher(pt phases.PacketType, realm *core.PrepRealm) core.PacketDispatcher {
-	c.realm = realm
-	return c
+func (p *NodePhantasm) CanReceivePacket(pt phases.PacketType) bool {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	return p.limiter.CanReceivePacket(pt)
 }
 
-func (c *Phase01PrepController) GetPacketType() []phases.PacketType {
-	return []phases.PacketType{phases.PacketPhase0, phases.PacketPhase1}
+func (p *NodePhantasm) VerifyPacketAuthenticity(packet transport.PacketParser, from endpoints.Inbound, strictFrom bool) error {
+	return nil
 }
 
-func (c *Phase01PrepController) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
-	from endpoints.Inbound, flags core.PacketVerifyFlags) error {
-	switch packet.GetPacketType() {
-	case phases.PacketPhase0:
-		p0 := packet.GetMemberPacket().AsPhase0Packet()
-		return c.pulseStrategy.HandlePrepPulsarPacket(ctx, p0.GetEmbeddedPulsePacket(), from, c.realm, false)
-	case phases.PacketPhase1:
-		p1 := packet.GetMemberPacket().AsPhase1Packet()
-		return c.pulseStrategy.HandlePrepPulsarPacket(ctx, p1.GetEmbeddedPulsePacket(), from, c.realm, false)
-	default:
-		panic("illegal value")
-	}
+func (p *NodePhantasm) SetPacketReceived(pt phases.PacketType) bool {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	var allowed bool
+	allowed, p.limiter = p.limiter.SetPacketReceived(pt)
+	return allowed
+}
+
+func (p *NodePhantasm) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, pd core.PacketDispatcher) error {
+	panic("implement me")
+}
+
+type nodeVision struct {
+	visionOf        *core.NodeAppearance
+	joinerAnnouncer insolar.ShortNodeID
+
+	profile profiles.ActiveNode // set by construction
+
+	announceSignature proofs.MemberAnnouncementSignature // one-time set
+	stateEvidence     proofs.NodeStateHashEvidence       // one-time set
+
+	firstFraudDetails *misbehavior.FraudError
+
+	neighborReports int
 }

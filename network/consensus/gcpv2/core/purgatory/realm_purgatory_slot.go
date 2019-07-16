@@ -48,7 +48,7 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 ///
 
-package core
+package purgatory
 
 import (
 	"github.com/insolar/insolar/insolar"

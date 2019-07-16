@@ -302,7 +302,7 @@ func (p *inspectedVector) doVerifyVectorHashes() nodeset.NodeVerificationResult 
 		gshTrusted, gshDoubted := selfData.Trusted.CalcStateWithRank, selfData.Doubted.CalcStateWithRank
 		if recalcTrusted || recalcDoubted {
 			gshTrusted, gshDoubted = vectorBuilder.BuildGlobulaStateHashesAndRanks(recalcTrusted, recalcDoubted,
-				p.node.GetShortNodeID(), gshTrusted, gshDoubted)
+				p.node.GetNodeID(), gshTrusted, gshDoubted)
 
 			if recalcTrusted {
 				validTrusted = gshTrusted.ExpectedRank == p.otherData.Trusted.ExpectedRank

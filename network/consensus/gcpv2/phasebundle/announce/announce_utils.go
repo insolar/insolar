@@ -98,9 +98,9 @@ func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementP
 	}
 
 	if applyFullIntros {
-		err = realm.AdvancePurgatoryNode(n.GetShortNodeID(), nil, reader.GetFullIntroduction(), n)
+		err = realm.AdvancePurgatoryNode(n.GetNodeID(), nil, reader.GetFullIntroduction(), n)
 	} else if brief != nil {
-		err = realm.AdvancePurgatoryNode(n.GetShortNodeID(), brief, nil, n)
+		err = realm.AdvancePurgatoryNode(n.GetNodeID(), brief, nil, n)
 	}
 	if err != nil {
 		return false, err

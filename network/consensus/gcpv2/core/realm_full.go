@@ -101,7 +101,8 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		verifyFlags = SkipVerify
 	}
 
-	var sourceNode *NodeAppearance
+	var sourceNode MemberPacketReceiver
+	var sourceID insolar.ShortNodeID
 
 	switch {
 	case pt.GetLimitPerSender() == 0 || int(pt) >= len(r.packetDispatchers) || r.packetDispatchers[pt] == nil:
@@ -114,15 +115,20 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		if strict {
 			verifyFlags |= RequireStrictVerify
 		}
-		sourceID := packet.GetSourceID()
+
+		sourceID = packet.GetSourceID()
 		sourceNode = r.GetPopulation().GetNodeAppearance(sourceID)
+
+		if sourceNode == nil {
+			sourceNode = r.GetPurgatoryNode(sourceID)
+		}
 	default:
 		// TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
 		verifyFlags |= SkipVerify
 	}
 
 	if sourceNode != nil && !sourceNode.CanReceivePacket(pt) {
-		return fmt.Errorf("packet type (%v) limit exceeded: from=%v(%v)", pt, sourceNode.GetShortNodeID(), from)
+		return fmt.Errorf("packet type (%v) limit exceeded: from=%v(%v)", pt, sourceNode.GetNodeID(), from)
 	}
 
 	if verifyFlags&SkipVerify == 0 {
@@ -155,14 +161,14 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		}
 
 		if sourceNode == nil {
-			panic("joiners are not yet supported") // TODO joiners
+			sourceNode = r.GetOrCreatePurgatoryNode(sourceID, memberPacket, pd)
 		}
 
 		if !sourceNode.SetPacketReceived(pt) {
-			return fmt.Errorf("packet type (%v) limit exceeded: from=%v(%v)", pt, sourceNode.GetShortNodeID(), from)
+			return fmt.Errorf("packet type (%v) limit exceeded: from=%v(%v)", pt, sourceNode.GetNodeID(), from)
 		}
 
-		return pd.DispatchMemberPacket(ctx, memberPacket, sourceNode)
+		return sourceNode.DispatchMemberPacket(ctx, memberPacket, pd)
 	} else {
 		return pd.DispatchHostPacket(ctx, packet, from, verifyFlags)
 	}
@@ -251,7 +257,7 @@ func (r *FullRealm) initSelf() {
 	newSelf := r.population.GetSelf()
 	prevSelf := r.self
 
-	if newSelf.GetShortNodeID() != prevSelf.GetShortNodeID() {
+	if newSelf.GetNodeID() != prevSelf.GetNodeID() {
 		panic("inconsistent transition of self between realms")
 	}
 
@@ -267,7 +273,7 @@ func (r *FullRealm) initSelf() {
 		// leaver is not allowed to add new nodes
 		jc := r.registerNextJoinCandidate()
 		if jc != nil {
-			newSelf.requestedJoinerID = jc.GetShortNodeID()
+			newSelf.requestedJoinerID = jc.GetNodeID()
 		}
 	}
 	newSelf.callback.updatePopulationVersion()
@@ -521,6 +527,14 @@ func (r *FullRealm) AdvancePurgatoryNode(purgatoryID insolar.ShortNodeID,
 	advancedBy *NodeAppearance) error {
 
 	panic("not implemented") // TODO
+}
+
+func (r *FullRealm) GetPurgatoryNode(id insolar.ShortNodeID) MemberPacketReceiver {
+	return nil // TODO
+}
+
+func (r *FullRealm) GetOrCreatePurgatoryNode(id insolar.ShortNodeID, reader transport.MemberPacketReader, dispatcher PacketDispatcher) MemberPacketReceiver {
+	return nil // TODO
 }
 
 // func (r *FullRealm) getPurgatoryNode(profile common2.BriefCandidateProfile) *NodeAppearance {
