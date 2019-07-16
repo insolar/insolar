@@ -314,7 +314,7 @@ func (s *Server) Send(pl payload.Payload) {
 }
 
 func (s *Server) Receive(h func(meta payload.Meta, pl payload.Payload)) {
-	s.network.outHandler = h
+	s.network.SetReceiver(h)
 }
 
 type networkMock struct {
