@@ -181,10 +181,10 @@ func (t RequestResultType) String() string {
 type RequestResult interface {
 	Type() RequestResultType
 
-	Activate() (*insolar.Reference, *insolar.Reference, bool, []byte)
-	Amend() (*insolar.ID, *insolar.Reference, []byte)
-	Deactivate() *insolar.ID
+	Activate() (insolar.Reference, insolar.Reference, bool, []byte)
+	Amend() (insolar.ID, insolar.Reference, []byte)
+	Deactivate() insolar.ID
 
 	Result() []byte
-	ObjectReference() *insolar.Reference
+	ObjectReference() insolar.Reference
 }

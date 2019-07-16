@@ -50,6 +50,8 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
+	objRef := gen.Reference()
+	objRecordID := gen.ID()
 	protoRef := gen.Reference()
 	codeRef := gen.Reference()
 
@@ -67,10 +69,10 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).
 					ParentMock.Return(nil).
 					MemoryMock.Return(nil).
-					HeadRefMock.Return(nil).
-					StateIDMock.Return(nil).
+					HeadRefMock.Return(&objRef).
+					StateIDMock.Return(&objRecordID).
 					IsPrototypeMock.Return(false).
-					PrototypeMock.Return(nil, nil),
+					PrototypeMock.Return(&protoRef, nil),
 				Request: &record.IncomingRequest{
 					Prototype: &protoRef,
 				},
@@ -93,9 +95,12 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 					nil,
 				),
 			res: &requestResult{
-				sideEffectType: artifacts.RequestSideEffectAmend,
-				memory:         []byte{1, 2, 3},
-				result:         []byte{3, 2, 1},
+				objectReference: objRef,
+				objectImage:     protoRef,
+				objectStateID:   objRecordID,
+				sideEffectType:  artifacts.RequestSideEffectAmend,
+				memory:          []byte{1, 2, 3},
+				result:          []byte{3, 2, 1},
 			},
 		},
 		{
@@ -104,7 +109,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).
 					ParentMock.Return(nil).
 					MemoryMock.Return([]byte{1, 2, 3}).
-					HeadRefMock.Return(nil),
+					HeadRefMock.Return(&objRef),
 				Request: &record.IncomingRequest{
 					Prototype: &protoRef,
 				},
@@ -127,8 +132,9 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 					nil,
 				),
 			res: &requestResult{
-				sideEffectType: artifacts.RequestSideEffectNone,
-				result:         []byte{3, 2, 1},
+				sideEffectType:  artifacts.RequestSideEffectNone,
+				result:          []byte{3, 2, 1},
+				objectReference: objRef,
 			},
 		},
 		{
@@ -137,7 +143,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).
 					ParentMock.Return(nil).
 					MemoryMock.Return([]byte{1, 2, 3}).
-					HeadRefMock.Return(nil),
+					HeadRefMock.Return(&objRef),
 				Request: &record.IncomingRequest{
 					Prototype: &protoRef,
 					Immutable: true,
@@ -170,11 +176,12 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).
 					ParentMock.Return(nil).
 					MemoryMock.Return(nil).
-					HeadRefMock.Return(nil),
+					StateIDMock.Return(&objRecordID).
+					HeadRefMock.Return(&objRef),
 				Request: &record.IncomingRequest{
 					Prototype: &protoRef,
 				},
-				Deactivate:   true, // this a bit hacky
+				Deactivate: true, // this a bit hacky
 			},
 			mm: NewMachinesManagerMock(mc).
 				GetExecutorMock.
@@ -193,9 +200,11 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 						MachineTypeMock.Return(insolar.MachineTypeBuiltin),
 					nil,
 				),
-			res: &RequestResult{
-				Deactivation: true,
-				Result:       []byte{3, 2, 1},
+			res: &requestResult{
+				sideEffectType:  artifacts.RequestSideEffectDeactivate,
+				result:          []byte{3, 2, 1},
+				objectStateID:   objRecordID,
+				objectReference: objRef,
 			},
 		},
 		{
@@ -262,7 +271,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).
 					ParentMock.Return(nil).
 					MemoryMock.Return(nil).
-					HeadRefMock.Return(nil),
+					HeadRefMock.Return(&objRef),
 				Request: &record.IncomingRequest{
 					Prototype: &protoRef,
 				},
@@ -291,6 +300,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := inslogger.TestContext(t)
+			inslogger.FromContext(ctx).Info(test.name)
 
 			vs := &logicExecutor{MachinesManager: test.mm, DescriptorsCache: test.dc}
 			// using Execute to increase coverage, calls should only go to ExecuteMethod
@@ -311,7 +321,9 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	protoRef := gen.Reference()
+	callerRef := gen.Reference()
 	codeRef := gen.Reference()
+	baseRef := gen.Reference()
 
 	tests := []struct {
 		name       string
@@ -319,14 +331,15 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 		error      bool
 		dc         artifacts.DescriptorsCache
 		mm         MachinesManager
-		res        *RequestResult
+		res        *requestResult
 	}{
 		{
 			name: "success",
 			transcript: &Transcript{
 				Request: &record.IncomingRequest{
+					Base:      &baseRef,
 					CallType:  record.CTSaveAsChild,
-					Caller:    gen.Reference(),
+					Caller:    callerRef,
 					Prototype: &protoRef,
 				},
 			},
@@ -347,17 +360,20 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 						MachineTypeMock.Return(insolar.MachineTypeBuiltin),
 					nil,
 				),
-			res: &RequestResult{
-				Activation: true,
-				NewMemory:  []byte{1, 2, 3},
+			res: &requestResult{
+				sideEffectType:  artifacts.RequestSideEffectActivate,
+				memory:          []byte{1, 2, 3},
+				parentReference: baseRef,
+				objectImage:     protoRef,
 			},
 		},
 		{
 			name: "error, executor problem",
 			transcript: &Transcript{
 				Request: &record.IncomingRequest{
+					Base:      &baseRef,
 					CallType:  record.CTSaveAsChild,
-					Caller:    gen.Reference(),
+					Caller:    callerRef,
 					Prototype: &protoRef,
 				},
 			},
@@ -384,6 +400,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 			name: "error, no machine type executor",
 			transcript: &Transcript{
 				Request: &record.IncomingRequest{
+					Base:      &baseRef,
 					CallType:  record.CTSaveAsChild,
 					Caller:    gen.Reference(),
 					Prototype: &protoRef,
@@ -434,7 +451,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 			name: "error, empty caller",
 			transcript: &Transcript{
 				Request: &record.IncomingRequest{
-					CallType:  record.CTSaveAsChild,
+					CallType: record.CTSaveAsChild,
 				},
 			},
 			error: true,
@@ -446,10 +463,11 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 			res, err := vs.Execute(ctx, test.transcript)
 			if test.error {
 				require.Error(t, err)
+				require.Nil(t, res)
 			} else {
 				require.NoError(t, err)
+				require.Equal(t, test.res, res)
 			}
-			require.Equal(t, test.res, res)
 		})
 	}
 }

@@ -19,6 +19,7 @@ package logicrunner
 
 import (
 	"context"
+	"encoding/json"
 	"strconv"
 	"sync"
 
@@ -271,6 +272,12 @@ func noLoopCheckerPredicate(current *Transcript, args interface{}) bool {
 	return false
 }
 
+func printTranscript(current *Transcript, args interface{}) bool {
+	out, _ := json.MarshalIndent(current.Request, "", "  ")
+	inslogger.FromContext(args.(context.Context)).Debugf("Got %s", out)
+	return true
+}
+
 func (lr *LogicRunner) CheckExecutionLoop(
 	ctx context.Context, request record.IncomingRequest,
 ) bool {
@@ -300,6 +307,10 @@ func (lr *LogicRunner) CheckExecutionLoop(
 	if broker.currentList.Check(noLoopCheckerPredicate, request.APIRequestID) {
 		return false
 	}
+
+	out, _ := json.MarshalIndent(request, "", "  ")
+	inslogger.FromContext(ctx).Debugf("Expected %s", out)
+	broker.currentList.Check(printTranscript, ctx)
 
 	inslogger.FromContext(ctx).Error("loop detected")
 	return true

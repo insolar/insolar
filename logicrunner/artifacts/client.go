@@ -893,7 +893,6 @@ func (m *client) RegisterResult(
 		payloadInput payload.Payload,
 		obj insolar.Reference,
 	) (*insolar.ID, error) {
-
 		payloadOutput, err := m.sendWithRetry(ctx, payloadInput, insolar.DynamicRoleLightExecutor, obj, 3)
 		if err != nil {
 			return nil, err
@@ -907,7 +906,6 @@ func (m *client) RegisterResult(
 		default:
 			return nil, fmt.Errorf("RegisterResult: unexpected reply: %#v", p)
 		}
-
 	}
 
 	var (
@@ -929,7 +927,6 @@ func (m *client) RegisterResult(
 	span.AddAttributes(trace.StringAttribute("SideEffect", result.Type().String()))
 
 	resultRecord := record.Result{
-		Object:  *result.ObjectReference().Record(),
 		Request: request,
 		Payload: result.Result(),
 	}
@@ -940,9 +937,12 @@ func (m *client) RegisterResult(
 	//
 	// Request reference will be this object's identifier and referred as "object head".
 	case RequestSideEffectActivate:
+		objectRef = request
+		resultRecord.Object = *objectRef.Record()
+
 		parentRef, imageRef, asDelegate, memory := result.Activate()
 
-		parentDesc, err = m.GetObject(ctx, *parentRef)
+		parentDesc, err = m.GetObject(ctx, parentRef)
 		if err != nil {
 			return err
 		}
@@ -951,9 +951,9 @@ func (m *client) RegisterResult(
 		vActivateRecord := record.Wrap(record.Activate{
 			Request:     request,
 			Memory:      memory,
-			Image:       *imageRef,
+			Image:       imageRef,
 			IsPrototype: false,
-			Parent:      *parentRef,
+			Parent:      parentRef,
 			IsDelegate:  asDelegate,
 		})
 
@@ -968,22 +968,23 @@ func (m *client) RegisterResult(
 		}
 		pl = &plTyped
 
-		objectRef = *result.ObjectReference()
-
 	// UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
 	// object. Provided memory well be the new object memory.
 	//
 	// Returned reference will be the latest object state (exact) reference.
 	case RequestSideEffectAmend:
+		objectRef = result.ObjectReference()
+		resultRecord.Object = *objectRef.Record()
+
 		objectStateID, objectImage, memory := result.Amend()
 
 		vResultRecord := record.Wrap(resultRecord)
 		vAmendRecord := record.Wrap(record.Amend{
 			Request:     request,
-			Image:       *objectImage,
-			IsPrototype: false,
-			PrevState:   *objectStateID,
 			Memory:      memory,
+			Image:       objectImage,
+			IsPrototype: false,
+			PrevState:   objectStateID,
 		})
 
 		plTyped := payload.Update{}
@@ -997,19 +998,20 @@ func (m *client) RegisterResult(
 		}
 		pl = &plTyped
 
-		objectRef = *result.ObjectReference()
-
 	// DeactivateObject creates deactivate object record in storage. Provided reference should be a reference to the head
 	// of the object. If object is already deactivated, an error should be returned.
 	//
 	// Deactivated object cannot be changed.
 	case RequestSideEffectDeactivate:
+		objectRef = result.ObjectReference()
+		resultRecord.Object = *objectRef.Record()
+
 		objectStateID := result.Deactivate()
 
 		vResultRecord := record.Wrap(resultRecord)
 		vDeactivateRecord := record.Wrap(record.Deactivate{
 			Request:   request,
-			PrevState: *objectStateID,
+			PrevState: objectStateID,
 		})
 
 		plTyped := payload.Deactivate{}
@@ -1023,9 +1025,10 @@ func (m *client) RegisterResult(
 		}
 		pl = &plTyped
 
-		objectRef = *result.ObjectReference()
-
 	case RequestSideEffectNone:
+		objectRef = result.ObjectReference()
+		resultRecord.Object = *objectRef.Record()
+
 		vResultRecord := record.Wrap(resultRecord)
 
 		plTyped := payload.SetResult{}
@@ -1034,8 +1037,6 @@ func (m *client) RegisterResult(
 			return errors.Wrap(err, "RegisterResult: can't serialize Result record")
 		}
 		pl = &plTyped
-
-		objectRef = *result.ObjectReference()
 
 	default:
 		return errors.Errorf("RegisterResult: Unknown side effect %d", result.Type())
@@ -1059,13 +1060,13 @@ func (m *client) RegisterResult(
 			child.PrevChild = *parentDesc.ChildPointer()
 		}
 		if asDelegate {
-			asType = imageRef
+			asType = &imageRef
 		}
 
 		err = m.registerChild(
 			ctx,
 			record.Wrap(child),
-			*parentRef,
+			parentRef,
 			objectRef,
 			asType,
 		)

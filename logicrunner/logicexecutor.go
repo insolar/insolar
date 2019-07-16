@@ -89,6 +89,8 @@ func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *Transcri
 	}
 
 	res := newRequestResult(result)
+	res.SetNone(*objDesc.HeadRef())
+
 	if request.Immutable {
 		return res, nil
 	}
@@ -96,11 +98,8 @@ func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *Transcri
 	switch {
 	case transcript.Deactivate:
 		res.SetDeactivate(objDesc)
-		res.Deactivate()
 	case !bytes.Equal(objDesc.Memory(), newData):
 		_ = res.SetAmend(objDesc, newData)
-	default:
-		res.SetNone(objDesc.HeadRef())
 	}
 
 	return res, nil
@@ -142,9 +141,10 @@ func (le *logicExecutor) ExecuteConstructor(
 	}
 
 	res := newRequestResult(nil)
+	inslogger.FromContext(ctx).Info(request.Base, request.Prototype)
 	res.SetActivate(
-		request.Base,
-		request.Prototype,
+		*request.Base,
+		*request.Prototype,
 		request.CallType == record.CTSaveAsDelegate,
 		newData,
 	)

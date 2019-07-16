@@ -61,8 +61,9 @@ func (h *HandleSagaCallAcceptNotification) Present(ctx context.Context, f flow.F
 
 	// Register result of the outgoing method.
 	outgoingReqRef := insolar.NewReference(msg.OutgoingReqID)
-	result := res.(*reply.RegisterRequest).Request.Bytes()
+	reqResult := newRequestResult(res.(*reply.RegisterRequest).Request.Bytes())
+	reqResult.SetNone(outgoing.Caller)
+
 	am := h.dep.lr.ArtifactManager
-	_, err = am.RegisterResult(ctx, outgoing.Caller, *outgoingReqRef, result)
-	return err
+	return am.RegisterResult(ctx, *outgoingReqRef, reqResult)
 }

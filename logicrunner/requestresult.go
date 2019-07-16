@@ -26,13 +26,13 @@ import (
 type requestResult struct {
 	sideEffectType  artifacts.RequestResultType // every
 	result          []byte                      // every
-	objectReference *insolar.Reference          // every
+	objectReference insolar.Reference           // every
 
-	asDelegate      bool               // activate
-	parentReference *insolar.Reference // activate
-	objectImage     *insolar.Reference // amend + activate
-	objectStateID   *insolar.ID        // amend + deactivate
-	memory          []byte             // amend + activate
+	asDelegate      bool              // activate
+	parentReference insolar.Reference // activate
+	objectImage     insolar.Reference // amend + activate
+	objectStateID   insolar.ID        // amend + deactivate
+	memory          []byte            // amend + activate
 }
 
 func newRequestResult(result []byte) *requestResult {
@@ -43,21 +43,21 @@ func (s *requestResult) Result() []byte {
 	return s.result
 }
 
-func (s *requestResult) Activate() (*insolar.Reference, *insolar.Reference, bool, []byte) {
+func (s *requestResult) Activate() (insolar.Reference, insolar.Reference, bool, []byte) {
 	return s.parentReference, s.objectImage, s.asDelegate, s.memory
 }
 
-func (s *requestResult) Amend() (*insolar.ID, *insolar.Reference, []byte) {
+func (s *requestResult) Amend() (insolar.ID, insolar.Reference, []byte) {
 	return s.objectStateID, s.objectImage, s.memory
 }
 
-func (s *requestResult) Deactivate() *insolar.ID {
+func (s *requestResult) Deactivate() insolar.ID {
 	return s.objectStateID
 }
 
-func (s *requestResult) SetActivate(parent, image *insolar.Reference, asDelegate bool, memory []byte) {
+func (s *requestResult) SetActivate(parent, image insolar.Reference, asDelegate bool, memory []byte) {
 	s.sideEffectType = artifacts.RequestSideEffectActivate
-	s.objectReference = parent
+	// s.objectReference = parent
 
 	s.asDelegate = asDelegate
 	s.parentReference = parent
@@ -69,8 +69,8 @@ func (s *requestResult) SetActivate(parent, image *insolar.Reference, asDelegate
 func (s *requestResult) SetAmend(object artifacts.ObjectDescriptor, memory []byte) error {
 	s.sideEffectType = artifacts.RequestSideEffectAmend
 	s.memory = memory
-	s.objectReference = object.HeadRef()
-	s.objectStateID = object.StateID()
+	s.objectReference = *object.HeadRef()
+	s.objectStateID = *object.StateID()
 
 	if object.IsPrototype() {
 		return errors.New("Can't update prototype")
@@ -81,17 +81,17 @@ func (s *requestResult) SetAmend(object artifacts.ObjectDescriptor, memory []byt
 		return errors.Wrap(err, "Failed to obtain prototype/code of object")
 	}
 
-	s.objectImage = prototype
+	s.objectImage = *prototype
 	return nil
 }
 
 func (s *requestResult) SetDeactivate(object artifacts.ObjectDescriptor) {
 	s.sideEffectType = artifacts.RequestSideEffectDeactivate
-	s.objectReference = object.HeadRef()
-	s.objectStateID = object.StateID()
+	s.objectReference = *object.HeadRef()
+	s.objectStateID = *object.StateID()
 }
 
-func (s *requestResult) SetNone(objectRef *insolar.Reference) {
+func (s *requestResult) SetNone(objectRef insolar.Reference) {
 	s.sideEffectType = artifacts.RequestSideEffectNone
 	s.objectReference = objectRef
 }
@@ -100,6 +100,6 @@ func (s requestResult) Type() artifacts.RequestResultType {
 	return s.sideEffectType
 }
 
-func (s *requestResult) ObjectReference() *insolar.Reference {
+func (s *requestResult) ObjectReference() insolar.Reference {
 	return s.objectReference
 }
