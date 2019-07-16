@@ -88,7 +88,8 @@ func Test_BasicOperations(t *testing.T) {
 	}
 	// Deactivate and check object.
 	{
-		deactivateObject(t, s, objectID)
+		requestID, _ := setIncomingRequest(t, s, objectID, reasonID, record.CTMethod)
+		deactivateObject(t, s, objectID, requestID)
 		received := make(chan payload.Payload)
 		s.Receive(func(meta payload.Meta, pl payload.Payload) {
 			received <- pl
@@ -339,7 +340,7 @@ func amendObject(t *testing.T, s *Server, objectID, requestID insolar.ID) record
 	return rec
 }
 
-func deactivateObject(t *testing.T, s *Server, objectID insolar.ID) record.Virtual {
+func deactivateObject(t *testing.T, s *Server, objectID, requestID insolar.ID) record.Virtual {
 	received := make(chan payload.ResultInfo)
 	s.Receive(func(meta payload.Meta, pl payload.Payload) {
 		switch p := pl.(type) {
@@ -362,7 +363,7 @@ func deactivateObject(t *testing.T, s *Server, objectID insolar.ID) record.Virtu
 	_, err = rand.Read(res)
 	require.NoError(t, err)
 	resultRecord := record.Wrap(record.Result{
-		Request: *insolar.NewReference(objectID),
+		Request: *insolar.NewReference(requestID),
 		Object:  objectID,
 		Payload: res,
 	})
