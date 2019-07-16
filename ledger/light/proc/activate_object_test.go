@@ -113,49 +113,6 @@ func TestActivateObject_RecordErr(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestActivateObject_SetIndexErr(t *testing.T) {
-	t.Parallel()
-
-	ctx := flow.TestContextWithPulse(
-		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
-	)
-
-	writeAccessor := hot.NewWriteAccessorMock(t)
-	writeAccessor.BeginMock.Return(func() {}, nil)
-
-	idxLockMock := object.NewIndexLockerMock(t)
-	idxLockMock.LockMock.Return()
-	idxLockMock.UnlockMock.Return()
-
-	recordsMock := object.NewRecordModifierMock(t)
-	recordsMock.SetMock.Return(nil)
-
-	idxStorageMock := object.NewIndexStorageMock(t)
-	idxStorageMock.SetIndexMock.Return(errors.New("something strange from SetIndex"))
-
-	p := proc.NewActivateObject(
-		payload.Meta{},
-		record.Activate{},
-		gen.ID(),
-		record.Result{},
-		gen.ID(),
-		gen.JetID(),
-	)
-	p.Dep(
-		writeAccessor,
-		idxLockMock,
-		recordsMock,
-		idxStorageMock,
-		nil,
-		nil,
-	)
-
-	err := p.Proceed(ctx)
-	require.Error(t, err)
-	assert.Equal(t, "something strange from SetIndex", err.Error())
-}
-
 func TestActivateObject_FilamentSetResultErr(t *testing.T) {
 	t.Parallel()
 
@@ -176,6 +133,7 @@ func TestActivateObject_FilamentSetResultErr(t *testing.T) {
 
 	idxStorageMock := object.NewIndexStorageMock(t)
 	idxStorageMock.SetIndexMock.Return(nil)
+	idxStorageMock.ForIDMock.Return(record.Index{}, nil)
 
 	filaments := executor.NewFilamentModifierMock(t)
 	filaments.SetResultMock.Return(nil, errors.New("something strange from filament.SetResult"))
@@ -221,6 +179,7 @@ func TestActivateObject_Proceed(t *testing.T) {
 	recordsMock.SetMock.Return(nil)
 
 	idxStorageMock := object.NewIndexStorageMock(t)
+	idxStorageMock.ForIDMock.Return(record.Index{}, nil)
 	idxStorageMock.SetIndexMock.Return(nil)
 
 	filaments := executor.NewFilamentModifierMock(t)
@@ -246,6 +205,6 @@ func TestActivateObject_Proceed(t *testing.T) {
 		sender,
 	)
 
-	err := p.Proceed(ctx)
+	err := p.Proceed(flow.TestContextWithPulse(ctx, gen.PulseNumber()))
 	require.NoError(t, err)
 }

@@ -117,9 +117,6 @@ func (a *ActivateObject) Proceed(ctx context.Context) error {
 	idx.Lifeline.StateID = a.activate.ID()
 	idx.Lifeline.Parent = a.activate.Parent
 	idx.Lifeline.LatestUpdate = flow.Pulse(ctx)
-	if idx.Lifeline.PendingPointer == nil {
-		panic("bux")
-	}
 
 	err = a.dep.indexStorage.SetIndex(ctx, flow.Pulse(ctx), idx)
 	if err != nil {
