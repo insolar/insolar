@@ -62,14 +62,14 @@ func Test_BasicOperations(t *testing.T) {
 	{
 		codeID, sent := setCode(t, s)
 		received := getCode(t, s, codeID)
-		assert.Equal(t, &sent, received.Virtual)
+		require.Equal(t, &sent, received.Virtual)
 	}
 	var objectID insolar.ID
 	// Set and get request.
 	{
 		id, sent := setIncomingRequest(t, s, record.CTSaveAsChild)
 		received := getRequest(t, s, id)
-		assert.Equal(t, sent, received)
+		require.Equal(t, sent, received)
 		objectID = id
 	}
 	// Activate and check object.
@@ -265,12 +265,12 @@ func setIncomingRequest(t *testing.T, s *Server, ct record.CallType) (insolar.ID
 }
 
 func activateObject(t *testing.T, s *Server, objectID insolar.ID) record.Virtual {
-	received := make(chan payload.ID)
+	received := make(chan payload.ResultInfo)
 	s.Receive(func(meta payload.Meta, pl payload.Payload) {
 		switch p := pl.(type) {
 		case *payload.Error:
 			panic(p.Text)
-		case *payload.ID:
+		case *payload.ResultInfo:
 			received <- *p
 		}
 	})
@@ -287,6 +287,7 @@ func activateObject(t *testing.T, s *Server, objectID insolar.ID) record.Virtual
 	res := make([]byte, 100)
 	_, err = rand.Read(res)
 	require.NoError(t, err)
+	id, sent := setIncomingRequest(t, s, record.CTSaveAsChild)
 	resultRecord := record.Wrap(record.Result{
 		Request: *insolar.NewReference(objectID),
 		Object:  objectID,
@@ -303,12 +304,12 @@ func activateObject(t *testing.T, s *Server, objectID insolar.ID) record.Virtual
 }
 
 func amendObject(t *testing.T, s *Server, objectID insolar.ID) record.Virtual {
-	received := make(chan payload.ID)
+	received := make(chan payload.ResultInfo)
 	s.Receive(func(meta payload.Meta, pl payload.Payload) {
 		switch p := pl.(type) {
 		case *payload.Error:
 			panic(p.Text)
-		case *payload.ID:
+		case *payload.ResultInfo:
 			received <- *p
 		}
 	})
@@ -340,12 +341,12 @@ func amendObject(t *testing.T, s *Server, objectID insolar.ID) record.Virtual {
 }
 
 func deactivateObject(t *testing.T, s *Server, objectID insolar.ID) record.Virtual {
-	received := make(chan payload.ID)
+	received := make(chan payload.ResultInfo)
 	s.Receive(func(meta payload.Meta, pl payload.Payload) {
 		switch p := pl.(type) {
 		case *payload.Error:
 			panic(p.Text)
-		case *payload.ID:
+		case *payload.ResultInfo:
 			received <- *p
 		}
 	})
