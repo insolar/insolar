@@ -325,7 +325,10 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 func (n *ServiceNetwork) ChangePulse(ctx context.Context, newPulse insolar.Pulse) {
 	logger := inslogger.FromContext(ctx)
 	n.CurrentPulse = newPulse
-	n.NodeKeeper.MoveSyncToActive(ctx, newPulse.PulseNumber)
+
+	if err := n.NodeKeeper.MoveSyncToActive(ctx, newPulse.PulseNumber); err != nil {
+		logger.Warn("MoveSyncToActive failed: ", err.Error())
+	}
 
 	if err := n.Gateway().OnPulse(ctx, newPulse); err != nil {
 		logger.Error(errors.Wrap(err, "Failed to call OnPulse on Gateway"))
