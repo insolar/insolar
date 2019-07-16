@@ -59,22 +59,27 @@ import (
 	"sync"
 )
 
-type updatableJoinerSlot struct {
+type purgatorySlot struct {
 	nodeID insolar.ShortNodeID
-	sf     cryptkit.SignatureVerifier
+	svf    cryptkit.SignatureVerifierFactory
+	//limiter
 
 	mutex sync.RWMutex
+	sv    cryptkit.SignatureVerifier
 	intro profiles.StaticProfile
+	index member.Index
+	mode  member.OpMode
+	pw    member.Power
 }
 
-func (p *updatableJoinerSlot) GetStatic() profiles.StaticProfile {
+func (p *purgatorySlot) GetStatic() profiles.StaticProfile {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 
 	return p.intro
 }
 
-func (p *updatableJoinerSlot) SetNodeIntroProfile(nip profiles.StaticProfile) {
+func (p *purgatorySlot) SetNodeIntroProfile(nip profiles.StaticProfile) {
 
 	if p.nodeID != nip.GetStaticNodeID() {
 		panic("illegal value")
@@ -82,69 +87,91 @@ func (p *updatableJoinerSlot) SetNodeIntroProfile(nip profiles.StaticProfile) {
 
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
+	if p.intro == nip {
+		return
+	}
 	p.intro = nip
+	p.sv = nil
 }
 
-func (p *updatableJoinerSlot) GetDefaultEndpoint() endpoints.Outbound {
+func (p *purgatorySlot) GetDefaultEndpoint() endpoints.Outbound {
 	return p.GetStatic().GetDefaultEndpoint()
 }
 
-func (p *updatableJoinerSlot) GetPublicKeyStore() cryptkit.PublicKeyStore {
+func (p *purgatorySlot) GetPublicKeyStore() cryptkit.PublicKeyStore {
 	return p.GetStatic().GetPublicKeyStore()
 }
 
-func (p *updatableJoinerSlot) IsAcceptableHost(from endpoints.Inbound) bool {
+func (p *purgatorySlot) IsAcceptableHost(from endpoints.Inbound) bool {
 	return p.GetStatic().IsAcceptableHost(from)
 }
 
-func (p *updatableJoinerSlot) GetNodeID() insolar.ShortNodeID {
+func (p *purgatorySlot) GetNodeID() insolar.ShortNodeID {
 	return p.nodeID
 }
 
-func (p *updatableJoinerSlot) GetStartPower() member.Power {
+func (p *purgatorySlot) GetStartPower() member.Power {
 	return p.GetStatic().GetStartPower()
 }
 
-func (p *updatableJoinerSlot) GetPrimaryRole() member.PrimaryRole {
+func (p *purgatorySlot) GetPrimaryRole() member.PrimaryRole {
 	return p.GetStatic().GetPrimaryRole()
 }
 
-func (p *updatableJoinerSlot) GetSpecialRoles() member.SpecialRole {
+func (p *purgatorySlot) GetSpecialRoles() member.SpecialRole {
 	return p.GetStatic().GetSpecialRoles()
 }
 
-func (p *updatableJoinerSlot) GetNodePublicKey() cryptkit.SignatureKeyHolder {
+func (p *purgatorySlot) GetNodePublicKey() cryptkit.SignatureKeyHolder {
 	return p.GetStatic().GetNodePublicKey()
 }
 
-func (p *updatableJoinerSlot) GetAnnouncementSignature() cryptkit.SignatureHolder {
+func (p *purgatorySlot) GetAnnouncementSignature() cryptkit.SignatureHolder {
 	return p.GetStatic().GetAnnouncementSignature()
 }
 
-func (p *updatableJoinerSlot) GetIntroduction() profiles.NodeIntroduction {
+func (p *purgatorySlot) GetIntroduction() profiles.NodeIntroduction {
 	return p.GetStatic().GetIntroduction()
 }
 
-func (p *updatableJoinerSlot) GetSignatureVerifier() cryptkit.SignatureVerifier {
-	return p.sf
+func (p *purgatorySlot) GetSignatureVerifier() cryptkit.SignatureVerifier {
+	p.mutex.RLock()
+	if p.sv != nil || p.svf == nil {
+		return p.sv
+	}
+	p.mutex.RUnlock()
+	return p.createSignatureVerifier()
 }
 
-func (p *updatableJoinerSlot) GetOpMode() member.OpMode {
-	return member.ModeNormal
+func (p *purgatorySlot) createSignatureVerifier() cryptkit.SignatureVerifier {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	if p.sv == nil {
+		p.sv = p.svf.GetSignatureVerifierWithPKS(p.intro.GetPublicKeyStore())
+	}
+	return p.sv
 }
 
-func (p *updatableJoinerSlot) GetIndex() member.Index {
-	return member.JoinerIndex.Ensure()
+func (p *purgatorySlot) GetOpMode() member.OpMode {
+	if p.index.IsJoiner() {
+		return member.ModeNormal
+	} else {
+		return p.mode
+	}
 }
 
-func (p *updatableJoinerSlot) IsJoiner() bool {
-	return true
+func (p *purgatorySlot) GetIndex() member.Index {
+	return p.index.Ensure()
 }
 
-func (p *updatableJoinerSlot) GetDeclaredPower() member.Power {
-	return 0
+func (p *purgatorySlot) IsJoiner() bool {
+	return p.index.IsJoiner()
 }
 
-func (p *updatableJoinerSlot) GetLeaveReason() uint32 {
-	panic("illegal state")
+func (p *purgatorySlot) GetDeclaredPower() member.Power {
+	if p.index.IsJoiner() || p.mode.IsPowerless() {
+		return 0
+	} else {
+		return p.pw
+	}
 }
