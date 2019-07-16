@@ -120,7 +120,7 @@ func TestNodeBriefIntro_SerializeTo(t *testing.T) {
 
 	err := ni.SerializeTo(nil, buf)
 	require.NoError(t, err)
-	require.Equal(t, 137, buf.Len())
+	require.Equal(t, 149, buf.Len())
 }
 
 func TestNodeBriefIntro_DeserializeFrom(t *testing.T) {
@@ -128,8 +128,6 @@ func TestNodeBriefIntro_DeserializeFrom(t *testing.T) {
 		PrimaryRoleAndFlags: 64,
 		SpecialRoles:        member.SpecialRoleDiscovery,
 		StartPower:          10,
-		BasePort:            1400,
-		PrimaryIPv4:         123123412,
 	}
 
 	b := make([]byte, 64)
@@ -155,8 +153,6 @@ func TestNodeBriefIntro_DeserializeFrom_NoShortID(t *testing.T) {
 		PrimaryRoleAndFlags: 64,
 		SpecialRoles:        member.SpecialRoleDiscovery,
 		StartPower:          10,
-		BasePort:            1400,
-		PrimaryIPv4:         123123412,
 	}
 
 	b := make([]byte, 64)
@@ -187,7 +183,7 @@ func TestNodeFullIntro_SerializeTo(t *testing.T) {
 
 	err := ni.SerializeTo(nil, buf)
 	require.NoError(t, err)
-	require.Equal(t, 223, buf.Len())
+	require.Equal(t, 235, buf.Len())
 }
 
 func TestNodeFullIntro_DeserializeFrom(t *testing.T) {
@@ -196,8 +192,6 @@ func TestNodeFullIntro_DeserializeFrom(t *testing.T) {
 			PrimaryRoleAndFlags: 64,
 			SpecialRoles:        member.SpecialRoleDiscovery,
 			StartPower:          10,
-			BasePort:            1400,
-			PrimaryIPv4:         123123412,
 		},
 	}
 
@@ -224,8 +218,6 @@ func TestNodeFullIntro_DeserializeFrom_NoShortID(t *testing.T) {
 			PrimaryRoleAndFlags: 64,
 			SpecialRoles:        member.SpecialRoleDiscovery,
 			StartPower:          10,
-			BasePort:            1400,
-			PrimaryIPv4:         123123412,
 		},
 	}
 
@@ -256,8 +248,6 @@ func TestNodeFullIntro_DeserializeFrom_Slices(t *testing.T) {
 			PrimaryRoleAndFlags: 64,
 			SpecialRoles:        member.SpecialRoleDiscovery,
 			StartPower:          10,
-			BasePort:            1400,
-			PrimaryIPv4:         123123412,
 		},
 		EndpointLen:    2,
 		ExtraEndpoints: make([]uint16, 2),

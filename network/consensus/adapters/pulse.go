@@ -51,7 +51,6 @@
 package adapters
 
 import (
-	"io"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
@@ -100,65 +99,53 @@ func NewPulseData(p insolar.Pulse) pulse.Data {
 }
 
 type PulsePacketReader struct {
-	pulse insolar.Pulse
+	longbits.FixedReader
+	data pulse.Data
 }
 
 func (p *PulsePacketReader) OriginalPulsarPacket() {}
 
 func (p *PulsePacketReader) GetPulseData() pulse.Data {
-	return NewPulseData(p.pulse)
+	return p.data
 }
 
 func (p *PulsePacketReader) GetPulseDataEvidence() proofs.OriginalPulsarPacket {
 	return p
 }
 
-func (p *PulsePacketReader) WriteTo(w io.Writer) (n int64, err error) {
-	panic("implement me")
-}
-
-func (p *PulsePacketReader) Read(b []byte) (n int, err error) {
-	panic("implement me")
-}
-
-func (p *PulsePacketReader) AsBytes() []byte {
-	panic("implement me")
-}
-
-func (p *PulsePacketReader) AsByteString() string {
-	panic("implement me")
-}
-
-func (p *PulsePacketReader) FixedByteSize() int {
-	panic("implement me")
-}
-
-func NewPulsePacketReader(pulse insolar.Pulse) *PulsePacketReader {
-	return &PulsePacketReader{pulse}
+func NewPulsePacketReader(pulse insolar.Pulse, data []byte) *PulsePacketReader {
+	return &PulsePacketReader{
+		FixedReader: longbits.NewFixedReader(data),
+		data:        NewPulseData(pulse),
+	}
 }
 
 type PulsePacketParser struct {
-	pulse insolar.Pulse
+	pulse       insolar.Pulse
+	pulsePacket *PulsePacketReader
+}
+
+func NewPulsePacketParser(pulse insolar.Pulse, data []byte) *PulsePacketParser {
+	return &PulsePacketParser{
+		pulse:       pulse,
+		pulsePacket: NewPulsePacketReader(pulse, data),
+	}
 }
 
 func (p *PulsePacketParser) IsRelayForbidden() bool {
-	return false
-}
-
-func NewPulsePacketParser(pulse insolar.Pulse) *PulsePacketParser {
-	return &PulsePacketParser{pulse}
+	return true
 }
 
 func (p *PulsePacketParser) GetSourceID() insolar.ShortNodeID {
-	panic("implement me")
+	return 0
 }
 
 func (p *PulsePacketParser) GetReceiverID() insolar.ShortNodeID {
-	panic("implement me")
+	return 0
 }
 
 func (p *PulsePacketParser) GetTargetID() insolar.ShortNodeID {
-	panic("implement me")
+	return 0
 }
 
 func (p *PulsePacketParser) GetPacketType() phases.PacketType {
@@ -170,7 +157,7 @@ func (p *PulsePacketParser) GetPulseNumber() pulse.Number {
 }
 
 func (p *PulsePacketParser) GetPulsePacket() transport.PulsePacketReader {
-	return NewPulsePacketReader(p.pulse)
+	return p.pulsePacket
 }
 
 func (p *PulsePacketParser) GetMemberPacket() transport.MemberPacketReader {

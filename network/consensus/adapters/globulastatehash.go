@@ -96,11 +96,16 @@ func (s *seqDigester) FinishSequence() cryptkit.Digest {
 }
 
 type gshDigester struct {
-	sd cryptkit.SequenceDigester
+	sd            cryptkit.SequenceDigester
+	defaultDigest longbits.FoldableReader
 }
 
 func (p *gshDigester) AddNext(digest longbits.FoldableReader, fullRank member.FullRank) {
-	p.sd.AddNext(digest)
+	if digest == nil {
+		p.sd.AddNext(p.defaultDigest)
+	} else {
+		p.sd.AddNext(digest)
+	}
 }
 
 func (p *gshDigester) GetDigestMethod() cryptkit.DigestMethod {
@@ -108,7 +113,7 @@ func (p *gshDigester) GetDigestMethod() cryptkit.DigestMethod {
 }
 
 func (p *gshDigester) ForkSequence() transport.StateDigester {
-	return &gshDigester{p.sd.ForkSequence()}
+	return &gshDigester{p.sd.ForkSequence(), p.defaultDigest}
 }
 
 func (p *gshDigester) FinishSequence() cryptkit.Digest {

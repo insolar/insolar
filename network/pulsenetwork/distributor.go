@@ -253,12 +253,9 @@ func (d *distributor) sendPulseToHost(ctx context.Context, p *insolar.Pulse, hos
 
 	ctx, span := instracer.StartSpan(ctx, "distributor.sendPulseToHosts")
 	defer span.End()
-	pulseRequest := packet.NewPacket(d.pulsarHost, host, types.Pulse, uint64(d.generateID()))
-	request := &packet.PulseRequest{
-		TraceSpanData: instracer.MustSerialize(ctx),
-		Pulse:         pulse.ToProto(p),
-	}
-	pulseRequest.SetRequest(request)
+
+	pulseRequest := NewPulsePacket(ctx, p, d.pulsarHost, host, uint64(d.generateID()))
+
 	call, err := d.sendRequestToHost(ctx, pulseRequest, host)
 	if err != nil {
 		return err
@@ -298,4 +295,14 @@ func (d *distributor) sendRequestToHost(ctx context.Context, packet *packet.Pack
 	}
 	metrics.NetworkPacketSentTotal.WithLabelValues(packet.GetType().String()).Inc()
 	return f, nil
+}
+
+func NewPulsePacket(ctx context.Context, p *insolar.Pulse, pulsarHost, to *host.Host, id uint64) *packet.Packet {
+	pulseRequest := packet.NewPacket(pulsarHost, to, types.Pulse, id)
+	request := &packet.PulseRequest{
+		TraceSpanData: instracer.MustSerialize(ctx),
+		Pulse:         pulse.ToProto(p),
+	}
+	pulseRequest.SetRequest(request)
+	return pulseRequest
 }

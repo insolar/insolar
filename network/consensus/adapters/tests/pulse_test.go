@@ -51,13 +51,18 @@
 package tests
 
 import (
+	"bytes"
 	"context"
 	"math/rand"
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/pulsenetwork"
 
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/adapters"
@@ -99,10 +104,18 @@ func (p *Pulsar) Pulse(ctx context.Context, attempts int) {
 	data := *pulse.NewPulsarData(p.pulseNumber, p.pulseDelta, prevDelta, randBits256())
 	p.pulseNumber += pulse.Number(p.pulseDelta)
 
+	pu := adapters.NewPulse(data)
+	ph, _ := host.NewHost("127.0.0.1:1")
+	th, _ := host.NewHost("127.0.0.1:2")
+	pp := pulsenetwork.NewPulsePacket(ctx, &pu, ph, th, 0)
+
+	bs, _ := packet.SerializePacket(pp)
+	rp, _ := packet.DeserializePacket(inslogger.FromContext(ctx), bytes.NewReader(bs))
+
 	go func() {
 		for i := 0; i < attempts; i++ {
 			handler := p.pulseHandlers[rand.Intn(len(p.pulseHandlers))]
-			go handler.HandlePulse(ctx, adapters.NewPulse(data), nil)
+			go handler.HandlePulse(ctx, pu, rp)
 		}
 	}()
 }

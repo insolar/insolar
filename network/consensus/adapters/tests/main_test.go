@@ -98,10 +98,14 @@ func TestConsensusMain(t *testing.T) {
 		nodeKeeper.SetInitialSnapshot(nodes)
 		certificateManager := initCrypto(n, discoveryNodes)
 		datagramHandler := adapters.NewDatagramHandler()
-		transportFactory := transport2.NewFactory(configuration.NewHostNetwork().Transport)
+
+		conf := configuration.NewHostNetwork().Transport
+		conf.Address = n.Address()
+
+		transportFactory := transport2.NewFactory(conf)
 		transport, _ := transportFactory.CreateDatagramTransport(datagramHandler)
 
-		consensusAdapter := NewEmuHostConsensusAdapter(n.Address())
+		// consensusAdapter := NewEmuHostConsensusAdapter(n.Address())
 
 		pulseHandler := adapters.NewPulseHandler()
 		pulseHandlers = append(pulseHandlers, pulseHandler)
@@ -116,14 +120,11 @@ func TestConsensusMain(t *testing.T) {
 			StateGetter:           &nshGen{nshDelay: defaultNshGenerationDelay},
 			PulseChanger:          &pulseChanger{},
 			StateUpdater:          &stateUpdater{nodeKeeper},
-			PacketBuilder:         NewEmuPacketBuilder,
 			DatagramTransport:     transport,
-			// TODO: remove
-			PacketSender: consensusAdapter,
-		}).Install(datagramHandler, pulseHandler, consensusAdapter)
+		}).Install(datagramHandler, pulseHandler)
 
 		_ = transport.Start(ctx)
-		consensusAdapter.ConnectTo(network)
+		// consensusAdapter.ConnectTo(network)
 	}
 
 	fmt.Println("===", len(nodes), "=================================================")
@@ -140,7 +141,7 @@ func TestConsensusMain(t *testing.T) {
 	for {
 		fmt.Println("===", time.Since(startedAt), "=================================================")
 		time.Sleep(time.Second)
-		if time.Since(startedAt) > time.Minute*30 {
+		if time.Since(startedAt) > time.Minute {
 			return
 		}
 	}

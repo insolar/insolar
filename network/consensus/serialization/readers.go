@@ -53,7 +53,6 @@ package serialization
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"time"
 
@@ -67,6 +66,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/utils"
 )
 
@@ -179,8 +179,10 @@ func (p *PacketParser) IsRelayForbidden() bool {
 }
 
 func (p *PacketParser) GetPacketSignature() cryptkit.SignedDigest {
+	payloadReader := bytes.NewReader(p.data[:len(p.data)-signatureSize])
+
 	signature := cryptkit.NewSignature(&p.packet.PacketSignature, p.digester.GetDigestMethod().SignedBy(p.signMethod))
-	digest := p.digester.GetDigestOf(bytes.NewReader(p.data))
+	digest := p.digester.GetDigestOf(payloadReader)
 	return cryptkit.NewSignedDigest(digest, signature)
 }
 
@@ -467,9 +469,7 @@ func (r *FullIntroductionReader) GetNodePublicKey() cryptkit.SignatureKeyHolder 
 }
 
 func (r *FullIntroductionReader) GetDefaultEndpoint() endpoints.Outbound {
-	ip := int2ip(r.intro.PrimaryIPv4)
-
-	return adapters.NewOutbound(fmt.Sprintf("%s:%d", ip.String(), r.intro.BasePort))
+	return adapters.NewOutbound(packets.NodeAddress(r.intro.Endpoint).String())
 }
 
 func (r *FullIntroductionReader) GetJoinerSignature() cryptkit.SignatureHolder {

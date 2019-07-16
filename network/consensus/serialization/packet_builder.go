@@ -54,6 +54,7 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
@@ -61,8 +62,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/statevector"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-
-	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type PacketBuilder struct {
@@ -104,7 +103,7 @@ func (pb *PacketBuilder) preparePacket(sender *transport.NodeAnnouncementProfile
 	return packet
 }
 
-func (pb *PacketBuilder) prepareWrapper(packet *Packet) *PreparedPacketSender {
+func (pb *PacketBuilder) preparePacketSender(packet *Packet) *PreparedPacketSender {
 	return &PreparedPacketSender{
 		packet:   packet,
 		digester: pb.crypto.GetDigestFactory().GetPacketDigester(),
@@ -124,11 +123,11 @@ func (pb *PacketBuilder) PreparePhase0Packet(sender *transport.NodeAnnouncementP
 	body.CurrentRank = sender.GetNodeRank()
 	body.PulsarPacket.Data = pulsarPacket.AsBytes()
 
-	return pb.prepareWrapper(packet)
+	return pb.preparePacketSender(packet)
 }
 
 func (pb *PacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncementProfile, pulsarPacket proofs.OriginalPulsarPacket,
-	options transport.PacketSendOptions) transport.PreparedPacketSender {
+	welcome *proofs.NodeWelcomePackage, options transport.PacketSendOptions) transport.PreparedPacketSender {
 
 	packet := pb.preparePacket(sender, phases.PacketPhase1)
 	if (options & transport.SendWithoutPulseData) == 0 {
@@ -138,19 +137,114 @@ func (pb *PacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncementP
 	body := packet.EncryptableBody.(*GlobulaConsensusPacketBody)
 	body.PulsarPacket.Data = pulsarPacket.AsBytes()
 
-	// TODO: fixed linter :)
-	body.FullSelfIntro.setAddrMode(body.FullSelfIntro.getAddrMode())
-	body.FullSelfIntro.setPrimaryRole(body.FullSelfIntro.getPrimaryRole())
+	body.Announcement.ShortID = sender.GetNodeID()
+	body.Announcement.CurrentRank = sender.GetNodeRank()
+	body.Announcement.RequestedPower = sender.GetRequestedPower()
+	copy(body.Announcement.AnnounceSignature[:], sender.GetAnnouncementSignature().AsBytes())
+	copy(
+		body.Announcement.Member.NodeState.NodeStateHash[:],
+		sender.GetNodeStateHashEvidence().GetNodeStateHash().AsBytes(),
+	)
+	copy(
+		body.Announcement.Member.NodeState.GlobulaNodeStateSignature[:],
+		sender.GetNodeStateHashEvidence().GetGlobulaNodeStateSignature().AsBytes(),
+	)
 
-	return pb.prepareWrapper(packet)
+	if sender.IsLeaving() {
+		body.Announcement.Member.AnnounceID = sender.GetNodeID()
+		body.Announcement.Member.Leaver.LeaveReason = sender.GetLeaveReason()
+	}
+
+	// if announcement := sender.GetJoinerAnnouncement(); announcement != nil {
+	// 	intro := announcement.GetBriefIntro()
+	// 	body.Announcement.Member.Joiner.ShortID = sender.GetJoinerID()
+	// 	body.Announcement.Member.Joiner.setPrimaryRole(intro.GetPrimaryRole())
+	// 	body.Announcement.Member.Joiner.setAddrMode(endpoints.IPEndpoint)
+	// 	body.Announcement.Member.Joiner.SpecialRoles = intro.GetSpecialRoles()
+	// 	body.Announcement.Member.Joiner.StartPower = intro.GetStartPower()
+	// 	copy(body.Announcement.Member.Joiner.NodePK[:], intro.GetNodePublicKey().AsBytes())
+	// 	body.Announcement.Member.Joiner.Endpoint = intro.GetDefaultEndpoint().GetIPAddress()
+	// }
+
+	// TODO: fill joiner fields
+
+	return pb.preparePacketSender(packet)
 }
 
-func (pb *PacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncementProfile,
+func (pb *PacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncementProfile, welcome *proofs.NodeWelcomePackage,
 	neighbourhood []transport.MembershipAnnouncementReader, options transport.PacketSendOptions) transport.PreparedPacketSender {
 
 	packet := pb.preparePacket(sender, phases.PacketPhase2)
 
-	return pb.prepareWrapper(packet)
+	body := packet.EncryptableBody.(*GlobulaConsensusPacketBody)
+
+	body.Announcement.ShortID = sender.GetNodeID()
+	body.Announcement.CurrentRank = sender.GetNodeRank()
+	body.Announcement.RequestedPower = sender.GetRequestedPower()
+	copy(body.Announcement.AnnounceSignature[:], sender.GetAnnouncementSignature().AsBytes())
+	copy(
+		body.Announcement.Member.NodeState.NodeStateHash[:],
+		sender.GetNodeStateHashEvidence().GetNodeStateHash().AsBytes(),
+	)
+	copy(
+		body.Announcement.Member.NodeState.GlobulaNodeStateSignature[:],
+		sender.GetNodeStateHashEvidence().GetGlobulaNodeStateSignature().AsBytes(),
+	)
+
+	if sender.IsLeaving() {
+		body.Announcement.Member.AnnounceID = sender.GetNodeID()
+		body.Announcement.Member.Leaver.LeaveReason = sender.GetLeaveReason()
+	}
+
+	// if announcement := sender.GetJoinerAnnouncement(); announcement != nil {
+	// 	intro := announcement.GetBriefIntro()
+	// 	body.Announcement.Member.Joiner.ShortID = sender.GetJoinerID()
+	// 	body.Announcement.Member.Joiner.setPrimaryRole(intro.GetPrimaryRole())
+	// 	body.Announcement.Member.Joiner.setAddrMode(endpoints.IPEndpoint)
+	// 	body.Announcement.Member.Joiner.SpecialRoles = intro.GetSpecialRoles()
+	// 	body.Announcement.Member.Joiner.StartPower = intro.GetStartPower()
+	// 	copy(body.Announcement.Member.Joiner.NodePK[:], intro.GetNodePublicKey().AsBytes())
+	// 	body.Announcement.Member.Joiner.Endpoint = intro.GetDefaultEndpoint().GetIPAddress()
+	// }
+
+	body.Neighbourhood.NeighbourCount = uint8(len(neighbourhood))
+	body.Neighbourhood.Neighbours = make([]NeighbourAnnouncement, len(neighbourhood))
+	for i, neighbour := range neighbourhood {
+		body.Neighbourhood.Neighbours[i].NeighbourNodeID = neighbour.GetNodeID()
+		body.Neighbourhood.Neighbours[i].CurrentRank = neighbour.GetNodeRank()
+		body.Neighbourhood.Neighbours[i].RequestedPower = neighbour.GetRequestedPower()
+		copy(body.Neighbourhood.Neighbours[i].AnnounceSignature[:], neighbour.GetAnnouncementSignature().AsBytes())
+
+		if neighbour.GetNodeRank() != 0 {
+			copy(
+				body.Neighbourhood.Neighbours[i].Member.NodeState.NodeStateHash[:],
+				sender.GetNodeStateHashEvidence().GetNodeStateHash().AsBytes(),
+			)
+			copy(
+				body.Neighbourhood.Neighbours[i].Member.NodeState.GlobulaNodeStateSignature[:],
+				sender.GetNodeStateHashEvidence().GetGlobulaNodeStateSignature().AsBytes(),
+			)
+		}
+
+		if neighbour.IsLeaving() {
+			body.Neighbourhood.Neighbours[i].Member.AnnounceID = neighbour.GetNodeID()
+			body.Neighbourhood.Neighbours[i].Member.Leaver.LeaveReason = neighbour.GetLeaveReason()
+		}
+
+		// if announcement := neighbour.GetJoinerAnnouncement(); announcement != nil {
+		// 	intro := announcement.GetBriefIntro()
+		// 	body.Neighbourhood.Neighbours[i].Joiner.ShortID = sender.GetJoinerID()
+		// 	body.Neighbourhood.Neighbours[i].Joiner.setPrimaryRole(intro.GetPrimaryRole())
+		// 	body.Neighbourhood.Neighbours[i].Joiner.setAddrMode(endpoints.IPEndpoint)
+		// 	body.Neighbourhood.Neighbours[i].Joiner.SpecialRoles = intro.GetSpecialRoles()
+		// 	body.Neighbourhood.Neighbours[i].Joiner.StartPower = intro.GetStartPower()
+		// 	copy(body.Neighbourhood.Neighbours[i].Joiner.NodePK[:], intro.GetNodePublicKey().AsBytes())
+		// 	body.Neighbourhood.Neighbours[i].Joiner.Endpoint = intro.GetDefaultEndpoint().GetIPAddress()
+		// }
+	}
+	// TODO: fill joiner fields
+
+	return pb.preparePacketSender(packet)
 }
 
 func (pb *PacketBuilder) PreparePhase3Packet(sender *transport.NodeAnnouncementProfile,
@@ -173,7 +267,7 @@ func (pb *PacketBuilder) PreparePhase3Packet(sender *transport.NodeAnnouncementP
 		body.Vectors.AdditionalStateVectors[0].ExpectedRank = vectors.Doubted.ExpectedRank
 	}
 
-	return pb.prepareWrapper(packet)
+	return pb.preparePacketSender(packet)
 }
 
 type PreparedPacketSender struct {
@@ -185,6 +279,7 @@ type PreparedPacketSender struct {
 
 func (p *PreparedPacketSender) SendTo(ctx context.Context, target profiles.ActiveNode, sendOptions transport.PacketSendOptions, sender transport.PacketSender) {
 	p.packet.Header.TargetID = uint32(target.GetShortNodeID())
+	p.packet.Header.ReceiverID = uint32(target.GetShortNodeID())
 
 	if (sendOptions & transport.SendWithoutPulseData) != 0 {
 		p.packet.Header.ClearFlag(FlagHasPulsePacket)
@@ -202,7 +297,7 @@ func (p *PreparedPacketSender) SendTo(ctx context.Context, target profiles.Activ
 func (p *PreparedPacketSender) SendToMany(ctx context.Context, targetCount int, sender transport.PacketSender,
 	filter func(ctx context.Context, targetIndex int) (profiles.ActiveNode, transport.PacketSendOptions)) {
 
-	for i := 0; i <= targetCount; i++ {
+	for i := 0; i < targetCount; i++ {
 		if np, options := filter(ctx, i); np != nil {
 			p.SendTo(ctx, np, options, sender)
 		}

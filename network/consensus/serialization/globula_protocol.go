@@ -51,15 +51,18 @@
 package serialization
 
 import (
+	"bytes"
 	"io"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 
-	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
 
@@ -256,19 +259,27 @@ Network traffic ~1000 nodes:
 	Total:		~3MB	   ~3MB
 */
 
+// TODO: HACK!
 type EmbeddedPulsarData struct {
+	Size uint16
 	Data []byte
 
 	// ByteSize>=124
-	Header      Header       `insolar-transport:"ignore=send"`           // ByteSize=16
-	PulseNumber pulse.Number `insolar-transport:"[30-31]=0;ignore=send"` // [30-31] MUST ==0, ByteSize=4
+	// Header      Header       `insolar-transport:"ignore=send"`           // ByteSize=16
+	// PulseNumber pulse.Number `insolar-transport:"[30-31]=0;ignore=send"` // [30-31] MUST ==0, ByteSize=4
 
 	// PulseNumber common.PulseNumber //available externally
 	PulsarPacketBody `insolar-transport:"ignore=send"` // ByteSize>=108
-	PulsarSignature  longbits.Bits512                  `insolar-transport:"ignore=send"` // ByteSize=64
+	// PulsarSignature  longbits.Bits512                  `insolar-transport:"ignore=send"` // ByteSize=64
 }
 
 func (pd *EmbeddedPulsarData) SerializeTo(ctx SerializeContext, writer io.Writer) error {
+	pd.Size = uint16(len(pd.Data))
+
+	if err := write(writer, pd.Size); err != nil {
+		return errors.Wrap(err, "failed to serialize Data")
+	}
+
 	if err := write(writer, pd.Data); err != nil {
 		return errors.Wrap(err, "failed to serialize Data")
 	}
@@ -277,25 +288,25 @@ func (pd *EmbeddedPulsarData) SerializeTo(ctx SerializeContext, writer io.Writer
 }
 
 func (pd *EmbeddedPulsarData) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
-	capture := utils.NewCapturingReader(reader)
-
-	if err := pd.Header.DeserializeFrom(ctx, capture); err != nil {
-		return errors.Wrap(err, "failed to deserialize Header")
+	if err := read(reader, &pd.Size); err != nil {
+		return errors.Wrap(err, "failed to deserialize Size")
 	}
 
-	if err := read(capture, &pd.PulseNumber); err != nil {
-		return errors.Wrap(err, "failed to deserialize PulseNumber")
+	pd.Data = make([]byte, pd.Size)
+	if err := read(reader, &pd.Data); err != nil {
+		return errors.Wrap(err, "failed to deserialize Data")
 	}
 
-	if err := pd.PulsarPacketBody.DeserializeFrom(ctx, capture); err != nil {
-		return errors.Wrap(err, "failed to deserialize PulsarPacketBody")
+	p, err := packet.DeserializePacket(inslogger.FromContext(ctx), bytes.NewReader(pd.Data))
+	if err != nil {
+		return errors.Wrap(err, "failed to deserialize PulsarPacket")
 	}
 
-	if err := read(capture, &pd.PulsarSignature); err != nil {
-		return errors.Wrap(err, "failed to deserialize PulsarSignature")
-	}
+	data := p.GetRequest().GetPulse()
+	pul := *pulse.FromProto(data.Pulse)
 
-	pd.Data = capture.Captured()
+	pd.PulseDataExt = adapters.NewPulseData(pul).DataExt
+
 	return nil
 }
 

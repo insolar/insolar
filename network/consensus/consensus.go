@@ -61,6 +61,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	transport2 "github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/network/consensus/serialization"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
@@ -84,10 +85,6 @@ type Dep struct {
 	StateGetter  adapters.StateGetter
 	PulseChanger adapters.PulseChanger
 	StateUpdater adapters.StateUpdater
-
-	// TODO: remove it from here
-	PacketBuilder func(transport2.CryptographyFactory, api.LocalNodeConfiguration) transport2.PacketBuilder
-	PacketSender  transport2.PacketSender
 }
 
 func (cd *Dep) verify() {
@@ -111,6 +108,7 @@ type Consensus struct {
 	packetSender                 transport2.PacketSender
 	transportFactory             transport2.Factory
 	consensusController          api.ConsensusController
+	packetParserFactory          adapters.PacketParserFactory
 }
 
 func New(ctx context.Context, dep Dep) Consensus {
@@ -164,13 +162,11 @@ func New(ctx context.Context, dep Dep) Consensus {
 	)
 	consensus.roundStrategyFactory = adapters.NewRoundStrategyFactory()
 	consensus.transportCryptographyFactory = adapters.NewTransportCryptographyFactory(dep.Scheme)
-	consensus.packetBuilder = dep.PacketBuilder(
+	consensus.packetBuilder = serialization.NewPacketBuilder(
 		consensus.transportCryptographyFactory,
 		consensus.localNodeConfiguration,
 	)
-	// TODO: comment until serialization ready
-	// consensus.packetSender = NewPacketSender(dep.DatagramTransport)
-	consensus.packetSender = dep.PacketSender
+	consensus.packetSender = adapters.NewPacketSender(dep.DatagramTransport)
 	consensus.transportFactory = adapters.NewTransportFactory(
 		consensus.transportCryptographyFactory,
 		consensus.packetBuilder,
@@ -187,6 +183,11 @@ func New(ctx context.Context, dep Dep) Consensus {
 		&core.SequentialCandidateFeeder{},
 		adapters.NewConsensusControlFeeder(),
 	)
+	consensus.packetParserFactory = serialization.NewPacketParserFactory(
+		consensus.transportCryptographyFactory.GetDigestFactory().GetPacketDigester(),
+		consensus.transportCryptographyFactory.GetNodeSigner(consensus.localNodeConfiguration.GetSecretKeyStore()).GetSignMethod(),
+		dep.KeyProcessor,
+	)
 
 	consensus.verify()
 	return consensus
@@ -194,6 +195,7 @@ func New(ctx context.Context, dep Dep) Consensus {
 
 type packetProcessorSetter interface {
 	SetPacketProcessor(adapters.PacketProcessor)
+	SetPacketParserFactory(factory adapters.PacketParserFactory)
 }
 
 type Controller interface {
@@ -204,6 +206,7 @@ type Controller interface {
 func (c Consensus) Install(setters ...packetProcessorSetter) Controller {
 	for _, setter := range setters {
 		setter.SetPacketProcessor(c.consensusController)
+		setter.SetPacketParserFactory(c.packetParserFactory)
 	}
 	return c.consensusController
 }
