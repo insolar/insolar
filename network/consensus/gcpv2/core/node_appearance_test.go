@@ -173,7 +173,9 @@ func TestGetIndex(t *testing.T) {
 func TestGetShortNodeID(t *testing.T) {
 	lp := profiles.NewLocalNodeMock(t)
 	lp.LocalNodeProfileMock.Set(func() {})
-	lp.GetShortNodeIDMock.Set(func() insolar.ShortNodeID { return insolar.AbsentShortNodeID })
+
+	lp.GetNodeIDMock.Set(func() insolar.ShortNodeID { return insolar.AbsentShortNodeID })
+
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
 	require.Equal(t, insolar.AbsentShortNodeID, r.GetShortNodeID())
@@ -200,7 +202,13 @@ func TestVerifyPacketAuthenticity(t *testing.T) {
 	lp := profiles.NewLocalNodeMock(t)
 	lp.LocalNodeProfileMock.Set(func() {})
 	var isAcceptable bool
-	lp.IsAcceptableHostMock.Set(func(p endpoints.Inbound) (r bool) { return *(&isAcceptable) })
+
+	sp := profiles.NewStaticProfileMock(t)
+	lp.GetStaticMock.Set(func() (r profiles.StaticProfile) {
+		return sp
+	})
+	sp.IsAcceptableHostMock.Set(func(p endpoints.Inbound) (r bool) { return *(&isAcceptable) })
+
 	sv := cryptkit.NewSignatureVerifierMock(t)
 	var isSignOfSignatureMethodSupported bool
 	sv.IsSignOfSignatureMethodSupportedMock.Set(func(cryptkit.SignatureMethod) bool { return *(&isSignOfSignatureMethodSupported) })
@@ -290,7 +298,13 @@ func TestGetSignatureVerifier(t *testing.T) {
 	lp.LocalNodeProfileMock.Set(func() {})
 	sv1 := cryptkit.NewSignatureVerifierMock(t)
 	lp.GetSignatureVerifierMock.Set(func() cryptkit.SignatureVerifier { return sv1 })
-	lp.GetPublicKeyStoreMock.Set(func() cryptkit.PublicKeyStore { return nil })
+
+	sp := profiles.NewStaticProfileMock(t)
+	lp.GetStaticMock.Set(func() (r profiles.StaticProfile) {
+		return sp
+	})
+	sp.GetPublicKeyStoreMock.Set(func() cryptkit.PublicKeyStore { return nil })
+
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
 	svf := cryptkit.NewSignatureVerifierFactoryMock(t)

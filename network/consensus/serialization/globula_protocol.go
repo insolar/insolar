@@ -84,9 +84,9 @@ type GlobulaConsensusPacketBody struct {
 	PulsarPacket EmbeddedPulsarData     `insolar-transport:"Packet=0,1;optional=PacketFlags[0]"` // ByteSize>=124
 	Announcement MembershipAnnouncement `insolar-transport:"Packet=1,2"`                         // ByteSize= (JOINER) 5, (MEMBER) 201, 205 (MEMBER+JOINER) 196, 198, 208
 
-	//TODO implement an additional field and serialization of NodeExtendedIntro
-	//This field can be included by sender who has introduced a joiner to facilitate joining process, and contains full intro data of the joiner
-	//This field  is not mandatory and can be omitted, e.g. when network is stable or some space is required for claims
+	// TODO implement an additional field and serialization of NodeExtendedIntro
+	// This field can be included by sender who has introduced a joiner to facilitate joining process, and contains full intro data of the joiner
+	// This field  is not mandatory and can be omitted, e.g. when network is stable or some space is required for claims
 	JoinerExt NodeExtendedIntro `insolar-transport:"Packet=1;optional=PacketFlags[3]"`
 
 	/*

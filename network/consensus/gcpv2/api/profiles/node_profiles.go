@@ -52,6 +52,8 @@ package profiles
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -59,7 +61,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
-	"time"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.Host -o . -s _mock.go
@@ -79,8 +80,6 @@ type NodeIntroduction interface {
 	ConvertPowerRequest(request power.Request) member.Power
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.StaticProfile -o . -s _mock.go
-
 type staticProfile interface {
 	GetStaticNodeID() insolar.ShortNodeID
 	GetPrimaryRole() member.PrimaryRole
@@ -89,7 +88,9 @@ type staticProfile interface {
 	GetStartPower() member.Power
 }
 
-type StaticProfile interface { //brief intro
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.StaticProfile -o . -s _mock.go
+
+type StaticProfile interface { // brief intro
 	Host
 	staticProfile
 	GetAnnouncementSignature() cryptkit.SignatureHolder
@@ -98,7 +99,7 @@ type StaticProfile interface { //brief intro
 }
 
 type BaseNode interface {
-	//StaticProfile
+	// StaticProfile
 	GetNodeID() insolar.ShortNodeID
 
 	/*
@@ -186,9 +187,9 @@ type MembershipProfile struct {
 }
 
 // TODO support joiner in MembershipProfile
-//func (v MembershipProfile) IsJoiner() bool {
+// func (v MembershipProfile) IsJoiner() bool {
 //
-//}
+// }
 
 func NewMembershipProfile(mode member.OpMode, power member.Power, index member.Index,
 	nsh proofs.NodeStateHashEvidence, nas proofs.MemberAnnouncementSignature,
