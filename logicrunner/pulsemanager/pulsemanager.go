@@ -138,7 +138,7 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		return errors.Wrap(err, "call of SetActiveNodes failed")
 	}
 
-	err = m.JetModifier.Clone(ctx, storagePulse.PulseNumber, newPulse.PulseNumber)
+	err = m.JetModifier.Clone(ctx, storagePulse.PulseNumber, newPulse.PulseNumber, false)
 	if err != nil {
 		return errors.Wrapf(err, "failed to clone jet.Tree fromPulse=%v toPulse=%v", storagePulse.PulseNumber, newPulse.PulseNumber)
 	}
