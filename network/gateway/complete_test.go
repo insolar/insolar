@@ -160,7 +160,6 @@ func mockContractRequester(t *testing.T, nodeRef insolar.Reference, ok bool, r [
 
 func mockPulseManager(t *testing.T) insolar.PulseManager {
 	pm := testutils.NewPulseManagerMock(t)
-
 	return pm
 }
 

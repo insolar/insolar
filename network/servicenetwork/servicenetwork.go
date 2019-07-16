@@ -111,6 +111,8 @@ type ServiceNetwork struct {
 	HostNetwork  network.HostNetwork
 	OperableFunc func(ctx context.Context, operable bool)
 
+	CurrentPulse insolar.Pulse
+
 	isDiscovery bool
 	skip        int
 
@@ -223,6 +225,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to init internal components")
 	}
 
+	n.CurrentPulse = *insolar.GenesisPulse
 	return nil
 }
 
@@ -307,19 +310,11 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 		return
 	}
 
-	// Ignore insolar.ErrNotFound because
-	// sometimes we can't fetch current pulse in new nodes
-	// (for fresh bootstrapped light-material with in-memory pulse-tracker)
-	// TODO: remove pulse checks here after new consensus ready
-	if currentPulse, err := n.PulseAccessor.Latest(ctx); err != nil {
-		if err != pulse.ErrNotFound {
-			currentPulse = *insolar.GenesisPulse
-		}
-	} else {
-		if !isNextPulse(&currentPulse, &newPulse) {
-			logger.Infof("Incorrect pulse number. Current: %+v. New: %+v", currentPulse, newPulse)
-			return
-		}
+	//TODO: use network pulsestorage here
+
+	if n.CurrentPulse.PulseNumber != insolar.GenesisPulse.PulseNumber && !isNextPulse(&n.CurrentPulse, &newPulse) {
+		logger.Infof("Incorrect pulse number. Current: %+v. New: %+v", n.CurrentPulse, newPulse)
+		return
 	}
 
 	n.ChangePulse(ctx, newPulse)
@@ -329,6 +324,8 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 
 func (n *ServiceNetwork) ChangePulse(ctx context.Context, newPulse insolar.Pulse) {
 	logger := inslogger.FromContext(ctx)
+	n.CurrentPulse = newPulse
+	n.NodeKeeper.MoveSyncToActive(ctx, newPulse.PulseNumber)
 
 	if err := n.Gateway().OnPulse(ctx, newPulse); err != nil {
 		logger.Error(errors.Wrap(err, "Failed to call OnPulse on Gateway"))

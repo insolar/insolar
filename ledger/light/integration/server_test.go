@@ -211,7 +211,6 @@ func NewServer(ctx context.Context, cfg configuration.Configuration) (*Server, e
 		pm.PulseAccessor = Pulses
 		pm.PulseCalculator = Pulses
 		pm.PulseAppender = Pulses
-		pm.ActiveListSwapper = &stub{}
 		pm.GIL = &stub{}
 		pm.NodeNet = NodeNetwork
 
