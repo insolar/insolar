@@ -14,7 +14,6 @@ import (
 )
 
 func Test_BootstrapCalls(t *testing.T) {
-	t.Skip()
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg)
@@ -42,8 +41,7 @@ func Test_BootstrapCalls(t *testing.T) {
 	})
 }
 
-func Test_ReplicationScenario(t *testing.T) {
-	t.Skip()
+func Test_AllOperations(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg)
@@ -58,49 +56,48 @@ func Test_ReplicationScenario(t *testing.T) {
 	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
 	s.Pulse(ctx)
 
-	codeID, codeRecord := setCode(t, s)
-	material := getCode(t, s, codeID)
-	assert.Equal(t, &codeRecord, material.Virtual)
+	// Save and check request.
+	{
+		codeID, codeRecord := setCode(t, s)
+		codeRec := getCode(t, s, codeID)
+		assert.Equal(t, &codeRecord, codeRec.Virtual)
+	}
 
-	// FIXME: doesn't work with old bus. Move Hot data to watermill to fix.
-	// _, _ = setIncomingRequest(t, s, record.CTSaveAsChild)
-	//
-	// // Activate object.
-	// var (
-	// 	objectID       insolar.ID
-	// 	activateRecord record.Virtual
-	// )
-	// {
-	// 	mem := make([]byte, 100)
-	// 	_, err := rand.Read(mem)
-	// 	require.NoError(t, err)
-	// 	activateRecord = record.Wrap(record.Activate{
-	// 		Memory: mem,
-	// 	})
-	// 	buf, err := activateRecord.Marshal()
-	// 	require.NoError(t, err)
-	// 	res := make([]byte, 100)
-	// 	_, err = rand.Read(res)
-	// 	require.NoError(t, err)
-	// 	resultRecord := record.Wrap(record.Result{Payload: res})
-	// 	resBuf, err := resultRecord.Marshal()
-	// 	require.NoError(t, err)
-	// 	s.Send(&payload.Activate{
-	// 		Record: buf,
-	// 		Result: resBuf,
-	// 	})
-	// 	pl := <-received
-	// 	id, ok := pl.(*payload.ID)
-	// 	require.True(t, ok)
-	// 	objectID = id.ID
-	// }
-
-	// _ = objectID
+	// Set request for object.
+	objectID, _ := setIncomingRequest(t, s, record.CTSaveAsChild)
+	// Activate and check object.
+	{
+		state := activateObject(t, s, objectID)
+		_, material := getObject(t, s, objectID)
+		require.Equal(t, &state, material.Virtual)
+	}
+	// Amend and check object.
+	{
+		state := amendObject(t, s, objectID)
+		_, material := getObject(t, s, objectID)
+		require.Equal(t, &state, material.Virtual)
+	}
+	// Deactivate and check object.
+	{
+		deactivateObject(t, s, objectID)
+		s.Receive(func(meta payload.Meta, pl payload.Payload) {
+			received <- pl
+		})
+		s.Send(&payload.GetObject{
+			ObjectID: objectID,
+		})
+		pl := <-received
+		_, ok := pl.(*payload.Error)
+		assert.True(t, ok)
+	}
 }
 
 func setCode(t *testing.T, s *Server) (insolar.ID, record.Virtual) {
 	received := make(chan payload.Payload)
 	s.Receive(func(meta payload.Meta, pl payload.Payload) {
+		if _, ok := pl.(*payload.ID); !ok {
+			return
+		}
 		received <- pl
 	})
 
@@ -122,6 +119,10 @@ func setCode(t *testing.T, s *Server) (insolar.ID, record.Virtual) {
 func getCode(t *testing.T, s *Server, id insolar.ID) record.Material {
 	received := make(chan payload.Payload)
 	s.Receive(func(meta payload.Meta, pl payload.Payload) {
+		if _, ok := pl.(*payload.Code); !ok {
+			return
+		}
+
 		received <- pl
 	})
 
@@ -140,6 +141,10 @@ func getCode(t *testing.T, s *Server, id insolar.ID) record.Material {
 func setIncomingRequest(t *testing.T, s *Server, ct record.CallType) (insolar.ID, record.Virtual) {
 	received := make(chan payload.Payload)
 	s.Receive(func(meta payload.Meta, pl payload.Payload) {
+		if _, ok := pl.(*payload.RequestInfo); !ok {
+			return
+		}
+
 		received <- pl
 	})
 
@@ -151,12 +156,164 @@ func setIncomingRequest(t *testing.T, s *Server, ct record.CallType) (insolar.ID
 		Object:    &objRef,
 		Arguments: args,
 		CallType:  ct,
+		Reason:    gen.Reference(),
 	})
 	s.Send(&payload.SetIncomingRequest{
 		Request: rec,
 	})
 	pl := <-received
-	id, ok := pl.(*payload.ID)
+	id, ok := pl.(*payload.RequestInfo)
 	require.True(t, ok)
-	return id.ID, rec
+	return id.RequestID, rec
+}
+
+func activateObject(t *testing.T, s *Server, objectID insolar.ID) record.Virtual {
+	received := make(chan payload.Payload)
+	s.Receive(func(meta payload.Meta, pl payload.Payload) {
+		if _, ok := pl.(*payload.ID); !ok {
+			return
+		}
+
+		received <- pl
+	})
+
+	mem := make([]byte, 100)
+	_, err := rand.Read(mem)
+	require.NoError(t, err)
+	rec := record.Wrap(record.Activate{
+		Request: *insolar.NewReference(objectID),
+		Memory:  mem,
+	})
+	buf, err := rec.Marshal()
+	require.NoError(t, err)
+	res := make([]byte, 100)
+	_, err = rand.Read(res)
+	require.NoError(t, err)
+	resultRecord := record.Wrap(record.Result{
+		Request: *insolar.NewReference(objectID),
+		Object:  objectID,
+		Payload: res,
+	})
+	resBuf, err := resultRecord.Marshal()
+	require.NoError(t, err)
+	s.Send(&payload.Activate{
+		Record: buf,
+		Result: resBuf,
+	})
+	pl := <-received
+	_, ok := pl.(*payload.ID)
+	require.True(t, ok)
+	return rec
+}
+
+func amendObject(t *testing.T, s *Server, objectID insolar.ID) record.Virtual {
+	received := make(chan payload.Payload)
+	s.Receive(func(meta payload.Meta, pl payload.Payload) {
+		if _, ok := pl.(*payload.ID); !ok {
+			return
+		}
+
+		received <- pl
+	})
+
+	mem := make([]byte, 100)
+	_, err := rand.Read(mem)
+	require.NoError(t, err)
+	rec := record.Wrap(record.Amend{
+		Memory: mem,
+	})
+	buf, err := rec.Marshal()
+	require.NoError(t, err)
+	res := make([]byte, 100)
+	_, err = rand.Read(res)
+	require.NoError(t, err)
+	resultRecord := record.Wrap(record.Result{
+		Request: *insolar.NewReference(objectID),
+		Object:  objectID,
+		Payload: res,
+	})
+	resBuf, err := resultRecord.Marshal()
+	require.NoError(t, err)
+	s.Send(&payload.Update{
+		Record: buf,
+		Result: resBuf,
+	})
+	pl := <-received
+	_, ok := pl.(*payload.ID)
+	require.True(t, ok)
+	return rec
+}
+
+func deactivateObject(t *testing.T, s *Server, objectID insolar.ID) record.Virtual {
+	received := make(chan payload.Payload)
+	s.Receive(func(meta payload.Meta, pl payload.Payload) {
+		if _, ok := pl.(*payload.ID); !ok {
+			return
+		}
+
+		received <- pl
+	})
+
+	mem := make([]byte, 100)
+	_, err := rand.Read(mem)
+	require.NoError(t, err)
+	rec := record.Wrap(record.Deactivate{
+		Request: *insolar.NewReference(objectID),
+	})
+	buf, err := rec.Marshal()
+	require.NoError(t, err)
+	res := make([]byte, 100)
+	_, err = rand.Read(res)
+	require.NoError(t, err)
+	resultRecord := record.Wrap(record.Result{
+		Request: *insolar.NewReference(objectID),
+		Object:  objectID,
+		Payload: res,
+	})
+	resBuf, err := resultRecord.Marshal()
+	require.NoError(t, err)
+	s.Send(&payload.Deactivate{
+		Record: buf,
+		Result: resBuf,
+	})
+	pl := <-received
+	_, ok := pl.(*payload.ID)
+	require.True(t, ok)
+	return rec
+}
+
+func getObject(t *testing.T, s *Server, objectID insolar.ID) (record.Lifeline, record.Material) {
+	received := make(chan payload.Payload)
+	s.Receive(func(meta payload.Meta, pl payload.Payload) {
+		received <- pl
+	})
+
+	s.Send(&payload.GetObject{
+		ObjectID: objectID,
+	})
+	var (
+		lifeline *record.Lifeline
+		state    *record.Material
+	)
+	done := func() bool {
+		return lifeline != nil && state != nil
+	}
+	for pl := range received {
+		switch p := pl.(type) {
+		case *payload.Index:
+			lifeline = &record.Lifeline{}
+			err := lifeline.Unmarshal(p.Index)
+			require.NoError(t, err)
+		case *payload.State:
+			state = &record.Material{}
+			err := state.Unmarshal(p.Record)
+			require.NoError(t, err)
+		}
+
+		if done() {
+			break
+		}
+	}
+	require.True(t, done())
+	return *lifeline, *state
 }
