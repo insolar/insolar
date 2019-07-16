@@ -232,11 +232,11 @@ func (cr *ContractRequester) result(ctx context.Context, msg *message.ReturnResu
 	copy(reqHash[:], msg.RequestRef.Record().Hash())
 	c, ok := cr.ResultMap[reqHash]
 	if !ok {
-		inslogger.FromContext(ctx).Warn("unwaited results of request ", msg.RequestRef.String())
+		inslogger.FromContext(ctx).Info("unwaited results of request ", msg.RequestRef.String())
 		if cr.lr != nil {
 			return cr.lr.AddUnwantedResponse(ctx, msg)
 		}
-		inslogger.FromContext(ctx).Warn("IP1: drop unwanted ", msg.RequestRef)
+		inslogger.FromContext(ctx).Warn("drop unwanted ", msg.RequestRef.String())
 		return &reply.OK{}
 	}
 
