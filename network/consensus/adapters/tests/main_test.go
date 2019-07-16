@@ -92,6 +92,13 @@ func TestConsensusMain(t *testing.T) {
 
 	pulseHandlers := make([]network2.PulseHandler, 0, len(nodes))
 
+	strategy := NewDelayNetStrategy(DelayStrategyConf{
+		MinDelay:         10 * time.Millisecond,
+		MaxDelay:         30 * time.Millisecond,
+		Variance:         0.2,
+		SpikeProbability: 0.1,
+	})
+
 	for i, n := range nodes {
 		nodeKeeper := nodenetwork.NewNodeKeeper(n)
 		nodeKeeper.SetInitialSnapshot(nodes)
@@ -107,6 +114,8 @@ func TestConsensusMain(t *testing.T) {
 		pulseHandler := adapters.NewPulseHandler()
 		pulseHandlers = append(pulseHandlers, pulseHandler)
 
+		delayTransport := strategy.GetLink(transport)
+
 		_ = consensus.New(ctx, consensus.Dep{
 			PrimingCloudStateHash: [64]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 			KeyProcessor:          keyProcessor,
@@ -117,14 +126,14 @@ func TestConsensusMain(t *testing.T) {
 			StateGetter:           &nshGen{nshDelay: defaultNshGenerationDelay},
 			PulseChanger:          &pulseChanger{},
 			StateUpdater:          &stateUpdater{nodeKeeper},
-			DatagramTransport:     transport,
+			DatagramTransport:     delayTransport,
 		}).Install(datagramHandler, pulseHandler)
 
 		ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
 			"node_id":      n.ShortID(),
 			"node_address": n.Address(),
 		})
-		_ = transport.Start(ctx)
+		_ = delayTransport.Start(ctx)
 	}
 
 	fmt.Println("===", len(nodes), "=================================================")

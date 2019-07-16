@@ -57,8 +57,10 @@ import (
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	transport2 "github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/insolar/insolar/network/consensus/serialization"
@@ -199,8 +201,12 @@ type packetProcessorSetter interface {
 }
 
 type Controller interface {
-	// Leave
-	// SetPower
+	Abort()
+	/* Graceful exit, actual moment of leave will be indicated via Upstream */
+	// RequestLeave()
+
+	/* This node power in the active population, and pulse number of such. Without active population returns (0,0) */
+	GetActivePowerLimit() (member.Power, pulse.Number)
 }
 
 func (c Consensus) Install(setters ...packetProcessorSetter) Controller {
