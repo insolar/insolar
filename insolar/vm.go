@@ -61,7 +61,7 @@ type MachineLogicExecutor interface {
 type LogicRunner interface {
 	LRI()
 	OnPulse(context.Context, Pulse) error
-	AddUnwantedResponse(ctx context.Context, msg Message)
+	AddUnwantedResponse(ctx context.Context, msg Message) Reply
 }
 
 // CallMode indicates whether we execute or validate

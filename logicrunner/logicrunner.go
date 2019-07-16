@@ -360,6 +360,8 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 
 	lr.stopIfNeeded(ctx)
 
+	lr.resultsMatcher.Clear()
+
 	return nil
 }
 
@@ -401,8 +403,8 @@ func (lr *LogicRunner) sendOnPulseMessage(ctx context.Context, msg insolar.Messa
 	}
 }
 
-func (lr *LogicRunner) AddUnwantedResponse(ctx context.Context, msg insolar.Message) {
-	lr.resultsMatcher.AddUnwantedResponse(ctx, msg)
+func (lr *LogicRunner) AddUnwantedResponse(ctx context.Context, msg insolar.Message) insolar.Reply {
+	return lr.resultsMatcher.AddUnwantedResponse(ctx, msg)
 }
 
 func convertQueueToMessageQueue(ctx context.Context, queue []*Transcript) []message.ExecutionQueueElement {

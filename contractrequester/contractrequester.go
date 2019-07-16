@@ -224,7 +224,7 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, inMsg insolar.
 	return rep.Object, nil
 }
 
-func (cr *ContractRequester) result(ctx context.Context, msg *message.ReturnResults) {
+func (cr *ContractRequester) result(ctx context.Context, msg *message.ReturnResults) insolar.Reply {
 	cr.ResultMutex.Lock()
 	defer cr.ResultMutex.Unlock()
 
@@ -234,15 +234,15 @@ func (cr *ContractRequester) result(ctx context.Context, msg *message.ReturnResu
 	if !ok {
 		inslogger.FromContext(ctx).Warn("unwaited results of request ", msg.RequestRef.String())
 		if cr.lr != nil {
-			cr.lr.AddUnwantedResponse(ctx, msg)
-		} else {
-			inslogger.FromContext(ctx).Warn("IP1: drop unwanted ", msg.RequestRef)
+			return cr.lr.AddUnwantedResponse(ctx, msg)
 		}
-		return
+		inslogger.FromContext(ctx).Warn("IP1: drop unwanted ", msg.RequestRef)
+		return &reply.OK{}
 	}
 
 	c <- msg
 	delete(cr.ResultMap, reqHash)
+	return &reply.OK{}
 }
 
 func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
@@ -254,7 +254,7 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel insolar.P
 	ctx, span := instracer.StartSpan(ctx, "ContractRequester.ReceiveResult")
 	defer span.End()
 
-	cr.result(ctx, msg)
+	return cr.result(ctx, msg), nil
 
-	return &reply.OK{}, nil
+	// return &reply.OK{}, nil
 }
