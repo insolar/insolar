@@ -90,7 +90,7 @@ func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBo
 
 	reference, err := insolar.NewReferenceFromBase58(request.Params.Reference)
 	if err != nil {
-		return nil, errors.Wrapf(err, "[ makeCall ] failed to parse params.Reference: %s, method: %S", genesisrefs.ContractRootMember.String(), request.Params.CallSite)
+		return nil, errors.Wrap(err, "[ makeCall ] failed to parse params.Reference")
 	}
 
 	requestArgs, err := insolar.MarshalArgs(rawBody, signature, pulseTimeStamp)
