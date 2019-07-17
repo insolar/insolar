@@ -28,37 +28,20 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 
-const (
-	glsCallContextKey = "callCtx"
-	glsSystemErrorKey = "systemError"
-)
+const glsCallContextKey = "callCtx"
 
 type ProxyHelper struct {
 	lrCommon.Serializer
+	lrCommon.SystemError
 	methods lrCommon.LogicRunnerRPCStub
 }
 
 func NewProxyHelper(runner lrCommon.LogicRunnerRPCStub) *ProxyHelper {
 	return &ProxyHelper{
-		Serializer: lrCommon.NewCBORSerializer(),
-		methods:    runner,
+		Serializer:  lrCommon.NewCBORSerializer(),
+		SystemError: lrCommon.NewSystemError(),
+		methods:     runner,
 	}
-}
-
-func (h *ProxyHelper) getSystemError() error {
-	// SystemError means an error in the system (platform), not a particular contract.
-	// For instance, timed out external call or failed deserialization means a SystemError.
-	// In case of SystemError all following external calls during current method call return
-	// an error and the result of the current method call is discarded (not registered).
-	callContextInterface := gls.Get(glsSystemErrorKey)
-	if callContextInterface == nil {
-		return nil
-	}
-	return callContextInterface.(error)
-}
-
-func (h *ProxyHelper) setSystemError(err error) {
-	gls.Set(glsSystemErrorKey, err)
 }
 
 func (h *ProxyHelper) getUpBaseReq() rpctypes.UpBaseReq {
@@ -79,24 +62,11 @@ func (h *ProxyHelper) getUpBaseReq() rpctypes.UpBaseReq {
 	}
 }
 
-// CleanupSystemError should be called in a contract wrapper before actually
-// executing a method.
-func (h *ProxyHelper) CleanupSystemError() {
-	h.setSystemError(nil)
-}
-
-// SystemError() should be checked in contract wrapper before returning a result.
-// If system error occurred the result returned by the method should be discarded.
-func (h *ProxyHelper) SystemError() error {
-	return h.getSystemError()
-}
-
 func (h *ProxyHelper) RouteCall(ref insolar.Reference, wait bool, immutable bool, saga bool, method string, args []byte,
 	proxyPrototype insolar.Reference) ([]byte, error) {
 
-	sysErr := h.getSystemError()
-	if sysErr != nil {
-		return nil, sysErr
+	if h.GetSystemError() != nil {
+		return nil, h.GetSystemError()
 	}
 
 	res := rpctypes.UpRouteResp{}
@@ -115,7 +85,7 @@ func (h *ProxyHelper) RouteCall(ref insolar.Reference, wait bool, immutable bool
 	err := h.methods.RouteCall(req, &res)
 
 	if err != nil {
-		h.setSystemError(err)
+		h.SetSystemError(err)
 		return nil, err
 	}
 	return res.Result, nil
@@ -124,9 +94,8 @@ func (h *ProxyHelper) RouteCall(ref insolar.Reference, wait bool, immutable bool
 func (h *ProxyHelper) SaveAsChild(parentRef, classRef insolar.Reference, constructorName string,
 	argsSerialized []byte) (insolar.Reference, error) {
 
-	sysErr := h.getSystemError()
-	if sysErr != nil {
-		return insolar.Reference{}, sysErr
+	if h.GetSystemError() != nil {
+		return insolar.Reference{}, h.GetSystemError()
 	}
 
 	res := rpctypes.UpSaveAsChildResp{}
@@ -140,12 +109,12 @@ func (h *ProxyHelper) SaveAsChild(parentRef, classRef insolar.Reference, constru
 	}
 
 	if err := h.methods.SaveAsChild(req, &res); err != nil {
-		h.setSystemError(err)
+		h.SetSystemError(err)
 		return insolar.Reference{}, err
 	}
 	if res.Reference == nil {
 		err := errors.New("Unexpected result, empty reference")
-		h.setSystemError(err)
+		h.SetSystemError(err)
 		return insolar.Reference{}, err
 	}
 	return *res.Reference, nil
@@ -154,9 +123,8 @@ func (h *ProxyHelper) SaveAsChild(parentRef, classRef insolar.Reference, constru
 func (h *ProxyHelper) SaveAsDelegate(parentRef, classRef insolar.Reference, constructorName string,
 	argsSerialized []byte) (insolar.Reference, error) {
 
-	sysErr := h.getSystemError()
-	if sysErr != nil {
-		return insolar.Reference{}, sysErr
+	if h.GetSystemError() != nil {
+		return insolar.Reference{}, h.GetSystemError()
 	}
 
 	res := rpctypes.UpSaveAsDelegateResp{}
@@ -170,12 +138,12 @@ func (h *ProxyHelper) SaveAsDelegate(parentRef, classRef insolar.Reference, cons
 	}
 
 	if err := h.methods.SaveAsDelegate(req, &res); err != nil {
-		h.setSystemError(err)
+		h.SetSystemError(err)
 		return insolar.Reference{}, err
 	}
 	if res.Reference == nil {
 		err := errors.New("Unexpected result, empty reference")
-		h.setSystemError(err)
+		h.SetSystemError(err)
 		return insolar.Reference{}, err
 	}
 	return *res.Reference, nil
@@ -183,9 +151,8 @@ func (h *ProxyHelper) SaveAsDelegate(parentRef, classRef insolar.Reference, cons
 }
 
 func (h *ProxyHelper) GetDelegate(object, ofType insolar.Reference) (insolar.Reference, error) {
-	sysErr := h.getSystemError()
-	if sysErr != nil {
-		return insolar.Reference{}, sysErr
+	if h.GetSystemError() != nil {
+		return insolar.Reference{}, h.GetSystemError()
 	}
 
 	res := rpctypes.UpGetDelegateResp{}
@@ -197,16 +164,15 @@ func (h *ProxyHelper) GetDelegate(object, ofType insolar.Reference) (insolar.Ref
 	}
 
 	if err := h.methods.GetDelegate(req, &res); err != nil {
-		h.setSystemError(err)
+		h.SetSystemError(err)
 		return insolar.Reference{}, err
 	}
 	return res.Object, nil
 }
 
 func (h *ProxyHelper) DeactivateObject(object insolar.Reference) error {
-	sysErr := h.getSystemError()
-	if sysErr != nil {
-		return sysErr
+	if h.GetSystemError() != nil {
+		return h.GetSystemError()
 	}
 
 	res := rpctypes.UpDeactivateObjectResp{}
@@ -215,7 +181,7 @@ func (h *ProxyHelper) DeactivateObject(object insolar.Reference) error {
 	}
 
 	if err := h.methods.DeactivateObject(req, &res); err != nil {
-		h.setSystemError(err)
+		h.SetSystemError(err)
 		return err
 	}
 	return nil

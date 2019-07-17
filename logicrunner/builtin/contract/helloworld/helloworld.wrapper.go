@@ -89,7 +89,7 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 
 func INSMETHOD_ReturnObj(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.CleanupSystemError()
+	ph.SetSystemError(nil)
 	self := new(HelloWorld)
 
 	if len(object) == 0 {
@@ -112,8 +112,8 @@ func INSMETHOD_ReturnObj(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.ReturnObj()
 
-	if ph.SystemError() != nil {
-		return nil, nil, ph.SystemError()
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
 	}
 
 	state := []byte{}
@@ -132,7 +132,7 @@ func INSMETHOD_ReturnObj(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_Greet(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.CleanupSystemError()
+	ph.SetSystemError(nil)
 	self := new(HelloWorld)
 
 	if len(object) == 0 {
@@ -157,8 +157,8 @@ func INSMETHOD_Greet(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.Greet(args0)
 
-	if ph.SystemError() != nil {
-		return nil, nil, ph.SystemError()
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
 	}
 
 	state := []byte{}
@@ -177,7 +177,7 @@ func INSMETHOD_Greet(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_Count(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.CleanupSystemError()
+	ph.SetSystemError(nil)
 	self := new(HelloWorld)
 
 	if len(object) == 0 {
@@ -200,8 +200,8 @@ func INSMETHOD_Count(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.Count()
 
-	if ph.SystemError() != nil {
-		return nil, nil, ph.SystemError()
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
 	}
 
 	state := []byte{}
@@ -220,7 +220,7 @@ func INSMETHOD_Count(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_Errored(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.CleanupSystemError()
+	ph.SetSystemError(nil)
 	self := new(HelloWorld)
 
 	if len(object) == 0 {
@@ -243,8 +243,8 @@ func INSMETHOD_Errored(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.Errored()
 
-	if ph.SystemError() != nil {
-		return nil, nil, ph.SystemError()
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
 	}
 
 	state := []byte{}
@@ -263,7 +263,7 @@ func INSMETHOD_Errored(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_CreateChild(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.CleanupSystemError()
+	ph.SetSystemError(nil)
 	self := new(HelloWorld)
 
 	if len(object) == 0 {
@@ -286,8 +286,8 @@ func INSMETHOD_CreateChild(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.CreateChild()
 
-	if ph.SystemError() != nil {
-		return nil, nil, ph.SystemError()
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
 	}
 
 	state := []byte{}
@@ -306,7 +306,7 @@ func INSMETHOD_CreateChild(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.CleanupSystemError()
+	ph.SetSystemError(nil)
 	self := new(HelloWorld)
 
 	if len(object) == 0 {
@@ -331,8 +331,8 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.Call(args0)
 
-	if ph.SystemError() != nil {
-		return nil, nil, ph.SystemError()
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
 	}
 
 	state := []byte{}
@@ -351,7 +351,7 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.CleanupSystemError()
+	ph.SetSystemError(nil)
 	args := []interface{}{}
 
 	err := ph.Deserialize(data, &args)
@@ -361,8 +361,8 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	}
 
 	ret0, ret1 := New()
-	if ph.SystemError() != nil {
-		return nil, ph.SystemError()
+	if ph.GetSystemError() != nil {
+		return nil, ph.GetSystemError()
 	}
 	if ret1 != nil {
 		return nil, ret1

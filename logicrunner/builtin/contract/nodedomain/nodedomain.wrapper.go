@@ -90,7 +90,7 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 
 func INSMETHOD_RegisterNode(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.CleanupSystemError()
+	ph.SetSystemError(nil)
 	self := new(NodeDomain)
 
 	if len(object) == 0 {
@@ -117,8 +117,8 @@ func INSMETHOD_RegisterNode(object []byte, data []byte) ([]byte, []byte, error) 
 
 	ret0, ret1 := self.RegisterNode(args0, args1)
 
-	if ph.SystemError() != nil {
-		return nil, nil, ph.SystemError()
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
 	}
 
 	state := []byte{}
@@ -137,7 +137,7 @@ func INSMETHOD_RegisterNode(object []byte, data []byte) ([]byte, []byte, error) 
 
 func INSMETHOD_GetNodeRefByPublicKey(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.CleanupSystemError()
+	ph.SetSystemError(nil)
 	self := new(NodeDomain)
 
 	if len(object) == 0 {
@@ -162,8 +162,8 @@ func INSMETHOD_GetNodeRefByPublicKey(object []byte, data []byte) ([]byte, []byte
 
 	ret0, ret1 := self.GetNodeRefByPublicKey(args0)
 
-	if ph.SystemError() != nil {
-		return nil, nil, ph.SystemError()
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
 	}
 
 	state := []byte{}
@@ -182,7 +182,7 @@ func INSMETHOD_GetNodeRefByPublicKey(object []byte, data []byte) ([]byte, []byte
 
 func INSMETHOD_RemoveNode(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.CleanupSystemError()
+	ph.SetSystemError(nil)
 	self := new(NodeDomain)
 
 	if len(object) == 0 {
@@ -207,8 +207,8 @@ func INSMETHOD_RemoveNode(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0 := self.RemoveNode(args0)
 
-	if ph.SystemError() != nil {
-		return nil, nil, ph.SystemError()
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
 	}
 
 	state := []byte{}
@@ -227,7 +227,7 @@ func INSMETHOD_RemoveNode(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSCONSTRUCTOR_NewNodeDomain(data []byte) ([]byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.CleanupSystemError()
+	ph.SetSystemError(nil)
 	args := []interface{}{}
 
 	err := ph.Deserialize(data, &args)
@@ -237,8 +237,8 @@ func INSCONSTRUCTOR_NewNodeDomain(data []byte) ([]byte, error) {
 	}
 
 	ret0, ret1 := NewNodeDomain()
-	if ph.SystemError() != nil {
-		return nil, ph.SystemError()
+	if ph.GetSystemError() != nil {
+		return nil, ph.GetSystemError()
 	}
 	if ret1 != nil {
 		return nil, ret1

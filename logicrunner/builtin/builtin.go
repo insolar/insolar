@@ -96,8 +96,6 @@ func (b *BuiltIn) CallConstructor(ctx context.Context, callCtx *insolar.LogicCal
 func (b *BuiltIn) CallMethod(ctx context.Context, callCtx *insolar.LogicCallContext, codeRef insolar.Reference,
 	data []byte, method string, args insolar.Arguments) ([]byte, insolar.Arguments, error) {
 
-	// TODO AALEKSEEV check SystemError here
-
 	ctx, span := instracer.StartSpan(ctx, "builtin.CallMethod")
 	defer span.End()
 
