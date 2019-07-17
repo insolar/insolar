@@ -95,6 +95,9 @@ func TestActivateObject_RecordErr(t *testing.T) {
 	recordsMock := object.NewRecordModifierMock(t)
 	recordsMock.SetMock.Return(errors.New("something strange from records.Set"))
 
+	idxStorage := object.NewIndexStorageMock(t)
+	idxStorage.ForIDMock.Return(record.Index{}, nil)
+
 	p := proc.NewActivateObject(
 		payload.Meta{},
 		record.Activate{},
@@ -107,7 +110,7 @@ func TestActivateObject_RecordErr(t *testing.T) {
 		writeAccessor,
 		idxLockMock,
 		recordsMock,
-		nil,
+		idxStorage,
 		nil,
 		nil,
 	)
