@@ -205,6 +205,12 @@ func NewMessageHandler(
 			p.Dep.PCS = h.PCS
 			p.Dep.Sender = h.Sender
 		},
+		GetPendings: func(p *proc.GetPendings) {
+			p.Dep(
+				h.FilamentCalculator,
+				h.Sender,
+			)
+		},
 		GetPendingRequests: func(p *proc.GetPendingRequests) {
 			p.Dep(h.IndexStorage, h.Sender)
 		},
