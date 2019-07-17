@@ -232,7 +232,7 @@ type ExecutionState struct {
 	getLedgerPendingMutex sync.Mutex
 
 	// TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
-	pending              message.PendingState
+	pending              insolar.PendingState
 	PendingConfirmed     bool
 	HasPendingCheckMutex sync.Mutex
 }
@@ -243,7 +243,7 @@ type ExecutionState struct {
 // Used in OnPulse to tell next executor, that it's time to continue
 // work on this object
 func (es *ExecutionState) InPendingNotConfirmed() bool {
-	return es.pending == message.InPending && !es.PendingConfirmed
+	return es.pending == insolar.InPending && !es.PendingConfirmed
 }
 
 type ExecutionBroker struct {
@@ -540,11 +540,11 @@ func (q *ExecutionBroker) Check(ctx context.Context) bool {
 
 	// check pending state of execution (whether we can process task or not)
 	es.Lock()
-	if es.pending == message.PendingUnknown {
+	if es.pending == insolar.PendingUnknown {
 		logger.Debug("One shouldn't call ExecuteTranscript in case when pending state is unknown")
 		es.Unlock()
 		return false
-	} else if es.pending == message.InPending {
+	} else if es.pending == insolar.InPending {
 		logger.Debug("Object in pending, wont start queue processor")
 		es.Unlock()
 		return false
@@ -619,11 +619,11 @@ func (q *ExecutionBroker) finishPendingIfNeeded(ctx context.Context) {
 	es.Lock()
 	defer es.Unlock()
 
-	if es.pending != message.InPending {
+	if es.pending != insolar.InPending {
 		return
 	}
 
-	es.pending = message.NotPending
+	es.pending = insolar.NotPending
 	es.PendingConfirmed = false
 
 	pulseObj, err := q.pulseAccessor.Latest(ctx)
@@ -648,7 +648,7 @@ func (q *ExecutionBroker) onPulseWeNotNext(ctx context.Context) []insolar.Messag
 
 	switch {
 	case !q.currentList.Empty():
-		es.pending = message.InPending
+		es.pending = insolar.InPending
 		sendExecResults = true
 
 		// TODO: this should return delegation token to continue execution of the pending
@@ -656,7 +656,7 @@ func (q *ExecutionBroker) onPulseWeNotNext(ctx context.Context) []insolar.Messag
 		messages = append(messages, msg)
 	case es.InPendingNotConfirmed():
 		logger.Warn("looks like pending executor died, continuing execution on next executor")
-		es.pending = message.NotPending
+		es.pending = insolar.NotPending
 		sendExecResults = true
 		es.LedgerHasMoreRequests = true
 	case q.finished.Length() > 0:
@@ -694,13 +694,13 @@ func (q *ExecutionBroker) onPulseWeNext(ctx context.Context) []insolar.Message {
 	es := &q.executionState
 	logger := inslogger.FromContext(ctx)
 
-	if !q.currentList.Empty() && es.pending == message.InPending {
+	if !q.currentList.Empty() && es.pending == insolar.InPending {
 		// no pending should be as we are executing
 		logger.Warn("we are executing ATM, but ES marked as pending, shouldn't be")
-		es.pending = message.NotPending
+		es.pending = insolar.NotPending
 	} else if es.InPendingNotConfirmed() {
 		logger.Warn("looks like pending executor died, re-starting execution")
-		es.pending = message.NotPending
+		es.pending = insolar.NotPending
 		es.LedgerHasMoreRequests = true
 	}
 
