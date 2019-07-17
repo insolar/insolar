@@ -603,6 +603,7 @@ func (r *Two) Hello() (*string, error) {
 }
 
 func TestConstructorReturnNil(t *testing.T) {
+	t.Skip("System is not ready for case when a contract constructor fails")
 	var contractOneCode = `
 package main
 
