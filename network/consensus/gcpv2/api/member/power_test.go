@@ -334,6 +334,7 @@ func TestFindNearestValid(t *testing.T) {
 	ps = psBase
 	// TODO: BUG
 	// require.Equal(t, ps[0], ps.FindNearestValid(ps[0]+1))
+
 	require.Equal(t, ps[1], ps.FindNearestValid(ps[1]-1))
 
 	require.Equal(t, ps[1], ps.FindNearestValid(ps[1]+1))
