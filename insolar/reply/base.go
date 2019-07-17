@@ -76,6 +76,8 @@ const (
 	TypeOpenRequestsOnHeavy
 	// TypeHeavyError carries heavy record sync
 	TypeHeavyError
+	// TypeIDs is common reply for methods returning list of IDs.
+	TypeIDs
 )
 
 // ErrType is used to determine and compare reply errors.
@@ -111,6 +113,8 @@ func getEmptyReply(t insolar.ReplyType) (insolar.Reply, error) {
 		return &Delegate{}, nil
 	case TypeID:
 		return &ID{}, nil
+	case TypeIDs:
+		return &IDs{}, nil
 	case TypeChildren:
 		return &Children{}, nil
 	case TypeError:
@@ -184,6 +188,7 @@ func init() {
 	gob.Register(&Object{})
 	gob.Register(&Delegate{})
 	gob.Register(&ID{})
+	gob.Register(&IDs{})
 	gob.Register(&Children{})
 	gob.Register(&Error{})
 	gob.Register(&OK{})

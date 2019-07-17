@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 )
 
 type TranscriptDequeueElement struct {
@@ -228,9 +229,6 @@ func NewTranscriptDequeue() *TranscriptDequeue {
 type ExecutionState struct {
 	sync.Mutex
 
-	LedgerHasMoreRequests bool
-	getLedgerPendingMutex sync.Mutex
-
 	// TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
 	pending              message.PendingState
 	PendingConfirmed     bool
@@ -258,6 +256,7 @@ type ExecutionBroker struct {
 	messageBus       insolar.MessageBus
 	jetCoordinator   jet.Coordinator
 	pulseAccessor    pulse.Accessor
+	artifactsManager artifacts.Client
 
 	Ref insolar.Reference
 
@@ -265,6 +264,9 @@ type ExecutionBroker struct {
 	// currently we need to store ES inside, so it looks like circular dependency
 	// and it is circular dependency. it will be removed, once Broker will be
 	// moved out of ES.
+
+	ledgerHasMoreRequests bool
+	requestsFetcher       RequestsFetcher
 
 	ledgerChecked sync.Once
 
@@ -444,6 +446,16 @@ func (q *ExecutionBroker) Put(ctx context.Context, start bool, transcripts ...*T
 	}
 }
 
+func (q *ExecutionBroker) IsKnownRequest(ctx context.Context, req insolar.Reference) bool {
+	q.deduplicationLock.Lock()
+	defer q.deduplicationLock.Unlock()
+
+	if _, ok := q.deduplicationTable[req]; ok {
+		return true
+	}
+	return false
+}
+
 func (q *ExecutionBroker) HasLedgerRequest(_ context.Context) *Transcript {
 	if obj := q.mutable.HasFromLedger(); obj != nil {
 		return obj
@@ -473,6 +485,8 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 		return
 	}
 
+	q.fetchMoreFromLedgerIfNeeded(ctx)
+
 	// processing immutable queue (it can appear if we were in pending state)
 	// run simultaneously all immutable transcripts and forget about them
 	for elem := q.getImmutableTask(ctx); elem != nil; elem = q.getImmutableTask(ctx) {
@@ -481,6 +495,8 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 
 	// processing mutable queue
 	for transcript := q.getMutableTask(ctx); transcript != nil; transcript = q.getMutableTask(ctx) {
+		q.fetchMoreFromLedgerIfNeeded(ctx)
+
 		if !q.processTranscript(ctx, transcript) {
 			break
 		}
@@ -501,7 +517,21 @@ func (q *ExecutionBroker) StartProcessorIfNeeded(ctx context.Context) {
 		logger.Info("[ StartProcessorIfNeeded ] Starting a new queue processor")
 		go q.startProcessor(ctx)
 	}
+}
 
+func (q *ExecutionBroker) fetchMoreFromLedgerIfNeeded(ctx context.Context) {
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
+
+	if !q.ledgerHasMoreRequests {
+		return
+	}
+
+	if q.mutable.Length()+q.immutable.Length() > 3 {
+		return
+	}
+
+	q.startRequestsFetcher(ctx)
 }
 
 // TODO: probably rotation should wait till processActive == false (??)
@@ -577,8 +607,6 @@ func (q *ExecutionBroker) checkLedgerPendingRequests(ctx context.Context, transc
 }
 
 func (q *ExecutionBroker) Execute(ctx context.Context, transcript *Transcript) {
-	q.checkLedgerPendingRequests(ctx, nil)
-
 	logger := inslogger.FromContext(ctx)
 
 	reply, err := q.requestsExecutor.ExecuteAndSave(ctx, transcript)
@@ -589,8 +617,6 @@ func (q *ExecutionBroker) Execute(ctx context.Context, transcript *Transcript) {
 	q.finishTask(ctx, transcript) // TODO: hack for now, later that function need to be splitted
 
 	go q.requestsExecutor.SendReply(ctx, transcript, reply, err)
-
-	q.checkLedgerPendingRequests(ctx, transcript)
 
 	// we're checking here that pulse was changed and we should send
 	// a message that we've finished processing task
@@ -643,6 +669,8 @@ func (q *ExecutionBroker) onPulseWeNotNext(ctx context.Context) []insolar.Messag
 	es := &q.executionState
 	logger := inslogger.FromContext(ctx)
 
+	q.stopRequestsFetcher(ctx)
+
 	messages := make([]insolar.Message, 0)
 	sendExecResults := false
 
@@ -662,7 +690,7 @@ func (q *ExecutionBroker) onPulseWeNotNext(ctx context.Context) []insolar.Messag
 		logger.Warn("looks like pending executor died, continuing execution on next executor")
 		es.pending = message.NotPending
 		sendExecResults = true
-		es.LedgerHasMoreRequests = true
+		q.ledgerHasMoreRequests = true
 	case q.finished.Length() > 0:
 		sendExecResults = true
 	}
@@ -681,7 +709,7 @@ func (q *ExecutionBroker) onPulseWeNotNext(ctx context.Context) []insolar.Messag
 		// }
 		// messages := append(messages, validationMsg)
 
-		ledgerHasMoreRequests := es.LedgerHasMoreRequests || rotationResults.LedgerHasMoreRequests
+		ledgerHasMoreRequests := q.ledgerHasMoreRequests || rotationResults.LedgerHasMoreRequests
 		resultsMsg := &message.ExecutorResults{
 			RecordRef:             q.Ref,
 			Pending:               es.pending,
@@ -705,7 +733,7 @@ func (q *ExecutionBroker) onPulseWeNext(ctx context.Context) []insolar.Message {
 	} else if es.InPendingNotConfirmed() {
 		logger.Warn("looks like pending executor died, re-starting execution")
 		es.pending = message.NotPending
-		es.LedgerHasMoreRequests = true
+		q.ledgerHasMoreRequests = true
 	}
 
 	es.PendingConfirmed = false
@@ -730,7 +758,75 @@ func (q *ExecutionBroker) ResetLedgerCheck() {
 	q.ledgerChecked = sync.Once{}
 }
 
-func NewExecutionBroker(ref insolar.Reference, publisher watermillMsg.Publisher, requestsExecutor RequestsExecutor, messageBus insolar.MessageBus, jetCoordinator jet.Coordinator, pulseAccessor pulse.Accessor) *ExecutionBroker {
+func (q *ExecutionBroker) NoMoreRequestsOnLedger(ctx context.Context) {
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
+
+	select {
+	case <-ctx.Done():
+		inslogger.FromContext(ctx).Debug("pulse changed, skipping")
+		return
+	default:
+	}
+
+	q.ledgerHasMoreRequests = false
+	q.stopRequestsFetcher(ctx)
+}
+
+func (q *ExecutionBroker) MoreRequestsOnLedger(ctx context.Context) {
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
+
+	q.ledgerHasMoreRequests = true
+}
+
+func (q *ExecutionBroker) FetchMoreRequestsFromLedger(ctx context.Context) {
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
+
+	if !q.ledgerHasMoreRequests {
+		inslogger.FromContext(ctx).Warn("unexpected request to fetch more requests on ledger")
+	}
+
+	q.startRequestsFetcher(ctx)
+}
+
+func (q *ExecutionBroker) startRequestsFetcher(ctx context.Context) {
+	if q.requestsFetcher == nil {
+		q.requestsFetcher = NewRequestsFetcher(q.Ref, q.artifactsManager, q)
+	}
+	q.requestsFetcher.FetchPendings(ctx)
+}
+
+func (q *ExecutionBroker) stopRequestsFetcher(ctx context.Context) {
+	if q.requestsFetcher != nil {
+		q.requestsFetcher.Abort(ctx)
+		q.requestsFetcher = nil
+	}
+}
+
+
+
+//go:generate minimock -i github.com/insolar/insolar/logicrunner.ExecutionBrokerI -o ./ -s _mock.go
+
+type ExecutionBrokerI interface {
+	Prepend(ctx context.Context, start bool, transcripts ...*Transcript)
+	IsKnownRequest(ctx context.Context, req insolar.Reference) bool
+
+	MoreRequestsOnLedger(ctx context.Context)
+	NoMoreRequestsOnLedger(ctx context.Context)
+	FetchMoreRequestsFromLedger(ctx context.Context)
+}
+
+func NewExecutionBroker(
+	ref insolar.Reference,
+	publisher watermillMsg.Publisher,
+	requestsExecutor RequestsExecutor,
+	messageBus insolar.MessageBus,
+	jetCoordinator jet.Coordinator,
+	pulseAccessor pulse.Accessor,
+	artifactsManager artifacts.Client,
+) *ExecutionBroker {
 	return &ExecutionBroker{
 		Ref: ref,
 
@@ -745,6 +841,7 @@ func NewExecutionBroker(ref insolar.Reference, publisher watermillMsg.Publisher,
 		messageBus:       messageBus,
 		jetCoordinator:   jetCoordinator,
 		pulseAccessor:    pulseAccessor,
+		artifactsManager: artifactsManager,
 
 		ledgerChecked:   sync.Once{},
 		processorActive: 0,

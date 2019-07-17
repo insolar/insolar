@@ -51,6 +51,7 @@
 package cryptkit
 
 import (
+	"bytes"
 	"io"
 	"strings"
 	"testing"
@@ -377,21 +378,17 @@ func TestGetSignedDigest(t *testing.T) {
 	require.Equal(t, s, signDig.signature)
 }
 
-// func TestWriteTo(t *testing.T) {
-// 	bits1 := longbits.NewBits64(1)
-// 	d := Digest{digestMethod: "testDigest"}
-// 	s := Signature{signatureMethod: "testSignature"}
-// 	sd := NewSignedData(&bits1, d, s)
-// 	wtc := &writerToComparer{}
-// 	require.Panics(t, func() { sd.WriteTo(wtc) })
-//
-// 	sd2 := NewSignedData(&bits1, d, s)
-// 	wtc.other = &sd2
-// 	n, err := sd.WriteTo(wtc)
-// 	require.Equal(t, int64(8), n)
-//
-// 	require.Equal(t, nil, err)
-// }
+func TestWriteTo(t *testing.T) {
+	bits1 := longbits.NewBits64(1)
+	d := Digest{digestMethod: "testDigest"}
+	s := Signature{signatureMethod: "testSignature"}
+	sd := NewSignedData(&bits1, d, s)
+	buf := &bytes.Buffer{}
+	n, err := sd.WriteTo(buf)
+	require.Equal(t, int64(8), n)
+
+	require.Equal(t, nil, err)
+}
 
 func TestSignedDataString(t *testing.T) {
 	bits := longbits.NewBits64(0)

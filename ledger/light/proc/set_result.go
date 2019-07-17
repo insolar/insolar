@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
@@ -71,6 +72,9 @@ func (p *SetResult) Dep(
 }
 
 func (p *SetResult) Proceed(ctx context.Context) error {
+	logger := inslogger.FromContext(ctx).WithField("result_id", p.resultID.DebugString())
+	logger.Debug("trying to save result")
+
 	done, err := p.dep.writer.Begin(ctx, flow.Pulse(ctx))
 	if err != nil {
 		if err == hot.ErrWriteClosed {
@@ -80,8 +84,8 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	}
 	defer done()
 
-	p.dep.locker.Lock(&p.result.Object)
-	defer p.dep.locker.Unlock(&p.result.Object)
+	p.dep.locker.Lock(p.result.Object)
+	defer p.dep.locker.Unlock(p.result.Object)
 
 	foundRes, err := p.dep.filament.SetResult(ctx, p.resultID, p.jetID, p.result)
 	if err != nil {
@@ -89,23 +93,27 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	}
 
 	var foundResBuf []byte
+	resultID := p.resultID
 	if foundRes != nil {
 		foundResBuf, err = foundRes.Record.Virtual.Marshal()
 		if err != nil {
 			return err
 		}
+		resultID = foundRes.RecordID
 	}
 
 	msg, err := payload.NewMessage(&payload.ResultInfo{
 		ObjectID: p.result.Object,
-		ResultID: p.resultID,
+		ResultID: resultID,
 		Result:   foundResBuf,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create reply")
 	}
 
+	logger.WithFields(map[string]interface{}{
+		"duplicate": foundRes != nil,
+	}).Debug("result saved")
 	p.dep.sender.Reply(ctx, p.message, msg)
-
 	return nil
 }
