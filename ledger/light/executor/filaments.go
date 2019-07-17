@@ -69,6 +69,8 @@ type FilamentCalculator interface {
 	ResultDuplicate(ctx context.Context, startFrom insolar.PulseNumber, objectID, resultID insolar.ID, result record.Result) (foundResult *record.CompositeFilamentRecord, err error)
 }
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCleaner -o ./ -s _mock.go
+
 type FilamentCleaner interface {
 	Clear(objID insolar.ID)
 }
@@ -584,10 +586,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 }
 
 func (c *FilamentCalculatorDefault) Clear(objID insolar.ID) {
-	cache := c.cache.Get(objID)
-	cache.Lock()
-	cache.Clear()
-	cache.Unlock()
+	c.cache.Delete(objID)
 }
 
 func (c *FilamentCalculatorDefault) checkReason(ctx context.Context, reason insolar.Reference) (bool, error) {
