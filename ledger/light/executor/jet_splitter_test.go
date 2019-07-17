@@ -32,6 +32,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -140,16 +141,9 @@ var cases = []splitCase{
 func TestJetSplitter(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	// prepare initial pulses and jets
-	var initalPulse insolar.PulseNumber = 60000
-	previousPulse, endedPulse, newPulse := initalPulse, initalPulse+1, initalPulse+2
-	initialJets := []insolar.JetID{jet0, jet10, jet11}
-
 	checkCase := func(t *testing.T, sc splitCase) {
 		// real components
 		jetStore := jet.NewStore()
-		err := jetStore.Update(ctx, endedPulse, true, initialJets...)
-		require.NoError(t, err, "jet store updated with initial jets")
 		db := drop.NewStorageMemory()
 		dropAccessor := db
 		dropModifier := db
@@ -171,11 +165,20 @@ func TestJetSplitter(t *testing.T) {
 			return jetStore.All(ctx, pn)
 		}
 
-		for i, jetsConfig := range sc.pulses {
-			delta := insolar.PulseNumber(i)
-			ended, newpulse := endedPulse+delta, newPulse+delta
-			pulseCalc.BackwardsMock.Return(insolar.Pulse{PulseNumber: previousPulse + delta}, nil)
+		var initialPulse insolar.PulseNumber = 60000
+		initialJets := []insolar.JetID{jet0, jet10, jet11}
+		// initialize jet tree
+		err := jetStore.Update(ctx, initialPulse, true, initialJets...)
+		require.NoError(t, err, "jet store updated with initial jets")
 
+		for i, jetsConfig := range sc.pulses {
+			previous := initialPulse + insolar.PulseNumber(i) - 1
+			ended := previous + 1
+			newpulse := ended + 1
+
+			pulseCalc.BackwardsMock.Return(insolar.Pulse{PulseNumber: previous}, nil)
+
+			// jets state before possible split
 			pulseStartedWithJets := jetStore.All(ctx, ended)
 
 			collectionAccessor.ForPulseFunc = func(_ context.Context, jetID insolar.JetID, pn insolar.PulseNumber) []record.Material {
@@ -190,10 +193,9 @@ func TestJetSplitter(t *testing.T) {
 			require.NoError(t, err, "splitter.Do performed")
 
 			for jetID, jConf := range jetsConfig {
-				jetsInEnded := jetStore.All(ctx, ended)
-				require.Truef(t, jetInList(jetsInEnded, jetID),
+				require.Truef(t, jetInList(pulseStartedWithJets, jetID),
 					"jet %v should be in jet-tree's leaves, got %v (+%v pulse)",
-					jetID.DebugString(), jsort(jetsInEnded), i)
+					jetID.DebugString(), jsort(pulseStartedWithJets), i)
 
 				dropThreshold := splitter.getDropThreshold(ctx, jetID, ended)
 				require.Equalf(t, jConf.dropThreshold, dropThreshold,
@@ -201,24 +203,34 @@ func TestJetSplitter(t *testing.T) {
 			}
 
 			var expectJets []insolar.JetID
-			var splitedJets []string
+			var splitJets []string
 			for _, jetID := range pulseStartedWithJets {
 				jConf := jetsConfig[jetID]
 				if jConf.hasSplit {
+
 					left, right := jet.Siblings(jetID)
 					expectJets = append(expectJets, left, right)
-					splitedJets = append(splitedJets, jetID.DebugString())
+					splitJets = append(splitJets, jetID.DebugString())
 					continue
 				}
 				expectJets = append(expectJets, jetID)
 			}
-			jetsInfo := "jets should split " + strings.Join(splitedJets, ", ")
-			if len(splitedJets) == 0 {
+			jetsInfo := "jets should split " + strings.Join(splitJets, ", ")
+			if len(splitJets) == 0 {
 				jetsInfo = "no jets spit"
 			}
 
 			expectMsg := fmt.Sprintf("jet %v should split on +%v pulse", jetsInfo, i)
 			require.Equal(t, jsort(expectJets), jsort(gotJets), expectMsg)
+
+			for _, jetID := range pulseStartedWithJets {
+				jConf := jetsConfig[jetID]
+				block, err := dropAccessor.ForPulse(ctx, jetID, ended)
+				require.NoErrorf(t, err,
+					"should be drop for jet %v, on pulse +%v (%v)", jetID.DebugString(), i, ended)
+				assert.Equalf(t, jConf.hasSplit, block.Split,
+					"drop's split flag check for jet %v on pulse +%v", jetID.DebugString(), i)
+			}
 		}
 	}
 

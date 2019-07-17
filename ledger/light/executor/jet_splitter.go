@@ -157,7 +157,10 @@ func (js *JetSplitterDefault) createDrop(
 		block.SplitThresholdExceeded = threshold + 1
 	}
 	// first return value is split needed
-	return block.SplitThresholdExceeded > js.cfg.ThresholdOverflowCount, js.dropModifier.Set(ctx, block)
+	if block.SplitThresholdExceeded > js.cfg.ThresholdOverflowCount {
+		block.Split = true
+	}
+	return block.Split, js.dropModifier.Set(ctx, block)
 }
 
 func (js *JetSplitterDefault) getPreviousDropThreshold(
