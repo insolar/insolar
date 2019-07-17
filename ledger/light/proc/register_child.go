@@ -20,14 +20,15 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/object"
 )
@@ -36,7 +37,7 @@ type RegisterChild struct {
 	jet     insolar.JetID
 	msg     *message.RegisterChild
 	pulse   insolar.PulseNumber
-	replyTo chan<- bus.Reply
+	message payload.Meta
 
 	Dep struct {
 		IndexLocker   object.IndexLocker
@@ -46,22 +47,27 @@ type RegisterChild struct {
 		JetCoordinator jet.Coordinator
 		RecordModifier object.RecordModifier
 		PCS            insolar.PlatformCryptographyScheme
+		Sender         bus.Sender
 	}
 }
 
-func NewRegisterChild(jet insolar.JetID, msg *message.RegisterChild, pulse insolar.PulseNumber, replyTo chan<- bus.Reply) *RegisterChild {
+func NewRegisterChild(jet insolar.JetID, msg *message.RegisterChild, pulse insolar.PulseNumber, message payload.Meta) *RegisterChild {
 	return &RegisterChild{
 		jet:     jet,
 		msg:     msg,
 		pulse:   pulse,
-		replyTo: replyTo,
+		message: message,
 	}
 }
 
 func (p *RegisterChild) Proceed(ctx context.Context) error {
 	err := p.process(ctx)
 	if err != nil {
-		p.replyTo <- bus.Reply{Err: err}
+		msg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
+		if err != nil {
+			return err
+		}
+		go p.Dep.Sender.Reply(ctx, p.message, msg)
 	}
 	return err
 }
@@ -123,6 +129,7 @@ func (p *RegisterChild) process(ctx context.Context) error {
 		return err
 	}
 
-	p.replyTo <- bus.Reply{Reply: &reply.ID{ID: *child}}
+	msg := bus.ReplyAsMessage(ctx, &reply.ID{ID: *child})
+	go p.Dep.Sender.Reply(ctx, p.message, msg)
 	return nil
 }

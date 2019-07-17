@@ -18,7 +18,6 @@ package proc
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/pkg/errors"
@@ -28,7 +27,6 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -40,7 +38,6 @@ type GetCode struct {
 	Dep struct {
 		RecordAccessor object.RecordAccessor
 		Coordinator    jet.Coordinator
-		BlobAccessor   blob.Accessor
 		Sender         bus.Sender
 		JetFetcher     jet.Fetcher
 	}
@@ -57,18 +54,12 @@ func NewGetCode(msg payload.Meta, codeID insolar.ID, pass bool) *GetCode {
 func (p *GetCode) Proceed(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	sendCode := func(rec record.Material) error {
-		virtual := record.Unwrap(rec.Virtual)
-		code, ok := virtual.(*record.Code)
-		if !ok {
-			return fmt.Errorf("invalid code record %#v", virtual)
-		}
 		buf, err := rec.Marshal()
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal record")
 		}
 		msg, err := payload.NewMessage(&payload.Code{
 			Record: buf,
-			Code:   code.Code,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create message")

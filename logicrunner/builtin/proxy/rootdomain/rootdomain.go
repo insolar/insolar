@@ -1254,6 +1254,93 @@ func (r *RootDomain) AddNewMemberToMapsAsImmutable(publicKey string, burnAddress
 	return nil
 }
 
+// AddNewMemberToPublicKeyMap is proxy generated method
+func (r *RootDomain) AddNewMemberToPublicKeyMap(publicKey string, memberRef insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = publicKey
+	args[1] = memberRef
+
+	var argsSerialized []byte
+
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "AddNewMemberToPublicKeyMap", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	if err != nil {
+		return err
+	}
+
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
+}
+
+// AddNewMemberToPublicKeyMapNoWait is proxy generated method
+func (r *RootDomain) AddNewMemberToPublicKeyMapNoWait(publicKey string, memberRef insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = publicKey
+	args[1] = memberRef
+
+	var argsSerialized []byte
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "AddNewMemberToPublicKeyMap", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// AddNewMemberToPublicKeyMapAsImmutable is proxy generated method
+func (r *RootDomain) AddNewMemberToPublicKeyMapAsImmutable(publicKey string, memberRef insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = publicKey
+	args[1] = memberRef
+
+	var argsSerialized []byte
+
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "AddNewMemberToPublicKeyMap", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	if err != nil {
+		return err
+	}
+
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
+}
+
 // CreateHelloWorld is proxy generated method
 func (r *RootDomain) CreateHelloWorld() (string, error) {
 	var args [0]interface{}

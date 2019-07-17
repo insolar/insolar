@@ -87,7 +87,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	var res *record.CompositeFilamentRecord
 	var objID insolar.ID
 
-	if p.request.GetCallType() == record.CTSaveAsChild || p.request.GetCallType() == record.CTSaveAsDelegate {
+	if p.request.IsCreationRequest() {
 		p.dep.locker.Lock(&p.requestID)
 		defer p.dep.locker.Unlock(&p.requestID)
 
@@ -130,6 +130,6 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to create reply")
 	}
 
-	go p.dep.sender.Reply(ctx, p.message, msg)
+	p.dep.sender.Reply(ctx, p.message, msg)
 	return nil
 }

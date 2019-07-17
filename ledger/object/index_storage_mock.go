@@ -12,6 +12,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	insolar "github.com/insolar/insolar/insolar"
+	record "github.com/insolar/insolar/insolar/record"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,17 +21,17 @@ import (
 type IndexStorageMock struct {
 	t minimock.Tester
 
-	ForIDFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r FilamentIndex, r1 error)
+	ForIDFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r record.Index, r1 error)
 	ForIDCounter    uint64
 	ForIDPreCounter uint64
 	ForIDMock       mIndexStorageMockForID
 
-	ForPulseFunc       func(p context.Context, p1 insolar.PulseNumber) (r []FilamentIndex)
+	ForPulseFunc       func(p context.Context, p1 insolar.PulseNumber) (r []record.Index)
 	ForPulseCounter    uint64
 	ForPulsePreCounter uint64
 	ForPulseMock       mIndexStorageMockForPulse
 
-	SetIndexFunc       func(p context.Context, p1 insolar.PulseNumber, p2 FilamentIndex) (r error)
+	SetIndexFunc       func(p context.Context, p1 insolar.PulseNumber, p2 record.Index) (r error)
 	SetIndexCounter    uint64
 	SetIndexPreCounter uint64
 	SetIndexMock       mIndexStorageMockSetIndex
@@ -69,7 +70,7 @@ type IndexStorageMockForIDInput struct {
 }
 
 type IndexStorageMockForIDResult struct {
-	r  FilamentIndex
+	r  record.Index
 	r1 error
 }
 
@@ -86,7 +87,7 @@ func (m *mIndexStorageMockForID) Expect(p context.Context, p1 insolar.PulseNumbe
 }
 
 //Return specifies results of invocation of IndexStorage.ForID
-func (m *mIndexStorageMockForID) Return(r FilamentIndex, r1 error) *IndexStorageMock {
+func (m *mIndexStorageMockForID) Return(r record.Index, r1 error) *IndexStorageMock {
 	m.mock.ForIDFunc = nil
 	m.expectationSeries = nil
 
@@ -108,12 +109,12 @@ func (m *mIndexStorageMockForID) ExpectOnce(p context.Context, p1 insolar.PulseN
 	return expectation
 }
 
-func (e *IndexStorageMockForIDExpectation) Return(r FilamentIndex, r1 error) {
+func (e *IndexStorageMockForIDExpectation) Return(r record.Index, r1 error) {
 	e.result = &IndexStorageMockForIDResult{r, r1}
 }
 
 //Set uses given function f as a mock of IndexStorage.ForID method
-func (m *mIndexStorageMockForID) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r FilamentIndex, r1 error)) *IndexStorageMock {
+func (m *mIndexStorageMockForID) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r record.Index, r1 error)) *IndexStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -122,7 +123,7 @@ func (m *mIndexStorageMockForID) Set(f func(p context.Context, p1 insolar.PulseN
 }
 
 //ForID implements github.com/insolar/insolar/ledger/object.IndexStorage interface
-func (m *IndexStorageMock) ForID(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r FilamentIndex, r1 error) {
+func (m *IndexStorageMock) ForID(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r record.Index, r1 error) {
 	counter := atomic.AddUint64(&m.ForIDPreCounter, 1)
 	defer atomic.AddUint64(&m.ForIDCounter, 1)
 
@@ -220,7 +221,7 @@ type IndexStorageMockForPulseInput struct {
 }
 
 type IndexStorageMockForPulseResult struct {
-	r []FilamentIndex
+	r []record.Index
 }
 
 //Expect specifies that invocation of IndexStorage.ForPulse is expected from 1 to Infinity times
@@ -236,7 +237,7 @@ func (m *mIndexStorageMockForPulse) Expect(p context.Context, p1 insolar.PulseNu
 }
 
 //Return specifies results of invocation of IndexStorage.ForPulse
-func (m *mIndexStorageMockForPulse) Return(r []FilamentIndex) *IndexStorageMock {
+func (m *mIndexStorageMockForPulse) Return(r []record.Index) *IndexStorageMock {
 	m.mock.ForPulseFunc = nil
 	m.expectationSeries = nil
 
@@ -258,12 +259,12 @@ func (m *mIndexStorageMockForPulse) ExpectOnce(p context.Context, p1 insolar.Pul
 	return expectation
 }
 
-func (e *IndexStorageMockForPulseExpectation) Return(r []FilamentIndex) {
+func (e *IndexStorageMockForPulseExpectation) Return(r []record.Index) {
 	e.result = &IndexStorageMockForPulseResult{r}
 }
 
 //Set uses given function f as a mock of IndexStorage.ForPulse method
-func (m *mIndexStorageMockForPulse) Set(f func(p context.Context, p1 insolar.PulseNumber) (r []FilamentIndex)) *IndexStorageMock {
+func (m *mIndexStorageMockForPulse) Set(f func(p context.Context, p1 insolar.PulseNumber) (r []record.Index)) *IndexStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -272,7 +273,7 @@ func (m *mIndexStorageMockForPulse) Set(f func(p context.Context, p1 insolar.Pul
 }
 
 //ForPulse implements github.com/insolar/insolar/ledger/object.IndexStorage interface
-func (m *IndexStorageMock) ForPulse(p context.Context, p1 insolar.PulseNumber) (r []FilamentIndex) {
+func (m *IndexStorageMock) ForPulse(p context.Context, p1 insolar.PulseNumber) (r []record.Index) {
 	counter := atomic.AddUint64(&m.ForPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.ForPulseCounter, 1)
 
@@ -365,7 +366,7 @@ type IndexStorageMockSetIndexExpectation struct {
 type IndexStorageMockSetIndexInput struct {
 	p  context.Context
 	p1 insolar.PulseNumber
-	p2 FilamentIndex
+	p2 record.Index
 }
 
 type IndexStorageMockSetIndexResult struct {
@@ -373,7 +374,7 @@ type IndexStorageMockSetIndexResult struct {
 }
 
 //Expect specifies that invocation of IndexStorage.SetIndex is expected from 1 to Infinity times
-func (m *mIndexStorageMockSetIndex) Expect(p context.Context, p1 insolar.PulseNumber, p2 FilamentIndex) *mIndexStorageMockSetIndex {
+func (m *mIndexStorageMockSetIndex) Expect(p context.Context, p1 insolar.PulseNumber, p2 record.Index) *mIndexStorageMockSetIndex {
 	m.mock.SetIndexFunc = nil
 	m.expectationSeries = nil
 
@@ -397,7 +398,7 @@ func (m *mIndexStorageMockSetIndex) Return(r error) *IndexStorageMock {
 }
 
 //ExpectOnce specifies that invocation of IndexStorage.SetIndex is expected once
-func (m *mIndexStorageMockSetIndex) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 FilamentIndex) *IndexStorageMockSetIndexExpectation {
+func (m *mIndexStorageMockSetIndex) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 record.Index) *IndexStorageMockSetIndexExpectation {
 	m.mock.SetIndexFunc = nil
 	m.mainExpectation = nil
 
@@ -412,7 +413,7 @@ func (e *IndexStorageMockSetIndexExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of IndexStorage.SetIndex method
-func (m *mIndexStorageMockSetIndex) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 FilamentIndex) (r error)) *IndexStorageMock {
+func (m *mIndexStorageMockSetIndex) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 record.Index) (r error)) *IndexStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -421,7 +422,7 @@ func (m *mIndexStorageMockSetIndex) Set(f func(p context.Context, p1 insolar.Pul
 }
 
 //SetIndex implements github.com/insolar/insolar/ledger/object.IndexStorage interface
-func (m *IndexStorageMock) SetIndex(p context.Context, p1 insolar.PulseNumber, p2 FilamentIndex) (r error) {
+func (m *IndexStorageMock) SetIndex(p context.Context, p1 insolar.PulseNumber, p2 record.Index) (r error) {
 	counter := atomic.AddUint64(&m.SetIndexPreCounter, 1)
 	defer atomic.AddUint64(&m.SetIndexCounter, 1)
 

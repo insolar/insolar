@@ -75,12 +75,26 @@ func (rd *RootDomain) GetBurnAddress() (string, error) {
 
 // GetMemberByPublicKey gets member reference by public key.
 func (rd RootDomain) GetMemberByPublicKey(publicKey string) (insolar.Reference, error) {
-	return rd.PublicKeyMap[trimPublicKey(publicKey)], nil
+	var result insolar.Reference
+	var ok bool
+
+	if result, ok = rd.PublicKeyMap[trimPublicKey(publicKey)]; !ok {
+		return insolar.Reference{}, fmt.Errorf("member for this public key does not exist")
+	}
+
+	return result, nil
 }
 
 // GetMemberByBurnAddress gets member reference by burn address.
 func (rd RootDomain) GetMemberByBurnAddress(burnAddress string) (insolar.Reference, error) {
-	return rd.BurnAddressMap[trimBurnAddress(burnAddress)], nil
+	var result insolar.Reference
+	var ok bool
+
+	if result, ok = rd.BurnAddressMap[trimBurnAddress(burnAddress)]; !ok {
+		return insolar.Reference{}, fmt.Errorf("member for this migration address does not exist")
+	}
+
+	return result, nil
 }
 
 // GetCostCenter gets cost center reference.
@@ -132,15 +146,28 @@ func (rd *RootDomain) AddBurnAddress(burnAddress string) error {
 
 // AddNewMemberToMaps adds new member to PublicKeyMap and BurnAddressMap.
 func (rd *RootDomain) AddNewMemberToMaps(publicKey string, burnAddress string, memberRef insolar.Reference) error {
-	if _, ok := rd.PublicKeyMap[trimPublicKey(publicKey)]; ok {
+	trimPublicKey := trimPublicKey(publicKey)
+	if _, ok := rd.PublicKeyMap[trimPublicKey]; ok {
 		return fmt.Errorf("member for this publicKey already exist")
 	}
-	rd.PublicKeyMap[trimPublicKey(publicKey)] = memberRef
+	rd.PublicKeyMap[trimPublicKey] = memberRef
 
-	if _, ok := rd.PublicKeyMap[trimPublicKey(burnAddress)]; ok {
+	trimBurnAddress := trimBurnAddress(burnAddress)
+	if _, ok := rd.BurnAddressMap[trimBurnAddress]; ok {
 		return fmt.Errorf("member for this burnAddress already exist")
 	}
-	rd.BurnAddressMap[trimBurnAddress(burnAddress)] = memberRef
+	rd.BurnAddressMap[trimBurnAddress] = memberRef
+
+	return nil
+}
+
+// AddNewMemberToPublicKeyMap adds new member to PublicKeyMap.
+func (rd *RootDomain) AddNewMemberToPublicKeyMap(publicKey string, memberRef insolar.Reference) error {
+	trimPublicKey := trimPublicKey(publicKey)
+	if _, ok := rd.PublicKeyMap[trimPublicKey]; ok {
+		return fmt.Errorf("member for this publicKey already exist")
+	}
+	rd.PublicKeyMap[trimPublicKey] = memberRef
 
 	return nil
 }

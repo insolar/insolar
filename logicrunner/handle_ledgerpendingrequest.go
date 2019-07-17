@@ -40,16 +40,15 @@ func (p *GetLedgerPendingRequest) Present(ctx context.Context, f flow.Flow) erro
 	lr := p.dep.lr
 	ref := Ref{}.FromSlice(p.Message.Payload)
 
-	es, broker := lr.StateStorage.GetExecutionState(ref)
-	if es == nil {
+	broker := lr.StateStorage.GetExecutionState(ref)
+	if broker == nil {
 		return nil
 	}
 
-	es.getLedgerPendingMutex.Lock()
-	defer es.getLedgerPendingMutex.Unlock()
+	broker.executionState.getLedgerPendingMutex.Lock()
+	defer broker.executionState.getLedgerPendingMutex.Unlock()
 
 	proc := &UnsafeGetLedgerPendingRequest{
-		es:         es,
 		broker:     broker,
 		dep:        p.dep,
 		hasPending: false,
@@ -71,24 +70,22 @@ func (p *GetLedgerPendingRequest) Present(ctx context.Context, f flow.Flow) erro
 
 type UnsafeGetLedgerPendingRequest struct {
 	dep        *Dependencies
-	es         *ExecutionState
 	broker     *ExecutionBroker
 	hasPending bool
 }
 
 func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
-	es := u.es
 	lr := u.dep.lr
 	broker := u.broker
 
-	es.Lock()
-	if broker.HasLedgerRequest(ctx) != nil || !es.LedgerHasMoreRequests {
-		es.Unlock()
+	broker.executionState.Lock()
+	if broker.HasLedgerRequest(ctx) != nil || !broker.executionState.LedgerHasMoreRequests {
+		broker.executionState.Unlock()
 		return nil
 	}
-	es.Unlock()
+	broker.executionState.Unlock()
 
-	id := *es.Ref.Record()
+	id := *broker.Ref.Record()
 
 	requestRef, request, err := lr.ArtifactManager.GetPendingRequest(ctx, id)
 	if err != nil {
@@ -96,8 +93,8 @@ func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 			inslogger.FromContext(ctx).Debug("GetPendingRequest failed with error")
 			return nil
 		}
-		es.Lock()
-		defer es.Unlock()
+		broker.executionState.Lock()
+		defer broker.executionState.Unlock()
 
 		select {
 		case <-ctx.Done():
@@ -106,11 +103,11 @@ func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 		default:
 		}
 
-		es.LedgerHasMoreRequests = false
+		broker.executionState.LedgerHasMoreRequests = false
 		return nil
 	}
-	es.Lock()
-	defer es.Unlock()
+	broker.executionState.Lock()
+	defer broker.executionState.Unlock()
 
 	pulse := lr.pulse(ctx).PulseNumber
 	authorized, err := lr.JetCoordinator.IsAuthorized(
@@ -134,9 +131,9 @@ func (u *UnsafeGetLedgerPendingRequest) Proceed(ctx context.Context) error {
 	}
 
 	u.hasPending = true
-	es.LedgerHasMoreRequests = true
+	broker.executionState.LedgerHasMoreRequests = true
 
-	t := NewTranscript(ctx, requestRef, *request)
+	t := NewTranscript(ctx, *requestRef, *request)
 	t.FromLedger = true
 	broker.Prepend(ctx, true, t)
 
