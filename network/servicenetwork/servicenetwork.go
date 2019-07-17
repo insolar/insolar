@@ -109,10 +109,11 @@ type ServiceNetwork struct {
 	BaseGateway  *gateway.Base
 	operableFunc insolar.NetworkOperableCallback
 
-	pulseHandler       *adapters.PulseHandler
-	datagramHandler    *adapters.DatagramHandler
-	datagramTransport  transport.DatagramTransport
-	consensusInstaller consensus.Installer
+	pulseHandler        *adapters.PulseHandler
+	datagramHandler     *adapters.DatagramHandler
+	datagramTransport   transport.DatagramTransport
+	consensusInstaller  consensus.Installer
+	consensusController consensus.Controller
 
 	lock sync.Mutex
 
@@ -162,7 +163,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	cert := n.CertificateManager.GetCertificate()
 
 	n.BaseGateway = &gateway.Base{}
-	n.Gatewayer = gateway.NewGatewayer(n.BaseGateway.NewGateway(insolar.NoNetworkState), func(ctx context.Context, isNetworkOperable bool) {
+	n.Gatewayer = gateway.NewGatewayer(n.BaseGateway.NewGateway(ctx, insolar.NoNetworkState), func(ctx context.Context, isNetworkOperable bool) {
 		if n.operableFunc != nil {
 			n.operableFunc(ctx, isNetworkOperable)
 		}
@@ -226,8 +227,6 @@ func (n *ServiceNetwork) SetOnStateUpdate(f func()) {
 }
 
 func (n *ServiceNetwork) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
-	inslogger.FromContext(ctx).Info(">>>>>> Update state called")
-
 	err := n.NodeKeeper.Sync(ctx, nodes, nil)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(err)
@@ -241,16 +240,13 @@ func (n *ServiceNetwork) UpdateState(ctx context.Context, pulseNumber insolar.Pu
 
 // Start implements component.Starter
 func (n *ServiceNetwork) Start(ctx context.Context) error {
-
-	logger := inslogger.FromContext(ctx)
-	logger.Info("Starting network component manager...")
 	err := n.cm.Start(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to start component manager")
 	}
 
 	n.Gatewayer.Gateway().Run(ctx)
-	n.consensusInstaller.Install(n.pulseHandler, n.datagramHandler)
+	n.consensusController = n.consensusInstaller.Install(n.pulseHandler, n.datagramHandler)
 
 	n.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
 
@@ -279,7 +275,6 @@ func (n *ServiceNetwork) GracefulStop(ctx context.Context) error {
 
 // Stop implements insolar.Component
 func (n *ServiceNetwork) Stop(ctx context.Context) error {
-	inslogger.FromContext(ctx).Info("Stopping network component manager...")
 	return n.cm.Stop(ctx)
 }
 

@@ -78,7 +78,6 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/nodenetwork"
@@ -89,6 +88,10 @@ import (
 
 var (
 	testNetworkPort uint32 = 10010
+)
+
+var (
+	suiteLogger = inslogger.FromContext(initLogger(context.Background(), insolar.ErrorLevel))
 )
 
 const (
@@ -115,9 +118,9 @@ type fixture struct {
 
 const cacheDir = "network_cache/"
 
-func initLogger(ctx context.Context) context.Context {
+func initLogger(ctx context.Context, level insolar.LogLevel) context.Context {
 	logger := inslogger.FromContext(ctx).WithCaller(false)
-	logger, _ = logger.WithLevelNumber(insolar.InfoLevel)
+	logger, _ = logger.WithLevelNumber(level)
 	logger, _ = logger.WithFormat(insolar.TextFormat)
 	ctx = inslogger.SetLogger(ctx, logger)
 	return ctx
@@ -125,7 +128,7 @@ func initLogger(ctx context.Context) context.Context {
 
 func newFixture(t *testing.T) *fixture {
 	return &fixture{
-		ctx:            initLogger(inslogger.TestContext(t)),
+		ctx:            initLogger(inslogger.TestContext(t), insolar.InfoLevel),
 		bootstrapNodes: make([]*networkNode, 0),
 		networkNodes:   make([]*networkNode, 0),
 	}
@@ -176,7 +179,7 @@ func (s *consensusSuite) SetupTest() {
 	s.fixture().pulsar, err = NewTestPulsar(reqTimeoutMs, pulseDelta)
 	s.Require().NoError(err)
 
-	log.Info("SetupTest")
+	suiteLogger.Info("SetupTest")
 
 	for i := 0; i < s.bootstrapCount; i++ {
 		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, s.newNetworkNode(fmt.Sprintf("bootstrap_%d", i)))
@@ -191,7 +194,7 @@ func (s *consensusSuite) SetupTest() {
 		pulseReceivers = append(pulseReceivers, n.host)
 	}
 
-	log.Info("Setup bootstrap nodes")
+	suiteLogger.Info("Setup bootstrap nodes")
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
 	if UseFakeBootstrap {
 
@@ -208,7 +211,7 @@ func (s *consensusSuite) SetupTest() {
 		}
 		for _, n := range s.fixture().bootstrapNodes {
 			n.serviceNetwork.NodeKeeper.SetInitialSnapshot(bnodes)
-			n.serviceNetwork.Gatewayer.SwitchState(insolar.CompleteNetworkState)
+			n.serviceNetwork.Gatewayer.SwitchState(s.fixture().ctx, insolar.CompleteNetworkState)
 			pulseReceivers = append(pulseReceivers, n.host)
 		}
 	}
@@ -235,7 +238,7 @@ func (s *consensusSuite) SetupTest() {
 	s.Require().Equal(len(s.fixture().bootstrapNodes), len(activeNodes))
 
 	if len(s.fixture().networkNodes) > 0 {
-		log.Info("Setup network nodes")
+		suiteLogger.Info("Setup network nodes")
 		s.SetupNodesNetwork(s.fixture().networkNodes)
 		s.StartNodesNetwork(s.fixture().networkNodes)
 
@@ -248,9 +251,8 @@ func (s *consensusSuite) SetupTest() {
 		s.Require().Equal(s.getNodesCount(), len(activeNodes1))
 		s.Require().Equal(s.getNodesCount(), len(activeNodes2))
 	}
-	fmt.Println("=================== SetupTest() Done")
-	log.Info("Start test pulsar")
-	err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
+	suiteLogger.Info("Start test pulsar")
+	err = s.fixture().pulsar.Start(initLogger(s.fixture().ctx, insolar.ErrorLevel), pulseReceivers)
 	s.Require().NoError(err)
 }
 
@@ -274,7 +276,7 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 		results <- err
 	}
 
-	log.Info("Init nodes")
+	suiteLogger.Info("Init nodes")
 	for _, node := range nodes {
 		go initNode(node)
 	}
@@ -282,7 +284,7 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 }
 
 func (s *testSuite) StartNodesNetwork(nodes []*networkNode) {
-	log.Info("Start nodes")
+	suiteLogger.Info("Start nodes")
 
 	results := make(chan error, len(nodes))
 	startNode := func(node *networkNode) {
@@ -299,18 +301,18 @@ func (s *testSuite) StartNodesNetwork(nodes []*networkNode) {
 
 // TearDownSuite shutdowns all nodes in network, calls once after all tests in suite finished
 func (s *consensusSuite) TearDownTest() {
-	log.Info("=================== TearDownTest()")
-	log.Info("Stop network nodes")
+	suiteLogger.Info("=================== TearDownTest()")
+	suiteLogger.Info("Stop network nodes")
 	for _, n := range s.fixture().networkNodes {
 		err := n.componentManager.Stop(n.ctx)
 		s.NoError(err)
 	}
-	log.Info("Stop bootstrap nodes")
+	suiteLogger.Info("Stop bootstrap nodes")
 	for _, n := range s.fixture().bootstrapNodes {
 		err := n.componentManager.Stop(n.ctx)
 		s.NoError(err)
 	}
-	log.Info("Stop test pulsar")
+	suiteLogger.Info("Stop test pulsar")
 	s.fixture().pulsar.Stop(s.fixture().ctx)
 }
 
@@ -452,7 +454,6 @@ func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManag
 	// dump cert and read it again from json for correct private files initialization
 	jsonCert, err := cert.Dump()
 	s.Require().NoError(err)
-	log.Infof("cert: %s", jsonCert)
 
 	cert, err = certificate.ReadCertificateFromReader(pubKey, proc, strings.NewReader(jsonCert))
 	s.Require().NoError(err)
@@ -551,7 +552,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	terminationHandler := testutils.NewTerminationHandlerMock(t)
 	terminationHandler.LeaveFunc = func(p context.Context, p1 insolar.PulseNumber) {}
 	terminationHandler.OnLeaveApprovedFunc = func(p context.Context) {}
-	terminationHandler.AbortFunc = func(reason string) { log.Error(reason) }
+	terminationHandler.AbortFunc = func(reason string) { suiteLogger.Error(reason) }
 
 	keyProc := platformpolicy.NewKeyProcessor()
 	pubMock := &PublisherMock{}

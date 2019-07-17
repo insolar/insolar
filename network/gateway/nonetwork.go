@@ -84,7 +84,7 @@ func (g *NoNetwork) Run(ctx context.Context) {
 	if len(discoveryNodes) == 0 {
 		g.zeroBootstrap(ctx)
 		// create complete network
-		g.Gatewayer.SwitchState(insolar.CompleteNetworkState)
+		g.Gatewayer.SwitchState(ctx, insolar.CompleteNetworkState)
 		return
 	}
 
@@ -92,17 +92,17 @@ func (g *NoNetwork) Run(ctx context.Context) {
 
 	// run bootstrap
 	if !network.OriginIsDiscovery(cert) {
-		g.Gatewayer.SwitchState(insolar.JoinerBootstrap)
+		g.Gatewayer.SwitchState(ctx, insolar.JoinerBootstrap)
 		return
 	}
 
 	p, err := g.PulseAccessor.Latest(ctx)
 	if err == nil && !insolar.IsEphemeralPulse(&p) {
-		g.Gatewayer.SwitchState(insolar.JoinerBootstrap)
+		g.Gatewayer.SwitchState(ctx, insolar.JoinerBootstrap)
 		return
 	}
 
-	g.Gatewayer.SwitchState(insolar.DiscoveryBootstrap)
+	g.Gatewayer.SwitchState(ctx, insolar.DiscoveryBootstrap)
 }
 
 func (g *NoNetwork) GetState() insolar.NetworkState {

@@ -75,7 +75,7 @@ func (g *WaitMinRoles) OnPulse(ctx context.Context, pu insolar.Pulse) error {
 	// TODO: check min roles and switch state
 
 	if g.Rules.CheckMinRole() {
-		g.Gatewayer.SwitchState(insolar.CompleteNetworkState)
+		g.Gatewayer.SwitchState(ctx, insolar.CompleteNetworkState)
 	}
 
 	return g.Base.OnPulse(ctx, pu)

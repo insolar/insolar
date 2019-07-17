@@ -52,6 +52,7 @@ package gateway
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
@@ -76,7 +77,7 @@ func (g *JoinerBootstrap) Run(ctx context.Context) {
 	permit, err := g.authorize(ctx)
 	if err != nil {
 		logger.Error(err.Error())
-		g.Gatewayer.SwitchState(insolar.NoNetworkState)
+		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState)
 		return
 	}
 
@@ -93,13 +94,13 @@ func (g *JoinerBootstrap) Run(ctx context.Context) {
 	resp, err := g.BootstrapRequester.Bootstrap(ctx, permit, g.joinClaim, &pulse)
 	if err != nil {
 		logger.Error(err.Error())
-		g.Gatewayer.SwitchState(insolar.NoNetworkState)
+		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState)
 		return
 	}
 
 	//  ConsensusWaiting, ETA
 	g.bootstrapETA = insolar.PulseNumber(resp.ETA)
-	g.Gatewayer.SwitchState(insolar.WaitConsensus)
+	g.Gatewayer.SwitchState(ctx, insolar.WaitConsensus)
 }
 
 func (g *JoinerBootstrap) GetState() insolar.NetworkState {

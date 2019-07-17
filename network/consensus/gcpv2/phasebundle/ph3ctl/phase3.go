@@ -444,7 +444,7 @@ outer:
 
 	if log.Is(insolar.DebugLevel) {
 		tblHeader := fmt.Sprintf("Consensus Node View: %v", c.R.GetSelfNodeID())
-		log.Warn(statTbl.TableFmt(tblHeader, nodeset.FmtConsensusStat))
+		log.Debug(statTbl.TableFmt(tblHeader, nodeset.FmtConsensusStat))
 	}
 
 	if consensusSelection == nil {

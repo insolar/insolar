@@ -53,6 +53,7 @@ package gateway
 import (
 	"context"
 	"errors"
+
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
@@ -76,7 +77,7 @@ func (g *DiscoveryBootstrap) Run(ctx context.Context) {
 	authorizeRes, err := g.authorize(ctx)
 	if err != nil {
 		// log warn
-		g.Gatewayer.SwitchState(insolar.NoNetworkState)
+		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState)
 		return
 	}
 
@@ -101,7 +102,7 @@ func (g *DiscoveryBootstrap) Run(ctx context.Context) {
 
 	//  ConsensusWaiting, ETA
 	g.bootstrapETA = insolar.PulseNumber(resp.ETA)
-	g.Gatewayer.SwitchState(insolar.WaitConsensus)
+	g.Gatewayer.SwitchState(ctx, insolar.WaitConsensus)
 	return
 
 	// Authorize(utc) permit, check version

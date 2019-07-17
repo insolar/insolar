@@ -61,8 +61,7 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/log" // TODO remove before merge
+	"github.com/insolar/insolar/instrumentation/inslogger" // TODO remove before merge
 	"github.com/insolar/insolar/network/gateway/bootstrap"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
@@ -100,8 +99,8 @@ type Base struct {
 }
 
 // NewGateway creates new gateway on top of existing
-func (g *Base) NewGateway(state insolar.NetworkState) network.Gateway {
-	log.Infof("NewGateway %s", state.String())
+func (g *Base) NewGateway(ctx context.Context, state insolar.NetworkState) network.Gateway {
+	inslogger.FromContext(ctx).Infof("NewGateway %s", state.String())
 	switch state {
 	case insolar.NoNetworkState:
 		g.Self = newNoNetwork(g)

@@ -90,7 +90,7 @@ func TestSwitch(t *testing.T) {
 	ge.Run(ctx)
 
 	gatewayer.GatewayFunc = func() (r network.Gateway) { return ge }
-	gatewayer.SwitchStateFunc = func(s insolar.NetworkState) { ge = ge.NewGateway(s) }
+	gatewayer.SwitchStateFunc = func(ctx context.Context, s insolar.NetworkState) { ge = ge.NewGateway(ctx, s) }
 	gilreleased := false
 
 	ge.OnPulse(ctx, insolar.Pulse{})
@@ -101,7 +101,7 @@ func TestSwitch(t *testing.T) {
 
 	for _, state := range []insolar.NetworkState{insolar.NoNetworkState,
 		insolar.JoinerBootstrap, insolar.DiscoveryBootstrap, insolar.CompleteNetworkState} {
-		ge = ge.NewGateway(state)
+		ge = ge.NewGateway(ctx, state)
 		require.Equal(t, state, ge.GetState())
 		ge.Run(ctx)
 		au := ge.Auther()
@@ -145,7 +145,7 @@ func TestDumbComplete_GetCert(t *testing.T) {
 	ge.Run(ctx)
 
 	gatewayer.GatewayFunc = func() (r network.Gateway) { return ge }
-	gatewayer.SwitchStateFunc = func(s insolar.NetworkState) { ge = ge.NewGateway(s) }
+	gatewayer.SwitchStateFunc = func(ctx context.Context, s insolar.NetworkState) { ge = ge.NewGateway(ctx, s) }
 	gilreleased := false
 
 	ge.OnPulse(ctx, insolar.Pulse{})

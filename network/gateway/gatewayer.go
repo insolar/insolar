@@ -55,7 +55,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 )
 
@@ -76,23 +76,23 @@ func (n *gatewayer) Gateway() network.Gateway {
 	return n.gateway
 }
 
-func (n *gatewayer) SwitchState(state insolar.NetworkState) {
+func (n *gatewayer) SwitchState(ctx context.Context, state insolar.NetworkState) {
 	n.gatewayMu.Lock()
 
 	// todo: check transition rules here
 	if n.gateway.GetState() == state {
-		log.Warn("Trying to set gateway to the same state")
+		inslogger.FromContext(ctx).Warn("Trying to set gateway to the same state")
 		n.gatewayMu.Unlock()
 		return
 	}
 
 	// todo: old gateway stop if needed
 
-	n.gateway = n.gateway.NewGateway(state)
+	n.gateway = n.gateway.NewGateway(ctx, state)
 	n.operableFunc(context.Background(), !n.gateway.NeedLockMessageBus())
 	n.gatewayMu.Unlock()
 
-	go n.gateway.Run(context.Background())
+	go n.gateway.Run(ctx)
 }
 
 func (n *gatewayer) GetState() insolar.NetworkState {

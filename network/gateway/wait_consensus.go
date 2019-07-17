@@ -81,7 +81,7 @@ func (g *WaitConsensus) OnPulse(ctx context.Context, pu insolar.Pulse) error {
 	n := g.NodeKeeper.GetAccessor().GetActiveNode(g.NodeKeeper.GetOrigin().ID())
 	if n != nil {
 		// todo: check majority
-		g.Gatewayer.SwitchState(insolar.WaitMinRoles)
+		g.Gatewayer.SwitchState(ctx, insolar.WaitMinRoles)
 	}
 
 	// check ETA

@@ -6,6 +6,7 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "Gatewayer" can be found in github.com/insolar/insolar/network
 */
 import (
+	context "context"
 	"sync/atomic"
 	"time"
 
@@ -25,7 +26,7 @@ type GatewayerMock struct {
 	GatewayPreCounter uint64
 	GatewayMock       mGatewayerMockGateway
 
-	SwitchStateFunc       func(p insolar.NetworkState)
+	SwitchStateFunc       func(p context.Context, p1 insolar.NetworkState)
 	SwitchStateCounter    uint64
 	SwitchStatePreCounter uint64
 	SwitchStateMock       mGatewayerMockSwitchState
@@ -190,18 +191,19 @@ type GatewayerMockSwitchStateExpectation struct {
 }
 
 type GatewayerMockSwitchStateInput struct {
-	p insolar.NetworkState
+	p  context.Context
+	p1 insolar.NetworkState
 }
 
 //Expect specifies that invocation of Gatewayer.SwitchState is expected from 1 to Infinity times
-func (m *mGatewayerMockSwitchState) Expect(p insolar.NetworkState) *mGatewayerMockSwitchState {
+func (m *mGatewayerMockSwitchState) Expect(p context.Context, p1 insolar.NetworkState) *mGatewayerMockSwitchState {
 	m.mock.SwitchStateFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &GatewayerMockSwitchStateExpectation{}
 	}
-	m.mainExpectation.input = &GatewayerMockSwitchStateInput{p}
+	m.mainExpectation.input = &GatewayerMockSwitchStateInput{p, p1}
 	return m
 }
 
@@ -218,18 +220,18 @@ func (m *mGatewayerMockSwitchState) Return() *GatewayerMock {
 }
 
 //ExpectOnce specifies that invocation of Gatewayer.SwitchState is expected once
-func (m *mGatewayerMockSwitchState) ExpectOnce(p insolar.NetworkState) *GatewayerMockSwitchStateExpectation {
+func (m *mGatewayerMockSwitchState) ExpectOnce(p context.Context, p1 insolar.NetworkState) *GatewayerMockSwitchStateExpectation {
 	m.mock.SwitchStateFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &GatewayerMockSwitchStateExpectation{}
-	expectation.input = &GatewayerMockSwitchStateInput{p}
+	expectation.input = &GatewayerMockSwitchStateInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
 //Set uses given function f as a mock of Gatewayer.SwitchState method
-func (m *mGatewayerMockSwitchState) Set(f func(p insolar.NetworkState)) *GatewayerMock {
+func (m *mGatewayerMockSwitchState) Set(f func(p context.Context, p1 insolar.NetworkState)) *GatewayerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -238,18 +240,18 @@ func (m *mGatewayerMockSwitchState) Set(f func(p insolar.NetworkState)) *Gateway
 }
 
 //SwitchState implements github.com/insolar/insolar/network.Gatewayer interface
-func (m *GatewayerMock) SwitchState(p insolar.NetworkState) {
+func (m *GatewayerMock) SwitchState(p context.Context, p1 insolar.NetworkState) {
 	counter := atomic.AddUint64(&m.SwitchStatePreCounter, 1)
 	defer atomic.AddUint64(&m.SwitchStateCounter, 1)
 
 	if len(m.SwitchStateMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.SwitchStateMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to GatewayerMock.SwitchState. %v", p)
+			m.t.Fatalf("Unexpected call to GatewayerMock.SwitchState. %v %v", p, p1)
 			return
 		}
 
 		input := m.SwitchStateMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, GatewayerMockSwitchStateInput{p}, "Gatewayer.SwitchState got unexpected parameters")
+		testify_assert.Equal(m.t, *input, GatewayerMockSwitchStateInput{p, p1}, "Gatewayer.SwitchState got unexpected parameters")
 
 		return
 	}
@@ -258,18 +260,18 @@ func (m *GatewayerMock) SwitchState(p insolar.NetworkState) {
 
 		input := m.SwitchStateMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, GatewayerMockSwitchStateInput{p}, "Gatewayer.SwitchState got unexpected parameters")
+			testify_assert.Equal(m.t, *input, GatewayerMockSwitchStateInput{p, p1}, "Gatewayer.SwitchState got unexpected parameters")
 		}
 
 		return
 	}
 
 	if m.SwitchStateFunc == nil {
-		m.t.Fatalf("Unexpected call to GatewayerMock.SwitchState. %v", p)
+		m.t.Fatalf("Unexpected call to GatewayerMock.SwitchState. %v %v", p, p1)
 		return
 	}
 
-	m.SwitchStateFunc(p)
+	m.SwitchStateFunc(p, p1)
 }
 
 //SwitchStateMinimockCounter returns a count of GatewayerMock.SwitchStateFunc invocations

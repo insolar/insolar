@@ -187,7 +187,7 @@ func TestComplete_GetCert(t *testing.T) {
 		CryptographyService: cs,
 		PulseManager:        pm,
 	})
-	ge = ge.NewGateway(insolar.CompleteNetworkState)
+	ge = ge.NewGateway(context.Background(), insolar.CompleteNetworkState)
 	ctx := context.Background()
 	result, err := ge.Auther().GetCert(ctx, &nodeRef)
 	require.NoError(t, err)
@@ -234,7 +234,7 @@ func TestComplete_handler(t *testing.T) {
 		CryptographyService: cs,
 		PulseManager:        pm,
 	})
-	ge = ge.NewGateway(insolar.CompleteNetworkState)
+	ge = ge.NewGateway(context.Background(), insolar.CompleteNetworkState)
 	ctx := context.Background()
 
 	p := packet.NewReceivedPacket(packet.NewPacket(nil, nil, types.SignCert, 1), nil)

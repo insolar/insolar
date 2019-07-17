@@ -239,7 +239,7 @@ type Mutator interface {
 // Gatewayer is a network which can change it's Gateway
 type Gatewayer interface {
 	Gateway() Gateway
-	SwitchState(state insolar.NetworkState)
+	SwitchState(ctx context.Context, state insolar.NetworkState)
 }
 
 // Gateway responds for whole network state
@@ -247,7 +247,7 @@ type Gateway interface {
 	Run(context.Context)
 	GetState() insolar.NetworkState
 	OnPulse(context.Context, insolar.Pulse) error
-	NewGateway(insolar.NetworkState) Gateway
+	NewGateway(context.Context, insolar.NetworkState) Gateway
 	Auther() Auther
 	NeedLockMessageBus() bool
 	Bootstrapper() Bootstrapper
