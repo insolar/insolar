@@ -111,7 +111,7 @@ func (m *HotSenderDefault) SendHot(
 	defer span.End()
 	logger := inslogger.FromContext(ctx)
 
-	byJet, err := m.filterAndGroupIndexes(ctx, currentPulse, newPulse)
+	idxByJet, err := m.filterAndGroupIndexes(ctx, currentPulse, newPulse)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get filament indexes for %v pulse", newPulse)
 	}
@@ -129,7 +129,7 @@ func (m *HotSenderDefault) SendHot(
 		// send data for every jet asynchronously
 		go func() {
 			logger.Infof("SPLIT> fire sendForJet in goroutine")
-			err := m.sendForJet(ctx, jetID, newPulse, byJet[jetID], block)
+			err := m.sendForJet(ctx, jetID, newPulse, idxByJet[jetID], block)
 			if err != nil {
 				logger.WithField("error", err.Error()).Error("hot sender: sendForJet failed")
 			} else {

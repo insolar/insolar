@@ -95,8 +95,8 @@ func (a *ActivateObject) Proceed(ctx context.Context) error {
 
 	logger := inslogger.FromContext(ctx)
 
-	a.dep.indexLocker.Lock(a.activate.Request.Record())
-	defer a.dep.indexLocker.Unlock(a.activate.Request.Record())
+	a.dep.indexLocker.Lock(*a.activate.Request.Record())
+	defer a.dep.indexLocker.Unlock(*a.activate.Request.Record())
 
 	activateVirt := record.Wrap(a.activate)
 	rec := record.Material{

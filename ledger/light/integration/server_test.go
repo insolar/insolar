@@ -180,6 +180,19 @@ func NewServer(ctx context.Context, cfg configuration.Configuration) (*Server, e
 		handler.WriteAccessor = writeController
 		handler.Sender = ServerBus
 		handler.IndexStorage = indexes
+
+		jetTreeUpdater := jet.NewFetcher(Nodes, Jets, Bus, Coordinator)
+		filamentCalculator := executor.NewFilamentCalculator(
+			indexes,
+			records,
+			Coordinator,
+			jetTreeUpdater,
+			WmBus,
+		)
+
+		handler.JetTreeUpdater = jetTreeUpdater
+		handler.FilamentCalculator = filamentCalculator
+
 		err := handler.Init(ctx)
 		if err != nil {
 			return nil, err
@@ -194,6 +207,8 @@ func NewServer(ctx context.Context, cfg configuration.Configuration) (*Server, e
 			indexes,
 			Pulses,
 			Pulses,
+			indexes,
+			handler.FilamentCalculator,
 			conf.LightChainLimit,
 		)
 

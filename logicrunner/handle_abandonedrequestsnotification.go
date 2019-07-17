@@ -49,8 +49,10 @@ func (p *initializeAbandonedRequestsNotificationExecutionState) Proceed(ctx cont
 		broker.executionState.pending = message.InPending
 		broker.executionState.PendingConfirmed = false
 	}
-	broker.executionState.LedgerHasMoreRequests = true
 	broker.executionState.Unlock()
+
+	broker.MoreRequestsOnLedger(ctx)
+	broker.FetchMoreRequestsFromLedger(ctx)
 
 	return nil
 }
