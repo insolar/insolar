@@ -52,8 +52,9 @@ type jetConfig struct {
 }
 
 var (
-	initialDepth      uint8 = 2
-	defaultDepthLimit       = initialDepth + 2
+	initialDepth uint8 = 2
+	// not limit depth by default
+	defaultDepthLimit = initialDepth + 10
 )
 
 // initial jets
@@ -92,7 +93,7 @@ var cases = []splitCase{
 		},
 		pulses: []map[insolar.JetID]jetConfig{
 			{jet10: {5, 1, true}},
-			{jet10: {3, 0, false}},
+			{jet10_left: {3, 0, false}},
 		},
 	},
 	{
@@ -105,7 +106,7 @@ var cases = []splitCase{
 		pulses: []map[insolar.JetID]jetConfig{
 			{jet10: {5, 1, false}},
 			{jet10: {5, 2, true}},
-			{jet10: {5, 0, false}},
+			{jet10_left: {5, 1, false}},
 		},
 	},
 	{
@@ -189,6 +190,11 @@ func TestJetSplitter(t *testing.T) {
 			require.NoError(t, err, "splitter.Do performed")
 
 			for jetID, jConf := range jetsConfig {
+				jetsInEnded := jetStore.All(ctx, ended)
+				require.Truef(t, jetInList(jetsInEnded, jetID),
+					"jet %v should be in jet-tree's leaves, got %v (+%v pulse)",
+					jetID.DebugString(), jsort(jetsInEnded), i)
+
 				dropThreshold := splitter.getDropThreshold(ctx, jetID, ended)
 				require.Equalf(t, jConf.dropThreshold, dropThreshold,
 					"check drop.SplitThresholdExceeded for jet %v in +%v pulse", jetID.DebugString(), i)
@@ -219,6 +225,15 @@ func TestJetSplitter(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) { checkCase(t, c) })
 	}
+}
+
+func jetInList(jets []insolar.JetID, jetID insolar.JetID) bool {
+	for _, j := range jets {
+		if j == jetID {
+			return true
+		}
+	}
+	return false
 }
 
 func jsort(jets []insolar.JetID) []string {
