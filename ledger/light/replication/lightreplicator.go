@@ -116,7 +116,7 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 
 		allIndexes := lr.filterAndGroupIndexes(ctx, pn)
 		jets := lr.jetCalculator.MineForPulse(ctx, pn)
-		logger.Debugf("[Replicator][sync] founds %v jets", len(jets))
+		logger.Debugf("[Replicator][sync] founds %v jets", len(jets), ". Jets: ", insolar.JetIDCollection(jets).DebugString())
 
 		for _, jetID := range jets {
 			msg, err := lr.heavyPayload(ctx, pn, jetID, allIndexes[jetID])

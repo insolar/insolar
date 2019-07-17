@@ -31,6 +31,10 @@ import (
 	"go.opencensus.io/trace"
 )
 
+var (
+	errZeroNodes = errors.New("zero nodes from network")
+)
+
 // PulseManager implements insolar.PulseManager.
 type PulseManager struct {
 	Bus           insolar.MessageBus        `inject:""`
@@ -76,6 +80,9 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 
 	err := m.setUnderGilSection(ctx, newPulse)
 	if err != nil {
+		if err == errZeroNodes {
+			return nil
+		}
 		return err
 	}
 
@@ -115,11 +122,12 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	// swap pulse
 	m.currentPulse = newPulse
 
-	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
-		return errors.Wrap(err, "call of AddPulse failed")
-	}
 	fromNetwork := m.NodeNet.GetWorkingNodes()
 	toSet := make([]insolar.Node, 0, len(fromNetwork))
+	if len(fromNetwork) == 0 {
+		logger.Errorf("received zero nodes for pulse %d", newPulse.PulseNumber)
+		return errZeroNodes
+	}
 	for _, node := range fromNetwork {
 		toSet = append(toSet, insolar.Node{ID: node.ID(), Role: node.Role()})
 	}
@@ -128,10 +136,13 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		return errors.Wrap(err, "call of SetActiveNodes failed")
 	}
 
-	futurePulse := newPulse.NextPulseNumber
-	err = m.JetModifier.Clone(ctx, newPulse.PulseNumber, futurePulse, true)
+	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
+		return errors.Wrap(err, "call of AddPulse failed")
+	}
+
+	err = m.JetModifier.Clone(ctx, storagePulse.PulseNumber, newPulse.PulseNumber, true)
 	if err != nil {
-		return errors.Wrapf(err, "failed to clone jet.Tree fromPulse=%v toPulse=%v", newPulse.PulseNumber, futurePulse)
+		return errors.Wrapf(err, "failed to clone jet.Tree fromPulse=%v toPulse=%v", storagePulse.PulseNumber, newPulse.PulseNumber)
 	}
 
 	if oldPulse != nil {
@@ -142,12 +153,11 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		// No active nodes for pulse. It means there was no processing (network start).
 		if len(nodes) == 0 {
 			// Activate zero jet for jet tree.
-			futurePulse := newPulse.NextPulseNumber
-			err := m.JetModifier.Update(ctx, futurePulse, false, insolar.ZeroJetID)
+			err := m.JetModifier.Update(ctx, newPulse.PulseNumber, false, insolar.ZeroJetID)
 			if err != nil {
 				return errors.Wrapf(err, "failed to update zeroJet")
 			}
-			logger.Infof("[PulseManager] activate zeroJet pulse=%v", futurePulse)
+			logger.Infof("[PulseManager] activate zeroJet pulse=%v", newPulse.PulseNumber)
 		}
 	}
 

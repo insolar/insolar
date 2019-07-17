@@ -85,6 +85,8 @@ func (jk *dbJetKeeper) Add(ctx context.Context, pn insolar.PulseNumber, id insol
 
 	if prev.PulseNumber == top || prev.PulseNumber == insolar.GenesisPulse.PulseNumber {
 		for jk.checkPulseConsistency(ctx, pn) {
+			logger.Debug(">>>>>>>>>>>>>>>>>.. AFTER checkPulseConsistency: pulse: ", pn, ". ID: ", id.DebugString(),
+				". TOP: ", top, ". prev.PulseNumber: ", prev.PulseNumber)
 			err = jk.updateSyncPulse(pn)
 			if err != nil {
 				return errors.Wrapf(err, "failed to update consistent pulse")
@@ -141,9 +143,15 @@ func (jk *dbJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.
 	expectedJets := jk.jetTrees.All(ctx, pulse)
 	actualJets := jk.all(pulse)
 
+	// if len(expectedJets) == 0 && len(actualJets) == 1 {
+	// 	return true
+	// }
+
 	if len(expectedJets) != len(actualJets) {
 		if len(actualJets) > len(expectedJets) {
-			inslogger.FromContext(ctx).Warn("num actual jets is more then expected. It's strange. Pulse: ", pulse)
+			inslogger.FromContext(ctx).Warn("num actual jets is more then expected. It's strange. Pulse: ", pulse,
+				". Expected: ", insolar.JetIDCollection(expectedJets).DebugString(),
+				". Actual: ", insolar.JetIDCollection(actualJets).DebugString())
 		}
 		return false
 	}
