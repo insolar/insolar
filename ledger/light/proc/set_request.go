@@ -110,7 +110,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 				return errors.Wrap(err, "failed to create reply")
 			}
 
-			go p.dep.sender.Reply(ctx, p.message, msg)
+			p.dep.sender.Reply(ctx, p.message, msg)
 			return nil
 		}
 	}

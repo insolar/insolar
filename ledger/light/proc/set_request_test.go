@@ -91,3 +91,56 @@ func TestSetRequest_Proceed(t *testing.T) {
 	err = p.Proceed(ctx)
 	require.NoError(t, err)
 }
+
+func TestSetRequest_ObjectIsDeactivated(t *testing.T) {
+	t.Parallel()
+
+	ctx := flow.TestContextWithPulse(
+		inslogger.TestContext(t),
+		insolar.GenesisPulse.PulseNumber+10,
+	)
+
+	writeAccessor := hot.NewWriteAccessorMock(t)
+	writeAccessor.BeginMock.Return(func() {}, nil)
+
+	sender := bus.NewSenderMock(t)
+	sender.ReplyMock.Return()
+
+	idxStorage := object.NewIndexStorageMock(t)
+	idxStorage.ForIDMock.Return(record.Index{
+		Lifeline: record.Lifeline{
+			StateID: record.StateDeactivation,
+		},
+	}, nil)
+
+	ref := gen.Reference()
+	jetID := gen.JetID()
+	id := gen.ID()
+
+	request := record.IncomingRequest{
+		Object:   &ref,
+		CallType: record.CTMethod,
+	}
+	virtual := record.Virtual{
+		Union: &record.Virtual_IncomingRequest{
+			IncomingRequest: &request,
+		},
+	}
+
+	pl := payload.SetIncomingRequest{
+		Request: virtual,
+	}
+	requestBuf, err := pl.Marshal()
+	require.NoError(t, err)
+
+	msg := payload.Meta{
+		Payload: requestBuf,
+	}
+
+	// Pendings limit not reached.
+	p := proc.NewSetRequest(msg, &request, id, jetID)
+	p.Dep(writeAccessor, nil, nil, sender, object.NewIndexLocker(), idxStorage)
+
+	err = p.Proceed(ctx)
+	require.NoError(t, err)
+}
