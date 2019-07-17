@@ -96,9 +96,8 @@ const (
 	UseFakeTransport = true
 	UseFakeBootstrap = true
 
-	pulseTimeMs  int32 = 8000
 	reqTimeoutMs int32 = 2000
-	pulseDelta   int32 = 10
+	pulseDelta   int32 = 1
 
 	Phase1Timeout  float64 = 0.30
 	Phase2Timeout  float64 = 0.50
@@ -175,7 +174,7 @@ func (s *consensusSuite) CheckBootstrapCount() {
 func (s *consensusSuite) SetupTest() {
 	s.fixtureMap[s.T().Name()] = newFixture(s.T())
 	var err error
-	s.fixture().pulsar, err = NewTestPulsar(pulseTimeMs, reqTimeoutMs, pulseDelta)
+	s.fixture().pulsar, err = NewTestPulsar(reqTimeoutMs, pulseDelta)
 	s.Require().NoError(err)
 
 	log.Info("SetupTest")
@@ -528,7 +527,7 @@ func (p *PublisherMock) Close() error {
 func (s *testSuite) preInitNode(node *networkNode) {
 	t := s.T()
 	cfg := configuration.NewConfiguration()
-	cfg.Pulsar.PulseTime = pulseTimeMs
+	cfg.Pulsar.PulseTime = pulseDelta * 1000
 	cfg.Host.Transport.Address = node.host
 	cfg.Service.CacheDirectory = cacheDir + node.host
 	cfg.Service.Consensus.Phase1Timeout = Phase1Timeout

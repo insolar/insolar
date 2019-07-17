@@ -91,7 +91,7 @@ func (f *fakeConsensus) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulse
 func (s *bootstrapSuite) SetupTest() {
 	s.fixtureMap[s.T().Name()] = newFixture(s.T())
 	var err error
-	s.fixture().pulsar, err = NewTestPulsar(pulseTimeMs, reqTimeoutMs, pulseDelta)
+	s.fixture().pulsar, err = NewTestPulsar(reqTimeoutMs, pulseDelta)
 	s.Require().NoError(err)
 
 	inslogger.FromContext(s.fixture().ctx).Info("SetupTest -- ")
