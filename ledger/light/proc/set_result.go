@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
@@ -90,6 +91,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 
 	var foundResBuf []byte
 	if foundRes != nil {
+		inslogger.FromContext(ctx).Errorf("duplicated result. resultID: %v, requestID: %v", p.resultID.DebugString(), p.result.Request.Record().DebugString())
 		foundResBuf, err = foundRes.Record.Virtual.Marshal()
 		if err != nil {
 			return err
