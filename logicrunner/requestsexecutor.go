@@ -58,7 +58,7 @@ func (e *requestsExecutor) ExecuteAndSave(
 	ctx, span := instracer.StartSpan(ctx, "RequestsExecutor.ExecuteAndSave")
 	defer span.End()
 
-	result, err := e.Execute(ctx, transcript)
+	result, err := e.Execute(ctx, transcript) // AALEKSEEV TODO check SystemError here
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't execute request")
 	}

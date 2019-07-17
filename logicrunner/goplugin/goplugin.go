@@ -154,7 +154,7 @@ func (gp *GoPlugin) CallMethodRPC(ctx context.Context, req rpctypes.DownCallMeth
 }
 
 // CallMethod runs a method on an object in controlled environment
-func (gp *GoPlugin) CallMethod(
+func (gp *GoPlugin) CallMethod( // AALEKSEEV TODO check SystemError here
 	ctx context.Context, callContext *insolar.LogicCallContext,
 	code insolar.Reference, data []byte,
 	method string, args insolar.Arguments,
