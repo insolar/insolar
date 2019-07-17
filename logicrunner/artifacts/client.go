@@ -244,7 +244,7 @@ func (m *client) GetCode(
 		return nil, errors.Wrap(err, "failed to marshal message")
 	}
 
-	r := bus.NewRetrySender(m.sender, m.PulseAccessor, 3)
+	r := bus.NewRetrySender(m.sender, 3)
 	reps, done := r.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, code)
 	defer done()
 
@@ -321,7 +321,7 @@ func (m *client) GetObject(
 		return nil, errors.Wrap(err, "failed to marshal message")
 	}
 
-	r := bus.NewRetrySender(m.sender, m.PulseAccessor, 3)
+	r := bus.NewRetrySender(m.sender, 3)
 	reps, done := r.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, head)
 	defer done()
 
