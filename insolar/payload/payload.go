@@ -55,6 +55,7 @@ const (
 	TypeUpdate
 	TypeHotObjects
 	TypeResultInfo
+	TypeGetPendings
 
 	// should be the last (required by TypesMap)
 	_latestType
@@ -214,6 +215,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *ResultInfo:
 		pl.Polymorph = uint32(TypeResultInfo)
 		return pl.Marshal()
+	case *GetPendings:
+		pl.Polymorph = uint32(TypeGetPendings)
+		return pl.Marshal()
 	}
 
 	return nil, errors.New("unknown payload type")
@@ -323,6 +327,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeResultInfo:
 		pl := ResultInfo{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeGetPendings:
+		pl := GetPendings{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}

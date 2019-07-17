@@ -36,12 +36,13 @@ func _() {
 	_ = x[TypeUpdate-25]
 	_ = x[TypeHotObjects-26]
 	_ = x[TypeResultInfo-27]
-	_ = x[_latestType-28]
+	_ = x[TypeGetPendings-28]
+	_ = x[_latestType-29]
 }
 
-const _Type_name = "TypeUnknownTypeMetaTypeErrorTypeIDTypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndexTypePassTypeGetCodeTypeCodeTypeSetCodeTypeSetIncomingRequestTypeSetOutgoingRequestTypeSagaCallAcceptNotificationTypeGetFilamentTypeGetRequestTypeRequestTypeFilamentSegmentTypeSetResultTypeActivateTypeRequestInfoTypeDeactivateTypeUpdateTypeHotObjectsTypeResultInfo_latestType"
+const _Type_name = "TypeUnknownTypeMetaTypeErrorTypeIDTypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndexTypePassTypeGetCodeTypeCodeTypeSetCodeTypeSetIncomingRequestTypeSetOutgoingRequestTypeSagaCallAcceptNotificationTypeGetFilamentTypeGetRequestTypeRequestTypeFilamentSegmentTypeSetResultTypeActivateTypeRequestInfoTypeDeactivateTypeUpdateTypeHotObjectsTypeResultInfoTypeGetPendings_latestType"
 
-var _Type_index = [...]uint16{0, 11, 19, 28, 34, 43, 56, 69, 81, 93, 102, 110, 121, 129, 140, 162, 184, 214, 229, 243, 254, 273, 286, 298, 313, 327, 337, 351, 365, 376}
+var _Type_index = [...]uint16{0, 11, 19, 28, 34, 43, 56, 69, 81, 93, 102, 110, 121, 129, 140, 162, 184, 214, 229, 243, 254, 273, 286, 298, 313, 327, 337, 351, 365, 380, 391}
 
 func (i Type) String() string {
 	if i >= Type(len(_Type_index)-1) {
