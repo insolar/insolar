@@ -200,17 +200,18 @@ func newInstaller(constructor *constructor, dep *Dep) Installer {
 }
 
 func (c Installer) Install(setters ...packetProcessorSetter) Controller {
-	feeder := adapters.NewConsensusControlFeeder()
+	controlFeeder := adapters.NewConsensusControlFeeder()
+	candidateFeeder := &core.SequentialCandidateFeeder{}
 
-	consensusController := c.createConsensusController(feeder)
+	consensusController := c.createConsensusController(controlFeeder, candidateFeeder)
 	packetParserFactory := c.createPacketParserFactory()
 
 	c.install(setters, consensusController, packetParserFactory)
 
-	return newController(feeder, consensusController)
+	return newController(controlFeeder, consensusController)
 }
 
-func (c *Installer) createConsensusController(feeder api.ConsensusControlFeeder) api.ConsensusController {
+func (c *Installer) createConsensusController(controlFeeder api.ConsensusControlFeeder, candidateFeeder api.CandidateControlFeeder) api.ConsensusController {
 	certificate := c.dep.CertificateManager.GetCertificate()
 	origin := c.dep.NodeKeeper.GetOrigin()
 	knownNodes := c.dep.NodeKeeper.GetAccessor().GetActiveNodes()
@@ -234,8 +235,8 @@ func (c *Installer) createConsensusController(feeder api.ConsensusControlFeeder)
 			c.consensus.transportFactory,
 			c.consensus.roundStrategyFactory,
 		),
-		&core.SequentialCandidateFeeder{},
-		feeder,
+		candidateFeeder,
+		controlFeeder,
 	)
 }
 
