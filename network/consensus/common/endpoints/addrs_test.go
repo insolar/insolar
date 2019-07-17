@@ -53,6 +53,12 @@ package endpoints
 import (
 	"testing"
 
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+
+	"github.com/insolar/insolar/insolar"
+
+	"github.com/insolar/insolar/network/consensusv1/packets"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -105,4 +111,99 @@ func TestString(t *testing.T) {
 	s = "addr"
 	h1 = Name(s)
 	require.Equal(t, s, h1.String())
+}
+
+func TestEqualEndpoints(t *testing.T) {
+	ob1 := NewOutboundMock(t)
+	require.False(t, EqualEndpoints(nil, ob1))
+
+	require.False(t, EqualEndpoints(ob1, nil))
+
+	require.True(t, EqualEndpoints(ob1, ob1))
+
+	et1 := NameEndpoint
+	ob1.GetEndpointTypeMock.Set(func() NodeEndpointType { return *(&et1) })
+	ob2 := NewOutboundMock(t)
+	et2 := RelayEndpoint
+	ob2.GetEndpointTypeMock.Set(func() NodeEndpointType { return *(&et2) })
+	require.False(t, EqualEndpoints(ob1, ob2))
+
+	et2 = et1
+	addr1 := Name("addr")
+	addr2 := Name("addr2")
+	ob1.GetNameAddressMock.Set(func() Name { return *(&addr1) })
+	ob2.GetNameAddressMock.Set(func() Name { return *(&addr2) })
+	require.False(t, EqualEndpoints(ob1, ob2))
+
+	addr2 = addr1
+	require.True(t, EqualEndpoints(ob1, ob2))
+
+	et1 = IPEndpoint
+	et2 = et1
+	ip1 := packets.NodeAddress{}
+	ip2 := packets.NodeAddress{1}
+	ob1.GetIPAddressMock.Set(func() packets.NodeAddress { return *(&ip1) })
+	ob2.GetIPAddressMock.Set(func() packets.NodeAddress { return *(&ip2) })
+	require.False(t, EqualEndpoints(ob1, ob2))
+
+	ip2 = ip1
+	require.True(t, EqualEndpoints(ob1, ob2))
+
+	et1 = RelayEndpoint
+	et2 = et1
+	rID1 := insolar.ShortNodeID(1)
+	rID2 := insolar.ShortNodeID(2)
+	ob1.GetRelayIDMock.Set(func() insolar.ShortNodeID { return *(&rID1) })
+	ob2.GetRelayIDMock.Set(func() insolar.ShortNodeID { return *(&rID2) })
+	require.False(t, EqualEndpoints(ob1, ob2))
+
+	rID2 = rID1
+	require.True(t, EqualEndpoints(ob1, ob2))
+
+	et1 = NodeEndpointType(4)
+	et2 = et1
+	require.Panics(t, func() { EqualEndpoints(ob1, ob2) })
+}
+
+func TestNewHostIdentityFromHolder(t *testing.T) {
+	in := NewInboundMock(t)
+	addr := Name("addr")
+	in.GetNameAddressMock.Set(func() Name { return addr })
+	skh := cryptkit.NewSignatureKeyHolderMock(t)
+	in.GetTransportKeyMock.Set(func() cryptkit.SignatureKeyHolder { return skh })
+	ch := cryptkit.NewCertificateHolderMock(t)
+	in.GetTransportCertMock.Set(func() cryptkit.CertificateHolder { return ch })
+	inc := NewHostIdentityFromHolder(in)
+	require.Equal(t, addr, inc.Addr)
+
+	require.Equal(t, skh, inc.Key)
+
+	require.Equal(t, ch, inc.Cert)
+}
+
+func TestShortNodeIDAsByteString(t *testing.T) {
+	require.True(t, ShortNodeIDAsByteString(insolar.ShortNodeID(123)) != "")
+}
+
+func TestAsByteString(t *testing.T) {
+	inc := InboundConnection{Addr: "test"}
+	require.True(t, inc.AsByteString() != "")
+}
+
+func TestGetNameAddress(t *testing.T) {
+	addr := Name("test")
+	inc := InboundConnection{Addr: addr}
+	require.Equal(t, addr, inc.GetNameAddress())
+}
+
+func TestGetTransportKey(t *testing.T) {
+	skh := cryptkit.NewSignatureKeyHolderMock(t)
+	inc := InboundConnection{Key: skh}
+	require.Equal(t, skh, inc.GetTransportKey())
+}
+
+func TestGetTransportCert(t *testing.T) {
+	ch := cryptkit.NewCertificateHolderMock(t)
+	inc := InboundConnection{Cert: ch}
+	require.Equal(t, ch, inc.GetTransportCert())
 }
