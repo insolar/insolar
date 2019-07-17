@@ -69,6 +69,8 @@ type FilamentCalculator interface {
 	ResultDuplicate(ctx context.Context, startFrom insolar.PulseNumber, objectID, resultID insolar.ID, result record.Result) (foundResult *record.CompositeFilamentRecord, err error)
 }
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCleaner -o ./ -s _mock.go
+
 type FilamentCleaner interface {
 	Clear(objID insolar.ID)
 }
@@ -670,6 +672,20 @@ func (c *cacheStore) Delete(id insolar.ID) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	delete(c.caches, id)
+}
+
+func (c *cacheStore) getIDs() []insolar.ID {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	res := make([]insolar.ID, len(c.caches))
+	i := 0
+	for id := range c.caches {
+		res[i] = id
+		i++
+	}
+
+	return res
 }
 
 type filamentCache struct {

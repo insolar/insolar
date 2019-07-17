@@ -71,7 +71,7 @@ type MessageHandler struct {
 	handlers       map[insolar.MessageType]insolar.MessageHandler
 
 	filamentModifier   *executor.FilamentModifierDefault
-	filamentCalculator *executor.FilamentCalculatorDefault
+	FilamentCalculator *executor.FilamentCalculatorDefault
 }
 
 // NewMessageHandler creates new handler.
@@ -210,7 +210,7 @@ func NewMessageHandler(
 			p.Dep(h.IndexStorage, h.Sender)
 		},
 		GetPendingRequestID: func(p *proc.GetPendingRequestID) {
-			p.Dep(h.filamentCalculator, h.Sender)
+			p.Dep(h.FilamentCalculator, h.Sender)
 		},
 		GetJet: func(p *proc.GetJet) {
 			p.Dep.Jets = h.JetStorage
@@ -227,7 +227,7 @@ func NewMessageHandler(
 			p.Dep.Calculator = h.PulseCalculator
 		},
 		SendRequests: func(p *proc.SendRequests) {
-			p.Dep(h.Sender, h.filamentCalculator)
+			p.Dep(h.Sender, h.FilamentCalculator)
 		},
 		PassState: func(p *proc.PassState) {
 			p.Dep.Sender = h.Sender
@@ -262,7 +262,7 @@ func NewMessageHandler(
 // Init initializes handlers and middleware.
 func (h *MessageHandler) Init(ctx context.Context) error {
 	h.jetTreeUpdater = jet.NewFetcher(h.Nodes, h.JetStorage, h.Bus, h.JetCoordinator)
-	h.filamentCalculator = executor.NewFilamentCalculator(
+	h.FilamentCalculator = executor.NewFilamentCalculator(
 		h.IndexStorage,
 		h.Records,
 		h.JetCoordinator,
@@ -273,7 +273,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 		h.IndexStorage,
 		h.Records,
 		h.PCS,
-		h.filamentCalculator,
+		h.FilamentCalculator,
 		h.PulseCalculator,
 	)
 

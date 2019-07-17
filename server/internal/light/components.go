@@ -257,6 +257,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			indexes,
 			Pulses,
 			Pulses,
+			indexes,
+			handler.FilamentCalculator,
 			conf.LightChainLimit,
 		)
 

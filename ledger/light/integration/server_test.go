@@ -171,6 +171,8 @@ func NewServer(ctx context.Context, cfg configuration.Configuration) (*Server, e
 			indexes,
 			Pulses,
 			Pulses,
+			indexes,
+			handler.FilamentCalculator,
 			conf.LightChainLimit,
 		)
 
