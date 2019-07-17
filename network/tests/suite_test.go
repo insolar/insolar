@@ -66,7 +66,6 @@ import (
 
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/network/node"
-	"github.com/stretchr/testify/require"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/stretchr/testify/suite"
@@ -317,14 +316,12 @@ func (s *consensusSuite) TearDownTest() {
 
 func (s *consensusSuite) waitForConsensus(consensusCount int) {
 	for i := 0; i < consensusCount; i++ {
-		for i, n := range s.fixture().bootstrapNodes {
-			err := <-n.consensusResult
-			require.NoError(s.T(), err, "Failed to pass consensus on bootstrapNodes[%d] %s ", i, n.host)
+		for _, n := range s.fixture().bootstrapNodes {
+			<-n.consensusResult
 		}
 
 		for _, n := range s.fixture().networkNodes {
-			err := <-n.consensusResult
-			require.NoError(s.T(), err, "Failed to pass consensus on networkNodes[%d] %s ", i, n.host)
+			<-n.consensusResult
 		}
 	}
 }
@@ -335,16 +332,14 @@ func (s *consensusSuite) waitForConsensusExcept(consensusCount int, exception in
 			if n.id.Equal(exception) {
 				continue
 			}
-			err := <-n.consensusResult
-			require.NoError(s.T(), err, "Failed to pass consensus on bootstrapNodes[%d] %s ", i, n.host)
+			<-n.consensusResult
 		}
 
 		for _, n := range s.fixture().networkNodes {
 			if n.id.Equal(exception) {
 				continue
 			}
-			err := <-n.consensusResult
-			require.NoError(s.T(), err, "Failed to pass consensus on networkNodes[%d] %s ", i, n.host)
+			<-n.consensusResult
 		}
 	}
 }
@@ -386,7 +381,7 @@ type networkNode struct {
 	componentManager   *component.Manager
 	serviceNetwork     *servicenetwork.ServiceNetwork
 	terminationHandler *testutils.TerminationHandlerMock
-	consensusResult    chan error
+	consensusResult    chan struct{}
 }
 
 // newNetworkNode returns networkNode initialized only with id, host address and key pair
@@ -401,7 +396,7 @@ func (s *testSuite) newNetworkNode(name string) *networkNode {
 		privateKey:          key,
 		cryptographyService: cryptography.NewKeyBoundCryptographyService(key),
 		host:                address,
-		consensusResult:     make(chan error, 30),
+		consensusResult:     make(chan struct{}, 1),
 	}
 
 	nodeContext, _ := inslogger.WithFields(s.fixture().ctx, map[string]interface{}{
@@ -539,6 +534,9 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme())
 	serviceNetwork, err := servicenetwork.NewServiceNetwork(cfg, node.componentManager)
 	s.Require().NoError(err)
+	serviceNetwork.SetOnStateUpdate(func() {
+		node.consensusResult <- struct{}{}
+	})
 
 	amMock := staterMock{
 		stateFunc: func() []byte {

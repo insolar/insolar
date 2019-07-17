@@ -115,6 +115,9 @@ type ServiceNetwork struct {
 	consensusInstaller consensus.Installer
 
 	lock sync.Mutex
+
+	// for testing purposes :(
+	onStateUpdate func()
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
@@ -218,6 +221,10 @@ func (n *ServiceNetwork) State() []byte {
 	return nshBytes
 }
 
+func (n *ServiceNetwork) SetOnStateUpdate(f func()) {
+	n.onStateUpdate = f
+}
+
 func (n *ServiceNetwork) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
 	inslogger.FromContext(ctx).Info(">>>>>> Update state called")
 
@@ -226,6 +233,10 @@ func (n *ServiceNetwork) UpdateState(ctx context.Context, pulseNumber insolar.Pu
 		inslogger.FromContext(ctx).Error(err)
 	}
 	n.NodeKeeper.SetCloudHash(cloudStateHash)
+
+	if n.onStateUpdate != nil {
+		n.onStateUpdate()
+	}
 }
 
 // Start implements component.Starter
