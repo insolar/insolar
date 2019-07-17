@@ -65,8 +65,7 @@ func (hw *HelloWorld) Errored() (interface{}, error) {
 
 //Get number pulse from foundation
 func (hw *HelloWorld) PulseNumber() (insolar.PulseNumber, error) {
-	pulse := foundation.GetPulseNumber()
-	return pulse, nil
+	return foundation.GetPulseNumber()
 }
 
 func (hw *HelloWorld) CreateChild() (interface{}, error) {
