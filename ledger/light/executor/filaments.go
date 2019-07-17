@@ -570,10 +570,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 }
 
 func (c *FilamentCalculatorDefault) Clear(objID insolar.ID) {
-	cache := c.cache.Get(objID)
-	cache.Lock()
-	cache.Clear()
-	cache.Unlock()
+	c.cache.Delete(objID)
 }
 
 func (c *FilamentCalculatorDefault) checkReason(ctx context.Context, reason insolar.Reference) (bool, error) {
