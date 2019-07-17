@@ -340,6 +340,7 @@ func TestGetStartOfEpoch(t *testing.T) {
 	pd.PulseEpoch = MaxTimePulse + 1
 	require.Equal(t, Number(1<<16), pd.GetStartOfEpoch())
 
+	pd.PulseEpoch = MaxTimePulse
 	pd.PulseNumber = MaxTimePulse
 	require.Equal(t, Number(MaxTimePulse), pd.GetStartOfEpoch())
 }
