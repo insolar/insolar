@@ -186,6 +186,10 @@ func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpcty
 	return nil
 }
 
+func (gi *GoInsider) CleanupSystemError() {
+	// AALEKSEEV TODO implement
+}
+
 // Upstream returns RPC client connected to upstream server (goplugin)
 func (gi *GoInsider) Upstream() (*rpc.Client, error) {
 	gi.upstreamMutex.Lock()
