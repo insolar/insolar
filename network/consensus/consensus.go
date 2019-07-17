@@ -249,11 +249,11 @@ func (c *Installer) createPacketParserFactory() adapters.PacketParserFactory {
 
 func (c *Installer) install(
 	setters []packetProcessorSetter,
-	consensusController api.ConsensusController,
+	packetProcessor adapters.PacketProcessor,
 	packetParserFactory adapters.PacketParserFactory,
 ) {
 	for _, setter := range setters {
-		setter.SetPacketProcessor(consensusController)
+		setter.SetPacketProcessor(packetProcessor)
 		setter.SetPacketParserFactory(packetParserFactory)
 	}
 }
