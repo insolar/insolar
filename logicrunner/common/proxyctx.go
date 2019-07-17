@@ -31,6 +31,7 @@ type ProxyHelper interface {
 	Deserialize(from []byte, into interface{}) error
 	MakeErrorSerializable(error) error
 	CleanupSystemError()
+	SystemError() error
 }
 
 // Current - hackish way to give proxies access to the current environment

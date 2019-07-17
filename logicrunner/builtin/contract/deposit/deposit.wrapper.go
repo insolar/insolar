@@ -39,7 +39,6 @@ func INS_META_INFO() []map[string]string {
 
 func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.CleanupSystemError()
 	self := new(Deposit)
 
 	if len(object) == 0 {
@@ -66,7 +65,6 @@ func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.CleanupSystemError()
 	self := new(Deposit)
 
 	if len(object) == 0 {
@@ -116,6 +114,10 @@ func INSMETHOD_GetTxHash(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.GetTxHash()
 
+	if ph.SystemError() != nil {
+		return nil, nil, ph.SystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -155,6 +157,10 @@ func INSMETHOD_GetAmount(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.GetAmount()
 
+	if ph.SystemError() != nil {
+		return nil, nil, ph.SystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -193,6 +199,10 @@ func INSMETHOD_MapMarshal(object []byte, data []byte) ([]byte, []byte, error) {
 	}
 
 	ret0, ret1 := self.MapMarshal()
+
+	if ph.SystemError() != nil {
+		return nil, nil, ph.SystemError()
+	}
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
@@ -239,6 +249,10 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.Confirm(args0, args1, args2)
 
+	if ph.SystemError() != nil {
+		return nil, nil, ph.SystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -273,6 +287,9 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	}
 
 	ret0, ret1 := New(args0, args1, args2, args3)
+	if ph.SystemError() != nil {
+		return nil, ph.SystemError()
+	}
 	if ret1 != nil {
 		return nil, ret1
 	}

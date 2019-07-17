@@ -85,6 +85,12 @@ func (h *ProxyHelper) CleanupSystemError() {
 	h.setSystemError(nil)
 }
 
+// SystemError() should be checked in contract wrapper before returning a result.
+// If system error occurred the result returned by the method should be discarded.
+func (h *ProxyHelper) SystemError() error {
+	return h.getSystemError()
+}
+
 func (h *ProxyHelper) RouteCall(ref insolar.Reference, wait bool, immutable bool, saga bool, method string, args []byte,
 	proxyPrototype insolar.Reference) ([]byte, error) {
 

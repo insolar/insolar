@@ -37,7 +37,6 @@ func INS_META_INFO() []map[string]string {
 
 func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.CleanupSystemError()
 	self := new(HelloWorld)
 
 	if len(object) == 0 {
@@ -64,7 +63,6 @@ func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.CleanupSystemError()
 	self := new(HelloWorld)
 
 	if len(object) == 0 {
@@ -114,6 +112,10 @@ func INSMETHOD_ReturnObj(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.ReturnObj()
 
+	if ph.SystemError() != nil {
+		return nil, nil, ph.SystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -155,6 +157,10 @@ func INSMETHOD_Greet(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.Greet(args0)
 
+	if ph.SystemError() != nil {
+		return nil, nil, ph.SystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -193,6 +199,10 @@ func INSMETHOD_Count(object []byte, data []byte) ([]byte, []byte, error) {
 	}
 
 	ret0, ret1 := self.Count()
+
+	if ph.SystemError() != nil {
+		return nil, nil, ph.SystemError()
+	}
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
@@ -233,6 +243,10 @@ func INSMETHOD_Errored(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.Errored()
 
+	if ph.SystemError() != nil {
+		return nil, nil, ph.SystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -271,6 +285,10 @@ func INSMETHOD_CreateChild(object []byte, data []byte) ([]byte, []byte, error) {
 	}
 
 	ret0, ret1 := self.CreateChild()
+
+	if ph.SystemError() != nil {
+		return nil, nil, ph.SystemError()
+	}
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
@@ -313,6 +331,10 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.Call(args0)
 
+	if ph.SystemError() != nil {
+		return nil, nil, ph.SystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -339,6 +361,9 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	}
 
 	ret0, ret1 := New()
+	if ph.SystemError() != nil {
+		return nil, ph.SystemError()
+	}
 	if ret1 != nil {
 		return nil, ret1
 	}

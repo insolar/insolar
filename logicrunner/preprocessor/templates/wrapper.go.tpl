@@ -51,7 +51,6 @@ func INS_META_INFO() ([] map[string]string) {
 
 func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.CleanupSystemError()
 	self := new({{ $.ContractType }})
 
 	if len(object) == 0 {
@@ -78,7 +77,6 @@ func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.CleanupSystemError()
 	self := new({{ $.ContractType }})
 
 	if len(object) == 0 {
@@ -132,6 +130,10 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, e
 	self.{{ $method.Name }}( {{ $method.Arguments }} )
 {{ end }}
 
+	if ph.SystemError() != nil {
+	    return nil, nil, ph.SystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -162,6 +164,9 @@ func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, error) {
 	}
 
 	{{ $f.Results }} := {{ $f.Name }}( {{ $f.Arguments }} )
+	if ph.SystemError() != nil {
+		return nil, ph.SystemError()
+	}
 	if ret1 != nil {
 		return nil, ret1
 	}

@@ -38,7 +38,6 @@ func INS_META_INFO() []map[string]string {
 
 func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.CleanupSystemError()
 	self := new(Member)
 
 	if len(object) == 0 {
@@ -65,7 +64,6 @@ func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.CleanupSystemError()
 	self := new(Member)
 
 	if len(object) == 0 {
@@ -115,6 +113,10 @@ func INSMETHOD_GetName(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.GetName()
 
+	if ph.SystemError() != nil {
+		return nil, nil, ph.SystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -153,6 +155,10 @@ func INSMETHOD_GetPublicKey(object []byte, data []byte) ([]byte, []byte, error) 
 	}
 
 	ret0, ret1 := self.GetPublicKey()
+
+	if ph.SystemError() != nil {
+		return nil, nil, ph.SystemError()
+	}
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
@@ -194,6 +200,10 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 	}
 
 	ret0, ret1 := self.Call(args0)
+
+	if ph.SystemError() != nil {
+		return nil, nil, ph.SystemError()
+	}
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
@@ -238,6 +248,10 @@ func INSMETHOD_FindDeposit(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1, ret2 := self.FindDeposit(args0, args1)
 
+	if ph.SystemError() != nil {
+		return nil, nil, ph.SystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -279,6 +293,10 @@ func INSMETHOD_SetDeposit(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0 := self.SetDeposit(args0)
 
+	if ph.SystemError() != nil {
+		return nil, nil, ph.SystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -318,6 +336,10 @@ func INSMETHOD_GetBurnAddress(object []byte, data []byte) ([]byte, []byte, error
 
 	ret0, ret1 := self.GetBurnAddress()
 
+	if ph.SystemError() != nil {
+		return nil, nil, ph.SystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -352,6 +374,9 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	}
 
 	ret0, ret1 := New(args0, args1, args2, args3)
+	if ph.SystemError() != nil {
+		return nil, ph.SystemError()
+	}
 	if ret1 != nil {
 		return nil, ret1
 	}

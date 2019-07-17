@@ -187,7 +187,11 @@ func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpcty
 }
 
 func (gi *GoInsider) CleanupSystemError() {
-	// AALEKSEEV TODO implement
+	// do nothing - the method should not be called on GoInsider
+}
+
+func (gi *GoInsider) SystemError() error {
+	return errors.New("GoInsider.SystemError is not supposed to be called by anyone")
 }
 
 // Upstream returns RPC client connected to upstream server (goplugin)

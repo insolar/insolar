@@ -37,7 +37,6 @@ func INS_META_INFO() []map[string]string {
 
 func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.CleanupSystemError()
 	self := new(Tariff)
 
 	if len(object) == 0 {
@@ -64,7 +63,6 @@ func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.CleanupSystemError()
 	self := new(Tariff)
 
 	if len(object) == 0 {
@@ -116,6 +114,10 @@ func INSMETHOD_CalcCommission(object []byte, data []byte) ([]byte, []byte, error
 
 	ret0, ret1 := self.CalcCommission(args0)
 
+	if ph.SystemError() != nil {
+		return nil, nil, ph.SystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -144,6 +146,9 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	}
 
 	ret0, ret1 := New(args0)
+	if ph.SystemError() != nil {
+		return nil, ph.SystemError()
+	}
 	if ret1 != nil {
 		return nil, ret1
 	}

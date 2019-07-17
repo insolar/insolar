@@ -37,7 +37,6 @@ func INS_META_INFO() []map[string]string {
 
 func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.CleanupSystemError()
 	self := new(NodeRecord)
 
 	if len(object) == 0 {
@@ -64,7 +63,6 @@ func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.CleanupSystemError()
 	self := new(NodeRecord)
 
 	if len(object) == 0 {
@@ -114,6 +112,10 @@ func INSMETHOD_GetNodeInfo(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.GetNodeInfo()
 
+	if ph.SystemError() != nil {
+		return nil, nil, ph.SystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -152,6 +154,10 @@ func INSMETHOD_GetPublicKey(object []byte, data []byte) ([]byte, []byte, error) 
 	}
 
 	ret0, ret1 := self.GetPublicKey()
+
+	if ph.SystemError() != nil {
+		return nil, nil, ph.SystemError()
+	}
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
@@ -192,6 +198,10 @@ func INSMETHOD_GetRole(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.GetRole()
 
+	if ph.SystemError() != nil {
+		return nil, nil, ph.SystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -231,6 +241,10 @@ func INSMETHOD_Destroy(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0 := self.Destroy()
 
+	if ph.SystemError() != nil {
+		return nil, nil, ph.SystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -261,6 +275,9 @@ func INSCONSTRUCTOR_NewNodeRecord(data []byte) ([]byte, error) {
 	}
 
 	ret0, ret1 := NewNodeRecord(args0, args1)
+	if ph.SystemError() != nil {
+		return nil, ph.SystemError()
+	}
 	if ret1 != nil {
 		return nil, ret1
 	}
