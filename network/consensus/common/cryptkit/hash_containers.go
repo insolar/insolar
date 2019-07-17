@@ -117,6 +117,8 @@ const (
 	PublicAsymmetricKey
 )
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.CertificateHolder -o . -s _mock.go
+
 type CertificateHolder interface {
 	GetPublicKey() SignatureKeyHolder
 	IsValidForHostAddress(HostAddress string) bool
