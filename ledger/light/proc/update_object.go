@@ -135,17 +135,29 @@ func (a *UpdateObject) Proceed(ctx context.Context) error {
 	}
 	logger.WithField("state", idx.Lifeline.LatestState.DebugString()).Debug("saved object")
 
-	err = a.dep.filament.SetResult(ctx, a.resultID, a.jetID, a.result)
+	foundRes, err := a.dep.filament.SetResult(ctx, a.resultID, a.jetID, a.result)
 	if err != nil {
 		return errors.Wrap(err, "failed to save result")
 	}
 
-	msg, err := payload.NewMessage(&payload.ID{ID: a.resultID})
+	var foundResBuf []byte
+	if foundRes != nil {
+		foundResBuf, err = foundRes.Record.Virtual.Marshal()
+		if err != nil {
+			return err
+		}
+	}
+
+	msg, err := payload.NewMessage(&payload.ResultInfo{
+		ObjectID: a.result.Object,
+		ResultID: a.resultID,
+		Result:   foundResBuf,
+	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create reply")
 	}
 
-	go a.dep.sender.Reply(ctx, a.message, msg)
+	a.dep.sender.Reply(ctx, a.message, msg)
 
 	return nil
 }

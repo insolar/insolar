@@ -61,7 +61,8 @@ import (
 	"sync"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -108,6 +109,8 @@ type ServiceNetwork struct {
 	Rules network.Rules            `inject:"subcomponent"`
 
 	HostNetwork network.HostNetwork
+
+	CurrentPulse insolar.Pulse
 
 	Gatewayer    network.Gatewayer
 	BaseGateway  *gateway.Base
@@ -190,6 +193,8 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to init internal components")
 	}
+
+	n.CurrentPulse = *insolar.GenesisPulse
 
 	err = n.initConsensus(ctx)
 	if err != nil {
@@ -298,19 +303,11 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 		return
 	}
 
-	// Ignore insolar.ErrNotFound because
-	// sometimes we can't fetch current pulse in new nodes
-	// (for fresh bootstrapped light-material with in-memory pulse-tracker)
-	// TODO: remove pulse checks here after new consensus ready
-	if currentPulse, err := n.PulseAccessor.Latest(ctx); err != nil {
-		if err != pulse.ErrNotFound {
-			currentPulse = *insolar.GenesisPulse
-		}
-	} else {
-		if !isNextPulse(&currentPulse, &newPulse) {
-			logger.Infof("Incorrect pulse number. Current: %+v. New: %+v", currentPulse, newPulse)
-			return
-		}
+	//TODO: use network pulsestorage here
+
+	if n.CurrentPulse.PulseNumber != insolar.GenesisPulse.PulseNumber && !isNextPulse(&n.CurrentPulse, &newPulse) {
+		logger.Infof("Incorrect pulse number. Current: %+v. New: %+v", n.CurrentPulse, newPulse)
+		return
 	}
 
 	n.ChangePulse(ctx, newPulse)
@@ -320,18 +317,15 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 
 func (n *ServiceNetwork) ChangePulse(ctx context.Context, newPulse insolar.Pulse) {
 	logger := inslogger.FromContext(ctx)
+	n.CurrentPulse = newPulse
+
+	if err := n.NodeKeeper.MoveSyncToActive(ctx, newPulse.PulseNumber); err != nil {
+		logger.Warn("MoveSyncToActive failed: ", err.Error())
+	}
 
 	if err := n.Gatewayer.Gateway().OnPulse(ctx, newPulse); err != nil {
 		logger.Error(errors.Wrap(err, "Failed to call OnPulse on Gateway"))
 	}
-
-	logger.Debugf("Before set new current pulse number: %d", newPulse.PulseNumber)
-	err := n.PulseManager.Set(ctx, newPulse)
-	if err != nil {
-		logger.Fatalf("Failed to set new pulse: %s", err.Error())
-	}
-	logger.Infof("Set new current pulse number: %d", newPulse.PulseNumber)
-
 }
 
 //func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insolar.Pulse, pulseStartTime time.Time) {

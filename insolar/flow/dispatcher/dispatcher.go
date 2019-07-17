@@ -97,6 +97,9 @@ func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 	ctx := context.Background()
 
 	for k, v := range msg.Metadata {
+		if k == bus.MetaSpanData {
+			continue
+		}
 		ctx, _ = inslogger.WithField(ctx, k, v)
 	}
 	logger := inslogger.FromContext(ctx)

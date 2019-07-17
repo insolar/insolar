@@ -159,6 +159,11 @@ func mockContractRequester(t *testing.T, nodeRef insolar.Reference, ok bool, r [
 	return cr
 }
 
+func mockPulseManager(t *testing.T) insolar.PulseManager {
+	pm := testutils.NewPulseManagerMock(t)
+	return pm
+}
+
 func TestComplete_GetCert(t *testing.T) {
 	nodeRef := testutils.RandomRef()
 	certNodeRef := testutils.RandomRef()
@@ -170,6 +175,7 @@ func TestComplete_GetCert(t *testing.T) {
 	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, true)
 	cs := mockCryptographyService(t, true)
+	pm := mockPulseManager(t)
 
 	var ge network.Gateway
 	ge = newNoNetwork(&Base{
@@ -179,6 +185,7 @@ func TestComplete_GetCert(t *testing.T) {
 		ContractRequester:   cr,
 		CertificateManager:  cm,
 		CryptographyService: cs,
+		PulseManager:        pm,
 	})
 	ge = ge.NewGateway(insolar.CompleteNetworkState)
 	ctx := context.Background()
@@ -213,6 +220,7 @@ func TestComplete_handler(t *testing.T) {
 	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, true)
 	cs := mockCryptographyService(t, true)
+	pm := mockPulseManager(t)
 
 	hn := mock.NewHostNetworkMock(t)
 
@@ -224,6 +232,7 @@ func TestComplete_handler(t *testing.T) {
 		ContractRequester:   cr,
 		CertificateManager:  cm,
 		CryptographyService: cs,
+		PulseManager:        pm,
 	})
 	ge = ge.NewGateway(insolar.CompleteNetworkState)
 	ctx := context.Background()

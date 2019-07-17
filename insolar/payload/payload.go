@@ -54,6 +54,7 @@ const (
 	TypeDeactivate
 	TypeUpdate
 	TypeHotObjects
+	TypeResultInfo
 
 	// should be the last (required by TypesMap)
 	_latestType
@@ -125,6 +126,7 @@ func UnmarshalType(data []byte) (Type, error) {
 	if err != nil {
 		return TypeUnknown, errors.Wrap(err, "failed to decode polymorph")
 	}
+	// First 3 bits is a field type (see protobuf wire protocol docs), key is always varint
 	if fieldNumType != MorphFieldNum<<3|MorpyFieldType {
 		return TypeUnknown, errors.Errorf("wrong polymorph field number %d", fieldNumType)
 	}
@@ -208,6 +210,9 @@ func Marshal(payload Payload) ([]byte, error) {
 		return pl.Marshal()
 	case *HotObjects:
 		pl.Polymorph = uint32(TypeHotObjects)
+		return pl.Marshal()
+	case *ResultInfo:
+		pl.Polymorph = uint32(TypeResultInfo)
 		return pl.Marshal()
 	}
 
@@ -314,6 +319,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeHotObjects:
 		pl := HotObjects{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeResultInfo:
+		pl := ResultInfo{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}

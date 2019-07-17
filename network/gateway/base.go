@@ -88,6 +88,7 @@ type Base struct {
 	HostNetwork         network.HostNetwork         `inject:""`
 	PulseAccessor       pulse.Accessor              `inject:""`
 	PulseAppender       pulse.Appender              `inject:""`
+	PulseManager        insolar.PulseManager        `inject:""`
 	BootstrapRequester  bootstrap.Requester         `inject:""`
 	//PhaseManager        phases.PhaseManager         `inject:""`
 	Rules        network.Rules        `inject:""`

@@ -25,7 +25,11 @@ const (
 )
 
 // ShortNodeID is the shortened ID of node that is unique inside the globe
-type ShortNodeID uint32
+type ShortNodeID uint32 // ZERO is RESERVED
+
+const AbsentShortNodeID ShortNodeID = 0
+
+func (v ShortNodeID) IsAbsent() bool { return v == AbsentShortNodeID }
 
 // GlobuleID is the ID of the globe
 type GlobuleID uint32

@@ -48,6 +48,7 @@ type Server struct {
 func DefaultLightConfig() configuration.Configuration {
 	cfg := configuration.Configuration{}
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
+	cfg.Ledger.LightChainLimit = 5
 	return cfg
 }
 
@@ -211,7 +212,6 @@ func NewServer(ctx context.Context, cfg configuration.Configuration) (*Server, e
 		pm.PulseAccessor = Pulses
 		pm.PulseCalculator = Pulses
 		pm.PulseAppender = Pulses
-		pm.ActiveListSwapper = &stub{}
 		pm.GIL = &stub{}
 		pm.NodeNet = NodeNetwork
 
@@ -219,7 +219,7 @@ func NewServer(ctx context.Context, cfg configuration.Configuration) (*Server, e
 		Handler = handler
 	}
 
-	netMock := newNetworkMock(Handler.FlowDispatcher.Process, NodeNetwork.GetOrigin().ID())
+	netMock := newNetworkMock(WmBus.IncomingMessageRouter(Handler.FlowDispatcher.Process), NodeNetwork.GetOrigin().ID())
 	startWatermill(ctx, logger, pubSub, WmBus, netMock.Handle, Handler.FlowDispatcher.Process)
 
 	s := &Server{

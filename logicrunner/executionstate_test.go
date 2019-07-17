@@ -157,6 +157,8 @@ func TestExecutionState_OnPulse(t *testing.T) {
 
 	for _, test := range table {
 		t.Run(test.name, func(t *testing.T) {
+			ctx := inslogger.TestContext(t)
+
 			messages := test.broker.OnPulse(ctx, test.meNext)
 			require.Equal(t, test.numberOfMessages, len(messages))
 			if test.checkES != nil {
