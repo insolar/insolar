@@ -81,7 +81,7 @@ type Sender interface {
 	SendTarget(ctx context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func())
 	// Reply sends message in response to another message.
 	Reply(ctx context.Context, origin payload.Meta, reply *message.Message)
-	// Geter for latest pulse
+	// Getter for latest pulse
 	LatestPulse(ctx context.Context) (insolar.Pulse, error)
 }
 
