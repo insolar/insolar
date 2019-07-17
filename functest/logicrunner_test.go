@@ -20,7 +20,6 @@ package functest
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -676,29 +675,13 @@ func (r *One) Recursive() (error) {
 `
 	protoRef := uploadContractOnce(t, "recursive_call_one", contractOneCode)
 
-	for i := 0; i <= 5; i++ {
-		obj := callConstructor(t, protoRef, "New")
-		resp := callMethodNoChecks(t, obj, "Recursive")
+	obj := callConstructor(t, protoRef, "New")
+	resp := callMethodNoChecks(t, obj, "Recursive")
 
-		errstr := resp.Error.Error()
-		if errstr != "" {
-			if strings.Contains(errstr, "timeout") {
-				continue
-			} else {
-				require.Fail(t, "Unexpected error: "+errstr)
-			}
-		}
-
-		errstr = resp.Result.ExtractedError
-		require.NotEmpty(t, errstr)
-		if strings.Contains(errstr, "loop detected") {
-			return
-		} else {
-			require.Fail(t, "Unexpected error: "+errstr)
-		}
-	}
-
-	require.Fail(t, "loop detection is broken, all requests failed with timeout")
+	errstr := resp.Error.Error()
+	require.NotEmpty(t, errstr)
+	// if you get a timeout here add a retry loop to the test as it was before
+	require.Contains(t, errstr, "loop detected")
 }
 
 func TestGetParent(t *testing.T) {
