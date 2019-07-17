@@ -231,7 +231,7 @@ func (m *FilamentModifierDefault) SetRequest(
 	inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"object_id":  objectID.DebugString(),
 		"request_id": requestID.DebugString(),
-	}).Debug("set request")
+	}).Debug("filament set request")
 
 	return nil, nil, nil
 }
@@ -439,10 +439,13 @@ func (c *FilamentCalculatorDefault) PendingRequests(
 func (c *FilamentCalculatorDefault) ResultDuplicate(
 	ctx context.Context, startFrom insolar.PulseNumber, objectID, resultID insolar.ID, result record.Result,
 ) (*record.CompositeFilamentRecord, error) {
-	logger := inslogger.FromContext(ctx).WithField("object_id", objectID.DebugString())
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"object_id": objectID.DebugString(),
+		"result_id": resultID.DebugString(),
+	})
 
-	logger.Debug("started to search duplicated requests")
-	defer logger.Debug("finished to search duplicated requests")
+	logger.Debug("started to search for duplicated results")
+	defer logger.Debug("finished to search for duplicated results")
 
 	if result.Request.IsEmpty() {
 		return nil, errors.New("request is empty")
@@ -470,33 +473,42 @@ func (c *FilamentCalculatorDefault) ResultDuplicate(
 		c.sender,
 	)
 
-	var foundResult *record.CompositeFilamentRecord
-
 	for iter.HasPrev() {
 		rec, err := iter.Prev(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to calculate pending")
 		}
 
+		// Result already exists, return it. It should happen before request.
 		if bytes.Equal(rec.RecordID.Hash(), resultID.Hash()) {
-			foundResult = &rec
+			logger.Debugf("found duplicate %s", rec.RecordID.DebugString())
+			return &rec, nil
 		}
 
+		// Request found, return nil. It means we didn't find the result since result goes before request on
+		// iteration.
 		if bytes.Equal(rec.RecordID.Hash(), result.Request.Record().Hash()) {
-			return foundResult, nil
+			return nil, nil
 		}
 	}
 
-	return foundResult, errors.New(fmt.Sprintf("request for result is not found"))
+	return nil, fmt.Errorf(
+		"request %s for result %s is not found",
+		result.Request.Record().DebugString(),
+		resultID.DebugString(),
+	)
 }
 
 func (c *FilamentCalculatorDefault) RequestDuplicate(
 	ctx context.Context, startFrom insolar.PulseNumber, objectID, requestID insolar.ID, request record.Request,
 ) (*record.CompositeFilamentRecord, *record.CompositeFilamentRecord, error) {
-	logger := inslogger.FromContext(ctx).WithField("object_id", objectID.DebugString())
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"object_id":  objectID.DebugString(),
+		"request_id": requestID.DebugString(),
+	})
 
-	logger.Debug("started to search duplicated requests")
-	defer logger.Debug("finished to search duplicated requests")
+	logger.Debug("started to search for duplicated requests")
+	defer logger.Debug("finished to search for duplicated requests")
 
 	if request.ReasonRef().IsEmpty() {
 		return nil, nil, ErrEmptyReason
@@ -549,6 +561,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 
 		if bytes.Equal(rec.RecordID.Hash(), requestID.Hash()) {
 			foundRequest = &rec
+			logger.Debugf("found duplicate %s", rec.RecordID.DebugString())
 		}
 		if rec.RecordID == *reason.Record() {
 			isReasonFound = true
@@ -558,6 +571,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 		if r, ok := virtual.(*record.Result); ok {
 			if bytes.Equal(r.Request.Record().Hash(), requestID.Hash()) {
 				foundResult = &rec
+				logger.Debugf("found result %s", rec.RecordID.DebugString())
 			}
 		}
 	}

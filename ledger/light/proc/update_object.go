@@ -95,8 +95,8 @@ func (a *UpdateObject) Proceed(ctx context.Context) error {
 
 	logger := inslogger.FromContext(ctx)
 
-	a.dep.indexLocker.Lock(&a.result.Object)
-	defer a.dep.indexLocker.Unlock(&a.result.Object)
+	a.dep.indexLocker.Lock(a.result.Object)
+	defer a.dep.indexLocker.Unlock(a.result.Object)
 
 	updateVirt := record.Wrap(a.update)
 	rec := record.Material{
