@@ -1,7 +1,9 @@
 package integration_test
 
 import (
+	"context"
 	"crypto/rand"
+	"sync"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
@@ -21,16 +23,9 @@ func Test_BootstrapCalls(t *testing.T) {
 	s, err := NewServer(ctx, cfg)
 	require.NoError(t, err)
 
-	received := make(chan payload.Payload)
-	s.Receive(func(meta payload.Meta, pl payload.Payload) {
-		received <- pl
-	})
-
 	t.Run("message before pulse received returns error", func(t *testing.T) {
-		s.Send(&payload.SetCode{})
-		pl := <-received
-		_, ok := pl.(*payload.Error)
-		require.True(t, ok)
+		p, _ := setCode(ctx, t, s)
+		requirePayloadNotError(t, p)
 	})
 
 	// First pulse goes in storage then interrupts.
@@ -39,7 +34,8 @@ func Test_BootstrapCalls(t *testing.T) {
 	s.Pulse(ctx)
 
 	t.Run("messages after two pulses return result", func(t *testing.T) {
-		setCode(t, s)
+		p, _ := setCode(ctx, t, s)
+		requirePayloadNotError(t, p)
 	})
 }
 
@@ -56,199 +52,136 @@ func Test_BasicOperations(t *testing.T) {
 	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
 	s.Pulse(ctx)
 
-	// Creating root reason request.
-	reasonID, _ := setIncomingRequest(t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
+	runner := func(t *testing.T) {
+		// Creating root reason request.
+		var reasonID insolar.ID
+		{
+			p, _ := setIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
+			requirePayloadNotError(t, p)
+			reasonID = p.(*payload.RequestInfo).RequestID
+		}
+		// Save and check code.
+		{
+			p, sent := setCode(ctx, t, s)
+			requirePayloadNotError(t, p)
 
-	// Save and check code.
-	{
-		codeID, sent := setCode(t, s)
-		received := getCode(t, s, codeID)
-		require.Equal(t, &sent, received.Virtual)
+			p = getCode(ctx, t, s, p.(*payload.ID).ID)
+			requirePayloadNotError(t, p)
+			material := record.Material{}
+			err := material.Unmarshal(p.(*payload.Code).Record)
+			require.NoError(t, err)
+			require.Equal(t, &sent, material.Virtual)
+		}
+		var objectID insolar.ID
+		// Set, get request.
+		{
+			p, sent := setIncomingRequest(ctx, t, s, gen.ID(), reasonID, record.CTSaveAsChild)
+			requirePayloadNotError(t, p)
+
+			p = getRequest(ctx, t, s, p.(*payload.RequestInfo).RequestID)
+			requirePayloadNotError(t, p)
+			require.Equal(t, sent, p.(*payload.Request).Request)
+			objectID = p.(*payload.Request).RequestID
+		}
+		// Activate and check object.
+		{
+			p, state := activateObject(ctx, t, s, objectID)
+			requirePayloadNotError(t, p)
+			_, material := requireGetObject(ctx, t, s, objectID)
+			require.Equal(t, &state, material.Virtual)
+		}
+		// Amend and check object.
+		{
+			p, _ := setIncomingRequest(ctx, t, s, objectID, reasonID, record.CTMethod)
+			requirePayloadNotError(t, p)
+			p, state := amendObject(ctx, t, s, objectID, p.(*payload.RequestInfo).RequestID)
+			requirePayloadNotError(t, p)
+			_, material := requireGetObject(ctx, t, s, objectID)
+			require.Equal(t, &state, material.Virtual)
+		}
+		// Deactivate and check object.
+		{
+			p, _ := setIncomingRequest(ctx, t, s, objectID, reasonID, record.CTMethod)
+			requirePayloadNotError(t, p)
+			deactivateObject(ctx, t, s, objectID, p.(*payload.RequestInfo).RequestID)
+
+			lifeline, _ := getObject(ctx, t, s, objectID)
+			_, ok := lifeline.(*payload.Error)
+			assert.True(t, ok)
+		}
 	}
-	var objectID insolar.ID
-	// Set and get request.
-	{
-		id, sent := setIncomingRequest(t, s, gen.ID(), reasonID, record.CTSaveAsChild)
-		received := getRequest(t, s, id)
-		require.Equal(t, sent, received)
-		objectID = id
-	}
-	// Activate and check object.
-	{
-		state := activateObject(t, s, objectID)
-		_, material := getObject(t, s, objectID)
-		require.Equal(t, &state, material.Virtual)
-	}
-	// Amend and check object.
-	{
-		requestID, _ := setIncomingRequest(t, s, objectID, reasonID, record.CTMethod)
-		state := amendObject(t, s, objectID, requestID)
-		_, material := getObject(t, s, objectID)
-		require.Equal(t, &state, material.Virtual)
-	}
-	// Deactivate and check object.
-	{
-		requestID, _ := setIncomingRequest(t, s, objectID, reasonID, record.CTMethod)
-		deactivateObject(t, s, objectID, requestID)
-		received := make(chan payload.Payload)
-		s.Receive(func(meta payload.Meta, pl payload.Payload) {
-			received <- pl
-		})
-		s.Send(&payload.GetObject{
-			ObjectID: objectID,
-		})
-		pl := <-received
-		_, ok := pl.(*payload.Error)
-		assert.True(t, ok)
-	}
+
+	t.Run("happy basic", runner)
+
+	t.Run("happy concurrent", func(t *testing.T) {
+		count := 1000
+		var wg sync.WaitGroup
+		wg.Add(count)
+		for i := 0; i < count; i++ {
+			go func() {
+				runner(t)
+				wg.Done()
+			}()
+		}
+
+		wg.Wait()
+	})
 }
 
-// func Test_Concurrency(t *testing.T) {
-// 	t.Skip()
-// 	t.Parallel()
-//
-// 	ctx := inslogger.TestContext(t)
-// 	cfg := DefaultLightConfig()
-// 	s, err := NewServer(ctx, cfg)
-// 	require.NoError(t, err)
-//
-// 	// First pulse goes in storage then interrupts.
-// 	s.Pulse(ctx)
-// 	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
-// 	s.Pulse(ctx)
-//
-// 	runner := func() {
-// 		// Save and check code.
-// 		{
-// 			codeID, sent := setCode(t, s)
-// 			received := getCode(t, s, codeID)
-// 			assert.Equal(t, &sent, received.Virtual)
-// 		}
-// 		var objectID insolar.ID
-// 		// Set and get request.
-// 		{
-// 			id, sent := setIncomingRequest(t, s, record.CTSaveAsChild)
-// 			received := getRequest(t, s, id)
-// 			assert.Equal(t, sent, received)
-// 			objectID = id
-// 		}
-// 		// Activate and check object.
-// 		{
-// 			state := activateObject(t, s, objectID)
-// 			_, material := getObject(t, s, objectID)
-// 			require.Equal(t, &state, material.Virtual)
-// 		}
-// 		// Amend and check object.
-// 		{
-// 			state := amendObject(t, s, objectID, gen.ID())
-// 			_, material := getObject(t, s, objectID)
-// 			require.Equal(t, &state, material.Virtual)
-// 		}
-// 		// Deactivate and check object.
-// 		{
-// 			deactivateObject(t, s, objectID)
-// 			received := make(chan payload.Payload)
-// 			s.Receive(func(meta payload.Meta, pl payload.Payload) {
-// 				received <- pl
-// 			})
-// 			s.Send(&payload.GetObject{
-// 				ObjectID: objectID,
-// 			})
-// 			pl := <-received
-// 			_, ok := pl.(*payload.Error)
-// 			assert.True(t, ok)
-// 		}
-// 	}
-//
-// 	count := 100
-// 	var wg sync.WaitGroup
-// 	wg.Add(count)
-// 	for i := 0; i < count; i++ {
-// 		go func() {
-// 			runner()
-// 			wg.Done()
-// 		}()
-// 	}
-//
-// 	wg.Wait()
-// }
-
-func setCode(t *testing.T, s *Server) (insolar.ID, record.Virtual) {
-	received := make(chan payload.ID)
-	s.Receive(func(meta payload.Meta, pl payload.Payload) {
-		switch p := pl.(type) {
-		case *payload.Error:
-			panic(p.Text)
-		case *payload.ID:
-			received <- *p
-		}
-	})
-
+func setCode(ctx context.Context, t *testing.T, s *Server) (payload.Payload, record.Virtual) {
 	code := make([]byte, 100)
 	_, err := rand.Read(code)
 	require.NoError(t, err)
 	rec := record.Wrap(record.Code{Code: code})
 	buf, err := rec.Marshal()
 	require.NoError(t, err)
-	s.Send(&payload.SetCode{
+	msg, err := payload.NewMessage(&payload.SetCode{
 		Record: buf,
 	})
-	pl := <-received
-	return pl.ID, rec
+	require.NoError(t, err)
+	reps, done := s.Send(ctx, msg)
+	defer done()
+
+	rep := <-reps
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	require.NoError(t, err)
+	switch pl.(type) {
+	case *payload.Error:
+		return pl, rec
+	case *payload.ID:
+		return pl, rec
+	default:
+		t.Fatalf("received unexpected reply %T", pl)
+	}
+
+	return nil, rec
 }
 
-func getCode(t *testing.T, s *Server, id insolar.ID) record.Material {
-	received := make(chan payload.Payload)
-	s.Receive(func(meta payload.Meta, pl payload.Payload) {
-		switch p := pl.(type) {
-		case *payload.Error:
-			panic(p.Text)
-		case *payload.Code:
-			received <- pl
-		}
-	})
-
-	s.Send(&payload.GetCode{
+func getCode(ctx context.Context, t *testing.T, s *Server, id insolar.ID) payload.Payload {
+	msg, err := payload.NewMessage(&payload.GetCode{
 		CodeID: id,
 	})
-	pl := <-received
-	code, ok := pl.(*payload.Code)
-	require.True(t, ok)
-	material := record.Material{}
-	err := material.Unmarshal(code.Record)
+
+	reps, done := s.Send(ctx, msg)
+	defer done()
+
+	rep := <-reps
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
 	require.NoError(t, err)
-	return material
+	switch pl.(type) {
+	case *payload.Error:
+		return pl
+	case *payload.Code:
+		return pl
+	default:
+		t.Fatalf("received unexpected reply %T", pl)
+	}
+	return nil
 }
 
-func getRequest(t *testing.T, s *Server, requestID insolar.ID) record.Virtual {
-	received := make(chan payload.Request)
-	s.Receive(func(meta payload.Meta, pl payload.Payload) {
-		switch p := pl.(type) {
-		case *payload.Error:
-			panic(p.Text)
-		case *payload.Request:
-			received <- *p
-		}
-	})
-
-	s.Send(&payload.GetRequest{
-		RequestID: requestID,
-	})
-	pl := <-received
-	return pl.Request
-}
-
-func setIncomingRequest(t *testing.T, s *Server, objectID, reasonID insolar.ID, ct record.CallType) (insolar.ID, record.Virtual) {
-	received := make(chan payload.RequestInfo)
-	s.Receive(func(meta payload.Meta, pl payload.Payload) {
-		switch p := pl.(type) {
-		case *payload.Error:
-			panic(p.Text)
-		case *payload.RequestInfo:
-			received <- *p
-		}
-	})
-
+func setIncomingRequest(
+	ctx context.Context, t *testing.T, s *Server, objectID, reasonID insolar.ID, ct record.CallType,
+) (payload.Payload, record.Virtual) {
 	args := make([]byte, 100)
 	_, err := rand.Read(args)
 	require.NoError(t, err)
@@ -258,24 +191,52 @@ func setIncomingRequest(t *testing.T, s *Server, objectID, reasonID insolar.ID, 
 		CallType:  ct,
 		Reason:    *insolar.NewReference(reasonID),
 	})
-	s.Send(&payload.SetIncomingRequest{
+	msg, err := payload.NewMessage(&payload.SetIncomingRequest{
 		Request: rec,
 	})
-	pl := <-received
-	return pl.RequestID, rec
+	require.NoError(t, err)
+	reps, done := s.Send(ctx, msg)
+	defer done()
+
+	rep := <-reps
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	require.NoError(t, err)
+	switch pl.(type) {
+	case *payload.Error:
+		return pl, rec
+	case *payload.RequestInfo:
+		return pl, rec
+	default:
+		t.Fatalf("received unexpected reply %T", pl)
+	}
+
+	return insolar.ID{}, record.Virtual{}
 }
 
-func activateObject(t *testing.T, s *Server, objectID insolar.ID) record.Virtual {
-	received := make(chan payload.ResultInfo)
-	s.Receive(func(meta payload.Meta, pl payload.Payload) {
-		switch p := pl.(type) {
-		case *payload.Error:
-			panic(p.Text)
-		case *payload.ResultInfo:
-			received <- *p
-		}
+func getRequest(ctx context.Context, t *testing.T, s *Server, requestID insolar.ID) payload.Payload {
+	msg, err := payload.NewMessage(&payload.GetRequest{
+		RequestID: requestID,
 	})
+	require.NoError(t, err)
+	reps, done := s.Send(ctx, msg)
+	defer done()
 
+	rep := <-reps
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	require.NoError(t, err)
+	switch pl.(type) {
+	case *payload.Error:
+		return pl
+	case *payload.Request:
+		return pl
+	default:
+		t.Fatalf("received unexpected reply %T", pl)
+	}
+
+	return nil
+}
+
+func activateObject(ctx context.Context, t *testing.T, s *Server, objectID insolar.ID) (payload.Payload, record.Virtual) {
 	mem := make([]byte, 100)
 	_, err := rand.Read(mem)
 	require.NoError(t, err)
@@ -295,25 +256,30 @@ func activateObject(t *testing.T, s *Server, objectID insolar.ID) record.Virtual
 	})
 	resBuf, err := resultRecord.Marshal()
 	require.NoError(t, err)
-	s.Send(&payload.Activate{
+
+	msg, err := payload.NewMessage(&payload.Activate{
 		Record: buf,
 		Result: resBuf,
 	})
-	<-received
-	return rec
+	require.NoError(t, err)
+	reps, done := s.Send(ctx, msg)
+	defer done()
+
+	rep := <-reps
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	require.NoError(t, err)
+	switch pl.(type) {
+	case *payload.Error:
+		return pl, rec
+	case *payload.ResultInfo:
+		return pl, rec
+	default:
+		t.Fatalf("received unexpected reply %T", pl)
+	}
+	return nil, rec
 }
 
-func amendObject(t *testing.T, s *Server, objectID, requestID insolar.ID) record.Virtual {
-	received := make(chan payload.ResultInfo)
-	s.Receive(func(meta payload.Meta, pl payload.Payload) {
-		switch p := pl.(type) {
-		case *payload.Error:
-			panic(p.Text)
-		case *payload.ResultInfo:
-			received <- *p
-		}
-	})
-
+func amendObject(ctx context.Context, t *testing.T, s *Server, objectID, requestID insolar.ID) (payload.Payload, record.Virtual) {
 	mem := make([]byte, 100)
 	_, err := rand.Read(mem)
 	require.NoError(t, err)
@@ -332,25 +298,31 @@ func amendObject(t *testing.T, s *Server, objectID, requestID insolar.ID) record
 	})
 	resBuf, err := resultRecord.Marshal()
 	require.NoError(t, err)
-	s.Send(&payload.Update{
+
+	msg, err := payload.NewMessage(&payload.Update{
 		Record: buf,
 		Result: resBuf,
 	})
-	<-received
-	return rec
+	require.NoError(t, err)
+
+	reps, done := s.Send(ctx, msg)
+	defer done()
+
+	rep := <-reps
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	require.NoError(t, err)
+	switch pl.(type) {
+	case *payload.ResultInfo:
+		return pl, rec
+	case *payload.Error:
+		return pl, rec
+	default:
+		t.Fatalf("received unexpected reply %T", pl)
+	}
+	return nil, rec
 }
 
-func deactivateObject(t *testing.T, s *Server, objectID, requestID insolar.ID) record.Virtual {
-	received := make(chan payload.ResultInfo)
-	s.Receive(func(meta payload.Meta, pl payload.Payload) {
-		switch p := pl.(type) {
-		case *payload.Error:
-			panic(p.Text)
-		case *payload.ResultInfo:
-			received <- *p
-		}
-	})
-
+func deactivateObject(ctx context.Context, t *testing.T, s *Server, objectID, requestID insolar.ID) (payload.Payload, record.Virtual) {
 	mem := make([]byte, 100)
 	_, err := rand.Read(mem)
 	require.NoError(t, err)
@@ -369,48 +341,55 @@ func deactivateObject(t *testing.T, s *Server, objectID, requestID insolar.ID) r
 	})
 	resBuf, err := resultRecord.Marshal()
 	require.NoError(t, err)
-	s.Send(&payload.Deactivate{
+
+	msg, err := payload.NewMessage(&payload.Deactivate{
 		Record: buf,
 		Result: resBuf,
 	})
-	<-received
-	return rec
+	require.NoError(t, err)
+	reps, done := s.Send(ctx, msg)
+	defer done()
+
+	rep := <-reps
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	require.NoError(t, err)
+	switch pl.(type) {
+	case *payload.ResultInfo:
+		return pl, rec
+	case *payload.Error:
+		return pl, rec
+	default:
+		t.Fatalf("received unexpected reply %T", pl)
+	}
+	return pl, rec
 }
 
-func getObject(t *testing.T, s *Server, objectID insolar.ID) (record.Lifeline, record.Material) {
-	received := make(chan payload.Payload)
-	s.Receive(func(meta payload.Meta, pl payload.Payload) {
-		switch p := pl.(type) {
-		case *payload.Error:
-			panic(p.Text)
-		case *payload.Index:
-			received <- pl
-		case *payload.State:
-			received <- pl
-		}
-		received <- pl
-	})
-
-	s.Send(&payload.GetObject{
+func getObject(ctx context.Context, t *testing.T, s *Server, objectID insolar.ID) (payload.Payload, payload.Payload) {
+	msg, err := payload.NewMessage(&payload.GetObject{
 		ObjectID: objectID,
 	})
+	require.NoError(t, err)
+	reps, d := s.Send(ctx, msg)
+	defer d()
+
 	var (
-		lifeline *record.Lifeline
-		state    *record.Material
+		lifeline, state payload.Payload
 	)
 	done := func() bool {
 		return lifeline != nil && state != nil
 	}
-	for pl := range received {
-		switch p := pl.(type) {
+	for rep := range reps {
+		pl, err := payload.UnmarshalFromMeta(rep.Payload)
+		require.NoError(t, err)
+		switch pl.(type) {
 		case *payload.Index:
-			lifeline = &record.Lifeline{}
-			err := lifeline.Unmarshal(p.Index)
-			require.NoError(t, err)
+			lifeline = pl
 		case *payload.State:
-			state = &record.Material{}
-			err := state.Unmarshal(p.Record)
-			require.NoError(t, err)
+			state = pl
+		case *payload.Error:
+			return pl, nil
+		default:
+			t.Fatalf("received unexpected reply %T", pl)
 		}
 
 		if done() {
@@ -418,5 +397,27 @@ func getObject(t *testing.T, s *Server, objectID insolar.ID) (record.Lifeline, r
 		}
 	}
 	require.True(t, done())
-	return *lifeline, *state
+	return lifeline, state
+}
+
+func requirePayloadNotError(t *testing.T, pl payload.Payload) {
+	if err, ok := pl.(*payload.Error); ok {
+		t.Fatal(err)
+	}
+}
+
+func requireGetObject(ctx context.Context, t *testing.T, s *Server, objectID insolar.ID) (record.Lifeline, record.Material) {
+	lifelinePL, statePL := getObject(ctx, t, s, objectID)
+	requirePayloadNotError(t, lifelinePL)
+	requirePayloadNotError(t, statePL)
+
+	lifeline := record.Lifeline{}
+	err := lifeline.Unmarshal(lifelinePL.(*payload.Index).Index)
+	require.NoError(t, err)
+
+	state := record.Material{}
+	err = state.Unmarshal(statePL.(*payload.State).Record)
+	require.NoError(t, err)
+
+	return lifeline, state
 }
