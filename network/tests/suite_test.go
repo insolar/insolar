@@ -97,7 +97,7 @@ const (
 
 	pulseTimeMs  int32 = 8000
 	reqTimeoutMs int32 = 2000
-	pulseDelta   int32 = 8
+	pulseDelta   int32 = 10
 
 	Phase1Timeout  float64 = 0.30
 	Phase2Timeout  float64 = 0.50
