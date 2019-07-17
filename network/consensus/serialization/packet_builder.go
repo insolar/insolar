@@ -55,27 +55,30 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	common2 "github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/statevector"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
 
 type PacketBuilder struct {
-	crypto      core.TransportCryptographyFactory
-	localConfig core.LocalNodeConfiguration
+	crypto      transport.CryptographyFactory
+	localConfig api.LocalNodeConfiguration
 }
 
-func NewPacketBuilder(crypto core.TransportCryptographyFactory, localConfig core.LocalNodeConfiguration) *PacketBuilder {
+func NewPacketBuilder(crypto transport.CryptographyFactory, localConfig api.LocalNodeConfiguration) *PacketBuilder {
 	return &PacketBuilder{
 		crypto:      crypto,
 		localConfig: localConfig,
 	}
 }
 
-func (p *PacketBuilder) GetNeighbourhoodSize() common.NeighbourhoodSizes {
-	return common.NeighbourhoodSizes{
+func (pb *PacketBuilder) GetNeighbourhoodSize() transport.NeighbourhoodSizes {
+	return transport.NeighbourhoodSizes{
 		NeighbourhoodSize:           5,
 		NeighbourhoodTrustThreshold: 2,
 		JoinersPerNeighbourhood:     2,
@@ -83,7 +86,7 @@ func (p *PacketBuilder) GetNeighbourhoodSize() common.NeighbourhoodSizes {
 	}
 }
 
-func (p *PacketBuilder) preparePacket(sender *packets.NodeAnnouncementProfile, packetType packets.PacketType) *Packet {
+func (pb *PacketBuilder) preparePacket(sender *transport.NodeAnnouncementProfile, packetType phases.PacketType) *Packet {
 	packet := &Packet{
 		Header: Header{
 			SourceID: uint32(sender.GetNodeID()),
@@ -101,77 +104,195 @@ func (p *PacketBuilder) preparePacket(sender *packets.NodeAnnouncementProfile, p
 	return packet
 }
 
-func (p *PacketBuilder) prepareWrapper(packet *Packet) *preparedPacketWrapper {
-	return &preparedPacketWrapper{
+func (pb *PacketBuilder) preparePacketSender(packet *Packet) *PreparedPacketSender {
+	return &PreparedPacketSender{
 		packet:   packet,
-		digester: p.crypto.GetDigestFactory().GetPacketDigester(),
-		signer:   p.crypto.GetNodeSigner(p.localConfig.GetSecretKeyStore()),
+		digester: pb.crypto.GetDigestFactory().GetPacketDigester(),
+		signer:   pb.crypto.GetNodeSigner(pb.localConfig.GetSecretKeyStore()),
 	}
 }
 
-func (p *PacketBuilder) PreparePhase0Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket common.OriginalPulsarPacket,
-	options core.PacketSendOptions) core.PreparedPacketSender {
+func (pb *PacketBuilder) PreparePhase0Packet(sender *transport.NodeAnnouncementProfile, pulsarPacket proofs.OriginalPulsarPacket,
+	options transport.PacketSendOptions) transport.PreparedPacketSender {
 
-	packet := p.preparePacket(sender, packets.PacketPhase0)
-	if (options & core.SendWithoutPulseData) == 0 {
+	packet := pb.preparePacket(sender, phases.PacketPhase0)
+	if (options & transport.SendWithoutPulseData) == 0 {
 		packet.Header.SetFlag(FlagHasPulsePacket)
 	}
 
 	body := packet.EncryptableBody.(*GlobulaConsensusPacketBody)
 	body.CurrentRank = sender.GetNodeRank()
-	body.PulsarPacket.Data = pulsarPacket.AsBytes()
+	body.PulsarPacket.setData(pulsarPacket.AsBytes())
 
-	return p.prepareWrapper(packet)
+	return pb.preparePacketSender(packet)
 }
 
-func (p *PacketBuilder) PreparePhase1Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket common.OriginalPulsarPacket,
-	options core.PacketSendOptions) core.PreparedPacketSender {
+func (pb *PacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncementProfile, pulsarPacket proofs.OriginalPulsarPacket,
+	welcome *proofs.NodeWelcomePackage, options transport.PacketSendOptions) transport.PreparedPacketSender {
 
-	packet := p.preparePacket(sender, packets.PacketPhase1)
-	if (options & core.SendWithoutPulseData) == 0 {
+	packet := pb.preparePacket(sender, phases.PacketPhase1)
+	if (options & transport.SendWithoutPulseData) == 0 {
 		packet.Header.SetFlag(FlagHasPulsePacket)
 	}
 
 	body := packet.EncryptableBody.(*GlobulaConsensusPacketBody)
-	body.PulsarPacket.Data = pulsarPacket.AsBytes()
+	body.PulsarPacket.setData(pulsarPacket.AsBytes())
 
-	// TODO: fixed linter :)
-	body.FullSelfIntro.setAddrMode(body.FullSelfIntro.getAddrMode())
-	body.FullSelfIntro.setPrimaryRole(body.FullSelfIntro.getPrimaryRole())
+	body.Announcement.ShortID = sender.GetNodeID()
+	body.Announcement.CurrentRank = sender.GetNodeRank()
+	body.Announcement.RequestedPower = sender.GetRequestedPower()
+	copy(
+		body.Announcement.AnnounceSignature[:],
+		sender.GetAnnouncementSignature().AsBytes(),
+	)
+	copy(
+		body.Announcement.Member.NodeState.NodeStateHash[:],
+		sender.GetNodeStateHashEvidence().GetNodeStateHash().AsBytes(),
+	)
+	copy(
+		body.Announcement.Member.NodeState.GlobulaNodeStateSignature[:],
+		sender.GetNodeStateHashEvidence().GetGlobulaNodeStateSignature().AsBytes(),
+	)
 
-	return p.prepareWrapper(packet)
+	if sender.IsLeaving() {
+		body.Announcement.Member.AnnounceID = sender.GetNodeID()
+		body.Announcement.Member.Leaver.LeaveReason = sender.GetLeaveReason()
+	}
+
+	if announcement := sender.GetJoinerAnnouncement(); announcement != nil {
+		intro := announcement.GetBriefIntroduction()
+		body.Announcement.Member.Joiner.ShortID = sender.GetJoinerID()
+		body.Announcement.Member.Joiner.setPrimaryRole(intro.GetPrimaryRole())
+		body.Announcement.Member.Joiner.setAddrMode(endpoints.IPEndpoint)
+		body.Announcement.Member.Joiner.SpecialRoles = intro.GetSpecialRoles()
+		body.Announcement.Member.Joiner.StartPower = intro.GetStartPower()
+		copy(body.Announcement.Member.Joiner.NodePK[:], intro.GetNodePublicKey().AsBytes())
+		body.Announcement.Member.Joiner.Endpoint = intro.GetDefaultEndpoint().GetIPAddress()
+	}
+
+	// TODO: fill joiner fields
+
+	return pb.preparePacketSender(packet)
 }
 
-func (p *PacketBuilder) PreparePhase2Packet(sender *packets.NodeAnnouncementProfile,
-	neighbourhood []packets.MembershipAnnouncementReader, options core.PacketSendOptions) core.PreparedPacketSender {
+func (pb *PacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncementProfile, welcome *proofs.NodeWelcomePackage,
+	neighbourhood []transport.MembershipAnnouncementReader, options transport.PacketSendOptions) transport.PreparedPacketSender {
 
-	packet := p.preparePacket(sender, packets.PacketPhase2)
+	packet := pb.preparePacket(sender, phases.PacketPhase2)
 
-	return p.prepareWrapper(packet)
+	body := packet.EncryptableBody.(*GlobulaConsensusPacketBody)
+
+	body.Announcement.ShortID = sender.GetNodeID()
+	body.Announcement.CurrentRank = sender.GetNodeRank()
+	body.Announcement.RequestedPower = sender.GetRequestedPower()
+	copy(body.Announcement.AnnounceSignature[:], sender.GetAnnouncementSignature().AsBytes())
+	copy(
+		body.Announcement.Member.NodeState.NodeStateHash[:],
+		sender.GetNodeStateHashEvidence().GetNodeStateHash().AsBytes(),
+	)
+	copy(
+		body.Announcement.Member.NodeState.GlobulaNodeStateSignature[:],
+		sender.GetNodeStateHashEvidence().GetGlobulaNodeStateSignature().AsBytes(),
+	)
+
+	if sender.IsLeaving() {
+		body.Announcement.Member.AnnounceID = sender.GetNodeID()
+		body.Announcement.Member.Leaver.LeaveReason = sender.GetLeaveReason()
+	}
+
+	if announcement := sender.GetJoinerAnnouncement(); announcement != nil {
+		intro := announcement.GetBriefIntroduction()
+		body.Announcement.Member.Joiner.ShortID = sender.GetJoinerID()
+		body.Announcement.Member.Joiner.setPrimaryRole(intro.GetPrimaryRole())
+		body.Announcement.Member.Joiner.setAddrMode(endpoints.IPEndpoint)
+		body.Announcement.Member.Joiner.SpecialRoles = intro.GetSpecialRoles()
+		body.Announcement.Member.Joiner.StartPower = intro.GetStartPower()
+		copy(body.Announcement.Member.Joiner.NodePK[:], intro.GetNodePublicKey().AsBytes())
+		body.Announcement.Member.Joiner.Endpoint = intro.GetDefaultEndpoint().GetIPAddress()
+	}
+
+	body.Neighbourhood.NeighbourCount = uint8(len(neighbourhood))
+	body.Neighbourhood.Neighbours = make([]NeighbourAnnouncement, len(neighbourhood))
+	for i, neighbour := range neighbourhood {
+		body.Neighbourhood.Neighbours[i].NeighbourNodeID = neighbour.GetNodeID()
+		body.Neighbourhood.Neighbours[i].CurrentRank = neighbour.GetNodeRank()
+		body.Neighbourhood.Neighbours[i].RequestedPower = neighbour.GetRequestedPower()
+		copy(body.Neighbourhood.Neighbours[i].AnnounceSignature[:], neighbour.GetAnnouncementSignature().AsBytes())
+
+		if neighbour.GetNodeRank() != 0 {
+			copy(
+				body.Neighbourhood.Neighbours[i].Member.NodeState.NodeStateHash[:],
+				neighbour.GetNodeStateHashEvidence().GetNodeStateHash().AsBytes(),
+			)
+			copy(
+				body.Neighbourhood.Neighbours[i].Member.NodeState.GlobulaNodeStateSignature[:],
+				neighbour.GetNodeStateHashEvidence().GetGlobulaNodeStateSignature().AsBytes(),
+			)
+		}
+
+		if neighbour.IsLeaving() {
+			body.Neighbourhood.Neighbours[i].Member.AnnounceID = neighbour.GetNodeID()
+			body.Neighbourhood.Neighbours[i].Member.Leaver.LeaveReason = neighbour.GetLeaveReason()
+		}
+
+		if announcement := neighbour.GetJoinerAnnouncement(); announcement != nil {
+			intro := announcement.GetBriefIntroduction()
+			body.Neighbourhood.Neighbours[i].Joiner.ShortID = sender.GetJoinerID()
+			body.Neighbourhood.Neighbours[i].Joiner.setPrimaryRole(intro.GetPrimaryRole())
+			body.Neighbourhood.Neighbours[i].Joiner.setAddrMode(endpoints.IPEndpoint)
+			body.Neighbourhood.Neighbours[i].Joiner.SpecialRoles = intro.GetSpecialRoles()
+			body.Neighbourhood.Neighbours[i].Joiner.StartPower = intro.GetStartPower()
+			copy(body.Neighbourhood.Neighbours[i].Joiner.NodePK[:], intro.GetNodePublicKey().AsBytes())
+			body.Neighbourhood.Neighbours[i].Joiner.Endpoint = intro.GetDefaultEndpoint().GetIPAddress()
+		}
+	}
+	// TODO: fill joiner fields
+
+	return pb.preparePacketSender(packet)
 }
 
-func (p *PacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementProfile,
-	vectors nodeset.HashedNodeVector, options core.PacketSendOptions) core.PreparedPacketSender {
+func (pb *PacketBuilder) PreparePhase3Packet(sender *transport.NodeAnnouncementProfile,
+	vectors statevector.Vector, options transport.PacketSendOptions) transport.PreparedPacketSender {
 
-	packet := p.preparePacket(sender, packets.PacketPhase3)
+	packet := pb.preparePacket(sender, phases.PacketPhase3)
 
 	body := packet.EncryptableBody.(*GlobulaConsensusPacketBody)
 	body.Vectors.StateVectorMask.SetBitset(vectors.Bitset)
 
-	return p.prepareWrapper(packet)
+	copy(body.Vectors.MainStateVector.VectorHash[:], vectors.Trusted.AnnouncementHash.AsBytes())
+	copy(body.Vectors.MainStateVector.SignedGlobulaStateHash[:], vectors.Trusted.StateSignature.AsBytes())
+	body.Vectors.MainStateVector.ExpectedRank = vectors.Trusted.ExpectedRank
+
+	if vectors.Doubted.AnnouncementHash != nil {
+		packet.Header.SetFlag(1)
+		body.Vectors.AdditionalStateVectors = make([]GlobulaStateVector, 1)
+		copy(body.Vectors.AdditionalStateVectors[0].VectorHash[:], vectors.Doubted.AnnouncementHash.AsBytes())
+		copy(body.Vectors.AdditionalStateVectors[0].SignedGlobulaStateHash[:], vectors.Doubted.StateSignature.AsBytes())
+		body.Vectors.AdditionalStateVectors[0].ExpectedRank = vectors.Doubted.ExpectedRank
+	}
+
+	return pb.preparePacketSender(packet)
 }
 
-type preparedPacketWrapper struct {
+type PreparedPacketSender struct {
 	packet   *Packet
 	buf      [packetMaxSize]byte
-	digester common2.DataDigester
-	signer   common2.DigestSigner
+	digester cryptkit.DataDigester
+	signer   cryptkit.DigestSigner
 }
 
-func (p *preparedPacketWrapper) SendTo(ctx context.Context, target common.NodeProfile, sendOptions core.PacketSendOptions, sender core.PacketSender) {
-	p.packet.Header.TargetID = uint32(target.GetShortNodeID())
+func (p *PreparedPacketSender) Copy() *PreparedPacketSender {
+	ppsCopy := *p
+	pCopy := *p.packet
+	ppsCopy.packet = &pCopy
+	return &ppsCopy
+}
 
-	if (sendOptions & core.SendWithoutPulseData) != 0 {
+func (p *PreparedPacketSender) SendTo(ctx context.Context, target profiles.ActiveNode, sendOptions transport.PacketSendOptions, sender transport.PacketSender) {
+	p.packet.Header.TargetID = uint32(target.GetNodeID())
+	p.packet.Header.ReceiverID = uint32(target.GetNodeID())
+
+	if (sendOptions & transport.SendWithoutPulseData) != 0 {
 		p.packet.Header.ClearFlag(FlagHasPulsePacket)
 	}
 
@@ -184,12 +305,12 @@ func (p *preparedPacketWrapper) SendTo(ctx context.Context, target common.NodePr
 	sender.SendPacketToTransport(ctx, target, sendOptions, p.buf[:buf.Len()])
 }
 
-func (p *preparedPacketWrapper) SendToMany(ctx context.Context, targetCount int, sender core.PacketSender,
-	filter func(ctx context.Context, targetIndex int) (common.NodeProfile, core.PacketSendOptions)) {
+func (p *PreparedPacketSender) SendToMany(ctx context.Context, targetCount int, sender transport.PacketSender,
+	filter func(ctx context.Context, targetIndex int) (profiles.ActiveNode, transport.PacketSendOptions)) {
 
-	for i := 0; i <= targetCount; i++ {
+	for i := 0; i < targetCount; i++ {
 		if np, options := filter(ctx, i); np != nil {
-			p.SendTo(ctx, np, options, sender)
+			p.Copy().SendTo(ctx, np, options, sender)
 		}
 	}
 }

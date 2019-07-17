@@ -235,8 +235,8 @@ func (m *executionProxyImplementation) RouteCall(
 
 	// Step 3. Register result of the outgoing method
 	outgoingReqRef := insolar.NewReference(*outgoingReqID)
-	_, err = m.am.RegisterResult(ctx, req.Callee, *outgoingReqRef, rep.Result)
-	return err
+	reqResult := newRequestResult(rep.Result, req.Callee)
+	return m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
 }
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
@@ -266,8 +266,8 @@ func (m *executionProxyImplementation) SaveAsChild(
 
 	// Register result of the outgoing method
 	outgoingReqRef := insolar.NewReference(*outgoingReqID)
-	_, err = m.am.RegisterResult(ctx, req.Callee, *outgoingReqRef, rep.Reference.Bytes())
-	return err
+	reqResult := newRequestResult(rep.Reference.Bytes(), req.Callee)
+	return m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
 }
 
 // SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
@@ -297,8 +297,8 @@ func (m *executionProxyImplementation) SaveAsDelegate(
 
 	// Register result of the outgoing method
 	outgoingReqRef := insolar.NewReference(*outgoingReqID)
-	_, err = m.am.RegisterResult(ctx, req.Callee, *outgoingReqRef, rep.Reference.Bytes())
-	return err
+	reqResult := newRequestResult(rep.Reference.Bytes(), req.Callee)
+	return m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
 }
 
 var iteratorBuffSize = 1000
