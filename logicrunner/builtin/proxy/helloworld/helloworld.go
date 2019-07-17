@@ -518,13 +518,13 @@ func (r *HelloWorld) ErroredAsImmutable() (interface{}, error) {
 }
 
 // PulseNumber is proxy generated method
-func (r *HelloWorld) PulseNumber() (interface{}, error) {
+func (r *HelloWorld) PulseNumber() (insolar.PulseNumber, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 interface{}
+	var ret0 insolar.PulseNumber
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -570,13 +570,13 @@ func (r *HelloWorld) PulseNumberNoWait() error {
 }
 
 // PulseNumberAsImmutable is proxy generated method
-func (r *HelloWorld) PulseNumberAsImmutable() (interface{}, error) {
+func (r *HelloWorld) PulseNumberAsImmutable() (insolar.PulseNumber, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 interface{}
+	var ret0 insolar.PulseNumber
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1

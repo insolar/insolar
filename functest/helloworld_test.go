@@ -138,6 +138,19 @@ func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
 	return int(rv), nil
 }
 
+func (i *HelloWorldInstance) PulseNumber(ctx context.Context) (int, error) {
+	member := &user{i.Ref.String(), root.privKey, root.pubKey}
+	result, err := signedRequest(member, "PulseNumber", nil)
+	if err != nil {
+		return 0, err
+	}
+	rv, ok := result.(float64)
+	if !ok {
+		return 0, errors.Errorf("failed to decode: expected float64, got %T", result)
+	}
+	return int(rv), nil
+}
+
 func (i *HelloWorldInstance) CreateChild(ctx context.Context) (*HelloWorldInstance, error) {
 	seed, err := requester.GetSeed(TestAPIURL)
 	if err != nil {
@@ -228,18 +241,6 @@ func TestCallHelloWorld(t *testing.T) {
 	// tip: right now deduplication is not presented in our system, so number of created
 	//      requests should be less or equal to result count of registered requests
 	a.LessOrEqual(100, count)
-}
-func (i *HelloWorldInstance) PulseNumber(ctx context.Context) (int, error) {
-	member := &user{i.Ref.String(), root.privKey, root.pubKey}
-	result, err := signedRequest(member, "PulseNumber", nil)
-	if err != nil {
-		return 0, err
-	}
-	rv, ok := result.(float64)
-	if !ok {
-		return 0, errors.Errorf("failed to decode: expected float64, got %T", result)
-	}
-	return int(rv), nil
 }
 
 func TestCallPulseNumber(t *testing.T) {

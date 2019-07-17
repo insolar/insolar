@@ -22,6 +22,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member/signer"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 
@@ -63,7 +64,7 @@ func (hw *HelloWorld) Errored() (interface{}, error) {
 }
 
 //Get number pulse from foundation
-func (hw *HelloWorld) PulseNumber() (interface{}, error) {
+func (hw *HelloWorld) PulseNumber() (insolar.PulseNumber, error) {
 	pulse := foundation.GetPulseNumber()
 	return pulse, nil
 }
