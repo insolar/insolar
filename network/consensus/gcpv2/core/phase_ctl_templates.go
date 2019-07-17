@@ -53,104 +53,43 @@ package core
 import (
 	"context"
 
-	"github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
 
-type PhaseControllerPerMemberFromUnknownTemplate struct {
-	R *FullRealm
+type PhaseControllerTemplate struct {
 }
 
-func (c *PhaseControllerPerMemberFromUnknownTemplate) BeforeStart(realm *FullRealm) {
-	c.R = realm
+func (c *PhaseControllerTemplate) BeforeStart(realm *FullRealm) {
 }
 
-func (*PhaseControllerPerMemberFromUnknownTemplate) GetHandlerType() PhaseControllerHandlerType {
-	return PacketHandlerTypeEnableUnknown | PacketHandlerTypeMember
+func (*PhaseControllerTemplate) StartWorker(ctx context.Context, realm *FullRealm) {
 }
 
-func (*PhaseControllerPerMemberFromUnknownTemplate) HandleHostPacket(ctx context.Context, reader packets.PacketParser,
-	from common.HostIdentityHolder) error {
-
-	return errPacketIsNotAllowed
+type PrepPhaseControllerTemplate struct {
 }
 
-func (*PhaseControllerPerMemberFromUnknownTemplate) CreatePerNodePacketHandler(sharedNodeContext context.Context,
-	ctlIndex int, node *NodeAppearance, realm *FullRealm) (PhasePerNodePacketFunc, context.Context) {
-
-	return nil, sharedNodeContext
+func (c *PrepPhaseControllerTemplate) BeforeStart(realm *PrepRealm) {
 }
 
-func (*PhaseControllerPerMemberFromUnknownTemplate) StartWorker(ctx context.Context) {
+func (*PrepPhaseControllerTemplate) StartWorker(ctx context.Context, realm *PrepRealm) {
 }
 
-type PhaseControllerPerMemberTemplate struct {
-	PhaseControllerPerMemberFromUnknownTemplate
+// var _ PacketDispatcher = &HostPacketDispatcherTemplate{}
+
+type HostPacketDispatcherTemplate struct {
 }
 
-func (*PhaseControllerPerMemberTemplate) GetHandlerType() PhaseControllerHandlerType {
-	return PacketHandlerTypeMember
+func (*HostPacketDispatcherTemplate) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, source *NodeAppearance) error {
+	panic("illegal state")
 }
 
-func (*PhaseControllerPerMemberTemplate) HandleUnknownMemberPacket(ctx context.Context,
-	reader packets.MemberPacketReader, from common.HostIdentityHolder) (*NodeAppearance, error) {
+// var _ PacketDispatcher = &MemberPacketDispatcherTemplate{}
 
-	return nil, errPacketIsNotAllowed
+type MemberPacketDispatcherTemplate struct {
 }
 
-//var _ PhaseController = &PhaseControllerPerNodeTemplate{}
-type PhaseControllerPerNodeTemplate struct {
-	R *FullRealm
-}
-
-func (c *PhaseControllerPerNodeTemplate) BeforeStart(realm *FullRealm) {
-	c.R = realm
-}
-
-func (*PhaseControllerPerNodeTemplate) GetHandlerType() PhaseControllerHandlerType {
-	return PacketHandlerTypePerNode
-}
-
-func (*PhaseControllerPerNodeTemplate) HandleHostPacket(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) error {
-	return errPacketIsNotAllowed
-}
-
-func (*PhaseControllerPerNodeTemplate) HandleMemberPacket(ctx context.Context, reader packets.MemberPacketReader, src *NodeAppearance) error {
-	return errPacketIsNotAllowed
-}
-
-func (*PhaseControllerPerNodeTemplate) HandleUnknownMemberPacket(ctx context.Context, reader packets.MemberPacketReader, from common.HostIdentityHolder) (*NodeAppearance, error) {
-	return nil, errPacketIsNotAllowed
-}
-
-func (*PhaseControllerPerNodeTemplate) StartWorker(ctx context.Context) {
-}
-
-type PhaseControllerPerHostTemplate struct {
-	R *FullRealm
-}
-
-func (c *PhaseControllerPerHostTemplate) BeforeStart(realm *FullRealm) {
-	c.R = realm
-}
-
-func (*PhaseControllerPerHostTemplate) HandleMemberPacket(ctx context.Context, reader packets.MemberPacketReader, src *NodeAppearance) error {
-	return errPacketIsNotAllowed
-}
-
-func (*PhaseControllerPerHostTemplate) CreatePerNodePacketHandler(sharedNodeContext context.Context, ctlIndex int, node *NodeAppearance,
-	realm *FullRealm) (PhasePerNodePacketFunc, context.Context) {
-
-	return nil, sharedNodeContext
-}
-
-func (*PhaseControllerPerHostTemplate) HandleUnknownMemberPacket(ctx context.Context, reader packets.MemberPacketReader, from common.HostIdentityHolder) (*NodeAppearance, error) {
-	return nil, errPacketIsNotAllowed
-}
-
-func (*PhaseControllerPerHostTemplate) GetHandlerType() PhaseControllerHandlerType {
-	return PacketHandlerTypeHost
-}
-
-func (*PhaseControllerPerHostTemplate) StartWorker(ctx context.Context) {
+func (*MemberPacketDispatcherTemplate) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
+	from endpoints.Inbound, flags PacketVerifyFlags) error {
+	panic("illegal state")
 }
