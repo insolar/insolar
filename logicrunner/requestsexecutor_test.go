@@ -63,8 +63,8 @@ func TestRequestsExecutor_ExecuteAndSave(t *testing.T) {
 					Prototype: &protoRef,
 				},
 			},
-			le:    NewLogicExecutorMock(mc).ExecuteMock.Return(&RequestResult{Activation: true}, nil),
-			am:    artifacts.NewClientMock(mc).ActivateObjectMock.Return(nil),
+			le:    NewLogicExecutorMock(mc).ExecuteMock.Return(&requestResult{sideEffectType: artifacts.RequestSideEffectActivate}, nil),
+			am:    artifacts.NewClientMock(mc).RegisterResultMock.Return(nil),
 			reply: &reply.CallConstructor{Object: &requestRef},
 		},
 	}
@@ -100,7 +100,7 @@ func TestRequestsExecutor_Execute(t *testing.T) {
 		am         artifacts.Client
 		le         LogicExecutor
 		error      bool
-		result     *RequestResult
+		result     *requestResult
 	}{
 		{
 			name: "success, constructor",
@@ -109,8 +109,8 @@ func TestRequestsExecutor_Execute(t *testing.T) {
 					CallType: record.CTSaveAsChild,
 				},
 			},
-			le:     NewLogicExecutorMock(mc).ExecuteMock.Return(&RequestResult{Activation: true}, nil),
-			result: &RequestResult{Activation: true},
+			le:     NewLogicExecutorMock(mc).ExecuteMock.Return(&requestResult{sideEffectType: artifacts.RequestSideEffectActivate}, nil),
+			result: &requestResult{sideEffectType: artifacts.RequestSideEffectActivate},
 		},
 		{
 			name: "success, method",
@@ -120,8 +120,8 @@ func TestRequestsExecutor_Execute(t *testing.T) {
 				},
 			},
 			am:     artifacts.NewClientMock(mc).GetObjectMock.Return(nil, nil),
-			le:     NewLogicExecutorMock(mc).ExecuteMock.Return(&RequestResult{Activation: true}, nil),
-			result: &RequestResult{Activation: true},
+			le:     NewLogicExecutorMock(mc).ExecuteMock.Return(&requestResult{sideEffectType: artifacts.RequestSideEffectActivate}, nil),
+			result: &requestResult{sideEffectType: artifacts.RequestSideEffectActivate},
 		},
 		{
 			name: "method, no object",
@@ -174,11 +174,9 @@ func TestRequestsExecutor_Save(t *testing.T) {
 	protoRef := gen.Reference()
 	objRef := gen.Reference()
 
-	resId := gen.ID()
-
 	table := []struct {
 		name       string
-		result     *RequestResult
+		result     *requestResult
 		transcript *Transcript
 		am         artifacts.Client
 		error      bool
@@ -193,8 +191,8 @@ func TestRequestsExecutor_Save(t *testing.T) {
 					Prototype: &protoRef,
 				},
 			},
-			result: &RequestResult{Activation: true},
-			am:     artifacts.NewClientMock(mc).ActivateObjectMock.Return(nil),
+			result: &requestResult{sideEffectType: artifacts.RequestSideEffectActivate},
+			am:     artifacts.NewClientMock(mc).RegisterResultMock.Return(nil),
 			reply:  &reply.CallConstructor{Object: &requestRef},
 		},
 		{
@@ -206,8 +204,8 @@ func TestRequestsExecutor_Save(t *testing.T) {
 					Prototype: &protoRef,
 				},
 			},
-			result: &RequestResult{Activation: true},
-			am:     artifacts.NewClientMock(mc).ActivateObjectMock.Return(errors.New("some error")),
+			result: &requestResult{sideEffectType: artifacts.RequestSideEffectActivate},
+			am:     artifacts.NewClientMock(mc).RegisterResultMock.Return(errors.New("some error")),
 			error:  true,
 		},
 		{
@@ -216,8 +214,8 @@ func TestRequestsExecutor_Save(t *testing.T) {
 				RequestRef: requestRef,
 				Request:    &record.IncomingRequest{},
 			},
-			result: &RequestResult{Deactivation: true, Result: []byte{1, 2, 3}},
-			am:     artifacts.NewClientMock(mc).DeactivateObjectMock.Return(nil),
+			result: &requestResult{sideEffectType: artifacts.RequestSideEffectDeactivate, result: []byte{1, 2, 3}},
+			am:     artifacts.NewClientMock(mc).RegisterResultMock.Return(nil),
 			reply:  &reply.CallMethod{Result: []byte{1, 2, 3}},
 		},
 		{
@@ -226,8 +224,8 @@ func TestRequestsExecutor_Save(t *testing.T) {
 				RequestRef: requestRef,
 				Request:    &record.IncomingRequest{},
 			},
-			result: &RequestResult{Deactivation: true, Result: []byte{1, 2, 3}},
-			am:     artifacts.NewClientMock(mc).DeactivateObjectMock.Return(errors.New("some")),
+			result: &requestResult{sideEffectType: artifacts.RequestSideEffectDeactivate, result: []byte{1, 2, 3}},
+			am:     artifacts.NewClientMock(mc).RegisterResultMock.Return(errors.New("some")),
 			error:  true,
 		},
 		{
@@ -236,8 +234,8 @@ func TestRequestsExecutor_Save(t *testing.T) {
 				RequestRef: requestRef,
 				Request:    &record.IncomingRequest{},
 			},
-			result: &RequestResult{NewMemory: []byte{3, 2, 1}, Result: []byte{1, 2, 3}},
-			am:     artifacts.NewClientMock(mc).UpdateObjectMock.Return(nil),
+			result: &requestResult{sideEffectType: artifacts.RequestSideEffectAmend, memory: []byte{3, 2, 1}, result: []byte{1, 2, 3}},
+			am:     artifacts.NewClientMock(mc).RegisterResultMock.Return(nil),
 			reply:  &reply.CallMethod{Result: []byte{1, 2, 3}},
 		},
 		{
@@ -246,8 +244,8 @@ func TestRequestsExecutor_Save(t *testing.T) {
 				RequestRef: requestRef,
 				Request:    &record.IncomingRequest{},
 			},
-			result: &RequestResult{NewMemory: []byte{3, 2, 1}, Result: []byte{1, 2, 3}},
-			am:     artifacts.NewClientMock(mc).UpdateObjectMock.Return(errors.New("some")),
+			result: &requestResult{sideEffectType: artifacts.RequestSideEffectAmend, memory: []byte{3, 2, 1}, result: []byte{1, 2, 3}},
+			am:     artifacts.NewClientMock(mc).RegisterResultMock.Return(errors.New("some")),
 			error:  true,
 		},
 		{
@@ -256,8 +254,8 @@ func TestRequestsExecutor_Save(t *testing.T) {
 				RequestRef: requestRef,
 				Request:    &record.IncomingRequest{Object: &objRef},
 			},
-			result: &RequestResult{Result: []byte{1, 2, 3}},
-			am:     artifacts.NewClientMock(mc).RegisterResultMock.Return(&resId, nil),
+			result: &requestResult{sideEffectType: artifacts.RequestSideEffectNone, result: []byte{1, 2, 3}},
+			am:     artifacts.NewClientMock(mc).RegisterResultMock.Return(nil),
 			reply:  &reply.CallMethod{Result: []byte{1, 2, 3}},
 		},
 		{
@@ -266,8 +264,8 @@ func TestRequestsExecutor_Save(t *testing.T) {
 				RequestRef: requestRef,
 				Request:    &record.IncomingRequest{Object: &objRef},
 			},
-			result: &RequestResult{Result: []byte{1, 2, 3}},
-			am:     artifacts.NewClientMock(mc).RegisterResultMock.Return(nil, errors.New("some")),
+			result: &requestResult{sideEffectType: artifacts.RequestSideEffectNone, result: []byte{1, 2, 3}},
+			am:     artifacts.NewClientMock(mc).RegisterResultMock.Return(errors.New("some")),
 			error:  true,
 		},
 	}
@@ -276,14 +274,14 @@ func TestRequestsExecutor_Save(t *testing.T) {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
 			re := &requestsExecutor{ArtifactManager: test.am}
-			reply, err := re.Save(ctx, test.transcript, test.result)
+			replyVal, err := re.Save(ctx, test.transcript, test.result)
 			if !test.error {
 				require.NoError(t, err)
-				require.NotNil(t, reply)
-				require.Equal(t, test.reply, reply)
+				require.NotNil(t, replyVal)
+				require.Equal(t, test.reply, replyVal)
 			} else {
 				require.Error(t, err)
-				require.Nil(t, reply)
+				require.Nil(t, replyVal)
 			}
 		})
 	}

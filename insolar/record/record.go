@@ -143,7 +143,8 @@ type Request interface {
 	// of this Request.
 	ReasonRef() insolar.Reference
 	GetCallType() CallType
-	IsAPIReq() bool
+	IsAPIRequest() bool
+	IsCreationRequest() bool
 }
 
 func (r *IncomingRequest) AffinityRef() *insolar.Reference {
@@ -156,8 +157,12 @@ func (r *IncomingRequest) ReasonRef() insolar.Reference {
 	return r.Reason
 }
 
-func (r *IncomingRequest) IsAPIReq() bool {
+func (r *IncomingRequest) IsAPIRequest() bool {
 	return !r.APINode.IsEmpty()
+}
+
+func (r *IncomingRequest) IsCreationRequest() bool {
+	return r.GetCallType() == CTSaveAsChild || r.GetCallType() == CTSaveAsDelegate
 }
 
 func (r *OutgoingRequest) AffinityRef() *insolar.Reference {
@@ -169,7 +174,11 @@ func (r *OutgoingRequest) ReasonRef() insolar.Reference {
 	return r.Reason
 }
 
-func (r *OutgoingRequest) IsAPIReq() bool {
+func (r *OutgoingRequest) IsAPIRequest() bool {
+	return false
+}
+
+func (r *OutgoingRequest) IsCreationRequest() bool {
 	return false
 }
 

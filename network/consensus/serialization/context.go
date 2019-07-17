@@ -56,7 +56,9 @@ import (
 	"io"
 	"math"
 
-	"github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+
 	"github.com/pkg/errors"
 )
 
@@ -68,7 +70,7 @@ const (
 
 type serializeSetter interface {
 	setPayloadLength(uint16)
-	setSignature(signature common.SignatureHolder)
+	setSignature(signature cryptkit.SignatureHolder)
 }
 
 type deserializeGetter interface {
@@ -82,8 +84,8 @@ type packetContext struct {
 	header *Header
 
 	fieldContext          FieldContext
-	neighbourNodeID       common.ShortNodeID
-	announcedJoinerNodeID common.ShortNodeID
+	neighbourNodeID       insolar.ShortNodeID
+	announcedJoinerNodeID insolar.ShortNodeID
 }
 
 func newPacketContext(ctx context.Context, header *Header) packetContext {
@@ -102,19 +104,19 @@ func (pc *packetContext) SetInContext(ctx FieldContext) {
 	pc.fieldContext = ctx
 }
 
-func (pc *packetContext) GetNeighbourNodeID() common.ShortNodeID {
+func (pc *packetContext) GetNeighbourNodeID() insolar.ShortNodeID {
 	return pc.neighbourNodeID
 }
 
-func (pc *packetContext) SetNeighbourNodeID(nodeID common.ShortNodeID) {
+func (pc *packetContext) SetNeighbourNodeID(nodeID insolar.ShortNodeID) {
 	pc.neighbourNodeID = nodeID
 }
 
-func (pc *packetContext) GetAnnouncedJoinerNodeID() common.ShortNodeID {
+func (pc *packetContext) GetAnnouncedJoinerNodeID() insolar.ShortNodeID {
 	return pc.announcedJoinerNodeID
 }
 
-func (pc *packetContext) SetAnnouncedJoinerNodeID(nodeID common.ShortNodeID) {
+func (pc *packetContext) SetAnnouncedJoinerNodeID(nodeID insolar.ShortNodeID) {
 	pc.announcedJoinerNodeID = nodeID
 }
 
@@ -153,8 +155,8 @@ type serializeContext struct {
 	PacketHeaderModifier
 
 	writer   *trackableWriter
-	digester common.DataDigester
-	signer   common.DigestSigner
+	digester cryptkit.DataDigester
+	signer   cryptkit.DigestSigner
 	setter   serializeSetter
 
 	buf1         [packetMaxSize]byte
@@ -164,8 +166,8 @@ type serializeContext struct {
 	packetBuffer *bytes.Buffer
 }
 
-func newSerializeContext(ctx packetContext, writer *trackableWriter, digester common.DataDigester, signer common.DigestSigner, callback serializeSetter) *serializeContext {
-	sctx := &serializeContext{
+func newSerializeContext(ctx packetContext, writer *trackableWriter, digester cryptkit.DataDigester, signer cryptkit.DigestSigner, callback serializeSetter) *serializeContext {
+	serializeCtx := &serializeContext{
 		packetContext:        ctx,
 		PacketHeaderModifier: ctx.header,
 
@@ -175,11 +177,11 @@ func newSerializeContext(ctx packetContext, writer *trackableWriter, digester co
 		setter:   callback,
 	}
 
-	sctx.bodyBuffer = bytes.NewBuffer(sctx.buf1[0:0:packetMaxSize])
-	sctx.bodyTracker = newTrackableWriter(sctx.bodyBuffer)
-	sctx.packetBuffer = bytes.NewBuffer(sctx.buf2[0:0:packetMaxSize])
+	serializeCtx.bodyBuffer = bytes.NewBuffer(serializeCtx.buf1[0:0:packetMaxSize])
+	serializeCtx.bodyTracker = newTrackableWriter(serializeCtx.bodyBuffer)
+	serializeCtx.packetBuffer = bytes.NewBuffer(serializeCtx.buf2[0:0:packetMaxSize])
 
-	return sctx
+	return serializeCtx
 }
 
 func (ctx *serializeContext) Write(p []byte) (int, error) {
@@ -199,7 +201,7 @@ func (ctx *serializeContext) Finalize() (int64, error) {
 	}
 	ctx.setter.setPayloadLength(uint16(payloadLength))
 
-	// TODO: receiverid =0
+	// TODO: set receiver id = 0
 	if err := ctx.header.SerializeTo(ctx, ctx.packetBuffer); err != nil {
 		return totalWrite, ErrMalformedHeader(err)
 	}
@@ -219,7 +221,7 @@ func (ctx *serializeContext) Finalize() (int64, error) {
 	}
 
 	if totalWrite, err = ctx.packetBuffer.WriteTo(ctx.writer); totalWrite != payloadLength {
-		return totalWrite, ErrPayloadLengthMissmatch(payloadLength, totalWrite)
+		return totalWrite, ErrPayloadLengthMismatch(payloadLength, totalWrite)
 	}
 
 	return totalWrite, err
@@ -233,13 +235,13 @@ type deserializeContext struct {
 }
 
 func newDeserializeContext(ctx packetContext, reader *trackableReader, callback deserializeGetter) *deserializeContext {
-	dctx := &deserializeContext{
+	deserializeCtx := &deserializeContext{
 		packetContext: ctx,
 
 		reader: reader,
 		getter: callback,
 	}
-	return dctx
+	return deserializeCtx
 }
 
 func (ctx *deserializeContext) Read(p []byte) (int, error) {
@@ -248,7 +250,7 @@ func (ctx *deserializeContext) Read(p []byte) (int, error) {
 
 func (ctx *deserializeContext) Finalize() (int64, error) {
 	if payloadLength := int64(ctx.getter.getPayloadLength()); payloadLength != ctx.reader.totalRead {
-		return ctx.reader.totalRead, ErrPayloadLengthMissmatch(payloadLength, ctx.reader.totalRead)
+		return ctx.reader.totalRead, ErrPayloadLengthMismatch(payloadLength, ctx.reader.totalRead)
 	}
 
 	return ctx.reader.totalRead, nil

@@ -55,13 +55,21 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	transport2 "github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/network/consensus/serialization"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/adapters"
-	common2 "github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2"
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/network/consensus/gcpv2/censusimpl"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/transport"
 )
@@ -79,10 +87,6 @@ type Dep struct {
 	StateGetter  adapters.StateGetter
 	PulseChanger adapters.PulseChanger
 	StateUpdater adapters.StateUpdater
-
-	// TODO: remove it from here
-	PacketBuilder func(core.TransportCryptographyFactory, core.LocalNodeConfiguration) core.PacketBuilder
-	PacketSender  core.PacketSender
 }
 
 func (cd *Dep) verify() {
@@ -90,22 +94,23 @@ func (cd *Dep) verify() {
 }
 
 type Consensus struct {
-	population                   census.ManyNodePopulation     // TODO: there should be interface
-	consensusConfiguration       census.ConsensusConfiguration // TODO: there should be interface
+	population                   censusimpl.ManyNodePopulation // TODO: there should be interface
+	consensusConfiguration       census.ConsensusConfiguration
 	mandateRegistry              census.MandateRegistry
 	misbehaviorRegistry          census.MisbehaviorRegistry
 	offlinePopulation            census.OfflinePopulation
 	versionedRegistries          census.VersionedRegistries
-	nodeProfileFactory           common.NodeProfileFactory
-	consensusChronicles          census.ConsensusChronicles
-	localNodeConfiguration       core.LocalNodeConfiguration
-	upstreamPulseController      core.UpstreamPulseController
+	nodeProfileFactory           profiles.Factory
+	consensusChronicles          api.ConsensusChronicles
+	localNodeConfiguration       api.LocalNodeConfiguration
+	upstreamPulseController      api.UpstreamController
 	roundStrategyFactory         core.RoundStrategyFactory
-	transportCryptographyFactory core.TransportCryptographyFactory
-	packetBuilder                core.PacketBuilder
-	packetSender                 core.PacketSender
-	transportFactory             core.TransportFactory
-	consensusController          core.ConsensusController
+	transportCryptographyFactory transport2.CryptographyFactory
+	packetBuilder                transport2.PacketBuilder
+	packetSender                 transport2.PacketSender
+	transportFactory             transport2.Factory
+	consensusController          api.ConsensusController
+	packetParserFactory          adapters.PacketParserFactory
 }
 
 func New(ctx context.Context, dep Dep) Consensus {
@@ -123,8 +128,8 @@ func New(ctx context.Context, dep Dep) Consensus {
 	)
 	consensus.consensusConfiguration = adapters.NewConsensusConfiguration()
 	consensus.mandateRegistry = adapters.NewMandateRegistry(
-		common2.NewDigest(
-			common2.NewBits512FromBytes(
+		cryptkit.NewDigest(
+			longbits.NewBits512FromBytes(
 				dep.PrimingCloudStateHash[:],
 			),
 			adapters.SHA3512Digest,
@@ -159,13 +164,11 @@ func New(ctx context.Context, dep Dep) Consensus {
 	)
 	consensus.roundStrategyFactory = adapters.NewRoundStrategyFactory()
 	consensus.transportCryptographyFactory = adapters.NewTransportCryptographyFactory(dep.Scheme)
-	consensus.packetBuilder = dep.PacketBuilder(
+	consensus.packetBuilder = serialization.NewPacketBuilder(
 		consensus.transportCryptographyFactory,
 		consensus.localNodeConfiguration,
 	)
-	// TODO: comment until serialization ready
-	// consensus.packetSender = NewPacketSender(dep.DatagramTransport)
-	consensus.packetSender = dep.PacketSender
+	consensus.packetSender = adapters.NewPacketSender(dep.DatagramTransport)
 	consensus.transportFactory = adapters.NewTransportFactory(
 		consensus.transportCryptographyFactory,
 		consensus.packetBuilder,
@@ -179,8 +182,13 @@ func New(ctx context.Context, dep Dep) Consensus {
 			consensus.transportFactory,
 			consensus.roundStrategyFactory,
 		),
-		&core.SequencialCandidateFeeder{},
+		&core.SequentialCandidateFeeder{},
 		adapters.NewConsensusControlFeeder(),
+	)
+	consensus.packetParserFactory = serialization.NewPacketParserFactory(
+		consensus.transportCryptographyFactory.GetDigestFactory().GetPacketDigester(),
+		consensus.transportCryptographyFactory.GetNodeSigner(consensus.localNodeConfiguration.GetSecretKeyStore()).GetSignMethod(),
+		dep.KeyProcessor,
 	)
 
 	consensus.verify()
@@ -189,16 +197,22 @@ func New(ctx context.Context, dep Dep) Consensus {
 
 type packetProcessorSetter interface {
 	SetPacketProcessor(adapters.PacketProcessor)
+	SetPacketParserFactory(factory adapters.PacketParserFactory)
 }
 
 type Controller interface {
-	// Leave
-	// SetPower
+	Abort()
+	/* Graceful exit, actual moment of leave will be indicated via Upstream */
+	// RequestLeave()
+
+	/* This node power in the active population, and pulse number of such. Without active population returns (0,0) */
+	GetActivePowerLimit() (member.Power, pulse.Number)
 }
 
 func (c Consensus) Install(setters ...packetProcessorSetter) Controller {
 	for _, setter := range setters {
 		setter.SetPacketProcessor(c.consensusController)
+		setter.SetPacketParserFactory(c.packetParserFactory)
 	}
 	return c.consensusController
 }

@@ -29,7 +29,7 @@ func newResultsMatcher(lr *LogicRunner) resultsMatcher {
 	}
 }
 
-func (rm *resultsMatcher) send(ctx context.Context, msg *message.ReturnResults, receiver *insolar.Reference) {
+func (rm *resultsMatcher) send(ctx context.Context, msg insolar.Message, receiver *insolar.Reference) {
 	sender := messagebus.BuildSender(
 		rm.lr.MessageBus.Send,
 		messagebus.RetryIncorrectPulse(rm.lr.PulseAccessor),
