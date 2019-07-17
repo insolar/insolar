@@ -162,6 +162,18 @@ func NewServer(ctx context.Context, cfg configuration.Configuration) (*Server, e
 			return nil, err
 		}
 
+		jetTreeUpdater := jet.NewFetcher(Nodes, Jets, Bus, Coordinator)
+		filamentCalculator := executor.NewFilamentCalculator(
+			indexes,
+			records,
+			Coordinator,
+			jetTreeUpdater,
+			WmBus,
+		)
+
+		handler.JetTreeUpdater = jetTreeUpdater
+		handler.FilamentCalculator = filamentCalculator
+
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
 		var lightCleaner = replication.NewCleaner(
 			Jets.(jet.Cleaner),
