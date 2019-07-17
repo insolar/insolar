@@ -51,14 +51,20 @@
 package tests
 
 import (
+	"bytes"
 	"context"
 	"math/rand"
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/pulsenetwork"
+
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/adapters"
-	"github.com/insolar/insolar/network/consensus/common"
 )
 
 const (
@@ -68,7 +74,7 @@ const (
 
 type Pulsar struct {
 	pulseDelta    uint16
-	pulseNumber   common.PulseNumber
+	pulseNumber   pulse.Number
 	pulseHandlers []network.PulseHandler
 
 	mu *sync.Mutex
@@ -94,19 +100,27 @@ func (p *Pulsar) Pulse(ctx context.Context, attempts int) {
 		prevDelta = 0
 	}
 
-	data := *common.NewPulsarData(p.pulseNumber, p.pulseDelta, prevDelta, randBits256())
-	p.pulseNumber += common.PulseNumber(p.pulseDelta)
+	data := *pulse.NewPulsarData(p.pulseNumber, p.pulseDelta, prevDelta, randBits256())
+	p.pulseNumber += pulse.Number(p.pulseDelta)
+
+	pu := adapters.NewPulse(data)
+	ph, _ := host.NewHost("127.0.0.1:1")
+	th, _ := host.NewHost("127.0.0.1:2")
+	pp := pulsenetwork.NewPulsePacket(ctx, &pu, ph, th, 0)
+
+	bs, _ := packet.SerializePacket(pp)
+	rp, _ := packet.DeserializePacketRaw(bytes.NewReader(bs))
 
 	go func() {
 		for i := 0; i < attempts; i++ {
 			handler := p.pulseHandlers[rand.Intn(len(p.pulseHandlers))]
-			go handler.HandlePulse(ctx, adapters.NewPulse(data), nil)
+			go handler.HandlePulse(ctx, pu, rp)
 		}
 	}()
 }
 
-func randBits256() common.Bits256 {
-	v := common.Bits256{}
+func randBits256() longbits.Bits256 {
+	v := longbits.Bits256{}
 	_, _ = rand.Read(v[:])
 	return v
 }

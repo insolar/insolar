@@ -244,7 +244,7 @@ func (m *client) GetCode(
 		return nil, errors.Wrap(err, "failed to marshal message")
 	}
 
-	r := bus.NewRetrySender(m.sender, m.PulseAccessor, 3)
+	r := bus.NewRetrySender(m.sender, 3)
 	reps, done := r.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, code)
 	defer done()
 
@@ -321,7 +321,7 @@ func (m *client) GetObject(
 		return nil, errors.Wrap(err, "failed to marshal message")
 	}
 
-	r := bus.NewRetrySender(m.sender, m.PulseAccessor, 3)
+	r := bus.NewRetrySender(m.sender, 3)
 	reps, done := r.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, head)
 	defer done()
 
@@ -801,7 +801,7 @@ func (m *client) activateObject(
 	}
 
 	switch p := pl.(type) {
-	case *payload.ID:
+	case *payload.ResultInfo:
 		var (
 			asType *insolar.Reference
 		)
@@ -899,8 +899,8 @@ func (m *client) RegisterResult(
 		}
 
 		switch p := payloadOutput.(type) {
-		case *payload.ID:
-			return &payloadOutput.(*payload.ID).ID, nil
+		case *payload.ResultInfo:
+			return &payloadOutput.(*payload.ResultInfo).ResultID, nil
 		case *payload.Error:
 			return nil, errors.New(p.Text)
 		default:

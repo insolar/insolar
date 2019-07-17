@@ -54,7 +54,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
 )
 
 type DelayStrategyConf struct {
@@ -104,7 +104,7 @@ func (dns *delayNetStrategy) getDelay() time.Duration {
 	return 0
 }
 
-func (dns *delayNetStrategy) GetLinkStrategy(hostAddress common.HostAddress) LinkStrategy {
+func (dns *delayNetStrategy) GetLinkStrategy(hostAddress endpoints.Name) LinkStrategy {
 	return newDelayLinkStrategy(
 		dns.getDelay(),
 		dns.conf.SpikeDelay,

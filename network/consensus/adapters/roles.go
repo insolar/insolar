@@ -52,33 +52,33 @@ package adapters
 
 import (
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 )
 
-func StaticRoleToPrimaryRole(staticRole insolar.StaticRole) common.NodePrimaryRole {
+func StaticRoleToPrimaryRole(staticRole insolar.StaticRole) member.PrimaryRole {
 	switch staticRole {
 	case insolar.StaticRoleVirtual:
-		return common.PrimaryRoleVirtual
+		return member.PrimaryRoleVirtual
 	case insolar.StaticRoleLightMaterial:
-		return common.PrimaryRoleLightMaterial
+		return member.PrimaryRoleLightMaterial
 	case insolar.StaticRoleHeavyMaterial:
-		return common.PrimaryRoleHeavyMaterial
+		return member.PrimaryRoleHeavyMaterial
 	case insolar.StaticRoleUnknown:
 		fallthrough
 	default:
-		return common.PrimaryRoleNeutral
+		return member.PrimaryRoleNeutral
 	}
 }
 
-func PrimaryRoleToStaticRole(primaryRole common.NodePrimaryRole) insolar.StaticRole {
+func PrimaryRoleToStaticRole(primaryRole member.PrimaryRole) insolar.StaticRole {
 	switch primaryRole {
-	case common.PrimaryRoleVirtual:
+	case member.PrimaryRoleVirtual:
 		return insolar.StaticRoleVirtual
-	case common.PrimaryRoleLightMaterial:
+	case member.PrimaryRoleLightMaterial:
 		return insolar.StaticRoleLightMaterial
-	case common.PrimaryRoleHeavyMaterial:
+	case member.PrimaryRoleHeavyMaterial:
 		return insolar.StaticRoleHeavyMaterial
-	case common.PrimaryRoleNeutral:
+	case member.PrimaryRoleNeutral:
 		fallthrough
 	default:
 		return insolar.StaticRoleUnknown
