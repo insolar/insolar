@@ -18,7 +18,6 @@ package contracts
 
 import (
 	"fmt"
-	"math/big"
 	"strconv"
 
 	"github.com/insolar/insolar/insolar"
@@ -133,7 +132,7 @@ func getCostCenterGenesisContractState() insolar.GenesisContractState {
 }
 
 func getTariffGenesisContractState() insolar.GenesisContractState {
-	t, err := tariff.New(big.NewInt(1000 * 1000 * 1000).String()) // 10% fee
+	t, err := tariff.New()
 	if err != nil {
 		panic("failed to create tariff instance")
 	}

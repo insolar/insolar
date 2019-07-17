@@ -130,9 +130,7 @@ func INSMETHOD_CalcFee(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	ph := common.CurrentProxyCtx
-	args := [1]interface{}{}
-	var args0 string
-	args[0] = &args0
+	args := []interface{}{}
 
 	err := ph.Deserialize(data, &args)
 	if err != nil {
@@ -140,7 +138,7 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 		return nil, e
 	}
 
-	ret0, ret1 := New(args0)
+	ret0, ret1 := New()
 	if ret1 != nil {
 		return nil, ret1
 	}

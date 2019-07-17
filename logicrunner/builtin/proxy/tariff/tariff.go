@@ -77,9 +77,8 @@ func GetImplementationFrom(object insolar.Reference) (*Tariff, error) {
 }
 
 // New is constructor
-func New(commissionRate string) *ContractConstructorHolder {
-	var args [1]interface{}
-	args[0] = commissionRate
+func New() *ContractConstructorHolder {
+	var args [0]interface{}
 
 	var argsSerialized []byte
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
