@@ -66,8 +66,6 @@ type Drop struct {
 
 	// SplitThresholdExceeded is a counter, which stores how many times in the row jet records count exceeds `ThresholdRecordsCount`.
 	SplitThresholdExceeded int
-	// Split indicates to heavy, what split for this jet happened on light.
-	Split bool
 }
 
 // MustEncode serializes jet drop.
