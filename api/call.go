@@ -29,6 +29,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/metrics"
 
 	"github.com/insolar/insolar/api/requester"
@@ -89,7 +90,7 @@ func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBo
 
 	reference, err := insolar.NewReferenceFromBase58(request.Params.Reference)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ makeCall ] failed to parse params.Reference")
+		return nil, errors.Wrapf(err, "[ makeCall ] failed to parse params.Reference: %s, method: %S", genesisrefs.ContractRootMember.String(), request.Params.CallSite)
 	}
 
 	requestArgs, err := insolar.MarshalArgs(rawBody, signature, pulseTimeStamp)
@@ -175,6 +176,14 @@ func processRequest(ctx context.Context,
 	return ctx, rawBody, nil
 }
 
+func setRootReferenceIfNeeded(request *requester.Request) {
+	if request.Params.CallSite == "member.create" ||
+		request.Params.CallSite == "member.migrationCreate" ||
+		request.Params.CallSite == "member.get" {
+		request.Params.Reference = genesisrefs.ContractRootMember.String()
+	}
+}
+
 func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 		traceID := utils.RandTraceID()
@@ -219,6 +228,8 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			processError(err, err.Error(), contractAnswer, insLog, traceID)
 			return
 		}
+
+		setRootReferenceIfNeeded(contractRequest)
 
 		var result interface{}
 		ch := make(chan interface{}, 1)

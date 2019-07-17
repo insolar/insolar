@@ -176,7 +176,7 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 	}
 	publicKeyStr := string(publicKey)
 
-	userConfig, err := requester.CreateUserConfig(sdk.rootMember.Caller, privateKeyStr, publicKeyStr)
+	userConfig, err := requester.CreateUserConfig("", privateKeyStr, publicKeyStr)
 	if err != nil {
 		return nil, "", errors.Wrap(err, "failed to create user config for request")
 	}
