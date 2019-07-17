@@ -46,15 +46,20 @@ type ClientMock struct {
 	GetDelegatePreCounter uint64
 	GetDelegateMock       mClientMockGetDelegate
 
+	GetIncomingRequestFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference) (r *record.IncomingRequest, r1 error)
+	GetIncomingRequestCounter    uint64
+	GetIncomingRequestPreCounter uint64
+	GetIncomingRequestMock       mClientMockGetIncomingRequest
+
 	GetObjectFunc       func(p context.Context, p1 insolar.Reference) (r ObjectDescriptor, r1 error)
 	GetObjectCounter    uint64
 	GetObjectPreCounter uint64
 	GetObjectMock       mClientMockGetObject
 
-	GetPendingRequestFunc       func(p context.Context, p1 insolar.ID) (r *insolar.Reference, r1 *record.IncomingRequest, r2 error)
-	GetPendingRequestCounter    uint64
-	GetPendingRequestPreCounter uint64
-	GetPendingRequestMock       mClientMockGetPendingRequest
+	GetPendingsFunc       func(p context.Context, p1 insolar.Reference) (r []insolar.Reference, r1 error)
+	GetPendingsCounter    uint64
+	GetPendingsPreCounter uint64
+	GetPendingsMock       mClientMockGetPendings
 
 	HasPendingRequestsFunc       func(p context.Context, p1 insolar.Reference) (r bool, r1 error)
 	HasPendingRequestsCounter    uint64
@@ -115,8 +120,9 @@ func NewClientMock(t minimock.Tester) *ClientMock {
 	m.GetChildrenMock = mClientMockGetChildren{mock: m}
 	m.GetCodeMock = mClientMockGetCode{mock: m}
 	m.GetDelegateMock = mClientMockGetDelegate{mock: m}
+	m.GetIncomingRequestMock = mClientMockGetIncomingRequest{mock: m}
 	m.GetObjectMock = mClientMockGetObject{mock: m}
-	m.GetPendingRequestMock = mClientMockGetPendingRequest{mock: m}
+	m.GetPendingsMock = mClientMockGetPendings{mock: m}
 	m.HasPendingRequestsMock = mClientMockHasPendingRequests{mock: m}
 	m.InjectCodeDescriptorMock = mClientMockInjectCodeDescriptor{mock: m}
 	m.InjectFinishMock = mClientMockInjectFinish{mock: m}
@@ -890,6 +896,158 @@ func (m *ClientMock) GetDelegateFinished() bool {
 	return true
 }
 
+type mClientMockGetIncomingRequest struct {
+	mock              *ClientMock
+	mainExpectation   *ClientMockGetIncomingRequestExpectation
+	expectationSeries []*ClientMockGetIncomingRequestExpectation
+}
+
+type ClientMockGetIncomingRequestExpectation struct {
+	input  *ClientMockGetIncomingRequestInput
+	result *ClientMockGetIncomingRequestResult
+}
+
+type ClientMockGetIncomingRequestInput struct {
+	p  context.Context
+	p1 insolar.Reference
+	p2 insolar.Reference
+}
+
+type ClientMockGetIncomingRequestResult struct {
+	r  *record.IncomingRequest
+	r1 error
+}
+
+//Expect specifies that invocation of Client.GetIncomingRequest is expected from 1 to Infinity times
+func (m *mClientMockGetIncomingRequest) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Reference) *mClientMockGetIncomingRequest {
+	m.mock.GetIncomingRequestFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ClientMockGetIncomingRequestExpectation{}
+	}
+	m.mainExpectation.input = &ClientMockGetIncomingRequestInput{p, p1, p2}
+	return m
+}
+
+//Return specifies results of invocation of Client.GetIncomingRequest
+func (m *mClientMockGetIncomingRequest) Return(r *record.IncomingRequest, r1 error) *ClientMock {
+	m.mock.GetIncomingRequestFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ClientMockGetIncomingRequestExpectation{}
+	}
+	m.mainExpectation.result = &ClientMockGetIncomingRequestResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Client.GetIncomingRequest is expected once
+func (m *mClientMockGetIncomingRequest) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Reference) *ClientMockGetIncomingRequestExpectation {
+	m.mock.GetIncomingRequestFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ClientMockGetIncomingRequestExpectation{}
+	expectation.input = &ClientMockGetIncomingRequestInput{p, p1, p2}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *ClientMockGetIncomingRequestExpectation) Return(r *record.IncomingRequest, r1 error) {
+	e.result = &ClientMockGetIncomingRequestResult{r, r1}
+}
+
+//Set uses given function f as a mock of Client.GetIncomingRequest method
+func (m *mClientMockGetIncomingRequest) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference) (r *record.IncomingRequest, r1 error)) *ClientMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetIncomingRequestFunc = f
+	return m.mock
+}
+
+//GetIncomingRequest implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
+func (m *ClientMock) GetIncomingRequest(p context.Context, p1 insolar.Reference, p2 insolar.Reference) (r *record.IncomingRequest, r1 error) {
+	counter := atomic.AddUint64(&m.GetIncomingRequestPreCounter, 1)
+	defer atomic.AddUint64(&m.GetIncomingRequestCounter, 1)
+
+	if len(m.GetIncomingRequestMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetIncomingRequestMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ClientMock.GetIncomingRequest. %v %v %v", p, p1, p2)
+			return
+		}
+
+		input := m.GetIncomingRequestMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ClientMockGetIncomingRequestInput{p, p1, p2}, "Client.GetIncomingRequest got unexpected parameters")
+
+		result := m.GetIncomingRequestMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the ClientMock.GetIncomingRequest")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.GetIncomingRequestMock.mainExpectation != nil {
+
+		input := m.GetIncomingRequestMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, ClientMockGetIncomingRequestInput{p, p1, p2}, "Client.GetIncomingRequest got unexpected parameters")
+		}
+
+		result := m.GetIncomingRequestMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the ClientMock.GetIncomingRequest")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.GetIncomingRequestFunc == nil {
+		m.t.Fatalf("Unexpected call to ClientMock.GetIncomingRequest. %v %v %v", p, p1, p2)
+		return
+	}
+
+	return m.GetIncomingRequestFunc(p, p1, p2)
+}
+
+//GetIncomingRequestMinimockCounter returns a count of ClientMock.GetIncomingRequestFunc invocations
+func (m *ClientMock) GetIncomingRequestMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetIncomingRequestCounter)
+}
+
+//GetIncomingRequestMinimockPreCounter returns the value of ClientMock.GetIncomingRequest invocations
+func (m *ClientMock) GetIncomingRequestMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetIncomingRequestPreCounter)
+}
+
+//GetIncomingRequestFinished returns true if mock invocations count is ok
+func (m *ClientMock) GetIncomingRequestFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetIncomingRequestMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetIncomingRequestCounter) == uint64(len(m.GetIncomingRequestMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetIncomingRequestMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetIncomingRequestCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetIncomingRequestFunc != nil {
+		return atomic.LoadUint64(&m.GetIncomingRequestCounter) > 0
+	}
+
+	return true
+}
+
 type mClientMockGetObject struct {
 	mock              *ClientMock
 	mainExpectation   *ClientMockGetObjectExpectation
@@ -1041,155 +1199,152 @@ func (m *ClientMock) GetObjectFinished() bool {
 	return true
 }
 
-type mClientMockGetPendingRequest struct {
+type mClientMockGetPendings struct {
 	mock              *ClientMock
-	mainExpectation   *ClientMockGetPendingRequestExpectation
-	expectationSeries []*ClientMockGetPendingRequestExpectation
+	mainExpectation   *ClientMockGetPendingsExpectation
+	expectationSeries []*ClientMockGetPendingsExpectation
 }
 
-type ClientMockGetPendingRequestExpectation struct {
-	input  *ClientMockGetPendingRequestInput
-	result *ClientMockGetPendingRequestResult
+type ClientMockGetPendingsExpectation struct {
+	input  *ClientMockGetPendingsInput
+	result *ClientMockGetPendingsResult
 }
 
-type ClientMockGetPendingRequestInput struct {
+type ClientMockGetPendingsInput struct {
 	p  context.Context
-	p1 insolar.ID
+	p1 insolar.Reference
 }
 
-type ClientMockGetPendingRequestResult struct {
-	r  *insolar.Reference
-	r1 *record.IncomingRequest
-	r2 error
+type ClientMockGetPendingsResult struct {
+	r  []insolar.Reference
+	r1 error
 }
 
-//Expect specifies that invocation of Client.GetPendingRequest is expected from 1 to Infinity times
-func (m *mClientMockGetPendingRequest) Expect(p context.Context, p1 insolar.ID) *mClientMockGetPendingRequest {
-	m.mock.GetPendingRequestFunc = nil
+//Expect specifies that invocation of Client.GetPendings is expected from 1 to Infinity times
+func (m *mClientMockGetPendings) Expect(p context.Context, p1 insolar.Reference) *mClientMockGetPendings {
+	m.mock.GetPendingsFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &ClientMockGetPendingRequestExpectation{}
+		m.mainExpectation = &ClientMockGetPendingsExpectation{}
 	}
-	m.mainExpectation.input = &ClientMockGetPendingRequestInput{p, p1}
+	m.mainExpectation.input = &ClientMockGetPendingsInput{p, p1}
 	return m
 }
 
-//Return specifies results of invocation of Client.GetPendingRequest
-func (m *mClientMockGetPendingRequest) Return(r *insolar.Reference, r1 *record.IncomingRequest, r2 error) *ClientMock {
-	m.mock.GetPendingRequestFunc = nil
+//Return specifies results of invocation of Client.GetPendings
+func (m *mClientMockGetPendings) Return(r []insolar.Reference, r1 error) *ClientMock {
+	m.mock.GetPendingsFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &ClientMockGetPendingRequestExpectation{}
+		m.mainExpectation = &ClientMockGetPendingsExpectation{}
 	}
-	m.mainExpectation.result = &ClientMockGetPendingRequestResult{r, r1, r2}
+	m.mainExpectation.result = &ClientMockGetPendingsResult{r, r1}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of Client.GetPendingRequest is expected once
-func (m *mClientMockGetPendingRequest) ExpectOnce(p context.Context, p1 insolar.ID) *ClientMockGetPendingRequestExpectation {
-	m.mock.GetPendingRequestFunc = nil
+//ExpectOnce specifies that invocation of Client.GetPendings is expected once
+func (m *mClientMockGetPendings) ExpectOnce(p context.Context, p1 insolar.Reference) *ClientMockGetPendingsExpectation {
+	m.mock.GetPendingsFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &ClientMockGetPendingRequestExpectation{}
-	expectation.input = &ClientMockGetPendingRequestInput{p, p1}
+	expectation := &ClientMockGetPendingsExpectation{}
+	expectation.input = &ClientMockGetPendingsInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *ClientMockGetPendingRequestExpectation) Return(r *insolar.Reference, r1 *record.IncomingRequest, r2 error) {
-	e.result = &ClientMockGetPendingRequestResult{r, r1, r2}
+func (e *ClientMockGetPendingsExpectation) Return(r []insolar.Reference, r1 error) {
+	e.result = &ClientMockGetPendingsResult{r, r1}
 }
 
-//Set uses given function f as a mock of Client.GetPendingRequest method
-func (m *mClientMockGetPendingRequest) Set(f func(p context.Context, p1 insolar.ID) (r *insolar.Reference, r1 *record.IncomingRequest, r2 error)) *ClientMock {
+//Set uses given function f as a mock of Client.GetPendings method
+func (m *mClientMockGetPendings) Set(f func(p context.Context, p1 insolar.Reference) (r []insolar.Reference, r1 error)) *ClientMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.GetPendingRequestFunc = f
+	m.mock.GetPendingsFunc = f
 	return m.mock
 }
 
-//GetPendingRequest implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
-func (m *ClientMock) GetPendingRequest(p context.Context, p1 insolar.ID) (r *insolar.Reference, r1 *record.IncomingRequest, r2 error) {
-	counter := atomic.AddUint64(&m.GetPendingRequestPreCounter, 1)
-	defer atomic.AddUint64(&m.GetPendingRequestCounter, 1)
+//GetPendings implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
+func (m *ClientMock) GetPendings(p context.Context, p1 insolar.Reference) (r []insolar.Reference, r1 error) {
+	counter := atomic.AddUint64(&m.GetPendingsPreCounter, 1)
+	defer atomic.AddUint64(&m.GetPendingsCounter, 1)
 
-	if len(m.GetPendingRequestMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetPendingRequestMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ClientMock.GetPendingRequest. %v %v", p, p1)
+	if len(m.GetPendingsMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetPendingsMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ClientMock.GetPendings. %v %v", p, p1)
 			return
 		}
 
-		input := m.GetPendingRequestMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ClientMockGetPendingRequestInput{p, p1}, "Client.GetPendingRequest got unexpected parameters")
+		input := m.GetPendingsMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ClientMockGetPendingsInput{p, p1}, "Client.GetPendings got unexpected parameters")
 
-		result := m.GetPendingRequestMock.expectationSeries[counter-1].result
+		result := m.GetPendingsMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the ClientMock.GetPendingRequest")
+			m.t.Fatal("No results are set for the ClientMock.GetPendings")
 			return
 		}
 
 		r = result.r
 		r1 = result.r1
-		r2 = result.r2
 
 		return
 	}
 
-	if m.GetPendingRequestMock.mainExpectation != nil {
+	if m.GetPendingsMock.mainExpectation != nil {
 
-		input := m.GetPendingRequestMock.mainExpectation.input
+		input := m.GetPendingsMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, ClientMockGetPendingRequestInput{p, p1}, "Client.GetPendingRequest got unexpected parameters")
+			testify_assert.Equal(m.t, *input, ClientMockGetPendingsInput{p, p1}, "Client.GetPendings got unexpected parameters")
 		}
 
-		result := m.GetPendingRequestMock.mainExpectation.result
+		result := m.GetPendingsMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the ClientMock.GetPendingRequest")
+			m.t.Fatal("No results are set for the ClientMock.GetPendings")
 		}
 
 		r = result.r
 		r1 = result.r1
-		r2 = result.r2
 
 		return
 	}
 
-	if m.GetPendingRequestFunc == nil {
-		m.t.Fatalf("Unexpected call to ClientMock.GetPendingRequest. %v %v", p, p1)
+	if m.GetPendingsFunc == nil {
+		m.t.Fatalf("Unexpected call to ClientMock.GetPendings. %v %v", p, p1)
 		return
 	}
 
-	return m.GetPendingRequestFunc(p, p1)
+	return m.GetPendingsFunc(p, p1)
 }
 
-//GetPendingRequestMinimockCounter returns a count of ClientMock.GetPendingRequestFunc invocations
-func (m *ClientMock) GetPendingRequestMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetPendingRequestCounter)
+//GetPendingsMinimockCounter returns a count of ClientMock.GetPendingsFunc invocations
+func (m *ClientMock) GetPendingsMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetPendingsCounter)
 }
 
-//GetPendingRequestMinimockPreCounter returns the value of ClientMock.GetPendingRequest invocations
-func (m *ClientMock) GetPendingRequestMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetPendingRequestPreCounter)
+//GetPendingsMinimockPreCounter returns the value of ClientMock.GetPendings invocations
+func (m *ClientMock) GetPendingsMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetPendingsPreCounter)
 }
 
-//GetPendingRequestFinished returns true if mock invocations count is ok
-func (m *ClientMock) GetPendingRequestFinished() bool {
+//GetPendingsFinished returns true if mock invocations count is ok
+func (m *ClientMock) GetPendingsFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetPendingRequestMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetPendingRequestCounter) == uint64(len(m.GetPendingRequestMock.expectationSeries))
+	if len(m.GetPendingsMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetPendingsCounter) == uint64(len(m.GetPendingsMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.GetPendingRequestMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetPendingRequestCounter) > 0
+	if m.GetPendingsMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetPendingsCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.GetPendingRequestFunc != nil {
-		return atomic.LoadUint64(&m.GetPendingRequestCounter) > 0
+	if m.GetPendingsFunc != nil {
+		return atomic.LoadUint64(&m.GetPendingsCounter) > 0
 	}
 
 	return true
@@ -2464,12 +2619,16 @@ func (m *ClientMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ClientMock.GetDelegate")
 	}
 
+	if !m.GetIncomingRequestFinished() {
+		m.t.Fatal("Expected call to ClientMock.GetIncomingRequest")
+	}
+
 	if !m.GetObjectFinished() {
 		m.t.Fatal("Expected call to ClientMock.GetObject")
 	}
 
-	if !m.GetPendingRequestFinished() {
-		m.t.Fatal("Expected call to ClientMock.GetPendingRequest")
+	if !m.GetPendingsFinished() {
+		m.t.Fatal("Expected call to ClientMock.GetPendings")
 	}
 
 	if !m.HasPendingRequestsFinished() {
@@ -2545,12 +2704,16 @@ func (m *ClientMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ClientMock.GetDelegate")
 	}
 
+	if !m.GetIncomingRequestFinished() {
+		m.t.Fatal("Expected call to ClientMock.GetIncomingRequest")
+	}
+
 	if !m.GetObjectFinished() {
 		m.t.Fatal("Expected call to ClientMock.GetObject")
 	}
 
-	if !m.GetPendingRequestFinished() {
-		m.t.Fatal("Expected call to ClientMock.GetPendingRequest")
+	if !m.GetPendingsFinished() {
+		m.t.Fatal("Expected call to ClientMock.GetPendings")
 	}
 
 	if !m.HasPendingRequestsFinished() {
@@ -2608,8 +2771,9 @@ func (m *ClientMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetChildrenFinished()
 		ok = ok && m.GetCodeFinished()
 		ok = ok && m.GetDelegateFinished()
+		ok = ok && m.GetIncomingRequestFinished()
 		ok = ok && m.GetObjectFinished()
-		ok = ok && m.GetPendingRequestFinished()
+		ok = ok && m.GetPendingsFinished()
 		ok = ok && m.HasPendingRequestsFinished()
 		ok = ok && m.InjectCodeDescriptorFinished()
 		ok = ok && m.InjectFinishFinished()
@@ -2647,12 +2811,16 @@ func (m *ClientMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to ClientMock.GetDelegate")
 			}
 
+			if !m.GetIncomingRequestFinished() {
+				m.t.Error("Expected call to ClientMock.GetIncomingRequest")
+			}
+
 			if !m.GetObjectFinished() {
 				m.t.Error("Expected call to ClientMock.GetObject")
 			}
 
-			if !m.GetPendingRequestFinished() {
-				m.t.Error("Expected call to ClientMock.GetPendingRequest")
+			if !m.GetPendingsFinished() {
+				m.t.Error("Expected call to ClientMock.GetPendings")
 			}
 
 			if !m.HasPendingRequestsFinished() {
@@ -2723,11 +2891,15 @@ func (m *ClientMock) AllMocksCalled() bool {
 		return false
 	}
 
+	if !m.GetIncomingRequestFinished() {
+		return false
+	}
+
 	if !m.GetObjectFinished() {
 		return false
 	}
 
-	if !m.GetPendingRequestFinished() {
+	if !m.GetPendingsFinished() {
 		return false
 	}
 
