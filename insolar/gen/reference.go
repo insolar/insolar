@@ -37,7 +37,7 @@ func IDRef() *insolar.ID {
 // IDWithPulse generates random id with provided pulse.
 func IDWithPulse(pn insolar.PulseNumber) (id insolar.ID) {
 	copy(id[:insolar.PulseNumberSize], pn.Bytes())
-	fill := id[insolar.PulseNumberSize:len(id)]
+	fill := id[insolar.PulseNumberSize:]
 	fuzz.New().NilChance(0).Fuzz(&fill)
 	return
 }
