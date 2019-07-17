@@ -1046,12 +1046,7 @@ func (r *Three) DoNothing() (error) {
 	require.Empty(t, resp.Error)
 	require.Equal(t, float64(42), resp.ExtractedReply)
 
-	resp = callMethod(t, obj, "ExternalImmutableCallMakesExternalCall")
-	require.Contains(
-		t,
-		"[ RouteCall ] on calling main API: Try to call route from immutable method",
-		resp.ExtractedError,
-	)
+	resp = callMethodExpectError(t, obj, "ExternalImmutableCallMakesExternalCall")
 }
 
 func TestMultipleConstructorsCall(t *testing.T) {
