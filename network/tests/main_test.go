@@ -55,7 +55,6 @@ package tests
 import (
 	"context"
 	"fmt"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -64,7 +63,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensusv1/claimhandler"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/nodenetwork"
 )
@@ -127,44 +125,44 @@ func (s *consensusSuite) TestNodeConnectInvalidVersion() {
 	log.Infof("Error: %s", err)
 }
 
-func (s *consensusSuite) TestManyNodesConnect() {
-	s.T().Skip("test hangs in some situations, needs fix: INS-2200")
-
-	s.CheckBootstrapCount()
-
-	joinersCount := 10
-	nodes := make([]*networkNode, 0)
-	for i := 0; i < joinersCount; i++ {
-		n := s.newNetworkNode(fmt.Sprintf("testNode_%d", i))
-		nodes = append(nodes, n)
-	}
-
-	wg := sync.WaitGroup{}
-	wg.Add(joinersCount)
-
-	for _, n := range nodes {
-		go func(wg *sync.WaitGroup, node *networkNode) {
-			s.preInitNode(node)
-			s.InitNode(node)
-			s.StartNode(node)
-			wg.Done()
-		}(&wg, n)
-	}
-
-	wg.Wait()
-
-	defer func() {
-		for _, n := range nodes {
-			s.StopNode(n)
-		}
-	}()
-
-	s.waitForConsensus(5)
-
-	joined := claimhandler.ApprovedJoinersCount(joinersCount, s.getNodesCount())
-	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
-	s.Equal(s.getNodesCount()+joined, len(activeNodes))
-}
+//func (s *consensusSuite) TestManyNodesConnect() {
+//	s.T().Skip("test hangs in some situations, needs fix: INS-2200")
+//
+//	s.CheckBootstrapCount()
+//
+//	joinersCount := 10
+//	nodes := make([]*networkNode, 0)
+//	for i := 0; i < joinersCount; i++ {
+//		n := s.newNetworkNode(fmt.Sprintf("testNode_%d", i))
+//		nodes = append(nodes, n)
+//	}
+//
+//	wg := sync.WaitGroup{}
+//	wg.Add(joinersCount)
+//
+//	for _, n := range nodes {
+//		go func(wg *sync.WaitGroup, node *networkNode) {
+//			s.preInitNode(node)
+//			s.InitNode(node)
+//			s.StartNode(node)
+//			wg.Done()
+//		}(&wg, n)
+//	}
+//
+//	wg.Wait()
+//
+//	defer func() {
+//		for _, n := range nodes {
+//			s.StopNode(n)
+//		}
+//	}()
+//
+//	s.waitForConsensus(5)
+//
+//	//joined := claimhandler.ApprovedJoinersCount(joinersCount, s.getNodesCount())
+//	//activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+//	//s.Equal(s.getNodesCount()+joined, len(activeNodes))
+//}
 
 func (s *consensusSuite) TestNodeLeave() {
 	s.CheckBootstrapCount()

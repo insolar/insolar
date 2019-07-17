@@ -52,32 +52,25 @@ package servicenetwork
 
 import (
 	"context"
-	"github.com/insolar/insolar/keystore"
+	"crypto/rand"
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/adapters"
-	"github.com/insolar/insolar/network/consensus/serialization"
+	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/gateway"
 	"github.com/insolar/insolar/network/gateway/bootstrap"
-	"sync"
-
-	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/network/controller/common"
 	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
+	"sync"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/controller"
 	"github.com/insolar/insolar/network/hostnetwork"
-	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
 	"github.com/insolar/insolar/network/transport"
 )
@@ -111,10 +104,11 @@ type ServiceNetwork struct {
 	HostNetwork network.HostNetwork
 
 	CurrentPulse insolar.Pulse
-
 	Gatewayer    network.Gatewayer
 	BaseGateway  *gateway.Base
 	operableFunc insolar.NetworkOperableCallback
+
+	pulseHandler *adapters.PulseHandler
 
 	lock sync.Mutex
 }
@@ -167,12 +161,15 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		}
 	})
 
+	n.pulseHandler = adapters.NewPulseHandler()
+
 	n.cm.Inject(n,
 		&routing.Table{},
 		cert,
 		transport.NewFactory(n.cfg.Host.Transport),
 		hostNetwork,
-		merkle.NewCalculator(),
+		n.pulseHandler,
+		//merkle.NewCalculator(),
 
 		// remove old consensus
 		//consensusNetwork,
@@ -196,26 +193,33 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 
 	n.CurrentPulse = *insolar.GenesisPulse
 
-	err = n.initConsensus(ctx)
-	if err != nil {
-		return errors.Wrap(err, "Failed to init Consensus")
-	}
-
 	return nil
 }
 
-func (n *ServiceNetwork) initConsensus(ctx context.Context) error {
-	//nodeKeeper := nodenetwork.NewNodeKeeper(n)
-	//nodeKeeper.SetInitialSnapshot(nodes)
+func (n *ServiceNetwork) State() []byte {
+	nshBytes := make([]byte, 64)
+	rand.Read(nshBytes)
 
+	return nshBytes
+}
+
+func (n *ServiceNetwork) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
+	inslogger.FromContext(ctx).Info(">>>>>> Update state called")
+
+	err := n.NodeKeeper.Sync(ctx, nodes, nil)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(err)
+	}
+	n.NodeKeeper.SetCloudHash(cloudStateHash)
+}
+
+func (n *ServiceNetwork) initConsensus(ctx context.Context) error {
 	datagramHandler := adapters.NewDatagramHandler()
 	udp, err := n.TransportFactory.CreateDatagramTransport(datagramHandler)
+	// todo: stop udp then stop ServiceNetwork
 	if err != nil {
 		return err
 	}
-
-	pulseHandler := adapters.NewPulseHandler()
-	//serialization.NewPacketBuilder()
 
 	_ = consensus.New(ctx, consensus.Dep{
 		PrimingCloudStateHash: [64]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
@@ -224,21 +228,26 @@ func (n *ServiceNetwork) initConsensus(ctx context.Context) error {
 		CertificateManager:    n.CertificateManager,
 		KeyStore:              n.KeyStore,
 		NodeKeeper:            n.NodeKeeper,
-		StateGetter:           &nshGen{nshDelay: 0},
-		PulseChanger:          &pulseChanger{},
-		StateUpdater:          &stateUpdater{nodeKeeper},
-		PacketBuilder:         NewEmuPacketBuilder,
+		StateGetter:           n,
+		PulseChanger:          n,
+		StateUpdater:          n,
 		DatagramTransport:     udp,
-	}).Install(datagramHandler, pulseHandler)
+	}).Install(datagramHandler, n.pulseHandler)
 
 	return nil
 }
 
 // Start implements component.Starter
 func (n *ServiceNetwork) Start(ctx context.Context) error {
+
+	err := n.initConsensus(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Failed to init Consensus")
+	}
+
 	logger := inslogger.FromContext(ctx)
 	logger.Info("Starting network component manager...")
-	err := n.cm.Start(ctx)
+	err = n.cm.Start(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to start component manager")
 	}
@@ -276,44 +285,44 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 	return n.cm.Stop(ctx)
 }
 
-func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse, _ network.ReceivedPacket) {
-	//pulseTime := time.Unix(0, newPulse.PulseTimestamp)
-	logger := inslogger.FromContext(ctx)
-
-	n.lock.Lock()
-	defer n.lock.Unlock()
-
-	ctx = network.NewPulseContext(ctx, uint32(newPulse.PulseNumber))
-	logger.Infof("Got new pulse number: %d", newPulse.PulseNumber)
-	ctx, span := instracer.StartSpan(ctx, "ServiceNetwork.Handlepulse")
-	span.AddAttributes(
-		trace.Int64Attribute("pulse.PulseNumber", int64(newPulse.PulseNumber)),
-	)
-	defer span.End()
-
-	//if n.shoudIgnorePulse(newPulse) {
-	//	log.Infof("Ignore pulse %d: network is not yet initialized", newPulse.PulseNumber)
-	//	return
-	//}
-
-	if n.NodeKeeper.GetConsensusInfo().IsJoiner() {
-		// do not set pulse because otherwise we will set invalid active list
-		// pass consensus, prepare valid active list and set it on next pulse
-		//go n.phaseManagerOnPulse(ctx, newPulse, pulseTime)
-		return
-	}
-
-	//TODO: use network pulsestorage here
-
-	if n.CurrentPulse.PulseNumber != insolar.GenesisPulse.PulseNumber && !isNextPulse(&n.CurrentPulse, &newPulse) {
-		logger.Infof("Incorrect pulse number. Current: %+v. New: %+v", n.CurrentPulse, newPulse)
-		return
-	}
-
-	n.ChangePulse(ctx, newPulse)
-
-	//go n.phaseManagerOnPulse(ctx, newPulse, pulseTime)
-}
+//func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse, _ network.ReceivedPacket) {
+//	//pulseTime := time.Unix(0, newPulse.PulseTimestamp)
+//	logger := inslogger.FromContext(ctx)
+//
+//	n.lock.Lock()
+//	defer n.lock.Unlock()
+//
+//	ctx = network.NewPulseContext(ctx, uint32(newPulse.PulseNumber))
+//	logger.Infof("Got new pulse number: %d", newPulse.PulseNumber)
+//	ctx, span := instracer.StartSpan(ctx, "ServiceNetwork.Handlepulse")
+//	span.AddAttributes(
+//		trace.Int64Attribute("pulse.PulseNumber", int64(newPulse.PulseNumber)),
+//	)
+//	defer span.End()
+//
+//	//if n.shoudIgnorePulse(newPulse) {
+//	//	log.Infof("Ignore pulse %d: network is not yet initialized", newPulse.PulseNumber)
+//	//	return
+//	//}
+//
+//	if n.NodeKeeper.GetConsensusInfo().IsJoiner() {
+//		// do not set pulse because otherwise we will set invalid active list
+//		// pass consensus, prepare valid active list and set it on next pulse
+//		//go n.phaseManagerOnPulse(ctx, newPulse, pulseTime)
+//		return
+//	}
+//
+//	//TODO: use network pulsestorage here
+//
+//	if n.CurrentPulse.PulseNumber != insolar.GenesisPulse.PulseNumber && !isNextPulse(&n.CurrentPulse, &newPulse) {
+//		logger.Infof("Incorrect pulse number. Current: %+v. New: %+v", n.CurrentPulse, newPulse)
+//		return
+//	}
+//
+//	n.ChangePulse(ctx, newPulse)
+//
+//	//go n.phaseManagerOnPulse(ctx, newPulse, pulseTime)
+//}
 
 func (n *ServiceNetwork) ChangePulse(ctx context.Context, newPulse insolar.Pulse) {
 	logger := inslogger.FromContext(ctx)

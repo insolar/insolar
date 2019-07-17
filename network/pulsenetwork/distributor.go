@@ -180,11 +180,11 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 		return
 	}
 
-	if err := d.resume(ctx); err != nil {
-		logger.Error("[ Distribute ] resume distribution error: " + err.Error())
-		return
-	}
-	defer d.pause(ctx)
+	//if err := d.resume(ctx); err != nil {
+	//	logger.Error("[ Distribute ] resume distribution error: " + err.Error())
+	//	return
+	//}
+	//defer d.pause(ctx)
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(bootstrapHosts))

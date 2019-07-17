@@ -56,6 +56,8 @@ import (
 	"context"
 	"crypto"
 	"fmt"
+	"github.com/insolar/insolar/keystore"
+	"github.com/insolar/insolar/network/node"
 	"github.com/stretchr/testify/require"
 	"math/rand"
 	"strconv"
@@ -178,21 +180,29 @@ func (s *consensusSuite) SetupTest() {
 	}
 
 	pulseReceivers := make([]string, 0)
-	for _, node := range s.fixture().bootstrapNodes {
-		pulseReceivers = append(pulseReceivers, node.host)
+	for _, n := range s.fixture().bootstrapNodes {
+		pulseReceivers = append(pulseReceivers, n.host)
 	}
 
 	log.Info("Setup bootstrap nodes")
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
 	if UseFakeBootstrap {
+
 		bnodes := make([]insolar.NetworkNode, 0)
-		for _, node := range s.fixture().bootstrapNodes {
-			bnodes = append(bnodes, node.serviceNetwork.NodeKeeper.GetOrigin())
+		for _, n := range s.fixture().bootstrapNodes {
+
+			sign, err := n.cryptographyService.Sign([]byte{1, 2, 3, 4, 5})
+			s.Require().NoError(err)
+
+			origin := n.serviceNetwork.NodeKeeper.GetOrigin()
+			origin.(node.MutableNode).SetSignature(*sign)
+
+			bnodes = append(bnodes, origin)
 		}
-		for _, node := range s.fixture().bootstrapNodes {
-			node.serviceNetwork.NodeKeeper.SetInitialSnapshot(bnodes)
-			node.serviceNetwork.Gatewayer.SwitchState(insolar.CompleteNetworkState)
-			pulseReceivers = append(pulseReceivers, node.host)
+		for _, n := range s.fixture().bootstrapNodes {
+			n.serviceNetwork.NodeKeeper.SetInitialSnapshot(bnodes)
+			n.serviceNetwork.Gatewayer.SwitchState(insolar.CompleteNetworkState)
+			pulseReceivers = append(pulseReceivers, n.host)
 		}
 	}
 
@@ -547,6 +557,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		&amMock,
 		certManager,
 		cryptographyService,
+		keystore.NewInplaceKeyStore(node.privateKey),
 		serviceNetwork,
 		keyProc,
 		terminationHandler,
