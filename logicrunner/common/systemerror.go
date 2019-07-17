@@ -11,13 +11,13 @@ type SystemError interface {
 	SetSystemError(err error)
 }
 
-type systemError struct{}
+type SystemErrorImpl struct{}
 
-func NewSystemError() *systemError {
-	return &systemError{}
+func NewSystemError() *SystemErrorImpl {
+	return &SystemErrorImpl{}
 }
 
-func (h *systemError) GetSystemError() error {
+func (h *SystemErrorImpl) GetSystemError() error {
 	// SystemError means an error in the system (platform), not a particular contract.
 	// For instance, timed out external call or failed deserialization means a SystemError.
 	// In case of SystemError all following external calls during current method call return
@@ -29,6 +29,6 @@ func (h *systemError) GetSystemError() error {
 	return callContextInterface.(error)
 }
 
-func (h *systemError) SetSystemError(err error) {
+func (h *SystemErrorImpl) SetSystemError(err error) {
 	gls.Set(glsSystemErrorKey, err)
 }
