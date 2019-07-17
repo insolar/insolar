@@ -39,6 +39,7 @@ func INS_META_INFO() []map[string]string {
 
 func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
+	ph.CleanupSystemError()
 	self := new(Deposit)
 
 	if len(object) == 0 {
@@ -65,6 +66,7 @@ func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
+	ph.CleanupSystemError()
 	self := new(Deposit)
 
 	if len(object) == 0 {
@@ -91,7 +93,7 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 
 func INSMETHOD_GetTxHash(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(Deposit)
 
 	if len(object) == 0 {
@@ -130,7 +132,7 @@ func INSMETHOD_GetTxHash(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetAmount(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(Deposit)
 
 	if len(object) == 0 {
@@ -169,7 +171,7 @@ func INSMETHOD_GetAmount(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_MapMarshal(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(Deposit)
 
 	if len(object) == 0 {
@@ -208,7 +210,7 @@ func INSMETHOD_MapMarshal(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(Deposit)
 
 	if len(object) == 0 {
@@ -253,6 +255,7 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	ph := common.CurrentProxyCtx
+	ph.CleanupSystemError()
 	args := [4]interface{}{}
 	var args0 map[insolar.Reference]bool
 	args[0] = &args0

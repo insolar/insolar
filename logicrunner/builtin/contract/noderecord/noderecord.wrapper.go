@@ -37,6 +37,7 @@ func INS_META_INFO() []map[string]string {
 
 func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
+	ph.CleanupSystemError()
 	self := new(NodeRecord)
 
 	if len(object) == 0 {
@@ -63,6 +64,7 @@ func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
+	ph.CleanupSystemError()
 	self := new(NodeRecord)
 
 	if len(object) == 0 {
@@ -89,7 +91,7 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 
 func INSMETHOD_GetNodeInfo(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(NodeRecord)
 
 	if len(object) == 0 {
@@ -128,7 +130,7 @@ func INSMETHOD_GetNodeInfo(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetPublicKey(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(NodeRecord)
 
 	if len(object) == 0 {
@@ -167,7 +169,7 @@ func INSMETHOD_GetPublicKey(object []byte, data []byte) ([]byte, []byte, error) 
 
 func INSMETHOD_GetRole(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(NodeRecord)
 
 	if len(object) == 0 {
@@ -206,7 +208,7 @@ func INSMETHOD_GetRole(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_Destroy(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(NodeRecord)
 
 	if len(object) == 0 {
@@ -245,6 +247,7 @@ func INSMETHOD_Destroy(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSCONSTRUCTOR_NewNodeRecord(data []byte) ([]byte, error) {
 	ph := common.CurrentProxyCtx
+	ph.CleanupSystemError()
 	args := [2]interface{}{}
 	var args0 string
 	args[0] = &args0

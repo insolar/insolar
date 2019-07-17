@@ -37,6 +37,7 @@ func INS_META_INFO() []map[string]string {
 
 func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
+	ph.CleanupSystemError()
 	self := new(HelloWorld)
 
 	if len(object) == 0 {
@@ -63,6 +64,7 @@ func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
+	ph.CleanupSystemError()
 	self := new(HelloWorld)
 
 	if len(object) == 0 {
@@ -89,7 +91,7 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 
 func INSMETHOD_ReturnObj(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(HelloWorld)
 
 	if len(object) == 0 {
@@ -128,7 +130,7 @@ func INSMETHOD_ReturnObj(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_Greet(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(HelloWorld)
 
 	if len(object) == 0 {
@@ -169,7 +171,7 @@ func INSMETHOD_Greet(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_Count(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(HelloWorld)
 
 	if len(object) == 0 {
@@ -208,7 +210,7 @@ func INSMETHOD_Count(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_Errored(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(HelloWorld)
 
 	if len(object) == 0 {
@@ -247,7 +249,7 @@ func INSMETHOD_Errored(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_CreateChild(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(HelloWorld)
 
 	if len(object) == 0 {
@@ -286,7 +288,7 @@ func INSMETHOD_CreateChild(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(HelloWorld)
 
 	if len(object) == 0 {
@@ -327,6 +329,7 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	ph := common.CurrentProxyCtx
+	ph.CleanupSystemError()
 	args := []interface{}{}
 
 	err := ph.Deserialize(data, &args)

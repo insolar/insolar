@@ -38,6 +38,7 @@ func INS_META_INFO() []map[string]string {
 
 func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
+	ph.CleanupSystemError()
 	self := new(CostCenter)
 
 	if len(object) == 0 {
@@ -64,6 +65,7 @@ func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
+	ph.CleanupSystemError()
 	self := new(CostCenter)
 
 	if len(object) == 0 {
@@ -90,7 +92,7 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 
 func INSMETHOD_SetTariffs(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(CostCenter)
 
 	if len(object) == 0 {
@@ -131,7 +133,7 @@ func INSMETHOD_SetTariffs(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetTariffs(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(CostCenter)
 
 	if len(object) == 0 {
@@ -170,7 +172,7 @@ func INSMETHOD_GetTariffs(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_SetCurrentTariff(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(CostCenter)
 
 	if len(object) == 0 {
@@ -211,7 +213,7 @@ func INSMETHOD_SetCurrentTariff(object []byte, data []byte) ([]byte, []byte, err
 
 func INSMETHOD_GetCurrentTariff(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(CostCenter)
 
 	if len(object) == 0 {
@@ -250,6 +252,7 @@ func INSMETHOD_GetCurrentTariff(object []byte, data []byte) ([]byte, []byte, err
 
 func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	ph := common.CurrentProxyCtx
+	ph.CleanupSystemError()
 	args := [2]interface{}{}
 	var args0 insolar.Reference
 	args[0] = &args0

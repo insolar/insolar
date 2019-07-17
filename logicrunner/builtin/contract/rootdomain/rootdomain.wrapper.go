@@ -38,6 +38,7 @@ func INS_META_INFO() []map[string]string {
 
 func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
+	ph.CleanupSystemError()
 	self := new(RootDomain)
 
 	if len(object) == 0 {
@@ -64,6 +65,7 @@ func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
+	ph.CleanupSystemError()
 	self := new(RootDomain)
 
 	if len(object) == 0 {
@@ -90,7 +92,7 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 
 func INSMETHOD_GetMigrationAdminMemberRef(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(RootDomain)
 
 	if len(object) == 0 {
@@ -129,7 +131,7 @@ func INSMETHOD_GetMigrationAdminMemberRef(object []byte, data []byte) ([]byte, [
 
 func INSMETHOD_GetMigrationWalletRef(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(RootDomain)
 
 	if len(object) == 0 {
@@ -168,7 +170,7 @@ func INSMETHOD_GetMigrationWalletRef(object []byte, data []byte) ([]byte, []byte
 
 func INSMETHOD_GetMigrationDaemonMembers(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(RootDomain)
 
 	if len(object) == 0 {
@@ -207,7 +209,7 @@ func INSMETHOD_GetMigrationDaemonMembers(object []byte, data []byte) ([]byte, []
 
 func INSMETHOD_GetRootMemberRef(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(RootDomain)
 
 	if len(object) == 0 {
@@ -246,7 +248,7 @@ func INSMETHOD_GetRootMemberRef(object []byte, data []byte) ([]byte, []byte, err
 
 func INSMETHOD_GetBurnAddress(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(RootDomain)
 
 	if len(object) == 0 {
@@ -285,7 +287,7 @@ func INSMETHOD_GetBurnAddress(object []byte, data []byte) ([]byte, []byte, error
 
 func INSMETHOD_GetMemberByPublicKey(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(RootDomain)
 
 	if len(object) == 0 {
@@ -326,7 +328,7 @@ func INSMETHOD_GetMemberByPublicKey(object []byte, data []byte) ([]byte, []byte,
 
 func INSMETHOD_GetMemberByBurnAddress(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(RootDomain)
 
 	if len(object) == 0 {
@@ -367,7 +369,7 @@ func INSMETHOD_GetMemberByBurnAddress(object []byte, data []byte) ([]byte, []byt
 
 func INSMETHOD_GetCostCenter(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(RootDomain)
 
 	if len(object) == 0 {
@@ -406,7 +408,7 @@ func INSMETHOD_GetCostCenter(object []byte, data []byte) ([]byte, []byte, error)
 
 func INSMETHOD_GetNodeDomainRef(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(RootDomain)
 
 	if len(object) == 0 {
@@ -445,7 +447,7 @@ func INSMETHOD_GetNodeDomainRef(object []byte, data []byte) ([]byte, []byte, err
 
 func INSMETHOD_Info(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(RootDomain)
 
 	if len(object) == 0 {
@@ -484,7 +486,7 @@ func INSMETHOD_Info(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_AddBurnAddresses(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(RootDomain)
 
 	if len(object) == 0 {
@@ -525,7 +527,7 @@ func INSMETHOD_AddBurnAddresses(object []byte, data []byte) ([]byte, []byte, err
 
 func INSMETHOD_AddBurnAddress(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(RootDomain)
 
 	if len(object) == 0 {
@@ -566,7 +568,7 @@ func INSMETHOD_AddBurnAddress(object []byte, data []byte) ([]byte, []byte, error
 
 func INSMETHOD_AddNewMemberToMaps(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(RootDomain)
 
 	if len(object) == 0 {
@@ -611,7 +613,7 @@ func INSMETHOD_AddNewMemberToMaps(object []byte, data []byte) ([]byte, []byte, e
 
 func INSMETHOD_AddNewMemberToPublicKeyMap(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(RootDomain)
 
 	if len(object) == 0 {
@@ -654,7 +656,7 @@ func INSMETHOD_AddNewMemberToPublicKeyMap(object []byte, data []byte) ([]byte, [
 
 func INSMETHOD_CreateHelloWorld(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.CleanupSystemError()
 	self := new(RootDomain)
 
 	if len(object) == 0 {
