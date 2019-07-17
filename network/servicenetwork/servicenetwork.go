@@ -109,9 +109,10 @@ type ServiceNetwork struct {
 	BaseGateway  *gateway.Base
 	operableFunc insolar.NetworkOperableCallback
 
-	pulseHandler      *adapters.PulseHandler
-	datagramHandler   *adapters.DatagramHandler
-	datagramTransport transport.DatagramTransport
+	pulseHandler       *adapters.PulseHandler
+	datagramHandler    *adapters.DatagramHandler
+	datagramTransport  transport.DatagramTransport
+	consensusInstaller consensus.Installer
 
 	lock sync.Mutex
 }
@@ -180,15 +181,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		n.pulseHandler,
 		n.datagramHandler,
 		n.datagramTransport,
-		//merkle.NewCalculator(),
-
-		// remove old consensus
-		//consensusNetwork,
-		//phases.NewCommunicator(),
-		//phases.NewFirstPhase(),
-		//phases.NewSecondPhase(),
-		//phases.NewThirdPhase(),
-		//phases.NewPhaseManager(n.cfg.Service.Consensus),
 
 		controller.NewRPCController(options),
 		controller.NewPulseController(),
@@ -204,13 +196,25 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 
 	n.CurrentPulse = *insolar.GenesisPulse
 
+	n.consensusInstaller = consensus.New(ctx, consensus.Dep{
+		PrimingCloudStateHash: [64]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
+		KeyProcessor:          n.KeyProcessor,
+		Scheme:                n.CryptographyScheme,
+		CertificateManager:    n.CertificateManager,
+		KeyStore:              n.KeyStore,
+		NodeKeeper:            n.NodeKeeper,
+		StateGetter:           n,
+		PulseChanger:          n,
+		StateUpdater:          n,
+		DatagramTransport:     n.datagramTransport,
+	})
+
 	return nil
 }
 
 func (n *ServiceNetwork) State() []byte {
 	nshBytes := make([]byte, 64)
-	rand.Read(nshBytes)
-
+	_, _ = rand.Read(nshBytes)
 	return nshBytes
 }
 
@@ -224,39 +228,18 @@ func (n *ServiceNetwork) UpdateState(ctx context.Context, pulseNumber insolar.Pu
 	n.NodeKeeper.SetCloudHash(cloudStateHash)
 }
 
-func (n *ServiceNetwork) initConsensus(ctx context.Context) error {
-	_ = consensus.New(ctx, consensus.Dep{
-		PrimingCloudStateHash: [64]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
-		KeyProcessor:          n.KeyProcessor,
-		Scheme:                n.CryptographyScheme,
-		CertificateManager:    n.CertificateManager,
-		KeyStore:              n.KeyStore,
-		NodeKeeper:            n.NodeKeeper,
-		StateGetter:           n,
-		PulseChanger:          n,
-		StateUpdater:          n,
-		DatagramTransport:     n.datagramTransport,
-	}).Install(n.datagramHandler, n.pulseHandler)
-
-	return nil
-}
-
 // Start implements component.Starter
 func (n *ServiceNetwork) Start(ctx context.Context) error {
 
-	err := n.initConsensus(ctx)
-	if err != nil {
-		return errors.Wrap(err, "Failed to init Consensus")
-	}
-
 	logger := inslogger.FromContext(ctx)
 	logger.Info("Starting network component manager...")
-	err = n.cm.Start(ctx)
+	err := n.cm.Start(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to start component manager")
 	}
 
 	n.Gatewayer.Gateway().Run(ctx)
+	n.consensusInstaller.Install(n.pulseHandler, n.datagramHandler)
 
 	n.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
 
