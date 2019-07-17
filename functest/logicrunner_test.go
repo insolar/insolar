@@ -942,13 +942,7 @@ func (c *First) GetName() (string, error) {
 	secondObj := callConstructor(t, uploadContractOnce(t, "prototype_mismatch_second", secondContract), "New")
 	testObj := callConstructor(t, uploadContractOnce(t, "prototype_mismatch_test", testContract), "New")
 
-	resp := callMethod(t, testObj, "Test", *secondObj)
-
-	require.Contains(
-		t,
-		string(resp.Reply.Result),
-		"try to call method of prototype as method of another prototype",
-	)
+	callMethodExpectError(t, testObj, "Test", *secondObj)
 }
 
 func TestImmutableAnnotation(t *testing.T) {
