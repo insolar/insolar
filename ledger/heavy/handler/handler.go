@@ -402,7 +402,7 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 		logger.Error(errors.Wrapf(err, "failed to store drop"))
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
-	if drop.Split {
+	if drop.SplitThresholdExceeded > h.cfg.JetSplit.ThresholdOverflowCount {
 		_, _, err = h.JetModifier.Split(ctx, futurePulse, drop.JetID)
 	} else {
 		err = h.JetModifier.Update(ctx, futurePulse, false, drop.JetID)
