@@ -53,6 +53,7 @@ package core
 import (
 	"context"
 	"fmt"
+
 	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -382,6 +383,20 @@ func (r *coreRealm) UpstreamPreparePulseChange() <-chan proofs.NodeStateHash {
 	return r.upstream.PreparePulseChange(report)
 }
 
+func (r *FullRealm) CommitPulseChange() {
+	if !r.pulseData.PulseNumber.IsTimePulse() {
+		panic("pulse number was not set")
+	}
+
+	sp := r.GetSelf().GetProfile()
+	report := api.UpstreamReport{
+		PulseNumber: r.pulseData.PulseNumber,
+		MemberPower: sp.GetDeclaredPower(),
+		MemberMode:  sp.GetOpMode(),
+	}
+	go r.upstream.CommitPulseChange(report, r.pulseData, r.census)
+}
+
 func (r *FullRealm) GetTimings() api.RoundTimings {
 	return r.timings
 }
@@ -495,7 +510,7 @@ func (r *FullRealm) notifyConsensusFinished(newSelf profiles.ActiveNode, expecte
 	}
 
 	r.controlFeeder.ConsensusFinished(report, expectedCensus)
-	r.upstream.ConsensusFinished(report, expectedCensus)
+	go r.upstream.ConsensusFinished(report, expectedCensus)
 }
 
 func (r *FullRealm) GetProfileFactory() profiles.Factory {
