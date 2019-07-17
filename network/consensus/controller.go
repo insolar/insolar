@@ -162,6 +162,7 @@ func (c *controller) RemoveFinishedNotifier(typ string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	close(c.notifiers[typ])
 	delete(c.notifiers, typ)
 }
 
