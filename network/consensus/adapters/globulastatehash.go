@@ -53,16 +53,19 @@ package adapters
 import (
 	"math/rand"
 
-	"github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
 
-type gshDigester struct {
+type seqDigester struct {
 	// TODO do test or a proper digest calc
 	rnd      *rand.Rand
 	lastSeed int64
 }
 
-func (s *gshDigester) AddNext(digest common.DigestHolder) {
+func (s *seqDigester) AddNext(digest longbits.FoldableReader) {
 	// it is a dirty emulation of digest
 	if s.rnd == nil {
 		s.rnd = rand.New(rand.NewSource(0))
@@ -71,23 +74,50 @@ func (s *gshDigester) AddNext(digest common.DigestHolder) {
 	s.rnd.Seed(s.lastSeed)
 }
 
-func (s *gshDigester) GetDigestMethod() common.DigestMethod {
-	return "emuDigest64"
+func (s *seqDigester) GetDigestMethod() cryptkit.DigestMethod {
+	return SHA3512Digest
 }
 
-func (s *gshDigester) ForkSequence() common.SequenceDigester {
-	cp := gshDigester{}
+func (s *seqDigester) ForkSequence() cryptkit.SequenceDigester {
+	cp := seqDigester{}
 	if s.rnd != nil {
 		cp.rnd = rand.New(rand.NewSource(s.lastSeed))
 	}
 	return &cp
 }
 
-func (s *gshDigester) FinishSequence() common.Digest {
+func (s *seqDigester) FinishSequence() cryptkit.Digest {
 	if s.rnd == nil {
 		panic("nothing")
 	}
-	bits := common.NewBits64(s.rnd.Uint64())
+	var res longbits.Bits512
+	bits64 := longbits.NewBits64(s.rnd.Uint64())
+	copy(res[:], bits64[:])
 	s.rnd = nil
-	return common.NewDigest(&bits, s.GetDigestMethod())
+	return cryptkit.NewDigest(&res, s.GetDigestMethod())
+}
+
+type gshDigester struct {
+	sd            cryptkit.SequenceDigester
+	defaultDigest longbits.FoldableReader
+}
+
+func (p *gshDigester) AddNext(digest longbits.FoldableReader, fullRank member.FullRank) {
+	if digest == nil {
+		p.sd.AddNext(p.defaultDigest)
+	} else {
+		p.sd.AddNext(digest)
+	}
+}
+
+func (p *gshDigester) GetDigestMethod() cryptkit.DigestMethod {
+	return p.sd.GetDigestMethod()
+}
+
+func (p *gshDigester) ForkSequence() transport.StateDigester {
+	return &gshDigester{p.sd.ForkSequence(), p.defaultDigest}
+}
+
+func (p *gshDigester) FinishSequence() cryptkit.Digest {
+	return p.sd.FinishSequence()
 }

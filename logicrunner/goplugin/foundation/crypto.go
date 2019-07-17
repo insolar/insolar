@@ -28,25 +28,16 @@ import (
 	"github.com/insolar/x-crypto/x509"
 )
 
-// PointsFromDER is used to convert raw DER string to R S points which are representation of the signature
-func PointsFromDER(der []byte) (*big.Int, *big.Int) {
-	R, S := &big.Int{}, &big.Int{}
-
-	data := asn1.RawValue{}
-	if _, err := asn1.Unmarshal(der, &data); err != nil {
-		panic(err.Error())
+// UnmarshalSig parses the two integer components of an ASN.1-encoded ECDSA signature.
+func UnmarshalSig(b []byte) (r, s *big.Int, err error) {
+	var ecsdaSig struct {
+		R, S *big.Int
 	}
-
-	// The format of our DER string is 0x02 + rlen + r + 0x02 + slen + s
-	rLen := data.Bytes[1] // The entire length of R + offset of 2 for 0x02 and rlen
-	r := data.Bytes[2 : rLen+2]
-	// Ignore the next 0x02 and slen bytes and just take the start of S to the end of the byte array
-	s := data.Bytes[rLen+4:]
-
-	R.SetBytes(r)
-	S.SetBytes(s)
-
-	return R, S
+	_, err = asn1.Unmarshal(b, &ecsdaSig)
+	if err != nil {
+		return nil, nil, err
+	}
+	return ecsdaSig.R, ecsdaSig.S, nil
 }
 
 // VerifySignature used for checking the signature using rawpublicpem and rawRequest.
@@ -72,8 +63,11 @@ func VerifySignature(rawRequest []byte, signature string, key string, rawpublicp
 	}
 
 	hash := sha256.Sum256(rawRequest)
-	R, S := PointsFromDER(sig)
-	valid := ecdsa.Verify(publicKey.(*ecdsa.PublicKey), hash[:], R, S)
+	r, s, err := UnmarshalSig(sig)
+	if err != nil {
+		return err
+	}
+	valid := ecdsa.Verify(publicKey.(*ecdsa.PublicKey), hash[:], r, s)
 	if !valid {
 		return fmt.Errorf("invalid signature")
 	}

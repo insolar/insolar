@@ -3,6 +3,7 @@ package integration_test
 import (
 	"context"
 	"crypto"
+	"sync"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -41,11 +42,13 @@ type Server struct {
 	network *networkMock
 	handler message.HandlerFunc
 	pulse   insolar.Pulse
+	lock    sync.RWMutex
 }
 
 func DefaultLightConfig() configuration.Configuration {
 	cfg := configuration.Configuration{}
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
+	cfg.Ledger.LightChainLimit = 5
 	return cfg
 }
 
@@ -185,12 +188,12 @@ func NewServer(ctx context.Context, cfg configuration.Configuration) (*Server, e
 		jetSplitter := executor.NewJetSplitter(cfg.Ledger.JetSplit, jetCalculator, Jets, Jets, drops, drops, Pulses, records)
 
 		hotSender := executor.NewHotSender(
-			Bus,
 			drops,
 			indexes,
 			Pulses,
 			Jets,
 			conf.LightChainLimit,
+			WmBus,
 		)
 
 		pm := pulsemanager.NewPulseManager(
@@ -209,7 +212,6 @@ func NewServer(ctx context.Context, cfg configuration.Configuration) (*Server, e
 		pm.PulseAccessor = Pulses
 		pm.PulseCalculator = Pulses
 		pm.PulseAppender = Pulses
-		pm.ActiveListSwapper = &stub{}
 		pm.GIL = &stub{}
 		pm.NodeNet = NodeNetwork
 
@@ -217,7 +219,7 @@ func NewServer(ctx context.Context, cfg configuration.Configuration) (*Server, e
 		Handler = handler
 	}
 
-	netMock := newNetworkMock(Handler.FlowDispatcher.Process, NodeNetwork.GetOrigin().ID())
+	netMock := newNetworkMock(WmBus.IncomingMessageRouter(Handler.FlowDispatcher.Process), NodeNetwork.GetOrigin().ID())
 	startWatermill(ctx, logger, pubSub, WmBus, netMock.Handle, Handler.FlowDispatcher.Process)
 
 	s := &Server{
@@ -312,13 +314,14 @@ func (s *Server) Send(pl payload.Payload) {
 }
 
 func (s *Server) Receive(h func(meta payload.Meta, pl payload.Payload)) {
-	s.network.outHandler = h
+	s.network.SetReceiver(h)
 }
 
 type networkMock struct {
 	outHandler func(meta payload.Meta, pl payload.Payload)
 	inHandler  message.HandlerFunc
 	me         insolar.Reference
+	lock       sync.RWMutex
 }
 
 func newNetworkMock(in message.HandlerFunc, me insolar.Reference) *networkMock {
@@ -326,6 +329,9 @@ func newNetworkMock(in message.HandlerFunc, me insolar.Reference) *networkMock {
 }
 
 func (p *networkMock) Handle(msg *message.Message) ([]*message.Message, error) {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
 	meta := payload.Meta{}
 	err := meta.Unmarshal(msg.Payload)
 	if err != nil {
@@ -343,7 +349,14 @@ func (p *networkMock) Handle(msg *message.Message) ([]*message.Message, error) {
 		return nil, nil
 	}
 
+	msg.Metadata.Set(bus.MetaPulse, meta.Pulse.String())
 	return p.inHandler(msg)
+}
+
+func (p *networkMock) SetReceiver(r func(meta payload.Meta, pl payload.Payload)) {
+	p.lock.Lock()
+	p.outHandler = r
+	p.lock.Unlock()
 }
 
 type nodeMock struct {

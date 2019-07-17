@@ -3,11 +3,12 @@ package logicrunner
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type HandleSagaCallAcceptNotification struct {
@@ -22,10 +23,46 @@ func (h *HandleSagaCallAcceptNotification) Present(ctx context.Context, f flow.F
 		return err
 	}
 
-	// work in progress...
-	inslogger.FromContext(ctx).Errorf("HandleSagaCallAcceptNotification.Present is in construction")
+	outgoing := record.OutgoingRequest{}
+	err = outgoing.Unmarshal(msg.Request)
+	if err != nil {
+		return err
+	}
 
-	replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})
-	h.dep.Sender.Reply(ctx, h.meta, replyOk)
-	return nil
+	// restore IncomingRequest by OutgoingRequest fields
+	incoming := record.IncomingRequest{
+		Caller:          outgoing.Caller,
+		CallerPrototype: outgoing.CallerPrototype,
+		Nonce:           outgoing.Nonce,
+
+		Immutable: outgoing.Immutable,
+
+		Object:    outgoing.Object,
+		Prototype: outgoing.Prototype,
+		Method:    outgoing.Method,
+		Arguments: outgoing.Arguments,
+
+		APIRequestID: outgoing.APIRequestID,
+		Reason:       outgoing.Reason,
+
+		// Saga calls are always asynchronous. We wait only for a confirmation
+		// that the incoming request was registered by the second VE. This is
+		// implemented in ContractRequester.CallMethod.
+		ReturnMode: record.ReturnNoWait,
+	}
+
+	// Make a call to the second VE.
+	callMsg := &message.CallMethod{IncomingRequest: incoming}
+	cr := h.dep.lr.ContractRequester
+	res, err := cr.CallMethod(ctx, callMsg)
+	if err != nil {
+		return err
+	}
+
+	// Register result of the outgoing method.
+	outgoingReqRef := insolar.NewReference(msg.OutgoingReqID)
+	reqResult := newRequestResult(res.(*reply.RegisterRequest).Request.Bytes(), outgoing.Caller)
+
+	am := h.dep.lr.ArtifactManager
+	return am.RegisterResult(ctx, *outgoingReqRef, reqResult)
 }

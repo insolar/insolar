@@ -136,7 +136,7 @@ func TestDeactivateObject_IndexForIDErr(t *testing.T) {
 	recordsMock.SetMock.Return(nil)
 
 	idxStorageMock := object.NewIndexStorageMock(t)
-	idxStorageMock.ForIDMock.Return(object.FilamentIndex{}, errors.New("something strange from index.ForID"))
+	idxStorageMock.ForIDMock.Return(record.Index{}, errors.New("something strange from index.ForID"))
 
 	p := proc.NewDeactivateObject(
 		payload.Meta{},
@@ -179,7 +179,7 @@ func TestDeactivateObject_SetIndexErr(t *testing.T) {
 	recordsMock.SetMock.Return(nil)
 
 	idxStorageMock := object.NewIndexStorageMock(t)
-	idxStorageMock.ForIDMock.Return(object.FilamentIndex{}, nil)
+	idxStorageMock.ForIDMock.Return(record.Index{}, nil)
 	idxStorageMock.SetIndexMock.Return(errors.New("something strange from SetIndex"))
 
 	p := proc.NewDeactivateObject(
@@ -223,11 +223,11 @@ func TestDeactivateObject_FilamentSetResultErr(t *testing.T) {
 	recordsMock.SetMock.Return(nil)
 
 	idxStorageMock := object.NewIndexStorageMock(t)
-	idxStorageMock.ForIDMock.Return(object.FilamentIndex{}, nil)
+	idxStorageMock.ForIDMock.Return(record.Index{}, nil)
 	idxStorageMock.SetIndexMock.Return(nil)
 
 	filaments := executor.NewFilamentModifierMock(t)
-	filaments.SetResultMock.Return(errors.New("something strange from filament.SetResult"))
+	filaments.SetResultMock.Return(nil, errors.New("something strange from filament.SetResult"))
 
 	p := proc.NewDeactivateObject(
 		payload.Meta{},
@@ -270,11 +270,11 @@ func TestDeactivateObject_Proceed(t *testing.T) {
 	recordsMock.SetMock.Return(nil)
 
 	idxStorageMock := object.NewIndexStorageMock(t)
-	idxStorageMock.ForIDMock.Return(object.FilamentIndex{}, nil)
+	idxStorageMock.ForIDMock.Return(record.Index{}, nil)
 	idxStorageMock.SetIndexMock.Return(nil)
 
 	filaments := executor.NewFilamentModifierMock(t)
-	filaments.SetResultMock.Return(nil)
+	filaments.SetResultMock.Return(nil, nil)
 
 	sender := bus.NewSenderMock(t)
 	sender.ReplyMock.Return()

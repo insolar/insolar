@@ -43,7 +43,7 @@ type ActivateObject struct {
 		writeAccessor hot.WriteAccessor
 		indexLocker   object.IndexLocker
 		records       object.RecordModifier
-		indexModifier object.IndexModifier
+		indexStorage  object.IndexStorage
 		filament      executor.FilamentModifier
 		sender        bus.Sender
 	}
@@ -71,13 +71,13 @@ func (a *ActivateObject) Dep(
 	w hot.WriteAccessor,
 	il object.IndexLocker,
 	r object.RecordModifier,
-	im object.IndexModifier,
+	is object.IndexStorage,
 	f executor.FilamentModifier,
 	s bus.Sender,
 ) {
 	a.dep.records = r
 	a.dep.indexLocker = il
-	a.dep.indexModifier = im
+	a.dep.indexStorage = is
 	a.dep.filament = f
 	a.dep.writeAccessor = w
 	a.dep.sender = s
@@ -95,8 +95,8 @@ func (a *ActivateObject) Proceed(ctx context.Context) error {
 
 	logger := inslogger.FromContext(ctx)
 
-	a.dep.indexLocker.Lock(a.activate.Request.Record())
-	defer a.dep.indexLocker.Unlock(a.activate.Request.Record())
+	a.dep.indexLocker.Lock(*a.activate.Request.Record())
+	defer a.dep.indexLocker.Unlock(*a.activate.Request.Record())
 
 	activateVirt := record.Wrap(a.activate)
 	rec := record.Material{
@@ -108,38 +108,45 @@ func (a *ActivateObject) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "can't save record into storage")
 	}
-
-	// We are activating the object. There is no index for it anywhere.
-	idx := object.FilamentIndex{
-		Lifeline: object.Lifeline{
-			LatestState:  &a.activateID,
-			StateID:      a.activate.ID(),
-			Parent:       a.activate.Parent,
-			LatestUpdate: flow.Pulse(ctx),
-		},
-		LifelineLastUsed: flow.Pulse(ctx),
-		PendingRecords:   []insolar.ID{},
-		ObjID:            *a.activate.Request.Record(),
+	idx, err := a.dep.indexStorage.ForID(ctx, flow.Pulse(ctx), *a.activate.Request.Record())
+	if err != nil {
+		return errors.Wrap(err, "failed to save result")
 	}
-	logger.Debugf("new lifeline created")
 
-	err = a.dep.indexModifier.SetIndex(ctx, flow.Pulse(ctx), idx)
+	idx.Lifeline.LatestState = &a.activateID
+	idx.Lifeline.StateID = a.activate.ID()
+	idx.Lifeline.Parent = a.activate.Parent
+	idx.Lifeline.LatestUpdate = flow.Pulse(ctx)
+
+	err = a.dep.indexStorage.SetIndex(ctx, flow.Pulse(ctx), idx)
 	if err != nil {
 		return err
 	}
 	logger.WithField("state", idx.Lifeline.LatestState.DebugString()).Debug("saved object")
 
-	err = a.dep.filament.SetResult(ctx, a.resultID, a.jetID, a.result)
+	foundRes, err := a.dep.filament.SetResult(ctx, a.resultID, a.jetID, a.result)
 	if err != nil {
 		return errors.Wrap(err, "failed to save result")
 	}
 
-	msg, err := payload.NewMessage(&payload.ID{ID: a.resultID})
+	var foundResBuf []byte
+	if foundRes != nil {
+		foundResBuf, err = foundRes.Record.Virtual.Marshal()
+		if err != nil {
+			return err
+		}
+	}
+
+	msg, err := payload.NewMessage(&payload.ResultInfo{
+		ObjectID: *a.activate.Request.Record(),
+		ResultID: a.resultID,
+		Result:   foundResBuf,
+	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create reply")
 	}
 
-	go a.dep.sender.Reply(ctx, a.message, msg)
+	a.dep.sender.Reply(ctx, a.message, msg)
 
 	return nil
 }

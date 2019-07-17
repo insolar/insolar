@@ -68,19 +68,21 @@ import (
 )
 
 func emtygateway(t *testing.T) network.Gateway {
-	return NewNoNetwork(testnet.NewGatewayerMock(t),
+	return NewNoNetwork(testnet.NewGatewayerMock(t), mockPulseManager(t),
 		testnet.NewNodeKeeperMock(t), testutils.NewContractRequesterMock(t),
 		testutils.NewCryptographyServiceMock(t), testnet.NewHostNetworkMock(t),
 		testutils.NewCertificateManagerMock(t))
 }
 
-func TestSWitch(t *testing.T) {
+func TestSwitch(t *testing.T) {
 	ctx := context.Background()
 
 	nodekeeper := testnet.NewNodeKeeperMock(t)
+	nodekeeper.MoveSyncToActiveFunc = func(p context.Context, p1 insolar.PulseNumber) (r error) { return nil }
 	gatewayer := testnet.NewGatewayerMock(t)
+	pm := mockPulseManager(t)
 
-	ge := NewNoNetwork(gatewayer,
+	ge := NewNoNetwork(gatewayer, pm,
 		nodekeeper, testutils.NewContractRequesterMock(t),
 		testutils.NewCryptographyServiceMock(t), testnet.NewHostNetworkMock(t),
 		testutils.NewCertificateManagerMock(t))
@@ -124,11 +126,14 @@ func TestDumbComplete_GetCert(t *testing.T) {
 	ctx := context.Background()
 
 	nodekeeper := testnet.NewNodeKeeperMock(t)
+	nodekeeper.MoveSyncToActiveFunc = func(p context.Context, p1 insolar.PulseNumber) (r error) { return nil }
+
 	gatewayer := testnet.NewGatewayerMock(t)
 
 	CR := testutils.NewContractRequesterMock(t)
 	CM := testutils.NewCertificateManagerMock(t)
-	ge := NewNoNetwork(gatewayer,
+	pm := mockPulseManager(t)
+	ge := NewNoNetwork(gatewayer, pm,
 		nodekeeper, CR,
 		testutils.NewCryptographyServiceMock(t),
 		testnet.NewHostNetworkMock(t),

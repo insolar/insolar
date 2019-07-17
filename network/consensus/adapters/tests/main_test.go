@@ -85,26 +85,36 @@ func TestConsensusMain(t *testing.T) {
 	startedAt := time.Now()
 
 	ctx := initLogger()
-	network := initNetwork(ctx)
 
-	nodeIdents := generateNodeIdentities(0, 1, 3, 5)
-	nodeInfos := generateNodeInfos(nodeIdents)
+	nodeIdentities := generateNodeIdentities(0, 1, 3, 5)
+	nodeInfos := generateNodeInfos(nodeIdentities)
 	nodes, discoveryNodes := nodesFromInfo(nodeInfos)
 
 	pulseHandlers := make([]network2.PulseHandler, 0, len(nodes))
+
+	strategy := NewDelayNetStrategy(DelayStrategyConf{
+		MinDelay:         10 * time.Millisecond,
+		MaxDelay:         30 * time.Millisecond,
+		Variance:         0.2,
+		SpikeProbability: 0.1,
+	})
 
 	for i, n := range nodes {
 		nodeKeeper := nodenetwork.NewNodeKeeper(n)
 		nodeKeeper.SetInitialSnapshot(nodes)
 		certificateManager := initCrypto(n, discoveryNodes)
 		datagramHandler := adapters.NewDatagramHandler()
-		transportFactory := transport2.NewFactory(configuration.NewHostNetwork().Transport)
-		transport, _ := transportFactory.CreateDatagramTransport(datagramHandler)
 
-		consensusAdapter := NewEmuHostConsensusAdapter(n.Address())
+		conf := configuration.NewHostNetwork().Transport
+		conf.Address = n.Address()
+
+		transportFactory := transport2.NewFactory(conf)
+		transport, _ := transportFactory.CreateDatagramTransport(datagramHandler)
 
 		pulseHandler := adapters.NewPulseHandler()
 		pulseHandlers = append(pulseHandlers, pulseHandler)
+
+		delayTransport := strategy.GetLink(transport)
 
 		_ = consensus.New(ctx, consensus.Dep{
 			PrimingCloudStateHash: [64]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
@@ -114,23 +124,25 @@ func TestConsensusMain(t *testing.T) {
 			KeyStore:              keystore.NewInplaceKeyStore(nodeInfos[i].privateKey),
 			NodeKeeper:            nodeKeeper,
 			StateGetter:           &nshGen{nshDelay: defaultNshGenerationDelay},
-			PulseChanger:          &pulseChanger{},
-			StateUpdater:          &stateUpdater{nodeKeeper},
-			PacketBuilder:         NewEmuPacketBuilder,
-			DatagramTransport:     transport,
-			// TODO: remove
-			PacketSender: consensusAdapter,
-		}).Install(datagramHandler, pulseHandler, consensusAdapter)
+			PulseChanger: &pulseChanger{
+				nodeKeeper: nodeKeeper,
+			},
+			StateUpdater: &stateUpdater{
+				nodeKeeper: nodeKeeper,
+			},
+			DatagramTransport: delayTransport,
+		}).Install(datagramHandler, pulseHandler)
 
-		_ = transport.Start(ctx)
-		consensusAdapter.ConnectTo(network)
+		ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
+			"node_id":      n.ShortID(),
+			"node_address": n.Address(),
+		})
+		_ = delayTransport.Start(ctx)
 	}
 
 	fmt.Println("===", len(nodes), "=================================================")
 
-	network.Start(ctx)
-
-	pulsar := NewPulsar(2, pulseHandlers)
+	pulsar := NewPulsar(1, pulseHandlers)
 	go func() {
 		for {
 			pulsar.Pulse(ctx, 4+len(nodes)/10)
@@ -140,7 +152,7 @@ func TestConsensusMain(t *testing.T) {
 	for {
 		fmt.Println("===", time.Since(startedAt), "=================================================")
 		time.Sleep(time.Second)
-		if time.Since(startedAt) > time.Minute*30 {
+		if time.Since(startedAt) > time.Minute {
 			return
 		}
 	}
@@ -153,17 +165,6 @@ func initLogger() context.Context {
 	logger, _ = logger.WithFormat(insolar.TextFormat)
 	ctx = inslogger.SetLogger(ctx, logger)
 	return ctx
-}
-
-func initNetwork(ctx context.Context) *EmuNetwork {
-	strategy := NewDelayNetStrategy(DelayStrategyConf{
-		MinDelay:         10 * time.Millisecond,
-		MaxDelay:         30 * time.Millisecond,
-		Variance:         0.2,
-		SpikeProbability: 0.1,
-	})
-	network := NewEmuNetwork(strategy, ctx)
-	return network
 }
 
 func generateNodeIdentities(countNeutral, countHeavy, countLight, countVirtual int) []nodeIdentity {
@@ -190,9 +191,9 @@ func _generateNodeIdentity(r []nodeIdentity, count int, role insolar.StaticRole)
 	return r
 }
 
-func generateNodeInfos(nodeIdents []nodeIdentity) []*nodeInfo {
-	nodeInfos := make([]*nodeInfo, 0, len(nodeIdents))
-	for _, ni := range nodeIdents {
+func generateNodeInfos(nodeIdentities []nodeIdentity) []*nodeInfo {
+	nodeInfos := make([]*nodeInfo, 0, len(nodeIdentities))
+	for _, ni := range nodeIdentities {
 		privateKey, _ := keyProcessor.GeneratePrivateKey()
 		publicKey := keyProcessor.ExtractPublicKey(privateKey)
 
@@ -313,10 +314,16 @@ func (ng *nshGen) State() []byte {
 	return nshBytes
 }
 
-type pulseChanger struct{}
+type pulseChanger struct {
+	nodeKeeper network2.NodeKeeper
+}
 
 func (pc *pulseChanger) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
 	inslogger.FromContext(ctx).Info(">>>>>> Change pulse called")
+	err := pc.nodeKeeper.MoveSyncToActive(ctx, pulse.PulseNumber)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(err)
+	}
 }
 
 type stateUpdater struct {
@@ -326,9 +333,9 @@ type stateUpdater struct {
 func (su *stateUpdater) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
 	inslogger.FromContext(ctx).Info(">>>>>> Update state called")
 
-	// err := su.nodeKeeper.Sync(ctx, nodes, nil)
-	// if err != nil {
-	// 	inslogger.FromContext(ctx).Error(err)
-	// }
-	// su.nodeKeeper.SetCloudHash(cloudStateHash)
+	err := su.nodeKeeper.Sync(ctx, nodes, nil)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(err)
+	}
+	su.nodeKeeper.SetCloudHash(cloudStateHash)
 }

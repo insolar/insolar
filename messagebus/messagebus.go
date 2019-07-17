@@ -50,7 +50,6 @@ const deliverRPCMethodName = "MessageBus.Deliver"
 var transferredToWatermill = map[insolar.MessageType]struct{}{
 	insolar.TypeSetBlob:                            {},
 	insolar.TypeGetChildren:                        {},
-	insolar.TypeGetRequest:                         {},
 	insolar.TypeUpdateObject:                       {},
 	insolar.TypeGetPendingRequests:                 {},
 	insolar.TypeRegisterChild:                      {},
@@ -64,6 +63,8 @@ var transferredToWatermill = map[insolar.MessageType]struct{}{
 	insolar.TypeGetPendingRequestID:                {},
 	insolar.TypeGetDelegate:                        {},
 	insolar.TypeAdditionalCallFromPreviousExecutor: {},
+	insolar.TypeHeavyPayload:                       {},
+	insolar.TypeGetObjectIndex:                     {},
 }
 
 // MessageBus is component that routes application logic requests,

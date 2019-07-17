@@ -276,12 +276,12 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		)
 
 		hotSender := executor.NewHotSender(
-			Bus,
 			drops,
 			indexes,
 			Pulses,
 			Jets,
 			conf.LightChainLimit,
+			WmBus,
 		)
 
 		pm := pulsemanager.NewPulseManager(

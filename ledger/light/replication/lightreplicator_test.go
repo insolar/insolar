@@ -89,7 +89,7 @@ func Test_NotifyAboutPulse(t *testing.T) {
 		Pulse: expectPN,
 		Hash:  []byte{4, 2, 3},
 	}
-	expectIndexes := []object.FilamentIndex{
+	expectIndexes := []record.Index{
 		{ObjID: gen.ID()},
 		{ObjID: gen.ID()},
 	}
@@ -137,7 +137,7 @@ func Test_NotifyAboutPulse(t *testing.T) {
 	}
 
 	indexAccessor := object.NewIndexAccessorMock(ctrl)
-	indexAccessor.ForPulseFunc = func(_ context.Context, _ insolar.PulseNumber) []object.FilamentIndex {
+	indexAccessor.ForPulseFunc = func(_ context.Context, _ insolar.PulseNumber) []record.Index {
 		return expectIndexes
 	}
 

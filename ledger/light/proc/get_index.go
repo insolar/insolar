@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/record"
 
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/jet"
@@ -74,8 +75,8 @@ func (p *EnsureIndex) process(ctx context.Context) error {
 	objectID := *p.object.Record()
 	logger := inslogger.FromContext(ctx)
 
-	p.Dep.IndexLocker.Lock(&objectID)
-	defer p.Dep.IndexLocker.Unlock(&objectID)
+	p.Dep.IndexLocker.Lock(objectID)
+	defer p.Dep.IndexLocker.Unlock(objectID)
 
 	idx, err := p.Dep.IndexAccessor.ForID(ctx, p.pn, objectID)
 	if err == nil {
@@ -119,7 +120,7 @@ func (p *EnsureIndex) process(ctx context.Context) error {
 		return errors.Wrap(err, "failed to decode index")
 	}
 
-	err = p.Dep.IndexModifier.SetIndex(ctx, flow.Pulse(ctx), object.FilamentIndex{
+	err = p.Dep.IndexModifier.SetIndex(ctx, flow.Pulse(ctx), record.Index{
 		LifelineLastUsed: p.pn,
 		Lifeline:         lfl,
 		PendingRecords:   []insolar.ID{},
@@ -138,7 +139,7 @@ type EnsureIndexWM struct {
 	message payload.Meta
 
 	Result struct {
-		Lifeline object.Lifeline
+		Lifeline record.Lifeline
 	}
 
 	Dep struct {
@@ -175,8 +176,8 @@ func (p *EnsureIndexWM) Proceed(ctx context.Context) error {
 func (p *EnsureIndexWM) process(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 
-	p.Dep.IndexLocker.Lock(&p.object)
-	defer p.Dep.IndexLocker.Unlock(&p.object)
+	p.Dep.IndexLocker.Lock(p.object)
+	defer p.Dep.IndexLocker.Unlock(p.object)
 
 	idx, err := p.Dep.IndexAccessor.ForID(ctx, flow.Pulse(ctx), p.object)
 	if err == nil {
@@ -220,7 +221,7 @@ func (p *EnsureIndexWM) process(ctx context.Context) error {
 		return errors.Wrap(err, "failed to decode index")
 	}
 
-	err = p.Dep.IndexModifier.SetIndex(ctx, flow.Pulse(ctx), object.FilamentIndex{
+	err = p.Dep.IndexModifier.SetIndex(ctx, flow.Pulse(ctx), record.Index{
 		LifelineLastUsed: flow.Pulse(ctx),
 		Lifeline:         p.Result.Lifeline,
 		PendingRecords:   []insolar.ID{},
