@@ -53,6 +53,8 @@ package servicenetwork
 import (
 	"context"
 	"crypto/rand"
+	"sync"
+
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/adapters"
@@ -60,7 +62,6 @@ import (
 	"github.com/insolar/insolar/network/gateway"
 	"github.com/insolar/insolar/network/gateway/bootstrap"
 	"github.com/pkg/errors"
-	"sync"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -108,7 +109,9 @@ type ServiceNetwork struct {
 	BaseGateway  *gateway.Base
 	operableFunc insolar.NetworkOperableCallback
 
-	pulseHandler *adapters.PulseHandler
+	pulseHandler      *adapters.PulseHandler
+	datagramHandler   *adapters.DatagramHandler
+	datagramTransport transport.DatagramTransport
 
 	lock sync.Mutex
 }
@@ -162,6 +165,12 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	})
 
 	n.pulseHandler = adapters.NewPulseHandler()
+	n.datagramHandler = adapters.NewDatagramHandler()
+	datagramTransport, err := n.TransportFactory.CreateDatagramTransport(n.datagramHandler)
+	if err != nil {
+		return errors.Wrap(err, "Failed to create datagramTransport")
+	}
+	n.datagramTransport = datagramTransport
 
 	n.cm.Inject(n,
 		&routing.Table{},
@@ -169,6 +178,8 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		transport.NewFactory(n.cfg.Host.Transport),
 		hostNetwork,
 		n.pulseHandler,
+		n.datagramHandler,
+		n.datagramTransport,
 		//merkle.NewCalculator(),
 
 		// remove old consensus
@@ -214,13 +225,6 @@ func (n *ServiceNetwork) UpdateState(ctx context.Context, pulseNumber insolar.Pu
 }
 
 func (n *ServiceNetwork) initConsensus(ctx context.Context) error {
-	datagramHandler := adapters.NewDatagramHandler()
-	udp, err := n.TransportFactory.CreateDatagramTransport(datagramHandler)
-	// todo: stop udp then stop ServiceNetwork
-	if err != nil {
-		return err
-	}
-
 	_ = consensus.New(ctx, consensus.Dep{
 		PrimingCloudStateHash: [64]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 		KeyProcessor:          n.KeyProcessor,
@@ -231,8 +235,8 @@ func (n *ServiceNetwork) initConsensus(ctx context.Context) error {
 		StateGetter:           n,
 		PulseChanger:          n,
 		StateUpdater:          n,
-		DatagramTransport:     udp,
-	}).Install(datagramHandler, n.pulseHandler)
+		DatagramTransport:     n.datagramTransport,
+	}).Install(n.datagramHandler, n.pulseHandler)
 
 	return nil
 }

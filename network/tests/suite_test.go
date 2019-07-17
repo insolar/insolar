@@ -56,9 +56,6 @@ import (
 	"context"
 	"crypto"
 	"fmt"
-	"github.com/insolar/insolar/keystore"
-	"github.com/insolar/insolar/network/node"
-	"github.com/stretchr/testify/require"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -66,6 +63,10 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/insolar/insolar/keystore"
+	"github.com/insolar/insolar/network/node"
+	"github.com/stretchr/testify/require"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/stretchr/testify/suite"
@@ -116,9 +117,17 @@ type fixture struct {
 
 const cacheDir = "network_cache/"
 
+func initLogger(ctx context.Context) context.Context {
+	logger := inslogger.FromContext(ctx).WithCaller(false)
+	logger, _ = logger.WithLevelNumber(insolar.InfoLevel)
+	logger, _ = logger.WithFormat(insolar.TextFormat)
+	ctx = inslogger.SetLogger(ctx, logger)
+	return ctx
+}
+
 func newFixture(t *testing.T) *fixture {
 	return &fixture{
-		ctx:            inslogger.TestContext(t),
+		ctx:            initLogger(inslogger.TestContext(t)),
 		bootstrapNodes: make([]*networkNode, 0),
 		networkNodes:   make([]*networkNode, 0),
 	}
@@ -387,16 +396,21 @@ func (s *testSuite) newNetworkNode(name string) *networkNode {
 	s.Require().NoError(err)
 	address := "127.0.0.1:" + strconv.Itoa(incrementTestPort())
 
-	nodeContext, _ := inslogger.WithField(s.fixture().ctx, "nodeName", name)
-	return &networkNode{
+	n := &networkNode{
 		id:                  testutils.RandomRef(),
 		role:                RandomRole(),
 		privateKey:          key,
 		cryptographyService: cryptography.NewKeyBoundCryptographyService(key),
 		host:                address,
-		ctx:                 nodeContext,
 		consensusResult:     make(chan error, 30),
 	}
+
+	nodeContext, _ := inslogger.WithFields(s.fixture().ctx, map[string]interface{}{
+		"node_name": name,
+	})
+
+	n.ctx = nodeContext
+	return n
 }
 
 func incrementTestPort() int {
@@ -567,6 +581,13 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	//serviceNetwork.SetOperableFunc(func(ctx context.Context, operable bool) {})
 	node.serviceNetwork = serviceNetwork
 	node.terminationHandler = terminationHandler
+
+	nodeContext, _ := inslogger.WithFields(s.fixture().ctx, map[string]interface{}{
+		"node_id":      realKeeper.GetOrigin().ShortID(),
+		"node_address": realKeeper.GetOrigin().Address(),
+	})
+
+	node.ctx = nodeContext
 }
 
 //func (s *testSuite) SetCommunicationPolicy(policy CommunicationPolicy) {
