@@ -84,8 +84,8 @@ func (p *RegisterChild) process(ctx context.Context) error {
 		return errors.New("wrong child record")
 	}
 
-	p.Dep.IndexLocker.Lock(p.msg.Parent.Record())
-	defer p.Dep.IndexLocker.Unlock(p.msg.Parent.Record())
+	p.Dep.IndexLocker.Lock(*p.msg.Parent.Record())
+	defer p.Dep.IndexLocker.Unlock(*p.msg.Parent.Record())
 
 	idx, err := p.Dep.IndexAccessor.ForID(ctx, p.pulse, *p.msg.Parent.Record())
 	if err != nil {

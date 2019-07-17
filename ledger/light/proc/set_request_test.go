@@ -17,8 +17,11 @@
 package proc_test
 
 import (
+	"context"
 	"testing"
 
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
@@ -40,78 +43,19 @@ func TestSetRequest_Proceed(t *testing.T) {
 		inslogger.TestContext(t),
 		insolar.GenesisPulse.PulseNumber+10,
 	)
+	mc := minimock.NewController(t)
 
-	writeAccessor := hot.NewWriteAccessorMock(t)
-	writeAccessor.BeginMock.Return(func() {}, nil)
-
-	sender := bus.NewSenderMock(t)
-	sender.ReplyMock.Return()
-
-	records := object.NewRecordModifierMock(t)
-	records.SetMock.Return(nil)
-
-	filaments := executor.NewFilamentModifierMock(t)
-	filaments.SetRequestMock.Return(nil, nil, nil)
-
-	idxStorage := object.NewIndexStorageMock(t)
-	idxStorage.ForIDMock.Return(record.Index{
-		Lifeline: record.Lifeline{
-			StateID: record.StateActivation,
-		},
-	}, nil)
-
-	ref := gen.Reference()
-	jetID := gen.JetID()
-	id := gen.ID()
-
-	request := record.IncomingRequest{
-		Object:   &ref,
-		CallType: record.CTMethod,
-	}
-	virtual := record.Virtual{
-		Union: &record.Virtual_IncomingRequest{
-			IncomingRequest: &request,
-		},
-	}
-
-	pl := payload.SetIncomingRequest{
-		Request: virtual,
-	}
-	requestBuf, err := pl.Marshal()
-	require.NoError(t, err)
-
-	msg := payload.Meta{
-		Payload: requestBuf,
-	}
-
-	// Pendings limit not reached.
-	p := proc.NewSetRequest(msg, &request, id, jetID)
-	p.Dep(writeAccessor, records, filaments, sender, object.NewIndexLocker(), idxStorage)
-
-	err = p.Proceed(ctx)
-	require.NoError(t, err)
-}
-
-func TestSetRequest_ObjectIsDeactivated(t *testing.T) {
-	t.Parallel()
-
-	ctx := flow.TestContextWithPulse(
-		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
+	var (
+		writeAccessor *hot.WriteAccessorMock
+		sender        *bus.SenderMock
+		filaments     *executor.FilamentModifierMock
 	)
 
-	writeAccessor := hot.NewWriteAccessorMock(t)
-	writeAccessor.BeginMock.Return(func() {}, nil)
-
-	sender := bus.NewSenderMock(t)
-	sender.ReplyMock.Return()
-
-	idxStorage := object.NewIndexStorageMock(t)
-	idxStorage.ForIDMock.Return(record.Index{
-		Lifeline: record.Lifeline{
-			StateID: record.StateDeactivation,
-		},
-	}, nil)
+	resetComponents := func() {
+		writeAccessor = hot.NewWriteAccessorMock(mc)
+		sender = bus.NewSenderMock(mc)
+		filaments = executor.NewFilamentModifierMock(t)
+	}
 
 	ref := gen.Reference()
 	jetID := gen.JetID()
@@ -137,10 +81,46 @@ func TestSetRequest_ObjectIsDeactivated(t *testing.T) {
 		Payload: requestBuf,
 	}
 
-	// Pendings limit not reached.
-	p := proc.NewSetRequest(msg, &request, id, jetID)
-	p.Dep(writeAccessor, nil, nil, sender, object.NewIndexLocker(), idxStorage)
+	resetComponents()
+	t.Run("happy basic", func(t *testing.T) {
+		writeAccessor.BeginMock.Return(func() {}, nil)
+		sender.ReplyMock.Return()
+		filaments.SetRequestMock.Return(nil, nil, nil)
 
-	err = p.Proceed(ctx)
-	require.NoError(t, err)
+		p := proc.NewSetRequest(msg, &request, id, jetID)
+		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker())
+
+		err = p.Proceed(ctx)
+		require.NoError(t, err)
+
+		mc.Finish()
+	})
+
+	resetComponents()
+	t.Run("duplicate returns correct id", func(t *testing.T) {
+		writeAccessor.BeginMock.Return(func() {}, nil)
+		reqID := gen.ID()
+		resID := gen.ID()
+		filaments.SetRequestMock.Return(
+			&record.CompositeFilamentRecord{RecordID: reqID},
+			&record.CompositeFilamentRecord{RecordID: resID},
+			nil,
+		)
+
+		sender.ReplyFunc = func(_ context.Context, meta payload.Meta, msg *message.Message) {
+			pl, err := payload.Unmarshal(msg.Payload)
+			require.NoError(t, err)
+			rep, ok := pl.(*payload.RequestInfo)
+			require.True(t, ok)
+			require.Equal(t, reqID, rep.RequestID)
+		}
+
+		p := proc.NewSetRequest(msg, &request, id, jetID)
+		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker())
+
+		err = p.Proceed(ctx)
+		require.NoError(t, err)
+
+		mc.Finish()
+	})
 }

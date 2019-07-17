@@ -469,10 +469,10 @@ Records
 
 Data is stored in the ledger as a series of immutable :term:`records <record>`. All records are created and signed by :ref:`virtual nodes <virtual>`. Each record is addressed by its hash and a :term:`pulse <pulse>` number. Records can contain a reference to another record, thus, creating a chain. An example of a chain is the :term:`object's <object>` :term:`lifeline <lifeline>`. Each :ref:`material node <static_roles>` is responsible for its own lifelines determined by their hashes.
 
-In the Insolar's key-value storage, the key is a fixed structure -- a combination of a pulse number and a value hash -- the value can be one of several types:
+In the Insolar's key-value storage, the key is a fixed structure -- a combination of a pulse number and a value hash. The value can be one of several types:
 
-* :term:`Record <record>` -- immutable structured data unit. Can be combined to form chains by referencing previous records in succession.
-* Index -- meta information about record chains, e.g., pointers to the latest record in a chain. Represents :term:`objects <object>`.
+* :term:`Record <record>` -- immutable structured data unit. Can form chains if each record references a previous one in succession.
+* Index -- meta information about record chains, e.g., pointers to the latest record in a chain. Represents an :term:`object <object>`.
 * Blob -- immutable payload. Used to store (potentially big) chunks of serialized data, e.g., object's memory. Usually, records refer to blobs to store application data.
 
 .. _requests:
@@ -480,14 +480,14 @@ In the Insolar's key-value storage, the key is a fixed structure -- a combinatio
 Requests
 ~~~~~~~~
 
-Each operation performed by :ref:`virtual nodes <virtual>` is registered as a request on the ledger. Request is a single :ref:`record <records>` that contains information necessary to perform an operation. Each request belongs to an :term:`object <object>` and is affined to it.
+Each operation performed by :ref:`virtual nodes <virtual>` is registered as a request in the ledger. Request is a single :ref:`record <records>` that contains information necessary to perform an operation. Each request belongs to an :term:`object <object>` and is affined to it.
 
 .. _results:
 
 Results
 ~~~~~~~
 
-Each operation performed by :ref:`virtual nodes <virtual>` has exactly one result. Although an operation can have many side effects (:term:`records <record>` stored on the ledger), result represents a summary of that operation. So, each finished request has its own result, i.e., result references its request. A request without an associated result stored on the ledger is a *pending* one.
+Each operation performed by :ref:`virtual nodes <virtual>` has exactly one result. Although an operation can have many side effects (:term:`records <record>` stored in the ledger), result represents a summary of that operation. So, each finished request has its own result, i.e., result references its request. A request without an associated result stored in the ledger is a *pending* one.
 
 .. _objects:
 
@@ -496,13 +496,15 @@ Objects
 
 :term:`Objects <object>` (contracts) are fundamental application building blocks. Borrowing OOP terminology, an object is a class instance. In other words, an object is a series of :ref:`records <records>` that can be accessed via an index.
 
-Each record represents an object's state at a certain point. In the blockchain, objects cannot be modified, only appended by another record. These object states can be one of the following types:
+Each record represents an object's state at a certain point. The state can contain the object's memory at the point. Memory is a binary blob stored in the ledger and a contract can put any data it needs into it.
 
-* **Activated** -- the :term:`object <object>` has been initialized. This is the first state of any object. It contains a reference to initial memory and to object's :ref:`parent <relations>`.
-* **Amended** -- the object's memory has been modified. Contains reference to new memory. 
+In a blockchain, objects cannot be modified, only appended by another record. Therefore, object states can be one of the following types:
+
+* **Activated** -- the :term:`object <object>` has been initialized. This is the first state of any object and it contains initial memory.
+* **Amended** -- the object's memory has been modified. Contains new memory. 
 * **Deactivated** --  the object has been "removed" from the system. Since data cannot be removed from the chain, objects are simply marked as *removed*.
 
-A succession of object records (states) is called a :term:`lifeline <lifeline>`. The index points to the object's latest state but the state does not matter since it is predetermined for each operation, i.e., two concurrent operations on the same object can work with different states of that object.
+A succession of object records (states) is called a :term:`lifeline <lifeline>`:
 
 .. uml::
 
@@ -539,7 +541,11 @@ A succession of object records (states) is called a :term:`lifeline <lifeline>`.
    Index -l- Request
    Index -l-> Deactivate
 
-Object's lifeline is not the only chain, though. The ledger stores any requests that belong to an object or :ref:`object's children <relations>` in a :term:`sideline <sideline>`. The general term for all the chains (lines) is a :term:`filament <filament>`. So, a more complex object structure including all filaments is as follows:
+An object is assembled from a lifeline via its index. As stated above, index is a collection of pointers to object's records (states, requests, etc.). So, to get an object, all we need is its index. The ledger stores multiple versions of the object's index depending on the pulse.
+
+To preserve consistency, each operation is performed on a particular object's version. To get an object to execute on, a :ref:`virtual node <virtual>` sends an operation request based on which the object's version is calculated. This way, two concurrent operations can be performed on different versions of said object.
+
+Object's lifeline is not the only chain, though. The ledger stores any requests that belong to an object in a :term:`sideline <sideline>`. The general term for all the chains (lines) is a :term:`filament <filament>`. So, a more complex object structure including all filaments is as follows:
 
 .. uml::
 
@@ -565,15 +571,6 @@ Object's lifeline is not the only chain, though. The ledger stores any requests 
    Activate <|-- Amend1
    Request <|-- Activate
 
-   package "[[../glossary.html#term-sideline Child's sideline]]" as chsl {
-      object "Child 1" as Child1
-      object "Child 2" as Child2
-      object "Child 3" as Child3
-   }
-
-   Child1 <|-- Child2
-   Child2 <|-- Child3
-
    package "[[../glossary.html#term-sideline Requests sideline]]" as rsl {
       object "Request 1" as Req1
       object "Request 2" as Req2
@@ -591,10 +588,6 @@ Object's lifeline is not the only chain, though. The ledger stores any requests 
    Amend2 : key = 14
    Deactivate : key = 15
 
-   Child1 : key = 21
-   Child2 : key = 22
-   Child3 : key = 23
-
    Req1 : key = 31
    Req2 : key = 32
    Res1 : key = 33
@@ -602,15 +595,12 @@ Object's lifeline is not the only chain, though. The ledger stores any requests 
 
    Index : key = 11
    Index : stateKey = 15
-   Index : childKey = 23
    Index : requestKey = 34
 
    Index -- Request
    Index --> Deactivate
-   Index --> Child3
    Index --> Req3
-   Lifeline -[hidden]r- chsl
-   chsl -[hidden]r- rsl
+   Lifeline -[hidden]r- rsl
    rsl  -[hidden]r- Index
 
 .. _object_address:
@@ -618,9 +608,7 @@ Object's lifeline is not the only chain, though. The ledger stores any requests 
 Object's Address
 ^^^^^^^^^^^^^^^^
 
-Object's address is more complicated than that of a simple :ref:`record <records>`. An :term:`object <object>` consists of many :ref:`records <records>` but should have only one address. So, the ledger considers a request for a "create object" operation to be the object's address.
-
-In other words, the object's address is its index since the index has all the information necessary to find other object records.
+Object's address is more complicated than that of a simple :ref:`record <records>`. An :term:`object <object>` consists of many :ref:`records <records>` but should have only one address. So, the ledger considers the address to be a pointer to the creation request's record. The object's index can be found via this address.
 
 .. _relations:
 
@@ -631,12 +619,11 @@ Objects have relations to other entities and to each other. Most of those relati
 
 Key figures in those relations are:
 
-* **Object**. Directly references prototype. This reference cannot be changed during the object's lifetime, although multiple objects can have the same prototype. Serves as an *instance* of a prototype.
-* **Prototype**. Special kind of :term:`object <object>` that acts as a template for building other objects. It contains default memory and directly refers to relevant code. Code reference can be changed to some different code during the prototype's lifetime.
-* **Code**. Single immutable :ref:`record <records>` which contains code for :ref:`virtual nodes <virtual>` to execute. They perform operations on the referenced object. The same code can reference multiple objects.
-* **Parent**. Object's "owner". Typically, when an operation on an object creates another object, the ledger considers the latter a child of the executed one.
+* **Object**. Directly references a prototype. This reference cannot be changed during the object's lifetime, although multiple objects can have the same prototype. Serves as an *instance* of a prototype.
+* **Prototype**. Special kind of :term:`object <object>` that acts as a template for building other objects. It contains default memory and directly refers to relevant code.
+* **Code**. Single immutable :ref:`record <records>` which contains code for :ref:`virtual nodes <virtual>` to execute. They perform operations on the referenced object. The same code can be referenced by multiple prototypes.
 
-Relations between entities are as follows:
+Relations between the entities are as follows:
 
 .. uml::
 
@@ -655,14 +642,16 @@ Relations between entities are as follows:
 
    object "Instance 3 (Object)" as Inst3
 
+   object "Prototype 3 (Object)" as Proto3
+
    Code1 <|-- Proto1 : Image
    Proto1 <|-- Inst1 : Image
 
    Code2 <|-- Proto2 : Image
    Proto2 <|-- Inst2 : Image
 
-   Inst2 <|-- Inst1 : Parent
    Proto2 <|-- Inst3 : Image
+   Code2 <|-- Proto3 : Image
 
 Since both prototype and object are technically :term:`objects <object>`, they contain a reference to either:
 

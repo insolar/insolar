@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
@@ -38,7 +39,6 @@ type SetRequest struct {
 
 	dep struct {
 		writer   hot.WriteAccessor
-		records  object.RecordModifier
 		filament executor.FilamentModifier
 		sender   bus.Sender
 		locker   object.IndexLocker
@@ -62,14 +62,12 @@ func NewSetRequest(
 
 func (p *SetRequest) Dep(
 	w hot.WriteAccessor,
-	r object.RecordModifier,
 	f executor.FilamentModifier,
 	s bus.Sender,
 	l object.IndexLocker,
 	i object.IndexStorage,
 ) {
 	p.dep.writer = w
-	p.dep.records = r
 	p.dep.filament = f
 	p.dep.sender = s
 	p.dep.locker = l
@@ -77,6 +75,9 @@ func (p *SetRequest) Dep(
 }
 
 func (p *SetRequest) Proceed(ctx context.Context) error {
+	logger := inslogger.FromContext(ctx).WithField("request_id", p.requestID.DebugString())
+	logger.Debug("trying to save request")
+
 	done, err := p.dep.writer.Begin(ctx, flow.Pulse(ctx))
 	if err != nil {
 		if err == hot.ErrWriteClosed {
@@ -86,21 +87,12 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	}
 	defer done()
 
-	var req *record.CompositeFilamentRecord
-	var res *record.CompositeFilamentRecord
-	var objID insolar.ID
-
+	var objectID insolar.ID
 	if p.request.IsCreationRequest() {
-		p.dep.locker.Lock(&p.requestID)
-		defer p.dep.locker.Unlock(&p.requestID)
-
-		objID = p.requestID
+		objectID = p.requestID
 	} else {
-		p.dep.locker.Lock(p.request.AffinityRef().Record())
-		defer p.dep.locker.Unlock(p.request.AffinityRef().Record())
-
-		objID = *p.request.AffinityRef().Record()
-		idx, err := p.dep.index.ForID(ctx, flow.Pulse(ctx), objID)
+		objectID = *p.request.AffinityRef().Record()
+		idx, err := p.dep.index.ForID(ctx, flow.Pulse(ctx), objectID)
 		if err != nil {
 			return errors.Wrap(err, "failed to check an object state")
 		}
@@ -115,20 +107,28 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		}
 	}
 
-	req, res, err = p.dep.filament.SetRequest(ctx, p.requestID, p.jetID, p.request)
+	p.dep.locker.Lock(objectID)
+	defer p.dep.locker.Unlock(objectID)
+
+	req, res, err := p.dep.filament.SetRequest(ctx, p.requestID, p.jetID, p.request)
 	if err != nil {
 		return errors.Wrap(err, "failed to store record")
 	}
 
-	var reqBuf []byte
-	var resBuf []byte
+	var (
+		reqBuf []byte
+		resBuf []byte
+	)
 
+	requestID := p.requestID
 	if req != nil {
 		reqBuf, err = req.Marshal()
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal stored record")
 		}
+		requestID = req.RecordID
 	}
+
 	if res != nil {
 		resBuf, err = res.Marshal()
 		if err != nil {
@@ -137,8 +137,8 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	}
 
 	msg, err := payload.NewMessage(&payload.RequestInfo{
-		ObjectID:  objID,
-		RequestID: p.requestID,
+		ObjectID:  objectID,
+		RequestID: requestID,
 		Request:   reqBuf,
 		Result:    resBuf,
 	})
@@ -146,6 +146,11 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to create reply")
 	}
 
+	logger.WithFields(map[string]interface{}{
+		"duplicate":   req != nil,
+		"has_result":  res != nil,
+		"is_creation": p.request.IsCreationRequest(),
+	}).Debug("request saved")
 	p.dep.sender.Reply(ctx, p.message, msg)
 	return nil
 }

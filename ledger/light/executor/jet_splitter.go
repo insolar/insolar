@@ -148,7 +148,7 @@ func (js *JetSplitterDefault) createDrop(
 
 	threshold := js.getPreviousDropThreshold(ctx, jetID, pn)
 	// reset threshold counter, if split is happened
-	if threshold > js.cfg.ThresholdRecordsCount {
+	if threshold > js.cfg.ThresholdOverflowCount {
 		threshold = 0
 	}
 	// if records count reached threshold increase counter (instead it reset)
@@ -157,7 +157,10 @@ func (js *JetSplitterDefault) createDrop(
 		block.SplitThresholdExceeded = threshold + 1
 	}
 	// first return value is split needed
-	return block.SplitThresholdExceeded > js.cfg.ThresholdOverflowCount, js.dropModifier.Set(ctx, block)
+	if block.SplitThresholdExceeded > js.cfg.ThresholdOverflowCount {
+		block.Split = true
+	}
+	return block.Split, js.dropModifier.Set(ctx, block)
 }
 
 func (js *JetSplitterDefault) getPreviousDropThreshold(

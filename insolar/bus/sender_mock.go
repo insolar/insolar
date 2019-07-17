@@ -22,6 +22,11 @@ import (
 type SenderMock struct {
 	t minimock.Tester
 
+	LatestPulseFunc       func(p context.Context) (r insolar.Pulse, r1 error)
+	LatestPulseCounter    uint64
+	LatestPulsePreCounter uint64
+	LatestPulseMock       mSenderMockLatestPulse
+
 	ReplyFunc       func(p context.Context, p1 payload.Meta, p2 *message.Message)
 	ReplyCounter    uint64
 	ReplyPreCounter uint64
@@ -46,11 +51,162 @@ func NewSenderMock(t minimock.Tester) *SenderMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.LatestPulseMock = mSenderMockLatestPulse{mock: m}
 	m.ReplyMock = mSenderMockReply{mock: m}
 	m.SendRoleMock = mSenderMockSendRole{mock: m}
 	m.SendTargetMock = mSenderMockSendTarget{mock: m}
 
 	return m
+}
+
+type mSenderMockLatestPulse struct {
+	mock              *SenderMock
+	mainExpectation   *SenderMockLatestPulseExpectation
+	expectationSeries []*SenderMockLatestPulseExpectation
+}
+
+type SenderMockLatestPulseExpectation struct {
+	input  *SenderMockLatestPulseInput
+	result *SenderMockLatestPulseResult
+}
+
+type SenderMockLatestPulseInput struct {
+	p context.Context
+}
+
+type SenderMockLatestPulseResult struct {
+	r  insolar.Pulse
+	r1 error
+}
+
+//Expect specifies that invocation of Sender.LatestPulse is expected from 1 to Infinity times
+func (m *mSenderMockLatestPulse) Expect(p context.Context) *mSenderMockLatestPulse {
+	m.mock.LatestPulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &SenderMockLatestPulseExpectation{}
+	}
+	m.mainExpectation.input = &SenderMockLatestPulseInput{p}
+	return m
+}
+
+//Return specifies results of invocation of Sender.LatestPulse
+func (m *mSenderMockLatestPulse) Return(r insolar.Pulse, r1 error) *SenderMock {
+	m.mock.LatestPulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &SenderMockLatestPulseExpectation{}
+	}
+	m.mainExpectation.result = &SenderMockLatestPulseResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Sender.LatestPulse is expected once
+func (m *mSenderMockLatestPulse) ExpectOnce(p context.Context) *SenderMockLatestPulseExpectation {
+	m.mock.LatestPulseFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &SenderMockLatestPulseExpectation{}
+	expectation.input = &SenderMockLatestPulseInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *SenderMockLatestPulseExpectation) Return(r insolar.Pulse, r1 error) {
+	e.result = &SenderMockLatestPulseResult{r, r1}
+}
+
+//Set uses given function f as a mock of Sender.LatestPulse method
+func (m *mSenderMockLatestPulse) Set(f func(p context.Context) (r insolar.Pulse, r1 error)) *SenderMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.LatestPulseFunc = f
+	return m.mock
+}
+
+//LatestPulse implements github.com/insolar/insolar/insolar/bus.Sender interface
+func (m *SenderMock) LatestPulse(p context.Context) (r insolar.Pulse, r1 error) {
+	counter := atomic.AddUint64(&m.LatestPulsePreCounter, 1)
+	defer atomic.AddUint64(&m.LatestPulseCounter, 1)
+
+	if len(m.LatestPulseMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.LatestPulseMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to SenderMock.LatestPulse. %v", p)
+			return
+		}
+
+		input := m.LatestPulseMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, SenderMockLatestPulseInput{p}, "Sender.LatestPulse got unexpected parameters")
+
+		result := m.LatestPulseMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the SenderMock.LatestPulse")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.LatestPulseMock.mainExpectation != nil {
+
+		input := m.LatestPulseMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, SenderMockLatestPulseInput{p}, "Sender.LatestPulse got unexpected parameters")
+		}
+
+		result := m.LatestPulseMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the SenderMock.LatestPulse")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.LatestPulseFunc == nil {
+		m.t.Fatalf("Unexpected call to SenderMock.LatestPulse. %v", p)
+		return
+	}
+
+	return m.LatestPulseFunc(p)
+}
+
+//LatestPulseMinimockCounter returns a count of SenderMock.LatestPulseFunc invocations
+func (m *SenderMock) LatestPulseMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.LatestPulseCounter)
+}
+
+//LatestPulseMinimockPreCounter returns the value of SenderMock.LatestPulse invocations
+func (m *SenderMock) LatestPulseMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.LatestPulsePreCounter)
+}
+
+//LatestPulseFinished returns true if mock invocations count is ok
+func (m *SenderMock) LatestPulseFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.LatestPulseMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.LatestPulseCounter) == uint64(len(m.LatestPulseMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.LatestPulseMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.LatestPulseCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.LatestPulseFunc != nil {
+		return atomic.LoadUint64(&m.LatestPulseCounter) > 0
+	}
+
+	return true
 }
 
 type mSenderMockReply struct {
@@ -487,6 +643,10 @@ func (m *SenderMock) SendTargetFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *SenderMock) ValidateCallCounters() {
 
+	if !m.LatestPulseFinished() {
+		m.t.Fatal("Expected call to SenderMock.LatestPulse")
+	}
+
 	if !m.ReplyFinished() {
 		m.t.Fatal("Expected call to SenderMock.Reply")
 	}
@@ -516,6 +676,10 @@ func (m *SenderMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *SenderMock) MinimockFinish() {
 
+	if !m.LatestPulseFinished() {
+		m.t.Fatal("Expected call to SenderMock.LatestPulse")
+	}
+
 	if !m.ReplyFinished() {
 		m.t.Fatal("Expected call to SenderMock.Reply")
 	}
@@ -542,6 +706,7 @@ func (m *SenderMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
+		ok = ok && m.LatestPulseFinished()
 		ok = ok && m.ReplyFinished()
 		ok = ok && m.SendRoleFinished()
 		ok = ok && m.SendTargetFinished()
@@ -552,6 +717,10 @@ func (m *SenderMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
+
+			if !m.LatestPulseFinished() {
+				m.t.Error("Expected call to SenderMock.LatestPulse")
+			}
 
 			if !m.ReplyFinished() {
 				m.t.Error("Expected call to SenderMock.Reply")
@@ -576,6 +745,10 @@ func (m *SenderMock) MinimockWait(timeout time.Duration) {
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *SenderMock) AllMocksCalled() bool {
+
+	if !m.LatestPulseFinished() {
+		return false
+	}
 
 	if !m.ReplyFinished() {
 		return false
