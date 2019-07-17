@@ -52,6 +52,10 @@ package servicenetwork
 
 import (
 	"context"
+	"github.com/insolar/insolar/keystore"
+	"github.com/insolar/insolar/network/consensus"
+	"github.com/insolar/insolar/network/consensus/adapters"
+	"github.com/insolar/insolar/network/consensus/serialization"
 	"github.com/insolar/insolar/network/gateway"
 	"github.com/insolar/insolar/network/gateway/bootstrap"
 	"sync"
@@ -83,13 +87,17 @@ type ServiceNetwork struct {
 	cm  *component.Manager
 
 	// dependencies
-	CertificateManager  insolar.CertificateManager  `inject:""`
-	PulseManager        insolar.PulseManager        `inject:""`
-	PulseAccessor       pulse.Accessor              `inject:""`
-	PulseAppender       pulse.Appender              `inject:""`
-	CryptographyService insolar.CryptographyService `inject:""`
-	NodeKeeper          network.NodeKeeper          `inject:""`
-	TerminationHandler  insolar.TerminationHandler  `inject:""`
+	CertificateManager  insolar.CertificateManager         `inject:""`
+	PulseManager        insolar.PulseManager               `inject:""`
+	PulseAccessor       pulse.Accessor                     `inject:""`
+	PulseAppender       pulse.Appender                     `inject:""`
+	CryptographyService insolar.CryptographyService        `inject:""`
+	CryptographyScheme  insolar.PlatformCryptographyScheme `inject:""`
+	KeyProcessor        insolar.KeyProcessor               `inject:""`
+	KeyStore            insolar.KeyStore                   `inject:""`
+	TransportFactory    transport.Factory                  `inject:""`
+	NodeKeeper          network.NodeKeeper                 `inject:""`
+	TerminationHandler  insolar.TerminationHandler         `inject:""`
 
 	// watermill support interfaces
 	Pub message.Publisher `inject:""`
@@ -182,6 +190,41 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to init internal components")
 	}
+
+	err = n.initConsensus(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Failed to init Consensus")
+	}
+
+	return nil
+}
+
+func (n *ServiceNetwork) initConsensus(ctx context.Context) error {
+	//nodeKeeper := nodenetwork.NewNodeKeeper(n)
+	//nodeKeeper.SetInitialSnapshot(nodes)
+
+	datagramHandler := adapters.NewDatagramHandler()
+	udp, err := n.TransportFactory.CreateDatagramTransport(datagramHandler)
+	if err != nil {
+		return err
+	}
+
+	pulseHandler := adapters.NewPulseHandler()
+	//serialization.NewPacketBuilder()
+
+	_ = consensus.New(ctx, consensus.Dep{
+		PrimingCloudStateHash: [64]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
+		KeyProcessor:          n.KeyProcessor,
+		Scheme:                n.CryptographyScheme,
+		CertificateManager:    n.CertificateManager,
+		KeyStore:              n.KeyStore,
+		NodeKeeper:            n.NodeKeeper,
+		StateGetter:           &nshGen{nshDelay: 0},
+		PulseChanger:          &pulseChanger{},
+		StateUpdater:          &stateUpdater{nodeKeeper},
+		PacketBuilder:         NewEmuPacketBuilder,
+		DatagramTransport:     udp,
+	}).Install(datagramHandler, pulseHandler)
 
 	return nil
 }
