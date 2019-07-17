@@ -201,31 +201,22 @@ func (m *FilamentModifierDefault) SetRequest(
 		return foundRequest, foundResult, nil
 	}
 
-	// check outgoing request if any pending exists with the same ID as request's reason.
-	isAnyPendingWithOutgoingRequestReason := func(req record.Request) error {
-		pendings, err := m.calculator.PendingRequests(ctx, requestID.Pulse(), objectID)
-		if err != nil {
-			return err
-		}
-		reason := req.ReasonRef()
-		for _, p := range pendings {
-			if p == *reason.Record() {
-				return nil
-			}
-		}
-		return errors.Errorf("reason ID %v not found in pendings for object %v",
-			reason.Record().DebugString(), objectID.DebugString())
-	}
-
 	switch r := request.(type) {
 	case *record.IncomingRequest:
 		if r.IsDetached() {
-			return nil, nil, errors.Errorf("incoming request can't be detached, has wrong reason %v", r.ReturnMode)
+			return nil, nil, errors.Errorf("request check failed: incoming request, has wrong reason %v", r.ReturnMode)
 		}
 	case *record.OutgoingRequest:
-		if err := isAnyPendingWithOutgoingRequestReason(request); err != nil {
+		err := m.checkOutgoingHasReasonInPendings(ctx, requestID, objectID, request)
+		if err == nil {
+			break
+		}
+		if _, ok := err.(*errorReasonNotInPendings); !ok {
 			return nil, nil, err
 		}
+
+		// temporary solution, until functest are fixed
+		inslogger.FromContext(ctx).Error(err)
 	}
 
 	// Save request record to storage.
@@ -273,6 +264,27 @@ func (m *FilamentModifierDefault) SetRequest(
 	}).Debug("filament set request")
 
 	return nil, nil, nil
+}
+
+// check outgoing request if any pending exists with the same ID as request's reason.
+func (m *FilamentModifierDefault) checkOutgoingHasReasonInPendings(
+	ctx context.Context,
+	requestID insolar.ID,
+	objectID insolar.ID,
+	request record.Request,
+) error {
+	pendings, err := m.calculator.PendingRequests(ctx, requestID.Pulse(), objectID)
+	if err != nil {
+		return errors.Wrap(err, "failed fecth pendings on reason check")
+	}
+	reason := request.ReasonRef()
+	reasonID := *reason.Record()
+	for _, p := range pendings {
+		if p == reasonID {
+			return nil
+		}
+	}
+	return &errorReasonNotInPendings{reason: reasonID, object: objectID}
 }
 
 func (m *FilamentModifierDefault) SetResult(ctx context.Context, resultID insolar.ID, jetID insolar.JetID, result record.Result) (*record.CompositeFilamentRecord, error) {
@@ -361,6 +373,8 @@ type FilamentCalculatorDefault struct {
 	coordinator jet.Coordinator
 	jetFetcher  jet.Fetcher
 	sender      bus.Sender
+
+	iteratorMaker fetchIteratorMaker
 }
 
 func NewFilamentCalculator(
@@ -376,6 +390,8 @@ func NewFilamentCalculator(
 		coordinator: coordinator,
 		jetFetcher:  jetFetcher,
 		sender:      sender,
+
+		iteratorMaker: newFetchingIterator,
 	}
 }
 
@@ -435,7 +451,7 @@ func (c *FilamentCalculatorDefault) PendingRequests(
 		return []insolar.ID{}, nil
 	}
 
-	iter := newFetchingIterator(
+	iter := c.iteratorMaker(
 		ctx,
 		cache,
 		objectID,
@@ -514,7 +530,7 @@ func (c *FilamentCalculatorDefault) ResultDuplicate(
 	cache.Lock()
 	defer cache.Unlock()
 
-	iter := newFetchingIterator(
+	iter := c.iteratorMaker(
 		ctx,
 		cache,
 		objectID,
@@ -578,7 +594,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	cache.Lock()
 	defer cache.Unlock()
 
-	iter := newFetchingIterator(
+	iter := c.iteratorMaker(
 		ctx,
 		cache,
 		objectID,
@@ -825,6 +841,22 @@ func (i *filamentIterator) Prev(ctx context.Context) (record.CompositeFilamentRe
 	return composite, nil
 }
 
+type fetchIterator interface {
+	PrevID() *insolar.ID
+	HasPrev() bool
+	Prev(ctx context.Context) (record.CompositeFilamentRecord, error)
+}
+
+type fetchIteratorMaker func(
+	ctx context.Context,
+	cache *filamentCache,
+	objectID, from insolar.ID,
+	readUntil insolar.PulseNumber,
+	fetcher jet.Fetcher,
+	coordinator jet.Coordinator,
+	sender bus.Sender,
+) fetchIterator
+
 func newFetchingIterator(
 	ctx context.Context,
 	cache *filamentCache,
@@ -833,7 +865,7 @@ func newFetchingIterator(
 	fetcher jet.Fetcher,
 	coordinator jet.Coordinator,
 	sender bus.Sender,
-) *fetchingIterator {
+) fetchIterator {
 	return &fetchingIterator{
 		iter:        cache.NewIterator(ctx, from),
 		cache:       cache,

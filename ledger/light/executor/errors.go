@@ -17,6 +17,9 @@
 package executor
 
 import (
+	"fmt"
+
+	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
 )
 
@@ -24,3 +27,13 @@ var (
 	// ErrEmptyReason is returned when blob-record not found.
 	ErrEmptyReason = errors.New("reason is empty")
 )
+
+type errorReasonNotInPendings struct {
+	reason insolar.ID
+	object insolar.ID
+}
+
+func (e *errorReasonNotInPendings) Error() string {
+	return fmt.Sprintf("reason ID %v not found in pendings for object %v",
+		e.reason.DebugString(), e.object.DebugString())
+}

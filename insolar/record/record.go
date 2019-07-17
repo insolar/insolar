@@ -134,6 +134,9 @@ func (Genesis) GetIsPrototype() bool {
 	return false
 }
 
+//go:generate minimock -i github.com/insolar/insolar/insolar/record.Request -o ./ -s _mock.go
+
+// Request is a common request interface.
 type Request interface {
 	// AffinityRef returns a pointer to the reference of the object the
 	// Request is affine to. The result can be nil, e.g. in case of creating

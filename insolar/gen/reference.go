@@ -28,6 +28,20 @@ func ID() (id insolar.ID) {
 	return
 }
 
+// IDRef generates random id and returns reference on it.
+func IDRef() *insolar.ID {
+	id := ID()
+	return &id
+}
+
+// IDWithPulse generates random id with provided pulse.
+func IDWithPulse(pn insolar.PulseNumber) (id insolar.ID) {
+	copy(id[:insolar.PulseNumberSize], pn.Bytes())
+	fill := id[insolar.PulseNumberSize:len(id)]
+	fuzz.New().NilChance(0).Fuzz(&fill)
+	return
+}
+
 // JetID generates random jet id.
 func JetID() (jetID insolar.JetID) {
 	f := fuzz.New().Funcs(func(jet *insolar.JetID, c fuzz.Continue) {
