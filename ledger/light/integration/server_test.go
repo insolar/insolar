@@ -157,10 +157,6 @@ func NewServer(ctx context.Context, cfg configuration.Configuration) (*Server, e
 		handler.WriteAccessor = writeController
 		handler.Sender = WmBus
 		handler.IndexStorage = indexes
-		err := handler.Init(ctx)
-		if err != nil {
-			return nil, err
-		}
 
 		jetTreeUpdater := jet.NewFetcher(Nodes, Jets, Bus, Coordinator)
 		filamentCalculator := executor.NewFilamentCalculator(
@@ -173,6 +169,11 @@ func NewServer(ctx context.Context, cfg configuration.Configuration) (*Server, e
 
 		handler.JetTreeUpdater = jetTreeUpdater
 		handler.FilamentCalculator = filamentCalculator
+
+		err := handler.Init(ctx)
+		if err != nil {
+			return nil, err
+		}
 
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
 		var lightCleaner = replication.NewCleaner(
