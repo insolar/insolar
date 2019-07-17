@@ -817,7 +817,7 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 	})
 
 	resetComponents()
-	t.Run("returns result. request is found too", func(t *testing.T) {
+	t.Run("returns result. result duplicate is found", func(t *testing.T) {
 		b := newFilamentBuilder(ctx, pcs, records)
 		req := record.IncomingRequest{Nonce: rand.Uint64(), Reason: *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, nil))}
 		req1 := b.Append(insolar.FirstPulseNumber+1, req)
@@ -842,30 +842,31 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 	})
 
 	resetComponents()
-	t.Run("returns result. request isn't found", func(t *testing.T) {
+	t.Run("returns result. request not found", func(t *testing.T) {
 		b := newFilamentBuilder(ctx, pcs, records)
-		res := record.Result{Request: *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber+2, nil))}
-		res1 := b.Append(insolar.FirstPulseNumber+2, res)
+		req := b.Append(
+			insolar.FirstPulseNumber+1,
+			record.IncomingRequest{Nonce: rand.Uint64(), Reason: *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, nil))},
+		)
 
 		objectID := gen.ID()
-		fromPulse := res1.MetaID.Pulse()
+		fromPulse := req.MetaID.Pulse()
 		err := indexes.SetIndex(ctx, fromPulse, record.Index{
 			ObjID: objectID,
 			Lifeline: record.Lifeline{
-				PendingPointer: &res1.MetaID,
+				PendingPointer: &req.MetaID,
 			},
 		})
 		require.NoError(t, err)
 
-		fRes, err := calculator.ResultDuplicate(ctx, fromPulse, objectID, res1.RecordID, res)
+		_, err = calculator.ResultDuplicate(ctx, fromPulse, objectID, req.RecordID, record.Result{Request: gen.Reference()})
 		require.Error(t, err)
-		require.Equal(t, *fRes, res1)
 
 		mc.Finish()
 	})
 
 	resetComponents()
-	t.Run("returns no result. request is found", func(t *testing.T) {
+	t.Run("returns no result. request found", func(t *testing.T) {
 		b := newFilamentBuilder(ctx, pcs, records)
 		req := record.IncomingRequest{Nonce: rand.Uint64(), Reason: *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, nil))}
 		req1 := b.Append(insolar.FirstPulseNumber+1, req)

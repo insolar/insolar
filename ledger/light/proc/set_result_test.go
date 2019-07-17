@@ -104,10 +104,11 @@ func TestSetResult_Proceed_ResultDuplicated(t *testing.T) {
 	sender := bus.NewSenderMock(t)
 
 	jetID := gen.JetID()
-	id := gen.ID()
+	objectID := gen.ID()
+	resultID := gen.ID()
 
 	res := &record.Result{
-		Object: id,
+		Object: objectID,
 	}
 	virtual := record.Virtual{
 		Union: &record.Virtual_Result{
@@ -129,7 +130,7 @@ func TestSetResult_Proceed_ResultDuplicated(t *testing.T) {
 
 	filamentModifier := executor.NewFilamentModifierMock(t)
 	filamentModifier.SetResultFunc = func(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.Result) (fRes *record.CompositeFilamentRecord, r error) {
-		require.Equal(t, id, p1)
+		require.Equal(t, objectID, p1)
 		require.Equal(t, jetID, p2)
 		require.Equal(t, *res, p3)
 
@@ -137,7 +138,7 @@ func TestSetResult_Proceed_ResultDuplicated(t *testing.T) {
 	}
 
 	// Pendings limit not reached.
-	setResultProc := proc.NewSetResult(msg, *res, id, jetID)
+	setResultProc := proc.NewSetResult(msg, *res, objectID, jetID)
 	setResultProc.Dep(writeAccessor, sender, object.NewIndexLocker(), filamentModifier)
 	sender.ReplyFunc = func(_ context.Context, receivedMeta payload.Meta, resMsg *message.Message) {
 		require.Equal(t, msg, receivedMeta)
@@ -148,18 +149,21 @@ func TestSetResult_Proceed_ResultDuplicated(t *testing.T) {
 		res, ok := resp.(*payload.ResultInfo)
 		require.True(t, ok)
 		require.Nil(t, res.Result)
-		require.Equal(t, id, res.ResultID)
+		require.Equal(t, objectID, res.ResultID)
 	}
 
 	err = setResultProc.Proceed(ctx)
 	require.NoError(t, err)
 
 	filamentModifier.SetResultFunc = func(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.Result) (fRes *record.CompositeFilamentRecord, r error) {
-		require.Equal(t, id, p1)
+		require.Equal(t, objectID, p1)
 		require.Equal(t, jetID, p2)
 		require.Equal(t, *res, p3)
 
-		return &record.CompositeFilamentRecord{Record: record.Material{Virtual: &virtual}}, nil
+		return &record.CompositeFilamentRecord{
+			Record:   record.Material{Virtual: &virtual},
+			RecordID: resultID,
+		}, nil
 	}
 	sender.ReplyFunc = func(_ context.Context, receivedMeta payload.Meta, resMsg *message.Message) {
 		require.Equal(t, msg, receivedMeta)
@@ -170,7 +174,7 @@ func TestSetResult_Proceed_ResultDuplicated(t *testing.T) {
 		res, ok := resp.(*payload.ResultInfo)
 		require.True(t, ok)
 		require.Equal(t, virtualBuf, res.Result)
-		require.Equal(t, id, res.ResultID)
+		require.Equal(t, resultID, res.ResultID)
 	}
 
 	// CheckDuplication
