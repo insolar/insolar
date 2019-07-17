@@ -674,20 +674,6 @@ func (c *cacheStore) Delete(id insolar.ID) {
 	delete(c.caches, id)
 }
 
-func (c *cacheStore) getIDs() []insolar.ID {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	res := make([]insolar.ID, len(c.caches))
-	i := 0
-	for id := range c.caches {
-		res[i] = id
-		i++
-	}
-
-	return res
-}
-
 type filamentCache struct {
 	sync.RWMutex
 	cache map[insolar.ID]record.CompositeFilamentRecord
