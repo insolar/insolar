@@ -98,6 +98,20 @@ func (a *DeactivateObject) Proceed(ctx context.Context) error {
 	a.dep.indexLocker.Lock(&a.result.Object)
 	defer a.dep.indexLocker.Unlock(&a.result.Object)
 
+	idx, err := a.dep.indices.ForID(ctx, flow.Pulse(ctx), a.result.Object)
+	if err != nil {
+		return errors.Wrap(err, "can't get index from storage")
+	}
+	if idx.Lifeline.StateID == record.StateDeactivation {
+		msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeDeactivated})
+		if err != nil {
+			return errors.Wrap(err, "failed to create reply")
+		}
+
+		a.dep.sender.Reply(ctx, a.message, msg)
+		return nil
+	}
+
 	deactivateVirt := record.Wrap(a.deactivate)
 	rec := record.Material{
 		Virtual: &deactivateVirt,
@@ -115,15 +129,6 @@ func (a *DeactivateObject) Proceed(ctx context.Context) error {
 		return nil
 	} else if err != nil {
 		return errors.Wrap(err, "can't save record into storage")
-	}
-
-	idx, err := a.dep.indices.ForID(ctx, flow.Pulse(ctx), a.result.Object)
-	if err != nil {
-		return errors.Wrap(err, "can't get index from storage")
-	}
-
-	if idx.Lifeline.StateID == record.StateDeactivation {
-		return ErrObjectDeactivated
 	}
 
 	idx.Lifeline.LatestState = &a.deactivateID

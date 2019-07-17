@@ -53,6 +53,9 @@ func TestActivateObject_RecordOverrideErr(t *testing.T) {
 	recordsMock := object.NewRecordModifierMock(t)
 	recordsMock.SetMock.Return(object.ErrOverride)
 
+	idxStorage := object.NewIndexStorageMock(t)
+	idxStorage.ForIDMock.Return(record.Index{}, nil)
+
 	p := proc.NewActivateObject(
 		payload.Meta{},
 		record.Activate{},
@@ -65,7 +68,7 @@ func TestActivateObject_RecordOverrideErr(t *testing.T) {
 		writeAccessor,
 		idxLockMock,
 		recordsMock,
-		nil,
+		idxStorage,
 		nil,
 		nil,
 	)

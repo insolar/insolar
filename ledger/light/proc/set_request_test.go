@@ -53,6 +53,13 @@ func TestSetRequest_Proceed(t *testing.T) {
 	filaments := executor.NewFilamentModifierMock(t)
 	filaments.SetRequestMock.Return(nil, nil, nil)
 
+	idxStorage := object.NewIndexStorageMock(t)
+	idxStorage.ForIDMock.Return(record.Index{
+		Lifeline: record.Lifeline{
+			StateID: record.StateActivation,
+		},
+	}, nil)
+
 	ref := gen.Reference()
 	jetID := gen.JetID()
 	id := gen.ID()
@@ -79,7 +86,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 
 	// Pendings limit not reached.
 	p := proc.NewSetRequest(msg, &request, id, jetID)
-	p.Dep(writeAccessor, records, filaments, sender, object.NewIndexLocker())
+	p.Dep(writeAccessor, records, filaments, sender, object.NewIndexLocker(), idxStorage)
 
 	err = p.Proceed(ctx)
 	require.NoError(t, err)

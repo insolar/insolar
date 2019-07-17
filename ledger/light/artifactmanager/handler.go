@@ -129,6 +129,7 @@ func NewMessageHandler(
 				h.filamentModifier,
 				h.Sender,
 				h.IndexLocker,
+				h.IndexStorage,
 			)
 		},
 		SetResult: func(p *proc.SetResult) {
