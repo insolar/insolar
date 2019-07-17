@@ -603,7 +603,6 @@ func (r *Two) Hello() (*string, error) {
 }
 
 func TestConstructorReturnNil(t *testing.T) {
-	t.Skip("System is not ready for case when a contract constructor fails")
 	var contractOneCode = `
 package main
 
@@ -648,14 +647,8 @@ func New() (*Two, error) {
 	uploadContractOnce(t, "constructor_return_nil_two", contractTwoCode)
 	obj := callConstructor(t, uploadContractOnce(t, "constructor_return_nil_one", contractOneCode), "New")
 
-	resp := callMethod(t, obj, "Hello")
-	require.NotEmpty(t, resp.Reply)
-
-	require.Contains(
-		t,
-		string(resp.Reply.Result),
-		"[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil",
-	)
+	resp := callMethodExpectError(t, obj, "Hello")
+	require.Empty(t, resp.Reply.Result)
 }
 
 func TestRecursiveCallError(t *testing.T) {
