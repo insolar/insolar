@@ -526,10 +526,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	cfg.Pulsar.PulseTime = pulseDelta * 1000
 	cfg.Host.Transport.Address = node.host
 	cfg.Service.CacheDirectory = cacheDir + node.host
-	cfg.Service.Consensus.Phase1Timeout = Phase1Timeout
-	cfg.Service.Consensus.Phase2Timeout = Phase2Timeout
-	cfg.Service.Consensus.Phase21Timeout = Phase21Timeout
-	cfg.Service.Consensus.Phase3Timeout = Phase3Timeout
 
 	node.componentManager = &component.Manager{}
 	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme())
