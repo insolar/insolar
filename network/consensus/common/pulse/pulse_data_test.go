@@ -107,6 +107,16 @@ func TestString(t *testing.T) {
 
 	pd := NewFirstPulsarData(delta, entropy)
 	require.True(t, pd.String() != "")
+
+	pd.PulseNumber = MaxTimePulse + 2
+	require.True(t, pd.String() != "")
+
+	pd.PulseNumber = MaxTimePulse
+	pd.PrevPulseDelta = pd.NextPulseDelta
+	require.True(t, pd.String() != "")
+
+	pd.NextPulseDelta = 0
+	require.True(t, pd.String() != "")
 }
 
 func TestNnewPulsarData(t *testing.T) {
@@ -330,8 +340,8 @@ func TestGetStartOfEpoch(t *testing.T) {
 	pd.PulseEpoch = MaxTimePulse + 1
 	require.Equal(t, Number(1<<16), pd.GetStartOfEpoch())
 
-	pd.PulseNumber = MaxTimePulse + 1
-	require.Equal(t, Number(MaxTimePulse+1), pd.GetStartOfEpoch())
+	pd.PulseNumber = MaxTimePulse
+	require.Equal(t, Number(MaxTimePulse), pd.GetStartOfEpoch())
 }
 
 func entropyGenTest() longbits.Bits256 {
@@ -362,7 +372,7 @@ func TestIsValidNext(t *testing.T) {
 	delta := uint16(2)
 	entropy := longbits.Bits256{3}
 	pd1 := newPulsarData(pn, delta, entropy)
-	pd2 := newPulsarData(pn+2, delta, entropy)
+	pd2 := newPulsarData(pn+Number(delta), delta, entropy)
 	pd2.PrevPulseDelta = delta
 	require.True(t, pd1.IsValidNext(pd2))
 
@@ -384,6 +394,12 @@ func TestIsValidNext(t *testing.T) {
 	pd2.PulseNumber = pn + 2
 	pd1.PulseNumber = MinTimePulse - 1
 	require.Panics(t, func() { pd1.IsValidNext(pd2) })
+
+	delta = 1
+	pd1 = newEphemeralData(pn)
+	pd2 = newEphemeralData(pn + Number(delta))
+	pd2.PrevPulseDelta = delta
+	require.True(t, pd1.IsValidNext(pd2))
 }
 
 func TestIsValidPrev(t *testing.T) {
@@ -391,7 +407,7 @@ func TestIsValidPrev(t *testing.T) {
 	delta := uint16(2)
 	entropy := longbits.Bits256{3}
 	pd1 := newPulsarData(pn, delta, entropy)
-	pd2 := newPulsarData(pn-2, delta, entropy)
+	pd2 := newPulsarData(pn-Number(delta), delta, entropy)
 	pd1.PrevPulseDelta = delta
 	require.True(t, pd1.IsValidPrev(pd2))
 
@@ -410,8 +426,14 @@ func TestIsValidPrev(t *testing.T) {
 	pd2.PulseNumber = pn - 3
 	require.False(t, pd1.IsValidPrev(pd2))
 
-	pd2.PulseNumber = MinTimePulse - 1
+	pd2.PulseNumber = MaxTimePulse + 1
 	require.Panics(t, func() { pd1.IsValidPrev(pd2) })
+
+	delta = 1
+	pd1 = newEphemeralData(pn)
+	pd2 = newEphemeralData(pn - Number(delta))
+	pd1.PrevPulseDelta = delta
+	require.True(t, pd1.IsValidPrev(pd2))
 }
 
 func TestGetNextPulseNumber(t *testing.T) {

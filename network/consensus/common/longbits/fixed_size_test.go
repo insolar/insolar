@@ -129,6 +129,7 @@ func TestAsByteString(t *testing.T) {
 	require.Equal(t, "abc", fs.AsByteString())
 }
 
+// Recursion
 /*func TestWriteTo(t *testing.T) {
 	fs := &fixedSize{data: []byte{}}
 
