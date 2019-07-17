@@ -51,90 +51,114 @@
 package adapters
 
 import (
-	"context"
+	"sync"
+	"time"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/utils"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 )
 
-type StateGetter interface {
-	State() []byte
+type (
+	OnPowerApplied func(pw member.Power, effectiveSince pulse.Number)
+	OnLeaveApplied func(exitCode uint32, effectiveSince pulse.Number)
+	OnFinished     func(pulse pulse.Number)
+)
+
+type ConsensusControlFeeder struct {
+	mu             *sync.RWMutex
+	onPowerApplied OnPowerApplied
+	onLeaveApplied OnLeaveApplied
+	onFinished     OnFinished
+	capacityLevel  capacity.Level
+	leave          bool
+	leaveReason    uint32
 }
 
-type PulseChanger interface {
-	ChangePulse(ctx context.Context, newPulse insolar.Pulse)
-}
-
-type StateUpdater interface {
-	UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte)
-}
-
-type UpstreamPulseController struct {
-	stateGetter  StateGetter
-	pulseChanger PulseChanger
-	stateUpdater StateUpdater
-}
-
-func NewUpstreamPulseController(stateGetter StateGetter, pulseChanger PulseChanger, stateUpdater StateUpdater) *UpstreamPulseController {
-	return &UpstreamPulseController{
-		stateGetter:  stateGetter,
-		pulseChanger: pulseChanger,
-		stateUpdater: stateUpdater,
+func NewConsensusControlFeeder() *ConsensusControlFeeder {
+	return &ConsensusControlFeeder{
+		mu:            &sync.RWMutex{},
+		capacityLevel: capacity.LevelNormal,
+		onLeaveApplied: func(exitCode uint32, effectiveSince pulse.Number) {
+			panic("unexpected leave")
+		},
+		onPowerApplied: func(pw member.Power, effectiveSince pulse.Number) {
+			panic("unexpected power change")
+		},
+		onFinished: func(pulse pulse.Number) {},
 	}
 }
 
-func (u *UpstreamPulseController) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
-	// TODO: use nodekeeper in chronicles and remove setting sync list from here
+func (cf *ConsensusControlFeeder) GetRequiredGracefulLeave() (bool, uint32) {
+	cf.mu.RLock()
+	defer cf.mu.RUnlock()
 
-	ctx := contextFromReport(report)
-
-	if expectedCensus == nil {
-		inslogger.FromContext(ctx).Info("consensus finished: seems we are leaving")
-		return
-	}
-
-	population := expectedCensus.GetOnlinePopulation()
-	networkNodes := NewNetworkNodeList(population.GetProfiles())
-
-	u.stateUpdater.UpdateState(
-		ctx,
-		insolar.PulseNumber(report.PulseNumber),
-		networkNodes,
-		expectedCensus.GetCloudStateHash().AsBytes(),
-	)
+	return cf.leave, cf.leaveReason
 }
 
-func (u *UpstreamPulseController) PreparePulseChange(report api.UpstreamReport) <-chan proofs.NodeStateHash {
-	nshChan := make(chan proofs.NodeStateHash)
+func (cf *ConsensusControlFeeder) GetRequiredPowerLevel() power.Request {
+	cf.mu.RLock()
+	defer cf.mu.RUnlock()
 
-	go awaitState(nshChan, u.stateGetter)
-
-	return nshChan
+	return power.NewRequestByLevel(capacity.LevelNormal)
 }
 
-func (u *UpstreamPulseController) CommitPulseChange(report api.UpstreamReport, pulseData pulse.Data, activeCensus census.Operational) {
-	ctx := contextFromReport(report)
-	p := NewPulse(pulseData)
+func (cf *ConsensusControlFeeder) SetRequiredGracefulLeave(leaveReason uint32, f OnLeaveApplied) {
+	cf.mu.Lock()
+	defer cf.mu.Unlock()
 
-	u.pulseChanger.ChangePulse(ctx, p)
+	cf.leave = true
+	cf.leaveReason = leaveReason
+	cf.onLeaveApplied = f
 }
 
-func (u *UpstreamPulseController) CancelPulseChange() {
+func (cf *ConsensusControlFeeder) SetRequiredPowerLevel(capacityLevel capacity.Level, f OnPowerApplied) {
+	cf.mu.Lock()
+	defer cf.mu.Unlock()
+
+	cf.capacityLevel = capacityLevel
+	cf.onPowerApplied = f
+}
+
+func (cf *ConsensusControlFeeder) SetOnFinished(f OnFinished) {
+	cf.mu.Lock()
+	defer cf.mu.Unlock()
+
+	cf.onFinished = f
+}
+
+func (cf *ConsensusControlFeeder) OnAppliedPowerLevel(pw member.Power, effectiveSince pulse.Number) {
+	cf.mu.RLock()
+	defer cf.mu.RUnlock()
+
+	cf.onPowerApplied(pw, effectiveSince)
+}
+
+func (cf *ConsensusControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse.Number) {
+	cf.mu.RLock()
+	defer cf.mu.RUnlock()
+
+	cf.onLeaveApplied(exitCode, effectiveSince)
+}
+
+func (cf *ConsensusControlFeeder) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
+	cf.mu.RLock()
+	defer cf.mu.RUnlock()
+
+	cf.onFinished(report.PulseNumber)
+}
+
+func (cf *ConsensusControlFeeder) SetTrafficLimit(level capacity.Level, duration time.Duration) {
 	panic("implement me")
 }
 
-func awaitState(c chan<- proofs.NodeStateHash, stater StateGetter) {
-	c <- cryptkit.NewDigest(longbits.NewBits512FromBytes(stater.State()), SHA3512Digest).AsDigestHolder()
+func (cf *ConsensusControlFeeder) ResumeTraffic() {
+	panic("implement me")
 }
 
-func contextFromReport(report api.UpstreamReport) context.Context {
-	return utils.NewPulseContext(context.Background(), uint32(report.PulseNumber))
+func (cf *ConsensusControlFeeder) PulseDetected() {
+	panic("implement me")
 }

@@ -48,61 +48,130 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package adapters
+package consensus
 
 import (
-	"context"
-	"time"
+	"sync"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 )
 
-type ConsensusControlFeeder struct{}
-
-func NewConsensusControlFeeder() *ConsensusControlFeeder {
-	return &ConsensusControlFeeder{}
+type LeaveApplied struct {
+	effectiveSince insolar.PulseNumber
+	exitCode       uint32
 }
 
-func (cf *ConsensusControlFeeder) GetRequiredPowerLevel() power.Request {
-	return power.NewRequestByLevel(capacity.LevelNormal)
+type PowerApplied struct {
+	effectiveSince insolar.PulseNumber
+	power          member.Power
 }
 
-func (cf *ConsensusControlFeeder) OnAppliedPowerLevel(pw member.Power, effectiveSince pulse.Number) {
-	ctx := context.TODO()
-
-	inslogger.FromContext(ctx).Info(">>> Power level applied")
+type Finished struct {
+	pulseNumber insolar.PulseNumber
 }
 
-func (cf *ConsensusControlFeeder) GetRequiredGracefulLeave() (bool, uint32) {
-	return false, 0
+type Controller interface {
+	Abort()
+
+	GetActivePowerLimit() (member.Power, insolar.PulseNumber)
+
+	GracefulLeave(reason uint32) <-chan LeaveApplied
+	ChangePower(capacity capacity.Level) <-chan PowerApplied
+
+	AddFinishedNotifier(typ string) <-chan Finished
+	RemoveFinishedNotifier(typ string)
 }
 
-func (cf *ConsensusControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse.Number) {
-	ctx := context.TODO()
+type controller struct {
+	consensusControlFeeder *adapters.ConsensusControlFeeder
+	consensusController    api.ConsensusController
 
-	inslogger.FromContext(ctx).Info(">>> Graceful leave applied")
+	mu        *sync.RWMutex
+	notifiers map[string]chan Finished
 }
 
-func (cf *ConsensusControlFeeder) SetTrafficLimit(level capacity.Level, duration time.Duration) {
-	panic("implement me")
+func newController(consensusControlFeeder *adapters.ConsensusControlFeeder, consensusController api.ConsensusController) *controller {
+	controller := &controller{
+		consensusControlFeeder: consensusControlFeeder,
+		consensusController:    consensusController,
+
+		mu:        &sync.RWMutex{},
+		notifiers: make(map[string]chan Finished),
+	}
+
+	consensusControlFeeder.SetOnFinished(controller.onFinished)
+
+	return controller
 }
 
-func (cf *ConsensusControlFeeder) ResumeTraffic() {
-	panic("implement me")
+func (c *controller) Abort() {
+	c.consensusController.Abort()
 }
 
-func (cf *ConsensusControlFeeder) PulseDetected() {
-	panic("implement me")
+func (c *controller) GetActivePowerLimit() (member.Power, insolar.PulseNumber) {
+	pw, pul := c.consensusController.GetActivePowerLimit()
+	return pw, insolar.PulseNumber(pul)
 }
 
-func (cf *ConsensusControlFeeder) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
-	ctx := context.TODO()
+func (c *controller) GracefulLeave(reason uint32) <-chan LeaveApplied {
+	leaveChan := make(chan LeaveApplied, 1)
 
-	inslogger.FromContext(ctx).Info(">>> ConsensusFinished")
+	c.consensusControlFeeder.SetRequiredGracefulLeave(reason, func(exitCode uint32, effectiveSince pulse.Number) {
+		defer close(leaveChan)
+
+		leaveChan <- LeaveApplied{
+			effectiveSince: insolar.PulseNumber(effectiveSince),
+			exitCode:       exitCode,
+		}
+	})
+
+	return leaveChan
+}
+
+func (c *controller) ChangePower(capacity capacity.Level) <-chan PowerApplied {
+	powerChan := make(chan PowerApplied, 1)
+
+	c.consensusControlFeeder.SetRequiredPowerLevel(capacity, func(power member.Power, effectiveSince pulse.Number) {
+		defer close(powerChan)
+
+		powerChan <- PowerApplied{
+			effectiveSince: insolar.PulseNumber(effectiveSince),
+			power:          power,
+		}
+	})
+
+	return powerChan
+}
+
+func (c *controller) AddFinishedNotifier(typ string) <-chan Finished {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	n := make(chan Finished, 1)
+	c.notifiers[typ] = n
+
+	return n
+}
+
+func (c *controller) RemoveFinishedNotifier(typ string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	delete(c.notifiers, typ)
+}
+
+func (c *controller) onFinished(pulse pulse.Number) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	for _, n := range c.notifiers {
+		n <- Finished{
+			pulseNumber: insolar.PulseNumber(pulse),
+		}
+	}
 }
