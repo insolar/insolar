@@ -76,6 +76,9 @@ func (gp *GetPendings) Proceed(ctx context.Context) error {
 	msg, err := payload.NewMessage(&payload.IDs{
 		IDs: ids,
 	})
+	if err != nil {
+		return errors.Wrap(err, "failed to create reply")
+	}
 
 	go gp.dep.sender.Reply(ctx, gp.message, msg)
 	return nil
