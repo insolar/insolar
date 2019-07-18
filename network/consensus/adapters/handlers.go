@@ -51,21 +51,28 @@
 package adapters
 
 import (
+	"bytes"
 	"context"
+	"io"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
 
 type PacketProcessor interface {
-	ProcessPacket(ctx context.Context, payload packets.PacketParser, from common.HostIdentityHolder) error
+	ProcessPacket(ctx context.Context, payload transport.PacketParser, from endpoints.Inbound) error
+}
+
+type PacketParserFactory interface {
+	ParsePacket(ctx context.Context, reader io.Reader) (transport.PacketParser, error)
 }
 
 type DatagramHandler struct {
-	packetProcessor PacketProcessor
+	packetProcessor     PacketProcessor
+	packetParserFactory PacketParserFactory
 }
 
 func NewDatagramHandler() *DatagramHandler {
@@ -76,35 +83,32 @@ func (dh *DatagramHandler) SetPacketProcessor(packetProcessor PacketProcessor) {
 	dh.packetProcessor = packetProcessor
 }
 
+func (dh *DatagramHandler) SetPacketParserFactory(packetParserFactory PacketParserFactory) {
+	dh.packetParserFactory = packetParserFactory
+}
+
 func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, buf []byte) {
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"address": address,
+		"sender_address": address,
 	})
 
-	p := payloadWrapper{}
-	err := insolar.Deserialize(buf, p)
+	packetParser, err := dh.packetParserFactory.ParsePacket(ctx, bytes.NewReader(buf))
 	if err != nil {
-		logger.Error(err)
+		logger.Error("Failed to get PacketParser: ", err)
 		return
 	}
 
-	packetParser, ok := p.Payload.(packets.PacketParser)
-	if !ok {
-		logger.Error("Failed to get PacketParser")
-		return
-	}
+	logger = inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"sender_id":   packetParser.GetSourceID(),
+		"packet_type": packetParser.GetPacketType(),
+	})
 
-	if packetParser == nil {
-		logger.Error("PacketParser is nil")
-		return
-	}
-
-	hostIdentity := common.HostIdentity{
-		Addr: common.HostAddress(address),
+	hostIdentity := endpoints.InboundConnection{
+		Addr: endpoints.Name(address),
 	}
 	err = dh.packetProcessor.ProcessPacket(ctx, packetParser, &hostIdentity)
 	if err != nil {
-		logger.Error("Failed to process packet")
+		logger.Error("Failed to process packet: ", err)
 		return
 	}
 }
@@ -121,10 +125,12 @@ func (ph *PulseHandler) SetPacketProcessor(packetProcessor PacketProcessor) {
 	ph.packetProcessor = packetProcessor
 }
 
-func (ph *PulseHandler) HandlePulse(ctx context.Context, pulse insolar.Pulse, _ network.ReceivedPacket) {
-	pulsePayload := NewPulsePacketParser(pulse)
+func (ph *PulseHandler) SetPacketParserFactory(PacketParserFactory) {}
 
-	err := ph.packetProcessor.ProcessPacket(ctx, pulsePayload, &common.HostIdentity{
+func (ph *PulseHandler) HandlePulse(ctx context.Context, pulse insolar.Pulse, packet network.ReceivedPacket) {
+	pulsePayload := NewPulsePacketParser(pulse, packet.Bytes())
+
+	err := ph.packetProcessor.ProcessPacket(ctx, pulsePayload, &endpoints.InboundConnection{
 		Addr: "pulsar",
 	})
 	if err != nil {

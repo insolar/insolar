@@ -55,12 +55,13 @@ import (
 	"io"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/common/longbits"
 )
 
 const (
-	SHA3512Digest = common.DigestMethod("sha3-512")
-	SECP256r1Sign = common.SignMethod("secp256r1")
+	SHA3512Digest = cryptkit.DigestMethod("sha3-512")
+	SECP256r1Sign = cryptkit.SignMethod("secp256r1")
 )
 
 type Sha3512Digester struct {
@@ -73,7 +74,7 @@ func NewSha3512Digester(scheme insolar.PlatformCryptographyScheme) *Sha3512Diges
 	}
 }
 
-func (pd *Sha3512Digester) GetDigestOf(reader io.Reader) common.Digest {
+func (pd *Sha3512Digester) GetDigestOf(reader io.Reader) cryptkit.Digest {
 	hasher := pd.scheme.IntegrityHasher()
 
 	_, err := io.Copy(hasher, reader)
@@ -82,12 +83,12 @@ func (pd *Sha3512Digester) GetDigestOf(reader io.Reader) common.Digest {
 	}
 
 	bytes := hasher.Sum(nil)
-	bits := common.NewBits512FromBytes(bytes)
+	bits := longbits.NewBits512FromBytes(bytes)
 
-	return common.NewDigest(bits, pd.GetDigestMethod())
+	return cryptkit.NewDigest(bits, pd.GetDigestMethod())
 }
 
-func (pd *Sha3512Digester) GetDigestMethod() common.DigestMethod {
+func (pd *Sha3512Digester) GetDigestMethod() cryptkit.DigestMethod {
 	return SHA3512Digest
 }
 
@@ -115,7 +116,7 @@ func NewECDSASecretKeyStore(privateKey *ecdsa.PrivateKey) *ECDSASecretKeyStore {
 
 func (ks *ECDSASecretKeyStore) PrivateKeyStore() {}
 
-func (ks *ECDSASecretKeyStore) AsPublicKeyStore() common.PublicKeyStore {
+func (ks *ECDSASecretKeyStore) AsPublicKeyStore() cryptkit.PublicKeyStore {
 	return NewECDSAPublicKeyStore(&ks.privateKey.PublicKey)
 }
 
@@ -131,7 +132,7 @@ func NewECDSADigestSigner(privateKey *ecdsa.PrivateKey, scheme insolar.PlatformC
 	}
 }
 
-func (ds *ECDSADigestSigner) SignDigest(digest common.Digest) common.Signature {
+func (ds *ECDSADigestSigner) SignDigest(digest cryptkit.Digest) cryptkit.Signature {
 	digestBytes := digest.AsBytes()
 
 	signer := ds.scheme.DigestSigner(ds.privateKey)
@@ -142,35 +143,13 @@ func (ds *ECDSADigestSigner) SignDigest(digest common.Digest) common.Signature {
 	}
 
 	sigBytes := sig.Bytes()
-	bits := common.NewBits512FromBytes(sigBytes)
+	bits := longbits.NewBits512FromBytes(sigBytes)
 
-	return common.NewSignature(bits, digest.GetDigestMethod().SignedBy(ds.GetSignMethod()))
+	return cryptkit.NewSignature(bits, digest.GetDigestMethod().SignedBy(ds.GetSignMethod()))
 }
 
-func (ds *ECDSADigestSigner) GetSignMethod() common.SignMethod {
+func (ds *ECDSADigestSigner) GetSignMethod() cryptkit.SignMethod {
 	return SECP256r1Sign
-}
-
-type ECDSADataSigner struct {
-	common.DataDigester
-	common.DigestSigner
-}
-
-func NewECDSADataSigner(dataDigester common.DataDigester, digestSigner common.DigestSigner) *ECDSADataSigner {
-	return &ECDSADataSigner{
-		DataDigester: dataDigester,
-		DigestSigner: digestSigner,
-	}
-}
-
-func (ds *ECDSADataSigner) GetSignOfData(reader io.Reader) common.SignedDigest {
-	digest := ds.DataDigester.GetDigestOf(reader)
-	signature := ds.DigestSigner.SignDigest(digest)
-	return common.NewSignedDigest(digest, signature)
-}
-
-func (ds *ECDSADataSigner) GetSignatureMethod() common.SignatureMethod {
-	return ds.DataDigester.GetDigestMethod().SignedBy(ds.DigestSigner.GetSignMethod())
 }
 
 type ECDSASignatureVerifier struct {
@@ -191,19 +170,19 @@ func NewECDSASignatureVerifier(
 	}
 }
 
-func (sv *ECDSASignatureVerifier) IsDigestMethodSupported(method common.DigestMethod) bool {
+func (sv *ECDSASignatureVerifier) IsDigestMethodSupported(method cryptkit.DigestMethod) bool {
 	return method == SHA3512Digest
 }
 
-func (sv *ECDSASignatureVerifier) IsSignMethodSupported(method common.SignMethod) bool {
+func (sv *ECDSASignatureVerifier) IsSignMethodSupported(method cryptkit.SignMethod) bool {
 	return method == SECP256r1Sign
 }
 
-func (sv *ECDSASignatureVerifier) IsSignOfSignatureMethodSupported(method common.SignatureMethod) bool {
+func (sv *ECDSASignatureVerifier) IsSignOfSignatureMethodSupported(method cryptkit.SignatureMethod) bool {
 	return method.SignMethod() == SECP256r1Sign
 }
 
-func (sv *ECDSASignatureVerifier) IsValidDigestSignature(digest common.DigestHolder, signature common.SignatureHolder) bool {
+func (sv *ECDSASignatureVerifier) IsValidDigestSignature(digest cryptkit.DigestHolder, signature cryptkit.SignatureHolder) bool {
 	method := signature.GetSignatureMethod()
 	if digest.GetDigestMethod() != method.DigestMethod() || !sv.IsSignOfSignatureMethodSupported(method) {
 		return false
@@ -216,7 +195,7 @@ func (sv *ECDSASignatureVerifier) IsValidDigestSignature(digest common.DigestHol
 	return verifier.Verify(insolar.SignatureFromBytes(signatureBytes), digestBytes)
 }
 
-func (sv *ECDSASignatureVerifier) IsValidDataSignature(data io.Reader, signature common.SignatureHolder) bool {
+func (sv *ECDSASignatureVerifier) IsValidDataSignature(data io.Reader, signature cryptkit.SignatureHolder) bool {
 	if sv.digester.GetDigestMethod() != signature.GetSignatureMethod().DigestMethod() {
 		return false
 	}
@@ -227,7 +206,7 @@ func (sv *ECDSASignatureVerifier) IsValidDataSignature(data io.Reader, signature
 }
 
 type ECDSASignatureKeyHolder struct {
-	common.Bits512
+	longbits.Bits512
 	publicKey *ecdsa.PublicKey
 }
 
@@ -237,26 +216,38 @@ func NewECDSASignatureKeyHolder(publicKey *ecdsa.PublicKey, processor insolar.Ke
 		panic(err)
 	}
 
-	bits := common.NewBits512FromBytes(publicKeyBytes)
+	bits := longbits.NewBits512FromBytes(publicKeyBytes)
 	return &ECDSASignatureKeyHolder{
 		Bits512:   *bits,
 		publicKey: publicKey,
 	}
 }
 
-func (kh *ECDSASignatureKeyHolder) GetSignMethod() common.SignMethod {
+func NewECDSASignatureKeyHolderFromBits(publicKeyBytes longbits.Bits512, processor insolar.KeyProcessor) *ECDSASignatureKeyHolder {
+	publicKey, err := processor.ImportPublicKeyBinary(publicKeyBytes.AsBytes())
+	if err != nil {
+		panic(err)
+	}
+
+	return &ECDSASignatureKeyHolder{
+		Bits512:   publicKeyBytes,
+		publicKey: publicKey.(*ecdsa.PublicKey),
+	}
+}
+
+func (kh *ECDSASignatureKeyHolder) GetSignMethod() cryptkit.SignMethod {
 	return SECP256r1Sign
 }
 
-func (kh *ECDSASignatureKeyHolder) GetSignatureKeyMethod() common.SignatureMethod {
+func (kh *ECDSASignatureKeyHolder) GetSignatureKeyMethod() cryptkit.SignatureMethod {
 	return SHA3512Digest.SignedBy(SECP256r1Sign)
 }
 
-func (kh *ECDSASignatureKeyHolder) GetSignatureKeyType() common.SignatureKeyType {
-	return common.PublicAsymmetricKey
+func (kh *ECDSASignatureKeyHolder) GetSignatureKeyType() cryptkit.SignatureKeyType {
+	return cryptkit.PublicAsymmetricKey
 }
 
-func (kh *ECDSASignatureKeyHolder) Equals(other common.SignatureKeyHolder) bool {
+func (kh *ECDSASignatureKeyHolder) Equals(other cryptkit.SignatureKeyHolder) bool {
 	okh, ok := other.(*ECDSASignatureKeyHolder)
 	if !ok {
 		return false

@@ -36,6 +36,10 @@ const (
 	StateDeactivation
 )
 
+func (s *StateID) Equal(other StateID) bool {
+	return *s == other
+}
+
 // State is common object state record.
 type State interface {
 	// ID returns state id.
@@ -139,6 +143,7 @@ type Request interface {
 	// of this Request.
 	ReasonRef() insolar.Reference
 	GetCallType() CallType
+	IsCreationRequest() bool
 }
 
 func (r *IncomingRequest) AffinityRef() *insolar.Reference {
@@ -151,6 +156,10 @@ func (r *IncomingRequest) ReasonRef() insolar.Reference {
 	return r.Reason
 }
 
+func (r *IncomingRequest) IsCreationRequest() bool {
+	return r.GetCallType() == CTSaveAsChild || r.GetCallType() == CTSaveAsDelegate
+}
+
 func (r *OutgoingRequest) AffinityRef() *insolar.Reference {
 	// OutgoingRequests are affine to the Caller which created the Request.
 	return &r.Caller
@@ -158,4 +167,29 @@ func (r *OutgoingRequest) AffinityRef() *insolar.Reference {
 
 func (r *OutgoingRequest) ReasonRef() insolar.Reference {
 	return r.Reason
+}
+
+func (r *OutgoingRequest) IsCreationRequest() bool {
+	return false
+}
+
+func (m *Lifeline) SetDelegate(key insolar.Reference, value insolar.Reference) {
+	for _, d := range m.Delegates {
+		if d.Key == key {
+			d.Value = value
+			return
+		}
+	}
+
+	m.Delegates = append(m.Delegates, LifelineDelegate{Key: key, Value: value})
+}
+
+func (m *Lifeline) DelegateByKey(key insolar.Reference) (insolar.Reference, bool) {
+	for _, d := range m.Delegates {
+		if d.Key == key {
+			return d.Value, true
+		}
+	}
+
+	return [64]byte{}, false
 }

@@ -76,13 +76,13 @@ func TestIndexDB_TruncateHead(t *testing.T) {
 		pulse := startPulseNumber + insolar.PulseNumber(idx)
 		objects[idx] = gen.ID()
 
-		bucket := FilamentIndex{}
+		bucket := record.Index{}
 
 		bucket.ObjID = objects[idx]
 		indexStore.SetIndex(ctx, pulse, bucket)
 
 		for i := 0; i < 5; i++ {
-			bucket := FilamentIndex{}
+			bucket := record.Index{}
 
 			bucket.ObjID = gen.ID()
 			indexStore.SetIndex(ctx, pulse, bucket)
@@ -143,11 +143,11 @@ func TestDBIndex_SetBucket(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	objID := gen.ID()
 	lflID := gen.ID()
-	buck := FilamentIndex{
+	buck := record.Index{
 		ObjID: objID,
-		Lifeline: Lifeline{
+		Lifeline: record.Lifeline{
 			LatestState: &lflID,
-			Delegates:   []LifelineDelegate{},
+			Delegates:   []record.LifelineDelegate{},
 		},
 	}
 
@@ -189,11 +189,11 @@ func TestDBIndex_SetBucket(t *testing.T) {
 		require.NoError(t, err)
 
 		sLlflID := gen.ID()
-		sBuck := FilamentIndex{
+		sBuck := record.Index{
 			ObjID: objID,
-			Lifeline: Lifeline{
+			Lifeline: record.Lifeline{
 				LatestState: &sLlflID,
-				Delegates:   []LifelineDelegate{},
+				Delegates:   []record.LifelineDelegate{},
 			},
 		}
 
@@ -243,7 +243,7 @@ func TestIndexDB_FetchFilament(t *testing.T) {
 	_ = recordStorage.Set(ctx, firstMeta, record.Material{Virtual: &firstFilV})
 	_ = recordStorage.Set(ctx, secondMeta, record.Material{Virtual: &secondFilV})
 
-	fi := &FilamentIndex{
+	fi := &record.Index{
 		PendingRecords: []insolar.ID{firstMeta, secondMeta},
 	}
 
@@ -283,7 +283,7 @@ func TestIndexDB_NextFilament(t *testing.T) {
 
 		_ = recordStorage.Set(ctx, firstMeta, record.Material{Virtual: &firstFilV})
 
-		fi := &FilamentIndex{
+		fi := &record.Index{
 			PendingRecords: []insolar.ID{firstMeta},
 		}
 
@@ -311,7 +311,7 @@ func TestIndexDB_NextFilament(t *testing.T) {
 
 		_ = recordStorage.Set(ctx, firstMeta, record.Material{Virtual: &firstFilV})
 
-		fi := &FilamentIndex{
+		fi := &record.Index{
 			PendingRecords: []insolar.ID{firstMeta},
 		}
 
@@ -331,7 +331,7 @@ func TestIndexDB_NextFilament(t *testing.T) {
 		defer db.Stop(context.Background())
 		index := NewIndexDB(db)
 
-		fi := &FilamentIndex{
+		fi := &record.Index{
 			PendingRecords: []insolar.ID{firstMeta},
 		}
 
@@ -410,9 +410,9 @@ func TestIndexDB_Records(t *testing.T) {
 
 		objID := gen.ID()
 
-		third := FilamentIndex{ObjID: objID, PendingRecords: []insolar.ID{*midT}}
-		second := FilamentIndex{ObjID: objID, PendingRecords: []insolar.ID{*midS}}
-		first := FilamentIndex{ObjID: objID, PendingRecords: []insolar.ID{*mid}}
+		third := record.Index{ObjID: objID, PendingRecords: []insolar.ID{*midT}}
+		second := record.Index{ObjID: objID, PendingRecords: []insolar.ID{*midS}}
+		first := record.Index{ObjID: objID, PendingRecords: []insolar.ID{*mid}}
 
 		err = index.SetIndex(ctx, pn, first)
 		require.NoError(t, err)

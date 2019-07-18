@@ -100,6 +100,7 @@ func (s *UpdateObject) Present(ctx context.Context, f flow.Flow) error {
 		}
 		return err
 	}
+
 	objJetID := jet.Result.Jet
 
 	hot := proc.NewWaitHotWM(objJetID, flow.Pulse(ctx), s.message)

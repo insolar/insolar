@@ -70,6 +70,7 @@ type Base struct {
 	ContractRequester   insolar.ContractRequester
 	CryptographyService insolar.CryptographyService
 	CertificateManager  insolar.CertificateManager
+	PulseManager        insolar.PulseManager
 }
 
 // NewGateway creates new gateway on top of existing

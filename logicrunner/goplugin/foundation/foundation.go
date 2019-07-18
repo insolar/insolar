@@ -18,6 +18,7 @@
 package foundation
 
 import (
+	"github.com/pkg/errors"
 	"github.com/tylerb/gls"
 
 	"github.com/insolar/insolar/insolar"
@@ -66,6 +67,15 @@ func (bc *BaseContract) GetContext() *insolar.LogicCallContext {
 	return GetContext()
 }
 
+// GetPulseNumber returns current pulse from context.
+func GetPulseNumber() (insolar.PulseNumber, error) {
+	req := GetContext().Request
+	if req == nil {
+		return insolar.PulseNumber(0), errors.New("request from LogicCallContext is nil, get pulse is failed")
+	}
+	return req.Record().Pulse(), nil
+}
+
 // GetContext returns current calling context.
 func GetContext() *insolar.LogicCallContext {
 	ctx := gls.Get("callCtx")
@@ -81,11 +91,6 @@ func GetContext() *insolar.LogicCallContext {
 // GetImplementationFor finds delegate typed r in object and returns it
 func GetImplementationFor(object, ofType insolar.Reference) (insolar.Reference, error) {
 	return common.CurrentProxyCtx.GetDelegate(object, ofType)
-}
-
-// NewChildrenTypedIterator returns children with corresponding type iterator
-func (bc *BaseContract) NewChildrenTypedIterator(childPrototype insolar.Reference) (*common.ChildrenTypedIterator, error) {
-	return common.CurrentProxyCtx.GetObjChildrenIterator(bc.GetReference(), childPrototype, "")
 }
 
 // GetObject create proxy by address

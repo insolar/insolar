@@ -19,11 +19,14 @@ package logicrunner
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/payload"
+
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -39,15 +42,17 @@ type initializeAbandonedRequestsNotificationExecutionState struct {
 func (p *initializeAbandonedRequestsNotificationExecutionState) Proceed(ctx context.Context) error {
 	ref := *p.msg.DefaultTarget()
 
-	es, _ := p.LR.StateStorage.UpsertExecutionState(ref)
+	broker := p.LR.StateStorage.UpsertExecutionState(ref)
 
-	es.Lock()
-	if es.pending == message.PendingUnknown {
-		es.pending = message.InPending
-		es.PendingConfirmed = false
+	broker.executionState.Lock()
+	if broker.executionState.pending == message.PendingUnknown {
+		broker.executionState.pending = message.InPending
+		broker.executionState.PendingConfirmed = false
 	}
-	es.LedgerHasMoreRequests = true
-	es.Unlock()
+	broker.executionState.Unlock()
+
+	broker.MoreRequestsOnLedger(ctx)
+	broker.FetchMoreRequestsFromLedger(ctx)
 
 	return nil
 }
@@ -55,20 +60,21 @@ func (p *initializeAbandonedRequestsNotificationExecutionState) Proceed(ctx cont
 type HandleAbandonedRequestsNotification struct {
 	dep *Dependencies
 
-	Message bus.Message
+	Message payload.Meta
+	Parcel  insolar.Parcel
 }
 
 func (h *HandleAbandonedRequestsNotification) Present(ctx context.Context, f flow.Flow) error {
-	h.Message.ReplyTo <- bus.Reply{Reply: &reply.OK{}, Err: nil}
+	ctx = loggerWithTargetID(ctx, h.Parcel)
+	replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})
+	h.dep.Sender.Reply(ctx, h.Message, replyOk)
 	return nil
 
-	parcel := h.Message.Parcel
-	ctx = loggerWithTargetID(ctx, parcel)
 	logger := inslogger.FromContext(ctx)
 
 	logger.Debug("HandleAbandonedRequestsNotification.Present starts ...")
 
-	msg, ok := parcel.Message().(*message.AbandonedRequestsNotification)
+	msg, ok := h.Parcel.Message().(*message.AbandonedRequestsNotification)
 	if !ok {
 		return errors.New("HandleAbandonedRequestsNotification( ! message.AbandonedRequestsNotification )")
 	}
@@ -83,10 +89,14 @@ func (h *HandleAbandonedRequestsNotification) Present(ctx context.Context, f flo
 	}
 	if err := f.Procedure(ctx, &procInitializeExecutionState, false); err != nil {
 		err := errors.Wrap(err, "[ HandleExecutorResults ] Failed to initialize execution state")
-		h.Message.ReplyTo <- bus.Reply{Reply: &reply.Error{}, Err: err}
+		rep, newErr := payload.NewMessage(&payload.Error{Text: err.Error()})
+		if newErr != nil {
+			return newErr
+		}
+		go h.dep.Sender.Reply(ctx, h.Message, rep)
 		return err
 	}
-
-	h.Message.ReplyTo <- bus.Reply{Reply: &reply.OK{}, Err: nil}
+	replyOk = bus.ReplyAsMessage(ctx, &reply.OK{})
+	go h.dep.Sender.Reply(ctx, h.Message, replyOk)
 	return nil
 }

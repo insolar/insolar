@@ -71,11 +71,7 @@ func TestActivateObject_RecordOverrideErr(t *testing.T) {
 	)
 
 	err := p.Proceed(ctx)
-	// Since there is no deduplication yet it's quite possible that there will be
-	// two writes by the same key. For this reason currently instead of reporting
-	// an error we return OK (nil error). When deduplication will be implemented
-	// we should check `ErrOverride` here.
-	require.NoError(t, err)
+	require.Error(t, err)
 }
 
 func TestActivateObject_RecordErr(t *testing.T) {
@@ -117,49 +113,6 @@ func TestActivateObject_RecordErr(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestActivateObject_SetIndexErr(t *testing.T) {
-	t.Parallel()
-
-	ctx := flow.TestContextWithPulse(
-		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
-	)
-
-	writeAccessor := hot.NewWriteAccessorMock(t)
-	writeAccessor.BeginMock.Return(func() {}, nil)
-
-	idxLockMock := object.NewIndexLockerMock(t)
-	idxLockMock.LockMock.Return()
-	idxLockMock.UnlockMock.Return()
-
-	recordsMock := object.NewRecordModifierMock(t)
-	recordsMock.SetMock.Return(nil)
-
-	idxModifierMock := object.NewIndexModifierMock(t)
-	idxModifierMock.SetIndexMock.Return(errors.New("something strange from SetIndex"))
-
-	p := proc.NewActivateObject(
-		payload.Meta{},
-		record.Activate{},
-		gen.ID(),
-		record.Result{},
-		gen.ID(),
-		gen.JetID(),
-	)
-	p.Dep(
-		writeAccessor,
-		idxLockMock,
-		recordsMock,
-		idxModifierMock,
-		nil,
-		nil,
-	)
-
-	err := p.Proceed(ctx)
-	require.Error(t, err)
-	assert.Equal(t, "something strange from SetIndex", err.Error())
-}
-
 func TestActivateObject_FilamentSetResultErr(t *testing.T) {
 	t.Parallel()
 
@@ -178,11 +131,12 @@ func TestActivateObject_FilamentSetResultErr(t *testing.T) {
 	recordsMock := object.NewRecordModifierMock(t)
 	recordsMock.SetMock.Return(nil)
 
-	idxModifierMock := object.NewIndexModifierMock(t)
-	idxModifierMock.SetIndexMock.Return(nil)
+	idxStorageMock := object.NewIndexStorageMock(t)
+	idxStorageMock.SetIndexMock.Return(nil)
+	idxStorageMock.ForIDMock.Return(record.Index{}, nil)
 
 	filaments := executor.NewFilamentModifierMock(t)
-	filaments.SetResultMock.Return(errors.New("something strange from filament.SetResult"))
+	filaments.SetResultMock.Return(nil, errors.New("something strange from filament.SetResult"))
 
 	p := proc.NewActivateObject(
 		payload.Meta{},
@@ -196,7 +150,7 @@ func TestActivateObject_FilamentSetResultErr(t *testing.T) {
 		writeAccessor,
 		idxLockMock,
 		recordsMock,
-		idxModifierMock,
+		idxStorageMock,
 		filaments,
 		nil,
 	)
@@ -224,11 +178,12 @@ func TestActivateObject_Proceed(t *testing.T) {
 	recordsMock := object.NewRecordModifierMock(t)
 	recordsMock.SetMock.Return(nil)
 
-	idxModifierMock := object.NewIndexModifierMock(t)
-	idxModifierMock.SetIndexMock.Return(nil)
+	idxStorageMock := object.NewIndexStorageMock(t)
+	idxStorageMock.ForIDMock.Return(record.Index{}, nil)
+	idxStorageMock.SetIndexMock.Return(nil)
 
 	filaments := executor.NewFilamentModifierMock(t)
-	filaments.SetResultMock.Return(nil)
+	filaments.SetResultMock.Return(nil, nil)
 
 	sender := bus.NewSenderMock(t)
 	sender.ReplyMock.Return()
@@ -245,11 +200,11 @@ func TestActivateObject_Proceed(t *testing.T) {
 		writeAccessor,
 		idxLockMock,
 		recordsMock,
-		idxModifierMock,
+		idxStorageMock,
 		filaments,
 		sender,
 	)
 
-	err := p.Proceed(ctx)
+	err := p.Proceed(flow.TestContextWithPulse(ctx, gen.PulseNumber()))
 	require.NoError(t, err)
 }

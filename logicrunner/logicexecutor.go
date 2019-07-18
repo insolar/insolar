@@ -30,11 +30,10 @@ import (
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.LogicExecutor -o ./ -s _mock.go
-
 type LogicExecutor interface {
-	Execute(ctx context.Context, transcript *Transcript) (*RequestResult, error)
-	ExecuteMethod(ctx context.Context, transcript *Transcript) (*RequestResult, error)
-	ExecuteConstructor(ctx context.Context, transcript *Transcript) (*RequestResult, error)
+	Execute(ctx context.Context, transcript *Transcript) (artifacts.RequestResult, error)
+	ExecuteMethod(ctx context.Context, transcript *Transcript) (artifacts.RequestResult, error)
+	ExecuteConstructor(ctx context.Context, transcript *Transcript) (artifacts.RequestResult, error)
 }
 
 type logicExecutor struct {
@@ -46,7 +45,7 @@ func NewLogicExecutor() LogicExecutor {
 	return &logicExecutor{}
 }
 
-func (le *logicExecutor) Execute(ctx context.Context, transcript *Transcript) (*RequestResult, error) {
+func (le *logicExecutor) Execute(ctx context.Context, transcript *Transcript) (artifacts.RequestResult, error) {
 	switch transcript.Request.CallType {
 	case record.CTMethod:
 		return le.ExecuteMethod(ctx, transcript)
@@ -57,7 +56,7 @@ func (le *logicExecutor) Execute(ctx context.Context, transcript *Transcript) (*
 	}
 }
 
-func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *Transcript) (*RequestResult, error) {
+func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *Transcript) (artifacts.RequestResult, error) {
 	ctx, span := instracer.StartSpan(ctx, "logicExecutor.ExecuteMethod")
 	defer span.End()
 
@@ -70,8 +69,6 @@ func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *Transcri
 		return nil, errors.Wrap(err, "couldn't get descriptors")
 	}
 
-	transcript.LogicContext = le.genLogicCallContext(ctx, transcript, protoDesc, codeDesc)
-
 	// it's needed to assure that we call method on ref, that has same prototype as proxy, that we import in contract code
 	if request.Prototype != nil && !request.Prototype.Equal(*protoDesc.HeadRef()) {
 		return nil, errors.New("proxy call error: try to call method of prototype as method of another prototype")
@@ -82,30 +79,35 @@ func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *Transcri
 		return nil, errors.Wrap(err, "couldn't get executor")
 	}
 
+	transcript.LogicContext = le.genLogicCallContext(ctx, transcript, protoDesc, codeDesc)
+
 	newData, result, err := executor.CallMethod(
 		ctx, transcript.LogicContext, *codeDesc.Ref(), objDesc.Memory(), request.Method, request.Arguments,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "couldn't executeAndReply")
+		return nil, errors.Wrap(err, "executor error")
 	}
 
-	res := NewRequestResult(result)
+	res := newRequestResult(result, *objDesc.HeadRef())
+
 	if request.Immutable {
 		return res, nil
 	}
 
-	if transcript.Deactivate {
-		res.Deactivate()
-	} else if !bytes.Equal(objDesc.Memory(), newData) {
-		res.Update(newData)
+	switch {
+	case transcript.Deactivate:
+		res.SetDeactivate(objDesc)
+	case !bytes.Equal(objDesc.Memory(), newData):
+		res.SetAmend(objDesc, newData)
 	}
+
 	return res, nil
 }
 
 func (le *logicExecutor) ExecuteConstructor(
 	ctx context.Context, transcript *Transcript,
 ) (
-	*RequestResult, error,
+	artifacts.RequestResult, error,
 ) {
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.executeConstructorCall")
 	defer span.End()
@@ -125,20 +127,25 @@ func (le *logicExecutor) ExecuteConstructor(
 		return nil, errors.Wrap(err, "couldn't get descriptors")
 	}
 
-	transcript.LogicContext = le.genLogicCallContext(ctx, transcript, protoDesc, codeDesc)
-
 	executor, err := le.MachinesManager.GetExecutor(codeDesc.MachineType())
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get executor")
 	}
+
+	transcript.LogicContext = le.genLogicCallContext(ctx, transcript, protoDesc, codeDesc)
 
 	newData, err := executor.CallConstructor(ctx, transcript.LogicContext, *codeDesc.Ref(), request.Method, request.Arguments)
 	if err != nil {
 		return nil, errors.Wrap(err, "executor error")
 	}
 
-	res := NewRequestResult(nil)
-	res.Activate(newData)
+	res := newRequestResult(nil, transcript.RequestRef)
+	res.SetActivate(
+		*request.Base,
+		*request.Prototype,
+		request.CallType == record.CTSaveAsDelegate,
+		newData,
+	)
 	return res, nil
 }
 

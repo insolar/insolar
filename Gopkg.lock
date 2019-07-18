@@ -19,7 +19,7 @@
   revision = "343706a395b76e5ca5c7dca46a5d937b48febc74"
 
 [[projects]]
-  digest = "1:742ea97411291dbc55b805043493f6beece4882523f69213d3a4629630ee9500"
+  digest = "1:60ddeb8548faba8198ced684ac98020a91c60fbe9e944341afed82a4d7c3b7c6"
   name = "github.com/ThreeDotsLabs/watermill"
   packages = [
     ".",
@@ -30,8 +30,8 @@
     "message/router/middleware",
   ]
   pruneopts = "UT"
-  revision = "fa394272631757fe84b31989cc935122a5fbcb20"
-  version = "v0.3.0"
+  revision = "b39a48a1c9edad83d74898f3bf96adedd18ece81"
+  version = "v0.4.0"
 
 [[projects]]
   branch = "master"
@@ -87,6 +87,14 @@
   pruneopts = "UT"
   revision = "9f541cc9db5d55bce703bd99987c9d5cb8eea45e"
   version = "v1.0.0"
+
+[[projects]]
+  digest = "1:547f5df5f708c880f0af507317c8d022b8d62053a5cb075e23c6eeed09eb2e4e"
+  name = "github.com/fortytw2/leaktest"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "9a23578d06a26ec1b47bfc8965bf5e7011df8bd6"
+  version = "v1.3.0"
 
 [[projects]]
   digest = "1:abeb38ade3f32a92943e5be54f55ed6d6e3b6602761d74b4aab4c9dd45c18abd"
@@ -694,6 +702,7 @@
     "github.com/ThreeDotsLabs/watermill/message/router/middleware",
     "github.com/blang/semver",
     "github.com/dgraph-io/badger",
+    "github.com/fortytw2/leaktest",
     "github.com/gogo/protobuf/gogoproto",
     "github.com/gogo/protobuf/proto",
     "github.com/gogo/protobuf/protoc-gen-gogoslick",

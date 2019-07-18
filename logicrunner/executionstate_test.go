@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -61,22 +62,23 @@ func newExecutionBroker(
 	mb := testutils.NewMessageBusMock(t)
 	jc := jet.NewCoordinatorMock(t)
 	ps := pulse.NewAccessorMock(t)
+	am := artifacts.NewClientMock(t)
 	pm := &publisherMock{}
 
 	lr := LogicRunner{
 		RequestsExecutor: NewRequestsExecutorMock(t),
-		StateStorage:     NewStateStorage(pm, re, mb, jc, ps),
+		StateStorage:     NewStateStorage(pm, re, mb, jc, ps, am),
 	}
 
 	objectRef := gen.Reference()
-	es, broker := lr.StateStorage.UpsertExecutionState(objectRef)
+	broker := lr.StateStorage.UpsertExecutionState(objectRef)
 
 	InitBroker(t, ctx, count, broker, true)
 	if list != nil {
 		broker.currentList = list
 	}
 	if pending != nil {
-		es.pending = *pending
+		broker.executionState.pending = *pending
 	}
 
 	return broker
@@ -157,10 +159,12 @@ func TestExecutionState_OnPulse(t *testing.T) {
 
 	for _, test := range table {
 		t.Run(test.name, func(t *testing.T) {
+			ctx := inslogger.TestContext(t)
+
 			messages := test.broker.OnPulse(ctx, test.meNext)
 			require.Equal(t, test.numberOfMessages, len(messages))
 			if test.checkES != nil {
-				test.checkES(t, test.broker.executionState, test.broker)
+				test.checkES(t, &test.broker.executionState, test.broker)
 			}
 		})
 	}

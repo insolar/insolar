@@ -23,15 +23,23 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 )
+
+// Context of one contract execution
+type ObjectState struct {
+	sync.Mutex
+
+	ExecutionBroker *ExecutionBroker
+	Validation      *ExecutionState
+}
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.StateStorage -o ./ -s _mock.go
 type StateStorage interface {
 	sync.Locker
 
-	UpsertExecutionState(ref insolar.Reference) (*ExecutionState, *ExecutionBroker)
-	GetExecutionState(ref insolar.Reference) (*ExecutionState, *ExecutionBroker)
+	UpsertExecutionState(ref insolar.Reference) *ExecutionBroker
+	GetExecutionState(ref insolar.Reference) *ExecutionBroker
 
 	UpsertValidationState(ref insolar.Reference) *ExecutionState
 	GetValidationState(ref insolar.Reference) *ExecutionState
@@ -49,6 +57,7 @@ type stateStorage struct {
 	messageBus       insolar.MessageBus
 	jetCoordinator   jet.Coordinator
 	pulseAccessor    pulse.Accessor
+	artifactsManager artifacts.Client
 
 	state map[insolar.Reference]*ObjectState // if object exists, we are validating or executing it right now
 }
@@ -59,7 +68,7 @@ func (ss *stateStorage) UpsertValidationState(ref insolar.Reference) *ExecutionS
 	os.Lock()
 	defer os.Unlock()
 
-	os.Validation = NewExecutionState(ref)
+	os.Validation = &ExecutionState{}
 	return os.Validation
 }
 
@@ -75,7 +84,15 @@ func (ss *stateStorage) GetValidationState(ref insolar.Reference) *ExecutionStat
 	return os.Validation
 }
 
-func NewStateStorage(publisher watermillMsg.Publisher, requestsExecutor RequestsExecutor, messageBus insolar.MessageBus, jetCoordinator jet.Coordinator, pulseAccessor pulse.Accessor) StateStorage {
+func NewStateStorage(
+	publisher watermillMsg.Publisher,
+	requestsExecutor RequestsExecutor,
+	messageBus insolar.MessageBus,
+	jetCoordinator jet.Coordinator,
+	pulseAccessor pulse.Accessor,
+	artifactsManager artifacts.Client,
+
+) StateStorage {
 	ss := &stateStorage{
 		state: make(map[insolar.Reference]*ObjectState),
 
@@ -84,43 +101,41 @@ func NewStateStorage(publisher watermillMsg.Publisher, requestsExecutor Requests
 		messageBus:       messageBus,
 		jetCoordinator:   jetCoordinator,
 		pulseAccessor:    pulseAccessor,
+		artifactsManager: artifactsManager,
 	}
 	return ss
 }
 
-func (ss *stateStorage) UpsertExecutionState(
-	ref insolar.Reference,
-) (*ExecutionState, *ExecutionBroker) {
+func (ss *stateStorage) UpsertExecutionState(ref insolar.Reference) *ExecutionBroker {
 	os := ss.upsertObjectState(ref)
 
 	os.Lock()
 	defer os.Unlock()
 
-	if os.ExecutionState == nil {
-		log.Error(ss.publisher)
-		os.ExecutionState = NewExecutionState(ref)
+	if os.ExecutionBroker == nil {
 		os.ExecutionBroker = NewExecutionBroker(
+			ref,
 			ss.publisher,
 			ss.requestsExecutor,
 			ss.messageBus,
 			ss.jetCoordinator,
 			ss.pulseAccessor,
-			os.ExecutionState,
+			ss.artifactsManager,
 		)
 	}
-	return os.ExecutionState, os.ExecutionBroker
+	return os.ExecutionBroker
 }
 
-func (ss *stateStorage) GetExecutionState(ref insolar.Reference) (*ExecutionState, *ExecutionBroker) {
+func (ss *stateStorage) GetExecutionState(ref insolar.Reference) *ExecutionBroker {
 	os := ss.getObjectState(ref)
 	if os == nil {
-		return nil, nil
+		return nil
 	}
 
 	os.Lock()
 	defer os.Unlock()
 
-	return os.ExecutionState, os.ExecutionBroker
+	return os.ExecutionBroker
 }
 
 func (ss *stateStorage) getObjectState(ref insolar.Reference) *ObjectState {

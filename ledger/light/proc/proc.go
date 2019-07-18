@@ -16,13 +16,6 @@
 
 package proc
 
-import (
-	"context"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow/bus"
-)
-
 type Dependencies struct {
 	FetchJet            func(*FetchJet)
 	CheckJet            func(*CheckJet)
@@ -43,26 +36,12 @@ type Dependencies struct {
 	GetPendingRequestID func(*GetPendingRequestID)
 	GetJet              func(*GetJet)
 	GetChildren         func(*GetChildren)
-	HotData             func(*HotData)
+	HotObjects          func(*HotObjects)
 	PassState           func(*PassState)
 	CalculateID         func(*CalculateID)
 	SetCode             func(*SetCode)
 	SendRequests        func(*SendRequests)
 	GetDelegate         func(*GetDelegate)
-}
-
-type ReturnReply struct {
-	ReplyTo chan<- bus.Reply
-	Err     error
-	Reply   insolar.Reply
-}
-
-func (p *ReturnReply) Proceed(ctx context.Context) error {
-	select {
-	case p.ReplyTo <- bus.Reply{Reply: p.Reply, Err: p.Err}:
-	case <-ctx.Done():
-	}
-	return nil
 }
 
 // NewDependenciesMock returns all dependencies for handlers.
@@ -78,7 +57,6 @@ func NewDependenciesMock() *Dependencies {
 		EnsureIndex:         func(*EnsureIndexWM) {},
 		SendObject:          func(*SendObject) {},
 		GetCode:             func(*GetCode) {},
-		GetRequest:          func(*GetRequest) {},
 		SetRequest:          func(*SetRequest) {},
 		SetResult:           func(*SetResult) {},
 		ActivateObject:      func(*ActivateObject) {},
@@ -89,7 +67,7 @@ func NewDependenciesMock() *Dependencies {
 		GetPendingRequestID: func(*GetPendingRequestID) {},
 		GetJet:              func(*GetJet) {},
 		GetChildren:         func(*GetChildren) {},
-		HotData:             func(*HotData) {},
+		HotObjects:          func(*HotObjects) {},
 		PassState:           func(*PassState) {},
 		CalculateID:         func(*CalculateID) {},
 		SetCode:             func(*SetCode) {},

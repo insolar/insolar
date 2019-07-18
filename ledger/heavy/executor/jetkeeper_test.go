@@ -64,7 +64,7 @@ func TestDbJetKeeper_Add(t *testing.T) {
 	f := fuzz.New()
 	f.Fuzz(&pulse)
 	f.Fuzz(&jet)
-	err = jetKeeper.Add(ctx, pulse, jet)
+	err = jetKeeper.AddJet(ctx, pulse, jet)
 	require.NoError(t, err)
 }
 
@@ -92,7 +92,7 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 	futurePulse = 20
 	jet = insolar.ZeroJetID
 
-	err = jetKeeper.Add(ctx, pulse, jet)
+	err = jetKeeper.AddJet(ctx, pulse, jet)
 	require.NoError(t, err)
 
 	err = jets.Update(ctx, pulse, false, jet)
@@ -104,9 +104,9 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 
 	err = jets.Clone(ctx, pulse, futurePulse)
 	require.NoError(t, err)
-	err = jetKeeper.Add(ctx, futurePulse, left)
+	err = jetKeeper.AddJet(ctx, futurePulse, left)
 	require.NoError(t, err)
-	err = jetKeeper.Add(ctx, futurePulse, right)
+	err = jetKeeper.AddJet(ctx, futurePulse, right)
 	require.NoError(t, err)
 
 	require.Equal(t, futurePulse, jetKeeper.TopSyncPulse())
