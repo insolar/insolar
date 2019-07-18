@@ -263,7 +263,7 @@ func INSMETHOD_Errored(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_PulseNumber(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.SetSystemError(nil)
 	self := new(HelloWorld)
 
 	if len(object) == 0 {
@@ -285,6 +285,10 @@ func INSMETHOD_PulseNumber(object []byte, data []byte) ([]byte, []byte, error) {
 	}
 
 	ret0, ret1 := self.PulseNumber()
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
