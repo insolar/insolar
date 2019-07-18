@@ -165,6 +165,7 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 	)
 	defer span.End()
 
+	// TODO: Move to config reader
 	bootstrapHosts := make([]*host.Host, 0, len(d.bootstrapHosts))
 	for _, node := range d.bootstrapHosts {
 		bootstrapHost, err := host.NewHost(node)
@@ -192,14 +193,6 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 	for _, bootstrapHost := range bootstrapHosts {
 		go func(ctx context.Context, pulse insolar.Pulse, bootstrapHost *host.Host) {
 			defer wg.Done()
-
-			if bootstrapHost.NodeID.IsEmpty() {
-				err := d.pingHost(ctx, bootstrapHost)
-				if err != nil {
-					logger.Errorf("[ Distribute pulse %d ] Failed to ping and fill node id: %s", pulse.PulseNumber, err)
-					return
-				}
-			}
 
 			err := d.sendPulseToHost(ctx, &pulse, bootstrapHost)
 			if err != nil {
@@ -258,15 +251,10 @@ func (d *distributor) sendPulseToHost(ctx context.Context, p *insolar.Pulse, hos
 
 	pulseRequest := NewPulsePacket(ctx, p, d.pulsarHost, host, uint64(d.generateID()))
 
-	call, err := d.sendRequestToHost(ctx, pulseRequest, host)
+	_, err := d.sendRequestToHost(ctx, pulseRequest, host)
 	if err != nil {
 		return err
 	}
-	_, err = call.WaitResponse(d.pulseRequestTimeout)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -289,14 +277,12 @@ func (d *distributor) sendRequestToHost(ctx context.Context, packet *packet.Pack
 	inslogger.FromContext(ctx).Debugf("Send %s request to %s with RequestID = %d",
 		packet.GetType(), receiver.String(), packet.GetRequestID())
 
-	f := d.futureManager.Create(packet)
 	err := hostnetwork.SendPacket(ctx, d.pool, packet)
 	if err != nil {
-		f.Cancel()
 		return nil, errors.Wrap(err, "Failed to send transport packet")
 	}
 	metrics.NetworkPacketSentTotal.WithLabelValues(packet.GetType().String()).Inc()
-	return f, nil
+	return nil, nil
 }
 
 func NewPulsePacket(ctx context.Context, p *insolar.Pulse, pulsarHost, to *host.Host, id uint64) *packet.Packet {
