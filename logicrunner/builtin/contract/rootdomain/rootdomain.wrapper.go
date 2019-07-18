@@ -113,10 +113,6 @@ func INSMETHOD_GetCostCenterRef(object []byte, data []byte) ([]byte, []byte, err
 
 	ret0, ret1 := self.GetCostCenterRef()
 
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -133,7 +129,7 @@ func INSMETHOD_GetCostCenterRef(object []byte, data []byte) ([]byte, []byte, err
 
 func INSMETHOD_GetFeeWalletRef(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
+
 	self := new(RootDomain)
 
 	if len(object) == 0 {
@@ -211,7 +207,7 @@ func INSMETHOD_GetMigrationWalletRef(object []byte, data []byte) ([]byte, []byte
 
 func INSMETHOD_GetMigrationAdminMember(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
+
 	self := new(RootDomain)
 
 	if len(object) == 0 {
@@ -233,10 +229,6 @@ func INSMETHOD_GetMigrationAdminMember(object []byte, data []byte) ([]byte, []by
 	}
 
 	ret0, ret1 := self.GetMigrationAdminMember()
-
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)

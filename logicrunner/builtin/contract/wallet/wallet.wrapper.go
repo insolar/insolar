@@ -176,7 +176,7 @@ func INSMETHOD_Accept(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_RollBack(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
+
 	self := new(Wallet)
 
 	if len(object) == 0 {
@@ -200,10 +200,6 @@ func INSMETHOD_RollBack(object []byte, data []byte) ([]byte, []byte, error) {
 	}
 
 	ret0 := self.RollBack(args0)
-
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
