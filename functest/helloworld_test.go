@@ -138,6 +138,19 @@ func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
 	return int(rv), nil
 }
 
+func (i *HelloWorldInstance) PulseNumber(ctx context.Context) (int, error) {
+	member := &user{i.Ref.String(), root.privKey, root.pubKey}
+	result, err := signedRequest(member, "PulseNumber", nil)
+	if err != nil {
+		return 0, err
+	}
+	rv, ok := result.(float64)
+	if !ok {
+		return 0, errors.Errorf("failed to decode: expected float64, got %T", result)
+	}
+	return int(rv), nil
+}
+
 func (i *HelloWorldInstance) CreateChild(ctx context.Context) (*HelloWorldInstance, error) {
 	seed, err := requester.GetSeed(TestAPIURL)
 	if err != nil {
@@ -230,6 +243,18 @@ func TestCallHelloWorld(t *testing.T) {
 	a.LessOrEqual(100, count)
 }
 
+func TestCallPulseNumber(t *testing.T) {
+	a, r := assert.New(t), require.New(t)
+	ctx := context.TODO()
+
+	hw, err := NewHelloWorld(ctx)
+	r.NoError(err, "Unexpected error")
+	a.NotEmpty(hw.Ref, "Ref doesn't exists")
+	pulseNum, err := hw.PulseNumber(ctx)
+	r.NoError(err)
+
+	r.True(pulseNum > 0)
+}
 func TestCallHelloWorldReturnObj(t *testing.T) {
 	a, r := assert.New(t), require.New(t)
 	ctx := context.TODO()
