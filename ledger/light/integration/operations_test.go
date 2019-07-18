@@ -34,11 +34,9 @@ func setCode(ctx context.Context, t *testing.T, s *Server) (payload.Payload, rec
 	rec := record.Wrap(record.Code{Code: code})
 	buf, err := rec.Marshal()
 	require.NoError(t, err)
-	msg, err := payload.NewMessage(&payload.SetCode{
+	reps, done := s.Send(ctx, &payload.SetCode{
 		Record: buf,
 	})
-	require.NoError(t, err)
-	reps, done := s.Send(ctx, msg)
 	defer done()
 
 	rep := <-reps
@@ -57,11 +55,9 @@ func setCode(ctx context.Context, t *testing.T, s *Server) (payload.Payload, rec
 }
 
 func getCode(ctx context.Context, t *testing.T, s *Server, id insolar.ID) payload.Payload {
-	msg, err := payload.NewMessage(&payload.GetCode{
+	reps, done := s.Send(ctx, &payload.GetCode{
 		CodeID: id,
 	})
-
-	reps, done := s.Send(ctx, msg)
 	defer done()
 
 	rep := <-reps
@@ -90,11 +86,9 @@ func setIncomingRequest(
 		CallType:  ct,
 		Reason:    *insolar.NewReference(reasonID),
 	})
-	msg, err := payload.NewMessage(&payload.SetIncomingRequest{
+	reps, done := s.Send(ctx, &payload.SetIncomingRequest{
 		Request: rec,
 	})
-	require.NoError(t, err)
-	reps, done := s.Send(ctx, msg)
 	defer done()
 
 	rep := <-reps
@@ -113,11 +107,9 @@ func setIncomingRequest(
 }
 
 func getRequest(ctx context.Context, t *testing.T, s *Server, requestID insolar.ID) payload.Payload {
-	msg, err := payload.NewMessage(&payload.GetRequest{
+	reps, done := s.Send(ctx, &payload.GetRequest{
 		RequestID: requestID,
 	})
-	require.NoError(t, err)
-	reps, done := s.Send(ctx, msg)
 	defer done()
 
 	rep := <-reps
@@ -156,12 +148,10 @@ func activateObject(ctx context.Context, t *testing.T, s *Server, objectID insol
 	resBuf, err := resultRecord.Marshal()
 	require.NoError(t, err)
 
-	msg, err := payload.NewMessage(&payload.Activate{
+	reps, done := s.Send(ctx, &payload.Activate{
 		Record: buf,
 		Result: resBuf,
 	})
-	require.NoError(t, err)
-	reps, done := s.Send(ctx, msg)
 	defer done()
 
 	rep := <-reps
@@ -198,13 +188,10 @@ func amendObject(ctx context.Context, t *testing.T, s *Server, objectID, request
 	resBuf, err := resultRecord.Marshal()
 	require.NoError(t, err)
 
-	msg, err := payload.NewMessage(&payload.Update{
+	reps, done := s.Send(ctx, &payload.Update{
 		Record: buf,
 		Result: resBuf,
 	})
-	require.NoError(t, err)
-
-	reps, done := s.Send(ctx, msg)
 	defer done()
 
 	rep := <-reps
@@ -241,12 +228,10 @@ func deactivateObject(ctx context.Context, t *testing.T, s *Server, objectID, re
 	resBuf, err := resultRecord.Marshal()
 	require.NoError(t, err)
 
-	msg, err := payload.NewMessage(&payload.Deactivate{
+	reps, done := s.Send(ctx, &payload.Deactivate{
 		Record: buf,
 		Result: resBuf,
 	})
-	require.NoError(t, err)
-	reps, done := s.Send(ctx, msg)
 	defer done()
 
 	rep := <-reps
@@ -264,11 +249,9 @@ func deactivateObject(ctx context.Context, t *testing.T, s *Server, objectID, re
 }
 
 func getObject(ctx context.Context, t *testing.T, s *Server, objectID insolar.ID) (payload.Payload, payload.Payload) {
-	msg, err := payload.NewMessage(&payload.GetObject{
+	reps, d := s.Send(ctx, &payload.GetObject{
 		ObjectID: objectID,
 	})
-	require.NoError(t, err)
-	reps, d := s.Send(ctx, msg)
 	defer d()
 
 	var (

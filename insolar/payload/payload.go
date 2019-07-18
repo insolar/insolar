@@ -59,6 +59,7 @@ const (
 	TypeGetPendings
 	TypeHasPendings
 	TypeHas
+	TypeReplication
 
 	// should be the last (required by TypesMap)
 	_latestType
@@ -230,6 +231,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *Has:
 		pl.Polymorph = uint32(TypeHas)
 		return pl.Marshal()
+	case *Replication:
+		pl.Polymorph = uint32(TypeReplication)
+		return pl.Marshal()
 	}
 
 	return nil, errors.New("unknown payload type")
@@ -355,6 +359,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeHas:
 		pl := Has{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeReplication:
+		pl := Replication{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}
