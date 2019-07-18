@@ -166,7 +166,10 @@ func (js *JetSplitterDefault) createDrop(
 	inslogger.FromContext(ctx).Debug(">>>>>>>>>>>>>>>: JET_SPLITTER threshold:", block.SplitThresholdExceeded, ". pulse: ", pn, ". JET: ", jetID.DebugString(), ". OVERFLOW: ", js.cfg.ThresholdOverflowCount)
 
 	// first return value is split needed
-	return block.SplitThresholdExceeded > js.cfg.ThresholdOverflowCount, js.dropModifier.Set(ctx, block)
+	if block.SplitThresholdExceeded > js.cfg.ThresholdOverflowCount {
+		block.Split = true
+	}
+	return block.Split, js.dropModifier.Set(ctx, block)
 }
 
 func (js *JetSplitterDefault) getPreviousDropThreshold(

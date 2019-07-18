@@ -94,10 +94,10 @@ func (p *Replication) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to store drop")
 	}
+
 	logger.Debug("--------------- GOT DROP: pulse: ", dr.Pulse, ". JET_ID: ", dr.JetID.DebugString())
 	logger.Debug(">>>>>>>>>>>>>>>>>+++++: THRESHOLD: ", dr.SplitThresholdExceeded, ". OVERFLOW: ", p.cfg.JetSplit.ThresholdOverflowCount)
-	if dr.SplitThresholdExceeded > p.cfg.JetSplit.ThresholdOverflowCount {
-		logger.Debug(">>>>>>>>>>>>>>>>--: SPLIT: pulse: ", dr.Pulse, ". JET: ", dr.JetID.DebugString())
+	if dr.Split {
 		_, _, err = p.dep.jets.Split(ctx, dr.Pulse, dr.JetID)
 	} else {
 		logger.Debug(">>>>>>>>>>>>>>>>--: Update: pulse: ", dr.Pulse, ". JET: ", dr.JetID.DebugString())
