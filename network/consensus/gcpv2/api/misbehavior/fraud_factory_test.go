@@ -51,6 +51,7 @@
 package misbehavior
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -62,76 +63,89 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBlameIsUnknown(t *testing.T) {
-	be := &BlameError{blameType: 0}
-	require.False(t, be.IsUnknown())
+func TestIsFraud(t *testing.T) {
+	fe := FraudError{}
+	require.True(t, IsFraud(&fe))
 
-	be.blameType = 1
-	require.True(t, be.IsUnknown())
+	err := errors.New("test")
+	require.False(t, IsFraud(err))
 }
 
-func TestBlameMisbehaviorType(t *testing.T) {
-	be := &BlameError{blameType: 0}
-	require.Equal(t, Type(1<<32), be.MisbehaviorType())
+func TestFraudOf(t *testing.T) {
+	fe := FraudError{}
+	require.Equal(t, &fe, FraudOf(&fe))
 
-	be.blameType = 1
-	require.Equal(t, Type((1<<32)+1), be.MisbehaviorType())
+	err := errors.New("test")
+	require.True(t, FraudOf(err) == nil)
 }
 
-func TestBlameCaptureMark(t *testing.T) {
+func TestFraudIsUnknown(t *testing.T) {
+	fe := FraudError{}
+	require.True(t, fe.IsUnknown())
+
+	fe.fraudType = 1
+	require.False(t, fe.IsUnknown())
+}
+
+func TestFraudMisbehaviorType(t *testing.T) {
+	fe := FraudError{fraudType: 0}
+	require.Equal(t, Type(1<<33), fe.MisbehaviorType())
+
+	fe.fraudType = 1
+	require.Equal(t, Type((1<<33)+1), fe.MisbehaviorType())
+}
+
+func TestFraudCaptureMark(t *testing.T) {
 	cm := interface{}(1)
-	be := &BlameError{captureMark: cm}
-	require.Equal(t, cm, be.CaptureMark())
+	fe := FraudError{captureMark: cm}
+
+	require.Equal(t, cm, fe.CaptureMark())
 }
 
-func TestBlameDetails(t *testing.T) {
+func TestFraudDetails(t *testing.T) {
 	dets := []interface{}{1, 2}
-	be := &BlameError{details: dets}
-	require.Equal(t, dets, be.Details())
+	fe := &FraudError{details: dets}
+	require.Equal(t, dets, fe.Details())
 }
 
-func TestBlameViolatorNode(t *testing.T) {
+func TestFraudViolatorNode(t *testing.T) {
 	bn := profiles.NewBaseNodeMock(t)
-	be := &BlameError{violatorNode: bn}
+	fe := &FraudError{violatorNode: bn}
 
-	require.Equal(t, bn, be.ViolatorNode())
+	require.Equal(t, bn, fe.ViolatorNode())
 }
 
-func TestBlameViolatorHost(t *testing.T) {
+func TestFraudViolatorHost(t *testing.T) {
 	inc := endpoints.InboundConnection{}
-	be := &BlameError{violatorHost: inc}
-	require.Equal(t, inc, be.ViolatorHost())
+	fe := &FraudError{violatorHost: inc}
+	require.Equal(t, inc, fe.ViolatorHost())
 }
 
-func TestBlameType(t *testing.T) {
-	bt := 1
-	be := &BlameError{blameType: bt}
-	require.Equal(t, bt, be.BlameType())
+func TestFraudType(t *testing.T) {
+	ft := 1
+	be := &FraudError{fraudType: ft}
+	require.Equal(t, ft, be.FraudType())
 }
 
-func TestBlameError(t *testing.T) {
-	be := &BlameError{}
-	require.True(t, be.Error() != "")
+func TestFraudError(t *testing.T) {
+	fe := &FraudError{}
+	require.True(t, fe.Error() != "")
 
 	bn := profiles.NewBaseNodeMock(t)
-	be.violatorNode = bn
-	require.True(t, be.Error() != "")
+	fe.violatorNode = bn
+	require.True(t, fe.Error() != "")
 
-	be.captureMark = 1
-	require.True(t, be.Error() != "")
+	fe.captureMark = 1
+	require.True(t, fe.Error() != "")
 }
 
-func reportFunc(Report) interface{} {
-	return 1
+func TestNewFraudFactory(t *testing.T) {
+	ff := NewFraudFactory(reportFunc)
+	require.True(t, ff.capture != nil)
 }
 
-func TestNewBlameFactory(t *testing.T) {
-	bf := NewBlameFactory(reportFunc)
-	require.True(t, bf.capture != nil)
-}
-
-func TestNewBlame(t *testing.T) {
-	bf := NewBlameFactory(reportFunc)
+func TestNewFraud(t *testing.T) {
+	bf := NewFraudFactory(reportFunc)
 	fraudType := 1
 	msg := "test"
 	inc := endpoints.NewInboundMock(t)
@@ -142,8 +156,8 @@ func TestNewBlame(t *testing.T) {
 	inc.GetNameAddressMock.Set(func() endpoints.Name { return "test" })
 	inc.GetTransportKeyMock.Set(func() cryptkit.SignatureKeyHolder { return nil })
 	inc.GetTransportCertMock.Set(func() cryptkit.CertificateHolder { return nil })
-	be := bf.NewBlame(fraudType, msg, violatorHost, violatorNode, details...)
-	require.Equal(t, fraudType, be.blameType)
+	be := bf.NewFraud(fraudType, msg, violatorHost, violatorNode, details...)
+	require.Equal(t, fraudType, be.fraudType)
 
 	require.Equal(t, msg, be.msg)
 
@@ -153,25 +167,25 @@ func TestNewBlame(t *testing.T) {
 
 	require.True(t, be.captureMark != nil)
 
-	bf = NewBlameFactory(nil)
-	be = bf.NewBlame(fraudType, msg, nil, violatorNode, details...)
+	bf = NewFraudFactory(nil)
+	be = bf.NewFraud(fraudType, msg, nil, violatorNode, details...)
 
 	require.True(t, be.captureMark == nil)
 }
 
-func TestNewNodeBlame(t *testing.T) {
-	bf := NewBlameFactory(reportFunc)
+func TestNewNodeFraud(t *testing.T) {
+	bf := NewFraudFactory(reportFunc)
 	fraudType := 1
 	msg := "test"
 	bn := profiles.NewBaseNodeMock(t)
 	violatorNode := bn
 	details := []interface{}{1, 2}
-	be := bf.NewNodeBlame(fraudType, msg, violatorNode, details...)
+	be := bf.NewNodeFraud(fraudType, msg, violatorNode, details...)
 	require.Equal(t, msg, be.msg)
 }
 
-func TestNewHostBlame(t *testing.T) {
-	bf := NewBlameFactory(reportFunc)
+func TestNewHostFraud(t *testing.T) {
+	ff := NewFraudFactory(reportFunc)
 	fraudType := 1
 	msg := "test"
 	inc := endpoints.NewInboundMock(t)
@@ -180,27 +194,49 @@ func TestNewHostBlame(t *testing.T) {
 	inc.GetNameAddressMock.Set(func() endpoints.Name { return "test" })
 	inc.GetTransportKeyMock.Set(func() cryptkit.SignatureKeyHolder { return nil })
 	inc.GetTransportCertMock.Set(func() cryptkit.CertificateHolder { return nil })
-	be := bf.NewHostBlame(fraudType, msg, violatorHost, details...)
-	require.Equal(t, msg, be.msg)
+	fe := ff.NewHostFraud(fraudType, msg, violatorHost, details...)
+	require.Equal(t, msg, fe.msg)
 }
 
-func TestExcessiveIntro(t *testing.T) {
-	be := NewBlameFactory(reportFunc).ExcessiveIntro(profiles.NewBaseNodeMock(t), nil, nil)
-	require.Equal(t, "excessive intro", be.msg)
+func TestNewInconsistentMembershipAnnouncement(t *testing.T) {
+	fe := NewFraudFactory(reportFunc).NewInconsistentMembershipAnnouncement(profiles.NewActiveNodeMock(t),
+		profiles.MembershipAnnouncement{}, profiles.MembershipAnnouncement{})
+	require.Equal(t, "multiple membership profile", fe.msg)
 }
 
-func TestNewMismatchedPulsarPacket(t *testing.T) {
-	be := NewBlameFactory(reportFunc).NewMismatchedPulsarPacket(nil, nil, nil)
-	require.Equal(t, "mixed pulsar pulses", be.msg)
+func TestNewMismatchedMembershipRank(t *testing.T) {
+	fe := NewFraudFactory(reportFunc).NewMismatchedMembershipRank(profiles.NewActiveNodeMock(t),
+		profiles.MembershipProfile{})
+	require.Equal(t, "mismatched membership profile rank", fe.msg)
 }
 
-func TestNewMismatchedPulsePacket(t *testing.T) {
-	be := NewBlameFactory(reportFunc).NewMismatchedPulsePacket(nil, nil, nil)
-	require.Equal(t, "mixed pulsar pulses", be.msg)
+func TestNewMismatchedMembershipRankOrNodeCount(t *testing.T) {
+	fe := NewFraudFactory(reportFunc).NewMismatchedMembershipRankOrNodeCount(profiles.NewActiveNodeMock(t),
+		profiles.MembershipProfile{}, 0)
+	require.Equal(t, "mismatched membership profile node count", fe.msg)
 }
 
-func TestNewProtocolViolation(t *testing.T) {
-	msg := "test"
-	be := NewBlameFactory(reportFunc).NewProtocolViolation(nil, msg)
-	require.Equal(t, msg, be.msg)
+func TestNewUnknownNeighbour(t *testing.T) {
+	fe := NewFraudFactory(reportFunc).NewUnknownNeighbour(profiles.NewBaseNodeMock(t))
+	require.Equal(t, "unknown neighbour", fe.(FraudError).msg)
+}
+
+func TestNewMismatchedNeighbourRank(t *testing.T) {
+	fe := NewFraudFactory(reportFunc).NewMismatchedNeighbourRank(profiles.NewBaseNodeMock(t))
+	require.Equal(t, "mismatched neighbour rank", fe.(FraudError).msg)
+}
+
+func TestNewNeighbourMissingTarget(t *testing.T) {
+	fe := NewFraudFactory(reportFunc).NewNeighbourMissingTarget(profiles.NewBaseNodeMock(t))
+	require.Equal(t, "neighbour must include target node", fe.(FraudError).msg)
+}
+
+func TestNewNeighbourContainsSource(t *testing.T) {
+	fe := NewFraudFactory(reportFunc).NewNeighbourContainsSource(profiles.NewBaseNodeMock(t))
+	require.Equal(t, "neighbour must NOT include source node", fe.(FraudError).msg)
+}
+
+func TestNewInconsistentNeighbourAnnouncement(t *testing.T) {
+	fe := NewFraudFactory(reportFunc).NewInconsistentNeighbourAnnouncement(profiles.NewBaseNodeMock(t))
+	require.Equal(t, "multiple neighbour profile", fe.msg)
 }
