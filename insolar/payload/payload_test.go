@@ -53,6 +53,7 @@ func TestMarshalUnmarshal(t *testing.T) {
 		{tp: payload.TypeMeta, pl: &payload.Meta{}},
 		{tp: payload.TypeError, pl: &payload.Error{}},
 		{tp: payload.TypeID, pl: &payload.ID{}},
+		{tp: payload.TypeIDs, pl: &payload.IDs{}},
 		{tp: payload.TypeState, pl: &payload.State{}},
 		{tp: payload.TypeGetObject, pl: &payload.GetObject{}},
 		{tp: payload.TypePassState, pl: &payload.PassState{}},
