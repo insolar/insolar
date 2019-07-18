@@ -141,6 +141,7 @@ func NewServer(ctx context.Context, cfg configuration.Configuration) (*Server, e
 
 		handler := artifactmanager.NewMessageHandler(&conf)
 		handler.PulseCalculator = Pulses
+		handler.FlowDispatcher.PulseAccessor = Pulses
 
 		handler.Bus = Bus
 		handler.PCS = CryptoScheme

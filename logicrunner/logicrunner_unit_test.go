@@ -113,6 +113,7 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 	suite.lr.Sender = suite.sender
 	suite.lr.Publisher = suite.pub
 	suite.lr.RequestsExecutor = suite.re
+	suite.lr.FlowDispatcher.PulseAccessor = suite.ps
 
 	_ = suite.lr.Init(suite.ctx)
 }
@@ -186,23 +187,23 @@ func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor(
 		expectedStartQueueProcessorCtr int32
 	}{
 		{
-			name:                           "Happy path",
+			name: "Happy path",
 			expectedClarifyPendingStateCtr: 1,
 			expectedStartQueueProcessorCtr: 1,
 		},
 		{
-			name:                           "ClarifyPendingState failed",
+			name: "ClarifyPendingState failed",
 			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
 			expectedClarifyPendingStateCtr: 1,
 		},
 		{
-			name:                           "StartQueueProcessorIfNeeded failed",
+			name: "StartQueueProcessorIfNeeded failed",
 			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
 			expectedClarifyPendingStateCtr: 1,
 			expectedStartQueueProcessorCtr: 1,
 		},
 		{
-			name:                           "Both procedures fail",
+			name: "Both procedures fail",
 			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
 			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
 			expectedClarifyPendingStateCtr: 1,
@@ -827,6 +828,9 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 	suite.Require().NoError(err)
 
 	pulseNum := pulsar.NewPulse(0, insolar.FirstPulseNumber, &entropygenerator.StandardEntropyGenerator{})
+
+	suite.ps.LatestMock.Return(*pulseNum, nil)
+
 	msg.Metadata.Set(bus.MetaPulse, pulseNum.PulseNumber.String())
 	sp, err := instracer.Serialize(context.Background())
 	suite.Require().NoError(err)
@@ -1082,6 +1086,9 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 		wg.Done()
 	}
 
+	suite.ps.LatestFunc = func(p context.Context) (r insolar.Pulse, r1 error) {
+		return insolar.Pulse{PulseNumber: pulseNum}, nil
+	}
 	for i := 0; i < num; i++ {
 		go func(i int) {
 			msg := &message.CallMethod{
@@ -1732,8 +1739,8 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			messagesQueue := convertQueueToMessageQueue(s.ctx, broker.mutable.Peek(maxQueueLength))
 
 			expectedMessage := &message.ExecutorResults{
-				RecordRef:             s.objectRef,
-				Queue:                 messagesQueue,
+				RecordRef: s.objectRef,
+				Queue:     messagesQueue,
 				LedgerHasMoreRequests: test.hasMoreRequests,
 			}
 

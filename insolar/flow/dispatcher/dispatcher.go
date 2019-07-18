@@ -62,12 +62,16 @@ func (d *Dispatcher) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
 }
 
 func (d *Dispatcher) getHandleByPulse(ctx context.Context, msgPulseNumber insolar.PulseNumber) flow.MakeHandle {
-	var currentPulseNumber insolar.PulseNumber
-	p, err := d.PulseAccessor.Latest(ctx)
-	if err == nil {
-		currentPulseNumber = p.PulseNumber
+	currentPulseNumber := insolar.PulseNumber(insolar.FirstPulseNumber)
+	if d.PulseAccessor == nil {
+		inslogger.FromContext(ctx).Error("PulseAccessor in dispatcher not set")
 	} else {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to fetch pulse in dispatcher"))
+		p, err := d.PulseAccessor.Latest(ctx)
+		if err == nil {
+			currentPulseNumber = p.PulseNumber
+		} else {
+			inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to fetch pulse in dispatcher"))
+		}
 	}
 
 	if msgPulseNumber > currentPulseNumber {
