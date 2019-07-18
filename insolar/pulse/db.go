@@ -89,6 +89,7 @@ func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) error {
 		if err != nil {
 			return err
 		}
+		oldHead.Pulse.NextPulseNumber = pulse.PulseNumber
 		oldHead.Next = &pulse.PulseNumber
 
 		// Set new pulse.
