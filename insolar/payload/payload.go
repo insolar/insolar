@@ -31,6 +31,7 @@ const (
 	TypeMeta
 	TypeError
 	TypeID
+	TypeIDs
 	TypeState
 	TypeGetObject
 	TypePassState
@@ -54,6 +55,9 @@ const (
 	TypeDeactivate
 	TypeUpdate
 	TypeHotObjects
+	TypeResultInfo
+	TypeGetPendings
+	TypeReplication
 
 	// should be the last (required by TypesMap)
 	_latestType
@@ -125,6 +129,7 @@ func UnmarshalType(data []byte) (Type, error) {
 	if err != nil {
 		return TypeUnknown, errors.Wrap(err, "failed to decode polymorph")
 	}
+	// First 3 bits is a field type (see protobuf wire protocol docs), key is always varint
 	if fieldNumType != MorphFieldNum<<3|MorpyFieldType {
 		return TypeUnknown, errors.Errorf("wrong polymorph field number %d", fieldNumType)
 	}
@@ -145,6 +150,9 @@ func Marshal(payload Payload) ([]byte, error) {
 		return pl.Marshal()
 	case *ID:
 		pl.Polymorph = uint32(TypeID)
+		return pl.Marshal()
+	case *IDs:
+		pl.Polymorph = uint32(TypeIDs)
 		return pl.Marshal()
 	case *State:
 		pl.Polymorph = uint32(TypeState)
@@ -209,6 +217,15 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *HotObjects:
 		pl.Polymorph = uint32(TypeHotObjects)
 		return pl.Marshal()
+	case *ResultInfo:
+		pl.Polymorph = uint32(TypeResultInfo)
+		return pl.Marshal()
+	case *Replication:
+		pl.Polymorph = uint32(TypeReplication)
+		return pl.Marshal()
+	case *GetPendings:
+		pl.Polymorph = uint32(TypeGetPendings)
+		return pl.Marshal()
 	}
 
 	return nil, errors.New("unknown payload type")
@@ -230,6 +247,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeID:
 		pl := ID{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeIDs:
+		pl := IDs{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	case TypeState:
@@ -314,6 +335,18 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeHotObjects:
 		pl := HotObjects{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeResultInfo:
+		pl := ResultInfo{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeReplication:
+		pl := Replication{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeGetPendings:
+		pl := GetPendings{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}

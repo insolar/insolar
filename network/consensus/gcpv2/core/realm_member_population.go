@@ -52,13 +52,12 @@ package core
 
 import (
 	"context"
-
-	"github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/common/consensuskit"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 )
 
-func NewMemberRealmPopulation(strategy RoundStrategy, population census.OnlinePopulation,
+func NewMemberRealmPopulation(strategy RoundStrategy, population census.OnlinePopulation, phase2ExtLimit uint8,
 	fn NodeInitFunc) *MemberRealmPopulation {
 
 	nodeCount := population.GetCount()
@@ -72,9 +71,9 @@ func NewMemberRealmPopulation(strategy RoundStrategy, population census.OnlinePo
 			nodeIndex:      make([]*NodeAppearance, nodeCount),
 			nodeShuffle:    make([]*NodeAppearance, nodeCount-1),
 		}},
-		bftMajorityCount: common.BftMajority(nodeCount),
+		bftMajorityCount: consensuskit.BftMajority(nodeCount),
 	}
-	r.initPopulation()
+	r.initPopulation(phase2ExtLimit)
 	ShuffleNodeProjections(strategy, r.nodeShuffle)
 
 	return r
@@ -95,27 +94,31 @@ func (r *MemberRealmPopulation) IsComplete() bool {
 	return true
 }
 
-func (r *MemberRealmPopulation) initPopulation() {
-	profiles := r.population.GetProfiles()
-	thisNodeID := r.population.GetLocalProfile().GetShortNodeID()
+func (r *MemberRealmPopulation) initPopulation(phase2ExtLimit uint8) {
+	activeProfiles := r.population.GetProfiles()
+	thisNodeID := r.population.GetLocalProfile().GetNodeID()
 
 	nodes := make([]NodeAppearance, r.indexedCount)
 
 	var j = 0
-	for i, p := range profiles {
+	for i, p := range activeProfiles {
 		n := &nodes[i]
 		r.nodeIndex[i] = n
 
-		n.init(p, nil, r.baselineWeight)
+		if p.GetOpMode().IsEvicted() {
+			panic("illegal state")
+		}
+
+		n.init(p, nil, r.baselineWeight, phase2ExtLimit)
 		r.nodeInit(context.Background(), n)
 
-		if p.GetShortNodeID() == thisNodeID {
+		if p.GetNodeID() == thisNodeID {
 			if r.self != nil {
 				panic("schizophrenia")
 			}
 			r.self = n
 		} else {
-			if j == len(profiles) {
+			if j == len(activeProfiles) {
 				panic("didnt find myself among active nodes")
 			}
 			r.nodeShuffle[j] = n
@@ -136,15 +139,15 @@ func (r *MemberRealmPopulation) GetBftMajorityCount() int {
 	return r.bftMajorityCount
 }
 
-func (r *MemberRealmPopulation) GetActiveNodeAppearance(id common.ShortNodeID) *NodeAppearance {
+func (r *MemberRealmPopulation) GetActiveNodeAppearance(id insolar.ShortNodeID) *NodeAppearance {
 	np := r.population.FindProfile(id)
 	if np != nil && !np.IsJoiner() {
-		return r.GetNodeAppearanceByIndex(np.GetIndex())
+		return r.GetNodeAppearanceByIndex(np.GetIndex().AsInt())
 	}
 	return nil
 }
 
-func (r *MemberRealmPopulation) GetNodeAppearance(id common.ShortNodeID) *NodeAppearance {
+func (r *MemberRealmPopulation) GetNodeAppearance(id insolar.ShortNodeID) *NodeAppearance {
 	na := r.GetActiveNodeAppearance(id)
 	if na != nil {
 		return na
@@ -164,35 +167,16 @@ func (r *MemberRealmPopulation) GetIndexedNodes() []*NodeAppearance {
 	return r.nodeIndex
 }
 
-func (r *MemberRealmPopulation) AddToDynamics(n *NodeAppearance) (*NodeAppearance, []*NodeAppearance) {
+func (r *MemberRealmPopulation) AddToDynamics(n *NodeAppearance) *NodeAppearance {
 	if !n.profile.IsJoiner() {
 		panic("illegal value")
 	}
 	return r.dynPop.AddToDynamics(n)
 }
 
-var _ common2.NodeProfile = &joiningNodeProfile{}
+func (r *MemberRealmPopulation) CreateVectorHelper() *RealmVectorHelper {
 
-type joiningNodeProfile struct {
-	common2.NodeIntroProfile
-}
-
-func (p *joiningNodeProfile) IsJoiner() bool {
-	return true
-}
-
-func (p *joiningNodeProfile) GetOpMode() common2.MemberOpMode {
-	return common2.MemberModeNormal
-}
-
-func (p *joiningNodeProfile) GetIndex() int {
-	return 0
-}
-
-func (p *joiningNodeProfile) GetDeclaredPower() common2.MemberPower {
-	return p.GetStartPower()
-}
-
-func (*joiningNodeProfile) GetSignatureVerifier() common.SignatureVerifier {
-	return nil
+	v := r.DynamicRealmPopulation.CreateVectorHelper()
+	v.realmPopulation = r
+	return v
 }

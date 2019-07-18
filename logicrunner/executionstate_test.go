@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -61,11 +62,12 @@ func newExecutionBroker(
 	mb := testutils.NewMessageBusMock(t)
 	jc := jet.NewCoordinatorMock(t)
 	ps := pulse.NewAccessorMock(t)
+	am := artifacts.NewClientMock(t)
 	pm := &publisherMock{}
 
 	lr := LogicRunner{
 		RequestsExecutor: NewRequestsExecutorMock(t),
-		StateStorage:     NewStateStorage(pm, re, mb, jc, ps),
+		StateStorage:     NewStateStorage(pm, re, mb, jc, ps, am),
 	}
 
 	objectRef := gen.Reference()
@@ -157,6 +159,8 @@ func TestExecutionState_OnPulse(t *testing.T) {
 
 	for _, test := range table {
 		t.Run(test.name, func(t *testing.T) {
+			ctx := inslogger.TestContext(t)
+
 			messages := test.broker.OnPulse(ctx, test.meNext)
 			require.Equal(t, test.numberOfMessages, len(messages))
 			if test.checkES != nil {

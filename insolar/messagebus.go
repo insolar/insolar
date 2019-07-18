@@ -223,8 +223,6 @@ const (
 	TypeGetObjectIndex
 	// TypeGetPendingRequests fetches pending requests for object.
 	TypeGetPendingRequests
-	// TypeHotRecords saves hot-records in storage.
-	TypeHotRecords
 	// TypeGetJet requests to calculate a jet for provided object.
 	TypeGetJet
 	// TypeAbandonedRequestsNotification informs virtual node about unclosed requests.

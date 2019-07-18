@@ -26,27 +26,23 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/ledger/heavy/executor"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 )
 
-// ActiveListSwapper is required by network to swap active list.
-type ActiveListSwapper interface {
-	MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error
-}
-
 // PulseManager implements insolar.PulseManager.
 type PulseManager struct {
-	Bus               insolar.MessageBus        `inject:""`
-	NodeNet           insolar.NodeNetwork       `inject:""`
-	GIL               insolar.GlobalInsolarLock `inject:""`
-	ActiveListSwapper ActiveListSwapper         `inject:""`
-	NodeSetter        node.Modifier             `inject:""`
-	Nodes             node.Accessor             `inject:""`
-	PulseAppender     pulse.Appender            `inject:""`
-	PulseAccessor     pulse.Accessor            `inject:""`
-	JetModifier       jet.Modifier              `inject:""`
+	Bus                insolar.MessageBus          `inject:""`
+	NodeNet            insolar.NodeNetwork         `inject:""`
+	GIL                insolar.GlobalInsolarLock   `inject:""`
+	NodeSetter         node.Modifier               `inject:""`
+	Nodes              node.Accessor               `inject:""`
+	PulseAppender      pulse.Appender              `inject:""`
+	PulseAccessor      pulse.Accessor              `inject:""`
+	FinalizationKeeper executor.FinalizationKeeper `inject:""`
+	JetModifier        jet.Modifier                `inject:""`
 
 	currentPulse insolar.Pulse
 
@@ -80,7 +76,12 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	)
 	defer span.End()
 
-	err := m.setUnderGilSection(ctx, newPulse)
+	err := m.FinalizationKeeper.OnPulse(ctx, newPulse.PulseNumber)
+	if err != nil {
+		return errors.Wrap(err, "got error calling FinalizationKeeper.OnPulse")
+	}
+
+	err = m.setUnderGilSection(ctx, newPulse)
 	if err != nil {
 		return err
 	}
@@ -121,11 +122,6 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	// swap pulse
 	m.currentPulse = newPulse
 
-	// swap active nodes
-	err = m.ActiveListSwapper.MoveSyncToActive(ctx, newPulse.PulseNumber)
-	if err != nil {
-		return errors.Wrap(err, "failed to apply new active node list")
-	}
 	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
 		return errors.Wrap(err, "call of AddPulse failed")
 	}

@@ -95,8 +95,22 @@ func (a *DeactivateObject) Proceed(ctx context.Context) error {
 
 	logger := inslogger.FromContext(ctx)
 
-	a.dep.indexLocker.Lock(&a.result.Object)
-	defer a.dep.indexLocker.Unlock(&a.result.Object)
+	a.dep.indexLocker.Lock(a.result.Object)
+	defer a.dep.indexLocker.Unlock(a.result.Object)
+
+	idx, err := a.dep.indices.ForID(ctx, flow.Pulse(ctx), a.result.Object)
+	if err != nil {
+		return errors.Wrap(err, "can't get index from storage")
+	}
+	if idx.Lifeline.StateID == record.StateDeactivation {
+		msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeDeactivated})
+		if err != nil {
+			return errors.Wrap(err, "failed to create reply")
+		}
+
+		a.dep.sender.Reply(ctx, a.message, msg)
+		return nil
+	}
 
 	deactivateVirt := record.Wrap(a.deactivate)
 	rec := record.Material{
@@ -117,15 +131,6 @@ func (a *DeactivateObject) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "can't save record into storage")
 	}
 
-	idx, err := a.dep.indices.ForID(ctx, flow.Pulse(ctx), a.result.Object)
-	if err != nil {
-		return errors.Wrap(err, "can't get index from storage")
-	}
-
-	if idx.Lifeline.StateID == record.StateDeactivation {
-		return ErrObjectDeactivated
-	}
-
 	idx.Lifeline.LatestState = &a.deactivateID
 	idx.Lifeline.StateID = a.deactivate.ID()
 	idx.Lifeline.LatestUpdate = flow.Pulse(ctx)
@@ -139,17 +144,29 @@ func (a *DeactivateObject) Proceed(ctx context.Context) error {
 	}
 	logger.WithField("state", idx.Lifeline.LatestState.DebugString()).Debug("saved object")
 
-	err = a.dep.filament.SetResult(ctx, a.resultID, a.jetID, a.result)
+	foundRes, err := a.dep.filament.SetResult(ctx, a.resultID, a.jetID, a.result)
 	if err != nil {
 		return errors.Wrap(err, "failed to save result")
 	}
+	var foundResBuf []byte
+	if foundRes != nil {
+		logger.Errorf("duplicated result. resultID: %v, requestID: %v", a.resultID.DebugString(), a.result.Request.Record().DebugString())
+		foundResBuf, err = foundRes.Record.Virtual.Marshal()
+		if err != nil {
+			return err
+		}
+	}
 
-	msg, err := payload.NewMessage(&payload.ID{ID: a.resultID})
+	msg, err := payload.NewMessage(&payload.ResultInfo{
+		ObjectID: a.result.Object,
+		ResultID: a.resultID,
+		Result:   foundResBuf,
+	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create reply")
 	}
 
-	go a.dep.sender.Reply(ctx, a.message, msg)
+	a.dep.sender.Reply(ctx, a.message, msg)
 
 	return nil
 }

@@ -43,7 +43,7 @@ type UpdateObject struct {
 		writeAccessor hot.WriteAccessor
 		indexLocker   object.IndexLocker
 		records       object.RecordModifier
-		indices       object.IndexStorage
+		index         object.IndexStorage
 		filament      executor.FilamentModifier
 		sender        bus.Sender
 	}
@@ -77,7 +77,7 @@ func (a *UpdateObject) Dep(
 ) {
 	a.dep.records = r
 	a.dep.indexLocker = il
-	a.dep.indices = i
+	a.dep.index = i
 	a.dep.filament = f
 	a.dep.writeAccessor = w
 	a.dep.sender = s
@@ -95,8 +95,22 @@ func (a *UpdateObject) Proceed(ctx context.Context) error {
 
 	logger := inslogger.FromContext(ctx)
 
-	a.dep.indexLocker.Lock(&a.result.Object)
-	defer a.dep.indexLocker.Unlock(&a.result.Object)
+	a.dep.indexLocker.Lock(a.result.Object)
+	defer a.dep.indexLocker.Unlock(a.result.Object)
+
+	idx, err := a.dep.index.ForID(ctx, flow.Pulse(ctx), a.result.Object)
+	if err != nil {
+		return errors.Wrap(err, "can't get index from storage")
+	}
+	if idx.Lifeline.StateID == record.StateDeactivation {
+		msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeDeactivated})
+		if err != nil {
+			return errors.Wrap(err, "failed to create reply")
+		}
+
+		a.dep.sender.Reply(ctx, a.message, msg)
+		return nil
+	}
 
 	updateVirt := record.Wrap(a.update)
 	rec := record.Material{
@@ -117,11 +131,6 @@ func (a *UpdateObject) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "can't save record into storage")
 	}
 
-	idx, err := a.dep.indices.ForID(ctx, flow.Pulse(ctx), a.result.Object)
-	if err != nil {
-		return errors.Wrap(err, "can't get index from storage")
-	}
-
 	idx.Lifeline.LatestState = &a.updateID
 	idx.Lifeline.StateID = a.update.ID()
 	idx.Lifeline.LatestUpdate = flow.Pulse(ctx)
@@ -129,23 +138,36 @@ func (a *UpdateObject) Proceed(ctx context.Context) error {
 
 	logger.Debugf("object is updated")
 
-	err = a.dep.indices.SetIndex(ctx, flow.Pulse(ctx), idx)
+	err = a.dep.index.SetIndex(ctx, flow.Pulse(ctx), idx)
 	if err != nil {
 		return err
 	}
 	logger.WithField("state", idx.Lifeline.LatestState.DebugString()).Debug("saved object")
 
-	err = a.dep.filament.SetResult(ctx, a.resultID, a.jetID, a.result)
+	foundRes, err := a.dep.filament.SetResult(ctx, a.resultID, a.jetID, a.result)
 	if err != nil {
 		return errors.Wrap(err, "failed to save result")
 	}
 
-	msg, err := payload.NewMessage(&payload.ID{ID: a.resultID})
+	var foundResBuf []byte
+	if foundRes != nil {
+		logger.Errorf("duplicated result. resultID: %v, requestID: %v", a.resultID.DebugString(), a.result.Request.Record().DebugString())
+		foundResBuf, err = foundRes.Record.Virtual.Marshal()
+		if err != nil {
+			return err
+		}
+	}
+
+	msg, err := payload.NewMessage(&payload.ResultInfo{
+		ObjectID: a.result.Object,
+		ResultID: a.resultID,
+		Result:   foundResBuf,
+	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create reply")
 	}
 
-	go a.dep.sender.Reply(ctx, a.message, msg)
+	a.dep.sender.Reply(ctx, a.message, msg)
 
 	return nil
 }

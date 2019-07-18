@@ -53,6 +53,9 @@ func TestDeactivateObject_RecordOverrideErr(t *testing.T) {
 	recordsMock := object.NewRecordModifierMock(t)
 	recordsMock.SetMock.Return(object.ErrOverride)
 
+	idxStorage := object.NewIndexStorageMock(t)
+	idxStorage.ForIDMock.Return(record.Index{}, nil)
+
 	p := proc.NewDeactivateObject(
 		payload.Meta{},
 		record.Deactivate{},
@@ -65,7 +68,7 @@ func TestDeactivateObject_RecordOverrideErr(t *testing.T) {
 		writeAccessor,
 		idxLockMock,
 		recordsMock,
-		nil,
+		idxStorage,
 		nil,
 		nil,
 	)
@@ -96,6 +99,9 @@ func TestDeactivateObject_RecordErr(t *testing.T) {
 	recordsMock := object.NewRecordModifierMock(t)
 	recordsMock.SetMock.Return(errors.New("something strange from records.Set"))
 
+	idxStorage := object.NewIndexStorageMock(t)
+	idxStorage.ForIDMock.Return(record.Index{}, nil)
+
 	p := proc.NewDeactivateObject(
 		payload.Meta{},
 		record.Deactivate{},
@@ -108,7 +114,7 @@ func TestDeactivateObject_RecordErr(t *testing.T) {
 		writeAccessor,
 		idxLockMock,
 		recordsMock,
-		nil,
+		idxStorage,
 		nil,
 		nil,
 	)
@@ -227,7 +233,7 @@ func TestDeactivateObject_FilamentSetResultErr(t *testing.T) {
 	idxStorageMock.SetIndexMock.Return(nil)
 
 	filaments := executor.NewFilamentModifierMock(t)
-	filaments.SetResultMock.Return(errors.New("something strange from filament.SetResult"))
+	filaments.SetResultMock.Return(nil, errors.New("something strange from filament.SetResult"))
 
 	p := proc.NewDeactivateObject(
 		payload.Meta{},
@@ -274,7 +280,7 @@ func TestDeactivateObject_Proceed(t *testing.T) {
 	idxStorageMock.SetIndexMock.Return(nil)
 
 	filaments := executor.NewFilamentModifierMock(t)
-	filaments.SetResultMock.Return(nil)
+	filaments.SetResultMock.Return(nil, nil)
 
 	sender := bus.NewSenderMock(t)
 	sender.ReplyMock.Return()

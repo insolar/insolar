@@ -39,6 +39,7 @@ import (
 type Member struct {
 	foundation.BaseContract
 	RootDomain  insolar.Reference
+	Deposit     insolar.Reference
 	Name        string
 	PublicKey   string
 	BurnAddress string
@@ -405,35 +406,6 @@ func (m *Member) createMember(name string, key string, burnAddress string) (*mem
 	return created, nil
 }
 
-func (m *Member) getDeposits() ([]map[string]string, error) {
-
-	iterator, err := m.NewChildrenTypedIterator(deposit.GetPrototype())
-	if err != nil {
-		return nil, fmt.Errorf("failed to get children: %s", err.Error())
-	}
-
-	var result []map[string]string
-	for iterator.HasNext() {
-		element, err := iterator.Next()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get next child: %s", err.Error())
-		}
-
-		if !element.IsEmpty() {
-			d := deposit.GetObject(element)
-
-			m, err := d.MapMarshal()
-			if err != nil {
-				return nil, fmt.Errorf("failed to marshal deposit to map: %s", err.Error())
-			}
-
-			result = append(result, m)
-		}
-	}
-
-	return result, nil
-}
-
 // Migration methods.
 func (m *Member) migration(txHash string, burnAddress string, amount big.Int, unHoldDate time.Time) (string, error) {
 	rd := rootdomain.GetObject(m.RootDomain)
@@ -446,7 +418,7 @@ func (m *Member) migration(txHash string, burnAddress string, amount big.Int, un
 	if len(migrationDaemonMembers) == 0 {
 		return "", fmt.Errorf("there is no active migraion daemon")
 	}
-	// Check that caller is migraion daemon
+	// Check that caller is migration daemon
 	if helper.Contains(migrationDaemonMembers, m.GetReference()) {
 		return "", fmt.Errorf("this migraion daemon is not in the list")
 	}
@@ -471,11 +443,15 @@ func (m *Member) migration(txHash string, burnAddress string, amount big.Int, un
 			migrationDaemonConfirms[ref] = false
 		}
 		dHolder := deposit.New(migrationDaemonConfirms, txHash, amount.String(), unHoldDate)
-		txDepositP, err := dHolder.AsDelegate(tokenHolderRef)
+		txDeposit, err := dHolder.AsDelegate(tokenHolderRef)
 		if err != nil {
 			return "", fmt.Errorf("failed to save as delegate: %s", err.Error())
 		}
-		txDeposit = *txDepositP
+
+		err = tokenHolder.SetDeposit(txDeposit.GetReference())
+		if err != nil {
+			return "", fmt.Errorf("failed to set deposit: %s", err.Error())
+		}
 	}
 
 	// Confirm transaction by migration daemon
@@ -496,45 +472,42 @@ func (m *Member) FindDeposit(txHash string, inputAmountStr string) (bool, deposi
 		return false, deposit.Deposit{}, fmt.Errorf("can't parse input amount")
 	}
 
-	iterator, err := m.NewChildrenTypedIterator(deposit.GetPrototype())
-	if err != nil {
-		return false, deposit.Deposit{}, fmt.Errorf("failed to get children: %s", err.Error())
+	if m.Deposit.IsEmpty() {
+		return false, deposit.Deposit{}, fmt.Errorf("no deposit provided")
 	}
 
-	for iterator.HasNext() {
-		element, err := iterator.Next()
-		if err != nil {
-			return false, deposit.Deposit{}, fmt.Errorf("failed to get next child: %s", err.Error())
-		}
+	d := deposit.GetObject(m.Deposit)
+	th, err := d.GetTxHash()
+	if err != nil {
+		return false, deposit.Deposit{}, fmt.Errorf("failed to get transaction hash: %s", err.Error())
+	}
 
-		if !element.IsEmpty() {
-			d := deposit.GetObject(element)
-			th, err := d.GetTxHash()
-			if err != nil {
-				return false, deposit.Deposit{}, fmt.Errorf("failed to get transaction hash: %s", err.Error())
-			}
-			depositAmountStr, err := d.GetAmount()
-			if err != nil {
-				return false, deposit.Deposit{}, fmt.Errorf("failed to get amount: %s", err.Error())
-			}
+	depositAmountStr, err := d.GetAmount()
+	if err != nil {
+		return false, deposit.Deposit{}, fmt.Errorf("failed to get amount: %s", err.Error())
+	}
 
-			depositAmountInt := new(big.Int)
-			depositAmountInt, ok := depositAmountInt.SetString(depositAmountStr, 10)
-			if !ok {
-				return false, deposit.Deposit{}, fmt.Errorf("can't parse input amount")
-			}
+	depositAmountInt := new(big.Int)
+	depositAmountInt, ok = depositAmountInt.SetString(depositAmountStr, 10)
+	if !ok {
+		return false, deposit.Deposit{}, fmt.Errorf("can't parse input amount")
+	}
 
-			if txHash == th {
-				if (inputAmount).Cmp(depositAmountInt) == 0 {
-					return true, *d, nil
-				} else {
-					return false, deposit.Deposit{}, fmt.Errorf("deposit with this transaction hash has different amount")
-				}
-			}
+	if txHash == th {
+		if (inputAmount).Cmp(depositAmountInt) == 0 {
+			return true, *d, nil
+		} else {
+			return false, deposit.Deposit{}, fmt.Errorf("deposit with this transaction hash has different amount")
 		}
 	}
 
 	return false, deposit.Deposit{}, nil
+}
+
+// SetDeposit method stores deposit reference in member it belongs to
+func (m *Member) SetDeposit(reference insolar.Reference) error {
+	m.Deposit = reference
+	return nil
 }
 
 func (m *Member) GetBurnAddress() (string, error) {

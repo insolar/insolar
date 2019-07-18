@@ -18,7 +18,6 @@ package message
 
 import (
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/ledger/drop"
 )
 
 // FIXME: @andreyromancev. 21.12.18. Remove this and create 'LogicRunnerMessage' interface to get rid of 'GetCaller' in ledger.
@@ -309,48 +308,6 @@ func (m *GetObjectIndex) DefaultTarget() *insolar.Reference {
 // Type implementation of Message interface.
 func (*GetObjectIndex) Type() insolar.MessageType {
 	return insolar.TypeGetObjectIndex
-}
-
-// HotData contains hot-data
-type HotData struct {
-	ledgerMessage
-	Jet         insolar.Reference
-	Drop        drop.Drop
-	HotIndexes  []HotIndex
-	PulseNumber insolar.PulseNumber
-}
-
-// AllowedSenderObjectAndRole implements interface method
-func (m *HotData) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
-	return nil, insolar.DynamicRoleUndefined
-}
-
-// DefaultRole returns role for this event
-func (*HotData) DefaultRole() insolar.DynamicRole {
-	return insolar.DynamicRoleLightExecutor
-}
-
-// DefaultTarget returns of target of this event.
-func (m *HotData) DefaultTarget() *insolar.Reference {
-	return &m.Jet
-}
-
-// Type implementation of Message interface.
-func (*HotData) Type() insolar.MessageType {
-	return insolar.TypeHotRecords
-}
-
-// HotIndex contains meat about hot-data
-type HotIndex struct {
-	// ObjID is needed for identifying lifeline
-	ObjID insolar.ID
-
-	// Index is decoded because of the circle-loops in the project
-	// We can't store it here as a Lifeline, because a project won't build
-	Index []byte
-	// LifelineLastUsed is a mark of pulse, when the lifeline was used for the last time
-	// It's being used for `ttl` of indexes
-	LifelineLastUsed insolar.PulseNumber
 }
 
 // GetPendingRequests fetches pending requests for object.

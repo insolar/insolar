@@ -17,8 +17,10 @@
 package proc_test
 
 import (
+	"context"
 	"testing"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
@@ -53,6 +55,9 @@ func TestUpdateObject_RecordOverrideErr(t *testing.T) {
 	recordsMock := object.NewRecordModifierMock(t)
 	recordsMock.SetMock.Return(object.ErrOverride)
 
+	idxStorage := object.NewIndexStorageMock(t)
+	idxStorage.ForIDMock.Return(record.Index{}, nil)
+
 	p := proc.NewUpdateObject(
 		payload.Meta{},
 		record.Amend{},
@@ -65,7 +70,7 @@ func TestUpdateObject_RecordOverrideErr(t *testing.T) {
 		writeAccessor,
 		idxLockMock,
 		recordsMock,
-		nil,
+		idxStorage,
 		nil,
 		nil,
 	)
@@ -96,6 +101,9 @@ func TestUpdateObject_RecordErr(t *testing.T) {
 	recordsMock := object.NewRecordModifierMock(t)
 	recordsMock.SetMock.Return(errors.New("something strange from records.Set"))
 
+	idxStorage := object.NewIndexStorageMock(t)
+	idxStorage.ForIDMock.Return(record.Index{}, nil)
+
 	p := proc.NewUpdateObject(
 		payload.Meta{},
 		record.Amend{},
@@ -108,7 +116,7 @@ func TestUpdateObject_RecordErr(t *testing.T) {
 		writeAccessor,
 		idxLockMock,
 		recordsMock,
-		nil,
+		idxStorage,
 		nil,
 		nil,
 	)
@@ -227,7 +235,7 @@ func TestUpdateObject_FilamentSetResultErr(t *testing.T) {
 	idxStorageMock.SetIndexMock.Return(nil)
 
 	filaments := executor.NewFilamentModifierMock(t)
-	filaments.SetResultMock.Return(errors.New("something strange from filament.SetResult"))
+	filaments.SetResultMock.Return(nil, errors.New("something strange from filament.SetResult"))
 
 	p := proc.NewUpdateObject(
 		payload.Meta{},
@@ -274,7 +282,7 @@ func TestUpdateObject_Proceed(t *testing.T) {
 	idxStorageMock.SetIndexMock.Return(nil)
 
 	filaments := executor.NewFilamentModifierMock(t)
-	filaments.SetResultMock.Return(nil)
+	filaments.SetResultMock.Return(nil, nil)
 
 	sender := bus.NewSenderMock(t)
 	sender.ReplyMock.Return()
@@ -293,6 +301,60 @@ func TestUpdateObject_Proceed(t *testing.T) {
 		recordsMock,
 		idxStorageMock,
 		filaments,
+		sender,
+	)
+
+	err := p.Proceed(ctx)
+	require.NoError(t, err)
+}
+
+func TestUpdateObject_ObjectIsDeactivated(t *testing.T) {
+	t.Parallel()
+
+	ctx := flow.TestContextWithPulse(
+		inslogger.TestContext(t),
+		insolar.GenesisPulse.PulseNumber+10,
+	)
+
+	writeAccessor := hot.NewWriteAccessorMock(t)
+	writeAccessor.BeginMock.Return(func() {}, nil)
+
+	idxLockMock := object.NewIndexLockerMock(t)
+	idxLockMock.LockMock.Return()
+	idxLockMock.UnlockMock.Return()
+
+	idxStorageMock := object.NewIndexStorageMock(t)
+	idxStorageMock.ForIDMock.Return(record.Index{
+		Lifeline: record.Lifeline{
+			StateID: record.StateDeactivation,
+		},
+	}, nil)
+	idxStorageMock.SetIndexMock.Return(nil)
+
+	sender := bus.NewSenderMock(t)
+	sender.ReplyFunc = func(_ context.Context, _ payload.Meta, inMsg *message.Message) {
+		resp, err := payload.Unmarshal(inMsg.Payload)
+		require.NoError(t, err)
+
+		res, ok := resp.(*payload.Error)
+		require.True(t, ok)
+		require.Equal(t, payload.CodeDeactivated, int(res.Code))
+	}
+
+	p := proc.NewUpdateObject(
+		payload.Meta{},
+		record.Amend{},
+		gen.ID(),
+		record.Result{},
+		gen.ID(),
+		gen.JetID(),
+	)
+	p.Dep(
+		writeAccessor,
+		idxLockMock,
+		nil,
+		idxStorageMock,
+		nil,
 		sender,
 	)
 
