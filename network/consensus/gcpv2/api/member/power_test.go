@@ -179,8 +179,7 @@ func TestIsAllowed(t *testing.T) {
 
 	require.True(t, PowerSet([...]Power{10, 0, 30, 40}).IsAllowed(40))
 
-	// TODO: BUG
-	// require.True(t, PowerSet([...]Power{0, 20, 30, 40}).IsAllowed(1))
+	require.True(t, PowerSet([...]Power{0, 20, 30, 40}).IsAllowed(1))
 }
 
 func TestIsEmpty(t *testing.T) {

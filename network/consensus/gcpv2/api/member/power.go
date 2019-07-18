@@ -208,8 +208,11 @@ Always true for p=0. Requires normalized ops.
 		// [min, 0, p2, max]
 		return v[3] == p || v[2] >= p
 	}
-	// [min, p1, p2, max]
-	return false
+
+	// [min, p1, p2, max] - was tested at entry
+	// [0, p1, p2, max]
+
+	return v[0] == 0 && v[1] > p
 }
 
 /*
