@@ -277,7 +277,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		lthSyncer := replication.NewReplicatorDefault(
 			jetCalculator,
 			lightCleaner,
-			Bus,
+			WmBus,
 			Pulses,
 			drops,
 			records,
