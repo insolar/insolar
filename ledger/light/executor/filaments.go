@@ -156,7 +156,7 @@ func (m *FilamentModifierDefault) notifyDetached(ctx context.Context, pendingReq
 	}
 
 	_, isOutgoing := record.Unwrap(closedReq.Record.Virtual).(*record.OutgoingRequest)
-	if !isOutgoing {
+	if isOutgoing {
 		return nil
 	}
 

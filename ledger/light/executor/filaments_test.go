@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
@@ -294,13 +295,15 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 		records    object.RecordStorage
 		calculator *executor.FilamentCalculatorMock
 		manager    *executor.FilamentModifierDefault
+		sender     *bus.SenderMock
 	)
 	resetComponents := func() {
 		pcs = testutils.NewPlatformCryptographyScheme()
 		indexes = object.NewIndexStorageMemory()
 		records = object.NewRecordMemory()
 		calculator = executor.NewFilamentCalculatorMock(mc)
-		manager = executor.NewFilamentModifier(indexes, records, pcs, calculator, nil, nil)
+		sender = bus.NewSenderMock(mc)
+		manager = executor.NewFilamentModifier(indexes, records, pcs, calculator, nil, sender)
 	}
 
 	validResult := record.Result{Object: gen.ID()}
@@ -417,6 +420,84 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 		require.Equal(t, record.Material{Virtual: &virtual, JetID: jetID}, rec)
 
 		mc.Finish()
+	})
+
+	resetComponents()
+	t.Run("notification about outgoing", func(t *testing.T) {
+		reqID := gen.ID()
+		outReqID := gen.ID()
+		validResult := record.Result{Object: gen.ID(), Request: *insolar.NewReference(reqID)}
+
+		resultID := gen.ID()
+		resultID.SetPulse(insolar.FirstPulseNumber + 2)
+		latestPendingID := gen.ID()
+		latestPendingID.SetPulse(insolar.FirstPulseNumber + 1)
+		jetID := gen.JetID()
+
+		expectedFilamentRecord := record.PendingFilament{
+			RecordID:       resultID,
+			PreviousRecord: &latestPendingID,
+		}
+		virtual := record.Wrap(expectedFilamentRecord)
+		hash := record.HashVirtual(pcs.ReferenceHasher(), virtual)
+		expectedFilamentRecordID := *insolar.NewID(resultID.Pulse(), hash)
+
+		calculator.PendingRequestsFunc = func(_ context.Context, pn insolar.PulseNumber, id insolar.ID) ([]record.CompositeFilamentRecord, error) {
+			require.Equal(t, resultID.Pulse(), pn)
+			require.Equal(t, validResult.Object, id)
+
+			// return []record.CompositeFilamentRecord{{RecordID: expectedFilamentRecordID}}, nil
+			req := record.OutgoingRequest{
+				ReturnMode: record.ReturnSaga,
+				Reason:     *insolar.NewReference(reqID),
+			}
+			reqVirt := record.Wrap(req)
+			return []record.CompositeFilamentRecord{{RecordID: outReqID, Record: record.Material{Virtual: &reqVirt}}}, nil
+		}
+		calculator.ResultDuplicateFunc = func(_ context.Context, inPN insolar.PulseNumber, inObjID insolar.ID, inResID insolar.ID, inRes record.Result) (*record.CompositeFilamentRecord, error) {
+			require.Equal(t, inPN, resultID.Pulse())
+			require.Equal(t, validResult.Object, inObjID)
+			require.Equal(t, resultID, inResID)
+			return nil, nil
+		}
+		calculator.FindRequestFunc = func(_ context.Context, startFrom insolar.ID, objID insolar.ID, reqID insolar.ID) (r record.CompositeFilamentRecord, r1 error) {
+			require.Equal(t, validResult.Object, objID)
+			require.Equal(t, *validResult.Request.Record(), reqID)
+			require.Equal(t, expectedFilamentRecordID, startFrom)
+
+			req := record.IncomingRequest{}
+			reqVirt := record.Wrap(req)
+			return record.CompositeFilamentRecord{RecordID: reqID, Record: record.Material{Virtual: &reqVirt}}, nil
+		}
+
+		sender.SendRoleFunc = func(_ context.Context, msg *message.Message, role insolar.DynamicRole, objRef insolar.Reference) (r <-chan *message.Message, r1 func()) {
+			require.Equal(t, insolar.DynamicRoleVirtualExecutor, role)
+			require.Equal(t, validResult.Object, *objRef.Record())
+
+			notification := payload.SagaCallAcceptNotification{}
+			err := notification.Unmarshal(msg.Payload)
+			require.NoError(t, err)
+
+			require.Equal(t, validResult.Object, notification.ObjectID)
+			require.Equal(t, outReqID, notification.OutgoingReqID)
+
+			return nil, func() {}
+		}
+
+		latestPendingPulse := latestPendingID.Pulse()
+		err := indexes.SetIndex(ctx, resultID.Pulse(), record.Index{
+			ObjID: validResult.Object,
+			Lifeline: record.Lifeline{
+				PendingPointer:      &latestPendingID,
+				EarliestOpenRequest: &latestPendingPulse,
+			},
+		})
+		require.NoError(t, err)
+
+		_, err = manager.SetResult(ctx, resultID, jetID, validResult)
+		assert.NoError(t, err)
+
+		mc.Wait(1 * time.Minute)
 	})
 
 	resetComponents()
