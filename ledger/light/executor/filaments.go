@@ -357,6 +357,10 @@ func (m *FilamentModifierDefault) SetResult(ctx context.Context, resultID insola
 	if len(pending) > 0 {
 		calculatedEarliest := pending[0].RecordID.Pulse()
 		idx.Lifeline.EarliestOpenRequest = &calculatedEarliest
+		err := m.notifyDetached(ctx, pending, result)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to check detaches")
+		}
 	} else {
 		idx.Lifeline.EarliestOpenRequest = nil
 	}
