@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 )
 
 // Context of one contract execution
@@ -56,6 +57,7 @@ type stateStorage struct {
 	messageBus       insolar.MessageBus
 	jetCoordinator   jet.Coordinator
 	pulseAccessor    pulse.Accessor
+	artifactsManager artifacts.Client
 
 	state map[insolar.Reference]*ObjectState // if object exists, we are validating or executing it right now
 }
@@ -88,6 +90,8 @@ func NewStateStorage(
 	messageBus insolar.MessageBus,
 	jetCoordinator jet.Coordinator,
 	pulseAccessor pulse.Accessor,
+	artifactsManager artifacts.Client,
+
 ) StateStorage {
 	ss := &stateStorage{
 		state: make(map[insolar.Reference]*ObjectState),
@@ -97,6 +101,7 @@ func NewStateStorage(
 		messageBus:       messageBus,
 		jetCoordinator:   jetCoordinator,
 		pulseAccessor:    pulseAccessor,
+		artifactsManager: artifactsManager,
 	}
 	return ss
 }
@@ -115,6 +120,7 @@ func (ss *stateStorage) UpsertExecutionState(ref insolar.Reference) *ExecutionBr
 			ss.messageBus,
 			ss.jetCoordinator,
 			ss.pulseAccessor,
+			ss.artifactsManager,
 		)
 	}
 	return os.ExecutionBroker

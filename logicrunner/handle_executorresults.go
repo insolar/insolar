@@ -75,9 +75,8 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 		}
 	}
 
-	// set false to true is good, set true to false may be wrong, better make unnecessary call
-	if !es.LedgerHasMoreRequests {
-		es.LedgerHasMoreRequests = p.msg.LedgerHasMoreRequests
+	if p.msg.LedgerHasMoreRequests {
+		broker.MoreRequestsOnLedger(ctx)
 	}
 
 	// prepare Queue

@@ -49,12 +49,14 @@ func TestSetRequest_Proceed(t *testing.T) {
 		writeAccessor *hot.WriteAccessorMock
 		sender        *bus.SenderMock
 		filaments     *executor.FilamentModifierMock
+		idxStorage    *object.IndexStorageMock
 	)
 
 	resetComponents := func() {
 		writeAccessor = hot.NewWriteAccessorMock(mc)
 		sender = bus.NewSenderMock(mc)
 		filaments = executor.NewFilamentModifierMock(t)
+		idxStorage = object.NewIndexStorageMock(t)
 	}
 
 	ref := gen.Reference()
@@ -83,12 +85,18 @@ func TestSetRequest_Proceed(t *testing.T) {
 
 	resetComponents()
 	t.Run("happy basic", func(t *testing.T) {
+		idxStorage.ForIDMock.Return(record.Index{
+			Lifeline: record.Lifeline{
+				StateID: record.StateActivation,
+			},
+		}, nil)
+
 		writeAccessor.BeginMock.Return(func() {}, nil)
 		sender.ReplyMock.Return()
 		filaments.SetRequestMock.Return(nil, nil, nil)
 
 		p := proc.NewSetRequest(msg, &request, id, jetID)
-		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker())
+		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker(), idxStorage)
 
 		err = p.Proceed(ctx)
 		require.NoError(t, err)
@@ -98,6 +106,12 @@ func TestSetRequest_Proceed(t *testing.T) {
 
 	resetComponents()
 	t.Run("duplicate returns correct id", func(t *testing.T) {
+		idxStorage.ForIDMock.Return(record.Index{
+			Lifeline: record.Lifeline{
+				StateID: record.StateActivation,
+			},
+		}, nil)
+
 		writeAccessor.BeginMock.Return(func() {}, nil)
 		reqID := gen.ID()
 		resID := gen.ID()
@@ -116,11 +130,65 @@ func TestSetRequest_Proceed(t *testing.T) {
 		}
 
 		p := proc.NewSetRequest(msg, &request, id, jetID)
-		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker())
+		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker(), idxStorage)
 
 		err = p.Proceed(ctx)
 		require.NoError(t, err)
 
 		mc.Finish()
 	})
+}
+
+func TestDeactivateObject_ObjectIsDeactivated(t *testing.T) {
+	t.Parallel()
+
+	ctx := flow.TestContextWithPulse(
+		inslogger.TestContext(t),
+		insolar.GenesisPulse.PulseNumber+10,
+	)
+
+	writeAccessor := hot.NewWriteAccessorMock(t)
+	writeAccessor.BeginMock.Return(func() {}, nil)
+
+	idxLockMock := object.NewIndexLockerMock(t)
+	idxLockMock.LockMock.Return()
+	idxLockMock.UnlockMock.Return()
+
+	idxStorageMock := object.NewIndexStorageMock(t)
+	idxStorageMock.ForIDMock.Return(record.Index{
+		Lifeline: record.Lifeline{
+			StateID: record.StateDeactivation,
+		},
+	}, nil)
+	idxStorageMock.SetIndexMock.Return(nil)
+
+	sender := bus.NewSenderMock(t)
+	sender.ReplyFunc = func(_ context.Context, _ payload.Meta, inMsg *message.Message) {
+		resp, err := payload.Unmarshal(inMsg.Payload)
+		require.NoError(t, err)
+
+		res, ok := resp.(*payload.Error)
+		require.True(t, ok)
+		require.Equal(t, payload.CodeDeactivated, int(res.Code))
+	}
+
+	p := proc.NewDeactivateObject(
+		payload.Meta{},
+		record.Deactivate{},
+		gen.ID(),
+		record.Result{},
+		gen.ID(),
+		gen.JetID(),
+	)
+	p.Dep(
+		writeAccessor,
+		idxLockMock,
+		nil,
+		idxStorageMock,
+		nil,
+		sender,
+	)
+
+	err := p.Proceed(ctx)
+	require.NoError(t, err)
 }

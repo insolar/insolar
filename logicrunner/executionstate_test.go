@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -60,11 +61,12 @@ func newExecutionBroker(
 	mb := testutils.NewMessageBusMock(t)
 	jc := jet.NewCoordinatorMock(t)
 	ps := pulse.NewAccessorMock(t)
+	am := artifacts.NewClientMock(t)
 	pm := &publisherMock{}
 
 	lr := LogicRunner{
 		RequestsExecutor: NewRequestsExecutorMock(t),
-		StateStorage:     NewStateStorage(pm, re, mb, jc, ps),
+		StateStorage:     NewStateStorage(pm, re, mb, jc, ps, am),
 	}
 
 	objectRef := gen.Reference()

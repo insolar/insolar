@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package handler
+package proc
 
 import (
 	"go.opencensus.io/stats"
