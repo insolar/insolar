@@ -48,56 +48,81 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package phasebundle
+package consensus
 
 import (
-	"context"
+	"sync"
 
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/adapters"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 )
 
-func NewPhase01PrepController(s PulseSelectionStrategy) *Phase01PrepController {
-	return &Phase01PrepController{pulseStrategy: s}
+type Controller interface {
+	Abort()
+
+	GetActivePowerLimit() (member.Power, insolar.PulseNumber)
+
+	AddFinishedNotifier(typ string) <-chan insolar.PulseNumber
+	RemoveFinishedNotifier(typ string)
 }
 
-var _ core.PrepPhaseController = &Phase01PrepController{}
+type controller struct {
+	consensusControlFeeder *adapters.ConsensusControlFeeder
+	consensusController    api.ConsensusController
 
-type Phase01PrepController struct {
-	core.PrepPhaseControllerTemplate
-	core.HostPacketDispatcherTemplate
-
-	realm         *core.PrepRealm
-	pulseStrategy PulseSelectionStrategy
+	mu        *sync.RWMutex
+	notifiers map[string]chan insolar.PulseNumber
 }
 
-func (c *Phase01PrepController) CreatePacketDispatcher(pt phases.PacketType, realm *core.PrepRealm) core.PacketDispatcher {
-	c.realm = realm
-	return c
+func newController(consensusControlFeeder *adapters.ConsensusControlFeeder, consensusController api.ConsensusController) *controller {
+	controller := &controller{
+		consensusControlFeeder: consensusControlFeeder,
+		consensusController:    consensusController,
+
+		mu:        &sync.RWMutex{},
+		notifiers: make(map[string]chan insolar.PulseNumber),
+	}
+
+	consensusControlFeeder.SetOnFinished(controller.onFinished)
+
+	return controller
 }
 
-func (c *Phase01PrepController) GetPacketType() []phases.PacketType {
-	return []phases.PacketType{phases.PacketPhase0, phases.PacketPhase1}
+func (c *controller) Abort() {
+	c.consensusController.Abort()
 }
 
-func (c *Phase01PrepController) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
-	from endpoints.Inbound, flags core.PacketVerifyFlags) error {
+func (c *controller) GetActivePowerLimit() (member.Power, insolar.PulseNumber) {
+	pw, pul := c.consensusController.GetActivePowerLimit()
+	return pw, insolar.PulseNumber(pul)
+}
 
-	// TODO check ranks?
+func (c *controller) AddFinishedNotifier(typ string) <-chan insolar.PulseNumber {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	switch packet.GetPacketType() {
-	case phases.PacketPhase0:
-		p0 := packet.GetMemberPacket().AsPhase0Packet()
-		return c.pulseStrategy.HandlePrepPulsarPacket(ctx, p0.GetEmbeddedPulsePacket(), from, c.realm, false)
-	case phases.PacketPhase1:
-		p1 := packet.GetMemberPacket().AsPhase1Packet()
-		if !p1.HasPulseData() {
-			return nil
-		}
-		return c.pulseStrategy.HandlePrepPulsarPacket(ctx, p1.GetEmbeddedPulsePacket(), from, c.realm, false)
-	default:
-		panic("illegal value")
+	n := make(chan insolar.PulseNumber, 1)
+	c.notifiers[typ] = n
+
+	return n
+}
+
+func (c *controller) RemoveFinishedNotifier(typ string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	close(c.notifiers[typ])
+	delete(c.notifiers, typ)
+}
+
+func (c *controller) onFinished(pulse pulse.Number) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	for _, n := range c.notifiers {
+		n <- insolar.PulseNumber(pulse)
 	}
 }

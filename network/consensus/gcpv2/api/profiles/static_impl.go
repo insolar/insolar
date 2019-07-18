@@ -56,13 +56,13 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
+	"sync"
 	"time"
 )
 
-func NewStaticProfileByBrief(v BriefCandidateProfile, pks cryptkit.PublicKeyStore) StaticProfile {
-	return &NodeStaticProfile{
-		endpoints:         []endpoints.Outbound{v.GetDefaultEndpoint()},
+func newStaticProfile(v BriefCandidateProfile, pks cryptkit.PublicKeyStore, endpoints []endpoints.Outbound) FixedStaticProfile {
+	return FixedStaticProfile{
+		endpoints:         endpoints,
 		nodeID:            v.GetStaticNodeID(),
 		primaryRole:       v.GetPrimaryRole(),
 		specialRoles:      v.GetSpecialRoles(),
@@ -74,29 +74,18 @@ func NewStaticProfileByBrief(v BriefCandidateProfile, pks cryptkit.PublicKeyStor
 	}
 }
 
-func NewStaticProfileByFull(v CandidateProfile, pks cryptkit.PublicKeyStore) StaticProfile {
-
-	extraEndpoints := v.GetExtraEndpoints()
-	return &NodeStaticProfile{
-		endpoints:         append(append(make([]endpoints.Outbound, len(extraEndpoints)+1), v.GetDefaultEndpoint()), extraEndpoints...),
-		nodeID:            v.GetStaticNodeID(),
-		primaryRole:       v.GetPrimaryRole(),
-		specialRoles:      v.GetSpecialRoles(),
-		pk:                v.GetNodePublicKey(),
-		pks:               pks,
-		startPower:        v.GetStartPower(),
-		announceSignature: v.GetJoinerSignature(),
-		isFull:            true,
-		powerSet:          v.GetPowerLevels(),
-		nodeRef:           v.GetReference(),
-		issuedAtPulse:     v.GetIssuedAtPulse(),
-		issuedAtTime:      v.GetIssuedAtTime(),
-		issuerID:          v.GetIssuerID(),
-		issuerSignature:   v.GetIssuerSignature(),
-	}
+func NewStaticProfileByBrief(v BriefCandidateProfile, pks cryptkit.PublicKeyStore) StaticProfile {
+	r := newStaticProfile(v, pks, []endpoints.Outbound{v.GetDefaultEndpoint()})
+	return &r
 }
 
-type NodeStaticProfile struct {
+func NewStaticProfileByFull(v CandidateProfile, pks cryptkit.PublicKeyStore) StaticProfile {
+	r := newStaticProfile(v, pks, nil)
+	r.setFull(v)
+	return &r
+}
+
+type FixedStaticProfile struct {
 	endpoints         []endpoints.Outbound
 	nodeID            insolar.ShortNodeID
 	primaryRole       member.PrimaryRole
@@ -116,66 +105,62 @@ type NodeStaticProfile struct {
 	issuerSignature cryptkit.SignatureHolder
 }
 
-func (p *NodeStaticProfile) ensureFull() {
+func (p *FixedStaticProfile) ensureFull() {
 	if p.isFull {
 		return
 	}
 	panic("illegal state")
 }
 
-func (p *NodeStaticProfile) GetIssuedAtPulse() pulse.Number {
+func (p *FixedStaticProfile) GetPowerLevels() member.PowerSet {
+	p.ensureFull()
+	return p.powerSet
+}
+
+func (p *FixedStaticProfile) GetIssuedAtPulse() pulse.Number {
 	p.ensureFull()
 	return p.issuedAtPulse
 }
 
-func (p *NodeStaticProfile) GetIssuedAtTime() time.Time {
+func (p *FixedStaticProfile) GetIssuedAtTime() time.Time {
 	p.ensureFull()
 	return p.issuedAtTime
 }
 
-func (p *NodeStaticProfile) GetIssuerID() insolar.ShortNodeID {
+func (p *FixedStaticProfile) GetIssuerID() insolar.ShortNodeID {
 	p.ensureFull()
 	return p.issuerID
 }
 
-func (p *NodeStaticProfile) GetIssuerSignature() cryptkit.SignatureHolder {
+func (p *FixedStaticProfile) GetIssuerSignature() cryptkit.SignatureHolder {
 	p.ensureFull()
 	return p.issuerSignature
 }
 
-func (p *NodeStaticProfile) GetReference() insolar.Reference {
+func (p *FixedStaticProfile) GetReference() insolar.Reference {
 	p.ensureFull()
 	return p.nodeRef
 }
 
-func (p *NodeStaticProfile) IsAllowedPower(pw member.Power) bool {
+func (p *FixedStaticProfile) IsAllowedPower(pw member.Power) bool {
 	p.ensureFull()
 	return p.powerSet.IsAllowed(pw)
 }
 
-func (p *NodeStaticProfile) GetIntroNodeID() insolar.ShortNodeID {
+func (p *FixedStaticProfile) GetIntroducedNodeID() insolar.ShortNodeID {
 	p.ensureFull()
 	return p.nodeID
 }
 
-func (p *NodeStaticProfile) ConvertPowerRequest(request power.Request) member.Power {
-	p.ensureFull()
-	if ok, cl := request.AsCapacityLevel(); ok {
-		return p.powerSet.ForLevel(cl)
-	}
-	_, pw := request.AsMemberPower()
-	return p.powerSet.FindNearestValid(pw)
-}
-
-func (p *NodeStaticProfile) GetDefaultEndpoint() endpoints.Outbound {
+func (p *FixedStaticProfile) GetDefaultEndpoint() endpoints.Outbound {
 	return p.endpoints[0]
 }
 
-func (p *NodeStaticProfile) GetPublicKeyStore() cryptkit.PublicKeyStore {
+func (p *FixedStaticProfile) GetPublicKeyStore() cryptkit.PublicKeyStore {
 	return p.pks
 }
 
-func (p *NodeStaticProfile) IsAcceptableHost(from endpoints.Inbound) bool {
+func (p *FixedStaticProfile) IsAcceptableHost(from endpoints.Inbound) bool {
 	for _, ep := range p.endpoints {
 		if ep.CanAccept(from) {
 			return true
@@ -184,33 +169,86 @@ func (p *NodeStaticProfile) IsAcceptableHost(from endpoints.Inbound) bool {
 	return false
 }
 
-func (p *NodeStaticProfile) GetStaticNodeID() insolar.ShortNodeID {
+func (p *FixedStaticProfile) GetStaticNodeID() insolar.ShortNodeID {
 	return p.nodeID
 }
 
-func (p *NodeStaticProfile) GetPrimaryRole() member.PrimaryRole {
+func (p *FixedStaticProfile) GetPrimaryRole() member.PrimaryRole {
 	return p.primaryRole
 }
 
-func (p *NodeStaticProfile) GetSpecialRoles() member.SpecialRole {
+func (p *FixedStaticProfile) GetSpecialRoles() member.SpecialRole {
 	return p.specialRoles
 }
 
-func (p *NodeStaticProfile) GetNodePublicKey() cryptkit.SignatureKeyHolder {
+func (p *FixedStaticProfile) GetNodePublicKey() cryptkit.SignatureKeyHolder {
 	return p.pk
 }
 
-func (p *NodeStaticProfile) GetStartPower() member.Power {
+func (p *FixedStaticProfile) GetStartPower() member.Power {
 	return p.startPower
 }
 
-func (p *NodeStaticProfile) GetAnnouncementSignature() cryptkit.SignatureHolder {
+func (p *FixedStaticProfile) GetJoinerSignature() cryptkit.SignatureHolder {
 	return p.announceSignature
 }
 
-func (p *NodeStaticProfile) GetIntroduction() NodeIntroduction {
+func (p *FixedStaticProfile) GetExtension() StaticProfileExtension {
 	if p.isFull {
 		return p
 	}
 	return nil
+}
+
+func (p *FixedStaticProfile) setFull(v CandidateProfile) {
+
+	p.powerSet = v.GetPowerLevels()
+	p.nodeRef = v.GetReference()
+	p.issuedAtPulse = v.GetIssuedAtPulse()
+	p.issuedAtTime = v.GetIssuedAtTime()
+	p.issuerID = v.GetIssuerID()
+	p.issuerSignature = v.GetIssuerSignature()
+
+	extraEndpoints := v.GetExtraEndpoints()
+	p.endpoints = append(append(make([]endpoints.Outbound, 0, len(extraEndpoints)+1),
+		v.GetDefaultEndpoint()), extraEndpoints...)
+
+	p.isFull = true
+}
+
+func NewUpgradableProfileByBrief(v BriefCandidateProfile, pks cryptkit.PublicKeyStore) StaticProfile {
+	return &UpgradableStaticProfile{FixedStaticProfile: newStaticProfile(v, pks, []endpoints.Outbound{v.GetDefaultEndpoint()})}
+}
+
+var _ Upgradable = &UpgradableStaticProfile{}
+
+type UpgradableStaticProfile struct {
+	mutex sync.RWMutex
+	FixedStaticProfile
+}
+
+func (p *UpgradableStaticProfile) GetExtension() StaticProfileExtension {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
+	if p.isFull {
+		return p
+	}
+	return nil
+}
+
+func (p *UpgradableStaticProfile) UpgradeProfile(v CandidateProfile) bool {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	if p.isFull {
+		return false
+	}
+
+	if !EqualStaticProfiles(p, v) {
+		return false
+	}
+
+	p.setFull(v)
+	return true
 }

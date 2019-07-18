@@ -74,23 +74,24 @@ func NewNodeAppearanceAsSelf(np profiles.LocalNode, callback *nodeContext) *Node
 	r := &NodeAppearance{
 		trust: member.SelfTrust,
 	}
-	r.init(np, callback, 0, 0)
-	r.limiter = phases.NewLocalPacketLimiter()
+	r.init(np, callback, 0, phases.NewLocalPacketLimiter())
 	return r
 }
 
 func (c *NodeAppearance) init(np profiles.ActiveNode, callback NodeContextHolder, baselineWeight uint32,
-	phase2ExtLimit uint8) {
+	limiter phases.PacketLimiter) {
+
 	if np == nil {
 		panic("node profile is nil")
 	}
-	c.limiter = phases.NewPacketLimiter(phase2ExtLimit)
+	c.limiter = limiter
 	c.profile = np
 	c.callback = callback
 	c.neighbourWeight = baselineWeight
 }
 
 var _ MemberPacketReceiver = &NodeAppearance{}
+var _ MemberPacketSender = &NodeAppearance{}
 
 type NodeAppearance struct {
 	mutex sync.Mutex
@@ -120,8 +121,26 @@ type NodeAppearance struct {
 	neighborReports uint8
 }
 
-func (c *NodeAppearance) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, pd PacketDispatcher) error {
-	return pd.DispatchMemberPacket(ctx, packet, c)
+func (c *NodeAppearance) GetStatic() profiles.StaticProfile {
+	return c.profile.GetStatic()
+}
+
+func (c *NodeAppearance) CanIntroduceJoiner() bool {
+	return c.profile.GetOpMode().CanIntroduceJoiner(c.profile.IsJoiner())
+}
+
+func (c *NodeAppearance) GetReportProfile() profiles.BaseNode {
+	return c.profile
+}
+
+func (c *NodeAppearance) GetRank(nodeCount int) member.Rank {
+	return profiles.ProfileAsRank(c.profile, nodeCount)
+}
+
+func (c *NodeAppearance) DispatchMemberPacket(ctx context.Context, packet transport.PacketParser,
+	from endpoints.Inbound, flags PacketVerifyFlags, pd PacketDispatcher) error {
+
+	return pd.DispatchMemberPacket(ctx, packet.GetMemberPacket(), c)
 }
 
 func (c *NodeAppearance) String() string {
@@ -176,8 +195,8 @@ func (c *NodeAppearance) GetProfile() profiles.ActiveNode {
 	return c.profile
 }
 
-func (c *NodeAppearance) VerifyPacketAuthenticity(packet transport.PacketParser, from endpoints.Inbound, strictFrom bool) error {
-	return VerifyPacketAuthenticityBy(packet, c.profile.GetStatic(), c.profile.GetSignatureVerifier(), from, strictFrom)
+func (c *NodeAppearance) VerifyPacketAuthenticity(ps cryptkit.SignedDigest, from endpoints.Inbound, strictFrom bool) error {
+	return VerifyPacketAuthenticityBy(ps, c.profile.GetStatic(), c.profile.GetSignatureVerifier(), from, strictFrom)
 }
 
 func (c *NodeAppearance) SetPacketReceived(pt phases.PacketType) bool {
@@ -301,16 +320,27 @@ func (c *NodeAppearance) _applyNodeMembership(ma profiles.MembershipAnnouncement
 	updVersion := c.callback.updatePopulationVersion()
 
 	if ma.IsLeaving {
-		c.requestedLeave = true
-		c.requestedLeaveReason = ma.LeaveReason
-	} else {
-		c.requestedJoinerID = ma.JoinerID
+		if c.IsJoiner() {
+			c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "joiner can't request leave"))
+		} else {
+			c.requestedLeave = true
+			c.requestedLeaveReason = ma.LeaveReason
+		}
+	} else if !ma.JoinerID.IsAbsent() {
+		switch {
+		case c.CanIntroduceJoiner():
+			c.requestedJoinerID = ma.JoinerID
+		case c.IsJoiner():
+			c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "joiner can't add a joiner"))
+		default:
+			c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "restricted/suspended nodes can't add a joiner"))
+		}
 	}
 
 	c.neighbourWeight ^= longbits.FoldUint64(ma.Membership.StateEvidence.GetNodeStateHash().FoldToUint64())
 	c.stateEvidence = ma.Membership.StateEvidence
 	c.announceSignature = ma.Membership.AnnounceSignature
-	c.requestedPower = ma.Membership.RequestedPower
+	c.requestedPower = c.profile.GetStatic().GetExtension().GetPowerLevels().FindNearestValid(ma.Membership.RequestedPower)
 
 	c.callback.onNodeStateAssigned(updVersion, c)
 
@@ -406,6 +436,11 @@ func (c *NodeAppearance) RegisterFraud(fraud misbehavior.FraudError) error {
 	return err
 }
 
+func (c *NodeAppearance) RegisterBlame(blame misbehavior.BlameError) {
+	// TODO
+	//inslogger.FromContext(ctx).Error(blame)
+}
+
 // MUST BE NO LOCK
 func (c *NodeAppearance) getMembership() profiles.MembershipProfile {
 	return profiles.NewMembershipProfileByNode(c.profile, c.stateEvidence, c.announceSignature, c.requestedPower)
@@ -471,7 +506,7 @@ func (c *NodeAppearance) GetRequestedState() NodeRequestedState {
 	if m.Mode.IsEvicted() {
 		panic("illegal state")
 	}
-	if m.Mode.IsRestricted() && !c.requestedJoinerID.IsAbsent() {
+	if !c.requestedJoinerID.IsAbsent() && !m.CanIntroduceJoiner() {
 		panic("illegal state")
 	}
 
@@ -500,9 +535,30 @@ func (c *NodeAppearance) getMembershipAnnouncement() profiles.MembershipAnnounce
 		return profiles.NewMembershipAnnouncementWithJoinerID(mb, c.requestedJoinerID)
 	}
 }
+
 func (c *NodeAppearance) GetRequestedAnnouncement() profiles.MembershipAnnouncement {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	return c.getMembershipAnnouncement()
+}
+
+func (c *NodeAppearance) ApplyNodeIntro(ctx context.Context, brief profiles.BriefCandidateProfile, full profiles.CandidateProfile,
+	announcerID, originID insolar.ShortNodeID) error {
+
+	matches, created := profiles.ApplyNodeIntro(c.profile.GetStatic(), brief, full)
+
+	if !matches {
+		return c.RegisterFraud(c.Frauds().NewInconsistentNeighbourAnnouncement(c.GetReportProfile()))
+	}
+	if created == nil {
+		//we didn't "caught the flag" so just leave
+		return nil
+	}
+
+	// here we should check/apply all related attributes
+	c.requestedPower = c.profile.GetStatic().GetExtension().GetPowerLevels().FindNearestValid(c.requestedPower)
+
+	c.callback.onDynamicNodeAdded(c.callback.updatePopulationVersion(), c, true)
+	return nil
 }

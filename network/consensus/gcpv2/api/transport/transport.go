@@ -73,11 +73,11 @@ type CryptographyFactory interface {
 }
 
 type PreparedPacketSender interface {
-	SendTo(ctx context.Context, target profiles.ActiveNode, sendOptions PacketSendOptions, sender PacketSender)
+	SendTo(ctx context.Context, target profiles.StaticProfile, sendOptions PacketSendOptions, sender PacketSender)
 
 	/* Allows to control parallelism. Can return nil to skip a target */
 	SendToMany(ctx context.Context, targetCount int, sender PacketSender,
-		filter func(ctx context.Context, targetIndex int) (profiles.ActiveNode, PacketSendOptions))
+		filter func(ctx context.Context, targetIndex int) (profiles.StaticProfile, PacketSendOptions))
 }
 
 type PacketBuilder interface {
@@ -102,7 +102,7 @@ type PacketBuilder interface {
 }
 
 type PacketSender interface {
-	SendPacketToTransport(ctx context.Context, t profiles.ActiveNode, sendOptions PacketSendOptions, payload interface{})
+	SendPacketToTransport(ctx context.Context, t profiles.StaticProfile, sendOptions PacketSendOptions, payload interface{})
 }
 
 type PacketSendOptions uint32

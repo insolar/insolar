@@ -32,7 +32,7 @@ type NodeIntroProfileMock struct {
 	GetDefaultEndpointPreCounter uint64
 	GetDefaultEndpointMock       mNodeIntroProfileMockGetDefaultEndpoint
 
-	GetIntroductionFunc       func() (r NodeIntroduction)
+	GetIntroductionFunc       func() (r StaticProfileExtension)
 	GetIntroductionCounter    uint64
 	GetIntroductionPreCounter uint64
 	GetIntroductionMock       mNodeIntroProfileMockGetIntroduction
@@ -115,7 +115,7 @@ type NodeIntroProfileMockGetAnnouncementSignatureResult struct {
 	r cryptkit.SignatureHolder
 }
 
-//Expect specifies that invocation of StaticProfile.GetAnnouncementSignature is expected from 1 to Infinity times
+//Expect specifies that invocation of StaticProfile.GetJoinerSignature is expected from 1 to Infinity times
 func (m *mNodeIntroProfileMockGetAnnouncementSignature) Expect() *mNodeIntroProfileMockGetAnnouncementSignature {
 	m.mock.GetAnnouncementSignatureFunc = nil
 	m.expectationSeries = nil
@@ -127,7 +127,7 @@ func (m *mNodeIntroProfileMockGetAnnouncementSignature) Expect() *mNodeIntroProf
 	return m
 }
 
-//Return specifies results of invocation of StaticProfile.GetAnnouncementSignature
+//Return specifies results of invocation of StaticProfile.GetJoinerSignature
 func (m *mNodeIntroProfileMockGetAnnouncementSignature) Return(r cryptkit.SignatureHolder) *NodeIntroProfileMock {
 	m.mock.GetAnnouncementSignatureFunc = nil
 	m.expectationSeries = nil
@@ -139,7 +139,7 @@ func (m *mNodeIntroProfileMockGetAnnouncementSignature) Return(r cryptkit.Signat
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of StaticProfile.GetAnnouncementSignature is expected once
+//ExpectOnce specifies that invocation of StaticProfile.GetJoinerSignature is expected once
 func (m *mNodeIntroProfileMockGetAnnouncementSignature) ExpectOnce() *NodeIntroProfileMockGetAnnouncementSignatureExpectation {
 	m.mock.GetAnnouncementSignatureFunc = nil
 	m.mainExpectation = nil
@@ -154,7 +154,7 @@ func (e *NodeIntroProfileMockGetAnnouncementSignatureExpectation) Return(r crypt
 	e.result = &NodeIntroProfileMockGetAnnouncementSignatureResult{r}
 }
 
-//Set uses given function f as a mock of StaticProfile.GetAnnouncementSignature method
+//Set uses given function f as a mock of StaticProfile.GetJoinerSignature method
 func (m *mNodeIntroProfileMockGetAnnouncementSignature) Set(f func() (r cryptkit.SignatureHolder)) *NodeIntroProfileMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -163,20 +163,20 @@ func (m *mNodeIntroProfileMockGetAnnouncementSignature) Set(f func() (r cryptkit
 	return m.mock
 }
 
-//GetAnnouncementSignature implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.StaticProfile interface
-func (m *NodeIntroProfileMock) GetAnnouncementSignature() (r cryptkit.SignatureHolder) {
+//GetJoinerSignature implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.StaticProfile interface
+func (m *NodeIntroProfileMock) GetJoinerSignature() (r cryptkit.SignatureHolder) {
 	counter := atomic.AddUint64(&m.GetAnnouncementSignaturePreCounter, 1)
 	defer atomic.AddUint64(&m.GetAnnouncementSignatureCounter, 1)
 
 	if len(m.GetAnnouncementSignatureMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.GetAnnouncementSignatureMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeIntroProfileMock.GetAnnouncementSignature.")
+			m.t.Fatalf("Unexpected call to NodeIntroProfileMock.GetJoinerSignature.")
 			return
 		}
 
 		result := m.GetAnnouncementSignatureMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the NodeIntroProfileMock.GetAnnouncementSignature")
+			m.t.Fatal("No results are set for the NodeIntroProfileMock.GetJoinerSignature")
 			return
 		}
 
@@ -189,7 +189,7 @@ func (m *NodeIntroProfileMock) GetAnnouncementSignature() (r cryptkit.SignatureH
 
 		result := m.GetAnnouncementSignatureMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the NodeIntroProfileMock.GetAnnouncementSignature")
+			m.t.Fatal("No results are set for the NodeIntroProfileMock.GetJoinerSignature")
 		}
 
 		r = result.r
@@ -198,7 +198,7 @@ func (m *NodeIntroProfileMock) GetAnnouncementSignature() (r cryptkit.SignatureH
 	}
 
 	if m.GetAnnouncementSignatureFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeIntroProfileMock.GetAnnouncementSignature.")
+		m.t.Fatalf("Unexpected call to NodeIntroProfileMock.GetJoinerSignature.")
 		return
 	}
 
@@ -210,7 +210,7 @@ func (m *NodeIntroProfileMock) GetAnnouncementSignatureMinimockCounter() uint64 
 	return atomic.LoadUint64(&m.GetAnnouncementSignatureCounter)
 }
 
-//GetAnnouncementSignatureMinimockPreCounter returns the value of NodeIntroProfileMock.GetAnnouncementSignature invocations
+//GetAnnouncementSignatureMinimockPreCounter returns the value of NodeIntroProfileMock.GetJoinerSignature invocations
 func (m *NodeIntroProfileMock) GetAnnouncementSignatureMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetAnnouncementSignaturePreCounter)
 }
@@ -380,10 +380,10 @@ type NodeIntroProfileMockGetIntroductionExpectation struct {
 }
 
 type NodeIntroProfileMockGetIntroductionResult struct {
-	r NodeIntroduction
+	r StaticProfileExtension
 }
 
-//Expect specifies that invocation of StaticProfile.GetIntroduction is expected from 1 to Infinity times
+//Expect specifies that invocation of StaticProfile.GetExtension is expected from 1 to Infinity times
 func (m *mNodeIntroProfileMockGetIntroduction) Expect() *mNodeIntroProfileMockGetIntroduction {
 	m.mock.GetIntroductionFunc = nil
 	m.expectationSeries = nil
@@ -395,8 +395,8 @@ func (m *mNodeIntroProfileMockGetIntroduction) Expect() *mNodeIntroProfileMockGe
 	return m
 }
 
-//Return specifies results of invocation of StaticProfile.GetIntroduction
-func (m *mNodeIntroProfileMockGetIntroduction) Return(r NodeIntroduction) *NodeIntroProfileMock {
+//Return specifies results of invocation of StaticProfile.GetExtension
+func (m *mNodeIntroProfileMockGetIntroduction) Return(r StaticProfileExtension) *NodeIntroProfileMock {
 	m.mock.GetIntroductionFunc = nil
 	m.expectationSeries = nil
 
@@ -407,7 +407,7 @@ func (m *mNodeIntroProfileMockGetIntroduction) Return(r NodeIntroduction) *NodeI
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of StaticProfile.GetIntroduction is expected once
+//ExpectOnce specifies that invocation of StaticProfile.GetExtension is expected once
 func (m *mNodeIntroProfileMockGetIntroduction) ExpectOnce() *NodeIntroProfileMockGetIntroductionExpectation {
 	m.mock.GetIntroductionFunc = nil
 	m.mainExpectation = nil
@@ -418,12 +418,12 @@ func (m *mNodeIntroProfileMockGetIntroduction) ExpectOnce() *NodeIntroProfileMoc
 	return expectation
 }
 
-func (e *NodeIntroProfileMockGetIntroductionExpectation) Return(r NodeIntroduction) {
+func (e *NodeIntroProfileMockGetIntroductionExpectation) Return(r StaticProfileExtension) {
 	e.result = &NodeIntroProfileMockGetIntroductionResult{r}
 }
 
-//Set uses given function f as a mock of StaticProfile.GetIntroduction method
-func (m *mNodeIntroProfileMockGetIntroduction) Set(f func() (r NodeIntroduction)) *NodeIntroProfileMock {
+//Set uses given function f as a mock of StaticProfile.GetExtension method
+func (m *mNodeIntroProfileMockGetIntroduction) Set(f func() (r StaticProfileExtension)) *NodeIntroProfileMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -431,20 +431,20 @@ func (m *mNodeIntroProfileMockGetIntroduction) Set(f func() (r NodeIntroduction)
 	return m.mock
 }
 
-//GetIntroduction implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.StaticProfile interface
-func (m *NodeIntroProfileMock) GetIntroduction() (r NodeIntroduction) {
+//GetExtension implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.StaticProfile interface
+func (m *NodeIntroProfileMock) GetExtension() (r StaticProfileExtension) {
 	counter := atomic.AddUint64(&m.GetIntroductionPreCounter, 1)
 	defer atomic.AddUint64(&m.GetIntroductionCounter, 1)
 
 	if len(m.GetIntroductionMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.GetIntroductionMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeIntroProfileMock.GetIntroduction.")
+			m.t.Fatalf("Unexpected call to NodeIntroProfileMock.GetExtension.")
 			return
 		}
 
 		result := m.GetIntroductionMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the NodeIntroProfileMock.GetIntroduction")
+			m.t.Fatal("No results are set for the NodeIntroProfileMock.GetExtension")
 			return
 		}
 
@@ -457,7 +457,7 @@ func (m *NodeIntroProfileMock) GetIntroduction() (r NodeIntroduction) {
 
 		result := m.GetIntroductionMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the NodeIntroProfileMock.GetIntroduction")
+			m.t.Fatal("No results are set for the NodeIntroProfileMock.GetExtension")
 		}
 
 		r = result.r
@@ -466,7 +466,7 @@ func (m *NodeIntroProfileMock) GetIntroduction() (r NodeIntroduction) {
 	}
 
 	if m.GetIntroductionFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeIntroProfileMock.GetIntroduction.")
+		m.t.Fatalf("Unexpected call to NodeIntroProfileMock.GetExtension.")
 		return
 	}
 
@@ -478,7 +478,7 @@ func (m *NodeIntroProfileMock) GetIntroductionMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetIntroductionCounter)
 }
 
-//GetIntroductionMinimockPreCounter returns the value of NodeIntroProfileMock.GetIntroduction invocations
+//GetIntroductionMinimockPreCounter returns the value of NodeIntroProfileMock.GetExtension invocations
 func (m *NodeIntroProfileMock) GetIntroductionMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetIntroductionPreCounter)
 }
@@ -1593,7 +1593,7 @@ func (m *NodeIntroProfileMock) IsAcceptableHostFinished() bool {
 func (m *NodeIntroProfileMock) ValidateCallCounters() {
 
 	if !m.GetAnnouncementSignatureFinished() {
-		m.t.Fatal("Expected call to NodeIntroProfileMock.GetAnnouncementSignature")
+		m.t.Fatal("Expected call to NodeIntroProfileMock.GetJoinerSignature")
 	}
 
 	if !m.GetDefaultEndpointFinished() {
@@ -1601,7 +1601,7 @@ func (m *NodeIntroProfileMock) ValidateCallCounters() {
 	}
 
 	if !m.GetIntroductionFinished() {
-		m.t.Fatal("Expected call to NodeIntroProfileMock.GetIntroduction")
+		m.t.Fatal("Expected call to NodeIntroProfileMock.GetExtension")
 	}
 
 	if !m.GetNodePublicKeyFinished() {
@@ -1654,7 +1654,7 @@ func (m *NodeIntroProfileMock) Finish() {
 func (m *NodeIntroProfileMock) MinimockFinish() {
 
 	if !m.GetAnnouncementSignatureFinished() {
-		m.t.Fatal("Expected call to NodeIntroProfileMock.GetAnnouncementSignature")
+		m.t.Fatal("Expected call to NodeIntroProfileMock.GetJoinerSignature")
 	}
 
 	if !m.GetDefaultEndpointFinished() {
@@ -1662,7 +1662,7 @@ func (m *NodeIntroProfileMock) MinimockFinish() {
 	}
 
 	if !m.GetIntroductionFinished() {
-		m.t.Fatal("Expected call to NodeIntroProfileMock.GetIntroduction")
+		m.t.Fatal("Expected call to NodeIntroProfileMock.GetExtension")
 	}
 
 	if !m.GetNodePublicKeyFinished() {
@@ -1731,7 +1731,7 @@ func (m *NodeIntroProfileMock) MinimockWait(timeout time.Duration) {
 		case <-timeoutCh:
 
 			if !m.GetAnnouncementSignatureFinished() {
-				m.t.Error("Expected call to NodeIntroProfileMock.GetAnnouncementSignature")
+				m.t.Error("Expected call to NodeIntroProfileMock.GetJoinerSignature")
 			}
 
 			if !m.GetDefaultEndpointFinished() {
@@ -1739,7 +1739,7 @@ func (m *NodeIntroProfileMock) MinimockWait(timeout time.Duration) {
 			}
 
 			if !m.GetIntroductionFinished() {
-				m.t.Error("Expected call to NodeIntroProfileMock.GetIntroduction")
+				m.t.Error("Expected call to NodeIntroProfileMock.GetExtension")
 			}
 
 			if !m.GetNodePublicKeyFinished() {

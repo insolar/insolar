@@ -93,21 +93,14 @@ func (v Rank) String() string {
 	return fmt.Sprintf("{%v %d/%d pw:%v}", v.GetMode(), v.GetIndex(), v.GetTotalCount(), v.GetPower())
 }
 
-func NewMembershipRank(mode OpMode, pw Power, idx Index, count uint16) Rank {
-	idx.Ensure()
-	//if idx.IsJoiner() {
-	//	if mode != 0 || pw != 0 {
-	//		panic("illegal value")
-	//	}
-	//	return JoinerRank
-	//}
-	if idx.AsUint16() >= count {
+func NewMembershipRank(mode OpMode, pw Power, idx Index, count Index) Rank {
+	if idx.Ensure() >= count {
 		panic("illegal value")
 	}
 
 	r := uint32(pw)
 	r |= idx.AsUint32() << 8
-	r |= Index(count).AsUint32() << 18
+	r |= count.AsUint32() << 18
 	r |= mode.AsUnit32() << 28
 	return Rank(r)
 }
@@ -132,6 +125,6 @@ type FullRank struct {
 	RolePower uint32
 }
 
-func (v FullRank) AsMembershipRank(totalCount uint16) Rank {
+func (v FullRank) AsMembershipRank(totalCount Index) Rank {
 	return NewMembershipRank(v.OpMode, v.Power, v.TotalIndex, totalCount)
 }

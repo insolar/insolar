@@ -75,8 +75,8 @@ func (p *EnsureIndex) process(ctx context.Context) error {
 	objectID := *p.object.Record()
 	logger := inslogger.FromContext(ctx)
 
-	p.Dep.IndexLocker.Lock(&objectID)
-	defer p.Dep.IndexLocker.Unlock(&objectID)
+	p.Dep.IndexLocker.Lock(objectID)
+	defer p.Dep.IndexLocker.Unlock(objectID)
 
 	idx, err := p.Dep.IndexAccessor.ForID(ctx, p.pn, objectID)
 	if err == nil {
@@ -176,8 +176,8 @@ func (p *EnsureIndexWM) Proceed(ctx context.Context) error {
 func (p *EnsureIndexWM) process(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 
-	p.Dep.IndexLocker.Lock(&p.object)
-	defer p.Dep.IndexLocker.Unlock(&p.object)
+	p.Dep.IndexLocker.Lock(p.object)
+	defer p.Dep.IndexLocker.Unlock(p.object)
 
 	idx, err := p.Dep.IndexAccessor.ForID(ctx, flow.Pulse(ctx), p.object)
 	if err == nil {

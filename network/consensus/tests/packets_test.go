@@ -230,7 +230,7 @@ func (r *basePacket) GetNodeID() insolar.ShortNodeID {
 }
 
 func (r *basePacket) GetNodeRank() member.Rank {
-	return member.NewMembershipRank(r.mp.Mode, r.mp.Power, r.mp.Index, r.nodeCount)
+	return member.NewMembershipRank(r.mp.Mode, r.mp.Power, r.mp.Index, member.AsIndexUint16(r.nodeCount))
 }
 
 func (r *basePacket) GetAnnouncementReader() transport.MembershipAnnouncementReader {
@@ -285,11 +285,13 @@ func (r *basePacket) AsPhase3Packet() transport.Phase3PacketReader {
 }
 
 func (r *basePacket) String() string {
-	leaving := ""
+	announcement := ""
 	if r.isLeaving {
-		leaving = fmt.Sprintf(" leave:%d", r.leaveReason)
+		announcement = fmt.Sprintf(" leave:%d", r.leaveReason)
+	} else if r.joiner != nil {
+		announcement = fmt.Sprintf(" join:%d", r.joiner.GetBriefIntroduction().GetStaticNodeID())
 	}
-	return fmt.Sprintf("s:%v t:%v%s", r.src, r.tgt, leaving)
+	return fmt.Sprintf("s:%v t:%v%s", r.src, r.tgt, announcement)
 }
 
 var _ transport.Phase0PacketReader = &EmuPhase0NetPacket{}

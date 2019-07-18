@@ -48,11 +48,13 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package phasebundle
+package ph01ctl
 
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/announce"
 	"time"
 
@@ -68,8 +70,8 @@ import (
 /*
 Does Phase0/Phase1/Phase1Rq processing
 */
-func NewPhase01Controller(packetPrepareOptions transport.PacketSendOptions) *Phase01Controller {
-	return &Phase01Controller{packetPrepareOptions: packetPrepareOptions}
+func NewPhase01Controller(packetPrepareOptions transport.PacketSendOptions, qJoiners <-chan core.MemberPacketSender) *Phase01Controller {
+	return &Phase01Controller{packetPrepareOptions: packetPrepareOptions, qJoiners: qJoiners}
 }
 
 func (p *packetPhase0Dispatcher) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, n *core.NodeAppearance) error {
@@ -77,8 +79,8 @@ func (p *packetPhase0Dispatcher) DispatchMemberPacket(ctx context.Context, packe
 	p0 := packet.AsPhase0Packet()
 	nr := p0.GetNodeRank()
 
-	if !profiles.MatchIntroAndRank(n.GetProfile(), p.ctl.R.GetNodeCount(), nr) {
-		return n.Frauds().NewMismatchedNeighbourRank(n.GetProfile())
+	if n.GetRank(p.ctl.R.GetNodeCount()) != nr {
+		return n.Frauds().NewMismatchedNeighbourRank(n.GetReportProfile())
 	}
 
 	pp := p0.GetEmbeddedPulsePacket()
@@ -88,7 +90,7 @@ func (p *packetPhase0Dispatcher) DispatchMemberPacket(ctx context.Context, packe
 func (c *packetPhase1Dispatcher) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, n *core.NodeAppearance) error {
 
 	p1 := packet.AsPhase1Packet()
-	_, err := announce.ApplyMemberAnnouncement(ctx, p1, nil, n, c.ctl.R)
+	_, _, err := announce.ApplyMemberAnnouncement(ctx, p1, nil, true, n, c.ctl.R)
 	if err != nil {
 		return err
 	}
@@ -100,17 +102,31 @@ func (c *packetPhase1Dispatcher) DispatchMemberPacket(ctx context.Context, packe
 	return err
 }
 
+func (c *packetPhase1Dispatcher) DispatchUnknownMemberPacket(ctx context.Context, memberID insolar.ShortNodeID,
+	packet transport.MemberPacketReader, from endpoints.Inbound) (bool, error) {
+
+	p1 := packet.AsPhase1Packet()
+
+	if p1.HasPulseData() {
+		return false, fmt.Errorf("pulse data is not expected") // TODO blame
+	}
+
+	// TODO check endpoint and PK
+
+	return announce.ApplyUnknownJoinerAnnouncement(ctx, memberID, p1, nil, true, c.ctl.R)
+}
+
 func (c *packetPhase1RqDispatcher) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, n *core.NodeAppearance) error {
 
 	p1 := packet.AsPhase1Packet()
 
-	_, err := announce.ApplyMemberAnnouncement(ctx, p1, nil, n, c.ctl.R)
+	_, _, err := announce.ApplyMemberAnnouncement(ctx, p1, nil, false, n, c.ctl.R)
 	if err != nil {
 		return err
 	}
 
 	if p1.HasPulseData() {
-		return fmt.Errorf("pulse data is not expected")
+		return fmt.Errorf("pulse data is not expected") // TODO blame
 	}
 
 	if !c.ctl.R.GetSelf().IsNshRequired() {
@@ -139,6 +155,7 @@ var _ core.PhaseController = &Phase01Controller{}
 type Phase01Controller struct {
 	core.PhaseControllerTemplate
 	packetPrepareOptions transport.PacketSendOptions
+	qJoiners             <-chan core.MemberPacketSender
 	R                    *core.FullRealm
 }
 
@@ -164,7 +181,7 @@ func (c *Phase01Controller) sendReqReply(ctx context.Context, target *core.NodeA
 	p1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
 		c.R.GetOriginalPulse(), nil, transport.SendWithoutPulseData|c.packetPrepareOptions)
 
-	p1.SendTo(ctx, target.GetProfile(), 0, c.R.GetPacketSender())
+	p1.SendTo(ctx, target.GetProfile().GetStatic(), 0, c.R.GetPacketSender())
 	target.SetPacketSent(phases.PacketPhase1)
 }
 
@@ -180,7 +197,8 @@ func (c *Phase01Controller) workerPhase01(ctx context.Context) {
 	}
 	c.R.PrepareAndSetLocalNodeStateHashEvidence(nsh)
 
-	c.workerSendPhase1(ctx, startIndex)
+	go c.workerSendPhase1(ctx, startIndex)
+	c.workerSendPhase1ToJoiners(ctx)
 }
 
 func (c *Phase01Controller) workerSendPhase0(ctx context.Context) (proofs.NodeStateHash, int) {
@@ -212,7 +230,7 @@ func (c *Phase01Controller) workerSendPhase0(ctx context.Context) (proofs.NodeSt
 
 		// DONT use SendToMany here, as this is "gossip" style and parallelism is provided by multiplicity of nodes
 		// Instead we have a chance to save some traffic.
-		p0.SendTo(ctx, target.GetProfile(), 0, c.R.GetPacketSender())
+		p0.SendTo(ctx, target.GetProfile().GetStatic(), 0, c.R.GetPacketSender())
 		target.SetPacketSent(phases.PacketPhase0)
 
 		select {
@@ -241,26 +259,45 @@ func (c *Phase01Controller) workerSendPhase1(ctx context.Context, startIndex int
 
 	// first, send to nodes not covered by Phase 0
 	p1.SendToMany(ctx, len(otherNodes)-startIndex, c.R.GetPacketSender(),
-		func(ctx context.Context, targetIdx int) (profiles.ActiveNode, transport.PacketSendOptions) {
+		func(ctx context.Context, targetIdx int) (profiles.StaticProfile, transport.PacketSendOptions) {
 			target := otherNodes[targetIdx+startIndex]
 			target.SetPacketSent(phases.PacketPhase1)
 
+			sp := target.GetProfile().GetStatic()
 			if target.HasAnyPacketReceived() {
-				return target.GetProfile(), transport.SendWithoutPulseData
+				return sp, transport.SendWithoutPulseData
 			}
-			return target.GetProfile(), 0
+			return sp, 0
 		})
 
 	p1.SendToMany(ctx, startIndex, c.R.GetPacketSender(),
-		func(ctx context.Context, targetIdx int) (profiles.ActiveNode, transport.PacketSendOptions) {
+		func(ctx context.Context, targetIdx int) (profiles.StaticProfile, transport.PacketSendOptions) {
 			target := otherNodes[targetIdx]
 			target.SetPacketSent(phases.PacketPhase1)
 
+			sp := target.GetProfile().GetStatic()
 			if target.HasAnyPacketReceived() {
-				return target.GetProfile(), transport.SendWithoutPulseData
+				return sp, transport.SendWithoutPulseData
 			}
-			return target.GetProfile(), 0
+			return sp, 0
 		})
+}
+
+func (c *Phase01Controller) workerSendPhase1ToJoiners(ctx context.Context) {
+
+	p1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
+		c.R.GetOriginalPulse(), nil, c.packetPrepareOptions)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case joiner := <-c.qJoiners:
+			if joiner.SetPacketSent(phases.PacketPhase1) {
+				p1.SendTo(ctx, joiner.GetStatic(), c.packetPrepareOptions, c.R.GetPacketSender())
+			}
+		}
+	}
 }
 
 type packetPhase01Dispatcher struct {

@@ -69,22 +69,18 @@ func PowerOf(linearValue uint16) Power { // TODO tests are needed
 		return 0xFF
 	}
 
-	linearValue += 32
+	linearValue += 0x20
 	pwr := uint8(bits.Len16(linearValue))
-	if pwr > 6 {
-		pwr -= 6
-		linearValue >>= pwr
-	} else {
-		pwr = 0
-	}
-	return Power((pwr << 5) | uint8(linearValue-32))
+	pwr -= 6 //linearValue is always >= 0x40, so pwr > 6
+	linearValue >>= pwr
+	return Power((pwr << 5) | uint8(linearValue-0x20))
 }
 
 func (v Power) ToLinearValue() uint16 {
 	if v <= 0x1F {
 		return uint16(v)
 	}
-	return uint16(v&0x1F+32)<<(v>>5) - 32
+	return uint16(v&0x1F+0x20)<<(v>>5) - 0x20
 }
 
 func (v Power) PercentAndMin(percent int, min Power) Power {
@@ -146,6 +142,14 @@ func (v Power) AbsDelta(o Power) uint16 {
 
 type PowerSet [4]Power
 
+func PowerSetOf(v uint32) PowerSet {
+	return PowerSet{Power(v), Power(v >> 8), Power(v >> 16), Power(v >> 24)}
+}
+
+func (v PowerSet) AsUint32() uint32 {
+	return uint32(v[0]) | uint32(v[1])<<8 | uint32(v[2])<<16 | uint32(v[3])<<24
+}
+
 func (v PowerSet) Normalize() PowerSet {
 	if v.IsValid() {
 		return v
@@ -204,8 +208,11 @@ Always true for p=0. Requires normalized ops.
 		// [min, 0, p2, max]
 		return v[3] == p || v[2] >= p
 	}
-	// [min, p1, p2, max]
-	return false
+
+	// [min, p1, p2, max] - was tested at entry
+	// [0, p1, p2, max]
+
+	return v[0] == 0 && v[1] > p
 }
 
 /*
@@ -304,8 +311,8 @@ Only for normalized set.
 
 func (v PowerSet) FindNearestValid(p Power) Power {
 
-	left := uint8(0)
-	right := uint8(3)
+	left := int8(0)
+	right := int8(3)
 	switch {
 	case p == 0 || v[0] == p || v[1] == p || v[2] == p || v[3] == p:
 		return p
@@ -318,7 +325,7 @@ func (v PowerSet) FindNearestValid(p Power) Power {
 			return p
 		}
 		// [v0, min, 0, max]
-		if v[1] > p {
+		if v[1] < p {
 			return p
 		}
 		// get nearest of v[0], v[1]
@@ -353,5 +360,8 @@ func (v PowerSet) FindNearestValid(p Power) Power {
 			return nearest
 		}
 	}
-	panic("impossible")
+	if nearest == 0 {
+		panic("impossible")
+	}
+	return nearest
 }

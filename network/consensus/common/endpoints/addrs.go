@@ -164,3 +164,37 @@ func (v *InboundConnection) GetTransportKey() cryptkit.SignatureKeyHolder {
 func (v *InboundConnection) GetTransportCert() cryptkit.CertificateHolder {
 	return v.Cert
 }
+
+func EqualOutboundEndpoints(p Outbound, o Outbound) bool {
+	if p == nil || o == nil {
+		return false
+	}
+	if p == o {
+		return true
+	}
+	if p.GetEndpointType() != o.GetEndpointType() {
+		return false
+	}
+	switch p.GetEndpointType() {
+	case NameEndpoint:
+		return p.GetNameAddress() == o.GetNameAddress()
+	case IPEndpoint:
+		return p.GetIPAddress() == o.GetIPAddress()
+	case RelayEndpoint:
+		return p.GetRelayID() == o.GetRelayID()
+	default:
+		panic("not implemented")
+	}
+}
+
+func EqualListOfOutboundEndpoints(p []Outbound, o []Outbound) bool {
+	if len(p) == 0 || len(o) == 0 || len(p) != len(o) {
+		return false
+	}
+	for i, pi := range p {
+		if !EqualOutboundEndpoints(pi, o[i]) {
+			return false
+		}
+	}
+	return true
+}

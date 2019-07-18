@@ -58,7 +58,7 @@ import (
 type Report interface {
 	CaptureMark() interface{}
 	Details() []interface{}
-	ViolatorNode() profiles.ActiveNode
+	ViolatorNode() profiles.BaseNode
 	ViolatorHost() endpoints.InboundConnection
 	MisbehaviorType() Type
 }

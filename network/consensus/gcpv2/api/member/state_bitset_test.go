@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,63 +46,87 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-//
+///
 
-package adapters
+package member
 
 import (
-	"context"
-	"time"
+	"testing"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/consensus/common/capacity"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
+	"github.com/stretchr/testify/require"
 )
 
-type ConsensusControlFeeder struct{}
-
-func NewConsensusControlFeeder() *ConsensusControlFeeder {
-	return &ConsensusControlFeeder{}
+func TestLen(t *testing.T) {
+	sb := StateBitset{1, 2}
+	require.Equal(t, len(sb), sb.Len())
 }
 
-func (cf *ConsensusControlFeeder) GetRequiredPowerLevel() power.Request {
-	return power.NewRequestByLevel(capacity.LevelNormal)
+func TestIsTrusted(t *testing.T) {
+	require.True(t, BeHighTrust.IsTrusted())
+
+	require.True(t, BeLimitedTrust.IsTrusted())
+
+	require.False(t, BeBaselineTrust.IsTrusted())
+
+	require.False(t, BeTimeout.IsTrusted())
+
+	require.False(t, BeFraud.IsTrusted())
+
+	require.False(t, maxBitsetEntry.IsTrusted())
 }
 
-func (cf *ConsensusControlFeeder) OnAppliedPowerLevel(pw member.Power, effectiveSince pulse.Number) {
-	ctx := context.TODO()
+func TestIsTimeout(t *testing.T) {
+	require.False(t, BeHighTrust.IsTimeout())
 
-	inslogger.FromContext(ctx).Info(">>> Power level applied")
+	require.False(t, BeLimitedTrust.IsTimeout())
+
+	require.False(t, BeBaselineTrust.IsTimeout())
+
+	require.True(t, BeTimeout.IsTimeout())
+
+	require.False(t, BeFraud.IsTimeout())
+
+	require.False(t, maxBitsetEntry.IsTimeout())
 }
 
-func (cf *ConsensusControlFeeder) GetRequiredGracefulLeave() (bool, uint32) {
-	return false, 0
+func TestIsFraud(t *testing.T) {
+	require.False(t, BeHighTrust.IsFraud())
+
+	require.False(t, BeLimitedTrust.IsFraud())
+
+	require.False(t, BeBaselineTrust.IsFraud())
+
+	require.False(t, BeTimeout.IsFraud())
+
+	require.True(t, BeFraud.IsFraud())
+
+	require.False(t, maxBitsetEntry.IsFraud())
 }
 
-func (cf *ConsensusControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse.Number) {
-	ctx := context.TODO()
+func TestFmtBitsetEntry(t *testing.T) {
+	require.True(t, FmtBitsetEntry(0) != "")
 
-	inslogger.FromContext(ctx).Info(">>> Graceful leave applied")
+	require.True(t, FmtBitsetEntry(1) != "")
+
+	require.True(t, FmtBitsetEntry(2) != "")
+
+	require.True(t, FmtBitsetEntry(3) != "")
+
+	require.True(t, FmtBitsetEntry(4) != "")
+
+	require.True(t, FmtBitsetEntry(5) != "")
 }
 
-func (cf *ConsensusControlFeeder) SetTrafficLimit(level capacity.Level, duration time.Duration) {
-	panic("implement me")
-}
+func TestBitsetEntryString(t *testing.T) {
+	require.True(t, BeHighTrust.String() != "")
 
-func (cf *ConsensusControlFeeder) ResumeTraffic() {
-	panic("implement me")
-}
+	require.True(t, BeLimitedTrust.String() != "")
 
-func (cf *ConsensusControlFeeder) PulseDetected() {
-	panic("implement me")
-}
+	require.True(t, BeBaselineTrust.String() != "")
 
-func (cf *ConsensusControlFeeder) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
-	ctx := context.TODO()
+	require.True(t, BeTimeout.String() != "")
 
-	inslogger.FromContext(ctx).Info(">>> ConsensusFinished")
+	require.True(t, BeFraud.String() != "")
+
+	require.True(t, maxBitsetEntry.String() != "")
 }

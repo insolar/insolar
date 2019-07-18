@@ -131,7 +131,8 @@ func (c *fixedSize) AsByteString() string {
 }
 
 func (c *fixedSize) WriteTo(w io.Writer) (n int64, err error) {
-	return io.Copy(w, c)
+	n32, err := w.Write(c.data)
+	return int64(n32), err
 }
 
 func (c *fixedSize) Read(p []byte) (n int, err error) {

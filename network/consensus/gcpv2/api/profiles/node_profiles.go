@@ -51,7 +51,6 @@
 package profiles
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
@@ -59,8 +58,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.Host -o . -s _mock.go
@@ -72,12 +69,15 @@ type Host interface {
 	// GetHostType()
 }
 
-type NodeIntroduction interface {
+type StaticProfileExtension interface {
 	// full intro
-	GetIntroNodeID() insolar.ShortNodeID
-	GetReference() insolar.Reference
+	GetIntroducedNodeID() insolar.ShortNodeID
 	IsAllowedPower(p member.Power) bool
-	ConvertPowerRequest(request power.Request) member.Power
+	GetPowerLevels() member.PowerSet
+	//ConvertPowerRequest(request power.Request) (bool, member.Power)
+
+	GetReference() insolar.Reference
+	//candidateProfileExtension
 }
 
 type staticProfile interface {
@@ -93,10 +93,11 @@ type staticProfile interface {
 type StaticProfile interface { // brief intro
 	Host
 	staticProfile
-	GetAnnouncementSignature() cryptkit.SignatureHolder
-
-	GetIntroduction() NodeIntroduction // must be always be not null for LocalNode, full intro, == nil when has no full
+	GetJoinerSignature() cryptkit.SignatureHolder
+	GetExtension() StaticProfileExtension // must be always be not null for LocalNode, full intro, == nil when has no full
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.BaseNode -o . -s _mock.go
 
 type BaseNode interface {
 	// StaticProfile
@@ -134,12 +135,9 @@ type BriefCandidateProfile interface {
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.CandidateProfile -o . -s _mock.go
 
-type CandidateProfile interface {
-	BriefCandidateProfile
-
+type candidateProfileExtension interface {
 	GetPowerLevels() member.PowerSet
 	GetExtraEndpoints() []endpoints.Outbound
-
 	GetReference() insolar.Reference
 	// NodeRefProof	[]common.Bits512
 
@@ -149,10 +147,15 @@ type CandidateProfile interface {
 	GetIssuerSignature() cryptkit.SignatureHolder
 }
 
+type CandidateProfile interface {
+	BriefCandidateProfile
+	candidateProfileExtension
+}
+
 type Factory interface {
-	CreateBriefIntroProfile(candidate BriefCandidateProfile) StaticProfile
-	/* This method MUST: (1) ensure same values of both params; (2) create a new copy of StaticProfile */
 	CreateFullIntroProfile(candidate CandidateProfile) StaticProfile
+	CreateBriefIntroProfile(candidate BriefCandidateProfile) StaticProfile
+	CreateUpgradableIntroProfile(candidate BriefCandidateProfile) StaticProfile
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.LocalNode -o . -s _mock.go
@@ -178,147 +181,6 @@ type Updatable interface {
 	SetIndex(index member.Index)
 }
 
-type MembershipProfile struct {
-	Index          member.Index
-	Mode           member.OpMode
-	Power          member.Power
-	RequestedPower member.Power
-	proofs.NodeAnnouncedState
-}
-
-// TODO support joiner in MembershipProfile
-// func (v MembershipProfile) IsJoiner() bool {
-//
-// }
-
-func NewMembershipProfile(mode member.OpMode, power member.Power, index member.Index,
-	nsh proofs.NodeStateHashEvidence, nas proofs.MemberAnnouncementSignature,
-	ep member.Power) MembershipProfile {
-
-	return MembershipProfile{
-		Index:          index,
-		Power:          power,
-		Mode:           mode,
-		RequestedPower: ep,
-		NodeAnnouncedState: proofs.NodeAnnouncedState{
-			StateEvidence:     nsh,
-			AnnounceSignature: nas,
-		},
-	}
-}
-
-func NewMembershipProfileByNode(np ActiveNode, nsh proofs.NodeStateHashEvidence, nas proofs.MemberAnnouncementSignature,
-	ep member.Power) MembershipProfile {
-
-	idx := member.JoinerIndex
-	if !np.IsJoiner() {
-		idx = np.GetIndex()
-	}
-
-	return NewMembershipProfile(np.GetOpMode(), np.GetDeclaredPower(), idx, nsh, nas, ep)
-}
-
-func (p MembershipProfile) IsEmpty() bool {
-	return p.StateEvidence == nil || p.AnnounceSignature == nil
-}
-
-func (p MembershipProfile) IsJoiner() bool {
-	return p.Index.IsJoiner()
-}
-
-func (p MembershipProfile) AsRank(nc int) member.Rank {
-	if p.Index.IsJoiner() {
-		return member.JoinerRank
-	}
-	return member.NewMembershipRank(p.Mode, p.Power, p.Index, member.AsIndex(nc).AsUint16())
-}
-
-func (p MembershipProfile) AsRankUint16(nc uint16) member.Rank {
-	if p.Index.IsJoiner() {
-		return member.JoinerRank
-	}
-	return member.NewMembershipRank(p.Mode, p.Power, p.Index, member.Index(nc).AsUint16())
-}
-
-func (p MembershipProfile) Equals(o MembershipProfile) bool {
-	if p.Index != o.Index || p.Power != o.Power || p.IsEmpty() || o.IsEmpty() || p.RequestedPower != o.RequestedPower {
-		return false
-	}
-
-	if p.StateEvidence != o.StateEvidence {
-		if !p.StateEvidence.GetNodeStateHash().Equals(o.StateEvidence.GetNodeStateHash()) {
-			return false
-		}
-		if !p.StateEvidence.GetGlobulaNodeStateSignature().Equals(o.StateEvidence.GetGlobulaNodeStateSignature()) {
-			return false
-		}
-	}
-
-	return p.AnnounceSignature == o.AnnounceSignature || p.AnnounceSignature.Equals(o.AnnounceSignature)
-}
-
-func (p MembershipProfile) StringParts() string {
-	if p.Power == p.RequestedPower {
-		return fmt.Sprintf("pw:%v se:%v cs:%v", p.Power, p.StateEvidence, p.AnnounceSignature)
-	}
-
-	return fmt.Sprintf("pw:%v->%v se:%v cs:%v", p.Power, p.RequestedPower, p.StateEvidence, p.AnnounceSignature)
-}
-
-func (p MembershipProfile) String() string {
-	return fmt.Sprintf("idx:%03d %s", p.Index, p.StringParts())
-}
-
-type MembershipAnnouncement struct {
-	Membership  MembershipProfile
-	IsLeaving   bool
-	LeaveReason uint32
-	JoinerID    insolar.ShortNodeID
-}
-
-func NewMembershipAnnouncement(mp MembershipProfile) MembershipAnnouncement {
-	return MembershipAnnouncement{
-		Membership: mp,
-	}
-}
-
-func NewMembershipAnnouncementWithJoinerID(mp MembershipProfile, joinerID insolar.ShortNodeID) MembershipAnnouncement {
-	return MembershipAnnouncement{
-		Membership: mp,
-		JoinerID:   joinerID,
-	}
-}
-
-func NewMembershipAnnouncementWithLeave(mp MembershipProfile, leaveReason uint32) MembershipAnnouncement {
-	return MembershipAnnouncement{
-		Membership:  mp,
-		IsLeaving:   true,
-		LeaveReason: leaveReason,
-	}
-}
-
-func EqualIntroProfiles(p StaticProfile, o StaticProfile) bool {
-	if p == nil || o == nil {
-		return false
-	}
-	if p == o {
-		return true
-	}
-
-	if p.GetStaticNodeID() != o.GetStaticNodeID() || p.GetPrimaryRole() != o.GetPrimaryRole() ||
-		p.GetSpecialRoles() != o.GetSpecialRoles() || p.GetStartPower() != o.GetStartPower() ||
-		!p.GetNodePublicKey().Equals(o.GetNodePublicKey()) {
-		return false
-	}
-
-	return endpoints.EqualEndpoints(p.GetDefaultEndpoint(), o.GetDefaultEndpoint())
-}
-
-func MatchIntroAndRank(np ActiveNode, nc int, nr member.Rank) bool {
-	if nr.IsJoiner() {
-		return np.IsJoiner()
-	}
-
-	return int(nr.GetTotalCount()) == nc && nr.GetIndex() == np.GetIndex() && nr.GetMode() == np.GetOpMode() &&
-		nr.GetPower() == np.GetDeclaredPower()
+type Upgradable interface {
+	UpgradeProfile(upgradeData CandidateProfile) bool
 }

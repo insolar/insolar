@@ -71,13 +71,15 @@ type VectorEntryData struct {
 	proofs.NodeAnnouncedState
 }
 
+type EntryFilteredScannerFunc func(nodeData VectorEntryData, postponed bool, filter uint32)
+type EntryFilterFunc func(index int, nodeData VectorEntryData) (bool, uint32)
+
 type VectorEntryScanner interface {
 	GetIndexedCount() int
 	GetSortedCount() int
 	ScanIndexed(apply func(index int, nodeData VectorEntryData))
-	ScanSorted(apply func(nodeData VectorEntryData, filter uint32), filterValue uint32)
-	ScanSortedWithFilter(apply func(nodeData VectorEntryData, filter uint32),
-		filter func(index int, nodeData VectorEntryData) (bool, uint32))
+	ScanSorted(apply EntryFilteredScannerFunc, filterValue uint32)
+	ScanSortedWithFilter(apply EntryFilteredScannerFunc, filter EntryFilterFunc)
 }
 
 type VectorEntryDigester interface {

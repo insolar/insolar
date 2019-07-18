@@ -52,6 +52,7 @@ package core
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
@@ -83,9 +84,9 @@ func TestInit(t *testing.T) {
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
-	require.Panics(t, func() { r.init(nil, callback, 0, 0) })
+	require.Panics(t, func() { r.init(nil, callback, 0, phases.NewLocalPacketLimiter()) })
 
-	r.init(lp, callback, 0, 0)
+	r.init(lp, callback, 0, phases.NewLocalPacketLimiter())
 
 	require.Equal(t, member.SelfTrust, r.trust)
 
@@ -224,17 +225,17 @@ func TestVerifyPacketAuthenticity(t *testing.T) {
 	from := endpoints.NewInboundMock(t)
 
 	isAcceptable = false
-	require.NotEqual(t, nil, r.VerifyPacketAuthenticity(packet, from, true))
+	require.NotEqual(t, nil, r.VerifyPacketAuthenticity(packet.GetPacketSignature(), from, true))
 
 	isSignOfSignatureMethodSupported = false
-	require.NotEqual(t, nil, r.VerifyPacketAuthenticity(packet, from, false))
+	require.NotEqual(t, nil, r.VerifyPacketAuthenticity(packet.GetPacketSignature(), from, false))
 
 	isSignOfSignatureMethodSupported = true
 	isValidDigestSignature = false
-	require.NotEqual(t, nil, r.VerifyPacketAuthenticity(packet, from, false))
+	require.NotEqual(t, nil, r.VerifyPacketAuthenticity(packet.GetPacketSignature(), from, false))
 
 	isValidDigestSignature = true
-	require.Equal(t, nil, r.VerifyPacketAuthenticity(packet, from, false))
+	require.Equal(t, nil, r.VerifyPacketAuthenticity(packet.GetPacketSignature(), from, false))
 }
 
 // func TestSetReceivedPhase(t *testing.T) {

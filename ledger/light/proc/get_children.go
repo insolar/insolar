@@ -75,8 +75,8 @@ func (p *GetChildren) Proceed(ctx context.Context) error {
 }
 
 func (p *GetChildren) reply(ctx context.Context) bus.Reply {
-	p.Dep.IndexLocker.Lock(p.msg.Parent.Record())
-	defer p.Dep.IndexLocker.Unlock(p.msg.Parent.Record())
+	p.Dep.IndexLocker.Lock(*p.msg.Parent.Record())
+	defer p.Dep.IndexLocker.Unlock(*p.msg.Parent.Record())
 
 	idx, err := p.Dep.IndexAccessor.ForID(ctx, p.parcel.Pulse(), *p.msg.Parent.Record())
 	if err != nil {

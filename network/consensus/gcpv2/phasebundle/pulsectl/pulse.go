@@ -48,7 +48,7 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package phasebundle
+package pulsectl
 
 import (
 	"context"
@@ -58,6 +58,9 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
+
+// TODO HACK - network doesnt have information about pulsars to validate packets, the next line must be removed when fixed
+const ignoreHostVerificationForPulses = true
 
 func NewPulsePrepController(s PulseSelectionStrategy) *PulsePrepController {
 	return &PulsePrepController{pulseStrategy: s}
@@ -83,6 +86,16 @@ func (p *pulsePacketDispatcher) DispatchHostPacket(ctx context.Context, packet t
 		return nil
 	}
 	return p.R.GetBlameFactory().NewMismatchedPulsarPacket(from, p.R.GetOriginalPulse(), pp.GetPulseDataEvidence())
+}
+
+func (*pulsePacketPrepDispatcher) HasCustomVerifyForHost(from endpoints.Inbound, strict bool) bool {
+	//noinspection GoBoolExpressions
+	return ignoreHostVerificationForPulses
+}
+
+func (*pulsePacketDispatcher) HasCustomVerifyForHost(from endpoints.Inbound, strict bool) bool {
+	//noinspection GoBoolExpressions
+	return ignoreHostVerificationForPulses
 }
 
 var _ core.PrepPhaseController = &PulsePrepController{}

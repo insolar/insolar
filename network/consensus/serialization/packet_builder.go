@@ -288,9 +288,9 @@ func (p *PreparedPacketSender) Copy() *PreparedPacketSender {
 	return &ppsCopy
 }
 
-func (p *PreparedPacketSender) SendTo(ctx context.Context, target profiles.ActiveNode, sendOptions transport.PacketSendOptions, sender transport.PacketSender) {
-	p.packet.Header.TargetID = uint32(target.GetNodeID())
-	p.packet.Header.ReceiverID = uint32(target.GetNodeID())
+func (p *PreparedPacketSender) SendTo(ctx context.Context, target profiles.StaticProfile, sendOptions transport.PacketSendOptions, sender transport.PacketSender) {
+	p.packet.Header.TargetID = uint32(target.GetStaticNodeID())
+	p.packet.Header.ReceiverID = uint32(target.GetStaticNodeID())
 
 	if (sendOptions & transport.SendWithoutPulseData) != 0 {
 		p.packet.Header.ClearFlag(FlagHasPulsePacket)
@@ -306,7 +306,7 @@ func (p *PreparedPacketSender) SendTo(ctx context.Context, target profiles.Activ
 }
 
 func (p *PreparedPacketSender) SendToMany(ctx context.Context, targetCount int, sender transport.PacketSender,
-	filter func(ctx context.Context, targetIndex int) (profiles.ActiveNode, transport.PacketSendOptions)) {
+	filter func(ctx context.Context, targetIndex int) (profiles.StaticProfile, transport.PacketSendOptions)) {
 
 	for i := 0; i < targetCount; i++ {
 		if np, options := filter(ctx, i); np != nil {

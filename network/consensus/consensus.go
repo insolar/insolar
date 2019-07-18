@@ -57,11 +57,9 @@ import (
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	transport2 "github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/insolar/insolar/network/consensus/serialization"
@@ -76,15 +74,6 @@ import (
 type packetProcessorSetter interface {
 	SetPacketProcessor(adapters.PacketProcessor)
 	SetPacketParserFactory(factory adapters.PacketParserFactory)
-}
-
-type Controller interface {
-	Abort()
-	/* Graceful exit, actual moment of leave will be indicated via Upstream */
-	// RequestLeave()
-
-	/* This node power in the active population, and pulse number of such. Without active population returns (0,0) */
-	GetActivePowerLimit() (member.Power, pulse.Number)
 }
 
 func New(ctx context.Context, dep Dep) Installer {
@@ -211,15 +200,18 @@ func newInstaller(constructor *constructor, dep *Dep) Installer {
 }
 
 func (c Installer) Install(setters ...packetProcessorSetter) Controller {
-	consensusController := c.createConsensusController()
+	controlFeeder := adapters.NewConsensusControlFeeder()
+	candidateFeeder := &core.SequentialCandidateFeeder{}
+
+	consensusController := c.createConsensusController(controlFeeder, candidateFeeder)
 	packetParserFactory := c.createPacketParserFactory()
 
 	c.install(setters, consensusController, packetParserFactory)
 
-	return consensusController
+	return newController(controlFeeder, consensusController)
 }
 
-func (c *Installer) createConsensusController() api.ConsensusController {
+func (c *Installer) createConsensusController(controlFeeder api.ConsensusControlFeeder, candidateFeeder api.CandidateControlFeeder) api.ConsensusController {
 	certificate := c.dep.CertificateManager.GetCertificate()
 	origin := c.dep.NodeKeeper.GetOrigin()
 	knownNodes := c.dep.NodeKeeper.GetAccessor().GetActiveNodes()
@@ -243,8 +235,8 @@ func (c *Installer) createConsensusController() api.ConsensusController {
 			c.consensus.transportFactory,
 			c.consensus.roundStrategyFactory,
 		),
-		&core.SequentialCandidateFeeder{},
-		adapters.NewConsensusControlFeeder(),
+		candidateFeeder,
+		controlFeeder,
 	)
 }
 
@@ -258,11 +250,11 @@ func (c *Installer) createPacketParserFactory() adapters.PacketParserFactory {
 
 func (c *Installer) install(
 	setters []packetProcessorSetter,
-	consensusController api.ConsensusController,
+	packetProcessor adapters.PacketProcessor,
 	packetParserFactory adapters.PacketParserFactory,
 ) {
 	for _, setter := range setters {
-		setter.SetPacketProcessor(consensusController)
+		setter.SetPacketProcessor(packetProcessor)
 		setter.SetPacketParserFactory(packetParserFactory)
 	}
 }

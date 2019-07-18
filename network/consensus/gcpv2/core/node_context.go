@@ -131,9 +131,30 @@ func (p *nodeContext) onNodeStateAssigned(populationVersion uint32, n *NodeAppea
 	p.phaseControllerCallback.OnNodeStateAssigned(populationVersion, n)
 }
 
+func (p *nodeContext) onDynamicNodeAdded(populationVersion uint32, n *NodeAppearance, fullIntro bool) {
+	if p.phaseControllerCallback == nil {
+		return
+	}
+	p.phaseControllerCallback.OnDynamicNodeAdded(populationVersion, n, fullIntro)
+}
+
+func (p *nodeContext) onPurgatoryNodeAdded(populationVersion uint32, n *NodePhantom) {
+	if p.phaseControllerCallback == nil {
+		return
+	}
+	p.phaseControllerCallback.OnPurgatoryNodeAdded(populationVersion, n)
+}
+
 func (p *nodeContext) onCustomEvent(populationVersion uint32, n *NodeAppearance, event interface{}) {
 	if p.phaseControllerCallback == nil {
 		return
 	}
 	p.phaseControllerCallback.OnCustomEvent(populationVersion, n, event)
+}
+
+func (p *nodeContext) onDynamicPopulationCompleted(populationVersion uint32, indexedCount int) {
+	if p.phaseControllerCallback == nil {
+		return
+	}
+	p.phaseControllerCallback.OnDynamicPopulationCompleted(populationVersion, indexedCount)
 }

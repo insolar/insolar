@@ -169,10 +169,10 @@ func (p *RealmVectorProjection) GetEntry(index int) nodeset.VectorEntryData {
 	return p.indexedRefs[index].VectorEntryData
 }
 
-func (p *RealmVectorProjection) ScanSorted(apply func(nodeData nodeset.VectorEntryData, filter uint32), filterValue uint32) {
+func (p *RealmVectorProjection) ScanSorted(apply nodeset.EntryFilteredScannerFunc, filterValue uint32) {
 	for _, se := range p.poweredSorted {
 		_, ve := se.chooseEntry(p.indexedRefs, p.joinersRefs)
-		apply(ve.VectorEntryData, filterValue)
+		apply(ve.VectorEntryData, false, filterValue)
 	}
 }
 
@@ -181,8 +181,7 @@ type postponedEntry struct {
 	filter uint32
 }
 
-func (p *RealmVectorProjection) ScanSortedWithFilter(apply func(nodeData nodeset.VectorEntryData, filter uint32),
-	filter func(index int, nodeData nodeset.VectorEntryData) (bool, uint32)) {
+func (p *RealmVectorProjection) ScanSortedWithFilter(apply nodeset.EntryFilteredScannerFunc, filter nodeset.EntryFilterFunc) {
 
 	var skipped []postponedEntry
 	unorderedSkipped := false
@@ -224,7 +223,7 @@ func (p *RealmVectorProjection) ScanSortedWithFilter(apply func(nodeData nodeset
 			}
 			continue
 		}
-		apply(valueEntry.VectorEntryData, filterValue)
+		apply(valueEntry.VectorEntryData, false, filterValue)
 	}
 
 	if unorderedSkipped {
@@ -232,7 +231,7 @@ func (p *RealmVectorProjection) ScanSortedWithFilter(apply func(nodeData nodeset
 	}
 
 	for _, pe := range skipped {
-		apply(pe.ve.VectorEntryData, pe.filter)
+		apply(pe.ve.VectorEntryData, true, pe.filter)
 	}
 }
 
@@ -291,8 +290,8 @@ func (p *RealmVectorHelper) setArrayNodes(nodeIndex []*NodeAppearance,
 		}
 		joiner := dynamicNodes[joinerID]
 		if joiner == nil {
-			panic("joiner is missing")
-			//continue
+			//panic("joiner is missing")
+			continue
 		}
 
 		if joinerCount >= len(p.joiners) {

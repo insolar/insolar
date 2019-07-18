@@ -59,41 +59,45 @@ import (
 )
 
 func TestNewRequestByLevel(t *testing.T) {
-	require.Equal(t, -Request(capacity.LevelMinimal), NewRequestByLevel(capacity.LevelMinimal))
+	require.Equal(t, -Request(capacity.LevelMinimal)-1, NewRequestByLevel(capacity.LevelMinimal))
 }
 
 func TestNewRequest(t *testing.T) {
-	require.Equal(t, Request(1), NewRequest(member.Power(1)))
+	require.Equal(t, Request(1)+1, NewRequest(member.Power(1)))
 }
 
 func TestAsCapacityLevel(t *testing.T) {
 	b, l := Request(-1).AsCapacityLevel()
 	require.True(t, b)
-	require.Equal(t, capacity.Level(1), l)
+	require.Equal(t, capacity.Level(0), l)
 
 	b, l = Request(1).AsCapacityLevel()
 	require.False(t, b)
 
-	r := Request(1)
-	require.Equal(t, capacity.Level(-r), l)
+	r := Request(-2)
+	require.Equal(t, capacity.Level(r), l)
 
 	b, l = Request(0).AsCapacityLevel()
 	require.False(t, b)
-	require.Equal(t, capacity.Level(0), l)
+
+	r = Request(-1)
+	require.Equal(t, capacity.Level(r), l)
 }
 
 func TestAsMemberPower(t *testing.T) {
 	b, l := Request(1).AsMemberPower()
 	require.True(t, b)
-	require.Equal(t, member.Power(1), l)
+	require.Equal(t, member.Power(0), l)
 
 	b, l = Request(-1).AsMemberPower()
 	require.False(t, b)
 
-	r := Request(-1)
+	r := Request(-2)
 	require.Equal(t, member.Power(r), l)
 
 	b, l = Request(0).AsMemberPower()
-	require.True(t, b)
-	require.Equal(t, member.Power(0), l)
+	require.False(t, b)
+
+	r = Request(-1)
+	require.Equal(t, member.Power(r), l)
 }

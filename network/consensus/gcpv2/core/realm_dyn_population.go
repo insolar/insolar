@@ -53,6 +53,9 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -60,15 +63,20 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
 
-func NewDynamicRealmPopulation(baselineWeight uint32, local profiles.ActiveNode, nodeCountHint int, phase2ExtLimit uint8,
+func NewDynamicRealmPopulation(strategy RoundStrategy, population census.OnlinePopulation, nodeCountHint int, phase2ExtLimit uint8,
 	fn NodeInitFunc) *DynamicRealmPopulation {
+
+	nodeCount := population.GetCount()
+	if nodeCount > nodeCountHint {
+		nodeCountHint = nodeCount + nodeCount>>2 //125%
+	}
 
 	r := &DynamicRealmPopulation{
 		nodeInit:       fn,
-		baselineWeight: baselineWeight,
+		baselineWeight: strategy.GetBaselineWeightForNeighbours(),
 		phase2ExtLimit: phase2ExtLimit,
 	}
-	r.initPopulation(local, nodeCountHint)
+	r.initPopulation(population, nodeCountHint)
 
 	return r
 }
@@ -83,24 +91,65 @@ type DynamicRealmPopulation struct {
 
 	rw sync.RWMutex
 
-	joinerCount  int
-	indexedCount int
+	joinerCount   int
+	indexedCount  int
+	indexedLenSet bool
 
 	nodeIndex    []*NodeAppearance
 	nodeShuffle  []*NodeAppearance // excluding self
 	dynamicNodes map[insolar.ShortNodeID]*NodeAppearance
 }
 
-func (r *DynamicRealmPopulation) initPopulation(local profiles.ActiveNode, nodeCountHint int) {
-	r.self = r.CreateNodeAppearance(context.Background(), local)
+func (r *DynamicRealmPopulation) SetIndexedCount(count int) bool {
+	r.rw.Lock()
+	defer r.rw.Unlock()
+
+	if r.indexedLenSet {
+		return r.indexedCount == count
+	}
+	if len(r.nodeIndex) > count {
+		return false
+	}
+	r.indexedLenSet = true
+	if len(r.nodeIndex) != count {
+		d := make([]*NodeAppearance, count)
+		copy(d, r.nodeIndex)
+		r.nodeIndex = d
+	}
+	if r.indexedCount == count {
+		r.onDynamicPopulationCompleted()
+	}
+	count--
+	if count > cap(r.nodeShuffle) {
+		d := make([]*NodeAppearance, len(r.nodeShuffle), count)
+		copy(d, r.nodeShuffle)
+		r.nodeShuffle = d
+	}
+	return true
+}
+
+func (r *DynamicRealmPopulation) initPopulation(population census.OnlinePopulation, nodeCountHint int) {
+
 	r.dynamicNodes = make(map[insolar.ShortNodeID]*NodeAppearance, nodeCountHint)
+
+	local := population.GetLocalProfile()
+	r.self = r.CreateNodeAppearance(context.Background(), local)
+	r.self, _ = r.AddToDynamics(r.self)
+
+	for _, np := range population.GetProfiles() {
+		na := r.CreateNodeAppearance(context.Background(), np)
+		_, _ = r.AddToDynamics(na) //repeated addition will leave the initial node
+	}
+	if r.self == nil || r.dynamicNodes[local.GetNodeID()] != r.self {
+		panic("illegal state")
+	}
 }
 
 func (r *DynamicRealmPopulation) GetSelf() *NodeAppearance {
 	return r.self
 }
 
-func (r *DynamicRealmPopulation) GetNodeCount() int {
+func (r *DynamicRealmPopulation) GetIndexedCount() int {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 	return len(r.nodeIndex)
@@ -113,11 +162,11 @@ func (r *DynamicRealmPopulation) GetJoinersCount() int {
 }
 
 func (r *DynamicRealmPopulation) GetOthersCount() int {
-	return r.GetNodeCount() - 1
+	return r.GetIndexedCount() - 1
 }
 
 func (r *DynamicRealmPopulation) GetBftMajorityCount() int {
-	return consensuskit.BftMajority(r.GetNodeCount())
+	return consensuskit.BftMajority(r.GetIndexedCount())
 }
 
 func (r *DynamicRealmPopulation) GetNodeAppearance(id insolar.ShortNodeID) *NodeAppearance {
@@ -129,15 +178,15 @@ func (r *DynamicRealmPopulation) GetNodeAppearance(id insolar.ShortNodeID) *Node
 
 func (r *DynamicRealmPopulation) GetActiveNodeAppearance(id insolar.ShortNodeID) *NodeAppearance {
 	na := r.GetNodeAppearance(id)
-	if !na.GetProfile().IsJoiner() {
-		return na
+	if na == nil || na.GetProfile().IsJoiner() {
+		return nil
 	}
-	return nil
+	return na
 }
 
 func (r *DynamicRealmPopulation) GetJoinerNodeAppearance(id insolar.ShortNodeID) *NodeAppearance {
 	na := r.GetNodeAppearance(id)
-	if !na.GetProfile().IsJoiner() {
+	if na == nil || !na.GetProfile().IsJoiner() {
 		return nil
 	}
 	return na
@@ -189,27 +238,41 @@ func (r *DynamicRealmPopulation) GetIndexedNodesWithCheck() ([]*NodeAppearance, 
 	return cp, len(r.nodeIndex) == r.indexedCount
 }
 
+func (r *DynamicRealmPopulation) CreatePacketLimiter() phases.PacketLimiter {
+	return phases.NewPacketLimiter(r.phase2ExtLimit)
+}
+
 func (r *DynamicRealmPopulation) CreateNodeAppearance(ctx context.Context, np profiles.ActiveNode) *NodeAppearance {
 
 	n := &NodeAppearance{}
-	n.init(np, nil, r.baselineWeight, r.phase2ExtLimit)
+	n.init(np, nil, r.baselineWeight, r.CreatePacketLimiter())
+	n.requestedPower = np.GetDeclaredPower()
+	n.trust = member.TrustBySome
 	r.nodeInit(ctx, n)
 
 	return n
 }
 
-func (r *DynamicRealmPopulation) AddToDynamics(n *NodeAppearance) *NodeAppearance {
+func (r *DynamicRealmPopulation) AddToDynamics(na *NodeAppearance) (*NodeAppearance, error) {
+	nna := r.addToDynamics(na)
+
+	if !profiles.EqualStaticProfiles(nna.profile.GetStatic(), na.profile.GetStatic()) {
+		return nil, fmt.Errorf("multiple joiners on same id(%v): %v", na.GetNodeID(), []*NodeAppearance{na, nna})
+	}
+	return na, nil
+}
+
+func (r *DynamicRealmPopulation) addToDynamics(n *NodeAppearance) *NodeAppearance {
 	nip := n.profile.GetStatic()
 
-	if nip.GetIntroduction() == nil {
-		panic("illegal value")
-	}
+	//if nip.GetExtension() == nil {
+	//	panic("illegal value")
+	//}
 
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
 	id := nip.GetStaticNodeID()
-
 	na := r.dynamicNodes[id]
 	if na != nil {
 		return na
@@ -227,13 +290,20 @@ func (r *DynamicRealmPopulation) AddToDynamics(n *NodeAppearance) *NodeAppearanc
 			r.nodeIndex[ni] = n
 		default:
 			if r.nodeIndex[ni] != nil {
-				panic(fmt.Sprintf("duplicate node id(%v)", ni))
+				panic(fmt.Sprintf("duplicate node index(%v)", ni))
 			}
 			r.nodeIndex[ni] = n
 		}
 		r.indexedCount++
 		r.nodeShuffle = append(r.nodeShuffle, n)
+
+		if r.indexedLenSet && r.indexedCount == len(r.nodeIndex) {
+			r.onDynamicPopulationCompleted()
+		}
 	}
+	r.dynamicNodes[id] = n
+	n.callback.onDynamicNodeAdded(n.callback.updatePopulationVersion(), n, nip.GetExtension() != nil)
+
 	return n
 }
 
@@ -246,4 +316,8 @@ func (r *DynamicRealmPopulation) CreateVectorHelper() *RealmVectorHelper {
 	v.setArrayNodes(r.nodeIndex, r.dynamicNodes, r.self.callback.GetPopulationVersion())
 	v.realmPopulation = r
 	return v
+}
+
+func (r *DynamicRealmPopulation) onDynamicPopulationCompleted() {
+	go r.self.callback.onDynamicPopulationCompleted(r.self.callback.GetPopulationVersion(), r.indexedCount)
 }

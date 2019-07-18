@@ -56,7 +56,6 @@ var transferredToWatermill = map[insolar.MessageType]struct{}{
 	insolar.TypeGetPendingRequests:                 {},
 	insolar.TypeRegisterChild:                      {},
 	insolar.TypeGetJet:                             {},
-	insolar.TypeHotRecords:                         {},
 	insolar.TypeCallMethod:                         {},
 	insolar.TypePendingFinished:                    {},
 	insolar.TypeStillExecuting:                     {},
@@ -419,7 +418,6 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel insolar.Parcel, loc
 			*message.SetBlob,
 			*message.GetPendingRequests,
 			*message.ValidateRecord,
-			*message.HotData,
 			*message.CallMethod:
 			inslogger.FromContext(ctx).Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d) Msg: %s", ppn, pulse.PulseNumber, parcel.Message().Type().String())
 			return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)  Msg: %s", ppn, pulse.PulseNumber, parcel.Message().Type().String())

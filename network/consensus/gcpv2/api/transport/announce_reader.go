@@ -75,6 +75,18 @@ type JoinerAnnouncement struct {
 	joinerSignature cryptkit.SignatureHolder
 }
 
+func (p *JoinerAnnouncement) GetJoinerIntroducedByID() insolar.ShortNodeID {
+	return insolar.AbsentShortNodeID
+}
+
+func (p *JoinerAnnouncement) HasFullIntro() bool {
+	return false
+}
+
+func (p *JoinerAnnouncement) GetFullIntroduction() FullIntroductionReader {
+	return nil
+}
+
 func (p *JoinerAnnouncement) GetJoinerSignature() cryptkit.SignatureHolder {
 	return p.joinerSignature
 }

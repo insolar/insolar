@@ -267,10 +267,6 @@ func (*EmuNodeIntro) IsAllowedPower(p member.Power) bool {
 	return true
 }
 
-func (c *EmuNodeIntro) GetAnnouncementSignature() cryptkit.SignatureHolder {
-	return nil
-}
-
 func (c *EmuNodeIntro) GetDefaultEndpoint() endpoints.Outbound {
 	return c.n
 }
@@ -288,11 +284,11 @@ func (c *EmuNodeIntro) GetStaticNodeID() insolar.ShortNodeID {
 	return c.id
 }
 
-func (c *EmuNodeIntro) GetIntroNodeID() insolar.ShortNodeID {
+func (c *EmuNodeIntro) GetIntroducedNodeID() insolar.ShortNodeID {
 	return c.id
 }
 
-func (c *EmuNodeIntro) GetIntroduction() profiles.NodeIntroduction {
+func (c *EmuNodeIntro) GetExtension() profiles.StaticProfileExtension {
 	return c
 }
 

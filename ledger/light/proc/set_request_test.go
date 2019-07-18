@@ -17,8 +17,11 @@
 package proc_test
 
 import (
+	"context"
 	"testing"
 
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
@@ -40,18 +43,21 @@ func TestSetRequest_Proceed(t *testing.T) {
 		inslogger.TestContext(t),
 		insolar.GenesisPulse.PulseNumber+10,
 	)
+	mc := minimock.NewController(t)
 
-	writeAccessor := hot.NewWriteAccessorMock(t)
-	writeAccessor.BeginMock.Return(func() {}, nil)
+	var (
+		writeAccessor *hot.WriteAccessorMock
+		sender        *bus.SenderMock
+		filaments     *executor.FilamentModifierMock
+		idxStorage    *object.IndexStorageMock
+	)
 
-	sender := bus.NewSenderMock(t)
-	sender.ReplyMock.Return()
-
-	records := object.NewRecordModifierMock(t)
-	records.SetMock.Return(nil)
-
-	filaments := executor.NewFilamentModifierMock(t)
-	filaments.SetRequestMock.Return(nil, nil, nil)
+	resetComponents := func() {
+		writeAccessor = hot.NewWriteAccessorMock(mc)
+		sender = bus.NewSenderMock(mc)
+		filaments = executor.NewFilamentModifierMock(t)
+		idxStorage = object.NewIndexStorageMock(t)
+	}
 
 	ref := gen.Reference()
 	jetID := gen.JetID()
@@ -77,10 +83,112 @@ func TestSetRequest_Proceed(t *testing.T) {
 		Payload: requestBuf,
 	}
 
-	// Pendings limit not reached.
-	p := proc.NewSetRequest(msg, &request, id, jetID)
-	p.Dep(writeAccessor, records, filaments, sender, object.NewIndexLocker())
+	resetComponents()
+	t.Run("happy basic", func(t *testing.T) {
+		idxStorage.ForIDMock.Return(record.Index{
+			Lifeline: record.Lifeline{
+				StateID: record.StateActivation,
+			},
+		}, nil)
 
-	err = p.Proceed(ctx)
+		writeAccessor.BeginMock.Return(func() {}, nil)
+		sender.ReplyMock.Return()
+		filaments.SetRequestMock.Return(nil, nil, nil)
+
+		p := proc.NewSetRequest(msg, &request, id, jetID)
+		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker(), idxStorage)
+
+		err = p.Proceed(ctx)
+		require.NoError(t, err)
+
+		mc.Finish()
+	})
+
+	resetComponents()
+	t.Run("duplicate returns correct id", func(t *testing.T) {
+		idxStorage.ForIDMock.Return(record.Index{
+			Lifeline: record.Lifeline{
+				StateID: record.StateActivation,
+			},
+		}, nil)
+
+		writeAccessor.BeginMock.Return(func() {}, nil)
+		reqID := gen.ID()
+		resID := gen.ID()
+		filaments.SetRequestMock.Return(
+			&record.CompositeFilamentRecord{RecordID: reqID},
+			&record.CompositeFilamentRecord{RecordID: resID},
+			nil,
+		)
+
+		sender.ReplyFunc = func(_ context.Context, meta payload.Meta, msg *message.Message) {
+			pl, err := payload.Unmarshal(msg.Payload)
+			require.NoError(t, err)
+			rep, ok := pl.(*payload.RequestInfo)
+			require.True(t, ok)
+			require.Equal(t, reqID, rep.RequestID)
+		}
+
+		p := proc.NewSetRequest(msg, &request, id, jetID)
+		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker(), idxStorage)
+
+		err = p.Proceed(ctx)
+		require.NoError(t, err)
+
+		mc.Finish()
+	})
+}
+
+func TestDeactivateObject_ObjectIsDeactivated(t *testing.T) {
+	t.Parallel()
+
+	ctx := flow.TestContextWithPulse(
+		inslogger.TestContext(t),
+		insolar.GenesisPulse.PulseNumber+10,
+	)
+
+	writeAccessor := hot.NewWriteAccessorMock(t)
+	writeAccessor.BeginMock.Return(func() {}, nil)
+
+	idxLockMock := object.NewIndexLockerMock(t)
+	idxLockMock.LockMock.Return()
+	idxLockMock.UnlockMock.Return()
+
+	idxStorageMock := object.NewIndexStorageMock(t)
+	idxStorageMock.ForIDMock.Return(record.Index{
+		Lifeline: record.Lifeline{
+			StateID: record.StateDeactivation,
+		},
+	}, nil)
+	idxStorageMock.SetIndexMock.Return(nil)
+
+	sender := bus.NewSenderMock(t)
+	sender.ReplyFunc = func(_ context.Context, _ payload.Meta, inMsg *message.Message) {
+		resp, err := payload.Unmarshal(inMsg.Payload)
+		require.NoError(t, err)
+
+		res, ok := resp.(*payload.Error)
+		require.True(t, ok)
+		require.Equal(t, payload.CodeDeactivated, int(res.Code))
+	}
+
+	p := proc.NewDeactivateObject(
+		payload.Meta{},
+		record.Deactivate{},
+		gen.ID(),
+		record.Result{},
+		gen.ID(),
+		gen.JetID(),
+	)
+	p.Dep(
+		writeAccessor,
+		idxLockMock,
+		nil,
+		idxStorageMock,
+		nil,
+		sender,
+	)
+
+	err := p.Proceed(ctx)
 	require.NoError(t, err)
 }

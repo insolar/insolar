@@ -91,9 +91,11 @@ func NewUpstreamPulseController(stateGetter StateGetter, pulseChanger PulseChang
 }
 
 func (u *UpstreamPulseController) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
-	// TODO: use nodekeeper in chronicles and remove setting sync list from here
-
 	ctx := contextFromReport(report)
+
+	if report.MemberMode.IsEvicted() {
+		return
+	}
 
 	population := expectedCensus.GetOnlinePopulation()
 	networkNodes := NewNetworkNodeList(population.GetProfiles())

@@ -260,7 +260,11 @@ func (c *ManyNodePopulation) makeOfProfiles(nodes []profiles.StaticProfile, loca
 }
 
 func (c *ManyNodePopulation) FindProfile(nodeID insolar.ShortNodeID) profiles.ActiveNode {
-	return &c.slotByID[nodeID].NodeProfileSlot
+	slot := c.slotByID[nodeID]
+	if slot == nil {
+		return nil
+	}
+	return &slot.NodeProfileSlot
 }
 
 func (c *ManyNodePopulation) GetCount() int {

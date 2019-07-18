@@ -205,7 +205,6 @@ func init() {
 	gob.Register(&GetPendingRequests{})
 	gob.Register(&GetJet{})
 	gob.Register(&AbandonedRequestsNotification{})
-	gob.Register(&HotData{})
 	gob.Register(&GetPendingRequestID{})
 
 	// heavy

@@ -53,6 +53,7 @@ package tests
 import (
 	"context"
 	"errors"
+	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle"
 	"math/rand"
 	"time"
 
@@ -69,7 +70,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/gcpv2"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle"
 )
 
 func NewConsensusHost(hostAddr endpoints.Name) *EmuHostConsensusAdapter {
@@ -132,8 +132,8 @@ func (h *EmuHostConsensusAdapter) run(ctx context.Context) {
 	}
 }
 
-func (h *EmuHostConsensusAdapter) SendPacketToTransport(ctx context.Context, t profiles.ActiveNode, sendOptions transport.PacketSendOptions, payload interface{}) {
-	h.send(t.GetStatic().GetDefaultEndpoint(), payload)
+func (h *EmuHostConsensusAdapter) SendPacketToTransport(ctx context.Context, t profiles.StaticProfile, sendOptions transport.PacketSendOptions, payload interface{}) {
+	h.send(t.GetDefaultEndpoint(), payload)
 }
 
 func (h *EmuHostConsensusAdapter) receive(ctx context.Context) (payload interface{}, from *endpoints.Name, err error) {
@@ -166,38 +166,35 @@ func (h *EmuHostConsensusAdapter) TransportPacketSender() {
 }
 
 type EmuRoundStrategyFactory struct {
+	roundStrategy EmuRoundStrategy
+	bundleFactory core.PhaseControllersBundleFactory
 }
 
-func (*EmuRoundStrategyFactory) CreateRoundStrategy(chronicle api.ConsensusChronicles, config api.LocalNodeConfiguration) core.RoundStrategy {
-	return &EmuRoundStrategy{bundle: phasebundle.NewRegularPhaseBundleByDefault()}
+func (p *EmuRoundStrategyFactory) CreateRoundStrategy(chronicle api.ConsensusChronicles,
+	config api.LocalNodeConfiguration) (core.RoundStrategy, core.PhaseControllersBundle) {
+
+	if p.bundleFactory == nil {
+		p.bundleFactory = phasebundle.NewStandardBundleFactoryDefault()
+	}
+
+	pop := chronicle.GetLatestCensus().GetOnlinePopulation()
+	bundle := p.bundleFactory.CreateControllersBundle(pop, config)
+	return &p.roundStrategy, bundle
 }
 
 type EmuRoundStrategy struct {
-	bundle core.PhaseControllersBundle
 }
 
 func (*EmuRoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse pulse.Number, self profiles.LocalNode) context.Context {
 	return ctx
 }
 
-func (c *EmuRoundStrategy) GetPrepPhaseControllers() []core.PrepPhaseController {
-	return c.bundle.GetPrepPhaseControllers()
-}
-
-func (c *EmuRoundStrategy) GetFullPhaseControllers(nodeCount int) ([]core.PhaseController, core.NodeUpdateCallback) {
-	return c.bundle.GetFullPhaseControllers(nodeCount)
-}
-
-func (*EmuRoundStrategy) RandUint32() uint32 {
+func (*EmuRoundStrategy) GetBaselineWeightForNeighbours() uint32 {
 	return rand.Uint32()
 }
 
 func (*EmuRoundStrategy) ShuffleNodeSequence(n int, swap func(i, j int)) {
 	rand.Shuffle(n, swap)
-}
-
-func (*EmuRoundStrategy) IsEphemeralPulseAllowed() bool {
-	return false
 }
 
 func (*EmuRoundStrategy) AdjustConsensusTimings(timings *api.RoundTimings) {
