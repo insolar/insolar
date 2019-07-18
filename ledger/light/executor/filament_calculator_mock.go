@@ -6,13 +6,13 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "FilamentCalculator" can be found in github.com/insolar/insolar/ledger/light/executor
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
-	record "github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/record"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -21,7 +21,7 @@ import (
 type FilamentCalculatorMock struct {
 	t minimock.Tester
 
-	PendingRequestsFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r []insolar.ID, r1 error)
+	PendingRequestsFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r []record.CompositeFilamentRecord, r1 error)
 	PendingRequestsCounter    uint64
 	PendingRequestsPreCounter uint64
 	PendingRequestsMock       mFilamentCalculatorMockPendingRequests
@@ -76,7 +76,7 @@ type FilamentCalculatorMockPendingRequestsInput struct {
 }
 
 type FilamentCalculatorMockPendingRequestsResult struct {
-	r  []insolar.ID
+	r  []record.CompositeFilamentRecord
 	r1 error
 }
 
@@ -93,7 +93,7 @@ func (m *mFilamentCalculatorMockPendingRequests) Expect(p context.Context, p1 in
 }
 
 //Return specifies results of invocation of FilamentCalculator.PendingRequests
-func (m *mFilamentCalculatorMockPendingRequests) Return(r []insolar.ID, r1 error) *FilamentCalculatorMock {
+func (m *mFilamentCalculatorMockPendingRequests) Return(r []record.CompositeFilamentRecord, r1 error) *FilamentCalculatorMock {
 	m.mock.PendingRequestsFunc = nil
 	m.expectationSeries = nil
 
@@ -115,12 +115,12 @@ func (m *mFilamentCalculatorMockPendingRequests) ExpectOnce(p context.Context, p
 	return expectation
 }
 
-func (e *FilamentCalculatorMockPendingRequestsExpectation) Return(r []insolar.ID, r1 error) {
+func (e *FilamentCalculatorMockPendingRequestsExpectation) Return(r []record.CompositeFilamentRecord, r1 error) {
 	e.result = &FilamentCalculatorMockPendingRequestsResult{r, r1}
 }
 
 //Set uses given function f as a mock of FilamentCalculator.PendingRequests method
-func (m *mFilamentCalculatorMockPendingRequests) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r []insolar.ID, r1 error)) *FilamentCalculatorMock {
+func (m *mFilamentCalculatorMockPendingRequests) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r []record.CompositeFilamentRecord, r1 error)) *FilamentCalculatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -129,7 +129,7 @@ func (m *mFilamentCalculatorMockPendingRequests) Set(f func(p context.Context, p
 }
 
 //PendingRequests implements github.com/insolar/insolar/ledger/light/executor.FilamentCalculator interface
-func (m *FilamentCalculatorMock) PendingRequests(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r []insolar.ID, r1 error) {
+func (m *FilamentCalculatorMock) PendingRequests(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r []record.CompositeFilamentRecord, r1 error) {
 	counter := atomic.AddUint64(&m.PendingRequestsPreCounter, 1)
 	defer atomic.AddUint64(&m.PendingRequestsCounter, 1)
 
