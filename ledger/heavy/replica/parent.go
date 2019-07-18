@@ -28,42 +28,53 @@ import (
 )
 
 type Parent interface {
-	Subscribe(Target, Position) error
-	Pull(byte, Position, uint32) ([]byte, error)
+	Subscribe(context.Context, Target, Page) error
+	Pull(context.Context, Page) ([]byte, uint32, error)
 }
 
-func NewParent(Sequencer sequence.Sequencer, keeper JetKeeper, cryptoService insolar.CryptographyService) Parent {
-	provider := intergrity.NewProvider(cryptoService)
-	return &localParent{Sequencer: Sequencer, jetKeeper: keeper, provider: provider}
+func NewParent() Parent {
+	return &parent{}
 }
 
-type localParent struct {
-	Sequencer sequence.Sequencer
-	jetKeeper JetKeeper
-	provider  intergrity.Provider
+type parent struct {
+	Sequencer sequence.Sequencer  `inject:""`
+	JetKeeper JetKeeper           `inject:""`
+	Provider  intergrity.Provider `inject:""`
 }
 
-func (p *localParent) Subscribe(child Target, at Position) error {
-	logger := inslogger.FromContext(context.Background())
-	current := p.jetKeeper.TopSyncPulse()
+func (p *parent) Subscribe(ctx context.Context, target Target, at Page) error {
+	highest := p.JetKeeper.TopSyncPulse()
 
-	if current < at.Pulse {
-		// TODO: register handler on sync pulse update
-		logger.Warn("I'm replicaroot. Current pulse less than requested position.")
+	if at.Pulse > highest {
+		p.JetKeeper.Subscribe(at.Pulse, func(highest insolar.PulseNumber) {
+			p.notify(target, highest)
+		})
+		return nil
 	}
-	err := child.Notify()
-	if err != nil {
-		// TODO: retry notify
-		return errors.Wrapf(err, "failed to notify child")
-	}
+	p.notify(target, highest)
 	return nil
 }
 
-func (p *localParent) Pull(scope byte, from Position, limit uint32) ([]byte, error) {
-	logger := inslogger.FromContext(context.Background())
-	highestPulse := p.jetKeeper.TopSyncPulse()
-	items := p.Sequencer.Slice(scope, from.Pulse, from.Skip, highestPulse, limit)
-	logger.Warnf("PULL_BATCH slicing scope: %v len(items): %v from: %v skip: %v highest: %v limit: %v", scope, len(items), from.Pulse, from.Skip, highestPulse, limit)
-	packet := p.provider.Wrap(items)
-	return packet, nil
+func (p *parent) Pull(ctx context.Context, page Page) ([]byte, uint32, error) {
+	highest := p.JetKeeper.TopSyncPulse()
+	if page.Pulse > highest {
+		packet := p.Provider.Wrap([]sequence.Item{})
+		return packet, 0, nil
+	}
+	items := p.Sequencer.Slice(page.Scope, page.Pulse, page.Skip, page.Limit)
+	packet := p.Provider.Wrap(items)
+	total := p.Sequencer.Len(page.Scope, page.Pulse)
+	return packet, total, nil
+}
+
+func (p *parent) notify(target Target, pn insolar.PulseNumber) {
+	ctx := context.Background()
+	logger := inslogger.FromContext(ctx)
+	err := target.Notify(ctx, pn)
+	if err != nil {
+		logger.WithFields(map[string]interface{}{
+			"target": target,
+		}).Error(errors.Wrapf(err, "failed to notify target"))
+		return
+	}
 }

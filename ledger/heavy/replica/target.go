@@ -18,152 +18,151 @@ package replica
 
 import (
 	"context"
-	"crypto"
 	"time"
 
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/heavy/replica/intergrity"
 	"github.com/insolar/insolar/ledger/heavy/sequence"
-	"github.com/insolar/insolar/platformpolicy"
-)
-
-var (
-	attempts          = 60
-	delayForAttempt   = 1 * time.Second
-	defaultBatchSize  = uint32(10)
-	scopesToReplicate = []byte{byte(store.ScopePulse), byte(store.ScopeRecord)}
 )
 
 type Target interface {
-	Notify() error
+	Notify(context.Context, insolar.PulseNumber) error
 }
 
-func NewTarget(Sequencer sequence.Sequencer, cfg configuration.Replica, parent Parent, cryptoService insolar.CryptographyService) Target {
-	logger := inslogger.FromContext(context.Background())
-	parentIdentity, err := buildParent(cfg)
-	if err != nil {
-		logger.Error(errors.Wrapf(err, "failed to build parent identity"))
-		return nil
-	}
-
-	validator := intergrity.NewValidator(cryptoService, parentIdentity.pubKey)
-	return &localTarget{Sequencer: Sequencer, parent: parent, validator: validator}
-}
-
-type localTarget struct {
-	Sequencer sequence.Sequencer
-	parent    Parent
-	validator intergrity.Validator
-}
-
-func (t *localTarget) Start(ctx context.Context) error {
-	minimal := insolar.GenesisPulse.PulseNumber
-	for _, scope := range scopesToReplicate {
-		if last := t.Sequencer.Last(scope); last != nil {
-			if pulse := insolar.NewPulseNumber(last.Key[:4]); pulse < minimal {
-				minimal = pulse
-			}
-		}
-	}
-	at := Position{Skip: 0, Pulse: minimal}
-	go t.trySubscribe(at)
-	return nil
-}
-
-func (t *localTarget) Notify() error {
-	// logger := inslogger.FromContext(context.Background())
-	// TODO: maybe do it in multiple routines
-	for _, scope := range scopesToReplicate {
-		highest := insolar.GenesisPulse.PulseNumber
-		if t.Sequencer.Last(scope) != nil {
-			highest = insolar.NewPulseNumber(t.Sequencer.Last(scope).Key[:4])
-		}
-		skip := uint32(t.Sequencer.Len(scope, highest))
-		// if scope == store.ScopePulse {
-		// 	pulses := sequence.NewSequencer(t.db, store.ScopePulse)
-		// 	seq := pulses.Slice(insolar.GenesisPulse.PulseNumber, 0, highest, 100)
-		// 	for i, item := range seq {
-		// 		logger.Warnf("PULSE highest: %v i: %v [%v]", highest, i, insolar.NewPulseNumber(item.Key))
-		// 	}
-		// }
-
-		t.pullBatch(scope, skip, highest)
-	}
-	t.Start(context.Background()) // TODO: refactor it
-	return nil
-}
-
-type Position struct {
+type Page struct {
+	Scope byte
 	Skip  uint32
+	Limit uint32
 	Pulse insolar.PulseNumber
 }
 
-type identity struct {
-	address string
-	pubKey  crypto.PublicKey
+func NewTarget(cfg configuration.Replica, parent Parent) Target {
+	scopes := append(cfg.ScopesToReplicate, byte(store.ScopePulse))
+	return &target{cfg: cfg, parent: parent, scopesToReplicate: scopes}
 }
 
-func buildParent(cfg configuration.Replica) (identity, error) {
-	kp := platformpolicy.NewKeyProcessor()
-	pubKey, err := kp.ImportPublicKeyPEM([]byte(cfg.ParentPubKey))
-	if err != nil {
-		return identity{}, errors.Wrap(err, "failed to import a public key from PEM")
-	}
-
-	return identity{address: cfg.ParentAddress, pubKey: pubKey}, nil
+type target struct {
+	Sequencer         sequence.Sequencer   `inject:""`
+	JetKeeper         JetKeeper            `inject:""`
+	Pulses            pulse.Accessor       `inject:""`
+	Validator         intergrity.Validator `inject:""`
+	cfg               configuration.Replica
+	parent            Parent
+	scopesToReplicate []byte
 }
 
-func (t *localTarget) trySubscribe(at Position) {
-	// TODO: add TTL for subscribe
-	for i := 0; i < attempts; i++ {
-		err := t.parent.Subscribe(t, at)
-		if err != nil {
-			inslogger.FromContext(context.Background()).Error(err)
-			time.Sleep(delayForAttempt)
-			continue
-		}
-		break
+func (t *target) Start(ctx context.Context) error {
+	if t == nil {
+		return errors.New("invalid target component")
 	}
+	pn := t.JetKeeper.TopSyncPulse()
+	at := Page{Pulse: pn}
+	go t.subscribe(at)
+	return nil
 }
 
-func (t *localTarget) pullNext(highest insolar.PulseNumber) insolar.PulseNumber {
-	logger := inslogger.FromContext(context.Background())
-	from := Position{Skip: 0, Pulse: highest}
-	packet, err := t.parent.Pull(byte(store.ScopePulse), from, 1)
-	if err != nil {
-		logger.Error(err)
-		go t.trySubscribe(from)
-	}
-	seq := t.validator.UnwrapAndValidate(packet)
-	t.Sequencer.Upsert(byte(store.ScopePulse), seq)
-	if len(seq) == 0 {
-		go t.trySubscribe(from)
-		return highest
-	}
-
-	return insolar.NewPulseNumber(seq[0].Key)
+func (t *target) Notify(ctx context.Context, present insolar.PulseNumber) error {
+	go t.process(present)
+	return nil
 }
 
-func (t *localTarget) pullBatch(scope byte, skip uint32, highest insolar.PulseNumber) {
-	logger := inslogger.FromContext(context.Background())
-	for {
-		at := Position{Skip: skip, Pulse: highest}
-		packet, err := t.parent.Pull(scope, at, defaultBatchSize)
+func (t *target) subscribe(at Page) {
+	ctx := context.Background()
+	logger := inslogger.FromContext(ctx)
+	for i := 0; i < t.cfg.Attempts; i++ {
+		err := t.parent.Subscribe(ctx, t, at)
 		if err != nil {
 			logger.Error(err)
-			t.trySubscribe(at)
-		}
-		seq := t.validator.UnwrapAndValidate(packet)
-		t.Sequencer.Upsert(scope, seq)
-		if len(seq) > 0 {
-			skip += uint32(len(seq))
+			time.Sleep(t.cfg.DelayForAttempt)
 			continue
 		}
 		break
 	}
+	logger.Errorf("Failed to subscribe to parent replica. The maximum number of attempts is exceeded.")
+}
+
+func (t *target) process(present insolar.PulseNumber) {
+	next := genesis()
+	synced := t.JetKeeper.TopSyncPulse()
+	if synced != genesis() {
+		next = t.nextPulse(synced)
+	}
+
+	for next <= present {
+		if !t.fetch(next) || !t.finish(next) {
+			return
+		}
+		next = t.nextPulse(next)
+	}
+
+	go t.subscribe(Page{Pulse: next})
+}
+
+func genesis() insolar.PulseNumber {
+	return insolar.GenesisPulse.PulseNumber
+}
+
+func (t *target) nextPulse(pn insolar.PulseNumber) insolar.PulseNumber {
+	ctx := context.Background()
+	p, err := t.Pulses.ForPulseNumber(ctx, pn)
+	if err != nil {
+		return pn
+	}
+	return p.NextPulseNumber
+}
+
+func (t *target) fetch(need insolar.PulseNumber) bool {
+	for _, scope := range t.scopesToReplicate {
+		if !t.pull(scope, need) {
+			t.subscribe(Page{Pulse: need})
+			return false
+		}
+	}
+	return true
+}
+
+func (t *target) pull(scope byte, pn insolar.PulseNumber) bool {
+	ctx := context.Background()
+	logger := inslogger.FromContext(ctx)
+	skip := t.Sequencer.Len(scope, pn)
+	for {
+		at := Page{Scope: scope, Skip: skip, Limit: t.cfg.DefaultBatchSize, Pulse: pn}
+		packet, total, err := t.parent.Pull(ctx, at)
+		if err != nil {
+			logger.Error(err)
+			return false
+		}
+		seq := t.Validator.UnwrapAndValidate(packet)
+		err = t.Sequencer.Upsert(scope, seq)
+		if err != nil {
+			logger.Error(errors.Wrapf(err, "failed to upsert sequence"))
+			return false
+		}
+
+		skip += uint32(len(seq))
+		if skip == total {
+			return true
+		}
+
+		if len(seq) == 0 {
+			return false
+		}
+	}
+}
+
+func (t *target) finish(pn insolar.PulseNumber) bool {
+	ctx := context.Background()
+	logger := inslogger.FromContext(ctx)
+	err := t.JetKeeper.Update(pn)
+	if err != nil {
+		logger.Error(errors.Wrapf(err, "failed to upsert sequence"))
+		return false
+	}
+	return true
 }

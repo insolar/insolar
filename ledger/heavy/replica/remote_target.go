@@ -17,26 +17,39 @@
 package replica
 
 import (
+	"context"
+
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 )
 
-func NewRemoteTarget(transport Transport, receiver string) Target {
-	return &target{transport: transport, receiver: receiver}
+type Notification struct {
+	Pulse insolar.PulseNumber
 }
 
-type target struct {
+func NewRemoteTarget(transport Transport, receiver string) Target {
+	return &remoteTarget{transport: transport, receiver: receiver}
+}
+
+type remoteTarget struct {
 	transport Transport
 	receiver  string
 }
 
-func (r *target) Notify() error {
-	rawReply, err := r.transport.Send(r.receiver, "replica.Notify", nil)
+func (r *remoteTarget) Notify(ctx context.Context, pn insolar.PulseNumber) error {
+	notification := Notification{
+		Pulse: pn,
+	}
+	data, err := insolar.Serialize(&notification)
+	if err != nil {
+		return errors.Wrapf(err, "failed to serialize Subscription request")
+	}
+	rawReply, err := r.transport.Send(ctx, r.receiver, "replica.Notify", data)
 	if err != nil {
 		return errors.Wrapf(err, "failed to send replica.Notify")
 	}
-	reply := Reply{}
+	reply := GenericReply{}
 	err = insolar.Deserialize(rawReply, &reply)
 	if err != nil {
 		return errors.Wrapf(err, "failed to deserialize reply on replica.Notify")

@@ -91,7 +91,7 @@ func TestSequencer_Records(t *testing.T) {
 	}
 
 	t.Run("slice length", func(t *testing.T) {
-		recs := records.Slice(pulse, skip, pulse+10, limit)
+		recs := records.Slice(pulse, skip, pulse+10)
 		require.Equal(t, limit-skip, len(recs))
 	})
 
@@ -166,7 +166,7 @@ func TestSequencer_Blobs(t *testing.T) {
 	}
 
 	t.Run("slice length", func(t *testing.T) {
-		blbs := blobs.Slice(pulse, skip, pulse+10, limit)
+		blbs := blobs.Slice(pulse, skip, pulse+10)
 		require.Equal(t, limit-skip, len(blbs))
 	})
 
@@ -234,7 +234,7 @@ func TestSequencer_Drops(t *testing.T) {
 	}
 
 	t.Run("slice length", func(t *testing.T) {
-		drps := drops.Slice(pulse, skip, pulse+10, limit)
+		drps := drops.Slice(pulse, skip, pulse+10)
 		require.Equal(t, limit-skip, len(drps))
 	})
 
@@ -285,14 +285,14 @@ func TestSequencer_Genesis(t *testing.T) {
 	)
 
 	t.Run("check pulses", func(t *testing.T) {
-		actualPulses := pulses.Slice(pulse, 0, nextPulse, 1)
+		actualPulses := pulses.Slice(pulse, 0, nextPulse)
 		require.Equal(t, 1, pulses.Len(pulse))
 		require.Equal(t, 1, len(actualPulses))
 		require.Equal(t, pulse, insolar.NewPulseNumber(actualPulses[0].Key))
 	})
 
 	t.Run("check drops", func(t *testing.T) {
-		actualDrops := drops.Slice(pulse, 0, nextPulse, 1)
+		actualDrops := drops.Slice(pulse, 0, nextPulse)
 		require.Equal(t, 1, drops.Len(pulse))
 		require.Equal(t, 1, len(actualDrops))
 		drop, err := drop.Decode(actualDrops[0].Value)
@@ -302,7 +302,7 @@ func TestSequencer_Genesis(t *testing.T) {
 	})
 
 	t.Run("check records and filaments", func(t *testing.T) {
-		actualRecords := records.Slice(pulse, 0, nextPulse, 1)
+		actualRecords := records.Slice(pulse, 0, nextPulse)
 		require.Equal(t, 1, records.Len(pulse))
 		require.Equal(t, 1, len(actualRecords))
 		rec := record.Material{}
@@ -312,7 +312,7 @@ func TestSequencer_Genesis(t *testing.T) {
 	})
 
 	t.Run("check filaments", func(t *testing.T) {
-		actualFilaments := lifelines.Slice(pulse, 0, nextPulse, 1)
+		actualFilaments := lifelines.Slice(pulse, 0, nextPulse)
 		require.Equal(t, 1, lifelines.Len(pulse))
 		require.Equal(t, 1, len(actualFilaments))
 		filament := object.FilamentIndex{}
@@ -320,7 +320,7 @@ func TestSequencer_Genesis(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, insolar.GenesisRecord.ID(), filament.ObjID)
 
-		actualLastKnownIndex := lastKnownIndex.Slice(pulse, 0, nextPulse, 1)
+		actualLastKnownIndex := lastKnownIndex.Slice(pulse, 0, nextPulse)
 		require.Equal(t, 1, lastKnownIndex.Len(pulse))
 		require.Equal(t, 1, len(actualLastKnownIndex))
 		actualLastPulse := insolar.NewPulseNumber(actualLastKnownIndex[0].Value)
@@ -328,7 +328,7 @@ func TestSequencer_Genesis(t *testing.T) {
 	})
 
 	t.Run("check baserecord", func(t *testing.T) {
-		actualBaseRecords := baseRecord.Slice(pulse, 0, nextPulse, 1)
+		actualBaseRecords := baseRecord.Slice(pulse, 0, nextPulse)
 		require.Equal(t, 1, baseRecord.Len(pulse))
 		require.Equal(t, 1, len(actualBaseRecords))
 	})
@@ -361,7 +361,7 @@ func TestSequencer_Pulses(t *testing.T) {
 		storage.Append(ctx, insolar.Pulse{PulseNumber: insolar.PulseNumber(pulse + 10*i)})
 	}
 
-	recs := records.Slice(pulse, 0, math.MaxUint32, limit)
+	recs := records.Slice(pulse, 0, math.MaxUint32)
 	require.Equal(t, limit, len(recs))
 }
 
@@ -409,7 +409,7 @@ func TestSequencer_Upsert(t *testing.T) {
 	records.Upsert(items)
 	require.Equal(t, len(items), records.Len(pulse))
 
-	seq := records.Slice(pulse, 0, math.MaxUint32, total)
+	seq := records.Slice(pulse, 0, math.MaxUint32)
 	for _, item := range seq {
 		id := insolar.ID{}
 		copy(id[:], item.Key)

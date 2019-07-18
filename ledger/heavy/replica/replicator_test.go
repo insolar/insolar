@@ -23,8 +23,8 @@ package replica
 // 	)
 // 	net := network.NewHostNetworkMock(t)
 // 	net.RegisterRequestHandlerMock.Return()
-// 	jetKeeper := NewJetKeeperMock(t)
-// 	jetKeeper.TopSyncPulseMock.Return(pulse)
+// 	JetKeeper := NewJetKeeperMock(t)
+// 	JetKeeper.TopSyncPulseMock.Return(pulse)
 // 	db := store.NewMemoryMockDB()
 // 	cs := testutils.NewCryptographyServiceMock(t)
 // 	config := configuration.Replica{
@@ -33,7 +33,7 @@ package replica
 // 		Out:          []string{"in"},
 // 		ParentCertPath: "",
 // 	}
-// 	replicator := NewReplicator(config, jetKeeper, cs)
+// 	replicator := NewReplicator(config, JetKeeper, cs)
 // 	replicator.DB = db
 // 	replicator.ServiceNetwork = net
 //
@@ -51,8 +51,8 @@ package replica
 // 	net := network.NewHostNetworkMock(t)
 // 	net.RegisterRequestHandlerMock.Return()
 // 	net.SendRequestToHostMock.Return(makeFuture([]byte{}), nil)
-// 	jetKeeper := NewJetKeeperMock(t)
-// 	jetKeeper.TopSyncPulseMock.Return(pulse)
+// 	JetKeeper := NewJetKeeperMock(t)
+// 	JetKeeper.TopSyncPulseMock.Return(pulse)
 // 	db := store.NewMemoryMockDB()
 // 	cs := testutils.NewCryptographyServiceMock(t)
 // 	config := configuration.Replica{
@@ -61,7 +61,7 @@ package replica
 // 		Out:         []string{"inside"},
 // 		ParentCertPath: "",
 // 	}
-// 	replicator := NewReplicator(config, jetKeeper, )
+// 	replicator := NewReplicator(config, JetKeeper, )
 //
 // 	err := replicator.Init(ctx)
 // 	require.NoError(t, err)
@@ -77,8 +77,8 @@ package replica
 // 	net := network.NewHostNetworkMock(t)
 // 	net.RegisterRequestHandlerMock.Return()
 // 	net.SendRequestToHostMock.Return(makeFuture([]byte{}), nil)
-// 	jetKeeper := NewJetKeeperMock(t)
-// 	jetKeeper.TopSyncPulseMock.Return(pulse)
+// 	JetKeeper := NewJetKeeperMock(t)
+// 	JetKeeper.TopSyncPulseMock.Return(pulse)
 // 	db := store.NewMemoryMockDB()
 // 	cs := testutils.NewCryptographyServiceMock(t)
 // 	config := configuration.Replica{
@@ -87,7 +87,7 @@ package replica
 // 		Out:         []string{"inside"},
 // 		ParentCertPath: "",
 // 	}
-// 	replicator := NewReplicator(config, jetKeeper, db, cs)
+// 	replicator := NewReplicator(config, JetKeeper, db, cs)
 // 	replicator.Network = net
 //
 // 	err := replicator.Init(ctx)

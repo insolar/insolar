@@ -30,7 +30,7 @@ func TestTarget_Notify(t *testing.T) {
 	transport.SendMock.Return(reply, nil)
 	target := NewRemoteTarget(transport)
 
-	err := target.Notify()
+	err := Notify()
 	require.NoError(t, err)
 }
 

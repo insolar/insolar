@@ -17,6 +17,8 @@
 package replica
 
 import (
+	"context"
+
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -24,30 +26,34 @@ import (
 
 type Subscription struct {
 	Target string
-	At     Position
+	At     Page
 }
 
 type PullRequest struct {
-	Scope byte
-	From  Position
-	Limit uint32
+	Page Page
 }
 
-type Reply struct {
+type GenericReply struct {
 	Data  []byte
 	Error error
 }
 
-func NewRemoteParent(transport Transport, receiver string) Parent {
-	return &parent{transport: transport, receiver: receiver}
+type PullReply struct {
+	Data  []byte
+	Total uint32
+	Error error
 }
 
-type parent struct {
+func NewRemoteParent(transport Transport, receiver string) Parent {
+	return &remoteParent{transport: transport, receiver: receiver}
+}
+
+type remoteParent struct {
 	transport Transport
 	receiver  string
 }
 
-func (r *parent) Subscribe(child Target, at Position) error {
+func (r *remoteParent) Subscribe(ctx context.Context, _ Target, at Page) error {
 	sub := Subscription{
 		Target: r.transport.Me(),
 		At:     at,
@@ -56,11 +62,11 @@ func (r *parent) Subscribe(child Target, at Position) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to serialize Subscription request")
 	}
-	rawReply, err := r.transport.Send(r.receiver, "replica.Subscribe", data)
+	rawReply, err := r.transport.Send(ctx, r.receiver, "replica.Subscribe", data)
 	if err != nil {
 		return errors.Wrapf(err, "failed to send replica.Subscribe request")
 	}
-	reply := Reply{}
+	reply := GenericReply{}
 	err = insolar.Deserialize(rawReply, &reply)
 	if err != nil {
 		return errors.Wrapf(err, "failed to deserialize Subscribe reply")
@@ -68,24 +74,22 @@ func (r *parent) Subscribe(child Target, at Position) error {
 	return reply.Error
 }
 
-func (r *parent) Pull(scope byte, from Position, limit uint32) ([]byte, error) {
+func (r *remoteParent) Pull(ctx context.Context, from Page) ([]byte, uint32, error) {
 	pr := PullRequest{
-		Scope: scope,
-		From:  from,
-		Limit: limit,
+		Page: from,
 	}
 	data, err := insolar.Serialize(&pr)
 	if err != nil {
-		return []byte{}, errors.Wrapf(err, "failed to serialize Pull request")
+		return []byte{}, 0, errors.Wrapf(err, "failed to serialize Pull request")
 	}
-	res, err := r.transport.Send(r.receiver, "replica.Pull", data)
+	res, err := r.transport.Send(ctx, r.receiver, "replica.Pull", data)
 	if err != nil {
-		return []byte{}, errors.Wrapf(err, "failed to send replica.Pull request")
+		return []byte{}, 0, errors.Wrapf(err, "failed to send replica.Pull request")
 	}
-	reply := Reply{}
+	reply := PullReply{}
 	err = insolar.Deserialize(res, &reply)
 	if err != nil {
-		return []byte{}, errors.Wrapf(err, "failed to deserialize Pull reply")
+		return []byte{}, 0, errors.Wrapf(err, "failed to deserialize Pull reply")
 	}
-	return reply.Data, reply.Error
+	return reply.Data, reply.Total, reply.Error
 }

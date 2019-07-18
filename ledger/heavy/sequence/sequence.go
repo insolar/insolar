@@ -18,13 +18,11 @@ package sequence
 
 import (
 	"bytes"
-	"context"
 	"sync"
 
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
 )
 
@@ -39,15 +37,15 @@ type Item struct {
 // Sequencer is an interface to work with db entity sequence.
 type Sequencer interface {
 	// Len returns count of records in db scope by the pulse.
-	Len(scope byte, pulse insolar.PulseNumber) int
+	Len(scope byte, pulse insolar.PulseNumber) uint32
 	// First returns first item in the db scope.
 	First(scope byte) *Item
 	// Last returns last item in the db scope.
 	Last(scope byte) *Item
 	// Slice returns slice of records from provided position with corresponding limit.
-	Slice(scope byte, from insolar.PulseNumber, skip uint32, to insolar.PulseNumber, limit uint32) []Item
+	Slice(scope byte, from insolar.PulseNumber, skip uint32, limit uint32) []Item
 	// Upsert updates or inserts sequence of db records.
-	Upsert(scope byte, sequence []Item)
+	Upsert(scope byte, sequence []Item) error
 }
 
 type sequencer struct {
@@ -59,21 +57,23 @@ func NewSequencer(db store.DB) Sequencer {
 	return &sequencer{db: db}
 }
 
-func (s *sequencer) Len(scope byte, pulse insolar.PulseNumber) int {
+func (s *sequencer) Len(scope byte, pulse insolar.PulseNumber) uint32 {
 	s.RLock()
 	defer s.RUnlock()
 
 	result := 0
-	it := s.db.NewIterator(polyKey{id: []byte{}, scope: store.Scope(scope)}, false)
+	pivot := polyKey{id: []byte{}, scope: store.Scope(scope)}
+	it := s.db.NewIterator(pivot, false)
 	defer it.Close()
 	for it.Next() && bytes.HasPrefix(it.Key(), pulse.Bytes()) {
 		result++
 	}
-	return result
+	return uint32(result)
 }
 
 func (s *sequencer) First(scope byte) *Item {
-	it := s.db.NewIterator(polyKey{id: []byte{}, scope: store.Scope(scope)}, false)
+	pivot := polyKey{id: []byte{}, scope: store.Scope(scope)}
+	it := s.db.NewIterator(pivot, false)
 	defer it.Close()
 
 	if !it.Next() {
@@ -83,7 +83,8 @@ func (s *sequencer) First(scope byte) *Item {
 }
 
 func (s *sequencer) Last(scope byte) *Item {
-	it := s.db.NewIterator(polyKey{id: []byte{0xFF, 0xFF, 0xFF, 0xFF}, scope: store.Scope(scope)}, true)
+	pivot := polyKey{id: []byte{0xFF, 0xFF, 0xFF, 0xFF}, scope: store.Scope(scope)}
+	it := s.db.NewIterator(pivot, true)
 	defer it.Close()
 
 	if !it.Next() {
@@ -92,16 +93,17 @@ func (s *sequencer) Last(scope byte) *Item {
 	return &Item{Key: it.Key(), Value: it.Value()}
 }
 
-func (s *sequencer) Slice(scope byte, from insolar.PulseNumber, skip uint32, to insolar.PulseNumber, limit uint32) []Item {
+func (s *sequencer) Slice(scope byte, from insolar.PulseNumber, skip uint32, limit uint32) []Item {
 	s.RLock()
 	defer s.RUnlock()
 
 	var result []Item
-	it := s.db.NewIterator(polyKey{id: from.Bytes(), scope: store.Scope(scope)}, false)
+	pivot := polyKey{id: from.Bytes(), scope: store.Scope(scope)}
+	it := s.db.NewIterator(pivot, false)
 	defer it.Close()
 
 	skipped := 0
-	for it.Next() && insolar.NewPulseNumber(it.Key()[:4]) < to && len(result) < int(limit) {
+	for it.Next() && pulse(it.Key()) == from && len(result) < int(limit) {
 		if skipped < int(skip) {
 			skipped++
 			continue
@@ -114,16 +116,18 @@ func (s *sequencer) Slice(scope byte, from insolar.PulseNumber, skip uint32, to 
 	return result
 }
 
-func (s *sequencer) Upsert(scope byte, sequence []Item) {
+func (s *sequencer) Upsert(scope byte, sequence []Item) error {
 	s.Lock()
 	defer s.Unlock()
 
 	for _, item := range sequence {
-		err := s.db.Set(polyKey{id: item.Key, scope: store.Scope(scope)}, item.Value)
+		key := polyKey{id: item.Key, scope: store.Scope(scope)}
+		err := s.db.Set(key, item.Value)
 		if err != nil {
-			inslogger.FromContext(context.Background()).Error(errors.Wrapf(err, "failed to save item of sequence"))
+			return errors.Wrapf(err, "failed to save item of sequence")
 		}
 	}
+	return nil
 }
 
 type polyKey struct {
@@ -137,4 +141,8 @@ func (k polyKey) ID() []byte {
 
 func (k polyKey) Scope() store.Scope {
 	return k.scope
+}
+
+func pulse(buf []byte) insolar.PulseNumber {
+	return insolar.NewPulseNumber(buf)
 }

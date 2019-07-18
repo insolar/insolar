@@ -36,7 +36,7 @@ import (
 
 // TODO: write docs
 type Transport interface {
-	Send(receiver, method string, data []byte) ([]byte, error)
+	Send(ctx context.Context, receiver, method string, data []byte) ([]byte, error)
 	Register(method string, handle Handle)
 	Me() string
 }
@@ -62,7 +62,7 @@ func (t *internalTransport) Init(ctx context.Context) error {
 	return nil
 }
 
-func (t *internalTransport) Send(receiver, method string, data []byte) ([]byte, error) {
+func (t *internalTransport) Send(ctx context.Context, receiver, method string, data []byte) ([]byte, error) {
 	receiverHost, err := t.hostByAddress(receiver)
 	if err != nil || receiverHost == nil {
 		return nil, errors.Wrapf(err, "failed to create host by receiver address")
@@ -71,7 +71,7 @@ func (t *internalTransport) Send(receiver, method string, data []byte) ([]byte, 
 		Method: method,
 		Data:   data,
 	}
-	future, err := t.net.SendRequestToHost(context.Background(), types.Replication, req, receiverHost)
+	future, err := t.net.SendRequestToHost(ctx, types.Replication, req, receiverHost)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to send request to host")
 	}
@@ -111,7 +111,7 @@ func registerHandlers(net network.HostNetwork, handlers map[string]Handle) {
 			}), nil
 		}
 		result, err := handlers[method](data)
-		reply, err := insolar.Serialize(Reply{
+		reply, err := insolar.Serialize(GenericReply{
 			Data:  result,
 			Error: err,
 		})

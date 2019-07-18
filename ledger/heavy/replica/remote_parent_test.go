@@ -26,7 +26,7 @@ import (
 
 func TestParent_Subscribe(t *testing.T) {
 	var (
-		pos     = Position{0, insolar.GenesisPulse.PulseNumber}
+		pos     = Page{0, insolar.GenesisPulse.PulseNumber}
 		address = "127.0.0.1:8080"
 	)
 	transport := NewTransportMock(t)
@@ -36,22 +36,22 @@ func TestParent_Subscribe(t *testing.T) {
 	targetTransport.MeMock.Return(address)
 	target := NewRemoteTarget(targetTransport)
 
-	err := parent.Subscribe(pos)
+	err := Subscribe(pos)
 	require.NoError(t, err)
 }
 
 func TestParent_Pull(t *testing.T) {
 	var (
-		pos   = Position{10, insolar.GenesisPulse.PulseNumber}
+		pos   = Page{10, insolar.GenesisPulse.PulseNumber}
 		limit = uint32(10)
 		reply = []byte{1, 2, 3}
 	)
-	rawReply, _ := insolar.Serialize(Reply{reply, nil})
+	rawReply, _ := insolar.Serialize(GenericReply{reply, nil})
 	transport := NewTransportMock(t)
 	transport.SendMock.Return(rawReply, nil)
 	parent := NewRemoteParent(transport)
 
-	actualReply, err := parent.Pull(0, pos, limit)
+	actualReply, err := Pull(pos)
 	require.NoError(t, err)
 	require.Equal(t, reply, actualReply)
 }

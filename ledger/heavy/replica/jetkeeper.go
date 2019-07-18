@@ -34,6 +34,10 @@ type JetKeeper interface {
 	Add(context.Context, insolar.PulseNumber, insolar.JetID) error
 	// TopSyncPulse provides access to highest synced (replicated) pulse.
 	TopSyncPulse() insolar.PulseNumber
+	// Subscribe adds a disposable handler that will be called when specified pulse or greater will be added.
+	Subscribe(at insolar.PulseNumber, handler func(insolar.PulseNumber))
+	// Update performs a forced sync pulse update.
+	Update(sync insolar.PulseNumber) error
 }
 
 func NewJetKeeper(jets jet.Storage, db store.DB) JetKeeper {
@@ -44,7 +48,13 @@ type dbJetKeeper struct {
 	jetTrees jet.Storage
 
 	sync.RWMutex
-	db store.DB
+	db            store.DB
+	subscriptions []subscription
+}
+
+type subscription struct {
+	pulse   insolar.PulseNumber
+	handler func(insolar.PulseNumber)
 }
 
 func (jk *dbJetKeeper) Add(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID) error {
@@ -71,6 +81,20 @@ func (jk *dbJetKeeper) TopSyncPulse() insolar.PulseNumber {
 		return insolar.NewPulseNumber(it.Key()[1:])
 	}
 	return insolar.GenesisPulse.PulseNumber
+}
+
+func (jk *dbJetKeeper) Subscribe(at insolar.PulseNumber, handler func(insolar.PulseNumber)) {
+	jk.Lock()
+	defer jk.Unlock()
+
+	jk.subscriptions = append(jk.subscriptions, subscription{pulse: at, handler: handler})
+}
+
+func (jk *dbJetKeeper) Update(sync insolar.PulseNumber) error {
+	jk.Lock()
+	defer jk.Unlock()
+
+	return jk.updateSyncPulse(sync)
 }
 
 func (jk *dbJetKeeper) add(pulse insolar.PulseNumber, id insolar.JetID) error {
@@ -167,5 +191,22 @@ func (jk *dbJetKeeper) set(pn insolar.PulseNumber, jets []insolar.JetID) error {
 
 func (jk *dbJetKeeper) updateSyncPulse(pn insolar.PulseNumber) error {
 	err := jk.db.Set(syncPulseKey(pn), []byte{})
-	return errors.Wrapf(err, "failed to set up new sync pulse")
+	if err != nil {
+		return errors.Wrapf(err, "failed to set up new sync pulse")
+	}
+
+	jk.publish(pn)
+	return nil
+}
+
+func (jk *dbJetKeeper) publish(pn insolar.PulseNumber) {
+	tmp := jk.subscriptions[:0]
+	for _, s := range jk.subscriptions {
+		if s.pulse > pn {
+			tmp = append(tmp, s)
+		} else {
+			s.handler(pn)
+		}
+	}
+	jk.subscriptions = tmp
 }

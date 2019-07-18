@@ -54,11 +54,13 @@ type Exporter struct {
 
 // TODO: write docs
 type Replica struct {
-	Role          string
-	In            string
-	Out           []string
-	ParentAddress string
-	ParentPubKey  string
+	Role              string
+	ParentAddress     string
+	ParentPubKey      string
+	ScopesToReplicate []byte
+	Attempts          int
+	DelayForAttempt   time.Duration
+	DefaultBatchSize  uint32
 }
 
 // Ledger holds configuration for ledger.
@@ -101,11 +103,13 @@ func NewLedger() Ledger {
 		},
 
 		Replica: Replica{
-			Role:          "root",
-			In:            "in",
-			Out:           []string{"in"},
-			ParentAddress: "127.0.0.1:13831",
-			ParentPubKey:  "",
+			Role:              "root",
+			ParentAddress:     "127.0.0.1:13831",
+			ParentPubKey:      "",
+			ScopesToReplicate: []byte{2},
+			Attempts:          60,
+			DelayForAttempt:   1 * time.Second,
+			DefaultBatchSize:  uint32(1000),
 		},
 	}
 }

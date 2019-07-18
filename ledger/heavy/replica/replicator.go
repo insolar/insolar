@@ -25,7 +25,9 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/heavy/replica/intergrity"
 	"github.com/insolar/insolar/ledger/heavy/sequence"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
 type Replicator struct {
@@ -35,42 +37,47 @@ type Replicator struct {
 	config        configuration.Configuration
 	jetKeeper     JetKeeper
 	target        Target
+	cmps          component.Manager
 }
 
 func NewReplicator(
 	cfg configuration.Configuration,
 	jetKeeper JetKeeper,
 ) *Replicator {
-	return &Replicator{config: cfg, jetKeeper: jetKeeper}
+	return &Replicator{config: cfg, jetKeeper: jetKeeper, cmps: component.Manager{}}
 }
 
 func (r *Replicator) Init(ctx context.Context) error {
-	// TODO: inject sequencer
 	replicaConfig := r.config.Ledger.Replica
 	role := RoleBy(replicaConfig.Role)
 	switch role {
 	case Root:
-		parent := NewParent(r.Sequencer, r.jetKeeper, r.CryptoService)
-		registerParent(parent, r.Transport)
+		parent := NewParent()
+		r.registerParent(parent)
 	case Replica:
-		remote := NewRemoteParent(r.Transport, replicaConfig.ParentAddress)
-		r.target = NewTarget(r.Sequencer, replicaConfig, remote, r.CryptoService)
-		registerTarget(r.target, r.Transport)
+		remoteParent := NewRemoteParent(r.Transport, replicaConfig.ParentAddress)
+		r.target = NewTarget(replicaConfig, remoteParent)
+		r.registerTarget(r.target)
+		validator := makeValidator(replicaConfig, r.CryptoService)
+		r.cmps.Register(validator)
 
-		parent := NewParent(r.Sequencer, r.jetKeeper, r.CryptoService)
-		registerParent(parent, r.Transport)
+		parent := NewParent()
+		r.registerParent(parent)
 	case Observer:
-		parent := NewRemoteParent(r.Transport, replicaConfig.ParentAddress)
-		r.target = NewTarget(r.Sequencer, replicaConfig, parent, r.CryptoService)
-		registerTarget(r.target, r.Transport)
+		remoteParent := NewRemoteParent(r.Transport, replicaConfig.ParentAddress)
+		r.target = NewTarget(replicaConfig, remoteParent)
+		r.registerTarget(r.target)
+		validator := makeValidator(replicaConfig, r.CryptoService)
+		r.cmps.Register(validator)
 	}
+	provider := makeProvider(r.CryptoService)
+	r.cmps.Inject(r.Sequencer, r.jetKeeper, provider)
 	return nil
 }
 
 func (r *Replicator) Start(ctx context.Context) error {
 	replicaConfig := r.config.Ledger.Replica
 	role := RoleBy(replicaConfig.Role)
-	inslogger.FromContext(ctx).Warnf("starting replicator config", replicaConfig)
 	switch role {
 	case Replica, Observer:
 		if cmp, ok := r.target.(component.Starter); ok {
@@ -80,40 +87,65 @@ func (r *Replicator) Start(ctx context.Context) error {
 	return nil
 }
 
-func registerParent(parent Parent, transport Transport) {
-	transport.Register("replica.Subscribe", func(data []byte) ([]byte, error) {
+func (r *Replicator) registerParent(parent Parent) {
+	r.Transport.Register("replica.Subscribe", func(data []byte) ([]byte, error) {
+		ctx := context.Background()
 		sub := Subscription{}
 		err := insolar.Deserialize(data, &sub)
 		if err != nil {
 			return []byte{}, errors.Wrapf(err, "failed to deserialize subscription data")
 		}
-		target := NewRemoteTarget(transport, sub.Target)
-		err = parent.Subscribe(target, sub.At)
+		target := NewRemoteTarget(r.Transport, sub.Target)
+		err = parent.Subscribe(ctx, target, sub.At)
 		if err != nil {
 			return []byte{}, errors.Wrapf(err, "failed to call parent.Subscribe")
 		}
 		return []byte{}, nil
 	})
-	transport.Register("replica.Pull", func(data []byte) ([]byte, error) {
+	r.Transport.Register("replica.Pull", func(data []byte) ([]byte, error) {
+		ctx := context.Background()
 		pr := PullRequest{}
 		err := insolar.Deserialize(data, &pr)
 		if err != nil {
 			return []byte{}, errors.Wrapf(err, "failed to deserialize pull request data")
 		}
-		packet, err := parent.Pull(pr.Scope, pr.From, pr.Limit)
+		packet, _, err := parent.Pull(ctx, pr.Page)
 		if err != nil {
 			return []byte{}, errors.Wrapf(err, "failed to call parent.Pull")
 		}
 		return packet, nil
 	})
+	r.cmps.Register(parent)
 }
 
-func registerTarget(target Target, transport Transport) {
-	transport.Register("replica.Notify", func(data []byte) ([]byte, error) {
-		err := target.Notify()
+func (r *Replicator) registerTarget(target Target) {
+	r.Transport.Register("replica.Notify", func(data []byte) ([]byte, error) {
+		ctx := context.Background()
+		n := Notification{}
+		err := insolar.Deserialize(data, &n)
+		if err != nil {
+			return []byte{}, errors.Wrapf(err, "failed to deserialize notification data")
+		}
+		err = target.Notify(ctx, n.Pulse)
 		if err != nil {
 			return []byte{}, errors.Wrapf(err, "failed to call target.Notify")
 		}
 		return []byte{}, nil
 	})
+	r.cmps.Register(target)
+}
+
+func makeProvider(cryptoService insolar.CryptographyService) intergrity.Provider {
+	return intergrity.NewProvider(cryptoService)
+}
+
+func makeValidator(cfg configuration.Replica, cryptoService insolar.CryptographyService) intergrity.Validator {
+	logger := inslogger.FromContext(context.Background())
+	kp := platformpolicy.NewKeyProcessor()
+	pubKey, err := kp.ImportPublicKeyPEM([]byte(cfg.ParentPubKey))
+	if err != nil {
+		logger.Error(errors.Wrap(err, "failed to import a public key from PEM"))
+		return nil
+	}
+	return intergrity.NewValidator(cryptoService, pubKey)
 }
