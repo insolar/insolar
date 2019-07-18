@@ -97,6 +97,8 @@ type StaticProfile interface { // brief intro
 	GetExtension() StaticProfileExtension // must be always be not null for LocalNode, full intro, == nil when has no full
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.BaseNode -o . -s _mock.go
+
 type BaseNode interface {
 	// StaticProfile
 	GetNodeID() insolar.ShortNodeID
