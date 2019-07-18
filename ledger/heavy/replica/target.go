@@ -83,7 +83,7 @@ func (t *target) subscribe(at Page) {
 			time.Sleep(t.cfg.DelayForAttempt)
 			continue
 		}
-		break
+		return
 	}
 	logger.Errorf("Failed to subscribe to parent replica. The maximum number of attempts is exceeded.")
 }
@@ -145,7 +145,7 @@ func (t *target) pull(scope byte, pn insolar.PulseNumber) bool {
 			logger.Error(errors.Wrapf(err, "failed to upsert sequence"))
 			return false
 		}
-		logger.Debugf("target.pull at=%v len(seq)=%v", at, len(seq))
+		logger.Debugf("target.pull at=%v total=%v len(seq)=%v", at, total, len(seq))
 
 		skip += uint32(len(seq))
 		if skip == total {
