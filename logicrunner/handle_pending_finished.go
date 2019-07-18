@@ -48,7 +48,7 @@ func (h *HandlePendingFinished) Present(ctx context.Context, f flow.Flow) error 
 	broker := lr.StateStorage.UpsertExecutionState(*ref)
 
 	broker.executionState.Lock()
-	broker.executionState.pending = message.NotPending
+	broker.executionState.pending = insolar.NotPending
 	if !broker.currentList.Empty() {
 		broker.executionState.Unlock()
 		return errors.New("[ HandlePendingFinished ] received PendingFinished when we are already executing")
