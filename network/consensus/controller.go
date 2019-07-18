@@ -193,24 +193,24 @@ func (p *ControlFeederAdapter) PrepareLeave() <-chan struct{} {
 		panic("illegal state")
 	}
 	p.internal.zeroReadyChannel = make(chan struct{})
-	if p.internal.hasZero {
+	if p.internal.hasZero || p.internal.zeroPending {
+		p.internal.hasZero = true
 		close(p.internal.zeroReadyChannel)
 	}
 	return p.internal.zeroReadyChannel
 }
 
 func (p *ControlFeederAdapter) Leave(leaveReason uint32) <-chan struct{} {
-	if p.internal.leftChannel != nil {
+	if p.internal.leavingChannel != nil {
 		panic("illegal state")
 	}
 	p.internal.leaveReason = leaveReason
-	p.internal.isLeaving = true
-	p.internal.leftChannel = make(chan struct{})
+	p.internal.leavingChannel = make(chan struct{})
 	if p.internal.hasLeft {
 		p.internal.setHasZero()
-		close(p.internal.leftChannel)
+		close(p.internal.leavingChannel)
 	}
-	return p.internal.leftChannel
+	return p.internal.leavingChannel
 }
 
 var _ api.ConsensusControlFeeder = &internalControlFeederAdapter{}
@@ -218,33 +218,33 @@ var _ api.ConsensusControlFeeder = &internalControlFeederAdapter{}
 type internalControlFeederAdapter struct {
 	api.ConsensusControlFeeder
 
-	isLeaving bool
-	hasLeft   bool
-	hasZero   bool
+	hasLeft bool
+	hasZero bool
 
 	zeroPending bool
 
 	leaveReason      uint32
 	zeroReadyChannel chan struct{}
-	leftChannel      chan struct{}
+	leavingChannel   chan struct{}
 }
 
 func (p *internalControlFeederAdapter) GetRequiredPowerLevel() power.Request {
-	if p.zeroReadyChannel != nil || p.leftChannel != nil {
+	if p.zeroReadyChannel != nil || p.leavingChannel != nil {
 		return power.NewRequestByLevel(capacity.LevelZero)
 	}
 	return p.ConsensusControlFeeder.GetRequiredPowerLevel()
 }
 
 func (p *internalControlFeederAdapter) OnAppliedPowerLevel(pw member.Power, effectiveSince pulse.Number) {
-	if p.zeroReadyChannel != nil && pw == 0 {
-		p.zeroPending = true
+	p.zeroPending = pw == 0
+	if pw == 0 && p.zeroReadyChannel != nil {
+		p.setHasZero()
 	}
 	p.ConsensusControlFeeder.OnAppliedPowerLevel(pw, effectiveSince)
 }
 
 func (p *internalControlFeederAdapter) GetRequiredGracefulLeave() (bool, uint32) {
-	if p.isLeaving {
+	if p.leavingChannel != nil {
 		return true, p.leaveReason
 	}
 	return p.ConsensusControlFeeder.GetRequiredGracefulLeave()
@@ -278,8 +278,8 @@ func (p *internalControlFeederAdapter) setHasZero() {
 func (p *internalControlFeederAdapter) setHasLeft() {
 	p.setHasZero()
 
-	if !p.hasLeft && p.leftChannel != nil {
-		close(p.leftChannel)
+	if !p.hasLeft && p.leavingChannel != nil {
+		close(p.leavingChannel)
 	}
 	p.hasLeft = true
 }
