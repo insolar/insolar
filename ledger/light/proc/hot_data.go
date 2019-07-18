@@ -76,6 +76,9 @@ func NewHotObjects(
 }
 
 func (p *HotObjects) Proceed(ctx context.Context) error {
+
+	inslogger.FromContext(ctx).Debug("------------- HotObjects:Proceed: pulse: ", p.drop.Pulse, " JET_ID: ", p.drop.JetID.DebugString())
+
 	err := p.Dep.DropModifier.Set(ctx, p.drop)
 	if err == drop.ErrOverride {
 		err = nil
@@ -137,7 +140,7 @@ func (p *HotObjects) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to release jets")
 	}
 
-	p.sendConfirmationToHeavy(ctx, p.jetID, p.pulse)
+	p.sendConfirmationToHeavy(ctx, p.jetID, p.drop.Pulse)
 	return nil
 }
 
@@ -146,6 +149,8 @@ func (p *HotObjects) sendConfirmationToHeavy(ctx context.Context, jetID insolar.
 		JetID: jetID,
 		Pulse: pn,
 	})
+
+	inslogger.FromContext(ctx).Debug("------------- sendConfirmationToHeavy: pulse: ", pn, " JET_ID: ", p.drop.JetID.DebugString())
 
 	if err != nil {
 		inslogger.FromContext(ctx).Warn("[ sendConfirmationToHeavy ] Can't create GotHotConfirmation message: ", err)

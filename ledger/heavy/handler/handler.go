@@ -35,7 +35,6 @@ import (
 
 	"github.com/insolar/insolar/ledger/heavy/proc"
 	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
@@ -89,6 +88,17 @@ func New(cfg configuration.Ledger) *Handler {
 		},
 		GetRequest: func(p *proc.GetRequest) {
 			p.Dep(h.RecordAccessor, h.Sender)
+		},
+		Replication: func(p *proc.Replication) {
+			p.Dep(
+				h.RecordModifier,
+				h.IndexModifier,
+				h.PCS,
+				h.PulseAccessor,
+				h.DropModifier,
+				h.JetModifier,
+				h.JetKeeper,
+			)
 		},
 	}
 	h.dep = &dep
@@ -148,8 +158,6 @@ func (h *Handler) handleParcel(ctx context.Context, msg *watermillMsg.Message) e
 		rep, err = h.handleGetDelegate(ctx, parcel)
 	case insolar.TypeGetJet.String():
 		rep, err = h.handleGetJet(ctx, parcel)
-	case insolar.TypeHeavyPayload.String():
-		rep, err = h.handleHeavyPayload(ctx, parcel)
 	case insolar.TypeGetObjectIndex.String():
 		rep, err = h.handleGetObjectIndex(ctx, parcel)
 	default:
@@ -206,6 +214,10 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 		h.handleError(ctx, meta)
 	case payload.TypeGotHotConfirmation:
 		h.handleGotHotConfirmation(ctx, meta)
+	case payload.TypeReplication:
+		p := proc.NewReplication(meta, h.cfg)
+		h.dep.Replication(p)
+		err = p.Proceed(ctx)
 	default:
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())
 	}
@@ -395,58 +407,12 @@ func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Met
 		return
 	}
 
+	logger.Debug("-------------- handleGotHotConfirmation: pulse: ", confirm.Pulse, ". JET_ID: ", confirm.JetID.DebugString())
+
 	err = h.JetKeeper.AddHotConfirmation(ctx, confirm.Pulse, confirm.JetID)
 	if err != nil {
 		logger.Error(errors.Wrapf(err, "failed to add hot confitmation to JetKeeper jet=%v", confirm.String()))
 	} else {
 		logger.Debug("got confirmation: ", confirm.String())
 	}
-}
-
-func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Parcel) (insolar.Reply, error) {
-	logger := inslogger.FromContext(ctx)
-	msg := genericMsg.Message().(*message.HeavyPayload)
-
-	storeRecords(ctx, h.RecordModifier, h.PCS, msg.PulseNum, msg.Records)
-	if err := storeIndexBuckets(ctx, h.IndexModifier, msg.IndexBuckets, msg.PulseNum); err != nil {
-		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
-	}
-
-	pulse, err := h.PulseAccessor.Latest(ctx)
-	if err != nil {
-		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
-	}
-	drop, err := storeDrop(ctx, h.DropModifier, msg.Drop)
-
-	prevP, errG := h.CALC.Backwards(ctx, drop.Pulse, 1)
-	logger.Debug(">>>>>>>>: HEAVYPAYLOAD: ", drop.Pulse, ". LATEST: ", pulse.PulseNumber, ". PREV_P: ", prevP.PulseNumber, ". err: ", errG)
-
-	if err != nil {
-		logger.Error(errors.Wrapf(err, "failed to store drop"))
-		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
-	}
-
-	logger.Debug(">>>>>>>>>>>>>>>>>+++++: THRESHOLD: ", drop.SplitThresholdExceeded, ". OVERFLOW: ", h.cfg.JetSplit.ThresholdOverflowCount)
-	if drop.SplitThresholdExceeded > h.cfg.JetSplit.ThresholdOverflowCount {
-		logger.Debug(">>>>>>>>>>>>>>>>--: SPLIT: pulse: ", pulse.PulseNumber, ". JET: ", drop.JetID.DebugString())
-		_, _, err = h.JetModifier.Split(ctx, pulse.PulseNumber, drop.JetID)
-	} else {
-		logger.Debug(">>>>>>>>>>>>>>>>--: Update: pulse: ", pulse.PulseNumber, ". JET: ", drop.JetID.DebugString())
-		err = h.JetModifier.Update(ctx, pulse.PulseNumber, true, drop.JetID)
-	}
-	if err != nil {
-		logger.Error(errors.Wrapf(err, "failed to split/update jet=%v pulse=%v", drop.JetID.DebugString(), pulse.PulseNumber))
-		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
-	}
-
-	if err := h.JetKeeper.AddJet(ctx, drop.Pulse, drop.JetID); err != nil {
-		logger.Error(errors.Wrapf(err, "failed to add jet to JetKeeper jet=%v", msg.JetID.DebugString()))
-		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
-	}
-
-	stats.Record(ctx,
-		statReceivedHeavyPayloadCount.M(1),
-	)
-
-	return &reply.OK{}, nil
 }

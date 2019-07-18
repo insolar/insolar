@@ -98,6 +98,20 @@ func (a *ActivateObject) Proceed(ctx context.Context) error {
 	a.dep.indexLocker.Lock(*a.activate.Request.Record())
 	defer a.dep.indexLocker.Unlock(*a.activate.Request.Record())
 
+	idx, err := a.dep.indexStorage.ForID(ctx, flow.Pulse(ctx), *a.activate.Request.Record())
+	if err != nil {
+		return errors.Wrap(err, "failed to save result")
+	}
+	if idx.Lifeline.StateID == record.StateDeactivation {
+		msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeDeactivated})
+		if err != nil {
+			return errors.Wrap(err, "failed to create reply")
+		}
+
+		a.dep.sender.Reply(ctx, a.message, msg)
+		return nil
+	}
+
 	activateVirt := record.Wrap(a.activate)
 	rec := record.Material{
 		Virtual: &activateVirt,
@@ -107,10 +121,6 @@ func (a *ActivateObject) Proceed(ctx context.Context) error {
 	err = a.dep.records.Set(ctx, a.activateID, rec)
 	if err != nil {
 		return errors.Wrap(err, "can't save record into storage")
-	}
-	idx, err := a.dep.indexStorage.ForID(ctx, flow.Pulse(ctx), *a.activate.Request.Record())
-	if err != nil {
-		return errors.Wrap(err, "failed to save result")
 	}
 
 	idx.Lifeline.LatestState = &a.activateID
@@ -131,6 +141,7 @@ func (a *ActivateObject) Proceed(ctx context.Context) error {
 
 	var foundResBuf []byte
 	if foundRes != nil {
+		logger.Errorf("duplicated result. resultID: %v, requestID: %v", a.resultID.DebugString(), a.result.Request.Record().DebugString())
 		foundResBuf, err = foundRes.Record.Virtual.Marshal()
 		if err != nil {
 			return err

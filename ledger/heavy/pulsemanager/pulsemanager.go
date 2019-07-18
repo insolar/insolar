@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/ledger/heavy/executor"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -37,14 +38,15 @@ var (
 
 // PulseManager implements insolar.PulseManager.
 type PulseManager struct {
-	Bus           insolar.MessageBus        `inject:""`
-	NodeNet       insolar.NodeNetwork       `inject:""`
-	GIL           insolar.GlobalInsolarLock `inject:""`
-	NodeSetter    node.Modifier             `inject:""`
-	Nodes         node.Accessor             `inject:""`
-	PulseAppender pulse.Appender            `inject:""`
-	PulseAccessor pulse.Accessor            `inject:""`
-	JetModifier   jet.Modifier              `inject:""`
+	Bus                insolar.MessageBus          `inject:""`
+	NodeNet            insolar.NodeNetwork         `inject:""`
+	GIL                insolar.GlobalInsolarLock   `inject:""`
+	NodeSetter         node.Modifier               `inject:""`
+	Nodes              node.Accessor               `inject:""`
+	PulseAppender      pulse.Appender              `inject:""`
+	PulseAccessor      pulse.Accessor              `inject:""`
+	FinalizationKeeper executor.FinalizationKeeper `inject:""`
+	JetModifier        jet.Modifier                `inject:""`
 
 	currentPulse insolar.Pulse
 
@@ -78,7 +80,12 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	)
 	defer span.End()
 
-	err := m.setUnderGilSection(ctx, newPulse)
+	err := m.FinalizationKeeper.OnPulse(ctx, newPulse.PulseNumber)
+	if err != nil {
+		return errors.Wrap(err, "got error calling FinalizationKeeper.OnPulse")
+	}
+
+	err = m.setUnderGilSection(ctx, newPulse)
 	if err != nil {
 		if err == errZeroNodes {
 			return nil

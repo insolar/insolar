@@ -73,13 +73,13 @@ func (jk *dbJetKeeper) AddHotConfirmation(ctx context.Context, pn insolar.PulseN
 	jk.Lock()
 	defer jk.Unlock()
 
-	inslogger.FromContext(ctx).Debug(">>>>>>>>>>>>>>>>> AddJet HERE: pulse: ", pn, ". ID: ", id.DebugString())
+	inslogger.FromContext(ctx).Debug(">>>>>>>>>>>>>>>>> AddHotConfirmation HERE: pulse: ", pn, ". ID: ", id.DebugString())
 
 	if err := jk.addHotConfirm(ctx, pn, id); err != nil {
 		return errors.Wrapf(err, "failed to save updated jets")
 	}
 
-	inslogger.FromContext(ctx).Debug(">>>>>>>>>>>>>>>>> AddJet AFTER addHotConfirm: pulse: ", pn, ". ID: ", id.DebugString())
+	inslogger.FromContext(ctx).Debug(">>>>>>>>>>>>>>>>> AddHotConfirmation AFTER addHotConfirm: pulse: ", pn, ". ID: ", id.DebugString())
 
 	err := jk.propagateConsistency(ctx, pn, id)
 	return errors.Wrapf(err, "AddHotConfirmation. propagateConsistency returns error")

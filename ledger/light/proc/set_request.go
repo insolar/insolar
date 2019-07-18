@@ -42,6 +42,7 @@ type SetRequest struct {
 		filament executor.FilamentModifier
 		sender   bus.Sender
 		locker   object.IndexLocker
+		index    object.IndexStorage
 	}
 }
 
@@ -64,11 +65,13 @@ func (p *SetRequest) Dep(
 	f executor.FilamentModifier,
 	s bus.Sender,
 	l object.IndexLocker,
+	i object.IndexStorage,
 ) {
 	p.dep.writer = w
 	p.dep.filament = f
 	p.dep.sender = s
 	p.dep.locker = l
+	p.dep.index = i
 }
 
 func (p *SetRequest) Proceed(ctx context.Context) error {
@@ -89,6 +92,19 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		objectID = p.requestID
 	} else {
 		objectID = *p.request.AffinityRef().Record()
+		idx, err := p.dep.index.ForID(ctx, flow.Pulse(ctx), objectID)
+		if err != nil {
+			return errors.Wrap(err, "failed to check an object state")
+		}
+		if idx.Lifeline.StateID == record.StateDeactivation {
+			msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeDeactivated})
+			if err != nil {
+				return errors.Wrap(err, "failed to create reply")
+			}
+
+			p.dep.sender.Reply(ctx, p.message, msg)
+			return nil
+		}
 	}
 
 	p.dep.locker.Lock(objectID)
