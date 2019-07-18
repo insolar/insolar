@@ -19,7 +19,6 @@ package deposit
 import (
 	"fmt"
 	"math/big"
-	"time"
 
 	"github.com/insolar/insolar/insolar"
 
@@ -29,7 +28,8 @@ import (
 type status string
 
 const (
-	confirms uint = 3
+	migrationConfirms       uint                = 3
+	migrationHoldNumOfPulse insolar.PulseNumber = 15768018 //hold on 6 month
 )
 
 const (
@@ -41,8 +41,8 @@ const (
 // Deposit is like wallet. It holds migrated money.
 type Deposit struct {
 	foundation.BaseContract
-	Timestamp               time.Time
-	HoldReleaseDate         time.Time
+	PulseDepositCreate      insolar.PulseNumber
+	PulseUnHoldDeposit      insolar.PulseNumber
 	MigrationDaemonConfirms map[insolar.Reference]bool
 	Confirms                uint
 	Amount                  string
@@ -62,62 +62,65 @@ func (d *Deposit) GetAmount() (string, error) {
 }
 
 // New creates new deposit.
-func New(migrationDaemonConfirms map[insolar.Reference]bool, txHash string, amount string, holdReleaseDate time.Time) (*Deposit, error) {
+func New(migrationDaemonConfirms map[insolar.Reference]bool, txHash string, amount string, currentPulse insolar.PulseNumber) (*Deposit, error) {
 	return &Deposit{
-
+		PulseDepositCreate:      currentPulse,
+		PulseUnHoldDeposit:      calculateUnHoldPulse(currentPulse),
 		MigrationDaemonConfirms: migrationDaemonConfirms,
 		Confirms:                0,
-		TxHash:                  txHash,
-		HoldReleaseDate:         holdReleaseDate,
 		Amount:                  amount,
+		TxHash:                  txHash,
 		Status:                  statusOpen,
 	}, nil
+}
+
+func calculateUnHoldPulse(currentPulse insolar.PulseNumber) insolar.PulseNumber {
+	return currentPulse + migrationHoldNumOfPulse
 }
 
 // MapMarshal gets deposit information.
 func (d *Deposit) MapMarshal() (map[string]string, error) {
 	return map[string]string{
-		"timestamp":       d.Timestamp.String(),
-		"holdReleaseDate": d.HoldReleaseDate.String(),
-		"amount":          d.Amount,
-		"bonus":           d.Bonus,
-		"txId":            d.TxHash,
+		"pulseDepositCreate": d.PulseDepositCreate.String(),
+		"pulseUnHoldDeposit": d.PulseUnHoldDeposit.String(),
+		"amount":             d.Amount,
+		"bonus":              d.Bonus,
+		"txId":               d.TxHash,
 	}, nil
 }
 
 // Confirm adds confirm for deposit by migration daemon.
-func (d *Deposit) Confirm(migrationDaemon insolar.Reference, txHash string, amountStr string) (uint, error) {
+func (d *Deposit) Confirm(migrationDaemon insolar.Reference, txHash string, amountStr string) error {
 	if txHash != d.TxHash {
-		return 0, fmt.Errorf("transaction hash is incorrect")
+		return fmt.Errorf("transaction hash is incorrect")
 	}
 
 	inputAmount := new(big.Int)
 	inputAmount, ok := inputAmount.SetString(amountStr, 10)
 	if !ok {
-		return 0, fmt.Errorf("failed to parse input amount")
+		return fmt.Errorf("failed to parse input amount")
 	}
 	depositAmount := new(big.Int)
 	depositAmount, ok = depositAmount.SetString(d.Amount, 10)
 	if !ok {
-		return 0, fmt.Errorf("failed to parse deposit amount")
+		return fmt.Errorf("failed to parse deposit amount")
 	}
 
 	if (inputAmount).Cmp(depositAmount) != 0 {
-		return 0, fmt.Errorf("amount is incorrect")
+		return fmt.Errorf("amount is incorrect")
 	}
-
 	if confirm, ok := d.MigrationDaemonConfirms[migrationDaemon]; ok {
 		if confirm {
-			return 0, fmt.Errorf("confirm from the migration daemon '%s' already exists", migrationDaemon.String())
+			return fmt.Errorf("confirm from the migration daemon '%s' already exists", migrationDaemon.String())
 		} else {
 			d.MigrationDaemonConfirms[migrationDaemon] = true
 			d.Confirms++
-			if d.Confirms == confirms {
+			if d.Confirms == migrationConfirms {
 				d.Status = statusHolding
 			}
-			return d.Confirms, nil
+			return nil
 		}
 	} else {
-		return 0, fmt.Errorf("migration daemon name is incorrect")
+		return fmt.Errorf("migration daemon name is incorrect")
 	}
 }

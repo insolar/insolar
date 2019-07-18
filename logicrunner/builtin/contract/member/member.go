@@ -19,11 +19,6 @@ package member
 import (
 	"encoding/json"
 	"fmt"
-	"math/big"
-	"strconv"
-	"strings"
-	"time"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member/helper"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member/signer"
@@ -33,6 +28,8 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"math/big"
+	"strings"
 )
 
 // Member - basic member contract.
@@ -151,7 +148,7 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 	case "wallet.transfer":
 		return m.transferCall(params)
 	case "deposit.migration":
-		return m.migrationCall(params)
+		return nil, m.migrationCall(params)
 	}
 	return nil, fmt.Errorf("unknown method: '%s'", request.Params.CallSite)
 }
@@ -259,40 +256,32 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 
 	return w.Transfer(amount, recipientReference)
 }
-func (m *Member) migrationCall(params map[string]interface{}) (interface{}, error) {
+func (m *Member) migrationCall(params map[string]interface{}) error {
 
 	amountStr, ok := params["amount"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'amount' param")
+		return fmt.Errorf("incorect input: failed to get 'amount' param")
 	}
 
 	amount := new(big.Int)
 	amount, ok = amount.SetString(amountStr, 10)
 	if !ok {
-		return nil, fmt.Errorf("failed to parse amount")
+		return fmt.Errorf("failed to parse amount")
 	}
-
-	currentDateStr, ok := params["currentDate"].(string)
+	if amount.Cmp(big.NewInt(0)) != 1 {
+		return fmt.Errorf("amount must be greater than zero")
+	}
+	txId, ok := params["ethTxHash"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'currentDate' param")
+		return fmt.Errorf("incorect input: failed to get 'ethTxHash' param")
 	}
 
-	currentDate, err := helper.ParseTimestamp(currentDateStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse 'currentDate': %s", err.Error())
-	}
-
-	txId, ok := params["txId"].(string)
+	burnAddress, ok := params["migrationAddress"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'txId' param")
+		return fmt.Errorf("incorect input: failed to get 'migrationAddress' param")
 	}
 
-	burnAddress, ok := params["burnAddress"].(string)
-	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'burnAddress' param")
-	}
-
-	return m.migration(txId, burnAddress, *amount, currentDate)
+	return m.depositMigration(txId, burnAddress, *amount)
 }
 
 // Platform methods.
@@ -402,33 +391,33 @@ func (m *Member) createMember(name string, key string, burnAddress string) (*mem
 }
 
 // Migration methods.
-func (m *Member) migration(txHash string, burnAddress string, amount big.Int, unHoldDate time.Time) (string, error) {
+func (m *Member) depositMigration(txHash string, burnAddress string, amount big.Int) error {
 	rd := rootdomain.GetObject(m.RootDomain)
 
 	// Get migration daemon members
 	migrationDaemonMembers, err := rd.GetMigrationDaemonMembers()
 	if err != nil {
-		return "", fmt.Errorf("failed to get migraion daemons map: %s", err.Error())
+		return fmt.Errorf("failed to get migraion daemons map: %s", err.Error())
 	}
 	if len(migrationDaemonMembers) == 0 {
-		return "", fmt.Errorf("there is no active migraion daemon")
+		return fmt.Errorf("there is no active migraion daemon")
 	}
 	// Check that caller is migration daemon
-	if helper.Contains(migrationDaemonMembers, m.GetReference()) {
-		return "", fmt.Errorf("this migraion daemon is not in the list")
+	if !helper.Contains(migrationDaemonMembers, m.GetReference()) {
+		return fmt.Errorf("this migration daemon is not in the list")
 	}
 
 	// Get member by burn address
 	tokenHolderRef, err := rd.GetMemberByBurnAddress(burnAddress)
 	if err != nil {
-		return "", fmt.Errorf("failed to get member by burn address")
+		return fmt.Errorf("failed to get member by burn address")
 	}
 	tokenHolder := member.GetObject(tokenHolderRef)
 
 	// Find deposit for txHash
 	found, txDeposit, err := tokenHolder.FindDeposit(txHash, amount.String())
 	if err != nil {
-		return "", fmt.Errorf("failed to get deposit: %s", err.Error())
+		return fmt.Errorf("failed to get deposit: %s", err.Error())
 	}
 
 	// If deposit doesn't exist - create new deposit
@@ -437,25 +426,33 @@ func (m *Member) migration(txHash string, burnAddress string, amount big.Int, un
 		for _, ref := range migrationDaemonMembers {
 			migrationDaemonConfirms[ref] = false
 		}
-		dHolder := deposit.New(migrationDaemonConfirms, txHash, amount.String(), unHoldDate)
-		txDeposit, err := dHolder.AsDelegate(tokenHolderRef)
+		migrationDaemonConfirms[m.GetReference()] = true
+		pulseNum, err := foundation.GetPulseNumber()
 		if err != nil {
-			return "", fmt.Errorf("failed to save as delegate: %s", err.Error())
+			return fmt.Errorf("failed to get current pulse: %s")
+		}
+		dHolder := deposit.New(migrationDaemonConfirms, txHash, amount.String(), pulseNum)
+		txDeposit, err := dHolder.AsDelegate(tokenHolderRef)
+		fmt.Println("TTTholderRef " + tokenHolderRef.String() + " txDeposit " + txDeposit.Reference.String())
+		if err != nil {
+			return fmt.Errorf("failed to save as delegate: %s", err.Error())
 		}
 
 		err = tokenHolder.SetDeposit(txDeposit.GetReference())
 		if err != nil {
-			return "", fmt.Errorf("failed to set deposit: %s", err.Error())
+			return fmt.Errorf("failed to set deposit: %s", err.Error())
 		}
+		return nil
+	} else {
+		// Confirm transaction by migration daemon
+		fmt.Println("TTMemberRef " + m.GetReference().String() + " txHash " + txHash + "amount " + amount.String())
+		err := txDeposit.Confirm(m.GetReference(), txHash, amount.String())
+		if err != nil {
+			return fmt.Errorf("confirmed failed: %s", err.Error())
+		}
+		return nil
 	}
 
-	// Confirm transaction by migration daemon
-	confirms, err := txDeposit.Confirm(m.GetReference(), txHash, amount.String())
-	if err != nil {
-		return "", fmt.Errorf("confirmed failed: %s", err.Error())
-	}
-
-	return strconv.Itoa(int(confirms)), nil
 }
 
 // FindDeposit finds deposits for this member with this transaction hash.
@@ -468,7 +465,7 @@ func (m *Member) FindDeposit(txHash string, inputAmountStr string) (bool, deposi
 	}
 
 	if m.Deposit.IsEmpty() {
-		return false, deposit.Deposit{}, fmt.Errorf("no deposit provided")
+		return false, deposit.Deposit{}, nil
 	}
 
 	d := deposit.GetObject(m.Deposit)

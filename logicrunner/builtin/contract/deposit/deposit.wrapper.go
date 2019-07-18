@@ -20,7 +20,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
-	"time"
 )
 
 type ExtendableError struct {
@@ -235,7 +234,7 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.Confirm(args0, args1, args2)
+	ret0 := self.Confirm(args0, args1, args2)
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
@@ -243,10 +242,10 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, err
 	}
 
-	ret1 = ph.MakeErrorSerializable(ret1)
+	ret0 = ph.MakeErrorSerializable(ret0)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+	err = ph.Serialize([]interface{}{ret0}, &ret)
 
 	return state, ret, err
 }
@@ -260,7 +259,7 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	args[1] = &args1
 	var args2 string
 	args[2] = &args2
-	var args3 time.Time
+	var args3 insolar.PulseNumber
 	args[3] = &args3
 
 	err := ph.Deserialize(data, &args)

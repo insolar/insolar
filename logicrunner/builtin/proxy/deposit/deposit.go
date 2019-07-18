@@ -20,7 +20,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"time"
 )
 
 type status string
@@ -80,12 +79,12 @@ func GetImplementationFrom(object insolar.Reference) (*Deposit, error) {
 }
 
 // New is constructor
-func New(migrationDaemonConfirms map[insolar.Reference]bool, txHash string, amount string, holdReleaseDate time.Time) *ContractConstructorHolder {
+func New(migrationDaemonConfirms map[insolar.Reference]bool, txHash string, amount string, currentPulse insolar.PulseNumber) *ContractConstructorHolder {
 	var args [4]interface{}
 	args[0] = migrationDaemonConfirms
 	args[1] = txHash
 	args[2] = amount
-	args[3] = holdReleaseDate
+	args[3] = currentPulse
 
 	var argsSerialized []byte
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
@@ -416,7 +415,7 @@ func (r *Deposit) MapMarshalAsImmutable() (map[string]string, error) {
 }
 
 // Confirm is proxy generated method
-func (r *Deposit) Confirm(migrationDaemon insolar.Reference, txHash string, amountStr string) (uint, error) {
+func (r *Deposit) Confirm(migrationDaemon insolar.Reference, txHash string, amountStr string) error {
 	var args [3]interface{}
 	args[0] = migrationDaemon
 	args[1] = txHash
@@ -424,31 +423,29 @@ func (r *Deposit) Confirm(migrationDaemon insolar.Reference, txHash string, amou
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
-	var ret0 uint
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
 	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
 
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
 	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "Confirm", argsSerialized, *PrototypeReference)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
 	err = common.CurrentProxyCtx.Deserialize(res, &ret)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
-	if ret1 != nil {
-		return ret0, ret1
+	if ret0 != nil {
+		return ret0
 	}
-	return ret0, nil
+	return nil
 }
 
 // ConfirmNoWait is proxy generated method
@@ -474,7 +471,7 @@ func (r *Deposit) ConfirmNoWait(migrationDaemon insolar.Reference, txHash string
 }
 
 // ConfirmAsImmutable is proxy generated method
-func (r *Deposit) ConfirmAsImmutable(migrationDaemon insolar.Reference, txHash string, amountStr string) (uint, error) {
+func (r *Deposit) ConfirmAsImmutable(migrationDaemon insolar.Reference, txHash string, amountStr string) error {
 	var args [3]interface{}
 	args[0] = migrationDaemon
 	args[1] = txHash
@@ -482,29 +479,27 @@ func (r *Deposit) ConfirmAsImmutable(migrationDaemon insolar.Reference, txHash s
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
-	var ret0 uint
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
 	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
 
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
 	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "Confirm", argsSerialized, *PrototypeReference)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
 	err = common.CurrentProxyCtx.Deserialize(res, &ret)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
-	if ret1 != nil {
-		return ret0, ret1
+	if ret0 != nil {
+		return ret0
 	}
-	return ret0, nil
+	return nil
 }
