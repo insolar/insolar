@@ -68,7 +68,6 @@ var (
 
 type Server struct {
 	pm           insolar.PulseManager
-	handler      message.HandlerFunc
 	pulse        insolar.Pulse
 	lock         sync.RWMutex
 	clientSender bus.Sender
@@ -81,7 +80,7 @@ func DefaultLightConfig() configuration.Configuration {
 	return cfg
 }
 
-func NewServer(ctx context.Context, cfg configuration.Configuration) (*Server, error) {
+func NewServer(ctx context.Context, cfg configuration.Configuration, receive func(meta payload.Meta, pl payload.Payload)) (*Server, error) {
 	// Cryptography.
 	var (
 		KeyProcessor  insolar.KeyProcessor
@@ -291,10 +290,18 @@ func NewServer(ctx context.Context, cfg configuration.Configuration) (*Server, e
 				return nil, nil
 			}
 
-			// Republish as incoming to client.
+			if receive != nil {
+				pl, err := payload.Unmarshal(meta.Payload)
+				if err != nil {
+					panic(nil)
+				}
+				receive(meta, pl)
+			}
+
 			clientHandler := func(msg *message.Message) (messages []*message.Message, e error) {
 				return nil, nil
 			}
+			// Republish as incoming to client.
 			_, err = ClientBus.IncomingMessageRouter(clientHandler)(msg)
 
 			if err != nil {
@@ -348,7 +355,6 @@ func NewServer(ctx context.Context, cfg configuration.Configuration) (*Server, e
 
 	s := &Server{
 		pm:           PulseManager,
-		handler:      Handler.FlowDispatcher.Process,
 		pulse:        *insolar.GenesisPulse,
 		clientSender: ClientBus,
 	}
@@ -377,10 +383,11 @@ func (s *Server) Pulse(ctx context.Context) {
 	}
 }
 
-func (s *Server) Send(ctx context.Context, msg *message.Message) (<-chan *message.Message, func()) {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
+func (s *Server) Send(ctx context.Context, pl payload.Payload) (<-chan *message.Message, func()) {
+	msg, err := payload.NewMessage(pl)
+	if err != nil {
+		panic(err)
+	}
 	return s.clientSender.SendTarget(ctx, msg, insolar.Reference{})
 }
 

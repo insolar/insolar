@@ -36,7 +36,7 @@ func Test_BootstrapCalls(t *testing.T) {
 
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
-	s, err := NewServer(ctx, cfg)
+	s, err := NewServer(ctx, cfg, nil)
 	require.NoError(t, err)
 
 	t.Run("message before pulse received returns error", func(t *testing.T) {
@@ -61,7 +61,7 @@ func Test_BasicOperations(t *testing.T) {
 
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
-	s, err := NewServer(ctx, cfg)
+	s, err := NewServer(ctx, cfg, nil)
 	require.NoError(t, err)
 
 	// First pulse goes in storage then interrupts.
