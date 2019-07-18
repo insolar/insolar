@@ -22,20 +22,20 @@ import (
 type StaticProfileMock struct {
 	t minimock.Tester
 
-	GetAnnouncementSignatureFunc       func() (r cryptkit.SignatureHolder)
-	GetAnnouncementSignatureCounter    uint64
-	GetAnnouncementSignaturePreCounter uint64
-	GetAnnouncementSignatureMock       mStaticProfileMockGetAnnouncementSignature
-
 	GetDefaultEndpointFunc       func() (r endpoints.Outbound)
 	GetDefaultEndpointCounter    uint64
 	GetDefaultEndpointPreCounter uint64
 	GetDefaultEndpointMock       mStaticProfileMockGetDefaultEndpoint
 
-	GetIntroductionFunc       func() (r StaticProfileExtension)
-	GetIntroductionCounter    uint64
-	GetIntroductionPreCounter uint64
-	GetIntroductionMock       mStaticProfileMockGetIntroduction
+	GetExtensionFunc       func() (r StaticProfileExtension)
+	GetExtensionCounter    uint64
+	GetExtensionPreCounter uint64
+	GetExtensionMock       mStaticProfileMockGetExtension
+
+	GetJoinerSignatureFunc       func() (r cryptkit.SignatureHolder)
+	GetJoinerSignatureCounter    uint64
+	GetJoinerSignaturePreCounter uint64
+	GetJoinerSignatureMock       mStaticProfileMockGetJoinerSignature
 
 	GetNodePublicKeyFunc       func() (r cryptkit.SignatureKeyHolder)
 	GetNodePublicKeyCounter    uint64
@@ -81,9 +81,9 @@ func NewStaticProfileMock(t minimock.Tester) *StaticProfileMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.GetAnnouncementSignatureMock = mStaticProfileMockGetAnnouncementSignature{mock: m}
 	m.GetDefaultEndpointMock = mStaticProfileMockGetDefaultEndpoint{mock: m}
-	m.GetIntroductionMock = mStaticProfileMockGetIntroduction{mock: m}
+	m.GetExtensionMock = mStaticProfileMockGetExtension{mock: m}
+	m.GetJoinerSignatureMock = mStaticProfileMockGetJoinerSignature{mock: m}
 	m.GetNodePublicKeyMock = mStaticProfileMockGetNodePublicKey{mock: m}
 	m.GetPrimaryRoleMock = mStaticProfileMockGetPrimaryRole{mock: m}
 	m.GetPublicKeyStoreMock = mStaticProfileMockGetPublicKeyStore{mock: m}
@@ -93,140 +93,6 @@ func NewStaticProfileMock(t minimock.Tester) *StaticProfileMock {
 	m.IsAcceptableHostMock = mStaticProfileMockIsAcceptableHost{mock: m}
 
 	return m
-}
-
-type mStaticProfileMockGetAnnouncementSignature struct {
-	mock              *StaticProfileMock
-	mainExpectation   *StaticProfileMockGetAnnouncementSignatureExpectation
-	expectationSeries []*StaticProfileMockGetAnnouncementSignatureExpectation
-}
-
-type StaticProfileMockGetAnnouncementSignatureExpectation struct {
-	result *StaticProfileMockGetAnnouncementSignatureResult
-}
-
-type StaticProfileMockGetAnnouncementSignatureResult struct {
-	r cryptkit.SignatureHolder
-}
-
-//Expect specifies that invocation of StaticProfile.GetJoinerSignature is expected from 1 to Infinity times
-func (m *mStaticProfileMockGetAnnouncementSignature) Expect() *mStaticProfileMockGetAnnouncementSignature {
-	m.mock.GetAnnouncementSignatureFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &StaticProfileMockGetAnnouncementSignatureExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of StaticProfile.GetJoinerSignature
-func (m *mStaticProfileMockGetAnnouncementSignature) Return(r cryptkit.SignatureHolder) *StaticProfileMock {
-	m.mock.GetAnnouncementSignatureFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &StaticProfileMockGetAnnouncementSignatureExpectation{}
-	}
-	m.mainExpectation.result = &StaticProfileMockGetAnnouncementSignatureResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of StaticProfile.GetJoinerSignature is expected once
-func (m *mStaticProfileMockGetAnnouncementSignature) ExpectOnce() *StaticProfileMockGetAnnouncementSignatureExpectation {
-	m.mock.GetAnnouncementSignatureFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &StaticProfileMockGetAnnouncementSignatureExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *StaticProfileMockGetAnnouncementSignatureExpectation) Return(r cryptkit.SignatureHolder) {
-	e.result = &StaticProfileMockGetAnnouncementSignatureResult{r}
-}
-
-//Set uses given function f as a mock of StaticProfile.GetJoinerSignature method
-func (m *mStaticProfileMockGetAnnouncementSignature) Set(f func() (r cryptkit.SignatureHolder)) *StaticProfileMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetAnnouncementSignatureFunc = f
-	return m.mock
-}
-
-//GetJoinerSignature implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.StaticProfile interface
-func (m *StaticProfileMock) GetJoinerSignature() (r cryptkit.SignatureHolder) {
-	counter := atomic.AddUint64(&m.GetAnnouncementSignaturePreCounter, 1)
-	defer atomic.AddUint64(&m.GetAnnouncementSignatureCounter, 1)
-
-	if len(m.GetAnnouncementSignatureMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetAnnouncementSignatureMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to StaticProfileMock.GetJoinerSignature.")
-			return
-		}
-
-		result := m.GetAnnouncementSignatureMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the StaticProfileMock.GetJoinerSignature")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetAnnouncementSignatureMock.mainExpectation != nil {
-
-		result := m.GetAnnouncementSignatureMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the StaticProfileMock.GetJoinerSignature")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetAnnouncementSignatureFunc == nil {
-		m.t.Fatalf("Unexpected call to StaticProfileMock.GetJoinerSignature.")
-		return
-	}
-
-	return m.GetAnnouncementSignatureFunc()
-}
-
-//GetAnnouncementSignatureMinimockCounter returns a count of StaticProfileMock.GetAnnouncementSignatureFunc invocations
-func (m *StaticProfileMock) GetAnnouncementSignatureMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetAnnouncementSignatureCounter)
-}
-
-//GetAnnouncementSignatureMinimockPreCounter returns the value of StaticProfileMock.GetJoinerSignature invocations
-func (m *StaticProfileMock) GetAnnouncementSignatureMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetAnnouncementSignaturePreCounter)
-}
-
-//GetAnnouncementSignatureFinished returns true if mock invocations count is ok
-func (m *StaticProfileMock) GetAnnouncementSignatureFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetAnnouncementSignatureMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetAnnouncementSignatureCounter) == uint64(len(m.GetAnnouncementSignatureMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetAnnouncementSignatureMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetAnnouncementSignatureCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetAnnouncementSignatureFunc != nil {
-		return atomic.LoadUint64(&m.GetAnnouncementSignatureCounter) > 0
-	}
-
-	return true
 }
 
 type mStaticProfileMockGetDefaultEndpoint struct {
@@ -363,80 +229,80 @@ func (m *StaticProfileMock) GetDefaultEndpointFinished() bool {
 	return true
 }
 
-type mStaticProfileMockGetIntroduction struct {
+type mStaticProfileMockGetExtension struct {
 	mock              *StaticProfileMock
-	mainExpectation   *StaticProfileMockGetIntroductionExpectation
-	expectationSeries []*StaticProfileMockGetIntroductionExpectation
+	mainExpectation   *StaticProfileMockGetExtensionExpectation
+	expectationSeries []*StaticProfileMockGetExtensionExpectation
 }
 
-type StaticProfileMockGetIntroductionExpectation struct {
-	result *StaticProfileMockGetIntroductionResult
+type StaticProfileMockGetExtensionExpectation struct {
+	result *StaticProfileMockGetExtensionResult
 }
 
-type StaticProfileMockGetIntroductionResult struct {
+type StaticProfileMockGetExtensionResult struct {
 	r StaticProfileExtension
 }
 
 //Expect specifies that invocation of StaticProfile.GetExtension is expected from 1 to Infinity times
-func (m *mStaticProfileMockGetIntroduction) Expect() *mStaticProfileMockGetIntroduction {
-	m.mock.GetIntroductionFunc = nil
+func (m *mStaticProfileMockGetExtension) Expect() *mStaticProfileMockGetExtension {
+	m.mock.GetExtensionFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &StaticProfileMockGetIntroductionExpectation{}
+		m.mainExpectation = &StaticProfileMockGetExtensionExpectation{}
 	}
 
 	return m
 }
 
 //Return specifies results of invocation of StaticProfile.GetExtension
-func (m *mStaticProfileMockGetIntroduction) Return(r StaticProfileExtension) *StaticProfileMock {
-	m.mock.GetIntroductionFunc = nil
+func (m *mStaticProfileMockGetExtension) Return(r StaticProfileExtension) *StaticProfileMock {
+	m.mock.GetExtensionFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &StaticProfileMockGetIntroductionExpectation{}
+		m.mainExpectation = &StaticProfileMockGetExtensionExpectation{}
 	}
-	m.mainExpectation.result = &StaticProfileMockGetIntroductionResult{r}
+	m.mainExpectation.result = &StaticProfileMockGetExtensionResult{r}
 	return m.mock
 }
 
 //ExpectOnce specifies that invocation of StaticProfile.GetExtension is expected once
-func (m *mStaticProfileMockGetIntroduction) ExpectOnce() *StaticProfileMockGetIntroductionExpectation {
-	m.mock.GetIntroductionFunc = nil
+func (m *mStaticProfileMockGetExtension) ExpectOnce() *StaticProfileMockGetExtensionExpectation {
+	m.mock.GetExtensionFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &StaticProfileMockGetIntroductionExpectation{}
+	expectation := &StaticProfileMockGetExtensionExpectation{}
 
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *StaticProfileMockGetIntroductionExpectation) Return(r StaticProfileExtension) {
-	e.result = &StaticProfileMockGetIntroductionResult{r}
+func (e *StaticProfileMockGetExtensionExpectation) Return(r StaticProfileExtension) {
+	e.result = &StaticProfileMockGetExtensionResult{r}
 }
 
 //Set uses given function f as a mock of StaticProfile.GetExtension method
-func (m *mStaticProfileMockGetIntroduction) Set(f func() (r StaticProfileExtension)) *StaticProfileMock {
+func (m *mStaticProfileMockGetExtension) Set(f func() (r StaticProfileExtension)) *StaticProfileMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.GetIntroductionFunc = f
+	m.mock.GetExtensionFunc = f
 	return m.mock
 }
 
 //GetExtension implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.StaticProfile interface
 func (m *StaticProfileMock) GetExtension() (r StaticProfileExtension) {
-	counter := atomic.AddUint64(&m.GetIntroductionPreCounter, 1)
-	defer atomic.AddUint64(&m.GetIntroductionCounter, 1)
+	counter := atomic.AddUint64(&m.GetExtensionPreCounter, 1)
+	defer atomic.AddUint64(&m.GetExtensionCounter, 1)
 
-	if len(m.GetIntroductionMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetIntroductionMock.expectationSeries)) {
+	if len(m.GetExtensionMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetExtensionMock.expectationSeries)) {
 			m.t.Fatalf("Unexpected call to StaticProfileMock.GetExtension.")
 			return
 		}
 
-		result := m.GetIntroductionMock.expectationSeries[counter-1].result
+		result := m.GetExtensionMock.expectationSeries[counter-1].result
 		if result == nil {
 			m.t.Fatal("No results are set for the StaticProfileMock.GetExtension")
 			return
@@ -447,9 +313,9 @@ func (m *StaticProfileMock) GetExtension() (r StaticProfileExtension) {
 		return
 	}
 
-	if m.GetIntroductionMock.mainExpectation != nil {
+	if m.GetExtensionMock.mainExpectation != nil {
 
-		result := m.GetIntroductionMock.mainExpectation.result
+		result := m.GetExtensionMock.mainExpectation.result
 		if result == nil {
 			m.t.Fatal("No results are set for the StaticProfileMock.GetExtension")
 		}
@@ -459,39 +325,173 @@ func (m *StaticProfileMock) GetExtension() (r StaticProfileExtension) {
 		return
 	}
 
-	if m.GetIntroductionFunc == nil {
+	if m.GetExtensionFunc == nil {
 		m.t.Fatalf("Unexpected call to StaticProfileMock.GetExtension.")
 		return
 	}
 
-	return m.GetIntroductionFunc()
+	return m.GetExtensionFunc()
 }
 
-//GetIntroductionMinimockCounter returns a count of StaticProfileMock.GetIntroductionFunc invocations
-func (m *StaticProfileMock) GetIntroductionMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetIntroductionCounter)
+//GetExtensionMinimockCounter returns a count of StaticProfileMock.GetExtensionFunc invocations
+func (m *StaticProfileMock) GetExtensionMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetExtensionCounter)
 }
 
-//GetIntroductionMinimockPreCounter returns the value of StaticProfileMock.GetExtension invocations
-func (m *StaticProfileMock) GetIntroductionMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetIntroductionPreCounter)
+//GetExtensionMinimockPreCounter returns the value of StaticProfileMock.GetExtension invocations
+func (m *StaticProfileMock) GetExtensionMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetExtensionPreCounter)
 }
 
-//GetIntroductionFinished returns true if mock invocations count is ok
-func (m *StaticProfileMock) GetIntroductionFinished() bool {
+//GetExtensionFinished returns true if mock invocations count is ok
+func (m *StaticProfileMock) GetExtensionFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetIntroductionMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetIntroductionCounter) == uint64(len(m.GetIntroductionMock.expectationSeries))
+	if len(m.GetExtensionMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetExtensionCounter) == uint64(len(m.GetExtensionMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.GetIntroductionMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetIntroductionCounter) > 0
+	if m.GetExtensionMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetExtensionCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.GetIntroductionFunc != nil {
-		return atomic.LoadUint64(&m.GetIntroductionCounter) > 0
+	if m.GetExtensionFunc != nil {
+		return atomic.LoadUint64(&m.GetExtensionCounter) > 0
+	}
+
+	return true
+}
+
+type mStaticProfileMockGetJoinerSignature struct {
+	mock              *StaticProfileMock
+	mainExpectation   *StaticProfileMockGetJoinerSignatureExpectation
+	expectationSeries []*StaticProfileMockGetJoinerSignatureExpectation
+}
+
+type StaticProfileMockGetJoinerSignatureExpectation struct {
+	result *StaticProfileMockGetJoinerSignatureResult
+}
+
+type StaticProfileMockGetJoinerSignatureResult struct {
+	r cryptkit.SignatureHolder
+}
+
+//Expect specifies that invocation of StaticProfile.GetJoinerSignature is expected from 1 to Infinity times
+func (m *mStaticProfileMockGetJoinerSignature) Expect() *mStaticProfileMockGetJoinerSignature {
+	m.mock.GetJoinerSignatureFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &StaticProfileMockGetJoinerSignatureExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of StaticProfile.GetJoinerSignature
+func (m *mStaticProfileMockGetJoinerSignature) Return(r cryptkit.SignatureHolder) *StaticProfileMock {
+	m.mock.GetJoinerSignatureFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &StaticProfileMockGetJoinerSignatureExpectation{}
+	}
+	m.mainExpectation.result = &StaticProfileMockGetJoinerSignatureResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of StaticProfile.GetJoinerSignature is expected once
+func (m *mStaticProfileMockGetJoinerSignature) ExpectOnce() *StaticProfileMockGetJoinerSignatureExpectation {
+	m.mock.GetJoinerSignatureFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &StaticProfileMockGetJoinerSignatureExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *StaticProfileMockGetJoinerSignatureExpectation) Return(r cryptkit.SignatureHolder) {
+	e.result = &StaticProfileMockGetJoinerSignatureResult{r}
+}
+
+//Set uses given function f as a mock of StaticProfile.GetJoinerSignature method
+func (m *mStaticProfileMockGetJoinerSignature) Set(f func() (r cryptkit.SignatureHolder)) *StaticProfileMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetJoinerSignatureFunc = f
+	return m.mock
+}
+
+//GetJoinerSignature implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.StaticProfile interface
+func (m *StaticProfileMock) GetJoinerSignature() (r cryptkit.SignatureHolder) {
+	counter := atomic.AddUint64(&m.GetJoinerSignaturePreCounter, 1)
+	defer atomic.AddUint64(&m.GetJoinerSignatureCounter, 1)
+
+	if len(m.GetJoinerSignatureMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetJoinerSignatureMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to StaticProfileMock.GetJoinerSignature.")
+			return
+		}
+
+		result := m.GetJoinerSignatureMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the StaticProfileMock.GetJoinerSignature")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetJoinerSignatureMock.mainExpectation != nil {
+
+		result := m.GetJoinerSignatureMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the StaticProfileMock.GetJoinerSignature")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetJoinerSignatureFunc == nil {
+		m.t.Fatalf("Unexpected call to StaticProfileMock.GetJoinerSignature.")
+		return
+	}
+
+	return m.GetJoinerSignatureFunc()
+}
+
+//GetJoinerSignatureMinimockCounter returns a count of StaticProfileMock.GetJoinerSignatureFunc invocations
+func (m *StaticProfileMock) GetJoinerSignatureMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetJoinerSignatureCounter)
+}
+
+//GetJoinerSignatureMinimockPreCounter returns the value of StaticProfileMock.GetJoinerSignature invocations
+func (m *StaticProfileMock) GetJoinerSignatureMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetJoinerSignaturePreCounter)
+}
+
+//GetJoinerSignatureFinished returns true if mock invocations count is ok
+func (m *StaticProfileMock) GetJoinerSignatureFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetJoinerSignatureMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetJoinerSignatureCounter) == uint64(len(m.GetJoinerSignatureMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetJoinerSignatureMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetJoinerSignatureCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetJoinerSignatureFunc != nil {
+		return atomic.LoadUint64(&m.GetJoinerSignatureCounter) > 0
 	}
 
 	return true
@@ -1452,16 +1452,16 @@ func (m *StaticProfileMock) IsAcceptableHostFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *StaticProfileMock) ValidateCallCounters() {
 
-	if !m.GetAnnouncementSignatureFinished() {
-		m.t.Fatal("Expected call to StaticProfileMock.GetJoinerSignature")
-	}
-
 	if !m.GetDefaultEndpointFinished() {
 		m.t.Fatal("Expected call to StaticProfileMock.GetDefaultEndpoint")
 	}
 
-	if !m.GetIntroductionFinished() {
+	if !m.GetExtensionFinished() {
 		m.t.Fatal("Expected call to StaticProfileMock.GetExtension")
+	}
+
+	if !m.GetJoinerSignatureFinished() {
+		m.t.Fatal("Expected call to StaticProfileMock.GetJoinerSignature")
 	}
 
 	if !m.GetNodePublicKeyFinished() {
@@ -1509,16 +1509,16 @@ func (m *StaticProfileMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *StaticProfileMock) MinimockFinish() {
 
-	if !m.GetAnnouncementSignatureFinished() {
-		m.t.Fatal("Expected call to StaticProfileMock.GetJoinerSignature")
-	}
-
 	if !m.GetDefaultEndpointFinished() {
 		m.t.Fatal("Expected call to StaticProfileMock.GetDefaultEndpoint")
 	}
 
-	if !m.GetIntroductionFinished() {
+	if !m.GetExtensionFinished() {
 		m.t.Fatal("Expected call to StaticProfileMock.GetExtension")
+	}
+
+	if !m.GetJoinerSignatureFinished() {
+		m.t.Fatal("Expected call to StaticProfileMock.GetJoinerSignature")
 	}
 
 	if !m.GetNodePublicKeyFinished() {
@@ -1563,9 +1563,9 @@ func (m *StaticProfileMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.GetAnnouncementSignatureFinished()
 		ok = ok && m.GetDefaultEndpointFinished()
-		ok = ok && m.GetIntroductionFinished()
+		ok = ok && m.GetExtensionFinished()
+		ok = ok && m.GetJoinerSignatureFinished()
 		ok = ok && m.GetNodePublicKeyFinished()
 		ok = ok && m.GetPrimaryRoleFinished()
 		ok = ok && m.GetPublicKeyStoreFinished()
@@ -1581,16 +1581,16 @@ func (m *StaticProfileMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if !m.GetAnnouncementSignatureFinished() {
-				m.t.Error("Expected call to StaticProfileMock.GetJoinerSignature")
-			}
-
 			if !m.GetDefaultEndpointFinished() {
 				m.t.Error("Expected call to StaticProfileMock.GetDefaultEndpoint")
 			}
 
-			if !m.GetIntroductionFinished() {
+			if !m.GetExtensionFinished() {
 				m.t.Error("Expected call to StaticProfileMock.GetExtension")
+			}
+
+			if !m.GetJoinerSignatureFinished() {
+				m.t.Error("Expected call to StaticProfileMock.GetJoinerSignature")
 			}
 
 			if !m.GetNodePublicKeyFinished() {
@@ -1633,15 +1633,15 @@ func (m *StaticProfileMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *StaticProfileMock) AllMocksCalled() bool {
 
-	if !m.GetAnnouncementSignatureFinished() {
-		return false
-	}
-
 	if !m.GetDefaultEndpointFinished() {
 		return false
 	}
 
-	if !m.GetIntroductionFinished() {
+	if !m.GetExtensionFinished() {
+		return false
+	}
+
+	if !m.GetJoinerSignatureFinished() {
 		return false
 	}
 

@@ -72,15 +72,19 @@ type NodeIntroduction struct {
 	ref     insolar.Reference
 }
 
-func (ni *NodeIntroduction) GetIntroducedNodeID() insolar.ShortNodeID {
-	return ni.shortID
-}
-
 func NewNodeIntroduction(networkNode insolar.NetworkNode) *NodeIntroduction {
 	return newNodeIntroduction(
 		networkNode.ShortID(),
 		networkNode.ID(),
 	)
+}
+
+func (ni *NodeIntroduction) GetPowerLevels() member.PowerSet {
+	return member.PowerSet{0, 0, 0, 0xff}
+}
+
+func (ni *NodeIntroduction) GetIntroducedNodeID() insolar.ShortNodeID {
+	return ni.shortID
 }
 
 func newNodeIntroduction(shortID insolar.ShortNodeID, ref insolar.Reference) *NodeIntroduction {

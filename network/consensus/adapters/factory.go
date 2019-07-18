@@ -130,7 +130,9 @@ type RoundStrategyFactory struct {
 }
 
 func NewRoundStrategyFactory() *RoundStrategyFactory {
-	return &RoundStrategyFactory{phasebundle.NewStandardBundleFactoryDefault()}
+	return &RoundStrategyFactory{
+		bundleFactory: phasebundle.NewStandardBundleFactoryDefault(),
+	}
 }
 
 func (rsf *RoundStrategyFactory) CreateRoundStrategy(chronicle api.ConsensusChronicles, config api.LocalNodeConfiguration) (core.RoundStrategy, core.PhaseControllersBundle) {
