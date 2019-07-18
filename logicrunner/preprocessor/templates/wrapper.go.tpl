@@ -104,7 +104,7 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 {{ range $method := .Methods }}
 func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
+
 	self := new({{ $.ContractType }})
 
 	if len(object) == 0 {
@@ -130,10 +130,6 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, e
 	self.{{ $method.Name }}( {{ $method.Arguments }} )
 {{ end }}
 
-	if ph.GetSystemError() != nil {
-	    return nil, nil, ph.GetSystemError()
-	}
-
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -155,7 +151,6 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, e
 {{ range $f := .Functions }}
 func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
 	{{ $f.ArgumentsZeroList }}
 	err := ph.Deserialize(data, &args)
 	if err != nil {
@@ -164,9 +159,6 @@ func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, error) {
 	}
 
 	{{ $f.Results }} := {{ $f.Name }}( {{ $f.Arguments }} )
-	if ph.GetSystemError() != nil {
-		return nil, ph.GetSystemError()
-	}
 	if ret1 != nil {
 		return nil, ret1
 	}
