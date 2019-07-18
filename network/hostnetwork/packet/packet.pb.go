@@ -1164,7 +1164,7 @@ var xxx_messageInfo_PulseRequest proto.InternalMessageInfo
 
 type BootstrapRequest struct {
 	JoinClaim     *github_com_insolar_insolar_network_consensusv1_packets.NodeJoinClaim `protobuf:"bytes,1,opt,name=JoinClaim,proto3,customtype=github.com/insolar/insolar/network/consensusv1/packets.NodeJoinClaim" json:"JoinClaim,omitempty"`
-	LastNodePulse github_com_insolar_insolar_insolar.PulseNumber                        `protobuf:"varint,2,opt,name=LastNodePulse,proto3,customtype=github.com/insolar/insolar/insolar.Number" json:"LastNodePulse"`
+	LastNodePulse github_com_insolar_insolar_insolar.PulseNumber                        `protobuf:"varint,2,opt,name=LastNodePulse,proto3,customtype=github.com/insolar/insolar/insolar.PulseNumber" json:"LastNodePulse"`
 	Permission    *Permission                                                           `protobuf:"bytes,3,opt,name=Permission,proto3" json:"Permission,omitempty"`
 }
 
@@ -1275,7 +1275,7 @@ func (m *RegisterRequest) XXX_DiscardUnknown() {
 var xxx_messageInfo_RegisterRequest proto.InternalMessageInfo
 
 type GenesisRequest struct {
-	LastPulse github_com_insolar_insolar_insolar.PulseNumber                        `protobuf:"varint,1,opt,name=LastPulse,proto3,customtype=github.com/insolar/insolar/insolar.Number" json:"LastPulse"`
+	LastPulse github_com_insolar_insolar_insolar.PulseNumber                        `protobuf:"varint,1,opt,name=LastPulse,proto3,customtype=github.com/insolar/insolar/insolar.PulseNumber" json:"LastPulse"`
 	Discovery *github_com_insolar_insolar_network_consensusv1_packets.NodeJoinClaim `protobuf:"bytes,2,opt,name=Discovery,proto3,customtype=github.com/insolar/insolar/network/consensusv1/packets.NodeJoinClaim" json:"Discovery,omitempty"`
 }
 
@@ -1465,7 +1465,7 @@ type BootstrapResponse struct {
 	RejectReason     string                                         `protobuf:"bytes,2,opt,name=RejectReason,proto3" json:"RejectReason,omitempty"`
 	ETA              uint32                                         `protobuf:"varint,3,opt,name=ETA,proto3" json:"ETA,omitempty"`
 	AssignShortID    uint32                                         `protobuf:"varint,4,opt,name=AssignShortID,proto3" json:"AssignShortID,omitempty"`
-	UpdateSincePulse github_com_insolar_insolar_insolar.PulseNumber `protobuf:"varint,5,opt,name=UpdateSincePulse,proto3,customtype=github.com/insolar/insolar/insolar.Number" json:"UpdateSincePulse"`
+	UpdateSincePulse github_com_insolar_insolar_insolar.PulseNumber `protobuf:"varint,5,opt,name=UpdateSincePulse,proto3,customtype=github.com/insolar/insolar/insolar.PulseNumber" json:"UpdateSincePulse"`
 	RedirectHost     string                                         `protobuf:"bytes,6,opt,name=RedirectHost,proto3" json:"RedirectHost,omitempty"`
 	NetworkSize      uint32                                         `protobuf:"varint,7,opt,name=NetworkSize,proto3" json:"NetworkSize,omitempty"`
 	Permission       *Permission                                    `protobuf:"bytes,8,opt,name=Permission,proto3" json:"Permission,omitempty"`

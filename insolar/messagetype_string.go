@@ -27,19 +27,18 @@ func _() {
 	_ = x[TypeSetBlob-16]
 	_ = x[TypeGetObjectIndex-17]
 	_ = x[TypeGetPendingRequests-18]
-	_ = x[TypeHotRecords-19]
-	_ = x[TypeGetJet-20]
-	_ = x[TypeAbandonedRequestsNotification-21]
-	_ = x[TypeGetPendingRequestID-22]
-	_ = x[TypeGetOpenRequests-23]
-	_ = x[TypeHeavyStartStop-24]
-	_ = x[TypeHeavyPayload-25]
-	_ = x[TypeGenesisRequest-26]
+	_ = x[TypeGetJet-19]
+	_ = x[TypeAbandonedRequestsNotification-20]
+	_ = x[TypeGetPendingRequestID-21]
+	_ = x[TypeGetOpenRequests-22]
+	_ = x[TypeHeavyStartStop-23]
+	_ = x[TypeHeavyPayload-24]
+	_ = x[TypeGenesisRequest-25]
 }
 
-const _MessageType_name = "TypeCallMethodTypeReturnResultsTypeExecutorResultsTypeValidateCaseBindTypeValidationResultsTypePendingFinishedTypeAdditionalCallFromPreviousExecutorTypeStillExecutingTypeGetCodeTypeGetObjectTypeGetDelegateTypeGetChildrenTypeUpdateObjectTypeRegisterChildTypeSetRecordTypeValidateRecordTypeSetBlobTypeGetObjectIndexTypeGetPendingRequestsTypeHotRecordsTypeGetJetTypeAbandonedRequestsNotificationTypeGetPendingRequestIDTypeGetOpenRequestsTypeHeavyStartStopTypeHeavyPayloadTypeGenesisRequest"
+const _MessageType_name = "TypeCallMethodTypeReturnResultsTypeExecutorResultsTypeValidateCaseBindTypeValidationResultsTypePendingFinishedTypeAdditionalCallFromPreviousExecutorTypeStillExecutingTypeGetCodeTypeGetObjectTypeGetDelegateTypeGetChildrenTypeUpdateObjectTypeRegisterChildTypeSetRecordTypeValidateRecordTypeSetBlobTypeGetObjectIndexTypeGetPendingRequestsTypeGetJetTypeAbandonedRequestsNotificationTypeGetPendingRequestIDTypeGetOpenRequestsTypeHeavyStartStopTypeHeavyPayloadTypeGenesisRequest"
 
-var _MessageType_index = [...]uint16{0, 14, 31, 50, 70, 91, 110, 148, 166, 177, 190, 205, 220, 236, 253, 266, 284, 295, 313, 335, 349, 359, 392, 415, 434, 452, 468, 486}
+var _MessageType_index = [...]uint16{0, 14, 31, 50, 70, 91, 110, 148, 166, 177, 190, 205, 220, 236, 253, 266, 284, 295, 313, 335, 345, 378, 401, 420, 438, 454, 472}
 
 func (i MessageType) String() string {
 	if i >= MessageType(len(_MessageType_index)-1) {
