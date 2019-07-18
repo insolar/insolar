@@ -308,14 +308,6 @@ func (tu *fetcher) nodesForPulse(ctx context.Context, pulse insolar.PulseNumber)
 		return nil, fmt.Errorf("can't get node of 'light' role for pulse %s", pulse)
 	}
 
-	// we have to go to heavy when we get up on existing ledger
-	heavy, err := tu.Nodes.InRole(pulse, insolar.StaticRoleHeavyMaterial)
-	if err != nil {
-		return nil, fmt.Errorf("can't get node of 'heavy' role for pulse %s", pulse)
-	}
-
-	res = append(res, heavy...)
-
 	me := tu.coordinator.Me()
 	for i := range res {
 		if res[i].ID == me {
@@ -326,10 +318,7 @@ func (tu *fetcher) nodesForPulse(ctx context.Context, pulse insolar.PulseNumber)
 
 	num := len(res)
 	if num == 0 {
-		inslogger.FromContext(ctx).Error(
-			"This shouldn't happen. We're solo active light material",
-		)
-
+		inslogger.FromContext(ctx).Error("This shouldn't happen. We're solo active light material")
 		return nil, errors.New("no other light to fetch jet tree data from")
 	}
 

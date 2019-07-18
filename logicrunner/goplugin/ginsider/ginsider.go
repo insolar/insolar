@@ -60,7 +60,6 @@ type GoInsider struct {
 	pluginsMutex sync.Mutex
 
 	lrCommon.Serializer
-	lrCommon.SystemError
 }
 
 // NewGoInsider creates a new GoInsider instance validating arguments
@@ -70,7 +69,6 @@ func NewGoInsider(path, network, address string) *GoInsider {
 	res.plugins = make(map[insolar.Reference]*pluginRec)
 	lrCommon.CurrentProxyCtx = &res
 	res.Serializer = lrCommon.NewCBORSerializer()
-	res.SystemError = lrCommon.NewSystemError()
 	return &res
 }
 
@@ -308,10 +306,6 @@ func (gi *GoInsider) RouteCall(ref insolar.Reference, wait bool, immutable bool,
 	if err != nil {
 		return nil, err
 	}
-	if gi.GetSystemError() != nil {
-		return nil, gi.GetSystemError()
-	}
-
 	req := rpctypes.UpRouteReq{
 		UpBaseReq: MakeUpBaseReq(),
 		Wait:      wait,
@@ -326,7 +320,6 @@ func (gi *GoInsider) RouteCall(ref insolar.Reference, wait bool, immutable bool,
 	res := rpctypes.UpRouteResp{}
 	err = client.Call("RPC.RouteCall", req, &res)
 	if err != nil {
-		gi.SetSystemError(err)
 		if err == rpc.ErrShutdown {
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
@@ -343,9 +336,6 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef insolar.Reference, construc
 	if err != nil {
 		return insolar.Reference{}, err
 	}
-	if gi.GetSystemError() != nil {
-		return insolar.Reference{}, gi.GetSystemError()
-	}
 
 	req := rpctypes.UpSaveAsChildReq{
 		UpBaseReq:       MakeUpBaseReq(),
@@ -358,7 +348,6 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef insolar.Reference, construc
 	res := rpctypes.UpSaveAsChildResp{}
 	err = client.Call("RPC.SaveAsChild", req, &res)
 	if err != nil {
-		gi.SetSystemError(err)
 		if err == rpc.ErrShutdown {
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
@@ -375,9 +364,6 @@ func (gi *GoInsider) SaveAsDelegate(intoRef, classRef insolar.Reference, constru
 	if err != nil {
 		return insolar.Reference{}, err
 	}
-	if gi.GetSystemError() != nil {
-		return insolar.Reference{}, gi.GetSystemError()
-	}
 
 	req := rpctypes.UpSaveAsDelegateReq{
 		UpBaseReq:       MakeUpBaseReq(),
@@ -390,7 +376,6 @@ func (gi *GoInsider) SaveAsDelegate(intoRef, classRef insolar.Reference, constru
 	res := rpctypes.UpSaveAsDelegateResp{}
 	err = client.Call("RPC.SaveAsDelegate", req, &res)
 	if err != nil {
-		gi.SetSystemError(err)
 		if err == rpc.ErrShutdown {
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
@@ -407,9 +392,6 @@ func (gi *GoInsider) GetDelegate(object, ofType insolar.Reference) (insolar.Refe
 	if err != nil {
 		return insolar.Reference{}, err
 	}
-	if gi.GetSystemError() != nil {
-		return insolar.Reference{}, gi.GetSystemError()
-	}
 
 	req := rpctypes.UpGetDelegateReq{
 		UpBaseReq: MakeUpBaseReq(),
@@ -420,7 +402,6 @@ func (gi *GoInsider) GetDelegate(object, ofType insolar.Reference) (insolar.Refe
 	res := rpctypes.UpGetDelegateResp{}
 	err = client.Call("RPC.GetDelegate", req, &res)
 	if err != nil {
-		gi.SetSystemError(err)
 		if err == rpc.ErrShutdown {
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
@@ -437,9 +418,6 @@ func (gi *GoInsider) DeactivateObject(object insolar.Reference) error {
 	if err != nil {
 		return err
 	}
-	if gi.GetSystemError() != nil {
-		return gi.GetSystemError()
-	}
 
 	req := rpctypes.UpDeactivateObjectReq{
 		UpBaseReq: MakeUpBaseReq(),
@@ -448,7 +426,6 @@ func (gi *GoInsider) DeactivateObject(object insolar.Reference) error {
 	res := rpctypes.UpDeactivateObjectResp{}
 	err = client.Call("RPC.DeactivateObject", req, &res)
 	if err != nil {
-		gi.SetSystemError(err)
 		if err == rpc.ErrShutdown {
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
