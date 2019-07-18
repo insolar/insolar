@@ -58,7 +58,6 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -151,19 +150,11 @@ func TestConsensusMain(t *testing.T) {
 		}
 	}()
 
-	once := sync.Once{}
-
 	for {
 		fmt.Println("===", time.Since(startedAt), "=================================================")
 		time.Sleep(time.Second)
 		if time.Since(startedAt) > time.Minute {
 			return
-		}
-
-		if time.Since(startedAt) > time.Second*10 {
-			once.Do(func() {
-				controllers[0].GracefulLeave(1)
-			})
 		}
 	}
 }

@@ -51,40 +51,21 @@
 package consensus
 
 import (
+	"sync"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/adapters"
-	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
-	"sync"
 )
-
-type LeaveApplied struct {
-	effectiveSince insolar.PulseNumber
-	exitCode       uint32
-}
-
-type PowerApplied struct {
-	effectiveSince insolar.PulseNumber
-	power          member.Power
-}
-
-type Finished struct {
-	pulseNumber insolar.PulseNumber
-}
 
 type Controller interface {
 	Abort()
 
 	GetActivePowerLimit() (member.Power, insolar.PulseNumber)
 
-	GracefulLeave(reason uint32) <-chan LeaveApplied
-	ChangePower(capacity capacity.Level) <-chan PowerApplied
-
-	AddFinishedNotifier(typ string) <-chan Finished
+	AddFinishedNotifier(typ string) <-chan insolar.PulseNumber
 	RemoveFinishedNotifier(typ string)
 }
 
@@ -93,7 +74,7 @@ type controller struct {
 	consensusController    api.ConsensusController
 
 	mu        *sync.RWMutex
-	notifiers map[string]chan Finished
+	notifiers map[string]chan insolar.PulseNumber
 }
 
 func newController(consensusControlFeeder *adapters.ConsensusControlFeeder, consensusController api.ConsensusController) *controller {
@@ -102,7 +83,7 @@ func newController(consensusControlFeeder *adapters.ConsensusControlFeeder, cons
 		consensusController:    consensusController,
 
 		mu:        &sync.RWMutex{},
-		notifiers: make(map[string]chan Finished),
+		notifiers: make(map[string]chan insolar.PulseNumber),
 	}
 
 	consensusControlFeeder.SetOnFinished(controller.onFinished)
@@ -119,41 +100,11 @@ func (c *controller) GetActivePowerLimit() (member.Power, insolar.PulseNumber) {
 	return pw, insolar.PulseNumber(pul)
 }
 
-func (c *controller) GracefulLeave(reason uint32) <-chan LeaveApplied {
-	leaveChan := make(chan LeaveApplied, 1)
-
-	c.consensusControlFeeder.SetRequiredGracefulLeave(reason, func(exitCode uint32, effectiveSince pulse.Number) {
-		defer close(leaveChan)
-
-		leaveChan <- LeaveApplied{
-			effectiveSince: insolar.PulseNumber(effectiveSince),
-			exitCode:       exitCode,
-		}
-	})
-
-	return leaveChan
-}
-
-func (c *controller) ChangePower(capacity capacity.Level) <-chan PowerApplied {
-	powerChan := make(chan PowerApplied, 1)
-
-	c.consensusControlFeeder.SetRequiredPowerLevel(capacity, func(power member.Power, effectiveSince pulse.Number) {
-		defer close(powerChan)
-
-		powerChan <- PowerApplied{
-			effectiveSince: insolar.PulseNumber(effectiveSince),
-			power:          power,
-		}
-	})
-
-	return powerChan
-}
-
-func (c *controller) AddFinishedNotifier(typ string) <-chan Finished {
+func (c *controller) AddFinishedNotifier(typ string) <-chan insolar.PulseNumber {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	n := make(chan Finished, 1)
+	n := make(chan insolar.PulseNumber, 1)
 	c.notifiers[typ] = n
 
 	return n
@@ -172,114 +123,6 @@ func (c *controller) onFinished(pulse pulse.Number) {
 	defer c.mu.RUnlock()
 
 	for _, n := range c.notifiers {
-		n <- Finished{
-			pulseNumber: insolar.PulseNumber(pulse),
-		}
+		n <- insolar.PulseNumber(pulse)
 	}
-}
-
-func InterceptConsensusControl(originalFeeder api.ConsensusControlFeeder) (*ControlFeederAdapter, api.ConsensusControlFeeder) {
-	r := ControlFeederAdapter{}
-	r.internal.ConsensusControlFeeder = originalFeeder
-	return &r, &r.internal
-}
-
-type ControlFeederAdapter struct {
-	internal internalControlFeederAdapter
-}
-
-func (p *ControlFeederAdapter) PrepareLeave() <-chan struct{} {
-	if p.internal.zeroReadyChannel != nil {
-		panic("illegal state")
-	}
-	p.internal.zeroReadyChannel = make(chan struct{})
-	if p.internal.hasZero || p.internal.zeroPending {
-		p.internal.hasZero = true
-		close(p.internal.zeroReadyChannel)
-	}
-	return p.internal.zeroReadyChannel
-}
-
-func (p *ControlFeederAdapter) Leave(leaveReason uint32) <-chan struct{} {
-	if p.internal.leavingChannel != nil {
-		panic("illegal state")
-	}
-	p.internal.leaveReason = leaveReason
-	p.internal.leavingChannel = make(chan struct{})
-	if p.internal.hasLeft {
-		p.internal.setHasZero()
-		close(p.internal.leavingChannel)
-	}
-	return p.internal.leavingChannel
-}
-
-var _ api.ConsensusControlFeeder = &internalControlFeederAdapter{}
-
-type internalControlFeederAdapter struct {
-	api.ConsensusControlFeeder
-
-	hasLeft bool
-	hasZero bool
-
-	zeroPending bool
-
-	leaveReason      uint32
-	zeroReadyChannel chan struct{}
-	leavingChannel   chan struct{}
-}
-
-func (p *internalControlFeederAdapter) GetRequiredPowerLevel() power.Request {
-	if p.zeroReadyChannel != nil || p.leavingChannel != nil {
-		return power.NewRequestByLevel(capacity.LevelZero)
-	}
-	return p.ConsensusControlFeeder.GetRequiredPowerLevel()
-}
-
-func (p *internalControlFeederAdapter) OnAppliedPowerLevel(pw member.Power, effectiveSince pulse.Number) {
-	p.zeroPending = pw == 0
-	if pw == 0 && p.zeroReadyChannel != nil {
-		p.setHasZero()
-	}
-	p.ConsensusControlFeeder.OnAppliedPowerLevel(pw, effectiveSince)
-}
-
-func (p *internalControlFeederAdapter) GetRequiredGracefulLeave() (bool, uint32) {
-	if p.leavingChannel != nil {
-		return true, p.leaveReason
-	}
-	return p.ConsensusControlFeeder.GetRequiredGracefulLeave()
-}
-
-func (p *internalControlFeederAdapter) OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse.Number) {
-	p.ConsensusControlFeeder.OnAppliedGracefulLeave(exitCode, effectiveSince)
-}
-
-func (p *internalControlFeederAdapter) PulseDetected() {
-	if p.zeroPending {
-		p.setHasZero()
-	}
-	p.ConsensusControlFeeder.PulseDetected()
-}
-
-func (p *internalControlFeederAdapter) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
-	if report.MemberMode.IsEvicted() {
-		p.setHasLeft()
-	}
-	p.ConsensusControlFeeder.ConsensusFinished(report, expectedCensus)
-}
-
-func (p *internalControlFeederAdapter) setHasZero() {
-	if !p.hasZero && p.zeroReadyChannel != nil {
-		close(p.zeroReadyChannel)
-	}
-	p.hasZero = true
-}
-
-func (p *internalControlFeederAdapter) setHasLeft() {
-	p.setHasZero()
-
-	if !p.hasLeft && p.leavingChannel != nil {
-		close(p.leavingChannel)
-	}
-	p.hasLeft = true
 }
