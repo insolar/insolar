@@ -58,8 +58,8 @@ func (hp *HasPendings) Proceed(ctx context.Context) error {
 		return err
 	}
 
-	msg, err := payload.NewMessage(&payload.Has{
-		Has: idx.Lifeline.EarliestOpenRequest != nil && *idx.Lifeline.EarliestOpenRequest < flow.Pulse(ctx),
+	msg, err := payload.NewMessage(&payload.PendingsInfo{
+		HasPendings: idx.Lifeline.EarliestOpenRequest != nil && *idx.Lifeline.EarliestOpenRequest < flow.Pulse(ctx),
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create reply")

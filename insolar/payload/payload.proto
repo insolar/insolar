@@ -214,10 +214,10 @@ message HasPendings {
     bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
 }
 
-message Has {
+message PendingsInfo {
     uint32 Polymorph = 16;
 
-    bool Has = 20;
+    bool HasPendings = 20;
 }
 
 message Replication {

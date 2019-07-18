@@ -308,8 +308,8 @@ func (s *amSuite) TestLedgerArtifactManager_HasPendings_Success() {
 	defer mc.Finish()
 	objectRef := gen.Reference()
 
-	resultHas := &payload.Has{
-		Has: true,
+	resultHas := &payload.PendingsInfo{
+		HasPendings: true,
 	}
 	resMsg, err := payload.NewMessage(resultHas)
 	require.NoError(s.T(), err)

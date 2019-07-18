@@ -58,7 +58,7 @@ const (
 	TypeResultInfo
 	TypeGetPendings
 	TypeHasPendings
-	TypeHas
+	TypePendingsInfo
 	TypeReplication
 
 	// should be the last (required by TypesMap)
@@ -228,8 +228,8 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *HasPendings:
 		pl.Polymorph = uint32(TypeHasPendings)
 		return pl.Marshal()
-	case *Has:
-		pl.Polymorph = uint32(TypeHas)
+	case *PendingsInfo:
+		pl.Polymorph = uint32(TypePendingsInfo)
 		return pl.Marshal()
 	case *Replication:
 		pl.Polymorph = uint32(TypeReplication)
@@ -357,8 +357,8 @@ func Unmarshal(data []byte) (Payload, error) {
 		pl := HasPendings{}
 		err := pl.Unmarshal(data)
 		return &pl, err
-	case TypeHas:
-		pl := Has{}
+	case TypePendingsInfo:
+		pl := PendingsInfo{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	case TypeReplication:

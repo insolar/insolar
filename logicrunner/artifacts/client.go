@@ -535,8 +535,8 @@ func (m *client) HasPendings(
 	}
 
 	switch concrete := pl.(type) {
-	case *payload.Has:
-		return concrete.Has, nil
+	case *payload.PendingsInfo:
+		return concrete.HasPendings, nil
 	case *payload.Error:
 		return false, errors.New(concrete.Text)
 	default:
