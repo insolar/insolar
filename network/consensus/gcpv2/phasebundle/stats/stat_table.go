@@ -158,6 +158,10 @@ func (t *StatTable) GetSummaryByValue(value uint8) uint32 {
 	return t.summary[value]
 }
 
+func (t *StatTable) GetSummary() []uint32 {
+	return append(make([]uint32, 0, len(t.summary)), t.summary...)
+}
+
 func (t *StatTable) MaxValue() uint8 {
 	return uint8(len(t.summary) - 1)
 }
@@ -172,6 +176,39 @@ func (t *StatTable) String() string {
 
 func (t *StatTable) AsText(header string) string {
 	return t.TableFmt(header, nil)
+}
+
+func (t *StatTable) Equals(o *StatTable) bool {
+	if t == nil || o == nil {
+		return false
+	}
+	if t == o {
+		return true
+	}
+	if t.rowCount != o.rowCount || len(t.columns) != len(o.columns) || len(t.summary) != len(o.summary) ||
+		len(t.rows) != len(o.rows) {
+		return false
+	}
+	for i, tS := range t.summary {
+		if tS != o.summary[i] {
+			return false
+		}
+	}
+	for j, tC := range t.columns {
+		if !tC.Equals(o.columns[j]) {
+			return false
+		}
+	}
+	for j, tR := range t.rows {
+		oR := o.rows[j]
+		if tR == oR { //for both nil
+			continue
+		}
+		if tR == nil || oR == nil || !tR.equals(oR) {
+			return false
+		}
+	}
+	return true
 }
 
 func (t *StatTable) TableFmt(header string, fmtFn RowValueFormatFunc) string {

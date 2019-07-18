@@ -58,6 +58,10 @@ func AsIndex(v int) Index {
 	return Index(v).Ensure()
 }
 
+func AsIndexUint16(v uint16) Index {
+	return Index(v).Ensure()
+}
+
 func (v Index) AsUint32() uint32 {
 	return uint32(v.Ensure())
 }

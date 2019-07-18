@@ -105,7 +105,9 @@ func (c *Phase2Controller) GetPacketType() []phases.PacketType {
 	return []phases.PacketType{phases.PacketPhase2}
 }
 
-func (c *Phase2Controller) CreatePacketDispatcher(pt phases.PacketType, ctlIndex int, realm *core.FullRealm) (core.PacketDispatcher, core.PerNodePacketDispatcherFactory) {
+func (c *Phase2Controller) CreatePacketDispatcher(pt phases.PacketType, ctlIndex int,
+	realm *core.FullRealm) (core.PacketDispatcher, core.PerNodePacketDispatcherFactory) {
+
 	c.R = realm
 	return c, nil
 }
@@ -119,7 +121,9 @@ func (c *Phase2Controller) DispatchMemberPacket(ctx context.Context, reader tran
 
 	p2 := reader.AsPhase2Packet()
 
-	signalSent, err := announce.ApplyMemberAnnouncement(ctx, p2, p2.GetBriefIntroduction(), sender, c.R)
+	signalSent, announcedJoinerID, err := announce.ApplyMemberAnnouncement(ctx, p2,
+		p2.GetBriefIntroduction(), false, sender, c.R)
+
 	if err != nil {
 		return err
 	}
@@ -134,21 +138,17 @@ func (c *Phase2Controller) DispatchMemberPacket(ctx context.Context, reader tran
 		return err
 	}
 
+	purgatory := c.R.GetPurgatory()
 	for i, nb := range neighbours {
 		modified, err := nb.neighbour.ApplyNeighbourEvidence(sender, nb.ma)
 		if err == nil && modified {
 			signalSent = true
 
-			if nb.neighbour.IsJoiner() {
-				ja := neighbourhood[i].GetJoinerAnnouncement()
-				err = c.R.AdvancePurgatoryNode(nb.neighbour.GetNodeID(), ja.GetBriefIntroduction(), nil, nb.neighbour)
-			} else if !nb.ma.JoinerID.IsAbsent() {
-				err = c.R.AdvancePurgatoryNode(nb.ma.JoinerID, nil, nil, nb.neighbour)
-			}
+			err = announce.ApplyNeighbourJoinerAnnouncement(ctx, purgatory, sender, announcedJoinerID, nb.neighbour,
+				nb.ma.JoinerID, neighbourhood[i].GetJoinerAnnouncement())
 		}
 		if err != nil {
 			inslogger.FromContext(ctx).Error(err)
-			continue
 		}
 	}
 	if !signalSent {
@@ -159,7 +159,7 @@ func (c *Phase2Controller) DispatchMemberPacket(ctx context.Context, reader tran
 }
 
 func (c *Phase2Controller) verifyNeighbourhood(neighbourhood []transport.MembershipAnnouncementReader,
-	n *core.NodeAppearance) ([]resolvedNeighbour, error) {
+	n announce.AnnouncingMember) ([]resolvedNeighbour, error) {
 
 	hasThis := false
 	hasSelf := false
@@ -174,12 +174,12 @@ func (c *Phase2Controller) verifyNeighbourhood(neighbourhood []transport.Members
 		}
 		neighbour := c.R.GetPopulation().GetNodeAppearance(nid)
 		if neighbour == nil {
-			return nil, n.Frauds().NewUnknownNeighbour(n.GetProfile())
+			return nil, n.Frauds().NewUnknownNeighbour(n.GetReportProfile())
 		}
 		nr := nb.GetNodeRank()
 
-		if !profiles.MatchIntroAndRank(neighbour.GetProfile(), nc, nr) {
-			return nil, n.Frauds().NewMismatchedNeighbourRank(n.GetProfile())
+		if neighbour.GetRank(nc) != nr {
+			return nil, n.Frauds().NewMismatchedNeighbourRank(n.GetReportProfile())
 		}
 
 		// TODO validate node proof - if fails, then fraud on sender
@@ -194,10 +194,10 @@ func (c *Phase2Controller) verifyNeighbourhood(neighbourhood []transport.Members
 	}
 
 	if !hasThis || hasSelf {
-		return nil, n.Frauds().NewNeighbourMissingTarget(n.GetProfile())
+		return nil, n.Frauds().NewNeighbourMissingTarget(n.GetReportProfile())
 	}
 	if hasSelf {
-		return nil, n.Frauds().NewNeighbourContainsRource(n.GetProfile())
+		return nil, n.Frauds().NewNeighbourContainsSource(n.GetReportProfile())
 	}
 	return neighbours, nil
 }
@@ -323,10 +323,10 @@ func (c *Phase2Controller) sendPhase2(ctx context.Context, neighbourhood []*core
 		neighbourhoodAnnouncements, c.packetPrepareOptions)
 
 	p2.SendToMany(ctx, len(neighbourhood), c.R.GetPacketSender(),
-		func(ctx context.Context, targetIdx int) (profiles.ActiveNode, transport.PacketSendOptions) {
+		func(ctx context.Context, targetIdx int) (profiles.StaticProfile, transport.PacketSendOptions) {
 			np := neighbourhood[targetIdx]
 			np.SetPacketSent(phases.PacketPhase2)
-			return np.GetProfile(), 0
+			return np.GetProfile().GetStatic(), 0
 		})
 }
 
@@ -390,7 +390,7 @@ func (c *Phase2Controller) workerRetryOnMissingNodes(ctx context.Context) {
 		if !v.IsNshRequired() {
 			continue
 		}
-		pr1.SendTo(ctx, v.GetProfile(), 0, c.R.GetPacketSender())
+		pr1.SendTo(ctx, v.GetProfile().GetStatic(), 0, c.R.GetPacketSender())
 	}
 }
 

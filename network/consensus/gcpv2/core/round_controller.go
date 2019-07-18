@@ -53,6 +53,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"sync"
 	"time"
 
@@ -66,15 +67,13 @@ import (
 )
 
 type RoundStrategyFactory interface {
-	CreateRoundStrategy(chronicle api.ConsensusChronicles, config api.LocalNodeConfiguration) RoundStrategy
+	CreateRoundStrategy(chronicle api.ConsensusChronicles, config api.LocalNodeConfiguration) (RoundStrategy, PhaseControllersBundle)
 }
 
 type RoundStrategy interface {
-	PhaseControllersBundle
-
-	RandUint32() uint32
+	GetBaselineWeightForNeighbours() uint32
 	ShuffleNodeSequence(n int, swap func(i, j int))
-	IsEphemeralPulseAllowed() bool
+
 	ConfigureRoundContext(ctx context.Context, expectedPulse pulse.Number, self profiles.LocalNode) context.Context
 	AdjustConsensusTimings(timings *api.RoundTimings)
 }
@@ -84,6 +83,7 @@ type PhasedRoundController struct {
 
 	/* Derived from the provided externally - set at init() or start(). Don't need mutex */
 	chronicle      api.ConsensusChronicles
+	bundle         PhaseControllersBundle
 	fullCancel     context.CancelFunc /* cancels prepareCancel as well */
 	prepareCancel  context.CancelFunc
 	prevPulseRound api.RoundController
@@ -94,17 +94,16 @@ type PhasedRoundController struct {
 	realm     FullRealm
 }
 
-func NewPhasedRoundController(strategy RoundStrategy, chronicle api.ConsensusChronicles, transport transport.Factory,
-	config api.LocalNodeConfiguration, controlFeeder api.ConsensusControlFeeder, candidateFeeder api.CandidateControlFeeder,
+func NewPhasedRoundController(strategy RoundStrategy, chronicle api.ConsensusChronicles, bundle PhaseControllersBundle,
+	transport transport.Factory, config api.LocalNodeConfiguration,
+	controlFeeder api.ConsensusControlFeeder, candidateFeeder api.CandidateControlFeeder,
 	prevPulseRound api.RoundController) *PhasedRoundController {
 
-	r := &PhasedRoundController{chronicle: chronicle}
+	r := &PhasedRoundController{chronicle: chronicle, prevPulseRound: prevPulseRound, bundle: bundle}
 
-	r.prevPulseRound = prevPulseRound
-	r.realm.coreRealm.init(&r.rw, strategy, transport, config, chronicle.GetLatestCensus())
-	nbhSizes := r.realm.init(transport, controlFeeder, candidateFeeder)
-
-	r.realm.coreRealm.initPopulation(controlFeeder.GetRequiredPowerLevel(), nbhSizes)
+	r.realm.coreRealm.initBefore(&r.rw, strategy, transport, config, chronicle.GetLatestCensus())
+	nbhSizes := r.realm.initBefore(transport, controlFeeder, candidateFeeder)
+	r.realm.coreRealm.initBeforePopulation(controlFeeder.GetRequiredPowerLevel(), nbhSizes)
 
 	return r
 }
@@ -120,7 +119,7 @@ func (r *PhasedRoundController) StartConsensusRound(upstream api.UpstreamControl
 	ctx := r.realm.config.GetParentContext()
 	ctx, r.fullCancel = context.WithCancel(ctx)
 
-	r.realm.roundContext = r.realm.strategy.ConfigureRoundContext(
+	r.realm.coreRealm.roundContext = r.realm.coreRealm.strategy.ConfigureRoundContext(
 		ctx,
 		r.realm.initialCensus.GetExpectedPulseNumber(),
 		r.realm.GetLocalProfile(),
@@ -130,32 +129,36 @@ func (r *PhasedRoundController) StartConsensusRound(upstream api.UpstreamControl
 
 	r.realm.coreRealm.roundStartedAt = time.Now()
 	r.realm.coreRealm.upstream = upstream
+	r.realm.coreRealm.postponedPacketFn = func(packet transport.PacketParser, from endpoints.Inbound, verifyFlags PacketVerifyFlags) {
+		// There is no real context for delayed reprocessing, so we use the round context
+		ctx := r.realm.coreRealm.roundContext
+		err := r.handlePacket(ctx, packet, from, verifyFlags)
 
-	preps := r.realm.strategy.GetPrepPhaseControllers()
+		if err != nil {
+			inslogger.FromContext(ctx).Error(err)
+		}
+	}
+
+	preps := r.bundle.CreatePrepPhaseControllers()
 
 	if len(preps) > 0 {
-		r.prepR = &PrepRealm{
-			coreRealm: &r.realm.coreRealm,
-
-			completeFn: func(successful bool) {
+		prep := PrepRealm{coreRealm: &r.realm.coreRealm}
+		prep.init(
+			r.bundle.IsEphemeralPulseAllowed(),
+			func(successful bool) {
 				if r.prepR == nil {
 					return
 				}
 				defer r.prepR.stop() // initiates handover from PrepRealm
 				r.prepR = nil
 				r.startFullRealm()
-			},
-
-			postponedPacketFn: func(packet transport.PacketParser, from endpoints.Inbound) {
-				// There is no real context for delayed reprocessing, so we use the round context
-				_ = r.handlePacket(r.realm.roundContext, packet, from, true)
-			},
-		}
+			})
 
 		// r.prepareCancel will be cancelled through r.fullCancel()
 		ctx, r.prepareCancel = context.WithCancel(r.realm.roundContext)
 
-		r.prepR.start(ctx, preps /* Should be excessively enough to avoid lockups */)
+		r.prepR = &prep
+		r.prepR.start(ctx, preps)
 	} else {
 		r.prepR = nil
 		r.startFullRealm()
@@ -221,6 +224,7 @@ func (r *PhasedRoundController) startFullRealm() {
 		chronicle.GetExpectedCensus().MakeActive(*pd)
 	} else {
 		if lastCensus.GetPulseNumber() != pd.PulseNumber {
+			// TODO inform control feeder when our pulse is less
 			panic(fmt.Sprintf("illegal state - pulse number of expected census (%v) and of the realm (%v) are mismatched for %v", lastCensus.GetPulseNumber(), pd.PulseNumber, r.realm.GetSelfNodeID()))
 		}
 		if !lastCensus.IsActive() {
@@ -231,15 +235,15 @@ func (r *PhasedRoundController) startFullRealm() {
 	}
 
 	active := chronicle.GetActiveCensus()
-	r.realm.start(active, active.GetOnlinePopulation())
+	r.realm.start(active, active.GetOnlinePopulation(), r.bundle)
 }
 
 func (r *PhasedRoundController) HandlePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound) error {
-	return r.handlePacket(ctx, packet, from, nil)
+	return r.handlePacket(ctx, packet, from, DefaultVerify)
 }
 
 func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
-	verificationProof interface{}) error {
+	verifyFlags PacketVerifyFlags) error {
 
 	/* a separate method with lock is to ensure that further packet processing is not connected to a lock */
 	prep, filterPN, nextPN, err := r.beforeHandlePacket()
@@ -259,9 +263,9 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 	}
 
 	if prep != nil {
-		return prep.dispatchPacket(ctx, packet, from, verificationProof)
+		return prep.dispatchPacket(ctx, packet, from, DefaultVerify) //prep realm can't inherit any flags
 	}
-	return r.realm.dispatchPacket(ctx, packet, from, verificationProof)
+	return r.realm.dispatchPacket(ctx, packet, from, verifyFlags)
 
 	// if pt.IsMemberPacket() {
 	//	memberPacket := packet.GetMemberPacket()

@@ -53,25 +53,36 @@ package core
 import (
 	"context"
 	"github.com/insolar/insolar/insolar"
-
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
 
 type PacketDispatcher interface {
-	DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
-		from endpoints.Inbound, flags PacketVerifyFlags) error
+	DispatchHostPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound, flags PacketVerifyFlags) error
 	DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, source *NodeAppearance) error
+	DispatchUnknownMemberPacket(ctx context.Context, memberID insolar.ShortNodeID, packet transport.MemberPacketReader,
+		from endpoints.Inbound) (bool, error)
+	HasCustomVerifyForHost(from endpoints.Inbound, strict bool) bool
 }
 
+type MemberPacketSender interface {
+	GetNodeID() insolar.ShortNodeID
+	GetStatic() profiles.StaticProfile
+	SetPacketSent(pt phases.PacketType) bool
+}
 type MemberPacketReceiver interface {
 	GetNodeID() insolar.ShortNodeID
 	CanReceivePacket(pt phases.PacketType) bool
-	VerifyPacketAuthenticity(packet transport.PacketParser, from endpoints.Inbound, strictFrom bool) error
+	VerifyPacketAuthenticity(packetSignature cryptkit.SignedDigest, from endpoints.Inbound, strictFrom bool) error
 	SetPacketReceived(pt phases.PacketType) bool
-	DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, pd PacketDispatcher) error
+	DispatchMemberPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound, flags PacketVerifyFlags,
+		pd PacketDispatcher) error
 }
 
 type PhasePerNodePacketFunc func(ctx context.Context, packet transport.MemberPacketReader, from *NodeAppearance, realm *FullRealm) error
@@ -83,8 +94,12 @@ type PerNodePacketDispatcherFactory interface {
 type PacketVerifyFlags uint32
 
 const DefaultVerify PacketVerifyFlags = 0
-const SkipVerify PacketVerifyFlags = 1
-const RequireStrictVerify PacketVerifyFlags = 2
+
+const (
+	SkipVerify PacketVerifyFlags = 1 << iota
+	RequireStrictVerify
+	SuccesfullyVerified
+)
 
 // type PrepPhasePacketHandler func(ctx context.Context, reader transport.PacketParser, from endpoints.Inbound) (postpone bool, err error)
 type PrepPhaseController interface {
@@ -112,12 +127,21 @@ type PhaseController interface {
 }
 
 type PhaseControllersBundle interface {
-	GetPrepPhaseControllers() []PrepPhaseController
-	GetFullPhaseControllers(nodeCount int) ([]PhaseController, NodeUpdateCallback)
+	IsEphemeralPulseAllowed() bool
+	IsDynamicPopulationRequired() bool
+	CreatePrepPhaseControllers() []PrepPhaseController
+	CreateFullPhaseControllers(nodeCount int) ([]PhaseController, NodeUpdateCallback)
+}
+
+type PhaseControllersBundleFactory interface {
+	CreateControllersBundle(population census.OnlinePopulation, config api.LocalNodeConfiguration) PhaseControllersBundle
 }
 
 type NodeUpdateCallback interface {
 	OnTrustUpdated(populationVersion uint32, n *NodeAppearance, before, after member.TrustLevel)
 	OnNodeStateAssigned(populationVersion uint32, n *NodeAppearance)
+	OnDynamicNodeAdded(populationVersion uint32, n *NodeAppearance, fullIntro bool)
+	OnPurgatoryNodeAdded(populationVersion uint32, n *NodePhantom)
 	OnCustomEvent(populationVersion uint32, n *NodeAppearance, event interface{})
+	OnDynamicPopulationCompleted(populationVersion uint32, indexedCount int)
 }

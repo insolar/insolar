@@ -89,7 +89,7 @@ func TestConsensusMain(t *testing.T) {
 
 	netBuilder.StartNetwork(ctx)
 
-	netBuilder.StartPulsar(20, 2, "pulsar0", nodes)
+	netBuilder.StartPulsar(10, 2, "pulsar0", nodes)
 
 	for {
 		fmt.Println("===", time.Since(startedAt), "=================================================")

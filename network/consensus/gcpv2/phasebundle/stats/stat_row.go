@@ -147,8 +147,7 @@ func (r *Row) GetSummaryByValue(value uint8) uint16 {
 }
 
 func (r *Row) GetSummary() []uint16 {
-	v := make([]uint16, len(r.summary))
-	copy(v, r.summary)
+	v := append(make([]uint16, 0, len(r.summary)), r.summary...)
 	v[0] += uint16(len(r.values)) // zero is reverse-counted
 	return v
 }
@@ -192,6 +191,30 @@ func (r *Row) StringSummaryFmt(fmtFn RowValueFormatFunc) string {
 	builder := strings.Builder{}
 	stringSummary16Fmt(r.GetSummary(), &builder, fmtFn)
 	return builder.String()
+}
+
+func (r *Row) Equals(o *Row) bool {
+	if r == nil || o == nil {
+		return false
+	}
+	if r == o {
+		return true
+	}
+	return r.equals(o)
+}
+
+func (r *Row) equals(o *Row) bool {
+	for i, tS := range r.summary {
+		if tS != o.summary[i] {
+			return false
+		}
+	}
+	for j, tC := range r.values {
+		if tC != o.values[j] {
+			return false
+		}
+	}
+	return true
 }
 
 func stringSummary16Fmt(summary []uint16, builder *strings.Builder, fmtFn RowValueFormatFunc) {

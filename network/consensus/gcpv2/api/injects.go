@@ -130,4 +130,5 @@ type LocalNodeConfiguration interface {
 	GetConsensusTimings(nextPulseDelta uint16, isJoiner bool) RoundTimings
 	GetSecretKeyStore() cryptkit.SecretKeyStore
 	GetParentContext() context.Context
+	GetNodeCountHint() int
 }

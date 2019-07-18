@@ -51,53 +51,60 @@
 package phasebundle
 
 import (
-	"context"
-
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
+	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/pulsectl"
+	"time"
 )
 
-func NewPhase01PrepController(s PulseSelectionStrategy) *Phase01PrepController {
-	return &Phase01PrepController{pulseStrategy: s}
+const loopingMinimalDelay = 2 * time.Millisecond
+
+func NewStandardBundleFactoryDefault() core.PhaseControllersBundleFactory {
+	return NewStandardBundleFactory(CreateStandardBundleConfig())
 }
 
-var _ core.PrepPhaseController = &Phase01PrepController{}
-
-type Phase01PrepController struct {
-	core.PrepPhaseControllerTemplate
-	core.HostPacketDispatcherTemplate
-
-	realm         *core.PrepRealm
-	pulseStrategy PulseSelectionStrategy
+func NewStandardBundleFactory(config BundleConfig) core.PhaseControllersBundleFactory {
+	return &standardBundleFactory{config}
 }
 
-func (c *Phase01PrepController) CreatePacketDispatcher(pt phases.PacketType, realm *core.PrepRealm) core.PacketDispatcher {
-	c.realm = realm
-	return c
+func CreateStandardBundleConfig() BundleConfig {
+	return BundleConfig{
+		pulsectl.NewTakeFirstSelectionStrategy(),
+		loopingMinimalDelay,
+		transport.AllowFullJoinerIntroForPhase1,
+		0,
+	}
 }
 
-func (c *Phase01PrepController) GetPacketType() []phases.PacketType {
-	return []phases.PacketType{phases.PacketPhase0, phases.PacketPhase1}
+type BundleConfig struct {
+	PulseSelectionStrategy pulsectl.PulseSelectionStrategy
+	LoopingMinimalDelay    time.Duration
+
+	MemberOptions transport.PacketSendOptions
+	JoinerOptions transport.PacketSendOptions
 }
 
-func (c *Phase01PrepController) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
-	from endpoints.Inbound, flags core.PacketVerifyFlags) error {
+type standardBundleFactory struct {
+	BundleConfig
+}
 
-	// TODO check ranks?
+func (p *standardBundleFactory) CreateControllersBundle(population census.OnlinePopulation, config api.LocalNodeConfiguration) core.PhaseControllersBundle {
 
-	switch packet.GetPacketType() {
-	case phases.PacketPhase0:
-		p0 := packet.GetMemberPacket().AsPhase0Packet()
-		return c.pulseStrategy.HandlePrepPulsarPacket(ctx, p0.GetEmbeddedPulsePacket(), from, c.realm, false)
-	case phases.PacketPhase1:
-		p1 := packet.GetMemberPacket().AsPhase1Packet()
-		if !p1.HasPulseData() {
-			return nil
+	lp := population.GetLocalProfile()
+	mode := lp.GetOpMode()
+	switch {
+	case mode.IsEvicted():
+		panic("unable to start consensus for an evicted node")
+	case lp.IsJoiner():
+		if population.GetCount() != 1 {
+			panic("joiner can only start with a one-node population")
 		}
-		return c.pulseStrategy.HandlePrepPulsarPacket(ctx, p1.GetEmbeddedPulsePacket(), from, c.realm, false)
+		return NewJoinerPhaseBundle(p.BundleConfig)
+	case mode.IsSuspended():
+		panic("not implemented")
 	default:
-		panic("illegal value")
+		return NewRegularPhaseBundle(p.BundleConfig)
 	}
 }

@@ -83,7 +83,7 @@ func NewNodeAnnouncement(np profiles.ActiveNode, ma profiles.MembershipAnnouncem
 //			nr.GetPower(),
 //			nr.GetIndex(),
 //			na.GetNodeStateHashEvidence(),
-//			na.GetAnnouncementSignature(),
+//			na.GetJoinerSignature(),
 //			na.GetRequestedPower(),
 //		),
 //	}
@@ -154,7 +154,17 @@ func (c *NodeAnnouncementProfile) GetNodeStateHashEvidence() proofs.NodeStateHas
 }
 
 func (c NodeAnnouncementProfile) String() string {
-	return fmt.Sprintf("{id:%d %03d/%d %s}", c.nodeID, c.ma.Membership.Index, c.nodeCount, c.ma.Membership.StringParts())
+	announcement := ""
+	if c.IsLeaving() {
+		announcement = fmt.Sprintf(" leave:%d", c.GetLeaveReason())
+	} else if !c.GetJoinerID().IsAbsent() {
+		joinerIntro := ""
+		if c.joiner != nil {
+			joinerIntro = "+intro"
+		}
+		announcement = fmt.Sprintf(" join:%d%s", c.GetJoinerID(), joinerIntro)
+	}
+	return fmt.Sprintf("{id:%d %03d/%d%s %s}", c.nodeID, c.ma.Membership.Index, c.nodeCount, announcement, c.ma.Membership.StringParts())
 }
 
 func (c *NodeAnnouncementProfile) GetMembershipProfile() profiles.MembershipProfile {

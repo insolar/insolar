@@ -89,15 +89,15 @@ func (rs *RoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPuls
 	return ctx
 }
 
-func (rs *RoundStrategy) GetPrepPhaseControllers() []core.PrepPhaseController {
-	return rs.bundle.GetPrepPhaseControllers()
+func (rs *RoundStrategy) CreatePrepPhaseControllers() []core.PrepPhaseController {
+	return rs.bundle.CreatePrepPhaseControllers()
 }
 
 func (rs *RoundStrategy) GetFullPhaseControllers(nodeCount int) ([]core.PhaseController, core.NodeUpdateCallback) {
-	return rs.bundle.GetFullPhaseControllers(nodeCount)
+	return rs.bundle.CreateFullPhaseControllers(nodeCount)
 }
 
-func (rs *RoundStrategy) RandUint32() uint32 {
+func (rs *RoundStrategy) GetBaselineWeightForNeighbours() uint32 {
 	return rand.Uint32()
 }
 

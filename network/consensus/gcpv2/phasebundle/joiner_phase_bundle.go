@@ -51,95 +51,56 @@
 package phasebundle
 
 import (
-	"fmt"
-	"time"
-
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core"
+	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/ph01ctl"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/ph2ctl"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/ph3ctl"
-
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
+	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/pulsectl"
 )
 
-var _ core.PhaseControllersBundle = &RegularPhaseBundle{}
-
-const loopingMinimalDelay = 2 * time.Millisecond
-
-type RegularPhaseBundle struct {
-	packetPrepareOptions transport.PacketSendOptions
-	pulseStrategy        PulseSelectionStrategy
+func NewJoinerPhaseBundle(config BundleConfig) core.PhaseControllersBundle {
+	return &JoinerPhaseBundle{config}
 }
 
-func NewRegularPhaseBundle(packetPrepareOptions transport.PacketSendOptions, s PulseSelectionStrategy) core.PhaseControllersBundle {
-	bundle := RegularPhaseBundle{packetPrepareOptions: packetPrepareOptions, pulseStrategy: s}
-
-	return &bundle
+type JoinerPhaseBundle struct {
+	BundleConfig
 }
 
-func NewRegularPhaseBundleByDefault() core.PhaseControllersBundle {
-	return NewRegularPhaseBundle(transport.AllowFullJoinerIntroForPhase1, NewTakeFirstSelectionStrategy())
+func (r *JoinerPhaseBundle) IsDynamicPopulationRequired() bool {
+	return true
 }
 
-func (r *RegularPhaseBundle) GetPrepPhaseControllers() []core.PrepPhaseController {
+func (r *JoinerPhaseBundle) IsEphemeralPulseAllowed() bool {
+	return false
+}
 
-	/*
-		There is a "hidden" built-in queue between PrepRealm and FullRealm to ensure that all packets are handled,
-		even if packets arrived while PrepRealm was active.
-	*/
+func (r *JoinerPhaseBundle) CreatePrepPhaseControllers() []core.PrepPhaseController {
+
 	return []core.PrepPhaseController{
-		NewPulsePrepController(r.pulseStrategy),
-		NewPhase01PrepController(r.pulseStrategy),
+		pulsectl.NewPulsePrepController(r.PulseSelectionStrategy),
+		ph01ctl.NewPhase01PrepController(r.PulseSelectionStrategy),
 	}
 }
 
-type regularCallback struct {
-	qNshReady    chan *core.NodeAppearance
-	qTrustLvlUpd chan ph2ctl.TrustUpdateSignal
-}
-
-func (p *regularCallback) OnCustomEvent(populationVersion uint32, n *core.NodeAppearance, event interface{}) {
-	if te, ok := event.(ph2ctl.TrustUpdateSignal); ok && te.IsPingSignal() {
-		p.qTrustLvlUpd <- te
-		return
-	}
-	panic(fmt.Sprintf("unknown custom event: %v", event))
-}
-
-func (p *regularCallback) OnTrustUpdated(populationVersion uint32, n *core.NodeAppearance, trustBefore, trustAfter member.TrustLevel) {
-	switch {
-	case trustBefore < member.TrustByNeighbors && trustAfter >= member.TrustByNeighbors:
-		trustAfter = member.TrustByNeighbors
-	case trustBefore < member.TrustBySome && trustAfter >= member.TrustBySome:
-		trustAfter = member.TrustBySome
-	case !trustBefore.IsNegative() && trustAfter.IsNegative():
-	default:
-		return
-	}
-	p.qTrustLvlUpd <- ph2ctl.TrustUpdateSignal{NewTrustLevel: trustAfter, UpdatedNode: n}
-}
-
-func (p *regularCallback) OnNodeStateAssigned(populationVersion uint32, n *core.NodeAppearance) {
-	p.qNshReady <- n
-	p.qTrustLvlUpd <- ph2ctl.TrustUpdateSignal{NewTrustLevel: member.UnknownTrust, UpdatedNode: n}
-}
-
-func (r *RegularPhaseBundle) GetFullPhaseControllers(nodeCount int) ([]core.PhaseController, core.NodeUpdateCallback) {
+func (r *JoinerPhaseBundle) CreateFullPhaseControllers(nodeCount int) ([]core.PhaseController, core.NodeUpdateCallback) {
 
 	/* Ensure sufficient sizes of queues to avoid lockups */
 	rcb := &regularCallback{
-		qNshReady:    make(chan *core.NodeAppearance, nodeCount),
-		qTrustLvlUpd: make(chan ph2ctl.TrustUpdateSignal, nodeCount*3), // up-to ~3 updates for every node
+		make(chan *core.NodeAppearance, nodeCount),
+		make(chan ph2ctl.TrustUpdateSignal, nodeCount*3), // up-to ~3 updates for every node
+		make(chan core.MemberPacketSender, nodeCount),
 	}
 
 	consensusStrategy := ph3ctl.NewSimpleConsensusSelectionStrategy()
 	inspectionFactory := ph3ctl.NewVectorInspectionFactory(0)
 
+	packetPrepareOptions := r.JoinerOptions
+
 	return []core.PhaseController{
-		NewPulseController(),
-		NewPhase01Controller(r.packetPrepareOptions),
-		ph2ctl.NewPhase2Controller(loopingMinimalDelay, r.packetPrepareOptions, rcb.qNshReady /*->*/),
-		ph3ctl.NewPhase3Controller(loopingMinimalDelay, r.packetPrepareOptions, rcb.qTrustLvlUpd, /*->*/
+		pulsectl.NewPulseController(),
+		ph01ctl.NewPhase01Controller(packetPrepareOptions, rcb.qJoiners),
+		ph2ctl.NewPhase2Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qNshReady /*->*/),
+		ph3ctl.NewPhase3Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qTrustLvlUpd, /*->*/
 			consensusStrategy, inspectionFactory),
 	}, rcb
 }

@@ -89,20 +89,20 @@ func (r *emuTransport) GetCryptographyFactory() transport.CryptographyFactory {
 }
 
 type emuPackerCloner interface {
-	clonePacketFor(target profiles.ActiveNode, sendOptions transport.PacketSendOptions) transport.PacketParser
+	clonePacketFor(target profiles.StaticProfile, sendOptions transport.PacketSendOptions) transport.PacketParser
 }
 
 type emuPacketSender struct {
 	cloner emuPackerCloner
 }
 
-func (r *emuPacketSender) SendTo(ctx context.Context, t profiles.ActiveNode, sendOptions transport.PacketSendOptions, s transport.PacketSender) {
+func (r *emuPacketSender) SendTo(ctx context.Context, t profiles.StaticProfile, sendOptions transport.PacketSendOptions, s transport.PacketSender) {
 	c := r.cloner.clonePacketFor(t, sendOptions)
 	s.SendPacketToTransport(ctx, t, sendOptions, c)
 }
 
 func (r *emuPacketSender) SendToMany(ctx context.Context, targetCount int, s transport.PacketSender,
-	filter func(ctx context.Context, targetIndex int) (profiles.ActiveNode, transport.PacketSendOptions)) {
+	filter func(ctx context.Context, targetIndex int) (profiles.StaticProfile, transport.PacketSendOptions)) {
 
 	for i := 0; i < targetCount; i++ {
 		sendTo, sendOptions := filter(ctx, i)
@@ -138,9 +138,9 @@ func (r *emuPacketBuilder) PreparePhase0Packet(sender *transport.NodeAnnouncemen
 	return &emuPacketSender{&v}
 }
 
-func (r *EmuPhase0NetPacket) clonePacketFor(t profiles.ActiveNode, sendOptions transport.PacketSendOptions) transport.PacketParser {
+func (r *EmuPhase0NetPacket) clonePacketFor(t profiles.StaticProfile, sendOptions transport.PacketSendOptions) transport.PacketParser {
 	c := *r
-	c.tgt = t.GetNodeID()
+	c.tgt = t.GetStaticNodeID()
 	return &c
 }
 
@@ -174,9 +174,9 @@ func (r *emuPacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncemen
 	return &emuPacketSender{&v}
 }
 
-func (r *EmuPhase1NetPacket) clonePacketFor(t profiles.ActiveNode, sendOptions transport.PacketSendOptions) transport.PacketParser {
+func (r *EmuPhase1NetPacket) clonePacketFor(t profiles.StaticProfile, sendOptions transport.PacketSendOptions) transport.PacketParser {
 	c := *r
-	c.tgt = t.GetNodeID()
+	c.tgt = t.GetStaticNodeID()
 
 	// if !t.IsJoiner() {
 	//	c.selfIntro = nil
@@ -194,11 +194,13 @@ func (r *emuPacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncemen
 
 	v := EmuPhase2NetPacket{
 		basePacket: basePacket{
-			src:         sender.GetNodeID(),
-			nodeCount:   sender.GetNodeCount(),
-			mp:          sender.GetMembershipProfile(),
-			isLeaving:   sender.IsLeaving(),
-			leaveReason: sender.GetLeaveReason(),
+			src:             sender.GetNodeID(),
+			nodeCount:       sender.GetNodeCount(),
+			mp:              sender.GetMembershipProfile(),
+			isLeaving:       sender.IsLeaving(),
+			leaveReason:     sender.GetLeaveReason(),
+			joiner:          sender.GetJoinerAnnouncement(),
+			joinerAnnouncer: sender.GetJoinerIntroducedByID(),
 		},
 		pulseNumber:   sender.GetPulseNumber(),
 		neighbourhood: neighbourhood,
@@ -206,9 +208,9 @@ func (r *emuPacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncemen
 	return &emuPacketSender{&v}
 }
 
-func (r *EmuPhase2NetPacket) clonePacketFor(t profiles.ActiveNode, sendOptions transport.PacketSendOptions) transport.PacketParser {
+func (r *EmuPhase2NetPacket) clonePacketFor(t profiles.StaticProfile, sendOptions transport.PacketSendOptions) transport.PacketParser {
 	c := *r
-	c.tgt = t.GetNodeID()
+	c.tgt = t.GetStaticNodeID()
 
 	// if !t.IsJoiner() || len(c.intros) == 1 /* the only joiner */ {
 	//	c.intros = nil
@@ -239,9 +241,9 @@ func (r *emuPacketBuilder) PreparePhase3Packet(sender *transport.NodeAnnouncemen
 	return &emuPacketSender{&v}
 }
 
-func (r *EmuPhase3NetPacket) clonePacketFor(t profiles.ActiveNode, sendOptions transport.PacketSendOptions) transport.PacketParser {
+func (r *EmuPhase3NetPacket) clonePacketFor(t profiles.StaticProfile, sendOptions transport.PacketSendOptions) transport.PacketParser {
 	c := *r
-	c.tgt = t.GetNodeID()
+	c.tgt = t.GetStaticNodeID()
 	return &c
 }
 

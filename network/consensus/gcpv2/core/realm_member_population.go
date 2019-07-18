@@ -66,14 +66,17 @@ func NewMemberRealmPopulation(strategy RoundStrategy, population census.OnlinePo
 		population: population,
 		dynPop: dynPop{DynamicRealmPopulation{
 			nodeInit:       fn,
-			baselineWeight: strategy.RandUint32(),
+			baselineWeight: strategy.GetBaselineWeightForNeighbours(),
+			phase2ExtLimit: phase2ExtLimit,
 			indexedCount:   nodeCount,
 			nodeIndex:      make([]*NodeAppearance, nodeCount),
 			nodeShuffle:    make([]*NodeAppearance, nodeCount-1),
+			dynamicNodes:   make(map[insolar.ShortNodeID]*NodeAppearance),
+			indexedLenSet:  true,
 		}},
 		bftMajorityCount: consensuskit.BftMajority(nodeCount),
 	}
-	r.initPopulation(phase2ExtLimit)
+	r.initPopulation()
 	ShuffleNodeProjections(strategy, r.nodeShuffle)
 
 	return r
@@ -94,7 +97,7 @@ func (r *MemberRealmPopulation) IsComplete() bool {
 	return true
 }
 
-func (r *MemberRealmPopulation) initPopulation(phase2ExtLimit uint8) {
+func (r *MemberRealmPopulation) initPopulation() {
 	activeProfiles := r.population.GetProfiles()
 	thisNodeID := r.population.GetLocalProfile().GetNodeID()
 
@@ -109,7 +112,7 @@ func (r *MemberRealmPopulation) initPopulation(phase2ExtLimit uint8) {
 			panic("illegal state")
 		}
 
-		n.init(p, nil, r.baselineWeight, phase2ExtLimit)
+		n.init(p, nil, r.baselineWeight, r.CreatePacketLimiter())
 		r.nodeInit(context.Background(), n)
 
 		if p.GetNodeID() == thisNodeID {
@@ -127,7 +130,7 @@ func (r *MemberRealmPopulation) initPopulation(phase2ExtLimit uint8) {
 	}
 }
 
-func (r *MemberRealmPopulation) GetNodeCount() int {
+func (r *MemberRealmPopulation) GetIndexedCount() int {
 	return r.indexedCount
 }
 
@@ -167,7 +170,7 @@ func (r *MemberRealmPopulation) GetIndexedNodes() []*NodeAppearance {
 	return r.nodeIndex
 }
 
-func (r *MemberRealmPopulation) AddToDynamics(n *NodeAppearance) *NodeAppearance {
+func (r *MemberRealmPopulation) AddToDynamics(n *NodeAppearance) (*NodeAppearance, error) {
 	if !n.profile.IsJoiner() {
 		panic("illegal value")
 	}

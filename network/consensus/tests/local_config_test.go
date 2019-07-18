@@ -82,6 +82,10 @@ type emuLocalConfig struct {
 	ctx     context.Context
 }
 
+func (r *emuLocalConfig) GetNodeCountHint() int {
+	return 10
+}
+
 func (r *emuLocalConfig) GetParentContext() context.Context {
 	return r.ctx
 }

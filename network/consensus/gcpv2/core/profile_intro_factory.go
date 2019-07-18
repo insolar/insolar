@@ -65,6 +65,11 @@ type SimpleProfileIntroFactory struct {
 	pksFactory cryptkit.KeyStoreFactory
 }
 
+func (p *SimpleProfileIntroFactory) CreateUpgradableIntroProfile(candidate profiles.BriefCandidateProfile) profiles.StaticProfile {
+	pks := p.pksFactory.GetPublicKeyStore(candidate.GetNodePublicKey())
+	return profiles.NewUpgradableProfileByBrief(candidate, pks)
+}
+
 func (p *SimpleProfileIntroFactory) CreateBriefIntroProfile(candidate profiles.BriefCandidateProfile) profiles.StaticProfile {
 
 	pks := p.pksFactory.GetPublicKeyStore(candidate.GetNodePublicKey())

@@ -52,67 +52,156 @@ package announce
 
 import (
 	"context"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
+type AnnouncingMember interface {
+	IsJoiner() bool
+	GetNodeID() insolar.ShortNodeID
+	Blames() misbehavior.BlameFactory
+	Frauds() misbehavior.FraudFactory
+	GetReportProfile() profiles.BaseNode
+	ApplyNodeMembership(announcement profiles.MembershipAnnouncement) (bool, error)
+	GetRank(nodeCount int) member.Rank
+	CanIntroduceJoiner() bool
+}
+
 func ValidateIntrosOnMember(reader transport.ExtendedIntroReader, brief transport.BriefIntroductionReader,
-	n *core.NodeAppearance) (bool, error) {
+	fullIntroRequired bool, n AnnouncingMember) error {
 
 	if reader.HasJoinerSecret() {
-		return false, n.Blames().NewProtocolViolation(n.GetProfile(), "joiner secret was not expected")
+		return n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner secret was not expected")
 	}
 
-	if reader.HasCloudIntro() || reader.HasFullIntro() || brief != nil {
-		if !n.IsJoiner() {
-			return false, n.Blames().NewProtocolViolation(n.GetProfile(), "intro(s) were not expected")
-		}
-		if reader.HasCloudIntro() {
-			return false, n.Blames().NewProtocolViolation(n.GetProfile(), "cloud intro can NOT be sent by joiner")
-		}
-		if brief == nil { //ph1
-			if !reader.HasFullIntro() {
-				return false, n.Blames().NewProtocolViolation(n.GetProfile(), "joiner MUST send full intro")
-			}
-		}
-		return reader.HasFullIntro(), nil
+	if reader.HasCloudIntro() {
+		return n.Blames().NewProtocolViolation(n.GetReportProfile(), "cloud intro can NOT be sent by joiner")
 	}
-	return false, nil
+
+	if reader.HasFullIntro() || brief != nil {
+		if !n.IsJoiner() {
+			return n.Blames().NewProtocolViolation(n.GetReportProfile(), "intro(s) were not expected")
+		}
+		if reader.HasFullIntro() {
+			return nil
+		}
+		if fullIntroRequired {
+			return n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner MUST send a full intro")
+		}
+		if brief == nil {
+			return n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner MUST send at least a brief intro")
+		}
+		return nil
+	}
+	if n.IsJoiner() {
+		return n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner MUST send a brief or a full intro")
+	}
+	return nil
+}
+
+func ApplyUnknownJoinerAnnouncement(ctx context.Context, announcerID insolar.ShortNodeID,
+	reader transport.AnnouncementPacketReader, brief transport.BriefIntroductionReader,
+	fullIntroRequired bool, realm *core.FullRealm) (bool, error) {
+
+	var err error
+	//err := ValidateIntrosOnMember(reader, brief, fullIntroRequired, nil)
+	//if err != nil {
+	//	return false, err
+	//}
+
+	na := reader.GetAnnouncementReader()
+	if !na.GetNodeRank().IsJoiner() {
+		return false, nil
+	}
+
+	purgatory := realm.GetPurgatory()
+	if reader.HasFullIntro() {
+		// announcer is joiner
+		err = purgatory.FromSelfIntroduction(ctx, announcerID, nil, reader.GetFullIntroduction())
+	} else if brief != nil {
+		// announcer is joiner
+		err = purgatory.FromSelfIntroduction(ctx, announcerID, brief, nil)
+	}
+	return err == nil, err
 }
 
 func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementPacketReader, brief transport.BriefIntroductionReader,
-	n *core.NodeAppearance, realm *core.FullRealm) (bool, error) {
+	fullIntroRequired bool, n AnnouncingMember, realm *core.FullRealm) (bool, insolar.ShortNodeID, error) {
 
-	applyFullIntros, err := ValidateIntrosOnMember(reader, brief, n)
+	err := ValidateIntrosOnMember(reader, brief, fullIntroRequired, n)
 	if err != nil {
-		return false, err
+		return false, 0, err
 	}
 
 	na := reader.GetAnnouncementReader()
 	nr := na.GetNodeRank()
-	ma := AnnouncementFromReader(na)
 
-	if !profiles.MatchIntroAndRank(n.GetProfile(), realm.GetNodeCount(), nr) {
-		return false, n.Frauds().NewMismatchedNeighbourRank(n.GetProfile())
+	if n.GetRank(realm.GetNodeCount()) != nr {
+		return false, 0, n.Frauds().NewMismatchedNeighbourRank(n.GetReportProfile())
 	}
 
-	if applyFullIntros {
-		err = realm.AdvancePurgatoryNode(n.GetNodeID(), nil, reader.GetFullIntroduction(), n)
+	purgatory := realm.GetPurgatory()
+	announcerID := n.GetNodeID()
+	if reader.HasFullIntro() {
+		// announcer is joiner
+		err = purgatory.FromSelfIntroduction(ctx, announcerID, nil, reader.GetFullIntroduction())
 	} else if brief != nil {
-		err = realm.AdvancePurgatoryNode(n.GetNodeID(), brief, nil, n)
+		// announcer is joiner
+		err = purgatory.FromSelfIntroduction(ctx, announcerID, brief, nil)
 	}
 	if err != nil {
-		return false, err
+		return false, 0, err
+	}
+
+	ma := AnnouncementFromReader(na)
+
+	if !n.CanIntroduceJoiner() && !ma.JoinerID.IsAbsent() {
+		return false, 0, n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner is not allowed to add a joiner")
 	}
 
 	modified, err := n.ApplyNodeMembership(ma)
 
 	if err == nil && modified && !ma.JoinerID.IsAbsent() {
 		ja := na.GetJoinerAnnouncement()
-		err = realm.AdvancePurgatoryNode(ma.JoinerID, ja.GetBriefIntroduction(), nil, n)
+		err = purgatory.FromMemberAnnouncement(ctx, ma.JoinerID, ja.GetBriefIntroduction(), nil, announcerID)
 	}
-	return modified, err
+	return modified, ma.JoinerID, err
+}
+
+func ApplyNeighbourJoinerAnnouncement(ctx context.Context, purgatory *core.RealmPurgatory, sender AnnouncingMember,
+	joinerAnnouncedBySender insolar.ShortNodeID, neighbour AnnouncingMember, joinerAnnouncedByNeighbour insolar.ShortNodeID,
+	neighbourJoinerAnnouncement transport.JoinerAnnouncementReader) error {
+
+	if joinerAnnouncedByNeighbour.IsAbsent() {
+		if neighbourJoinerAnnouncement != nil {
+			return neighbour.Blames().NewProtocolViolation(sender.GetReportProfile(), "joiner profile is unexpected on neighbourhood")
+		}
+		return nil
+	}
+
+	neighbourID := neighbour.GetNodeID()
+	if neighbour.IsJoiner() {
+		if neighbourID == joinerAnnouncedBySender {
+			if neighbourJoinerAnnouncement == nil {
+				return nil //ok, we've got details from the sender's announcement
+			}
+			return neighbour.Blames().NewProtocolViolation(sender.GetReportProfile(), "joiner profile is duplicated in neighbourhood")
+		}
+		if neighbourJoinerAnnouncement == nil {
+			return neighbour.Blames().NewProtocolViolation(sender.GetReportProfile(), "joiner profile is missing in neighbourhood")
+		}
+		return purgatory.BriefSelfFromNeighbourhood(ctx, neighbourID,
+			neighbourJoinerAnnouncement.GetBriefIntroduction(), neighbourJoinerAnnouncement.GetJoinerIntroducedByID())
+	}
+
+	if neighbourJoinerAnnouncement == nil {
+		return neighbour.Blames().NewProtocolViolation(sender.GetReportProfile(), "joiner profile is missing in neighbourhood")
+	}
+	return purgatory.NoticeFromNeighbourhood(ctx, joinerAnnouncedByNeighbour, neighbourID, sender.GetNodeID())
 }
 
 func AnnouncementFromReader(nb transport.MembershipAnnouncementReader) profiles.MembershipAnnouncement {

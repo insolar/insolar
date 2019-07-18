@@ -402,8 +402,9 @@ type NeighbourAnnouncement struct {
 		As joiner has no state before joining, its announcement and relevant signature are considered equal to
 		NodeBriefIntro and related signature, and CurrentRank of joiner will always be ZERO, as joiner has no index/nodeCount/power.
 
-		The field "Joiner" MUST BE OMITTED when	this joiner is introduced by the sending node
+		Fields "Joiner" and "JoinerIntroducedBy" MUST BE OMITTED when this joiner is introduced by the sending node
 	*/
+	// TODO merge "Joiner" and "JoinerIntroducedBy" fields into NeighbourJoinerAnnouncement
 	Joiner             JoinAnnouncement    `insolar-transport:"optional=CurrentRank==0"` // ByteSize = 135, 137, 147
 	JoinerIntroducedBy insolar.ShortNodeID `insolar-transport:"optional=CurrentRank==0"`
 

@@ -179,7 +179,7 @@ func NewNodeProfileFactory(keyProcessor insolar.KeyProcessor) *NodeProfileFactor
 	}
 }
 
-func (npf *NodeProfileFactory) createProfile(candidate profiles.BriefCandidateProfile, signature cryptkit.SignatureHolder, intro profiles.NodeIntroduction) *NodeIntroProfile {
+func (npf *NodeProfileFactory) createProfile(candidate profiles.BriefCandidateProfile, signature cryptkit.SignatureHolder, intro profiles.StaticProfileExtension) *NodeIntroProfile {
 	keyHolder := candidate.GetNodePublicKey()
 	pk, err := npf.keyProcessor.ImportPublicKeyBinary(keyHolder.AsBytes())
 	if err != nil {

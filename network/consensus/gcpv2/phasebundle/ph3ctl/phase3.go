@@ -298,6 +298,7 @@ func (c *Phase3ControllerV2) workerRescanForMissing(ctx context.Context, missing
 			}
 			// TODO
 		case <-missing:
+			panic("not implemented")
 			//TODO
 		}
 	}
@@ -311,10 +312,10 @@ func (c *Phase3ControllerV2) workerSendPhase3(ctx context.Context, selfData stat
 		c.packetPrepareOptions)
 
 	p3.SendToMany(ctx, len(otherNodes), c.R.GetPacketSender(),
-		func(ctx context.Context, targetIdx int) (profiles.ActiveNode, transport.PacketSendOptions) {
+		func(ctx context.Context, targetIdx int) (profiles.StaticProfile, transport.PacketSendOptions) {
 			np := otherNodes[targetIdx]
 			np.SetPacketSent(phases.PacketPhase3)
-			return np.GetProfile(), 0
+			return np.GetProfile().GetStatic(), 0
 		})
 
 	// TODO send to shuffled joiners as well?
@@ -330,10 +331,17 @@ func (c *Phase3ControllerV2) workerRecvPhase3(ctx context.Context, localInspecto
 	softDeadline := time.After(c.R.AdjustedAfter(timings.EndOfPhase3))
 	chasingDelayTimer := chaser.NewChasingTimer(timings.BeforeInPhase3ChasingDelay)
 
-	statTbl := nodeset.NewConsensusStatTable(c.R.GetNodeCount())
+	verifiedStatTbl := nodeset.NewConsensusStatTable(c.R.GetNodeCount())
+	originalStatTbl := nodeset.NewConsensusStatTable(c.R.GetNodeCount())
 
 	// should it be updatable?
-	statTbl.PutRow(c.R.GetSelf().GetIndex().AsInt(), nodeset.LocalToConsensusStatRow(localInspector.GetBitset()))
+	{
+		selfIndex := c.R.GetSelf().GetIndex().AsInt()
+		localStat := nodeset.StateToConsensusStatRow(localInspector.GetBitset())
+		localStatCopy := localStat
+		verifiedStatTbl.PutRow(selfIndex, &localStat)
+		originalStatTbl.PutRow(selfIndex, &localStatCopy)
+	}
 
 	remainingNodes := c.R.GetPopulation().GetOthersCount()
 
@@ -354,11 +362,11 @@ outer:
 			return false
 		case <-softDeadline:
 			log.Debug("Phase3 deadline")
-			consensusSelection = c.consensusStrategy.SelectOnStopped(&statTbl, true, c.R)
+			consensusSelection = c.consensusStrategy.SelectOnStopped(&verifiedStatTbl, true, c.R)
 			break outer
 		case <-chasingDelayTimer.Channel():
 			log.Debug("Phase3 chasing expired")
-			consensusSelection = c.consensusStrategy.SelectOnStopped(&statTbl, true, c.R)
+			consensusSelection = c.consensusStrategy.SelectOnStopped(&verifiedStatTbl, true, c.R)
 			break outer
 		case d := <-c.queuePh3Recv:
 			switch {
@@ -368,7 +376,7 @@ outer:
 					go c.workerRescanForMissing(ctx, queueMissing)
 				}
 				queueMissing <- d
-				//break // do chasing
+				// do chasing
 			case !d.IsInspected():
 				d = d.Reinspect(localInspector)
 				if !d.IsInspected() {
@@ -412,7 +420,13 @@ outer:
 					break
 				}
 
-				statTbl.PutRow(d.GetNode().GetIndex().AsInt(), nodeStats)
+				{
+					nodeIndex := d.GetNode().GetIndex().AsInt()
+					verifiedStatTbl.PutRow(nodeIndex, nodeStats)
+					originalStat := nodeset.StateToConsensusStatRow(d.GetBitset())
+					originalStatTbl.PutRow(nodeIndex, &originalStat)
+				}
+
 				remainingNodes--
 
 				if vr.AnyOf(nodeset.NvrDoubtedAlteredNodeSet) {
@@ -420,13 +434,13 @@ outer:
 				}
 
 				if remainingNodes <= 0 {
-					consensusSelection = c.consensusStrategy.SelectOnStopped(&statTbl, false, c.R)
+					consensusSelection = c.consensusStrategy.SelectOnStopped(&verifiedStatTbl, false, c.R)
 					log.Debug("Phase3 done all")
 					break outer
 				}
 
 				consensusSelection = c.consensusStrategy.TrySelectOnAdded(
-					&statTbl, d.GetNode().GetProfile(), nodeStats, c.R)
+					&verifiedStatTbl, d.GetNode().GetProfile(), nodeStats, c.R)
 
 				if consensusSelection == nil {
 					continue
@@ -443,8 +457,13 @@ outer:
 	}
 
 	if log.Is(insolar.DebugLevel) {
-		tblHeader := fmt.Sprintf("Consensus Node View: %v", c.R.GetSelfNodeID())
-		log.Warn(statTbl.TableFmt(tblHeader, nodeset.FmtConsensusStat))
+		tblHeader := fmt.Sprintf("Consensus Node View (%%s): %v", c.R.GetSelfNodeID())
+		typeHeader := "Original=Verified"
+		if !originalStatTbl.EqualsTyped(&verifiedStatTbl) {
+			log.Debug(originalStatTbl.TableFmt(fmt.Sprintf(tblHeader, "Original"), nodeset.FmtConsensusStat))
+			typeHeader = "Verified"
+		}
+		log.Debug(verifiedStatTbl.TableFmt(fmt.Sprintf(tblHeader, typeHeader), nodeset.FmtConsensusStat))
 	}
 
 	if consensusSelection == nil {

@@ -52,6 +52,7 @@ package core
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
@@ -83,7 +84,7 @@ func TestInit(t *testing.T) {
 	lp.LocalNodeProfileMock.Set(func() {})
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
-	require.Panics(t, func() { r.init(nil, callback, 0, 0) })
+	require.Panics(t, func() { r.init(nil, callback, 0, phases.NewLocalPacketLimiter()) })
 
 	r.init(lp, callback, 0, 0)
 

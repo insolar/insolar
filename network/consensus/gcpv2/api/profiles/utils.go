@@ -48,41 +48,88 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package nodeset
+package profiles
 
 import (
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 )
 
-/*
-Contains copy of NodeAppearance fields that can be changed, to avoid possible racing
-*/
+func EqualStaticProfiles(p BriefCandidateProfile, o BriefCandidateProfile) bool {
+	if p == nil || o == nil {
+		return false
+	}
 
-type VectorEntryData struct {
-	RequestedPower member.Power
-	RequestedMode  member.OpMode
-	TrustLevel     member.TrustLevel
-	Profile        profiles.ActiveNode
-
-	// Node *NodeAppearance
-	// common.MembershipAnnouncement
-	proofs.NodeAnnouncedState
+	return p == o ||
+		equalBriefIntro(p, o) &&
+			endpoints.EqualEndpoints(p.GetDefaultEndpoint(), o.GetDefaultEndpoint()) &&
+			p.GetJoinerSignature().Equals(o.GetJoinerSignature())
 }
 
-type EntryFilteredScannerFunc func(nodeData VectorEntryData, postponed bool, filter uint32)
-type EntryFilterFunc func(index int, nodeData VectorEntryData) (bool, uint32)
+func EqualStaticExtensions(p StaticProfileExtension, o candidateProfileExtension) bool {
+	if p == nil || o == nil {
+		return false
+	}
 
-type VectorEntryScanner interface {
-	GetIndexedCount() int
-	GetSortedCount() int
-	ScanIndexed(apply func(index int, nodeData VectorEntryData))
-	ScanSorted(apply EntryFilteredScannerFunc, filterValue uint32)
-	ScanSortedWithFilter(apply EntryFilteredScannerFunc, filter EntryFilterFunc)
+	return p.GetReference() == o.GetReference()
+
+	//return p == o ||
+	//	p.GetIntroducedNodeID() == o.GetIntroducedNodeID() &&
+	//	p.GetReference() == o.GetReference()
+	//	//&& equalExtIntro(p, o)
 }
 
-type VectorEntryDigester interface {
-	AddNext(nodeData VectorEntryData, zeroPower bool)
-	ForkSequence() VectorEntryDigester
+func equalBriefIntro(p staticProfile, o staticProfile) bool {
+	return p.GetStaticNodeID() == o.GetStaticNodeID() &&
+		p.GetPrimaryRole() == o.GetPrimaryRole() &&
+		p.GetSpecialRoles() == o.GetSpecialRoles() &&
+		p.GetStartPower() == o.GetStartPower() &&
+		p.GetNodePublicKey().Equals(o.GetNodePublicKey())
+}
+
+func equalExtIntro(p candidateProfileExtension, o candidateProfileExtension) bool {
+
+	return p.GetPowerLevels() == o.GetPowerLevels() &&
+		p.GetReference() == o.GetReference() &&
+		p.GetIssuedAtPulse() == o.GetIssuedAtPulse() &&
+		p.GetIssuedAtTime() == o.GetIssuedAtTime() &&
+		p.GetIssuerID() == o.GetIssuerID() &&
+		p.GetIssuerSignature().Equals(o.GetIssuerSignature()) &&
+		endpoints.EqualListOfOutboundEndpoints(p.GetExtraEndpoints(), o.GetExtraEndpoints())
+}
+
+func ProfileAsRank(np ActiveNode, nc int) member.Rank {
+	if np.IsJoiner() {
+		return member.JoinerRank
+	}
+	return member.NewMembershipRank(np.GetOpMode(), np.GetDeclaredPower(), np.GetIndex(), member.AsIndex(nc))
+}
+
+func ApplyNodeIntro(sp StaticProfile, brief BriefCandidateProfile, full CandidateProfile) (bool, StaticProfileExtension) {
+
+	if (brief == nil) == (full == nil) {
+		panic("illegal value")
+	}
+
+	if brief != nil { //brief cant be used for upgrades
+		return EqualStaticProfiles(sp, brief), nil
+	}
+
+	spe := sp.GetExtension()
+	if spe != nil {
+		return EqualStaticExtensions(spe, full), nil
+	}
+
+	if sp.(Upgradable).UpgradeProfile(full) {
+		spe = sp.GetExtension() // == nil, means that the brief part doesnt match
+		return spe != nil, spe
+	}
+
+	spe = sp.GetExtension()
+	if spe == nil { // there were no concurrent creation, hence we have a mismatch
+		return false, nil
+	}
+
+	// check if there was the same upgrade
+	return EqualStaticProfiles(sp, brief) && EqualStaticExtensions(spe, full), nil
 }

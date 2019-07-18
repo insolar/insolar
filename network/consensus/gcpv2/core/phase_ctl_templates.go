@@ -52,6 +52,7 @@ package core
 
 import (
 	"context"
+	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
@@ -75,18 +76,37 @@ func (c *PrepPhaseControllerTemplate) BeforeStart(realm *PrepRealm) {
 func (*PrepPhaseControllerTemplate) StartWorker(ctx context.Context, realm *PrepRealm) {
 }
 
-// var _ PacketDispatcher = &HostPacketDispatcherTemplate{}
+//var _ PacketDispatcher = &HostPacketDispatcherTemplate{}
 
 type HostPacketDispatcherTemplate struct {
 }
 
-func (*HostPacketDispatcherTemplate) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, source *NodeAppearance) error {
+func (*HostPacketDispatcherTemplate) DispatchUnknownMemberPacket(ctx context.Context, memberID insolar.ShortNodeID,
+	packet transport.MemberPacketReader, from endpoints.Inbound) (bool, error) {
+	return false, nil
+}
+
+func (*HostPacketDispatcherTemplate) HasCustomVerifyForHost(from endpoints.Inbound, strict bool) bool {
+	return false
+}
+
+func (*HostPacketDispatcherTemplate) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader,
+	source *NodeAppearance) error {
 	panic("illegal state")
 }
 
-// var _ PacketDispatcher = &MemberPacketDispatcherTemplate{}
+//var _ PacketDispatcher = &MemberPacketDispatcherTemplate{}
 
 type MemberPacketDispatcherTemplate struct {
+}
+
+func (*MemberPacketDispatcherTemplate) DispatchUnknownMemberPacket(ctx context.Context, memberID insolar.ShortNodeID,
+	packet transport.MemberPacketReader, from endpoints.Inbound) (bool, error) {
+	return false, nil
+}
+
+func (*MemberPacketDispatcherTemplate) HasCustomVerifyForHost(from endpoints.Inbound, strict bool) bool {
+	return false
 }
 
 func (*MemberPacketDispatcherTemplate) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,

@@ -72,7 +72,7 @@ type NodeIntroduction struct {
 	ref     insolar.Reference
 }
 
-func (ni *NodeIntroduction) GetIntroNodeID() insolar.ShortNodeID {
+func (ni *NodeIntroduction) GetIntroducedNodeID() insolar.ShortNodeID {
 	return ni.shortID
 }
 
@@ -115,7 +115,7 @@ type NodeIntroProfile struct {
 	shortID     insolar.ShortNodeID
 	primaryRole member.PrimaryRole
 	specialRole member.SpecialRole
-	intro       profiles.NodeIntroduction
+	intro       profiles.StaticProfileExtension
 	endpoint    endpoints.Outbound
 	store       cryptkit.PublicKeyStore
 	keyHolder   cryptkit.SignatureKeyHolder
@@ -152,7 +152,7 @@ func newNodeIntroProfile(
 	shortID insolar.ShortNodeID,
 	primaryRole member.PrimaryRole,
 	specialRole member.SpecialRole,
-	intro profiles.NodeIntroduction,
+	intro profiles.StaticProfileExtension,
 	endpoint endpoints.Outbound,
 	store cryptkit.PublicKeyStore,
 	keyHolder cryptkit.SignatureKeyHolder,
@@ -178,7 +178,7 @@ func (nip *NodeIntroProfile) GetSpecialRoles() member.SpecialRole {
 	return nip.specialRole
 }
 
-func (nip *NodeIntroProfile) GetIntroduction() profiles.NodeIntroduction {
+func (nip *NodeIntroProfile) GetExtension() profiles.StaticProfileExtension {
 	return nip.intro
 }
 
@@ -208,7 +208,7 @@ func (nip *NodeIntroProfile) GetStaticNodeID() insolar.ShortNodeID {
 	return nip.shortID
 }
 
-func (nip *NodeIntroProfile) GetAnnouncementSignature() cryptkit.SignatureHolder {
+func (nip *NodeIntroProfile) GetJoinerSignature() cryptkit.SignatureHolder {
 	return nip.signature
 }
 
@@ -269,7 +269,7 @@ func NewNodeIntroProfileList(nodes []insolar.NetworkNode, certificate insolar.Ce
 func NewNetworkNode(profile profiles.ActiveNode) insolar.NetworkNode {
 	nip := profile.GetStatic()
 	store := nip.GetPublicKeyStore()
-	introduction := nip.GetIntroduction()
+	introduction := nip.GetExtension()
 
 	networkNode := node.NewNode(
 		introduction.GetReference(),
@@ -283,7 +283,7 @@ func NewNetworkNode(profile profiles.ActiveNode) insolar.NetworkNode {
 
 	mutableNode.SetShortID(profile.GetNodeID())
 	mutableNode.SetState(insolar.NodeReady)
-	mutableNode.SetSignature(insolar.SignatureFromBytes(nip.GetAnnouncementSignature().AsBytes()))
+	mutableNode.SetSignature(insolar.SignatureFromBytes(nip.GetJoinerSignature().AsBytes()))
 
 	return networkNode
 }

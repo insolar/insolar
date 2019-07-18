@@ -65,7 +65,7 @@ const (
 	TrustByCouncil   TrustLevel = 5  // on- or off-network node with a permanent mandate
 
 	SelfTrust       = TrustByNeighbors // MUST be not less than TrustByNeighbors
-	FraudByThisNode = FraudBySome      // fraud is detected by this node
+	FraudByThisNode = FraudByNeighbors // fraud is detected by this node
 )
 
 func (v TrustLevel) abs() int8 {

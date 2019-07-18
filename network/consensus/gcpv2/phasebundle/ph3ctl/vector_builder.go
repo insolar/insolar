@@ -147,21 +147,20 @@ func (p *VectorBuilder) buildGlobulaStateHash(trusted bool, nodeID insolar.Short
 
 	const (
 		skipEntry = iota
-		postponeEntry
 		normalEntry
 	)
 
 	p.entryScanner.ScanSortedWithFilter(
-		func(nodeData nodeset.VectorEntryData, filter uint32) {
+		func(nodeData nodeset.VectorEntryData, postponed bool, filter uint32) {
 			if filter == skipEntry {
 				return
 			}
 			// TODO use default state hash on missing data
-			calc.AddNext(nodeData, filter == postponeEntry)
+			calc.AddNext(nodeData, postponed)
 		},
 		func(idx int, nodeData nodeset.VectorEntryData) (bool, uint32) {
 			if nodeData.IsEmpty() || nodeData.RequestedPower == 0 || nodeData.RequestedMode.IsPowerless() {
-				return true, postponeEntry
+				return true, normalEntry
 			}
 
 			if idx < 0 { //this is joiner check - it can only indicate "postpone"
@@ -169,13 +168,13 @@ func (p *VectorBuilder) buildGlobulaStateHash(trusted bool, nodeID insolar.Short
 			}
 
 			if trusted && !p.bitset[idx].IsTrusted() {
-				return true, postponeEntry
+				return true, normalEntry
 			}
 			return false, normalEntry
 		})
 
 	tHash, tRank, tCount := calc.FinishSequence()
-	return statevector.CalcStateWithRank{StateHash: tHash, ExpectedRank: tRank.AsMembershipRank(tCount.AsUint16())}
+	return statevector.CalcStateWithRank{StateHash: tHash, ExpectedRank: tRank.AsMembershipRank(tCount)}
 }
 
 func (p *VectorBuilder) BuildGlobulaAnnouncementHashes(buildTrusted, buildDoubted bool,

@@ -71,13 +71,13 @@ import (
 */
 type PrepRealm struct {
 	/* Provided externally. Don't need mutex */
-	*coreRealm                              // points the core part realms, it is shared between of all Realms of a Round
-	completeFn        func(successful bool) //
-	postponedPacketFn postponedPacketFunc
+	*coreRealm                                    // points the core part realms, it is shared between of all Realms of a Round
+	completeFn              func(successful bool) //
+	isEphemeralPulseAllowed bool
 
 	/* Derived from the provided externally - set at init() or start(). Don't need mutex */
 	packetDispatchers []PacketDispatcher
-	queueToFull       chan postponedPacket
+	queueToFull       chan PostponedPacket
 	//phase2ExtLimit    uint8
 
 	limiters sync.Map
@@ -86,11 +86,15 @@ type PrepRealm struct {
 	// 	censusBuilder census.Builder
 }
 
+func (p *PrepRealm) init(isEphemeralPulseAllowed bool, completeFn func(successful bool)) {
+	p.isEphemeralPulseAllowed = isEphemeralPulseAllowed
+	p.completeFn = completeFn
+}
+
 func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
-	_ interface{}) error {
+	verifyFlags PacketVerifyFlags) error {
 
 	pt := packet.GetPacketType()
-	verifyFlags := DefaultVerify
 
 	var limiterKey string
 	switch {
@@ -126,7 +130,9 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 	}
 
 	if verifyFlags&SkipVerify == 0 {
-		err := p.coreRealm.VerifyPacketAuthenticity(packet, from, verifyFlags&RequireStrictVerify != 0)
+		err := p.coreRealm.VerifyPacketAuthenticity(packet.GetPacketSignature(),
+			from, verifyFlags&RequireStrictVerify != 0)
+
 		if err != nil {
 			return err
 		}
@@ -155,7 +161,7 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		}
 	}
 
-	if !p.postponePacket(packet, from) {
+	if !p.postponePacket(packet, from, verifyFlags) {
 		inslogger.FromContext(ctx).Warnf("unable to postpone packet: type=%v", pt)
 	}
 	return nil
@@ -166,7 +172,7 @@ func (p *PrepRealm) start(ctx context.Context, controllers []PrepPhaseController
 
 	if p.postponedPacketFn != nil {
 		limiter := phases.NewPacketLimiter(p.nbhSizes.ExtendingNeighbourhoodLimit)
-		packetsPerSender := limiter.GetRemainingPacketCount(5)
+		packetsPerSender := limiter.GetRemainingPacketCountDefault()
 
 		prepToFullQueueSize := int(packetsPerSender) * int(p.expectedPopulationSize)
 		switch {
@@ -176,7 +182,7 @@ func (p *PrepRealm) start(ctx context.Context, controllers []PrepPhaseController
 			inslogger.FromContext(ctx).Warnf("estimated postponed packet count (%d) is too high", prepToFullQueueSize)
 			prepToFullQueueSize = 10000
 		}
-		p.queueToFull = make(chan postponedPacket, prepToFullQueueSize)
+		p.queueToFull = make(chan PostponedPacket, prepToFullQueueSize)
 	}
 
 	p.packetDispatchers = make([]PacketDispatcher, phases.PacketTypeCount)
@@ -202,27 +208,26 @@ func (p *PrepRealm) stop() {
 	/*
 		NB! do not close p.queueToFull here immediately, as some messages can still be in processing and will be lost
 	*/
-	if p.postponedPacketFn != nil {
-		/* Do not give out a PrepRealm reference to avoid retention in memory */
-		go flushQueueTo(p.coreRealm.roundContext, p.queueToFull, p.postponedPacketFn)
-	}
+	/* Do not give out a PrepRealm reference to avoid retention in memory */
+	go flushQueueTo(p.coreRealm.roundContext, p.queueToFull, p.postponedPacketFn)
 }
 
-type postponedPacketFunc func(packet transport.PacketParser, from endpoints.Inbound)
+type PostponedPacketFunc func(packet transport.PacketParser, from endpoints.Inbound, verifyFlags PacketVerifyFlags)
 
-type postponedPacket struct {
-	packet transport.PacketParser
-	from   endpoints.Inbound
+type PostponedPacket struct {
+	Packet      transport.PacketParser
+	From        endpoints.Inbound
+	VerifyFlags PacketVerifyFlags
 }
 
-func flushQueueTo(ctx context.Context, in chan postponedPacket, out postponedPacketFunc) {
+func flushQueueTo(ctx context.Context, in chan PostponedPacket, out PostponedPacketFunc) {
 	for {
 		select {
 		case p, ok := <-in:
 			if !ok {
 				return
 			}
-			out(p.packet, p.from)
+			out(p.Packet, p.From, p.VerifyFlags)
 		case <-ctx.Done():
 			return
 		}
@@ -249,7 +254,7 @@ func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bo
 		if pd == p.pulseData {
 			return nil // got it already
 		}
-	case fromPulsar || !p.strategy.IsEphemeralPulseAllowed():
+	case fromPulsar || !p.isEphemeralPulseAllowed:
 		// Pulsars are NEVER ALLOWED to send ephemeral pulses
 		valid = pd.IsValidPulsarData()
 	default:
@@ -277,10 +282,10 @@ func (p *PrepRealm) GetExpectedPulseNumber() pulse.Number {
 	return p.initialCensus.GetExpectedPulseNumber()
 }
 
-func (p *PrepRealm) postponePacket(packet transport.PacketParser, from endpoints.Inbound) bool {
+func (p *PrepRealm) postponePacket(packet transport.PacketParser, from endpoints.Inbound, verifyFlags PacketVerifyFlags) bool {
 	if p.queueToFull == nil {
 		return false
 	}
-	p.queueToFull <- postponedPacket{packet: packet, from: from}
+	p.queueToFull <- PostponedPacket{packet, from, verifyFlags}
 	return true
 }
