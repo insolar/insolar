@@ -207,16 +207,9 @@ func (m *FilamentModifierDefault) SetRequest(
 			return nil, nil, errors.Errorf("request check failed: incoming request, has wrong reason %v", r.ReturnMode)
 		}
 	case *record.OutgoingRequest:
-		err := m.checkOutgoingHasReasonInPendings(ctx, requestID, objectID, request)
-		if err == nil {
-			break
-		}
-		if _, ok := err.(*errorReasonNotInPendings); !ok {
+		if err := m.checkOutgoingHasReasonInPendings(ctx, requestID, objectID, request); err != nil {
 			return nil, nil, err
 		}
-
-		// temporary solution, until functest are fixed
-		inslogger.FromContext(ctx).Error(err)
 	}
 
 	// Save request record to storage.
