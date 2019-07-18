@@ -176,10 +176,21 @@ func processRequest(ctx context.Context,
 	return ctx, rawBody, nil
 }
 
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
 func setRootReferenceIfNeeded(request *requester.Request) {
-	if request.Params.CallSite == "member.create" ||
-		request.Params.CallSite == "member.migrationCreate" ||
-		request.Params.CallSite == "member.get" {
+	if request.Params.Reference != "" {
+		return
+	}
+	methods := []string{"member.create", "member.migrationCreate", "member.get"}
+	if contains(methods, request.Params.CallSite) {
 		request.Params.Reference = genesisrefs.ContractRootMember.String()
 	}
 }
