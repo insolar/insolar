@@ -72,7 +72,7 @@ var (
 	jet10_right = jet.NewIDFromString("101")
 )
 
-var cases = []splitCase{
+var splitCases = []splitCase{
 	{
 		name: "no_split",
 		cfg: configuration.JetSplit{
@@ -234,8 +234,8 @@ func TestJetSplitter(t *testing.T) {
 		}
 	}
 
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) { checkCase(t, c) })
+	for _, sc := range splitCases {
+		t.Run(sc.name, func(t *testing.T) { checkCase(t, sc) })
 	}
 }
 
