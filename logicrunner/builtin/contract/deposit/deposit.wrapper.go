@@ -91,7 +91,7 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 
 func INSMETHOD_GetTxHash(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
+
 	self := new(Deposit)
 
 	if len(object) == 0 {
@@ -114,10 +114,6 @@ func INSMETHOD_GetTxHash(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.GetTxHash()
 
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -134,7 +130,7 @@ func INSMETHOD_GetTxHash(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetAmount(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
+
 	self := new(Deposit)
 
 	if len(object) == 0 {
@@ -157,10 +153,6 @@ func INSMETHOD_GetAmount(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.GetAmount()
 
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -177,7 +169,7 @@ func INSMETHOD_GetAmount(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_MapMarshal(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
+
 	self := new(Deposit)
 
 	if len(object) == 0 {
@@ -200,10 +192,6 @@ func INSMETHOD_MapMarshal(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.MapMarshal()
 
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -220,7 +208,7 @@ func INSMETHOD_MapMarshal(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
+
 	self := new(Deposit)
 
 	if len(object) == 0 {
@@ -249,10 +237,6 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.Confirm(args0, args1, args2)
 
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -269,7 +253,6 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
 	args := [4]interface{}{}
 	var args0 map[insolar.Reference]bool
 	args[0] = &args0
@@ -287,9 +270,6 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	}
 
 	ret0, ret1 := New(args0, args1, args2, args3)
-	if ph.GetSystemError() != nil {
-		return nil, ph.GetSystemError()
-	}
 	if ret1 != nil {
 		return nil, ret1
 	}
