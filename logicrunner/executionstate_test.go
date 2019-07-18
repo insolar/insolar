@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -56,7 +55,7 @@ func newExecutionBroker(
 	ctx context.Context,
 	count int,
 	list *CurrentExecutionList,
-	pending *message.PendingState,
+	pending *insolar.PendingState,
 ) *ExecutionBroker {
 	re := NewRequestsExecutorMock(t)
 	mb := testutils.NewMessageBusMock(t)
@@ -91,7 +90,7 @@ func TestExecutionState_OnPulse(t *testing.T) {
 	requestRef := gen.Reference()
 	list.SetTranscript(&Transcript{RequestRef: requestRef})
 
-	inPending := message.InPending
+	inPending := insolar.InPending
 
 	table := []struct {
 		name             string
@@ -126,7 +125,7 @@ func TestExecutionState_OnPulse(t *testing.T) {
 			numberOfMessages: 2,
 			checkES: func(t *testing.T, es *ExecutionState, broker *ExecutionBroker) {
 				require.Equal(t, 0, broker.mutable.Length())
-				require.Equal(t, message.InPending, es.pending)
+				require.Equal(t, insolar.InPending, es.pending)
 			},
 		},
 		{
@@ -143,7 +142,7 @@ func TestExecutionState_OnPulse(t *testing.T) {
 			broker:           newExecutionBroker(t, ctx, 0, nil, &inPending),
 			numberOfMessages: 1,
 			checkES: func(t *testing.T, es *ExecutionState, broker *ExecutionBroker) {
-				require.Equal(t, message.NotPending, es.pending)
+				require.Equal(t, insolar.NotPending, es.pending)
 			},
 		},
 		{
@@ -152,7 +151,7 @@ func TestExecutionState_OnPulse(t *testing.T) {
 			meNext:           true,
 			numberOfMessages: 0,
 			checkES: func(t *testing.T, es *ExecutionState, broker *ExecutionBroker) {
-				require.Equal(t, message.NotPending, es.pending)
+				require.Equal(t, insolar.NotPending, es.pending)
 			},
 		},
 	}
