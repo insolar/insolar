@@ -31,6 +31,7 @@ const (
 	TypeMeta
 	TypeError
 	TypeID
+	TypeIDs
 	TypeState
 	TypeGetObject
 	TypePassState
@@ -55,6 +56,7 @@ const (
 	TypeUpdate
 	TypeHotObjects
 	TypeResultInfo
+	TypeGetPendings
 	TypeHasPendings
 	TypeHas
 
@@ -150,6 +152,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *ID:
 		pl.Polymorph = uint32(TypeID)
 		return pl.Marshal()
+	case *IDs:
+		pl.Polymorph = uint32(TypeIDs)
+		return pl.Marshal()
 	case *State:
 		pl.Polymorph = uint32(TypeState)
 		return pl.Marshal()
@@ -216,6 +221,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *ResultInfo:
 		pl.Polymorph = uint32(TypeResultInfo)
 		return pl.Marshal()
+	case *GetPendings:
+		pl.Polymorph = uint32(TypeGetPendings)
+		return pl.Marshal()
 	case *HasPendings:
 		pl.Polymorph = uint32(TypeHasPendings)
 		return pl.Marshal()
@@ -243,6 +251,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeID:
 		pl := ID{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeIDs:
+		pl := IDs{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	case TypeState:
@@ -331,6 +343,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeResultInfo:
 		pl := ResultInfo{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeGetPendings:
+		pl := GetPendings{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	case TypeHasPendings:

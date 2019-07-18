@@ -459,35 +459,42 @@ func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]i
 		instrumenter.end()
 	}()
 
-	sender := messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(m.PulseAccessor),
-		messagebus.RetryJetSender(m.JetStorage),
-	)
-
-	genericReply, err := sender(ctx, &message.GetPendingRequestID{
+	msg, err := payload.NewMessage(&payload.GetPendings{
 		ObjectID: *object.Record(),
-	}, nil)
+	})
+
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "GetPendings: failed to create a message")
 	}
 
-	var IDs []insolar.ID
-	switch r := genericReply.(type) {
-	case *reply.IDs:
-		IDs = r.IDs
-	case *reply.Error:
-		return nil, r.Error()
+	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, object)
+
+	defer done()
+	res, ok := <-reps
+	if !ok {
+		return []insolar.Reference{}, errors.New("GetPendings: no reply")
+	}
+
+	pl, err := payload.UnmarshalFromMeta(res.Payload)
+	if err != nil {
+		return []insolar.Reference{}, errors.Wrap(err, "GetPendings: failed to unmarshal reply")
+	}
+
+	switch concrete := pl.(type) {
+	case *payload.IDs:
+		res := make([]insolar.Reference, len(concrete.IDs))
+		for i := range concrete.IDs {
+			res[i] = *insolar.NewReference(concrete.IDs[i])
+		}
+		return res, nil
+	case *payload.Error:
+		if concrete.Code == payload.CodeNoPendings {
+			return []insolar.Reference{}, insolar.ErrNoPendingRequest
+		}
+		return []insolar.Reference{}, errors.New(concrete.Text)
 	default:
-		return nil, fmt.Errorf("GetPendingRequest: unexpected reply: %#v", genericReply)
+		return []insolar.Reference{}, fmt.Errorf("unexpected reply %T", pl)
 	}
-
-	res := make([]insolar.Reference, len(IDs))
-	for i := range IDs {
-		res[i] = *insolar.NewReference(IDs[i])
-	}
-
-	return res, nil
 }
 
 // HasPendingRequests returns true if object has unclosed requests.
