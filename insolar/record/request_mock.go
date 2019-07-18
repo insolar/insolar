@@ -27,6 +27,11 @@ type RequestMock struct {
 	GetCallTypePreCounter uint64
 	GetCallTypeMock       mRequestMockGetCallType
 
+	IsCreationRequestFunc       func() (r bool)
+	IsCreationRequestCounter    uint64
+	IsCreationRequestPreCounter uint64
+	IsCreationRequestMock       mRequestMockIsCreationRequest
+
 	IsDetachedFunc       func() (r bool)
 	IsDetachedCounter    uint64
 	IsDetachedPreCounter uint64
@@ -48,6 +53,7 @@ func NewRequestMock(t minimock.Tester) *RequestMock {
 
 	m.AffinityRefMock = mRequestMockAffinityRef{mock: m}
 	m.GetCallTypeMock = mRequestMockGetCallType{mock: m}
+	m.IsCreationRequestMock = mRequestMockIsCreationRequest{mock: m}
 	m.IsDetachedMock = mRequestMockIsDetached{mock: m}
 	m.ReasonRefMock = mRequestMockReasonRef{mock: m}
 
@@ -317,6 +323,140 @@ func (m *RequestMock) GetCallTypeFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetCallTypeFunc != nil {
 		return atomic.LoadUint64(&m.GetCallTypeCounter) > 0
+	}
+
+	return true
+}
+
+type mRequestMockIsCreationRequest struct {
+	mock              *RequestMock
+	mainExpectation   *RequestMockIsCreationRequestExpectation
+	expectationSeries []*RequestMockIsCreationRequestExpectation
+}
+
+type RequestMockIsCreationRequestExpectation struct {
+	result *RequestMockIsCreationRequestResult
+}
+
+type RequestMockIsCreationRequestResult struct {
+	r bool
+}
+
+//Expect specifies that invocation of Request.IsCreationRequest is expected from 1 to Infinity times
+func (m *mRequestMockIsCreationRequest) Expect() *mRequestMockIsCreationRequest {
+	m.mock.IsCreationRequestFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &RequestMockIsCreationRequestExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of Request.IsCreationRequest
+func (m *mRequestMockIsCreationRequest) Return(r bool) *RequestMock {
+	m.mock.IsCreationRequestFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &RequestMockIsCreationRequestExpectation{}
+	}
+	m.mainExpectation.result = &RequestMockIsCreationRequestResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Request.IsCreationRequest is expected once
+func (m *mRequestMockIsCreationRequest) ExpectOnce() *RequestMockIsCreationRequestExpectation {
+	m.mock.IsCreationRequestFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &RequestMockIsCreationRequestExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *RequestMockIsCreationRequestExpectation) Return(r bool) {
+	e.result = &RequestMockIsCreationRequestResult{r}
+}
+
+//Set uses given function f as a mock of Request.IsCreationRequest method
+func (m *mRequestMockIsCreationRequest) Set(f func() (r bool)) *RequestMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.IsCreationRequestFunc = f
+	return m.mock
+}
+
+//IsCreationRequest implements github.com/insolar/insolar/insolar/record.Request interface
+func (m *RequestMock) IsCreationRequest() (r bool) {
+	counter := atomic.AddUint64(&m.IsCreationRequestPreCounter, 1)
+	defer atomic.AddUint64(&m.IsCreationRequestCounter, 1)
+
+	if len(m.IsCreationRequestMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.IsCreationRequestMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to RequestMock.IsCreationRequest.")
+			return
+		}
+
+		result := m.IsCreationRequestMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the RequestMock.IsCreationRequest")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsCreationRequestMock.mainExpectation != nil {
+
+		result := m.IsCreationRequestMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the RequestMock.IsCreationRequest")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsCreationRequestFunc == nil {
+		m.t.Fatalf("Unexpected call to RequestMock.IsCreationRequest.")
+		return
+	}
+
+	return m.IsCreationRequestFunc()
+}
+
+//IsCreationRequestMinimockCounter returns a count of RequestMock.IsCreationRequestFunc invocations
+func (m *RequestMock) IsCreationRequestMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.IsCreationRequestCounter)
+}
+
+//IsCreationRequestMinimockPreCounter returns the value of RequestMock.IsCreationRequest invocations
+func (m *RequestMock) IsCreationRequestMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.IsCreationRequestPreCounter)
+}
+
+//IsCreationRequestFinished returns true if mock invocations count is ok
+func (m *RequestMock) IsCreationRequestFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.IsCreationRequestMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.IsCreationRequestCounter) == uint64(len(m.IsCreationRequestMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.IsCreationRequestMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.IsCreationRequestCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.IsCreationRequestFunc != nil {
+		return atomic.LoadUint64(&m.IsCreationRequestCounter) > 0
 	}
 
 	return true
@@ -602,6 +742,10 @@ func (m *RequestMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to RequestMock.GetCallType")
 	}
 
+	if !m.IsCreationRequestFinished() {
+		m.t.Fatal("Expected call to RequestMock.IsCreationRequest")
+	}
+
 	if !m.IsDetachedFinished() {
 		m.t.Fatal("Expected call to RequestMock.IsDetached")
 	}
@@ -635,6 +779,10 @@ func (m *RequestMock) MinimockFinish() {
 		m.t.Fatal("Expected call to RequestMock.GetCallType")
 	}
 
+	if !m.IsCreationRequestFinished() {
+		m.t.Fatal("Expected call to RequestMock.IsCreationRequest")
+	}
+
 	if !m.IsDetachedFinished() {
 		m.t.Fatal("Expected call to RequestMock.IsDetached")
 	}
@@ -659,6 +807,7 @@ func (m *RequestMock) MinimockWait(timeout time.Duration) {
 		ok := true
 		ok = ok && m.AffinityRefFinished()
 		ok = ok && m.GetCallTypeFinished()
+		ok = ok && m.IsCreationRequestFinished()
 		ok = ok && m.IsDetachedFinished()
 		ok = ok && m.ReasonRefFinished()
 
@@ -675,6 +824,10 @@ func (m *RequestMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetCallTypeFinished() {
 				m.t.Error("Expected call to RequestMock.GetCallType")
+			}
+
+			if !m.IsCreationRequestFinished() {
+				m.t.Error("Expected call to RequestMock.IsCreationRequest")
 			}
 
 			if !m.IsDetachedFinished() {
@@ -702,6 +855,10 @@ func (m *RequestMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetCallTypeFinished() {
+		return false
+	}
+
+	if !m.IsCreationRequestFinished() {
 		return false
 	}
 
