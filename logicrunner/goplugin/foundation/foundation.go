@@ -18,6 +18,7 @@
 package foundation
 
 import (
+	"github.com/pkg/errors"
 	"github.com/tylerb/gls"
 
 	"github.com/insolar/insolar/insolar"
@@ -64,6 +65,15 @@ func (bc *BaseContract) GetCode() insolar.Reference {
 // GetContext returns current calling context OBSOLETED.
 func (bc *BaseContract) GetContext() *insolar.LogicCallContext {
 	return GetContext()
+}
+
+// GetPulseNumber returns current pulse from context.
+func GetPulseNumber() (insolar.PulseNumber, error) {
+	req := GetContext().Request
+	if req == nil {
+		return insolar.PulseNumber(0), errors.New("request from LogicCallContext is nil, get pulse is failed")
+	}
+	return req.Record().Pulse(), nil
 }
 
 // GetContext returns current calling context.
