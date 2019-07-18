@@ -51,14 +51,15 @@
 package consensus
 
 import (
-	"sync"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
+	"sync"
 )
 
 type LeaveApplied struct {
@@ -175,4 +176,110 @@ func (c *controller) onFinished(pulse pulse.Number) {
 			pulseNumber: insolar.PulseNumber(pulse),
 		}
 	}
+}
+
+func InterceptConsensusControl(originalFeeder api.ConsensusControlFeeder) (*ControlFeederAdapter, api.ConsensusControlFeeder) {
+	r := ControlFeederAdapter{}
+	r.internal.ConsensusControlFeeder = originalFeeder
+	return &r, &r.internal
+}
+
+type ControlFeederAdapter struct {
+	internal internalControlFeederAdapter
+}
+
+func (p *ControlFeederAdapter) PrepareLeave() <-chan struct{} {
+	if p.internal.zeroReadyChannel != nil {
+		panic("illegal state")
+	}
+	p.internal.zeroReadyChannel = make(chan struct{})
+	if p.internal.hasZero {
+		close(p.internal.zeroReadyChannel)
+	}
+	return p.internal.zeroReadyChannel
+}
+
+func (p *ControlFeederAdapter) Leave(leaveReason uint32) <-chan struct{} {
+	if p.internal.leftChannel != nil {
+		panic("illegal state")
+	}
+	p.internal.leaveReason = leaveReason
+	p.internal.isLeaving = true
+	p.internal.leftChannel = make(chan struct{})
+	if p.internal.hasLeft {
+		p.internal.setHasZero()
+		close(p.internal.leftChannel)
+	}
+	return p.internal.leftChannel
+}
+
+var _ api.ConsensusControlFeeder = &internalControlFeederAdapter{}
+
+type internalControlFeederAdapter struct {
+	api.ConsensusControlFeeder
+
+	isLeaving bool
+	hasLeft   bool
+	hasZero   bool
+
+	zeroPending bool
+
+	leaveReason      uint32
+	zeroReadyChannel chan struct{}
+	leftChannel      chan struct{}
+}
+
+func (p *internalControlFeederAdapter) GetRequiredPowerLevel() power.Request {
+	if p.zeroReadyChannel != nil || p.leftChannel != nil {
+		return power.NewRequestByLevel(capacity.LevelZero)
+	}
+	return p.ConsensusControlFeeder.GetRequiredPowerLevel()
+}
+
+func (p *internalControlFeederAdapter) OnAppliedPowerLevel(pw member.Power, effectiveSince pulse.Number) {
+	if p.zeroReadyChannel != nil && pw == 0 {
+		p.zeroPending = true
+	}
+	p.ConsensusControlFeeder.OnAppliedPowerLevel(pw, effectiveSince)
+}
+
+func (p *internalControlFeederAdapter) GetRequiredGracefulLeave() (bool, uint32) {
+	if p.isLeaving {
+		return true, p.leaveReason
+	}
+	return p.ConsensusControlFeeder.GetRequiredGracefulLeave()
+}
+
+func (p *internalControlFeederAdapter) OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse.Number) {
+	p.ConsensusControlFeeder.OnAppliedGracefulLeave(exitCode, effectiveSince)
+}
+
+func (p *internalControlFeederAdapter) PulseDetected() {
+	if p.zeroPending {
+		p.setHasZero()
+	}
+	p.ConsensusControlFeeder.PulseDetected()
+}
+
+func (p *internalControlFeederAdapter) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
+	if report.MemberMode.IsEvicted() {
+		p.setHasLeft()
+	}
+	p.ConsensusControlFeeder.ConsensusFinished(report, expectedCensus)
+}
+
+func (p *internalControlFeederAdapter) setHasZero() {
+	if !p.hasZero && p.zeroReadyChannel != nil {
+		close(p.zeroReadyChannel)
+	}
+	p.hasZero = true
+}
+
+func (p *internalControlFeederAdapter) setHasLeft() {
+	p.setHasZero()
+
+	if !p.hasLeft && p.leftChannel != nil {
+		close(p.leftChannel)
+	}
+	p.hasLeft = true
 }
