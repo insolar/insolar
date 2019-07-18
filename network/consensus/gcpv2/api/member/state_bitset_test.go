@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,7 +46,7 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-//
+///
 
 package member
 
@@ -56,57 +56,77 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetPower(t *testing.T) {
-	require.Equal(t, Rank(1).GetPower(), Power(1))
+func TestLen(t *testing.T) {
+	sb := StateBitset{1, 2}
+	require.Equal(t, len(sb), sb.Len())
 }
 
-func TestGetIndex(t *testing.T) {
-	require.Equal(t, JoinerIndex, JoinerRank.GetIndex())
+func TestIsTrusted(t *testing.T) {
+	require.True(t, BeHighTrust.IsTrusted())
 
-	require.Equal(t, Index(0), Rank((1<<8)-1).GetIndex())
+	require.True(t, BeLimitedTrust.IsTrusted())
 
-	require.Equal(t, Index(1), Rank(1<<8).GetIndex())
+	require.False(t, BeBaselineTrust.IsTrusted())
+
+	require.False(t, BeTimeout.IsTrusted())
+
+	require.False(t, BeFraud.IsTrusted())
+
+	require.False(t, maxBitsetEntry.IsTrusted())
 }
 
-func TestGetTotalCount(t *testing.T) {
-	require.Equal(t, uint16(0), Rank((1<<18)-1).GetTotalCount())
+func TestIsTimeout(t *testing.T) {
+	require.False(t, BeHighTrust.IsTimeout())
 
-	require.Equal(t, uint16(1), Rank(1<<18).GetTotalCount())
+	require.False(t, BeLimitedTrust.IsTimeout())
+
+	require.False(t, BeBaselineTrust.IsTimeout())
+
+	require.True(t, BeTimeout.IsTimeout())
+
+	require.False(t, BeFraud.IsTimeout())
+
+	require.False(t, maxBitsetEntry.IsTimeout())
 }
 
-func TestIsJoiner(t *testing.T) {
-	require.False(t, Rank(1).IsJoiner())
+func TestIsFraud(t *testing.T) {
+	require.False(t, BeHighTrust.IsFraud())
 
-	require.True(t, JoinerRank.IsJoiner())
+	require.False(t, BeLimitedTrust.IsFraud())
+
+	require.False(t, BeBaselineTrust.IsFraud())
+
+	require.False(t, BeTimeout.IsFraud())
+
+	require.True(t, BeFraud.IsFraud())
+
+	require.False(t, maxBitsetEntry.IsFraud())
 }
 
-func TestString(t *testing.T) {
-	joiner := "{joiner}"
+func TestFmtBitsetEntry(t *testing.T) {
+	require.True(t, FmtBitsetEntry(0) != "")
 
-	require.Equal(t, JoinerRank.String(), joiner)
-	require.NotEqual(t, Rank(1).String(), joiner)
-	require.Equal(t, joiner, JoinerRank.String())
-	require.NotEqual(t, joiner, Rank(1).String())
+	require.True(t, FmtBitsetEntry(1) != "")
+
+	require.True(t, FmtBitsetEntry(2) != "")
+
+	require.True(t, FmtBitsetEntry(3) != "")
+
+	require.True(t, FmtBitsetEntry(4) != "")
+
+	require.True(t, FmtBitsetEntry(5) != "")
 }
 
-func TestNewMembershipRank(t *testing.T) {
-	require.Panics(t, func() { NewMembershipRank(ModeNormal, Power(1), 1, 1) })
+func TestBitsetEntryString(t *testing.T) {
+	require.True(t, BeHighTrust.String() != "")
 
-	require.Panics(t, func() { NewMembershipRank(ModeNormal, Power(1), 0x03FF+1, 1) })
+	require.True(t, BeLimitedTrust.String() != "")
 
-	require.Panics(t, func() { NewMembershipRank(ModeNormal, Power(1), 1, 0x03FF+1) })
+	require.True(t, BeBaselineTrust.String() != "")
 
-	require.Panics(t, func() { NewMembershipRank(ModeNormal, Power(1), 1, 0x03FF+1) })
+	require.True(t, BeTimeout.String() != "")
 
-	require.Equal(t, Rank(0x80101), NewMembershipRank(ModeNormal, Power(1), 1, 2))
-}
+	require.True(t, BeFraud.String() != "")
 
-func TestAsMembershipRank(t *testing.T) {
-	fr := FullRank{}
-	fr.OpMode = ModeNormal
-	fr.Power = 1
-	fr.TotalIndex = 1
-	require.Equal(t, Rank(0x80101), fr.AsMembershipRank(2))
-
-	require.Panics(t, func() { fr.AsMembershipRank(0) })
+	require.True(t, maxBitsetEntry.String() != "")
 }

@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,7 +46,7 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-//
+///
 
 package member
 
@@ -56,57 +56,69 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetPower(t *testing.T) {
-	require.Equal(t, Rank(1).GetPower(), Power(1))
+func TestAbs(t *testing.T) {
+	require.Equal(t, int8(1), FraudBySome.abs())
+
+	require.Equal(t, int8(1), TrustBySome.abs())
 }
 
-func TestGetIndex(t *testing.T) {
-	require.Equal(t, JoinerIndex, JoinerRank.GetIndex())
+func TestUpdate(t *testing.T) {
+	tl := FraudBySome
+	require.False(t, tl.Update(UnknownTrust))
 
-	require.Equal(t, Index(0), Rank((1<<8)-1).GetIndex())
+	require.Equal(t, FraudBySome, tl)
 
-	require.Equal(t, Index(1), Rank(1<<8).GetIndex())
+	require.False(t, tl.Update(FraudBySome))
+
+	require.Equal(t, FraudBySome, tl)
+
+	tl = FraudByNeighbors
+	require.False(t, tl.Update(FraudBySome))
+
+	require.Equal(t, FraudByNeighbors, tl)
+
+	require.True(t, tl.Update(FraudByNetwork))
+
+	require.Equal(t, FraudByNetwork, tl)
+
+	tl = TrustByNeighbors
+	require.False(t, tl.Update(TrustBySome))
+
+	require.Equal(t, TrustByNeighbors, tl)
+
+	require.True(t, tl.Update(TrustByNetwork))
+
+	require.Equal(t, TrustByNetwork, tl)
 }
 
-func TestGetTotalCount(t *testing.T) {
-	require.Equal(t, uint16(0), Rank((1<<18)-1).GetTotalCount())
+func TestUpdateKeepNegative(t *testing.T) {
+	tl := FraudBySome
+	require.False(t, tl.UpdateKeepNegative(TrustBySome))
 
-	require.Equal(t, uint16(1), Rank(1<<18).GetTotalCount())
+	require.Equal(t, FraudBySome, tl)
+
+	require.False(t, tl.UpdateKeepNegative(UnknownTrust))
+
+	require.Equal(t, FraudBySome, tl)
+
+	tl = TrustByNeighbors
+
+	require.False(t, tl.UpdateKeepNegative(TrustBySome))
+
+	require.Equal(t, TrustByNeighbors, tl)
+
+	require.True(t, tl.UpdateKeepNegative(TrustByNetwork))
+
+	require.Equal(t, TrustByNetwork, tl)
 }
 
-func TestIsJoiner(t *testing.T) {
-	require.False(t, Rank(1).IsJoiner())
+func TestIsNegative(t *testing.T) {
+	tl := FraudBySome
+	require.True(t, tl.IsNegative())
 
-	require.True(t, JoinerRank.IsJoiner())
-}
+	tl = TrustBySome
+	require.False(t, tl.IsNegative())
 
-func TestString(t *testing.T) {
-	joiner := "{joiner}"
-
-	require.Equal(t, JoinerRank.String(), joiner)
-	require.NotEqual(t, Rank(1).String(), joiner)
-	require.Equal(t, joiner, JoinerRank.String())
-	require.NotEqual(t, joiner, Rank(1).String())
-}
-
-func TestNewMembershipRank(t *testing.T) {
-	require.Panics(t, func() { NewMembershipRank(ModeNormal, Power(1), 1, 1) })
-
-	require.Panics(t, func() { NewMembershipRank(ModeNormal, Power(1), 0x03FF+1, 1) })
-
-	require.Panics(t, func() { NewMembershipRank(ModeNormal, Power(1), 1, 0x03FF+1) })
-
-	require.Panics(t, func() { NewMembershipRank(ModeNormal, Power(1), 1, 0x03FF+1) })
-
-	require.Equal(t, Rank(0x80101), NewMembershipRank(ModeNormal, Power(1), 1, 2))
-}
-
-func TestAsMembershipRank(t *testing.T) {
-	fr := FullRank{}
-	fr.OpMode = ModeNormal
-	fr.Power = 1
-	fr.TotalIndex = 1
-	require.Equal(t, Rank(0x80101), fr.AsMembershipRank(2))
-
-	require.Panics(t, func() { fr.AsMembershipRank(0) })
+	tl = UnknownTrust
+	require.False(t, tl.IsNegative())
 }
