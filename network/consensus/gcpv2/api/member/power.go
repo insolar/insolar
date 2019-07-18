@@ -308,8 +308,8 @@ Only for normalized set.
 
 func (v PowerSet) FindNearestValid(p Power) Power {
 
-	left := uint8(0)
-	right := uint8(3)
+	left := int8(0)
+	right := int8(3)
 	switch {
 	case p == 0 || v[0] == p || v[1] == p || v[2] == p || v[3] == p:
 		return p
@@ -322,7 +322,7 @@ func (v PowerSet) FindNearestValid(p Power) Power {
 			return p
 		}
 		// [v0, min, 0, max]
-		if v[1] > p {
+		if v[1] < p {
 			return p
 		}
 		// get nearest of v[0], v[1]
@@ -357,5 +357,8 @@ func (v PowerSet) FindNearestValid(p Power) Power {
 			return nearest
 		}
 	}
-	panic("impossible")
+	if nearest == 0 {
+		panic("impossible")
+	}
+	return nearest
 }

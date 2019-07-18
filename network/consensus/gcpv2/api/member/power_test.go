@@ -301,39 +301,33 @@ func TestFindNearestValid(t *testing.T) {
 	require.Equal(t, ps[0]+1, ps.FindNearestValid(ps[0]+1))
 
 	ps[1] = psBase[1]
-	// TODO: BUG
-	// require.Equal(t, ps[1]+1, ps.FindNearestValid(ps[1]+1))
 
-	// TODO: BUG
-	// require.Equal(t, ps[1], ps.FindNearestValid(ps[1]-1))
+	require.Equal(t, ps[1]+1, ps.FindNearestValid(ps[1]+1))
 
-	// TODO: BUG
-	// require.Equal(t, ps[0], ps.FindNearestValid(ps[0]+1))
+	require.Equal(t, ps[1], ps.FindNearestValid(ps[1]-1))
+
+	require.Equal(t, ps[0], ps.FindNearestValid(ps[0]+1))
 
 	ps = psBase
 	ps[1] = 0
-	// TODO: BUG
-	// require.Equal(t, ps[2], ps.FindNearestValid(ps[2]+1))
+	require.Equal(t, ps[2], ps.FindNearestValid(ps[2]+1))
 
 	require.Equal(t, ps[3], ps.FindNearestValid(ps[3]-1))
 
 	require.Equal(t, ps[2]-1, ps.FindNearestValid(ps[2]-1))
 
-	// TODO: BUG
-	// return v[0] - impossible
+	require.Equal(t, ps[0], ps.FindNearestValid(ps[0]-1))
 
 	ps = psBase
 	ps[0] = 0
 	require.Equal(t, ps[1]-1, ps.FindNearestValid(ps[1]-1))
 
-	// TODO: BUG
-	// require.Equal(t, ps[1], ps.FindNearestValid(ps[1]+1))
+	require.Equal(t, ps[1], ps.FindNearestValid(ps[1]+1))
 
 	require.Equal(t, ps[2], ps.FindNearestValid(ps[2]-1))
 
 	ps = psBase
-	// TODO: BUG
-	// require.Equal(t, ps[0], ps.FindNearestValid(ps[0]+1))
+	require.Equal(t, ps[0], ps.FindNearestValid(ps[0]+1))
 
 	require.Equal(t, ps[1], ps.FindNearestValid(ps[1]-1))
 
