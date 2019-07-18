@@ -68,6 +68,8 @@ type FilamentCalculator interface {
 	)
 
 	ResultDuplicate(ctx context.Context, startFrom insolar.PulseNumber, objectID, resultID insolar.ID, result record.Result) (foundResult *record.CompositeFilamentRecord, err error)
+
+	FindRequest(ctx context.Context, startFrom insolar.ID, objectID, requestID insolar.ID) (record.CompositeFilamentRecord, error)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCleaner -o ./ -s _mock.go
@@ -147,20 +149,20 @@ func (m *FilamentModifierDefault) prepareCreationRequest(ctx context.Context, re
 	return err
 }
 
-func (m *FilamentModifierDefault) notifyDetached(ctx context.Context, pendingReqs []record.CompositeFilamentRecord, result record.Result) error {
-	closedReq, err := m.records.ForID(ctx, *result.Request.Record())
+func (m *FilamentModifierDefault) notifyDetached(ctx context.Context, pendingReqs []record.CompositeFilamentRecord, reqID, objID, resFilID insolar.ID) error {
+	closedReq, err := m.calculator.FindRequest(ctx, resFilID, objID, reqID)
 	if err != nil {
 		return errors.Wrap(err, "failed to notify about detached")
 	}
 
-	_, isOutgoing := record.Unwrap(closedReq.Virtual).(*record.OutgoingRequest)
+	_, isOutgoing := record.Unwrap(closedReq.Record.Virtual).(*record.OutgoingRequest)
 	if !isOutgoing {
 		return nil
 	}
 
 	needToBeeNotified := func(rec record.CompositeFilamentRecord) (bool, *record.OutgoingRequest) {
 		outReq, isOutgoing := record.Unwrap(rec.Record.Virtual).(*record.OutgoingRequest)
-		if isOutgoing && outReq.ReturnMode == record.ReturnSaga && outReq.Reason.Record().Equal(*result.Request.Record()) {
+		if isOutgoing && outReq.ReturnMode == record.ReturnSaga && outReq.Reason.Record().Equal(reqID) {
 			return true, outReq
 		}
 
@@ -174,7 +176,7 @@ func (m *FilamentModifierDefault) notifyDetached(ctx context.Context, pendingReq
 		}
 
 		msg, err := payload.NewMessage(&payload.SagaCallAcceptNotification{
-			ObjectID:      result.Object,
+			ObjectID:      objID,
 			OutgoingReqID: reqID,
 			Request:       buf,
 		})
@@ -193,7 +195,7 @@ func (m *FilamentModifierDefault) notifyDetached(ctx context.Context, pendingReq
 			}
 
 			go func() {
-				_, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, *insolar.NewReference(result.Object))
+				_, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, *insolar.NewReference(objID))
 				defer done()
 			}()
 		}
@@ -358,7 +360,7 @@ func (m *FilamentModifierDefault) SetResult(ctx context.Context, resultID insola
 	if len(pending) > 0 {
 		calculatedEarliest := pending[0].RecordID.Pulse()
 		idx.Lifeline.EarliestOpenRequest = &calculatedEarliest
-		err := m.notifyDetached(ctx, pending, result)
+		err := m.notifyDetached(ctx, pending, *result.Request.Record(), result.Object, filamentID)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to check detaches")
 		}
@@ -644,6 +646,36 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	}
 
 	return foundRequest, foundResult, nil
+}
+
+func (c *FilamentCalculatorDefault) FindRequest(ctx context.Context, startFrom insolar.ID, objectID, requestID insolar.ID) (record.CompositeFilamentRecord, error) {
+	cache := c.cache.Get(objectID)
+	cache.Lock()
+	defer cache.Unlock()
+
+	iter := newFetchingIterator(
+		ctx,
+		cache,
+		objectID,
+		startFrom,
+		requestID.Pulse(),
+		c.jetFetcher,
+		c.coordinator,
+		c.sender,
+	)
+
+	for iter.HasPrev() {
+		rec, err := iter.Prev(ctx)
+		if err != nil {
+			return record.CompositeFilamentRecord{}, errors.Wrap(err, "failed to calculate pending")
+		}
+
+		if rec.RecordID == requestID {
+			return rec, nil
+		}
+	}
+
+	return record.CompositeFilamentRecord{}, ErrRequestNotFound
 }
 
 func (c *FilamentCalculatorDefault) Clear(objID insolar.ID) {

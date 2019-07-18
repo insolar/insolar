@@ -348,7 +348,8 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 
 	resetComponents()
 	t.Run("happy basic", func(t *testing.T) {
-		validResult := record.Result{Object: gen.ID()}
+		reqID := gen.ID()
+		validResult := record.Result{Object: gen.ID(), Request: *insolar.NewReference(reqID)}
 
 		resultID := gen.ID()
 		resultID.SetPulse(insolar.FirstPulseNumber + 2)
@@ -376,16 +377,18 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 			require.Equal(t, resultID, inResID)
 			return nil, nil
 		}
+		calculator.FindRequestFunc = func(_ context.Context, startFrom insolar.ID, objID insolar.ID, reqID insolar.ID) (r record.CompositeFilamentRecord, r1 error) {
+			require.Equal(t, validResult.Object, objID)
+			require.Equal(t, *validResult.Request.Record(), reqID)
+			require.Equal(t, expectedFilamentRecordID, startFrom)
 
-		req := record.IncomingRequest{}
-		reqID := gen.ID()
-		reqVirt := record.Wrap(req)
-		err := records.Set(ctx, reqID, record.Material{Virtual: &reqVirt})
-		require.NoError(t, err)
-		validResult.Request = *insolar.NewReference(reqID)
+			req := record.IncomingRequest{}
+			reqVirt := record.Wrap(req)
+			return record.CompositeFilamentRecord{Record: record.Material{Virtual: &reqVirt}}, nil
+		}
 
 		latestPendingPulse := latestPendingID.Pulse()
-		err = indexes.SetIndex(ctx, resultID.Pulse(), record.Index{
+		err := indexes.SetIndex(ctx, resultID.Pulse(), record.Index{
 			ObjID: validResult.Object,
 			Lifeline: record.Lifeline{
 				PendingPointer:      &latestPendingID,

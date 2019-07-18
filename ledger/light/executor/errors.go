@@ -23,4 +23,6 @@ import (
 var (
 	// ErrEmptyReason is returned when blob-record not found.
 	ErrEmptyReason = errors.New("reason is empty")
+	// ErrRequestNotFound is returned when there is no such a request in a filament
+	ErrRequestNotFound = errors.New("there is no such a request in a filament")
 )
