@@ -118,6 +118,9 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 	case payload.TypeUpdate:
 		h := NewUpdateObject(s.dep, meta, false)
 		err = f.Handle(ctx, h.Present)
+	case payload.TypeGetPendings:
+		h := NewGetPendings(s.dep, meta, false)
+		err = f.Handle(ctx, h.Present)
 	case payload.TypePass:
 		err = s.handlePass(ctx, f, meta)
 	case payload.TypeError:
@@ -232,6 +235,9 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeUpdate:
 		h := NewUpdateObject(s.dep, originMeta, true)
+		err = f.Handle(ctx, h.Present)
+	case payload.TypeGetPendings:
+		h := NewGetPendings(s.dep, originMeta, true)
 		err = f.Handle(ctx, h.Present)
 	default:
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())
