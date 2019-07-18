@@ -58,6 +58,7 @@ type Handler struct {
 
 	DropModifier  drop.Modifier
 	PulseAccessor pulse.Accessor
+	CALC          pulse.Calculator
 	JetModifier   jet.Modifier
 	JetAccessor   jet.Accessor
 	JetKeeper     executor.JetKeeper
@@ -415,19 +416,26 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 	if err != nil {
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
-	futurePulse := pulse.NextPulseNumber
 	drop, err := storeDrop(ctx, h.DropModifier, msg.Drop)
+
+	prevP, errG := h.CALC.Backwards(ctx, drop.Pulse, 1)
+	logger.Debug(">>>>>>>>: HEAVYPAYLOAD: ", drop.Pulse, ". LATEST: ", pulse.PulseNumber, ". PREV_P: ", prevP.PulseNumber, ". err: ", errG)
+
 	if err != nil {
 		logger.Error(errors.Wrapf(err, "failed to store drop"))
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
+
+	logger.Debug(">>>>>>>>>>>>>>>>>+++++: THRESHOLD: ", drop.SplitThresholdExceeded, ". OVERFLOW: ", h.cfg.JetSplit.ThresholdOverflowCount)
 	if drop.SplitThresholdExceeded > h.cfg.JetSplit.ThresholdOverflowCount {
-		_, _, err = h.JetModifier.Split(ctx, futurePulse, drop.JetID)
+		logger.Debug(">>>>>>>>>>>>>>>>--: SPLIT: pulse: ", pulse.PulseNumber, ". JET: ", drop.JetID.DebugString())
+		_, _, err = h.JetModifier.Split(ctx, pulse.PulseNumber, drop.JetID)
 	} else {
-		err = h.JetModifier.Update(ctx, futurePulse, false, drop.JetID)
+		logger.Debug(">>>>>>>>>>>>>>>>--: Update: pulse: ", pulse.PulseNumber, ". JET: ", drop.JetID.DebugString())
+		err = h.JetModifier.Update(ctx, pulse.PulseNumber, true, drop.JetID)
 	}
 	if err != nil {
-		logger.Error(errors.Wrapf(err, "failed to split/update jet=%v pulse=%v", drop.JetID.DebugString(), futurePulse))
+		logger.Error(errors.Wrapf(err, "failed to split/update jet=%v pulse=%v", drop.JetID.DebugString(), pulse.PulseNumber))
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
 

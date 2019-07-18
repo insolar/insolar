@@ -236,7 +236,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		indexes := object.NewIndexDB(DB)
 		drops := drop.NewDB(DB)
 		jets := jet.NewDBStore(DB)
-		jetKeeper := executor.NewJetKeeper(jets, DB)
+		jetKeeper := executor.NewJetKeeper(jets, DB, Pulses)
 		c.rollback = executor.NewDBRollback(jetKeeper, Pulses, drops, records, indexes, jets, Pulses)
 
 		pm := pulsemanager.NewPulseManager()
@@ -258,6 +258,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		h.DropModifier = drops
 		h.PCS = CryptoScheme
 		h.PulseAccessor = Pulses
+		h.CALC = Pulses
 		h.JetModifier = jets
 		h.JetAccessor = jets
 		h.JetKeeper = jetKeeper

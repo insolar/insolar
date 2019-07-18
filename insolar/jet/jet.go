@@ -44,7 +44,7 @@ type Modifier interface {
 	// Split performs jet split and returns resulting jet ids. Always set Active flag to true for leafs.
 	Split(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID) (insolar.JetID, insolar.JetID, error)
 	// Clone copies tree from one pulse to another. Use it to copy the past tree into new pulse.
-	Clone(ctx context.Context, from, to insolar.PulseNumber) error
+	Clone(ctx context.Context, from, to insolar.PulseNumber, keepActual bool) error
 }
 
 // Cleaner provides an interface for removing jet.Tree from a storage.

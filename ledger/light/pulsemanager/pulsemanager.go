@@ -108,6 +108,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	jets, endedPulse, err := m.setUnderGilSection(ctx, newPulse)
 	if err != nil {
 		if err == errZeroNodes || err == errNoPulse {
+			logger.Debug("setUnderGilSection return error: ", err)
 			return nil
 		}
 		panic(errors.Wrap(err, "under gil error"))

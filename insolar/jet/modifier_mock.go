@@ -20,7 +20,7 @@ import (
 type ModifierMock struct {
 	t minimock.Tester
 
-	CloneFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber) (r error)
+	CloneFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber, p3 bool) (r error)
 	CloneCounter    uint64
 	ClonePreCounter uint64
 	CloneMock       mModifierMockClone
@@ -66,6 +66,7 @@ type ModifierMockCloneInput struct {
 	p  context.Context
 	p1 insolar.PulseNumber
 	p2 insolar.PulseNumber
+	p3 bool
 }
 
 type ModifierMockCloneResult struct {
@@ -73,14 +74,14 @@ type ModifierMockCloneResult struct {
 }
 
 //Expect specifies that invocation of Modifier.Clone is expected from 1 to Infinity times
-func (m *mModifierMockClone) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber) *mModifierMockClone {
+func (m *mModifierMockClone) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber, p3 bool) *mModifierMockClone {
 	m.mock.CloneFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ModifierMockCloneExpectation{}
 	}
-	m.mainExpectation.input = &ModifierMockCloneInput{p, p1, p2}
+	m.mainExpectation.input = &ModifierMockCloneInput{p, p1, p2, p3}
 	return m
 }
 
@@ -97,12 +98,12 @@ func (m *mModifierMockClone) Return(r error) *ModifierMock {
 }
 
 //ExpectOnce specifies that invocation of Modifier.Clone is expected once
-func (m *mModifierMockClone) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber) *ModifierMockCloneExpectation {
+func (m *mModifierMockClone) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber, p3 bool) *ModifierMockCloneExpectation {
 	m.mock.CloneFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &ModifierMockCloneExpectation{}
-	expectation.input = &ModifierMockCloneInput{p, p1, p2}
+	expectation.input = &ModifierMockCloneInput{p, p1, p2, p3}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -112,7 +113,7 @@ func (e *ModifierMockCloneExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of Modifier.Clone method
-func (m *mModifierMockClone) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber) (r error)) *ModifierMock {
+func (m *mModifierMockClone) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber, p3 bool) (r error)) *ModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -121,18 +122,18 @@ func (m *mModifierMockClone) Set(f func(p context.Context, p1 insolar.PulseNumbe
 }
 
 //Clone implements github.com/insolar/insolar/insolar/jet.Modifier interface
-func (m *ModifierMock) Clone(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber) (r error) {
+func (m *ModifierMock) Clone(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber, p3 bool) (r error) {
 	counter := atomic.AddUint64(&m.ClonePreCounter, 1)
 	defer atomic.AddUint64(&m.CloneCounter, 1)
 
 	if len(m.CloneMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.CloneMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ModifierMock.Clone. %v %v %v", p, p1, p2)
+			m.t.Fatalf("Unexpected call to ModifierMock.Clone. %v %v %v %v", p, p1, p2, p3)
 			return
 		}
 
 		input := m.CloneMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ModifierMockCloneInput{p, p1, p2}, "Modifier.Clone got unexpected parameters")
+		testify_assert.Equal(m.t, *input, ModifierMockCloneInput{p, p1, p2, p3}, "Modifier.Clone got unexpected parameters")
 
 		result := m.CloneMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -149,7 +150,7 @@ func (m *ModifierMock) Clone(p context.Context, p1 insolar.PulseNumber, p2 insol
 
 		input := m.CloneMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, ModifierMockCloneInput{p, p1, p2}, "Modifier.Clone got unexpected parameters")
+			testify_assert.Equal(m.t, *input, ModifierMockCloneInput{p, p1, p2, p3}, "Modifier.Clone got unexpected parameters")
 		}
 
 		result := m.CloneMock.mainExpectation.result
@@ -163,11 +164,11 @@ func (m *ModifierMock) Clone(p context.Context, p1 insolar.PulseNumber, p2 insol
 	}
 
 	if m.CloneFunc == nil {
-		m.t.Fatalf("Unexpected call to ModifierMock.Clone. %v %v %v", p, p1, p2)
+		m.t.Fatalf("Unexpected call to ModifierMock.Clone. %v %v %v %v", p, p1, p2, p3)
 		return
 	}
 
-	return m.CloneFunc(p, p1, p2)
+	return m.CloneFunc(p, p1, p2, p3)
 }
 
 //CloneMinimockCounter returns a count of ModifierMock.CloneFunc invocations
