@@ -113,9 +113,13 @@ func (r *Replicator) registerParent(parent Parent) {
 		if err != nil {
 			return []byte{}, errors.Wrapf(err, "failed to deserialize pull request data")
 		}
-		packet, _, err := parent.Pull(ctx, pr.Page)
+		packet, total, err := parent.Pull(ctx, pr.Page)
 		if err != nil {
 			return []byte{}, errors.Wrapf(err, "failed to call parent.Pull")
+		}
+		packet, err = insolar.Serialize(&PullReply{Data: packet, Total: total})
+		if err != nil {
+			return []byte{}, errors.Wrapf(err, "failed to serialize PullReply")
 		}
 		return packet, nil
 	})

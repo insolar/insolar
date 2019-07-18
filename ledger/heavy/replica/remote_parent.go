@@ -41,7 +41,6 @@ type GenericReply struct {
 type PullReply struct {
 	Data  []byte
 	Total uint32
-	Error error
 }
 
 func NewRemoteParent(transport Transport, receiver string) Parent {
@@ -86,10 +85,15 @@ func (r *remoteParent) Pull(ctx context.Context, from Page) ([]byte, uint32, err
 	if err != nil {
 		return []byte{}, 0, errors.Wrapf(err, "failed to send replica.Pull request")
 	}
-	reply := PullReply{}
-	err = insolar.Deserialize(res, &reply)
+	ext := PullReply{}
+	err = insolar.Deserialize(res, &ext)
 	if err != nil {
-		return []byte{}, 0, errors.Wrapf(err, "failed to deserialize Pull reply")
+		return []byte{}, 0, errors.Wrapf(err, "failed to deserialize PullReply")
 	}
-	return reply.Data, reply.Total, reply.Error
+	reply := GenericReply{}
+	err = insolar.Deserialize(ext.Data, &reply)
+	if err != nil {
+		return []byte{}, 0, errors.Wrapf(err, "failed to deserialize data from PullReply")
+	}
+	return reply.Data, ext.Total, reply.Error
 }
