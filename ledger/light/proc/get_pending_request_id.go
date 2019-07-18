@@ -66,7 +66,11 @@ func (p *GetPendingRequestID) Proceed(ctx context.Context) error {
 		return nil
 	}
 
-	m := bus.ReplyAsMessage(ctx, &reply.ID{ID: ids[0]})
+	if len(ids) > 100 {
+		ids = ids[:100]
+	}
+
+	m := bus.ReplyAsMessage(ctx, &reply.IDs{IDs: ids})
 	go p.dep.sender.Reply(ctx, p.message, m)
 	return nil
 }

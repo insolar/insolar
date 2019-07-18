@@ -34,6 +34,15 @@ type Client interface {
 
 	// RegisterResult saves VM method call result and side-effect
 	RegisterResult(ctx context.Context, request insolar.Reference, result RequestResult) error
+	
+	// GetIncomingRequest returns an incoming request for an object.
+	GetIncomingRequest(ctx context.Context, objectRef, reqRef insolar.Reference) (*record.IncomingRequest, error)
+
+	// GetPendings returns pending request IDs of an object.
+	GetPendings(ctx context.Context, objectRef insolar.Reference) ([]insolar.Reference, error)
+
+	// HasPendingRequests returns true if object has unclosed requests.
+	HasPendingRequests(ctx context.Context, object insolar.Reference) (bool, error)
 
 	// RegisterValidation marks provided object state as approved or disapproved.
 	//
@@ -50,12 +59,6 @@ type Client interface {
 	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 	// provide methods for fetching all related data.
 	GetObject(ctx context.Context, head insolar.Reference) (ObjectDescriptor, error)
-
-	// GetPendingRequest returns a pending request for object.
-	GetPendingRequest(ctx context.Context, objectID insolar.ID) (*insolar.Reference, *record.IncomingRequest, error)
-
-	// HasPendingRequests returns true if object has unclosed requests.
-	HasPendingRequests(ctx context.Context, object insolar.Reference) (bool, error)
 
 	// GetDelegate returns provided object's delegate reference for provided type.
 	//

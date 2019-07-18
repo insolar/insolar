@@ -181,12 +181,6 @@ type InnerInit struct {
 
 func (s *InnerInit) Present(ctx context.Context, f flow.Flow) error {
 	switch s.Message.Metadata.Get(bus.MetaType) {
-	case getLedgerPendingRequestMsg:
-		h := GetLedgerPendingRequest{
-			dep:     s.dep,
-			Message: s.Message,
-		}
-		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("[ InnerInit.Present ] no handler for message type %s", s.Message.Metadata.Get("Type"))
 	}
