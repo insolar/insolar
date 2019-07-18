@@ -241,3 +241,23 @@ func TestDbJetKeeper_TopSyncPulse_FinalizeMultiple(t *testing.T) {
 	require.Equal(t, futurePulse, jetKeeper.TopSyncPulse())
 
 }
+
+func TestDbJetKeeper_Add_CantGetPulse(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	dbMock := store.NewDBMock(t)
+
+	pn := insolar.GenesisPulse.PulseNumber
+
+	dbMock.GetMock.Expect(jetKeeperKey(pn)).Return([]byte{}, nil)
+
+	jets := jet.NewStorageMock(t)
+	pulses := pulse.NewCalculatorMock(t)
+
+	jetKeeper := NewJetKeeper(jets, dbMock, pulses)
+	err := jetKeeper.AddHotConfirmation(ctx, pn, insolar.ZeroJetID)
+	require.Error(t, err)
+
+	err = jetKeeper.AddJet(ctx, pn, insolar.ZeroJetID)
+	require.Error(t, err)
+
+}
