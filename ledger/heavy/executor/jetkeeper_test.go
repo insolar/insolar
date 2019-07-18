@@ -236,8 +236,8 @@ func TestDbJetKeeper_TopSyncPulse_FinalizeMultiple(t *testing.T) {
 		require.Equal(t, currentPulse, jetKeeper.TopSyncPulse())
 		err = jetKeeper.AddHotConfirmation(ctx, nextPulse, right)
 		require.NoError(t, err)
-
-		require.Equal(t, futurePulse, jetKeeper.TopSyncPulse())
 	}
+
+	require.Equal(t, futurePulse, jetKeeper.TopSyncPulse())
 
 }
