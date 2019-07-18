@@ -81,6 +81,12 @@ message ID {
     bytes ID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
 }
 
+message IDs {
+    uint32 Polymorph = 16;
+
+    repeated bytes IDs = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+}
+
 message Jet {
     uint32 Polymorph = 16;
 
@@ -194,4 +200,10 @@ message Request {
 
     bytes RequestID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
     record.Virtual Request = 21 [(gogoproto.nullable) = false];
+}
+
+message GetPendings {
+    uint32 Polymorph = 16;
+
+    bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
 }

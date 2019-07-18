@@ -53,6 +53,7 @@ func TestMarshalUnmarshal(t *testing.T) {
 		{tp: payload.TypeMeta, pl: &payload.Meta{}},
 		{tp: payload.TypeError, pl: &payload.Error{}},
 		{tp: payload.TypeID, pl: &payload.ID{}},
+		{tp: payload.TypeIDs, pl: &payload.IDs{}},
 		{tp: payload.TypeState, pl: &payload.State{}},
 		{tp: payload.TypeGetObject, pl: &payload.GetObject{}},
 		{tp: payload.TypePassState, pl: &payload.PassState{}},
@@ -72,6 +73,7 @@ func TestMarshalUnmarshal(t *testing.T) {
 		{tp: payload.TypeUpdate, pl: &payload.Update{}},
 		{tp: payload.TypeHotObjects, pl: &payload.HotObjects{}},
 		{tp: payload.TypeGetRequest, pl: &payload.GetRequest{}},
+		{tp: payload.TypeGetPendings, pl: &payload.GetPendings{}},
 	}
 
 	for _, d := range table {
