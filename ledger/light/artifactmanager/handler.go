@@ -128,6 +128,7 @@ func NewMessageHandler(
 				h.filamentModifier,
 				h.Sender,
 				h.IndexLocker,
+				h.IndexStorage,
 			)
 		},
 		SetResult: func(p *proc.SetResult) {
@@ -204,6 +205,12 @@ func NewMessageHandler(
 			p.Dep.RecordModifier = h.Records
 			p.Dep.PCS = h.PCS
 			p.Dep.Sender = h.Sender
+		},
+		GetPendings: func(p *proc.GetPendings) {
+			p.Dep(
+				h.FilamentCalculator,
+				h.Sender,
+			)
 		},
 		GetPendingRequests: func(p *proc.GetPendingRequests) {
 			p.Dep(h.IndexStorage, h.Sender)
