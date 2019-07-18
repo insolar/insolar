@@ -380,7 +380,7 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 			require.Equal(t, resultID, inResID)
 			return nil, nil
 		}
-		calculator.FindRequestFunc = func(_ context.Context, startFrom insolar.ID, objID insolar.ID, reqID insolar.ID) (r record.CompositeFilamentRecord, r1 error) {
+		calculator.FindRecordFunc = func(_ context.Context, startFrom insolar.ID, objID insolar.ID, reqID insolar.ID) (r record.CompositeFilamentRecord, r1 error) {
 			require.Equal(t, validResult.Object, objID)
 			require.Equal(t, *validResult.Request.Record(), reqID)
 			require.Equal(t, expectedFilamentRecordID, startFrom)
@@ -460,7 +460,7 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 			require.Equal(t, resultID, inResID)
 			return nil, nil
 		}
-		calculator.FindRequestFunc = func(_ context.Context, startFrom insolar.ID, objID insolar.ID, reqID insolar.ID) (r record.CompositeFilamentRecord, r1 error) {
+		calculator.FindRecordFunc = func(_ context.Context, startFrom insolar.ID, objID insolar.ID, reqID insolar.ID) (r record.CompositeFilamentRecord, r1 error) {
 			require.Equal(t, validResult.Object, objID)
 			require.Equal(t, *validResult.Request.Record(), reqID)
 			require.Equal(t, expectedFilamentRecordID, startFrom)

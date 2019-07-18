@@ -69,7 +69,7 @@ type FilamentCalculator interface {
 
 	ResultDuplicate(ctx context.Context, startFrom insolar.PulseNumber, objectID, resultID insolar.ID, result record.Result) (foundResult *record.CompositeFilamentRecord, err error)
 
-	FindRequest(ctx context.Context, startFrom insolar.ID, objectID, requestID insolar.ID) (record.CompositeFilamentRecord, error)
+	FindRecord(ctx context.Context, startFrom insolar.ID, objectID, recordID insolar.ID) (record.CompositeFilamentRecord, error)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCleaner -o ./ -s _mock.go
@@ -150,7 +150,7 @@ func (m *FilamentModifierDefault) prepareCreationRequest(ctx context.Context, re
 }
 
 func (m *FilamentModifierDefault) notifyDetached(ctx context.Context, pendingReqs []record.CompositeFilamentRecord, reqID, objID, resFilID insolar.ID) error {
-	closedReq, err := m.calculator.FindRequest(ctx, resFilID, objID, reqID)
+	closedReq, err := m.calculator.FindRecord(ctx, resFilID, objID, reqID)
 	if err != nil {
 		return errors.Wrap(err, "failed to notify about detached")
 	}
@@ -648,7 +648,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	return foundRequest, foundResult, nil
 }
 
-func (c *FilamentCalculatorDefault) FindRequest(ctx context.Context, startFrom insolar.ID, objectID, requestID insolar.ID) (record.CompositeFilamentRecord, error) {
+func (c *FilamentCalculatorDefault) FindRecord(ctx context.Context, startFrom insolar.ID, objectID, recordID insolar.ID) (record.CompositeFilamentRecord, error) {
 	cache := c.cache.Get(objectID)
 	cache.Lock()
 	defer cache.Unlock()
@@ -658,7 +658,7 @@ func (c *FilamentCalculatorDefault) FindRequest(ctx context.Context, startFrom i
 		cache,
 		objectID,
 		startFrom,
-		requestID.Pulse(),
+		recordID.Pulse(),
 		c.jetFetcher,
 		c.coordinator,
 		c.sender,
@@ -670,7 +670,7 @@ func (c *FilamentCalculatorDefault) FindRequest(ctx context.Context, startFrom i
 			return record.CompositeFilamentRecord{}, errors.Wrap(err, "failed to calculate pending")
 		}
 
-		if rec.RecordID == requestID {
+		if rec.RecordID == recordID {
 			return rec, nil
 		}
 	}
