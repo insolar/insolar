@@ -74,6 +74,7 @@ type tcpTransport struct {
 	started            uint32
 	fixedPublicAddress string
 	handler            StreamHandler
+	cancel             context.CancelFunc
 }
 
 func newTCPTransport(listenAddress, fixedPublicAddress string, handler StreamHandler) *tcpTransport {
@@ -112,6 +113,7 @@ func (t *tcpTransport) Start(ctx context.Context) error {
 
 		logger := inslogger.FromContext(ctx)
 		logger.Info("[ Start ] Start TCP transport")
+		ctx, t.cancel = context.WithCancel(ctx)
 
 		addr, err := net.ResolveTCPAddr("tcp", t.address)
 		if err != nil {
@@ -157,6 +159,7 @@ func (t *tcpTransport) listen(ctx context.Context) {
 // Stop stops networking.
 func (t *tcpTransport) Stop(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
+	t.cancel()
 
 	if atomic.CompareAndSwapUint32(&t.started, 1, 0) {
 		logger.Info("[ Stop ] Stop TCP transport")
