@@ -152,3 +152,20 @@ func (r *CapturingReader) Read(p []byte) (int, error) {
 func (r *CapturingReader) Captured() []byte {
 	return r.buffer.Bytes()
 }
+
+// FindDiscoveriesInNodeList returns only discovery nodes from active node list
+func FindDiscoveriesInNodeList(nodes []insolar.NetworkNode, cert insolar.Certificate) []insolar.NetworkNode {
+	discovery := cert.GetDiscoveryNodes()
+	result := make([]insolar.NetworkNode, 0)
+
+	for _, d := range discovery {
+		for _, n := range nodes {
+			if d.GetNodeRef().Equal(n.ID()) {
+				result = append(result, n)
+				break
+			}
+		}
+	}
+
+	return result
+}
