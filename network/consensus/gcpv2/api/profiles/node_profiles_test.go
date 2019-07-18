@@ -272,5 +272,13 @@ func TestEqualIntroProfiles(t *testing.T) {
 	require.False(t, EqualStaticProfiles(p, o))
 
 	o.GetDefaultEndpointMock.Set(func() endpoints.Outbound { return ne1 })
+	sh := cryptkit.NewSignatureHolderMock(t)
+	equal := false
+	sh.EqualsMock.Set(func(cryptkit.SignatureHolder) bool { return *(&equal) })
+	p.GetAnnouncementSignatureMock.Set(func() cryptkit.SignatureHolder { return sh })
+	o.GetAnnouncementSignatureMock.Set(func() cryptkit.SignatureHolder { return sh })
+	require.False(t, EqualStaticProfiles(p, o))
+
+	equal = true
 	require.True(t, EqualStaticProfiles(p, o))
 }
