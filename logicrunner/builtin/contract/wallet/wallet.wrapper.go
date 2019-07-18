@@ -90,7 +90,7 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 
 func INSMETHOD_Transfer(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
+
 	self := new(Wallet)
 
 	if len(object) == 0 {
@@ -119,10 +119,6 @@ func INSMETHOD_Transfer(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.Transfer(args0, args1, args2)
 
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -139,7 +135,7 @@ func INSMETHOD_Transfer(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_Accept(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
+
 	self := new(Wallet)
 
 	if len(object) == 0 {
@@ -163,10 +159,6 @@ func INSMETHOD_Accept(object []byte, data []byte) ([]byte, []byte, error) {
 	}
 
 	ret0 := self.Accept(args0)
-
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
@@ -229,7 +221,7 @@ func INSMETHOD_RollBack(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetBalance(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
+
 	self := new(Wallet)
 
 	if len(object) == 0 {
@@ -252,10 +244,6 @@ func INSMETHOD_GetBalance(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.GetBalance()
 
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -272,7 +260,6 @@ func INSMETHOD_GetBalance(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
 	args := [1]interface{}{}
 	var args0 string
 	args[0] = &args0
@@ -284,9 +271,6 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	}
 
 	ret0, ret1 := New(args0)
-	if ph.GetSystemError() != nil {
-		return nil, ph.GetSystemError()
-	}
 	if ret1 != nil {
 		return nil, ret1
 	}

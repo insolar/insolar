@@ -37,6 +37,10 @@ const (
 	PanicLevel
 )
 
+func (l LogLevel) Equal(other LogLevel) bool {
+	return l == other
+}
+
 func (l LogLevel) String() string {
 	switch l {
 	case NoLevel:
