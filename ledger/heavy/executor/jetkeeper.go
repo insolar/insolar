@@ -248,6 +248,11 @@ func (jk *dbJetKeeper) all(pulse insolar.PulseNumber) []jetInfo {
 	return jets
 }
 
+const (
+	jetKeeperKeyPrefix = 0x01
+	syncPulseKeyPrefix = 0x02
+)
+
 type jetKeeperKey insolar.PulseNumber
 
 func (k jetKeeperKey) Scope() store.Scope {
@@ -255,7 +260,7 @@ func (k jetKeeperKey) Scope() store.Scope {
 }
 
 func (k jetKeeperKey) ID() []byte {
-	return append([]byte{0x01}, insolar.PulseNumber(k).Bytes()...)
+	return append([]byte{jetKeeperKeyPrefix}, insolar.PulseNumber(k).Bytes()...)
 }
 
 type syncPulseKey insolar.PulseNumber
@@ -265,7 +270,7 @@ func (k syncPulseKey) Scope() store.Scope {
 }
 
 func (k syncPulseKey) ID() []byte {
-	return append([]byte{0x02}, insolar.PulseNumber(k).Bytes()...)
+	return append([]byte{syncPulseKeyPrefix}, insolar.PulseNumber(k).Bytes()...)
 }
 
 func (jk *dbJetKeeper) get(pn insolar.PulseNumber) ([]jetInfo, error) {
