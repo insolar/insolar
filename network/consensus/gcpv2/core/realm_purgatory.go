@@ -173,7 +173,7 @@ func (p *RealmPurgatory) ascendFromPurgatory(ctx context.Context, id insolar.Sho
 	defer p.rw.Unlock()
 	p.phantomByID[id] = nil //leave marker
 	//delete(p.phantomByEP, ...)
-	p.population.AddToDynamics(na)
+	_, _ = p.population.AddToDynamics(na)
 	go p.flushPostponedPackets(packets)
 }
 
@@ -231,7 +231,7 @@ func (p *RealmPurgatory) GetProfileFactory() profiles.Factory {
 }
 
 func (p *RealmPurgatory) IsBriefAscensionAllowed() bool {
-	return true
+	return true // TODO using false will fail vector calculation, because only NodeAppearance can be there now
 }
 
 func (p *RealmPurgatory) flushPostponedPackets(packets []PostponedPacket) {
