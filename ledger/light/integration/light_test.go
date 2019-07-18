@@ -132,6 +132,7 @@ func Test_BasicOperations(t *testing.T) {
 	t.Run("happy basic", runner)
 
 	t.Run("happy concurrent", func(t *testing.T) {
+		t.Skip()
 		count := 1000
 		pulseAt := rand.Intn(count)
 		var wg sync.WaitGroup
