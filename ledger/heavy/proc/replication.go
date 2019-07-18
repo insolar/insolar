@@ -98,7 +98,7 @@ func (p *Replication) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to store drop")
 	}
-	if dr.SplitThresholdExceeded > p.cfg.JetSplit.ThresholdOverflowCount {
+	if dr.Split {
 		_, _, err = p.dep.jets.Split(ctx, futurePulse, dr.JetID)
 	} else {
 		err = p.dep.jets.Update(ctx, futurePulse, false, dr.JetID)
