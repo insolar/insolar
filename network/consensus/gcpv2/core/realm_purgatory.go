@@ -64,14 +64,13 @@ import (
 
 func NewRealmPurgatory(population RealmPopulation, pf profiles.Factory, svf cryptkit.SignatureVerifierFactory,
 	callback *nodeContext, postponedPacketFn PostponedPacketFunc) RealmPurgatory {
-	r := RealmPurgatory{
+	return RealmPurgatory{
 		population:        population,
 		profileFactory:    pf,
 		svFactory:         svf,
 		callback:          callback,
 		postponedPacketFn: postponedPacketFn,
 	}
-	return r
 }
 
 type RealmPurgatory struct {
@@ -173,7 +172,7 @@ func (p *RealmPurgatory) ascendFromPurgatory(ctx context.Context, id insolar.Sho
 	defer p.rw.Unlock()
 	p.phantomByID[id] = nil //leave marker
 	//delete(p.phantomByEP, ...)
-	p.population.AddToDynamics(na)
+	_, _ = p.population.AddToDynamics(na)
 	go p.flushPostponedPackets(packets)
 }
 
@@ -199,7 +198,10 @@ func (p *RealmPurgatory) FromSelfIntroduction(ctx context.Context,
 		panic("illegal value")
 	}
 	if brief != nil && full != nil {
-		// TODO leave only full if present
+		if !profiles.EqualStaticProfiles(full, brief) {
+			return fmt.Errorf("deserialization error")
+		}
+		brief = nil
 	}
 
 	return p.getApplyFn(joinerID, false)(ctx, brief, full, joinerID, insolar.AbsentShortNodeID)
@@ -221,8 +223,9 @@ func (p *RealmPurgatory) FromMemberAnnouncement(ctx context.Context, joinerID in
 	return p.getApplyFn(joinerID, false)(ctx, brief, full, announcerID, announcerID)
 }
 
-func (p *RealmPurgatory) sendPostponedPacket(ctx context.Context, packet transport.PacketParser,
+func (p *RealmPurgatory) sendPostponedPacket(_ context.Context, packet transport.PacketParser,
 	from endpoints.Inbound, flags PacketVerifyFlags) {
+
 	p.postponedPacketFn(packet, from, flags)
 }
 
@@ -231,7 +234,7 @@ func (p *RealmPurgatory) GetProfileFactory() profiles.Factory {
 }
 
 func (p *RealmPurgatory) IsBriefAscensionAllowed() bool {
-	return true
+	return true // TODO using false will fail vector calculation, because only NodeAppearance can be there now
 }
 
 func (p *RealmPurgatory) flushPostponedPackets(packets []PostponedPacket) {

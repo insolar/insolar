@@ -396,6 +396,7 @@ outer:
 				}
 				fallthrough
 			default:
+				nodeIndex := d.GetNode().GetIndex().AsInt()
 				nodeStats, vr := d.GetInspectionResults()
 				if log.Is(insolar.DebugLevel) {
 					var logMsg interface{}
@@ -410,9 +411,11 @@ outer:
 
 					na := d.GetNode()
 					log.Debugf(
-						"%s: s:%v t:%v idx:%d left:%d\n Here:%v\nThere:%v\n Comp:%v\nStats:%v\n",
-						logMsg, na.GetNodeID(), c.R.GetSelf().GetNodeID(), na.GetIndex(), remainingNodes,
-						localInspector.GetBitset(), d.GetBitset(), d, nodeStats,
+						"%s: idx:%d left:%d\n Here(%04d):%v\nThere(%04d):%v\n     Result:%v\n Comparison:%v\n",
+						//													    Compared
+						logMsg, na.GetIndex(), remainingNodes, c.R.GetSelf().GetNodeID(), localInspector.GetBitset(),
+						na.GetNodeID(), d.GetBitset(),
+						nodeStats, d,
 					)
 				}
 
@@ -421,7 +424,6 @@ outer:
 				}
 
 				{
-					nodeIndex := d.GetNode().GetIndex().AsInt()
 					verifiedStatTbl.PutRow(nodeIndex, nodeStats)
 					originalStat := nodeset.StateToConsensusStatRow(d.GetBitset())
 					originalStatTbl.PutRow(nodeIndex, &originalStat)
@@ -457,13 +459,14 @@ outer:
 	}
 
 	if log.Is(insolar.DebugLevel) {
-		tblHeader := fmt.Sprintf("Consensus Node View (%%s): %v", c.R.GetSelfNodeID())
-		typeHeader := "Original=Verified"
+		tblHeader := fmt.Sprintf("%%sConsensus Node View (%%s): %v", c.R.GetSelfNodeID())
+		typeHeader := "Original, Verified"
+		prev := ""
 		if !originalStatTbl.EqualsTyped(&verifiedStatTbl) {
-			log.Debug(originalStatTbl.TableFmt(fmt.Sprintf(tblHeader, "Original"), nodeset.FmtConsensusStat))
+			prev = originalStatTbl.TableFmt(fmt.Sprintf(tblHeader, prev, "Original"), nodeset.FmtConsensusStat)
 			typeHeader = "Verified"
 		}
-		log.Debug(verifiedStatTbl.TableFmt(fmt.Sprintf(tblHeader, typeHeader), nodeset.FmtConsensusStat))
+		log.Debug(verifiedStatTbl.TableFmt(fmt.Sprintf(tblHeader, prev, typeHeader), nodeset.FmtConsensusStat))
 	}
 
 	if consensusSelection == nil {
