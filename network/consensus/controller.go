@@ -55,38 +55,41 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/adapters"
+	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 )
 
 type Controller interface {
 	Abort()
 
-	GetActivePowerLimit() (member.Power, insolar.PulseNumber)
+	ChangePower(level capacity.Level)
+	PrepareLeave() <-chan struct{}
+	Leave(leaveReason uint32) <-chan struct{}
 
 	AddFinishedNotifier(typ string) <-chan insolar.PulseNumber
 	RemoveFinishedNotifier(typ string)
 }
 
 type controller struct {
-	consensusControlFeeder *adapters.ConsensusControlFeeder
-	consensusController    api.ConsensusController
+	consensusControlFeeder   api.ConsensusControlFeeder
+	consensusController      api.ConsensusController
+	controlFeederInterceptor *adapters.ControlFeederInterceptor
 
 	mu        *sync.RWMutex
 	notifiers map[string]chan insolar.PulseNumber
 }
 
-func newController(consensusControlFeeder *adapters.ConsensusControlFeeder, consensusController api.ConsensusController) *controller {
+func newController(controlFeederInterceptor *adapters.ControlFeederInterceptor, consensusController api.ConsensusController) *controller {
 	controller := &controller{
-		consensusControlFeeder: consensusControlFeeder,
-		consensusController:    consensusController,
+		controlFeederInterceptor: controlFeederInterceptor,
+		consensusController:      consensusController,
 
 		mu:        &sync.RWMutex{},
 		notifiers: make(map[string]chan insolar.PulseNumber),
 	}
 
-	consensusControlFeeder.SetOnFinished(controller.onFinished)
+	controlFeederInterceptor.Feeder().SetOnFinished(controller.onFinished)
 
 	return controller
 }
@@ -95,9 +98,16 @@ func (c *controller) Abort() {
 	c.consensusController.Abort()
 }
 
-func (c *controller) GetActivePowerLimit() (member.Power, insolar.PulseNumber) {
-	pw, pul := c.consensusController.GetActivePowerLimit()
-	return pw, insolar.PulseNumber(pul)
+func (c *controller) ChangePower(level capacity.Level) {
+	c.controlFeederInterceptor.Feeder().SetRequiredPowerLevel(level)
+}
+
+func (c *controller) PrepareLeave() <-chan struct{} {
+	return c.controlFeederInterceptor.PrepareLeave()
+}
+
+func (c *controller) Leave(leaveReason uint32) <-chan struct{} {
+	return c.controlFeederInterceptor.Leave(leaveReason)
 }
 
 func (c *controller) AddFinishedNotifier(typ string) <-chan insolar.PulseNumber {

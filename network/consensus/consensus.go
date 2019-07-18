@@ -200,15 +200,15 @@ func newInstaller(constructor *constructor, dep *Dep) Installer {
 }
 
 func (c Installer) Install(setters ...packetProcessorSetter) Controller {
-	controlFeeder := adapters.NewConsensusControlFeeder()
+	controlFeederInterceptor := adapters.InterceptConsensusControl(adapters.NewConsensusControlFeeder())
 	candidateFeeder := &core.SequentialCandidateFeeder{}
 
-	consensusController := c.createConsensusController(controlFeeder, candidateFeeder)
+	consensusController := c.createConsensusController(controlFeederInterceptor.Feeder(), candidateFeeder)
 	packetParserFactory := c.createPacketParserFactory()
 
 	c.install(setters, consensusController, packetParserFactory)
 
-	return newController(controlFeeder, consensusController)
+	return newController(controlFeederInterceptor, consensusController)
 }
 
 func (c *Installer) createConsensusController(controlFeeder api.ConsensusControlFeeder, candidateFeeder api.CandidateControlFeeder) api.ConsensusController {
