@@ -50,13 +50,13 @@ func NewFinalizationKeeperDefault(jk JetKeeper, ns insolar.TerminationHandler, p
 
 func (f *FinalizationKeeperDefault) OnPulse(ctx context.Context, current insolar.PulseNumber) error {
 	logger := inslogger.FromContext(ctx)
-	bottomLevel, err := f.pulseCalculator.Backwards(ctx, current, f.limit-1)
+	bottomLevel, err := f.pulseCalculator.Backwards(ctx, current, f.limit)
 	if err != nil {
 		if err == pulse.ErrNotFound {
 			logger.Debug("finalizationKeeper: possibly we started not so long ago. Do nothing. Current pulse: ", current)
 			return nil
 		}
-		return errors.Wrap(err, "Can't get old pulse: ")
+		return errors.Wrap(err, "Can't get old pulse")
 	}
 
 	lastConfirmedPulse := f.jetKeeper.TopSyncPulse()
