@@ -491,32 +491,49 @@ func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]i
 }
 
 // HasPendingRequests returns true if object has unclosed requests.
-func (m *client) HasPendingRequests(
+func (m *client) HasPendings(
 	ctx context.Context,
 	object insolar.Reference,
 ) (bool, error) {
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.HasPendingRequests")
-	defer span.End()
+	var err error
+	instrumenter := instrument(ctx, "HasPendings").err(&err)
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.HasPendings")
+	defer func() {
+		if err != nil {
+			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+		}
+		span.End()
+		instrumenter.end()
+	}()
 
-	sender := messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(m.PulseAccessor),
-		messagebus.RetryJetSender(m.JetStorage),
-	)
-
-	genericReact, err := sender(ctx, &message.GetPendingRequests{Object: object}, nil)
+	msg, err := payload.NewMessage(&payload.HasPendings{
+		ObjectID: *object.Record(),
+	})
 
 	if err != nil {
-		return false, err
+		return false, errors.Wrap(err, "HasPendings: failed to create a message")
 	}
 
-	switch rep := genericReact.(type) {
-	case *reply.HasPendingRequests:
-		return rep.Has, nil
-	case *reply.Error:
-		return false, rep.Error()
+	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, object)
+
+	defer done()
+	res, ok := <-reps
+	if !ok {
+		return false, errors.New("HasPendings: no reply")
+	}
+
+	pl, err := payload.UnmarshalFromMeta(res.Payload)
+	if err != nil {
+		return false, errors.Wrap(err, "HasPendings: failed to unmarshal reply")
+	}
+
+	switch concrete := pl.(type) {
+	case *payload.Has:
+		return concrete.Has, nil
+	case *payload.Error:
+		return false, errors.New(concrete.Text)
 	default:
-		return false, fmt.Errorf("HasPendingRequests: unexpected reply: %#v", rep)
+		return false, fmt.Errorf("HasPendings: unexpected reply %T", pl)
 	}
 }
 

@@ -319,7 +319,7 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 			broker := suite.lr.StateStorage.UpsertExecutionState(gen.Reference())
 			broker.executionState.pending = test.inState
 			if test.amReply != nil {
-				suite.am.HasPendingRequestsMock.Return(test.amReply.has, test.amReply.err)
+				suite.am.HasPendingsMock.Return(test.amReply.has, test.amReply.err)
 			}
 			proc := ClarifyPendingState{
 				broker:          broker,
@@ -342,7 +342,7 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 		broker := suite.lr.StateStorage.UpsertExecutionState(gen.Reference())
 		broker.executionState.pending = message.PendingUnknown
 
-		suite.am.HasPendingRequestsMock.Return(false, errors.New("some"))
+		suite.am.HasPendingsMock.Return(false, errors.New("some"))
 
 		proc := ClarifyPendingState{
 			broker:          broker,
@@ -510,7 +510,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 			}
 
 			if test.expected.hasPendingCall {
-				suite.am.HasPendingRequestsMock.Return(true, nil)
+				suite.am.HasPendingsMock.Return(true, nil)
 			}
 
 			flowMock, pubSub := prepareWatermill(suite)
@@ -1064,7 +1064,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	cd.MachineTypeMock.Return(insolar.MachineTypeBuiltin)
 	cd.RefMock.Return(&codeRef)
 
-	suite.am.HasPendingRequestsMock.Return(false, nil)
+	suite.am.HasPendingsMock.Return(false, nil)
 
 	suite.am.RegisterIncomingRequestMock.Set(func(ctx context.Context, r *record.IncomingRequest) (*insolar.ID, error) {
 		reqId := testutils.RandomID()
@@ -1248,7 +1248,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			}
 
 			if test.when > whenRegisterRequest {
-				suite.am.HasPendingRequestsFunc = func(ctx context.Context, r insolar.Reference) (bool, error) {
+				suite.am.HasPendingsFunc = func(ctx context.Context, r insolar.Reference) (bool, error) {
 					if test.when == whenHasPendingRequest {
 						changePulse()
 
