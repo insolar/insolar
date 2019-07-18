@@ -62,7 +62,7 @@ func (s *sequencer) Len(scope byte, pulse insolar.PulseNumber) uint32 {
 	defer s.RUnlock()
 
 	result := 0
-	pivot := polyKey{id: []byte{}, scope: store.Scope(scope)}
+	pivot := polyKey{id: pulse.Bytes(), scope: store.Scope(scope)}
 	it := s.db.NewIterator(pivot, false)
 	defer it.Close()
 	for it.Next() && bytes.HasPrefix(it.Key(), pulse.Bytes()) {
