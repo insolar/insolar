@@ -59,22 +59,18 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
 type RoundStrategy struct {
-	bundle      core.PhaseControllersBundle
 	chronicle   api.ConsensusChronicles
 	localConfig api.LocalNodeConfiguration
 }
 
 func NewRoundStrategy(
-	bundle core.PhaseControllersBundle,
 	chronicle api.ConsensusChronicles,
 	localConfig api.LocalNodeConfiguration,
 ) *RoundStrategy {
 	return &RoundStrategy{
-		bundle:      bundle,
 		chronicle:   chronicle,
 		localConfig: localConfig,
 	}
@@ -87,14 +83,6 @@ func (rs *RoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPuls
 		// "is_joiner": self.IsRecentlyJoiner(),
 	})
 	return ctx
-}
-
-func (rs *RoundStrategy) CreatePrepPhaseControllers() []core.PrepPhaseController {
-	return rs.bundle.CreatePrepPhaseControllers()
-}
-
-func (rs *RoundStrategy) GetFullPhaseControllers(nodeCount int) ([]core.PhaseController, core.NodeUpdateCallback) {
-	return rs.bundle.CreateFullPhaseControllers(nodeCount)
 }
 
 func (rs *RoundStrategy) GetBaselineWeightForNeighbours() uint32 {

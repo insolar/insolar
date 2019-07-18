@@ -70,12 +70,12 @@ func NewPacketSender(datagramTransport transport.DatagramTransport) *PacketSende
 	}
 }
 
-func (ps *PacketSender) SendPacketToTransport(ctx context.Context, to profiles.ActiveNode, sendOptions transport2.PacketSendOptions, payload interface{}) {
-	addr := to.GetStatic().GetDefaultEndpoint().GetNameAddress().String()
+func (ps *PacketSender) SendPacketToTransport(ctx context.Context, to profiles.StaticProfile, sendOptions transport2.PacketSendOptions, payload interface{}) {
+	addr := to.GetDefaultEndpoint().GetNameAddress().String()
 
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"receiver_addr":    addr,
-		"receiver_node_id": to.GetNodeID(),
+		"receiver_node_id": to.GetStaticNodeID(),
 		"options":          sendOptions,
 	})
 

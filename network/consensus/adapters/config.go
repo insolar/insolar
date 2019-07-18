@@ -78,6 +78,10 @@ type LocalNodeConfiguration struct {
 	secretKeyStore cryptkit.SecretKeyStore
 }
 
+func (c *LocalNodeConfiguration) GetNodeCountHint() int {
+	return 10 // should provide some rough estimate of a size of a network to be joined
+}
+
 func NewLocalNodeConfiguration(ctx context.Context, keyStore insolar.KeyStore) *LocalNodeConfiguration {
 	privateKey, err := keyStore.GetPrivateKey("")
 	if err != nil {

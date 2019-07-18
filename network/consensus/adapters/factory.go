@@ -125,18 +125,19 @@ func (cf *TransportCryptographyFactory) GetPublicKeyStore(skh cryptkit.Signature
 	return NewECDSAPublicKeyStore(kh.publicKey)
 }
 
-type RoundStrategyFactory struct{}
-
-func NewRoundStrategyFactory() *RoundStrategyFactory {
-	return &RoundStrategyFactory{}
+type RoundStrategyFactory struct {
+	bundleFactory core.PhaseControllersBundleFactory
 }
 
-func (rsf *RoundStrategyFactory) CreateRoundStrategy(chronicle api.ConsensusChronicles, config api.LocalNodeConfiguration) core.RoundStrategy {
-	return NewRoundStrategy(
-		phasebundle.NewRegularPhaseBundleByDefault(),
-		chronicle,
-		config,
-	)
+func NewRoundStrategyFactory() *RoundStrategyFactory {
+	return &RoundStrategyFactory{phasebundle.NewStandardBundleFactoryDefault()}
+}
+
+func (rsf *RoundStrategyFactory) CreateRoundStrategy(chronicle api.ConsensusChronicles, config api.LocalNodeConfiguration) (core.RoundStrategy, core.PhaseControllersBundle) {
+	rs := NewRoundStrategy(chronicle, config)
+	pcb := rsf.bundleFactory.CreateControllersBundle(chronicle.GetLatestCensus().GetOnlinePopulation(), config)
+	return rs, pcb
+
 }
 
 type TransportFactory struct {
@@ -169,45 +170,20 @@ func (tf *TransportFactory) GetCryptographyFactory() transport.CryptographyFacto
 	return tf.cryptographyFactory
 }
 
-type NodeProfileFactory struct {
+type keyStoreFactory struct {
 	keyProcessor insolar.KeyProcessor
 }
 
-func NewNodeProfileFactory(keyProcessor insolar.KeyProcessor) *NodeProfileFactory {
-	return &NodeProfileFactory{
-		keyProcessor: keyProcessor,
-	}
-}
-
-func (npf *NodeProfileFactory) createProfile(candidate profiles.BriefCandidateProfile, signature cryptkit.SignatureHolder, intro profiles.StaticProfileExtension) *NodeIntroProfile {
-	keyHolder := candidate.GetNodePublicKey()
-	pk, err := npf.keyProcessor.ImportPublicKeyBinary(keyHolder.AsBytes())
+func (p *keyStoreFactory) GetPublicKeyStore(keyHolder cryptkit.SignatureKeyHolder) cryptkit.PublicKeyStore {
+	pk, err := p.keyProcessor.ImportPublicKeyBinary(keyHolder.AsBytes())
 	if err != nil {
 		panic(err)
 	}
-
-	store := NewECDSAPublicKeyStore(pk.(*ecdsa.PublicKey))
-
-	return newNodeIntroProfile(
-		candidate.GetStaticNodeID(),
-		candidate.GetPrimaryRole(),
-		candidate.GetSpecialRoles(),
-		intro,
-		candidate.GetDefaultEndpoint(),
-		store,
-		keyHolder,
-		signature,
-	)
+	return NewECDSAPublicKeyStore(pk.(*ecdsa.PublicKey))
 }
 
-func (npf *NodeProfileFactory) CreateBriefIntroProfile(candidate profiles.BriefCandidateProfile) profiles.StaticProfile {
-	return npf.createProfile(candidate, candidate.GetJoinerSignature(), nil)
-}
-
-func (npf *NodeProfileFactory) CreateFullIntroProfile(candidate profiles.CandidateProfile) profiles.StaticProfile {
-	intro := newNodeIntroduction(candidate.GetStaticNodeID(), candidate.GetReference())
-
-	return npf.createProfile(candidate, candidate.GetJoinerSignature(), intro)
+func NewNodeProfileFactory(keyProcessor insolar.KeyProcessor) profiles.Factory {
+	return core.NewSimpleProfileIntroFactory(&keyStoreFactory{keyProcessor})
 }
 
 type ConsensusDigestFactory struct {
