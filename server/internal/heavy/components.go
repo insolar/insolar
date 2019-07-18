@@ -267,7 +267,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Handler = h
 
 		RecordSequencer = sequence.NewSequencer(DB)
-		r := replica.NewReplicator(cfg, jetKeeper)
+		r := replica.NewReplicator(cfg, Pulses, jetKeeper)
 		Replicator = r
 
 		artifactManager := &artifact.Scope{

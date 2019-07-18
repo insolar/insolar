@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/heavy/replica/intergrity"
 	"github.com/insolar/insolar/ledger/heavy/sequence"
@@ -35,6 +36,7 @@ type Replicator struct {
 	CryptoService insolar.CryptographyService `inject:""`
 	Transport     Transport                   `inject:""`
 	config        configuration.Configuration
+	pulses        pulse.Accessor
 	jetKeeper     JetKeeper
 	target        Target
 	cmps          component.Manager
@@ -42,9 +44,11 @@ type Replicator struct {
 
 func NewReplicator(
 	cfg configuration.Configuration,
+	pulses pulse.Accessor,
 	jetKeeper JetKeeper,
 ) *Replicator {
-	return &Replicator{config: cfg, jetKeeper: jetKeeper, cmps: component.Manager{}}
+	cmps := component.Manager{}
+	return &Replicator{config: cfg, pulses: pulses, jetKeeper: jetKeeper, cmps: cmps}
 }
 
 func (r *Replicator) Init(ctx context.Context) error {
@@ -71,7 +75,7 @@ func (r *Replicator) Init(ctx context.Context) error {
 		r.cmps.Register(validator)
 	}
 	provider := makeProvider(r.CryptoService)
-	r.cmps.Inject(r.Sequencer, r.jetKeeper, provider)
+	r.cmps.Inject(r.Sequencer, r.pulses, r.jetKeeper, provider)
 	return nil
 }
 
