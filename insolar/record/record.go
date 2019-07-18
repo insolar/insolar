@@ -167,7 +167,7 @@ func (r *IncomingRequest) IsCreationRequest() bool {
 }
 
 func (r *IncomingRequest) IsDetached() bool {
-	// incoming requests should't be in detached state, app code should check it and raise some kind of error.
+	// incoming requests never should't be in detached state, app code should check it and raise some kind of error.
 	return isDetached(r.ReturnMode)
 }
 
