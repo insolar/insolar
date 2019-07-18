@@ -66,6 +66,7 @@ func TestMarshalUnmarshal(t *testing.T) {
 		// {tp: payload.TypeFilamentSegment, pl: &payload.FilamentSegment{}},
 		// {tp: payload.TypeSetIncomingRequest, pl: &payload.SetIncomingRequest{}},
 		// {tp: payload.TypeRequest, pl: &payload.Request{}},
+		// {tp: payload.TypeReplication, pl: &payload.Replication{}},
 		{tp: payload.TypeSetResult, pl: &payload.SetResult{}},
 		{tp: payload.TypeActivate, pl: &payload.Activate{}},
 		{tp: payload.TypeDeactivate, pl: &payload.Deactivate{}},

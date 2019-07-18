@@ -195,3 +195,13 @@ message Request {
     bytes RequestID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
     record.Virtual Request = 21 [(gogoproto.nullable) = false];
 }
+
+message Replication {
+    uint32 Polymorph = 16;
+
+    bytes JetID      = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
+    bytes Pulse      = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    repeated record.Index Indexes = 22 [(gogoproto.nullable) = false];
+    repeated record.Material Records = 23 [(gogoproto.nullable) = false];
+    bytes Drop = 24;
+}

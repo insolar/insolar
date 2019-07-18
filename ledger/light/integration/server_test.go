@@ -230,7 +230,7 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 		lthSyncer := replication.NewReplicatorDefault(
 			jetCalculator,
 			lightCleaner,
-			Bus,
+			ServerBus,
 			Pulses,
 			drops,
 			records,
