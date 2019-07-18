@@ -262,15 +262,11 @@ func (d *distributor) pause(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("[ Pause ] Pause distribution, stopping transport")
 	d.pool.Reset()
-	err := d.transport.Stop(ctx)
-	if err != nil {
-		logger.Errorf("Failed to stop network: %s", err.Error())
-	}
 }
 
 func (d *distributor) resume(ctx context.Context) error {
 	inslogger.FromContext(ctx).Info("[ Resume ] Resume distribution, starting transport")
-	return d.transport.Start(ctx)
+	return nil
 }
 
 func (d *distributor) sendRequestToHost(ctx context.Context, packet *packet.Packet, receiver *host.Host) (network.Future, error) {
