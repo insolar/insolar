@@ -180,6 +180,8 @@ func TestIsAllowed(t *testing.T) {
 	require.True(t, PowerSet([...]Power{10, 0, 30, 40}).IsAllowed(40))
 
 	require.True(t, PowerSet([...]Power{0, 20, 30, 40}).IsAllowed(1))
+
+	require.False(t, PowerSet([...]Power{0, 20, 30, 40}).IsAllowed(21))
 }
 
 func TestIsEmpty(t *testing.T) {
