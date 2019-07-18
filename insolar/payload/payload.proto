@@ -195,3 +195,15 @@ message Request {
     bytes RequestID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
     record.Virtual Request = 21 [(gogoproto.nullable) = false];
 }
+
+message HasPendings {
+    uint32 Polymorph = 16;
+
+    bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+}
+
+message Has {
+    uint32 Polymorph = 16;
+
+    bool Has = 20;
+}

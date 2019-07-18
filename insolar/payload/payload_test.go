@@ -72,6 +72,8 @@ func TestMarshalUnmarshal(t *testing.T) {
 		{tp: payload.TypeUpdate, pl: &payload.Update{}},
 		{tp: payload.TypeHotObjects, pl: &payload.HotObjects{}},
 		{tp: payload.TypeGetRequest, pl: &payload.GetRequest{}},
+		{tp: payload.TypeHasPendings, pl: &payload.HasPendings{}},
+		{tp: payload.TypeHas, pl: &payload.Has{}},
 	}
 
 	for _, d := range table {
