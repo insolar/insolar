@@ -85,15 +85,16 @@ func (r *remoteParent) Pull(ctx context.Context, from Page) ([]byte, uint32, err
 	if err != nil {
 		return []byte{}, 0, errors.Wrapf(err, "failed to send replica.Pull request")
 	}
+	reply := GenericReply{}
+	err = insolar.Deserialize(res, &reply)
+	if err != nil {
+		return []byte{}, 0, errors.Wrapf(err, "failed to deserialize reply from Pull")
+	}
 	ext := PullReply{}
-	err = insolar.Deserialize(res, &ext)
+	err = insolar.Deserialize(reply.Data, &ext)
 	if err != nil {
 		return []byte{}, 0, errors.Wrapf(err, "failed to deserialize PullReply")
 	}
-	reply := GenericReply{}
-	err = insolar.Deserialize(ext.Data, &reply)
-	if err != nil {
-		return []byte{}, 0, errors.Wrapf(err, "failed to deserialize data from PullReply")
-	}
-	return reply.Data, ext.Total, reply.Error
+
+	return ext.Data, ext.Total, reply.Error
 }
