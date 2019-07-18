@@ -18,6 +18,7 @@ package integration_test
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"sync"
 	"testing"
@@ -140,8 +141,9 @@ func Test_BasicOperations(t *testing.T) {
 				// FIXME: find out why it hangs.
 				// s.Pulse(ctx)
 			}
+			i := i
 			go func() {
-				runner(t)
+				t.Run(fmt.Sprintf("iter %d", i), runner)
 				wg.Done()
 			}()
 		}
