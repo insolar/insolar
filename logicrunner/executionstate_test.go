@@ -44,7 +44,7 @@ func InitBroker(_ *testing.T, ctx context.Context, count int, broker *ExecutionB
 		broker.Put(ctx, false, &Transcript{
 			LogicContext: &insolar.LogicCallContext{},
 			Context:      ctx,
-			RequestRef:   &reqRef,
+			RequestRef:   reqRef,
 			Request:      &record.IncomingRequest{},
 		})
 	}
@@ -69,14 +69,14 @@ func newExecutionBroker(
 	}
 
 	objectRef := gen.Reference()
-	es, broker := lr.StateStorage.UpsertExecutionState(objectRef)
+	broker := lr.StateStorage.UpsertExecutionState(objectRef)
 
 	InitBroker(t, ctx, count, broker, true)
 	if list != nil {
 		broker.currentList = list
 	}
 	if pending != nil {
-		es.pending = *pending
+		broker.executionState.pending = *pending
 	}
 
 	return broker
@@ -87,7 +87,7 @@ func TestExecutionState_OnPulse(t *testing.T) {
 
 	list := NewCurrentExecutionList()
 	requestRef := gen.Reference()
-	list.SetTranscript(&Transcript{RequestRef: &requestRef})
+	list.SetTranscript(&Transcript{RequestRef: requestRef})
 
 	inPending := message.InPending
 
@@ -157,10 +157,12 @@ func TestExecutionState_OnPulse(t *testing.T) {
 
 	for _, test := range table {
 		t.Run(test.name, func(t *testing.T) {
+			ctx := inslogger.TestContext(t)
+
 			messages := test.broker.OnPulse(ctx, test.meNext)
 			require.Equal(t, test.numberOfMessages, len(messages))
 			if test.checkES != nil {
-				test.checkES(t, test.broker.executionState, test.broker)
+				test.checkES(t, &test.broker.executionState, test.broker)
 			}
 		})
 	}

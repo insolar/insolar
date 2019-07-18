@@ -58,6 +58,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -99,6 +100,7 @@ func TestConsensusMain(t *testing.T) {
 		SpikeProbability: 0.1,
 	})
 
+	controllers := make([]consensus.Controller, len(nodes))
 	for i, n := range nodes {
 		nodeKeeper := nodenetwork.NewNodeKeeper(n)
 		nodeKeeper.SetInitialSnapshot(nodes)
@@ -116,7 +118,7 @@ func TestConsensusMain(t *testing.T) {
 
 		delayTransport := strategy.GetLink(transport)
 
-		_ = consensus.New(ctx, consensus.Dep{
+		controllers[i] = consensus.New(ctx, consensus.Dep{
 			PrimingCloudStateHash: [64]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 			KeyProcessor:          keyProcessor,
 			Scheme:                scheme,
@@ -124,9 +126,13 @@ func TestConsensusMain(t *testing.T) {
 			KeyStore:              keystore.NewInplaceKeyStore(nodeInfos[i].privateKey),
 			NodeKeeper:            nodeKeeper,
 			StateGetter:           &nshGen{nshDelay: defaultNshGenerationDelay},
-			PulseChanger:          &pulseChanger{},
-			StateUpdater:          &stateUpdater{nodeKeeper},
-			DatagramTransport:     delayTransport,
+			PulseChanger: &pulseChanger{
+				nodeKeeper: nodeKeeper,
+			},
+			StateUpdater: &stateUpdater{
+				nodeKeeper: nodeKeeper,
+			},
+			DatagramTransport: delayTransport,
 		}).Install(datagramHandler, pulseHandler)
 
 		ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
@@ -138,18 +144,26 @@ func TestConsensusMain(t *testing.T) {
 
 	fmt.Println("===", len(nodes), "=================================================")
 
-	pulsar := NewPulsar(2, pulseHandlers)
+	pulsar := NewPulsar(1, pulseHandlers)
 	go func() {
 		for {
 			pulsar.Pulse(ctx, 4+len(nodes)/10)
 		}
 	}()
 
+	once := sync.Once{}
+
 	for {
 		fmt.Println("===", time.Since(startedAt), "=================================================")
 		time.Sleep(time.Second)
 		if time.Since(startedAt) > time.Minute {
 			return
+		}
+
+		if time.Since(startedAt) > time.Second*10 {
+			once.Do(func() {
+				controllers[0].GracefulLeave(1)
+			})
 		}
 	}
 }
@@ -310,10 +324,16 @@ func (ng *nshGen) State() []byte {
 	return nshBytes
 }
 
-type pulseChanger struct{}
+type pulseChanger struct {
+	nodeKeeper network2.NodeKeeper
+}
 
 func (pc *pulseChanger) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
 	inslogger.FromContext(ctx).Info(">>>>>> Change pulse called")
+	err := pc.nodeKeeper.MoveSyncToActive(ctx, pulse.PulseNumber)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(err)
+	}
 }
 
 type stateUpdater struct {
@@ -323,9 +343,9 @@ type stateUpdater struct {
 func (su *stateUpdater) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
 	inslogger.FromContext(ctx).Info(">>>>>> Update state called")
 
-	// err := su.nodeKeeper.Sync(ctx, nodes, nil)
-	// if err != nil {
-	// 	inslogger.FromContext(ctx).Error(err)
-	// }
-	// su.nodeKeeper.SetCloudHash(cloudStateHash)
+	err := su.nodeKeeper.Sync(ctx, nodes, nil)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(err)
+	}
+	su.nodeKeeper.SetCloudHash(cloudStateHash)
 }

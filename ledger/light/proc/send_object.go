@@ -28,21 +28,19 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/object"
 )
 
 type SendObject struct {
 	message  payload.Meta
 	objectID insolar.ID
-	index    object.Lifeline
+	index    record.Lifeline
 
 	Dep struct {
 		Coordinator    jet.Coordinator
 		Jets           jet.Storage
 		JetFetcher     jet.Fetcher
 		RecordAccessor object.RecordAccessor
-		Blobs          blob.Accessor
 		Bus            insolar.MessageBus
 		Sender         bus.Sender
 	}
@@ -51,7 +49,7 @@ type SendObject struct {
 func NewSendObject(
 	msg payload.Meta,
 	id insolar.ID,
-	idx object.Lifeline,
+	idx record.Lifeline,
 ) *SendObject {
 	return &SendObject{
 		message:  msg,

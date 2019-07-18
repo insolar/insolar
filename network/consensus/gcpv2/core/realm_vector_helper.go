@@ -119,7 +119,7 @@ func (p *RealmVectorProjection) ForceEntryUpdate(index int) bool {
 //	return nil, nil
 //}
 
-func (p *RealmVectorProjection) updateEntry(index int, member, joiner *VectorEntry) {
+func (p *RealmVectorProjection) updateEntry(index int, member, joiner *VectorEntry) { // nolint: unused
 	if p.sharedIndexedRefs {
 		cp := make([]*VectorEntry, len(p.indexedRefs))
 		copy(cp, p.indexedRefs)

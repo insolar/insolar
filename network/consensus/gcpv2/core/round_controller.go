@@ -236,6 +236,7 @@ func (r *PhasedRoundController) startFullRealm() {
 
 	active := chronicle.GetActiveCensus()
 	r.realm.start(active, active.GetOnlinePopulation(), r.bundle)
+	r.realm.CommitPulseChange()
 }
 
 func (r *PhasedRoundController) HandlePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound) error {

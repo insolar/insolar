@@ -20,30 +20,33 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
 )
 
 type GetJet struct {
 	msg     *message.GetJet
-	replyTo chan<- bus.Reply
+	message payload.Meta
 
 	Dep struct {
-		Jets jet.Storage
+		Jets   jet.Storage
+		Sender bus.Sender
 	}
 }
 
-func NewGetJet(msg *message.GetJet, rep chan<- bus.Reply) *GetJet {
+func NewGetJet(msg *message.GetJet, message payload.Meta) *GetJet {
 	return &GetJet{
 		msg:     msg,
-		replyTo: rep,
+		message: message,
 	}
 }
 
 func (p *GetJet) Proceed(ctx context.Context) error {
 	jetID, actual := p.Dep.Jets.ForID(ctx, p.msg.Pulse, p.msg.Object)
-	p.replyTo <- bus.Reply{Reply: &reply.Jet{ID: insolar.ID(jetID), Actual: actual}, Err: nil}
+	msg := bus.ReplyAsMessage(ctx, &reply.Jet{ID: insolar.ID(jetID), Actual: actual})
+	go p.Dep.Sender.Reply(ctx, p.message, msg)
 	return nil
 }

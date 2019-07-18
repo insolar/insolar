@@ -55,6 +55,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/transport"
 )
 
@@ -178,7 +179,9 @@ func (dls *delayLinkStrategy) delay(f func()) {
 
 func (dls *delayLinkStrategy) SendDatagram(ctx context.Context, address string, data []byte) error {
 	dls.delay(func() {
-		_ = dls.DatagramTransport.SendDatagram(ctx, address, data)
+		if err := dls.DatagramTransport.SendDatagram(ctx, address, data); err != nil {
+			inslogger.FromContext(ctx).Error(err)
+		}
 	})
 	return nil
 }

@@ -24,6 +24,7 @@ import (
 
 	wmMessage "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/configuration"
@@ -137,9 +138,9 @@ func (s *TranscriptDequeueSuite) TestPopByReference() {
 	ref1, ref2, ref3 := gen.Reference(), gen.Reference(), gen.Reference()
 
 	d.Prepend(
-		&Transcript{Nonce: 3, RequestRef: &ref1},
-		&Transcript{Nonce: 4, RequestRef: &ref2},
-		&Transcript{Nonce: 5, RequestRef: &ref3},
+		&Transcript{Nonce: 3, RequestRef: ref1},
+		&Transcript{Nonce: 4, RequestRef: ref2},
+		&Transcript{Nonce: 5, RequestRef: ref3},
 	)
 
 	tr := d.PopByReference(ref2)
@@ -164,9 +165,9 @@ func (s *TranscriptDequeueSuite) TestPopByReferenceHead() {
 	s.Require().NotNil(d)
 
 	ref1, ref2, ref3 := gen.Reference(), gen.Reference(), gen.Reference()
-	el1 := &Transcript{Nonce: 3, RequestRef: &ref1}
-	el2 := &Transcript{Nonce: 4, RequestRef: &ref2}
-	el3 := &Transcript{Nonce: 5, RequestRef: &ref3}
+	el1 := &Transcript{Nonce: 3, RequestRef: ref1}
+	el2 := &Transcript{Nonce: 4, RequestRef: ref2}
+	el3 := &Transcript{Nonce: 5, RequestRef: ref3}
 	d.Prepend(el1, el2, el3)
 
 	tr := d.PopByReference(ref1)
@@ -188,9 +189,9 @@ func (s *TranscriptDequeueSuite) TestPopByReferenceTail() {
 	s.Require().NotNil(d)
 
 	ref1, ref2, ref3 := gen.Reference(), gen.Reference(), gen.Reference()
-	el1 := &Transcript{Nonce: 3, RequestRef: &ref1}
-	el2 := &Transcript{Nonce: 4, RequestRef: &ref2}
-	el3 := &Transcript{Nonce: 5, RequestRef: &ref3}
+	el1 := &Transcript{Nonce: 3, RequestRef: ref1}
+	el2 := &Transcript{Nonce: 4, RequestRef: ref2}
+	el3 := &Transcript{Nonce: 5, RequestRef: ref3}
 	d.Prepend(el1, el2, el3)
 
 	tr := d.PopByReference(ref3)
@@ -214,7 +215,7 @@ func (s *TranscriptDequeueSuite) TestPopByReferenceOneElement() {
 	ref1 := gen.Reference()
 
 	d.Prepend(
-		&Transcript{Nonce: 3, RequestRef: &ref1},
+		&Transcript{Nonce: 3, RequestRef: ref1},
 	)
 
 	tr := d.PopByReference(ref1)
@@ -283,7 +284,9 @@ func channelIsEmpty(channel chan struct{}) bool {
 }
 
 func (s *ExecutionBrokerSuite) prepareLogicRunner(t *testing.T) *LogicRunner {
-	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+	sender := bus.NewSenderMock(s.Controller)
+	pm := &publisherMock{}
+	lr, _ := NewLogicRunner(&configuration.LogicRunner{}, pm, sender)
 
 	// initialize mocks
 	am := artifacts.NewClientMock(s.Controller)
@@ -294,7 +297,6 @@ func (s *ExecutionBrokerSuite) prepareLogicRunner(t *testing.T) *LogicRunner {
 	jc := jet.NewCoordinatorMock(s.Controller)
 	ps := pulse.NewAccessorMock(s.Controller)
 	nn := network.NewNodeNetworkMock(s.Controller)
-	pm := &publisherMock{}
 
 	// initialize lr
 	lr.ArtifactManager = am
@@ -305,7 +307,6 @@ func (s *ExecutionBrokerSuite) prepareLogicRunner(t *testing.T) *LogicRunner {
 	lr.PulseAccessor = ps
 	lr.NodeNetwork = nn
 	lr.RequestsExecutor = re
-	lr.publisher = pm
 
 	_ = lr.Init(s.Context)
 
@@ -347,25 +348,15 @@ func (s *ExecutionBrokerSuite) TestPut() {
 	rem.SendReplyMock.Return()
 
 	objectRef := gen.Reference()
-	es, b := lr.StateStorage.UpsertExecutionState(objectRef)
-	es.pending = message.NotPending
+	b := lr.StateStorage.UpsertExecutionState(objectRef)
+	b.executionState.pending = message.NotPending
 
-	reqRef1 := gen.Reference()
-	tr := &Transcript{
-		LogicContext: &insolar.LogicCallContext{},
-		RequestRef:   &reqRef1,
-		Request:      &record.IncomingRequest{},
-	}
+	tr := NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{})
 
 	b.Put(s.Context, false, tr)
 	s.Equal(b.mutable.Length(), 1)
 
-	reqRef2 := gen.Reference()
-	tr = &Transcript{
-		LogicContext: &insolar.LogicCallContext{},
-		RequestRef:   &reqRef2,
-		Request:      &record.IncomingRequest{},
-	}
+	tr = NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{})
 
 	b.Put(s.Context, true, tr)
 	s.True(waitOnChannel(waitChannel), "failed to wait until put triggers start of queue processor")
@@ -399,24 +390,16 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 	rem.SendReplyMock.Return()
 
 	objectRef := gen.Reference()
-	es, b := lr.StateStorage.UpsertExecutionState(objectRef)
-	es.pending = message.NotPending
+	b := lr.StateStorage.UpsertExecutionState(objectRef)
+	b.executionState.pending = message.NotPending
 
 	reqRef1 := gen.Reference()
-	tr := &Transcript{
-		LogicContext: &insolar.LogicCallContext{},
-		RequestRef:   &reqRef1,
-		Request:      &record.IncomingRequest{},
-	}
+	tr := NewTranscript(s.Context, reqRef1, record.IncomingRequest{})
 	b.Prepend(s.Context, false, tr)
 	s.Equal(b.mutable.Length(), 1)
 
 	reqRef2 := gen.Reference()
-	tr = &Transcript{
-		LogicContext: &insolar.LogicCallContext{},
-		RequestRef:   &reqRef2,
-		Request:      &record.IncomingRequest{},
-	}
+	tr = NewTranscript(s.Context, reqRef2, record.IncomingRequest{})
 	b.Prepend(s.Context, true, tr)
 	s.Require().True(waitOnChannel(waitChannel), "failed to wait until put triggers start of queue processor")
 	s.Require().True(waitOnChannel(waitChannel), "failed to wait until queue processor'll finish processing")
@@ -453,27 +436,17 @@ func (s *ExecutionBrokerSuite) TestImmutable_NotPending() {
 	rem.SendReplyMock.Return()
 
 	objectRef := gen.Reference()
-	es, b := lr.StateStorage.UpsertExecutionState(objectRef)
-	es.pending = message.NotPending
+	b := lr.StateStorage.UpsertExecutionState(objectRef)
+	b.executionState.pending = message.NotPending
 
-	reqRef1 := gen.Reference()
-	tr := &Transcript{
-		LogicContext: &insolar.LogicCallContext{},
-		RequestRef:   &reqRef1,
-		Request:      &record.IncomingRequest{Immutable: true},
-	}
+	tr := NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{Immutable: true})
 
 	b.Prepend(s.Context, false, tr)
 	s.Require().True(waitOnChannel(waitImmutableChannel), "failed to wait while processing is finished")
 	s.Require().True(wait(processorStatus, b, false))
 	s.Require().Empty(waitMutableChannel)
 
-	reqRef2 := gen.Reference()
-	tr = &Transcript{
-		LogicContext: &insolar.LogicCallContext{},
-		RequestRef:   &reqRef2,
-		Request:      &record.IncomingRequest{Immutable: true},
-	}
+	tr = NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{Immutable: true})
 
 	b.Prepend(s.Context, true, tr)
 	s.Require().True(waitOnChannel(waitImmutableChannel), "failed to wait while processing is finished")
@@ -501,26 +474,16 @@ func (s *ExecutionBrokerSuite) TestImmutable_InPending() {
 	rem.SendReplyMock.Return()
 
 	objectRef := gen.Reference()
-	es, b := lr.StateStorage.UpsertExecutionState(objectRef)
-	es.pending = message.InPending
+	b := lr.StateStorage.UpsertExecutionState(objectRef)
+	b.executionState.pending = message.InPending
 
-	reqRef3 := gen.Reference()
-	tr := &Transcript{
-		LogicContext: &insolar.LogicCallContext{},
-		RequestRef:   &reqRef3,
-		Request:      &record.IncomingRequest{Immutable: true},
-	}
+	tr := NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{Immutable: true})
 
 	b.Prepend(s.Context, false, tr)
 	s.Require().True(wait(immutableCount, b, 1), "failed to wait until immutable was put")
 	s.Require().True(wait(processorStatus, b, false))
 
-	reqRef4 := gen.Reference()
-	tr = &Transcript{
-		LogicContext: &insolar.LogicCallContext{},
-		RequestRef:   &reqRef4,
-		Request:      &record.IncomingRequest{Immutable: true},
-	}
+	tr = NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{Immutable: true})
 
 	b.Prepend(s.Context, true, tr)
 
@@ -549,8 +512,8 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 	rem.SendReplyMock.Return()
 
 	objectRef := gen.Reference()
-	es, b := lr.StateStorage.UpsertExecutionState(objectRef)
-	es.pending = message.NotPending
+	b := lr.StateStorage.UpsertExecutionState(objectRef)
+	b.executionState.pending = message.NotPending
 
 	for i := 0; i < 4; i++ {
 		b.stateLock.Lock()
@@ -618,22 +581,14 @@ func (s *ExecutionBrokerSuite) TestDeduplication() {
 	rem.SendReplyMock.Return()
 
 	objectRef := gen.Reference()
-	es, b := lr.StateStorage.UpsertExecutionState(objectRef)
-	es.pending = message.InPending
+	b := lr.StateStorage.UpsertExecutionState(objectRef)
+	b.executionState.pending = message.InPending
 
 	reqRef1 := gen.Reference()
-	b.Put(s.Context, false, &Transcript{
-		LogicContext: &insolar.LogicCallContext{},
-		RequestRef:   &reqRef1,
-		Request:      &record.IncomingRequest{},
-	}) // no duplication
+	b.Put(s.Context, false, NewTranscript(s.Context, reqRef1, record.IncomingRequest{})) // no duplication
 	s.Equal(b.mutable.Length(), 1)
 
-	b.Put(s.Context, false, &Transcript{
-		LogicContext: &insolar.LogicCallContext{},
-		RequestRef:   &reqRef1,
-		Request:      &record.IncomingRequest{},
-	}) // duplication
+	b.Put(s.Context, false, NewTranscript(s.Context, reqRef1, record.IncomingRequest{})) // duplication
 	s.Equal(b.mutable.Length(), 1)
 
 	_ = lr.Stop(s.Context)

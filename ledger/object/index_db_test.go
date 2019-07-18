@@ -19,17 +19,97 @@ package object
 import (
 	"context"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestIndexKey(t *testing.T) {
+	t.Parallel()
+
+	testPulseNumber := insolar.GenesisPulse.PulseNumber
+	expectedKey := indexKey{objID: testutils.RandomID(), pn: testPulseNumber}
+
+	rawID := expectedKey.ID()
+
+	actualKey := newIndexKey(rawID)
+	require.Equal(t, expectedKey, actualKey)
+}
+
+func TestIndexDB_TruncateHead(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	assert.NoError(t, err)
+
+	dbMock, err := store.NewBadgerDB(tmpdir)
+	defer dbMock.Stop(ctx)
+	require.NoError(t, err)
+
+	indexStore := NewIndexDB(dbMock)
+
+	numElements := 100
+
+	// it's used for writing pulses in random order to db
+	indexes := make([]int, numElements)
+	for i := 0; i < numElements; i++ {
+		indexes[i] = i
+	}
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(indexes), func(i, j int) { indexes[i], indexes[j] = indexes[j], indexes[i] })
+
+	startPulseNumber := insolar.GenesisPulse.PulseNumber
+	objects := make([]insolar.ID, numElements)
+	for _, idx := range indexes {
+		pulse := startPulseNumber + insolar.PulseNumber(idx)
+		objects[idx] = gen.ID()
+
+		bucket := record.Index{}
+
+		bucket.ObjID = objects[idx]
+		indexStore.SetIndex(ctx, pulse, bucket)
+
+		for i := 0; i < 5; i++ {
+			bucket := record.Index{}
+
+			bucket.ObjID = gen.ID()
+			indexStore.SetIndex(ctx, pulse, bucket)
+		}
+
+		require.NoError(t, err)
+	}
+
+	for i := 0; i < numElements; i++ {
+		_, err := indexStore.ForID(ctx, startPulseNumber+insolar.PulseNumber(i), objects[i])
+		require.NoError(t, err)
+	}
+
+	numLeftElements := numElements / 2
+	err = indexStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements))
+	require.NoError(t, err)
+
+	for i := 0; i < numLeftElements; i++ {
+		_, err := indexStore.ForID(ctx, startPulseNumber+insolar.PulseNumber(i), objects[i])
+		require.NoError(t, err)
+	}
+
+	for i := numElements - 1; i >= numLeftElements; i-- {
+		_, err := indexStore.ForID(ctx, startPulseNumber+insolar.PulseNumber(i), objects[i])
+		require.EqualError(t, err, ErrIndexNotFound.Error())
+	}
+}
 
 func TestDBIndexStorage_ForID(t *testing.T) {
 	t.Parallel()
@@ -63,11 +143,11 @@ func TestDBIndex_SetBucket(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	objID := gen.ID()
 	lflID := gen.ID()
-	buck := FilamentIndex{
+	buck := record.Index{
 		ObjID: objID,
-		Lifeline: Lifeline{
+		Lifeline: record.Lifeline{
 			LatestState: &lflID,
-			Delegates:   []LifelineDelegate{},
+			Delegates:   []record.LifelineDelegate{},
 		},
 	}
 
@@ -109,11 +189,11 @@ func TestDBIndex_SetBucket(t *testing.T) {
 		require.NoError(t, err)
 
 		sLlflID := gen.ID()
-		sBuck := FilamentIndex{
+		sBuck := record.Index{
 			ObjID: objID,
-			Lifeline: Lifeline{
+			Lifeline: record.Lifeline{
 				LatestState: &sLlflID,
-				Delegates:   []LifelineDelegate{},
+				Delegates:   []record.LifelineDelegate{},
 			},
 		}
 
@@ -163,7 +243,7 @@ func TestIndexDB_FetchFilament(t *testing.T) {
 	_ = recordStorage.Set(ctx, firstMeta, record.Material{Virtual: &firstFilV})
 	_ = recordStorage.Set(ctx, secondMeta, record.Material{Virtual: &secondFilV})
 
-	fi := &FilamentIndex{
+	fi := &record.Index{
 		PendingRecords: []insolar.ID{firstMeta, secondMeta},
 	}
 
@@ -203,7 +283,7 @@ func TestIndexDB_NextFilament(t *testing.T) {
 
 		_ = recordStorage.Set(ctx, firstMeta, record.Material{Virtual: &firstFilV})
 
-		fi := &FilamentIndex{
+		fi := &record.Index{
 			PendingRecords: []insolar.ID{firstMeta},
 		}
 
@@ -231,7 +311,7 @@ func TestIndexDB_NextFilament(t *testing.T) {
 
 		_ = recordStorage.Set(ctx, firstMeta, record.Material{Virtual: &firstFilV})
 
-		fi := &FilamentIndex{
+		fi := &record.Index{
 			PendingRecords: []insolar.ID{firstMeta},
 		}
 
@@ -251,7 +331,7 @@ func TestIndexDB_NextFilament(t *testing.T) {
 		defer db.Stop(context.Background())
 		index := NewIndexDB(db)
 
-		fi := &FilamentIndex{
+		fi := &record.Index{
 			PendingRecords: []insolar.ID{firstMeta},
 		}
 
@@ -330,9 +410,9 @@ func TestIndexDB_Records(t *testing.T) {
 
 		objID := gen.ID()
 
-		third := FilamentIndex{ObjID: objID, PendingRecords: []insolar.ID{*midT}}
-		second := FilamentIndex{ObjID: objID, PendingRecords: []insolar.ID{*midS}}
-		first := FilamentIndex{ObjID: objID, PendingRecords: []insolar.ID{*mid}}
+		third := record.Index{ObjID: objID, PendingRecords: []insolar.ID{*midT}}
+		second := record.Index{ObjID: objID, PendingRecords: []insolar.ID{*midS}}
+		first := record.Index{ObjID: objID, PendingRecords: []insolar.ID{*mid}}
 
 		err = index.SetIndex(ctx, pn, first)
 		require.NoError(t, err)

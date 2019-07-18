@@ -27,7 +27,6 @@ type HeavyPayload struct {
 	PulseNum     insolar.PulseNumber
 	IndexBuckets [][]byte
 	Drop         []byte
-	Blobs        [][]byte
 	Records      [][]byte
 }
 

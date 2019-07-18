@@ -50,7 +50,7 @@ func TestSendRequests_Proceed(t *testing.T) {
 	t.Run("object does not exist", func(t *testing.T) {
 		p = newProc(payload.Meta{})
 
-		indexes.ForIDMock.Return(object.FilamentIndex{}, object.ErrNotFound)
+		indexes.ForIDMock.Return(record.Index{}, object.ErrNotFound)
 
 		err := p.Proceed(ctx)
 		require.Error(t, err)
@@ -67,10 +67,10 @@ func TestSendRequests_Proceed(t *testing.T) {
 		receivedMeta := payload.Meta{Payload: buf}
 		p = newProc(receivedMeta)
 
-		indexes.ForIDFunc = func(_ context.Context, pn insolar.PulseNumber, id insolar.ID) (object.FilamentIndex, error) {
+		indexes.ForIDFunc = func(_ context.Context, pn insolar.PulseNumber, id insolar.ID) (record.Index, error) {
 			require.Equal(t, msg.StartFrom.Pulse(), pn)
 			require.Equal(t, msg.ObjectID, id)
-			return object.FilamentIndex{}, nil
+			return record.Index{}, nil
 		}
 
 		err = p.Proceed(ctx)
@@ -96,10 +96,10 @@ func TestSendRequests_Proceed(t *testing.T) {
 		receivedMeta := payload.Meta{Payload: buf}
 		p = newProc(receivedMeta)
 
-		indexes.ForIDFunc = func(_ context.Context, pn insolar.PulseNumber, id insolar.ID) (object.FilamentIndex, error) {
+		indexes.ForIDFunc = func(_ context.Context, pn insolar.PulseNumber, id insolar.ID) (record.Index, error) {
 			require.Equal(t, msg.StartFrom.Pulse(), pn)
 			require.Equal(t, msg.ObjectID, id)
-			return object.FilamentIndex{}, nil
+			return record.Index{}, nil
 		}
 
 		sender.ReplyFunc = func(_ context.Context, origin payload.Meta, rep *message.Message) {
@@ -119,7 +119,6 @@ func TestSendRequests_Proceed(t *testing.T) {
 
 		mc.Wait(10 * time.Minute)
 		mc.Finish()
-		_, _ = rec1, rec2
 	})
 }
 

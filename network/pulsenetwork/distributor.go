@@ -56,9 +56,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
+
+	"github.com/insolar/insolar/insolar/pulse"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"

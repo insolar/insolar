@@ -204,7 +204,7 @@ func createMember(sendURL string, userName string, serverLogLevel string) {
 		ID:      1,
 		Method:  "api.call",
 		Params: requester.Params{
-			CallSite:   "contract.createMember",
+			CallSite:   "member.create",
 			CallParams: []interface{}{userName, cfg.PublicKey},
 			PublicKey:  ucfg.PublicKey,
 		},

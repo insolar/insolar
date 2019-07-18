@@ -167,8 +167,8 @@ type CallMethodArgs struct {
 type CallMethodReply struct {
 	Reply          reply.CallMethod  `json:"Reply"`
 	ExtractedReply interface{}       `json:"ExtractedReply"`
-	Error          *foundation.Error `json:"Error"`
 	ExtractedError string            `json:"ExtractedError"`
+	Error          *foundation.Error `json:"FoundationError"`
 	TraceID        string            `json:"TraceID"`
 }
 
@@ -211,8 +211,7 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 
 	re.Reply = *callMethodReply.(*reply.CallMethod)
 
-	var extractedReply interface{}
-	extractedReply, _, err = extractor.CallResponse(re.Reply.Result)
+	extractedReply, foundationError, err := extractor.CallResponse(re.Reply.Result)
 	if err != nil {
 		return errors.Wrap(err, "Can't extract response")
 	}
@@ -232,6 +231,8 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 	default:
 		re.ExtractedReply = extractedReply
 	}
+
+	re.Error = foundationError
 
 	return nil
 }

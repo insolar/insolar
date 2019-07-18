@@ -26,12 +26,19 @@ import (
 	"github.com/insolar/insolar/logicrunner/artifacts"
 )
 
+type OutgoingRequest struct {
+	Request   record.IncomingRequest
+	NewObject *Ref
+	Response  []byte
+	Error     error
+}
+
 type Transcript struct {
 	ObjectDescriptor artifacts.ObjectDescriptor
 	Context          context.Context
 	LogicContext     *insolar.LogicCallContext
 	Request          *record.IncomingRequest
-	RequestRef       *insolar.Reference
+	RequestRef       insolar.Reference
 	RequesterNode    *insolar.Reference
 	Nonce            uint64
 	Deactivate       bool
@@ -41,7 +48,7 @@ type Transcript struct {
 
 func NewTranscript(
 	ctx context.Context,
-	requestRef *insolar.Reference,
+	requestRef insolar.Reference,
 	request record.IncomingRequest,
 ) *Transcript {
 
@@ -54,13 +61,6 @@ func NewTranscript(
 
 		FromLedger: false,
 	}
-}
-
-type OutgoingRequest struct {
-	Request   record.IncomingRequest
-	NewObject *Ref
-	Response  []byte
-	Error     error
 }
 
 func (t *Transcript) AddOutgoingRequest(
@@ -106,7 +106,7 @@ func (ces *CurrentExecutionList) Set(requestRef insolar.Reference, ce *Transcrip
 
 func (ces *CurrentExecutionList) SetTranscript(t *Transcript) {
 	ces.lock.Lock()
-	ces.executions[*t.RequestRef] = t
+	ces.executions[t.RequestRef] = t
 	ces.lock.Unlock()
 }
 

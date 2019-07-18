@@ -22,7 +22,6 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -40,7 +39,6 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/artifactmanager"
 	"github.com/insolar/insolar/ledger/light/executor"
@@ -56,12 +54,15 @@ import (
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/server/internal"
 	"github.com/pkg/errors"
 )
 
 type components struct {
 	cmp               component.Manager
 	NodeRef, NodeRole string
+	inRouter          *watermillMsg.Router
+	outRouter         *watermillMsg.Router
 }
 
 func newComponents(ctx context.Context, cfg configuration.Configuration) (*components, error) {
@@ -108,6 +109,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubSub := gochannel.NewGoChannel(gochannel.Config{}, logger)
+	pubSub = internal.PubSubWrapper(ctx, &c.cmp, cfg.Introspection, pubSub)
 
 	// Network.
 	var (
@@ -217,7 +219,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		conf := cfg.Ledger
 		idLocker := object.NewIndexLocker()
 		drops := drop.NewStorageMemory()
-		blobs := blob.NewStorageMemory()
 		records := object.NewRecordMemory()
 		indexes := object.NewIndexStorageMemory()
 		writeController := hot.NewWriteController()
@@ -237,14 +238,12 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.DelegationTokenFactory = Tokens
 		handler.JetStorage = Jets
 		handler.DropModifier = drops
-		handler.BlobModifier = blobs
-		handler.BlobAccessor = blobs
-		handler.Blobs = blobs
 		handler.IndexLocker = idLocker
 		handler.Records = records
 		handler.Nodes = Nodes
 		handler.HotDataWaiter = waiter
 		handler.JetReleaser = waiter
+		handler.Sender = WmBus
 		handler.WriteAccessor = writeController
 		handler.Sender = WmBus
 		handler.IndexStorage = indexes
@@ -254,7 +253,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Jets.(jet.Cleaner),
 			Nodes,
 			drops,
-			blobs,
 			records,
 			indexes,
 			Pulses,
@@ -268,21 +266,22 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Bus,
 			Pulses,
 			drops,
-			blobs,
 			records,
 			indexes,
 			Jets,
 		)
 
-		jetSplitter := executor.NewJetSplitter(jetCalculator, Jets, Jets, drops, drops, Pulses)
+		jetSplitter := executor.NewJetSplitter(
+			conf.JetSplit, jetCalculator, Jets, Jets, drops, drops, Pulses, records,
+		)
 
 		hotSender := executor.NewHotSender(
-			Bus,
 			drops,
 			indexes,
 			Pulses,
 			Jets,
 			conf.LightChainLimit,
+			WmBus,
 		)
 
 		pm := pulsemanager.NewPulseManager(
@@ -336,7 +335,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		return nil, errors.Wrap(err, "failed to init components")
 	}
 
-	startWatermill(ctx, logger, pubSub, WmBus, NetworkService.SendMessageHandler, Handler.FlowDispatcher.Process)
+	c.startWatermill(ctx, logger, pubSub, WmBus, NetworkService.SendMessageHandler, Handler.FlowDispatcher.Process)
 
 	return c, nil
 }
@@ -346,10 +345,18 @@ func (c *components) Start(ctx context.Context) error {
 }
 
 func (c *components) Stop(ctx context.Context) error {
+	err := c.inRouter.Close()
+	if err != nil {
+		inslogger.FromContext(ctx).Error("Error while closing router", err)
+	}
+	err = c.outRouter.Close()
+	if err != nil {
+		inslogger.FromContext(ctx).Error("Error while closing router", err)
+	}
 	return c.cmp.Stop(ctx)
 }
 
-func startWatermill(
+func (c *components) startWatermill(
 	ctx context.Context,
 	logger watermill.LoggerAdapter,
 	pubSub watermillMsg.PubSub,
@@ -373,7 +380,6 @@ func startWatermill(
 	)
 
 	inRouter.AddMiddleware(
-		middleware.InstantAck,
 		b.IncomingMessageRouter,
 	)
 
@@ -385,7 +391,9 @@ func startWatermill(
 	)
 
 	startRouter(ctx, inRouter)
+	c.inRouter = inRouter
 	startRouter(ctx, outRouter)
+	c.outRouter = outRouter
 }
 
 func startRouter(ctx context.Context, router *watermillMsg.Router) {

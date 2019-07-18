@@ -77,9 +77,6 @@ func TestSetRequest_Proceed(t *testing.T) {
 		Payload: requestBuf,
 	}
 
-	pmm := object.NewPendingModifierMock(t)
-	pmm.SetRequestMock.Return(nil)
-
 	// Pendings limit not reached.
 	p := proc.NewSetRequest(msg, &request, id, jetID)
 	p.Dep(writeAccessor, records, filaments, sender, object.NewIndexLocker())
