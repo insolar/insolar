@@ -21,4 +21,5 @@ const (
 	CodeDeactivated    = 1
 	CodeFlowCanceled   = 2
 	CodeObjectNotFound = 3
+	CodeNoPendings     = 4
 )

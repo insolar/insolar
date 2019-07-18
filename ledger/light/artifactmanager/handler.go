@@ -64,14 +64,14 @@ type MessageHandler struct {
 	PulseCalculator storage.PulseCalculator
 
 	conf           *configuration.Ledger
-	jetTreeUpdater jet.Fetcher
+	JetTreeUpdater jet.Fetcher
 
 	Sender         bus.Sender
 	FlowDispatcher *dispatcher.Dispatcher
 	handlers       map[insolar.MessageType]insolar.MessageHandler
 
 	filamentModifier   *executor.FilamentModifierDefault
-	filamentCalculator *executor.FilamentCalculatorDefault
+	FilamentCalculator *executor.FilamentCalculatorDefault
 }
 
 // NewMessageHandler creates new handler.
@@ -88,8 +88,8 @@ func NewMessageHandler(
 		FetchJet: func(p *proc.FetchJet) {
 			p.Dep.JetAccessor = h.JetStorage
 			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.JetUpdater = h.jetTreeUpdater
-			p.Dep.JetFetcher = h.jetTreeUpdater
+			p.Dep.JetUpdater = h.JetTreeUpdater
+			p.Dep.JetFetcher = h.JetTreeUpdater
 			p.Dep.Sender = h.Sender
 		},
 		WaitHot: func(p *proc.WaitHot) {
@@ -107,7 +107,7 @@ func NewMessageHandler(
 		CheckJet: func(p *proc.CheckJet) {
 			p.Dep.JetAccessor = h.JetStorage
 			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.JetFetcher = h.jetTreeUpdater
+			p.Dep.JetFetcher = h.JetTreeUpdater
 			p.Dep.Sender = h.Sender
 		},
 		WaitHotWM: func(p *proc.WaitHotWM) {
@@ -128,6 +128,7 @@ func NewMessageHandler(
 				h.filamentModifier,
 				h.Sender,
 				h.IndexLocker,
+				h.IndexStorage,
 			)
 		},
 		SetResult: func(p *proc.SetResult) {
@@ -171,7 +172,7 @@ func NewMessageHandler(
 		SendObject: func(p *proc.SendObject) {
 			p.Dep.Jets = h.JetStorage
 			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.JetFetcher = h.jetTreeUpdater
+			p.Dep.JetFetcher = h.JetTreeUpdater
 			p.Dep.Bus = h.Bus
 			p.Dep.RecordAccessor = h.Records
 			p.Dep.Sender = h.Sender
@@ -179,7 +180,7 @@ func NewMessageHandler(
 		GetCode: func(p *proc.GetCode) {
 			p.Dep.RecordAccessor = h.Records
 			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.JetFetcher = h.jetTreeUpdater
+			p.Dep.JetFetcher = h.JetTreeUpdater
 			p.Dep.Sender = h.Sender
 		},
 		GetRequest: func(p *proc.GetRequest) {
@@ -193,7 +194,7 @@ func NewMessageHandler(
 			p.Dep.DelegationTokenFactory = h.DelegationTokenFactory
 			p.Dep.RecordAccessor = h.Records
 			p.Dep.JetStorage = h.JetStorage
-			p.Dep.JetTreeUpdater = h.jetTreeUpdater
+			p.Dep.JetTreeUpdater = h.JetTreeUpdater
 			p.Dep.Sender = h.Sender
 		},
 		RegisterChild: func(p *proc.RegisterChild) {
@@ -205,11 +206,17 @@ func NewMessageHandler(
 			p.Dep.PCS = h.PCS
 			p.Dep.Sender = h.Sender
 		},
+		GetPendings: func(p *proc.GetPendings) {
+			p.Dep(
+				h.FilamentCalculator,
+				h.Sender,
+			)
+		},
 		GetPendingRequests: func(p *proc.GetPendingRequests) {
 			p.Dep(h.IndexStorage, h.Sender)
 		},
 		GetPendingRequestID: func(p *proc.GetPendingRequestID) {
-			p.Dep(h.filamentCalculator, h.Sender)
+			p.Dep(h.FilamentCalculator, h.Sender)
 		},
 		GetJet: func(p *proc.GetJet) {
 			p.Dep.Jets = h.JetStorage
@@ -220,13 +227,13 @@ func NewMessageHandler(
 			p.Dep.MessageBus = h.Bus
 			p.Dep.IndexModifier = h.IndexStorage
 			p.Dep.JetStorage = h.JetStorage
-			p.Dep.JetFetcher = h.jetTreeUpdater
+			p.Dep.JetFetcher = h.JetTreeUpdater
 			p.Dep.JetReleaser = h.JetReleaser
 			p.Dep.Sender = h.Sender
 			p.Dep.Calculator = h.PulseCalculator
 		},
 		SendRequests: func(p *proc.SendRequests) {
-			p.Dep(h.Sender, h.filamentCalculator)
+			p.Dep(h.Sender, h.FilamentCalculator)
 		},
 		PassState: func(p *proc.PassState) {
 			p.Dep.Sender = h.Sender
@@ -260,19 +267,11 @@ func NewMessageHandler(
 
 // Init initializes handlers and middleware.
 func (h *MessageHandler) Init(ctx context.Context) error {
-	h.jetTreeUpdater = jet.NewFetcher(h.Nodes, h.JetStorage, h.Bus, h.JetCoordinator)
-	h.filamentCalculator = executor.NewFilamentCalculator(
-		h.IndexStorage,
-		h.Records,
-		h.JetCoordinator,
-		h.jetTreeUpdater,
-		h.Sender,
-	)
 	h.filamentModifier = executor.NewFilamentModifier(
 		h.IndexStorage,
 		h.Records,
 		h.PCS,
-		h.filamentCalculator,
+		h.FilamentCalculator,
 		h.PulseCalculator,
 	)
 

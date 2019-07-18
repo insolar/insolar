@@ -248,6 +248,18 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.Sender = WmBus
 		handler.IndexStorage = indexes
 
+		jetTreeUpdater := jet.NewFetcher(Nodes, Jets, Bus, Coordinator)
+		filamentCalculator := executor.NewFilamentCalculator(
+			indexes,
+			records,
+			Coordinator,
+			jetTreeUpdater,
+			WmBus,
+		)
+
+		handler.JetTreeUpdater = jetTreeUpdater
+		handler.FilamentCalculator = filamentCalculator
+
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
 		var lightCleaner = replication.NewCleaner(
 			Jets.(jet.Cleaner),
@@ -257,13 +269,15 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			indexes,
 			Pulses,
 			Pulses,
+			indexes,
+			filamentCalculator,
 			conf.LightChainLimit,
 		)
 
 		lthSyncer := replication.NewReplicatorDefault(
 			jetCalculator,
 			lightCleaner,
-			Bus,
+			WmBus,
 			Pulses,
 			drops,
 			records,
