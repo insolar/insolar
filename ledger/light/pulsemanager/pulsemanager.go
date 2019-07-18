@@ -128,6 +128,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		panic(errors.Wrap(err, "failed to open pulse for writing"))
 	}
 
+	m.MessageHandler.OnPulse(ctx, newPulse)
 	return nil
 }
 
