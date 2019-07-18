@@ -23,13 +23,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math/big"
+	"net/http"
 	"regexp"
 	"runtime"
 	"strings"
-
-	"io/ioutil"
-	"net/http"
 	"testing"
 
 	"github.com/insolar/insolar/api"
@@ -135,7 +134,7 @@ func getBalance(caller *user, reference string) (*big.Int, error) {
 	if err != nil {
 		return nil, err
 	}
-	amount, ok := new(big.Int).SetString(res.(string), 10)
+	amount, ok := new(big.Int).SetString(res.(map[string]interface{})["balance"].(string), 10)
 	if !ok {
 		return nil, fmt.Errorf("can't parse input amount")
 	}

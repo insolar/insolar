@@ -39,7 +39,7 @@ import (
 type Member struct {
 	foundation.BaseContract
 	RootDomain  insolar.Reference
-	Deposit     insolar.Reference
+	Deposits    []insolar.Reference
 	Name        string
 	PublicKey   string
 	BurnAddress string
@@ -208,6 +208,12 @@ func (m *Member) addBurnAddressesCall(params map[string]interface{}) (interface{
 
 	return nil, nil
 }
+
+type GetBalanceResponse struct {
+	Balance  string `json:"balance"`
+	Deposits []map[string]string
+}
+
 func getBalanceCall(params map[string]interface{}) (interface{}, error) {
 
 	referenceStr, ok := params["reference"].(string)
@@ -229,8 +235,9 @@ func getBalanceCall(params map[string]interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get balance: %s", err.Error())
 	}
+	d, err := m.GetDeposits()
 
-	return b, nil
+	return GetBalanceResponse{Balance: b, Deposits: d}, nil
 }
 func (m *Member) transferCall(params map[string]interface{}) (interface{}, error) {
 
@@ -443,7 +450,7 @@ func (m *Member) migration(txHash string, burnAddress string, amount big.Int, un
 			return "", fmt.Errorf("failed to save as delegate: %s", err.Error())
 		}
 
-		err = tokenHolder.SetDeposit(txDeposit.GetReference())
+		err = tokenHolder.AddDeposit(txDeposit.GetReference())
 		if err != nil {
 			return "", fmt.Errorf("failed to set deposit: %s", err.Error())
 		}
@@ -458,8 +465,25 @@ func (m *Member) migration(txHash string, burnAddress string, amount big.Int, un
 	return strconv.Itoa(int(confirms)), nil
 }
 
-// FindDeposit finds deposits for this member with this transaction hash.
-func (m *Member) FindDeposit(txHash string, inputAmountStr string) (bool, deposit.Deposit, error) {
+// GetDeposits get all deposits for this member
+func (m *Member) GetDeposits() ([]map[string]string, error) {
+	var result []map[string]string
+	for _, dRef := range m.Deposits {
+
+		d := deposit.GetObject(dRef)
+
+		depositInfo, err := d.MapMarshal()
+		if err != nil {
+			return nil, fmt.Errorf("map marshal failed: %s", err.Error())
+		}
+
+		result = append(result, depositInfo)
+	}
+	return result, nil
+}
+
+// FindDeposit finds deposit for this member with this transaction hash.
+func (m *Member) FindDeposit(transactionsHash string, inputAmountStr string) (bool, deposit.Deposit, error) {
 
 	inputAmount := new(big.Int)
 	inputAmount, ok := inputAmount.SetString(inputAmountStr, 10)
@@ -467,41 +491,41 @@ func (m *Member) FindDeposit(txHash string, inputAmountStr string) (bool, deposi
 		return false, deposit.Deposit{}, fmt.Errorf("can't parse input amount")
 	}
 
-	if m.Deposit.IsEmpty() {
-		return false, deposit.Deposit{}, fmt.Errorf("no deposit provided")
-	}
+	for _, dRef := range m.Deposits {
+		d := deposit.GetObject(dRef)
 
-	d := deposit.GetObject(m.Deposit)
-	th, err := d.GetTxHash()
-	if err != nil {
-		return false, deposit.Deposit{}, fmt.Errorf("failed to get transaction hash: %s", err.Error())
-	}
-
-	depositAmountStr, err := d.GetAmount()
-	if err != nil {
-		return false, deposit.Deposit{}, fmt.Errorf("failed to get amount: %s", err.Error())
-	}
-
-	depositAmountInt := new(big.Int)
-	depositAmountInt, ok = depositAmountInt.SetString(depositAmountStr, 10)
-	if !ok {
-		return false, deposit.Deposit{}, fmt.Errorf("can't parse input amount")
-	}
-
-	if txHash == th {
-		if (inputAmount).Cmp(depositAmountInt) == 0 {
-			return true, *d, nil
-		} else {
-			return false, deposit.Deposit{}, fmt.Errorf("deposit with this transaction hash has different amount")
+		txHash, err := d.GetTxHash()
+		if err != nil {
+			return false, deposit.Deposit{}, fmt.Errorf("failed to get transaction hash: %s", err.Error())
 		}
+
+		depositAmountStr, err := d.GetAmount()
+		if err != nil {
+			return false, deposit.Deposit{}, fmt.Errorf("failed to get amount: %s", err.Error())
+		}
+
+		depositAmount := new(big.Int)
+		depositAmount, ok = depositAmount.SetString(depositAmountStr, 10)
+		if !ok {
+			return false, deposit.Deposit{}, fmt.Errorf("can't parse input amount")
+		}
+
+		if transactionsHash == txHash {
+			if (inputAmount).Cmp(depositAmount) == 0 {
+				return true, *d, nil
+			} else {
+				return false, deposit.Deposit{}, fmt.Errorf("deposit with this transaction hash has different amount")
+			}
+		}
+
 	}
 
 	return false, deposit.Deposit{}, nil
 }
 
 // SetDeposit method stores deposit reference in member it belongs to
-func (m *Member) SetDeposit(reference insolar.Reference) error {
-	m.Deposit = reference
+func (m *Member) AddDeposit(deposit insolar.Reference) error {
+	m.Deposits = append(m.Deposits, deposit)
 	return nil
 }
 

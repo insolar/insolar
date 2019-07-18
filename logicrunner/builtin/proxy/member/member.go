@@ -26,6 +26,10 @@ import (
 type CreateResponse struct {
 	Reference string `json:"reference"`
 }
+type GetBalanceResponse struct {
+	Balance  string `json:"balance"`
+	Deposits []map[string]string
+}
 type GetResponse struct {
 	Reference   string `json:"reference"`
 	BurnAddress string `json:"migrationAddress,omitempty"`
@@ -442,10 +446,95 @@ func (r *Member) CallAsImmutable(signedRequest []byte) (interface{}, error) {
 	return ret0, nil
 }
 
+// GetDeposits is proxy generated method
+func (r *Member) GetDeposits() ([]map[string]string, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 []map[string]string
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetDeposits", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// GetDepositsNoWait is proxy generated method
+func (r *Member) GetDepositsNoWait() error {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetDeposits", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetDepositsAsImmutable is proxy generated method
+func (r *Member) GetDepositsAsImmutable() ([]map[string]string, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 []map[string]string
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetDeposits", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
 // FindDeposit is proxy generated method
-func (r *Member) FindDeposit(txHash string, inputAmountStr string) (bool, deposit.Deposit, error) {
+func (r *Member) FindDeposit(transactionsHash string, inputAmountStr string) (bool, deposit.Deposit, error) {
 	var args [2]interface{}
-	args[0] = txHash
+	args[0] = transactionsHash
 	args[1] = inputAmountStr
 
 	var argsSerialized []byte
@@ -480,9 +569,9 @@ func (r *Member) FindDeposit(txHash string, inputAmountStr string) (bool, deposi
 }
 
 // FindDepositNoWait is proxy generated method
-func (r *Member) FindDepositNoWait(txHash string, inputAmountStr string) error {
+func (r *Member) FindDepositNoWait(transactionsHash string, inputAmountStr string) error {
 	var args [2]interface{}
-	args[0] = txHash
+	args[0] = transactionsHash
 	args[1] = inputAmountStr
 
 	var argsSerialized []byte
@@ -501,9 +590,9 @@ func (r *Member) FindDepositNoWait(txHash string, inputAmountStr string) error {
 }
 
 // FindDepositAsImmutable is proxy generated method
-func (r *Member) FindDepositAsImmutable(txHash string, inputAmountStr string) (bool, deposit.Deposit, error) {
+func (r *Member) FindDepositAsImmutable(transactionsHash string, inputAmountStr string) (bool, deposit.Deposit, error) {
 	var args [2]interface{}
-	args[0] = txHash
+	args[0] = transactionsHash
 	args[1] = inputAmountStr
 
 	var argsSerialized []byte
@@ -537,10 +626,10 @@ func (r *Member) FindDepositAsImmutable(txHash string, inputAmountStr string) (b
 	return ret0, ret1, nil
 }
 
-// SetDeposit is proxy generated method
-func (r *Member) SetDeposit(reference insolar.Reference) error {
+// AddDeposit is proxy generated method
+func (r *Member) AddDeposit(deposit insolar.Reference) error {
 	var args [1]interface{}
-	args[0] = reference
+	args[0] = deposit
 
 	var argsSerialized []byte
 
@@ -553,7 +642,7 @@ func (r *Member) SetDeposit(reference insolar.Reference) error {
 		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "SetDeposit", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "AddDeposit", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -569,10 +658,10 @@ func (r *Member) SetDeposit(reference insolar.Reference) error {
 	return nil
 }
 
-// SetDepositNoWait is proxy generated method
-func (r *Member) SetDepositNoWait(reference insolar.Reference) error {
+// AddDepositNoWait is proxy generated method
+func (r *Member) AddDepositNoWait(deposit insolar.Reference) error {
 	var args [1]interface{}
-	args[0] = reference
+	args[0] = deposit
 
 	var argsSerialized []byte
 
@@ -581,7 +670,7 @@ func (r *Member) SetDepositNoWait(reference insolar.Reference) error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "SetDeposit", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "AddDeposit", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -589,10 +678,10 @@ func (r *Member) SetDepositNoWait(reference insolar.Reference) error {
 	return nil
 }
 
-// SetDepositAsImmutable is proxy generated method
-func (r *Member) SetDepositAsImmutable(reference insolar.Reference) error {
+// AddDepositAsImmutable is proxy generated method
+func (r *Member) AddDepositAsImmutable(deposit insolar.Reference) error {
 	var args [1]interface{}
-	args[0] = reference
+	args[0] = deposit
 
 	var argsSerialized []byte
 
@@ -605,7 +694,7 @@ func (r *Member) SetDepositAsImmutable(reference insolar.Reference) error {
 		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "SetDeposit", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "AddDeposit", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}

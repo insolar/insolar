@@ -81,7 +81,8 @@ func (d *Deposit) MapMarshal() (map[string]string, error) {
 		"holdReleaseDate": d.HoldReleaseDate.String(),
 		"amount":          d.Amount,
 		"bonus":           d.Bonus,
-		"txId":            d.TxHash,
+		"ethTxHash":       d.TxHash,
+		"status":          string(d.Status),
 	}, nil
 }
 
