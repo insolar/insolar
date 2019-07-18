@@ -230,6 +230,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 		handler := artifactmanager.NewMessageHandler(&conf)
 		handler.PulseCalculator = Pulses
+		handler.FlowDispatcher.PulseAccessor = Pulses
 
 		handler.Bus = Bus
 		handler.PCS = CryptoScheme

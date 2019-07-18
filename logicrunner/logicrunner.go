@@ -104,9 +104,9 @@ func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publi
 		return nil, errors.New("LogicRunner have nil configuration")
 	}
 	res := LogicRunner{
-		Cfg:       cfg,
-		Publisher: publisher,
-		Sender:    sender,
+		Cfg:             cfg,
+		Publisher:       publisher,
+		Sender:          sender,
 		SenderWithRetry: bus.NewWaitOKWithRetrySender(sender, 3),
 	}
 
@@ -220,6 +220,7 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 	}
 
 	lr.ArtifactManager.InjectFinish()
+	lr.FlowDispatcher.PulseAccessor = lr.PulseAccessor
 
 	return nil
 }

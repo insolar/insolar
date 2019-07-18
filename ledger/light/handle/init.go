@@ -79,7 +79,9 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
 
-	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
+	ctx, logger := inslogger.WithField(ctx, "msg_type", payloadType.String())
+
+	logger.Debug("Start to handle new message")
 
 	switch payloadType {
 	case payload.TypeGetObject:
@@ -146,7 +148,10 @@ func (s *Init) handleParcel(ctx context.Context, f flow.Flow) error {
 	}
 
 	msgType := s.message.Metadata.Get(wbus.MetaType)
-	ctx, _ = inslogger.WithField(ctx, "msg_type", msgType)
+	ctx, logger := inslogger.WithField(ctx, "msg_type", msgType)
+
+	logger.Debug("Start to handle new message (from parcel)")
+
 	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("Present %v", parcel.Message().Type().String()))
 	defer span.End()
 
@@ -252,9 +257,10 @@ func (s *Init) replyError(ctx context.Context, replyTo payload.Meta, err error) 
 	if err == flow.ErrCancelled {
 		errCode = payload.CodeFlowCanceled
 	}
-	errMsg, err := payload.NewMessage(&payload.Error{Text: err.Error(), Code: uint32(errCode)})
-	if err != nil {
+	errMsg, newErr := payload.NewMessage(&payload.Error{Text: err.Error(), Code: uint32(errCode)})
+	if newErr != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
 	}
 	go s.sender.Reply(ctx, replyTo, errMsg)
+	inslogger.FromContext(ctx).Errorf("reply error was return to asker - %s", err.Error())
 }
