@@ -128,7 +128,6 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		panic(errors.Wrap(err, "failed to open pulse for writing"))
 	}
 
-	m.MessageHandler.OnPulse(ctx, newPulse)
 	return nil
 }
 
@@ -162,13 +161,9 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		}
 	}
 
-	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
-		panic(errors.Wrap(err, "failed to add pulse"))
-	}
-
 	// Updating jet tree if its network start.
 	{
-		_, err := m.PulseCalculator.Backwards(ctx, newPulse.PulseNumber, 2)
+		_, err := m.PulseCalculator.Backwards(ctx, newPulse.PulseNumber, 1)
 		if err != nil {
 			if err == pulse.ErrNotFound {
 				err := m.JetModifier.Update(ctx, newPulse.PulseNumber, true, insolar.ZeroJetID)
@@ -181,7 +176,7 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		}
 	}
 
-	endedPulse, err := m.PulseCalculator.Backwards(ctx, newPulse.PulseNumber, 1)
+	endedPulse, err := m.PulseAccessor.Latest(ctx)
 	if err != nil {
 		if err == pulse.ErrNotFound {
 			return nil, insolar.Pulse{}, errNoPulse
@@ -195,5 +190,10 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	}
 
 	m.JetReleaser.ThrowTimeout(ctx, newPulse.PulseNumber)
+
+	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
+		panic(errors.Wrap(err, "failed to add pulse"))
+	}
+
 	return jets, endedPulse, nil
 }
