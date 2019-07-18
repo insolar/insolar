@@ -199,6 +199,7 @@ func (m *FilamentModifierDefault) notifyDetached(ctx context.Context, pendingReq
 		}
 	}
 
+	return nil
 }
 
 func (m *FilamentModifierDefault) SetRequest(

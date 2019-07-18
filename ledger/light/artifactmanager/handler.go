@@ -266,6 +266,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 		h.PCS,
 		h.FilamentCalculator,
 		h.PulseCalculator,
+		h.Sender,
 	)
 
 	return nil
