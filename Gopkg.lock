@@ -3,7 +3,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:1b2208b11ad707c7fce6bb4d093b507dd3dfe378dfd88fdf5097cf26ad5beff4"
+  digest = "1:e95de5c830369d6592224de57a31cd87a2ba1cec2abaf050d06a63ee8f7babd8"
   name = "git.apache.org/thrift.git"
   packages = ["lib/go/thrift"]
   pruneopts = "UT"
@@ -631,7 +631,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d6decc43ac14bea732edcb63e328c63636be508cf037b87a7d167e2c3b49c960"
+  digest = "1:942335f6796b56d5cfb773e938cee5302d1a763930f34b87fd26d33f7f0b9404"
   name = "google.golang.org/genproto"
   packages = [
     "googleapis/api/annotations",
