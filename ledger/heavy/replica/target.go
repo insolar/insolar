@@ -75,6 +75,7 @@ func (t *target) Notify(ctx context.Context, present insolar.PulseNumber) error 
 func (t *target) subscribe(at Page) {
 	ctx := context.Background()
 	logger := inslogger.FromContext(ctx)
+	logger.Debugf("target.subscribe at pulse=%v", at.Pulse)
 	for i := 0; i < t.cfg.Attempts; i++ {
 		err := t.parent.Subscribe(ctx, t, at)
 		if err != nil {
@@ -144,6 +145,7 @@ func (t *target) pull(scope byte, pn insolar.PulseNumber) bool {
 			logger.Error(errors.Wrapf(err, "failed to upsert sequence"))
 			return false
 		}
+		logger.Debugf("target.pull at=%v len(seq)=%v", at, len(seq))
 
 		skip += uint32(len(seq))
 		if skip == total {
