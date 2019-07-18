@@ -95,6 +95,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	var foundResBuf []byte
 	resultID := p.resultID
 	if foundRes != nil {
+		inslogger.FromContext(ctx).Errorf("duplicated result. resultID: %v, requestID: %v", p.resultID.DebugString(), p.result.Request.Record().DebugString())
 		foundResBuf, err = foundRes.Record.Virtual.Marshal()
 		if err != nil {
 			return err
