@@ -12,6 +12,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	insolar "github.com/insolar/insolar/insolar"
+	record "github.com/insolar/insolar/insolar/record"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,7 +21,7 @@ import (
 type IndexModifierMock struct {
 	t minimock.Tester
 
-	SetIndexFunc       func(p context.Context, p1 insolar.PulseNumber, p2 FilamentIndex) (r error)
+	SetIndexFunc       func(p context.Context, p1 insolar.PulseNumber, p2 record.Index) (r error)
 	SetIndexCounter    uint64
 	SetIndexPreCounter uint64
 	SetIndexMock       mIndexModifierMockSetIndex
@@ -53,7 +54,7 @@ type IndexModifierMockSetIndexExpectation struct {
 type IndexModifierMockSetIndexInput struct {
 	p  context.Context
 	p1 insolar.PulseNumber
-	p2 FilamentIndex
+	p2 record.Index
 }
 
 type IndexModifierMockSetIndexResult struct {
@@ -61,7 +62,7 @@ type IndexModifierMockSetIndexResult struct {
 }
 
 //Expect specifies that invocation of IndexModifier.SetIndex is expected from 1 to Infinity times
-func (m *mIndexModifierMockSetIndex) Expect(p context.Context, p1 insolar.PulseNumber, p2 FilamentIndex) *mIndexModifierMockSetIndex {
+func (m *mIndexModifierMockSetIndex) Expect(p context.Context, p1 insolar.PulseNumber, p2 record.Index) *mIndexModifierMockSetIndex {
 	m.mock.SetIndexFunc = nil
 	m.expectationSeries = nil
 
@@ -85,7 +86,7 @@ func (m *mIndexModifierMockSetIndex) Return(r error) *IndexModifierMock {
 }
 
 //ExpectOnce specifies that invocation of IndexModifier.SetIndex is expected once
-func (m *mIndexModifierMockSetIndex) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 FilamentIndex) *IndexModifierMockSetIndexExpectation {
+func (m *mIndexModifierMockSetIndex) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 record.Index) *IndexModifierMockSetIndexExpectation {
 	m.mock.SetIndexFunc = nil
 	m.mainExpectation = nil
 
@@ -100,7 +101,7 @@ func (e *IndexModifierMockSetIndexExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of IndexModifier.SetIndex method
-func (m *mIndexModifierMockSetIndex) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 FilamentIndex) (r error)) *IndexModifierMock {
+func (m *mIndexModifierMockSetIndex) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 record.Index) (r error)) *IndexModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -109,7 +110,7 @@ func (m *mIndexModifierMockSetIndex) Set(f func(p context.Context, p1 insolar.Pu
 }
 
 //SetIndex implements github.com/insolar/insolar/ledger/object.IndexModifier interface
-func (m *IndexModifierMock) SetIndex(p context.Context, p1 insolar.PulseNumber, p2 FilamentIndex) (r error) {
+func (m *IndexModifierMock) SetIndex(p context.Context, p1 insolar.PulseNumber, p2 record.Index) (r error) {
 	counter := atomic.AddUint64(&m.SetIndexPreCounter, 1)
 	defer atomic.AddUint64(&m.SetIndexCounter, 1)
 

@@ -51,26 +51,26 @@
 package merkle
 
 import (
-	common2 "github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 )
 
 type GlobulaLeaf struct {
 	// ByteSize = 16
 
-	NodeID common2.ShortNodeID // ByteSize = 4
+	NodeID insolar.ShortNodeID // ByteSize = 4
 
 	// ByteSize = 4
-	NodeRole   common.NodePrimaryRole // 8
-	PowerTotal uint32                 // 23
+	NodeRole   member.PrimaryRole // 8
+	PowerTotal uint32             // 23
 
 	// ByteSize = 4
-	NodePower common.MemberPower // 8
-	PowerBase uint32             // 23
+	NodePower member.Power // 8
+	PowerBase uint32       // 23
 
 	// ByteSize = 4
-	RoleIndex uint16              //10
-	RoleTotal uint16              //10
-	NodeTotal uint16              //10
-	OpMode    common.MemberOpMode //4
+	RoleIndex uint16        // 10
+	RoleTotal uint16        // 10
+	NodeTotal uint16        // 10
+	OpMode    member.OpMode // 4
 }

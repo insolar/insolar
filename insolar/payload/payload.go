@@ -45,12 +45,16 @@ const (
 	TypeSetOutgoingRequest
 	TypeSagaCallAcceptNotification
 	TypeGetFilament
+	TypeGetRequest
+	TypeRequest
 	TypeFilamentSegment
 	TypeSetResult
 	TypeActivate
 	TypeRequestInfo
 	TypeDeactivate
 	TypeUpdate
+	TypeHotObjects
+	TypeResultInfo
 
 	// should be the last (required by TypesMap)
 	_latestType
@@ -122,6 +126,7 @@ func UnmarshalType(data []byte) (Type, error) {
 	if err != nil {
 		return TypeUnknown, errors.Wrap(err, "failed to decode polymorph")
 	}
+	// First 3 bits is a field type (see protobuf wire protocol docs), key is always varint
 	if fieldNumType != MorphFieldNum<<3|MorpyFieldType {
 		return TypeUnknown, errors.Errorf("wrong polymorph field number %d", fieldNumType)
 	}
@@ -191,11 +196,23 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *RequestInfo:
 		pl.Polymorph = uint32(TypeRequestInfo)
 		return pl.Marshal()
+	case *GetRequest:
+		pl.Polymorph = uint32(TypeGetRequest)
+		return pl.Marshal()
+	case *Request:
+		pl.Polymorph = uint32(TypeRequest)
+		return pl.Marshal()
 	case *Deactivate:
 		pl.Polymorph = uint32(TypeDeactivate)
 		return pl.Marshal()
 	case *Update:
 		pl.Polymorph = uint32(TypeUpdate)
+		return pl.Marshal()
+	case *HotObjects:
+		pl.Polymorph = uint32(TypeHotObjects)
+		return pl.Marshal()
+	case *ResultInfo:
+		pl.Polymorph = uint32(TypeResultInfo)
 		return pl.Marshal()
 	}
 
@@ -284,12 +301,28 @@ func Unmarshal(data []byte) (Payload, error) {
 		pl := RequestInfo{}
 		err := pl.Unmarshal(data)
 		return &pl, err
+	case TypeGetRequest:
+		pl := GetRequest{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeRequest:
+		pl := Request{}
+		err := pl.Unmarshal(data)
+		return &pl, err
 	case TypeDeactivate:
 		pl := Deactivate{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	case TypeUpdate:
 		pl := Update{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeHotObjects:
+		pl := HotObjects{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeResultInfo:
+		pl := ResultInfo{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}

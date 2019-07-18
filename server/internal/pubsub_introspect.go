@@ -27,18 +27,21 @@ import (
 	"golang.org/x/net/context"
 )
 
-// PubSubWrapper introspection wrapper of message.PubSub.
+// PubSubWrapper setups and returns introspection wrapper for message.PubSub.
 func PubSubWrapper(ctx context.Context, cm *component.Manager, cfg configuration.Introspection, pb message.PubSub) message.PubSub {
 	pw := pubsubwrap.NewPubSubWrapper(pb)
 
+	// init pubsub middlewares and add them to wrapper
 	mStat := pubsubwrap.NewMessageStatByType()
 	mLocker := pubsubwrap.NewMessageLockerByType(ctx)
-	pw.Middleware(mStat, mLocker)
+	pw.Middleware(mStat)
+	pw.Middleware(mLocker)
 
+	// create introspection server with service which implements introproto.PublisherServer
 	service := pubsubwrap.NewPublisherService(mLocker, mStat)
 	iSrv := introspector.NewServer(cfg.Addr, service)
 
-	// use component manager for lifecycle (component.Manager calls Start/Stop)
+	// use component manager for lifecycle (component.Manager calls Start/Stop on server instance)
 	cm.Register(iSrv)
 
 	return pw

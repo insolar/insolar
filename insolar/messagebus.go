@@ -223,14 +223,10 @@ const (
 	TypeGetObjectIndex
 	// TypeGetPendingRequests fetches pending requests for object.
 	TypeGetPendingRequests
-	// TypeHotRecords saves hot-records in storage.
-	TypeHotRecords
 	// TypeGetJet requests to calculate a jet for provided object.
 	TypeGetJet
 	// TypeAbandonedRequestsNotification informs virtual node about unclosed requests.
 	TypeAbandonedRequestsNotification
-	// TypeGetRequest fetches request from ledger.
-	TypeGetRequest
 	// TypeGetPendingRequestID fetches a pending request id from ledger
 	TypeGetPendingRequestID
 	// TypeGetOpenRequests fetches open pending requests from a heavy to a provided pulse

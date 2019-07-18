@@ -765,14 +765,14 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 	_, err = getReply(suite, replyChan)
 	suite.Require().NoError(err)
 	broker := suite.lr.StateStorage.GetExecutionState(objectRef)
-	suite.Equal(true, broker.executionState.LedgerHasMoreRequests)
+	suite.Equal(true, broker.ledgerHasMoreRequests)
 	_ = suite.lr.Stop(suite.ctx)
 
 	// LedgerHasMoreRequests false
 	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{}, suite.pub, suite.sender)
 
 	broker = suite.lr.StateStorage.UpsertExecutionState(objectRef)
-	broker.executionState.LedgerHasMoreRequests = false
+	broker.ledgerHasMoreRequests = false
 
 	h = HandleAbandonedRequestsNotification{
 		dep:    &Dependencies{lr: suite.lr, Sender: suite.sender},
@@ -784,14 +784,14 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 	_, err = getReply(suite, replyChan)
 	suite.Require().NoError(err)
 	broker = suite.lr.StateStorage.GetExecutionState(objectRef)
-	suite.Equal(true, broker.executionState.LedgerHasMoreRequests)
+	suite.Equal(true, broker.ledgerHasMoreRequests)
 	_ = suite.lr.Stop(suite.ctx)
 
 	// LedgerHasMoreRequests already true
 	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{}, suite.pub, suite.sender)
 
 	broker = suite.lr.StateStorage.UpsertExecutionState(objectRef)
-	broker.executionState.LedgerHasMoreRequests = true
+	broker.ledgerHasMoreRequests = true
 
 	h = HandleAbandonedRequestsNotification{
 		dep:    &Dependencies{lr: suite.lr, Sender: suite.sender},
@@ -804,12 +804,25 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 	suite.Require().NoError(err)
 	suite.Require().NoError(err)
 	broker = suite.lr.StateStorage.GetExecutionState(objectRef)
-	suite.Equal(true, broker.executionState.LedgerHasMoreRequests)
+	suite.Equal(true, broker.ledgerHasMoreRequests)
 	_ = suite.lr.Stop(suite.ctx)
 }
 
 func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
-	pl := &payload.SagaCallAcceptNotification{}
+	outgoing := record.OutgoingRequest{
+		Caller: gen.Reference(),
+		Reason: gen.Reference(),
+	}
+	outgoingBytes, err := outgoing.Marshal()
+	suite.Require().NoError(err)
+
+	outgoingReqId := gen.ID()
+	outgoingRequestRef := insolar.NewReference(outgoingReqId)
+
+	pl := &payload.SagaCallAcceptNotification{
+		OutgoingReqID: outgoingReqId,
+		Request:       outgoingBytes,
+	}
 	msg, err := payload.NewMessage(pl)
 	suite.Require().NoError(err)
 
@@ -825,18 +838,61 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 	buf, err := meta.Marshal()
 	msg.Payload = buf
 
-	replyChan := mockSender(suite)
+	dummyRequestRef := gen.Reference()
+	callMethodChan := make(chan struct{})
+	var usedCaller insolar.Reference
+	var usedReason insolar.Reference
+	var usedReturnMode record.ReturnMode
+
+	cr := testutils.NewContractRequesterMock(suite.T())
+	cr.CallMethodFunc = func(ctx context.Context, msg insolar.Message) (insolar.Reply, error) {
+		suite.Require().Equal(insolar.TypeCallMethod, msg.Type())
+		cm := msg.(*message.CallMethod)
+		usedCaller = cm.Caller
+		usedReason = cm.Reason
+		usedReturnMode = cm.ReturnMode
+
+		result := &reply.RegisterRequest{
+			Request: dummyRequestRef,
+		}
+		callMethodChan <- struct{}{}
+		return result, nil
+	}
+	suite.lr.ContractRequester = cr
+
+	registerResultChan := make(chan struct{})
+	var usedRequestRef insolar.Reference
+	var usedResult []byte
+
+	am := artifacts.NewClientMock(suite.T())
+	am.RegisterResultMock.Set(func(ctx context.Context, reqRef insolar.Reference, reqResults artifacts.RequestResult) (r error) {
+		usedRequestRef = reqRef
+		usedResult = reqResults.Result()
+		registerResultChan <- struct{}{}
+		return nil
+	})
+	suite.lr.ArtifactManager = am
+
 	_, err = suite.lr.FlowDispatcher.Process(msg)
 	suite.Require().NoError(err)
 
-	rep, err := getReply(suite, replyChan)
-	suite.Require().NoError(err)
+	<-callMethodChan
+	suite.Require().Equal(outgoing.Caller, usedCaller)
+	suite.Require().Equal(outgoing.Reason, usedReason)
+	suite.Require().Equal(record.ReturnNoWait, usedReturnMode)
 
-	// This is a temporary reply. It is required only to make sure that the
-	// message handler was executed. Actually LME doesn't need any reply.
-	suite.Require().Equal(&reply.OK{}, rep)
+	<-registerResultChan
+	suite.Require().Equal(outgoingRequestRef, &usedRequestRef)
+	suite.Require().Equal(dummyRequestRef.Bytes(), usedResult)
 
-	// work in progress...
+	// In this test LME doesn't need any reply from VE. But if an reply was
+	// required you could check it like this:
+	// ```
+	// replyChan = mockSender(suite)
+	// rep, err := getReply(suite, replyChan)
+	// suite.Require().NoError(err)
+	// suite.Require().Equal(&reply.OK{}, rep)
+	// ```
 }
 
 func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangePendingStatus() {
@@ -914,12 +970,12 @@ func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangeLedgerHasMoreRequ
 
 		broker := suite.lr.StateStorage.UpsertExecutionState(ref)
 		broker.tryTakeProcessor(suite.ctx)
-		broker.executionState.LedgerHasMoreRequests = test.objectStateStatus
+		broker.ledgerHasMoreRequests = test.objectStateStatus
 
 		err := h.realHandleExecutorState(suite.ctx, flowMock)
 		suite.Require().NoError(err)
 		broker = suite.lr.StateStorage.GetExecutionState(ref)
-		suite.Equal(test.expectedObjectStateStatue, broker.executionState.LedgerHasMoreRequests)
+		suite.Equal(test.expectedObjectStateStatue, broker.ledgerHasMoreRequests)
 	}
 }
 
@@ -1598,6 +1654,8 @@ func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer2() {
 	s.jc.MeMock.Return(insolar.Reference{})
 	s.jc.IsAuthorizedMock.Return(true, nil)
 
+	s.am.GetPendingsMock.Return([]insolar.Reference{}, nil)
+
 	broker := s.lr.StateStorage.UpsertExecutionState(s.objectRef)
 	broker.executionState.pending = message.InPending
 	broker.executionState.PendingConfirmed = false
@@ -1697,118 +1755,6 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 
 func TestLogicRunnerOnPulse(t *testing.T) {
 	suite.Run(t, new(LogicRunnerOnPulseTestSuite))
-}
-
-func TestLRUnsafeGetLedgerPendingRequest(t *testing.T) {
-	suite.Run(t, new(LRUnsafeGetLedgerPendingRequestTestSuite))
-}
-
-type LRUnsafeGetLedgerPendingRequestTestSuite struct {
-	LogicRunnerCommonTestSuite
-
-	pulse                 insolar.Pulse
-	ref                   insolar.Reference
-	currentPulseNumber    insolar.PulseNumber
-	oldRequestPulseNumber insolar.PulseNumber
-}
-
-func (s *LRUnsafeGetLedgerPendingRequestTestSuite) BeforeTest(suiteName, testName string) {
-	s.LogicRunnerCommonTestSuite.BeforeTest(suiteName, testName)
-
-	s.pulse = insolar.Pulse{}
-	s.ref = testutils.RandomRef()
-	s.currentPulseNumber = 3
-	s.oldRequestPulseNumber = 1
-}
-
-func (s *LRUnsafeGetLedgerPendingRequestTestSuite) AfterTest(suiteName, testName string) {
-	s.LogicRunnerCommonTestSuite.AfterTest(suiteName, testName)
-}
-
-func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueElement() {
-	objectRef := gen.Reference()
-	broker := s.lr.StateStorage.UpsertExecutionState(objectRef)
-
-	reqRef := gen.Reference()
-	broker.Put(s.ctx, false, &Transcript{
-		FromLedger:   true,
-		LogicContext: &insolar.LogicCallContext{},
-		RequestRef:   reqRef,
-		Request:      &record.IncomingRequest{},
-	})
-
-	proc := UnsafeGetLedgerPendingRequest{broker: broker, dep: &Dependencies{lr: s.lr}}
-	err := proc.Proceed(s.ctx)
-	s.Require().NoError(err)
-
-	// we check that there is no unexpected calls to A.M., as we already have element
-	// from ledger another call to the ledger will return the same request, so we make
-	// sure it doesn't happen
-}
-
-func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInExecutionState() {
-	objectRef := gen.Reference()
-	broker := s.lr.StateStorage.UpsertExecutionState(objectRef)
-	broker.executionState.LedgerHasMoreRequests = false
-
-	proc := UnsafeGetLedgerPendingRequest{broker: broker, dep: &Dependencies{lr: s.lr}}
-	err := proc.Proceed(s.ctx)
-	s.Require().NoError(err)
-	s.Require().Nil(broker.HasLedgerRequest(s.ctx))
-}
-
-func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInLedger() {
-	objectRef := gen.Reference()
-	broker := s.lr.StateStorage.UpsertExecutionState(objectRef)
-	broker.executionState.LedgerHasMoreRequests = true
-
-	am := artifacts.NewClientMock(s.mc)
-	am.GetPendingRequestMock.Return(nil, nil, insolar.ErrNoPendingRequest)
-	s.lr.ArtifactManager = am
-	proc := UnsafeGetLedgerPendingRequest{broker: broker, dep: &Dependencies{lr: s.lr}}
-	err := proc.Proceed(s.ctx)
-	s.Require().NoError(err)
-}
-
-func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestDoesNotAuthorized() {
-	objectRef := gen.Reference()
-	broker := s.lr.StateStorage.UpsertExecutionState(objectRef)
-	broker.executionState.LedgerHasMoreRequests = true
-
-	s.am.GetPendingRequestMock.Return(nil, &record.IncomingRequest{}, nil)
-
-	// we doesn't authorized (pulse change in time we process function)
-	s.ps.LatestMock.Return(insolar.Pulse{PulseNumber: s.currentPulseNumber}, nil)
-	s.jc.IsAuthorizedMock.Return(false, nil)
-	s.jc.MeMock.Return(insolar.Reference{})
-
-	proc := UnsafeGetLedgerPendingRequest{broker: broker, dep: &Dependencies{lr: s.lr}}
-	err := proc.Proceed(s.ctx)
-	s.Require().NoError(err)
-	s.Require().Nil(broker.HasLedgerRequest(s.ctx))
-}
-
-func (s LRUnsafeGetLedgerPendingRequestTestSuite) TestUnsafeGetLedgerPendingRequest() {
-	objectRef := gen.Reference()
-	broker := s.lr.StateStorage.UpsertExecutionState(objectRef)
-	broker.executionState.LedgerHasMoreRequests = true
-
-	testRequestRef := gen.Reference()
-	testRequest := record.IncomingRequest{Object: &s.ref}
-
-	s.am.GetPendingRequestMock.Return(&testRequestRef, &testRequest, nil)
-
-	s.ps.LatestMock.Return(insolar.Pulse{PulseNumber: s.currentPulseNumber}, nil)
-	s.jc.IsAuthorizedMock.Return(true, nil)
-	s.jc.MeMock.Return(insolar.Reference{})
-
-	proc := UnsafeGetLedgerPendingRequest{broker: broker, dep: &Dependencies{lr: s.lr}}
-	err := proc.Proceed(s.ctx)
-	s.Require().NoError(err)
-
-	s.Require().Equal(true, broker.executionState.LedgerHasMoreRequests)
-	ledgerRequest := broker.HasLedgerRequest(s.ctx)
-	s.Require().NotNil(ledgerRequest)
 }
 
 func (suite *LogicRunnerTestSuite) TestInitializeExecutionState() {

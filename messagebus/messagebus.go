@@ -50,12 +50,10 @@ const deliverRPCMethodName = "MessageBus.Deliver"
 var transferredToWatermill = map[insolar.MessageType]struct{}{
 	insolar.TypeSetBlob:                            {},
 	insolar.TypeGetChildren:                        {},
-	insolar.TypeGetRequest:                         {},
 	insolar.TypeUpdateObject:                       {},
 	insolar.TypeGetPendingRequests:                 {},
 	insolar.TypeRegisterChild:                      {},
 	insolar.TypeGetJet:                             {},
-	insolar.TypeHotRecords:                         {},
 	insolar.TypeCallMethod:                         {},
 	insolar.TypePendingFinished:                    {},
 	insolar.TypeStillExecuting:                     {},
@@ -64,6 +62,8 @@ var transferredToWatermill = map[insolar.MessageType]struct{}{
 	insolar.TypeGetPendingRequestID:                {},
 	insolar.TypeGetDelegate:                        {},
 	insolar.TypeAdditionalCallFromPreviousExecutor: {},
+	insolar.TypeHeavyPayload:                       {},
+	insolar.TypeGetObjectIndex:                     {},
 }
 
 // MessageBus is component that routes application logic requests,
@@ -416,7 +416,6 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel insolar.Parcel, loc
 			*message.SetBlob,
 			*message.GetPendingRequests,
 			*message.ValidateRecord,
-			*message.HotData,
 			*message.CallMethod:
 			inslogger.FromContext(ctx).Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d) Msg: %s", ppn, pulse.PulseNumber, parcel.Message().Type().String())
 			return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)  Msg: %s", ppn, pulse.PulseNumber, parcel.Message().Type().String())

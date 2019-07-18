@@ -62,12 +62,12 @@ import (
 // TODO Slightly ugly, decide how to inject anything without exporting Base
 // TODO Remove message bus here and switch communication to network.rpc
 // NewNoNetwork this initial constructor have special signature to be called outside
-func NewNoNetwork(n network.Gatewayer,
+func NewNoNetwork(n network.Gatewayer, pm insolar.PulseManager,
 	nk network.NodeKeeper, cr insolar.ContractRequester,
 	cs insolar.CryptographyService, hn network.HostNetwork,
 	cm insolar.CertificateManager) network.Gateway {
 	return (&Base{
-		Network:    n,
+		Network: n, PulseManager: pm,
 		Nodekeeper: nk, ContractRequester: cr,
 		CryptographyService: cs, HostNetwork: hn,
 		CertificateManager: cm,

@@ -1,7 +1,25 @@
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
 package integration_test
 
 import (
-	"crypto/rand"
+	"context"
+	"math/rand"
+	"sync"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
@@ -14,21 +32,17 @@ import (
 )
 
 func Test_BootstrapCalls(t *testing.T) {
+	t.Parallel()
+
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg)
 	require.NoError(t, err)
 
-	received := make(chan payload.Payload)
-	s.Receive(func(meta payload.Meta, pl payload.Payload) {
-		received <- pl
-	})
-
 	t.Run("message before pulse received returns error", func(t *testing.T) {
-		s.Send(&payload.SetCode{})
-		pl := <-received
-		_, ok := pl.(*payload.Error)
-		require.True(t, ok)
+		p, _ := setCode(ctx, t, s)
+		_, ok := p.(*payload.Error)
+		assert.True(t, ok)
 	})
 
 	// First pulse goes in storage then interrupts.
@@ -37,124 +51,123 @@ func Test_BootstrapCalls(t *testing.T) {
 	s.Pulse(ctx)
 
 	t.Run("messages after two pulses return result", func(t *testing.T) {
-		setCode(t, s)
+		p, _ := setCode(ctx, t, s)
+		requirePayloadNotError(t, p)
 	})
 }
 
-func Test_ReplicationScenario(t *testing.T) {
+func Test_BasicOperations(t *testing.T) {
+	t.Parallel()
+
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg)
 	require.NoError(t, err)
-	received := make(chan payload.Payload)
-	s.Receive(func(meta payload.Meta, pl payload.Payload) {
-		received <- pl
-	})
 
 	// First pulse goes in storage then interrupts.
 	s.Pulse(ctx)
 	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
 	s.Pulse(ctx)
 
-	codeID, codeRecord := setCode(t, s)
-	material := getCode(t, s, codeID)
-	assert.Equal(t, &codeRecord, material.Virtual)
+	runner := func(t *testing.T) {
+		// Creating root reason request.
+		var reasonID insolar.ID
+		{
+			p, _ := setIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
+			requirePayloadNotError(t, p)
+			reasonID = p.(*payload.RequestInfo).RequestID
+		}
+		// Save and check code.
+		{
+			p, sent := setCode(ctx, t, s)
+			requirePayloadNotError(t, p)
 
-	// FIXME: doesn't work with old bus. Move Hot data to watermill to fix.
-	// _, _ = setIncomingRequest(t, s, record.CTSaveAsChild)
-	//
-	// // Activate object.
-	// var (
-	// 	objectID       insolar.ID
-	// 	activateRecord record.Virtual
-	// )
-	// {
-	// 	mem := make([]byte, 100)
-	// 	_, err := rand.Read(mem)
-	// 	require.NoError(t, err)
-	// 	activateRecord = record.Wrap(record.Activate{
-	// 		Memory: mem,
-	// 	})
-	// 	buf, err := activateRecord.Marshal()
-	// 	require.NoError(t, err)
-	// 	res := make([]byte, 100)
-	// 	_, err = rand.Read(res)
-	// 	require.NoError(t, err)
-	// 	resultRecord := record.Wrap(record.Result{Payload: res})
-	// 	resBuf, err := resultRecord.Marshal()
-	// 	require.NoError(t, err)
-	// 	s.Send(&payload.Activate{
-	// 		Record: buf,
-	// 		Result: resBuf,
-	// 	})
-	// 	pl := <-received
-	// 	id, ok := pl.(*payload.ID)
-	// 	require.True(t, ok)
-	// 	objectID = id.ID
-	// }
+			p = getCode(ctx, t, s, p.(*payload.ID).ID)
+			requirePayloadNotError(t, p)
+			material := record.Material{}
+			err := material.Unmarshal(p.(*payload.Code).Record)
+			require.NoError(t, err)
+			require.Equal(t, &sent, material.Virtual)
+		}
+		var objectID insolar.ID
+		// Set, get request.
+		{
+			p, sent := setIncomingRequest(ctx, t, s, gen.ID(), reasonID, record.CTSaveAsChild)
+			requirePayloadNotError(t, p)
 
-	// _ = objectID
+			p = getRequest(ctx, t, s, p.(*payload.RequestInfo).RequestID)
+			requirePayloadNotError(t, p)
+			require.Equal(t, sent, p.(*payload.Request).Request)
+			objectID = p.(*payload.Request).RequestID
+		}
+		// Activate and check object.
+		{
+			p, state := activateObject(ctx, t, s, objectID)
+			requirePayloadNotError(t, p)
+			_, material := requireGetObject(ctx, t, s, objectID)
+			require.Equal(t, &state, material.Virtual)
+		}
+		// Amend and check object.
+		{
+			p, _ := setIncomingRequest(ctx, t, s, objectID, reasonID, record.CTMethod)
+			requirePayloadNotError(t, p)
+			p, state := amendObject(ctx, t, s, objectID, p.(*payload.RequestInfo).RequestID)
+			requirePayloadNotError(t, p)
+			_, material := requireGetObject(ctx, t, s, objectID)
+			require.Equal(t, &state, material.Virtual)
+		}
+		// Deactivate and check object.
+		{
+			p, _ := setIncomingRequest(ctx, t, s, objectID, reasonID, record.CTMethod)
+			requirePayloadNotError(t, p)
+			deactivateObject(ctx, t, s, objectID, p.(*payload.RequestInfo).RequestID)
+
+			lifeline, _ := getObject(ctx, t, s, objectID)
+			_, ok := lifeline.(*payload.Error)
+			assert.True(t, ok)
+		}
+	}
+
+	t.Run("happy basic", runner)
+
+	t.Run("happy concurrent", func(t *testing.T) {
+		count := 1000
+		pulseAt := rand.Intn(count)
+		var wg sync.WaitGroup
+		wg.Add(count)
+		for i := 0; i < count; i++ {
+			if i == pulseAt {
+				// FIXME: find out why it hangs.
+				// s.Pulse(ctx)
+			}
+			go func() {
+				runner(t)
+				wg.Done()
+			}()
+		}
+
+		wg.Wait()
+	})
 }
 
-func setCode(t *testing.T, s *Server) (insolar.ID, record.Virtual) {
-	received := make(chan payload.Payload)
-	s.Receive(func(meta payload.Meta, pl payload.Payload) {
-		received <- pl
-	})
-
-	code := make([]byte, 100)
-	_, err := rand.Read(code)
-	require.NoError(t, err)
-	rec := record.Wrap(record.Code{Code: code})
-	buf, err := rec.Marshal()
-	require.NoError(t, err)
-	s.Send(&payload.SetCode{
-		Record: buf,
-	})
-	pl := <-received
-	id, ok := pl.(*payload.ID)
-	require.True(t, ok)
-	return id.ID, rec
+func requirePayloadNotError(t *testing.T, pl payload.Payload) {
+	if err, ok := pl.(*payload.Error); ok {
+		t.Fatal(err)
+	}
 }
 
-func getCode(t *testing.T, s *Server, id insolar.ID) record.Material {
-	received := make(chan payload.Payload)
-	s.Receive(func(meta payload.Meta, pl payload.Payload) {
-		received <- pl
-	})
+func requireGetObject(ctx context.Context, t *testing.T, s *Server, objectID insolar.ID) (record.Lifeline, record.Material) {
+	lifelinePL, statePL := getObject(ctx, t, s, objectID)
+	requirePayloadNotError(t, lifelinePL)
+	requirePayloadNotError(t, statePL)
 
-	s.Send(&payload.GetCode{
-		CodeID: id,
-	})
-	pl := <-received
-	code, ok := pl.(*payload.Code)
-	require.True(t, ok)
-	material := record.Material{}
-	err := material.Unmarshal(code.Record)
+	lifeline := record.Lifeline{}
+	err := lifeline.Unmarshal(lifelinePL.(*payload.Index).Index)
 	require.NoError(t, err)
-	return material
-}
 
-func setIncomingRequest(t *testing.T, s *Server, ct record.CallType) (insolar.ID, record.Virtual) {
-	received := make(chan payload.Payload)
-	s.Receive(func(meta payload.Meta, pl payload.Payload) {
-		received <- pl
-	})
-
-	args := make([]byte, 100)
-	_, err := rand.Read(args)
+	state := record.Material{}
+	err = state.Unmarshal(statePL.(*payload.State).Record)
 	require.NoError(t, err)
-	objRef := gen.Reference()
-	rec := record.Wrap(record.IncomingRequest{
-		Object:    &objRef,
-		Arguments: args,
-		CallType:  ct,
-	})
-	s.Send(&payload.SetIncomingRequest{
-		Request: rec,
-	})
-	pl := <-received
-	id, ok := pl.(*payload.ID)
-	require.True(t, ok)
-	return id.ID, rec
+
+	return lifeline, state
 }
