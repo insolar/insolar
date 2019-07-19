@@ -48,6 +48,9 @@ type Request struct {
 	Params   Params `json:"params"`
 	LogLevel string `json:"logLevel,omitempty"`
 }
+type TransferResponse struct {
+	Fee string `json:"fee"`
+}
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
