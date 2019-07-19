@@ -412,13 +412,6 @@ func callMethod(t *testing.T, objectRef *insolar.Reference, method string, args 
 	return callRes.Result
 }
 
-func callMethodExpectError(t *testing.T, objectRef *insolar.Reference, method string, args ...interface{}) api.CallMethodReply {
-	callRes := callMethodNoChecks(t, objectRef, method, args...)
-	require.NotEmpty(t, callRes.Error)
-
-	return callRes.Result
-}
-
 func callMethodNoChecks(t *testing.T, objectRef *insolar.Reference, method string, args ...interface{}) callRes {
 	argsSerialized, err := insolar.Serialize(args)
 	require.NoError(t, err)
