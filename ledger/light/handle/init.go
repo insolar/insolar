@@ -268,5 +268,4 @@ func (s *Init) replyError(ctx context.Context, replyTo payload.Meta, err error) 
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
 	}
 	go s.sender.Reply(ctx, replyTo, errMsg)
-	inslogger.FromContext(ctx).Errorf("reply error was return to asker - %s", err.Error())
 }
