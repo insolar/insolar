@@ -54,7 +54,6 @@ func TestFilamentModifierDefault_CheckOutgoingHasReasonInPendings(t *testing.T) 
 	request.ReasonRefMock.Return(*insolar.NewReference(notPendingObjectID))
 	err := modifier.checkOutgoingHasReasonInPendings(ctx, requestID, lifelineObjectID, request)
 	require.Error(t, err, "error if request reason not in pendings")
-	require.IsType(t, &errorReasonNotInPendings{}, err, "error has errorReasonNotInPendings type")
 
 	request.ReasonRefMock.Return(*insolar.NewReference(pendingObjectID))
 	err = modifier.checkOutgoingHasReasonInPendings(ctx, requestID, lifelineObjectID, request)
