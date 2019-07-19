@@ -110,12 +110,15 @@ func genesis() insolar.PulseNumber {
 }
 
 func (t *target) nextPulse(pn insolar.PulseNumber) insolar.PulseNumber {
-	ctx := context.Background()
-	p, err := t.Pulses.ForPulseNumber(ctx, pn)
-	if err != nil {
+	pulses := t.Sequencer.Slice(byte(store.ScopePulse), pn, 0, 1)
+	if len(pulses) == 0 {
 		return pn
 	}
-	return p.NextPulseNumber
+	pulseItem := pulseNode{}
+	if err := insolar.Deserialize(pulses[0].Value, &pulseItem); err != nil {
+		return pn
+	}
+	return *pulseItem.Next
 }
 
 func (t *target) fetch(need insolar.PulseNumber) bool {
@@ -167,4 +170,9 @@ func (t *target) finish(pn insolar.PulseNumber) bool {
 		return false
 	}
 	return true
+}
+
+type pulseNode struct {
+	Pulse      insolar.Pulse
+	Prev, Next *insolar.PulseNumber
 }
