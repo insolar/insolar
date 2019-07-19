@@ -351,6 +351,12 @@ func (m *FilamentModifierDefault) SetResult(ctx context.Context, resultID insola
 		filamentID = id
 	}
 
+	idx.Lifeline.PendingPointer = &filamentID
+	err = m.indexes.SetIndex(ctx, resultID.Pulse(), idx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create a meta-record about result")
+	}
+
 	pending, err := m.calculator.PendingRequests(ctx, resultID.Pulse(), objectID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to calculate pending requests")
@@ -366,7 +372,6 @@ func (m *FilamentModifierDefault) SetResult(ctx context.Context, resultID insola
 		idx.Lifeline.EarliestOpenRequest = nil
 	}
 
-	idx.Lifeline.PendingPointer = &filamentID
 	err = m.indexes.SetIndex(ctx, resultID.Pulse(), idx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create a meta-record about pending request")
