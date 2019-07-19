@@ -39,7 +39,7 @@ type Params struct {
 	CallSite   string      `json:"callSite"`
 	CallParams interface{} `json:"callParams"`
 	Reference  string      `json:"reference"`
-	PublicKey  string      `json:"memberPublicKey"`
+	PublicKey  string      `json:"publicKey"`
 }
 type Request struct {
 	JSONRPC  string `json:"jsonrpc"`
