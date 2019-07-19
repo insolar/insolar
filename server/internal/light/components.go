@@ -248,7 +248,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.Sender = WmBus
 		handler.IndexStorage = indexes
 
-		jetTreeUpdater := jet.NewFetcher(Nodes, Jets, Bus, Coordinator)
+		jetTreeUpdater := executor.NewFetcher(Nodes, Jets, WmBus, Coordinator)
 		filamentCalculator := executor.NewFilamentCalculator(
 			indexes,
 			records,

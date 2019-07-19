@@ -64,7 +64,7 @@ type MessageHandler struct {
 	PulseCalculator storage.PulseCalculator
 
 	conf           *configuration.Ledger
-	JetTreeUpdater jet.Fetcher
+	JetTreeUpdater executor.JetFetcher
 
 	Sender         bus.Sender
 	FlowDispatcher *dispatcher.Dispatcher
@@ -219,8 +219,10 @@ func NewMessageHandler(
 			p.Dep(h.FilamentCalculator, h.Sender)
 		},
 		GetJet: func(p *proc.GetJet) {
-			p.Dep.Jets = h.JetStorage
-			p.Dep.Sender = h.Sender
+			p.Dep(
+				h.JetStorage,
+				h.Sender,
+			)
 		},
 		HotObjects: func(p *proc.HotObjects) {
 			p.Dep.DropModifier = h.DropModifier

@@ -33,6 +33,7 @@ const (
 	TypeError
 	TypeID
 	TypeIDs
+	TypeJet
 	TypeState
 	TypeGetObject
 	TypePassState
@@ -163,6 +164,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *IDs:
 		pl.Polymorph = uint32(TypeIDs)
 		return pl.Marshal()
+	case *Jet:
+		pl.Polymorph = uint32(TypeJet)
+		return pl.Marshal()
 	case *State:
 		pl.Polymorph = uint32(TypeState)
 		return pl.Marshal()
@@ -281,6 +285,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeIDs:
 		pl := IDs{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeJet:
+		pl := Jet{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	case TypeState:

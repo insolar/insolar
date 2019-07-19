@@ -322,7 +322,7 @@ type FilamentCalculatorDefault struct {
 	cache       *cacheStore
 	indexes     object.IndexAccessor
 	coordinator jet.Coordinator
-	jetFetcher  jet.Fetcher
+	jetFetcher  JetFetcher
 	sender      bus.Sender
 }
 
@@ -330,7 +330,7 @@ func NewFilamentCalculator(
 	indexes object.IndexAccessor,
 	records object.RecordAccessor,
 	coordinator jet.Coordinator,
-	jetFetcher jet.Fetcher,
+	jetFetcher JetFetcher,
 	sender bus.Sender,
 ) *FilamentCalculatorDefault {
 	return &FilamentCalculatorDefault{
@@ -650,7 +650,7 @@ type fetchingIterator struct {
 	objectID             insolar.ID
 	readUntil, calcPulse insolar.PulseNumber
 
-	jetFetcher  jet.Fetcher
+	jetFetcher  JetFetcher
 	coordinator jet.Coordinator
 	sender      bus.Sender
 }
@@ -781,7 +781,7 @@ func newFetchingIterator(
 	cache *filamentCache,
 	objectID, from insolar.ID,
 	readUntil insolar.PulseNumber,
-	fetcher jet.Fetcher,
+	fetcher JetFetcher,
 	coordinator jet.Coordinator,
 	sender bus.Sender,
 ) *fetchingIterator {
