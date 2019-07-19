@@ -223,7 +223,7 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, inMsg insolar.
 	return rep.Object, nil
 }
 
-func (cr *ContractRequester) result(ctx context.Context, msg *message.ReturnResults) insolar.Reply {
+func (cr *ContractRequester) result(ctx context.Context, msg *message.ReturnResults) error {
 	cr.ResultMutex.Lock()
 	defer cr.ResultMutex.Unlock()
 
@@ -236,12 +236,12 @@ func (cr *ContractRequester) result(ctx context.Context, msg *message.ReturnResu
 			return cr.lr.AddUnwantedResponse(ctx, msg)
 		}
 		inslogger.FromContext(ctx).Warn("drop unwanted ", msg.RequestRef.String())
-		return &reply.OK{}
+		return nil
 	}
 
 	c <- msg
 	delete(cr.ResultMap, reqHash)
-	return &reply.OK{}
+	return nil
 }
 
 func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
@@ -253,6 +253,10 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel insolar.P
 	ctx, span := instracer.StartSpan(ctx, "ContractRequester.ReceiveResult")
 	defer span.End()
 
-	return cr.result(ctx, msg), nil
+	err := cr.result(ctx, msg)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ReceiveResult ]")
+	}
 
+	return &reply.OK{}, nil
 }

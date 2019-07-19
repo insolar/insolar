@@ -1,29 +1,50 @@
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
 package logicrunner
 
 import (
+	"context"
 	"sync"
 
-	"context"
-
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/pkg/errors"
 )
 
+type ResultMatcher interface {
+	AddStillExecution(ctx context.Context, msg *message.StillExecuting)
+	AddUnwantedResponse(ctx context.Context, msg *message.ReturnResults) error
+	Clear()
+}
+
 type resultsMatcher struct {
 	lr                *LogicRunner
-	lock              *sync.RWMutex
+	lock              sync.RWMutex
 	executionNodes    map[insolar.Reference]insolar.Reference
 	unwantedResponses map[insolar.Reference]message.ReturnResults
 }
 
-func newResultsMatcher(lr *LogicRunner) resultsMatcher {
-	return resultsMatcher{
+func newResultsMatcher(lr *LogicRunner) *resultsMatcher {
+	return &resultsMatcher{
 		lr:                lr,
-		lock:              &sync.RWMutex{},
+		lock:              sync.RWMutex{},
 		executionNodes:    make(map[insolar.Reference]insolar.Reference),
 		unwantedResponses: make(map[insolar.Reference]message.ReturnResults),
 	}
@@ -51,48 +72,46 @@ func (rm *resultsMatcher) AddStillExecution(ctx context.Context, msg *message.St
 		if response, ok := rm.unwantedResponses[reqRef]; ok {
 			inslogger.FromContext(ctx).Debug("[ resultsMatcher::AddStillExecution ] resend unwanted response ", reqRef)
 			go rm.send(ctx, &response, &msg.Executor)
-			delete(rm.executionNodes, reqRef)
-			continue
+		} else {
+			rm.executionNodes[reqRef] = msg.Executor
 		}
-		rm.executionNodes[reqRef] = msg.Executor
 	}
 }
 
-var flowCancelledError = &reply.Error{
-	ErrType: reply.FlowCancelled,
-}
-
-func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg insolar.Message) insolar.Reply {
+func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg *message.ReturnResults) error {
 	rm.lock.Lock()
 	defer rm.lock.Unlock()
-	pulse, err := rm.lr.PulseAccessor.Latest(ctx)
+	object := *msg.Target.Record()
+
+	err := rm.isStillExecutor(ctx, object)
 	if err != nil {
-		return flowCancelledError
-	}
-	response := msg.(*message.ReturnResults)
-	node, err := rm.lr.JetCoordinator.VirtualExecutorForObject(ctx, *response.Target.Record(), pulse.PulseNumber)
-	if err != nil {
-		return flowCancelledError
-	}
-	if *node != rm.lr.JetCoordinator.Me() {
-		return flowCancelledError
-	}
-	if node, ok := rm.executionNodes[response.Reason]; ok {
-		inslogger.FromContext(ctx).Debug("[ resultsMatcher::AddUnwantedResponse ] resend unwanted response ", response.Reason)
-		go rm.send(ctx, response, &node)
-		delete(rm.unwantedResponses, response.Reason)
-		return &reply.OK{}
+		return err
 	}
 
-	newPulse, err := rm.lr.PulseAccessor.Latest(ctx)
+	if node, ok := rm.executionNodes[msg.Reason]; ok {
+		inslogger.FromContext(ctx).Debug("[ resultsMatcher::AddUnwantedResponse ] resend unwanted response ", msg.Reason)
+		go rm.send(ctx, msg, &node)
+		delete(rm.unwantedResponses, msg.Reason)
+		return nil
+	}
+
+	return rm.isStillExecutor(ctx, object)
+}
+
+// isStillExecutor is tmp solution. Needs to be moved on flow
+func (rm *resultsMatcher) isStillExecutor(ctx context.Context, object insolar.ID) error {
+	pulse, err := rm.lr.PulseAccessor.Latest(ctx)
 	if err != nil {
-		return flowCancelledError
+		return flow.ErrCancelled
 	}
-	if newPulse.PulseNumber == pulse.PulseNumber {
-		rm.unwantedResponses[response.Reason] = *response
-		return &reply.OK{}
+	node, err := rm.lr.JetCoordinator.VirtualExecutorForObject(ctx, object, pulse.PulseNumber)
+	if err != nil {
+		return flow.ErrCancelled
 	}
-	return flowCancelledError
+	if *node != rm.lr.JetCoordinator.Me() {
+		return flow.ErrCancelled
+	}
+	return nil
 }
 
 func (rm *resultsMatcher) Clear() {
