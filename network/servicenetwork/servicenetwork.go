@@ -347,6 +347,18 @@ func (n *ServiceNetwork) shoudIgnorePulse(newPulse insolar.Pulse) bool {
 func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insolar.Pulse, pulseStartTime time.Time) {
 	logger := inslogger.FromContext(ctx)
 
+	defer func() {
+		if n.NodeKeeper.IsBootstrapped() && n.Gateway().GetState() == insolar.CompleteNetworkState {
+			if !n.Rules.CheckMinRole() {
+				logger.Fatal("CheckMinRole() failed")
+			}
+
+			if ok, _ := n.Rules.CheckMajorityRule(); !ok {
+				logger.Fatal("CheckMajorityRule() failed")
+			}
+		}
+	}()
+
 	if !n.cfg.Service.ConsensusEnabled {
 		logger.Warn("Consensus is disabled")
 		return
@@ -356,10 +368,6 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insol
 		errMsg := "Failed to pass consensus: " + err.Error()
 		logger.Error(errMsg)
 		n.SetGateway(n.Gateway().NewGateway(insolar.NoNetworkState))
-	}
-
-	if n.Gateway().GetState() == insolar.CompleteNetworkState && !n.Rules.CheckMinRole() {
-		logger.Fatalf("Minroles failed")
 	}
 
 }
