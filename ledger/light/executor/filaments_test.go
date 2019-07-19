@@ -550,6 +550,192 @@ func TestFilamentCalculatorDefault_Requests(t *testing.T) {
 	})
 }
 
+type components struct {
+	indexes     object.IndexStorage
+	records     object.RecordStorage
+	coordinator *jet.CoordinatorMock
+	fetcher     *jet.FetcherMock
+	sender      *bus.SenderMock
+	pcs         insolar.PlatformCryptographyScheme
+	calculator  *executor.FilamentCalculatorDefault
+}
+
+func newComponents(mc *minimock.Controller) components {
+	c := components{
+		indexes:     object.NewIndexStorageMemory(),
+		records:     object.NewRecordMemory(),
+		coordinator: jet.NewCoordinatorMock(mc),
+		fetcher:     jet.NewFetcherMock(mc),
+		sender:      bus.NewSenderMock(mc),
+		pcs:         testutils.NewPlatformCryptographyScheme(),
+	}
+	c.calculator = executor.NewFilamentCalculator(
+		c.indexes, c.records, c.coordinator, c.fetcher, c.sender)
+	return c
+}
+
+func pn(offset int) insolar.PulseNumber {
+	return insolar.PulseNumber(insolar.FirstPulseNumber + offset)
+}
+
+func (b *filamentBuilder) appendInRequest(pn insolar.PulseNumber) record.CompositeFilamentRecord {
+	return b.Append(pn, record.IncomingRequest{
+		Nonce:    rand.Uint64(),
+		CallType: record.CTMethod,
+	})
+}
+
+func (b *filamentBuilder) appendOutRequest(pn insolar.PulseNumber, reason insolar.ID, mode record.ReturnMode) record.CompositeFilamentRecord {
+	return b.Append(pn, record.OutgoingRequest{
+		Reason:     *insolar.NewReference(reason),
+		ReturnMode: mode,
+	})
+}
+
+func (b *filamentBuilder) appendResult(pn insolar.PulseNumber, requestID insolar.ID) record.CompositeFilamentRecord {
+	return b.Append(pn, record.Result{
+		Request: *insolar.NewReference(requestID),
+	})
+}
+
+// setIndex creates index with settings for scanning all pending records from start.
+func (b *filamentBuilder) setIndex(ctx context.Context, indexes object.IndexStorage) (insolar.ID, error) {
+	objectID := gen.ID()
+	err := indexes.SetIndex(ctx, *b.earliestOpenRequest, record.Index{
+		ObjID: objectID,
+		Lifeline: record.Lifeline{
+			PendingPointer:      b.pendingPointer,
+			EarliestOpenRequest: b.earliestOpenRequest,
+		},
+	})
+	return objectID, err
+}
+
+func TestFilamentCalculatorDefault_PendingRequests_RequestOnly(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	c := newComponents(mc)
+	b := newFilamentBuilder(ctx, c.pcs, c.records)
+
+	inRequest1 := b.appendInRequest(pn(1))
+	inRequestID1 := inRequest1.RecordID
+
+	objectID, err := b.setIndex(ctx, c.indexes)
+	require.NoError(t, err)
+
+	recs, err := c.calculator.PendingRequests(ctx, *b.earliestOpenRequest, objectID)
+	require.NoError(t, err)
+	require.Equal(t, []insolar.ID{inRequestID1}, recs, "request in pendings")
+
+	mc.Finish()
+}
+
+func TestFilamentCalculatorDefault_PendingRequests_RequestWithDetached(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	c := newComponents(mc)
+	b := newFilamentBuilder(ctx, c.pcs, c.records)
+
+	inRequest1 := b.appendInRequest(pn(1))
+	inRequestID1 := inRequest1.RecordID
+
+	outRequestDetached1 := b.appendOutRequest(pn(2), inRequestID1, record.ReturnSaga)
+	outRequestDetachedID1 := outRequestDetached1.RecordID
+
+	objectID, err := b.setIndex(ctx, c.indexes)
+	require.NoError(t, err)
+
+	recs, err := c.calculator.PendingRequests(ctx, *b.earliestOpenRequest, objectID)
+	require.NoError(t, err)
+	require.Equal(t, []insolar.ID{inRequestID1, outRequestDetachedID1}, recs,
+		"single unclosed request with detached outgoing (both are pendings)")
+
+	mc.Finish()
+}
+
+func TestFilamentCalculatorDefault_PendingRequests_RequestWithNotDetached(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	c := newComponents(mc)
+	b := newFilamentBuilder(ctx, c.pcs, c.records)
+
+	inRequest1 := b.appendInRequest(pn(1))
+	inRequestID1 := inRequest1.RecordID
+
+	_ = b.appendOutRequest(pn(2), inRequestID1, record.ReturnResult)
+
+	objectID, err := b.setIndex(ctx, c.indexes)
+	require.NoError(t, err)
+
+	recs, err := c.calculator.PendingRequests(ctx, *b.earliestOpenRequest, objectID)
+	require.NoError(t, err)
+	require.Equal(t, []insolar.ID{inRequestID1}, recs,
+		"single unclosed request with not detached outgoing (request is only pending)")
+
+	mc.Finish()
+}
+
+func TestFilamentCalculatorDefault_RequestWithDetachedAndResult(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	c := newComponents(mc)
+	b := newFilamentBuilder(ctx, c.pcs, c.records)
+
+	inRequest1 := b.appendInRequest(pn(1))
+	inRequestID1 := inRequest1.RecordID
+	_ = b.appendOutRequest(pn(2), inRequestID1, record.ReturnSaga)
+	_ = b.appendResult(pn(2), inRequestID1)
+
+	objectID, err := b.setIndex(ctx, c.indexes)
+	require.NoError(t, err)
+
+	recs, err := c.calculator.PendingRequests(ctx, *b.earliestOpenRequest, objectID)
+	require.NoError(t, err)
+	require.Equal(t, []insolar.ID{}, recs, "in-request with result detached out-request, as result no pendings")
+
+	mc.Finish()
+}
+
+func TestFilamentCalculatorDefault_RequestWithResult(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	c := newComponents(mc)
+	b := newFilamentBuilder(ctx, c.pcs, c.records)
+
+	inRequest1 := b.appendInRequest(pn(1))
+	_ = b.appendResult(pn(2), inRequest1.RecordID)
+
+	objectID, err := b.setIndex(ctx, c.indexes)
+	require.NoError(t, err)
+
+	recs, err := c.calculator.PendingRequests(ctx, *b.earliestOpenRequest, objectID)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(recs), "no pendings if request with result")
+
+	mc.Finish()
+}
+
+func TestFilamentCalculatorDefault2_RequestWithResultAndNotDetachedOutgoing(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	c := newComponents(mc)
+	b := newFilamentBuilder(ctx, c.pcs, c.records)
+
+	inRequest1 := b.appendInRequest(pn(1))
+	inRequestID1 := inRequest1.RecordID
+	_ = b.appendOutRequest(pn(2), inRequestID1, record.ReturnResult)
+	_ = b.appendResult(pn(2), inRequestID1)
+
+	objectID, err := b.setIndex(ctx, c.indexes)
+	require.NoError(t, err)
+
+	recs, err := c.calculator.PendingRequests(ctx, *b.earliestOpenRequest, objectID)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(recs), "no pendings")
+
+	mc.Finish()
+}
+
 func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 	t.Parallel()
 	mc := minimock.NewController(t)
@@ -1067,6 +1253,11 @@ type filamentBuilder struct {
 	currentID insolar.ID
 	ctx       context.Context
 	pcs       insolar.PlatformCryptographyScheme
+
+	// store anchors for setIndex method
+	appends             int
+	pendingPointer      *insolar.ID
+	earliestOpenRequest *insolar.PulseNumber
 }
 
 func newFilamentBuilder(
@@ -1128,5 +1319,10 @@ func (b *filamentBuilder) append(pn insolar.PulseNumber, rec record.Record, pers
 
 	b.currentID = composite.MetaID
 
+	if b.appends == 0 {
+		b.earliestOpenRequest = &pn
+	}
+	b.pendingPointer = &composite.MetaID
+	b.appends++
 	return composite
 }
