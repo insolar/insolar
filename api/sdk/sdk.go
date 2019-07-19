@@ -133,7 +133,7 @@ func (sdk *SDK) SetLogLevel(logLevel string) error {
 func (sdk *SDK) sendRequest(ctx context.Context, method string, params map[string]interface{}, userCfg *requester.UserConfigJSON) ([]byte, error) {
 	reqCfg := &requester.Request{
 		Params:   requester.Params{CallParams: params, CallSite: method, PublicKey: userCfg.PublicKey},
-		Method:   "api.Call",
+		Method:   "api.call",
 		LogLevel: sdk.logLevel.(string),
 	}
 
@@ -176,21 +176,31 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 	}
 	publicKeyStr := string(publicKey)
 
-	userConfig, err := requester.CreateUserConfig(sdk.rootMember.Caller, privateKeyStr, publicKeyStr)
+	userConfig, err := requester.CreateUserConfig("", privateKeyStr, publicKeyStr)
 	if err != nil {
 		return nil, "", errors.Wrap(err, "failed to create user config for request")
 	}
 
 	response, err := sdk.DoRequest(
 		userConfig,
-		"contract.createMember",
+		"member.create",
 		map[string]interface{}{},
 	)
 	if err != nil {
 		return nil, "", errors.Wrap(err, "request was failed ")
 	}
 
-	return NewMember(response.ContractResult.(string), privateKeyStr, publicKeyStr), response.TraceID, nil
+	var memberRef string
+	var contractResultCasted map[string]interface{}
+	var ok bool
+	if contractResultCasted, ok = response.ContractResult.(map[string]interface{}); !ok {
+		return nil, "", errors.Errorf("failed to cast result: expected map[string]interface{}, got %T", response.ContractResult)
+	}
+	if memberRef, ok = contractResultCasted["reference"].(string); !ok {
+		return nil, "", errors.Errorf("failed to cast reference: expected string, got %T", contractResultCasted["reference"])
+	}
+
+	return NewMember(memberRef, privateKeyStr, publicKeyStr), response.TraceID, nil
 }
 
 // AddBurnAddresses method add burn addresses
@@ -220,7 +230,7 @@ func (sdk *SDK) Transfer(amount string, from *Member, to *Member) (string, error
 	}
 	response, err := sdk.DoRequest(
 		userConfig,
-		"wallet.transfer",
+		"member.transfer",
 		map[string]interface{}{"amount": amount, "toMemberReference": to.Reference},
 	)
 	if err != nil {

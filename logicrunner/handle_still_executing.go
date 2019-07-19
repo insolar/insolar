@@ -19,9 +19,11 @@ package logicrunner
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
@@ -29,45 +31,40 @@ import (
 type HandleStillExecuting struct {
 	dep *Dependencies
 
-	Message bus.Message
+	Message payload.Meta
+	Parcel  insolar.Parcel
 }
 
 func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
-	parcel := h.Message.Parcel
-	ctx = loggerWithTargetID(ctx, parcel)
+	logger := inslogger.FromContext(ctx)
 	lr := h.dep.lr
+	replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})
+
 	inslogger.FromContext(ctx).Debug("HandleStillExecuting.Present starts ...")
-	replyOk := bus.Reply{Reply: &reply.OK{}, Err: nil}
 
-	msg := parcel.Message().(*message.StillExecuting)
+	msg := h.Parcel.Message().(*message.StillExecuting)
 	ref := msg.DefaultTarget()
-	os := lr.StateStorage.UpsertObjectState(*ref)
+	broker := lr.StateStorage.UpsertExecutionState(*ref)
+	es := &broker.executionState
 
-	inslogger.FromContext(ctx).Debug("Got information that ", ref, " is still executing")
+	logger.Debugf("Got information that %s is still executing", ref.String())
 
-	os.Lock()
-	if os.ExecutionState == nil {
+	es.Lock()
+	switch es.pending {
+	case insolar.NotPending:
+		// It might be when StillExecuting comes after PendingFinished
+		logger.Error("got StillExecuting message, but our state says that it's not in pending")
+	case insolar.InPending:
+		es.PendingConfirmed = true
+	case insolar.PendingUnknown:
 		// we are first, strange, soon ExecuteResults message should come
-		os.ExecutionState = NewExecutionState(*ref)
-		os.ExecutionState.pending = message.InPending
-		os.ExecutionState.PendingConfirmed = true
-		os.ExecutionState.RegisterLogicRunner(lr)
-	} else {
-		es := os.ExecutionState
-		es.Lock()
-		if es.pending == message.NotPending {
-			// It might be when StillExecuting comes after PendingFinished
-			inslogger.FromContext(ctx).Error(
-				"got StillExecuting message, but our state says that it's not in pending",
-			)
-		} else {
-			es.PendingConfirmed = true
-		}
-		es.Unlock()
+		es.pending = insolar.InPending
+		es.PendingConfirmed = true
 	}
-	os.Unlock()
 
-	h.Message.ReplyTo <- replyOk
+	es.Unlock()
+	h.dep.Sender.Reply(ctx, h.Message, replyOk)
+
 	return nil
 
 }

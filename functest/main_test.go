@@ -42,7 +42,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-const HOST = "http://localhost:19101"
+const HOST = "http://localhost:19102"
 const HOST_DEBUG = "http://localhost:8001"
 const TestAPIURL = HOST + "/api"
 const TestRPCUrl = TestAPIURL + "/rpc"

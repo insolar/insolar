@@ -23,7 +23,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -75,8 +74,6 @@ type Scope struct {
 	PulseNumber insolar.PulseNumber
 
 	PCS insolar.PlatformCryptographyScheme
-
-	BlobStorage blob.Storage
 
 	RecordModifier object.RecordModifier
 	RecordAccessor object.RecordAccessor
@@ -273,22 +270,6 @@ func (m *Scope) setRecord(ctx context.Context, rec record.Virtual) (*insolar.ID,
 	return id, m.RecordModifier.Set(ctx, *id, matRec)
 }
 
-func (m *Scope) setBlob(ctx context.Context, memory []byte) (*insolar.ID, error) {
-	blobID := object.CalculateIDForBlob(m.PCS, m.PulseNumber, memory)
-	err := m.BlobStorage.Set(
-		ctx,
-		*blobID,
-		blob.Blob{
-			JetID: insolar.ZeroJetID,
-			Value: memory,
-		},
-	)
-	if err != nil && err != blob.ErrOverride {
-		return nil, err
-	}
-	return blobID, nil
-}
-
 func (m *Scope) registerChild(
 	ctx context.Context,
 	obj insolar.Reference,
@@ -296,8 +277,6 @@ func (m *Scope) registerChild(
 	prevChild *insolar.ID,
 	asType *insolar.Reference,
 ) error {
-
-	var jetID = insolar.ID(insolar.ZeroJetID)
 	idx, err := m.IndexAccessor.ForID(ctx, m.PulseNumber, *parent.Record())
 	if err != nil {
 		return err
@@ -327,7 +306,6 @@ func (m *Scope) registerChild(
 		idx.Lifeline.SetDelegate(*asType, obj)
 	}
 	idx.Lifeline.LatestUpdate = m.PulseNumber
-	idx.Lifeline.JetID = insolar.JetID(jetID)
 	return m.IndexModifier.SetIndex(ctx, m.PulseNumber, idx)
 }
 
@@ -337,7 +315,6 @@ func (m *Scope) updateStateObject(
 	stateObject record.State,
 	memory []byte,
 ) error {
-	var jetID = insolar.ID(insolar.ZeroJetID)
 	var virtRecord record.Virtual
 
 	switch so := stateObject.(type) {
@@ -361,8 +338,8 @@ func (m *Scope) updateStateObject(
 			return errors.Wrap(err, "index not found for updating non Activation state object")
 		}
 		// We are activating the object. There is no index for it yet.
-		idx = object.FilamentIndex{
-			Lifeline:       object.Lifeline{StateID: record.StateUndefined},
+		idx = record.Index{
+			Lifeline:       record.Lifeline{StateID: record.StateUndefined},
 			PendingRecords: []insolar.ID{},
 			ObjID:          *objRef.Record(),
 		}
@@ -380,7 +357,6 @@ func (m *Scope) updateStateObject(
 	if stateObject.ID() == record.StateActivation {
 		idx.Lifeline.Parent = stateObject.(record.Activate).Parent
 	}
-	idx.Lifeline.JetID = insolar.JetID(jetID)
 	err = m.IndexModifier.SetIndex(ctx, m.PulseNumber, idx)
 	if err != nil {
 		return errors.Wrap(err, "fail set index for state object")

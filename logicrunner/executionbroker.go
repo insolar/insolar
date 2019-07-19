@@ -18,30 +18,80 @@ package logicrunner
 
 import (
 	"context"
+	"fmt"
 	"sync"
+	"sync/atomic"
 
-	"github.com/pkg/errors"
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 )
+
+type TranscriptDequeueElement struct {
+	prev  *TranscriptDequeueElement
+	next  *TranscriptDequeueElement
+	value *Transcript
+}
 
 // TODO: probably it's better to rewrite it using linked list
 type TranscriptDequeue struct {
-	lock  sync.Mutex
-	queue []*Transcript
+	lock   sync.Locker
+	first  *TranscriptDequeueElement
+	last   *TranscriptDequeueElement
+	length int
+}
+
+func (d *TranscriptDequeue) pushOne(el *Transcript) {
+	newElement := &TranscriptDequeueElement{value: el}
+	lastElement := d.last
+
+	if lastElement != nil {
+		newElement.prev = lastElement
+		lastElement.next = newElement
+		d.last = newElement
+	} else {
+		d.first, d.last = newElement, newElement
+	}
+
+	d.length++
 }
 
 func (d *TranscriptDequeue) Push(els ...*Transcript) {
 	d.lock.Lock()
-	d.queue = append(d.queue, els...)
-	d.lock.Unlock()
+	defer d.lock.Unlock()
+
+	for _, el := range els {
+		d.pushOne(el)
+	}
+}
+
+func (d *TranscriptDequeue) prependOne(el *Transcript) {
+	newElement := &TranscriptDequeueElement{value: el}
+	firstElement := d.first
+
+	if firstElement != nil {
+		newElement.next = firstElement
+		firstElement.prev = newElement
+		d.first = newElement
+	} else {
+		d.first, d.last = newElement, newElement
+	}
+
+	d.length++
 }
 
 func (d *TranscriptDequeue) Prepend(els ...*Transcript) {
 	d.lock.Lock()
-	d.queue = append(els, d.queue...)
-	d.lock.Unlock()
+	defer d.lock.Unlock()
+
+	for i := len(els) - 1; i >= 0; i-- {
+		d.prependOne(els[i])
+	}
 }
 
 func (d *TranscriptDequeue) Pop() *Transcript {
@@ -56,105 +106,187 @@ func (d *TranscriptDequeue) Has(ref insolar.Reference) bool {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	for pos := len(d.queue) - 1; pos >= 0; pos-- {
-		if d.queue[pos].RequestRef.Compare(ref) == 0 {
+	for elem := d.first; elem != nil; elem = elem.next {
+		if elem.value.RequestRef.Compare(ref) == 0 {
 			return true
 		}
 	}
 	return false
 }
 
-func (d *TranscriptDequeue) PopByReference(ref *insolar.Reference) *Transcript {
+func (d *TranscriptDequeue) PopByReference(ref insolar.Reference) *Transcript {
 	d.lock.Lock()
-	toDelete := -1
-	for pos := len(d.queue) - 1; pos >= 0; pos-- {
-		if d.queue[pos].RequestRef.Compare(*ref) == 0 {
-			toDelete = pos
-			break
+	defer d.lock.Unlock()
+
+	for elem := d.first; elem != nil; elem = elem.next {
+		if elem.value.RequestRef.Compare(ref) == 0 {
+			if elem.prev != nil {
+				elem.prev.next = elem.next
+			} else {
+				d.first = elem.next
+			}
+			if elem.next != nil {
+				elem.next.prev = elem.prev
+			} else {
+				d.last = elem.prev
+			}
+
+			d.length--
+
+			return elem.value
 		}
 	}
-	var rv *Transcript
-	if toDelete != -1 {
-		rv = d.queue[toDelete]
-		d.queue = append(d.queue[:toDelete], d.queue[toDelete+1:]...)
-	}
-	d.lock.Unlock()
-	return rv
+
+	return nil
 }
 
 func (d *TranscriptDequeue) HasFromLedger() *Transcript {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	for _, t := range d.queue {
-		if t.FromLedger {
-			return t
+	for elem := d.first; elem != nil; elem = elem.next {
+		if elem.value.FromLedger {
+			return elem.value
 		}
 	}
 	return nil
+}
+
+func (d *TranscriptDequeue) commonPeek(count int) (*TranscriptDequeueElement, []*Transcript) {
+	if d.length < count {
+		count = d.length
+	}
+
+	rv := make([]*Transcript, count)
+
+	var lastElement *TranscriptDequeueElement
+	for i := 0; i < count; i++ {
+		if lastElement == nil {
+			lastElement = d.first
+		} else {
+			lastElement = lastElement.next
+		}
+		rv[i] = lastElement.value
+	}
+
+	return lastElement, rv
+}
+
+func (d *TranscriptDequeue) take(count int) []*Transcript {
+	lastElement, rv := d.commonPeek(count)
+	if lastElement != nil {
+		if lastElement.next == nil {
+			d.first, d.last = nil, nil
+		} else {
+			lastElement.next.prev, d.first = nil, lastElement.next
+			lastElement.next = nil
+		}
+
+		d.length -= len(rv)
+	}
+
+	return rv
+}
+
+func (d *TranscriptDequeue) Peek(count int) []*Transcript {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+
+	_, rv := d.commonPeek(count)
+	return rv
 }
 
 func (d *TranscriptDequeue) Take(count int) []*Transcript {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	size := len(d.queue)
-	if size < count {
-		count = size
-	}
-
-	elements := d.queue[:count]
-	d.queue = d.queue[count:]
-
-	return elements
+	return d.take(count)
 }
 
 func (d *TranscriptDequeue) Rotate() []*Transcript {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	rv := d.queue
-	d.queue = make([]*Transcript, 0)
-
-	return rv
+	return d.take(d.length)
 }
 
-func (d *TranscriptDequeue) Len() int {
+func (d *TranscriptDequeue) Length() int {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	return len(d.queue)
+	return d.length
 }
 
 func NewTranscriptDequeue() *TranscriptDequeue {
 	return &TranscriptDequeue{
-		lock:  sync.Mutex{},
-		queue: make([]*Transcript, 0),
+		lock:   &sync.Mutex{},
+		first:  nil,
+		last:   nil,
+		length: 0,
 	}
 }
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner.ExecutionBrokerMethods -o ./ -s _mock.go
-type ExecutionBrokerMethods interface {
-	Check(context.Context) error
-	Execute(context.Context, *Transcript) error
+type ExecutionState struct {
+	sync.Mutex
+
+	// TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
+	pending              insolar.PendingState
+	PendingConfirmed     bool
+	HasPendingCheckMutex sync.Mutex
+}
+
+// PendingNotConfirmed checks that we were in pending and waiting
+// for previous executor to notify us that he still executes it
+//
+// Used in OnPulse to tell next executor, that it's time to continue
+// work on this object
+func (es *ExecutionState) InPendingNotConfirmed() bool {
+	return es.pending == insolar.InPending && !es.PendingConfirmed
 }
 
 type ExecutionBroker struct {
-	mutableLock sync.RWMutex
+	stateLock   sync.Locker
 	mutable     *TranscriptDequeue
 	immutable   *TranscriptDequeue
 	finished    *TranscriptDequeue
+	currentList *CurrentExecutionList
 
-	methods ExecutionBrokerMethods
+	publisher        watermillMsg.Publisher
+	requestsExecutor RequestsExecutor
+	messageBus       insolar.MessageBus
+	jetCoordinator   jet.Coordinator
+	pulseAccessor    pulse.Accessor
+	artifactsManager artifacts.Client
 
-	processActive bool
-	processLock   sync.Mutex
+	Ref insolar.Reference
+
+	executionState ExecutionState
+	// currently we need to store ES inside, so it looks like circular dependency
+	// and it is circular dependency. it will be removed, once Broker will be
+	// moved out of ES.
+
+	ledgerHasMoreRequests bool
+	requestsFetcher       RequestsFetcher
+
+	ledgerChecked sync.Once
+
+	processorActive uint32
 
 	deduplicationTable map[insolar.Reference]bool
 	deduplicationLock  sync.Mutex
 }
 
-var ErrRetryLater = errors.New("Failed to start task, retry next time")
+func (q *ExecutionBroker) tryTakeProcessor(_ context.Context) bool {
+	return atomic.CompareAndSwapUint32(&q.processorActive, 0, 1)
+}
+
+func (q *ExecutionBroker) releaseProcessor(_ context.Context) {
+	atomic.SwapUint32(&q.processorActive, 0)
+}
+
+func (q *ExecutionBroker) isActiveProcessor() bool { //nolint: unused
+	return atomic.LoadUint32(&q.processorActive) == 1
+}
 
 type ExecutionBrokerRotationResult struct {
 	Requests              []*Transcript
@@ -162,50 +294,126 @@ type ExecutionBrokerRotationResult struct {
 	LedgerHasMoreRequests bool
 }
 
-func (q *ExecutionBroker) processImmutable(ctx context.Context, transcript *Transcript) {
-	logger := inslogger.FromContext(ctx).WithField("RequestReference", transcript.RequestRef)
-
-	if err := q.methods.Check(ctx); err == nil {
-		if err := q.methods.Execute(ctx, transcript); err == nil {
-			// In case when we're in pending - we should store it to execute later
-			q.finished.Push(transcript)
-			return
-		} else if err != ErrRetryLater {
-			logger.Error("[ processImmutable ] Failed to process immutable Transcript:", err)
-			return
-		}
-	} else if err != ErrRetryLater {
-		logger.Error("[ processImmutable ] check function returned error:", err)
-		return
+func (q *ExecutionBroker) checkCurrent(_ context.Context, transcript *Transcript) {
+	if q.currentList.Has(transcript.RequestRef) {
+		panic(fmt.Sprintf("requestRef %s is already in currentList", transcript.RequestRef.String()))
 	}
-
-	// we're retrying this request later, we're in pending now
-	q.immutable.Push(transcript)
 }
 
-func (q *ExecutionBroker) isDuplicate(_ context.Context, transcript *Transcript) bool {
+func (q *ExecutionBroker) getImmutableTask(ctx context.Context) *Transcript {
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
+
+	transcript := q.immutable.Pop()
+	if transcript == nil {
+		return nil
+	}
+
+	q.checkCurrent(ctx, transcript)
+	q.currentList.SetTranscript(transcript)
+	return transcript
+}
+
+func (q *ExecutionBroker) getMutableTask(ctx context.Context) *Transcript {
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
+
+	transcript := q.mutable.Pop()
+	if transcript == nil {
+		return nil
+	}
+
+	q.checkCurrent(ctx, transcript)
+	q.currentList.SetTranscript(transcript)
+	return transcript
+}
+
+func (q *ExecutionBroker) storeCurrent(ctx context.Context, transcript *Transcript) {
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
+
+	q.checkCurrent(ctx, transcript)
+	q.currentList.SetTranscript(transcript)
+}
+
+func (q *ExecutionBroker) releaseTask(_ context.Context, transcript *Transcript) {
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
+
+	if !q.currentList.Has(transcript.RequestRef) {
+		return
+	}
+	q.currentList.Delete(transcript.RequestRef)
+
+	queue := q.mutable
+	if transcript.Request.Immutable {
+		queue = q.immutable
+	}
+
+	queue.Prepend(transcript)
+}
+
+func (q *ExecutionBroker) finishTask(ctx context.Context, transcript *Transcript) {
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
+
+	logger := inslogger.FromContext(ctx)
+
+	q.finished.Push(transcript)
+
+	if !q.currentList.Has(transcript.RequestRef) {
+		logger.Error("[ ExecutionBroker.FinishTask ] task '%s' is not in current", transcript.RequestRef.String())
+	} else {
+		q.currentList.Delete(transcript.RequestRef)
+	}
+}
+
+func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *Transcript) bool {
+	if transcript.Context != nil {
+		ctx = transcript.Context
+	} else {
+		inslogger.FromContext(ctx).Error("context in transcript is nil")
+	}
+
+	defer q.releaseTask(ctx, transcript)
+
+	if readyToExecute := q.Check(ctx); !readyToExecute {
+		return false
+	}
+
+	q.Execute(ctx, transcript)
+	// q.finishTask(ctx, transcript)
+	return true
+}
+
+func (q *ExecutionBroker) storeWithoutDuplication(_ context.Context, transcript *Transcript) bool {
 	q.deduplicationLock.Lock()
 	defer q.deduplicationLock.Unlock()
 
-	if _, ok := q.deduplicationTable[*transcript.RequestRef]; ok {
+	if _, ok := q.deduplicationTable[transcript.RequestRef]; ok {
 		return true
 	}
-	q.deduplicationTable[*transcript.RequestRef] = true
+	q.deduplicationTable[transcript.RequestRef] = true
 	return false
 }
 
 func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts ...*Transcript) {
 	for _, transcript := range transcripts {
-		if q.isDuplicate(ctx, transcript) {
+		if q.storeWithoutDuplication(ctx, transcript) {
+			inslogger.FromContext(ctx).Info(
+				"Already know about request ",
+				transcript.RequestRef.String(), ", skipping",
+			)
 			continue
 		}
 
 		if transcript.Request.Immutable {
-			go q.processImmutable(ctx, transcript)
+			q.storeCurrent(ctx, transcript)
+			go q.processTranscript(ctx, transcript)
 		} else {
-			q.mutableLock.RLock()
+			q.stateLock.Lock()
 			q.mutable.Prepend(transcript)
-			q.mutableLock.RUnlock()
+			q.stateLock.Unlock()
 		}
 	}
 	if start {
@@ -216,16 +424,21 @@ func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts .
 // One shouldn't mix immutable calls and mutable ones
 func (q *ExecutionBroker) Put(ctx context.Context, start bool, transcripts ...*Transcript) {
 	for _, transcript := range transcripts {
-		if q.isDuplicate(ctx, transcript) {
+		if q.storeWithoutDuplication(ctx, transcript) {
+			inslogger.FromContext(ctx).Info(
+				"Already know about request ",
+				transcript.RequestRef.String(), ", skipping",
+			)
 			continue
 		}
 
 		if transcript.Request.Immutable {
-			go q.processImmutable(ctx, transcript)
+			q.storeCurrent(ctx, transcript)
+			go q.processTranscript(ctx, transcript)
 		} else {
-			q.mutableLock.RLock()
+			q.stateLock.Lock()
 			q.mutable.Push(transcript)
-			q.mutableLock.RUnlock()
+			q.stateLock.Unlock()
 		}
 	}
 	if start {
@@ -233,11 +446,14 @@ func (q *ExecutionBroker) Put(ctx context.Context, start bool, transcripts ...*T
 	}
 }
 
-func (q *ExecutionBroker) get(_ context.Context) *Transcript {
-	q.mutableLock.RLock()
-	defer q.mutableLock.RUnlock()
+func (q *ExecutionBroker) IsKnownRequest(ctx context.Context, req insolar.Reference) bool {
+	q.deduplicationLock.Lock()
+	defer q.deduplicationLock.Unlock()
 
-	return q.mutable.Pop()
+	if _, ok := q.deduplicationTable[req]; ok {
+		return true
+	}
+	return false
 }
 
 func (q *ExecutionBroker) HasLedgerRequest(_ context.Context) *Transcript {
@@ -251,43 +467,40 @@ func (q *ExecutionBroker) HasLedgerRequest(_ context.Context) *Transcript {
 }
 
 func (q *ExecutionBroker) GetByReference(_ context.Context, r *insolar.Reference) *Transcript {
-	q.mutableLock.RLock()
-	defer q.mutableLock.RUnlock()
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
 
-	return q.mutable.PopByReference(r)
+	q.deduplicationLock.Lock()
+	defer q.deduplicationLock.Unlock()
+
+	delete(q.deduplicationTable, *r)
+	return q.mutable.PopByReference(*r)
 }
 
 func (q *ExecutionBroker) startProcessor(ctx context.Context) {
-	logger := inslogger.FromContext(ctx)
+	defer q.releaseProcessor(ctx)
 
 	// сhecking we're eligible to execute contracts
-	if err := q.methods.Check(ctx); err == nil {
-		// processing immutable queue (it can appear if we were in pending state)
-		// run simultaneously all immutable transcripts and forget about them
-		for elem := q.immutable.Pop(); elem != nil; elem = q.immutable.Pop() {
-			go q.processImmutable(ctx, elem)
-		}
-
-		// processing mutable queue
-		for transcript := q.get(ctx); transcript != nil; transcript = q.get(ctx) {
-			logger := logger.WithField("RequestReference", transcript.RequestRef)
-
-			if err := q.methods.Execute(ctx, transcript); err == ErrRetryLater {
-				q.Prepend(ctx, false, transcript)
-				break
-			} else if err != nil {
-				logger.Error("[ StartProcessorIfNeeded ] Failed to process transcript:", err)
-			}
-
-			q.finished.Push(transcript)
-		}
-	} else if err != ErrRetryLater {
-		logger.Error("[ StartProcessorIfNeeded ] check function returned error:", err)
+	if readyToExecute := q.Check(ctx); !readyToExecute {
+		return
 	}
 
-	q.processLock.Lock()
-	q.processActive = false
-	q.processLock.Unlock()
+	q.fetchMoreFromLedgerIfNeeded(ctx)
+
+	// processing immutable queue (it can appear if we were in pending state)
+	// run simultaneously all immutable transcripts and forget about them
+	for elem := q.getImmutableTask(ctx); elem != nil; elem = q.getImmutableTask(ctx) {
+		go q.processTranscript(ctx, elem)
+	}
+
+	// processing mutable queue
+	for transcript := q.getMutableTask(ctx); transcript != nil; transcript = q.getMutableTask(ctx) {
+		q.fetchMoreFromLedgerIfNeeded(ctx)
+
+		if !q.processTranscript(ctx, transcript) {
+			break
+		}
+	}
 }
 
 // StartProcessorIfNeeded processes queue messages in strict order
@@ -295,26 +508,38 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 func (q *ExecutionBroker) StartProcessorIfNeeded(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 
-	q.processLock.Lock()
 	// i've removed "if we have tasks here"; we can be there in two cases:
 	// 1) we've put a task into queue and automatically start processor
 	// 2) we've explicitly ask broker to be here
 	// both cases means we knew what we are doing and so it's just an
 	// unneeded optimisation
-	if !q.processActive {
+	if q.tryTakeProcessor(ctx) {
 		logger.Info("[ StartProcessorIfNeeded ] Starting a new queue processor")
-
-		q.processActive = true
 		go q.startProcessor(ctx)
 	}
-	q.processLock.Unlock()
 }
 
-// TODO: locking system (mutableLock) should be reconsidered
+func (q *ExecutionBroker) fetchMoreFromLedgerIfNeeded(ctx context.Context) {
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
+
+	if !q.ledgerHasMoreRequests {
+		return
+	}
+
+	if q.mutable.Length()+q.immutable.Length() > 3 {
+		return
+	}
+
+	q.startRequestsFetcher(ctx)
+}
+
 // TODO: probably rotation should wait till processActive == false (??)
 func (q *ExecutionBroker) Rotate(count int) *ExecutionBrokerRotationResult {
 	// take mutables, then, if we can, take immutables, if something was left -
-	q.mutableLock.Lock()
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
+
 	rv := &ExecutionBrokerRotationResult{
 		Requests:              q.mutable.Take(count),
 		Finished:              q.finished.Rotate(),
@@ -325,7 +550,7 @@ func (q *ExecutionBroker) Rotate(count int) *ExecutionBrokerRotationResult {
 		rv.Requests = append(rv.Requests, q.immutable.Take(leftCount)...)
 	}
 
-	if len(rv.Requests) > 0 && (q.mutable.Len() > 0 || q.immutable.Len() > 0) {
+	if len(rv.Requests) > 0 && (q.mutable.Length() > 0 || q.immutable.Length() > 0) {
 		rv.LedgerHasMoreRequests = true
 	}
 
@@ -336,19 +561,286 @@ func (q *ExecutionBroker) Rotate(count int) *ExecutionBrokerRotationResult {
 	q.deduplicationTable = make(map[insolar.Reference]bool)
 	q.deduplicationLock.Unlock()
 
-	q.mutableLock.Unlock()
-
 	return rv
 }
 
-func NewExecutionBroker(methods ExecutionBrokerMethods) *ExecutionBroker {
+func (q *ExecutionBroker) Check(ctx context.Context) bool {
+	logger := inslogger.FromContext(ctx)
+	es := &q.executionState
+
+	// check pending state of execution (whether we can process task or not)
+	es.Lock()
+	if es.pending == insolar.PendingUnknown {
+		logger.Debug("One shouldn't call ExecuteTranscript in case when pending state is unknown")
+		es.Unlock()
+		return false
+	} else if es.pending == insolar.InPending {
+		logger.Debug("Object in pending, wont start queue processor")
+		es.Unlock()
+		return false
+	}
+	es.Unlock()
+
+	return true
+}
+
+func (q *ExecutionBroker) checkLedgerPendingRequestsBase(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+	objectRefBytes := q.Ref.Bytes()
+
+	wmMessage := makeWMMessage(ctx, objectRefBytes, getLedgerPendingRequestMsg)
+	if err := q.publisher.Publish(InnerMsgTopic, wmMessage); err != nil {
+		logger.Warnf("can't send getLedgerPendingRequestMsg: ", err)
+	}
+}
+
+func (q *ExecutionBroker) checkLedgerPendingRequests(ctx context.Context, transcript *Transcript) {
+	if transcript == nil {
+		// Ask ledger kindly to give us next pending task and continue execution
+		// note: should be done only once
+		q.ledgerChecked.Do(func() { q.checkLedgerPendingRequestsBase(ctx) })
+	} else if transcript.FromLedger {
+		// we've already told ledger that we've processed it's task;
+		// trying to take another one
+		q.checkLedgerPendingRequestsBase(ctx)
+	}
+}
+
+func (q *ExecutionBroker) Execute(ctx context.Context, transcript *Transcript) {
+	logger := inslogger.FromContext(ctx)
+
+	reply, err := q.requestsExecutor.ExecuteAndSave(ctx, transcript)
+	if err != nil {
+		logger.Warn("contract execution error: ", err)
+	}
+
+	q.finishTask(ctx, transcript) // TODO: hack for now, later that function need to be splitted
+
+	go q.requestsExecutor.SendReply(ctx, transcript, reply, err)
+
+	// we're checking here that pulse was changed and we should send
+	// a message that we've finished processing task
+	// note: ideally we should tell here that we've stopped executing
+	//       but we only hoped that OnPulse had already told us that
+	//       pulse changed and we should stop execution
+	q.finishPendingIfNeeded(ctx)
+}
+
+func (q *ExecutionBroker) finishPending(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+
+	msg := message.PendingFinished{Reference: q.Ref}
+	_, err := q.messageBus.Send(ctx, &msg, nil)
+	if err != nil {
+		logger.Error("Unable to send PendingFinished message:", err)
+	}
+}
+
+// finishPendingIfNeeded checks whether last execution was a pending one.
+// If this is true as a side effect the function sends a PendingFinished
+// message to the current executor
+func (q *ExecutionBroker) finishPendingIfNeeded(ctx context.Context) {
+	es := &q.executionState
+
+	es.Lock()
+	defer es.Unlock()
+
+	if es.pending != insolar.InPending {
+		return
+	}
+
+	es.pending = insolar.NotPending
+	es.PendingConfirmed = false
+
+	pulseObj, err := q.pulseAccessor.Latest(ctx)
+	if err != nil {
+		inslogger.FromContext(ctx).Error("Failed to obtain latest pulse:", err)
+	}
+	me := q.jetCoordinator.Me()
+	meCurrent, _ := q.jetCoordinator.IsAuthorized(
+		ctx, insolar.DynamicRoleVirtualExecutor, *q.Ref.Record(), pulseObj.PulseNumber, me,
+	)
+	if !meCurrent {
+		go q.finishPending(ctx)
+	}
+}
+
+func (q *ExecutionBroker) onPulseWeNotNext(ctx context.Context) []insolar.Message {
+	es := &q.executionState
+	logger := inslogger.FromContext(ctx)
+
+	q.stopRequestsFetcher(ctx)
+
+	messages := make([]insolar.Message, 0)
+	sendExecResults := false
+
+	switch {
+	case !q.currentList.Empty():
+		es.pending = insolar.InPending
+		sendExecResults = true
+
+		// TODO: this should return delegation token to continue execution of the pending
+		msg := &message.StillExecuting{Reference: q.Ref}
+		messages = append(messages, msg)
+	case es.InPendingNotConfirmed():
+		logger.Warn("looks like pending executor died, continuing execution on next executor")
+		es.pending = insolar.NotPending
+		sendExecResults = true
+		q.ledgerHasMoreRequests = true
+	case q.finished.Length() > 0:
+		sendExecResults = true
+	}
+
+	// rotation results also contain finished requests
+	rotationResults := q.Rotate(maxQueueLength)
+	if len(rotationResults.Requests) > 0 || sendExecResults {
+		// TODO: we also should send when executed something for validation
+		// TODO: now validation is disabled
+		messagesQueue := convertQueueToMessageQueue(ctx, rotationResults.Requests)
+
+		// validationMsg := &message.ValidateCaseBind{
+		// 	Reference: ref,
+		// 	Requests:  requests,
+		// 	Pulse:     pulse,
+		// }
+		// messages := append(messages, validationMsg)
+
+		ledgerHasMoreRequests := q.ledgerHasMoreRequests || rotationResults.LedgerHasMoreRequests
+		resultsMsg := &message.ExecutorResults{
+			RecordRef:             q.Ref,
+			Pending:               es.pending,
+			Queue:                 messagesQueue,
+			LedgerHasMoreRequests: ledgerHasMoreRequests,
+		}
+		messages = append(messages, resultsMsg)
+	}
+
+	return messages
+}
+
+func (q *ExecutionBroker) onPulseWeNext(ctx context.Context) []insolar.Message {
+	es := &q.executionState
+	logger := inslogger.FromContext(ctx)
+
+	if !q.currentList.Empty() && es.pending == insolar.InPending {
+		// no pending should be as we are executing
+		logger.Warn("we are executing ATM, but ES marked as pending, shouldn't be")
+		es.pending = insolar.NotPending
+	} else if es.InPendingNotConfirmed() {
+		logger.Warn("looks like pending executor died, re-starting execution")
+		es.pending = insolar.NotPending
+		q.ledgerHasMoreRequests = true
+	}
+
+	es.PendingConfirmed = false
+
+	return make([]insolar.Message, 0)
+}
+
+func (q *ExecutionBroker) OnPulse(ctx context.Context, meNext bool) []insolar.Message {
+	var rv []insolar.Message
+	if q == nil {
+		return rv
+	}
+	if meNext {
+		rv = q.onPulseWeNext(ctx)
+	} else {
+		rv = q.onPulseWeNotNext(ctx)
+	}
+	return rv
+}
+
+func (q *ExecutionBroker) ResetLedgerCheck() {
+	q.ledgerChecked = sync.Once{}
+}
+
+func (q *ExecutionBroker) NoMoreRequestsOnLedger(ctx context.Context) {
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
+
+	select {
+	case <-ctx.Done():
+		inslogger.FromContext(ctx).Debug("pulse changed, skipping")
+		return
+	default:
+	}
+
+	q.ledgerHasMoreRequests = false
+	q.stopRequestsFetcher(ctx)
+}
+
+func (q *ExecutionBroker) MoreRequestsOnLedger(ctx context.Context) {
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
+
+	q.ledgerHasMoreRequests = true
+}
+
+func (q *ExecutionBroker) FetchMoreRequestsFromLedger(ctx context.Context) {
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
+
+	if !q.ledgerHasMoreRequests {
+		inslogger.FromContext(ctx).Warn("unexpected request to fetch more requests on ledger")
+	}
+
+	q.startRequestsFetcher(ctx)
+}
+
+func (q *ExecutionBroker) startRequestsFetcher(ctx context.Context) {
+	if q.requestsFetcher == nil {
+		q.requestsFetcher = NewRequestsFetcher(q.Ref, q.artifactsManager, q)
+	}
+	q.requestsFetcher.FetchPendings(ctx)
+}
+
+func (q *ExecutionBroker) stopRequestsFetcher(ctx context.Context) {
+	if q.requestsFetcher != nil {
+		q.requestsFetcher.Abort(ctx)
+		q.requestsFetcher = nil
+	}
+}
+
+
+
+//go:generate minimock -i github.com/insolar/insolar/logicrunner.ExecutionBrokerI -o ./ -s _mock.go
+
+type ExecutionBrokerI interface {
+	Prepend(ctx context.Context, start bool, transcripts ...*Transcript)
+	IsKnownRequest(ctx context.Context, req insolar.Reference) bool
+
+	MoreRequestsOnLedger(ctx context.Context)
+	NoMoreRequestsOnLedger(ctx context.Context)
+	FetchMoreRequestsFromLedger(ctx context.Context)
+}
+
+func NewExecutionBroker(
+	ref insolar.Reference,
+	publisher watermillMsg.Publisher,
+	requestsExecutor RequestsExecutor,
+	messageBus insolar.MessageBus,
+	jetCoordinator jet.Coordinator,
+	pulseAccessor pulse.Accessor,
+	artifactsManager artifacts.Client,
+) *ExecutionBroker {
 	return &ExecutionBroker{
-		mutableLock: sync.RWMutex{},
+		Ref: ref,
+
+		stateLock:   &sync.Mutex{},
 		mutable:     NewTranscriptDequeue(),
 		immutable:   NewTranscriptDequeue(),
 		finished:    NewTranscriptDequeue(),
+		currentList: NewCurrentExecutionList(),
 
-		methods: methods,
+		publisher:        publisher,
+		requestsExecutor: requestsExecutor,
+		messageBus:       messageBus,
+		jetCoordinator:   jetCoordinator,
+		pulseAccessor:    pulseAccessor,
+		artifactsManager: artifactsManager,
+
+		ledgerChecked:   sync.Once{},
+		processorActive: 0,
 
 		deduplicationLock:  sync.Mutex{},
 		deduplicationTable: make(map[insolar.Reference]bool),

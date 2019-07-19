@@ -20,48 +20,62 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/pkg/errors"
 )
 
 type GetPendingRequestID struct {
-	replyTo  chan<- bus.Reply
+	message  payload.Meta
 	msg      *message.GetPendingRequestID
 	jet      insolar.JetID
 	reqPulse insolar.PulseNumber
 
 	dep struct {
 		filaments executor.FilamentCalculator
+		sender    bus.Sender
 	}
 }
 
-func NewGetPendingRequestID(jetID insolar.JetID, replyTo chan<- bus.Reply, msg *message.GetPendingRequestID, reqPulse insolar.PulseNumber) *GetPendingRequestID {
+func NewGetPendingRequestID(jetID insolar.JetID, message payload.Meta, msg *message.GetPendingRequestID, reqPulse insolar.PulseNumber) *GetPendingRequestID {
 	return &GetPendingRequestID{
 		msg:      msg,
-		replyTo:  replyTo,
+		message:  message,
 		jet:      jetID,
 		reqPulse: reqPulse,
 	}
 }
 
-func (p *GetPendingRequestID) Dep(filaments executor.FilamentCalculator) {
+func (p *GetPendingRequestID) Dep(filaments executor.FilamentCalculator, sender bus.Sender) {
 	p.dep.filaments = filaments
+	p.dep.sender = sender
 }
 
 func (p *GetPendingRequestID) Proceed(ctx context.Context) error {
-	ids, err := p.dep.filaments.PendingRequests(ctx, flow.Pulse(ctx), p.msg.ObjectID)
+	pends, err := p.dep.filaments.PendingRequests(ctx, flow.Pulse(ctx), p.msg.ObjectID)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate pending")
 	}
-	if len(ids) == 0 {
-		p.replyTo <- bus.Reply{Reply: &reply.Error{ErrType: reply.ErrNoPendingRequests}}
+	if len(pends) == 0 {
+		msg := bus.ReplyAsMessage(ctx, &reply.Error{ErrType: reply.ErrNoPendingRequests})
+		go p.dep.sender.Reply(ctx, p.message, msg)
 		return nil
 	}
 
-	p.replyTo <- bus.Reply{Reply: &reply.ID{ID: ids[0]}}
+	if len(pends) > 100 {
+		pends = pends[:100]
+	}
+
+	ids := make([]insolar.ID, len(pends))
+	for i, pend := range pends {
+		ids[i] = pend.RecordID
+	}
+
+	m := bus.ReplyAsMessage(ctx, &reply.IDs{IDs: ids})
+	p.dep.sender.Reply(ctx, p.message, m)
 	return nil
 }

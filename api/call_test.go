@@ -54,7 +54,7 @@ type TimeoutSuite struct {
 func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 	seed, err := suite.api.SeedGenerator.Next()
 	suite.NoError(err)
-	suite.api.SeedManager.Add(*seed)
+	suite.api.SeedManager.Add(*seed, 0)
 
 	close(suite.delay)
 	suite.api.timeout = 60 * time.Second
@@ -68,7 +68,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 			JSONRPC: "2.0",
 			ID:      1,
 			Method:  "api.call",
-			Params:  requester.Params{CallSite: "contract.createMember", CallParams: map[string]interface{}{}, PublicKey: suite.user.PublicKey},
+			Params:  requester.Params{CallSite: "member.create", CallParams: map[string]interface{}{}, PublicKey: suite.user.PublicKey},
 		},
 		seedString,
 	)
@@ -84,7 +84,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
 	seed, err := suite.api.SeedGenerator.Next()
 	suite.NoError(err)
-	suite.api.SeedManager.Add(*seed)
+	suite.api.SeedManager.Add(*seed, 0)
 
 	suite.api.timeout = 1 * time.Second
 
@@ -94,7 +94,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
 		suite.ctx,
 		CallUrl,
 		suite.user,
-		&requester.Request{},
+		&requester.Request{Method: "api.call"},
 		seedString,
 	)
 	suite.NoError(err)
@@ -133,7 +133,7 @@ func TestTimeoutSuite(t *testing.T) {
 	timeoutSuite.api.timeout = 1 * time.Second
 
 	cr := testutils.NewContractRequesterMock(timeoutSuite.mc)
-	cr.SendRequestFunc = func(p context.Context, p1 *insolar.Reference, method string, p3 []interface{}) (insolar.Reply, error) {
+	cr.SendRequestWithPulseFunc = func(p context.Context, p1 *insolar.Reference, method string, p3 []interface{}, p4 insolar.PulseNumber) (insolar.Reply, error) {
 		switch method {
 		case "GetPublicKey":
 			var result = string(pKeyString)

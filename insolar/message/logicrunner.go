@@ -19,16 +19,7 @@ package message
 import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/platformpolicy"
-)
-
-type PendingState int
-
-const (
-	PendingUnknown PendingState = iota
-	NotPending
-	InPending
 )
 
 // ReturnResults - push results of methods
@@ -44,7 +35,6 @@ func (rr *ReturnResults) Type() insolar.MessageType {
 }
 
 func (rr *ReturnResults) GetCaller() *insolar.Reference {
-	log.Error("GetCaller shouldn't be called on ReturnResults message")
 	return nil
 }
 
@@ -116,12 +106,13 @@ type ExecutorResults struct {
 	Requests              []CaseBindRequest
 	Queue                 []ExecutionQueueElement
 	LedgerHasMoreRequests bool
-	Pending               PendingState
+	Pending               insolar.PendingState
 }
 
 type ExecutionQueueElement struct {
-	Parcel  insolar.Parcel
-	Request *insolar.Reference
+	RequestRef  insolar.Reference
+	Request     record.IncomingRequest
+	ServiceData ServiceData
 }
 
 // AllowedSenderObjectAndRole implements interface method
@@ -278,9 +269,10 @@ func (pf *PendingFinished) Type() insolar.MessageType {
 // for more details.
 type AdditionalCallFromPreviousExecutor struct {
 	ObjectReference insolar.Reference
-	Parcel          insolar.Parcel
-	Request         *insolar.Reference
-	Pending         PendingState
+	Pending         insolar.PendingState
+	RequestRef      insolar.Reference
+	Request         record.IncomingRequest
+	ServiceData     ServiceData
 }
 
 func (m *AdditionalCallFromPreviousExecutor) GetCaller() *insolar.Reference {

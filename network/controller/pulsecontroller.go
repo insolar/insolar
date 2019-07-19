@@ -91,7 +91,7 @@ func (pc *pulseController) Init(ctx context.Context) error {
 	return nil
 }
 
-func (pc *pulseController) processPulse(ctx context.Context, request network.Packet) (network.Packet, error) {
+func (pc *pulseController) processPulse(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 	if request.GetRequest() == nil || request.GetRequest().GetPulse() == nil {
 		return nil, errors.Errorf("process pulse: got invalid protobuf request message: %s", request)
 	}
@@ -115,7 +115,7 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Pac
 		} else {
 			newCtx = instracer.WithParentSpan(newCtx, parent)
 		}
-		go pc.PulseHandler.HandlePulse(newCtx, pulse)
+		go pc.PulseHandler.HandlePulse(newCtx, pulse, request)
 	} else {
 		inslog.Debugf("Ignore pulse %v from pulsar, waiting for consensus phase1 packet", data.Pulse)
 		skipped := atomic.AddUint32(&pc.skippedPulses, 1)

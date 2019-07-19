@@ -77,8 +77,6 @@ func getEmptyMessage(mt insolar.MessageType) (insolar.Message, error) {
 		return &AbandonedRequestsNotification{}, nil
 	case insolar.TypeGetPendingRequestID:
 		return &GetPendingRequestID{}, nil
-	case insolar.TypeGetRequest:
-		return &GetRequest{}, nil
 
 	// heavy sync
 	case insolar.TypeHeavyPayload:
@@ -207,9 +205,7 @@ func init() {
 	gob.Register(&GetPendingRequests{})
 	gob.Register(&GetJet{})
 	gob.Register(&AbandonedRequestsNotification{})
-	gob.Register(&HotData{})
 	gob.Register(&GetPendingRequestID{})
-	gob.Register(&GetRequest{})
 
 	// heavy
 	gob.Register(&HeavyPayload{})

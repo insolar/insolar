@@ -22,6 +22,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member/signer"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 
@@ -35,6 +36,18 @@ type HelloWorld struct {
 }
 
 var INSATTR_Greet_API = true
+
+type Text struct {
+	SomeText string `json:"someText"`
+}
+
+type HwMessage struct {
+	Message Text `json:"message"`
+}
+
+func (hw *HelloWorld) ReturnObj() (interface{}, error) {
+	return hwProxy.HwMessage{Message: hwProxy.Text{SomeText: "Hello world"}}, nil
+}
 
 // Greet greats the caller
 func (hw *HelloWorld) Greet(name string) (interface{}, error) {
@@ -50,6 +63,11 @@ func (hw *HelloWorld) Errored() (interface{}, error) {
 	return nil, errors.New("TestError")
 }
 
+//Get number pulse from foundation
+func (hw *HelloWorld) PulseNumber() (insolar.PulseNumber, error) {
+	return foundation.GetPulseNumber()
+}
+
 func (hw *HelloWorld) CreateChild() (interface{}, error) {
 	hwHolder := hwProxy.New()
 	chw, err := hwHolder.AsChild(hw.GetReference())
@@ -57,38 +75,6 @@ func (hw *HelloWorld) CreateChild() (interface{}, error) {
 		return nil, errors.Wrap(err, "[ HelloWorld.CreateChild ] Can't save as child")
 	}
 	return chw.GetReference().String(), nil
-}
-
-func (hw *HelloWorld) CountChild() (interface{}, error) {
-	count := 0
-
-	iterator, err := hw.NewChildrenTypedIterator(hwProxy.GetPrototype())
-	if err != nil {
-		return nil, fmt.Errorf("[ CountChild ] Can't get children: %s", err.Error())
-	}
-
-	for iterator.HasNext() {
-		cref, err := iterator.Next()
-		if err != nil {
-			return nil, fmt.Errorf("[ CountChild ] Can't get next child: %s", err.Error())
-		}
-
-		m := hwProxy.GetObject(cref)
-
-		childCountI, err := m.Count()
-		if err != nil {
-			return nil, fmt.Errorf("[ CountChild ] Can't get count of child: %s", err.Error())
-		}
-
-		childCount, ok := childCountI.(uint64)
-		if !ok {
-			return nil, fmt.Errorf("[ CountChild ] Bad childCount format, expected int got %T", childCountI)
-		}
-
-		count = count + int(childCount)
-	}
-
-	return count, nil
 }
 
 type Request struct {
@@ -104,7 +90,7 @@ type Params struct {
 	CallSite   string      `json:"callSite"`
 	CallParams interface{} `json:"callParams"`
 	Reference  string      `json:"reference"`
-	PublicKey  string      `json:"memberPubKey"`
+	PublicKey  string      `json:"publicKey"`
 }
 
 func (hw *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
@@ -132,8 +118,10 @@ func (hw *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
 		return hw.Errored()
 	case "CreateChild":
 		return hw.CreateChild()
-	case "CountChild":
-		return hw.CountChild()
+	case "ReturnObj":
+		return hw.ReturnObj()
+	case "PulseNumber":
+		return hw.PulseNumber()
 	default:
 		return nil, errors.New("Unknown method " + request.Params.CallSite)
 	}

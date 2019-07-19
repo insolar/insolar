@@ -34,8 +34,8 @@ import (
 
 type RequestsExecutor interface {
 	ExecuteAndSave(ctx context.Context, current *Transcript) (insolar.Reply, error)
-	Execute(ctx context.Context, current *Transcript) (*RequestResult, error)
-	Save(ctx context.Context, current *Transcript, res *RequestResult) (insolar.Reply, error)
+	Execute(ctx context.Context, current *Transcript) (artifacts.RequestResult, error)
+	Save(ctx context.Context, current *Transcript, res artifacts.RequestResult) (insolar.Reply, error)
 	SendReply(ctx context.Context, current *Transcript, re insolar.Reply, err error)
 }
 
@@ -68,16 +68,20 @@ func (e *requestsExecutor) ExecuteAndSave(
 		return nil, errors.Wrap(err, "couldn't save request result")
 	}
 
+	inslogger.FromContext(ctx).Debug("saved result")
+
 	return repl, nil
 }
 
 func (e *requestsExecutor) Execute(
 	ctx context.Context, transcript *Transcript,
 ) (
-	*RequestResult, error,
+	artifacts.RequestResult, error,
 ) {
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.executeLogic")
 	defer span.End()
+
+	inslogger.FromContext(ctx).Debug("Executing request")
 
 	if transcript.Request.CallType == record.CTMethod {
 		objDesc, err := e.ArtifactManager.GetObject(ctx, *transcript.Request.Object)
@@ -96,57 +100,37 @@ func (e *requestsExecutor) Execute(
 }
 
 func (e *requestsExecutor) Save(
-	ctx context.Context, transcript *Transcript, res *RequestResult,
+	ctx context.Context, transcript *Transcript, res artifacts.RequestResult,
 ) (
 	insolar.Reply, error,
 ) {
-	am := e.ArtifactManager
-	request := transcript.Request
+	inslogger.FromContext(ctx).Debug("Saving result")
 
-	switch {
-	case res.Activation:
-		err := e.ArtifactManager.ActivateObject(
-			ctx, *transcript.RequestRef, *request.Base, *request.Prototype,
-			request.CallType == record.CTSaveAsDelegate,
-			res.NewMemory,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't activate object")
-		}
-		return &reply.CallConstructor{Object: transcript.RequestRef}, err
-	case res.Deactivation:
-		err := am.DeactivateObject(
-			ctx, *transcript.RequestRef, transcript.ObjectDescriptor, res.Result,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't deactivate object")
-		}
-		return &reply.CallMethod{Result: res.Result}, nil
-	case res.NewMemory != nil:
-		err := am.UpdateObject(
-			ctx, *transcript.RequestRef, transcript.ObjectDescriptor, res.NewMemory, res.Result,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't update object")
-		}
-		return &reply.CallMethod{Result: res.Result}, nil
+	if err := e.ArtifactManager.RegisterResult(ctx, transcript.RequestRef, res); err != nil {
+		return nil, errors.Wrapf(err, "couldn't save result with %s side effect", res.Type().String())
+	}
+
+	switch res.Type() {
+	case artifacts.RequestSideEffectActivate:
+		return &reply.CallConstructor{Object: &transcript.RequestRef}, nil
 	default:
-		_, err := am.RegisterResult(ctx, *request.Object, *transcript.RequestRef, res.Result)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't save results")
-		}
-		return &reply.CallMethod{Result: res.Result}, nil
+		return &reply.CallMethod{Result: res.Result()}, nil
 	}
 }
 
 func (e *requestsExecutor) SendReply(
 	ctx context.Context, transcript *Transcript, re insolar.Reply, err error,
 ) {
-	if transcript.Request.ReturnMode != record.ReturnResult {
+	if rm := transcript.Request.ReturnMode; rm != record.ReturnResult {
+		inslogger.FromContext(ctx).Debug(
+			"Not sending result, return mode: ", rm.String(),
+		)
 		return
 	}
 
-	target := *transcript.RequesterNode
+	inslogger.FromContext(ctx).Debug("Returning result")
+
+	target := transcript.Request.Sender
 
 	errstr := ""
 	if err != nil {
@@ -156,7 +140,7 @@ func (e *requestsExecutor) SendReply(
 		ctx,
 		&message.ReturnResults{
 			Target:     target,
-			RequestRef: *transcript.RequestRef,
+			RequestRef: transcript.RequestRef,
 			Reply:      re,
 			Error:      errstr,
 		},

@@ -20,11 +20,14 @@ package functest
 
 import (
 	"fmt"
+	"strings"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSingleContract(t *testing.T) {
@@ -305,7 +308,7 @@ func (r *Two) Hello(s string) (string, error) {
 	require.Equal(t, "Hello you too, ins. 1288 times!", resp.ExtractedReply)
 }
 
-func TestBasicNotificationCall(t *testing.T) {
+func TestNoWaitCall(t *testing.T) {
 	var contractOneCode = `
 package main
 
@@ -328,7 +331,7 @@ func (r *One) Hello() error {
 		return err
 	}
 
-	err = friend.HelloNoWait()
+	err = friend.MultiplyNoWait()
 	if err != nil {
 		return err
 	}
@@ -342,7 +345,7 @@ func (r *One) Value() (int, error) {
 		return 0, err
 	}
 
-	return friend.Value()
+	return friend.GetValue()
 }
 `
 
@@ -364,12 +367,12 @@ func New() (*Two, error) {
 	return &Two{X:322}, nil
 }
 
-func (r *Two) Hello() (string, error) {
+func (r *Two) Multiply() (string, error) {
 	r.X *= 2
 	return fmt.Sprintf("Hello %d times!", r.X), nil
 }
 
-func (r *Two) Value() (int, error) {
+func (r *Two) GetValue() (int, error) {
 	return r.X, nil
 }
 `
@@ -379,8 +382,16 @@ func (r *Two) Value() (int, error) {
 	resp := callMethod(t, obj, "Hello")
 	require.Empty(t, resp.Error)
 
-	resp = callMethod(t, obj, "Value")
-	require.Empty(t, resp.Error)
+	for i := 0; i < 25; i++ {
+		resp = callMethod(t, obj, "Value")
+		require.Empty(t, resp.Error)
+
+		if float64(322) != resp.ExtractedReply {
+			break
+		}
+		time.Sleep(1000 * time.Millisecond)
+	}
+
 	require.Equal(t, float64(644), resp.ExtractedReply)
 }
 
@@ -669,9 +680,31 @@ func (r *One) Recursive() (error) {
 }
 
 `
-	obj := callConstructor(t, uploadContractOnce(t, "recursive_call_one", contractOneCode), "New")
-	resp := callMethod(t, obj, "Recursive")
-	require.Contains(t, resp.ExtractedError, "loop detected")
+	protoRef := uploadContractOnce(t, "recursive_call_one", contractOneCode)
+
+	for i := 0; i <= 5; i++ {
+		obj := callConstructor(t, protoRef, "New")
+		resp := callMethodNoChecks(t, obj, "Recursive")
+
+		errstr := resp.Error.Error()
+		if errstr != "" {
+			if strings.Contains(errstr, "timeout") {
+				continue
+			} else {
+				require.Fail(t, "Unexpected error: "+errstr)
+			}
+		}
+
+		errstr = resp.Result.ExtractedError
+		require.NotEmpty(t, errstr)
+		if strings.Contains(errstr, "loop detected") {
+			return
+		} else {
+			require.Fail(t, "Unexpected error: "+errstr)
+		}
+	}
+
+	require.Fail(t, "loop detection is broken, all requests failed with timeout")
 }
 
 func TestGetParent(t *testing.T) {

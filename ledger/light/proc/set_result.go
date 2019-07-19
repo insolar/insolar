@@ -72,6 +72,9 @@ func (p *SetResult) Dep(
 }
 
 func (p *SetResult) Proceed(ctx context.Context) error {
+	logger := inslogger.FromContext(ctx).WithField("result_id", p.resultID.DebugString())
+	logger.Debug("trying to save result")
+
 	done, err := p.dep.writer.Begin(ctx, flow.Pulse(ctx))
 	if err != nil {
 		if err == hot.ErrWriteClosed {
@@ -81,27 +84,37 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	}
 	defer done()
 
-	p.dep.locker.Lock(&p.result.Object)
-	defer p.dep.locker.Unlock(&p.result.Object)
+	p.dep.locker.Lock(p.result.Object)
+	defer p.dep.locker.Unlock(p.result.Object)
 
-	err = p.dep.filament.SetResult(ctx, p.resultID, p.jetID, p.result)
-	if err == object.ErrOverride {
-		inslogger.FromContext(ctx).Errorf("can't save record into storage: %s", err)
-		// Since there is no deduplication yet it's quite possible that there will be
-		// two writes by the same key. For this reason currently instead of reporting
-		// an error we return OK (nil error). When deduplication will be implemented
-		// we should change `nil` to `ErrOverride` here.
-		return nil
-	} else if err != nil {
+	foundRes, err := p.dep.filament.SetResult(ctx, p.resultID, p.jetID, p.result)
+	if err != nil {
 		return errors.Wrap(err, "failed to store record")
 	}
 
-	msg, err := payload.NewMessage(&payload.ID{ID: p.resultID})
+	var foundResBuf []byte
+	resultID := p.resultID
+	if foundRes != nil {
+		inslogger.FromContext(ctx).Errorf("duplicated result. resultID: %v, requestID: %v", p.resultID.DebugString(), p.result.Request.Record().DebugString())
+		foundResBuf, err = foundRes.Record.Virtual.Marshal()
+		if err != nil {
+			return err
+		}
+		resultID = foundRes.RecordID
+	}
+
+	msg, err := payload.NewMessage(&payload.ResultInfo{
+		ObjectID: p.result.Object,
+		ResultID: resultID,
+		Result:   foundResBuf,
+	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create reply")
 	}
 
-	go p.dep.sender.Reply(ctx, p.message, msg)
-
+	logger.WithFields(map[string]interface{}{
+		"duplicate": foundRes != nil,
+	}).Debug("result saved")
+	p.dep.sender.Reply(ctx, p.message, msg)
 	return nil
 }

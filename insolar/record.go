@@ -57,6 +57,13 @@ func NewID(pulse PulseNumber, hash []byte) *ID {
 	return &id
 }
 
+func NewIDFromBytes(raw []byte) *ID {
+	id := ID{}
+	copy(id[:], raw)
+
+	return &id
+}
+
 // Bytes returns byte slice of ID.
 func (id ID) Bytes() []byte {
 	return id[:]
@@ -93,7 +100,7 @@ func (id ID) IsEmpty() bool {
 	return id.Equal(ID{})
 }
 
-// IsEmpty - check for void
+// NotEmpty - check for void
 func (id ID) NotEmpty() bool {
 	return !id.IsEmpty()
 }

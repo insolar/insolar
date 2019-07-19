@@ -21,6 +21,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/stretchr/testify/require"
 )
@@ -31,13 +32,11 @@ func TestInMemoryIndex_SetIndex(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	objID := gen.ID()
 	lflID := gen.ID()
-	jetID := gen.JetID()
-	buck := FilamentIndex{
+	buck := record.Index{
 		ObjID: objID,
-		Lifeline: Lifeline{
+		Lifeline: record.Lifeline{
 			LatestState: &lflID,
-			JetID:       jetID,
-			Delegates:   []LifelineDelegate{},
+			Delegates:   []record.LifelineDelegate{},
 		},
 	}
 
@@ -65,13 +64,11 @@ func TestInMemoryIndex_SetIndex(t *testing.T) {
 		require.NoError(t, err)
 
 		sLlflID := gen.ID()
-		sJetID := gen.JetID()
-		sBuck := FilamentIndex{
+		sBuck := record.Index{
 			ObjID: objID,
-			Lifeline: Lifeline{
+			Lifeline: record.Lifeline{
 				LatestState: &sLlflID,
-				JetID:       sJetID,
-				Delegates:   []LifelineDelegate{},
+				Delegates:   []record.LifelineDelegate{},
 			},
 		}
 
@@ -99,9 +96,9 @@ func TestNewInMemoryIndex_DeleteForPN(t *testing.T) {
 
 	index := NewIndexStorageMemory()
 
-	index.buckets[fPn] = map[insolar.ID]*FilamentIndex{}
-	index.buckets[sPn] = map[insolar.ID]*FilamentIndex{}
-	index.buckets[tPn] = map[insolar.ID]*FilamentIndex{}
+	index.buckets[fPn] = map[insolar.ID]*record.Index{}
+	index.buckets[sPn] = map[insolar.ID]*record.Index{}
+	index.buckets[tPn] = map[insolar.ID]*record.Index{}
 
 	index.DeleteForPN(ctx, sPn)
 

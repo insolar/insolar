@@ -17,6 +17,7 @@
 package contractrequester
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/binary"
@@ -29,9 +30,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"encoding/hex"
-
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
@@ -42,12 +42,14 @@ import (
 
 // ContractRequester helps to call contracts
 type ContractRequester struct {
-	MessageBus     insolar.MessageBus `inject:""`
-	ResultMutex    sync.Mutex
-	ResultMap      map[[insolar.RecordHashSize]byte]chan *message.ReturnResults
-	PulseAccessor  pulse.Accessor                     `inject:""`
-	JetCoordinator jet.Coordinator                    `inject:""`
-	PCS            insolar.PlatformCryptographyScheme `inject:""`
+	MessageBus                 insolar.MessageBus                 `inject:""`
+	PulseAccessor              pulse.Accessor                     `inject:""`
+	JetCoordinator             jet.Coordinator                    `inject:""`
+	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
+
+	ResultMutex sync.Mutex
+	ResultMap   map[[insolar.RecordHashSize]byte]chan *message.ReturnResults
+
 	// callTimeout is mainly needed for unit tests which
 	// sometimes may unpredictably fail on CI with a default timeout
 	callTimeout time.Duration
@@ -59,10 +61,6 @@ func New() (*ContractRequester, error) {
 		ResultMap:   make(map[[insolar.RecordHashSize]byte]chan *message.ReturnResults),
 		callTimeout: 25 * time.Second,
 	}, nil
-}
-
-func (cr *ContractRequester) SetCallTimeout(timeout time.Duration) {
-	cr.callTimeout = timeout
 }
 
 func (cr *ContractRequester) Start(ctx context.Context) error {
@@ -82,6 +80,14 @@ func randomUint64() uint64 {
 
 // SendRequest makes synchronously call to method of contract by its ref without additional information
 func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{}) (insolar.Reply, error) {
+	pulse, err := cr.PulseAccessor.Latest(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Couldn't fetch current pulse")
+	}
+	return cr.SendRequestWithPulse(ctx, ref, method, argsIn, pulse.PulseNumber)
+}
+
+func (cr *ContractRequester) SendRequestWithPulse(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{}, pulse insolar.PulseNumber) (insolar.Reply, error) {
 	ctx, span := instracer.StartSpan(ctx, "SendRequest "+method)
 	defer span.End()
 
@@ -96,6 +102,7 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Refer
 			Method:       method,
 			Arguments:    args,
 			APIRequestID: utils.TraceID(ctx),
+			Reason:       api.MakeReason(pulse, args),
 		},
 	}
 
@@ -107,20 +114,18 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Refer
 	return routResult, nil
 }
 
-func (cr *ContractRequester) calcRequestHash(request record.IncomingRequest, hash *[insolar.RecordHashSize]byte) error {
+func (cr *ContractRequester) calcRequestHash(request record.IncomingRequest) ([insolar.RecordHashSize]byte, error) {
+	var hash [insolar.RecordHashSize]byte
+
 	virtRec := record.Wrap(request)
 	buf, err := virtRec.Marshal()
 	if err != nil {
-		return errors.Wrap(err, "[ ContractRequester::calcRequestHash ] Failed to marshal record")
-	}
-	h := cr.PCS.ReferenceHasher()
-	_, err = h.Write(buf)
-	if err != nil {
-		return errors.Wrap(err, "[ ContractRequester::calcRequestHash ] Failed to calculate hash")
+		return hash, errors.Wrap(err, "[ ContractRequester::calcRequestHash ] Failed to marshal record")
 	}
 
-	copy(hash[:], h.Sum(nil)[0:insolar.RecordHashSize])
-	return nil
+	hasher := cr.PlatformCryptographyScheme.ReferenceHasher()
+	copy(hash[:], hasher.Hash(buf)[0:insolar.RecordHashSize])
+	return hash, nil
 }
 
 func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (insolar.Reply, error) {
@@ -141,7 +146,8 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 
 	if !async {
 		cr.ResultMutex.Lock()
-		err := cr.calcRequestHash(msg.IncomingRequest, &reqHash)
+		var err error
+		reqHash, err = cr.calcRequestHash(msg.IncomingRequest)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ ContractRequester::Call ] Failed to calculate hash")
 		}
@@ -156,8 +162,8 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 		messagebus.RetryIncorrectPulse(cr.PulseAccessor),
 		messagebus.RetryFlowCancelled(cr.PulseAccessor),
 	)
-	res, err := sender(ctx, msg, nil)
 
+	res, err := sender(ctx, msg, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't dispatch event")
 	}
@@ -171,14 +177,21 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 		return res, nil
 	}
 
+	if !bytes.Equal(r.Request.Record().Hash(), reqHash[:]) {
+		return nil, errors.New("Registered request has different hash")
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, cr.callTimeout)
 	defer cancel()
 
-	inslogger.FromContext(ctx).Debug("Waiting for Method results ref=", r.Request, ". Method: ", msg.Method, ". reqRef: ", hex.EncodeToString(reqHash[:]))
+	ctx, _ = inslogger.WithField(ctx, "request", r.Request.String())
+	ctx, logger := inslogger.WithField(ctx, "method", msg.Method)
+
+	logger.Debug("Waiting results of request")
 
 	select {
 	case ret := <-ch:
-		inslogger.FromContext(ctx).Debug("Got Method results. reqRef: ", hex.EncodeToString(reqHash[:]))
+		logger.Debug("Got results of request")
 		if ret.Error != "" {
 			return nil, errors.Wrap(errors.New(ret.Error), "CallMethod returns error")
 		}
@@ -208,6 +221,22 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, inMsg insolar.
 	return rep.Object, nil
 }
 
+func (cr *ContractRequester) result(ctx context.Context, msg *message.ReturnResults) {
+	cr.ResultMutex.Lock()
+	defer cr.ResultMutex.Unlock()
+
+	var reqHash [insolar.RecordHashSize]byte
+	copy(reqHash[:], msg.RequestRef.Record().Hash())
+	c, ok := cr.ResultMap[reqHash]
+	if !ok {
+		inslogger.FromContext(ctx).Warn("unwaited results of request ", msg.RequestRef.String())
+		return
+	}
+
+	c <- msg
+	delete(cr.ResultMap, reqHash)
+}
+
 func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg, ok := parcel.Message().(*message.ReturnResults)
 	if !ok {
@@ -217,21 +246,7 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel insolar.P
 	ctx, span := instracer.StartSpan(ctx, "ContractRequester.ReceiveResult")
 	defer span.End()
 
-	cr.ResultMutex.Lock()
-	defer cr.ResultMutex.Unlock()
-
-	logger := inslogger.FromContext(ctx)
-	var reqHash [insolar.RecordHashSize]byte
-	copy(reqHash[:], msg.RequestRef.Record().Hash())
-	c, ok := cr.ResultMap[reqHash]
-	if !ok {
-		logger.Info("oops unwaited results reqRef=", hex.EncodeToString(reqHash[:]))
-		return &reply.OK{}, nil
-	}
-	logger.Debug("Got wanted results reqRef=", hex.EncodeToString(reqHash[:]))
-
-	c <- msg
-	delete(cr.ResultMap, reqHash)
+	cr.result(ctx, msg)
 
 	return &reply.OK{}, nil
 }

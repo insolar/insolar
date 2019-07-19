@@ -56,11 +56,11 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 )
 
-var defaultRoundTimings = common2.RoundTimings{
+var defaultRoundTimings = api.RoundTimings{
 	StartPhase0At: 100 * time.Millisecond, // Not scaled
 
 	StartPhase1RetryAt: 200 * time.Millisecond, // 0 for no retries
@@ -70,6 +70,12 @@ var defaultRoundTimings = common2.RoundTimings{
 
 	BeforeInPhase2ChasingDelay: 0 * time.Millisecond,
 	BeforeInPhase3ChasingDelay: 0 * time.Millisecond,
+}
+
+type LocalNodeConfiguration struct {
+	ctx            context.Context
+	timings        api.RoundTimings
+	secretKeyStore cryptkit.SecretKeyStore
 }
 
 func NewLocalNodeConfiguration(ctx context.Context, keyStore insolar.KeyStore) *LocalNodeConfiguration {
@@ -87,17 +93,11 @@ func NewLocalNodeConfiguration(ctx context.Context, keyStore insolar.KeyStore) *
 	}
 }
 
-type LocalNodeConfiguration struct {
-	ctx            context.Context
-	timings        common2.RoundTimings
-	secretKeyStore common.SecretKeyStore
-}
-
 func (c *LocalNodeConfiguration) GetParentContext() context.Context {
 	return c.ctx
 }
 
-func (c *LocalNodeConfiguration) GetConsensusTimings(nextPulseDelta uint16, isJoiner bool) common2.RoundTimings {
+func (c *LocalNodeConfiguration) GetConsensusTimings(nextPulseDelta uint16, isJoiner bool) api.RoundTimings {
 	if nextPulseDelta == 1 {
 		return c.timings
 	}
@@ -115,6 +115,12 @@ func (c *LocalNodeConfiguration) GetConsensusTimings(nextPulseDelta uint16, isJo
 	return t
 }
 
-func (c *LocalNodeConfiguration) GetSecretKeyStore() common.SecretKeyStore {
+func (c *LocalNodeConfiguration) GetSecretKeyStore() cryptkit.SecretKeyStore {
 	return c.secretKeyStore
+}
+
+type ConsensusConfiguration struct{}
+
+func NewConsensusConfiguration() *ConsensusConfiguration {
+	return &ConsensusConfiguration{}
 }

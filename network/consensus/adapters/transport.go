@@ -53,45 +53,12 @@ package adapters
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	transport2 "github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 	"github.com/insolar/insolar/network/transport"
 )
-
-type PacketBuilder struct{}
-
-func NewPacketBuilder() *PacketBuilder {
-	return &PacketBuilder{}
-}
-
-func (pb *PacketBuilder) GetNeighbourhoodSize(populationCount int) common2.NeighbourhoodSizes {
-	panic("implement me")
-}
-
-func (pb *PacketBuilder) PreparePhase0Packet(sender common2.NodeProfile, pulsarPacket common2.OriginalPulsarPacket, options core.PacketSendOptions) core.PreparedPacketSender {
-	panic("implement me")
-}
-
-func (pb *PacketBuilder) PreparePhase1Packet(sender common2.NodeProfile, pulsarPacket common2.OriginalPulsarPacket, nsh common2.NodeStateHashEvidence,
-	options core.PacketSendOptions) core.PreparedPacketSender {
-	panic("implement me")
-}
-
-func (pb *PacketBuilder) PreparePhase2Packet(sender common2.NodeProfile, pd common.PulseData, neighbourhood []packets.NodeStateHashReportReader,
-	intros []common2.NodeIntroduction, options core.PacketSendOptions) core.PreparedPacketSender {
-	panic("implement me")
-}
-
-func (pb *PacketBuilder) PreparePhase3Packet(sender common2.NodeProfile, pd common.PulseData, bitset nodeset.NodeBitset,
-	gshTrusted common2.GlobulaStateHash, gshDoubted common2.GlobulaStateHash,
-	options core.PacketSendOptions) core.PreparedPacketSender {
-	panic("implement me")
-}
 
 type PacketSender struct {
 	datagramTransport transport.DatagramTransport
@@ -103,73 +70,17 @@ func NewPacketSender(datagramTransport transport.DatagramTransport) *PacketSende
 	}
 }
 
-type payloadWrapper struct {
-	Payload interface{}
-}
-
-// TODO: signature seems to be wrong :( context missed
-func (ps *PacketSender) SendPacketToTransport(to common2.NodeProfile, sendOptions core.PacketSendOptions, payload interface{}) {
-	ctx := context.TODO()
-	addr := to.GetDefaultEndpoint().String()
+func (ps *PacketSender) SendPacketToTransport(ctx context.Context, to profiles.ActiveNode, sendOptions transport2.PacketSendOptions, payload interface{}) {
+	addr := to.GetStatic().GetDefaultEndpoint().GetNameAddress().String()
 
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"receiver_addr":    addr,
-		"receiver_node_id": to.GetShortNodeID(),
+		"receiver_node_id": to.GetNodeID(),
 		"options":          sendOptions,
 	})
 
-	bs, err := insolar.Serialize(payload)
-	if err != nil {
-		logger.Error("Failed to serialize payload")
-	}
-
-	err = ps.datagramTransport.SendDatagram(ctx, addr, bs)
+	err := ps.datagramTransport.SendDatagram(ctx, addr, payload.([]byte))
 	if err != nil {
 		logger.Error("Failed to send datagram")
-	}
-}
-
-type DatagramHandler struct {
-	consensusController core.ConsensusController
-}
-
-func NewDatagramHandler() *DatagramHandler {
-	return &DatagramHandler{}
-}
-
-func (dh *DatagramHandler) SetConsensusController(consensusController core.ConsensusController) {
-	dh.consensusController = consensusController
-}
-
-func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, buf []byte) {
-	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"address": address,
-	})
-
-	p := payloadWrapper{}
-	err := insolar.Deserialize(buf, p)
-	if err != nil {
-		logger.Error(err)
-		return
-	}
-
-	packetParser, ok := p.Payload.(packets.PacketParser)
-	if !ok {
-		logger.Error("Failed to get PacketParser")
-		return
-	}
-
-	if packetParser == nil {
-		logger.Error("PacketParser is nil")
-		return
-	}
-
-	hostIdentity := common.HostIdentity{
-		Addr: common.HostAddress(address),
-	}
-	err = dh.consensusController.ProcessPacket(ctx, packetParser, &hostIdentity)
-	if err != nil {
-		logger.Error("Failed to process p")
-		return
 	}
 }

@@ -20,27 +20,27 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
 type GetJet struct {
-	dep     *proc.Dependencies
-	msg     *message.GetJet
-	replyTo chan<- bus.Reply
+	dep  *proc.Dependencies
+	msg  *message.GetJet
+	meta payload.Meta
 }
 
-func NewGetJet(dep *proc.Dependencies, rep chan<- bus.Reply, msg *message.GetJet) *GetJet {
+func NewGetJet(dep *proc.Dependencies, meta payload.Meta, msg *message.GetJet) *GetJet {
 	return &GetJet{
-		dep:     dep,
-		msg:     msg,
-		replyTo: rep,
+		dep:  dep,
+		msg:  msg,
+		meta: meta,
 	}
 }
 
 func (s *GetJet) Present(ctx context.Context, f flow.Flow) error {
-	getJet := proc.NewGetJet(s.msg, s.replyTo)
+	getJet := proc.NewGetJet(s.msg, s.meta)
 	s.dep.GetJet(getJet)
 	return f.Procedure(ctx, getJet, false)
 }

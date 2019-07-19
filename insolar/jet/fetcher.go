@@ -18,6 +18,7 @@ package jet
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -279,7 +280,10 @@ func (tu *fetcher) fetch(
 				"pulse":  pulse,
 				"object": target.DebugString(),
 			}).Error("all lights for pulse have no actual jet for object")
-			ch <- fetchResult{nil, errors.New("all lights for pulse have no actual jet for object")}
+			ch <- fetchResult{
+				nil,
+				fmt.Errorf("all lights for pulse %d have no actual jet for object", pulse),
+			}
 			close(ch)
 		} else if len(res) > 1 {
 			// We have multiple different opinions on the actual jet.
@@ -301,7 +305,7 @@ func (tu *fetcher) nodesForPulse(ctx context.Context, pulse insolar.PulseNumber)
 
 	res, err := tu.Nodes.InRole(pulse, insolar.StaticRoleLightMaterial)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("can't get node of 'light' role for pulse %s", pulse)
 	}
 
 	me := tu.coordinator.Me()
@@ -314,10 +318,7 @@ func (tu *fetcher) nodesForPulse(ctx context.Context, pulse insolar.PulseNumber)
 
 	num := len(res)
 	if num == 0 {
-		inslogger.FromContext(ctx).Error(
-			"This shouldn't happen. We're solo active light material",
-		)
-
+		inslogger.FromContext(ctx).Error("This shouldn't happen. We're solo active light material")
 		return nil, errors.New("no other light to fetch jet tree data from")
 	}
 

@@ -26,27 +26,23 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/ledger/heavy/executor"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 )
 
-// ActiveListSwapper is required by network to swap active list.
-type ActiveListSwapper interface {
-	MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error
-}
-
 // PulseManager implements insolar.PulseManager.
 type PulseManager struct {
-	Bus               insolar.MessageBus        `inject:""`
-	NodeNet           insolar.NodeNetwork       `inject:""`
-	GIL               insolar.GlobalInsolarLock `inject:""`
-	ActiveListSwapper ActiveListSwapper         `inject:""`
-	NodeSetter        node.Modifier             `inject:""`
-	Nodes             node.Accessor             `inject:""`
-	PulseAppender     pulse.Appender            `inject:""`
-	PulseAccessor     pulse.Accessor            `inject:""`
-	JetModifier       jet.Modifier              `inject:""`
+	Bus                insolar.MessageBus          `inject:""`
+	NodeNet            insolar.NodeNetwork         `inject:""`
+	GIL                insolar.GlobalInsolarLock   `inject:""`
+	NodeSetter         node.Modifier               `inject:""`
+	Nodes              node.Accessor               `inject:""`
+	PulseAppender      pulse.Appender              `inject:""`
+	PulseAccessor      pulse.Accessor              `inject:""`
+	FinalizationKeeper executor.FinalizationKeeper `inject:""`
+	JetModifier        jet.Modifier                `inject:""`
 
 	currentPulse insolar.Pulse
 
@@ -65,7 +61,7 @@ func NewPulseManager() *PulseManager {
 }
 
 // Set set's new pulse.
-func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist bool) error {
+func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	m.setLock.Lock()
 	defer m.setLock.Unlock()
 	if m.stopped {
@@ -80,13 +76,14 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 	)
 	defer span.End()
 
-	err := m.setUnderGilSection(ctx, newPulse, persist)
+	err := m.FinalizationKeeper.OnPulse(ctx, newPulse.PulseNumber)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "got error calling FinalizationKeeper.OnPulse")
 	}
 
-	if !persist {
-		return nil
+	err = m.setUnderGilSection(ctx, newPulse)
+	if err != nil {
+		return err
 	}
 
 	err = m.Bus.OnPulse(ctx, newPulse)
@@ -97,7 +94,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 	return nil
 }
 
-func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.Pulse, persist bool) error {
+func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.Pulse) error {
 	var (
 		oldPulse *insolar.Pulse
 	)
@@ -120,39 +117,31 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	logger := inslogger.FromContext(ctx)
 	logger.WithFields(map[string]interface{}{
 		"new_pulse": newPulse.PulseNumber,
-		"persist":   persist,
 	}).Debugf("received pulse")
 
 	// swap pulse
 	m.currentPulse = newPulse
 
-	// swap active nodes
-	err = m.ActiveListSwapper.MoveSyncToActive(ctx, newPulse.PulseNumber)
+	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
+		return errors.Wrap(err, "call of AddPulse failed")
+	}
+	fromNetwork := m.NodeNet.GetWorkingNodes()
+	toSet := make([]insolar.Node, 0, len(fromNetwork))
+	for _, node := range fromNetwork {
+		toSet = append(toSet, insolar.Node{ID: node.ID(), Role: node.Role()})
+	}
+	err = m.NodeSetter.Set(newPulse.PulseNumber, toSet)
 	if err != nil {
-		return errors.Wrap(err, "failed to apply new active node list")
-	}
-	if persist {
-		if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
-			return errors.Wrap(err, "call of AddPulse failed")
-		}
-		fromNetwork := m.NodeNet.GetWorkingNodes()
-		toSet := make([]insolar.Node, 0, len(fromNetwork))
-		for _, node := range fromNetwork {
-			toSet = append(toSet, insolar.Node{ID: node.ID(), Role: node.Role()})
-		}
-		err = m.NodeSetter.Set(newPulse.PulseNumber, toSet)
-		if err != nil {
-			return errors.Wrap(err, "call of SetActiveNodes failed")
-		}
-
-		futurePulse := newPulse.NextPulseNumber
-		err = m.JetModifier.Clone(ctx, newPulse.PulseNumber, futurePulse)
-		if err != nil {
-			return errors.Wrapf(err, "failed to clone jet.Tree fromPulse=%v toPulse=%v", newPulse.PulseNumber, futurePulse)
-		}
+		return errors.Wrap(err, "call of SetActiveNodes failed")
 	}
 
-	if persist && oldPulse != nil {
+	futurePulse := newPulse.NextPulseNumber
+	err = m.JetModifier.Clone(ctx, newPulse.PulseNumber, futurePulse)
+	if err != nil {
+		return errors.Wrapf(err, "failed to clone jet.Tree fromPulse=%v toPulse=%v", newPulse.PulseNumber, futurePulse)
+	}
+
+	if oldPulse != nil {
 		nodes, err := m.Nodes.All(oldPulse.PulseNumber)
 		if err != nil {
 			return nil
@@ -168,21 +157,6 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 			logger.Infof("[PulseManager] activate zeroJet pulse=%v", futurePulse)
 		}
 	}
-
-	return nil
-}
-
-// Start starts pulse manager.
-func (m *PulseManager) Start(ctx context.Context) error {
-	return nil
-}
-
-// Stop stops PulseManager.
-func (m *PulseManager) Stop(ctx context.Context) error {
-	// There should not to be any Set call after Stop call
-	m.setLock.Lock()
-	m.stopped = true
-	m.setLock.Unlock()
 
 	return nil
 }

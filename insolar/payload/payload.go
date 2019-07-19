@@ -28,9 +28,11 @@ type Type uint32
 
 const (
 	TypeUnknown Type = iota
+
 	TypeMeta
 	TypeError
 	TypeID
+	TypeIDs
 	TypeState
 	TypeGetObject
 	TypePassState
@@ -43,12 +45,40 @@ const (
 	TypeSetCode
 	TypeSetIncomingRequest
 	TypeSetOutgoingRequest
+	TypeSagaCallAcceptNotification
 	TypeGetFilament
+	TypeGetRequest
+	TypeRequest
 	TypeFilamentSegment
 	TypeSetResult
 	TypeActivate
 	TypeRequestInfo
+	TypeDeactivate
+	TypeUpdate
+	TypeHotObjects
+	TypeResultInfo
+	TypeGetPendings
+	TypeReplication
+
+	TypeReturnResults
+	TypeCallMethod
+	TypeExecutorResults
+	TypePendingFinished
+	TypeAdditionalCallFromPreviousExecutor
+	TypeStillExecuting
+
+	// should be the last (required by TypesMap)
+	_latestType
 )
+
+// TypesMap contains Type name (gen by stringer) to type mapping.
+var TypesMap = func() map[string]Type {
+	m := map[string]Type{}
+	for i := TypeUnknown; i < _latestType; i++ {
+		m[i.String()] = i
+	}
+	return m
+}()
 
 // Payload represents any kind of data that can be encoded in consistent manner.
 type Payload interface {
@@ -57,6 +87,8 @@ type Payload interface {
 
 const (
 	MessageHashSize = 28
+	MorphFieldNum   = 16
+	MorpyFieldType  = 0 // Varint
 )
 
 type MessageHash [MessageHashSize]byte
@@ -101,9 +133,13 @@ func (h *MessageHash) IsZero() bool {
 // UnmarshalType decodes payload type from given binary.
 func UnmarshalType(data []byte) (Type, error) {
 	buf := proto.NewBuffer(data)
-	_, err := buf.DecodeVarint()
+	fieldNumType, err := buf.DecodeVarint()
 	if err != nil {
 		return TypeUnknown, errors.Wrap(err, "failed to decode polymorph")
+	}
+	// First 3 bits is a field type (see protobuf wire protocol docs), key is always varint
+	if fieldNumType != MorphFieldNum<<3|MorpyFieldType {
+		return TypeUnknown, errors.Errorf("wrong polymorph field number %d", fieldNumType)
 	}
 	morph, err := buf.DecodeVarint()
 	if err != nil {
@@ -122,6 +158,9 @@ func Marshal(payload Payload) ([]byte, error) {
 		return pl.Marshal()
 	case *ID:
 		pl.Polymorph = uint32(TypeID)
+		return pl.Marshal()
+	case *IDs:
+		pl.Polymorph = uint32(TypeIDs)
 		return pl.Marshal()
 	case *State:
 		pl.Polymorph = uint32(TypeState)
@@ -159,6 +198,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *SetOutgoingRequest:
 		pl.Polymorph = uint32(TypeSetOutgoingRequest)
 		return pl.Marshal()
+	case *SagaCallAcceptNotification:
+		pl.Polymorph = uint32(TypeSagaCallAcceptNotification)
+		return pl.Marshal()
 	case *SetResult:
 		pl.Polymorph = uint32(TypeSetResult)
 		return pl.Marshal()
@@ -167,6 +209,48 @@ func Marshal(payload Payload) ([]byte, error) {
 		return pl.Marshal()
 	case *RequestInfo:
 		pl.Polymorph = uint32(TypeRequestInfo)
+		return pl.Marshal()
+	case *GetRequest:
+		pl.Polymorph = uint32(TypeGetRequest)
+		return pl.Marshal()
+	case *Request:
+		pl.Polymorph = uint32(TypeRequest)
+		return pl.Marshal()
+	case *Deactivate:
+		pl.Polymorph = uint32(TypeDeactivate)
+		return pl.Marshal()
+	case *Update:
+		pl.Polymorph = uint32(TypeUpdate)
+		return pl.Marshal()
+	case *HotObjects:
+		pl.Polymorph = uint32(TypeHotObjects)
+		return pl.Marshal()
+	case *ResultInfo:
+		pl.Polymorph = uint32(TypeResultInfo)
+		return pl.Marshal()
+	case *ReturnResults:
+		pl.Polymorph = uint32(TypeReturnResults)
+		return pl.Marshal()
+	case *CallMethod:
+		pl.Polymorph = uint32(TypeCallMethod)
+		return pl.Marshal()
+	case *ExecutorResults:
+		pl.Polymorph = uint32(TypeExecutorResults)
+		return pl.Marshal()
+	case *PendingFinished:
+		pl.Polymorph = uint32(TypePendingFinished)
+		return pl.Marshal()
+	case *AdditionalCallFromPreviousExecutor:
+		pl.Polymorph = uint32(TypeAdditionalCallFromPreviousExecutor)
+		return pl.Marshal()
+	case *StillExecuting:
+		pl.Polymorph = uint32(TypeStillExecuting)
+		return pl.Marshal()
+	case *Replication:
+		pl.Polymorph = uint32(TypeReplication)
+		return pl.Marshal()
+	case *GetPendings:
+		pl.Polymorph = uint32(TypeGetPendings)
 		return pl.Marshal()
 	}
 
@@ -189,6 +273,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeID:
 		pl := ID{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeIDs:
+		pl := IDs{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	case TypeState:
@@ -239,6 +327,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		pl := SetOutgoingRequest{}
 		err := pl.Unmarshal(data)
 		return &pl, err
+	case TypeSagaCallAcceptNotification:
+		pl := SagaCallAcceptNotification{}
+		err := pl.Unmarshal(data)
+		return &pl, err
 	case TypeSetResult:
 		pl := SetResult{}
 		err := pl.Unmarshal(data)
@@ -249,6 +341,62 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeRequestInfo:
 		pl := RequestInfo{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeGetRequest:
+		pl := GetRequest{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeRequest:
+		pl := Request{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeDeactivate:
+		pl := Deactivate{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeUpdate:
+		pl := Update{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeHotObjects:
+		pl := HotObjects{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeResultInfo:
+		pl := ResultInfo{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeReturnResults:
+		pl := ReturnResults{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeCallMethod:
+		pl := CallMethod{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeExecutorResults:
+		pl := ExecutorResults{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypePendingFinished:
+		pl := PendingFinished{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeAdditionalCallFromPreviousExecutor:
+		pl := AdditionalCallFromPreviousExecutor{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeStillExecuting:
+		pl := StillExecuting{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeReplication:
+		pl := Replication{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeGetPendings:
+		pl := GetPendings{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}

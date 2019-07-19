@@ -51,151 +51,259 @@
 package core
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
+	"github.com/insolar/insolar/insolar"
 
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	census2 "github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-
-	"github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/consensus/gcpv2/censusimpl"
 )
 
 type FullRealm struct {
 	coreRealm
+	nodeContext nodeContext
+
 	/* Derived from the ones provided externally - set at init() or start(). Don't need mutex */
-	handlers []packetRoute
+	packetBuilder   transport.PacketBuilder
+	packetSender    transport.PacketSender
+	controlFeeder   api.ConsensusControlFeeder
+	candidateFeeder api.CandidateControlFeeder
+	profileFactory  profiles.Factory
 
-	nodes    []NodeAppearance
-	nodeRefs []*NodeAppearance
+	timings api.RoundTimings
 
-	timings  common2.RoundTimings
-	nbhSizes common2.NeighbourhoodSizes
+	census     census2.Active
+	population RealmPopulation
 
-	othersCount      int
-	joinersCount     int
-	bftMajorityCount int
-
-	census     census.ActiveCensus
-	population census.OnlinePopulation
+	packetDispatchers []PacketDispatcher
 
 	/* Other fields - need mutex */
 	isFinished bool
 }
 
-/* LOCK - runs under RoundController lock */
-func (r *FullRealm) start() {
-	r.census = r.chronicle.GetActiveCensus()
-	r.population = r.census.GetOnlinePopulation()
+func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
+	verificationProof interface{}) error {
 
-	r.initBasics()
-	allCtls, perNodeCtls := r.initHandlers()
-	r.initProjections(perNodeCtls)
-	r.startWorkers(allCtls)
+	pt := packet.GetPacketType()
+	verifyFlags := DefaultVerify
+	if verificationProof != nil {
+		verifyFlags = SkipVerify
+	}
+
+	var sourceNode MemberPacketReceiver
+	var sourceID insolar.ShortNodeID
+
+	switch {
+	case pt.GetLimitPerSender() == 0 || int(pt) >= len(r.packetDispatchers) || r.packetDispatchers[pt] == nil:
+		return fmt.Errorf("packet type (%v) is unknown", pt)
+	case pt.IsMemberPacket():
+		strict, err := VerifyPacketRoute(ctx, packet, r.GetSelfNodeID())
+		if err != nil {
+			return err
+		}
+		if strict {
+			verifyFlags |= RequireStrictVerify
+		}
+
+		sourceID = packet.GetSourceID()
+
+		sourceNode = r.getMemberReceiver(sourceID)
+	default:
+		// TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
+		verifyFlags |= SkipVerify
+	}
+
+	if sourceNode != nil && !sourceNode.CanReceivePacket(pt) {
+		return fmt.Errorf("packet type (%v) limit exceeded: from=%v(%v)", pt, sourceNode.GetNodeID(), from)
+	}
+
+	if verifyFlags&SkipVerify == 0 {
+		var err error
+		strict := verifyFlags&RequireStrictVerify != 0
+		if sourceNode == nil {
+			err = r.coreRealm.VerifyPacketAuthenticity(packet, from, strict)
+		} else {
+			err = sourceNode.VerifyPacketAuthenticity(packet, from, strict)
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	pd := r.packetDispatchers[pt] // was checked above for != nil
+
+	//this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
+	var err error
+	packet, err = LazyPacketParse(packet)
+	if err != nil {
+		return err
+	}
+
+	if pt.IsMemberPacket() {
+		// now it is safe to parse the rest of the packet
+		memberPacket := packet.GetMemberPacket()
+		if memberPacket == nil {
+			return fmt.Errorf("packet type (%v) can't be parsed: from=%v", pt, from)
+		}
+
+		if sourceNode == nil {
+			sourceNode = r.GetOrCreatePurgatoryNode(sourceID, memberPacket, pd)
+		}
+
+		if !sourceNode.SetPacketReceived(pt) {
+			return fmt.Errorf("packet type (%v) limit exceeded: from=%v(%v)", pt, sourceNode.GetNodeID(), from)
+		}
+
+		return sourceNode.DispatchMemberPacket(ctx, memberPacket, pd)
+	}
+	return pd.DispatchHostPacket(ctx, packet, from, verifyFlags)
 }
 
-func (r *FullRealm) initBasics() {
+/* LOCK - runs under RoundController lock */
+func (r *FullRealm) start(census census2.Active, population census2.OnlinePopulation) {
+	r.initBasics(census)
+	allControllers, perNodeControllers := r.initHandlers(population.GetCount())
+	r.initPopulation(population, perNodeControllers)
+	r.initSelf()
+	r.startWorkers(allControllers)
+}
 
-	nodeCount := r.population.GetCount()
+func (r *FullRealm) init(transport transport.Factory, controlFeeder api.ConsensusControlFeeder,
+	candidateFeeder api.CandidateControlFeeder) transport.NeighbourhoodSizes {
+	r.packetSender = transport.GetPacketSender()
+	r.packetBuilder = transport.GetPacketBuilder(r.signer)
+	r.controlFeeder = controlFeeder
+	r.candidateFeeder = candidateFeeder
+	return r.packetBuilder.GetNeighbourhoodSize()
+}
+
+func (r *FullRealm) initBasics(census census2.Active) {
+
+	r.census = census
+	r.profileFactory = census.GetProfileFactory(r.verifierFactory)
 
 	r.timings = r.config.GetConsensusTimings(r.pulseData.NextPulseDelta, r.IsJoiner())
 	r.strategy.AdjustConsensusTimings(&r.timings)
 
-	r.nbhSizes = r.packetBuilder.GetNeighbourhoodSize(nodeCount)
-
-	r.bftMajorityCount = common.BftMajority(nodeCount)
-
-	r.nodes = make([]NodeAppearance, nodeCount)
-	nodeCount-- // remove self
-	r.nodeRefs = make([]*NodeAppearance, nodeCount)
-
-	r.othersCount = nodeCount
+	r.nodeContext.initFull(r.verifierFactory, uint8(r.nbhSizes.NeighbourhoodTrustThreshold),
+		func(report misbehavior.Report) interface{} {
+			r.census.GetMisbehaviorRegistry().AddReport(report)
+			return nil
+		})
 }
 
-func (r *FullRealm) initHandlers() (allControllers []PhaseController, perNodeControllers []PhaseController) {
-	r.handlers = make([]packetRoute, packets.MaxPacketType)
+func (r *FullRealm) initHandlers(nodeCount int) ([]PhaseController, []PerNodePacketDispatcherFactory) {
 
-	controllers := r.strategy.GetFullPhaseControllers(r.othersCount + 1)
+	r.packetDispatchers = make([]PacketDispatcher, phases.PacketTypeCount)
+	controllers, nodeCallback := r.strategy.GetFullPhaseControllers(nodeCount)
+
 	if len(controllers) == 0 {
 		panic("no phase controllers")
 	}
-	individualHandlers := make([]PhaseController, 0, len(controllers))
+	r.nodeContext.setNodeToPhaseCallback(nodeCallback)
+	individualHandlers := make([]PerNodePacketDispatcherFactory, 0, len(controllers))
 
 	for _, ctl := range controllers {
-		pt := ctl.GetPacketType()
-		if !r.handlers[pt].IsEmpty() {
-			panic("multiple handlers for packet type")
-		}
-		r.handlers[pt].realm = r
-		switch ctl.IsPerNode() {
-		case HandlerTypeHostPacket:
-			r.handlers[pt].handlerHost = ctl.HandleHostPacket
-			continue
-		case HandlerTypeMemberPacket:
-			r.handlers[pt].handlerMember = ctl.HandleMemberPacket
-		case HandlerTypePerNodePacket:
-			r.handlers[pt].setRedirectHandler(len(individualHandlers))
-			individualHandlers = append(individualHandlers, ctl)
-		}
-		if !pt.IsMemberPacket() {
-			panic("only member packet types can be handled as member/per-node")
+		for _, pt := range ctl.GetPacketType() {
+			if r.packetDispatchers[pt] != nil {
+				panic("multiple controllers for packet type")
+			}
+			pd, nf := ctl.CreatePacketDispatcher(pt, len(individualHandlers), r)
+			r.packetDispatchers[pt] = pd
+			if nf != nil {
+				individualHandlers = append(individualHandlers, nf)
+			}
 		}
 	}
 
 	return controllers, individualHandlers
 }
 
-func (r *FullRealm) initProjections(individualHandlers []PhaseController) {
+func (r *FullRealm) initPopulation(population census2.OnlinePopulation, individualHandlers []PerNodePacketDispatcherFactory) {
 
-	thisNodeID := r.GetLocalProfile().GetShortNodeID()
-	profiles := r.population.GetProfiles()
-	baselineWeight := r.strategy.RandUint32()
-
-	neighborTrustThreshold := uint8(r.nbhSizes.NeighbourhoodTrustThreshold)
-
-	r.joinersCount = 0
-	var j = 0
-	prevSelf := r.self
-	r.self = nil // resets self set on prep
-	for i, p := range profiles {
-		if p.IsJoiner() {
-			r.joinersCount++
-		}
-		n := &r.nodes[i]
-		n.init(p, &r.coreRealm.nodeCallback)
-		n.neighborTrustThreshold = neighborTrustThreshold
-		n.neighbourWeight = baselineWeight
-		if p.GetShortNodeID() == thisNodeID {
-			if r.self != nil {
-				panic("schizophrenia")
-			}
-			r.self = n
-		} else {
-			if j == len(profiles) {
-				panic("didnt find myself among active nodes")
-			}
-			r.nodeRefs[j] = n
-			j++
-		}
-		if len(individualHandlers) > 0 {
-			n.handlers = make([]PhasePerNodePacketHandler, len(individualHandlers))
-			for _, ctl := range individualHandlers {
-				ph := ctl.CreatePerNodePacketHandler(n)
+	r.population = NewMemberRealmPopulation(r.strategy, population, r.nbhSizes.ExtendingNeighbourhoodLimit,
+		func(ctx context.Context, n *NodeAppearance) {
+			n.callback = &r.nodeContext
+			for k, ctl := range individualHandlers {
+				var ph PhasePerNodePacketFunc
+				ctx, ph = ctl.CreatePerNodePacketHandler(ctx, n)
 				if ph == nil {
-					panic("nil packet handler")
+					continue
 				}
-				n.handlers[ctl.GetPacketType()] = ph
+				if n.handlers == nil {
+					n.handlers = make([]PhasePerNodePacketFunc, len(individualHandlers))
+				}
+				n.handlers[k] = ph
 			}
-		}
-	}
-	r.ShuffleNodeProjections(r.nodeRefs)
+		})
+}
 
-	// Transition data from prev self
-	if prevSelf.IsJoiner() != r.self.IsJoiner() || prevSelf.GetShortNodeID() != r.self.GetShortNodeID() {
+func (r *FullRealm) initSelf() {
+	newSelf := r.population.GetSelf()
+	prevSelf := r.self
+
+	if newSelf.GetNodeID() != prevSelf.GetNodeID() {
 		panic("inconsistent transition of self between realms")
 	}
-	prevSelf.copySelfTo(r.self)
+
+	prevSelf.copySelfTo(newSelf)
+	r.self = newSelf
+
+	if !newSelf.profile.IsJoiner() {
+		// joiners are not allowed to request leave
+		newSelf.requestedLeave, newSelf.requestedLeaveReason = r.controlFeeder.GetRequiredGracefulLeave()
+	}
+
+	if !newSelf.requestedLeave {
+		// leaver is not allowed to add new nodes
+		jc := r.registerNextJoinCandidate()
+		if jc != nil {
+			newSelf.requestedJoinerID = jc.GetNodeID()
+		}
+	}
+	newSelf.callback.updatePopulationVersion()
+}
+
+func (r *FullRealm) registerNextJoinCandidate() *NodeAppearance {
+
+	if r.GetLocalProfile().GetOpMode().IsRestricted() {
+		// this node is not allowed to introduce joiners
+		return nil
+	}
+
+	for {
+		cp := r.candidateFeeder.PickNextJoinCandidate()
+		if cp == nil {
+			return nil
+		}
+
+		nip := r.profileFactory.CreateFullIntroProfile(cp)
+		sv := r.GetSignatureVerifier(nip.GetPublicKeyStore())
+		np := censusimpl.NewJoinerProfile(nip, sv, nip.GetStartPower())
+		na := r.population.CreateNodeAppearance(r.roundContext, &np)
+		nna := r.population.AddToDynamics(na)
+
+		if !profiles.EqualIntroProfiles(nna.profile.GetStatic(), na.profile.GetStatic()) {
+			inslogger.FromContext(r.roundContext).Errorf("multiple joiners on same id(%v): %v", cp.GetStaticNodeID(),
+				[]*NodeAppearance{na, nna})
+		}
+		if nna != nil {
+			return nna
+		}
+		r.candidateFeeder.RemoveJoinCandidate(false, cp.GetStaticNodeID())
+	}
 }
 
 func (r *FullRealm) startWorkers(controllers []PhaseController) {
@@ -203,117 +311,177 @@ func (r *FullRealm) startWorkers(controllers []PhaseController) {
 		ctl.BeforeStart(r)
 	}
 	for _, ctl := range controllers {
-		ctl.StartWorker(r.roundContext)
+		ctl.StartWorker(r.roundContext, r)
 	}
 }
 
-func (r *FullRealm) GetJoinersCount() int {
-	return r.joinersCount
+func (r *FullRealm) GetFraudFactory() misbehavior.FraudFactory {
+	return r.nodeContext.fraudFactory
+}
+
+func (r *FullRealm) GetBlameFactory() misbehavior.BlameFactory {
+	return r.nodeContext.blameFactory
+}
+
+func (r *FullRealm) GetPacketSender() transport.PacketSender {
+	return r.packetSender
+}
+
+func (r *FullRealm) GetPacketBuilder() transport.PacketBuilder {
+	return r.packetBuilder
+}
+
+func (r *FullRealm) GetSigner() cryptkit.DigestSigner {
+	return r.signer
+}
+
+func ShuffleNodeProjections(strategy RoundStrategy, nodeRefs []*NodeAppearance) {
+	strategy.ShuffleNodeSequence(len(nodeRefs),
+		func(i, j int) { nodeRefs[i], nodeRefs[j] = nodeRefs[j], nodeRefs[i] })
+}
+
+func (r *FullRealm) GetPopulation() RealmPopulation {
+	return r.population
 }
 
 func (r *FullRealm) GetNodeCount() int {
-	return len(r.nodes)
+	return r.population.GetNodeCount()
 }
 
-func (r *FullRealm) GetOthersCount() int {
-	return r.othersCount
-}
-
-func (r *FullRealm) GetBftMajorityCount() int {
-	return r.bftMajorityCount
-}
-
-func (r *FullRealm) FindActiveNode(id common.ShortNodeID) common2.NodeProfile {
-	return r.population.FindProfile(id)
-}
-
-func (r *FullRealm) GetActiveNode(id common.ShortNodeID) (common2.NodeProfile, error) {
-	np := r.population.FindProfile(id)
-	if np == nil {
-		return nil, fmt.Errorf("unknown ShortNodeID: %v", id)
-	}
-	return np, nil
-}
-
-func (r *FullRealm) GetNodeAppearance(id common.ShortNodeID) (*NodeAppearance, error) {
-	np, err := r.GetActiveNode(id)
-	if err != nil {
-		return nil, err
-	}
-	return r.GetNodeAppearanceByIndex(np.GetIndex()), nil
-}
-
-func (r *FullRealm) GetNodeAppearanceByIndex(idx int) *NodeAppearance {
-	return &r.nodes[idx]
-}
-
-func (r *FullRealm) GetPulseNumber() common.PulseNumber {
+func (r *FullRealm) GetPulseNumber() pulse.Number {
 	return r.pulseData.PulseNumber
 }
 
-func (r *FullRealm) GetNextPulseNumber() common.PulseNumber {
+func (r *FullRealm) GetNextPulseNumber() pulse.Number {
 	return r.pulseData.GetNextPulseNumber()
 }
 
-func (r *FullRealm) GetOriginalPulse() common2.OriginalPulsarPacket {
+func (r *FullRealm) GetOriginalPulse() proofs.OriginalPulsarPacket {
 	// NB! locks for this field are only needed for PrepRealm
 	return r.coreRealm.originalPulse
 }
 
-func (r *FullRealm) GetPulseData() common.PulseData {
+func (r *FullRealm) GetPulseData() pulse.Data {
 	return r.pulseData
 }
 
-func (r *FullRealm) GetLastCloudStateHash() common2.CloudStateHash {
+func (r *FullRealm) GetLastCloudStateHash() proofs.CloudStateHash {
 	return r.census.GetCloudStateHash()
 }
 
-func (r *coreRealm) UpstreamPreparePulseChange() <-chan common2.NodeStateHash {
+func (r *coreRealm) UpstreamPreparePulseChange() <-chan proofs.NodeStateHash {
 	if !r.pulseData.PulseNumber.IsTimePulse() {
 		panic("pulse number was not set")
 	}
 
 	sp := r.GetSelf().GetProfile()
-	report := MembershipUpstreamReport{
-		PulseNumber:     r.pulseData.PulseNumber,
-		MemberPower:     sp.GetPower(),
-		MembershipState: sp.GetState(),
+	report := api.UpstreamReport{
+		PulseNumber: r.pulseData.PulseNumber,
+		MemberPower: sp.GetDeclaredPower(),
+		MemberMode:  sp.GetOpMode(),
 	}
 	return r.upstream.PreparePulseChange(report)
 }
 
-func (r *FullRealm) GetTimings() common2.RoundTimings {
+func (r *FullRealm) CommitPulseChange() {
+	if !r.pulseData.PulseNumber.IsTimePulse() {
+		panic("pulse number was not set")
+	}
+
+	sp := r.GetSelf().GetProfile()
+	report := api.UpstreamReport{
+		PulseNumber: r.pulseData.PulseNumber,
+		MemberPower: sp.GetDeclaredPower(),
+		MemberMode:  sp.GetOpMode(),
+	}
+	go r.upstream.CommitPulseChange(report, r.pulseData, r.census)
+}
+
+func (r *FullRealm) GetTimings() api.RoundTimings {
 	return r.timings
 }
 
-func (r *FullRealm) GetNeighbourhoodSizes() common2.NeighbourhoodSizes {
+func (r *FullRealm) GetNeighbourhoodSizes() transport.NeighbourhoodSizes {
 	return r.nbhSizes
 }
 
-/* Shuffled only once, when the round is created */
-func (r *FullRealm) GetShuffledOtherNodes() []*NodeAppearance {
-	return r.nodeRefs
+func (r *FullRealm) GetLocalProfile() profiles.LocalNode {
+	return r.self.profile.(profiles.LocalNode)
 }
 
-func (r *FullRealm) GetLocalProfile() common2.LocalNodeProfile {
-	return r.self.profile.(common2.LocalNodeProfile)
-}
-
-func (r *FullRealm) PrepareAndSetLocalNodeStateHashEvidence(nsh common2.NodeStateHash, nch common2.NodeClaimSignature) {
+func (r *FullRealm) PrepareAndSetLocalNodeStateHashEvidence(nsh proofs.NodeStateHash) {
 	// TODO use r.GetLastCloudStateHash() + digest(PulseData) + r.digest.GetGshDigester() to build digest for signing
+
+	// TODO Hack! MUST provide announcement hash
+	nas := cryptkit.NewSignature(nsh, "stubSign")
+
 	v := nsh.SignWith(r.signer)
-	r.self.SetLocalNodeStateHashEvidence(common2.NewNodeStateHashEvidence(v), nch)
+	r.self.SetLocalNodeStateHashEvidence(proofs.NewNodeStateHashEvidence(v), &nas)
 }
 
-func (r *FullRealm) GetIndexedNodes() []NodeAppearance {
-	return r.nodes
+func (r *FullRealm) CreateAnnouncement(n *NodeAppearance) *transport.NodeAnnouncementProfile {
+	ma := n.GetRequestedAnnouncement()
+	if ma.Membership.IsEmpty() {
+		panic("illegal state")
+	}
+
+	var joiner *transport.JoinerAnnouncement
+	//if !ma.JoinerID.IsAbsent() {
+	//jna := r.GetPopulation().GetNodeAppearance(ma.JoinerID)
+	//if jna != nil {
+	//	jp := jna.GetProfile().GetStatic()
+	//	joiner = transport.NewJoinerAnnouncement(jp, n.GetNodeID(), jp.GetAnnouncementSignature())
+	//}
+	//}
+
+	return transport.NewNodeAnnouncement(n.profile, ma, r.GetNodeCount(), r.pulseData.PulseNumber, joiner)
 }
 
-func (r *FullRealm) CreateNextPopulationBuilder() census.Builder {
-	return r.chronicle.GetActiveCensus().CreateBuilder(r.GetNextPulseNumber())
+func (r *FullRealm) CreateLocalAnnouncement() *transport.NodeAnnouncementProfile {
+	return r.CreateAnnouncement(r.self)
 }
 
-func (r *FullRealm) FinishRound(builder census.Builder, csh common2.CloudStateHash) {
+func (r *FullRealm) CreateNextCensusBuilder() census2.Builder {
+	return r.census.CreateBuilder(r.GetNextPulseNumber(), true)
+}
+
+func (r *FullRealm) preparePrimingMembers(pop census2.PopulationBuilder) {
+	for _, p := range pop.GetUnorderedProfiles() {
+		if p.GetSignatureVerifier() != nil {
+			continue
+		}
+		v := r.GetSignatureVerifier(p.GetStatic().GetPublicKeyStore())
+		p.SetSignatureVerifier(v)
+	}
+}
+
+/* deprecated */
+func (r *FullRealm) prepareRegularMembers(pop census2.PopulationBuilder) {
+	// cc := r.census.GetMandateRegistry().GetConsensusConfiguration()
+
+	for _, p := range pop.GetUnorderedProfiles() {
+		if p.GetSignatureVerifier() == nil {
+			v := r.GetSignatureVerifier(p.GetStatic().GetPublicKeyStore())
+			p.SetSignatureVerifier(v)
+		}
+
+		if p.GetOpMode().IsEvicted() {
+			continue
+		}
+
+		var na *NodeAppearance
+		if p.IsJoiner() {
+			na = r.population.GetJoinerNodeAppearance(p.GetNodeID())
+		} else {
+			na = r.population.GetNodeAppearanceByIndex(p.GetIndex().AsInt())
+		}
+		rs := na.GetRequestedState()
+		p.SetPower(rs.RequestedPower)
+		p.SetOpMode(rs.RequestedMode)
+	}
+}
+
+func (r *FullRealm) FinishRound(builder census2.Builder, csh proofs.CloudStateHash) {
 	r.Lock()
 	defer r.Unlock()
 
@@ -322,19 +490,99 @@ func (r *FullRealm) FinishRound(builder census.Builder, csh common2.CloudStateHa
 	}
 	r.isFinished = true
 
-	r.prepareNewMembers(builder.GetOnlinePopulationBuilder())
-	expected := builder.BuildAndMakeExpected(csh)
+	local := builder.GetPopulationBuilder().GetLocalProfile()
+	r.prepareRegularMembers(builder.GetPopulationBuilder())
 
-	r.upstreamMembershipConfirmed(expected)
-}
-
-func (r *coreRealm) upstreamMembershipConfirmed(expectedCensus census.OperationalCensus) {
-	sp := r.GetSelf().GetProfile()
-	report := MembershipUpstreamReport{
-		PulseNumber:     r.pulseData.PulseNumber,
-		MemberPower:     sp.GetPower(),
-		MembershipState: sp.GetState(),
+	if local.GetOpMode().IsEvicted() {
+		r.notifyConsensusFinished(local, nil)
+		return
 	}
 
-	r.upstream.MembershipConfirmed(report, expectedCensus)
+	expected := builder.BuildAndMakeExpected(csh)
+	r.notifyConsensusFinished(expected.GetOnlinePopulation().GetLocalProfile(), expected)
 }
+
+func (r *FullRealm) notifyConsensusFinished(newSelf profiles.ActiveNode, expectedCensus census2.Operational) {
+	report := api.UpstreamReport{
+		PulseNumber: r.pulseData.PulseNumber,
+		MemberPower: newSelf.GetDeclaredPower(),
+		MemberMode:  newSelf.GetOpMode(),
+	}
+
+	r.controlFeeder.ConsensusFinished(report, expectedCensus)
+	go r.upstream.ConsensusFinished(report, expectedCensus)
+}
+
+func (r *FullRealm) GetProfileFactory() profiles.Factory {
+	return r.profileFactory
+}
+
+func (r *FullRealm) CreatePurgatoryNode(ctx context.Context, intro transport.BriefIntroductionReader, from endpoints.Inbound) (*NodeAppearance, error) {
+
+	panic("not implemented")
+	// nip := r.profileFactory.CreateBriefIntroProfile(intro, intro.GetJoinerSignature())
+	// if fIntro, ok := intro.(packets.FullIntroductionReader); ok && !fIntro.GetIssuerID().IsAbsent() {
+	//	nip = r.profileFactory.CreateFullIntroProfile(nip, fIntro)
+	// }
+	// na := r.population.CreateNodeAppearance(r.roundContext, nip)
+	//
+	// nna, ps := r.population.AddToPurgatory(na)
+	//
+	// if !common2.EqualIntroProfiles(nna.profile, na.profile) {
+	//	nodes = append(nodes, na)
+	//	nna = nil
+	// }
+	// if nodes != nil {
+	//	inslogger.FromContext(r.roundContext).Errorf("multiple joiners on same id(%v): %v", cp.GetNodeID(), nodes)
+	// }
+	// if nna != nil {
+	//	newSelf.requestedJoiner = nna
+	//	break
+	// }
+
+}
+
+func (r *FullRealm) AdvancePurgatoryNode(purgatoryID insolar.ShortNodeID,
+	brief transport.BriefIntroductionReader, full transport.FullIntroductionReader,
+	advancedBy *NodeAppearance) error {
+
+	panic("not implemented") // TODO
+}
+
+func (r *FullRealm) GetPurgatoryNode(id insolar.ShortNodeID) MemberPacketReceiver {
+	return nil // TODO
+}
+
+func (r *FullRealm) GetOrCreatePurgatoryNode(id insolar.ShortNodeID, reader transport.MemberPacketReader, dispatcher PacketDispatcher) MemberPacketReceiver {
+	return nil // TODO
+}
+
+func (r *FullRealm) getMemberReceiver(id insolar.ShortNodeID) MemberPacketReceiver {
+	//Purgatory MUST be checked first to avoid "missing" a node during its transition between the purgatory and the normal population
+	node := r.GetPurgatoryNode(id)
+	if node != nil {
+		return node
+	}
+	return r.GetPopulation().GetNodeAppearance(id)
+}
+
+// func (r *FullRealm) getPurgatoryNode(profile common2.BriefCandidateProfile) *NodeAppearance {
+//
+// }
+//
+// func (r *FullRealm) createPurgatoryNode(profile common2.BriefCandidateProfile, nodeSignature common.SignatureHolder) *NodeAppearance {
+//	pr := r.profileFactory.CreateBriefIntroProfile(profile, nodeSignature)
+//
+// }
+//
+// func (r *FullRealm) _registerPurgatoryNode(profile common2.BriefCandidateProfile) *NodeAppearance {
+//
+// }
+//
+// func (r *FullRealm) CreatePurgatoryNode(profile common2.BriefCandidateProfile) *NodeAppearance {
+//	r.
+// }
+//
+// func (r *FullRealm) UpgradeToDynamicNode(n *NodeAppearance, profile common2.CandidateProfile) {
+//
+// }

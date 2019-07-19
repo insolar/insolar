@@ -36,6 +36,10 @@ const (
 	StateDeactivation
 )
 
+func (s *StateID) Equal(other StateID) bool {
+	return *s == other
+}
+
 // State is common object state record.
 type State interface {
 	// ID returns state id.
@@ -130,7 +134,81 @@ func (Genesis) GetIsPrototype() bool {
 	return false
 }
 
+//go:generate minimock -i github.com/insolar/insolar/insolar/record.Request -o ./ -s _mock.go
+
+// Request is a common request interface.
 type Request interface {
-	GetObject() *insolar.Reference
-	GetReason() insolar.Reference
+	// AffinityRef returns a pointer to the reference of the object the
+	// Request is affine to. The result can be nil, e.g. in case of creating
+	// a new object.
+	AffinityRef() *insolar.Reference
+	// ReasonRef returns a reference of the Request that caused the creating
+	// of this Request.
+	ReasonRef() insolar.Reference
+	// GetCallType returns call type.
+	GetCallType() CallType
+	IsCreationRequest() bool
+	// IsDetached check is request has detached state.
+	IsDetached() bool
+}
+
+func (r *IncomingRequest) AffinityRef() *insolar.Reference {
+	// IncomingRequests are affine to the Object on which the request
+	// is going to be executed.
+	return r.Object
+}
+
+func (r *IncomingRequest) ReasonRef() insolar.Reference {
+	return r.Reason
+}
+
+func (r *IncomingRequest) IsCreationRequest() bool {
+	return r.GetCallType() == CTSaveAsChild || r.GetCallType() == CTSaveAsDelegate
+}
+
+func (r *IncomingRequest) IsDetached() bool {
+	// incoming requests never should't be in detached state, app code should check it and raise some kind of error.
+	return isDetached(r.ReturnMode)
+}
+
+func (r *OutgoingRequest) AffinityRef() *insolar.Reference {
+	// OutgoingRequests are affine to the Caller which created the Request.
+	return &r.Caller
+}
+
+func (r *OutgoingRequest) ReasonRef() insolar.Reference {
+	return r.Reason
+}
+
+func (r *OutgoingRequest) IsCreationRequest() bool {
+	return false
+}
+
+func (r *OutgoingRequest) IsDetached() bool {
+	return isDetached(r.ReturnMode)
+}
+
+func isDetached(rm ReturnMode) bool {
+	return rm == ReturnSaga
+}
+
+func (m *Lifeline) SetDelegate(key insolar.Reference, value insolar.Reference) {
+	for _, d := range m.Delegates {
+		if d.Key == key {
+			d.Value = value
+			return
+		}
+	}
+
+	m.Delegates = append(m.Delegates, LifelineDelegate{Key: key, Value: value})
+}
+
+func (m *Lifeline) DelegateByKey(key insolar.Reference) (insolar.Reference, bool) {
+	for _, d := range m.Delegates {
+		if d.Key == key {
+			return d.Value, true
+		}
+	}
+
+	return [64]byte{}, false
 }

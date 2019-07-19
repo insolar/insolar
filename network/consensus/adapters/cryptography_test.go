@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,7 +46,7 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package adapters
 
@@ -58,7 +58,8 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/require"
 )
@@ -74,7 +75,7 @@ var (
 func TestNewSha3512Digester(t *testing.T) {
 	digester := NewSha3512Digester(scheme)
 
-	require.Implements(t, (*common.DataDigester)(nil), digester)
+	require.Implements(t, (*cryptkit.DataDigester)(nil), digester)
 
 	require.Equal(t, digester.scheme, scheme)
 }
@@ -83,7 +84,7 @@ func TestSha3512Digester_GetDigestOf(t *testing.T) {
 	digester := NewSha3512Digester(scheme)
 
 	b := make([]byte, 120)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
@@ -91,7 +92,7 @@ func TestSha3512Digester_GetDigestOf(t *testing.T) {
 
 	expected := scheme.IntegrityHasher().Hash(b)
 
-	require.Equal(t, expected, digest.Bytes())
+	require.Equal(t, expected, digest.AsBytes())
 }
 
 func TestSha3512Digester_GetDigestMethod(t *testing.T) {
@@ -103,7 +104,7 @@ func TestSha3512Digester_GetDigestMethod(t *testing.T) {
 func TestNewECDSAPublicKeyStore(t *testing.T) {
 	ks := NewECDSAPublicKeyStore(publicKey)
 
-	require.Implements(t, (*common.PublicKeyStore)(nil), ks)
+	require.Implements(t, (*cryptkit.PublicKeyStore)(nil), ks)
 
 	require.Equal(t, ks.publicKey, publicKey)
 }
@@ -117,7 +118,7 @@ func TestECDSAPublicKeyStore_PublicKeyStore(t *testing.T) {
 func TestNewECDSASecretKeyStore(t *testing.T) {
 	ks := NewECDSASecretKeyStore(privateKey)
 
-	require.Implements(t, (*common.SecretKeyStore)(nil), ks)
+	require.Implements(t, (*cryptkit.SecretKeyStore)(nil), ks)
 
 	require.Equal(t, ks.privateKey, privateKey)
 }
@@ -139,7 +140,7 @@ func TestECDSASecretKeyStore_AsPublicKeyStore(t *testing.T) {
 func TestNewECDSADigestSigner(t *testing.T) {
 	ds := NewECDSADigestSigner(privateKey, scheme)
 
-	require.Implements(t, (*common.DigestSigner)(nil), ds)
+	require.Implements(t, (*cryptkit.DigestSigner)(nil), ds)
 
 	require.Equal(t, ds.privateKey, privateKey)
 	require.Equal(t, ds.scheme, scheme)
@@ -152,17 +153,17 @@ func TestECDSADigestSigner_SignDigest(t *testing.T) {
 	verifier := scheme.DigestVerifier(publicKey)
 
 	b := make([]byte, 120)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
-	digestBytes := digest.Bytes()
+	digestBytes := digest.AsBytes()
 
 	signature := ds.SignDigest(digest)
 	require.Equal(t, scheme.SignatureSize(), signature.FixedByteSize())
 	require.Equal(t, signature.GetSignatureMethod(), SHA3512Digest.SignedBy(SECP256r1Sign))
 
-	signatureBytes := signature.Bytes()
+	signatureBytes := signature.AsBytes()
 
 	require.True(t, verifier.Verify(insolar.SignatureFromBytes(signatureBytes), digestBytes))
 }
@@ -177,7 +178,7 @@ func TestNewECDSASignatureVerifier(t *testing.T) {
 	digester := NewSha3512Digester(scheme)
 	dv := NewECDSASignatureVerifier(digester, scheme, publicKey)
 
-	require.Implements(t, (*common.SignatureVerifier)(nil), dv)
+	require.Implements(t, (*cryptkit.SignatureVerifier)(nil), dv)
 
 	require.Equal(t, dv.digester, digester)
 	require.Equal(t, dv.scheme, scheme)
@@ -200,16 +201,6 @@ func TestECDSASignatureVerifier_IsSignMethodSupported(t *testing.T) {
 	require.False(t, dv.IsSignMethodSupported("SOME SIGN METHOD"))
 }
 
-func TestECDSASignatureVerifier_IsDigestOfSignatureMethodSupported(t *testing.T) {
-	digester := NewSha3512Digester(scheme)
-	dv := NewECDSASignatureVerifier(digester, scheme, publicKey)
-
-	require.True(t, dv.IsDigestOfSignatureMethodSupported(SHA3512Digest.SignedBy(SECP256r1Sign)))
-	require.False(t, dv.IsDigestOfSignatureMethodSupported("SOME SIGNATURE METHOD"))
-	require.True(t, dv.IsDigestOfSignatureMethodSupported(SHA3512Digest.SignedBy("SOME SIGN METHOD")))
-	require.False(t, dv.IsDigestOfSignatureMethodSupported(common.DigestMethod("SOME DIGEST METHOD").SignedBy(SECP256r1Sign)))
-}
-
 func TestECDSASignatureVerifier_IsSignOfSignatureMethodSupported(t *testing.T) {
 	digester := NewSha3512Digester(scheme)
 	dv := NewECDSASignatureVerifier(digester, scheme, publicKey)
@@ -217,7 +208,7 @@ func TestECDSASignatureVerifier_IsSignOfSignatureMethodSupported(t *testing.T) {
 	require.True(t, dv.IsSignOfSignatureMethodSupported(SHA3512Digest.SignedBy(SECP256r1Sign)))
 	require.False(t, dv.IsSignOfSignatureMethodSupported("SOME SIGNATURE METHOD"))
 	require.False(t, dv.IsSignOfSignatureMethodSupported(SHA3512Digest.SignedBy("SOME SIGN METHOD")))
-	require.True(t, dv.IsSignOfSignatureMethodSupported(common.DigestMethod("SOME DIGEST METHOD").SignedBy(SECP256r1Sign)))
+	require.True(t, dv.IsSignOfSignatureMethodSupported(cryptkit.DigestMethod("SOME DIGEST METHOD").SignedBy(SECP256r1Sign)))
 }
 
 func TestECDSASignatureVerifier_IsValidDigestSignature(t *testing.T) {
@@ -227,15 +218,15 @@ func TestECDSASignatureVerifier_IsValidDigestSignature(t *testing.T) {
 	signer := scheme.DigestSigner(privateKey)
 
 	b := make([]byte, 120)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
-	digestBytes := digest.Bytes()
+	digestBytes := digest.AsBytes()
 
 	signature, _ := signer.Sign(digestBytes)
 
-	sig := common.NewSignature(common.NewBits512FromBytes(signature.Bytes()), SHA3512Digest.SignedBy(SECP256r1Sign))
+	sig := cryptkit.NewSignature(longbits.NewBits512FromBytes(signature.Bytes()), SHA3512Digest.SignedBy(SECP256r1Sign))
 
 	require.True(t, dv.IsValidDigestSignature(digest.AsDigestHolder(), sig.AsSignatureHolder()))
 }
@@ -247,25 +238,25 @@ func TestECDSASignatureVerifier_IsValidDigestSignature_InvalidMethod(t *testing.
 	signer := scheme.DigestSigner(privateKey)
 
 	b := make([]byte, 120)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
-	digestBytes := digest.Bytes()
+	digestBytes := digest.AsBytes()
 
 	signature, _ := signer.Sign(digestBytes)
-	bits := common.NewBits512FromBytes(signature.Bytes())
+	bits := longbits.NewBits512FromBytes(signature.Bytes())
 
-	sig1 := common.NewSignature(bits, SHA3512Digest.SignedBy(SECP256r1Sign))
+	sig1 := cryptkit.NewSignature(bits, SHA3512Digest.SignedBy(SECP256r1Sign))
 	require.True(t, dv.IsValidDigestSignature(digest.AsDigestHolder(), sig1.AsSignatureHolder()))
 
-	sig2 := common.NewSignature(bits, "SOME DIGEST METHOD")
+	sig2 := cryptkit.NewSignature(bits, "SOME DIGEST METHOD")
 	require.False(t, dv.IsValidDigestSignature(digest.AsDigestHolder(), sig2.AsSignatureHolder()))
 
-	sig3 := common.NewSignature(bits, SHA3512Digest.SignedBy("SOME SIGN METHOD"))
+	sig3 := cryptkit.NewSignature(bits, SHA3512Digest.SignedBy("SOME SIGN METHOD"))
 	require.False(t, dv.IsValidDigestSignature(digest.AsDigestHolder(), sig3.AsSignatureHolder()))
 
-	sig4 := common.NewSignature(bits, common.DigestMethod("SOME DIGEST METHOD").SignedBy(SECP256r1Sign))
+	sig4 := cryptkit.NewSignature(bits, cryptkit.DigestMethod("SOME DIGEST METHOD").SignedBy(SECP256r1Sign))
 	require.False(t, dv.IsValidDigestSignature(digest.AsDigestHolder(), sig4.AsSignatureHolder()))
 }
 
@@ -276,17 +267,17 @@ func TestECDSASignatureVerifier_IsValidDataSignature(t *testing.T) {
 	signer := scheme.DigestSigner(privateKey)
 
 	b := make([]byte, 120)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
-	digestBytes := digest.Bytes()
+	digestBytes := digest.AsBytes()
 
 	signature, _ := signer.Sign(digestBytes)
 
-	sig := common.NewSignature(common.NewBits512FromBytes(signature.Bytes()), SHA3512Digest.SignedBy(SECP256r1Sign))
+	sig := cryptkit.NewSignature(longbits.NewBits512FromBytes(signature.Bytes()), SHA3512Digest.SignedBy(SECP256r1Sign))
 
-	reader.Seek(0, io.SeekStart)
+	_, _ = reader.Seek(0, io.SeekStart)
 	require.True(t, dv.IsValidDataSignature(reader, sig.AsSignatureHolder()))
 }
 
@@ -297,29 +288,29 @@ func TestECDSASignatureVerifier_IsValidDataSignature_InvalidMethod(t *testing.T)
 	signer := scheme.DigestSigner(privateKey)
 
 	b := make([]byte, 120)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 	reader := bytes.NewReader(b)
 
 	digest := digester.GetDigestOf(reader)
-	digestBytes := digest.Bytes()
+	digestBytes := digest.AsBytes()
 
 	signature, _ := signer.Sign(digestBytes)
 
-	bits := common.NewBits512FromBytes(signature.Bytes())
+	bits := longbits.NewBits512FromBytes(signature.Bytes())
 
-	reader.Seek(0, io.SeekStart)
-	sig1 := common.NewSignature(bits, SHA3512Digest.SignedBy(SECP256r1Sign))
+	_, _ = reader.Seek(0, io.SeekStart)
+	sig1 := cryptkit.NewSignature(bits, SHA3512Digest.SignedBy(SECP256r1Sign))
 	require.True(t, dv.IsValidDataSignature(reader, sig1.AsSignatureHolder()))
 
-	reader.Seek(0, io.SeekStart)
-	sig2 := common.NewSignature(bits, "SOME DIGEST METHOD")
+	_, _ = reader.Seek(0, io.SeekStart)
+	sig2 := cryptkit.NewSignature(bits, "SOME DIGEST METHOD")
 	require.False(t, dv.IsValidDataSignature(reader, sig2.AsSignatureHolder()))
 
-	reader.Seek(0, io.SeekStart)
-	sig3 := common.NewSignature(bits, SHA3512Digest.SignedBy("SOME SIGN METHOD"))
+	_, _ = reader.Seek(0, io.SeekStart)
+	sig3 := cryptkit.NewSignature(bits, SHA3512Digest.SignedBy("SOME SIGN METHOD"))
 	require.False(t, dv.IsValidDataSignature(reader, sig3.AsSignatureHolder()))
 
-	reader.Seek(0, io.SeekStart)
-	sig4 := common.NewSignature(bits, common.DigestMethod("SOME DIGEST METHOD").SignedBy(SECP256r1Sign))
+	_, _ = reader.Seek(0, io.SeekStart)
+	sig4 := cryptkit.NewSignature(bits, cryptkit.DigestMethod("SOME DIGEST METHOD").SignedBy(SECP256r1Sign))
 	require.False(t, dv.IsValidDataSignature(reader, sig4.AsSignatureHolder()))
 }
