@@ -260,9 +260,6 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *StillExecuting:
 		pl.Polymorph = uint32(TypeStillExecuting)
 		return pl.Marshal()
-	case *Replication:
-		pl.Polymorph = uint32(TypeReplication)
-		return pl.Marshal()
 	}
 
 	return nil, errors.New("unknown payload type")
@@ -372,10 +369,6 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeHotObjects:
 		pl := HotObjects{}
-		err := pl.Unmarshal(data)
-		return &pl, err
-	case TypeResultInfo:
-		pl := ResultInfo{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	case TypeGetPendings:
