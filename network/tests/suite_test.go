@@ -266,8 +266,8 @@ func (s *testSuite) waitResults(results chan error, expected int) {
 }
 
 func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
-	for _, node := range nodes {
-		s.preInitNode(node)
+	for _, n := range nodes {
+		s.preInitNode(n)
 	}
 
 	results := make(chan error, len(nodes))
@@ -277,8 +277,8 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 	}
 
 	suiteLogger.Info("Init nodes")
-	for _, node := range nodes {
-		go initNode(node)
+	for _, n := range nodes {
+		go initNode(n)
 	}
 	s.waitResults(results, len(nodes))
 }
@@ -289,11 +289,14 @@ func (s *testSuite) StartNodesNetwork(nodes []*networkNode) {
 	results := make(chan error, len(nodes))
 	startNode := func(node *networkNode) {
 		err := node.componentManager.Start(node.ctx)
+		node.serviceNetwork.RegisterConsensusFinishedNotifier(func(number insolar.PulseNumber) {
+			node.consensusResult <- number
+		})
 		results <- err
 	}
 
-	for _, node := range nodes {
-		go startNode(node)
+	for _, n := range nodes {
+		go startNode(n)
 	}
 	s.waitResults(results, len(nodes))
 	atomic.StoreUint32(&s.fixture().discoveriesAreBootstrapped, 1)
@@ -383,7 +386,7 @@ type networkNode struct {
 	componentManager   *component.Manager
 	serviceNetwork     *servicenetwork.ServiceNetwork
 	terminationHandler *testutils.TerminationHandlerMock
-	consensusResult    chan struct{}
+	consensusResult    chan insolar.PulseNumber
 }
 
 // newNetworkNode returns networkNode initialized only with id, host address and key pair
@@ -398,7 +401,7 @@ func (s *testSuite) newNetworkNode(name string) *networkNode {
 		privateKey:          key,
 		cryptographyService: cryptography.NewKeyBoundCryptographyService(key),
 		host:                address,
-		consensusResult:     make(chan struct{}, 1),
+		consensusResult:     make(chan insolar.PulseNumber, 1),
 	}
 
 	nodeContext, _ := inslogger.WithFields(s.fixture().ctx, map[string]interface{}{
@@ -531,9 +534,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme())
 	serviceNetwork, err := servicenetwork.NewServiceNetwork(cfg, node.componentManager)
 	s.Require().NoError(err)
-	serviceNetwork.SetOnStateUpdate(func() {
-		node.consensusResult <- struct{}{}
-	})
 
 	amMock := staterMock{
 		stateFunc: func() []byte {

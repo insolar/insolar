@@ -118,9 +118,6 @@ type ServiceNetwork struct {
 	consensusController consensus.Controller
 
 	lock sync.Mutex
-
-	// for testing purposes :(
-	onStateUpdate func()
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
@@ -151,14 +148,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to create hostnetwork")
 	}
 	n.HostNetwork = hostNetwork
-
-	//consensusNetwork, err := hostnetwork.NewConsensusNetwork(
-	//	n.CertificateManager.GetCertificate().GetNodeRef().String(),
-	//	n.NodeKeeper.GetOrigin().ShortID(),
-	//)
-	//if err != nil {
-	//	return errors.Wrap(err, "Failed to create consensus network.")
-	//}
 
 	options := common.ConfigureOptions(n.cfg)
 
@@ -216,10 +205,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	})
 
 	return nil
-}
-
-func (n *ServiceNetwork) SetOnStateUpdate(f func()) {
-	n.onStateUpdate = f
 }
 
 // Start implements component.Starter
@@ -299,14 +284,14 @@ func (n *ServiceNetwork) UpdateState(ctx context.Context, pulseNumber insolar.Pu
 		inslogger.FromContext(ctx).Error(err)
 	}
 	n.NodeKeeper.SetCloudHash(cloudStateHash)
-
-	if n.onStateUpdate != nil {
-		n.onStateUpdate()
-	}
 }
 
 func (n *ServiceNetwork) State() []byte {
 	nshBytes := make([]byte, 64)
 	_, _ = rand.Read(nshBytes)
 	return nshBytes
+}
+
+func (n *ServiceNetwork) RegisterConsensusFinishedNotifier(fn consensus.FinishedNotifier) {
+	n.consensusController.RegisterFinishedNotifier(fn)
 }
