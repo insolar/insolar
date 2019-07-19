@@ -24,14 +24,13 @@ import (
 
 	wmMessage "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar/bus"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -349,7 +348,7 @@ func (s *ExecutionBrokerSuite) TestPut() {
 
 	objectRef := gen.Reference()
 	b := lr.StateStorage.UpsertExecutionState(objectRef)
-	b.executionState.pending = message.NotPending
+	b.executionState.pending = insolar.NotPending
 
 	tr := NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{})
 
@@ -391,7 +390,7 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 
 	objectRef := gen.Reference()
 	b := lr.StateStorage.UpsertExecutionState(objectRef)
-	b.executionState.pending = message.NotPending
+	b.executionState.pending = insolar.NotPending
 
 	reqRef1 := gen.Reference()
 	tr := NewTranscript(s.Context, reqRef1, record.IncomingRequest{})
@@ -437,7 +436,7 @@ func (s *ExecutionBrokerSuite) TestImmutable_NotPending() {
 
 	objectRef := gen.Reference()
 	b := lr.StateStorage.UpsertExecutionState(objectRef)
-	b.executionState.pending = message.NotPending
+	b.executionState.pending = insolar.NotPending
 
 	tr := NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{Immutable: true})
 
@@ -475,7 +474,7 @@ func (s *ExecutionBrokerSuite) TestImmutable_InPending() {
 
 	objectRef := gen.Reference()
 	b := lr.StateStorage.UpsertExecutionState(objectRef)
-	b.executionState.pending = message.InPending
+	b.executionState.pending = insolar.InPending
 
 	tr := NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{Immutable: true})
 
@@ -513,7 +512,7 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 
 	objectRef := gen.Reference()
 	b := lr.StateStorage.UpsertExecutionState(objectRef)
-	b.executionState.pending = message.NotPending
+	b.executionState.pending = insolar.NotPending
 
 	for i := 0; i < 4; i++ {
 		b.stateLock.Lock()
@@ -582,7 +581,7 @@ func (s *ExecutionBrokerSuite) TestDeduplication() {
 
 	objectRef := gen.Reference()
 	b := lr.StateStorage.UpsertExecutionState(objectRef)
-	b.executionState.pending = message.InPending
+	b.executionState.pending = insolar.InPending
 
 	reqRef1 := gen.Reference()
 	b.Put(s.Context, false, NewTranscript(s.Context, reqRef1, record.IncomingRequest{})) // no duplication

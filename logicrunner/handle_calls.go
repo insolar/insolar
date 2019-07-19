@@ -77,8 +77,8 @@ func (h *HandleCall) sendToNextExecutor(
 			Request:         *transcript.Request,
 			ServiceData:     serviceDataFromContext(transcript.Context),
 		}
-		if broker.executionState.pending == message.PendingUnknown {
-			additionalCallMsg.Pending = message.NotPending
+		if broker.executionState.pending == insolar.PendingUnknown {
+			additionalCallMsg.Pending = insolar.NotPending
 		} else {
 			additionalCallMsg.Pending = broker.executionState.pending
 		}
@@ -225,8 +225,8 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 	broker := lr.StateStorage.UpsertExecutionState(msg.ObjectReference)
 
 	broker.executionState.Lock()
-	if msg.Pending == message.NotPending {
-		broker.executionState.pending = message.NotPending
+	if msg.Pending == insolar.NotPending {
+		broker.executionState.pending = insolar.NotPending
 	}
 
 	broker.Put(ctx, false, NewTranscript(ctx, msg.RequestRef, msg.Request))

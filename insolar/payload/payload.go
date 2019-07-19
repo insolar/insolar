@@ -28,6 +28,7 @@ type Type uint32
 
 const (
 	TypeUnknown Type = iota
+
 	TypeMeta
 	TypeError
 	TypeID
@@ -58,6 +59,13 @@ const (
 	TypeResultInfo
 	TypeGetPendings
 	TypeReplication
+
+	TypeReturnResults
+	TypeCallMethod
+	TypeExecutorResults
+	TypePendingFinished
+	TypeAdditionalCallFromPreviousExecutor
+	TypeStillExecuting
 
 	// should be the last (required by TypesMap)
 	_latestType
@@ -220,6 +228,24 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *ResultInfo:
 		pl.Polymorph = uint32(TypeResultInfo)
 		return pl.Marshal()
+	case *ReturnResults:
+		pl.Polymorph = uint32(TypeReturnResults)
+		return pl.Marshal()
+	case *CallMethod:
+		pl.Polymorph = uint32(TypeCallMethod)
+		return pl.Marshal()
+	case *ExecutorResults:
+		pl.Polymorph = uint32(TypeExecutorResults)
+		return pl.Marshal()
+	case *PendingFinished:
+		pl.Polymorph = uint32(TypePendingFinished)
+		return pl.Marshal()
+	case *AdditionalCallFromPreviousExecutor:
+		pl.Polymorph = uint32(TypeAdditionalCallFromPreviousExecutor)
+		return pl.Marshal()
+	case *StillExecuting:
+		pl.Polymorph = uint32(TypeStillExecuting)
+		return pl.Marshal()
 	case *Replication:
 		pl.Polymorph = uint32(TypeReplication)
 		return pl.Marshal()
@@ -339,6 +365,30 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeResultInfo:
 		pl := ResultInfo{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeReturnResults:
+		pl := ReturnResults{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeCallMethod:
+		pl := CallMethod{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeExecutorResults:
+		pl := ExecutorResults{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypePendingFinished:
+		pl := PendingFinished{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeAdditionalCallFromPreviousExecutor:
+		pl := AdditionalCallFromPreviousExecutor{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeStillExecuting:
+		pl := StillExecuting{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	case TypeReplication:

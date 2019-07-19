@@ -22,7 +22,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -114,7 +113,7 @@ func (c *ClarifyPendingState) Proceed(ctx context.Context) error {
 	es := &c.broker.executionState
 
 	es.Lock()
-	if es.pending != message.PendingUnknown {
+	if es.pending != insolar.PendingUnknown {
 		es.Unlock()
 		return nil
 	}
@@ -122,7 +121,7 @@ func (c *ClarifyPendingState) Proceed(ctx context.Context) error {
 	if c.request != nil {
 		if c.request.CallType != record.CTMethod {
 			// It's considered that we are not pending except someone calls a method.
-			es.pending = message.NotPending
+			es.pending = insolar.NotPending
 			es.Unlock()
 			return nil
 		}
@@ -134,7 +133,7 @@ func (c *ClarifyPendingState) Proceed(ctx context.Context) error {
 	defer es.HasPendingCheckMutex.Unlock()
 
 	es.Lock()
-	if es.pending != message.PendingUnknown {
+	if es.pending != insolar.PendingUnknown {
 		es.Unlock()
 		return nil
 	}
@@ -146,11 +145,11 @@ func (c *ClarifyPendingState) Proceed(ctx context.Context) error {
 	}
 
 	es.Lock()
-	if es.pending == message.PendingUnknown {
+	if es.pending == insolar.PendingUnknown {
 		if has {
-			es.pending = message.InPending
+			es.pending = insolar.InPending
 		} else {
-			es.pending = message.NotPending
+			es.pending = insolar.NotPending
 		}
 	}
 	es.Unlock()

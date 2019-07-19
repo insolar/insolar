@@ -45,8 +45,8 @@ func (p *initializeAbandonedRequestsNotificationExecutionState) Proceed(ctx cont
 	broker := p.LR.StateStorage.UpsertExecutionState(ref)
 
 	broker.executionState.Lock()
-	if broker.executionState.pending == message.PendingUnknown {
-		broker.executionState.pending = message.InPending
+	if broker.executionState.pending == insolar.PendingUnknown {
+		broker.executionState.pending = insolar.InPending
 		broker.executionState.PendingConfirmed = false
 	}
 	broker.executionState.Unlock()

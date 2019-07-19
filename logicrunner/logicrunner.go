@@ -344,7 +344,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 			if !meNext && state.ExecutionBroker.currentList.Empty() {
 				// we're not executing and we have nothing to process
 				state.ExecutionBroker = nil
-			} else if meNext && broker.executionState.pending == message.NotPending {
+			} else if meNext && broker.executionState.pending == insolar.NotPending {
 				// we're executing, micro optimization, check pending
 				// status, reset ledger check status and start execution
 				state.ExecutionBroker.ResetLedgerCheck()
