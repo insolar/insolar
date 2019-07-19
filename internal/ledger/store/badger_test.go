@@ -203,7 +203,8 @@ func TestBadgerDB_NewIterator(t *testing.T) {
 	i := 0
 	for it.Next() && i < len(expected) {
 		require.Equal(t, expected[i].k.ID(), it.Key())
-		require.Equal(t, expected[i].v, it.Value())
+		val, _ := it.Value()
+		require.Equal(t, expected[i].v, val)
 		i++
 	}
 	require.Equal(t, len(expected), i)
@@ -303,7 +304,8 @@ func TestBadgerDB_NewReverseIterator(t *testing.T) {
 	i := 0
 	for it.Next() && i < len(expected) {
 		require.Equal(t, expected[len(expected)-i-1].k.ID(), it.Key())
-		require.Equal(t, expected[len(expected)-i-1].v, it.Value())
+		val, _ := it.Value()
+		require.Equal(t, expected[len(expected)-i-1].v, val)
 		i++
 	}
 	require.Equal(t, len(expected), i)

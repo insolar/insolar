@@ -110,16 +110,16 @@ func (mi *memoryIterator) Key() []byte {
 	return val
 }
 
-func (mi *memoryIterator) Value() []byte {
+func (mi *memoryIterator) Value() ([]byte, error) {
 	if mi.current < 0 || mi.current >= len(mi.items) {
-		return nil
+		return nil, nil
 	}
 	key := mi.items[mi.current]
 	value, ok := mi.db.backend[string(key)]
 	if !ok {
-		return nil
+		return nil, nil
 	}
-	return append([]byte{}, value...)
+	return append([]byte{}, value...), nil
 }
 
 func (mi *memoryIterator) searchKeys() {
