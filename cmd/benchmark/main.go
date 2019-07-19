@@ -318,6 +318,19 @@ func loadMembers(count int) ([]*sdk.Member, error) {
 	return members, nil
 }
 
+func calcFee(amount int64) int64 {
+	feePercentage := amount * transferFee
+
+	fee := feePercentage / 100
+	mod := feePercentage % 100
+
+	if mod > 0 {
+		return fee + 1
+	}
+
+	return fee
+}
+
 func main() {
 	parseInputParams()
 
@@ -385,18 +398,20 @@ func main() {
 
 	if !noCheckBalance {
 		totalBalanceAfter := big.NewInt(0)
+		totalBalanceAfterWithFee := big.NewInt(0)
 		for nretries := 0; nretries < 3; nretries++ {
 			totalBalanceAfter, _ = getTotalBalance(insSDK, members)
-			if totalBalanceAfter.Cmp(totalBalanceBefore) == 0 {
+			totalBalanceAfterWithFee = new(big.Int).Add(totalBalanceAfter, big.NewInt(calcFee(transferAmount)))
+			if totalBalanceAfterWithFee.Cmp(totalBalanceBefore) == 0 {
 				break
 			}
 			fmt.Printf("Total balance before and after don't match: %v vs %v - retrying in 3 seconds...\n",
-				totalBalanceBefore, totalBalanceAfter)
+				totalBalanceBefore, totalBalanceAfterWithFee)
 			time.Sleep(3 * time.Second)
 
 		}
-		fmt.Printf("Total balance before: %v and after: %v\n", totalBalanceBefore, totalBalanceAfter)
-		if totalBalanceAfter.Cmp(totalBalanceBefore) != 0 {
+		fmt.Printf("Total balance before: %v and after: %v\n", totalBalanceBefore, totalBalanceAfterWithFee)
+		if totalBalanceAfterWithFee.Cmp(totalBalanceBefore) != 0 {
 			log.Fatal("Total balance mismatch!\n")
 		}
 	}

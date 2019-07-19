@@ -22,18 +22,14 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/pkg/errors"
 )
 
-type GetPendingRequestID struct {
+type GetPendings struct {
 	message  payload.Meta
-	msg      *message.GetPendingRequestID
-	jet      insolar.JetID
-	reqPulse insolar.PulseNumber
+	objectID insolar.ID
 
 	dep struct {
 		filaments executor.FilamentCalculator
@@ -41,41 +37,54 @@ type GetPendingRequestID struct {
 	}
 }
 
-func NewGetPendingRequestID(jetID insolar.JetID, message payload.Meta, msg *message.GetPendingRequestID, reqPulse insolar.PulseNumber) *GetPendingRequestID {
-	return &GetPendingRequestID{
-		msg:      msg,
-		message:  message,
-		jet:      jetID,
-		reqPulse: reqPulse,
+func NewGetPendings(msg payload.Meta, objectID insolar.ID) *GetPendings {
+	return &GetPendings{
+		message:  msg,
+		objectID: objectID,
 	}
 }
 
-func (p *GetPendingRequestID) Dep(filaments executor.FilamentCalculator, sender bus.Sender) {
-	p.dep.filaments = filaments
-	p.dep.sender = sender
+func (gp *GetPendings) Dep(
+	f executor.FilamentCalculator,
+	s bus.Sender,
+) {
+	gp.dep.filaments = f
+	gp.dep.sender = s
 }
 
-func (p *GetPendingRequestID) Proceed(ctx context.Context) error {
-	pends, err := p.dep.filaments.PendingRequests(ctx, flow.Pulse(ctx), p.msg.ObjectID)
+func (gp *GetPendings) Proceed(ctx context.Context) error {
+	pendings, err := gp.dep.filaments.PendingRequests(ctx, flow.Pulse(ctx), gp.objectID)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate pending")
 	}
-	if len(pends) == 0 {
-		msg := bus.ReplyAsMessage(ctx, &reply.Error{ErrType: reply.ErrNoPendingRequests})
-		go p.dep.sender.Reply(ctx, p.message, msg)
+	if len(pendings) == 0 {
+		msg, err := payload.NewMessage(&payload.Error{
+			Code: payload.CodeNoPendings,
+			Text: insolar.ErrNoPendingRequest.Error(),
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to create reply")
+		}
+		go gp.dep.sender.Reply(ctx, gp.message, msg)
 		return nil
 	}
 
-	if len(pends) > 100 {
-		pends = pends[:100]
+	if len(pendings) > 100 {
+		pendings = pendings[:100]
 	}
 
-	ids := make([]insolar.ID, len(pends))
-	for i, pend := range pends {
+	ids := make([]insolar.ID, len(pendings))
+	for i, pend := range pendings {
 		ids[i] = pend.RecordID
 	}
 
-	m := bus.ReplyAsMessage(ctx, &reply.IDs{IDs: ids})
-	p.dep.sender.Reply(ctx, p.message, m)
+	msg, err := payload.NewMessage(&payload.IDs{
+		IDs: ids,
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to create reply")
+	}
+
+	go gp.dep.sender.Reply(ctx, gp.message, msg)
 	return nil
 }

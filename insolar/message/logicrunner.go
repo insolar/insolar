@@ -22,14 +22,6 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 )
 
-type PendingState int
-
-const (
-	PendingUnknown PendingState = iota
-	NotPending
-	InPending
-)
-
 // ReturnResults - push results of methods
 type ReturnResults struct {
 	Target     insolar.Reference
@@ -114,7 +106,7 @@ type ExecutorResults struct {
 	Requests              []CaseBindRequest
 	Queue                 []ExecutionQueueElement
 	LedgerHasMoreRequests bool
-	Pending               PendingState
+	Pending               insolar.PendingState
 }
 
 type ExecutionQueueElement struct {
@@ -277,7 +269,7 @@ func (pf *PendingFinished) Type() insolar.MessageType {
 // for more details.
 type AdditionalCallFromPreviousExecutor struct {
 	ObjectReference insolar.Reference
-	Pending         PendingState
+	Pending         insolar.PendingState
 	RequestRef      insolar.Reference
 	Request         record.IncomingRequest
 	ServiceData     ServiceData

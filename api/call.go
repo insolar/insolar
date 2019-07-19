@@ -29,6 +29,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/metrics"
 
 	"github.com/insolar/insolar/api/requester"
@@ -175,6 +176,25 @@ func processRequest(ctx context.Context,
 	return ctx, rawBody, nil
 }
 
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
+func setRootReferenceIfNeeded(request *requester.Request) {
+	if request.Params.Reference != "" {
+		return
+	}
+	methods := []string{"member.create", "member.migrationCreate", "member.get"}
+	if contains(methods, request.Params.CallSite) {
+		request.Params.Reference = genesisrefs.ContractRootMember.String()
+	}
+}
+
 func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 		traceID := utils.RandTraceID()
@@ -219,6 +239,8 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			processError(err, err.Error(), contractAnswer, insLog, traceID)
 			return
 		}
+
+		setRootReferenceIfNeeded(contractRequest)
 
 		var result interface{}
 		ch := make(chan interface{}, 1)
