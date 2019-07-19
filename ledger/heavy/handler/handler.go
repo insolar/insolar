@@ -383,7 +383,7 @@ func (h *Handler) handleGetObjectIndex(ctx context.Context, parcel insolar.Parce
 	return &reply.ObjectIndex{Index: buf}, nil
 }
 
-func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Parcel) (insolar.Reply, error) {
+func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Parcel) (insolar.Reply, error) { // nolint
 	logger := inslogger.FromContext(ctx)
 	msg := genericMsg.Message().(*message.HeavyPayload)
 
