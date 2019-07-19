@@ -82,6 +82,9 @@ func (p *GetChildren) reply(ctx context.Context) bus.Reply {
 	if err != nil {
 		return bus.Reply{Err: err}
 	}
+	if idx.Lifeline.LatestState == nil {
+		return bus.Reply{Err: ErrNotActivated}
+	}
 
 	// The object has no children.
 	if idx.Lifeline.ChildPointer == nil {

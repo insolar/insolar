@@ -59,6 +59,10 @@ func (p *GetPendingRequests) Proceed(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	if idx.Lifeline.LatestState == nil {
+		return ErrNotActivated
+	}
+
 	rep := bus.ReplyAsMessage(ctx, &reply.HasPendingRequests{
 		Has: idx.Lifeline.EarliestOpenRequest != nil && *idx.Lifeline.EarliestOpenRequest < flow.Pulse(ctx),
 	})

@@ -148,7 +148,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 			return errors.Wrap(err, "failed to create reply")
 		}
 
-		go p.Dep.Sender.Reply(ctx, p.message, msg)
+		p.Dep.Sender.Reply(ctx, p.message, msg)
 		logger.Info("sending index")
 	}
 
