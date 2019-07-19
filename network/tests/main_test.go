@@ -64,7 +64,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/node"
-	"github.com/insolar/insolar/network/nodenetwork"
 )
 
 var (
@@ -419,7 +418,6 @@ func (s *consensusSuite) TestDiscoveryDown() {
 
 func flushNodeKeeper(keeper network.NodeKeeper) {
 	// keeper.SetIsBootstrapped(false)
-	keeper.GetConsensusInfo().(*nodenetwork.ConsensusInfo).Flush(false)
 	keeper.SetCloudHash(nil)
 	keeper.SetInitialSnapshot([]insolar.NetworkNode{})
 	keeper.GetClaimQueue().Clear()

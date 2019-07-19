@@ -120,20 +120,18 @@ func resolveAddress(configuration configuration.Transport) (string, error) {
 // NewNodeKeeper create new NodeKeeper
 func NewNodeKeeper(origin insolar.NetworkNode) network.NodeKeeper {
 	nk := &nodekeeper{
-		origin:        origin,
-		claimQueue:    newClaimQueue(),
-		consensusInfo: NewConsensusInfo(),
-		syncNodes:     make([]insolar.NetworkNode, 0),
-		syncClaims:    make([]packets.ReferendumClaim, 0),
+		origin:     origin,
+		claimQueue: newClaimQueue(),
+		syncNodes:  make([]insolar.NetworkNode, 0),
+		syncClaims: make([]packets.ReferendumClaim, 0),
 	}
 	nk.SetInitialSnapshot([]insolar.NetworkNode{})
 	return nk
 }
 
 type nodekeeper struct {
-	origin        insolar.NetworkNode
-	claimQueue    *claimQueue
-	consensusInfo *ConsensusInfo
+	origin     insolar.NetworkNode
+	claimQueue *claimQueue
 
 	cloudHashLock sync.RWMutex
 	cloudHash     []byte
@@ -179,10 +177,6 @@ func (nk *nodekeeper) GetAccessor() network.Accessor {
 	defer nk.activeLock.RUnlock()
 
 	return nk.accessor
-}
-
-func (nk *nodekeeper) GetConsensusInfo() network.ConsensusInfo {
-	return nk.consensusInfo
 }
 
 func (nk *nodekeeper) GetWorkingNode(ref insolar.Reference) insolar.NetworkNode {
@@ -240,7 +234,6 @@ func (nk *nodekeeper) Sync(ctx context.Context, nodes []insolar.NetworkNode, cla
 		if n.ID().Equal(nk.origin.ID()) {
 			foundOrigin = true
 			nk.syncOrigin(n)
-			nk.consensusInfo.SetIsJoiner(false)
 		}
 	}
 
@@ -282,7 +275,6 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context, number insolar.Pulse
 	nk.snapshot = node.NewSnapshot(number, mergeResult.ActiveList)
 	nk.accessor = node.NewAccessor(nk.snapshot)
 	stats.Record(ctx, network.ActiveNodes.M(int64(len(nk.accessor.GetActiveNodes()))))
-	nk.consensusInfo.Flush(mergeResult.NodesJoinedDuringPrevPulse)
 	nk.gracefulStopIfNeeded(ctx)
 	return nil
 }

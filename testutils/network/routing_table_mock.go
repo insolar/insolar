@@ -35,16 +35,6 @@ type RoutingTableMock struct {
 	ResolveCounter    uint64
 	ResolvePreCounter uint64
 	ResolveMock       mRoutingTableMockResolve
-
-	ResolveConsensusFunc       func(p insolar.ShortNodeID) (r *host.Host, r1 error)
-	ResolveConsensusCounter    uint64
-	ResolveConsensusPreCounter uint64
-	ResolveConsensusMock       mRoutingTableMockResolveConsensus
-
-	ResolveConsensusRefFunc       func(p insolar.Reference) (r *host.Host, r1 error)
-	ResolveConsensusRefCounter    uint64
-	ResolveConsensusRefPreCounter uint64
-	ResolveConsensusRefMock       mRoutingTableMockResolveConsensusRef
 }
 
 //NewRoutingTableMock returns a mock for github.com/insolar/insolar/network.RoutingTable
@@ -58,8 +48,6 @@ func NewRoutingTableMock(t minimock.Tester) *RoutingTableMock {
 	m.AddToKnownHostsMock = mRoutingTableMockAddToKnownHosts{mock: m}
 	m.RebalanceMock = mRoutingTableMockRebalance{mock: m}
 	m.ResolveMock = mRoutingTableMockResolve{mock: m}
-	m.ResolveConsensusMock = mRoutingTableMockResolveConsensus{mock: m}
-	m.ResolveConsensusRefMock = mRoutingTableMockResolveConsensusRef{mock: m}
 
 	return m
 }
@@ -460,306 +448,6 @@ func (m *RoutingTableMock) ResolveFinished() bool {
 	return true
 }
 
-type mRoutingTableMockResolveConsensus struct {
-	mock              *RoutingTableMock
-	mainExpectation   *RoutingTableMockResolveConsensusExpectation
-	expectationSeries []*RoutingTableMockResolveConsensusExpectation
-}
-
-type RoutingTableMockResolveConsensusExpectation struct {
-	input  *RoutingTableMockResolveConsensusInput
-	result *RoutingTableMockResolveConsensusResult
-}
-
-type RoutingTableMockResolveConsensusInput struct {
-	p insolar.ShortNodeID
-}
-
-type RoutingTableMockResolveConsensusResult struct {
-	r  *host.Host
-	r1 error
-}
-
-//Expect specifies that invocation of RoutingTable.ResolveConsensus is expected from 1 to Infinity times
-func (m *mRoutingTableMockResolveConsensus) Expect(p insolar.ShortNodeID) *mRoutingTableMockResolveConsensus {
-	m.mock.ResolveConsensusFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &RoutingTableMockResolveConsensusExpectation{}
-	}
-	m.mainExpectation.input = &RoutingTableMockResolveConsensusInput{p}
-	return m
-}
-
-//Return specifies results of invocation of RoutingTable.ResolveConsensus
-func (m *mRoutingTableMockResolveConsensus) Return(r *host.Host, r1 error) *RoutingTableMock {
-	m.mock.ResolveConsensusFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &RoutingTableMockResolveConsensusExpectation{}
-	}
-	m.mainExpectation.result = &RoutingTableMockResolveConsensusResult{r, r1}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of RoutingTable.ResolveConsensus is expected once
-func (m *mRoutingTableMockResolveConsensus) ExpectOnce(p insolar.ShortNodeID) *RoutingTableMockResolveConsensusExpectation {
-	m.mock.ResolveConsensusFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &RoutingTableMockResolveConsensusExpectation{}
-	expectation.input = &RoutingTableMockResolveConsensusInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *RoutingTableMockResolveConsensusExpectation) Return(r *host.Host, r1 error) {
-	e.result = &RoutingTableMockResolveConsensusResult{r, r1}
-}
-
-//Set uses given function f as a mock of RoutingTable.ResolveConsensus method
-func (m *mRoutingTableMockResolveConsensus) Set(f func(p insolar.ShortNodeID) (r *host.Host, r1 error)) *RoutingTableMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.ResolveConsensusFunc = f
-	return m.mock
-}
-
-//ResolveConsensus implements github.com/insolar/insolar/network.RoutingTable interface
-func (m *RoutingTableMock) ResolveConsensus(p insolar.ShortNodeID) (r *host.Host, r1 error) {
-	counter := atomic.AddUint64(&m.ResolveConsensusPreCounter, 1)
-	defer atomic.AddUint64(&m.ResolveConsensusCounter, 1)
-
-	if len(m.ResolveConsensusMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.ResolveConsensusMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to RoutingTableMock.ResolveConsensus. %v", p)
-			return
-		}
-
-		input := m.ResolveConsensusMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, RoutingTableMockResolveConsensusInput{p}, "RoutingTable.ResolveConsensus got unexpected parameters")
-
-		result := m.ResolveConsensusMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the RoutingTableMock.ResolveConsensus")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.ResolveConsensusMock.mainExpectation != nil {
-
-		input := m.ResolveConsensusMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, RoutingTableMockResolveConsensusInput{p}, "RoutingTable.ResolveConsensus got unexpected parameters")
-		}
-
-		result := m.ResolveConsensusMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the RoutingTableMock.ResolveConsensus")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.ResolveConsensusFunc == nil {
-		m.t.Fatalf("Unexpected call to RoutingTableMock.ResolveConsensus. %v", p)
-		return
-	}
-
-	return m.ResolveConsensusFunc(p)
-}
-
-//ResolveConsensusMinimockCounter returns a count of RoutingTableMock.ResolveConsensusFunc invocations
-func (m *RoutingTableMock) ResolveConsensusMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.ResolveConsensusCounter)
-}
-
-//ResolveConsensusMinimockPreCounter returns the value of RoutingTableMock.ResolveConsensus invocations
-func (m *RoutingTableMock) ResolveConsensusMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.ResolveConsensusPreCounter)
-}
-
-//ResolveConsensusFinished returns true if mock invocations count is ok
-func (m *RoutingTableMock) ResolveConsensusFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.ResolveConsensusMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.ResolveConsensusCounter) == uint64(len(m.ResolveConsensusMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.ResolveConsensusMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.ResolveConsensusCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.ResolveConsensusFunc != nil {
-		return atomic.LoadUint64(&m.ResolveConsensusCounter) > 0
-	}
-
-	return true
-}
-
-type mRoutingTableMockResolveConsensusRef struct {
-	mock              *RoutingTableMock
-	mainExpectation   *RoutingTableMockResolveConsensusRefExpectation
-	expectationSeries []*RoutingTableMockResolveConsensusRefExpectation
-}
-
-type RoutingTableMockResolveConsensusRefExpectation struct {
-	input  *RoutingTableMockResolveConsensusRefInput
-	result *RoutingTableMockResolveConsensusRefResult
-}
-
-type RoutingTableMockResolveConsensusRefInput struct {
-	p insolar.Reference
-}
-
-type RoutingTableMockResolveConsensusRefResult struct {
-	r  *host.Host
-	r1 error
-}
-
-//Expect specifies that invocation of RoutingTable.ResolveConsensusRef is expected from 1 to Infinity times
-func (m *mRoutingTableMockResolveConsensusRef) Expect(p insolar.Reference) *mRoutingTableMockResolveConsensusRef {
-	m.mock.ResolveConsensusRefFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &RoutingTableMockResolveConsensusRefExpectation{}
-	}
-	m.mainExpectation.input = &RoutingTableMockResolveConsensusRefInput{p}
-	return m
-}
-
-//Return specifies results of invocation of RoutingTable.ResolveConsensusRef
-func (m *mRoutingTableMockResolveConsensusRef) Return(r *host.Host, r1 error) *RoutingTableMock {
-	m.mock.ResolveConsensusRefFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &RoutingTableMockResolveConsensusRefExpectation{}
-	}
-	m.mainExpectation.result = &RoutingTableMockResolveConsensusRefResult{r, r1}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of RoutingTable.ResolveConsensusRef is expected once
-func (m *mRoutingTableMockResolveConsensusRef) ExpectOnce(p insolar.Reference) *RoutingTableMockResolveConsensusRefExpectation {
-	m.mock.ResolveConsensusRefFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &RoutingTableMockResolveConsensusRefExpectation{}
-	expectation.input = &RoutingTableMockResolveConsensusRefInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *RoutingTableMockResolveConsensusRefExpectation) Return(r *host.Host, r1 error) {
-	e.result = &RoutingTableMockResolveConsensusRefResult{r, r1}
-}
-
-//Set uses given function f as a mock of RoutingTable.ResolveConsensusRef method
-func (m *mRoutingTableMockResolveConsensusRef) Set(f func(p insolar.Reference) (r *host.Host, r1 error)) *RoutingTableMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.ResolveConsensusRefFunc = f
-	return m.mock
-}
-
-//ResolveConsensusRef implements github.com/insolar/insolar/network.RoutingTable interface
-func (m *RoutingTableMock) ResolveConsensusRef(p insolar.Reference) (r *host.Host, r1 error) {
-	counter := atomic.AddUint64(&m.ResolveConsensusRefPreCounter, 1)
-	defer atomic.AddUint64(&m.ResolveConsensusRefCounter, 1)
-
-	if len(m.ResolveConsensusRefMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.ResolveConsensusRefMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to RoutingTableMock.ResolveConsensusRef. %v", p)
-			return
-		}
-
-		input := m.ResolveConsensusRefMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, RoutingTableMockResolveConsensusRefInput{p}, "RoutingTable.ResolveConsensusRef got unexpected parameters")
-
-		result := m.ResolveConsensusRefMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the RoutingTableMock.ResolveConsensusRef")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.ResolveConsensusRefMock.mainExpectation != nil {
-
-		input := m.ResolveConsensusRefMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, RoutingTableMockResolveConsensusRefInput{p}, "RoutingTable.ResolveConsensusRef got unexpected parameters")
-		}
-
-		result := m.ResolveConsensusRefMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the RoutingTableMock.ResolveConsensusRef")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.ResolveConsensusRefFunc == nil {
-		m.t.Fatalf("Unexpected call to RoutingTableMock.ResolveConsensusRef. %v", p)
-		return
-	}
-
-	return m.ResolveConsensusRefFunc(p)
-}
-
-//ResolveConsensusRefMinimockCounter returns a count of RoutingTableMock.ResolveConsensusRefFunc invocations
-func (m *RoutingTableMock) ResolveConsensusRefMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.ResolveConsensusRefCounter)
-}
-
-//ResolveConsensusRefMinimockPreCounter returns the value of RoutingTableMock.ResolveConsensusRef invocations
-func (m *RoutingTableMock) ResolveConsensusRefMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.ResolveConsensusRefPreCounter)
-}
-
-//ResolveConsensusRefFinished returns true if mock invocations count is ok
-func (m *RoutingTableMock) ResolveConsensusRefFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.ResolveConsensusRefMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.ResolveConsensusRefCounter) == uint64(len(m.ResolveConsensusRefMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.ResolveConsensusRefMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.ResolveConsensusRefCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.ResolveConsensusRefFunc != nil {
-		return atomic.LoadUint64(&m.ResolveConsensusRefCounter) > 0
-	}
-
-	return true
-}
-
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *RoutingTableMock) ValidateCallCounters() {
@@ -774,14 +462,6 @@ func (m *RoutingTableMock) ValidateCallCounters() {
 
 	if !m.ResolveFinished() {
 		m.t.Fatal("Expected call to RoutingTableMock.Resolve")
-	}
-
-	if !m.ResolveConsensusFinished() {
-		m.t.Fatal("Expected call to RoutingTableMock.ResolveConsensus")
-	}
-
-	if !m.ResolveConsensusRefFinished() {
-		m.t.Fatal("Expected call to RoutingTableMock.ResolveConsensusRef")
 	}
 
 }
@@ -813,14 +493,6 @@ func (m *RoutingTableMock) MinimockFinish() {
 		m.t.Fatal("Expected call to RoutingTableMock.Resolve")
 	}
 
-	if !m.ResolveConsensusFinished() {
-		m.t.Fatal("Expected call to RoutingTableMock.ResolveConsensus")
-	}
-
-	if !m.ResolveConsensusRefFinished() {
-		m.t.Fatal("Expected call to RoutingTableMock.ResolveConsensusRef")
-	}
-
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -838,8 +510,6 @@ func (m *RoutingTableMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.AddToKnownHostsFinished()
 		ok = ok && m.RebalanceFinished()
 		ok = ok && m.ResolveFinished()
-		ok = ok && m.ResolveConsensusFinished()
-		ok = ok && m.ResolveConsensusRefFinished()
 
 		if ok {
 			return
@@ -858,14 +528,6 @@ func (m *RoutingTableMock) MinimockWait(timeout time.Duration) {
 
 			if !m.ResolveFinished() {
 				m.t.Error("Expected call to RoutingTableMock.Resolve")
-			}
-
-			if !m.ResolveConsensusFinished() {
-				m.t.Error("Expected call to RoutingTableMock.ResolveConsensus")
-			}
-
-			if !m.ResolveConsensusRefFinished() {
-				m.t.Error("Expected call to RoutingTableMock.ResolveConsensusRef")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -889,14 +551,6 @@ func (m *RoutingTableMock) AllMocksCalled() bool {
 	}
 
 	if !m.ResolveFinished() {
-		return false
-	}
-
-	if !m.ResolveConsensusFinished() {
-		return false
-	}
-
-	if !m.ResolveConsensusRefFinished() {
 		return false
 	}
 

@@ -81,8 +81,6 @@ func (g *JoinerBootstrap) Run(ctx context.Context) {
 		return
 	}
 
-	g.NodeKeeper.GetConsensusInfo().SetIsJoiner(true)
-
 	pulse, err := g.PulseAccessor.Latest(ctx)
 	if err != nil {
 		logger.Error(err.Error())

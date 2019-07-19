@@ -38,11 +38,6 @@ type NodeKeeperMock struct {
 	GetCloudHashPreCounter uint64
 	GetCloudHashMock       mNodeKeeperMockGetCloudHash
 
-	GetConsensusInfoFunc       func() (r network.ConsensusInfo)
-	GetConsensusInfoCounter    uint64
-	GetConsensusInfoPreCounter uint64
-	GetConsensusInfoMock       mNodeKeeperMockGetConsensusInfo
-
 	GetOriginFunc       func() (r insolar.NetworkNode)
 	GetOriginCounter    uint64
 	GetOriginPreCounter uint64
@@ -110,7 +105,6 @@ func NewNodeKeeperMock(t minimock.Tester) *NodeKeeperMock {
 	m.GetAccessorMock = mNodeKeeperMockGetAccessor{mock: m}
 	m.GetClaimQueueMock = mNodeKeeperMockGetClaimQueue{mock: m}
 	m.GetCloudHashMock = mNodeKeeperMockGetCloudHash{mock: m}
-	m.GetConsensusInfoMock = mNodeKeeperMockGetConsensusInfo{mock: m}
 	m.GetOriginMock = mNodeKeeperMockGetOrigin{mock: m}
 	m.GetOriginAnnounceClaimMock = mNodeKeeperMockGetOriginAnnounceClaim{mock: m}
 	m.GetOriginJoinClaimMock = mNodeKeeperMockGetOriginJoinClaim{mock: m}
@@ -523,140 +517,6 @@ func (m *NodeKeeperMock) GetCloudHashFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetCloudHashFunc != nil {
 		return atomic.LoadUint64(&m.GetCloudHashCounter) > 0
-	}
-
-	return true
-}
-
-type mNodeKeeperMockGetConsensusInfo struct {
-	mock              *NodeKeeperMock
-	mainExpectation   *NodeKeeperMockGetConsensusInfoExpectation
-	expectationSeries []*NodeKeeperMockGetConsensusInfoExpectation
-}
-
-type NodeKeeperMockGetConsensusInfoExpectation struct {
-	result *NodeKeeperMockGetConsensusInfoResult
-}
-
-type NodeKeeperMockGetConsensusInfoResult struct {
-	r network.ConsensusInfo
-}
-
-//Expect specifies that invocation of NodeKeeper.GetConsensusInfo is expected from 1 to Infinity times
-func (m *mNodeKeeperMockGetConsensusInfo) Expect() *mNodeKeeperMockGetConsensusInfo {
-	m.mock.GetConsensusInfoFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeKeeperMockGetConsensusInfoExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of NodeKeeper.GetConsensusInfo
-func (m *mNodeKeeperMockGetConsensusInfo) Return(r network.ConsensusInfo) *NodeKeeperMock {
-	m.mock.GetConsensusInfoFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeKeeperMockGetConsensusInfoExpectation{}
-	}
-	m.mainExpectation.result = &NodeKeeperMockGetConsensusInfoResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of NodeKeeper.GetConsensusInfo is expected once
-func (m *mNodeKeeperMockGetConsensusInfo) ExpectOnce() *NodeKeeperMockGetConsensusInfoExpectation {
-	m.mock.GetConsensusInfoFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NodeKeeperMockGetConsensusInfoExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *NodeKeeperMockGetConsensusInfoExpectation) Return(r network.ConsensusInfo) {
-	e.result = &NodeKeeperMockGetConsensusInfoResult{r}
-}
-
-//Set uses given function f as a mock of NodeKeeper.GetConsensusInfo method
-func (m *mNodeKeeperMockGetConsensusInfo) Set(f func() (r network.ConsensusInfo)) *NodeKeeperMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetConsensusInfoFunc = f
-	return m.mock
-}
-
-//GetConsensusInfo implements github.com/insolar/insolar/network.NodeKeeper interface
-func (m *NodeKeeperMock) GetConsensusInfo() (r network.ConsensusInfo) {
-	counter := atomic.AddUint64(&m.GetConsensusInfoPreCounter, 1)
-	defer atomic.AddUint64(&m.GetConsensusInfoCounter, 1)
-
-	if len(m.GetConsensusInfoMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetConsensusInfoMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeKeeperMock.GetConsensusInfo.")
-			return
-		}
-
-		result := m.GetConsensusInfoMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeKeeperMock.GetConsensusInfo")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetConsensusInfoMock.mainExpectation != nil {
-
-		result := m.GetConsensusInfoMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeKeeperMock.GetConsensusInfo")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetConsensusInfoFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeKeeperMock.GetConsensusInfo.")
-		return
-	}
-
-	return m.GetConsensusInfoFunc()
-}
-
-//GetConsensusInfoMinimockCounter returns a count of NodeKeeperMock.GetConsensusInfoFunc invocations
-func (m *NodeKeeperMock) GetConsensusInfoMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetConsensusInfoCounter)
-}
-
-//GetConsensusInfoMinimockPreCounter returns the value of NodeKeeperMock.GetConsensusInfo invocations
-func (m *NodeKeeperMock) GetConsensusInfoMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetConsensusInfoPreCounter)
-}
-
-//GetConsensusInfoFinished returns true if mock invocations count is ok
-func (m *NodeKeeperMock) GetConsensusInfoFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetConsensusInfoMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetConsensusInfoCounter) == uint64(len(m.GetConsensusInfoMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetConsensusInfoMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetConsensusInfoCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetConsensusInfoFunc != nil {
-		return atomic.LoadUint64(&m.GetConsensusInfoCounter) > 0
 	}
 
 	return true
@@ -2204,10 +2064,6 @@ func (m *NodeKeeperMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetCloudHash")
 	}
 
-	if !m.GetConsensusInfoFinished() {
-		m.t.Fatal("Expected call to NodeKeeperMock.GetConsensusInfo")
-	}
-
 	if !m.GetOriginFinished() {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetOrigin")
 	}
@@ -2281,10 +2137,6 @@ func (m *NodeKeeperMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetCloudHash")
 	}
 
-	if !m.GetConsensusInfoFinished() {
-		m.t.Fatal("Expected call to NodeKeeperMock.GetConsensusInfo")
-	}
-
 	if !m.GetOriginFinished() {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetOrigin")
 	}
@@ -2346,7 +2198,6 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetAccessorFinished()
 		ok = ok && m.GetClaimQueueFinished()
 		ok = ok && m.GetCloudHashFinished()
-		ok = ok && m.GetConsensusInfoFinished()
 		ok = ok && m.GetOriginFinished()
 		ok = ok && m.GetOriginAnnounceClaimFinished()
 		ok = ok && m.GetOriginJoinClaimFinished()
@@ -2376,10 +2227,6 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetCloudHashFinished() {
 				m.t.Error("Expected call to NodeKeeperMock.GetCloudHash")
-			}
-
-			if !m.GetConsensusInfoFinished() {
-				m.t.Error("Expected call to NodeKeeperMock.GetConsensusInfo")
 			}
 
 			if !m.GetOriginFinished() {
@@ -2447,10 +2294,6 @@ func (m *NodeKeeperMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetCloudHashFinished() {
-		return false
-	}
-
-	if !m.GetConsensusInfoFinished() {
 		return false
 	}
 

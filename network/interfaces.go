@@ -147,25 +147,25 @@ type NodeKeeper interface {
 	// MoveSyncToActive merge sync list with active nodes
 	MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error
 	// GetConsensusInfo get additional info for the current consensus process
-	GetConsensusInfo() ConsensusInfo
+	//GetConsensusInfo() ConsensusInfo
 }
 
 // ConsensusInfo additional info for the current consensus process
 // TODO: refactor code and make it not necessary
-type ConsensusInfo interface {
-	// NodesJoinedDuringPreviousPulse returns true if the last Sync call contained approved Join claims
-	NodesJoinedDuringPreviousPulse() bool
-	// AddTemporaryMapping add temporary mapping till the next pulse for consensus
-	AddTemporaryMapping(nodeID insolar.Reference, shortID insolar.ShortNodeID, address string) error
-	// ResolveConsensus get temporary mapping by short ID
-	ResolveConsensus(shortID insolar.ShortNodeID) *host.Host
-	// ResolveConsensusRef get temporary mapping by node ID
-	ResolveConsensusRef(nodeID insolar.Reference) *host.Host
-	// SetIsJoiner instruct current node whether it should perform consensus as joiner or not
-	SetIsJoiner(isJoiner bool)
-	// IsJoiner true if current node should perform consensus as joiner
-	IsJoiner() bool
-}
+//type ConsensusInfo interface {
+//	// NodesJoinedDuringPreviousPulse returns true if the last Sync call contained approved Join claims
+//	NodesJoinedDuringPreviousPulse() bool
+//	// AddTemporaryMapping add temporary mapping till the next pulse for consensus
+//	AddTemporaryMapping(nodeID insolar.Reference, shortID insolar.ShortNodeID, address string) error
+//	// ResolveConsensus get temporary mapping by short ID
+//	ResolveConsensus(shortID insolar.ShortNodeID) *host.Host
+//	// ResolveConsensusRef get temporary mapping by node ID
+//	ResolveConsensusRef(nodeID insolar.Reference) *host.Host
+//	// SetIsJoiner instruct current node whether it should perform consensus as joiner or not
+//	SetIsJoiner(isJoiner bool)
+//	// IsJoiner true if current node should perform consensus as joiner
+//	IsJoiner() bool
+//}
 
 // PartitionPolicy contains all rules how to initiate globule resharding.
 type PartitionPolicy interface {
@@ -178,10 +178,6 @@ type PartitionPolicy interface {
 type RoutingTable interface {
 	// Resolve NodeID -> ShortID, Address. Can initiate network requests.
 	Resolve(insolar.Reference) (*host.Host, error)
-	// ResolveConsensus ShortID -> NodeID, Address for node inside current globe for current consensus.
-	ResolveConsensus(insolar.ShortNodeID) (*host.Host, error)
-	// ResolveConsensusRef NodeID -> ShortID, Address for node inside current globe for current consensus.
-	ResolveConsensusRef(insolar.Reference) (*host.Host, error)
 	// AddToKnownHosts add host to routing table.
 	AddToKnownHosts(*host.Host)
 	// Rebalance recreate shards of routing table with known hosts according to new partition policy.
@@ -247,6 +243,7 @@ type Gateway interface {
 	Run(context.Context)
 	GetState() insolar.NetworkState
 	OnPulse(context.Context, insolar.Pulse) error
+	OnConsensusFinished(p insolar.PulseNumber)
 	NewGateway(context.Context, insolar.NetworkState) Gateway
 	Auther() Auther
 	NeedLockMessageBus() bool

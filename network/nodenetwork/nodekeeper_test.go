@@ -106,7 +106,6 @@ func newNodeKeeper(t *testing.T, service insolar.CryptographyService) network.No
 func TestNewNodeKeeper(t *testing.T) {
 	nk := newNodeKeeper(t, nil)
 	assert.NotNil(t, nk.GetOrigin())
-	assert.NotNil(t, nk.GetConsensusInfo())
 	assert.NotNil(t, nk.GetClaimQueue())
 	assert.NotNil(t, nk.GetAccessor())
 	assert.NotNil(t, nk.GetSnapshotCopy())

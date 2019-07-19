@@ -87,8 +87,6 @@ func (g *DiscoveryBootstrap) Run(ctx context.Context) {
 	//	return
 	//}
 
-	g.NodeKeeper.GetConsensusInfo().SetIsJoiner(false)
-
 	_, err = g.PulseAccessor.Latest(ctx)
 	pp := pulse.FromProto(authorizeRes.Pulse)
 	if err != nil {
