@@ -28,12 +28,6 @@ func ID() (id insolar.ID) {
 	return
 }
 
-// IDRef generates random id and returns reference on it.
-func IDRef() *insolar.ID {
-	id := ID()
-	return &id
-}
-
 // IDWithPulse generates random id with provided pulse.
 func IDWithPulse(pn insolar.PulseNumber) (id insolar.ID) {
 	copy(id[:insolar.PulseNumberSize], pn.Bytes())
