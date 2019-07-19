@@ -94,7 +94,11 @@ func (pc *pulseController) Init(ctx context.Context) error {
 
 func (pc *pulseController) processPulse(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 	runtime.LockOSThread() // Attention, this is a priveleged thread
+
+	inslog := inslogger.FromContext(ctx)
+
 	if request.GetRequest() == nil || request.GetRequest().GetPulse() == nil {
+		inslog.Warn(">>> BROKEN PULSE MARK <<<")
 		return nil, errors.Errorf("process pulse: got invalid protobuf request message: %s", request)
 	}
 
@@ -104,8 +108,6 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Rec
 	if err != nil {
 		return nil, errors.Wrap(err, "[ pulseController ] processPulse: failed to verify pulse")
 	}
-
-	inslog := inslogger.FromContext(ctx)
 	// if we are a joiner node, we should receive pulse from phase1 packet and ignore pulse from pulsar
 	if !pc.NodeKeeper.GetConsensusInfo().IsJoiner() {
 		// Because we want to save our trace-context from a pulsar node
