@@ -90,7 +90,7 @@ type Params struct {
 	CallSite   string      `json:"callSite"`
 	CallParams interface{} `json:"callParams"`
 	Reference  string      `json:"reference"`
-	PublicKey  string      `json:"memberPublicKey"`
+	PublicKey  string      `json:"publicKey"`
 }
 
 func (hw *HelloWorld) Call(signedRequest []byte) (interface{}, error) {

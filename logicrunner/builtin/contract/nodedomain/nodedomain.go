@@ -50,7 +50,7 @@ func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error
 	if err != nil {
 		return "", fmt.Errorf("failed to get root member reference: %s", err.Error())
 	}
-	if *nd.GetContext().Caller != *root {
+	if *nd.GetContext().Caller != root {
 		return "", fmt.Errorf("only root member can register node")
 	}
 

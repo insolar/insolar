@@ -134,6 +134,9 @@ func (Genesis) GetIsPrototype() bool {
 	return false
 }
 
+//go:generate minimock -i github.com/insolar/insolar/insolar/record.Request -o ./ -s _mock.go
+
+// Request is a common request interface.
 type Request interface {
 	// AffinityRef returns a pointer to the reference of the object the
 	// Request is affine to. The result can be nil, e.g. in case of creating
@@ -142,9 +145,12 @@ type Request interface {
 	// ReasonRef returns a reference of the Request that caused the creating
 	// of this Request.
 	ReasonRef() insolar.Reference
+	// GetCallType returns call type.
 	GetCallType() CallType
 	IsAPIRequest() bool
 	IsCreationRequest() bool
+	// IsDetached check is request has detached state.
+	IsDetached() bool
 }
 
 func (r *IncomingRequest) AffinityRef() *insolar.Reference {
@@ -165,6 +171,11 @@ func (r *IncomingRequest) IsCreationRequest() bool {
 	return r.GetCallType() == CTSaveAsChild || r.GetCallType() == CTSaveAsDelegate
 }
 
+func (r *IncomingRequest) IsDetached() bool {
+	// incoming requests never should't be in detached state, app code should check it and raise some kind of error.
+	return isDetached(r.ReturnMode)
+}
+
 func (r *OutgoingRequest) AffinityRef() *insolar.Reference {
 	// OutgoingRequests are affine to the Caller which created the Request.
 	return &r.Caller
@@ -180,6 +191,14 @@ func (r *OutgoingRequest) IsAPIRequest() bool {
 
 func (r *OutgoingRequest) IsCreationRequest() bool {
 	return false
+}
+
+func (r *OutgoingRequest) IsDetached() bool {
+	return isDetached(r.ReturnMode)
+}
+
+func isDetached(rm ReturnMode) bool {
+	return rm == ReturnSaga
 }
 
 func (m *Lifeline) SetDelegate(key insolar.Reference, value insolar.Reference) {

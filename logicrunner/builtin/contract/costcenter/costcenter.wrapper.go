@@ -90,7 +90,7 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 
 func INSMETHOD_SetTariffs(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
+
 	self := new(CostCenter)
 
 	if len(object) == 0 {
@@ -115,10 +115,6 @@ func INSMETHOD_SetTariffs(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0 := self.SetTariffs(args0)
 
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -135,7 +131,7 @@ func INSMETHOD_SetTariffs(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetTariffs(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
+
 	self := new(CostCenter)
 
 	if len(object) == 0 {
@@ -158,10 +154,6 @@ func INSMETHOD_GetTariffs(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.GetTariffs()
 
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -178,7 +170,7 @@ func INSMETHOD_GetTariffs(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_SetCurrentTariff(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
+
 	self := new(CostCenter)
 
 	if len(object) == 0 {
@@ -203,10 +195,6 @@ func INSMETHOD_SetCurrentTariff(object []byte, data []byte) ([]byte, []byte, err
 
 	ret0 := self.SetCurrentTariff(args0)
 
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -223,7 +211,7 @@ func INSMETHOD_SetCurrentTariff(object []byte, data []byte) ([]byte, []byte, err
 
 func INSMETHOD_GetCurrentTariff(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
+
 	self := new(CostCenter)
 
 	if len(object) == 0 {
@@ -246,10 +234,6 @@ func INSMETHOD_GetCurrentTariff(object []byte, data []byte) ([]byte, []byte, err
 
 	ret0, ret1 := self.GetCurrentTariff()
 
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -266,7 +250,6 @@ func INSMETHOD_GetCurrentTariff(object []byte, data []byte) ([]byte, []byte, err
 
 func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
 	args := [2]interface{}{}
 	var args0 insolar.Reference
 	args[0] = &args0
@@ -280,9 +263,6 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	}
 
 	ret0, ret1 := New(args0, args1)
-	if ph.GetSystemError() != nil {
-		return nil, ph.GetSystemError()
-	}
 	if ret1 != nil {
 		return nil, ret1
 	}

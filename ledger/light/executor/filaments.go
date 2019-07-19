@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
@@ -53,7 +54,7 @@ type FilamentCalculator interface {
 	) ([]record.CompositeFilamentRecord, error)
 
 	// PendingRequests only looks locally.
-	PendingRequests(ctx context.Context, pulse insolar.PulseNumber, objectID insolar.ID) ([]insolar.ID, error)
+	PendingRequests(ctx context.Context, pulse insolar.PulseNumber, objectID insolar.ID) ([]record.CompositeFilamentRecord, error)
 
 	RequestDuplicate(
 		ctx context.Context,
@@ -67,6 +68,8 @@ type FilamentCalculator interface {
 	)
 
 	ResultDuplicate(ctx context.Context, startFrom insolar.PulseNumber, objectID, resultID insolar.ID, result record.Result) (foundResult *record.CompositeFilamentRecord, err error)
+
+	FindRecord(ctx context.Context, startFrom insolar.ID, objectID, recordID insolar.ID) (record.CompositeFilamentRecord, error)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCleaner -o ./ -s _mock.go
@@ -77,10 +80,11 @@ type FilamentCleaner interface {
 
 func NewFilamentModifier(
 	indexes object.IndexStorage,
-	recordStorage object.RecordModifier,
+	recordStorage object.RecordStorage,
 	pcs insolar.PlatformCryptographyScheme,
 	calculator FilamentCalculator,
 	pulses pulse.Calculator,
+	sender bus.Sender,
 ) *FilamentModifierDefault {
 	return &FilamentModifierDefault{
 		calculator: calculator,
@@ -88,15 +92,17 @@ func NewFilamentModifier(
 		records:    recordStorage,
 		pcs:        pcs,
 		pulses:     pulses,
+		sender:     sender,
 	}
 }
 
 type FilamentModifierDefault struct {
 	calculator FilamentCalculator
 	indexes    object.IndexStorage
-	records    object.RecordModifier
+	records    object.RecordStorage
 	pcs        insolar.PlatformCryptographyScheme
 	pulses     pulse.Calculator
+	sender     bus.Sender
 }
 
 func (m *FilamentModifierDefault) checkObject(ctx context.Context, currentPN insolar.PulseNumber, untilPN insolar.PulseNumber, requestID insolar.ID) (record.Index, error) {
@@ -141,6 +147,59 @@ func (m *FilamentModifierDefault) prepareCreationRequest(ctx context.Context, re
 	}
 
 	return err
+}
+
+func (m *FilamentModifierDefault) notifyDetached(ctx context.Context, pendingReqs []record.CompositeFilamentRecord, reqID, objID, resFilID insolar.ID) error {
+	closedReq, err := m.calculator.FindRecord(ctx, resFilID, objID, reqID)
+	if err != nil {
+		return errors.Wrap(err, "failed to notify about detached")
+	}
+
+	_, isOutgoing := record.Unwrap(closedReq.Record.Virtual).(*record.OutgoingRequest)
+	if isOutgoing {
+		return nil
+	}
+
+	needToBeeNotified := func(rec record.CompositeFilamentRecord) (bool, *record.OutgoingRequest) {
+		outReq, isOutgoing := record.Unwrap(rec.Record.Virtual).(*record.OutgoingRequest)
+		if isOutgoing && outReq.IsDetached() && outReq.Reason.Record().Equal(reqID) {
+			return true, outReq
+		}
+
+		return false, nil
+	}
+
+	prepareMessage := func(reqID insolar.ID, outReq *record.OutgoingRequest) (*message.Message, error) {
+		buf, err := outReq.Marshal()
+		if err != nil {
+			return nil, err
+		}
+
+		msg, err := payload.NewMessage(&payload.SagaCallAcceptNotification{
+			ObjectID:      objID,
+			OutgoingReqID: reqID,
+			Request:       buf,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		return msg, nil
+	}
+
+	for _, pendingReq := range pendingReqs {
+		if ok, outReq := needToBeeNotified(pendingReq); ok {
+			msg, err := prepareMessage(pendingReq.RecordID, outReq)
+			if err != nil {
+				return errors.Wrap(err, "failed to notify about detached")
+			}
+
+			_, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, *insolar.NewReference(objID))
+			defer done()
+		}
+	}
+
+	return nil
 }
 
 func (m *FilamentModifierDefault) SetRequest(
@@ -297,8 +356,12 @@ func (m *FilamentModifierDefault) SetResult(ctx context.Context, resultID insola
 		return nil, errors.Wrap(err, "failed to calculate pending requests")
 	}
 	if len(pending) > 0 {
-		calculatedEarliest := pending[0].Pulse()
+		calculatedEarliest := pending[0].RecordID.Pulse()
 		idx.Lifeline.EarliestOpenRequest = &calculatedEarliest
+		err := m.notifyDetached(ctx, pending, *result.Request.Record(), result.Object, filamentID)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to check detaches")
+		}
 	} else {
 		idx.Lifeline.EarliestOpenRequest = nil
 	}
@@ -374,9 +437,7 @@ func (c *FilamentCalculatorDefault) Requests(
 	return segment, nil
 }
 
-func (c *FilamentCalculatorDefault) PendingRequests(
-	ctx context.Context, pulse insolar.PulseNumber, objectID insolar.ID,
-) ([]insolar.ID, error) {
+func (c *FilamentCalculatorDefault) PendingRequests(ctx context.Context, pulse insolar.PulseNumber, objectID insolar.ID) ([]record.CompositeFilamentRecord, error) {
 	logger := inslogger.FromContext(ctx).WithField("object_id", objectID.DebugString())
 
 	logger.Debug("started collecting pending requests")
@@ -392,10 +453,10 @@ func (c *FilamentCalculatorDefault) PendingRequests(
 	defer cache.Unlock()
 
 	if idx.Lifeline.PendingPointer == nil {
-		return []insolar.ID{}, nil
+		return []record.CompositeFilamentRecord{}, nil
 	}
 	if idx.Lifeline.EarliestOpenRequest == nil {
-		return []insolar.ID{}, nil
+		return []record.CompositeFilamentRecord{}, nil
 	}
 
 	iter := newFetchingIterator(
@@ -409,7 +470,7 @@ func (c *FilamentCalculatorDefault) PendingRequests(
 		c.sender,
 	)
 
-	var pending []insolar.ID
+	var pending []record.CompositeFilamentRecord
 	hasResult := map[insolar.ID]struct{}{}
 	for iter.HasPrev() {
 		rec, err := iter.Prev(ctx)
@@ -421,7 +482,7 @@ func (c *FilamentCalculatorDefault) PendingRequests(
 		switch r := virtual.(type) {
 		case *record.IncomingRequest:
 			if _, ok := hasResult[rec.RecordID]; !ok {
-				pending = append(pending, rec.RecordID)
+				pending = append(pending, rec)
 			}
 		case *record.Result:
 			hasResult[*r.Request.Record()] = struct{}{}
@@ -429,10 +490,10 @@ func (c *FilamentCalculatorDefault) PendingRequests(
 	}
 
 	// We need to reverse pending because we iterated from the end when selecting them.
-	ordered := make([]insolar.ID, len(pending))
+	ordered := make([]record.CompositeFilamentRecord, len(pending))
 	count := len(pending)
-	for i, id := range pending {
-		ordered[count-i-1] = id
+	for i, pend := range pending {
+		ordered[count-i-1] = pend
 	}
 
 	return ordered, nil
@@ -583,6 +644,36 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	}
 
 	return foundRequest, foundResult, nil
+}
+
+func (c *FilamentCalculatorDefault) FindRecord(ctx context.Context, startFrom insolar.ID, objectID, recordID insolar.ID) (record.CompositeFilamentRecord, error) {
+	cache := c.cache.Get(objectID)
+	cache.Lock()
+	defer cache.Unlock()
+
+	iter := newFetchingIterator(
+		ctx,
+		cache,
+		objectID,
+		startFrom,
+		recordID.Pulse(),
+		c.jetFetcher,
+		c.coordinator,
+		c.sender,
+	)
+
+	for iter.HasPrev() {
+		rec, err := iter.Prev(ctx)
+		if err != nil {
+			return record.CompositeFilamentRecord{}, errors.Wrap(err, "failed to calculate pending")
+		}
+
+		if rec.RecordID == recordID {
+			return rec, nil
+		}
+	}
+
+	return record.CompositeFilamentRecord{}, ErrRecordNotFound
 }
 
 func (c *FilamentCalculatorDefault) Clear(objID insolar.ID) {

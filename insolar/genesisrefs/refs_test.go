@@ -54,8 +54,8 @@ func TestReferences(t *testing.T) {
 			expect: "1tJDxESz1Vn6aDqzupAofBFQJa6yCrr3jTUFoVrGLm.11111111111111111111111111111111",
 		},
 		insolar.GenesisNameTariff: {
-			got:    ContractTariff,
-			expect: "1tJDHmhUjkQEkG3GaNGxvwuJUiUhaxYrG9TqMWviRY.11111111111111111111111111111111",
+			got:    ContractStandardTariff,
+			expect: "1tJBiXErALbFCemdJeub4VstKjbL5is6Vrq6p5SPUW.11111111111111111111111111111111",
 		},
 		insolar.GenesisNameCostCenter: {
 			got:    ContractCostCenter,
