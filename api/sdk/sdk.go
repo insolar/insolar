@@ -230,7 +230,7 @@ func (sdk *SDK) Transfer(amount string, from *Member, to *Member) (string, error
 	}
 	response, err := sdk.DoRequest(
 		userConfig,
-		"wallet.transfer",
+		"member.transfer",
 		map[string]interface{}{"amount": amount, "toMemberReference": to.Reference},
 	)
 	if err != nil {

@@ -34,7 +34,7 @@ type RootDomain struct {
 	MigrationAdminMember   insolar.Reference
 	MigrationWallet        insolar.Reference
 	CostCenter             insolar.Reference
-	CommissionWallet       insolar.Reference
+	FeeWallet              insolar.Reference
 	BurnAddressMap         map[string]insolar.Reference
 	PublicKeyMap           map[string]insolar.Reference
 	FreeBurnAddresses      []string
@@ -42,13 +42,23 @@ type RootDomain struct {
 }
 
 // GetMigrationAdminMemberRef gets migration admin member reference.
-func (rd RootDomain) GetMigrationAdminMemberRef() (*insolar.Reference, error) {
-	return &rd.MigrationAdminMember, nil
+func (rd RootDomain) GetCostCenterRef() (insolar.Reference, error) {
+	return rd.MigrationAdminMember, nil
+}
+
+// GetFeeWalletRef gets fee wallet reference.
+func (rd RootDomain) GetFeeWalletRef() (insolar.Reference, error) {
+	return rd.FeeWallet, nil
 }
 
 // GetMigrationWalletRef gets migration wallet reference.
-func (rd RootDomain) GetMigrationWalletRef() (*insolar.Reference, error) {
-	return &rd.MigrationWallet, nil
+func (rd RootDomain) GetMigrationWalletRef() (insolar.Reference, error) {
+	return rd.MigrationWallet, nil
+}
+
+// GetMigrationDaemonMembers gets migration daemon members references.
+func (rd RootDomain) GetMigrationAdminMember() (insolar.Reference, error) {
+	return rd.MigrationAdminMember, nil
 }
 
 // GetMigrationDaemonMembers gets migration daemon members references.
@@ -57,8 +67,8 @@ func (rd RootDomain) GetMigrationDaemonMembers() ([]insolar.Reference, error) {
 }
 
 // GetRootMemberRef gets root member reference.
-func (rd RootDomain) GetRootMemberRef() (*insolar.Reference, error) {
-	return &rd.RootMember, nil
+func (rd RootDomain) GetRootMemberRef() (insolar.Reference, error) {
+	return rd.RootMember, nil
 }
 
 // GetBurnAddress pulls out burn address from list.
