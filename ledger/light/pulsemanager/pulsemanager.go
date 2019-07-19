@@ -113,20 +113,11 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		panic(errors.Wrap(err, "under gil error"))
 	}
 
-	err = m.WriteManager.CloseAndWait(ctx, endedPulse.PulseNumber)
-	if err != nil {
-		panic(errors.Wrap(err, "can't close pulse for writing"))
-	}
 	err = m.HotSender.SendHot(ctx, endedPulse.PulseNumber, newPulse.PulseNumber, jets)
 	if err != nil {
 		logger.Error("send Hot failed: ", err)
 	}
 	go m.LightReplicator.NotifyAboutPulse(ctx, newPulse.PulseNumber)
-
-	err = m.WriteManager.Open(ctx, newPulse.PulseNumber)
-	if err != nil {
-		panic(errors.Wrap(err, "failed to open pulse for writing"))
-	}
 
 	m.MessageHandler.OnPulse(ctx, newPulse)
 	return nil
@@ -194,6 +185,16 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	}
 
 	m.JetReleaser.ThrowTimeout(ctx, newPulse.PulseNumber)
+
+	err = m.WriteManager.CloseAndWait(ctx, endedPulse.PulseNumber)
+	if err != nil {
+		panic(errors.Wrap(err, "can't close pulse for writing"))
+	}
+
+	err = m.WriteManager.Open(ctx, newPulse.PulseNumber)
+	if err != nil {
+		panic(errors.Wrap(err, "failed to open pulse for writing"))
+	}
 
 	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
 		panic(errors.Wrap(err, "failed to add pulse"))
