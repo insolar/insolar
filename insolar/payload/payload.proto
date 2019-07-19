@@ -91,7 +91,7 @@ message Jet {
     uint32 Polymorph = 16;
 
     bytes JetID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
-    bytes Pulse = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    bool Actual = 21;
 }
 
 message SetIncomingRequest {

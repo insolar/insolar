@@ -22,14 +22,15 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/pkg/errors"
 )
 
 type GetJet struct {
-	msg     *message.GetJet
-	message payload.Meta
+	message  payload.Meta
+	objectID insolar.ID
+	pulse    insolar.PulseNumber
 
 	Dep struct {
 		Jets   jet.Storage
@@ -37,16 +38,26 @@ type GetJet struct {
 	}
 }
 
-func NewGetJet(msg *message.GetJet, message payload.Meta) *GetJet {
+func NewGetJet(msg payload.Meta, objectID insolar.ID, pulse insolar.PulseNumber) *GetJet {
 	return &GetJet{
-		msg:     msg,
-		message: message,
+		message:  msg,
+		objectID: objectID,
+		pulse:    pulse,
 	}
 }
 
 func (p *GetJet) Proceed(ctx context.Context) error {
-	jetID, actual := p.Dep.Jets.ForID(ctx, p.msg.Pulse, p.msg.Object)
+	jetID, actual := p.Dep.Jets.ForID(ctx, p.pulse, p.objectID)
 	msg := bus.ReplyAsMessage(ctx, &reply.Jet{ID: insolar.ID(jetID), Actual: actual})
-	go p.Dep.Sender.Reply(ctx, p.message, msg)
+
+	msg, err := payload.NewMessage(&payload.Jet{
+		JetID:  jetID,
+		Actual: actual,
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to create reply")
+	}
+
+	p.Dep.Sender.Reply(ctx, p.message, msg)
 	return nil
 }
