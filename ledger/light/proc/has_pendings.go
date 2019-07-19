@@ -65,6 +65,6 @@ func (hp *HasPendings) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to create reply")
 	}
 
-	go hp.dep.sender.Reply(ctx, hp.message, msg)
+	hp.dep.sender.Reply(ctx, hp.message, msg)
 	return nil
 }
