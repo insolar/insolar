@@ -511,7 +511,7 @@ func TestFilamentCalculatorDefault_Requests(t *testing.T) {
 
 	resetComponents()
 	t.Run("happy basic", func(t *testing.T) {
-		b := newFilamentBuilder(ctx, pcs, records)
+		b := newFilamentBuilder(ctx, pcs, records, indexes)
 		storageRecs := make([]record.CompositeFilamentRecord, 5)
 		storageRecs[0] = b.Append(insolar.FirstPulseNumber+1, record.IncomingRequest{Nonce: rand.Uint64(), CallType: record.CTMethod})
 		storageRecs[1] = b.Append(insolar.FirstPulseNumber+2, record.IncomingRequest{Nonce: rand.Uint64(), CallType: record.CTMethod})
@@ -554,12 +554,12 @@ func TestFilamentCalculatorDefault_PendingRequests_RequestOnly(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	c := newComponents(mc)
-	b := newFilamentBuilder(ctx, c.pcs, c.records)
+	b := newFilamentBuilder(ctx, c.pcs, c.records, c.indexes)
 
 	inRequest1 := b.appendInRequest(pulseNum(1))
 	inRequestID1 := inRequest1.RecordID
 
-	objectID, err := b.setIndex(ctx, c.indexes)
+	objectID, err := b.setIndex(ctx)
 	require.NoError(t, err)
 
 	recs, err := c.calculator.PendingRequests(ctx, *b.earliestOpenRequest, objectID)
@@ -573,7 +573,7 @@ func TestFilamentCalculatorDefault_PendingRequests_RequestWithDetached(t *testin
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	c := newComponents(mc)
-	b := newFilamentBuilder(ctx, c.pcs, c.records)
+	b := newFilamentBuilder(ctx, c.pcs, c.records, c.indexes)
 
 	inRequest1 := b.appendInRequest(pulseNum(1))
 	inRequestID1 := inRequest1.RecordID
@@ -581,7 +581,7 @@ func TestFilamentCalculatorDefault_PendingRequests_RequestWithDetached(t *testin
 	outRequestDetached1 := b.appendOutRequest(pulseNum(2), inRequestID1, record.ReturnSaga)
 	outRequestDetachedID1 := outRequestDetached1.RecordID
 
-	objectID, err := b.setIndex(ctx, c.indexes)
+	objectID, err := b.setIndex(ctx)
 	require.NoError(t, err)
 
 	recs, err := c.calculator.PendingRequests(ctx, *b.earliestOpenRequest, objectID)
@@ -596,14 +596,14 @@ func TestFilamentCalculatorDefault_PendingRequests_RequestWithNotDetached(t *tes
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	c := newComponents(mc)
-	b := newFilamentBuilder(ctx, c.pcs, c.records)
+	b := newFilamentBuilder(ctx, c.pcs, c.records, c.indexes)
 
 	inRequest1 := b.appendInRequest(pulseNum(1))
 	inRequestID1 := inRequest1.RecordID
 
 	_ = b.appendOutRequest(pulseNum(2), inRequestID1, record.ReturnResult)
 
-	objectID, err := b.setIndex(ctx, c.indexes)
+	objectID, err := b.setIndex(ctx)
 	require.NoError(t, err)
 
 	recs, err := c.calculator.PendingRequests(ctx, *b.earliestOpenRequest, objectID)
@@ -618,14 +618,14 @@ func TestFilamentCalculatorDefault_RequestWithDetachedAndResult(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	c := newComponents(mc)
-	b := newFilamentBuilder(ctx, c.pcs, c.records)
+	b := newFilamentBuilder(ctx, c.pcs, c.records, c.indexes)
 
 	inRequest1 := b.appendInRequest(pulseNum(1))
 	inRequestID1 := inRequest1.RecordID
 	_ = b.appendOutRequest(pulseNum(2), inRequestID1, record.ReturnSaga)
 	_ = b.appendResult(pulseNum(2), inRequestID1)
 
-	objectID, err := b.setIndex(ctx, c.indexes)
+	objectID, err := b.setIndex(ctx)
 	require.NoError(t, err)
 
 	recs, err := c.calculator.PendingRequests(ctx, *b.earliestOpenRequest, objectID)
@@ -639,12 +639,12 @@ func TestFilamentCalculatorDefault_RequestWithResult(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	c := newComponents(mc)
-	b := newFilamentBuilder(ctx, c.pcs, c.records)
+	b := newFilamentBuilder(ctx, c.pcs, c.records, c.indexes)
 
 	inRequest1 := b.appendInRequest(pulseNum(1))
 	_ = b.appendResult(pulseNum(2), inRequest1.RecordID)
 
-	objectID, err := b.setIndex(ctx, c.indexes)
+	objectID, err := b.setIndex(ctx)
 	require.NoError(t, err)
 
 	recs, err := c.calculator.PendingRequests(ctx, *b.earliestOpenRequest, objectID)
@@ -658,14 +658,14 @@ func TestFilamentCalculatorDefault2_RequestWithResultAndNotDetachedOutgoing(t *t
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	c := newComponents(mc)
-	b := newFilamentBuilder(ctx, c.pcs, c.records)
+	b := newFilamentBuilder(ctx, c.pcs, c.records, c.indexes)
 
 	inRequest1 := b.appendInRequest(pulseNum(1))
 	inRequestID1 := inRequest1.RecordID
 	_ = b.appendOutRequest(pulseNum(2), inRequestID1, record.ReturnResult)
 	_ = b.appendResult(pulseNum(2), inRequestID1)
 
-	objectID, err := b.setIndex(ctx, c.indexes)
+	objectID, err := b.setIndex(ctx)
 	require.NoError(t, err)
 
 	recs, err := c.calculator.PendingRequests(ctx, *b.earliestOpenRequest, objectID)
@@ -725,7 +725,7 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 
 	resetComponents()
 	t.Run("happy basic", func(t *testing.T) {
-		b := newFilamentBuilder(ctx, pcs, records)
+		b := newFilamentBuilder(ctx, pcs, records, indexes)
 		rec1 := b.Append(insolar.FirstPulseNumber+1, record.IncomingRequest{Nonce: rand.Uint64(), CallType: record.CTMethod})
 		rec2 := b.Append(insolar.FirstPulseNumber+2, record.IncomingRequest{Nonce: rand.Uint64(), CallType: record.CTMethod})
 		b.Append(insolar.FirstPulseNumber+3, record.Result{Request: *insolar.NewReference(rec1.RecordID)})
@@ -754,7 +754,7 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 
 	resetComponents()
 	t.Run("happy fetches from light", func(t *testing.T) {
-		b := newFilamentBuilder(ctx, pcs, records)
+		b := newFilamentBuilder(ctx, pcs, records, indexes)
 		rec1 := b.Append(insolar.FirstPulseNumber+1, record.IncomingRequest{Nonce: rand.Uint64()})
 		rec2 := b.Append(insolar.FirstPulseNumber+2, record.IncomingRequest{Nonce: rand.Uint64()})
 		// This result is not in the storage.
@@ -837,7 +837,7 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 
 	resetComponents()
 	t.Run("happy fetches from heavy", func(t *testing.T) {
-		b := newFilamentBuilder(ctx, pcs, records)
+		b := newFilamentBuilder(ctx, pcs, records, indexes)
 		rec1 := b.Append(insolar.FirstPulseNumber+1, record.IncomingRequest{Nonce: rand.Uint64()})
 		rec2 := b.Append(insolar.FirstPulseNumber+2, record.IncomingRequest{Nonce: rand.Uint64()})
 		// This result is not in the storage.
@@ -959,7 +959,7 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 
 	resetComponents()
 	t.Run("returns result. result duplicate is found", func(t *testing.T) {
-		b := newFilamentBuilder(ctx, pcs, records)
+		b := newFilamentBuilder(ctx, pcs, records, indexes)
 		req := record.IncomingRequest{Nonce: rand.Uint64(), Reason: *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, nil))}
 		req1 := b.Append(insolar.FirstPulseNumber+1, req)
 		res := record.Result{Request: *insolar.NewReference(req1.RecordID)}
@@ -984,7 +984,7 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 
 	resetComponents()
 	t.Run("returns result. request not found", func(t *testing.T) {
-		b := newFilamentBuilder(ctx, pcs, records)
+		b := newFilamentBuilder(ctx, pcs, records, indexes)
 		req := b.Append(
 			insolar.FirstPulseNumber+1,
 			record.IncomingRequest{Nonce: rand.Uint64(), Reason: *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, nil))},
@@ -1008,7 +1008,7 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 
 	resetComponents()
 	t.Run("returns no result. request found", func(t *testing.T) {
-		b := newFilamentBuilder(ctx, pcs, records)
+		b := newFilamentBuilder(ctx, pcs, records, indexes)
 		req := record.IncomingRequest{Nonce: rand.Uint64(), Reason: *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, nil))}
 		req1 := b.Append(insolar.FirstPulseNumber+1, req)
 		res := record.Result{Request: *insolar.NewReference(req1.RecordID)}
@@ -1090,7 +1090,7 @@ func TestFilamentCalculatorDefault_RequestDuplicate(t *testing.T) {
 		hNode := gen.Reference()
 		coordinator.HeavyMock.Return(&hNode, nil)
 
-		b := newFilamentBuilder(ctx, pcs, records)
+		b := newFilamentBuilder(ctx, pcs, records, indexes)
 		reason := *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, nil))
 		req := record.IncomingRequest{Nonce: rand.Uint64(), Reason: reason}
 		req1 := b.Append(insolar.FirstPulseNumber+1, req)
@@ -1140,7 +1140,7 @@ func TestFilamentCalculatorDefault_RequestDuplicate(t *testing.T) {
 		hNode := gen.Reference()
 		coordinator.HeavyMock.Return(&hNode, nil)
 
-		b := newFilamentBuilder(ctx, pcs, records)
+		b := newFilamentBuilder(ctx, pcs, records, indexes)
 		reason := *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, nil))
 		reqR := record.IncomingRequest{Nonce: rand.Uint64(), Reason: reason}
 		req1 := b.Append(insolar.FirstPulseNumber+1, reqR)
