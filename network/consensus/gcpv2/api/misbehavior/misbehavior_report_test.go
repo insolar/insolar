@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,83 +46,50 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-//
+///
 
-package consensus
+package misbehavior
 
 import (
-	"sync"
+	"testing"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/adapters"
-	"github.com/insolar/insolar/network/consensus/common/capacity"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/pkg/errors"
+
+	"github.com/stretchr/testify/require"
 )
 
-type FinishedNotifier func(insolar.PulseNumber)
+func TestIs(t *testing.T) {
+	// TODO
+	/*r := NewReportMock(t)
+	require.True(t, Is(r))*/
 
-type Controller interface {
-	Abort()
-
-	ChangePower(level capacity.Level)
-	PrepareLeave() <-chan struct{}
-	Leave(leaveReason uint32) <-chan struct{}
-
-	RegisterFinishedNotifier(fn FinishedNotifier)
+	err := errors.New("test")
+	require.False(t, Is(err))
 }
 
-type controller struct {
-	consensusControlFeeder   api.ConsensusControlFeeder
-	consensusController      api.ConsensusController
-	controlFeederInterceptor *adapters.ControlFeederInterceptor
+func TestReportOf(t *testing.T) {
+	// TODO
+	/*r := NewReportMock(t)
+	require.True(t, Of(r) != nil)*/
 
-	mu        *sync.RWMutex
-	notifiers []FinishedNotifier
+	err := errors.New("test")
+	require.True(t, Of(err) == nil)
 }
 
-func newController(controlFeederInterceptor *adapters.ControlFeederInterceptor, consensusController api.ConsensusController) *controller {
-	controller := &controller{
-		controlFeederInterceptor: controlFeederInterceptor,
-		consensusController:      consensusController,
-
-		mu:        &sync.RWMutex{},
-		notifiers: make([]FinishedNotifier, 0),
-	}
-
-	controlFeederInterceptor.Feeder().SetOnFinished(controller.onFinished)
-
-	return controller
+func TestCategory(t *testing.T) {
+	require.Equal(t, Category(1), Type(1<<32).Category())
 }
 
-func (c *controller) Abort() {
-	c.consensusController.Abort()
+func TestType(t *testing.T) {
+	require.Equal(t, 1, Type(1).Type())
+
+	require.Equal(t, 0, Type(1<<32).Type())
 }
 
-func (c *controller) ChangePower(level capacity.Level) {
-	c.controlFeederInterceptor.Feeder().SetRequiredPowerLevel(level)
-}
+func TestCategoryOf(t *testing.T) {
+	require.Equal(t, Type(0), Category(0).Of(0))
 
-func (c *controller) PrepareLeave() <-chan struct{} {
-	return c.controlFeederInterceptor.PrepareLeave()
-}
+	require.Equal(t, Type(1<<32), Category(1).Of(0))
 
-func (c *controller) Leave(leaveReason uint32) <-chan struct{} {
-	return c.controlFeederInterceptor.Leave(leaveReason)
-}
-
-func (c *controller) RegisterFinishedNotifier(fn FinishedNotifier) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	c.notifiers = append(c.notifiers, fn)
-}
-
-func (c *controller) onFinished(pulse pulse.Number) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	for _, n := range c.notifiers {
-		go n(insolar.PulseNumber(pulse))
-	}
+	require.Equal(t, Type((1<<32)+1), Category(1).Of(1))
 }
