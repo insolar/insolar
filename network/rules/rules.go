@@ -64,7 +64,6 @@ func (r *rules) CheckMinRole() bool {
 		}
 	}
 
-	log.Warnf("minroles: %d, %d, %d", heavyCount, lightCount, virtualCount)
 	v, h, l := cert.GetMinRoles()
 	return virtualCount >= v &&
 		heavyCount >= h &&
