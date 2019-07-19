@@ -95,19 +95,33 @@ func (p *Replication) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to store drop")
 	}
 
-	logger.Debug("--------------- GOT DROP: pulse: ", dr.Pulse, ". JET_ID: ", dr.JetID.DebugString())
+	pulse, err := p.dep.pulses.ForPulseNumber(ctx, dr.Pulse)
+	if err != nil {
+		return errors.Wrapf(err, "can't get pulse for pulse number ", dr.Pulse)
+	}
+
+	logger.Debug("--------------- GOT DROP: pulse: ", pulse.NextPulseNumber, ". JET_ID: ", dr.JetID.DebugString())
 	logger.Debug(">>>>>>>>>>>>>>>>>+++++: THRESHOLD: ", dr.SplitThresholdExceeded, ". OVERFLOW: ", p.cfg.JetSplit.ThresholdOverflowCount)
+	jetsForKeeper := make([]insolar.JetID, 0)
 	if dr.Split {
-		_, _, err = p.dep.jets.Split(ctx, dr.Pulse, dr.JetID)
+		logger.Debug(">>>>>>>>>>>>>>>>--: Split: pulse: ", pulse.NextPulseNumber, ". JET: ", dr.JetID.DebugString())
+		var (
+			left  insolar.JetID
+			right insolar.JetID
+		)
+
+		left, right, err = p.dep.jets.Split(ctx, pulse.NextPulseNumber, dr.JetID)
+		jetsForKeeper = append(jetsForKeeper, left, right)
 	} else {
-		logger.Debug(">>>>>>>>>>>>>>>>--: Update: pulse: ", dr.Pulse, ". JET: ", dr.JetID.DebugString())
-		err = p.dep.jets.Update(ctx, dr.Pulse, false, dr.JetID)
+		logger.Debug(">>>>>>>>>>>>>>>>--: Update: pulse: ", pulse.NextPulseNumber, ". JET: ", dr.JetID.DebugString())
+		err = p.dep.jets.Update(ctx, pulse.NextPulseNumber, false, dr.JetID)
+		jetsForKeeper = append(jetsForKeeper, dr.JetID)
 	}
 	if err != nil {
 		return errors.Wrapf(err, "failed to split/update jet=%v pulse=%v", dr.JetID.DebugString(), dr.Pulse)
 	}
 
-	if err := p.dep.keeper.AddJet(ctx, dr.Pulse, dr.JetID); err != nil {
+	if err := p.dep.keeper.AddJet(ctx, dr.Pulse, jetsForKeeper...); err != nil {
 		return errors.Wrapf(err, "failed to add jet to JetKeeper jet=%v", dr.JetID.DebugString())
 	}
 
