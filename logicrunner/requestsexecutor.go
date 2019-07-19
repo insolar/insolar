@@ -23,11 +23,13 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/messagebus"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.RequestsExecutor -o ./ -s _mock.go
@@ -44,6 +46,7 @@ type requestsExecutor struct {
 	NodeNetwork     insolar.NodeNetwork `inject:""`
 	LogicExecutor   LogicExecutor       `inject:""`
 	ArtifactManager artifacts.Client    `inject:""`
+	PulseAccessor   pulse.Accessor      `inject:""`
 }
 
 func NewRequestsExecutor() RequestsExecutor {
@@ -130,24 +133,41 @@ func (e *requestsExecutor) SendReply(
 
 	inslogger.FromContext(ctx).Debug("Returning result")
 
-	target := transcript.Request.Sender
-
 	errstr := ""
 	if err != nil {
 		errstr = err.Error()
 	}
-	_, err = e.MessageBus.Send(
-		ctx,
-		&message.ReturnResults{
-			Target:     target,
-			RequestRef: transcript.RequestRef,
-			Reply:      re,
-			Error:      errstr,
-		},
-		&insolar.MessageSendOptions{
-			Receiver: &target,
-		},
+	sender := messagebus.BuildSender(
+		e.MessageBus.Send,
+		messagebus.RetryIncorrectPulse(e.PulseAccessor),
+		messagebus.RetryFlowCancelled(e.PulseAccessor),
 	)
+
+	if transcript.Request.APINode.IsEmpty() {
+		_, err = sender(
+			ctx,
+			&message.ReturnResults{
+				Target:     transcript.Request.Caller,
+				RequestRef: transcript.RequestRef,
+				Reason:     transcript.Request.Reason,
+				Reply:      re,
+				Error:      errstr,
+			},
+			&insolar.MessageSendOptions{},
+		)
+	} else {
+		_, err = sender(
+			ctx,
+			&message.ReturnResults{
+				RequestRef: transcript.RequestRef,
+				Reply:      re,
+				Error:      errstr,
+			},
+			&insolar.MessageSendOptions{
+				Receiver: &transcript.Request.APINode,
+			},
+		)
+	}
 	if err != nil {
 		inslogger.FromContext(ctx).Error("couldn't deliver results: ", err)
 	}

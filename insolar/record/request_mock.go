@@ -27,6 +27,11 @@ type RequestMock struct {
 	GetCallTypePreCounter uint64
 	GetCallTypeMock       mRequestMockGetCallType
 
+	IsAPIRequestFunc       func() (r bool)
+	IsAPIRequestCounter    uint64
+	IsAPIRequestPreCounter uint64
+	IsAPIRequestMock       mRequestMockIsAPIRequest
+
 	IsCreationRequestFunc       func() (r bool)
 	IsCreationRequestCounter    uint64
 	IsCreationRequestPreCounter uint64
@@ -53,6 +58,7 @@ func NewRequestMock(t minimock.Tester) *RequestMock {
 
 	m.AffinityRefMock = mRequestMockAffinityRef{mock: m}
 	m.GetCallTypeMock = mRequestMockGetCallType{mock: m}
+	m.IsAPIRequestMock = mRequestMockIsAPIRequest{mock: m}
 	m.IsCreationRequestMock = mRequestMockIsCreationRequest{mock: m}
 	m.IsDetachedMock = mRequestMockIsDetached{mock: m}
 	m.ReasonRefMock = mRequestMockReasonRef{mock: m}
@@ -323,6 +329,140 @@ func (m *RequestMock) GetCallTypeFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetCallTypeFunc != nil {
 		return atomic.LoadUint64(&m.GetCallTypeCounter) > 0
+	}
+
+	return true
+}
+
+type mRequestMockIsAPIRequest struct {
+	mock              *RequestMock
+	mainExpectation   *RequestMockIsAPIRequestExpectation
+	expectationSeries []*RequestMockIsAPIRequestExpectation
+}
+
+type RequestMockIsAPIRequestExpectation struct {
+	result *RequestMockIsAPIRequestResult
+}
+
+type RequestMockIsAPIRequestResult struct {
+	r bool
+}
+
+//Expect specifies that invocation of Request.IsAPIRequest is expected from 1 to Infinity times
+func (m *mRequestMockIsAPIRequest) Expect() *mRequestMockIsAPIRequest {
+	m.mock.IsAPIRequestFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &RequestMockIsAPIRequestExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of Request.IsAPIRequest
+func (m *mRequestMockIsAPIRequest) Return(r bool) *RequestMock {
+	m.mock.IsAPIRequestFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &RequestMockIsAPIRequestExpectation{}
+	}
+	m.mainExpectation.result = &RequestMockIsAPIRequestResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Request.IsAPIRequest is expected once
+func (m *mRequestMockIsAPIRequest) ExpectOnce() *RequestMockIsAPIRequestExpectation {
+	m.mock.IsAPIRequestFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &RequestMockIsAPIRequestExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *RequestMockIsAPIRequestExpectation) Return(r bool) {
+	e.result = &RequestMockIsAPIRequestResult{r}
+}
+
+//Set uses given function f as a mock of Request.IsAPIRequest method
+func (m *mRequestMockIsAPIRequest) Set(f func() (r bool)) *RequestMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.IsAPIRequestFunc = f
+	return m.mock
+}
+
+//IsAPIRequest implements github.com/insolar/insolar/insolar/record.Request interface
+func (m *RequestMock) IsAPIRequest() (r bool) {
+	counter := atomic.AddUint64(&m.IsAPIRequestPreCounter, 1)
+	defer atomic.AddUint64(&m.IsAPIRequestCounter, 1)
+
+	if len(m.IsAPIRequestMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.IsAPIRequestMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to RequestMock.IsAPIRequest.")
+			return
+		}
+
+		result := m.IsAPIRequestMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the RequestMock.IsAPIRequest")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsAPIRequestMock.mainExpectation != nil {
+
+		result := m.IsAPIRequestMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the RequestMock.IsAPIRequest")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsAPIRequestFunc == nil {
+		m.t.Fatalf("Unexpected call to RequestMock.IsAPIRequest.")
+		return
+	}
+
+	return m.IsAPIRequestFunc()
+}
+
+//IsAPIRequestMinimockCounter returns a count of RequestMock.IsAPIRequestFunc invocations
+func (m *RequestMock) IsAPIRequestMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.IsAPIRequestCounter)
+}
+
+//IsAPIRequestMinimockPreCounter returns the value of RequestMock.IsAPIRequest invocations
+func (m *RequestMock) IsAPIRequestMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.IsAPIRequestPreCounter)
+}
+
+//IsAPIRequestFinished returns true if mock invocations count is ok
+func (m *RequestMock) IsAPIRequestFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.IsAPIRequestMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.IsAPIRequestCounter) == uint64(len(m.IsAPIRequestMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.IsAPIRequestMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.IsAPIRequestCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.IsAPIRequestFunc != nil {
+		return atomic.LoadUint64(&m.IsAPIRequestCounter) > 0
 	}
 
 	return true
@@ -742,6 +882,10 @@ func (m *RequestMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to RequestMock.GetCallType")
 	}
 
+	if !m.IsAPIRequestFinished() {
+		m.t.Fatal("Expected call to RequestMock.IsAPIRequest")
+	}
+
 	if !m.IsCreationRequestFinished() {
 		m.t.Fatal("Expected call to RequestMock.IsCreationRequest")
 	}
@@ -779,6 +923,10 @@ func (m *RequestMock) MinimockFinish() {
 		m.t.Fatal("Expected call to RequestMock.GetCallType")
 	}
 
+	if !m.IsAPIRequestFinished() {
+		m.t.Fatal("Expected call to RequestMock.IsAPIRequest")
+	}
+
 	if !m.IsCreationRequestFinished() {
 		m.t.Fatal("Expected call to RequestMock.IsCreationRequest")
 	}
@@ -807,6 +955,7 @@ func (m *RequestMock) MinimockWait(timeout time.Duration) {
 		ok := true
 		ok = ok && m.AffinityRefFinished()
 		ok = ok && m.GetCallTypeFinished()
+		ok = ok && m.IsAPIRequestFinished()
 		ok = ok && m.IsCreationRequestFinished()
 		ok = ok && m.IsDetachedFinished()
 		ok = ok && m.ReasonRefFinished()
@@ -824,6 +973,10 @@ func (m *RequestMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetCallTypeFinished() {
 				m.t.Error("Expected call to RequestMock.GetCallType")
+			}
+
+			if !m.IsAPIRequestFinished() {
+				m.t.Error("Expected call to RequestMock.IsAPIRequest")
 			}
 
 			if !m.IsCreationRequestFinished() {
@@ -855,6 +1008,10 @@ func (m *RequestMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetCallTypeFinished() {
+		return false
+	}
+
+	if !m.IsAPIRequestFinished() {
 		return false
 	}
 

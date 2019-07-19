@@ -60,6 +60,9 @@ func newExecutionBroker(
 	re := NewRequestsExecutorMock(t)
 	mb := testutils.NewMessageBusMock(t)
 	jc := jet.NewCoordinatorMock(t)
+	jc.MeFunc = func() insolar.Reference {
+		return testutils.RandomRef()
+	}
 	ps := pulse.NewAccessorMock(t)
 	am := artifacts.NewClientMock(t)
 	pm := &publisherMock{}
