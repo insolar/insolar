@@ -56,6 +56,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/network/rules"
+
 	"github.com/insolar/insolar/network/gateway"
 
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -102,6 +104,7 @@ type ServiceNetwork struct {
 	TerminationHandler  insolar.TerminationHandler  `inject:""`
 	Pub                 message.Publisher           `inject:""`
 	ContractRequester   insolar.ContractRequester   `inject:""`
+	Rules               network.Rules               `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager           `inject:"subcomponent"`
@@ -219,6 +222,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		bootstrap.NewBootstrapper(options),
 		bootstrap.NewAuthorizationController(options),
 		bootstrap.NewNetworkBootstrapper(),
+		rules.NewRules(),
 	)
 	err = n.cm.Init(ctx)
 	if err != nil {
@@ -353,6 +357,11 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insol
 		logger.Error(errMsg)
 		n.SetGateway(n.Gateway().NewGateway(insolar.NoNetworkState))
 	}
+
+	if n.Gateway().GetState() == insolar.CompleteNetworkState && !n.Rules.CheckMinRole() {
+		logger.Fatalf("Minroles failed")
+	}
+
 }
 
 // SendMessageHandler async sends message with confirmation of delivery.

@@ -22,6 +22,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member/signer"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 
@@ -62,6 +63,11 @@ func (hw *HelloWorld) Errored() (interface{}, error) {
 	return nil, errors.New("TestError")
 }
 
+//Get number pulse from foundation
+func (hw *HelloWorld) PulseNumber() (insolar.PulseNumber, error) {
+	return foundation.GetPulseNumber()
+}
+
 func (hw *HelloWorld) CreateChild() (interface{}, error) {
 	hwHolder := hwProxy.New()
 	chw, err := hwHolder.AsChild(hw.GetReference())
@@ -84,7 +90,7 @@ type Params struct {
 	CallSite   string      `json:"callSite"`
 	CallParams interface{} `json:"callParams"`
 	Reference  string      `json:"reference"`
-	PublicKey  string      `json:"memberPublicKey"`
+	PublicKey  string      `json:"publicKey"`
 }
 
 func (hw *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
@@ -114,6 +120,8 @@ func (hw *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
 		return hw.CreateChild()
 	case "ReturnObj":
 		return hw.ReturnObj()
+	case "PulseNumber":
+		return hw.PulseNumber()
 	default:
 		return nil, errors.New("Unknown method " + request.Params.CallSite)
 	}

@@ -43,8 +43,11 @@ func TestFilamentModifierDefault_CheckOutgoingHasReasonInPendings(t *testing.T) 
 	)
 
 	calc := NewFilamentCalculatorMock(t)
-	calc.PendingRequestsFunc = func(_ context.Context, _ insolar.PulseNumber, id insolar.ID) ([]insolar.ID, error) {
-		return []insolar.ID{pendingObjectID}, nil
+	calc.PendingRequestsFunc = func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r []record.CompositeFilamentRecord, r1 error) {
+		return []record.CompositeFilamentRecord{
+			{RecordID: pendingObjectID},
+		}, nil
+		// return []insolar.ID{pendingObjectID}, nil
 	}
 
 	request := record.NewRequestMock(t)

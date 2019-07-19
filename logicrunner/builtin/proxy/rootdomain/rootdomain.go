@@ -140,14 +140,14 @@ func (r *RootDomain) GetCode() (insolar.Reference, error) {
 	return r.Code, nil
 }
 
-// GetMigrationAdminMemberRef is proxy generated method
-func (r *RootDomain) GetMigrationAdminMemberRef() (*insolar.Reference, error) {
+// GetCostCenterRef is proxy generated method
+func (r *RootDomain) GetCostCenterRef() (insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 *insolar.Reference
+	var ret0 insolar.Reference
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -157,7 +157,7 @@ func (r *RootDomain) GetMigrationAdminMemberRef() (*insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetMigrationAdminMemberRef", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetCostCenterRef", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -173,8 +173,8 @@ func (r *RootDomain) GetMigrationAdminMemberRef() (*insolar.Reference, error) {
 	return ret0, nil
 }
 
-// GetMigrationAdminMemberRefNoWait is proxy generated method
-func (r *RootDomain) GetMigrationAdminMemberRefNoWait() error {
+// GetCostCenterRefNoWait is proxy generated method
+func (r *RootDomain) GetCostCenterRefNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -184,7 +184,7 @@ func (r *RootDomain) GetMigrationAdminMemberRefNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetMigrationAdminMemberRef", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetCostCenterRef", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -192,14 +192,14 @@ func (r *RootDomain) GetMigrationAdminMemberRefNoWait() error {
 	return nil
 }
 
-// GetMigrationAdminMemberRefAsImmutable is proxy generated method
-func (r *RootDomain) GetMigrationAdminMemberRefAsImmutable() (*insolar.Reference, error) {
+// GetCostCenterRefAsImmutable is proxy generated method
+func (r *RootDomain) GetCostCenterRefAsImmutable() (insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 *insolar.Reference
+	var ret0 insolar.Reference
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -209,7 +209,92 @@ func (r *RootDomain) GetMigrationAdminMemberRefAsImmutable() (*insolar.Reference
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetMigrationAdminMemberRef", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetCostCenterRef", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// GetFeeWalletRef is proxy generated method
+func (r *RootDomain) GetFeeWalletRef() (insolar.Reference, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 insolar.Reference
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetFeeWalletRef", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// GetFeeWalletRefNoWait is proxy generated method
+func (r *RootDomain) GetFeeWalletRefNoWait() error {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetFeeWalletRef", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetFeeWalletRefAsImmutable is proxy generated method
+func (r *RootDomain) GetFeeWalletRefAsImmutable() (insolar.Reference, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 insolar.Reference
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetFeeWalletRef", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -226,13 +311,13 @@ func (r *RootDomain) GetMigrationAdminMemberRefAsImmutable() (*insolar.Reference
 }
 
 // GetMigrationWalletRef is proxy generated method
-func (r *RootDomain) GetMigrationWalletRef() (*insolar.Reference, error) {
+func (r *RootDomain) GetMigrationWalletRef() (insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 *insolar.Reference
+	var ret0 insolar.Reference
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -278,13 +363,13 @@ func (r *RootDomain) GetMigrationWalletRefNoWait() error {
 }
 
 // GetMigrationWalletRefAsImmutable is proxy generated method
-func (r *RootDomain) GetMigrationWalletRefAsImmutable() (*insolar.Reference, error) {
+func (r *RootDomain) GetMigrationWalletRefAsImmutable() (insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 *insolar.Reference
+	var ret0 insolar.Reference
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -295,6 +380,91 @@ func (r *RootDomain) GetMigrationWalletRefAsImmutable() (*insolar.Reference, err
 	}
 
 	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetMigrationWalletRef", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// GetMigrationAdminMember is proxy generated method
+func (r *RootDomain) GetMigrationAdminMember() (insolar.Reference, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 insolar.Reference
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetMigrationAdminMember", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// GetMigrationAdminMemberNoWait is proxy generated method
+func (r *RootDomain) GetMigrationAdminMemberNoWait() error {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetMigrationAdminMember", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetMigrationAdminMemberAsImmutable is proxy generated method
+func (r *RootDomain) GetMigrationAdminMemberAsImmutable() (insolar.Reference, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 insolar.Reference
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetMigrationAdminMember", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -396,13 +566,13 @@ func (r *RootDomain) GetMigrationDaemonMembersAsImmutable() ([]insolar.Reference
 }
 
 // GetRootMemberRef is proxy generated method
-func (r *RootDomain) GetRootMemberRef() (*insolar.Reference, error) {
+func (r *RootDomain) GetRootMemberRef() (insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 *insolar.Reference
+	var ret0 insolar.Reference
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -448,13 +618,13 @@ func (r *RootDomain) GetRootMemberRefNoWait() error {
 }
 
 // GetRootMemberRefAsImmutable is proxy generated method
-func (r *RootDomain) GetRootMemberRefAsImmutable() (*insolar.Reference, error) {
+func (r *RootDomain) GetRootMemberRefAsImmutable() (insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 *insolar.Reference
+	var ret0 insolar.Reference
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1

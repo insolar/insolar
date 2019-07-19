@@ -19,6 +19,8 @@ package heavy
 import (
 	"context"
 
+	"github.com/insolar/insolar/network/rules"
+
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
@@ -247,6 +249,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		pm.PulseAppender = Pulses
 		pm.PulseAccessor = Pulses
 		pm.JetModifier = jets
+		pm.FinalizationKeeper = executor.NewFinalizationKeeperDefault(jetKeeper, Termination, Pulses, cfg.Ledger.LightChainLimit)
 
 		h := handler.New(cfg.Ledger)
 		h.RecordAccessor = records
@@ -314,6 +317,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		NodeNetwork,
 		NetworkService,
 		pubSub,
+		rules.NewRules(),
 	)
 	err = c.cmp.Init(ctx)
 	if err != nil {

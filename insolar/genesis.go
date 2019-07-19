@@ -40,7 +40,7 @@ const (
 	GenesisNameRootWallet           = "root" + GenesisNameWallet
 	GenesisNameMigrationAdminMember = "migrationadmin" + GenesisNameMember
 	GenesisNameMigrationWallet      = "migration" + GenesisNameWallet
-	GenesisNameCommissionWallet     = "commission" + GenesisNameWallet
+	GenesisNameFeeWallet            = "fee" + GenesisNameWallet
 
 	GenesisNameStandardTariff = "standard" + GenesisNameTariff
 

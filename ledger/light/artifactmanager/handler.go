@@ -128,6 +128,7 @@ func NewMessageHandler(
 				h.filamentModifier,
 				h.Sender,
 				h.IndexLocker,
+				h.IndexStorage,
 			)
 		},
 		SetResult: func(p *proc.SetResult) {
@@ -205,6 +206,12 @@ func NewMessageHandler(
 			p.Dep.PCS = h.PCS
 			p.Dep.Sender = h.Sender
 		},
+		GetPendings: func(p *proc.GetPendings) {
+			p.Dep(
+				h.FilamentCalculator,
+				h.Sender,
+			)
+		},
 		GetPendingRequests: func(p *proc.GetPendingRequests) {
 			p.Dep(h.IndexStorage, h.Sender)
 		},
@@ -266,6 +273,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 		h.PCS,
 		h.FilamentCalculator,
 		h.PulseCalculator,
+		h.Sender,
 	)
 
 	return nil
