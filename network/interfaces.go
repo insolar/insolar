@@ -136,8 +136,6 @@ type NodeKeeper interface {
 	GetAccessor() Accessor
 	// GetOriginJoinClaim get origin NodeJoinClaim
 	GetOriginJoinClaim() (*packets.NodeJoinClaim, error)
-	// GetOriginAnnounceClaim get origin NodeAnnounceClaim
-	GetOriginAnnounceClaim(mapper packets.BitSetMapper) (*packets.NodeAnnounceClaim, error)
 	// GetClaimQueue get the internal queue of claims
 	GetClaimQueue() ClaimQueue
 	// GetSnapshotCopy get copy of the current nodekeeper snapshot
@@ -149,23 +147,6 @@ type NodeKeeper interface {
 	// GetConsensusInfo get additional info for the current consensus process
 	//GetConsensusInfo() ConsensusInfo
 }
-
-// ConsensusInfo additional info for the current consensus process
-// TODO: refactor code and make it not necessary
-//type ConsensusInfo interface {
-//	// NodesJoinedDuringPreviousPulse returns true if the last Sync call contained approved Join claims
-//	NodesJoinedDuringPreviousPulse() bool
-//	// AddTemporaryMapping add temporary mapping till the next pulse for consensus
-//	AddTemporaryMapping(nodeID insolar.Reference, shortID insolar.ShortNodeID, address string) error
-//	// ResolveConsensus get temporary mapping by short ID
-//	ResolveConsensus(shortID insolar.ShortNodeID) *host.Host
-//	// ResolveConsensusRef get temporary mapping by node ID
-//	ResolveConsensusRef(nodeID insolar.Reference) *host.Host
-//	// SetIsJoiner instruct current node whether it should perform consensus as joiner or not
-//	SetIsJoiner(isJoiner bool)
-//	// IsJoiner true if current node should perform consensus as joiner
-//	IsJoiner() bool
-//}
 
 // PartitionPolicy contains all rules how to initiate globule resharding.
 type PartitionPolicy interface {

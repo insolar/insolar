@@ -43,11 +43,6 @@ type NodeKeeperMock struct {
 	GetOriginPreCounter uint64
 	GetOriginMock       mNodeKeeperMockGetOrigin
 
-	GetOriginAnnounceClaimFunc       func(p packets.BitSetMapper) (r *packets.NodeAnnounceClaim, r1 error)
-	GetOriginAnnounceClaimCounter    uint64
-	GetOriginAnnounceClaimPreCounter uint64
-	GetOriginAnnounceClaimMock       mNodeKeeperMockGetOriginAnnounceClaim
-
 	GetOriginJoinClaimFunc       func() (r *packets.NodeJoinClaim, r1 error)
 	GetOriginJoinClaimCounter    uint64
 	GetOriginJoinClaimPreCounter uint64
@@ -106,7 +101,6 @@ func NewNodeKeeperMock(t minimock.Tester) *NodeKeeperMock {
 	m.GetClaimQueueMock = mNodeKeeperMockGetClaimQueue{mock: m}
 	m.GetCloudHashMock = mNodeKeeperMockGetCloudHash{mock: m}
 	m.GetOriginMock = mNodeKeeperMockGetOrigin{mock: m}
-	m.GetOriginAnnounceClaimMock = mNodeKeeperMockGetOriginAnnounceClaim{mock: m}
 	m.GetOriginJoinClaimMock = mNodeKeeperMockGetOriginJoinClaim{mock: m}
 	m.GetSnapshotCopyMock = mNodeKeeperMockGetSnapshotCopy{mock: m}
 	m.GetWorkingNodeMock = mNodeKeeperMockGetWorkingNode{mock: m}
@@ -651,156 +645,6 @@ func (m *NodeKeeperMock) GetOriginFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetOriginFunc != nil {
 		return atomic.LoadUint64(&m.GetOriginCounter) > 0
-	}
-
-	return true
-}
-
-type mNodeKeeperMockGetOriginAnnounceClaim struct {
-	mock              *NodeKeeperMock
-	mainExpectation   *NodeKeeperMockGetOriginAnnounceClaimExpectation
-	expectationSeries []*NodeKeeperMockGetOriginAnnounceClaimExpectation
-}
-
-type NodeKeeperMockGetOriginAnnounceClaimExpectation struct {
-	input  *NodeKeeperMockGetOriginAnnounceClaimInput
-	result *NodeKeeperMockGetOriginAnnounceClaimResult
-}
-
-type NodeKeeperMockGetOriginAnnounceClaimInput struct {
-	p packets.BitSetMapper
-}
-
-type NodeKeeperMockGetOriginAnnounceClaimResult struct {
-	r  *packets.NodeAnnounceClaim
-	r1 error
-}
-
-//Expect specifies that invocation of NodeKeeper.GetOriginAnnounceClaim is expected from 1 to Infinity times
-func (m *mNodeKeeperMockGetOriginAnnounceClaim) Expect(p packets.BitSetMapper) *mNodeKeeperMockGetOriginAnnounceClaim {
-	m.mock.GetOriginAnnounceClaimFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeKeeperMockGetOriginAnnounceClaimExpectation{}
-	}
-	m.mainExpectation.input = &NodeKeeperMockGetOriginAnnounceClaimInput{p}
-	return m
-}
-
-//Return specifies results of invocation of NodeKeeper.GetOriginAnnounceClaim
-func (m *mNodeKeeperMockGetOriginAnnounceClaim) Return(r *packets.NodeAnnounceClaim, r1 error) *NodeKeeperMock {
-	m.mock.GetOriginAnnounceClaimFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeKeeperMockGetOriginAnnounceClaimExpectation{}
-	}
-	m.mainExpectation.result = &NodeKeeperMockGetOriginAnnounceClaimResult{r, r1}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of NodeKeeper.GetOriginAnnounceClaim is expected once
-func (m *mNodeKeeperMockGetOriginAnnounceClaim) ExpectOnce(p packets.BitSetMapper) *NodeKeeperMockGetOriginAnnounceClaimExpectation {
-	m.mock.GetOriginAnnounceClaimFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NodeKeeperMockGetOriginAnnounceClaimExpectation{}
-	expectation.input = &NodeKeeperMockGetOriginAnnounceClaimInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *NodeKeeperMockGetOriginAnnounceClaimExpectation) Return(r *packets.NodeAnnounceClaim, r1 error) {
-	e.result = &NodeKeeperMockGetOriginAnnounceClaimResult{r, r1}
-}
-
-//Set uses given function f as a mock of NodeKeeper.GetOriginAnnounceClaim method
-func (m *mNodeKeeperMockGetOriginAnnounceClaim) Set(f func(p packets.BitSetMapper) (r *packets.NodeAnnounceClaim, r1 error)) *NodeKeeperMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetOriginAnnounceClaimFunc = f
-	return m.mock
-}
-
-//GetOriginAnnounceClaim implements github.com/insolar/insolar/network.NodeKeeper interface
-func (m *NodeKeeperMock) GetOriginAnnounceClaim(p packets.BitSetMapper) (r *packets.NodeAnnounceClaim, r1 error) {
-	counter := atomic.AddUint64(&m.GetOriginAnnounceClaimPreCounter, 1)
-	defer atomic.AddUint64(&m.GetOriginAnnounceClaimCounter, 1)
-
-	if len(m.GetOriginAnnounceClaimMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetOriginAnnounceClaimMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeKeeperMock.GetOriginAnnounceClaim. %v", p)
-			return
-		}
-
-		input := m.GetOriginAnnounceClaimMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, NodeKeeperMockGetOriginAnnounceClaimInput{p}, "NodeKeeper.GetOriginAnnounceClaim got unexpected parameters")
-
-		result := m.GetOriginAnnounceClaimMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeKeeperMock.GetOriginAnnounceClaim")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.GetOriginAnnounceClaimMock.mainExpectation != nil {
-
-		input := m.GetOriginAnnounceClaimMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, NodeKeeperMockGetOriginAnnounceClaimInput{p}, "NodeKeeper.GetOriginAnnounceClaim got unexpected parameters")
-		}
-
-		result := m.GetOriginAnnounceClaimMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeKeeperMock.GetOriginAnnounceClaim")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.GetOriginAnnounceClaimFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeKeeperMock.GetOriginAnnounceClaim. %v", p)
-		return
-	}
-
-	return m.GetOriginAnnounceClaimFunc(p)
-}
-
-//GetOriginAnnounceClaimMinimockCounter returns a count of NodeKeeperMock.GetOriginAnnounceClaimFunc invocations
-func (m *NodeKeeperMock) GetOriginAnnounceClaimMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetOriginAnnounceClaimCounter)
-}
-
-//GetOriginAnnounceClaimMinimockPreCounter returns the value of NodeKeeperMock.GetOriginAnnounceClaim invocations
-func (m *NodeKeeperMock) GetOriginAnnounceClaimMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetOriginAnnounceClaimPreCounter)
-}
-
-//GetOriginAnnounceClaimFinished returns true if mock invocations count is ok
-func (m *NodeKeeperMock) GetOriginAnnounceClaimFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetOriginAnnounceClaimMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetOriginAnnounceClaimCounter) == uint64(len(m.GetOriginAnnounceClaimMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetOriginAnnounceClaimMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetOriginAnnounceClaimCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetOriginAnnounceClaimFunc != nil {
-		return atomic.LoadUint64(&m.GetOriginAnnounceClaimCounter) > 0
 	}
 
 	return true
@@ -2068,10 +1912,6 @@ func (m *NodeKeeperMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetOrigin")
 	}
 
-	if !m.GetOriginAnnounceClaimFinished() {
-		m.t.Fatal("Expected call to NodeKeeperMock.GetOriginAnnounceClaim")
-	}
-
 	if !m.GetOriginJoinClaimFinished() {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetOriginJoinClaim")
 	}
@@ -2141,10 +1981,6 @@ func (m *NodeKeeperMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetOrigin")
 	}
 
-	if !m.GetOriginAnnounceClaimFinished() {
-		m.t.Fatal("Expected call to NodeKeeperMock.GetOriginAnnounceClaim")
-	}
-
 	if !m.GetOriginJoinClaimFinished() {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetOriginJoinClaim")
 	}
@@ -2199,7 +2035,6 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetClaimQueueFinished()
 		ok = ok && m.GetCloudHashFinished()
 		ok = ok && m.GetOriginFinished()
-		ok = ok && m.GetOriginAnnounceClaimFinished()
 		ok = ok && m.GetOriginJoinClaimFinished()
 		ok = ok && m.GetSnapshotCopyFinished()
 		ok = ok && m.GetWorkingNodeFinished()
@@ -2231,10 +2066,6 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetOriginFinished() {
 				m.t.Error("Expected call to NodeKeeperMock.GetOrigin")
-			}
-
-			if !m.GetOriginAnnounceClaimFinished() {
-				m.t.Error("Expected call to NodeKeeperMock.GetOriginAnnounceClaim")
 			}
 
 			if !m.GetOriginJoinClaimFinished() {
@@ -2298,10 +2129,6 @@ func (m *NodeKeeperMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetOriginFinished() {
-		return false
-	}
-
-	if !m.GetOriginAnnounceClaimFinished() {
 		return false
 	}
 

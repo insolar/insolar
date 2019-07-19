@@ -213,10 +213,6 @@ func (nk *nodekeeper) GetOriginJoinClaim() (*packets.NodeJoinClaim, error) {
 	return nk.nodeToSignedClaim()
 }
 
-func (nk *nodekeeper) GetOriginAnnounceClaim(mapper packets.BitSetMapper) (*packets.NodeAnnounceClaim, error) {
-	return nk.nodeToAnnounceClaim(mapper)
-}
-
 func (nk *nodekeeper) GetClaimQueue() network.ClaimQueue {
 	return nk.claimQueue
 }
@@ -306,28 +302,6 @@ func (nk *nodekeeper) nodeToSignedClaim() (*packets.NodeJoinClaim, error) {
 	}
 	copy(claim.Signature[:], sign[:packets.SignatureLength])
 	return claim, nil
-}
-
-func (nk *nodekeeper) nodeToAnnounceClaim(mapper packets.BitSetMapper) (*packets.NodeAnnounceClaim, error) {
-	claim := packets.NodeAnnounceClaim{}
-	joinClaim, err := packets.NodeToClaim(nk.origin)
-	if err != nil {
-		return nil, err
-	}
-	claim.NodeJoinClaim = *joinClaim
-	claim.NodeCount = uint16(mapper.Length())
-	announcerIndex, err := mapper.RefToIndex(nk.origin.ID())
-	if err != nil {
-		return nil, errors.Wrap(err, "[ nodeToAnnounceClaim ] failed to map origin node ID to bitset index")
-	}
-	claim.NodeAnnouncerIndex = uint16(announcerIndex)
-	claim.BitSetMapper = mapper
-	hash := nk.GetCloudHash()
-	if hash == nil {
-		hash = make([]byte, packets.HashLength)
-	}
-	claim.SetCloudHash(hash)
-	return &claim, nil
 }
 
 func (nk *nodekeeper) sign(data []byte) ([]byte, error) {

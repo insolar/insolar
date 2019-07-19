@@ -138,32 +138,6 @@ func (njc *NodeJoinClaim) Type() ClaimType {
 	return TypeNodeJoinClaim
 }
 
-// NodeJoinClaim is a type 5, len == 272.
-type NodeAnnounceClaim struct {
-	NodeJoinClaim
-
-	NodeAnnouncerIndex uint16
-	NodeJoinerIndex    uint16
-	NodeCount          uint16
-	CloudHash          [HashLength]byte
-
-	// mapper is used to fill three fields above, is not serialized
-	BitSetMapper BitSetMapper
-}
-
-func (nac *NodeAnnounceClaim) Clone() ReferendumClaim {
-	result := *nac
-	return &result
-}
-
-func (nac *NodeAnnounceClaim) Type() ClaimType {
-	return TypeNodeAnnounceClaim
-}
-
-func (nac *NodeAnnounceClaim) SetCloudHash(cloudHash []byte) {
-	copy(nac.CloudHash[:], cloudHash[:HashLength])
-}
-
 // NodeLeaveClaim can be the only be issued by the node itself and must be the only claim record.
 // Should be executed with the next pulse. Type 1, len == 0.
 type NodeLeaveClaim struct {

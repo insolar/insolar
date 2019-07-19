@@ -56,7 +56,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
 )
 
@@ -184,105 +183,6 @@ func (njc *NodeJoinClaim) SerializeRaw() ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-func (nac *NodeAnnounceClaim) SerializeRaw() ([]byte, error) {
-	nodeJoinPart, err := nac.NodeJoinClaim.SerializeRaw()
-	if err != nil {
-		return nil, err
-	}
-	result := allocateBuffer(1024)
-	err = binary.Write(result, defaultByteOrder, nodeJoinPart)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Can't write NodeJoinClaim part")
-	}
-	err = binary.Write(result, defaultByteOrder, nac.NodeAnnouncerIndex)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Can't write NodeAnnouncerIndex")
-	}
-	err = binary.Write(result, defaultByteOrder, nac.NodeJoinerIndex)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Can't write NodeJoinerIndex")
-	}
-	err = binary.Write(result, defaultByteOrder, nac.NodeCount)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Can't write NodeCount")
-	}
-	err = binary.Write(result, defaultByteOrder, nac.CloudHash)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Can't write CloudHash")
-	}
-	return result.Bytes(), nil
-}
-
-// Serialize implements interface method
-func (nac *NodeAnnounceClaim) Serialize() ([]byte, error) {
-	result := allocateBuffer(1024)
-
-	rawData, err := nac.SerializeRaw()
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Failed to serialize a claim without header")
-	}
-
-	err = binary.Write(result, defaultByteOrder, rawData)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Failed to write a data without header")
-	}
-
-	err = binary.Write(result, defaultByteOrder, nac.Signature[:])
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Can't write Signature")
-	}
-
-	return result.Bytes(), nil
-}
-
-// Deserialize implements interface method
-func (nac *NodeAnnounceClaim) Deserialize(data io.Reader) error {
-	err := nac.deserializeRaw(data)
-	if err != nil {
-		return err
-	}
-	err = binary.Read(data, defaultByteOrder, &nac.NodeAnnouncerIndex)
-	if err != nil {
-		return errors.Wrap(err, "[ NodeAnnounceClaim.Deserialize ] Can't read NodeAnnouncerIndex")
-	}
-	err = binary.Read(data, defaultByteOrder, &nac.NodeJoinerIndex)
-	if err != nil {
-		return errors.Wrap(err, "[ NodeAnnounceClaim.Deserialize ] Can't read NodeJoinerIndex")
-	}
-	err = binary.Read(data, defaultByteOrder, &nac.NodeCount)
-	if err != nil {
-		return errors.Wrap(err, "[ NodeAnnounceClaim.Deserialize ] Can't read NodeCount")
-	}
-	err = binary.Read(data, defaultByteOrder, &nac.CloudHash)
-	if err != nil {
-		return errors.Wrap(err, "[ NodeAnnounceClaim.Deserialize ] Can't read CloudHash")
-	}
-	err = binary.Read(data, defaultByteOrder, &nac.Signature)
-	if err != nil {
-		return errors.Wrap(err, "[ NodeAnnounceClaim.Deserialize ] Can't read Signature")
-	}
-	return nil
-}
-
-func (nac *NodeAnnounceClaim) Update(nodeJoinerID insolar.Reference, crypto insolar.Signer) error {
-	index, err := nac.BitSetMapper.RefToIndex(nodeJoinerID)
-	if err != nil {
-		return errors.Wrap(err, "[ NodeAnnounceClaim.Update ] failed to map joiner node ID to bitset index")
-	}
-	nac.NodeJoinerIndex = uint16(index)
-	data, err := nac.SerializeRaw()
-	if err != nil {
-		return errors.Wrap(err, "[ NodeAnnounceClaim.Update ] failed to serialize raw announce claim")
-	}
-	signature, err := crypto.Sign(data)
-	if err != nil {
-		return errors.Wrap(err, "[ NodeAnnounceClaim.Update ] failed to sign announce claim")
-	}
-	sign := signature.Bytes()
-	copy(nac.Signature[:], sign[:SignatureLength])
-	return nil
-}
-
 // Serialize implements interface method
 func (nlc *NodeLeaveClaim) Serialize() ([]byte, error) {
 	var result bytes.Buffer
@@ -370,8 +270,6 @@ func parseReferendumClaim(data []byte) ([]ReferendumClaim, error) {
 			refClaim = &NodeJoinClaim{}
 		case TypeNodeLeaveClaim:
 			refClaim = &NodeLeaveClaim{}
-		case TypeNodeAnnounceClaim:
-			refClaim = &NodeAnnounceClaim{}
 		case TypeChangeNetworkClaim:
 			refClaim = &ChangeNetworkClaim{}
 		default:
