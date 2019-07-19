@@ -52,6 +52,7 @@ package controller
 
 import (
 	"context"
+	"runtime"
 	"sync/atomic"
 
 	"github.com/insolar/insolar/component"
@@ -92,6 +93,7 @@ func (pc *pulseController) Init(ctx context.Context) error {
 }
 
 func (pc *pulseController) processPulse(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
+	runtime.LockOSThread() // Attention, this is a priveleged thread
 	if request.GetRequest() == nil || request.GetRequest().GetPulse() == nil {
 		return nil, errors.Errorf("process pulse: got invalid protobuf request message: %s", request)
 	}
