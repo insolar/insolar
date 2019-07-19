@@ -162,7 +162,7 @@ func (m *FilamentModifierDefault) notifyDetached(ctx context.Context, pendingReq
 
 	needToBeeNotified := func(rec record.CompositeFilamentRecord) (bool, *record.OutgoingRequest) {
 		outReq, isOutgoing := record.Unwrap(rec.Record.Virtual).(*record.OutgoingRequest)
-		if isOutgoing && outReq.ReturnMode == record.ReturnSaga && outReq.Reason.Record().Equal(reqID) {
+		if isOutgoing && outReq.IsDetached() && outReq.Reason.Record().Equal(reqID) {
 			return true, outReq
 		}
 
@@ -675,7 +675,7 @@ func (c *FilamentCalculatorDefault) FindRecord(ctx context.Context, startFrom in
 		}
 	}
 
-	return record.CompositeFilamentRecord{}, ErrRequestNotFound
+	return record.CompositeFilamentRecord{}, ErrRecordNotFound
 }
 
 func (c *FilamentCalculatorDefault) Clear(objID insolar.ID) {
