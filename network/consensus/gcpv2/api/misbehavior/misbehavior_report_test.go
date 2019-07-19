@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,57 +46,50 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-//
+///
 
 package misbehavior
 
 import (
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"testing"
+
+	"github.com/pkg/errors"
+
+	"github.com/stretchr/testify/require"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior.Report -o . -s _mock.go
+func TestIs(t *testing.T) {
+	// TODO
+	/*r := NewReportMock(t)
+	require.True(t, Is(r))*/
 
-type Report interface {
-	CaptureMark() interface{}
-	Details() []interface{}
-	ViolatorNode() profiles.BaseNode
-	ViolatorHost() endpoints.InboundConnection
-	MisbehaviorType() Type
+	err := errors.New("test")
+	require.False(t, Is(err))
 }
 
-func Is(err error) bool {
-	_, ok := err.(Report)
-	return ok
+func TestReportOf(t *testing.T) {
+	// TODO
+	/*r := NewReportMock(t)
+	require.True(t, Of(r) != nil)*/
+
+	err := errors.New("test")
+	require.True(t, Of(err) == nil)
 }
 
-func Of(err error) Report {
-	rep, ok := err.(Report)
-	if ok {
-		return rep
-	}
-	return nil
+func TestCategory(t *testing.T) {
+	require.Equal(t, Category(1), Type(1<<32).Category())
 }
 
-type ReportFunc func(report Report) interface{}
+func TestType(t *testing.T) {
+	require.Equal(t, 1, Type(1).Type())
 
-type Type uint64
-type Category int
-
-const (
-	_ Category = iota
-	Blame
-	Fraud
-)
-
-func (c Type) Category() Category {
-	return Category(c >> 32)
+	require.Equal(t, 0, Type(1<<32).Type())
 }
 
-func (c Type) Type() int {
-	return int(c & (1<<32 - 1))
-}
+func TestCategoryOf(t *testing.T) {
+	require.Equal(t, Type(0), Category(0).Of(0))
 
-func (c Category) Of(misbehavior int) Type {
-	return Type(c<<32) | Type(misbehavior&(1<<32-1))
+	require.Equal(t, Type(1<<32), Category(1).Of(0))
+
+	require.Equal(t, Type((1<<32)+1), Category(1).Of(1))
 }

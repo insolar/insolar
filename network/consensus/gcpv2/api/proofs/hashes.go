@@ -64,9 +64,13 @@ type GlobulaAnnouncementHash interface {
 	cryptkit.DigestHolder
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.GlobulaStateHash -o . -s _mock.go
+
 type GlobulaStateHash interface {
 	cryptkit.DigestHolder
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.CloudStateHash -o . -s _mock.go
 
 type CloudStateHash interface {
 	cryptkit.DigestHolder
