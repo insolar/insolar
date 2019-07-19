@@ -181,11 +181,7 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 		return
 	}
 
-	if err := d.resume(ctx); err != nil {
-		logger.Error("[ Distribute ] resume distribution error: " + err.Error())
-		return
-	}
-	defer d.pause(ctx)
+	d.pool.Reset()
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(bootstrapHosts))
@@ -255,17 +251,6 @@ func (d *distributor) sendPulseToHost(ctx context.Context, p *insolar.Pulse, hos
 	if err != nil {
 		return err
 	}
-	return nil
-}
-
-func (d *distributor) pause(ctx context.Context) {
-	logger := inslogger.FromContext(ctx)
-	logger.Info("[ Pause ] Pause distribution, stopping transport")
-	d.pool.Reset()
-}
-
-func (d *distributor) resume(ctx context.Context) error {
-	inslogger.FromContext(ctx).Info("[ Resume ] Resume distribution, starting transport")
 	return nil
 }
 
