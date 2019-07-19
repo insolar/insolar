@@ -25,7 +25,7 @@ type JetKeeperMock struct {
 	AddHotConfirmationPreCounter uint64
 	AddHotConfirmationMock       mJetKeeperMockAddHotConfirmation
 
-	AddJetFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r error)
+	AddJetFunc       func(p context.Context, p1 insolar.PulseNumber, p2 ...insolar.JetID) (r error)
 	AddJetCounter    uint64
 	AddJetPreCounter uint64
 	AddJetMock       mJetKeeperMockAddJet
@@ -214,7 +214,7 @@ type JetKeeperMockAddJetExpectation struct {
 type JetKeeperMockAddJetInput struct {
 	p  context.Context
 	p1 insolar.PulseNumber
-	p2 insolar.JetID
+	p2 []insolar.JetID
 }
 
 type JetKeeperMockAddJetResult struct {
@@ -222,7 +222,7 @@ type JetKeeperMockAddJetResult struct {
 }
 
 //Expect specifies that invocation of JetKeeper.AddJet is expected from 1 to Infinity times
-func (m *mJetKeeperMockAddJet) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) *mJetKeeperMockAddJet {
+func (m *mJetKeeperMockAddJet) Expect(p context.Context, p1 insolar.PulseNumber, p2 ...insolar.JetID) *mJetKeeperMockAddJet {
 	m.mock.AddJetFunc = nil
 	m.expectationSeries = nil
 
@@ -246,7 +246,7 @@ func (m *mJetKeeperMockAddJet) Return(r error) *JetKeeperMock {
 }
 
 //ExpectOnce specifies that invocation of JetKeeper.AddJet is expected once
-func (m *mJetKeeperMockAddJet) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) *JetKeeperMockAddJetExpectation {
+func (m *mJetKeeperMockAddJet) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 ...insolar.JetID) *JetKeeperMockAddJetExpectation {
 	m.mock.AddJetFunc = nil
 	m.mainExpectation = nil
 
@@ -261,7 +261,7 @@ func (e *JetKeeperMockAddJetExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of JetKeeper.AddJet method
-func (m *mJetKeeperMockAddJet) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r error)) *JetKeeperMock {
+func (m *mJetKeeperMockAddJet) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 ...insolar.JetID) (r error)) *JetKeeperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -270,7 +270,7 @@ func (m *mJetKeeperMockAddJet) Set(f func(p context.Context, p1 insolar.PulseNum
 }
 
 //AddJet implements github.com/insolar/insolar/ledger/heavy/executor.JetKeeper interface
-func (m *JetKeeperMock) AddJet(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r error) {
+func (m *JetKeeperMock) AddJet(p context.Context, p1 insolar.PulseNumber, p2 ...insolar.JetID) (r error) {
 	counter := atomic.AddUint64(&m.AddJetPreCounter, 1)
 	defer atomic.AddUint64(&m.AddJetCounter, 1)
 
@@ -316,7 +316,7 @@ func (m *JetKeeperMock) AddJet(p context.Context, p1 insolar.PulseNumber, p2 ins
 		return
 	}
 
-	return m.AddJetFunc(p, p1, p2)
+	return m.AddJetFunc(p, p1, p2...)
 }
 
 //AddJetMinimockCounter returns a count of JetKeeperMock.AddJetFunc invocations
