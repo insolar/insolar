@@ -54,32 +54,9 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-//go:generate stringer -type=PacketType
-type PacketType uint8
-
-const (
-	Phase1 = PacketType(iota + 1)
-	Phase2
-	Phase3
-)
-
 const HashLength = 64
 const SignatureLength = 64
 const PublicKeyLength = 64
-
-// ------------------------------PACKET HEADER------------------------------
-
-type PacketHeader struct {
-	PacketT    PacketType
-	HasRouting bool
-	// -----------------
-	f01   bool
-	f00   bool
-	Pulse uint32
-	// -----------------
-	OriginNodeID insolar.ShortNodeID
-	TargetNodeID insolar.ShortNodeID
-}
 
 // ------------------------------PULSE DATA------------------------------
 

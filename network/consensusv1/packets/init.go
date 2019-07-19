@@ -62,7 +62,6 @@ var (
 	// claimSizeMap contains serialized size of each claim type without header(2 bytes)
 	claimSizeMap map[ClaimType]uint16
 	// claimSizeMap contains sizes of serialized votes for each type without header (2 bytes)
-	voteSizeMap map[VoteType]uint16
 )
 
 // init packets and claims size variables
@@ -75,15 +74,8 @@ func init() {
 		return uint16(len(data))
 	}
 
-	phase1PacketSizeForClaims = packetMaxSize - int(sizeOf(&Phase1Packet{}))
-
 	claimSizeMap = make(map[ClaimType]uint16)
 	claimSizeMap[TypeNodeJoinClaim] = sizeOf(&NodeJoinClaim{})
 	claimSizeMap[TypeNodeLeaveClaim] = sizeOf(&NodeLeaveClaim{})
 
-	voteSizeMap = make(map[VoteType]uint16)
-	voteSizeMap[TypeMissingNodeRespVote] = sizeOf(&MissingNodeRespVote{})
-	voteSizeMap[TypeMissingNodeReqVote] = sizeOf(&MissingNodeReqVote{})
-	// MissingNodeClaimsVote has variable-sized length
-	voteSizeMap[TypeMissingNodeClaimsVote] = 0
 }

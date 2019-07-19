@@ -52,6 +52,7 @@ package packets
 
 import (
 	"bytes"
+	"encoding/binary"
 	"net"
 	"strconv"
 
@@ -65,6 +66,8 @@ const (
 
 	maxPortNumber = ^uint16(0)
 )
+
+var defaultByteOrder = binary.BigEndian
 
 type NodeAddress [nodeAddressSize]byte
 

@@ -290,17 +290,18 @@ func (nk *nodekeeper) nodeToSignedClaim() (*packets.NodeJoinClaim, error) {
 	if err != nil {
 		return nil, err
 	}
-	dataToSign, err := claim.SerializeRaw()
-	log.Debugf("dataToSign len: %d", len(dataToSign))
-	if err != nil {
-		return nil, errors.Wrap(err, "[ nodeToSignedClaim ] failed to serialize a claim")
-	}
-	sign, err := nk.sign(dataToSign)
-	log.Debugf("sign len: %d", len(sign))
-	if err != nil {
-		return nil, errors.Wrap(err, "[ nodeToSignedClaim ] failed to sign a claim")
-	}
-	copy(claim.Signature[:], sign[:packets.SignatureLength])
+	// TODO
+	//dataToSign, err := claim.SerializeRaw()
+	//log.Debugf("dataToSign len: %d", len(dataToSign))
+	//if err != nil {
+	//	return nil, errors.Wrap(err, "[ nodeToSignedClaim ] failed to serialize a claim")
+	//}
+	//sign, err := nk.sign(dataToSign)
+	//log.Debugf("sign len: %d", len(sign))
+	//if err != nil {
+	//	return nil, errors.Wrap(err, "[ nodeToSignedClaim ] failed to sign a claim")
+	//}
+	//copy(claim.Signature[:], sign[:packets.SignatureLength])
 	return claim, nil
 }
 

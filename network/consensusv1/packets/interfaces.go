@@ -52,12 +52,8 @@ package packets
 
 import (
 	"crypto"
-	"io"
-	"strconv"
-
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/insolar"
+	"io"
 )
 
 type PacketRoutable interface {
@@ -71,49 +67,7 @@ type Serializer interface {
 	Deserialize(data io.Reader) error
 }
 
-type HeaderSkipDeserializer interface {
-	DeserializeWithoutHeader(data io.Reader, header *PacketHeader) error
-}
-
 type SignedPacket interface {
 	Verify(cryptographyService insolar.CryptographyService, key crypto.PublicKey) error
 	Sign(insolar.CryptographyService) error
-}
-
-type ConsensusPacket interface {
-	GetType() PacketType
-	Clone() ConsensusPacket
-
-	SignedPacket
-	HeaderSkipDeserializer
-	Serializer
-	PacketRoutable
-}
-
-func ExtractPacket(reader io.Reader) (ConsensusPacket, error) {
-	header := PacketHeader{}
-	// TODO: serialize/deserialize consensus packets without header and move header serialization/deserialization to transport layer
-	err := header.Deserialize(reader)
-	if err != nil {
-		return nil, errors.New("[ ExtractPacket ] Can't read packet header")
-	}
-
-	var packet ConsensusPacket
-	switch header.PacketT {
-	case Phase1:
-		packet = &Phase1Packet{}
-	case Phase2:
-		packet = &Phase2Packet{}
-	case Phase3:
-		packet = &Phase3Packet{}
-	default:
-		return nil, errors.New("[ ExtractPacket ] Unknown extract packet type. " + strconv.Itoa(int(header.PacketT)))
-	}
-
-	err = packet.DeserializeWithoutHeader(reader, &header)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ExtractPacket ] Can't DeserializeWithoutHeader packet")
-	}
-
-	return packet, nil
 }

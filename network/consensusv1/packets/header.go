@@ -75,16 +75,3 @@ func makeClaimHeader(claim ReferendumClaim) uint16 {
 	result |= uint16(claim.Type()) << headerTypeShift
 	return result
 }
-
-func makeVoteHeader(vote ReferendumVote) uint16 {
-	if vote == nil {
-		panic("invalid vote")
-	}
-	var result = getVoteSize(vote)
-	result |= uint16(vote.Type()) << headerTypeShift
-	return result
-}
-
-func getVoteSize(vote ReferendumVote) uint16 {
-	return voteSizeMap[vote.Type()]
-}

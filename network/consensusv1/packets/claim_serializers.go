@@ -59,6 +59,12 @@ import (
 	"github.com/pkg/errors"
 )
 
+func allocateBuffer(n int) *bytes.Buffer {
+	buf := make([]byte, 0, n)
+	result := bytes.NewBuffer(buf)
+	return result
+}
+
 func (njc *NodeJoinClaim) deserializeRaw(data io.Reader) error {
 	err := binary.Read(data, defaultByteOrder, &njc.ShortNodeID)
 	if err != nil {
