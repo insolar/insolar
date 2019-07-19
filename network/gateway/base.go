@@ -52,6 +52,7 @@ package gateway
 
 import (
 	"context"
+	"github.com/insolar/insolar/log"
 	"time"
 
 	"github.com/insolar/insolar/network/consensusv1/packets"
@@ -352,4 +353,8 @@ func (g *Base) HandleReconnect(ctx context.Context, request network.ReceivedPack
 
 	// TODO:
 	return g.HostNetwork.BuildResponse(ctx, request, &packet.ReconnectResponse{}), nil
+}
+
+func (g *Base) OnConsensusFinished(p insolar.PulseNumber) {
+	log.Infof("================== OnConsensusFinished for pulse %d", p)
 }
