@@ -27,9 +27,10 @@ import (
 
 type status string
 
+const month = 30 * 24 * 60 * 60
 const (
-	migrationConfirms       uint                = 3
-	migrationHoldNumOfPulse insolar.PulseNumber = 15768018 //hold on 6 month
+	migrationConfirms           uint                = 3
+	migrationOffSetDepositPulse insolar.PulseNumber = 6 * month
 )
 
 const (
@@ -75,7 +76,7 @@ func New(migrationDaemonConfirms map[insolar.Reference]bool, txHash string, amou
 }
 
 func calculateUnHoldPulse(currentPulse insolar.PulseNumber) insolar.PulseNumber {
-	return currentPulse + migrationHoldNumOfPulse
+	return currentPulse + migrationOffSetDepositPulse
 }
 
 // MapMarshal gets deposit information.

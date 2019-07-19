@@ -148,7 +148,7 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 	case "wallet.transfer":
 		return m.transferCall(params)
 	case "deposit.migration":
-		return nil, m.migrationCall(params)
+		return nil, m.depositMigrationCall(params)
 	}
 	return nil, fmt.Errorf("unknown method: '%s'", request.Params.CallSite)
 }
@@ -256,7 +256,7 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 
 	return w.Transfer(amount, recipientReference)
 }
-func (m *Member) migrationCall(params map[string]interface{}) error {
+func (m *Member) depositMigrationCall(params map[string]interface{}) error {
 
 	amountStr, ok := params["amount"].(string)
 	if !ok {
@@ -429,11 +429,10 @@ func (m *Member) depositMigration(txHash string, burnAddress string, amount big.
 		migrationDaemonConfirms[m.GetReference()] = true
 		pulseNum, err := foundation.GetPulseNumber()
 		if err != nil {
-			return fmt.Errorf("failed to get current pulse: %s")
+			return fmt.Errorf("failed to get current pulse: %s", err.Error())
 		}
 		dHolder := deposit.New(migrationDaemonConfirms, txHash, amount.String(), pulseNum)
 		txDeposit, err := dHolder.AsDelegate(tokenHolderRef)
-		fmt.Println("TTTholderRef " + tokenHolderRef.String() + " txDeposit " + txDeposit.Reference.String())
 		if err != nil {
 			return fmt.Errorf("failed to save as delegate: %s", err.Error())
 		}
@@ -443,16 +442,13 @@ func (m *Member) depositMigration(txHash string, burnAddress string, amount big.
 			return fmt.Errorf("failed to set deposit: %s", err.Error())
 		}
 		return nil
-	} else {
-		// Confirm transaction by migration daemon
-		fmt.Println("TTMemberRef " + m.GetReference().String() + " txHash " + txHash + "amount " + amount.String())
-		err := txDeposit.Confirm(m.GetReference(), txHash, amount.String())
-		if err != nil {
-			return fmt.Errorf("confirmed failed: %s", err.Error())
-		}
-		return nil
 	}
-
+	// Confirm transaction by migration daemon
+	err = txDeposit.Confirm(m.GetReference(), txHash, amount.String())
+	if err != nil {
+		return fmt.Errorf("confirmed failed: %s", err.Error())
+	}
+	return nil
 }
 
 // FindDeposit finds deposits for this member with this transaction hash.
