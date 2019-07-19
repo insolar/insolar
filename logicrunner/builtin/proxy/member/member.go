@@ -28,7 +28,7 @@ type CreateResponse struct {
 }
 type GetBalanceResponse struct {
 	Balance  string `json:"balance"`
-	Deposits []map[string]string
+	Deposits []interface{}
 }
 type GetResponse struct {
 	Reference   string `json:"reference"`
@@ -447,13 +447,13 @@ func (r *Member) CallAsImmutable(signedRequest []byte) (interface{}, error) {
 }
 
 // GetDeposits is proxy generated method
-func (r *Member) GetDeposits() ([]map[string]string, error) {
+func (r *Member) GetDeposits() ([]interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 []map[string]string
+	var ret0 []interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -499,13 +499,13 @@ func (r *Member) GetDepositsNoWait() error {
 }
 
 // GetDepositsAsImmutable is proxy generated method
-func (r *Member) GetDepositsAsImmutable() ([]map[string]string, error) {
+func (r *Member) GetDepositsAsImmutable() ([]interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 []map[string]string
+	var ret0 []interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1

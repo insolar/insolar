@@ -211,7 +211,7 @@ func (m *Member) addBurnAddressesCall(params map[string]interface{}) (interface{
 
 type GetBalanceResponse struct {
 	Balance  string `json:"balance"`
-	Deposits []map[string]string
+	Deposits []interface{}
 }
 
 func getBalanceCall(params map[string]interface{}) (interface{}, error) {
@@ -466,15 +466,15 @@ func (m *Member) migration(txHash string, burnAddress string, amount big.Int, un
 }
 
 // GetDeposits get all deposits for this member
-func (m *Member) GetDeposits() ([]map[string]string, error) {
-	var result []map[string]string
+func (m *Member) GetDeposits() ([]interface{}, error) {
+	var result []interface{}
 	for _, dRef := range m.Deposits {
 
 		d := deposit.GetObject(dRef)
 
-		depositInfo, err := d.MapMarshal()
+		depositInfo, err := d.Itself()
 		if err != nil {
-			return nil, fmt.Errorf("map marshal failed: %s", err.Error())
+			return nil, fmt.Errorf("failed to get deposit itself: %s", err.Error())
 		}
 
 		result = append(result, depositInfo)

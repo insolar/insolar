@@ -330,14 +330,14 @@ func (r *Deposit) GetAmountAsImmutable() (string, error) {
 	return ret0, nil
 }
 
-// MapMarshal is proxy generated method
-func (r *Deposit) MapMarshal() (map[string]string, error) {
+// Itself is proxy generated method
+func (r *Deposit) Itself() (Deposit, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 map[string]string
+	var ret0 Deposit
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -347,7 +347,7 @@ func (r *Deposit) MapMarshal() (map[string]string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "MapMarshal", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "Itself", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -363,8 +363,8 @@ func (r *Deposit) MapMarshal() (map[string]string, error) {
 	return ret0, nil
 }
 
-// MapMarshalNoWait is proxy generated method
-func (r *Deposit) MapMarshalNoWait() error {
+// ItselfNoWait is proxy generated method
+func (r *Deposit) ItselfNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -374,7 +374,7 @@ func (r *Deposit) MapMarshalNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "MapMarshal", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "Itself", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -382,14 +382,14 @@ func (r *Deposit) MapMarshalNoWait() error {
 	return nil
 }
 
-// MapMarshalAsImmutable is proxy generated method
-func (r *Deposit) MapMarshalAsImmutable() (map[string]string, error) {
+// ItselfAsImmutable is proxy generated method
+func (r *Deposit) ItselfAsImmutable() (Deposit, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 map[string]string
+	var ret0 Deposit
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -399,7 +399,7 @@ func (r *Deposit) MapMarshalAsImmutable() (map[string]string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "MapMarshal", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "Itself", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}

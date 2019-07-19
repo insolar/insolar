@@ -41,14 +41,14 @@ const (
 // Deposit is like wallet. It holds migrated money.
 type Deposit struct {
 	foundation.BaseContract
-	Timestamp               time.Time
-	HoldReleaseDate         time.Time
-	MigrationDaemonConfirms map[insolar.Reference]bool
-	Confirms                uint
-	Amount                  string
-	Bonus                   string
-	TxHash                  string
-	Status                  status
+	Timestamp               time.Time                  `json:"timestamp"`
+	HoldReleaseDate         time.Time                  `json:"holdReleaseDate"`
+	MigrationDaemonConfirms map[insolar.Reference]bool `json:"migrationDaemonConfirms"`
+	Confirms                uint                       `json:"confirms"`
+	Amount                  string                     `json:"amount"`
+	Bonus                   string                     `json:"bonus"`
+	TxHash                  string                     `json:"ethTxHash"`
+	Status                  status                     `json:"status"`
 }
 
 // GetTxHash gets transaction hash.
@@ -75,15 +75,8 @@ func New(migrationDaemonConfirms map[insolar.Reference]bool, txHash string, amou
 }
 
 // MapMarshal gets deposit information.
-func (d *Deposit) MapMarshal() (map[string]string, error) {
-	return map[string]string{
-		"timestamp":       d.Timestamp.String(),
-		"holdReleaseDate": d.HoldReleaseDate.String(),
-		"amount":          d.Amount,
-		"bonus":           d.Bonus,
-		"ethTxHash":       d.TxHash,
-		"status":          string(d.Status),
-	}, nil
+func (d *Deposit) Itself() (Deposit, error) {
+	return *d, nil
 }
 
 // Confirm adds confirm for deposit by migration daemon.
