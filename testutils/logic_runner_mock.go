@@ -20,7 +20,7 @@ import (
 type LogicRunnerMock struct {
 	t minimock.Tester
 
-	AddUnwantedResponseFunc       func(p context.Context, p1 insolar.Message) (r insolar.Reply)
+	AddUnwantedResponseFunc       func(p context.Context, p1 insolar.Message) (r error)
 	AddUnwantedResponseCounter    uint64
 	AddUnwantedResponsePreCounter uint64
 	AddUnwantedResponseMock       mLogicRunnerMockAddUnwantedResponse
@@ -68,7 +68,7 @@ type LogicRunnerMockAddUnwantedResponseInput struct {
 }
 
 type LogicRunnerMockAddUnwantedResponseResult struct {
-	r insolar.Reply
+	r error
 }
 
 //Expect specifies that invocation of LogicRunner.AddUnwantedResponse is expected from 1 to Infinity times
@@ -84,7 +84,7 @@ func (m *mLogicRunnerMockAddUnwantedResponse) Expect(p context.Context, p1 insol
 }
 
 //Return specifies results of invocation of LogicRunner.AddUnwantedResponse
-func (m *mLogicRunnerMockAddUnwantedResponse) Return(r insolar.Reply) *LogicRunnerMock {
+func (m *mLogicRunnerMockAddUnwantedResponse) Return(r error) *LogicRunnerMock {
 	m.mock.AddUnwantedResponseFunc = nil
 	m.expectationSeries = nil
 
@@ -106,12 +106,12 @@ func (m *mLogicRunnerMockAddUnwantedResponse) ExpectOnce(p context.Context, p1 i
 	return expectation
 }
 
-func (e *LogicRunnerMockAddUnwantedResponseExpectation) Return(r insolar.Reply) {
+func (e *LogicRunnerMockAddUnwantedResponseExpectation) Return(r error) {
 	e.result = &LogicRunnerMockAddUnwantedResponseResult{r}
 }
 
 //Set uses given function f as a mock of LogicRunner.AddUnwantedResponse method
-func (m *mLogicRunnerMockAddUnwantedResponse) Set(f func(p context.Context, p1 insolar.Message) (r insolar.Reply)) *LogicRunnerMock {
+func (m *mLogicRunnerMockAddUnwantedResponse) Set(f func(p context.Context, p1 insolar.Message) (r error)) *LogicRunnerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -120,7 +120,7 @@ func (m *mLogicRunnerMockAddUnwantedResponse) Set(f func(p context.Context, p1 i
 }
 
 //AddUnwantedResponse implements github.com/insolar/insolar/insolar.LogicRunner interface
-func (m *LogicRunnerMock) AddUnwantedResponse(p context.Context, p1 insolar.Message) (r insolar.Reply) {
+func (m *LogicRunnerMock) AddUnwantedResponse(p context.Context, p1 insolar.Message) (r error) {
 	counter := atomic.AddUint64(&m.AddUnwantedResponsePreCounter, 1)
 	defer atomic.AddUint64(&m.AddUnwantedResponseCounter, 1)
 
