@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -38,11 +39,12 @@ type SetRequest struct {
 	jetID     insolar.JetID
 
 	dep struct {
-		writer   hot.WriteAccessor
-		filament executor.FilamentModifier
-		sender   bus.Sender
-		locker   object.IndexLocker
-		index    object.IndexStorage
+		writer      hot.WriteAccessor
+		filament    executor.FilamentModifier
+		sender      bus.Sender
+		locker      object.IndexLocker
+		index       object.IndexStorage
+		coordinator jet.Coordinator
 	}
 }
 
@@ -66,12 +68,14 @@ func (p *SetRequest) Dep(
 	s bus.Sender,
 	l object.IndexLocker,
 	i object.IndexStorage,
+	c jet.Coordinator,
 ) {
 	p.dep.writer = w
 	p.dep.filament = f
 	p.dep.sender = s
 	p.dep.locker = l
 	p.dep.index = i
+	p.dep.coordinator = c
 }
 
 func (p *SetRequest) Proceed(ctx context.Context) error {
@@ -105,6 +109,14 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 			p.dep.sender.Reply(ctx, p.message, msg)
 			return nil
 		}
+	}
+
+	virtNode, err := p.dep.coordinator.VirtualExecutorForObject(ctx, objectID, flow.Pulse(ctx))
+	if err != nil {
+		return err
+	}
+	if p.message.Sender != *virtNode {
+		return ErrExecutorMismatch
 	}
 
 	p.dep.locker.Lock(objectID)
