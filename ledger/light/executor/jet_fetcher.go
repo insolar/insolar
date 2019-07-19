@@ -273,6 +273,7 @@ func (tu *fetcher) fetch(
 
 					replies[i] = concrete.JetID
 				case *payload.Error:
+					inslogger.FromContext(ctx).Errorf("middleware.jetfetch: %s", concrete.Text)
 					return
 				default:
 					inslogger.FromContext(ctx).Errorf("middleware.jetfetch: unexpected reply: %#v\n", concrete)
