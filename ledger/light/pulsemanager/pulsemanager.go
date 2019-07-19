@@ -153,6 +153,12 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		}
 	}
 
+	defer func() {
+		if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
+			panic(errors.Wrap(err, "failed to add pulse"))
+		}
+	}()
+
 	// Updating jet tree if its network start.
 	{
 		_, err := m.PulseCalculator.Backwards(ctx, newPulse.PulseNumber, 1)
@@ -171,9 +177,6 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	endedPulse, err := m.PulseAccessor.Latest(ctx)
 	if err != nil {
 		if err == pulse.ErrNotFound {
-			if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
-				panic(errors.Wrap(err, "failed to add pulse"))
-			}
 			return nil, insolar.Pulse{}, errNoPulse
 		}
 		panic(errors.Wrap(err, "failed to calculate ended pulse"))
@@ -196,8 +199,5 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		panic(errors.Wrap(err, "failed to open pulse for writing"))
 	}
 
-	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
-		panic(errors.Wrap(err, "failed to add pulse"))
-	}
 	return jets, endedPulse, nil
 }
