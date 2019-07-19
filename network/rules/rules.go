@@ -48,7 +48,7 @@ func (r *rules) CheckMajorityRule() (bool, int) {
 func (r *rules) CheckMinRole() bool {
 	cert := r.CertificateManager.GetCertificate()
 
-	nodes := r.NodeKeeper.GetWorkingNodes()
+	nodes := r.NodeKeeper.GetAccessor().GetActiveNodes()
 
 	var virtualCount, heavyCount, lightCount uint
 	for _, n := range nodes {
@@ -64,6 +64,7 @@ func (r *rules) CheckMinRole() bool {
 		}
 	}
 
+	log.Warnf("minroles: %d, %d, %d", heavyCount, lightCount, virtualCount)
 	v, h, l := cert.GetMinRoles()
 	return virtualCount >= v &&
 		heavyCount >= h &&
