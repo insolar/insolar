@@ -277,7 +277,7 @@ func (m *FilamentModifierDefault) checkOutgoingHasReasonInPendings(
 			return nil
 		}
 	}
-	return &errorReasonNotInPendings{reason: reasonID, object: objectID}
+	return errors.Errorf("reason ID %v not found in pendings for object %v", reasonID.DebugString(), objectID.DebugString())
 }
 
 func (m *FilamentModifierDefault) SetResult(ctx context.Context, resultID insolar.ID, jetID insolar.JetID, result record.Result) (*record.CompositeFilamentRecord, error) {
