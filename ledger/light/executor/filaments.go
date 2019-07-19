@@ -204,7 +204,7 @@ func (m *FilamentModifierDefault) SetRequest(
 	switch r := request.(type) {
 	case *record.IncomingRequest:
 		if r.IsDetached() {
-			return nil, nil, errors.Errorf("request check failed: incoming request, has wrong reason %v", r.ReturnMode)
+			return nil, nil, errors.Errorf("request check failed: cannot be detached (got mode %v)", r.ReturnMode)
 		}
 	case *record.OutgoingRequest:
 		if err := m.checkOutgoingHasReasonInPendings(ctx, requestID, objectID, request); err != nil {
@@ -366,8 +366,6 @@ type FilamentCalculatorDefault struct {
 	coordinator jet.Coordinator
 	jetFetcher  jet.Fetcher
 	sender      bus.Sender
-
-	iteratorMaker fetchIteratorMaker
 }
 
 func NewFilamentCalculator(
@@ -383,8 +381,6 @@ func NewFilamentCalculator(
 		coordinator: coordinator,
 		jetFetcher:  jetFetcher,
 		sender:      sender,
-
-		iteratorMaker: newFetchingIterator,
 	}
 }
 
@@ -444,7 +440,7 @@ func (c *FilamentCalculatorDefault) PendingRequests(
 		return []insolar.ID{}, nil
 	}
 
-	iter := c.iteratorMaker(
+	iter := newFetchingIterator(
 		ctx,
 		cache,
 		objectID,
@@ -523,7 +519,7 @@ func (c *FilamentCalculatorDefault) ResultDuplicate(
 	cache.Lock()
 	defer cache.Unlock()
 
-	iter := c.iteratorMaker(
+	iter := newFetchingIterator(
 		ctx,
 		cache,
 		objectID,
@@ -587,7 +583,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	cache.Lock()
 	defer cache.Unlock()
 
-	iter := c.iteratorMaker(
+	iter := newFetchingIterator(
 		ctx,
 		cache,
 		objectID,
@@ -839,16 +835,6 @@ type fetchIterator interface {
 	HasPrev() bool
 	Prev(ctx context.Context) (record.CompositeFilamentRecord, error)
 }
-
-type fetchIteratorMaker func(
-	ctx context.Context,
-	cache *filamentCache,
-	objectID, from insolar.ID,
-	readUntil insolar.PulseNumber,
-	fetcher jet.Fetcher,
-	coordinator jet.Coordinator,
-	sender bus.Sender,
-) fetchIterator
 
 func newFetchingIterator(
 	ctx context.Context,
