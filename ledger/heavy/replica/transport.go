@@ -34,10 +34,14 @@ import (
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/heavy/replica.Transport -o ./ -s _mock.go
 
-// TODO: write docs
+// Transport provides methods for sending a message,
+// registering the recipient of the message, and obtaining an identity.
 type Transport interface {
+	// Send performs message sending.
 	Send(ctx context.Context, receiver, method string, data []byte) ([]byte, error)
+	// Register performs message recipient registering.
 	Register(method string, handle Handle)
+	// Me obtains transport identity.
 	Me() string
 }
 

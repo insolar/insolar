@@ -52,15 +52,22 @@ type Exporter struct {
 	ExportLag uint32
 }
 
-// TODO: write docs
+// Replica holds configuration for Replicator.
 type Replica struct {
-	Role              string
-	ParentAddress     string
-	ParentPubKey      string
+	// Role defines that should do replicator (subscribe on replica parent or send notifications to replica targets).
+	Role string
+	// ParentAddress is an address to connect to replica parent.
+	ParentAddress string
+	// ParentPubKey is a public key that replica parent will use to sign replication records.
+	ParentPubKey string
+	// ScopesToReplicate is a list of DB scopes identifiers that define what should to replicate.
 	ScopesToReplicate []byte
-	Attempts          int
-	DelayForAttempt   time.Duration
-	DefaultBatchSize  uint32
+	// Attempts are a maximum count of attempts to connect to replica parent.
+	Attempts int
+	// DelayForAttempt is a time between connection attempt.
+	DelayForAttempt time.Duration
+	// DefaultBatchSize is a preferable count of records in a pull batch.
+	DefaultBatchSize uint32
 }
 
 // Ledger holds configuration for ledger.
@@ -81,7 +88,7 @@ type Ledger struct {
 	// Exporter holds configuration of Exporter
 	Exporter Exporter
 
-	// TODO: write docs
+	// Replica holds configuration for Replicator.
 	Replica Replica
 }
 

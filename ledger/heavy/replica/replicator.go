@@ -39,7 +39,7 @@ type Replicator struct {
 	pulses        pulse.Accessor
 	jetKeeper     JetKeeper
 	target        Target
-	cmps          component.Manager
+	cmps          *component.Manager
 }
 
 func NewReplicator(
@@ -48,7 +48,7 @@ func NewReplicator(
 	jetKeeper JetKeeper,
 ) *Replicator {
 	cmps := component.Manager{}
-	return &Replicator{config: cfg, pulses: pulses, jetKeeper: jetKeeper, cmps: cmps}
+	return &Replicator{config: cfg, pulses: pulses, jetKeeper: jetKeeper, cmps: &cmps}
 }
 
 func (r *Replicator) Init(ctx context.Context) error {
