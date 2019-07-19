@@ -22,14 +22,17 @@ import (
 	"math/rand"
 	"sync"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
 func Test_BootstrapCalls(t *testing.T) {
@@ -55,6 +58,130 @@ func Test_BootstrapCalls(t *testing.T) {
 		p, _ := callSetCode(ctx, t, s)
 		requireNotError(t, p)
 	})
+}
+
+func Test_LightReplication(t *testing.T) {
+	t.Parallel()
+
+	var secondPulseNumber insolar.PulseNumber
+	var inputLifeline record.Lifeline
+	inputRecords := make(map[insolar.ID]record.Virtual)
+
+	ctx := inslogger.TestContext(t)
+	cfg := DefaultLightConfig()
+	cfg.Ledger.JetSplit.ThresholdOverflowCount = 10000
+	cfg.Ledger.JetSplit.ThresholdRecordsCount = 10000
+
+	s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) {
+		switch pl.(type) {
+		case *payload.Replication:
+
+			payloadReplication := pl.(*payload.Replication)
+
+			if payloadReplication.Pulse.Equal(secondPulseNumber) {
+
+				recordMap := make(map[insolar.ID]record.Material)
+
+				require.Equal(t, 13, len(payloadReplication.Records))
+				require.Equal(t, inputLifeline, payloadReplication.Indexes[1].Lifeline)
+
+				// testing payload
+				pcs := platformpolicy.NewPlatformCryptographyScheme()
+
+				for _, rec := range payloadReplication.Records {
+					virtualRec := *rec.Virtual
+					hash := record.HashVirtual(pcs.ReferenceHasher(), virtualRec)
+					id := insolar.NewID(secondPulseNumber, hash)
+					recordMap[*id] = rec
+
+				}
+
+				for k, inputRecord := range inputRecords {
+					require.Equal(t, inputRecord, *recordMap[k].Virtual)
+				}
+
+			}
+		}
+	})
+
+	require.NoError(t, err)
+
+	// First pulse goes in storage then interrupts.
+	s.Pulse(ctx)
+
+	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
+	s.Pulse(ctx)
+	secondPulseNumber = s.pulse.PulseNumber
+
+	runner := func(t *testing.T) {
+		// Creating root reason request.
+		var reasonID insolar.ID
+		{
+			p, _ := setIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
+			requirePayloadNotError(t, p)
+			reasonID = p.(*payload.RequestInfo).RequestID
+		}
+		// Save and check code.
+		{
+			p, sent := setCode(ctx, t, s)
+			requirePayloadNotError(t, p)
+			payloadId := p.(*payload.ID).ID
+
+			p = getCode(ctx, t, s, p.(*payload.ID).ID)
+			requirePayloadNotError(t, p)
+
+			material := record.Material{}
+			err := material.Unmarshal(p.(*payload.Code).Record)
+			require.NoError(t, err)
+			require.Equal(t, &sent, material.Virtual)
+
+			inputRecords[payloadId] = *material.Virtual
+		}
+		var objectID insolar.ID
+		// Set, get request.
+		{
+			p, sent := setIncomingRequest(ctx, t, s, gen.ID(), reasonID, record.CTSaveAsChild)
+			requirePayloadNotError(t, p)
+
+			payloadId := p.(*payload.RequestInfo).RequestID
+
+			p = getRequest(ctx, t, s, p.(*payload.RequestInfo).RequestID)
+			requirePayloadNotError(t, p)
+
+			require.Equal(t, sent, p.(*payload.Request).Request)
+			objectID = p.(*payload.Request).RequestID
+
+			inputRecords[payloadId] = sent
+		}
+		// Activate and check object.
+		{
+			p, state := activateObject(ctx, t, s, objectID)
+			requirePayloadNotError(t, p)
+
+			lifeline, material := requireGetObject(ctx, t, s, objectID)
+
+			inputRecords[*lifeline.LatestState] = *material.Virtual
+
+			require.Equal(t, &state, material.Virtual)
+		}
+		// Amend and check object.
+		{
+			p, _ := setIncomingRequest(ctx, t, s, objectID, reasonID, record.CTMethod)
+			requirePayloadNotError(t, p)
+
+			p, state := amendObject(ctx, t, s, objectID, p.(*payload.RequestInfo).RequestID)
+			requirePayloadNotError(t, p)
+			lifeline, material := requireGetObject(ctx, t, s, objectID)
+			require.Equal(t, &state, material.Virtual)
+
+			inputLifeline = lifeline
+			inputRecords[*lifeline.LatestState] = *material.Virtual
+		}
+	}
+
+	t.Run("happy light replication", runner)
+	s.Pulse(ctx)
+	time.Sleep(1 * time.Second)
 }
 
 func Test_BasicOperations(t *testing.T) {

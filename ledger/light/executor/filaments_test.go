@@ -614,7 +614,7 @@ func TestFilamentCalculatorDefault_Requests(t *testing.T) {
 
 	resetComponents()
 	t.Run("returns error if object does not exist", func(t *testing.T) {
-		_, err := calculator.Requests(ctx, gen.ID(), gen.ID(), gen.PulseNumber(), gen.PulseNumber())
+		_, err := calculator.Requests(ctx, gen.ID(), gen.ID(), gen.PulseNumber())
 		assert.Error(t, err)
 
 		mc.Finish()
@@ -629,7 +629,7 @@ func TestFilamentCalculatorDefault_Requests(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		recs, err := calculator.Requests(ctx, objectID, fromID, gen.PulseNumber(), gen.PulseNumber())
+		recs, err := calculator.Requests(ctx, objectID, fromID, gen.PulseNumber())
 		assert.NoError(t, err)
 		assert.Equal(t, 0, len(recs))
 
@@ -659,7 +659,7 @@ func TestFilamentCalculatorDefault_Requests(t *testing.T) {
 		require.NoError(t, err)
 
 		// First time, records accessed from storage.
-		recs, err := calculator.Requests(ctx, objectID, fromID, storageRecs[1].MetaID.Pulse(), storageRecs[3].MetaID.Pulse())
+		recs, err := calculator.Requests(ctx, objectID, fromID, storageRecs[1].MetaID.Pulse())
 		assert.NoError(t, err)
 		require.Equal(t, 3, len(recs))
 		assert.Equal(t, []record.CompositeFilamentRecord{storageRecs[3], storageRecs[2], storageRecs[1]}, recs)
@@ -668,7 +668,7 @@ func TestFilamentCalculatorDefault_Requests(t *testing.T) {
 		for _, rec := range storageRecs {
 			records.DeleteForPN(ctx, rec.MetaID.Pulse())
 		}
-		recs, err = calculator.Requests(ctx, objectID, fromID, storageRecs[1].MetaID.Pulse(), storageRecs[3].MetaID.Pulse())
+		recs, err = calculator.Requests(ctx, objectID, fromID, storageRecs[1].MetaID.Pulse())
 		assert.NoError(t, err)
 		require.Equal(t, 3, len(recs))
 		assert.Equal(t, []record.CompositeFilamentRecord{storageRecs[3], storageRecs[2], storageRecs[1]}, recs)
