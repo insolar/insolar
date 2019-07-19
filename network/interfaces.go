@@ -144,8 +144,6 @@ type NodeKeeper interface {
 	Sync(context.Context, []insolar.NetworkNode, []packets.ReferendumClaim) error
 	// MoveSyncToActive merge sync list with active nodes
 	MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error
-	// GetConsensusInfo get additional info for the current consensus process
-	//GetConsensusInfo() ConsensusInfo
 }
 
 // PartitionPolicy contains all rules how to initiate globule resharding.
