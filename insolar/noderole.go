@@ -24,8 +24,6 @@ const (
 	StaticRoleVirtual
 	StaticRoleHeavyMaterial
 	StaticRoleLightMaterial
-	StaticRoleHeavyReplica
-	StaticRoleHeavyObserver
 )
 
 // AllStaticRoles is an array of all possible StaticRoles.
@@ -33,8 +31,6 @@ var AllStaticRoles = []StaticRole{
 	StaticRoleVirtual,
 	StaticRoleLightMaterial,
 	StaticRoleHeavyMaterial,
-	StaticRoleHeavyReplica,
-	StaticRoleHeavyObserver,
 }
 
 // GetStaticRoleFromString converts role from string to StaticRole.
@@ -46,10 +42,6 @@ func GetStaticRoleFromString(role string) StaticRole {
 		return StaticRoleHeavyMaterial
 	case "light_material":
 		return StaticRoleLightMaterial
-	case "heavy_replica":
-		return StaticRoleHeavyReplica
-	case "heavy_observer":
-		return StaticRoleHeavyObserver
 	}
 
 	return StaticRoleUnknown
@@ -63,10 +55,6 @@ func (nr StaticRole) String() string {
 		return "heavy_material"
 	case StaticRoleLightMaterial:
 		return "light_material"
-	case StaticRoleHeavyReplica:
-		return "heavy_replica"
-	case StaticRoleHeavyObserver:
-		return "heavy_observer"
 	}
 
 	return "unknown"
