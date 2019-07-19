@@ -60,6 +60,8 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 )
 
+type FinishedNotifier func(insolar.PulseNumber)
+
 type Controller interface {
 	Abort()
 
@@ -67,8 +69,7 @@ type Controller interface {
 	PrepareLeave() <-chan struct{}
 	Leave(leaveReason uint32) <-chan struct{}
 
-	AddFinishedNotifier(typ string) <-chan insolar.PulseNumber
-	RemoveFinishedNotifier(typ string)
+	RegisterFinishedNotifier(fn FinishedNotifier)
 }
 
 type controller struct {
@@ -77,7 +78,7 @@ type controller struct {
 	controlFeederInterceptor *adapters.ControlFeederInterceptor
 
 	mu        *sync.RWMutex
-	notifiers map[string]chan insolar.PulseNumber
+	notifiers []FinishedNotifier
 }
 
 func newController(controlFeederInterceptor *adapters.ControlFeederInterceptor, consensusController api.ConsensusController) *controller {
@@ -86,7 +87,7 @@ func newController(controlFeederInterceptor *adapters.ControlFeederInterceptor, 
 		consensusController:      consensusController,
 
 		mu:        &sync.RWMutex{},
-		notifiers: make(map[string]chan insolar.PulseNumber),
+		notifiers: make([]FinishedNotifier, 0),
 	}
 
 	controlFeederInterceptor.Feeder().SetOnFinished(controller.onFinished)
@@ -110,22 +111,11 @@ func (c *controller) Leave(leaveReason uint32) <-chan struct{} {
 	return c.controlFeederInterceptor.Leave(leaveReason)
 }
 
-func (c *controller) AddFinishedNotifier(typ string) <-chan insolar.PulseNumber {
+func (c *controller) RegisterFinishedNotifier(fn FinishedNotifier) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	n := make(chan insolar.PulseNumber, 1)
-	c.notifiers[typ] = n
-
-	return n
-}
-
-func (c *controller) RemoveFinishedNotifier(typ string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	close(c.notifiers[typ])
-	delete(c.notifiers, typ)
+	c.notifiers = append(c.notifiers, fn)
 }
 
 func (c *controller) onFinished(pulse pulse.Number) {
@@ -133,6 +123,6 @@ func (c *controller) onFinished(pulse pulse.Number) {
 	defer c.mu.RUnlock()
 
 	for _, n := range c.notifiers {
-		n <- insolar.PulseNumber(pulse)
+		go n(insolar.PulseNumber(pulse))
 	}
 }
