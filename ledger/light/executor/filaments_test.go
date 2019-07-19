@@ -4,7 +4,6 @@ import (
 	"context"
 	"math/rand"
 	"testing"
-	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
@@ -497,7 +496,7 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 		_, err = manager.SetResult(ctx, resultID, jetID, validResult)
 		assert.NoError(t, err)
 
-		mc.Wait(1 * time.Minute)
+		mc.Finish()
 	})
 
 	resetComponents()
