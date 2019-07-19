@@ -75,7 +75,7 @@ func New(migrationDaemonConfirms map[insolar.Reference]bool, txHash string, amou
 }
 
 // MapMarshal gets deposit information.
-func (d *Deposit) Itself() (Deposit, error) {
+func (d *Deposit) Itself() (interface{}, error) {
 	return *d, nil
 }
 

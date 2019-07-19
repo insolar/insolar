@@ -331,13 +331,13 @@ func (r *Deposit) GetAmountAsImmutable() (string, error) {
 }
 
 // Itself is proxy generated method
-func (r *Deposit) Itself() (Deposit, error) {
+func (r *Deposit) Itself() (interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 Deposit
+	var ret0 interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -383,13 +383,13 @@ func (r *Deposit) ItselfNoWait() error {
 }
 
 // ItselfAsImmutable is proxy generated method
-func (r *Deposit) ItselfAsImmutable() (Deposit, error) {
+func (r *Deposit) ItselfAsImmutable() (interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 Deposit
+	var ret0 interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
