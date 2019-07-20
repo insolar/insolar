@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package intergrity
+package integrity
 
 import (
 	"testing"
@@ -43,7 +43,7 @@ func TestIntegrity_WrapUnwrap(t *testing.T) {
 	provider := NewProvider(cs)
 	validator := NewValidator(cs, parentPubKey)
 
-	packet := Wrap(expected)
-	actual := UnwrapAndValidate(packet)
+	packet := provider.Wrap(expected)
+	actual := validator.UnwrapAndValidate(packet)
 	require.Equal(t, expected, actual)
 }

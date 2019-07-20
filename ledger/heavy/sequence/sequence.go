@@ -105,7 +105,7 @@ func (s *sequencer) Slice(scope byte, from insolar.PulseNumber, skip uint32, lim
 	defer it.Close()
 
 	skipped := 0
-	for it.Next() && pulse(it.Key()) == from && len(result) < int(limit) {
+	for it.Next() && pulseNumber(it.Key()) == from && len(result) < int(limit) {
 		if skipped < int(skip) {
 			skipped++
 			continue
@@ -146,6 +146,6 @@ func (k polyKey) Scope() store.Scope {
 	return k.scope
 }
 
-func pulse(buf []byte) insolar.PulseNumber {
+func pulseNumber(buf []byte) insolar.PulseNumber {
 	return insolar.NewPulseNumber(buf)
 }

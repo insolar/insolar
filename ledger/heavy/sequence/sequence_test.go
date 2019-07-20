@@ -19,7 +19,6 @@ package sequence
 import (
 	"bytes"
 	"io/ioutil"
-	"math"
 	"math/rand"
 	"os"
 	"sort"
@@ -46,7 +45,7 @@ func TestSequencer_Records(t *testing.T) {
 
 	db := store.NewMemoryMockDB()
 	storage := object.NewRecordDB(db)
-	records := NewSequencer(db, store.ScopeRecord)
+	seqeuncer := NewSequencer(db)
 
 	type tempRecord struct {
 		id  insolar.ID
@@ -54,9 +53,10 @@ func TestSequencer_Records(t *testing.T) {
 	}
 
 	const (
-		pulse = 10
-		skip  = 5
-		limit = 10
+		pulse       = insolar.PulseNumber(10)
+		skip        = 5
+		limit       = 10
+		scopeRecord = byte(store.ScopeRecord)
 	)
 
 	var (
@@ -78,7 +78,7 @@ func TestSequencer_Records(t *testing.T) {
 		var hash [insolar.RecordIDSize - insolar.RecordHashOffset]byte
 		c.Fuzz(&hash)
 		oneOrZero := rand.Intn(2)
-		t.id = *insolar.NewID(insolar.PulseNumber(pulse+oneOrZero*(-10)+(1-oneOrZero)*(10)), hash[:])
+		t.id = *insolar.NewID(insolar.PulseNumber(int(pulse)+oneOrZero*(-10)+(1-oneOrZero)*(10)), hash[:])
 		t.rec = record.Material{Polymorph: c.Int31()}
 	})
 	f.NilChance(0)
@@ -91,7 +91,7 @@ func TestSequencer_Records(t *testing.T) {
 	}
 
 	t.Run("slice length", func(t *testing.T) {
-		recs := records.Slice(pulse, skip, pulse+10)
+		recs := seqeuncer.Slice(scopeRecord, pulse, skip, limit)
 		require.Equal(t, limit-skip, len(recs))
 	})
 
@@ -101,83 +101,8 @@ func TestSequencer_Records(t *testing.T) {
 			return bytes.Compare(all[i].id.Bytes(), all[j].id.Bytes()) == -1
 		})
 
-		require.Equal(t, all[0].id.Bytes(), records.First().Key)
-		require.Equal(t, all[len(all)-1].id.Bytes(), records.Last().Key)
-	})
-}
-
-func TestSequencer_Blobs(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-
-	db := store.NewMemoryMockDB()
-	storage := blob.NewDB(db)
-	blobs := NewSequencer(db, store.ScopeBlob)
-
-	type tempBlob struct {
-		id   insolar.ID
-		blob blob.Blob
-	}
-
-	const (
-		pulse = 10
-		skip  = 5
-		limit = 10
-	)
-
-	var (
-		expected   []tempBlob
-		unexpected []tempBlob
-	)
-
-	f := fuzz.New().Funcs(func(t *tempBlob, c fuzz.Continue) {
-		var memory [10]byte
-		c.Fuzz(&memory)
-		var hash [insolar.RecordIDSize - insolar.RecordHashOffset]byte
-		c.Fuzz(&hash)
-		oneOrZero := rand.Intn(2)
-		t.id = *insolar.NewID(insolar.PulseNumber(pulse+oneOrZero*(-10)+(1-oneOrZero)*(10)), hash[:])
-		t.blob = blob.Blob{
-			JetID: insolar.ZeroJetID,
-			Value: memory[:],
-		}
-	})
-	f.NilChance(0)
-	f.NumElements(limit, limit)
-	f.Fuzz(&expected)
-
-	f = fuzz.New().Funcs(func(t *tempBlob, c fuzz.Continue) {
-		var memory [10]byte
-		c.Fuzz(&memory)
-		var hash [insolar.RecordIDSize - insolar.RecordHashOffset]byte
-		c.Fuzz(&hash)
-		t.id = *insolar.NewID(pulse, hash[:])
-		t.blob = blob.Blob{
-			JetID: insolar.ZeroJetID,
-			Value: memory[:],
-		}
-	})
-	f.NilChance(0)
-	f.NumElements(limit, limit)
-	f.Fuzz(&unexpected)
-
-	for i := 0; i < limit; i++ {
-		storage.Set(ctx, expected[i].id, expected[i].blob)
-		storage.Set(ctx, unexpected[i].id, unexpected[i].blob)
-	}
-
-	t.Run("slice length", func(t *testing.T) {
-		blbs := blobs.Slice(pulse, skip, pulse+10)
-		require.Equal(t, limit-skip, len(blbs))
-	})
-
-	t.Run("first last", func(t *testing.T) {
-		all := append(expected, unexpected...)
-		sort.Slice(all, func(i, j int) bool {
-			return bytes.Compare(all[i].id.Bytes(), all[j].id.Bytes()) == -1
-		})
-
-		require.Equal(t, all[0].id.Bytes(), blobs.First().Key)
-		require.Equal(t, all[len(all)-1].id.Bytes(), blobs.Last().Key)
+		require.Equal(t, all[0].id.Bytes(), seqeuncer.First(scopeRecord).Key)
+		require.Equal(t, all[len(all)-1].id.Bytes(), seqeuncer.Last(scopeRecord).Key)
 	})
 }
 
@@ -186,16 +111,17 @@ func TestSequencer_Drops(t *testing.T) {
 
 	db := store.NewMemoryMockDB()
 	storage := drop.NewDB(db)
-	drops := NewSequencer(db, store.ScopeJetDrop)
+	sequencer := NewSequencer(db)
 
 	type tempDrop struct {
 		drop drop.Drop
 	}
 
 	const (
-		pulse = 10
-		skip  = 5
-		limit = 10
+		pulse        = 10
+		skip         = 5
+		limit        = 10
+		scopeJetDrop = byte(store.ScopeJetDrop)
 	)
 
 	var (
@@ -234,7 +160,7 @@ func TestSequencer_Drops(t *testing.T) {
 	}
 
 	t.Run("slice length", func(t *testing.T) {
-		drps := drops.Slice(pulse, skip, pulse+10)
+		drps := sequencer.Slice(scopeJetDrop, pulse, skip, limit)
 		require.Equal(t, limit-skip, len(drps))
 	})
 
@@ -247,13 +173,98 @@ func TestSequencer_Drops(t *testing.T) {
 			) == -1
 		})
 
-		require.Equal(t, append(all[0].drop.Pulse.Bytes(), all[0].drop.JetID.Prefix()...), drops.First().Key)
-		require.Equal(t, append(all[len(all)-1].drop.Pulse.Bytes(), all[len(all)-1].drop.JetID.Prefix()...), drops.Last().Key)
+		require.Equal(t, append(all[0].drop.Pulse.Bytes(), all[0].drop.JetID.Prefix()...), sequencer.First(scopeJetDrop).Key)
+		require.Equal(t, append(all[len(all)-1].drop.Pulse.Bytes(), all[len(all)-1].drop.JetID.Prefix()...), sequencer.Last(scopeJetDrop).Key)
+	})
+}
+
+func TestSequencer_Blobs(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+
+	db := store.NewMemoryMockDB()
+	storage := blob.NewDB(db)
+	sequencer := NewSequencer(db)
+
+	type tempBlob struct {
+		id   insolar.ID
+		blob blob.Blob
+	}
+
+	const (
+		pulse     = insolar.PulseNumber(10)
+		skip      = 5
+		limit     = 10
+		scopeBlob = byte(store.ScopeBlob)
+	)
+
+	var (
+		expected   []tempBlob
+		unexpected []tempBlob
+	)
+
+	f := fuzz.New().Funcs(func(t *tempBlob, c fuzz.Continue) {
+		var memory [10]byte
+		c.Fuzz(&memory)
+		var hash [insolar.RecordIDSize - insolar.RecordHashOffset]byte
+		c.Fuzz(&hash)
+		oneOrZero := rand.Intn(2)
+		t.id = *insolar.NewID(insolar.PulseNumber(int(pulse)+(oneOrZero)*(-10)+(1-oneOrZero)*(10)), hash[:])
+		t.blob = blob.Blob{
+			JetID: insolar.ZeroJetID,
+			Value: memory[:],
+		}
+	})
+	f.NilChance(0)
+	f.NumElements(limit, limit)
+	f.Fuzz(&expected)
+
+	f = fuzz.New().Funcs(func(t *tempBlob, c fuzz.Continue) {
+		var memory [10]byte
+		c.Fuzz(&memory)
+		var hash [insolar.RecordIDSize - insolar.RecordHashOffset]byte
+		c.Fuzz(&hash)
+		t.id = *insolar.NewID(pulse, hash[:])
+		t.blob = blob.Blob{
+			JetID: insolar.ZeroJetID,
+			Value: memory[:],
+		}
+	})
+	f.NilChance(0)
+	f.NumElements(limit, limit)
+	f.Fuzz(&unexpected)
+
+	for i := 0; i < limit; i++ {
+		storage.Set(ctx, expected[i].id, expected[i].blob)
+		storage.Set(ctx, unexpected[i].id, unexpected[i].blob)
+	}
+
+	t.Run("slice length", func(t *testing.T) {
+		blbs := sequencer.Slice(scopeBlob, pulse, skip, limit)
+		require.Equal(t, limit-skip, len(blbs))
+	})
+
+	t.Run("first last", func(t *testing.T) {
+		all := append(expected, unexpected...)
+		sort.Slice(all, func(i, j int) bool {
+			return bytes.Compare(all[i].id.Bytes(), all[j].id.Bytes()) == -1
+		})
+
+		require.Equal(t, all[0].id.Bytes(), sequencer.First(scopeBlob).Key)
+		require.Equal(t, all[len(all)-1].id.Bytes(), sequencer.Last(scopeBlob).Key)
 	})
 }
 
 func TestSequencer_Genesis(t *testing.T) {
 	ctx := inslogger.TestContext(t)
+
+	const (
+		scopePulse          = byte(store.ScopePulse)
+		scopeDrop           = byte(store.ScopeJetDrop)
+		scopeRecord         = byte(store.ScopeRecord)
+		scopeIndex          = byte(store.ScopeIndex)
+		scopeLastKnownIndex = byte(store.ScopeLastKnownIndexPN)
+		scopeGenesis        = byte(store.ScopeGenesis)
+	)
 
 	db := store.NewMemoryMockDB()
 	pulseDB := pulse.NewDB(db)
@@ -269,31 +280,32 @@ func TestSequencer_Genesis(t *testing.T) {
 		IndexLifelineModifier: lifelineDB,
 	}
 
-	pulses := NewSequencer(db, store.ScopePulse)
-	drops := NewSequencer(db, store.ScopeJetDrop)
-	records := NewSequencer(db, store.ScopeRecord)
-	lifelines := NewSequencer(db, store.ScopeIndex)
-	lastKnownIndex := NewSequencer(db, store.ScopeLastKnownIndexPN)
-	baseRecord := NewSequencer(db, store.ScopeGenesis)
+	pulses := NewSequencer(db)
+	drops := NewSequencer(db)
+	records := NewSequencer(db)
+	lifelines := NewSequencer(db)
+	lastKnownIndex := NewSequencer(db)
+	baseRecord := NewSequencer(db)
 
 	genesisCreator.Create(ctx)
 	genesisCreator.Done(ctx)
 
 	var (
-		pulse     = insolar.GenesisPulse.PulseNumber
-		nextPulse = pulse + 10
+		pulse = insolar.GenesisPulse.PulseNumber
+		// nextPulse = pulse + 10
+		limit = uint32(10)
 	)
 
 	t.Run("check pulses", func(t *testing.T) {
-		actualPulses := pulses.Slice(pulse, 0, nextPulse)
-		require.Equal(t, 1, pulses.Len(pulse))
+		actualPulses := pulses.Slice(scopePulse, pulse, 0, limit)
+		require.Equal(t, uint32(1), pulses.Len(scopePulse, pulse))
 		require.Equal(t, 1, len(actualPulses))
 		require.Equal(t, pulse, insolar.NewPulseNumber(actualPulses[0].Key))
 	})
 
 	t.Run("check drops", func(t *testing.T) {
-		actualDrops := drops.Slice(pulse, 0, nextPulse)
-		require.Equal(t, 1, drops.Len(pulse))
+		actualDrops := drops.Slice(scopeDrop, pulse, 0, limit)
+		require.Equal(t, uint32(1), drops.Len(scopeDrop, pulse))
 		require.Equal(t, 1, len(actualDrops))
 		drop, err := drop.Decode(actualDrops[0].Value)
 		require.NoError(t, err)
@@ -302,8 +314,8 @@ func TestSequencer_Genesis(t *testing.T) {
 	})
 
 	t.Run("check records and filaments", func(t *testing.T) {
-		actualRecords := records.Slice(pulse, 0, nextPulse)
-		require.Equal(t, 1, records.Len(pulse))
+		actualRecords := records.Slice(scopeRecord, pulse, 0, limit)
+		require.Equal(t, uint32(1), records.Len(scopeRecord, pulse))
 		require.Equal(t, 1, len(actualRecords))
 		rec := record.Material{}
 		err := rec.Unmarshal(actualRecords[0].Value)
@@ -312,24 +324,24 @@ func TestSequencer_Genesis(t *testing.T) {
 	})
 
 	t.Run("check filaments", func(t *testing.T) {
-		actualFilaments := lifelines.Slice(pulse, 0, nextPulse)
-		require.Equal(t, 1, lifelines.Len(pulse))
+		actualFilaments := lifelines.Slice(scopeIndex, pulse, 0, limit)
+		require.Equal(t, uint32(1), lifelines.Len(scopeIndex, pulse))
 		require.Equal(t, 1, len(actualFilaments))
 		filament := object.FilamentIndex{}
 		err := filament.Unmarshal(actualFilaments[0].Value)
 		require.NoError(t, err)
 		require.Equal(t, insolar.GenesisRecord.ID(), filament.ObjID)
 
-		actualLastKnownIndex := lastKnownIndex.Slice(pulse, 0, nextPulse)
-		require.Equal(t, 1, lastKnownIndex.Len(pulse))
+		actualLastKnownIndex := lastKnownIndex.Slice(scopeLastKnownIndex, pulse, 0, limit)
+		require.Equal(t, uint32(1), lastKnownIndex.Len(scopeLastKnownIndex, pulse))
 		require.Equal(t, 1, len(actualLastKnownIndex))
 		actualLastPulse := insolar.NewPulseNumber(actualLastKnownIndex[0].Value)
 		require.Equal(t, pulse, actualLastPulse)
 	})
 
 	t.Run("check baserecord", func(t *testing.T) {
-		actualBaseRecords := baseRecord.Slice(pulse, 0, nextPulse)
-		require.Equal(t, 1, baseRecord.Len(pulse))
+		actualBaseRecords := baseRecord.Slice(scopeGenesis, pulse, 0, limit)
+		require.Equal(t, uint32(1), baseRecord.Len(scopeGenesis, pulse))
 		require.Equal(t, 1, len(actualBaseRecords))
 	})
 
@@ -340,12 +352,13 @@ func TestSequencer_Pulses(t *testing.T) {
 
 	db := store.NewMemoryMockDB()
 	storage := pulse.NewDB(db)
-	records := NewSequencer(db, store.ScopePulse)
+	records := NewSequencer(db)
 
 	const (
-		pulse = 10
-		limit = 10
-		total = 30
+		pulse      = 10
+		limit      = 10
+		total      = 30
+		scopePulse = byte(store.ScopePulse)
 	)
 
 	var all []insolar.Pulse
@@ -361,8 +374,8 @@ func TestSequencer_Pulses(t *testing.T) {
 		storage.Append(ctx, insolar.Pulse{PulseNumber: insolar.PulseNumber(pulse + 10*i)})
 	}
 
-	recs := records.Slice(pulse, 0, math.MaxUint32)
-	require.Equal(t, limit, len(recs))
+	recs := records.Slice(scopePulse, pulse, 0, limit)
+	require.Equal(t, 1, len(recs))
 }
 
 func TestSequencer_Upsert(t *testing.T) {
@@ -375,15 +388,16 @@ func TestSequencer_Upsert(t *testing.T) {
 	db, err := store.NewBadgerDB(tmpdir)
 	defer db.Stop(ctx)
 	require.NoError(t, err)
-	records := NewSequencer(db, store.ScopeRecord)
+	records := NewSequencer(db)
 
 	type tempRecord struct {
 		id  insolar.ID
 		rec record.Material
 	}
 	const (
-		pulse = 10
-		total = 3
+		pulse       = 10
+		total       = 3
+		scopeRecord = byte(store.ScopeRecord)
 	)
 
 	var all []tempRecord
@@ -398,7 +412,7 @@ func TestSequencer_Upsert(t *testing.T) {
 	f.NumElements(total, total)
 	f.Fuzz(&all)
 
-	require.Equal(t, 0, records.Len(pulse))
+	require.Equal(t, uint32(0), records.Len(scopeRecord, pulse))
 
 	items := []Item{}
 	for _, rec := range all {
@@ -406,10 +420,10 @@ func TestSequencer_Upsert(t *testing.T) {
 		items = append(items, Item{Key: rec.id.Bytes(), Value: val})
 	}
 
-	records.Upsert(items)
-	require.Equal(t, len(items), records.Len(pulse))
+	records.Upsert(scopeRecord, items)
+	require.Equal(t, uint32(len(items)), records.Len(scopeRecord, pulse))
 
-	seq := records.Slice(pulse, 0, math.MaxUint32)
+	seq := records.Slice(scopeRecord, pulse, 0, uint32(total))
 	for _, item := range seq {
 		id := insolar.ID{}
 		copy(id[:], item.Key)

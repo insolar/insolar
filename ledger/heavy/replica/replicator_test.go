@@ -16,82 +16,96 @@
 
 package replica
 
-// func TestReplicatorRoot_Start(t *testing.T) {
-// 	var (
-// 		ctx   = inslogger.TestContext(t)
-// 		pulse = insolar.GenesisPulse.PulseNumber
-// 	)
-// 	net := network.NewHostNetworkMock(t)
-// 	net.RegisterRequestHandlerMock.Return()
-// 	JetKeeper := NewJetKeeperMock(t)
-// 	JetKeeper.TopSyncPulseMock.Return(pulse)
-// 	db := store.NewMemoryMockDB()
-// 	cs := testutils.NewCryptographyServiceMock(t)
-// 	config := configuration.Replica{
-// 		Role:         "root",
-// 		In:           "in",
-// 		Out:          []string{"in"},
-// 		ParentCertPath: "",
-// 	}
-// 	replicator := NewReplicator(config, JetKeeper, cs)
-// 	replicator.DB = db
-// 	replicator.ServiceNetwork = net
-//
-// 	err := replicator.Init(ctx)
-// 	require.NoError(t, err)
-// 	err = replicator.Start(ctx)
-// 	require.NoError(t, err)
-// }
+import (
+	"testing"
+	"time"
 
-// func TestReplicatorReplica_Start(t *testing.T) {
-// 	var (
-// 		ctx   = inslogger.TestContext(t)
-// 		pulse = insolar.GenesisPulse.PulseNumber
-// 	)
-// 	net := network.NewHostNetworkMock(t)
-// 	net.RegisterRequestHandlerMock.Return()
-// 	net.SendRequestToHostMock.Return(makeFuture([]byte{}), nil)
-// 	JetKeeper := NewJetKeeperMock(t)
-// 	JetKeeper.TopSyncPulseMock.Return(pulse)
-// 	db := store.NewMemoryMockDB()
-// 	cs := testutils.NewCryptographyServiceMock(t)
-// 	config := configuration.Replica{
-// 		Role:         "replica",
-// 		In:           "inside",
-// 		Out:         []string{"inside"},
-// 		ParentCertPath: "",
-// 	}
-// 	replicator := NewReplicator(config, JetKeeper, )
-//
-// 	err := replicator.Init(ctx)
-// 	require.NoError(t, err)
-// 	err = replicator.Start(ctx)
-// 	require.NoError(t, err)
-// }
-//
-// func TestReplicatorObserver_Start(t *testing.T) {
-// 	var (
-// 		ctx   = inslogger.TestContext(t)
-// 		pulse = insolar.GenesisPulse.PulseNumber
-// 	)
-// 	net := network.NewHostNetworkMock(t)
-// 	net.RegisterRequestHandlerMock.Return()
-// 	net.SendRequestToHostMock.Return(makeFuture([]byte{}), nil)
-// 	JetKeeper := NewJetKeeperMock(t)
-// 	JetKeeper.TopSyncPulseMock.Return(pulse)
-// 	db := store.NewMemoryMockDB()
-// 	cs := testutils.NewCryptographyServiceMock(t)
-// 	config := configuration.Replica{
-// 		Role:         "observer",
-// 		In:           "inside",
-// 		Out:         []string{"inside"},
-// 		ParentCertPath: "",
-// 	}
-// 	replicator := NewReplicator(config, JetKeeper, db, cs)
-// 	replicator.Network = net
-//
-// 	err := replicator.Init(ctx)
-// 	require.NoError(t, err)
-// 	err = replicator.Start(ctx)
-// 	require.NoError(t, err)
-// }
+	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/ledger/heavy/sequence"
+	"github.com/insolar/insolar/network/servicenetwork"
+	"github.com/insolar/insolar/testutils"
+)
+
+func TestReplicatorRoot_InitStart(t *testing.T) {
+	var (
+		ctx = inslogger.TestContext(t)
+		pn  = insolar.GenesisPulse.PulseNumber
+	)
+	JetKeeper := NewJetKeeperMock(t)
+	JetKeeper.TopSyncPulseMock.Return(pn)
+	db := store.NewMemoryMockDB()
+	pulses := pulse.NewDB(db)
+	sequencer := sequence.NewSequencer(db)
+	cs := testutils.NewCryptographyServiceMock(t)
+	config := configuration.Configuration{
+		Ledger: configuration.Ledger{
+			Replica: configuration.Replica{
+				Role:              "root",
+				ParentAddress:     "127.0.0.1:13831",
+				ParentPubKey:      "",
+				ScopesToReplicate: []byte{2},
+				Attempts:          60,
+				DelayForAttempt:   1 * time.Second,
+				DefaultBatchSize:  uint32(1000),
+			},
+		},
+	}
+	serviceNetwork, _ := servicenetwork.NewServiceNetwork(config, nil, false)
+	transport := NewTransport(serviceNetwork)
+	replicator := NewReplicator(config, pulses, JetKeeper)
+	replicator.Sequencer = sequencer
+	replicator.CryptoService = cs
+	replicator.Transport = transport
+
+	err := replicator.Init(ctx)
+	require.NoError(t, err)
+	err = replicator.Start(ctx)
+	require.NoError(t, err)
+}
+
+func TestReplicatorReplica_InitStart(t *testing.T) {
+	var (
+		ctx     = inslogger.TestContext(t)
+		pn      = insolar.GenesisPulse.PulseNumber
+		address = "127.0.0.1:13831"
+	)
+	JetKeeper := NewJetKeeperMock(t)
+	JetKeeper.TopSyncPulseMock.Return(pn)
+	db := store.NewMemoryMockDB()
+	pulses := pulse.NewDB(db)
+	sequencer := sequence.NewSequencer(db)
+	cs := testutils.NewCryptographyServiceMock(t)
+	config := configuration.Configuration{
+		Ledger: configuration.Ledger{
+			Replica: configuration.Replica{
+				Role:              "replica",
+				ParentAddress:     address,
+				ParentPubKey:      "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE3IbYswQbBlxMg0dFNzxN+3hY3VWP\nyCL8T/XEx3trWuFn74M5vGvbabvJSkF6U8Qlq6mwQ8zx7teIFML7IlQwwg==\n-----END PUBLIC KEY-----\n",
+				ScopesToReplicate: []byte{2},
+				Attempts:          60,
+				DelayForAttempt:   1 * time.Second,
+				DefaultBatchSize:  uint32(1000),
+			},
+		},
+	}
+	transport := NewTransportMock(t)
+	transport.RegisterMock.Return()
+	transport.MeMock.Return(address)
+	reply, _ := insolar.Serialize(GenericReply{Data: []byte{}, Error: nil})
+	transport.SendMock.Return(reply, nil)
+	replicator := NewReplicator(config, pulses, JetKeeper)
+	replicator.Sequencer = sequencer
+	replicator.CryptoService = cs
+	replicator.Transport = transport
+
+	err := replicator.Init(ctx)
+	require.NoError(t, err)
+	err = replicator.Start(ctx)
+	require.NoError(t, err)
+}

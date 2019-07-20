@@ -28,6 +28,8 @@ import (
 	"github.com/insolar/insolar/internal/ledger/store"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/heavy/replica.JetKeeper -o ./ -s _mock.go
+
 // JetKeeper provides a method for adding jet to storage, checking pulse completion and getting access to highest synced pulse.
 type JetKeeper interface {
 	// Add performs adding jet to storage and checks pulse completion.

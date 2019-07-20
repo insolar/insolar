@@ -20,27 +20,22 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-func TestTarget_Notify(t *testing.T) {
+func TestRemoteTarget_Notify(t *testing.T) {
 	var (
-		reply = []byte{1, 2, 3}
-	)
-	transport := NewTransportMock(t)
-	transport.SendMock.Return(reply, nil)
-	target := NewRemoteTarget(transport)
-
-	err := Notify()
-	require.NoError(t, err)
-}
-
-func TestTarget_Me(t *testing.T) {
-	var (
+		ctx     = inslogger.TestContext(t)
 		address = "127.0.0.1:8080"
+		pulse   = insolar.GenesisPulse.PulseNumber
 	)
 	transport := NewTransportMock(t)
-	transport.MeMock.Return(address)
-	target := NewRemoteTarget(transport)
+	reply, _ := insolar.Serialize(GenericReply{Data: nil, Error: nil})
+	transport.SendMock.Return(reply, nil)
+	target := NewRemoteTarget(transport, address)
 
-	require.Equal(t, address, target.Me())
+	err := target.Notify(ctx, pulse)
+	require.NoError(t, err)
 }

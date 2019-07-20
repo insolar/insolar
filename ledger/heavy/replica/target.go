@@ -27,11 +27,15 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
-	"github.com/insolar/insolar/ledger/heavy/replica/intergrity"
+	"github.com/insolar/insolar/ledger/heavy/replica/integrity"
 	"github.com/insolar/insolar/ledger/heavy/sequence"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/heavy/replica.Target -o ./ -s _mock.go
+
+// Target provides methods to get notification by subscription.
 type Target interface {
+	// Notify informs target replica node.
 	Notify(context.Context, insolar.PulseNumber) error
 }
 
@@ -48,10 +52,10 @@ func NewTarget(cfg configuration.Replica, parent Parent) Target {
 }
 
 type target struct {
-	Sequencer         sequence.Sequencer   `inject:""`
-	JetKeeper         JetKeeper            `inject:""`
-	Pulses            pulse.Accessor       `inject:""`
-	Validator         intergrity.Validator `inject:""`
+	Sequencer         sequence.Sequencer  `inject:""`
+	JetKeeper         JetKeeper           `inject:""`
+	Pulses            pulse.Accessor      `inject:""`
+	Validator         integrity.Validator `inject:""`
 	cfg               configuration.Replica
 	parent            Parent
 	scopesToReplicate []byte
@@ -63,12 +67,12 @@ func (t *target) Start(ctx context.Context) error {
 	}
 	pn := t.JetKeeper.TopSyncPulse()
 	at := Page{Pulse: pn}
-	go t.subscribe(at)
+	t.subscribe(at)
 	return nil
 }
 
 func (t *target) Notify(ctx context.Context, present insolar.PulseNumber) error {
-	go t.process(present)
+	t.process(present)
 	return nil
 }
 
@@ -99,7 +103,11 @@ func (t *target) process(present insolar.PulseNumber) {
 		if !t.fetch(next) || !t.finish(next) {
 			return
 		}
+		curr := next
 		next = t.nextPulse(next)
+		if next == curr {
+			break
+		}
 	}
 
 	go t.subscribe(Page{Pulse: next})

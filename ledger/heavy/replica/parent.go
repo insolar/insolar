@@ -23,12 +23,18 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/heavy/replica/intergrity"
+	"github.com/insolar/insolar/ledger/heavy/replica/integrity"
 	"github.com/insolar/insolar/ledger/heavy/sequence"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/heavy/replica.Parent -o ./ -s _mock.go
+
+// Parent provides methods for subscription on data updates and pulling data by pages.
 type Parent interface {
+	// Subscribe adds a new disposable handler to JetKeeper updates
+	// to send a notification when required data will available.
 	Subscribe(context.Context, Target, Page) error
+	// Pull returns page of data.
 	Pull(context.Context, Page) ([]byte, uint32, error)
 }
 
@@ -37,9 +43,9 @@ func NewParent() Parent {
 }
 
 type parent struct {
-	Sequencer sequence.Sequencer  `inject:""`
-	JetKeeper JetKeeper           `inject:""`
-	Provider  intergrity.Provider `inject:""`
+	Sequencer sequence.Sequencer `inject:""`
+	JetKeeper JetKeeper          `inject:""`
+	Provider  integrity.Provider `inject:""`
 }
 
 func (p *parent) Subscribe(ctx context.Context, target Target, at Page) error {

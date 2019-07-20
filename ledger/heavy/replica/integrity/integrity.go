@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package intergrity
+package integrity
 
 import (
 	"context"
@@ -25,13 +25,15 @@ import (
 	"github.com/insolar/insolar/ledger/heavy/sequence"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/heavy/replica.Integrity -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/heavy/replica/integrity.Provider -o ./ -s _mock.go
 
 // Provider is an interface to add transferred record integrity.
 type Provider interface {
 	// Wrap returns the serialized sequence of db records signed by node signature.
 	Wrap([]sequence.Item) []byte
 }
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/heavy/replica/integrity.Validator -o ./ -s _mock.go
 
 // Validator is an interface validate transferred record integrity.
 type Validator interface {

@@ -90,3 +90,19 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 
 	require.Equal(t, futurePulse, jetKeeper.TopSyncPulse())
 }
+
+func TestDbJetKeeper_SubscribeUpdate(t *testing.T) {
+	var (
+		targetPulse = insolar.GenesisPulse.PulseNumber
+		handler     = func(present insolar.PulseNumber) {
+			require.Equal(t, targetPulse, present)
+		}
+		db        = store.NewMemoryMockDB()
+		jets      = jet.NewDBStore(db)
+		jetKeeper = NewJetKeeper(jets, db)
+	)
+
+	jetKeeper.Subscribe(targetPulse, handler)
+	err := jetKeeper.Update(targetPulse)
+	require.NoError(t, err)
+}

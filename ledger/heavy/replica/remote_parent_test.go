@@ -22,36 +22,44 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-func TestParent_Subscribe(t *testing.T) {
+func TestRemoteParent_Subscribe(t *testing.T) {
 	var (
-		pos     = Page{0, insolar.GenesisPulse.PulseNumber}
+		ctx     = inslogger.TestContext(t)
+		pos     = Page{Pulse: insolar.GenesisPulse.PulseNumber}
 		address = "127.0.0.1:8080"
 	)
 	transport := NewTransportMock(t)
-	transport.SendMock.Return(nil, nil)
-	parent := NewRemoteParent(transport)
+	transport.MeMock.Return(address)
+	reply, _ := insolar.Serialize(GenericReply{Data: nil, Error: nil})
+	transport.SendMock.Return(reply, nil)
+	parent := NewRemoteParent(transport, address)
 	targetTransport := NewTransportMock(t)
 	targetTransport.MeMock.Return(address)
-	target := NewRemoteTarget(targetTransport)
+	target := NewRemoteTarget(targetTransport, address)
 
-	err := Subscribe(pos)
+	err := parent.Subscribe(ctx, target, pos)
 	require.NoError(t, err)
 }
 
-func TestParent_Pull(t *testing.T) {
+func TestRemoteParent_Pull(t *testing.T) {
 	var (
-		pos   = Page{10, insolar.GenesisPulse.PulseNumber}
-		limit = uint32(10)
-		reply = []byte{1, 2, 3}
+		ctx     = inslogger.TestContext(t)
+		pos     = Page{Pulse: insolar.GenesisPulse.PulseNumber}
+		total   = uint32(10)
+		reply   = []byte{1, 2, 3}
+		address = "127.0.0.1:8080"
 	)
-	rawReply, _ := insolar.Serialize(GenericReply{reply, nil})
+	extReply, _ := insolar.Serialize(PullReply{Data: reply, Total: total})
+	rawReply, _ := insolar.Serialize(GenericReply{Data: extReply, Error: nil})
 	transport := NewTransportMock(t)
 	transport.SendMock.Return(rawReply, nil)
-	parent := NewRemoteParent(transport)
+	parent := NewRemoteParent(transport, address)
 
-	actualReply, err := Pull(pos)
+	actualReply, actualTotal, err := parent.Pull(ctx, pos)
 	require.NoError(t, err)
 	require.Equal(t, reply, actualReply)
+	require.Equal(t, total, actualTotal)
 }

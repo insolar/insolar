@@ -26,7 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/heavy/replica/intergrity"
+	"github.com/insolar/insolar/ledger/heavy/replica/integrity"
 	"github.com/insolar/insolar/ledger/heavy/sequence"
 	"github.com/insolar/insolar/platformpolicy"
 )
@@ -143,11 +143,11 @@ func (r *Replicator) registerTarget(target Target) {
 	r.cmps.Register(target)
 }
 
-func makeProvider(cryptoService insolar.CryptographyService) intergrity.Provider {
-	return intergrity.NewProvider(cryptoService)
+func makeProvider(cryptoService insolar.CryptographyService) integrity.Provider {
+	return integrity.NewProvider(cryptoService)
 }
 
-func makeValidator(cfg configuration.Replica, cryptoService insolar.CryptographyService) intergrity.Validator {
+func makeValidator(cfg configuration.Replica, cryptoService insolar.CryptographyService) integrity.Validator {
 	logger := inslogger.FromContext(context.Background())
 	kp := platformpolicy.NewKeyProcessor()
 	pubKey, err := kp.ImportPublicKeyPEM([]byte(cfg.ParentPubKey))
@@ -155,5 +155,5 @@ func makeValidator(cfg configuration.Replica, cryptoService insolar.Cryptography
 		logger.Error(errors.Wrap(err, "failed to import a public key from PEM"))
 		return nil
 	}
-	return intergrity.NewValidator(cryptoService, pubKey)
+	return integrity.NewValidator(cryptoService, pubKey)
 }
