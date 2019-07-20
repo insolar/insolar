@@ -24,7 +24,6 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/heavy/sequence"
@@ -40,7 +39,6 @@ func TestReplicatorRoot_InitStart(t *testing.T) {
 	JetKeeper := NewJetKeeperMock(t)
 	JetKeeper.TopSyncPulseMock.Return(pn)
 	db := store.NewMemoryMockDB()
-	pulses := pulse.NewDB(db)
 	sequencer := sequence.NewSequencer(db)
 	cs := testutils.NewCryptographyServiceMock(t)
 	config := configuration.Configuration{
@@ -58,7 +56,7 @@ func TestReplicatorRoot_InitStart(t *testing.T) {
 	}
 	serviceNetwork, _ := servicenetwork.NewServiceNetwork(config, nil, false)
 	transport := NewTransport(serviceNetwork)
-	replicator := NewReplicator(config, pulses, JetKeeper)
+	replicator := NewReplicator(config, JetKeeper)
 	replicator.Sequencer = sequencer
 	replicator.CryptoService = cs
 	replicator.Transport = transport
@@ -78,7 +76,6 @@ func TestReplicatorReplica_InitStart(t *testing.T) {
 	JetKeeper := NewJetKeeperMock(t)
 	JetKeeper.TopSyncPulseMock.Return(pn)
 	db := store.NewMemoryMockDB()
-	pulses := pulse.NewDB(db)
 	sequencer := sequence.NewSequencer(db)
 	cs := testutils.NewCryptographyServiceMock(t)
 	config := configuration.Configuration{
@@ -99,7 +96,7 @@ func TestReplicatorReplica_InitStart(t *testing.T) {
 	transport.MeMock.Return(address)
 	reply, _ := insolar.Serialize(GenericReply{Data: []byte{}, Error: nil})
 	transport.SendMock.Return(reply, nil)
-	replicator := NewReplicator(config, pulses, JetKeeper)
+	replicator := NewReplicator(config, JetKeeper)
 	replicator.Sequencer = sequencer
 	replicator.CryptoService = cs
 	replicator.Transport = transport
