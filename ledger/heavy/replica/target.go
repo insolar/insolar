@@ -67,12 +67,12 @@ func (t *target) Start(ctx context.Context) error {
 	}
 	pn := t.JetKeeper.TopSyncPulse()
 	at := Page{Pulse: pn}
-	t.subscribe(at)
+	go t.subscribe(at)
 	return nil
 }
 
 func (t *target) Notify(ctx context.Context, present insolar.PulseNumber) error {
-	t.process(present)
+	go t.process(present)
 	return nil
 }
 
