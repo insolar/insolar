@@ -99,6 +99,11 @@ func New(cfg configuration.Ledger) *Handler {
 				h.JetKeeper,
 			)
 		},
+		GetJet: func(p *proc.GetJet) {
+			p.Dep(
+				h.JetAccessor,
+				h.Sender)
+		},
 	}
 	h.dep = &dep
 	return h
@@ -158,8 +163,8 @@ func (h *Handler) handleParcel(ctx context.Context, msg *watermillMsg.Message) e
 		rep, err = h.handleGetChildren(ctx, parcel)
 	case insolar.TypeGetDelegate.String():
 		rep, err = h.handleGetDelegate(ctx, parcel)
-	case insolar.TypeGetJet.String():
-		rep, err = h.handleGetJet(ctx, parcel)
+	// case insolar.TypeGetJet.String():
+	// 	rep, err = h.handleGetJet(ctx, parcel)
 	case insolar.TypeGetObjectIndex.String():
 		rep, err = h.handleGetObjectIndex(ctx, parcel)
 	default:
@@ -209,6 +214,10 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 	case payload.TypeGetCode:
 		p := proc.NewGetCode(meta)
 		h.dep.GetCode(p)
+		err = p.Proceed(ctx)
+	case payload.TypeGetJet:
+		p := proc.NewGetJet(meta)
+		h.dep.GetJet(p)
 		err = p.Proceed(ctx)
 	case payload.TypePass:
 		err = h.handlePass(ctx, meta)

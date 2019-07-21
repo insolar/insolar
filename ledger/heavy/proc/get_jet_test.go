@@ -1,0 +1,115 @@
+// //
+// // Copyright 2019 Insolar Technologies GmbH
+// //
+// // Licensed under the Apache License, Version 2.0 (the "License");
+// // you may not use this file except in compliance with the License.
+// // You may obtain a copy of the License at
+// //
+// //     http://www.apache.org/licenses/LICENSE-2.0
+// //
+// // Unless required by applicable law or agreed to in writing, software
+// // distributed under the License is distributed on an "AS IS" BASIS,
+// // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// // See the License for the specific language governing permissions and
+// // limitations under the License.
+// //
+//
+package proc_test
+
+//
+// import (
+// 	"context"
+// 	"testing"
+//
+// 	"github.com/ThreeDotsLabs/watermill/message"
+// 	"github.com/gojuno/minimock"
+// 	"github.com/insolar/insolar/insolar/bus"
+// 	"github.com/insolar/insolar/insolar/gen"
+// 	"github.com/insolar/insolar/insolar/jet"
+// 	"github.com/insolar/insolar/insolar/payload"
+// 	"github.com/insolar/insolar/insolar/record"
+// 	"github.com/insolar/insolar/instrumentation/inslogger"
+// 	"github.com/insolar/insolar/ledger/heavy/proc"
+// 	"github.com/insolar/insolar/ledger/object"
+// 	"github.com/stretchr/testify/require"
+// )
+//
+// func TestGetJet_Proceed(t *testing.T) {
+// 	mc := minimock.NewController(t)
+// 	ctx := inslogger.TestContext(t)
+//
+// 	var (
+// 		sender *bus.SenderMock
+// 		jets   *jet.AccessorMock
+// 	)
+//
+// 	resetComponents := func() {
+// 		sender = bus.NewSenderMock(mc)
+// 		jets = jet.NewAccessorMock(t)
+// 	}
+//
+// 	newProc := func(msg payload.Meta) *proc.GetJet {
+// 		p := proc.NewGetJet(msg)
+// 		p.Dep(jets, sender)
+// 		return p
+// 	}
+//
+// 	resetComponents()
+// 	t.Run("request does not exist", func(t *testing.T) {
+// 		sender.ReplyFunc = func(_ context.Context, _ payload.Meta, msg *message.Message) {
+// 			rep := payload.Error{}
+// 			err := rep.Unmarshal(msg.Payload)
+// 			require.NoError(t, err)
+// 			require.Equal(t, int(rep.Code), payload.CodeObjectNotFound)
+// 			require.Equal(t, rep.Text, object.ErrNotFound.Error())
+// 		}
+// 		p := newProc(payload.Meta{})
+// 		records.ForIDMock.Return(record.Material{}, object.ErrNotFound)
+//
+// 		err := p.Proceed(ctx)
+// 		require.NoError(t, err)
+//
+// 		mc.Finish()
+// 	})
+//
+// 	resetComponents()
+// 	t.Run("happy basic", func(t *testing.T) {
+// 		reqID := gen.ID()
+// 		msg := payload.GetRequest{
+// 			RequestID: reqID,
+// 		}
+// 		buf, err := msg.Marshal()
+// 		require.NoError(t, err)
+// 		receivedMeta := payload.Meta{Payload: buf}
+// 		p := newProc(receivedMeta)
+//
+// 		ref := gen.Reference()
+// 		req := record.Virtual{
+// 			Union: &record.Virtual_IncomingRequest{
+// 				IncomingRequest: &record.IncomingRequest{
+// 					Object: &ref,
+// 				},
+// 			},
+// 		}
+//
+// 		records.ForIDMock.Return(record.Material{
+// 			Virtual: &req,
+// 		}, nil)
+// 		sender.ReplyFunc = func(_ context.Context, origin payload.Meta, rep *message.Message) {
+// 			require.Equal(t, receivedMeta, origin)
+//
+// 			resp, err := payload.Unmarshal(rep.Payload)
+// 			require.NoError(t, err)
+//
+// 			res, ok := resp.(*payload.Request)
+// 			require.True(t, ok)
+// 			require.Equal(t, msg.RequestID, res.RequestID)
+// 			require.Equal(t, req, res.Request)
+// 		}
+//
+// 		err = p.Proceed(ctx)
+// 		require.NoError(t, err)
+//
+// 		mc.Finish()
+// 	})
+// }

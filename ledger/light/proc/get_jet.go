@@ -32,13 +32,13 @@ type GetJet struct {
 	pulse    insolar.PulseNumber
 
 	dep struct {
-		jets   jet.Storage
+		jets   jet.Accessor
 		sender bus.Sender
 	}
 }
 
 func (p *GetJet) Dep(
-	jets jet.Storage,
+	jets jet.Accessor,
 	sender bus.Sender,
 ) {
 	p.dep.jets = jets
@@ -61,7 +61,7 @@ func (p *GetJet) Proceed(ctx context.Context) error {
 		Actual: actual,
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to create reply")
+		return errors.Wrap(err, "GetJet: failed to create reply")
 	}
 
 	p.dep.sender.Reply(ctx, p.message, msg)
