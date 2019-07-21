@@ -53,11 +53,11 @@ func (gp *GetPendings) Dep(
 }
 
 func (gp *GetPendings) Proceed(ctx context.Context) error {
-	ids, err := gp.dep.filaments.PendingRequests(ctx, flow.Pulse(ctx), gp.objectID)
+	pendings, err := gp.dep.filaments.PendingRequests(ctx, flow.Pulse(ctx), gp.objectID)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate pending")
 	}
-	if len(ids) == 0 {
+	if len(pendings) == 0 {
 		msg, err := payload.NewMessage(&payload.Error{
 			Code: payload.CodeNoPendings,
 			Text: insolar.ErrNoPendingRequest.Error(),
@@ -69,8 +69,13 @@ func (gp *GetPendings) Proceed(ctx context.Context) error {
 		return nil
 	}
 
-	if len(ids) > 100 {
-		ids = ids[:100]
+	if len(pendings) > 100 {
+		pendings = pendings[:100]
+	}
+
+	ids := make([]insolar.ID, len(pendings))
+	for i, pend := range pendings {
+		ids[i] = pend.RecordID
 	}
 
 	msg, err := payload.NewMessage(&payload.IDs{

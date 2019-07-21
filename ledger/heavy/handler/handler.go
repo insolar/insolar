@@ -114,6 +114,9 @@ func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, e
 	}
 
 	for k, v := range msg.Metadata {
+		if k == bus.MetaSpanData || k == bus.MetaTraceID {
+			continue
+		}
 		ctx, _ = inslogger.WithField(ctx, k, v)
 	}
 	logger := inslogger.FromContext(ctx)

@@ -19,6 +19,8 @@ package light
 import (
 	"context"
 
+	"github.com/insolar/insolar/network/rules"
+
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
@@ -143,7 +145,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	)
 	{
 		var err error
-		Requester, err = contractrequester.New()
+		Requester, err = contractrequester.New(nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ContractRequester")
 		}
@@ -342,6 +344,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		NodeNetwork,
 		NetworkService,
 		pubSub,
+		rules.NewRules(),
 	)
 
 	err = c.cmp.Init(ctx)

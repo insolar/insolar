@@ -121,6 +121,9 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 	case payload.TypeGetPendings:
 		h := NewGetPendings(s.dep, meta, false)
 		err = f.Handle(ctx, h.Present)
+	case payload.TypeHasPendings:
+		h := NewHasPendings(s.dep, meta, false)
+		err = f.Handle(ctx, h.Present)
 	case payload.TypeGetJet:
 		h := NewGetJet(s.dep, meta, false)
 		err = f.Handle(ctx, h.Present)
@@ -237,6 +240,9 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeGetPendings:
 		h := NewGetPendings(s.dep, originMeta, true)
+		err = f.Handle(ctx, h.Present)
+	case payload.TypeHasPendings:
+		h := NewHasPendings(s.dep, originMeta, true)
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeGetJet:
 		h := NewGetJet(s.dep, originMeta, true)

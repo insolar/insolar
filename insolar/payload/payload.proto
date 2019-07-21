@@ -272,6 +272,18 @@ message GetPendings {
     bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
 }
 
+message HasPendings {
+    uint32 Polymorph = 16;
+
+    bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+}
+
+message PendingsInfo {
+    uint32 Polymorph = 16;
+
+    bool HasPendings = 20;
+}
+
 message Replication {
     uint32 Polymorph = 16;
 

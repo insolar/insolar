@@ -169,6 +169,12 @@ func NewMessageHandler(
 				h.Sender,
 			)
 		},
+		HasPendings: func(p *proc.HasPendings) {
+			p.Dep(
+				h.IndexStorage,
+				h.Sender,
+			)
+		},
 		SendObject: func(p *proc.SendObject) {
 			p.Dep.Jets = h.JetStorage
 			p.Dep.Coordinator = h.JetCoordinator
@@ -275,6 +281,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 		h.PCS,
 		h.FilamentCalculator,
 		h.PulseCalculator,
+		h.Sender,
 	)
 
 	return nil

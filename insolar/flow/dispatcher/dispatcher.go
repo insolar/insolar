@@ -95,9 +95,10 @@ func (d *Dispatcher) InnerSubscriber(msg *message.Message) ([]*message.Message, 
 // Process handles incoming message.
 func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 	ctx := context.Background()
+	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(bus.MetaTraceID))
 
 	for k, v := range msg.Metadata {
-		if k == bus.MetaSpanData {
+		if k == bus.MetaSpanData || k == bus.MetaTraceID {
 			continue
 		}
 		ctx, _ = inslogger.WithField(ctx, k, v)
@@ -110,7 +111,6 @@ func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 		return nil, nil
 	}
 	ctx = pulse.ContextWith(ctx, pn)
-	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(bus.MetaTraceID))
 	parentSpan := instracer.MustDeserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
 	ctx = instracer.WithParentSpan(ctx, parentSpan)
 	go func() {
