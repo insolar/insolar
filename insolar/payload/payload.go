@@ -58,6 +58,8 @@ const (
 	TypeHotObjects
 	TypeResultInfo
 	TypeGetPendings
+	TypeHasPendings
+	TypePendingsInfo
 	TypeReplication
 
 	TypeReturnResults
@@ -228,6 +230,18 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *ResultInfo:
 		pl.Polymorph = uint32(TypeResultInfo)
 		return pl.Marshal()
+	case *GetPendings:
+		pl.Polymorph = uint32(TypeGetPendings)
+		return pl.Marshal()
+	case *HasPendings:
+		pl.Polymorph = uint32(TypeHasPendings)
+		return pl.Marshal()
+	case *PendingsInfo:
+		pl.Polymorph = uint32(TypePendingsInfo)
+		return pl.Marshal()
+	case *Replication:
+		pl.Polymorph = uint32(TypeReplication)
+		return pl.Marshal()
 	case *ReturnResults:
 		pl.Polymorph = uint32(TypeReturnResults)
 		return pl.Marshal()
@@ -245,12 +259,6 @@ func Marshal(payload Payload) ([]byte, error) {
 		return pl.Marshal()
 	case *StillExecuting:
 		pl.Polymorph = uint32(TypeStillExecuting)
-		return pl.Marshal()
-	case *Replication:
-		pl.Polymorph = uint32(TypeReplication)
-		return pl.Marshal()
-	case *GetPendings:
-		pl.Polymorph = uint32(TypeGetPendings)
 		return pl.Marshal()
 	}
 
@@ -363,6 +371,22 @@ func Unmarshal(data []byte) (Payload, error) {
 		pl := HotObjects{}
 		err := pl.Unmarshal(data)
 		return &pl, err
+	case TypeGetPendings:
+		pl := GetPendings{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeHasPendings:
+		pl := HasPendings{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypePendingsInfo:
+		pl := PendingsInfo{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeReplication:
+		pl := Replication{}
+		err := pl.Unmarshal(data)
+		return &pl, err
 	case TypeResultInfo:
 		pl := ResultInfo{}
 		err := pl.Unmarshal(data)
@@ -389,14 +413,6 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeStillExecuting:
 		pl := StillExecuting{}
-		err := pl.Unmarshal(data)
-		return &pl, err
-	case TypeReplication:
-		pl := Replication{}
-		err := pl.Unmarshal(data)
-		return &pl, err
-	case TypeGetPendings:
-		pl := GetPendings{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}

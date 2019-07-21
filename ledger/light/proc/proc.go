@@ -43,6 +43,7 @@ type Dependencies struct {
 	SetCode             func(*SetCode)
 	SendRequests        func(*SendRequests)
 	GetDelegate         func(*GetDelegate)
+	HasPendings         func(*HasPendings)
 }
 
 // NewDependenciesMock returns all dependencies for handlers.
@@ -75,5 +76,6 @@ func NewDependenciesMock() *Dependencies {
 		SetCode:             func(*SetCode) {},
 		SendRequests:        func(*SendRequests) {},
 		GetDelegate:         func(*GetDelegate) {},
+		HasPendings:         func(*HasPendings) {},
 	}
 }
