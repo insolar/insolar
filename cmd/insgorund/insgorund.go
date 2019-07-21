@@ -54,7 +54,7 @@ func main() {
 	}
 
 	if *path == "" {
-		tmpDir, err := ioutil.TempDir("", "contractcache-")
+		tmpDir, err := ioutil.TempDir("", "funcTestContractcache-")
 		if err != nil {
 			log.Fatal("Couldn't create temp cache dir: ", err)
 			os.Exit(1)

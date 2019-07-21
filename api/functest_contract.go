@@ -38,15 +38,15 @@ import (
 	"github.com/insolar/insolar/testutils"
 )
 
-// ContractService is a service that provides ability to add custom contracts
-type ContractService struct {
+// FuncTestContractService is a service that provides ability to add custom contracts
+type FuncTestContractService struct {
 	runner *Runner
 	cb     *goplugintestutils.ContractsBuilder
 }
 
-// NewContractService creates new Contract service instance.
-func NewContractService(runner *Runner) *ContractService {
-	return &ContractService{runner: runner}
+// NewFuncTestContractService creates new Contract service instance.
+func NewFuncTestContractService(runner *Runner) *FuncTestContractService {
+	return &FuncTestContractService{runner: runner}
 }
 
 // UploadArgs is arguments that Contract.Upload accepts.
@@ -62,11 +62,11 @@ type UploadReply struct {
 }
 
 // Upload builds code and return prototype ref
-func (s *ContractService) Upload(r *http.Request, args *UploadArgs, reply *UploadReply) error {
+func (s *FuncTestContractService) Upload(r *http.Request, args *UploadArgs, reply *UploadReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 	reply.TraceID = utils.TraceID(ctx)
 
-	inslog.Infof("[ ContractService.Upload ] Incoming request: %s", r.RequestURI)
+	inslog.Infof("[ FuncTestContractService.Upload ] Incoming request: %s", r.RequestURI)
 
 	if len(args.Name) == 0 {
 		return errors.New("params.name is missing")
@@ -79,7 +79,7 @@ func (s *ContractService) Upload(r *http.Request, args *UploadArgs, reply *Uploa
 	if s.cb == nil {
 		insgocc, err := goplugintestutils.BuildPreprocessor()
 		if err != nil {
-			inslog.Infof("[ ContractService.Upload ] can't build preprocessor %#v", err)
+			inslog.Infof("[ FuncTestContractService.Upload ] can't build preprocessor %#v", err)
 			return errors.Wrap(err, "can't build preprocessor")
 		}
 		s.cb = goplugintestutils.NewContractBuilder(s.runner.ArtifactManager, insgocc, s.runner.PulseAccessor)
@@ -111,11 +111,11 @@ type CallConstructorReply struct {
 }
 
 // CallConstructor make an object from its prototype
-func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructorArgs, reply *CallConstructorReply) error {
+func (s *FuncTestContractService) CallConstructor(r *http.Request, args *CallConstructorArgs, reply *CallConstructorReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 	reply.TraceID = utils.TraceID(ctx)
 
-	inslog.Infof("[ ContractService.CallConstructor ] Incoming request: %s", r.RequestURI)
+	inslog.Infof("[ FuncTestContractService.CallConstructor ] Incoming request: %s", r.RequestURI)
 
 	if len(args.PrototypeRefString) == 0 {
 		return errors.New("params.PrototypeRefString is missing")
@@ -174,11 +174,11 @@ type CallMethodReply struct {
 }
 
 // CallConstructor make an object from its prototype
-func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *CallMethodReply) error {
+func (s *FuncTestContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *CallMethodReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 	re.TraceID = utils.TraceID(ctx)
 
-	inslog.Infof("[ ContractService.CallMethod ] Incoming request: %s", r.RequestURI)
+	inslog.Infof("[ FuncTestContractService.CallMethod ] Incoming request: %s", r.RequestURI)
 
 	if len(args.ObjectRefString) == 0 {
 		return errors.New("params.ObjectRefString is missing")

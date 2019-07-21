@@ -47,7 +47,7 @@ func (s *HealthCheckSuite) TestHealthCheck() {
 	protocol := "unix"
 	socket := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 
-	tmpDir, err := ioutil.TempDir("", "contractcache-")
+	tmpDir, err := ioutil.TempDir("", "funcTestContractcache-")
 	s.Require().NoError(err, "failed to build tmp dir")
 	defer os.RemoveAll(tmpDir)
 

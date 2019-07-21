@@ -334,7 +334,7 @@ func uploadContractOnce(t *testing.T, name string, code string) *insolar.Referen
 func uploadContract(t *testing.T, contractName string, contractCode string) *insolar.Reference {
 	uploadBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
-		"method":  "contract.upload",
+		"method":  "funcTestContract.upload",
 		"id":      "",
 		"params": map[string]string{
 			"name": contractName,
@@ -369,7 +369,7 @@ func callConstructor(t *testing.T, prototypeRef *insolar.Reference, method strin
 
 	objectBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
-		"method":  "contract.callConstructor",
+		"method":  "funcTestContract.callConstructor",
 		"id":      "",
 		"params": map[string]interface{}{
 			"PrototypeRefString": prototypeRef.String(),
@@ -418,7 +418,7 @@ func callMethodNoChecks(t *testing.T, objectRef *insolar.Reference, method strin
 
 	callMethodBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
-		"method":  "contract.callMethod",
+		"method":  "funcTestContract.callMethod",
 		"id":      "",
 		"params": map[string]interface{}{
 			"ObjectRefString": objectRef.String(),

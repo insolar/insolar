@@ -23,14 +23,14 @@ import (
 	"net/http"
 )
 
-// ContractService is a service that provides ability to add custom contracts
-type ContractService struct {
+// FuncTestContractService is a service that provides ability to add custom contracts
+type FuncTestContractService struct {
 	runner *Runner
 }
 
-// NewContractService is dummy for NewContractService in contract.go that hidden under build tag
-func NewContractService(runner *Runner) *ContractService {
-	return &ContractService{runner: runner}
+// NewFuncTestContractService is dummy for NewFuncTestContractService in functest_contract.go that hidden under build tag
+func NewFuncTestContractService(runner *Runner) *FuncTestContractService {
+	return &FuncTestContractService{runner: runner}
 }
 
 type DummyArgs struct{}
@@ -40,14 +40,14 @@ type UploadReply struct {
 	PrototypeRef string `json:"PrototypeRef"`
 }
 
-func (s *ContractService) Upload(r *http.Request, args *DummyArgs, reply *DummyReply) error {
+func (s *FuncTestContractService) Upload(r *http.Request, args *DummyArgs, reply *DummyReply) error {
 	return errors.New("method allowed only in build with functest tag")
 }
 
-func (s *ContractService) CallConstructor(r *http.Request, args *DummyArgs, reply *DummyReply) error {
+func (s *FuncTestContractService) CallConstructor(r *http.Request, args *DummyArgs, reply *DummyReply) error {
 	return errors.New("method allowed only in build with functest tag")
 }
 
-func (s *ContractService) CallMethod(r *http.Request, args *DummyArgs, reply *DummyReply) error {
+func (s *FuncTestContractService) CallMethod(r *http.Request, args *DummyArgs, reply *DummyReply) error {
 	return errors.New("method allowed only in build with functest tag")
 }
