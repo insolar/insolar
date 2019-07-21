@@ -218,12 +218,6 @@ func NewMessageHandler(
 				h.Sender,
 			)
 		},
-		GetPendingRequests: func(p *proc.GetPendingRequests) {
-			p.Dep(h.IndexStorage, h.Sender)
-		},
-		GetPendingRequestID: func(p *proc.GetPendingRequestID) {
-			p.Dep(h.FilamentCalculator, h.Sender)
-		},
 		GetJet: func(p *proc.GetJet) {
 			p.Dep(
 				h.JetStorage,

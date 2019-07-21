@@ -166,12 +166,6 @@ func (s *Init) handleParcel(ctx context.Context, f flow.Flow) error {
 	case insolar.TypeGetDelegate.String():
 		h := NewGetDelegate(s.dep, meta, parcel)
 		return f.Handle(ctx, h.Present)
-	case insolar.TypeGetPendingRequests.String():
-		h := NewGetPendingRequests(s.dep, meta, parcel)
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeGetPendingRequestID.String():
-		h := NewGetPendingRequestID(s.dep, meta, parcel)
-		return f.Handle(ctx, h.Present)
 	case insolar.TypeRegisterChild.String():
 		msg := parcel.Message().(*message.RegisterChild)
 		h := NewRegisterChild(s.dep, meta, msg, parcel.Pulse())

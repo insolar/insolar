@@ -387,13 +387,6 @@ func (h *Handler) handleGetChildren(
 	return &reply.Children{Refs: refs, NextFrom: nil}, nil
 }
 
-func (h *Handler) handleGetJet(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetJet)
-	jet, actual := h.JetAccessor.ForID(ctx, msg.Pulse, msg.Object)
-
-	return &reply.Jet{ID: insolar.ID(jet), Actual: actual}, nil
-}
-
 func (h *Handler) handleGetObjectIndex(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetObjectIndex)
 
