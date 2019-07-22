@@ -17,42 +17,48 @@
 package replica
 
 import (
-	context "context"
+	"context"
 	"fmt"
 	"net"
 
 	"github.com/pkg/errors"
-	grpc "google.golang.org/grpc"
+	"google.golang.org/grpc"
 
 	"github.com/insolar/insolar/insolar"
 )
 
 type grpcTransport struct {
+	port       uint32
 	lis        net.Listener
 	grpcServer *grpc.Server
 	handlers   map[string]Handle
 }
 
-func NewGRPCTransport() Transport {
+func NewGRPCTransport(port uint32) Transport {
 	return &grpcTransport{
+		port:     port,
 		handlers: make(map[string]Handle),
 	}
 }
 
 func (t *grpcTransport) Init(ctx context.Context) error {
 	t.grpcServer = grpc.NewServer()
-	RegisterReplicaServer(t.grpcServer, t)
+	RegisterReplicaTransportServer(t.grpcServer, t)
 	return nil
 }
 
 func (t *grpcTransport) Start(ctx context.Context) error {
-	const port = 20111
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", t.port))
 	if err != nil {
-		return errors.Wrapf(err, "failed to open replication port %d", port)
+		return errors.Wrapf(err, "failed to open replication port %d", t.port)
 	}
 	t.lis = lis
 	return t.grpcServer.Serve(t.lis)
+}
+
+func (t *grpcTransport) Stop(ctx context.Context) error {
+	t.grpcServer.GracefulStop()
+	return nil
 }
 
 func (t *grpcTransport) Call(ctx context.Context, request *Request) (*Response, error) {
@@ -75,7 +81,7 @@ func (t *grpcTransport) Send(ctx context.Context, receiver, method string, data 
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to connect to receiver %s", receiver)
 	}
-	client := NewReplicaClient(conn)
+	client := NewReplicaTransportClient(conn)
 
 	res, err := client.Call(ctx, &req)
 	if err != nil || res == nil {

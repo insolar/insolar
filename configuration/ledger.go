@@ -56,6 +56,8 @@ type Exporter struct {
 type Replica struct {
 	// Role defines that should do replicator (subscribe on replica parent or send notifications to replica targets).
 	Role string
+	// Port that should be opened for replica communication.
+	Port uint32
 	// ParentAddress is an address to connect to replica parent.
 	ParentAddress string
 	// ParentPubKey is a public key that replica parent will use to sign replication records.
@@ -111,7 +113,8 @@ func NewLedger() Ledger {
 
 		Replica: Replica{
 			Role:              "root",
-			ParentAddress:     "127.0.0.1:13831",
+			Port:              20111,
+			ParentAddress:     "127.0.0.1:20111",
 			ParentPubKey:      "",
 			ScopesToReplicate: []byte{2},
 			Attempts:          60,
