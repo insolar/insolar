@@ -66,15 +66,15 @@ type OfflinePopulation interface {
 type OnlinePopulation interface {
 	FindProfile(nodeID insolar.ShortNodeID) profiles.ActiveNode
 	GetCount() int
-	//GetKnownCount() int
-	//GetPopulationSize() int
-	//IsComplete() bool
+	// GetKnownCount() int
+	// GetPopulationSize() int
+	// IsComplete() bool
 
-	//GetActiveRoleProfiles(role member.PrimaryRole) (active []profiles.ActiveNode, activePower uint16)
-	//GetActiveRoles() []member.PrimaryRole //?
+	// GetActiveRoleProfiles(role member.PrimaryRole) (active []profiles.ActiveNode, activePower uint16)
+	// GetActiveRoles() []member.PrimaryRole //?
 
-	//GetInactiveRoleProfiles(role member.PrimaryRole) []profiles.ActiveNode
-	//GetInactiveRoles() []member.PrimaryRole
+	// GetInactiveRoleProfiles(role member.PrimaryRole) []profiles.ActiveNode
+	// GetInactiveRoles() []member.PrimaryRole
 
 	GetProfiles() []profiles.ActiveNode
 	GetLocalProfile() profiles.LocalNode

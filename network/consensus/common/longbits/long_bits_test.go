@@ -511,47 +511,47 @@ func TestFillBitsWithStaticNoise(t *testing.T) {
 
 func TestReadFromArray(t *testing.T) {
 	t.Skipped()
-	//var d, s []byte
-	//n, err := readFromArray(d, s)
-	//require.Equal(t, 0, n)
+	// var d, s []byte
+	// n, err := readFromArray(d, s)
+	// require.Equal(t, 0, n)
 	//
-	//require.Equal(t, nil, err)
+	// require.Equal(t, nil, err)
 	//
-	//d = make([]byte, 1)
-	//n, err = readFromArray(d, s)
-	//require.Equal(t, 0, n)
+	// d = make([]byte, 1)
+	// n, err = readFromArray(d, s)
+	// require.Equal(t, 0, n)
 	//
-	//require.Equal(t, nil, err)
+	// require.Equal(t, nil, err)
 	//
-	//d = nil
-	//s = []byte{1}
-	//n, err = readFromArray(d, s)
-	//require.Equal(t, 0, n)
+	// d = nil
+	// s = []byte{1}
+	// n, err = readFromArray(d, s)
+	// require.Equal(t, 0, n)
 	//
-	//require.Equal(t, nil, err)
+	// require.Equal(t, nil, err)
 	//
-	//d = make([]byte, 1)
-	//n, err = readFromArray(d, s)
-	//require.Equal(t, 1, n)
+	// d = make([]byte, 1)
+	// n, err = readFromArray(d, s)
+	// require.Equal(t, 1, n)
 	//
-	//require.Equal(t, nil, err)
+	// require.Equal(t, nil, err)
 	//
-	//require.Equal(t, s[0], d[0])
+	// require.Equal(t, s[0], d[0])
 	//
-	//require.Equal(t, uint8(1), d[0])
+	// require.Equal(t, uint8(1), d[0])
 	//
-	//d = make([]byte, 2)
-	//n, err = readFromArray(d, s)
-	//require.Equal(t, 1, n)
+	// d = make([]byte, 2)
+	// n, err = readFromArray(d, s)
+	// require.Equal(t, 1, n)
 	//
-	//require.Equal(t, nil, err)
+	// require.Equal(t, nil, err)
 	//
-	//d = make([]byte, 1)
-	//s = make([]byte, 2)
-	//n, err = readFromArray(d, s)
-	//require.Equal(t, 1, n)
+	// d = make([]byte, 1)
+	// s = make([]byte, 2)
+	// n, err = readFromArray(d, s)
+	// require.Equal(t, 1, n)
 	//
-	//require.Equal(t, nil, err)
+	// require.Equal(t, nil, err)
 }
 
 func TestBitsToStringDefault(t *testing.T) {

@@ -77,7 +77,7 @@ func TestNewLocalCensusBuilder(t *testing.T) {
 	lcb := newLocalCensusBuilder(chronicles, pn, population, false)
 	require.Equal(t, pn, lcb.populationBuilder.census.pulseNumber)
 
-	//TODO
+	// TODO
 	/*lcb = newLocalCensusBuilder(chronicles, pn, population, true)
 	require.Equal(t, pn, lcb.populationBuilder.census.pulseNumber)*/
 }

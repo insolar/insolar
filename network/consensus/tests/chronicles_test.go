@@ -52,11 +52,10 @@ package tests
 
 import (
 	"fmt"
-
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-
 	"math"
 	"time"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"

@@ -107,17 +107,17 @@ func (c *packetPhase1Dispatcher) DispatchUnknownMemberPacket(ctx context.Context
 
 	p1 := packet.AsPhase1Packet()
 
-	//if p1.HasPulseData() {
+	// if p1.HasPulseData() {
 	//	return false, fmt.Errorf("pulse data is not expected")
-	//}
+	// }
 
 	// TODO check endpoint and PK
 
-	//na := p1.GetAnnouncementReader()
-	//nr := na.GetNodeRank()
-	//if !c.ctl.isJoiner && !nr.IsJoiner() {
+	// na := p1.GetAnnouncementReader()
+	// nr := na.GetNodeRank()
+	// if !c.ctl.isJoiner && !nr.IsJoiner() {
 	//	return false, fmt.Errorf("member to member intro")
-	//}
+	// }
 
 	return announce.ApplyUnknownAnnouncement(ctx, memberID, p1, nil, true, c.ctl.R)
 }

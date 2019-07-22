@@ -78,7 +78,7 @@ func (c *PrepPhaseControllerTemplate) BeforeStart(realm *PrepRealm) {
 func (*PrepPhaseControllerTemplate) StartWorker(ctx context.Context, realm *PrepRealm) {
 }
 
-//var _ PacketDispatcher = &HostPacketDispatcherTemplate{}
+// var _ PacketDispatcher = &HostPacketDispatcherTemplate{}
 
 type HostPacketDispatcherTemplate struct {
 }
@@ -97,7 +97,7 @@ func (*HostPacketDispatcherTemplate) DispatchMemberPacket(ctx context.Context, p
 	panic("illegal state")
 }
 
-//var _ PacketDispatcher = &MemberPacketDispatcherTemplate{}
+// var _ PacketDispatcher = &MemberPacketDispatcherTemplate{}
 
 type MemberPacketDispatcherTemplate struct {
 }

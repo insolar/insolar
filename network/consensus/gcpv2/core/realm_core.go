@@ -282,7 +282,7 @@ func VerifyPacketRoute(ctx context.Context, packet transport.PacketParser, selfI
 
 func LazyPacketParse(packet transport.PacketParser) (transport.PacketParser, error) {
 
-	//this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
+	// this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
 	newPacket, err := packet.ParsePacketBody()
 	if err != nil {
 		return packet, err

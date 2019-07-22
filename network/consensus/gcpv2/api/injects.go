@@ -115,7 +115,7 @@ type RoundStateCallback interface {
 	OnPulseDetected()
 
 	OnFullRoundStarting()
-	//TODO pulse committed
+	// TODO pulse committed
 
 	// A special case for joiner, as it doesnt request NSG with PreparePulseChange
 	CommitPulseChangeByJoiner(report UpstreamReport, pd pulse.Data, activeCensus census.Operational)

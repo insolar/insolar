@@ -187,7 +187,7 @@ func (p *VectorBuilder) buildGlobulaStateHash(trusted bool, nodeID insolar.Short
 				return true, 0
 			}
 
-			if idx < 0 { //this is joiner check - it should only indicate "postpone"
+			if idx < 0 { // this is joiner check - it should only indicate "postpone"
 				return false, 0
 			}
 

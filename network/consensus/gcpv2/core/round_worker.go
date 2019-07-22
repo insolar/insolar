@@ -93,7 +93,7 @@ type RoundStateMachineWorker struct {
 	ctx      context.Context
 	cancelFn context.CancelFunc
 
-	runStatus  int32 //atomic
+	runStatus  int32 // atomic
 	roundState uint32
 
 	timeout <-chan time.Time
@@ -258,10 +258,10 @@ func (p *RoundStateMachineWorker) runToLastState() (exitState RoundState) {
 		}
 		p.cancelFn()
 
-		for cmd := range p.asyncCmd { //ensure that a queued command is read
+		for cmd := range p.asyncCmd { // ensure that a queued command is read
 			cmd()
 		}
-		for cmd := range p.syncCmd { //ensure that a queued command is read
+		for cmd := range p.syncCmd { // ensure that a queued command is read
 			cmd()
 		}
 		return RoundStopped

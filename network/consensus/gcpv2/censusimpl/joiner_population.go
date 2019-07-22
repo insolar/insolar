@@ -74,7 +74,7 @@ type OneJoinerPopulation struct {
 func (c *OneJoinerPopulation) Copy() ManyNodePopulation {
 	r := ManyNodePopulation{}
 	v := []updatableSlot{c.localNode}
-	v[0].index = 0 //removes Joiner status
+	v[0].index = 0 // removes Joiner status
 
 	r.makeFullCopyOf(v, &v[0])
 	return r
@@ -82,7 +82,7 @@ func (c *OneJoinerPopulation) Copy() ManyNodePopulation {
 
 func (c *OneJoinerPopulation) copyTo(p copyFromPopulation, fullCopy bool) {
 	v := []updatableSlot{c.localNode}
-	v[0].index = 0 //removes Joiner status
+	v[0].index = 0 // removes Joiner status
 
 	if fullCopy {
 		p.makeFullCopyOf(v, &v[0])
@@ -99,7 +99,7 @@ func (c *OneJoinerPopulation) FindProfile(nodeID insolar.ShortNodeID) profiles.A
 }
 
 func (c *OneJoinerPopulation) GetCount() int {
-	return 0 //joiner is not counted
+	return 0 // joiner is not counted
 }
 
 func (c *OneJoinerPopulation) GetProfiles() []profiles.ActiveNode {

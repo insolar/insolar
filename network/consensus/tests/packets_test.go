@@ -170,7 +170,7 @@ func (r *EmuPulsarNetPacket) String() string {
 
 // var _ gcp_v2.PhasePacketReader = &basePacket{}
 // var _ gcp_v2.MemberPacketReader = &basePacket{}
-//var _ cryptkit.SignedEvidenceHolder = &basePacket{}
+// var _ cryptkit.SignedEvidenceHolder = &basePacket{}
 
 type basePacket struct {
 	src           insolar.ShortNodeID
@@ -181,7 +181,7 @@ type basePacket struct {
 	isLeaving     bool
 	leaveReason   uint32
 	joiner        transport.JoinerAnnouncementReader
-	//joinerAnnouncer insolar.ShortNodeID
+	// joinerAnnouncer insolar.ShortNodeID
 	cloudIntro *proofs.NodeWelcomePackage
 
 	profiles.BriefCandidateProfile
@@ -229,12 +229,12 @@ func (r *basePacket) GetJoinerSecret() cryptkit.DigestHolder {
 	return r.cloudIntro.JoinerSecret
 }
 
-//func (r *basePacket) GetJoinerIntroducedByID() insolar.ShortNodeID {
+// func (r *basePacket) GetJoinerIntroducedByID() insolar.ShortNodeID {
 //	if r.joiner == nil {
 //		return insolar.AbsentShortNodeID
 //	}
 //	return r.joinerAnnouncer
-//}
+// }
 
 func (r *basePacket) ParsePacketBody() (transport.PacketParser, error) {
 	return nil, nil

@@ -60,7 +60,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-//TODO
+// TODO
 /*func TestPickNextJoinCandidate(t *testing.T) {
 	require.Equal(t, nil, (&SequentialCandidateFeeder{}).PickNextJoinCandidate())
 

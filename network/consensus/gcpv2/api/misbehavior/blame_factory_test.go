@@ -121,7 +121,7 @@ func TestBlameError(t *testing.T) {
 	require.True(t, be.Error() != "")
 }
 
-func reportFunc(Report) interface{} {
+func reportFunc(_ Report) interface{} {
 	return 1
 }
 

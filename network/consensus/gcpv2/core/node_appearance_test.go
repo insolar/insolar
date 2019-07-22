@@ -72,8 +72,8 @@ func TestNewNodeAppearanceAsSelf(t *testing.T) {
 	callback := &nodeContext{}
 	r := NewNodeAppearanceAsSelf(lp, callback)
 
-	//TODO
-	//require.Equal(t, member.SelfTrust, r.trust)
+	// TODO
+	// require.Equal(t, member.SelfTrust, r.trust)
 
 	require.Equal(t, lp, r.profile)
 
@@ -90,8 +90,8 @@ func TestInit(t *testing.T) {
 
 	r.init(lp, callback, 0, phases.NewLocalPacketLimiter())
 
-	//TODO
-	//require.Equal(t, member.SelfTrust, r.trust)
+	// TODO
+	// require.Equal(t, member.SelfTrust, r.trust)
 
 	require.Equal(t, lp, r.profile)
 
@@ -323,14 +323,14 @@ func TestGetSignatureVerifier(t *testing.T) {
 
 func TestCreateSignatureVerifier(t *testing.T) {
 	t.Skipped() // TODO
-	//lp := profiles.NewLocalNodeMock(t)
-	//lp.LocalNodeProfileMock.Set(func() {})
-	//lp.GetPublicKeyStoreMock.Set(func() cryptkit.PublicKeyStore { return nil })
-	//callback := &nodeContext{}
-	//r := NewNodeAppearanceAsSelf(lp, callback)
+	// lp := profiles.NewLocalNodeMock(t)
+	// lp.LocalNodeProfileMock.Set(func() {})
+	// lp.GetPublicKeyStoreMock.Set(func() cryptkit.PublicKeyStore { return nil })
+	// callback := &nodeContext{}
+	// r := NewNodeAppearanceAsSelf(lp, callback)
 	//
-	//svf := cryptkit.NewSignatureVerifierFactoryMock(t)
-	//sv := cryptkit.NewSignatureVerifierMock(t)
-	//svf.GetSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
-	//require.Equal(t, sv, r.CreateSignatureVerifier(svf))
+	// svf := cryptkit.NewSignatureVerifierFactoryMock(t)
+	// sv := cryptkit.NewSignatureVerifierMock(t)
+	// svf.GetSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
+	// require.Equal(t, sv, r.CreateSignatureVerifier(svf))
 }

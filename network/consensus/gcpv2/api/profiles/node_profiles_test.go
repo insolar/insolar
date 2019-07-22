@@ -167,7 +167,7 @@ func TestEquals(t *testing.T) {
 	require.False(t, mp1.Equals(mp2))
 
 	mp2.RequestedPower = mp1.RequestedPower
-	//TODO
+	// TODO
 	/*she2 := proofs.NewNodeStateHashEvidenceMock(t)
 	mp2.StateEvidence = she2
 	nsh := proofs.NewNodeStateHashMock(t)
@@ -210,7 +210,7 @@ func TestMembershipProfileString(t *testing.T) {
 
 func TestEqualIntroProfiles(t *testing.T) {
 	require.False(t, EqualStaticProfiles(nil, nil))
-	//TODO
+	// TODO
 	/*p := NewNodeIntroProfileMock(t)
 	require.False(t, EqualStaticProfiles(p, nil))
 

@@ -87,7 +87,7 @@ func TestGetVersionedRegistries(t *testing.T) {
 	require.Equal(t, vr, pct.getVersionedRegistries())
 }
 
-//TODO
+// TODO
 /*func TestNewPrimingCensus(t *testing.T) {
 	sp1 := profiles.NewStaticProfileMock(t)
 	sp1.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
@@ -218,7 +218,7 @@ func TestPCTCreateBuilder(t *testing.T) {
 	builder := pct.CreateBuilder(pn, false)
 	require.Equal(t, pn, builder.GetPulseNumber())
 
-	//TODO
+	// TODO
 	/*builder = pct.CreateBuilder(pn, true)
 	require.Equal(t, pn, builder.GetPulseNumber())*/
 }
@@ -341,7 +341,7 @@ func TestECTCreateBuilder(t *testing.T) {
 	builder := ect.CreateBuilder(pn, false)
 	require.Equal(t, pn, builder.GetPulseNumber())
 
-	//TODO
+	// TODO
 	/*builder = ect.CreateBuilder(pn, true)
 	require.Equal(t, pn, builder.GetPulseNumber())*/
 }
@@ -353,7 +353,7 @@ func TestGetPrevious(t *testing.T) {
 }
 
 func TestMakeActive(t *testing.T) {
-	//ect := ExpectedCensusTemplate{}
+	// ect := ExpectedCensusTemplate{}
 	chronicles := &localChronicles{}
 	ect := ExpectedCensusTemplate{chronicles: chronicles}
 	pd := pulse.Data{PulseNumber: pulse.Number(1)}

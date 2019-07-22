@@ -66,11 +66,11 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
 )
 
-func NewRealmPurgatory(population RealmPopulation, pf profiles.Factory, svf cryptkit.SignatureVerifierFactory,
+func NewRealmPurgatory(population RealmPopulation, _ profiles.Factory, svf cryptkit.SignatureVerifierFactory,
 	callback *nodeContext, postponedPacketFn packetrecorder.PostponedPacketFunc) RealmPurgatory {
 	return RealmPurgatory{
 		population: population,
-		//profileFactory:    pf,
+		// profileFactory:    pf,
 		svFactory:         svf,
 		callback:          callback,
 		postponedPacketFn: postponedPacketFn,
@@ -93,7 +93,7 @@ type AnnouncingMember interface {
 type RealmPurgatory struct {
 	population RealmPopulation
 	svFactory  cryptkit.SignatureVerifierFactory
-	//profileFactory    profiles.Factory
+	// profileFactory    profiles.Factory
 	postponedPacketFn packetrecorder.PostponedPacketFunc
 
 	callback *nodeContext
@@ -106,13 +106,13 @@ type RealmPurgatory struct {
 
 	phantomByID map[insolar.ShortNodeID]*NodePhantom
 
-	//phantomByEP map[string]*NodePhantom
+	// phantomByEP map[string]*NodePhantom
 }
 
-//type PurgatoryNodeState int
+// type PurgatoryNodeState int
 //
-//const PurgatoryDuplicatePK PurgatoryNodeState = -1
-//const PurgatoryExistingMember PurgatoryNodeState = -2
+// const PurgatoryDuplicatePK PurgatoryNodeState = -1
+// const PurgatoryExistingMember PurgatoryNodeState = -2
 
 func (p *RealmPurgatory) GetPhantomNode(id insolar.ShortNodeID) *NodePhantom {
 	p.rw.RLock()
@@ -136,7 +136,7 @@ func (p *RealmPurgatory) getOrCreatePhantom(id insolar.ShortNodeID) AnnouncingMe
 
 	np, ok := p.phantomByID[id]
 	if ok {
-		if np == nil { //avoid interface-nil
+		if np == nil { // avoid interface-nil
 			return nil
 		}
 		return np
@@ -173,10 +173,10 @@ func (p *RealmPurgatory) getOrCreateMember(id insolar.ShortNodeID) AnnouncingMem
 		return np
 	}
 
-	//NB! np == NIL - it means that phantom was moved to a normal population
+	// NB! np == NIL - it means that phantom was moved to a normal population
 	na = p.population.GetNodeAppearance(id)
 	if na == nil {
-		//nil entry in the purgatory means that there MUST have be a relevant NodeAppearance
+		// nil entry in the purgatory means that there MUST have be a relevant NodeAppearance
 		panic("illegal state")
 	}
 	return na
@@ -199,7 +199,7 @@ func (p *RealmPurgatory) getMember(id insolar.ShortNodeID, introducedBy insolar.
 
 	na = p.population.GetNodeAppearance(id)
 	if na == nil {
-		//nil entry in the purgatory means that there MUST have be a relevant NodeAppearance
+		// nil entry in the purgatory means that there MUST have be a relevant NodeAppearance
 		panic("illegal state")
 	}
 	return na
@@ -221,8 +221,8 @@ func (p *RealmPurgatory) ascendFromPurgatory(ctx context.Context, id insolar.Sho
 
 	p.rw.Lock()
 	defer p.rw.Unlock()
-	p.phantomByID[id] = nil //leave marker
-	//delete(p.phantomByEP, ...)
+	p.phantomByID[id] = nil // leave marker
+	// delete(p.phantomByEP, ...)
 	na, _ = p.population.AddToDynamics(na)
 	if na.IsJoiner() {
 		_, err := na.ApplyNodeStateHashEvidenceForJoiner()

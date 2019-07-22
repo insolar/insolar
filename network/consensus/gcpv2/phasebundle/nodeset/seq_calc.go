@@ -91,9 +91,9 @@ func (p *AnnouncementSequenceCalc) ForkSequenceOf(s AnnouncementSequenceCalc) {
 	if !p.IsEmpty() {
 		panic("illegal state")
 	}
-	//if s.IsEmpty() {
+	// if s.IsEmpty() {
 	//	panic("illegal value")
-	//}
+	// }
 
 	if s.digester != nil {
 		p.digester = s.digester.ForkSequence()

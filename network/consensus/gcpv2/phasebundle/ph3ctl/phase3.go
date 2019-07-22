@@ -319,8 +319,8 @@ func (c *Phase3Controller) workerRescanForMissing(ctx context.Context, missing c
 			}
 			// TODO
 		case <-missing:
-			//TODO - rescan vector and send results
-			//c.queuePh3Recv <- d
+			// TODO - rescan vector and send results
+			// c.queuePh3Recv <- d
 		}
 	}
 }
@@ -329,7 +329,7 @@ func (c *Phase3Controller) workerSendFastPhase3(ctx context.Context) {
 
 	// TODO vector calculation for fast options
 	// handling of fast phase3 may also require a separate vector inspector
-	//c.workerSendPhase3(ctx, nil, c.packetPrepareOptions|transport.AlternativePhasePacket)
+	// c.workerSendPhase3(ctx, nil, c.packetPrepareOptions|transport.AlternativePhasePacket)
 }
 
 func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData statevector.Vector, options transport.PacketSendOptions) {
@@ -383,7 +383,7 @@ func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, localInspector 
 
 	// hasher := nodeset.NewFilteredSequenceHasher(c.R.GetDigestFactory(), localVector)
 
-	//alteredDoubtedGshCount := 0
+	// alteredDoubtedGshCount := 0
 	var consensusSelection consensus.Selection
 
 outer:
@@ -422,20 +422,20 @@ outer:
 				d = d.Reinspect(ctx, localInspector)
 				if !d.IsInspected() {
 					if d.HasMissingMembers() {
-						//loop it back to be picked by "case d.HasMissingMembers()"
+						// loop it back to be picked by "case d.HasMissingMembers()"
 						c.queuePh3Recv <- d
 					}
 					// TODO heavy inspection with hash recalculations should be running on a limited pool
-					//go func() {
+					// go func() {
 					d.Inspect(ctx)
 					if !d.IsInspected() {
 						inslogger.FromContext(ctx).Errorf("unable to inspect vector: %v", d)
 						break
-						//} else {
+						// } else {
 						//	c.queuePh3Recv <- d
 					}
-					//}()
-					//break // do chasing
+					// }()
+					// break // do chasing
 				}
 				fallthrough
 			default:
@@ -508,11 +508,11 @@ outer:
 				consensusSelection = c.consensusStrategy.TrySelectOnAdded(&verifiedStatTbl,
 					d.GetNode().GetProfile().GetStatic(), nodeStats)
 
-				//remainingNodes--
+				// remainingNodes--
 
-				//if vr.AnyOf(nodeset.NvrDoubtedAlteredNodeSet) {
+				// if vr.AnyOf(nodeset.NvrDoubtedAlteredNodeSet) {
 				//	alteredDoubtedGshCount++
-				//}
+				// }
 			}
 
 			if consensusSelection != nil {

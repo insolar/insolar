@@ -89,7 +89,7 @@ type PhasedRoundController struct {
 	/* Derived from the provided externally - set at init() or start(). Don't need mutex */
 	chronicle api.ConsensusChronicles
 	bundle    PhaseControllersBundle
-	//fullCancel     context.CancelFunc /* cancels prepareCancel as well */
+	// fullCancel     context.CancelFunc /* cancels prepareCancel as well */
 	prepareCancel  context.CancelFunc
 	prevPulseRound api.RoundController
 
@@ -211,7 +211,7 @@ func (r *PhasedRoundController) StopConsensusRound() {
 	r.rw.Lock()
 	defer r.rw.Unlock()
 	r.roundWorker.Stop()
-	r._onConsensusFinished() //double-check, just to be on a safe side
+	r._onConsensusFinished() // double-check, just to be on a safe side
 }
 
 func (r *PhasedRoundController) IsRunning() bool {
@@ -259,9 +259,9 @@ func (r *PhasedRoundController) startFullRealm() {
 }
 
 func (r *PhasedRoundController) HandlePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound) (bool, error) {
-	//if !r.roundWorker.IsRunning() {
+	// if !r.roundWorker.IsRunning() {
 	//	return false, nil
-	//}
+	// }
 	err := r.handlePacket(ctx, packet, from, packetrecorder.DefaultVerify)
 	return r.roundWorker.IsRunning(), err
 }
@@ -275,15 +275,15 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 
 	switch {
 	case filterPN == pn:
-		//this is for us
+		// this is for us
 	case filterPN.IsUnknown() || pn.IsUnknown():
-		//we will take any packet or it is a special packet
+		// we will take any packet or it is a special packet
 	case !nextPN.IsUnknown() && nextPN == pn:
-		//time for the next round?
+		// time for the next round?
 		r.roundWorker.onNextPulse(pn)
 		return errors2.NewNextPulseArrivedError(pn)
 	case filterPN > pn:
-		//something from a previous round?
+		// something from a previous round?
 		if prev != nil {
 			_, err := prev.HandlePacket(ctx, packet, from)
 			// don't let pulse errors to go through - it will mess up the consensus controller
@@ -302,7 +302,7 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 		if !pn.IsUnknown() {
 			r.roundWorker.OnPulseDetected()
 		}
-		return prep.dispatchPacket(ctx, packet, from, packetrecorder.DefaultVerify) //prep realm can't inherit any flags
+		return prep.dispatchPacket(ctx, packet, from, packetrecorder.DefaultVerify) // prep realm can't inherit any flags
 	}
 	return r.realm.dispatchPacket(ctx, packet, from, verifyFlags)
 }

@@ -80,8 +80,8 @@ type PrepRealm struct {
 	/* Derived from the provided externally - set at init() or start(). Don't need mutex */
 	packetDispatchers []PacketDispatcher
 	packetRecorder    packetrecorder.PacketRecorder
-	//queueToFull       chan packetrecorder.PostponedPacket
-	//phase2ExtLimit    uint8
+	// queueToFull       chan packetrecorder.PostponedPacket
+	// phase2ExtLimit    uint8
 
 	limiters sync.Map
 
@@ -150,7 +150,7 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 	if int(pt) < len(p.packetDispatchers) {
 		pd := p.packetDispatchers[pt]
 		if pd != nil {
-			//this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
+			// this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
 			var err error
 			packet, err = LazyPacketParse(packet)
 			if err != nil {
