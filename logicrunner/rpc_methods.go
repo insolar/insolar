@@ -38,6 +38,7 @@ import (
 type ProxyImplementation interface {
 	GetCode(context.Context, *Transcript, rpctypes.UpGetCodeReq, *rpctypes.UpGetCodeResp) error
 	RouteCall(context.Context, *Transcript, rpctypes.UpRouteReq, *rpctypes.UpRouteResp) error
+	Save(context.Context, *Transcript, rpctypes.UpSaveReq, *rpctypes.UpSaveResp) error
 	SaveAsChild(context.Context, *Transcript, rpctypes.UpSaveAsChildReq, *rpctypes.UpSaveAsChildResp) error
 	SaveAsDelegate(context.Context, *Transcript, rpctypes.UpSaveAsDelegateReq, *rpctypes.UpSaveAsDelegateResp) error
 	GetObjChildrenIterator(context.Context, *Transcript, rpctypes.UpGetObjChildrenIteratorReq, *rpctypes.UpGetObjChildrenIteratorResp) error
@@ -105,6 +106,11 @@ func (m *RPCMethods) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteRes
 	}
 
 	return impl.RouteCall(current.Context, current, req, rep)
+}
+
+// Save is an RPC saving data as memory of a contract
+func (m *RPCMethods) Save(req rpctypes.UpSaveReq, rep *rpctypes.UpSaveResp) error {
+	panic("implement me")
 }
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
@@ -237,6 +243,13 @@ func (m *executionProxyImplementation) RouteCall(
 	outgoingReqRef := insolar.NewReference(*outgoingReqID)
 	reqResult := newRequestResult(rep.Result, req.Callee)
 	return m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
+}
+
+// Save is an RPC saving data as memory of a contract
+func (m *executionProxyImplementation) Save(
+	ctx context.Context, current *Transcript, req rpctypes.UpSaveReq, rep *rpctypes.UpSaveResp,
+) error {
+	panic("implement me")
 }
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
@@ -449,6 +462,12 @@ func (m *validationProxyImplementation) RouteCall(
 	}
 
 	return nil
+}
+
+func (m *validationProxyImplementation) Save(
+	ctx context.Context, current *Transcript, req rpctypes.UpSaveReq, rep *rpctypes.UpSaveResp,
+) error {
+	panic("implement me")
 }
 
 func (m *validationProxyImplementation) SaveAsChild(

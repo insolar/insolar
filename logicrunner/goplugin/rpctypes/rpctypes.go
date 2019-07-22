@@ -154,6 +154,19 @@ type UpGetDelegateResp struct {
 	Object insolar.Reference
 }
 
+// UpSaveReq is a set of arguments for SaveAsChild RPC in goplugin
+type UpSaveReq struct {
+	UpBaseReq
+	Prototype       insolar.Reference
+	ConstructorName string
+	ArgsSerialized  []byte
+}
+
+// UpSaveResp is a set of arguments for SaveAsChild RPC in goplugin
+type UpSaveResp struct {
+	Reference *insolar.Reference
+}
+
 // UpDeactivateObjectReq is a set of arguments for DeactivateObject RPC in goplugin
 type UpDeactivateObjectReq struct {
 	UpBaseReq

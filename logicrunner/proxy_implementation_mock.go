@@ -45,6 +45,11 @@ type ProxyImplementationMock struct {
 	RouteCallPreCounter uint64
 	RouteCallMock       mProxyImplementationMockRouteCall
 
+	SaveFunc       func(p context.Context, p1 *Transcript, p2 rpctypes.UpSaveReq, p3 *rpctypes.UpSaveResp) (r error)
+	SaveCounter    uint64
+	SavePreCounter uint64
+	SaveMock       mProxyImplementationMockSave
+
 	SaveAsChildFunc       func(p context.Context, p1 *Transcript, p2 rpctypes.UpSaveAsChildReq, p3 *rpctypes.UpSaveAsChildResp) (r error)
 	SaveAsChildCounter    uint64
 	SaveAsChildPreCounter uint64
@@ -69,6 +74,7 @@ func NewProxyImplementationMock(t minimock.Tester) *ProxyImplementationMock {
 	m.GetDelegateMock = mProxyImplementationMockGetDelegate{mock: m}
 	m.GetObjChildrenIteratorMock = mProxyImplementationMockGetObjChildrenIterator{mock: m}
 	m.RouteCallMock = mProxyImplementationMockRouteCall{mock: m}
+	m.SaveMock = mProxyImplementationMockSave{mock: m}
 	m.SaveAsChildMock = mProxyImplementationMockSaveAsChild{mock: m}
 	m.SaveAsDelegateMock = mProxyImplementationMockSaveAsDelegate{mock: m}
 
@@ -825,6 +831,156 @@ func (m *ProxyImplementationMock) RouteCallFinished() bool {
 	return true
 }
 
+type mProxyImplementationMockSave struct {
+	mock              *ProxyImplementationMock
+	mainExpectation   *ProxyImplementationMockSaveExpectation
+	expectationSeries []*ProxyImplementationMockSaveExpectation
+}
+
+type ProxyImplementationMockSaveExpectation struct {
+	input  *ProxyImplementationMockSaveInput
+	result *ProxyImplementationMockSaveResult
+}
+
+type ProxyImplementationMockSaveInput struct {
+	p  context.Context
+	p1 *Transcript
+	p2 rpctypes.UpSaveReq
+	p3 *rpctypes.UpSaveResp
+}
+
+type ProxyImplementationMockSaveResult struct {
+	r error
+}
+
+//Expect specifies that invocation of ProxyImplementation.Save is expected from 1 to Infinity times
+func (m *mProxyImplementationMockSave) Expect(p context.Context, p1 *Transcript, p2 rpctypes.UpSaveReq, p3 *rpctypes.UpSaveResp) *mProxyImplementationMockSave {
+	m.mock.SaveFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ProxyImplementationMockSaveExpectation{}
+	}
+	m.mainExpectation.input = &ProxyImplementationMockSaveInput{p, p1, p2, p3}
+	return m
+}
+
+//Return specifies results of invocation of ProxyImplementation.Save
+func (m *mProxyImplementationMockSave) Return(r error) *ProxyImplementationMock {
+	m.mock.SaveFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ProxyImplementationMockSaveExpectation{}
+	}
+	m.mainExpectation.result = &ProxyImplementationMockSaveResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of ProxyImplementation.Save is expected once
+func (m *mProxyImplementationMockSave) ExpectOnce(p context.Context, p1 *Transcript, p2 rpctypes.UpSaveReq, p3 *rpctypes.UpSaveResp) *ProxyImplementationMockSaveExpectation {
+	m.mock.SaveFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ProxyImplementationMockSaveExpectation{}
+	expectation.input = &ProxyImplementationMockSaveInput{p, p1, p2, p3}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *ProxyImplementationMockSaveExpectation) Return(r error) {
+	e.result = &ProxyImplementationMockSaveResult{r}
+}
+
+//Set uses given function f as a mock of ProxyImplementation.Save method
+func (m *mProxyImplementationMockSave) Set(f func(p context.Context, p1 *Transcript, p2 rpctypes.UpSaveReq, p3 *rpctypes.UpSaveResp) (r error)) *ProxyImplementationMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.SaveFunc = f
+	return m.mock
+}
+
+//Save implements github.com/insolar/insolar/logicrunner.ProxyImplementation interface
+func (m *ProxyImplementationMock) Save(p context.Context, p1 *Transcript, p2 rpctypes.UpSaveReq, p3 *rpctypes.UpSaveResp) (r error) {
+	counter := atomic.AddUint64(&m.SavePreCounter, 1)
+	defer atomic.AddUint64(&m.SaveCounter, 1)
+
+	if len(m.SaveMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.SaveMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ProxyImplementationMock.Save. %v %v %v %v", p, p1, p2, p3)
+			return
+		}
+
+		input := m.SaveMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ProxyImplementationMockSaveInput{p, p1, p2, p3}, "ProxyImplementation.Save got unexpected parameters")
+
+		result := m.SaveMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the ProxyImplementationMock.Save")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.SaveMock.mainExpectation != nil {
+
+		input := m.SaveMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, ProxyImplementationMockSaveInput{p, p1, p2, p3}, "ProxyImplementation.Save got unexpected parameters")
+		}
+
+		result := m.SaveMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the ProxyImplementationMock.Save")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.SaveFunc == nil {
+		m.t.Fatalf("Unexpected call to ProxyImplementationMock.Save. %v %v %v %v", p, p1, p2, p3)
+		return
+	}
+
+	return m.SaveFunc(p, p1, p2, p3)
+}
+
+//SaveMinimockCounter returns a count of ProxyImplementationMock.SaveFunc invocations
+func (m *ProxyImplementationMock) SaveMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.SaveCounter)
+}
+
+//SaveMinimockPreCounter returns the value of ProxyImplementationMock.Save invocations
+func (m *ProxyImplementationMock) SaveMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.SavePreCounter)
+}
+
+//SaveFinished returns true if mock invocations count is ok
+func (m *ProxyImplementationMock) SaveFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.SaveMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.SaveCounter) == uint64(len(m.SaveMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.SaveMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.SaveCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.SaveFunc != nil {
+		return atomic.LoadUint64(&m.SaveCounter) > 0
+	}
+
+	return true
+}
+
 type mProxyImplementationMockSaveAsChild struct {
 	mock              *ProxyImplementationMock
 	mainExpectation   *ProxyImplementationMockSaveAsChildExpectation
@@ -1149,6 +1305,10 @@ func (m *ProxyImplementationMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ProxyImplementationMock.RouteCall")
 	}
 
+	if !m.SaveFinished() {
+		m.t.Fatal("Expected call to ProxyImplementationMock.Save")
+	}
+
 	if !m.SaveAsChildFinished() {
 		m.t.Fatal("Expected call to ProxyImplementationMock.SaveAsChild")
 	}
@@ -1194,6 +1354,10 @@ func (m *ProxyImplementationMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ProxyImplementationMock.RouteCall")
 	}
 
+	if !m.SaveFinished() {
+		m.t.Fatal("Expected call to ProxyImplementationMock.Save")
+	}
+
 	if !m.SaveAsChildFinished() {
 		m.t.Fatal("Expected call to ProxyImplementationMock.SaveAsChild")
 	}
@@ -1221,6 +1385,7 @@ func (m *ProxyImplementationMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetDelegateFinished()
 		ok = ok && m.GetObjChildrenIteratorFinished()
 		ok = ok && m.RouteCallFinished()
+		ok = ok && m.SaveFinished()
 		ok = ok && m.SaveAsChildFinished()
 		ok = ok && m.SaveAsDelegateFinished()
 
@@ -1249,6 +1414,10 @@ func (m *ProxyImplementationMock) MinimockWait(timeout time.Duration) {
 
 			if !m.RouteCallFinished() {
 				m.t.Error("Expected call to ProxyImplementationMock.RouteCall")
+			}
+
+			if !m.SaveFinished() {
+				m.t.Error("Expected call to ProxyImplementationMock.Save")
 			}
 
 			if !m.SaveAsChildFinished() {
@@ -1288,6 +1457,10 @@ func (m *ProxyImplementationMock) AllMocksCalled() bool {
 	}
 
 	if !m.RouteCallFinished() {
+		return false
+	}
+
+	if !m.SaveFinished() {
 		return false
 	}
 

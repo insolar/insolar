@@ -31,35 +31,35 @@ func TestReferences(t *testing.T) {
 	}{
 		insolar.GenesisNameRootDomain: {
 			got:    ContractRootDomain,
-			expect: "1tJBs4NHBSTZKqGET49Se31ken7i6oVhEfsnVyu6VK.11111111111111111111111111111111",
+			expect: "1tJDdt2rswYc7W7uKgCMPNJuQsVj98CMEQjMdNiD3P.11111111111111111111111111111111",
 		},
 		insolar.GenesisNameNodeDomain: {
 			got:    ContractNodeDomain,
-			expect: "1tJBxdoc3hAM5aLStE4AWqVhx4DexNp85WdAWkZgQ3.11111111111111111111111111111111",
+			expect: "1tJBuVNvfN2aobkUSx2LYfdbrYfCKCuvMTqToBZcPX.11111111111111111111111111111111",
 		},
 		insolar.GenesisNameNodeRecord: {
 			got:    ContractNodeRecord,
-			expect: "1tJBtBaT1r27eYNfFFkeKWpcp39ahVXaEfdaVDVT7K.11111111111111111111111111111111",
+			expect: "1tJChm5qnRjXPhD69dBKLQg4YVJ3krQc8TYVYRmte5.11111111111111111111111111111111",
 		},
 		insolar.GenesisNameRootMember: {
 			got:    ContractRootMember,
-			expect: "1tJBqpFDFVRnHghz4bFtZx5Cidnf3U5vvVqgxMBKKX.11111111111111111111111111111111",
+			expect: "1tJDMkBFgzhx8MNLujfmwVjm1icuVmwU43gTeH3bfQ.11111111111111111111111111111111",
 		},
 		insolar.GenesisNameRootWallet: {
 			got:    ContractRootWallet,
-			expect: "1tJBjgjkRDcjiqCt14hLN5bNCCUnxg9PcH3naR5vbL.11111111111111111111111111111111",
+			expect: "1tJDSUusVg63maCCV4JaFFP1qyDj7GV66De88q4A41.11111111111111111111111111111111",
 		},
 		insolar.GenesisNameDeposit: {
 			got:    ContractDeposit,
-			expect: "1tJDXFp5aTKYSX4u1k9JY1bhEDhPqyggagprNtdvir.11111111111111111111111111111111",
+			expect: "1tJE2dgG45oigzahQaJxdeqhqHJzsY26aRecDwd3ck.11111111111111111111111111111111",
 		},
 		insolar.GenesisNameTariff: {
 			got:    ContractTariff,
-			expect: "1tJDwWoTjy1WArGJ8vWWyooAXGmtKuDxTyEqvNwTk7.11111111111111111111111111111111",
+			expect: "1tJCajdax8rhWhdtmhffz3sagQmEzqE81dthtkca12.11111111111111111111111111111111",
 		},
 		insolar.GenesisNameCostCenter: {
 			got:    ContractCostCenter,
-			expect: "1tJCwPq32u3rFaTx7akLTcYLMa9FLTUrz2ykV1Md8t.11111111111111111111111111111111",
+			expect: "1tJDRFyccUb2bvoxVCgGf4eZcbsFSfT9PY3FArJ8nv.11111111111111111111111111111111",
 		},
 	}
 

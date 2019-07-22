@@ -26,7 +26,7 @@ import (
 )
 
 var (
-	idHex  = "00010001124af4e7065c7e57e2d39f4856d628a8d21ba220e1a972cf2d482f7e"
+	idHex  = "00010001bea7ac35bd94f012c9292535c4d491e21e619cf4c9f6b30161c48272"
 	refHex = idHex + "0000000000000000000000000000000000000000000000000000000000000000"
 )
 
@@ -48,7 +48,7 @@ func TestReference(t *testing.T) {
 func TestGenesisRef(t *testing.T) {
 	var (
 		pubKey    = "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEf+vsMVU75xH8uj5WRcOqYdHXtaHH\nN0na2RVQ1xbhsVybYPae3ujNHeQCPj+RaJyMVhb6Aj/AOsTTOPFswwIDAQ==\n-----END PUBLIC KEY-----\n"
-		pubKeyRef = "1tJCZzjxdewre9TxN2AFKMWqiyVhq7btgNgLjLQFfY.11111111111111111111111111111111"
+		pubKeyRef = "1tJDWGYtmy9Mcmx7Jtb5C9FYnm6qUjfiMJ8nvdge56.11111111111111111111111111111111"
 	)
 	genesisRef := GenesisRef(pubKey)
 	require.Equal(t, pubKeyRef, genesisRef.String(), "reference by name always the same")
