@@ -60,7 +60,7 @@ type CloudStateHashMock struct {
 	ReadPreCounter uint64
 	ReadMock       mCloudStateHashMockRead
 
-	SignWithFunc       func(p cryptkit.DigestSigner) (r cryptkit.SignedDigest)
+	SignWithFunc       func(p cryptkit.DigestSigner) (r cryptkit.SignedDigestHolder)
 	SignWithCounter    uint64
 	SignWithPreCounter uint64
 	SignWithMock       mCloudStateHashMockSignWith
@@ -1210,7 +1210,7 @@ type CloudStateHashMockSignWithInput struct {
 }
 
 type CloudStateHashMockSignWithResult struct {
-	r cryptkit.SignedDigest
+	r cryptkit.SignedDigestHolder
 }
 
 //Expect specifies that invocation of CloudStateHash.SignWith is expected from 1 to Infinity times
@@ -1226,7 +1226,7 @@ func (m *mCloudStateHashMockSignWith) Expect(p cryptkit.DigestSigner) *mCloudSta
 }
 
 //Return specifies results of invocation of CloudStateHash.SignWith
-func (m *mCloudStateHashMockSignWith) Return(r cryptkit.SignedDigest) *CloudStateHashMock {
+func (m *mCloudStateHashMockSignWith) Return(r cryptkit.SignedDigestHolder) *CloudStateHashMock {
 	m.mock.SignWithFunc = nil
 	m.expectationSeries = nil
 
@@ -1248,12 +1248,12 @@ func (m *mCloudStateHashMockSignWith) ExpectOnce(p cryptkit.DigestSigner) *Cloud
 	return expectation
 }
 
-func (e *CloudStateHashMockSignWithExpectation) Return(r cryptkit.SignedDigest) {
+func (e *CloudStateHashMockSignWithExpectation) Return(r cryptkit.SignedDigestHolder) {
 	e.result = &CloudStateHashMockSignWithResult{r}
 }
 
 //Set uses given function f as a mock of CloudStateHash.SignWith method
-func (m *mCloudStateHashMockSignWith) Set(f func(p cryptkit.DigestSigner) (r cryptkit.SignedDigest)) *CloudStateHashMock {
+func (m *mCloudStateHashMockSignWith) Set(f func(p cryptkit.DigestSigner) (r cryptkit.SignedDigestHolder)) *CloudStateHashMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1262,7 +1262,7 @@ func (m *mCloudStateHashMockSignWith) Set(f func(p cryptkit.DigestSigner) (r cry
 }
 
 //SignWith implements github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.CloudStateHash interface
-func (m *CloudStateHashMock) SignWith(p cryptkit.DigestSigner) (r cryptkit.SignedDigest) {
+func (m *CloudStateHashMock) SignWith(p cryptkit.DigestSigner) (r cryptkit.SignedDigestHolder) {
 	counter := atomic.AddUint64(&m.SignWithPreCounter, 1)
 	defer atomic.AddUint64(&m.SignWithCounter, 1)
 

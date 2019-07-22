@@ -60,7 +60,7 @@ type GlobulaStateHashMock struct {
 	ReadPreCounter uint64
 	ReadMock       mGlobulaStateHashMockRead
 
-	SignWithFunc       func(p cryptkit.DigestSigner) (r cryptkit.SignedDigest)
+	SignWithFunc       func(p cryptkit.DigestSigner) (r cryptkit.SignedDigestHolder)
 	SignWithCounter    uint64
 	SignWithPreCounter uint64
 	SignWithMock       mGlobulaStateHashMockSignWith
@@ -1210,7 +1210,7 @@ type GlobulaStateHashMockSignWithInput struct {
 }
 
 type GlobulaStateHashMockSignWithResult struct {
-	r cryptkit.SignedDigest
+	r cryptkit.SignedDigestHolder
 }
 
 //Expect specifies that invocation of GlobulaStateHash.SignWith is expected from 1 to Infinity times
@@ -1226,7 +1226,7 @@ func (m *mGlobulaStateHashMockSignWith) Expect(p cryptkit.DigestSigner) *mGlobul
 }
 
 //Return specifies results of invocation of GlobulaStateHash.SignWith
-func (m *mGlobulaStateHashMockSignWith) Return(r cryptkit.SignedDigest) *GlobulaStateHashMock {
+func (m *mGlobulaStateHashMockSignWith) Return(r cryptkit.SignedDigestHolder) *GlobulaStateHashMock {
 	m.mock.SignWithFunc = nil
 	m.expectationSeries = nil
 
@@ -1248,12 +1248,12 @@ func (m *mGlobulaStateHashMockSignWith) ExpectOnce(p cryptkit.DigestSigner) *Glo
 	return expectation
 }
 
-func (e *GlobulaStateHashMockSignWithExpectation) Return(r cryptkit.SignedDigest) {
+func (e *GlobulaStateHashMockSignWithExpectation) Return(r cryptkit.SignedDigestHolder) {
 	e.result = &GlobulaStateHashMockSignWithResult{r}
 }
 
 //Set uses given function f as a mock of GlobulaStateHash.SignWith method
-func (m *mGlobulaStateHashMockSignWith) Set(f func(p cryptkit.DigestSigner) (r cryptkit.SignedDigest)) *GlobulaStateHashMock {
+func (m *mGlobulaStateHashMockSignWith) Set(f func(p cryptkit.DigestSigner) (r cryptkit.SignedDigestHolder)) *GlobulaStateHashMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1262,7 +1262,7 @@ func (m *mGlobulaStateHashMockSignWith) Set(f func(p cryptkit.DigestSigner) (r c
 }
 
 //SignWith implements github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.GlobulaStateHash interface
-func (m *GlobulaStateHashMock) SignWith(p cryptkit.DigestSigner) (r cryptkit.SignedDigest) {
+func (m *GlobulaStateHashMock) SignWith(p cryptkit.DigestSigner) (r cryptkit.SignedDigestHolder) {
 	counter := atomic.AddUint64(&m.SignWithPreCounter, 1)
 	defer atomic.AddUint64(&m.SignWithCounter, 1)
 
