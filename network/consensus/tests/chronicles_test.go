@@ -107,12 +107,12 @@ func NewEmuNodeIntroByName(id int, name string) *EmuNodeIntro {
 	var sr member.SpecialRole
 	var pr member.PrimaryRole
 	switch name[0] {
-	case 'h':
+	case 'H':
 		pr = member.PrimaryRoleHeavyMaterial
 		sr = member.SpecialRoleDiscovery
-	case 'l':
+	case 'L':
 		pr = member.PrimaryRoleLightMaterial
-	case 'v':
+	case 'V':
 		pr = member.PrimaryRoleVirtual
 	default:
 		pr = member.PrimaryRoleNeutral

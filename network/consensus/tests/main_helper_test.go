@@ -135,10 +135,10 @@ func (p *emuNetworkBuilder) _connectEmuNode(nodes []profiles.StaticProfile, self
 func generateNameList(countNeutral, countHeavy, countLight, countVirtual int) []string {
 	r := make([]string, 0, countNeutral+countHeavy+countLight+countVirtual)
 
-	r = appendNameList(len(r), r, fmtNodeName, "n", countNeutral)
-	r = appendNameList(len(r), r, fmtNodeName, "h", countHeavy)
-	r = appendNameList(len(r), r, fmtNodeName, "l", countLight)
-	r = appendNameList(len(r), r, fmtNodeName, "v", countVirtual)
+	r = appendNameList(len(r), r, fmtNodeName, "N", countNeutral)
+	r = appendNameList(len(r), r, fmtNodeName, "H", countHeavy)
+	r = appendNameList(len(r), r, fmtNodeName, "L", countLight)
+	r = appendNameList(len(r), r, fmtNodeName, "V", countVirtual)
 
 	return r
 }
