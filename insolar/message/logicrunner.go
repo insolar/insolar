@@ -26,6 +26,7 @@ import (
 type ReturnResults struct {
 	Target     insolar.Reference
 	RequestRef insolar.Reference
+	Reason     insolar.Reference
 	Reply      insolar.Reply
 	Error      string
 }
@@ -299,7 +300,9 @@ func (m *AdditionalCallFromPreviousExecutor) Type() insolar.MessageType {
 
 // StillExecuting
 type StillExecuting struct {
-	Reference insolar.Reference // object we still executing
+	Reference   insolar.Reference // object we still executing
+	Executor    insolar.Reference
+	RequestRefs []insolar.Reference
 }
 
 func (se *StillExecuting) GetCaller() *insolar.Reference {

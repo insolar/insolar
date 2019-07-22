@@ -21,49 +21,50 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
 
-type GetJet struct {
+type HasPendings struct {
 	message  payload.Meta
 	objectID insolar.ID
-	pulse    insolar.PulseNumber
 
 	dep struct {
-		jets   jet.Accessor
+		index  object.IndexAccessor
 		sender bus.Sender
 	}
 }
 
-func (p *GetJet) Dep(
-	jets jet.Accessor,
-	sender bus.Sender,
-) {
-	p.dep.jets = jets
-	p.dep.sender = sender
-}
-
-func NewGetJet(msg payload.Meta, objectID insolar.ID, pulse insolar.PulseNumber) *GetJet {
-	return &GetJet{
+func NewHasPendings(msg payload.Meta, objectID insolar.ID) *HasPendings {
+	return &HasPendings{
 		message:  msg,
 		objectID: objectID,
-		pulse:    pulse,
 	}
 }
 
-func (p *GetJet) Proceed(ctx context.Context) error {
-	jetID, actual := p.dep.jets.ForID(ctx, p.pulse, p.objectID)
+func (hp *HasPendings) Dep(
+	index object.IndexAccessor,
+	sender bus.Sender,
+) {
+	hp.dep.index = index
+	hp.dep.sender = sender
+}
 
-	msg, err := payload.NewMessage(&payload.Jet{
-		JetID:  jetID,
-		Actual: actual,
-	})
+func (hp *HasPendings) Proceed(ctx context.Context) error {
+	idx, err := hp.dep.index.ForID(ctx, flow.Pulse(ctx), hp.objectID)
 	if err != nil {
-		return errors.Wrap(err, "GetJet: failed to create reply")
+		return err
 	}
 
-	p.dep.sender.Reply(ctx, p.message, msg)
+	msg, err := payload.NewMessage(&payload.PendingsInfo{
+		HasPendings: idx.Lifeline.EarliestOpenRequest != nil && *idx.Lifeline.EarliestOpenRequest < flow.Pulse(ctx),
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to create reply")
+	}
+
+	hp.dep.sender.Reply(ctx, hp.message, msg)
 	return nil
 }

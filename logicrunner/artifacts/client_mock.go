@@ -61,10 +61,10 @@ type ClientMock struct {
 	GetPendingsPreCounter uint64
 	GetPendingsMock       mClientMockGetPendings
 
-	HasPendingRequestsFunc       func(p context.Context, p1 insolar.Reference) (r bool, r1 error)
-	HasPendingRequestsCounter    uint64
-	HasPendingRequestsPreCounter uint64
-	HasPendingRequestsMock       mClientMockHasPendingRequests
+	HasPendingsFunc       func(p context.Context, p1 insolar.Reference) (r bool, r1 error)
+	HasPendingsCounter    uint64
+	HasPendingsPreCounter uint64
+	HasPendingsMock       mClientMockHasPendings
 
 	InjectCodeDescriptorFunc       func(p insolar.Reference, p1 CodeDescriptor)
 	InjectCodeDescriptorCounter    uint64
@@ -123,7 +123,7 @@ func NewClientMock(t minimock.Tester) *ClientMock {
 	m.GetIncomingRequestMock = mClientMockGetIncomingRequest{mock: m}
 	m.GetObjectMock = mClientMockGetObject{mock: m}
 	m.GetPendingsMock = mClientMockGetPendings{mock: m}
-	m.HasPendingRequestsMock = mClientMockHasPendingRequests{mock: m}
+	m.HasPendingsMock = mClientMockHasPendings{mock: m}
 	m.InjectCodeDescriptorMock = mClientMockInjectCodeDescriptor{mock: m}
 	m.InjectFinishMock = mClientMockInjectFinish{mock: m}
 	m.InjectObjectDescriptorMock = mClientMockInjectObjectDescriptor{mock: m}
@@ -1350,92 +1350,92 @@ func (m *ClientMock) GetPendingsFinished() bool {
 	return true
 }
 
-type mClientMockHasPendingRequests struct {
+type mClientMockHasPendings struct {
 	mock              *ClientMock
-	mainExpectation   *ClientMockHasPendingRequestsExpectation
-	expectationSeries []*ClientMockHasPendingRequestsExpectation
+	mainExpectation   *ClientMockHasPendingsExpectation
+	expectationSeries []*ClientMockHasPendingsExpectation
 }
 
-type ClientMockHasPendingRequestsExpectation struct {
-	input  *ClientMockHasPendingRequestsInput
-	result *ClientMockHasPendingRequestsResult
+type ClientMockHasPendingsExpectation struct {
+	input  *ClientMockHasPendingsInput
+	result *ClientMockHasPendingsResult
 }
 
-type ClientMockHasPendingRequestsInput struct {
+type ClientMockHasPendingsInput struct {
 	p  context.Context
 	p1 insolar.Reference
 }
 
-type ClientMockHasPendingRequestsResult struct {
+type ClientMockHasPendingsResult struct {
 	r  bool
 	r1 error
 }
 
-//Expect specifies that invocation of Client.HasPendingRequests is expected from 1 to Infinity times
-func (m *mClientMockHasPendingRequests) Expect(p context.Context, p1 insolar.Reference) *mClientMockHasPendingRequests {
-	m.mock.HasPendingRequestsFunc = nil
+//Expect specifies that invocation of Client.HasPendings is expected from 1 to Infinity times
+func (m *mClientMockHasPendings) Expect(p context.Context, p1 insolar.Reference) *mClientMockHasPendings {
+	m.mock.HasPendingsFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &ClientMockHasPendingRequestsExpectation{}
+		m.mainExpectation = &ClientMockHasPendingsExpectation{}
 	}
-	m.mainExpectation.input = &ClientMockHasPendingRequestsInput{p, p1}
+	m.mainExpectation.input = &ClientMockHasPendingsInput{p, p1}
 	return m
 }
 
-//Return specifies results of invocation of Client.HasPendingRequests
-func (m *mClientMockHasPendingRequests) Return(r bool, r1 error) *ClientMock {
-	m.mock.HasPendingRequestsFunc = nil
+//Return specifies results of invocation of Client.HasPendings
+func (m *mClientMockHasPendings) Return(r bool, r1 error) *ClientMock {
+	m.mock.HasPendingsFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &ClientMockHasPendingRequestsExpectation{}
+		m.mainExpectation = &ClientMockHasPendingsExpectation{}
 	}
-	m.mainExpectation.result = &ClientMockHasPendingRequestsResult{r, r1}
+	m.mainExpectation.result = &ClientMockHasPendingsResult{r, r1}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of Client.HasPendingRequests is expected once
-func (m *mClientMockHasPendingRequests) ExpectOnce(p context.Context, p1 insolar.Reference) *ClientMockHasPendingRequestsExpectation {
-	m.mock.HasPendingRequestsFunc = nil
+//ExpectOnce specifies that invocation of Client.HasPendings is expected once
+func (m *mClientMockHasPendings) ExpectOnce(p context.Context, p1 insolar.Reference) *ClientMockHasPendingsExpectation {
+	m.mock.HasPendingsFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &ClientMockHasPendingRequestsExpectation{}
-	expectation.input = &ClientMockHasPendingRequestsInput{p, p1}
+	expectation := &ClientMockHasPendingsExpectation{}
+	expectation.input = &ClientMockHasPendingsInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *ClientMockHasPendingRequestsExpectation) Return(r bool, r1 error) {
-	e.result = &ClientMockHasPendingRequestsResult{r, r1}
+func (e *ClientMockHasPendingsExpectation) Return(r bool, r1 error) {
+	e.result = &ClientMockHasPendingsResult{r, r1}
 }
 
-//Set uses given function f as a mock of Client.HasPendingRequests method
-func (m *mClientMockHasPendingRequests) Set(f func(p context.Context, p1 insolar.Reference) (r bool, r1 error)) *ClientMock {
+//Set uses given function f as a mock of Client.HasPendings method
+func (m *mClientMockHasPendings) Set(f func(p context.Context, p1 insolar.Reference) (r bool, r1 error)) *ClientMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.HasPendingRequestsFunc = f
+	m.mock.HasPendingsFunc = f
 	return m.mock
 }
 
-//HasPendingRequests implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
-func (m *ClientMock) HasPendingRequests(p context.Context, p1 insolar.Reference) (r bool, r1 error) {
-	counter := atomic.AddUint64(&m.HasPendingRequestsPreCounter, 1)
-	defer atomic.AddUint64(&m.HasPendingRequestsCounter, 1)
+//HasPendings implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
+func (m *ClientMock) HasPendings(p context.Context, p1 insolar.Reference) (r bool, r1 error) {
+	counter := atomic.AddUint64(&m.HasPendingsPreCounter, 1)
+	defer atomic.AddUint64(&m.HasPendingsCounter, 1)
 
-	if len(m.HasPendingRequestsMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.HasPendingRequestsMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ClientMock.HasPendingRequests. %v %v", p, p1)
+	if len(m.HasPendingsMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.HasPendingsMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ClientMock.HasPendings. %v %v", p, p1)
 			return
 		}
 
-		input := m.HasPendingRequestsMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ClientMockHasPendingRequestsInput{p, p1}, "Client.HasPendingRequests got unexpected parameters")
+		input := m.HasPendingsMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ClientMockHasPendingsInput{p, p1}, "Client.HasPendings got unexpected parameters")
 
-		result := m.HasPendingRequestsMock.expectationSeries[counter-1].result
+		result := m.HasPendingsMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the ClientMock.HasPendingRequests")
+			m.t.Fatal("No results are set for the ClientMock.HasPendings")
 			return
 		}
 
@@ -1445,16 +1445,16 @@ func (m *ClientMock) HasPendingRequests(p context.Context, p1 insolar.Reference)
 		return
 	}
 
-	if m.HasPendingRequestsMock.mainExpectation != nil {
+	if m.HasPendingsMock.mainExpectation != nil {
 
-		input := m.HasPendingRequestsMock.mainExpectation.input
+		input := m.HasPendingsMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, ClientMockHasPendingRequestsInput{p, p1}, "Client.HasPendingRequests got unexpected parameters")
+			testify_assert.Equal(m.t, *input, ClientMockHasPendingsInput{p, p1}, "Client.HasPendings got unexpected parameters")
 		}
 
-		result := m.HasPendingRequestsMock.mainExpectation.result
+		result := m.HasPendingsMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the ClientMock.HasPendingRequests")
+			m.t.Fatal("No results are set for the ClientMock.HasPendings")
 		}
 
 		r = result.r
@@ -1463,39 +1463,39 @@ func (m *ClientMock) HasPendingRequests(p context.Context, p1 insolar.Reference)
 		return
 	}
 
-	if m.HasPendingRequestsFunc == nil {
-		m.t.Fatalf("Unexpected call to ClientMock.HasPendingRequests. %v %v", p, p1)
+	if m.HasPendingsFunc == nil {
+		m.t.Fatalf("Unexpected call to ClientMock.HasPendings. %v %v", p, p1)
 		return
 	}
 
-	return m.HasPendingRequestsFunc(p, p1)
+	return m.HasPendingsFunc(p, p1)
 }
 
-//HasPendingRequestsMinimockCounter returns a count of ClientMock.HasPendingRequestsFunc invocations
-func (m *ClientMock) HasPendingRequestsMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.HasPendingRequestsCounter)
+//HasPendingsMinimockCounter returns a count of ClientMock.HasPendingsFunc invocations
+func (m *ClientMock) HasPendingsMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.HasPendingsCounter)
 }
 
-//HasPendingRequestsMinimockPreCounter returns the value of ClientMock.HasPendingRequests invocations
-func (m *ClientMock) HasPendingRequestsMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.HasPendingRequestsPreCounter)
+//HasPendingsMinimockPreCounter returns the value of ClientMock.HasPendings invocations
+func (m *ClientMock) HasPendingsMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.HasPendingsPreCounter)
 }
 
-//HasPendingRequestsFinished returns true if mock invocations count is ok
-func (m *ClientMock) HasPendingRequestsFinished() bool {
+//HasPendingsFinished returns true if mock invocations count is ok
+func (m *ClientMock) HasPendingsFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.HasPendingRequestsMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.HasPendingRequestsCounter) == uint64(len(m.HasPendingRequestsMock.expectationSeries))
+	if len(m.HasPendingsMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.HasPendingsCounter) == uint64(len(m.HasPendingsMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.HasPendingRequestsMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.HasPendingRequestsCounter) > 0
+	if m.HasPendingsMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.HasPendingsCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.HasPendingRequestsFunc != nil {
-		return atomic.LoadUint64(&m.HasPendingRequestsCounter) > 0
+	if m.HasPendingsFunc != nil {
+		return atomic.LoadUint64(&m.HasPendingsCounter) > 0
 	}
 
 	return true
@@ -2631,8 +2631,8 @@ func (m *ClientMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ClientMock.GetPendings")
 	}
 
-	if !m.HasPendingRequestsFinished() {
-		m.t.Fatal("Expected call to ClientMock.HasPendingRequests")
+	if !m.HasPendingsFinished() {
+		m.t.Fatal("Expected call to ClientMock.HasPendings")
 	}
 
 	if !m.InjectCodeDescriptorFinished() {
@@ -2716,8 +2716,8 @@ func (m *ClientMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ClientMock.GetPendings")
 	}
 
-	if !m.HasPendingRequestsFinished() {
-		m.t.Fatal("Expected call to ClientMock.HasPendingRequests")
+	if !m.HasPendingsFinished() {
+		m.t.Fatal("Expected call to ClientMock.HasPendings")
 	}
 
 	if !m.InjectCodeDescriptorFinished() {
@@ -2774,7 +2774,7 @@ func (m *ClientMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetIncomingRequestFinished()
 		ok = ok && m.GetObjectFinished()
 		ok = ok && m.GetPendingsFinished()
-		ok = ok && m.HasPendingRequestsFinished()
+		ok = ok && m.HasPendingsFinished()
 		ok = ok && m.InjectCodeDescriptorFinished()
 		ok = ok && m.InjectFinishFinished()
 		ok = ok && m.InjectObjectDescriptorFinished()
@@ -2823,8 +2823,8 @@ func (m *ClientMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to ClientMock.GetPendings")
 			}
 
-			if !m.HasPendingRequestsFinished() {
-				m.t.Error("Expected call to ClientMock.HasPendingRequests")
+			if !m.HasPendingsFinished() {
+				m.t.Error("Expected call to ClientMock.HasPendings")
 			}
 
 			if !m.InjectCodeDescriptorFinished() {
@@ -2903,7 +2903,7 @@ func (m *ClientMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.HasPendingRequestsFinished() {
+	if !m.HasPendingsFinished() {
 		return false
 	}
 

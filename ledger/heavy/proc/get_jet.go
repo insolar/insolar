@@ -14,39 +14,57 @@
 // limitations under the License.
 //
 
-package handle
+package proc
 
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/pkg/errors"
 )
 
 type GetJet struct {
-	dep    *proc.Dependencies
-	meta   payload.Meta
-	passed bool
-}
+	meta payload.Meta
 
-func NewGetJet(dep *proc.Dependencies, meta payload.Meta, passed bool) *GetJet {
-	return &GetJet{
-		dep:    dep,
-		meta:   meta,
-		passed: passed,
+	dep struct {
+		jets   jet.Accessor
+		sender bus.Sender
 	}
 }
 
-func (h *GetJet) Present(ctx context.Context, f flow.Flow) error {
-	msg := payload.GetJet{}
-	err := msg.Unmarshal(h.meta.Payload)
+func (p *GetJet) Dep(
+	jets jet.Accessor,
+	sender bus.Sender,
+) {
+	p.dep.jets = jets
+	p.dep.sender = sender
+}
+
+func NewGetJet(meta payload.Meta) *GetJet {
+	return &GetJet{
+		meta: meta,
+	}
+}
+
+func (p *GetJet) Proceed(ctx context.Context) error {
+	getJet := payload.GetJet{}
+	err := getJet.Unmarshal(p.meta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal GetJet message")
 	}
 
-	getJet := proc.NewGetJet(h.meta, msg.ObjectID, msg.PulseNumber)
-	h.dep.GetJet(getJet)
-	return f.Procedure(ctx, getJet, false)
+	jetID, actual := p.dep.jets.ForID(ctx, getJet.PulseNumber, getJet.ObjectID)
+
+	msg, err := payload.NewMessage(&payload.Jet{
+		JetID:  jetID,
+		Actual: actual,
+	})
+	if err != nil {
+		return errors.Wrap(err, "GetJet: failed to create reply")
+	}
+
+	p.dep.sender.Reply(ctx, p.meta, msg)
+	return nil
 }

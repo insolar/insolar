@@ -139,7 +139,7 @@ func (c *ClarifyPendingState) Proceed(ctx context.Context) error {
 	}
 	es.Unlock()
 
-	has, err := c.ArtifactManager.HasPendingRequests(ctx, c.broker.Ref)
+	has, err := c.ArtifactManager.HasPendings(ctx, c.broker.Ref)
 	if err != nil {
 		return err
 	}

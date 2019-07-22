@@ -163,6 +163,18 @@ func (ces *CurrentExecutionList) Has(requestRef insolar.Reference) bool {
 	return has
 }
 
+func (ces *CurrentExecutionList) GetAllRequestRefs() []insolar.Reference {
+	ces.lock.RLock()
+	defer ces.lock.RUnlock()
+	out := make([]insolar.Reference, len(ces.executions))
+	i := 0
+	for key := range ces.executions {
+		out[i] = key
+		i++
+	}
+	return out
+}
+
 type CurrentExecutionPredicate func(*Transcript, interface{}) bool
 
 func (ces *CurrentExecutionList) Check(predicate CurrentExecutionPredicate, args interface{}) bool {
