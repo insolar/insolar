@@ -213,7 +213,7 @@ func (jk *dbJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.
 			}
 			r[el.JetID] = struct{}{}
 		}
-		return r, true
+		return r, len(r) != 0
 	}
 
 	infoToList := func(s []jetInfo) []insolar.JetID {
@@ -226,10 +226,11 @@ func (jk *dbJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.
 
 	next, err := jk.pulses.Forwards(ctx, pulse, 1)
 	if err != nil {
-		inslogger.FromContext(ctx).Debug("Impossible situation: can't get next pulse for", pulse)
+		inslogger.FromContext(ctx).Debug("strange situation: can't get next pulse for", pulse)
 		return false
 	}
 
+	// you use next pulse here since we get drop\hot confirm for previous pulse but update\split jet tree for current
 	expectedJets := jk.jetTrees.All(ctx, next.PulseNumber)
 	actualJets := jk.all(pulse)
 

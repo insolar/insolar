@@ -85,59 +85,59 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	jets := jet.NewDBStore(db)
-	pulses := pulse.NewCalculatorMock(t)
-	pulses.BackwardsFunc = func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
-		return insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber}, nil
-	}
-	pulses.ForwardsFunc = func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
-		return insolar.Pulse{}, pulse.ErrNotFound
-	}
+	pulses := pulse.NewDB(db)
+	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
+	require.NoError(t, err)
+
 	jetKeeper := NewJetKeeper(jets, db, pulses)
 
 	require.Equal(t, insolar.GenesisPulse.PulseNumber, jetKeeper.TopSyncPulse())
 
 	var (
 		currentPulse insolar.PulseNumber
+		nextPulse    insolar.PulseNumber
 		futurePulse  insolar.PulseNumber
 		jet          insolar.JetID
 	)
-	currentPulse = 10
-	futurePulse = 20
+	currentPulse = insolar.GenesisPulse.PulseNumber + 10
+	nextPulse = insolar.GenesisPulse.PulseNumber + 20
+	futurePulse = insolar.GenesisPulse.PulseNumber + 30
 	jet = insolar.ZeroJetID
 
-	err = jets.Update(ctx, currentPulse, true, jet)
+	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: currentPulse})
+	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: nextPulse})
+	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: futurePulse})
+
+	require.NoError(t, err)
+	err = jets.Update(ctx, nextPulse, true, jet)
 	require.NoError(t, err)
 	err = jetKeeper.AddJet(ctx, currentPulse, jet)
-
 	require.NoError(t, err)
-
 	// it's still top confirmed
 	require.Equal(t, insolar.GenesisPulse.PulseNumber, jetKeeper.TopSyncPulse())
 
 	err = jetKeeper.AddHotConfirmation(ctx, currentPulse, jet)
+	require.NoError(t, err)
 	require.Equal(t, currentPulse, jetKeeper.TopSyncPulse())
 
-	pulses.BackwardsFunc = func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
-		return insolar.Pulse{PulseNumber: currentPulse}, nil
-	}
-
-	err = jets.Clone(ctx, currentPulse, futurePulse, true)
+	err = jets.Clone(ctx, nextPulse, futurePulse, true)
 	require.NoError(t, err)
 	left, right, err := jets.Split(ctx, futurePulse, jet)
 	require.NoError(t, err)
-	err = jetKeeper.AddJet(ctx, futurePulse, left)
+
+	err = jetKeeper.AddJet(ctx, nextPulse, left)
 	require.NoError(t, err)
 	require.Equal(t, currentPulse, jetKeeper.TopSyncPulse())
-	err = jetKeeper.AddJet(ctx, futurePulse, right)
+	err = jetKeeper.AddJet(ctx, nextPulse, right)
 	require.NoError(t, err)
 	require.Equal(t, currentPulse, jetKeeper.TopSyncPulse())
 
-	err = jetKeeper.AddHotConfirmation(ctx, futurePulse, right)
+	err = jetKeeper.AddHotConfirmation(ctx, nextPulse, right)
 	require.NoError(t, err)
 	require.Equal(t, currentPulse, jetKeeper.TopSyncPulse())
-	err = jetKeeper.AddHotConfirmation(ctx, futurePulse, left)
+	err = jetKeeper.AddHotConfirmation(ctx, nextPulse, left)
 	require.NoError(t, err)
-	require.Equal(t, futurePulse, jetKeeper.TopSyncPulse())
+	require.Equal(t, nextPulse, jetKeeper.TopSyncPulse())
 }
 
 func TestDbJetKeeper_TopSyncPulse_FinalizeMultiple(t *testing.T) {
@@ -160,48 +160,52 @@ func TestDbJetKeeper_TopSyncPulse_FinalizeMultiple(t *testing.T) {
 	require.Equal(t, insolar.GenesisPulse.PulseNumber, jetKeeper.TopSyncPulse())
 
 	var (
-		currentPulse insolar.PulseNumber
-		futurePulse  insolar.PulseNumber
-		nextPulse    insolar.PulseNumber
-		jet          insolar.JetID
+		currentPulse   insolar.PulseNumber
+		nextPulse      insolar.PulseNumber
+		futurePulse    insolar.PulseNumber
+		farFuturePulse insolar.PulseNumber
+		jet            insolar.JetID
 	)
 	currentPulse = insolar.GenesisPulse.PulseNumber + 10
 	nextPulse = insolar.GenesisPulse.PulseNumber + 20
 	futurePulse = insolar.GenesisPulse.PulseNumber + 30
+	farFuturePulse = insolar.GenesisPulse.PulseNumber + 40
 	jet = insolar.ZeroJetID
 
 	inslogger.FromContext(ctx).Debug("INIT: JET: ", jet.DebugString())
 
-	err = jets.Update(ctx, currentPulse, true, jet)
+	err = jets.Update(ctx, nextPulse, true, jet)
 	require.NoError(t, err)
 
 	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: currentPulse})
 	require.NoError(t, err)
+	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: nextPulse})
+	require.NoError(t, err)
+	require.Equal(t, insolar.GenesisPulse.PulseNumber, jetKeeper.TopSyncPulse())
 
 	// Complete currentPulse pulse
 	{
 		err = jetKeeper.AddHotConfirmation(ctx, currentPulse, jet)
 		require.NoError(t, err)
+		require.Equal(t, insolar.GenesisPulse.PulseNumber, jetKeeper.TopSyncPulse())
 		err = jetKeeper.AddJet(ctx, currentPulse, jet)
 		require.NoError(t, err)
 		require.Equal(t, currentPulse, jetKeeper.TopSyncPulse())
 	}
 
-	err = jets.Clone(ctx, currentPulse, nextPulse, true)
+	err = jets.Clone(ctx, nextPulse, futurePulse, true)
 	require.NoError(t, err)
-	left, right, err := jets.Split(ctx, nextPulse, jet)
+	left, right, err := jets.Split(ctx, futurePulse, jet)
 	require.NoError(t, err)
 
-	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: nextPulse})
-	require.NoError(t, err)
 	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: futurePulse})
 	require.NoError(t, err)
 
 	// Complete future pulse
 	{
-		err = jets.Clone(ctx, nextPulse, futurePulse, true)
+		err = jets.Clone(ctx, futurePulse, farFuturePulse, true)
 		require.NoError(t, err)
-		leftFuture, rightFuture, err := jets.Split(ctx, futurePulse, left)
+		leftFuture, rightFuture, err := jets.Split(ctx, farFuturePulse, left)
 		require.NoError(t, err)
 		err = jetKeeper.AddJet(ctx, futurePulse, leftFuture)
 		require.NoError(t, err)
@@ -222,6 +226,9 @@ func TestDbJetKeeper_TopSyncPulse_FinalizeMultiple(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, currentPulse, jetKeeper.TopSyncPulse())
 	}
+
+	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: farFuturePulse})
+	require.NoError(t, err)
 
 	// complete next pulse
 	{
