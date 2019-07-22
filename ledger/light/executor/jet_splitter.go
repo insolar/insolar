@@ -114,12 +114,8 @@ func (js *JetSplitterDefault) Do(
 			}
 			result = append(result, jetID)
 
-			inslogger.FromContext(ctx).Debug(">>>>>>>>>>>>>>>: DON'T SPLIT: pulse: ", endedPulse, ". JET: ", jetID.DebugString())
-
 			continue
 		}
-
-		inslogger.FromContext(ctx).Debug(">>>>>>>>>>>>>>>: YYYY SPLIT: pulse: ", endedPulse, ". JET: ", jetID.DebugString())
 
 		// split jet for new pulse
 		leftJetID, rightJetID, err := js.jetModifier.Split(ctx, newPulse, jetID)
@@ -154,16 +150,13 @@ func (js *JetSplitterDefault) createDrop(
 	threshold := js.getPreviousDropThreshold(ctx, jetID, pn)
 	// reset threshold counter, if split is happened
 	if threshold > js.cfg.ThresholdOverflowCount {
-		inslogger.FromContext(ctx).Debug(">>>>>>>>>>>>>>>: RESET threshold: pulse: ", pn, ". JET: ", jetID.DebugString())
 		threshold = 0
 	}
 	// if records count reached threshold increase counter (instead it reset)
 	recordsCount := len(js.recordsAccessor.ForPulse(ctx, jetID, pn))
 	if recordsCount > js.cfg.ThresholdRecordsCount {
 		block.SplitThresholdExceeded = threshold + 1
-		inslogger.FromContext(ctx).Debug(">>>>>>>>>>>>>>>: INCREASE threshold:", block.SplitThresholdExceeded, ". pulse: ", pn, ". JET: ", jetID.DebugString())
 	}
-	inslogger.FromContext(ctx).Debug(">>>>>>>>>>>>>>>: JET_SPLITTER threshold:", block.SplitThresholdExceeded, ". pulse: ", pn, ". JET: ", jetID.DebugString(), ". OVERFLOW: ", js.cfg.ThresholdOverflowCount)
 
 	// first return value is split needed
 	if block.SplitThresholdExceeded > js.cfg.ThresholdOverflowCount {

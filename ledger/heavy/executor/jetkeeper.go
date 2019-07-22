@@ -73,13 +73,11 @@ func (jk *dbJetKeeper) AddHotConfirmation(ctx context.Context, pn insolar.PulseN
 	jk.Lock()
 	defer jk.Unlock()
 
-	inslogger.FromContext(ctx).Debug(">>>>>>>>>>>>>>>>> AddHotConfirmation HERE: pulse: ", pn, ". ID: ", id.DebugString())
+	inslogger.FromContext(ctx).Debug("AddHotConfirmation. pulse: ", pn, ". ID: ", id.DebugString())
 
 	if err := jk.addHotConfirm(ctx, pn, id); err != nil {
 		return errors.Wrapf(err, "failed to save updated jets")
 	}
-
-	inslogger.FromContext(ctx).Debug(">>>>>>>>>>>>>>>>> AddHotConfirmation AFTER addHotConfirm: pulse: ", pn, ". ID: ", id.DebugString())
 
 	err := jk.propagateConsistency(ctx, pn, id.DebugString())
 	return errors.Wrapf(err, "AddHotConfirmation. propagateConsistency returns error")
@@ -90,13 +88,11 @@ func (jk *dbJetKeeper) AddJet(ctx context.Context, pn insolar.PulseNumber, jetID
 	defer jk.Unlock()
 
 	for _, id := range jetIDs {
-		inslogger.FromContext(ctx).Debug(">>>>>>>>>>>>>>>>> AddJet HERE: pulse: ", pn, ". ID: ", id.DebugString())
+		inslogger.FromContext(ctx).Debug("AddJet. pulse: ", pn, ". ID: ", id.DebugString())
 
 		if err := jk.addJet(ctx, pn, id); err != nil {
 			return errors.Wrapf(err, "AddJet. failed to save updated jets")
 		}
-
-		inslogger.FromContext(ctx).Debug(">>>>>>>>>>>>>>>>> AddJet AFTER addJet: pulse: ", pn, ". ID: ", id.DebugString())
 	}
 
 	err := jk.propagateConsistency(ctx, pn, insolar.JetIDCollection(jetIDs).DebugString())
@@ -114,13 +110,11 @@ func (jk *dbJetKeeper) propagateConsistency(ctx context.Context, pn insolar.Puls
 
 	top := jk.topSyncPulse()
 
-	logger.Debug(">>>>>>>>>>>>>>>>>.. AFTER Backwards: pulse: ", pn, ". ID: ", jetIDs,
-		". TOP: ", top, ". prev.PulseNumber: ", prev.PulseNumber)
+	logger.Debug("propagateConsistency. pulse: ", pn, ". ID: ", jetIDs,
+		". top: ", top, ". prev.PulseNumber: ", prev.PulseNumber)
 
-	if prev.PulseNumber == top || prev.PulseNumber == insolar.GenesisPulse.PulseNumber {
+	if prev.PulseNumber == top {
 		for jk.checkPulseConsistency(ctx, pn) {
-			logger.Debug(">>>>>>>>>>>>>>>>>.. AFTER checkPulseConsistency: pulse: ", pn, ". ID: ", jetIDs,
-				". TOP: ", top, ". prev.PulseNumber: ", prev.PulseNumber)
 			err := jk.updateSyncPulse(pn)
 			if err != nil {
 				return errors.Wrapf(err, "failed to update consistent pulse")
@@ -129,6 +123,7 @@ func (jk *dbJetKeeper) propagateConsistency(ctx context.Context, pn insolar.Puls
 
 			next, err := jk.pulses.Forwards(ctx, pn, 1)
 			if err == pulse.ErrNotFound {
+				logger.Info("propagateConsistency. No next pulse. Stop propagating")
 				return nil
 			}
 			if err != nil {
@@ -165,7 +160,7 @@ func (jk *dbJetKeeper) updateJet(ctx context.Context, pulse insolar.PulseNumber,
 	jets, err := jk.get(pulse)
 	var exists bool
 	if err == nil {
-		for i, _ := range jets {
+		for i := range jets {
 			if jets[i].JetID.Equal(id) {
 				exists = true
 				if hotConfirmed {
@@ -179,10 +174,10 @@ func (jk *dbJetKeeper) updateJet(ctx context.Context, pulse insolar.PulseNumber,
 		}
 		if exists {
 			if jetConfirmed {
-				logger.Debug("pulse complete: jetConfirmed: update existing: ", pulse, ". Jet:", id.DebugString())
+				logger.Debug("jetConfirmed. update existing: ", pulse, ". Jet:", id.DebugString())
 			}
 			if hotConfirmed {
-				logger.Debug("pulse complete: hotConfirmed: update existing: ", pulse, ". Jet:", id.DebugString())
+				logger.Debug("hotConfirmed. update existing: ", pulse, ". Jet:", id.DebugString())
 			}
 		}
 	} else if err != store.ErrNotFound {
@@ -191,10 +186,10 @@ func (jk *dbJetKeeper) updateJet(ctx context.Context, pulse insolar.PulseNumber,
 	if !exists {
 		jets = append(jets, jetInfo{JetID: id, HotConfirmed: hotConfirmed, JetConfirmed: jetConfirmed})
 		if jetConfirmed {
-			logger.Debug("pulse complete: jetConfirmed: not exists: ", pulse, ". Jet:", id.DebugString())
+			logger.Debug("jetConfirmed: not exists: ", pulse, ". Jet:", id.DebugString())
 		}
 		if hotConfirmed {
-			logger.Debug("pulse complete: hotConfirmed: not exists: ", pulse, ". Jet:", id.DebugString())
+			logger.Debug("hotConfirmed: not exists: ", pulse, ". Jet:", id.DebugString())
 		}
 	}
 	return jk.set(pulse, jets)

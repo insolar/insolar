@@ -145,9 +145,9 @@ func main() {
 		}
 
 		if node.Role == "light_material" {
-			// conf.Ledger.JetSplit.ThresholdRecordsCount = 1
-			// conf.Ledger.JetSplit.ThresholdOverflowCount = 0
-			// conf.Ledger.JetSplit.DepthLimit = 4
+			conf.Ledger.JetSplit.ThresholdRecordsCount = 1
+			conf.Ledger.JetSplit.ThresholdOverflowCount = 0
+			conf.Ledger.JetSplit.DepthLimit = 4
 		}
 
 		conf.APIRunner.Address = fmt.Sprintf(defaultHost+":191%02d", nodeIndex)

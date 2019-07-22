@@ -78,7 +78,7 @@ func NewHotObjects(
 
 func (p *HotObjects) Proceed(ctx context.Context) error {
 
-	inslogger.FromContext(ctx).Debug("------------- HotObjects:Proceed: pulse: ", p.drop.Pulse, " JET_ID: ", p.drop.JetID.DebugString())
+	inslogger.FromContext(ctx).Debug("Get hot. pulse: ", p.drop.Pulse, " jet: ", p.drop.JetID.DebugString())
 
 	err := p.Dep.DropModifier.Set(ctx, p.drop)
 	if err == drop.ErrOverride {
@@ -151,12 +151,12 @@ func (p *HotObjects) sendConfirmationToHeavy(ctx context.Context, jetID insolar.
 		Pulse: pn,
 	})
 
-	inslogger.FromContext(ctx).Debug("------------- sendConfirmationToHeavy: pulse: ", pn, " JET_ID: ", p.drop.JetID.DebugString())
-
 	if err != nil {
-		inslogger.FromContext(ctx).Warn("[ sendConfirmationToHeavy ] Can't create GotHotConfirmation message: ", err)
+		inslogger.FromContext(ctx).Error("Can't create GotHotConfirmation message: ", err)
 		return
 	}
+
+	inslogger.FromContext(ctx).Debug("Send hot confirmation to heavy. pulse: ", pn, " jet: ", p.drop.JetID.DebugString())
 
 	_, done := p.Dep.Sender.SendRole(ctx, msg, insolar.DynamicRoleHeavyExecutor, *insolar.NewReference(insolar.ID(jetID)))
 	defer done()

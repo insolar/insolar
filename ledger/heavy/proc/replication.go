@@ -99,22 +99,21 @@ func (p *Replication) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "can't get pulse for pulse number ", dr.Pulse)
 	}
+	pulseForJetsUpdate := pulse.NextPulseNumber
 
-	logger.Debug("--------------- GOT DROP: pulse: ", pulse.NextPulseNumber, ". JET_ID: ", dr.JetID.DebugString())
-	logger.Debug(">>>>>>>>>>>>>>>>>+++++: THRESHOLD: ", dr.SplitThresholdExceeded, ". OVERFLOW: ", p.cfg.JetSplit.ThresholdOverflowCount)
 	jetsForKeeper := make([]insolar.JetID, 0)
 	if dr.Split {
-		logger.Debug(">>>>>>>>>>>>>>>>--: Split: pulse: ", pulse.NextPulseNumber, ". JET: ", dr.JetID.DebugString())
+		logger.Debugf("Split jet. pulse: %d, jet: %s", pulseForJetsUpdate, dr.JetID.DebugString())
 		var (
 			left  insolar.JetID
 			right insolar.JetID
 		)
 
-		left, right, err = p.dep.jets.Split(ctx, pulse.NextPulseNumber, dr.JetID)
+		left, right, err = p.dep.jets.Split(ctx, pulseForJetsUpdate, dr.JetID)
 		jetsForKeeper = append(jetsForKeeper, left, right)
 	} else {
-		logger.Debug(">>>>>>>>>>>>>>>>--: Update: pulse: ", pulse.NextPulseNumber, ". JET: ", dr.JetID.DebugString())
-		err = p.dep.jets.Update(ctx, pulse.NextPulseNumber, false, dr.JetID)
+		logger.Debugf("Update jet. pulse: %d, jet: %s", pulseForJetsUpdate, dr.JetID.DebugString())
+		err = p.dep.jets.Update(ctx, pulseForJetsUpdate, false, dr.JetID)
 		jetsForKeeper = append(jetsForKeeper, dr.JetID)
 	}
 	if err != nil {

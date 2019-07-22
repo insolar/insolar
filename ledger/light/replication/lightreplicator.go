@@ -116,7 +116,7 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 
 		allIndexes := lr.filterAndGroupIndexes(ctx, pn)
 		jets := lr.jetCalculator.MineForPulse(ctx, pn)
-		logger.Debugf("[Replicator][sync] founds %v jets", len(jets), ". Jets: ", insolar.JetIDCollection(jets).DebugString())
+		logger.Debugf("[Replicator][sync] founds %d jets", len(jets), ". Jets: ", insolar.JetIDCollection(jets).DebugString())
 
 		for _, jetID := range jets {
 			msg, err := lr.heavyPayload(ctx, pn, jetID, allIndexes[jetID])
@@ -151,7 +151,7 @@ func (lr *LightReplicatorDefault) sendToHeavy(ctx context.Context, pl payload.Re
 		return err
 	}
 
-	inslogger.FromContext(ctx).Debug("-----------: sendToHeavy: pulse: ", pl.Pulse, ". JET_ID: ", pl.JetID.DebugString())
+	inslogger.FromContext(ctx).Debug("send drop to heavy. pulse: ", pl.Pulse, ". jet: ", pl.JetID.DebugString())
 
 	_, done := lr.sender.SendRole(ctx, msg, insolar.DynamicRoleHeavyExecutor, *insolar.NewReference(insolar.ID(pl.JetID)))
 	done()

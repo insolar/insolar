@@ -104,7 +104,6 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Rec
 	}
 
 	inslog := inslogger.FromContext(ctx)
-	inslog.Debug("processPulse: pulse: ", pulse.PulseNumber)
 	// if we are a joiner node, we should receive pulse from phase1 packet and ignore pulse from pulsar
 	if !pc.NodeKeeper.GetConsensusInfo().IsJoiner() {
 		// Because we want to save our trace-context from a pulsar node
