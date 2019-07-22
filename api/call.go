@@ -21,18 +21,12 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"time"
-
-	"github.com/stretchr/testify/assert"
-
-	"github.com/insolar/insolar/insolar/genesisrefs"
-	"github.com/insolar/insolar/metrics"
 
 	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/insolar/genesisrefs"
 
 	"github.com/pkg/errors"
 
@@ -40,7 +34,6 @@ import (
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 )
 
@@ -122,59 +115,6 @@ func (ar *Runner) makeCall(ctx context.Context, method string, params requester.
 	return result, nil
 }
 
-func processError(err error, extraMsg string, resp *requester.ContractAnswer, insLog insolar.Logger, traceID string) {
-	errResponse := &requester.Error{Message: extraMsg, Code: ResultError, Data: requester.Data{TraceID: traceID}}
-	resp.Error = errResponse
-	insLog.Error(errors.Wrapf(err, "[ CallHandler ] %s", extraMsg))
-}
-
-func writeResponse(insLog assert.TestingT, response http.ResponseWriter, contractAnswer *requester.ContractAnswer) {
-	res, err := json.MarshalIndent(*contractAnswer, "", "    ")
-	if err != nil {
-		hcContractAnswer := requester.ContractAnswer{
-			JSONRPC: "2.0",
-			ID:      contractAnswer.ID,
-			Error:   &requester.Error{Message: fmt.Sprintf("can't marshal ContractAnswer to json; error: '%v'", err.Error())},
-		}
-		res, _ = json.MarshalIndent(hcContractAnswer, "", "    ")
-	}
-	response.Header().Add("Content-Type", "application/json")
-	_, err = response.Write(res)
-	if err != nil {
-		insLog.Errorf("Can't write response\n")
-	}
-}
-
-func observeResultStatus(requestMethod string, contractAnswer *requester.ContractAnswer, startTime time.Time) {
-	success := "success"
-	if contractAnswer.Error != nil {
-		success = "fail"
-	}
-	metrics.APIContractExecutionTime.WithLabelValues(requestMethod, success).Observe(time.Since(startTime).Seconds())
-}
-
-func processRequest(ctx context.Context,
-	req *http.Request, contractRequest *requester.Request, contractAnswer *requester.ContractAnswer) (context.Context, []byte, error) {
-
-	rawBody, err := UnmarshalRequest(req, contractRequest)
-	if err != nil {
-		return ctx, nil, errors.Wrap(err, "failed to unmarshal request")
-	}
-
-	contractAnswer.JSONRPC = contractRequest.JSONRPC
-	contractAnswer.ID = contractRequest.ID
-
-	if len(contractRequest.Params.LogLevel) > 0 {
-		logLevelNumber, err := insolar.ParseLevel(contractRequest.Params.LogLevel)
-		if err != nil {
-			return ctx, nil, errors.Wrap(err, "failed to parse logLevel")
-		}
-		ctx = inslogger.WithLoggerLevel(ctx, logLevelNumber)
-	}
-
-	return ctx, rawBody, nil
-}
-
 func contains(s []string, e string) bool {
 	for _, a := range s {
 		if a == e {
@@ -193,78 +133,6 @@ func setRootReferenceIfNeeded(params *requester.Params) {
 		params.Reference = genesisrefs.ContractRootMember.String()
 	}
 }
-
-// func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
-// 	return func(response http.ResponseWriter, req *http.Request) {
-// 		traceID := utils.RandTraceID()
-// 		ctx, insLog := inslogger.WithTraceField(context.Background(), traceID)
-//
-// 		ctx, span := instracer.StartSpan(ctx, "callHandler")
-// 		defer span.End()
-//
-// 		contractRequest := &requester.Request{}
-// 		contractAnswer := &requester.ContractAnswer{}
-// 		defer writeResponse(insLog, response, contractAnswer)
-//
-// 		startTime := time.Now()
-// 		defer observeResultStatus(contractRequest.Method, contractAnswer, startTime)
-//
-// 		insLog.Infof("[ callHandler ] Incoming contractRequest: %s", req.RequestURI)
-//
-// 		ctx, rawBody, err := processRequest(ctx, req, contractRequest, contractAnswer)
-// 		if err != nil {
-// 			processError(err, err.Error(), contractAnswer, insLog, traceID)
-// 			return
-// 		}
-//
-// 		if contractRequest.Params.Test != "" {
-// 			insLog.Infof("Request related to %s", contractRequest.Params.Test)
-// 		}
-//
-// 		if contractRequest.Method != "contract.call" {
-// 			err := errors.New("rpc method does not exist")
-// 			processError(err, err.Error(), contractAnswer, insLog, traceID)
-// 			return
-// 		}
-//
-// 		signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), rawBody)
-// 		if err != nil {
-// 			processError(err, err.Error(), contractAnswer, insLog, traceID)
-// 			return
-// 		}
-//
-// 		seedPulse, err := ar.checkSeed(contractRequest.Params.Seed)
-// 		if err != nil {
-// 			processError(err, err.Error(), contractAnswer, insLog, traceID)
-// 			return
-// 		}
-//
-// 		setRootReferenceIfNeeded(contractRequest)
-//
-// 		var result interface{}
-// 		ch := make(chan interface{}, 1)
-// 		go func() {
-// 			result, err = ar.makeCall(ctx, *contractRequest, rawBody, signature, 0, seedPulse)
-// 			ch <- nil
-// 		}()
-// 		select {
-//
-// 		case <-ch:
-// 			if err != nil {
-// 				processError(err, err.Error(), contractAnswer, insLog, traceID)
-// 				return
-// 			}
-// 			contractResult := &requester.Result{ContractResult: result, TraceID: traceID}
-// 			contractAnswer.Result = contractResult
-// 			return
-//
-// 		case <-time.After(ar.timeout):
-// 			errResponse := &requester.Error{Message: "API timeout exceeded", Code: TimeoutError, Data: requester.Data{TraceID: traceID}}
-// 			contractAnswer.Error = errResponse
-// 			return
-// 		}
-// 	}
-// }
 
 func validateRequestHeaders(digest string, richSignature string, body []byte) (string, error) {
 	// Digest = "SHA-256=<hashString>"
