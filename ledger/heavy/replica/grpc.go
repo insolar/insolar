@@ -25,6 +25,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type grpcTransport struct {
@@ -53,7 +54,12 @@ func (t *grpcTransport) Start(ctx context.Context) error {
 		return errors.Wrapf(err, "failed to open replication port %d", t.port)
 	}
 	t.lis = lis
-	return t.grpcServer.Serve(t.lis)
+	go func() {
+		if err := t.grpcServer.Serve(t.lis); err != nil {
+			inslogger.FromContext(context.Background()).Error(err)
+		}
+	}()
+	return nil
 }
 
 func (t *grpcTransport) Stop(ctx context.Context) error {
