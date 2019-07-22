@@ -147,6 +147,7 @@ type Request interface {
 	ReasonRef() insolar.Reference
 	// GetCallType returns call type.
 	GetCallType() CallType
+	// IsCreationRequest checks a request-type.
 	IsCreationRequest() bool
 	// IsDetached check is request has detached state.
 	IsDetached() bool

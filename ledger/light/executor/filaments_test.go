@@ -158,6 +158,41 @@ func TestFilamentModifierDefault_SetRequest(t *testing.T) {
 
 		mc.Finish()
 	})
+
+	resetComponents()
+	t.Run("incoming can't be detached", func(t *testing.T) {
+		objRef := gen.Reference()
+		validRequest = record.IncomingRequest{
+			Object:     &objRef,
+			CallType:   record.CTMethod,
+			Reason:     *insolar.NewReference(*objRef.Record()),
+			ReturnMode: record.ReturnSaga,
+		}
+
+		requestID := gen.ID()
+		requestID.SetPulse(insolar.FirstPulseNumber + 2)
+		latestPendingID := gen.ID()
+		latestPendingID.SetPulse(insolar.FirstPulseNumber + 1)
+		jetID := gen.JetID()
+
+		err := indexes.SetIndex(ctx, requestID.Pulse(), record.Index{
+			ObjID: *validRequest.Object.Record(),
+			Lifeline: record.Lifeline{
+				PendingPointer: &latestPendingID,
+			},
+		})
+		require.NoError(t, err)
+
+		calculator.RequestDuplicateFunc = func(_ context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Request) (r *record.CompositeFilamentRecord, r1 *record.CompositeFilamentRecord, r2 error) {
+			require.Equal(t, p1, requestID.Pulse())
+			require.Equal(t, p2, *validRequest.Object.Record())
+			require.Equal(t, p3, requestID)
+			return nil, nil, nil
+		}
+
+		_, _, err = manager.SetRequest(ctx, requestID, jetID, &validRequest)
+		require.Error(t, err)
+	})
 }
 
 func TestFilamentModifierDefault_SetRequest_NewObject(t *testing.T) {
@@ -603,7 +638,7 @@ func TestFilamentCalculatorDefault_Requests(t *testing.T) {
 
 	resetComponents()
 	t.Run("happy basic", func(t *testing.T) {
-		b := newFilamentBuilder(ctx, pcs, records, indexes)
+		b := newFilamentBuilder(ctx, pcs, records)
 		storageRecs := make([]record.CompositeFilamentRecord, 5)
 		storageRecs[0] = b.Append(insolar.FirstPulseNumber+1, record.IncomingRequest{Nonce: rand.Uint64(), CallType: record.CTMethod})
 		storageRecs[1] = b.Append(insolar.FirstPulseNumber+2, record.IncomingRequest{Nonce: rand.Uint64(), CallType: record.CTMethod})
@@ -640,131 +675,6 @@ func TestFilamentCalculatorDefault_Requests(t *testing.T) {
 
 		mc.Finish()
 	})
-}
-
-func TestFilamentCalculatorDefault_PendingRequests_RequestOnly(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(t)
-	c := newComponents(mc)
-	b := newFilamentBuilder(ctx, c.pcs, c.records, c.indexes)
-
-	inRequest1 := b.appendInRequest(pulseNum(1))
-	inRequestID1 := inRequest1.RecordID
-
-	objectID, err := b.setIndex(ctx)
-	require.NoError(t, err)
-
-	recs, err := c.calculator.PendingRequests(ctx, *b.earliestOpenRequest, objectID)
-	require.NoError(t, err)
-	require.Equal(t, []insolar.ID{inRequestID1}, recordsToIDs(recs...), "request in pendings")
-
-	mc.Finish()
-}
-
-func TestFilamentCalculatorDefault_PendingRequests_RequestWithDetached(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(t)
-	c := newComponents(mc)
-	b := newFilamentBuilder(ctx, c.pcs, c.records, c.indexes)
-
-	inRequest1 := b.appendInRequest(pulseNum(1))
-	inRequestID1 := inRequest1.RecordID
-
-	outRequestDetached1 := b.appendOutRequest(pulseNum(2), inRequestID1, record.ReturnSaga)
-	outRequestDetachedID1 := outRequestDetached1.RecordID
-
-	objectID, err := b.setIndex(ctx)
-	require.NoError(t, err)
-
-	recs, err := c.calculator.PendingRequests(ctx, *b.earliestOpenRequest, objectID)
-	require.NoError(t, err)
-	require.Equal(t, []insolar.ID{inRequestID1, outRequestDetachedID1}, recordsToIDs(recs...),
-		"single unclosed request with detached outgoing (both are pendings)")
-
-	mc.Finish()
-}
-
-func TestFilamentCalculatorDefault_PendingRequests_RequestWithNotDetached(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(t)
-	c := newComponents(mc)
-	b := newFilamentBuilder(ctx, c.pcs, c.records, c.indexes)
-
-	inRequest1 := b.appendInRequest(pulseNum(1))
-	inRequestID1 := inRequest1.RecordID
-
-	_ = b.appendOutRequest(pulseNum(2), inRequestID1, record.ReturnResult)
-
-	objectID, err := b.setIndex(ctx)
-	require.NoError(t, err)
-
-	recs, err := c.calculator.PendingRequests(ctx, *b.earliestOpenRequest, objectID)
-	require.NoError(t, err)
-	require.Equal(t, []insolar.ID{inRequestID1}, recordsToIDs(recs...),
-		"single unclosed request with not detached outgoing (request is only pending)")
-
-	mc.Finish()
-}
-
-func TestFilamentCalculatorDefault_RequestWithDetachedAndResult(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(t)
-	c := newComponents(mc)
-	b := newFilamentBuilder(ctx, c.pcs, c.records, c.indexes)
-
-	inRequest1 := b.appendInRequest(pulseNum(1))
-	inRequestID1 := inRequest1.RecordID
-	_ = b.appendOutRequest(pulseNum(2), inRequestID1, record.ReturnSaga)
-	_ = b.appendResult(pulseNum(2), inRequestID1)
-
-	objectID, err := b.setIndex(ctx)
-	require.NoError(t, err)
-
-	recs, err := c.calculator.PendingRequests(ctx, *b.earliestOpenRequest, objectID)
-	require.NoError(t, err)
-	require.Equal(t, 0, len(recs), "in-request with result with detached out-request (expect no pendings)")
-
-	mc.Finish()
-}
-
-func TestFilamentCalculatorDefault_RequestWithResult(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(t)
-	c := newComponents(mc)
-	b := newFilamentBuilder(ctx, c.pcs, c.records, c.indexes)
-
-	inRequest1 := b.appendInRequest(pulseNum(1))
-	_ = b.appendResult(pulseNum(2), inRequest1.RecordID)
-
-	objectID, err := b.setIndex(ctx)
-	require.NoError(t, err)
-
-	recs, err := c.calculator.PendingRequests(ctx, *b.earliestOpenRequest, objectID)
-	require.NoError(t, err)
-	require.Equal(t, 0, len(recs), "no pendings if request with result")
-
-	mc.Finish()
-}
-
-func TestFilamentCalculatorDefault2_RequestWithResultAndNotDetachedOutgoing(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(t)
-	c := newComponents(mc)
-	b := newFilamentBuilder(ctx, c.pcs, c.records, c.indexes)
-
-	inRequest1 := b.appendInRequest(pulseNum(1))
-	inRequestID1 := inRequest1.RecordID
-	_ = b.appendOutRequest(pulseNum(2), inRequestID1, record.ReturnResult)
-	_ = b.appendResult(pulseNum(2), inRequestID1)
-
-	objectID, err := b.setIndex(ctx)
-	require.NoError(t, err)
-
-	recs, err := c.calculator.PendingRequests(ctx, *b.earliestOpenRequest, objectID)
-	require.NoError(t, err)
-	require.Equal(t, 0, len(recs), "no pendings")
-
-	mc.Finish()
 }
 
 func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
@@ -817,7 +727,7 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 
 	resetComponents()
 	t.Run("happy basic", func(t *testing.T) {
-		b := newFilamentBuilder(ctx, pcs, records, indexes)
+		b := newFilamentBuilder(ctx, pcs, records)
 		rec1 := b.Append(insolar.FirstPulseNumber+1, record.IncomingRequest{Nonce: rand.Uint64(), CallType: record.CTMethod})
 		rec2 := b.Append(insolar.FirstPulseNumber+2, record.IncomingRequest{Nonce: rand.Uint64(), CallType: record.CTMethod})
 		b.Append(insolar.FirstPulseNumber+3, record.Result{Request: *insolar.NewReference(rec1.RecordID)})
@@ -846,7 +756,7 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 
 	resetComponents()
 	t.Run("happy fetches from light", func(t *testing.T) {
-		b := newFilamentBuilder(ctx, pcs, records, indexes)
+		b := newFilamentBuilder(ctx, pcs, records)
 		rec1 := b.Append(insolar.FirstPulseNumber+1, record.IncomingRequest{Nonce: rand.Uint64()})
 		rec2 := b.Append(insolar.FirstPulseNumber+2, record.IncomingRequest{Nonce: rand.Uint64()})
 		// This result is not in the storage.
@@ -929,7 +839,7 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 
 	resetComponents()
 	t.Run("happy fetches from heavy", func(t *testing.T) {
-		b := newFilamentBuilder(ctx, pcs, records, indexes)
+		b := newFilamentBuilder(ctx, pcs, records)
 		rec1 := b.Append(insolar.FirstPulseNumber+1, record.IncomingRequest{Nonce: rand.Uint64()})
 		rec2 := b.Append(insolar.FirstPulseNumber+2, record.IncomingRequest{Nonce: rand.Uint64()})
 		// This result is not in the storage.
@@ -998,6 +908,137 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 
 		mc.Finish()
 	})
+
+	resetComponents()
+	t.Run("ignore not detached outgoings", func(t *testing.T) {
+		b := newFilamentBuilder(ctx, pcs, records)
+		rec1 := b.Append(insolar.FirstPulseNumber+1, record.OutgoingRequest{
+			Nonce:      rand.Uint64(),
+			CallType:   record.CTMethod,
+			ReturnMode: record.ReturnResult,
+		})
+
+		objectID := gen.ID()
+		fromPulse := rec1.MetaID.Pulse()
+		earliestPending := rec1.MetaID.Pulse()
+		err := indexes.SetIndex(ctx, fromPulse, record.Index{
+			ObjID: objectID,
+			Lifeline: record.Lifeline{
+				PendingPointer:      &rec1.MetaID,
+				EarliestOpenRequest: &earliestPending,
+			},
+		})
+		require.NoError(t, err)
+
+		recs, err := calculator.PendingRequests(ctx, fromPulse, objectID)
+		require.NoError(t, err)
+		require.Equal(t, 0, len(recs))
+
+		mc.Finish()
+	})
+
+	// b := newFilamentBuilder(ctx, pcs, records)
+	// rec1 := b.Append(insolar.FirstPulseNumber+1, record.IncomingRequest{Nonce: rand.Uint64()})
+	// rec2 := b.Append(insolar.FirstPulseNumber+2, record.IncomingRequest{Nonce: rand.Uint64()})
+	// // This result is not in the storage.
+	// missingRec := b.AppendNoPersist(insolar.FirstPulseNumber+3, record.Result{Request: *insolar.NewReference(rec1.RecordID)})
+	// rec4 := b.Append(insolar.FirstPulseNumber+4, record.IncomingRequest{Nonce: rand.Uint64()})
+	// b.Append(insolar.FirstPulseNumber+5, record.IncomingRequest{Nonce: rand.Uint64()})
+	//
+
+	resetComponents()
+	t.Run("ignore closed outgoing", func(t *testing.T) {
+		b := newFilamentBuilder(ctx, pcs, records)
+		reason := b.Append(insolar.FirstPulseNumber+1, record.IncomingRequest{Nonce: rand.Uint64()})
+		outgoing := b.Append(insolar.FirstPulseNumber+1, record.OutgoingRequest{
+			Nonce:      rand.Uint64(),
+			Reason:     *insolar.NewReference(reason.RecordID),
+			CallType:   record.CTMethod,
+			ReturnMode: record.ReturnSaga,
+		})
+		_ = b.Append(insolar.FirstPulseNumber+1, record.Result{Request: *insolar.NewReference(reason.RecordID)})
+		outgoingRes := b.Append(insolar.FirstPulseNumber+1, record.Result{Request: *insolar.NewReference(outgoing.RecordID)})
+
+		objectID := gen.ID()
+		fromPulse := outgoingRes.MetaID.Pulse()
+		earliestPending := outgoingRes.MetaID.Pulse()
+		err := indexes.SetIndex(ctx, fromPulse, record.Index{
+			ObjID: objectID,
+			Lifeline: record.Lifeline{
+				PendingPointer:      &outgoingRes.MetaID,
+				EarliestOpenRequest: &earliestPending,
+			},
+		})
+		require.NoError(t, err)
+
+		recs, err := calculator.PendingRequests(ctx, fromPulse, objectID)
+		require.NoError(t, err)
+		require.Equal(t, 0, len(recs))
+
+		mc.Finish()
+	})
+
+	resetComponents()
+	t.Run("return outgoing with closed reason and no result", func(t *testing.T) {
+		b := newFilamentBuilder(ctx, pcs, records)
+		reason := b.Append(insolar.FirstPulseNumber+1, record.IncomingRequest{Nonce: rand.Uint64()})
+		outgoing := b.Append(insolar.FirstPulseNumber+1, record.OutgoingRequest{
+			Nonce:      rand.Uint64(),
+			Reason:     *insolar.NewReference(reason.RecordID),
+			CallType:   record.CTMethod,
+			ReturnMode: record.ReturnSaga,
+		})
+		reasonRes := b.Append(insolar.FirstPulseNumber+1, record.Result{Request: *insolar.NewReference(reason.RecordID)})
+
+		objectID := gen.ID()
+		fromPulse := reasonRes.MetaID.Pulse()
+		earliestPending := reasonRes.MetaID.Pulse()
+		err := indexes.SetIndex(ctx, fromPulse, record.Index{
+			ObjID: objectID,
+			Lifeline: record.Lifeline{
+				PendingPointer:      &reasonRes.MetaID,
+				EarliestOpenRequest: &earliestPending,
+			},
+		})
+		require.NoError(t, err)
+
+		recs, err := calculator.PendingRequests(ctx, fromPulse, objectID)
+		require.NoError(t, err)
+		require.Equal(t, 1, len(recs))
+		require.Equal(t, outgoing, recs[0])
+
+		mc.Finish()
+	})
+
+	resetComponents()
+	t.Run("returns error, when there is closed outgoing with open reason", func(t *testing.T) {
+		b := newFilamentBuilder(ctx, pcs, records)
+		reason := b.Append(insolar.FirstPulseNumber+1, record.IncomingRequest{Nonce: rand.Uint64()})
+		outgoing := b.Append(insolar.FirstPulseNumber+1, record.OutgoingRequest{
+			Nonce:      rand.Uint64(),
+			Reason:     *insolar.NewReference(reason.RecordID),
+			CallType:   record.CTMethod,
+			ReturnMode: record.ReturnSaga,
+		})
+		outgoingRes := b.Append(insolar.FirstPulseNumber+1, record.Result{Request: *insolar.NewReference(outgoing.RecordID)})
+
+		objectID := gen.ID()
+		fromPulse := outgoingRes.MetaID.Pulse()
+		earliestPending := outgoingRes.MetaID.Pulse()
+		err := indexes.SetIndex(ctx, fromPulse, record.Index{
+			ObjID: objectID,
+			Lifeline: record.Lifeline{
+				PendingPointer:      &outgoingRes.MetaID,
+				EarliestOpenRequest: &earliestPending,
+			},
+		})
+		require.NoError(t, err)
+
+		_, err = calculator.PendingRequests(ctx, fromPulse, objectID)
+		require.Error(t, err)
+
+		mc.Finish()
+	})
 }
 
 func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
@@ -1051,7 +1092,7 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 
 	resetComponents()
 	t.Run("returns result. result duplicate is found", func(t *testing.T) {
-		b := newFilamentBuilder(ctx, pcs, records, indexes)
+		b := newFilamentBuilder(ctx, pcs, records)
 		req := record.IncomingRequest{Nonce: rand.Uint64(), Reason: *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, nil))}
 		req1 := b.Append(insolar.FirstPulseNumber+1, req)
 		res := record.Result{Request: *insolar.NewReference(req1.RecordID)}
@@ -1076,7 +1117,7 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 
 	resetComponents()
 	t.Run("returns result. request not found", func(t *testing.T) {
-		b := newFilamentBuilder(ctx, pcs, records, indexes)
+		b := newFilamentBuilder(ctx, pcs, records)
 		req := b.Append(
 			insolar.FirstPulseNumber+1,
 			record.IncomingRequest{Nonce: rand.Uint64(), Reason: *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, nil))},
@@ -1100,7 +1141,7 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 
 	resetComponents()
 	t.Run("returns no result. request found", func(t *testing.T) {
-		b := newFilamentBuilder(ctx, pcs, records, indexes)
+		b := newFilamentBuilder(ctx, pcs, records)
 		req := record.IncomingRequest{Nonce: rand.Uint64(), Reason: *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, nil))}
 		req1 := b.Append(insolar.FirstPulseNumber+1, req)
 		res := record.Result{Request: *insolar.NewReference(req1.RecordID)}
@@ -1182,7 +1223,7 @@ func TestFilamentCalculatorDefault_RequestDuplicate(t *testing.T) {
 		hNode := gen.Reference()
 		coordinator.HeavyMock.Return(&hNode, nil)
 
-		b := newFilamentBuilder(ctx, pcs, records, indexes)
+		b := newFilamentBuilder(ctx, pcs, records)
 		reason := *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, nil))
 		req := record.IncomingRequest{Nonce: rand.Uint64(), Reason: reason}
 		req1 := b.Append(insolar.FirstPulseNumber+1, req)
@@ -1232,7 +1273,7 @@ func TestFilamentCalculatorDefault_RequestDuplicate(t *testing.T) {
 		hNode := gen.Reference()
 		coordinator.HeavyMock.Return(&hNode, nil)
 
-		b := newFilamentBuilder(ctx, pcs, records, indexes)
+		b := newFilamentBuilder(ctx, pcs, records)
 		reason := *insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, nil))
 		reqR := record.IncomingRequest{Nonce: rand.Uint64(), Reason: reason}
 		req1 := b.Append(insolar.FirstPulseNumber+1, reqR)
@@ -1277,4 +1318,73 @@ func TestFilamentCalculatorDefault_RequestDuplicate(t *testing.T) {
 		mc.Finish()
 	})
 
+}
+
+type filamentBuilder struct {
+	records   object.RecordModifier
+	currentID insolar.ID
+	ctx       context.Context
+	pcs       insolar.PlatformCryptographyScheme
+}
+
+func newFilamentBuilder(
+	ctx context.Context,
+	pcs insolar.PlatformCryptographyScheme,
+	records object.RecordModifier,
+) *filamentBuilder {
+	return &filamentBuilder{
+		ctx:     ctx,
+		records: records,
+		pcs:     pcs,
+	}
+}
+
+func (b *filamentBuilder) Append(pn insolar.PulseNumber, rec record.Record) record.CompositeFilamentRecord {
+	return b.append(pn, rec, true)
+}
+
+func (b *filamentBuilder) AppendNoPersist(pn insolar.PulseNumber, rec record.Record) record.CompositeFilamentRecord {
+	return b.append(pn, rec, false)
+}
+
+func (b *filamentBuilder) append(pn insolar.PulseNumber, rec record.Record, persist bool) record.CompositeFilamentRecord {
+	var composite record.CompositeFilamentRecord
+	{
+		virtual := record.Wrap(rec)
+		hash := record.HashVirtual(b.pcs.ReferenceHasher(), virtual)
+		id := *insolar.NewID(pn, hash)
+		material := record.Material{Virtual: &virtual, JetID: insolar.ZeroJetID}
+		if persist {
+			err := b.records.Set(b.ctx, id, material)
+			if err != nil {
+				panic(err)
+			}
+		}
+		composite.RecordID = id
+		composite.Record = material
+	}
+
+	{
+		rec := record.PendingFilament{RecordID: composite.RecordID}
+		if !b.currentID.IsEmpty() {
+			curr := b.currentID
+			rec.PreviousRecord = &curr
+		}
+		virtual := record.Wrap(rec)
+		hash := record.HashVirtual(b.pcs.ReferenceHasher(), virtual)
+		id := *insolar.NewID(pn, hash)
+		material := record.Material{Virtual: &virtual, JetID: insolar.ZeroJetID}
+		if persist {
+			err := b.records.Set(b.ctx, id, material)
+			if err != nil {
+				panic(err)
+			}
+		}
+		composite.MetaID = id
+		composite.Meta = material
+	}
+
+	b.currentID = composite.MetaID
+
+	return composite
 }

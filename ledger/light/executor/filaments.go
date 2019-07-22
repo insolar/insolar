@@ -538,7 +538,14 @@ func (c *FilamentCalculatorDefault) PendingRequests(ctx context.Context, pulse i
 			if !r.IsDetached() {
 				break
 			}
-			if _, ok := hasResult[*r.Reason.Record()]; !ok {
+			_, reasonClosed := hasResult[*r.Reason.Record()]
+			_, reqClose := hasResult[rec.RecordID]
+
+			if reqClose && !reasonClosed {
+				return nil, errors.New("impossible situation. reason should be closed before closing of outgoing")
+			}
+
+			if reasonClosed && !reqClose {
 				pending = append(pending, rec)
 			}
 		}
