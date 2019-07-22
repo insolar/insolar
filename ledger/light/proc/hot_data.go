@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/hot"
@@ -156,9 +155,15 @@ func (p *HotObjects) notifyPending(
 		return
 	}
 
-	_, err := p.Dep.MessageBus.Send(ctx, &message.AbandonedRequestsNotification{
-		Object: objectID,
-	}, nil)
+	msg, err := payload.NewMessage(&payload.AbandonedRequestsNotification{
+		ObjectID: objectID,
+	})
+	if err != nil {
+		inslogger.FromContext(ctx).Error("failed to create reply")
+	}
+
+	p.Dep.Sender.Reply(ctx, p.meta, msg)
+
 	if err != nil {
 		inslogger.FromContext(ctx).Error("failed to notify about pending requests")
 	}
