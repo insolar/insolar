@@ -155,6 +155,9 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	if oldPulse != nil {
 		nodes, err := m.Nodes.All(oldPulse.PulseNumber)
 		if err != nil {
+			if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
+				return errors.Wrap(err, "call of AddPulse failed")
+			}
 			return nil
 		}
 		// No active nodes for pulse. It means there was no processing (network start).
@@ -168,5 +171,8 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		}
 	}
 
+	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
+		return errors.Wrap(err, "call of AddPulse failed")
+	}
 	return nil
 }

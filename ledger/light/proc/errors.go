@@ -21,5 +21,6 @@ import (
 )
 
 var (
-	ErrNotExecutor = errors.New("not executor for jet")
+	ErrNotExecutor  = errors.New("not executor for jet")
+	ErrNotActivated = errors.New("object should be activated")
 )

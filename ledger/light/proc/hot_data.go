@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -51,7 +52,7 @@ type HotObjects struct {
 		MessageBus    insolar.MessageBus
 		IndexModifier object.IndexModifier
 		JetStorage    jet.Storage
-		JetFetcher    jet.Fetcher
+		JetFetcher    executor.JetFetcher
 		JetReleaser   hot.JetReleaser
 		Coordinator   jet.Coordinator
 		Calculator    pulse.Calculator

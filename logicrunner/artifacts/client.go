@@ -747,43 +747,6 @@ func (m *client) ActivatePrototype(
 	return err
 }
 
-// RegisterValidation marks provided object state as approved or disapproved.
-//
-// When fetching object, validity can be specified.
-func (m *client) RegisterValidation(
-	ctx context.Context,
-	object insolar.Reference,
-	state insolar.ID,
-	isValid bool,
-	validationMessages []insolar.Message,
-) error {
-	var err error
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.RegisterValidation")
-	instrumenter := instrument(ctx, "RegisterValidation").err(&err)
-	defer func() {
-		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
-		}
-		span.End()
-		instrumenter.end()
-	}()
-
-	msg := message.ValidateRecord{
-		Object:             object,
-		State:              state,
-		IsValid:            isValid,
-		ValidationMessages: validationMessages,
-	}
-
-	sender := messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryJetSender(m.JetStorage),
-	)
-	_, err = sender(ctx, &msg, nil)
-
-	return err
-}
-
 // pulse returns current PulseNumber for artifact manager
 func (m *client) pulse(ctx context.Context) (pn insolar.PulseNumber, err error) {
 	pulse, err := m.PulseAccessor.Latest(ctx)

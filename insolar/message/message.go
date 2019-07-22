@@ -53,30 +53,16 @@ func getEmptyMessage(mt insolar.MessageType) (insolar.Message, error) {
 		return &StillExecuting{}, nil
 
 	// Ledger
-	case insolar.TypeGetCode:
-		return &GetCode{}, nil
-	case insolar.TypeGetObject:
-		return &GetObject{}, nil
 	case insolar.TypeGetDelegate:
 		return &GetDelegate{}, nil
 	case insolar.TypeGetChildren:
 		return &GetChildren{}, nil
-	case insolar.TypeUpdateObject:
-		return &UpdateObject{}, nil
 	case insolar.TypeRegisterChild:
 		return &RegisterChild{}, nil
-	case insolar.TypeSetRecord:
-		return &SetRecord{}, nil
 	case insolar.TypeGetObjectIndex:
 		return &GetObjectIndex{}, nil
-	case insolar.TypeGetPendingRequests:
-		return &GetPendingRequests{}, nil
-	case insolar.TypeGetJet:
-		return &GetJet{}, nil
 	case insolar.TypeAbandonedRequestsNotification:
 		return &AbandonedRequestsNotification{}, nil
-	case insolar.TypeGetPendingRequestID:
-		return &GetPendingRequestID{}, nil
 
 	// heavy sync
 	case insolar.TypeHeavyPayload:
@@ -193,19 +179,10 @@ func init() {
 	gob.Register(&StillExecuting{})
 
 	// Ledger
-	gob.Register(&GetCode{})
-	gob.Register(&GetObject{})
 	gob.Register(&GetDelegate{})
-	gob.Register(&UpdateObject{})
 	gob.Register(&RegisterChild{})
-	gob.Register(&SetRecord{})
 	gob.Register(&GetObjectIndex{})
-	gob.Register(&SetBlob{})
-	gob.Register(&ValidateRecord{})
-	gob.Register(&GetPendingRequests{})
-	gob.Register(&GetJet{})
 	gob.Register(&AbandonedRequestsNotification{})
-	gob.Register(&GetPendingRequestID{})
 
 	// heavy
 	gob.Register(&HeavyPayload{})

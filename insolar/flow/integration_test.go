@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
@@ -61,9 +62,9 @@ func TestEmptyHandle(t *testing.T) {
 				return nil
 			}
 		}, nil, nil)
-	ctx := context.Background()
 	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
-	disp.ChangePulse(ctx, currentPulse)
+	disp.PulseAccessor = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
+	ctx := context.Background()
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
@@ -95,7 +96,7 @@ func TestCallEmptyProcedure(t *testing.T) {
 
 	ctx := context.Background()
 	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
-	disp.ChangePulse(ctx, currentPulse)
+	disp.PulseAccessor = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
@@ -128,7 +129,7 @@ func TestProcedureReturnError(t *testing.T) {
 
 	ctx := context.Background()
 	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
-	disp.ChangePulse(ctx, currentPulse)
+	disp.PulseAccessor = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
@@ -167,10 +168,16 @@ func TestChangePulse(t *testing.T) {
 		}, nil, nil)
 
 	handleProcessed := make(chan struct{})
+	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+
+	a := pulse.NewAccessorMock(t)
+	a.LatestFunc = func(ctx context.Context) (insolar.Pulse, error) {
+		return currentPulse, nil
+	}
+	disp.PulseAccessor = a
+
 	go func() {
 		ctx := context.Background()
-		currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
-		disp.ChangePulse(ctx, currentPulse)
 
 		msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
@@ -182,8 +189,8 @@ func TestChangePulse(t *testing.T) {
 	}()
 
 	<-procedureStarted
-	pulse := pulsar.NewPulse(22, 33, &entropygenerator.StandardEntropyGenerator{})
-	disp.ChangePulse(context.Background(), *pulse)
+	p := pulsar.NewPulse(22, 33, &entropygenerator.StandardEntropyGenerator{})
+	disp.ChangePulse(context.Background(), *p)
 	<-handleProcessed
 }
 
@@ -220,10 +227,12 @@ func TestChangePulseAndMigrate(t *testing.T) {
 		}, nil, nil)
 
 	handleProcessed := make(chan struct{})
+
+	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+	disp.PulseAccessor = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
+
 	go func() {
 		ctx := context.Background()
-		currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
-		disp.ChangePulse(ctx, currentPulse)
 
 		msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 

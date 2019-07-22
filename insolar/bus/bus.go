@@ -175,6 +175,11 @@ func (b *Bus) SendTarget(
 		close(res)
 		return res, func() {}
 	}
+	ctx, _ = inslogger.WithField(ctx, "sending_type", msg.Metadata.Get(MetaType))
+	payloadType, err := payload.UnmarshalType(msg.Payload)
+	if err == nil {
+		ctx, _ = inslogger.WithField(ctx, "sending_type", payloadType.String())
+	}
 	logger := inslogger.FromContext(ctx)
 
 	msg.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
