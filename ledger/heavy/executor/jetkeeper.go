@@ -60,13 +60,13 @@ type dbJetKeeper struct {
 }
 
 type jetInfo struct {
-	JetID        insolar.JetID
-	HotConfirmed bool
-	JetConfirmed bool
+	JetID         insolar.JetID
+	HotConfirmed  bool
+	DropConfirmed bool
 }
 
 func (j *jetInfo) isConfirmed() bool {
-	return j.JetConfirmed && j.HotConfirmed
+	return j.DropConfirmed && j.HotConfirmed
 }
 
 func (jk *dbJetKeeper) AddHotConfirmation(ctx context.Context, pn insolar.PulseNumber, id insolar.JetID) error {
@@ -167,21 +167,21 @@ func (jk *dbJetKeeper) updateJet(ctx context.Context, pulse insolar.PulseNumber,
 					jets[i].HotConfirmed = hotConfirmed
 				}
 				if dropConfirmed {
-					jets[i].JetConfirmed = dropConfirmed
+					jets[i].DropConfirmed = dropConfirmed
 				}
 				break
 			}
 		}
 		if exists {
-			logger.Debug("updateJet. update existing. jetConfirmed: ", dropConfirmed, ". hotConfirmed: ", hotConfirmed,
+			logger.Debug("updateJet. update existing. dropConfirmed: ", dropConfirmed, ". hotConfirmed: ", hotConfirmed,
 				pulse, ". Jet:", id.DebugString())
 		}
 	} else if err != store.ErrNotFound {
 		return errors.Wrapf(err, "can't get pulse: %d", pulse)
 	}
 	if !exists {
-		jets = append(jets, jetInfo{JetID: id, HotConfirmed: hotConfirmed, JetConfirmed: jetConfirmed})
-		logger.Debug("updateJet. not exists. jetConfirmed: ", dropConfirmed, ". hotConfirmed: ", hotConfirmed,
+		jets = append(jets, jetInfo{JetID: id, HotConfirmed: hotConfirmed, DropConfirmed: dropConfirmed})
+		logger.Debug("updateJet. not exists. dropConfirmed: ", dropConfirmed, ". hotConfirmed: ", hotConfirmed,
 			pulse, ". Jet:", id.DebugString())
 	}
 	return jk.set(pulse, jets)
