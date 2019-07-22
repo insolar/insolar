@@ -172,7 +172,12 @@ func (pb *PacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncementP
 		body.Announcement.Member.Joiner.Endpoint = intro.GetDefaultEndpoint().GetIPAddress()
 	}
 
-	// TODO: fill joiner fields
+	// TODO:
+	// Fill JoinerExt
+	// Fill FullSelfIntro
+	// Fill CloudIntro
+	// Fill JoinerSecret
+	// Fill Claims
 
 	return pb.preparePacketSender(packet)
 }
@@ -216,6 +221,12 @@ func (pb *PacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncementP
 		body.Announcement.Member.Joiner.Endpoint = intro.GetDefaultEndpoint().GetIPAddress()
 	}
 
+	// TODO:
+	// Fill BriefSelfIntro
+	// Fill FullSelfIntro
+	// Fill CloudIntro
+	// Fill JoinerSecret
+
 	body.Neighbourhood.NeighbourCount = uint8(len(neighbourhood))
 	body.Neighbourhood.Neighbours = make([]NeighbourAnnouncement, len(neighbourhood))
 	for i, neighbour := range neighbourhood {
@@ -242,16 +253,16 @@ func (pb *PacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncementP
 
 		if announcement := neighbour.GetJoinerAnnouncement(); announcement != nil {
 			intro := announcement.GetBriefIntroduction()
-			body.Neighbourhood.Neighbours[i].Joiner.ShortID = sender.GetJoinerID()
+			body.Neighbourhood.Neighbours[i].Joiner.ShortID = sender.GetNodeID()
 			body.Neighbourhood.Neighbours[i].Joiner.setPrimaryRole(intro.GetPrimaryRole())
 			body.Neighbourhood.Neighbours[i].Joiner.setAddrMode(endpoints.IPEndpoint)
 			body.Neighbourhood.Neighbours[i].Joiner.SpecialRoles = intro.GetSpecialRoles()
 			body.Neighbourhood.Neighbours[i].Joiner.StartPower = intro.GetStartPower()
 			copy(body.Neighbourhood.Neighbours[i].Joiner.NodePK[:], intro.GetNodePublicKey().AsBytes())
 			body.Neighbourhood.Neighbours[i].Joiner.Endpoint = intro.GetDefaultEndpoint().GetIPAddress()
+			body.Neighbourhood.Neighbours[i].JoinerIntroducedBy = announcement.GetJoinerIntroducedByID()
 		}
 	}
-	// TODO: fill joiner fields
 
 	return pb.preparePacketSender(packet)
 }
@@ -278,6 +289,9 @@ func (pb *PacketBuilder) PreparePhase3Packet(sender *transport.NodeAnnouncementP
 		copy(body.Vectors.AdditionalStateVectors[0].SignedGlobulaStateHash[:], vectors.Doubted.StateSignature.AsBytes())
 		body.Vectors.AdditionalStateVectors[0].ExpectedRank = vectors.Doubted.ExpectedRank
 	}
+
+	// TODO:
+	// Fill Claims
 
 	return pb.preparePacketSender(packet)
 }

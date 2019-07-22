@@ -499,7 +499,7 @@ func (r *FullIntroductionReader) GetPowerLevels() member.PowerSet {
 }
 
 func (r *FullIntroductionReader) GetExtraEndpoints() []endpoints.Outbound {
-	// TODO:
+	// TODO: we have no extra endpoints atm
 	return nil
 }
 
@@ -615,16 +615,18 @@ func (r *MembershipAnnouncementReader) GetJoinerAnnouncement() transport.JoinerA
 	return &JoinerAnnouncementReader{
 		MemberPacketReader: r.MemberPacketReader,
 		joiner:             r.body.Announcement.Member.Joiner,
+		introducedBy:       insolar.ShortNodeID(r.packet.Header.SourceID),
 	}
 }
 
 type JoinerAnnouncementReader struct {
 	MemberPacketReader
-	joiner JoinAnnouncement
+	joiner       JoinAnnouncement
+	introducedBy insolar.ShortNodeID
 }
 
 func (r *JoinerAnnouncementReader) GetJoinerIntroducedByID() insolar.ShortNodeID {
-	panic("implement me")
+	return r.introducedBy
 }
 
 func (r *JoinerAnnouncementReader) HasFullIntro() bool {
@@ -715,5 +717,6 @@ func (r *NeighbourAnnouncementReader) GetJoinerAnnouncement() transport.JoinerAn
 	return &JoinerAnnouncementReader{
 		MemberPacketReader: r.MemberPacketReader,
 		joiner:             r.body.Announcement.Member.Joiner,
+		introducedBy:       r.neighbour.JoinerIntroducedBy,
 	}
 }
