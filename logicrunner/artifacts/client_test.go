@@ -301,3 +301,42 @@ func (s *amSuite) TestLedgerArtifactManager_GetPendings_Success() {
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), []insolar.Reference{requestRef}, res)
 }
+
+func (s *amSuite) TestLedgerArtifactManager_HasPendings_Success() {
+	// Arrange
+	mc := minimock.NewController(s.T())
+	defer mc.Finish()
+	objectRef := gen.Reference()
+
+	resultHas := &payload.PendingsInfo{
+		HasPendings: true,
+	}
+	resMsg, err := payload.NewMessage(resultHas)
+	require.NoError(s.T(), err)
+
+	sender := bus.NewSenderMock(s.T())
+	sender.SendRoleFunc = func(p context.Context, msg *wmMessage.Message, role insolar.DynamicRole, ref insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
+		hasPendings := payload.HasPendings{}
+		err := hasPendings.Unmarshal(msg.Payload)
+		require.NoError(s.T(), err)
+
+		require.Equal(s.T(), *objectRef.Record(), hasPendings.ObjectID)
+
+		meta := payload.Meta{Payload: resMsg.Payload}
+		buf, err := meta.Marshal()
+		require.NoError(s.T(), err)
+		resMsg.Payload = buf
+		ch := make(chan *wmMessage.Message, 1)
+		ch <- resMsg
+		return ch, func() {}
+	}
+
+	am := NewClient(sender)
+
+	// Act
+	res, err := am.HasPendings(inslogger.TestContext(s.T()), objectRef)
+
+	// Assert
+	require.NoError(s.T(), err)
+	require.Equal(s.T(), true, res)
+}

@@ -39,7 +39,7 @@ type Params struct {
 	CallSite   string      `json:"callSite"`
 	CallParams interface{} `json:"callParams"`
 	Reference  string      `json:"reference"`
-	PublicKey  string      `json:"memberPublicKey"`
+	PublicKey  string      `json:"publicKey"`
 }
 type Request struct {
 	JSONRPC  string `json:"jsonrpc"`
@@ -47,6 +47,9 @@ type Request struct {
 	Method   string `json:"method"`
 	Params   Params `json:"params"`
 	LogLevel string `json:"logLevel,omitempty"`
+}
+type TransferResponse struct {
+	Fee string `json:"fee"`
 }
 
 // PrototypeReference to prototype of this contract

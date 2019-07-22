@@ -56,21 +56,26 @@ func (p *GetPendingRequestID) Dep(filaments executor.FilamentCalculator, sender 
 }
 
 func (p *GetPendingRequestID) Proceed(ctx context.Context) error {
-	ids, err := p.dep.filaments.PendingRequests(ctx, flow.Pulse(ctx), p.msg.ObjectID)
+	pends, err := p.dep.filaments.PendingRequests(ctx, flow.Pulse(ctx), p.msg.ObjectID)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate pending")
 	}
-	if len(ids) == 0 {
+	if len(pends) == 0 {
 		msg := bus.ReplyAsMessage(ctx, &reply.Error{ErrType: reply.ErrNoPendingRequests})
 		go p.dep.sender.Reply(ctx, p.message, msg)
 		return nil
 	}
 
-	if len(ids) > 100 {
-		ids = ids[:100]
+	if len(pends) > 100 {
+		pends = pends[:100]
+	}
+
+	ids := make([]insolar.ID, len(pends))
+	for i, pend := range pends {
+		ids[i] = pend.RecordID
 	}
 
 	m := bus.ReplyAsMessage(ctx, &reply.IDs{IDs: ids})
-	go p.dep.sender.Reply(ctx, p.message, m)
+	p.dep.sender.Reply(ctx, p.message, m)
 	return nil
 }
