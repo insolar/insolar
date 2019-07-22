@@ -59,7 +59,7 @@ func (cs *ContractService) Call(req *http.Request, args *requester.Params, contr
 	startTime := time.Now()
 	defer observeResultStatus(contractRequest.Method, contractAnswer, startTime)
 
-	insLog.Infof("[ callHandler ] Incoming contractRequest: %s", req.RequestURI)
+	insLog.Infof("[ ContractService.Call ] Incoming request: %s", req.RequestURI)
 
 	ctx, rawBody, err := processRequest(ctx, req, contractRequest, contractAnswer)
 	if err != nil {
