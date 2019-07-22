@@ -208,7 +208,7 @@ func (c Installer) Install(setters ...packetProcessorSetter) Controller {
 
 	c.install(setters, consensusController, packetParserFactory)
 
-	return newController(controlFeederInterceptor, consensusController)
+	return newController(controlFeederInterceptor, candidateFeeder, consensusController)
 }
 
 func (c *Installer) createConsensusController(controlFeeder api.ConsensusControlFeeder, candidateFeeder api.CandidateControlFeeder) api.ConsensusController {
