@@ -3,3 +3,4 @@ metrics:
 # Uncomment this section to disable consensus
 service:
   consensusenabled: false
+
