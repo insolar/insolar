@@ -59,7 +59,7 @@ type DigestHolderMock struct {
 	ReadPreCounter uint64
 	ReadMock       mDigestHolderMockRead
 
-	SignWithFunc       func(p DigestSigner) (r SignedDigest)
+	SignWithFunc       func(p DigestSigner) (r SignedDigestHolder)
 	SignWithCounter    uint64
 	SignWithPreCounter uint64
 	SignWithMock       mDigestHolderMockSignWith
@@ -1209,7 +1209,7 @@ type DigestHolderMockSignWithInput struct {
 }
 
 type DigestHolderMockSignWithResult struct {
-	r SignedDigest
+	r SignedDigestHolder
 }
 
 //Expect specifies that invocation of DigestHolder.SignWith is expected from 1 to Infinity times
@@ -1225,7 +1225,7 @@ func (m *mDigestHolderMockSignWith) Expect(p DigestSigner) *mDigestHolderMockSig
 }
 
 //Return specifies results of invocation of DigestHolder.SignWith
-func (m *mDigestHolderMockSignWith) Return(r SignedDigest) *DigestHolderMock {
+func (m *mDigestHolderMockSignWith) Return(r SignedDigestHolder) *DigestHolderMock {
 	m.mock.SignWithFunc = nil
 	m.expectationSeries = nil
 
@@ -1247,12 +1247,12 @@ func (m *mDigestHolderMockSignWith) ExpectOnce(p DigestSigner) *DigestHolderMock
 	return expectation
 }
 
-func (e *DigestHolderMockSignWithExpectation) Return(r SignedDigest) {
+func (e *DigestHolderMockSignWithExpectation) Return(r SignedDigestHolder) {
 	e.result = &DigestHolderMockSignWithResult{r}
 }
 
 //Set uses given function f as a mock of DigestHolder.SignWith method
-func (m *mDigestHolderMockSignWith) Set(f func(p DigestSigner) (r SignedDigest)) *DigestHolderMock {
+func (m *mDigestHolderMockSignWith) Set(f func(p DigestSigner) (r SignedDigestHolder)) *DigestHolderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1261,7 +1261,7 @@ func (m *mDigestHolderMockSignWith) Set(f func(p DigestSigner) (r SignedDigest))
 }
 
 //SignWith implements github.com/insolar/insolar/network/consensus/common/cryptkit.DigestHolder interface
-func (m *DigestHolderMock) SignWith(p DigestSigner) (r SignedDigest) {
+func (m *DigestHolderMock) SignWith(p DigestSigner) (r SignedDigestHolder) {
 	counter := atomic.AddUint64(&m.SignWithPreCounter, 1)
 	defer atomic.AddUint64(&m.SignWithCounter, 1)
 

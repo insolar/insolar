@@ -64,36 +64,6 @@ type LocalHashedNodeVector struct {
 	DoubtedGlobulaStateVector proofs.GlobulaStateHash
 }
 
-func ClassifyByNodeGsh(selfData LocalHashedNodeVector, otherData statevector.Vector,
-	derivedVector *NodeVectorHelper) (NodeVerificationResult, ConsensusStatRow) {
-
-	sr := CompareToStatRow(selfData.Bitset, otherData.Bitset)
-
-	if sr.HasValues(ComparedMissingHere) {
-		// we can't validate anything without data
-		// ...  check for updates or/and send requests
-		return NvrMissingNodes, ConsensusStatRow{}
-	}
-
-	trustedPart, doubtedPart := PrepareSubVectorsComparison(sr,
-		otherData.Trusted.AnnouncementHash != nil,
-		otherData.Doubted.AnnouncementHash != nil)
-
-	if trustedPart == verifyRecalc || doubtedPart == verifyRecalc {
-		// It does remap the original bitset with the given stats
-		derivedVector.PrepareDerivedVector(sr)
-	}
-
-	verifyRes := doVerifyVectorHashes(trustedPart, doubtedPart, selfData, otherData, derivedVector)
-
-	if verifyRes == NvrNotVerified || verifyRes == NvrSenderFault {
-		return verifyRes, ConsensusStatRow{}
-	}
-
-	nodeStats := SummarizeStats(otherData.Bitset, verifyRes&^NvrHashlessFlags, sr)
-	return verifyRes, nodeStats
-}
-
 type SubVectorCompared uint8
 
 const (
@@ -186,63 +156,7 @@ func PrepareSubVectorsComparison(sr ComparedBitsetRow, hasOtherTrusted, hasOther
 	return trustedPart, doubtedPart
 }
 
-func doVerifyVectorHashes(trustedPart, doubtedPart SubVectorCompared,
-	selfData LocalHashedNodeVector, otherData statevector.Vector, derivedVector *NodeVectorHelper) NodeVerificationResult {
-
-	if doubtedPart.IsNeeded() && selfData.Doubted.AnnouncementHash == nil {
-		// special case when all our nodes are in trusted, so other's doubted vector will be matched with the trusted one of ours
-		selfData.Doubted.AnnouncementHash = selfData.Trusted.AnnouncementHash
-		selfData.DoubtedGlobulaStateVector = selfData.TrustedGlobulaStateVector
-		// selfData.DoubtedGlobulaStateVectorSignature = selfData.TrustedGlobulaStateVectorSignature
-	}
-
-	gahTrusted, gahDoubted := selfData.Trusted.AnnouncementHash, selfData.Doubted.AnnouncementHash
-
-	if trustedPart.IsRecalc() || doubtedPart.IsRecalc() {
-		// It does remap the original bitset with the given stats
-		// derivedVector.PrepareDerivedVector(sr)
-		gahTrusted, gahDoubted = derivedVector.BuildGlobulaAnnouncementHashes(
-			trustedPart.IsRecalc(), doubtedPart.IsRecalc(), gahTrusted, gahDoubted)
-	}
-
-	validTrusted := trustedPart.IsNeeded() && gahTrusted.Equals(otherData.Trusted.AnnouncementHash)
-	validDoubted := doubtedPart.IsNeeded() && gahDoubted.Equals(otherData.Doubted.AnnouncementHash)
-
-	verifyRes := NvrNotVerified
-	if validDoubted && !validTrusted {
-		// As Trusted is a subset of Doubted, then Doubted can't be valid if Trusted is not.
-		// This is an evident fraud/error by the sender.
-		// Use status for doubted, but SvcIgnore results for Trusted check
-		// TODO report fraud
-		verifyRes |= NvrSenderFault
-		trustedPart = SvcIgnore
-	}
-
-	if validTrusted || validDoubted {
-		recalcTrusted := trustedPart.IsRecalc() && validTrusted
-		recalcDoubted := doubtedPart.IsRecalc() && validDoubted
-
-		gshTrusted, gshDoubted := selfData.TrustedGlobulaStateVector, selfData.DoubtedGlobulaStateVector
-		if recalcTrusted || recalcDoubted {
-			gshTrusted, gshDoubted = derivedVector.BuildGlobulaStateHashes(
-				recalcTrusted, recalcDoubted, gshTrusted, gshDoubted)
-		}
-
-		validTrusted = validTrusted && derivedVector.VerifyGlobulaStateSignature(gshTrusted, otherData.Trusted.StateSignature)
-		validDoubted = validDoubted && derivedVector.VerifyGlobulaStateSignature(gshDoubted, otherData.Doubted.StateSignature)
-	}
-
-	if trustedPart.IsNeeded() {
-		verifyRes.SetTrusted(validTrusted, trustedPart.IsRecalc())
-	}
-	if doubtedPart.IsNeeded() {
-		verifyRes.SetDoubted(validDoubted, doubtedPart.IsRecalc())
-	}
-
-	return verifyRes
-}
-
-func SummarizeStats(otherDataBitset member.StateBitset, verifyRes NodeVerificationResult, sr ComparedBitsetRow) ConsensusStatRow {
+func SummarizeStatsOld(hereDataBitset, otherDataBitset member.StateBitset, verifyRes NodeVerificationResult, sr ComparedBitsetRow) ConsensusStatRow {
 
 	nodeStats := NewConsensusStatRow(sr.ColumnCount())
 
@@ -257,7 +171,7 @@ func SummarizeStats(otherDataBitset member.StateBitset, verifyRes NodeVerificati
 			if verifyRes != NvrNotVerified {
 				panic("unexpected")
 			}
-			nodeResult = ConsensusStatMissingHere
+			nodeResult = ConsensusStatMissingHere // TODO wrong
 		case ComparedMissingThere:
 			nodeResult = ConsensusStatMissingThere
 		case ComparedDoubtedMissingHere:
@@ -274,7 +188,11 @@ func SummarizeStats(otherDataBitset member.StateBitset, verifyRes NodeVerificati
 				nodeResult = ConsensusStatMissingThere
 			case b.IsFraud():
 				// we don't need checks to agree on fraud mutually detected
-				nodeResult = ConsensusStatFraud
+				if hereDataBitset[i].IsFraud() {
+					nodeResult = ConsensusStatFraud
+				} else {
+					nodeResult = ConsensusStatFraudSuspect
+				}
 			case b.IsTrusted() && verifyRes.AnyOf(NvrTrustedFraud):
 				nodeResult = ConsensusStatFraudSuspect
 				fraudEnforcementCheck = NvrTrustedFraud
@@ -321,6 +239,97 @@ func SummarizeStats(otherDataBitset member.StateBitset, verifyRes NodeVerificati
 		nodeStats.Set(i, nodeResult)
 	}
 	return nodeStats
+}
+
+func SummarizeStats(otherDataBitset member.StateBitset, verifyRes NodeVerificationResult, sr ComparedBitsetRow) ConsensusStatRow {
+
+	nodeStats := NewConsensusStatRow(sr.ColumnCount())
+
+	for i := 0; i < sr.ColumnCount(); i++ {
+		nodeResult, fraudEnforcementCheck := summaryByEntry(otherDataBitset[i], verifyRes, sr.Get(i))
+
+		if nodeResult == ConsensusStatFraudSuspect {
+			switch fraudEnforcementCheck {
+			case NvrTrustedFraud:
+				// TODO check if there is the only one trusted, then set ConsensusStatFraud
+			case NvrDoubtedFraud:
+				// TODO check if it is the only one in doubted different from trusted, then set ConsensusStatFraud
+			}
+		}
+		nodeStats.Set(i, nodeResult)
+	}
+	return nodeStats
+}
+
+func summaryByEntry(otherEntry member.BitsetEntry, verifyRes NodeVerificationResult,
+	compared ComparedState) (ConsensusStat, NodeVerificationResult) {
+
+	if otherEntry.IsFraud() {
+		return ConsensusStatFraud, NvrNotVerified
+	}
+
+	switch compared {
+	case ComparedMissingHere:
+		// missing here and present there in "doubted"
+		// so we can't build GSH without it anyway
+		if verifyRes != NvrNotVerified {
+			panic("unexpected")
+		}
+	case ComparedDoubtedMissingHere:
+		// missed by us, so we can't build doubted GSH without it anyway
+		switch {
+		case verifyRes.AnyOf(NvrDoubtedFraud | NvrDoubtedValid):
+			panic("unexpected")
+		case otherEntry.IsTrusted():
+			switch {
+			case verifyRes.AnyOf(NvrTrustedValid):
+				return ConsensusStatTrusted, NvrNotVerified
+			case verifyRes.AllOf(NvrTrustedFraud):
+				return ConsensusStatFraudSuspect, NvrTrustedFraud
+			}
+		}
+	case ComparedMissingThere:
+		return ConsensusStatMissingThere, NvrNotVerified
+	case ComparedSame:
+		switch {
+		case otherEntry.IsTimeout():
+			// it was missing on both sides
+			return ConsensusStatMissingThere, NvrNotVerified
+		case otherEntry.IsFraud():
+			return ConsensusStatFraud, NvrNotVerified
+		case otherEntry.IsTrusted() && verifyRes.AnyOf(NvrTrustedFraud):
+			return ConsensusStatFraudSuspect, NvrTrustedFraud
+		case otherEntry.IsTrusted() && verifyRes.AnyOf(NvrTrustedValid):
+			return ConsensusStatTrusted, NvrNotVerified
+		case verifyRes.AnyOf(NvrDoubtedValid):
+			return ConsensusStatDoubted, NvrNotVerified
+		case verifyRes.AnyOf(NvrDoubtedFraud):
+			return ConsensusStatFraudSuspect, NvrDoubtedFraud
+		}
+	case ComparedLessTrustedThere:
+		switch {
+		case otherEntry.IsFraud():
+			return ConsensusStatFraudSuspect, NvrNotVerified
+		case verifyRes.AnyOf(NvrDoubtedValid):
+			return ConsensusStatDoubted, NvrNotVerified
+		case verifyRes.AnyOf(NvrDoubtedFraud):
+			return ConsensusStatFraudSuspect, NvrDoubtedFraud
+		}
+	case ComparedLessTrustedHere:
+		switch {
+		case verifyRes.AllOf(NvrTrustedValid | NvrTrustedAlteredNodeSet):
+			return ConsensusStatTrusted, NvrNotVerified
+		case verifyRes.AllOf(NvrTrustedFraud | NvrTrustedAlteredNodeSet):
+			return ConsensusStatFraudSuspect, NvrTrustedFraud
+		case verifyRes.AnyOf(NvrDoubtedValid):
+			return ConsensusStatDoubted, NvrNotVerified
+		case verifyRes.AnyOf(NvrDoubtedFraud):
+			return ConsensusStatFraudSuspect, NvrDoubtedFraud
+		}
+	default:
+		panic("unexpected")
+	}
+	return ConsensusStatMissingHere, NvrNotVerified
 }
 
 type NodeVerificationResult uint16

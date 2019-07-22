@@ -53,6 +53,8 @@ package endpoints
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/network/consensus/common/args"
+
 	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -163,4 +165,38 @@ func (v *InboundConnection) GetTransportKey() cryptkit.SignatureKeyHolder {
 
 func (v *InboundConnection) GetTransportCert() cryptkit.CertificateHolder {
 	return v.Cert
+}
+
+func EqualOutboundEndpoints(p Outbound, o Outbound) bool {
+	if args.IsNil(p) || args.IsNil(o) {
+		return false
+	}
+	if p == o {
+		return true
+	}
+	if p.GetEndpointType() != o.GetEndpointType() {
+		return false
+	}
+	switch p.GetEndpointType() {
+	case NameEndpoint:
+		return p.GetNameAddress() == o.GetNameAddress()
+	case IPEndpoint:
+		return p.GetIPAddress() == o.GetIPAddress()
+	case RelayEndpoint:
+		return p.GetRelayID() == o.GetRelayID()
+	default:
+		panic("not implemented")
+	}
+}
+
+func EqualListOfOutboundEndpoints(p []Outbound, o []Outbound) bool {
+	if len(p) != len(o) {
+		return false
+	}
+	for i, pi := range p {
+		if !EqualOutboundEndpoints(pi, o[i]) {
+			return false
+		}
+	}
+	return true
 }

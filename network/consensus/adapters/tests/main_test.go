@@ -58,6 +58,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -99,6 +100,7 @@ func TestConsensusMain(t *testing.T) {
 		SpikeProbability: 0.1,
 	})
 
+	controllers := make([]consensus.Controller, len(nodes))
 	for i, n := range nodes {
 		nodeKeeper := nodenetwork.NewNodeKeeper(n)
 		nodeKeeper.SetInitialSnapshot(nodes)
@@ -116,7 +118,7 @@ func TestConsensusMain(t *testing.T) {
 
 		delayTransport := strategy.GetLink(transport)
 
-		_ = consensus.New(ctx, consensus.Dep{
+		controllers[i] = consensus.New(ctx, consensus.Dep{
 			PrimingCloudStateHash: [64]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 			KeyProcessor:          keyProcessor,
 			Scheme:                scheme,
@@ -149,11 +151,19 @@ func TestConsensusMain(t *testing.T) {
 		}
 	}()
 
+	once := sync.Once{}
+
 	for {
 		fmt.Println("===", time.Since(startedAt), "=================================================")
 		time.Sleep(time.Second)
 		if time.Since(startedAt) > time.Minute {
 			return
+		}
+
+		if time.Since(startedAt) > 10*time.Second {
+			once.Do(func() {
+				controllers[0].Leave(0)
+			})
 		}
 	}
 }
@@ -257,7 +267,7 @@ func newNetworkNode(id int, addr string, role insolar.StaticRole, pk crypto.Publ
 	digest := hasher.Hash(data)
 	signature, _ := signer.Sign(digest)
 
-	mn.SetSignature(*signature)
+	mn.SetSignature(digest, *signature)
 
 	return mn
 }
