@@ -51,7 +51,7 @@ func (cs *ContractService) Call(req *http.Request, args *requester.Params, resul
 	}
 
 	rawBody, err := json.Marshal(requester.Request{
-		JSONRPC: "2.0",
+		JSONRPC: requester.JSONRPCVersion,
 		ID:      1,
 		Method:  "contract.call",
 		Params:  *args,
