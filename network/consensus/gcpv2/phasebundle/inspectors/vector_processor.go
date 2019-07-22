@@ -240,7 +240,7 @@ func (p *ignoredVector) Reinspect(ctx context.Context, inspector VectorInspector
 }
 
 func (p *ignoredVector) Inspect(ctx context.Context) {
-	return
+	// do nothing, all was done before
 }
 
 type vectorInspectorImpl struct {

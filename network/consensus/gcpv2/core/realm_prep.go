@@ -171,11 +171,12 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 /* LOCK - runs under RoundController lock */
 func (p *PrepRealm) beforeStart(ctx context.Context, controllers []PrepPhaseController) {
 
-	if p.postponedPacketFn != nil {
-		limiter := phases.NewPacketLimiter(p.nbhSizes.ExtendingNeighbourhoodLimit)
-		packetsPerSender := limiter.GetRemainingPacketCountDefault()
-		p.packetRecorder = packetrecorder.NewPacketRecorder(int(packetsPerSender) * 100)
+	if p.postponedPacketFn == nil {
+		panic("illegal state")
 	}
+	limiter := phases.NewPacketLimiter(p.nbhSizes.ExtendingNeighbourhoodLimit)
+	packetsPerSender := limiter.GetRemainingPacketCountDefault()
+	p.packetRecorder = packetrecorder.NewPacketRecorder(int(packetsPerSender) * 100)
 
 	p.packetDispatchers = make([]PacketDispatcher, phases.PacketTypeCount)
 	for _, ctl := range controllers {
@@ -188,7 +189,7 @@ func (p *PrepRealm) beforeStart(ctx context.Context, controllers []PrepPhaseCont
 	}
 
 	for _, ctl := range controllers {
-		ctl.BeforeStart(p)
+		ctl.BeforeStart(ctx, p)
 	}
 }
 

@@ -79,11 +79,8 @@ type takeFirstStrategyFactory struct {
 func (p *takeFirstStrategyFactory) CreatePulseSelectionStrategy(population census.OnlinePopulation,
 	config api.LocalNodeConfiguration) PulseSelectionStrategy {
 
-	if population.GetLocalProfile().IsJoiner() {
-		return p
-	} else {
-		return p
-	}
+	//if population.GetLocalProfile().IsJoiner() {
+	return p
 }
 
 func (p *takeFirstStrategyFactory) HandlePulsarPacket(ctx context.Context, packet transport.PulsePacketReader,

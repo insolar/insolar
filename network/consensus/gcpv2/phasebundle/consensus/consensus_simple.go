@@ -96,9 +96,8 @@ func consensusDecisionOfNode(tc *nodeset.ConsensusStatColumn, absMajority bool, 
 		tc.GetSummaryByValue(nodeset.ConsensusStatFraudSuspect) >= bftMajority:
 		if absMajority {
 			return nodeset.CbsExcluded
-		} else {
-			return nodeset.CbsFraud
 		}
+		return nodeset.CbsFraud
 	default:
 		return nodeset.CbsSuspected
 	}

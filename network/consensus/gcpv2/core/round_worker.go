@@ -87,7 +87,6 @@ var _ api.RoundStateCallback = &RoundStateMachineWorker{}
 
 type RoundStateMachineWorker struct {
 	api.UpstreamController
-	controller *PhasedRoundController
 
 	ctx      context.Context
 	cancelFn context.CancelFunc
@@ -154,11 +153,11 @@ func (p *RoundStateMachineWorker) SetTimeout(deadline time.Time) {
 	})
 }
 
-func (p *RoundStateMachineWorker) onUnexpectedPulse(number pulse.Number) {
+func (p *RoundStateMachineWorker) onUnexpectedPulse(pulse.Number) {
 
 }
 
-func (p *RoundStateMachineWorker) onNextPulse(number pulse.Number) {
+func (p *RoundStateMachineWorker) onNextPulse(pulse.Number) {
 	p.cancelFn()
 }
 
@@ -299,14 +298,14 @@ func (p *RoundStateMachineWorker) EnsureRunning() {
 
 func (p *RoundStateMachineWorker) sync(fn func()) {
 	defer func() {
-		recover()
+		_ := recover()
 	}()
 	p.syncCmd <- fn
 }
 
 func (p *RoundStateMachineWorker) async(fn func()) {
 	defer func() {
-		recover()
+		_ := recover()
 	}()
 	p.asyncCmd <- fn
 }

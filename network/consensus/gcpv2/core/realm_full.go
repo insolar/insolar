@@ -358,7 +358,7 @@ func (r *FullRealm) registerNextJoinCandidate() (*NodeAppearance, cryptkit.Diges
 
 func (r *FullRealm) startWorkers(controllers []PhaseController) {
 	for _, ctl := range controllers {
-		ctl.BeforeStart(r)
+		ctl.BeforeStart(r.roundContext, r)
 	}
 	for _, ctl := range controllers {
 		ctl.StartWorker(r.roundContext, r)
