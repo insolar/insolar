@@ -23,6 +23,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
@@ -106,9 +107,15 @@ type Bus struct {
 }
 
 // NewBus creates Bus instance with provided values.
-func NewBus(pub message.Publisher, pulses pulse.Accessor, jc jet.Coordinator, pcs insolar.PlatformCryptographyScheme) *Bus {
+func NewBus(
+	cfg configuration.Bus,
+	pub message.Publisher,
+	pulses pulse.Accessor,
+	jc jet.Coordinator,
+	pcs insolar.PlatformCryptographyScheme,
+) *Bus {
 	return &Bus{
-		timeout:     time.Second * 15,
+		timeout:     cfg.ReplyTimeout,
 		pub:         pub,
 		replies:     make(map[payload.MessageHash]*lockedReply),
 		pulses:      pulses,
