@@ -22,7 +22,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type Subscription struct {
@@ -67,7 +66,6 @@ func (r *remoteParent) Subscribe(ctx context.Context, _ Target, at Page) error {
 		return errors.Wrapf(err, "failed to send replica.Subscribe request")
 	}
 	reply := GenericReply{}
-	inslogger.FromContext(context.Background()).Infof("raw reply: %v err: %v", rawReply, err)
 	err = insolar.Deserialize(rawReply, &reply)
 	if err != nil {
 		return errors.Wrapf(err, "failed to deserialize Subscribe reply")
