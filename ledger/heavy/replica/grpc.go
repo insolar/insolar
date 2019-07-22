@@ -82,6 +82,9 @@ func (t *grpcTransport) Call(ctx context.Context, request *Request) (*Response, 
 		Data:  result,
 		Error: err,
 	})
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to serialize GenericReply")
+	}
 	return &Response{Data: reply}, nil
 }
 
