@@ -105,6 +105,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	)
 	defer span.End()
 
+	inslogger.FromContext(ctx).Debug("BEFORE setUnderGilSection")
 	jets, endedPulse, err := m.setUnderGilSection(ctx, newPulse)
 	if err != nil {
 		if err == errZeroNodes || err == errNoPulse {
@@ -114,10 +115,14 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		panic(errors.Wrap(err, "under gil error"))
 	}
 
+	inslogger.FromContext(ctx).Debug("BEFORE CloseAndWait")
+
 	err = m.WriteManager.CloseAndWait(ctx, endedPulse.PulseNumber)
 	if err != nil {
 		panic(errors.Wrap(err, "can't close pulse for writing"))
 	}
+
+	inslogger.FromContext(ctx).Debug("AFTER CloseAndWait")
 	err = m.HotSender.SendHot(ctx, endedPulse.PulseNumber, newPulse.PulseNumber, jets)
 	if err != nil {
 		logger.Error("send Hot failed: ", err)

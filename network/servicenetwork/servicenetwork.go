@@ -283,6 +283,8 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	pulseTime := time.Unix(0, newPulse.PulseTimestamp)
 	logger := inslogger.FromContext(ctx)
 
+	logger.Infof("BEFORE LOCK Got new pulse number: %d", newPulse.PulseNumber)
+
 	n.lock.Lock()
 	defer n.lock.Unlock()
 
