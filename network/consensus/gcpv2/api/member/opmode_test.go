@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,7 +46,7 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package member
 
@@ -68,6 +68,16 @@ func TestIsRestricted(t *testing.T) {
 	require.False(t, ModeSuspected.IsRestricted())
 
 	require.True(t, ModeEvictedGracefully.IsRestricted())
+}
+
+func TestCanIntroduceJoiner(t *testing.T) {
+	require.False(t, ModeRestrictedAnnouncement.CanIntroduceJoiner(false))
+
+	require.False(t, ModePossibleFraudAndSuspected.CanIntroduceJoiner(false))
+
+	require.False(t, ModePossibleFraud.CanIntroduceJoiner(true))
+
+	require.True(t, ModePossibleFraud.CanIntroduceJoiner(false))
 }
 
 func TestIsMistrustful(t *testing.T) {

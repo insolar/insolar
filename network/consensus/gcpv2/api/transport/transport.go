@@ -53,6 +53,8 @@ package transport
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
@@ -72,12 +74,19 @@ type CryptographyFactory interface {
 	GetNodeSigner(sks cryptkit.SecretKeyStore) cryptkit.DigestSigner
 }
 
+type TargetProfile interface {
+	GetNodeID() insolar.ShortNodeID
+	GetStatic() profiles.StaticProfile
+	IsJoiner() bool
+	EncryptJoinerSecret(joinerSecret cryptkit.DigestHolder) cryptkit.DigestHolder
+}
+
 type PreparedPacketSender interface {
-	SendTo(ctx context.Context, target profiles.StaticProfile, sendOptions PacketSendOptions, sender PacketSender)
+	SendTo(ctx context.Context, target TargetProfile, sendOptions PacketSendOptions, sender PacketSender)
 
 	/* Allows to control parallelism. Can return nil to skip a target */
 	SendToMany(ctx context.Context, targetCount int, sender PacketSender,
-		filter func(ctx context.Context, targetIndex int) (profiles.StaticProfile, PacketSendOptions))
+		filter func(ctx context.Context, targetIndex int) (TargetProfile, PacketSendOptions))
 }
 
 type PacketBuilder interface {
@@ -102,15 +111,15 @@ type PacketBuilder interface {
 }
 
 type PacketSender interface {
-	SendPacketToTransport(ctx context.Context, t profiles.StaticProfile, sendOptions PacketSendOptions, payload interface{})
+	SendPacketToTransport(ctx context.Context, t TargetProfile, sendOptions PacketSendOptions, payload interface{})
 }
 
 type PacketSendOptions uint32
 
 const (
 	SendWithoutPulseData PacketSendOptions = 1 << iota
-	RequestForPhase1
-	AllowFullJoinerIntroForPhase1
+	AlternativePhasePacket
+	OnlyBriefIntroAboutJoiner
 )
 
 // type PreparedIntro interface {}

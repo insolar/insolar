@@ -48,49 +48,91 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package ph3ctl
+package inspectors
 
 import (
+	"context"
+
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/statevector"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/nodeset"
 )
 
-func NewSimpleConsensusSelectionStrategy() ConsensusSelectionStrategy {
-	return &simpleSimpleConsensusSelectionStrategy{}
+func NewBypassInspector() VectorInspector {
+	return &bypassVectorInspector{}
 }
 
-type simpleSimpleConsensusSelectionStrategy struct {
+type bypassVectorInspector struct {
 }
 
-func (*simpleSimpleConsensusSelectionStrategy) TrySelectOnAdded(globulaStats *nodeset.ConsensusStatTable, addedNode profiles.ActiveNode,
-	nodeStats *nodeset.ConsensusStatRow, realm *core.FullRealm) ConsensusSelection {
-	return nil
+func (*bypassVectorInspector) CreateNextPopulation(nodeset.ConsensusBitsetRow) ([]profiles.PopulationRank, proofs.CloudStateHash, proofs.GlobulaStateHash) {
+	panic("illegal state")
 }
 
-func (*simpleSimpleConsensusSelectionStrategy) SelectOnStopped(globulaStats *nodeset.ConsensusStatTable, timeIsOut bool, realm *core.FullRealm) ConsensusSelection {
+func (*bypassVectorInspector) PrepareForInspection(ctx context.Context) {
+	panic("illegal state")
+}
 
-	if globulaStats.ColumnCount() != realm.GetNodeCount() {
+func (*bypassVectorInspector) CreateVector(cryptkit.DigestSigner) statevector.Vector {
+	panic("illegal state")
+}
+
+func (*bypassVectorInspector) InspectVector(ctx context.Context, sender *core.NodeAppearance, customOptions uint32,
+	otherData statevector.Vector) InspectedVector {
+
+	return &bypassVector{sender, customOptions, otherData}
+}
+
+func (*bypassVectorInspector) GetBitset() member.StateBitset {
+	panic("illegal state")
+}
+
+type bypassVector struct {
+	n             *core.NodeAppearance
+	customOptions uint32
+	otherData     statevector.Vector
+}
+
+func (p *bypassVector) GetCustomOptions() uint32 {
+	return p.customOptions
+}
+
+func (p *bypassVector) HasSenderFault() bool {
+	return false
+}
+
+func (p *bypassVector) GetInspectionResults() (*nodeset.ConsensusStatRow, nodeset.NodeVerificationResult) {
+	return nil, nodeset.NvrNotVerified
+}
+
+func (p *bypassVector) GetBitset() member.StateBitset {
+	return p.otherData.Bitset
+}
+
+func (p *bypassVector) GetNode() *core.NodeAppearance {
+	return p.n
+}
+
+func (p *bypassVector) Reinspect(ctx context.Context, inspector VectorInspector) InspectedVector {
+	iv := inspector.InspectVector(ctx, p.n, p.customOptions, p.otherData)
+	if _, ok := iv.(*bypassVector); ok {
 		panic("illegal state")
 	}
-	pop := realm.GetPopulation()
-	bftMajority := uint16(pop.GetBftMajorityCount())
+	return iv
+}
 
-	resultSet := nodeset.NewConsensusBitsetRow(globulaStats.ColumnCount())
-	for i := 0; i < resultSet.ColumnCount(); i++ {
-		tc := globulaStats.GetColumn(i)
-		decision := nodeset.CbsSuspected
-		switch {
-		case tc.GetSummaryByValue(nodeset.ConsensusStatFraud)+tc.GetSummaryByValue(nodeset.ConsensusStatFraudSuspect) >= bftMajority:
-			decision = nodeset.CbsFraud
-		case tc.GetSummaryByValue(nodeset.ConsensusStatTrusted)+tc.GetSummaryByValue(nodeset.ConsensusStatDoubted) >= bftMajority:
-			decision = nodeset.CbsIncluded
-			// TODO suspect markings etc must be by consensus decision
-			// case pop.GetNodeAppearanceByIndex(i).GetProfile().GetState().IsSuspect():
-			//	decision = nodeset.CbsExcluded
-		}
-		resultSet.Set(i, decision)
-	}
+func (*bypassVector) Inspect(ctx context.Context) {
+	panic("illegal state")
+}
 
-	return NewConsensusSelection(false, &resultSet)
+func (*bypassVector) IsInspected() bool {
+	return false
+}
+
+func (*bypassVector) HasMissingMembers() bool {
+	return false
 }

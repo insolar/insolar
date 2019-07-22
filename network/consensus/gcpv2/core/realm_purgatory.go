@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,38 +46,55 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package core
 
 import (
 	"context"
-	"fmt"
+	"sync"
+
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/insolar/insolar/network/consensus/gcpv2/censusimpl"
-	"sync"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
 )
 
-func NewRealmPurgatory(population RealmPopulation, pf profiles.Factory, svf cryptkit.SignatureVerifierFactory,
-	callback *nodeContext, postponedPacketFn PostponedPacketFunc) RealmPurgatory {
+func NewRealmPurgatory(population RealmPopulation, _ profiles.Factory, svf cryptkit.SignatureVerifierFactory,
+	callback *nodeContext, postponedPacketFn packetrecorder.PostponedPacketFunc) RealmPurgatory {
 	return RealmPurgatory{
-		population:        population,
-		profileFactory:    pf,
+		population: population,
+		// profileFactory:    pf,
 		svFactory:         svf,
 		callback:          callback,
 		postponedPacketFn: postponedPacketFn,
 	}
 }
 
+type AnnouncingMember interface {
+	IsJoiner() bool
+	GetNodeID() insolar.ShortNodeID
+	Blames() misbehavior.BlameFactory
+	Frauds() misbehavior.FraudFactory
+	GetReportProfile() profiles.BaseNode
+	DispatchAnnouncement(ctx context.Context, rank member.Rank, profile profiles.StaticProfile,
+		announcement *profiles.MembershipAnnouncement, introducedByID insolar.ShortNodeID) error
+
+	ApplyNeighbourEvidence(n *NodeAppearance, an profiles.MembershipAnnouncement, cappedTrust bool) (bool, error)
+	GetStatic() profiles.StaticProfile
+}
+
 type RealmPurgatory struct {
-	population        RealmPopulation
-	svFactory         cryptkit.SignatureVerifierFactory
-	profileFactory    profiles.Factory
-	postponedPacketFn PostponedPacketFunc
+	population RealmPopulation
+	svFactory  cryptkit.SignatureVerifierFactory
+	// profileFactory    profiles.Factory
+	postponedPacketFn packetrecorder.PostponedPacketFunc
 
 	callback *nodeContext
 
@@ -89,13 +106,13 @@ type RealmPurgatory struct {
 
 	phantomByID map[insolar.ShortNodeID]*NodePhantom
 
-	//phantomByEP map[string]*NodePhantom
+	// phantomByEP map[string]*NodePhantom
 }
 
-//type PurgatoryNodeState int
+// type PurgatoryNodeState int
 //
-//const PurgatoryDuplicatePK PurgatoryNodeState = -1
-//const PurgatoryExistingMember PurgatoryNodeState = -2
+// const PurgatoryDuplicatePK PurgatoryNodeState = -1
+// const PurgatoryExistingMember PurgatoryNodeState = -2
 
 func (p *RealmPurgatory) GetPhantomNode(id insolar.ShortNodeID) *NodePhantom {
 	p.rw.RLock()
@@ -112,137 +129,156 @@ func (p *RealmPurgatory) getPhantomNode(id insolar.ShortNodeID) (*NodePhantom, b
 	return np, ok
 }
 
-type applyNodeIntroFunc func(ctx context.Context, brief profiles.BriefCandidateProfile, full profiles.CandidateProfile,
-	announcerID, originID insolar.ShortNodeID) error
-
-func (p *RealmPurgatory) _getApplyFn(id insolar.ShortNodeID, np *NodePhantom, isNotice bool) applyNodeIntroFunc {
-
-	if np != nil {
-		return np.ApplyNodeIntro
-	}
-	//NB! np == NIL - it means that phantom was moved to a normal population
-	if isNotice {
-		//we dont need to send notice to a NodeAppearance
-		return func(_ context.Context, _ profiles.BriefCandidateProfile, _ profiles.CandidateProfile, _, _ insolar.ShortNodeID) error {
-			return nil
-		}
-	}
-	na := p.population.GetNodeAppearance(id)
-	if na == nil {
-		//nil entry in the purgatory MUST have a relevant NodeAppearance
-		panic("illegal state")
-	}
-	return na.ApplyNodeIntro
-}
-
-func (p *RealmPurgatory) getApplyFn(id insolar.ShortNodeID, isNotice bool) applyNodeIntroFunc {
-
-	np, ok := p.getPhantomNode(id)
-	if ok {
-		return p._getApplyFn(id, np, isNotice)
-	}
+func (p *RealmPurgatory) getOrCreatePhantom(id insolar.ShortNodeID) AnnouncingMember {
 
 	p.rw.Lock()
 	defer p.rw.Unlock()
+
+	np, ok := p.phantomByID[id]
+	if ok {
+		if np == nil { // avoid interface-nil
+			return nil
+		}
+		return np
+	}
+
+	na := p.population.GetNodeAppearance(id)
+	if na != nil {
+		return na
+	}
+
 	if p.phantomByID == nil {
 		p.phantomByID = make(map[insolar.ShortNodeID]*NodePhantom)
-		//p.phantomByEP = make(map[string]*NodePhantom)
-	} else {
-		np, ok = p.phantomByID[id]
-		if ok {
-			return p._getApplyFn(id, np, isNotice)
-		}
 	}
 	limiter := p.population.CreatePacketLimiter()
 	np = NewNodePhantom(p, id, limiter)
 	p.phantomByID[id] = np
-	return np.ApplyNodeIntro
+	return np
+}
+
+func (p *RealmPurgatory) getOrCreateMember(id insolar.ShortNodeID) AnnouncingMember {
+
+	na := p.population.GetNodeAppearance(id)
+	if na != nil { // main path
+		return na
+	}
+
+	np, ok := p.getPhantomNode(id) // read lock
+	if !ok {
+		am := p.getOrCreatePhantom(id) // write lock
+		if am != nil {
+			return am
+		}
+	} else if np != nil {
+		return np
+	}
+
+	// NB! np == NIL - it means that phantom was moved to a normal population
+	na = p.population.GetNodeAppearance(id)
+	if na == nil {
+		// nil entry in the purgatory means that there MUST have be a relevant NodeAppearance
+		panic("illegal state")
+	}
+	return na
+}
+
+func (p *RealmPurgatory) getMember(id insolar.ShortNodeID, introducedBy insolar.ShortNodeID) AnnouncingMember {
+
+	na := p.population.GetNodeAppearance(id)
+	if na != nil { // main path
+		return na
+	}
+
+	np, ok := p.getPhantomNode(id) // read lock
+	if !ok {
+		return nil
+	}
+	if np != nil {
+		return np
+	}
+
+	na = p.population.GetNodeAppearance(id)
+	if na == nil {
+		// nil entry in the purgatory means that there MUST have be a relevant NodeAppearance
+		panic("illegal state")
+	}
+	return na
 }
 
 func (p *RealmPurgatory) ascendFromPurgatory(ctx context.Context, id insolar.ShortNodeID, nsp profiles.StaticProfile,
-	sv cryptkit.SignatureVerifier, packets []PostponedPacket) {
+	rank member.Rank, sv cryptkit.SignatureVerifier) {
 
 	if sv == nil {
 		sv = p.svFactory.GetSignatureVerifierWithPKS(nsp.GetPublicKeyStore())
 	}
-	np := censusimpl.NewJoinerProfile(nsp, sv, nsp.GetStartPower())
+	var np censusimpl.NodeProfileSlot
+	if rank.IsJoiner() {
+		np = censusimpl.NewJoinerProfile(nsp, sv)
+	} else {
+		np = censusimpl.NewNodeProfileExt(rank.GetIndex(), nsp, sv, rank.GetPower(), rank.GetMode())
+	}
 	na := p.population.CreateNodeAppearance(ctx, &np)
 
 	p.rw.Lock()
 	defer p.rw.Unlock()
-	p.phantomByID[id] = nil //leave marker
-	//delete(p.phantomByEP, ...)
-	_, _ = p.population.AddToDynamics(na)
-	go p.flushPostponedPackets(packets)
-}
-
-func (p *RealmPurgatory) NoticeFromNeighbourhood(ctx context.Context,
-	joinerID insolar.ShortNodeID, announcerID, originID insolar.ShortNodeID) error {
-
-	return p.getApplyFn(joinerID, true)(ctx, nil, nil, announcerID, originID)
-}
-
-func (p *RealmPurgatory) BriefSelfFromNeighbourhood(ctx context.Context,
-	joinerID insolar.ShortNodeID, brief transport.BriefIntroductionReader, originID insolar.ShortNodeID) error {
-
-	if brief == nil {
-		panic("illegal value")
-	}
-	return p.getApplyFn(joinerID, false)(ctx, brief, nil, joinerID, insolar.AbsentShortNodeID)
-}
-
-func (p *RealmPurgatory) FromSelfIntroduction(ctx context.Context,
-	joinerID insolar.ShortNodeID, brief transport.BriefIntroductionReader, full transport.FullIntroductionReader) error {
-
-	if brief == nil && full == nil {
-		panic("illegal value")
-	}
-	if brief != nil && full != nil {
-		if !profiles.EqualStaticProfiles(full, brief) {
-			return fmt.Errorf("deserialization error")
+	p.phantomByID[id] = nil // leave marker
+	// delete(p.phantomByEP, ...)
+	na, _ = p.population.AddToDynamics(na)
+	if na.IsJoiner() {
+		_, err := na.ApplyNodeStateHashEvidenceForJoiner()
+		if err != nil {
+			inslogger.FromContext(ctx).Error(err)
 		}
-		brief = nil
 	}
 
-	return p.getApplyFn(joinerID, false)(ctx, brief, full, joinerID, insolar.AbsentShortNodeID)
-}
-
-func (p *RealmPurgatory) FromMemberAnnouncement(ctx context.Context, joinerID insolar.ShortNodeID,
-	brief transport.BriefIntroductionReader, full transport.FullIntroductionReader, announcerID insolar.ShortNodeID) error {
-
-	if brief == nil && full == nil {
-		panic("illegal value")
-	}
-	if brief != nil && full != nil {
-		if !profiles.EqualStaticProfiles(full, brief) {
-			return fmt.Errorf("deserialization error")
-		}
-		brief = nil
-	}
-
-	return p.getApplyFn(joinerID, false)(ctx, brief, full, announcerID, announcerID)
+	inslogger.FromContext(ctx).Debugf("Candidate/joiner has ascended as dynamic node: s=%d, t=%d, full=%v",
+		p.callback.localNodeID, np.GetNodeID(), np.GetStatic().GetExtension() != nil)
 }
 
 func (p *RealmPurgatory) sendPostponedPacket(_ context.Context, packet transport.PacketParser,
-	from endpoints.Inbound, flags PacketVerifyFlags) {
+	from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags) {
 
 	p.postponedPacketFn(packet, from, flags)
 }
 
-func (p *RealmPurgatory) GetProfileFactory() profiles.Factory {
-	return p.profileFactory
-}
-
 func (p *RealmPurgatory) IsBriefAscensionAllowed() bool {
-	return true // TODO using false will fail vector calculation, because only NodeAppearance can be there now
-}
-
-func (p *RealmPurgatory) flushPostponedPackets(packets []PostponedPacket) {
-	for _, pp := range packets {
-		p.postponedPacketFn(pp.Packet, pp.From, pp.VerifyFlags)
-	}
+	return false // TODO using false will fail vector calculation, because only NodeAppearance can be there now
 }
 
 func (p *RealmPurgatory) onBriefProfileCreated(n *NodePhantom) {
 	p.callback.onPurgatoryNodeAdded(p.callback.GetPopulationVersion(), n)
+}
+
+func (p *RealmPurgatory) SelfFromMemberAnnouncement(ctx context.Context, id insolar.ShortNodeID, profile profiles.StaticProfile,
+	rank member.Rank, announcement profiles.MembershipAnnouncement) (bool, error) {
+
+	err := p.getOrCreateMember(id).DispatchAnnouncement(ctx, rank, profile, &announcement, id)
+	return err == nil, err
+}
+
+func (p *RealmPurgatory) JoinerFromMemberAnnouncement(ctx context.Context, id insolar.ShortNodeID, profile profiles.StaticProfile,
+	introducedByID insolar.ShortNodeID) error {
+
+	return p.getOrCreateMember(id).DispatchAnnouncement(ctx, member.JoinerRank, profile, nil, introducedByID)
+}
+
+func (p *RealmPurgatory) JoinerFromNeighbourhood(ctx context.Context, id insolar.ShortNodeID, profile profiles.StaticProfile,
+	introducedByID insolar.ShortNodeID) error {
+
+	return p.getOrCreateMember(id).DispatchAnnouncement(ctx, member.JoinerRank, profile, nil, introducedByID)
+}
+
+func (p *RealmPurgatory) MemberFromNeighbourhood(ctx context.Context, id insolar.ShortNodeID, rank member.Rank,
+	announcement profiles.MembershipAnnouncement, introducedByID insolar.ShortNodeID) (AnnouncingMember, error) {
+
+	am := p.getOrCreateMember(id)
+	return am, am.DispatchAnnouncement(ctx, rank, nil, &announcement, introducedByID)
+}
+
+func (p *RealmPurgatory) FindJoinerProfile(nodeID insolar.ShortNodeID, introducedBy insolar.ShortNodeID) profiles.StaticProfile {
+	am := p.getMember(nodeID, introducedBy)
+	if am.IsJoiner() {
+		return am.GetStatic()
+	}
+	return nil
 }

@@ -48,72 +48,73 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package ph3ctl
+package core
 
 import (
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/statevector"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/nodeset"
+	"context"
+	"time"
+
+	"github.com/insolar/insolar/network/consensus/common/chaser"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 )
 
-func NewBypassInspector() VectorInspector {
-	return &bypassVectorInspector{}
+type PollingWorker struct {
+	ctx context.Context
+
+	polls   []api.MaintenancePollFunc
+	pollCmd chan api.MaintenancePollFunc
 }
 
-type bypassVectorInspector struct {
-}
-
-func (*bypassVectorInspector) CreateVector(cryptkit.DigestSigner) statevector.Vector {
-	panic("illegal state")
-}
-
-func (*bypassVectorInspector) InspectVector(sender *core.NodeAppearance, otherData statevector.Vector) InspectedVector {
-	return &bypassVector{sender, otherData}
-}
-
-func (*bypassVectorInspector) GetBitset() member.StateBitset {
-	panic("illegal state")
-}
-
-type bypassVector struct {
-	n         *core.NodeAppearance
-	otherData statevector.Vector
-}
-
-func (p *bypassVector) HasSenderFault() bool {
-	return false
-}
-
-func (p *bypassVector) GetInspectionResults() (*nodeset.ConsensusStatRow, nodeset.NodeVerificationResult) {
-	return nil, nodeset.NvrNotVerified
-}
-
-func (p *bypassVector) GetBitset() member.StateBitset {
-	return p.otherData.Bitset
-}
-
-func (p *bypassVector) GetNode() *core.NodeAppearance {
-	return p.n
-}
-
-func (p *bypassVector) Reinspect(inspector VectorInspector) InspectedVector {
-	iv := inspector.InspectVector(p.n, p.otherData)
-	if _, ok := iv.(*bypassVector); ok {
+func (p *PollingWorker) Start(ctx context.Context, pollingInterval time.Duration) {
+	if p.ctx != nil {
 		panic("illegal state")
 	}
-	return iv
+	p.ctx = ctx
+	p.pollCmd = make(chan api.MaintenancePollFunc, 10)
+
+	go p.pollingWorker(pollingInterval)
 }
 
-func (*bypassVector) Inspect() {
-	panic("illegal state")
+func (p *PollingWorker) AddPoll(fn api.MaintenancePollFunc) {
+	p.pollCmd <- fn
 }
 
-func (*bypassVector) IsInspected() bool {
-	return false
+func (p *PollingWorker) pollingWorker(pollingInterval time.Duration) {
+	pollingTimer := chaser.NewChasingTimer(pollingInterval)
+
+	for {
+		select {
+		case <-p.ctx.Done():
+			return
+		case <-pollingTimer.Channel():
+			if p.scanPolls() {
+				pollingTimer.RestartChase()
+			}
+		case add := <-p.pollCmd:
+			if add == nil {
+				continue
+			}
+			p.polls = append(p.polls, add)
+			if len(p.polls) == 1 {
+				pollingTimer.RestartChase()
+			}
+		}
+	}
 }
 
-func (*bypassVector) HasMissingMembers() bool {
-	return false
+func (p *PollingWorker) scanPolls() bool {
+	j := 0
+	for i, poll := range p.polls {
+		if !poll(p.ctx) {
+			p.polls[i] = nil
+			continue
+		}
+		if i != j {
+			p.polls[i] = nil
+			p.polls[j] = poll
+		}
+		j++
+	}
+	p.polls = p.polls[:j]
+	return j > 0
 }

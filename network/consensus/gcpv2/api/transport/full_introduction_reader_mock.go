@@ -21,6 +21,11 @@ import (
 type FullIntroductionReaderMock struct {
 	t minimock.Tester
 
+	GetBriefIntroSignedDigestFunc       func() (r cryptkit.SignedDigestHolder)
+	GetBriefIntroSignedDigestCounter    uint64
+	GetBriefIntroSignedDigestPreCounter uint64
+	GetBriefIntroSignedDigestMock       mFullIntroductionReaderMockGetBriefIntroSignedDigest
+
 	GetDefaultEndpointFunc       func() (r endpoints.Outbound)
 	GetDefaultEndpointCounter    uint64
 	GetDefaultEndpointPreCounter uint64
@@ -50,11 +55,6 @@ type FullIntroductionReaderMock struct {
 	GetIssuerSignatureCounter    uint64
 	GetIssuerSignaturePreCounter uint64
 	GetIssuerSignatureMock       mFullIntroductionReaderMockGetIssuerSignature
-
-	GetJoinerSignatureFunc       func() (r cryptkit.SignatureHolder)
-	GetJoinerSignatureCounter    uint64
-	GetJoinerSignaturePreCounter uint64
-	GetJoinerSignatureMock       mFullIntroductionReaderMockGetJoinerSignature
 
 	GetNodePublicKeyFunc       func() (r cryptkit.SignatureKeyHolder)
 	GetNodePublicKeyCounter    uint64
@@ -100,13 +100,13 @@ func NewFullIntroductionReaderMock(t minimock.Tester) *FullIntroductionReaderMoc
 		controller.RegisterMocker(m)
 	}
 
+	m.GetBriefIntroSignedDigestMock = mFullIntroductionReaderMockGetBriefIntroSignedDigest{mock: m}
 	m.GetDefaultEndpointMock = mFullIntroductionReaderMockGetDefaultEndpoint{mock: m}
 	m.GetExtraEndpointsMock = mFullIntroductionReaderMockGetExtraEndpoints{mock: m}
 	m.GetIssuedAtPulseMock = mFullIntroductionReaderMockGetIssuedAtPulse{mock: m}
 	m.GetIssuedAtTimeMock = mFullIntroductionReaderMockGetIssuedAtTime{mock: m}
 	m.GetIssuerIDMock = mFullIntroductionReaderMockGetIssuerID{mock: m}
 	m.GetIssuerSignatureMock = mFullIntroductionReaderMockGetIssuerSignature{mock: m}
-	m.GetJoinerSignatureMock = mFullIntroductionReaderMockGetJoinerSignature{mock: m}
 	m.GetNodePublicKeyMock = mFullIntroductionReaderMockGetNodePublicKey{mock: m}
 	m.GetPowerLevelsMock = mFullIntroductionReaderMockGetPowerLevels{mock: m}
 	m.GetPrimaryRoleMock = mFullIntroductionReaderMockGetPrimaryRole{mock: m}
@@ -116,6 +116,140 @@ func NewFullIntroductionReaderMock(t minimock.Tester) *FullIntroductionReaderMoc
 	m.GetStaticNodeIDMock = mFullIntroductionReaderMockGetStaticNodeID{mock: m}
 
 	return m
+}
+
+type mFullIntroductionReaderMockGetBriefIntroSignedDigest struct {
+	mock              *FullIntroductionReaderMock
+	mainExpectation   *FullIntroductionReaderMockGetBriefIntroSignedDigestExpectation
+	expectationSeries []*FullIntroductionReaderMockGetBriefIntroSignedDigestExpectation
+}
+
+type FullIntroductionReaderMockGetBriefIntroSignedDigestExpectation struct {
+	result *FullIntroductionReaderMockGetBriefIntroSignedDigestResult
+}
+
+type FullIntroductionReaderMockGetBriefIntroSignedDigestResult struct {
+	r cryptkit.SignedDigestHolder
+}
+
+//Expect specifies that invocation of FullIntroductionReader.GetBriefIntroSignedDigest is expected from 1 to Infinity times
+func (m *mFullIntroductionReaderMockGetBriefIntroSignedDigest) Expect() *mFullIntroductionReaderMockGetBriefIntroSignedDigest {
+	m.mock.GetBriefIntroSignedDigestFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &FullIntroductionReaderMockGetBriefIntroSignedDigestExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of FullIntroductionReader.GetBriefIntroSignedDigest
+func (m *mFullIntroductionReaderMockGetBriefIntroSignedDigest) Return(r cryptkit.SignedDigestHolder) *FullIntroductionReaderMock {
+	m.mock.GetBriefIntroSignedDigestFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &FullIntroductionReaderMockGetBriefIntroSignedDigestExpectation{}
+	}
+	m.mainExpectation.result = &FullIntroductionReaderMockGetBriefIntroSignedDigestResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of FullIntroductionReader.GetBriefIntroSignedDigest is expected once
+func (m *mFullIntroductionReaderMockGetBriefIntroSignedDigest) ExpectOnce() *FullIntroductionReaderMockGetBriefIntroSignedDigestExpectation {
+	m.mock.GetBriefIntroSignedDigestFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &FullIntroductionReaderMockGetBriefIntroSignedDigestExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *FullIntroductionReaderMockGetBriefIntroSignedDigestExpectation) Return(r cryptkit.SignedDigestHolder) {
+	e.result = &FullIntroductionReaderMockGetBriefIntroSignedDigestResult{r}
+}
+
+//Set uses given function f as a mock of FullIntroductionReader.GetBriefIntroSignedDigest method
+func (m *mFullIntroductionReaderMockGetBriefIntroSignedDigest) Set(f func() (r cryptkit.SignedDigestHolder)) *FullIntroductionReaderMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetBriefIntroSignedDigestFunc = f
+	return m.mock
+}
+
+//GetBriefIntroSignedDigest implements github.com/insolar/insolar/network/consensus/gcpv2/api/transport.FullIntroductionReader interface
+func (m *FullIntroductionReaderMock) GetBriefIntroSignedDigest() (r cryptkit.SignedDigestHolder) {
+	counter := atomic.AddUint64(&m.GetBriefIntroSignedDigestPreCounter, 1)
+	defer atomic.AddUint64(&m.GetBriefIntroSignedDigestCounter, 1)
+
+	if len(m.GetBriefIntroSignedDigestMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetBriefIntroSignedDigestMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to FullIntroductionReaderMock.GetBriefIntroSignedDigest.")
+			return
+		}
+
+		result := m.GetBriefIntroSignedDigestMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the FullIntroductionReaderMock.GetBriefIntroSignedDigest")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetBriefIntroSignedDigestMock.mainExpectation != nil {
+
+		result := m.GetBriefIntroSignedDigestMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the FullIntroductionReaderMock.GetBriefIntroSignedDigest")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetBriefIntroSignedDigestFunc == nil {
+		m.t.Fatalf("Unexpected call to FullIntroductionReaderMock.GetBriefIntroSignedDigest.")
+		return
+	}
+
+	return m.GetBriefIntroSignedDigestFunc()
+}
+
+//GetBriefIntroSignedDigestMinimockCounter returns a count of FullIntroductionReaderMock.GetBriefIntroSignedDigestFunc invocations
+func (m *FullIntroductionReaderMock) GetBriefIntroSignedDigestMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetBriefIntroSignedDigestCounter)
+}
+
+//GetBriefIntroSignedDigestMinimockPreCounter returns the value of FullIntroductionReaderMock.GetBriefIntroSignedDigest invocations
+func (m *FullIntroductionReaderMock) GetBriefIntroSignedDigestMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetBriefIntroSignedDigestPreCounter)
+}
+
+//GetBriefIntroSignedDigestFinished returns true if mock invocations count is ok
+func (m *FullIntroductionReaderMock) GetBriefIntroSignedDigestFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetBriefIntroSignedDigestMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetBriefIntroSignedDigestCounter) == uint64(len(m.GetBriefIntroSignedDigestMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetBriefIntroSignedDigestMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetBriefIntroSignedDigestCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetBriefIntroSignedDigestFunc != nil {
+		return atomic.LoadUint64(&m.GetBriefIntroSignedDigestCounter) > 0
+	}
+
+	return true
 }
 
 type mFullIntroductionReaderMockGetDefaultEndpoint struct {
@@ -917,140 +1051,6 @@ func (m *FullIntroductionReaderMock) GetIssuerSignatureFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetIssuerSignatureFunc != nil {
 		return atomic.LoadUint64(&m.GetIssuerSignatureCounter) > 0
-	}
-
-	return true
-}
-
-type mFullIntroductionReaderMockGetJoinerSignature struct {
-	mock              *FullIntroductionReaderMock
-	mainExpectation   *FullIntroductionReaderMockGetJoinerSignatureExpectation
-	expectationSeries []*FullIntroductionReaderMockGetJoinerSignatureExpectation
-}
-
-type FullIntroductionReaderMockGetJoinerSignatureExpectation struct {
-	result *FullIntroductionReaderMockGetJoinerSignatureResult
-}
-
-type FullIntroductionReaderMockGetJoinerSignatureResult struct {
-	r cryptkit.SignatureHolder
-}
-
-//Expect specifies that invocation of FullIntroductionReader.GetJoinerSignature is expected from 1 to Infinity times
-func (m *mFullIntroductionReaderMockGetJoinerSignature) Expect() *mFullIntroductionReaderMockGetJoinerSignature {
-	m.mock.GetJoinerSignatureFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &FullIntroductionReaderMockGetJoinerSignatureExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of FullIntroductionReader.GetJoinerSignature
-func (m *mFullIntroductionReaderMockGetJoinerSignature) Return(r cryptkit.SignatureHolder) *FullIntroductionReaderMock {
-	m.mock.GetJoinerSignatureFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &FullIntroductionReaderMockGetJoinerSignatureExpectation{}
-	}
-	m.mainExpectation.result = &FullIntroductionReaderMockGetJoinerSignatureResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of FullIntroductionReader.GetJoinerSignature is expected once
-func (m *mFullIntroductionReaderMockGetJoinerSignature) ExpectOnce() *FullIntroductionReaderMockGetJoinerSignatureExpectation {
-	m.mock.GetJoinerSignatureFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &FullIntroductionReaderMockGetJoinerSignatureExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *FullIntroductionReaderMockGetJoinerSignatureExpectation) Return(r cryptkit.SignatureHolder) {
-	e.result = &FullIntroductionReaderMockGetJoinerSignatureResult{r}
-}
-
-//Set uses given function f as a mock of FullIntroductionReader.GetJoinerSignature method
-func (m *mFullIntroductionReaderMockGetJoinerSignature) Set(f func() (r cryptkit.SignatureHolder)) *FullIntroductionReaderMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetJoinerSignatureFunc = f
-	return m.mock
-}
-
-//GetJoinerSignature implements github.com/insolar/insolar/network/consensus/gcpv2/api/transport.FullIntroductionReader interface
-func (m *FullIntroductionReaderMock) GetJoinerSignature() (r cryptkit.SignatureHolder) {
-	counter := atomic.AddUint64(&m.GetJoinerSignaturePreCounter, 1)
-	defer atomic.AddUint64(&m.GetJoinerSignatureCounter, 1)
-
-	if len(m.GetJoinerSignatureMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetJoinerSignatureMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to FullIntroductionReaderMock.GetJoinerSignature.")
-			return
-		}
-
-		result := m.GetJoinerSignatureMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the FullIntroductionReaderMock.GetJoinerSignature")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetJoinerSignatureMock.mainExpectation != nil {
-
-		result := m.GetJoinerSignatureMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the FullIntroductionReaderMock.GetJoinerSignature")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetJoinerSignatureFunc == nil {
-		m.t.Fatalf("Unexpected call to FullIntroductionReaderMock.GetJoinerSignature.")
-		return
-	}
-
-	return m.GetJoinerSignatureFunc()
-}
-
-//GetJoinerSignatureMinimockCounter returns a count of FullIntroductionReaderMock.GetJoinerSignatureFunc invocations
-func (m *FullIntroductionReaderMock) GetJoinerSignatureMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetJoinerSignatureCounter)
-}
-
-//GetJoinerSignatureMinimockPreCounter returns the value of FullIntroductionReaderMock.GetJoinerSignature invocations
-func (m *FullIntroductionReaderMock) GetJoinerSignatureMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetJoinerSignaturePreCounter)
-}
-
-//GetJoinerSignatureFinished returns true if mock invocations count is ok
-func (m *FullIntroductionReaderMock) GetJoinerSignatureFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetJoinerSignatureMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetJoinerSignatureCounter) == uint64(len(m.GetJoinerSignatureMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetJoinerSignatureMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetJoinerSignatureCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetJoinerSignatureFunc != nil {
-		return atomic.LoadUint64(&m.GetJoinerSignatureCounter) > 0
 	}
 
 	return true
@@ -1998,6 +1998,10 @@ func (m *FullIntroductionReaderMock) GetStaticNodeIDFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *FullIntroductionReaderMock) ValidateCallCounters() {
 
+	if !m.GetBriefIntroSignedDigestFinished() {
+		m.t.Fatal("Expected call to FullIntroductionReaderMock.GetBriefIntroSignedDigest")
+	}
+
 	if !m.GetDefaultEndpointFinished() {
 		m.t.Fatal("Expected call to FullIntroductionReaderMock.GetDefaultEndpoint")
 	}
@@ -2020,10 +2024,6 @@ func (m *FullIntroductionReaderMock) ValidateCallCounters() {
 
 	if !m.GetIssuerSignatureFinished() {
 		m.t.Fatal("Expected call to FullIntroductionReaderMock.GetIssuerSignature")
-	}
-
-	if !m.GetJoinerSignatureFinished() {
-		m.t.Fatal("Expected call to FullIntroductionReaderMock.GetJoinerSignature")
 	}
 
 	if !m.GetNodePublicKeyFinished() {
@@ -2071,6 +2071,10 @@ func (m *FullIntroductionReaderMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *FullIntroductionReaderMock) MinimockFinish() {
 
+	if !m.GetBriefIntroSignedDigestFinished() {
+		m.t.Fatal("Expected call to FullIntroductionReaderMock.GetBriefIntroSignedDigest")
+	}
+
 	if !m.GetDefaultEndpointFinished() {
 		m.t.Fatal("Expected call to FullIntroductionReaderMock.GetDefaultEndpoint")
 	}
@@ -2093,10 +2097,6 @@ func (m *FullIntroductionReaderMock) MinimockFinish() {
 
 	if !m.GetIssuerSignatureFinished() {
 		m.t.Fatal("Expected call to FullIntroductionReaderMock.GetIssuerSignature")
-	}
-
-	if !m.GetJoinerSignatureFinished() {
-		m.t.Fatal("Expected call to FullIntroductionReaderMock.GetJoinerSignature")
 	}
 
 	if !m.GetNodePublicKeyFinished() {
@@ -2141,13 +2141,13 @@ func (m *FullIntroductionReaderMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
+		ok = ok && m.GetBriefIntroSignedDigestFinished()
 		ok = ok && m.GetDefaultEndpointFinished()
 		ok = ok && m.GetExtraEndpointsFinished()
 		ok = ok && m.GetIssuedAtPulseFinished()
 		ok = ok && m.GetIssuedAtTimeFinished()
 		ok = ok && m.GetIssuerIDFinished()
 		ok = ok && m.GetIssuerSignatureFinished()
-		ok = ok && m.GetJoinerSignatureFinished()
 		ok = ok && m.GetNodePublicKeyFinished()
 		ok = ok && m.GetPowerLevelsFinished()
 		ok = ok && m.GetPrimaryRoleFinished()
@@ -2162,6 +2162,10 @@ func (m *FullIntroductionReaderMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
+
+			if !m.GetBriefIntroSignedDigestFinished() {
+				m.t.Error("Expected call to FullIntroductionReaderMock.GetBriefIntroSignedDigest")
+			}
 
 			if !m.GetDefaultEndpointFinished() {
 				m.t.Error("Expected call to FullIntroductionReaderMock.GetDefaultEndpoint")
@@ -2185,10 +2189,6 @@ func (m *FullIntroductionReaderMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetIssuerSignatureFinished() {
 				m.t.Error("Expected call to FullIntroductionReaderMock.GetIssuerSignature")
-			}
-
-			if !m.GetJoinerSignatureFinished() {
-				m.t.Error("Expected call to FullIntroductionReaderMock.GetJoinerSignature")
 			}
 
 			if !m.GetNodePublicKeyFinished() {
@@ -2231,6 +2231,10 @@ func (m *FullIntroductionReaderMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *FullIntroductionReaderMock) AllMocksCalled() bool {
 
+	if !m.GetBriefIntroSignedDigestFinished() {
+		return false
+	}
+
 	if !m.GetDefaultEndpointFinished() {
 		return false
 	}
@@ -2252,10 +2256,6 @@ func (m *FullIntroductionReaderMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetIssuerSignatureFinished() {
-		return false
-	}
-
-	if !m.GetJoinerSignatureFinished() {
 		return false
 	}
 

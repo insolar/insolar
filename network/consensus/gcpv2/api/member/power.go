@@ -71,7 +71,7 @@ func PowerOf(linearValue uint16) Power { // TODO tests are needed
 
 	linearValue += 0x20
 	pwr := uint8(bits.Len16(linearValue))
-	pwr -= 6 //linearValue is always >= 0x40, so pwr > 6
+	pwr -= 6 // linearValue is always >= 0x40, so pwr > 6
 	linearValue >>= pwr
 	return Power((pwr << 5) | uint8(linearValue-0x20))
 }

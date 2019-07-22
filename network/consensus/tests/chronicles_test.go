@@ -52,6 +52,9 @@ package tests
 
 import (
 	"fmt"
+	"math"
+	"time"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -66,22 +69,29 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/censusimpl"
-	"math"
-	"time"
 
 	"github.com/insolar/insolar/network/consensusv1/packets"
 
 	"github.com/insolar/insolar/insolar"
 )
 
-func NewEmuChronicles(intros []profiles.StaticProfile, localNodeIndex int,
+func NewEmuChronicles(intros []profiles.StaticProfile, localNodeIndex int, asJoiner bool,
 	primingCloudStateHash proofs.CloudStateHash) api.ConsensusChronicles {
 
-	pop := censusimpl.NewManyNodePopulation(intros[localNodeIndex], intros)
+	var localCensus *censusimpl.PrimingCensusTemplate
+	registries := &EmuVersionedRegistries{primingCloudStateHash: primingCloudStateHash}
+
+	if asJoiner {
+		if len(intros) != 1 && localNodeIndex != 0 {
+			panic("illegal state")
+		}
+		localCensus = censusimpl.NewPrimingCensusForJoiner(intros[localNodeIndex], registries, EmuDefaultCryptography)
+	} else {
+		localCensus = censusimpl.NewPrimingCensus(intros, intros[localNodeIndex], registries, EmuDefaultCryptography)
+	}
+
 	chronicles := censusimpl.NewLocalChronicles(core.NewSimpleProfileIntroFactory(EmuDefaultCryptography))
-	censusimpl.NewPrimingCensus(&pop,
-		&EmuVersionedRegistries{primingCloudStateHash: primingCloudStateHash},
-	).SetAsActiveTo(chronicles)
+	localCensus.SetAsActiveTo(chronicles)
 	return chronicles
 }
 
@@ -115,6 +125,10 @@ func NewEmuNodeIntroByName(id int, name string) *EmuNodeIntro {
 type EmuVersionedRegistries struct {
 	pd                    pulse.Data
 	primingCloudStateHash proofs.CloudStateHash
+}
+
+func (c *EmuVersionedRegistries) GetCloudIdentity() cryptkit.DigestHolder {
+	return c.primingCloudStateHash
 }
 
 func (c *EmuVersionedRegistries) GetConsensusConfiguration() census.ConsensusConfiguration {
@@ -197,6 +211,9 @@ func (p *emuEndpoint) GetNameAddress() endpoints.Name {
 	return p.name
 }
 
+var _ profiles.StaticProfile = &EmuNodeIntro{}
+var baseIssuedAtTime = time.Now()
+
 type EmuNodeIntro struct {
 	n  endpoints.Outbound
 	id insolar.ShortNodeID
@@ -204,8 +221,13 @@ type EmuNodeIntro struct {
 	sr member.SpecialRole
 }
 
-func (c *EmuNodeIntro) GetJoinerSignature() cryptkit.SignatureHolder {
-	return nil
+func (c *EmuNodeIntro) GetBriefIntroSignedDigest() cryptkit.SignedDigestHolder {
+	dd := longbits.NewBits64(uint64(1000000 + c.id))
+	ds := longbits.NewBits64(uint64(1000000+c.id) << 32)
+
+	return cryptkit.NewSignedDigest(
+		cryptkit.NewDigest(&dd, "stubHash"),
+		cryptkit.NewSignature(&ds, "stubSign")).AsSignedDigestHolder()
 }
 
 func (c *EmuNodeIntro) GetIssuedAtPulse() pulse.Number {
@@ -213,7 +235,7 @@ func (c *EmuNodeIntro) GetIssuedAtPulse() pulse.Number {
 }
 
 func (c *EmuNodeIntro) GetIssuedAtTime() time.Time {
-	return time.Now()
+	return baseIssuedAtTime
 }
 
 func (c *EmuNodeIntro) GetPowerLevels() member.PowerSet {
@@ -229,7 +251,9 @@ func (c *EmuNodeIntro) GetIssuerID() insolar.ShortNodeID {
 }
 
 func (c *EmuNodeIntro) GetIssuerSignature() cryptkit.SignatureHolder {
-	return nil
+	ds := longbits.NewBits64(uint64(5000000+c.id) << 32)
+
+	return cryptkit.NewSignature(&ds, "stubSign").AsSignatureHolder()
 }
 
 func (c *EmuNodeIntro) GetNodePublicKey() cryptkit.SignatureKeyHolder {

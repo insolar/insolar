@@ -53,6 +53,8 @@ package longbits
 import (
 	"bytes"
 	"io"
+
+	"github.com/insolar/insolar/network/consensus/common/args"
 )
 
 type Foldable interface {
@@ -83,7 +85,7 @@ func FoldUint64(v uint64) uint32 {
 
 // TODO ?NeedFix - current implementation can only work for limited cases
 func EqualFixedLenWriterTo(t, o FixedReader) bool {
-	if t == nil || o == nil {
+	if args.IsNil(t) || args.IsNil(o) {
 		return false
 	}
 	return (&writerToComparer{}).compare(t, o)

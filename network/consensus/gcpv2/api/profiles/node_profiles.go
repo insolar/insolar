@@ -70,14 +70,8 @@ type Host interface {
 }
 
 type StaticProfileExtension interface {
-	// full intro
 	GetIntroducedNodeID() insolar.ShortNodeID
-	IsAllowedPower(p member.Power) bool
-	GetPowerLevels() member.PowerSet
-	//ConvertPowerRequest(request power.Request) (bool, member.Power)
-
-	GetReference() insolar.Reference
-	//candidateProfileExtension
+	CandidateProfileExtension
 }
 
 type staticProfile interface {
@@ -86,6 +80,7 @@ type staticProfile interface {
 	GetSpecialRoles() member.SpecialRole
 	GetNodePublicKey() cryptkit.SignatureKeyHolder
 	GetStartPower() member.Power
+	GetBriefIntroSignedDigest() cryptkit.SignedDigestHolder
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.StaticProfile -o . -s _mock.go
@@ -93,7 +88,6 @@ type staticProfile interface {
 type StaticProfile interface { // brief intro
 	Host
 	staticProfile
-	GetJoinerSignature() cryptkit.SignatureHolder
 	GetExtension() StaticProfileExtension // must be always be not null for LocalNode, full intro, == nil when has no full
 }
 
@@ -130,12 +124,11 @@ type BriefCandidateProfile interface {
 	staticProfile
 
 	GetDefaultEndpoint() endpoints.Outbound
-	GetJoinerSignature() cryptkit.SignatureHolder
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.CandidateProfile -o . -s _mock.go
 
-type candidateProfileExtension interface {
+type CandidateProfileExtension interface {
 	GetPowerLevels() member.PowerSet
 	GetExtraEndpoints() []endpoints.Outbound
 	GetReference() insolar.Reference
@@ -149,7 +142,7 @@ type candidateProfileExtension interface {
 
 type CandidateProfile interface {
 	BriefCandidateProfile
-	candidateProfileExtension
+	CandidateProfileExtension
 }
 
 type Factory interface {
@@ -176,11 +169,11 @@ type Updatable interface {
 	SetSignatureVerifier(verifier cryptkit.SignatureVerifier)
 	// Update certificate / mandate
 
-	SetOpModeAndLeaveReason(exitCode uint32)
+	SetOpModeAndLeaveReason(index member.Index, exitCode uint32)
 	GetLeaveReason() uint32
 	SetIndex(index member.Index)
 }
 
 type Upgradable interface {
-	UpgradeProfile(upgradeData CandidateProfile) bool
+	UpgradeProfile(upgradeData CandidateProfileExtension) bool
 }

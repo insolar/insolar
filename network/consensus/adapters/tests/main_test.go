@@ -267,7 +267,7 @@ func newNetworkNode(id int, addr string, role insolar.StaticRole, pk crypto.Publ
 	digest := hasher.Hash(data)
 	signature, _ := signer.Sign(digest)
 
-	mn.SetSignature(*signature)
+	mn.SetSignature(digest, *signature)
 
 	return mn
 }

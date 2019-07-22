@@ -73,27 +73,28 @@ func TestNewLocalCensusBuilder(t *testing.T) {
 	pn := pulse.Number(1)
 	sp := profiles.NewStaticProfileMock(t)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
-	population := &OneNodePopulation{localNode: updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
+	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
 	lcb := newLocalCensusBuilder(chronicles, pn, population, false)
 	require.Equal(t, pn, lcb.populationBuilder.census.pulseNumber)
 
-	lcb = newLocalCensusBuilder(chronicles, pn, population, true)
-	require.Equal(t, pn, lcb.populationBuilder.census.pulseNumber)
+	// TODO
+	/*lcb = newLocalCensusBuilder(chronicles, pn, population, true)
+	require.Equal(t, pn, lcb.populationBuilder.census.pulseNumber)*/
 }
 
-func TestGetCensusState(t *testing.T) {
+func TestLCBGetCensusState(t *testing.T) {
 	st := census.SealedCensus
 	lcb := LocalCensusBuilder{state: st}
 	require.Equal(t, st, lcb.GetCensusState())
 }
 
-func TestGetPulseNumber(t *testing.T) {
+func TestLCBGetPulseNumber(t *testing.T) {
 	pn := pulse.Number(1)
 	lcb := LocalCensusBuilder{pulseNumber: pn}
 	require.Equal(t, pn, lcb.GetPulseNumber())
 }
 
-func TestGetGlobulaStateHash(t *testing.T) {
+func TestLCBGetGlobulaStateHash(t *testing.T) {
 	gsh := proofs.NewGlobulaStateHashMock(t)
 	lcb := LocalCensusBuilder{gsh: gsh}
 	require.Equal(t, gsh, lcb.GetGlobulaStateHash())
@@ -139,24 +140,26 @@ func TestGetPopulationBuilder(t *testing.T) {
 
 func TestBuild(t *testing.T) {
 	lcb := LocalCensusBuilder{state: census.SealedCensus}
-	require.Panics(t, func() { lcb.build(nil) })
+	require.Panics(t, func() { lcb.build(true, nil) })
+
+	require.Panics(t, func() { lcb.build(false, nil) })
 
 	csh := proofs.NewCloudStateHashMock(t)
 	lcb.state = census.DraftCensus
-	require.Panics(t, func() { lcb.build(csh) })
+	require.Panics(t, func() { lcb.build(false, csh) })
 
-	lcb.state = census.BuiltCensus
-	require.Panics(t, func() { lcb.build(csh) })
+	lcb.state = census.CompleteCensus
+	require.Panics(t, func() { lcb.build(false, csh) })
 
 	chronicles := &localChronicles{}
 	pn := pulse.Number(1)
 	sp := profiles.NewStaticProfileMock(t)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
-	population := &OneNodePopulation{localNode: updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
+	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
 	lc := newLocalCensusBuilder(chronicles, pn, population, false)
 	lc.state = census.SealedCensus
-	lc.build(csh)
-	require.Equal(t, census.BuiltCensus, lc.state)
+	lc.build(true, csh)
+	require.Equal(t, census.CompleteCensus, lc.state)
 
 	require.Equal(t, csh, lc.csh)
 }
@@ -166,7 +169,7 @@ func TestBuildAndMakeExpected(t *testing.T) {
 	pn := pulse.Number(1)
 	sp := profiles.NewStaticProfileMock(t)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
-	population := &OneNodePopulation{localNode: updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
+	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
 	lcb := newLocalCensusBuilder(chronicles, pn, population, false)
 	lcb.state = census.SealedCensus
 	csh := proofs.NewCloudStateHashMock(t)
@@ -181,7 +184,7 @@ func TestRemoveOthers(t *testing.T) {
 	pn := pulse.Number(1)
 	sp := profiles.NewStaticProfileMock(t)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
-	population := &OneNodePopulation{localNode: updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
+	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
 	lcb := newLocalCensusBuilder(chronicles, pn, population, false)
 
 	dpb := DynamicPopulationBuilder{census: lcb}
@@ -197,7 +200,7 @@ func TestGetUnorderedProfiles(t *testing.T) {
 	pn := pulse.Number(1)
 	sp := profiles.NewStaticProfileMock(t)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
-	population := &OneNodePopulation{localNode: updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
+	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
 	lcb := newLocalCensusBuilder(chronicles, pn, population, false)
 
 	dpb := DynamicPopulationBuilder{census: lcb}
@@ -214,7 +217,7 @@ func TestGetCount(t *testing.T) {
 	pn := pulse.Number(1)
 	sp := profiles.NewStaticProfileMock(t)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
-	population := &OneNodePopulation{localNode: updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
+	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
 	lcb := newLocalCensusBuilder(chronicles, pn, population, false)
 
 	dpb := DynamicPopulationBuilder{census: lcb}
@@ -227,7 +230,7 @@ func TestGetLocalProfile(t *testing.T) {
 	pn := pulse.Number(1)
 	sp := profiles.NewStaticProfileMock(t)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
-	population := &OneNodePopulation{localNode: updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
+	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
 	lcb := newLocalCensusBuilder(chronicles, pn, population, false)
 	dpb := DynamicPopulationBuilder{census: lcb}
 	require.Equal(t, uint32(0), dpb.GetLocalProfile().GetLeaveReason())
@@ -238,7 +241,7 @@ func TestFindProfile(t *testing.T) {
 	pn := pulse.Number(1)
 	sp := profiles.NewStaticProfileMock(t)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
-	population := &OneNodePopulation{localNode: updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
+	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
 	lcb := newLocalCensusBuilder(chronicles, pn, population, false)
 	dpb := DynamicPopulationBuilder{census: lcb}
 	require.Equal(t, uint32(0), dpb.FindProfile(0).GetLeaveReason())
@@ -246,12 +249,12 @@ func TestFindProfile(t *testing.T) {
 	require.Panics(t, func() { dpb.FindProfile(1).GetLeaveReason() })
 }
 
-func TestAddJoinerProfile(t *testing.T) {
+func TestAddProfile(t *testing.T) {
 	chronicles := &localChronicles{}
 	pn := pulse.Number(1)
 	sp1 := profiles.NewStaticProfileMock(t)
 	sp1.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
-	population := &OneNodePopulation{localNode: updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp1}}}
+	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp1}}}
 	lcb := newLocalCensusBuilder(chronicles, pn, population, false)
 	dpb := DynamicPopulationBuilder{census: lcb}
 
@@ -259,12 +262,12 @@ func TestAddJoinerProfile(t *testing.T) {
 	sp2.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 1 })
 	sp2.GetStartPowerMock.Set(func() member.Power { return 0 })
 	lcb.state = census.SealedCensus
-	require.Panics(t, func() { dpb.AddJoinerProfile(sp2) })
+	require.Panics(t, func() { dpb.AddProfile(sp2) })
 
 	lcb.state = census.DraftCensus
 	require.Len(t, lcb.population.slotByID, 1)
 
-	dpb.AddJoinerProfile(sp2)
+	dpb.AddProfile(sp2)
 	require.Len(t, lcb.population.slotByID, 2)
 }
 
@@ -273,7 +276,7 @@ func TestRemoveProfile(t *testing.T) {
 	pn := pulse.Number(1)
 	sp1 := profiles.NewStaticProfileMock(t)
 	sp1.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
-	population := &OneNodePopulation{localNode: updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp1}}}
+	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp1}}}
 	lcb := newLocalCensusBuilder(chronicles, pn, population, false)
 	dpb := DynamicPopulationBuilder{census: lcb}
 
@@ -282,7 +285,7 @@ func TestRemoveProfile(t *testing.T) {
 	sp2.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 1 })
 	sp2.GetStartPowerMock.Set(func() member.Power { return 0 })
 	lcb.state = census.DraftCensus
-	dpb.AddJoinerProfile(sp2)
+	dpb.AddProfile(sp2)
 
 	lcb.state = census.SealedCensus
 	require.Panics(t, func() { dpb.RemoveProfile(nodeID) })

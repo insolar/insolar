@@ -48,7 +48,7 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package ph3ctl
+package nodeset
 
 import (
 	"github.com/insolar/insolar/insolar"
@@ -56,40 +56,72 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/statevector"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/nodeset"
 )
 
 type VectorBuilder struct {
 	digestFactory transport.ConsensusDigestFactory
-	entryScanner  nodeset.VectorEntryScanner
+	entryScanner  VectorEntryScanner
 	bitset        member.StateBitset
 }
 
-func (p *VectorBuilder) CreateDerived(comparedStats nodeset.ComparedBitsetRow) VectorBuilder {
+func NewVectorBuilder(df transport.ConsensusDigestFactory, s VectorEntryScanner, bitset member.StateBitset) VectorBuilder {
+	return VectorBuilder{df, s, bitset}
+}
+
+func (p *VectorBuilder) FillBitset() {
+	p.entryScanner.ScanIndexed(func(idx int, nodeData VectorEntryData) {
+		p.bitset[idx] = mapVectorEntryDataToNodesetEntry(nodeData)
+	})
+}
+
+func mapVectorEntryDataToNodesetEntry(nodeData VectorEntryData) member.BitsetEntry {
+	switch {
+	case nodeData.IsEmpty():
+		return member.BeTimeout
+	case nodeData.TrustLevel.IsNegative():
+		return member.BeFraud
+	case nodeData.TrustLevel == member.UnknownTrust:
+		return member.BeBaselineTrust
+	case nodeData.TrustLevel < member.TrustByNeighbors:
+		return member.BeLimitedTrust
+	default:
+		return member.BeHighTrust
+	}
+}
+
+func (p *VectorBuilder) GetBitset() member.StateBitset {
+	return p.bitset
+}
+
+func (p *VectorBuilder) GetEntryScanner() VectorEntryScanner {
+	return p.entryScanner
+}
+
+func (p *VectorBuilder) CreateDerived(comparedStats ComparedBitsetRow) VectorBuilder {
 	return VectorBuilder{p.digestFactory, p.entryScanner,
 		p.buildDerivedBitset(comparedStats)}
 }
 
-func (p *VectorBuilder) buildDerivedBitset(comparedStats nodeset.ComparedBitsetRow) member.StateBitset {
+func (p *VectorBuilder) buildDerivedBitset(comparedStats ComparedBitsetRow) member.StateBitset {
 
 	bitset := make(member.StateBitset, len(p.bitset))
 
 	for idx := range p.bitset {
 		switch comparedStats.Get(idx) {
-		case nodeset.ComparedMissingHere:
+		case ComparedMissingHere:
 			bitset[idx] = member.BeTimeout // we don't have it
-		case nodeset.ComparedDoubtedMissingHere:
+		case ComparedDoubtedMissingHere:
 			bitset[idx] = member.BeTimeout // we don't have it
-		case nodeset.ComparedSame:
+		case ComparedSame:
 			// ok, use as-is
 			bitset[idx] = p.bitset[idx]
-		case nodeset.ComparedLessTrustedThere:
+		case ComparedLessTrustedThere:
 			// ok - exclude for trusted
 			bitset[idx] = member.BeBaselineTrust
-		case nodeset.ComparedLessTrustedHere:
+		case ComparedLessTrustedHere:
 			// ok - use for both
 			bitset[idx] = member.BeHighTrust
-		case nodeset.ComparedMissingThere:
+		case ComparedMissingThere:
 			bitset[idx] = member.BeTimeout // we have it, but the other's doesn't
 		default:
 			panic("unexpected")
@@ -101,8 +133,8 @@ func (p *VectorBuilder) buildDerivedBitset(comparedStats nodeset.ComparedBitsetR
 
 func (p *VectorBuilder) buildGlobulaAnnouncementHash(trusted bool) proofs.GlobulaAnnouncementHash {
 
-	calc := nodeset.NewAnnouncementSequenceCalc(p.digestFactory)
-	p.entryScanner.ScanIndexed(func(idx int, nodeData nodeset.VectorEntryData) {
+	calc := NewAnnouncementSequenceCalc(p.digestFactory)
+	p.entryScanner.ScanIndexed(func(idx int, nodeData VectorEntryData) {
 		b := p.bitset[idx]
 		if b.IsTimeout() {
 			return
@@ -115,13 +147,13 @@ func (p *VectorBuilder) buildGlobulaAnnouncementHash(trusted bool) proofs.Globul
 	return calc.FinishSequence()
 }
 
-func (p *VectorBuilder) buildGlobulaAnnouncementHashes() (proofs.GlobulaAnnouncementHash, proofs.GlobulaAnnouncementHash) {
+func (p *VectorBuilder) BuildAllGlobulaAnnouncementHashes() (proofs.GlobulaAnnouncementHash, proofs.GlobulaAnnouncementHash) {
 
-	calcTrusted := nodeset.NewAnnouncementSequenceCalc(p.digestFactory)
-	var calcDoubted nodeset.AnnouncementSequenceCalc
+	calcTrusted := NewAnnouncementSequenceCalc(p.digestFactory)
+	var calcDoubted AnnouncementSequenceCalc
 
 	p.entryScanner.ScanIndexed(
-		func(idx int, nodeData nodeset.VectorEntryData) {
+		func(idx int, nodeData VectorEntryData) {
 			b := p.bitset[idx]
 			if b.IsTimeout() {
 				return
@@ -140,37 +172,29 @@ func (p *VectorBuilder) buildGlobulaAnnouncementHashes() (proofs.GlobulaAnnounce
 	return calcTrusted.FinishSequence(), calcDoubted.FinishSequence()
 }
 
+// TODO reuse BuildGlobulaStateHashWithFilter
 func (p *VectorBuilder) buildGlobulaStateHash(trusted bool, nodeID insolar.ShortNodeID) statevector.CalcStateWithRank {
 
-	calc := nodeset.NewStateAndRankSequenceCalc(p.digestFactory, nodeID,
+	calc := NewStateAndRankSequenceCalc(p.digestFactory, nodeID,
 		1+p.entryScanner.GetSortedCount()>>1)
 
-	const (
-		skipEntry = iota
-		normalEntry
-	)
-
-	p.entryScanner.ScanSortedWithFilter(
-		func(nodeData nodeset.VectorEntryData, postponed bool, filter uint32) {
-			if filter == skipEntry {
-				return
-			}
-			// TODO use default state hash on missing data
+	p.entryScanner.ScanSortedWithFilter(0,
+		func(nodeData VectorEntryData, postponed bool, filter uint32) {
 			calc.AddNext(nodeData, postponed)
 		},
-		func(idx int, nodeData nodeset.VectorEntryData) (bool, uint32) {
+		func(idx int, nodeData VectorEntryData, parentFilter uint32) (bool, uint32) {
 			if nodeData.IsEmpty() || nodeData.RequestedPower == 0 || nodeData.RequestedMode.IsPowerless() {
-				return true, normalEntry
+				return true, 0
 			}
 
-			if idx < 0 { //this is joiner check - it can only indicate "postpone"
-				return false, 0 /* filterValue is ignored for index < 0 */
+			if idx < 0 { // this is joiner check - it should only indicate "postpone"
+				return false, 0
 			}
 
 			if trusted && !p.bitset[idx].IsTrusted() {
-				return true, normalEntry
+				return true, 0
 			}
-			return false, normalEntry
+			return false, 0
 		})
 
 	tHash, tRank, tCount := calc.FinishSequence()
@@ -181,7 +205,7 @@ func (p *VectorBuilder) BuildGlobulaAnnouncementHashes(buildTrusted, buildDoubte
 	defaultTrusted, defaultDoubted proofs.GlobulaAnnouncementHash) (trustedHash, doubtedHash proofs.GlobulaAnnouncementHash) {
 
 	if buildTrusted && buildDoubted {
-		t, d := p.buildGlobulaAnnouncementHashes()
+		t, d := p.BuildAllGlobulaAnnouncementHashes()
 		if d == nil {
 			return t, t
 		}
@@ -206,4 +230,21 @@ func (p *VectorBuilder) BuildGlobulaStateHashesAndRanks(buildTrusted, buildDoubt
 		defaultDoubted = p.buildGlobulaStateHash(false, nodeID)
 	}
 	return defaultTrusted, defaultDoubted
+}
+
+func (p *VectorBuilder) BuildGlobulaStateHashWithFilter(nodeID insolar.ShortNodeID, apply EntryApplyFunc,
+	filter EntryFilterFunc) statevector.CalcStateWithRank {
+
+	calc := NewStateAndRankSequenceCalc(p.digestFactory, nodeID,
+		1+p.entryScanner.GetSortedCount()>>1)
+
+	p.entryScanner.ScanSortedWithFilter(0,
+		func(nodeData VectorEntryData, postponed bool, filter uint32) {
+			apply(nodeData, postponed, filter)
+			calc.AddNext(nodeData, postponed)
+		},
+		filter)
+
+	tHash, tRank, tCount := calc.FinishSequence()
+	return statevector.CalcStateWithRank{StateHash: tHash, ExpectedRank: tRank.AsMembershipRank(tCount)}
 }

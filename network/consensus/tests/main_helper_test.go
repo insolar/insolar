@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,19 +46,20 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package tests
 
 import (
 	"context"
 	"fmt"
+	"math/rand"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-	"math/rand"
 )
 
 func newEmuNetworkBuilder(ctx context.Context, netStrategy NetStrategy,
@@ -108,19 +109,25 @@ func (p *emuNetworkBuilder) StartPulsar(pulseCount int, pulseDelta uint16, pulsa
 const fmtNodeName = "%s%04d"
 
 func (p *emuNetworkBuilder) connectEmuNode(nodes []profiles.StaticProfile, selfIndex int) {
+	p._connectEmuNode(nodes, selfIndex, false)
+}
+
+func (p *emuNetworkBuilder) _connectEmuNode(nodes []profiles.StaticProfile, selfIndex int, asJoiner bool) {
 
 	controlFeeder := &EmuControlFeeder{}
 	candidateFeeder := &core.SequentialCandidateFeeder{}
 	switch {
-	case selfIndex == 1:
+	case !asJoiner && selfIndex%3 == 1:
 		introID := 8000 + selfIndex
 		intro := NewEmuNodeIntroByName(introID, fmt.Sprintf(fmtNodeName, "v", introID))
 		candidateFeeder.AddJoinCandidate(intro)
-		//case selfIndex%5 == 2:
-		//	controlFeeder.leaveReason = uint32(selfIndex) //simulate leave
+
+		p._connectEmuNode([]profiles.StaticProfile{intro}, 0, true)
+	case selfIndex%5 == 2:
+		controlFeeder.leaveReason = uint32(selfIndex) // simulate leave
 	}
 
-	chronicles := NewEmuChronicles(nodes, selfIndex, p.primingCloudStateHash)
+	chronicles := NewEmuChronicles(nodes, selfIndex, asJoiner, p.primingCloudStateHash)
 	self := nodes[selfIndex]
 	node := NewConsensusHost(self.GetDefaultEndpoint().GetNameAddress())
 	node.ConnectTo(chronicles, p.network, p.strategyFactory, candidateFeeder, controlFeeder, p.config)

@@ -54,24 +54,41 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
+type PulseSelectionStrategyFactory interface {
+	CreatePulseSelectionStrategy(population census.OnlinePopulation, config api.LocalNodeConfiguration) PulseSelectionStrategy
+}
+
 type PulseSelectionStrategy interface {
-	HandlePrepPulsarPacket(ctx context.Context, p transport.PulsePacketReader, from endpoints.Inbound, realm *core.PrepRealm, fromPulsar bool) error
+	HandlePulsarPacket(ctx context.Context, p transport.PulsePacketReader,
+		from endpoints.Inbound, fromPulsar bool) (bool, error)
 }
 
-var _ PulseSelectionStrategy = &TakeFirstSelectionStrategy{}
+var _ PulseSelectionStrategyFactory = &takeFirstStrategyFactory{}
 
-type TakeFirstSelectionStrategy struct {
+func NewTakeFirstSelectionStrategyFactory() PulseSelectionStrategyFactory {
+	return &takeFirstStrategyFactory{}
 }
 
-func NewTakeFirstSelectionStrategy() PulseSelectionStrategy {
-	return &TakeFirstSelectionStrategy{}
+type takeFirstStrategyFactory struct {
 }
 
-func (*TakeFirstSelectionStrategy) HandlePrepPulsarPacket(ctx context.Context, p transport.PulsePacketReader, from endpoints.Inbound, r *core.PrepRealm, fromPulsar bool) error {
-	return r.ApplyPulseData(p, fromPulsar)
+func (p *takeFirstStrategyFactory) CreatePulseSelectionStrategy(population census.OnlinePopulation,
+	config api.LocalNodeConfiguration) PulseSelectionStrategy {
+
+	if population.GetLocalProfile().IsJoiner() {
+		return p
+	} else {
+		return p
+	}
+}
+
+func (p *takeFirstStrategyFactory) HandlePulsarPacket(ctx context.Context, packet transport.PulsePacketReader,
+	from endpoints.Inbound, fromPulsar bool) (bool, error) {
+
+	return true, nil
 }

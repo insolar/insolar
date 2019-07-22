@@ -52,7 +52,9 @@ package core
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
 
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
@@ -76,7 +78,7 @@ func (c *PrepPhaseControllerTemplate) BeforeStart(realm *PrepRealm) {
 func (*PrepPhaseControllerTemplate) StartWorker(ctx context.Context, realm *PrepRealm) {
 }
 
-//var _ PacketDispatcher = &HostPacketDispatcherTemplate{}
+// var _ PacketDispatcher = &HostPacketDispatcherTemplate{}
 
 type HostPacketDispatcherTemplate struct {
 }
@@ -95,7 +97,7 @@ func (*HostPacketDispatcherTemplate) DispatchMemberPacket(ctx context.Context, p
 	panic("illegal state")
 }
 
-//var _ PacketDispatcher = &MemberPacketDispatcherTemplate{}
+// var _ PacketDispatcher = &MemberPacketDispatcherTemplate{}
 
 type MemberPacketDispatcherTemplate struct {
 }
@@ -110,6 +112,6 @@ func (*MemberPacketDispatcherTemplate) HasCustomVerifyForHost(from endpoints.Inb
 }
 
 func (*MemberPacketDispatcherTemplate) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
-	from endpoints.Inbound, flags PacketVerifyFlags) error {
+	from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags) error {
 	panic("illegal state")
 }

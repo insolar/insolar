@@ -54,6 +54,8 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/nodeset"
 )
@@ -99,25 +101,25 @@ func (p *RealmVectorProjection) HasSameVersion(version uint32) bool {
 }
 
 func (p *RealmVectorProjection) ForceEntryUpdate(index int) bool {
-	//if p == &p.origin.projection {
+	// if p == &p.origin.projection {
 	//	member, _ := p.origin.forceEntryUpdate(index)
 	//	return member != nil
-	//}
-	//member, joiner := p.origin.forceEntryUpdate(index)
+	// }
+	// member, joiner := p.origin.forceEntryUpdate(index)
 	//
-	//if member == nil {
+	// if member == nil {
 	return false
-	//}
-	//p.updateEntry(index, member, joiner)
-	//return true
+	// }
+	// p.updateEntry(index, member, joiner)
+	// return true
 }
 
-//func (p *RealmVectorHelper) forceEntryUpdate(index int) (*VectorEntry, *VectorEntry) {
+// func (p *RealmVectorHelper) forceEntryUpdate(index int) (*VectorEntry, *VectorEntry) {
 //	p.mutex.Lock()
 //	defer p.mutex.Lock()
 //
 //	return nil, nil
-//}
+// }
 
 func (p *RealmVectorProjection) updateEntry(index int, member, joiner *VectorEntry) { // nolint: unused
 	if p.sharedIndexedRefs {
@@ -161,17 +163,20 @@ func (p *RealmVectorProjection) GetSortedCount() int {
 
 func (p *RealmVectorProjection) ScanIndexed(apply func(index int, nodeData nodeset.VectorEntryData)) {
 	for i := range p.indexedRefs {
-		apply(i, p.indexedRefs[i].VectorEntryData)
+		pi := p.indexedRefs[i]
+		if pi == nil {
+			continue
+		}
+		apply(i, pi.VectorEntryData)
 	}
 }
 
-func (p *RealmVectorProjection) GetEntry(index int) nodeset.VectorEntryData {
-	return p.indexedRefs[index].VectorEntryData
-}
-
-func (p *RealmVectorProjection) ScanSorted(apply nodeset.EntryFilteredScannerFunc, filterValue uint32) {
+func (p *RealmVectorProjection) ScanSorted(apply nodeset.EntryApplyFunc, filterValue uint32) {
 	for _, se := range p.poweredSorted {
 		_, ve := se.chooseEntry(p.indexedRefs, p.joinersRefs)
+		if ve == nil {
+			continue
+		}
 		apply(ve.VectorEntryData, false, filterValue)
 	}
 }
@@ -181,7 +186,7 @@ type postponedEntry struct {
 	filter uint32
 }
 
-func (p *RealmVectorProjection) ScanSortedWithFilter(apply nodeset.EntryFilteredScannerFunc, filter nodeset.EntryFilterFunc) {
+func (p *RealmVectorProjection) ScanSortedWithFilter(parentFilter uint32, apply nodeset.EntryApplyFunc, filter nodeset.EntryFilterFunc) {
 
 	var skipped []postponedEntry
 	unorderedSkipped := false
@@ -190,21 +195,24 @@ func (p *RealmVectorProjection) ScanSortedWithFilter(apply nodeset.EntryFiltered
 
 	for _, se := range p.poweredSorted {
 		joiner, valueEntry := se.chooseEntry(p.indexedRefs, p.joinersRefs)
+		if valueEntry == nil {
+			continue
+		}
 		filterEntry := p.indexedRefs[valueEntry.filterBy]
-		postpone, filterValue := filter(int(valueEntry.filterBy), filterEntry.VectorEntryData)
+		if filterEntry == nil {
+			continue
+		}
+		postpone, filterValue := filter(int(valueEntry.filterBy), filterEntry.VectorEntryData, parentFilter)
 
 		nodeID := valueEntry.Profile.GetNodeID()
 		if joiner {
-			if postpone {
-				// joiner MUST NOT appear when an introduction node is out
-				return
-			}
-			// joiner may appear multiple times in a powered section via multiple introducing nodes
+			// joiner may appear multiple times via multiple introducing nodes
 			// due to sorting all repetitions will come in sequence
-			if prevID == nodeID {
+			// And joiner MUST NOT appear even as postponed when an introduction node is out
+			if prevID == nodeID || postpone {
 				continue
 			}
-			postpone, _ = filter(-1, valueEntry.VectorEntryData)
+			postpone, filterValue = filter(-1, valueEntry.VectorEntryData, filterValue)
 		} else if prevID == nodeID {
 			// regular nodes MUST NOT be multiplied
 			panic("illegal state")
@@ -216,7 +224,7 @@ func (p *RealmVectorProjection) ScanSortedWithFilter(apply nodeset.EntryFiltered
 				skipped = make([]postponedEntry, 1, 1+len(p.poweredSorted)>>1)
 				skipped[0] = postponedEntry{valueEntry, filterValue}
 			} else {
-				if skipped[len(skipped)-1].ve.Profile.GetNodeID() >= valueEntry.Profile.GetNodeID() {
+				if member.LessByID(valueEntry.Profile.GetNodeID(), skipped[len(skipped)-1].ve.Profile.GetNodeID()) {
 					unorderedSkipped = true
 				}
 				skipped = append(skipped, postponedEntry{valueEntry, filterValue})
@@ -290,7 +298,7 @@ func (p *RealmVectorHelper) setArrayNodes(nodeIndex []*NodeAppearance,
 		}
 		joiner := dynamicNodes[joinerID]
 		if joiner == nil {
-			//panic("joiner is missing")
+			// panic("joiner is missing")
 			continue
 		}
 
@@ -338,9 +346,8 @@ func (p *VectorEntry) setValues(n *NodeAppearance) insolar.ShortNodeID {
 }
 
 type sortedEntry struct {
-	id        insolar.ShortNodeID
-	powerRole uint16
-	index     int16 // points to the same for both member and joiner, but joiner has different id in the entryRank
+	sortRank member.SortingRank
+	index    int16 // points to the same for both member and joiner, but joiner has different id in the entryRank
 }
 
 func (v *sortedEntry) isJoiner() bool {
@@ -359,24 +366,9 @@ func (v *sortedEntry) setJoiner(ve *VectorEntry, index int) {
 }
 
 func (v *sortedEntry) setMember(ve *VectorEntry, index int) {
-	v.id = ve.Profile.GetNodeID()
 	v.index = int16(index)
-	// role of zero-power nodes is ignored for sorting
-	if ve.RequestedPower == 0 {
-		v.powerRole = 0
-	} else {
-		v.powerRole = uint16(ve.RequestedPower) | uint16(ve.Profile.GetStatic().GetPrimaryRole())<<8
-	}
-}
-
-func (v sortedEntry) lessByPowerRole(o sortedEntry) bool {
-	if v.powerRole > o.powerRole {
-		return false
-	}
-	if v.powerRole < o.powerRole {
-		return true
-	}
-	return v.id < o.id
+	v.sortRank = member.NewSortingRank(ve.Profile.GetNodeID(), ve.Profile.GetStatic().GetPrimaryRole(),
+		ve.RequestedPower, member.ModeNormal)
 }
 
 type vectorPowerSorter struct {
@@ -387,9 +379,8 @@ func (c *vectorPowerSorter) Len() int {
 	return len(c.values)
 }
 
-// sorting is REVERSED - it makes the most powerful nodes of a role to be first in the list
 func (c *vectorPowerSorter) Less(i, j int) bool {
-	return c.values[j].lessByPowerRole(c.values[i])
+	return c.values[i].sortRank.Less(c.values[j].sortRank)
 }
 
 func (c *vectorPowerSorter) Swap(i, j int) {
@@ -405,7 +396,7 @@ func (c *vectorIDSorter) Len() int {
 }
 
 func (c *vectorIDSorter) Less(i, j int) bool {
-	return c.values[i].ve.Profile.GetNodeID() < c.values[j].ve.Profile.GetNodeID()
+	return member.LessByID(c.values[j].ve.Profile.GetNodeID(), c.values[i].ve.Profile.GetNodeID())
 }
 
 func (c *vectorIDSorter) Swap(i, j int) {

@@ -60,7 +60,7 @@ type NodeStateHashMock struct {
 	ReadPreCounter uint64
 	ReadMock       mNodeStateHashMockRead
 
-	SignWithFunc       func(p cryptkit.DigestSigner) (r cryptkit.SignedDigest)
+	SignWithFunc       func(p cryptkit.DigestSigner) (r cryptkit.SignedDigestHolder)
 	SignWithCounter    uint64
 	SignWithPreCounter uint64
 	SignWithMock       mNodeStateHashMockSignWith
@@ -1210,7 +1210,7 @@ type NodeStateHashMockSignWithInput struct {
 }
 
 type NodeStateHashMockSignWithResult struct {
-	r cryptkit.SignedDigest
+	r cryptkit.SignedDigestHolder
 }
 
 //Expect specifies that invocation of NodeStateHash.SignWith is expected from 1 to Infinity times
@@ -1226,7 +1226,7 @@ func (m *mNodeStateHashMockSignWith) Expect(p cryptkit.DigestSigner) *mNodeState
 }
 
 //Return specifies results of invocation of NodeStateHash.SignWith
-func (m *mNodeStateHashMockSignWith) Return(r cryptkit.SignedDigest) *NodeStateHashMock {
+func (m *mNodeStateHashMockSignWith) Return(r cryptkit.SignedDigestHolder) *NodeStateHashMock {
 	m.mock.SignWithFunc = nil
 	m.expectationSeries = nil
 
@@ -1248,12 +1248,12 @@ func (m *mNodeStateHashMockSignWith) ExpectOnce(p cryptkit.DigestSigner) *NodeSt
 	return expectation
 }
 
-func (e *NodeStateHashMockSignWithExpectation) Return(r cryptkit.SignedDigest) {
+func (e *NodeStateHashMockSignWithExpectation) Return(r cryptkit.SignedDigestHolder) {
 	e.result = &NodeStateHashMockSignWithResult{r}
 }
 
 //Set uses given function f as a mock of NodeStateHash.SignWith method
-func (m *mNodeStateHashMockSignWith) Set(f func(p cryptkit.DigestSigner) (r cryptkit.SignedDigest)) *NodeStateHashMock {
+func (m *mNodeStateHashMockSignWith) Set(f func(p cryptkit.DigestSigner) (r cryptkit.SignedDigestHolder)) *NodeStateHashMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1262,7 +1262,7 @@ func (m *mNodeStateHashMockSignWith) Set(f func(p cryptkit.DigestSigner) (r cryp
 }
 
 //SignWith implements github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.NodeStateHash interface
-func (m *NodeStateHashMock) SignWith(p cryptkit.DigestSigner) (r cryptkit.SignedDigest) {
+func (m *NodeStateHashMock) SignWith(p cryptkit.DigestSigner) (r cryptkit.SignedDigestHolder) {
 	counter := atomic.AddUint64(&m.SignWithPreCounter, 1)
 	defer atomic.AddUint64(&m.SignWithCounter, 1)
 
