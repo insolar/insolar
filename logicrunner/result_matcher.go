@@ -94,6 +94,7 @@ func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg *message.
 		delete(rm.unwantedResponses, msg.Reason)
 		return nil
 	}
+	rm.unwantedResponses[msg.Reason] = *msg
 
 	return rm.isStillExecutor(ctx, object)
 }
