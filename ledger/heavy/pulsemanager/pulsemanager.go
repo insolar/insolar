@@ -88,6 +88,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	err = m.setUnderGilSection(ctx, newPulse)
 	if err != nil {
 		if err == errZeroNodes {
+			inslogger.FromContext(ctx).Info("setUnderGilSection return error: ", err)
 			return nil
 		}
 		return err
@@ -142,10 +143,6 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	if err != nil {
 		return errors.Wrap(err, "call of SetActiveNodes failed")
 	}
-
-	// if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
-	// 	return errors.Wrap(err, "call of AddPulse failed")
-	// }
 
 	err = m.JetModifier.Clone(ctx, storagePulse.PulseNumber, newPulse.PulseNumber, true)
 	if err != nil {

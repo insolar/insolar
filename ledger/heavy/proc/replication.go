@@ -97,7 +97,7 @@ func (p *Replication) Proceed(ctx context.Context) error {
 
 	pulse, err := p.dep.pulses.ForPulseNumber(ctx, dr.Pulse)
 	if err != nil {
-		return errors.Wrapf(err, "can't get pulse for pulse number ", dr.Pulse)
+		return errors.Wrapf(err, "can't get pulse for pulse number %d", dr.Pulse)
 	}
 	pulseForJetsUpdate := pulse.NextPulseNumber
 

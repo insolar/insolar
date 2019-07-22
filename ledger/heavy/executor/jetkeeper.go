@@ -155,7 +155,7 @@ func (jk *dbJetKeeper) addJet(ctx context.Context, pulse insolar.PulseNumber, id
 	return jk.updateJet(ctx, pulse, id, true, false)
 }
 
-func (jk *dbJetKeeper) updateJet(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID, jetConfirmed bool, hotConfirmed bool) error {
+func (jk *dbJetKeeper) updateJet(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID, dropConfirmed bool, hotConfirmed bool) error {
 	logger := inslogger.FromContext(ctx)
 	jets, err := jk.get(pulse)
 	var exists bool
@@ -166,31 +166,23 @@ func (jk *dbJetKeeper) updateJet(ctx context.Context, pulse insolar.PulseNumber,
 				if hotConfirmed {
 					jets[i].HotConfirmed = hotConfirmed
 				}
-				if jetConfirmed {
-					jets[i].JetConfirmed = jetConfirmed
+				if dropConfirmed {
+					jets[i].JetConfirmed = dropConfirmed
 				}
 				break
 			}
 		}
 		if exists {
-			if jetConfirmed {
-				logger.Debug("jetConfirmed. update existing: ", pulse, ". Jet:", id.DebugString())
-			}
-			if hotConfirmed {
-				logger.Debug("hotConfirmed. update existing: ", pulse, ". Jet:", id.DebugString())
-			}
+			logger.Debug("updateJet. update existing. jetConfirmed: ", dropConfirmed, ". hotConfirmed: ", hotConfirmed,
+				pulse, ". Jet:", id.DebugString())
 		}
 	} else if err != store.ErrNotFound {
 		return errors.Wrapf(err, "can't get pulse: %d", pulse)
 	}
 	if !exists {
 		jets = append(jets, jetInfo{JetID: id, HotConfirmed: hotConfirmed, JetConfirmed: jetConfirmed})
-		if jetConfirmed {
-			logger.Debug("jetConfirmed: not exists: ", pulse, ". Jet:", id.DebugString())
-		}
-		if hotConfirmed {
-			logger.Debug("hotConfirmed: not exists: ", pulse, ". Jet:", id.DebugString())
-		}
+		logger.Debug("updateJet. not exists. jetConfirmed: ", dropConfirmed, ". hotConfirmed: ", hotConfirmed,
+			pulse, ". Jet:", id.DebugString())
 	}
 	return jk.set(pulse, jets)
 }

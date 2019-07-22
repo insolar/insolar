@@ -105,7 +105,6 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	)
 	defer span.End()
 
-	inslogger.FromContext(ctx).Debug("BEFORE setUnderGilSection")
 	jets, endedPulse, err := m.setUnderGilSection(ctx, newPulse)
 	if err != nil {
 		if err == errZeroNodes || err == errNoPulse {
