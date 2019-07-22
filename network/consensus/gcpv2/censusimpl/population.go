@@ -73,66 +73,12 @@ type copyFromPopulation interface {
 
 var _ census.OnlinePopulation = &OneJoinerPopulation{}
 
-func NewJoinerPopulation(localNode profiles.StaticProfile, vf cryptkit.SignatureVerifierFactory) OneJoinerPopulation {
-	localNode.GetStaticNodeID()
-
-	verifier := vf.GetSignatureVerifierWithPKS(localNode.GetPublicKeyStore())
-	return OneJoinerPopulation{
-		localNode: updatableSlot{
-			NodeProfileSlot: NewJoinerProfile(localNode, verifier),
-		},
-	}
-}
-
 func NewManyNodePopulation(nodes []profiles.StaticProfile, localID insolar.ShortNodeID,
 	vf cryptkit.SignatureVerifierFactory) ManyNodePopulation {
 
 	r := ManyNodePopulation{}
 	r.makeOfProfiles(nodes, localID, vf)
 	return r
-}
-
-type OneJoinerPopulation struct {
-	localNode updatableSlot
-}
-
-func (c *OneJoinerPopulation) Copy() ManyNodePopulation {
-	r := ManyNodePopulation{}
-	v := []updatableSlot{c.localNode}
-	v[0].index = 0 //removes Joiner status
-
-	r.makeFullCopyOf(v, &v[0])
-	return r
-}
-
-func (c *OneJoinerPopulation) copyTo(p copyFromPopulation, fullCopy bool) {
-	v := []updatableSlot{c.localNode}
-	v[0].index = 0 //removes Joiner status
-
-	if fullCopy {
-		p.makeFullCopyOf(v, &v[0])
-	} else {
-		p.makeSelfCopyOf(v, &v[0])
-	}
-}
-
-func (c *OneJoinerPopulation) FindProfile(nodeID insolar.ShortNodeID) profiles.ActiveNode {
-	if c.localNode.GetNodeID() != nodeID {
-		return nil
-	}
-	return &c.localNode
-}
-
-func (c *OneJoinerPopulation) GetCount() int {
-	return 0 //joiner is not counted
-}
-
-func (c *OneJoinerPopulation) GetProfiles() []profiles.ActiveNode {
-	return []profiles.ActiveNode{}
-}
-
-func (c *OneJoinerPopulation) GetLocalProfile() profiles.LocalNode {
-	return &c.localNode.NodeProfileSlot
 }
 
 var _ copyToPopulation = &ManyNodePopulation{}

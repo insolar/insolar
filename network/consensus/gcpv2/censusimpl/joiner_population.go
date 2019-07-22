@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,50 +46,66 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-//
+///
 
-package census
+package censusimpl
 
 import (
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
 
-type OfflinePopulation interface {
-	FindRegisteredProfile(identity endpoints.Inbound) profiles.Host
-	// FindPulsarProfile(pulsarId PulsarId) PulsarProfile
+func NewJoinerPopulation(localNode profiles.StaticProfile, vf cryptkit.SignatureVerifierFactory) OneJoinerPopulation {
+	localNode.GetStaticNodeID()
+
+	verifier := vf.GetSignatureVerifierWithPKS(localNode.GetPublicKeyStore())
+	return OneJoinerPopulation{
+		localNode: updatableSlot{
+			NodeProfileSlot: NewJoinerProfile(localNode, verifier),
+		},
+	}
 }
 
-type OnlinePopulation interface {
-	FindProfile(nodeID insolar.ShortNodeID) profiles.ActiveNode
-	GetCount() int
-	//GetKnownCount() int
-	//GetPopulationSize() int
-	//IsComplete() bool
-
-	//GetActiveRoleProfiles(role member.PrimaryRole) (active []profiles.ActiveNode, activePower uint16)
-	//GetActiveRoles() []member.PrimaryRole //?
-
-	//GetInactiveRoleProfiles(role member.PrimaryRole) []profiles.ActiveNode
-	//GetInactiveRoles() []member.PrimaryRole
-
-	GetProfiles() []profiles.ActiveNode
-	GetLocalProfile() profiles.LocalNode
+type OneJoinerPopulation struct {
+	localNode updatableSlot
 }
 
-type EvictedPopulation interface {
-	FindProfile(nodeID insolar.ShortNodeID) profiles.EvictedNode
-	GetCount() int
-	GetProfiles() []profiles.EvictedNode
+func (c *OneJoinerPopulation) Copy() ManyNodePopulation {
+	r := ManyNodePopulation{}
+	v := []updatableSlot{c.localNode}
+	v[0].index = 0 //removes Joiner status
+
+	r.makeFullCopyOf(v, &v[0])
+	return r
 }
 
-type PopulationBuilder interface {
-	GetCount() int
-	AddProfile(intro profiles.StaticProfile) profiles.Updatable
-	RemoveProfile(nodeID insolar.ShortNodeID)
-	GetUnorderedProfiles() []profiles.Updatable
-	FindProfile(nodeID insolar.ShortNodeID) profiles.Updatable
-	GetLocalProfile() profiles.Updatable
-	RemoveOthers()
+func (c *OneJoinerPopulation) copyTo(p copyFromPopulation, fullCopy bool) {
+	v := []updatableSlot{c.localNode}
+	v[0].index = 0 //removes Joiner status
+
+	if fullCopy {
+		p.makeFullCopyOf(v, &v[0])
+	} else {
+		p.makeSelfCopyOf(v, &v[0])
+	}
+}
+
+func (c *OneJoinerPopulation) FindProfile(nodeID insolar.ShortNodeID) profiles.ActiveNode {
+	if c.localNode.GetNodeID() != nodeID {
+		return nil
+	}
+	return &c.localNode
+}
+
+func (c *OneJoinerPopulation) GetCount() int {
+	return 0 //joiner is not counted
+}
+
+func (c *OneJoinerPopulation) GetProfiles() []profiles.ActiveNode {
+	return []profiles.ActiveNode{}
+}
+
+func (c *OneJoinerPopulation) GetLocalProfile() profiles.LocalNode {
+	return &c.localNode.NodeProfileSlot
 }
