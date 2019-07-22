@@ -95,16 +95,10 @@ type PlatformRequest struct {
 
 // GetResponseBodyContract makes request to contract and extracts body
 func GetResponseBodyContract(url string, postP Request, signature string) ([]byte, error) {
-	jsonValue, err := json.Marshal(postP)
+	req, jsonValue, err := prepareReq(url, postP)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ GetResponseBodyContract ] Problem with marshaling params")
+		return nil, errors.Wrap(err, "problem with preparing contract request")
 	}
-
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonValue))
-	if err != nil {
-		return nil, errors.Wrap(err, "[ GetResponseBodyContract ] Problem with creating request")
-	}
-	req.Header.Set(ContentType, "application/json")
 
 	h := sha256.New()
 	_, err = h.Write(jsonValue)
@@ -114,57 +108,53 @@ func GetResponseBodyContract(url string, postP Request, signature string) ([]byt
 	sha := base64.StdEncoding.EncodeToString(h.Sum(nil))
 	req.Header.Set(Digest, "SHA-256="+sha)
 	req.Header.Set(Signature, "keyId=\"member-pub-key\", algorithm=\"ecdsa\", headers=\"digest\", signature="+signature)
-	postResp, err := httpClient.Do(req)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ GetResponseBodyContract ] Problem with sending request")
-	}
 
-	if postResp == nil {
-		return nil, errors.New("[ GetResponseBodyContract ] Response is nil")
-	}
-
-	defer postResp.Body.Close()
-	if http.StatusOK != postResp.StatusCode {
-		return nil, errors.New("[ getResponseBodyContract ] Bad http response code: " + strconv.Itoa(postResp.StatusCode))
-	}
-
-	body, err := ioutil.ReadAll(postResp.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ GetResponseBodyContract ] Problem with reading body")
-	}
-
-	return body, nil
+	return doReq(req)
 }
 
 // GetResponseBodyContract makes request to platform and extracts body
 func GetResponseBodyPlatform(url string, postP PlatformRequest) ([]byte, error) {
+	req, _, err := prepareReq(url, postP)
+	if err != nil {
+		return nil, errors.Wrap(err, "problem with preparing platform request")
+	}
+
+	return doReq(req)
+}
+
+func prepareReq(url string, postP interface{}) (*http.Request, []byte, error) {
 	jsonValue, err := json.Marshal(postP)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ GetResponseBodyPlatform ] Problem with marshaling params")
+		return nil, nil, errors.Wrap(err, "problem with marshaling params")
 	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonValue))
 	if err != nil {
-		return nil, errors.Wrap(err, "[ GetResponseBodyPlatform ] Problem with creating request")
+		return nil, nil, errors.Wrap(err, "problem with creating request")
 	}
 	req.Header.Set(ContentType, "application/json")
+
+	return req, jsonValue, nil
+}
+
+func doReq(req *http.Request) ([]byte, error) {
 	postResp, err := httpClient.Do(req)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ GetResponseBodyPlatform ] Problem with sending request")
+		return nil, errors.Wrap(err, "problem with sending request")
 	}
 
 	if postResp == nil {
-		return nil, errors.New("[ GetResponseBodyPlatform ] Response is nil")
+		return nil, errors.New("response is nil")
 	}
 
 	defer postResp.Body.Close()
 	if http.StatusOK != postResp.StatusCode {
-		return nil, errors.New("[ GetResponseBodyPlatform ] Bad http response code: " + strconv.Itoa(postResp.StatusCode))
+		return nil, errors.New("bad http response code: " + strconv.Itoa(postResp.StatusCode))
 	}
 
 	body, err := ioutil.ReadAll(postResp.Body)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ GetResponseBodyPlatform ] Problem with reading body")
+		return nil, errors.Wrap(err, "problem with reading body")
 	}
 
 	return body, nil
@@ -260,7 +250,7 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Requ
 	}
 	verboseInfo(ctx, "GETSEED request completed. seed: "+seed)
 
-	response, err := SendWithSeed(ctx, url+"/call", userCfg, reqCfg, seed)
+	response, err := SendWithSeed(ctx, url+"/rpc", userCfg, reqCfg, seed)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ]")
 	}

@@ -298,19 +298,19 @@ func TestMarshalSig(t *testing.T) {
 	require.Equal(t, s1, s2, errors.Errorf("Invalid R number"))
 }
 
-// UnmarshalRequest unmarshals request to api
+// unmarshalRequest unmarshals request to api
 func unmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ UnmarshalRequest ] Can't read body. So strange")
+		return nil, errors.Wrap(err, "[ unmarshalRequest ] Can't read body. So strange")
 	}
 	if len(body) == 0 {
-		return nil, errors.New("[ UnmarshalRequest ] Empty body")
+		return nil, errors.New("[ unmarshalRequest ] Empty body")
 	}
 
 	err = json.Unmarshal(body, &params)
 	if err != nil {
-		return body, errors.Wrap(err, "[ UnmarshalRequest ] Can't unmarshal input params")
+		return body, errors.Wrap(err, "[ unmarshalRequest ] Can't unmarshal input params")
 	}
 	return body, nil
 }

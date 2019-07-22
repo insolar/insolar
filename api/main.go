@@ -100,6 +100,11 @@ func (ar *Runner) registerServices(rpcServer *rpc.Server) error {
 
 	err = rpcServer.RegisterService(NewFuncTestContractService(ar), "funcTestContract")
 	if err != nil {
+		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: funcTestContract")
+	}
+
+	err = rpcServer.RegisterService(NewContractService(ar), "contract")
+	if err != nil {
 		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: contract")
 	}
 

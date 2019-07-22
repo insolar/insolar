@@ -258,7 +258,7 @@ func signedRequest(user *user, method string, params interface{}) (interface{}, 
 		res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.Request{
 			JSONRPC: "2.0",
 			ID:      1,
-			Method:  "api.call",
+			Method:  "contract.call",
 			Params:  requester.Params{CallSite: method, CallParams: params, PublicKey: user.pubKey},
 			Test:    caller,
 		})
