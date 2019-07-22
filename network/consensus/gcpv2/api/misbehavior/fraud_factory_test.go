@@ -240,3 +240,8 @@ func TestNewInconsistentNeighbourAnnouncement(t *testing.T) {
 	fe := NewFraudFactory(reportFunc).NewInconsistentNeighbourAnnouncement(profiles.NewBaseNodeMock(t))
 	require.Equal(t, "multiple neighbour profile", fe.msg)
 }
+
+func TestNewInvalidPowerLevel(t *testing.T) {
+	fe := NewFraudFactory(reportFunc).NewInvalidPowerLevel(profiles.NewBaseNodeMock(t))
+	require.Equal(t, "power level is incorrect", fe.msg)
+}

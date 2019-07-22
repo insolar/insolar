@@ -104,6 +104,18 @@ func TestAbsDelta(t *testing.T) {
 	require.Equal(t, uint16(1), Power(1).AbsDelta(Power(2)))
 }
 
+func TestPowerSetOf(t *testing.T) {
+	require.Equal(t, PowerSet([...]Power{0, 0, 0, 0}), PowerSetOf(0))
+
+	require.Equal(t, PowerSet([...]Power{1, 2, 3, 4}), PowerSetOf(67305985))
+}
+
+func TestPowerSetAsUint32(t *testing.T) {
+	require.Equal(t, uint32(0), PowerSet([...]Power{0, 0, 0, 0}).AsUint32())
+
+	require.Equal(t, uint32(67305985), PowerSet([...]Power{1, 2, 3, 4}).AsUint32())
+}
+
 func TestNormalize(t *testing.T) {
 	zero := PowerSet([...]Power{0, 0, 0, 0})
 	require.Equal(t, zero, zero.Normalize())

@@ -48,7 +48,7 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package member
+package args
 
 import (
 	"testing"
@@ -56,72 +56,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestIsEvicted(t *testing.T) {
-	require.False(t, ModeRestrictedAnnouncement.IsEvicted())
+func TestIsNil(t *testing.T) {
+	m := make(map[int]interface{})
+	require.True(t, IsNil(m[0]))
 
-	require.True(t, ModeEvictedGracefully.IsEvicted())
+	m[0] = nil
+	require.True(t, IsNil(m[0]))
 
-	require.True(t, ModeEvictedAsSuspected.IsEvicted())
-}
+	m[0] = 0
+	require.False(t, IsNil(m[0]))
 
-func TestIsRestricted(t *testing.T) {
-	require.False(t, ModeSuspected.IsRestricted())
-
-	require.True(t, ModeEvictedGracefully.IsRestricted())
-}
-
-func TestCanIntroduceJoiner(t *testing.T) {
-	require.False(t, ModeRestrictedAnnouncement.CanIntroduceJoiner(false))
-
-	require.False(t, ModePossibleFraudAndSuspected.CanIntroduceJoiner(false))
-
-	require.False(t, ModePossibleFraud.CanIntroduceJoiner(true))
-
-	require.True(t, ModePossibleFraud.CanIntroduceJoiner(false))
-}
-
-func TestIsMistrustful(t *testing.T) {
-	require.False(t, ModeSuspected.IsMistrustful())
-
-	require.True(t, ModePossibleFraudAndSuspected.IsMistrustful())
-}
-
-func TestIsSuspended(t *testing.T) {
-	require.False(t, ModePossibleFraud.IsSuspended())
-
-	require.True(t, ModePossibleFraudAndSuspected.IsSuspended())
-}
-
-func TestIsPowerless(t *testing.T) {
-	require.False(t, ModePossibleFraud.IsPowerless())
-
-	require.True(t, ModePossibleFraudAndSuspected.IsPowerless())
-
-	require.True(t, ModeEvictedAsFraud.IsPowerless())
-}
-
-func TestAsUnit32(t *testing.T) {
-	require.Equal(t, uint32(ModePossibleFraud), ModePossibleFraud.AsUnit32())
-
-	require.Panics(t, func() { OpMode(1 << ModeBits).AsUnit32() })
-}
-
-func TestOpModeString(t *testing.T) {
-	require.True(t, OpMode(ModeNormal).String() != "")
-
-	require.True(t, OpMode(ModeSuspected).String() != "")
-
-	require.True(t, OpMode(ModePossibleFraud).String() != "")
-
-	require.True(t, OpMode(ModePossibleFraudAndSuspected).String() != "")
-
-	require.True(t, OpMode(ModeRestrictedAnnouncement).String() != "")
-
-	require.True(t, OpMode(ModeEvictedGracefully).String() != "")
-
-	require.True(t, OpMode(ModeEvictedAsFraud).String() != "")
-
-	require.True(t, OpMode(ModeEvictedAsSuspected).String() != "")
-
-	require.True(t, OpMode(1<<ModeBits).String() != "")
+	delete(m, 0)
+	require.True(t, IsNil(m[0]))
 }
