@@ -52,7 +52,6 @@ package announce
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
@@ -110,14 +109,15 @@ func ApplyUnknownAnnouncement(ctx context.Context, announcerID insolar.ShortNode
 	// TODO verify announcement content and signature
 
 	purgatory := realm.GetPurgatory()
-	if reader.HasFullIntro() {
+	switch {
+	case reader.HasFullIntro():
 		full := reader.GetFullIntroduction()
 		intro := realm.GetProfileFactory().CreateFullIntroProfile(full)
 		return purgatory.SelfFromMemberAnnouncement(ctx, announcerID, intro, nr, ma)
-	} else if brief != nil {
+	case brief != nil:
 		intro := realm.GetProfileFactory().CreateBriefIntroProfile(brief)
 		return purgatory.SelfFromMemberAnnouncement(ctx, announcerID, intro, nr, ma)
-	} else {
+	default:
 		return purgatory.SelfFromMemberAnnouncement(ctx, announcerID, nil, nr, ma)
 	}
 }
@@ -134,7 +134,6 @@ func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementP
 	nr := na.GetNodeRank()
 
 	if n.GetRank(realm.GetNodeCount()) != nr {
-		fmt.Println(nr)
 		return false, 0, n.Frauds().NewMismatchedNeighbourRank(n.GetReportProfile())
 	}
 

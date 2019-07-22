@@ -67,14 +67,11 @@ func EqualStaticProfiles(p BriefCandidateProfile, o BriefCandidateProfile) bool 
 			p.GetBriefIntroSignedDigest().Equals(o.GetBriefIntroSignedDigest())
 }
 
-func EqualStaticExtensions(p StaticProfileExtension, o CandidateProfileExtension) bool {
+func EqualProfileExtensions(p CandidateProfileExtension, o CandidateProfileExtension) bool {
 	if args.IsNil(p) || args.IsNil(o) {
 		return false
 	}
-
-	return p == o ||
-		p.GetReference() == o.GetReference() &&
-			equalExtIntro(p, o)
+	return p == o || equalExtIntro(p, o)
 }
 
 func equalBriefIntro(p staticProfile, o staticProfile) bool {
@@ -126,11 +123,11 @@ func UpgradeStaticProfile(sp StaticProfile, brief BriefCandidateProfile, ext Can
 
 	spe := sp.GetExtension()
 	if !args.IsNil(spe) {
-		return EqualStaticExtensions(spe, ext), nil
+		return EqualProfileExtensions(spe, ext), nil
 	}
 
 	if sp.(Upgradable).UpgradeProfile(ext) {
 		return true, sp.GetExtension()
 	}
-	return EqualStaticExtensions(sp.GetExtension(), ext), nil
+	return EqualProfileExtensions(sp.GetExtension(), ext), nil
 }

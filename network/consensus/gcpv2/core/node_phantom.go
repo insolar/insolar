@@ -205,6 +205,10 @@ func (p *NodePhantom) ascend(ctx context.Context, nsp profiles.StaticProfile, ra
 	p.recorder.Playback(p.purgatory.postponedPacketFn)
 }
 
+func (p *NodePhantom) IntroducedBy( /* introducedBy */ insolar.ShortNodeID) {
+
+}
+
 type figment struct {
 	phantom     *NodePhantom
 	announcerID insolar.ShortNodeID
@@ -233,7 +237,7 @@ func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom
 
 	ascentWithBrief := p.phantom.purgatory.IsBriefAscensionAllowed()
 
-	hasProfileUpdate, hasMismatch := p.updateProfile(rank, profile, ascentWithBrief)
+	hasProfileUpdate, hasMismatch := p.updateProfile(rank, profile)
 	if hasMismatch {
 		panic(fmt.Sprintf("inconsistent neighbour announcement: local=%d, phantom=%d, announcer=%d, rank=%v, profile=%+v, firmentRank=%v, figmentProfile=%+v, ann=%+v",
 			p.phantom.purgatory.callback.localNodeID, p.phantom.nodeID, announcedBy, rank, profile, p.rank, p.profile, announcement))
@@ -263,7 +267,7 @@ func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom
 	return nil
 }
 
-func (p *figment) updateProfile(rank member.Rank, profile profiles.StaticProfile, ascentWithBrief bool) (updated bool, mismatched bool) {
+func (p *figment) updateProfile(rank member.Rank, profile profiles.StaticProfile) (updated bool, mismatched bool) {
 
 	switch {
 	case rank != p.rank:
@@ -283,6 +287,6 @@ func (p *figment) updateProfile(rank member.Rank, profile profiles.StaticProfile
 		return true, false
 	default:
 		return false, !profiles.EqualStaticProfiles(p.profile, profile) ||
-			!profiles.EqualStaticExtensions(p.profile.GetExtension(), profile.GetExtension())
+			!profiles.EqualProfileExtensions(p.profile.GetExtension(), profile.GetExtension())
 	}
 }

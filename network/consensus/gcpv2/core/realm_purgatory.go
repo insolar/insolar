@@ -57,11 +57,9 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/insolar/insolar/network/consensus/gcpv2/censusimpl"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
 )
@@ -194,6 +192,7 @@ func (p *RealmPurgatory) getMember(id insolar.ShortNodeID, introducedBy insolar.
 		return nil
 	}
 	if np != nil {
+		np.IntroducedBy(introducedBy)
 		return np
 	}
 
@@ -233,12 +232,6 @@ func (p *RealmPurgatory) ascendFromPurgatory(ctx context.Context, id insolar.Sho
 
 	inslogger.FromContext(ctx).Debugf("Candidate/joiner has ascended as dynamic node: s=%d, t=%d, full=%v",
 		p.callback.localNodeID, np.GetNodeID(), np.GetStatic().GetExtension() != nil)
-}
-
-func (p *RealmPurgatory) sendPostponedPacket(_ context.Context, packet transport.PacketParser,
-	from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags) {
-
-	p.postponedPacketFn(packet, from, flags)
 }
 
 func (p *RealmPurgatory) IsBriefAscensionAllowed() bool {

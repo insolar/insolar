@@ -53,7 +53,6 @@ package serialization
 import (
 	"bytes"
 	"context"
-	"fmt"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -134,13 +133,15 @@ func (pb *PacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncementP
 	if (options & transport.SendWithoutPulseData) == 0 {
 		packet.Header.SetFlag(FlagHasPulsePacket)
 	}
+	if (options & transport.AlternativePhasePacket) != 0 {
+		packet.Header.setPacketType(phases.PacketReqPhase1)
+	}
 
 	body := packet.EncryptableBody.(*GlobulaConsensusPacketBody)
 	body.PulsarPacket.setData(pulsarPacket.AsBytes())
 
 	body.Announcement.ShortID = sender.GetNodeID()
 	body.Announcement.CurrentRank = sender.GetNodeRank()
-	fmt.Println("send", sender.GetNodeID(), sender.GetNodeRank())
 	body.Announcement.RequestedPower = sender.GetRequestedPower()
 	copy(
 		body.Announcement.AnnounceSignature[:],
@@ -180,6 +181,9 @@ func (pb *PacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncementP
 	neighbourhood []transport.MembershipAnnouncementReader, options transport.PacketSendOptions) transport.PreparedPacketSender {
 
 	packet := pb.preparePacket(sender, phases.PacketPhase2)
+	if (options & transport.AlternativePhasePacket) != 0 {
+		packet.Header.setPacketType(phases.PacketExtPhase2)
+	}
 
 	body := packet.EncryptableBody.(*GlobulaConsensusPacketBody)
 
@@ -256,6 +260,9 @@ func (pb *PacketBuilder) PreparePhase3Packet(sender *transport.NodeAnnouncementP
 	vectors statevector.Vector, options transport.PacketSendOptions) transport.PreparedPacketSender {
 
 	packet := pb.preparePacket(sender, phases.PacketPhase3)
+	if (options & transport.AlternativePhasePacket) != 0 {
+		packet.Header.setPacketType(phases.PacketFastPhase3)
+	}
 
 	body := packet.EncryptableBody.(*GlobulaConsensusPacketBody)
 	body.Vectors.StateVectorMask.SetBitset(vectors.Bitset)
