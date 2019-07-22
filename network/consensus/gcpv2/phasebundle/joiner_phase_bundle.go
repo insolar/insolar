@@ -51,19 +51,26 @@
 package phasebundle
 
 import (
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
+	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/inspectors"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/ph01ctl"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/ph2ctl"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/ph3ctl"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/pulsectl"
 )
 
-func NewJoinerPhaseBundle(config BundleConfig) core.PhaseControllersBundle {
-	return &JoinerPhaseBundle{config}
+func NewJoinerPhaseBundle(pss pulsectl.PulseSelectionStrategy, config BundleConfig) core.PhaseControllersBundle {
+	return &JoinerPhaseBundle{pss, config}
 }
 
 type JoinerPhaseBundle struct {
+	pss pulsectl.PulseSelectionStrategy
 	BundleConfig
+}
+
+func (r JoinerPhaseBundle) String() string {
+	return "JoinerPhaseBundle"
 }
 
 func (r *JoinerPhaseBundle) IsDynamicPopulationRequired() bool {
@@ -77,30 +84,34 @@ func (r *JoinerPhaseBundle) IsEphemeralPulseAllowed() bool {
 func (r *JoinerPhaseBundle) CreatePrepPhaseControllers() []core.PrepPhaseController {
 
 	return []core.PrepPhaseController{
-		pulsectl.NewPulsePrepController(r.PulseSelectionStrategy),
-		ph01ctl.NewPhase01PrepController(r.PulseSelectionStrategy),
+		ph01ctl.NewJoinerPhase01PrepController(r.pss),
 	}
 }
 
 func (r *JoinerPhaseBundle) CreateFullPhaseControllers(nodeCount int) ([]core.PhaseController, core.NodeUpdateCallback) {
 
 	/* Ensure sufficient sizes of queues to avoid lockups */
+	if nodeCount == 0 {
+		panic("illegal value")
+	}
+
 	rcb := &regularCallback{
 		make(chan *core.NodeAppearance, nodeCount),
 		make(chan ph2ctl.TrustUpdateSignal, nodeCount*3), // up-to ~3 updates for every node
 		make(chan core.MemberPacketSender, nodeCount),
 	}
 
-	consensusStrategy := ph3ctl.NewSimpleConsensusSelectionStrategy()
-	inspectionFactory := ph3ctl.NewVectorInspectionFactory(0)
+	vif := r.VectorInspectorFactory
+	if r.DisableVectorInspectionOnJoiner {
+		vif = inspectors.NewIgnorantVectorInspectionFactory()
+	}
 
 	packetPrepareOptions := r.JoinerOptions
 
 	return []core.PhaseController{
-		pulsectl.NewPulseController(),
-		ph01ctl.NewPhase01Controller(packetPrepareOptions, rcb.qJoiners),
+		ph01ctl.NewPhase01Controller(packetPrepareOptions|transport.SendWithoutPulseData, rcb.qJoiners),
 		ph2ctl.NewPhase2Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qNshReady /*->*/),
 		ph3ctl.NewPhase3Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qTrustLvlUpd, /*->*/
-			consensusStrategy, inspectionFactory),
+			r.ConsensusStrategy, vif, r.EnableFastPhase3),
 	}, rcb
 }

@@ -55,6 +55,8 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
+	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/consensus"
+	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/inspectors"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/pulsectl"
 	"time"
 )
@@ -71,19 +73,28 @@ func NewStandardBundleFactory(config BundleConfig) core.PhaseControllersBundleFa
 
 func CreateStandardBundleConfig() BundleConfig {
 	return BundleConfig{
-		pulsectl.NewTakeFirstSelectionStrategy(),
+		pulsectl.NewTakeFirstSelectionStrategyFactory(),
+		consensus.NewSimpleSelectionStrategy(),
+		inspectors.NewVectorInspectionFactory(0),
 		loopingMinimalDelay,
-		transport.AllowFullJoinerIntroForPhase1,
+		transport.OnlyBriefIntroAboutJoiner,
 		0,
+		false,
+		false,
 	}
 }
 
 type BundleConfig struct {
-	PulseSelectionStrategy pulsectl.PulseSelectionStrategy
-	LoopingMinimalDelay    time.Duration
+	PulseSelectionStrategyFactory pulsectl.PulseSelectionStrategyFactory
+	ConsensusStrategy             consensus.SelectionStrategy
+	VectorInspectorFactory        inspectors.VectorInspectorFactory
 
-	MemberOptions transport.PacketSendOptions
-	JoinerOptions transport.PacketSendOptions
+	LoopingMinimalDelay time.Duration
+
+	MemberOptions                   transport.PacketSendOptions
+	JoinerOptions                   transport.PacketSendOptions
+	DisableVectorInspectionOnJoiner bool
+	EnableFastPhase3                bool
 }
 
 type standardBundleFactory struct {
@@ -92,19 +103,20 @@ type standardBundleFactory struct {
 
 func (p *standardBundleFactory) CreateControllersBundle(population census.OnlinePopulation, config api.LocalNodeConfiguration) core.PhaseControllersBundle {
 
+	pss := p.PulseSelectionStrategyFactory.CreatePulseSelectionStrategy(population, config)
 	lp := population.GetLocalProfile()
 	mode := lp.GetOpMode()
 	switch {
 	case mode.IsEvicted():
 		panic("unable to start consensus for an evicted node")
 	case lp.IsJoiner():
-		if population.GetCount() != 1 {
-			panic("joiner can only start with a one-node population")
+		if population.GetCount() != 0 {
+			panic("joiner can only start with a zero node population")
 		}
-		return NewJoinerPhaseBundle(p.BundleConfig)
-	case mode.IsSuspended():
-		panic("not implemented")
+		return NewJoinerPhaseBundle(pss, p.BundleConfig)
+	case mode.IsSuspended() /* && !population.IsComplete() */ :
+		panic("not implemented") // TODO work as suspected
 	default:
-		return NewRegularPhaseBundle(p.BundleConfig)
+		return NewRegularPhaseBundle(pss, p.BundleConfig)
 	}
 }

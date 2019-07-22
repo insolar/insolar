@@ -115,7 +115,7 @@ type ExtendedIntroReader interface {
 	GetCloudIntroduction() CloudIntroductionReader
 
 	HasJoinerSecret() bool
-	GetJoinerSecret() cryptkit.SignatureHolder
+	GetJoinerSecret() cryptkit.DigestHolder
 }
 
 type AnnouncementPacketReader interface {

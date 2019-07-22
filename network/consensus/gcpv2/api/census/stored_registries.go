@@ -51,6 +51,7 @@
 package census
 
 import (
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
@@ -75,6 +76,7 @@ type MisbehaviorRegistry interface {
 type MandateRegistry interface {
 	FindRegisteredProfile(host endpoints.Inbound) profiles.Host
 	GetPrimingCloudHash() proofs.CloudStateHash
+	GetCloudIdentity() cryptkit.DigestHolder
 	GetConsensusConfiguration() ConsensusConfiguration
 }
 

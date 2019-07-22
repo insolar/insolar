@@ -126,6 +126,7 @@ const (
 	FraudMultipleNsh
 	MismatchedRank
 	MismatchedNeighbour
+	WrongPower
 )
 
 func NewFraudFactory(capture ReportFunc) FraudFactory {
@@ -191,4 +192,8 @@ func (p FraudFactory) NewNeighbourContainsSource(violator profiles.BaseNode) err
 
 func (p FraudFactory) NewInconsistentNeighbourAnnouncement(violator profiles.BaseNode) FraudError {
 	return p.NewNodeFraud(MismatchedNeighbour, "multiple neighbour profile", violator)
+}
+
+func (p FraudFactory) NewInvalidPowerLevel(violator profiles.BaseNode) FraudError {
+	return p.NewNodeFraud(WrongPower, "power level is incorrect", violator)
 }

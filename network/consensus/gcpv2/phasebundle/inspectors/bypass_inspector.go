@@ -48,83 +48,90 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package proofs
+package inspectors
 
 import (
-	"github.com/insolar/insolar/network/consensus/common/args"
+	"context"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/statevector"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core"
+	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/nodeset"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.NodeStateHash -o . -s _mock.go
-
-type NodeStateHash interface {
-	cryptkit.DigestHolder
+func NewBypassInspector() VectorInspector {
+	return &bypassVectorInspector{}
 }
 
-type GlobulaAnnouncementHash interface {
-	cryptkit.DigestHolder
+type bypassVectorInspector struct {
 }
 
-type GlobulaStateHash interface {
-	cryptkit.DigestHolder
+func (*bypassVectorInspector) CreateNextPopulation(nodeset.ConsensusBitsetRow) ([]profiles.PopulationRank, proofs.CloudStateHash, proofs.GlobulaStateHash) {
+	panic("illegal state")
 }
 
-type CloudStateHash interface {
-	cryptkit.DigestHolder
+func (*bypassVectorInspector) PrepareForInspection(ctx context.Context) {
+	panic("illegal state")
 }
 
-type GlobulaStateSignature interface {
-	cryptkit.SignatureHolder
+func (*bypassVectorInspector) CreateVector(cryptkit.DigestSigner) statevector.Vector {
+	panic("illegal state")
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.MemberAnnouncementSignature -o . -s _mock.go
+func (*bypassVectorInspector) InspectVector(ctx context.Context, sender *core.NodeAppearance, customOptions uint32,
+	otherData statevector.Vector) InspectedVector {
 
-type MemberAnnouncementSignature interface {
-	cryptkit.SignatureHolder
+	return &bypassVector{sender, customOptions, otherData}
 }
 
-type NodeAnnouncedState struct {
-	StateEvidence     cryptkit.SignedDigestHolder
-	AnnounceSignature MemberAnnouncementSignature
+func (*bypassVectorInspector) GetBitset() member.StateBitset {
+	panic("illegal state")
 }
 
-func (p NodeAnnouncedState) IsEmpty() bool {
-	return args.IsNil(p.StateEvidence)
+type bypassVector struct {
+	n             *core.NodeAppearance
+	customOptions uint32
+	otherData     statevector.Vector
 }
 
-func (p NodeAnnouncedState) Equals(o NodeAnnouncedState) bool {
-	if args.IsNil(p.StateEvidence) || args.IsNil(o.StateEvidence) || args.IsNil(p.AnnounceSignature) || args.IsNil(o.AnnounceSignature) {
-		return false
+func (p *bypassVector) GetCustomOptions() uint32 {
+	return p.customOptions
+}
+
+func (p *bypassVector) HasSenderFault() bool {
+	return false
+}
+
+func (p *bypassVector) GetInspectionResults() (*nodeset.ConsensusStatRow, nodeset.NodeVerificationResult) {
+	return nil, nodeset.NvrNotVerified
+}
+
+func (p *bypassVector) GetBitset() member.StateBitset {
+	return p.otherData.Bitset
+}
+
+func (p *bypassVector) GetNode() *core.NodeAppearance {
+	return p.n
+}
+
+func (p *bypassVector) Reinspect(ctx context.Context, inspector VectorInspector) InspectedVector {
+	iv := inspector.InspectVector(ctx, p.n, p.customOptions, p.otherData)
+	if _, ok := iv.(*bypassVector); ok {
+		panic("illegal state")
 	}
-	return p.StateEvidence.Equals(o.StateEvidence) && p.AnnounceSignature.Equals(o.AnnounceSignature)
+	return iv
 }
 
-type NodeStateHashEvidence interface {
-	cryptkit.SignedDigestHolder
+func (*bypassVector) Inspect(ctx context.Context) {
+	panic("illegal state")
 }
 
-//func NewNodeStateHashEvidence(sd cryptkit.SignedDigest) NodeStateHashEvidence {
-//	return &nodeStateHashEvidence{sd}
-//}
-//
-//type nodeStateHashEvidence struct {
-//	cryptkit.SignedDigest
-//}
-//
-//func (c *nodeStateHashEvidence) GetNodeStateHash() NodeStateHash {
-//	return c.GetDigestHolder()
-//}
-//
-//func (c *nodeStateHashEvidence) GetGlobulaNodeStateSignature() cryptkit.SignatureHolder {
-//	return c.GetSignatureHolder()
-//}
-//
-////go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.NodeStateHashEvidence -o . -s _mock.go
-//
-//// TODO revisit and rework
-//type NodeStateHashEvidence interface {
-//	GetNodeStateHash() NodeStateHash
-//	GetGlobulaNodeStateSignature() cryptkit.SignatureHolder
-//}
-//
-//
+func (*bypassVector) IsInspected() bool {
+	return false
+}
+
+func (*bypassVector) HasMissingMembers() bool {
+	return false
+}

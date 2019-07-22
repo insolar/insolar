@@ -128,6 +128,7 @@ type NodeIntroProfile struct {
 }
 
 func NewNodeIntroProfile(networkNode insolar.NetworkNode, certificate insolar.Certificate, keyProcessor insolar.KeyProcessor) *NodeIntroProfile {
+
 	specialRole := member.SpecialRoleNone
 	if utils.IsDiscovery(networkNode.ID(), certificate) {
 		specialRole = member.SpecialRoleDiscovery

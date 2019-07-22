@@ -63,12 +63,17 @@ import (
 
 var _ core.PhaseControllersBundle = &RegularPhaseBundle{}
 
-func NewRegularPhaseBundle(config BundleConfig) core.PhaseControllersBundle {
-	return &RegularPhaseBundle{config}
+func NewRegularPhaseBundle(pss pulsectl.PulseSelectionStrategy, config BundleConfig) core.PhaseControllersBundle {
+	return &RegularPhaseBundle{pss, config}
 }
 
 type RegularPhaseBundle struct {
+	pss pulsectl.PulseSelectionStrategy
 	BundleConfig
+}
+
+func (r RegularPhaseBundle) String() string {
+	return "RegularPhaseBundle"
 }
 
 func (r *RegularPhaseBundle) IsDynamicPopulationRequired() bool {
@@ -86,8 +91,8 @@ func (r *RegularPhaseBundle) CreatePrepPhaseControllers() []core.PrepPhaseContro
 		even if packets arrived while PrepRealm was active.
 	*/
 	return []core.PrepPhaseController{
-		pulsectl.NewPulsePrepController(r.PulseSelectionStrategy),
-		ph01ctl.NewPhase01PrepController(r.PulseSelectionStrategy),
+		pulsectl.NewPulsePrepController(r.pss),
+		ph01ctl.NewPhase01PrepController(r.pss),
 	}
 }
 
@@ -117,6 +122,7 @@ func (p *regularCallback) OnCustomEvent(populationVersion uint32, n *core.NodeAp
 }
 
 func (p *regularCallback) OnTrustUpdated(populationVersion uint32, n *core.NodeAppearance, trustBefore, trustAfter member.TrustLevel) {
+
 	switch {
 	case trustBefore < member.TrustByNeighbors && trustAfter >= member.TrustByNeighbors:
 		trustAfter = member.TrustByNeighbors
@@ -137,14 +143,15 @@ func (p *regularCallback) OnNodeStateAssigned(populationVersion uint32, n *core.
 func (r *RegularPhaseBundle) CreateFullPhaseControllers(nodeCount int) ([]core.PhaseController, core.NodeUpdateCallback) {
 
 	/* Ensure sufficient sizes of queues to avoid lockups */
+	if nodeCount == 0 {
+		panic("illegal value")
+	}
+
 	rcb := &regularCallback{
 		make(chan *core.NodeAppearance, nodeCount),
 		make(chan ph2ctl.TrustUpdateSignal, nodeCount*3), // up-to ~3 updates for every node
 		make(chan core.MemberPacketSender, nodeCount),
 	}
-
-	consensusStrategy := ph3ctl.NewSimpleConsensusSelectionStrategy()
-	inspectionFactory := ph3ctl.NewVectorInspectionFactory(0)
 
 	packetPrepareOptions := r.MemberOptions
 
@@ -153,6 +160,6 @@ func (r *RegularPhaseBundle) CreateFullPhaseControllers(nodeCount int) ([]core.P
 		ph01ctl.NewPhase01Controller(packetPrepareOptions, rcb.qJoiners),
 		ph2ctl.NewPhase2Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qNshReady),
 		ph3ctl.NewPhase3Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qTrustLvlUpd,
-			consensusStrategy, inspectionFactory),
+			r.ConsensusStrategy, r.VectorInspectorFactory, r.EnableFastPhase3),
 	}, rcb
 }

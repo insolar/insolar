@@ -59,9 +59,10 @@ import (
 type RowValueFormatFunc func(v uint8) string
 
 type Row struct {
-	rowIndex int
-	values   []uint8
-	summary  []uint16
+	rowIndex      int
+	values        []uint8
+	summary       []uint16
+	customOptions uint32
 }
 
 func NewStatRow(maxValue uint8, columns int) Row {
@@ -71,8 +72,20 @@ func NewStatRow(maxValue uint8, columns int) Row {
 	return Row{rowIndex: -1, values: make([]uint8, columns), summary: make([]uint16, maxValue+1)}
 }
 
+func (r *Row) GetCustomOptions() uint32 {
+	return r.customOptions
+}
+
+func (r *Row) SetCustomOptions(v uint32) {
+	r.customOptions = v
+}
+
 func (r *Row) Len() int {
 	return len(r.values)
+}
+
+func (r *Row) IsEmpty() bool {
+	return len(r.values) == 0 && len(r.summary) == 0
 }
 
 func (r *Row) Set(column int, value uint8) uint8 {

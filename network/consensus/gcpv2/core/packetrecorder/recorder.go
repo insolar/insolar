@@ -48,75 +48,110 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package ph01ctl
+package packetrecorder
 
 import (
-	"context"
-	"fmt"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
-	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/pulsectl"
-
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
+	"sync"
 )
 
-func NewPhase01PrepController(s pulsectl.PulseSelectionStrategy) *Phase01PrepController {
-	return &Phase01PrepController{pulseStrategy: s}
+type PostponedPacketFunc func(packet transport.PacketParser, from endpoints.Inbound, verifyFlags PacketVerifyFlags) bool
+
+type PostponedPacket struct {
+	Packet      transport.PacketParser
+	From        endpoints.Inbound
+	VerifyFlags PacketVerifyFlags
 }
 
-var _ core.PrepPhaseController = &Phase01PrepController{}
-
-type Phase01PrepController struct {
-	core.PrepPhaseControllerTemplate
-	core.HostPacketDispatcherTemplate
-
-	realm         *core.PrepRealm
-	pulseStrategy pulsectl.PulseSelectionStrategy
+func NewPacketRecorder(recordingSize int) PacketRecorder {
+	return PacketRecorder{pr: UnsafePacketRecorder{recordingLimit: recordingSize}}
 }
 
-func (c *Phase01PrepController) CreatePacketDispatcher(pt phases.PacketType, realm *core.PrepRealm) core.PacketDispatcher {
-	c.realm = realm
-	return c
+func NewUnsafePacketRecorder(recordingSize int) UnsafePacketRecorder {
+	return UnsafePacketRecorder{recordingLimit: recordingSize}
 }
 
-func (c *Phase01PrepController) GetPacketType() []phases.PacketType {
-	return []phases.PacketType{phases.PacketPhase0, phases.PacketPhase1}
+type packetRecording struct {
+	packets []PostponedPacket
 }
 
-func (c *Phase01PrepController) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
-	from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags) error {
+func (p *packetRecording) Record(packet transport.PacketParser, from endpoints.Inbound, verifyFlags PacketVerifyFlags) {
+	p.packets = append(p.packets, PostponedPacket{packet, from, verifyFlags})
+}
 
-	var pp transport.PulsePacketReader
-	var nr member.Rank
+type PacketRecorder struct {
+	sync sync.Mutex
+	pr   UnsafePacketRecorder
+}
 
-	switch packet.GetPacketType() {
-	case phases.PacketPhase0:
-		p0 := packet.GetMemberPacket().AsPhase0Packet()
-		nr = p0.GetNodeRank()
-		pp = p0.GetEmbeddedPulsePacket()
-	case phases.PacketPhase1:
-		p1 := packet.GetMemberPacket().AsPhase1Packet()
-		if p1.HasFullIntro() || p1.HasCloudIntro() || p1.HasJoinerSecret() {
-			return fmt.Errorf("introduction data were not expected: from=%v", from)
-		}
-		nr = p1.GetAnnouncementReader().GetNodeRank()
-		if p1.HasPulseData() {
-			pp = p1.GetEmbeddedPulsePacket()
-		}
-	default:
+func (p *PacketRecorder) Record(packet transport.PacketParser, from endpoints.Inbound, verifyFlags PacketVerifyFlags) {
+	p.sync.Lock()
+	defer p.sync.Unlock()
+	p.pr.Record(packet, from, verifyFlags)
+}
+
+func (p *PacketRecorder) Playback(to PostponedPacketFunc) {
+	p.sync.Lock()
+	defer p.sync.Unlock()
+	p.pr.Playback(to)
+}
+
+type UnsafePacketRecorder struct {
+	recordingLimit int
+	playbackFn     PostponedPacketFunc
+	recordings     []packetRecording
+}
+
+func (p *UnsafePacketRecorder) IsRecording() bool {
+	return p.playbackFn == nil
+}
+
+func (p *UnsafePacketRecorder) Record(packet transport.PacketParser, from endpoints.Inbound, verifyFlags PacketVerifyFlags) {
+	if p.playbackFn != nil {
+		go p.playbackFn(packet, from, verifyFlags)
+		return
+	}
+	last := len(p.recordings) - 1
+	if last < 0 || len(p.recordings[last].packets) >= p.recordingLimit {
+		p.recordings = append(p.recordings, packetRecording{make([]PostponedPacket, 0, p.recordingLimit)})
+		last++
+	}
+	p.recordings[last].Record(packet, from, verifyFlags)
+}
+
+func (p *UnsafePacketRecorder) Playback(to PostponedPacketFunc) {
+	if p.playbackFn != nil {
+		panic("illegal state")
+	}
+	if to == nil {
 		panic("illegal value")
 	}
-	if nr.IsJoiner() && pp != nil {
-		return fmt.Errorf("pulse data in Phase0/Phas1 is not allowed from a joiner: from=%v", from)
-	}
-	// if { TODO check ranks? }
+	p.playbackFn = to
 
-	ok, err := c.pulseStrategy.HandlePulsarPacket(ctx, pp, from, false)
-	if err != nil || !ok {
-		return err
+	recordings := p.recordings
+	p.recordings = nil
+	if len(recordings) > 0 {
+		go playbackPackets(recordings, to)
 	}
-	return c.realm.ApplyPulseData(pp, false)
 }
+
+func playbackPackets(recordings []packetRecording, to PostponedPacketFunc) {
+	for _, p := range recordings {
+		for _, pp := range p.packets {
+			if !to(pp.Packet, pp.From, pp.VerifyFlags) {
+				return
+			}
+		}
+	}
+}
+
+type PacketVerifyFlags uint32
+
+const DefaultVerify PacketVerifyFlags = 0
+
+const (
+	SkipVerify PacketVerifyFlags = 1 << iota
+	RequireStrictVerify
+	SuccesfullyVerified
+)

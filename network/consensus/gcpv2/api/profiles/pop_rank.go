@@ -48,83 +48,12 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package proofs
+package profiles
 
-import (
-	"github.com/insolar/insolar/network/consensus/common/args"
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-)
+import "github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.NodeStateHash -o . -s _mock.go
-
-type NodeStateHash interface {
-	cryptkit.DigestHolder
+type PopulationRank struct {
+	Profile ActiveNode
+	Power   member.Power
+	OpMode  member.OpMode
 }
-
-type GlobulaAnnouncementHash interface {
-	cryptkit.DigestHolder
-}
-
-type GlobulaStateHash interface {
-	cryptkit.DigestHolder
-}
-
-type CloudStateHash interface {
-	cryptkit.DigestHolder
-}
-
-type GlobulaStateSignature interface {
-	cryptkit.SignatureHolder
-}
-
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.MemberAnnouncementSignature -o . -s _mock.go
-
-type MemberAnnouncementSignature interface {
-	cryptkit.SignatureHolder
-}
-
-type NodeAnnouncedState struct {
-	StateEvidence     cryptkit.SignedDigestHolder
-	AnnounceSignature MemberAnnouncementSignature
-}
-
-func (p NodeAnnouncedState) IsEmpty() bool {
-	return args.IsNil(p.StateEvidence)
-}
-
-func (p NodeAnnouncedState) Equals(o NodeAnnouncedState) bool {
-	if args.IsNil(p.StateEvidence) || args.IsNil(o.StateEvidence) || args.IsNil(p.AnnounceSignature) || args.IsNil(o.AnnounceSignature) {
-		return false
-	}
-	return p.StateEvidence.Equals(o.StateEvidence) && p.AnnounceSignature.Equals(o.AnnounceSignature)
-}
-
-type NodeStateHashEvidence interface {
-	cryptkit.SignedDigestHolder
-}
-
-//func NewNodeStateHashEvidence(sd cryptkit.SignedDigest) NodeStateHashEvidence {
-//	return &nodeStateHashEvidence{sd}
-//}
-//
-//type nodeStateHashEvidence struct {
-//	cryptkit.SignedDigest
-//}
-//
-//func (c *nodeStateHashEvidence) GetNodeStateHash() NodeStateHash {
-//	return c.GetDigestHolder()
-//}
-//
-//func (c *nodeStateHashEvidence) GetGlobulaNodeStateSignature() cryptkit.SignatureHolder {
-//	return c.GetSignatureHolder()
-//}
-//
-////go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.NodeStateHashEvidence -o . -s _mock.go
-//
-//// TODO revisit and rework
-//type NodeStateHashEvidence interface {
-//	GetNodeStateHash() NodeStateHash
-//	GetGlobulaNodeStateSignature() cryptkit.SignatureHolder
-//}
-//
-//

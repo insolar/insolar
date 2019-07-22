@@ -48,83 +48,88 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package proofs
+package profiles
 
 import (
-	"github.com/insolar/insolar/network/consensus/common/args"
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"sort"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.NodeStateHash -o . -s _mock.go
-
-type NodeStateHash interface {
-	cryptkit.DigestHolder
-}
-
-type GlobulaAnnouncementHash interface {
-	cryptkit.DigestHolder
-}
-
-type GlobulaStateHash interface {
-	cryptkit.DigestHolder
-}
-
-type CloudStateHash interface {
-	cryptkit.DigestHolder
-}
-
-type GlobulaStateSignature interface {
-	cryptkit.SignatureHolder
-}
-
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.MemberAnnouncementSignature -o . -s _mock.go
-
-type MemberAnnouncementSignature interface {
-	cryptkit.SignatureHolder
-}
-
-type NodeAnnouncedState struct {
-	StateEvidence     cryptkit.SignedDigestHolder
-	AnnounceSignature MemberAnnouncementSignature
-}
-
-func (p NodeAnnouncedState) IsEmpty() bool {
-	return args.IsNil(p.StateEvidence)
-}
-
-func (p NodeAnnouncedState) Equals(o NodeAnnouncedState) bool {
-	if args.IsNil(p.StateEvidence) || args.IsNil(o.StateEvidence) || args.IsNil(p.AnnounceSignature) || args.IsNil(o.AnnounceSignature) {
-		return false
+func AsRank(np ActiveNode, count member.Index) member.Rank {
+	if np.IsJoiner() {
+		return member.JoinerRank
 	}
-	return p.StateEvidence.Equals(o.StateEvidence) && p.AnnounceSignature.Equals(o.AnnounceSignature)
+	return member.NewMembershipRank(np.GetOpMode(), np.GetDeclaredPower(), np.GetIndex(), count)
 }
 
-type NodeStateHashEvidence interface {
-	cryptkit.SignedDigestHolder
+func AsSortingRank(np ActiveNode) member.SortingRank {
+	return member.NewSortingRank(np.GetNodeID(), np.GetStatic().GetPrimaryRole(), np.GetDeclaredPower(), np.GetOpMode())
 }
 
-//func NewNodeStateHashEvidence(sd cryptkit.SignedDigest) NodeStateHashEvidence {
-//	return &nodeStateHashEvidence{sd}
+func AsSortingRankOfStatic(st StaticProfile, enableStartPower bool) member.SortingRank {
+	if enableStartPower {
+		return member.NewSortingRank(st.GetStaticNodeID(), st.GetPrimaryRole(), st.GetStartPower(), member.ModeNormal)
+	}
+	return member.NewSortingRank(st.GetStaticNodeID(), st.GetPrimaryRole(), 0, member.ModeNormal)
+}
+
+//func AsSortingPowerRole(np ActiveNode) uint16 {
+//	st := np.GetStatic()
+//	return member.SortingPowerRole(st.GetPrimaryRole(), np.GetDeclaredPower(), np.GetOpMode())
 //}
 //
-//type nodeStateHashEvidence struct {
-//	cryptkit.SignedDigest
+//func AsSortingPowerRoleOfStatic(st StaticProfile, enableStartPower bool) uint16 {
+//	if enableStartPower {
+//		return member.SortingPowerRole(st.GetPrimaryRole(), st.GetStartPower(), member.ModeNormal)
+//	}
+//	return 0
 //}
-//
-//func (c *nodeStateHashEvidence) GetNodeStateHash() NodeStateHash {
-//	return c.GetDigestHolder()
-//}
-//
-//func (c *nodeStateHashEvidence) GetGlobulaNodeStateSignature() cryptkit.SignatureHolder {
-//	return c.GetSignatureHolder()
-//}
-//
-////go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.NodeStateHashEvidence -o . -s _mock.go
-//
-//// TODO revisit and rework
-//type NodeStateHashEvidence interface {
-//	GetNodeStateHash() NodeStateHash
-//	GetGlobulaNodeStateSignature() cryptkit.SignatureHolder
-//}
-//
-//
+
+func LessForActiveNodes(vN, oN ActiveNode) bool {
+	return AsSortingRank(vN).Less(AsSortingRank(oN))
+}
+
+func LessForStaticProfiles(vN, oN StaticProfile, enableStartPower bool) bool {
+	return AsSortingRankOfStatic(vN, enableStartPower).Less(AsSortingRankOfStatic(oN, enableStartPower))
+}
+
+func SortActiveNodes(nodes []ActiveNode) {
+	sort.Sort(&sorterActiveNode{nodes})
+}
+
+func SortStaticProfiles(nodes []StaticProfile, enableStartPower bool) {
+	sort.Sort(&sorterStaticProfile{nodes, enableStartPower})
+}
+
+type sorterActiveNode struct {
+	values []ActiveNode
+}
+
+func (c *sorterActiveNode) Len() int {
+	return len(c.values)
+}
+
+func (c *sorterActiveNode) Less(i, j int) bool {
+	return LessForActiveNodes(c.values[i], c.values[j])
+}
+
+func (c *sorterActiveNode) Swap(i, j int) {
+	c.values[i], c.values[j] = c.values[j], c.values[i]
+}
+
+type sorterStaticProfile struct {
+	values           []StaticProfile
+	enableStartPower bool
+}
+
+func (c *sorterStaticProfile) Len() int {
+	return len(c.values)
+}
+
+func (c *sorterStaticProfile) Less(i, j int) bool {
+	return LessForStaticProfiles(c.values[i], c.values[j], c.enableStartPower)
+}
+
+func (c *sorterStaticProfile) Swap(i, j int) {
+	c.values[i], c.values[j] = c.values[j], c.values[i]
+}

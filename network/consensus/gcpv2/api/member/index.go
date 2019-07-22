@@ -50,11 +50,16 @@
 
 package member
 
+import "fmt"
+
 type Index uint16
 
 const JoinerIndex Index = 0x8000
 
 func AsIndex(v int) Index {
+	if v < 0 {
+		panic("illegal value")
+	}
 	return Index(v).Ensure()
 }
 
@@ -83,6 +88,13 @@ func (v Index) Ensure() Index {
 
 func (v Index) IsJoiner() bool {
 	return v == JoinerIndex
+}
+
+func (v Index) String() string {
+	if v.IsJoiner() {
+		return "joiner"
+	}
+	return fmt.Sprintf("%d", v)
 }
 
 const NodeIndexBits = 10 // DO NOT change it, otherwise nasty consequences will come

@@ -48,72 +48,40 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package ph3ctl
+package consensus
 
 import (
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/statevector"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/nodeset"
 )
 
-func NewBypassInspector() VectorInspector {
-	return &bypassVectorInspector{}
+type Selection interface {
+	/* When false - disables chasing timeout */
+	CanBeImproved() bool
+	/* This bitset only allows values of NbsConsensus[*] */
+	GetConsensusVector() nodeset.ConsensusBitsetRow
 }
 
-type bypassVectorInspector struct {
+type SelectionStrategy interface {
+	/* Result can be nil - it means no-decision */
+	TrySelectOnAdded(globulaStats *nodeset.ConsensusStatTable, addedNode profiles.StaticProfile,
+		nodeStats *nodeset.ConsensusStatRow) Selection
+	SelectOnStopped(globulaStats *nodeset.ConsensusStatTable, timeIsOut bool, bftMajority int) Selection
 }
 
-func (*bypassVectorInspector) CreateVector(cryptkit.DigestSigner) statevector.Vector {
-	panic("illegal state")
+func NewSelection(canBeImproved bool, bitset nodeset.ConsensusBitsetRow) Selection {
+	return &selectionTemplate{canBeImproved: canBeImproved, bitset: bitset}
 }
 
-func (*bypassVectorInspector) InspectVector(sender *core.NodeAppearance, otherData statevector.Vector) InspectedVector {
-	return &bypassVector{sender, otherData}
+type selectionTemplate struct {
+	canBeImproved bool
+	bitset        nodeset.ConsensusBitsetRow
 }
 
-func (*bypassVectorInspector) GetBitset() member.StateBitset {
-	panic("illegal state")
+func (c *selectionTemplate) CanBeImproved() bool {
+	return c.canBeImproved
 }
 
-type bypassVector struct {
-	n         *core.NodeAppearance
-	otherData statevector.Vector
-}
-
-func (p *bypassVector) HasSenderFault() bool {
-	return false
-}
-
-func (p *bypassVector) GetInspectionResults() (*nodeset.ConsensusStatRow, nodeset.NodeVerificationResult) {
-	return nil, nodeset.NvrNotVerified
-}
-
-func (p *bypassVector) GetBitset() member.StateBitset {
-	return p.otherData.Bitset
-}
-
-func (p *bypassVector) GetNode() *core.NodeAppearance {
-	return p.n
-}
-
-func (p *bypassVector) Reinspect(inspector VectorInspector) InspectedVector {
-	iv := inspector.InspectVector(p.n, p.otherData)
-	if _, ok := iv.(*bypassVector); ok {
-		panic("illegal state")
-	}
-	return iv
-}
-
-func (*bypassVector) Inspect() {
-	panic("illegal state")
-}
-
-func (*bypassVector) IsInspected() bool {
-	return false
-}
-
-func (*bypassVector) HasMissingMembers() bool {
-	return false
+func (c *selectionTemplate) GetConsensusVector() nodeset.ConsensusBitsetRow {
+	return c.bitset
 }

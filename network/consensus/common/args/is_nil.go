@@ -48,49 +48,11 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package ph3ctl
+package args
 
-import (
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/nodeset"
-)
-
-func NewSimpleConsensusSelectionStrategy() ConsensusSelectionStrategy {
-	return &simpleSimpleConsensusSelectionStrategy{}
+func IsNil(v interface{}) bool {
+	_, ok := v.(interface{})
+	return !ok
 }
 
-type simpleSimpleConsensusSelectionStrategy struct {
-}
-
-func (*simpleSimpleConsensusSelectionStrategy) TrySelectOnAdded(globulaStats *nodeset.ConsensusStatTable, addedNode profiles.ActiveNode,
-	nodeStats *nodeset.ConsensusStatRow, realm *core.FullRealm) ConsensusSelection {
-	return nil
-}
-
-func (*simpleSimpleConsensusSelectionStrategy) SelectOnStopped(globulaStats *nodeset.ConsensusStatTable, timeIsOut bool, realm *core.FullRealm) ConsensusSelection {
-
-	if globulaStats.ColumnCount() != realm.GetNodeCount() {
-		panic("illegal state")
-	}
-	pop := realm.GetPopulation()
-	bftMajority := uint16(pop.GetBftMajorityCount())
-
-	resultSet := nodeset.NewConsensusBitsetRow(globulaStats.ColumnCount())
-	for i := 0; i < resultSet.ColumnCount(); i++ {
-		tc := globulaStats.GetColumn(i)
-		decision := nodeset.CbsSuspected
-		switch {
-		case tc.GetSummaryByValue(nodeset.ConsensusStatFraud)+tc.GetSummaryByValue(nodeset.ConsensusStatFraudSuspect) >= bftMajority:
-			decision = nodeset.CbsFraud
-		case tc.GetSummaryByValue(nodeset.ConsensusStatTrusted)+tc.GetSummaryByValue(nodeset.ConsensusStatDoubted) >= bftMajority:
-			decision = nodeset.CbsIncluded
-			// TODO suspect markings etc must be by consensus decision
-			// case pop.GetNodeAppearanceByIndex(i).GetProfile().GetState().IsSuspect():
-			//	decision = nodeset.CbsExcluded
-		}
-		resultSet.Set(i, decision)
-	}
-
-	return NewConsensusSelection(false, &resultSet)
-}
+type ShuffleFunc func(n int, swap func(i, j int))

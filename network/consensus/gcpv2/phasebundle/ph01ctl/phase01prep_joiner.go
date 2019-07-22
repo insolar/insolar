@@ -48,83 +48,79 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package proofs
+package ph01ctl
 
 import (
-	"github.com/insolar/insolar/network/consensus/common/args"
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"context"
+	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
+	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/pulsectl"
+
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.NodeStateHash -o . -s _mock.go
-
-type NodeStateHash interface {
-	cryptkit.DigestHolder
+func NewJoinerPhase01PrepController(s pulsectl.PulseSelectionStrategy) *JoinerPhase01PrepController {
+	return &JoinerPhase01PrepController{pulseStrategy: s}
 }
 
-type GlobulaAnnouncementHash interface {
-	cryptkit.DigestHolder
+var _ core.PrepPhaseController = &JoinerPhase01PrepController{}
+
+type JoinerPhase01PrepController struct {
+	core.PrepPhaseControllerTemplate
+	core.HostPacketDispatcherTemplate
+
+	realm         *core.PrepRealm
+	pulseStrategy pulsectl.PulseSelectionStrategy
 }
 
-type GlobulaStateHash interface {
-	cryptkit.DigestHolder
+func (c *JoinerPhase01PrepController) CreatePacketDispatcher(pt phases.PacketType, realm *core.PrepRealm) core.PacketDispatcher {
+	c.realm = realm
+	return c
 }
 
-type CloudStateHash interface {
-	cryptkit.DigestHolder
+func (c *JoinerPhase01PrepController) GetPacketType() []phases.PacketType {
+	return []phases.PacketType{phases.PacketPhase0, phases.PacketPhase1}
 }
 
-type GlobulaStateSignature interface {
-	cryptkit.SignatureHolder
-}
+func (c *JoinerPhase01PrepController) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
+	from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags) error {
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.MemberAnnouncementSignature -o . -s _mock.go
+	var pp transport.PulsePacketReader
+	var nr member.Rank
 
-type MemberAnnouncementSignature interface {
-	cryptkit.SignatureHolder
-}
-
-type NodeAnnouncedState struct {
-	StateEvidence     cryptkit.SignedDigestHolder
-	AnnounceSignature MemberAnnouncementSignature
-}
-
-func (p NodeAnnouncedState) IsEmpty() bool {
-	return args.IsNil(p.StateEvidence)
-}
-
-func (p NodeAnnouncedState) Equals(o NodeAnnouncedState) bool {
-	if args.IsNil(p.StateEvidence) || args.IsNil(o.StateEvidence) || args.IsNil(p.AnnounceSignature) || args.IsNil(o.AnnounceSignature) {
-		return false
+	switch packet.GetPacketType() {
+	case phases.PacketPhase0:
+		p0 := packet.GetMemberPacket().AsPhase0Packet()
+		nr = p0.GetNodeRank()
+		pp = p0.GetEmbeddedPulsePacket()
+	case phases.PacketPhase1:
+		p1 := packet.GetMemberPacket().AsPhase1Packet()
+		nr = p1.GetAnnouncementReader().GetNodeRank()
+		if p1.HasPulseData() {
+			pp = p1.GetEmbeddedPulsePacket()
+		}
+	default:
+		panic("illegal value")
 	}
-	return p.StateEvidence.Equals(o.StateEvidence) && p.AnnounceSignature.Equals(o.AnnounceSignature)
-}
+	if nr.IsJoiner() && pp != nil {
+		return fmt.Errorf("pulse data in Phase0/Phas1 is not allowed from a joiner: from=%v", from)
+	}
+	if c.realm.IsJoiner() && !nr.IsJoiner() {
+		err := c.realm.ApplyPopulationHint(int(nr.GetTotalCount()), from)
+		if err != nil {
+			return err
+		}
+	}
+	// if !c.realm.IsJoiner() { TODO check ranks? }
 
-type NodeStateHashEvidence interface {
-	cryptkit.SignedDigestHolder
+	// TODO joiner should wait for CloudIntro also!
+	ok, err := c.pulseStrategy.HandlePulsarPacket(ctx, pp, from, false)
+	if err != nil || !ok {
+		return err
+	}
+	return c.realm.ApplyPulseData(pp, false)
 }
-
-//func NewNodeStateHashEvidence(sd cryptkit.SignedDigest) NodeStateHashEvidence {
-//	return &nodeStateHashEvidence{sd}
-//}
-//
-//type nodeStateHashEvidence struct {
-//	cryptkit.SignedDigest
-//}
-//
-//func (c *nodeStateHashEvidence) GetNodeStateHash() NodeStateHash {
-//	return c.GetDigestHolder()
-//}
-//
-//func (c *nodeStateHashEvidence) GetGlobulaNodeStateSignature() cryptkit.SignatureHolder {
-//	return c.GetSignatureHolder()
-//}
-//
-////go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.NodeStateHashEvidence -o . -s _mock.go
-//
-//// TODO revisit and rework
-//type NodeStateHashEvidence interface {
-//	GetNodeStateHash() NodeStateHash
-//	GetGlobulaNodeStateSignature() cryptkit.SignatureHolder
-//}
-//
-//

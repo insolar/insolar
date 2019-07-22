@@ -62,15 +62,15 @@ import (
 
 func newStaticProfile(v BriefCandidateProfile, pks cryptkit.PublicKeyStore, endpoints []endpoints.Outbound) FixedStaticProfile {
 	return FixedStaticProfile{
-		endpoints:         endpoints,
-		nodeID:            v.GetStaticNodeID(),
-		primaryRole:       v.GetPrimaryRole(),
-		specialRoles:      v.GetSpecialRoles(),
-		pk:                v.GetNodePublicKey(),
-		pks:               pks,
-		startPower:        v.GetStartPower(),
-		announceSignature: v.GetJoinerSignature(),
-		isFull:            false,
+		endpoints:        endpoints,
+		nodeID:           v.GetStaticNodeID(),
+		primaryRole:      v.GetPrimaryRole(),
+		specialRoles:     v.GetSpecialRoles(),
+		pk:               v.GetNodePublicKey(),
+		pks:              pks,
+		startPower:       v.GetStartPower(),
+		briefIntroSigned: v.GetBriefIntroSignedDigest(),
+		isFull:           false,
 	}
 }
 
@@ -80,20 +80,20 @@ func NewStaticProfileByBrief(v BriefCandidateProfile, pks cryptkit.PublicKeyStor
 }
 
 func NewStaticProfileByFull(v CandidateProfile, pks cryptkit.PublicKeyStore) StaticProfile {
-	r := newStaticProfile(v, pks, nil)
+	r := newStaticProfile(v, pks, []endpoints.Outbound{v.GetDefaultEndpoint()})
 	r.setFull(v)
 	return &r
 }
 
 type FixedStaticProfile struct {
-	endpoints         []endpoints.Outbound
-	nodeID            insolar.ShortNodeID
-	primaryRole       member.PrimaryRole
-	specialRoles      member.SpecialRole
-	startPower        member.Power
-	announceSignature cryptkit.SignatureHolder
-	pk                cryptkit.SignatureKeyHolder
-	pks               cryptkit.PublicKeyStore
+	endpoints        []endpoints.Outbound
+	nodeID           insolar.ShortNodeID
+	primaryRole      member.PrimaryRole
+	specialRoles     member.SpecialRole
+	startPower       member.Power
+	briefIntroSigned cryptkit.SignedDigestHolder
+	pk               cryptkit.SignatureKeyHolder
+	pks              cryptkit.PublicKeyStore
 
 	isFull   bool
 	powerSet member.PowerSet
@@ -103,6 +103,15 @@ type FixedStaticProfile struct {
 	issuedAtTime    time.Time
 	issuerID        insolar.ShortNodeID
 	issuerSignature cryptkit.SignatureHolder
+}
+
+func (p *FixedStaticProfile) GetExtraEndpoints() []endpoints.Outbound {
+	p.ensureFull()
+	return p.endpoints[1:]
+}
+
+func (p *FixedStaticProfile) GetBriefIntroSignedDigest() cryptkit.SignedDigestHolder {
+	return p.briefIntroSigned
 }
 
 func (p *FixedStaticProfile) ensureFull() {
@@ -140,11 +149,6 @@ func (p *FixedStaticProfile) GetIssuerSignature() cryptkit.SignatureHolder {
 func (p *FixedStaticProfile) GetReference() insolar.Reference {
 	p.ensureFull()
 	return p.nodeRef
-}
-
-func (p *FixedStaticProfile) IsAllowedPower(pw member.Power) bool {
-	p.ensureFull()
-	return p.powerSet.IsAllowed(pw)
 }
 
 func (p *FixedStaticProfile) GetIntroducedNodeID() insolar.ShortNodeID {
@@ -189,10 +193,6 @@ func (p *FixedStaticProfile) GetStartPower() member.Power {
 	return p.startPower
 }
 
-func (p *FixedStaticProfile) GetJoinerSignature() cryptkit.SignatureHolder {
-	return p.announceSignature
-}
-
 func (p *FixedStaticProfile) GetExtension() StaticProfileExtension {
 	if p.isFull {
 		return p
@@ -200,7 +200,7 @@ func (p *FixedStaticProfile) GetExtension() StaticProfileExtension {
 	return nil
 }
 
-func (p *FixedStaticProfile) setFull(v CandidateProfile) {
+func (p *FixedStaticProfile) setFull(v CandidateProfileExtension) {
 
 	p.powerSet = v.GetPowerLevels()
 	p.nodeRef = v.GetReference()
@@ -211,7 +211,7 @@ func (p *FixedStaticProfile) setFull(v CandidateProfile) {
 
 	extraEndpoints := v.GetExtraEndpoints()
 	p.endpoints = append(append(make([]endpoints.Outbound, 0, len(extraEndpoints)+1),
-		v.GetDefaultEndpoint()), extraEndpoints...)
+		p.GetDefaultEndpoint()), extraEndpoints...)
 
 	p.isFull = true
 }
@@ -237,15 +237,11 @@ func (p *UpgradableStaticProfile) GetExtension() StaticProfileExtension {
 	return nil
 }
 
-func (p *UpgradableStaticProfile) UpgradeProfile(v CandidateProfile) bool {
+func (p *UpgradableStaticProfile) UpgradeProfile(v CandidateProfileExtension) bool {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
 	if p.isFull {
-		return false
-	}
-
-	if !EqualStaticProfiles(p, v) {
 		return false
 	}
 

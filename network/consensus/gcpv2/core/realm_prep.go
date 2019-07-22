@@ -53,9 +53,10 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
 	"sync"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
@@ -77,7 +78,8 @@ type PrepRealm struct {
 
 	/* Derived from the provided externally - set at init() or start(). Don't need mutex */
 	packetDispatchers []PacketDispatcher
-	queueToFull       chan PostponedPacket
+	packetRecorder    packetrecorder.PacketRecorder
+	//queueToFull       chan packetrecorder.PostponedPacket
 	//phase2ExtLimit    uint8
 
 	limiters sync.Map
@@ -92,28 +94,29 @@ func (p *PrepRealm) init(isEphemeralPulseAllowed bool, completeFn func(successfu
 }
 
 func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
-	verifyFlags PacketVerifyFlags) error {
+	verifyFlags packetrecorder.PacketVerifyFlags) error {
 
 	pt := packet.GetPacketType()
+	selfID := p.GetSelfNodeID()
 
 	var limiterKey string
 	switch {
 	case pt.GetLimitPerSender() == 0:
 		return fmt.Errorf("packet type (%v) is unknown", pt)
 	case pt.IsMemberPacket():
-		strict, err := VerifyPacketRoute(ctx, packet, p.GetSelfNodeID())
+		strict, err := VerifyPacketRoute(ctx, packet, selfID)
 		if err != nil {
 			return err
 		}
 		if strict {
-			verifyFlags = RequireStrictVerify
+			verifyFlags = packetrecorder.RequireStrictVerify
 		}
 		limiterKey = endpoints.ShortNodeIDAsByteString(packet.GetSourceID())
 	default:
 		limiterKey = from.AsByteString()
 
 		// TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
-		verifyFlags = SkipVerify
+		verifyFlags = packetrecorder.SkipVerify
 	}
 
 	/*
@@ -129,13 +132,14 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		return fmt.Errorf("packet type (%v) limit exceeded: from=%v", pt, from)
 	}
 
-	if verifyFlags&SkipVerify == 0 {
-		err := p.coreRealm.VerifyPacketAuthenticity(packet.GetPacketSignature(),
-			from, verifyFlags&RequireStrictVerify != 0)
+	if verifyFlags&(packetrecorder.SkipVerify|packetrecorder.SuccesfullyVerified) == 0 {
+		strict := verifyFlags&packetrecorder.RequireStrictVerify != 0
+		err := p.coreRealm.VerifyPacketAuthenticity(packet.GetPacketSignature(), from, strict)
 
 		if err != nil {
 			return err
 		}
+		verifyFlags |= packetrecorder.SuccesfullyVerified
 	}
 
 	if !limiter.SetPacketReceived(pt) {
@@ -145,7 +149,6 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 	if int(pt) < len(p.packetDispatchers) {
 		pd := p.packetDispatchers[pt]
 		if pd != nil {
-
 			//this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
 			var err error
 			packet, err = LazyPacketParse(packet)
@@ -161,28 +164,17 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		}
 	}
 
-	if !p.postponePacket(packet, from, verifyFlags) {
-		inslogger.FromContext(ctx).Warnf("unable to postpone packet: type=%v", pt)
-	}
+	p.packetRecorder.Record(packet, from, verifyFlags)
 	return nil
 }
 
 /* LOCK - runs under RoundController lock */
-func (p *PrepRealm) start(ctx context.Context, controllers []PrepPhaseController) {
+func (p *PrepRealm) beforeStart(ctx context.Context, controllers []PrepPhaseController) {
 
 	if p.postponedPacketFn != nil {
 		limiter := phases.NewPacketLimiter(p.nbhSizes.ExtendingNeighbourhoodLimit)
 		packetsPerSender := limiter.GetRemainingPacketCountDefault()
-
-		prepToFullQueueSize := int(packetsPerSender) * int(p.expectedPopulationSize)
-		switch {
-		case prepToFullQueueSize < 100:
-			prepToFullQueueSize = 100
-		case prepToFullQueueSize > 10000:
-			inslogger.FromContext(ctx).Warnf("estimated postponed packet count (%d) is too high", prepToFullQueueSize)
-			prepToFullQueueSize = 10000
-		}
-		p.queueToFull = make(chan PostponedPacket, prepToFullQueueSize)
+		p.packetRecorder = packetrecorder.NewPacketRecorder(int(packetsPerSender) * 100)
 	}
 
 	p.packetDispatchers = make([]PacketDispatcher, phases.PacketTypeCount)
@@ -198,40 +190,16 @@ func (p *PrepRealm) start(ctx context.Context, controllers []PrepPhaseController
 	for _, ctl := range controllers {
 		ctl.BeforeStart(p)
 	}
+}
+
+func (p *PrepRealm) startWorkers(ctx context.Context, controllers []PrepPhaseController) {
 	for _, ctl := range controllers {
 		ctl.StartWorker(ctx, p)
 	}
 }
 
-/* LOCK - runs under RoundController lock */
 func (p *PrepRealm) stop() {
-	/*
-		NB! do not close p.queueToFull here immediately, as some messages can still be in processing and will be lost
-	*/
-	/* Do not give out a PrepRealm reference to avoid retention in memory */
-	go flushQueueTo(p.coreRealm.roundContext, p.queueToFull, p.postponedPacketFn)
-}
-
-type PostponedPacketFunc func(packet transport.PacketParser, from endpoints.Inbound, verifyFlags PacketVerifyFlags)
-
-type PostponedPacket struct {
-	Packet      transport.PacketParser
-	From        endpoints.Inbound
-	VerifyFlags PacketVerifyFlags
-}
-
-func flushQueueTo(ctx context.Context, in chan PostponedPacket, out PostponedPacketFunc) {
-	for {
-		select {
-		case p, ok := <-in:
-			if !ok {
-				return
-			}
-			out(p.Packet, p.From, p.VerifyFlags)
-		case <-ctx.Done():
-			return
-		}
-	}
+	p.packetRecorder.Playback(p.postponedPacketFn)
 }
 
 func (p *PrepRealm) GetOriginalPulse() proofs.OriginalPulsarPacket {
@@ -282,10 +250,14 @@ func (p *PrepRealm) GetExpectedPulseNumber() pulse.Number {
 	return p.initialCensus.GetExpectedPulseNumber()
 }
 
-func (p *PrepRealm) postponePacket(packet transport.PacketParser, from endpoints.Inbound, verifyFlags PacketVerifyFlags) bool {
-	if p.queueToFull == nil {
-		return false
+func (p *PrepRealm) ApplyPopulationHint(populationCount int, from endpoints.Inbound) error {
+	if populationCount == 0 {
+		return fmt.Errorf("packet from joiner was not expected: from=%v", from)
 	}
-	p.queueToFull <- PostponedPacket{packet, from, verifyFlags}
-	return true
+
+	popCount := member.AsIndex(populationCount)
+	if p.expectedPopulationSize < popCount {
+		p.expectedPopulationSize = popCount
+	}
+	return nil
 }

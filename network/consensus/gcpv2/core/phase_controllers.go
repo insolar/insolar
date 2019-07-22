@@ -59,12 +59,12 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
 )
 
 type PacketDispatcher interface {
-	DispatchHostPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound, flags PacketVerifyFlags) error
+	DispatchHostPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags) error
 	DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, source *NodeAppearance) error
 	DispatchUnknownMemberPacket(ctx context.Context, memberID insolar.ShortNodeID, packet transport.MemberPacketReader,
 		from endpoints.Inbound) (bool, error)
@@ -72,8 +72,7 @@ type PacketDispatcher interface {
 }
 
 type MemberPacketSender interface {
-	GetNodeID() insolar.ShortNodeID
-	GetStatic() profiles.StaticProfile
+	transport.TargetProfile
 	SetPacketSent(pt phases.PacketType) bool
 }
 type MemberPacketReceiver interface {
@@ -81,7 +80,7 @@ type MemberPacketReceiver interface {
 	CanReceivePacket(pt phases.PacketType) bool
 	VerifyPacketAuthenticity(packetSignature cryptkit.SignedDigest, from endpoints.Inbound, strictFrom bool) error
 	SetPacketReceived(pt phases.PacketType) bool
-	DispatchMemberPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound, flags PacketVerifyFlags,
+	DispatchMemberPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags,
 		pd PacketDispatcher) error
 }
 
@@ -90,16 +89,6 @@ type PerNodePacketDispatcherFactory interface {
 	// PhasePerNodePacketFunc
 	CreatePerNodePacketHandler(perNodeContext context.Context, node *NodeAppearance) (context.Context, PhasePerNodePacketFunc)
 }
-
-type PacketVerifyFlags uint32
-
-const DefaultVerify PacketVerifyFlags = 0
-
-const (
-	SkipVerify PacketVerifyFlags = 1 << iota
-	RequireStrictVerify
-	SuccesfullyVerified
-)
 
 // type PrepPhasePacketHandler func(ctx context.Context, reader transport.PacketParser, from endpoints.Inbound) (postpone bool, err error)
 type PrepPhaseController interface {

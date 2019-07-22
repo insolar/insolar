@@ -52,6 +52,7 @@ package pulsectl
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
 
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
@@ -71,16 +72,21 @@ func NewPulseController() *PulseController {
 }
 
 func (p *pulsePacketPrepDispatcher) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
-	from endpoints.Inbound, flags core.PacketVerifyFlags) error {
+	from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags) error {
 
-	return p.pulseStrategy.HandlePrepPulsarPacket(ctx, packet.GetPulsePacket(), from, p.R, true)
+	pp := packet.GetPulsePacket()
+	ok, err := p.pulseStrategy.HandlePulsarPacket(ctx, pp, from, true)
+	if err != nil || !ok {
+		return err
+	}
+	return p.R.ApplyPulseData(pp, true)
 }
 
 func (p *pulsePacketDispatcher) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
-	from endpoints.Inbound, flags core.PacketVerifyFlags) error {
+	from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags) error {
 
 	pp := packet.GetPulsePacket()
-	// FullRealm already has a pulse data, so can only check it
+	// FullRealm already has a pulse data, so should only check it
 	pd := pp.GetPulseData()
 	if p.R.GetPulseData() == pd {
 		return nil

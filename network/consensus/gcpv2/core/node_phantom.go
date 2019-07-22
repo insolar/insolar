@@ -52,21 +52,26 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
 	"sync"
 )
 
 func NewNodePhantom(purgatory *RealmPurgatory, nodeID insolar.ShortNodeID, limiter phases.PacketLimiter) *NodePhantom {
 	return &NodePhantom{
-		purgatory:        purgatory,
-		nodeID:           nodeID,
-		limiter:          limiter,
-		postponedPackets: make([]PostponedPacket, 0, 1+limiter.GetRemainingPacketCountDefault()<<1),
+		purgatory: purgatory,
+		nodeID:    nodeID,
+		limiter:   limiter,
+		recorder:  packetrecorder.NewUnsafePacketRecorder(int(limiter.GetRemainingPacketCountDefault())),
 	}
 }
 
@@ -80,10 +85,34 @@ type NodePhantom struct {
 	mutex   sync.Mutex
 	limiter phases.PacketLimiter
 
-	figment figment
+	figment  figment
+	recorder packetrecorder.UnsafePacketRecorder
 	//figments map[string]*figment
+}
 
-	postponedPackets []PostponedPacket
+func (p *NodePhantom) ApplyNeighbourEvidence(n *NodeAppearance, an profiles.MembershipAnnouncement, cappedTrust bool) (bool, error) {
+	return false, nil
+}
+
+func (p *NodePhantom) Blames() misbehavior.BlameFactory {
+	return p.purgatory.callback.GetBlameFactory()
+}
+
+func (p *NodePhantom) Frauds() misbehavior.FraudFactory {
+	return p.purgatory.callback.GetFraudFactory()
+}
+
+func (p *NodePhantom) GetReportProfile() profiles.BaseNode {
+	panic("implement me")
+}
+
+func (p *NodePhantom) IsJoiner() bool {
+	return p.figment.rank.IsJoiner()
+}
+
+func (p *NodePhantom) EncryptJoinerSecret(joinerSecret cryptkit.DigestHolder) cryptkit.DigestHolder {
+	// TODO encryption of joinerSecret
+	return joinerSecret
 }
 
 func (p *NodePhantom) GetStatic() profiles.StaticProfile {
@@ -131,56 +160,54 @@ func (p *NodePhantom) SetPacketReceived(pt phases.PacketType) bool {
 }
 
 func (p *NodePhantom) DispatchMemberPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
-	flags PacketVerifyFlags, pd PacketDispatcher) error {
+	flags packetrecorder.PacketVerifyFlags, pd PacketDispatcher) error {
 
-	if p.WasAscent() {
-		// MUST be outside of locks
-		p.purgatory.sendPostponedPacket(ctx, packet, from, flags)
-		return nil
+	_, err := pd.DispatchUnknownMemberPacket(ctx, p.nodeID, packet.GetMemberPacket(), from)
+	if err != nil {
+		return err
 	}
 
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-	p.postponedPackets = append(p.postponedPackets, PostponedPacket{packet, from, flags})
+	p.postponePacket(ctx, packet, from, flags)
 	return nil
 }
 
-func (p *NodePhantom) ApplyNodeIntro(ctx context.Context,
-	brief profiles.BriefCandidateProfile, full profiles.CandidateProfile,
-	announcerID insolar.ShortNodeID, originID insolar.ShortNodeID) error {
+func (p *NodePhantom) postponePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags) {
+
+	inslogger.FromContext(ctx).Debugf("packet added to purgatory: s=%d t=%d pt=%v",
+		packet.GetSourceID(), packet.GetTargetID(), packet.GetPacketType())
+
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	p.recorder.Record(packet, from, flags)
+}
+
+func (p *NodePhantom) DispatchAnnouncement(ctx context.Context, rank member.Rank, profile profiles.StaticProfile,
+	announcement *profiles.MembershipAnnouncement, introducedByID insolar.ShortNodeID) error {
 
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	if (brief == nil) == (full == nil) {
-		panic("illegal value")
-	}
-
-	return p.figment.applyNodeIntro(ctx, p, brief, full, announcerID, originID)
+	return p.figment.dispatchAnnouncement(ctx, p, rank, profile, announcement, introducedByID)
 }
 
-func (p *NodePhantom) WasAscent() bool {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-	return p.postponedPackets == nil
+func (p *NodePhantom) isAscent() bool {
+	return !p.recorder.IsRecording()
 }
 
-func (p *NodePhantom) ascend(ctx context.Context, nsp profiles.StaticProfile, sv cryptkit.SignatureVerifier) {
+func (p *NodePhantom) ascend(ctx context.Context, nsp profiles.StaticProfile, rank member.Rank, sv cryptkit.SignatureVerifier) {
 
-	if p.postponedPackets == nil {
+	if p.isAscent() {
 		panic("illegal state")
 	}
 
-	packets := p.postponedPackets
-	p.postponedPackets = nil //mark
-
-	p.purgatory.ascendFromPurgatory(ctx, p.nodeID, nsp, sv, packets)
+	p.purgatory.ascendFromPurgatory(ctx, p.nodeID, nsp, rank, sv)
+	p.recorder.Playback(p.purgatory.postponedPacketFn)
 }
 
 type figment struct {
 	phantom     *NodePhantom
-	originID    insolar.ShortNodeID
 	announcerID insolar.ShortNodeID
+	rank        member.Rank
 
 	profile profiles.StaticProfile
 
@@ -190,79 +217,71 @@ type figment struct {
 	//neighborReports int
 }
 
-func (p *figment) applyNodeIntro(ctx context.Context, phantom *NodePhantom,
-	brief profiles.BriefCandidateProfile, full profiles.CandidateProfile,
-	announcerID insolar.ShortNodeID, originID insolar.ShortNodeID) error {
+func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom, rank member.Rank, profile profiles.StaticProfile,
+	announcement *profiles.MembershipAnnouncement, announcedBy insolar.ShortNodeID) error {
 
+	hasUpdate := false
 	if p.phantom == nil {
 		p.phantom = phantom
+		p.rank = rank
 	}
-	if p.originID.IsAbsent() {
-		p.originID = originID
+	if p.announcerID.IsAbsent() && announcedBy != phantom.nodeID && !announcedBy.IsAbsent() {
+		p.announcerID = announcedBy
+		hasUpdate = true
 	}
 
 	ascentWithBrief := p.phantom.purgatory.IsBriefAscensionAllowed()
 
-	hasUpdate, hasMismatch := p.updateProfile(brief, full, ascentWithBrief)
+	hasProfileUpdate, hasMismatch := p.updateProfile(rank, profile, ascentWithBrief)
 	if hasMismatch {
-		panic("InconsistentNeighbourAnnouncement") // TODO
-		//return p.RegisterFraud(p.Frauds().NewInconsistentNeighbourAnnouncement(p.GetReportProfile()))
+		panic(fmt.Sprintf("inconsistent neighbour announcement: local=%d, phantom=%d, announcer=%d, rank=%v, profile=%+v, firmentRank=%v, figmentProfile=%+v, ann=%+v",
+			p.phantom.purgatory.callback.localNodeID, p.phantom.nodeID, announcedBy, rank, profile, p.rank, p.profile, announcement))
+		// TODO return p.RegisterFraud(p.Frauds().NewInconsistentNeighbourAnnouncement(p.GetReportProfile()))
+	}
+	if hasProfileUpdate {
+		hasUpdate = true
 	}
 
-	if p.announcerID.IsAbsent() {
-		if announcerID.IsAbsent() || announcerID == p.phantom.nodeID /* self-ascension is not allowed */ {
-			return nil
-		}
-		// TODO do we need to double-check, that the announcerID is an active node?
-		p.announcerID = announcerID
-		if p.profile == nil {
-			return nil
-		}
-	} else if !hasUpdate {
+	if p.profile == nil || !hasUpdate {
+		return nil
+	}
+	if p.rank.IsJoiner() && p.announcerID.IsAbsent() {
+		/* self-ascension is not allowed for joiners */
 		return nil
 	}
 
 	if p.profile.GetExtension() != nil || ascentWithBrief {
-		p.phantom.ascend(ctx, p.profile, nil)
+		inslogger.FromContext(ctx).Debugf("Phantom node ascension: s=%d, t=%d, full=%v",
+			p.phantom.purgatory.callback.localNodeID, p.phantom.nodeID, p.profile.GetExtension() != nil)
+		p.phantom.ascend(ctx, p.profile, p.rank, nil)
 	} else {
+		inslogger.FromContext(ctx).Debugf("Phantom node added: s=%d, t=%d, full=%v",
+			p.phantom.purgatory.callback.localNodeID, p.phantom.nodeID, p.profile.GetExtension() != nil)
 		p.phantom.purgatory.onBriefProfileCreated(p.phantom)
 	}
 	return nil
 }
 
-func (p *figment) updateProfile(brief profiles.BriefCandidateProfile, full profiles.CandidateProfile, ascentWithBrief bool) (bool, bool) {
+func (p *figment) updateProfile(rank member.Rank, profile profiles.StaticProfile, ascentWithBrief bool) (updated bool, mismatched bool) {
 
 	switch {
+	case rank != p.rank:
+		return false, true
+	case profile == nil:
+		return false, false
 	case p.profile == nil:
-		switch {
-		case full != nil:
-			p.profile = p.phantom.purgatory.GetProfileFactory().CreateFullIntroProfile(full)
-		case brief != nil:
-			if ascentWithBrief {
-				p.profile = p.phantom.purgatory.GetProfileFactory().CreateUpgradableIntroProfile(brief)
-			} else {
-				p.profile = p.phantom.purgatory.GetProfileFactory().CreateBriefIntroProfile(brief)
-			}
-		default:
-			return false, false
-		}
+		p.profile = profile
 		return true, false
-	case full != nil:
-		matches, created := profiles.ApplyNodeIntro(p.profile, brief, full)
-		if !matches {
-			if created != nil {
-				panic("illegal state")
-			}
+	case profile.GetExtension() == nil:
+		return false, !profiles.EqualStaticProfiles(p.profile, profile)
+	case p.profile.GetExtension() == nil:
+		if !profiles.EqualStaticProfiles(p.profile, profile) {
 			return false, true
 		}
-		return created != nil, false
-	case brief != nil:
-		matches, created := profiles.ApplyNodeIntro(p.profile, brief, full)
-		if created != nil { //it is impossible to create a full profile on a brief intro
-			panic("illegal state")
-		}
-		return false, !matches
+		p.profile = profile
+		return true, false
 	default:
-		return false, false
+		return false, !profiles.EqualStaticProfiles(p.profile, profile) ||
+			!profiles.EqualStaticExtensions(p.profile.GetExtension(), profile.GetExtension())
 	}
 }

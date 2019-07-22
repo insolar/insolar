@@ -48,46 +48,58 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package ph3ctl
+package consensus
 
 import (
+	"github.com/insolar/insolar/network/consensus/common/consensuskit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/nodeset"
 )
 
-type ConsensusSelection interface {
-	/* When false - disables chasing timeout */
-	CanBeImproved() bool
-	IsSameWithActive() bool
-	/* This bitset only allows values of NbsConsensus[*] */
-	GetConsensusNodes() *nodeset.ConsensusBitsetRow
+func NewSimpleSelectionStrategy() SelectionStrategy {
+	return &simpleSelectionStrategy{}
 }
 
-type ConsensusSelectionStrategy interface {
-	/* Result can be nil - it means no-decision */
-	TrySelectOnAdded(globulaStats *nodeset.ConsensusStatTable, addedNode profiles.ActiveNode,
-		nodeStats *nodeset.ConsensusStatRow, realm *core.FullRealm) ConsensusSelection
-	SelectOnStopped(globulaStats *nodeset.ConsensusStatTable, timeIsOut bool, realm *core.FullRealm) ConsensusSelection
+type simpleSelectionStrategy struct {
 }
 
-func NewConsensusSelection(canBeImproved bool, bitset *nodeset.ConsensusBitsetRow) ConsensusSelection {
-	return &consensusSelectionTemplate{canBeImproved: canBeImproved, bitset: bitset}
+func (*simpleSelectionStrategy) TrySelectOnAdded(globulaStats *nodeset.ConsensusStatTable, addedNode profiles.StaticProfile,
+	nodeStats *nodeset.ConsensusStatRow) Selection {
+	return nil
 }
 
-type consensusSelectionTemplate struct {
-	canBeImproved bool
-	bitset        *nodeset.ConsensusBitsetRow
+func (*simpleSelectionStrategy) SelectOnStopped(globulaStats *nodeset.ConsensusStatTable, timeIsOut bool, bftMajorityArg int) Selection {
+
+	bftMajority := uint16(bftMajorityArg)
+	absMajority := true
+	if globulaStats.RowCount() < bftMajorityArg {
+		bftMajority = uint16(consensuskit.BftMajority(globulaStats.RowCount()))
+		absMajority = false
+	}
+
+	resultSet := nodeset.NewConsensusBitsetRow(globulaStats.ColumnCount())
+	for i := 0; i < resultSet.ColumnCount(); i++ {
+		tc := globulaStats.GetColumn(i)
+		decision := consensusDecisionOfNode(tc, absMajority, bftMajority)
+		resultSet.Set(i, decision)
+	}
+
+	return NewSelection(!absMajority, resultSet)
 }
 
-func (c *consensusSelectionTemplate) CanBeImproved() bool {
-	return c.canBeImproved
-}
+func consensusDecisionOfNode(tc *nodeset.ConsensusStatColumn, absMajority bool, bftMajority uint16) nodeset.ConsensusBitsetEntry {
 
-func (c *consensusSelectionTemplate) IsSameWithActive() bool {
-	return c.bitset == nil
-}
-
-func (c *consensusSelectionTemplate) GetConsensusNodes() *nodeset.ConsensusBitsetRow {
-	return c.bitset
+	switch {
+	case tc.GetSummaryByValue(nodeset.ConsensusStatTrusted)+tc.GetSummaryByValue(nodeset.ConsensusStatDoubted) >= bftMajority:
+		return nodeset.CbsIncluded
+	case tc.GetSummaryByValue(nodeset.ConsensusStatFraud)+tc.GetSummaryByValue(nodeset.ConsensusStatMissingThere)+
+		tc.GetSummaryByValue(nodeset.ConsensusStatFraudSuspect) >= bftMajority:
+		if absMajority {
+			return nodeset.CbsExcluded
+		} else {
+			return nodeset.CbsFraud
+		}
+	default:
+		return nodeset.CbsSuspected
+	}
 }

@@ -48,83 +48,72 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package proofs
+package core
 
 import (
-	"github.com/insolar/insolar/network/consensus/common/args"
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"context"
+	"github.com/insolar/insolar/network/consensus/common/chaser"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"time"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.NodeStateHash -o . -s _mock.go
+type PollingWorker struct {
+	ctx context.Context
 
-type NodeStateHash interface {
-	cryptkit.DigestHolder
+	polls   []api.MaintenancePollFunc
+	pollCmd chan api.MaintenancePollFunc
 }
 
-type GlobulaAnnouncementHash interface {
-	cryptkit.DigestHolder
-}
-
-type GlobulaStateHash interface {
-	cryptkit.DigestHolder
-}
-
-type CloudStateHash interface {
-	cryptkit.DigestHolder
-}
-
-type GlobulaStateSignature interface {
-	cryptkit.SignatureHolder
-}
-
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.MemberAnnouncementSignature -o . -s _mock.go
-
-type MemberAnnouncementSignature interface {
-	cryptkit.SignatureHolder
-}
-
-type NodeAnnouncedState struct {
-	StateEvidence     cryptkit.SignedDigestHolder
-	AnnounceSignature MemberAnnouncementSignature
-}
-
-func (p NodeAnnouncedState) IsEmpty() bool {
-	return args.IsNil(p.StateEvidence)
-}
-
-func (p NodeAnnouncedState) Equals(o NodeAnnouncedState) bool {
-	if args.IsNil(p.StateEvidence) || args.IsNil(o.StateEvidence) || args.IsNil(p.AnnounceSignature) || args.IsNil(o.AnnounceSignature) {
-		return false
+func (p *PollingWorker) Start(ctx context.Context, pollingInterval time.Duration) {
+	if p.ctx != nil {
+		panic("illegal state")
 	}
-	return p.StateEvidence.Equals(o.StateEvidence) && p.AnnounceSignature.Equals(o.AnnounceSignature)
+	p.ctx = ctx
+	p.pollCmd = make(chan api.MaintenancePollFunc, 10)
+
+	go p.pollingWorker(pollingInterval)
 }
 
-type NodeStateHashEvidence interface {
-	cryptkit.SignedDigestHolder
+func (p *PollingWorker) AddPoll(fn api.MaintenancePollFunc) {
+	p.pollCmd <- fn
 }
 
-//func NewNodeStateHashEvidence(sd cryptkit.SignedDigest) NodeStateHashEvidence {
-//	return &nodeStateHashEvidence{sd}
-//}
-//
-//type nodeStateHashEvidence struct {
-//	cryptkit.SignedDigest
-//}
-//
-//func (c *nodeStateHashEvidence) GetNodeStateHash() NodeStateHash {
-//	return c.GetDigestHolder()
-//}
-//
-//func (c *nodeStateHashEvidence) GetGlobulaNodeStateSignature() cryptkit.SignatureHolder {
-//	return c.GetSignatureHolder()
-//}
-//
-////go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.NodeStateHashEvidence -o . -s _mock.go
-//
-//// TODO revisit and rework
-//type NodeStateHashEvidence interface {
-//	GetNodeStateHash() NodeStateHash
-//	GetGlobulaNodeStateSignature() cryptkit.SignatureHolder
-//}
-//
-//
+func (p *PollingWorker) pollingWorker(pollingInterval time.Duration) {
+	pollingTimer := chaser.NewChasingTimer(pollingInterval)
+
+	for {
+		select {
+		case <-p.ctx.Done():
+			return
+		case <-pollingTimer.Channel():
+			if p.scanPolls() {
+				pollingTimer.RestartChase()
+			}
+		case add := <-p.pollCmd:
+			if add == nil {
+				continue
+			}
+			p.polls = append(p.polls, add)
+			if len(p.polls) == 1 {
+				pollingTimer.RestartChase()
+			}
+		}
+	}
+}
+
+func (p *PollingWorker) scanPolls() bool {
+	j := 0
+	for i, poll := range p.polls {
+		if !poll(p.ctx) {
+			p.polls[i] = nil
+			continue
+		}
+		if i != j {
+			p.polls[i] = nil
+			p.polls[j] = poll
+		}
+		j++
+	}
+	p.polls = p.polls[:j]
+	return j > 0
+}

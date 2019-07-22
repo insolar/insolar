@@ -76,7 +76,7 @@ type EvictedPopulation interface {
 
 type PopulationBuilder interface {
 	GetCount() int
-	AddJoinerProfile(intro profiles.StaticProfile) profiles.Updatable
+	AddProfile(intro profiles.StaticProfile) profiles.Updatable
 	RemoveProfile(nodeID insolar.ShortNodeID)
 	GetUnorderedProfiles() []profiles.Updatable
 	FindProfile(nodeID insolar.ShortNodeID) profiles.Updatable

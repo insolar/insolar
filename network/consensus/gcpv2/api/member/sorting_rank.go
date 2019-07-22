@@ -48,83 +48,59 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package proofs
+package member
 
 import (
-	"github.com/insolar/insolar/network/consensus/common/args"
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/insolar"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.NodeStateHash -o . -s _mock.go
-
-type NodeStateHash interface {
-	cryptkit.DigestHolder
+type SortingRank struct {
+	nodeID    insolar.ShortNodeID
+	powerRole uint16
 }
 
-type GlobulaAnnouncementHash interface {
-	cryptkit.DigestHolder
+func NewSortingRank(nodeID insolar.ShortNodeID, role PrimaryRole, pw Power, mode OpMode) SortingRank {
+	return SortingRank{nodeID, SortingPowerRole(role, pw, mode)}
 }
 
-type GlobulaStateHash interface {
-	cryptkit.DigestHolder
+func (v SortingRank) GetNodeID() insolar.ShortNodeID {
+	return v.nodeID
 }
 
-type CloudStateHash interface {
-	cryptkit.DigestHolder
+func (v SortingRank) IsWorking() bool {
+	return v.powerRole != 0
 }
 
-type GlobulaStateSignature interface {
-	cryptkit.SignatureHolder
+func (v SortingRank) GetWorkingRole() PrimaryRole {
+	return PrimaryRole(v.powerRole >> 8)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.MemberAnnouncementSignature -o . -s _mock.go
-
-type MemberAnnouncementSignature interface {
-	cryptkit.SignatureHolder
+func (v SortingRank) GetPower() Power {
+	return Power(v.powerRole)
 }
 
-type NodeAnnouncedState struct {
-	StateEvidence     cryptkit.SignedDigestHolder
-	AnnounceSignature MemberAnnouncementSignature
-}
-
-func (p NodeAnnouncedState) IsEmpty() bool {
-	return args.IsNil(p.StateEvidence)
-}
-
-func (p NodeAnnouncedState) Equals(o NodeAnnouncedState) bool {
-	if args.IsNil(p.StateEvidence) || args.IsNil(o.StateEvidence) || args.IsNil(p.AnnounceSignature) || args.IsNil(o.AnnounceSignature) {
+// NB! Sorting is REVERSED
+func (v SortingRank) Less(o SortingRank) bool {
+	if o.powerRole < v.powerRole {
+		return true
+	}
+	if o.powerRole > v.powerRole {
 		return false
 	}
-	return p.StateEvidence.Equals(o.StateEvidence) && p.AnnounceSignature.Equals(o.AnnounceSignature)
+	return o.nodeID < v.nodeID
 }
 
-type NodeStateHashEvidence interface {
-	cryptkit.SignedDigestHolder
+// NB! Sorting is REVERSED
+func LessByID(vNodeID, oNodeID insolar.ShortNodeID) bool {
+	return oNodeID < vNodeID
 }
 
-//func NewNodeStateHashEvidence(sd cryptkit.SignedDigest) NodeStateHashEvidence {
-//	return &nodeStateHashEvidence{sd}
-//}
-//
-//type nodeStateHashEvidence struct {
-//	cryptkit.SignedDigest
-//}
-//
-//func (c *nodeStateHashEvidence) GetNodeStateHash() NodeStateHash {
-//	return c.GetDigestHolder()
-//}
-//
-//func (c *nodeStateHashEvidence) GetGlobulaNodeStateSignature() cryptkit.SignatureHolder {
-//	return c.GetSignatureHolder()
-//}
-//
-////go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.NodeStateHashEvidence -o . -s _mock.go
-//
-//// TODO revisit and rework
-//type NodeStateHashEvidence interface {
-//	GetNodeStateHash() NodeStateHash
-//	GetGlobulaNodeStateSignature() cryptkit.SignatureHolder
-//}
-//
-//
+func SortingPowerRole(role PrimaryRole, pw Power, mode OpMode) uint16 {
+	if role == 0 {
+		panic("illegal value")
+	}
+	if pw == 0 || mode.IsPowerless() {
+		return 0
+	}
+	return uint16(role)<<8 | uint16(pw)
+}

@@ -51,32 +51,30 @@
 package profiles
 
 import (
+	"github.com/insolar/insolar/network/consensus/common/args"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 )
 
 func EqualStaticProfiles(p BriefCandidateProfile, o BriefCandidateProfile) bool {
-	if p == nil || o == nil {
+	if args.IsNil(p) || args.IsNil(o) {
 		return false
 	}
 
 	return p == o ||
 		equalBriefIntro(p, o) &&
 			endpoints.EqualEndpoints(p.GetDefaultEndpoint(), o.GetDefaultEndpoint()) &&
-			p.GetJoinerSignature().Equals(o.GetJoinerSignature())
+			p.GetBriefIntroSignedDigest().Equals(o.GetBriefIntroSignedDigest())
 }
 
-func EqualStaticExtensions(p StaticProfileExtension, o candidateProfileExtension) bool {
-	if p == nil || o == nil {
+func EqualStaticExtensions(p StaticProfileExtension, o CandidateProfileExtension) bool {
+	if args.IsNil(p) || args.IsNil(o) {
 		return false
 	}
 
-	return p.GetReference() == o.GetReference()
-
-	//return p == o ||
-	//	p.GetIntroducedNodeID() == o.GetIntroducedNodeID() &&
-	//	p.GetReference() == o.GetReference()
-	//	//&& equalExtIntro(p, o)
+	return p == o ||
+		p.GetReference() == o.GetReference() &&
+			equalExtIntro(p, o)
 }
 
 func equalBriefIntro(p staticProfile, o staticProfile) bool {
@@ -87,15 +85,21 @@ func equalBriefIntro(p staticProfile, o staticProfile) bool {
 		p.GetNodePublicKey().Equals(o.GetNodePublicKey())
 }
 
-func equalExtIntro(p candidateProfileExtension, o candidateProfileExtension) bool {
+func equalExtIntro(p CandidateProfileExtension, o CandidateProfileExtension) bool {
 
-	return p.GetPowerLevels() == o.GetPowerLevels() &&
-		p.GetReference() == o.GetReference() &&
-		p.GetIssuedAtPulse() == o.GetIssuedAtPulse() &&
-		p.GetIssuedAtTime() == o.GetIssuedAtTime() &&
-		p.GetIssuerID() == o.GetIssuerID() &&
-		p.GetIssuerSignature().Equals(o.GetIssuerSignature()) &&
-		endpoints.EqualListOfOutboundEndpoints(p.GetExtraEndpoints(), o.GetExtraEndpoints())
+	if p.GetPowerLevels() != o.GetPowerLevels() &&
+		p.GetReference() != o.GetReference() &&
+		p.GetIssuedAtPulse() != o.GetIssuedAtPulse() &&
+		p.GetIssuedAtTime() != o.GetIssuedAtTime() &&
+		p.GetIssuerID() != o.GetIssuerID() {
+		return false
+	}
+	if args.IsNil(p.GetIssuerSignature()) ||
+		!p.GetIssuerSignature().Equals(o.GetIssuerSignature()) {
+		return false
+	}
+
+	return endpoints.EqualListOfOutboundEndpoints(p.GetExtraEndpoints(), o.GetExtraEndpoints())
 }
 
 func ProfileAsRank(np ActiveNode, nc int) member.Rank {
@@ -105,31 +109,28 @@ func ProfileAsRank(np ActiveNode, nc int) member.Rank {
 	return member.NewMembershipRank(np.GetOpMode(), np.GetDeclaredPower(), np.GetIndex(), member.AsIndex(nc))
 }
 
-func ApplyNodeIntro(sp StaticProfile, brief BriefCandidateProfile, full CandidateProfile) (bool, StaticProfileExtension) {
+func UpgradeStaticProfile(sp StaticProfile, brief BriefCandidateProfile, ext CandidateProfileExtension) (bool, StaticProfileExtension) {
 
-	if (brief == nil) == (full == nil) {
+	if args.IsNil(brief) && args.IsNil(ext) {
 		panic("illegal value")
 	}
 
-	if brief != nil { //brief cant be used for upgrades
-		return EqualStaticProfiles(sp, brief), nil
+	if !args.IsNil(brief) {
+		if !EqualStaticProfiles(sp, brief) {
+			return false, nil
+		}
+	}
+	if args.IsNil(ext) {
+		return true, nil
 	}
 
 	spe := sp.GetExtension()
-	if spe != nil {
-		return EqualStaticExtensions(spe, full), nil
+	if !args.IsNil(spe) {
+		return EqualStaticExtensions(spe, ext), nil
 	}
 
-	if sp.(Upgradable).UpgradeProfile(full) {
-		spe = sp.GetExtension() // == nil, means that the brief part doesnt match
-		return spe != nil, spe
+	if sp.(Upgradable).UpgradeProfile(ext) {
+		return true, sp.GetExtension()
 	}
-
-	spe = sp.GetExtension()
-	if spe == nil { // there were no concurrent creation, hence we have a mismatch
-		return false, nil
-	}
-
-	// check if there was the same upgrade
-	return EqualStaticProfiles(sp, brief) && EqualStaticExtensions(spe, full), nil
+	return EqualStaticExtensions(sp.GetExtension(), ext), nil
 }

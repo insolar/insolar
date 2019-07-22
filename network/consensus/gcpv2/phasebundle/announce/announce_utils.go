@@ -54,25 +54,13 @@ import (
 	"context"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
-type AnnouncingMember interface {
-	IsJoiner() bool
-	GetNodeID() insolar.ShortNodeID
-	Blames() misbehavior.BlameFactory
-	Frauds() misbehavior.FraudFactory
-	GetReportProfile() profiles.BaseNode
-	ApplyNodeMembership(announcement profiles.MembershipAnnouncement) (bool, error)
-	GetRank(nodeCount int) member.Rank
-	CanIntroduceJoiner() bool
-}
-
 func ValidateIntrosOnMember(reader transport.ExtendedIntroReader, brief transport.BriefIntroductionReader,
-	fullIntroRequired bool, n AnnouncingMember) error {
+	fullIntroRequired bool, n core.AnnouncingMember) error {
 
 	if reader.HasJoinerSecret() {
 		return n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner secret was not expected")
@@ -103,39 +91,42 @@ func ValidateIntrosOnMember(reader transport.ExtendedIntroReader, brief transpor
 	return nil
 }
 
-func ApplyUnknownJoinerAnnouncement(ctx context.Context, announcerID insolar.ShortNodeID,
+func ApplyUnknownAnnouncement(ctx context.Context, announcerID insolar.ShortNodeID,
 	reader transport.AnnouncementPacketReader, brief transport.BriefIntroductionReader,
 	fullIntroRequired bool, realm *core.FullRealm) (bool, error) {
 
-	var err error
+	//var err error
 	//err := ValidateIntrosOnMember(reader, brief, fullIntroRequired, nil)
 	//if err != nil {
 	//	return false, err
 	//}
 
 	na := reader.GetAnnouncementReader()
-	if !na.GetNodeRank().IsJoiner() {
-		return false, nil
-	}
+	nr := na.GetNodeRank()
+
+	ma := AnnouncementFromReader(na)
+	// TODO verify announcement content and signature
 
 	purgatory := realm.GetPurgatory()
 	if reader.HasFullIntro() {
-		// announcer is joiner
-		err = purgatory.FromSelfIntroduction(ctx, announcerID, nil, reader.GetFullIntroduction())
+		full := reader.GetFullIntroduction()
+		intro := realm.GetProfileFactory().CreateFullIntroProfile(full)
+		return purgatory.SelfFromMemberAnnouncement(ctx, announcerID, intro, nr, ma)
 	} else if brief != nil {
-		// announcer is joiner
-		err = purgatory.FromSelfIntroduction(ctx, announcerID, brief, nil)
+		intro := realm.GetProfileFactory().CreateBriefIntroProfile(brief)
+		return purgatory.SelfFromMemberAnnouncement(ctx, announcerID, intro, nr, ma)
+	} else {
+		return purgatory.SelfFromMemberAnnouncement(ctx, announcerID, nil, nr, ma)
 	}
-	return err == nil, err
 }
 
 func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementPacketReader, brief transport.BriefIntroductionReader,
-	fullIntroRequired bool, n AnnouncingMember, realm *core.FullRealm) (bool, insolar.ShortNodeID, error) {
+	fullIntroRequired bool, n *core.NodeAppearance, realm *core.FullRealm) (bool, insolar.ShortNodeID, error) {
 
-	err := ValidateIntrosOnMember(reader, brief, fullIntroRequired, n)
-	if err != nil {
-		return false, 0, err
-	}
+	//err := ValidateIntrosOnMember(reader, brief, fullIntroRequired, n)
+	//if err != nil {
+	//	return false, 0, err
+	//}
 
 	na := reader.GetAnnouncementReader()
 	nr := na.GetNodeRank()
@@ -144,37 +135,62 @@ func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementP
 		return false, 0, n.Frauds().NewMismatchedNeighbourRank(n.GetReportProfile())
 	}
 
-	purgatory := realm.GetPurgatory()
+	var err error
+	var matches = true
 	announcerID := n.GetNodeID()
-	if reader.HasFullIntro() {
-		// announcer is joiner
-		err = purgatory.FromSelfIntroduction(ctx, announcerID, nil, reader.GetFullIntroduction())
-	} else if brief != nil {
-		// announcer is joiner
-		err = purgatory.FromSelfIntroduction(ctx, announcerID, brief, nil)
-	}
-	if err != nil {
-		return false, 0, err
-	}
 
 	ma := AnnouncementFromReader(na)
+	// TODO verify announcement content and signature
 
+	if reader.HasFullIntro() {
+		full := reader.GetFullIntroduction()
+		matches = n.UpgradeDynamicNodeProfile(ctx, full)
+		if !matches {
+			// TODO should be fraud
+			return false, 0, n.Blames().NewProtocolViolation(n.GetReportProfile(), "announcement is incorrect")
+		}
+	} else if brief != nil {
+		matches = profiles.EqualStaticProfiles(n.GetReportProfile().GetStatic(), brief)
+		if !matches {
+			// TODO should be fraud
+			return false, 0, n.Blames().NewProtocolViolation(n.GetReportProfile(), "announcement is incorrect")
+		}
+	}
+	if !matches {
+		// TODO should be fraud
+		return false, 0, n.Blames().NewProtocolViolation(n.GetReportProfile(), "announcement is incorrect")
+	}
 	if !n.CanIntroduceJoiner() && !ma.JoinerID.IsAbsent() {
-		return false, 0, n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner is not allowed to add a joiner")
+		return false, 0, n.Blames().NewProtocolViolation(n.GetReportProfile(), "node is not allowed to add a joiner")
 	}
 
 	modified, err := n.ApplyNodeMembership(ma)
 
 	if err == nil && modified && !ma.JoinerID.IsAbsent() {
+		purgatory := realm.GetPurgatory()
+
 		ja := na.GetJoinerAnnouncement()
-		err = purgatory.FromMemberAnnouncement(ctx, ma.JoinerID, ja.GetBriefIntroduction(), nil, announcerID)
+		// originID := ja.GetJoinerIntroducedByID() // applies to neighbourhood only
+
+		var joinerIntroProfile profiles.StaticProfile
+		if ja.HasFullIntro() {
+			joinerIntroProfile = realm.GetProfileFactory().CreateFullIntroProfile(ja.GetFullIntroduction())
+		} else {
+			joinerIntroProfile = realm.GetProfileFactory().CreateUpgradableIntroProfile(ja.GetBriefIntroduction())
+		}
+		err = purgatory.JoinerFromMemberAnnouncement(ctx, ma.JoinerID, joinerIntroProfile, announcerID)
+		if err == nil && ma.JoinerID == realm.GetSelfNodeID() {
+			//we trust more to these who has introduced us
+			// It is also REQUIRED as vector calculation requires at least one trusted node to work properly
+			n.UpdateNodeTrustLevel(member.TrustBySome)
+		}
 	}
 	return modified, ma.JoinerID, err
 }
 
-func ApplyNeighbourJoinerAnnouncement(ctx context.Context, purgatory *core.RealmPurgatory, sender AnnouncingMember,
-	joinerAnnouncedBySender insolar.ShortNodeID, neighbour AnnouncingMember, joinerAnnouncedByNeighbour insolar.ShortNodeID,
-	neighbourJoinerAnnouncement transport.JoinerAnnouncementReader) error {
+func ApplyNeighbourJoinerAnnouncement(ctx context.Context, sender *core.NodeAppearance,
+	joinerAnnouncedBySender insolar.ShortNodeID, neighbour core.AnnouncingMember, joinerAnnouncedByNeighbour insolar.ShortNodeID,
+	neighbourJoinerAnnouncement transport.JoinerAnnouncementReader, realm *core.FullRealm) error {
 
 	if joinerAnnouncedByNeighbour.IsAbsent() {
 		if neighbourJoinerAnnouncement != nil {
@@ -182,6 +198,8 @@ func ApplyNeighbourJoinerAnnouncement(ctx context.Context, purgatory *core.Realm
 		}
 		return nil
 	}
+
+	purgatory := realm.GetPurgatory()
 
 	neighbourID := neighbour.GetNodeID()
 	if neighbour.IsJoiner() {
@@ -194,14 +212,21 @@ func ApplyNeighbourJoinerAnnouncement(ctx context.Context, purgatory *core.Realm
 		if neighbourJoinerAnnouncement == nil {
 			return neighbour.Blames().NewProtocolViolation(sender.GetReportProfile(), "joiner profile is missing in neighbourhood")
 		}
-		return purgatory.BriefSelfFromNeighbourhood(ctx, neighbourID,
-			neighbourJoinerAnnouncement.GetBriefIntroduction(), neighbourJoinerAnnouncement.GetJoinerIntroducedByID())
+
+		brief := neighbourJoinerAnnouncement.GetBriefIntroduction()
+		nbIntroProfile := realm.GetProfileFactory().CreateUpgradableIntroProfile(brief)
+
+		introducedByID := neighbourJoinerAnnouncement.GetJoinerIntroducedByID()
+		if introducedByID.IsAbsent() {
+			introducedByID = sender.GetNodeID()
+		}
+		return purgatory.JoinerFromNeighbourhood(ctx, neighbourID, nbIntroProfile, introducedByID)
 	}
 
 	if neighbourJoinerAnnouncement == nil {
-		return neighbour.Blames().NewProtocolViolation(sender.GetReportProfile(), "joiner profile is missing in neighbourhood")
+		return neighbour.Blames().NewProtocolViolation(sender.GetReportProfile(), "joiner profile was not expected in neighbourhood")
 	}
-	return purgatory.NoticeFromNeighbourhood(ctx, joinerAnnouncedByNeighbour, neighbourID, sender.GetNodeID())
+	return purgatory.JoinerFromNeighbourhood(ctx, neighbourID, nil, sender.GetNodeID())
 }
 
 func AnnouncementFromReader(nb transport.MembershipAnnouncementReader) profiles.MembershipAnnouncement {
@@ -216,4 +241,60 @@ func AnnouncementFromReader(nb transport.MembershipAnnouncementReader) profiles.
 	default:
 		return profiles.NewMembershipAnnouncementWithJoinerID(mp, nb.GetJoinerID())
 	}
+}
+
+type ResolvedNeighbour struct {
+	Neighbour    core.AnnouncingMember
+	Announcement profiles.MembershipAnnouncement
+}
+
+func VerifyNeighbourhood(ctx context.Context, neighbourhood []transport.MembershipAnnouncementReader,
+	n *core.NodeAppearance, realm *core.FullRealm) ([]ResolvedNeighbour, error) {
+
+	hasThis := false
+	hasSelf := false
+	neighbours := make([]ResolvedNeighbour, len(neighbourhood))
+	//nc := realm.GetNodeCount()
+	purgatory := realm.GetPurgatory()
+	localID := realm.GetSelfNodeID()
+	senderID := n.GetNodeID()
+
+	for idx, nb := range neighbourhood {
+		nid := nb.GetNodeID()
+		if nid == n.GetNodeID() {
+			hasSelf = true
+		}
+		nr := nb.GetNodeRank()
+		nba := AnnouncementFromReader(nb)
+		neighbour, err := purgatory.MemberFromNeighbourhood(ctx, nid, nr, nba, senderID)
+		if err != nil {
+			return nil, err
+		}
+		if neighbour == nil {
+			return nil, n.Frauds().NewUnknownNeighbour(n.GetReportProfile())
+		}
+
+		// TODO may vary for dynamic population
+		//if neighbour.GetRank(nc) != nr {
+		//	return nil, n.Frauds().NewMismatchedNeighbourRank(n.GetReportProfile())
+		//}
+
+		// TODO validate node proof - if fails, then fraud on sender
+		// neighbourProfile.IsValidPacketSignature(nshEvidence.GetSignature())
+
+		neighbours[idx].Announcement = nba
+		neighbours[idx].Neighbour = neighbour
+
+		if nid == localID {
+			hasThis = true
+		}
+	}
+
+	if !hasThis || hasSelf {
+		return nil, n.Frauds().NewNeighbourMissingTarget(n.GetReportProfile())
+	}
+	if hasSelf {
+		return nil, n.Frauds().NewNeighbourContainsSource(n.GetReportProfile())
+	}
+	return neighbours, nil
 }

@@ -59,26 +59,29 @@ import (
 )
 
 type RealmPopulation interface {
-	SetIndexedCount(count int) bool
 	GetIndexedCount() int
-	GetOthersCount() int
 	GetJoinersCount() int
 	GetBftMajorityCount() int
-	IsComplete() bool
+
+	GetSealedLimit() (int, bool)
+	SealIndex(indexedCountLimit int) bool
 
 	GetNodeAppearance(id insolar.ShortNodeID) *NodeAppearance
 	GetActiveNodeAppearance(id insolar.ShortNodeID) *NodeAppearance
 	GetJoinerNodeAppearance(id insolar.ShortNodeID) *NodeAppearance
 	GetNodeAppearanceByIndex(idx int) *NodeAppearance
 
-	GetShuffledOtherNodes() []*NodeAppearance /* no joiners or self included */
+	GetShuffledOtherNodes() []*NodeAppearance /* excludes joiners and self */
 	GetIndexedNodes() []*NodeAppearance       /* no joiners included */
+	GetIndexedNodesAndHasNil() ([]*NodeAppearance, bool)
+	GetCountAndCompleteness(includeJoiners bool) (int, bool)
 
 	GetSelf() *NodeAppearance
 
 	CreateNodeAppearance(ctx context.Context, inp profiles.ActiveNode) *NodeAppearance
 
 	AddToDynamics(n *NodeAppearance) (*NodeAppearance, error)
+	GetAnyNodes(includeIndexed bool, shuffle bool) []*NodeAppearance
 
 	CreateVectorHelper() *RealmVectorHelper
 	CreatePacketLimiter() phases.PacketLimiter

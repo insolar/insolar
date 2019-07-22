@@ -52,6 +52,7 @@ package endpoints
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/common/args"
 
 	"github.com/insolar/insolar/insolar"
 
@@ -166,7 +167,7 @@ func (v *InboundConnection) GetTransportCert() cryptkit.CertificateHolder {
 }
 
 func EqualOutboundEndpoints(p Outbound, o Outbound) bool {
-	if p == nil || o == nil {
+	if args.IsNil(p) || args.IsNil(o) {
 		return false
 	}
 	if p == o {
@@ -188,7 +189,7 @@ func EqualOutboundEndpoints(p Outbound, o Outbound) bool {
 }
 
 func EqualListOfOutboundEndpoints(p []Outbound, o []Outbound) bool {
-	if len(p) == 0 || len(o) == 0 || len(p) != len(o) {
+	if len(p) != len(o) {
 		return false
 	}
 	for i, pi := range p {

@@ -53,6 +53,7 @@ package profiles
 import (
 	"fmt"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 )
@@ -71,7 +72,7 @@ type MembershipProfile struct {
 // }
 
 func NewMembershipProfile(mode member.OpMode, power member.Power, index member.Index,
-	nsh proofs.NodeStateHashEvidence, nas proofs.MemberAnnouncementSignature,
+	nsh cryptkit.SignedDigestHolder, nas proofs.MemberAnnouncementSignature,
 	ep member.Power) MembershipProfile {
 
 	return MembershipProfile{
@@ -86,7 +87,7 @@ func NewMembershipProfile(mode member.OpMode, power member.Power, index member.I
 	}
 }
 
-func NewMembershipProfileByNode(np ActiveNode, nsh proofs.NodeStateHashEvidence, nas proofs.MemberAnnouncementSignature,
+func NewMembershipProfileByNode(np ActiveNode, nsh cryptkit.SignedDigestHolder, nas proofs.MemberAnnouncementSignature,
 	ep member.Power) MembershipProfile {
 
 	idx := member.JoinerIndex
@@ -128,16 +129,7 @@ func (p MembershipProfile) Equals(o MembershipProfile) bool {
 		return false
 	}
 
-	if p.StateEvidence != o.StateEvidence {
-		if !p.StateEvidence.GetNodeStateHash().Equals(o.StateEvidence.GetNodeStateHash()) {
-			return false
-		}
-		if !p.StateEvidence.GetGlobulaNodeStateSignature().Equals(o.StateEvidence.GetGlobulaNodeStateSignature()) {
-			return false
-		}
-	}
-
-	return p.AnnounceSignature == o.AnnounceSignature || p.AnnounceSignature.Equals(o.AnnounceSignature)
+	return p.NodeAnnouncedState.Equals(o.NodeAnnouncedState)
 }
 
 func (p MembershipProfile) StringParts() string {
@@ -149,7 +141,11 @@ func (p MembershipProfile) StringParts() string {
 }
 
 func (p MembershipProfile) String() string {
-	return fmt.Sprintf("idx:%03d %s", p.Index, p.StringParts())
+	index := "joiner"
+	if !p.Index.IsJoiner() {
+		index = fmt.Sprintf("idx:%d", p.Index)
+	}
+	return fmt.Sprintf("%s %s", index, p.StringParts())
 }
 
 type MembershipAnnouncement struct {

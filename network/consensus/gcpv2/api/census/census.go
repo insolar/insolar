@@ -89,6 +89,11 @@ type Active interface {
 	GetPulseData() pulse.Data
 }
 
+type Prime interface {
+	Active
+	MakeExpected(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) Expected
+}
+
 type Expected interface {
 	Operational
 	GetPrevious() Active
@@ -108,6 +113,7 @@ type Builder interface {
 	IsSealed() bool
 
 	BuildAndMakeExpected(csh proofs.CloudStateHash) Expected
+	BuildAndMakeIncompleteExpected(csh proofs.CloudStateHash) Expected
 }
 
 type State uint8
@@ -115,7 +121,8 @@ type State uint8
 const (
 	DraftCensus State = iota
 	SealedCensus
-	BuiltCensus
+	CompleteCensus
+	IncompleteCensus
 	PrimingCensus
 )
 
@@ -128,5 +135,5 @@ func (v State) IsSealed() bool {
 }
 
 func (v State) IsBuilt() bool {
-	return v >= BuiltCensus
+	return v >= CompleteCensus
 }
