@@ -51,9 +51,10 @@
 package packetrecorder
 
 import (
+	"sync"
+
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"sync"
 )
 
 type PostponedPacketFunc func(packet transport.PacketParser, from endpoints.Inbound, verifyFlags PacketVerifyFlags) bool

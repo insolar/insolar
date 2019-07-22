@@ -53,9 +53,10 @@ package tests
 import (
 	"context"
 	"errors"
-	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle"
 	"math/rand"
 	"time"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle"
 
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"

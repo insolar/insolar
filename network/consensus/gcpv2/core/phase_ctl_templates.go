@@ -52,6 +52,7 @@ package core
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
 

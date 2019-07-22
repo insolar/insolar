@@ -51,9 +51,10 @@
 package core
 
 import (
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"sort"
 	"sync"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/nodeset"

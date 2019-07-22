@@ -53,11 +53,12 @@ package core
 import (
 	"context"
 	"fmt"
+	"math"
+	"sync"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/args"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
-	"math"
-	"sync"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"

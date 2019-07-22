@@ -52,9 +52,10 @@ package core
 
 import (
 	"context"
+	"time"
+
 	"github.com/insolar/insolar/network/consensus/common/chaser"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"time"
 )
 
 type PollingWorker struct {

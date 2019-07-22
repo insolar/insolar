@@ -53,6 +53,7 @@ package ph01ctl
 import (
 	"context"
 	"fmt"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/pulsectl"

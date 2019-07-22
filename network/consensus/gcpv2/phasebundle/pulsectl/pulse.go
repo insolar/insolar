@@ -52,6 +52,7 @@ package pulsectl
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
 
 	"github.com/insolar/insolar/network/consensus/common/endpoints"

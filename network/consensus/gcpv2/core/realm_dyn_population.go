@@ -53,10 +53,11 @@ package core
 import (
 	"context"
 	"fmt"
+	"sync"
+
 	"github.com/insolar/insolar/network/consensus/common/args"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
-	"sync"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/consensuskit"

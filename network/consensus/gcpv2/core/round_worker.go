@@ -52,12 +52,13 @@ package core
 
 import (
 	"context"
+	"sync/atomic"
+	"time"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
-	"sync/atomic"
-	"time"
 )
 
 const (

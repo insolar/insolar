@@ -52,8 +52,9 @@ package api
 
 import (
 	"context"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"time"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/capacity"

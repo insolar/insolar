@@ -53,11 +53,12 @@ package ph3ctl
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/insolar/insolar/network/consensus/common/consensuskit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/consensus"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/inspectors"
-	"sync"
-	"time"
 
 	"github.com/insolar/insolar/network/consensus/common/chaser"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"

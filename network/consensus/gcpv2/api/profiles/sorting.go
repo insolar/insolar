@@ -51,8 +51,9 @@
 package profiles
 
 import (
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"sort"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 )
 
 func AsRank(np ActiveNode, count member.Index) member.Rank {
