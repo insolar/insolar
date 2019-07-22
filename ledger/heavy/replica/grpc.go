@@ -28,6 +28,10 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
+const (
+	MaxTransportMsg = 1073741824
+)
+
 type grpcTransport struct {
 	port       uint32
 	lis        net.Listener
@@ -83,7 +87,11 @@ func (t *grpcTransport) Call(ctx context.Context, request *Request) (*Response, 
 
 func (t *grpcTransport) Send(ctx context.Context, receiver, method string, data []byte) ([]byte, error) {
 	req := Request{Method: method, Data: data}
-	conn, err := grpc.Dial(receiver, grpc.WithInsecure())
+	limits := grpc.WithDefaultCallOptions(
+		grpc.MaxCallRecvMsgSize(MaxTransportMsg),
+		grpc.MaxCallSendMsgSize(MaxTransportMsg),
+	)
+	conn, err := grpc.Dial(receiver, limits, grpc.WithInsecure())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to connect to receiver %s", receiver)
 	}
