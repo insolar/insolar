@@ -13,29 +13,6 @@ func _() {
 	_ = x[TypeError-2]
 	_ = x[TypeID-3]
 	_ = x[TypeIDs-4]
-<<<<<<< HEAD
-	_ = x[TypeState-5]
-	_ = x[TypeGetObject-6]
-	_ = x[TypePassState-7]
-	_ = x[TypeObjIndex-8]
-	_ = x[TypeObjState-9]
-	_ = x[TypeIndex-10]
-	_ = x[TypePass-11]
-	_ = x[TypeGetCode-12]
-	_ = x[TypeCode-13]
-	_ = x[TypeSetCode-14]
-	_ = x[TypeSetIncomingRequest-15]
-	_ = x[TypeSetOutgoingRequest-16]
-	_ = x[TypeSagaCallAcceptNotification-17]
-	_ = x[TypeGetFilament-18]
-	_ = x[TypeGetRequest-19]
-	_ = x[TypeRequest-20]
-	_ = x[TypeFilamentSegment-21]
-	_ = x[TypeSetResult-22]
-	_ = x[TypeActivate-23]
-	_ = x[TypeRequestInfo-24]
-	_ = x[TypeGotHotConfirmation-25]
-=======
 	_ = x[TypeJet-5]
 	_ = x[TypeState-6]
 	_ = x[TypeGetObject-7]
@@ -57,43 +34,28 @@ func _() {
 	_ = x[TypeSetResult-23]
 	_ = x[TypeActivate-24]
 	_ = x[TypeRequestInfo-25]
->>>>>>> 54a30b28f11800de0dff33a97e46c2720992a924
-	_ = x[TypeDeactivate-26]
-	_ = x[TypeUpdate-27]
-	_ = x[TypeHotObjects-28]
-	_ = x[TypeResultInfo-29]
-	_ = x[TypeGetPendings-30]
-	_ = x[TypeHasPendings-31]
-	_ = x[TypePendingsInfo-32]
-	_ = x[TypeReplication-33]
-<<<<<<< HEAD
-	_ = x[TypeReturnResults-34]
-	_ = x[TypeCallMethod-35]
-	_ = x[TypeExecutorResults-36]
-	_ = x[TypePendingFinished-37]
-	_ = x[TypeAdditionalCallFromPreviousExecutor-38]
-	_ = x[TypeStillExecuting-39]
-	_ = x[_latestType-40]
+	_ = x[TypeGotHotConfirmation-26]
+	_ = x[TypeDeactivate-27]
+	_ = x[TypeUpdate-28]
+	_ = x[TypeHotObjects-29]
+	_ = x[TypeResultInfo-30]
+	_ = x[TypeGetPendings-31]
+	_ = x[TypeHasPendings-32]
+	_ = x[TypePendingsInfo-33]
+	_ = x[TypeReplication-34]
+	_ = x[TypeGetJet-35]
+	_ = x[TypeReturnResults-36]
+	_ = x[TypeCallMethod-37]
+	_ = x[TypeExecutorResults-38]
+	_ = x[TypePendingFinished-39]
+	_ = x[TypeAdditionalCallFromPreviousExecutor-40]
+	_ = x[TypeStillExecuting-41]
+	_ = x[_latestType-42]
 }
 
-const _Type_name = "TypeUnknownTypeMetaTypeErrorTypeIDTypeIDsTypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndexTypePassTypeGetCodeTypeCodeTypeSetCodeTypeSetIncomingRequestTypeSetOutgoingRequestTypeSagaCallAcceptNotificationTypeGetFilamentTypeGetRequestTypeRequestTypeFilamentSegmentTypeSetResultTypeActivateTypeRequestInfoTypeGotHotConfirmationTypeDeactivateTypeUpdateTypeHotObjectsTypeResultInfoTypeGetPendingsTypeHasPendingsTypePendingsInfoTypeReplicationTypeReturnResultsTypeCallMethodTypeExecutorResultsTypePendingFinishedTypeAdditionalCallFromPreviousExecutorTypeStillExecuting_latestType"
+const _Type_name = "TypeUnknownTypeMetaTypeErrorTypeIDTypeIDsTypeJetTypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndexTypePassTypeGetCodeTypeCodeTypeSetCodeTypeSetIncomingRequestTypeSetOutgoingRequestTypeSagaCallAcceptNotificationTypeGetFilamentTypeGetRequestTypeRequestTypeFilamentSegmentTypeSetResultTypeActivateTypeRequestInfoTypeGotHotConfirmationTypeDeactivateTypeUpdateTypeHotObjectsTypeResultInfoTypeGetPendingsTypeHasPendingsTypePendingsInfoTypeReplicationTypeGetJetTypeReturnResultsTypeCallMethodTypeExecutorResultsTypePendingFinishedTypeAdditionalCallFromPreviousExecutorTypeStillExecuting_latestType"
 
-var _Type_index = [...]uint16{0, 11, 19, 28, 34, 41, 50, 63, 76, 88, 100, 109, 117, 128, 136, 147, 169, 191, 221, 236, 250, 261, 280, 293, 305, 320, 342, 356, 366, 380, 394, 409, 424, 440, 455, 472, 486, 505, 524, 562, 580, 591}
-=======
-	_ = x[TypeGetJet-34]
-	_ = x[TypeReturnResults-35]
-	_ = x[TypeCallMethod-36]
-	_ = x[TypeExecutorResults-37]
-	_ = x[TypePendingFinished-38]
-	_ = x[TypeAdditionalCallFromPreviousExecutor-39]
-	_ = x[TypeStillExecuting-40]
-	_ = x[_latestType-41]
-}
-
-const _Type_name = "TypeUnknownTypeMetaTypeErrorTypeIDTypeIDsTypeJetTypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndexTypePassTypeGetCodeTypeCodeTypeSetCodeTypeSetIncomingRequestTypeSetOutgoingRequestTypeSagaCallAcceptNotificationTypeGetFilamentTypeGetRequestTypeRequestTypeFilamentSegmentTypeSetResultTypeActivateTypeRequestInfoTypeDeactivateTypeUpdateTypeHotObjectsTypeResultInfoTypeGetPendingsTypeHasPendingsTypePendingsInfoTypeReplicationTypeGetJetTypeReturnResultsTypeCallMethodTypeExecutorResultsTypePendingFinishedTypeAdditionalCallFromPreviousExecutorTypeStillExecuting_latestType"
-
-var _Type_index = [...]uint16{0, 11, 19, 28, 34, 41, 48, 57, 70, 83, 95, 107, 116, 124, 135, 143, 154, 176, 198, 228, 243, 257, 268, 287, 300, 312, 327, 341, 351, 365, 379, 394, 409, 425, 440, 450, 467, 481, 500, 519, 557, 575, 586}
->>>>>>> 54a30b28f11800de0dff33a97e46c2720992a924
+var _Type_index = [...]uint16{0, 11, 19, 28, 34, 41, 48, 57, 70, 83, 95, 107, 116, 124, 135, 143, 154, 176, 198, 228, 243, 257, 268, 287, 300, 312, 327, 349, 363, 373, 387, 401, 416, 431, 447, 462, 472, 489, 503, 522, 541, 579, 597, 608}
 
 func (i Type) String() string {
 	if i >= Type(len(_Type_index)-1) {

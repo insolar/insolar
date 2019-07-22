@@ -143,9 +143,9 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		return errors.Wrap(err, "call of SetActiveNodes failed")
 	}
 
-	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
-		return errors.Wrap(err, "call of AddPulse failed")
-	}
+	// if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
+	// 	return errors.Wrap(err, "call of AddPulse failed")
+	// }
 
 	err = m.JetModifier.Clone(ctx, storagePulse.PulseNumber, newPulse.PulseNumber, true)
 	if err != nil {

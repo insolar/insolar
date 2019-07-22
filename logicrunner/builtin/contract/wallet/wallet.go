@@ -106,7 +106,7 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toM
 			return nil, fmt.Errorf("failed to add amount back to balance: %s", err.Error())
 		}
 		w.Balance = newBalance.String()
-		return nil, fmt.Errorf("failed to transfer fee: %s", err.Error())
+		return nil, fmt.Errorf("failed to transfer fee: %s", acceptFeeErr.Error())
 	}
 
 	acceptErr := toWallet.Accept(amount.String())
