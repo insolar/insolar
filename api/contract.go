@@ -37,44 +37,18 @@ func NewContractService(runner *Runner) *ContractService {
 	return &ContractService{runner: runner}
 }
 
-//
-// func (cs *ContractService) Call(response http.ResponseWriter, req *http.Request) error {
-// 	cs.runner.callHandler()(response, req)
-// 	return nil
-// }
-
 func (cs *ContractService) Call(req *http.Request, args *requester.Params, result *requester.Result) error {
-
 	traceID := utils.RandTraceID()
 	ctx, insLog := inslogger.WithTraceField(context.Background(), traceID)
 
-	ctx, span := instracer.StartSpan(ctx, "callHandler")
+	ctx, span := instracer.StartSpan(ctx, "Call")
 	defer span.End()
-	//
-	// contractRequest := &requester.Request{}
-	// contractAnswer := &requester.ContractAnswer{}
-	// defer writeResponse(insLog, response, contractAnswer)
-
-	// startTime := time.Now()
-	// defer observeResultStatus(contractRequest.Method, contractAnswer, startTime)
 
 	insLog.Infof("[ ContractService.Call ] Incoming request: %s", req.RequestURI)
-
-	// ctx, rawBody, err := processRequest(ctx, req, contractRequest, result)
-	// if err != nil {
-	// 	processError(err, err.Error(), contractAnswer, insLog, traceID)
-	// 	return err
-	// }
 
 	if args.Test != "" {
 		insLog.Infof("Request related to %s", args.Test)
 	}
-	//
-	// if contractRequest.Method != "contract.call" {
-	// 	err := errors.New("rpc method does not exist")
-	// 	processError(err, err.Error(), contractAnswer, insLog, traceID)
-	// 	return err
-	// }
 
 	rawBody, err := json.Marshal(requester.Request{
 		JSONRPC: "2.0",
@@ -100,7 +74,8 @@ func (cs *ContractService) Call(req *http.Request, args *requester.Params, resul
 		return err
 	}
 
-	result = &requester.Result{ContractResult: callResult, TraceID: traceID}
+	result.ContractResult = callResult
+	result.TraceID = traceID
 
 	return nil
 }

@@ -39,24 +39,8 @@ func TestWrongUrl(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, postResp.StatusCode)
 }
 
-func TestGetRequest(t *testing.T) {
-	postResp, err := http.Get(TestCallUrl)
-	defer postResp.Body.Close()
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, postResp.StatusCode)
-	body, err := ioutil.ReadAll(postResp.Body)
-	require.NoError(t, err)
-
-	getResponse := &requester.ContractAnswer{}
-	unmarshalCallResponse(t, body, getResponse)
-	require.NotNil(t, getResponse.Error)
-
-	require.Equal(t, "failed to unmarshal request: [ UnmarshalRequest ] Empty body", getResponse.Error.Message)
-	require.Nil(t, getResponse.Result)
-}
-
 func TestWrongJson(t *testing.T) {
-	postResp, err := http.Post(TestCallUrl, "application/json", bytes.NewBuffer([]byte("some not json value")))
+	postResp, err := http.Post(TestRPCUrl, "application/json", bytes.NewBuffer([]byte("some not json value")))
 	defer postResp.Body.Close()
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, postResp.StatusCode)

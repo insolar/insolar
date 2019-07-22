@@ -50,7 +50,7 @@ func TestBadSeed(t *testing.T) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
 	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
+	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "contract.call",
@@ -64,7 +64,7 @@ func TestIncorrectSeed(t *testing.T) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
 	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
+	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "contract.call",
@@ -75,7 +75,7 @@ func TestIncorrectSeed(t *testing.T) {
 }
 
 func customSend(data string) (map[string]interface{}, error) {
-	req, err := http.NewRequest("POST", TestCallUrl, strings.NewReader(data))
+	req, err := http.NewRequest("POST", TestRPCUrl, strings.NewReader(data))
 	if err != nil {
 		return nil, err
 	}
@@ -98,13 +98,13 @@ func customSend(data string) (map[string]interface{}, error) {
 func TestEmptyBody(t *testing.T) {
 	res, err := customSend("")
 	require.NoError(t, err)
-	require.Equal(t, "failed to unmarshal request: [ UnmarshalRequest ] Empty body", res["error"].(map[string]interface{})["message"].(string))
+	require.Equal(t, "EOF", res["error"].(map[string]interface{})["message"].(string))
 }
 
 func TestCrazyJSON(t *testing.T) {
 	res, err := customSend("[dh")
 	require.NoError(t, err)
-	require.Contains(t, res["error"].(map[string]interface{})["message"].(string), "[ UnmarshalRequest ] Can't unmarshal input params: invalid")
+	require.Contains(t, res["error"].(map[string]interface{})["message"].(string), "looking for beginning of value")
 }
 
 func TestIncorrectSign(t *testing.T) {
@@ -112,7 +112,7 @@ func TestIncorrectSign(t *testing.T) {
 	seed, err := requester.GetSeed(TestAPIURL)
 	require.NoError(t, err)
 	body, err := requester.GetResponseBodyContract(
-		TestCallUrl,
+		TestRPCUrl,
 		requester.Request{
 			JSONRPC: "2.0",
 			ID:      1,
@@ -134,12 +134,12 @@ func TestIncorrectMethodName(t *testing.T) {
 	require.NoError(t, err)
 	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
 	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
+	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "foo.bar",
 		Params:  requester.Params{CallSite: "member.create", PublicKey: rootCfg.PublicKey},
 	}, seed)
 	require.NoError(t, err)
-	require.EqualError(t, contractError(res), "rpc method does not exist")
+	require.EqualError(t, contractError(res), "rpc: can't find service \"foo.bar\"")
 }

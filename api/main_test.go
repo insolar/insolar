@@ -31,9 +31,6 @@ import (
 	"github.com/insolar/insolar/configuration"
 )
 
-const HOST = "http://localhost:19101"
-const TestUrl = HOST + "/api/rpc"
-
 type MainAPISuite struct {
 	suite.Suite
 }

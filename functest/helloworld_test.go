@@ -42,7 +42,7 @@ func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
 	}
 
 	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
+	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "contract.call",
@@ -81,7 +81,7 @@ func (i *HelloWorldInstance) Greet(ctx context.Context, name string) (string, er
 	}
 
 	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
+	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "contract.call",
@@ -113,7 +113,7 @@ func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
 	}
 
 	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
+	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "contract.call",
@@ -158,7 +158,7 @@ func (i *HelloWorldInstance) CreateChild(ctx context.Context) (*HelloWorldInstan
 	}
 
 	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
+	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "contract.call",
@@ -197,7 +197,7 @@ func (i *HelloWorldInstance) ReturnObj(ctx context.Context) (map[string]interfac
 	}
 
 	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
+	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "contract.call",

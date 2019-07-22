@@ -46,7 +46,6 @@ const HOST = "http://localhost:19102"
 const HOST_DEBUG = "http://localhost:8001"
 const TestAPIURL = HOST + "/api"
 const TestRPCUrl = TestAPIURL + "/rpc"
-const TestCallUrl = TestAPIURL + "/call"
 
 const insolarRootMemberKeys = "root_member_keys.json"
 const insolarMigrationAdminMemberKeys = "migration_admin_member_keys.json"

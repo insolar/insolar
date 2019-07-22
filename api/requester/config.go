@@ -33,13 +33,13 @@ type Request struct {
 	JSONRPC string `json:"jsonrpc"`
 	ID      int    `json:"id"`
 	Method  string `json:"method"`
-	Params  Params `json:"params"`
+	Params  Params `json:"params,omitempty"`
 }
 
 type Params struct {
 	Seed       string      `json:"seed"`
 	CallSite   string      `json:"callSite"`
-	CallParams interface{} `json:"callParams"`
+	CallParams interface{} `json:"callParams,omitempty"`
 	Reference  string      `json:"reference"`
 	PublicKey  string      `json:"publicKey"`
 	LogLevel   string      `json:"logLevel,omitempty"`
