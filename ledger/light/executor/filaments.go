@@ -39,23 +39,30 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentModifier -o ./ -s _mock.go
 
 type FilamentModifier interface {
+	// SetRequest creates request record. Idempotent operation.
 	SetRequest(ctx context.Context, reqID insolar.ID, jetID insolar.JetID, request record.Request) (foundRequest *record.CompositeFilamentRecord, foundResult *record.CompositeFilamentRecord, err error)
+	// SetResult creates result record.
 	SetResult(ctx context.Context, resID insolar.ID, jetID insolar.JetID, result record.Result) (foundResult *record.CompositeFilamentRecord, err error)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCalculator -o ./ -s _mock.go
 
 type FilamentCalculator interface {
-	// Requests goes to network.
+	// Requests returns request records for objectID's chain, starts from provided id until provided pulse.
+	// TODO: remove calcPulse param
 	Requests(
 		ctx context.Context,
 		objectID, from insolar.ID,
 		readUntil, calcPulse insolar.PulseNumber,
 	) ([]record.CompositeFilamentRecord, error)
 
-	// PendingRequests only looks locally.
+	// PendingRequests returns all pending requests of object for provided pulse.
 	PendingRequests(ctx context.Context, pulse insolar.PulseNumber, objectID insolar.ID) ([]record.CompositeFilamentRecord, error)
 
+	// RequestDuplicate searches two records on objectID chain:
+	// First one with same ID as requestID param.
+	// Second is the Result record Request field of which equals requestID param.
+	// Uses request parameter to check if Reason is not empty and to set pulse for scan limit.
 	RequestDuplicate(
 		ctx context.Context,
 		startFrom insolar.PulseNumber,
@@ -78,6 +85,7 @@ type FilamentCleaner interface {
 	Clear(objID insolar.ID)
 }
 
+// NewFilamentModifier creates FilamentModifierDefault with all required components.
 func NewFilamentModifier(
 	indexes object.IndexStorage,
 	recordStorage object.RecordStorage,
@@ -96,6 +104,7 @@ func NewFilamentModifier(
 	}
 }
 
+// FilamentModifierDefault implements FilamentModifier.
 type FilamentModifierDefault struct {
 	calculator FilamentCalculator
 	indexes    object.IndexStorage
@@ -242,12 +251,24 @@ func (m *FilamentModifierDefault) SetRequest(
 		return nil, nil, errors.New("request from the past")
 	}
 
+	// if request has duplicate or result already exists, return RequestDuplicate result
 	foundRequest, foundResult, err := m.calculator.RequestDuplicate(ctx, requestID.Pulse(), objectID, requestID, request)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to set request")
 	}
 	if foundRequest != nil || foundResult != nil {
-		return foundRequest, foundResult, err
+		return foundRequest, foundResult, nil
+	}
+
+	switch r := request.(type) {
+	case *record.IncomingRequest:
+		if r.IsDetached() {
+			return nil, nil, errors.Errorf("request check failed: cannot be detached (got mode %v)", r.ReturnMode)
+		}
+	case *record.OutgoingRequest:
+		if err := m.checkOutgoingHasReasonInPendings(ctx, requestID, objectID, request); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	// Save request record to storage.
@@ -295,6 +316,27 @@ func (m *FilamentModifierDefault) SetRequest(
 	}).Debug("filament set request")
 
 	return nil, nil, nil
+}
+
+// check outgoing request if any pending exists with the same ID as request's reason.
+func (m *FilamentModifierDefault) checkOutgoingHasReasonInPendings(
+	ctx context.Context,
+	requestID insolar.ID,
+	objectID insolar.ID,
+	request record.Request,
+) error {
+	pendings, err := m.calculator.PendingRequests(ctx, requestID.Pulse(), objectID)
+	if err != nil {
+		return errors.Wrap(err, "failed fecth pendings on reason check")
+	}
+	reason := request.ReasonRef()
+	reasonID := *reason.Record()
+	for _, p := range pendings {
+		if p.RecordID == reasonID {
+			return nil
+		}
+	}
+	return errors.Errorf("reason ID %v not found in pendings for object %v", reasonID.DebugString(), objectID.DebugString())
 }
 
 func (m *FilamentModifierDefault) SetResult(ctx context.Context, resultID insolar.ID, jetID insolar.JetID, result record.Result) (*record.CompositeFilamentRecord, error) {
@@ -485,12 +527,32 @@ func (c *FilamentCalculatorDefault) PendingRequests(ctx context.Context, pulse i
 
 		virtual := record.Unwrap(rec.Record.Virtual)
 		switch r := virtual.(type) {
+		// result should always go first, before initial request
+		case *record.Result:
+			hasResult[*r.Request.Record()] = struct{}{}
 		case *record.IncomingRequest:
 			if _, ok := hasResult[rec.RecordID]; !ok {
 				pending = append(pending, rec)
 			}
-		case *record.Result:
-			hasResult[*r.Request.Record()] = struct{}{}
+		// Outgoing without pending incoming reason request couldn't be registered,
+		// so pending outgoing request always goes:
+		// 1) after reason's request (before while iterating)
+		// 2) before reason's request Result. (after while iterating)
+		case *record.OutgoingRequest:
+			// Add only detached outgoing requests with incoming request which has result.
+			if !r.IsDetached() {
+				break
+			}
+			_, reasonClosed := hasResult[*r.Reason.Record()]
+			_, reqClose := hasResult[rec.RecordID]
+
+			if reqClose && !reasonClosed {
+				return nil, errors.New("impossible situation. reason should be closed before closing of outgoing")
+			}
+
+			if reasonClosed && !reqClose {
+				pending = append(pending, rec)
+			}
 		}
 	}
 
@@ -582,7 +644,6 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 		return nil, nil, ErrEmptyReason
 	}
 	reason := request.ReasonRef()
-
 	idx, err := c.indexes.ForID(ctx, startFrom, objectID)
 	if err != nil {
 		return nil, nil, err
@@ -872,6 +933,12 @@ func (i *filamentIterator) Prev(ctx context.Context) (record.CompositeFilamentRe
 	return composite, nil
 }
 
+type fetchIterator interface {
+	PrevID() *insolar.ID
+	HasPrev() bool
+	Prev(ctx context.Context) (record.CompositeFilamentRecord, error)
+}
+
 func newFetchingIterator(
 	ctx context.Context,
 	cache *filamentCache,
@@ -880,7 +947,7 @@ func newFetchingIterator(
 	fetcher JetFetcher,
 	coordinator jet.Coordinator,
 	sender bus.Sender,
-) *fetchingIterator {
+) fetchIterator {
 	return &fetchingIterator{
 		iter:        cache.NewIterator(ctx, from),
 		cache:       cache,
@@ -904,30 +971,31 @@ func (i *fetchingIterator) Prev(ctx context.Context) (record.CompositeFilamentRe
 	logger := inslogger.FromContext(ctx)
 
 	rec, err := i.iter.Prev(ctx)
-	switch err {
-	case nil:
+	if err == nil {
 		return rec, nil
+	}
 
-	case object.ErrNotFound:
-		// Update cache from network.
-		logger.Debug("fetching requests from network")
-		defer logger.Debug("received requests from network")
-		recs, err := i.fetchFromNetwork(ctx, *i.PrevID())
-		if err != nil {
-			return record.CompositeFilamentRecord{}, errors.Wrap(err, "failed to fetch filament")
-		}
-		i.cache.Update(recs)
-
-		// Try to iterate again.
-		rec, err = i.iter.Prev(ctx)
-		if err != nil {
-			return record.CompositeFilamentRecord{}, errors.Wrap(err, "failed to update filament")
-		}
-		return rec, nil
-
-	default:
+	if err != object.ErrNotFound {
 		return record.CompositeFilamentRecord{}, errors.Wrap(err, "failed to fetch filament")
 	}
+
+	// Update cache from network.
+	logger.Debug("fetching requests from network")
+	recs, err := i.fetchFromNetwork(ctx, *i.PrevID())
+	logger.Debug("received requests from network")
+	if err != nil {
+		return record.CompositeFilamentRecord{}, errors.Wrap(err, "failed to fetch filament")
+	}
+
+	i.cache.Update(recs)
+
+	// Try to iterate again.
+	rec, err = i.iter.Prev(ctx)
+	if err != nil {
+		return record.CompositeFilamentRecord{}, errors.Wrap(err, "failed to update filament")
+	}
+	return rec, nil
+
 }
 
 func (i *fetchingIterator) fetchFromNetwork(

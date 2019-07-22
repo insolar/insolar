@@ -147,7 +147,9 @@ type Request interface {
 	ReasonRef() insolar.Reference
 	// GetCallType returns call type.
 	GetCallType() CallType
+	// IsAPIRequest tells is it API-request or not.
 	IsAPIRequest() bool
+	// IsCreationRequest checks a request-type.
 	IsCreationRequest() bool
 	// IsDetached check is request has detached state.
 	IsDetached() bool
@@ -208,7 +210,6 @@ func (m *Lifeline) SetDelegate(key insolar.Reference, value insolar.Reference) {
 			return
 		}
 	}
-
 	m.Delegates = append(m.Delegates, LifelineDelegate{Key: key, Value: value})
 }
 
@@ -218,6 +219,5 @@ func (m *Lifeline) DelegateByKey(key insolar.Reference) (insolar.Reference, bool
 			return d.Value, true
 		}
 	}
-
 	return [64]byte{}, false
 }
