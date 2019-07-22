@@ -96,11 +96,6 @@ type ClientMock struct {
 	RegisterResultPreCounter uint64
 	RegisterResultMock       mClientMockRegisterResult
 
-	RegisterValidationFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.ID, p3 bool, p4 []insolar.Message) (r error)
-	RegisterValidationCounter    uint64
-	RegisterValidationPreCounter uint64
-	RegisterValidationMock       mClientMockRegisterValidation
-
 	StateFunc       func() (r []byte)
 	StateCounter    uint64
 	StatePreCounter uint64
@@ -130,7 +125,6 @@ func NewClientMock(t minimock.Tester) *ClientMock {
 	m.RegisterIncomingRequestMock = mClientMockRegisterIncomingRequest{mock: m}
 	m.RegisterOutgoingRequestMock = mClientMockRegisterOutgoingRequest{mock: m}
 	m.RegisterResultMock = mClientMockRegisterResult{mock: m}
-	m.RegisterValidationMock = mClientMockRegisterValidation{mock: m}
 	m.StateMock = mClientMockState{mock: m}
 
 	return m
@@ -2310,157 +2304,6 @@ func (m *ClientMock) RegisterResultFinished() bool {
 	return true
 }
 
-type mClientMockRegisterValidation struct {
-	mock              *ClientMock
-	mainExpectation   *ClientMockRegisterValidationExpectation
-	expectationSeries []*ClientMockRegisterValidationExpectation
-}
-
-type ClientMockRegisterValidationExpectation struct {
-	input  *ClientMockRegisterValidationInput
-	result *ClientMockRegisterValidationResult
-}
-
-type ClientMockRegisterValidationInput struct {
-	p  context.Context
-	p1 insolar.Reference
-	p2 insolar.ID
-	p3 bool
-	p4 []insolar.Message
-}
-
-type ClientMockRegisterValidationResult struct {
-	r error
-}
-
-//Expect specifies that invocation of Client.RegisterValidation is expected from 1 to Infinity times
-func (m *mClientMockRegisterValidation) Expect(p context.Context, p1 insolar.Reference, p2 insolar.ID, p3 bool, p4 []insolar.Message) *mClientMockRegisterValidation {
-	m.mock.RegisterValidationFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ClientMockRegisterValidationExpectation{}
-	}
-	m.mainExpectation.input = &ClientMockRegisterValidationInput{p, p1, p2, p3, p4}
-	return m
-}
-
-//Return specifies results of invocation of Client.RegisterValidation
-func (m *mClientMockRegisterValidation) Return(r error) *ClientMock {
-	m.mock.RegisterValidationFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ClientMockRegisterValidationExpectation{}
-	}
-	m.mainExpectation.result = &ClientMockRegisterValidationResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Client.RegisterValidation is expected once
-func (m *mClientMockRegisterValidation) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.ID, p3 bool, p4 []insolar.Message) *ClientMockRegisterValidationExpectation {
-	m.mock.RegisterValidationFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &ClientMockRegisterValidationExpectation{}
-	expectation.input = &ClientMockRegisterValidationInput{p, p1, p2, p3, p4}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *ClientMockRegisterValidationExpectation) Return(r error) {
-	e.result = &ClientMockRegisterValidationResult{r}
-}
-
-//Set uses given function f as a mock of Client.RegisterValidation method
-func (m *mClientMockRegisterValidation) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.ID, p3 bool, p4 []insolar.Message) (r error)) *ClientMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.RegisterValidationFunc = f
-	return m.mock
-}
-
-//RegisterValidation implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
-func (m *ClientMock) RegisterValidation(p context.Context, p1 insolar.Reference, p2 insolar.ID, p3 bool, p4 []insolar.Message) (r error) {
-	counter := atomic.AddUint64(&m.RegisterValidationPreCounter, 1)
-	defer atomic.AddUint64(&m.RegisterValidationCounter, 1)
-
-	if len(m.RegisterValidationMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.RegisterValidationMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ClientMock.RegisterValidation. %v %v %v %v %v", p, p1, p2, p3, p4)
-			return
-		}
-
-		input := m.RegisterValidationMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ClientMockRegisterValidationInput{p, p1, p2, p3, p4}, "Client.RegisterValidation got unexpected parameters")
-
-		result := m.RegisterValidationMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the ClientMock.RegisterValidation")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.RegisterValidationMock.mainExpectation != nil {
-
-		input := m.RegisterValidationMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, ClientMockRegisterValidationInput{p, p1, p2, p3, p4}, "Client.RegisterValidation got unexpected parameters")
-		}
-
-		result := m.RegisterValidationMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the ClientMock.RegisterValidation")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.RegisterValidationFunc == nil {
-		m.t.Fatalf("Unexpected call to ClientMock.RegisterValidation. %v %v %v %v %v", p, p1, p2, p3, p4)
-		return
-	}
-
-	return m.RegisterValidationFunc(p, p1, p2, p3, p4)
-}
-
-//RegisterValidationMinimockCounter returns a count of ClientMock.RegisterValidationFunc invocations
-func (m *ClientMock) RegisterValidationMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.RegisterValidationCounter)
-}
-
-//RegisterValidationMinimockPreCounter returns the value of ClientMock.RegisterValidation invocations
-func (m *ClientMock) RegisterValidationMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.RegisterValidationPreCounter)
-}
-
-//RegisterValidationFinished returns true if mock invocations count is ok
-func (m *ClientMock) RegisterValidationFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.RegisterValidationMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.RegisterValidationCounter) == uint64(len(m.RegisterValidationMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.RegisterValidationMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.RegisterValidationCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.RegisterValidationFunc != nil {
-		return atomic.LoadUint64(&m.RegisterValidationCounter) > 0
-	}
-
-	return true
-}
-
 type mClientMockState struct {
 	mock              *ClientMock
 	mainExpectation   *ClientMockStateExpectation
@@ -2659,10 +2502,6 @@ func (m *ClientMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ClientMock.RegisterResult")
 	}
 
-	if !m.RegisterValidationFinished() {
-		m.t.Fatal("Expected call to ClientMock.RegisterValidation")
-	}
-
 	if !m.StateFinished() {
 		m.t.Fatal("Expected call to ClientMock.State")
 	}
@@ -2744,10 +2583,6 @@ func (m *ClientMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ClientMock.RegisterResult")
 	}
 
-	if !m.RegisterValidationFinished() {
-		m.t.Fatal("Expected call to ClientMock.RegisterValidation")
-	}
-
 	if !m.StateFinished() {
 		m.t.Fatal("Expected call to ClientMock.State")
 	}
@@ -2781,7 +2616,6 @@ func (m *ClientMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.RegisterIncomingRequestFinished()
 		ok = ok && m.RegisterOutgoingRequestFinished()
 		ok = ok && m.RegisterResultFinished()
-		ok = ok && m.RegisterValidationFinished()
 		ok = ok && m.StateFinished()
 
 		if ok {
@@ -2849,10 +2683,6 @@ func (m *ClientMock) MinimockWait(timeout time.Duration) {
 
 			if !m.RegisterResultFinished() {
 				m.t.Error("Expected call to ClientMock.RegisterResult")
-			}
-
-			if !m.RegisterValidationFinished() {
-				m.t.Error("Expected call to ClientMock.RegisterValidation")
 			}
 
 			if !m.StateFinished() {
@@ -2928,10 +2758,6 @@ func (m *ClientMock) AllMocksCalled() bool {
 	}
 
 	if !m.RegisterResultFinished() {
-		return false
-	}
-
-	if !m.RegisterValidationFinished() {
 		return false
 	}
 
