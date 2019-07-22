@@ -190,8 +190,7 @@ func NewMessageHandler(
 			p.Dep.Sender = h.Sender
 		},
 		GetRequest: func(p *proc.GetRequest) {
-			p.Dep.RecordAccessor = h.Records
-			p.Dep.Sender = h.Sender
+			p.Dep(h.Records, h.Sender, h.JetCoordinator, h.JetTreeUpdater)
 		},
 		GetChildren: func(p *proc.GetChildren) {
 			p.Dep.IndexLocker = h.IndexLocker

@@ -669,7 +669,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 
 	_, isOutgoing := request.(*record.OutgoingRequest)
 	if !isOutgoing && reason.Record().Pulse() != insolar.PulseNumberAPIRequest {
-		exists, err := c.checkReason(ctx, reason)
+		exists, err := c.checkReason(ctx, objectID, reason)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -746,7 +746,9 @@ func (c *FilamentCalculatorDefault) Clear(objID insolar.ID) {
 	c.cache.Delete(objID)
 }
 
-func (c *FilamentCalculatorDefault) checkReason(ctx context.Context, reason insolar.Reference) (bool, error) {
+func (c *FilamentCalculatorDefault) checkReason(
+	ctx context.Context, objectID insolar.ID, reason insolar.Reference,
+) (bool, error) {
 	isBeyond, err := c.coordinator.IsBeyondLimit(ctx, reason.Record().Pulse())
 	if err != nil {
 		return false, errors.Wrap(err, "failed to calculate limit")
@@ -768,6 +770,7 @@ func (c *FilamentCalculatorDefault) checkReason(ctx context.Context, reason inso
 		}
 	}
 	msg, err := payload.NewMessage(&payload.GetRequest{
+		ObjectID:  objectID,
 		RequestID: *reason.Record(),
 	})
 	if err != nil {
@@ -790,7 +793,7 @@ func (c *FilamentCalculatorDefault) checkReason(ctx context.Context, reason inso
 	case *payload.Request:
 		return true, nil
 	case *payload.Error:
-		if concrete.Code == payload.CodeObjectNotFound {
+		if concrete.Code == payload.CodeNotFound {
 			inslogger.FromContext(ctx).Errorf("reason is wrong. %v", concrete.Text)
 			return true, nil
 		}

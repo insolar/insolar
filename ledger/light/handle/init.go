@@ -88,7 +88,7 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		h := NewGetObject(s.dep, meta, false)
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeGetRequest:
-		h := NewGetRequest(s.dep, meta)
+		h := NewGetRequest(s.dep, meta, false)
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeGetFilament:
 		h := NewGetRequests(s.dep, meta)
@@ -245,6 +245,9 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeGetJet:
 		h := NewGetJet(s.dep, originMeta, true)
+		err = f.Handle(ctx, h.Present)
+	case payload.TypeGetRequest:
+		h := NewGetRequest(s.dep, originMeta, true)
 		err = f.Handle(ctx, h.Present)
 	default:
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())
