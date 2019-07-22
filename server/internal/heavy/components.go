@@ -19,8 +19,6 @@ package heavy
 import (
 	"context"
 
-	"github.com/insolar/insolar/network/rules"
-
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
@@ -317,7 +315,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		NodeNetwork,
 		NetworkService,
 		pubSub,
-		rules.NewRules(),
 	)
 	err = c.cmp.Init(ctx)
 	if err != nil {
