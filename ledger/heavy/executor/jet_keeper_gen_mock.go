@@ -20,15 +20,15 @@ import (
 type JetKeeperMock struct {
 	t minimock.Tester
 
+	AddDropConfirmationFunc       func(p context.Context, p1 insolar.PulseNumber, p2 ...insolar.JetID) (r error)
+	AddDropConfirmationCounter    uint64
+	AddDropConfirmationPreCounter uint64
+	AddDropConfirmationMock       mJetKeeperMockAddDropConfirmation
+
 	AddHotConfirmationFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r error)
 	AddHotConfirmationCounter    uint64
 	AddHotConfirmationPreCounter uint64
 	AddHotConfirmationMock       mJetKeeperMockAddHotConfirmation
-
-	AddJetFunc       func(p context.Context, p1 insolar.PulseNumber, p2 ...insolar.JetID) (r error)
-	AddJetCounter    uint64
-	AddJetPreCounter uint64
-	AddJetMock       mJetKeeperMockAddJet
 
 	TopSyncPulseFunc       func() (r insolar.PulseNumber)
 	TopSyncPulseCounter    uint64
@@ -44,11 +44,160 @@ func NewJetKeeperMock(t minimock.Tester) *JetKeeperMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.AddDropConfirmationMock = mJetKeeperMockAddDropConfirmation{mock: m}
 	m.AddHotConfirmationMock = mJetKeeperMockAddHotConfirmation{mock: m}
-	m.AddJetMock = mJetKeeperMockAddJet{mock: m}
 	m.TopSyncPulseMock = mJetKeeperMockTopSyncPulse{mock: m}
 
 	return m
+}
+
+type mJetKeeperMockAddDropConfirmation struct {
+	mock              *JetKeeperMock
+	mainExpectation   *JetKeeperMockAddDropConfirmationExpectation
+	expectationSeries []*JetKeeperMockAddDropConfirmationExpectation
+}
+
+type JetKeeperMockAddDropConfirmationExpectation struct {
+	input  *JetKeeperMockAddDropConfirmationInput
+	result *JetKeeperMockAddDropConfirmationResult
+}
+
+type JetKeeperMockAddDropConfirmationInput struct {
+	p  context.Context
+	p1 insolar.PulseNumber
+	p2 []insolar.JetID
+}
+
+type JetKeeperMockAddDropConfirmationResult struct {
+	r error
+}
+
+//Expect specifies that invocation of JetKeeper.AddDropConfirmation is expected from 1 to Infinity times
+func (m *mJetKeeperMockAddDropConfirmation) Expect(p context.Context, p1 insolar.PulseNumber, p2 ...insolar.JetID) *mJetKeeperMockAddDropConfirmation {
+	m.mock.AddDropConfirmationFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &JetKeeperMockAddDropConfirmationExpectation{}
+	}
+	m.mainExpectation.input = &JetKeeperMockAddDropConfirmationInput{p, p1, p2}
+	return m
+}
+
+//Return specifies results of invocation of JetKeeper.AddDropConfirmation
+func (m *mJetKeeperMockAddDropConfirmation) Return(r error) *JetKeeperMock {
+	m.mock.AddDropConfirmationFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &JetKeeperMockAddDropConfirmationExpectation{}
+	}
+	m.mainExpectation.result = &JetKeeperMockAddDropConfirmationResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of JetKeeper.AddDropConfirmation is expected once
+func (m *mJetKeeperMockAddDropConfirmation) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 ...insolar.JetID) *JetKeeperMockAddDropConfirmationExpectation {
+	m.mock.AddDropConfirmationFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &JetKeeperMockAddDropConfirmationExpectation{}
+	expectation.input = &JetKeeperMockAddDropConfirmationInput{p, p1, p2}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *JetKeeperMockAddDropConfirmationExpectation) Return(r error) {
+	e.result = &JetKeeperMockAddDropConfirmationResult{r}
+}
+
+//Set uses given function f as a mock of JetKeeper.AddDropConfirmation method
+func (m *mJetKeeperMockAddDropConfirmation) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 ...insolar.JetID) (r error)) *JetKeeperMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.AddDropConfirmationFunc = f
+	return m.mock
+}
+
+//AddDropConfirmation implements github.com/insolar/insolar/ledger/heavy/executor.JetKeeper interface
+func (m *JetKeeperMock) AddDropConfirmation(p context.Context, p1 insolar.PulseNumber, p2 ...insolar.JetID) (r error) {
+	counter := atomic.AddUint64(&m.AddDropConfirmationPreCounter, 1)
+	defer atomic.AddUint64(&m.AddDropConfirmationCounter, 1)
+
+	if len(m.AddDropConfirmationMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.AddDropConfirmationMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to JetKeeperMock.AddDropConfirmation. %v %v %v", p, p1, p2)
+			return
+		}
+
+		input := m.AddDropConfirmationMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, JetKeeperMockAddDropConfirmationInput{p, p1, p2}, "JetKeeper.AddDropConfirmation got unexpected parameters")
+
+		result := m.AddDropConfirmationMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the JetKeeperMock.AddDropConfirmation")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.AddDropConfirmationMock.mainExpectation != nil {
+
+		input := m.AddDropConfirmationMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, JetKeeperMockAddDropConfirmationInput{p, p1, p2}, "JetKeeper.AddDropConfirmation got unexpected parameters")
+		}
+
+		result := m.AddDropConfirmationMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the JetKeeperMock.AddDropConfirmation")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.AddDropConfirmationFunc == nil {
+		m.t.Fatalf("Unexpected call to JetKeeperMock.AddDropConfirmation. %v %v %v", p, p1, p2)
+		return
+	}
+
+	return m.AddDropConfirmationFunc(p, p1, p2...)
+}
+
+//AddDropConfirmationMinimockCounter returns a count of JetKeeperMock.AddDropConfirmationFunc invocations
+func (m *JetKeeperMock) AddDropConfirmationMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.AddDropConfirmationCounter)
+}
+
+//AddDropConfirmationMinimockPreCounter returns the value of JetKeeperMock.AddDropConfirmation invocations
+func (m *JetKeeperMock) AddDropConfirmationMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.AddDropConfirmationPreCounter)
+}
+
+//AddDropConfirmationFinished returns true if mock invocations count is ok
+func (m *JetKeeperMock) AddDropConfirmationFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.AddDropConfirmationMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.AddDropConfirmationCounter) == uint64(len(m.AddDropConfirmationMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.AddDropConfirmationMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.AddDropConfirmationCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.AddDropConfirmationFunc != nil {
+		return atomic.LoadUint64(&m.AddDropConfirmationCounter) > 0
+	}
+
+	return true
 }
 
 type mJetKeeperMockAddHotConfirmation struct {
@@ -200,155 +349,6 @@ func (m *JetKeeperMock) AddHotConfirmationFinished() bool {
 	return true
 }
 
-type mJetKeeperMockAddJet struct {
-	mock              *JetKeeperMock
-	mainExpectation   *JetKeeperMockAddJetExpectation
-	expectationSeries []*JetKeeperMockAddJetExpectation
-}
-
-type JetKeeperMockAddJetExpectation struct {
-	input  *JetKeeperMockAddJetInput
-	result *JetKeeperMockAddJetResult
-}
-
-type JetKeeperMockAddJetInput struct {
-	p  context.Context
-	p1 insolar.PulseNumber
-	p2 []insolar.JetID
-}
-
-type JetKeeperMockAddJetResult struct {
-	r error
-}
-
-//Expect specifies that invocation of JetKeeper.AddJet is expected from 1 to Infinity times
-func (m *mJetKeeperMockAddJet) Expect(p context.Context, p1 insolar.PulseNumber, p2 ...insolar.JetID) *mJetKeeperMockAddJet {
-	m.mock.AddJetFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetKeeperMockAddJetExpectation{}
-	}
-	m.mainExpectation.input = &JetKeeperMockAddJetInput{p, p1, p2}
-	return m
-}
-
-//Return specifies results of invocation of JetKeeper.AddJet
-func (m *mJetKeeperMockAddJet) Return(r error) *JetKeeperMock {
-	m.mock.AddJetFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetKeeperMockAddJetExpectation{}
-	}
-	m.mainExpectation.result = &JetKeeperMockAddJetResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of JetKeeper.AddJet is expected once
-func (m *mJetKeeperMockAddJet) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 ...insolar.JetID) *JetKeeperMockAddJetExpectation {
-	m.mock.AddJetFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &JetKeeperMockAddJetExpectation{}
-	expectation.input = &JetKeeperMockAddJetInput{p, p1, p2}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *JetKeeperMockAddJetExpectation) Return(r error) {
-	e.result = &JetKeeperMockAddJetResult{r}
-}
-
-//Set uses given function f as a mock of JetKeeper.AddJet method
-func (m *mJetKeeperMockAddJet) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 ...insolar.JetID) (r error)) *JetKeeperMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.AddJetFunc = f
-	return m.mock
-}
-
-//AddJet implements github.com/insolar/insolar/ledger/heavy/executor.JetKeeper interface
-func (m *JetKeeperMock) AddJet(p context.Context, p1 insolar.PulseNumber, p2 ...insolar.JetID) (r error) {
-	counter := atomic.AddUint64(&m.AddJetPreCounter, 1)
-	defer atomic.AddUint64(&m.AddJetCounter, 1)
-
-	if len(m.AddJetMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.AddJetMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to JetKeeperMock.AddJet. %v %v %v", p, p1, p2)
-			return
-		}
-
-		input := m.AddJetMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, JetKeeperMockAddJetInput{p, p1, p2}, "JetKeeper.AddJet got unexpected parameters")
-
-		result := m.AddJetMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetKeeperMock.AddJet")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.AddJetMock.mainExpectation != nil {
-
-		input := m.AddJetMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, JetKeeperMockAddJetInput{p, p1, p2}, "JetKeeper.AddJet got unexpected parameters")
-		}
-
-		result := m.AddJetMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetKeeperMock.AddJet")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.AddJetFunc == nil {
-		m.t.Fatalf("Unexpected call to JetKeeperMock.AddJet. %v %v %v", p, p1, p2)
-		return
-	}
-
-	return m.AddJetFunc(p, p1, p2...)
-}
-
-//AddJetMinimockCounter returns a count of JetKeeperMock.AddJetFunc invocations
-func (m *JetKeeperMock) AddJetMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.AddJetCounter)
-}
-
-//AddJetMinimockPreCounter returns the value of JetKeeperMock.AddJet invocations
-func (m *JetKeeperMock) AddJetMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.AddJetPreCounter)
-}
-
-//AddJetFinished returns true if mock invocations count is ok
-func (m *JetKeeperMock) AddJetFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.AddJetMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.AddJetCounter) == uint64(len(m.AddJetMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.AddJetMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.AddJetCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.AddJetFunc != nil {
-		return atomic.LoadUint64(&m.AddJetCounter) > 0
-	}
-
-	return true
-}
-
 type mJetKeeperMockTopSyncPulse struct {
 	mock              *JetKeeperMock
 	mainExpectation   *JetKeeperMockTopSyncPulseExpectation
@@ -487,12 +487,12 @@ func (m *JetKeeperMock) TopSyncPulseFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *JetKeeperMock) ValidateCallCounters() {
 
-	if !m.AddHotConfirmationFinished() {
-		m.t.Fatal("Expected call to JetKeeperMock.AddHotConfirmation")
+	if !m.AddDropConfirmationFinished() {
+		m.t.Fatal("Expected call to JetKeeperMock.AddDropConfirmation")
 	}
 
-	if !m.AddJetFinished() {
-		m.t.Fatal("Expected call to JetKeeperMock.AddJet")
+	if !m.AddHotConfirmationFinished() {
+		m.t.Fatal("Expected call to JetKeeperMock.AddHotConfirmation")
 	}
 
 	if !m.TopSyncPulseFinished() {
@@ -516,12 +516,12 @@ func (m *JetKeeperMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *JetKeeperMock) MinimockFinish() {
 
-	if !m.AddHotConfirmationFinished() {
-		m.t.Fatal("Expected call to JetKeeperMock.AddHotConfirmation")
+	if !m.AddDropConfirmationFinished() {
+		m.t.Fatal("Expected call to JetKeeperMock.AddDropConfirmation")
 	}
 
-	if !m.AddJetFinished() {
-		m.t.Fatal("Expected call to JetKeeperMock.AddJet")
+	if !m.AddHotConfirmationFinished() {
+		m.t.Fatal("Expected call to JetKeeperMock.AddHotConfirmation")
 	}
 
 	if !m.TopSyncPulseFinished() {
@@ -542,8 +542,8 @@ func (m *JetKeeperMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
+		ok = ok && m.AddDropConfirmationFinished()
 		ok = ok && m.AddHotConfirmationFinished()
-		ok = ok && m.AddJetFinished()
 		ok = ok && m.TopSyncPulseFinished()
 
 		if ok {
@@ -553,12 +553,12 @@ func (m *JetKeeperMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if !m.AddHotConfirmationFinished() {
-				m.t.Error("Expected call to JetKeeperMock.AddHotConfirmation")
+			if !m.AddDropConfirmationFinished() {
+				m.t.Error("Expected call to JetKeeperMock.AddDropConfirmation")
 			}
 
-			if !m.AddJetFinished() {
-				m.t.Error("Expected call to JetKeeperMock.AddJet")
+			if !m.AddHotConfirmationFinished() {
+				m.t.Error("Expected call to JetKeeperMock.AddHotConfirmation")
 			}
 
 			if !m.TopSyncPulseFinished() {
@@ -577,11 +577,11 @@ func (m *JetKeeperMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *JetKeeperMock) AllMocksCalled() bool {
 
-	if !m.AddHotConfirmationFinished() {
+	if !m.AddDropConfirmationFinished() {
 		return false
 	}
 
-	if !m.AddJetFinished() {
+	if !m.AddHotConfirmationFinished() {
 		return false
 	}
 

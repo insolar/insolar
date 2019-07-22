@@ -261,7 +261,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		h.DropModifier = drops
 		h.PCS = CryptoScheme
 		h.PulseAccessor = Pulses
-		h.CALC = Pulses
 		h.JetModifier = jets
 		h.JetAccessor = jets
 		h.JetKeeper = jetKeeper

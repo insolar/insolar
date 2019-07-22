@@ -34,8 +34,8 @@ import (
 
 // JetKeeper provides a method for adding jet to storage, checking pulse completion and getting access to highest synced pulse.
 type JetKeeper interface {
-	// AddJet performs adding jet to storage and checks pulse completion.
-	AddJet(context.Context, insolar.PulseNumber, ...insolar.JetID) error
+	// AddDropConfirmation performs adding jet to storage and checks pulse completion.
+	AddDropConfirmation(context.Context, insolar.PulseNumber, ...insolar.JetID) error
 	// AddHotConfirmation performs adding hot confirmation to storage and checks pulse completion.
 	AddHotConfirmation(context.Context, insolar.PulseNumber, insolar.JetID) error
 	// TopSyncPulse provides access to highest synced (replicated) pulse.
@@ -83,15 +83,15 @@ func (jk *dbJetKeeper) AddHotConfirmation(ctx context.Context, pn insolar.PulseN
 	return errors.Wrapf(err, "AddHotConfirmation. propagateConsistency returns error")
 }
 
-func (jk *dbJetKeeper) AddJet(ctx context.Context, pn insolar.PulseNumber, jetIDs ...insolar.JetID) error {
+func (jk *dbJetKeeper) AddDropConfirmation(ctx context.Context, pn insolar.PulseNumber, jetIDs ...insolar.JetID) error {
 	jk.Lock()
 	defer jk.Unlock()
 
 	for _, id := range jetIDs {
-		inslogger.FromContext(ctx).Debug("AddJet. pulse: ", pn, ". ID: ", id.DebugString())
+		inslogger.FromContext(ctx).Debug("AddDropConfirmation. pulse: ", pn, ". ID: ", id.DebugString())
 
 		if err := jk.addJet(ctx, pn, id); err != nil {
-			return errors.Wrapf(err, "AddJet. failed to save updated jets")
+			return errors.Wrapf(err, "AddDropConfirmation. failed to save updated jets")
 		}
 	}
 

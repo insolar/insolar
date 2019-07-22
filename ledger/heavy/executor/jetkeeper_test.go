@@ -70,7 +70,7 @@ func TestDbJetKeeper_AddJet(t *testing.T) {
 	f := fuzz.New()
 	f.Fuzz(&pulse)
 	f.Fuzz(&jet)
-	err = jetKeeper.AddJet(ctx, pulse, jet)
+	err = jetKeeper.AddDropConfirmation(ctx, pulse, jet)
 	require.NoError(t, err)
 }
 
@@ -111,7 +111,7 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 	require.NoError(t, err)
 	err = jets.Update(ctx, nextPulse, true, jet)
 	require.NoError(t, err)
-	err = jetKeeper.AddJet(ctx, currentPulse, jet)
+	err = jetKeeper.AddDropConfirmation(ctx, currentPulse, jet)
 	require.NoError(t, err)
 	// it's still top confirmed
 	require.Equal(t, insolar.GenesisPulse.PulseNumber, jetKeeper.TopSyncPulse())
@@ -125,10 +125,10 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 	left, right, err := jets.Split(ctx, futurePulse, jet)
 	require.NoError(t, err)
 
-	err = jetKeeper.AddJet(ctx, nextPulse, left)
+	err = jetKeeper.AddDropConfirmation(ctx, nextPulse, left)
 	require.NoError(t, err)
 	require.Equal(t, currentPulse, jetKeeper.TopSyncPulse())
-	err = jetKeeper.AddJet(ctx, nextPulse, right)
+	err = jetKeeper.AddDropConfirmation(ctx, nextPulse, right)
 	require.NoError(t, err)
 	require.Equal(t, currentPulse, jetKeeper.TopSyncPulse())
 
@@ -188,7 +188,7 @@ func TestDbJetKeeper_TopSyncPulse_FinalizeMultiple(t *testing.T) {
 		err = jetKeeper.AddHotConfirmation(ctx, currentPulse, jet)
 		require.NoError(t, err)
 		require.Equal(t, insolar.GenesisPulse.PulseNumber, jetKeeper.TopSyncPulse())
-		err = jetKeeper.AddJet(ctx, currentPulse, jet)
+		err = jetKeeper.AddDropConfirmation(ctx, currentPulse, jet)
 		require.NoError(t, err)
 		require.Equal(t, currentPulse, jetKeeper.TopSyncPulse())
 	}
@@ -207,13 +207,13 @@ func TestDbJetKeeper_TopSyncPulse_FinalizeMultiple(t *testing.T) {
 		require.NoError(t, err)
 		leftFuture, rightFuture, err := jets.Split(ctx, farFuturePulse, left)
 		require.NoError(t, err)
-		err = jetKeeper.AddJet(ctx, futurePulse, leftFuture)
+		err = jetKeeper.AddDropConfirmation(ctx, futurePulse, leftFuture)
 		require.NoError(t, err)
 		require.Equal(t, currentPulse, jetKeeper.TopSyncPulse())
-		err = jetKeeper.AddJet(ctx, futurePulse, rightFuture)
+		err = jetKeeper.AddDropConfirmation(ctx, futurePulse, rightFuture)
 		require.NoError(t, err)
 		require.Equal(t, currentPulse, jetKeeper.TopSyncPulse())
-		err = jetKeeper.AddJet(ctx, futurePulse, right)
+		err = jetKeeper.AddDropConfirmation(ctx, futurePulse, right)
 		require.Equal(t, currentPulse, jetKeeper.TopSyncPulse())
 
 		err = jetKeeper.AddHotConfirmation(ctx, futurePulse, rightFuture)
@@ -232,10 +232,10 @@ func TestDbJetKeeper_TopSyncPulse_FinalizeMultiple(t *testing.T) {
 
 	// complete next pulse
 	{
-		err = jetKeeper.AddJet(ctx, nextPulse, left)
+		err = jetKeeper.AddDropConfirmation(ctx, nextPulse, left)
 		require.NoError(t, err)
 		require.Equal(t, currentPulse, jetKeeper.TopSyncPulse())
-		err = jetKeeper.AddJet(ctx, nextPulse, right)
+		err = jetKeeper.AddDropConfirmation(ctx, nextPulse, right)
 		require.NoError(t, err)
 
 		err = jetKeeper.AddHotConfirmation(ctx, nextPulse, left)
@@ -264,7 +264,7 @@ func TestDbJetKeeper_Add_CantGetPulse(t *testing.T) {
 	err := jetKeeper.AddHotConfirmation(ctx, pn, insolar.ZeroJetID)
 	require.Error(t, err)
 
-	err = jetKeeper.AddJet(ctx, pn, insolar.ZeroJetID)
+	err = jetKeeper.AddDropConfirmation(ctx, pn, insolar.ZeroJetID)
 	require.Error(t, err)
 
 }

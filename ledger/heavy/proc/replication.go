@@ -120,7 +120,7 @@ func (p *Replication) Proceed(ctx context.Context) error {
 		return errors.Wrapf(err, "failed to split/update jet=%v pulse=%v", dr.JetID.DebugString(), dr.Pulse)
 	}
 
-	if err := p.dep.keeper.AddJet(ctx, dr.Pulse, jetsForKeeper...); err != nil {
+	if err := p.dep.keeper.AddDropConfirmation(ctx, dr.Pulse, jetsForKeeper...); err != nil {
 		return errors.Wrapf(err, "failed to add jet to JetKeeper jet=%v", dr.JetID.DebugString())
 	}
 

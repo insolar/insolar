@@ -57,7 +57,6 @@ type Handler struct {
 
 	DropModifier  drop.Modifier
 	PulseAccessor pulse.Accessor
-	CALC          pulse.Calculator
 	JetModifier   jet.Modifier
 	JetAccessor   jet.Accessor
 	JetKeeper     executor.JetKeeper
@@ -412,7 +411,7 @@ func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Met
 		return
 	}
 
-	logger.Debug("-------------- handleGotHotConfirmation: pulse: ", confirm.Pulse, ". JET_ID: ", confirm.JetID.DebugString())
+	logger.Debug("handleGotHotConfirmation. pulse: ", confirm.Pulse, ". jet: ", confirm.JetID.DebugString())
 
 	err = h.JetKeeper.AddHotConfirmation(ctx, confirm.Pulse, confirm.JetID)
 	if err != nil {
