@@ -91,9 +91,7 @@ type Base struct {
 	Rules               network.Rules               `inject:""`
 	KeyProcessor        insolar.KeyProcessor        `inject:""`
 
-	// DiscoveryBootstrapper bootstrap.DiscoveryBootstrapper `inject:""`
-	bootstrapETA insolar.PulseNumber
-
+	bootstrapETA     insolar.PulseNumber
 	candidateProfile packet.CandidateProfile
 }
 

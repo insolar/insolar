@@ -99,11 +99,6 @@ const (
 
 	reqTimeoutMs int32 = 2000
 	pulseDelta   int32 = 1
-
-	Phase1Timeout  float64 = 0.30
-	Phase2Timeout  float64 = 0.50
-	Phase21Timeout float64 = 0.70
-	Phase3Timeout  float64 = 0.90
 )
 
 type fixture struct {
