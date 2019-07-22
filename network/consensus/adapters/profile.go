@@ -53,6 +53,7 @@ package adapters
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/insolar/insolar/network"
 	"time"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -66,7 +67,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/node"
-	"github.com/insolar/insolar/network/utils"
 )
 
 type StaticProfileExtension struct {
@@ -152,7 +152,7 @@ type StaticProfile struct {
 func NewStaticProfile(networkNode insolar.NetworkNode, certificate insolar.Certificate, keyProcessor insolar.KeyProcessor) *StaticProfile {
 
 	specialRole := member.SpecialRoleNone
-	if utils.IsDiscovery(networkNode.ID(), certificate) {
+	if network.IsDiscovery(networkNode.ID(), certificate) {
 		specialRole = member.SpecialRoleDiscovery
 	}
 

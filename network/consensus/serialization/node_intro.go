@@ -51,6 +51,7 @@
 package serialization
 
 import (
+	"github.com/insolar/insolar/network"
 	"io"
 
 	"github.com/insolar/insolar/insolar"
@@ -58,7 +59,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/utils"
 
 	"github.com/pkg/errors"
 )
@@ -157,7 +157,7 @@ func (bi *NodeBriefIntro) SerializeTo(ctx SerializeContext, writer io.Writer) er
 }
 
 func (bi *NodeBriefIntro) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
-	capture := utils.NewCapturingReader(reader)
+	capture := network.NewCapturingReader(reader)
 
 	if err := read(capture, &bi.PrimaryRoleAndFlags); err != nil {
 		return errors.Wrap(err, "failed to deserialize PrimaryRoleAndFlags")

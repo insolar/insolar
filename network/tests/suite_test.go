@@ -56,6 +56,7 @@ import (
 	"context"
 	"crypto"
 	"fmt"
+	"github.com/insolar/insolar/network/node"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -64,10 +65,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/keystore"
-	"github.com/insolar/insolar/network/node"
-
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/keystore"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/network/servicenetwork"
@@ -195,11 +194,13 @@ func (s *consensusSuite) SetupTest() {
 		bnodes := make([]insolar.NetworkNode, 0)
 		for _, n := range s.fixture().bootstrapNodes {
 
-			sign, err := n.cryptographyService.Sign([]byte{1, 2, 3, 4, 5})
+			data := []byte{1, 2, 3, 4, 5}
+			digest := platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher().Hash(data)
+			sign, err := n.cryptographyService.Sign(data)
 			s.Require().NoError(err)
 
 			origin := n.serviceNetwork.NodeKeeper.GetOrigin()
-			origin.(node.MutableNode).SetSignature(*sign)
+			origin.(node.MutableNode).SetSignature(digest, *sign)
 
 			bnodes = append(bnodes, origin)
 		}
