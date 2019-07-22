@@ -56,8 +56,6 @@ import (
 
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 )
@@ -119,16 +117,13 @@ func (cf *ConsensusControlFeeder) SetOnFinished(f OnFinished) {
 }
 
 func (cf *ConsensusControlFeeder) OnAppliedMembershipProfile(mode member.OpMode, pw member.Power, effectiveSince pulse.Number) {
-}
-
-func (cf *ConsensusControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse.Number) {
-}
-
-func (cf *ConsensusControlFeeder) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
 	cf.mu.RLock()
 	defer cf.mu.RUnlock()
 
-	cf.onFinished(report.PulseNumber)
+	cf.onFinished(effectiveSince)
+}
+
+func (cf *ConsensusControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse.Number) {
 }
 
 func (cf *ConsensusControlFeeder) SetTrafficLimit(level capacity.Level, duration time.Duration) {
@@ -222,6 +217,11 @@ func (cf *InternalControlFeederAdapter) OnAppliedMembershipProfile(mode member.O
 	if pw == 0 && cf.zeroReadyChannel != nil {
 		cf.setHasZero()
 	}
+
+	if mode.IsEvicted() {
+		cf.setHasLeft()
+	}
+
 	cf.ConsensusControlFeeder.OnAppliedMembershipProfile(mode, pw, effectiveSince)
 }
 
@@ -247,16 +247,6 @@ func (cf *InternalControlFeederAdapter) PulseDetected() {
 		cf.setHasZero()
 	}
 	cf.ConsensusControlFeeder.PulseDetected()
-}
-
-func (cf *InternalControlFeederAdapter) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
-	cf.mu.Lock()
-	defer cf.mu.Unlock()
-
-	if report.MemberMode.IsEvicted() {
-		cf.setHasLeft()
-	}
-	cf.ConsensusControlFeeder.ConsensusFinished(report, expectedCensus)
 }
 
 func (cf *InternalControlFeederAdapter) setHasZero() {

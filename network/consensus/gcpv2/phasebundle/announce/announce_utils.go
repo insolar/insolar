@@ -52,7 +52,6 @@ package announce
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
@@ -134,7 +133,6 @@ func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementP
 	nr := na.GetNodeRank()
 
 	if n.GetRank(realm.GetNodeCount()) != nr {
-		fmt.Println(nr)
 		return false, 0, n.Frauds().NewMismatchedNeighbourRank(n.GetReportProfile())
 	}
 
