@@ -51,6 +51,8 @@
 package phasebundle
 
 import (
+	"time"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
@@ -58,7 +60,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/consensus"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/inspectors"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/pulsectl"
-	"time"
 )
 
 const loopingMinimalDelay = 2 * time.Millisecond

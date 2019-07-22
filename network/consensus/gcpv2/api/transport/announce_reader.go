@@ -112,10 +112,6 @@ func (p *JoinerAnnouncement) GetFullIntroduction() FullIntroductionReader {
 	return &fullIntroduction{p.privStaticProfile, p.privStaticProfile.GetExtension()}
 }
 
-func (p *JoinerAnnouncement) GetJoinerSignature() cryptkit.SignatureHolder {
-	return p.joinerSignature
-}
-
 func (p *JoinerAnnouncement) GetBriefIntroduction() BriefIntroductionReader {
 	return p
 }

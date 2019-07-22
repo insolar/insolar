@@ -310,15 +310,15 @@ func (r *ExtendedIntroReader) GetCloudIntroduction() transport.CloudIntroduction
 	}
 }
 
-func (r *ExtendedIntroReader) GetJoinerSecret() cryptkit.SignatureHolder {
+func (r *ExtendedIntroReader) GetJoinerSecret() cryptkit.DigestHolder {
 	if !r.HasJoinerSecret() {
 		return nil
 	}
 
-	return cryptkit.NewSignature(
+	return cryptkit.NewDigest(
 		&r.body.JoinerSecret,
-		r.digester.GetDigestMethod().SignedBy(r.signMethod),
-	).AsSignatureHolder()
+		r.digester.GetDigestMethod(),
+	).AsDigestHolder()
 }
 
 type Phase1PacketReader struct {
@@ -455,6 +455,13 @@ type FullIntroductionReader struct {
 	intro NodeFullIntro
 }
 
+func (r *FullIntroductionReader) GetBriefIntroSignedDigest() cryptkit.SignedDigestHolder {
+	return cryptkit.NewSignedDigest(
+		r.digester.GetDigestOf(bytes.NewReader(r.intro.JoinerData)),
+		cryptkit.NewSignature(&r.intro.JoinerSignature, r.digester.GetDigestMethod().SignedBy(r.signMethod)),
+	).AsSignedDigestHolder()
+}
+
 func (r *FullIntroductionReader) GetStaticNodeID() insolar.ShortNodeID {
 	return r.intro.ShortID
 }
@@ -477,13 +484,6 @@ func (r *FullIntroductionReader) GetNodePublicKey() cryptkit.SignatureKeyHolder 
 
 func (r *FullIntroductionReader) GetDefaultEndpoint() endpoints.Outbound {
 	return adapters.NewOutbound(packets.NodeAddress(r.intro.Endpoint).String())
-}
-
-func (r *FullIntroductionReader) GetJoinerSignature() cryptkit.SignatureHolder {
-	return cryptkit.NewSignature(
-		&r.intro.JoinerSignature,
-		r.digester.GetDigestMethod().SignedBy(r.signMethod),
-	).AsSignatureHolder()
 }
 
 func (r *FullIntroductionReader) GetIssuedAtPulse() pulse.Number {
@@ -553,10 +553,10 @@ func (r *MembershipAnnouncementReader) GetNodeStateHashEvidence() proofs.NodeSta
 		return nil
 	}
 
-	return &NodeStateHashReader{
-		MemberPacketReader: r.MemberPacketReader,
-		gns:                r.body.Announcement.Member.NodeState,
-	}
+	return cryptkit.NewSignedDigest(
+		cryptkit.NewDigest(&r.body.Announcement.Member.NodeState.NodeStateHash, r.digester.GetDigestMethod()),
+		cryptkit.NewSignature(&r.body.Announcement.Member.NodeState.GlobulaNodeStateSignature, r.digester.GetDigestMethod().SignedBy(r.signMethod)),
+	).AsSignedDigestHolder()
 }
 
 func (r *MembershipAnnouncementReader) GetAnnouncementSignature() proofs.MemberAnnouncementSignature {
@@ -628,11 +628,11 @@ func (r *JoinerAnnouncementReader) GetJoinerIntroducedByID() insolar.ShortNodeID
 }
 
 func (r *JoinerAnnouncementReader) HasFullIntro() bool {
-	panic("implement me")
+	return false
 }
 
 func (r *JoinerAnnouncementReader) GetFullIntroduction() transport.FullIntroductionReader {
-	panic("implement me")
+	return nil
 }
 
 func (r *JoinerAnnouncementReader) GetBriefIntroduction() transport.BriefIntroductionReader {
@@ -666,10 +666,10 @@ func (r *NeighbourAnnouncementReader) GetRequestedPower() member.Power {
 }
 
 func (r *NeighbourAnnouncementReader) GetNodeStateHashEvidence() proofs.NodeStateHashEvidence {
-	return &NodeStateHashReader{
-		MemberPacketReader: r.MemberPacketReader,
-		gns:                r.neighbour.Member.NodeState,
-	}
+	return cryptkit.NewSignedDigest(
+		cryptkit.NewDigest(&r.neighbour.Member.NodeState.NodeStateHash, r.digester.GetDigestMethod()),
+		cryptkit.NewSignature(&r.neighbour.Member.NodeState.GlobulaNodeStateSignature, r.digester.GetDigestMethod().SignedBy(r.signMethod)),
+	).AsSignedDigestHolder()
 }
 
 func (r *NeighbourAnnouncementReader) GetAnnouncementSignature() proofs.MemberAnnouncementSignature {
@@ -716,23 +716,4 @@ func (r *NeighbourAnnouncementReader) GetJoinerAnnouncement() transport.JoinerAn
 		MemberPacketReader: r.MemberPacketReader,
 		joiner:             r.body.Announcement.Member.Joiner,
 	}
-}
-
-type NodeStateHashReader struct {
-	MemberPacketReader
-	gns CompactGlobulaNodeState
-}
-
-func (r *NodeStateHashReader) GetNodeStateHash() proofs.NodeStateHash {
-	return cryptkit.NewDigest(
-		&r.gns.NodeStateHash,
-		r.digester.GetDigestMethod(),
-	).AsDigestHolder()
-}
-
-func (r *NodeStateHashReader) GetGlobulaNodeStateSignature() cryptkit.SignatureHolder {
-	return cryptkit.NewSignature(
-		&r.gns.GlobulaNodeStateSignature,
-		r.digester.GetDigestMethod().SignedBy(r.signMethod),
-	).AsSignatureHolder()
 }

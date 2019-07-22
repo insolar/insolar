@@ -98,13 +98,13 @@ func NewPrimingCensusForJoiner(localProfile profiles.StaticProfile, registries c
 	return newPrimingCensus(&pop, registries)
 }
 
-func NewPrimingCensus(intros []profiles.StaticProfile, localNodeIndex int, registries census.VersionedRegistries,
+func NewPrimingCensus(intros []profiles.StaticProfile, localProfile profiles.StaticProfile, registries census.VersionedRegistries,
 	vf cryptkit.SignatureVerifierFactory) *PrimingCensusTemplate {
 
 	if len(intros) == 0 {
 		panic("illegal state")
 	}
-	localID := intros[localNodeIndex].GetStaticNodeID()
+	localID := localProfile.GetStaticNodeID()
 	pop := NewManyNodePopulation(intros, localID, vf)
 	return newPrimingCensus(&pop, registries)
 }

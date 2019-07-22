@@ -93,9 +93,5 @@ func (rs *RoundStrategy) ShuffleNodeSequence(n int, swap func(i, j int)) {
 	rand.Shuffle(n, swap)
 }
 
-func (rs *RoundStrategy) IsEphemeralPulseAllowed() bool {
-	return false
-}
-
 func (rs *RoundStrategy) AdjustConsensusTimings(timings *api.RoundTimings) {
 }

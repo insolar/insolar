@@ -216,16 +216,13 @@ func (c *Installer) createConsensusController(controlFeeder api.ConsensusControl
 	origin := c.dep.NodeKeeper.GetOrigin()
 	knownNodes := c.dep.NodeKeeper.GetAccessor().GetActiveNodes()
 
-	population := adapters.NewPopulation(
-		adapters.NewNodeIntroProfile(origin, certificate, c.dep.KeyProcessor),
-		adapters.NewNodeIntroProfileList(knownNodes, certificate, c.dep.KeyProcessor),
-	)
-
-	consensusChronicles := adapters.NewChronicles(
-		population,
-		c.consensus.nodeProfileFactory,
+	consensusChronicles := adapters.NewChronicles(c.consensus.nodeProfileFactory)
+	adapters.NewCensus(
+		adapters.NewStaticProfile(origin, certificate, c.dep.KeyProcessor),
+		adapters.NewStaticProfileList(knownNodes, certificate, c.dep.KeyProcessor),
 		c.consensus.versionedRegistries,
-	)
+		c.consensus.transportCryptographyFactory,
+	).SetAsActiveTo(consensusChronicles)
 
 	return gcpv2.NewConsensusMemberController(
 		consensusChronicles,
