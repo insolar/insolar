@@ -130,16 +130,11 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 	r.realm.coreRealm.postponedPacketFn = func(packet transport.PacketParser, from endpoints.Inbound, verifyFlags packetrecorder.PacketVerifyFlags) bool {
 		// There is no real context for delayed reprocessing, so we use the round context
 		ctx := r.realm.coreRealm.roundContext
-		select {
-		case <-ctx.Done():
-			return false
-		default:
-			err := r.handlePacket(ctx, packet, from, verifyFlags)
-			if err != nil {
-				inslogger.FromContext(ctx).Error(err)
-			}
-			return true
+		err := r.handlePacket(ctx, packet, from, verifyFlags)
+		if err != nil {
+			inslogger.FromContext(ctx).Error(err)
 		}
+		return true
 	}
 
 	inslogger.FromContext(r.realm.roundContext).Debugf(
@@ -259,9 +254,6 @@ func (r *PhasedRoundController) startFullRealm() {
 }
 
 func (r *PhasedRoundController) HandlePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound) (bool, error) {
-	// if !r.roundWorker.IsRunning() {
-	//	return false, nil
-	// }
 	err := r.handlePacket(ctx, packet, from, packetrecorder.DefaultVerify)
 	return r.roundWorker.IsRunning(), err
 }

@@ -93,7 +93,7 @@ func TestConsensusMain(t *testing.T) {
 	netBuilder.StartPulsar(5, 2, "pulsar0", nodes)
 
 	time.AfterFunc(time.Second, func() {
-		netBuilder.network.DropHost("v0007")
+		netBuilder.network.DropHost("V0007")
 	})
 
 	for {

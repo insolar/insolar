@@ -63,7 +63,7 @@ import (
 type PhaseControllerTemplate struct {
 }
 
-func (c *PhaseControllerTemplate) BeforeStart(realm *FullRealm) {
+func (c *PhaseControllerTemplate) BeforeStart(ctx context.Context, realm *FullRealm) {
 }
 
 func (*PhaseControllerTemplate) StartWorker(ctx context.Context, realm *FullRealm) {
@@ -72,7 +72,7 @@ func (*PhaseControllerTemplate) StartWorker(ctx context.Context, realm *FullReal
 type PrepPhaseControllerTemplate struct {
 }
 
-func (c *PrepPhaseControllerTemplate) BeforeStart(realm *PrepRealm) {
+func (c *PrepPhaseControllerTemplate) BeforeStart(ctx context.Context, realm *PrepRealm) {
 }
 
 func (*PrepPhaseControllerTemplate) StartWorker(ctx context.Context, realm *PrepRealm) {

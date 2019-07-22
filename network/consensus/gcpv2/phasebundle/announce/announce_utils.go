@@ -109,14 +109,15 @@ func ApplyUnknownAnnouncement(ctx context.Context, announcerID insolar.ShortNode
 	// TODO verify announcement content and signature
 
 	purgatory := realm.GetPurgatory()
-	if reader.HasFullIntro() {
+	switch {
+	case reader.HasFullIntro():
 		full := reader.GetFullIntroduction()
 		intro := realm.GetProfileFactory().CreateFullIntroProfile(full)
 		return purgatory.SelfFromMemberAnnouncement(ctx, announcerID, intro, nr, ma)
-	} else if brief != nil {
+	case brief != nil:
 		intro := realm.GetProfileFactory().CreateBriefIntroProfile(brief)
 		return purgatory.SelfFromMemberAnnouncement(ctx, announcerID, intro, nr, ma)
-	} else {
+	default:
 		return purgatory.SelfFromMemberAnnouncement(ctx, announcerID, nil, nr, ma)
 	}
 }
