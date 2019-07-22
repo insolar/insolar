@@ -67,16 +67,23 @@ func New(rootDomain insolar.Reference, name string, key string, burnAddress stri
 	}, nil
 }
 
-func (m *Member) verifySig(publicKey string, rawRequest []byte, signature string, selfSigned bool) error {
+func (m *Member) verifySig(request Request, rawRequest []byte, signature string, selfSigned bool) error {
 	key, err := m.GetPublicKey()
 	if err != nil {
 		return fmt.Errorf("[ verifySig ]: %s", err.Error())
 	}
 
-	return foundation.VerifySignature(rawRequest, signature, key, publicKey, selfSigned)
+	return foundation.VerifySignature(rawRequest, signature, key, request.Params.PublicKey, selfSigned)
 }
 
 var INSATTR_Call_API = true
+
+type Request struct {
+	JSONRPC string `json:"jsonrpc"`
+	ID      int    `json:"id"`
+	Method  string `json:"method"`
+	Params  Params `json:"params"`
+}
 
 type Params struct {
 	Seed       string      `json:"seed"`
@@ -100,13 +107,13 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 		return nil, fmt.Errorf("failed to decode: %s", err.Error())
 	}
 
-	params := Params{}
-	err = json.Unmarshal(rawRequest, &params)
+	request := Request{}
+	err = json.Unmarshal(rawRequest, &request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal: %s", err.Error())
 	}
 
-	switch params.CallSite {
+	switch request.Params.CallSite {
 	case "member.create":
 		selfSigned = true
 	case "member.migrationCreate":
@@ -115,39 +122,39 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 		selfSigned = true
 	}
 
-	err = m.verifySig(params.PublicKey, rawRequest, signature, selfSigned)
+	err = m.verifySig(request, rawRequest, signature, selfSigned)
 	if err != nil {
 		return nil, fmt.Errorf("error while verify signature: %s", err.Error())
 	}
 
-	switch params.CallSite {
+	switch request.Params.CallSite {
 	case "CreateHelloWorld":
 		return rootdomain.GetObject(m.RootDomain).CreateHelloWorld()
 	case "member.create":
-		return m.contractCreateMember(params.PublicKey)
+		return m.contractCreateMember(request.Params.PublicKey)
 	case "member.migrationCreate":
-		return m.memberMigrationCreate(params.PublicKey)
+		return m.memberMigrationCreate(request.Params.PublicKey)
 	case "member.get":
-		return m.memberGet(params.PublicKey)
+		return m.memberGet(request.Params.PublicKey)
 	}
 
-	callParams := params.CallParams.(map[string]interface{})
+	params := request.Params.CallParams.(map[string]interface{})
 
-	switch params.CallSite {
+	switch request.Params.CallSite {
 	case "contract.registerNode":
-		return m.registerNodeCall(callParams)
+		return m.registerNodeCall(params)
 	case "contract.getNodeRef":
-		return m.getNodeRefCall(callParams)
+		return m.getNodeRefCall(params)
 	case "migration.addBurnAddresses":
-		return m.addBurnAddressesCall(callParams)
+		return m.addBurnAddressesCall(params)
 	case "wallet.getBalance":
-		return getBalanceCall(callParams)
+		return getBalanceCall(params)
 	case "member.transfer":
-		return m.transferCall(callParams)
+		return m.transferCall(params)
 	case "deposit.migration":
-		return m.migrationCall(callParams)
+		return m.migrationCall(params)
 	}
-	return nil, fmt.Errorf("unknown method: '%s'", params.CallSite)
+	return nil, fmt.Errorf("unknown method: '%s'", request.Params.CallSite)
 }
 
 func (m *Member) getNodeRefCall(params map[string]interface{}) (interface{}, error) {

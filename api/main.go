@@ -152,7 +152,7 @@ func (ar *Runner) Start(ctx context.Context) error {
 	ar.SeedManager = seedmanager.New()
 
 	router.HandleFunc("/healthcheck", hc.CheckHandler)
-	router.HandleFunc(ar.cfg.Call, ar.callHandler())
+	// router.HandleFunc(ar.cfg.Call, ar.callHandler())
 	router.Handle(ar.cfg.RPC, ar.rpcServer)
 
 	inslog := inslogger.FromContext(ctx)

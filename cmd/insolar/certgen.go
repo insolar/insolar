@@ -81,7 +81,7 @@ func (g *certGen) registerNode() insolar.Reference {
 	request := requester.Request{
 		JSONRPC: JSONRPCVersion,
 		ID:      1,
-		Method:  "api.call",
+		Method:  "contract.call",
 		Params: requester.Params{
 			CallSite:   "contract.registerNode",
 			CallParams: map[string]string{"publicKey": string(keySerialized), "role": g.staticRole.String()},
@@ -197,7 +197,7 @@ func (g *certGen) getNodeRefByPublicKey() insolar.Reference {
 	request := requester.Request{
 		JSONRPC: JSONRPCVersion,
 		ID:      1,
-		Method:  "api.call",
+		Method:  "contract.call",
 		Params: requester.Params{
 			CallSite:   "contract.getNodeRef",
 			CallParams: []interface{}{keySerialized},

@@ -202,7 +202,7 @@ func createMember(sendURL string, userName string, serverLogLevel string) {
 	req := requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
-		Method:  "api.call",
+		Method:  "contract.call",
 		Params: requester.Params{
 			CallSite:   "member.create",
 			CallParams: []interface{}{userName, cfg.PublicKey},

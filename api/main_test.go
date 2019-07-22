@@ -18,32 +18,24 @@ package api
 
 import (
 	"context"
-	"io/ioutil"
 	"net/http"
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/configuration"
 )
 
 const HOST = "http://localhost:19101"
-const TestUrl = HOST + "/api/call"
+const TestUrl = HOST + "/api/rpc"
 
 type MainAPISuite struct {
 	suite.Suite
-}
-
-func (suite *MainAPISuite) TestGetRequest() {
-	resp, err := http.Get(TestUrl)
-	suite.NoError(err)
-	body, err := ioutil.ReadAll(resp.Body)
-	suite.NoError(err)
-	suite.Contains(string(body[:]), `failed to unmarshal request: [ UnmarshalRequest ] Empty body`)
 }
 
 func (suite *MainAPISuite) TestSerialization() {

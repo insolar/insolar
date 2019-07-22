@@ -40,7 +40,6 @@ import (
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 )
@@ -84,11 +83,11 @@ func (ar *Runner) checkSeed(paramsSeed string) (insolar.PulseNumber, error) {
 	return 0, errors.New("[ checkSeed ] Incorrect seed")
 }
 
-func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBody []byte, signature string, pulseTimeStamp int64, seedPulse insolar.PulseNumber) (interface{}, error) {
-	ctx, span := instracer.StartSpan(ctx, "SendRequest "+request.Method)
+func (ar *Runner) makeCall(ctx context.Context, method string, params requester.Params, rawBody []byte, signature string, pulseTimeStamp int64, seedPulse insolar.PulseNumber) (interface{}, error) {
+	ctx, span := instracer.StartSpan(ctx, "SendRequest "+method)
 	defer span.End()
 
-	reference, err := insolar.NewReferenceFromBase58(request.Params.Reference)
+	reference, err := insolar.NewReferenceFromBase58(params.Reference)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] failed to parse params.Reference")
 	}
@@ -185,87 +184,87 @@ func contains(s []string, e string) bool {
 	return false
 }
 
-func setRootReferenceIfNeeded(request *requester.Request) {
-	if request.Params.Reference != "" {
+func setRootReferenceIfNeeded(params *requester.Params) {
+	if params.Reference != "" {
 		return
 	}
 	methods := []string{"member.create", "member.migrationCreate", "member.get"}
-	if contains(methods, request.Params.CallSite) {
-		request.Params.Reference = genesisrefs.ContractRootMember.String()
+	if contains(methods, params.CallSite) {
+		params.Reference = genesisrefs.ContractRootMember.String()
 	}
 }
 
-func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
-	return func(response http.ResponseWriter, req *http.Request) {
-		traceID := utils.RandTraceID()
-		ctx, insLog := inslogger.WithTraceField(context.Background(), traceID)
-
-		ctx, span := instracer.StartSpan(ctx, "callHandler")
-		defer span.End()
-
-		contractRequest := &requester.Request{}
-		contractAnswer := &requester.ContractAnswer{}
-		defer writeResponse(insLog, response, contractAnswer)
-
-		startTime := time.Now()
-		defer observeResultStatus(contractRequest.Method, contractAnswer, startTime)
-
-		insLog.Infof("[ callHandler ] Incoming contractRequest: %s", req.RequestURI)
-
-		ctx, rawBody, err := processRequest(ctx, req, contractRequest, contractAnswer)
-		if err != nil {
-			processError(err, err.Error(), contractAnswer, insLog, traceID)
-			return
-		}
-
-		if contractRequest.Params.Test != "" {
-			insLog.Infof("Request related to %s", contractRequest.Params.Test)
-		}
-
-		if contractRequest.Method != "api.call" {
-			err := errors.New("rpc method does not exist")
-			processError(err, err.Error(), contractAnswer, insLog, traceID)
-			return
-		}
-
-		signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), rawBody)
-		if err != nil {
-			processError(err, err.Error(), contractAnswer, insLog, traceID)
-			return
-		}
-
-		seedPulse, err := ar.checkSeed(contractRequest.Params.Seed)
-		if err != nil {
-			processError(err, err.Error(), contractAnswer, insLog, traceID)
-			return
-		}
-
-		setRootReferenceIfNeeded(contractRequest)
-
-		var result interface{}
-		ch := make(chan interface{}, 1)
-		go func() {
-			result, err = ar.makeCall(ctx, *contractRequest, rawBody, signature, 0, seedPulse)
-			ch <- nil
-		}()
-		select {
-
-		case <-ch:
-			if err != nil {
-				processError(err, err.Error(), contractAnswer, insLog, traceID)
-				return
-			}
-			contractResult := &requester.Result{ContractResult: result, TraceID: traceID}
-			contractAnswer.Result = contractResult
-			return
-
-		case <-time.After(ar.timeout):
-			errResponse := &requester.Error{Message: "API timeout exceeded", Code: TimeoutError, Data: requester.Data{TraceID: traceID}}
-			contractAnswer.Error = errResponse
-			return
-		}
-	}
-}
+// func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
+// 	return func(response http.ResponseWriter, req *http.Request) {
+// 		traceID := utils.RandTraceID()
+// 		ctx, insLog := inslogger.WithTraceField(context.Background(), traceID)
+//
+// 		ctx, span := instracer.StartSpan(ctx, "callHandler")
+// 		defer span.End()
+//
+// 		contractRequest := &requester.Request{}
+// 		contractAnswer := &requester.ContractAnswer{}
+// 		defer writeResponse(insLog, response, contractAnswer)
+//
+// 		startTime := time.Now()
+// 		defer observeResultStatus(contractRequest.Method, contractAnswer, startTime)
+//
+// 		insLog.Infof("[ callHandler ] Incoming contractRequest: %s", req.RequestURI)
+//
+// 		ctx, rawBody, err := processRequest(ctx, req, contractRequest, contractAnswer)
+// 		if err != nil {
+// 			processError(err, err.Error(), contractAnswer, insLog, traceID)
+// 			return
+// 		}
+//
+// 		if contractRequest.Params.Test != "" {
+// 			insLog.Infof("Request related to %s", contractRequest.Params.Test)
+// 		}
+//
+// 		if contractRequest.Method != "contract.call" {
+// 			err := errors.New("rpc method does not exist")
+// 			processError(err, err.Error(), contractAnswer, insLog, traceID)
+// 			return
+// 		}
+//
+// 		signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), rawBody)
+// 		if err != nil {
+// 			processError(err, err.Error(), contractAnswer, insLog, traceID)
+// 			return
+// 		}
+//
+// 		seedPulse, err := ar.checkSeed(contractRequest.Params.Seed)
+// 		if err != nil {
+// 			processError(err, err.Error(), contractAnswer, insLog, traceID)
+// 			return
+// 		}
+//
+// 		setRootReferenceIfNeeded(contractRequest)
+//
+// 		var result interface{}
+// 		ch := make(chan interface{}, 1)
+// 		go func() {
+// 			result, err = ar.makeCall(ctx, *contractRequest, rawBody, signature, 0, seedPulse)
+// 			ch <- nil
+// 		}()
+// 		select {
+//
+// 		case <-ch:
+// 			if err != nil {
+// 				processError(err, err.Error(), contractAnswer, insLog, traceID)
+// 				return
+// 			}
+// 			contractResult := &requester.Result{ContractResult: result, TraceID: traceID}
+// 			contractAnswer.Result = contractResult
+// 			return
+//
+// 		case <-time.After(ar.timeout):
+// 			errResponse := &requester.Error{Message: "API timeout exceeded", Code: TimeoutError, Data: requester.Data{TraceID: traceID}}
+// 			contractAnswer.Error = errResponse
+// 			return
+// 		}
+// 	}
+// }
 
 func validateRequestHeaders(digest string, richSignature string, body []byte) (string, error) {
 	// Digest = "SHA-256=<hashString>"

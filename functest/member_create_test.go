@@ -31,7 +31,7 @@ func TestMemberCreate(t *testing.T) {
 	result, err := retryableMemberCreate(member, true)
 	require.NoError(t, err)
 	output, ok := result.(map[string]interface{})
-	require.True(t, ok)
+	require.True(t, ok, fmt.Sprintf("failed to decode result: expected map[string]interface{}, got %T", result))
 	require.NotEqual(t, "", output["reference"])
 }
 

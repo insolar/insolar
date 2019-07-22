@@ -18,9 +18,8 @@ package api
 
 import (
 	"context"
-	"errors"
+	"encoding/json"
 	"net/http"
-	"time"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar/utils"
@@ -44,73 +43,64 @@ func NewContractService(runner *Runner) *ContractService {
 // 	return nil
 // }
 
-func (cs *ContractService) Call(req *http.Request, args *requester.Params, contractAnswer *requester.ContractAnswer) error {
+func (cs *ContractService) Call(req *http.Request, args *requester.Params, result *requester.Result) error {
 
 	traceID := utils.RandTraceID()
 	ctx, insLog := inslogger.WithTraceField(context.Background(), traceID)
 
 	ctx, span := instracer.StartSpan(ctx, "callHandler")
 	defer span.End()
-
-	contractRequest := &requester.Request{}
+	//
+	// contractRequest := &requester.Request{}
 	// contractAnswer := &requester.ContractAnswer{}
 	// defer writeResponse(insLog, response, contractAnswer)
 
-	startTime := time.Now()
-	defer observeResultStatus(contractRequest.Method, contractAnswer, startTime)
+	// startTime := time.Now()
+	// defer observeResultStatus(contractRequest.Method, contractAnswer, startTime)
 
 	insLog.Infof("[ ContractService.Call ] Incoming request: %s", req.RequestURI)
 
-	ctx, rawBody, err := processRequest(ctx, req, contractRequest, contractAnswer)
-	if err != nil {
-		processError(err, err.Error(), contractAnswer, insLog, traceID)
-		return err
-	}
+	// ctx, rawBody, err := processRequest(ctx, req, contractRequest, result)
+	// if err != nil {
+	// 	processError(err, err.Error(), contractAnswer, insLog, traceID)
+	// 	return err
+	// }
 
-	if contractRequest.Params.Test != "" {
-		insLog.Infof("Request related to %s", contractRequest.Params.Test)
+	if args.Test != "" {
+		insLog.Infof("Request related to %s", args.Test)
 	}
 	//
-	// if contractRequest.Method != "api.call" {
+	// if contractRequest.Method != "contract.call" {
 	// 	err := errors.New("rpc method does not exist")
 	// 	processError(err, err.Error(), contractAnswer, insLog, traceID)
 	// 	return err
 	// }
 
+	rawBody, err := json.Marshal(requester.Request{
+		JSONRPC: "2.0",
+		ID:      1,
+		Method:  "contract.call",
+		Params:  *args,
+	})
+
 	signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), rawBody)
 	if err != nil {
-		processError(err, err.Error(), contractAnswer, insLog, traceID)
 		return err
 	}
 
-	seedPulse, err := cs.runner.checkSeed(contractRequest.Params.Seed)
+	seedPulse, err := cs.runner.checkSeed(args.Seed)
 	if err != nil {
-		processError(err, err.Error(), contractAnswer, insLog, traceID)
 		return err
 	}
 
-	setRootReferenceIfNeeded(contractRequest)
+	setRootReferenceIfNeeded(args)
 
-	var result interface{}
-	ch := make(chan interface{}, 1)
-	go func() {
-		result, err = cs.runner.makeCall(ctx, *contractRequest, rawBody, signature, 0, seedPulse)
-		ch <- nil
-	}()
-	select {
-
-	case <-ch:
-		if err != nil {
-			processError(err, err.Error(), contractAnswer, insLog, traceID)
-			return err
-		}
-		contractResult := &requester.Result{ContractResult: result, TraceID: traceID}
-		contractAnswer.Result = contractResult
-		return nil
-
-	case <-time.After(cs.runner.timeout):
-		errResponse := &requester.Error{Message: "API timeout exceeded", Code: TimeoutError, Data: requester.Data{TraceID: traceID}}
-		contractAnswer.Error = errResponse
-		return errors.New(errResponse.Message)
+	callResult, err := cs.runner.makeCall(ctx, "contract.call", *args, rawBody, signature, 0, seedPulse)
+	if err != nil {
+		return err
 	}
+
+	result = &requester.Result{ContractResult: callResult, TraceID: traceID}
+
+	return nil
 }
