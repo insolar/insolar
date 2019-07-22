@@ -188,11 +188,11 @@ message HotObjects {
     repeated record.Index Indexes = 23 [(gogoproto.nullable) = false];
 }
 
-
 message GetRequest {
     uint32 Polymorph = 16;
 
-    bytes RequestID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes ObjectID  = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes RequestID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
 }
 
 message Request {

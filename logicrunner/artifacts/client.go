@@ -409,19 +409,14 @@ func (m *client) GetIncomingRequest(
 		instrumenter.end()
 	}()
 
-	requestID := reqRef.Record()
-	node, err := m.JetCoordinator.NodeForObject(ctx, *object.Record(), requestID.Pulse())
-	if err != nil {
-		return nil, err
-	}
-
 	msg, err := payload.NewMessage(&payload.GetRequest{
-		RequestID: *requestID,
+		ObjectID:  *object.Record(),
+		RequestID: *reqRef.Record(),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create a message")
 	}
-	reps, done := m.sender.SendTarget(ctx, msg, *node)
+	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, object)
 	defer done()
 	res, ok := <-reps
 	if !ok {
