@@ -207,8 +207,8 @@ func createMember(sendURL string, userName string, serverLogLevel string) {
 			CallSite:   "member.create",
 			CallParams: []interface{}{userName, cfg.PublicKey},
 			PublicKey:  ucfg.PublicKey,
+			LogLevel:   logLevelInsolar.String(),
 		},
-		LogLevel: logLevelInsolar.String(),
 	}
 
 	r, err := requester.Send(ctx, sendURL, ucfg, &req)

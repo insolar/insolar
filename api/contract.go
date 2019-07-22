@@ -67,8 +67,8 @@ func (cs *ContractService) Call(req *http.Request, args *requester.Params, contr
 		return err
 	}
 
-	if contractRequest.Test != "" {
-		insLog.Infof("Request related to %s", contractRequest.Test)
+	if contractRequest.Params.Test != "" {
+		insLog.Infof("Request related to %s", contractRequest.Params.Test)
 	}
 	//
 	// if contractRequest.Method != "api.call" {

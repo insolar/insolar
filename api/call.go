@@ -165,8 +165,8 @@ func processRequest(ctx context.Context,
 	contractAnswer.JSONRPC = contractRequest.JSONRPC
 	contractAnswer.ID = contractRequest.ID
 
-	if len(contractRequest.LogLevel) > 0 {
-		logLevelNumber, err := insolar.ParseLevel(contractRequest.LogLevel)
+	if len(contractRequest.Params.LogLevel) > 0 {
+		logLevelNumber, err := insolar.ParseLevel(contractRequest.Params.LogLevel)
 		if err != nil {
 			return ctx, nil, errors.Wrap(err, "failed to parse logLevel")
 		}
@@ -218,8 +218,8 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		if contractRequest.Test != "" {
-			insLog.Infof("Request related to %s", contractRequest.Test)
+		if contractRequest.Params.Test != "" {
+			insLog.Infof("Request related to %s", contractRequest.Params.Test)
 		}
 
 		if contractRequest.Method != "api.call" {

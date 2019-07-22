@@ -30,12 +30,10 @@ import (
 
 // Request is a representation of request struct to api
 type Request struct {
-	JSONRPC  string `json:"jsonrpc"`
-	ID       int    `json:"id"`
-	Method   string `json:"method"`
-	Params   Params `json:"params"`
-	LogLevel string `json:"logLevel,omitempty"`
-	Test     string `json:"test,omitempty"`
+	JSONRPC string `json:"jsonrpc"`
+	ID      int    `json:"id"`
+	Method  string `json:"method"`
+	Params  Params `json:"params"`
 }
 
 type Params struct {
@@ -44,6 +42,8 @@ type Params struct {
 	CallParams interface{} `json:"callParams"`
 	Reference  string      `json:"reference"`
 	PublicKey  string      `json:"publicKey"`
+	LogLevel   string      `json:"logLevel,omitempty"`
+	Test       string      `json:"test,omitempty"`
 }
 
 type ContractAnswer struct {

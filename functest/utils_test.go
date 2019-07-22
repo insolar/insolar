@@ -259,8 +259,7 @@ func signedRequest(user *user, method string, params interface{}) (interface{}, 
 			JSONRPC: "2.0",
 			ID:      1,
 			Method:  "contract.call",
-			Params:  requester.Params{CallSite: method, CallParams: params, PublicKey: user.pubKey},
-			Test:    caller,
+			Params:  requester.Params{CallSite: method, CallParams: params, PublicKey: user.pubKey, Test: caller},
 		})
 
 		if err != nil {
