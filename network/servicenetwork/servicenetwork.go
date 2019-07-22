@@ -345,6 +345,9 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insol
 
 	if !n.cfg.Service.ConsensusEnabled {
 		logger.Warn("Consensus is disabled")
+		if n.TerminationHandler.Terminating() {
+			n.TerminationHandler.OnLeaveApproved(ctx)
+		}
 		return
 	}
 
