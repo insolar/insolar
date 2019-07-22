@@ -71,7 +71,6 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/controller"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/routing"
@@ -232,7 +231,8 @@ func (n *ServiceNetwork) Leave(ctx context.Context, eta insolar.PulseNumber) {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("Gracefully stopping service network")
 
-	n.NodeKeeper.GetClaimQueue().Push(&packets.NodeLeaveClaim{ETA: eta})
+	// TODO: fix leave
+	//n.consensusController.Leave(0)
 }
 
 func (n *ServiceNetwork) GracefulStop(ctx context.Context) error {
@@ -284,7 +284,7 @@ func (n *ServiceNetwork) ChangePulse(ctx context.Context, newPulse insolar.Pulse
 }
 
 func (n *ServiceNetwork) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
-	err := n.NodeKeeper.Sync(ctx, nodes, nil)
+	err := n.NodeKeeper.Sync(ctx, nodes)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(err)
 	}

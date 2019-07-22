@@ -87,10 +87,32 @@ message ReconnectRequest {
     Permit Permit = 2;
 }
 
+enum PrimaryRole {
+	Inactive = 0;
+    Neutral = 1;
+    HeavyMaterial = 2;
+    LightMaterial = 3;
+    Virtual = 4;
+}
+
+enum SpecialRole {
+    None = 0;
+    Discovery = 1;
+}
+
+message CandidateProfile {
+    string Address = 1;
+    bytes Ref = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    uint32 ShortID = 3;
+    PrimaryRole PrimaryRole = 4;
+    SpecialRole SpecialRole = 5;
+    bytes Signature = 6;
+}
+
 message BootstrapRequest {
-    bytes JoinClaim = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/network/consensusv1/packets.NodeJoinClaim"];
-    pulse.PulseProto Pulse = 2 [(gogoproto.nullable) = false];
-    Permit Permit = 3;
+    CandidateProfile CandidateProfile = 2 [(gogoproto.nullable) = false];
+    pulse.PulseProto Pulse = 3 [(gogoproto.nullable) = false];
+    Permit Permit = 4;
 }
 
 message AuthorizeData {

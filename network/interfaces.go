@@ -56,7 +56,6 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
@@ -134,14 +133,10 @@ type NodeKeeper interface {
 	// GetAccessor get accessor to the internal snapshot for the current pulse
 	// TODO: add pulse to the function signature to get data of various pulses
 	GetAccessor() Accessor
-	// GetOriginJoinClaim get origin NodeJoinClaim
-	GetOriginJoinClaim() (*packets.NodeJoinClaim, error)
-	// GetClaimQueue get the internal queue of claims
-	GetClaimQueue() ClaimQueue
 	// GetSnapshotCopy get copy of the current nodekeeper snapshot
 	GetSnapshotCopy() *node.Snapshot
 	// Sync move unsync -> sync
-	Sync(context.Context, []insolar.NetworkNode, []packets.ReferendumClaim) error
+	Sync(context.Context, []insolar.NetworkNode) error
 	// MoveSyncToActive merge sync list with active nodes
 	MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error
 }
@@ -161,22 +156,6 @@ type RoutingTable interface {
 	AddToKnownHosts(*host.Host)
 	// Rebalance recreate shards of routing table with known hosts according to new partition policy.
 	Rebalance(PartitionPolicy)
-}
-
-//go:generate minimock -i github.com/insolar/insolar/network.ClaimQueue -o ../testutils/network -s _mock.go
-
-// ClaimQueue is the queue that contains consensus claims.
-type ClaimQueue interface {
-	// Pop takes claim from the queue.
-	Pop() packets.ReferendumClaim
-	// Front returns claim from the queue without removing it from the queue.
-	Front() packets.ReferendumClaim
-	// Length returns the length of the queue
-	Length() int
-	// Push adds claim to the queue.
-	Push(claim packets.ReferendumClaim)
-	// Clear removes all claims from queue
-	Clear()
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network.Accessor -o ../testutils/network -s _mock.go
@@ -237,9 +216,6 @@ type Auther interface {
 	// ValidateCert checks certificate signature
 	// TODO make this cert.validate()
 	ValidateCert(context.Context, insolar.AuthorizationCertificate) (bool, error)
-
-	// FilterJoinerNodes returns nodes which allowed to connect to this network in this state.
-	FilterJoinerNodes(certificate insolar.Certificate, nodes []insolar.NetworkNode) []insolar.NetworkNode
 }
 
 // Bootstrapper interface used to change behavior of handlers in different network states

@@ -60,7 +60,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-	"github.com/insolar/insolar/network/consensusv1/packets"
 	"time"
 )
 
@@ -70,8 +69,8 @@ func NewCandidateProfile(
 	id insolar.ShortNodeID,
 	primaryRole member.PrimaryRole,
 	specialRole member.SpecialRole,
-) *CandidatProfile {
-	return &CandidatProfile{
+) *CandidateProfile {
+	return &CandidateProfile{
 		n:           NewOutbound(address),
 		id:          id,
 		primaryRole: primaryRole,
@@ -80,33 +79,33 @@ func NewCandidateProfile(
 	}
 }
 
-func NewCandidateProfileFromJoinClaim(joinClaim *packets.NodeJoinClaim, isDiscovery bool) *CandidatProfile {
-	specialRole := member.SpecialRoleNone
-	if isDiscovery {
-		specialRole = member.SpecialRoleDiscovery
-	}
+//func NewCandidateProfileFromJoinClaim(joinClaim *packets.NodeJoinClaim, isDiscovery bool) *CandidateProfile {
+//	specialRole := member.SpecialRoleNone
+//	if isDiscovery {
+//		specialRole = member.SpecialRoleDiscovery
+//	}
+//
+//	primaryRole := member.PrimaryRoleNeutral
+//	switch joinClaim.NodeRoleRecID {
+//	case insolar.StaticRoleVirtual:
+//		primaryRole = member.PrimaryRoleVirtual
+//	case insolar.StaticRoleHeavyMaterial:
+//		primaryRole = member.PrimaryRoleHeavyMaterial
+//	case insolar.StaticRoleLightMaterial:
+//		primaryRole = member.PrimaryRoleLightMaterial
+//	default:
+//	}
+//
+//	return &CandidateProfile{
+//		n:           NewOutbound(joinClaim.NodeAddress.String()),
+//		id:          joinClaim.ShortNodeID,
+//		primaryRole: primaryRole,
+//		specialRole: specialRole,
+//		ref:         joinClaim.NodeRef,
+//	}
+//}
 
-	primaryRole := member.PrimaryRoleNeutral
-	switch joinClaim.NodeRoleRecID {
-	case insolar.StaticRoleVirtual:
-		primaryRole = member.PrimaryRoleVirtual
-	case insolar.StaticRoleHeavyMaterial:
-		primaryRole = member.PrimaryRoleHeavyMaterial
-	case insolar.StaticRoleLightMaterial:
-		primaryRole = member.PrimaryRoleLightMaterial
-	default:
-	}
-
-	return &CandidatProfile{
-		n:           NewOutbound(joinClaim.NodeAddress.String()),
-		id:          joinClaim.ShortNodeID,
-		primaryRole: primaryRole,
-		specialRole: specialRole,
-		ref:         joinClaim.NodeRef,
-	}
-}
-
-type CandidatProfile struct {
+type CandidateProfile struct {
 	n           endpoints.Outbound
 	id          insolar.ShortNodeID
 	primaryRole member.PrimaryRole
@@ -114,50 +113,50 @@ type CandidatProfile struct {
 	ref         insolar.Reference
 }
 
-func (c *CandidatProfile) GetJoinerSignature() cryptkit.SignatureHolder {
+func (c *CandidateProfile) GetJoinerSignature() cryptkit.SignatureHolder {
 	return nil
 }
 
-func (c *CandidatProfile) GetIssuedAtPulse() pulse.Number {
+func (c *CandidateProfile) GetIssuedAtPulse() pulse.Number {
 	return 0
 }
 
-func (c *CandidatProfile) GetIssuedAtTime() time.Time {
+func (c *CandidateProfile) GetIssuedAtTime() time.Time {
 	return time.Now()
 }
 
-func (c *CandidatProfile) GetPowerLevels() member.PowerSet {
+func (c *CandidateProfile) GetPowerLevels() member.PowerSet {
 	return member.PowerSet{0, 0, 0, 0xFF}
 }
 
-func (c *CandidatProfile) GetExtraEndpoints() []endpoints.Outbound {
+func (c *CandidateProfile) GetExtraEndpoints() []endpoints.Outbound {
 	return nil
 }
 
-func (c *CandidatProfile) GetIssuerID() insolar.ShortNodeID {
+func (c *CandidateProfile) GetIssuerID() insolar.ShortNodeID {
 	return 0
 }
 
-func (c *CandidatProfile) GetIssuerSignature() cryptkit.SignatureHolder {
+func (c *CandidateProfile) GetIssuerSignature() cryptkit.SignatureHolder {
 	return nil
 }
 
-func (c *CandidatProfile) GetNodePublicKey() cryptkit.SignatureKeyHolder {
+func (c *CandidateProfile) GetNodePublicKey() cryptkit.SignatureKeyHolder {
 	v := &longbits.Bits512{}
 	longbits.FillBitsWithStaticNoise(uint32(c.id), v[:])
 	k := cryptkit.NewSignatureKey(v, "stub/stub", cryptkit.PublicAsymmetricKey)
 	return &k
 }
 
-func (c *CandidatProfile) GetStartPower() member.Power {
+func (c *CandidateProfile) GetStartPower() member.Power {
 	return 10
 }
 
-func (c *CandidatProfile) GetReference() insolar.Reference {
+func (c *CandidateProfile) GetReference() insolar.Reference {
 	return c.ref
 }
 
-func (c *CandidatProfile) ConvertPowerRequest(request power.Request) member.Power {
+func (c *CandidateProfile) ConvertPowerRequest(request power.Request) member.Power {
 	if ok, cl := request.AsCapacityLevel(); ok {
 		return member.PowerOf(uint16(cl.DefaultPercent()))
 	}
@@ -165,43 +164,43 @@ func (c *CandidatProfile) ConvertPowerRequest(request power.Request) member.Powe
 	return pw
 }
 
-func (c *CandidatProfile) GetPrimaryRole() member.PrimaryRole {
+func (c *CandidateProfile) GetPrimaryRole() member.PrimaryRole {
 	return c.primaryRole
 }
 
-func (c *CandidatProfile) GetSpecialRoles() member.SpecialRole {
+func (c *CandidateProfile) GetSpecialRoles() member.SpecialRole {
 	return c.specialRole
 }
 
-func (*CandidatProfile) IsAllowedPower(p member.Power) bool {
+func (*CandidateProfile) IsAllowedPower(p member.Power) bool {
 	return true
 }
 
-func (c *CandidatProfile) GetDefaultEndpoint() endpoints.Outbound {
+func (c *CandidateProfile) GetDefaultEndpoint() endpoints.Outbound {
 	return c.n
 }
 
-func (*CandidatProfile) GetPublicKeyStore() cryptkit.PublicKeyStore {
+func (*CandidateProfile) GetPublicKeyStore() cryptkit.PublicKeyStore {
 	return nil
 }
 
-func (c *CandidatProfile) IsAcceptableHost(from endpoints.Inbound) bool {
+func (c *CandidateProfile) IsAcceptableHost(from endpoints.Inbound) bool {
 	addr := c.n.GetNameAddress()
 	return addr.Equals(from.GetNameAddress())
 }
 
-func (c *CandidatProfile) GetStaticNodeID() insolar.ShortNodeID {
+func (c *CandidateProfile) GetStaticNodeID() insolar.ShortNodeID {
 	return c.id
 }
 
-func (c *CandidatProfile) GetIntroducedNodeID() insolar.ShortNodeID {
+func (c *CandidateProfile) GetIntroducedNodeID() insolar.ShortNodeID {
 	return c.id
 }
 
-func (c *CandidatProfile) GetExtension() profiles.StaticProfileExtension {
+func (c *CandidateProfile) GetExtension() profiles.StaticProfileExtension {
 	return c
 }
 
-func (c *CandidatProfile) String() string {
+func (c *CandidateProfile) String() string {
 	return fmt.Sprintf("{sid:%v, n:%v}", c.id, c.n)
 }

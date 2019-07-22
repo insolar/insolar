@@ -420,7 +420,6 @@ func flushNodeKeeper(keeper network.NodeKeeper) {
 	// keeper.SetIsBootstrapped(false)
 	keeper.SetCloudHash(nil)
 	keeper.SetInitialSnapshot([]insolar.NetworkNode{})
-	keeper.GetClaimQueue().Clear()
 	keeper.GetOrigin().(node.MutableNode).SetState(insolar.NodeReady)
 }
 

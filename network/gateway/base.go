@@ -55,8 +55,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"time"
 
-	"github.com/insolar/insolar/network/consensusv1/packets"
-
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/certificate"
@@ -90,13 +88,13 @@ type Base struct {
 	PulseAppender       pulse.Appender              `inject:""`
 	PulseManager        insolar.PulseManager        `inject:""`
 	BootstrapRequester  bootstrap.Requester         `inject:""`
-	//PhaseManager        phases.PhaseManager         `inject:""`
-	Rules        network.Rules        `inject:""`
-	KeyProcessor insolar.KeyProcessor `inject:""`
+	Rules               network.Rules               `inject:""`
+	KeyProcessor        insolar.KeyProcessor        `inject:""`
 
 	// DiscoveryBootstrapper bootstrap.DiscoveryBootstrapper `inject:""`
 	bootstrapETA insolar.PulseNumber
-	joinClaim    *packets.NodeJoinClaim
+
+	candidateProfile packet.CandidateProfile
 }
 
 // NewGateway creates new gateway on top of existing
@@ -131,7 +129,9 @@ func (g *Base) Init(ctx context.Context) error {
 	})
 
 	var err error
-	g.joinClaim, err = g.NodeKeeper.GetOriginJoinClaim()
+
+	// todo: use candidate profile
+	//g.joinClaim, err = g.NodeKeeper.GetOriginJoinClaim()
 	return err
 }
 
@@ -169,21 +169,6 @@ func (g *Base) ValidateCert(ctx context.Context, certificate insolar.Authorizati
 	return g.CertificateManager.VerifyAuthorizationCertificate(certificate)
 }
 
-func (g *Base) FilterJoinerNodes(certificate insolar.Certificate, nodes []insolar.NetworkNode) []insolar.NetworkNode {
-	//dNodes := make(map[insolar.Reference]struct{}, len(certificate.GetDiscoveryNodes()))
-	//for _, dn := range certificate.GetDiscoveryNodes() {
-	//	dNodes[*dn.GetNodeRef()] = struct{}{}
-	//}
-	//ret := []insolar.NetworkNode{}
-	//for _, n := range nodes {
-	//	if _, ok := dNodes[n.ID()]; ok {
-	//		ret = append(ret, n)
-	//	}
-	//}
-	//return ret
-	return nodes
-}
-
 // ============= Bootstrap =======
 
 func (g *Base) ShouldIgnorePulse(context.Context, insolar.Pulse) bool {
@@ -196,7 +181,9 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 	}
 
 	data := request.GetRequest().GetBootstrap()
-	if network.CheckShortIDCollision(g.NodeKeeper.GetAccessor().GetActiveNodes(), data.JoinClaim.ShortNodeID) {
+	//candidate := data.CandidateProfile
+
+	if network.CheckShortIDCollision(g.NodeKeeper.GetAccessor().GetActiveNodes(), insolar.ShortNodeID(data.CandidateProfile.ShortID)) {
 		return g.HostNetwork.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.UpdateShortID}), nil
 	}
 
@@ -224,7 +211,8 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 	//TODO: how to ignore claim if node already bootstrap to other??
 
 	// TODO: check JoinClaim is from Discovery node
-	g.NodeKeeper.GetClaimQueue().Push(data.JoinClaim)
+	//g.NodeKeeper.GetClaimQueue().Push(data.CandidateProfile)
+
 	go func() {
 		// TODO:
 		//pulseStartTime := time.Unix(0, data.Pulse.PulseTimestamp)

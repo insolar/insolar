@@ -79,7 +79,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/platformpolicy"
@@ -535,12 +534,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	serviceNetwork, err := servicenetwork.NewServiceNetwork(cfg, node.componentManager)
 	s.Require().NoError(err)
 
-	amMock := staterMock{
-		stateFunc: func() []byte {
-			return make([]byte, packets.HashLength)
-		},
-	}
-
 	certManager, cryptographyService := s.initCrypto(node)
 
 	realKeeper, err := nodenetwork.NewNodeNetwork(cfg.Host.Transport, certManager.GetCertificate())
@@ -562,7 +555,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		realKeeper,
 		newPulseManagerMock(realKeeper.(network.NodeKeeper)),
 		pubMock,
-		&amMock,
 		certManager,
 		cryptographyService,
 		keystore.NewInplaceKeyStore(node.privateKey),
