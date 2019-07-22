@@ -41,7 +41,7 @@ func Test_BootstrapCalls(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("message before pulse received returns error", func(t *testing.T) {
-		p, _ := setCode(ctx, t, s)
+		p, _ := callSetCode(ctx, t, s)
 		_, ok := p.(*payload.Error)
 		assert.True(t, ok)
 	})
@@ -52,8 +52,8 @@ func Test_BootstrapCalls(t *testing.T) {
 	s.Pulse(ctx)
 
 	t.Run("messages after two pulses return result", func(t *testing.T) {
-		p, _ := setCode(ctx, t, s)
-		requirePayloadNotError(t, p)
+		p, _ := callSetCode(ctx, t, s)
+		requireNotError(t, p)
 	})
 }
 
@@ -74,17 +74,25 @@ func Test_BasicOperations(t *testing.T) {
 		// Creating root reason request.
 		var reasonID insolar.ID
 		{
-			p, _ := setIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
-			requirePayloadNotError(t, p)
+			p := retryIfCancelled(func() payload.Payload {
+				p, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
+				return p
+			})
+			requireNotError(t, p)
 			reasonID = p.(*payload.RequestInfo).RequestID
 		}
 		// Save and check code.
 		{
-			p, sent := setCode(ctx, t, s)
-			requirePayloadNotError(t, p)
+			var sent record.Virtual
+			p := retryIfCancelled(func() payload.Payload {
+				p, s := callSetCode(ctx, t, s)
+				sent = s
+				return p
+			})
+			requireNotError(t, p)
 
-			p = getCode(ctx, t, s, p.(*payload.ID).ID)
-			requirePayloadNotError(t, p)
+			p = callGetCode(ctx, t, s, p.(*payload.ID).ID)
+			requireNotError(t, p)
 			material := record.Material{}
 			err := material.Unmarshal(p.(*payload.Code).Record)
 			require.NoError(t, err)
@@ -93,37 +101,64 @@ func Test_BasicOperations(t *testing.T) {
 		var objectID insolar.ID
 		// Set, get request.
 		{
-			p, sent := setIncomingRequest(ctx, t, s, gen.ID(), reasonID, record.CTSaveAsChild)
-			requirePayloadNotError(t, p)
+			var sent record.Virtual
+			p := retryIfCancelled(func() payload.Payload {
+				p, s := callSetIncomingRequest(ctx, t, s, gen.ID(), reasonID, record.CTSaveAsChild)
+				sent = s
+				return p
+			})
+			requireNotError(t, p)
 
-			p = getRequest(ctx, t, s, p.(*payload.RequestInfo).RequestID)
-			requirePayloadNotError(t, p)
+			p = callGetRequest(ctx, t, s, p.(*payload.RequestInfo).RequestID)
+			requireNotError(t, p)
 			require.Equal(t, sent, p.(*payload.Request).Request)
 			objectID = p.(*payload.Request).RequestID
 		}
 		// Activate and check object.
 		{
-			p, state := activateObject(ctx, t, s, objectID)
-			requirePayloadNotError(t, p)
+			var state record.Virtual
+			p := retryIfCancelled(func() payload.Payload {
+				p, s := callActivateObject(ctx, t, s, objectID)
+				state = s
+				return p
+			})
+			requireNotError(t, p)
 			_, material := requireGetObject(ctx, t, s, objectID)
 			require.Equal(t, &state, material.Virtual)
 		}
 		// Amend and check object.
 		{
-			p, _ := setIncomingRequest(ctx, t, s, objectID, reasonID, record.CTMethod)
-			requirePayloadNotError(t, p)
-			p, state := amendObject(ctx, t, s, objectID, p.(*payload.RequestInfo).RequestID)
-			requirePayloadNotError(t, p)
+			p := retryIfCancelled(func() payload.Payload {
+				p, _ := callSetIncomingRequest(ctx, t, s, objectID, reasonID, record.CTMethod)
+				return p
+			})
+			requireNotError(t, p)
+
+			var state record.Virtual
+			p = retryIfCancelled(func() payload.Payload {
+				p, s := callAmendObject(ctx, t, s, objectID, p.(*payload.RequestInfo).RequestID)
+				state = s
+				return p
+			})
+			requireNotError(t, p)
+
 			_, material := requireGetObject(ctx, t, s, objectID)
 			require.Equal(t, &state, material.Virtual)
 		}
 		// Deactivate and check object.
 		{
-			p, _ := setIncomingRequest(ctx, t, s, objectID, reasonID, record.CTMethod)
-			requirePayloadNotError(t, p)
-			deactivateObject(ctx, t, s, objectID, p.(*payload.RequestInfo).RequestID)
+			p := retryIfCancelled(func() payload.Payload {
+				p, _ := callSetIncomingRequest(ctx, t, s, objectID, reasonID, record.CTMethod)
+				return p
+			})
+			requireNotError(t, p)
 
-			lifeline, _ := getObject(ctx, t, s, objectID)
+			retryIfCancelled(func() payload.Payload {
+				p, _ := callDeactivateObject(ctx, t, s, objectID, p.(*payload.RequestInfo).RequestID)
+				return p
+			})
+
+			lifeline, _ := callGetObject(ctx, t, s, objectID)
 			_, ok := lifeline.(*payload.Error)
 			assert.True(t, ok)
 		}
@@ -132,15 +167,13 @@ func Test_BasicOperations(t *testing.T) {
 	t.Run("happy basic", runner)
 
 	t.Run("happy concurrent", func(t *testing.T) {
-		t.Skip()
-		count := 1000
+		count := 100
 		pulseAt := rand.Intn(count)
 		var wg sync.WaitGroup
 		wg.Add(count)
 		for i := 0; i < count; i++ {
 			if i == pulseAt {
-				// FIXME: find out why it hangs.
-				// s.Pulse(ctx)
+				s.Pulse(ctx)
 			}
 			i := i
 			go func() {
@@ -153,16 +186,16 @@ func Test_BasicOperations(t *testing.T) {
 	})
 }
 
-func requirePayloadNotError(t *testing.T, pl payload.Payload) {
+func requireNotError(t *testing.T, pl payload.Payload) {
 	if err, ok := pl.(*payload.Error); ok {
 		t.Fatal(err)
 	}
 }
 
 func requireGetObject(ctx context.Context, t *testing.T, s *Server, objectID insolar.ID) (record.Lifeline, record.Material) {
-	lifelinePL, statePL := getObject(ctx, t, s, objectID)
-	requirePayloadNotError(t, lifelinePL)
-	requirePayloadNotError(t, statePL)
+	lifelinePL, statePL := callGetObject(ctx, t, s, objectID)
+	requireNotError(t, lifelinePL)
+	requireNotError(t, statePL)
 
 	lifeline := record.Lifeline{}
 	err := lifeline.Unmarshal(lifelinePL.(*payload.Index).Index)
@@ -173,4 +206,15 @@ func requireGetObject(ctx context.Context, t *testing.T, s *Server, objectID ins
 	require.NoError(t, err)
 
 	return lifeline, state
+}
+
+func retryIfCancelled(cb func() payload.Payload) payload.Payload {
+	rep := cb()
+	if err, ok := rep.(*payload.Error); ok {
+		if err.Code == payload.CodeFlowCanceled {
+			return retryIfCancelled(cb)
+		}
+	}
+
+	return rep
 }

@@ -64,7 +64,7 @@ type MessageHandler struct {
 	PulseCalculator storage.PulseCalculator
 
 	conf           *configuration.Ledger
-	JetTreeUpdater jet.Fetcher
+	JetTreeUpdater executor.JetFetcher
 
 	Sender         bus.Sender
 	FlowDispatcher *dispatcher.Dispatcher
@@ -169,6 +169,12 @@ func NewMessageHandler(
 				h.Sender,
 			)
 		},
+		HasPendings: func(p *proc.HasPendings) {
+			p.Dep(
+				h.IndexStorage,
+				h.Sender,
+			)
+		},
 		SendObject: func(p *proc.SendObject) {
 			p.Dep.Jets = h.JetStorage
 			p.Dep.Coordinator = h.JetCoordinator
@@ -212,15 +218,11 @@ func NewMessageHandler(
 				h.Sender,
 			)
 		},
-		GetPendingRequests: func(p *proc.GetPendingRequests) {
-			p.Dep(h.IndexStorage, h.Sender)
-		},
-		GetPendingRequestID: func(p *proc.GetPendingRequestID) {
-			p.Dep(h.FilamentCalculator, h.Sender)
-		},
 		GetJet: func(p *proc.GetJet) {
-			p.Dep.Jets = h.JetStorage
-			p.Dep.Sender = h.Sender
+			p.Dep(
+				h.JetStorage,
+				h.Sender,
+			)
 		},
 		HotObjects: func(p *proc.HotObjects) {
 			p.Dep.DropModifier = h.DropModifier
@@ -273,6 +275,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 		h.PCS,
 		h.FilamentCalculator,
 		h.PulseCalculator,
+		h.Sender,
 	)
 
 	return nil

@@ -55,6 +55,9 @@ func (s *GetDelegate) Proceed(ctx context.Context) error {
 		s.Dep.Sender.Reply(ctx, s.message, msg)
 		return err
 	}
+	if idx.Lifeline.LatestState == nil {
+		return ErrNotActivated
+	}
 
 	delegateRef, ok := idx.Lifeline.DelegateByKey(s.msg.AsType)
 	if !ok {

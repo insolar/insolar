@@ -48,6 +48,7 @@ func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 	es := &broker.executionState
 
 	logger.Debugf("Got information that %s is still executing", ref.String())
+	h.dep.lr.ResultsMatcher.AddStillExecution(ctx, msg)
 
 	es.Lock()
 	switch es.pending {

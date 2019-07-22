@@ -113,6 +113,7 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 	suite.lr.Sender = suite.sender
 	suite.lr.Publisher = suite.pub
 	suite.lr.RequestsExecutor = suite.re
+	suite.lr.FlowDispatcher.PulseAccessor = suite.ps
 
 	_ = suite.lr.Init(suite.ctx)
 }
@@ -186,23 +187,23 @@ func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor(
 		expectedStartQueueProcessorCtr int32
 	}{
 		{
-			name:                           "Happy path",
+			name: "Happy path",
 			expectedClarifyPendingStateCtr: 1,
 			expectedStartQueueProcessorCtr: 1,
 		},
 		{
-			name:                           "ClarifyPendingState failed",
+			name: "ClarifyPendingState failed",
 			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
 			expectedClarifyPendingStateCtr: 1,
 		},
 		{
-			name:                           "StartQueueProcessorIfNeeded failed",
+			name: "StartQueueProcessorIfNeeded failed",
 			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
 			expectedClarifyPendingStateCtr: 1,
 			expectedStartQueueProcessorCtr: 1,
 		},
 		{
-			name:                           "Both procedures fail",
+			name: "Both procedures fail",
 			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
 			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
 			expectedClarifyPendingStateCtr: 1,
@@ -319,7 +320,7 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 			broker := suite.lr.StateStorage.UpsertExecutionState(gen.Reference())
 			broker.executionState.pending = test.inState
 			if test.amReply != nil {
-				suite.am.HasPendingRequestsMock.Return(test.amReply.has, test.amReply.err)
+				suite.am.HasPendingsMock.Return(test.amReply.has, test.amReply.err)
 			}
 			proc := ClarifyPendingState{
 				broker:          broker,
@@ -342,7 +343,7 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 		broker := suite.lr.StateStorage.UpsertExecutionState(gen.Reference())
 		broker.executionState.pending = insolar.PendingUnknown
 
-		suite.am.HasPendingRequestsMock.Return(false, errors.New("some"))
+		suite.am.HasPendingsMock.Return(false, errors.New("some"))
 
 		proc := ClarifyPendingState{
 			broker:          broker,
@@ -510,7 +511,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 			}
 
 			if test.expected.hasPendingCall {
-				suite.am.HasPendingRequestsMock.Return(true, nil)
+				suite.am.HasPendingsMock.Return(true, nil)
 			}
 
 			flowMock, pubSub := prepareWatermill(suite)
@@ -827,6 +828,9 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 	suite.Require().NoError(err)
 
 	pulseNum := pulsar.NewPulse(0, insolar.FirstPulseNumber, &entropygenerator.StandardEntropyGenerator{})
+
+	suite.ps.LatestMock.Return(*pulseNum, nil)
+
 	msg.Metadata.Set(bus.MetaPulse, pulseNum.PulseNumber.String())
 	sp, err := instracer.Serialize(context.Background())
 	suite.Require().NoError(err)
@@ -1064,7 +1068,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	cd.MachineTypeMock.Return(insolar.MachineTypeBuiltin)
 	cd.RefMock.Return(&codeRef)
 
-	suite.am.HasPendingRequestsMock.Return(false, nil)
+	suite.am.HasPendingsMock.Return(false, nil)
 
 	suite.am.RegisterIncomingRequestMock.Set(func(ctx context.Context, r *record.IncomingRequest) (*insolar.ID, error) {
 		reqId := testutils.RandomID()
@@ -1082,6 +1086,9 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 		wg.Done()
 	}
 
+	suite.ps.LatestFunc = func(p context.Context) (r insolar.Pulse, r1 error) {
+		return insolar.Pulse{PulseNumber: pulseNum}, nil
+	}
 	for i := 0; i < num; i++ {
 		go func(i int) {
 			msg := &message.CallMethod{
@@ -1248,7 +1255,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			}
 
 			if test.when > whenRegisterRequest {
-				suite.am.HasPendingRequestsFunc = func(ctx context.Context, r insolar.Reference) (bool, error) {
+				suite.am.HasPendingsFunc = func(ctx context.Context, r insolar.Reference) (bool, error) {
 					if test.when == whenHasPendingRequest {
 						changePulse()
 
@@ -1732,8 +1739,8 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			messagesQueue := convertQueueToMessageQueue(s.ctx, broker.mutable.Peek(maxQueueLength))
 
 			expectedMessage := &message.ExecutorResults{
-				RecordRef:             s.objectRef,
-				Queue:                 messagesQueue,
+				RecordRef: s.objectRef,
+				Queue:     messagesQueue,
 				LedgerHasMoreRequests: test.hasMoreRequests,
 			}
 

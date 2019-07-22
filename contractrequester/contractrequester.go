@@ -46,6 +46,7 @@ type ContractRequester struct {
 	PulseAccessor              pulse.Accessor                     `inject:""`
 	JetCoordinator             jet.Coordinator                    `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
+	lr                         insolar.LogicRunner
 
 	ResultMutex sync.Mutex
 	ResultMap   map[[insolar.RecordHashSize]byte]chan *message.ReturnResults
@@ -56,10 +57,11 @@ type ContractRequester struct {
 }
 
 // New creates new ContractRequester
-func New() (*ContractRequester, error) {
+func New(lr insolar.LogicRunner) (*ContractRequester, error) {
 	return &ContractRequester{
 		ResultMap:   make(map[[insolar.RecordHashSize]byte]chan *message.ReturnResults),
 		callTimeout: 25 * time.Second,
+		lr:          lr,
 	}, nil
 }
 
@@ -103,6 +105,7 @@ func (cr *ContractRequester) SendRequestWithPulse(ctx context.Context, ref *inso
 			Arguments:    args,
 			APIRequestID: utils.TraceID(ctx),
 			Reason:       api.MakeReason(pulse, args),
+			APINode:      cr.JetCoordinator.Me(),
 		},
 	}
 
@@ -139,7 +142,6 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 	if msg.Nonce == 0 {
 		msg.Nonce = randomUint64()
 	}
-	msg.Sender = cr.JetCoordinator.Me()
 
 	var ch chan *message.ReturnResults
 	var reqHash [insolar.RecordHashSize]byte
@@ -221,7 +223,7 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, inMsg insolar.
 	return rep.Object, nil
 }
 
-func (cr *ContractRequester) result(ctx context.Context, msg *message.ReturnResults) {
+func (cr *ContractRequester) result(ctx context.Context, msg *message.ReturnResults) error {
 	cr.ResultMutex.Lock()
 	defer cr.ResultMutex.Unlock()
 
@@ -229,12 +231,17 @@ func (cr *ContractRequester) result(ctx context.Context, msg *message.ReturnResu
 	copy(reqHash[:], msg.RequestRef.Record().Hash())
 	c, ok := cr.ResultMap[reqHash]
 	if !ok {
-		inslogger.FromContext(ctx).Warn("unwaited results of request ", msg.RequestRef.String())
-		return
+		inslogger.FromContext(ctx).Info("unwaited results of request ", msg.RequestRef.String())
+		if cr.lr != nil {
+			return cr.lr.AddUnwantedResponse(ctx, msg)
+		}
+		inslogger.FromContext(ctx).Warn("drop unwanted ", msg.RequestRef.String())
+		return nil
 	}
 
 	c <- msg
 	delete(cr.ResultMap, reqHash)
+	return nil
 }
 
 func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
@@ -246,7 +253,10 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel insolar.P
 	ctx, span := instracer.StartSpan(ctx, "ContractRequester.ReceiveResult")
 	defer span.End()
 
-	cr.result(ctx, msg)
+	err := cr.result(ctx, msg)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ReceiveResult ]")
+	}
 
 	return &reply.OK{}, nil
 }

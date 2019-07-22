@@ -79,7 +79,9 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
 
-	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
+	ctx, logger := inslogger.WithField(ctx, "msg_type", payloadType.String())
+
+	logger.Debug("Start to handle new message")
 
 	switch payloadType {
 	case payload.TypeGetObject:
@@ -121,6 +123,12 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 	case payload.TypeGetPendings:
 		h := NewGetPendings(s.dep, meta, false)
 		err = f.Handle(ctx, h.Present)
+	case payload.TypeHasPendings:
+		h := NewHasPendings(s.dep, meta, false)
+		err = f.Handle(ctx, h.Present)
+	case payload.TypeGetJet:
+		h := NewGetJet(s.dep, meta, false)
+		err = f.Handle(ctx, h.Present)
 	case payload.TypePass:
 		err = s.handlePass(ctx, f, meta)
 	case payload.TypeError:
@@ -149,7 +157,10 @@ func (s *Init) handleParcel(ctx context.Context, f flow.Flow) error {
 	}
 
 	msgType := s.message.Metadata.Get(wbus.MetaType)
-	ctx, _ = inslogger.WithField(ctx, "msg_type", msgType)
+	ctx, logger := inslogger.WithField(ctx, "msg_type", msgType)
+
+	logger.Debug("Start to handle new message (from parcel)")
+
 	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("Present %v", parcel.Message().Type().String()))
 	defer span.End()
 
@@ -160,19 +171,9 @@ func (s *Init) handleParcel(ctx context.Context, f flow.Flow) error {
 	case insolar.TypeGetDelegate.String():
 		h := NewGetDelegate(s.dep, meta, parcel)
 		return f.Handle(ctx, h.Present)
-	case insolar.TypeGetPendingRequests.String():
-		h := NewGetPendingRequests(s.dep, meta, parcel)
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeGetPendingRequestID.String():
-		h := NewGetPendingRequestID(s.dep, meta, parcel)
-		return f.Handle(ctx, h.Present)
 	case insolar.TypeRegisterChild.String():
 		msg := parcel.Message().(*message.RegisterChild)
 		h := NewRegisterChild(s.dep, meta, msg, parcel.Pulse())
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeGetJet.String():
-		msg := parcel.Message().(*message.GetJet)
-		h := NewGetJet(s.dep, meta, msg)
 		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("no handler for message type %s (from parcel)", msgType)
@@ -239,6 +240,12 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 	case payload.TypeGetPendings:
 		h := NewGetPendings(s.dep, originMeta, true)
 		err = f.Handle(ctx, h.Present)
+	case payload.TypeHasPendings:
+		h := NewHasPendings(s.dep, originMeta, true)
+		err = f.Handle(ctx, h.Present)
+	case payload.TypeGetJet:
+		h := NewGetJet(s.dep, originMeta, true)
+		err = f.Handle(ctx, h.Present)
 	default:
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())
 	}
@@ -258,8 +265,8 @@ func (s *Init) replyError(ctx context.Context, replyTo payload.Meta, err error) 
 	if err == flow.ErrCancelled {
 		errCode = payload.CodeFlowCanceled
 	}
-	errMsg, err := payload.NewMessage(&payload.Error{Text: err.Error(), Code: uint32(errCode)})
-	if err != nil {
+	errMsg, newErr := payload.NewMessage(&payload.Error{Text: err.Error(), Code: uint32(errCode)})
+	if newErr != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
 	}
 	go s.sender.Reply(ctx, replyTo, errMsg)
