@@ -247,7 +247,7 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 		h := NewGetJet(s.dep, originMeta, true)
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeGetRequest:
-		h := NewGetRequest(s.dep, meta, true)
+		h := NewGetRequest(s.dep, originMeta, true)
 		err = f.Handle(ctx, h.Present)
 	default:
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())
