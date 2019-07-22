@@ -33,6 +33,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+const transferAmount = 101
+const transferFee = 40 // 40%
+
 type scenario interface {
 	canBeStarted() error
 	start(ctx context.Context)
@@ -130,7 +133,7 @@ func (s *transferDifferentMembersScenario) startMember(ctx context.Context, inde
 		retry := true
 		for retry && bof.Attempt() < backoffAttemptsCount {
 			start = time.Now()
-			traceID, err = s.insSDK.Transfer(big.NewInt(1).String(), from, to)
+			traceID, err = s.insSDK.Transfer(big.NewInt(transferAmount).String(), from, to)
 			stop = time.Since(start)
 
 			if err != nil && strings.Contains(err.Error(), insolar.ErrTooManyPendingRequests.Error()) {

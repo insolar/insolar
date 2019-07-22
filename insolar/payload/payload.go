@@ -28,10 +28,12 @@ type Type uint32
 
 const (
 	TypeUnknown Type = iota
+
 	TypeMeta
 	TypeError
 	TypeID
 	TypeIDs
+	TypeJet
 	TypeState
 	TypeGetObject
 	TypePassState
@@ -57,6 +59,17 @@ const (
 	TypeHotObjects
 	TypeResultInfo
 	TypeGetPendings
+	TypeHasPendings
+	TypePendingsInfo
+	TypeReplication
+	TypeGetJet
+
+	TypeReturnResults
+	TypeCallMethod
+	TypeExecutorResults
+	TypePendingFinished
+	TypeAdditionalCallFromPreviousExecutor
+	TypeStillExecuting
 
 	// should be the last (required by TypesMap)
 	_latestType
@@ -153,6 +166,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *IDs:
 		pl.Polymorph = uint32(TypeIDs)
 		return pl.Marshal()
+	case *Jet:
+		pl.Polymorph = uint32(TypeJet)
+		return pl.Marshal()
 	case *State:
 		pl.Polymorph = uint32(TypeState)
 		return pl.Marshal()
@@ -222,6 +238,36 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *GetPendings:
 		pl.Polymorph = uint32(TypeGetPendings)
 		return pl.Marshal()
+	case *HasPendings:
+		pl.Polymorph = uint32(TypeHasPendings)
+		return pl.Marshal()
+	case *PendingsInfo:
+		pl.Polymorph = uint32(TypePendingsInfo)
+		return pl.Marshal()
+	case *Replication:
+		pl.Polymorph = uint32(TypeReplication)
+		return pl.Marshal()
+	case *ReturnResults:
+		pl.Polymorph = uint32(TypeReturnResults)
+		return pl.Marshal()
+	case *CallMethod:
+		pl.Polymorph = uint32(TypeCallMethod)
+		return pl.Marshal()
+	case *ExecutorResults:
+		pl.Polymorph = uint32(TypeExecutorResults)
+		return pl.Marshal()
+	case *PendingFinished:
+		pl.Polymorph = uint32(TypePendingFinished)
+		return pl.Marshal()
+	case *AdditionalCallFromPreviousExecutor:
+		pl.Polymorph = uint32(TypeAdditionalCallFromPreviousExecutor)
+		return pl.Marshal()
+	case *StillExecuting:
+		pl.Polymorph = uint32(TypeStillExecuting)
+		return pl.Marshal()
+	case *GetJet:
+		pl.Polymorph = uint32(TypeGetJet)
+		return pl.Marshal()
 	}
 
 	return nil, errors.New("unknown payload type")
@@ -247,6 +293,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeIDs:
 		pl := IDs{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeJet:
+		pl := Jet{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	case TypeState:
@@ -333,12 +383,52 @@ func Unmarshal(data []byte) (Payload, error) {
 		pl := HotObjects{}
 		err := pl.Unmarshal(data)
 		return &pl, err
+	case TypeGetPendings:
+		pl := GetPendings{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeHasPendings:
+		pl := HasPendings{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypePendingsInfo:
+		pl := PendingsInfo{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeReplication:
+		pl := Replication{}
+		err := pl.Unmarshal(data)
+		return &pl, err
 	case TypeResultInfo:
 		pl := ResultInfo{}
 		err := pl.Unmarshal(data)
 		return &pl, err
-	case TypeGetPendings:
-		pl := GetPendings{}
+	case TypeReturnResults:
+		pl := ReturnResults{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeCallMethod:
+		pl := CallMethod{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeExecutorResults:
+		pl := ExecutorResults{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypePendingFinished:
+		pl := PendingFinished{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeAdditionalCallFromPreviousExecutor:
+		pl := AdditionalCallFromPreviousExecutor{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeStillExecuting:
+		pl := StillExecuting{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeGetJet:
+		pl := GetJet{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}

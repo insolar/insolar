@@ -62,6 +62,11 @@ func (id *JetID) IsValid() bool {
 	return bytes.Equal(id[:PulseNumberSize], PulseNumberJet.Bytes())
 }
 
+// IsEmpty - check for void
+func (id JetID) IsEmpty() bool {
+	return id.Equal(JetID{})
+}
+
 // ZeroJetID is value of an empty Jet ID
 var ZeroJetID = *NewJetID(0, nil)
 

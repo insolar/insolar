@@ -83,6 +83,7 @@ type LogicRunner struct {
 	Sender                     bus.Sender
 	SenderWithRetry            *bus.WaitOKSender
 	StateStorage               StateStorage
+	ResultsMatcher             ResultMatcher
 
 	Cfg *configuration.LogicRunner
 
@@ -104,13 +105,14 @@ func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publi
 		return nil, errors.New("LogicRunner have nil configuration")
 	}
 	res := LogicRunner{
-		Cfg:       cfg,
-		Publisher: publisher,
-		Sender:    sender,
+		Cfg:             cfg,
+		Publisher:       publisher,
+		Sender:          sender,
 		SenderWithRetry: bus.NewWaitOKWithRetrySender(sender, 3),
 	}
 
 	initHandlers(&res)
+	res.ResultsMatcher = newResultsMatcher(&res)
 
 	return &res, nil
 }
@@ -220,6 +222,7 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 	}
 
 	lr.ArtifactManager.InjectFinish()
+	lr.FlowDispatcher.PulseAccessor = lr.PulseAccessor
 
 	return nil
 }
@@ -342,7 +345,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 			if !meNext && state.ExecutionBroker.currentList.Empty() {
 				// we're not executing and we have nothing to process
 				state.ExecutionBroker = nil
-			} else if meNext && broker.executionState.pending == message.NotPending {
+			} else if meNext && broker.executionState.pending == insolar.NotPending {
 				// we're executing, micro optimization, check pending
 				// status, reset ledger check status and start execution
 				state.ExecutionBroker.ResetLedgerCheck()
@@ -366,6 +369,8 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 	}
 
 	lr.stopIfNeeded(ctx)
+
+	lr.ResultsMatcher.Clear()
 
 	return nil
 }
@@ -406,6 +411,11 @@ func (lr *LogicRunner) sendOnPulseMessage(ctx context.Context, msg insolar.Messa
 	if err != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "error while sending validation data on pulse"))
 	}
+}
+
+func (lr *LogicRunner) AddUnwantedResponse(ctx context.Context, msg insolar.Message) error {
+	m := msg.(*message.ReturnResults)
+	return lr.ResultsMatcher.AddUnwantedResponse(ctx, m)
 }
 
 func convertQueueToMessageQueue(ctx context.Context, queue []*Transcript) []message.ExecutionQueueElement {

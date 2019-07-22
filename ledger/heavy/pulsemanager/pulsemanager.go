@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/ledger/heavy/executor"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -33,14 +34,15 @@ import (
 
 // PulseManager implements insolar.PulseManager.
 type PulseManager struct {
-	Bus           insolar.MessageBus        `inject:""`
-	NodeNet       insolar.NodeNetwork       `inject:""`
-	GIL           insolar.GlobalInsolarLock `inject:""`
-	NodeSetter    node.Modifier             `inject:""`
-	Nodes         node.Accessor             `inject:""`
-	PulseAppender pulse.Appender            `inject:""`
-	PulseAccessor pulse.Accessor            `inject:""`
-	JetModifier   jet.Modifier              `inject:""`
+	Bus                insolar.MessageBus          `inject:""`
+	NodeNet            insolar.NodeNetwork         `inject:""`
+	GIL                insolar.GlobalInsolarLock   `inject:""`
+	NodeSetter         node.Modifier               `inject:""`
+	Nodes              node.Accessor               `inject:""`
+	PulseAppender      pulse.Appender              `inject:""`
+	PulseAccessor      pulse.Accessor              `inject:""`
+	FinalizationKeeper executor.FinalizationKeeper `inject:""`
+	JetModifier        jet.Modifier                `inject:""`
 
 	currentPulse insolar.Pulse
 
@@ -74,7 +76,12 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	)
 	defer span.End()
 
-	err := m.setUnderGilSection(ctx, newPulse)
+	err := m.FinalizationKeeper.OnPulse(ctx, newPulse.PulseNumber)
+	if err != nil {
+		return errors.Wrap(err, "got error calling FinalizationKeeper.OnPulse")
+	}
+
+	err = m.setUnderGilSection(ctx, newPulse)
 	if err != nil {
 		return err
 	}
@@ -115,9 +122,6 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	// swap pulse
 	m.currentPulse = newPulse
 
-	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
-		return errors.Wrap(err, "call of AddPulse failed")
-	}
 	fromNetwork := m.NodeNet.GetWorkingNodes()
 	toSet := make([]insolar.Node, 0, len(fromNetwork))
 	for _, node := range fromNetwork {
@@ -137,6 +141,9 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	if oldPulse != nil {
 		nodes, err := m.Nodes.All(oldPulse.PulseNumber)
 		if err != nil {
+			if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
+				return errors.Wrap(err, "call of AddPulse failed")
+			}
 			return nil
 		}
 		// No active nodes for pulse. It means there was no processing (network start).
@@ -151,5 +158,8 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		}
 	}
 
+	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
+		return errors.Wrap(err, "call of AddPulse failed")
+	}
 	return nil
 }

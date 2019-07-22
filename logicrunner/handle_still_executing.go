@@ -48,17 +48,18 @@ func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 	es := &broker.executionState
 
 	logger.Debugf("Got information that %s is still executing", ref.String())
+	h.dep.lr.ResultsMatcher.AddStillExecution(ctx, msg)
 
 	es.Lock()
 	switch es.pending {
-	case message.NotPending:
+	case insolar.NotPending:
 		// It might be when StillExecuting comes after PendingFinished
 		logger.Error("got StillExecuting message, but our state says that it's not in pending")
-	case message.InPending:
+	case insolar.InPending:
 		es.PendingConfirmed = true
-	case message.PendingUnknown:
+	case insolar.PendingUnknown:
 		// we are first, strange, soon ExecuteResults message should come
-		es.pending = message.InPending
+		es.pending = insolar.InPending
 		es.PendingConfirmed = true
 	}
 

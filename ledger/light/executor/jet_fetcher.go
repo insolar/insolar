@@ -14,28 +14,29 @@
 // limitations under the License.
 //
 
-package jet
+package executor
 
 import (
 	"context"
 	"fmt"
 	"sync"
 
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/node"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Fetcher -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.JetFetcher -o ./ -s _mock.go
 
-// Fetcher can be used to get actual jets. It involves fetching jet from other nodes via network and updating local
+// JetFetcher can be used to get actual jets. It involves fetching jet from other nodes via network and updating local
 // jet tree.
-type Fetcher interface {
+type JetFetcher interface {
 	Fetch(ctx context.Context, target insolar.ID, pulse insolar.PulseNumber) (*insolar.ID, error)
 	Release(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber)
 }
@@ -61,9 +62,9 @@ type fetchResult struct {
 
 type fetcher struct {
 	Nodes       node.Accessor
-	JetStorage  Storage
-	MessageBus  insolar.MessageBus
-	coordinator Coordinator
+	JetStorage  jet.Storage
+	sender      bus.Sender
+	coordinator jet.Coordinator
 
 	seqMutex  sync.Mutex
 	sequencer map[seqKey]*seqEntry
@@ -72,14 +73,14 @@ type fetcher struct {
 // NewFetcher creates new fetcher instance.
 func NewFetcher(
 	ans node.Accessor,
-	js Storage,
-	mb insolar.MessageBus,
-	jc Coordinator,
-) Fetcher {
+	js jet.Storage,
+	s bus.Sender,
+	jc jet.Coordinator,
+) JetFetcher {
 	return &fetcher{
 		Nodes:       ans,
 		JetStorage:  js,
-		MessageBus:  mb,
+		sender:      s,
 		coordinator: jc,
 		sequencer:   map[seqKey]*seqEntry{},
 	}
@@ -188,7 +189,7 @@ func (tu *fetcher) Release(ctx context.Context, jetID insolar.JetID, pulse insol
 			break
 		}
 		// Iterating over jet parents (going up the tree).
-		jetID = Parent(jetID)
+		jetID = jet.Parent(jetID)
 		depth--
 	}
 }
@@ -218,7 +219,7 @@ func (tu *fetcher) fetch(
 
 		once := sync.Once{}
 
-		replies := make([]*reply.Jet, num)
+		replies := make([]insolar.JetID, num)
 		for i, node := range nodes {
 			// Asking all the nodes concurrently.
 			go func(i int, node insolar.Node) {
@@ -228,50 +229,68 @@ func (tu *fetcher) fetch(
 				defer wg.Done()
 
 				nodeID := node.ID
-				// Asking the node for jet.
-				rep, err := tu.MessageBus.Send(
-					ctx,
-					&message.GetJet{Object: target, Pulse: pulse},
-					&insolar.MessageSendOptions{Receiver: &nodeID},
-				)
+
+				msg, err := payload.NewMessage(&payload.GetJet{
+					ObjectID:    target,
+					PulseNumber: pulse,
+				})
+
 				if err != nil {
+					return
+				}
+
+				// Asking the node for jet.
+				reps, done := tu.sender.SendTarget(ctx, msg, nodeID)
+
+				defer done()
+				res, ok := <-reps
+				if !ok {
 					inslogger.FromContext(ctx).Error(
 						errors.Wrap(err, "couldn't get jet"),
 					)
 					return
 				}
 
-				r, ok := rep.(*reply.Jet)
-				if !ok {
-					inslogger.FromContext(ctx).Errorf("middleware.fetch: unexpected reply: %#v\n", rep)
+				pl, err := payload.UnmarshalFromMeta(res.Payload)
+				if err != nil {
 					return
 				}
 
-				if !r.Actual {
+				switch concrete := pl.(type) {
+				case *payload.Jet:
+					if !concrete.Actual {
+						return
+					}
+					// Only one routine writes the result.
+					// The rest will still collect their result for future comparison.
+					// We compare all the results to find potential problems.
+					once.Do(func() {
+						jID := concrete.JetID
+						jetID := insolar.ID(jID)
+						ch <- fetchResult{&jetID, nil}
+						close(ch)
+					})
+
+					replies[i] = concrete.JetID
+				case *payload.Error:
+					inslogger.FromContext(ctx).Errorf("middleware.jetfetch: %s", concrete.Text)
+					return
+				default:
+					inslogger.FromContext(ctx).Errorf("middleware.jetfetch: unexpected reply: %#v\n", concrete)
 					return
 				}
-
-				// Only one routine writes the result. The rest will still collect their result for future comparison.
-				// We compare all the results to find potential problems.
-				once.Do(func() {
-					jetID := r.ID
-					ch <- fetchResult{&jetID, nil}
-					close(ch)
-				})
-
-				replies[i] = r
 			}(i, node)
 		}
 		wg.Wait()
 
 		// Collect non-nil replies (only actual).
-		res := make(map[insolar.ID]struct{})
+		res := make(map[insolar.JetID]struct{})
 		for _, r := range replies {
-			if r == nil {
+			if r.IsEmpty() {
 				continue
 			}
 
-			res[r.ID] = struct{}{}
+			res[r] = struct{}{}
 		}
 
 		if len(res) == 0 {
@@ -308,14 +327,6 @@ func (tu *fetcher) nodesForPulse(ctx context.Context, pulse insolar.PulseNumber)
 		return nil, fmt.Errorf("can't get node of 'light' role for pulse %s", pulse)
 	}
 
-	// we have to go to heavy when we get up on existing ledger
-	heavy, err := tu.Nodes.InRole(pulse, insolar.StaticRoleHeavyMaterial)
-	if err != nil {
-		return nil, fmt.Errorf("can't get node of 'heavy' role for pulse %s", pulse)
-	}
-
-	res = append(res, heavy...)
-
 	me := tu.coordinator.Me()
 	for i := range res {
 		if res[i].ID == me {
@@ -326,10 +337,7 @@ func (tu *fetcher) nodesForPulse(ctx context.Context, pulse insolar.PulseNumber)
 
 	num := len(res)
 	if num == 0 {
-		inslogger.FromContext(ctx).Error(
-			"This shouldn't happen. We're solo active light material",
-		)
-
+		inslogger.FromContext(ctx).Error("This shouldn't happen. We're solo active light material")
 		return nil, errors.New("no other light to fetch jet tree data from")
 	}
 

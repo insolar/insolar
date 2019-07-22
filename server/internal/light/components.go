@@ -19,6 +19,8 @@ package light
 import (
 	"context"
 
+	"github.com/insolar/insolar/network/rules"
+
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
@@ -143,7 +145,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	)
 	{
 		var err error
-		Requester, err = contractrequester.New()
+		Requester, err = contractrequester.New(nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ContractRequester")
 		}
@@ -197,7 +199,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start MessageBus")
 		}
-		WmBus = bus.NewBus(pubSub, Pulses, Coordinator, CryptoScheme)
+		WmBus = bus.NewBus(cfg.Bus, pubSub, Pulses, Coordinator, CryptoScheme)
 	}
 
 	metricsHandler, err := metrics.NewMetrics(
@@ -230,6 +232,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 		handler := artifactmanager.NewMessageHandler(&conf)
 		handler.PulseCalculator = Pulses
+		handler.FlowDispatcher.PulseAccessor = Pulses
 
 		handler.Bus = Bus
 		handler.PCS = CryptoScheme
@@ -248,7 +251,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.Sender = WmBus
 		handler.IndexStorage = indexes
 
-		jetTreeUpdater := jet.NewFetcher(Nodes, Jets, Bus, Coordinator)
+		jetTreeUpdater := executor.NewFetcher(Nodes, Jets, WmBus, Coordinator)
 		filamentCalculator := executor.NewFilamentCalculator(
 			indexes,
 			records,
@@ -277,7 +280,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		lthSyncer := replication.NewReplicatorDefault(
 			jetCalculator,
 			lightCleaner,
-			Bus,
+			WmBus,
 			Pulses,
 			drops,
 			records,
@@ -342,6 +345,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		NodeNetwork,
 		NetworkService,
 		pubSub,
+		rules.NewRules(),
 	)
 
 	err = c.cmp.Init(ctx)
