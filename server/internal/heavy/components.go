@@ -321,7 +321,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		NetworkService,
 		pubSub,
 		RecordSequencer,
-		replica.NewTransport(NetworkService),
+		// replica.NewTransport(NetworkService),
+		replica.NewGRPCTransport(),
 		Replicator,
 	)
 	err = c.cmp.Init(ctx)

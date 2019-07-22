@@ -517,10 +517,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:370d49f91099ce70df877098123f6b59b1c1e54770b3443da352fab7bca01f8b"
+  digest = "1:6ca51c5d8a610b3da56856df7a8f8f3e075eba8d5f7a4acbadd79b2d2a368054"
   name = "golang.org/x/net"
   packages = [
     "context",
+    "http/httpguts",
+    "http2",
+    "http2/hpack",
+    "idna",
     "internal/timeseries",
     "trace",
   ]
@@ -547,15 +551,23 @@
   revision = "4ed8d59d0b35e1e29334a206d1b3f38b1e5dfb31"
 
 [[projects]]
-  digest = "1:8029e9743749d4be5bc9f7d42ea1659471767860f0cdc34d37c3111bd308a295"
+  digest = "1:a2ab62866c75542dd18d2b069fec854577a20211d7c0ea6ae746072a1dccdd18"
   name = "golang.org/x/text"
   packages = [
+    "collate",
+    "collate/build",
+    "internal/colltab",
     "internal/gen",
+    "internal/tag",
     "internal/triegen",
     "internal/ucd",
+    "language",
+    "secure/bidirule",
     "transform",
+    "unicode/bidi",
     "unicode/cldr",
     "unicode/norm",
+    "unicode/rangetable",
   ]
   pruneopts = "UT"
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
@@ -578,14 +590,35 @@
   revision = "31ac5d88444a9e7ad18077db9a165d793ad06a2e"
 
 [[projects]]
-  digest = "1:736bea44d8f508c2a27f05225a11bfed723125676c26a2fd75977eedb5ef602b"
+  digest = "1:c3ad9841823db6da420a5625b367913b4ff54bbe60e8e3c98bd20e243e62e2d2"
   name = "google.golang.org/grpc"
   packages = [
+    ".",
+    "balancer",
+    "balancer/base",
+    "balancer/roundrobin",
     "codes",
+    "connectivity",
+    "credentials",
+    "encoding",
+    "encoding/proto",
     "grpclog",
+    "internal",
+    "internal/backoff",
+    "internal/channelz",
+    "internal/envconfig",
+    "internal/grpcrand",
+    "internal/transport",
+    "keepalive",
     "metadata",
+    "naming",
+    "peer",
+    "resolver",
+    "resolver/dns",
+    "resolver/passthrough",
     "stats",
     "status",
+    "tap",
   ]
   pruneopts = "UT"
   revision = "2e463a05d100327ca47ac218281906921038fd95"
@@ -614,6 +647,7 @@
     "github.com/gogo/protobuf/protoc-gen-gogoslick",
     "github.com/gogo/protobuf/sortkeys",
     "github.com/gojuno/minimock",
+    "github.com/golang/protobuf/proto",
     "github.com/google/btree",
     "github.com/google/gofuzz",
     "github.com/gorilla/rpc/v2",
@@ -645,6 +679,7 @@
     "go.opencensus.io/zpages",
     "golang.org/x/crypto/sha3",
     "golang.org/x/sync/errgroup",
+    "google.golang.org/grpc",
     "gopkg.in/yaml.v2",
   ]
   solver-name = "gps-cdcl"

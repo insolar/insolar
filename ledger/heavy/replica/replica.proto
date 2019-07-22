@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package replica;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+service Replica {
+    rpc Call(Request) returns (Response) {}
+}
+
+message Request {
+    string method = 1;
+    bytes data = 2;
+}
+
+message Response {
+    bytes data = 1;
+    bytes error = 2;
+}
