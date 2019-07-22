@@ -197,7 +197,7 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 		handler.Sender = ServerBus
 		handler.IndexStorage = indexes
 
-		jetTreeUpdater := jet.NewFetcher(Nodes, Jets, Bus, Coordinator)
+		jetTreeUpdater := executor.NewFetcher(Nodes, Jets, ServerBus, Coordinator)
 		filamentCalculator := executor.NewFilamentCalculator(
 			indexes,
 			records,

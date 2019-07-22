@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -39,7 +40,7 @@ type SendObject struct {
 	Dep struct {
 		Coordinator    jet.Coordinator
 		Jets           jet.Storage
-		JetFetcher     jet.Fetcher
+		JetFetcher     executor.JetFetcher
 		RecordAccessor object.RecordAccessor
 		Bus            insolar.MessageBus
 		Sender         bus.Sender

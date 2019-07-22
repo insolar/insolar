@@ -33,6 +33,7 @@ const (
 	TypeError
 	TypeID
 	TypeIDs
+	TypeJet
 	TypeState
 	TypeGetObject
 	TypePassState
@@ -61,6 +62,7 @@ const (
 	TypeHasPendings
 	TypePendingsInfo
 	TypeReplication
+	TypeGetJet
 
 	TypeReturnResults
 	TypeCallMethod
@@ -164,6 +166,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *IDs:
 		pl.Polymorph = uint32(TypeIDs)
 		return pl.Marshal()
+	case *Jet:
+		pl.Polymorph = uint32(TypeJet)
+		return pl.Marshal()
 	case *State:
 		pl.Polymorph = uint32(TypeState)
 		return pl.Marshal()
@@ -260,6 +265,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *StillExecuting:
 		pl.Polymorph = uint32(TypeStillExecuting)
 		return pl.Marshal()
+	case *GetJet:
+		pl.Polymorph = uint32(TypeGetJet)
+		return pl.Marshal()
 	}
 
 	return nil, errors.New("unknown payload type")
@@ -285,6 +293,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeIDs:
 		pl := IDs{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeJet:
+		pl := Jet{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	case TypeState:
@@ -413,6 +425,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeStillExecuting:
 		pl := StillExecuting{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeGetJet:
+		pl := GetJet{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}
