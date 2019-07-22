@@ -57,7 +57,7 @@ func (p *GetRequest) Proceed(ctx context.Context) error {
 	if err == object.ErrNotFound {
 		msg, err := payload.NewMessage(&payload.Error{
 			Text: object.ErrNotFound.Error(),
-			Code: payload.CodeObjectNotFound,
+			Code: payload.CodeNotFound,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")

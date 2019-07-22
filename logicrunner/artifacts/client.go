@@ -416,6 +416,7 @@ func (m *client) GetIncomingRequest(
 	}
 
 	msg, err := payload.NewMessage(&payload.GetRequest{
+		ObjectID:  *object.Record(),
 		RequestID: *requestID,
 	})
 	if err != nil {
