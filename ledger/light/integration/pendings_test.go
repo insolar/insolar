@@ -17,6 +17,7 @@
 package integration_test
 
 import (
+	"crypto/rand"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
@@ -27,7 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_Pending_RequestRegistration(t *testing.T) {
+func Test_Pending_RequestRegistration_Incoming(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
@@ -64,5 +65,59 @@ func Test_Pending_RequestRegistration(t *testing.T) {
 
 		err := p.(*payload.Error)
 		require.Equal(t, insolar.ErrNoPendingRequest.Error(), err.Text)
+	})
+
+	t.Run("reason on the another object", func(t *testing.T) {
+		firstObjP, _ := setIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
+		requirePayloadNotError(t, firstObjP)
+		reqInfo := firstObjP.(*payload.RequestInfo)
+		firstObjP, _ = activateObject(ctx, t, s, reqInfo.RequestID)
+		requirePayloadNotError(t, firstObjP)
+
+		secondObjP, _ := setIncomingRequest(ctx, t, s, gen.ID(), reqInfo.RequestID, record.CTSaveAsChild)
+		requirePayloadNotError(t, secondObjP)
+		secondReqInfo := secondObjP.(*payload.RequestInfo)
+		secondPendings := fetchPendings(ctx, t, s, secondReqInfo.RequestID)
+		requirePayloadNotError(t, secondPendings)
+
+		ids := secondPendings.(*payload.IDs)
+		require.Equal(t, 1, len(ids.IDs))
+		require.Equal(t, secondReqInfo.RequestID, ids.IDs[0])
+	})
+
+	t.Run("try to register twice. checking for duplication is working", func(t *testing.T) {
+		args := make([]byte, 100)
+		_, err := rand.Read(args)
+		initReq := record.IncomingRequest{
+			Object:    insolar.NewReference(gen.ID()),
+			Arguments: args,
+			CallType:  record.CTSaveAsChild,
+			Reason:    *insolar.NewReference(*insolar.NewID(s.pulse.PulseNumber, []byte{1, 2, 3})),
+			APINode:   gen.Reference(),
+		}
+		initReqMsg := &payload.SetIncomingRequest{
+			Request: record.Wrap(initReq),
+		}
+
+		// Set first request
+		p := setRequest(ctx, t, s, initReqMsg)
+		requirePayloadNotError(t, p)
+		reqInfo := p.(*payload.RequestInfo)
+		require.Nil(t, reqInfo.Request)
+		require.Nil(t, reqInfo.Result)
+
+		// Try to set it again
+		secondP := setRequest(ctx, t, s, initReqMsg)
+		requirePayloadNotError(t, secondP)
+		reqInfo = secondP.(*payload.RequestInfo)
+		require.NotNil(t, reqInfo.Request)
+		require.Nil(t, reqInfo.Result)
+
+		// Check for the result
+		compositeRec := record.CompositeFilamentRecord{}
+		err = compositeRec.Unmarshal(reqInfo.Request)
+		require.NoError(t, err)
+		returnedReq := record.Unwrap(compositeRec.Record.Virtual)
+		require.Equal(t, &initReq, returnedReq)
 	})
 }
