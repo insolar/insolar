@@ -52,6 +52,7 @@ package core
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/consensuskit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
@@ -63,7 +64,7 @@ func NewFixedRealmPopulation(strategy RoundStrategy, population census.OnlinePop
 	nodeCount := population.GetCount()
 	otherCount := nodeCount
 	if otherCount > 0 && !population.GetLocalProfile().IsJoiner() {
-		otherCount-- //remove self when it is not a joiner
+		otherCount-- // remove self when it is not a joiner
 	}
 
 	r := &FixedRealmPopulation{
@@ -78,7 +79,7 @@ func NewFixedRealmPopulation(strategy RoundStrategy, population census.OnlinePop
 			nodeShuffle:    make([]*NodeAppearance, otherCount),
 			shuffledCount:  otherCount,
 			dynamicNodes:   make(map[insolar.ShortNodeID]*NodeAppearance),
-			indexedLenSet:  true, //locks down SealIndex
+			indexedLenSet:  true, // locks down SealIndex
 		}},
 		bftMajorityCount: consensuskit.BftMajority(nodeCount),
 	}

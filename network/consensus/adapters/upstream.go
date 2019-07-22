@@ -58,7 +58,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/utils"
@@ -108,12 +107,8 @@ func (u *UpstreamPulseController) ConsensusFinished(report api.UpstreamReport, e
 	)
 }
 
-func (u *UpstreamPulseController) PreparePulseChange(report api.UpstreamReport) <-chan proofs.NodeStateHash {
-	nshChan := make(chan proofs.NodeStateHash)
-
-	go awaitState(nshChan, u.stateGetter)
-
-	return nshChan
+func (u *UpstreamPulseController) PreparePulseChange(report api.UpstreamReport, ch chan<- api.UpstreamState) {
+	go awaitState(ch, u.stateGetter)
 }
 
 func (u *UpstreamPulseController) CommitPulseChange(report api.UpstreamReport, pulseData pulse.Data, activeCensus census.Operational) {
@@ -127,8 +122,10 @@ func (u *UpstreamPulseController) CancelPulseChange() {
 	panic("implement me")
 }
 
-func awaitState(c chan<- proofs.NodeStateHash, stater StateGetter) {
-	c <- cryptkit.NewDigest(longbits.NewBits512FromBytes(stater.State()), SHA3512Digest).AsDigestHolder()
+func awaitState(c chan<- api.UpstreamState, stater StateGetter) {
+	c <- api.UpstreamState{
+		NodeState: cryptkit.NewDigest(longbits.NewBits512FromBytes(stater.State()), SHA3512Digest).AsDigestHolder(),
+	}
 }
 
 func contextFromReport(report api.UpstreamReport) context.Context {

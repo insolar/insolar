@@ -58,11 +58,18 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
 
 type FinishedNotifier func(insolar.PulseNumber)
 
+type candidateController interface {
+	AddJoinCandidate(candidate transport.FullIntroductionReader)
+}
+
 type Controller interface {
+	candidateController
+
 	Abort()
 
 	ChangePower(level capacity.Level)
@@ -73,18 +80,23 @@ type Controller interface {
 }
 
 type controller struct {
-	consensusControlFeeder   api.ConsensusControlFeeder
 	consensusController      api.ConsensusController
 	controlFeederInterceptor *adapters.ControlFeederInterceptor
+	candidateController      candidateController
 
 	mu        *sync.RWMutex
 	notifiers []FinishedNotifier
 }
 
-func newController(controlFeederInterceptor *adapters.ControlFeederInterceptor, consensusController api.ConsensusController) *controller {
+func newController(
+	controlFeederInterceptor *adapters.ControlFeederInterceptor,
+	candidateController candidateController,
+	consensusController api.ConsensusController,
+) *controller {
 	controller := &controller{
 		controlFeederInterceptor: controlFeederInterceptor,
 		consensusController:      consensusController,
+		candidateController:      candidateController,
 
 		mu:        &sync.RWMutex{},
 		notifiers: make([]FinishedNotifier, 0),
@@ -93,6 +105,10 @@ func newController(controlFeederInterceptor *adapters.ControlFeederInterceptor, 
 	controlFeederInterceptor.Feeder().SetOnFinished(controller.onFinished)
 
 	return controller
+}
+
+func (c *controller) AddJoinCandidate(candidate transport.FullIntroductionReader) {
+	c.candidateController.AddJoinCandidate(candidate)
 }
 
 func (c *controller) Abort() {

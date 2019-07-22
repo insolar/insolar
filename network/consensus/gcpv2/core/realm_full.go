@@ -53,6 +53,7 @@ package core
 import (
 	"context"
 	"fmt"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -145,7 +146,7 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		}
 	}
 
-	//this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
+	// this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
 	var err error
 	packet, err = LazyPacketParse(packet)
 	if err != nil {
@@ -524,7 +525,7 @@ func (r *FullRealm) FinishRound(builder census.Builder, csh proofs.CloudStateHas
 	mode := local.GetOpMode()
 	if mode.IsEvicted() {
 		expected = builder.BuildAndMakeIncompleteExpected(csh)
-		//expected = builder.BuildAndMakeExpected(csh)
+		// expected = builder.BuildAndMakeExpected(csh)
 	} else {
 		expected = builder.BuildAndMakeExpected(csh)
 		successful = true
@@ -540,8 +541,8 @@ func (r *FullRealm) FinishRound(builder census.Builder, csh proofs.CloudStateHas
 		case !r.self.requestedJoinerID.IsAbsent():
 			r.candidateFeeder.RemoveJoinCandidate(true, r.self.requestedJoinerID)
 		}
-		//if r.requestedPowerFlag {
-		//}
+		// if r.requestedPowerFlag {
+		// }
 	}
 	pw := r.self.requestedPower
 	if mode.IsPowerless() {
@@ -568,7 +569,7 @@ func (r *FullRealm) GetPurgatory() *RealmPurgatory {
 }
 
 func (r *FullRealm) getMemberReceiver(id insolar.ShortNodeID) MemberPacketReceiver {
-	//Purgatory MUST be checked first to avoid "missing" a node during its transition from the purgatory to normal population
+	// Purgatory MUST be checked first to avoid "missing" a node during its transition from the purgatory to normal population
 	pn := r.GetPurgatory().GetPhantomNode(id)
 	if pn != nil {
 		return pn
@@ -606,7 +607,7 @@ func (r *FullRealm) BuildNextPopulation(ctx context.Context, ranks []profiles.Po
 		if nodeID == selfID {
 			selfMode = pr.OpMode
 		} else {
-			//na = r.population.GetNodeAppearance(pr.NodeID)
+			// na = r.population.GetNodeAppearance(pr.NodeID)
 			nextAP = pb.AddProfile(prevAP.GetStatic())
 		}
 		if pr.OpMode.IsPowerless() && pr.Power != 0 {

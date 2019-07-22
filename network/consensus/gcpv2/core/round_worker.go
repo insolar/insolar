@@ -52,12 +52,13 @@ package core
 
 import (
 	"context"
+	"sync/atomic"
+	"time"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
-	"sync/atomic"
-	"time"
 )
 
 const (
@@ -91,7 +92,7 @@ type RoundStateMachineWorker struct {
 	ctx      context.Context
 	cancelFn context.CancelFunc
 
-	runStatus  int32 //atomic
+	runStatus  int32 // atomic
 	roundState uint32
 
 	timeout <-chan time.Time
@@ -256,10 +257,10 @@ func (p *RoundStateMachineWorker) runToLastState() (exitState RoundState) {
 		}
 		p.cancelFn()
 
-		for cmd := range p.asyncCmd { //ensure that a queued command is read
+		for cmd := range p.asyncCmd { // ensure that a queued command is read
 			cmd()
 		}
-		for cmd := range p.syncCmd { //ensure that a queued command is read
+		for cmd := range p.syncCmd { // ensure that a queued command is read
 			cmd()
 		}
 		return RoundStopped

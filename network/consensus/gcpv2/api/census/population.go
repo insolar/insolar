@@ -56,6 +56,8 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.OfflinePopulation -o . -s _mock.go
+
 type OfflinePopulation interface {
 	FindRegisteredProfile(identity endpoints.Inbound) profiles.Host
 	// FindPulsarProfile(pulsarId PulsarId) PulsarProfile
@@ -64,19 +66,21 @@ type OfflinePopulation interface {
 type OnlinePopulation interface {
 	FindProfile(nodeID insolar.ShortNodeID) profiles.ActiveNode
 	GetCount() int
-	//GetKnownCount() int
-	//GetPopulationSize() int
-	//IsComplete() bool
+	// GetKnownCount() int
+	// GetPopulationSize() int
+	// IsComplete() bool
 
-	//GetActiveRoleProfiles(role member.PrimaryRole) (active []profiles.ActiveNode, activePower uint16)
-	//GetActiveRoles() []member.PrimaryRole //?
+	// GetActiveRoleProfiles(role member.PrimaryRole) (active []profiles.ActiveNode, activePower uint16)
+	// GetActiveRoles() []member.PrimaryRole //?
 
-	//GetInactiveRoleProfiles(role member.PrimaryRole) []profiles.ActiveNode
-	//GetInactiveRoles() []member.PrimaryRole
+	// GetInactiveRoleProfiles(role member.PrimaryRole) []profiles.ActiveNode
+	// GetInactiveRoles() []member.PrimaryRole
 
 	GetProfiles() []profiles.ActiveNode
 	GetLocalProfile() profiles.LocalNode
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.EvictedPopulation -o . -s _mock.go
 
 type EvictedPopulation interface {
 	FindProfile(nodeID insolar.ShortNodeID) profiles.EvictedNode

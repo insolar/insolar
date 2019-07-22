@@ -53,11 +53,12 @@ package core
 import (
 	"context"
 	"fmt"
+	"math"
+	"sync"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/args"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
-	"math"
-	"sync"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -332,7 +333,7 @@ func (c *NodeAppearance) _applyNodeMembership(ma profiles.MembershipAnnouncement
 
 	if c.stateEvidence != nil {
 		lmp := c.getMembership()
-		//var lma profiles.MembershipAnnouncement
+		// var lma profiles.MembershipAnnouncement
 		if ma.Membership.Equals(lmp) && ma.IsLeaving == c.requestedLeave {
 			switch {
 			case c.requestedLeave:
@@ -506,7 +507,7 @@ func (c *NodeAppearance) RegisterFraud(fraud misbehavior.FraudError) error {
 
 func (c *NodeAppearance) RegisterBlame(blame misbehavior.BlameError) {
 	// TODO
-	//inslogger.FromContext(ctx).Error(blame)
+	// inslogger.FromContext(ctx).Error(blame)
 }
 
 // MUST BE NO LOCK

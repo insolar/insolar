@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,19 +46,20 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package tests
 
 import (
 	"context"
 	"fmt"
+	"math/rand"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-	"math/rand"
 )
 
 func newEmuNetworkBuilder(ctx context.Context, netStrategy NetStrategy,
@@ -123,7 +124,7 @@ func (p *emuNetworkBuilder) _connectEmuNode(nodes []profiles.StaticProfile, self
 
 		p._connectEmuNode([]profiles.StaticProfile{intro}, 0, true)
 	case selfIndex%5 == 2:
-		controlFeeder.leaveReason = uint32(selfIndex) //simulate leave
+		controlFeeder.leaveReason = uint32(selfIndex) // simulate leave
 	}
 
 	chronicles := NewEmuChronicles(nodes, selfIndex, asJoiner, p.primingCloudStateHash)

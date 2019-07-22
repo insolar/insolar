@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,13 +46,15 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package core
 
 import (
 	"context"
 	"fmt"
+	"sync"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -63,7 +65,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
-	"sync"
 )
 
 func NewNodePhantom(purgatory *RealmPurgatory, nodeID insolar.ShortNodeID, limiter phases.PacketLimiter) *NodePhantom {
@@ -87,7 +88,7 @@ type NodePhantom struct {
 
 	figment  figment
 	recorder packetrecorder.UnsafePacketRecorder
-	//figments map[string]*figment
+	// figments map[string]*figment
 }
 
 func (p *NodePhantom) ApplyNeighbourEvidence(n *NodeAppearance, an profiles.MembershipAnnouncement, cappedTrust bool) (bool, error) {
@@ -215,10 +216,10 @@ type figment struct {
 
 	profile profiles.StaticProfile
 
-	//announceSignature proofs.MemberAnnouncementSignature // one-time set
-	//stateEvidence     proofs.NodeStateHashEvidence       // one-time set
-	//firstFraudDetails *misbehavior.FraudError
-	//neighborReports int
+	// announceSignature proofs.MemberAnnouncementSignature // one-time set
+	// stateEvidence     proofs.NodeStateHashEvidence       // one-time set
+	// firstFraudDetails *misbehavior.FraudError
+	// neighborReports int
 }
 
 func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom, rank member.Rank, profile profiles.StaticProfile,

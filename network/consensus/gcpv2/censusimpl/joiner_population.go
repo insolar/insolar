@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,7 +46,7 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package censusimpl
 
@@ -74,7 +74,7 @@ type OneJoinerPopulation struct {
 func (c *OneJoinerPopulation) Copy() ManyNodePopulation {
 	r := ManyNodePopulation{}
 	v := []updatableSlot{c.localNode}
-	v[0].index = 0 //removes Joiner status
+	v[0].index = 0 // removes Joiner status
 
 	r.makeFullCopyOf(v, &v[0])
 	return r
@@ -82,7 +82,7 @@ func (c *OneJoinerPopulation) Copy() ManyNodePopulation {
 
 func (c *OneJoinerPopulation) copyTo(p copyFromPopulation, fullCopy bool) {
 	v := []updatableSlot{c.localNode}
-	v[0].index = 0 //removes Joiner status
+	v[0].index = 0 // removes Joiner status
 
 	if fullCopy {
 		p.makeFullCopyOf(v, &v[0])
@@ -99,7 +99,7 @@ func (c *OneJoinerPopulation) FindProfile(nodeID insolar.ShortNodeID) profiles.A
 }
 
 func (c *OneJoinerPopulation) GetCount() int {
-	return 0 //joiner is not counted
+	return 0 // joiner is not counted
 }
 
 func (c *OneJoinerPopulation) GetProfiles() []profiles.ActiveNode {

@@ -52,8 +52,9 @@ package longbits
 
 import (
 	"bytes"
-	"github.com/insolar/insolar/network/consensus/common/args"
 	"io"
+
+	"github.com/insolar/insolar/network/consensus/common/args"
 )
 
 type Foldable interface {

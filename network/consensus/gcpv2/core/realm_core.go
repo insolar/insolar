@@ -53,11 +53,12 @@ package core
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
-	"sync"
-	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -281,7 +282,7 @@ func VerifyPacketRoute(ctx context.Context, packet transport.PacketParser, selfI
 
 func LazyPacketParse(packet transport.PacketParser) (transport.PacketParser, error) {
 
-	//this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
+	// this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
 	newPacket, err := packet.ParsePacketBody()
 	if err != nil {
 		return packet, err

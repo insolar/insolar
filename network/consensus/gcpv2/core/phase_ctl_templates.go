@@ -52,6 +52,7 @@ package core
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
 
@@ -77,7 +78,7 @@ func (c *PrepPhaseControllerTemplate) BeforeStart(ctx context.Context, realm *Pr
 func (*PrepPhaseControllerTemplate) StartWorker(ctx context.Context, realm *PrepRealm) {
 }
 
-//var _ PacketDispatcher = &HostPacketDispatcherTemplate{}
+// var _ PacketDispatcher = &HostPacketDispatcherTemplate{}
 
 type HostPacketDispatcherTemplate struct {
 }
@@ -96,7 +97,7 @@ func (*HostPacketDispatcherTemplate) DispatchMemberPacket(ctx context.Context, p
 	panic("illegal state")
 }
 
-//var _ PacketDispatcher = &MemberPacketDispatcherTemplate{}
+// var _ PacketDispatcher = &MemberPacketDispatcherTemplate{}
 
 type MemberPacketDispatcherTemplate struct {
 }

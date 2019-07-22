@@ -77,7 +77,7 @@ type EmuUpstreamPulseController struct {
 func (r *EmuUpstreamPulseController) PreparePulseChange(report api.UpstreamReport, c chan<- api.UpstreamState) {
 	fn := func() {
 		nsh := NewEmuNodeStateHash(rand.Uint64())
-		c <- api.UpstreamState{nsh}
+		c <- api.UpstreamState{NodeState: nsh}
 		close(c)
 	}
 	if r.nshDelay == 0 {

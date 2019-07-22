@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,12 +46,14 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package core
 
 import (
 	"context"
+	"sync"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -60,14 +62,13 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/censusimpl"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
-	"sync"
 )
 
-func NewRealmPurgatory(population RealmPopulation, pf profiles.Factory, svf cryptkit.SignatureVerifierFactory,
+func NewRealmPurgatory(population RealmPopulation, _ profiles.Factory, svf cryptkit.SignatureVerifierFactory,
 	callback *nodeContext, postponedPacketFn packetrecorder.PostponedPacketFunc) RealmPurgatory {
 	return RealmPurgatory{
 		population: population,
-		//profileFactory:    pf,
+		// profileFactory:    pf,
 		svFactory:         svf,
 		callback:          callback,
 		postponedPacketFn: postponedPacketFn,
@@ -90,7 +91,7 @@ type AnnouncingMember interface {
 type RealmPurgatory struct {
 	population RealmPopulation
 	svFactory  cryptkit.SignatureVerifierFactory
-	//profileFactory    profiles.Factory
+	// profileFactory    profiles.Factory
 	postponedPacketFn packetrecorder.PostponedPacketFunc
 
 	callback *nodeContext
@@ -103,13 +104,13 @@ type RealmPurgatory struct {
 
 	phantomByID map[insolar.ShortNodeID]*NodePhantom
 
-	//phantomByEP map[string]*NodePhantom
+	// phantomByEP map[string]*NodePhantom
 }
 
-//type PurgatoryNodeState int
+// type PurgatoryNodeState int
 //
-//const PurgatoryDuplicatePK PurgatoryNodeState = -1
-//const PurgatoryExistingMember PurgatoryNodeState = -2
+// const PurgatoryDuplicatePK PurgatoryNodeState = -1
+// const PurgatoryExistingMember PurgatoryNodeState = -2
 
 func (p *RealmPurgatory) GetPhantomNode(id insolar.ShortNodeID) *NodePhantom {
 	p.rw.RLock()
@@ -133,7 +134,7 @@ func (p *RealmPurgatory) getOrCreatePhantom(id insolar.ShortNodeID) AnnouncingMe
 
 	np, ok := p.phantomByID[id]
 	if ok {
-		if np == nil { //avoid interface-nil
+		if np == nil { // avoid interface-nil
 			return nil
 		}
 		return np
@@ -170,10 +171,10 @@ func (p *RealmPurgatory) getOrCreateMember(id insolar.ShortNodeID) AnnouncingMem
 		return np
 	}
 
-	//NB! np == NIL - it means that phantom was moved to a normal population
+	// NB! np == NIL - it means that phantom was moved to a normal population
 	na = p.population.GetNodeAppearance(id)
 	if na == nil {
-		//nil entry in the purgatory means that there MUST have be a relevant NodeAppearance
+		// nil entry in the purgatory means that there MUST have be a relevant NodeAppearance
 		panic("illegal state")
 	}
 	return na
@@ -197,7 +198,7 @@ func (p *RealmPurgatory) getMember(id insolar.ShortNodeID, introducedBy insolar.
 
 	na = p.population.GetNodeAppearance(id)
 	if na == nil {
-		//nil entry in the purgatory means that there MUST have be a relevant NodeAppearance
+		// nil entry in the purgatory means that there MUST have be a relevant NodeAppearance
 		panic("illegal state")
 	}
 	return na
@@ -219,8 +220,8 @@ func (p *RealmPurgatory) ascendFromPurgatory(ctx context.Context, id insolar.Sho
 
 	p.rw.Lock()
 	defer p.rw.Unlock()
-	p.phantomByID[id] = nil //leave marker
-	//delete(p.phantomByEP, ...)
+	p.phantomByID[id] = nil // leave marker
+	// delete(p.phantomByEP, ...)
 	na, _ = p.population.AddToDynamics(na)
 	if na.IsJoiner() {
 		_, err := na.ApplyNodeStateHashEvidenceForJoiner()

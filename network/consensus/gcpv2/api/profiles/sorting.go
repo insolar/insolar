@@ -51,8 +51,9 @@
 package profiles
 
 import (
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"sort"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 )
 
 func AsRank(np ActiveNode, count member.Index) member.Rank {
@@ -73,17 +74,17 @@ func AsSortingRankOfStatic(st StaticProfile, enableStartPower bool) member.Sorti
 	return member.NewSortingRank(st.GetStaticNodeID(), st.GetPrimaryRole(), 0, member.ModeNormal)
 }
 
-//func AsSortingPowerRole(np ActiveNode) uint16 {
+// func AsSortingPowerRole(np ActiveNode) uint16 {
 //	st := np.GetStatic()
 //	return member.SortingPowerRole(st.GetPrimaryRole(), np.GetDeclaredPower(), np.GetOpMode())
-//}
+// }
 //
-//func AsSortingPowerRoleOfStatic(st StaticProfile, enableStartPower bool) uint16 {
+// func AsSortingPowerRoleOfStatic(st StaticProfile, enableStartPower bool) uint16 {
 //	if enableStartPower {
 //		return member.SortingPowerRole(st.GetPrimaryRole(), st.GetStartPower(), member.ModeNormal)
 //	}
 //	return 0
-//}
+// }
 
 func LessForActiveNodes(vN, oN ActiveNode) bool {
 	return AsSortingRank(vN).Less(AsSortingRank(oN))

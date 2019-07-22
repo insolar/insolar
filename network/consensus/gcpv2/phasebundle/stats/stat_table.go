@@ -201,7 +201,7 @@ func (t *StatTable) Equals(o *StatTable) bool {
 	}
 	for j, tR := range t.rows {
 		oR := o.rows[j]
-		if tR == oR { //for both nil
+		if tR == oR { // for both nil
 			continue
 		}
 		if tR == nil || oR == nil || !tR.equals(oR) {

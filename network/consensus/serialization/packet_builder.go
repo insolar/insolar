@@ -53,13 +53,13 @@ package serialization
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/statevector"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
@@ -140,6 +140,7 @@ func (pb *PacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncementP
 
 	body.Announcement.ShortID = sender.GetNodeID()
 	body.Announcement.CurrentRank = sender.GetNodeRank()
+	fmt.Println("send", sender.GetNodeID(), sender.GetNodeRank())
 	body.Announcement.RequestedPower = sender.GetRequestedPower()
 	copy(
 		body.Announcement.AnnounceSignature[:],
@@ -147,11 +148,11 @@ func (pb *PacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncementP
 	)
 	copy(
 		body.Announcement.Member.NodeState.NodeStateHash[:],
-		sender.GetNodeStateHashEvidence().GetNodeStateHash().AsBytes(),
+		sender.GetNodeStateHashEvidence().CopyOfSignedDigest().GetDigest().AsBytes(),
 	)
 	copy(
 		body.Announcement.Member.NodeState.GlobulaNodeStateSignature[:],
-		sender.GetNodeStateHashEvidence().GetGlobulaNodeStateSignature().AsBytes(),
+		sender.GetNodeStateHashEvidence().CopyOfSignedDigest().GetSignature().AsBytes(),
 	)
 
 	if sender.IsLeaving() {
@@ -188,11 +189,11 @@ func (pb *PacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncementP
 	copy(body.Announcement.AnnounceSignature[:], sender.GetAnnouncementSignature().AsBytes())
 	copy(
 		body.Announcement.Member.NodeState.NodeStateHash[:],
-		sender.GetNodeStateHashEvidence().GetNodeStateHash().AsBytes(),
+		sender.GetNodeStateHashEvidence().CopyOfSignedDigest().GetDigest().AsBytes(),
 	)
 	copy(
 		body.Announcement.Member.NodeState.GlobulaNodeStateSignature[:],
-		sender.GetNodeStateHashEvidence().GetGlobulaNodeStateSignature().AsBytes(),
+		sender.GetNodeStateHashEvidence().CopyOfSignedDigest().GetSignature().AsBytes(),
 	)
 
 	if sender.IsLeaving() {
@@ -222,11 +223,11 @@ func (pb *PacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncementP
 		if neighbour.GetNodeRank() != 0 {
 			copy(
 				body.Neighbourhood.Neighbours[i].Member.NodeState.NodeStateHash[:],
-				neighbour.GetNodeStateHashEvidence().GetNodeStateHash().AsBytes(),
+				neighbour.GetNodeStateHashEvidence().CopyOfSignedDigest().GetDigest().AsBytes(),
 			)
 			copy(
 				body.Neighbourhood.Neighbours[i].Member.NodeState.GlobulaNodeStateSignature[:],
-				neighbour.GetNodeStateHashEvidence().GetGlobulaNodeStateSignature().AsBytes(),
+				neighbour.GetNodeStateHashEvidence().CopyOfSignedDigest().GetSignature().AsBytes(),
 			)
 		}
 
@@ -288,9 +289,9 @@ func (p *PreparedPacketSender) Copy() *PreparedPacketSender {
 	return &ppsCopy
 }
 
-func (p *PreparedPacketSender) SendTo(ctx context.Context, target profiles.StaticProfile, sendOptions transport.PacketSendOptions, sender transport.PacketSender) {
-	p.packet.Header.TargetID = uint32(target.GetStaticNodeID())
-	p.packet.Header.ReceiverID = uint32(target.GetStaticNodeID())
+func (p *PreparedPacketSender) SendTo(ctx context.Context, target transport.TargetProfile, sendOptions transport.PacketSendOptions, sender transport.PacketSender) {
+	p.packet.Header.TargetID = uint32(target.GetNodeID())
+	p.packet.Header.ReceiverID = uint32(target.GetNodeID())
 
 	if (sendOptions & transport.SendWithoutPulseData) != 0 {
 		p.packet.Header.ClearFlag(FlagHasPulsePacket)
@@ -306,7 +307,7 @@ func (p *PreparedPacketSender) SendTo(ctx context.Context, target profiles.Stati
 }
 
 func (p *PreparedPacketSender) SendToMany(ctx context.Context, targetCount int, sender transport.PacketSender,
-	filter func(ctx context.Context, targetIndex int) (profiles.StaticProfile, transport.PacketSendOptions)) {
+	filter func(ctx context.Context, targetIndex int) (transport.TargetProfile, transport.PacketSendOptions)) {
 
 	for i := 0; i < targetCount; i++ {
 		if np, options := filter(ctx, i); np != nil {

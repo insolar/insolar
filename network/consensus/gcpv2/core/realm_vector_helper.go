@@ -51,9 +51,10 @@
 package core
 
 import (
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"sort"
 	"sync"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/nodeset"
@@ -100,25 +101,25 @@ func (p *RealmVectorProjection) HasSameVersion(version uint32) bool {
 }
 
 func (p *RealmVectorProjection) ForceEntryUpdate(index int) bool {
-	//if p == &p.origin.projection {
+	// if p == &p.origin.projection {
 	//	member, _ := p.origin.forceEntryUpdate(index)
 	//	return member != nil
-	//}
-	//member, joiner := p.origin.forceEntryUpdate(index)
+	// }
+	// member, joiner := p.origin.forceEntryUpdate(index)
 	//
-	//if member == nil {
+	// if member == nil {
 	return false
-	//}
-	//p.updateEntry(index, member, joiner)
-	//return true
+	// }
+	// p.updateEntry(index, member, joiner)
+	// return true
 }
 
-//func (p *RealmVectorHelper) forceEntryUpdate(index int) (*VectorEntry, *VectorEntry) {
+// func (p *RealmVectorHelper) forceEntryUpdate(index int) (*VectorEntry, *VectorEntry) {
 //	p.mutex.Lock()
 //	defer p.mutex.Lock()
 //
 //	return nil, nil
-//}
+// }
 
 func (p *RealmVectorProjection) updateEntry(index int, member, joiner *VectorEntry) { // nolint: unused
 	if p.sharedIndexedRefs {
@@ -297,7 +298,7 @@ func (p *RealmVectorHelper) setArrayNodes(nodeIndex []*NodeAppearance,
 		}
 		joiner := dynamicNodes[joinerID]
 		if joiner == nil {
-			//panic("joiner is missing")
+			// panic("joiner is missing")
 			continue
 		}
 

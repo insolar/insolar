@@ -59,6 +59,8 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.VersionedRegistries -o . -s _mock.go
+
 type VersionedRegistries interface {
 	// GetVersionId() int
 	CommitNextPulse(pd pulse.Data, population OnlinePopulation) VersionedRegistries
@@ -69,9 +71,13 @@ type VersionedRegistries interface {
 	GetVersionPulseData() pulse.Data
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.MisbehaviorRegistry -o . -s _mock.go
+
 type MisbehaviorRegistry interface {
 	AddReport(report misbehavior.Report)
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.MandateRegistry -o . -s _mock.go
 
 type MandateRegistry interface {
 	FindRegisteredProfile(host endpoints.Inbound) profiles.Host

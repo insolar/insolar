@@ -195,9 +195,9 @@ func (h *ConsensusMemberController) ProcessPacket(ctx context.Context, payload t
 	return err
 }
 
-//func (h *ConsensusMemberController) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
+// func (h *ConsensusMemberController) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
 //	if expectedCensus == nil || report.MemberMode.IsEvicted() {
 //		h.discardRound(true, nil)
 //	}
 //	//h.controlFeeder.ConsensusFinished(report, expectedCensus)
-//}
+// }

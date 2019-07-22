@@ -52,6 +52,8 @@ package announce
 
 import (
 	"context"
+	"fmt"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
@@ -93,13 +95,13 @@ func ValidateIntrosOnMember(reader transport.ExtendedIntroReader, brief transpor
 
 func ApplyUnknownAnnouncement(ctx context.Context, announcerID insolar.ShortNodeID,
 	reader transport.AnnouncementPacketReader, brief transport.BriefIntroductionReader,
-	fullIntroRequired bool, realm *core.FullRealm) (bool, error) {
+	_ bool, realm *core.FullRealm) (bool, error) {
 
-	//var err error
-	//err := ValidateIntrosOnMember(reader, brief, fullIntroRequired, nil)
-	//if err != nil {
+	// var err error
+	// err := ValidateIntrosOnMember(reader, brief, fullIntroRequired, nil)
+	// if err != nil {
 	//	return false, err
-	//}
+	// }
 
 	na := reader.GetAnnouncementReader()
 	nr := na.GetNodeRank()
@@ -124,15 +126,16 @@ func ApplyUnknownAnnouncement(ctx context.Context, announcerID insolar.ShortNode
 func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementPacketReader, brief transport.BriefIntroductionReader,
 	fullIntroRequired bool, n *core.NodeAppearance, realm *core.FullRealm) (bool, insolar.ShortNodeID, error) {
 
-	//err := ValidateIntrosOnMember(reader, brief, fullIntroRequired, n)
-	//if err != nil {
+	// err := ValidateIntrosOnMember(reader, brief, fullIntroRequired, n)
+	// if err != nil {
 	//	return false, 0, err
-	//}
+	// }
 
 	na := reader.GetAnnouncementReader()
 	nr := na.GetNodeRank()
 
 	if n.GetRank(realm.GetNodeCount()) != nr {
+		fmt.Println(nr)
 		return false, 0, n.Frauds().NewMismatchedNeighbourRank(n.GetReportProfile())
 	}
 
@@ -181,7 +184,7 @@ func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementP
 		}
 		err = purgatory.JoinerFromMemberAnnouncement(ctx, ma.JoinerID, joinerIntroProfile, announcerID)
 		if err == nil && ma.JoinerID == realm.GetSelfNodeID() {
-			//we trust more to these who has introduced us
+			// we trust more to these who has introduced us
 			// It is also REQUIRED as vector calculation requires at least one trusted node to work properly
 			n.UpdateNodeTrustLevel(member.TrustBySome)
 		}
@@ -206,7 +209,7 @@ func ApplyNeighbourJoinerAnnouncement(ctx context.Context, sender *core.NodeAppe
 	if neighbour.IsJoiner() {
 		if neighbourID == joinerAnnouncedBySender {
 			if neighbourJoinerAnnouncement == nil {
-				return nil //ok, we've got details from the sender's announcement
+				return nil // ok, we've got details from the sender's announcement
 			}
 			return neighbour.Blames().NewProtocolViolation(sender.GetReportProfile(), "joiner profile is duplicated in neighbourhood")
 		}
@@ -255,7 +258,7 @@ func VerifyNeighbourhood(ctx context.Context, neighbourhood []transport.Membersh
 	hasThis := false
 	hasSelf := false
 	neighbours := make([]ResolvedNeighbour, len(neighbourhood))
-	//nc := realm.GetNodeCount()
+	// nc := realm.GetNodeCount()
 	purgatory := realm.GetPurgatory()
 	localID := realm.GetSelfNodeID()
 	senderID := n.GetNodeID()
@@ -276,9 +279,9 @@ func VerifyNeighbourhood(ctx context.Context, neighbourhood []transport.Membersh
 		}
 
 		// TODO may vary for dynamic population
-		//if neighbour.GetRank(nc) != nr {
+		// if neighbour.GetRank(nc) != nr {
 		//	return nil, n.Frauds().NewMismatchedNeighbourRank(n.GetReportProfile())
-		//}
+		// }
 
 		// TODO validate node proof - if fails, then fraud on sender
 		// neighbourProfile.IsValidPacketSignature(nshEvidence.GetSignature())

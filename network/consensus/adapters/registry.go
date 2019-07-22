@@ -53,6 +53,7 @@ package adapters
 import (
 	"context"
 
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
@@ -74,7 +75,7 @@ func NewMisbehaviorRegistry() *MisbehaviorRegistry {
 func (mr *MisbehaviorRegistry) AddReport(report misbehavior.Report) {
 	ctx := context.TODO()
 
-	inslogger.FromContext(ctx).Warnf("Got Report% %+v", report)
+	inslogger.FromContext(ctx).Warnf("Got Report: %+v", report)
 }
 
 type MandateRegistry struct {
@@ -91,6 +92,10 @@ func NewMandateRegistry(cloudHash proofs.CloudStateHash, consensusConfiguration 
 
 func (mr *MandateRegistry) FindRegisteredProfile(host endpoints.Inbound) profiles.Host {
 	panic("implement me")
+}
+
+func (mr *MandateRegistry) GetCloudIdentity() cryptkit.DigestHolder {
+	return mr.cloudHash
 }
 
 func (mr *MandateRegistry) GetConsensusConfiguration() census.ConsensusConfiguration {
@@ -120,7 +125,7 @@ func (op *OfflinePopulation) FindRegisteredProfile(identity endpoints.Inbound) p
 	node := op.nodeKeeper.GetAccessor().GetActiveNodeByAddr(identity.GetNameAddress().String())
 	cert := op.manager.GetCertificate()
 
-	return NewNodeIntroProfile(node, cert, op.keyProcessor)
+	return NewStaticProfile(node, cert, op.keyProcessor)
 }
 
 type VersionedRegistries struct {

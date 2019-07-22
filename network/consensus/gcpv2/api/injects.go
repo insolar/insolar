@@ -52,8 +52,9 @@ package api
 
 import (
 	"context"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"time"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/capacity"
@@ -114,7 +115,7 @@ type RoundStateCallback interface {
 	OnPulseDetected()
 
 	OnFullRoundStarting()
-	//TODO pulse committed
+	// TODO pulse committed
 
 	// A special case for joiner, as it doesnt request NSG with PreparePulseChange
 	CommitPulseChangeByJoiner(report UpstreamReport, pd pulse.Data, activeCensus census.Operational)

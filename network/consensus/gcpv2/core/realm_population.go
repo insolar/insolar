@@ -52,6 +52,7 @@ package core
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 
 	"github.com/insolar/insolar/insolar"

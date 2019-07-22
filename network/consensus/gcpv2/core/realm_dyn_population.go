@@ -53,10 +53,11 @@ package core
 import (
 	"context"
 	"fmt"
+	"sync"
+
 	"github.com/insolar/insolar/network/consensus/common/args"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
-	"sync"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/consensuskit"
@@ -68,7 +69,7 @@ func NewDynamicRealmPopulation(strategy RoundStrategy, population census.OnlineP
 
 	nodeCount := population.GetCount()
 	if nodeCount > nodeCountHint {
-		nodeCountHint = nodeCount + nodeCount>>2 //125%
+		nodeCountHint = nodeCount + nodeCount>>2 // 125%
 	}
 
 	r := &DynamicRealmPopulation{
@@ -145,7 +146,7 @@ func (r *DynamicRealmPopulation) initPopulation(population census.OnlinePopulati
 
 	for _, np := range population.GetProfiles() {
 		na := r.CreateNodeAppearance(context.Background(), np)
-		_, _ = r.AddToDynamics(na) //repeated addition will leave the initial node
+		_, _ = r.AddToDynamics(na) // repeated addition will leave the initial node
 	}
 	self := r.dynamicNodes[local.GetNodeID()]
 	if r.self == nil || r.self != self {
@@ -306,9 +307,9 @@ func (r *DynamicRealmPopulation) AddToDynamics(na *NodeAppearance) (*NodeAppeara
 func (r *DynamicRealmPopulation) addToDynamics(n *NodeAppearance) *NodeAppearance {
 	nip := n.profile.GetStatic()
 
-	//if nip.GetExtension() == nil {
+	// if nip.GetExtension() == nil {
 	//	panic("illegal value")
-	//}
+	// }
 
 	r.rw.Lock()
 	defer r.rw.Unlock()

@@ -103,32 +103,8 @@ func (p NodeAnnouncedState) Equals(o NodeAnnouncedState) bool {
 	return p.StateEvidence.Equals(o.StateEvidence) && p.AnnounceSignature.Equals(o.AnnounceSignature)
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.NodeStateHashEvidence -o . -s _mock.go
+
 type NodeStateHashEvidence interface {
 	cryptkit.SignedDigestHolder
 }
-
-//func NewNodeStateHashEvidence(sd cryptkit.SignedDigest) NodeStateHashEvidence {
-//	return &nodeStateHashEvidence{sd}
-//}
-//
-//type nodeStateHashEvidence struct {
-//	cryptkit.SignedDigest
-//}
-//
-//func (c *nodeStateHashEvidence) GetNodeStateHash() NodeStateHash {
-//	return c.GetDigestHolder()
-//}
-//
-//func (c *nodeStateHashEvidence) GetGlobulaNodeStateSignature() cryptkit.SignatureHolder {
-//	return c.GetSignatureHolder()
-//}
-//
-////go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/proofs.NodeStateHashEvidence -o . -s _mock.go
-//
-//// TODO revisit and rework
-//type NodeStateHashEvidence interface {
-//	GetNodeStateHash() NodeStateHash
-//	GetGlobulaNodeStateSignature() cryptkit.SignatureHolder
-//}
-//
-//
