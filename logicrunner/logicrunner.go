@@ -222,6 +222,7 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 	}
 
 	lr.ArtifactManager.InjectFinish()
+	lr.FlowDispatcher.PulseAccessor = lr.PulseAccessor
 
 	return nil
 }
