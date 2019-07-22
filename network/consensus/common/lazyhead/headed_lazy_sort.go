@@ -204,7 +204,7 @@ func (r *HeadedLazySortedList) checkHeadLen(headLenReduction int) int {
 	if headCutLen > r.data.len {
 		return r.data.len
 	}
-	return r.headLen
+	return headCutLen
 }
 
 func (r *HeadedLazySortedList) CutOffHeadInto(headLenReduction int, to []interface{}) []interface{} {
