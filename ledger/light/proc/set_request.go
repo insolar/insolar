@@ -117,7 +117,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	}
 	if p.message.Sender != *virtNode {
 		logger.Errorf("sender isn't the executor. sender - %v, executor - %v", p.message.Sender, *virtNode)
-		//return ErrExecutorMismatch
+		return ErrExecutorMismatch
 	}
 
 	p.dep.locker.Lock(objectID)

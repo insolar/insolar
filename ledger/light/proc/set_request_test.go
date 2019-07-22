@@ -158,7 +158,6 @@ func TestSetRequest_Proceed(t *testing.T) {
 
 	resetComponents()
 	t.Run("wrong sender", func(t *testing.T) {
-		t.Skip("should be unskipped, when return ErrExecutorMismatch will be uncommented")
 		idxStorage.ForIDMock.Return(record.Index{
 			Lifeline: record.Lifeline{
 				StateID: record.StateActivation,
