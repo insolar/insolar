@@ -62,19 +62,23 @@ func TestMarshalUnmarshal(t *testing.T) {
 		{tp: payload.TypeGetCode, pl: &payload.GetCode{}},
 		{tp: payload.TypeSetCode, pl: &payload.SetCode{}},
 		{tp: payload.TypeGetFilament, pl: &payload.GetFilament{}},
+		// FIXME: uncomment after removing virtual record wrapper.
 		// {tp: payload.TypeFilamentSegment, pl: &payload.FilamentSegment{}},
 		// {tp: payload.TypeSetIncomingRequest, pl: &payload.SetIncomingRequest{}},
 		{tp: payload.TypeSetResult, pl: &payload.SetResult{}},
 		{tp: payload.TypeActivate, pl: &payload.Activate{}},
+		{tp: payload.TypeDeactivate, pl: &payload.Deactivate{}},
+		{tp: payload.TypeUpdate, pl: &payload.Update{}},
+		{tp: payload.TypeHotObjects, pl: &payload.HotObjects{}},
 	}
 
 	for _, d := range table {
 		t.Run(d.tp.String(), func(t *testing.T) {
 			fuzz.New().Fuzz(d.pl)
 			encoded, err := payload.Marshal(d.pl)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			decoded, err := payload.Unmarshal(encoded)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, d.pl, decoded)
 		})
 	}

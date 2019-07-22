@@ -54,6 +54,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
@@ -63,8 +64,8 @@ func NewPhase0Controller() *Phase0Controller {
 	return &Phase0Controller{}
 }
 
-func NewPhase1Controller(packetPrepareOptions core.PacketSendOptions, queueNshReady chan<- *core.NodeAppearance) *Phase1Controller {
-	return &Phase1Controller{packetPrepareOptions: packetPrepareOptions, qNshReady: queueNshReady}
+func NewPhase1Controller(packetPrepareOptions core.PacketSendOptions) *Phase1Controller {
+	return &Phase1Controller{packetPrepareOptions: packetPrepareOptions}
 }
 
 func NewReqPhase1Controller(packetPrepareOptions core.PacketSendOptions, delegate *Phase1Controller) *ReqPhase1Controller {
@@ -84,6 +85,10 @@ func (*Phase0Controller) GetPacketType() packets.PacketType {
 func (c *Phase0Controller) HandleMemberPacket(ctx context.Context, p packets.MemberPacketReader, n *core.NodeAppearance) error {
 	p0 := p.AsPhase0Packet()
 	pp := p0.GetEmbeddedPulsePacket()
+
+	//TODO check NodeRank - especially for suspected node
+
+	//TODO when PulseDataExt is bigger than ~1.5KB - ignore it, as we will not be able to resend it within Ph0/Ph1 packets
 
 	err := n.SetReceivedWithDupCheck(c.GetPacketType())
 	return handleEmbeddedPulsePacket(ctx, p, pp, n, c.R, err)
@@ -106,13 +111,18 @@ func handleEmbeddedPulsePacket(ctx context.Context, p packets.MemberPacketReader
 var _ core.PhaseController = &Phase1Controller{}
 
 type Phase1Controller struct {
-	core.PhaseControllerPerMemberTemplate
-	qNshReady            chan<- *core.NodeAppearance
+	PhaseControllerWithJoinersTemplate
 	packetPrepareOptions core.PacketSendOptions
 }
 
 func (*Phase1Controller) GetPacketType() packets.PacketType {
 	return packets.PacketPhase1
+}
+
+func (c *Phase1Controller) CreatePerNodePacketHandler(sharedNodeContext context.Context, ctlIndex int, node *core.NodeAppearance,
+	realm *core.FullRealm) (core.PhasePerNodePacketFunc, context.Context) {
+
+	return c.createPerNodePacketHandler(sharedNodeContext, ctlIndex, node, realm, c.handleJoinerPacket)
 }
 
 func (c *Phase1Controller) HandleMemberPacket(ctx context.Context, p packets.MemberPacketReader, n *core.NodeAppearance) error {
@@ -126,35 +136,45 @@ func (c *Phase1Controller) HandleMemberPacket(ctx context.Context, p packets.Mem
 	return err
 }
 
-/* Is also used by ReqPhase1Controller */
-func (c *Phase1Controller) handleNodeData(p1 packets.Phase1PacketReader, n *core.NodeAppearance) error {
-	send, err := c._handleNodeData(p1, n)
-	if send {
-		c.qNshReady <- n
-	}
-	return err
+func (c *Phase1Controller) handleJoinerPacket(ctx context.Context, p packets.MemberPacketReader, from *JoinerController) error {
+	panic("unsupported")
 }
 
-func (c *Phase1Controller) _handleNodeData(p1 packets.Phase1PacketReader, n *core.NodeAppearance) (bool, error) {
+/* Is also used by ReqPhase1Controller */
+func (c *Phase1Controller) handleNodeData(p1 packets.Phase1PacketReader, n *core.NodeAppearance) error {
 	dupErr := n.SetReceivedWithDupCheck(c.GetPacketType())
 
 	// if p1.HasSelfIntro() {
 	// TODO register protocol misbehavior - IntroClaim was not expected
 
-	mp := common.NewMembershipProfile(p1.GetNodeIndex(), p1.GetNodePower(), p1.GetNodeStateHashEvidence(), p1.GetNodeClaimsSignature())
-	if c.R.GetNodeCount() != int(p1.GetNodeCount()) {
-		return false, n.RegisterFraud(n.Frauds().NewMismatchedMembershipRank(n.GetProfile(), mp))
+	na := p1.GetAnnouncementReader()
+	nr := na.GetNodeRank()
+	mp := common.NewMembershipProfile(nr.GetMode(), nr.GetPower(), nr.GetIndex(),
+		na.GetNodeStateHashEvidence(), na.GetAnnouncementSignature(), na.GetRequestedPower())
+
+	if c.R.GetNodeCount() != int(nr.GetTotalCount()) {
+		_, err := n.RegisterFraud(n.Frauds().NewMismatchedMembershipRank(n.GetProfile(), mp))
+		return err
 	}
 
-	modified, err := n.ApplyNodeMembership(mp)
-	// if modified && dupErr != nil {
-	//	c.R.Log().Warnf("unexpected state: Phase1 was received, but NSH is unset: node=%v", n)
-	// }
+	var ma common.MembershipAnnouncement
+	switch {
+	case na.IsLeaving():
+		ma = common.NewMembershipAnnouncementWithLeave(mp, na.GetLeaveReason())
+	case na.GetJoinerID().IsAbsent():
+		ma = common.NewMembershipAnnouncement(mp)
+	default:
+		panic("not implemented") //TODO implement
+		//jar := na.GetJoinerAnnouncement()
+		//ma = common.NewMembershipAnnouncementWithJoiner(mp)
+	}
+
+	_, err := n.ApplyNodeMembership(ma)
 
 	if err != nil {
-		return modified, err
+		return err
 	}
-	return modified, dupErr
+	return dupErr
 }
 
 func (c *Phase1Controller) StartWorker(ctx context.Context) {
@@ -166,9 +186,7 @@ func (c *Phase1Controller) workerPhase01(ctx context.Context) {
 	if startIndex < 0 {
 		return
 	}
-
-	//TODO Hack! MUST provide claims hash
-	c.R.PrepareAndSetLocalNodeStateHashEvidence(nsh, nsh)
+	c.R.PrepareAndSetLocalNodeStateHashEvidence(nsh)
 
 	c.workerSendPhase1(ctx, startIndex)
 }
@@ -178,6 +196,10 @@ func (c *Phase1Controller) workerSendPhase0(ctx context.Context) (common.NodeSta
 	nshChannel := c.R.UpstreamPreparePulseChange()
 	// batchSize := c.R.strategy.GetPhase01SendBatching()
 
+	/*
+		TODO when PulseDataExt is bigger than ~1KB then it is too big for Ph1 and can only be distributed with Ph0 packets, so Ph0 phase should continue to run
+		Also size of Ph1 claims should be considered too.
+	*/
 	var nsh common.NodeStateHash
 
 	select {
@@ -189,15 +211,19 @@ func (c *Phase1Controller) workerSendPhase0(ctx context.Context) (common.NodeSta
 		return nsh, 0
 	}
 
-	p0 := c.R.GetPacketBuilder().PreparePhase0Packet(c.R.GetLocalProfile(), c.R.GetOriginalPulse(),
-		c.R.GetSelf().GetNodeMembershipProfile(), c.R.GetNodeCount(),
+	p0 := c.R.GetPacketBuilder().PreparePhase0Packet(c.R.CreateLocalAnnouncement(), c.R.GetOriginalPulse(),
 		c.packetPrepareOptions)
 
-	for lastIndex, target := range c.R.GetShuffledOtherNodes() {
-		if !target.HasReceivedAnyPhase() {
-			p0.SendTo(ctx, target.GetProfile(), 0, c.R.GetPacketSender())
-			target.SetSentPhase(packets.Phase0)
+	for lastIndex, target := range c.R.GetPopulation().GetShuffledOtherNodes() {
+		if target.HasReceivedAnyPhase() {
+			continue
 		}
+
+		//DONT use SendToMany here, as this is "gossip" style and parallelism is provided by multiplicity of nodes
+		//Instead we have a chance to save some traffic.
+		p0.SendTo(ctx, target.GetProfile(), 0, c.R.GetPacketSender())
+		target.SetSentPhase(packets.Phase0)
+
 		select {
 		case <-ctx.Done():
 			return nil, -1
@@ -217,28 +243,33 @@ func (c *Phase1Controller) workerSendPhase0(ctx context.Context) (common.NodeSta
 
 func (c *Phase1Controller) workerSendPhase1(ctx context.Context, startIndex int) {
 
-	p1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.GetLocalProfile(), c.R.GetOriginalPulse(),
-		c.R.GetSelf().GetNodeMembershipProfile(), c.R.GetNodeCount(),
-		c.packetPrepareOptions)
+	p1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
+		c.R.GetOriginalPulse(), c.packetPrepareOptions)
 
-	otherNodes := c.R.GetShuffledOtherNodes()
-	for i := range otherNodes {
-		index := (startIndex + i) % len(otherNodes)
-		target := otherNodes[index]
-		var sendOptions core.PacketSendOptions
+	otherNodes := c.R.GetPopulation().GetShuffledOtherNodes()
 
-		if target.HasReceivedAnyPhase() {
-			// if something was received from this node, then we don't need to send a copy of pulse data to it
-			sendOptions |= core.SendWithoutPulseData
-		}
-		p1.SendTo(ctx, target.GetProfile(), sendOptions, c.R.GetPacketSender())
-		target.SetSentByPacketType(c.GetPacketType())
-		select {
-		case <-ctx.Done():
-			return // ctx.Err() ?
-		default:
-		}
-	}
+	//first, send to nodes not covered by Phase 0
+	p1.SendToMany(ctx, len(otherNodes)-startIndex, c.R.GetPacketSender(),
+		func(ctx context.Context, targetIdx int) (common.NodeProfile, core.PacketSendOptions) {
+			target := otherNodes[targetIdx+startIndex]
+			target.SetSentByPacketType(c.GetPacketType())
+
+			if target.HasReceivedAnyPhase() {
+				return target.GetProfile(), core.SendWithoutPulseData
+			}
+			return target.GetProfile(), 0
+		})
+
+	p1.SendToMany(ctx, startIndex, c.R.GetPacketSender(),
+		func(ctx context.Context, targetIdx int) (common.NodeProfile, core.PacketSendOptions) {
+			target := otherNodes[targetIdx]
+			target.SetSentByPacketType(c.GetPacketType())
+
+			if target.HasReceivedAnyPhase() {
+				return target.GetProfile(), core.SendWithoutPulseData
+			}
+			return target.GetProfile(), 0
+		})
 }
 
 var _ core.PhaseController = &ReqPhase1Controller{}
@@ -262,16 +293,15 @@ func (c *ReqPhase1Controller) HandleMemberPacket(ctx context.Context, p packets.
 	if !c.R.GetSelf().IsNshRequired() {
 		c.sendReqPhase1Reply(ctx, n)
 	} else {
-		c.R.Log().Warn("got Phase1 request, but NSH is still unavailable")
+		inslogger.FromContext(ctx).Warn("got Phase1 request, but NSH is still unavailable")
 	}
 	return nil
 }
 
 func (c *ReqPhase1Controller) sendReqPhase1Reply(ctx context.Context, target *core.NodeAppearance) {
 
-	p1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.GetLocalProfile(), c.R.GetOriginalPulse(),
-		c.R.GetSelf().GetNodeMembershipProfile(), c.R.GetNodeCount(),
-		core.SendWithoutPulseData|c.packetPrepareOptions)
+	p1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
+		c.R.GetOriginalPulse(), core.SendWithoutPulseData|c.packetPrepareOptions)
 
 	p1.SendTo(ctx, target.GetProfile(), 0, c.R.GetPacketSender())
 	target.SetSentByPacketType(c.GetPacketType())

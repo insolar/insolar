@@ -27,28 +27,28 @@ import (
 )
 
 type GetCode struct {
-	dep     *proc.Dependencies
-	message payload.Meta
-	passed  bool
+	dep    *proc.Dependencies
+	meta   payload.Meta
+	passed bool
 }
 
-func NewGetCode(dep *proc.Dependencies, msg payload.Meta, passed bool) *GetCode {
+func NewGetCode(dep *proc.Dependencies, meta payload.Meta, passed bool) *GetCode {
 	return &GetCode{
-		dep:     dep,
-		message: msg,
-		passed:  passed,
+		dep:    dep,
+		meta:   meta,
+		passed: passed,
 	}
 }
 
 func (s *GetCode) Present(ctx context.Context, f flow.Flow) error {
 	msg := payload.GetCode{}
-	err := msg.Unmarshal(s.message.Payload)
+	err := msg.Unmarshal(s.meta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal GetCode message")
 	}
 
 	passIfNotFound := !s.passed
-	code := proc.NewGetCode(s.message, msg.CodeID, passIfNotFound)
+	code := proc.NewGetCode(s.meta, msg.CodeID, passIfNotFound)
 	s.dep.GetCode(code)
 	return f.Procedure(ctx, code, false)
 }

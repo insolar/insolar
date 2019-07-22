@@ -21,9 +21,10 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/insolar"
-	wbus "github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/record"
+
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
@@ -36,7 +37,7 @@ import (
 type EnsureIndex struct {
 	object  insolar.Reference
 	jet     insolar.JetID
-	replyTo chan<- bus.Reply
+	message payload.Meta
 	pn      insolar.PulseNumber
 
 	Dep struct {
@@ -45,14 +46,15 @@ type EnsureIndex struct {
 		IndexModifier object.IndexModifier
 		Coordinator   jet.Coordinator
 		Bus           insolar.MessageBus
+		Sender        bus.Sender
 	}
 }
 
-func NewEnsureIndex(obj insolar.Reference, jetID insolar.JetID, rep chan<- bus.Reply, pn insolar.PulseNumber) *EnsureIndex {
+func NewEnsureIndex(obj insolar.Reference, jetID insolar.JetID, msg payload.Meta, pn insolar.PulseNumber) *EnsureIndex {
 	return &EnsureIndex{
 		object:  obj,
 		jet:     jetID,
-		replyTo: rep,
+		message: msg,
 		pn:      pn,
 	}
 }
@@ -60,7 +62,11 @@ func NewEnsureIndex(obj insolar.Reference, jetID insolar.JetID, rep chan<- bus.R
 func (p *EnsureIndex) Proceed(ctx context.Context) error {
 	err := p.process(ctx)
 	if err != nil {
-		p.replyTo <- bus.Reply{Err: err}
+		msg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
+		if err != nil {
+			return err
+		}
+		go p.Dep.Sender.Reply(ctx, p.message, msg)
 	}
 	return err
 }
@@ -88,7 +94,7 @@ func (p *EnsureIndex) process(ctx context.Context) error {
 	}
 
 	logger.Debug("failed to fetch index (fetching from heavy)")
-	heavy, err := p.Dep.Coordinator.Heavy(ctx, flow.Pulse(ctx))
+	heavy, err := p.Dep.Coordinator.Heavy(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate heavy")
 	}
@@ -114,7 +120,7 @@ func (p *EnsureIndex) process(ctx context.Context) error {
 		return errors.Wrap(err, "failed to decode index")
 	}
 
-	err = p.Dep.IndexModifier.SetIndex(ctx, flow.Pulse(ctx), object.FilamentIndex{
+	err = p.Dep.IndexModifier.SetIndex(ctx, flow.Pulse(ctx), record.Index{
 		LifelineLastUsed: p.pn,
 		Lifeline:         lfl,
 		PendingRecords:   []insolar.ID{},
@@ -133,7 +139,7 @@ type EnsureIndexWM struct {
 	message payload.Meta
 
 	Result struct {
-		Lifeline object.Lifeline
+		Lifeline record.Lifeline
 	}
 
 	Dep struct {
@@ -143,7 +149,7 @@ type EnsureIndexWM struct {
 
 		Coordinator jet.Coordinator
 		Bus         insolar.MessageBus
-		Sender      wbus.Sender
+		Sender      bus.Sender
 	}
 }
 
@@ -189,7 +195,7 @@ func (p *EnsureIndexWM) process(ctx context.Context) error {
 	}
 
 	logger.Debug("failed to fetch index (fetching from heavy)")
-	heavy, err := p.Dep.Coordinator.Heavy(ctx, flow.Pulse(ctx))
+	heavy, err := p.Dep.Coordinator.Heavy(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate heavy")
 	}
@@ -215,7 +221,7 @@ func (p *EnsureIndexWM) process(ctx context.Context) error {
 		return errors.Wrap(err, "failed to decode index")
 	}
 
-	err = p.Dep.IndexModifier.SetIndex(ctx, flow.Pulse(ctx), object.FilamentIndex{
+	err = p.Dep.IndexModifier.SetIndex(ctx, flow.Pulse(ctx), record.Index{
 		LifelineLastUsed: flow.Pulse(ctx),
 		Lifeline:         p.Result.Lifeline,
 		PendingRecords:   []insolar.ID{},

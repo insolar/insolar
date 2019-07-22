@@ -54,6 +54,10 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/insolar/insolar/network/consensusv1/packets"
+
+	"github.com/insolar/insolar/insolar"
+
 	"github.com/insolar/insolar/network/consensus/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
 	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
@@ -61,9 +65,13 @@ import (
 )
 
 func NewEmuChronicles(intros []common2.NodeIntroProfile, localNodeIndex int, primingCloudStateHash common2.CloudStateHash) census.ConsensusChronicles {
-	pop := census.NewManyNodePopulation(intros[localNodeIndex], intros, false)
+	pop := census.NewManyNodePopulation(intros[localNodeIndex], intros)
 	chronicles := census.NewLocalChronicles()
-	census.NewPrimingCensus(&pop, &EmuVersionedRegistries{primingCloudStateHash: primingCloudStateHash}).SetAsActiveTo(chronicles)
+	census.NewPrimingCensus(
+		&pop,
+		nil,
+		&EmuVersionedRegistries{primingCloudStateHash: primingCloudStateHash},
+	).SetAsActiveTo(chronicles)
 	return chronicles
 }
 
@@ -92,6 +100,10 @@ func NewEmuNodeIntros(names ...string) []common2.NodeIntroProfile {
 type EmuVersionedRegistries struct {
 	pd                    common.PulseData
 	primingCloudStateHash common2.CloudStateHash
+}
+
+func (c *EmuVersionedRegistries) GetConsensusConfiguration() census.ConsensusConfiguration {
+	return c
 }
 
 func (c *EmuVersionedRegistries) GetPrimingCloudHash() common2.CloudStateHash {
@@ -132,21 +144,75 @@ func (c *EmuVersionedRegistries) GetVersionPulseData() common.PulseData {
 const ShortNodeIdOffset = 1000
 
 func NewEmuNodeIntro(id int, s common.HostAddress, pr common2.NodePrimaryRole, sr common2.NodeSpecialRole) common2.NodeIntroProfile {
-	return &emuNodeIntro{id: common.ShortNodeID(ShortNodeIdOffset + id), n: s, pr: pr, sr: sr}
+	return &emuNodeIntro{
+		id: common.ShortNodeID(ShortNodeIdOffset + id),
+		n:  &emuEndpoint{name: s},
+		pr: pr,
+		sr: sr,
+	}
+}
+
+var _ common.NodeEndpoint = &emuEndpoint{}
+
+type emuEndpoint struct {
+	name common.HostAddress
+}
+
+func (p *emuEndpoint) GetIPAddress() packets.NodeAddress {
+	panic("implement me")
+}
+
+func (p *emuEndpoint) GetEndpointType() common.NodeEndpointType {
+	return common.NameEndpoint
+}
+
+func (*emuEndpoint) GetRelayID() common.ShortNodeID {
+	return 0
+}
+
+func (p *emuEndpoint) GetNameAddress() common.HostAddress {
+	return p.name
 }
 
 type emuNodeIntro struct {
-	n  common.HostAddress
+	n  common.NodeEndpoint
 	id common.ShortNodeID
 	pr common2.NodePrimaryRole
 	sr common2.NodeSpecialRole
 }
 
-func (c *emuNodeIntro) GetNodePrimaryRole() common2.NodePrimaryRole {
+func (c *emuNodeIntro) GetNodePublicKey() common.SignatureKeyHolder {
+	v := &common.Bits512{}
+	common.FillBitsWithStaticNoise(uint32(c.id), v[:])
+	k := common.NewSignatureKey(v, "stub/stub", common.PublicAsymmetricKey)
+	return &k
+}
+
+func (c *emuNodeIntro) GetStartPower() common2.MemberPower {
+	return 10
+}
+
+func (c *emuNodeIntro) GetNodeReference() insolar.Reference {
+	panic("unsupported")
+}
+
+func (c *emuNodeIntro) HasIntroduction() bool {
+	return true
+}
+
+func (c *emuNodeIntro) ConvertPowerRequest(request common2.PowerRequest) common2.MemberPower {
+	if ok, cl := request.AsCapacityLevel(); ok {
+		return common2.MemberPowerOf(uint16(cl.DefaultPercent()))
+	}
+	_, pw := request.AsMemberPower()
+	return pw
+}
+
+func (c *emuNodeIntro) GetPrimaryRole() common2.NodePrimaryRole {
 	return c.pr
 }
 
-func (c *emuNodeIntro) GetNodeSpecialRole() common2.NodeSpecialRole {
+func (c *emuNodeIntro) GetSpecialRoles() common2.NodeSpecialRole {
 	return c.sr
 }
 
@@ -154,11 +220,11 @@ func (*emuNodeIntro) IsAllowedPower(p common2.MemberPower) bool {
 	return true
 }
 
-func (c *emuNodeIntro) GetClaimEvidence() common.SignedEvidenceHolder {
+func (c *emuNodeIntro) GetAnnouncementSignature() common.SignatureHolder {
 	return nil
 }
 
-func (c *emuNodeIntro) GetDefaultEndpoint() common.HostAddress {
+func (c *emuNodeIntro) GetDefaultEndpoint() common.NodeEndpoint {
 	return c.n
 }
 
@@ -167,7 +233,8 @@ func (*emuNodeIntro) GetNodePublicKeyStore() common.PublicKeyStore {
 }
 
 func (c *emuNodeIntro) IsAcceptableHost(from common.HostIdentityHolder) bool {
-	return c.n.Equals(from.GetHostAddress())
+	addr := c.n.GetNameAddress()
+	return addr.Equals(from.GetHostAddress())
 }
 
 func (c *emuNodeIntro) GetShortNodeID() common.ShortNodeID {

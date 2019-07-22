@@ -75,6 +75,6 @@ func CreateGenerator(pulseCount int, pulseDelta uint16, output chan<- interface{
 		})
 
 		pulseNum += common.PulseNumber(pulseDelta)
-		time.Sleep(10 * time.Second)
+		time.Sleep(time.Duration(pulseDelta) * time.Second)
 	}
 }

@@ -84,13 +84,13 @@ type Coordinator interface {
 	LightExecutorForJet(ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber) (*insolar.Reference, error)
 	LightValidatorsForJet(ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber) ([]insolar.Reference, error)
 
-	Heavy(ctx context.Context, pulse insolar.PulseNumber) (*insolar.Reference, error)
+	Heavy(ctx context.Context) (*insolar.Reference, error)
 
-	IsBeyondLimit(ctx context.Context, currentPN, targetPN insolar.PulseNumber) (bool, error)
-	NodeForJet(ctx context.Context, jetID insolar.ID, rootPN, targetPN insolar.PulseNumber) (*insolar.Reference, error)
+	IsBeyondLimit(ctx context.Context, targetPN insolar.PulseNumber) (bool, error)
+	NodeForJet(ctx context.Context, jetID insolar.ID, targetPN insolar.PulseNumber) (*insolar.Reference, error)
 
 	// NodeForObject calculates a node (LME or heavy) for a specific jet for a specific pulseNumber
-	NodeForObject(ctx context.Context, objectID insolar.ID, rootPN, targetPN insolar.PulseNumber) (*insolar.Reference, error)
+	NodeForObject(ctx context.Context, objectID insolar.ID, targetPN insolar.PulseNumber) (*insolar.Reference, error)
 }
 
 // Parent returns a parent of the jet or jet itself if depth of provided JetID is zero.

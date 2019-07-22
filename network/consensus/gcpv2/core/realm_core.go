@@ -56,14 +56,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
-
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 	"github.com/insolar/insolar/network/consensus/gcpv2/errors"
 
+	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/census"
+	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
 
 	"github.com/insolar/insolar/network/consensus/common"
 )
@@ -78,20 +76,16 @@ type hLocker interface {
 type coreRealm struct {
 	/* Provided externally at construction. Don't need mutex */
 	hLocker
-	nodeCallback
 
 	roundContext  context.Context
 	strategy      RoundStrategy
 	config        LocalNodeConfiguration
-	chronicle     census.ConsensusChronicles
 	initialCensus census.OperationalCensus
 
 	/* Derived from the ones provided externally - set at init() or start(). Don't need mutex */
 	signer          common.DigestSigner
 	digest          common.DigestFactory
-	packetBuilder   PacketBuilder
-	packetSender    PacketSender
-	verifierFactory common.SignatureVerifierFactory
+	verifierFactory TransportCryptographyFactory
 	upstream        UpstreamPulseController
 	roundStartedAt  time.Time
 
@@ -105,28 +99,52 @@ type coreRealm struct {
 	originalPulse common2.OriginalPulsarPacket
 }
 
-func newCoreRealm(hLocker hLocker) coreRealm {
-	return coreRealm{hLocker: hLocker}
+func (r *coreRealm) init(hLocker hLocker, strategy RoundStrategy, transport TransportFactory,
+	config LocalNodeConfiguration, initialCensus census.OperationalCensus, powerRequest common2.PowerRequest) {
+
+	r.hLocker = hLocker
+
+	r.strategy = strategy
+	r.config = config
+	r.initialCensus = initialCensus
+
+	r.verifierFactory = transport.GetCryptographyFactory()
+	r.digest = r.verifierFactory.GetDigestFactory()
+
+	sks := config.GetSecretKeyStore()
+	r.signer = r.verifierFactory.GetNodeSigner(sks)
+
+	population := r.initialCensus.GetOnlinePopulation()
+
+	/*
+		Here we initialize self like for PrepRealm. This is not perfect, but it enables access to Self earlier.
+	*/
+	nodeContext := &nodeContext{}
+	profile := population.GetLocalProfile()
+
+	if profile.GetOpMode().IsEvicted() {
+		/*
+			Previous round has provided an incorrect population, as eviction of local node must force one-node population of self
+		*/
+		panic("illegal state")
+	}
+
+	r.self = NewNodeAppearanceAsSelf(profile, nodeContext)
+	r.self.requestedPower = profile.GetIntroduction().ConvertPowerRequest(powerRequest)
+
+	nodeContext.initPrep(
+		func(report errors.MisbehaviorReport) interface{} {
+			r.initialCensus.GetMisbehaviorRegistry().AddReport(report)
+			return nil
+		})
 }
 
-func (r *coreRealm) init() {
-	r.nodeCallback.init()
-}
-
-func (r *coreRealm) Log() insolar.Logger {
-	return inslogger.FromContext(r.roundContext)
+func (r *coreRealm) GetStrategy() RoundStrategy {
+	return r.strategy
 }
 
 func (r *coreRealm) GetVerifierFactory() common.SignatureVerifierFactory {
 	return r.verifierFactory
-}
-
-func (r *coreRealm) GetPacketSender() PacketSender {
-	return r.packetSender
-}
-
-func (r *coreRealm) GetPacketBuilder() PacketBuilder {
-	return r.packetBuilder
 }
 
 func (r *coreRealm) GetDigestFactory() common.DigestFactory {
@@ -135,19 +153,6 @@ func (r *coreRealm) GetDigestFactory() common.DigestFactory {
 
 func (r *coreRealm) GetSigner() common.DigestSigner {
 	return r.signer
-}
-
-func (r *coreRealm) GetStrategy() RoundStrategy {
-	return r.strategy
-}
-
-func (r *coreRealm) GetRandomUint32() uint32 {
-	return r.strategy.RandUint32()
-}
-
-func (r *coreRealm) ShuffleNodeProjections(nodeRefs []*NodeAppearance) {
-	r.strategy.ShuffleNodeSequence(len(nodeRefs),
-		func(i, j int) { nodeRefs[i], nodeRefs[j] = nodeRefs[j], nodeRefs[i] })
 }
 
 func (r *coreRealm) GetSignatureVerifier(pks common.PublicKeyStore) common.SignatureVerifier {
@@ -182,21 +187,11 @@ func (r *coreRealm) GetSelf() *NodeAppearance {
 	return r.self
 }
 
-/* Overrides nodeCallback.captureMisbehavior */
-func (r *coreRealm) captureMisbehavior(report errors.MisbehaviorReport) interface{} {
-	r.ReportMisbehavior(report)
-	return nil
-}
-
-func (r *coreRealm) ReportMisbehavior(report errors.MisbehaviorReport) {
-	r.chronicle.GetLatestCensus().GetMisbehaviorRegistry().AddReport(report)
-}
-
 func (r *coreRealm) GetPrimingCloudHash() common2.CloudStateHash {
 	return r.initialCensus.GetMandateRegistry().GetPrimingCloudHash()
 }
 
-func (r *coreRealm) VerifyPacketAuthenticity(packet packets.PacketParser, from common.HostIdentityHolder) error {
+func (r *coreRealm) VerifyPacketAuthenticity(packet packets.PacketParser, from common.HostIdentityHolder, strictFrom bool) error {
 	nr := r.initialCensus.GetOfflinePopulation().FindRegisteredProfile(from)
 	if nr == nil {
 		nr = r.initialCensus.GetMandateRegistry().FindRegisteredProfile(from)
@@ -205,15 +200,16 @@ func (r *coreRealm) VerifyPacketAuthenticity(packet packets.PacketParser, from c
 		}
 	}
 	sf := r.verifierFactory.GetSignatureVerifierWithPKS(nr.GetNodePublicKeyStore())
-	return VerifyPacketAuthenticityBy(packet, nr, sf, from)
+	return VerifyPacketAuthenticityBy(packet, nr, sf, from, strictFrom)
 }
 
 func VerifyPacketAuthenticityBy(packet packets.PacketParser, nr common2.HostProfile, sf common.SignatureVerifier,
-	from common.HostIdentityHolder) error {
+	from common.HostIdentityHolder, strictFrom bool) error {
 
-	if !nr.IsAcceptableHost(from) {
+	if strictFrom && !nr.IsAcceptableHost(from) {
 		return fmt.Errorf("host is not allowed by node registration: node=%v, host=%v", nr, from)
 	}
+
 	ps := packet.GetPacketSignature()
 	if !ps.IsVerifiableBy(sf) {
 		return fmt.Errorf("unable to verify packet signature from sender: %v", from)
@@ -222,15 +218,4 @@ func VerifyPacketAuthenticityBy(packet packets.PacketParser, nr common2.HostProf
 		return fmt.Errorf("packet signature doesn't match for sender: %v", from)
 	}
 	return nil
-}
-
-func (r *coreRealm) prepareNewMembers(pop census.OnlinePopulationBuilder) {
-
-	for _, p := range pop.GetUnorderedProfiles() {
-		if p.GetSignatureVerifier() != nil {
-			continue
-		}
-		v := r.GetSignatureVerifier(p.GetNodePublicKeyStore())
-		p.SetSignatureVerifier(v)
-	}
 }

@@ -116,7 +116,7 @@ func NewDistributor(conf configuration.PulseDistributor) (insolar.PulseDistribut
 }
 
 func (d *distributor) Init(ctx context.Context) error {
-	handler := hostnetwork.NewStreamHandler(func(context.Context, *packet.Packet) {}, d.responseHandler)
+	handler := hostnetwork.NewStreamHandler(func(context.Context, *packet.ReceivedPacket) {}, d.responseHandler)
 
 	var err error
 	d.transport, err = d.Factory.CreateStreamTransport(handler)
@@ -179,11 +179,12 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 		return
 	}
 
-	if err := d.resume(ctx); err != nil {
-		logger.Error("[ Distribute ] resume distribution error: " + err.Error())
-		return
-	}
-	defer d.pause(ctx)
+	// TODO: Bronin. workaround for INS-2946
+	// if err := d.resume(ctx); err != nil {
+	// 	logger.Error("[ Distribute ] resume distribution error: " + err.Error())
+	// 	return
+	// }
+	// defer d.pause(ctx)
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(bootstrapHosts))

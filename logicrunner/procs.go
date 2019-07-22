@@ -101,7 +101,7 @@ func (r *RegisterIncomingRequest) Proceed(ctx context.Context) error {
 // ------------- ClarifyPendingState
 
 type ClarifyPendingState struct {
-	es     *ExecutionState
+	broker  *ExecutionBroker
 	request *record.IncomingRequest
 
 	ArtifactManager artifacts.Client
@@ -111,47 +111,49 @@ func (c *ClarifyPendingState) Proceed(ctx context.Context) error {
 	ctx, span := instracer.StartSpan(ctx, "ClarifyPendingState")
 	defer span.End()
 
-	c.es.Lock()
-	if c.es.pending != message.PendingUnknown {
-		c.es.Unlock()
+	es := &c.broker.executionState
+
+	es.Lock()
+	if es.pending != message.PendingUnknown {
+		es.Unlock()
 		return nil
 	}
 
 	if c.request != nil {
 		if c.request.CallType != record.CTMethod {
 			// It's considered that we are not pending except someone calls a method.
-			c.es.pending = message.NotPending
-			c.es.Unlock()
+			es.pending = message.NotPending
+			es.Unlock()
 			return nil
 		}
 	}
 
-	c.es.Unlock()
+	es.Unlock()
 
-	c.es.HasPendingCheckMutex.Lock()
-	defer c.es.HasPendingCheckMutex.Unlock()
+	es.HasPendingCheckMutex.Lock()
+	defer es.HasPendingCheckMutex.Unlock()
 
-	c.es.Lock()
-	if c.es.pending != message.PendingUnknown {
-		c.es.Unlock()
+	es.Lock()
+	if es.pending != message.PendingUnknown {
+		es.Unlock()
 		return nil
 	}
-	c.es.Unlock()
+	es.Unlock()
 
-	has, err := c.ArtifactManager.HasPendingRequests(ctx, c.es.Ref)
+	has, err := c.ArtifactManager.HasPendingRequests(ctx, c.broker.Ref)
 	if err != nil {
 		return err
 	}
 
-	c.es.Lock()
-	if c.es.pending == message.PendingUnknown {
+	es.Lock()
+	if es.pending == message.PendingUnknown {
 		if has {
-			c.es.pending = message.InPending
+			es.pending = message.InPending
 		} else {
-			c.es.pending = message.NotPending
+			es.pending = message.NotPending
 		}
 	}
-	c.es.Unlock()
+	es.Unlock()
 
 	return nil
 }

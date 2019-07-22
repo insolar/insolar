@@ -31,7 +31,6 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/messagebus"
 
 	"github.com/pkg/errors"
@@ -274,7 +273,7 @@ func (m *client) GetCode(
 		desc = &codeDescriptor{
 			ref:         code,
 			machineType: codeRecord.MachineType,
-			code:        p.Code,
+			code:        codeRecord.Code,
 		}
 		return desc, nil
 	case *payload.Error:
@@ -327,7 +326,7 @@ func (m *client) GetObject(
 	defer done()
 
 	var (
-		index        *object.Lifeline
+		index        *record.Lifeline
 		statePayload *payload.State
 	)
 	success := func() bool {
@@ -343,7 +342,7 @@ func (m *client) GetObject(
 		switch p := replyPayload.(type) {
 		case *payload.Index:
 			logger.Debug("reply index")
-			index = &object.Lifeline{}
+			index = &record.Lifeline{}
 			err := index.Unmarshal(p.Index)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to unmarshal index")
@@ -434,12 +433,7 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (*i
 		return nil, nil, fmt.Errorf("GetPendingRequest: unexpected reply: %#v", genericReply)
 	}
 
-	currentPN, err := m.pulse(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	node, err := m.JetCoordinator.NodeForObject(ctx, objectID, currentPN, requestID.Pulse())
+	node, err := m.JetCoordinator.NodeForObject(ctx, objectID, requestID.Pulse())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -628,7 +622,6 @@ func (m *client) DeployCode(
 
 	psc := &payload.SetCode{
 		Record: buf,
-		Code:   code,
 	}
 
 	pl, err := m.sendWithRetry(ctx, psc, insolar.DynamicRoleLightExecutor, *insolar.NewReference(recID), 3)
@@ -743,7 +736,10 @@ func (m *client) ActivateObject(
 //
 // Deactivated object cannot be changed.
 func (m *client) DeactivateObject(
-	ctx context.Context, request insolar.Reference, obj ObjectDescriptor, result []byte,
+	ctx context.Context,
+	request insolar.Reference,
+	obj ObjectDescriptor,
+	result []byte,
 ) error {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.DeactivateObject")
@@ -766,17 +762,36 @@ func (m *client) DeactivateObject(
 		Payload: result,
 	}
 
-	err = m.sendUpdateObject(
-		ctx,
-		record.Wrap(deactivate),
-		record.Wrap(resultRecord),
-		*obj.HeadRef(),
-		nil,
-	)
+	virtDeactivate := record.Wrap(deactivate)
+	virtResult := record.Wrap(resultRecord)
+
+	deactivateBuf, err := virtDeactivate.Marshal()
 	if err != nil {
-		return errors.Wrap(err, "failed to deactivate object")
+		return errors.Wrap(err, "DeactivateObject: can't serialize record")
 	}
-	return nil
+	resultBuf, err := virtResult.Marshal()
+	if err != nil {
+		return errors.Wrap(err, "DeactivateObject: can't serialize record")
+	}
+
+	pd := &payload.Deactivate{
+		Record: deactivateBuf,
+		Result: resultBuf,
+	}
+
+	pl, err := m.sendWithRetry(ctx, pd, insolar.DynamicRoleLightExecutor, *obj.HeadRef(), 3)
+	if err != nil {
+		return errors.Wrap(err, "DeactivateObject: can't send deactivation and result records")
+	}
+
+	switch p := pl.(type) {
+	case *payload.ID:
+		return nil
+	case *payload.Error:
+		return errors.New(p.Text)
+	default:
+		return fmt.Errorf("DeactivateObject: unexpected reply: %#v", p)
+	}
 }
 
 // UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
@@ -801,12 +816,56 @@ func (m *client) UpdateObject(
 		instrumenter.end()
 	}()
 
-	if object.IsPrototype() {
-		err = errors.New("object is not an instance")
-		return err
+	image, err := object.Prototype()
+
+	if err != nil {
+		return errors.Wrap(err, "UpdateObject: failed to get prototype for object")
 	}
-	err = m.updateObject(ctx, request, object, memory, result)
-	return err
+
+	amend := record.Amend{
+		Request:     request,
+		Image:       *image,
+		IsPrototype: object.IsPrototype(),
+		PrevState:   *object.StateID(),
+		Memory:      memory,
+	}
+
+	resultRecord := record.Result{
+		Object:  *object.HeadRef().Record(),
+		Request: request,
+		Payload: result,
+	}
+
+	virtDeactivate := record.Wrap(amend)
+	virtResult := record.Wrap(resultRecord)
+
+	updateBuf, err := virtDeactivate.Marshal()
+	if err != nil {
+		return errors.Wrap(err, "UpdateObject: can't serialize record")
+	}
+	resultBuf, err := virtResult.Marshal()
+	if err != nil {
+		return errors.Wrap(err, "UpdateObject: can't serialize record")
+	}
+
+	pu := &payload.Update{
+		Record: updateBuf,
+		Result: resultBuf,
+	}
+
+	pl, err := m.sendWithRetry(ctx, pu, insolar.DynamicRoleLightExecutor, *object.HeadRef(), 3)
+	if err != nil {
+		return errors.Wrap(err, "UpdateObject: can't send update and result records")
+	}
+
+	switch p := pl.(type) {
+	case *payload.ID:
+		return nil
+	case *payload.Error:
+		return errors.New(p.Text)
+	default:
+		return fmt.Errorf("UpdateObject: unexpected reply: %#v", p)
+	}
 }
 
 // RegisterValidation marks provided object state as approved or disapproved.
@@ -985,83 +1044,6 @@ func (m *client) activateObject(
 		return errors.New(p.Text)
 	default:
 		return fmt.Errorf("ActivateObject: unexpected reply: %#v", p)
-	}
-}
-
-func (m *client) updateObject(
-	ctx context.Context,
-	request insolar.Reference,
-	obj ObjectDescriptor,
-	memory []byte,
-	result []byte,
-) error {
-	var (
-		image *insolar.Reference
-		err   error
-	)
-	if obj.IsPrototype() {
-		image, err = obj.Code()
-	} else {
-		image, err = obj.Prototype()
-	}
-	if err != nil {
-		return errors.Wrap(err, "failed to update object")
-	}
-
-	amend := record.Amend{
-		Request:     request,
-		Image:       *image,
-		IsPrototype: obj.IsPrototype(),
-		PrevState:   *obj.StateID(),
-	}
-
-	resultRecord := record.Result{
-		Object:  *obj.HeadRef().Record(),
-		Request: request,
-		Payload: result,
-	}
-
-	err = m.sendUpdateObject(
-		ctx,
-		record.Wrap(amend),
-		record.Wrap(resultRecord),
-		*obj.HeadRef(),
-		memory,
-	)
-	if err != nil {
-		return errors.Wrap(err, "failed to update object")
-	}
-
-	return nil
-}
-
-func (m *client) setBlob(
-	ctx context.Context,
-	blob []byte,
-	target insolar.Reference,
-) (*insolar.ID, error) {
-
-	sender := messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryJetSender(m.JetStorage),
-		messagebus.RetryFlowCancelled(m.PulseAccessor),
-	)
-	genericReact, err := sender(ctx, &message.SetBlob{
-		Memory:    blob,
-		TargetRef: target,
-	}, nil)
-
-	if err != nil {
-		return nil, err
-	}
-
-	switch rep := genericReact.(type) {
-	case *reply.ID:
-		return &rep.ID, nil
-	case *reply.Error:
-		return nil, rep.Error()
-	default:
-		return nil, fmt.Errorf("setBlob: unexpected reply: %#v", rep)
 	}
 }
 

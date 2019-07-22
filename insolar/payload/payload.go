@@ -43,12 +43,28 @@ const (
 	TypeSetCode
 	TypeSetIncomingRequest
 	TypeSetOutgoingRequest
+	TypeSagaCallAcceptNotification
 	TypeGetFilament
 	TypeFilamentSegment
 	TypeSetResult
 	TypeActivate
 	TypeRequestInfo
+	TypeDeactivate
+	TypeUpdate
+	TypeHotObjects
+
+	// should be the last (required by TypesMap)
+	_latestType
 )
+
+// TypesMap contains Type name (gen by stringer) to type mapping.
+var TypesMap = func() map[string]Type {
+	m := map[string]Type{}
+	for i := TypeUnknown; i < _latestType; i++ {
+		m[i.String()] = i
+	}
+	return m
+}()
 
 // Payload represents any kind of data that can be encoded in consistent manner.
 type Payload interface {
@@ -57,6 +73,8 @@ type Payload interface {
 
 const (
 	MessageHashSize = 28
+	MorphFieldNum   = 16
+	MorpyFieldType  = 0 // Varint
 )
 
 type MessageHash [MessageHashSize]byte
@@ -101,9 +119,12 @@ func (h *MessageHash) IsZero() bool {
 // UnmarshalType decodes payload type from given binary.
 func UnmarshalType(data []byte) (Type, error) {
 	buf := proto.NewBuffer(data)
-	_, err := buf.DecodeVarint()
+	fieldNumType, err := buf.DecodeVarint()
 	if err != nil {
 		return TypeUnknown, errors.Wrap(err, "failed to decode polymorph")
+	}
+	if fieldNumType != MorphFieldNum<<3|MorpyFieldType {
+		return TypeUnknown, errors.Errorf("wrong polymorph field number %d", fieldNumType)
 	}
 	morph, err := buf.DecodeVarint()
 	if err != nil {
@@ -159,6 +180,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *SetOutgoingRequest:
 		pl.Polymorph = uint32(TypeSetOutgoingRequest)
 		return pl.Marshal()
+	case *SagaCallAcceptNotification:
+		pl.Polymorph = uint32(TypeSagaCallAcceptNotification)
+		return pl.Marshal()
 	case *SetResult:
 		pl.Polymorph = uint32(TypeSetResult)
 		return pl.Marshal()
@@ -167,6 +191,15 @@ func Marshal(payload Payload) ([]byte, error) {
 		return pl.Marshal()
 	case *RequestInfo:
 		pl.Polymorph = uint32(TypeRequestInfo)
+		return pl.Marshal()
+	case *Deactivate:
+		pl.Polymorph = uint32(TypeDeactivate)
+		return pl.Marshal()
+	case *Update:
+		pl.Polymorph = uint32(TypeUpdate)
+		return pl.Marshal()
+	case *HotObjects:
+		pl.Polymorph = uint32(TypeHotObjects)
 		return pl.Marshal()
 	}
 
@@ -239,6 +272,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		pl := SetOutgoingRequest{}
 		err := pl.Unmarshal(data)
 		return &pl, err
+	case TypeSagaCallAcceptNotification:
+		pl := SagaCallAcceptNotification{}
+		err := pl.Unmarshal(data)
+		return &pl, err
 	case TypeSetResult:
 		pl := SetResult{}
 		err := pl.Unmarshal(data)
@@ -249,6 +286,18 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeRequestInfo:
 		pl := RequestInfo{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeDeactivate:
+		pl := Deactivate{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeUpdate:
+		pl := Update{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeHotObjects:
+		pl := HotObjects{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}

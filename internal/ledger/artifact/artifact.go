@@ -23,7 +23,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -75,8 +74,6 @@ type Scope struct {
 	PulseNumber insolar.PulseNumber
 
 	PCS insolar.PlatformCryptographyScheme
-
-	BlobStorage blob.Storage
 
 	RecordModifier object.RecordModifier
 	RecordAccessor object.RecordAccessor
@@ -273,22 +270,6 @@ func (m *Scope) setRecord(ctx context.Context, rec record.Virtual) (*insolar.ID,
 	return id, m.RecordModifier.Set(ctx, *id, matRec)
 }
 
-func (m *Scope) setBlob(ctx context.Context, memory []byte) (*insolar.ID, error) {
-	blobID := object.CalculateIDForBlob(m.PCS, m.PulseNumber, memory)
-	err := m.BlobStorage.Set(
-		ctx,
-		*blobID,
-		blob.Blob{
-			JetID: insolar.ZeroJetID,
-			Value: memory,
-		},
-	)
-	if err != nil && err != blob.ErrOverride {
-		return nil, err
-	}
-	return blobID, nil
-}
-
 func (m *Scope) registerChild(
 	ctx context.Context,
 	obj insolar.Reference,
@@ -357,8 +338,8 @@ func (m *Scope) updateStateObject(
 			return errors.Wrap(err, "index not found for updating non Activation state object")
 		}
 		// We are activating the object. There is no index for it yet.
-		idx = object.FilamentIndex{
-			Lifeline:       object.Lifeline{StateID: record.StateUndefined},
+		idx = record.Index{
+			Lifeline:       record.Lifeline{StateID: record.StateUndefined},
 			PendingRecords: []insolar.ID{},
 			ObjID:          *objRef.Record(),
 		}
