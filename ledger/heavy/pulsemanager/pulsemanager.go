@@ -122,9 +122,6 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	// swap pulse
 	m.currentPulse = newPulse
 
-	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
-		return errors.Wrap(err, "call of AddPulse failed")
-	}
 	fromNetwork := m.NodeNet.GetWorkingNodes()
 	toSet := make([]insolar.Node, 0, len(fromNetwork))
 	for _, node := range fromNetwork {
@@ -144,6 +141,9 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	if oldPulse != nil {
 		nodes, err := m.Nodes.All(oldPulse.PulseNumber)
 		if err != nil {
+			if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
+				return errors.Wrap(err, "call of AddPulse failed")
+			}
 			return nil
 		}
 		// No active nodes for pulse. It means there was no processing (network start).
@@ -158,5 +158,8 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		}
 	}
 
+	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
+		return errors.Wrap(err, "call of AddPulse failed")
+	}
 	return nil
 }
