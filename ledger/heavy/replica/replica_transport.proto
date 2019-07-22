@@ -15,5 +15,4 @@ message Request {
 
 message Response {
     bytes data = 1;
-    bytes error = 2;
 }

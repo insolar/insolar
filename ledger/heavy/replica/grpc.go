@@ -74,11 +74,11 @@ func (t *grpcTransport) Call(ctx context.Context, request *Request) (*Response, 
 		return nil, errors.Errorf("handle function: %v not defined", method)
 	}
 	result, err := t.handlers[method](data)
-	resError, err := insolar.Serialize(err)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to serialize error value")
-	}
-	return &Response{Data: result, Error: resError}, nil
+	reply, err := insolar.Serialize(GenericReply{
+		Data:  result,
+		Error: err,
+	})
+	return &Response{Data: reply}, nil
 }
 
 func (t *grpcTransport) Send(ctx context.Context, receiver, method string, data []byte) ([]byte, error) {
@@ -93,12 +93,7 @@ func (t *grpcTransport) Send(ctx context.Context, receiver, method string, data 
 	if err != nil || res == nil {
 		return nil, errors.Wrapf(err, "failed to call RPC method %v", method)
 	}
-	resError := error(nil)
-	err = insolar.Deserialize(res.Error, &resError)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to deserialize error value")
-	}
-	return res.Data, resError
+	return res.Data, nil
 }
 
 func (t *grpcTransport) Register(method string, handle Handle) {
