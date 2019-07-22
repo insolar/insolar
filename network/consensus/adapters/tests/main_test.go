@@ -160,9 +160,9 @@ func TestConsensusMain(t *testing.T) {
 			return
 		}
 
-		if time.Since(startedAt) > time.Second*10 {
+		if time.Since(startedAt) > 10*time.Second {
 			once.Do(func() {
-				controllers[0].GracefulLeave(1)
+				controllers[0].Leave(0)
 			})
 		}
 	}

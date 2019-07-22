@@ -63,33 +63,38 @@ import (
 )
 
 type (
-	OnPowerApplied func(pw member.Power, effectiveSince pulse.Number)
-	OnLeaveApplied func(exitCode uint32, effectiveSince pulse.Number)
-	OnFinished     func(pulse pulse.Number)
+	OnFinished func(pulse pulse.Number)
 )
 
 type ConsensusControlFeeder struct {
-	mu             *sync.RWMutex
-	onPowerApplied OnPowerApplied
-	onLeaveApplied OnLeaveApplied
-	onFinished     OnFinished
-	capacityLevel  capacity.Level
-	leave          bool
-	leaveReason    uint32
+	mu            *sync.RWMutex
+	onFinished    OnFinished
+	capacityLevel capacity.Level
+	leave         bool
+	leaveReason   uint32
 }
 
 func NewConsensusControlFeeder() *ConsensusControlFeeder {
 	return &ConsensusControlFeeder{
 		mu:            &sync.RWMutex{},
 		capacityLevel: capacity.LevelNormal,
-		onLeaveApplied: func(exitCode uint32, effectiveSince pulse.Number) {
-			panic("unexpected leave")
-		},
-		onPowerApplied: func(pw member.Power, effectiveSince pulse.Number) {
-			panic("unexpected power change")
-		},
-		onFinished: func(pulse pulse.Number) {},
+		onFinished:    func(pulse pulse.Number) {},
 	}
+}
+
+func (cf *ConsensusControlFeeder) SetRequiredGracefulLeave(reason uint32) {
+	cf.mu.Lock()
+	defer cf.mu.Unlock()
+
+	cf.leave = true
+	cf.leaveReason = reason
+}
+
+func (cf *ConsensusControlFeeder) SetRequiredPowerLevel(level capacity.Level) {
+	cf.mu.Lock()
+	defer cf.mu.Unlock()
+
+	cf.capacityLevel = level
 }
 
 func (cf *ConsensusControlFeeder) GetRequiredGracefulLeave() (bool, uint32) {
@@ -106,23 +111,6 @@ func (cf *ConsensusControlFeeder) GetRequiredPowerLevel() power.Request {
 	return power.NewRequestByLevel(capacity.LevelNormal)
 }
 
-func (cf *ConsensusControlFeeder) SetRequiredGracefulLeave(leaveReason uint32, f OnLeaveApplied) {
-	cf.mu.Lock()
-	defer cf.mu.Unlock()
-
-	cf.leave = true
-	cf.leaveReason = leaveReason
-	cf.onLeaveApplied = f
-}
-
-func (cf *ConsensusControlFeeder) SetRequiredPowerLevel(capacityLevel capacity.Level, f OnPowerApplied) {
-	cf.mu.Lock()
-	defer cf.mu.Unlock()
-
-	cf.capacityLevel = capacityLevel
-	cf.onPowerApplied = f
-}
-
 func (cf *ConsensusControlFeeder) SetOnFinished(f OnFinished) {
 	cf.mu.Lock()
 	defer cf.mu.Unlock()
@@ -131,17 +119,9 @@ func (cf *ConsensusControlFeeder) SetOnFinished(f OnFinished) {
 }
 
 func (cf *ConsensusControlFeeder) OnAppliedPowerLevel(pw member.Power, effectiveSince pulse.Number) {
-	cf.mu.RLock()
-	defer cf.mu.RUnlock()
-
-	cf.onPowerApplied(pw, effectiveSince)
 }
 
 func (cf *ConsensusControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse.Number) {
-	cf.mu.RLock()
-	defer cf.mu.RUnlock()
-
-	cf.onLeaveApplied(exitCode, effectiveSince)
 }
 
 func (cf *ConsensusControlFeeder) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
@@ -161,4 +141,136 @@ func (cf *ConsensusControlFeeder) ResumeTraffic() {
 
 func (cf *ConsensusControlFeeder) PulseDetected() {
 	panic("implement me")
+}
+
+func InterceptConsensusControl(originalFeeder *ConsensusControlFeeder) *ControlFeederInterceptor {
+	r := ControlFeederInterceptor{}
+	r.internal.ConsensusControlFeeder = originalFeeder
+	r.internal.mu = &sync.Mutex{}
+	return &r
+}
+
+type ControlFeederInterceptor struct {
+	internal internalControlFeederAdapter
+}
+
+func (i *ControlFeederInterceptor) Feeder() *internalControlFeederAdapter {
+	return &i.internal
+}
+
+func (i *ControlFeederInterceptor) PrepareLeave() <-chan struct{} {
+	i.internal.mu.Lock()
+	defer i.internal.mu.Unlock()
+
+	if i.internal.zeroReadyChannel != nil {
+		panic("illegal state")
+	}
+	i.internal.zeroReadyChannel = make(chan struct{})
+	if i.internal.hasZero || i.internal.zeroPending {
+		i.internal.hasZero = true
+		close(i.internal.zeroReadyChannel)
+	}
+	return i.internal.zeroReadyChannel
+}
+
+func (i *ControlFeederInterceptor) Leave(leaveReason uint32) <-chan struct{} {
+	i.internal.mu.Lock()
+	defer i.internal.mu.Unlock()
+
+	if i.internal.leavingChannel != nil {
+		panic("illegal state")
+	}
+	i.internal.leaveReason = leaveReason
+	i.internal.leavingChannel = make(chan struct{})
+	if i.internal.hasLeft {
+		i.internal.setHasZero()
+		close(i.internal.leavingChannel)
+	}
+	return i.internal.leavingChannel
+}
+
+type internalControlFeederAdapter struct {
+	*ConsensusControlFeeder
+
+	mu *sync.Mutex
+
+	hasLeft bool
+	hasZero bool
+
+	zeroPending bool
+
+	leaveReason      uint32
+	zeroReadyChannel chan struct{}
+	leavingChannel   chan struct{}
+}
+
+func (cf *internalControlFeederAdapter) GetRequiredPowerLevel() power.Request {
+	cf.mu.Lock()
+	defer cf.mu.Unlock()
+
+	if cf.zeroReadyChannel != nil || cf.leavingChannel != nil {
+		return power.NewRequestByLevel(capacity.LevelZero)
+	}
+	return cf.ConsensusControlFeeder.GetRequiredPowerLevel()
+}
+
+func (cf *internalControlFeederAdapter) OnAppliedPowerLevel(pw member.Power, effectiveSince pulse.Number) {
+	cf.mu.Lock()
+	defer cf.mu.Unlock()
+
+	cf.zeroPending = pw == 0
+	if pw == 0 && cf.zeroReadyChannel != nil {
+		cf.setHasZero()
+	}
+	cf.ConsensusControlFeeder.OnAppliedPowerLevel(pw, effectiveSince)
+}
+
+func (cf *internalControlFeederAdapter) GetRequiredGracefulLeave() (bool, uint32) {
+	cf.mu.Lock()
+	defer cf.mu.Unlock()
+
+	if cf.leavingChannel != nil {
+		return true, cf.leaveReason
+	}
+	return cf.ConsensusControlFeeder.GetRequiredGracefulLeave()
+}
+
+func (cf *internalControlFeederAdapter) OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse.Number) {
+	cf.ConsensusControlFeeder.OnAppliedGracefulLeave(exitCode, effectiveSince)
+}
+
+func (cf *internalControlFeederAdapter) PulseDetected() {
+	cf.mu.Lock()
+	defer cf.mu.Unlock()
+
+	if cf.zeroPending {
+		cf.setHasZero()
+	}
+	cf.ConsensusControlFeeder.PulseDetected()
+}
+
+func (cf *internalControlFeederAdapter) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
+	cf.mu.Lock()
+	defer cf.mu.Unlock()
+
+	if report.MemberMode.IsEvicted() {
+		cf.setHasLeft()
+	}
+	cf.ConsensusControlFeeder.ConsensusFinished(report, expectedCensus)
+}
+
+func (cf *internalControlFeederAdapter) setHasZero() {
+	if !cf.hasZero && cf.zeroReadyChannel != nil {
+		close(cf.zeroReadyChannel)
+	}
+	cf.hasZero = true
+}
+
+func (cf *internalControlFeederAdapter) setHasLeft() {
+	cf.setHasZero()
+
+	if !cf.hasLeft && cf.leavingChannel != nil {
+		close(cf.leavingChannel)
+	}
+	cf.hasLeft = true
 }

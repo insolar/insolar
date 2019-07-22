@@ -53,7 +53,6 @@ package adapters
 import (
 	"context"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
@@ -92,12 +91,9 @@ func NewUpstreamPulseController(stateGetter StateGetter, pulseChanger PulseChang
 }
 
 func (u *UpstreamPulseController) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
-	// TODO: use nodekeeper in chronicles and remove setting sync list from here
-
 	ctx := contextFromReport(report)
 
-	if expectedCensus == nil {
-		inslogger.FromContext(ctx).Info("consensus finished: seems we are leaving")
+	if report.MemberMode.IsEvicted() {
 		return
 	}
 
