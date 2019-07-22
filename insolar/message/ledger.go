@@ -29,33 +29,6 @@ func (ledgerMessage) GetCaller() *insolar.Reference {
 	return nil
 }
 
-// GetDelegate retrieves object represented as provided type.
-type GetDelegate struct {
-	ledgerMessage
-	Head   insolar.Reference
-	AsType insolar.Reference
-}
-
-// AllowedSenderObjectAndRole implements interface method
-func (m *GetDelegate) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
-	return &m.Head, insolar.DynamicRoleVirtualExecutor
-}
-
-// DefaultRole returns role for this event
-func (*GetDelegate) DefaultRole() insolar.DynamicRole {
-	return insolar.DynamicRoleLightExecutor
-}
-
-// DefaultTarget returns of target of this event.
-func (m *GetDelegate) DefaultTarget() *insolar.Reference {
-	return &m.Head
-}
-
-// Type implementation of Message interface.
-func (*GetDelegate) Type() insolar.MessageType {
-	return insolar.TypeGetDelegate
-}
-
 // RegisterChild amends object.
 type RegisterChild struct {
 	ledgerMessage

@@ -201,8 +201,6 @@ const (
 
 	// Ledger
 
-	// TypeGetDelegate retrieves object represented as provided type.
-	TypeGetDelegate
 	// TypeGetChildren retrieves object's children.
 	TypeGetChildren
 	// TypeRegisterChild registers child on the parent object.

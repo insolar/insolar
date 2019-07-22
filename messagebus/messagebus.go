@@ -55,7 +55,6 @@ var transferredToWatermill = map[insolar.MessageType]struct{}{
 	insolar.TypeStillExecuting:                     {},
 	insolar.TypeAbandonedRequestsNotification:      {},
 	insolar.TypeExecutorResults:                    {},
-	insolar.TypeGetDelegate:                        {},
 	insolar.TypeAdditionalCallFromPreviousExecutor: {},
 	insolar.TypeHeavyPayload:                       {},
 	insolar.TypeGetObjectIndex:                     {},
@@ -402,7 +401,6 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel insolar.Parcel, loc
 		// Parcel is from past. Return error for some messages, allow for others.
 		switch parcel.Message().(type) {
 		case
-			*message.GetDelegate,
 			*message.GetChildren,
 			*message.RegisterChild,
 			*message.CallMethod:

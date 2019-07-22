@@ -232,82 +232,6 @@ func (r *Two) GetPayloadString() (string, error) {
 	)
 }
 
-func TestInjectingDelegate(t *testing.T) {
-	var contractOneCode = `
-package main
-
-import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import two "github.com/insolar/insolar/application/proxy/injection_delegate_two"
-
-type One struct {
-	foundation.BaseContract
-}
-
-func New() (*One, error) {
-	return &One{}, nil
-}
-
-func (r *One) Hello(s string) (string, error) {
-	holder := two.New()
-	friend, err := holder.AsDelegate(r.GetReference())
-	if err != nil {
-		return "", err
-	}
-
-	res, err := friend.Hello(s)
-	if err != nil {
-		return "", err
-	}
-
-	return "Hi, " + s + "! Two said: " + res, nil
-}
-
-func (r *One) HelloFromDelegate(s string) (string, error) {
-	friend, err := two.GetImplementationFrom(r.GetReference())
-	if err != nil {
-		return "", err
-	}
-
-	return friend.Hello(s)
-}
-`
-
-	var contractTwoCode = `
-package main
-
-import (
-	"fmt"
-
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-)
-
-type Two struct {
-	foundation.BaseContract
-	X int
-}
-
-func New() (*Two, error) {
-	return &Two{X:322}, nil
-}
-
-func (r *Two) Hello(s string) (string, error) {
-	r.X *= 2
-	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X), nil
-}
-`
-
-	uploadContractOnce(t, "injection_delegate_two", contractTwoCode)
-	obj := callConstructor(t, uploadContractOnce(t, "injection_delegate_one", contractOneCode), "New")
-
-	resp := callMethod(t, obj, "Hello", "ins")
-	require.Empty(t, resp.Error)
-	require.Equal(t, "Hi, ins! Two said: Hello you too, ins. 644 times!", resp.ExtractedReply)
-
-	resp = callMethod(t, obj, "HelloFromDelegate", "ins")
-	require.Empty(t, resp.Error)
-	require.Equal(t, "Hello you too, ins. 1288 times!", resp.ExtractedReply)
-}
-
 func TestNoWaitCall(t *testing.T) {
 	var contractOneCode = `
 package main
@@ -326,7 +250,7 @@ func New() (*One, error) {
 func (r *One) Hello() error {
 	holder := two.New()
 
-	friend, err := holder.AsDelegate(r.GetReference())
+	friend, err := holder.AsChild(r.GetReference())
 	if err != nil {
 		return err
 	}

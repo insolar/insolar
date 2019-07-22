@@ -88,11 +88,6 @@ func GetContext() *insolar.LogicCallContext {
 	}
 }
 
-// GetImplementationFor finds delegate typed r in object and returns it
-func GetImplementationFor(object, ofType insolar.Reference) (insolar.Reference, error) {
-	return common.CurrentProxyCtx.GetDelegate(object, ofType)
-}
-
 // GetObject create proxy by address
 // unimplemented
 func GetObject(ref insolar.Reference) ProxyInterface {

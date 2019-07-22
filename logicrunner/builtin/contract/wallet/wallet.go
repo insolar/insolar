@@ -81,7 +81,7 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toM
 		return nil, fmt.Errorf("can't parse wallet balance")
 	}
 
-	toWallet, err := wallet.GetImplementationFrom(*toMember)
+	toWallet := wallet.GetObject(*toMember)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get implementation: %s", err.Error())
 	}

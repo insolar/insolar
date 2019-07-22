@@ -358,60 +358,6 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef insolar.Reference, construc
 	return *res.Reference, nil
 }
 
-// SaveAsDelegate ...
-func (gi *GoInsider) SaveAsDelegate(intoRef, classRef insolar.Reference, constructorName string, argsSerialized []byte) (insolar.Reference, error) {
-	client, err := gi.Upstream()
-	if err != nil {
-		return insolar.Reference{}, err
-	}
-
-	req := rpctypes.UpSaveAsDelegateReq{
-		UpBaseReq:       MakeUpBaseReq(),
-		Into:            intoRef,
-		Prototype:       classRef,
-		ConstructorName: constructorName,
-		ArgsSerialized:  argsSerialized,
-	}
-
-	res := rpctypes.UpSaveAsDelegateResp{}
-	err = client.Call("RPC.SaveAsDelegate", req, &res)
-	if err != nil {
-		if err == rpc.ErrShutdown {
-			log.Error("Insgorund can't connect to Insolard")
-			os.Exit(0)
-		}
-		return insolar.Reference{}, errors.Wrap(err, "[ SaveAsDelegate ] on calling main API")
-	}
-
-	return *res.Reference, nil
-}
-
-// GetDelegate ...
-func (gi *GoInsider) GetDelegate(object, ofType insolar.Reference) (insolar.Reference, error) {
-	client, err := gi.Upstream()
-	if err != nil {
-		return insolar.Reference{}, err
-	}
-
-	req := rpctypes.UpGetDelegateReq{
-		UpBaseReq: MakeUpBaseReq(),
-		Object:    object,
-		OfType:    ofType,
-	}
-
-	res := rpctypes.UpGetDelegateResp{}
-	err = client.Call("RPC.GetDelegate", req, &res)
-	if err != nil {
-		if err == rpc.ErrShutdown {
-			log.Error("Insgorund can't connect to Insolard")
-			os.Exit(0)
-		}
-		return insolar.Reference{}, errors.Wrap(err, "[ GetDelegate ] on calling main API")
-	}
-
-	return res.Object, nil
-}
-
 // DeactivateObject ...
 func (gi *GoInsider) DeactivateObject(object insolar.Reference) error {
 	client, err := gi.Upstream()

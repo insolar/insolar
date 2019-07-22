@@ -81,8 +81,6 @@ func (cm *CallMethod) DefaultTarget() *insolar.Reference {
 	switch cm.CallType {
 	case record.CTSaveAsChild:
 		return genRequest(cm.PulseNum, MustSerializeBytes(cm))
-	case record.CTSaveAsDelegate:
-		return cm.Base
 	default:
 		return cm.Object
 	}

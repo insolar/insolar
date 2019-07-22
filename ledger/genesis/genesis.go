@@ -239,7 +239,6 @@ func (g *Genesis) activateContract(ctx context.Context, state insolar.GenesisCon
 		objRef,
 		parentRef,
 		protoRef,
-		state.Delegate,
 		state.Memory,
 	)
 	if err != nil {

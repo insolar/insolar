@@ -108,44 +108,6 @@ func (h *ProxyHelper) SaveAsChild(parentRef, classRef insolar.Reference, constru
 	return *res.Reference, nil
 }
 
-func (h *ProxyHelper) SaveAsDelegate(parentRef, classRef insolar.Reference, constructorName string,
-	argsSerialized []byte) (insolar.Reference, error) {
-
-	res := rpctypes.UpSaveAsDelegateResp{}
-	req := rpctypes.UpSaveAsDelegateReq{
-		UpBaseReq: h.getUpBaseReq(),
-
-		Into:            parentRef,
-		Prototype:       classRef,
-		ConstructorName: constructorName,
-		ArgsSerialized:  argsSerialized,
-	}
-
-	if err := h.methods.SaveAsDelegate(req, &res); err != nil {
-		return insolar.Reference{}, err
-	}
-	if res.Reference == nil {
-		return insolar.Reference{}, errors.New("Unexpected result, empty reference")
-	}
-	return *res.Reference, nil
-
-}
-
-func (h *ProxyHelper) GetDelegate(object, ofType insolar.Reference) (insolar.Reference, error) {
-	res := rpctypes.UpGetDelegateResp{}
-	req := rpctypes.UpGetDelegateReq{
-		UpBaseReq: h.getUpBaseReq(),
-
-		Object: object,
-		OfType: ofType,
-	}
-
-	if err := h.methods.GetDelegate(req, &res); err != nil {
-		return insolar.Reference{}, err
-	}
-	return res.Object, nil
-}
-
 func (h *ProxyHelper) DeactivateObject(object insolar.Reference) error {
 	res := rpctypes.UpDeactivateObjectResp{}
 	req := rpctypes.UpDeactivateObjectReq{

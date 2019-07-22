@@ -40,7 +40,6 @@ type Dependencies struct {
 	CalculateID      func(*CalculateID)
 	SetCode          func(*SetCode)
 	SendRequests     func(*SendRequests)
-	GetDelegate      func(*GetDelegate)
 	HasPendings      func(*HasPendings)
 }
 
@@ -71,7 +70,6 @@ func NewDependenciesMock() *Dependencies {
 		CalculateID:      func(*CalculateID) {},
 		SetCode:          func(*SetCode) {},
 		SendRequests:     func(*SendRequests) {},
-		GetDelegate:      func(*GetDelegate) {},
 		HasPendings:      func(*HasPendings) {},
 	}
 }

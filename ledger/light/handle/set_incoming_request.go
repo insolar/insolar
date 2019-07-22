@@ -56,7 +56,7 @@ func (s *SetIncomingRequest) Present(ctx context.Context, f flow.Flow) error {
 		return fmt.Errorf("SetIncomingRequest.Present: wrong request type: %T", rec)
 	}
 
-	var create = request.CallType == record.CTSaveAsChild || request.CallType == record.CTSaveAsDelegate
+	var create = request.CallType == record.CTSaveAsChild
 
 	if create {
 		return s.setActivationRequest(ctx, msg, request, f)
