@@ -251,15 +251,15 @@ func TestHasFullHead(t *testing.T) {
 func TestCheckHeadLen(t *testing.T) {
 	hl := NewHeadedLazySortedList(3, lessTestFn, 1)
 	hl.Add(2)
-	require.Panics(t, func() { hl.checkHeadLen(-1) })
+	require.Panics(t, func() { hl.checkAndGetAdjustedHeadLen(-1) })
 
-	require.Panics(t, func() { hl.checkHeadLen(4) })
+	require.Panics(t, func() { hl.checkAndGetAdjustedHeadLen(4) })
 
 	hl.Add(3)
-	n := hl.checkHeadLen(1)
+	n := hl.checkAndGetAdjustedHeadLen(1)
 	require.Equal(t, hl.headLen, n)
 
-	n = hl.checkHeadLen(0)
+	n = hl.checkAndGetAdjustedHeadLen(0)
 	require.Equal(t, hl.data.len, n)
 }
 
