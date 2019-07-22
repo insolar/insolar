@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -34,12 +35,12 @@ import (
 type SendObject struct {
 	message  payload.Meta
 	objectID insolar.ID
-	index    record.Lifeline
+	lifeline record.Lifeline
 
 	Dep struct {
 		Coordinator    jet.Coordinator
 		Jets           jet.Storage
-		JetFetcher     jet.Fetcher
+		JetFetcher     executor.JetFetcher
 		RecordAccessor object.RecordAccessor
 		Bus            insolar.MessageBus
 		Sender         bus.Sender
@@ -49,11 +50,11 @@ type SendObject struct {
 func NewSendObject(
 	msg payload.Meta,
 	id insolar.ID,
-	idx record.Lifeline,
+	lifeline record.Lifeline,
 ) *SendObject {
 	return &SendObject{
 		message:  msg,
-		index:    idx,
+		lifeline: lifeline,
 		objectID: id,
 	}
 }
@@ -135,9 +136,13 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		return nil
 	}
 
+	if p.lifeline.LatestState == nil {
+		return ErrNotActivated
+	}
+
 	logger := inslogger.FromContext(ctx)
 	{
-		buf, err := p.index.Marshal()
+		buf, err := p.lifeline.Marshal()
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal index")
 		}
@@ -148,18 +153,18 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 			return errors.Wrap(err, "failed to create reply")
 		}
 
-		go p.Dep.Sender.Reply(ctx, p.message, msg)
+		p.Dep.Sender.Reply(ctx, p.message, msg)
 		logger.Info("sending index")
 	}
 
-	rec, err := p.Dep.RecordAccessor.ForID(ctx, *p.index.LatestState)
+	rec, err := p.Dep.RecordAccessor.ForID(ctx, *p.lifeline.LatestState)
 	switch err {
 	case nil:
 		logger.Info("sending state")
 		return sendState(rec)
 	case object.ErrNotFound:
 		logger.Info("state not found (sending pass)")
-		return sendPassState(*p.index.LatestState)
+		return sendPassState(*p.lifeline.LatestState)
 	default:
 		return errors.Wrap(err, "failed to fetch record")
 	}

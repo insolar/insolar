@@ -393,6 +393,12 @@ func (m *FilamentModifierDefault) SetResult(ctx context.Context, resultID insola
 		filamentID = id
 	}
 
+	idx.Lifeline.PendingPointer = &filamentID
+	err = m.indexes.SetIndex(ctx, resultID.Pulse(), idx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create a meta-record about result")
+	}
+
 	pending, err := m.calculator.PendingRequests(ctx, resultID.Pulse(), objectID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to calculate pending requests")
@@ -408,7 +414,6 @@ func (m *FilamentModifierDefault) SetResult(ctx context.Context, resultID insola
 		idx.Lifeline.EarliestOpenRequest = nil
 	}
 
-	idx.Lifeline.PendingPointer = &filamentID
 	err = m.indexes.SetIndex(ctx, resultID.Pulse(), idx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create a meta-record about pending request")
@@ -427,7 +432,7 @@ type FilamentCalculatorDefault struct {
 	cache       *cacheStore
 	indexes     object.IndexAccessor
 	coordinator jet.Coordinator
-	jetFetcher  jet.Fetcher
+	jetFetcher  JetFetcher
 	sender      bus.Sender
 }
 
@@ -435,7 +440,7 @@ func NewFilamentCalculator(
 	indexes object.IndexAccessor,
 	records object.RecordAccessor,
 	coordinator jet.Coordinator,
-	jetFetcher jet.Fetcher,
+	jetFetcher JetFetcher,
 	sender bus.Sender,
 ) *FilamentCalculatorDefault {
 	return &FilamentCalculatorDefault{
@@ -802,7 +807,7 @@ type fetchingIterator struct {
 	objectID             insolar.ID
 	readUntil, calcPulse insolar.PulseNumber
 
-	jetFetcher  jet.Fetcher
+	jetFetcher  JetFetcher
 	coordinator jet.Coordinator
 	sender      bus.Sender
 }
@@ -939,7 +944,7 @@ func newFetchingIterator(
 	cache *filamentCache,
 	objectID, from insolar.ID,
 	readUntil insolar.PulseNumber,
-	fetcher jet.Fetcher,
+	fetcher JetFetcher,
 	coordinator jet.Coordinator,
 	sender bus.Sender,
 ) fetchIterator {

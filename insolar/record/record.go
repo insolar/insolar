@@ -147,6 +147,8 @@ type Request interface {
 	ReasonRef() insolar.Reference
 	// GetCallType returns call type.
 	GetCallType() CallType
+	// IsAPIRequest tells is it API-request or not.
+	IsAPIRequest() bool
 	// IsCreationRequest checks a request-type.
 	IsCreationRequest() bool
 	// IsDetached check is request has detached state.
@@ -161,6 +163,10 @@ func (r *IncomingRequest) AffinityRef() *insolar.Reference {
 
 func (r *IncomingRequest) ReasonRef() insolar.Reference {
 	return r.Reason
+}
+
+func (r *IncomingRequest) IsAPIRequest() bool {
+	return !r.APINode.IsEmpty()
 }
 
 func (r *IncomingRequest) IsCreationRequest() bool {
@@ -179,6 +185,10 @@ func (r *OutgoingRequest) AffinityRef() *insolar.Reference {
 
 func (r *OutgoingRequest) ReasonRef() insolar.Reference {
 	return r.Reason
+}
+
+func (r *OutgoingRequest) IsAPIRequest() bool {
+	return false
 }
 
 func (r *OutgoingRequest) IsCreationRequest() bool {

@@ -686,7 +686,7 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 		indexes     object.IndexStorage
 		records     object.RecordStorage
 		coordinator *jet.CoordinatorMock
-		fetcher     *jet.FetcherMock
+		jetFetcher  *executor.JetFetcherMock
 		sender      *bus.SenderMock
 		pcs         insolar.PlatformCryptographyScheme
 		calculator  *executor.FilamentCalculatorDefault
@@ -695,10 +695,10 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 		indexes = object.NewIndexStorageMemory()
 		records = object.NewRecordMemory()
 		coordinator = jet.NewCoordinatorMock(mc)
-		fetcher = jet.NewFetcherMock(mc)
+		jetFetcher = executor.NewJetFetcherMock(mc)
 		sender = bus.NewSenderMock(mc)
 		pcs = testutils.NewPlatformCryptographyScheme()
-		calculator = executor.NewFilamentCalculator(indexes, records, coordinator, fetcher, sender)
+		calculator = executor.NewFilamentCalculator(indexes, records, coordinator, jetFetcher, sender)
 	}
 
 	resetComponents()
@@ -782,7 +782,7 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 		}
 
 		jetID := gen.JetID()
-		fetcher.FetchFunc = func(_ context.Context, targetID insolar.ID, pn insolar.PulseNumber) (*insolar.ID, error) {
+		jetFetcher.FetchFunc = func(_ context.Context, targetID insolar.ID, pn insolar.PulseNumber) (*insolar.ID, error) {
 			require.Equal(t, objectID, targetID)
 			require.Equal(t, missingRec.MetaID.Pulse(), pn)
 			id := insolar.ID(jetID)
@@ -1050,7 +1050,7 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 		indexes     object.IndexStorage
 		records     object.RecordStorage
 		coordinator *jet.CoordinatorMock
-		fetcher     *jet.FetcherMock
+		jetFetcher  *executor.JetFetcherMock
 		sender      *bus.SenderMock
 		pcs         insolar.PlatformCryptographyScheme
 		calculator  *executor.FilamentCalculatorDefault
@@ -1059,10 +1059,10 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 		indexes = object.NewIndexStorageMemory()
 		records = object.NewRecordMemory()
 		coordinator = jet.NewCoordinatorMock(mc)
-		fetcher = jet.NewFetcherMock(mc)
+		jetFetcher = executor.NewJetFetcherMock(mc)
 		sender = bus.NewSenderMock(mc)
 		pcs = testutils.NewPlatformCryptographyScheme()
-		calculator = executor.NewFilamentCalculator(indexes, records, coordinator, fetcher, sender)
+		calculator = executor.NewFilamentCalculator(indexes, records, coordinator, jetFetcher, sender)
 	}
 
 	resetComponents()
@@ -1174,7 +1174,7 @@ func TestFilamentCalculatorDefault_RequestDuplicate(t *testing.T) {
 		indexes     object.IndexStorage
 		records     object.RecordStorage
 		coordinator *jet.CoordinatorMock
-		fetcher     *jet.FetcherMock
+		jetFetcher  *executor.JetFetcherMock
 		sender      *bus.SenderMock
 		pcs         insolar.PlatformCryptographyScheme
 		calculator  *executor.FilamentCalculatorDefault
@@ -1183,10 +1183,10 @@ func TestFilamentCalculatorDefault_RequestDuplicate(t *testing.T) {
 		indexes = object.NewIndexStorageMemory()
 		records = object.NewRecordMemory()
 		coordinator = jet.NewCoordinatorMock(mc)
-		fetcher = jet.NewFetcherMock(mc)
+		jetFetcher = executor.NewJetFetcherMock(mc)
 		sender = bus.NewSenderMock(mc)
 		pcs = testutils.NewPlatformCryptographyScheme()
-		calculator = executor.NewFilamentCalculator(indexes, records, coordinator, fetcher, sender)
+		calculator = executor.NewFilamentCalculator(indexes, records, coordinator, jetFetcher, sender)
 	}
 
 	resetComponents()

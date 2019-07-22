@@ -22,17 +22,14 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/pkg/errors"
 )
 
-type GetPendingRequests struct {
+type HasPendings struct {
 	message  payload.Meta
-	msg      *message.GetPendingRequests
-	jet      insolar.JetID
-	reqPulse insolar.PulseNumber
+	objectID insolar.ID
 
 	dep struct {
 		index  object.IndexAccessor
@@ -40,28 +37,34 @@ type GetPendingRequests struct {
 	}
 }
 
-func NewGetPendingRequests(jetID insolar.JetID, message payload.Meta, msg *message.GetPendingRequests, reqPulse insolar.PulseNumber) *GetPendingRequests {
-	return &GetPendingRequests{
-		msg:      msg,
-		message:  message,
-		jet:      jetID,
-		reqPulse: reqPulse,
+func NewHasPendings(msg payload.Meta, objectID insolar.ID) *HasPendings {
+	return &HasPendings{
+		message:  msg,
+		objectID: objectID,
 	}
 }
 
-func (p *GetPendingRequests) Dep(index object.IndexAccessor, sender bus.Sender) {
-	p.dep.index = index
-	p.dep.sender = sender
+func (hp *HasPendings) Dep(
+	index object.IndexAccessor,
+	sender bus.Sender,
+) {
+	hp.dep.index = index
+	hp.dep.sender = sender
 }
 
-func (p *GetPendingRequests) Proceed(ctx context.Context) error {
-	idx, err := p.dep.index.ForID(ctx, flow.Pulse(ctx), *p.msg.Object.Record())
+func (hp *HasPendings) Proceed(ctx context.Context) error {
+	idx, err := hp.dep.index.ForID(ctx, flow.Pulse(ctx), hp.objectID)
 	if err != nil {
 		return err
 	}
-	rep := bus.ReplyAsMessage(ctx, &reply.HasPendingRequests{
-		Has: idx.Lifeline.EarliestOpenRequest != nil && *idx.Lifeline.EarliestOpenRequest < flow.Pulse(ctx),
+
+	msg, err := payload.NewMessage(&payload.PendingsInfo{
+		HasPendings: idx.Lifeline.EarliestOpenRequest != nil && *idx.Lifeline.EarliestOpenRequest < flow.Pulse(ctx),
 	})
-	go p.dep.sender.Reply(ctx, p.message, rep)
+	if err != nil {
+		return errors.Wrap(err, "failed to create reply")
+	}
+
+	hp.dep.sender.Reply(ctx, hp.message, msg)
 	return nil
 }
