@@ -298,14 +298,14 @@ func (p *RoundStateMachineWorker) EnsureRunning() {
 
 func (p *RoundStateMachineWorker) sync(fn func()) {
 	defer func() {
-		_ := recover()
+		_ = recover()
 	}()
 	p.syncCmd <- fn
 }
 
 func (p *RoundStateMachineWorker) async(fn func()) {
 	defer func() {
-		_ := recover()
+		_ = recover()
 	}()
 	p.asyncCmd <- fn
 }
