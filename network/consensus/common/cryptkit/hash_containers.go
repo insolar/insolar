@@ -167,6 +167,8 @@ type SignatureVerifierFactory interface {
 	GetSignatureVerifierWithPKS(pks PublicKeyStore) SignatureVerifier
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.KeyStoreFactory -o . -s _mock.go
+
 type KeyStoreFactory interface {
 	GetPublicKeyStore(skh SignatureKeyHolder) PublicKeyStore
 }

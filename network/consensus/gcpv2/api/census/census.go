@@ -84,6 +84,8 @@ type Operational interface {
 	GetProfileFactory(ksf cryptkit.KeyStoreFactory) profiles.Factory
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.Active -o . -s _mock.go
+
 type Active interface {
 	Operational
 	GetPulseData() pulse.Data
