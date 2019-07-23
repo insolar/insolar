@@ -70,8 +70,6 @@ func (h *HandleAbandonedRequestsNotification) Present(ctx context.Context, f flo
 
 	ctx, _ = inslogger.WithField(ctx, "targetid", abandoned.ObjectID.String())
 
-	replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})
-	h.dep.Sender.Reply(ctx, h.meta, replyOk)
 	return nil
 
 	logger := inslogger.FromContext(ctx)
@@ -95,7 +93,7 @@ func (h *HandleAbandonedRequestsNotification) Present(ctx context.Context, f flo
 		go h.dep.Sender.Reply(ctx, h.meta, rep)
 		return err
 	}
-	replyOk = bus.ReplyAsMessage(ctx, &reply.OK{})
+	replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})
 	go h.dep.Sender.Reply(ctx, h.meta, replyOk)
 	return nil
 }

@@ -160,11 +160,10 @@ func (p *HotObjects) notifyPending(
 	})
 	if err != nil {
 		inslogger.FromContext(ctx).Error("failed to create reply")
+		return
 	}
 
-	p.Dep.Sender.Reply(ctx, p.meta, msg)
-
-	if err != nil {
-		inslogger.FromContext(ctx).Error("failed to notify about pending requests")
-	}
+	// Hot data was sent to us by another light.
+	// Notification should be send to virtual for this object.
+	p.Dep.Sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, *insolar.NewReference(objectID))
 }
