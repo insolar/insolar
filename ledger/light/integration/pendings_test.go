@@ -299,6 +299,41 @@ func Test_DuplicatedRequests(t *testing.T) {
 	})
 }
 
-func Test_Reason_Incoming(t *testing.T) {
+func Test_Reason_Requests(t *testing.T) {
+	t.Parallel()
 
+	ctx := inslogger.TestContext(t)
+	cfg := DefaultLightConfig()
+	s, err := NewServer(ctx, cfg, nil)
+	require.NoError(t, err)
+
+	// First pulse goes in storage then interrupts.
+	s.Pulse(ctx)
+	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
+	s.Pulse(ctx)
+
+	// t.Run("outgoing with closed reason", func(t *testing.T) {
+	// 	p, _ := setIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
+	// 	requirePayloadNotError(t, p)
+	// 	reqInfo := p.(*payload.RequestInfo)
+	//
+	// 	p, _ = activateObject(ctx, t, s, reqInfo.RequestID)
+	// 	requirePayloadNotError(t, p)
+	//
+	// 	outgoingReq := record.OutgoingRequest{
+	// 		Object:   insolar.NewReference(reqInfo.RequestID),
+	// 		Reason:   *insolar.NewReference(reqInfo.RequestID),
+	// 		CallType: record.CTMethod,
+	// 		Caller:   *insolar.NewReference(reqInfo.RequestID),
+	// 	}
+	// 	outgoingReqMsg := &payload.SetOutgoingRequest{
+	// 		Request: record.Wrap(outgoingReq),
+	// 	}
+	//
+	// 	// Set outgoing request
+	// 	outP := sendMessage(ctx, t, s, outgoingReqMsg)
+	// 	errP, ok := outP.(*payload.Error)
+	// 	require.Equal(t, true, ok)
+	// 	require.NotNil(t, errP)
+	// })
 }
