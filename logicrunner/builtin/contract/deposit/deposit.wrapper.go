@@ -17,10 +17,11 @@
 package deposit
 
 import (
+	"time"
+
 	"github.com/insolar/insolar/insolar"
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
-	"time"
 )
 
 type ExtendableError struct {

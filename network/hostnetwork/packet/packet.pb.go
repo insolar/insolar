@@ -56,17 +56,18 @@ package packet
 import (
 	bytes "bytes"
 	fmt "fmt"
+	io "io"
+	math "math"
+	reflect "reflect"
+	strconv "strconv"
+	strings "strings"
+
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	github_com_insolar_insolar_insolar "github.com/insolar/insolar/insolar"
 	pulse "github.com/insolar/insolar/insolar/pulse"
 	github_com_insolar_insolar_network_consensusv1_packets "github.com/insolar/insolar/network/consensusv1/packets"
 	github_com_insolar_insolar_network_hostnetwork_host "github.com/insolar/insolar/network/hostnetwork/host"
-	io "io"
-	math "math"
-	reflect "reflect"
-	strconv "strconv"
-	strings "strings"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
