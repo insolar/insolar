@@ -260,11 +260,11 @@ func TestPCTCreateBuilder(t *testing.T) {
 		slots: []updatableSlot{updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}}
 
 	pct := PrimingCensusTemplate{chronicles: chronicles, online: population}
-	builder := pct.CreateBuilder(pn, false)
+	builder := pct.CreateBuilder(pn)
 	require.Equal(t, pn, builder.GetPulseNumber())
 
-	builder = pct.CreateBuilder(pn, true)
-	require.Equal(t, pn, builder.GetPulseNumber())
+	//builder = pct.CreateBuilder(pn, true)
+	//require.Equal(t, pn, builder.GetPulseNumber())
 }
 
 func TestACTGetExpectedPulseNumber(t *testing.T) {
@@ -326,9 +326,6 @@ func TestECTGetExpectedPulseNumber(t *testing.T) {
 func TestECTGetCensusState(t *testing.T) {
 	ect := ExpectedCensusTemplate{}
 	require.Equal(t, census.CompleteCensus, ect.GetCensusState())
-
-	ect.isIncomplete = true
-	require.Equal(t, census.IncompleteCensus, ect.GetCensusState())
 }
 
 func TestECTGetPulseNumber(t *testing.T) {
@@ -386,10 +383,7 @@ func TestECTCreateBuilder(t *testing.T) {
 		slots: []updatableSlot{updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}}
 
 	ect := ExpectedCensusTemplate{chronicles: chronicles, online: population}
-	builder := ect.CreateBuilder(pn, false)
-	require.Equal(t, pn, builder.GetPulseNumber())
-
-	builder = ect.CreateBuilder(pn, true)
+	builder := ect.CreateBuilder(pn)
 	require.Equal(t, pn, builder.GetPulseNumber())
 }
 
