@@ -85,9 +85,8 @@ func fillMembershipAnnouncement(a *MembershipAnnouncement, sender *transport.Nod
 	if sender.IsLeaving() {
 		a.Member.AnnounceID = sender.GetNodeID()
 		a.Member.Leaver.LeaveReason = sender.GetLeaveReason()
-	}
-
-	if joinerAnnouncement := sender.GetJoinerAnnouncement(); joinerAnnouncement != nil {
+	} else if joinerAnnouncement := sender.GetJoinerAnnouncement(); joinerAnnouncement != nil {
+		a.Member.AnnounceID = joinerAnnouncement.GetBriefIntroduction().GetStaticNodeID()
 		fillBriefInto(&a.Member.Joiner.NodeBriefIntro, joinerAnnouncement.GetBriefIntroduction())
 	}
 }
@@ -152,9 +151,9 @@ func fillNeighbourAnnouncement(n *NeighbourAnnouncement, neighbour transport.Mem
 	if neighbour.IsLeaving() {
 		n.Member.AnnounceID = neighbour.GetNodeID()
 		n.Member.Leaver.LeaveReason = neighbour.GetLeaveReason()
-	}
-
-	if announcement := neighbour.GetJoinerAnnouncement(); announcement != nil {
+	} else if announcement := neighbour.GetJoinerAnnouncement(); announcement != nil {
+		n.JoinerIntroducedBy = announcement.GetJoinerIntroducedByID()
+		n.Member.AnnounceID = announcement.GetBriefIntroduction().GetStaticNodeID()
 		fillBriefInto(&n.Joiner.NodeBriefIntro, announcement.GetBriefIntroduction())
 	}
 }

@@ -579,11 +579,7 @@ func (r *MembershipAnnouncementReader) IsLeaving() bool {
 }
 
 func (r *MembershipAnnouncementReader) GetLeaveReason() uint32 {
-	if !r.hasRank() {
-		return 0
-	}
-
-	if r.body.Announcement.Member.AnnounceID != insolar.ShortNodeID(r.packet.Header.SourceID) {
+	if !r.IsLeaving() {
 		return 0
 	}
 
@@ -690,11 +686,7 @@ func (r *NeighbourAnnouncementReader) IsLeaving() bool {
 }
 
 func (r *NeighbourAnnouncementReader) GetLeaveReason() uint32 {
-	if !r.hasRank() {
-		return 0
-	}
-
-	if r.neighbour.Member.AnnounceID != r.neighbour.NeighbourNodeID {
+	if !r.IsLeaving() {
 		return 0
 	}
 
@@ -702,11 +694,15 @@ func (r *NeighbourAnnouncementReader) GetLeaveReason() uint32 {
 }
 
 func (r *NeighbourAnnouncementReader) GetJoinerID() insolar.ShortNodeID {
-	if r.hasRank() {
+	if !r.hasRank() {
 		return insolar.AbsentShortNodeID
 	}
 
-	return r.neighbour.NeighbourNodeID
+	if r.neighbour.Member.AnnounceID == insolar.ShortNodeID(r.packet.Header.SourceID) {
+		return insolar.AbsentShortNodeID
+	}
+
+	return r.neighbour.Member.AnnounceID
 }
 
 func (r *NeighbourAnnouncementReader) GetJoinerAnnouncement() transport.JoinerAnnouncementReader {

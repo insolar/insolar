@@ -68,9 +68,9 @@ func NewCensus(
 	vf cryptkit.SignatureVerifierFactory,
 ) *censusimpl.PrimingCensusTemplate {
 
-	// if len(nodes) == 0 {
-	// 	return censusimpl.NewPrimingCensusForJoiner(localNode, vc, vf)
-	// }
+	if len(nodes) == 0 {
+		return censusimpl.NewPrimingCensusForJoiner(localNode, vc, vf)
+	}
 
 	return censusimpl.NewPrimingCensus(nodes, localNode, vc, vf)
 }

@@ -91,7 +91,7 @@ func NewMandateRegistry(cloudHash proofs.CloudStateHash, consensusConfiguration 
 }
 
 func (mr *MandateRegistry) FindRegisteredProfile(host endpoints.Inbound) profiles.Host {
-	panic("implement me")
+	return nil
 }
 
 func (mr *MandateRegistry) GetCloudIdentity() cryptkit.DigestHolder {
@@ -123,6 +123,9 @@ func NewOfflinePopulation(nodeKeeper network.NodeKeeper, manager insolar.Certifi
 
 func (op *OfflinePopulation) FindRegisteredProfile(identity endpoints.Inbound) profiles.Host {
 	node := op.nodeKeeper.GetAccessor().GetActiveNodeByAddr(identity.GetNameAddress().String())
+	if node == nil {
+		return nil
+	}
 	cert := op.manager.GetCertificate()
 
 	return NewStaticProfile(node, cert, op.keyProcessor)
