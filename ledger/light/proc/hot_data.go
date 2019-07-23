@@ -160,7 +160,7 @@ func (p *HotObjects) sendConfirmationToHeavy(ctx context.Context, jetID insolar.
 	inslogger.FromContext(ctx).Debug("Send hot confirmation to heavy. pulse: ", pn, " jet: ", p.drop.JetID.DebugString())
 
 	_, done := p.Dep.Sender.SendRole(ctx, msg, insolar.DynamicRoleHeavyExecutor, *insolar.NewReference(insolar.ID(jetID)))
-	defer done()
+	done()
 }
 
 func (p *HotObjects) notifyPending(

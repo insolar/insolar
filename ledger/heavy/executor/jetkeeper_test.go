@@ -158,7 +158,7 @@ func TestNewJetKeeper(t *testing.T) {
 	require.NotNil(t, jetKeeper)
 }
 
-func TestDbJetKeeper_AddJet(t *testing.T) {
+func TestDbJetKeeper_AddDropConfirmation(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")

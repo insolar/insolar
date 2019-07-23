@@ -131,7 +131,7 @@ func (jk *dbJetKeeper) AddHotConfirmation(ctx context.Context, pn insolar.PulseN
 		return errors.Wrapf(err, "failed to save updated jets")
 	}
 
-	err := jk.propagateConsistency(ctx, pn, id.DebugString())
+	err := jk.updateTopSyncPulse(ctx, pn, id)
 	return errors.Wrapf(err, "AddHotConfirmation. propagateConsistency returns error")
 }
 
@@ -145,12 +145,12 @@ func (jk *dbJetKeeper) AddDropConfirmation(ctx context.Context, pn insolar.Pulse
 		return errors.Wrapf(err, "AddDropConfirmation. failed to save updated jets")
 	}
 
-	err := jk.propagateConsistency(ctx, pn, id.DebugString())
+	err := jk.updateTopSyncPulse(ctx, pn, id)
 
 	return errors.Wrap(err, "propagateConsistency returns error")
 }
 
-func (jk *dbJetKeeper) propagateConsistency(ctx context.Context, pn insolar.PulseNumber, jetIDs string) error {
+func (jk *dbJetKeeper) updateTopSyncPulse(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) error {
 	logger := inslogger.FromContext(ctx)
 
 	prev, err := jk.pulses.Backwards(ctx, pn, 1)
@@ -160,27 +160,30 @@ func (jk *dbJetKeeper) propagateConsistency(ctx context.Context, pn insolar.Puls
 
 	top := jk.topSyncPulse()
 
-	logger.Debug("propagateConsistency. pulse: ", pn, ". ID: ", jetIDs,
+	logger.Debug("propagateConsistency. pulse: ", pn, ". ID: ", jetID.DebugString(),
 		". top: ", top, ". prev.PulseNumber: ", prev.PulseNumber)
 
-	if prev.PulseNumber == top {
-		for jk.checkPulseConsistency(ctx, pn) {
-			err := jk.updateSyncPulse(pn)
-			if err != nil {
-				return errors.Wrapf(err, "failed to update consistent pulse")
-			}
-			logger.Debugf("pulse completed: %d", pn)
+	if prev.PulseNumber != top {
+		// We should sync pulses sequentially. We can't skip.
+		return nil
+	}
 
-			next, err := jk.pulses.Forwards(ctx, pn, 1)
-			if err == pulse.ErrNotFound {
-				logger.Info("propagateConsistency. No next pulse. Stop propagating")
-				return nil
-			}
-			if err != nil {
-				return errors.Wrapf(err, "failed to get next pulse for %d", pn)
-			}
-			pn = next.PulseNumber
+	for jk.checkPulseConsistency(ctx, pn) {
+		err := jk.updateSyncPulse(pn)
+		if err != nil {
+			return errors.Wrapf(err, "failed to update consistent pulse")
 		}
+		logger.Debugf("pulse completed: %d", pn)
+
+		next, err := jk.pulses.Forwards(ctx, pn, 1)
+		if err == pulse.ErrNotFound {
+			logger.Info("propagateConsistency. No next pulse. Stop propagating")
+			return nil
+		}
+		if err != nil {
+			return errors.Wrapf(err, "failed to get next pulse for %d", pn)
+		}
+		pn = next.PulseNumber
 	}
 
 	return nil
@@ -194,7 +197,7 @@ func (jk *dbJetKeeper) TopSyncPulse() insolar.PulseNumber {
 }
 
 func (jk *dbJetKeeper) topSyncPulse() insolar.PulseNumber {
-	val, err := jk.db.Get(syncPulseKey(insolar.GenesisPulse.PulseNumber))
+	val, err := jk.db.Get(syncPulseKey{})
 	if err != nil {
 		return insolar.GenesisPulse.PulseNumber
 	}
@@ -204,25 +207,24 @@ func (jk *dbJetKeeper) topSyncPulse() insolar.PulseNumber {
 func (jk *dbJetKeeper) updateHot(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID, split bool) error {
 	logger := inslogger.FromContext(ctx)
 	jets, err := jk.get(pulse)
-	var exists bool
-	if err == nil {
-		parentId := id
-		if split {
-			parentId = jet.Parent(id)
-		}
-		for i := range jets {
-			if jets[i].JetID.Equal(parentId) {
-				exists = true
-				err := jets[i].addHot(id, split)
-				if err != nil {
-					return errors.Wrap(err, "can't addHot")
-				}
-				logger.Debug("updateHot. update existing. pulse: ", pulse, ", Jet:", id.DebugString(), ", split: ", split)
-				break
-			}
-		}
-	} else if err != store.ErrNotFound {
+	if err != nil && err != store.ErrNotFound {
 		return errors.Wrapf(err, "updateHot. can't get pulse: %d", pulse)
+	}
+	var exists bool
+	parentID := id
+	if split {
+		parentID = jet.Parent(id)
+	}
+	for i := range jets {
+		if jets[i].JetID.Equal(parentID) {
+			exists = true
+			err := jets[i].addHot(id, split)
+			if err != nil {
+				return errors.Wrap(err, "can't addHot")
+			}
+			logger.Debug("updateHot. update existing. pulse: ", pulse, ", Jet:", id.DebugString(), ", split: ", split)
+			break
+		}
 	}
 	if !exists {
 		newInfo := jetInfo{}
@@ -239,21 +241,20 @@ func (jk *dbJetKeeper) updateHot(ctx context.Context, pulse insolar.PulseNumber,
 func (jk *dbJetKeeper) updateDrop(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID, split bool) error {
 	logger := inslogger.FromContext(ctx)
 	jets, err := jk.get(pulse)
-	var exists bool
-	if err == nil {
-		for i := range jets {
-			if jets[i].JetID.Equal(id) {
-				exists = true
-				err := jets[i].addDrop(id, split)
-				if err != nil {
-					return errors.Wrap(err, "can't addDrop")
-				}
-				logger.Debug("updateDrop. update existing. pulse: ", pulse, ", Jet:", id.DebugString(), ", split: ", split)
-				break
-			}
-		}
-	} else if err != store.ErrNotFound {
+	if err != nil && err != store.ErrNotFound {
 		return errors.Wrapf(err, "updateDrop. can't get pulse: %d", pulse)
+	}
+	var exists bool
+	for i := range jets {
+		if jets[i].JetID.Equal(id) {
+			exists = true
+			err := jets[i].addDrop(id, split)
+			if err != nil {
+				return errors.Wrap(err, "can't addDrop")
+			}
+			logger.Debug("updateDrop. update existing. pulse: ", pulse, ", Jet:", id.DebugString(), ", split: ", split)
+			break
+		}
 	}
 	if !exists {
 		newInfo := jetInfo{}
@@ -284,21 +285,13 @@ func (jk *dbJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.
 	infoToList := func(s map[insolar.JetID]struct{}) []insolar.JetID {
 		r := make([]insolar.JetID, len(s))
 		var idx int
-		for jet, _ := range s {
+		for jet := range s {
 			r[idx] = jet
 			idx++
 		}
 		return r
 	}
 
-	// next, err := jk.pulses.Forwards(ctx, pulse, 1)
-	// if err != nil {
-	// 	inslogger.FromContext(ctx).Debug("strange situation: can't get next pulse for", pulse)
-	// 	return false
-	// }
-
-	// you use next pulse here since we get drop\hot confirm for previous pulse but update\split jet tree for current
-	//expectedJets := jk.jetTrees.All(ctx, next.PulseNumber)
 	expectedJets := jk.jetTrees.All(ctx, pulse)
 	actualJets := jk.all(pulse)
 
@@ -351,14 +344,14 @@ func (k jetKeeperKey) ID() []byte {
 	return append([]byte{jetKeeperKeyPrefix}, insolar.PulseNumber(k).Bytes()...)
 }
 
-type syncPulseKey insolar.PulseNumber
+type syncPulseKey struct{}
 
 func (k syncPulseKey) Scope() store.Scope {
 	return store.ScopeJetKeeper
 }
 
 func (k syncPulseKey) ID() []byte {
-	return append([]byte{syncPulseKeyPrefix}, insolar.PulseNumber(k).Bytes()...)
+	return []byte{syncPulseKeyPrefix}
 }
 
 func (jk *dbJetKeeper) get(pn insolar.PulseNumber) ([]jetInfo, error) {
@@ -390,6 +383,6 @@ func (jk *dbJetKeeper) set(pn insolar.PulseNumber, jets []jetInfo) error {
 }
 
 func (jk *dbJetKeeper) updateSyncPulse(pn insolar.PulseNumber) error {
-	err := jk.db.Set(syncPulseKey(insolar.GenesisPulse.PulseNumber), pn.Bytes())
+	err := jk.db.Set(syncPulseKey{}, pn.Bytes())
 	return errors.Wrapf(err, "failed to set up new sync pulse")
 }
