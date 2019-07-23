@@ -237,10 +237,12 @@ func TestNoWaitCall(t *testing.T) {
 package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import "github.com/insolar/insolar/insolar"
 import two "github.com/insolar/insolar/application/proxy/basic_notification_call_two"
 
 type One struct {
 	foundation.BaseContract
+	Friend insolar.Reference
 }
 
 func New() (*One, error) {
@@ -255,6 +257,8 @@ func (r *One) Hello() error {
 		return err
 	}
 
+	r.Friend = friend.GetReference()
+
 	err = friend.MultiplyNoWait()
 	if err != nil {
 		return err
@@ -264,12 +268,7 @@ func (r *One) Hello() error {
 }
 
 func (r *One) Value() (int, error) {
-	friend, err := two.GetImplementationFrom(r.GetReference())
-	if err != nil {
-		return 0, err
-	}
-
-	return friend.GetValue()
+	return two.GetObject(r.Friend).GetValue()
 }
 `
 
