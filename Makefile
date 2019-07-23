@@ -4,6 +4,7 @@ INSOLAR = insolar
 INSOLARD = insolard
 INSGOCC = insgocc
 PULSARD = pulsard
+TESTPULSARD = testpulsard
 INSGORUND = insgorund
 BENCHMARK = benchmark
 PULSEWATCHER = pulsewatcher
@@ -90,7 +91,7 @@ ensure: ## install all dependencies
 	dep ensure
 
 .PHONY: build
-build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(APIREQUESTER) $(PULSEWATCHER) ## build all binaries
+build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(APIREQUESTER) $(PULSEWATCHER) ## build all binaries
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
@@ -112,6 +113,10 @@ $(BININSGOCC): $(INSGOCC)
 .PHONY: $(PULSARD)
 $(PULSARD):
 	$(GOBUILD) -o $(BIN_DIR)/$(PULSARD) -ldflags "${LDFLAGS}" cmd/pulsard/*.go
+
+.PHONY: $(TESTPULSARD)
+$(TESTPULSARD):
+	$(GOBUILD) -o $(BIN_DIR)/$(TESTPULSARD) -ldflags "${LDFLAGS}" cmd/testpulsard/*.go
 
 .PHONY: $(INSGORUND)
 $(INSGORUND):
