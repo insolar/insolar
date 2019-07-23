@@ -98,7 +98,7 @@ func (s *SetIncomingRequest) setActivationRequest(
 		return err
 	}
 
-	setRequest := proc.NewSetRequest(s.message, request, reqID, reqJetID, true)
+	setRequest := proc.NewSetRequest(s.message, request, reqID, reqJetID)
 	s.dep.SetRequest(setRequest)
 	return f.Procedure(ctx, setRequest, false)
 }
@@ -150,7 +150,7 @@ func (s *SetIncomingRequest) setRequest(
 		return err
 	}
 
-	setRequest := proc.NewSetRequest(s.message, request, reqID, objJetID, true)
+	setRequest := proc.NewSetRequest(s.message, request, reqID, objJetID)
 	s.dep.SetRequest(setRequest)
 	return f.Procedure(ctx, setRequest, false)
 }

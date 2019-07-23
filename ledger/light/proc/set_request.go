@@ -33,11 +33,10 @@ import (
 )
 
 type SetRequest struct {
-	message     payload.Meta
-	request     record.Request
-	requestID   insolar.ID
-	jetID       insolar.JetID
-	checkSender bool
+	message   payload.Meta
+	request   record.Request
+	requestID insolar.ID
+	jetID     insolar.JetID
 
 	dep struct {
 		writer      hot.WriteAccessor
@@ -54,14 +53,12 @@ func NewSetRequest(
 	rec record.Request,
 	recID insolar.ID,
 	jetID insolar.JetID,
-	checkSender bool,
 ) *SetRequest {
 	return &SetRequest{
-		message:     msg,
-		request:     rec,
-		requestID:   recID,
-		jetID:       jetID,
-		checkSender: checkSender,
+		message:   msg,
+		request:   rec,
+		requestID: recID,
+		jetID:     jetID,
 	}
 }
 
@@ -122,7 +119,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	// * EmptyAPINode - it means that we're uploading a contract
 	// * OutgoingRequests - we may create OutgoingRequests after change of pulse,
 	//                      but we told everyone that we still executing that message
-	if !p.request.IsEmptyAPINode() && p.checkSender {
+	if _, ok := p.request.(*record.OutgoingRequest); !p.request.IsEmptyAPINode() && !ok {
 		if p.message.Sender != *virtNode {
 			logger.Errorf("sender isn't the executor. sender - %v, executor - %v", p.message.Sender, *virtNode)
 			return ErrExecutorMismatch
