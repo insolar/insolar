@@ -166,18 +166,18 @@ func INSMETHOD_GetAmount(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
-func INSMETHOD_MapMarshal(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_Itself(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 
 	self := new(Deposit)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeMapMarshal ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &ExtendableError{S: "[ FakeItself ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeMapMarshal ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeItself ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -185,11 +185,11 @@ func INSMETHOD_MapMarshal(object []byte, data []byte) ([]byte, []byte, error) {
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeMapMarshal ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeItself ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.MapMarshal()
+	ret0, ret1 := self.Itself()
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
@@ -292,10 +292,10 @@ func Initialize() XXX_insolar.ContractWrapper {
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: XXX_insolar.ContractMethods{
-			"GetTxHash":  INSMETHOD_GetTxHash,
-			"GetAmount":  INSMETHOD_GetAmount,
-			"MapMarshal": INSMETHOD_MapMarshal,
-			"Confirm":    INSMETHOD_Confirm,
+			"GetTxHash": INSMETHOD_GetTxHash,
+			"GetAmount": INSMETHOD_GetAmount,
+			"Itself":    INSMETHOD_Itself,
+			"Confirm":   INSMETHOD_Confirm,
 		},
 		Constructors: XXX_insolar.ContractConstructors{
 			"New": INSCONSTRUCTOR_New,

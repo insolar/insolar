@@ -42,14 +42,14 @@ const (
 // Deposit is like wallet. It holds migrated money.
 type Deposit struct {
 	foundation.BaseContract
-	PulseDepositCreate      insolar.PulseNumber
-	PulseUnHoldDeposit      insolar.PulseNumber
-	MigrationDaemonConfirms map[insolar.Reference]bool
-	Confirms                uint
-	Amount                  string
-	Bonus                   string
-	TxHash                  string
-	Status                  status
+	PulseDepositCreate              insolar.PulseNumber                 `json:"timestamp"`
+	PulseUnHoldDeposit         insolar.PulseNumber               `json:"holdReleaseDate"`
+	MigrationDaemonConfirms map[insolar.Reference]bool `json:"migrationDaemonConfirms"`
+	Confirms                uint                       `json:"confirms"`
+	Amount                  string                     `json:"amount"`
+	Bonus                   string                     `json:"bonus"`
+	TxHash                  string                     `json:"ethTxHash"`
+	Status                  status                     `json:"status"`
 }
 
 // GetTxHash gets transaction hash.
@@ -80,14 +80,8 @@ func calculateUnHoldPulse(currentPulse insolar.PulseNumber) insolar.PulseNumber 
 }
 
 // MapMarshal gets deposit information.
-func (d *Deposit) MapMarshal() (map[string]string, error) {
-	return map[string]string{
-		"pulseDepositCreate": d.PulseDepositCreate.String(),
-		"pulseUnHoldDeposit": d.PulseUnHoldDeposit.String(),
-		"amount":             d.Amount,
-		"bonus":              d.Bonus,
-		"txId":               d.TxHash,
-	}, nil
+func (d *Deposit) Itself() (interface{}, error) {
+	return *d, nil
 }
 
 // Confirm adds confirm for deposit by migration daemon.
