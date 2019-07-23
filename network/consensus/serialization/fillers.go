@@ -122,7 +122,7 @@ func fillFullInto(i *NodeFullIntro, intro transport.FullIntroductionReader) {
 	fillExtendedIntro(&i.NodeExtendedIntro, intro)
 }
 
-func fillCloudIntro(b *GlobulaConsensusPacketBody, welcome *proofs.NodeWelcomePackage) {
+func fillWelcome(b *GlobulaConsensusPacketBody, welcome *proofs.NodeWelcomePackage) {
 	copy(b.CloudIntro.CloudIdentity[:], welcome.CloudIdentity.AsBytes())
 	copy(b.CloudIntro.LastCloudStateHash[:], welcome.LastCloudStateHash.AsBytes())
 	if welcome.JoinerSecret != nil {
@@ -196,7 +196,7 @@ func fillPhase1(
 	})
 
 	if welcome != nil {
-		fillCloudIntro(body, welcome)
+		fillWelcome(body, welcome)
 	}
 
 	// TODO:
@@ -226,7 +226,7 @@ func fullPhase2(
 	}
 
 	if welcome != nil {
-		fillCloudIntro(body, welcome)
+		fillWelcome(body, welcome)
 	}
 
 	fillNeighbourhood(&body.Neighbourhood, neighbourhood)
