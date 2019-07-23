@@ -85,7 +85,7 @@ func Test_Pending_RequestRegistration_Incoming(t *testing.T) {
 		require.Equal(t, secondReqInfo.RequestID, ids.IDs[0])
 	})
 
-	t.Run("try to register twice. checking for duplication is working", func(t *testing.T) {
+	t.Run("try to register request twice. no result", func(t *testing.T) {
 		args := make([]byte, 100)
 		_, err := rand.Read(args)
 		initReq := record.IncomingRequest{
@@ -119,5 +119,51 @@ func Test_Pending_RequestRegistration_Incoming(t *testing.T) {
 		require.NoError(t, err)
 		returnedReq := record.Unwrap(compositeRec.Record.Virtual)
 		require.Equal(t, &initReq, returnedReq)
+	})
+
+	t.Run("try to register request twice. when there is result", func(t *testing.T) {
+		args := make([]byte, 100)
+		_, err := rand.Read(args)
+		initReq := record.IncomingRequest{
+			Object:    insolar.NewReference(gen.ID()),
+			Arguments: args,
+			CallType:  record.CTSaveAsChild,
+			Reason:    *insolar.NewReference(*insolar.NewID(s.pulse.PulseNumber, []byte{1, 2, 3})),
+			APINode:   gen.Reference(),
+		}
+		initReqMsg := &payload.SetIncomingRequest{
+			Request: record.Wrap(initReq),
+		}
+
+		// Set first request
+		p := setRequest(ctx, t, s, initReqMsg)
+		requirePayloadNotError(t, p)
+		reqInfo := p.(*payload.RequestInfo)
+
+		// Set result for the request
+		p, _ = activateObject(ctx, t, s, reqInfo.RequestID)
+		requirePayloadNotError(t, p)
+
+		// Try to set it again
+		secondP := setRequest(ctx, t, s, initReqMsg)
+		requirePayloadNotError(t, secondP)
+		secondReqInfo := secondP.(*payload.RequestInfo)
+		require.NotNil(t, secondReqInfo.Request)
+		require.NotNil(t, secondReqInfo.Result)
+
+		// Check for the request
+		compositeReq := record.CompositeFilamentRecord{}
+		err = compositeReq.Unmarshal(secondReqInfo.Request)
+		require.NoError(t, err)
+		returnedReq := record.Unwrap(compositeReq.Record.Virtual)
+		require.Equal(t, &initReq, returnedReq)
+
+		// Check for the result
+		compositeRes := record.CompositeFilamentRecord{}
+		err = compositeRes.Unmarshal(secondReqInfo.Result)
+		require.NoError(t, err)
+		returnedRes := record.Unwrap(compositeRes.Record.Virtual).(*record.Result)
+		require.Equal(t, *insolar.NewReference(reqInfo.RequestID), returnedRes.Request)
+		require.Equal(t, reqInfo.RequestID, returnedRes.Object)
 	})
 }
