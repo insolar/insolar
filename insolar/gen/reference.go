@@ -48,7 +48,7 @@ func JetID() (jetID insolar.JetID) {
 		depth := byte(c.Intn(insolar.JetMaximumDepth + 1))
 		jet[insolar.PulseNumberSize] = depth
 
-		resetJet := bits.ResetBits(jet[:], depth)
+		resetJet := bits.ResetBits(jet[:], depth+insolar.PulseNumberSize*8)
 		copy(jet[:], resetJet[:])
 	})
 	f.Fuzz(&jetID)
