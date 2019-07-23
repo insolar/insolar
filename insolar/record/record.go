@@ -151,6 +151,10 @@ type Request interface {
 	IsCreationRequest() bool
 	// IsDetached check is request has detached state.
 	IsDetached() bool
+	// IsEmptyAPINode checks that APINode field is empty.
+	// This is needed to understand that we use UploadCode hack
+	// and that we should skip sender check on RegisterResult
+	IsEmptyAPINode() bool
 }
 
 func (r *IncomingRequest) AffinityRef() *insolar.Reference {
@@ -181,6 +185,10 @@ func (r *IncomingRequest) IsDetached() bool {
 	return isDetached(r.ReturnMode)
 }
 
+func (r *IncomingRequest) IsEmptyAPINode() bool {
+	return r.APINode.IsEmpty()
+}
+
 func (r *OutgoingRequest) AffinityRef() *insolar.Reference {
 	// OutgoingRequests are affine to the Caller which created the Request.
 	return &r.Caller
@@ -200,6 +208,10 @@ func (r *OutgoingRequest) IsCreationRequest() bool {
 
 func (r *OutgoingRequest) IsDetached() bool {
 	return isDetached(r.ReturnMode)
+}
+
+func (OutgoingRequest) IsEmptyAPINode() bool {
+	return false
 }
 
 func isDetached(rm ReturnMode) bool {

@@ -115,9 +115,13 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if p.message.Sender != *virtNode {
-		logger.Errorf("sender isn't the executor. sender - %v, executor - %v", p.message.Sender, *virtNode)
-		return ErrExecutorMismatch
+	// we should ignore here
+	// * EmptyAPINode - it means that we're uploading a contract
+	if !p.request.IsEmptyAPINode() {
+		if p.message.Sender != *virtNode {
+			logger.Errorf("sender isn't the executor. sender - %v, executor - %v", p.message.Sender, *virtNode)
+			return ErrExecutorMismatch
+		}
 	}
 
 	p.dep.locker.Lock(objectID)

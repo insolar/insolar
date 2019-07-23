@@ -70,6 +70,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 	request := record.IncomingRequest{
 		Object:   &ref,
 		CallType: record.CTMethod,
+		APINode:  gen.Reference(),
 	}
 	virtual := record.Virtual{
 		Union: &record.Virtual_IncomingRequest{
