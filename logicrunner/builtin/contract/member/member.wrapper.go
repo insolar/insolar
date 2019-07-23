@@ -127,6 +127,45 @@ func INSMETHOD_GetName(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
+func INSMETHOD_GetWallet(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+
+	self := new(Member)
+
+	if len(object) == 0 {
+		return nil, nil, &ExtendableError{S: "[ FakeGetWallet ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeGetWallet ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := []interface{}{}
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeGetWallet ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0, ret1 := self.GetWallet()
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret1 = ph.MakeErrorSerializable(ret1)
+
+	ret := []byte{}
+	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+
+	return state, ret, err
+}
+
 func INSMETHOD_GetPublicKey(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 
@@ -332,7 +371,7 @@ func INSMETHOD_GetBurnAddress(object []byte, data []byte) ([]byte, []byte, error
 
 func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	ph := common.CurrentProxyCtx
-	args := [4]interface{}{}
+	args := [5]interface{}{}
 	var args0 insolar.Reference
 	args[0] = &args0
 	var args1 string
@@ -341,6 +380,8 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	args[2] = &args2
 	var args3 string
 	args[3] = &args3
+	var args4 insolar.Reference
+	args[4] = &args4
 
 	err := ph.Deserialize(data, &args)
 	if err != nil {
@@ -348,7 +389,7 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 		return nil, e
 	}
 
-	ret0, ret1 := New(args0, args1, args2, args3)
+	ret0, ret1 := New(args0, args1, args2, args3, args4)
 	if ret1 != nil {
 		return nil, ret1
 	}
@@ -373,6 +414,7 @@ func Initialize() XXX_insolar.ContractWrapper {
 		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: XXX_insolar.ContractMethods{
 			"GetName":        INSMETHOD_GetName,
+			"GetWallet":      INSMETHOD_GetWallet,
 			"GetPublicKey":   INSMETHOD_GetPublicKey,
 			"Call":           INSMETHOD_Call,
 			"FindDeposit":    INSMETHOD_FindDeposit,

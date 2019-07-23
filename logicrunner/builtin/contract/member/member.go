@@ -43,12 +43,17 @@ type Member struct {
 	Name        string
 	PublicKey   string
 	BurnAddress string
-	Wallet      *wallet.Wallet
+	Wallet      insolar.Reference
 }
 
 // GetName gets name.
 func (m *Member) GetName() (string, error) {
 	return m.Name, nil
+}
+
+// GetWallet gets wallet.
+func (m *Member) GetWallet() (insolar.Reference, error) {
+	return m.Wallet, nil
 }
 
 var INSATTR_GetPublicKey_API = true
@@ -59,12 +64,13 @@ func (m *Member) GetPublicKey() (string, error) {
 }
 
 // New creates new member.
-func New(rootDomain insolar.Reference, name string, key string, burnAddress string) (*Member, error) {
+func New(rootDomain insolar.Reference, name string, key string, burnAddress string, walletRef insolar.Reference) (*Member, error) {
 	return &Member{
 		RootDomain:  rootDomain,
 		Name:        name,
 		PublicKey:   key,
 		BurnAddress: burnAddress,
+		Wallet:      walletRef,
 	}, nil
 }
 
@@ -210,7 +216,29 @@ func (m *Member) addBurnAddressesCall(params map[string]interface{}) (interface{
 	return nil, nil
 }
 func (m *Member) getBalanceCall(params map[string]interface{}) (interface{}, error) {
-	b, err := wallet.GetObject(m.Wallet.Reference).GetBalance()
+	referenceStr, ok := params["reference"].(string)
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'reference' param")
+	}
+
+	reference, err := insolar.NewReferenceFromBase58(referenceStr)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse 'reference': %s", err.Error())
+	}
+
+	var walletRef insolar.Reference
+
+	if *reference == m.GetReference() {
+		walletRef = m.Wallet
+	} else {
+		m2 := member.GetObject(*reference)
+		walletRef, err = m2.GetWallet()
+		if err != nil {
+			return 0, fmt.Errorf("can't get members wallet: %s", err.Error())
+		}
+	}
+
+	b, err := wallet.GetObject(walletRef).GetBalance()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get balance: %s", err.Error())
 	}
@@ -241,9 +269,7 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 		return nil, fmt.Errorf("recipient must be different from the sender")
 	}
 
-	w := wallet.GetObject(m.Wallet.Reference)
-
-	return w.Transfer(m.RootDomain, amount, recipientReference)
+	return wallet.GetObject(m.Wallet).Transfer(m.RootDomain, amount, recipientReference)
 }
 func (m *Member) migrationCall(params map[string]interface{}) (interface{}, error) {
 
@@ -372,19 +398,17 @@ func (m *Member) createMember(name string, key string, burnAddress string) (*mem
 		return nil, fmt.Errorf("key is not valid")
 	}
 
-	memberHolder := member.New(m.RootDomain, name, key, burnAddress)
+	wHolder := wallet.New(big.NewInt(1000000000).String())
+	createdWallet, err := wHolder.AsChild(m.RootDomain)
+	if err != nil {
+		return nil, fmt.Errorf("failed to save as child: %s", err.Error())
+	}
+
+	memberHolder := member.New(m.RootDomain, name, key, burnAddress, createdWallet.Reference)
 	created, err := memberHolder.AsChild(m.RootDomain)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save as child: %s", err.Error())
 	}
-
-	wHolder := wallet.New(big.NewInt(1000000000).String())
-	createdWallet, err := wHolder.AsChild(created.Reference)
-	if err != nil {
-		return nil, fmt.Errorf("failed to save as child: %s", err.Error())
-	}
-
-	m.Wallet = wallet.GetObject(createdWallet.Reference)
 
 	return created, nil
 }

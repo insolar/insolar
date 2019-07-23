@@ -88,7 +88,7 @@ func nodeDomain() insolar.GenesisContractState {
 }
 
 func getMemberGenesisContractState(publicKey string, name string, parent string) insolar.GenesisContractState {
-	m, err := member.New(genesisrefs.ContractRootDomain, name, publicKey, "")
+	m, err := member.New(genesisrefs.ContractRootDomain, name, publicKey, "", insolar.Reference{})
 	if err != nil {
 		panic(fmt.Sprintf("'%s' member constructor failed", name))
 	}
