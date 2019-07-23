@@ -100,14 +100,14 @@ func Test_Pending_RequestRegistration_Incoming(t *testing.T) {
 		}
 
 		// Set first request
-		p := setRequest(ctx, t, s, initReqMsg)
+		p := sendMessage(ctx, t, s, initReqMsg)
 		requirePayloadNotError(t, p)
 		reqInfo := p.(*payload.RequestInfo)
 		require.Nil(t, reqInfo.Request)
 		require.Nil(t, reqInfo.Result)
 
 		// Try to set it again
-		secondP := setRequest(ctx, t, s, initReqMsg)
+		secondP := sendMessage(ctx, t, s, initReqMsg)
 		requirePayloadNotError(t, secondP)
 		reqInfo = secondP.(*payload.RequestInfo)
 		require.NotNil(t, reqInfo.Request)
@@ -136,7 +136,7 @@ func Test_Pending_RequestRegistration_Incoming(t *testing.T) {
 		}
 
 		// Set first request
-		p := setRequest(ctx, t, s, initReqMsg)
+		p := sendMessage(ctx, t, s, initReqMsg)
 		requirePayloadNotError(t, p)
 		reqInfo := p.(*payload.RequestInfo)
 
@@ -145,7 +145,7 @@ func Test_Pending_RequestRegistration_Incoming(t *testing.T) {
 		requirePayloadNotError(t, p)
 
 		// Try to set it again
-		secondP := setRequest(ctx, t, s, initReqMsg)
+		secondP := sendMessage(ctx, t, s, initReqMsg)
 		requirePayloadNotError(t, secondP)
 		secondReqInfo := secondP.(*payload.RequestInfo)
 		require.NotNil(t, secondReqInfo.Request)
@@ -163,6 +163,70 @@ func Test_Pending_RequestRegistration_Incoming(t *testing.T) {
 		err = compositeRes.Unmarshal(secondReqInfo.Result)
 		require.NoError(t, err)
 		returnedRes := record.Unwrap(compositeRes.Record.Virtual).(*record.Result)
+		require.Equal(t, *insolar.NewReference(reqInfo.RequestID), returnedRes.Request)
+		require.Equal(t, reqInfo.RequestID, returnedRes.Object)
+	})
+
+	t.Run("try to register result twice", func(t *testing.T) {
+		args := make([]byte, 100)
+		_, err := rand.Read(args)
+		initReq := record.IncomingRequest{
+			Object:    insolar.NewReference(gen.ID()),
+			Arguments: args,
+			CallType:  record.CTSaveAsChild,
+			Reason:    *insolar.NewReference(*insolar.NewID(s.pulse.PulseNumber, []byte{1, 2, 3})),
+			APINode:   gen.Reference(),
+		}
+		initReqMsg := &payload.SetIncomingRequest{
+			Request: record.Wrap(initReq),
+		}
+
+		// Set first request
+		p := sendMessage(ctx, t, s, initReqMsg)
+		requirePayloadNotError(t, p)
+		reqInfo := p.(*payload.RequestInfo)
+
+		// Set result for the request
+		mem := make([]byte, 100)
+		_, err = rand.Read(mem)
+		require.NoError(t, err)
+		rec := record.Wrap(record.Activate{
+			Request: *insolar.NewReference(reqInfo.RequestID),
+			Memory:  mem,
+		})
+		buf, err := rec.Marshal()
+		require.NoError(t, err)
+		res := make([]byte, 100)
+		_, err = rand.Read(res)
+		require.NoError(t, err)
+		resultRecord := record.Wrap(record.Result{
+			Request: *insolar.NewReference(reqInfo.RequestID),
+			Object:  reqInfo.RequestID,
+			Payload: res,
+		})
+		resBuf, err := resultRecord.Marshal()
+		require.NoError(t, err)
+
+		p = sendMessage(ctx, t, s, &payload.Activate{
+			Record: buf,
+			Result: resBuf,
+		})
+		requirePayloadNotError(t, p)
+
+		// Try to set it again
+		secondResP := sendMessage(ctx, t, s, &payload.Activate{
+			Record: buf,
+			Result: resBuf,
+		})
+		requirePayloadNotError(t, secondResP)
+		secondReqInfo := secondResP.(*payload.ResultInfo)
+		require.NotNil(t, secondReqInfo.Result)
+
+		// Check for the result
+		returnedResult := record.Virtual{}
+		err = returnedResult.Unmarshal(secondReqInfo.Result)
+		require.NoError(t, err)
+		returnedRes := record.Unwrap(&returnedResult).(*record.Result)
 		require.Equal(t, *insolar.NewReference(reqInfo.RequestID), returnedRes.Request)
 		require.Equal(t, reqInfo.RequestID, returnedRes.Object)
 	})

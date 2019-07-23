@@ -106,25 +106,17 @@ func setIncomingRequest(
 	return insolar.ID{}, record.Virtual{}
 }
 
-func setRequest(
-	ctx context.Context, t *testing.T, s *Server, request payload.Payload,
+func sendMessage(
+	ctx context.Context, t *testing.T, s *Server, msg payload.Payload,
 ) payload.Payload {
-	reps, done := s.Send(ctx, request)
+	reps, done := s.Send(ctx, msg)
 	defer done()
 
 	rep := <-reps
 	pl, err := payload.UnmarshalFromMeta(rep.Payload)
 	require.NoError(t, err)
-	switch pl.(type) {
-	case *payload.Error:
-		return pl
-	case *payload.RequestInfo:
-		return pl
-	default:
-		t.Fatalf("received unexpected reply %T", pl)
-	}
 
-	return nil
+	return pl
 }
 func getRequest(ctx context.Context, t *testing.T, s *Server, requestID insolar.ID) payload.Payload {
 	reps, done := s.Send(ctx, &payload.GetRequest{
