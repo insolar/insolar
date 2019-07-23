@@ -26,7 +26,7 @@ import (
 )
 
 func TestInsgorundReload(t *testing.T) {
-	_ = getBalanceNoErr(t, &root, root.ref)
+	createMember(t)
 	err := stopAllInsgorunds()
 	// No need to stop test if this fails. All tests may stack
 	assert.NoError(t, err)
@@ -34,5 +34,5 @@ func TestInsgorundReload(t *testing.T) {
 	err = startAllInsgorunds()
 	require.NoError(t, err)
 
-	_ = getBalanceNoErr(t, &root, root.ref)
+	createMember(t)
 }
