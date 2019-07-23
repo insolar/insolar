@@ -159,7 +159,7 @@ func (p *HotObjects) notifyPending(
 		ObjectID: objectID,
 	})
 	if err != nil {
-		inslogger.FromContext(ctx).Errorf("failed to notify about pending requests: %s", err.Error())
+		inslogger.FromContext(ctx).Error("failed to notify about pending requests: ", err.Error())
 		return
 	}
 
