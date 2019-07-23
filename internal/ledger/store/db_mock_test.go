@@ -176,7 +176,7 @@ func TestMockDB_NewIterator(t *testing.T) {
 	i := 0
 	for it.Next() && i < len(expected) {
 		require.Equal(t, expected[i].k.ID(), it.Key())
-		val, _ := it.Value()
+		val := it.Value()
 		require.Equal(t, expected[i].v, val)
 		i++
 	}
@@ -286,10 +286,10 @@ func TestMockDB_CMP_Badger(t *testing.T) {
 	i := 0
 	for memIt.Next() && dbIt.Next() && i < len(expected) {
 		assert.Equal(t, expected[len(expected)-i-1].k.ID(), memIt.Key())
-		memVal, _ := memIt.Value()
+		memVal := memIt.Value()
 		assert.Equal(t, expected[len(expected)-i-1].v, memVal)
 		require.Equal(t, memIt.Key(), dbIt.Key())
-		dbVal, _ := dbIt.Value()
+		dbVal := dbIt.Value()
 		require.Equal(t, memVal, dbVal)
 		i++
 	}

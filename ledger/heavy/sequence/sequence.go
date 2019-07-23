@@ -79,7 +79,7 @@ func (s *sequencer) First(scope byte) *Item {
 	if !it.Next() {
 		return nil
 	}
-	val, _ := it.Value()
+	val := it.Value()
 	return &Item{Key: it.Key(), Value: val}
 }
 
@@ -91,7 +91,7 @@ func (s *sequencer) Last(scope byte) *Item {
 	if !it.Next() {
 		return nil
 	}
-	val, _ := it.Value()
+	val := it.Value()
 	return &Item{Key: it.Key(), Value: val}
 }
 
@@ -110,7 +110,7 @@ func (s *sequencer) Slice(scope byte, from insolar.PulseNumber, skip uint32, lim
 			skipped++
 			continue
 		}
-		val, _ := it.Value()
+		val := it.Value()
 		result = append(result, Item{
 			Key:   it.Key(),
 			Value: val,
