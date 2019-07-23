@@ -124,7 +124,7 @@ func (p *evictedSlot) GetOpMode() member.OpMode {
 }
 
 func (p *evictedSlot) GetLeaveReason() uint32 {
-	if p.mode != member.ModeEvictedGracefully {
+	if !p.mode.IsEvictedGracefully() {
 		return 0
 	}
 	return p.leaveReason

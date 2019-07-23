@@ -76,7 +76,7 @@ type Operational interface {
 	GetOnlinePopulation() OnlinePopulation
 	GetEvictedPopulation() EvictedPopulation
 	GetOfflinePopulation() OfflinePopulation
-	CreateBuilder(pn pulse.Number, fullCopy bool) Builder
+	CreateBuilder(pn pulse.Number) Builder
 	IsActive() bool
 
 	GetMisbehaviorRegistry() MisbehaviorRegistry
@@ -115,7 +115,7 @@ type Builder interface {
 	IsSealed() bool
 
 	BuildAndMakeExpected(csh proofs.CloudStateHash) Expected
-	BuildAndMakeIncompleteExpected(csh proofs.CloudStateHash) Expected
+	BuildAndMakeBrokenExpected(csh proofs.CloudStateHash) Expected
 }
 
 type State uint8
@@ -124,7 +124,6 @@ const (
 	DraftCensus State = iota
 	SealedCensus
 	CompleteCensus
-	IncompleteCensus
 	PrimingCensus
 )
 

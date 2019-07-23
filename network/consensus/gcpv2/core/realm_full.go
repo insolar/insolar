@@ -191,7 +191,7 @@ func (r *FullRealm) start(census census.Active, population census.OnlinePopulati
 	r.initBasics(census)
 
 	isDynamic := bundle.IsDynamicPopulationRequired()
-	allControllers, perNodeControllers := r.initHandlers(isDynamic, population.GetCount(), bundle)
+	allControllers, perNodeControllers := r.initHandlers(isDynamic, population.GetIndexedCapacity(), bundle)
 
 	r.initPopulation(isDynamic, population, perNodeControllers)
 	r.initSelf()
@@ -279,14 +279,19 @@ func (r *FullRealm) initPopulation(needsDynamic bool, population census.OnlinePo
 
 	if needsDynamic {
 		expectedSize := r.expectedPopulationSize.AsInt()
+		if population.GetIndexedCapacity() > expectedSize {
+			expectedSize = population.GetIndexedCapacity()
+		}
+
 		r.population = NewDynamicRealmPopulation(r.strategy, population, expectedSize,
 			r.nbhSizes.ExtendingNeighbourhoodLimit, r.strategy.ShuffleNodeSequence, initNodeFn)
 
 		// TODO probably should happen at later stages, closer to Phase3 analysis
-		r.population.SealIndex(expectedSize)
+		r.population.SealIndexed(expectedSize)
 	} else {
-		if population.GetCount() == 0 {
-			panic("dynamic population is required for joiner")
+		if population.GetIndexedCount() == 0 || !population.IsValid() ||
+			population.GetIndexedCount() != population.GetIndexedCapacity() {
+			panic("dynamic population is required for joiner or suspect")
 		}
 		r.population = NewFixedRealmPopulation(r.strategy, population,
 			r.nbhSizes.ExtendingNeighbourhoodLimit, initNodeFn)
@@ -521,20 +526,18 @@ func (r *FullRealm) FinishRound(builder census.Builder, csh proofs.CloudStateHas
 	local := builder.GetPopulationBuilder().GetLocalProfile()
 
 	var expected census.Expected
-	successful := false
 	mode := local.GetOpMode()
-	if mode.IsEvicted() {
-		expected = builder.BuildAndMakeIncompleteExpected(csh)
-		// expected = builder.BuildAndMakeExpected(csh)
-	} else {
+	// ModeEvictedGracefully
+	if csh != nil && !mode.IsEvictedForcefully() {
 		expected = builder.BuildAndMakeExpected(csh)
-		successful = true
+	} else {
+		expected = builder.BuildAndMakeBrokenExpected(csh)
 	}
 
 	r.notifyConsensusFinished(expected.GetOnlinePopulation().GetLocalProfile(), expected)
 
 	nextNP := expected.GetPulseNumber()
-	if successful {
+	if expected.GetOnlinePopulation().IsValid() {
 		switch {
 		case r.self.requestedLeave:
 			r.controlFeeder.OnAppliedGracefulLeave(r.self.requestedLeaveReason, nextNP)
@@ -591,7 +594,7 @@ func (r *FullRealm) GetWelcomePackage() *proofs.NodeWelcomePackage {
 func (r *FullRealm) BuildNextPopulation(ctx context.Context, ranks []profiles.PopulationRank,
 	gsh proofs.GlobulaStateHash, csh proofs.CloudStateHash) bool {
 
-	b := r.census.CreateBuilder(r.GetNextPulseNumber(), false)
+	b := r.census.CreateBuilder(r.GetNextPulseNumber())
 	pb := b.GetPopulationBuilder()
 	selfID := r.GetSelfNodeID()
 	localUpdProfile := pb.GetLocalProfile()
@@ -607,15 +610,16 @@ func (r *FullRealm) BuildNextPopulation(ctx context.Context, ranks []profiles.Po
 		if nodeID == selfID {
 			selfMode = pr.OpMode
 		} else {
-			// na = r.population.GetNodeAppearance(pr.NodeID)
-			nextAP = pb.AddProfile(prevAP.GetStatic())
+			static := prevAP.GetStatic()
+			static, _ = r.profileFactory.TryConvertUpgradableIntroProfile(static)
+			nextAP = pb.AddProfile(static)
 		}
 		if pr.OpMode.IsPowerless() && pr.Power != 0 {
 			panic("illegal state")
 		}
 
 		nextAP.SetSignatureVerifier(prevAP.GetSignatureVerifier())
-		if pr.OpMode == member.ModeEvictedGracefully {
+		if pr.OpMode.IsEvictedGracefully() {
 			na := r.self
 			if nodeID != selfID {
 				na = r.population.GetNodeAppearance(nodeID)

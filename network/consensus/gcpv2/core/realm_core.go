@@ -164,7 +164,7 @@ func (r *coreRealm) initBeforePopulation(powerRequest power.Request, nbhSizes tr
 			return nil
 		})
 
-	r.expectedPopulationSize = member.AsIndex(population.GetCount())
+	r.expectedPopulationSize = member.AsIndex(population.GetIndexedCapacity())
 }
 
 func (r *coreRealm) GetStrategy() RoundStrategy {

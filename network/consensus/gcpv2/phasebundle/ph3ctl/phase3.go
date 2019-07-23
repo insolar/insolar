@@ -83,7 +83,7 @@ func NewPhase3Controller(loopingMinimalDelay time.Duration, packetPrepareOptions
 		consensusStrategy:    consensusStrategy,
 		loopingMinimalDelay:  loopingMinimalDelay,
 		inspectionFactory:    inspectionFactory,
-		isFastEnabled:        enabledFast,
+		isFastPacketEnabled:  enabledFast,
 	}
 }
 
@@ -92,13 +92,15 @@ var _ core.PhaseController = &Phase3Controller{}
 type Phase3Controller struct {
 	core.PhaseControllerTemplate
 	packetPrepareOptions transport.PacketSendOptions
-	queueTrustUpdated    <-chan ph2ctl.TrustUpdateSignal
-	queuePh3Recv         chan inspectors.InspectedVector
 	consensusStrategy    consensus.SelectionStrategy
-	inspectionFactory    inspectors.VectorInspectorFactory
 	loopingMinimalDelay  time.Duration
-	isFastEnabled        bool
-	R                    *core.FullRealm
+	isFastPacketEnabled  bool
+
+	inspectionFactory inspectors.VectorInspectorFactory
+	R                 *core.FullRealm
+
+	queueTrustUpdated <-chan ph2ctl.TrustUpdateSignal
+	queuePh3Recv      chan inspectors.InspectedVector
 
 	rw        sync.RWMutex
 	inspector inspectors.VectorInspector
@@ -285,7 +287,7 @@ outer:
 			}
 
 			// if we didn't went for a full phase3 sending, but we have all nodes, then should try a shortcut
-			if c.isFastEnabled {
+			if c.isFastPacketEnabled {
 				indexedCount, isComplete := pop.GetCountAndCompleteness(false)
 				if isComplete && countHasNsh >= indexedCount && !didFastPhase3 {
 					didFastPhase3 = true
@@ -391,7 +393,7 @@ outer:
 		popCount, popCompleteness := population.GetCountAndCompleteness(false)
 		if popCompleteness && popCount <= processedNodesFlawlessly {
 			consensusSelection = c.consensusStrategy.SelectOnStopped(&verifiedStatTbl, false,
-				population.GetBftMajorityCount())
+				consensuskit.BftMajority(popCount))
 
 			log.Debug("Phase3 done all")
 			break outer
@@ -403,11 +405,11 @@ outer:
 			return false
 		case <-softDeadline:
 			log.Debug("Phase3 deadline")
-			consensusSelection = c.consensusStrategy.SelectOnStopped(&verifiedStatTbl, true, population.GetBftMajorityCount())
+			consensusSelection = c.consensusStrategy.SelectOnStopped(&verifiedStatTbl, true, consensuskit.BftMajority(popCount))
 			break outer
 		case <-chasingDelayTimer.Channel():
 			log.Debug("Phase3 chasing expired")
-			consensusSelection = c.consensusStrategy.SelectOnStopped(&verifiedStatTbl, true, population.GetBftMajorityCount())
+			consensusSelection = c.consensusStrategy.SelectOnStopped(&verifiedStatTbl, true, consensuskit.BftMajority(popCount))
 			break outer
 		case d := <-c.queuePh3Recv:
 			switch {
@@ -450,7 +452,7 @@ outer:
 				nodeStats, vr := d.GetInspectionResults()
 
 				if log.Is(insolar.DebugLevel) {
-					popLimit, popSealed := population.GetSealedLimit()
+					popLimit, popSealed := population.GetSealedCapacity()
 					remains := popLimit - originalStatTbl.RowCount() - 1
 					logMsg := "validated"
 					switch {
@@ -529,7 +531,7 @@ outer:
 
 	if log.Is(insolar.DebugLevel) {
 
-		limit, sealed := population.GetSealedLimit()
+		limit, sealed := population.GetSealedCapacity()
 		limitStr := ""
 		if sealed {
 			limitStr = fmt.Sprintf("%d", limit)

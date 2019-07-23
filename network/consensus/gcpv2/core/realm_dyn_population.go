@@ -60,14 +60,13 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common/consensuskit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
 
 func NewDynamicRealmPopulation(strategy RoundStrategy, population census.OnlinePopulation, nodeCountHint int, phase2ExtLimit uint8,
 	shuffleFn args.ShuffleFunc, fn NodeInitFunc) *DynamicRealmPopulation {
 
-	nodeCount := population.GetCount()
+	nodeCount := population.GetIndexedCapacity()
 	if nodeCount > nodeCountHint {
 		nodeCountHint = nodeCount + nodeCount>>2 // 125%
 	}
@@ -106,7 +105,7 @@ type DynamicRealmPopulation struct {
 	dynamicNodes map[insolar.ShortNodeID]*NodeAppearance
 }
 
-func (r *DynamicRealmPopulation) SealIndex(indexedCountLimit int) bool {
+func (r *DynamicRealmPopulation) SealIndexed(indexedCountLimit int) bool {
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
@@ -168,10 +167,6 @@ func (r *DynamicRealmPopulation) GetJoinersCount() int {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 	return r.joinerCount
-}
-
-func (r *DynamicRealmPopulation) GetBftMajorityCount() int {
-	return consensuskit.BftMajority(r.GetIndexedCount())
 }
 
 func (r *DynamicRealmPopulation) GetNodeAppearance(id insolar.ShortNodeID) *NodeAppearance {
@@ -262,7 +257,7 @@ func (r *DynamicRealmPopulation) GetIndexedNodesAndHasNil() ([]*NodeAppearance, 
 	return cp, len(r.nodeIndex) > r.indexedCount
 }
 
-func (r *DynamicRealmPopulation) GetSealedLimit() (int, bool) {
+func (r *DynamicRealmPopulation) GetSealedCapacity() (int, bool) {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 

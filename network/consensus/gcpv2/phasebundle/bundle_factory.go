@@ -111,7 +111,7 @@ func (p *standardBundleFactory) CreateControllersBundle(population census.Online
 	case mode.IsEvicted():
 		panic("unable to start consensus for an evicted node")
 	case lp.IsJoiner():
-		if population.GetCount() != 0 {
+		if population.GetIndexedCapacity() != 0 {
 			panic("joiner can only start with a zero node population")
 		}
 		return NewJoinerPhaseBundle(pss, p.BundleConfig)
