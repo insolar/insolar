@@ -286,7 +286,7 @@ func (w *SimpleWallet) Rollback(amount int) error {
 	prototype := uploadContractOnce(t, "wallet", walletContract)
 	objectRef := callConstructor(t, prototype, "New")
 	resp := callMethod(t, objectRef, "Transfer10", nil)
-	require.Empty(t, resp.Error)
+	require.Empty(t, resp.Error) // AALEKSEEV TODO FIXME Should be empty, but was Decoder not initialized
 }
 
 func TestInjectingDelegate(t *testing.T) {
