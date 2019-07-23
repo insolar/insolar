@@ -213,8 +213,8 @@ func (ctx *serializeContext) Finalize() (int64, error) {
 	readerForSignature := bytes.NewReader(ctx.packetBuffer.Bytes())
 	digest := ctx.digester.GetDigestOf(readerForSignature)
 	signedDigest := digest.SignWith(ctx.signer)
-	signature := signedDigest.GetSignature()
-	ctx.setter.setSignature(signature.AsSignatureHolder())
+	signature := signedDigest.GetSignatureHolder()
+	ctx.setter.setSignature(signature)
 
 	if _, err := signature.WriteTo(ctx.packetBuffer); err != nil {
 		return totalWrite, ErrMalformedPacketSignature(err)

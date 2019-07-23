@@ -209,8 +209,6 @@ const (
 	TypeRegisterChild
 	// TypeGetObjectIndex fetches object index from storage.
 	TypeGetObjectIndex
-	// TypeAbandonedRequestsNotification informs virtual node about unclosed requests.
-	TypeAbandonedRequestsNotification
 
 	// Heavy replication
 

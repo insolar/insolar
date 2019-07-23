@@ -93,7 +93,7 @@ func (p *Replication) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to fetch pulse")
 	}
-	futurePulse := latest.NextPulseNumber
+	futurePulse := latest.PulseNumber
 	dr, err := storeDrop(ctx, p.dep.drops, msg.Drop)
 	if err != nil {
 		return errors.Wrap(err, "failed to store drop")

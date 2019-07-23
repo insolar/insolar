@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -140,7 +139,6 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		return ErrNotActivated
 	}
 
-	logger := inslogger.FromContext(ctx)
 	{
 		buf, err := p.lifeline.Marshal()
 		if err != nil {
@@ -154,16 +152,13 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		}
 
 		p.Dep.Sender.Reply(ctx, p.message, msg)
-		logger.Info("sending index")
 	}
 
 	rec, err := p.Dep.RecordAccessor.ForID(ctx, *p.lifeline.LatestState)
 	switch err {
 	case nil:
-		logger.Info("sending state")
 		return sendState(rec)
 	case object.ErrNotFound:
-		logger.Info("state not found (sending pass)")
 		return sendPassState(*p.lifeline.LatestState)
 	default:
 		return errors.Wrap(err, "failed to fetch record")

@@ -153,7 +153,7 @@ func initComponents(
 
 	jc := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
 	pulses := pulse.NewStorageMem()
-	b := bus.NewBus(pubSub, pulses, jc, pcs)
+	b := bus.NewBus(cfg.Bus, pubSub, pulses, jc, pcs)
 
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, pubSub, b)
 	checkError(ctx, err, "failed to start LogicRunner")

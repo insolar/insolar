@@ -63,6 +63,7 @@ const (
 	TypePendingsInfo
 	TypeReplication
 	TypeGetJet
+	TypeAbandonedRequestsNotification
 
 	TypeReturnResults
 	TypeCallMethod
@@ -268,6 +269,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *GetJet:
 		pl.Polymorph = uint32(TypeGetJet)
 		return pl.Marshal()
+	case *AbandonedRequestsNotification:
+		pl.Polymorph = uint32(TypeAbandonedRequestsNotification)
+		return pl.Marshal()
 	}
 
 	return nil, errors.New("unknown payload type")
@@ -429,6 +433,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeGetJet:
 		pl := GetJet{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeAbandonedRequestsNotification:
+		pl := AbandonedRequestsNotification{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}
