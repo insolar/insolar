@@ -232,6 +232,63 @@ func (r *Two) GetPayloadString() (string, error) {
 	)
 }
 
+func TestSagaSimpleCall(t *testing.T) {
+	var walletContract = `
+package main
+
+import (
+"github.com/insolar/insolar/insolar"
+"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+"github.com/insolar/insolar/application/proxy/wallet"
+)
+
+type SimpleWallet struct {
+	foundation.BaseContract
+	Friend insolar.Reference
+	Amount int
+}
+
+func New() (*SimpleWallet, error) {
+	return &SimpleWallet{Amount: 100}, nil
+}
+
+func (r *SimpleWallet) Transfer10() (string, error) {
+	n := 10
+	second := wallet.New()
+	w2, err := second.AsChild(r.GetReference())
+	if err != nil {
+		return "1", err
+	}
+
+	r.Amount -= n
+
+	err = w2.Accept(n)
+	if err != nil {
+		return "2", err
+	}
+	return w2.GetReference().String(), nil
+}
+
+func (w *SimpleWallet) GetBalance() (int, error) {
+	return w.Amount, nil
+}
+
+//ins:saga(Rollback)
+func (w *SimpleWallet) Accept(amount int) error {
+	w.Amount += amount
+	return nil
+}
+
+func (w *SimpleWallet) Rollback(amount int) error {
+	w.Amount -= amount
+	return nil
+}
+`
+	objectRef := callConstructor(t, uploadContractOnce(t, "wallet", walletContract), "New")
+	resp := callMethod(t, objectRef, "Transfer10", nil)
+	require.Empty(t, resp.Error)
+}
+
 func TestInjectingDelegate(t *testing.T) {
 	var contractOneCode = `
 package main
