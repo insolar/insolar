@@ -53,6 +53,8 @@ package censusimpl
 import (
 	"testing"
 
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 
 	"github.com/insolar/insolar/network/consensus/common/pulse"
@@ -87,17 +89,39 @@ func TestGetVersionedRegistries(t *testing.T) {
 	require.Equal(t, vr, pct.getVersionedRegistries())
 }
 
-// TODO
-/*func TestNewPrimingCensus(t *testing.T) {
-	sp1 := profiles.NewStaticProfileMock(t)
-	sp1.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
-	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp1}}}
+func TestNewPrimingCensusForJoiner(t *testing.T) {
+	sp := profiles.NewStaticProfileMock(t)
+	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
+	pks := cryptkit.NewPublicKeyStoreMock(t)
+	sp.GetPublicKeyStoreMock.Set(func() cryptkit.PublicKeyStore { return pks })
 	registries := census.NewVersionedRegistriesMock(t)
 	pn := pulse.Number(1)
 	registries.GetVersionPulseDataMock.Set(func() pulse.Data { return pulse.Data{PulseNumber: pn} })
-	pc := NewPrimingCensus(population, registries)
+	vf := cryptkit.NewSignatureVerifierFactoryMock(t)
+	sv := cryptkit.NewSignatureVerifierMock(t)
+	vf.GetSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
+	pcj := NewPrimingCensusForJoiner(sp, registries, vf)
+	require.Equal(t, pn, pcj.GetPulseNumber())
+}
+
+func TestNewPrimingCensus(t *testing.T) {
+	sp := profiles.NewStaticProfileMock(t)
+	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
+	pks := cryptkit.NewPublicKeyStoreMock(t)
+	sp.GetPublicKeyStoreMock.Set(func() cryptkit.PublicKeyStore { return pks })
+	registries := census.NewVersionedRegistriesMock(t)
+	pn := pulse.Number(1)
+	registries.GetVersionPulseDataMock.Set(func() pulse.Data { return pulse.Data{PulseNumber: pn} })
+	var sps []profiles.StaticProfile
+	sps = append(sps, sp)
+	vf := cryptkit.NewSignatureVerifierFactoryMock(t)
+	sv := cryptkit.NewSignatureVerifierMock(t)
+	vf.GetSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
+	pc := NewPrimingCensus(sps, sp, registries, vf)
 	require.Equal(t, pn, pc.GetPulseNumber())
-}*/
+
+	require.Panics(t, func() { NewPrimingCensus(nil, sp, registries, vf) })
+}
 
 func TestSetAsActiveTo(t *testing.T) {
 	pct := PrimingCensusTemplate{}
@@ -133,6 +157,26 @@ func TestPCTGetExpectedPulseNumber(t *testing.T) {
 
 	pct.pd.NextPulseDelta = 1
 	require.Equal(t, pulse.MinTimePulse+pulse.Number(pct.pd.NextPulseDelta), pct.GetExpectedPulseNumber())
+}
+
+func TestPCTMakeExpected(t *testing.T) {
+	pn := pulse.Number(1)
+	pct := PrimingCensusTemplate{}
+	require.Panics(t, func() { pct.MakeExpected(pn, nil, nil) })
+
+	csh := proofs.NewCloudStateHashMock(t)
+	require.Panics(t, func() { pct.MakeExpected(pn, csh, nil) })
+
+	gsh := proofs.NewGlobulaStateHashMock(t)
+	pn = pulse.MinTimePulse
+	pct.pd.PulseNumber = pulse.MinTimePulse
+	pct.pd.NextPulseDelta = 1
+	require.Panics(t, func() { pct.MakeExpected(pn, csh, gsh) })
+
+	pn = pulse.MinTimePulse + 1
+	pct.chronicles = &localChronicles{}
+	r := pct.MakeExpected(pn, csh, gsh)
+	require.Equal(t, pn, r.GetPulseNumber())
 }
 
 func TestPCTGetPulseNumber(t *testing.T) {
@@ -212,15 +256,15 @@ func TestPCTCreateBuilder(t *testing.T) {
 	pn := pulse.Number(1)
 	sp := profiles.NewStaticProfileMock(t)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
-	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
+	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}},
+		slots: []updatableSlot{updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}}
 
 	pct := PrimingCensusTemplate{chronicles: chronicles, online: population}
 	builder := pct.CreateBuilder(pn, false)
 	require.Equal(t, pn, builder.GetPulseNumber())
 
-	// TODO
-	/*builder = pct.CreateBuilder(pn, true)
-	require.Equal(t, pn, builder.GetPulseNumber())*/
+	builder = pct.CreateBuilder(pn, true)
+	require.Equal(t, pn, builder.GetPulseNumber())
 }
 
 func TestACTGetExpectedPulseNumber(t *testing.T) {
@@ -282,6 +326,9 @@ func TestECTGetExpectedPulseNumber(t *testing.T) {
 func TestECTGetCensusState(t *testing.T) {
 	ect := ExpectedCensusTemplate{}
 	require.Equal(t, census.CompleteCensus, ect.GetCensusState())
+
+	ect.isIncomplete = true
+	require.Equal(t, census.IncompleteCensus, ect.GetCensusState())
 }
 
 func TestECTGetPulseNumber(t *testing.T) {
@@ -335,15 +382,15 @@ func TestECTCreateBuilder(t *testing.T) {
 	pn := pulse.Number(1)
 	sp := profiles.NewStaticProfileMock(t)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
-	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
+	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}},
+		slots: []updatableSlot{updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}}
 
 	ect := ExpectedCensusTemplate{chronicles: chronicles, online: population}
 	builder := ect.CreateBuilder(pn, false)
 	require.Equal(t, pn, builder.GetPulseNumber())
 
-	// TODO
-	/*builder = ect.CreateBuilder(pn, true)
-	require.Equal(t, pn, builder.GetPulseNumber())*/
+	builder = ect.CreateBuilder(pn, true)
+	require.Equal(t, pn, builder.GetPulseNumber())
 }
 
 func TestGetPrevious(t *testing.T) {
@@ -353,7 +400,6 @@ func TestGetPrevious(t *testing.T) {
 }
 
 func TestMakeActive(t *testing.T) {
-	// ect := ExpectedCensusTemplate{}
 	chronicles := &localChronicles{}
 	ect := ExpectedCensusTemplate{chronicles: chronicles}
 	pd := pulse.Data{PulseNumber: pulse.Number(1)}
