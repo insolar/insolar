@@ -140,38 +140,51 @@ func (c *LocalCensusBuilder) GetPopulationBuilder() census.PopulationBuilder {
 	return &c.populationBuilder
 }
 
-func (c *LocalCensusBuilder) build(csh proofs.CloudStateHash) (copyToOnlinePopulation, census.EvictedPopulation) {
+func (c *LocalCensusBuilder) build(incomplete bool, csh proofs.CloudStateHash) (copyToOnlinePopulation, census.EvictedPopulation) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-
-	if csh == nil {
-		panic("illegal state: CSH is nil")
-	}
-
-	if !c.state.IsSealed() {
-		panic("illegal state: not sealed")
-	}
 
 	if c.state.IsBuilt() {
 		panic("illegal state: was built")
 	}
-	c.state = census.BuiltCensus
-	c.csh = csh
 
-	return c.population.CopyAndSeparate()
+	if !incomplete {
+		if !c.state.IsSealed() {
+			panic("illegal state: not sealed")
+		}
+
+		if csh == nil {
+			panic("illegal state: CSH is nil")
+		}
+	}
+	c.csh = csh
+	c.state = census.CompleteCensus
+	return c.population.CopyAndSeparate(!incomplete)
 }
 
 func (c *LocalCensusBuilder) BuildAndMakeExpected(csh proofs.CloudStateHash) census.Expected {
-	pop, evicts := c.build(csh)
+
+	pop, evicts := c.build(false, csh)
+	return c.makeExpected(false, pop, evicts)
+}
+
+func (c *LocalCensusBuilder) BuildAndMakeIncompleteExpected(csh proofs.CloudStateHash) census.Expected {
+
+	pop, evicts := c.build(true, csh)
+	return c.makeExpected(true, pop, evicts)
+}
+
+func (c *LocalCensusBuilder) makeExpected(isIncomplete bool, pop copyToOnlinePopulation, evicts census.EvictedPopulation) census.Expected {
 
 	r := &ExpectedCensusTemplate{
-		chronicles: c.chronicles,
-		prev:       c.chronicles.active,
-		csh:        c.csh,
-		gsh:        c.gsh,
-		pn:         c.pulseNumber,
-		online:     pop,
-		evicted:    evicts,
+		chronicles:   c.chronicles,
+		prev:         c.chronicles.active,
+		csh:          c.csh,
+		gsh:          c.gsh,
+		pn:           c.pulseNumber,
+		online:       pop,
+		evicted:      evicts,
+		isIncomplete: isIncomplete,
 	}
 
 	c.chronicles.makeExpected(r)
@@ -216,7 +229,7 @@ func (c *DynamicPopulationBuilder) FindProfile(nodeID insolar.ShortNodeID) profi
 	return c.census.population.FindUpdatableProfile(nodeID)
 }
 
-func (c *DynamicPopulationBuilder) AddJoinerProfile(intro profiles.StaticProfile) profiles.Updatable {
+func (c *DynamicPopulationBuilder) AddProfile(intro profiles.StaticProfile) profiles.Updatable {
 	c.census.mutex.Lock()
 	defer c.census.mutex.Unlock()
 

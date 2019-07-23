@@ -85,7 +85,6 @@ type GlobulaConsensusPacketBody struct {
 	PulsarPacket EmbeddedPulsarData     `insolar-transport:"Packet=0,1;optional=PacketFlags[0]"` // ByteSize>=124
 	Announcement MembershipAnnouncement `insolar-transport:"Packet=1,2"`                         // ByteSize= (JOINER) 5, (MEMBER) 201, 205 (MEMBER+JOINER) 196, 198, 208
 
-	// TODO implement an additional field and serialization of NodeExtendedIntro
 	// This field can be included by sender who has introduced a joiner to facilitate joining process, and contains full intro data of the joiner
 	// This field  is not mandatory and can be omitted, e.g. when network is stable or some space is required for claims
 	JoinerExt NodeExtendedIntro `insolar-transport:"Packet=1;optional=PacketFlags[3]"`
@@ -402,8 +401,9 @@ type NeighbourAnnouncement struct {
 		As joiner has no state before joining, its announcement and relevant signature are considered equal to
 		NodeBriefIntro and related signature, and CurrentRank of joiner will always be ZERO, as joiner has no index/nodeCount/power.
 
-		The field "Joiner" MUST BE OMITTED when	this joiner is introduced by the sending node
+		Fields "Joiner" and "JoinerIntroducedBy" MUST BE OMITTED when this joiner is introduced by the sending node
 	*/
+	// TODO merge "Joiner" and "JoinerIntroducedBy" fields into NeighbourJoinerAnnouncement
 	Joiner             JoinAnnouncement    `insolar-transport:"optional=CurrentRank==0"` // ByteSize = 135, 137, 147
 	JoinerIntroducedBy insolar.ShortNodeID `insolar-transport:"optional=CurrentRank==0"`
 
@@ -432,9 +432,9 @@ func (na *NeighbourAnnouncement) SerializeTo(ctx SerializeContext, writer io.Wri
 			if err := na.Joiner.SerializeTo(ctx, writer); err != nil {
 				return errors.Wrap(err, "failed to serialize Joiner")
 			}
-		}
-		if err := write(writer, na.JoinerIntroducedBy); err != nil {
-			return errors.Wrap(err, "failed to serialize JoinerIntroducedBy")
+			if err := write(writer, na.JoinerIntroducedBy); err != nil {
+				return errors.Wrap(err, "failed to serialize JoinerIntroducedBy")
+			}
 		}
 	} else {
 		ctx.SetInContext(ContextNeighbourAnnouncement)
@@ -472,9 +472,9 @@ func (na *NeighbourAnnouncement) DeserializeFrom(ctx DeserializeContext, reader 
 			if err := na.Joiner.DeserializeFrom(ctx, reader); err != nil {
 				return errors.Wrap(err, "failed to deserialize Joiner")
 			}
-		}
-		if err := read(reader, &na.JoinerIntroducedBy); err != nil {
-			return errors.Wrap(err, "failed to deserialize JoinerIntroducedBy")
+			if err := read(reader, &na.JoinerIntroducedBy); err != nil {
+				return errors.Wrap(err, "failed to deserialize JoinerIntroducedBy")
+			}
 		}
 	} else {
 		ctx.SetInContext(ContextNeighbourAnnouncement)

@@ -53,7 +53,6 @@ package adapters
 import (
 	"context"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	transport2 "github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -70,7 +69,7 @@ func NewPacketSender(datagramTransport transport.DatagramTransport) *PacketSende
 	}
 }
 
-func (ps *PacketSender) SendPacketToTransport(ctx context.Context, to profiles.ActiveNode, sendOptions transport2.PacketSendOptions, payload interface{}) {
+func (ps *PacketSender) SendPacketToTransport(ctx context.Context, to transport2.TargetProfile, sendOptions transport2.PacketSendOptions, payload interface{}) {
 	addr := to.GetStatic().GetDefaultEndpoint().GetNameAddress().String()
 
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{

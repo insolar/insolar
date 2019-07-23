@@ -67,6 +67,7 @@ var RoundTimingsFor1s = api.RoundTimings{
 	EndOfPhase1:        250 * time.Millisecond,
 	EndOfPhase2:        400 * time.Millisecond,
 	EndOfPhase3:        500 * time.Millisecond,
+	EndOfConsensus:     600 * time.Millisecond,
 
 	BeforeInPhase2ChasingDelay: 0 * time.Millisecond,
 	BeforeInPhase3ChasingDelay: 0 * time.Millisecond,
@@ -80,6 +81,10 @@ func NewEmuLocalConfig(ctx context.Context) api.LocalNodeConfiguration {
 type emuLocalConfig struct {
 	timings api.RoundTimings
 	ctx     context.Context
+}
+
+func (r *emuLocalConfig) GetNodeCountHint() int {
+	return 10
 }
 
 func (r *emuLocalConfig) GetParentContext() context.Context {
@@ -108,6 +113,7 @@ func (r *emuLocalConfig) GetConsensusTimings(nextPulseDelta uint16, isJoiner boo
 	t.EndOfPhase1 *= m
 	t.EndOfPhase2 *= m
 	t.EndOfPhase3 *= m
+	t.EndOfConsensus *= m
 	t.BeforeInPhase2ChasingDelay *= m
 	t.BeforeInPhase3ChasingDelay *= m
 

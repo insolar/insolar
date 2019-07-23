@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,19 +46,20 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package tests
 
 import (
 	"context"
 	"fmt"
+	"math/rand"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-	"math/rand"
 )
 
 func newEmuNetworkBuilder(ctx context.Context, netStrategy NetStrategy,
@@ -108,19 +109,25 @@ func (p *emuNetworkBuilder) StartPulsar(pulseCount int, pulseDelta uint16, pulsa
 const fmtNodeName = "%s%04d"
 
 func (p *emuNetworkBuilder) connectEmuNode(nodes []profiles.StaticProfile, selfIndex int) {
+	p._connectEmuNode(nodes, selfIndex, false)
+}
+
+func (p *emuNetworkBuilder) _connectEmuNode(nodes []profiles.StaticProfile, selfIndex int, asJoiner bool) {
 
 	controlFeeder := &EmuControlFeeder{}
 	candidateFeeder := &core.SequentialCandidateFeeder{}
 	switch {
-	//case selfIndex%7 == 1:
-	//	introID := 8000 + selfIndex
-	//	intro := NewEmuNodeIntroByName(introID, fmt.Sprintf(fmtNodeName, "v%04d", introID))
-	//	candidateFeeder.AddJoinCandidate(intro)
+	case !asJoiner && selfIndex%3 == 1:
+		introID := 8000 + selfIndex
+		intro := NewEmuNodeIntroByName(introID, fmt.Sprintf(fmtNodeName, "v", introID))
+		candidateFeeder.AddJoinCandidate(intro)
+
+		p._connectEmuNode([]profiles.StaticProfile{intro}, 0, true)
 	case selfIndex%5 == 2:
-		controlFeeder.leaveReason = uint32(selfIndex) //simulate leave
+		controlFeeder.leaveReason = uint32(selfIndex) // simulate leave
 	}
 
-	chronicles := NewEmuChronicles(nodes, selfIndex, p.primingCloudStateHash)
+	chronicles := NewEmuChronicles(nodes, selfIndex, asJoiner, p.primingCloudStateHash)
 	self := nodes[selfIndex]
 	node := NewConsensusHost(self.GetDefaultEndpoint().GetNameAddress())
 	node.ConnectTo(chronicles, p.network, p.strategyFactory, candidateFeeder, controlFeeder, p.config)
@@ -129,17 +136,17 @@ func (p *emuNetworkBuilder) connectEmuNode(nodes []profiles.StaticProfile, selfI
 func generateNameList(countNeutral, countHeavy, countLight, countVirtual int) []string {
 	r := make([]string, 0, countNeutral+countHeavy+countLight+countVirtual)
 
-	r = appendNameList(len(r), r, "n%04d", countNeutral)
-	r = appendNameList(len(r), r, "h%04d", countHeavy)
-	r = appendNameList(len(r), r, "l%04d", countLight)
-	r = appendNameList(len(r), r, "v%04d", countVirtual)
+	r = appendNameList(len(r), r, fmtNodeName, "N", countNeutral)
+	r = appendNameList(len(r), r, fmtNodeName, "H", countHeavy)
+	r = appendNameList(len(r), r, fmtNodeName, "L", countLight)
+	r = appendNameList(len(r), r, fmtNodeName, "V", countVirtual)
 
 	return r
 }
 
-func appendNameList(baseNum int, r []string, f string, count int) []string {
+func appendNameList(baseNum int, r []string, fmtS, pfx string, count int) []string {
 	for i := 0; i < count; i++ {
-		r = append(r, fmt.Sprintf(f, baseNum+i))
+		r = append(r, fmt.Sprintf(fmtS, pfx, baseNum+i))
 	}
 	return r
 }

@@ -11,6 +11,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	insolar "github.com/insolar/insolar/insolar"
+	cryptkit "github.com/insolar/insolar/network/consensus/common/cryptkit"
 	profiles "github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 
 	testify_assert "github.com/stretchr/testify/assert"
@@ -20,7 +21,7 @@ import (
 type CandidateControlFeederMock struct {
 	t minimock.Tester
 
-	PickNextJoinCandidateFunc       func() (r profiles.CandidateProfile)
+	PickNextJoinCandidateFunc       func() (r profiles.CandidateProfile, r1 cryptkit.DigestHolder)
 	PickNextJoinCandidateCounter    uint64
 	PickNextJoinCandidatePreCounter uint64
 	PickNextJoinCandidateMock       mCandidateControlFeederMockPickNextJoinCandidate
@@ -56,7 +57,8 @@ type CandidateControlFeederMockPickNextJoinCandidateExpectation struct {
 }
 
 type CandidateControlFeederMockPickNextJoinCandidateResult struct {
-	r profiles.CandidateProfile
+	r  profiles.CandidateProfile
+	r1 cryptkit.DigestHolder
 }
 
 //Expect specifies that invocation of CandidateControlFeeder.PickNextJoinCandidate is expected from 1 to Infinity times
@@ -72,14 +74,14 @@ func (m *mCandidateControlFeederMockPickNextJoinCandidate) Expect() *mCandidateC
 }
 
 //Return specifies results of invocation of CandidateControlFeeder.PickNextJoinCandidate
-func (m *mCandidateControlFeederMockPickNextJoinCandidate) Return(r profiles.CandidateProfile) *CandidateControlFeederMock {
+func (m *mCandidateControlFeederMockPickNextJoinCandidate) Return(r profiles.CandidateProfile, r1 cryptkit.DigestHolder) *CandidateControlFeederMock {
 	m.mock.PickNextJoinCandidateFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &CandidateControlFeederMockPickNextJoinCandidateExpectation{}
 	}
-	m.mainExpectation.result = &CandidateControlFeederMockPickNextJoinCandidateResult{r}
+	m.mainExpectation.result = &CandidateControlFeederMockPickNextJoinCandidateResult{r, r1}
 	return m.mock
 }
 
@@ -94,12 +96,12 @@ func (m *mCandidateControlFeederMockPickNextJoinCandidate) ExpectOnce() *Candida
 	return expectation
 }
 
-func (e *CandidateControlFeederMockPickNextJoinCandidateExpectation) Return(r profiles.CandidateProfile) {
-	e.result = &CandidateControlFeederMockPickNextJoinCandidateResult{r}
+func (e *CandidateControlFeederMockPickNextJoinCandidateExpectation) Return(r profiles.CandidateProfile, r1 cryptkit.DigestHolder) {
+	e.result = &CandidateControlFeederMockPickNextJoinCandidateResult{r, r1}
 }
 
 //Set uses given function f as a mock of CandidateControlFeeder.PickNextJoinCandidate method
-func (m *mCandidateControlFeederMockPickNextJoinCandidate) Set(f func() (r profiles.CandidateProfile)) *CandidateControlFeederMock {
+func (m *mCandidateControlFeederMockPickNextJoinCandidate) Set(f func() (r profiles.CandidateProfile, r1 cryptkit.DigestHolder)) *CandidateControlFeederMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -108,7 +110,7 @@ func (m *mCandidateControlFeederMockPickNextJoinCandidate) Set(f func() (r profi
 }
 
 //PickNextJoinCandidate implements github.com/insolar/insolar/network/consensus/gcpv2/api.CandidateControlFeeder interface
-func (m *CandidateControlFeederMock) PickNextJoinCandidate() (r profiles.CandidateProfile) {
+func (m *CandidateControlFeederMock) PickNextJoinCandidate() (r profiles.CandidateProfile, r1 cryptkit.DigestHolder) {
 	counter := atomic.AddUint64(&m.PickNextJoinCandidatePreCounter, 1)
 	defer atomic.AddUint64(&m.PickNextJoinCandidateCounter, 1)
 
@@ -125,6 +127,7 @@ func (m *CandidateControlFeederMock) PickNextJoinCandidate() (r profiles.Candida
 		}
 
 		r = result.r
+		r1 = result.r1
 
 		return
 	}
@@ -137,6 +140,7 @@ func (m *CandidateControlFeederMock) PickNextJoinCandidate() (r profiles.Candida
 		}
 
 		r = result.r
+		r1 = result.r1
 
 		return
 	}
