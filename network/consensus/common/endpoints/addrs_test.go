@@ -182,12 +182,12 @@ func TestNewHostIdentityFromHolder(t *testing.T) {
 }
 
 func TestShortNodeIDAsByteString(t *testing.T) {
-	require.True(t, ShortNodeIDAsByteString(insolar.ShortNodeID(123)) != "")
+	require.NotEmpty(t, ShortNodeIDAsByteString(insolar.ShortNodeID(123)))
 }
 
 func TestAsByteString(t *testing.T) {
 	inc := InboundConnection{Addr: "test"}
-	require.True(t, inc.AsByteString() != "")
+	require.NotEmpty(t, inc.AsByteString())
 }
 
 func TestGetNameAddress(t *testing.T) {

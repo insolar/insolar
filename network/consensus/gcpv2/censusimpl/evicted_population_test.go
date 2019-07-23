@@ -85,10 +85,10 @@ func TestEPFindProfile(t *testing.T) {
 		&updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp2}}}
 	ep := newEvictedPopulation(evicts)
 	en := ep.FindProfile(nodeID)
-	require.NotEqual(t, nil, en)
+	require.NotNil(t, en)
 
 	en = ep.FindProfile(2)
-	require.Equal(t, nil, en)
+	require.Nil(t, en)
 }
 
 func TestEPGetCount(t *testing.T) {

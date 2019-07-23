@@ -70,10 +70,10 @@ func TestIs(t *testing.T) {
 func TestReportOf(t *testing.T) {
 	// TODO
 	/*r := NewReportMock(t)
-	require.True(t, Of(r) != nil)*/
+	require.NotNil(t, Of(r))*/
 
 	err := errors.New("test")
-	require.True(t, Of(err) == nil)
+	require.Nil(t, Of(err))
 }
 
 func TestCategory(t *testing.T) {

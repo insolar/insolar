@@ -115,21 +115,21 @@ func TestAsUnit32(t *testing.T) {
 }
 
 func TestOpModeString(t *testing.T) {
-	require.True(t, OpMode(ModeNormal).String() != "")
+	require.NotEmpty(t, OpMode(ModeNormal).String())
 
-	require.True(t, OpMode(ModeSuspected).String() != "")
+	require.NotEmpty(t, OpMode(ModeSuspected).String())
 
-	require.True(t, OpMode(ModePossibleFraud).String() != "")
+	require.NotEmpty(t, OpMode(ModePossibleFraud).String())
 
-	require.True(t, OpMode(ModePossibleFraudAndSuspected).String() != "")
+	require.NotEmpty(t, OpMode(ModePossibleFraudAndSuspected).String())
 
-	require.True(t, OpMode(ModeRestrictedAnnouncement).String() != "")
+	require.NotEmpty(t, OpMode(ModeRestrictedAnnouncement).String())
 
-	require.True(t, OpMode(ModeEvictedGracefully).String() != "")
+	require.NotEmpty(t, OpMode(ModeEvictedGracefully).String())
 
-	require.True(t, OpMode(ModeEvictedAsFraud).String() != "")
+	require.NotEmpty(t, OpMode(ModeEvictedAsFraud).String())
 
-	require.True(t, OpMode(ModeEvictedAsSuspected).String() != "")
+	require.NotEmpty(t, OpMode(ModeEvictedAsSuspected).String())
 
-	require.True(t, OpMode(1<<ModeBits).String() != "")
+	require.NotEmpty(t, OpMode(1<<ModeBits).String())
 }

@@ -106,17 +106,17 @@ func TestString(t *testing.T) {
 	entropy := longbits.Bits256{2}
 
 	pd := NewFirstPulsarData(delta, entropy)
-	require.True(t, pd.String() != "")
+	require.NotEmpty(t, pd.String())
 
 	pd.PulseNumber = MaxTimePulse + 2
-	require.True(t, pd.String() != "")
+	require.NotEmpty(t, pd.String())
 
 	pd.PulseNumber = MaxTimePulse
 	pd.PrevPulseDelta = pd.NextPulseDelta
-	require.True(t, pd.String() != "")
+	require.NotEmpty(t, pd.String())
 
 	pd.NextPulseDelta = 0
-	require.True(t, pd.String() != "")
+	require.NotEmpty(t, pd.String())
 }
 
 func TestNnewPulsarData(t *testing.T) {

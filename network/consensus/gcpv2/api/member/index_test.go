@@ -104,5 +104,5 @@ func TestIndexIsJoiner(t *testing.T) {
 func TestIndexString(t *testing.T) {
 	require.Equal(t, "joiner", JoinerIndex.String())
 
-	require.True(t, Index(1).String() != "")
+	require.NotEmpty(t, Index(1).String())
 }

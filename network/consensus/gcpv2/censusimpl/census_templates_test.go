@@ -72,7 +72,7 @@ import (
 func TestPCTGetProfileFactory(t *testing.T) {
 	pct := PrimingCensusTemplate{chronicles: &localChronicles{}}
 	pf := pct.GetProfileFactory(nil)
-	require.Equal(t, nil, pf)
+	require.Nil(t, pf)
 }
 
 func TestSetVersionedRegistries(t *testing.T) {
@@ -201,17 +201,17 @@ func TestPCTGetPulseData(t *testing.T) {
 
 func TestPCTGetGlobulaStateHash(t *testing.T) {
 	pct := PrimingCensusTemplate{}
-	require.Equal(t, nil, pct.GetGlobulaStateHash())
+	require.Nil(t, pct.GetGlobulaStateHash())
 }
 
 func TestPCTGetCloudStateHash(t *testing.T) {
 	pct := PrimingCensusTemplate{}
-	require.Equal(t, nil, pct.GetCloudStateHash())
+	require.Nil(t, pct.GetCloudStateHash())
 }
 
 func TestPCTGetOnlinePopulation(t *testing.T) {
 	pct := PrimingCensusTemplate{}
-	require.Equal(t, nil, pct.GetOnlinePopulation())
+	require.Nil(t, pct.GetOnlinePopulation())
 }
 
 func TestPCTGetEvictedPopulation(t *testing.T) {
@@ -267,9 +267,6 @@ func TestPCTCreateBuilder(t *testing.T) {
 	pct := PrimingCensusTemplate{chronicles: chronicles, online: population}
 	builder := pct.CreateBuilder(pn)
 	require.Equal(t, pn, builder.GetPulseNumber())
-
-	//builder = pct.CreateBuilder(pn, true)
-	//require.Equal(t, pn, builder.GetPulseNumber())
 }
 
 func TestACTGetExpectedPulseNumber(t *testing.T) {
@@ -303,17 +300,17 @@ func TestACTGetPulseData(t *testing.T) {
 
 func TestACTGetGlobulaStateHash(t *testing.T) {
 	act := ActiveCensusTemplate{}
-	require.Equal(t, nil, act.GetGlobulaStateHash())
+	require.Nil(t, act.GetGlobulaStateHash())
 }
 
 func TestACTGetCloudStateHash(t *testing.T) {
 	act := ActiveCensusTemplate{}
-	require.Equal(t, nil, act.GetCloudStateHash())
+	require.Nil(t, act.GetCloudStateHash())
 }
 
 func TestECTGetProfileFactory(t *testing.T) {
 	ect := ExpectedCensusTemplate{chronicles: &localChronicles{}}
-	require.Equal(t, nil, ect.GetProfileFactory(cryptkit.NewKeyStoreFactoryMock(t)))
+	require.Nil(t, ect.GetProfileFactory(cryptkit.NewKeyStoreFactoryMock(t)))
 }
 
 func TestECTGetEvictedPopulation(t *testing.T) {
@@ -342,17 +339,17 @@ func TestECTGetPulseNumber(t *testing.T) {
 
 func TestECTGetGlobulaStateHash(t *testing.T) {
 	ect := ExpectedCensusTemplate{}
-	require.Equal(t, nil, ect.GetGlobulaStateHash())
+	require.Nil(t, ect.GetGlobulaStateHash())
 }
 
 func TestECTGetCloudStateHash(t *testing.T) {
 	ect := ExpectedCensusTemplate{}
-	require.Equal(t, nil, ect.GetCloudStateHash())
+	require.Nil(t, ect.GetCloudStateHash())
 }
 
 func TestECTGetOnlinePopulation(t *testing.T) {
 	ect := ExpectedCensusTemplate{}
-	require.Equal(t, nil, ect.GetOnlinePopulation())
+	require.Nil(t, ect.GetOnlinePopulation())
 }
 
 func TestECTGetOfflinePopulation(t *testing.T) {
