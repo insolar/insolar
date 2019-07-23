@@ -446,12 +446,13 @@ func (r *One) Kill() error {
 	require.Empty(t, resp.Error)
 }
 
+// Make sure that panic() in a contract causes a system error and that this error
+// is returned by API.
 func TestPanic(t *testing.T) {
-	var contractOneCode = `
+	var panicContractCode = `
 package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import "errors"
 
 type One struct {
 	foundation.BaseContract
@@ -462,19 +463,15 @@ func New() (*One, error) {
 }
 
 func (r *One) Panic() error {
-	return errors.New("test")
-}
-func (r *One) NotPanic() error {
+	panic("AAAAAAAA!")
 	return nil
 }
 `
-	obj := callConstructor(t, uploadContractOnce(t, "panic", contractOneCode), "New")
+	prototype := uploadContractOnce(t, "panic", panicContractCode)
+	obj := callConstructor(t, prototype, "New")
 
-	resp := callMethod(t, obj, "Panic") // need to check error
-	require.Equal(t, "test", resp.ExtractedError)
-
-	resp = callMethod(t, obj, "NotPanic") // no error
-	require.Empty(t, resp.ExtractedError)
+	resp := callMethodNoChecks(t, obj, "Panic")
+	require.Contains(t, resp.Error.Message, "executor error: problem with API call: AAAAAAAA!")
 }
 
 func TestErrorInterface(t *testing.T) {
