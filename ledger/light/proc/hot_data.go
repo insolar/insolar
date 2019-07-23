@@ -141,14 +141,15 @@ func (p *HotObjects) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to release jets")
 	}
 
-	p.sendConfirmationToHeavy(ctx, p.jetID, p.drop.Pulse)
+	p.sendConfirmationToHeavy(ctx, p.jetID, p.drop.Pulse, p.drop.Split)
 	return nil
 }
 
-func (p *HotObjects) sendConfirmationToHeavy(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) {
+func (p *HotObjects) sendConfirmationToHeavy(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber, split bool) {
 	msg, err := payload.NewMessage(&payload.GotHotConfirmation{
 		JetID: jetID,
 		Pulse: pn,
+		Split: split,
 	})
 
 	if err != nil {

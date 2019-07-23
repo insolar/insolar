@@ -75,7 +75,6 @@ func (p *Replication) Dep(
 }
 
 func (p *Replication) Proceed(ctx context.Context) error {
-	logger := inslogger.FromContext(ctx)
 	pl, err := payload.Unmarshal(p.message.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload")
@@ -95,32 +94,11 @@ func (p *Replication) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to store drop")
 	}
 
-	pulse, err := p.dep.pulses.ForPulseNumber(ctx, dr.Pulse)
-	if err != nil {
-		return errors.Wrapf(err, "can't get pulse for pulse number %d", dr.Pulse)
-	}
-	pulseForJetsUpdate := pulse.NextPulseNumber
-
-	jetsForKeeper := make([]insolar.JetID, 0)
-	if dr.Split {
-		logger.Debugf("Split jet. pulse: %d, jet: %s", pulseForJetsUpdate, dr.JetID.DebugString())
-		var (
-			left  insolar.JetID
-			right insolar.JetID
-		)
-
-		left, right, err = p.dep.jets.Split(ctx, pulseForJetsUpdate, dr.JetID)
-		jetsForKeeper = append(jetsForKeeper, left, right)
-	} else {
-		logger.Debugf("Update jet. pulse: %d, jet: %s", pulseForJetsUpdate, dr.JetID.DebugString())
-		err = p.dep.jets.Update(ctx, pulseForJetsUpdate, false, dr.JetID)
-		jetsForKeeper = append(jetsForKeeper, dr.JetID)
-	}
 	if err != nil {
 		return errors.Wrapf(err, "failed to split/update jet=%v pulse=%v", dr.JetID.DebugString(), dr.Pulse)
 	}
 
-	if err := p.dep.keeper.AddDropConfirmation(ctx, dr.Pulse, jetsForKeeper...); err != nil {
+	if err := p.dep.keeper.AddDropConfirmation(ctx, dr.Pulse, dr.JetID, dr.Split); err != nil {
 		return errors.Wrapf(err, "failed to add jet to JetKeeper jet=%v", dr.JetID.DebugString())
 	}
 
