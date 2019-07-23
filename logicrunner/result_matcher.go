@@ -79,9 +79,8 @@ func (rm *resultsMatcher) AddStillExecution(ctx context.Context, msg *message.St
 			ctx = inslogger.ContextWithTrace(ctx, response.traceID)
 			inslogger.FromContext(ctx).Debug("[ resultsMatcher::AddStillExecution ] resend unwanted response ", reqRef)
 			go rm.send(ctx, &response.result, &msg.Executor)
-		} else {
-			rm.executionNodes[reqRef] = msg.Executor
 		}
+		rm.executionNodes[reqRef] = msg.Executor
 	}
 }
 
