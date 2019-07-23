@@ -769,6 +769,7 @@ func (c *FilamentCalculatorDefault) checkReason(
 			return false, errors.Wrap(err, "failed to calculate node")
 		}
 	}
+	inslogger.FromContext(ctx).Debugf("check reason. request: %s, ")
 	msg, err := payload.NewMessage(&payload.GetRequest{
 		ObjectID:  objectID,
 		RequestID: *reason.Record(),
