@@ -492,6 +492,7 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 		hash := record.HashVirtual(pcs.ReferenceHasher(), virtual)
 		expectedFilamentRecordID := *insolar.NewID(resultID.Pulse(), hash)
 
+		caller := gen.Reference()
 		calculator.PendingRequestsFunc = func(_ context.Context, pn insolar.PulseNumber, id insolar.ID) ([]record.CompositeFilamentRecord, error) {
 			require.Equal(t, resultID.Pulse(), pn)
 			require.Equal(t, validResult.Object, id)
@@ -499,6 +500,7 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 			// return []record.CompositeFilamentRecord{{RecordID: expectedFilamentRecordID}}, nil
 			req := record.OutgoingRequest{
 				ReturnMode: record.ReturnSaga,
+				Caller:     caller,
 				Reason:     *insolar.NewReference(reqID),
 			}
 			reqVirt := record.Wrap(req)
@@ -522,7 +524,7 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 
 		sender.SendRoleFunc = func(_ context.Context, msg *message.Message, role insolar.DynamicRole, objRef insolar.Reference) (r <-chan *message.Message, r1 func()) {
 			require.Equal(t, insolar.DynamicRoleVirtualExecutor, role)
-			require.Equal(t, validResult.Object, *objRef.Record())
+			require.Equal(t, caller, objRef)
 
 			notification := payload.SagaCallAcceptNotification{}
 			err := notification.Unmarshal(msg.Payload)

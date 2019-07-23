@@ -203,7 +203,7 @@ func (m *FilamentModifierDefault) notifyDetached(ctx context.Context, pendingReq
 				return errors.Wrap(err, "failed to notify about detached")
 			}
 
-			_, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, *insolar.NewReference(objID))
+			_, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, outReq.Caller)
 			defer done()
 		}
 	}
