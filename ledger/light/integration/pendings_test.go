@@ -84,6 +84,20 @@ func Test_Pending_RequestRegistration_Incoming(t *testing.T) {
 		require.Equal(t, 1, len(ids.IDs))
 		require.Equal(t, secondReqInfo.RequestID, ids.IDs[0])
 	})
+}
+
+func Test_DuplicatedRequests(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	cfg := DefaultLightConfig()
+	s, err := NewServer(ctx, cfg, nil)
+	require.NoError(t, err)
+
+	// First pulse goes in storage then interrupts.
+	s.Pulse(ctx)
+	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
+	s.Pulse(ctx)
 
 	t.Run("try to register request twice. no result", func(t *testing.T) {
 		args := make([]byte, 100)
@@ -119,6 +133,59 @@ func Test_Pending_RequestRegistration_Incoming(t *testing.T) {
 		require.NoError(t, err)
 		returnedReq := record.Unwrap(compositeRec.Record.Virtual)
 		require.Equal(t, &initReq, returnedReq)
+	})
+
+	t.Run("try to register outgoing request twice. no result", func(t *testing.T) {
+		args := make([]byte, 100)
+		_, err := rand.Read(args)
+		initReq := record.IncomingRequest{
+			Object:    insolar.NewReference(gen.ID()),
+			Arguments: args,
+			CallType:  record.CTSaveAsChild,
+			Reason:    *insolar.NewReference(*insolar.NewID(s.pulse.PulseNumber, []byte{1, 2, 3})),
+			APINode:   gen.Reference(),
+		}
+		initReqMsg := &payload.SetIncomingRequest{
+			Request: record.Wrap(initReq),
+		}
+
+		// Set first request
+		p := sendMessage(ctx, t, s, initReqMsg)
+		requirePayloadNotError(t, p)
+		reqInfo := p.(*payload.RequestInfo)
+		require.Nil(t, reqInfo.Request)
+		require.Nil(t, reqInfo.Result)
+
+		outgoingReq := record.OutgoingRequest{
+			Object:   insolar.NewReference(reqInfo.RequestID),
+			Reason:   *insolar.NewReference(reqInfo.RequestID),
+			CallType: record.CTMethod,
+			Caller:   *insolar.NewReference(reqInfo.RequestID),
+		}
+		outgoingReqMsg := &payload.SetOutgoingRequest{
+			Request: record.Wrap(outgoingReq),
+		}
+
+		// Set outgoing request
+		outP := sendMessage(ctx, t, s, outgoingReqMsg)
+		requirePayloadNotError(t, outP)
+		outReqInfo := p.(*payload.RequestInfo)
+		require.Nil(t, outReqInfo.Request)
+		require.Nil(t, outReqInfo.Result)
+
+		// Try to set an outgoing again
+		outSecondP := sendMessage(ctx, t, s, outgoingReqMsg)
+		requirePayloadNotError(t, outSecondP)
+		outReqSecondInfo := outSecondP.(*payload.RequestInfo)
+		require.NotNil(t, outReqSecondInfo.Request)
+		require.Nil(t, outReqSecondInfo.Result)
+
+		// Check for the result
+		compositeRec := record.CompositeFilamentRecord{}
+		err = compositeRec.Unmarshal(outReqSecondInfo.Request)
+		require.NoError(t, err)
+		returnedReq := record.Unwrap(compositeRec.Record.Virtual)
+		require.Equal(t, &outgoingReq, returnedReq)
 	})
 
 	t.Run("try to register request twice. when there is result", func(t *testing.T) {
@@ -230,4 +297,8 @@ func Test_Pending_RequestRegistration_Incoming(t *testing.T) {
 		require.Equal(t, *insolar.NewReference(reqInfo.RequestID), returnedRes.Request)
 		require.Equal(t, reqInfo.RequestID, returnedRes.Object)
 	})
+}
+
+func Test_Reason_Incoming(t *testing.T) {
+
 }
