@@ -284,7 +284,8 @@ func (w *SimpleWallet) Rollback(amount int) error {
 	return nil
 }
 `
-	objectRef := callConstructor(t, uploadContractOnce(t, "wallet", walletContract), "New")
+	prototype := uploadContractOnce(t, "wallet", walletContract)
+	objectRef := callConstructor(t, prototype, "New")
 	resp := callMethod(t, objectRef, "Transfer10", nil)
 	require.Empty(t, resp.Error)
 }
