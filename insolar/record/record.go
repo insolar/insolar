@@ -155,7 +155,12 @@ type Request interface {
 
 func (r *IncomingRequest) AffinityRef() *insolar.Reference {
 	// IncomingRequests are affine to the Object on which the request
-	// is going to be executed.
+	// is going to be executed
+	// Exceptions are CTSaveAsMethod/CTSaveAsDelegate, we should
+	// calculate hash of message, so call CalculateRequestAffinityRef
+	if r.IsCreationRequest() {
+		return nil
+	}
 	return r.Object
 }
 
@@ -220,4 +225,19 @@ func (m *Lifeline) DelegateByKey(key insolar.Reference) (insolar.Reference, bool
 	}
 
 	return [64]byte{}, false
+}
+
+func CalculateRequestAffinityRef(
+	request Request,
+	pulseNumber insolar.PulseNumber,
+	scheme insolar.PlatformCryptographyScheme,
+) *insolar.Reference {
+	affinityRef := request.AffinityRef()
+	if affinityRef == nil {
+		virtualRecord := Wrap(request)
+		hash := HashVirtual(scheme.ReferenceHasher(), virtualRecord)
+		recID := insolar.NewID(pulseNumber, hash)
+		affinityRef = insolar.NewReference(*recID)
+	}
+	return affinityRef
 }
