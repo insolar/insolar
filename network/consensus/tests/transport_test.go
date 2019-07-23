@@ -100,8 +100,7 @@ func (r *emuPacketSender) SendTo(ctx context.Context, t transport.TargetProfile,
 	s.SendPacketToTransport(ctx, t, sendOptions, c)
 }
 
-func (r *emuPacketSender) SendToMany(ctx context.Context, targetCount int, s transport.PacketSender,
-	filter func(ctx context.Context, targetIndex int) (transport.TargetProfile, transport.PacketSendOptions)) {
+func (r *emuPacketSender) SendToMany(ctx context.Context, targetCount int, s transport.PacketSender, filter transport.ProfileFilter) {
 
 	for i := 0; i < targetCount; i++ {
 		sendTo, sendOptions := filter(ctx, i)

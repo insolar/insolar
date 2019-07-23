@@ -529,7 +529,7 @@ type MembershipAnnouncementReader struct {
 }
 
 func (r *MembershipAnnouncementReader) hasRank() bool {
-	return r.body.Announcement.CurrentRank != 0
+	return !r.body.Announcement.CurrentRank.IsJoiner()
 }
 
 func (r *MembershipAnnouncementReader) GetNodeID() insolar.ShortNodeID {
@@ -592,11 +592,11 @@ func (r *MembershipAnnouncementReader) GetLeaveReason() uint32 {
 
 func (r *MembershipAnnouncementReader) GetJoinerID() insolar.ShortNodeID {
 	if !r.hasRank() {
-		return 0
+		return insolar.AbsentShortNodeID
 	}
 
 	if r.body.Announcement.Member.AnnounceID == insolar.ShortNodeID(r.packet.Header.SourceID) {
-		return 0
+		return insolar.AbsentShortNodeID
 	}
 
 	return r.body.Announcement.Member.AnnounceID
@@ -652,7 +652,7 @@ type NeighbourAnnouncementReader struct {
 }
 
 func (r *NeighbourAnnouncementReader) hasRank() bool {
-	return r.neighbour.CurrentRank != 0
+	return !r.neighbour.CurrentRank.IsJoiner()
 }
 
 func (r *NeighbourAnnouncementReader) GetNodeID() insolar.ShortNodeID {
@@ -703,7 +703,7 @@ func (r *NeighbourAnnouncementReader) GetLeaveReason() uint32 {
 
 func (r *NeighbourAnnouncementReader) GetJoinerID() insolar.ShortNodeID {
 	if r.hasRank() {
-		return 0
+		return insolar.AbsentShortNodeID
 	}
 
 	return r.neighbour.NeighbourNodeID

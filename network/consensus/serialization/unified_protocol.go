@@ -87,6 +87,9 @@ const (
 	flagIsBodyEncrypted   = Flag(1)
 
 	FlagHasPulsePacket = Flag(0)
+	FlagSelfIntro1     = Flag(1)
+	FlagSelfIntro2     = Flag(2)
+	FlagHasJoinerExt   = Flag(3)
 )
 
 const (

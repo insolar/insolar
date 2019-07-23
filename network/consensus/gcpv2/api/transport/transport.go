@@ -81,12 +81,13 @@ type TargetProfile interface {
 	EncryptJoinerSecret(joinerSecret cryptkit.DigestHolder) cryptkit.DigestHolder
 }
 
+type ProfileFilter func(ctx context.Context, targetIndex int) (TargetProfile, PacketSendOptions)
+
 type PreparedPacketSender interface {
 	SendTo(ctx context.Context, target TargetProfile, sendOptions PacketSendOptions, sender PacketSender)
 
 	/* Allows to control parallelism. Can return nil to skip a target */
-	SendToMany(ctx context.Context, targetCount int, sender PacketSender,
-		filter func(ctx context.Context, targetIndex int) (TargetProfile, PacketSendOptions))
+	SendToMany(ctx context.Context, targetCount int, sender PacketSender, filter ProfileFilter)
 }
 
 type PacketBuilder interface {
@@ -116,10 +117,15 @@ type PacketSender interface {
 
 type PacketSendOptions uint32
 
+func (o PacketSendOptions) Has(mask PacketSendOptions) bool {
+	return (o & mask) != 0
+}
+
 const (
 	SendWithoutPulseData PacketSendOptions = 1 << iota
 	AlternativePhasePacket
 	OnlyBriefIntroAboutJoiner
+	TargetNeedsIntro
 )
 
 // type PreparedIntro interface {}

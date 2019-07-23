@@ -129,7 +129,7 @@ func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io
 	}
 
 	if packetType == phases.PacketPhase1 {
-		if ctx.HasFlag(3) {
+		if ctx.HasFlag(FlagHasJoinerExt) {
 			if err := b.JoinerExt.SerializeTo(ctx, writer); err != nil {
 				return errors.Wrap(err, "failed to serialize JoinerExt")
 			}
@@ -207,7 +207,7 @@ func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, rea
 	}
 
 	if packetType == phases.PacketPhase1 {
-		if ctx.HasFlag(3) {
+		if ctx.HasFlag(FlagHasJoinerExt) {
 			if err := b.JoinerExt.DeserializeFrom(ctx, reader); err != nil {
 				return errors.Wrap(err, "failed to deserialize JoinerExt")
 			}
@@ -215,7 +215,7 @@ func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, rea
 	}
 
 	if packetType == phases.PacketPhase2 {
-		if ctx.HasFlag(1) && !ctx.HasFlag(2) { // [1:2] == 1 - has brief intro (this option is only allowed Phase 2 only)
+		if ctx.GetFlagRangeInt(1, 2) == 1 { // [1:2] == 1 - has brief intro (this option is only allowed Phase 2 only)
 			if err := b.BriefSelfIntro.DeserializeFrom(ctx, reader); err != nil {
 				return errors.Wrap(err, "failed to deserialize BriefSelfIntro")
 			}
@@ -223,7 +223,7 @@ func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, rea
 	}
 
 	if packetType == phases.PacketPhase1 || packetType == phases.PacketPhase2 {
-		if ctx.HasFlag(2) { // [1:2] in (2, 3) - has full intro + cloud intro
+		if ctx.GetFlagRangeInt(1, 2) == 2 || ctx.GetFlagRangeInt(1, 2) == 3 { // [1:2] in (2, 3) - has full intro + cloud intro
 			if err := b.FullSelfIntro.DeserializeFrom(ctx, reader); err != nil {
 				return errors.Wrap(err, "failed to deserialize FullSelfIntro")
 			}
@@ -232,7 +232,7 @@ func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, rea
 				return errors.Wrap(err, "failed to deserialize CloudIntro")
 			}
 
-			if ctx.HasFlag(1) { // [1:2] == 3 - has joiner secret (only for member-to-joiner packet)
+			if ctx.GetFlagRangeInt(1, 2) == 3 { // [1:2] == 3 - has joiner secret (only for member-to-joiner packet)
 				if err := read(reader, &b.JoinerSecret); err != nil {
 					return errors.Wrap(err, "failed to deserialize JoinerSecret")
 				}
@@ -355,6 +355,7 @@ func (ci *CloudIntro) DeserializeFrom(ctx DeserializeContext, reader io.Reader) 
 type Neighbourhood struct {
 	// ByteSize= 1 + N * (205 .. 220)
 	NeighbourCount uint8
+	FraudFlags     []uint8
 	Neighbours     []NeighbourAnnouncement
 }
 

@@ -58,11 +58,12 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
 
-type FinishedNotifier func(insolar.PulseNumber)
+type FinishedNotifier func(mode member.OpMode, pw member.Power, effectiveSince insolar.PulseNumber)
 
 type candidateController interface {
 	AddJoinCandidate(candidate transport.FullIntroductionReader)
@@ -135,11 +136,11 @@ func (c *controller) RegisterFinishedNotifier(fn FinishedNotifier) {
 	c.notifiers = append(c.notifiers, fn)
 }
 
-func (c *controller) onFinished(pulse pulse.Number) {
+func (c *controller) onFinished(mode member.OpMode, pw member.Power, pulse pulse.Number) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
 	for _, n := range c.notifiers {
-		go n(insolar.PulseNumber(pulse))
+		go n(mode, pw, insolar.PulseNumber(pulse))
 	}
 }
