@@ -32,12 +32,25 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var nilref = insolar.Reference{}
+
 func TestRules_CheckMinRole(t *testing.T) {
 	cm := component.Manager{}
 	r := NewRules()
 	certManager := testutils.NewCertificateManagerMock(t)
 	cert := testutils.NewCertificateMock(t)
 	nodeKeeper := network.NewNodeKeeperMock(t)
+	accessor := network.NewAccessorMock(t)
+	nodeKeeper.GetAccessorFunc = func() (r network2.Accessor) { return accessor }
+	accessor.GetActiveNodesFunc = func() []insolar.NetworkNode {
+		return []insolar.NetworkNode{
+			node2.NewNode(nilref, insolar.StaticRoleHeavyMaterial, nil, "", ""),
+			node2.NewNode(nilref, insolar.StaticRoleLightMaterial, nil, "", ""),
+			node2.NewNode(nilref, insolar.StaticRoleLightMaterial, nil, "", ""),
+			node2.NewNode(nilref, insolar.StaticRoleVirtual, nil, "", ""),
+			node2.NewNode(nilref, insolar.StaticRoleVirtual, nil, "", ""),
+		}
+	}
 	cm.Inject(r, certManager, nodeKeeper)
 
 	certManager.GetCertificateMock.Set(func() (r insolar.Certificate) {

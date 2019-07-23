@@ -25,6 +25,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
 func FuzzRandomID(t *insolar.ID, _ fuzz.Continue) {
@@ -300,6 +301,7 @@ func TestRequestInterface_IncomingRequest(t *testing.T) {
 		Reason: gen.Reference(),
 	}
 	iface := Request(req)
+	require.Equal(t, false, iface.IsCreationRequest())
 	require.Equal(t, req.Object, iface.AffinityRef())
 	require.Equal(t, req.Reason, iface.ReasonRef())
 }
@@ -307,13 +309,58 @@ func TestRequestInterface_IncomingRequest(t *testing.T) {
 func TestRequestInterface_OutgoingRequest(t *testing.T) {
 	t.Parallel()
 	objref := gen.Reference()
-	callerref := gen.Reference()
 	req := &OutgoingRequest{
-		Caller: callerref,
+		Caller: gen.Reference(),
 		Object: &objref,
 		Reason: gen.Reference(),
 	}
 	iface := Request(req)
+	require.Equal(t, false, iface.IsCreationRequest())
 	require.Equal(t, &req.Caller, iface.AffinityRef())
 	require.Equal(t, req.Reason, iface.ReasonRef())
+}
+
+func TestRequestInterface_IncomingRequestSaveAsChild(t *testing.T) {
+	t.Parallel()
+
+	objref := gen.Reference()
+	req := &IncomingRequest{
+		CallType: CTSaveAsChild,
+		Object:   &objref,
+		Reason:   gen.Reference(),
+	}
+
+	iface := Request(req)
+	require.Equal(t, true, iface.IsCreationRequest())
+	require.Equal(t, (*insolar.Reference)(nil), iface.AffinityRef())
+	require.Equal(t, req.Reason, iface.ReasonRef())
+
+	pn := insolar.PulseNumber(256)
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
+
+	realAffinityRef := CalculateRequestAffinityRef(iface, pn, pcs)
+	assert.NotNil(t, realAffinityRef)
+
+}
+
+func TestRequestInterface_IncomingRequestSaveAsDelegate(t *testing.T) {
+	t.Parallel()
+
+	objref := gen.Reference()
+	req := &IncomingRequest{
+		CallType: CTSaveAsDelegate,
+		Object:   &objref,
+		Reason:   gen.Reference(),
+	}
+
+	iface := Request(req)
+	require.Equal(t, true, iface.IsCreationRequest())
+	require.Equal(t, (*insolar.Reference)(nil), iface.AffinityRef())
+	require.Equal(t, req.Reason, iface.ReasonRef())
+
+	pn := insolar.PulseNumber(256)
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
+
+	realAffinityRef := CalculateRequestAffinityRef(iface, pn, pcs)
+	assert.NotNil(t, realAffinityRef)
 }

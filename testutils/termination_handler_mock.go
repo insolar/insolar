@@ -34,6 +34,11 @@ type TerminationHandlerMock struct {
 	OnLeaveApprovedCounter    uint64
 	OnLeaveApprovedPreCounter uint64
 	OnLeaveApprovedMock       mTerminationHandlerMockOnLeaveApproved
+
+	TerminatingFunc       func() (r bool)
+	TerminatingCounter    uint64
+	TerminatingPreCounter uint64
+	TerminatingMock       mTerminationHandlerMockTerminating
 }
 
 //NewTerminationHandlerMock returns a mock for github.com/insolar/insolar/insolar.TerminationHandler
@@ -47,6 +52,7 @@ func NewTerminationHandlerMock(t minimock.Tester) *TerminationHandlerMock {
 	m.AbortMock = mTerminationHandlerMockAbort{mock: m}
 	m.LeaveMock = mTerminationHandlerMockLeave{mock: m}
 	m.OnLeaveApprovedMock = mTerminationHandlerMockOnLeaveApproved{mock: m}
+	m.TerminatingMock = mTerminationHandlerMockTerminating{mock: m}
 
 	return m
 }
@@ -421,6 +427,140 @@ func (m *TerminationHandlerMock) OnLeaveApprovedFinished() bool {
 	return true
 }
 
+type mTerminationHandlerMockTerminating struct {
+	mock              *TerminationHandlerMock
+	mainExpectation   *TerminationHandlerMockTerminatingExpectation
+	expectationSeries []*TerminationHandlerMockTerminatingExpectation
+}
+
+type TerminationHandlerMockTerminatingExpectation struct {
+	result *TerminationHandlerMockTerminatingResult
+}
+
+type TerminationHandlerMockTerminatingResult struct {
+	r bool
+}
+
+//Expect specifies that invocation of TerminationHandler.Terminating is expected from 1 to Infinity times
+func (m *mTerminationHandlerMockTerminating) Expect() *mTerminationHandlerMockTerminating {
+	m.mock.TerminatingFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &TerminationHandlerMockTerminatingExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of TerminationHandler.Terminating
+func (m *mTerminationHandlerMockTerminating) Return(r bool) *TerminationHandlerMock {
+	m.mock.TerminatingFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &TerminationHandlerMockTerminatingExpectation{}
+	}
+	m.mainExpectation.result = &TerminationHandlerMockTerminatingResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of TerminationHandler.Terminating is expected once
+func (m *mTerminationHandlerMockTerminating) ExpectOnce() *TerminationHandlerMockTerminatingExpectation {
+	m.mock.TerminatingFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &TerminationHandlerMockTerminatingExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *TerminationHandlerMockTerminatingExpectation) Return(r bool) {
+	e.result = &TerminationHandlerMockTerminatingResult{r}
+}
+
+//Set uses given function f as a mock of TerminationHandler.Terminating method
+func (m *mTerminationHandlerMockTerminating) Set(f func() (r bool)) *TerminationHandlerMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.TerminatingFunc = f
+	return m.mock
+}
+
+//Terminating implements github.com/insolar/insolar/insolar.TerminationHandler interface
+func (m *TerminationHandlerMock) Terminating() (r bool) {
+	counter := atomic.AddUint64(&m.TerminatingPreCounter, 1)
+	defer atomic.AddUint64(&m.TerminatingCounter, 1)
+
+	if len(m.TerminatingMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.TerminatingMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to TerminationHandlerMock.Terminating.")
+			return
+		}
+
+		result := m.TerminatingMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the TerminationHandlerMock.Terminating")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.TerminatingMock.mainExpectation != nil {
+
+		result := m.TerminatingMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the TerminationHandlerMock.Terminating")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.TerminatingFunc == nil {
+		m.t.Fatalf("Unexpected call to TerminationHandlerMock.Terminating.")
+		return
+	}
+
+	return m.TerminatingFunc()
+}
+
+//TerminatingMinimockCounter returns a count of TerminationHandlerMock.TerminatingFunc invocations
+func (m *TerminationHandlerMock) TerminatingMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.TerminatingCounter)
+}
+
+//TerminatingMinimockPreCounter returns the value of TerminationHandlerMock.Terminating invocations
+func (m *TerminationHandlerMock) TerminatingMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.TerminatingPreCounter)
+}
+
+//TerminatingFinished returns true if mock invocations count is ok
+func (m *TerminationHandlerMock) TerminatingFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.TerminatingMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.TerminatingCounter) == uint64(len(m.TerminatingMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.TerminatingMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.TerminatingCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.TerminatingFunc != nil {
+		return atomic.LoadUint64(&m.TerminatingCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *TerminationHandlerMock) ValidateCallCounters() {
@@ -435,6 +575,10 @@ func (m *TerminationHandlerMock) ValidateCallCounters() {
 
 	if !m.OnLeaveApprovedFinished() {
 		m.t.Fatal("Expected call to TerminationHandlerMock.OnLeaveApproved")
+	}
+
+	if !m.TerminatingFinished() {
+		m.t.Fatal("Expected call to TerminationHandlerMock.Terminating")
 	}
 
 }
@@ -466,6 +610,10 @@ func (m *TerminationHandlerMock) MinimockFinish() {
 		m.t.Fatal("Expected call to TerminationHandlerMock.OnLeaveApproved")
 	}
 
+	if !m.TerminatingFinished() {
+		m.t.Fatal("Expected call to TerminationHandlerMock.Terminating")
+	}
+
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -483,6 +631,7 @@ func (m *TerminationHandlerMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.AbortFinished()
 		ok = ok && m.LeaveFinished()
 		ok = ok && m.OnLeaveApprovedFinished()
+		ok = ok && m.TerminatingFinished()
 
 		if ok {
 			return
@@ -501,6 +650,10 @@ func (m *TerminationHandlerMock) MinimockWait(timeout time.Duration) {
 
 			if !m.OnLeaveApprovedFinished() {
 				m.t.Error("Expected call to TerminationHandlerMock.OnLeaveApproved")
+			}
+
+			if !m.TerminatingFinished() {
+				m.t.Error("Expected call to TerminationHandlerMock.Terminating")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -524,6 +677,10 @@ func (m *TerminationHandlerMock) AllMocksCalled() bool {
 	}
 
 	if !m.OnLeaveApprovedFinished() {
+		return false
+	}
+
+	if !m.TerminatingFinished() {
 		return false
 	}
 

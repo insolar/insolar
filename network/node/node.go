@@ -67,8 +67,8 @@ type MutableNode interface {
 
 	SetShortID(shortID insolar.ShortNodeID)
 	SetState(state insolar.NodeState)
-	GetSignature() insolar.Signature
-	SetSignature(signature insolar.Signature)
+	GetSignature() ([]byte, insolar.Signature)
+	SetSignature(digest []byte, signature insolar.Signature)
 	ChangeState()
 	SetLeavingETA(number insolar.PulseNumber)
 	SetVersion(version string)
@@ -89,6 +89,7 @@ type node struct {
 	NodeAddress string
 
 	mutex          sync.RWMutex
+	digest         []byte
 	signature      insolar.Signature
 	NodeVersion    string
 	NodeLeavingETA uint32
@@ -176,18 +177,19 @@ func (n *node) Version() string {
 	return n.NodeVersion
 }
 
-func (n *node) GetSignature() insolar.Signature {
+func (n *node) GetSignature() ([]byte, insolar.Signature) {
 	n.mutex.RLock()
 	defer n.mutex.RUnlock()
 
-	return n.signature
+	return n.digest, n.signature
 }
 
-func (n *node) SetSignature(signature insolar.Signature) {
+func (n *node) SetSignature(digest []byte, signature insolar.Signature) {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 
 	n.signature = signature
+	n.digest = digest
 }
 
 func (n *node) SetShortID(id insolar.ShortNodeID) {

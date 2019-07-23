@@ -533,6 +533,9 @@ func TestGlobulaConsensusPacketBody_Phases_Flag1(t *testing.T) {
 			_, err = p2.DeserializeFrom(context.Background(), buf)
 			require.NoError(t, err)
 
+			p2.EncryptableBody.(*GlobulaConsensusPacketBody).BriefSelfIntro.JoinerData = nil
+			p2.EncryptableBody.(*GlobulaConsensusPacketBody).FullSelfIntro.JoinerData = nil
+			p2.EncryptableBody.(*GlobulaConsensusPacketBody).Announcement.Member.Joiner.JoinerData = nil
 			require.Equal(t, p, p2)
 		})
 	}
@@ -607,6 +610,9 @@ func TestGlobulaConsensusPacketBody_Phases_Flag2(t *testing.T) {
 			_, err = p2.DeserializeFrom(context.Background(), buf)
 			require.NoError(t, err)
 
+			p2.EncryptableBody.(*GlobulaConsensusPacketBody).BriefSelfIntro.JoinerData = nil
+			p2.EncryptableBody.(*GlobulaConsensusPacketBody).FullSelfIntro.JoinerData = nil
+			p2.EncryptableBody.(*GlobulaConsensusPacketBody).Announcement.Member.Joiner.JoinerData = nil
 			require.Equal(t, p, p2)
 		})
 	}
@@ -682,6 +688,9 @@ func TestGlobulaConsensusPacketBody_Phases_Flag12(t *testing.T) {
 			_, err = p2.DeserializeFrom(context.Background(), buf)
 			require.NoError(t, err)
 
+			p2.EncryptableBody.(*GlobulaConsensusPacketBody).BriefSelfIntro.JoinerData = nil
+			p2.EncryptableBody.(*GlobulaConsensusPacketBody).FullSelfIntro.JoinerData = nil
+			p2.EncryptableBody.(*GlobulaConsensusPacketBody).Announcement.Member.Joiner.JoinerData = nil
 			require.Equal(t, p, p2)
 		})
 	}
