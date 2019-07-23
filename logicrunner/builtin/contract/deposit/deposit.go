@@ -42,8 +42,8 @@ const (
 // Deposit is like wallet. It holds migrated money.
 type Deposit struct {
 	foundation.BaseContract
-	PulseDepositCreate              insolar.PulseNumber                 `json:"timestamp"`
-	PulseUnHoldDeposit         insolar.PulseNumber               `json:"holdReleaseDate"`
+	PulseDepositCreate      insolar.PulseNumber        `json:"timestamp"`
+	PulseUnHoldDeposit      insolar.PulseNumber        `json:"holdReleaseDate"`
 	MigrationDaemonConfirms map[insolar.Reference]bool `json:"migrationDaemonConfirms"`
 	Confirms                uint                       `json:"confirms"`
 	Amount                  string                     `json:"amount"`
