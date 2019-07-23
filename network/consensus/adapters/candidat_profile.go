@@ -60,23 +60,28 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"time"
 )
 
-func NewCandidateProfile(
-	address string,
-	ref insolar.Reference,
-	id insolar.ShortNodeID,
-	primaryRole member.PrimaryRole,
-	specialRole member.SpecialRole,
-) *CandidateProfile {
-	return &CandidateProfile{
-		n:           NewOutbound(address),
-		id:          id,
-		primaryRole: primaryRole,
-		specialRole: specialRole,
-		ref:         ref,
-	}
+//func NewCandidateProfile(
+//	address string,
+//	ref insolar.Reference,
+//	id insolar.ShortNodeID,
+//	primaryRole member.PrimaryRole,
+//	specialRole member.SpecialRole,
+//) *CandidateProfile {
+//	return &CandidateProfile{
+//		n:           NewOutbound(address),
+//		id:          id,
+//		primaryRole: primaryRole,
+//		specialRole: specialRole,
+//		ref:         ref,
+//	}
+//}
+
+func NewCandidateProfile(p packet.CandidateProfile) *CandidateProfile {
+	return &CandidateProfile{CandidateProfile: p}
 }
 
 //func NewCandidateProfileFromJoinClaim(joinClaim *packets.NodeJoinClaim, isDiscovery bool) *CandidateProfile {
@@ -105,12 +110,27 @@ func NewCandidateProfile(
 //	}
 //}
 
+var _ profiles.CandidateProfile = &CandidateProfile{}
+
 type CandidateProfile struct {
-	n           endpoints.Outbound
-	id          insolar.ShortNodeID
-	primaryRole member.PrimaryRole
-	specialRole member.SpecialRole
-	ref         insolar.Reference
+	packet.CandidateProfile
+
+	// NodeBriefIntro - hash and signature
+
+	//n           endpoints.Outbound
+	//id          insolar.ShortNodeID
+	//primaryRole member.PrimaryRole
+	//specialRole member.SpecialRole
+	//ref         insolar.Reference
+}
+
+func (c *CandidateProfile) GetBriefIntroSignedDigest() cryptkit.SignedDigestHolder {
+	dd := longbits.NewBits64(uint64(1000000 + c.ShortID))
+	ds := longbits.NewBits64(uint64(1000000+c.ShortID) << 32)
+
+	return cryptkit.NewSignedDigest(
+		cryptkit.NewDigest(&dd, "stubHash"),
+		cryptkit.NewSignature(&ds, "stubSign")).AsSignedDigestHolder()
 }
 
 func (c *CandidateProfile) GetJoinerSignature() cryptkit.SignatureHolder {
@@ -138,12 +158,14 @@ func (c *CandidateProfile) GetIssuerID() insolar.ShortNodeID {
 }
 
 func (c *CandidateProfile) GetIssuerSignature() cryptkit.SignatureHolder {
-	return nil
+	ds := longbits.NewBits64(uint64(5000000+c.ShortID) << 32)
+
+	return cryptkit.NewSignature(&ds, "stubSign").AsSignatureHolder()
 }
 
 func (c *CandidateProfile) GetNodePublicKey() cryptkit.SignatureKeyHolder {
 	v := &longbits.Bits512{}
-	longbits.FillBitsWithStaticNoise(uint32(c.id), v[:])
+	longbits.FillBitsWithStaticNoise(c.ShortID, v[:])
 	k := cryptkit.NewSignatureKey(v, "stub/stub", cryptkit.PublicAsymmetricKey)
 	return &k
 }
@@ -153,7 +175,7 @@ func (c *CandidateProfile) GetStartPower() member.Power {
 }
 
 func (c *CandidateProfile) GetReference() insolar.Reference {
-	return c.ref
+	return c.Ref
 }
 
 func (c *CandidateProfile) ConvertPowerRequest(request power.Request) member.Power {
@@ -165,11 +187,31 @@ func (c *CandidateProfile) ConvertPowerRequest(request power.Request) member.Pow
 }
 
 func (c *CandidateProfile) GetPrimaryRole() member.PrimaryRole {
-	return c.primaryRole
+	switch c.PrimaryRole {
+	case packet.Inactive:
+		return member.PrimaryRoleInactive
+	case packet.Neutral:
+		return member.PrimaryRoleNeutral
+	case packet.HeavyMaterial:
+		return member.PrimaryRoleHeavyMaterial
+	case packet.LightMaterial:
+		return member.PrimaryRoleLightMaterial
+	case packet.Virtual:
+		return member.PrimaryRoleVirtual
+	default:
+		panic("unknown PrimaryRole")
+	}
 }
 
 func (c *CandidateProfile) GetSpecialRoles() member.SpecialRole {
-	return c.specialRole
+	switch c.SpecialRole {
+	case packet.None:
+		return member.SpecialRoleNone
+	case packet.Discovery:
+		return member.SpecialRoleDiscovery
+	default:
+		panic("unknown SpecialRole")
+	}
 }
 
 func (*CandidateProfile) IsAllowedPower(p member.Power) bool {
@@ -177,7 +219,7 @@ func (*CandidateProfile) IsAllowedPower(p member.Power) bool {
 }
 
 func (c *CandidateProfile) GetDefaultEndpoint() endpoints.Outbound {
-	return c.n
+	return NewOutbound(c.Address)
 }
 
 func (*CandidateProfile) GetPublicKeyStore() cryptkit.PublicKeyStore {
@@ -185,16 +227,16 @@ func (*CandidateProfile) GetPublicKeyStore() cryptkit.PublicKeyStore {
 }
 
 func (c *CandidateProfile) IsAcceptableHost(from endpoints.Inbound) bool {
-	addr := c.n.GetNameAddress()
-	return addr.Equals(from.GetNameAddress())
+	address := from.GetNameAddress()
+	return address.EqualsToString(c.Address)
 }
 
 func (c *CandidateProfile) GetStaticNodeID() insolar.ShortNodeID {
-	return c.id
+	return insolar.ShortNodeID(c.ShortID)
 }
 
 func (c *CandidateProfile) GetIntroducedNodeID() insolar.ShortNodeID {
-	return c.id
+	return insolar.ShortNodeID(c.ShortID)
 }
 
 func (c *CandidateProfile) GetExtension() profiles.StaticProfileExtension {
@@ -202,5 +244,5 @@ func (c *CandidateProfile) GetExtension() profiles.StaticProfileExtension {
 }
 
 func (c *CandidateProfile) String() string {
-	return fmt.Sprintf("{sid:%v, n:%v}", c.id, c.n)
+	return fmt.Sprintf("{sid:%v, n:%v}", c.ShortID, c.Address)
 }

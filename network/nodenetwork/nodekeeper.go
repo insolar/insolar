@@ -52,6 +52,7 @@ package nodenetwork
 
 import (
 	"context"
+	"github.com/insolar/insolar/platformpolicy"
 	"net"
 	"sync"
 
@@ -139,7 +140,20 @@ type nodekeeper struct {
 	syncLock  sync.Mutex
 	syncNodes []insolar.NetworkNode
 
-	TerminationHandler insolar.TerminationHandler `inject:""`
+	TerminationHandler  insolar.TerminationHandler  `inject:""`
+	CryptographyService insolar.CryptographyService `inject:""`
+}
+
+func (nk *nodekeeper) Init(ctx context.Context) error {
+	data := []byte{1, 2, 3, 4, 5}
+	digest := platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher().Hash(data)
+	sign, err := nk.CryptographyService.Sign(data)
+	if err != nil {
+		return err
+	}
+
+	nk.origin.(node.MutableNode).SetSignature(digest, *sign)
+	return err
 }
 
 func (nk *nodekeeper) GetSnapshotCopy() *node.Snapshot {

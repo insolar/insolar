@@ -53,6 +53,8 @@ package gateway
 import (
 	"context"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network/consensus"
+	"github.com/insolar/insolar/network/consensus/adapters"
 	"time"
 
 	"github.com/pkg/errors"
@@ -91,8 +93,10 @@ type Base struct {
 	Rules               network.Rules               `inject:""`
 	KeyProcessor        insolar.KeyProcessor        `inject:""`
 
-	bootstrapETA     insolar.PulseNumber
-	candidateProfile packet.CandidateProfile
+	ConsensusController consensus.Controller
+
+	bootstrapETA           insolar.PulseNumber
+	originCandidateProfile *packet.CandidateProfile
 }
 
 // NewGateway creates new gateway on top of existing
@@ -129,6 +133,18 @@ func (g *Base) Init(ctx context.Context) error {
 	var err error
 
 	// todo: use candidate profile
+	origin := g.NodeKeeper.GetOrigin()
+	g.originCandidateProfile = &packet.CandidateProfile{
+		Address:     origin.Address(),
+		Ref:         origin.ID(),
+		ShortID:     uint32(origin.ShortID()),
+		PrimaryRole: packet.Virtual,
+		SpecialRole: packet.None,
+		Signature:   nil,
+	}
+
+	g.createCandidateProfile()
+	//g.originCandidateProfile = adapters.NewCandidateProfile(p)
 	//g.joinClaim, err = g.NodeKeeper.GetOriginJoinClaim()
 	return err
 }
@@ -196,9 +212,9 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 	if err != nil {
 		lastPulse = *insolar.GenesisPulse
 	}
-	if lastPulse.PulseNumber > data.Pulse.PulseNumber {
-		return g.HostNetwork.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.UpdateSchedule}), nil
-	}
+	//if lastPulse.PulseNumber > data.Pulse.PulseNumber {
+	//	return g.HostNetwork.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.UpdateSchedule}), nil
+	//}
 
 	err = bootstrap.ValidatePermit(data.Permit, g.CertificateManager.GetCertificate(), g.CryptographyService)
 	if err != nil {
@@ -210,6 +226,8 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 
 	// TODO: check JoinClaim is from Discovery node
 	//g.NodeKeeper.GetClaimQueue().Push(data.CandidateProfile)
+	profile := adapters.NewCandidateProfile(data.CandidateProfile)
+	g.ConsensusController.AddJoinCandidate(profile)
 
 	go func() {
 		// TODO:
@@ -343,4 +361,36 @@ func (g *Base) HandleReconnect(ctx context.Context, request network.ReceivedPack
 
 func (g *Base) OnConsensusFinished(p insolar.PulseNumber) {
 	log.Infof("================== OnConsensusFinished for pulse %d", p)
+}
+
+func (g *Base) createCandidateProfile() {
+	origin := g.NodeKeeper.GetOrigin()
+	p := &packet.CandidateProfile{}
+	p.Address = origin.Address()
+	p.Ref = origin.ID()
+	p.ShortID = uint32(origin.ShortID())
+
+	cert := g.CertificateManager.GetCertificate()
+	switch cert.GetRole() {
+	case insolar.StaticRoleVirtual:
+		p.PrimaryRole = packet.Virtual
+	case insolar.StaticRoleHeavyMaterial:
+		p.PrimaryRole = packet.HeavyMaterial
+	case insolar.StaticRoleLightMaterial:
+		p.PrimaryRole = packet.LightMaterial
+	default:
+		panic("unknown role")
+	}
+
+	if network.OriginIsDiscovery(cert) {
+		p.SpecialRole = packet.Discovery
+	} else {
+		p.SpecialRole = packet.None
+	}
+
+	g.originCandidateProfile = p
+
+	//nodeBriefIntro := serialization.NodeBriefIntro{}
+	//nodeBriefIntro.SerializeTo()
+
 }

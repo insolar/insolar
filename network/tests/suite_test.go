@@ -56,7 +56,6 @@ import (
 	"context"
 	"crypto"
 	"fmt"
-	"github.com/insolar/insolar/network/node"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -190,19 +189,9 @@ func (s *consensusSuite) SetupTest() {
 	suiteLogger.Info("Setup bootstrap nodes")
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
 	if UseFakeBootstrap {
-
 		bnodes := make([]insolar.NetworkNode, 0)
 		for _, n := range s.fixture().bootstrapNodes {
-
-			data := []byte{1, 2, 3, 4, 5}
-			digest := platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher().Hash(data)
-			sign, err := n.cryptographyService.Sign(data)
-			s.Require().NoError(err)
-
-			origin := n.serviceNetwork.NodeKeeper.GetOrigin()
-			origin.(node.MutableNode).SetSignature(digest, *sign)
-
-			bnodes = append(bnodes, origin)
+			bnodes = append(bnodes, n.serviceNetwork.NodeKeeper.GetOrigin())
 		}
 		for _, n := range s.fixture().bootstrapNodes {
 			n.serviceNetwork.NodeKeeper.SetInitialSnapshot(bnodes)

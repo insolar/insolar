@@ -215,11 +215,11 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 
 	n.Gatewayer.Gateway().Run(ctx)
 
-	// TODO: move this to init
 	n.consensusController = n.consensusInstaller.Install(n.pulseHandler, n.datagramHandler)
 	n.consensusController.RegisterFinishedNotifier(func(pulseNumber insolar.PulseNumber) {
 		n.Gatewayer.Gateway().OnConsensusFinished(pulseNumber)
 	})
+	n.BaseGateway.ConsensusController = n.consensusController
 
 	n.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
 

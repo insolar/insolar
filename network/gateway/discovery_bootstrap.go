@@ -93,7 +93,7 @@ func (g *DiscoveryBootstrap) Run(ctx context.Context) {
 		g.PulseAppender.Append(ctx, *pp)
 	}
 
-	resp, err := g.BootstrapRequester.Bootstrap(ctx, authorizeRes.Permit, g.candidateProfile, pp)
+	resp, err := g.BootstrapRequester.Bootstrap(ctx, authorizeRes.Permit, *g.originCandidateProfile, pp)
 	if err != nil {
 
 	}
