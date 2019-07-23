@@ -61,8 +61,6 @@ func getEmptyMessage(mt insolar.MessageType) (insolar.Message, error) {
 		return &RegisterChild{}, nil
 	case insolar.TypeGetObjectIndex:
 		return &GetObjectIndex{}, nil
-	case insolar.TypeAbandonedRequestsNotification:
-		return &AbandonedRequestsNotification{}, nil
 
 	// heavy sync
 	case insolar.TypeHeavyPayload:
@@ -182,7 +180,6 @@ func init() {
 	gob.Register(&GetDelegate{})
 	gob.Register(&RegisterChild{})
 	gob.Register(&GetObjectIndex{})
-	gob.Register(&AbandonedRequestsNotification{})
 
 	// heavy
 	gob.Register(&HeavyPayload{})

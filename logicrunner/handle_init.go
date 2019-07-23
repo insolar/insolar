@@ -81,6 +81,12 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 			meta: meta,
 		}
 		return f.Handle(ctx, h.Present)
+	case payload.TypeAbandonedRequestsNotification:
+		h := &HandleAbandonedRequestsNotification{
+			dep:  s.dep,
+			meta: meta,
+		}
+		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("[ Init.Present ] no handler for message type %s", msgType)
 	}
@@ -126,13 +132,6 @@ func (s *Init) handleParcel(ctx context.Context, f flow.Flow) error {
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeStillExecuting.String():
 		h := &HandleStillExecuting{
-			dep:     s.dep,
-			Message: meta,
-			Parcel:  parcel,
-		}
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeAbandonedRequestsNotification.String():
-		h := &HandleAbandonedRequestsNotification{
 			dep:     s.dep,
 			Message: meta,
 			Parcel:  parcel,
