@@ -24,7 +24,7 @@ import (
 	"testing"
 )
 
-const insolarMigrationMember1 = "migration_daemon_0_member_keys.json"
+const migrationMember = "migration_daemon_0_member_keys.json"
 
 func TestMigrationTokenNotInTheList(t *testing.T) {
 	ba := testutils.RandomString()
@@ -39,7 +39,7 @@ func TestMigrationToken(t *testing.T) {
 	err := createMemberWithMigrationAddress(ba)
 	require.NoError(t, err)
 
-	migrationMember, err := getMigrationDaemon(insolarMigrationMember1, 0)
+	migrationMember, err := getMigrationDaemon(migrationMember, 0)
 	require.NoError(t, err)
 
 	result, err := signedRequest(
@@ -55,7 +55,7 @@ func TestMigrationTokenZeroAmount(t *testing.T) {
 	err := createMemberWithMigrationAddress(ba)
 	require.NoError(t, err)
 
-	migrationMember, err := getMigrationDaemon(insolarMigrationMember1, 0)
+	migrationMember, err := getMigrationDaemon(migrationMember, 0)
 	require.NoError(t, err)
 
 	result, err := signedRequest(
@@ -73,7 +73,7 @@ func TestMigrationTokenMistakeField(t *testing.T) {
 	err := createMemberWithMigrationAddress(ba)
 	require.NoError(t, err)
 
-	migrationMember, err := getMigrationDaemon(insolarMigrationMember1, 0)
+	migrationMember, err := getMigrationDaemon(migrationMember, 0)
 	require.NoError(t, err)
 
 	result, err := signedRequest(
@@ -89,7 +89,7 @@ func TestMigrationTokenNilValue(t *testing.T) {
 	err := createMemberWithMigrationAddress(ba)
 	require.NoError(t, err)
 
-	migrationMember, err := getMigrationDaemon(insolarMigrationMember1, 0)
+	migrationMember, err := getMigrationDaemon(migrationMember, 0)
 	require.NoError(t, err)
 
 	result, err := signedRequest(migrationMember, "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": nil, "migrationAddress": ba})
@@ -103,7 +103,7 @@ func TestMigrationTokenMaxAmount(t *testing.T) {
 	err := createMemberWithMigrationAddress(ba)
 	require.NoError(t, err)
 
-	migrationMember, err := getMigrationDaemon(insolarMigrationMember1, 0)
+	migrationMember, err := getMigrationDaemon(migrationMember, 0)
 	require.NoError(t, err)
 
 	result, err := signedRequest(
@@ -119,7 +119,7 @@ func TestMigrationDoubleMigration(t *testing.T) {
 	err := createMemberWithMigrationAddress(ba)
 	require.NoError(t, err)
 
-	migrationMember, err := getMigrationDaemon(insolarMigrationMember1, 0)
+	migrationMember, err := getMigrationDaemon(migrationMember, 0)
 	require.NoError(t, err)
 
 	resultMigr1, err := signedRequest(
