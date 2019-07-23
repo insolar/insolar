@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bits"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/insolar/jet.Accessor -o ./ -s _mock.go
@@ -100,30 +101,7 @@ func Parent(id insolar.JetID) insolar.JetID {
 		return id
 	}
 
-	return *insolar.NewJetID(depth-1, resetBits(prefix, depth-1))
-}
-
-// resetBits returns a new byte slice with all bits in 'value' reset,
-// starting from 'start' number of bit.
-//
-// If 'start' is bigger than len(value), the original slice will be returned.
-func resetBits(value []byte, start uint8) []byte {
-	if int(start) >= len(value)*8 {
-		return value
-	}
-
-	startByte := start / 8
-	startBit := start % 8
-
-	result := make([]byte, len(value))
-	copy(result, value[:startByte])
-
-	// Reset bits in starting byte.
-	mask := byte(0xFF)
-	mask <<= 8 - startBit
-	result[startByte] = value[startByte] & mask
-
-	return result
+	return *insolar.NewJetID(depth-1, bits.ResetBits(prefix, depth-1))
 }
 
 // NewIDFromString creates new JetID from string represents binary prefix.
@@ -158,10 +136,10 @@ func parsePrefix(s string) []byte {
 func Siblings(id insolar.JetID) (insolar.JetID, insolar.JetID) {
 	depth, prefix := id.Depth(), id.Prefix()
 
-	leftPrefix := resetBits(prefix, depth)
+	leftPrefix := bits.ResetBits(prefix, depth)
 	left := insolar.NewJetID(depth+1, leftPrefix)
 
-	rightPrefix := resetBits(prefix, depth)
+	rightPrefix := bits.ResetBits(prefix, depth)
 	setBit(rightPrefix, depth)
 	right := insolar.NewJetID(depth+1, rightPrefix)
 
