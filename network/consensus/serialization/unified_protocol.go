@@ -154,6 +154,7 @@ func (h *Header) setPacketType(packetType phases.PacketType) {
 		panic("invalid packet type")
 	}
 
+	h.ProtocolAndPacketType ^= h.ProtocolAndPacketType & packetTypeMask
 	h.ProtocolAndPacketType |= uint8(packetType)
 }
 

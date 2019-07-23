@@ -58,6 +58,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
 
@@ -68,7 +69,7 @@ type candidateController interface {
 }
 
 type Controller interface {
-	candidateController
+	AddJoinCandidate(candidate profiles.CandidateProfile)
 
 	Abort()
 
@@ -107,7 +108,7 @@ func newController(
 	return controller
 }
 
-func (c *controller) AddJoinCandidate(candidate transport.FullIntroductionReader) {
+func (c *controller) AddJoinCandidate(candidate profiles.CandidateProfile) {
 	c.candidateController.AddJoinCandidate(candidate)
 }
 
