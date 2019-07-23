@@ -20,12 +20,12 @@ import (
 type JetKeeperMock struct {
 	t minimock.Tester
 
-	AddDropConfirmationFunc       func(p context.Context, p1 insolar.PulseNumber, p2 ...insolar.JetID) (r error)
+	AddDropConfirmationFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID, p3 bool) (r error)
 	AddDropConfirmationCounter    uint64
 	AddDropConfirmationPreCounter uint64
 	AddDropConfirmationMock       mJetKeeperMockAddDropConfirmation
 
-	AddHotConfirmationFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r error)
+	AddHotConfirmationFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID, p3 bool) (r error)
 	AddHotConfirmationCounter    uint64
 	AddHotConfirmationPreCounter uint64
 	AddHotConfirmationMock       mJetKeeperMockAddHotConfirmation
@@ -65,7 +65,8 @@ type JetKeeperMockAddDropConfirmationExpectation struct {
 type JetKeeperMockAddDropConfirmationInput struct {
 	p  context.Context
 	p1 insolar.PulseNumber
-	p2 []insolar.JetID
+	p2 insolar.JetID
+	p3 bool
 }
 
 type JetKeeperMockAddDropConfirmationResult struct {
@@ -73,14 +74,14 @@ type JetKeeperMockAddDropConfirmationResult struct {
 }
 
 //Expect specifies that invocation of JetKeeper.AddDropConfirmation is expected from 1 to Infinity times
-func (m *mJetKeeperMockAddDropConfirmation) Expect(p context.Context, p1 insolar.PulseNumber, p2 ...insolar.JetID) *mJetKeeperMockAddDropConfirmation {
+func (m *mJetKeeperMockAddDropConfirmation) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID, p3 bool) *mJetKeeperMockAddDropConfirmation {
 	m.mock.AddDropConfirmationFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &JetKeeperMockAddDropConfirmationExpectation{}
 	}
-	m.mainExpectation.input = &JetKeeperMockAddDropConfirmationInput{p, p1, p2}
+	m.mainExpectation.input = &JetKeeperMockAddDropConfirmationInput{p, p1, p2, p3}
 	return m
 }
 
@@ -97,12 +98,12 @@ func (m *mJetKeeperMockAddDropConfirmation) Return(r error) *JetKeeperMock {
 }
 
 //ExpectOnce specifies that invocation of JetKeeper.AddDropConfirmation is expected once
-func (m *mJetKeeperMockAddDropConfirmation) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 ...insolar.JetID) *JetKeeperMockAddDropConfirmationExpectation {
+func (m *mJetKeeperMockAddDropConfirmation) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID, p3 bool) *JetKeeperMockAddDropConfirmationExpectation {
 	m.mock.AddDropConfirmationFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &JetKeeperMockAddDropConfirmationExpectation{}
-	expectation.input = &JetKeeperMockAddDropConfirmationInput{p, p1, p2}
+	expectation.input = &JetKeeperMockAddDropConfirmationInput{p, p1, p2, p3}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -112,7 +113,7 @@ func (e *JetKeeperMockAddDropConfirmationExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of JetKeeper.AddDropConfirmation method
-func (m *mJetKeeperMockAddDropConfirmation) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 ...insolar.JetID) (r error)) *JetKeeperMock {
+func (m *mJetKeeperMockAddDropConfirmation) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID, p3 bool) (r error)) *JetKeeperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -121,18 +122,18 @@ func (m *mJetKeeperMockAddDropConfirmation) Set(f func(p context.Context, p1 ins
 }
 
 //AddDropConfirmation implements github.com/insolar/insolar/ledger/heavy/executor.JetKeeper interface
-func (m *JetKeeperMock) AddDropConfirmation(p context.Context, p1 insolar.PulseNumber, p2 ...insolar.JetID) (r error) {
+func (m *JetKeeperMock) AddDropConfirmation(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID, p3 bool) (r error) {
 	counter := atomic.AddUint64(&m.AddDropConfirmationPreCounter, 1)
 	defer atomic.AddUint64(&m.AddDropConfirmationCounter, 1)
 
 	if len(m.AddDropConfirmationMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.AddDropConfirmationMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to JetKeeperMock.AddDropConfirmation. %v %v %v", p, p1, p2)
+			m.t.Fatalf("Unexpected call to JetKeeperMock.AddDropConfirmation. %v %v %v %v", p, p1, p2, p3)
 			return
 		}
 
 		input := m.AddDropConfirmationMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, JetKeeperMockAddDropConfirmationInput{p, p1, p2}, "JetKeeper.AddDropConfirmation got unexpected parameters")
+		testify_assert.Equal(m.t, *input, JetKeeperMockAddDropConfirmationInput{p, p1, p2, p3}, "JetKeeper.AddDropConfirmation got unexpected parameters")
 
 		result := m.AddDropConfirmationMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -149,7 +150,7 @@ func (m *JetKeeperMock) AddDropConfirmation(p context.Context, p1 insolar.PulseN
 
 		input := m.AddDropConfirmationMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, JetKeeperMockAddDropConfirmationInput{p, p1, p2}, "JetKeeper.AddDropConfirmation got unexpected parameters")
+			testify_assert.Equal(m.t, *input, JetKeeperMockAddDropConfirmationInput{p, p1, p2, p3}, "JetKeeper.AddDropConfirmation got unexpected parameters")
 		}
 
 		result := m.AddDropConfirmationMock.mainExpectation.result
@@ -163,11 +164,11 @@ func (m *JetKeeperMock) AddDropConfirmation(p context.Context, p1 insolar.PulseN
 	}
 
 	if m.AddDropConfirmationFunc == nil {
-		m.t.Fatalf("Unexpected call to JetKeeperMock.AddDropConfirmation. %v %v %v", p, p1, p2)
+		m.t.Fatalf("Unexpected call to JetKeeperMock.AddDropConfirmation. %v %v %v %v", p, p1, p2, p3)
 		return
 	}
 
-	return m.AddDropConfirmationFunc(p, p1, p2...)
+	return m.AddDropConfirmationFunc(p, p1, p2, p3)
 }
 
 //AddDropConfirmationMinimockCounter returns a count of JetKeeperMock.AddDropConfirmationFunc invocations
@@ -215,6 +216,7 @@ type JetKeeperMockAddHotConfirmationInput struct {
 	p  context.Context
 	p1 insolar.PulseNumber
 	p2 insolar.JetID
+	p3 bool
 }
 
 type JetKeeperMockAddHotConfirmationResult struct {
@@ -222,14 +224,14 @@ type JetKeeperMockAddHotConfirmationResult struct {
 }
 
 //Expect specifies that invocation of JetKeeper.AddHotConfirmation is expected from 1 to Infinity times
-func (m *mJetKeeperMockAddHotConfirmation) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) *mJetKeeperMockAddHotConfirmation {
+func (m *mJetKeeperMockAddHotConfirmation) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID, p3 bool) *mJetKeeperMockAddHotConfirmation {
 	m.mock.AddHotConfirmationFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &JetKeeperMockAddHotConfirmationExpectation{}
 	}
-	m.mainExpectation.input = &JetKeeperMockAddHotConfirmationInput{p, p1, p2}
+	m.mainExpectation.input = &JetKeeperMockAddHotConfirmationInput{p, p1, p2, p3}
 	return m
 }
 
@@ -246,12 +248,12 @@ func (m *mJetKeeperMockAddHotConfirmation) Return(r error) *JetKeeperMock {
 }
 
 //ExpectOnce specifies that invocation of JetKeeper.AddHotConfirmation is expected once
-func (m *mJetKeeperMockAddHotConfirmation) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) *JetKeeperMockAddHotConfirmationExpectation {
+func (m *mJetKeeperMockAddHotConfirmation) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID, p3 bool) *JetKeeperMockAddHotConfirmationExpectation {
 	m.mock.AddHotConfirmationFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &JetKeeperMockAddHotConfirmationExpectation{}
-	expectation.input = &JetKeeperMockAddHotConfirmationInput{p, p1, p2}
+	expectation.input = &JetKeeperMockAddHotConfirmationInput{p, p1, p2, p3}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -261,7 +263,7 @@ func (e *JetKeeperMockAddHotConfirmationExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of JetKeeper.AddHotConfirmation method
-func (m *mJetKeeperMockAddHotConfirmation) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r error)) *JetKeeperMock {
+func (m *mJetKeeperMockAddHotConfirmation) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID, p3 bool) (r error)) *JetKeeperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -270,18 +272,18 @@ func (m *mJetKeeperMockAddHotConfirmation) Set(f func(p context.Context, p1 inso
 }
 
 //AddHotConfirmation implements github.com/insolar/insolar/ledger/heavy/executor.JetKeeper interface
-func (m *JetKeeperMock) AddHotConfirmation(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r error) {
+func (m *JetKeeperMock) AddHotConfirmation(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID, p3 bool) (r error) {
 	counter := atomic.AddUint64(&m.AddHotConfirmationPreCounter, 1)
 	defer atomic.AddUint64(&m.AddHotConfirmationCounter, 1)
 
 	if len(m.AddHotConfirmationMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.AddHotConfirmationMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to JetKeeperMock.AddHotConfirmation. %v %v %v", p, p1, p2)
+			m.t.Fatalf("Unexpected call to JetKeeperMock.AddHotConfirmation. %v %v %v %v", p, p1, p2, p3)
 			return
 		}
 
 		input := m.AddHotConfirmationMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, JetKeeperMockAddHotConfirmationInput{p, p1, p2}, "JetKeeper.AddHotConfirmation got unexpected parameters")
+		testify_assert.Equal(m.t, *input, JetKeeperMockAddHotConfirmationInput{p, p1, p2, p3}, "JetKeeper.AddHotConfirmation got unexpected parameters")
 
 		result := m.AddHotConfirmationMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -298,7 +300,7 @@ func (m *JetKeeperMock) AddHotConfirmation(p context.Context, p1 insolar.PulseNu
 
 		input := m.AddHotConfirmationMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, JetKeeperMockAddHotConfirmationInput{p, p1, p2}, "JetKeeper.AddHotConfirmation got unexpected parameters")
+			testify_assert.Equal(m.t, *input, JetKeeperMockAddHotConfirmationInput{p, p1, p2, p3}, "JetKeeper.AddHotConfirmation got unexpected parameters")
 		}
 
 		result := m.AddHotConfirmationMock.mainExpectation.result
@@ -312,11 +314,11 @@ func (m *JetKeeperMock) AddHotConfirmation(p context.Context, p1 insolar.PulseNu
 	}
 
 	if m.AddHotConfirmationFunc == nil {
-		m.t.Fatalf("Unexpected call to JetKeeperMock.AddHotConfirmation. %v %v %v", p, p1, p2)
+		m.t.Fatalf("Unexpected call to JetKeeperMock.AddHotConfirmation. %v %v %v %v", p, p1, p2, p3)
 		return
 	}
 
-	return m.AddHotConfirmationFunc(p, p1, p2)
+	return m.AddHotConfirmationFunc(p, p1, p2, p3)
 }
 
 //AddHotConfirmationMinimockCounter returns a count of JetKeeperMock.AddHotConfirmationFunc invocations

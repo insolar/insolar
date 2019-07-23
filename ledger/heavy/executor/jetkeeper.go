@@ -35,9 +35,9 @@ import (
 // JetKeeper provides a method for adding jet to storage, checking pulse completion and getting access to highest synced pulse.
 type JetKeeper interface {
 	// AddDropConfirmation performs adding jet to storage and checks pulse completion.
-	AddDropConfirmation(context.Context, insolar.PulseNumber, ...insolar.JetID) error
+	AddDropConfirmation(context.Context, insolar.PulseNumber, insolar.JetID, bool) error
 	// AddHotConfirmation performs adding hot confirmation to storage and checks pulse completion.
-	AddHotConfirmation(context.Context, insolar.PulseNumber, insolar.JetID) error
+	AddHotConfirmation(context.Context, insolar.PulseNumber, insolar.JetID, bool) error
 	// TopSyncPulse provides access to highest synced (replicated) pulse.
 	TopSyncPulse() insolar.PulseNumber
 }
@@ -61,21 +61,73 @@ type dbJetKeeper struct {
 
 type jetInfo struct {
 	JetID         insolar.JetID
-	HotConfirmed  bool
+	HotConfirmed  []insolar.JetID
 	DropConfirmed bool
+	Split         bool
+}
+
+func (j *jetInfo) addDrop(newJetID insolar.JetID, split bool) error {
+	if j.DropConfirmed {
+		return errors.New("addDrop. try to rewrite drop confirmation. existing: " + j.JetID.DebugString() +
+			", new: " + newJetID.DebugString())
+	}
+	j.Split = split
+	j.DropConfirmed = true
+	j.JetID = newJetID
+
+	return nil
+}
+
+func (j *jetInfo) addHot(newJetID insolar.JetID, split bool) error {
+	if len(j.HotConfirmed) >= 2 {
+		return errors.New("num hot confirmations exceeds 2. existing: " + insolar.JetIDCollection(j.HotConfirmed).DebugString() +
+			", new: " + newJetID.DebugString())
+	}
+	if len(j.HotConfirmed) == 0 {
+		j.HotConfirmed = make([]insolar.JetID, 0)
+	}
+
+	jetID := newJetID
+	if split {
+		jetID = jet.Parent(newJetID)
+		if !j.JetID.IsEmpty() && !j.JetID.Equal(jetID) {
+			return errors.New("addHot. try to rewrite jet with different parent. existing: " + j.JetID.DebugString() +
+				", new: " + newJetID.DebugString())
+		}
+	}
+
+	if len(j.HotConfirmed) == 1 && j.HotConfirmed[0].Equal(newJetID) {
+		return errors.New("try add already existing hot confirmation: " + newJetID.DebugString())
+	}
+
+	j.HotConfirmed = append(j.HotConfirmed, newJetID)
+	j.JetID = jetID
+
+	return nil
 }
 
 func (j *jetInfo) isConfirmed() bool {
-	return j.DropConfirmed && j.HotConfirmed
+	if !j.DropConfirmed {
+		return false
+	}
+	if len(j.HotConfirmed) == 0 || j.HotConfirmed[0].IsEmpty() {
+		return false
+	}
+
+	if !j.Split {
+		return j.DropConfirmed && j.HotConfirmed[0].Equal(j.JetID)
+	}
+
+	return len(j.HotConfirmed) == 2
 }
 
-func (jk *dbJetKeeper) AddHotConfirmation(ctx context.Context, pn insolar.PulseNumber, id insolar.JetID) error {
+func (jk *dbJetKeeper) AddHotConfirmation(ctx context.Context, pn insolar.PulseNumber, id insolar.JetID, split bool) error {
 	jk.Lock()
 	defer jk.Unlock()
 
 	inslogger.FromContext(ctx).Debug("AddHotConfirmation. pulse: ", pn, ". ID: ", id.DebugString())
 
-	if err := jk.addHotConfirm(ctx, pn, id); err != nil {
+	if err := jk.updateHot(ctx, pn, id, split); err != nil {
 		return errors.Wrapf(err, "failed to save updated jets")
 	}
 
@@ -83,19 +135,17 @@ func (jk *dbJetKeeper) AddHotConfirmation(ctx context.Context, pn insolar.PulseN
 	return errors.Wrapf(err, "AddHotConfirmation. propagateConsistency returns error")
 }
 
-func (jk *dbJetKeeper) AddDropConfirmation(ctx context.Context, pn insolar.PulseNumber, jetIDs ...insolar.JetID) error {
+func (jk *dbJetKeeper) AddDropConfirmation(ctx context.Context, pn insolar.PulseNumber, id insolar.JetID, split bool) error {
 	jk.Lock()
 	defer jk.Unlock()
 
-	for _, id := range jetIDs {
-		inslogger.FromContext(ctx).Debug("AddDropConfirmation. pulse: ", pn, ". ID: ", id.DebugString())
+	inslogger.FromContext(ctx).Debug("AddDropConfirmation. pulse: ", pn, ". ID: ", id.DebugString())
 
-		if err := jk.addJet(ctx, pn, id); err != nil {
-			return errors.Wrapf(err, "AddDropConfirmation. failed to save updated jets")
-		}
+	if err := jk.updateDrop(ctx, pn, id, split); err != nil {
+		return errors.Wrapf(err, "AddDropConfirmation. failed to save updated jets")
 	}
 
-	err := jk.propagateConsistency(ctx, pn, insolar.JetIDCollection(jetIDs).DebugString())
+	err := jk.propagateConsistency(ctx, pn, id.DebugString())
 
 	return errors.Wrap(err, "propagateConsistency returns error")
 }
@@ -151,11 +201,42 @@ func (jk *dbJetKeeper) topSyncPulse() insolar.PulseNumber {
 	return insolar.NewPulseNumber(val)
 }
 
-func (jk *dbJetKeeper) addJet(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID) error {
-	return jk.updateJet(ctx, pulse, id, true, false)
+func (jk *dbJetKeeper) updateHot(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID, split bool) error {
+	logger := inslogger.FromContext(ctx)
+	jets, err := jk.get(pulse)
+	var exists bool
+	if err == nil {
+		parentId := id
+		if split {
+			parentId = jet.Parent(id)
+		}
+		for i := range jets {
+			if jets[i].JetID.Equal(parentId) {
+				exists = true
+				err := jets[i].addHot(id, split)
+				if err != nil {
+					return errors.Wrap(err, "can't addHot")
+				}
+				logger.Debug("updateHot. update existing. pulse: ", pulse, ", Jet:", id.DebugString(), ", split: ", split)
+				break
+			}
+		}
+	} else if err != store.ErrNotFound {
+		return errors.Wrapf(err, "updateHot. can't get pulse: %d", pulse)
+	}
+	if !exists {
+		newInfo := jetInfo{}
+		err := newInfo.addHot(id, split)
+		if err != nil {
+			return errors.Wrap(err, "can't addHot ( not existing )")
+		}
+		jets = append(jets, newInfo)
+		logger.Debug("updateHot. not existing. pulse: ", pulse, ". Jet:", id.DebugString(), ", split: ", split)
+	}
+	return jk.set(pulse, jets)
 }
 
-func (jk *dbJetKeeper) updateJet(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID, dropConfirmed bool, hotConfirmed bool) error {
+func (jk *dbJetKeeper) updateDrop(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID, split bool) error {
 	logger := inslogger.FromContext(ctx)
 	jets, err := jk.get(pulse)
 	var exists bool
@@ -163,32 +244,27 @@ func (jk *dbJetKeeper) updateJet(ctx context.Context, pulse insolar.PulseNumber,
 		for i := range jets {
 			if jets[i].JetID.Equal(id) {
 				exists = true
-				if hotConfirmed {
-					jets[i].HotConfirmed = hotConfirmed
+				err := jets[i].addDrop(id, split)
+				if err != nil {
+					return errors.Wrap(err, "can't addDrop")
 				}
-				if dropConfirmed {
-					jets[i].DropConfirmed = dropConfirmed
-				}
+				logger.Debug("updateDrop. update existing. pulse: ", pulse, ", Jet:", id.DebugString(), ", split: ", split)
 				break
 			}
 		}
-		if exists {
-			logger.Debug("updateJet. update existing. dropConfirmed: ", dropConfirmed, ". hotConfirmed: ", hotConfirmed,
-				pulse, ". Jet:", id.DebugString())
-		}
 	} else if err != store.ErrNotFound {
-		return errors.Wrapf(err, "can't get pulse: %d", pulse)
+		return errors.Wrapf(err, "updateDrop. can't get pulse: %d", pulse)
 	}
 	if !exists {
-		jets = append(jets, jetInfo{JetID: id, HotConfirmed: hotConfirmed, DropConfirmed: dropConfirmed})
-		logger.Debug("updateJet. not exists. dropConfirmed: ", dropConfirmed, ". hotConfirmed: ", hotConfirmed,
-			pulse, ". Jet:", id.DebugString())
+		newInfo := jetInfo{}
+		err := newInfo.addDrop(id, split)
+		if err != nil {
+			return errors.Wrap(err, "can't addDrop ( not existing )")
+		}
+		jets = append(jets, newInfo)
+		logger.Debug("updateDrop. not existing. pulse: ", pulse, ". Jet:", id.DebugString(), ", split: ", split)
 	}
 	return jk.set(pulse, jets)
-}
-
-func (jk *dbJetKeeper) addHotConfirm(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID) error {
-	return jk.updateJet(ctx, pulse, id, false, true)
 }
 
 func (jk *dbJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.PulseNumber) bool {
@@ -198,27 +274,32 @@ func (jk *dbJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.
 			if !el.isConfirmed() {
 				return nil, false
 			}
-			r[el.JetID] = struct{}{}
+			for _, jet := range el.HotConfirmed {
+				r[jet] = struct{}{}
+			}
 		}
 		return r, len(r) != 0
 	}
 
-	infoToList := func(s []jetInfo) []insolar.JetID {
+	infoToList := func(s map[insolar.JetID]struct{}) []insolar.JetID {
 		r := make([]insolar.JetID, len(s))
-		for i, el := range s {
-			r[i] = el.JetID
+		var idx int
+		for jet, _ := range s {
+			r[idx] = jet
+			idx++
 		}
 		return r
 	}
 
-	next, err := jk.pulses.Forwards(ctx, pulse, 1)
-	if err != nil {
-		inslogger.FromContext(ctx).Debug("strange situation: can't get next pulse for", pulse)
-		return false
-	}
+	// next, err := jk.pulses.Forwards(ctx, pulse, 1)
+	// if err != nil {
+	// 	inslogger.FromContext(ctx).Debug("strange situation: can't get next pulse for", pulse)
+	// 	return false
+	// }
 
 	// you use next pulse here since we get drop\hot confirm for previous pulse but update\split jet tree for current
-	expectedJets := jk.jetTrees.All(ctx, next.PulseNumber)
+	//expectedJets := jk.jetTrees.All(ctx, next.PulseNumber)
+	expectedJets := jk.jetTrees.All(ctx, pulse)
 	actualJets := jk.all(pulse)
 
 	actualJetsSet, allConfirmed := infoToSet(actualJets)
@@ -226,11 +307,11 @@ func (jk *dbJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.
 		return false
 	}
 
-	if len(expectedJets) != len(actualJets) {
-		if len(actualJets) > len(expectedJets) {
+	if len(actualJetsSet) != len(expectedJets) {
+		if len(actualJetsSet) > len(expectedJets) {
 			inslogger.FromContext(ctx).Warn("num actual jets is more then expected. it's too bad. Pulse: ", pulse,
 				". Expected: ", insolar.JetIDCollection(expectedJets).DebugString(),
-				". Actual: ", insolar.JetIDCollection(infoToList(actualJets)).DebugString())
+				". Actual: ", insolar.JetIDCollection(infoToList(actualJetsSet)).DebugString())
 		}
 		return false
 	}
@@ -239,7 +320,7 @@ func (jk *dbJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.
 		if _, ok := actualJetsSet[expID]; !ok {
 			inslogger.FromContext(ctx).Error("jet sets are different. it's too bad. Pulse: ", pulse,
 				". Expected: ", insolar.JetIDCollection(expectedJets).DebugString(),
-				". Actual: ", insolar.JetIDCollection(infoToList(actualJets)).DebugString())
+				". Actual: ", insolar.JetIDCollection(infoToList(actualJetsSet)).DebugString())
 			return false
 		}
 	}
