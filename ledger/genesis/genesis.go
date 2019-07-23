@@ -19,9 +19,8 @@ package genesis
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
-	"path/filepath"
-	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/bootstrap/contracts"
 	"github.com/insolar/insolar/insolar"
@@ -34,17 +33,16 @@ import (
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/pkg/errors"
 )
 
 // BaseRecord provides methods for genesis base record manipulation.
 type BaseRecord struct {
-	DB                    store.DB
-	DropModifier          drop.Modifier
-	PulseAppender         pulse.Appender
-	PulseAccessor         pulse.Accessor
-	RecordModifier        object.RecordModifier
-	IndexLifelineModifier object.LifelineModifier
+	DB             store.DB
+	DropModifier   drop.Modifier
+	PulseAppender  pulse.Appender
+	PulseAccessor  pulse.Accessor
+	RecordModifier object.RecordModifier
+	IndexModifier  object.IndexModifier
 }
 
 // Key is genesis key.
@@ -122,14 +120,16 @@ func (br *BaseRecord) Create(ctx context.Context) error {
 		return errors.Wrap(err, "can't save genesis record into storage")
 	}
 
-	err = br.IndexLifelineModifier.Set(
+	err = br.IndexModifier.SetIndex(
 		ctx,
 		insolar.FirstPulseNumber,
-		genesisID,
-		object.Lifeline{
-			LatestState:         &genesisID,
-			LatestStateApproved: &genesisID,
-			JetID:               insolar.ZeroJetID,
+		record.Index{
+			ObjID: genesisID,
+			Lifeline: record.Lifeline{
+				LatestState:         &genesisID,
+				LatestStateApproved: &genesisID,
+			},
+			PendingRecords: []insolar.ID{},
 		},
 	)
 	if err != nil {
@@ -202,23 +202,9 @@ func (g *Genesis) Start(ctx context.Context) error {
 func (g *Genesis) storeContracts(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 
-	plugins, err := readPluginsDir(g.PluginsDir)
-	if err != nil {
-		return errors.Wrapf(err, "failed to read plugins dir")
-	}
-	inslog.Infof("[genesis] found %v plugins in %v", len(plugins), g.PluginsDir)
-
-	for name, file := range plugins {
-		err = g.prepareContractPrototype(ctx, name, file)
-		if err != nil {
-			return errors.Wrapf(err, "failed to prepare plugin's prototype %v for contract %v", file, name)
-		}
-		inslog.Infof("[genesis] code and prototype are activated for %v", name)
-	}
-
 	states := contracts.GenesisContractsStates(g.ContractsConfig)
 	for _, conf := range states {
-		err = g.activateContract(ctx, conf)
+		err := g.activateContract(ctx, conf)
 		if err != nil {
 			return errors.Wrapf(err, "failed to activate contract %v", conf.Name)
 		}
@@ -229,11 +215,14 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 
 func (g *Genesis) activateContract(ctx context.Context, state insolar.GenesisContractState) error {
 	name := state.Name
-
 	objRef := rootdomain.GenesisRef(name)
+
+	protoName := name + rootdomain.GenesisPrototypeSuffix
+	protoRef := rootdomain.GenesisRef(protoName)
+
 	_, err := g.ArtifactManager.RegisterRequest(
 		ctx,
-		record.Request{
+		record.IncomingRequest{
 			CallType: record.CTGenesis,
 			Method:   name,
 		},
@@ -247,12 +236,12 @@ func (g *Genesis) activateContract(ctx context.Context, state insolar.GenesisCon
 		parentRef = rootdomain.GenesisRef(state.ParentName)
 	}
 
-	_, err = g.ArtifactManager.ActivateObject(
+	err = g.ArtifactManager.ActivateObject(
 		ctx,
 		insolar.Reference{},
 		objRef,
 		parentRef,
-		rootdomain.GenesisRef(name+"_proto"),
+		protoRef,
 		state.Delegate,
 		state.Memory,
 	)
@@ -262,102 +251,4 @@ func (g *Genesis) activateContract(ctx context.Context, state insolar.GenesisCon
 
 	_, err = g.ArtifactManager.RegisterResult(ctx, genesisrefs.ContractRootDomain, objRef, nil)
 	return errors.Wrapf(err, "failed to register result for '%v'", name)
-}
-
-func (g *Genesis) prepareContractPrototype(ctx context.Context, name string, binFile string) error {
-	rootDomainRef := rootdomain.RootDomain.Ref()
-
-	protoID, err := g.ArtifactManager.RegisterRequest(
-		ctx,
-		record.Request{
-			CallType: record.CTGenesis,
-			Method:   name + "_proto",
-		},
-	)
-	if err != nil {
-		return errors.Wrapf(err, "can't register request for prototype '%v'", name)
-	}
-	protoRef := insolar.NewReference(*protoID)
-	assertGenesisRef(*protoRef, name+"_proto")
-
-	pluginBinary, err := ioutil.ReadFile(binFile)
-	if err != nil {
-		return errors.Wrap(err, "failed to read plugin file")
-	}
-	codeReq, err := g.ArtifactManager.RegisterRequest(
-		ctx,
-		record.Request{
-			CallType: record.CTGenesis,
-			Method:   name + "_code",
-		},
-	)
-	if err != nil {
-		return errors.Wrapf(err, "failed to register request for code '%v'", name)
-	}
-
-	codeID, err := g.ArtifactManager.DeployCode(
-		ctx,
-		rootDomainRef,
-		*insolar.NewReference(*codeReq),
-		pluginBinary,
-		insolar.MachineTypeGoPlugin,
-	)
-	if err != nil {
-		return errors.Wrapf(err, "failed to deploy code for code '%v", name)
-	}
-
-	codeRef := insolar.NewReference(*codeID)
-
-	_, err = g.ArtifactManager.RegisterResult(ctx, rootDomainRef, *codeRef, nil)
-	if err != nil {
-		return errors.Wrapf(err, "failed to register code result for '%v'", name)
-	}
-
-	_, err = g.ArtifactManager.ActivatePrototype(
-		ctx,
-		rootDomainRef,
-		*protoRef,
-		insolar.GenesisRecord.Ref(),
-		*codeRef,
-		nil,
-	)
-	if err != nil {
-		return errors.Wrapf(err, "failed to activate prototype for '%v'", name)
-	}
-
-	_, err = g.ArtifactManager.RegisterResult(ctx, rootDomainRef, *protoRef, nil)
-	return errors.Wrapf(err, "failed to register request for '%v'", name)
-}
-
-func readPluginsDir(dir string) (map[string]string, error) {
-	files, err := ioutil.ReadDir(dir)
-	if err != nil {
-		return nil, errors.Wrapf(err, "open plugin dir %v failed", dir)
-	}
-
-	result := map[string]string{}
-	for _, file := range files {
-		if file.IsDir() {
-			continue
-		}
-		soName := file.Name()
-		if strings.HasSuffix(soName, ".so") {
-			name := soName[:len(soName)-len(".so")]
-			result[name] = filepath.Join(dir, soName)
-			continue
-		}
-	}
-
-	return result, nil
-}
-
-func assertGenesisRef(gotRef insolar.Reference, name string) {
-	expectRef := rootdomain.GenesisRef(name)
-	// check just in case
-	if gotRef != expectRef {
-		panic(fmt.Sprintf(
-			"mismatch actual reference and expected for name %v (got=%v; expected=%v)",
-			name, gotRef, expectRef,
-		))
-	}
 }

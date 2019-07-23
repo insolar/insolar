@@ -76,13 +76,13 @@ func TestNewNodeAddress_InvalidHost(t *testing.T) {
 
 func TestNewNodeAddress_InvalidPort(t *testing.T) {
 	_, err := NewNodeAddress("127.0.0.1:notport")
-	require.EqualError(t, err, "invalid port: notport")
+	require.EqualError(t, err, "invalid port number: notport")
 
 	_, err = NewNodeAddress("127.0.0.1:65536")
-	require.EqualError(t, err, "invalid port: 65536")
+	require.EqualError(t, err, "invalid port number: 65536")
 
 	_, err = NewNodeAddress("127.0.0.1:0")
-	require.EqualError(t, err, "invalid port: 0")
+	require.EqualError(t, err, "invalid port number: 0")
 }
 
 func TestNodeAddress_Get(t *testing.T) {

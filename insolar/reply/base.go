@@ -70,15 +70,14 @@ const (
 	TypeJetMiss
 	// TypePendingRequests contains unclosed requests for an object.
 	TypePendingRequests
-	// TypePendingRequestID contains ID of unclosed request for an object.
-	TypePendingRequestID
 	// TypeJet contains jet.
 	TypeJet
-	// TypeRequest contains request.
-	TypeRequest
-	TypePendingFilament
+	// TypeOpenRequestsOnHeavy returns open requests from a heavy
+	TypeOpenRequestsOnHeavy
 	// TypeHeavyError carries heavy record sync
 	TypeHeavyError
+	// TypeIDs is common reply for methods returning list of IDs.
+	TypeIDs
 )
 
 // ErrType is used to determine and compare reply errors.
@@ -95,6 +94,7 @@ const (
 	ErrNoPendingRequests
 	// ErrTooManyPendingRequests is returned when a limit of pending requests has been reached
 	ErrTooManyPendingRequests
+	FlowCancelled
 )
 
 func getEmptyReply(t insolar.ReplyType) (insolar.Reply, error) {
@@ -113,6 +113,8 @@ func getEmptyReply(t insolar.ReplyType) (insolar.Reply, error) {
 		return &Delegate{}, nil
 	case TypeID:
 		return &ID{}, nil
+	case TypeIDs:
+		return &IDs{}, nil
 	case TypeChildren:
 		return &Children{}, nil
 	case TypeError:
@@ -133,8 +135,6 @@ func getEmptyReply(t insolar.ReplyType) (insolar.Reply, error) {
 		return &HasPendingRequests{}, nil
 	case TypeJet:
 		return &Jet{}, nil
-	case TypeRequest:
-		return &Request{}, nil
 
 	default:
 		return nil, errors.Errorf("unimplemented reply type: '%d'", t)
@@ -188,6 +188,7 @@ func init() {
 	gob.Register(&Object{})
 	gob.Register(&Delegate{})
 	gob.Register(&ID{})
+	gob.Register(&IDs{})
 	gob.Register(&Children{})
 	gob.Register(&Error{})
 	gob.Register(&OK{})
@@ -197,5 +198,4 @@ func init() {
 	gob.Register(&HeavyError{})
 	gob.Register(&JetMiss{})
 	gob.Register(&HasPendingRequests{})
-	gob.Register(&Request{})
 }

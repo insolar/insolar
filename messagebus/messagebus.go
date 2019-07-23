@@ -40,7 +40,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/instrumentation/hack"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -49,7 +48,17 @@ import (
 const deliverRPCMethodName = "MessageBus.Deliver"
 
 var transferredToWatermill = map[insolar.MessageType]struct{}{
-	insolar.TypeGetObject: {},
+	insolar.TypeGetChildren:                        {},
+	insolar.TypeRegisterChild:                      {},
+	insolar.TypeCallMethod:                         {},
+	insolar.TypePendingFinished:                    {},
+	insolar.TypeStillExecuting:                     {},
+	insolar.TypeAbandonedRequestsNotification:      {},
+	insolar.TypeExecutorResults:                    {},
+	insolar.TypeGetDelegate:                        {},
+	insolar.TypeAdditionalCallFromPreviousExecutor: {},
+	insolar.TypeHeavyPayload:                       {},
+	insolar.TypeGetObjectIndex:                     {},
 }
 
 // MessageBus is component that routes application logic requests,
@@ -89,9 +98,6 @@ func (mb *MessageBus) Init(ctx context.Context) error {
 }
 
 func (mb *MessageBus) Acquire(ctx context.Context) {
-	ctx, span := instracer.StartSpan(ctx, "MessageBus.Acquire")
-	defer span.End()
-
 	counter := atomic.AddInt64(&mb.counter, 1)
 	inslogger.FromContext(ctx).Info("Call Acquire in MessageBus: ", counter)
 	if counter == 1 {
@@ -102,9 +108,6 @@ func (mb *MessageBus) Acquire(ctx context.Context) {
 }
 
 func (mb *MessageBus) Release(ctx context.Context) {
-	ctx, span := instracer.StartSpan(ctx, "MessageBus.Release")
-	defer span.End()
-
 	counter := atomic.AddInt64(&mb.counter, -1)
 	if counter < 0 {
 		panic("Trying to unlock without locking")
@@ -219,7 +222,7 @@ func (mb *MessageBus) Send(ctx context.Context, msg insolar.Message, ops *insola
 		res, done := mb.Sender.SendTarget(ctx, wmMsg, nodes[0])
 		repMsg, ok := <-res
 		if !ok {
-			return nil, errors.New("can't get reply: reply channel was closed")
+			return nil, errors.New("can't get reply: timeout while awaiting reply from watermill")
 		}
 		done()
 		return deserializePayload(repMsg)
@@ -236,21 +239,34 @@ func deserializePayload(msg *watermillMsg.Message) (insolar.Reply, error) {
 	meta := payload.Meta{}
 	err := meta.Unmarshal(msg.Payload)
 	if err != nil {
-		return nil, errors.Wrap(err, "can't deserialize meta payload")
-	}
-	if msg.Metadata.Get(bus.MetaType) == bus.TypeError {
-		errReply, err := bus.DeserializeError(bytes.NewBuffer(meta.Payload))
-		if err != nil {
-			return nil, errors.Wrap(err, "can't deserialize payload to error")
-		}
-		return nil, errReply
+		return nil, errors.Wrap(err, "can't deserialize message payload")
 	}
 
-	rep, err := reply.Deserialize(bytes.NewBuffer(meta.Payload))
-	if err != nil {
-		return nil, errors.Wrap(err, "can't deserialize payload to reply")
+	if msg.Metadata.Get(bus.MetaType) == bus.TypeReply {
+		rep, err := reply.Deserialize(bytes.NewBuffer(meta.Payload))
+		if err != nil {
+			return nil, errors.Wrap(err, "can't deserialize payload to reply")
+		}
+		return rep, nil
 	}
-	return rep, nil
+
+	payloadType, err := payload.UnmarshalType(meta.Payload)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal payload type")
+	}
+	if payloadType != payload.TypeError {
+		return nil, errors.Errorf("message bus receive unexpected payload type: %s", payloadType)
+	}
+
+	pl, err := payload.UnmarshalFromMeta(msg.Payload)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal error")
+	}
+	p, ok := pl.(*payload.Error)
+	if !ok {
+		return nil, errors.Errorf("unexpected error type %T", pl)
+	}
+	return nil, errors.New(p.Text)
 }
 
 // CreateParcel creates signed message from provided message.
@@ -269,6 +285,8 @@ func (mb *MessageBus) SendParcel(
 	ctx, span := instracer.StartSpan(ctx, "MessageBus.SendParcel "+parcelType)
 	ctx = insmetrics.InsertTag(ctx, tagMessageType, parcelType)
 	defer span.End()
+
+	inslogger.FromContext(ctx).Debug("About to send message ", parcelType)
 
 	readBarrier(ctx, &mb.globalLock)
 
@@ -344,15 +362,11 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg insolar.Parcel) (insola
 	inslogger.FromContext(ctx).Debug("MessageBus.doDeliver starts ...")
 	handler, ok := mb.handlers[msg.Type()]
 	if !ok {
-		txt := "no handler for received message type"
+		txt := "no handler for received message type: " + msg.Type().String()
 		inslogger.FromContext(ctx).Error(txt)
 		return nil, errors.New(txt)
 	}
 
-	origin := mb.NodeNetwork.GetOrigin()
-	if msg.GetSender().Equal(origin.ID()) {
-		ctx = hack.SetSkipValidation(ctx, true)
-	}
 	// TODO: sergey.morozov 2018-12-21 there is potential race condition because of readBarrier. We must implement correct locking.
 
 	resp, err := handler(ctx, msg)
@@ -388,16 +402,9 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel insolar.Parcel, loc
 		// Parcel is from past. Return error for some messages, allow for others.
 		switch parcel.Message().(type) {
 		case
-			*message.GetObject,
 			*message.GetDelegate,
 			*message.GetChildren,
-			*message.SetRecord,
-			*message.UpdateObject,
 			*message.RegisterChild,
-			*message.SetBlob,
-			*message.GetPendingRequests,
-			*message.ValidateRecord,
-			*message.HotData,
 			*message.CallMethod:
 			inslogger.FromContext(ctx).Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d) Msg: %s", ppn, pulse.PulseNumber, parcel.Message().Type().String())
 			return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)  Msg: %s", ppn, pulse.PulseNumber, parcel.Message().Type().String())
@@ -540,11 +547,8 @@ func (mb *MessageBus) checkParcel(_ context.Context, parcel insolar.Parcel) erro
 }
 
 func readBarrier(ctx context.Context, mutex *sync.RWMutex) {
-	inslogger.FromContext(ctx).Debug("Locking readBarrier")
 	mutex.RLock()
-	inslogger.FromContext(ctx).Debug("readBarrier locked")
 	mutex.RUnlock()
-	inslogger.FromContext(ctx).Debug("readBarrier unlocked")
 }
 
 func init() {

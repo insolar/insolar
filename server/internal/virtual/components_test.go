@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// +build slowtest
 
 package virtual
 
@@ -41,7 +40,7 @@ func TestInitComponents(t *testing.T) {
 		bootstrapComponents.CryptographyService,
 		bootstrapComponents.KeyProcessor,
 	)
-	cm, _ := initComponents(
+	cm, _, stopWatermill := initComponents(
 		ctx,
 		cfg,
 		bootstrapComponents.CryptographyService,
@@ -49,9 +48,9 @@ func TestInitComponents(t *testing.T) {
 		bootstrapComponents.KeyStore,
 		bootstrapComponents.KeyProcessor,
 		cert,
-		false,
 	)
 	require.NotNil(t, cm)
+	require.NotNil(t, stopWatermill)
 
 	err := cm.Init(ctx)
 	require.NoError(t, err)

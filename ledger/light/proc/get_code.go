@@ -18,18 +18,16 @@ package proc
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -41,9 +39,8 @@ type GetCode struct {
 	Dep struct {
 		RecordAccessor object.RecordAccessor
 		Coordinator    jet.Coordinator
-		BlobAccessor   blob.Accessor
 		Sender         bus.Sender
-		JetFetcher     jet.Fetcher
+		JetFetcher     executor.JetFetcher
 	}
 }
 
@@ -58,18 +55,12 @@ func NewGetCode(msg payload.Meta, codeID insolar.ID, pass bool) *GetCode {
 func (p *GetCode) Proceed(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	sendCode := func(rec record.Material) error {
-		virtual := record.Unwrap(rec.Virtual)
-		code, ok := virtual.(*record.Code)
-		if !ok {
-			return fmt.Errorf("invalid code record %#v", virtual)
-		}
 		buf, err := rec.Marshal()
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal record")
 		}
 		msg, err := payload.NewMessage(&payload.Code{
 			Record: buf,
-			Code:   code.Code,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create message")
@@ -92,13 +83,13 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 			return errors.Wrap(err, "failed to create reply")
 		}
 
-		onHeavy, err := p.Dep.Coordinator.IsBeyondLimit(ctx, flow.Pulse(ctx), p.codeID.Pulse())
+		onHeavy, err := p.Dep.Coordinator.IsBeyondLimit(ctx, p.codeID.Pulse())
 		if err != nil {
 			return errors.Wrap(err, "failed to calculate pulse")
 		}
 		var node insolar.Reference
 		if onHeavy {
-			h, err := p.Dep.Coordinator.Heavy(ctx, flow.Pulse(ctx))
+			h, err := p.Dep.Coordinator.Heavy(ctx)
 			if err != nil {
 				return errors.Wrap(err, "failed to calculate heavy")
 			}

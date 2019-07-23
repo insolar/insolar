@@ -144,8 +144,15 @@ func main() {
 			gorundPorts = append(gorundPorts, []string{strconv.Itoa(rpcListenPort - 1), strconv.Itoa(rpcListenPort)})
 		}
 
+		if node.Role == "light_material" {
+			conf.Ledger.JetSplit.ThresholdRecordsCount = 1
+			conf.Ledger.JetSplit.ThresholdOverflowCount = 0
+			conf.Ledger.JetSplit.DepthLimit = 4
+		}
+
 		conf.APIRunner.Address = fmt.Sprintf(defaultHost+":191%02d", nodeIndex)
 		conf.Metrics.ListenAddress = fmt.Sprintf(defaultHost+":80%02d", nodeIndex)
+		conf.Introspection.Addr = fmt.Sprintf(defaultHost+":555%02d", nodeIndex)
 
 		conf.Tracer.Jaeger.AgentEndpoint = defaultJaegerEndPoint
 		conf.Log.Level = debugLevel
@@ -186,6 +193,7 @@ func main() {
 
 		conf.APIRunner.Address = fmt.Sprintf(defaultHost+":191%02d", nodeIndex+len(bootstrapConf.DiscoveryNodes))
 		conf.Metrics.ListenAddress = fmt.Sprintf(defaultHost+":80%02d", nodeIndex+len(bootstrapConf.DiscoveryNodes))
+		conf.Introspection.Addr = fmt.Sprintf(defaultHost+":555%02d", nodeIndex+len(bootstrapConf.DiscoveryNodes))
 
 		conf.Tracer.Jaeger.AgentEndpoint = defaultJaegerEndPoint
 		conf.Log.Level = debugLevel

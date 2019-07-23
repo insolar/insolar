@@ -69,7 +69,7 @@ func NewPacketHandler(futureManager Manager) PacketHandler {
 	}
 }
 
-func (ph *packetHandler) Handle(ctx context.Context, response *packet.Packet) {
+func (ph *packetHandler) Handle(ctx context.Context, response *packet.ReceivedPacket) {
 	metrics.NetworkPacketReceivedTotal.WithLabelValues(response.GetType().String()).Inc()
 	if !response.IsResponse() {
 		return
@@ -82,7 +82,7 @@ func (ph *packetHandler) Handle(ctx context.Context, response *packet.Packet) {
 	logger.Debugf("[ processResponse ] Processing %s response from host %s; RequestID = %d",
 		response.GetType(), response.Sender, response.RequestID)
 
-	future := ph.futureManager.Get(response)
+	future := ph.futureManager.Get(response.Packet)
 	if future != nil {
 		if shouldProcessPacket(future, response) {
 			logger.Debugf("[ processResponse ] Processing future RequestID = %d", future.ID())
@@ -94,7 +94,7 @@ func (ph *packetHandler) Handle(ctx context.Context, response *packet.Packet) {
 	}
 }
 
-func shouldProcessPacket(future Future, p *packet.Packet) bool {
+func shouldProcessPacket(future Future, p *packet.ReceivedPacket) bool {
 	typesShouldBeEqual := p.GetType() == future.Request().GetType()
 	responseIsForRightSender := future.Receiver().Equal(*p.Sender)
 

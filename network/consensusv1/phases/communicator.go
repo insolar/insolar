@@ -589,7 +589,7 @@ func (nc *ConsensusCommunicator) phase1DataHandler(packet packets.ConsensusPacke
 	}
 
 	if nc.setPulseNumber(newPulse.PulseNumber) {
-		go nc.PulseHandler.HandlePulse(context.Background(), newPulse)
+		go nc.PulseHandler.HandlePulse(context.Background(), newPulse, nil)
 	}
 
 	nc.phase1result <- phase1Result{id: sender, packet: p}

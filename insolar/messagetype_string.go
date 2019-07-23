@@ -16,31 +16,19 @@ func _() {
 	_ = x[TypePendingFinished-5]
 	_ = x[TypeAdditionalCallFromPreviousExecutor-6]
 	_ = x[TypeStillExecuting-7]
-	_ = x[TypeGetCode-8]
-	_ = x[TypeGetObject-9]
-	_ = x[TypeGetDelegate-10]
-	_ = x[TypeGetChildren-11]
-	_ = x[TypeUpdateObject-12]
-	_ = x[TypeRegisterChild-13]
-	_ = x[TypeSetRecord-14]
-	_ = x[TypeValidateRecord-15]
-	_ = x[TypeSetBlob-16]
-	_ = x[TypeGetObjectIndex-17]
-	_ = x[TypeGetPendingRequests-18]
-	_ = x[TypeHotRecords-19]
-	_ = x[TypeGetJet-20]
-	_ = x[TypeAbandonedRequestsNotification-21]
-	_ = x[TypeGetRequest-22]
-	_ = x[TypeGetPendingRequestID-23]
-	_ = x[TypeGetPendingFilament-24]
-	_ = x[TypeHeavyStartStop-25]
-	_ = x[TypeHeavyPayload-26]
-	_ = x[TypeGenesisRequest-27]
+	_ = x[TypeGetDelegate-8]
+	_ = x[TypeGetChildren-9]
+	_ = x[TypeRegisterChild-10]
+	_ = x[TypeGetObjectIndex-11]
+	_ = x[TypeAbandonedRequestsNotification-12]
+	_ = x[TypeHeavyStartStop-13]
+	_ = x[TypeHeavyPayload-14]
+	_ = x[TypeGenesisRequest-15]
 }
 
-const _MessageType_name = "TypeCallMethodTypeReturnResultsTypeExecutorResultsTypeValidateCaseBindTypeValidationResultsTypePendingFinishedTypeAdditionalCallFromPreviousExecutorTypeStillExecutingTypeGetCodeTypeGetObjectTypeGetDelegateTypeGetChildrenTypeUpdateObjectTypeRegisterChildTypeSetRecordTypeValidateRecordTypeSetBlobTypeGetObjectIndexTypeGetPendingRequestsTypeHotRecordsTypeGetJetTypeAbandonedRequestsNotificationTypeGetRequestTypeGetPendingRequestIDTypeGetPendingFilamentTypeHeavyStartStopTypeHeavyPayloadTypeGenesisRequest"
+const _MessageType_name = "TypeCallMethodTypeReturnResultsTypeExecutorResultsTypeValidateCaseBindTypeValidationResultsTypePendingFinishedTypeAdditionalCallFromPreviousExecutorTypeStillExecutingTypeGetDelegateTypeGetChildrenTypeRegisterChildTypeGetObjectIndexTypeAbandonedRequestsNotificationTypeHeavyStartStopTypeHeavyPayloadTypeGenesisRequest"
 
-var _MessageType_index = [...]uint16{0, 14, 31, 50, 70, 91, 110, 148, 166, 177, 190, 205, 220, 236, 253, 266, 284, 295, 313, 335, 349, 359, 392, 406, 429, 451, 469, 485, 503}
+var _MessageType_index = [...]uint16{0, 14, 31, 50, 70, 91, 110, 148, 166, 181, 196, 213, 231, 264, 282, 298, 316}
 
 func (i MessageType) String() string {
 	if i >= MessageType(len(_MessageType_index)-1) {

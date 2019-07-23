@@ -38,9 +38,9 @@ func Test_IDLockTheSame(t *testing.T) {
 	wg.Add(numParallelAccessors)
 	for i := 0; i < numParallelAccessors; i++ {
 		go func() {
-			tl.Lock("", &id)
+			tl.Lock("", id)
 			counter++
-			tl.Unlock("", &id)
+			tl.Unlock("", id)
 			wg.Done()
 		}()
 	}
@@ -49,10 +49,32 @@ func Test_IDLockTheSame(t *testing.T) {
 	require.Equal(t, numParallelAccessors, counter)
 }
 
+func TestIdLocker_Lock_PulseDoesntMatter(t *testing.T) {
+	tl := newtestlocker()
+	id1 := *insolar.NewID(0, []byte{0x0A})
+	id2 := *insolar.NewID(1, []byte{0x0A})
+	end := make(chan bool)
+	go func() {
+		tl.Lock("lock1", id1)
+		tl.Unlock("unlock1", id2)
+		close(end)
+	}()
+	select {
+	case <-end:
+	case <-time.After(5 * time.Second):
+		// Different record.ID should not lock each other.
+		// 5s should be enough for any slow test environment.
+		t.Fatalf(
+			"Probably got deadlock (id1=%v, id2=%v).",
+			id1.String(), id2.String(),
+		)
+	}
+}
+
 func Test_IDLockDifferent(t *testing.T) {
 	tl := newtestlocker()
-	id1 := insolar.NewID(0, []byte{0x0A})
-	id2 := insolar.NewID(1, []byte{0x0A})
+	id1 := *insolar.NewID(0, []byte{0x0A})
+	id2 := *insolar.NewID(0, []byte{0x0B})
 	end := make(chan bool)
 	go func() {
 		tl.Lock("lock1", id1)
@@ -89,13 +111,13 @@ type synclist struct {
 }
 
 type testlock struct {
-	lock     IDLocker
+	lock     IndexLocker
 	synclist *synclist
 }
 
 func newtestlocker() *testlock {
 	return &testlock{
-		lock:     NewIDLocker(),
+		lock:     NewIndexLocker(),
 		synclist: &synclist{list: []string{}},
 	}
 }
@@ -114,12 +136,12 @@ func (l *synclist) String() string {
 	return strings.Join(s, "\n")
 }
 
-func (tl *testlock) Lock(name string, id *insolar.ID) {
+func (tl *testlock) Lock(name string, id insolar.ID) {
 	tl.synclist.Add("before-" + name)
 	tl.lock.Lock(id)
 }
 
-func (tl *testlock) Unlock(name string, id *insolar.ID) {
+func (tl *testlock) Unlock(name string, id insolar.ID) {
 	tl.synclist.Add("before-" + name)
 	tl.lock.Unlock(id)
 }

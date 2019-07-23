@@ -50,13 +50,14 @@
 
 package core
 
+// TODO pulse projections to fight possible fakes?
 type PulseProjection struct {
-	//mutex sync.Mutex
-	//id    int
+	// mutex sync.Mutex
+	// id    int
 	//
-	//// countFromPulsars	high32
-	//// countFromNodes	low32
-	//// counters       uint64 // atomic
-	//pulseData      common.PulseData
-	//originalPacket common2.OriginalPulsarPacket
+	// // countFromPulsars	high32
+	// // countFromNodes	low32
+	// // counters       uint64 // atomic
+	// pulseData      common.PulseData
+	// originalPacket common2.OriginalPulsarPacket
 }

@@ -54,17 +54,16 @@ import (
 	"context"
 	"time"
 
-	"github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 )
 
 const defaultNshGenerationDelay = time.Millisecond * 0
 
-var RoundTimingsFor1s = common2.RoundTimings{
+var RoundTimingsFor1s = api.RoundTimings{
 	StartPhase0At: 100 * time.Millisecond, // Not scaled
 
-	StartPhase1RetryAt: 200 * time.Millisecond, // 0 for no retries
+	StartPhase1RetryAt: 00 * time.Millisecond, // 0 for no retries
 	EndOfPhase1:        250 * time.Millisecond,
 	EndOfPhase2:        400 * time.Millisecond,
 	EndOfPhase3:        500 * time.Millisecond,
@@ -73,13 +72,13 @@ var RoundTimingsFor1s = common2.RoundTimings{
 	BeforeInPhase3ChasingDelay: 0 * time.Millisecond,
 }
 
-func NewEmuLocalConfig(ctx context.Context) core.LocalNodeConfiguration {
+func NewEmuLocalConfig(ctx context.Context) api.LocalNodeConfiguration {
 	r := emuLocalConfig{timings: RoundTimingsFor1s, ctx: ctx}
 	return &r
 }
 
 type emuLocalConfig struct {
-	timings common2.RoundTimings
+	timings api.RoundTimings
 	ctx     context.Context
 }
 
@@ -90,14 +89,14 @@ func (r *emuLocalConfig) GetParentContext() context.Context {
 func (r *emuLocalConfig) PublicKeyStore() {
 }
 
-func (r *emuLocalConfig) AsPublicKeyStore() common.PublicKeyStore {
+func (r *emuLocalConfig) AsPublicKeyStore() cryptkit.PublicKeyStore {
 	return r
 }
 
 func (r *emuLocalConfig) PrivateKeyStore() {
 }
 
-func (r *emuLocalConfig) GetConsensusTimings(nextPulseDelta uint16, isJoiner bool) common2.RoundTimings {
+func (r *emuLocalConfig) GetConsensusTimings(nextPulseDelta uint16, isJoiner bool) api.RoundTimings {
 	if nextPulseDelta == 1 {
 		return r.timings
 	}
@@ -115,6 +114,6 @@ func (r *emuLocalConfig) GetConsensusTimings(nextPulseDelta uint16, isJoiner boo
 	return t
 }
 
-func (r *emuLocalConfig) GetSecretKeyStore() common.SecretKeyStore {
+func (r *emuLocalConfig) GetSecretKeyStore() cryptkit.SecretKeyStore {
 	return r
 }

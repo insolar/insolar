@@ -146,7 +146,7 @@ func (cert *Certificate) SerializeNetworkPart() []byte {
 
 // SignNetworkPart signs network part in certificate
 func (cert *Certificate) SignNetworkPart(key crypto.PrivateKey) ([]byte, error) {
-	signer := scheme.Signer(key)
+	signer := scheme.DataSigner(key, scheme.IntegrityHasher())
 	sign, err := signer.Sign(cert.SerializeNetworkPart())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SignNetworkPart ] Can't Sign")

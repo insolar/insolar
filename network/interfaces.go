@@ -71,7 +71,7 @@ type BootstrapResult struct {
 }
 
 // RequestHandler handler function to process incoming requests from network and return responses to these requests.
-type RequestHandler func(ctx context.Context, request Packet) (response Packet, err error)
+type RequestHandler func(ctx context.Context, request ReceivedPacket) (response Packet, err error)
 
 //go:generate minimock -i github.com/insolar/insolar/network.HostNetwork -o ../testutils/network -s _mock.go
 
@@ -126,18 +126,24 @@ type Packet interface {
 	String() string
 }
 
+type ReceivedPacket interface {
+	Packet
+	Bytes() []byte
+}
+
 // Future allows to handle responses to a previously sent request.
 type Future interface {
 	Request() Packet
-	Response() <-chan Packet
-	WaitResponse(duration time.Duration) (Packet, error)
+	Response() <-chan ReceivedPacket
+	WaitResponse(duration time.Duration) (ReceivedPacket, error)
+	Cancel()
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network.PulseHandler -o ../testutils/network -s _mock.go
 
 // PulseHandler interface to process new pulse.
 type PulseHandler interface {
-	HandlePulse(ctx context.Context, pulse insolar.Pulse)
+	HandlePulse(ctx context.Context, pulse insolar.Pulse, originalPacket ReceivedPacket)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network.NodeKeeper -o ../testutils/network -s _mock.go
@@ -247,6 +253,8 @@ type Accessor interface {
 	GetActiveNodes() []insolar.NetworkNode
 	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.
 	GetActiveNodeByShortID(shortID insolar.ShortNodeID) insolar.NetworkNode
+	// GetActiveNodeByAddr get active node by addr. Returns nil if node is not found.
+	GetActiveNodeByAddr(address string) insolar.NetworkNode
 }
 
 // Mutator is interface that provides read and write access to a snapshot

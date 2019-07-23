@@ -14,11 +14,14 @@
 // limitations under the License.
 //
 
-package proc
+package proc_test
 
 import (
+	"context"
 	"testing"
 
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
@@ -26,72 +29,12 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/hot"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
+	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func TestSetRequest_ProceedErrTooManyPendings(t *testing.T) {
-	t.Parallel()
-
-	ctx := flow.TestContextWithPulse(
-		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
-	)
-
-	writeAccessor := hot.NewWriteAccessorMock(t)
-	writeAccessor.BeginMock.Return(func() {}, nil)
-
-	sender := bus.NewSenderMock(t)
-	sender.ReplyMock.Return()
-
-	records := object.NewRecordModifierMock(t)
-	records.SetMock.Return(nil)
-
-	pending := recentstorage.NewPendingStorageMock(t)
-	pending.AddPendingRequestMock.Return()
-	provider := recentstorage.NewProviderMock(t)
-	provider.GetPendingStorageMock.Return(pending)
-	provider.CountMock.Return(recentstorage.PendingRequestsLimit + 1)
-
-	ref := gen.Reference()
-	jetID := gen.JetID()
-	id := gen.ID()
-
-	virtual := record.Virtual{
-		Union: &record.Virtual_Request{
-			Request: &record.Request{
-				Object:   &ref,
-				CallType: record.CTMethod,
-			},
-		},
-	}
-	virtualBuf, err := virtual.Marshal()
-	require.NoError(t, err)
-
-	request := payload.SetRequest{
-		Request: virtualBuf,
-	}
-	requestBuf, err := request.Marshal()
-	require.NoError(t, err)
-
-	msg := payload.Meta{
-		Payload: requestBuf,
-	}
-
-	// Pendings limit reached.
-	setRequestProc := NewSetRequest(msg, virtual, id, jetID)
-	setRequestProc.dep.writer = writeAccessor
-	setRequestProc.dep.sender = sender
-	setRequestProc.dep.recentStorage = provider
-	setRequestProc.dep.records = records
-
-	err = setRequestProc.Proceed(ctx)
-	require.Error(t, err)
-	assert.Equal(t, insolar.ErrTooManyPendingRequests, err)
-}
 
 func TestSetRequest_Proceed(t *testing.T) {
 	t.Parallel()
@@ -100,54 +43,152 @@ func TestSetRequest_Proceed(t *testing.T) {
 		inslogger.TestContext(t),
 		insolar.GenesisPulse.PulseNumber+10,
 	)
+	mc := minimock.NewController(t)
 
-	writeAccessor := hot.NewWriteAccessorMock(t)
-	writeAccessor.BeginMock.Return(func() {}, nil)
+	var (
+		writeAccessor *hot.WriteAccessorMock
+		sender        *bus.SenderMock
+		filaments     *executor.FilamentModifierMock
+		idxStorage    *object.IndexStorageMock
+	)
 
-	sender := bus.NewSenderMock(t)
-	sender.ReplyMock.Return()
-
-	records := object.NewRecordModifierMock(t)
-	records.SetMock.Return(nil)
-
-	pending := recentstorage.NewPendingStorageMock(t)
-	pending.AddPendingRequestMock.Return()
-	provider := recentstorage.NewProviderMock(t)
-	provider.GetPendingStorageMock.Return(pending)
-	provider.CountMock.Return(recentstorage.PendingRequestsLimit - 1)
+	resetComponents := func() {
+		writeAccessor = hot.NewWriteAccessorMock(mc)
+		sender = bus.NewSenderMock(mc)
+		filaments = executor.NewFilamentModifierMock(t)
+		idxStorage = object.NewIndexStorageMock(t)
+	}
 
 	ref := gen.Reference()
 	jetID := gen.JetID()
 	id := gen.ID()
 
+	request := record.IncomingRequest{
+		Object:   &ref,
+		CallType: record.CTMethod,
+	}
 	virtual := record.Virtual{
-		Union: &record.Virtual_Request{
-			Request: &record.Request{
-				Object:   &ref,
-				CallType: record.CTMethod,
-			},
+		Union: &record.Virtual_IncomingRequest{
+			IncomingRequest: &request,
 		},
 	}
-	virtualBuf, err := virtual.Marshal()
-	require.NoError(t, err)
 
-	request := payload.SetRequest{
-		Request: virtualBuf,
+	pl := payload.SetIncomingRequest{
+		Request: virtual,
 	}
-	requestBuf, err := request.Marshal()
+	requestBuf, err := pl.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
 		Payload: requestBuf,
 	}
 
-	// Pendings limit not reached.
-	setRequestProc := NewSetRequest(msg, virtual, id, jetID)
-	setRequestProc.dep.writer = writeAccessor
-	setRequestProc.dep.sender = sender
-	setRequestProc.dep.recentStorage = provider
-	setRequestProc.dep.records = records
+	resetComponents()
+	t.Run("happy basic", func(t *testing.T) {
+		idxStorage.ForIDMock.Return(record.Index{
+			Lifeline: record.Lifeline{
+				StateID: record.StateActivation,
+			},
+		}, nil)
 
-	err = setRequestProc.Proceed(ctx)
+		writeAccessor.BeginMock.Return(func() {}, nil)
+		sender.ReplyMock.Return()
+		filaments.SetRequestMock.Return(nil, nil, nil)
+
+		p := proc.NewSetRequest(msg, &request, id, jetID)
+		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker(), idxStorage)
+
+		err = p.Proceed(ctx)
+		require.NoError(t, err)
+
+		mc.Finish()
+	})
+
+	resetComponents()
+	t.Run("duplicate returns correct id", func(t *testing.T) {
+		idxStorage.ForIDMock.Return(record.Index{
+			Lifeline: record.Lifeline{
+				StateID: record.StateActivation,
+			},
+		}, nil)
+
+		writeAccessor.BeginMock.Return(func() {}, nil)
+		reqID := gen.ID()
+		resID := gen.ID()
+		filaments.SetRequestMock.Return(
+			&record.CompositeFilamentRecord{RecordID: reqID},
+			&record.CompositeFilamentRecord{RecordID: resID},
+			nil,
+		)
+
+		sender.ReplyFunc = func(_ context.Context, meta payload.Meta, msg *message.Message) {
+			pl, err := payload.Unmarshal(msg.Payload)
+			require.NoError(t, err)
+			rep, ok := pl.(*payload.RequestInfo)
+			require.True(t, ok)
+			require.Equal(t, reqID, rep.RequestID)
+		}
+
+		p := proc.NewSetRequest(msg, &request, id, jetID)
+		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker(), idxStorage)
+
+		err = p.Proceed(ctx)
+		require.NoError(t, err)
+
+		mc.Finish()
+	})
+}
+
+func TestDeactivateObject_ObjectIsDeactivated(t *testing.T) {
+	t.Parallel()
+
+	ctx := flow.TestContextWithPulse(
+		inslogger.TestContext(t),
+		insolar.GenesisPulse.PulseNumber+10,
+	)
+
+	writeAccessor := hot.NewWriteAccessorMock(t)
+	writeAccessor.BeginMock.Return(func() {}, nil)
+
+	idxLockMock := object.NewIndexLockerMock(t)
+	idxLockMock.LockMock.Return()
+	idxLockMock.UnlockMock.Return()
+
+	idxStorageMock := object.NewIndexStorageMock(t)
+	idxStorageMock.ForIDMock.Return(record.Index{
+		Lifeline: record.Lifeline{
+			StateID: record.StateDeactivation,
+		},
+	}, nil)
+	idxStorageMock.SetIndexMock.Return(nil)
+
+	sender := bus.NewSenderMock(t)
+	sender.ReplyFunc = func(_ context.Context, _ payload.Meta, inMsg *message.Message) {
+		resp, err := payload.Unmarshal(inMsg.Payload)
+		require.NoError(t, err)
+
+		res, ok := resp.(*payload.Error)
+		require.True(t, ok)
+		require.Equal(t, payload.CodeDeactivated, int(res.Code))
+	}
+
+	p := proc.NewDeactivateObject(
+		payload.Meta{},
+		record.Deactivate{},
+		gen.ID(),
+		record.Result{},
+		gen.ID(),
+		gen.JetID(),
+	)
+	p.Dep(
+		writeAccessor,
+		idxLockMock,
+		nil,
+		idxStorageMock,
+		nil,
+		sender,
+	)
+
+	err := p.Proceed(ctx)
 	require.NoError(t, err)
 }

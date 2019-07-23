@@ -20,27 +20,33 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
+	"github.com/pkg/errors"
 )
 
 type GetJet struct {
-	dep     *proc.Dependencies
-	msg     *message.GetJet
-	replyTo chan<- bus.Reply
+	dep    *proc.Dependencies
+	meta   payload.Meta
+	passed bool
 }
 
-func NewGetJet(dep *proc.Dependencies, rep chan<- bus.Reply, msg *message.GetJet) *GetJet {
+func NewGetJet(dep *proc.Dependencies, meta payload.Meta, passed bool) *GetJet {
 	return &GetJet{
-		dep:     dep,
-		msg:     msg,
-		replyTo: rep,
+		dep:    dep,
+		meta:   meta,
+		passed: passed,
 	}
 }
 
-func (s *GetJet) Present(ctx context.Context, f flow.Flow) error {
-	getJet := proc.NewGetJet(s.msg, s.replyTo)
-	s.dep.GetJet(getJet)
+func (h *GetJet) Present(ctx context.Context, f flow.Flow) error {
+	msg := payload.GetJet{}
+	err := msg.Unmarshal(h.meta.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal GetJet message")
+	}
+
+	getJet := proc.NewGetJet(h.meta, msg.ObjectID, msg.PulseNumber)
+	h.dep.GetJet(getJet)
 	return f.Procedure(ctx, getJet, false)
 }

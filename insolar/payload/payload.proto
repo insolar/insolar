@@ -3,16 +3,17 @@ syntax = "proto3";
 package payload;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "github.com/insolar/insolar/insolar/record/record.proto";
 
 
 message Meta {
     uint32 Polymorph = 16;
 
-    bytes Payload    = 20;
-    bytes Sender     = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    bytes Receiver   = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    bytes Pulse      = 23 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
-    bytes ID         = 24;
+    bytes Payload = 20;
+    bytes Sender = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes Receiver = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes Pulse = 23 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    bytes ID = 24;
     bytes OriginHash = 25 [(gogoproto.customtype) = "MessageHash", (gogoproto.nullable) = false];
 }
 
@@ -26,34 +27,33 @@ message Error {
 message GetObject {
     uint32 Polymorph = 16;
 
-    bytes ObjectID        = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
     bytes ObjectRequestID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
 }
 
 message GetCode {
     uint32 Polymorph = 16;
 
-    bytes CodeID     = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes CodeID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
 }
 
 message PassState {
     uint32 Polymorph = 16;
 
-    bytes Origin   = 20;
-    bytes StateID  = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes Origin = 20;
+    bytes StateID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
 }
 
 message Pass {
     uint32 Polymorph = 16;
 
-    bytes Origin   = 20;
+    bytes Origin = 20;
 }
 
 message SetCode {
     uint32 Polymorph = 16;
 
     bytes Record = 20;
-    bytes Code   = 21;
 }
 
 message Index {
@@ -65,15 +65,14 @@ message Index {
 message Code {
     uint32 Polymorph = 16;
 
-    bytes Record   = 20;
-    bytes Code     = 21;
+    bytes Record = 20;
 }
 
 message State {
     uint32 Polymorph = 16;
 
-    bytes Record   = 20;
-    bytes Memory   = 21;
+    bytes Record = 20;
+    bytes Memory = 21;
 }
 
 message ID {
@@ -82,15 +81,222 @@ message ID {
     bytes ID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
 }
 
+message IDs {
+    uint32 Polymorph = 16;
+
+    repeated bytes IDs = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+}
+
 message Jet {
     uint32 Polymorph = 16;
 
     bytes JetID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
-    bytes Pulse = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    bool Actual = 21;
 }
 
-message SetRequest {
+message SetIncomingRequest {
     uint32 Polymorph = 16;
 
-    bytes Request = 20;
+    record.Virtual Request = 20 [(gogoproto.nullable) = false];
+}
+
+message SetOutgoingRequest {
+    uint32 Polymorph = 16;
+
+    record.Virtual Request = 20 [(gogoproto.nullable) = false];
+}
+
+// SagaCallAcceptNotification informs virtual node that it's time to call saga Accept method.
+message SagaCallAcceptNotification {
+    uint32 Polymorph = 16;
+
+    bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+
+    // OutgoingReqID contains the id of registered outgoing request.
+    // VE needs it to register the result of the outgoing request.
+    bytes OutgoingReqID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+
+    // Request contains original OutgoingRequest registered by VE
+    bytes Request = 22;
+}
+
+message SetResult {
+    uint32 Polymorph = 16;
+
+    bytes Result = 20;
+}
+
+message Activate {
+    uint32 Polymorph = 16;
+
+    bytes Record = 20;
+    bytes Result = 21;
+}
+
+message Deactivate {
+    uint32 Polymorph = 16;
+
+    bytes Record = 20;
+    bytes Result = 21;
+}
+
+message Update {
+    uint32 Polymorph = 16;
+
+    bytes Record = 20;
+    bytes Result = 21;
+}
+
+message GetFilament {
+    uint32 Polymorph = 16;
+
+    bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes StartFrom = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes ReadUntil = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+}
+
+message FilamentSegment {
+    uint32 Polymorph = 16;
+
+    bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    repeated record.CompositeFilamentRecord Records = 21 [(gogoproto.nullable) = false];
+}
+
+message RequestInfo {
+    uint32 Polymorph = 16;
+
+    bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes RequestID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes Request = 22;
+    bytes Result = 23;
+}
+
+message ResultInfo {
+    uint32 Polymorph = 16;
+
+    bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes ResultID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes Result = 22;
+}
+
+message HotObjects {
+    uint32 Polymorph = 16;
+
+    bytes JetID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
+    bytes Pulse = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    bytes Drop = 21;
+    repeated record.Index Indexes = 23 [(gogoproto.nullable) = false];
+}
+
+
+message GetRequest {
+    uint32 Polymorph = 16;
+
+    bytes RequestID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+}
+
+message Request {
+    uint32 Polymorph = 16;
+
+    bytes RequestID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    record.Virtual Request = 21 [(gogoproto.nullable) = false];
+}
+
+message ServiceData {
+    uint32 Polymorph = 16;
+
+    string LogTraceID = 20;
+    uint32 LogLevel = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.LogLevel", (gogoproto.nullable) = false];
+    bytes TraceSpanData = 22;
+}
+
+message ExecutionQueueElement {
+    uint32 Polymorph = 16;
+
+    bytes RequestRef = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    record.IncomingRequest Incoming = 21;
+    ServiceData ServiceData = 22;
+}
+
+message ReturnResults {
+    uint32 Polymorph = 16;
+
+    bytes Target = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes RequestRef = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes Reply = 22;
+    string Error = 23;
+}
+
+message CallMethod {
+    uint32 Polymorph = 16;
+
+    record.IncomingRequest Request = 20;
+    uint32 PulseNumber = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+}
+
+message ExecutorResults {
+    uint32 Polymorph = 16;
+
+    bytes Caller = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes RecordRef = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    repeated ExecutionQueueElement Queue = 22;
+    bool LedgerHasMoreRequests = 23;
+    int32 Pending = 24 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PendingState", (gogoproto.nullable) = false];
+}
+
+message PendingFinished {
+    uint32 Polymorph = 16;
+
+    bytes ObjectRef = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+}
+
+message AdditionalCallFromPreviousExecutor {
+    uint32 Polymorph = 16;
+
+    bytes ObjectReference = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    int32 Pending = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PendingState", (gogoproto.nullable) = false];
+    bytes RequestRef = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    record.IncomingRequest Request = 23;
+    ServiceData ServiceData = 24;
+}
+
+message StillExecuting {
+    uint32 Polymorph = 16;
+
+    bytes ObjectRef = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+}
+
+message GetPendings {
+    uint32 Polymorph = 16;
+
+    bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+}
+
+message HasPendings {
+    uint32 Polymorph = 16;
+
+    bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+}
+
+message PendingsInfo {
+    uint32 Polymorph = 16;
+
+    bool HasPendings = 20;
+}
+
+message Replication {
+    uint32 Polymorph = 16;
+
+    bytes JetID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
+    bytes Pulse = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    repeated record.Index Indexes = 22 [(gogoproto.nullable) = false];
+    repeated record.Material Records = 23 [(gogoproto.nullable) = false];
+    bytes Drop = 24;
+}
+
+message GetJet {
+    uint32 Polymorph = 16;
+
+    bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    uint32 PulseNumber = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
 }

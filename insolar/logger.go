@@ -37,6 +37,10 @@ const (
 	PanicLevel
 )
 
+func (l LogLevel) Equal(other LogLevel) bool {
+	return l == other
+}
+
 func (l LogLevel) String() string {
 	switch l {
 	case NoLevel:
@@ -80,25 +84,25 @@ func ParseLevel(levelStr string) (LogLevel, error) {
 type LogFormat uint8
 
 const (
-	Text LogFormat = iota
-	JSON
+	TextFormat LogFormat = iota
+	JSONFormat
 )
 
 func ParseFormat(formatStr string) (LogFormat, error) {
 	switch strings.ToLower(formatStr) {
-	case Text.String():
-		return Text, nil
-	case JSON.String():
-		return JSON, nil
+	case TextFormat.String():
+		return TextFormat, nil
+	case JSONFormat.String():
+		return JSONFormat, nil
 	}
-	return Text, fmt.Errorf("unknown Format String: '%s', defaulting to Text", formatStr)
+	return TextFormat, fmt.Errorf("unknown Format String: '%s', defaulting to TextFormat", formatStr)
 }
 
 func (l LogFormat) String() string {
 	switch l {
-	case Text:
+	case TextFormat:
 		return "text"
-	case JSON:
+	case JSONFormat:
 		return "json"
 	}
 	return string(l)
@@ -156,4 +160,7 @@ type Logger interface {
 	WithFields(map[string]interface{}) Logger
 	// WithField return copy of Logger with predefined single field.
 	WithField(string, interface{}) Logger
+
+	// Is returns if passed log level equal current log level
+	Is(level LogLevel) bool
 }

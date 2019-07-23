@@ -58,14 +58,16 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
-
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/errors"
-
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-
-	"github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
 
 // hides embedded pointer from external access
@@ -78,21 +80,21 @@ type hLocker interface {
 type coreRealm struct {
 	/* Provided externally at construction. Don't need mutex */
 	hLocker
+
 	roundContext  context.Context
 	strategy      RoundStrategy
-	config        LocalNodeConfiguration
-	chronicle     census.ConsensusChronicles
-	initialCensus census.OperationalCensus
-	errorFactory  errors.MisbehaviorFactories
+	config        api.LocalNodeConfiguration
+	initialCensus census.Operational
 
 	/* Derived from the ones provided externally - set at init() or start(). Don't need mutex */
-	signer          common.DigestSigner
-	digest          common.DigestFactory
-	packetBuilder   PacketBuilder
-	packetSender    PacketSender
-	verifierFactory common.SignatureVerifierFactory
-	upstream        UpstreamPulseController
+	signer          cryptkit.DigestSigner
+	digest          transport.ConsensusDigestFactory
+	verifierFactory transport.CryptographyFactory
+	upstream        api.UpstreamController
 	roundStartedAt  time.Time
+
+	expectedPopulationSize uint16
+	nbhSizes               transport.NeighbourhoodSizes
 
 	self *NodeAppearance /* Special case - this field is set twice, by start() of PrepRealm and FullRealm */
 
@@ -100,64 +102,73 @@ type coreRealm struct {
 		Other fields - need mutex during PrepRealm, unless accessed by start() of PrepRealm
 		FullRealm doesnt need a lock to read them
 	*/
-	pulseData     common.PulseData
-	originalPulse common2.OriginalPulsarPacket
+	pulseData     pulse.Data
+	originalPulse proofs.OriginalPulsarPacket
 }
 
-func newCoreRealm(hLocker hLocker) coreRealm {
-	return coreRealm{hLocker: hLocker}
+func (r *coreRealm) init(hLocker hLocker, strategy RoundStrategy, transport transport.Factory,
+	config api.LocalNodeConfiguration, initialCensus census.Operational) {
+
+	r.hLocker = hLocker
+
+	r.strategy = strategy
+	r.config = config
+	r.initialCensus = initialCensus
+
+	r.verifierFactory = transport.GetCryptographyFactory()
+	r.digest = r.verifierFactory.GetDigestFactory()
+
+	sks := config.GetSecretKeyStore()
+	r.signer = r.verifierFactory.GetNodeSigner(sks)
 }
 
-func (r *coreRealm) Log() insolar.Logger {
-	return inslogger.FromContext(r.roundContext)
-}
+func (r *coreRealm) initPopulation(powerRequest power.Request, nbhSizes transport.NeighbourhoodSizes) {
 
-func (r *coreRealm) GetVerifierFactory() common.SignatureVerifierFactory {
-	return r.verifierFactory
-}
+	r.nbhSizes = nbhSizes
+	population := r.initialCensus.GetOnlinePopulation()
 
-func (r *coreRealm) GetPacketSender() PacketSender {
-	return r.packetSender
-}
+	/*
+		Here we initialize self like for PrepRealm. This is not perfect, but it enables access to Self earlier.
+	*/
+	nodeContext := &nodeContext{}
+	profile := population.GetLocalProfile()
 
-func (r *coreRealm) GetPacketBuilder() PacketBuilder {
-	return r.packetBuilder
-}
+	if profile.GetOpMode().IsEvicted() {
+		/*
+			Previous round has provided an incorrect population, as eviction of local node must force one-node population of self
+		*/
+		panic("illegal state")
+	}
 
-func (r *coreRealm) GetDigestFactory() common.DigestFactory {
-	return r.digest
-}
+	r.self = NewNodeAppearanceAsSelf(profile, nodeContext)
+	r.self.requestedPower = profile.GetStatic().GetIntroduction().ConvertPowerRequest(powerRequest)
 
-func (r *coreRealm) GetSigner() common.DigestSigner {
-	return r.signer
+	nodeContext.initPrep(r.verifierFactory,
+		func(report misbehavior.Report) interface{} {
+			r.initialCensus.GetMisbehaviorRegistry().AddReport(report)
+			return nil
+		})
+
+	r.expectedPopulationSize = uint16(population.GetCount())
 }
 
 func (r *coreRealm) GetStrategy() RoundStrategy {
 	return r.strategy
 }
 
-func (r *coreRealm) GetRandomUint32() uint32 {
-	return r.strategy.RandUint32()
+func (r *coreRealm) GetVerifierFactory() cryptkit.SignatureVerifierFactory {
+	return r.verifierFactory
 }
 
-func (r *coreRealm) GetMisbehaviorFactories() errors.MisbehaviorFactories {
-	return r.errorFactory
+func (r *coreRealm) GetDigestFactory() transport.ConsensusDigestFactory {
+	return r.digest
 }
 
-func (r *coreRealm) Frauds() errors.FraudFactory {
-	return r.errorFactory.GetFraudFactory()
+func (r *coreRealm) GetSigner() cryptkit.DigestSigner {
+	return r.signer
 }
 
-func (r *coreRealm) Blames() errors.BlameFactory {
-	return r.errorFactory.GetBlameFactory()
-}
-
-func (r *coreRealm) ShuffleNodeProjections(nodeRefs []*NodeAppearance) {
-	r.strategy.ShuffleNodeSequence(len(nodeRefs),
-		func(i, j int) { nodeRefs[i], nodeRefs[j] = nodeRefs[j], nodeRefs[i] })
-}
-
-func (r *coreRealm) GetSignatureVerifier(pks common.PublicKeyStore) common.SignatureVerifier {
+func (r *coreRealm) GetSignatureVerifier(pks cryptkit.PublicKeyStore) cryptkit.SignatureVerifier {
 	return r.verifierFactory.GetSignatureVerifierWithPKS(pks)
 }
 
@@ -173,7 +184,7 @@ func (r *coreRealm) GetRoundContext() context.Context {
 	return r.roundContext
 }
 
-func (r *coreRealm) GetLocalConfig() LocalNodeConfiguration {
+func (r *coreRealm) GetLocalConfig() api.LocalNodeConfiguration {
 	return r.config
 }
 
@@ -181,28 +192,19 @@ func (r *coreRealm) IsJoiner() bool {
 	return r.self.IsJoiner()
 }
 
-func (r *coreRealm) GetSelfNodeID() common.ShortNodeID {
-	return r.self.profile.GetShortNodeID()
+func (r *coreRealm) GetSelfNodeID() insolar.ShortNodeID {
+	return r.self.profile.GetNodeID()
 }
 
 func (r *coreRealm) GetSelf() *NodeAppearance {
 	return r.self
 }
 
-func (r *coreRealm) captureMisbehavior(report errors.MisbehaviorReport) interface{} {
-	r.ReportMisbehavior(report)
-	return nil
-}
-
-func (r *coreRealm) ReportMisbehavior(report errors.MisbehaviorReport) {
-	r.chronicle.GetLatestCensus().GetMisbehaviorRegistry().AddReport(report)
-}
-
-func (r *coreRealm) GetPrimingCloudHash() common2.CloudStateHash {
+func (r *coreRealm) GetPrimingCloudHash() proofs.CloudStateHash {
 	return r.initialCensus.GetMandateRegistry().GetPrimingCloudHash()
 }
 
-func (r *coreRealm) VerifyPacketAuthenticity(packet packets.PacketParser, from common.HostIdentityHolder) error {
+func (r *coreRealm) VerifyPacketAuthenticity(packet transport.PacketParser, from endpoints.Inbound, strictFrom bool) error {
 	nr := r.initialCensus.GetOfflinePopulation().FindRegisteredProfile(from)
 	if nr == nil {
 		nr = r.initialCensus.GetMandateRegistry().FindRegisteredProfile(from)
@@ -210,16 +212,47 @@ func (r *coreRealm) VerifyPacketAuthenticity(packet packets.PacketParser, from c
 			return fmt.Errorf("unable to identify sender: %v", from)
 		}
 	}
-	sf := r.verifierFactory.GetSignatureVerifierWithPKS(nr.GetNodePublicKeyStore())
-	return VerifyPacketAuthenticityBy(packet, nr, sf, from)
+	sf := r.verifierFactory.GetSignatureVerifierWithPKS(nr.GetPublicKeyStore())
+	return VerifyPacketAuthenticityBy(packet, nr, sf, from, strictFrom)
 }
 
-func VerifyPacketAuthenticityBy(packet packets.PacketParser, nr common2.HostProfile, sf common.SignatureVerifier,
-	from common.HostIdentityHolder) error {
+func VerifyPacketRoute(ctx context.Context, packet transport.PacketParser, selfID insolar.ShortNodeID) (bool, error) {
 
-	if !nr.IsAcceptableHost(from) {
+	sid := packet.GetSourceID()
+	if sid == selfID {
+		return false, fmt.Errorf("loopback, SourceID(%v) == thisNodeID(%v)", sid, selfID)
+	}
+
+	rid := packet.GetReceiverID()
+	if rid != selfID {
+		return false, fmt.Errorf("receiverID(%v) != thisNodeID(%v)", rid, selfID)
+	}
+
+	tid := packet.GetTargetID()
+	if tid != selfID {
+		// Relaying
+		if packet.IsRelayForbidden() {
+			return false, fmt.Errorf("sender doesn't allow relaying for targetID(%v)", tid)
+		}
+
+		// TODO relay support
+		err := fmt.Errorf("unsupported: relay is required for targetID(%v)", tid)
+		inslogger.FromContext(ctx).Errorf(err.Error())
+		// allow sender to be different from source
+		return false, err
+	}
+
+	// sender must be source
+	return packet.IsRelayForbidden(), nil
+}
+
+func VerifyPacketAuthenticityBy(packet transport.PacketParser, nr profiles.Host, sf cryptkit.SignatureVerifier,
+	from endpoints.Inbound, strictFrom bool) error {
+
+	if strictFrom && !nr.IsAcceptableHost(from) {
 		return fmt.Errorf("host is not allowed by node registration: node=%v, host=%v", nr, from)
 	}
+
 	ps := packet.GetPacketSignature()
 	if !ps.IsVerifiableBy(sf) {
 		return fmt.Errorf("unable to verify packet signature from sender: %v", from)
@@ -230,13 +263,15 @@ func VerifyPacketAuthenticityBy(packet packets.PacketParser, nr common2.HostProf
 	return nil
 }
 
-func (r *coreRealm) prepareNewMembers(pop census.OnlinePopulationBuilder) {
+func LazyPacketParse(packet transport.PacketParser) (transport.PacketParser, error) {
 
-	for _, p := range pop.GetUnorderedProfiles() {
-		if p.GetSignatureVerifier() != nil {
-			continue
-		}
-		v := r.GetSignatureVerifier(p.GetNodePublicKeyStore())
-		p.SetSignatureVerifier(v)
+	//this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
+	newPacket, err := packet.ParsePacketBody()
+	if err != nil {
+		return packet, err
 	}
+	if newPacket == nil {
+		return packet, nil
+	}
+	return newPacket, nil
 }

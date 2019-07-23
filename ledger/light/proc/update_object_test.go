@@ -14,219 +14,350 @@
 // limitations under the License.
 //
 
-package proc
+package proc_test
 
 import (
 	"context"
-	"crypto/rand"
 	"testing"
 
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/hot"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/ledger/blob"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
+	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/insolar/insolar/testutils"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func genRandomID(pulse insolar.PulseNumber) *insolar.ID {
-	buff := [insolar.RecordIDSize - insolar.PulseNumberSize]byte{}
-	_, err := rand.Read(buff[:])
-	if err != nil {
-		panic(err)
-	}
-	return insolar.NewID(pulse, buff[:])
+func TestUpdateObject_RecordOverrideErr(t *testing.T) {
+	t.Parallel()
+
+	ctx := flow.TestContextWithPulse(
+		inslogger.TestContext(t),
+		insolar.GenesisPulse.PulseNumber+10,
+	)
+
+	writeAccessor := hot.NewWriteAccessorMock(t)
+	writeAccessor.BeginMock.Return(func() {}, nil)
+
+	idxLockMock := object.NewIndexLockerMock(t)
+	idxLockMock.LockMock.Return()
+	idxLockMock.UnlockMock.Return()
+
+	recordsMock := object.NewRecordModifierMock(t)
+	recordsMock.SetMock.Return(object.ErrOverride)
+
+	idxStorage := object.NewIndexStorageMock(t)
+	idxStorage.ForIDMock.Return(record.Index{}, nil)
+
+	p := proc.NewUpdateObject(
+		payload.Meta{},
+		record.Amend{},
+		gen.ID(),
+		record.Result{},
+		gen.ID(),
+		gen.JetID(),
+	)
+	p.Dep(
+		writeAccessor,
+		idxLockMock,
+		recordsMock,
+		idxStorage,
+		nil,
+		nil,
+	)
+
+	err := p.Proceed(ctx)
+	// Since there is no deduplication yet it's quite possible that there will be
+	// two writes by the same key. For this reason currently instead of reporting
+	// an error we return OK (nil error). When deduplication will be implemented
+	// we should check `ErrOverride` here.
+	require.NoError(t, err)
 }
 
-func genRefWithID(id *insolar.ID) *insolar.Reference {
-	return insolar.NewReference(*id)
+func TestUpdateObject_RecordErr(t *testing.T) {
+	t.Parallel()
+
+	ctx := flow.TestContextWithPulse(
+		inslogger.TestContext(t),
+		insolar.GenesisPulse.PulseNumber+10,
+	)
+
+	writeAccessor := hot.NewWriteAccessorMock(t)
+	writeAccessor.BeginMock.Return(func() {}, nil)
+
+	idxLockMock := object.NewIndexLockerMock(t)
+	idxLockMock.LockMock.Return()
+	idxLockMock.UnlockMock.Return()
+
+	recordsMock := object.NewRecordModifierMock(t)
+	recordsMock.SetMock.Return(errors.New("something strange from records.Set"))
+
+	idxStorage := object.NewIndexStorageMock(t)
+	idxStorage.ForIDMock.Return(record.Index{}, nil)
+
+	p := proc.NewUpdateObject(
+		payload.Meta{},
+		record.Amend{},
+		gen.ID(),
+		record.Result{},
+		gen.ID(),
+		gen.JetID(),
+	)
+	p.Dep(
+		writeAccessor,
+		idxLockMock,
+		recordsMock,
+		idxStorage,
+		nil,
+		nil,
+	)
+
+	err := p.Proceed(ctx)
+	require.Error(t, err)
 }
 
-func genRandomRef(pulse insolar.PulseNumber) *insolar.Reference {
-	return genRefWithID(genRandomID(pulse))
+func TestUpdateObject_IndexForIDErr(t *testing.T) {
+	t.Parallel()
+
+	ctx := flow.TestContextWithPulse(
+		inslogger.TestContext(t),
+		insolar.GenesisPulse.PulseNumber+10,
+	)
+
+	writeAccessor := hot.NewWriteAccessorMock(t)
+	writeAccessor.BeginMock.Return(func() {}, nil)
+
+	idxLockMock := object.NewIndexLockerMock(t)
+	idxLockMock.LockMock.Return()
+	idxLockMock.UnlockMock.Return()
+
+	recordsMock := object.NewRecordModifierMock(t)
+	recordsMock.SetMock.Return(nil)
+
+	idxStorageMock := object.NewIndexStorageMock(t)
+	idxStorageMock.ForIDMock.Return(record.Index{}, errors.New("something strange from index.ForID"))
+
+	p := proc.NewUpdateObject(
+		payload.Meta{},
+		record.Amend{},
+		gen.ID(),
+		record.Result{},
+		gen.ID(),
+		gen.JetID(),
+	)
+	p.Dep(
+		writeAccessor,
+		idxLockMock,
+		recordsMock,
+		idxStorageMock,
+		nil,
+		nil,
+	)
+
+	err := p.Proceed(ctx)
+	require.Error(t, err)
+	assert.Equal(t, "can't get index from storage: something strange from index.ForID", err.Error())
 }
 
-func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
-	jetID := insolar.ID(*insolar.NewJetID(0, nil))
+func TestUpdateObject_SetIndexErr(t *testing.T) {
+	t.Parallel()
 
-	pendingMock := recentstorage.NewPendingStorageMock(t)
+	ctx := flow.TestContextWithPulse(
+		inslogger.TestContext(t),
+		insolar.GenesisPulse.PulseNumber+10,
+	)
 
-	pendingMock.GetRequestsForObjectMock.Return(nil)
-	pendingMock.AddPendingRequestMock.Return()
-	pendingMock.RemovePendingRequestMock.Return()
+	writeAccessor := hot.NewWriteAccessorMock(t)
+	writeAccessor.BeginMock.Return(func() {}, nil)
 
-	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetPendingStorageMock.Return(pendingMock)
+	idxLockMock := object.NewIndexLockerMock(t)
+	idxLockMock.LockMock.Return()
+	idxLockMock.UnlockMock.Return()
 
-	pendingModifierMock := object.NewPendingModifierMock(t)
-	pendingModifierMock.SetResultMock.Return(nil)
+	recordsMock := object.NewRecordModifierMock(t)
+	recordsMock.SetMock.Return(nil)
 
-	mb := testutils.NewMessageBusMock(t)
-	mb.MustRegisterMock.Return()
-	jc := jet.NewCoordinatorMock(t)
+	idxStorageMock := object.NewIndexStorageMock(t)
+	idxStorageMock.ForIDMock.Return(record.Index{}, nil)
+	idxStorageMock.SetIndexMock.Return(errors.New("something strange from SetIndex"))
 
-	recordStorage := object.NewRecordMemory()
+	p := proc.NewUpdateObject(
+		payload.Meta{},
+		record.Amend{},
+		gen.ID(),
+		record.Result{},
+		gen.ID(),
+		gen.JetID(),
+	)
+	p.Dep(
+		writeAccessor,
+		idxLockMock,
+		recordsMock,
+		idxStorageMock,
+		nil,
+		nil,
+	)
 
-	scheme := testutils.NewPlatformCryptographyScheme()
-	indexMemoryStor := object.NewInMemoryIndex(recordStorage, nil)
-
-	idLockMock := object.NewIDLockerMock(t)
-	idLockMock.LockMock.Return()
-	idLockMock.UnlockMock.Return()
-
-	writeManagerMock := hot.NewWriteAccessorMock(t)
-	writeManagerMock.BeginFunc = func(context.Context, insolar.PulseNumber) (func(), error) {
-		return func() {}, nil
-	}
-
-	objIndex := object.Lifeline{LatestState: genRandomID(0), StateID: record.StateActivation}
-	amendRecord := record.Amend{
-		PrevState: *objIndex.LatestState,
-	}
-	amendVirt := record.Wrap(amendRecord)
-	amendData, err := amendVirt.Marshal()
-	require.NoError(t, err)
-
-	objectRef := genRandomRef(0)
-	resultRecord := record.Result{
-		Object: *objectRef.Record(),
-	}
-	resultVirt := record.Wrap(resultRecord)
-	resultData, err := resultVirt.Marshal()
-	require.NoError(t, err)
-
-	msg := message.UpdateObject{
-		Record:       amendData,
-		ResultRecord: resultData,
-		Object:       *objectRef,
-	}
-
-	mb.SendFunc = func(c context.Context, gm insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
-		if m, ok := gm.(*message.GetObjectIndex); ok {
-			assert.Equal(t, msg.Object, m.Object)
-			buf := object.EncodeIndex(objIndex)
-			return &reply.ObjectIndex{Index: buf}, nil
-		}
-
-		panic("unexpected call")
-	}
-
-	ctx := inslogger.TestContext(t)
-	heavyRef := genRandomRef(0)
-	jc.HeavyMock.Return(heavyRef, nil)
-
-	updateObject := UpdateObject{
-		JetID:       insolar.JetID(jetID),
-		Message:     &msg,
-		PulseNumber: insolar.FirstPulseNumber,
-	}
-	updateObject.Dep.Bus = mb
-	updateObject.Dep.BlobModifier = blob.NewStorageMemory()
-	updateObject.Dep.IDLocker = idLockMock
-	updateObject.Dep.Coordinator = jc
-	updateObject.Dep.LifelineIndex = indexMemoryStor
-	updateObject.Dep.PCS = scheme
-	updateObject.Dep.RecordModifier = recordStorage
-	updateObject.Dep.LifelineStateModifier = indexMemoryStor
-	updateObject.Dep.WriteAccessor = writeManagerMock
-	updateObject.Dep.RecentStorageProvider = provideMock
-	updateObject.Dep.PendingModifier = pendingModifierMock
-
-	rep := updateObject.handle(ctx)
-	require.NoError(t, rep.Err)
-	_, ok := rep.Reply.(*reply.OK)
-	require.True(t, ok)
+	err := p.Proceed(ctx)
+	require.Error(t, err)
+	assert.Equal(t, "something strange from SetIndex", err.Error())
 }
 
-func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
-	jetID := insolar.ID(*insolar.NewJetID(0, nil))
+func TestUpdateObject_FilamentSetResultErr(t *testing.T) {
+	t.Parallel()
 
-	pendingMock := recentstorage.NewPendingStorageMock(t)
+	ctx := flow.TestContextWithPulse(
+		inslogger.TestContext(t),
+		insolar.GenesisPulse.PulseNumber+10,
+	)
 
-	pendingMock.GetRequestsForObjectMock.Return(nil)
-	pendingMock.AddPendingRequestMock.Return()
-	pendingMock.RemovePendingRequestMock.Return()
+	writeAccessor := hot.NewWriteAccessorMock(t)
+	writeAccessor.BeginMock.Return(func() {}, nil)
 
-	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetPendingStorageMock.Return(pendingMock)
+	idxLockMock := object.NewIndexLockerMock(t)
+	idxLockMock.LockMock.Return()
+	idxLockMock.UnlockMock.Return()
 
-	pendingModifierMock := object.NewPendingModifierMock(t)
-	pendingModifierMock.SetResultMock.Return(nil)
+	recordsMock := object.NewRecordModifierMock(t)
+	recordsMock.SetMock.Return(nil)
 
-	writeManagerMock := hot.NewWriteAccessorMock(t)
-	writeManagerMock.BeginFunc = func(context.Context, insolar.PulseNumber) (func(), error) {
-		return func() {}, nil
-	}
+	idxStorageMock := object.NewIndexStorageMock(t)
+	idxStorageMock.ForIDMock.Return(record.Index{}, nil)
+	idxStorageMock.SetIndexMock.Return(nil)
 
-	scheme := testutils.NewPlatformCryptographyScheme()
-	recordStorage := object.NewRecordMemory()
-	indexMemoryStor := object.NewInMemoryIndex(recordStorage, nil)
+	filaments := executor.NewFilamentModifierMock(t)
+	filaments.SetResultMock.Return(nil, errors.New("something strange from filament.SetResult"))
 
-	idLockMock := object.NewIDLockerMock(t)
-	idLockMock.LockMock.Return()
-	idLockMock.UnlockMock.Return()
+	p := proc.NewUpdateObject(
+		payload.Meta{},
+		record.Amend{},
+		gen.ID(),
+		record.Result{},
+		gen.ID(),
+		gen.JetID(),
+	)
+	p.Dep(
+		writeAccessor,
+		idxLockMock,
+		recordsMock,
+		idxStorageMock,
+		filaments,
+		nil,
+	)
 
-	objIndex := object.Lifeline{
-		LatestState:  genRandomID(0),
-		StateID:      record.StateActivation,
-		LatestUpdate: 0,
-		JetID:        insolar.JetID(jetID),
-	}
-	amendRecord := record.Amend{
-		PrevState: *objIndex.LatestState,
-	}
-	amendVirt := record.Wrap(amendRecord)
-	amendData, err := amendVirt.Marshal()
+	err := p.Proceed(ctx)
+	require.Error(t, err)
+	assert.Equal(t, "failed to save result: something strange from filament.SetResult", err.Error())
+}
+
+func TestUpdateObject_Proceed(t *testing.T) {
+	t.Parallel()
+
+	ctx := flow.TestContextWithPulse(
+		inslogger.TestContext(t),
+		insolar.GenesisPulse.PulseNumber+10,
+	)
+
+	writeAccessor := hot.NewWriteAccessorMock(t)
+	writeAccessor.BeginMock.Return(func() {}, nil)
+
+	idxLockMock := object.NewIndexLockerMock(t)
+	idxLockMock.LockMock.Return()
+	idxLockMock.UnlockMock.Return()
+
+	recordsMock := object.NewRecordModifierMock(t)
+	recordsMock.SetMock.Return(nil)
+
+	idxStorageMock := object.NewIndexStorageMock(t)
+	idxStorageMock.ForIDMock.Return(record.Index{}, nil)
+	idxStorageMock.SetIndexMock.Return(nil)
+
+	filaments := executor.NewFilamentModifierMock(t)
+	filaments.SetResultMock.Return(nil, nil)
+
+	sender := bus.NewSenderMock(t)
+	sender.ReplyMock.Return()
+
+	p := proc.NewUpdateObject(
+		payload.Meta{},
+		record.Amend{},
+		gen.ID(),
+		record.Result{},
+		gen.ID(),
+		gen.JetID(),
+	)
+	p.Dep(
+		writeAccessor,
+		idxLockMock,
+		recordsMock,
+		idxStorageMock,
+		filaments,
+		sender,
+	)
+
+	err := p.Proceed(ctx)
 	require.NoError(t, err)
+}
 
-	objectRef := genRandomRef(0)
-	resultRecord := record.Result{
-		Object: *objectRef.Record(),
+func TestUpdateObject_ObjectIsDeactivated(t *testing.T) {
+	t.Parallel()
+
+	ctx := flow.TestContextWithPulse(
+		inslogger.TestContext(t),
+		insolar.GenesisPulse.PulseNumber+10,
+	)
+
+	writeAccessor := hot.NewWriteAccessorMock(t)
+	writeAccessor.BeginMock.Return(func() {}, nil)
+
+	idxLockMock := object.NewIndexLockerMock(t)
+	idxLockMock.LockMock.Return()
+	idxLockMock.UnlockMock.Return()
+
+	idxStorageMock := object.NewIndexStorageMock(t)
+	idxStorageMock.ForIDMock.Return(record.Index{
+		Lifeline: record.Lifeline{
+			StateID: record.StateDeactivation,
+		},
+	}, nil)
+	idxStorageMock.SetIndexMock.Return(nil)
+
+	sender := bus.NewSenderMock(t)
+	sender.ReplyFunc = func(_ context.Context, _ payload.Meta, inMsg *message.Message) {
+		resp, err := payload.Unmarshal(inMsg.Payload)
+		require.NoError(t, err)
+
+		res, ok := resp.(*payload.Error)
+		require.True(t, ok)
+		require.Equal(t, payload.CodeDeactivated, int(res.Code))
 	}
-	resultVirt := record.Wrap(resultRecord)
-	resultData, err := resultVirt.Marshal()
+
+	p := proc.NewUpdateObject(
+		payload.Meta{},
+		record.Amend{},
+		gen.ID(),
+		record.Result{},
+		gen.ID(),
+		gen.JetID(),
+	)
+	p.Dep(
+		writeAccessor,
+		idxLockMock,
+		nil,
+		idxStorageMock,
+		nil,
+		sender,
+	)
+
+	err := p.Proceed(ctx)
 	require.NoError(t, err)
-
-	msg := message.UpdateObject{
-		Record:       amendData,
-		ResultRecord: resultData,
-		Object:       *objectRef,
-	}
-	ctx := context.Background()
-	err = indexMemoryStor.Set(ctx, insolar.FirstPulseNumber, *msg.Object.Record(), objIndex)
-	require.NoError(t, err)
-
-	// Act
-	updateObject := UpdateObject{
-		JetID:       insolar.JetID(jetID),
-		Message:     &msg,
-		PulseNumber: insolar.FirstPulseNumber,
-	}
-	updateObject.Dep.BlobModifier = blob.NewStorageMemory()
-	updateObject.Dep.IDLocker = idLockMock
-	updateObject.Dep.LifelineIndex = indexMemoryStor
-	updateObject.Dep.PCS = scheme
-	updateObject.Dep.RecordModifier = recordStorage
-	updateObject.Dep.LifelineStateModifier = indexMemoryStor
-	updateObject.Dep.WriteAccessor = writeManagerMock
-	updateObject.Dep.RecentStorageProvider = provideMock
-	updateObject.Dep.PendingModifier = pendingModifierMock
-
-	rep := updateObject.handle(ctx)
-	require.NoError(t, rep.Err)
-	_, ok := rep.Reply.(*reply.OK)
-	require.True(t, ok)
-
-	// Arrange
-	idx, err := indexMemoryStor.ForID(ctx, insolar.FirstPulseNumber, *msg.Object.Record())
-	require.NoError(t, err)
-	require.Equal(t, insolar.FirstPulseNumber, int(idx.LatestUpdate))
 }

@@ -17,6 +17,7 @@
 package insolar
 
 import (
+	"bytes"
 	"fmt"
 	"strconv"
 	"strings"
@@ -54,6 +55,16 @@ func (id *JetID) Unmarshal(data []byte) error {
 	}
 	copy(id[:], data)
 	return nil
+}
+
+// IsValid returns true is JetID has a predefined reserved pulse number.
+func (id *JetID) IsValid() bool {
+	return bytes.Equal(id[:PulseNumberSize], PulseNumberJet.Bytes())
+}
+
+// IsEmpty - check for void
+func (id JetID) IsEmpty() bool {
+	return id.Equal(JetID{})
 }
 
 // ZeroJetID is value of an empty Jet ID

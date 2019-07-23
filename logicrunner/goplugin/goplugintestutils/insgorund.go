@@ -101,7 +101,7 @@ func StartInsgorund(cmdPath, lProto, listen, upstreamProto, upstreamAddr string,
 		close(cancelWarning)
 
 		p := runner.Process
-		err := p.Kill()
+		err := p.Signal(syscall.SIGTERM)
 		if err != nil {
 			log.Error("couldn't kill process: ", err)
 		}

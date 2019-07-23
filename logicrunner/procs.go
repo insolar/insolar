@@ -18,27 +18,26 @@ package logicrunner
 
 import (
 	"context"
-	"fmt"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/pkg/errors"
 )
 
 // ------------- CheckOurRole
 
 type CheckOurRole struct {
-	msg  insolar.Message
-	role insolar.DynamicRole
+	msg         insolar.Message
+	role        insolar.DynamicRole
 	pulseNumber insolar.PulseNumber
 
 	lr *LogicRunner
 }
 
-var ErrCantExecute = errors.New("can't execute this object")
+var ErrCantExecute = errors.New("can't executeAndReply this object")
 
 func (ch *CheckOurRole) Proceed(ctx context.Context) error {
 	ctx, span := instracer.StartSpan(ctx, "CheckOurRole")
@@ -58,39 +57,38 @@ func (ch *CheckOurRole) Proceed(ctx context.Context) error {
 	return nil
 }
 
-// ------------- RegisterRequest
+// ------------- RegisterIncomingRequest
 
-type RegisterRequest struct {
-	parcel insolar.Parcel
+type RegisterIncomingRequest struct {
+	request record.IncomingRequest
 
 	result chan *Ref
 
 	ArtifactManager artifacts.Client
 }
 
-func NewRegisterRequest(parcel insolar.Parcel, dep *Dependencies) *RegisterRequest {
-	return &RegisterRequest{
-		parcel:          parcel,
+func NewRegisterIncomingRequest(request record.IncomingRequest, dep *Dependencies) *RegisterIncomingRequest {
+	return &RegisterIncomingRequest{
+		request:         request,
 		ArtifactManager: dep.lr.ArtifactManager,
 		result:          make(chan *Ref, 1),
 	}
 }
 
-func (r *RegisterRequest) setResult(result *Ref) { // nolint
+func (r *RegisterIncomingRequest) setResult(result *Ref) { // nolint
 	r.result <- result
 }
 
 // getResult is blocking
-func (r *RegisterRequest) getResult() *Ref { // nolint
+func (r *RegisterIncomingRequest) getResult() *Ref { // nolint
 	return <-r.result
 }
 
-func (r *RegisterRequest) Proceed(ctx context.Context) error {
-	ctx, span := instracer.StartSpan(ctx, "RegisterRequest.Proceed")
+func (r *RegisterIncomingRequest) Proceed(ctx context.Context) error {
+	ctx, span := instracer.StartSpan(ctx, "RegisterIncomingRequest.Proceed")
 	defer span.End()
 
-	msg := r.parcel.Message().(*message.CallMethod)
-	id, err := r.ArtifactManager.RegisterRequest(ctx, msg.Request)
+	id, err := r.ArtifactManager.RegisterIncomingRequest(ctx, &r.request)
 	if err != nil {
 		return err
 	}
@@ -102,8 +100,8 @@ func (r *RegisterRequest) Proceed(ctx context.Context) error {
 // ------------- ClarifyPendingState
 
 type ClarifyPendingState struct {
-	es     *ExecutionState
-	parcel insolar.Parcel
+	broker  *ExecutionBroker
+	request *record.IncomingRequest
 
 	ArtifactManager artifacts.Client
 }
@@ -112,54 +110,49 @@ func (c *ClarifyPendingState) Proceed(ctx context.Context) error {
 	ctx, span := instracer.StartSpan(ctx, "ClarifyPendingState")
 	defer span.End()
 
-	c.es.Lock()
-	if c.es.pending != message.PendingUnknown {
-		c.es.Unlock()
+	es := &c.broker.executionState
+
+	es.Lock()
+	if es.pending != insolar.PendingUnknown {
+		es.Unlock()
 		return nil
 	}
 
-	if c.parcel != nil {
-		if c.parcel.Type() != insolar.TypeCallMethod {
-			// We expect ONLY CallMethods in LogicRunner.
-			c.es.Unlock()
-			return fmt.Errorf("unexpecxted parcel type during ClarifyPendingState: %v", c.parcel.Type())
-		}
-
-		msg := c.parcel.Message().(*message.CallMethod)
-		if msg.CallType != record.CTMethod {
+	if c.request != nil {
+		if c.request.CallType != record.CTMethod {
 			// It's considered that we are not pending except someone calls a method.
-			c.es.pending = message.NotPending
-			c.es.Unlock()
+			es.pending = insolar.NotPending
+			es.Unlock()
 			return nil
 		}
 	}
 
-	c.es.Unlock()
+	es.Unlock()
 
-	c.es.HasPendingCheckMutex.Lock()
-	defer c.es.HasPendingCheckMutex.Unlock()
+	es.HasPendingCheckMutex.Lock()
+	defer es.HasPendingCheckMutex.Unlock()
 
-	c.es.Lock()
-	if c.es.pending != message.PendingUnknown {
-		c.es.Unlock()
+	es.Lock()
+	if es.pending != insolar.PendingUnknown {
+		es.Unlock()
 		return nil
 	}
-	c.es.Unlock()
+	es.Unlock()
 
-	has, err := c.ArtifactManager.HasPendingRequests(ctx, c.es.Ref)
+	has, err := c.ArtifactManager.HasPendings(ctx, c.broker.Ref)
 	if err != nil {
 		return err
 	}
 
-	c.es.Lock()
-	if c.es.pending == message.PendingUnknown {
+	es.Lock()
+	if es.pending == insolar.PendingUnknown {
 		if has {
-			c.es.pending = message.InPending
+			es.pending = insolar.InPending
 		} else {
-			c.es.pending = message.NotPending
+			es.pending = insolar.NotPending
 		}
 	}
-	c.es.Unlock()
+	es.Unlock()
 
 	return nil
 }

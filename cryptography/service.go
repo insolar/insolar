@@ -47,7 +47,7 @@ func (cs *nodeCryptographyService) Sign(payload []byte) (*insolar.Signature, err
 		return nil, errors.Wrap(err, "[ Sign ] Failed to get private privateKey")
 	}
 
-	signer := cs.PlatformCryptographyScheme.Signer(privateKey)
+	signer := cs.PlatformCryptographyScheme.DataSigner(privateKey, cs.PlatformCryptographyScheme.IntegrityHasher())
 	signature, err := signer.Sign(payload)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Sign ] Failed to sign payload")
@@ -57,24 +57,16 @@ func (cs *nodeCryptographyService) Sign(payload []byte) (*insolar.Signature, err
 }
 
 func (cs *nodeCryptographyService) Verify(publicKey crypto.PublicKey, signature insolar.Signature, payload []byte) bool {
-	return cs.PlatformCryptographyScheme.Verifier(publicKey).Verify(signature, payload)
+	return cs.PlatformCryptographyScheme.DataVerifier(publicKey, cs.PlatformCryptographyScheme.IntegrityHasher()).Verify(signature, payload)
 }
 
 func NewCryptographyService() insolar.CryptographyService {
 	return &nodeCryptographyService{}
 }
 
-type inPlaceKeyStore struct {
-	privateKey crypto.PrivateKey
-}
-
-func (ipks *inPlaceKeyStore) GetPrivateKey(string) (crypto.PrivateKey, error) {
-	return ipks.privateKey, nil
-}
-
 func NewKeyBoundCryptographyService(privateKey crypto.PrivateKey) insolar.CryptographyService {
 	platformCryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
-	keyStore := &inPlaceKeyStore{privateKey: privateKey}
+	keyStore := keystore.NewInplaceKeyStore(privateKey)
 	keyProcessor := platformpolicy.NewKeyProcessor()
 	cryptographyService := NewCryptographyService()
 

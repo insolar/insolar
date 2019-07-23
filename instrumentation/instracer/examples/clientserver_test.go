@@ -147,8 +147,8 @@ func dataForServer(tracestring string) (context.Context, []byte) {
 func serverHandler(ctx context.Context, spanbin []byte) {
 	fmt.Println(" B> call serverHandler")
 
-	parentspan := instracer.MustDeserialize(spanbin)
-	ctx = instracer.WithParentSpan(ctx, parentspan)
+	parentSpan := instracer.MustDeserialize(spanbin)
+	ctx = instracer.WithParentSpan(ctx, parentSpan)
 
 	fmt.Println("  ... instracer.StartSpan")
 	spanctx, servspan := instracer.StartSpan(ctx, "server")

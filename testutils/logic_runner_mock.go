@@ -20,20 +20,20 @@ import (
 type LogicRunnerMock struct {
 	t minimock.Tester
 
-	GetExecutorFunc       func(p insolar.MachineType) (r insolar.MachineLogicExecutor, r1 error)
-	GetExecutorCounter    uint64
-	GetExecutorPreCounter uint64
-	GetExecutorMock       mLogicRunnerMockGetExecutor
+	AddUnwantedResponseFunc       func(p context.Context, p1 insolar.Message) (r error)
+	AddUnwantedResponseCounter    uint64
+	AddUnwantedResponsePreCounter uint64
+	AddUnwantedResponseMock       mLogicRunnerMockAddUnwantedResponse
+
+	LRIFunc       func()
+	LRICounter    uint64
+	LRIPreCounter uint64
+	LRIMock       mLogicRunnerMockLRI
 
 	OnPulseFunc       func(p context.Context, p1 insolar.Pulse) (r error)
 	OnPulseCounter    uint64
 	OnPulsePreCounter uint64
 	OnPulseMock       mLogicRunnerMockOnPulse
-
-	RegisterExecutorFunc       func(p insolar.MachineType, p1 insolar.MachineLogicExecutor) (r error)
-	RegisterExecutorCounter    uint64
-	RegisterExecutorPreCounter uint64
-	RegisterExecutorMock       mLogicRunnerMockRegisterExecutor
 }
 
 //NewLogicRunnerMock returns a mock for github.com/insolar/insolar/insolar.LogicRunner
@@ -44,158 +44,266 @@ func NewLogicRunnerMock(t minimock.Tester) *LogicRunnerMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.GetExecutorMock = mLogicRunnerMockGetExecutor{mock: m}
+	m.AddUnwantedResponseMock = mLogicRunnerMockAddUnwantedResponse{mock: m}
+	m.LRIMock = mLogicRunnerMockLRI{mock: m}
 	m.OnPulseMock = mLogicRunnerMockOnPulse{mock: m}
-	m.RegisterExecutorMock = mLogicRunnerMockRegisterExecutor{mock: m}
 
 	return m
 }
 
-type mLogicRunnerMockGetExecutor struct {
+type mLogicRunnerMockAddUnwantedResponse struct {
 	mock              *LogicRunnerMock
-	mainExpectation   *LogicRunnerMockGetExecutorExpectation
-	expectationSeries []*LogicRunnerMockGetExecutorExpectation
+	mainExpectation   *LogicRunnerMockAddUnwantedResponseExpectation
+	expectationSeries []*LogicRunnerMockAddUnwantedResponseExpectation
 }
 
-type LogicRunnerMockGetExecutorExpectation struct {
-	input  *LogicRunnerMockGetExecutorInput
-	result *LogicRunnerMockGetExecutorResult
+type LogicRunnerMockAddUnwantedResponseExpectation struct {
+	input  *LogicRunnerMockAddUnwantedResponseInput
+	result *LogicRunnerMockAddUnwantedResponseResult
 }
 
-type LogicRunnerMockGetExecutorInput struct {
-	p insolar.MachineType
+type LogicRunnerMockAddUnwantedResponseInput struct {
+	p  context.Context
+	p1 insolar.Message
 }
 
-type LogicRunnerMockGetExecutorResult struct {
-	r  insolar.MachineLogicExecutor
-	r1 error
+type LogicRunnerMockAddUnwantedResponseResult struct {
+	r error
 }
 
-//Expect specifies that invocation of LogicRunner.GetExecutor is expected from 1 to Infinity times
-func (m *mLogicRunnerMockGetExecutor) Expect(p insolar.MachineType) *mLogicRunnerMockGetExecutor {
-	m.mock.GetExecutorFunc = nil
+//Expect specifies that invocation of LogicRunner.AddUnwantedResponse is expected from 1 to Infinity times
+func (m *mLogicRunnerMockAddUnwantedResponse) Expect(p context.Context, p1 insolar.Message) *mLogicRunnerMockAddUnwantedResponse {
+	m.mock.AddUnwantedResponseFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &LogicRunnerMockGetExecutorExpectation{}
+		m.mainExpectation = &LogicRunnerMockAddUnwantedResponseExpectation{}
 	}
-	m.mainExpectation.input = &LogicRunnerMockGetExecutorInput{p}
+	m.mainExpectation.input = &LogicRunnerMockAddUnwantedResponseInput{p, p1}
 	return m
 }
 
-//Return specifies results of invocation of LogicRunner.GetExecutor
-func (m *mLogicRunnerMockGetExecutor) Return(r insolar.MachineLogicExecutor, r1 error) *LogicRunnerMock {
-	m.mock.GetExecutorFunc = nil
+//Return specifies results of invocation of LogicRunner.AddUnwantedResponse
+func (m *mLogicRunnerMockAddUnwantedResponse) Return(r error) *LogicRunnerMock {
+	m.mock.AddUnwantedResponseFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &LogicRunnerMockGetExecutorExpectation{}
+		m.mainExpectation = &LogicRunnerMockAddUnwantedResponseExpectation{}
 	}
-	m.mainExpectation.result = &LogicRunnerMockGetExecutorResult{r, r1}
+	m.mainExpectation.result = &LogicRunnerMockAddUnwantedResponseResult{r}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of LogicRunner.GetExecutor is expected once
-func (m *mLogicRunnerMockGetExecutor) ExpectOnce(p insolar.MachineType) *LogicRunnerMockGetExecutorExpectation {
-	m.mock.GetExecutorFunc = nil
+//ExpectOnce specifies that invocation of LogicRunner.AddUnwantedResponse is expected once
+func (m *mLogicRunnerMockAddUnwantedResponse) ExpectOnce(p context.Context, p1 insolar.Message) *LogicRunnerMockAddUnwantedResponseExpectation {
+	m.mock.AddUnwantedResponseFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &LogicRunnerMockGetExecutorExpectation{}
-	expectation.input = &LogicRunnerMockGetExecutorInput{p}
+	expectation := &LogicRunnerMockAddUnwantedResponseExpectation{}
+	expectation.input = &LogicRunnerMockAddUnwantedResponseInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *LogicRunnerMockGetExecutorExpectation) Return(r insolar.MachineLogicExecutor, r1 error) {
-	e.result = &LogicRunnerMockGetExecutorResult{r, r1}
+func (e *LogicRunnerMockAddUnwantedResponseExpectation) Return(r error) {
+	e.result = &LogicRunnerMockAddUnwantedResponseResult{r}
 }
 
-//Set uses given function f as a mock of LogicRunner.GetExecutor method
-func (m *mLogicRunnerMockGetExecutor) Set(f func(p insolar.MachineType) (r insolar.MachineLogicExecutor, r1 error)) *LogicRunnerMock {
+//Set uses given function f as a mock of LogicRunner.AddUnwantedResponse method
+func (m *mLogicRunnerMockAddUnwantedResponse) Set(f func(p context.Context, p1 insolar.Message) (r error)) *LogicRunnerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.GetExecutorFunc = f
+	m.mock.AddUnwantedResponseFunc = f
 	return m.mock
 }
 
-//GetExecutor implements github.com/insolar/insolar/insolar.LogicRunner interface
-func (m *LogicRunnerMock) GetExecutor(p insolar.MachineType) (r insolar.MachineLogicExecutor, r1 error) {
-	counter := atomic.AddUint64(&m.GetExecutorPreCounter, 1)
-	defer atomic.AddUint64(&m.GetExecutorCounter, 1)
+//AddUnwantedResponse implements github.com/insolar/insolar/insolar.LogicRunner interface
+func (m *LogicRunnerMock) AddUnwantedResponse(p context.Context, p1 insolar.Message) (r error) {
+	counter := atomic.AddUint64(&m.AddUnwantedResponsePreCounter, 1)
+	defer atomic.AddUint64(&m.AddUnwantedResponseCounter, 1)
 
-	if len(m.GetExecutorMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetExecutorMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to LogicRunnerMock.GetExecutor. %v", p)
+	if len(m.AddUnwantedResponseMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.AddUnwantedResponseMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to LogicRunnerMock.AddUnwantedResponse. %v %v", p, p1)
 			return
 		}
 
-		input := m.GetExecutorMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, LogicRunnerMockGetExecutorInput{p}, "LogicRunner.GetExecutor got unexpected parameters")
+		input := m.AddUnwantedResponseMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, LogicRunnerMockAddUnwantedResponseInput{p, p1}, "LogicRunner.AddUnwantedResponse got unexpected parameters")
 
-		result := m.GetExecutorMock.expectationSeries[counter-1].result
+		result := m.AddUnwantedResponseMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the LogicRunnerMock.GetExecutor")
+			m.t.Fatal("No results are set for the LogicRunnerMock.AddUnwantedResponse")
 			return
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
 
-	if m.GetExecutorMock.mainExpectation != nil {
+	if m.AddUnwantedResponseMock.mainExpectation != nil {
 
-		input := m.GetExecutorMock.mainExpectation.input
+		input := m.AddUnwantedResponseMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, LogicRunnerMockGetExecutorInput{p}, "LogicRunner.GetExecutor got unexpected parameters")
+			testify_assert.Equal(m.t, *input, LogicRunnerMockAddUnwantedResponseInput{p, p1}, "LogicRunner.AddUnwantedResponse got unexpected parameters")
 		}
 
-		result := m.GetExecutorMock.mainExpectation.result
+		result := m.AddUnwantedResponseMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the LogicRunnerMock.GetExecutor")
+			m.t.Fatal("No results are set for the LogicRunnerMock.AddUnwantedResponse")
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
 
-	if m.GetExecutorFunc == nil {
-		m.t.Fatalf("Unexpected call to LogicRunnerMock.GetExecutor. %v", p)
+	if m.AddUnwantedResponseFunc == nil {
+		m.t.Fatalf("Unexpected call to LogicRunnerMock.AddUnwantedResponse. %v %v", p, p1)
 		return
 	}
 
-	return m.GetExecutorFunc(p)
+	return m.AddUnwantedResponseFunc(p, p1)
 }
 
-//GetExecutorMinimockCounter returns a count of LogicRunnerMock.GetExecutorFunc invocations
-func (m *LogicRunnerMock) GetExecutorMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetExecutorCounter)
+//AddUnwantedResponseMinimockCounter returns a count of LogicRunnerMock.AddUnwantedResponseFunc invocations
+func (m *LogicRunnerMock) AddUnwantedResponseMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.AddUnwantedResponseCounter)
 }
 
-//GetExecutorMinimockPreCounter returns the value of LogicRunnerMock.GetExecutor invocations
-func (m *LogicRunnerMock) GetExecutorMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetExecutorPreCounter)
+//AddUnwantedResponseMinimockPreCounter returns the value of LogicRunnerMock.AddUnwantedResponse invocations
+func (m *LogicRunnerMock) AddUnwantedResponseMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.AddUnwantedResponsePreCounter)
 }
 
-//GetExecutorFinished returns true if mock invocations count is ok
-func (m *LogicRunnerMock) GetExecutorFinished() bool {
+//AddUnwantedResponseFinished returns true if mock invocations count is ok
+func (m *LogicRunnerMock) AddUnwantedResponseFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetExecutorMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetExecutorCounter) == uint64(len(m.GetExecutorMock.expectationSeries))
+	if len(m.AddUnwantedResponseMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.AddUnwantedResponseCounter) == uint64(len(m.AddUnwantedResponseMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.GetExecutorMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetExecutorCounter) > 0
+	if m.AddUnwantedResponseMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.AddUnwantedResponseCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.GetExecutorFunc != nil {
-		return atomic.LoadUint64(&m.GetExecutorCounter) > 0
+	if m.AddUnwantedResponseFunc != nil {
+		return atomic.LoadUint64(&m.AddUnwantedResponseCounter) > 0
+	}
+
+	return true
+}
+
+type mLogicRunnerMockLRI struct {
+	mock              *LogicRunnerMock
+	mainExpectation   *LogicRunnerMockLRIExpectation
+	expectationSeries []*LogicRunnerMockLRIExpectation
+}
+
+type LogicRunnerMockLRIExpectation struct {
+}
+
+//Expect specifies that invocation of LogicRunner.LRI is expected from 1 to Infinity times
+func (m *mLogicRunnerMockLRI) Expect() *mLogicRunnerMockLRI {
+	m.mock.LRIFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &LogicRunnerMockLRIExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of LogicRunner.LRI
+func (m *mLogicRunnerMockLRI) Return() *LogicRunnerMock {
+	m.mock.LRIFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &LogicRunnerMockLRIExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of LogicRunner.LRI is expected once
+func (m *mLogicRunnerMockLRI) ExpectOnce() *LogicRunnerMockLRIExpectation {
+	m.mock.LRIFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &LogicRunnerMockLRIExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of LogicRunner.LRI method
+func (m *mLogicRunnerMockLRI) Set(f func()) *LogicRunnerMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.LRIFunc = f
+	return m.mock
+}
+
+//LRI implements github.com/insolar/insolar/insolar.LogicRunner interface
+func (m *LogicRunnerMock) LRI() {
+	counter := atomic.AddUint64(&m.LRIPreCounter, 1)
+	defer atomic.AddUint64(&m.LRICounter, 1)
+
+	if len(m.LRIMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.LRIMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to LogicRunnerMock.LRI.")
+			return
+		}
+
+		return
+	}
+
+	if m.LRIMock.mainExpectation != nil {
+
+		return
+	}
+
+	if m.LRIFunc == nil {
+		m.t.Fatalf("Unexpected call to LogicRunnerMock.LRI.")
+		return
+	}
+
+	m.LRIFunc()
+}
+
+//LRIMinimockCounter returns a count of LogicRunnerMock.LRIFunc invocations
+func (m *LogicRunnerMock) LRIMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.LRICounter)
+}
+
+//LRIMinimockPreCounter returns the value of LogicRunnerMock.LRI invocations
+func (m *LogicRunnerMock) LRIMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.LRIPreCounter)
+}
+
+//LRIFinished returns true if mock invocations count is ok
+func (m *LogicRunnerMock) LRIFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.LRIMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.LRICounter) == uint64(len(m.LRIMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.LRIMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.LRICounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.LRIFunc != nil {
+		return atomic.LoadUint64(&m.LRICounter) > 0
 	}
 
 	return true
@@ -349,168 +457,20 @@ func (m *LogicRunnerMock) OnPulseFinished() bool {
 	return true
 }
 
-type mLogicRunnerMockRegisterExecutor struct {
-	mock              *LogicRunnerMock
-	mainExpectation   *LogicRunnerMockRegisterExecutorExpectation
-	expectationSeries []*LogicRunnerMockRegisterExecutorExpectation
-}
-
-type LogicRunnerMockRegisterExecutorExpectation struct {
-	input  *LogicRunnerMockRegisterExecutorInput
-	result *LogicRunnerMockRegisterExecutorResult
-}
-
-type LogicRunnerMockRegisterExecutorInput struct {
-	p  insolar.MachineType
-	p1 insolar.MachineLogicExecutor
-}
-
-type LogicRunnerMockRegisterExecutorResult struct {
-	r error
-}
-
-//Expect specifies that invocation of LogicRunner.RegisterExecutor is expected from 1 to Infinity times
-func (m *mLogicRunnerMockRegisterExecutor) Expect(p insolar.MachineType, p1 insolar.MachineLogicExecutor) *mLogicRunnerMockRegisterExecutor {
-	m.mock.RegisterExecutorFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &LogicRunnerMockRegisterExecutorExpectation{}
-	}
-	m.mainExpectation.input = &LogicRunnerMockRegisterExecutorInput{p, p1}
-	return m
-}
-
-//Return specifies results of invocation of LogicRunner.RegisterExecutor
-func (m *mLogicRunnerMockRegisterExecutor) Return(r error) *LogicRunnerMock {
-	m.mock.RegisterExecutorFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &LogicRunnerMockRegisterExecutorExpectation{}
-	}
-	m.mainExpectation.result = &LogicRunnerMockRegisterExecutorResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of LogicRunner.RegisterExecutor is expected once
-func (m *mLogicRunnerMockRegisterExecutor) ExpectOnce(p insolar.MachineType, p1 insolar.MachineLogicExecutor) *LogicRunnerMockRegisterExecutorExpectation {
-	m.mock.RegisterExecutorFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &LogicRunnerMockRegisterExecutorExpectation{}
-	expectation.input = &LogicRunnerMockRegisterExecutorInput{p, p1}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *LogicRunnerMockRegisterExecutorExpectation) Return(r error) {
-	e.result = &LogicRunnerMockRegisterExecutorResult{r}
-}
-
-//Set uses given function f as a mock of LogicRunner.RegisterExecutor method
-func (m *mLogicRunnerMockRegisterExecutor) Set(f func(p insolar.MachineType, p1 insolar.MachineLogicExecutor) (r error)) *LogicRunnerMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.RegisterExecutorFunc = f
-	return m.mock
-}
-
-//RegisterExecutor implements github.com/insolar/insolar/insolar.LogicRunner interface
-func (m *LogicRunnerMock) RegisterExecutor(p insolar.MachineType, p1 insolar.MachineLogicExecutor) (r error) {
-	counter := atomic.AddUint64(&m.RegisterExecutorPreCounter, 1)
-	defer atomic.AddUint64(&m.RegisterExecutorCounter, 1)
-
-	if len(m.RegisterExecutorMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.RegisterExecutorMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to LogicRunnerMock.RegisterExecutor. %v %v", p, p1)
-			return
-		}
-
-		input := m.RegisterExecutorMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, LogicRunnerMockRegisterExecutorInput{p, p1}, "LogicRunner.RegisterExecutor got unexpected parameters")
-
-		result := m.RegisterExecutorMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the LogicRunnerMock.RegisterExecutor")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.RegisterExecutorMock.mainExpectation != nil {
-
-		input := m.RegisterExecutorMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, LogicRunnerMockRegisterExecutorInput{p, p1}, "LogicRunner.RegisterExecutor got unexpected parameters")
-		}
-
-		result := m.RegisterExecutorMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the LogicRunnerMock.RegisterExecutor")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.RegisterExecutorFunc == nil {
-		m.t.Fatalf("Unexpected call to LogicRunnerMock.RegisterExecutor. %v %v", p, p1)
-		return
-	}
-
-	return m.RegisterExecutorFunc(p, p1)
-}
-
-//RegisterExecutorMinimockCounter returns a count of LogicRunnerMock.RegisterExecutorFunc invocations
-func (m *LogicRunnerMock) RegisterExecutorMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.RegisterExecutorCounter)
-}
-
-//RegisterExecutorMinimockPreCounter returns the value of LogicRunnerMock.RegisterExecutor invocations
-func (m *LogicRunnerMock) RegisterExecutorMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.RegisterExecutorPreCounter)
-}
-
-//RegisterExecutorFinished returns true if mock invocations count is ok
-func (m *LogicRunnerMock) RegisterExecutorFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.RegisterExecutorMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.RegisterExecutorCounter) == uint64(len(m.RegisterExecutorMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.RegisterExecutorMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.RegisterExecutorCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.RegisterExecutorFunc != nil {
-		return atomic.LoadUint64(&m.RegisterExecutorCounter) > 0
-	}
-
-	return true
-}
-
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *LogicRunnerMock) ValidateCallCounters() {
 
-	if !m.GetExecutorFinished() {
-		m.t.Fatal("Expected call to LogicRunnerMock.GetExecutor")
+	if !m.AddUnwantedResponseFinished() {
+		m.t.Fatal("Expected call to LogicRunnerMock.AddUnwantedResponse")
+	}
+
+	if !m.LRIFinished() {
+		m.t.Fatal("Expected call to LogicRunnerMock.LRI")
 	}
 
 	if !m.OnPulseFinished() {
 		m.t.Fatal("Expected call to LogicRunnerMock.OnPulse")
-	}
-
-	if !m.RegisterExecutorFinished() {
-		m.t.Fatal("Expected call to LogicRunnerMock.RegisterExecutor")
 	}
 
 }
@@ -530,16 +490,16 @@ func (m *LogicRunnerMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *LogicRunnerMock) MinimockFinish() {
 
-	if !m.GetExecutorFinished() {
-		m.t.Fatal("Expected call to LogicRunnerMock.GetExecutor")
+	if !m.AddUnwantedResponseFinished() {
+		m.t.Fatal("Expected call to LogicRunnerMock.AddUnwantedResponse")
+	}
+
+	if !m.LRIFinished() {
+		m.t.Fatal("Expected call to LogicRunnerMock.LRI")
 	}
 
 	if !m.OnPulseFinished() {
 		m.t.Fatal("Expected call to LogicRunnerMock.OnPulse")
-	}
-
-	if !m.RegisterExecutorFinished() {
-		m.t.Fatal("Expected call to LogicRunnerMock.RegisterExecutor")
 	}
 
 }
@@ -556,9 +516,9 @@ func (m *LogicRunnerMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.GetExecutorFinished()
+		ok = ok && m.AddUnwantedResponseFinished()
+		ok = ok && m.LRIFinished()
 		ok = ok && m.OnPulseFinished()
-		ok = ok && m.RegisterExecutorFinished()
 
 		if ok {
 			return
@@ -567,16 +527,16 @@ func (m *LogicRunnerMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if !m.GetExecutorFinished() {
-				m.t.Error("Expected call to LogicRunnerMock.GetExecutor")
+			if !m.AddUnwantedResponseFinished() {
+				m.t.Error("Expected call to LogicRunnerMock.AddUnwantedResponse")
+			}
+
+			if !m.LRIFinished() {
+				m.t.Error("Expected call to LogicRunnerMock.LRI")
 			}
 
 			if !m.OnPulseFinished() {
 				m.t.Error("Expected call to LogicRunnerMock.OnPulse")
-			}
-
-			if !m.RegisterExecutorFinished() {
-				m.t.Error("Expected call to LogicRunnerMock.RegisterExecutor")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -591,15 +551,15 @@ func (m *LogicRunnerMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *LogicRunnerMock) AllMocksCalled() bool {
 
-	if !m.GetExecutorFinished() {
+	if !m.AddUnwantedResponseFinished() {
+		return false
+	}
+
+	if !m.LRIFinished() {
 		return false
 	}
 
 	if !m.OnPulseFinished() {
-		return false
-	}
-
-	if !m.RegisterExecutorFinished() {
 		return false
 	}
 

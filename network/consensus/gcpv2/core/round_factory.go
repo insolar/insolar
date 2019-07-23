@@ -50,25 +50,32 @@
 
 package core
 
-import "github.com/insolar/insolar/network/consensus/gcpv2/census"
+import (
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+)
 
-var _ RoundControllerFactory = &PhasedRoundControllerFactory{}
+var _ api.RoundControllerFactory = &PhasedRoundControllerFactory{}
 
-func NewPhasedRoundControllerFactory(config LocalNodeConfiguration, t TransportFactory, strategyFactory RoundStrategyFactory) *PhasedRoundControllerFactory {
+func NewPhasedRoundControllerFactory(config api.LocalNodeConfiguration, t transport.Factory, strategyFactory RoundStrategyFactory) *PhasedRoundControllerFactory {
 	return &PhasedRoundControllerFactory{strategyFactory: strategyFactory, transport: t, config: config}
 }
 
 type PhasedRoundControllerFactory struct {
 	strategyFactory RoundStrategyFactory
-	transport       TransportFactory
-	config          LocalNodeConfiguration
+	transport       transport.Factory
+	config          api.LocalNodeConfiguration
 }
 
-func (c *PhasedRoundControllerFactory) GetLocalConfiguration() LocalNodeConfiguration {
+func (c *PhasedRoundControllerFactory) GetLocalConfiguration() api.LocalNodeConfiguration {
 	return c.config
 }
 
-func (c *PhasedRoundControllerFactory) CreateConsensusRound(chronicle census.ConsensusChronicles) RoundController {
+func (c *PhasedRoundControllerFactory) CreateConsensusRound(chronicle api.ConsensusChronicles,
+	controlFeeder api.ConsensusControlFeeder, candidateFeeder api.CandidateControlFeeder,
+	prevPulseRound api.RoundController) api.RoundController {
+
 	strategy := c.strategyFactory.CreateRoundStrategy(chronicle, c.config)
-	return NewPhasedRoundController(strategy, chronicle, c.transport, c.config)
+	return NewPhasedRoundController(strategy, chronicle, c.transport, c.config, controlFeeder, candidateFeeder,
+		prevPulseRound)
 }

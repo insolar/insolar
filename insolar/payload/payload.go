@@ -18,7 +18,7 @@ package payload
 
 import (
 	"github.com/gogo/protobuf/proto"
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -27,21 +27,62 @@ type Type uint32
 //go:generate stringer -type=Type
 
 const (
-	TypeUnknown    Type = 0
-	TypeError      Type = 1
-	TypeID         Type = 2
-	TypeState      Type = 4
-	TypeGetObject  Type = 5
-	TypePassState  Type = 6
-	TypeObjIndex   Type = 7
-	TypeObjState   Type = 8
-	TypeIndex      Type = 9
-	TypePass       Type = 10
-	TypeGetCode    Type = 11
-	TypeCode       Type = 12
-	TypeSetCode    Type = 13
-	TypeSetRequest Type = 14
+	TypeUnknown Type = iota
+
+	TypeMeta
+	TypeError
+	TypeID
+	TypeIDs
+	TypeJet
+	TypeState
+	TypeGetObject
+	TypePassState
+	TypeObjIndex
+	TypeObjState
+	TypeIndex
+	TypePass
+	TypeGetCode
+	TypeCode
+	TypeSetCode
+	TypeSetIncomingRequest
+	TypeSetOutgoingRequest
+	TypeSagaCallAcceptNotification
+	TypeGetFilament
+	TypeGetRequest
+	TypeRequest
+	TypeFilamentSegment
+	TypeSetResult
+	TypeActivate
+	TypeRequestInfo
+	TypeDeactivate
+	TypeUpdate
+	TypeHotObjects
+	TypeResultInfo
+	TypeGetPendings
+	TypeHasPendings
+	TypePendingsInfo
+	TypeReplication
+	TypeGetJet
+
+	TypeReturnResults
+	TypeCallMethod
+	TypeExecutorResults
+	TypePendingFinished
+	TypeAdditionalCallFromPreviousExecutor
+	TypeStillExecuting
+
+	// should be the last (required by TypesMap)
+	_latestType
 )
+
+// TypesMap contains Type name (gen by stringer) to type mapping.
+var TypesMap = func() map[string]Type {
+	m := map[string]Type{}
+	for i := TypeUnknown; i < _latestType; i++ {
+		m[i.String()] = i
+	}
+	return m
+}()
 
 // Payload represents any kind of data that can be encoded in consistent manner.
 type Payload interface {
@@ -50,6 +91,8 @@ type Payload interface {
 
 const (
 	MessageHashSize = 28
+	MorphFieldNum   = 16
+	MorpyFieldType  = 0 // Varint
 )
 
 type MessageHash [MessageHashSize]byte
@@ -94,9 +137,13 @@ func (h *MessageHash) IsZero() bool {
 // UnmarshalType decodes payload type from given binary.
 func UnmarshalType(data []byte) (Type, error) {
 	buf := proto.NewBuffer(data)
-	_, err := buf.DecodeVarint()
+	fieldNumType, err := buf.DecodeVarint()
 	if err != nil {
 		return TypeUnknown, errors.Wrap(err, "failed to decode polymorph")
+	}
+	// First 3 bits is a field type (see protobuf wire protocol docs), key is always varint
+	if fieldNumType != MorphFieldNum<<3|MorpyFieldType {
+		return TypeUnknown, errors.Errorf("wrong polymorph field number %d", fieldNumType)
 	}
 	morph, err := buf.DecodeVarint()
 	if err != nil {
@@ -107,11 +154,20 @@ func UnmarshalType(data []byte) (Type, error) {
 
 func Marshal(payload Payload) ([]byte, error) {
 	switch pl := payload.(type) {
+	case *Meta:
+		pl.Polymorph = uint32(TypeMeta)
+		return pl.Marshal()
 	case *Error:
 		pl.Polymorph = uint32(TypeError)
 		return pl.Marshal()
 	case *ID:
 		pl.Polymorph = uint32(TypeID)
+		return pl.Marshal()
+	case *IDs:
+		pl.Polymorph = uint32(TypeIDs)
+		return pl.Marshal()
+	case *Jet:
+		pl.Polymorph = uint32(TypeJet)
 		return pl.Marshal()
 	case *State:
 		pl.Polymorph = uint32(TypeState)
@@ -137,8 +193,80 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *SetCode:
 		pl.Polymorph = uint32(TypeSetCode)
 		return pl.Marshal()
-	case *SetRequest:
-		pl.Polymorph = uint32(TypeSetRequest)
+	case *GetFilament:
+		pl.Polymorph = uint32(TypeGetFilament)
+		return pl.Marshal()
+	case *FilamentSegment:
+		pl.Polymorph = uint32(TypeFilamentSegment)
+		return pl.Marshal()
+	case *SetIncomingRequest:
+		pl.Polymorph = uint32(TypeSetIncomingRequest)
+		return pl.Marshal()
+	case *SetOutgoingRequest:
+		pl.Polymorph = uint32(TypeSetOutgoingRequest)
+		return pl.Marshal()
+	case *SagaCallAcceptNotification:
+		pl.Polymorph = uint32(TypeSagaCallAcceptNotification)
+		return pl.Marshal()
+	case *SetResult:
+		pl.Polymorph = uint32(TypeSetResult)
+		return pl.Marshal()
+	case *Activate:
+		pl.Polymorph = uint32(TypeActivate)
+		return pl.Marshal()
+	case *RequestInfo:
+		pl.Polymorph = uint32(TypeRequestInfo)
+		return pl.Marshal()
+	case *GetRequest:
+		pl.Polymorph = uint32(TypeGetRequest)
+		return pl.Marshal()
+	case *Request:
+		pl.Polymorph = uint32(TypeRequest)
+		return pl.Marshal()
+	case *Deactivate:
+		pl.Polymorph = uint32(TypeDeactivate)
+		return pl.Marshal()
+	case *Update:
+		pl.Polymorph = uint32(TypeUpdate)
+		return pl.Marshal()
+	case *HotObjects:
+		pl.Polymorph = uint32(TypeHotObjects)
+		return pl.Marshal()
+	case *ResultInfo:
+		pl.Polymorph = uint32(TypeResultInfo)
+		return pl.Marshal()
+	case *GetPendings:
+		pl.Polymorph = uint32(TypeGetPendings)
+		return pl.Marshal()
+	case *HasPendings:
+		pl.Polymorph = uint32(TypeHasPendings)
+		return pl.Marshal()
+	case *PendingsInfo:
+		pl.Polymorph = uint32(TypePendingsInfo)
+		return pl.Marshal()
+	case *Replication:
+		pl.Polymorph = uint32(TypeReplication)
+		return pl.Marshal()
+	case *ReturnResults:
+		pl.Polymorph = uint32(TypeReturnResults)
+		return pl.Marshal()
+	case *CallMethod:
+		pl.Polymorph = uint32(TypeCallMethod)
+		return pl.Marshal()
+	case *ExecutorResults:
+		pl.Polymorph = uint32(TypeExecutorResults)
+		return pl.Marshal()
+	case *PendingFinished:
+		pl.Polymorph = uint32(TypePendingFinished)
+		return pl.Marshal()
+	case *AdditionalCallFromPreviousExecutor:
+		pl.Polymorph = uint32(TypeAdditionalCallFromPreviousExecutor)
+		return pl.Marshal()
+	case *StillExecuting:
+		pl.Polymorph = uint32(TypeStillExecuting)
+		return pl.Marshal()
+	case *GetJet:
+		pl.Polymorph = uint32(TypeGetJet)
 		return pl.Marshal()
 	}
 
@@ -151,12 +279,24 @@ func Unmarshal(data []byte) (Payload, error) {
 		return nil, err
 	}
 	switch tp {
+	case TypeMeta:
+		pl := Meta{}
+		err := pl.Unmarshal(data)
+		return &pl, err
 	case TypeError:
 		pl := Error{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	case TypeID:
 		pl := ID{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeIDs:
+		pl := IDs{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeJet:
+		pl := Jet{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	case TypeState:
@@ -191,8 +331,104 @@ func Unmarshal(data []byte) (Payload, error) {
 		pl := SetCode{}
 		err := pl.Unmarshal(data)
 		return &pl, err
-	case TypeSetRequest:
-		pl := SetRequest{}
+	case TypeGetFilament:
+		pl := GetFilament{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeFilamentSegment:
+		pl := FilamentSegment{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeSetIncomingRequest:
+		pl := SetIncomingRequest{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeSetOutgoingRequest:
+		pl := SetOutgoingRequest{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeSagaCallAcceptNotification:
+		pl := SagaCallAcceptNotification{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeSetResult:
+		pl := SetResult{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeActivate:
+		pl := Activate{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeRequestInfo:
+		pl := RequestInfo{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeGetRequest:
+		pl := GetRequest{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeRequest:
+		pl := Request{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeDeactivate:
+		pl := Deactivate{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeUpdate:
+		pl := Update{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeHotObjects:
+		pl := HotObjects{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeGetPendings:
+		pl := GetPendings{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeHasPendings:
+		pl := HasPendings{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypePendingsInfo:
+		pl := PendingsInfo{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeReplication:
+		pl := Replication{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeResultInfo:
+		pl := ResultInfo{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeReturnResults:
+		pl := ReturnResults{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeCallMethod:
+		pl := CallMethod{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeExecutorResults:
+		pl := ExecutorResults{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypePendingFinished:
+		pl := PendingFinished{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeAdditionalCallFromPreviousExecutor:
+		pl := AdditionalCallFromPreviousExecutor{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeStillExecuting:
+		pl := StillExecuting{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeGetJet:
+		pl := GetJet{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}
@@ -215,16 +451,4 @@ func UnmarshalFromMeta(meta []byte) (Payload, error) {
 	}
 
 	return pl, nil
-}
-
-// UnmarshalTypeFromMeta decodes payload type from given meta binary.
-func UnmarshalTypeFromMeta(data []byte) (Type, error) {
-	m := Meta{}
-	// Can be optimized by using proto.NewBuffer.
-	err := m.Unmarshal(data)
-	if err != nil {
-		return TypeUnknown, err
-	}
-
-	return UnmarshalType(m.Payload)
 }

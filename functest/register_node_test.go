@@ -33,8 +33,8 @@ var keyProcessor = platformpolicy.NewKeyProcessor()
 
 const TESTPUBLICKEY = "some_fancy_public_key"
 
-func registerNodeSignedCall(params ...interface{}) (string, error) {
-	res, err := signedRequest(&root, "RegisterNode", params...)
+func registerNodeSignedCall(params map[string]interface{}) (string, error) {
+	res, err := signedRequest(&root, "contract.registerNode", params)
 	if err != nil {
 		return "", err
 	}
@@ -43,7 +43,7 @@ func registerNodeSignedCall(params ...interface{}) (string, error) {
 
 func TestRegisterNodeVirtual(t *testing.T) {
 	const testRole = "virtual"
-	ref, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
+	ref, err := registerNodeSignedCall(map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
 	require.NoError(t, err)
 
 	require.NotNil(t, ref)
@@ -51,7 +51,7 @@ func TestRegisterNodeVirtual(t *testing.T) {
 
 func TestRegisterNodeHeavyMaterial(t *testing.T) {
 	const testRole = "heavy_material"
-	ref, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
+	ref, err := registerNodeSignedCall(map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
 	require.NoError(t, err)
 
 	require.NotNil(t, ref)
@@ -59,33 +59,33 @@ func TestRegisterNodeHeavyMaterial(t *testing.T) {
 
 func TestRegisterNodeLightMaterial(t *testing.T) {
 	const testRole = "light_material"
-	ref, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
+	ref, err := registerNodeSignedCall(map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
 	require.NoError(t, err)
 
 	require.NotNil(t, ref)
 }
 
 func TestRegisterNodeNotExistRole(t *testing.T) {
-	_, err := registerNodeSignedCall(TESTPUBLICKEY, "some_not_fancy_role")
+	_, err := registerNodeSignedCall(map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": "some_not_fancy_role"})
 	require.Contains(t, err.Error(),
-		"Role is not supported: some_not_fancy_role")
+		"role is not supported: some_not_fancy_role")
 }
 
 func TestRegisterNodeByNoRoot(t *testing.T) {
-	member := createMember(t, "Member1")
+	member := createMember(t)
 	const testRole = "virtual"
-	_, err := signedRequest(member, "RegisterNode", TESTPUBLICKEY, testRole)
-	require.Contains(t, err.Error(), "[ RegisterNode ] Only Root member can register node")
+	_, err := signedRequest(member, "contract.registerNode", map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
+	require.Contains(t, err.Error(), "only root member can register node")
 }
 
 func TestReceiveNodeCert(t *testing.T) {
 	const testRole = "virtual"
-	ref, err := registerNodeSignedCall(TESTPUBLICKEY, testRole)
+	ref, err := registerNodeSignedCall(map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
 	require.NoError(t, err)
 
 	body := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
-		"method":  "cert.Get",
+		"method":  "cert.get",
 		"id":      "",
 		"params":  map[string]string{"ref": ref},
 	})
@@ -107,11 +107,11 @@ func TestReceiveNodeCert(t *testing.T) {
 		require.NoError(t, err)
 
 		t.Run("Verify network sign for "+discoveryNode.Host, func(t *testing.T) {
-			verified := scheme.Verifier(pKey).Verify(insolar.SignatureFromBytes(discoveryNode.NetworkSign), networkPart)
+			verified := scheme.DataVerifier(pKey, scheme.IntegrityHasher()).Verify(insolar.SignatureFromBytes(discoveryNode.NetworkSign), networkPart)
 			require.True(t, verified)
 		})
 		t.Run("Verify node sign for "+discoveryNode.Host, func(t *testing.T) {
-			verified := scheme.Verifier(pKey).Verify(insolar.SignatureFromBytes(discoveryNode.NodeSign), nodePart)
+			verified := scheme.DataVerifier(pKey, scheme.IntegrityHasher()).Verify(insolar.SignatureFromBytes(discoveryNode.NodeSign), nodePart)
 			require.True(t, verified)
 		})
 	}

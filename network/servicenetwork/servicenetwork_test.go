@@ -85,7 +85,7 @@ func (p *PublisherMock) Close() error {
 }
 
 func prepareNetwork(t *testing.T, cfg configuration.Configuration) *ServiceNetwork {
-	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
+	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{})
 	require.NoError(t, err)
 
 	nodeKeeper := networkUtils.NewNodeKeeperMock(t)
@@ -118,7 +118,7 @@ func TestSendMessageHandler_ReceiverNotSet(t *testing.T) {
 func TestSendMessageHandler_SameNode(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	cfg.Service.Skip = 5
-	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
+	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{})
 	nodeRef := testutils.RandomRef()
 	nodeN := networkUtils.NewNodeKeeperMock(t)
 	nodeN.GetOriginFunc = func() (r insolar.NetworkNode) {
@@ -154,7 +154,7 @@ func TestSendMessageHandler_SendError(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	cfg.Service.Skip = 5
 	pubMock := &PublisherMock{}
-	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
+	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{})
 	serviceNetwork.Pub = pubMock
 	nodeN := networkUtils.NewNodeKeeperMock(t)
 	nodeN.GetOriginFunc = func() (r insolar.NetworkNode) {
@@ -192,7 +192,7 @@ func TestSendMessageHandler_WrongReply(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	cfg.Service.Skip = 5
 	pubMock := &PublisherMock{}
-	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
+	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{})
 	serviceNetwork.Pub = pubMock
 	nodeN := networkUtils.NewNodeKeeperMock(t)
 	nodeN.GetOriginFunc = func() (r insolar.NetworkNode) {
@@ -229,7 +229,7 @@ func TestSendMessageHandler_WrongReply(t *testing.T) {
 func TestSendMessageHandler(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	cfg.Service.Skip = 5
-	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
+	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{})
 	nodeN := networkUtils.NewNodeKeeperMock(t)
 	nodeN.GetOriginFunc = func() (r insolar.NetworkNode) {
 		n := networkUtils.NewNetworkNodeMock(t)
@@ -265,8 +265,8 @@ func TestSendMessageHandler(t *testing.T) {
 
 type stater struct{}
 
-func (s *stater) State() ([]byte, error) {
-	return []byte("123"), nil
+func (s *stater) State() []byte {
+	return []byte("123")
 }
 
 func TestServiceNetwork_StartStop(t *testing.T) {
@@ -276,7 +276,7 @@ func TestServiceNetwork_StartStop(t *testing.T) {
 	cert := &certificate.Certificate{}
 	cert.Reference = origin.String()
 	certManager := certificate.NewCertificateManager(cert)
-	serviceNetwork, err := NewServiceNetwork(configuration.NewConfiguration(), cm, false)
+	serviceNetwork, err := NewServiceNetwork(configuration.NewConfiguration(), cm)
 	require.NoError(t, err)
 	ctx := context.Background()
 	defer serviceNetwork.Stop(ctx)
@@ -302,7 +302,7 @@ func (pm *publisherMock) Publish(topic string, messages ...*message.Message) err
 func (pm *publisherMock) Close() error                                             { return nil }
 
 func TestServiceNetwork_processIncoming(t *testing.T) {
-	serviceNetwork, err := NewServiceNetwork(configuration.NewConfiguration(), &component.Manager{}, false)
+	serviceNetwork, err := NewServiceNetwork(configuration.NewConfiguration(), &component.Manager{})
 	require.NoError(t, err)
 	pub := &publisherMock{}
 	serviceNetwork.Pub = pub
@@ -320,7 +320,7 @@ func TestServiceNetwork_processIncoming(t *testing.T) {
 }
 
 func TestServiceNetwork_SetGateway(t *testing.T) {
-	sn, err := NewServiceNetwork(configuration.NewConfiguration(), &component.Manager{}, false)
+	sn, err := NewServiceNetwork(configuration.NewConfiguration(), &component.Manager{})
 	require.NoError(t, err)
 	op := false
 	tick := 0
@@ -334,7 +334,7 @@ func TestServiceNetwork_SetGateway(t *testing.T) {
 	sn.HostNetwork = hn
 
 	// initial set
-	sn.SetGateway(gateway.NewNoNetwork(sn, sn.NodeKeeper, sn.ContractRequester,
+	sn.SetGateway(gateway.NewNoNetwork(sn, sn.PulseManager, sn.NodeKeeper, sn.ContractRequester,
 		sn.CryptographyService, sn.HostNetwork, sn.CertificateManager))
 	assert.Equal(t, 1, tick)
 	assert.False(t, op)

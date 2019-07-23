@@ -20,52 +20,66 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow/bus"
+	wmbus "github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
 
 type GetRequest struct {
-	replyTo chan<- bus.Reply
-	request insolar.ID
+	message   payload.Meta
+	requestID insolar.ID
 
 	Dep struct {
 		RecordAccessor object.RecordAccessor
+		Sender         wmbus.Sender
 	}
 }
 
-func NewGetRequest(request insolar.ID, replyTo chan<- bus.Reply) *GetRequest {
+func NewGetRequest(msg payload.Meta, requestID insolar.ID) *GetRequest {
 	return &GetRequest{
-		request: request,
-		replyTo: replyTo,
+		requestID: requestID,
+		message:   msg,
 	}
 }
 
 func (p *GetRequest) Proceed(ctx context.Context) error {
-	rec, err := p.Dep.RecordAccessor.ForID(ctx, p.request)
+	rec, err := p.Dep.RecordAccessor.ForID(ctx, p.requestID)
+	if err == object.ErrNotFound {
+		msg, err := payload.NewMessage(&payload.Error{
+			Text: object.ErrNotFound.Error(),
+			Code: payload.CodeObjectNotFound,
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to create reply")
+		}
+
+		p.Dep.Sender.Reply(ctx, p.message, msg)
+		return nil
+	}
 	if err != nil {
 		return errors.Wrap(err, "failed to fetch request")
 	}
 
-	virtRec := rec.Virtual
-	concrete := record.Unwrap(virtRec)
-	_, ok := concrete.(*record.Request)
-	if !ok {
+	concrete := record.Unwrap(rec.Virtual)
+	_, isIncoming := concrete.(*record.IncomingRequest)
+	_, isOutgoing := concrete.(*record.IncomingRequest)
+	if !isIncoming && !isOutgoing {
 		return errors.New("failed to decode request")
 	}
 
-	data, err := virtRec.Marshal()
+	msg, err := payload.NewMessage(&payload.Request{
+		RequestID: p.requestID,
+		Request:   *rec.Virtual,
+	})
 	if err != nil {
-		return errors.Wrap(err, "can't serialize record")
+		return errors.Wrap(err, "failed to create reply")
 	}
 
-	rep := &reply.Request{
-		ID:     p.request,
-		Record: data,
-	}
+	p.Dep.Sender.Reply(ctx, p.message, msg)
+	inslogger.FromContext(ctx).Info("sending request")
 
-	p.replyTo <- bus.Reply{Reply: rep}
 	return nil
 }

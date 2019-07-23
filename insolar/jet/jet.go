@@ -41,7 +41,7 @@ type Accessor interface {
 type Modifier interface {
 	// Update updates jet tree for specified pulse.
 	Update(ctx context.Context, pulse insolar.PulseNumber, actual bool, ids ...insolar.JetID) error
-	// Split performs jet split and returns resulting jet ids.
+	// Split performs jet split and returns resulting jet ids. Always set Active flag to true for leafs.
 	Split(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID) (insolar.JetID, insolar.JetID, error)
 	// Clone copies tree from one pulse to another. Use it to copy the past tree into new pulse.
 	Clone(ctx context.Context, from, to insolar.PulseNumber) error
@@ -84,13 +84,13 @@ type Coordinator interface {
 	LightExecutorForJet(ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber) (*insolar.Reference, error)
 	LightValidatorsForJet(ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber) ([]insolar.Reference, error)
 
-	Heavy(ctx context.Context, pulse insolar.PulseNumber) (*insolar.Reference, error)
+	Heavy(ctx context.Context) (*insolar.Reference, error)
 
-	IsBeyondLimit(ctx context.Context, currentPN, targetPN insolar.PulseNumber) (bool, error)
-	NodeForJet(ctx context.Context, jetID insolar.ID, rootPN, targetPN insolar.PulseNumber) (*insolar.Reference, error)
+	IsBeyondLimit(ctx context.Context, targetPN insolar.PulseNumber) (bool, error)
+	NodeForJet(ctx context.Context, jetID insolar.ID, targetPN insolar.PulseNumber) (*insolar.Reference, error)
 
 	// NodeForObject calculates a node (LME or heavy) for a specific jet for a specific pulseNumber
-	NodeForObject(ctx context.Context, objectID insolar.ID, rootPN, targetPN insolar.PulseNumber) (*insolar.Reference, error)
+	NodeForObject(ctx context.Context, objectID insolar.ID, targetPN insolar.PulseNumber) (*insolar.Reference, error)
 }
 
 // Parent returns a parent of the jet or jet itself if depth of provided JetID is zero.

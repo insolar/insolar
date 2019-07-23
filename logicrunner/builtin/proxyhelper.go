@@ -62,7 +62,7 @@ func (h *ProxyHelper) getUpBaseReq() rpctypes.UpBaseReq {
 	}
 }
 
-func (h *ProxyHelper) RouteCall(ref insolar.Reference, wait bool, immutable bool, method string, args []byte,
+func (h *ProxyHelper) RouteCall(ref insolar.Reference, wait bool, immutable bool, saga bool, method string, args []byte,
 	proxyPrototype insolar.Reference) ([]byte, error) {
 
 	res := rpctypes.UpRouteResp{}
@@ -72,6 +72,7 @@ func (h *ProxyHelper) RouteCall(ref insolar.Reference, wait bool, immutable bool
 		Object:    ref,
 		Wait:      wait,
 		Immutable: immutable,
+		Saga:      saga,
 		Method:    method,
 		Arguments: args,
 		Prototype: proxyPrototype,
@@ -105,32 +106,6 @@ func (h *ProxyHelper) SaveAsChild(parentRef, classRef insolar.Reference, constru
 		return insolar.Reference{}, errors.New("Unexpected result, empty reference")
 	}
 	return *res.Reference, nil
-}
-
-func (h *ProxyHelper) GetObjChildrenIterator(head insolar.Reference, prototype insolar.Reference,
-	iteratorID string) (*lrCommon.ChildrenTypedIterator, error) {
-
-	res := rpctypes.UpGetObjChildrenIteratorResp{}
-	req := rpctypes.UpGetObjChildrenIteratorReq{
-		UpBaseReq: h.getUpBaseReq(),
-
-		IteratorID: iteratorID,
-		Object:     head,
-		Prototype:  prototype,
-	}
-
-	err := h.methods.GetObjChildrenIterator(req, &res)
-
-	if err != nil {
-		return &lrCommon.ChildrenTypedIterator{}, errors.Wrap(err, "on calling GetObjChildren")
-	}
-	return &lrCommon.ChildrenTypedIterator{
-		Parent:         head,
-		ChildPrototype: prototype,
-		IteratorID:     res.Iterator.ID,
-		Buff:           res.Iterator.Buff,
-		CanFetch:       res.Iterator.CanFetch,
-	}, nil
 }
 
 func (h *ProxyHelper) SaveAsDelegate(parentRef, classRef insolar.Reference, constructorName string,

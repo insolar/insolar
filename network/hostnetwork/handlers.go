@@ -54,6 +54,8 @@ import (
 	"context"
 	"io"
 
+	"github.com/insolar/insolar/network/utils"
+
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -64,7 +66,7 @@ import (
 )
 
 // RequestHandler is callback function for request handling
-type RequestHandler func(ctx context.Context, p *packet.Packet)
+type RequestHandler func(ctx context.Context, p *packet.ReceivedPacket)
 
 // StreamHandler parses packets from data stream and calls request handler or response handler
 type StreamHandler struct {
@@ -87,12 +89,24 @@ func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader
 	// get only log level from context, discard TraceID in favor of packet TraceID
 	packetCtx := inslogger.WithLoggerLevel(context.Background(), logLevel)
 
+	// context cancel monitoring
+	go func() {
+		<-ctx.Done()
+		utils.CloseVerbose(reader)
+	}()
+
 	for {
 		p, err := packet.DeserializePacket(mainLogger, reader)
 
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				mainLogger.Info("[ HandleStream ] Connection closed by peer")
+				utils.CloseVerbose(reader)
+				return
+			}
+
+			if utils.IsConnectionClosed(err) || utils.IsClosedPipe(err) {
+				mainLogger.Info("[ HandleStream ] Connection closed.")
 				return
 			}
 
@@ -125,11 +139,12 @@ func SendPacket(ctx context.Context, pool pool.ConnectionPool, p *packet.Packet)
 	n, err := conn.Write(data)
 	if err != nil {
 		// retry
+		inslogger.FromContext(ctx).Warn("[ SendPacket ] retry conn.Write")
 		pool.CloseConnection(ctx, p.Receiver)
 		conn, err = pool.GetConnection(ctx, p.Receiver)
 
 		if err != nil {
-			return errors.Wrap(err, "[ SendBuffer ] Failed to get connection")
+			return errors.Wrap(err, "[ SendPacket ] Failed to get connection")
 		}
 		n, err = conn.Write(data)
 	}
@@ -137,5 +152,5 @@ func SendPacket(ctx context.Context, pool pool.ConnectionPool, p *packet.Packet)
 		metrics.NetworkSentSize.Add(float64(n))
 		return nil
 	}
-	return errors.Wrap(err, "[ send ] Failed to write data")
+	return errors.Wrap(err, "[ SendPacket ] Failed to write data")
 }

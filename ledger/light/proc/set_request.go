@@ -24,30 +24,31 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/hot"
-	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
 
 type SetRequest struct {
 	message   payload.Meta
-	request   record.Virtual
+	request   record.Request
 	requestID insolar.ID
 	jetID     insolar.JetID
 
 	dep struct {
-		writer        hot.WriteAccessor
-		records       object.RecordModifier
-		recentStorage recentstorage.Provider
-		pendings      object.PendingModifier
-		sender        bus.Sender
+		writer   hot.WriteAccessor
+		filament executor.FilamentModifier
+		sender   bus.Sender
+		locker   object.IndexLocker
+		index    object.IndexStorage
 	}
 }
 
 func NewSetRequest(
 	msg payload.Meta,
-	rec record.Virtual,
+	rec record.Request,
 	recID insolar.ID,
 	jetID insolar.JetID,
 ) *SetRequest {
@@ -61,19 +62,22 @@ func NewSetRequest(
 
 func (p *SetRequest) Dep(
 	w hot.WriteAccessor,
-	r object.RecordModifier,
-	rs recentstorage.Provider,
-	pnds object.PendingModifier,
+	f executor.FilamentModifier,
 	s bus.Sender,
+	l object.IndexLocker,
+	i object.IndexStorage,
 ) {
 	p.dep.writer = w
-	p.dep.records = r
-	p.dep.recentStorage = rs
-	p.dep.pendings = pnds
+	p.dep.filament = f
 	p.dep.sender = s
+	p.dep.locker = l
+	p.dep.index = i
 }
 
 func (p *SetRequest) Proceed(ctx context.Context) error {
+	logger := inslogger.FromContext(ctx).WithField("request_id", p.requestID.DebugString())
+	logger.Debug("trying to save request")
+
 	done, err := p.dep.writer.Begin(ctx, flow.Pulse(ctx))
 	if err != nil {
 		if err == hot.ErrWriteClosed {
@@ -83,47 +87,70 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	}
 	defer done()
 
-	material := record.Material{
-		Virtual: &p.request,
-		JetID:   p.jetID,
-	}
-	err = p.dep.records.Set(ctx, p.requestID, material)
-	if err != nil {
-		return errors.Wrap(err, "failed to store record")
+	var objectID insolar.ID
+	if p.request.IsCreationRequest() {
+		objectID = p.requestID
+	} else {
+		objectID = *p.request.AffinityRef().Record()
+		idx, err := p.dep.index.ForID(ctx, flow.Pulse(ctx), objectID)
+		if err != nil {
+			return errors.Wrap(err, "failed to check an object state")
+		}
+		if idx.Lifeline.StateID == record.StateDeactivation {
+			msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeDeactivated})
+			if err != nil {
+				return errors.Wrap(err, "failed to create reply")
+			}
+
+			p.dep.sender.Reply(ctx, p.message, msg)
+			return nil
+		}
 	}
 
-	err = p.handlePendings(ctx, p.requestID, p.request)
+	p.dep.locker.Lock(objectID)
+	defer p.dep.locker.Unlock(objectID)
+
+	req, res, err := p.dep.filament.SetRequest(ctx, p.requestID, p.jetID, p.request)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to set request")
 	}
 
-	msg, err := payload.NewMessage(&payload.ID{ID: p.requestID})
+	var (
+		reqBuf []byte
+		resBuf []byte
+	)
+
+	requestID := p.requestID
+	if req != nil {
+		reqBuf, err = req.Marshal()
+		if err != nil {
+			return errors.Wrap(err, "failed to marshal stored record")
+		}
+		requestID = req.RecordID
+	}
+
+	if res != nil {
+		resBuf, err = res.Marshal()
+		if err != nil {
+			return errors.Wrap(err, "failed to marshal stored record")
+		}
+	}
+
+	msg, err := payload.NewMessage(&payload.RequestInfo{
+		ObjectID:  objectID,
+		RequestID: requestID,
+		Request:   reqBuf,
+		Result:    resBuf,
+	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create reply")
 	}
 
-	go p.dep.sender.Reply(ctx, p.message, msg)
-
-	return nil
-}
-
-func (p *SetRequest) handlePendings(ctx context.Context, id insolar.ID, virtReq record.Virtual) error {
-	concrete := record.Unwrap(&virtReq)
-	req := concrete.(*record.Request)
-
-	// Skip object creation and genesis
-	if req.CallType == record.CTMethod {
-		if p.dep.recentStorage.Count() > recentstorage.PendingRequestsLimit {
-			return insolar.ErrTooManyPendingRequests
-		}
-		recentStorage := p.dep.recentStorage.GetPendingStorage(ctx, insolar.ID(p.jetID))
-		recentStorage.AddPendingRequest(ctx, *req.Object.Record(), id)
-
-		// err := p.dep.pendings.SetRequest(ctx, flow.Pulse(ctx), *req.Object.Record(), id)
-		// if err != nil {
-		// 	return errors.Wrap(err, "can't save result into filament-index")
-		// }
-	}
-
+	logger.WithFields(map[string]interface{}{
+		"duplicate":   req != nil,
+		"has_result":  res != nil,
+		"is_creation": p.request.IsCreationRequest(),
+	}).Debug("request saved")
+	p.dep.sender.Reply(ctx, p.message, msg)
 	return nil
 }

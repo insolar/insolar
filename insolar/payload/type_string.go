@@ -9,39 +9,56 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[TypeUnknown-0]
-	_ = x[TypeError-1]
-	_ = x[TypeID-2]
-	_ = x[TypeState-4]
-	_ = x[TypeGetObject-5]
-	_ = x[TypePassState-6]
-	_ = x[TypeObjIndex-7]
-	_ = x[TypeObjState-8]
-	_ = x[TypeIndex-9]
-	_ = x[TypePass-10]
-	_ = x[TypeGetCode-11]
-	_ = x[TypeCode-12]
-	_ = x[TypeSetCode-13]
-	_ = x[TypeSetRequest-14]
+	_ = x[TypeMeta-1]
+	_ = x[TypeError-2]
+	_ = x[TypeID-3]
+	_ = x[TypeIDs-4]
+	_ = x[TypeJet-5]
+	_ = x[TypeState-6]
+	_ = x[TypeGetObject-7]
+	_ = x[TypePassState-8]
+	_ = x[TypeObjIndex-9]
+	_ = x[TypeObjState-10]
+	_ = x[TypeIndex-11]
+	_ = x[TypePass-12]
+	_ = x[TypeGetCode-13]
+	_ = x[TypeCode-14]
+	_ = x[TypeSetCode-15]
+	_ = x[TypeSetIncomingRequest-16]
+	_ = x[TypeSetOutgoingRequest-17]
+	_ = x[TypeSagaCallAcceptNotification-18]
+	_ = x[TypeGetFilament-19]
+	_ = x[TypeGetRequest-20]
+	_ = x[TypeRequest-21]
+	_ = x[TypeFilamentSegment-22]
+	_ = x[TypeSetResult-23]
+	_ = x[TypeActivate-24]
+	_ = x[TypeRequestInfo-25]
+	_ = x[TypeDeactivate-26]
+	_ = x[TypeUpdate-27]
+	_ = x[TypeHotObjects-28]
+	_ = x[TypeResultInfo-29]
+	_ = x[TypeGetPendings-30]
+	_ = x[TypeHasPendings-31]
+	_ = x[TypePendingsInfo-32]
+	_ = x[TypeReplication-33]
+	_ = x[TypeGetJet-34]
+	_ = x[TypeReturnResults-35]
+	_ = x[TypeCallMethod-36]
+	_ = x[TypeExecutorResults-37]
+	_ = x[TypePendingFinished-38]
+	_ = x[TypeAdditionalCallFromPreviousExecutor-39]
+	_ = x[TypeStillExecuting-40]
+	_ = x[_latestType-41]
 }
 
-const (
-	_Type_name_0 = "TypeUnknownTypeErrorTypeID"
-	_Type_name_1 = "TypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndexTypePassTypeGetCodeTypeCodeTypeSetCodeTypeSetRequest"
-)
+const _Type_name = "TypeUnknownTypeMetaTypeErrorTypeIDTypeIDsTypeJetTypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndexTypePassTypeGetCodeTypeCodeTypeSetCodeTypeSetIncomingRequestTypeSetOutgoingRequestTypeSagaCallAcceptNotificationTypeGetFilamentTypeGetRequestTypeRequestTypeFilamentSegmentTypeSetResultTypeActivateTypeRequestInfoTypeDeactivateTypeUpdateTypeHotObjectsTypeResultInfoTypeGetPendingsTypeHasPendingsTypePendingsInfoTypeReplicationTypeGetJetTypeReturnResultsTypeCallMethodTypeExecutorResultsTypePendingFinishedTypeAdditionalCallFromPreviousExecutorTypeStillExecuting_latestType"
 
-var (
-	_Type_index_0 = [...]uint8{0, 11, 20, 26}
-	_Type_index_1 = [...]uint8{0, 9, 22, 35, 47, 59, 68, 76, 87, 95, 106, 120}
-)
+var _Type_index = [...]uint16{0, 11, 19, 28, 34, 41, 48, 57, 70, 83, 95, 107, 116, 124, 135, 143, 154, 176, 198, 228, 243, 257, 268, 287, 300, 312, 327, 341, 351, 365, 379, 394, 409, 425, 440, 450, 467, 481, 500, 519, 557, 575, 586}
 
 func (i Type) String() string {
-	switch {
-	case 0 <= i && i <= 2:
-		return _Type_name_0[_Type_index_0[i]:_Type_index_0[i+1]]
-	case 4 <= i && i <= 14:
-		i -= 4
-		return _Type_name_1[_Type_index_1[i]:_Type_index_1[i+1]]
-	default:
+	if i >= Type(len(_Type_index)-1) {
 		return "Type(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
+	return _Type_name[_Type_index[i]:_Type_index[i+1]]
 }

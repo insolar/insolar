@@ -21,6 +21,8 @@ import (
 	"context"
 	"sync"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/insolar"
@@ -41,6 +43,11 @@ func (k pulseKey) Scope() store.Scope {
 
 func (k pulseKey) ID() []byte {
 	return insolar.PulseNumber(k).Bytes()
+}
+
+func newPulseKey(raw []byte) pulseKey {
+	key := pulseKey(insolar.NewPulseNumber(raw))
+	return key
 }
 
 type dbNode struct {
@@ -76,6 +83,29 @@ func (s *DB) Latest(ctx context.Context) (pulse insolar.Pulse, err error) {
 		return
 	}
 	return nd.Pulse, nil
+}
+
+// TruncateHead remove all records after lastPulse
+func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
+	it := s.db.NewIterator(pulseKey(from), false)
+	defer it.Close()
+
+	var hasKeys bool
+	for it.Next() {
+		hasKeys = true
+		key := newPulseKey(it.Key())
+		err := s.db.Delete(&key)
+		if err != nil {
+			return errors.Wrapf(err, "can't delete key: %+v", key)
+		}
+
+		inslogger.FromContext(ctx).Debugf("Erased key with pulse number: %s", insolar.PulseNumber(key))
+	}
+	if !hasKeys {
+		return errors.New("No required pulse: " + from.String())
+	}
+
+	return nil
 }
 
 // Append appends provided pulse to current storage. Pulse number should be greater than currently saved for preserving

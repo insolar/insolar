@@ -201,40 +201,16 @@ const (
 
 	// Ledger
 
-	// TypeGetCode retrieves code from storage.
-	TypeGetCode
-	// TypeGetObject retrieves object from storage.
-	TypeGetObject
 	// TypeGetDelegate retrieves object represented as provided type.
 	TypeGetDelegate
 	// TypeGetChildren retrieves object's children.
 	TypeGetChildren
-	// TypeUpdateObject amends object.
-	TypeUpdateObject
 	// TypeRegisterChild registers child on the parent object.
 	TypeRegisterChild
-	// TypeSetRecord saves record in storage.
-	TypeSetRecord
-	// TypeValidateRecord saves record in storage.
-	TypeValidateRecord
-	// TypeSetBlob saves blob in storage.
-	TypeSetBlob
 	// TypeGetObjectIndex fetches object index from storage.
 	TypeGetObjectIndex
-	// TypeGetPendingRequests fetches pending requests for object.
-	TypeGetPendingRequests
-	// TypeHotRecords saves hot-records in storage.
-	TypeHotRecords
-	// TypeGetJet requests to calculate a jet for provided object.
-	TypeGetJet
 	// TypeAbandonedRequestsNotification informs virtual node about unclosed requests.
 	TypeAbandonedRequestsNotification
-	// TypeGetRequest fetches request from ledger.
-	TypeGetRequest
-	// TypeGetPendingRequestID fetches a pending request id from ledger
-	TypeGetPendingRequestID
-	// TypeGetPendingFilament fetches a part of a pending-filament from another light
-	TypeGetPendingFilament
 
 	// Heavy replication
 

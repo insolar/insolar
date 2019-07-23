@@ -18,7 +18,9 @@ package pulse_test
 
 import (
 	"crypto/rand"
+	"io/ioutil"
 	rand2 "math/rand"
+	"os"
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
@@ -36,7 +38,15 @@ func TestPulse_Components(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	memStorage := pulse.NewStorageMem()
-	dbStorage := pulse.NewDB(store.NewMemoryMockDB())
+
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	require.NoError(t, err)
+
+	db, err := store.NewBadgerDB(tmpdir)
+	require.NoError(t, err)
+	defer db.Stop(ctx)
+	dbStorage := pulse.NewDB(db)
 
 	var pulses []insolar.Pulse
 	f := fuzz.New().Funcs(func(p *insolar.Pulse, c fuzz.Continue) {

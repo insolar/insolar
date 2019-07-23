@@ -19,11 +19,14 @@ package logicrunner
 import (
 	"context"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -35,7 +38,7 @@ type initializeExecutionState struct {
 	msg *message.ExecutorResults
 
 	Result struct {
-		es             *ExecutionState
+		broker         *ExecutionBroker
 		clarifyPending bool
 	}
 }
@@ -44,51 +47,44 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	ref := p.msg.GetReference()
 
-	state := p.LR.UpsertObjectState(ref)
+	broker := p.LR.StateStorage.UpsertExecutionState(ref)
+	es := &broker.executionState
 
-	state.Lock()
-	if state.ExecutionState == nil {
-		state.ExecutionState = NewExecutionState(ref)
-		state.ExecutionState.RegisterLogicRunner(p.LR)
-	}
-	es := state.ExecutionState
-	p.Result.es = es
-	state.Unlock()
+	p.Result.broker = broker
 
 	p.Result.clarifyPending = false
 
 	es.Lock()
-	if es.pending == message.InPending {
-		if !es.CurrentList.Empty() {
+	if es.pending == insolar.InPending {
+		if !broker.currentList.Empty() {
 			logger.Debug("execution returned to node that is still executing pending")
 
-			es.pending = message.NotPending
+			es.pending = insolar.NotPending
 			es.PendingConfirmed = false
-		} else if p.msg.Pending == message.NotPending {
+		} else if p.msg.Pending == insolar.NotPending {
 			logger.Debug("executor we came to thinks that execution pending, but previous said to continue")
 
-			es.pending = message.NotPending
+			es.pending = insolar.NotPending
 		}
-	} else if es.pending == message.PendingUnknown {
+	} else if es.pending == insolar.PendingUnknown {
 		es.pending = p.msg.Pending
+		logger.Debug("pending state was unknown, setting from previous executor to ", es.pending)
 
-		if es.pending == message.PendingUnknown {
+		if es.pending == insolar.PendingUnknown {
 			p.Result.clarifyPending = true
 		}
 	}
 
-	// set false to true is good, set true to false may be wrong, better make unnecessary call
-	if !es.LedgerHasMoreRequests {
-		es.LedgerHasMoreRequests = p.msg.LedgerHasMoreRequests
+	if p.msg.LedgerHasMoreRequests {
+		broker.MoreRequestsOnLedger(ctx)
 	}
 
 	// prepare Queue
 	if p.msg.Queue != nil {
 		for _, qe := range p.msg.Queue {
-			ctxToSent := qe.Parcel.Context(context.Background())
-			transcript := NewTranscript(ctxToSent, qe.Parcel, qe.Request, p.LR.pulse(ctx), es.Ref)
-
-			es.Broker.Prepend(ctx, false, transcript)
+			requestCtx := contextFromServiceData(qe.ServiceData)
+			transcript := NewTranscript(requestCtx, qe.RequestRef, qe.Request)
+			broker.Prepend(ctx, false, transcript)
 		}
 	}
 	es.Unlock()
@@ -99,12 +95,12 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 type HandleExecutorResults struct {
 	dep *Dependencies
 
-	Message bus.Message
+	Message payload.Meta
+	Parcel  insolar.Parcel
 }
 
 func (h *HandleExecutorResults) realHandleExecutorState(ctx context.Context, f flow.Flow) error {
-	parcel := h.Message.Parcel
-	msg := parcel.Message().(*message.ExecutorResults)
+	msg := h.Parcel.Message().(*message.ExecutorResults)
 
 	// now we have 2 different types of data in message.HandleExecutorResultsMessage
 	// one part of it is about consensus
@@ -126,8 +122,7 @@ func (h *HandleExecutorResults) realHandleExecutorState(ctx context.Context, f f
 
 	if procInitializeExecutionState.Result.clarifyPending {
 		procClarifyPending := ClarifyPendingState{
-			es:              procInitializeExecutionState.Result.es,
-			parcel:          nil,
+			broker:          procInitializeExecutionState.Result.broker,
 			ArtifactManager: h.dep.lr.ArtifactManager,
 		}
 
@@ -141,19 +136,18 @@ func (h *HandleExecutorResults) realHandleExecutorState(ctx context.Context, f f
 		}
 	}
 
-	es := procInitializeExecutionState.Result.es
-	es.Broker.StartProcessorIfNeeded(ctx)
+	broker := procInitializeExecutionState.Result.broker
+	broker.StartProcessorIfNeeded(ctx)
 	return nil
 }
 
 func (h *HandleExecutorResults) Present(ctx context.Context, f flow.Flow) error {
-	parcel := h.Message.Parcel
-	ctx = loggerWithTargetID(ctx, parcel)
+	ctx = loggerWithTargetID(ctx, h.Parcel)
 	logger := inslogger.FromContext(ctx)
 
 	logger.Debug("HandleExecutorResults.Present starts ...")
 
-	msg, ok := parcel.Message().(*message.ExecutorResults)
+	msg, ok := h.Parcel.Message().(*message.ExecutorResults)
 	if !ok {
 		return errors.New("HandleExecutorResults( ! message.ExecutorResults )")
 	}
@@ -164,11 +158,17 @@ func (h *HandleExecutorResults) Present(ctx context.Context, f flow.Flow) error 
 
 	err := h.realHandleExecutorState(ctx, f)
 
-	actualReply := bus.Reply{Reply: &reply.OK{}, Err: err}
+	var rep *watermillMsg.Message
 	if err != nil {
-		actualReply.Reply = &reply.Error{}
+		var newErr error
+		rep, newErr = payload.NewMessage(&payload.Error{Text: err.Error()})
+		if newErr != nil {
+			return newErr
+		}
+	} else {
+		rep = bus.ReplyAsMessage(ctx, &reply.OK{})
 	}
-	h.Message.ReplyTo <- actualReply
+	h.dep.Sender.Reply(ctx, h.Message, rep)
 
 	return err
 }
