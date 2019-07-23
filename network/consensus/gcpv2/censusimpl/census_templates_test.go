@@ -53,6 +53,8 @@ package censusimpl
 import (
 	"testing"
 
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -107,6 +109,7 @@ func TestNewPrimingCensusForJoiner(t *testing.T) {
 func TestNewPrimingCensus(t *testing.T) {
 	sp := profiles.NewStaticProfileMock(t)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
+	sp.GetPrimaryRoleMock.Set(func() member.PrimaryRole { return member.PrimaryRoleNeutral })
 	pks := cryptkit.NewPublicKeyStoreMock(t)
 	sp.GetPublicKeyStoreMock.Set(func() cryptkit.PublicKeyStore { return pks })
 	registries := census.NewVersionedRegistriesMock(t)
@@ -117,6 +120,8 @@ func TestNewPrimingCensus(t *testing.T) {
 	vf := cryptkit.NewSignatureVerifierFactoryMock(t)
 	sv := cryptkit.NewSignatureVerifierMock(t)
 	vf.GetSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
+	require.Panics(t, func() { NewPrimingCensus(nil, sp, registries, vf) })
+
 	pc := NewPrimingCensus(sps, sp, registries, vf)
 	require.Equal(t, pn, pc.GetPulseNumber())
 

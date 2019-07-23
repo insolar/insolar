@@ -64,6 +64,14 @@ func TestIsEvicted(t *testing.T) {
 	require.True(t, ModeEvictedAsSuspected.IsEvicted())
 }
 
+func TestIsEvictedForcefully(t *testing.T) {
+	require.False(t, ModeRestrictedAnnouncement.IsEvictedForcefully())
+
+	require.False(t, ModeEvictedGracefully.IsEvictedForcefully())
+
+	require.True(t, ModeEvictedAsSuspected.IsEvictedForcefully())
+}
+
 func TestIsRestricted(t *testing.T) {
 	require.False(t, ModeSuspected.IsRestricted())
 
