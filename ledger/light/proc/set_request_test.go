@@ -108,7 +108,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 			return &virtualRef, nil
 		}
 
-		p := proc.NewSetRequest(msg, &request, id, jetID)
+		p := proc.NewSetRequest(msg, &request, id, jetID, true)
 		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker(), idxStorage, coordinator)
 
 		err = p.Proceed(ctx)
@@ -148,7 +148,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 			return &virtualRef, nil
 		}
 
-		p := proc.NewSetRequest(msg, &request, id, jetID)
+		p := proc.NewSetRequest(msg, &request, id, jetID, true)
 		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker(), idxStorage, coordinator)
 
 		err = p.Proceed(ctx)
@@ -174,7 +174,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 			return &virtualRef, nil
 		}
 
-		p := proc.NewSetRequest(msg, &request, id, jetID)
+		p := proc.NewSetRequest(msg, &request, id, jetID, true)
 		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker(), idxStorage, coordinator)
 
 		err = p.Proceed(ctx)

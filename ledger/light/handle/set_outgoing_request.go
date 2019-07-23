@@ -95,7 +95,7 @@ func (s *SetOutgoingRequest) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
-	setRequest := proc.NewSetRequest(s.message, request, reqID, objJetID)
+	setRequest := proc.NewSetRequest(s.message, request, reqID, objJetID, false)
 	s.dep.SetRequest(setRequest)
 	return f.Procedure(ctx, setRequest, false)
 }
