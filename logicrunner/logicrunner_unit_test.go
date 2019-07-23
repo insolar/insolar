@@ -187,23 +187,23 @@ func (suite *LogicRunnerTestSuite) TestHandleAdditionalCallFromPreviousExecutor(
 		expectedStartQueueProcessorCtr int32
 	}{
 		{
-			name: "Happy path",
+			name:                           "Happy path",
 			expectedClarifyPendingStateCtr: 1,
 			expectedStartQueueProcessorCtr: 1,
 		},
 		{
-			name: "ClarifyPendingState failed",
+			name:                           "ClarifyPendingState failed",
 			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
 			expectedClarifyPendingStateCtr: 1,
 		},
 		{
-			name: "StartQueueProcessorIfNeeded failed",
+			name:                           "StartQueueProcessorIfNeeded failed",
 			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
 			expectedClarifyPendingStateCtr: 1,
 			expectedStartQueueProcessorCtr: 1,
 		},
 		{
-			name: "Both procedures fail",
+			name:                           "Both procedures fail",
 			clarifyPendingStateResult:      fmt.Errorf("ClarifyPendingState failed"),
 			startQueueProcessorResult:      fmt.Errorf("StartQueueProcessorIfNeeded failed"),
 			expectedClarifyPendingStateCtr: 1,
@@ -745,8 +745,10 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 
 	objectId := testutils.RandomID()
 	objectRef := *insolar.NewReference(objectId)
-	msg := &message.AbandonedRequestsNotification{Object: objectId}
-	parcel := &message.Parcel{Msg: msg}
+	msg := &payload.AbandonedRequestsNotification{ObjectID: objectId}
+	msgData, err := msg.Marshal()
+	require.NoError(suite.T(), err)
+	meta := payload.Meta{Payload: msgData}
 
 	flowMock := flow.NewFlowMock(suite.mc)
 	flowMock.ProcedureMock.Set(func(p context.Context, p1 flow.Procedure, p2 bool) (r error) {
@@ -756,11 +758,11 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 	replyChan := mockSender(suite)
 
 	h := HandleAbandonedRequestsNotification{
-		dep:    &Dependencies{lr: suite.lr, Sender: suite.sender},
-		Parcel: parcel,
+		dep:  &Dependencies{lr: suite.lr, Sender: suite.sender},
+		meta: meta,
 	}
 
-	err := h.Present(suite.ctx, flowMock)
+	err = h.Present(suite.ctx, flowMock)
 	suite.Require().NoError(err)
 
 	_, err = getReply(suite, replyChan)
@@ -776,8 +778,8 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 	broker.ledgerHasMoreRequests = false
 
 	h = HandleAbandonedRequestsNotification{
-		dep:    &Dependencies{lr: suite.lr, Sender: suite.sender},
-		Parcel: parcel,
+		dep:  &Dependencies{lr: suite.lr, Sender: suite.sender},
+		meta: meta,
 	}
 
 	err = h.Present(suite.ctx, flowMock)
@@ -795,8 +797,8 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 	broker.ledgerHasMoreRequests = true
 
 	h = HandleAbandonedRequestsNotification{
-		dep:    &Dependencies{lr: suite.lr, Sender: suite.sender},
-		Parcel: parcel,
+		dep:  &Dependencies{lr: suite.lr, Sender: suite.sender},
+		meta: meta,
 	}
 
 	err = h.Present(suite.ctx, flowMock)
@@ -1739,8 +1741,8 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			messagesQueue := convertQueueToMessageQueue(s.ctx, broker.mutable.Peek(maxQueueLength))
 
 			expectedMessage := &message.ExecutorResults{
-				RecordRef: s.objectRef,
-				Queue:     messagesQueue,
+				RecordRef:             s.objectRef,
+				Queue:                 messagesQueue,
 				LedgerHasMoreRequests: test.hasMoreRequests,
 			}
 

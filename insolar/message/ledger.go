@@ -140,30 +140,3 @@ func (m *GetObjectIndex) DefaultTarget() *insolar.Reference {
 func (*GetObjectIndex) Type() insolar.MessageType {
 	return insolar.TypeGetObjectIndex
 }
-
-// AbandonedRequestsNotification informs virtual node about unclosed requests.
-type AbandonedRequestsNotification struct {
-	ledgerMessage
-
-	Object insolar.ID
-}
-
-// Type implementation of Message interface.
-func (*AbandonedRequestsNotification) Type() insolar.MessageType {
-	return insolar.TypeAbandonedRequestsNotification
-}
-
-// AllowedSenderObjectAndRole implements interface method
-func (m *AbandonedRequestsNotification) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
-	return nil, insolar.DynamicRoleUndefined
-}
-
-// DefaultRole returns role for this event
-func (*AbandonedRequestsNotification) DefaultRole() insolar.DynamicRole {
-	return insolar.DynamicRoleVirtualExecutor
-}
-
-// DefaultTarget returns of target of this event.
-func (m *AbandonedRequestsNotification) DefaultTarget() *insolar.Reference {
-	return insolar.NewReference(m.Object)
-}
