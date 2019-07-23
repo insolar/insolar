@@ -29,7 +29,7 @@ import (
 func TestCallUploadedContract(t *testing.T) {
 	contractCode := `
 		package main
-		import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+		import "github.com/insolar/insolar/logicrunner/builtin/foundation"
 		type One struct {
 			foundation.BaseContract
 		}

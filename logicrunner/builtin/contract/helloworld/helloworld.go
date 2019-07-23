@@ -24,7 +24,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member/signer"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 
 	hwProxy "github.com/insolar/insolar/logicrunner/builtin/proxy/helloworld"
 )

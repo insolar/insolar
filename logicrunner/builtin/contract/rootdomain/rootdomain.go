@@ -22,8 +22,8 @@ import (
 	"strings"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/helloworld"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 // RootDomain is smart contract representing entrance point to system.

@@ -18,9 +18,9 @@ package member
 
 import (
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/deposit"
 	"github.com/insolar/insolar/logicrunner/common"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 type CreateResponse struct {

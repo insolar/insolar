@@ -18,8 +18,8 @@ package wallet
 
 import (
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 // PrototypeReference to prototype of this contract

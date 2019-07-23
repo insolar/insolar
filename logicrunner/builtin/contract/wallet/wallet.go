@@ -22,12 +22,12 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member"
-	"github.com/insolar/insolar/logicrunner/builtin/contract/wallet/safemath"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation/safemath"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/costcenter"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/tariff"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 // Wallet - basic wallet contract.

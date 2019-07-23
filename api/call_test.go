@@ -34,7 +34,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 )

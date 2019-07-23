@@ -20,9 +20,9 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/noderecord"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 // NodeDomain holds node records.

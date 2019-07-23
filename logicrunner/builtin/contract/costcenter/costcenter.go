@@ -18,7 +18,7 @@ package costcenter
 
 import (
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 // CostCenter provides access to tariffs and wallet for commission.
