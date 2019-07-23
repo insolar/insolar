@@ -89,7 +89,7 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 
 func INSMETHOD_CalcFee(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.SetSystemError(nil)
 	self := new(Tariff)
 
 	if len(object) == 0 {
@@ -114,6 +114,10 @@ func INSMETHOD_CalcFee(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.CalcFee(args0)
 
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -130,6 +134,7 @@ func INSMETHOD_CalcFee(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
 	args := []interface{}{}
 
 	err := ph.Deserialize(data, &args)
@@ -139,6 +144,9 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	}
 
 	ret0, ret1 := New()
+	if ph.GetSystemError() != nil {
+		return nil, ph.GetSystemError()
+	}
 	if ret1 != nil {
 		return nil, ret1
 	}

@@ -153,11 +153,20 @@ type Request interface {
 	IsCreationRequest() bool
 	// IsDetached check is request has detached state.
 	IsDetached() bool
+	// IsEmptyAPINode checks that APINode field is empty.
+	// This is needed to understand that we use UploadCode hack
+	// and that we should skip sender check on RegisterResult
+	IsEmptyAPINode() bool
 }
 
 func (r *IncomingRequest) AffinityRef() *insolar.Reference {
 	// IncomingRequests are affine to the Object on which the request
-	// is going to be executed.
+	// is going to be executed
+	// Exceptions are CTSaveAsMethod/CTSaveAsDelegate, we should
+	// calculate hash of message, so call CalculateRequestAffinityRef
+	if r.IsCreationRequest() {
+		return nil
+	}
 	return r.Object
 }
 
@@ -176,6 +185,10 @@ func (r *IncomingRequest) IsCreationRequest() bool {
 func (r *IncomingRequest) IsDetached() bool {
 	// incoming requests never should't be in detached state, app code should check it and raise some kind of error.
 	return isDetached(r.ReturnMode)
+}
+
+func (r *IncomingRequest) IsEmptyAPINode() bool {
+	return r.APINode.IsEmpty()
 }
 
 func (r *OutgoingRequest) AffinityRef() *insolar.Reference {
@@ -199,6 +212,10 @@ func (r *OutgoingRequest) IsDetached() bool {
 	return isDetached(r.ReturnMode)
 }
 
+func (OutgoingRequest) IsEmptyAPINode() bool {
+	return false
+}
+
 func isDetached(rm ReturnMode) bool {
 	return rm == ReturnSaga
 }
@@ -220,4 +237,19 @@ func (m *Lifeline) DelegateByKey(key insolar.Reference) (insolar.Reference, bool
 		}
 	}
 	return [64]byte{}, false
+}
+
+func CalculateRequestAffinityRef(
+	request Request,
+	pulseNumber insolar.PulseNumber,
+	scheme insolar.PlatformCryptographyScheme,
+) *insolar.Reference {
+	affinityRef := request.AffinityRef()
+	if affinityRef == nil {
+		virtualRecord := Wrap(request)
+		hash := HashVirtual(scheme.ReferenceHasher(), virtualRecord)
+		recID := insolar.NewID(pulseNumber, hash)
+		affinityRef = insolar.NewReference(*recID)
+	}
+	return affinityRef
 }
