@@ -401,7 +401,7 @@ func main() {
 		totalBalanceAfterWithFee := big.NewInt(0)
 		for nretries := 0; nretries < 3; nretries++ {
 			totalBalanceAfter, _ = getTotalBalance(insSDK, members)
-			totalBalanceAfterWithFee = new(big.Int).Add(totalBalanceAfter, big.NewInt(calcFee(transferAmount)*int64(repetitions)))
+			totalBalanceAfterWithFee = new(big.Int).Add(totalBalanceAfter, big.NewInt(calcFee(transferAmount)*int64(repetitions*concurrent)))
 			if totalBalanceAfterWithFee.Cmp(totalBalanceBefore) == 0 {
 				break
 			}
