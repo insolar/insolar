@@ -19,6 +19,9 @@ package member
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
+	"strings"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member/helper"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member/signer"
@@ -28,8 +31,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"math/big"
-	"strings"
 )
 
 // Member - basic member contract.
@@ -286,7 +287,7 @@ func (m *Member) depositMigrationCall(params map[string]interface{}) error {
 		return fmt.Errorf("incorect input: failed to get 'migrationAddress' param")
 	}
 
-	return m.depositMigration(txId, burnAddress, *amount)
+	return m.depositMigration(txId, burnAddress, amount)
 }
 
 // Platform methods.
@@ -396,7 +397,7 @@ func (m *Member) createMember(name string, key string, burnAddress string) (*mem
 }
 
 // Migration methods.
-func (m *Member) depositMigration(txHash string, burnAddress string, amount big.Int) error {
+func (m *Member) depositMigration(txHash string, burnAddress string, amount *big.Int) error {
 	rd := rootdomain.GetObject(m.RootDomain)
 
 	// Get migration daemon members
