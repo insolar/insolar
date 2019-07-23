@@ -22,10 +22,12 @@ type StableMap struct {
 	values []interface{}
 }
 
+// Len returns number of keys in StableMap.
 func (m *StableMap) Len() int {
 	return len(m.keys)
 }
 
+// Get returns value from StableMap.
 func (m *StableMap) Get(key interface{}) (val interface{}, ok bool) {
 	for idx, k := range m.keys {
 		if k == key {
@@ -35,6 +37,7 @@ func (m *StableMap) Get(key interface{}) (val interface{}, ok bool) {
 	return nil, false
 }
 
+// Set adds or replaces value in StableMap.
 func (m *StableMap) Set(key, val interface{}) {
 	for idx, k := range m.keys {
 		if k == key {
@@ -47,6 +50,7 @@ func (m *StableMap) Set(key, val interface{}) {
 	m.values = append(m.values, val)
 }
 
+// Delete deletes value from StableMap. If there is no such key in map Delete does nothing.
 func (m *StableMap) Delete(key interface{}) {
 	for idx, k := range m.keys {
 		if k == key {
@@ -57,14 +61,17 @@ func (m *StableMap) Delete(key interface{}) {
 	}
 }
 
+// Keys returns a slice of keys from StableMap.
 func (m *StableMap) Keys() []interface{} {
 	return m.keys
 }
 
+// Values returns a slice of values from StableMap.
 func (m *StableMap) Values() []interface{} {
 	return m.values
 }
 
+// Pairs returns a slice of key value pairs from StableMap.
 func (m *StableMap) Pairs() [][2]interface{} {
 	pairs := make([][2]interface{}, len(m.keys))
 	for idx, key := range m.keys {
