@@ -53,8 +53,9 @@ package phasebundle
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/announce"
 	"time"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/announce"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
