@@ -256,6 +256,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Coordinator,
 			jetTreeUpdater,
 			WmBus,
+			Pulses,
 		)
 
 		handler.JetTreeUpdater = jetTreeUpdater

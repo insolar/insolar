@@ -39,7 +39,7 @@ type SetResult struct {
 
 	dep struct {
 		writer   hot.WriteAccessor
-		filament executor.FilamentModifier
+		filament executor.FilamentManager
 		sender   bus.Sender
 		locker   object.IndexLocker
 	}
@@ -63,7 +63,7 @@ func (p *SetResult) Dep(
 	w hot.WriteAccessor,
 	s bus.Sender,
 	l object.IndexLocker,
-	f executor.FilamentModifier,
+	f executor.FilamentManager,
 ) {
 	p.dep.writer = w
 	p.dep.sender = s

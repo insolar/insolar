@@ -49,7 +49,6 @@ func (s *SetIncomingRequest) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	virtual := msg.Request
-
 	rec := record.Unwrap(&virtual)
 	request, ok := rec.(*record.IncomingRequest)
 	if !ok {

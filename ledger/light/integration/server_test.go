@@ -210,6 +210,7 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 			Coordinator,
 			jetTreeUpdater,
 			ServerBus,
+			Pulses,
 		)
 
 		handler.JetTreeUpdater = jetTreeUpdater

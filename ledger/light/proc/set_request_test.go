@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,24 +45,27 @@ func TestSetRequest_Proceed(t *testing.T) {
 		insolar.GenesisPulse.PulseNumber+10,
 	)
 	mc := minimock.NewController(t)
+	pcs := testutils.NewPlatformCryptographyScheme()
 
 	var (
 		writeAccessor *hot.WriteAccessorMock
 		sender        *bus.SenderMock
-		filaments     *executor.FilamentModifierMock
+		filaments     *executor.FilamentCalculatorMock
 		idxStorage    *object.IndexStorageMock
+		records       *object.RecordModifierMock
 	)
 
 	resetComponents := func() {
 		writeAccessor = hot.NewWriteAccessorMock(mc)
 		sender = bus.NewSenderMock(mc)
-		filaments = executor.NewFilamentModifierMock(t)
+		filaments = executor.NewFilamentCalculatorMock(t)
 		idxStorage = object.NewIndexStorageMock(t)
+		records = object.NewRecordModifierMock(t)
 	}
 
 	ref := gen.Reference()
 	jetID := gen.JetID()
-	id := gen.ID()
+	requestID := gen.ID()
 
 	request := record.IncomingRequest{
 		Object:   &ref,
@@ -90,13 +94,47 @@ func TestSetRequest_Proceed(t *testing.T) {
 				StateID: record.StateActivation,
 			},
 		}, nil)
+		idxStorage.SetIndexFunc = func(_ context.Context, pn insolar.PulseNumber, idx record.Index) (r error) {
+			require.Equal(t, requestID.Pulse(), pn)
+
+			virtual = record.Wrap(record.PendingFilament{
+				RecordID:       requestID,
+				PreviousRecord: nil,
+			})
+			hash := record.HashVirtual(pcs.ReferenceHasher(), virtual)
+			pendingID := insolar.NewID(requestID.Pulse(), hash)
+			expectedIndex := record.Index{
+				LifelineLastUsed: pn,
+				Lifeline: record.Lifeline{
+					StateID:             record.StateActivation,
+					EarliestOpenRequest: &pn,
+					PendingPointer:      pendingID,
+				},
+			}
+			require.Equal(t, expectedIndex, idx)
+			return nil
+		}
 
 		writeAccessor.BeginMock.Return(func() {}, nil)
+		filaments.RequestDuplicateMock.Return(nil, nil, nil)
 		sender.ReplyMock.Return()
-		filaments.SetRequestMock.Return(nil, nil, nil)
+		records.SetFunc = func(_ context.Context, id insolar.ID, rec record.Material) (r error) {
+			switch record.Unwrap(rec.Virtual).(type) {
+			case *record.IncomingRequest:
+				require.Equal(t, requestID, id)
+			case *record.PendingFilament:
+				hash := record.HashVirtual(pcs.ReferenceHasher(), *rec.Virtual)
+				calcID := *insolar.NewID(requestID.Pulse(), hash)
+				require.Equal(t, calcID, id)
+			default:
+				t.Fatal("unknown record saved")
+			}
 
-		p := proc.NewSetRequest(msg, &request, id, jetID)
-		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker(), idxStorage)
+			return nil
+		}
+
+		p := proc.NewSetRequest(msg, &request, requestID, jetID)
+		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker(), idxStorage, records, pcs)
 
 		err = p.Proceed(ctx)
 		require.NoError(t, err)
@@ -105,17 +143,16 @@ func TestSetRequest_Proceed(t *testing.T) {
 	})
 
 	resetComponents()
-	t.Run("duplicate returns correct id", func(t *testing.T) {
+	t.Run("duplicate returns correct requestID", func(t *testing.T) {
 		idxStorage.ForIDMock.Return(record.Index{
 			Lifeline: record.Lifeline{
 				StateID: record.StateActivation,
 			},
 		}, nil)
 
-		writeAccessor.BeginMock.Return(func() {}, nil)
 		reqID := gen.ID()
 		resID := gen.ID()
-		filaments.SetRequestMock.Return(
+		filaments.RequestDuplicateMock.Return(
 			&record.CompositeFilamentRecord{RecordID: reqID},
 			&record.CompositeFilamentRecord{RecordID: resID},
 			nil,
@@ -129,8 +166,8 @@ func TestSetRequest_Proceed(t *testing.T) {
 			require.Equal(t, reqID, rep.RequestID)
 		}
 
-		p := proc.NewSetRequest(msg, &request, id, jetID)
-		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker(), idxStorage)
+		p := proc.NewSetRequest(msg, &request, requestID, jetID)
+		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker(), idxStorage, records, pcs)
 
 		err = p.Proceed(ctx)
 		require.NoError(t, err)

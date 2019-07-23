@@ -125,10 +125,12 @@ func NewMessageHandler(
 		SetRequest: func(p *proc.SetRequest) {
 			p.Dep(
 				h.WriteAccessor,
-				h.filamentModifier,
+				h.FilamentCalculator,
 				h.Sender,
 				h.IndexLocker,
 				h.IndexStorage,
+				h.Records,
+				h.PCS,
 			)
 		},
 		SetResult: func(p *proc.SetResult) {

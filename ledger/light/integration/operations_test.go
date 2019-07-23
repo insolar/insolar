@@ -103,7 +103,7 @@ func callSetIncomingRequest(
 		t.Fatalf("received unexpected reply %T", pl)
 	}
 
-	return insolar.ID{}, record.Virtual{}
+	return nil, record.Virtual{}
 }
 
 func callGetRequest(ctx context.Context, t *testing.T, s *Server, requestID insolar.ID) payload.Payload {
