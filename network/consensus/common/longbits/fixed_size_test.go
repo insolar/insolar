@@ -61,7 +61,7 @@ import (
 )
 
 func TestFoldUint64(t *testing.T) {
-	require.Equal(t, uint32(0), FoldUint64(0))
+	require.Zero(t, FoldUint64(0))
 
 	require.Equal(t, uint32(2), FoldUint64(2))
 
@@ -69,7 +69,7 @@ func TestFoldUint64(t *testing.T) {
 
 	require.Equal(t, uint32(1), FoldUint64(math.MaxUint32+1))
 
-	require.Equal(t, uint32(0), FoldUint64(math.MaxUint64))
+	require.Zero(t, FoldUint64(math.MaxUint64))
 }
 
 func TestEqualFixedLenWriterTo(t *testing.T) {
@@ -114,7 +114,7 @@ func TestWrite(t *testing.T) {
 	n, err := (&writerToComparer{other: fr}).Write(bits.AsBytes())
 	require.NotEqual(t, nil, err)
 
-	require.Equal(t, 0, n)
+	require.Zero(t, n)
 
 	n, err = (&writerToComparer{other: &bits}).Write(bits.AsBytes())
 	require.Nil(t, err)

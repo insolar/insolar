@@ -68,7 +68,7 @@ func TestNewFirstPulsarData(t *testing.T) {
 
 	require.Equal(t, delta, pd.DataExt.NextPulseDelta)
 
-	require.Equal(t, uint16(0), pd.DataExt.PrevPulseDelta)
+	require.Zero(t, pd.DataExt.PrevPulseDelta)
 }
 
 func TestNewPulsarData(t *testing.T) {
@@ -94,11 +94,11 @@ func TestNewFirstEphemeralData(t *testing.T) {
 
 	require.Equal(t, EphemeralPulseEpoch, pd.PulseEpoch)
 
-	require.Equal(t, uint32(0), pd.Timestamp)
+	require.Zero(t, pd.Timestamp)
 
 	require.Equal(t, uint16(1), pd.NextPulseDelta)
 
-	require.Equal(t, uint16(0), pd.PrevPulseDelta)
+	require.Zero(t, pd.PrevPulseDelta)
 }
 
 func TestString(t *testing.T) {
@@ -142,11 +142,11 @@ func TestNewEphemeralData(t *testing.T) {
 
 	require.Equal(t, EphemeralPulseEpoch, pd.PulseEpoch)
 
-	require.Equal(t, uint32(0), pd.Timestamp)
+	require.Zero(t, pd.Timestamp)
 
 	require.Equal(t, uint16(1), pd.NextPulseDelta)
 
-	require.Equal(t, uint16(0), pd.PrevPulseDelta)
+	require.Zero(t, pd.PrevPulseDelta)
 }
 
 func TestFixedPulseEntropy(t *testing.T) {
@@ -360,12 +360,13 @@ func TestCreateNextPulse(t *testing.T) {
 	pd.PulseEpoch = EphemeralPulseEpoch
 	d := pd.CreateNextPulse(entropyGenTest)
 	require.Equal(t, d.PrevPulseDelta, pd.NextPulseDelta)
-	require.Equal(t, uint32(0), d.Timestamp)
+
+	require.Zero(t, d.Timestamp)
 
 	pd.PulseEpoch = MaxTimePulse
 	d = pd.CreateNextPulse(entropyGenTest)
 	require.Equal(t, d.PrevPulseDelta, pd.NextPulseDelta)
-	require.NotEqual(t, uint32(0), d.Timestamp)
+	require.NotZero(t, d.Timestamp)
 }
 
 func TestIsValidNext(t *testing.T) {

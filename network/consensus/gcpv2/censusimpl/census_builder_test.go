@@ -172,6 +172,9 @@ func TestBuildAndMakeExpected(t *testing.T) {
 	pn := pulse.Number(1)
 	sp := profiles.NewStaticProfileMock(t)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
+	sp.GetPrimaryRoleMock.Set(func() member.PrimaryRole { return member.PrimaryRoleNeutral })
+	spe := profiles.NewStaticProfileExtensionMock(t)
+	sp.GetExtensionMock.Set(func() profiles.StaticProfileExtension { return spe })
 	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
 	lcb := newLocalCensusBuilder(chronicles, pn, population)
 	lcb.state = census.SealedCensus
@@ -187,8 +190,8 @@ func TestBuildAndMakeBrokenExpected(t *testing.T) {
 	pn := pulse.Number(1)
 	sp := profiles.NewStaticProfileMock(t)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
-	spe := profiles.NewStaticProfileExtensionMock(t)
 	sp.GetPrimaryRoleMock.Set(func() member.PrimaryRole { return member.PrimaryRoleNeutral })
+	spe := profiles.NewStaticProfileExtensionMock(t)
 	sp.GetExtensionMock.Set(func() profiles.StaticProfileExtension { return spe })
 	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
 	lcb := newLocalCensusBuilder(chronicles, pn, population)
@@ -265,7 +268,7 @@ func TestDPBGetCount(t *testing.T) {
 	require.Equal(t, 2, dpb.GetCount())
 }
 
-func TestGetLocalProfile(t *testing.T) {
+func TestDPBGetLocalProfile(t *testing.T) {
 	chronicles := &localChronicles{}
 	pn := pulse.Number(1)
 	sp := profiles.NewStaticProfileMock(t)
@@ -273,7 +276,7 @@ func TestGetLocalProfile(t *testing.T) {
 	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
 	lcb := newLocalCensusBuilder(chronicles, pn, population)
 	dpb := DynamicPopulationBuilder{census: lcb}
-	require.Equal(t, uint32(0), dpb.GetLocalProfile().GetLeaveReason())
+	require.Zero(t, dpb.GetLocalProfile().GetLeaveReason())
 }
 
 func TestDPBFindProfile(t *testing.T) {
@@ -284,7 +287,7 @@ func TestDPBFindProfile(t *testing.T) {
 	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
 	lcb := newLocalCensusBuilder(chronicles, pn, population)
 	dpb := DynamicPopulationBuilder{census: lcb}
-	require.Equal(t, uint32(0), dpb.FindProfile(0).GetLeaveReason())
+	require.Zero(t, dpb.FindProfile(0).GetLeaveReason())
 
 	require.Panics(t, func() { dpb.FindProfile(1).GetLeaveReason() })
 }

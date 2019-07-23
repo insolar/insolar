@@ -83,11 +83,11 @@ func TestCategory(t *testing.T) {
 func TestType(t *testing.T) {
 	require.Equal(t, 1, Type(1).Type())
 
-	require.Equal(t, 0, Type(1<<32).Type())
+	require.Zero(t, Type(1<<32).Type())
 }
 
 func TestCategoryOf(t *testing.T) {
-	require.Equal(t, Type(0), Category(0).Of(0))
+	require.Zero(t, Category(0).Of(0))
 
 	require.Equal(t, Type(1<<32), Category(1).Of(0))
 

@@ -62,7 +62,7 @@ func lessTestFn(v1 interface{}, v2 interface{}) bool {
 
 func TestNewHeadedLazySortedList(t *testing.T) {
 	hl := NewHeadedLazySortedList(1, lessTestFn, -1)
-	require.Equal(t, 0, len(hl.data.data))
+	require.Len(t, hl.data.data, 0)
 
 	require.Equal(t, 2, cap(hl.data.data))
 
@@ -136,7 +136,7 @@ func TestInnerGet(t *testing.T) {
 
 func TestLen(t *testing.T) {
 	hl := NewHeadedLazySortedList(1, lessTestFn, 1)
-	require.Equal(t, 0, hl.Len())
+	require.Zero(t, hl.Len())
 
 	hl.Add(2)
 	require.Equal(t, 1, hl.Len())
@@ -221,7 +221,7 @@ func TestInnerCutOffHeadByLen(t *testing.T) {
 	to = inl.cutOffHeadByLen(2, to2)
 	require.Len(t, to, 3)
 
-	require.Equal(t, 0, inl.len)
+	require.Zero(t, inl.len)
 
 	require.Nil(t, inl.data[1])
 }

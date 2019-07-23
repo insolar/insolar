@@ -107,7 +107,7 @@ func TestEPGetCount(t *testing.T) {
 	require.Equal(t, 2, ep.GetCount())
 }
 
-func TestGetProfiles(t *testing.T) {
+func TestEPGetProfiles(t *testing.T) {
 	sp1 := profiles.NewStaticProfileMock(t)
 	nodeID := insolar.ShortNodeID(0)
 	sp1.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return nodeID })
@@ -152,5 +152,5 @@ func TestGetLeaveReason(t *testing.T) {
 	require.Equal(t, leaveReason, es.GetLeaveReason())
 
 	es.mode = member.ModeSuspected
-	require.Equal(t, uint32(0), es.GetLeaveReason())
+	require.Zero(t, es.GetLeaveReason())
 }
