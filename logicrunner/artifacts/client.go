@@ -120,8 +120,7 @@ func NewClient(sender bus.Sender) *client { // nolint
 
 // registerRequest registers incoming or outgoing request.
 func (m *client) registerRequest(
-	ctx context.Context, req record.Request, msgPayload payload.Payload, callType record.CallType,
-	retriesNumber int,
+	ctx context.Context, req record.Request, msgPayload payload.Payload, retriesNumber int,
 ) (*insolar.ID, error) {
 	affinityRef, err := m.calculateAffinityReference(ctx, req)
 	if err != nil {
@@ -170,7 +169,7 @@ func (m *client) RegisterIncomingRequest(ctx context.Context, request *record.In
 
 	// retriesNumber is zero, because we don't retry registering of incoming requests - the caller should
 	// re-send the request instead.
-	id, err := m.registerRequest(ctx, request, incomingRequest, request.CallType, 0)
+	id, err := m.registerRequest(ctx, request, incomingRequest, 0)
 	if err != nil {
 		return id, errors.Wrap(err, "RegisterIncomingRequest")
 	}
@@ -181,7 +180,7 @@ func (m *client) RegisterIncomingRequest(ctx context.Context, request *record.In
 // returns request record Ref if request successfully created or already exists.
 func (m *client) RegisterOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) (*insolar.ID, error) {
 	outgoingRequest := &payload.SetOutgoingRequest{Request: record.Wrap(request)}
-	id, err := m.registerRequest(ctx, request, outgoingRequest, request.CallType, 3)
+	id, err := m.registerRequest(ctx, request, outgoingRequest, 3)
 	if err != nil {
 		return id, errors.Wrap(err, "RegisterOutgoingRequest")
 	}
