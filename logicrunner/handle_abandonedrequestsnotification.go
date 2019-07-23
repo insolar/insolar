@@ -68,7 +68,7 @@ func (h *HandleAbandonedRequestsNotification) Present(ctx context.Context, f flo
 		return errors.Wrap(err, "failed to unmarshal AbandonedRequestsNotification message")
 	}
 
-	ctx, _ = inslogger.WithField(ctx, "targetid", abandoned.ObjectID.String())
+	ctx, _ = inslogger.WithField(ctx, "targetid", abandoned.ObjectID.String()) // nolint: ineffassign
 
 	return nil
 

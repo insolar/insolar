@@ -165,5 +165,6 @@ func (p *HotObjects) notifyPending(
 
 	// Hot data was sent to us by another light.
 	// Notification should be send to virtual for this object.
-	p.Dep.Sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, *insolar.NewReference(objectID))
+	_, done := p.Dep.Sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, *insolar.NewReference(objectID))
+	done()
 }
