@@ -42,11 +42,11 @@ func Test_Pending_RequestRegistration_Incoming(t *testing.T) {
 	s.Pulse(ctx)
 
 	t.Run("pending was added", func(t *testing.T) {
-		p, _ := setIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
-		requirePayloadNotError(t, p)
+		p, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
+		requireNotError(t, p)
 		reqInfo := p.(*payload.RequestInfo)
 		p = fetchPendings(ctx, t, s, reqInfo.RequestID)
-		requirePayloadNotError(t, p)
+		requireNotError(t, p)
 
 		ids := p.(*payload.IDs)
 		require.Equal(t, 1, len(ids.IDs))
@@ -54,12 +54,12 @@ func Test_Pending_RequestRegistration_Incoming(t *testing.T) {
 	})
 
 	t.Run("pending was added and closed", func(t *testing.T) {
-		p, _ := setIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
-		requirePayloadNotError(t, p)
+		p, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
+		requireNotError(t, p)
 		reqInfo := p.(*payload.RequestInfo)
 
-		p, _ = activateObject(ctx, t, s, reqInfo.RequestID)
-		requirePayloadNotError(t, p)
+		p, _ = callActivateObject(ctx, t, s, reqInfo.RequestID)
+		requireNotError(t, p)
 
 		p = fetchPendings(ctx, t, s, reqInfo.RequestID)
 
@@ -68,17 +68,17 @@ func Test_Pending_RequestRegistration_Incoming(t *testing.T) {
 	})
 
 	t.Run("reason on the another object", func(t *testing.T) {
-		firstObjP, _ := setIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
-		requirePayloadNotError(t, firstObjP)
+		firstObjP, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
+		requireNotError(t, firstObjP)
 		reqInfo := firstObjP.(*payload.RequestInfo)
-		firstObjP, _ = activateObject(ctx, t, s, reqInfo.RequestID)
-		requirePayloadNotError(t, firstObjP)
+		firstObjP, _ = callActivateObject(ctx, t, s, reqInfo.RequestID)
+		requireNotError(t, firstObjP)
 
-		secondObjP, _ := setIncomingRequest(ctx, t, s, gen.ID(), reqInfo.RequestID, record.CTSaveAsChild)
-		requirePayloadNotError(t, secondObjP)
+		secondObjP, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), reqInfo.RequestID, record.CTSaveAsChild)
+		requireNotError(t, secondObjP)
 		secondReqInfo := secondObjP.(*payload.RequestInfo)
 		secondPendings := fetchPendings(ctx, t, s, secondReqInfo.RequestID)
-		requirePayloadNotError(t, secondPendings)
+		requireNotError(t, secondPendings)
 
 		ids := secondPendings.(*payload.IDs)
 		require.Equal(t, 1, len(ids.IDs))
@@ -115,14 +115,14 @@ func Test_DuplicatedRequests(t *testing.T) {
 
 		// Set first request
 		p := sendMessage(ctx, t, s, initReqMsg)
-		requirePayloadNotError(t, p)
+		requireNotError(t, p)
 		reqInfo := p.(*payload.RequestInfo)
 		require.Nil(t, reqInfo.Request)
 		require.Nil(t, reqInfo.Result)
 
 		// Try to set it again
 		secondP := sendMessage(ctx, t, s, initReqMsg)
-		requirePayloadNotError(t, secondP)
+		requireNotError(t, secondP)
 		reqInfo = secondP.(*payload.RequestInfo)
 		require.NotNil(t, reqInfo.Request)
 		require.Nil(t, reqInfo.Result)
@@ -151,7 +151,7 @@ func Test_DuplicatedRequests(t *testing.T) {
 
 		// Set first request
 		p := sendMessage(ctx, t, s, initReqMsg)
-		requirePayloadNotError(t, p)
+		requireNotError(t, p)
 		reqInfo := p.(*payload.RequestInfo)
 		require.Nil(t, reqInfo.Request)
 		require.Nil(t, reqInfo.Result)
@@ -168,14 +168,14 @@ func Test_DuplicatedRequests(t *testing.T) {
 
 		// Set outgoing request
 		outP := sendMessage(ctx, t, s, outgoingReqMsg)
-		requirePayloadNotError(t, outP)
+		requireNotError(t, outP)
 		outReqInfo := p.(*payload.RequestInfo)
 		require.Nil(t, outReqInfo.Request)
 		require.Nil(t, outReqInfo.Result)
 
 		// Try to set an outgoing again
 		outSecondP := sendMessage(ctx, t, s, outgoingReqMsg)
-		requirePayloadNotError(t, outSecondP)
+		requireNotError(t, outSecondP)
 		outReqSecondInfo := outSecondP.(*payload.RequestInfo)
 		require.NotNil(t, outReqSecondInfo.Request)
 		require.Nil(t, outReqSecondInfo.Result)
@@ -204,16 +204,16 @@ func Test_DuplicatedRequests(t *testing.T) {
 
 		// Set first request
 		p := sendMessage(ctx, t, s, initReqMsg)
-		requirePayloadNotError(t, p)
+		requireNotError(t, p)
 		reqInfo := p.(*payload.RequestInfo)
 
 		// Set result for the request
-		p, _ = activateObject(ctx, t, s, reqInfo.RequestID)
-		requirePayloadNotError(t, p)
+		p, _ = callActivateObject(ctx, t, s, reqInfo.RequestID)
+		requireNotError(t, p)
 
 		// Try to set it again
 		secondP := sendMessage(ctx, t, s, initReqMsg)
-		requirePayloadNotError(t, secondP)
+		requireNotError(t, secondP)
 		secondReqInfo := secondP.(*payload.RequestInfo)
 		require.NotNil(t, secondReqInfo.Request)
 		require.NotNil(t, secondReqInfo.Result)
@@ -250,7 +250,7 @@ func Test_DuplicatedRequests(t *testing.T) {
 
 		// Set first request
 		p := sendMessage(ctx, t, s, initReqMsg)
-		requirePayloadNotError(t, p)
+		requireNotError(t, p)
 		reqInfo := p.(*payload.RequestInfo)
 
 		// Set result for the request
@@ -278,14 +278,14 @@ func Test_DuplicatedRequests(t *testing.T) {
 			Record: buf,
 			Result: resBuf,
 		})
-		requirePayloadNotError(t, p)
+		requireNotError(t, p)
 
 		// Try to set it again
 		secondResP := sendMessage(ctx, t, s, &payload.Activate{
 			Record: buf,
 			Result: resBuf,
 		})
-		requirePayloadNotError(t, secondResP)
+		requireNotError(t, secondResP)
 		secondReqInfo := secondResP.(*payload.ResultInfo)
 		require.NotNil(t, secondReqInfo.Result)
 
