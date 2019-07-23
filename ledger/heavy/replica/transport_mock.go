@@ -6,7 +6,7 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "Transport" can be found in github.com/insolar/insolar/ledger/heavy/replica
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 

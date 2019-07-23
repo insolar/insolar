@@ -21,9 +21,11 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/ledger/heavy/executor"
+	"github.com/insolar/insolar/ledger/heavy/replica/integrity"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/heavy/replica/integrity"
 	"github.com/insolar/insolar/ledger/heavy/sequence"
 )
 
@@ -44,7 +46,7 @@ func NewParent() Parent {
 
 type parent struct {
 	Sequencer sequence.Sequencer `inject:""`
-	JetKeeper JetKeeper          `inject:""`
+	JetKeeper executor.JetKeeper `inject:""`
 	Provider  integrity.Provider `inject:""`
 }
 

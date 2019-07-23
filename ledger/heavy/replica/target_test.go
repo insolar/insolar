@@ -17,16 +17,20 @@
 package replica
 
 import (
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/ledger/heavy/executor"
+	"github.com/insolar/insolar/ledger/heavy/replica/integrity"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/internal/ledger/store"
-	"github.com/insolar/insolar/ledger/heavy/replica/integrity"
 	"github.com/insolar/insolar/ledger/heavy/sequence"
 )
 
@@ -34,7 +38,7 @@ func TestTarget_Notify(t *testing.T) {
 	var (
 		ctx        = inslogger.TestContext(t)
 		parent     = NewParentMock(t)
-		jetKeeper  = NewJetKeeperMock(t)
+		jetKeeper  = executor.NewJetKeeperMock(t)
 		sequencer  = sequence.NewSequencerMock(t)
 		validator  = integrity.NewValidatorMock(t)
 		firstPulse = insolar.GenesisPulse.PulseNumber
@@ -59,17 +63,24 @@ func TestTarget_Notify(t *testing.T) {
 }
 
 func TestTarget_nextPulse(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	require.NoError(t, err)
+
+	db, err := store.NewBadgerDB(tmpdir)
+	defer db.Stop(ctx)
+	require.NoError(t, err)
 	var (
-		ctx       = inslogger.TestContext(t)
-		db        = store.NewMemoryMockDB()
 		pulses    = pulse.NewDB(db)
 		sequencer = sequence.NewSequencer(db)
 		tar       = NewTarget(configuration.Replica{}, nil)
 		first     = insolar.GenesisPulse.PulseNumber
 		second    = first + 10
 	)
+
 	tar.(*target).Sequencer = sequencer
-	err := pulses.Append(ctx, insolar.Pulse{
+	err = pulses.Append(ctx, insolar.Pulse{
 		PulseNumber: first,
 	})
 	require.NoError(t, err)

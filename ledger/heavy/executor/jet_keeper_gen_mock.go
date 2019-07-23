@@ -25,10 +25,20 @@ type JetKeeperMock struct {
 	AddPreCounter uint64
 	AddMock       mJetKeeperMockAdd
 
+	SubscribeFunc       func(p insolar.PulseNumber, p1 func(p insolar.PulseNumber))
+	SubscribeCounter    uint64
+	SubscribePreCounter uint64
+	SubscribeMock       mJetKeeperMockSubscribe
+
 	TopSyncPulseFunc       func() (r insolar.PulseNumber)
 	TopSyncPulseCounter    uint64
 	TopSyncPulsePreCounter uint64
 	TopSyncPulseMock       mJetKeeperMockTopSyncPulse
+
+	UpdateFunc       func(p insolar.PulseNumber) (r error)
+	UpdateCounter    uint64
+	UpdatePreCounter uint64
+	UpdateMock       mJetKeeperMockUpdate
 }
 
 //NewJetKeeperMock returns a mock for github.com/insolar/insolar/ledger/heavy/executor.JetKeeper
@@ -40,7 +50,9 @@ func NewJetKeeperMock(t minimock.Tester) *JetKeeperMock {
 	}
 
 	m.AddMock = mJetKeeperMockAdd{mock: m}
+	m.SubscribeMock = mJetKeeperMockSubscribe{mock: m}
 	m.TopSyncPulseMock = mJetKeeperMockTopSyncPulse{mock: m}
+	m.UpdateMock = mJetKeeperMockUpdate{mock: m}
 
 	return m
 }
@@ -194,6 +206,130 @@ func (m *JetKeeperMock) AddFinished() bool {
 	return true
 }
 
+type mJetKeeperMockSubscribe struct {
+	mock              *JetKeeperMock
+	mainExpectation   *JetKeeperMockSubscribeExpectation
+	expectationSeries []*JetKeeperMockSubscribeExpectation
+}
+
+type JetKeeperMockSubscribeExpectation struct {
+	input *JetKeeperMockSubscribeInput
+}
+
+type JetKeeperMockSubscribeInput struct {
+	p  insolar.PulseNumber
+	p1 func(p insolar.PulseNumber)
+}
+
+//Expect specifies that invocation of JetKeeper.Subscribe is expected from 1 to Infinity times
+func (m *mJetKeeperMockSubscribe) Expect(p insolar.PulseNumber, p1 func(p insolar.PulseNumber)) *mJetKeeperMockSubscribe {
+	m.mock.SubscribeFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &JetKeeperMockSubscribeExpectation{}
+	}
+	m.mainExpectation.input = &JetKeeperMockSubscribeInput{p, p1}
+	return m
+}
+
+//Return specifies results of invocation of JetKeeper.Subscribe
+func (m *mJetKeeperMockSubscribe) Return() *JetKeeperMock {
+	m.mock.SubscribeFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &JetKeeperMockSubscribeExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of JetKeeper.Subscribe is expected once
+func (m *mJetKeeperMockSubscribe) ExpectOnce(p insolar.PulseNumber, p1 func(p insolar.PulseNumber)) *JetKeeperMockSubscribeExpectation {
+	m.mock.SubscribeFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &JetKeeperMockSubscribeExpectation{}
+	expectation.input = &JetKeeperMockSubscribeInput{p, p1}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of JetKeeper.Subscribe method
+func (m *mJetKeeperMockSubscribe) Set(f func(p insolar.PulseNumber, p1 func(p insolar.PulseNumber))) *JetKeeperMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.SubscribeFunc = f
+	return m.mock
+}
+
+//Subscribe implements github.com/insolar/insolar/ledger/heavy/executor.JetKeeper interface
+func (m *JetKeeperMock) Subscribe(p insolar.PulseNumber, p1 func(p insolar.PulseNumber)) {
+	counter := atomic.AddUint64(&m.SubscribePreCounter, 1)
+	defer atomic.AddUint64(&m.SubscribeCounter, 1)
+
+	if len(m.SubscribeMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.SubscribeMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to JetKeeperMock.Subscribe. %v %v", p, p1)
+			return
+		}
+
+		input := m.SubscribeMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, JetKeeperMockSubscribeInput{p, p1}, "JetKeeper.Subscribe got unexpected parameters")
+
+		return
+	}
+
+	if m.SubscribeMock.mainExpectation != nil {
+
+		input := m.SubscribeMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, JetKeeperMockSubscribeInput{p, p1}, "JetKeeper.Subscribe got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.SubscribeFunc == nil {
+		m.t.Fatalf("Unexpected call to JetKeeperMock.Subscribe. %v %v", p, p1)
+		return
+	}
+
+	m.SubscribeFunc(p, p1)
+}
+
+//SubscribeMinimockCounter returns a count of JetKeeperMock.SubscribeFunc invocations
+func (m *JetKeeperMock) SubscribeMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.SubscribeCounter)
+}
+
+//SubscribeMinimockPreCounter returns the value of JetKeeperMock.Subscribe invocations
+func (m *JetKeeperMock) SubscribeMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.SubscribePreCounter)
+}
+
+//SubscribeFinished returns true if mock invocations count is ok
+func (m *JetKeeperMock) SubscribeFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.SubscribeMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.SubscribeCounter) == uint64(len(m.SubscribeMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.SubscribeMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.SubscribeCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.SubscribeFunc != nil {
+		return atomic.LoadUint64(&m.SubscribeCounter) > 0
+	}
+
+	return true
+}
+
 type mJetKeeperMockTopSyncPulse struct {
 	mock              *JetKeeperMock
 	mainExpectation   *JetKeeperMockTopSyncPulseExpectation
@@ -328,6 +464,153 @@ func (m *JetKeeperMock) TopSyncPulseFinished() bool {
 	return true
 }
 
+type mJetKeeperMockUpdate struct {
+	mock              *JetKeeperMock
+	mainExpectation   *JetKeeperMockUpdateExpectation
+	expectationSeries []*JetKeeperMockUpdateExpectation
+}
+
+type JetKeeperMockUpdateExpectation struct {
+	input  *JetKeeperMockUpdateInput
+	result *JetKeeperMockUpdateResult
+}
+
+type JetKeeperMockUpdateInput struct {
+	p insolar.PulseNumber
+}
+
+type JetKeeperMockUpdateResult struct {
+	r error
+}
+
+//Expect specifies that invocation of JetKeeper.Update is expected from 1 to Infinity times
+func (m *mJetKeeperMockUpdate) Expect(p insolar.PulseNumber) *mJetKeeperMockUpdate {
+	m.mock.UpdateFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &JetKeeperMockUpdateExpectation{}
+	}
+	m.mainExpectation.input = &JetKeeperMockUpdateInput{p}
+	return m
+}
+
+//Return specifies results of invocation of JetKeeper.Update
+func (m *mJetKeeperMockUpdate) Return(r error) *JetKeeperMock {
+	m.mock.UpdateFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &JetKeeperMockUpdateExpectation{}
+	}
+	m.mainExpectation.result = &JetKeeperMockUpdateResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of JetKeeper.Update is expected once
+func (m *mJetKeeperMockUpdate) ExpectOnce(p insolar.PulseNumber) *JetKeeperMockUpdateExpectation {
+	m.mock.UpdateFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &JetKeeperMockUpdateExpectation{}
+	expectation.input = &JetKeeperMockUpdateInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *JetKeeperMockUpdateExpectation) Return(r error) {
+	e.result = &JetKeeperMockUpdateResult{r}
+}
+
+//Set uses given function f as a mock of JetKeeper.Update method
+func (m *mJetKeeperMockUpdate) Set(f func(p insolar.PulseNumber) (r error)) *JetKeeperMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.UpdateFunc = f
+	return m.mock
+}
+
+//Update implements github.com/insolar/insolar/ledger/heavy/executor.JetKeeper interface
+func (m *JetKeeperMock) Update(p insolar.PulseNumber) (r error) {
+	counter := atomic.AddUint64(&m.UpdatePreCounter, 1)
+	defer atomic.AddUint64(&m.UpdateCounter, 1)
+
+	if len(m.UpdateMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.UpdateMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to JetKeeperMock.Update. %v", p)
+			return
+		}
+
+		input := m.UpdateMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, JetKeeperMockUpdateInput{p}, "JetKeeper.Update got unexpected parameters")
+
+		result := m.UpdateMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the JetKeeperMock.Update")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.UpdateMock.mainExpectation != nil {
+
+		input := m.UpdateMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, JetKeeperMockUpdateInput{p}, "JetKeeper.Update got unexpected parameters")
+		}
+
+		result := m.UpdateMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the JetKeeperMock.Update")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.UpdateFunc == nil {
+		m.t.Fatalf("Unexpected call to JetKeeperMock.Update. %v", p)
+		return
+	}
+
+	return m.UpdateFunc(p)
+}
+
+//UpdateMinimockCounter returns a count of JetKeeperMock.UpdateFunc invocations
+func (m *JetKeeperMock) UpdateMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.UpdateCounter)
+}
+
+//UpdateMinimockPreCounter returns the value of JetKeeperMock.Update invocations
+func (m *JetKeeperMock) UpdateMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.UpdatePreCounter)
+}
+
+//UpdateFinished returns true if mock invocations count is ok
+func (m *JetKeeperMock) UpdateFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.UpdateMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.UpdateCounter) == uint64(len(m.UpdateMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.UpdateMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.UpdateCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.UpdateFunc != nil {
+		return atomic.LoadUint64(&m.UpdateCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *JetKeeperMock) ValidateCallCounters() {
@@ -336,8 +619,16 @@ func (m *JetKeeperMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to JetKeeperMock.Add")
 	}
 
+	if !m.SubscribeFinished() {
+		m.t.Fatal("Expected call to JetKeeperMock.Subscribe")
+	}
+
 	if !m.TopSyncPulseFinished() {
 		m.t.Fatal("Expected call to JetKeeperMock.TopSyncPulse")
+	}
+
+	if !m.UpdateFinished() {
+		m.t.Fatal("Expected call to JetKeeperMock.Update")
 	}
 
 }
@@ -361,8 +652,16 @@ func (m *JetKeeperMock) MinimockFinish() {
 		m.t.Fatal("Expected call to JetKeeperMock.Add")
 	}
 
+	if !m.SubscribeFinished() {
+		m.t.Fatal("Expected call to JetKeeperMock.Subscribe")
+	}
+
 	if !m.TopSyncPulseFinished() {
 		m.t.Fatal("Expected call to JetKeeperMock.TopSyncPulse")
+	}
+
+	if !m.UpdateFinished() {
+		m.t.Fatal("Expected call to JetKeeperMock.Update")
 	}
 
 }
@@ -380,7 +679,9 @@ func (m *JetKeeperMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.AddFinished()
+		ok = ok && m.SubscribeFinished()
 		ok = ok && m.TopSyncPulseFinished()
+		ok = ok && m.UpdateFinished()
 
 		if ok {
 			return
@@ -393,8 +694,16 @@ func (m *JetKeeperMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to JetKeeperMock.Add")
 			}
 
+			if !m.SubscribeFinished() {
+				m.t.Error("Expected call to JetKeeperMock.Subscribe")
+			}
+
 			if !m.TopSyncPulseFinished() {
 				m.t.Error("Expected call to JetKeeperMock.TopSyncPulse")
+			}
+
+			if !m.UpdateFinished() {
+				m.t.Error("Expected call to JetKeeperMock.Update")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -413,7 +722,15 @@ func (m *JetKeeperMock) AllMocksCalled() bool {
 		return false
 	}
 
+	if !m.SubscribeFinished() {
+		return false
+	}
+
 	if !m.TopSyncPulseFinished() {
+		return false
+	}
+
+	if !m.UpdateFinished() {
 		return false
 	}
 

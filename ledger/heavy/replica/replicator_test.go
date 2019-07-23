@@ -26,27 +26,28 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/ledger/heavy/sequence"
-	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/testutils"
 )
 
 func TestReplicatorRoot_InitStart(t *testing.T) {
 	var (
-		ctx = inslogger.TestContext(t)
-		pn  = insolar.GenesisPulse.PulseNumber
+		ctx     = inslogger.TestContext(t)
+		pn      = insolar.GenesisPulse.PulseNumber
+		address = "127.0.0.1:13831"
 	)
-	JetKeeper := NewJetKeeperMock(t)
+	JetKeeper := executor.NewJetKeeperMock(t)
 	JetKeeper.TopSyncPulseMock.Return(pn)
-	db := store.NewMemoryMockDB()
+	db := store.NewDBMock(t)
 	sequencer := sequence.NewSequencer(db)
 	cs := testutils.NewCryptographyServiceMock(t)
 	config := configuration.Configuration{
 		Ledger: configuration.Ledger{
 			Replica: configuration.Replica{
-				Role:              "root",
-				ParentAddress:     "127.0.0.1:13831",
-				ParentPubKey:      "",
+				Role:              "replica",
+				ParentAddress:     address,
+				ParentPubKey:      "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE3IbYswQbBlxMg0dFNzxN+3hY3VWP\nyCL8T/XEx3trWuFn74M5vGvbabvJSkF6U8Qlq6mwQ8zx7teIFML7IlQwwg==\n-----END PUBLIC KEY-----\n",
 				ScopesToReplicate: []byte{2},
 				Attempts:          60,
 				DelayForAttempt:   1 * time.Second,
@@ -54,8 +55,11 @@ func TestReplicatorRoot_InitStart(t *testing.T) {
 			},
 		},
 	}
-	serviceNetwork, _ := servicenetwork.NewServiceNetwork(config, nil, false)
-	transport := NewTransport(serviceNetwork)
+	transport := NewTransportMock(t)
+	transport.RegisterMock.Return()
+	transport.MeMock.Return(address)
+	reply, _ := insolar.Serialize(GenericReply{Data: []byte{}, Error: nil})
+	transport.SendMock.Return(reply, nil)
 	replicator := NewReplicator(config, JetKeeper)
 	replicator.Sequencer = sequencer
 	replicator.CryptoService = cs
@@ -73,9 +77,9 @@ func TestReplicatorReplica_InitStart(t *testing.T) {
 		pn      = insolar.GenesisPulse.PulseNumber
 		address = "127.0.0.1:13831"
 	)
-	JetKeeper := NewJetKeeperMock(t)
+	JetKeeper := executor.NewJetKeeperMock(t)
 	JetKeeper.TopSyncPulseMock.Return(pn)
-	db := store.NewMemoryMockDB()
+	db := store.NewDBMock(t)
 	sequencer := sequence.NewSequencer(db)
 	cs := testutils.NewCryptographyServiceMock(t)
 	config := configuration.Configuration{

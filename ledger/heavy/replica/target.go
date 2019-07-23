@@ -22,11 +22,13 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/ledger/heavy/executor"
+	"github.com/insolar/insolar/ledger/heavy/replica/integrity"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
-	"github.com/insolar/insolar/ledger/heavy/replica/integrity"
 	"github.com/insolar/insolar/ledger/heavy/sequence"
 )
 
@@ -52,7 +54,7 @@ func NewTarget(cfg configuration.Replica, parent Parent) Target {
 
 type target struct {
 	Sequencer         sequence.Sequencer  `inject:""`
-	JetKeeper         JetKeeper           `inject:""`
+	JetKeeper         executor.JetKeeper  `inject:""`
 	Validator         integrity.Validator `inject:""`
 	cfg               configuration.Replica
 	parent            Parent

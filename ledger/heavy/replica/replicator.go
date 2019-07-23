@@ -21,11 +21,13 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/ledger/heavy/executor"
+	"github.com/insolar/insolar/ledger/heavy/replica/integrity"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/heavy/replica/integrity"
 	"github.com/insolar/insolar/ledger/heavy/sequence"
 	"github.com/insolar/insolar/platformpolicy"
 )
@@ -35,14 +37,14 @@ type Replicator struct {
 	CryptoService insolar.CryptographyService `inject:""`
 	Transport     Transport                   `inject:""`
 	config        configuration.Configuration
-	jetKeeper     JetKeeper
+	jetKeeper     executor.JetKeeper
 	target        Target
 	cmps          *component.Manager
 }
 
 func NewReplicator(
 	cfg configuration.Configuration,
-	jetKeeper JetKeeper,
+	jetKeeper executor.JetKeeper,
 ) *Replicator {
 	cmps := component.Manager{}
 	return &Replicator{config: cfg, jetKeeper: jetKeeper, cmps: &cmps}

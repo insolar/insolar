@@ -31,7 +31,7 @@ type IteratorMock struct {
 	NextPreCounter uint64
 	NextMock       mIteratorMockNext
 
-	ValueFunc       func() (r []byte, r1 error)
+	ValueFunc       func() (r []byte)
 	ValueCounter    uint64
 	ValuePreCounter uint64
 	ValueMock       mIteratorMockValue
@@ -442,8 +442,7 @@ type IteratorMockValueExpectation struct {
 }
 
 type IteratorMockValueResult struct {
-	r  []byte
-	r1 error
+	r []byte
 }
 
 //Expect specifies that invocation of Iterator.Value is expected from 1 to Infinity times
@@ -459,14 +458,14 @@ func (m *mIteratorMockValue) Expect() *mIteratorMockValue {
 }
 
 //Return specifies results of invocation of Iterator.Value
-func (m *mIteratorMockValue) Return(r []byte, r1 error) *IteratorMock {
+func (m *mIteratorMockValue) Return(r []byte) *IteratorMock {
 	m.mock.ValueFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &IteratorMockValueExpectation{}
 	}
-	m.mainExpectation.result = &IteratorMockValueResult{r, r1}
+	m.mainExpectation.result = &IteratorMockValueResult{r}
 	return m.mock
 }
 
@@ -481,12 +480,12 @@ func (m *mIteratorMockValue) ExpectOnce() *IteratorMockValueExpectation {
 	return expectation
 }
 
-func (e *IteratorMockValueExpectation) Return(r []byte, r1 error) {
-	e.result = &IteratorMockValueResult{r, r1}
+func (e *IteratorMockValueExpectation) Return(r []byte) {
+	e.result = &IteratorMockValueResult{r}
 }
 
 //Set uses given function f as a mock of Iterator.Value method
-func (m *mIteratorMockValue) Set(f func() (r []byte, r1 error)) *IteratorMock {
+func (m *mIteratorMockValue) Set(f func() (r []byte)) *IteratorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -495,7 +494,7 @@ func (m *mIteratorMockValue) Set(f func() (r []byte, r1 error)) *IteratorMock {
 }
 
 //Value implements github.com/insolar/insolar/internal/ledger/store.Iterator interface
-func (m *IteratorMock) Value() (r []byte, r1 error) {
+func (m *IteratorMock) Value() (r []byte) {
 	counter := atomic.AddUint64(&m.ValuePreCounter, 1)
 	defer atomic.AddUint64(&m.ValueCounter, 1)
 
@@ -512,7 +511,6 @@ func (m *IteratorMock) Value() (r []byte, r1 error) {
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -525,7 +523,6 @@ func (m *IteratorMock) Value() (r []byte, r1 error) {
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}

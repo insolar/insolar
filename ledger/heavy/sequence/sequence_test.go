@@ -34,7 +34,6 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/genesis"
 	"github.com/insolar/insolar/ledger/object"
@@ -43,7 +42,14 @@ import (
 func TestSequencer_Records(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	db := store.NewMemoryMockDB()
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	require.NoError(t, err)
+
+	db, err := store.NewBadgerDB(tmpdir)
+	defer db.Stop(ctx)
+	require.NoError(t, err)
+
 	storage := object.NewRecordDB(db)
 	seqeuncer := NewSequencer(db)
 
@@ -109,7 +115,14 @@ func TestSequencer_Records(t *testing.T) {
 func TestSequencer_Drops(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	db := store.NewMemoryMockDB()
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	require.NoError(t, err)
+
+	db, err := store.NewBadgerDB(tmpdir)
+	defer db.Stop(ctx)
+	require.NoError(t, err)
+
 	storage := drop.NewDB(db)
 	sequencer := NewSequencer(db)
 
@@ -178,82 +191,6 @@ func TestSequencer_Drops(t *testing.T) {
 	})
 }
 
-func TestSequencer_Blobs(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-
-	db := store.NewMemoryMockDB()
-	storage := blob.NewDB(db)
-	sequencer := NewSequencer(db)
-
-	type tempBlob struct {
-		id   insolar.ID
-		blob blob.Blob
-	}
-
-	const (
-		pulse     = insolar.PulseNumber(10)
-		skip      = 5
-		limit     = 10
-		scopeBlob = byte(store.ScopeBlob)
-	)
-
-	var (
-		expected   []tempBlob
-		unexpected []tempBlob
-	)
-
-	f := fuzz.New().Funcs(func(t *tempBlob, c fuzz.Continue) {
-		var memory [10]byte
-		c.Fuzz(&memory)
-		var hash [insolar.RecordIDSize - insolar.RecordHashOffset]byte
-		c.Fuzz(&hash)
-		oneOrZero := rand.Intn(2)
-		t.id = *insolar.NewID(insolar.PulseNumber(int(pulse)+(oneOrZero)*(-10)+(1-oneOrZero)*(10)), hash[:])
-		t.blob = blob.Blob{
-			JetID: insolar.ZeroJetID,
-			Value: memory[:],
-		}
-	})
-	f.NilChance(0)
-	f.NumElements(limit, limit)
-	f.Fuzz(&expected)
-
-	f = fuzz.New().Funcs(func(t *tempBlob, c fuzz.Continue) {
-		var memory [10]byte
-		c.Fuzz(&memory)
-		var hash [insolar.RecordIDSize - insolar.RecordHashOffset]byte
-		c.Fuzz(&hash)
-		t.id = *insolar.NewID(pulse, hash[:])
-		t.blob = blob.Blob{
-			JetID: insolar.ZeroJetID,
-			Value: memory[:],
-		}
-	})
-	f.NilChance(0)
-	f.NumElements(limit, limit)
-	f.Fuzz(&unexpected)
-
-	for i := 0; i < limit; i++ {
-		storage.Set(ctx, expected[i].id, expected[i].blob)
-		storage.Set(ctx, unexpected[i].id, unexpected[i].blob)
-	}
-
-	t.Run("slice length", func(t *testing.T) {
-		blbs := sequencer.Slice(scopeBlob, pulse, skip, limit)
-		require.Equal(t, limit-skip, len(blbs))
-	})
-
-	t.Run("first last", func(t *testing.T) {
-		all := append(expected, unexpected...)
-		sort.Slice(all, func(i, j int) bool {
-			return bytes.Compare(all[i].id.Bytes(), all[j].id.Bytes()) == -1
-		})
-
-		require.Equal(t, all[0].id.Bytes(), sequencer.First(scopeBlob).Key)
-		require.Equal(t, all[len(all)-1].id.Bytes(), sequencer.Last(scopeBlob).Key)
-	})
-}
-
 func TestSequencer_Genesis(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
@@ -266,18 +203,25 @@ func TestSequencer_Genesis(t *testing.T) {
 		scopeGenesis        = byte(store.ScopeGenesis)
 	)
 
-	db := store.NewMemoryMockDB()
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	require.NoError(t, err)
+
+	db, err := store.NewBadgerDB(tmpdir)
+	defer db.Stop(ctx)
+	require.NoError(t, err)
+
 	pulseDB := pulse.NewDB(db)
 	dropDB := drop.NewDB(db)
 	recordDB := object.NewRecordDB(db)
 	lifelineDB := object.NewIndexDB(db)
 	genesisCreator := genesis.BaseRecord{
-		DB:                    db,
-		PulseAccessor:         pulseDB,
-		PulseAppender:         pulseDB,
-		DropModifier:          dropDB,
-		RecordModifier:        recordDB,
-		IndexLifelineModifier: lifelineDB,
+		DB:             db,
+		PulseAccessor:  pulseDB,
+		PulseAppender:  pulseDB,
+		DropModifier:   dropDB,
+		RecordModifier: recordDB,
+		IndexModifier:  lifelineDB,
 	}
 
 	pulses := NewSequencer(db)
@@ -327,10 +271,6 @@ func TestSequencer_Genesis(t *testing.T) {
 		actualFilaments := lifelines.Slice(scopeIndex, pulse, 0, limit)
 		require.Equal(t, uint32(1), lifelines.Len(scopeIndex, pulse))
 		require.Equal(t, 1, len(actualFilaments))
-		filament := object.FilamentIndex{}
-		err := filament.Unmarshal(actualFilaments[0].Value)
-		require.NoError(t, err)
-		require.Equal(t, insolar.GenesisRecord.ID(), filament.ObjID)
 
 		actualLastKnownIndex := lastKnownIndex.Slice(scopeLastKnownIndex, pulse, 0, limit)
 		require.Equal(t, uint32(1), lastKnownIndex.Len(scopeLastKnownIndex, pulse))
@@ -350,7 +290,14 @@ func TestSequencer_Genesis(t *testing.T) {
 func TestSequencer_Pulses(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	db := store.NewMemoryMockDB()
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	require.NoError(t, err)
+
+	db, err := store.NewBadgerDB(tmpdir)
+	defer db.Stop(ctx)
+	require.NoError(t, err)
+
 	storage := pulse.NewDB(db)
 	records := NewSequencer(db)
 

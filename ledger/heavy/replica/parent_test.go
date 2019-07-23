@@ -21,9 +21,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/insolar/insolar/ledger/heavy/executor"
+	"github.com/insolar/insolar/ledger/heavy/replica/integrity"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/heavy/replica/integrity"
 	"github.com/insolar/insolar/ledger/heavy/sequence"
 )
 
@@ -33,7 +35,7 @@ func TestParent_Subscribe(t *testing.T) {
 		syncPulse = insolar.GenesisPulse.PulseNumber
 		page      = Page{Pulse: syncPulse}
 		sequencer = sequence.NewSequencerMock(t)
-		jetKeeper = NewJetKeeperMock(t)
+		jetKeeper = executor.NewJetKeeperMock(t)
 		provider  = integrity.NewProviderMock(t)
 		target    = NewTargetMock(t)
 		p         = NewParent()
@@ -56,7 +58,7 @@ func TestParent_Pull(t *testing.T) {
 		reply     = []byte{1, 2, 3}
 		total     = uint32(0)
 		sequencer = sequence.NewSequencerMock(t)
-		jetKeeper = NewJetKeeperMock(t)
+		jetKeeper = executor.NewJetKeeperMock(t)
 		provider  = integrity.NewProviderMock(t)
 		p         = NewParent()
 	)
