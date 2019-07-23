@@ -20,7 +20,6 @@ package functest
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -647,14 +646,8 @@ func New() (*Two, error) {
 	uploadContractOnce(t, "constructor_return_nil_two", contractTwoCode)
 	obj := callConstructor(t, uploadContractOnce(t, "constructor_return_nil_one", contractOneCode), "New")
 
-	resp := callMethod(t, obj, "Hello")
-	require.NotEmpty(t, resp.Reply)
-
-	require.Contains(
-		t,
-		string(resp.Reply.Result),
-		"[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil",
-	)
+	resp := callMethodExpectError(t, obj, "Hello")
+	require.Empty(t, resp.Reply.Result)
 }
 
 func TestRecursiveCallError(t *testing.T) {
@@ -682,29 +675,13 @@ func (r *One) Recursive() (error) {
 `
 	protoRef := uploadContractOnce(t, "recursive_call_one", contractOneCode)
 
-	for i := 0; i <= 5; i++ {
-		obj := callConstructor(t, protoRef, "New")
-		resp := callMethodNoChecks(t, obj, "Recursive")
+	obj := callConstructor(t, protoRef, "New")
+	resp := callMethodNoChecks(t, obj, "Recursive")
 
-		errstr := resp.Error.Error()
-		if errstr != "" {
-			if strings.Contains(errstr, "timeout") {
-				continue
-			} else {
-				require.Fail(t, "Unexpected error: "+errstr)
-			}
-		}
-
-		errstr = resp.Result.ExtractedError
-		require.NotEmpty(t, errstr)
-		if strings.Contains(errstr, "loop detected") {
-			return
-		} else {
-			require.Fail(t, "Unexpected error: "+errstr)
-		}
-	}
-
-	require.Fail(t, "loop detection is broken, all requests failed with timeout")
+	errstr := resp.Error.Error()
+	require.NotEmpty(t, errstr)
+	// if you get a timeout here add a retry loop to the test as it was before
+	require.Contains(t, errstr, "loop detected")
 }
 
 func TestGetParent(t *testing.T) {
@@ -948,13 +925,7 @@ func (c *First) GetName() (string, error) {
 	secondObj := callConstructor(t, uploadContractOnce(t, "prototype_mismatch_second", secondContract), "New")
 	testObj := callConstructor(t, uploadContractOnce(t, "prototype_mismatch_test", testContract), "New")
 
-	resp := callMethod(t, testObj, "Test", *secondObj)
-
-	require.Contains(
-		t,
-		string(resp.Reply.Result),
-		"try to call method of prototype as method of another prototype",
-	)
+	callMethodExpectError(t, testObj, "Test", *secondObj)
 }
 
 func TestImmutableAnnotation(t *testing.T) {
@@ -1052,12 +1023,7 @@ func (r *Three) DoNothing() (error) {
 	require.Empty(t, resp.Error)
 	require.Equal(t, float64(42), resp.ExtractedReply)
 
-	resp = callMethod(t, obj, "ExternalImmutableCallMakesExternalCall")
-	require.Contains(
-		t,
-		"[ RouteCall ] on calling main API: Try to call route from immutable method",
-		resp.ExtractedError,
-	)
+	resp = callMethodExpectError(t, obj, "ExternalImmutableCallMakesExternalCall")
 }
 
 func TestMultipleConstructorsCall(t *testing.T) {
