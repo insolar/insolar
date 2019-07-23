@@ -64,8 +64,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/network/rules"
-
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -500,7 +498,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	cfg.Service.Consensus.Phase3Timeout = Phase3Timeout
 
 	node.componentManager = &component.Manager{}
-	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme(), rules.NewRules())
+	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme())
 	serviceNetwork, err := servicenetwork.NewServiceNetwork(cfg, node.componentManager)
 	s.Require().NoError(err)
 

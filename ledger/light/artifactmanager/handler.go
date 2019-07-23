@@ -191,8 +191,7 @@ func NewMessageHandler(
 			p.Dep.Sender = h.Sender
 		},
 		GetRequest: func(p *proc.GetRequest) {
-			p.Dep.RecordAccessor = h.Records
-			p.Dep.Sender = h.Sender
+			p.Dep(h.Records, h.Sender, h.JetCoordinator, h.JetTreeUpdater)
 		},
 		GetChildren: func(p *proc.GetChildren) {
 			p.Dep.IndexLocker = h.IndexLocker
@@ -218,12 +217,6 @@ func NewMessageHandler(
 				h.FilamentCalculator,
 				h.Sender,
 			)
-		},
-		GetPendingRequests: func(p *proc.GetPendingRequests) {
-			p.Dep(h.IndexStorage, h.Sender)
-		},
-		GetPendingRequestID: func(p *proc.GetPendingRequestID) {
-			p.Dep(h.FilamentCalculator, h.Sender)
 		},
 		GetJet: func(p *proc.GetJet) {
 			p.Dep(

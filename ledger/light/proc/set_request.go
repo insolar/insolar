@@ -131,7 +131,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 
 	req, res, err := p.dep.filament.SetRequest(ctx, p.requestID, p.jetID, p.request)
 	if err != nil {
-		return errors.Wrap(err, "failed to store record")
+		return errors.Wrap(err, "failed to set request")
 	}
 
 	var (

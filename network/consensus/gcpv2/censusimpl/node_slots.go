@@ -51,6 +51,8 @@
 package censusimpl
 
 import (
+	"fmt"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
@@ -80,9 +82,15 @@ func NewNodeProfile(index member.Index, p profiles.StaticProfile, verifier crypt
 	return NodeProfileSlot{index: index.Ensure(), StaticProfile: p, verifier: verifier, power: pw}
 }
 
-func NewJoinerProfile(p profiles.StaticProfile, verifier cryptkit.SignatureVerifier, pw member.Power) NodeProfileSlot {
+func NewJoinerProfile(p profiles.StaticProfile, verifier cryptkit.SignatureVerifier) NodeProfileSlot {
 
-	return NodeProfileSlot{index: member.JoinerIndex, StaticProfile: p, verifier: verifier, power: pw}
+	return NodeProfileSlot{index: member.JoinerIndex, StaticProfile: p, verifier: verifier}
+}
+
+func NewNodeProfileExt(index member.Index, p profiles.StaticProfile, verifier cryptkit.SignatureVerifier, pw member.Power,
+	mode member.OpMode) NodeProfileSlot {
+
+	return NodeProfileSlot{index: index.Ensure(), StaticProfile: p, verifier: verifier, power: pw, mode: mode}
 }
 
 func (c *NodeProfileSlot) GetDeclaredPower() member.Power {
@@ -106,6 +114,13 @@ func (c *NodeProfileSlot) IsJoiner() bool {
 
 func (c *NodeProfileSlot) GetSignatureVerifier() cryptkit.SignatureVerifier {
 	return c.verifier
+}
+
+func (c NodeProfileSlot) String() string {
+	if c.IsJoiner() {
+		return fmt.Sprintf("id:%04d joiner", c.GetNodeID())
+	}
+	return fmt.Sprintf("id:%04d idx:%d %v", c.GetNodeID(), c.index, c.mode)
 }
 
 var _ profiles.Updatable = &updatableSlot{}
@@ -133,7 +148,9 @@ func (c *updatableSlot) SetOpMode(m member.OpMode) {
 	c.mode = m
 }
 
-func (c *updatableSlot) SetOpModeAndLeaveReason(leaveReason uint32) {
+func (c *updatableSlot) SetOpModeAndLeaveReason(index member.Index, leaveReason uint32) {
+	c.index = index.Ensure()
+	c.power = 0
 	c.mode = member.ModeEvictedGracefully
 	c.leaveReason = leaveReason
 }

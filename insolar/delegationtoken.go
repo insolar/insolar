@@ -20,7 +20,6 @@ package insolar
 type DelegationTokenFactory interface {
 	IssuePendingExecution(msg Message, pulse PulseNumber) (DelegationToken, error)
 	IssueGetChildrenRedirect(sender *Reference, redirectedMessage Message) (DelegationToken, error)
-	IssueGetCodeRedirect(sender *Reference, redirectedMessage Message) (DelegationToken, error)
 	Verify(parcel Parcel) (bool, error)
 }
 

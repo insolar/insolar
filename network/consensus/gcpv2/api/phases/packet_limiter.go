@@ -198,6 +198,10 @@ func (p PacketLimiter) String() string {
 	return b.String()
 }
 
+func (p PacketLimiter) GetRemainingPacketCountDefault() uint8 {
+	return p.GetRemainingPacketCount(5)
+}
+
 func fmtNodeStatePhases(b *strings.Builder, prefix byte, ns uint16, limits *LimitCounters) {
 
 	if ns == 0 {
