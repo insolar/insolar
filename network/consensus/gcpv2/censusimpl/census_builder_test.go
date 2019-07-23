@@ -245,7 +245,7 @@ func TestGetUnorderedProfiles(t *testing.T) {
 	require.Len(t, up, length)
 }
 
-func TestGetCount(t *testing.T) {
+func TestDPBGetCount(t *testing.T) {
 	chronicles := &localChronicles{}
 	pn := pulse.Number(1)
 	sp := profiles.NewStaticProfileMock(t)
@@ -269,7 +269,7 @@ func TestGetLocalProfile(t *testing.T) {
 	require.Equal(t, uint32(0), dpb.GetLocalProfile().GetLeaveReason())
 }
 
-func TestFindProfile(t *testing.T) {
+func TestDPBFindProfile(t *testing.T) {
 	chronicles := &localChronicles{}
 	pn := pulse.Number(1)
 	sp := profiles.NewStaticProfileMock(t)
