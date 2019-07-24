@@ -145,7 +145,7 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 	case "migration.addBurnAddresses":
 		return m.addBurnAddressesCall(params)
 	case "wallet.getBalance":
-		return getBalanceCall(params)
+		return m.getBalanceCall(params)
 	case "member.transfer":
 		return m.transferCall(params)
 	case "deposit.migration":
@@ -212,7 +212,7 @@ type GetBalanceResponse struct {
 	Deposits []interface{} `json:"deposits"`
 }
 
-func getBalanceCall(params map[string]interface{}) (interface{}, error) {
+func (m *Member) getBalanceCall(params map[string]interface{}) (interface{}, error) {
 
 	referenceStr, ok := params["reference"].(string)
 	if !ok {
@@ -223,9 +223,9 @@ func getBalanceCall(params map[string]interface{}) (interface{}, error) {
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse 'reference': %s", err.Error())
 	}
-	m := member.GetObject(*reference)
+	user := member.GetObject(*reference)
 
-	w, err := wallet.GetImplementationFrom(m.GetReference())
+	w, err := wallet.GetImplementationFrom(user.GetReference())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get implementation: %s", err.Error())
 	}
@@ -233,7 +233,18 @@ func getBalanceCall(params map[string]interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get balance: %s", err.Error())
 	}
-	d, err := m.GetDeposits()
+
+	var d []interface{}
+	if referenceStr == m.GetReference().String() {
+		d, err = m.getDeposits()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get deposits: %s", err.Error())
+		}
+	}
+	d, err = user.GetDeposits()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get deposits for user: %s", err.Error())
+	}
 
 	return GetBalanceResponse{Balance: b, Deposits: d}, nil
 }
@@ -464,6 +475,9 @@ func (m *Member) depositMigration(txHash string, burnAddress string, amount *big
 
 // GetDeposits get all deposits for this member
 func (m *Member) GetDeposits() ([]interface{}, error) {
+	return m.getDeposits()
+}
+func (m *Member) getDeposits() ([]interface{}, error) {
 	var result []interface{}
 	for _, dRef := range m.Deposits {
 
