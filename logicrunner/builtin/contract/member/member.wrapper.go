@@ -221,7 +221,7 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetDeposits(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.SetSystemError(nil)
 	self := new(Member)
 
 	if len(object) == 0 {
@@ -243,6 +243,10 @@ func INSMETHOD_GetDeposits(object []byte, data []byte) ([]byte, []byte, error) {
 	}
 
 	ret0, ret1 := self.GetDeposits()
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
