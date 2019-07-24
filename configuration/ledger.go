@@ -122,7 +122,7 @@ func NewLedger() Ledger {
 			Role:              "root",
 			Port:              20111,
 			ParentAddress:     "127.0.0.1:20111",
-			ParentPubKey:      "",
+			ParentPubKeyFile:  "",
 			ScopesToReplicate: []byte{2},
 			Attempts:          60,
 			DelayForAttempt:   1 * time.Second,

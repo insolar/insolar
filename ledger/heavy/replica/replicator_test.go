@@ -47,7 +47,7 @@ func TestReplicatorRoot_InitStart(t *testing.T) {
 			Replica: configuration.Replica{
 				Role:              "replica",
 				ParentAddress:     address,
-				ParentPubKey:      "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE3IbYswQbBlxMg0dFNzxN+3hY3VWP\nyCL8T/XEx3trWuFn74M5vGvbabvJSkF6U8Qlq6mwQ8zx7teIFML7IlQwwg==\n-----END PUBLIC KEY-----\n",
+				ParentPubKeyFile:  "./testdata/parent_pubkey.pem",
 				ScopesToReplicate: []byte{2},
 				Attempts:          60,
 				DelayForAttempt:   1 * time.Second,
@@ -87,7 +87,7 @@ func TestReplicatorReplica_InitStart(t *testing.T) {
 			Replica: configuration.Replica{
 				Role:              "replica",
 				ParentAddress:     address,
-				ParentPubKey:      "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE3IbYswQbBlxMg0dFNzxN+3hY3VWP\nyCL8T/XEx3trWuFn74M5vGvbabvJSkF6U8Qlq6mwQ8zx7teIFML7IlQwwg==\n-----END PUBLIC KEY-----\n",
+				ParentPubKeyFile:  "./testdata/parent_pubkey.pem",
 				ScopesToReplicate: []byte{2},
 				Attempts:          60,
 				DelayForAttempt:   1 * time.Second,
