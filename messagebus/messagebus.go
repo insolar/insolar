@@ -95,14 +95,15 @@ func (mb *MessageBus) Init(ctx context.Context) error {
 }
 
 func (mb *MessageBus) Acquire(ctx context.Context) {
+	parentCtx := ctx
 	counter := atomic.AddInt64(&mb.counter, 1)
 	inslogger.FromContext(ctx).Info("Call Acquire in MessageBus: ", counter)
 	if counter == 1 {
 		inslogger.FromContext(ctx).Info("Lock MB")
-		ctx, span := instracer.StartSpan(ctx, "before GIL Lock (Lock MB)")
+		ctx, span := instracer.StartSpan(parentCtx, "before GIL Lock (Lock MB)")
 		span.End()
 		mb.Lock(ctx)
-		ctx, span = instracer.StartSpan(ctx, "after GIL Lock (Lock MB)")
+		ctx, span = instracer.StartSpan(parentCtx, "after GIL Lock (Lock MB)")
 		span.End()
 	}
 }
