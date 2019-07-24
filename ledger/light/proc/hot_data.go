@@ -104,7 +104,7 @@ func (p *HotObjects) Proceed(ctx context.Context) error {
 		}
 	}
 
-	logger.Debugf("[handleHotRecords] received %v hot indexes", len(p.indexes))
+	logger.Debugf("received %v hot indexes for jet %s and pulse %s", len(p.indexes), p.jetID.DebugString(), p.pulse)
 	for _, idx := range p.indexes {
 		objJetID, _ := p.Dep.JetStorage.ForID(ctx, p.pulse, idx.ObjID)
 		if objJetID != p.jetID {

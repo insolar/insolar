@@ -44,7 +44,7 @@ type ActivateObject struct {
 		indexLocker   object.IndexLocker
 		records       object.RecordModifier
 		indexStorage  object.IndexStorage
-		filament      executor.FilamentModifier
+		filament      executor.FilamentManager
 		sender        bus.Sender
 	}
 }
@@ -72,7 +72,7 @@ func (a *ActivateObject) Dep(
 	il object.IndexLocker,
 	r object.RecordModifier,
 	is object.IndexStorage,
-	f executor.FilamentModifier,
+	f executor.FilamentManager,
 	s bus.Sender,
 ) {
 	a.dep.records = r
