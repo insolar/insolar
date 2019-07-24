@@ -44,8 +44,7 @@ func TestMigrationMemberGet(t *testing.T) {
 
 	res1, err := retryableMemberMigrationCreate(member1, true)
 
-	member2 := *member1
-	res2, err := signedRequest(&member2, "member.get", nil)
+	res2, err := signedRequest(member1, "member.get", nil)
 	require.Nil(t, err)
 	require.Equal(t, res1.(map[string]interface{})["reference"].(string), res2.(map[string]interface{})["reference"].(string))
 	require.Equal(t, ba, res2.(map[string]interface{})["migrationAddress"].(string))

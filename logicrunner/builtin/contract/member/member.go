@@ -523,6 +523,10 @@ func (m *Member) memberGet(publicKey string) (interface{}, error) {
 		return nil, fmt.Errorf("failed to get reference by public key: %s", err.Error())
 	}
 
+	if m.GetReference() == ref {
+		return m.BurnAddress, nil
+	}
+
 	user := member.GetObject(ref)
 	ba, err := user.GetBurnAddress()
 	if err != nil {
