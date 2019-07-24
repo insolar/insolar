@@ -19,12 +19,88 @@
 package functest
 
 import (
-	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/require"
+	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/testutils"
 )
 
-const migrationMember = "migration_daemon_0_member_keys.json"
+func TestMigrationToken(t *testing.T) {
+	member, err := newUserWithKeys()
+	require.NoError(t, err)
+	ba := testutils.RandomString()
+	_, err = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
+	require.NoError(t, err)
+	_, err = retryableMemberMigrationCreate(member, true)
+	require.NoError(t, err)
+
+	_, err = signedRequest(
+		&migrationDaemons[0],
+		"deposit.migration",
+		map[string]interface{}{"amount": "1000", "ethTxHash": "Test_TxHash", "migrationAddress": ba})
+	require.NoError(t, err)
+
+	anotherMember := createMember(t)
+	res, err := signedRequest(anotherMember, "wallet.getBalance", map[string]interface{}{"reference": member.ref})
+	require.NoError(t, err)
+	deposits, ok := res.(map[string]interface{})["deposits"].([]interface{})
+	require.True(t, ok)
+	deposit, ok := deposits[0].(map[string]interface{})
+	require.True(t, ok)
+	require.Equal(t, deposit["amount"], "1000")
+	require.Equal(t, deposit["ethTxHash"], "Test_TxHash")
+	require.Equal(t, deposit["status"], "Open")
+	require.Equal(t, deposit["confirms"], float64(1))
+
+	migrationDaemonConfirms, ok := deposit["migrationDaemonConfirms"].([]interface{})
+	require.True(t, ok, fmt.Sprintf("failed to cast result: expected []string, got %T", deposit["migrationDaemonConfirms"]))
+	require.Equal(t, migrationDaemonConfirms[0], migrationDaemons[0].ref)
+
+	_, err = signedRequest(
+		&migrationDaemons[1],
+		"deposit.migration",
+		map[string]interface{}{"amount": "1000", "ethTxHash": "Test_TxHash", "migrationAddress": ba})
+	require.NoError(t, err)
+	res, err = signedRequest(anotherMember, "wallet.getBalance", map[string]interface{}{"reference": member.ref})
+	require.NoError(t, err)
+	deposits, ok = res.(map[string]interface{})["deposits"].([]interface{})
+	require.True(t, ok)
+	deposit, ok = deposits[0].(map[string]interface{})
+	require.True(t, ok)
+	require.Equal(t, deposit["amount"], "1000")
+	require.Equal(t, deposit["ethTxHash"], "Test_TxHash")
+	require.Equal(t, deposit["status"], "Open")
+	require.Equal(t, deposit["confirms"], float64(2))
+
+	migrationDaemonConfirms, ok = deposit["migrationDaemonConfirms"].([]interface{})
+	require.True(t, ok)
+	require.Equal(t, migrationDaemonConfirms[0], migrationDaemons[0].ref)
+	require.Equal(t, migrationDaemonConfirms[1], migrationDaemons[1].ref)
+
+	_, err = signedRequest(
+		&migrationDaemons[2],
+		"deposit.migration",
+		map[string]interface{}{"amount": "1000", "ethTxHash": "Test_TxHash", "migrationAddress": ba})
+	require.NoError(t, err)
+	res, err = signedRequest(anotherMember, "wallet.getBalance", map[string]interface{}{"reference": member.ref})
+	require.NoError(t, err)
+	deposits, ok = res.(map[string]interface{})["deposits"].([]interface{})
+	require.True(t, ok)
+	deposit, ok = deposits[0].(map[string]interface{})
+	require.True(t, ok)
+	require.Equal(t, deposit["amount"], "1000")
+	require.Equal(t, deposit["ethTxHash"], "Test_TxHash")
+	require.Equal(t, deposit["status"], "Holding")
+	require.Equal(t, deposit["confirms"], float64(3))
+
+	migrationDaemonConfirms, ok = deposit["migrationDaemonConfirms"].([]interface{})
+	require.True(t, ok)
+	require.Equal(t, migrationDaemonConfirms[0], migrationDaemons[0].ref)
+	require.Equal(t, migrationDaemonConfirms[1], migrationDaemons[1].ref)
+	require.Equal(t, migrationDaemonConfirms[2], migrationDaemons[2].ref)
+}
 
 func TestMigrationTokenNotInTheList(t *testing.T) {
 	ba := testutils.RandomString()
@@ -34,32 +110,13 @@ func TestMigrationTokenNotInTheList(t *testing.T) {
 	require.Contains(t, err.Error(), "this migration daemon is not in the list")
 }
 
-func TestMigrationToken(t *testing.T) {
-	ba := testutils.RandomString()
-	err := createMemberWithMigrationAddress(ba)
-	require.NoError(t, err)
-
-	migrationMember, err := getMigrationDaemon(migrationMember, 0)
-	require.NoError(t, err)
-
-	result, err := signedRequest(
-		migrationMember,
-		"deposit.migration",
-		map[string]interface{}{"amount": "1000", "ethTxHash": "TxHash", "migrationAddress": ba})
-	require.NoError(t, err)
-	require.Nil(t, result)
-}
-
 func TestMigrationTokenZeroAmount(t *testing.T) {
 	ba := testutils.RandomString()
 	err := createMemberWithMigrationAddress(ba)
 	require.NoError(t, err)
 
-	migrationMember, err := getMigrationDaemon(migrationMember, 0)
-	require.NoError(t, err)
-
 	result, err := signedRequest(
-		migrationMember,
+		&migrationDaemons[0],
 		"deposit.migration",
 		map[string]interface{}{"amount": "0", "ethTxHash": "TxHash", "migrationAddress": ba})
 
@@ -73,11 +130,8 @@ func TestMigrationTokenMistakeField(t *testing.T) {
 	err := createMemberWithMigrationAddress(ba)
 	require.NoError(t, err)
 
-	migrationMember, err := getMigrationDaemon(migrationMember, 0)
-	require.NoError(t, err)
-
 	result, err := signedRequest(
-		migrationMember,
+		&migrationDaemons[0],
 		"deposit.migration",
 		map[string]interface{}{"amount1": "0", "ethTxHash": "TxHash", "migrationAddress": ba})
 	require.Contains(t, err.Error(), " incorect input: failed to get 'amount' param")
@@ -89,10 +143,7 @@ func TestMigrationTokenNilValue(t *testing.T) {
 	err := createMemberWithMigrationAddress(ba)
 	require.NoError(t, err)
 
-	migrationMember, err := getMigrationDaemon(migrationMember, 0)
-	require.NoError(t, err)
-
-	result, err := signedRequest(migrationMember, "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": nil, "migrationAddress": ba})
+	result, err := signedRequest(&migrationDaemons[0], "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": nil, "migrationAddress": ba})
 	require.Contains(t, err.Error(), "failed to get 'ethTxHash' param")
 	require.Nil(t, result)
 
@@ -103,11 +154,8 @@ func TestMigrationTokenMaxAmount(t *testing.T) {
 	err := createMemberWithMigrationAddress(ba)
 	require.NoError(t, err)
 
-	migrationMember, err := getMigrationDaemon(migrationMember, 0)
-	require.NoError(t, err)
-
 	result, err := signedRequest(
-		migrationMember,
+		&migrationDaemons[0],
 		"deposit.migration",
 		map[string]interface{}{"amount": "500000000000000000", "ethTxHash": "ethTxHash", "migrationAddress": ba})
 	require.NoError(t, err)
@@ -119,20 +167,33 @@ func TestMigrationDoubleMigration(t *testing.T) {
 	err := createMemberWithMigrationAddress(ba)
 	require.NoError(t, err)
 
-	migrationMember, err := getMigrationDaemon(migrationMember, 0)
-	require.NoError(t, err)
-
 	resultMigr1, err := signedRequest(
-		migrationMember, "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": ba})
+		&migrationDaemons[0], "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": ba})
 	require.NoError(t, err)
 	require.Nil(t, resultMigr1)
 
 	_, err = signedRequest(
-		migrationMember,
+		&migrationDaemons[0],
 		"deposit.migration",
 		map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": ba})
-	require.Contains(t, err.Error(), "confirmed failed: confirm from the migration daemon")
+	require.Contains(t, err.Error(), "confirmed failed: confirm from the")
+}
 
+func TestMigrationAnotherAmountSameTx(t *testing.T) {
+	ba := testutils.RandomString()
+	err := createMemberWithMigrationAddress(ba)
+	require.NoError(t, err)
+
+	resultMigr1, err := signedRequest(
+		&migrationDaemons[0], "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": ba})
+	require.NoError(t, err)
+	require.Nil(t, resultMigr1)
+
+	_, err = signedRequest(
+		&migrationDaemons[0],
+		"deposit.migration",
+		map[string]interface{}{"amount": "30", "ethTxHash": "ethTxHash", "migrationAddress": ba})
+	require.Contains(t, err.Error(), "deposit with this transaction hash has different amount")
 }
 
 func createMemberWithMigrationAddress(migrationAddress string) error {
@@ -141,7 +202,6 @@ func createMemberWithMigrationAddress(migrationAddress string) error {
 		return err
 	}
 
-	member.ref = root.ref
 	_, err = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
 	if err != nil {
 		return err

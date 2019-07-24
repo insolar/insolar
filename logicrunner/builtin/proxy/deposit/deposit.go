@@ -79,12 +79,11 @@ func GetImplementationFrom(object insolar.Reference) (*Deposit, error) {
 }
 
 // New is constructor
-func New(migrationDaemonConfirms map[insolar.Reference]bool, txHash string, amount string, currentPulse insolar.PulseNumber) *ContractConstructorHolder {
-	var args [4]interface{}
+func New(migrationDaemonConfirms [3]string, txHash string, amount string) *ContractConstructorHolder {
+	var args [3]interface{}
 	args[0] = migrationDaemonConfirms
 	args[1] = txHash
 	args[2] = amount
-	args[3] = currentPulse
 
 	var argsSerialized []byte
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
@@ -415,11 +414,12 @@ func (r *Deposit) ItselfAsImmutable() (interface{}, error) {
 }
 
 // Confirm is proxy generated method
-func (r *Deposit) Confirm(migrationDaemon insolar.Reference, txHash string, amountStr string) error {
-	var args [3]interface{}
-	args[0] = migrationDaemon
-	args[1] = txHash
-	args[2] = amountStr
+func (r *Deposit) Confirm(migrationDaemonIndex int, migrationDaemonRef string, txHash string, amountStr string) error {
+	var args [4]interface{}
+	args[0] = migrationDaemonIndex
+	args[1] = migrationDaemonRef
+	args[2] = txHash
+	args[3] = amountStr
 
 	var argsSerialized []byte
 
@@ -449,11 +449,12 @@ func (r *Deposit) Confirm(migrationDaemon insolar.Reference, txHash string, amou
 }
 
 // ConfirmNoWait is proxy generated method
-func (r *Deposit) ConfirmNoWait(migrationDaemon insolar.Reference, txHash string, amountStr string) error {
-	var args [3]interface{}
-	args[0] = migrationDaemon
-	args[1] = txHash
-	args[2] = amountStr
+func (r *Deposit) ConfirmNoWait(migrationDaemonIndex int, migrationDaemonRef string, txHash string, amountStr string) error {
+	var args [4]interface{}
+	args[0] = migrationDaemonIndex
+	args[1] = migrationDaemonRef
+	args[2] = txHash
+	args[3] = amountStr
 
 	var argsSerialized []byte
 
@@ -471,11 +472,12 @@ func (r *Deposit) ConfirmNoWait(migrationDaemon insolar.Reference, txHash string
 }
 
 // ConfirmAsImmutable is proxy generated method
-func (r *Deposit) ConfirmAsImmutable(migrationDaemon insolar.Reference, txHash string, amountStr string) error {
-	var args [3]interface{}
-	args[0] = migrationDaemon
-	args[1] = txHash
-	args[2] = amountStr
+func (r *Deposit) ConfirmAsImmutable(migrationDaemonIndex int, migrationDaemonRef string, txHash string, amountStr string) error {
+	var args [4]interface{}
+	args[0] = migrationDaemonIndex
+	args[1] = migrationDaemonRef
+	args[2] = txHash
+	args[3] = amountStr
 
 	var argsSerialized []byte
 

@@ -27,8 +27,8 @@ type CreateResponse struct {
 	Reference string `json:"reference"`
 }
 type GetBalanceResponse struct {
-	Balance  string `json:"balance"`
-	Deposits []interface{}
+	Balance  string        `json:"balance"`
+	Deposits []interface{} `json:"deposits"`
 }
 type GetResponse struct {
 	Reference   string `json:"reference"`
@@ -535,10 +535,9 @@ func (r *Member) GetDepositsAsImmutable() ([]interface{}, error) {
 }
 
 // FindDeposit is proxy generated method
-func (r *Member) FindDeposit(transactionsHash string, inputAmountStr string) (bool, deposit.Deposit, error) {
-	var args [2]interface{}
+func (r *Member) FindDeposit(transactionsHash string) (bool, deposit.Deposit, error) {
+	var args [1]interface{}
 	args[0] = transactionsHash
-	args[1] = inputAmountStr
 
 	var argsSerialized []byte
 
@@ -572,10 +571,9 @@ func (r *Member) FindDeposit(transactionsHash string, inputAmountStr string) (bo
 }
 
 // FindDepositNoWait is proxy generated method
-func (r *Member) FindDepositNoWait(transactionsHash string, inputAmountStr string) error {
-	var args [2]interface{}
+func (r *Member) FindDepositNoWait(transactionsHash string) error {
+	var args [1]interface{}
 	args[0] = transactionsHash
-	args[1] = inputAmountStr
 
 	var argsSerialized []byte
 
@@ -593,10 +591,9 @@ func (r *Member) FindDepositNoWait(transactionsHash string, inputAmountStr strin
 }
 
 // FindDepositAsImmutable is proxy generated method
-func (r *Member) FindDepositAsImmutable(transactionsHash string, inputAmountStr string) (bool, deposit.Deposit, error) {
-	var args [2]interface{}
+func (r *Member) FindDepositAsImmutable(transactionsHash string) (bool, deposit.Deposit, error) {
+	var args [1]interface{}
 	args[0] = transactionsHash
-	args[1] = inputAmountStr
 
 	var argsSerialized []byte
 
@@ -630,9 +627,10 @@ func (r *Member) FindDepositAsImmutable(transactionsHash string, inputAmountStr 
 }
 
 // AddDeposit is proxy generated method
-func (r *Member) AddDeposit(deposit insolar.Reference) error {
-	var args [1]interface{}
-	args[0] = deposit
+func (r *Member) AddDeposit(txId string, deposit insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = txId
+	args[1] = deposit
 
 	var argsSerialized []byte
 
@@ -662,9 +660,10 @@ func (r *Member) AddDeposit(deposit insolar.Reference) error {
 }
 
 // AddDepositNoWait is proxy generated method
-func (r *Member) AddDepositNoWait(deposit insolar.Reference) error {
-	var args [1]interface{}
-	args[0] = deposit
+func (r *Member) AddDepositNoWait(txId string, deposit insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = txId
+	args[1] = deposit
 
 	var argsSerialized []byte
 
@@ -682,9 +681,10 @@ func (r *Member) AddDepositNoWait(deposit insolar.Reference) error {
 }
 
 // AddDepositAsImmutable is proxy generated method
-func (r *Member) AddDepositAsImmutable(deposit insolar.Reference) error {
-	var args [1]interface{}
-	args[0] = deposit
+func (r *Member) AddDepositAsImmutable(txId string, deposit insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = txId
+	args[1] = deposit
 
 	var argsSerialized []byte
 

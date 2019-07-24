@@ -17,7 +17,6 @@
 package deposit
 
 import (
-	"github.com/insolar/insolar/insolar"
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
 )
@@ -220,13 +219,15 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	args := [3]interface{}{}
-	var args0 insolar.Reference
+	args := [4]interface{}{}
+	var args0 int
 	args[0] = &args0
 	var args1 string
 	args[1] = &args1
 	var args2 string
 	args[2] = &args2
+	var args3 string
+	args[3] = &args3
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
@@ -234,7 +235,7 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	ret0 := self.Confirm(args0, args1, args2)
+	ret0 := self.Confirm(args0, args1, args2, args3)
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
@@ -252,15 +253,13 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	ph := common.CurrentProxyCtx
-	args := [4]interface{}{}
-	var args0 map[insolar.Reference]bool
+	args := [3]interface{}{}
+	var args0 [3]string
 	args[0] = &args0
 	var args1 string
 	args[1] = &args1
 	var args2 string
 	args[2] = &args2
-	var args3 insolar.PulseNumber
-	args[3] = &args3
 
 	err := ph.Deserialize(data, &args)
 	if err != nil {
@@ -268,7 +267,7 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 		return nil, e
 	}
 
-	ret0, ret1 := New(args0, args1, args2, args3)
+	ret0, ret1 := New(args0, args1, args2)
 	if ret1 != nil {
 		return nil, ret1
 	}

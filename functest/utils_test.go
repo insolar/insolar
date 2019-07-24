@@ -208,18 +208,6 @@ func retryableMemberMigrationCreate(user *user, updatePublicKey bool) (interface
 	return retryableCreateMember(user, "member.migrationCreate", updatePublicKey)
 }
 
-func getMigrationDaemon(nameFileWithKeys string, numberMigrationDaemon int) (*user, error) {
-	var migrationDaemon user
-	insolarMigrationDaemonKeysPath := launchnetPath("configs", nameFileWithKeys)
-	err := loadMemberKeys(insolarMigrationDaemonKeysPath, &migrationDaemon)
-	if err != nil {
-		return &user{}, err
-	}
-	info, err = requester.Info(TestAPIURL)
-	migrationDaemon.ref = info.MigrationDaemonMembers[numberMigrationDaemon]
-	return &migrationDaemon, nil
-}
-
 func retryableCreateMember(user *user, method string, updatePublicKey bool) (interface{}, error) {
 	// TODO: delete this after deduplication (INS-2778)
 	var result interface{}
@@ -228,6 +216,9 @@ func retryableCreateMember(user *user, method string, updatePublicKey bool) (int
 	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
 		result, err = signedRequest(user, method, nil)
 		if err == nil || !strings.Contains(err.Error(), "member for this publicKey already exist") {
+			if err == nil {
+				user.ref = result.(map[string]interface{})["reference"].(string)
+			}
 			return result, err
 		}
 		fmt.Printf("CreateMember request was duplicated, retry. Attempt for duplicated: %d/%d\n", currentIterNum, sendRetryCount)

@@ -261,11 +261,9 @@ func INSMETHOD_FindDeposit(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	args := [2]interface{}{}
+	args := [1]interface{}{}
 	var args0 string
 	args[0] = &args0
-	var args1 string
-	args[1] = &args1
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
@@ -273,7 +271,7 @@ func INSMETHOD_FindDeposit(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	ret0, ret1, ret2 := self.FindDeposit(args0, args1)
+	ret0, ret1, ret2 := self.FindDeposit(args0)
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
@@ -304,9 +302,11 @@ func INSMETHOD_AddDeposit(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	args := [1]interface{}{}
-	var args0 insolar.Reference
+	args := [2]interface{}{}
+	var args0 string
 	args[0] = &args0
+	var args1 insolar.Reference
+	args[1] = &args1
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
@@ -314,7 +314,7 @@ func INSMETHOD_AddDeposit(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	ret0 := self.AddDeposit(args0)
+	ret0 := self.AddDeposit(args0, args1)
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
