@@ -119,7 +119,6 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		if p.message.Sender != *virtualExecutor {
 			// FIXME: virtuals don't pass this test.
 			logger.Errorf("sender isn't the executor. sender - %v, executor - %v", p.message.Sender, *virtualExecutor)
-			return nil
 		}
 	}
 
@@ -170,7 +169,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 				"duplicate":   req != nil,
 				"has_result":  res != nil,
 				"is_creation": p.request.IsCreationRequest(),
-			}).Debug("request saved")
+			}).Debug("duplicate found")
 			return nil
 		}
 	}
@@ -263,5 +262,8 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to create reply")
 	}
 	p.dep.sender.Reply(ctx, p.message, msg)
+	logger.WithFields(map[string]interface{}{
+		"is_creation": p.request.IsCreationRequest(),
+	}).Debug("request saved")
 	return nil
 }
