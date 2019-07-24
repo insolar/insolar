@@ -480,7 +480,6 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 			return nil, nil, errors.Wrap(err, "failed to find index")
 		}
 		lifeline = l
-		return nil, nil, nil
 	} else {
 		l, err := c.indexes.ForID(ctx, requestID.Pulse(), objectID)
 		if err != nil {

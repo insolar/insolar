@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/stretchr/testify/require"
@@ -85,6 +86,7 @@ func callSetIncomingRequest(
 		Arguments: args,
 		CallType:  ct,
 		Reason:    *insolar.NewReference(reasonID),
+		APINode:   gen.Reference(),
 	})
 	reps, done := s.Send(ctx, &payload.SetIncomingRequest{
 		Request: rec,

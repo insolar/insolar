@@ -125,8 +125,6 @@ func (p *GetRequest) Proceed(ctx context.Context) error {
 		return nil
 	}
 
-	fmt.Printf("looking for %s", p.requestID.DebugString())
-	fmt.Println()
 	rec, err := p.dep.records.ForID(ctx, p.requestID)
 	switch err {
 	case nil:

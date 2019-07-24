@@ -60,7 +60,7 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 
 		// Reason should exist.
 		// FIXME: replace with remote request check.
-		if request.IsAPIRequest() {
+		if !request.IsAPIRequest() {
 			err := c.checkIncomingReason(ctx, objectID, reasonID)
 			if err != nil {
 				return errors.Wrap(err, "reason for found")
@@ -75,16 +75,9 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 		}
 		reasonInPendings := inFilament(pendings, reasonID)
 
-		// Reason should be closed.
-		if !request.IsDetached() && reasonInPendings {
-			// FIXME: virtual doesn't pass this check.
-			// return errors.New("request reason should be closed")
-			inslogger.FromContext(ctx).Error("request reason should be closed")
-		}
-
-		// Detached reason should be pending.
-		if request.IsDetached() && !reasonInPendings {
-			return errors.New("detached request reason should be pending")
+		// Reason should be open.
+		if !reasonInPendings {
+			return errors.New("request reason should be open")
 		}
 	}
 
