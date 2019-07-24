@@ -255,7 +255,7 @@ func (p *Outbound) CanAccept(connection endpoints.Inbound) bool {
 }
 
 func (p *Outbound) GetEndpointType() endpoints.NodeEndpointType {
-	return endpoints.NameEndpoint
+	return endpoints.IPEndpoint
 }
 
 func (*Outbound) GetRelayID() insolar.ShortNodeID {

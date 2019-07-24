@@ -509,10 +509,10 @@ type MembershipAnnouncement struct {
 	*/
 	ShortID insolar.ShortNodeID `insolar-transport:"ignore=send"` // ByteSize = 0
 
-	CurrentRank member.Rank // ByteSize=4
+	CurrentRank    member.Rank  // ByteSize=4
+	RequestedPower member.Power // ByteSize=1
 
 	/* For non-joiner ONLY */
-	RequestedPower    member.Power     `insolar-transport:"optional=CurrentRank!=0"` // ByteSize=1
 	Member            NodeAnnouncement `insolar-transport:"optional=CurrentRank!=0"` // ByteSize = 132, 136, 267, 269, 279
 	AnnounceSignature longbits.Bits512 `insolar-transport:"optional=CurrentRank!=0"` // ByteSize = 64
 	// AnnounceSignature = sign(LastCloudHash + hash(NodeFullIntro) + CurrentRank + fields of MembershipAnnouncement, SK(sender))
@@ -523,13 +523,13 @@ func (ma *MembershipAnnouncement) SerializeTo(ctx SerializeContext, writer io.Wr
 		return errors.Wrap(err, "failed to serialize CurrentRank")
 	}
 
+	if err := write(writer, ma.RequestedPower); err != nil {
+		return errors.Wrap(err, "failed to serialize RequestedPower")
+	}
+
 	if ma.CurrentRank != 0 {
 		ctx.SetInContext(ContextMembershipAnnouncement)
 		defer ctx.SetInContext(NoContext)
-
-		if err := write(writer, ma.RequestedPower); err != nil {
-			return errors.Wrap(err, "failed to serialize RequestedPower")
-		}
 
 		if err := ma.Member.SerializeTo(ctx, writer); err != nil {
 			return errors.Wrap(err, "failed to serialize Member")
@@ -548,13 +548,13 @@ func (ma *MembershipAnnouncement) DeserializeFrom(ctx DeserializeContext, reader
 		return errors.Wrap(err, "failed to deserialize CurrentRank")
 	}
 
+	if err := read(reader, &ma.RequestedPower); err != nil {
+		return errors.Wrap(err, "failed to deserialize RequestedPower")
+	}
+
 	if ma.CurrentRank != 0 {
 		ctx.SetInContext(ContextMembershipAnnouncement)
 		defer ctx.SetInContext(NoContext)
-
-		if err := read(reader, &ma.RequestedPower); err != nil {
-			return errors.Wrap(err, "failed to deserialize RequestedPower")
-		}
 
 		if err := ma.Member.DeserializeFrom(ctx, reader); err != nil {
 			return errors.Wrap(err, "failed to deserialize Member")

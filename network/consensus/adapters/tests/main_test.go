@@ -53,8 +53,10 @@
 package tests
 
 import (
+	"bytes"
 	"context"
 	"crypto"
+	"crypto/ecdsa"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -70,11 +72,16 @@ import (
 	network2 "github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/adapters"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/serialization"
+	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/nodenetwork"
 	transport2 "github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -91,6 +98,10 @@ func TestConsensusMain(t *testing.T) {
 	nodeInfos := generateNodeInfos(nodeIdentities)
 	nodes, discoveryNodes := nodesFromInfo(nodeInfos)
 
+	joinIdentities := generateNodeIdentities(0, 0, 2, 2)
+	joinInfos := generateNodeInfos(joinIdentities)
+	joiners, _ := nodesFromInfo(joinInfos)
+
 	pulseHandlers := make([]network2.PulseHandler, 0, len(nodes))
 
 	strategy := NewDelayNetStrategy(DelayStrategyConf{
@@ -101,6 +112,9 @@ func TestConsensusMain(t *testing.T) {
 	})
 
 	controllers := make([]consensus.Controller, len(nodes))
+	transports := make([]transport2.DatagramTransport, len(nodes))
+	contexts := make([]context.Context, len(nodes))
+
 	for i, n := range nodes {
 		nodeKeeper := nodenetwork.NewNodeKeeper(n)
 		nodeKeeper.SetInitialSnapshot(nodes)
@@ -111,12 +125,14 @@ func TestConsensusMain(t *testing.T) {
 		conf.Address = n.Address()
 
 		transportFactory := transport2.NewFactory(conf)
-		transport, _ := transportFactory.CreateDatagramTransport(datagramHandler)
+		transport, err := transportFactory.CreateDatagramTransport(datagramHandler)
+		require.NoError(t, err)
 
 		pulseHandler := adapters.NewPulseHandler()
 		pulseHandlers = append(pulseHandlers, pulseHandler)
 
 		delayTransport := strategy.GetLink(transport)
+		transports[i] = delayTransport
 
 		controllers[i] = consensus.New(ctx, consensus.Dep{
 			PrimingCloudStateHash: [64]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
@@ -139,19 +155,67 @@ func TestConsensusMain(t *testing.T) {
 			"node_id":      n.ShortID(),
 			"node_address": n.Address(),
 		})
-		_ = delayTransport.Start(ctx)
+		contexts[i] = ctx
+		err = delayTransport.Start(ctx)
+		require.NoError(t, err)
+	}
+
+	joinerProfiles := make([]profiles.StaticProfile, len(joiners))
+	for i, j := range joiners {
+		nodeKeeper := nodenetwork.NewNodeKeeper(j)
+		certificateManager := initCrypto(j, discoveryNodes)
+		datagramHandler := adapters.NewDatagramHandler()
+
+		conf := configuration.NewHostNetwork().Transport
+		conf.Address = j.Address()
+
+		transportFactory := transport2.NewFactory(conf)
+		transport, err := transportFactory.CreateDatagramTransport(datagramHandler)
+		require.NoError(t, err)
+
+		pulseHandler := adapters.NewPulseHandler()
+
+		delayTransport := strategy.GetLink(transport)
+
+		_ = consensus.New(ctx, consensus.Dep{
+			PrimingCloudStateHash: [64]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
+			KeyProcessor:          keyProcessor,
+			Scheme:                scheme,
+			CertificateManager:    certificateManager,
+			KeyStore:              keystore.NewInplaceKeyStore(joinInfos[i].privateKey),
+			NodeKeeper:            nodeKeeper,
+			StateGetter:           &nshGen{nshDelay: defaultNshGenerationDelay},
+			PulseChanger: &pulseChanger{
+				nodeKeeper: nodeKeeper,
+			},
+			StateUpdater: &stateUpdater{
+				nodeKeeper: nodeKeeper,
+			},
+			DatagramTransport: delayTransport,
+		}).Install(datagramHandler, pulseHandler)
+
+		ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
+			"node_id":      j.ShortID(),
+			"node_address": j.Address(),
+		})
+		err = delayTransport.Start(ctx)
+		require.NoError(t, err)
+
+		joinerProfiles[i] = adapters.NewStaticProfile(j, certificateManager.GetCertificate(), keyProcessor)
 	}
 
 	fmt.Println("===", len(nodes), "=================================================")
 
-	pulsar := NewPulsar(1, pulseHandlers)
+	pulsar := NewPulsar(2, pulseHandlers)
 	go func() {
 		for {
 			pulsar.Pulse(ctx, 4+len(nodes)/10)
 		}
 	}()
 
-	once := sync.Once{}
+	// once1 := sync.Once{}
+	// once2 := sync.Once{}
+	once3 := sync.Once{}
 
 	for {
 		fmt.Println("===", time.Since(startedAt), "=================================================")
@@ -160,9 +224,36 @@ func TestConsensusMain(t *testing.T) {
 			return
 		}
 
-		if time.Since(startedAt) > 10*time.Second {
-			once.Do(func() {
-				controllers[0].Leave(0)
+		// if time.Since(startedAt) > 2*time.Second {
+		// 	once1.Do(func() {
+		// 		<-controllers[0].Leave(0)
+		// 		transports[0].Stop(contexts[0])
+		// 		controllers[0].Abort()
+		// 		fmt.Println("LEFT 0")
+		// 	})
+		// }
+		//
+		// if time.Since(startedAt) > 1*time.Second {
+		// 	once2.Do(func() {
+		// 		fmt.Println("DROP 1")
+		// 		transports[1].Stop(contexts[1])
+		// 	})
+		// }
+
+		if time.Since(startedAt) > 1*time.Second {
+			once3.Do(func() {
+				type candidate struct {
+					profiles.StaticProfile
+					profiles.StaticProfileExtension
+				}
+
+				for i, joiner := range joinerProfiles {
+					controllers[i].AddJoinCandidate(candidate{
+						joiner,
+						joiner.GetExtension(),
+					})
+					break
+				}
 			})
 		}
 	}
@@ -171,7 +262,7 @@ func TestConsensusMain(t *testing.T) {
 func initLogger() context.Context {
 	ctx := context.Background()
 	logger := inslogger.FromContext(ctx).WithCaller(false)
-	logger, _ = logger.WithLevelNumber(insolar.DebugLevel)
+	logger, _ = logger.WithLevelNumber(insolar.ErrorLevel)
 	logger, _ = logger.WithFormat(insolar.TextFormat)
 	ctx = inslogger.SetLogger(ctx, logger)
 	return ctx
@@ -188,15 +279,16 @@ func generateNodeIdentities(countNeutral, countHeavy, countLight, countVirtual i
 	return r
 }
 
-const portOffset = 10000
+var portOffset = 10000
 
 func _generateNodeIdentity(r []nodeIdentity, count int, role insolar.StaticRole) []nodeIdentity {
 	for i := 0; i < count; i++ {
-		port := portOffset + len(r)
+		port := portOffset
 		r = append(r, nodeIdentity{
 			role: role,
 			addr: fmt.Sprintf("127.0.0.1:%d", port),
 		})
+		portOffset += 1
 	}
 	return r
 }
@@ -237,19 +329,28 @@ func nodesFromInfo(nodeInfos []*nodeInfo) ([]insolar.NetworkNode, []insolar.Netw
 			isDiscovery = true
 		}
 
-		nn := newNetworkNode(i, info.addr, info.role, info.publicKey, info.privateKey)
+		nn := newNetworkNode(info.addr, info.role, info.publicKey)
 		nodes[i] = nn
 		if isDiscovery {
 			discoveryNodes = append(discoveryNodes, nn)
 		}
+
+		d, s := getSD(
+			nn,
+			isDiscovery,
+			keyProcessor,
+			info.privateKey.(*ecdsa.PrivateKey),
+			scheme,
+		)
+		nn.(node.MutableNode).SetSignature(d, s)
 	}
 
 	return nodes, discoveryNodes
 }
 
-const shortNodeIdOffset = 1000
+var shortNodeIdOffset = 1000
 
-func newNetworkNode(id int, addr string, role insolar.StaticRole, pk crypto.PublicKey, sk crypto.PrivateKey) node.MutableNode {
+func newNetworkNode(addr string, role insolar.StaticRole, pk crypto.PublicKey) node.MutableNode {
 	n := node.NewNode(
 		testutils.RandomRef(),
 		role,
@@ -258,17 +359,9 @@ func newNetworkNode(id int, addr string, role insolar.StaticRole, pk crypto.Publ
 		"",
 	)
 	mn := n.(node.MutableNode)
-	mn.SetShortID(insolar.ShortNodeID(shortNodeIdOffset + id))
+	mn.SetShortID(insolar.ShortNodeID(shortNodeIdOffset))
 
-	hasher := scheme.IntegrityHasher()
-	signer := scheme.DigestSigner(sk)
-
-	data := []byte{1, 3, 3, 7}
-	digest := hasher.Hash(data)
-	signature, _ := signer.Sign(digest)
-
-	mn.SetSignature(digest, *signature)
-
+	shortNodeIdOffset += 1
 	return mn
 }
 
@@ -348,4 +441,51 @@ func (su *stateUpdater) UpdateState(ctx context.Context, pulseNumber insolar.Pul
 		inslogger.FromContext(ctx).Error(err)
 	}
 	su.nodeKeeper.SetCloudHash(cloudStateHash)
+}
+
+func getSD(
+	node insolar.NetworkNode,
+	isDiscovery bool,
+	kp insolar.KeyProcessor,
+	key *ecdsa.PrivateKey,
+	scheme insolar.PlatformCryptographyScheme,
+) ([]byte, insolar.Signature) {
+
+	brief := serialization.NodeBriefIntro{}
+	brief.ShortID = node.ShortID()
+	brief.SetPrimaryRole(adapters.StaticRoleToPrimaryRole(node.Role()))
+	if isDiscovery {
+		brief.SpecialRoles = member.SpecialRoleDiscovery
+	}
+	brief.StartPower = 10
+
+	addr, err := packets.NewNodeAddress(node.Address())
+	if err != nil {
+		panic(err)
+	}
+	copy(brief.Endpoint[:], addr[:])
+
+	pk, err := kp.ExportPublicKeyBinary(node.PublicKey())
+	if err != nil {
+		panic(err)
+	}
+
+	copy(brief.NodePK[:], pk)
+
+	buf := &bytes.Buffer{}
+	err = brief.SerializeTo(nil, buf)
+	if err != nil {
+		panic(err)
+	}
+
+	data := buf.Bytes()
+	data = data[:len(data)-64]
+
+	digest := scheme.IntegrityHasher().Hash(data)
+	sign, err := scheme.DigestSigner(key).Sign(digest)
+	if err != nil {
+		panic(err)
+	}
+
+	return digest, *sign
 }

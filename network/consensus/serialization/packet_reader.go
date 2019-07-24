@@ -470,7 +470,7 @@ func (r *FullIntroductionReader) GetStaticNodeID() insolar.ShortNodeID {
 }
 
 func (r *FullIntroductionReader) GetPrimaryRole() member.PrimaryRole {
-	return r.intro.getPrimaryRole()
+	return r.intro.GetPrimaryRole()
 }
 
 func (r *FullIntroductionReader) GetSpecialRoles() member.SpecialRole {

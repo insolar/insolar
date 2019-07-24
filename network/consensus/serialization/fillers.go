@@ -98,8 +98,8 @@ func fillMembershipAnnouncement(a *MembershipAnnouncement, sender *transport.Nod
 
 func fillBriefInto(i *NodeBriefIntro, intro transport.BriefIntroductionReader) {
 	i.ShortID = intro.GetStaticNodeID()
-	i.setPrimaryRole(intro.GetPrimaryRole())
-	i.setAddrMode(endpoints.IPEndpoint)
+	i.SetPrimaryRole(intro.GetPrimaryRole())
+	i.SetAddrMode(endpoints.IPEndpoint)
 	i.SpecialRoles = intro.GetSpecialRoles()
 	i.StartPower = intro.GetStartPower()
 	copy(i.NodePK[:], intro.GetNodePublicKey().AsBytes())
@@ -195,15 +195,14 @@ func fillPhase1(
 		fillExtendedIntro(&body.JoinerExt, joiner.GetFullIntroduction())
 	}
 
-	needFullIntro := welcome != nil && welcome.JoinerSecret != nil
 	staticProfile := sender.GetStatic()
-	if staticProfileExtension := staticProfile.GetExtension(); staticProfileExtension != nil && needFullIntro {
+	fillBriefInto(&body.BriefSelfIntro, staticProfile)
+
+	if staticProfileExtension := staticProfile.GetExtension(); staticProfileExtension != nil {
 		fillFullInto(&body.FullSelfIntro, &fullReader{
 			StaticProfile:          staticProfile,
 			StaticProfileExtension: staticProfileExtension,
 		})
-	} else {
-		fillBriefInto(&body.BriefSelfIntro, staticProfile)
 	}
 
 	if welcome != nil {
@@ -222,15 +221,14 @@ func fullPhase2(
 ) {
 	fillMembershipAnnouncement(&body.Announcement, sender)
 
-	needFullIntro := welcome != nil && welcome.JoinerSecret != nil
 	staticProfile := sender.GetStatic()
-	if staticProfileExtension := staticProfile.GetExtension(); staticProfileExtension != nil && needFullIntro {
+	fillBriefInto(&body.BriefSelfIntro, staticProfile)
+
+	if staticProfileExtension := staticProfile.GetExtension(); staticProfileExtension != nil {
 		fillFullInto(&body.FullSelfIntro, &fullReader{
 			StaticProfile:          staticProfile,
 			StaticProfileExtension: staticProfileExtension,
 		})
-	} else {
-		fillBriefInto(&body.BriefSelfIntro, staticProfile)
 	}
 
 	if welcome != nil {
