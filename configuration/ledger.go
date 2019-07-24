@@ -64,8 +64,8 @@ type Replica struct {
 	Port uint32
 	// ParentAddress is an address to connect to replica parent.
 	ParentAddress string
-	// ParentPubKey is a public key that replica parent will use to sign replication records.
-	ParentPubKey string
+	// ParentPubKeyFile is a path to public key that replica parent will use to sign replication records.
+	ParentPubKeyFile string
 	// ScopesToReplicate is a list of DB scopes identifiers that define what should to replicate.
 	ScopesToReplicate []byte
 	// Attempts are a maximum count of attempts to connect to replica parent.

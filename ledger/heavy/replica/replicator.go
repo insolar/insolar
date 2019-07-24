@@ -18,6 +18,7 @@ package replica
 
 import (
 	"context"
+	"io/ioutil"
 
 	"github.com/pkg/errors"
 
@@ -27,7 +28,6 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/heavy/sequence"
 	"github.com/insolar/insolar/platformpolicy"
 )
@@ -61,7 +61,10 @@ func (r *Replicator) Init(ctx context.Context) error {
 		remoteParent := NewRemoteParent(r.Transport, replicaConfig.ParentAddress)
 		r.target = NewTarget(replicaConfig, remoteParent)
 		r.registerTarget(r.target)
-		validator := makeValidator(replicaConfig, r.CryptoService)
+		validator, err := makeValidator(replicaConfig, r.CryptoService)
+		if err != nil {
+			return err
+		}
 		r.cmps.Register(validator)
 
 		parent := NewParent()
@@ -70,7 +73,10 @@ func (r *Replicator) Init(ctx context.Context) error {
 		remoteParent := NewRemoteParent(r.Transport, replicaConfig.ParentAddress)
 		r.target = NewTarget(replicaConfig, remoteParent)
 		r.registerTarget(r.target)
-		validator := makeValidator(replicaConfig, r.CryptoService)
+		validator, err := makeValidator(replicaConfig, r.CryptoService)
+		if err != nil {
+			return err
+		}
 		r.cmps.Register(validator)
 	}
 	provider := makeProvider(r.CryptoService)
@@ -146,13 +152,15 @@ func makeProvider(cryptoService insolar.CryptographyService) integrity.Provider 
 	return integrity.NewProvider(cryptoService)
 }
 
-func makeValidator(cfg configuration.Replica, cryptoService insolar.CryptographyService) integrity.Validator {
-	logger := inslogger.FromContext(context.Background())
-	kp := platformpolicy.NewKeyProcessor()
-	pubKey, err := kp.ImportPublicKeyPEM([]byte(cfg.ParentPubKey))
+func makeValidator(cfg configuration.Replica, cryptoService insolar.CryptographyService) (integrity.Validator, error) {
+	keyContent, err := ioutil.ReadFile(cfg.ParentPubKeyFile)
 	if err != nil {
-		logger.Error(errors.Wrap(err, "failed to import a public key from PEM"))
-		return nil
+		return nil, errors.Wrap(err, "failed to load public key")
 	}
-	return integrity.NewValidator(cryptoService, pubKey)
+	kp := platformpolicy.NewKeyProcessor()
+	pubKey, err := kp.ImportPublicKeyPEM(keyContent)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to import a public key from PEM")
+	}
+	return integrity.NewValidator(cryptoService, pubKey), nil
 }
