@@ -51,6 +51,7 @@
 package censusimpl
 
 import (
+	"context"
 	"testing"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
@@ -108,7 +109,8 @@ func TestNewPrimingCensusForJoiner(t *testing.T) {
 
 func TestNewPrimingCensus(t *testing.T) {
 	sp := profiles.NewStaticProfileMock(t)
-	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
+	nodeID := insolar.ShortNodeID(0)
+	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return *(&nodeID) })
 	sp.GetPrimaryRoleMock.Set(func() member.PrimaryRole { return member.PrimaryRoleNeutral })
 	pks := cryptkit.NewPublicKeyStoreMock(t)
 	sp.GetPublicKeyStoreMock.Set(func() cryptkit.PublicKeyStore { return pks })
@@ -122,6 +124,8 @@ func TestNewPrimingCensus(t *testing.T) {
 	vf.GetSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
 	require.Panics(t, func() { NewPrimingCensus(nil, sp, registries, vf) })
 
+	require.Panics(t, func() { NewPrimingCensus(sps, sp, registries, vf) })
+	nodeID = 1
 	pc := NewPrimingCensus(sps, sp, registries, vf)
 	require.Equal(t, pn, pc.GetPulseNumber())
 
@@ -265,7 +269,7 @@ func TestPCTCreateBuilder(t *testing.T) {
 		slots: []updatableSlot{updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}}
 
 	pct := PrimingCensusTemplate{chronicles: chronicles, online: population}
-	builder := pct.CreateBuilder(pn)
+	builder := pct.CreateBuilder(context.Background(), pn)
 	require.Equal(t, pn, builder.GetPulseNumber())
 }
 
@@ -385,7 +389,7 @@ func TestECTCreateBuilder(t *testing.T) {
 		slots: []updatableSlot{updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}}
 
 	ect := ExpectedCensusTemplate{chronicles: chronicles, online: population}
-	builder := ect.CreateBuilder(pn)
+	builder := ect.CreateBuilder(context.Background(), pn)
 	require.Equal(t, pn, builder.GetPulseNumber())
 }
 

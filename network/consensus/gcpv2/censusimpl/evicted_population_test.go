@@ -64,14 +64,14 @@ import (
 )
 
 func TestNewEvictedPopulation(t *testing.T) {
-	require.Len(t, newEvictedPopulation(nil).profiles, 0)
+	require.Len(t, newEvictedPopulation(nil, 0).profiles, 0)
 
-	require.Len(t, newEvictedPopulation(make([]*updatableSlot, 0)).profiles, 0)
+	require.Len(t, newEvictedPopulation(make([]*updatableSlot, 0), 0).profiles, 0)
 
 	sp := profiles.NewStaticProfileMock(t)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
 	evicts := []*updatableSlot{&updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
-	ep := newEvictedPopulation(evicts)
+	ep := newEvictedPopulation(evicts, 0)
 	require.Equal(t, 1, ep.GetCount())
 }
 
@@ -83,7 +83,7 @@ func TestEPFindProfile(t *testing.T) {
 	sp2.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 1 })
 	evicts := []*updatableSlot{&updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp1}},
 		&updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp2}}}
-	ep := newEvictedPopulation(evicts)
+	ep := newEvictedPopulation(evicts, 0)
 	en := ep.FindProfile(nodeID)
 	require.NotNil(t, en)
 
@@ -99,11 +99,11 @@ func TestEPGetCount(t *testing.T) {
 	sp2.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return *(&nodeID) })
 	evicts := []*updatableSlot{&updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp1}},
 		&updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp2}}}
-	ep := newEvictedPopulation(evicts)
+	ep := newEvictedPopulation(evicts, 0)
 	require.Equal(t, 1, ep.GetCount())
 
 	nodeID = 1
-	ep = newEvictedPopulation(evicts)
+	ep = newEvictedPopulation(evicts, 0)
 	require.Equal(t, 2, ep.GetCount())
 }
 
@@ -115,7 +115,7 @@ func TestEPGetProfiles(t *testing.T) {
 	sp2.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 1 })
 	evicts := []*updatableSlot{&updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp1}},
 		&updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp2}}}
-	ep := newEvictedPopulation(evicts)
+	ep := newEvictedPopulation(evicts, 0)
 	require.Len(t, ep.GetProfiles(), len(evicts))
 }
 
