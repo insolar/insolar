@@ -84,7 +84,7 @@ func (e *requestsExecutor) Execute(
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.executeLogic")
 	defer span.End()
 
-	inslogger.FromContext(ctx).Debug("Executing request")
+	inslogger.FromContext(ctx).Debugf("Executing request: %s", transcript.Request.CallType)
 
 	if transcript.Request.CallType == record.CTMethod {
 		objDesc, err := e.ArtifactManager.GetObject(ctx, *transcript.Request.Object)

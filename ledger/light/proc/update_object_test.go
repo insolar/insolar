@@ -76,11 +76,8 @@ func TestUpdateObject_RecordOverrideErr(t *testing.T) {
 	)
 
 	err := p.Proceed(ctx)
-	// Since there is no deduplication yet it's quite possible that there will be
-	// two writes by the same key. For this reason currently instead of reporting
-	// an error we return OK (nil error). When deduplication will be implemented
-	// we should check `ErrOverride` here.
-	require.NoError(t, err)
+	require.Error(t, err)
+	require.Equal(t, "can't save record into storage: record override is forbidden", err.Error())
 }
 
 func TestUpdateObject_RecordErr(t *testing.T) {

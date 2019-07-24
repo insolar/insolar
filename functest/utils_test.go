@@ -328,10 +328,13 @@ func uploadContractOnce(t *testing.T, name string, code string) *insolar.Referen
 		t, contracts[name].testName, t.Name(),
 		"[ uploadContractOnce ] You cant use name of contract multiple times: "+contracts[name].testName,
 	)
+	fmt.Println("ContractREF is : ", contracts[name].reference)
 	return contracts[name].reference
 }
 
 func uploadContract(t *testing.T, contractName string, contractCode string) *insolar.Reference {
+	fmt.Println("Name is ", contractName)
+
 	uploadBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
 		"method":  "contract.upload",
@@ -387,6 +390,7 @@ func callConstructor(t *testing.T, prototypeRef *insolar.Reference, method strin
 	}{}
 
 	err = json.Unmarshal(objectBody, &callConstructorRes)
+	fmt.Println("TRACE_ID:" + callConstructorRes.Result.TraceID)
 	require.NoError(t, err)
 	require.Empty(t, callConstructorRes.Error)
 

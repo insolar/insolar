@@ -120,14 +120,7 @@ func (a *DeactivateObject) Proceed(ctx context.Context) error {
 
 	err = a.dep.records.Set(ctx, a.deactivateID, rec)
 
-	if err == object.ErrOverride {
-		// Since there is no deduplication yet it's quite possible that there will be
-		// two writes by the same key. For this reason currently instead of reporting
-		// an error we return OK (nil error). When deduplication will be implemented
-		// we should change `nil` to `ErrOverride` here.
-		logger.Errorf("can't save record into storage: %s", err)
-		return nil
-	} else if err != nil {
+	if err != nil {
 		return errors.Wrap(err, "can't save record into storage")
 	}
 

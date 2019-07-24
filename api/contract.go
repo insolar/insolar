@@ -94,6 +94,7 @@ func (s *ContractService) Upload(r *http.Request, args *UploadArgs, reply *Uploa
 	}
 	reference := *s.cb.Prototypes[args.Name]
 	reply.PrototypeRef = reference.String()
+	inslogger.FromContext(ctx).Debugf("[ Upload ] proto: %s", reply.PrototypeRef)
 	return nil
 }
 
@@ -132,13 +133,23 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 	}
 
 	base := insolar.GenesisRecord.Ref()
+
+	caller := testutils.RandomRef()
+	callerProto := testutils.RandomRef()
+	reason := insolarApi.MakeReason(pulse.PulseNumber, args.MethodArgs)
+
+	inslogger.FromContext(ctx).Debugf("[ CallConstructor ] caller: %s  callerProto: %s", caller.String(), callerProto.String())
+	inslogger.FromContext(ctx).Debugf("[ CallConstructor ] base: %s", base.String())
+	inslogger.FromContext(ctx).Debugf("[ CallConstructor ] Reason: %s  ", reason.String())
+	inslogger.FromContext(ctx).Debugf("[ CallConstructor ] Prototype: %s  ", protoRef.String())
+
 	msg := &message.CallMethod{
 		IncomingRequest: record.IncomingRequest{
 			Method:          args.Method,
 			Arguments:       args.MethodArgs,
 			Base:            &base,
-			Caller:          testutils.RandomRef(),
-			CallerPrototype: testutils.RandomRef(),
+			Caller:          caller,
+			CallerPrototype: callerProto,
 			Prototype:       protoRef,
 			CallType:        record.CTSaveAsChild,
 			APIRequestID:    utils.TraceID(ctx),
@@ -153,6 +164,8 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 	}
 
 	reply.ObjectRef = callConstructorReply.String()
+
+	inslogger.FromContext(ctx).Debugf("[ CallConstructor ] New obj is: %s  ", reply.ObjectRef)
 
 	return nil
 }
@@ -193,6 +206,9 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 	if err != nil {
 		return errors.Wrap(err, "can't get current pulse")
 	}
+
+	inslog.Infof("[ ContractService.CallMethod ] object: %s", objectRef.String())
+
 	msg := &message.CallMethod{
 		IncomingRequest: record.IncomingRequest{
 			Caller:       testutils.RandomRef(),

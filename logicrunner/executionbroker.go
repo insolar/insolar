@@ -376,8 +376,9 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *Tra
 	}
 
 	defer q.releaseTask(ctx, transcript)
-
-	if readyToExecute := q.Check(ctx); !readyToExecute {
+	readyToExecute := q.Check(ctx)
+	inslogger.FromContext(ctx).Debugf("[ processTranscript ] execution: %s", readyToExecute)
+	if !readyToExecute {
 		return false
 	}
 
@@ -482,6 +483,7 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 
 	// сhecking we're eligible to execute contracts
 	if readyToExecute := q.Check(ctx); !readyToExecute {
+		inslogger.FromContext(ctx).Debugf("[ startProcessor ] NOT READY")
 		return
 	}
 
@@ -804,8 +806,6 @@ func (q *ExecutionBroker) stopRequestsFetcher(ctx context.Context) {
 		q.requestsFetcher = nil
 	}
 }
-
-
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.ExecutionBrokerI -o ./ -s _mock.go
 

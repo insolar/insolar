@@ -20,6 +20,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -45,6 +46,7 @@ func (c *descriptorsCache) ByPrototypeRef(
 	ObjectDescriptor, CodeDescriptor, error,
 ) {
 	protoDesc, err := c.GetPrototype(ctx, protoRef)
+	inslogger.FromContext(ctx).Debugf("[ ByPrototypeRef ] %s", protoRef)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "couldn't get prototype descriptor")
 	}
@@ -81,6 +83,7 @@ func (c *descriptorsCache) GetPrototype(
 	ObjectDescriptor, error,
 ) {
 	res, err := c.protoCache.get(ref, func() (interface{}, error) {
+		inslogger.FromContext(ctx).Debugf("[ GetPrototype ]")
 		return c.Client.GetObject(ctx, ref)
 	})
 	if err != nil {
