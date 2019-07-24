@@ -60,7 +60,7 @@ func TestActivateObject_RecordOverrideErr(t *testing.T) {
 	idxStorage := object.NewIndexStorageMock(t)
 	idxStorage.ForIDMock.Return(record.Index{}, nil)
 
-	filament := executor.NewFilamentModifierMock(t)
+	filament := executor.NewFilamentManagerMock(t)
 	filament.SetResultFunc = func(_ context.Context, inResID insolar.ID, _ insolar.JetID, _ record.Result) (_ *record.CompositeFilamentRecord, _ error) {
 		require.Equal(t, resID, inResID)
 
@@ -111,7 +111,7 @@ func TestActivateObject_RecordErr(t *testing.T) {
 	idxStorage := object.NewIndexStorageMock(t)
 	idxStorage.ForIDMock.Return(record.Index{}, nil)
 
-	filament := executor.NewFilamentModifierMock(t)
+	filament := executor.NewFilamentManagerMock(t)
 	filament.SetResultFunc = func(_ context.Context, inResID insolar.ID, _ insolar.JetID, _ record.Result) (_ *record.CompositeFilamentRecord, _ error) {
 		require.Equal(t, resID, inResID)
 
@@ -161,7 +161,7 @@ func TestActivateObject_FilamentSetResultErr(t *testing.T) {
 	idxStorageMock.SetIndexMock.Return(nil)
 	idxStorageMock.ForIDMock.Return(record.Index{}, nil)
 
-	filaments := executor.NewFilamentModifierMock(t)
+	filaments := executor.NewFilamentManagerMock(t)
 	filaments.SetResultMock.Return(nil, errors.New("something strange from filament.SetResult"))
 
 	p := proc.NewActivateObject(
@@ -208,7 +208,7 @@ func TestActivateObject_Proceed(t *testing.T) {
 	idxStorageMock.ForIDMock.Return(record.Index{}, nil)
 	idxStorageMock.SetIndexMock.Return(nil)
 
-	filaments := executor.NewFilamentModifierMock(t)
+	filaments := executor.NewFilamentManagerMock(t)
 	filaments.SetResultMock.Return(nil, nil)
 
 	sender := bus.NewSenderMock(t)

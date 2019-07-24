@@ -210,10 +210,13 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 			Coordinator,
 			jetTreeUpdater,
 			ServerBus,
+			Pulses,
 		)
+		requestChecker := executor.NewRequestChecker(filamentCalculator, Coordinator, jetTreeUpdater, ServerBus)
 
 		handler.JetTreeUpdater = jetTreeUpdater
 		handler.FilamentCalculator = filamentCalculator
+		handler.RequestChecker = requestChecker
 
 		err := handler.Init(ctx)
 		if err != nil {
