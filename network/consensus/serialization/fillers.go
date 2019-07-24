@@ -78,6 +78,11 @@ func fillMembershipAnnouncement(a *MembershipAnnouncement, sender *transport.Nod
 	a.ShortID = sender.GetNodeID()
 	a.CurrentRank = sender.GetNodeRank()
 	a.RequestedPower = sender.GetRequestedPower()
+
+	if sender.GetNodeRank().IsJoiner() {
+		return
+	}
+
 	copy(a.AnnounceSignature[:], sender.GetAnnouncementSignature().AsBytes())
 
 	fillNodeState(&a.Member.NodeState, sender.GetNodeStateHashEvidence())
@@ -86,7 +91,7 @@ func fillMembershipAnnouncement(a *MembershipAnnouncement, sender *transport.Nod
 		a.Member.AnnounceID = sender.GetNodeID()
 		a.Member.Leaver.LeaveReason = sender.GetLeaveReason()
 	} else if joinerAnnouncement := sender.GetJoinerAnnouncement(); joinerAnnouncement != nil {
-		a.Member.AnnounceID = joinerAnnouncement.GetBriefIntroduction().GetStaticNodeID()
+		a.Member.AnnounceID = sender.GetJoinerID()
 		fillBriefInto(&a.Member.Joiner.NodeBriefIntro, joinerAnnouncement.GetBriefIntroduction())
 	}
 }
@@ -146,15 +151,18 @@ func fillNeighbourAnnouncement(n *NeighbourAnnouncement, neighbour transport.Mem
 
 	if !neighbour.GetNodeRank().IsJoiner() {
 		fillNodeState(&n.Member.NodeState, neighbour.GetNodeStateHashEvidence())
-	}
 
-	if neighbour.IsLeaving() {
-		n.Member.AnnounceID = neighbour.GetNodeID()
-		n.Member.Leaver.LeaveReason = neighbour.GetLeaveReason()
-	} else if announcement := neighbour.GetJoinerAnnouncement(); announcement != nil {
-		n.JoinerIntroducedBy = announcement.GetJoinerIntroducedByID()
-		n.Member.AnnounceID = announcement.GetBriefIntroduction().GetStaticNodeID()
-		fillBriefInto(&n.Joiner.NodeBriefIntro, announcement.GetBriefIntroduction())
+		if neighbour.IsLeaving() {
+			n.Member.AnnounceID = neighbour.GetNodeID()
+			n.Member.Leaver.LeaveReason = neighbour.GetLeaveReason()
+		} else {
+			n.Member.AnnounceID = neighbour.GetJoinerID()
+		}
+	} else {
+		if announcement := neighbour.GetJoinerAnnouncement(); announcement != nil {
+			n.JoinerIntroducedBy = announcement.GetJoinerIntroducedByID()
+			fillBriefInto(&n.Joiner.NodeBriefIntro, announcement.GetBriefIntroduction())
+		}
 	}
 }
 
@@ -187,13 +195,16 @@ func fillPhase1(
 		fillExtendedIntro(&body.JoinerExt, joiner.GetFullIntroduction())
 	}
 
+	needFullIntro := welcome != nil && welcome.JoinerSecret != nil
 	staticProfile := sender.GetStatic()
-	staticProfileExtension := staticProfile.GetExtension()
-
-	fillFullInto(&body.FullSelfIntro, &fullReader{
-		StaticProfile:          staticProfile,
-		StaticProfileExtension: staticProfileExtension,
-	})
+	if staticProfileExtension := staticProfile.GetExtension(); staticProfileExtension != nil && needFullIntro {
+		fillFullInto(&body.FullSelfIntro, &fullReader{
+			StaticProfile:          staticProfile,
+			StaticProfileExtension: staticProfileExtension,
+		})
+	} else {
+		fillBriefInto(&body.BriefSelfIntro, staticProfile)
+	}
 
 	if welcome != nil {
 		fillWelcome(body, welcome)
@@ -211,12 +222,9 @@ func fullPhase2(
 ) {
 	fillMembershipAnnouncement(&body.Announcement, sender)
 
-	if joiner := sender.GetJoinerAnnouncement(); joiner != nil && joiner.HasFullIntro() {
-		fillExtendedIntro(&body.JoinerExt, joiner.GetFullIntroduction())
-	}
-
+	needFullIntro := welcome != nil && welcome.JoinerSecret != nil
 	staticProfile := sender.GetStatic()
-	if staticProfileExtension := staticProfile.GetExtension(); staticProfileExtension != nil {
+	if staticProfileExtension := staticProfile.GetExtension(); staticProfileExtension != nil && needFullIntro {
 		fillFullInto(&body.FullSelfIntro, &fullReader{
 			StaticProfile:          staticProfile,
 			StaticProfileExtension: staticProfileExtension,

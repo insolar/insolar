@@ -53,10 +53,12 @@ package serialization
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"math"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 
 	"github.com/pkg/errors"
@@ -89,6 +91,11 @@ type packetContext struct {
 }
 
 func newPacketContext(ctx context.Context, header *Header) packetContext {
+	ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
+		"flags":          fmt.Sprintf("%08b", header.PacketFlags),
+		"payload_length": header.getPayloadLength(),
+	})
+
 	return packetContext{
 		Context:              ctx,
 		PacketHeaderAccessor: header,
@@ -105,6 +112,10 @@ func (pc *packetContext) SetInContext(ctx FieldContext) {
 }
 
 func (pc *packetContext) GetNeighbourNodeID() insolar.ShortNodeID {
+	if pc.neighbourNodeID.IsAbsent() {
+		panic("illegal value")
+	}
+
 	return pc.neighbourNodeID
 }
 
@@ -117,6 +128,10 @@ func (pc *packetContext) GetAnnouncedJoinerNodeID() insolar.ShortNodeID {
 }
 
 func (pc *packetContext) SetAnnouncedJoinerNodeID(nodeID insolar.ShortNodeID) {
+	if nodeID.IsAbsent() {
+		panic("illegal value")
+	}
+
 	pc.announcedJoinerNodeID = nodeID
 }
 

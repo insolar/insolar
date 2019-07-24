@@ -55,7 +55,6 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
@@ -122,13 +121,13 @@ func (pb *PacketBuilder) preparePacketSender(packet *Packet) *PreparedPacketSend
 func (pb *PacketBuilder) PreparePhase0Packet(
 	sender *transport.NodeAnnouncementProfile,
 	pulsarPacket proofs.OriginalPulsarPacket,
-	options transport.PacketSendOptions,
+	options transport.PacketPrepareOptions,
 ) transport.PreparedPacketSender {
 
 	packet := pb.preparePacket(sender, phases.PacketPhase0)
 	fillPhase0(packet.EncryptableBody.(*GlobulaConsensusPacketBody), sender, pulsarPacket)
 
-	if !options.HasAny(transport.SendWithoutPulseData) {
+	if !options.HasAny(transport.PrepareWithoutPulseData) {
 		packet.Header.SetFlag(FlagHasPulsePacket)
 	}
 
@@ -157,12 +156,14 @@ func (pb *PacketBuilder) PreparePhase1Packet(
 		packet.Header.SetFlag(FlagHasJoinerExt)
 	}
 
-	if options.HasAny(transport.TargetNeedsIntro) {
+	packet.Header.SetFlag(FlagSelfIntro1)
+	if welcome != nil {
+		packet.Header.ClearFlag(FlagSelfIntro1)
 		packet.Header.SetFlag(FlagSelfIntro2)
-	}
 
-	if welcome != nil && welcome.JoinerSecret != nil {
-		packet.Header.SetFlag(FlagSelfIntro1)
+		if welcome.JoinerSecret != nil {
+			packet.Header.SetFlag(FlagSelfIntro1)
+		}
 	}
 
 	return pb.preparePacketSender(packet)
@@ -186,12 +187,14 @@ func (pb *PacketBuilder) PreparePhase2Packet(
 		packet.Header.SetFlag(FlagHasJoinerExt)
 	}
 
-	if options.HasAny(transport.TargetNeedsIntro) {
+	packet.Header.SetFlag(FlagSelfIntro1)
+	if welcome != nil {
+		packet.Header.ClearFlag(FlagSelfIntro1)
 		packet.Header.SetFlag(FlagSelfIntro2)
-	}
 
-	if welcome != nil && welcome.JoinerSecret != nil {
-		packet.Header.SetFlag(FlagSelfIntro1)
+		if welcome.JoinerSecret != nil {
+			packet.Header.SetFlag(FlagSelfIntro1)
+		}
 	}
 
 	return pb.preparePacketSender(packet)
@@ -272,29 +275,17 @@ func (p *PreparedPacketSender) beforeSend(
 	target transport.TargetProfile,
 ) {
 
-	if p.packet.Header.GetPacketType() == phases.PacketPhase0 || p.packet.Header.GetPacketType() == phases.PacketPhase1 {
+	packetType := p.packet.Header.GetPacketType().GetPayloadEquivalent()
+
+	if packetType == phases.PacketPhase0 || packetType == phases.PacketPhase1 {
 		if sendOptions.HasAny(transport.SendWithoutPulseData) {
 			p.packet.Header.ClearFlag(FlagHasPulsePacket)
 		}
 	}
 
-	if p.packet.Header.GetPacketType() == phases.PacketPhase1 || p.packet.Header.GetPacketType() == phases.PacketPhase2 {
-		if sendOptions.HasAny(transport.OnlyBriefIntroAboutJoiner) {
-			p.packet.Header.ClearFlag(FlagHasJoinerExt)
-		}
-
-		if !target.IsJoiner() {
+	if packetType == phases.PacketPhase1 || packetType == phases.PacketPhase2 {
+		if !target.IsJoiner() || !sendOptions.HasAny(transport.TargetNeedsIntro) {
 			p.packet.Header.ClearFlag(FlagSelfIntro1)
-			p.packet.Header.ClearFlag(FlagSelfIntro2)
-		} else {
-			joinerSecret := p.packet.EncryptableBody.(*GlobulaConsensusPacketBody).JoinerSecret
-			encryptedJoinerSecret := target.EncryptJoinerSecret(
-				cryptkit.NewDigest(&joinerSecret, adapters.SHA3512Digest).AsDigestHolder(),
-			)
-			copy(p.packet.EncryptableBody.(*GlobulaConsensusPacketBody).JoinerSecret[:], encryptedJoinerSecret.AsBytes())
-		}
-
-		if !sendOptions.HasAny(transport.TargetNeedsIntro) {
 			p.packet.Header.ClearFlag(FlagSelfIntro2)
 		}
 	}

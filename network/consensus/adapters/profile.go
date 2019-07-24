@@ -60,7 +60,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 
 	"github.com/insolar/insolar/insolar"
@@ -124,25 +123,8 @@ func (ni *StaticProfileExtension) GetIssuerSignature() cryptkit.SignatureHolder 
 	return ni.signature
 }
 
-func (ni *StaticProfileExtension) ConvertPowerRequest(request power.Request) member.Power {
-	if ok, cl := request.AsCapacityLevel(); ok {
-		return member.PowerOf(uint16(cl.DefaultPercent()))
-	}
-	_, pw := request.AsMemberPower()
-	return pw
-}
-
 func (ni *StaticProfileExtension) GetReference() insolar.Reference {
 	return ni.ref
-}
-
-func (ni *StaticProfileExtension) IsAllowedPower(p member.Power) bool {
-	// TODO: do something with power
-	return true
-}
-
-func (ni *StaticProfileExtension) GetShortNodeID() insolar.ShortNodeID {
-	return ni.shortID
 }
 
 type StaticProfile struct {
