@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/internal/ledger/artifact"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/nodedomain"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/noderecord"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/pkg/errors"
@@ -77,12 +78,12 @@ func TestData_WriteNodeDomainData(t *testing.T) {
 	var ndMemory nodedomain.NodeDomain
 	insolar.Deserialize(objDesc.Memory(), &ndMemory)
 
-	expectIndexMap := map[string]string{}
+	expectIndexMap := foundation.NewStableMap()
 
 	for _, n := range nodes {
 		pKey := platformpolicy.MustPublicKeyToString(n.key)
 		ref := rootdomain.GenesisRef(pKey)
-		expectIndexMap[pKey] = ref.String()
+		expectIndexMap.Set(pKey, ref.String())
 
 		nodeObjDesc, err := am.GetObject(ctx, ref)
 		require.NoError(t, err, "nodeInfo object not found for public key: "+pKey)
@@ -92,14 +93,14 @@ func TestData_WriteNodeDomainData(t *testing.T) {
 		assert.Equal(t, n.role, nodeRec.Record.Role, "role is the same")
 	}
 
-	assert.Equal(t, ndMemory.NodeIndexPublicKey, expectIndexMap, "NodeDomain memory contains expected map")
+	assert.Equal(t, expectIndexMap, ndMemory.NodeIndexPublicKey, "NodeDomain memory contains expected map")
 }
 
 func initArtifactManager(t *testing.T) artifact.Manager {
 	amMock := artifact.NewManagerMock(t)
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 
-	indexMap := map[string]string{}
+	indexMap := foundation.NewStableMap()
 	activatedMemory := map[insolar.Reference][]byte{}
 
 	amMock.GetObjectFunc = func(_ context.Context, ref insolar.Reference) (artifact.ObjectDescriptor, error) {

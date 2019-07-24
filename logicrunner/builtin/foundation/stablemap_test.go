@@ -20,7 +20,7 @@ import (
 	"crypto/md5"
 	"testing"
 
-	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -173,9 +173,7 @@ type testStableStruct struct {
 	C int
 }
 
-func TestStableMap_is_deterministic(t *testing.T) {
-	cbor := common.NewCBORSerializer()
-	var buf []byte
+func TestStableMap_serialization(t *testing.T) {
 	s := testStableStruct{}
 
 	s.A = "foobar"
@@ -187,13 +185,31 @@ func TestStableMap_is_deterministic(t *testing.T) {
 	s.B.Set(789, "baz")
 	s.C = 123
 
-	err := cbor.Serialize(s, &buf)
-	require.NoError(t, err)
+	buf := insolar.MustSerialize(s)
+
+	s2 := testStableStruct{}
+	insolar.MustDeserialize(buf, s2)
+
+	assert.Equal(t, s, s2)
+}
+
+func TestStableMap_is_deterministic(t *testing.T) {
+	s := testStableStruct{}
+
+	s.A = "foobar"
+	s.B.Set("foo", 123)
+	s.B.Set("bar", 456)
+	s.B.Set("baz", 789)
+	s.B.Set(123, "foo")
+	s.B.Set(456, "bar")
+	s.B.Set(789, "baz")
+	s.C = 123
+
+	buf := insolar.MustSerialize(s)
 	sum := md5.Sum(buf)
 
 	for i := 0; i < 10000; i++ {
-		err = cbor.Serialize(s, &buf)
-		require.NoError(t, err)
+		buf = insolar.MustSerialize(s)
 		require.Equal(t, sum, md5.Sum(buf))
 	}
 }
@@ -205,8 +221,6 @@ type testMapStruct struct {
 }
 
 func TestStableMap_common_map_is_not_deterministic(t *testing.T) {
-	cbor := common.NewCBORSerializer()
-	var buf []byte
 	hashmap := make(map[[16]byte]uint)
 	s := testMapStruct{}
 
@@ -220,9 +234,9 @@ func TestStableMap_common_map_is_not_deterministic(t *testing.T) {
 	s.B[789] = "baz"
 	s.C = 123
 
+	var buf []byte
 	for i := 0; i < 10000; i++ {
-		err := cbor.Serialize(s, &buf)
-		require.NoError(t, err)
+		buf = insolar.MustSerialize(s)
 		sum := md5.Sum(buf)
 		hashmap[sum]++
 	}
