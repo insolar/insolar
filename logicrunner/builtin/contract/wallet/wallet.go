@@ -120,7 +120,7 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toM
 	}
 	w.Balance = newBalance.String()
 
-	err = feeWallet.RollBack(amountStr)
+	err = feeWallet.RollBack(feeStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to roll back fee: %s", err.Error())
 	}
