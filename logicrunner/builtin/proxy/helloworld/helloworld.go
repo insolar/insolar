@@ -204,6 +204,7 @@ func (r *HelloWorld) ReturnObj() (interface{}, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
+
 	return ret0, nil
 }
 
@@ -290,6 +291,7 @@ func (r *HelloWorld) Greet(name string) (interface{}, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
+
 	return ret0, nil
 }
 
@@ -377,6 +379,7 @@ func (r *HelloWorld) Count() (interface{}, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
+
 	return ret0, nil
 }
 
@@ -462,6 +465,7 @@ func (r *HelloWorld) Errored() (interface{}, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
+
 	return ret0, nil
 }
 
@@ -547,6 +551,7 @@ func (r *HelloWorld) PulseNumber() (insolar.PulseNumber, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
+
 	return ret0, nil
 }
 
@@ -632,6 +637,7 @@ func (r *HelloWorld) CreateChild() (interface{}, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
+
 	return ret0, nil
 }
 
@@ -718,6 +724,7 @@ func (r *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
+
 	return ret0, nil
 }
 

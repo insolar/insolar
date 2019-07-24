@@ -185,6 +185,7 @@ func (r *NodeDomain) RegisterNode(publicKey string, role string) (string, error)
 	if ret1 != nil {
 		return ret0, ret1
 	}
+
 	return ret0, nil
 }
 
@@ -275,6 +276,7 @@ func (r *NodeDomain) GetNodeRefByPublicKey(publicKey string) (string, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
+
 	return ret0, nil
 }
 
@@ -361,6 +363,7 @@ func (r *NodeDomain) RemoveNode(nodeRef insolar.Reference) error {
 	if ret0 != nil {
 		return ret0
 	}
+
 	return nil
 }
 

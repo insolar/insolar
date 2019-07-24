@@ -217,6 +217,7 @@ func (r *Member) GetName() (string, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
+
 	return ret0, nil
 }
 
@@ -302,6 +303,7 @@ func (r *Member) GetPublicKey() (string, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
+
 	return ret0, nil
 }
 
@@ -388,6 +390,7 @@ func (r *Member) Call(signedRequest []byte) (interface{}, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
+
 	return ret0, nil
 }
 
@@ -479,6 +482,7 @@ func (r *Member) FindDeposit(txHash string, inputAmountStr string) (bool, deposi
 	if ret2 != nil {
 		return ret0, ret1, ret2
 	}
+
 	return ret0, ret1, nil
 }
 
@@ -569,6 +573,7 @@ func (r *Member) SetDeposit(reference insolar.Reference) error {
 	if ret0 != nil {
 		return ret0
 	}
+
 	return nil
 }
 
@@ -654,6 +659,7 @@ func (r *Member) GetBurnAddress() (string, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
+
 	return ret0, nil
 }
 

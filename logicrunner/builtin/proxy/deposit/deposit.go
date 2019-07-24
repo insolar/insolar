@@ -190,6 +190,7 @@ func (r *Deposit) GetTxHash() (string, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
+
 	return ret0, nil
 }
 
@@ -275,6 +276,7 @@ func (r *Deposit) GetAmount() (string, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
+
 	return ret0, nil
 }
 
@@ -360,6 +362,7 @@ func (r *Deposit) MapMarshal() (map[string]string, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
+
 	return ret0, nil
 }
 
@@ -448,6 +451,7 @@ func (r *Deposit) Confirm(migrationDaemon insolar.Reference, txHash string, amou
 	if ret1 != nil {
 		return ret0, ret1
 	}
+
 	return ret0, nil
 }
 

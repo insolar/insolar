@@ -184,6 +184,7 @@ func (r *CostCenter) SetTariffs(tariffs []insolar.Reference) error {
 	if ret0 != nil {
 		return ret0
 	}
+
 	return nil
 }
 
@@ -269,6 +270,7 @@ func (r *CostCenter) GetTariffs() ([]insolar.Reference, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
+
 	return ret0, nil
 }
 
@@ -353,6 +355,7 @@ func (r *CostCenter) SetCurrentTariff(currentTariff insolar.Reference) error {
 	if ret0 != nil {
 		return ret0
 	}
+
 	return nil
 }
 
@@ -438,6 +441,7 @@ func (r *CostCenter) GetCurrentTariff() (insolar.Reference, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
+
 	return ret0, nil
 }
 
