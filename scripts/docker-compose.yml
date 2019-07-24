@@ -50,7 +50,7 @@ services:
       - elasticsearch
 
   jaeger:
-    image: "jaegertracing/all-in-one:1.8"
+    image: "jaegertracing/all-in-one:1.13"
     ports:
       - "6831:6831/udp"
       - "16686:16686"
