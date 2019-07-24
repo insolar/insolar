@@ -22,7 +22,6 @@ import (
 	"math/rand"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -63,44 +62,26 @@ func Test_BootstrapCalls(t *testing.T) {
 func Test_LightReplication(t *testing.T) {
 	t.Parallel()
 
-	var secondPulseNumber insolar.PulseNumber
+	var secondPulseNumber = insolar.FirstPulseNumber + (PulseStep * 2)
 	var inputLifeline record.Lifeline
-	inputRecords := make(map[insolar.ID]record.Virtual)
+	var objectID insolar.ID
 
-	ctx := inslogger.TestContext(t)
+	var inputRecords = make(map[insolar.ID]record.Virtual)
+	var outChan = make(chan payload.Replication, 10)
+
+	ctx := inslogger.WithLoggerLevel(inslogger.TestContext(t), insolar.ErrorLevel)
 	cfg := DefaultLightConfig()
-	cfg.Ledger.JetSplit.ThresholdOverflowCount = 10000
-	cfg.Ledger.JetSplit.ThresholdRecordsCount = 10000
 
 	s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) {
 		switch pl.(type) {
 		case *payload.Replication:
 
-			payloadReplication := pl.(*payload.Replication)
-
-			if payloadReplication.Pulse.Equal(secondPulseNumber) {
-
-				recordMap := make(map[insolar.ID]record.Material)
-
-				require.Equal(t, 13, len(payloadReplication.Records))
-				require.Equal(t, inputLifeline, payloadReplication.Indexes[1].Lifeline)
-
-				// testing payload
-				pcs := platformpolicy.NewPlatformCryptographyScheme()
-
-				for _, rec := range payloadReplication.Records {
-					virtualRec := *rec.Virtual
-					hash := record.HashVirtual(pcs.ReferenceHasher(), virtualRec)
-					id := insolar.NewID(secondPulseNumber, hash)
-					recordMap[*id] = rec
-
-				}
-
-				for k, inputRecord := range inputRecords {
-					require.Equal(t, inputRecord, *recordMap[k].Virtual)
-				}
-
+			if pl.(*payload.Replication).Pulse == secondPulseNumber {
+				go func() {
+					outChan <- *pl.(*payload.Replication)
+				}()
 			}
+
 		}
 	})
 
@@ -111,24 +92,24 @@ func Test_LightReplication(t *testing.T) {
 
 	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
 	s.Pulse(ctx)
-	secondPulseNumber = s.pulse.PulseNumber
 
-	runner := func(t *testing.T) {
+	t.Run("happy light replication", func(t *testing.T) {
 		// Creating root reason request.
 		var reasonID insolar.ID
 		{
-			p, _ := setIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
-			requirePayloadNotError(t, p)
+			p, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
+			requireNotError(t, p)
 			reasonID = p.(*payload.RequestInfo).RequestID
 		}
+
 		// Save and check code.
 		{
-			p, sent := setCode(ctx, t, s)
-			requirePayloadNotError(t, p)
+			p, sent := callSetCode(ctx, t, s)
+			requireNotError(t, p)
 			payloadId := p.(*payload.ID).ID
 
-			p = getCode(ctx, t, s, p.(*payload.ID).ID)
-			requirePayloadNotError(t, p)
+			p = callGetCode(ctx, t, s, p.(*payload.ID).ID)
+			requireNotError(t, p)
 
 			material := record.Material{}
 			err := material.Unmarshal(p.(*payload.Code).Record)
@@ -137,16 +118,16 @@ func Test_LightReplication(t *testing.T) {
 
 			inputRecords[payloadId] = *material.Virtual
 		}
-		var objectID insolar.ID
+
 		// Set, get request.
 		{
-			p, sent := setIncomingRequest(ctx, t, s, gen.ID(), reasonID, record.CTSaveAsChild)
-			requirePayloadNotError(t, p)
+			p, sent := callSetIncomingRequest(ctx, t, s, gen.ID(), reasonID, record.CTSaveAsChild)
+			requireNotError(t, p)
 
 			payloadId := p.(*payload.RequestInfo).RequestID
 
-			p = getRequest(ctx, t, s, p.(*payload.RequestInfo).RequestID)
-			requirePayloadNotError(t, p)
+			p = callGetRequest(ctx, t, s, p.(*payload.RequestInfo).RequestID)
+			requireNotError(t, p)
 
 			require.Equal(t, sent, p.(*payload.Request).Request)
 			objectID = p.(*payload.Request).RequestID
@@ -155,8 +136,8 @@ func Test_LightReplication(t *testing.T) {
 		}
 		// Activate and check object.
 		{
-			p, state := activateObject(ctx, t, s, objectID)
-			requirePayloadNotError(t, p)
+			p, state := callActivateObject(ctx, t, s, objectID)
+			requireNotError(t, p)
 
 			lifeline, material := requireGetObject(ctx, t, s, objectID)
 
@@ -166,22 +147,63 @@ func Test_LightReplication(t *testing.T) {
 		}
 		// Amend and check object.
 		{
-			p, _ := setIncomingRequest(ctx, t, s, objectID, reasonID, record.CTMethod)
-			requirePayloadNotError(t, p)
+			p, _ := callSetIncomingRequest(ctx, t, s, objectID, reasonID, record.CTMethod)
+			requireNotError(t, p)
 
-			p, state := amendObject(ctx, t, s, objectID, p.(*payload.RequestInfo).RequestID)
-			requirePayloadNotError(t, p)
+			p, state := callAmendObject(ctx, t, s, objectID, p.(*payload.RequestInfo).RequestID)
+			requireNotError(t, p)
 			lifeline, material := requireGetObject(ctx, t, s, objectID)
 			require.Equal(t, &state, material.Virtual)
 
 			inputLifeline = lifeline
 			inputRecords[*lifeline.LatestState] = *material.Virtual
 		}
+		fmt.Println("sending finished:", objectID.String())
+	})
+
+	// Third pulse activate replication of second's pulse records
+	s.Pulse(ctx)
+
+	{
+		payloadReplication := <-outChan
+
+		var currentLifeline record.Lifeline
+
+		for _, idx := range payloadReplication.Indexes {
+			if idx.ObjID == objectID {
+				currentLifeline = idx.Lifeline
+			}
+		}
+
+		if currentLifeline.LatestState == nil {
+			fmt.Println("indexes len:", len(payloadReplication.Indexes))
+			fmt.Println("indexes str:", payloadReplication.Indexes[0].GoString())
+		}
+
+		if payloadReplication.Pulse.Equal(secondPulseNumber) {
+
+			recordMap := make(map[insolar.ID]record.Material)
+
+			require.Equal(t, 13, len(payloadReplication.Records))
+			require.Equal(t, inputLifeline, currentLifeline)
+
+			// testing payload
+			pcs := platformpolicy.NewPlatformCryptographyScheme()
+
+			for _, rec := range payloadReplication.Records {
+				virtualRec := *rec.Virtual
+				hash := record.HashVirtual(pcs.ReferenceHasher(), virtualRec)
+				id := insolar.NewID(secondPulseNumber, hash)
+				recordMap[*id] = rec
+
+			}
+
+			for k, inputRecord := range inputRecords {
+				require.Equal(t, inputRecord, *recordMap[k].Virtual)
+			}
+		}
 	}
 
-	t.Run("happy light replication", runner)
-	s.Pulse(ctx)
-	time.Sleep(1 * time.Second)
 }
 
 func Test_BasicOperations(t *testing.T) {
