@@ -48,84 +48,99 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package transport
+package censusimpl
 
 import (
-	"context"
+	"testing"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/statevector"
 )
 
-type Factory interface {
-	GetPacketSender() PacketSender
-	GetPacketBuilder(signer cryptkit.DigestSigner) PacketBuilder
-	GetCryptographyFactory() CryptographyFactory
+func TestNewJoinerPopulation(t *testing.T) {
+	sp := profiles.NewStaticProfileMock(t)
+	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
+	pks := cryptkit.NewPublicKeyStoreMock(t)
+	sp.GetPublicKeyStoreMock.Set(func() cryptkit.PublicKeyStore { return pks })
+	vf := cryptkit.NewSignatureVerifierFactoryMock(t)
+	sv := cryptkit.NewSignatureVerifierMock(t)
+	vf.GetSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
+	ojp := NewJoinerPopulation(sp, vf)
+	require.Zero(t, ojp.localNode.mode)
 }
 
-type CryptographyFactory interface {
-	cryptkit.SignatureVerifierFactory
-	cryptkit.KeyStoreFactory
-	GetDigestFactory() ConsensusDigestFactory
-	GetNodeSigner(sks cryptkit.SecretKeyStore) cryptkit.DigestSigner
+func TestGetIdleProfiles(t *testing.T) {
+	ojp := OneJoinerPopulation{}
+	require.Nil(t, ojp.GetIdleProfiles())
 }
 
-type TargetProfile interface {
-	GetNodeID() insolar.ShortNodeID
-	GetStatic() profiles.StaticProfile
-	IsJoiner() bool
-	EncryptJoinerSecret(joinerSecret cryptkit.DigestHolder) cryptkit.DigestHolder
+func TestGetIdleCount(t *testing.T) {
+	ojp := OneJoinerPopulation{}
+	require.Zero(t, ojp.GetIdleCount())
 }
 
-type ProfileFilter func(ctx context.Context, targetIndex int) (TargetProfile, PacketSendOptions)
-
-type PreparedPacketSender interface {
-	SendTo(ctx context.Context, target TargetProfile, sendOptions PacketSendOptions, sender PacketSender)
-
-	/* Allows to control parallelism. Can return nil to skip a target */
-	SendToMany(ctx context.Context, targetCount int, sender PacketSender, filter ProfileFilter)
+func TestGetIndexedCount(t *testing.T) {
+	ojp := OneJoinerPopulation{}
+	require.Zero(t, ojp.GetIndexedCount())
 }
 
-type PacketBuilder interface {
-	GetNeighbourhoodSize() NeighbourhoodSizes
-
-	// PrepareIntro
-
-	PreparePhase0Packet(sender *NodeAnnouncementProfile, pulsarPacket proofs.OriginalPulsarPacket,
-		options PacketSendOptions) PreparedPacketSender
-	PreparePhase1Packet(sender *NodeAnnouncementProfile, pulsarPacket proofs.OriginalPulsarPacket,
-		welcome *proofs.NodeWelcomePackage, options PacketSendOptions) PreparedPacketSender
-
-	/* Prepare receives all introductions at once, but PreparedSendPacket.SendTo MUST:
-	1. exclude all intros when target is not joiner
-	2. exclude the intro of the target
-	*/
-	PreparePhase2Packet(sender *NodeAnnouncementProfile, welcome *proofs.NodeWelcomePackage,
-		neighbourhood []MembershipAnnouncementReader, options PacketSendOptions) PreparedPacketSender
-
-	PreparePhase3Packet(sender *NodeAnnouncementProfile, vectors statevector.Vector,
-		options PacketSendOptions) PreparedPacketSender
+func TestGetIndexedCapacity(t *testing.T) {
+	ojp := OneJoinerPopulation{}
+	require.Zero(t, ojp.GetIndexedCapacity())
 }
 
-type PacketSender interface {
-	SendPacketToTransport(ctx context.Context, t TargetProfile, sendOptions PacketSendOptions, payload interface{})
+func TestIsValid(t *testing.T) {
+	ojp := OneJoinerPopulation{}
+	require.True(t, ojp.IsValid())
 }
 
-type PacketSendOptions uint32
-
-func (o PacketSendOptions) Has(mask PacketSendOptions) bool {
-	return (o & mask) != 0
+func TestGetRolePopulation(t *testing.T) {
+	ojp := OneJoinerPopulation{}
+	require.Nil(t, ojp.GetRolePopulation(member.PrimaryRoleNeutral))
 }
 
-const (
-	SendWithoutPulseData PacketSendOptions = 1 << iota
-	AlternativePhasePacket
-	OnlyBriefIntroAboutJoiner
-	TargetNeedsIntro
-)
+func TestGetWorkingRoles(t *testing.T) {
+	ojp := OneJoinerPopulation{}
+	require.Nil(t, ojp.GetWorkingRoles())
+}
 
-// type PreparedIntro interface {}
+func TestCopyTo(t *testing.T) {
+	sp := profiles.NewStaticProfileMock(t)
+	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
+	index := member.JoinerIndex
+	ojp := OneJoinerPopulation{localNode: updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp, index: index}}}
+	population := &DynamicPopulation{}
+	ojp.copyTo(population)
+
+	require.Equal(t, index, ojp.localNode.index)
+
+	require.Zero(t, population.local.index)
+}
+
+func TestFindProfile(t *testing.T) {
+	sp := profiles.NewStaticProfileMock(t)
+	nodeID := insolar.ShortNodeID(0)
+	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return nodeID })
+	ojp := OneJoinerPopulation{localNode: updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
+
+	require.Nil(t, ojp.FindProfile(1))
+
+	require.NotNil(t, ojp.FindProfile(nodeID))
+}
+
+func TestOJPGetProfiles(t *testing.T) {
+	ojp := OneJoinerPopulation{}
+	require.Len(t, ojp.GetProfiles(), 0)
+}
+
+func TestOJPGetLocalProfile(t *testing.T) {
+	ojp := OneJoinerPopulation{localNode: updatableSlot{NodeProfileSlot: NodeProfileSlot{}}}
+	require.NotNil(t, ojp.GetLocalProfile())
+}

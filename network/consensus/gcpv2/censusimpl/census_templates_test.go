@@ -53,6 +53,8 @@ package censusimpl
 import (
 	"testing"
 
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -70,7 +72,7 @@ import (
 func TestPCTGetProfileFactory(t *testing.T) {
 	pct := PrimingCensusTemplate{chronicles: &localChronicles{}}
 	pf := pct.GetProfileFactory(nil)
-	require.Equal(t, nil, pf)
+	require.Nil(t, pf)
 }
 
 func TestSetVersionedRegistries(t *testing.T) {
@@ -107,6 +109,7 @@ func TestNewPrimingCensusForJoiner(t *testing.T) {
 func TestNewPrimingCensus(t *testing.T) {
 	sp := profiles.NewStaticProfileMock(t)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
+	sp.GetPrimaryRoleMock.Set(func() member.PrimaryRole { return member.PrimaryRoleNeutral })
 	pks := cryptkit.NewPublicKeyStoreMock(t)
 	sp.GetPublicKeyStoreMock.Set(func() cryptkit.PublicKeyStore { return pks })
 	registries := census.NewVersionedRegistriesMock(t)
@@ -117,6 +120,8 @@ func TestNewPrimingCensus(t *testing.T) {
 	vf := cryptkit.NewSignatureVerifierFactoryMock(t)
 	sv := cryptkit.NewSignatureVerifierMock(t)
 	vf.GetSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
+	require.Panics(t, func() { NewPrimingCensus(nil, sp, registries, vf) })
+
 	pc := NewPrimingCensus(sps, sp, registries, vf)
 	require.Equal(t, pn, pc.GetPulseNumber())
 
@@ -196,17 +201,17 @@ func TestPCTGetPulseData(t *testing.T) {
 
 func TestPCTGetGlobulaStateHash(t *testing.T) {
 	pct := PrimingCensusTemplate{}
-	require.Equal(t, nil, pct.GetGlobulaStateHash())
+	require.Nil(t, pct.GetGlobulaStateHash())
 }
 
 func TestPCTGetCloudStateHash(t *testing.T) {
 	pct := PrimingCensusTemplate{}
-	require.Equal(t, nil, pct.GetCloudStateHash())
+	require.Nil(t, pct.GetCloudStateHash())
 }
 
 func TestPCTGetOnlinePopulation(t *testing.T) {
 	pct := PrimingCensusTemplate{}
-	require.Equal(t, nil, pct.GetOnlinePopulation())
+	require.Nil(t, pct.GetOnlinePopulation())
 }
 
 func TestPCTGetEvictedPopulation(t *testing.T) {
@@ -262,9 +267,6 @@ func TestPCTCreateBuilder(t *testing.T) {
 	pct := PrimingCensusTemplate{chronicles: chronicles, online: population}
 	builder := pct.CreateBuilder(pn)
 	require.Equal(t, pn, builder.GetPulseNumber())
-
-	//builder = pct.CreateBuilder(pn, true)
-	//require.Equal(t, pn, builder.GetPulseNumber())
 }
 
 func TestACTGetExpectedPulseNumber(t *testing.T) {
@@ -298,17 +300,17 @@ func TestACTGetPulseData(t *testing.T) {
 
 func TestACTGetGlobulaStateHash(t *testing.T) {
 	act := ActiveCensusTemplate{}
-	require.Equal(t, nil, act.GetGlobulaStateHash())
+	require.Nil(t, act.GetGlobulaStateHash())
 }
 
 func TestACTGetCloudStateHash(t *testing.T) {
 	act := ActiveCensusTemplate{}
-	require.Equal(t, nil, act.GetCloudStateHash())
+	require.Nil(t, act.GetCloudStateHash())
 }
 
 func TestECTGetProfileFactory(t *testing.T) {
 	ect := ExpectedCensusTemplate{chronicles: &localChronicles{}}
-	require.Equal(t, nil, ect.GetProfileFactory(cryptkit.NewKeyStoreFactoryMock(t)))
+	require.Nil(t, ect.GetProfileFactory(cryptkit.NewKeyStoreFactoryMock(t)))
 }
 
 func TestECTGetEvictedPopulation(t *testing.T) {
@@ -337,17 +339,17 @@ func TestECTGetPulseNumber(t *testing.T) {
 
 func TestECTGetGlobulaStateHash(t *testing.T) {
 	ect := ExpectedCensusTemplate{}
-	require.Equal(t, nil, ect.GetGlobulaStateHash())
+	require.Nil(t, ect.GetGlobulaStateHash())
 }
 
 func TestECTGetCloudStateHash(t *testing.T) {
 	ect := ExpectedCensusTemplate{}
-	require.Equal(t, nil, ect.GetCloudStateHash())
+	require.Nil(t, ect.GetCloudStateHash())
 }
 
 func TestECTGetOnlinePopulation(t *testing.T) {
 	ect := ExpectedCensusTemplate{}
-	require.Equal(t, nil, ect.GetOnlinePopulation())
+	require.Nil(t, ect.GetOnlinePopulation())
 }
 
 func TestECTGetOfflinePopulation(t *testing.T) {
@@ -393,7 +395,7 @@ func TestGetPrevious(t *testing.T) {
 	require.Equal(t, act, ect.GetPrevious())
 }
 
-func TestMakeActive(t *testing.T) {
+func TestECTMakeActive(t *testing.T) {
 	chronicles := &localChronicles{}
 	ect := ExpectedCensusTemplate{chronicles: chronicles}
 	pd := pulse.Data{PulseNumber: pulse.Number(1)}
