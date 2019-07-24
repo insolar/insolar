@@ -524,7 +524,7 @@ func (m *Member) memberGet(publicKey string) (interface{}, error) {
 	}
 
 	if m.GetReference() == ref {
-		return m.BurnAddress, nil
+		return GetResponse{Reference: ref.String(), BurnAddress: m.BurnAddress}, nil
 	}
 
 	user := member.GetObject(ref)
