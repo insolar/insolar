@@ -102,7 +102,7 @@ func (c *packetPhase1Dispatcher) DispatchMemberPacket(ctx context.Context, packe
 	return err
 }
 
-func (c *packetPhase1Dispatcher) TriggerUnknownMember(ctx context.Context, memberID insolar.ShortNodeID,
+func (c *packetPhase1Dispatcher) DispatchUnknownMemberPacket(ctx context.Context, memberID insolar.ShortNodeID,
 	packet transport.MemberPacketReader, from endpoints.Inbound) (bool, error) {
 
 	p1 := packet.AsPhase1Packet()
