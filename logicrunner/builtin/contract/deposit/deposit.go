@@ -31,7 +31,7 @@ const (
 	month = 30 * 24 * 60 * 60
 
 	confirms           uint                = 3
-	offSetDepositPulse insolar.PulseNumber = 6 * month
+	offsetDepositPulse insolar.PulseNumber = 6 * month
 
 	statusOpen    status = "Open"
 	statusHolding status = "Holding"
@@ -45,11 +45,9 @@ type Deposit struct {
 	PulseDepositHold        insolar.PulseNumber `json:"holdStartDate"`
 	PulseDepositUnHold      insolar.PulseNumber `json:"holdReleaseDate"`
 	MigrationDaemonConfirms [3]string           `json:"confirmerReferences"`
-	Confirms                uint                `json:"confirms"`
 	Amount                  string              `json:"amount"`
 	Bonus                   string              `json:"bonus"`
 	TxHash                  string              `json:"ethTxHash"`
-	Status                  status              `json:"status"`
 }
 
 // GetTxHash gets transaction hash.
@@ -71,15 +69,13 @@ func New(migrationDaemonConfirms [3]string, txHash string, amount string) (*Depo
 	return &Deposit{
 		PulseDepositCreate:      currentPulse,
 		MigrationDaemonConfirms: migrationDaemonConfirms,
-		Confirms:                1,
 		Amount:                  amount,
 		TxHash:                  txHash,
-		Status:                  statusOpen,
 	}, nil
 }
 
 func calculateUnHoldPulse(currentPulse insolar.PulseNumber) insolar.PulseNumber {
-	return currentPulse + offSetDepositPulse
+	return currentPulse + offsetDepositPulse
 }
 
 // MapMarshal gets deposit information.
@@ -112,10 +108,14 @@ func (d *Deposit) Confirm(migrationDaemonIndex int, migrationDaemonRef string, t
 		return fmt.Errorf("confirm from the '%v' migration daemon already exists; member '%s' confirmed it", migrationDaemonIndex, migrationDaemonRef)
 	} else {
 		d.MigrationDaemonConfirms[migrationDaemonIndex] = migrationDaemonRef
-		d.Confirms++
-		if d.Confirms == confirms {
-			d.Status = statusHolding
 
+		n := 0
+		for _, c := range d.MigrationDaemonConfirms {
+			if c != "" {
+				n++
+			}
+		}
+		if uint(n) >= confirms {
 			currentPulse, err := foundation.GetPulseNumber()
 			if err != nil {
 				return fmt.Errorf("failed to get current pulse: %s", err.Error())

@@ -18,7 +18,6 @@ package member
 
 import (
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/deposit"
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
@@ -535,7 +534,7 @@ func (r *Member) GetDepositsAsImmutable() ([]interface{}, error) {
 }
 
 // FindDeposit is proxy generated method
-func (r *Member) FindDeposit(transactionsHash string) (bool, deposit.Deposit, error) {
+func (r *Member) FindDeposit(transactionsHash string) (bool, insolar.Reference, error) {
 	var args [1]interface{}
 	args[0] = transactionsHash
 
@@ -544,7 +543,7 @@ func (r *Member) FindDeposit(transactionsHash string) (bool, deposit.Deposit, er
 	ret := [3]interface{}{}
 	var ret0 bool
 	ret[0] = &ret0
-	var ret1 deposit.Deposit
+	var ret1 insolar.Reference
 	ret[1] = &ret1
 	var ret2 *foundation.Error
 	ret[2] = &ret2
@@ -591,7 +590,7 @@ func (r *Member) FindDepositNoWait(transactionsHash string) error {
 }
 
 // FindDepositAsImmutable is proxy generated method
-func (r *Member) FindDepositAsImmutable(transactionsHash string) (bool, deposit.Deposit, error) {
+func (r *Member) FindDepositAsImmutable(transactionsHash string) (bool, insolar.Reference, error) {
 	var args [1]interface{}
 	args[0] = transactionsHash
 
@@ -600,7 +599,7 @@ func (r *Member) FindDepositAsImmutable(transactionsHash string) (bool, deposit.
 	ret := [3]interface{}{}
 	var ret0 bool
 	ret[0] = &ret0
-	var ret1 deposit.Deposit
+	var ret1 insolar.Reference
 	ret[1] = &ret1
 	var ret2 *foundation.Error
 	ret[2] = &ret2

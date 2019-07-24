@@ -445,7 +445,7 @@ func (m *Member) depositMigration(txHash string, burnAddress string, amount *big
 	tokenHolder := member.GetObject(tokenHolderRef)
 
 	// Find deposit for txHash
-	found, txDeposit, err := tokenHolder.FindDeposit(txHash)
+	found, txDepositRef, err := tokenHolder.FindDeposit(txHash)
 	if err != nil {
 		return fmt.Errorf("failed to get deposit: %s", err.Error())
 	}
@@ -467,6 +467,7 @@ func (m *Member) depositMigration(txHash string, burnAddress string, amount *big
 		return nil
 	}
 	// Confirm transaction by migration daemon
+	txDeposit := deposit.GetObject(txDepositRef)
 	err = txDeposit.Confirm(mdIndex, m.GetReference().String(), txHash, amount.String())
 	if err != nil {
 		return fmt.Errorf("confirmed failed: %s", err.Error())
@@ -495,22 +496,13 @@ func (m *Member) getDeposits() ([]interface{}, error) {
 }
 
 // FindDeposit finds deposit for this member with this transaction hash.
-func (m *Member) FindDeposit(transactionsHash string) (bool, deposit.Deposit, error) {
+func (m *Member) FindDeposit(transactionsHash string) (bool, insolar.Reference, error) {
 
-	for _, dRef := range m.Deposits {
-		d := deposit.GetObject(dRef)
-
-		txHash, err := d.GetTxHash()
-		if err != nil {
-			return false, deposit.Deposit{}, fmt.Errorf("failed to get transaction hash: %s", err.Error())
-		}
-
-		if transactionsHash == txHash {
-			return true, *d, nil
-		}
+	if dRef, ok := m.Deposits[transactionsHash]; ok {
+		return true, dRef, nil
 	}
 
-	return false, deposit.Deposit{}, nil
+	return false, insolar.Reference{}, nil
 }
 
 // SetDeposit method stores deposit reference in member it belongs to
