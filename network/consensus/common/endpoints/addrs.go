@@ -90,8 +90,8 @@ type Outbound interface {
 	CanAccept(connection Inbound) bool
 }
 
-func EqualEndpoints(p, o Outbound) bool {
-	if p == nil || o == nil {
+func EqualOutboundEndpoints(p, o Outbound) bool {
+	if args.IsNil(p) || args.IsNil(o) {
 		return false
 	}
 	if p == o {
@@ -110,6 +110,18 @@ func EqualEndpoints(p, o Outbound) bool {
 		return p.GetRelayID() == o.GetRelayID()
 	}
 	panic("missing")
+}
+
+func EqualListOfOutboundEndpoints(p []Outbound, o []Outbound) bool {
+	if len(p) != len(o) {
+		return false
+	}
+	for i, pi := range p {
+		if !EqualOutboundEndpoints(pi, o[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 type NodeEndpointType uint8
@@ -165,38 +177,4 @@ func (v *InboundConnection) GetTransportKey() cryptkit.SignatureKeyHolder {
 
 func (v *InboundConnection) GetTransportCert() cryptkit.CertificateHolder {
 	return v.Cert
-}
-
-func EqualOutboundEndpoints(p Outbound, o Outbound) bool {
-	if args.IsNil(p) || args.IsNil(o) {
-		return false
-	}
-	if p == o {
-		return true
-	}
-	if p.GetEndpointType() != o.GetEndpointType() {
-		return false
-	}
-	switch p.GetEndpointType() {
-	case NameEndpoint:
-		return p.GetNameAddress() == o.GetNameAddress()
-	case IPEndpoint:
-		return p.GetIPAddress() == o.GetIPAddress()
-	case RelayEndpoint:
-		return p.GetRelayID() == o.GetRelayID()
-	default:
-		panic("not implemented")
-	}
-}
-
-func EqualListOfOutboundEndpoints(p []Outbound, o []Outbound) bool {
-	if len(p) != len(o) {
-		return false
-	}
-	for i, pi := range p {
-		if !EqualOutboundEndpoints(pi, o[i]) {
-			return false
-		}
-	}
-	return true
 }

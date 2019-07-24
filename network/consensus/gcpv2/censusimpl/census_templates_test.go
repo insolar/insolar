@@ -395,7 +395,7 @@ func TestGetPrevious(t *testing.T) {
 	require.Equal(t, act, ect.GetPrevious())
 }
 
-func TestMakeActive(t *testing.T) {
+func TestECTMakeActive(t *testing.T) {
 	chronicles := &localChronicles{}
 	ect := ExpectedCensusTemplate{chronicles: chronicles}
 	pd := pulse.Data{PulseNumber: pulse.Number(1)}

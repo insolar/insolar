@@ -147,6 +147,8 @@ type CandidateProfile interface {
 	CandidateProfileExtension
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.Factory -o . -s _mock.go
+
 type Factory interface {
 	CreateFullIntroProfile(candidate CandidateProfile) StaticProfile
 	CreateBriefIntroProfile(candidate BriefCandidateProfile) StaticProfile

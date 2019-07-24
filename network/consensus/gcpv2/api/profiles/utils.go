@@ -63,7 +63,7 @@ func EqualStaticProfiles(p BriefCandidateProfile, o BriefCandidateProfile) bool 
 
 	return p == o ||
 		equalBriefIntro(p, o) &&
-			endpoints.EqualEndpoints(p.GetDefaultEndpoint(), o.GetDefaultEndpoint()) &&
+			endpoints.EqualOutboundEndpoints(p.GetDefaultEndpoint(), o.GetDefaultEndpoint()) &&
 			p.GetBriefIntroSignedDigest().Equals(o.GetBriefIntroSignedDigest())
 }
 

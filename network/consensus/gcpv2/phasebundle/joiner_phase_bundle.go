@@ -57,15 +57,14 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/ph01ctl"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/ph2ctl"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/ph3ctl"
-	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/pulsectl"
 )
 
-func NewJoinerPhaseBundle(pss pulsectl.PulseSelectionStrategy, config BundleConfig) core.PhaseControllersBundle {
-	return &JoinerPhaseBundle{pss, config}
+func NewJoinerPhaseBundle(factories BundleFactories, config BundleConfig) core.PhaseControllersBundle {
+	return &JoinerPhaseBundle{factories, config}
 }
 
 type JoinerPhaseBundle struct {
-	pss pulsectl.PulseSelectionStrategy
+	BundleFactories
 	BundleConfig
 }
 
@@ -77,14 +76,10 @@ func (r *JoinerPhaseBundle) IsDynamicPopulationRequired() bool {
 	return true
 }
 
-func (r *JoinerPhaseBundle) IsEphemeralPulseAllowed() bool {
-	return false
-}
-
 func (r *JoinerPhaseBundle) CreatePrepPhaseControllers() []core.PrepPhaseController {
 
 	return []core.PrepPhaseController{
-		ph01ctl.NewJoinerPhase01PrepController(r.pss),
+		ph01ctl.NewJoinerPhase01PrepController(r.PulseSelectionStrategy),
 	}
 }
 
@@ -97,19 +92,19 @@ func (r *JoinerPhaseBundle) CreateFullPhaseControllers(nodeCount int) ([]core.Ph
 
 	rcb := &regularCallback{
 		make(chan *core.NodeAppearance, nodeCount),
-		make(chan ph2ctl.TrustUpdateSignal, nodeCount*3), // up-to ~3 updates for every node
+		make(chan ph2ctl.UpdateSignal, nodeCount*3), // up-to ~3 updates for every node
 		make(chan core.MemberPacketSender, nodeCount),
 	}
 
-	vif := r.VectorInspectorFactory
+	vif := r.VectorInspection
 	if r.DisableVectorInspectionOnJoiner {
-		vif = inspectors.NewIgnorantVectorInspectionFactory()
+		vif = inspectors.NewIgnorantVectorInspection()
 	}
 
 	packetPrepareOptions := r.JoinerOptions
 
 	return []core.PhaseController{
-		ph01ctl.NewPhase01Controller(packetPrepareOptions|transport.SendWithoutPulseData, rcb.qJoiners),
+		ph01ctl.NewPhase01Controller(packetPrepareOptions|transport.SendWithoutPulseData, rcb.qIntroToJoiner),
 		ph2ctl.NewPhase2Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qNshReady /*->*/),
 		ph3ctl.NewPhase3Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qTrustLvlUpd, /*->*/
 			r.ConsensusStrategy, vif, r.EnableFastPhase3),

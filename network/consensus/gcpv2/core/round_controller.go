@@ -79,6 +79,7 @@ type RoundStrategy interface {
 
 	ConfigureRoundContext(ctx context.Context, expectedPulse pulse.Number, self profiles.LocalNode) context.Context
 	AdjustConsensusTimings(timings *api.RoundTimings)
+	IsEphemeralPulseAllowed() bool
 }
 
 var _ api.RoundController = &PhasedRoundController{}
@@ -89,6 +90,7 @@ type PhasedRoundController struct {
 	/* Derived from the provided externally - set at init() or start(). Don't need mutex */
 	chronicle api.ConsensusChronicles
 	bundle    PhaseControllersBundle
+
 	// fullCancel     context.CancelFunc /* cancels prepareCancel as well */
 	prepareCancel  context.CancelFunc
 	prevPulseRound api.RoundController
@@ -147,7 +149,7 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 
 	prep := PrepRealm{coreRealm: &r.realm.coreRealm}
 	prep.init(
-		r.bundle.IsEphemeralPulseAllowed(),
+		r.realm.strategy.IsEphemeralPulseAllowed(),
 		func(successful bool) {
 			if r.prepR == nil {
 				return

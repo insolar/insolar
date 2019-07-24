@@ -56,11 +56,30 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/nodeset"
 )
 
-func NewSimpleSelectionStrategy() SelectionStrategy {
-	return &simpleSelectionStrategy{}
+func NewSimpleSelectionStrategyFactory() SelectionStrategyFactory {
+	return &simpleSelectionStrategyFactory{}
+}
+
+type simpleSelectionStrategyFactory struct {
+	fastConsensus bool
+}
+
+func (*simpleSelectionStrategyFactory) CreateSelectionStrategy(aggressivePhasing bool) SelectionStrategy {
+	return &simpleSelectionStrategy{aggressivePhasing}
 }
 
 type simpleSelectionStrategy struct {
+	aggressivePhasing bool
+}
+
+func (p *simpleSelectionStrategy) CanStartVectorsEarly(consensusMembers int, countFraud int, countTrustBySome int, countTrustByNeighbors int) bool {
+	if countFraud != 0 {
+		return false
+	}
+	if p.aggressivePhasing {
+		return true
+	}
+	return countTrustBySome >= consensuskit.BftMajority(consensusMembers) || countTrustByNeighbors >= 1+consensusMembers>>1
 }
 
 func (*simpleSelectionStrategy) TrySelectOnAdded(globulaStats *nodeset.ConsensusStatTable, addedNode profiles.StaticProfile,

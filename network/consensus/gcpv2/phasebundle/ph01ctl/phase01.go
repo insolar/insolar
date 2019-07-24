@@ -201,13 +201,15 @@ func (c *Phase01Controller) StartWorker(ctx context.Context, realm *core.FullRea
 }
 
 func (c *Phase01Controller) workerPhase01Member(ctx context.Context) {
-	nsh, startIndex := c.workerSendPhase0(ctx)
+
+	nodes := c.R.GetPopulation().GetShuffledOtherNodes()
+	nsh, startIndex := c.workerSendPhase0(ctx, nodes)
 	if startIndex < 0 {
 		return
 	}
 	c.R.PrepareAndSetLocalNodeStateHashEvidence(nsh)
 
-	go c.workerSendPhase1(ctx, startIndex)
+	go c.workerSendPhase1(ctx, startIndex, nodes)
 	c.workerSendPhase1ToDynamics(ctx)
 }
 
@@ -216,7 +218,7 @@ func (c *Phase01Controller) workerPhase01Joiner(ctx context.Context) {
 	c.workerSendPhase1ToDynamics(ctx)
 }
 
-func (c *Phase01Controller) workerSendPhase0(ctx context.Context) (proofs.NodeStateHash, int) {
+func (c *Phase01Controller) workerSendPhase0(ctx context.Context, nodes []*core.NodeAppearance) (proofs.NodeStateHash, int) {
 
 	nshChannel := c.R.PreparePulseChange()
 	/*
@@ -237,7 +239,7 @@ func (c *Phase01Controller) workerSendPhase0(ctx context.Context) (proofs.NodeSt
 	p0 := c.R.GetPacketBuilder().PreparePhase0Packet(c.R.CreateLocalAnnouncement(), c.R.GetOriginalPulse(),
 		c.packetPrepareOptions)
 
-	for lastIndex, target := range c.R.GetPopulation().GetShuffledOtherNodes() {
+	for lastIndex, target := range nodes {
 		if target.HasAnyPacketReceived() {
 			continue
 		}
@@ -264,12 +266,10 @@ func (c *Phase01Controller) workerSendPhase0(ctx context.Context) (proofs.NodeSt
 	}
 }
 
-func (c *Phase01Controller) workerSendPhase1(ctx context.Context, startIndex int) {
+func (c *Phase01Controller) workerSendPhase1(ctx context.Context, startIndex int, otherNodes []*core.NodeAppearance) {
 
 	p1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
 		c.R.GetOriginalPulse(), c.R.GetWelcomePackage(), c.packetPrepareOptions)
-
-	otherNodes := c.R.GetPopulation().GetShuffledOtherNodes()
 
 	// first, send to nodes not covered by Phase 0
 	p1.SendToMany(ctx, len(otherNodes)-startIndex, c.R.GetPacketSender(),

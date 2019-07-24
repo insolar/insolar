@@ -625,7 +625,7 @@ func (c *NodeAppearance) upgradeDynamicNodeProfile(ctx context.Context, brief pr
 		inslogger.FromContext(ctx).Debugf("Node profile was upgraded: s=%d, t=%d",
 			c.callback.localNodeID, c.GetNodeID())
 
-		c.callback.onDynamicNodeAdded(c.callback.updatePopulationVersion(), c, true)
+		c.callback.onDynamicNodeUpdate(c.callback.updatePopulationVersion(), c, FlagProfileUpdated)
 	}
 	return match
 }

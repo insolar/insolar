@@ -225,10 +225,24 @@ type figment struct {
 func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom, rank member.Rank, profile profiles.StaticProfile,
 	announcement *profiles.MembershipAnnouncement, announcedBy insolar.ShortNodeID) error {
 
+	flags := UpdateFlags(0)
 	hasUpdate := false
 	if p.phantom == nil {
 		p.phantom = phantom
 		p.rank = rank
+
+		prof := "none"
+		if p.profile != nil {
+			if p.profile.GetExtension() != nil {
+				prof = "full"
+			} else {
+				prof = "brief"
+			}
+		}
+		inslogger.FromContext(ctx).Debugf("Phantom node added: s=%d, t=%d, profile=%s",
+			p.phantom.purgatory.callback.localNodeID, p.phantom.nodeID, prof)
+
+		flags |= FlagCreated
 	}
 	if p.announcerID.IsAbsent() && announcedBy != phantom.nodeID && !announcedBy.IsAbsent() {
 		p.announcerID = announcedBy
@@ -245,24 +259,24 @@ func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom
 	}
 	if hasProfileUpdate {
 		hasUpdate = true
+		flags |= FlagProfileUpdated
 	}
 
-	if p.profile == nil || !hasUpdate {
+	if flags != 0 {
+		p.phantom.purgatory.onNodeUpdated(p.phantom, flags)
+	}
+	if !hasUpdate || p.profile == nil {
+		// just nothing new
 		return nil
 	}
-	if p.rank.IsJoiner() && p.announcerID.IsAbsent() {
+
+	switch {
+	case p.rank.IsJoiner() && p.announcerID.IsAbsent():
 		/* self-ascension is not allowed for joiners */
-		return nil
-	}
-
-	if p.profile.GetExtension() != nil || ascentWithBrief {
+	case p.profile.GetExtension() != nil || ascentWithBrief:
 		inslogger.FromContext(ctx).Debugf("Phantom node ascension: s=%d, t=%d, full=%v",
 			p.phantom.purgatory.callback.localNodeID, p.phantom.nodeID, p.profile.GetExtension() != nil)
 		p.phantom.ascend(ctx, p.profile, p.rank, nil)
-	} else {
-		inslogger.FromContext(ctx).Debugf("Phantom node added: s=%d, t=%d, full=%v",
-			p.phantom.purgatory.callback.localNodeID, p.phantom.nodeID, p.profile.GetExtension() != nil)
-		p.phantom.purgatory.onBriefProfileCreated(p.phantom)
 	}
 	return nil
 }

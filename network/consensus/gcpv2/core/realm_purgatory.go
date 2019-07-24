@@ -235,11 +235,9 @@ func (p *RealmPurgatory) ascendFromPurgatory(ctx context.Context, id insolar.Sho
 }
 
 func (p *RealmPurgatory) IsBriefAscensionAllowed() bool {
-	return false // TODO using false will fail vector calculation, because only NodeAppearance can be there now
-}
-
-func (p *RealmPurgatory) onBriefProfileCreated(n *NodePhantom) {
-	p.callback.onPurgatoryNodeAdded(p.callback.GetPopulationVersion(), n)
+	// using false will delay processing of packets and may result in slower consensus
+	// using true may produce NodeAppearance objects with Brief profiles
+	return true
 }
 
 func (p *RealmPurgatory) SelfFromMemberAnnouncement(ctx context.Context, id insolar.ShortNodeID, profile profiles.StaticProfile,
@@ -270,8 +268,12 @@ func (p *RealmPurgatory) MemberFromNeighbourhood(ctx context.Context, id insolar
 
 func (p *RealmPurgatory) FindJoinerProfile(nodeID insolar.ShortNodeID, introducedBy insolar.ShortNodeID) profiles.StaticProfile {
 	am := p.getMember(nodeID, introducedBy)
-	if am.IsJoiner() {
+	if am != nil && am.IsJoiner() {
 		return am.GetStatic()
 	}
 	return nil
+}
+
+func (p *RealmPurgatory) onNodeUpdated(n *NodePhantom, flags UpdateFlags) {
+	p.callback.onPurgatoryNodeUpdate(p.callback.updatePopulationVersion(), n, flags)
 }

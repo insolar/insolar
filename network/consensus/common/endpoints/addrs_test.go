@@ -115,28 +115,28 @@ func TestString(t *testing.T) {
 
 func TestEqualEndpoints(t *testing.T) {
 	ob1 := NewOutboundMock(t)
-	require.False(t, EqualEndpoints(nil, ob1))
+	require.False(t, EqualOutboundEndpoints(nil, ob1))
 
-	require.False(t, EqualEndpoints(ob1, nil))
+	require.False(t, EqualOutboundEndpoints(ob1, nil))
 
-	require.True(t, EqualEndpoints(ob1, ob1))
+	require.True(t, EqualOutboundEndpoints(ob1, ob1))
 
 	et1 := NameEndpoint
 	ob1.GetEndpointTypeMock.Set(func() NodeEndpointType { return *(&et1) })
 	ob2 := NewOutboundMock(t)
 	et2 := RelayEndpoint
 	ob2.GetEndpointTypeMock.Set(func() NodeEndpointType { return *(&et2) })
-	require.False(t, EqualEndpoints(ob1, ob2))
+	require.False(t, EqualOutboundEndpoints(ob1, ob2))
 
 	et2 = et1
 	addr1 := Name("addr")
 	addr2 := Name("addr2")
 	ob1.GetNameAddressMock.Set(func() Name { return *(&addr1) })
 	ob2.GetNameAddressMock.Set(func() Name { return *(&addr2) })
-	require.False(t, EqualEndpoints(ob1, ob2))
+	require.False(t, EqualOutboundEndpoints(ob1, ob2))
 
 	addr2 = addr1
-	require.True(t, EqualEndpoints(ob1, ob2))
+	require.True(t, EqualOutboundEndpoints(ob1, ob2))
 
 	et1 = IPEndpoint
 	et2 = et1
@@ -144,10 +144,10 @@ func TestEqualEndpoints(t *testing.T) {
 	ip2 := packets.NodeAddress{1}
 	ob1.GetIPAddressMock.Set(func() packets.NodeAddress { return *(&ip1) })
 	ob2.GetIPAddressMock.Set(func() packets.NodeAddress { return *(&ip2) })
-	require.False(t, EqualEndpoints(ob1, ob2))
+	require.False(t, EqualOutboundEndpoints(ob1, ob2))
 
 	ip2 = ip1
-	require.True(t, EqualEndpoints(ob1, ob2))
+	require.True(t, EqualOutboundEndpoints(ob1, ob2))
 
 	et1 = RelayEndpoint
 	et2 = et1
@@ -155,14 +155,14 @@ func TestEqualEndpoints(t *testing.T) {
 	rID2 := insolar.ShortNodeID(2)
 	ob1.GetRelayIDMock.Set(func() insolar.ShortNodeID { return *(&rID1) })
 	ob2.GetRelayIDMock.Set(func() insolar.ShortNodeID { return *(&rID2) })
-	require.False(t, EqualEndpoints(ob1, ob2))
+	require.False(t, EqualOutboundEndpoints(ob1, ob2))
 
 	rID2 = rID1
-	require.True(t, EqualEndpoints(ob1, ob2))
+	require.True(t, EqualOutboundEndpoints(ob1, ob2))
 
 	et1 = NodeEndpointType(4)
 	et2 = et1
-	require.Panics(t, func() { EqualEndpoints(ob1, ob2) })
+	require.Panics(t, func() { EqualOutboundEndpoints(ob1, ob2) })
 }
 
 func TestNewHostIdentityFromHolder(t *testing.T) {
