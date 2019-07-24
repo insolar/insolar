@@ -16,38 +16,44 @@
 
 package foundation
 
+import (
+	"encoding/json"
+
+	"github.com/davecgh/go-spew/spew"
+)
+
 // StableMap is a `map[interface{}]interface{}` like structure that can be deterministically serialized.
 type StableMap struct {
-	keys   []interface{}
-	values []interface{}
+	Keys   []interface{}
+	Values []interface{}
 }
 
 func NewStableMap() (sm StableMap) {
-	sm.keys = make([]interface{}, 0)
-	sm.values = make([]interface{}, 0)
+	sm.Keys = make([]interface{}, 0)
+	sm.Values = make([]interface{}, 0)
 	return sm
 }
 
 func NewStableMapFromMap(m map[interface{}]interface{}) (sm StableMap) {
-	sm.keys = make([]interface{}, 0, len(m))
-	sm.values = make([]interface{}, 0, len(m))
+	sm.Keys = make([]interface{}, 0, len(m))
+	sm.Values = make([]interface{}, 0, len(m))
 	for k, v := range m {
-		sm.keys = append(sm.keys, k)
-		sm.values = append(sm.values, v)
+		sm.Keys = append(sm.Keys, k)
+		sm.Values = append(sm.Values, v)
 	}
 	return sm
 }
 
-// Len returns number of keys in StableMap.
+// Len returns number of Keys in StableMap.
 func (m *StableMap) Len() int {
-	return len(m.keys)
+	return len(m.Keys)
 }
 
 // Get returns value from StableMap.
 func (m *StableMap) Get(key interface{}) (val interface{}, ok bool) {
-	for idx, k := range m.keys {
+	for idx, k := range m.Keys {
 		if k == key {
-			return m.values[idx], true
+			return m.Values[idx], true
 		}
 	}
 	return nil, false
@@ -55,43 +61,62 @@ func (m *StableMap) Get(key interface{}) (val interface{}, ok bool) {
 
 // Set adds or replaces value in StableMap.
 func (m *StableMap) Set(key, val interface{}) {
-	for idx, k := range m.keys {
+	for idx, k := range m.Keys {
 		if k == key {
-			m.keys[idx] = key
-			m.values[idx] = val
+			m.Keys[idx] = key
+			m.Values[idx] = val
 			return
 		}
 	}
-	m.keys = append(m.keys, key)
-	m.values = append(m.values, val)
+	m.Keys = append(m.Keys, key)
+	m.Values = append(m.Values, val)
 }
 
 // Delete deletes value from StableMap. If there is no such key in map Delete does nothing.
 func (m *StableMap) Delete(key interface{}) {
-	for idx, k := range m.keys {
+	for idx, k := range m.Keys {
 		if k == key {
-			m.keys = append(m.keys[:idx], m.keys[idx+1:]...)
-			m.values = append(m.values[:idx], m.values[idx+1:]...)
+			m.Keys = append(m.Keys[:idx], m.Keys[idx+1:]...)
+			m.Values = append(m.Values[:idx], m.Values[idx+1:]...)
 			return
 		}
 	}
 }
 
-// Keys returns a slice of keys from StableMap.
-func (m *StableMap) Keys() []interface{} {
-	return m.keys
+// GetKeys returns a slice of Keys from StableMap.
+func (m *StableMap) GetKeys() []interface{} {
+	return m.Keys
 }
 
-// Values returns a slice of values from StableMap.
-func (m *StableMap) Values() []interface{} {
-	return m.values
+// GetValues returns a slice of Values from StableMap.
+func (m *StableMap) GetValues() []interface{} {
+	return m.Values
 }
 
 // Pairs returns a slice of key value pairs from StableMap.
 func (m *StableMap) Pairs() [][2]interface{} {
-	pairs := make([][2]interface{}, len(m.keys))
-	for idx, key := range m.keys {
-		pairs[idx] = [2]interface{}{key, m.values[idx]}
+	pairs := make([][2]interface{}, len(m.Keys))
+	for idx, key := range m.Keys {
+		pairs[idx] = [2]interface{}{key, m.Values[idx]}
 	}
 	return pairs
+}
+
+func (m *StableMap) MarshalJSON() ([]byte, error) {
+	res := [2][]interface{}{}
+	res[0] = m.Keys
+	res[1] = m.Values
+	return json.Marshal(res)
+}
+
+func (m *StableMap) UnmarshalJSON(data []byte) error {
+	res := [2][]interface{}{}
+	err := json.Unmarshal(data, res)
+	if err != nil {
+		return err
+	}
+	spew.Dump(res)
+	m.Keys = res[0]
+	m.Values = res[1]
+	return nil
 }

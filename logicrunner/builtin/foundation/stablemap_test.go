@@ -105,33 +105,33 @@ func TestStableMap_Delete(t *testing.T) {
 func TestStableMap_Keys(t *testing.T) {
 	sm := StableMap{}
 
-	assert.Empty(t, sm.Keys())
+	assert.Empty(t, sm.GetKeys())
 
 	sm.Set("foo", 123)
 	sm.Set("bar", 456)
 	sm.Set("baz", 789)
-	assert.Equal(t, []interface{}{"foo", "bar", "baz"}, sm.Keys())
+	assert.Equal(t, []interface{}{"foo", "bar", "baz"}, sm.GetKeys())
 
 	sm.Delete("bar")
 	sm.Set("bar", 456)
 	sm.Set(123, "foobar")
-	assert.Equal(t, []interface{}{"foo", "baz", "bar", 123}, sm.Keys())
+	assert.Equal(t, []interface{}{"foo", "baz", "bar", 123}, sm.GetKeys())
 }
 
 func TestStableMap_Values(t *testing.T) {
 	sm := StableMap{}
 
-	assert.Empty(t, sm.Values())
+	assert.Empty(t, sm.GetValues())
 
 	sm.Set("foo", 123)
 	sm.Set("bar", 456)
 	sm.Set("baz", 789)
-	assert.Equal(t, []interface{}{123, 456, 789}, sm.Values())
+	assert.Equal(t, []interface{}{123, 456, 789}, sm.GetValues())
 
 	sm.Delete("bar")
 	sm.Set("bar", 456)
 	sm.Set(123, "foobar")
-	assert.Equal(t, []interface{}{123, 789, 456, "foobar"}, sm.Values())
+	assert.Equal(t, []interface{}{123, 789, 456, "foobar"}, sm.GetValues())
 }
 
 func TestStableMap_Pairs(t *testing.T) {
@@ -167,34 +167,34 @@ func TestStableMap_Pairs(t *testing.T) {
 	)
 }
 
-type testStableStruct struct {
+type TestStable struct {
 	A string
 	B StableMap
 	C int
 }
 
 func TestStableMap_serialization(t *testing.T) {
-	s := testStableStruct{}
+	s := TestStable{}
 
 	s.A = "foobar"
-	s.B.Set("foo", 123)
-	s.B.Set("bar", 456)
-	s.B.Set("baz", 789)
-	s.B.Set(123, "foo")
-	s.B.Set(456, "bar")
-	s.B.Set(789, "baz")
+	s.B.Set("foo", "123")
+	s.B.Set("bar", "456")
+	s.B.Set("baz", "789")
+	s.B.Set("123", "foo")
+	s.B.Set("456", "bar")
+	s.B.Set("789", "baz")
 	s.C = 123
 
-	buf := insolar.MustSerialize(s)
+	buf := insolar.MustSerialize(&s)
 
-	s2 := testStableStruct{}
-	insolar.MustDeserialize(buf, s2)
+	s2 := TestStable{}
+	insolar.MustDeserialize(buf, &s2)
 
 	assert.Equal(t, s, s2)
 }
 
 func TestStableMap_is_deterministic(t *testing.T) {
-	s := testStableStruct{}
+	s := TestStable{}
 
 	s.A = "foobar"
 	s.B.Set("foo", 123)
@@ -214,7 +214,7 @@ func TestStableMap_is_deterministic(t *testing.T) {
 	}
 }
 
-type testMapStruct struct {
+type TestMap struct {
 	A string
 	B map[interface{}]interface{}
 	C int
@@ -222,7 +222,7 @@ type testMapStruct struct {
 
 func TestStableMap_common_map_is_not_deterministic(t *testing.T) {
 	hashmap := make(map[[16]byte]uint)
-	s := testMapStruct{}
+	s := TestMap{}
 
 	s.A = "foobar"
 	s.B = make(map[interface{}]interface{})
