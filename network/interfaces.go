@@ -77,7 +77,6 @@ type RequestHandler func(ctx context.Context, request ReceivedPacket) (response 
 
 // HostNetwork simple interface to send network requests and process network responses.
 type HostNetwork interface {
-	component.Initer
 	component.Starter
 	component.Stopper
 
