@@ -53,6 +53,8 @@ package core
 import (
 	"sync"
 
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
@@ -63,14 +65,14 @@ type SequentialCandidateFeeder struct {
 	buf []profiles.CandidateProfile
 }
 
-func (p *SequentialCandidateFeeder) PickNextJoinCandidate() profiles.CandidateProfile {
+func (p *SequentialCandidateFeeder) PickNextJoinCandidate() (profiles.CandidateProfile, cryptkit.DigestHolder) {
 	p.mx.Lock()
 	defer p.mx.Unlock()
 
 	if len(p.buf) == 0 {
-		return nil
+		return nil, nil
 	}
-	return p.buf[0]
+	return p.buf[0], nil
 }
 
 func (p *SequentialCandidateFeeder) RemoveJoinCandidate(candidateAdded bool, nodeID insolar.ShortNodeID) bool {

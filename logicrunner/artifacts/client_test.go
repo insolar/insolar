@@ -204,10 +204,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetIncomingRequest_Success() {
 	objectRef := gen.Reference()
 	requestRef := gen.Reference()
 
-	node := testutils.RandomRef()
-
 	jc := jet.NewCoordinatorMock(mc)
-	jc.NodeForObjectMock.Return(&node, nil)
 
 	pulseAccessor := pulse.NewAccessorMock(s.T())
 	pulseAccessor.LatestMock.Return(*insolar.GenesisPulse, nil)
@@ -224,13 +221,15 @@ func (s *amSuite) TestLedgerArtifactManager_GetIncomingRequest_Success() {
 	require.NoError(s.T(), err)
 
 	sender := bus.NewSenderMock(s.T())
-	sender.SendTargetFunc = func(_ context.Context, msg *wmMessage.Message, n insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
+	sender.SendRoleFunc = func(_ context.Context, msg *wmMessage.Message, role insolar.DynamicRole, n insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
+		require.Equal(s.T(), insolar.DynamicRoleLightExecutor, role)
+
 		getReq := payload.GetRequest{}
 		err := getReq.Unmarshal(msg.Payload)
 		require.NoError(s.T(), err)
 
 		require.Equal(s.T(), *requestRef.Record(), getReq.RequestID)
-		require.Equal(s.T(), node, n)
+		require.Equal(s.T(), objectRef, n)
 
 		meta := payload.Meta{Payload: reqMsg.Payload}
 		buf, err := meta.Marshal()

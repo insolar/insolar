@@ -17,8 +17,10 @@
 package deposit
 
 import (
+	"github.com/insolar/insolar/insolar"
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
+	"time"
 )
 
 type ExtendableError struct {
@@ -89,7 +91,7 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 
 func INSMETHOD_GetTxHash(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.SetSystemError(nil)
 	self := new(Deposit)
 
 	if len(object) == 0 {
@@ -112,6 +114,10 @@ func INSMETHOD_GetTxHash(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.GetTxHash()
 
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -128,7 +134,7 @@ func INSMETHOD_GetTxHash(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetAmount(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.SetSystemError(nil)
 	self := new(Deposit)
 
 	if len(object) == 0 {
@@ -151,6 +157,10 @@ func INSMETHOD_GetAmount(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.GetAmount()
 
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -165,18 +175,18 @@ func INSMETHOD_GetAmount(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
-func INSMETHOD_Itself(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_MapMarshal(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.SetSystemError(nil)
 	self := new(Deposit)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeItself ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &ExtendableError{S: "[ FakeMapMarshal ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeItself ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeMapMarshal ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -184,11 +194,15 @@ func INSMETHOD_Itself(object []byte, data []byte) ([]byte, []byte, error) {
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeItself ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeMapMarshal ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.Itself()
+	ret0, ret1 := self.MapMarshal()
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
@@ -206,7 +220,7 @@ func INSMETHOD_Itself(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.SetSystemError(nil)
 	self := new(Deposit)
 
 	if len(object) == 0 {
@@ -219,15 +233,13 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	args := [4]interface{}{}
-	var args0 int
+	args := [3]interface{}{}
+	var args0 insolar.Reference
 	args[0] = &args0
 	var args1 string
 	args[1] = &args1
 	var args2 string
 	args[2] = &args2
-	var args3 string
-	args[3] = &args3
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
@@ -235,7 +247,11 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	ret0 := self.Confirm(args0, args1, args2, args3)
+	ret0, ret1 := self.Confirm(args0, args1, args2)
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
@@ -243,23 +259,26 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, err
 	}
 
-	ret0 = ph.MakeErrorSerializable(ret0)
+	ret1 = ph.MakeErrorSerializable(ret1)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0}, &ret)
+	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
 
 	return state, ret, err
 }
 
 func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	ph := common.CurrentProxyCtx
-	args := [3]interface{}{}
-	var args0 [3]string
+	ph.SetSystemError(nil)
+	args := [4]interface{}{}
+	var args0 map[insolar.Reference]bool
 	args[0] = &args0
 	var args1 string
 	args[1] = &args1
 	var args2 string
 	args[2] = &args2
+	var args3 time.Time
+	args[3] = &args3
 
 	err := ph.Deserialize(data, &args)
 	if err != nil {
@@ -267,7 +286,10 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 		return nil, e
 	}
 
-	ret0, ret1 := New(args0, args1, args2)
+	ret0, ret1 := New(args0, args1, args2, args3)
+	if ph.GetSystemError() != nil {
+		return nil, ph.GetSystemError()
+	}
 	if ret1 != nil {
 		return nil, ret1
 	}
@@ -291,10 +313,10 @@ func Initialize() XXX_insolar.ContractWrapper {
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: XXX_insolar.ContractMethods{
-			"GetTxHash": INSMETHOD_GetTxHash,
-			"GetAmount": INSMETHOD_GetAmount,
-			"Itself":    INSMETHOD_Itself,
-			"Confirm":   INSMETHOD_Confirm,
+			"GetTxHash":  INSMETHOD_GetTxHash,
+			"GetAmount":  INSMETHOD_GetAmount,
+			"MapMarshal": INSMETHOD_MapMarshal,
+			"Confirm":    INSMETHOD_Confirm,
 		},
 		Constructors: XXX_insolar.ContractConstructors{
 			"New": INSCONSTRUCTOR_New,

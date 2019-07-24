@@ -76,7 +76,7 @@ type FraudError struct {
 	fraudType    int
 	msg          string
 	violatorHost endpoints.InboundConnection
-	violatorNode profiles.ActiveNode
+	violatorNode profiles.BaseNode
 	details      []interface{}
 	captureMark  interface{}
 }
@@ -97,7 +97,7 @@ func (p *FraudError) Details() []interface{} {
 	return p.details
 }
 
-func (p *FraudError) ViolatorNode() profiles.ActiveNode {
+func (p *FraudError) ViolatorNode() profiles.BaseNode {
 	return p.violatorNode
 }
 
@@ -126,6 +126,7 @@ const (
 	FraudMultipleNsh
 	MismatchedRank
 	MismatchedNeighbour
+	WrongPower
 )
 
 func NewFraudFactory(capture ReportFunc) FraudFactory {
@@ -136,7 +137,7 @@ type FraudFactory struct {
 	capture ReportFunc
 }
 
-func (p FraudFactory) NewFraud(fraudType int, msg string, violatorHost endpoints.Inbound, violatorNode profiles.ActiveNode, details ...interface{}) FraudError {
+func (p FraudFactory) NewFraud(fraudType int, msg string, violatorHost endpoints.Inbound, violatorNode profiles.BaseNode, details ...interface{}) FraudError {
 	err := FraudError{
 		fraudType:    fraudType,
 		msg:          msg,
@@ -152,7 +153,7 @@ func (p FraudFactory) NewFraud(fraudType int, msg string, violatorHost endpoints
 	return err
 }
 
-func (p FraudFactory) NewNodeFraud(fraudType int, msg string, violatorNode profiles.ActiveNode, details ...interface{}) FraudError {
+func (p FraudFactory) NewNodeFraud(fraudType int, msg string, violatorNode profiles.BaseNode, details ...interface{}) FraudError {
 	return p.NewFraud(fraudType, msg, nil, violatorNode, details...)
 }
 
@@ -173,18 +174,26 @@ func (p FraudFactory) NewMismatchedMembershipRankOrNodeCount(violator profiles.A
 	return p.NewNodeFraud(MismatchedRank, "mismatched membership profile node count", violator, mp, nodeCount)
 }
 
-func (p FraudFactory) NewUnknownNeighbour(violator profiles.ActiveNode) error {
+func (p FraudFactory) NewUnknownNeighbour(violator profiles.BaseNode) error {
 	return p.NewNodeFraud(MismatchedNeighbour, "unknown neighbour", violator)
 }
 
-func (p FraudFactory) NewMismatchedNeighbourRank(violator profiles.ActiveNode) error {
+func (p FraudFactory) NewMismatchedNeighbourRank(violator profiles.BaseNode) error {
 	return p.NewNodeFraud(MismatchedNeighbour, "mismatched neighbour rank", violator)
 }
 
-func (p FraudFactory) NewNeighbourMissingTarget(violator profiles.ActiveNode) error {
+func (p FraudFactory) NewNeighbourMissingTarget(violator profiles.BaseNode) error {
 	return p.NewNodeFraud(MismatchedNeighbour, "neighbour must include target node", violator)
 }
 
-func (p FraudFactory) NewNeighbourContainsRource(violator profiles.ActiveNode) error {
+func (p FraudFactory) NewNeighbourContainsSource(violator profiles.BaseNode) error {
 	return p.NewNodeFraud(MismatchedNeighbour, "neighbour must NOT include source node", violator)
+}
+
+func (p FraudFactory) NewInconsistentNeighbourAnnouncement(violator profiles.BaseNode) FraudError {
+	return p.NewNodeFraud(MismatchedNeighbour, "multiple neighbour profile", violator)
+}
+
+func (p FraudFactory) NewInvalidPowerLevel(violator profiles.BaseNode) FraudError {
+	return p.NewNodeFraud(WrongPower, "power level is incorrect", violator)
 }
