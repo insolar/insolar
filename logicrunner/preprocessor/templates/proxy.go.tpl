@@ -178,6 +178,9 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}{{if $method.Immutable}}AsMutab
 		return {{ $method.ResultsWithErr }}
 	}
 
+    {{/* Saga call doesn't has a reply (it's `nil`), thus we shouldn't attempt to deserialize it. */}}
+    {{if not $method.SagaInfo.IsSaga }}
+
 	err = common.CurrentProxyCtx.Deserialize(res, &ret)
 	if err != nil {
 		return {{ $method.ResultsWithErr }}
@@ -186,6 +189,9 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}{{if $method.Immutable}}AsMutab
 	if {{ $method.ErrorVar }} != nil {
 		return {{ $method.Results }}
 	}
+
+	{{end}}
+
 	return {{ $method.ResultsNilError }}
 }
 

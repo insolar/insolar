@@ -238,22 +238,22 @@ package main
 import (
 "github.com/insolar/insolar/insolar"
 "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-"github.com/insolar/insolar/application/proxy/wallet"
+"github.com/insolar/insolar/application/proxy/test_saga_simple_contract"
 )
 
-type SimpleWallet struct {
+type TestSagaSimpleCallContract struct {
 	foundation.BaseContract
 	Friend insolar.Reference
 	Amount int
 }
 
-func New() (*SimpleWallet, error) {
-	return &SimpleWallet{Amount: 100}, nil
+func New() (*TestSagaSimpleCallContract, error) {
+	return &TestSagaSimpleCallContract{Amount: 100}, nil
 }
 
-func (r *SimpleWallet) Transfer10() (string, error) {
+func (r *TestSagaSimpleCallContract) Transfer10() (string, error) {
 	n := 10
-	second := wallet.New()
+	second := test_saga_simple_contract.New()
 	w2, err := second.AsChild(r.GetReference())
 	if err != nil {
 		return "1", err
@@ -268,25 +268,58 @@ func (r *SimpleWallet) Transfer10() (string, error) {
 	return w2.GetReference().String(), nil
 }
 
-func (w *SimpleWallet) GetBalance() (int, error) {
+func (w *TestSagaSimpleCallContract) GetBalance() (int, error) {
 	return w.Amount, nil
 }
 
 //ins:saga(Rollback)
-func (w *SimpleWallet) Accept(amount int) error {
+func (w *TestSagaSimpleCallContract) Accept(amount int) error {
 	w.Amount += amount
 	return nil
 }
 
-func (w *SimpleWallet) Rollback(amount int) error {
+func (w *TestSagaSimpleCallContract) Rollback(amount int) error {
 	w.Amount -= amount
 	return nil
 }
 `
-	prototype := uploadContractOnce(t, "wallet", walletContract)
+	prototype := uploadContractOnce(t, "test_saga_simple_contract", walletContract)
 	objectRef := callConstructor(t, prototype, "New")
 	resp := callMethod(t, objectRef, "Transfer10", nil)
+	fmt.Printf("resp = %+v\n", resp)
+	fmt.Printf("Reply.Result = %v\n", string(resp.Reply.Result))
 	require.Empty(t, resp.Error) // AALEKSEEV TODO FIXME Should be empty, but was Decoder not initialized
+
+	/*
+		--- FAIL: TestSagaSimpleCall (2.73s)
+		    logicrunner_test.go:290:
+		        	Error Trace:	logicrunner_test.go:290
+		        	Error:      	Should be empty, but was GoInsider.Deserialize, from = [], into = &[0xc0003d4028]: goroutine 58 [running]:
+		        	            	runtime/debug.Stack(0xc0001383c0, 0xc0012c1320, 0x44eeb06)
+		        	            		/usr/local/go/src/runtime/debug/stack.go:24 +0xa7
+		        	            	github.com/insolar/insolar/vendor/github.com/ugorji/go/codec.(*Decoder).Decode(0xc00034c000, 0x47185c0, 0xc0001d2030, 0x0, 0x0)
+		        	            		/Users/eax/go/src/github.com/insolar/insolar/vendor/github.com/ugorji/go/codec/decode.go:2499 +0xaa
+		        	            	github.com/insolar/insolar/logicrunner/goplugin/ginsider.(*GoInsider).Deserialize(0xc0003b6000, 0x0, 0x0, 0x0, 0x47185c0, 0xc0001d2030, 0x0, 0x0)
+		        	            		/Users/eax/go/src/github.com/insolar/insolar/logicrunner/goplugin/ginsider/ginsider.go:480 +0x160
+		        	            	github.com/insolar/insolar/application/proxy/test_saga_simple_contract.(*TestSagaSimpleCallContract).Accept(0xc0003e0000, 0xa, 0x41ba7aa282c1a72a, 0xdbf4127198d8e711)
+		        	            		/var/folders/vl/st0t3kyj4b71r04v2vf9dwt00000gn/T/test-140686017/src/github.com/insolar/insolar/application/proxy/test_saga_simple_contract/main.go:347 +0x312
+		        	            	contract/test_saga_simple_contract.(*TestSagaSimpleCallContract).Transfer10(0xc000104500, 0xc0000b4678, 0x2, 0x2, 0x4715c00)
+		        	            		/var/folders/vl/st0t3kyj4b71r04v2vf9dwt00000gn/T/test-140686017/src/contract/test_saga_simple_contract/main.go:30 +0x10b
+		        	            	contract/test_saga_simple_contract.INSMETHOD_Transfer10(0xc0000ce240, 0x53, 0x53, 0xc0000b4678, 0x2, 0x2, 0x14, 0x0, 0x0, 0x0, ...)
+		        	            		/var/folders/vl/st0t3kyj4b71r04v2vf9dwt00000gn/T/test-140686017/src/contract/test_saga_simple_contract/main_wrapper.go:120 +0x430
+		        	            	github.com/insolar/insolar/logicrunner/goplugin/ginsider.(*RPC).CallMethod(0xc0000c2608, 0xc0000e6190, 0x7c76d0c33273af01, 0x8deaaf3a6f35bb74, 0x8a6ad208139dcbee, 0xd229683bd161105c, 0x0, 0x0, 0x0, 0x0, ...)
+		        	            		/Users/eax/go/src/github.com/insolar/insolar/logicrunner/goplugin/ginsider/ginsider.go:142 +0x57f
+		        	            	reflect.Value.call(0xc0000c55c0, 0xc0000c2648, 0x13, 0x4857a57, 0x4, 0xc000065f18, 0x3, 0x3, 0xc000078180, 0x2108421084, ...)
+		        	            		/usr/local/go/src/reflect/value.go:447 +0x449
+		        	            	reflect.Value.Call(0xc0000c55c0, 0xc0000c2648, 0x13, 0xc000256f18, 0x3, 0x3, 0xc000257158, 0x43624c7, 0xc000257b60)
+		        	            		/usr/local/go/src/reflect/value.go:308 +0xa4
+		        	            	net/rpc.(*service).call(0xc0000b7d80, 0xc0000e6320, 0xc0000240e8, 0xc000024110, 0xc00016a780, 0xc00000c660, 0x47d6540, 0xc0000c81b0, 0x199, 0x4710380, ...)
+		        	            		/usr/local/go/src/net/rpc/server.go:384 +0x14e
+		        	            	created by net/rpc.(*Server).ServeCodec
+		        	            		/usr/local/go/src/net/rpc/server.go:481 +0x47e
+		        	            	: Decoder not initialized
+		        	Test:       	TestSagaSimpleCall
+	*/
 }
 
 func TestInjectingDelegate(t *testing.T) {
