@@ -232,7 +232,9 @@ func (r *Two) GetPayloadString() (string, error) {
 }
 
 func TestSagaSimpleCall(t *testing.T) {
-	var walletContract = `
+	balance := float64(100)
+	amount := float64(10)
+	var contractCode = `
 package main
 
 import (
@@ -283,12 +285,35 @@ func (w *TestSagaSimpleCallContract) Rollback(amount int) error {
 	return nil
 }
 `
-	prototype := uploadContractOnce(t, "test_saga_simple_contract", walletContract)
-	objectRef := callConstructor(t, prototype, "New")
-	resp := callMethod(t, objectRef, "Transfer10", nil) // AALEKSEEV TODO try to pass 10 as an argument
-	// resp.Reply.Result contains a string with second objectRef
-	fmt.Printf("Reply.Result = %v\n", string(resp.Reply.Result))
+	prototype := uploadContractOnce(t, "test_saga_simple_contract", contractCode)
+	firstWalletRef := callConstructor(t, prototype, "New")
+	resp := callMethod(t, firstWalletRef, "Transfer10", nil) // AALEKSEEV TODO try to pass 10 as an argument
 	require.Empty(t, resp.Error)
+
+	secondWalletRef, err := insolar.NewReferenceFromBase58(resp.ExtractedReply.(string))
+	require.NoError(t, err)
+
+	checkPassed := false
+
+	for attempt := 0; attempt <= 10; attempt++ {
+		bal2 := callMethod(t, secondWalletRef, "GetBalance")
+		require.Empty(t, bal2.Error)
+		if bal2.ExtractedReply.(float64) != balance+amount {
+			// money are not accepted yet
+			time.Sleep(10 * time.Millisecond)
+			continue
+		}
+
+		bal1 := callMethod(t, firstWalletRef, "GetBalance")
+		require.Empty(t, bal1.Error)
+		require.Equal(t, balance-amount, bal1.ExtractedReply.(float64))
+		require.Equal(t, balance+amount, bal2.ExtractedReply.(float64))
+
+		checkPassed = true
+		break
+	}
+
+	require.True(t, checkPassed)
 }
 
 func TestInjectingDelegate(t *testing.T) {
