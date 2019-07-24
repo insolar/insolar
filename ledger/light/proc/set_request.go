@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -39,14 +40,15 @@ type SetRequest struct {
 	jetID     insolar.JetID
 
 	dep struct {
-		writer   hot.WriteAccessor
-		filament executor.FilamentCalculator
-		sender   bus.Sender
-		locker   object.IndexLocker
-		indexes  object.IndexStorage
-		records  object.RecordModifier
-		pcs      insolar.PlatformCryptographyScheme
-		checker  executor.RequestChecker
+		writer      hot.WriteAccessor
+		filament    executor.FilamentCalculator
+		sender      bus.Sender
+		locker      object.IndexLocker
+		indexes     object.IndexStorage
+		records     object.RecordModifier
+		pcs         insolar.PlatformCryptographyScheme
+		checker     executor.RequestChecker
+		coordinator jet.Coordinator
 	}
 }
 
@@ -72,7 +74,8 @@ func (p *SetRequest) Dep(
 	i object.IndexStorage,
 	r object.RecordModifier,
 	pcs insolar.PlatformCryptographyScheme,
-	c executor.RequestChecker,
+	rc executor.RequestChecker,
+	c jet.Coordinator,
 ) {
 	p.dep.writer = w
 	p.dep.filament = f
@@ -81,7 +84,8 @@ func (p *SetRequest) Dep(
 	p.dep.indexes = i
 	p.dep.records = r
 	p.dep.pcs = pcs
-	p.dep.checker = c
+	p.dep.checker = rc
+	p.dep.coordinator = c
 }
 
 func (p *SetRequest) Proceed(ctx context.Context) error {
@@ -100,6 +104,23 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		objectID = p.requestID
 	} else {
 		objectID = *p.request.AffinityRef().Record()
+	}
+
+	// Check virtual executor.
+	virtualExecutor, err := p.dep.coordinator.VirtualExecutorForObject(ctx, objectID, flow.Pulse(ctx))
+	if err != nil {
+		return err
+	}
+
+	// We allow API and outgoing requests.
+	// - API request is used to upload code for test. Should be fixed.
+	// - Outgoing request is registered during Incoming request execution in the past, so can be received not from
+	//   current executor.
+	if _, ok := p.request.(*record.IncomingRequest); ok && !p.request.IsAPIRequest() {
+		if p.message.Sender != *virtualExecutor {
+			logger.Errorf("sender isn't the executor. sender - %v, executor - %v", p.message.Sender, *virtualExecutor)
+			return ErrExecutorMismatch
+		}
 	}
 
 	// Prevent concurrent object modifications.
@@ -156,7 +177,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	}
 
 	// Checking request validity.
-	err := p.dep.checker.CheckRequest(ctx, p.requestID, p.request)
+	err = p.dep.checker.CheckRequest(ctx, p.requestID, p.request)
 	if err != nil {
 		return errors.Wrap(err, "request check failed")
 	}

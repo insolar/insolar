@@ -56,6 +56,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/network/rules"
+
 	"github.com/insolar/insolar/network/gateway"
 
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -102,6 +104,7 @@ type ServiceNetwork struct {
 	TerminationHandler  insolar.TerminationHandler  `inject:""`
 	Pub                 message.Publisher           `inject:""`
 	ContractRequester   insolar.ContractRequester   `inject:""`
+	Rules               network.Rules               `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager           `inject:"subcomponent"`
@@ -219,6 +222,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		bootstrap.NewBootstrapper(options),
 		bootstrap.NewAuthorizationController(options),
 		bootstrap.NewNetworkBootstrapper(),
+		rules.NewRules(),
 	)
 	err = n.cm.Init(ctx)
 	if err != nil {
@@ -343,6 +347,18 @@ func (n *ServiceNetwork) shoudIgnorePulse(newPulse insolar.Pulse) bool {
 func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insolar.Pulse, pulseStartTime time.Time) {
 	logger := inslogger.FromContext(ctx)
 
+	defer func() {
+		if n.NodeKeeper.IsBootstrapped() && n.Gateway().GetState() == insolar.CompleteNetworkState {
+			if !n.Rules.CheckMinRole() {
+				logger.Fatal("CheckMinRole() failed")
+			}
+
+			if ok, _ := n.Rules.CheckMajorityRule(); !ok {
+				logger.Fatal("CheckMajorityRule() failed")
+			}
+		}
+	}()
+
 	if !n.cfg.Service.ConsensusEnabled {
 		logger.Warn("Consensus is disabled")
 		if n.TerminationHandler.Terminating() {
@@ -356,6 +372,7 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insol
 		logger.Error(errMsg)
 		n.SetGateway(n.Gateway().NewGateway(insolar.NoNetworkState))
 	}
+
 }
 
 // SendMessageHandler async sends message with confirmation of delivery.

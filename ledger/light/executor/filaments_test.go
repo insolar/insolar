@@ -198,13 +198,14 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 		hash := record.HashVirtual(pcs.ReferenceHasher(), virtual)
 		expectedFilamentRecordID := *insolar.NewID(resultID.Pulse(), hash)
 
+		caller := gen.Reference()
 		calculator.PendingRequestsFunc = func(_ context.Context, pn insolar.PulseNumber, id insolar.ID) ([]record.CompositeFilamentRecord, error) {
 			require.Equal(t, resultID.Pulse(), pn)
 			require.Equal(t, validResult.Object, id)
 
-			// return []record.CompositeFilamentRecord{{RecordID: expectedFilamentRecordID}}, nil
 			req := record.OutgoingRequest{
 				ReturnMode: record.ReturnSaga,
+				Caller:     caller,
 				Reason:     *insolar.NewReference(reqID),
 			}
 			reqVirt := record.Wrap(req)

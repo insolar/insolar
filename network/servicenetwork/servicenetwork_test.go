@@ -54,6 +54,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/insolar/insolar/network/rules"
+
 	"github.com/insolar/insolar/network/gateway"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -286,7 +288,7 @@ func TestServiceNetwork_StartStop(t *testing.T) {
 
 	cm.Inject(serviceNetwork, nk, certManager, testutils.NewCryptographyServiceMock(t), pulse.NewAccessorMock(t),
 		testutils.NewTerminationHandlerMock(t), testutils.NewPulseManagerMock(t), &PublisherMock{},
-		testutils.NewMessageBusMock(t), testutils.NewContractRequesterMock(t),
+		testutils.NewMessageBusMock(t), testutils.NewContractRequesterMock(t), rules.NewRules(),
 		bus.NewSenderMock(t), &stater{}, testutils.NewPlatformCryptographyScheme(), testutils.NewKeyProcessorMock(t))
 	err = serviceNetwork.Init(ctx)
 	require.NoError(t, err)

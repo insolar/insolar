@@ -76,23 +76,15 @@ func (*CallMethod) DefaultRole() insolar.DynamicRole {
 	return insolar.DynamicRoleVirtualExecutor
 }
 
+var pcs = platformpolicy.NewPlatformCryptographyScheme() // TODO: create message factory
+
 // DefaultTarget returns of target of this event.
 func (cm *CallMethod) DefaultTarget() *insolar.Reference {
-	switch cm.CallType {
-	case record.CTSaveAsChild:
-		return genRequest(cm.PulseNum, MustSerializeBytes(cm))
-	case record.CTSaveAsDelegate:
-		return cm.Base
-	default:
-		return cm.Object
-	}
+	return record.CalculateRequestAffinityRef(&cm.IncomingRequest, cm.PulseNum, pcs)
 }
 
 func (cm *CallMethod) GetReference() insolar.Reference {
-	if cm.CallType != record.CTMethod {
-		return *genRequest(cm.PulseNum, MustSerializeBytes(cm))
-	}
-	return *cm.Object
+	return *record.CalculateRequestAffinityRef(&cm.IncomingRequest, cm.PulseNum, pcs)
 }
 
 // Type returns TypeCallMethod.
@@ -225,14 +217,6 @@ func (vr *ValidationResults) GetCaller() *insolar.Reference {
 
 func (vr *ValidationResults) GetReference() insolar.Reference {
 	return vr.RecordRef
-}
-
-var hasher = platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher() // TODO: create message factory
-
-// GenRequest calculates Reference for request message from pulse number and request's payload.
-func genRequest(pn insolar.PulseNumber, payload []byte) *insolar.Reference {
-	ref := insolar.NewReference(*insolar.NewID(pn, hasher.Hash(payload)))
-	return ref
 }
 
 // PendingFinished is sent by the old executor to the current executor

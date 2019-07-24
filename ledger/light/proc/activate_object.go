@@ -112,6 +112,32 @@ func (a *ActivateObject) Proceed(ctx context.Context) error {
 		return nil
 	}
 
+	foundRes, err := a.dep.filament.SetResult(ctx, a.resultID, a.jetID, a.result)
+	if err != nil {
+		return errors.Wrap(err, "failed to save result")
+	}
+
+	if foundRes != nil {
+		logger.Errorf("duplicated result. resultID: %v, requestID: %v", a.resultID.DebugString(), a.result.Request.Record().DebugString())
+		foundResBuf, err := foundRes.Record.Virtual.Marshal()
+		if err != nil {
+			return err
+		}
+
+		msg, err := payload.NewMessage(&payload.ResultInfo{
+			ObjectID: *a.activate.Request.Record(),
+			ResultID: a.resultID,
+			Result:   foundResBuf,
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to create reply")
+		}
+
+		a.dep.sender.Reply(ctx, a.message, msg)
+
+		return nil
+	}
+
 	activateVirt := record.Wrap(a.activate)
 	rec := record.Material{
 		Virtual: &activateVirt,
@@ -123,6 +149,10 @@ func (a *ActivateObject) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "can't save record into storage")
 	}
 
+	idx, err = a.dep.indexStorage.ForID(ctx, flow.Pulse(ctx), *a.activate.Request.Record())
+	if err != nil {
+		return errors.Wrap(err, "failed to save result")
+	}
 	idx.Lifeline.LatestState = &a.activateID
 	idx.Lifeline.StateID = a.activate.ID()
 	idx.Lifeline.Parent = a.activate.Parent
@@ -134,24 +164,9 @@ func (a *ActivateObject) Proceed(ctx context.Context) error {
 	}
 	logger.WithField("state", idx.Lifeline.LatestState.DebugString()).Debug("saved object")
 
-	foundRes, err := a.dep.filament.SetResult(ctx, a.resultID, a.jetID, a.result)
-	if err != nil {
-		return errors.Wrap(err, "failed to save result")
-	}
-
-	var foundResBuf []byte
-	if foundRes != nil {
-		logger.Errorf("duplicated result. resultID: %v, requestID: %v", a.resultID.DebugString(), a.result.Request.Record().DebugString())
-		foundResBuf, err = foundRes.Record.Virtual.Marshal()
-		if err != nil {
-			return err
-		}
-	}
-
 	msg, err := payload.NewMessage(&payload.ResultInfo{
 		ObjectID: *a.activate.Request.Record(),
 		ResultID: a.resultID,
-		Result:   foundResBuf,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create reply")

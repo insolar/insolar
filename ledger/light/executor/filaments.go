@@ -246,7 +246,7 @@ func (m *FilamentModifierDefault) notifyDetached(ctx context.Context, pendingReq
 			}
 
 			_, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, *insolar.NewReference(objID))
-			defer done()
+			done()
 		}
 	}
 

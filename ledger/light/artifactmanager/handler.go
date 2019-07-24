@@ -133,6 +133,7 @@ func NewMessageHandler(
 				h.Records,
 				h.PCS,
 				h.RequestChecker,
+				h.JetCoordinator,
 			)
 		},
 		SetResult: func(p *proc.SetResult) {
