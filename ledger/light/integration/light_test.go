@@ -63,11 +63,11 @@ func Test_LightReplication(t *testing.T) {
 	t.Parallel()
 
 	var secondPulseNumber = insolar.FirstPulseNumber + (PulseStep * 2)
-	var inputLifeline record.Lifeline
-	var objectID insolar.ID
+	var sentLifeline record.Lifeline
+	var sentObjectID insolar.ID
 
-	var inputRecords = make(map[insolar.ID]record.Virtual)
-	var outChan = make(chan payload.Replication, 10)
+	var sentIds = make(map[insolar.ID]struct{})
+	var replicationChannel = make(chan payload.Replication, 10)
 
 	ctx := inslogger.WithLoggerLevel(inslogger.TestContext(t), insolar.ErrorLevel)
 	cfg := DefaultLightConfig()
@@ -78,7 +78,7 @@ func Test_LightReplication(t *testing.T) {
 
 			if pl.(*payload.Replication).Pulse == secondPulseNumber {
 				go func() {
-					outChan <- *pl.(*payload.Replication)
+					replicationChannel <- *pl.(*payload.Replication)
 				}()
 			}
 
@@ -116,7 +116,7 @@ func Test_LightReplication(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, &sent, material.Virtual)
 
-			inputRecords[payloadId] = *material.Virtual
+			sentIds[payloadId] = struct{}{}
 		}
 
 		// Set, get request.
@@ -130,76 +130,71 @@ func Test_LightReplication(t *testing.T) {
 			requireNotError(t, p)
 
 			require.Equal(t, sent, p.(*payload.Request).Request)
-			objectID = p.(*payload.Request).RequestID
+			sentObjectID = p.(*payload.Request).RequestID
 
-			inputRecords[payloadId] = sent
+			sentIds[payloadId] = struct{}{}
+
 		}
 		// Activate and check object.
 		{
-			p, state := callActivateObject(ctx, t, s, objectID)
+			p, state := callActivateObject(ctx, t, s, sentObjectID)
 			requireNotError(t, p)
 
-			lifeline, material := requireGetObject(ctx, t, s, objectID)
+			lifeline, material := requireGetObject(ctx, t, s, sentObjectID)
 
-			inputRecords[*lifeline.LatestState] = *material.Virtual
+			sentIds[*lifeline.LatestState] = struct{}{}
 
 			require.Equal(t, &state, material.Virtual)
 		}
 		// Amend and check object.
 		{
-			p, _ := callSetIncomingRequest(ctx, t, s, objectID, reasonID, record.CTMethod)
+			p, _ := callSetIncomingRequest(ctx, t, s, sentObjectID, reasonID, record.CTMethod)
 			requireNotError(t, p)
 
-			p, state := callAmendObject(ctx, t, s, objectID, p.(*payload.RequestInfo).RequestID)
+			p, state := callAmendObject(ctx, t, s, sentObjectID, p.(*payload.RequestInfo).RequestID)
 			requireNotError(t, p)
-			lifeline, material := requireGetObject(ctx, t, s, objectID)
+			lifeline, material := requireGetObject(ctx, t, s, sentObjectID)
 			require.Equal(t, &state, material.Virtual)
 
-			inputLifeline = lifeline
-			inputRecords[*lifeline.LatestState] = *material.Virtual
+			sentLifeline = lifeline
+			sentIds[*lifeline.LatestState] = struct{}{}
 		}
-		fmt.Println("sending finished:", objectID.String())
+		fmt.Println("sending finished:", sentObjectID.String())
 	})
 
 	// Third pulse activate replication of second's pulse records
 	s.Pulse(ctx)
 
 	{
-		payloadReplication := <-outChan
+		replicationPayload := <-replicationChannel
 
 		var currentLifeline record.Lifeline
 
-		for _, idx := range payloadReplication.Indexes {
-			if idx.ObjID == objectID {
-				currentLifeline = idx.Lifeline
+		for _, recordIndex := range replicationPayload.Indexes {
+			if recordIndex.ObjID == sentObjectID {
+				currentLifeline = recordIndex.Lifeline
 			}
 		}
 
-		if currentLifeline.LatestState == nil {
-			fmt.Println("indexes len:", len(payloadReplication.Indexes))
-			fmt.Println("indexes str:", payloadReplication.Indexes[0].GoString())
-		}
+		if replicationPayload.Pulse.Equal(secondPulseNumber) {
 
-		if payloadReplication.Pulse.Equal(secondPulseNumber) {
+			replicatedIds := make(map[insolar.ID]struct{})
 
-			recordMap := make(map[insolar.ID]record.Material)
-
-			require.Equal(t, 13, len(payloadReplication.Records))
-			require.Equal(t, inputLifeline, currentLifeline)
+			require.Equal(t, 13, len(replicationPayload.Records))
+			require.Equal(t, sentLifeline, currentLifeline)
 
 			// testing payload
-			pcs := platformpolicy.NewPlatformCryptographyScheme()
+			cryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
 
-			for _, rec := range payloadReplication.Records {
-				virtualRec := *rec.Virtual
-				hash := record.HashVirtual(pcs.ReferenceHasher(), virtualRec)
+			for _, rec := range replicationPayload.Records {
+				hash := record.HashVirtual(cryptographyScheme.ReferenceHasher(), *rec.Virtual)
 				id := insolar.NewID(secondPulseNumber, hash)
-				recordMap[*id] = rec
-
+				replicatedIds[*id] = struct{}{}
 			}
 
-			for k, inputRecord := range inputRecords {
-				require.Equal(t, inputRecord, *recordMap[k].Virtual)
+			for k := range sentIds {
+				_, ok := replicatedIds[k]
+				require.True(t, ok, "No key in replicated data")
 			}
 		}
 	}
