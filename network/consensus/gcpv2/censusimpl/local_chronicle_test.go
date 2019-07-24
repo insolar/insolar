@@ -137,6 +137,10 @@ func TestLCMakeActive(t *testing.T) {
 	pct.pd.PulseNumber = 1
 	require.Panics(t, func() { lc.makeActive(exp1, pct) })
 
+	lc.expectedPulseNumber = pulse.Unknown
+	require.Panics(t, func() { lc.makeActive(exp1, pct) })
+
+	lc.expectedPulseNumber = pn
 	pct.pd.PulseNumber = pn
 	require.Panics(t, func() { lc.makeActive(exp1, pct) })
 
