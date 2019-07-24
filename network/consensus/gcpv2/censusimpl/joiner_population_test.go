@@ -76,37 +76,47 @@ func TestNewJoinerPopulation(t *testing.T) {
 	require.Zero(t, ojp.localNode.mode)
 }
 
-func TestGetIdleProfiles(t *testing.T) {
+func TestOJPGetSuspendedCount(t *testing.T) {
+	ojp := OneJoinerPopulation{}
+	require.Zero(t, ojp.GetSuspendedCount())
+}
+
+func TestOJPGetMistrustedCount(t *testing.T) {
+	ojp := OneJoinerPopulation{}
+	require.Zero(t, ojp.GetMistrustedCount())
+}
+
+func TestOJPGetIdleProfiles(t *testing.T) {
 	ojp := OneJoinerPopulation{}
 	require.Nil(t, ojp.GetIdleProfiles())
 }
 
-func TestGetIdleCount(t *testing.T) {
+func TestOJPGetIdleCount(t *testing.T) {
 	ojp := OneJoinerPopulation{}
 	require.Zero(t, ojp.GetIdleCount())
 }
 
-func TestGetIndexedCount(t *testing.T) {
+func TestOJPGetIndexedCount(t *testing.T) {
 	ojp := OneJoinerPopulation{}
 	require.Zero(t, ojp.GetIndexedCount())
 }
 
-func TestGetIndexedCapacity(t *testing.T) {
+func TestOJPGetIndexedCapacity(t *testing.T) {
 	ojp := OneJoinerPopulation{}
 	require.Zero(t, ojp.GetIndexedCapacity())
 }
 
-func TestIsValid(t *testing.T) {
+func TestOJPIsValid(t *testing.T) {
 	ojp := OneJoinerPopulation{}
 	require.True(t, ojp.IsValid())
 }
 
-func TestGetRolePopulation(t *testing.T) {
+func TestOJPGetRolePopulation(t *testing.T) {
 	ojp := OneJoinerPopulation{}
 	require.Nil(t, ojp.GetRolePopulation(member.PrimaryRoleNeutral))
 }
 
-func TestGetWorkingRoles(t *testing.T) {
+func TestOJPGetWorkingRoles(t *testing.T) {
 	ojp := OneJoinerPopulation{}
 	require.Nil(t, ojp.GetWorkingRoles())
 }

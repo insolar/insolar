@@ -6,6 +6,7 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "Expected" can be found in github.com/insolar/insolar/network/consensus/gcpv2/api/census
 */
 import (
+	context "context"
 	"sync/atomic"
 	"time"
 
@@ -22,7 +23,7 @@ import (
 type ExpectedMock struct {
 	t minimock.Tester
 
-	CreateBuilderFunc       func(p pulse.Number) (r Builder)
+	CreateBuilderFunc       func(p context.Context, p1 pulse.Number) (r Builder)
 	CreateBuilderCounter    uint64
 	CreateBuilderPreCounter uint64
 	CreateBuilderMock       mExpectedMockCreateBuilder
@@ -137,7 +138,8 @@ type ExpectedMockCreateBuilderExpectation struct {
 }
 
 type ExpectedMockCreateBuilderInput struct {
-	p pulse.Number
+	p  context.Context
+	p1 pulse.Number
 }
 
 type ExpectedMockCreateBuilderResult struct {
@@ -145,14 +147,14 @@ type ExpectedMockCreateBuilderResult struct {
 }
 
 //Expect specifies that invocation of Expected.CreateBuilder is expected from 1 to Infinity times
-func (m *mExpectedMockCreateBuilder) Expect(p pulse.Number) *mExpectedMockCreateBuilder {
+func (m *mExpectedMockCreateBuilder) Expect(p context.Context, p1 pulse.Number) *mExpectedMockCreateBuilder {
 	m.mock.CreateBuilderFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ExpectedMockCreateBuilderExpectation{}
 	}
-	m.mainExpectation.input = &ExpectedMockCreateBuilderInput{p}
+	m.mainExpectation.input = &ExpectedMockCreateBuilderInput{p, p1}
 	return m
 }
 
@@ -169,12 +171,12 @@ func (m *mExpectedMockCreateBuilder) Return(r Builder) *ExpectedMock {
 }
 
 //ExpectOnce specifies that invocation of Expected.CreateBuilder is expected once
-func (m *mExpectedMockCreateBuilder) ExpectOnce(p pulse.Number) *ExpectedMockCreateBuilderExpectation {
+func (m *mExpectedMockCreateBuilder) ExpectOnce(p context.Context, p1 pulse.Number) *ExpectedMockCreateBuilderExpectation {
 	m.mock.CreateBuilderFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &ExpectedMockCreateBuilderExpectation{}
-	expectation.input = &ExpectedMockCreateBuilderInput{p}
+	expectation.input = &ExpectedMockCreateBuilderInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -184,7 +186,7 @@ func (e *ExpectedMockCreateBuilderExpectation) Return(r Builder) {
 }
 
 //Set uses given function f as a mock of Expected.CreateBuilder method
-func (m *mExpectedMockCreateBuilder) Set(f func(p pulse.Number) (r Builder)) *ExpectedMock {
+func (m *mExpectedMockCreateBuilder) Set(f func(p context.Context, p1 pulse.Number) (r Builder)) *ExpectedMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -193,18 +195,18 @@ func (m *mExpectedMockCreateBuilder) Set(f func(p pulse.Number) (r Builder)) *Ex
 }
 
 //CreateBuilder implements github.com/insolar/insolar/network/consensus/gcpv2/api/census.Expected interface
-func (m *ExpectedMock) CreateBuilder(p pulse.Number) (r Builder) {
+func (m *ExpectedMock) CreateBuilder(p context.Context, p1 pulse.Number) (r Builder) {
 	counter := atomic.AddUint64(&m.CreateBuilderPreCounter, 1)
 	defer atomic.AddUint64(&m.CreateBuilderCounter, 1)
 
 	if len(m.CreateBuilderMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.CreateBuilderMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ExpectedMock.CreateBuilder. %v", p)
+			m.t.Fatalf("Unexpected call to ExpectedMock.CreateBuilder. %v %v", p, p1)
 			return
 		}
 
 		input := m.CreateBuilderMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ExpectedMockCreateBuilderInput{p}, "Expected.CreateBuilder got unexpected parameters")
+		testify_assert.Equal(m.t, *input, ExpectedMockCreateBuilderInput{p, p1}, "Expected.CreateBuilder got unexpected parameters")
 
 		result := m.CreateBuilderMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -221,7 +223,7 @@ func (m *ExpectedMock) CreateBuilder(p pulse.Number) (r Builder) {
 
 		input := m.CreateBuilderMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, ExpectedMockCreateBuilderInput{p}, "Expected.CreateBuilder got unexpected parameters")
+			testify_assert.Equal(m.t, *input, ExpectedMockCreateBuilderInput{p, p1}, "Expected.CreateBuilder got unexpected parameters")
 		}
 
 		result := m.CreateBuilderMock.mainExpectation.result
@@ -235,11 +237,11 @@ func (m *ExpectedMock) CreateBuilder(p pulse.Number) (r Builder) {
 	}
 
 	if m.CreateBuilderFunc == nil {
-		m.t.Fatalf("Unexpected call to ExpectedMock.CreateBuilder. %v", p)
+		m.t.Fatalf("Unexpected call to ExpectedMock.CreateBuilder. %v %v", p, p1)
 		return
 	}
 
-	return m.CreateBuilderFunc(p)
+	return m.CreateBuilderFunc(p, p1)
 }
 
 //CreateBuilderMinimockCounter returns a count of ExpectedMock.CreateBuilderFunc invocations
