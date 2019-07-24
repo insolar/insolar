@@ -119,7 +119,7 @@ func TestEPGetProfiles(t *testing.T) {
 	require.Len(t, ep.GetProfiles(), len(evicts))
 }
 
-func TestGetNodeID(t *testing.T) {
+func TestEPGetNodeID(t *testing.T) {
 	sp := profiles.NewStaticProfileMock(t)
 	nodeID := insolar.ShortNodeID(1)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return nodeID })
@@ -127,25 +127,25 @@ func TestGetNodeID(t *testing.T) {
 	require.Equal(t, nodeID, es.GetNodeID())
 }
 
-func TestGetStatic(t *testing.T) {
+func TestEPGetStatic(t *testing.T) {
 	sp := profiles.NewStaticProfileMock(t)
 	es := evictedSlot{StaticProfile: sp}
 	require.Equal(t, sp, es.GetStatic())
 }
 
-func TestGetSignatureVerifier(t *testing.T) {
+func TestEPGetSignatureVerifier(t *testing.T) {
 	sv := cryptkit.NewSignatureVerifierMock(t)
 	es := evictedSlot{sf: sv}
 	require.Equal(t, sv, es.GetSignatureVerifier())
 }
 
-func TestGetOpMode(t *testing.T) {
+func TestEPGetOpMode(t *testing.T) {
 	opMode := member.ModeSuspected
 	es := evictedSlot{mode: opMode}
 	require.Equal(t, opMode, es.GetOpMode())
 }
 
-func TestGetLeaveReason(t *testing.T) {
+func TestEPGetLeaveReason(t *testing.T) {
 	opMode := member.ModeEvictedGracefully
 	leaveReason := uint32(1)
 	es := evictedSlot{mode: opMode, leaveReason: leaveReason}
