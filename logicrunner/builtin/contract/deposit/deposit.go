@@ -27,13 +27,12 @@ import (
 
 type status string
 
-const month = 30 * 24 * 60 * 60
 const (
+	month = 30 * 24 * 60 * 60
+
 	confirms           uint                = 3
 	offSetDepositPulse insolar.PulseNumber = 6 * month
-)
 
-const (
 	statusOpen    status = "Open"
 	statusHolding status = "Holding"
 	statusClose   status = "Close"
@@ -45,7 +44,7 @@ type Deposit struct {
 	PulseDepositCreate      insolar.PulseNumber `json:"timestamp"`
 	PulseDepositHold        insolar.PulseNumber `json:"holdStartDate"`
 	PulseDepositUnHold      insolar.PulseNumber `json:"holdReleaseDate"`
-	MigrationDaemonConfirms [3]string           `json:"migrationDaemonConfirms"`
+	MigrationDaemonConfirms [3]string           `json:"confirmerReferences"`
 	Confirms                uint                `json:"confirms"`
 	Amount                  string              `json:"amount"`
 	Bonus                   string              `json:"bonus"`

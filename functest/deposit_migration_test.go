@@ -54,9 +54,9 @@ func TestMigrationToken(t *testing.T) {
 	require.Equal(t, deposit["status"], "Open")
 	require.Equal(t, deposit["confirms"], float64(1))
 
-	migrationDaemonConfirms, ok := deposit["migrationDaemonConfirms"].([]interface{})
-	require.True(t, ok, fmt.Sprintf("failed to cast result: expected []string, got %T", deposit["migrationDaemonConfirms"]))
-	require.Equal(t, migrationDaemonConfirms[0], migrationDaemons[0].ref)
+	confirmerReferences, ok := deposit["confirmerReferences"].([]interface{})
+	require.True(t, ok, fmt.Sprintf("failed to cast result: expected []string, got %T", deposit["confirmerReferences"]))
+	require.Equal(t, confirmerReferences[0], migrationDaemons[0].ref)
 
 	_, err = signedRequest(
 		&migrationDaemons[1],
@@ -74,10 +74,10 @@ func TestMigrationToken(t *testing.T) {
 	require.Equal(t, deposit["status"], "Open")
 	require.Equal(t, deposit["confirms"], float64(2))
 
-	migrationDaemonConfirms, ok = deposit["migrationDaemonConfirms"].([]interface{})
+	confirmerReferences, ok = deposit["confirmerReferences"].([]interface{})
 	require.True(t, ok)
-	require.Equal(t, migrationDaemonConfirms[0], migrationDaemons[0].ref)
-	require.Equal(t, migrationDaemonConfirms[1], migrationDaemons[1].ref)
+	require.Equal(t, confirmerReferences[0], migrationDaemons[0].ref)
+	require.Equal(t, confirmerReferences[1], migrationDaemons[1].ref)
 
 	_, err = signedRequest(
 		&migrationDaemons[2],
@@ -95,11 +95,11 @@ func TestMigrationToken(t *testing.T) {
 	require.Equal(t, deposit["status"], "Holding")
 	require.Equal(t, deposit["confirms"], float64(3))
 
-	migrationDaemonConfirms, ok = deposit["migrationDaemonConfirms"].([]interface{})
+	confirmerReferences, ok = deposit["confirmerReferences"].([]interface{})
 	require.True(t, ok)
-	require.Equal(t, migrationDaemonConfirms[0], migrationDaemons[0].ref)
-	require.Equal(t, migrationDaemonConfirms[1], migrationDaemons[1].ref)
-	require.Equal(t, migrationDaemonConfirms[2], migrationDaemons[2].ref)
+	require.Equal(t, confirmerReferences[0], migrationDaemons[0].ref)
+	require.Equal(t, confirmerReferences[1], migrationDaemons[1].ref)
+	require.Equal(t, confirmerReferences[2], migrationDaemons[2].ref)
 }
 
 func TestMigrationTokenNotInTheList(t *testing.T) {
