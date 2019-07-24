@@ -34,6 +34,7 @@ import (
 )
 
 func TestJetInfoIsConfirmed_OneDropOneHot(t *testing.T) {
+	t.Parallel()
 	ji := jetInfo{}
 	require.False(t, ji.isConfirmed())
 
@@ -47,6 +48,7 @@ func TestJetInfoIsConfirmed_OneDropOneHot(t *testing.T) {
 }
 
 func TestJetInfoIsConfirmed_Split(t *testing.T) {
+	t.Parallel()
 	ji := jetInfo{}
 	require.False(t, ji.isConfirmed())
 	testJet := gen.JetID()
@@ -67,6 +69,7 @@ func TestJetInfoIsConfirmed_Split(t *testing.T) {
 }
 
 func TestJetInfoIsConfirmed_Split_And_DifferentOrderOfComingConfirmations(t *testing.T) {
+	t.Parallel()
 	ji := jetInfo{}
 	require.False(t, ji.isConfirmed())
 	testJet := gen.JetID()
@@ -87,9 +90,10 @@ func TestJetInfoIsConfirmed_Split_And_DifferentOrderOfComingConfirmations(t *tes
 }
 
 func TestJetInfo_RewriteWithDifferentParent(t *testing.T) {
+	t.Parallel()
 	ji := jetInfo{}
 	require.False(t, ji.isConfirmed())
-	testJet := gen.JetID()
+	testJet := *insolar.NewJetID(5, gen.ID().Bytes())
 
 	left, _ := jet.Siblings(testJet)
 
@@ -103,6 +107,7 @@ func TestJetInfo_RewriteWithDifferentParent(t *testing.T) {
 }
 
 func TestJetInfo_ExistingHot(t *testing.T) {
+	t.Parallel()
 	ji := jetInfo{}
 	require.False(t, ji.isConfirmed())
 	testJet := gen.JetID()
@@ -117,6 +122,7 @@ func TestJetInfo_ExistingHot(t *testing.T) {
 }
 
 func TestJetInfo_ExistingDrop(t *testing.T) {
+	t.Parallel()
 	ji := jetInfo{}
 	require.False(t, ji.isConfirmed())
 	testJet := gen.JetID()
@@ -128,6 +134,7 @@ func TestJetInfo_ExistingDrop(t *testing.T) {
 }
 
 func TestJetInfo_ExceedNumHotConfirmations(t *testing.T) {
+	t.Parallel()
 	ji := jetInfo{}
 	require.False(t, ji.isConfirmed())
 	testJet := gen.JetID()
@@ -145,6 +152,7 @@ func TestJetInfo_ExceedNumHotConfirmations(t *testing.T) {
 }
 
 func TestNewJetKeeper(t *testing.T) {
+	t.Parallel()
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
@@ -159,6 +167,7 @@ func TestNewJetKeeper(t *testing.T) {
 }
 
 func TestDbJetKeeper_AddDropConfirmation(t *testing.T) {
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
 
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
@@ -187,6 +196,7 @@ func TestDbJetKeeper_AddDropConfirmation(t *testing.T) {
 }
 
 func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
 
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
@@ -247,6 +257,7 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 }
 
 func TestDbJetKeeper_TopSyncPulse_FinalizeMultiple(t *testing.T) {
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
 
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
@@ -345,23 +356,3 @@ func TestDbJetKeeper_TopSyncPulse_FinalizeMultiple(t *testing.T) {
 	require.Equal(t, futurePulse, jetKeeper.TopSyncPulse())
 
 }
-
-// func TestDbJetKeeper_Add_CantGetPulse(t *testing.T) {
-// 	ctx := inslogger.TestContext(t)
-// 	dbMock := store.NewDBMock(t)
-//
-// 	pn := insolar.GenesisPulse.PulseNumber
-//
-// 	dbMock.GetMock.Expect(jetKeeperKey(pn)).Return([]byte{}, nil)
-//
-// 	jets := jet.NewStorageMock(t)
-// 	pulses := pulse.NewCalculatorMock(t)
-//
-// 	jetKeeper := NewJetKeeper(jets, dbMock, pulses)
-// 	err := jetKeeper.AddHotConfirmation(ctx, pn, insolar.ZeroJetID)
-// 	require.Error(t, err)
-//
-// 	err = jetKeeper.AddDropConfirmation(ctx, pn, insolar.ZeroJetID)
-// 	require.Error(t, err)
-//
-// }
