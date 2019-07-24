@@ -601,7 +601,7 @@ func (r *FullRealm) GetWelcomePackage() *proofs.NodeWelcomePackage {
 func (r *FullRealm) BuildNextPopulation(ctx context.Context, ranks []profiles.PopulationRank,
 	gsh proofs.GlobulaStateHash, csh proofs.CloudStateHash) bool {
 
-	b := r.census.CreateBuilder(r.GetNextPulseNumber())
+	b := r.census.CreateBuilder(ctx, r.GetNextPulseNumber())
 	pb := b.GetPopulationBuilder()
 	selfID := r.GetSelfNodeID()
 	localUpdProfile := pb.GetLocalProfile()

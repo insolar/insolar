@@ -103,6 +103,23 @@ type OnlinePopulation interface {
 	GetLocalProfile() profiles.LocalNode
 }
 
+type RecoverableErrorTypes uint32
+
+const EmptyPopulation RecoverableErrorTypes = 0
+
+const (
+	External RecoverableErrorTypes = 1 << iota
+	EmptySlot
+	IllegalRole
+	IllegalMode
+	IllegalIndex
+	DuplicateIndex
+	BriefProfile
+	DuplicateID
+	IllegalSorting
+	MissingSelf
+)
+
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.EvictedPopulation -o . -s _mock.go
 
 type EvictedPopulation interface {
@@ -111,6 +128,9 @@ type EvictedPopulation interface {
 	GetCount() int
 	/* slice will never contain nil. when the relevant online population is !IsValid() then it will also include erroneous nodes */
 	GetProfiles() []profiles.EvictedNode
+
+	IsValid() bool
+	GetDetectedErrors() RecoverableErrorTypes
 }
 
 type PopulationBuilder interface {

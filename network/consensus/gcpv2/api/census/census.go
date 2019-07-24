@@ -51,6 +51,7 @@
 package census
 
 import (
+	"context"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
@@ -76,7 +77,7 @@ type Operational interface {
 	GetOnlinePopulation() OnlinePopulation
 	GetEvictedPopulation() EvictedPopulation
 	GetOfflinePopulation() OfflinePopulation
-	CreateBuilder(pn pulse.Number) Builder
+	CreateBuilder(ctx context.Context, pn pulse.Number) Builder
 	IsActive() bool
 
 	GetMisbehaviorRegistry() MisbehaviorRegistry

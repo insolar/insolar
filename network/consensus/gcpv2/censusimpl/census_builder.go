@@ -51,7 +51,8 @@
 package censusimpl
 
 import (
-	"fmt"
+	"context"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -61,9 +62,10 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 )
 
-func newLocalCensusBuilder(chronicles *localChronicles, pn pulse.Number, population copyToPopulation) *LocalCensusBuilder {
+func newLocalCensusBuilder(ctx context.Context, chronicles *localChronicles, pn pulse.Number,
+	population copyToPopulation) *LocalCensusBuilder {
 
-	r := &LocalCensusBuilder{chronicles: chronicles, pulseNumber: pn}
+	r := &LocalCensusBuilder{chronicles: chronicles, pulseNumber: pn, ctx: ctx}
 	r.population = NewDynamicPopulationCopySelf(population)
 	r.populationBuilder.census = r
 	return r
@@ -72,6 +74,7 @@ func newLocalCensusBuilder(chronicles *localChronicles, pn pulse.Number, populat
 var _ census.Builder = &LocalCensusBuilder{}
 
 type LocalCensusBuilder struct {
+	ctx               context.Context
 	mutex             sync.RWMutex
 	chronicles        *localChronicles
 	pulseNumber       pulse.Number
@@ -154,13 +157,10 @@ func (c *LocalCensusBuilder) build(markBroken bool, csh proofs.CloudStateHash) (
 	}
 	c.csh = csh
 	c.state = census.CompleteCensus
-	pop, evicts := c.population.CopyAndSeparate(func(e RecoverableErrorType, msg string, args ...interface{}) {
-		// TODO
-		fmt.Printf(msg, args...)
+	log := inslogger.FromContext(c.ctx)
+	pop, evicts := c.population.CopyAndSeparate(markBroken, func(e census.RecoverableErrorTypes, msg string, args ...interface{}) {
+		log.Debugf(msg, args)
 	})
-	if markBroken {
-		pop.SetInvalid()
-	}
 	return pop, evicts
 }
 

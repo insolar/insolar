@@ -139,31 +139,16 @@ func (c *ManyNodePopulation) GetRolePopulation(role member.PrimaryRole) census.R
 }
 
 func (c *ManyNodePopulation) GetWorkingRoles() []member.PrimaryRole {
-	return append(make([]member.PrimaryRole, len(c.workingRoles)), c.workingRoles...)
+	return append(make([]member.PrimaryRole, 0, len(c.workingRoles)), c.workingRoles...)
 }
 
 func (c *ManyNodePopulation) copyTo(p copyFromPopulation) {
 	p.makeCopyOf(c.slots, c.local)
 }
 
-type RecoverableErrorType int
+type RecoverableReport func(e census.RecoverableErrorTypes, msg string, args ...interface{})
 
-const (
-	EmptySlot RecoverableErrorType = iota
-	EmptyPopulation
-	IllegalRole
-	IllegalMode
-	IllegalIndex
-	DuplicateIndex
-	BriefProfile
-	DuplicateID
-	IllegalSorting
-	MissingSelf
-)
-
-type RecoverableReport func(e RecoverableErrorType, msg string, args ...interface{})
-
-func panicOnRecoverable(e RecoverableErrorType, msg string, args ...interface{}) {
+func panicOnRecoverable(e census.RecoverableErrorTypes, msg string, args ...interface{}) {
 	panic(fmt.Sprintf(msg, args...))
 }
 
@@ -177,7 +162,7 @@ func (c *ManyNodePopulation) makeCopyOfMapAndSeparateEvicts(slots map[insolar.Sh
 
 	if len(slots) == 0 {
 		c.isInvalid = true
-		fail(EmptyPopulation, "empty node population")
+		fail(census.EmptyPopulation, "empty node population")
 		return nil
 	}
 
@@ -204,28 +189,28 @@ func (c *ManyNodePopulation) _filterAndFillInSlots(slots map[insolar.ShortNodeID
 	for id, vv := range slots {
 		if vv == nil || vv.StaticProfile == nil || id == insolar.AbsentShortNodeID {
 			c.isInvalid = true
-			fail(EmptySlot, "invalid slot: id:%d", id)
+			fail(census.EmptySlot, "invalid slot: id:%d", id)
 			continue
 		}
 		switch {
 		case vv.GetPrimaryRole() == member.PrimaryRoleInactive:
 			c.isInvalid = true
-			fail(IllegalRole, "invalid role: id:%d", id)
+			fail(census.IllegalRole, "invalid role: id:%d", id)
 		case vv.IsJoiner():
 			c.isInvalid = true
-			fail(IllegalMode, "invalid mode: id:%d joiner", id)
+			fail(census.IllegalMode, "invalid mode: id:%d joiner", id)
 		case vv.mode.IsEvicted():
 			//
 		case int(vv.index) /* avoid panic */ >= len(c.slots):
 			c.isInvalid = true
-			fail(IllegalIndex, "index out of bound: id:%d %d", id, vv.index)
+			fail(census.IllegalIndex, "index out of bound: id:%d %d", id, vv.index)
 		case c.slots[vv.index].StaticProfile != nil:
 			c.isInvalid = true
-			fail(DuplicateIndex, "duplicate index: id:%d %d", id, vv.index)
+			fail(census.DuplicateIndex, "duplicate index: id:%d %d", id, vv.index)
 		default:
 			if vv.GetExtension() == nil {
 				c.isInvalid = true
-				fail(BriefProfile, "incomplete index: id:%d %d", id, vv.StaticProfile)
+				fail(census.BriefProfile, "incomplete index: id:%d %d", id, vv.StaticProfile)
 			}
 			c.slots[vv.index] = *vv
 			slotCount++
@@ -275,14 +260,14 @@ func (c *ManyNodePopulation) _fillInRoleStatsAndMap(localID insolar.ShortNodeID,
 		if checkUniqueID && c.slotByID[nodeID] != nil {
 			// NB! this flag is only used when strictChecks == true, it should panic always
 			c.isInvalid = true
-			fail(DuplicateID, "duplicate ShortNodeID: id:%d idx:%d", nodeID, i)
+			fail(census.DuplicateID, "duplicate ShortNodeID: id:%d idx:%d", nodeID, i)
 		}
 		c.slotByID[nodeID] = vv
 
 		role := vv.GetPrimaryRole()
 		if role == member.PrimaryRoleInactive {
 			c.isInvalid = true
-			fail(IllegalRole, "invalid role: id:%d idx:%d", nodeID, i)
+			fail(census.IllegalRole, "invalid role: id:%d idx:%d", nodeID, i)
 		}
 
 		if vv.power == 0 || vv.mode.IsPowerless() || role == member.PrimaryRoleInactive {
@@ -295,7 +280,7 @@ func (c *ManyNodePopulation) _fillInRoleStatsAndMap(localID insolar.ShortNodeID,
 		} else {
 			if lastRole < role {
 				c.isInvalid = true
-				fail(IllegalSorting, "invalid population order: id:%d idx:%d prev:%v this:%v", nodeID, i, lastRole, role)
+				fail(census.IllegalSorting, "invalid population order: id:%d idx:%d prev:%v this:%v", nodeID, i, lastRole, role)
 			}
 
 			if c.roles[role].role == member.PrimaryRoleInactive {
@@ -331,7 +316,7 @@ func (c *ManyNodePopulation) _fillInRoleStatsAndMap(localID insolar.ShortNodeID,
 	c.local = c.slotByID[localID]
 	if c.local == nil {
 		c.isInvalid = true
-		fail(MissingSelf, "missing self: id:%d", localID)
+		fail(census.MissingSelf, "missing self: id:%d", localID)
 	}
 }
 
@@ -401,7 +386,7 @@ func (c *ManyNodePopulation) GetLocalProfile() profiles.LocalNode {
 	return c.local
 }
 
-func (c *ManyNodePopulation) SetInvalid() {
+func (c *ManyNodePopulation) setInvalid() {
 	c.isInvalid = true
 }
 
@@ -482,11 +467,24 @@ func (c *DynamicPopulation) GetLocalProfile() profiles.LocalNode {
 	return c.local
 }
 
-func (c *DynamicPopulation) CopyAndSeparate(fail RecoverableReport) (*ManyNodePopulation, census.EvictedPopulation) {
+func (c *DynamicPopulation) CopyAndSeparate(forceInvalid bool, report RecoverableReport) (*ManyNodePopulation, census.EvictedPopulation) {
 
 	r := ManyNodePopulation{}
-	evicts := r.makeCopyOfMapAndSeparateEvicts(c.slotByID, c.local, fail)
-	evPop := newEvictedPopulation(evicts)
+	var handler RecoverableReport
+	var issues census.RecoverableErrorTypes
+
+	if report != nil {
+		handler = func(e census.RecoverableErrorTypes, msg string, args ...interface{}) {
+			issues |= e
+			report(e, msg, args)
+		}
+	}
+	evicts := r.makeCopyOfMapAndSeparateEvicts(c.slotByID, c.local, handler)
+	if forceInvalid {
+		r.setInvalid()
+		issues |= census.External
+	}
+	evPop := newEvictedPopulation(evicts, issues)
 	return &r, &evPop
 }
 

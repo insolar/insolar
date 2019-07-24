@@ -51,6 +51,7 @@
 package censusimpl
 
 import (
+	"context"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
@@ -208,8 +209,8 @@ func (c *PrimingCensusTemplate) GetMandateRegistry() census.MandateRegistry {
 	return c.registries.GetMandateRegistry()
 }
 
-func (c *PrimingCensusTemplate) CreateBuilder(pn pulse.Number) census.Builder {
-	return newLocalCensusBuilder(c.chronicles, pn, c.online)
+func (c *PrimingCensusTemplate) CreateBuilder(ctx context.Context, pn pulse.Number) census.Builder {
+	return newLocalCensusBuilder(ctx, c.chronicles, pn, c.online)
 }
 
 var _ census.Active = &ActiveCensusTemplate{}
@@ -303,8 +304,8 @@ func (c *ExpectedCensusTemplate) GetMandateRegistry() census.MandateRegistry {
 	return c.prev.GetMandateRegistry()
 }
 
-func (c *ExpectedCensusTemplate) CreateBuilder(pn pulse.Number) census.Builder {
-	return newLocalCensusBuilder(c.chronicles, pn, c.online)
+func (c *ExpectedCensusTemplate) CreateBuilder(ctx context.Context, pn pulse.Number) census.Builder {
+	return newLocalCensusBuilder(ctx, c.chronicles, pn, c.online)
 }
 
 func (c *ExpectedCensusTemplate) GetPrevious() census.Active {
