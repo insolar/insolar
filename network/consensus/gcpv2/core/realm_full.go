@@ -164,12 +164,12 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 	}
 
 	if sourceNode == nil {
-		memberCreated := false
-		memberCreated, err = pd.DispatchUnknownMemberPacket(ctx, sourceID, memberPacket, from)
+		memberTriggered := false
+		memberTriggered, err = pd.TriggerUnknownMember(ctx, sourceID, memberPacket, from)
 		if err != nil {
 			return err
 		}
-		if !memberCreated {
+		if !memberTriggered {
 			return fmt.Errorf("packet type (%v) from unknown sourceID(%v): from=%v", pt, sourceID, from)
 		}
 

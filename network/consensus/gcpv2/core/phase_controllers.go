@@ -65,11 +65,14 @@ import (
 )
 
 type PacketDispatcher interface {
-	DispatchHostPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags) error
-	DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, source *NodeAppearance) error
-	DispatchUnknownMemberPacket(ctx context.Context, memberID insolar.ShortNodeID, packet transport.MemberPacketReader,
-		from endpoints.Inbound) (bool, error)
 	HasCustomVerifyForHost(from endpoints.Inbound, strict bool) bool
+
+	DispatchHostPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags) error
+
+	/* This method can validate and create a member, but MUST NOT apply any changes to members etc */
+	TriggerUnknownMember(ctx context.Context, memberID insolar.ShortNodeID, packet transport.MemberPacketReader,
+		from endpoints.Inbound) (bool, error)
+	DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, source *NodeAppearance) error
 }
 
 type MemberPacketSender interface {

@@ -163,7 +163,7 @@ func (p *NodePhantom) SetPacketReceived(pt phases.PacketType) bool {
 func (p *NodePhantom) DispatchMemberPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
 	flags packetrecorder.PacketVerifyFlags, pd PacketDispatcher) error {
 
-	_, err := pd.DispatchUnknownMemberPacket(ctx, p.nodeID, packet.GetMemberPacket(), from)
+	_, err := pd.TriggerUnknownMember(ctx, p.nodeID, packet.GetMemberPacket(), from)
 	if err != nil {
 		return err
 	}
