@@ -70,7 +70,6 @@ import (
 )
 
 func TestNewLocalCensusBuilder(t *testing.T) {
-	t.Skipped()
 	chronicles := &localChronicles{}
 	pn := pulse.Number(1)
 	sp := profiles.NewStaticProfileMock(t)
