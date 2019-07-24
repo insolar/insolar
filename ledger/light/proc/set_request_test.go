@@ -53,14 +53,16 @@ func TestSetRequest_Proceed(t *testing.T) {
 		filaments     *executor.FilamentCalculatorMock
 		idxStorage    *object.IndexStorageMock
 		records       *object.RecordModifierMock
+		checker       *executor.RequestCheckerMock
 	)
 
 	resetComponents := func() {
 		writeAccessor = hot.NewWriteAccessorMock(mc)
 		sender = bus.NewSenderMock(mc)
-		filaments = executor.NewFilamentCalculatorMock(t)
-		idxStorage = object.NewIndexStorageMock(t)
-		records = object.NewRecordModifierMock(t)
+		filaments = executor.NewFilamentCalculatorMock(mc)
+		idxStorage = object.NewIndexStorageMock(mc)
+		records = object.NewRecordModifierMock(mc)
+		checker = executor.NewRequestCheckerMock(mc)
 	}
 
 	ref := gen.Reference()
@@ -132,9 +134,14 @@ func TestSetRequest_Proceed(t *testing.T) {
 
 			return nil
 		}
+		checker.CheckRequestFunc = func(_ context.Context, id insolar.ID, req record.Request) (r error) {
+			require.Equal(t, requestID, id)
+			require.Equal(t, &request, req)
+			return nil
+		}
 
 		p := proc.NewSetRequest(msg, &request, requestID, jetID)
-		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker(), idxStorage, records, pcs)
+		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker(), idxStorage, records, pcs, checker)
 
 		err = p.Proceed(ctx)
 		require.NoError(t, err)
@@ -144,12 +151,6 @@ func TestSetRequest_Proceed(t *testing.T) {
 
 	resetComponents()
 	t.Run("duplicate returns correct requestID", func(t *testing.T) {
-		idxStorage.ForIDMock.Return(record.Index{
-			Lifeline: record.Lifeline{
-				StateID: record.StateActivation,
-			},
-		}, nil)
-
 		reqID := gen.ID()
 		resID := gen.ID()
 		filaments.RequestDuplicateMock.Return(
@@ -167,7 +168,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 		}
 
 		p := proc.NewSetRequest(msg, &request, requestID, jetID)
-		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker(), idxStorage, records, pcs)
+		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker(), idxStorage, records, pcs, checker)
 
 		err = p.Proceed(ctx)
 		require.NoError(t, err)

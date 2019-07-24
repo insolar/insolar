@@ -46,6 +46,7 @@ type SetRequest struct {
 		indexes  object.IndexStorage
 		records  object.RecordModifier
 		pcs      insolar.PlatformCryptographyScheme
+		checker  executor.RequestChecker
 	}
 }
 
@@ -71,6 +72,7 @@ func (p *SetRequest) Dep(
 	i object.IndexStorage,
 	r object.RecordModifier,
 	pcs insolar.PlatformCryptographyScheme,
+	c executor.RequestChecker,
 ) {
 	p.dep.writer = w
 	p.dep.filament = f
@@ -79,6 +81,7 @@ func (p *SetRequest) Dep(
 	p.dep.indexes = i
 	p.dep.records = r
 	p.dep.pcs = pcs
+	p.dep.checker = c
 }
 
 func (p *SetRequest) Proceed(ctx context.Context) error {
@@ -150,6 +153,12 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 			}).Debug("request saved")
 			return nil
 		}
+	}
+
+	// Checking request validity.
+	err := p.dep.checker.CheckRequest(ctx, p.requestID, p.request)
+	if err != nil {
+		return errors.Wrap(err, "request check failed")
 	}
 
 	// Start writing to db.

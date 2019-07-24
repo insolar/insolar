@@ -13,8 +13,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.RequestChecker -o ./ -s _mock.go
+
 type RequestChecker interface {
-	CheckRequest(ctx context.Context, request record.Request) error
+	CheckRequest(ctx context.Context, requestID insolar.ID, request record.Request) error
 }
 
 type RequestCheckerDefault struct {
@@ -24,7 +26,7 @@ type RequestCheckerDefault struct {
 	sender      bus.Sender
 }
 
-func NewRequestCheckerDefault(
+func NewRequestChecker(
 	fc FilamentCalculator,
 	c jet.Coordinator,
 	jf JetFetcher,
@@ -75,7 +77,9 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 
 		// Reason should be closed.
 		if !request.IsDetached() && reasonInPendings {
-			return errors.New("request reason should be closed")
+			// FIXME: virtual doesn't pass this check.
+			// return errors.New("request reason should be closed")
+			inslogger.FromContext(ctx).Error("request reason should be closed")
 		}
 
 		// Detached reason should be pending.
