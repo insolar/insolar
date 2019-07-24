@@ -348,6 +348,11 @@ func (r *FullRealm) registerNextJoinCandidate() (*NodeAppearance, cryptkit.Diges
 			if err != nil {
 				inslogger.FromContext(r.roundContext).Error(err)
 			} else if nna != nil {
+				_, err = na.ApplyNodeStateHashEvidenceForJoiner()
+				if err != nil {
+					inslogger.FromContext(r.roundContext).Error("NOT EXPECTED", err)
+				}
+
 				inslogger.FromContext(r.roundContext).Debugf("Candidate/joiner added as dynamic node: s=%d, t=%d, full=%v",
 					r.nodeContext.localNodeID, np.GetNodeID(), np.GetExtension() != nil)
 
@@ -502,7 +507,7 @@ func (r *FullRealm) CreateAnnouncement(n *NodeAppearance) *transport.NodeAnnounc
 		case n == r.self:
 			panic("illegal state - local joiner is missing")
 		default:
-			r.GetPurgatory().FindJoinerProfile(ma.JoinerID, n.GetNodeID())
+			//r.GetPurgatory().FindJoinerProfile(ma.JoinerID, n.GetNodeID())
 			panic("illegal state - joiner is missing")
 		}
 	}

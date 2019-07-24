@@ -53,6 +53,8 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
 	"sync"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
@@ -212,7 +214,7 @@ func (p *PrepRealm) GetOriginalPulse() proofs.OriginalPulsarPacket {
 	return p.coreRealm.originalPulse
 }
 
-func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bool) error {
+func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bool, from endpoints.Inbound) error {
 	pd := pp.GetPulseData()
 
 	p.Lock()
@@ -235,9 +237,22 @@ func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bo
 		// TODO blame pulsar and/or node
 		return fmt.Errorf("invalid pulse data")
 	}
-	epn := p.GetExpectedPulseNumber()
-	if !epn.IsUnknown() && epn != pd.PulseNumber {
-		return fmt.Errorf("unexpected pulse number: expected=%v, received=%v", epn, pd.PulseNumber)
+
+	epn := pulse.Unknown
+	if p.initialCensus.GetCensusState() == census.PrimingCensus || p.initialCensus.IsActive() {
+		epn = p.initialCensus.GetExpectedPulseNumber()
+	} else {
+		epn = p.initialCensus.GetPulseNumber()
+	}
+
+	//	sourceID := packet.GetSourceID()
+	localID := p.self.GetNodeID()
+
+	pn := pd.PulseNumber
+	if !epn.IsUnknown() && epn != pn {
+		return errors.NewPulseRoundMismatchError(pn,
+			fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v, local=%d, from=%v",
+				epn, pn, localID, from))
 	}
 
 	p.originalPulse = pp.GetPulseDataEvidence()
@@ -246,10 +261,6 @@ func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bo
 	p.completeFn(true)
 
 	return nil
-}
-
-func (p *PrepRealm) GetExpectedPulseNumber() pulse.Number {
-	return p.initialCensus.GetExpectedPulseNumber()
 }
 
 func (p *PrepRealm) ApplyPopulationHint(populationCount int, from endpoints.Inbound) error {

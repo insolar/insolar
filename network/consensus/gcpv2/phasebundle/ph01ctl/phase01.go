@@ -70,8 +70,8 @@ import (
 /*
 Does Phase0/Phase1/Phase1Rq processing
 */
-func NewPhase01Controller(packetPrepareOptions transport.PacketPrepareOptions, qJoiners <-chan core.MemberPacketSender) *Phase01Controller {
-	return &Phase01Controller{packetPrepareOptions: packetPrepareOptions, qIntroToJoiner: qJoiners}
+func NewPhase01Controller(packetPrepareOptions transport.PacketPrepareOptions, qIntro <-chan core.MemberPacketSender) *Phase01Controller {
+	return &Phase01Controller{packetPrepareOptions: packetPrepareOptions, qIntro: qIntro}
 }
 
 func (p *packetPhase0Dispatcher) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, n *core.NodeAppearance) error {
@@ -161,7 +161,7 @@ var _ core.PhaseController = &Phase01Controller{}
 type Phase01Controller struct {
 	core.PhaseControllerTemplate
 	packetPrepareOptions transport.PacketPrepareOptions
-	qIntroToJoiner       <-chan core.MemberPacketSender
+	qIntro               <-chan core.MemberPacketSender
 	R                    *core.FullRealm
 }
 
@@ -304,20 +304,23 @@ func (c *Phase01Controller) workerSendPhase1ToDynamics(ctx context.Context) {
 
 	p1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
 		c.R.GetOriginalPulse(), c.R.GetWelcomePackage(),
-		c.packetPrepareOptions|transport.PrepareWithoutPulseData)
+		c.packetPrepareOptions)
 
-	sendOptions := c.packetPrepareOptions.AsSendOptions() | transport.SendWithoutPulseData | transport.TargetNeedsIntro
+	// TODO check if Phase1 packet size is ok to send both into and pulse data - then, as a backup - send Phase0
+
+	sendOptions := c.packetPrepareOptions.AsSendOptions() | transport.TargetNeedsIntro
 
 	selfID := c.R.GetSelfNodeID()
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case joiner := <-c.qIntroToJoiner:
-			if selfID == joiner.GetNodeID() || !joiner.SetPacketSent(phases.PacketPhase1) {
+		case introTo := <-c.qIntro:
+			if selfID == introTo.GetNodeID() {
 				continue
 			}
-			p1.SendTo(ctx, joiner, sendOptions, c.R.GetPacketSender())
+			//|| !introTo.SetPacketSent(phases.PacketPhase1)
+			p1.SendTo(ctx, introTo, sendOptions, c.R.GetPacketSender())
 		}
 	}
 }

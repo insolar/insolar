@@ -267,6 +267,9 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 	/* a separate method with lock is to ensure that further packet processing is not connected to a lock */
 	prep, filterPN, nextPN, prev := r.beforeHandlePacket()
 
+	sourceID := packet.GetSourceID()
+	localID := r.realm.self.GetNodeID()
+
 	switch {
 	case filterPN == pn:
 		// this is for us
@@ -289,7 +292,7 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 	default:
 		r.roundWorker.onUnexpectedPulse(pn)
 		return errors2.NewPulseRoundMismatchError(pn,
-			fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v", filterPN, pn))
+			fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v, source=%v, local=%d", filterPN, pn, sourceID, localID))
 	}
 
 	if prep != nil {

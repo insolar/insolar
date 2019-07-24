@@ -93,9 +93,9 @@ func (r *RegularPhaseBundle) CreatePrepPhaseControllers() []core.PrepPhaseContro
 }
 
 type regularCallback struct {
-	qNshReady      chan *core.NodeAppearance    // can NOT handle duplicate events
-	qTrustLvlUpd   chan ph2ctl.UpdateSignal     // can NOT handle duplicate events
-	qIntroToJoiner chan core.MemberPacketSender // can handle duplicate events
+	qNshReady    chan *core.NodeAppearance    // can NOT handle duplicate events
+	qTrustLvlUpd chan ph2ctl.UpdateSignal     // can NOT handle duplicate events
+	qIntro       chan core.MemberPacketSender // can handle duplicate events
 }
 
 func (p *regularCallback) OnPurgatoryNodeUpdate(populationVersion uint32, n *core.NodePhantom, flags core.UpdateFlags) {
@@ -103,14 +103,14 @@ func (p *regularCallback) OnPurgatoryNodeUpdate(populationVersion uint32, n *cor
 		p.qTrustLvlUpd <- ph2ctl.NewDynamicNodeCreated(nil)
 	}
 	if flags&core.FlagProfileUpdated != 0 {
-		p.qIntroToJoiner <- n
+		p.qIntro <- n
 	}
 }
 
 func (p *regularCallback) OnDynamicNodeUpdate(populationVersion uint32, n *core.NodeAppearance, flags core.UpdateFlags) {
 
 	if flags&core.FlagCreated != 0 {
-		p.qIntroToJoiner <- n
+		p.qIntro <- n
 		//		p.qTrustLvlUpd <- ph2ctl.NewDynamicNodeCreated(n)
 	}
 	if flags&core.FlagProfileUpdated != 0 {
@@ -169,7 +169,7 @@ func (r *RegularPhaseBundle) CreateFullPhaseControllers(nodeCount int) ([]core.P
 
 	return []core.PhaseController{
 		pulsectl.NewPulseController(),
-		ph01ctl.NewPhase01Controller(packetPrepareOptions, rcb.qIntroToJoiner),
+		ph01ctl.NewPhase01Controller(packetPrepareOptions, rcb.qIntro),
 		ph2ctl.NewPhase2Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qNshReady),
 		ph3ctl.NewPhase3Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qTrustLvlUpd,
 			r.ConsensusStrategy, r.VectorInspection, r.EnableFastPhase3),

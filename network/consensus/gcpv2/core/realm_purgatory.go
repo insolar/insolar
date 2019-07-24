@@ -192,7 +192,7 @@ func (p *RealmPurgatory) getMember(id insolar.ShortNodeID, introducedBy insolar.
 		return nil
 	}
 	if np != nil {
-		np.IntroducedBy(introducedBy)
+		// np.IntroducedBy(introducedBy) TODO do we need it?
 		return np
 	}
 

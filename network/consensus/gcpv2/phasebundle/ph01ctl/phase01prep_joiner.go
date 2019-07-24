@@ -120,8 +120,9 @@ func (c *JoinerPhase01PrepController) DispatchHostPacket(ctx context.Context, pa
 
 	// TODO joiner should wait for CloudIntro also!
 	ok, err := c.pulseStrategy.HandlePulsarPacket(ctx, pp, from, false)
-	if err != nil || !ok {
+	if err != nil || !ok || pp == nil {
 		return err
 	}
-	return c.realm.ApplyPulseData(pp, false)
+
+	return c.realm.ApplyPulseData(pp, false, from)
 }

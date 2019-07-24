@@ -146,29 +146,52 @@ func (c *ManyNodePopulation) copyTo(p copyFromPopulation) {
 	p.makeCopyOf(c.slots, c.local)
 }
 
+type RecoverableErrorType int
+
+const (
+	EmptySlot RecoverableErrorType = iota
+	EmptyPopulation
+	IllegalRole
+	IllegalMode
+	IllegalIndex
+	DuplicateIndex
+	BriefProfile
+	DuplicateID
+	IllegalSorting
+	MissingSelf
+)
+
+type RecoverableReport func(e RecoverableErrorType, msg string, args ...interface{})
+
+func panicOnRecoverable(e RecoverableErrorType, msg string, args ...interface{}) {
+	panic(fmt.Sprintf(msg, args...))
+}
+
 // TODO it needs extensive testing on detection/tolerance when an invalid population is provided
 func (c *ManyNodePopulation) makeCopyOfMapAndSeparateEvicts(slots map[insolar.ShortNodeID]*updatableSlot,
-	local *updatableSlot, strictChecks bool, compactIndex bool) []*updatableSlot {
+	local *updatableSlot, fail RecoverableReport) []*updatableSlot {
+
+	if fail == nil {
+		fail = panicOnRecoverable
+	}
 
 	if len(slots) == 0 {
 		c.isInvalid = true
-		if strictChecks {
-			panic("empty node population")
-		}
+		fail(EmptyPopulation, "empty node population")
 		return nil
 	}
 
 	localID := local.GetNodeID()
 
-	evicts, slotCount := c._filterAndFillInSlots(slots, strictChecks)
-	c._fillInRoleStatsAndMap(localID, slotCount, strictChecks, compactIndex, false)
+	evicts, slotCount := c._filterAndFillInSlots(slots, fail)
+	c._fillInRoleStatsAndMap(localID, slotCount, false, false, fail)
 	evicts = c._adjustSlotsAndCopyEvicts(localID, evicts)
 
 	return evicts
 }
 
 func (c *ManyNodePopulation) _filterAndFillInSlots(slots map[insolar.ShortNodeID]*updatableSlot,
-	strictChecks bool) ([]*updatableSlot, int) {
+	fail RecoverableReport) ([]*updatableSlot, int) {
 
 	if len(slots) > member.MaxNodeIndex {
 		panic("too many nodes")
@@ -179,42 +202,30 @@ func (c *ManyNodePopulation) _filterAndFillInSlots(slots map[insolar.ShortNodeID
 
 	slotCount := 0
 	for id, vv := range slots {
-		if vv == nil || vv.StaticProfile == nil {
+		if vv == nil || vv.StaticProfile == nil || id == insolar.AbsentShortNodeID {
 			c.isInvalid = true
-			if strictChecks {
-				panic(fmt.Sprintf("invalid slot: id=%d", id))
-			}
+			fail(EmptySlot, "invalid slot: id:%d", id)
 			continue
 		}
 		switch {
-		case vv.IsJoiner() || vv.GetPrimaryRole() == member.PrimaryRoleInactive:
+		case vv.GetPrimaryRole() == member.PrimaryRoleInactive:
 			c.isInvalid = true
-			if strictChecks {
-				panic(fmt.Sprintf("invalid role: %v", vv))
-			}
+			fail(IllegalRole, "invalid role: id:%d", id)
+		case vv.IsJoiner():
+			c.isInvalid = true
+			fail(IllegalMode, "invalid mode: id:%d joiner", id)
 		case vv.mode.IsEvicted():
 			//
-		case vv.index.AsInt() >= len(c.slots):
+		case int(vv.index) /* avoid panic */ >= len(c.slots):
 			c.isInvalid = true
-			if strictChecks {
-				panic("invalid index")
-			}
+			fail(IllegalIndex, "index out of bound: id:%d %d", id, vv.index)
 		case c.slots[vv.index].StaticProfile != nil:
 			c.isInvalid = true
-			if strictChecks {
-				panic("duplicate index")
-			}
-		//case c.slotByID[vv.GetNodeID()] != nil:
-		//	if strictChecks {
-		//		panic("duplicate node id")
-		//	}
-		//	valid = false
+			fail(DuplicateIndex, "duplicate index: id:%d %d", id, vv.index)
 		default:
 			if vv.GetExtension() == nil {
 				c.isInvalid = true
-				if strictChecks {
-					panic(fmt.Sprintf("incomplete profile: %v %v", vv.GetNodeID(), vv.StaticProfile))
-				}
+				fail(BriefProfile, "incomplete index: id:%d %d", id, vv.StaticProfile)
 			}
 			c.slots[vv.index] = *vv
 			slotCount++
@@ -231,7 +242,7 @@ func (c *ManyNodePopulation) _filterAndFillInSlots(slots map[insolar.ShortNodeID
 }
 
 func (c *ManyNodePopulation) _fillInRoleStatsAndMap(localID insolar.ShortNodeID, slotCount int,
-	strictChecks bool, compactIndex bool, checkUniqueID bool) {
+	compactIndex bool, checkUniqueID bool, fail RecoverableReport) {
 
 	if slotCount > 0 {
 		if slotCount > member.MaxNodeIndex {
@@ -264,32 +275,33 @@ func (c *ManyNodePopulation) _fillInRoleStatsAndMap(localID insolar.ShortNodeID,
 		if checkUniqueID && c.slotByID[nodeID] != nil {
 			// NB! this flag is only used when strictChecks == true, it should panic always
 			c.isInvalid = true
-			panic(fmt.Sprintf("duplicate ShortNodeID: %v", nodeID))
+			fail(DuplicateID, "duplicate ShortNodeID: id:%d idx:%d", nodeID, i)
 		}
 		c.slotByID[nodeID] = vv
 
 		role := vv.GetPrimaryRole()
+		if role == member.PrimaryRoleInactive {
+			c.isInvalid = true
+			fail(IllegalRole, "invalid role: id:%d idx:%d", nodeID, i)
+		}
 
-		if vv.power == 0 || vv.mode.IsPowerless() {
+		if vv.power == 0 || vv.mode.IsPowerless() || role == member.PrimaryRoleInactive {
 			c.roles[role].idleCount++
-			if lastRole != member.PrimaryRoleInactive && j != 0 {
-				c.roles[lastRole].prepare(c)
+			if c.roles[member.PrimaryRoleInactive].container == nil {
+				c.roles[member.PrimaryRoleInactive].container = c
+				c.roles[member.PrimaryRoleInactive].firstNode = j.AsUint16()
 			}
 			lastRole = member.PrimaryRoleInactive
 		} else {
 			if lastRole < role {
 				c.isInvalid = true
-				if strictChecks {
-					panic("invalid population order")
-				}
+				fail(IllegalSorting, "invalid population order: id:%d idx:%d prev:%v this:%v", nodeID, i, lastRole, role)
 			}
 
-			if lastRole != role {
-				if j != 0 {
-					c.roles[lastRole].prepare(c)
-				}
+			if c.roles[role].role == member.PrimaryRoleInactive {
+				c.roles[role].container = c
 				c.roles[role].role = role
-				c.roles[role].firstNode = vv.index.AsUint16()
+				c.roles[role].firstNode = j.AsUint16()
 				c.workingRoles = append(c.workingRoles, role)
 			}
 			c.roles[role].roleCount++
@@ -310,16 +322,16 @@ func (c *ManyNodePopulation) _fillInRoleStatsAndMap(localID insolar.ShortNodeID,
 	}
 	c.assignedSlotCount = uint16(j)
 
-	if j > 0 {
-		c.roles[lastRole].prepare(c)
+	for i := range c.roles {
+		if c.roles[i].role != member.PrimaryRoleInactive {
+			c.roles[i].prepare()
+		}
 	}
 
 	c.local = c.slotByID[localID]
 	if c.local == nil {
 		c.isInvalid = true
-		if strictChecks {
-			panic("illegal state")
-		}
+		fail(MissingSelf, "missing self: id:%d", localID)
 	}
 }
 
@@ -359,11 +371,14 @@ func (c *ManyNodePopulation) makeOfProfiles(nodes []profiles.StaticProfile, loca
 	c.slotByID = make(map[insolar.ShortNodeID]*updatableSlot, len(nodes))
 
 	for i, n := range nodes {
+		if n.GetStaticNodeID().IsAbsent() {
+			panic("illegal value")
+		}
 		verifier := vf.GetSignatureVerifierWithPKS(n.GetPublicKeyStore())
 		buf[i].NodeProfileSlot = NewNodeProfile(member.Index(i), n, verifier, 0) // Power MUST BE zero, index will be assigned later
 	}
 	c.slots = buf
-	c._fillInRoleStatsAndMap(localNodeID, len(c.slots), true, false, true)
+	c._fillInRoleStatsAndMap(localNodeID, len(c.slots), false, true, panicOnRecoverable)
 }
 
 func (c *ManyNodePopulation) FindProfile(nodeID insolar.ShortNodeID) profiles.ActiveNode {
@@ -467,10 +482,10 @@ func (c *DynamicPopulation) GetLocalProfile() profiles.LocalNode {
 	return c.local
 }
 
-func (c *DynamicPopulation) CopyAndSeparate(strictChecks bool) (*ManyNodePopulation, census.EvictedPopulation) {
+func (c *DynamicPopulation) CopyAndSeparate(fail RecoverableReport) (*ManyNodePopulation, census.EvictedPopulation) {
 
 	r := ManyNodePopulation{}
-	evicts := r.makeCopyOfMapAndSeparateEvicts(c.slotByID, c.local, strictChecks, !strictChecks)
+	evicts := r.makeCopyOfMapAndSeparateEvicts(c.slotByID, c.local, fail)
 	evPop := newEvictedPopulation(evicts)
 	return &r, &evPop
 }
@@ -530,11 +545,10 @@ type unitizedPowerPosition struct {
 	unitCount     uint16
 }
 
-func (p *roleRecord) prepare(container *ManyNodePopulation) {
-	if p.container != nil {
+func (p *roleRecord) prepare() {
+	if p.container == nil || len(p.powerPositions) > 0 {
 		panic("illegal state")
 	}
-	p.container = container
 	if p.rolePower == 0 {
 		return
 	}

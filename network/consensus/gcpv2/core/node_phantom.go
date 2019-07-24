@@ -82,12 +82,14 @@ var _ MemberPacketSender = &NodePhantom{}
 type NodePhantom struct {
 	purgatory *RealmPurgatory
 
-	nodeID  insolar.ShortNodeID
-	mutex   sync.Mutex
-	limiter phases.PacketLimiter
+	nodeID    insolar.ShortNodeID
+	mutex     sync.Mutex
+	limiter   phases.PacketLimiter
+	recorder  packetrecorder.UnsafePacketRecorder
+	hasAscent bool
 
-	figment  figment
-	recorder packetrecorder.UnsafePacketRecorder
+	figment figment
+
 	// figments map[string]*figment
 }
 
@@ -191,23 +193,22 @@ func (p *NodePhantom) DispatchAnnouncement(ctx context.Context, rank member.Rank
 	return p.figment.dispatchAnnouncement(ctx, p, rank, profile, announcement, introducedByID)
 }
 
-func (p *NodePhantom) isAscent() bool {
-	return !p.recorder.IsRecording()
-}
+func (p *NodePhantom) ascend(ctx context.Context, nsp profiles.StaticProfile, rank member.Rank, sv cryptkit.SignatureVerifier) bool {
 
-func (p *NodePhantom) ascend(ctx context.Context, nsp profiles.StaticProfile, rank member.Rank, sv cryptkit.SignatureVerifier) {
-
-	if p.isAscent() {
-		panic("illegal state")
+	if p.hasAscent {
+		return false
 	}
+	p.hasAscent = true
 
 	p.purgatory.ascendFromPurgatory(ctx, p.nodeID, nsp, rank, sv)
 	p.recorder.Playback(p.purgatory.postponedPacketFn)
+	return true
 }
 
-func (p *NodePhantom) IntroducedBy( /* introducedBy */ insolar.ShortNodeID) {
-
-}
+//func (p *NodePhantom) IntroducedBy( /* introducedBy */ insolar.ShortNodeID) {
+//
+//	// TODO do we need it?
+//}
 
 type figment struct {
 	phantom     *NodePhantom
@@ -244,11 +245,6 @@ func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom
 
 		flags |= FlagCreated
 	}
-	if p.announcerID.IsAbsent() && announcedBy != phantom.nodeID && !announcedBy.IsAbsent() {
-		p.announcerID = announcedBy
-		hasUpdate = true
-	}
-
 	ascentWithBrief := p.phantom.purgatory.IsBriefAscensionAllowed()
 
 	hasProfileUpdate, hasMismatch := p.updateProfile(rank, profile)
@@ -257,16 +253,20 @@ func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom
 			p.phantom.purgatory.callback.localNodeID, p.phantom.nodeID, announcedBy, rank, profile, p.rank, p.profile, announcement))
 		// TODO return p.RegisterFraud(p.Frauds().NewInconsistentNeighbourAnnouncement(p.GetReportProfile()))
 	}
+
 	if hasProfileUpdate {
-		hasUpdate = true
 		flags |= FlagProfileUpdated
+		hasUpdate = true
+	}
+	if p.announcerID.IsAbsent() && !announcedBy.IsAbsent() && (announcedBy != phantom.nodeID || !p.rank.IsJoiner()) {
+		p.announcerID = announcedBy
+		hasUpdate = true
 	}
 
 	if flags != 0 {
 		p.phantom.purgatory.onNodeUpdated(p.phantom, flags)
 	}
 	if !hasUpdate || p.profile == nil {
-		// just nothing new
 		return nil
 	}
 
@@ -276,6 +276,7 @@ func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom
 	case p.profile.GetExtension() != nil || ascentWithBrief:
 		inslogger.FromContext(ctx).Debugf("Phantom node ascension: s=%d, t=%d, full=%v",
 			p.phantom.purgatory.callback.localNodeID, p.phantom.nodeID, p.profile.GetExtension() != nil)
+
 		p.phantom.ascend(ctx, p.profile, p.rank, nil)
 	}
 	return nil

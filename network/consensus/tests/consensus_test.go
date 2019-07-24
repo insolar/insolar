@@ -127,6 +127,14 @@ func (h *EmuHostConsensusAdapter) run(ctx context.Context) {
 			if err == nil {
 				if packet != nil {
 					hostFrom := endpoints.InboundConnection{Addr: *from}
+
+					sourceID := packet.GetSourceID()
+					targetID := packet.GetTargetID()
+
+					if sourceID != 0 && sourceID == targetID { // TODO for debugging
+						panic("must not")
+					}
+
 					err = h.controller.ProcessPacket(ctx, packet, &hostFrom)
 				}
 			}

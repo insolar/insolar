@@ -51,6 +51,7 @@
 package censusimpl
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -153,7 +154,10 @@ func (c *LocalCensusBuilder) build(markBroken bool, csh proofs.CloudStateHash) (
 	}
 	c.csh = csh
 	c.state = census.CompleteCensus
-	pop, evicts := c.population.CopyAndSeparate(false)
+	pop, evicts := c.population.CopyAndSeparate(func(e RecoverableErrorType, msg string, args ...interface{}) {
+		// TODO
+		fmt.Printf(msg, args...)
+	})
 	if markBroken {
 		pop.SetInvalid()
 	}

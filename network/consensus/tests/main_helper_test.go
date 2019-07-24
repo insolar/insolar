@@ -116,16 +116,16 @@ func (p *emuNetworkBuilder) _connectEmuNode(nodes []profiles.StaticProfile, self
 
 	controlFeeder := &EmuControlFeeder{}
 	candidateFeeder := &core.SequentialCandidateFeeder{}
-	//switch {
-	//case !asJoiner && selfIndex%3 == 1:
-	//	introID := 8000 + selfIndex
-	//	intro := NewEmuNodeIntroByName(introID, fmt.Sprintf(fmtNodeName, "V", introID))
-	//	candidateFeeder.AddJoinCandidate(intro)
-	//
-	//	p._connectEmuNode([]profiles.StaticProfile{intro}, 0, true)
-	//case selfIndex%5 == 2:
-	//	controlFeeder.leaveReason = uint32(selfIndex) // simulate leave
-	//}
+	switch {
+	case !asJoiner && selfIndex%3 == 1:
+		introID := 8000 + selfIndex
+		intro := NewEmuNodeIntroByName(introID, fmt.Sprintf(fmtNodeName, "V", introID))
+		candidateFeeder.AddJoinCandidate(intro)
+
+		p._connectEmuNode([]profiles.StaticProfile{intro}, 0, true)
+		//case selfIndex%5 == 2:
+		//	controlFeeder.leaveReason = uint32(selfIndex) // simulate leave
+	}
 
 	chronicles := NewEmuChronicles(nodes, selfIndex, asJoiner, p.primingCloudStateHash)
 	self := nodes[selfIndex]
