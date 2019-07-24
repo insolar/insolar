@@ -51,7 +51,6 @@ func TestMigrationToken(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, deposit["amount"], "1000")
 	require.Equal(t, deposit["ethTxHash"], "Test_TxHash")
-	require.Equal(t, deposit["status"], "Open")
 	require.Equal(t, deposit["confirms"], float64(1))
 
 	confirmerReferences, ok := deposit["confirmerReferences"].([]interface{})
@@ -71,7 +70,6 @@ func TestMigrationToken(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, deposit["amount"], "1000")
 	require.Equal(t, deposit["ethTxHash"], "Test_TxHash")
-	require.Equal(t, deposit["status"], "Open")
 	require.Equal(t, deposit["confirms"], float64(2))
 
 	confirmerReferences, ok = deposit["confirmerReferences"].([]interface{})
@@ -92,7 +90,6 @@ func TestMigrationToken(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, deposit["amount"], "1000")
 	require.Equal(t, deposit["ethTxHash"], "Test_TxHash")
-	require.Equal(t, deposit["status"], "Holding")
 	require.Equal(t, deposit["confirms"], float64(3))
 
 	confirmerReferences, ok = deposit["confirmerReferences"].([]interface{})
