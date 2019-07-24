@@ -35,6 +35,7 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
@@ -402,6 +403,34 @@ func contextFromServiceData(data message.ServiceData) context.Context {
 		return instracer.WithParentSpan(ctx, parentSpan)
 	}
 	return ctx
+}
+
+func freshContextFromContext(ctx context.Context) context.Context {
+	res := inslogger.ContextWithTrace(
+		context.Background(),
+		inslogger.TraceID(ctx),
+	)
+	//FIXME: need way to get level out of context
+	//res = inslogger.WithLoggerLevel(res, data.LogLevel)
+	parentSpan, ok := instracer.ParentSpan(ctx)
+	if ok {
+		res = instracer.WithParentSpan(res, parentSpan)
+	}
+	return res
+}
+
+func freshContextFromContextAndRequest(ctx context.Context, req record.IncomingRequest) context.Context {
+	res := inslogger.ContextWithTrace(
+		context.Background(),
+		req.APIRequestID, // this is HACK based on awareness, we just know how trace id is formed
+	)
+	//FIXME: need way to get level out of context
+	//res = inslogger.WithLoggerLevel(res, data.LogLevel)
+	parentSpan, ok := instracer.ParentSpan(ctx)
+	if ok {
+		res = instracer.WithParentSpan(res, parentSpan)
+	}
+	return res
 }
 
 func serviceDataFromContext(ctx context.Context) message.ServiceData {

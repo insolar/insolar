@@ -120,7 +120,8 @@ func (rf *requestsFetcher) fetch(ctx context.Context) error {
 		default:
 		}
 
-		tr := NewTranscript(ctx, reqRef, *request)
+		requestCtx := freshContextFromContextAndRequest(ctx, *request)
+		tr := NewTranscript(requestCtx, reqRef, *request)
 		rf.broker.AddRequestsFromLedger(ctx, tr)
 	}
 

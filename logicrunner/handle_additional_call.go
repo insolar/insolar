@@ -56,7 +56,7 @@ func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
 		broker.SetNotPending(ctx)
 	}
 
-	tr := NewTranscript(ctx, msg.RequestRef, msg.Request)
+	tr := NewTranscript(freshContextFromContext(ctx), msg.RequestRef, msg.Request)
 	broker.AddAdditionalRequestFromPrevExecutor(ctx, tr)
 }
 
