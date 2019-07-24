@@ -253,8 +253,7 @@ func New() (*TestSagaSimpleCallContract, error) {
 	return &TestSagaSimpleCallContract{Amount: 100}, nil
 }
 
-func (r *TestSagaSimpleCallContract) Transfer10() (string, error) {
-	n := 10
+func (r *TestSagaSimpleCallContract) Transfer(n int) (string, error) {
 	second := test_saga_simple_contract.New()
 	w2, err := second.AsChild(r.GetReference())
 	if err != nil {
@@ -287,7 +286,7 @@ func (w *TestSagaSimpleCallContract) Rollback(amount int) error {
 `
 	prototype := uploadContractOnce(t, "test_saga_simple_contract", contractCode)
 	firstWalletRef := callConstructor(t, prototype, "New")
-	resp := callMethod(t, firstWalletRef, "Transfer10", nil) // AALEKSEEV TODO try to pass 10 as an argument
+	resp := callMethod(t, firstWalletRef, "Transfer", int(amount))
 	require.Empty(t, resp.Error)
 
 	secondWalletRef, err := insolar.NewReferenceFromBase58(resp.ExtractedReply.(string))

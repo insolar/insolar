@@ -173,13 +173,13 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}{{if $method.Immutable}}AsMutab
 		return {{ $method.ResultsWithErr }}
 	}
 
-    {{/* Saga call doesn't has a reply (it's `nil`), thus we shouldn't attempt to deserialize it. */}}
-    {{if $method.SagaInfo.IsSaga }}
+	{{/* Saga call doesn't has a reply (it's `nil`), thus we shouldn't attempt to deserialize it. */}}
+	{{if $method.SagaInfo.IsSaga }}
 	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, true, false, {{ $method.SagaInfo.IsSaga }}, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return {{ $method.ResultsWithErr }}
 	}
-    {{else}}
+	{{else}}
 	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, {{ $method.SagaInfo.IsSaga }}, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return {{ $method.ResultsWithErr }}
