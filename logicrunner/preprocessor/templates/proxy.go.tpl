@@ -193,7 +193,7 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}{{if $method.Immutable}}AsMutab
 	if {{ $method.ErrorVar }} != nil {
 		return {{ $method.Results }}
 	}
-	{{end}}
+	{{end -}}
 
 	return {{ $method.ResultsNilError }}
 }

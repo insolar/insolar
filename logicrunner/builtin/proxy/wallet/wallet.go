@@ -187,7 +187,6 @@ func (r *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toM
 	if ret1 != nil {
 		return ret0, ret1
 	}
-
 	return ret0, nil
 }
 
@@ -278,7 +277,6 @@ func (r *Wallet) Accept(amountStr string) error {
 	if ret0 != nil {
 		return ret0
 	}
-
 	return nil
 }
 
@@ -363,7 +361,6 @@ func (r *Wallet) RollBack(amountStr string) error {
 	if ret0 != nil {
 		return ret0
 	}
-
 	return nil
 }
 
@@ -449,7 +446,6 @@ func (r *Wallet) GetBalance() (string, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
-
 	return ret0, nil
 }
 

@@ -184,7 +184,6 @@ func (r *Tariff) CalcFee(amountStr string) (string, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
-
 	return ret0, nil
 }
 

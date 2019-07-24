@@ -170,7 +170,6 @@ func (r *RootDomain) GetCostCenterRef() (insolar.Reference, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
-
 	return ret0, nil
 }
 
@@ -256,7 +255,6 @@ func (r *RootDomain) GetFeeWalletRef() (insolar.Reference, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
-
 	return ret0, nil
 }
 
@@ -342,7 +340,6 @@ func (r *RootDomain) GetMigrationWalletRef() (insolar.Reference, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
-
 	return ret0, nil
 }
 
@@ -428,7 +425,6 @@ func (r *RootDomain) GetMigrationAdminMember() (insolar.Reference, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
-
 	return ret0, nil
 }
 
@@ -514,7 +510,6 @@ func (r *RootDomain) GetMigrationDaemonMembers() ([]insolar.Reference, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
-
 	return ret0, nil
 }
 
@@ -600,7 +595,6 @@ func (r *RootDomain) GetRootMemberRef() (insolar.Reference, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
-
 	return ret0, nil
 }
 
@@ -686,7 +680,6 @@ func (r *RootDomain) GetBurnAddress() (string, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
-
 	return ret0, nil
 }
 
@@ -773,7 +766,6 @@ func (r *RootDomain) GetMemberByPublicKey(publicKey string) (insolar.Reference, 
 	if ret1 != nil {
 		return ret0, ret1
 	}
-
 	return ret0, nil
 }
 
@@ -862,7 +854,6 @@ func (r *RootDomain) GetMemberByBurnAddress(burnAddress string) (insolar.Referen
 	if ret1 != nil {
 		return ret0, ret1
 	}
-
 	return ret0, nil
 }
 
@@ -950,7 +941,6 @@ func (r *RootDomain) GetCostCenter() (insolar.Reference, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
-
 	return ret0, nil
 }
 
@@ -1036,7 +1026,6 @@ func (r *RootDomain) GetNodeDomainRef() (insolar.Reference, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
-
 	return ret0, nil
 }
 
@@ -1122,7 +1111,6 @@ func (r *RootDomain) Info() (interface{}, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
-
 	return ret0, nil
 }
 
@@ -1207,7 +1195,6 @@ func (r *RootDomain) AddBurnAddresses(burnAddresses []string) error {
 	if ret0 != nil {
 		return ret0
 	}
-
 	return nil
 }
 
@@ -1292,7 +1279,6 @@ func (r *RootDomain) AddBurnAddress(burnAddress string) error {
 	if ret0 != nil {
 		return ret0
 	}
-
 	return nil
 }
 
@@ -1379,7 +1365,6 @@ func (r *RootDomain) AddNewMemberToMaps(publicKey string, burnAddress string, me
 	if ret0 != nil {
 		return ret0
 	}
-
 	return nil
 }
 
@@ -1469,7 +1454,6 @@ func (r *RootDomain) AddNewMemberToPublicKeyMap(publicKey string, memberRef inso
 	if ret0 != nil {
 		return ret0
 	}
-
 	return nil
 }
 
@@ -1557,7 +1541,6 @@ func (r *RootDomain) CreateHelloWorld() (string, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
-
 	return ret0, nil
 }
 

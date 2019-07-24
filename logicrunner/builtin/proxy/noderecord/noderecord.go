@@ -190,7 +190,6 @@ func (r *NodeRecord) GetNodeInfo() (RecordInfo, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
-
 	return ret0, nil
 }
 
@@ -276,7 +275,6 @@ func (r *NodeRecord) GetPublicKey() (string, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
-
 	return ret0, nil
 }
 
@@ -362,7 +360,6 @@ func (r *NodeRecord) GetRole() (insolar.StaticRole, error) {
 	if ret1 != nil {
 		return ret0, ret1
 	}
-
 	return ret0, nil
 }
 
@@ -446,7 +443,6 @@ func (r *NodeRecord) Destroy() error {
 	if ret0 != nil {
 		return ret0
 	}
-
 	return nil
 }
 
