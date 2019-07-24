@@ -85,9 +85,8 @@ func fillMembershipAnnouncement(a *MembershipAnnouncement, sender *transport.Nod
 	if sender.IsLeaving() {
 		a.Member.AnnounceID = sender.GetNodeID()
 		a.Member.Leaver.LeaveReason = sender.GetLeaveReason()
-	}
-
-	if joinerAnnouncement := sender.GetJoinerAnnouncement(); joinerAnnouncement != nil {
+	} else if joinerAnnouncement := sender.GetJoinerAnnouncement(); joinerAnnouncement != nil {
+		a.Member.AnnounceID = joinerAnnouncement.GetBriefIntroduction().GetStaticNodeID()
 		fillBriefInto(&a.Member.Joiner.NodeBriefIntro, joinerAnnouncement.GetBriefIntroduction())
 	}
 }
@@ -123,7 +122,7 @@ func fillFullInto(i *NodeFullIntro, intro transport.FullIntroductionReader) {
 	fillExtendedIntro(&i.NodeExtendedIntro, intro)
 }
 
-func fillCloudIntro(b *GlobulaConsensusPacketBody, welcome *proofs.NodeWelcomePackage) {
+func fillWelcome(b *GlobulaConsensusPacketBody, welcome *proofs.NodeWelcomePackage) {
 	copy(b.CloudIntro.CloudIdentity[:], welcome.CloudIdentity.AsBytes())
 	copy(b.CloudIntro.LastCloudStateHash[:], welcome.LastCloudStateHash.AsBytes())
 	if welcome.JoinerSecret != nil {
@@ -152,9 +151,9 @@ func fillNeighbourAnnouncement(n *NeighbourAnnouncement, neighbour transport.Mem
 	if neighbour.IsLeaving() {
 		n.Member.AnnounceID = neighbour.GetNodeID()
 		n.Member.Leaver.LeaveReason = neighbour.GetLeaveReason()
-	}
-
-	if announcement := neighbour.GetJoinerAnnouncement(); announcement != nil {
+	} else if announcement := neighbour.GetJoinerAnnouncement(); announcement != nil {
+		n.JoinerIntroducedBy = announcement.GetJoinerIntroducedByID()
+		n.Member.AnnounceID = announcement.GetBriefIntroduction().GetStaticNodeID()
 		fillBriefInto(&n.Joiner.NodeBriefIntro, announcement.GetBriefIntroduction())
 	}
 }
@@ -197,7 +196,7 @@ func fillPhase1(
 	})
 
 	if welcome != nil {
-		fillCloudIntro(body, welcome)
+		fillWelcome(body, welcome)
 	}
 
 	// TODO:
@@ -227,7 +226,7 @@ func fullPhase2(
 	}
 
 	if welcome != nil {
-		fillCloudIntro(body, welcome)
+		fillWelcome(body, welcome)
 	}
 
 	fillNeighbourhood(&body.Neighbourhood, neighbourhood)
