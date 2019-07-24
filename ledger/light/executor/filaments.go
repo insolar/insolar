@@ -668,7 +668,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	)
 
 	_, isOutgoing := request.(*record.OutgoingRequest)
-	if !isOutgoing && reason.Record().Pulse() != insolar.PulseNumberAPIRequest {
+	if !isOutgoing && !request.IsAPIRequest() {
 		exists, err := c.checkReason(ctx, objectID, reason)
 		if err != nil {
 			return nil, nil, err
