@@ -134,15 +134,19 @@ func (o PacketPrepareOptions) HasAll(mask PacketPrepareOptions) bool {
 	return (o & mask) == mask
 }
 
+func (o PacketPrepareOptions) AsSendOptions() PacketSendOptions {
+	return PacketSendOptions(o) & SharedPrepareSendOptionsMask
+}
+
 const (
 	SendWithoutPulseData PacketSendOptions = 1 << iota
 	TargetNeedsIntro
 )
 
+const SharedPrepareSendOptionsMask = 0 | SendWithoutPulseData
 const PrepareWithoutPulseData = PacketPrepareOptions(SendWithoutPulseData)
+
 const (
 	AlternativePhasePacket PacketPrepareOptions = 1 << (16 + iota)
 	OnlyBriefIntroAboutJoiner
 )
-
-// type PreparedIntro interface {}

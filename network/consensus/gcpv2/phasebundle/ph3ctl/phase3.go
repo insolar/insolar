@@ -186,7 +186,7 @@ func (c *Phase3Controller) workerPhase3(ctx context.Context) {
 	if !c.R.IsJoiner() {
 		// joiner has no vote in consensus, hence there is no reason to send Phase3 from it
 		localHashedVector := localInspector.CreateVector(c.R.GetSigner())
-		go c.workerSendPhase3(ctx, localHashedVector, c.packetPrepareOptions)
+		go c.workerSendPhase3(ctx, localHashedVector)
 	}
 
 	if !c.workerRecvPhase3(ctx, localInspector) {
@@ -361,21 +361,23 @@ func (c *Phase3Controller) workerSendFastPhase3(ctx context.Context) {
 	// c.workerSendPhase3(ctx, nil, c.packetPrepareOptions|transport.AlternativePhasePacket)
 }
 
-func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData statevector.Vector, options transport.PacketPrepareOptions) {
+func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData statevector.Vector) {
 
-	p3 := c.R.GetPacketBuilder().PreparePhase3Packet(c.R.CreateLocalAnnouncement(), selfData, options)
+	p3 := c.R.GetPacketBuilder().PreparePhase3Packet(c.R.CreateLocalAnnouncement(), selfData,
+		c.packetPrepareOptions)
 
+	sendOptions := c.packetPrepareOptions.AsSendOptions()
 	selfID := c.R.GetSelfNodeID()
-	otherNodes := c.R.GetPopulation().GetAnyNodes(true, true)
+	nodes := c.R.GetPopulation().GetAnyNodes(true, true)
 
-	p3.SendToMany(ctx, len(otherNodes), c.R.GetPacketSender(),
+	p3.SendToMany(ctx, len(nodes), c.R.GetPacketSender(),
 		func(ctx context.Context, targetIdx int) (transport.TargetProfile, transport.PacketSendOptions) {
-			np := otherNodes[targetIdx]
-			if np.GetNodeID() == selfID {
+			np := nodes[targetIdx]
+			if np.GetNodeID() == selfID || !np.SetPacketSent(phases.PacketPhase3) {
 				return nil, 0
 			}
-			np.SetPacketSent(phases.PacketPhase3)
-			return np, 0
+
+			return np, sendOptions
 		})
 }
 

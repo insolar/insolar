@@ -338,24 +338,6 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 	}
 }
 
-func (c *Phase2Controller) sendPhase2(ctx context.Context, neighbourhood []*core.NodeAppearance) {
-
-	neighbourhoodAnnouncements := make([]transport.MembershipAnnouncementReader, len(neighbourhood))
-	for i, np := range neighbourhood {
-		neighbourhoodAnnouncements[i] = c.R.CreateAnnouncement(np)
-	}
-
-	p2 := c.R.GetPacketBuilder().PreparePhase2Packet(c.R.CreateLocalAnnouncement(), nil,
-		neighbourhoodAnnouncements, c.packetPrepareOptions)
-
-	p2.SendToMany(ctx, len(neighbourhood), c.R.GetPacketSender(),
-		func(ctx context.Context, targetIdx int) (transport.TargetProfile, transport.PacketSendOptions) {
-			np := neighbourhood[targetIdx]
-			np.SetPacketSent(phases.PacketPhase2)
-			return np, 0
-		})
-}
-
 func availableInQueue(captured int, queue lazyhead.HeadedLazySortedList, maxWeight uint32) int {
 	if maxWeight == math.MaxUint32 {
 		return queue.GetAvailableHeadLen(captured)
@@ -391,6 +373,26 @@ func readQueueOrDone(ctx context.Context, needsSleep bool, sleep time.Duration,
 	}
 }
 
+func (c *Phase2Controller) sendPhase2(ctx context.Context, neighbourhood []*core.NodeAppearance) {
+
+	neighbourhoodAnnouncements := make([]transport.MembershipAnnouncementReader, len(neighbourhood))
+	for i, np := range neighbourhood {
+		neighbourhoodAnnouncements[i] = c.R.CreateAnnouncement(np)
+	}
+
+	p2 := c.R.GetPacketBuilder().PreparePhase2Packet(c.R.CreateLocalAnnouncement(), nil,
+		neighbourhoodAnnouncements, c.packetPrepareOptions)
+
+	sendOptions := c.packetPrepareOptions.AsSendOptions()
+
+	p2.SendToMany(ctx, len(neighbourhood), c.R.GetPacketSender(),
+		func(ctx context.Context, targetIdx int) (transport.TargetProfile, transport.PacketSendOptions) {
+			np := neighbourhood[targetIdx]
+			np.SetPacketSent(phases.PacketPhase2)
+			return np, sendOptions
+		})
+}
+
 func (c *Phase2Controller) workerRetryOnMissingNodes(ctx context.Context) {
 	log := inslogger.FromContext(ctx)
 
@@ -405,6 +407,8 @@ func (c *Phase2Controller) workerRetryOnMissingNodes(ctx context.Context) {
 	pr1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
 		c.R.GetOriginalPulse(), c.R.GetWelcomePackage(), transport.AlternativePhasePacket|c.packetPrepareOptions)
 
+	sendOptions := c.packetPrepareOptions.AsSendOptions()
+
 	for _, v := range c.R.GetPopulation().GetShuffledOtherNodes() {
 		select {
 		case <-ctx.Done():
@@ -414,17 +418,6 @@ func (c *Phase2Controller) workerRetryOnMissingNodes(ctx context.Context) {
 		if !v.IsNshRequired() {
 			continue
 		}
-		pr1.SendTo(ctx, v, 0, c.R.GetPacketSender())
+		pr1.SendTo(ctx, v, sendOptions, c.R.GetPacketSender())
 	}
 }
-
-// func (R *ConsensusRoundController) preparePhase1Packet(po gcpv2.PacketSendOptions) gcpv2.PreparedSendPacket {
-//
-// 	var selfIntro gcpv2.NodeIntroduction = nil
-// 	if c.R.joinersCount > 0 {
-// 		selfIntro = c.R.self.nodeProfile.GetLastPublishedIntroduction()
-// 	}
-//
-// 	return c.R.callback.PreparePhase1Packet(c.R.activePulse.originalPacket, selfIntro,
-// 		c.R.self.membership, c.R.strategy.GetPacketOptions(gcpv2.Phase1)|po)
-// }

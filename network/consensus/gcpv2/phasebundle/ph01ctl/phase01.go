@@ -239,6 +239,8 @@ func (c *Phase01Controller) workerSendPhase0(ctx context.Context, nodes []*core.
 	p0 := c.R.GetPacketBuilder().PreparePhase0Packet(c.R.CreateLocalAnnouncement(), c.R.GetOriginalPulse(),
 		c.packetPrepareOptions)
 
+	sendOptions := c.packetPrepareOptions.AsSendOptions() &^ transport.SendWithoutPulseData
+
 	for lastIndex, target := range nodes {
 		if target.HasAnyPacketReceived() {
 			continue
@@ -246,7 +248,7 @@ func (c *Phase01Controller) workerSendPhase0(ctx context.Context, nodes []*core.
 
 		// DONT use SendToMany here, as this is "gossip" style and parallelism is provided by multiplicity of nodes
 		// Instead we have a chance to save some traffic.
-		p0.SendTo(ctx, target, 0, c.R.GetPacketSender())
+		p0.SendTo(ctx, target, sendOptions, c.R.GetPacketSender())
 		target.SetPacketSent(phases.PacketPhase0)
 
 		select {
@@ -271,27 +273,31 @@ func (c *Phase01Controller) workerSendPhase1(ctx context.Context, startIndex int
 	p1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
 		c.R.GetOriginalPulse(), c.R.GetWelcomePackage(), c.packetPrepareOptions)
 
+	sendOptions := c.packetPrepareOptions.AsSendOptions()
+
 	// first, send to nodes not covered by Phase 0
 	p1.SendToMany(ctx, len(otherNodes)-startIndex, c.R.GetPacketSender(),
 		func(ctx context.Context, targetIdx int) (transport.TargetProfile, transport.PacketSendOptions) {
-			return prepareTarget(otherNodes[targetIdx+startIndex])
+			return prepareTarget(otherNodes[targetIdx+startIndex], sendOptions)
 		})
 
 	p1.SendToMany(ctx, startIndex, c.R.GetPacketSender(),
 		func(ctx context.Context, targetIdx int) (transport.TargetProfile, transport.PacketSendOptions) {
-			return prepareTarget(otherNodes[targetIdx])
+			return prepareTarget(otherNodes[targetIdx], sendOptions)
 		})
 }
 
-func prepareTarget(target *core.NodeAppearance) (transport.TargetProfile, transport.PacketSendOptions) {
+func prepareTarget(target *core.NodeAppearance,
+	sendOptions transport.PacketSendOptions) (transport.TargetProfile, transport.PacketSendOptions) {
+
 	target.SetPacketSent(phases.PacketPhase1)
 	if !target.SetPacketSent(phases.PacketPhase1) {
 		return nil, 0
 	}
 	if target.HasAnyPacketReceived() {
-		return target, transport.SendWithoutPulseData
+		sendOptions |= transport.SendWithoutPulseData
 	}
-	return target, 0
+	return target, sendOptions
 }
 
 func (c *Phase01Controller) workerSendPhase1ToDynamics(ctx context.Context) {
@@ -299,6 +305,8 @@ func (c *Phase01Controller) workerSendPhase1ToDynamics(ctx context.Context) {
 	p1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
 		c.R.GetOriginalPulse(), c.R.GetWelcomePackage(),
 		c.packetPrepareOptions|transport.PrepareWithoutPulseData)
+
+	sendOptions := c.packetPrepareOptions.AsSendOptions() | transport.SendWithoutPulseData | transport.TargetNeedsIntro
 
 	selfID := c.R.GetSelfNodeID()
 	for {
@@ -309,8 +317,7 @@ func (c *Phase01Controller) workerSendPhase1ToDynamics(ctx context.Context) {
 			if selfID == joiner.GetNodeID() || !joiner.SetPacketSent(phases.PacketPhase1) {
 				continue
 			}
-			p1.SendTo(ctx, joiner, transport.SendWithoutPulseData|transport.TargetNeedsIntro,
-				c.R.GetPacketSender())
+			p1.SendTo(ctx, joiner, sendOptions, c.R.GetPacketSender())
 		}
 	}
 }
