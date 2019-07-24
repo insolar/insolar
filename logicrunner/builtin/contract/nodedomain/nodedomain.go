@@ -29,13 +29,13 @@ import (
 type NodeDomain struct {
 	foundation.BaseContract
 
-	NodeIndexPublicKey map[string]string
+	NodeIndexPublicKey foundation.StableMap
 }
 
 // NewNodeDomain create new NodeDomain.
 func NewNodeDomain() (*NodeDomain, error) {
 	return &NodeDomain{
-		NodeIndexPublicKey: make(map[string]string),
+		NodeIndexPublicKey: foundation.StableMap{},
 	}, nil
 }
 
@@ -61,18 +61,23 @@ func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error
 	}
 
 	newNodeRef := node.GetReference().String()
-	nd.NodeIndexPublicKey[publicKey] = newNodeRef
+	nd.NodeIndexPublicKey.Set(publicKey, newNodeRef)
 
 	return newNodeRef, err
 }
 
 // GetNodeRefByPublicKey returns node reference.
 func (nd *NodeDomain) GetNodeRefByPublicKey(publicKey string) (string, error) {
-	nodeRef, ok := nd.NodeIndexPublicKey[publicKey]
+	nodeRef, ok := nd.NodeIndexPublicKey.Get(publicKey)
 	if !ok {
-		return nodeRef, fmt.Errorf("network node not found by public key: %s", publicKey)
+		return "", fmt.Errorf("network node not found by public key: %s", publicKey)
 	}
-	return nodeRef, nil
+	nodeRefStr, ok := nodeRef.(string)
+	if !ok {
+		return "", fmt.Errorf("bad network node reference by public key: %s", publicKey)
+	}
+
+	return nodeRefStr, nil
 }
 
 // RemoveNode deletes node from registry.
@@ -83,6 +88,6 @@ func (nd *NodeDomain) RemoveNode(nodeRef insolar.Reference) error {
 		return fmt.Errorf("failed to find network node by public key: %s", nodePK)
 	}
 
-	delete(nd.NodeIndexPublicKey, nodePK)
+	nd.NodeIndexPublicKey.Delete(nodePK)
 	return node.Destroy()
 }

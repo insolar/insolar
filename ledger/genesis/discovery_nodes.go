@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/internal/ledger/artifact"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/nodedomain"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/noderecord"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
@@ -61,7 +62,7 @@ func (nm *DiscoveryNodeManager) StoreDiscoveryNodes(ctx context.Context, discove
 	insolar.MustDeserialize(nodeDomainDesc.Memory(), &ndObj)
 	inslogger.FromContext(ctx).Debugf("get index on the node domain contract: %v", ndObj.NodeIndexPublicKey)
 
-	if len(ndObj.NodeIndexPublicKey) != 0 {
+	if ndObj.NodeIndexPublicKey.Len() != 0 {
 		inslogger.FromContext(ctx).Info("discovery nodes already saved in the node domain index.")
 		return nil
 	}
@@ -169,9 +170,14 @@ func (nm *DiscoveryNodeManager) updateNodeDomainIndex(
 		return err
 	}
 
+	indexStableMap := foundation.NewStableMap()
+	for k, v := range indexMap {
+		indexStableMap.Set(k, v)
+	}
+
 	updateData, err := insolar.Serialize(
 		&nodedomain.NodeDomain{
-			NodeIndexPublicKey: indexMap,
+			NodeIndexPublicKey: indexStableMap,
 		},
 	)
 	if err != nil {

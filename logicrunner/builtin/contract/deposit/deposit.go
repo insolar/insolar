@@ -43,7 +43,7 @@ type Deposit struct {
 	foundation.BaseContract
 	Timestamp               time.Time
 	HoldReleaseDate         time.Time
-	MigrationDaemonConfirms map[insolar.Reference]bool
+	MigrationDaemonConfirms foundation.StableMap
 	Confirms                uint
 	Amount                  string
 	Bonus                   string
@@ -62,7 +62,7 @@ func (d *Deposit) GetAmount() (string, error) {
 }
 
 // New creates new deposit.
-func New(migrationDaemonConfirms map[insolar.Reference]bool, txHash string, amount string, holdReleaseDate time.Time) (*Deposit, error) {
+func New(migrationDaemonConfirms foundation.StableMap, txHash string, amount string, holdReleaseDate time.Time) (*Deposit, error) {
 	return &Deposit{
 
 		MigrationDaemonConfirms: migrationDaemonConfirms,
@@ -75,13 +75,13 @@ func New(migrationDaemonConfirms map[insolar.Reference]bool, txHash string, amou
 }
 
 // MapMarshal gets deposit information.
-func (d *Deposit) MapMarshal() (map[string]string, error) {
-	return map[string]string{
-		"timestamp":       d.Timestamp.String(),
-		"holdReleaseDate": d.HoldReleaseDate.String(),
-		"amount":          d.Amount,
-		"bonus":           d.Bonus,
-		"txId":            d.TxHash,
+func (d *Deposit) MapMarshal() ([][2]string, error) {
+	return [][2]string{
+		{"timestamp", d.Timestamp.String()},
+		{"holdReleaseDate", d.HoldReleaseDate.String()},
+		{"amount", d.Amount},
+		{"bonus", d.Bonus},
+		{"txId", d.TxHash},
 	}, nil
 }
 
@@ -106,11 +106,11 @@ func (d *Deposit) Confirm(migrationDaemon insolar.Reference, txHash string, amou
 		return 0, fmt.Errorf("amount is incorrect")
 	}
 
-	if confirm, ok := d.MigrationDaemonConfirms[migrationDaemon]; ok {
-		if confirm {
+	if confirm, ok := d.MigrationDaemonConfirms.Get(migrationDaemon); ok {
+		if confirm, ok := confirm.(bool); ok && confirm {
 			return 0, fmt.Errorf("confirm from the migration daemon '%s' already exists", migrationDaemon.String())
 		} else {
-			d.MigrationDaemonConfirms[migrationDaemon] = true
+			d.MigrationDaemonConfirms.Set(migrationDaemon, true)
 			d.Confirms++
 			if d.Confirms == confirms {
 				d.Status = statusHolding

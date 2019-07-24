@@ -438,9 +438,9 @@ func (m *Member) migration(txHash string, burnAddress string, amount big.Int, un
 
 	// If deposit doesn't exist - create new deposit
 	if !found {
-		migrationDaemonConfirms := map[insolar.Reference]bool{}
+		migrationDaemonConfirms := foundation.StableMap{}
 		for _, ref := range migrationDaemonMembers {
-			migrationDaemonConfirms[ref] = false
+			migrationDaemonConfirms.Set(ref, false)
 		}
 		dHolder := deposit.New(migrationDaemonConfirms, txHash, amount.String(), unHoldDate)
 		txDeposit, err := dHolder.AsDelegate(tokenHolderRef)

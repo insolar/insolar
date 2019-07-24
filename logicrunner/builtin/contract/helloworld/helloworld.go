@@ -111,7 +111,18 @@ func (hw *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
 
 	switch request.Params.CallSite {
 	case "Greet":
-		return hw.Greet(request.Params.CallParams.(map[string]interface{})["name"].(string))
+		callParams, ok := request.Params.CallParams.(foundation.StableMap)
+		if !ok {
+			return nil, errors.New("failed to parse CallParams")
+		}
+		name, ok := callParams.Get("name")
+		if !ok {
+			return hw.Greet("Anonymous")
+		}
+		if name, ok := name.(string); ok {
+			return hw.Greet(name)
+		}
+		return nil, errors.New("failed to parse name param")
 	case "Count":
 		return hw.Count()
 	case "Errored":
@@ -123,7 +134,7 @@ func (hw *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
 	case "PulseNumber":
 		return hw.PulseNumber()
 	default:
-		return nil, errors.New("Unknown method " + request.Params.CallSite)
+		return nil, errors.New("unknown method " + request.Params.CallSite)
 	}
 }
 

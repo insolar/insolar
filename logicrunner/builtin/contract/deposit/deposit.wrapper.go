@@ -19,6 +19,7 @@ package deposit
 import (
 	"github.com/insolar/insolar/insolar"
 	XXX_insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
 	"time"
 )
@@ -254,7 +255,7 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	ph := common.CurrentProxyCtx
 	args := [4]interface{}{}
-	var args0 map[insolar.Reference]bool
+	var args0 foundation.StableMap
 	args[0] = &args0
 	var args1 string
 	args[1] = &args1

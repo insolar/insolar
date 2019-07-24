@@ -22,6 +22,22 @@ type StableMap struct {
 	values []interface{}
 }
 
+func NewStableMap() (sm StableMap) {
+	sm.keys = make([]interface{}, 0)
+	sm.values = make([]interface{}, 0)
+	return sm
+}
+
+func NewStableMapFromMap(m map[interface{}]interface{}) (sm StableMap) {
+	sm.keys = make([]interface{}, 0, len(m))
+	sm.values = make([]interface{}, 0, len(m))
+	for k, v := range m {
+		sm.keys = append(sm.keys, k)
+		sm.values = append(sm.values, v)
+	}
+	return sm
+}
+
 // Len returns number of keys in StableMap.
 func (m *StableMap) Len() int {
 	return len(m.keys)

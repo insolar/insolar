@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -46,7 +47,7 @@ func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "api.call",
-		Params:  requester.Params{CallSite: "CreateHelloWorld", CallParams: map[string]interface{}{}, PublicKey: rootCfg.PublicKey},
+		Params:  requester.Params{CallSite: "CreateHelloWorld", CallParams: foundation.StableMap{}, PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
 		return nil, err
@@ -81,11 +82,13 @@ func (i *HelloWorldInstance) Greet(ctx context.Context, name string) (string, er
 	}
 
 	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
+	callParams := foundation.StableMap{}
+	callParams.Set("name", name)
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "api.call",
-		Params:  requester.Params{CallSite: "Greet", CallParams: map[string]interface{}{"name": name}, PublicKey: rootCfg.PublicKey},
+		Params:  requester.Params{CallSite: "Greet", CallParams: callParams, PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
 		return "", err
@@ -117,7 +120,7 @@ func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "api.call",
-		Params:  requester.Params{CallSite: "Count", CallParams: map[string]interface{}{}, PublicKey: rootCfg.PublicKey},
+		Params:  requester.Params{CallSite: "Count", CallParams: foundation.StableMap{}, PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
 		return 0, err
@@ -162,7 +165,7 @@ func (i *HelloWorldInstance) CreateChild(ctx context.Context) (*HelloWorldInstan
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "api.call",
-		Params:  requester.Params{CallSite: "CreateChild", CallParams: map[string]interface{}{}, PublicKey: rootCfg.PublicKey},
+		Params:  requester.Params{CallSite: "CreateChild", CallParams: foundation.StableMap{}, PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
 		return nil, err
@@ -201,7 +204,7 @@ func (i *HelloWorldInstance) ReturnObj(ctx context.Context) (map[string]interfac
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "api.call",
-		Params:  requester.Params{CallSite: "ReturnObj", CallParams: map[string]interface{}{}, PublicKey: rootCfg.PublicKey},
+		Params:  requester.Params{CallSite: "ReturnObj", CallParams: foundation.StableMap{}, PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
 		return nil, err

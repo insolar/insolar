@@ -80,7 +80,7 @@ func GetImplementationFrom(object insolar.Reference) (*Deposit, error) {
 }
 
 // New is constructor
-func New(migrationDaemonConfirms map[insolar.Reference]bool, txHash string, amount string, holdReleaseDate time.Time) *ContractConstructorHolder {
+func New(migrationDaemonConfirms foundation.StableMap, txHash string, amount string, holdReleaseDate time.Time) *ContractConstructorHolder {
 	var args [4]interface{}
 	args[0] = migrationDaemonConfirms
 	args[1] = txHash
@@ -331,13 +331,13 @@ func (r *Deposit) GetAmountAsImmutable() (string, error) {
 }
 
 // MapMarshal is proxy generated method
-func (r *Deposit) MapMarshal() (map[string]string, error) {
+func (r *Deposit) MapMarshal() ([][2]string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 map[string]string
+	var ret0 [][2]string
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -383,13 +383,13 @@ func (r *Deposit) MapMarshalNoWait() error {
 }
 
 // MapMarshalAsImmutable is proxy generated method
-func (r *Deposit) MapMarshalAsImmutable() (map[string]string, error) {
+func (r *Deposit) MapMarshalAsImmutable() ([][2]string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 map[string]string
+	var ret0 [][2]string
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
