@@ -104,7 +104,7 @@ func (r *JoinerPhaseBundle) CreateFullPhaseControllers(nodeCount int) ([]core.Ph
 	packetPrepareOptions := r.JoinerOptions
 
 	return []core.PhaseController{
-		ph01ctl.NewPhase01Controller(packetPrepareOptions|transport.SendWithoutPulseData, rcb.qIntroToJoiner),
+		ph01ctl.NewPhase01Controller(packetPrepareOptions|transport.PrepareWithoutPulseData, rcb.qIntroToJoiner),
 		ph2ctl.NewPhase2Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qNshReady /*->*/),
 		ph3ctl.NewPhase3Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qTrustLvlUpd, /*->*/
 			r.ConsensusStrategy, vif, r.EnableFastPhase3),

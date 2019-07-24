@@ -128,7 +128,7 @@ func (pb *PacketBuilder) PreparePhase0Packet(
 	packet := pb.preparePacket(sender, phases.PacketPhase0)
 	fillPhase0(packet.EncryptableBody.(*GlobulaConsensusPacketBody), sender, pulsarPacket)
 
-	if !options.Has(transport.SendWithoutPulseData) {
+	if !options.HasAny(transport.SendWithoutPulseData) {
 		packet.Header.SetFlag(FlagHasPulsePacket)
 	}
 
@@ -139,25 +139,25 @@ func (pb *PacketBuilder) PreparePhase1Packet(
 	sender *transport.NodeAnnouncementProfile,
 	pulsarPacket proofs.OriginalPulsarPacket,
 	welcome *proofs.NodeWelcomePackage,
-	options transport.PacketSendOptions,
+	options transport.PacketPrepareOptions,
 ) transport.PreparedPacketSender {
 
 	packet := pb.preparePacket(sender, phases.PacketPhase1)
 	fillPhase1(packet.EncryptableBody.(*GlobulaConsensusPacketBody), sender, pulsarPacket, welcome)
 
-	if !options.Has(transport.SendWithoutPulseData) {
+	if !options.HasAny(transport.PrepareWithoutPulseData) {
 		packet.Header.SetFlag(FlagHasPulsePacket)
 	}
 
-	if options.Has(transport.AlternativePhasePacket) {
+	if options.HasAny(transport.AlternativePhasePacket) {
 		packet.Header.setPacketType(phases.PacketReqPhase1)
 	}
 
-	if !options.Has(transport.OnlyBriefIntroAboutJoiner) {
+	if !options.HasAny(transport.OnlyBriefIntroAboutJoiner) {
 		packet.Header.SetFlag(FlagHasJoinerExt)
 	}
 
-	if options.Has(transport.TargetNeedsIntro) {
+	if options.HasAny(transport.TargetNeedsIntro) {
 		packet.Header.SetFlag(FlagSelfIntro2)
 	}
 
@@ -172,21 +172,21 @@ func (pb *PacketBuilder) PreparePhase2Packet(
 	sender *transport.NodeAnnouncementProfile,
 	welcome *proofs.NodeWelcomePackage,
 	neighbourhood []transport.MembershipAnnouncementReader,
-	options transport.PacketSendOptions,
+	options transport.PacketPrepareOptions,
 ) transport.PreparedPacketSender {
 
 	packet := pb.preparePacket(sender, phases.PacketPhase2)
 	fullPhase2(packet.EncryptableBody.(*GlobulaConsensusPacketBody), sender, welcome, neighbourhood)
 
-	if options.Has(transport.AlternativePhasePacket) {
+	if options.HasAny(transport.AlternativePhasePacket) {
 		packet.Header.setPacketType(phases.PacketExtPhase2)
 	}
 
-	if !options.Has(transport.OnlyBriefIntroAboutJoiner) {
+	if !options.HasAny(transport.OnlyBriefIntroAboutJoiner) {
 		packet.Header.SetFlag(FlagHasJoinerExt)
 	}
 
-	if options.Has(transport.TargetNeedsIntro) {
+	if options.HasAny(transport.TargetNeedsIntro) {
 		packet.Header.SetFlag(FlagSelfIntro2)
 	}
 
@@ -200,13 +200,13 @@ func (pb *PacketBuilder) PreparePhase2Packet(
 func (pb *PacketBuilder) PreparePhase3Packet(
 	sender *transport.NodeAnnouncementProfile,
 	vectors statevector.Vector,
-	options transport.PacketSendOptions,
+	options transport.PacketPrepareOptions,
 ) transport.PreparedPacketSender {
 
 	packet := pb.preparePacket(sender, phases.PacketPhase3)
 	fillPhase3(packet.EncryptableBody.(*GlobulaConsensusPacketBody), vectors)
 
-	if options.Has(transport.AlternativePhasePacket) {
+	if options.HasAny(transport.AlternativePhasePacket) {
 		packet.Header.setPacketType(phases.PacketFastPhase3)
 	}
 
@@ -273,13 +273,13 @@ func (p *PreparedPacketSender) beforeSend(
 ) {
 
 	if p.packet.Header.GetPacketType() == phases.PacketPhase0 || p.packet.Header.GetPacketType() == phases.PacketPhase1 {
-		if sendOptions.Has(transport.SendWithoutPulseData) {
+		if sendOptions.HasAny(transport.SendWithoutPulseData) {
 			p.packet.Header.ClearFlag(FlagHasPulsePacket)
 		}
 	}
 
 	if p.packet.Header.GetPacketType() == phases.PacketPhase1 || p.packet.Header.GetPacketType() == phases.PacketPhase2 {
-		if sendOptions.Has(transport.OnlyBriefIntroAboutJoiner) {
+		if sendOptions.HasAny(transport.OnlyBriefIntroAboutJoiner) {
 			p.packet.Header.ClearFlag(FlagHasJoinerExt)
 		}
 
@@ -294,7 +294,7 @@ func (p *PreparedPacketSender) beforeSend(
 			copy(p.packet.EncryptableBody.(*GlobulaConsensusPacketBody).JoinerSecret[:], encryptedJoinerSecret.AsBytes())
 		}
 
-		if !sendOptions.Has(transport.TargetNeedsIntro) {
+		if !sendOptions.HasAny(transport.TargetNeedsIntro) {
 			p.packet.Header.ClearFlag(FlagSelfIntro2)
 		}
 	}

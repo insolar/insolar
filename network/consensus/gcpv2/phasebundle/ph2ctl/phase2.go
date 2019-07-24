@@ -70,7 +70,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
-func NewPhase2Controller(loopingMinimalDelay time.Duration, packetPrepareOptions transport.PacketSendOptions,
+func NewPhase2Controller(loopingMinimalDelay time.Duration, packetPrepareOptions transport.PacketPrepareOptions,
 	queueNshReady <-chan *core.NodeAppearance) *Phase2Controller {
 
 	return &Phase2Controller{
@@ -85,7 +85,7 @@ var _ core.PhaseController = &Phase2Controller{}
 type Phase2Controller struct {
 	core.PhaseControllerTemplate
 	R                    *core.FullRealm
-	packetPrepareOptions transport.PacketSendOptions
+	packetPrepareOptions transport.PacketPrepareOptions
 	queueNshReady        <-chan *core.NodeAppearance
 	loopingMinimalDelay  time.Duration
 }
@@ -171,7 +171,7 @@ func (c *Phase2PacketDispatcher) DispatchMemberPacket(ctx context.Context, reade
 	return nil
 }
 
-func (c *Phase2PacketDispatcher) DispatchUnknownMemberPacket(ctx context.Context, memberID insolar.ShortNodeID,
+func (c *Phase2PacketDispatcher) TriggerUnknownMember(ctx context.Context, memberID insolar.ShortNodeID,
 	packet transport.MemberPacketReader, from endpoints.Inbound) (bool, error) {
 
 	p2 := packet.AsPhase2Packet()

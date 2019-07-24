@@ -97,8 +97,8 @@ func CreateDefaultBundleConfig() BundleConfig {
 type BundleConfig struct {
 	LoopingMinimalDelay time.Duration
 
-	MemberOptions                   transport.PacketSendOptions
-	JoinerOptions                   transport.PacketSendOptions
+	MemberOptions                   transport.PacketPrepareOptions
+	JoinerOptions                   transport.PacketPrepareOptions
 	VectorInspectInliningLimit      int
 	DisableVectorInspectionOnJoiner bool
 	EnableFastPhase3                bool

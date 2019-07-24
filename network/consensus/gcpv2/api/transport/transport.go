@@ -52,7 +52,6 @@ package transport
 
 import (
 	"context"
-
 	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -78,6 +77,7 @@ type TargetProfile interface {
 	GetNodeID() insolar.ShortNodeID
 	GetStatic() profiles.StaticProfile
 	IsJoiner() bool
+	//GetOpMode() member.OpMode
 	EncryptJoinerSecret(joinerSecret cryptkit.DigestHolder) cryptkit.DigestHolder
 }
 
@@ -96,36 +96,53 @@ type PacketBuilder interface {
 	// PrepareIntro
 
 	PreparePhase0Packet(sender *NodeAnnouncementProfile, pulsarPacket proofs.OriginalPulsarPacket,
-		options PacketSendOptions) PreparedPacketSender
+		options PacketPrepareOptions) PreparedPacketSender
 	PreparePhase1Packet(sender *NodeAnnouncementProfile, pulsarPacket proofs.OriginalPulsarPacket,
-		welcome *proofs.NodeWelcomePackage, options PacketSendOptions) PreparedPacketSender
+		welcome *proofs.NodeWelcomePackage, options PacketPrepareOptions) PreparedPacketSender
 
 	/* Prepare receives all introductions at once, but PreparedSendPacket.SendTo MUST:
 	1. exclude all intros when target is not joiner
 	2. exclude the intro of the target
 	*/
 	PreparePhase2Packet(sender *NodeAnnouncementProfile, welcome *proofs.NodeWelcomePackage,
-		neighbourhood []MembershipAnnouncementReader, options PacketSendOptions) PreparedPacketSender
+		neighbourhood []MembershipAnnouncementReader, options PacketPrepareOptions) PreparedPacketSender
 
 	PreparePhase3Packet(sender *NodeAnnouncementProfile, vectors statevector.Vector,
-		options PacketSendOptions) PreparedPacketSender
+		options PacketPrepareOptions) PreparedPacketSender
 }
 
 type PacketSender interface {
 	SendPacketToTransport(ctx context.Context, t TargetProfile, sendOptions PacketSendOptions, payload interface{})
 }
 
+type PacketPrepareOptions uint32
 type PacketSendOptions uint32
 
-func (o PacketSendOptions) Has(mask PacketSendOptions) bool {
+func (o PacketSendOptions) HasAny(mask PacketSendOptions) bool {
 	return (o & mask) != 0
+}
+
+func (o PacketSendOptions) HasAll(mask PacketSendOptions) bool {
+	return (o & mask) == mask
+}
+
+func (o PacketPrepareOptions) HasAny(mask PacketPrepareOptions) bool {
+	return (o & mask) != 0
+}
+
+func (o PacketPrepareOptions) HasAll(mask PacketPrepareOptions) bool {
+	return (o & mask) == mask
 }
 
 const (
 	SendWithoutPulseData PacketSendOptions = 1 << iota
-	AlternativePhasePacket
-	OnlyBriefIntroAboutJoiner
 	TargetNeedsIntro
+)
+
+const PrepareWithoutPulseData = PacketPrepareOptions(SendWithoutPulseData)
+const (
+	AlternativePhasePacket PacketPrepareOptions = 1 << (16 + iota)
+	OnlyBriefIntroAboutJoiner
 )
 
 // type PreparedIntro interface {}

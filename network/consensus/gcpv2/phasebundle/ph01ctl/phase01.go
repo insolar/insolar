@@ -70,8 +70,8 @@ import (
 /*
 Does Phase0/Phase1/Phase1Rq processing
 */
-func NewPhase01Controller(packetPrepareOptions transport.PacketSendOptions, qJoiners <-chan core.MemberPacketSender) *Phase01Controller {
-	return &Phase01Controller{packetPrepareOptions: packetPrepareOptions, qJoiners: qJoiners}
+func NewPhase01Controller(packetPrepareOptions transport.PacketPrepareOptions, qJoiners <-chan core.MemberPacketSender) *Phase01Controller {
+	return &Phase01Controller{packetPrepareOptions: packetPrepareOptions, qIntroToJoiner: qJoiners}
 }
 
 func (p *packetPhase0Dispatcher) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, n *core.NodeAppearance) error {
@@ -160,8 +160,8 @@ var _ core.PhaseController = &Phase01Controller{}
 
 type Phase01Controller struct {
 	core.PhaseControllerTemplate
-	packetPrepareOptions transport.PacketSendOptions
-	qJoiners             <-chan core.MemberPacketSender
+	packetPrepareOptions transport.PacketPrepareOptions
+	qIntroToJoiner       <-chan core.MemberPacketSender
 	R                    *core.FullRealm
 }
 
@@ -185,7 +185,7 @@ func (*Phase01Controller) GetPacketType() []phases.PacketType {
 func (c *Phase01Controller) sendReqReply(ctx context.Context, target *core.NodeAppearance) {
 
 	p1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
-		c.R.GetOriginalPulse(), c.R.GetWelcomePackage(), transport.SendWithoutPulseData|c.packetPrepareOptions)
+		c.R.GetOriginalPulse(), c.R.GetWelcomePackage(), transport.PrepareWithoutPulseData|c.packetPrepareOptions)
 
 	p1.SendTo(ctx, target, 0, c.R.GetPacketSender())
 	target.SetPacketSent(phases.PacketPhase1)
@@ -274,43 +274,43 @@ func (c *Phase01Controller) workerSendPhase1(ctx context.Context, startIndex int
 	// first, send to nodes not covered by Phase 0
 	p1.SendToMany(ctx, len(otherNodes)-startIndex, c.R.GetPacketSender(),
 		func(ctx context.Context, targetIdx int) (transport.TargetProfile, transport.PacketSendOptions) {
-			target := otherNodes[targetIdx+startIndex]
-			target.SetPacketSent(phases.PacketPhase1)
-
-			if target.HasAnyPacketReceived() {
-				return target, transport.SendWithoutPulseData
-			}
-			return target, 0
+			return prepareTarget(otherNodes[targetIdx+startIndex])
 		})
 
 	p1.SendToMany(ctx, startIndex, c.R.GetPacketSender(),
 		func(ctx context.Context, targetIdx int) (transport.TargetProfile, transport.PacketSendOptions) {
-			target := otherNodes[targetIdx]
-			target.SetPacketSent(phases.PacketPhase1)
-
-			if target.HasAnyPacketReceived() {
-				return target, transport.SendWithoutPulseData
-			}
-			return target, 0
+			return prepareTarget(otherNodes[targetIdx])
 		})
+}
+
+func prepareTarget(target *core.NodeAppearance) (transport.TargetProfile, transport.PacketSendOptions) {
+	target.SetPacketSent(phases.PacketPhase1)
+	if !target.SetPacketSent(phases.PacketPhase1) {
+		return nil, 0
+	}
+	if target.HasAnyPacketReceived() {
+		return target, transport.SendWithoutPulseData
+	}
+	return target, 0
 }
 
 func (c *Phase01Controller) workerSendPhase1ToDynamics(ctx context.Context) {
 
 	p1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
-		c.R.GetOriginalPulse(), c.R.GetWelcomePackage(), c.packetPrepareOptions)
+		c.R.GetOriginalPulse(), c.R.GetWelcomePackage(),
+		c.packetPrepareOptions|transport.PrepareWithoutPulseData)
 
+	selfID := c.R.GetSelfNodeID()
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case joiner := <-c.qJoiners:
-			if c.R.GetSelfNodeID() == joiner.GetNodeID() {
+		case joiner := <-c.qIntroToJoiner:
+			if selfID == joiner.GetNodeID() || !joiner.SetPacketSent(phases.PacketPhase1) {
 				continue
 			}
-			if joiner.SetPacketSent(phases.PacketPhase1) {
-				p1.SendTo(ctx, joiner, 0, c.R.GetPacketSender())
-			}
+			p1.SendTo(ctx, joiner, transport.SendWithoutPulseData|transport.TargetNeedsIntro,
+				c.R.GetPacketSender())
 		}
 	}
 }

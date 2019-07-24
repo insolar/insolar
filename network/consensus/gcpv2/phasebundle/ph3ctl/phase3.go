@@ -74,7 +74,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
-func NewPhase3Controller(loopingMinimalDelay time.Duration, packetPrepareOptions transport.PacketSendOptions,
+func NewPhase3Controller(loopingMinimalDelay time.Duration, packetPrepareOptions transport.PacketPrepareOptions,
 	queueTrustUpdated <-chan ph2ctl.UpdateSignal, consensusStrategy consensus.SelectionStrategy,
 	inspectionFactory inspectors.VectorInspection, enabledFast bool) *Phase3Controller {
 	return &Phase3Controller{
@@ -91,7 +91,7 @@ var _ core.PhaseController = &Phase3Controller{}
 
 type Phase3Controller struct {
 	core.PhaseControllerTemplate
-	packetPrepareOptions transport.PacketSendOptions
+	packetPrepareOptions transport.PacketPrepareOptions
 	consensusStrategy    consensus.SelectionStrategy
 	loopingMinimalDelay  time.Duration
 	isFastPacketEnabled  bool
@@ -361,7 +361,7 @@ func (c *Phase3Controller) workerSendFastPhase3(ctx context.Context) {
 	// c.workerSendPhase3(ctx, nil, c.packetPrepareOptions|transport.AlternativePhasePacket)
 }
 
-func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData statevector.Vector, options transport.PacketSendOptions) {
+func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData statevector.Vector, options transport.PacketPrepareOptions) {
 
 	p3 := c.R.GetPacketBuilder().PreparePhase3Packet(c.R.CreateLocalAnnouncement(), selfData, options)
 
