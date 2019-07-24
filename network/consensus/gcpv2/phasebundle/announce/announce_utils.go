@@ -94,7 +94,7 @@ func ValidateIntrosOnMember(reader transport.ExtendedIntroReader, brief transpor
 
 func ApplyUnknownAnnouncement(ctx context.Context, announcerID insolar.ShortNodeID,
 	reader transport.AnnouncementPacketReader, brief transport.BriefIntroductionReader,
-	_ bool, realm *core.FullRealm) (bool, error) {
+	_ /* full is required */ bool, realm *core.FullRealm) (bool, error) {
 
 	// var err error
 	// err := ValidateIntrosOnMember(reader, brief, fullIntroRequired, nil)

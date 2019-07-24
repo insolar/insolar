@@ -340,8 +340,12 @@ func (r *DynamicRealmPopulation) addToDynamics(n *NodeAppearance) *NodeAppearanc
 	}
 	r.dynamicNodes[id] = n
 
-	n.callback.onDynamicNodeAdded(n.callback.updatePopulationVersion(), n, nip.GetExtension() != nil)
+	flags := FlagCreated
+	if nip.GetExtension() != nil {
+		flags |= FlagProfileUpdated
+	}
 
+	n.callback.onDynamicNodeUpdate(n.callback.updatePopulationVersion(), n, flags)
 	return n
 }
 

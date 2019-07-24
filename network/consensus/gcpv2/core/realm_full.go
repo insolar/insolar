@@ -514,7 +514,7 @@ func (r *FullRealm) CreateLocalAnnouncement() *transport.NodeAnnouncementProfile
 	return r.CreateAnnouncement(r.self)
 }
 
-func (r *FullRealm) FinishRound(builder census.Builder, csh proofs.CloudStateHash) {
+func (r *FullRealm) FinishRound(ctx context.Context, builder census.Builder, csh proofs.CloudStateHash) {
 	r.Lock()
 	defer r.Unlock()
 
@@ -546,6 +546,8 @@ func (r *FullRealm) FinishRound(builder census.Builder, csh proofs.CloudStateHas
 		}
 		// if r.requestedPowerFlag {
 		// }
+	} else {
+		inslogger.FromContext(ctx).Debugf("got a broken population: s=%d %v", local.GetNodeID(), expected.GetOnlinePopulation())
 	}
 	pw := r.self.requestedPower
 	if mode.IsPowerless() {
@@ -638,7 +640,7 @@ func (r *FullRealm) BuildNextPopulation(ctx context.Context, ranks []profiles.Po
 	b.SetGlobulaStateHash(gsh)
 	b.SealCensus()
 
-	r.FinishRound(b, csh)
+	r.FinishRound(ctx, b, csh)
 
 	if selfMode.IsEvicted() {
 		inslogger.FromContext(ctx).Info("Node has left")

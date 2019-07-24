@@ -75,6 +75,14 @@ type OneJoinerPopulation struct {
 	localNode updatableSlot
 }
 
+func (c *OneJoinerPopulation) GetSuspendedCount() int {
+	return 0
+}
+
+func (c *OneJoinerPopulation) GetMistrustedCount() int {
+	return 0
+}
+
 func (c *OneJoinerPopulation) GetIdleProfiles() []profiles.ActiveNode {
 	return nil
 }

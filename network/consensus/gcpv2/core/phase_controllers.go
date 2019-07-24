@@ -117,21 +117,27 @@ type PhaseController interface {
 }
 
 type PhaseControllersBundle interface {
-	IsEphemeralPulseAllowed() bool
 	IsDynamicPopulationRequired() bool
 	CreatePrepPhaseControllers() []PrepPhaseController
 	CreateFullPhaseControllers(nodeCount int) ([]PhaseController, NodeUpdateCallback)
 }
 
 type PhaseControllersBundleFactory interface {
-	CreateControllersBundle(population census.OnlinePopulation, config api.LocalNodeConfiguration) PhaseControllersBundle
+	CreateControllersBundle(population census.OnlinePopulation, config api.LocalNodeConfiguration /* strategy RoundStrategy */) PhaseControllersBundle
 }
+
+type UpdateFlags uint32
+
+const (
+	FlagCreated UpdateFlags = 1 << iota
+	FlagProfileUpdated
+)
 
 type NodeUpdateCallback interface {
 	OnTrustUpdated(populationVersion uint32, n *NodeAppearance, before, after member.TrustLevel)
 	OnNodeStateAssigned(populationVersion uint32, n *NodeAppearance)
-	OnDynamicNodeAdded(populationVersion uint32, n *NodeAppearance, fullIntro bool)
-	OnPurgatoryNodeAdded(populationVersion uint32, n *NodePhantom)
+	OnDynamicNodeUpdate(populationVersion uint32, n *NodeAppearance, flags UpdateFlags)
+	OnPurgatoryNodeUpdate(populationVersion uint32, n *NodePhantom, flags UpdateFlags)
 	OnCustomEvent(populationVersion uint32, n *NodeAppearance, event interface{})
 	OnDynamicPopulationCompleted(populationVersion uint32, indexedCount int)
 }

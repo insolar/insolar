@@ -76,6 +76,9 @@ type OnlinePopulation interface {
 	*/
 	GetIndexedCapacity() int
 
+	GetSuspendedCount() int
+	GetMistrustedCount() int
+
 	/*
 		It returns nil for (1) PrimaryRoleInactive, (2) for roles without any members, working or idle
 	*/

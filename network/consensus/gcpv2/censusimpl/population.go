@@ -90,6 +90,16 @@ type ManyNodePopulation struct {
 	workingRoles      []member.PrimaryRole
 	assignedSlotCount uint16
 	isInvalid         bool
+	suspendedCount    uint16
+	mistrustedCount   uint16
+}
+
+func (c *ManyNodePopulation) GetSuspendedCount() int {
+	return int(c.suspendedCount)
+}
+
+func (c *ManyNodePopulation) GetMistrustedCount() int {
+	return int(c.mistrustedCount)
 }
 
 func (c *ManyNodePopulation) GetIdleProfiles() []profiles.ActiveNode {
@@ -160,6 +170,10 @@ func (c *ManyNodePopulation) makeCopyOfMapAndSeparateEvicts(slots map[insolar.Sh
 func (c *ManyNodePopulation) _filterAndFillInSlots(slots map[insolar.ShortNodeID]*updatableSlot,
 	strictChecks bool) ([]*updatableSlot, int) {
 
+	if len(slots) > member.MaxNodeIndex {
+		panic("too many nodes")
+	}
+
 	c.slots = make([]updatableSlot, len(slots))
 	evicts := make([]*updatableSlot, 0, len(slots))
 
@@ -220,6 +234,9 @@ func (c *ManyNodePopulation) _fillInRoleStatsAndMap(localID insolar.ShortNodeID,
 	strictChecks bool, compactIndex bool, checkUniqueID bool) {
 
 	if slotCount > 0 {
+		if slotCount > member.MaxNodeIndex {
+			panic("too many nodes")
+		}
 		c.roles = make([]roleRecord, member.PrimaryRoleCount)
 	}
 
@@ -281,6 +298,13 @@ func (c *ManyNodePopulation) _fillInRoleStatsAndMap(localID insolar.ShortNodeID,
 			lastRole = role
 		}
 
+		if vv.mode.IsSuspended() {
+			c.suspendedCount++
+		}
+		if vv.mode.IsMistrustful() {
+			c.mistrustedCount++
+		}
+
 		slotCount--
 		j++
 	}
@@ -323,8 +347,8 @@ func (c *ManyNodePopulation) makeOfProfiles(nodes []profiles.StaticProfile, loca
 	vf cryptkit.SignatureVerifierFactory) {
 
 	/*
-		Sorting of nodes aren't necessary here as they all will be zero power, and in this case ordering is ignored
-	    by internal procedures of ManyNodePopulation
+			Sorting of nodes aren't necessary here as they all will be zero power, and in this case ordering is ignored
+		    by internal procedures of ManyNodePopulation
 	*/
 
 	if len(nodes) == 0 {
