@@ -240,10 +240,11 @@ func (m *Member) getBalanceCall(params map[string]interface{}) (interface{}, err
 		if err != nil {
 			return nil, fmt.Errorf("failed to get deposits: %s", err.Error())
 		}
-	}
-	d, err = user.GetDeposits()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get deposits for user: %s", err.Error())
+	} else {
+		d, err = user.GetDeposits()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get deposits for user: %s", err.Error())
+		}
 	}
 
 	return GetBalanceResponse{Balance: b, Deposits: d}, nil
