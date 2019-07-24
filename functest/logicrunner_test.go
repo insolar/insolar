@@ -231,6 +231,90 @@ func (r *Two) GetPayloadString() (string, error) {
 	)
 }
 
+func TestSagaSimpleCall(t *testing.T) {
+	balance := float64(100)
+	amount := float64(10)
+	var contractCode = `
+package main
+
+import (
+"github.com/insolar/insolar/insolar"
+"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+"github.com/insolar/insolar/application/proxy/test_saga_simple_contract"
+)
+
+type TestSagaSimpleCallContract struct {
+	foundation.BaseContract
+	Friend insolar.Reference
+	Amount int
+}
+
+func New() (*TestSagaSimpleCallContract, error) {
+	return &TestSagaSimpleCallContract{Amount: 100}, nil
+}
+
+func (r *TestSagaSimpleCallContract) Transfer(n int) (string, error) {
+	second := test_saga_simple_contract.New()
+	w2, err := second.AsChild(r.GetReference())
+	if err != nil {
+		return "1", err
+	}
+
+	r.Amount -= n
+
+	err = w2.Accept(n)
+	if err != nil {
+		return "2", err
+	}
+	return w2.GetReference().String(), nil
+}
+
+func (w *TestSagaSimpleCallContract) GetBalance() (int, error) {
+	return w.Amount, nil
+}
+
+//ins:saga(Rollback)
+func (w *TestSagaSimpleCallContract) Accept(amount int) error {
+	w.Amount += amount
+	return nil
+}
+
+func (w *TestSagaSimpleCallContract) Rollback(amount int) error {
+	w.Amount -= amount
+	return nil
+}
+`
+	prototype := uploadContractOnce(t, "test_saga_simple_contract", contractCode)
+	firstWalletRef := callConstructor(t, prototype, "New")
+	resp := callMethod(t, firstWalletRef, "Transfer", int(amount))
+	require.Empty(t, resp.Error)
+
+	secondWalletRef, err := insolar.NewReferenceFromBase58(resp.ExtractedReply.(string))
+	require.NoError(t, err)
+
+	checkPassed := false
+
+	for attempt := 0; attempt <= 10; attempt++ {
+		bal2 := callMethod(t, secondWalletRef, "GetBalance")
+		require.Empty(t, bal2.Error)
+		if bal2.ExtractedReply.(float64) != balance+amount {
+			// money are not accepted yet
+			time.Sleep(10 * time.Millisecond)
+			continue
+		}
+
+		bal1 := callMethod(t, firstWalletRef, "GetBalance")
+		require.Empty(t, bal1.Error)
+		require.Equal(t, balance-amount, bal1.ExtractedReply.(float64))
+		require.Equal(t, balance+amount, bal2.ExtractedReply.(float64))
+
+		checkPassed = true
+		break
+	}
+
+	require.True(t, checkPassed)
+}
+
 func TestInjectingDelegate(t *testing.T) {
 	var contractOneCode = `
 package main
