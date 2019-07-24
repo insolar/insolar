@@ -141,7 +141,10 @@ func NewMessageHandler(
 				h.WriteAccessor,
 				h.Sender,
 				h.IndexLocker,
-				h.filamentModifier,
+				h.FilamentCalculator,
+				h.Records,
+				h.IndexStorage,
+				h.PCS,
 			)
 		},
 		ActivateObject: func(p *proc.ActivateObject) {

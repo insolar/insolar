@@ -139,7 +139,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		}
 		if req != nil || res != nil {
 			if req != nil {
-				reqBuf, err = req.Marshal()
+				reqBuf, err = req.Record.Marshal()
 				if err != nil {
 					return errors.Wrap(err, "failed to marshal stored record")
 				}
@@ -149,7 +149,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 				}
 			}
 			if res != nil {
-				resBuf, err = res.Marshal()
+				resBuf, err = res.Record.Marshal()
 				if err != nil {
 					return errors.Wrap(err, "failed to marshal stored record")
 				}

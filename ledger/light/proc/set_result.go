@@ -39,9 +39,12 @@ type SetResult struct {
 
 	dep struct {
 		writer   hot.WriteAccessor
-		filament executor.FilamentManager
+		filament executor.FilamentCalculator
 		sender   bus.Sender
 		locker   object.IndexLocker
+		records  object.RecordModifier
+		indexes  object.IndexStorage
+		pcs      insolar.PlatformCryptographyScheme
 	}
 }
 
@@ -63,60 +66,228 @@ func (p *SetResult) Dep(
 	w hot.WriteAccessor,
 	s bus.Sender,
 	l object.IndexLocker,
-	f executor.FilamentManager,
+	f executor.FilamentCalculator,
+	r object.RecordModifier,
+	i object.IndexStorage,
+	pcs insolar.PlatformCryptographyScheme,
 ) {
 	p.dep.writer = w
 	p.dep.sender = s
 	p.dep.locker = l
 	p.dep.filament = f
+	p.dep.records = r
+	p.dep.indexes = i
+	p.dep.pcs = pcs
 }
 
 func (p *SetResult) Proceed(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx).WithField("result_id", p.resultID.DebugString())
 	logger.Debug("trying to save result")
 
-	done, err := p.dep.writer.Begin(ctx, flow.Pulse(ctx))
-	if err != nil {
-		if err == hot.ErrWriteClosed {
-			return flow.ErrCancelled
-		}
-		return err
-	}
-	defer done()
-
+	// Prevent concurrent object modifications.
 	p.dep.locker.Lock(p.result.Object)
 	defer p.dep.locker.Unlock(p.result.Object)
 
-	foundRes, err := p.dep.filament.SetResult(ctx, p.resultID, p.jetID, p.result)
-	if err != nil {
-		return errors.Wrap(err, "failed to store record")
+	objectID := p.result.Object
+
+	// Check for duplicates.
+	{
+		res, err := p.dep.filament.ResultDuplicate(ctx, objectID, p.resultID, p.result)
+		if err != nil {
+			return errors.Wrap(err, "failed to check result duplicates")
+		}
+		if res != nil {
+			resBuf, err := res.Record.Marshal()
+			if err != nil {
+				return errors.Wrap(err, "failed to marshal result")
+			}
+			msg, err := payload.NewMessage(&payload.ResultInfo{
+				ObjectID: p.result.Object,
+				ResultID: res.RecordID,
+				Result:   resBuf,
+			})
+			if err != nil {
+				return errors.Wrap(err, "failed to create reply")
+			}
+			logger.Debug("result duplicate found")
+			p.dep.sender.Reply(ctx, p.message, msg)
+			return nil
+		}
 	}
 
-	var foundResBuf []byte
-	resultID := p.resultID
-	if foundRes != nil {
-		inslogger.FromContext(ctx).Errorf("duplicated result. resultID: %v, requestID: %v", p.resultID.DebugString(), p.result.Request.Record().DebugString())
-		foundResBuf, err = foundRes.Record.Virtual.Marshal()
+	pendings, err := p.dep.filament.PendingRequests(ctx, flow.Pulse(ctx), objectID)
+	if err != nil {
+		return errors.Wrap(err, "failed to calculate pending requests")
+	}
+	closedRequest, err := findClosed(pendings, p.result)
+	if err != nil {
+		return errors.Wrap(err, "failed to find request being closed")
+	}
+	earliestPending, err := earliestPending(pendings, closedRequest.RecordID)
+	if err != nil {
+		return errors.Wrap(err, "failed to calculate earliest pending")
+	}
+
+	index, err := p.dep.indexes.ForID(ctx, p.resultID.Pulse(), objectID)
+	if err != nil {
+		return errors.Wrap(err, "failed to fetch index")
+	}
+
+	err = func() error {
+		// Start writing to db.
+		done, err := p.dep.writer.Begin(ctx, flow.Pulse(ctx))
 		if err != nil {
+			if err == hot.ErrWriteClosed {
+				return flow.ErrCancelled
+			}
 			return err
 		}
-		resultID = foundRes.RecordID
+		defer done()
+
+		// Save request record to storage.
+		{
+			virtual := record.Wrap(p.result)
+			material := record.Material{Virtual: &virtual, JetID: p.jetID}
+			err := p.dep.records.Set(ctx, p.resultID, material)
+			if err != nil {
+				return errors.Wrap(err, "failed to save a result record")
+			}
+		}
+
+		var filamentID insolar.ID
+		// Save filament record to storage.
+		{
+			rec := record.PendingFilament{
+				RecordID:       p.resultID,
+				PreviousRecord: index.Lifeline.PendingPointer,
+			}
+			virtual := record.Wrap(rec)
+			hash := record.HashVirtual(p.dep.pcs.ReferenceHasher(), virtual)
+			id := *insolar.NewID(p.resultID.Pulse(), hash)
+			material := record.Material{Virtual: &virtual, JetID: p.jetID}
+			err := p.dep.records.Set(ctx, id, material)
+			if err != nil {
+				return errors.Wrap(err, "failed to save filament record")
+			}
+			filamentID = id
+		}
+
+		// Save updated index.
+		index.LifelineLastUsed = p.resultID.Pulse()
+		index.Lifeline.PendingPointer = &filamentID
+		index.Lifeline.EarliestOpenRequest = earliestPending
+		err = p.dep.indexes.SetIndex(ctx, p.resultID.Pulse(), index)
+		if err != nil {
+			return errors.Wrap(err, "failed to update index")
+		}
+		return nil
+	}()
+	if err != nil {
+		return err
+	}
+
+	// Outgoing request cannot be a reason. We are only interested in potential reason requests.
+	if _, ok := record.Unwrap(closedRequest.Record.Virtual).(*record.OutgoingRequest); ok {
+		notifyDetached(ctx, p.dep.sender, pendings, objectID, closedRequest.RecordID)
 	}
 
 	msg, err := payload.NewMessage(&payload.ResultInfo{
 		ObjectID: p.result.Object,
-		ResultID: resultID,
-		Result:   foundResBuf,
+		ResultID: p.resultID,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create reply")
 	}
-
-	logger.WithFields(map[string]interface{}{
-		"duplicate": foundRes != nil,
-	}).Debug("result saved")
+	logger.Debug("result saved")
 	p.dep.sender.Reply(ctx, p.message, msg)
 	return nil
+}
+
+// EarliestPending checks if received result closes earliest request. If so, it should return new earliest request or
+// nil if the last request was closed.
+func earliestPending(pendings []record.CompositeFilamentRecord, closedRequestID insolar.ID) (*insolar.PulseNumber, error) {
+	// If we don't have pending requests BEFORE we try to save result, something went wrong.
+	if len(pendings) == 0 {
+		return nil, errors.New("no requests in pending before result")
+	}
+
+	currentEarliest := pendings[0]
+	// Received result doesn't close earliest known request. It means the earliest Request is still the earliest.
+	if currentEarliest.RecordID != closedRequestID {
+		// If earliest request is not closed by received result and its the only request, something went wrong.
+		if len(pendings) < 2 {
+			return nil, errors.New("result doesn't match with any pending requests")
+		}
+		p := currentEarliest.RecordID.Pulse()
+		return &p, nil
+	}
+
+	// If earliest request is closed by received result and its the only request, no open requests left.
+	if len(pendings) < 2 {
+		return nil, nil
+	}
+
+	// Returning next earliest request.
+	newEarliest := pendings[1]
+	p := newEarliest.RecordID.Pulse()
+	return &p, nil
+}
+
+// FindClosed looks for request that was closed by provided result. Returns error if not found.
+func findClosed(reqs []record.CompositeFilamentRecord, result record.Result) (record.CompositeFilamentRecord, error) {
+	for _, req := range reqs {
+		if req.RecordID == *result.Request.Record() {
+			found := record.Unwrap(req.Record.Virtual)
+			if _, ok := found.(record.Request); ok {
+				return req, nil
+			}
+			return record.CompositeFilamentRecord{}, errors.New("unexpected closed record")
+		}
+	}
+
+	return record.CompositeFilamentRecord{}, errors.New("request not found")
+}
+
+// NotifyDetached sends notifications about detached requests that are ready for execution.
+func notifyDetached(
+	ctx context.Context,
+	sender bus.Sender,
+	pendings []record.CompositeFilamentRecord,
+	objectID, closedRequestID insolar.ID,
+) {
+	for _, req := range pendings {
+		outgoing, ok := record.Unwrap(req.Record.Virtual).(*record.OutgoingRequest)
+		if !ok {
+			continue
+		}
+		if !outgoing.IsDetached() {
+			continue
+		}
+		if reasonRef := outgoing.ReasonRef(); *reasonRef.Record() != closedRequestID {
+			continue
+		}
+
+		buf, err := outgoing.Marshal()
+		if err != nil {
+			inslogger.FromContext(ctx).Error(
+				errors.Wrapf(err, "failed to notify about detached %s", req.RecordID.DebugString()),
+			)
+			return
+		}
+		msg, err := payload.NewMessage(&payload.SagaCallAcceptNotification{
+			ObjectID:      objectID,
+			OutgoingReqID: closedRequestID,
+			Request:       buf,
+		})
+		if err != nil {
+			inslogger.FromContext(ctx).Error(
+				errors.Wrapf(err, "failed to notify about detached %s", req.RecordID.DebugString()),
+			)
+			return
+		}
+		_, done := sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, *insolar.NewReference(objectID))
+		done()
+	}
 }
 
 type ActivateObject struct {

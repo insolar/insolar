@@ -130,8 +130,7 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 
 			return []record.CompositeFilamentRecord{{RecordID: expectedFilamentRecordID}}, nil
 		}
-		calculator.ResultDuplicateFunc = func(_ context.Context, inPN insolar.PulseNumber, inObjID insolar.ID, inResID insolar.ID, inRes record.Result) (*record.CompositeFilamentRecord, error) {
-			require.Equal(t, inPN, resultID.Pulse())
+		calculator.ResultDuplicateFunc = func(_ context.Context, inObjID insolar.ID, inResID insolar.ID, inRes record.Result) (*record.CompositeFilamentRecord, error) {
 			require.Equal(t, validResult.Object, inObjID)
 			require.Equal(t, resultID, inResID)
 			return nil, nil
@@ -211,8 +210,7 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 			reqVirt := record.Wrap(req)
 			return []record.CompositeFilamentRecord{{RecordID: outReqID, Record: record.Material{Virtual: &reqVirt}}}, nil
 		}
-		calculator.ResultDuplicateFunc = func(_ context.Context, inPN insolar.PulseNumber, inObjID insolar.ID, inResID insolar.ID, inRes record.Result) (*record.CompositeFilamentRecord, error) {
-			require.Equal(t, inPN, resultID.Pulse())
+		calculator.ResultDuplicateFunc = func(_ context.Context, inObjID insolar.ID, inResID insolar.ID, inRes record.Result) (*record.CompositeFilamentRecord, error) {
 			require.Equal(t, validResult.Object, inObjID)
 			require.Equal(t, resultID, inResID)
 			return nil, nil
@@ -271,10 +269,9 @@ func TestFilamentModifierDefault_SetResult(t *testing.T) {
 
 			return []record.CompositeFilamentRecord{}, nil
 		}
-		calculator.ResultDuplicateFunc = func(_ context.Context, pn insolar.PulseNumber, objID insolar.ID, inResID insolar.ID, _ record.Result) (*record.CompositeFilamentRecord, error) {
+		calculator.ResultDuplicateFunc = func(_ context.Context, objID insolar.ID, inResID insolar.ID, _ record.Result) (*record.CompositeFilamentRecord, error) {
 			require.Equal(t, resultID, inResID)
 			require.Equal(t, validResult.Object, objID)
-			require.Equal(t, resultID.Pulse(), pn)
 
 			return nil, nil
 		}
@@ -774,7 +771,7 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 
 	resetComponents()
 	t.Run("returns error if reason is empty", func(t *testing.T) {
-		_, err := calculator.ResultDuplicate(ctx, gen.PulseNumber(), gen.ID(), gen.ID(), record.Result{})
+		_, err := calculator.ResultDuplicate(ctx, gen.ID(), gen.ID(), record.Result{})
 		assert.Error(t, err)
 
 		mc.Finish()
@@ -789,7 +786,7 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		res, err := calculator.ResultDuplicate(ctx, fromPulse, objectID, gen.ID(), record.Result{Request: gen.Reference()})
+		res, err := calculator.ResultDuplicate(ctx, objectID, gen.ID(), record.Result{Request: gen.Reference()})
 
 		assert.NoError(t, err)
 		assert.Nil(t, res)
@@ -815,7 +812,7 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		fRes, err := calculator.ResultDuplicate(ctx, fromPulse, objectID, res1.RecordID, res)
+		fRes, err := calculator.ResultDuplicate(ctx, objectID, res1.RecordID, res)
 		require.NoError(t, err)
 		require.Equal(t, *fRes, res1)
 
@@ -840,7 +837,7 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		_, err = calculator.ResultDuplicate(ctx, fromPulse, objectID, req.RecordID, record.Result{Request: gen.Reference()})
+		_, err = calculator.ResultDuplicate(ctx, objectID, req.RecordID, record.Result{Request: gen.Reference()})
 		require.Error(t, err)
 
 		mc.Finish()
@@ -864,7 +861,7 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		fRes, err := calculator.ResultDuplicate(ctx, fromPulse, objectID, *resID, res)
+		fRes, err := calculator.ResultDuplicate(ctx, objectID, *resID, res)
 		require.NoError(t, err)
 		require.Nil(t, fRes)
 

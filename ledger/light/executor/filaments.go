@@ -71,7 +71,14 @@ type FilamentCalculator interface {
 		err error,
 	)
 
-	ResultDuplicate(ctx context.Context, startFrom insolar.PulseNumber, objectID, resultID insolar.ID, result record.Result) (foundResult *record.CompositeFilamentRecord, err error)
+	ResultDuplicate(
+		ctx context.Context,
+		objectID, resultID insolar.ID,
+		result record.Result,
+	) (
+		foundResult *record.CompositeFilamentRecord,
+		err error,
+	)
 
 	FindRecord(ctx context.Context, startFrom insolar.ID, objectID, recordID insolar.ID) (record.CompositeFilamentRecord, error)
 }
@@ -129,7 +136,7 @@ func (m *FilamentModifierDefault) SetResult(ctx context.Context, resultID insola
 		return nil, errors.Wrap(err, "failed to update a result's filament")
 	}
 
-	foundRes, err := m.calculator.ResultDuplicate(ctx, resultID.Pulse(), objectID, resultID, result)
+	foundRes, err := m.calculator.ResultDuplicate(ctx, objectID, resultID, result)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to save a result record")
 	}
@@ -395,7 +402,7 @@ func (c *FilamentCalculatorDefault) PendingRequests(ctx context.Context, pulse i
 }
 
 func (c *FilamentCalculatorDefault) ResultDuplicate(
-	ctx context.Context, startFrom insolar.PulseNumber, objectID, resultID insolar.ID, result record.Result,
+	ctx context.Context, objectID, resultID insolar.ID, result record.Result,
 ) (*record.CompositeFilamentRecord, error) {
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"object_id": objectID.DebugString(),
@@ -408,7 +415,7 @@ func (c *FilamentCalculatorDefault) ResultDuplicate(
 	if result.Request.IsEmpty() {
 		return nil, errors.New("request is empty")
 	}
-	idx, err := c.indexes.ForID(ctx, startFrom, objectID)
+	idx, err := c.indexes.ForID(ctx, resultID.Pulse(), objectID)
 	if err != nil {
 		return nil, err
 	}

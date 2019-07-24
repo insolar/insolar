@@ -41,7 +41,7 @@ type FilamentCalculatorMock struct {
 	RequestsPreCounter uint64
 	RequestsMock       mFilamentCalculatorMockRequests
 
-	ResultDuplicateFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Result) (r *record.CompositeFilamentRecord, r1 error)
+	ResultDuplicateFunc       func(p context.Context, p1 insolar.ID, p2 insolar.ID, p3 record.Result) (r *record.CompositeFilamentRecord, r1 error)
 	ResultDuplicateCounter    uint64
 	ResultDuplicatePreCounter uint64
 	ResultDuplicateMock       mFilamentCalculatorMockResultDuplicate
@@ -692,10 +692,9 @@ type FilamentCalculatorMockResultDuplicateExpectation struct {
 
 type FilamentCalculatorMockResultDuplicateInput struct {
 	p  context.Context
-	p1 insolar.PulseNumber
+	p1 insolar.ID
 	p2 insolar.ID
-	p3 insolar.ID
-	p4 record.Result
+	p3 record.Result
 }
 
 type FilamentCalculatorMockResultDuplicateResult struct {
@@ -704,14 +703,14 @@ type FilamentCalculatorMockResultDuplicateResult struct {
 }
 
 //Expect specifies that invocation of FilamentCalculator.ResultDuplicate is expected from 1 to Infinity times
-func (m *mFilamentCalculatorMockResultDuplicate) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Result) *mFilamentCalculatorMockResultDuplicate {
+func (m *mFilamentCalculatorMockResultDuplicate) Expect(p context.Context, p1 insolar.ID, p2 insolar.ID, p3 record.Result) *mFilamentCalculatorMockResultDuplicate {
 	m.mock.ResultDuplicateFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &FilamentCalculatorMockResultDuplicateExpectation{}
 	}
-	m.mainExpectation.input = &FilamentCalculatorMockResultDuplicateInput{p, p1, p2, p3, p4}
+	m.mainExpectation.input = &FilamentCalculatorMockResultDuplicateInput{p, p1, p2, p3}
 	return m
 }
 
@@ -728,12 +727,12 @@ func (m *mFilamentCalculatorMockResultDuplicate) Return(r *record.CompositeFilam
 }
 
 //ExpectOnce specifies that invocation of FilamentCalculator.ResultDuplicate is expected once
-func (m *mFilamentCalculatorMockResultDuplicate) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Result) *FilamentCalculatorMockResultDuplicateExpectation {
+func (m *mFilamentCalculatorMockResultDuplicate) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.ID, p3 record.Result) *FilamentCalculatorMockResultDuplicateExpectation {
 	m.mock.ResultDuplicateFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &FilamentCalculatorMockResultDuplicateExpectation{}
-	expectation.input = &FilamentCalculatorMockResultDuplicateInput{p, p1, p2, p3, p4}
+	expectation.input = &FilamentCalculatorMockResultDuplicateInput{p, p1, p2, p3}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -743,7 +742,7 @@ func (e *FilamentCalculatorMockResultDuplicateExpectation) Return(r *record.Comp
 }
 
 //Set uses given function f as a mock of FilamentCalculator.ResultDuplicate method
-func (m *mFilamentCalculatorMockResultDuplicate) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Result) (r *record.CompositeFilamentRecord, r1 error)) *FilamentCalculatorMock {
+func (m *mFilamentCalculatorMockResultDuplicate) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.ID, p3 record.Result) (r *record.CompositeFilamentRecord, r1 error)) *FilamentCalculatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -752,18 +751,18 @@ func (m *mFilamentCalculatorMockResultDuplicate) Set(f func(p context.Context, p
 }
 
 //ResultDuplicate implements github.com/insolar/insolar/ledger/light/executor.FilamentCalculator interface
-func (m *FilamentCalculatorMock) ResultDuplicate(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID, p4 record.Result) (r *record.CompositeFilamentRecord, r1 error) {
+func (m *FilamentCalculatorMock) ResultDuplicate(p context.Context, p1 insolar.ID, p2 insolar.ID, p3 record.Result) (r *record.CompositeFilamentRecord, r1 error) {
 	counter := atomic.AddUint64(&m.ResultDuplicatePreCounter, 1)
 	defer atomic.AddUint64(&m.ResultDuplicateCounter, 1)
 
 	if len(m.ResultDuplicateMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.ResultDuplicateMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to FilamentCalculatorMock.ResultDuplicate. %v %v %v %v %v", p, p1, p2, p3, p4)
+			m.t.Fatalf("Unexpected call to FilamentCalculatorMock.ResultDuplicate. %v %v %v %v", p, p1, p2, p3)
 			return
 		}
 
 		input := m.ResultDuplicateMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, FilamentCalculatorMockResultDuplicateInput{p, p1, p2, p3, p4}, "FilamentCalculator.ResultDuplicate got unexpected parameters")
+		testify_assert.Equal(m.t, *input, FilamentCalculatorMockResultDuplicateInput{p, p1, p2, p3}, "FilamentCalculator.ResultDuplicate got unexpected parameters")
 
 		result := m.ResultDuplicateMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -781,7 +780,7 @@ func (m *FilamentCalculatorMock) ResultDuplicate(p context.Context, p1 insolar.P
 
 		input := m.ResultDuplicateMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, FilamentCalculatorMockResultDuplicateInput{p, p1, p2, p3, p4}, "FilamentCalculator.ResultDuplicate got unexpected parameters")
+			testify_assert.Equal(m.t, *input, FilamentCalculatorMockResultDuplicateInput{p, p1, p2, p3}, "FilamentCalculator.ResultDuplicate got unexpected parameters")
 		}
 
 		result := m.ResultDuplicateMock.mainExpectation.result
@@ -796,11 +795,11 @@ func (m *FilamentCalculatorMock) ResultDuplicate(p context.Context, p1 insolar.P
 	}
 
 	if m.ResultDuplicateFunc == nil {
-		m.t.Fatalf("Unexpected call to FilamentCalculatorMock.ResultDuplicate. %v %v %v %v %v", p, p1, p2, p3, p4)
+		m.t.Fatalf("Unexpected call to FilamentCalculatorMock.ResultDuplicate. %v %v %v %v", p, p1, p2, p3)
 		return
 	}
 
-	return m.ResultDuplicateFunc(p, p1, p2, p3, p4)
+	return m.ResultDuplicateFunc(p, p1, p2, p3)
 }
 
 //ResultDuplicateMinimockCounter returns a count of FilamentCalculatorMock.ResultDuplicateFunc invocations
