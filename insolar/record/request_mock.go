@@ -42,11 +42,6 @@ type RequestMock struct {
 	IsDetachedPreCounter uint64
 	IsDetachedMock       mRequestMockIsDetached
 
-	IsEmptyAPINodeFunc       func() (r bool)
-	IsEmptyAPINodeCounter    uint64
-	IsEmptyAPINodePreCounter uint64
-	IsEmptyAPINodeMock       mRequestMockIsEmptyAPINode
-
 	ReasonRefFunc       func() (r insolar.Reference)
 	ReasonRefCounter    uint64
 	ReasonRefPreCounter uint64
@@ -66,7 +61,6 @@ func NewRequestMock(t minimock.Tester) *RequestMock {
 	m.IsAPIRequestMock = mRequestMockIsAPIRequest{mock: m}
 	m.IsCreationRequestMock = mRequestMockIsCreationRequest{mock: m}
 	m.IsDetachedMock = mRequestMockIsDetached{mock: m}
-	m.IsEmptyAPINodeMock = mRequestMockIsEmptyAPINode{mock: m}
 	m.ReasonRefMock = mRequestMockReasonRef{mock: m}
 
 	return m
@@ -742,140 +736,6 @@ func (m *RequestMock) IsDetachedFinished() bool {
 	return true
 }
 
-type mRequestMockIsEmptyAPINode struct {
-	mock              *RequestMock
-	mainExpectation   *RequestMockIsEmptyAPINodeExpectation
-	expectationSeries []*RequestMockIsEmptyAPINodeExpectation
-}
-
-type RequestMockIsEmptyAPINodeExpectation struct {
-	result *RequestMockIsEmptyAPINodeResult
-}
-
-type RequestMockIsEmptyAPINodeResult struct {
-	r bool
-}
-
-//Expect specifies that invocation of Request.IsEmptyAPINode is expected from 1 to Infinity times
-func (m *mRequestMockIsEmptyAPINode) Expect() *mRequestMockIsEmptyAPINode {
-	m.mock.IsEmptyAPINodeFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &RequestMockIsEmptyAPINodeExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of Request.IsEmptyAPINode
-func (m *mRequestMockIsEmptyAPINode) Return(r bool) *RequestMock {
-	m.mock.IsEmptyAPINodeFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &RequestMockIsEmptyAPINodeExpectation{}
-	}
-	m.mainExpectation.result = &RequestMockIsEmptyAPINodeResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Request.IsEmptyAPINode is expected once
-func (m *mRequestMockIsEmptyAPINode) ExpectOnce() *RequestMockIsEmptyAPINodeExpectation {
-	m.mock.IsEmptyAPINodeFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &RequestMockIsEmptyAPINodeExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *RequestMockIsEmptyAPINodeExpectation) Return(r bool) {
-	e.result = &RequestMockIsEmptyAPINodeResult{r}
-}
-
-//Set uses given function f as a mock of Request.IsEmptyAPINode method
-func (m *mRequestMockIsEmptyAPINode) Set(f func() (r bool)) *RequestMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.IsEmptyAPINodeFunc = f
-	return m.mock
-}
-
-//IsEmptyAPINode implements github.com/insolar/insolar/insolar/record.Request interface
-func (m *RequestMock) IsEmptyAPINode() (r bool) {
-	counter := atomic.AddUint64(&m.IsEmptyAPINodePreCounter, 1)
-	defer atomic.AddUint64(&m.IsEmptyAPINodeCounter, 1)
-
-	if len(m.IsEmptyAPINodeMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.IsEmptyAPINodeMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to RequestMock.IsEmptyAPINode.")
-			return
-		}
-
-		result := m.IsEmptyAPINodeMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the RequestMock.IsEmptyAPINode")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.IsEmptyAPINodeMock.mainExpectation != nil {
-
-		result := m.IsEmptyAPINodeMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the RequestMock.IsEmptyAPINode")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.IsEmptyAPINodeFunc == nil {
-		m.t.Fatalf("Unexpected call to RequestMock.IsEmptyAPINode.")
-		return
-	}
-
-	return m.IsEmptyAPINodeFunc()
-}
-
-//IsEmptyAPINodeMinimockCounter returns a count of RequestMock.IsEmptyAPINodeFunc invocations
-func (m *RequestMock) IsEmptyAPINodeMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.IsEmptyAPINodeCounter)
-}
-
-//IsEmptyAPINodeMinimockPreCounter returns the value of RequestMock.IsEmptyAPINode invocations
-func (m *RequestMock) IsEmptyAPINodeMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.IsEmptyAPINodePreCounter)
-}
-
-//IsEmptyAPINodeFinished returns true if mock invocations count is ok
-func (m *RequestMock) IsEmptyAPINodeFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.IsEmptyAPINodeMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.IsEmptyAPINodeCounter) == uint64(len(m.IsEmptyAPINodeMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.IsEmptyAPINodeMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.IsEmptyAPINodeCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.IsEmptyAPINodeFunc != nil {
-		return atomic.LoadUint64(&m.IsEmptyAPINodeCounter) > 0
-	}
-
-	return true
-}
-
 type mRequestMockReasonRef struct {
 	mock              *RequestMock
 	mainExpectation   *RequestMockReasonRefExpectation
@@ -1034,10 +894,6 @@ func (m *RequestMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to RequestMock.IsDetached")
 	}
 
-	if !m.IsEmptyAPINodeFinished() {
-		m.t.Fatal("Expected call to RequestMock.IsEmptyAPINode")
-	}
-
 	if !m.ReasonRefFinished() {
 		m.t.Fatal("Expected call to RequestMock.ReasonRef")
 	}
@@ -1079,10 +935,6 @@ func (m *RequestMock) MinimockFinish() {
 		m.t.Fatal("Expected call to RequestMock.IsDetached")
 	}
 
-	if !m.IsEmptyAPINodeFinished() {
-		m.t.Fatal("Expected call to RequestMock.IsEmptyAPINode")
-	}
-
 	if !m.ReasonRefFinished() {
 		m.t.Fatal("Expected call to RequestMock.ReasonRef")
 	}
@@ -1106,7 +958,6 @@ func (m *RequestMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.IsAPIRequestFinished()
 		ok = ok && m.IsCreationRequestFinished()
 		ok = ok && m.IsDetachedFinished()
-		ok = ok && m.IsEmptyAPINodeFinished()
 		ok = ok && m.ReasonRefFinished()
 
 		if ok {
@@ -1134,10 +985,6 @@ func (m *RequestMock) MinimockWait(timeout time.Duration) {
 
 			if !m.IsDetachedFinished() {
 				m.t.Error("Expected call to RequestMock.IsDetached")
-			}
-
-			if !m.IsEmptyAPINodeFinished() {
-				m.t.Error("Expected call to RequestMock.IsEmptyAPINode")
 			}
 
 			if !m.ReasonRefFinished() {
@@ -1173,10 +1020,6 @@ func (m *RequestMock) AllMocksCalled() bool {
 	}
 
 	if !m.IsDetachedFinished() {
-		return false
-	}
-
-	if !m.IsEmptyAPINodeFinished() {
 		return false
 	}
 

@@ -44,7 +44,7 @@ type UpdateObject struct {
 		indexLocker   object.IndexLocker
 		records       object.RecordModifier
 		index         object.IndexStorage
-		filament      executor.FilamentModifier
+		filament      executor.FilamentManager
 		sender        bus.Sender
 	}
 }
@@ -72,7 +72,7 @@ func (a *UpdateObject) Dep(
 	il object.IndexLocker,
 	r object.RecordModifier,
 	i object.IndexStorage,
-	f executor.FilamentModifier,
+	f executor.FilamentManager,
 	s bus.Sender,
 ) {
 	a.dep.records = r
