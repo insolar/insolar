@@ -129,6 +129,7 @@ func NewMessageHandler(
 				h.Sender,
 				h.IndexLocker,
 				h.IndexStorage,
+				h.JetCoordinator,
 			)
 		},
 		SetResult: func(p *proc.SetResult) {
