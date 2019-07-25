@@ -76,21 +76,15 @@ func (*CallMethod) DefaultRole() insolar.DynamicRole {
 	return insolar.DynamicRoleVirtualExecutor
 }
 
+var pcs = platformpolicy.NewPlatformCryptographyScheme() // TODO: create message factory
+
 // DefaultTarget returns of target of this event.
 func (cm *CallMethod) DefaultTarget() *insolar.Reference {
-	switch cm.CallType {
-	case record.CTSaveAsChild:
-		return genRequest(cm.PulseNum, MustSerializeBytes(cm))
-	default:
-		return cm.Object
-	}
+	return record.CalculateRequestAffinityRef(&cm.IncomingRequest, cm.PulseNum, pcs)
 }
 
 func (cm *CallMethod) GetReference() insolar.Reference {
-	if cm.CallType != record.CTMethod {
-		return *genRequest(cm.PulseNum, MustSerializeBytes(cm))
-	}
-	return *cm.Object
+	return *record.CalculateRequestAffinityRef(&cm.IncomingRequest, cm.PulseNum, pcs)
 }
 
 // Type returns TypeCallMethod.
@@ -98,11 +92,8 @@ func (cm *CallMethod) Type() insolar.MessageType {
 	return insolar.TypeCallMethod
 }
 
-// TODO rename to executorObjectResult (results?)
 type ExecutorResults struct {
-	Caller                insolar.Reference
 	RecordRef             insolar.Reference
-	Requests              []CaseBindRequest
 	Queue                 []ExecutionQueueElement
 	LedgerHasMoreRequests bool
 	Pending               insolar.PendingState
@@ -136,58 +127,11 @@ func (er *ExecutorResults) Type() insolar.MessageType {
 
 // TODO change after changing pulsar
 func (er *ExecutorResults) GetCaller() *insolar.Reference {
-	return &er.Caller
+	return nil
 }
 
 func (er *ExecutorResults) GetReference() insolar.Reference {
 	return er.RecordRef
-}
-
-type ValidateCaseBind struct {
-	Caller    insolar.Reference
-	RecordRef insolar.Reference
-	Requests  []CaseBindRequest
-	Pulse     insolar.Pulse
-}
-
-type CaseBindRequest struct {
-	Parcel         insolar.Parcel
-	Request        insolar.Reference
-	MessageBusTape []byte
-	Reply          insolar.Reply
-	Error          string
-}
-
-// AllowedSenderObjectAndRole implements interface method
-func (vcb *ValidateCaseBind) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
-	return &vcb.RecordRef, insolar.DynamicRoleVirtualExecutor
-}
-
-// DefaultRole returns role for this event
-func (*ValidateCaseBind) DefaultRole() insolar.DynamicRole {
-	return insolar.DynamicRoleVirtualValidator
-}
-
-// DefaultTarget returns of target of this event.
-func (vcb *ValidateCaseBind) DefaultTarget() *insolar.Reference {
-	return &vcb.RecordRef
-}
-
-func (vcb *ValidateCaseBind) Type() insolar.MessageType {
-	return insolar.TypeValidateCaseBind
-}
-
-// TODO change after changing pulsar
-func (vcb *ValidateCaseBind) GetCaller() *insolar.Reference {
-	return &vcb.Caller // TODO actually it's not right. There is no caller.
-}
-
-func (vcb *ValidateCaseBind) GetReference() insolar.Reference {
-	return vcb.RecordRef
-}
-
-func (vcb *ValidateCaseBind) GetPulse() insolar.Pulse {
-	return vcb.Pulse
 }
 
 type ValidationResults struct {
@@ -223,14 +167,6 @@ func (vr *ValidationResults) GetCaller() *insolar.Reference {
 
 func (vr *ValidationResults) GetReference() insolar.Reference {
 	return vr.RecordRef
-}
-
-var hasher = platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher() // TODO: create message factory
-
-// GenRequest calculates Reference for request message from pulse number and request's payload.
-func genRequest(pn insolar.PulseNumber, payload []byte) *insolar.Reference {
-	ref := insolar.NewReference(*insolar.NewID(pn, hasher.Hash(payload)))
-	return ref
 }
 
 // PendingFinished is sent by the old executor to the current executor

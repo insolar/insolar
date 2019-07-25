@@ -53,7 +53,6 @@ var transferredToWatermill = map[insolar.MessageType]struct{}{
 	insolar.TypeCallMethod:                         {},
 	insolar.TypePendingFinished:                    {},
 	insolar.TypeStillExecuting:                     {},
-	insolar.TypeAbandonedRequestsNotification:      {},
 	insolar.TypeExecutorResults:                    {},
 	insolar.TypeAdditionalCallFromPreviousExecutor: {},
 	insolar.TypeHeavyPayload:                       {},

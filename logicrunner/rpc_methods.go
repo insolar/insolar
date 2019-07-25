@@ -74,7 +74,7 @@ func (m *RPCMethods) getCurrent(
 			return nil, nil, errors.New("No execution in the state")
 		}
 
-		transcript := broker.currentList.Get(reqRef)
+		transcript := broker.GetActiveTranscript(reqRef)
 		if transcript == nil {
 			return nil, nil, errors.Errorf("No current execution in the state for request %s", reqRef.String())
 		}

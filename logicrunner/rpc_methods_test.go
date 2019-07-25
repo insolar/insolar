@@ -45,32 +45,6 @@ func TestRPCMethods_New(t *testing.T) {
 	require.NotNil(t, m)
 }
 
-func genBaseData(t minimock.Tester, tr *Transcript) (
-	*RPCMethods, insolar.Reference, insolar.Reference,
-) {
-	reqRef := gen.Reference()
-	objRef := gen.Reference()
-
-	tr.RequestRef = reqRef
-
-	execList := NewCurrentExecutionList()
-	execList.Set(reqRef, tr)
-	ss := NewStateStorageMock(t).
-		GetExecutionStateMock.Set(func(ref insolar.Reference) (r *ExecutionBroker) {
-		if ref.Equal(objRef) {
-			return &ExecutionBroker{currentList: execList}
-		} else {
-			return nil
-		}
-	})
-
-	m := &RPCMethods{
-		ss:        ss,
-		execution: NewProxyImplementationMock(t),
-	}
-	return m, reqRef, objRef
-}
-
 func TestRPCMethods_DeactivateObject(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
@@ -81,9 +55,11 @@ func TestRPCMethods_DeactivateObject(t *testing.T) {
 	tr := &Transcript{RequestRef: reqRef}
 
 	execList := NewCurrentExecutionList()
-	execList.Set(reqRef, tr)
+	err := execList.SetOnce(tr)
+	require.NoError(t, err)
+
 	ss := NewStateStorageMock(t).
-		GetExecutionStateMock.Set(func(ref insolar.Reference) (r *ExecutionBroker) {
+		GetExecutionStateMock.Set(func(ref insolar.Reference) (r ExecutionBrokerI) {
 		if ref.Equal(objRef) {
 			return &ExecutionBroker{currentList: execList}
 		} else {

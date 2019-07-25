@@ -19,6 +19,8 @@ package light
 import (
 	"context"
 
+	"github.com/insolar/insolar/network/rules"
+
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
@@ -256,10 +258,13 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Coordinator,
 			jetTreeUpdater,
 			WmBus,
+			Pulses,
 		)
+		requestChecker := executor.NewRequestChecker(filamentCalculator, Coordinator, jetTreeUpdater, WmBus)
 
 		handler.JetTreeUpdater = jetTreeUpdater
 		handler.FilamentCalculator = filamentCalculator
+		handler.RequestChecker = requestChecker
 
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
 		var lightCleaner = replication.NewCleaner(
@@ -343,6 +348,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		NodeNetwork,
 		NetworkService,
 		pubSub,
+		rules.NewRules(),
 	)
 
 	err = c.cmp.Init(ctx)

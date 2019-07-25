@@ -171,6 +171,13 @@ message RequestInfo {
     bytes Result = 23;
 }
 
+message GotHotConfirmation {
+    uint32 Polymorph = 16;
+    bytes JetID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
+    bytes Pulse = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    bool Split = 22;
+}
+
 message ResultInfo {
     uint32 Polymorph = 16;
 
@@ -299,4 +306,10 @@ message GetJet {
 
     bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
     uint32 PulseNumber = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+}
+
+message AbandonedRequestsNotification {
+    uint32 Polymorph = 16;
+
+    bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
 }

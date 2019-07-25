@@ -72,6 +72,7 @@ type MessageHandler struct {
 
 	filamentModifier   *executor.FilamentModifierDefault
 	FilamentCalculator *executor.FilamentCalculatorDefault
+	RequestChecker     *executor.RequestCheckerDefault
 }
 
 // NewMessageHandler creates new handler.
@@ -125,10 +126,14 @@ func NewMessageHandler(
 		SetRequest: func(p *proc.SetRequest) {
 			p.Dep(
 				h.WriteAccessor,
-				h.filamentModifier,
+				h.FilamentCalculator,
 				h.Sender,
 				h.IndexLocker,
 				h.IndexStorage,
+				h.Records,
+				h.PCS,
+				h.RequestChecker,
+				h.JetCoordinator,
 			)
 		},
 		SetResult: func(p *proc.SetResult) {
