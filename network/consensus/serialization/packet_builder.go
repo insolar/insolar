@@ -222,7 +222,6 @@ func (pb *PacketBuilder) PreparePhase3Packet(
 
 type PreparedPacketSender struct {
 	packet   *Packet
-	buf      [packetMaxSize]byte
 	digester cryptkit.DataDigester
 	signer   cryptkit.DigestSigner
 }
@@ -244,15 +243,24 @@ func (p *PreparedPacketSender) SendTo(
 	p.packet.Header.TargetID = uint32(target.GetNodeID())
 	p.packet.Header.ReceiverID = uint32(target.GetNodeID())
 
+	ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
+		"receiver_node_id": p.packet.Header.ReceiverID,
+		"target_node_id":   p.packet.Header.TargetID,
+		"options":          sendOptions,
+		"packet_type":      p.packet.Header.GetPacketType().String(),
+	})
+
 	p.beforeSend(sender, sendOptions, target)
 
-	buf := bytes.NewBuffer(p.buf[0:0:packetMaxSize])
-	_, err := p.packet.SerializeTo(ctx, buf, p.digester, p.signer)
+	var buf [packetMaxSize]byte
+	buffer := bytes.NewBuffer(buf[0:0:packetMaxSize])
+
+	_, err := p.packet.SerializeTo(ctx, buffer, p.digester, p.signer)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(err)
 	}
 
-	sender.SendPacketToTransport(ctx, target, sendOptions, p.buf[:buf.Len()])
+	sender.SendPacketToTransport(ctx, target, sendOptions, buffer.Bytes())
 }
 
 func (p *PreparedPacketSender) SendToMany(

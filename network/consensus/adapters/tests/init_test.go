@@ -206,7 +206,7 @@ func initNodes(
 func initLogger() context.Context {
 	ctx := context.Background()
 	logger := inslogger.FromContext(ctx).WithCaller(false)
-	logger, _ = logger.WithLevelNumber(insolar.ErrorLevel)
+	logger, _ = logger.WithLevelNumber(TestLogLevel)
 	logger, _ = logger.WithFormat(insolar.TextFormat)
 	ctx = inslogger.SetLogger(ctx, logger)
 	return ctx
