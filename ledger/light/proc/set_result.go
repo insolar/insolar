@@ -33,10 +33,10 @@ import (
 )
 
 type SetResult struct {
-	message  payload.Meta
-	result   record.Result
-	resultID insolar.ID
-	jetID    insolar.JetID
+	message    payload.Meta
+	result     record.Result
+	jetID      insolar.JetID
+	sideEffect record.Record
 
 	dep struct {
 		writer   hot.WriteAccessor
@@ -51,15 +51,15 @@ type SetResult struct {
 
 func NewSetResult(
 	msg payload.Meta,
-	res record.Result,
-	resID insolar.ID,
+	result record.Result,
 	jetID insolar.JetID,
+	sideEffect record.Record,
 ) *SetResult {
 	return &SetResult{
-		message:  msg,
-		result:   res,
-		resultID: resID,
-		jetID:    jetID,
+		message:    msg,
+		result:     result,
+		jetID:      jetID,
+		sideEffect: sideEffect,
 	}
 }
 
@@ -82,22 +82,43 @@ func (p *SetResult) Dep(
 }
 
 func (p *SetResult) Proceed(ctx context.Context) error {
+	var resultID insolar.ID
+	{
+		hash := record.HashVirtual(p.dep.pcs.ReferenceHasher(), record.Wrap(p.result))
+		resultID = *insolar.NewID(flow.Pulse(ctx), hash)
+	}
+	objectID := p.result.Object
+
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"object_id":  p.result.Object.DebugString(),
-		"result_id":  p.resultID.DebugString(),
+		"object_id":  objectID.DebugString(),
+		"result_id":  resultID.DebugString(),
 		"request_id": p.result.Request.Record().DebugString(),
 	})
 	logger.Debug("trying to save result")
-
-	objectID := p.result.Object
 
 	// Prevent concurrent object modifications.
 	p.dep.locker.Lock(objectID)
 	defer p.dep.locker.Unlock(objectID)
 
+	index, err := p.dep.indexes.ForID(ctx, resultID.Pulse(), objectID)
+	if err != nil {
+		return errors.Wrap(err, "failed to fetch index")
+	}
+	if p.sideEffect != nil && index.Lifeline.StateID == record.StateDeactivation {
+		msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeDeactivated})
+		if err != nil {
+			return errors.Wrap(err, "failed to create reply")
+		}
+		p.dep.sender.Reply(ctx, p.message, msg)
+		return nil
+	}
+	if index.Lifeline.PendingPointer != nil && resultID.Pulse() < index.Lifeline.PendingPointer.Pulse() {
+		return errors.New("result from the past")
+	}
+
 	// Check for duplicates.
 	{
-		res, err := p.dep.filament.ResultDuplicate(ctx, objectID, p.resultID, p.result)
+		res, err := p.dep.filament.ResultDuplicate(ctx, objectID, resultID, p.result)
 		if err != nil {
 			return errors.Wrap(err, "failed to check result duplicates")
 		}
@@ -133,11 +154,6 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to calculate earliest pending")
 	}
 
-	index, err := p.dep.indexes.ForID(ctx, p.resultID.Pulse(), objectID)
-	if err != nil {
-		return errors.Wrap(err, "failed to fetch index")
-	}
-
 	err = func() error {
 		// Start writing to db.
 		done, err := p.dep.writer.Begin(ctx, flow.Pulse(ctx))
@@ -153,7 +169,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		{
 			virtual := record.Wrap(p.result)
 			material := record.Material{Virtual: &virtual, JetID: p.jetID}
-			err := p.dep.records.Set(ctx, p.resultID, material)
+			err := p.dep.records.Set(ctx, resultID, material)
 			if err != nil {
 				return errors.Wrap(err, "failed to save a result record")
 			}
@@ -163,11 +179,11 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		// Save filament record to storage.
 		{
 			virtual := record.Wrap(record.PendingFilament{
-				RecordID:       p.resultID,
+				RecordID:       resultID,
 				PreviousRecord: index.Lifeline.PendingPointer,
 			})
 			hash := record.HashVirtual(p.dep.pcs.ReferenceHasher(), virtual)
-			id := *insolar.NewID(p.resultID.Pulse(), hash)
+			id := *insolar.NewID(resultID.Pulse(), hash)
 			material := record.Material{Virtual: &virtual, JetID: p.jetID}
 			err := p.dep.records.Set(ctx, id, material)
 			if err != nil {
@@ -176,11 +192,28 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 			filamentID = id
 		}
 
+		// Save side effect.
+		{
+			if p.sideEffect != nil {
+				virtual := record.Wrap(p.sideEffect)
+				hash := record.HashVirtual(p.dep.pcs.ReferenceHasher(), virtual)
+				id := *insolar.NewID(resultID.Pulse(), hash)
+				material := record.Material{
+					Virtual: &virtual,
+					JetID:   p.jetID,
+				}
+				err := p.dep.records.Set(ctx, id, material)
+				if err != nil {
+					return errors.Wrap(err, "failed to save filament record")
+				}
+			}
+		}
+
 		// Save updated index.
-		index.LifelineLastUsed = p.resultID.Pulse()
+		index.LifelineLastUsed = resultID.Pulse()
 		index.Lifeline.PendingPointer = &filamentID
 		index.Lifeline.EarliestOpenRequest = earliestPending
-		err = p.dep.indexes.SetIndex(ctx, p.resultID.Pulse(), index)
+		err = p.dep.indexes.SetIndex(ctx, resultID.Pulse(), index)
 		if err != nil {
 			return errors.Wrap(err, "failed to update index")
 		}
@@ -197,7 +230,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 
 	msg, err := payload.NewMessage(&payload.ResultInfo{
 		ObjectID: p.result.Object,
-		ResultID: p.resultID,
+		ResultID: resultID,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create reply")

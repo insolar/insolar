@@ -43,9 +43,10 @@ func TestSetResult_Proceed(t *testing.T) {
 	t.Parallel()
 
 	mc := minimock.NewController(t)
+	flowPulse := insolar.GenesisPulse.PulseNumber + 2
 	ctx := flow.TestContextWithPulse(
 		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
+		flowPulse,
 	)
 
 	writeAccessor := hot.NewWriteAccessorMock(mc)
@@ -57,18 +58,19 @@ func TestSetResult_Proceed(t *testing.T) {
 
 	jetID := gen.JetID()
 	objectID := gen.ID()
-	resultID := gen.ID()
 	requestID := gen.ID()
 
-	res := &record.Result{
+	resultRecord := &record.Result{
 		Request: *insolar.NewReference(requestID),
 		Object:  objectID,
 	}
 	virtual := record.Virtual{
 		Union: &record.Virtual_Result{
-			Result: res,
+			Result: resultRecord,
 		},
 	}
+	hash := record.HashVirtual(pcs.ReferenceHasher(), virtual)
+	resultID := *insolar.NewID(flow.Pulse(ctx), hash)
 	virtualBuf, err := virtual.Marshal()
 	require.NoError(t, err)
 
@@ -81,17 +83,17 @@ func TestSetResult_Proceed(t *testing.T) {
 	msg := payload.Meta{
 		Payload: resultBuf,
 	}
-	pendingPointer := gen.ID()
+	pendingPointer := gen.IDWithPulse(flowPulse)
 	expectedFilament := record.PendingFilament{
 		RecordID:       resultID,
 		PreviousRecord: &pendingPointer,
 	}
-	hash := record.HashVirtual(pcs.ReferenceHasher(), record.Wrap(expectedFilament))
+	hash = record.HashVirtual(pcs.ReferenceHasher(), record.Wrap(expectedFilament))
 	expectedFilamentID := *insolar.NewID(resultID.Pulse(), hash)
 
 	indexes := object.NewIndexStorageMock(mc)
 	indexes.ForIDFunc = func(_ context.Context, pn insolar.PulseNumber, id insolar.ID) (record.Index, error) {
-		require.Equal(t, resultID.Pulse(), pn)
+		require.Equal(t, flow.Pulse(ctx), pn)
 		require.Equal(t, objectID, id)
 		earliestPN := requestID.Pulse()
 		return record.Index{
@@ -118,7 +120,7 @@ func TestSetResult_Proceed(t *testing.T) {
 		switch r := record.Unwrap(rec.Virtual).(type) {
 		case *record.Result:
 			require.Equal(t, resultID, id)
-			require.Equal(t, res, r)
+			require.Equal(t, resultRecord, r)
 		case *record.PendingFilament:
 			require.Equal(t, expectedFilamentID, id)
 			require.Equal(t, &expectedFilament, record.Unwrap(rec.Virtual))
@@ -130,7 +132,7 @@ func TestSetResult_Proceed(t *testing.T) {
 	filaments := executor.NewFilamentCalculatorMock(mc)
 	filaments.ResultDuplicateFunc = func(_ context.Context, objID insolar.ID, resID insolar.ID, r record.Result) (*record.CompositeFilamentRecord, error) {
 		require.Equal(t, objectID, objID)
-		require.Equal(t, *res, r)
+		require.Equal(t, *resultRecord, r)
 		return nil, nil
 	}
 	filaments.OpenedRequestsFunc = func(_ context.Context, pn insolar.PulseNumber, objID insolar.ID, pendingOnly bool) ([]record.CompositeFilamentRecord, error) {
@@ -147,7 +149,7 @@ func TestSetResult_Proceed(t *testing.T) {
 		}, nil
 	}
 
-	setResultProc := proc.NewSetResult(msg, *res, resultID, jetID)
+	setResultProc := proc.NewSetResult(msg, *resultRecord, jetID, nil)
 	setResultProc.Dep(writeAccessor, sender, object.NewIndexLocker(), filaments, records, indexes, pcs)
 
 	err = setResultProc.Proceed(ctx)
@@ -167,6 +169,7 @@ func TestSetResult_Proceed_ResultDuplicated(t *testing.T) {
 	writeAccessor.BeginMock.Return(func() {}, nil)
 	records := object.NewRecordModifierMock(mc)
 	indexes := object.NewIndexStorageMock(mc)
+	indexes.ForIDMock.Return(record.Index{}, nil)
 	pcs := testutils.NewPlatformCryptographyScheme()
 
 	sender := bus.NewSenderMock(t)
@@ -219,7 +222,7 @@ func TestSetResult_Proceed_ResultDuplicated(t *testing.T) {
 		require.Equal(t, resultID, res.ResultID)
 	}
 
-	setResultProc := proc.NewSetResult(msg, *res, objectID, jetID)
+	setResultProc := proc.NewSetResult(msg, *res, jetID, nil)
 	setResultProc.Dep(writeAccessor, sender, object.NewIndexLocker(), filaments, records, indexes, pcs)
 	err = setResultProc.Proceed(ctx)
 	require.NoError(t, err)

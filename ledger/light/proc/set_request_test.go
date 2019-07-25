@@ -166,6 +166,11 @@ func TestSetRequest_Proceed(t *testing.T) {
 	t.Run("duplicate returns correct requestID", func(t *testing.T) {
 		reqID := gen.ID()
 		resID := gen.ID()
+		idxStorage.ForIDMock.Return(record.Index{
+			Lifeline: record.Lifeline{
+				StateID: record.StateActivation,
+			},
+		}, nil)
 		filaments.RequestDuplicateMock.Return(
 			&record.CompositeFilamentRecord{RecordID: reqID},
 			&record.CompositeFilamentRecord{RecordID: resID},

@@ -130,6 +130,31 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	p.dep.locker.Lock(objectID)
 	defer p.dep.locker.Unlock(objectID)
 
+	var index record.Index
+	if p.request.IsCreationRequest() {
+		index = record.Index{
+			ObjID:            objectID,
+			LifelineLastUsed: p.requestID.Pulse(),
+		}
+	} else {
+		idx, err := p.dep.indexes.ForID(ctx, flow.Pulse(ctx), objectID)
+		if err != nil {
+			return errors.Wrap(err, "failed to check an object state")
+		}
+		if index.Lifeline.StateID == record.StateDeactivation {
+			msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeDeactivated})
+			if err != nil {
+				return errors.Wrap(err, "failed to create reply")
+			}
+			p.dep.sender.Reply(ctx, p.message, msg)
+			return nil
+		}
+		if idx.Lifeline.PendingPointer != nil && p.requestID.Pulse() < idx.Lifeline.PendingPointer.Pulse() {
+			return errors.New("request from the past")
+		}
+		index = idx
+	}
+
 	// Check for request duplicates.
 	{
 		var (
@@ -193,31 +218,6 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		return err
 	}
 	defer done()
-
-	var index record.Index
-	if p.request.IsCreationRequest() {
-		index = record.Index{
-			ObjID:            objectID,
-			LifelineLastUsed: p.requestID.Pulse(),
-		}
-	} else {
-		idx, err := p.dep.indexes.ForID(ctx, flow.Pulse(ctx), objectID)
-		if err != nil {
-			return errors.Wrap(err, "failed to check an object state")
-		}
-		if index.Lifeline.StateID == record.StateDeactivation {
-			msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeDeactivated})
-			if err != nil {
-				return errors.Wrap(err, "failed to create reply")
-			}
-			p.dep.sender.Reply(ctx, p.message, msg)
-			return nil
-		}
-		if idx.Lifeline.PendingPointer != nil && p.requestID.Pulse() < idx.Lifeline.PendingPointer.Pulse() {
-			return errors.New("request from the past")
-		}
-		index = idx
-	}
 
 	// Store request record.
 	{
