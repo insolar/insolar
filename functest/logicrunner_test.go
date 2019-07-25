@@ -231,6 +231,7 @@ func (r *Two) GetPayloadString() (string, error) {
 	)
 }
 
+// Make sure a contract can make a saga call to another contract
 func TestSagaSimpleCall(t *testing.T) {
 	balance := float64(100)
 	amount := float64(10)
@@ -308,6 +309,76 @@ func (w *TestSagaSimpleCallContract) Rollback(amount int) error {
 		require.Equal(t, balance-amount, bal1.ExtractedReply.(float64))
 		require.Equal(t, balance+amount, bal2.ExtractedReply.(float64))
 
+		checkPassed = true
+		break
+	}
+
+	require.True(t, checkPassed)
+}
+
+// Make sure a contract can make a saga call to itself
+func TestSagaSelfCall(t *testing.T) {
+	var contractCode = `
+package main
+
+import (
+"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+"github.com/insolar/insolar/application/proxy/test_saga_self_contract"
+)
+
+type TestSagaSelfCallContract struct {
+	foundation.BaseContract
+	SagaCallsNum int
+}
+
+func New() (*TestSagaSelfCallContract, error) {
+	return &TestSagaSelfCallContract{SagaCallsNum: 0}, nil
+}
+
+func (c *TestSagaSelfCallContract) Transfer(delta int) error {
+	proxy := test_saga_self_contract.GetObject(c.GetReference())
+	err := proxy.Accept(delta)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *TestSagaSelfCallContract) GetSagaCallsNum() (int, error) {
+	return c.SagaCallsNum, nil
+}
+
+//ins:saga(Rollback)
+func (c *TestSagaSelfCallContract) Accept(delta int) error {
+	c.SagaCallsNum += delta
+	return nil
+}
+
+func (c *TestSagaSelfCallContract) Rollback(delta int) error {
+	c.SagaCallsNum -= delta
+	return nil
+}
+`
+	prototype := uploadContractOnce(t, "test_saga_self_contract", contractCode)
+	contractRef := callConstructor(t, prototype, "New")
+
+	res1 := callMethod(t, contractRef, "GetSagaCallsNum")
+	require.Empty(t, res1.Error)
+	require.Equal(t, float64(0), res1.ExtractedReply.(float64))
+
+	resp := callMethod(t, contractRef, "Transfer", 1)
+	require.Empty(t, resp.Error)
+
+	checkPassed := false
+
+	for attempt := 0; attempt <= 10; attempt++ {
+		bal2 := callMethod(t, contractRef, "GetSagaCallsNum")
+		require.Empty(t, bal2.Error)
+		if bal2.ExtractedReply.(float64) != float64(1) {
+			// saga is not accepted yet
+			time.Sleep(10 * time.Millisecond)
+			continue
+		}
 		checkPassed = true
 		break
 	}
