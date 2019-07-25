@@ -144,8 +144,9 @@ const (
 	TargetNeedsIntro
 )
 
-const SharedPrepareSendOptionsMask = 0 | SendWithoutPulseData
+const SharedPrepareSendOptionsMask = SendWithoutPulseData | TargetNeedsIntro
 const PrepareWithoutPulseData = PacketPrepareOptions(SendWithoutPulseData)
+const PrepareWithIntro = PacketPrepareOptions(TargetNeedsIntro)
 
 const (
 	AlternativePhasePacket PacketPrepareOptions = 1 << (16 + iota)

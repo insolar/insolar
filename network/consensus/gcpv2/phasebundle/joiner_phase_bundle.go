@@ -101,7 +101,7 @@ func (r *JoinerPhaseBundle) CreateFullPhaseControllers(nodeCount int) ([]core.Ph
 		vif = inspectors.NewIgnorantVectorInspection()
 	}
 
-	packetPrepareOptions := r.JoinerOptions
+	packetPrepareOptions := r.JoinerOptions | transport.PrepareWithIntro
 
 	return []core.PhaseController{
 		ph01ctl.NewPhase01Controller(packetPrepareOptions|transport.PrepareWithoutPulseData, rcb.qIntro),
