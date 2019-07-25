@@ -161,8 +161,6 @@ func (h *Handler) handleParcel(ctx context.Context, msg *watermillMsg.Message) e
 	switch msgType {
 	case insolar.TypeGetChildren.String():
 		rep, err = h.handleGetChildren(ctx, parcel)
-	// case insolar.TypeGetJet.String():
-	// 	rep, err = h.handleGetJet(ctx, parcel)
 	case insolar.TypeGetObjectIndex.String():
 		rep, err = h.handleGetObjectIndex(ctx, parcel)
 	default:
