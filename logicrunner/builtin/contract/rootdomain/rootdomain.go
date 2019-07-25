@@ -31,7 +31,7 @@ import (
 type RootDomain struct {
 	foundation.BaseContract
 	RootMember             insolar.Reference
-	MigrationDaemonMembers []insolar.Reference
+	MigrationDaemonMembers [insolar.GenesisAmountActiveMigrationDaemonMembers]insolar.Reference
 	MigrationAdminMember   insolar.Reference
 	MigrationWallet        insolar.Reference
 	CostCenter             insolar.Reference
@@ -57,13 +57,13 @@ func (rd RootDomain) GetMigrationWalletRef() (insolar.Reference, error) {
 	return rd.MigrationWallet, nil
 }
 
-// GetMigrationDaemonMembers gets migration daemon members references.
+// GetMigrationAdminMember gets migration admin member reference.
 func (rd RootDomain) GetMigrationAdminMember() (insolar.Reference, error) {
 	return rd.MigrationAdminMember, nil
 }
 
-// GetMigrationDaemonMembers gets migration daemon members references.
-func (rd RootDomain) GetMigrationDaemonMembers() ([]insolar.Reference, error) {
+// GetActiveMigrationDaemonMembers gets migration daemon members references.
+func (rd RootDomain) GetActiveMigrationDaemonMembers() ([3]insolar.Reference, error) {
 	return rd.MigrationDaemonMembers, nil
 }
 

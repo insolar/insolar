@@ -71,6 +71,8 @@ func TestMarshalUnmarshal(t *testing.T) {
 		// {tp: payload.TypeReplication, pl: &payload.Replication{}},
 		{tp: payload.TypeSetResult, pl: &payload.SetResult{}},
 		{tp: payload.TypeActivate, pl: &payload.Activate{}},
+		{tp: payload.TypeRequestInfo, pl: &payload.RequestInfo{}},
+		{tp: payload.TypeGotHotConfirmation, pl: &payload.GotHotConfirmation{}},
 		{tp: payload.TypeDeactivate, pl: &payload.Deactivate{}},
 		{tp: payload.TypeUpdate, pl: &payload.Update{}},
 		{tp: payload.TypeHotObjects, pl: &payload.HotObjects{}},

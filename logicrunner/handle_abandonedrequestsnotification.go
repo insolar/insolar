@@ -20,13 +20,14 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
+
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/pkg/errors"
 )
 
 type initializeAbandonedRequestsNotificationExecutionState struct {
-	LR  *LogicRunner
+	dep *Dependencies
 	msg payload.AbandonedRequestsNotification
 }
 
@@ -34,17 +35,8 @@ type initializeAbandonedRequestsNotificationExecutionState struct {
 func (p *initializeAbandonedRequestsNotificationExecutionState) Proceed(ctx context.Context) error {
 	ref := *insolar.NewReference(p.msg.ObjectID)
 
-	broker := p.LR.StateStorage.UpsertExecutionState(ref)
-
-	broker.executionState.Lock()
-	if broker.executionState.pending == insolar.PendingUnknown {
-		broker.executionState.pending = insolar.InPending
-		broker.executionState.PendingConfirmed = false
-	}
-	broker.executionState.Unlock()
-
-	broker.MoreRequestsOnLedger(ctx)
-	broker.FetchMoreRequestsFromLedger(ctx)
+	broker := p.dep.StateStorage.UpsertExecutionState(ref)
+	broker.AbandonedRequestsOnLedger(ctx)
 
 	return nil
 }
@@ -60,6 +52,8 @@ func (h *HandleAbandonedRequestsNotification) Present(ctx context.Context, f flo
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal AbandonedRequestsNotification message")
 	}
+
+
 
 	return nil
 
