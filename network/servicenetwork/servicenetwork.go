@@ -321,7 +321,17 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 		return
 	}
 
+	done := make(chan struct{})
+	go func() {
+		select {
+		case <-time.After(5 * time.Second):
+			log.Fatal("Node stopped due to long pulse processing")
+		case <-done:
+		}
+	}()
+
 	n.ChangePulse(ctx, newPulse)
+	close(done)
 
 	go n.phaseManagerOnPulse(ctx, newPulse, pulseTime)
 }
