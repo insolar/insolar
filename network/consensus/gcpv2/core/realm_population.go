@@ -62,10 +62,9 @@ import (
 type RealmPopulation interface {
 	GetIndexedCount() int
 	GetJoinersCount() int
-	GetBftMajorityCount() int
 
-	GetSealedLimit() (int, bool)
-	SealIndex(indexedCountLimit int) bool
+	GetSealedCapacity() (int, bool)
+	SealIndexed(indexedCapacity int) bool
 
 	GetNodeAppearance(id insolar.ShortNodeID) *NodeAppearance
 	GetActiveNodeAppearance(id insolar.ShortNodeID) *NodeAppearance

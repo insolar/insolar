@@ -61,7 +61,7 @@ import (
 )
 
 type (
-	OnFinished func(pulse pulse.Number)
+	OnFinished func(mode member.OpMode, pw member.Power, effectiveSince pulse.Number)
 )
 
 type ConsensusControlFeeder struct {
@@ -76,7 +76,7 @@ func NewConsensusControlFeeder() *ConsensusControlFeeder {
 	return &ConsensusControlFeeder{
 		mu:            &sync.RWMutex{},
 		capacityLevel: capacity.LevelNormal,
-		onFinished:    func(pulse pulse.Number) {},
+		onFinished:    func(mode member.OpMode, pw member.Power, effectiveSince pulse.Number) {},
 	}
 }
 
@@ -120,7 +120,7 @@ func (cf *ConsensusControlFeeder) OnAppliedMembershipProfile(mode member.OpMode,
 	cf.mu.RLock()
 	defer cf.mu.RUnlock()
 
-	cf.onFinished(effectiveSince)
+	cf.onFinished(mode, pw, effectiveSince)
 }
 
 func (cf *ConsensusControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse.Number) {

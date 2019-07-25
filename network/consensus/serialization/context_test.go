@@ -58,7 +58,7 @@ import (
 )
 
 func TestPacketContext_InContext(t *testing.T) {
-	ctx := newPacketContext(context.Background(), nil)
+	ctx := newPacketContext(context.Background(), &Header{})
 
 	require.True(t, ctx.InContext(NoContext))
 	require.False(t, ctx.InContext(ContextMembershipAnnouncement))
@@ -72,7 +72,7 @@ func TestPacketContext_InContext(t *testing.T) {
 }
 
 func TestPacketContext_SetInContext(t *testing.T) {
-	ctx := newPacketContext(context.Background(), nil)
+	ctx := newPacketContext(context.Background(), &Header{})
 
 	require.True(t, ctx.InContext(NoContext))
 
@@ -84,25 +84,27 @@ func TestPacketContext_SetInContext(t *testing.T) {
 }
 
 func TestPacketContext_GetNeighbourNodeID(t *testing.T) {
-	ctx := newPacketContext(context.Background(), nil)
-
-	require.EqualValues(t, 0, ctx.GetNeighbourNodeID())
+	ctx := newPacketContext(context.Background(), &Header{})
 
 	ctx.neighbourNodeID = 123
 	require.EqualValues(t, 123, ctx.GetNeighbourNodeID())
 }
 
-func TestPacketContext_SetNeighbourNodeID(t *testing.T) {
-	ctx := newPacketContext(context.Background(), nil)
+func TestPacketContext_GetNeighbourNodeID_Panics(t *testing.T) {
+	ctx := newPacketContext(context.Background(), &Header{})
 
-	require.EqualValues(t, 0, ctx.GetNeighbourNodeID())
+	require.Panics(t, func() { ctx.GetNeighbourNodeID() })
+}
+
+func TestPacketContext_SetNeighbourNodeID(t *testing.T) {
+	ctx := newPacketContext(context.Background(), &Header{})
 
 	ctx.SetNeighbourNodeID(123)
 	require.EqualValues(t, 123, ctx.GetNeighbourNodeID())
 }
 
 func TestPacketContext_GetAnnouncedJoinerNodeID(t *testing.T) {
-	ctx := newPacketContext(context.Background(), nil)
+	ctx := newPacketContext(context.Background(), &Header{})
 
 	require.EqualValues(t, 0, ctx.GetAnnouncedJoinerNodeID())
 
@@ -111,7 +113,7 @@ func TestPacketContext_GetAnnouncedJoinerNodeID(t *testing.T) {
 }
 
 func TestPacketContext_SetAnnouncedJoinerNodeID(t *testing.T) {
-	ctx := newPacketContext(context.Background(), nil)
+	ctx := newPacketContext(context.Background(), &Header{})
 
 	require.EqualValues(t, 0, ctx.GetAnnouncedJoinerNodeID())
 

@@ -7,7 +7,7 @@ The original interface "LocalNode" can be found in github.com/insolar/insolar/ne
 */
 import (
 	"sync/atomic"
-	"time"
+	time "time"
 
 	"github.com/gojuno/minimock"
 	insolar "github.com/insolar/insolar/insolar"

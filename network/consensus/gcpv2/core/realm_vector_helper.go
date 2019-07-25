@@ -298,6 +298,7 @@ func (p *RealmVectorHelper) setArrayNodes(nodeIndex []*NodeAppearance,
 		}
 		joiner := dynamicNodes[joinerID]
 		if joiner == nil {
+			// TODO this need a purgatory handling here
 			// panic("joiner is missing")
 			continue
 		}
