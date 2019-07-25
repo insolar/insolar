@@ -529,11 +529,6 @@ func (r *FullRealm) FinishRound(ctx context.Context, builder census.Builder, csh
 	pb := builder.GetPopulationBuilder()
 	local := pb.GetLocalProfile()
 
-	count := pb.GetCount()
-	if count == 0 {
-		panic("test") // TODO remove
-	}
-
 	var expected census.Expected
 	mode := local.GetOpMode()
 	// ModeEvictedGracefully

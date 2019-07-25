@@ -86,6 +86,10 @@ func (c *JoinerPhase01PrepController) GetPacketType() []phases.PacketType {
 	return []phases.PacketType{phases.PacketPhase0, phases.PacketPhase1}
 }
 
+func (*JoinerPhase01PrepController) HasCustomVerifyForHost(from endpoints.Inbound, strict bool) bool {
+	return true // TODO remove after verification fix
+}
+
 func (c *JoinerPhase01PrepController) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
 	from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags) error {
 
