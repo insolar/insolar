@@ -64,8 +64,8 @@ const (
 	TypeReplication
 	TypeGetJet
 	TypeAbandonedRequestsNotification
-	TypeGetInitialState
-	TypeInitialState
+	TypeGetLightInitialState
+	TypeLightInitialState
 
 	TypeReturnResults
 	TypeCallMethod
@@ -274,11 +274,11 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *AbandonedRequestsNotification:
 		pl.Polymorph = uint32(TypeAbandonedRequestsNotification)
 		return pl.Marshal()
-	case *GetInitialState:
-		pl.Polymorph = uint32(TypeGetInitialState)
+	case *GetLightInitialState:
+		pl.Polymorph = uint32(TypeGetLightInitialState)
 		return pl.Marshal()
-	case *InitialState:
-		pl.Polymorph = uint32(TypeInitialState)
+	case *LightInitialState:
+		pl.Polymorph = uint32(TypeLightInitialState)
 		return pl.Marshal()
 	}
 
@@ -447,12 +447,12 @@ func Unmarshal(data []byte) (Payload, error) {
 		pl := AbandonedRequestsNotification{}
 		err := pl.Unmarshal(data)
 		return &pl, err
-	case TypeGetInitialState:
-		pl := GetInitialState{}
+	case TypeGetLightInitialState:
+		pl := GetLightInitialState{}
 		err := pl.Unmarshal(data)
 		return &pl, err
-	case TypeInitialState:
-		pl := InitialState{}
+	case TypeLightInitialState:
+		pl := LightInitialState{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}

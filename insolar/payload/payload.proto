@@ -307,13 +307,13 @@ message AbandonedRequestsNotification {
     bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
 }
 
-message GetInitialState {
+message GetLightInitialState {
     uint32 Polymorph = 16;
 
     bytes Pulse = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
 }
 
-message InitialState {
+message LightInitialState {
     uint32 Polymorph = 16;
 
     repeated bytes JetIDs = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];

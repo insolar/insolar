@@ -73,7 +73,7 @@ func (s *StateIniterDefault) PrepareState(ctx context.Context, pulse insolar.Pul
 		return errors.Wrap(err, "failed to get heavy ref from coordinator")
 	}
 
-	msg, err := payload.NewMessage(&payload.GetInitialState{
+	msg, err := payload.NewMessage(&payload.GetLightInitialState{
 		Pulse: pulse,
 	})
 	if err != nil {
@@ -92,7 +92,7 @@ func (s *StateIniterDefault) PrepareState(ctx context.Context, pulse insolar.Pul
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal reply")
 	}
-	initialState, ok := pl.(*payload.InitialState)
+	initialState, ok := pl.(*payload.LightInitialState)
 	if !ok {
 		return fmt.Errorf("unexpected reply %T", pl)
 	}
