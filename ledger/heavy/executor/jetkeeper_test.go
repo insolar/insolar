@@ -33,122 +33,160 @@ import (
 	"github.com/insolar/insolar/internal/ledger/store"
 )
 
+func initDB(t *testing.T, testPulse insolar.PulseNumber) (JetKeeper, string, *store.BadgerDB, *jet.DBStore) {
+	ctx := inslogger.TestContext(t)
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+
+	require.NoError(t, err)
+
+	db, err := store.NewBadgerDB(tmpdir)
+	require.NoError(t, err)
+
+	jets := jet.NewDBStore(db)
+	pulses := pulse.NewDB(db)
+	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
+	require.NoError(t, err)
+
+	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: testPulse})
+	require.NoError(t, err)
+
+	jetKeeper := NewJetKeeper(jets, db, pulses)
+
+	return jetKeeper, tmpdir, db, jets
+}
+
 func TestJetInfoIsConfirmed_OneDropOneHot(t *testing.T) {
 	t.Parallel()
-	ji := jetInfo{}
-	require.False(t, ji.isConfirmed())
+	ctx := inslogger.TestContext(t)
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	ji, tmpDir, db, jets := initDB(t, testPulse)
+	defer os.RemoveAll(tmpDir)
+	defer db.Stop(ctx)
 
-	jet := gen.JetID()
+	testJet := gen.JetID()
 
-	ji.addDrop(jet, false)
-	require.False(t, ji.isConfirmed())
+	err := jets.Update(ctx, testPulse, true, testJet)
+	require.NoError(t, err)
 
-	ji.addHot(jet, false)
-	require.True(t, ji.isConfirmed())
+	err = ji.AddHotConfirmation(ctx, testPulse, testJet, false)
+	require.NoError(t, err)
+	require.Equal(t, insolar.GenesisPulse.PulseNumber, ji.TopSyncPulse())
+
+	err = ji.AddDropConfirmation(ctx, testPulse, testJet, false)
+	require.NoError(t, err)
+	require.Equal(t, testPulse, ji.TopSyncPulse())
 }
 
 func TestJetInfoIsConfirmed_Split(t *testing.T) {
 	t.Parallel()
-	ji := jetInfo{}
-	require.False(t, ji.isConfirmed())
+	ctx := inslogger.TestContext(t)
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	ji, tmpDir, db, jets := initDB(t, testPulse)
+	defer os.RemoveAll(tmpDir)
+	defer db.Stop(ctx)
+
 	testJet := gen.JetID()
 
-	left, right := jet.Siblings(testJet)
-
-	err := ji.addHot(left, true)
+	err := jets.Update(ctx, testPulse, true, testJet)
 	require.NoError(t, err)
-	require.False(t, ji.isConfirmed())
-
-	err = ji.addHot(right, true)
+	left, right, err := jets.Split(ctx, testPulse, testJet)
 	require.NoError(t, err)
-	require.False(t, ji.isConfirmed())
 
-	err = ji.addDrop(testJet, true)
+	err = ji.AddHotConfirmation(ctx, testPulse, left, true)
 	require.NoError(t, err)
-	require.True(t, ji.isConfirmed())
+	require.Equal(t, insolar.GenesisPulse.PulseNumber, ji.TopSyncPulse())
+
+	err = ji.AddHotConfirmation(ctx, testPulse, right, true)
+	require.NoError(t, err)
+	require.Equal(t, insolar.GenesisPulse.PulseNumber, ji.TopSyncPulse())
+
+	err = ji.AddDropConfirmation(ctx, testPulse, testJet, true)
+	require.NoError(t, err)
+	require.Equal(t, testPulse, ji.TopSyncPulse())
 }
 
 func TestJetInfoIsConfirmed_Split_And_DifferentOrderOfComingConfirmations(t *testing.T) {
 	t.Parallel()
-	ji := jetInfo{}
-	require.False(t, ji.isConfirmed())
+	ctx := inslogger.TestContext(t)
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	ji, tmpDir, db, jets := initDB(t, testPulse)
+	defer os.RemoveAll(tmpDir)
+	defer db.Stop(ctx)
+
 	testJet := gen.JetID()
 
-	left, right := jet.Siblings(testJet)
-
-	err := ji.addHot(left, true)
+	err := jets.Update(ctx, testPulse, true, testJet)
 	require.NoError(t, err)
-	require.False(t, ji.isConfirmed())
-
-	err = ji.addDrop(testJet, true)
-	require.NoError(t, err)
-	require.False(t, ji.isConfirmed())
-
-	err = ji.addHot(right, true)
-	require.NoError(t, err)
-	require.True(t, ji.isConfirmed())
-}
-
-func TestJetInfo_RewriteWithDifferentParent(t *testing.T) {
-	t.Parallel()
-	ji := jetInfo{}
-	require.False(t, ji.isConfirmed())
-	testJet := *insolar.NewJetID(5, gen.ID().Bytes())
-
-	left, _ := jet.Siblings(testJet)
-
-	err := ji.addHot(left, true)
-	require.NoError(t, err)
-	require.False(t, ji.isConfirmed())
-
-	err = ji.addHot(testJet, true)
-	require.Contains(t, err.Error(), "try to rewrite jet with different parent")
-	require.False(t, ji.isConfirmed())
-}
-
-func TestJetInfo_ExistingHot(t *testing.T) {
-	t.Parallel()
-	ji := jetInfo{}
-	require.False(t, ji.isConfirmed())
-	testJet := gen.JetID()
-
-	left, _ := jet.Siblings(testJet)
-
-	err := ji.addHot(left, false)
+	left, right, err := jets.Split(ctx, testPulse, testJet)
 	require.NoError(t, err)
 
-	err = ji.addHot(left, false)
-	require.Contains(t, err.Error(), "try add already existing hot confirmation")
+	err = ji.AddHotConfirmation(ctx, testPulse, left, true)
+	require.NoError(t, err)
+	require.Equal(t, insolar.GenesisPulse.PulseNumber, ji.TopSyncPulse())
+
+	err = ji.AddDropConfirmation(ctx, testPulse, testJet, true)
+	require.NoError(t, err)
+	require.Equal(t, insolar.GenesisPulse.PulseNumber, ji.TopSyncPulse())
+
+	err = ji.AddHotConfirmation(ctx, testPulse, right, true)
+	require.NoError(t, err)
+	require.Equal(t, testPulse, ji.TopSyncPulse())
 }
 
 func TestJetInfo_ExistingDrop(t *testing.T) {
 	t.Parallel()
-	ji := jetInfo{}
-	require.False(t, ji.isConfirmed())
+	ctx := inslogger.TestContext(t)
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	jetKeeper, tmpDir, db, _ := initDB(t, testPulse)
+	defer os.RemoveAll(tmpDir)
+	defer db.Stop(ctx)
+
 	testJet := gen.JetID()
-	err := ji.addDrop(testJet, false)
+	err := jetKeeper.AddDropConfirmation(ctx, testPulse, testJet, false)
 	require.NoError(t, err)
 
-	err = ji.addDrop(testJet, false)
+	err = jetKeeper.AddDropConfirmation(ctx, testPulse, testJet, false)
 	require.Contains(t, err.Error(), "try to rewrite drop confirmation")
+	require.Equal(t, insolar.GenesisPulse.PulseNumber, jetKeeper.TopSyncPulse())
+}
+
+func TestJetInfo_ExistingHot(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	jetKeeper, tmpDir, db, _ := initDB(t, testPulse)
+	defer os.RemoveAll(tmpDir)
+	defer db.Stop(ctx)
+
+	testJet := gen.JetID()
+	err := jetKeeper.AddHotConfirmation(ctx, testPulse, testJet, false)
+	require.NoError(t, err)
+
+	err = jetKeeper.AddHotConfirmation(ctx, testPulse, testJet, false)
+	require.Contains(t, err.Error(), "try add already existing hot confirmation")
 }
 
 func TestJetInfo_ExceedNumHotConfirmations(t *testing.T) {
 	t.Parallel()
-	ji := jetInfo{}
-	require.False(t, ji.isConfirmed())
-	testJet := gen.JetID()
+	ctx := inslogger.TestContext(t)
 
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	jetKeeper, tmpDir, db, _ := initDB(t, testPulse)
+	defer os.RemoveAll(tmpDir)
+	defer db.Stop(context.Background())
+
+	testJet := gen.JetID()
 	left, right := jet.Siblings(testJet)
 
-	err := ji.addHot(left, false)
+	err := jetKeeper.AddHotConfirmation(ctx, testPulse, left, true)
 	require.NoError(t, err)
 
-	err = ji.addHot(right, false)
+	err = jetKeeper.AddHotConfirmation(ctx, testPulse, right, true)
 	require.NoError(t, err)
 
-	err = ji.addHot(testJet, false)
+	err = jetKeeper.AddHotConfirmation(ctx, testPulse, left, true)
 	require.Contains(t, err.Error(), "num hot confirmations exceeds")
+	require.Equal(t, insolar.GenesisPulse.PulseNumber, jetKeeper.TopSyncPulse())
 }
 
 func TestNewJetKeeper(t *testing.T) {
@@ -164,6 +202,55 @@ func TestNewJetKeeper(t *testing.T) {
 	pulses := pulse.NewCalculatorMock(t)
 	jetKeeper := NewJetKeeper(jets, db, pulses)
 	require.NotNil(t, jetKeeper)
+}
+
+func TestDbJetKeeper_DifferentActualAndExpectedJets(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	jetKeeper, tmpDir, db, jets := initDB(t, testPulse)
+	defer os.RemoveAll(tmpDir)
+	defer db.Stop(context.Background())
+
+	testJet := gen.JetID()
+	left, _ := jet.Siblings(testJet)
+
+	err := jets.Update(ctx, testPulse, true, left)
+	require.NoError(t, err)
+
+	err = jetKeeper.AddHotConfirmation(ctx, testPulse, testJet, false)
+	require.NoError(t, err)
+
+	err = jetKeeper.AddDropConfirmation(ctx, testPulse, testJet, false)
+	require.NoError(t, err)
+	require.Equal(t, insolar.GenesisPulse.PulseNumber, jetKeeper.TopSyncPulse())
+}
+
+func TestDbJetKeeper_DifferentBymberOfActualAndExpectedJets(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	jetKeeper, tmpDir, db, jets := initDB(t, testPulse)
+	defer os.RemoveAll(tmpDir)
+	defer db.Stop(context.Background())
+
+	testJet := gen.JetID()
+	left, right := jet.Siblings(testJet)
+
+	err := jets.Update(ctx, testPulse, true, testJet)
+	require.NoError(t, err)
+
+	err = jetKeeper.AddHotConfirmation(ctx, testPulse, left, true)
+	require.NoError(t, err)
+
+	err = jetKeeper.AddHotConfirmation(ctx, testPulse, right, true)
+	require.NoError(t, err)
+
+	err = jetKeeper.AddDropConfirmation(ctx, testPulse, testJet, true)
+	require.NoError(t, err)
+	require.Equal(t, insolar.GenesisPulse.PulseNumber, jetKeeper.TopSyncPulse())
 }
 
 func TestDbJetKeeper_AddDropConfirmation(t *testing.T) {
@@ -286,8 +373,6 @@ func TestDbJetKeeper_TopSyncPulse_FinalizeMultiple(t *testing.T) {
 	nextPulse = insolar.GenesisPulse.PulseNumber + 20
 	futurePulse = insolar.GenesisPulse.PulseNumber + 30
 	jet = insolar.ZeroJetID
-
-	inslogger.FromContext(ctx).Debug("INIT: JET: ", jet.DebugString())
 
 	err = jets.Update(ctx, currentPulse, true, jet)
 	require.NoError(t, err)

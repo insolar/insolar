@@ -35,9 +35,9 @@ import (
 // JetKeeper provides a method for adding jet to storage, checking pulse completion and getting access to highest synced pulse.
 type JetKeeper interface {
 	// AddDropConfirmation performs adding jet to storage and checks pulse completion.
-	AddDropConfirmation(context.Context, insolar.PulseNumber, insolar.JetID, bool) error
+	AddDropConfirmation(ctx context.Context, pn insolar.PulseNumber, jet insolar.JetID, split bool) error
 	// AddHotConfirmation performs adding hot confirmation to storage and checks pulse completion.
-	AddHotConfirmation(context.Context, insolar.PulseNumber, insolar.JetID, bool) error
+	AddHotConfirmation(ctx context.Context, pn insolar.PulseNumber, jet insolar.JetID, split bool) error
 	// TopSyncPulse provides access to highest synced (replicated) pulse.
 	TopSyncPulse() insolar.PulseNumber
 }
@@ -78,30 +78,27 @@ func (j *jetInfo) addDrop(newJetID insolar.JetID, split bool) error {
 	return nil
 }
 
-func (j *jetInfo) addHot(newJetID insolar.JetID, split bool) error {
+func (j *jetInfo) checkIncomingHot(incomingJetID insolar.JetID) error {
 	if len(j.HotConfirmed) >= 2 {
 		return errors.New("num hot confirmations exceeds 2. existing: " + insolar.JetIDCollection(j.HotConfirmed).DebugString() +
-			", new: " + newJetID.DebugString())
-	}
-	if len(j.HotConfirmed) == 0 {
-		j.HotConfirmed = make([]insolar.JetID, 0)
+			", new: " + incomingJetID.DebugString())
 	}
 
-	jetID := newJetID
-	if split {
-		jetID = jet.Parent(newJetID)
-		if !j.JetID.IsEmpty() && !j.JetID.Equal(jetID) {
-			return errors.New("addHot. try to rewrite jet with different parent. existing: " + j.JetID.DebugString() +
-				", new: " + newJetID.DebugString())
-		}
+	if len(j.HotConfirmed) == 1 && j.HotConfirmed[0].Equal(incomingJetID) {
+		return errors.New("try add already existing hot confirmation: " + incomingJetID.DebugString())
 	}
 
-	if len(j.HotConfirmed) == 1 && j.HotConfirmed[0].Equal(newJetID) {
-		return errors.New("try add already existing hot confirmation: " + newJetID.DebugString())
+	return nil
+}
+
+func (j *jetInfo) addHot(newJetID insolar.JetID, parentId insolar.JetID, split bool) error {
+	err := j.checkIncomingHot(newJetID)
+	if err != nil {
+		return errors.Wrap(err, "incorrect incoming jet")
 	}
 
 	j.HotConfirmed = append(j.HotConfirmed, newJetID)
-	j.JetID = jetID
+	j.JetID = parentId
 
 	return nil
 }
@@ -218,7 +215,7 @@ func (jk *dbJetKeeper) updateHot(ctx context.Context, pulse insolar.PulseNumber,
 	for i := range jets {
 		if jets[i].JetID.Equal(parentID) {
 			exists = true
-			err := jets[i].addHot(id, split)
+			err := jets[i].addHot(id, parentID, split)
 			if err != nil {
 				return errors.Wrap(err, "can't addHot")
 			}
@@ -228,7 +225,7 @@ func (jk *dbJetKeeper) updateHot(ctx context.Context, pulse insolar.PulseNumber,
 	}
 	if !exists {
 		newInfo := jetInfo{}
-		err := newInfo.addHot(id, split)
+		err := newInfo.addHot(id, parentID, split)
 		if err != nil {
 			return errors.Wrap(err, "can't addHot ( not existing )")
 		}
@@ -268,30 +265,30 @@ func (jk *dbJetKeeper) updateDrop(ctx context.Context, pulse insolar.PulseNumber
 	return jk.set(pulse, jets)
 }
 
+func infoToSet(s []jetInfo) (map[insolar.JetID]struct{}, bool) {
+	r := make(map[insolar.JetID]struct{}, len(s))
+	for _, el := range s {
+		if !el.isConfirmed() {
+			return nil, false
+		}
+		for _, jet := range el.HotConfirmed {
+			r[jet] = struct{}{}
+		}
+	}
+	return r, len(r) != 0
+}
+
+func infoToList(s map[insolar.JetID]struct{}) []insolar.JetID {
+	r := make([]insolar.JetID, len(s))
+	var idx int
+	for jet := range s {
+		r[idx] = jet
+		idx++
+	}
+	return r
+}
+
 func (jk *dbJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.PulseNumber) bool {
-	infoToSet := func(s []jetInfo) (map[insolar.JetID]struct{}, bool) {
-		r := make(map[insolar.JetID]struct{}, len(s))
-		for _, el := range s {
-			if !el.isConfirmed() {
-				return nil, false
-			}
-			for _, jet := range el.HotConfirmed {
-				r[jet] = struct{}{}
-			}
-		}
-		return r, len(r) != 0
-	}
-
-	infoToList := func(s map[insolar.JetID]struct{}) []insolar.JetID {
-		r := make([]insolar.JetID, len(s))
-		var idx int
-		for jet := range s {
-			r[idx] = jet
-			idx++
-		}
-		return r
-	}
-
 	expectedJets := jk.jetTrees.All(ctx, pulse)
 	actualJets := jk.all(pulse)
 
