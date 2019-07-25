@@ -326,8 +326,8 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 
 	//TODO: use network pulsestorage here
 
-	if n.CurrentPulse.PulseNumber != insolar.GenesisPulse.PulseNumber && !isNextPulse(&n.CurrentPulse, &newPulse) {
-		logger.Infof("Incorrect pulse number. Current: %+v. New: %+v", n.CurrentPulse, newPulse)
+	if n.CurrentPulse.PulseNumber != insolar.GenesisPulse.PulseNumber && isOldPulse(&n.CurrentPulse, &newPulse) {
+		logger.Warnf("Incorrect pulse number. Current: %+v. New: %+v", n.CurrentPulse, newPulse)
 		return
 	}
 
@@ -436,8 +436,8 @@ func (n *ServiceNetwork) sendMessage(ctx context.Context, msg *message.Message) 
 	return nil
 }
 
-func isNextPulse(currentPulse, newPulse *insolar.Pulse) bool {
-	return newPulse.PulseNumber > currentPulse.PulseNumber && newPulse.PulseNumber >= currentPulse.NextPulseNumber
+func isOldPulse(currentPulse, newPulse *insolar.Pulse) bool {
+	return newPulse.PulseNumber <= currentPulse.PulseNumber || newPulse.PulseNumber < currentPulse.NextPulseNumber
 }
 
 func (n *ServiceNetwork) processIncoming(ctx context.Context, args []byte) ([]byte, error) {
