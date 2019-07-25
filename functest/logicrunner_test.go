@@ -59,11 +59,7 @@ func (c *One) Dec() (int, error) {
 	return c.Number, nil
 }
 `
-
-	time.Sleep(30 * time.Second)
-	proto := uploadContractOnce(t, "test", contractCode)
-	time.Sleep(20 * time.Second)
-	objectRef := callConstructor(t, proto, "New")
+	objectRef := callConstructor(t, uploadContractOnce(t, "test", contractCode), "New")
 
 	// be careful - jsonUnmarshal convert json numbers to float64
 	result := callMethod(t, objectRef, "Get")

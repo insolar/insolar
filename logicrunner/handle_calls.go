@@ -143,8 +143,6 @@ func (h *HandleCall) handleActual(
 
 	broker := lr.StateStorage.UpsertExecutionState(*objRef)
 
-	inslogger.FromContext(ctx).Debugf("[ handleActual ] %s", request.Prototype)
-
 	broker.executionState.Lock()
 	broker.Put(ctx, false, NewTranscript(ctx, *requestRef, request))
 	broker.executionState.Unlock()

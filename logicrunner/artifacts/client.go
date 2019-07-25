@@ -222,8 +222,6 @@ func (m *client) GetCode(
 		err  error
 	)
 
-	inslogger.FromContext(ctx).Debugf("[ GetCode ] %s", code.String())
-
 	desc = m.localStorage.Code(code)
 	if desc != nil {
 		return desc, nil
@@ -924,8 +922,6 @@ func (m *client) RegisterResult(
 		err        error
 	)
 
-	inslogger.FromContext(ctx).Debugf("[ RegisterResult ] return res")
-
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.RegisterResult")
 	instrumenter := instrument(ctx, "RegisterResult").err(&err)
 	defer func() {
@@ -952,11 +948,8 @@ func (m *client) RegisterResult(
 	case RequestSideEffectActivate:
 		parentRef, imageRef, asDelegate, memory := result.Activate()
 
-		inslogger.FromContext(ctx).Debugf("[ RegisterResult ] RequestSideEffectActivate")
-
 		parentDesc, err = m.GetObject(ctx, parentRef)
 		if err != nil {
-			inslogger.FromContext(ctx).Debugf("[ RegisterResult ] not found?")
 			return err
 		}
 

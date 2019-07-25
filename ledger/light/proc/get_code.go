@@ -115,7 +115,6 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 		return nil
 	}
 
-	logger.Debugf("[ GetCode ] %s", p.codeID.String())
 	rec, err := p.Dep.RecordAccessor.ForID(ctx, p.codeID)
 	switch err {
 	case nil:

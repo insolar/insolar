@@ -19,7 +19,6 @@ package proc
 import (
 	"context"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -79,6 +78,7 @@ func (p *SetCode) Proceed(ctx context.Context) error {
 
 	material := record.Material{
 		Virtual: &p.record,
+		JetID:   p.jetID,
 	}
 
 	err = p.dep.records.Set(ctx, p.recordID, material)
@@ -90,7 +90,6 @@ func (p *SetCode) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create reply")
 	}
-	inslogger.FromContext(ctx).Debugf("[ SetCode ] recordID: %s ", p.recordID)
 	go p.dep.sender.Reply(ctx, p.message, msg)
 
 	return nil

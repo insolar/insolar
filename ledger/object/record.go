@@ -237,8 +237,6 @@ func (r *RecordDB) ForID(ctx context.Context, id insolar.ID) (record.Material, e
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 
-	inslogger.FromContext(ctx).Debugf("[ ForID ] key is %s", id.String())
-
 	return r.get(id)
 }
 
@@ -260,7 +258,6 @@ func (r *RecordDB) set(id insolar.ID, rec record.Material) error {
 
 func (r *RecordDB) get(id insolar.ID) (record.Material, error) {
 	buff, err := r.db.Get(recordKey(id))
-
 	if err == store.ErrNotFound {
 		err = ErrNotFound
 		return record.Material{}, err

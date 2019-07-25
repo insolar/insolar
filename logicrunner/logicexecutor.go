@@ -109,7 +109,6 @@ func (le *logicExecutor) ExecuteConstructor(
 ) (
 	artifacts.RequestResult, error,
 ) {
-	inslogger.FromContext(ctx).Debugf("[ ExecuteConstructor ] START")
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.executeConstructorCall")
 	defer span.End()
 
@@ -134,13 +133,11 @@ func (le *logicExecutor) ExecuteConstructor(
 	}
 
 	transcript.LogicContext = le.genLogicCallContext(ctx, transcript, protoDesc, codeDesc)
-	inslogger.FromContext(ctx).Debugf("[ ExecuteConstructor ] call constructor of code: %s request: %s", codeDesc.Ref().String(), transcript.RequestRef.String())
 	newData, err := executor.CallConstructor(ctx, transcript.LogicContext, *codeDesc.Ref(), request.Method, request.Arguments)
 	if err != nil {
 		return nil, errors.Wrap(err, "executor error")
 	}
 
-	inslogger.FromContext(ctx).Debugf("[ ExecuteConstructor ] call constructor complete, request: %s", transcript.RequestRef.String())
 	res := newRequestResult(nil, transcript.RequestRef)
 	res.SetActivate(
 		*request.Base,
@@ -148,7 +145,6 @@ func (le *logicExecutor) ExecuteConstructor(
 		request.CallType == record.CTSaveAsDelegate,
 		newData,
 	)
-	inslogger.FromContext(ctx).Debugf("[ ExecuteConstructor ] res activated, request: %s", transcript.RequestRef.String())
 	return res, nil
 }
 
