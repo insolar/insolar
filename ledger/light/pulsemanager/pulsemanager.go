@@ -162,7 +162,13 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		}
 	}()
 
-	// Updating jet tree if its network start.
+	// FIXME: special for @ivanshibitov (uncomment this when INS-3031 is ready).
+	// if err := m.StateIniter.PrepareState(ctx, newPulse.PulseNumber); err != nil {
+	// 	logger.Error("failed to prepare light for start: ", err.Error())
+	// 	panic("failed to prepare light for start")
+	// }
+
+	// Updating jet tree if its network start. Remove when INS-3031 is ready.
 	{
 		_, err := m.PulseCalculator.Backwards(ctx, newPulse.PulseNumber, 1)
 		if err != nil {
