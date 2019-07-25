@@ -399,12 +399,12 @@ func (m *Member) createMember(name string, key string, burnAddress string) (*mem
 	}
 
 	wHolder := wallet.New(big.NewInt(1000000000).String())
-	createdWallet, err := wHolder.AsChild(m.RootDomain)
+	walletRef, err := wHolder.AsChild(m.RootDomain)
 	if err != nil {
-		return nil, fmt.Errorf("failed to save as child: %s", err.Error())
+		return nil, fmt.Errorf("failed to create wallet for  member: %s", err.Error())
 	}
 
-	memberHolder := member.New(m.RootDomain, name, key, burnAddress, createdWallet.Reference)
+	memberHolder := member.New(m.RootDomain, name, key, burnAddress, walletRef.Reference)
 	created, err := memberHolder.AsChild(m.RootDomain)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save as child: %s", err.Error())

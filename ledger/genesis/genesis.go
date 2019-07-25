@@ -199,9 +199,48 @@ func (g *Genesis) Start(ctx context.Context) error {
 func (g *Genesis) storeContracts(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 
-	states := contracts.GenesisContractsStates(g.ContractsConfig)
+	// Hint: order matters, because of dependency contracts on each other.
+	rootDomain := contracts.RootDomain()
+	_, err := g.activateContract(ctx, rootDomain)
+	if err != nil {
+		return errors.Wrapf(err, "failed to activate contract %v", rootDomain.Name)
+	}
+	inslog.Infof("[genesis] activate contract %v", rootDomain.Name)
+
+	nodeDomain := contracts.NodeDomain()
+	_, err = g.activateContract(ctx, nodeDomain)
+	if err != nil {
+		return errors.Wrapf(err, "failed to activate contract %v", nodeDomain.Name)
+	}
+	inslog.Infof("[genesis] activate contract %v", nodeDomain.Name)
+
+	rootWallet := contracts.GetWalletGenesisContractState(g.ContractsConfig.RootBalance, insolar.GenesisNameRootWallet, insolar.GenesisNameRootDomain)
+	rwRef, err := g.activateContract(ctx, rootWallet)
+	if err != nil {
+		return errors.Wrapf(err, "failed to activate contract %v", rootWallet.Name)
+	}
+	inslog.Infof("[genesis] activate contract %v", rootWallet.Name)
+
+	migrationAdminWallet := contracts.GetWalletGenesisContractState(g.ContractsConfig.MDBalance, insolar.GenesisNameMigrationWallet, insolar.GenesisNameRootDomain)
+	mawRef, err := g.activateContract(ctx, migrationAdminWallet)
+	if err != nil {
+		return errors.Wrapf(err, "failed to activate contract %v", migrationAdminWallet.Name)
+	}
+	inslog.Infof("[genesis] activate contract %v", migrationAdminWallet.Name)
+
+	states := []insolar.GenesisContractState{
+		contracts.GetMemberGenesisContractState(g.ContractsConfig.RootPublicKey, insolar.GenesisNameRootMember, insolar.GenesisNameRootDomain, *rwRef),
+		contracts.GetMemberGenesisContractState(g.ContractsConfig.MigrationAdminPublicKey, insolar.GenesisNameMigrationAdminMember, insolar.GenesisNameRootDomain, *mawRef),
+		contracts.GetWalletGenesisContractState("0", insolar.GenesisNameFeeWallet, insolar.GenesisNameRootDomain),
+		contracts.GetCostCenterGenesisContractState(),
+		contracts.GetTariffGenesisContractState(),
+	}
+
+	for i, key := range g.ContractsConfig.MigrationDaemonPublicKeys {
+		states = append(states, contracts.GetMemberGenesisContractState(key, insolar.GenesisNameMigrationDaemonMembers[i], insolar.GenesisNameRootDomain, insolar.Reference{}))
+	}
 	for _, conf := range states {
-		err := g.activateContract(ctx, conf)
+		_, err := g.activateContract(ctx, conf)
 		if err != nil {
 			return errors.Wrapf(err, "failed to activate contract %v", conf.Name)
 		}
@@ -210,7 +249,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	return nil
 }
 
-func (g *Genesis) activateContract(ctx context.Context, state insolar.GenesisContractState) error {
+func (g *Genesis) activateContract(ctx context.Context, state insolar.GenesisContractState) (*insolar.Reference, error) {
 	name := state.Name
 	objRef := rootdomain.GenesisRef(name)
 
@@ -225,7 +264,7 @@ func (g *Genesis) activateContract(ctx context.Context, state insolar.GenesisCon
 		},
 	)
 	if err != nil {
-		return errors.Wrapf(err, "failed to register '%v' contract", name)
+		return nil, errors.Wrapf(err, "failed to register '%v' contract", name)
 	}
 
 	parentRef := insolar.GenesisRecord.Ref()
@@ -242,9 +281,13 @@ func (g *Genesis) activateContract(ctx context.Context, state insolar.GenesisCon
 		state.Memory,
 	)
 	if err != nil {
-		return errors.Wrapf(err, "failed to activate object for '%v'", name)
+		return nil, errors.Wrapf(err, "failed to activate object for '%v'", name)
 	}
 
-	_, err = g.ArtifactManager.RegisterResult(ctx, genesisrefs.ContractRootDomain, objRef, nil)
-	return errors.Wrapf(err, "failed to register result for '%v'", name)
+	id, err := g.ArtifactManager.RegisterResult(ctx, genesisrefs.ContractRootDomain, objRef, nil)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to register result for '%v'", name)
+	}
+
+	return insolar.NewReference(*id), nil
 }

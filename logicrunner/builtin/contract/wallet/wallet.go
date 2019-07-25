@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/wallet/safemath"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/costcenter"
+	proxyMember "github.com/insolar/insolar/logicrunner/builtin/proxy/member"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/tariff"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
@@ -81,9 +82,9 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toM
 		return nil, fmt.Errorf("can't parse wallet balance")
 	}
 
-	toWallet := wallet.GetObject(*toMember)
+	memberWallet, err := proxyMember.GetObject(*toMember).GetWallet()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get implementation: %s", err.Error())
+		return nil, fmt.Errorf("failed to get member wallet: %s", err.Error())
 	}
 
 	newBalance, err := safemath.Sub(balance, amountWithFee)
@@ -109,6 +110,7 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toM
 		return nil, fmt.Errorf("failed to transfer fee: %s", acceptFeeErr.Error())
 	}
 
+	toWallet := wallet.GetObject(memberWallet)
 	acceptErr := toWallet.Accept(amount.String())
 	if acceptErr == nil {
 		return member.TransferResponse{Fee: feeStr}, nil
@@ -120,7 +122,7 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toM
 	}
 	w.Balance = newBalance.String()
 
-	err = feeWallet.RollBack(amountStr)
+	err = feeWallet.RollBack(feeStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to roll back fee: %s", err.Error())
 	}
