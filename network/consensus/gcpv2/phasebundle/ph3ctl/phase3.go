@@ -236,6 +236,12 @@ func (c *Phase3Controller) workerPrePhase3(ctx context.Context) bool {
 	var countTrustBySome = 0
 	var countTrustByNeighbors = 0
 
+	if c.R.IsJoiner() {
+		// creation of a self when it is joiner doesnt trigger purgatory, so counters will be in disbalance
+		// TODO should notification be suppressed otherwise?
+		countFullJoiners--
+	}
+
 	pop := c.R.GetPopulation()
 	didFastPhase3 := false
 

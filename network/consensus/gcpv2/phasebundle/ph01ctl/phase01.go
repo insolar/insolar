@@ -74,10 +74,6 @@ func NewPhase01Controller(packetPrepareOptions transport.PacketPrepareOptions, q
 	return &Phase01Controller{packetPrepareOptions: packetPrepareOptions, qIntro: qIntro}
 }
 
-func (*packetPhase0Dispatcher) HasCustomVerifyForHost(from endpoints.Inbound, strict bool) bool {
-	return true // TODO remove after verification fix
-}
-
 func (p *packetPhase0Dispatcher) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, n *core.NodeAppearance) error {
 
 	p0 := packet.AsPhase0Packet()
@@ -89,6 +85,10 @@ func (p *packetPhase0Dispatcher) DispatchMemberPacket(ctx context.Context, packe
 
 	pp := p0.GetEmbeddedPulsePacket()
 	return p.ctl.handlePulseData(ctx, pp, n)
+}
+
+func (*packetPhase1Dispatcher) HasCustomVerifyForHost(from endpoints.Inbound, strict bool) bool {
+	return true // TODO remove after verification fix
 }
 
 func (c *packetPhase1Dispatcher) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, n *core.NodeAppearance) error {

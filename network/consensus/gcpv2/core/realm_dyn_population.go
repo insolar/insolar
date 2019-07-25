@@ -347,8 +347,8 @@ func (r *DynamicRealmPopulation) addToDynamics(n *NodeAppearance) *NodeAppearanc
 	if nip.GetExtension() != nil {
 		flags |= FlagProfileUpdated
 	}
-
 	n.callback.onDynamicNodeUpdate(n.callback.updatePopulationVersion(), n, flags)
+
 	return n
 }
 

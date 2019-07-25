@@ -219,12 +219,21 @@ func (r *coreRealm) GetSelf() *NodeAppearance {
 	return r.self
 }
 
-func (r *coreRealm) VerifyPacketAuthenticity(packetSignature cryptkit.SignedDigest, from endpoints.Inbound, strictFrom bool) error {
-	nr := r.initialCensus.GetOfflinePopulation().FindRegisteredProfile(from)
+func (r *coreRealm) VerifyPacketAuthenticity(packetSignature cryptkit.SignedDigest, sourceID insolar.ShortNodeID, from endpoints.Inbound, strictFrom bool) error {
+	var nr profiles.Host
+
+	np := r.initialCensus.GetOnlinePopulation().FindProfile(sourceID)
+	if np != nil {
+		nr = np.GetStatic()
+	}
+
 	if nr == nil {
-		nr = r.initialCensus.GetMandateRegistry().FindRegisteredProfile(from)
+		nr = r.initialCensus.GetOfflinePopulation().FindRegisteredProfile(from)
 		if nr == nil {
-			return fmt.Errorf("unable to identify sender: %v", from)
+			nr = r.initialCensus.GetMandateRegistry().FindRegisteredProfile(from)
+			if nr == nil {
+				return fmt.Errorf("unable to identify sender: %v", from)
+			}
 		}
 	}
 	sf := r.verifierFactory.GetSignatureVerifierWithPKS(nr.GetPublicKeyStore())

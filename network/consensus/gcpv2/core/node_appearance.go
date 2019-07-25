@@ -173,6 +173,8 @@ func (c *NodeAppearance) copySelfTo(target *NodeAppearance) {
 
 	//target.stateEvidence = c.stateEvidence
 	//target.announceSignature = c.announceSignature
+	//target.trust = c.trust
+
 	target.requestedPower = c.requestedPower
 	target.requestedJoinerID = c.requestedJoinerID
 	target.requestedLeave = c.requestedLeave
@@ -180,7 +182,6 @@ func (c *NodeAppearance) copySelfTo(target *NodeAppearance) {
 	target.firstFraudDetails = c.firstFraudDetails
 
 	target.limiter = c.limiter
-	target.trust = c.trust
 	target.callback.updatePopulationVersion()
 }
 
@@ -435,6 +436,7 @@ func (c *NodeAppearance) onNodeAdded(ctx context.Context) {
 		if err != nil {
 			inslogger.FromContext(ctx).Error("error was unexpected", err)
 		}
+		c.UpdateNodeTrustLevel(member.SelfTrust)
 	}
 }
 

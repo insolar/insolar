@@ -328,6 +328,9 @@ func (c *ManyNodePopulation) _adjustSlotsAndCopyEvicts(localID insolar.ShortNode
 	} else {
 		c.slots = c.slots[:c.assignedSlotCount]
 	}
+	if len(evictCopies) < len(evicts) {
+		evictCopies = make([]updatableSlot, len(evicts))
+	}
 
 	for i := range evicts {
 		evictCopies[i] = *evicts[i]

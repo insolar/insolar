@@ -138,7 +138,7 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		case pd.HasCustomVerifyForHost(from, strict):
 			// skip default
 		default:
-			err = r.coreRealm.VerifyPacketAuthenticity(packet.GetPacketSignature(), from, strict)
+			err = r.coreRealm.VerifyPacketAuthenticity(packet.GetPacketSignature(), sourceID, from, strict)
 			if err != nil {
 				return err
 			}

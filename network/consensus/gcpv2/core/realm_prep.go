@@ -137,35 +137,43 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		return fmt.Errorf("packet type (%v) limit exceeded: from=%v", pt, from)
 	}
 
+	var pd PacketDispatcher
+
+	if int(pt) < len(p.packetDispatchers) {
+		pd = p.packetDispatchers[pt]
+	}
+
 	if verifyFlags&(packetrecorder.SkipVerify|packetrecorder.SuccesfullyVerified) == 0 {
 		strict := verifyFlags&packetrecorder.RequireStrictVerify != 0
-		err := p.coreRealm.VerifyPacketAuthenticity(packet.GetPacketSignature(), from, strict)
 
-		if err != nil {
-			return err
+		if pd == nil || !pd.HasCustomVerifyForHost(from, strict) {
+			sourceID := packet.GetSourceID()
+
+			err := p.coreRealm.VerifyPacketAuthenticity(packet.GetPacketSignature(), sourceID, from, strict)
+
+			if err != nil {
+				return err
+			}
+			verifyFlags |= packetrecorder.SuccesfullyVerified
 		}
-		verifyFlags |= packetrecorder.SuccesfullyVerified
 	}
 
 	if !limiter.SetPacketReceived(pt) {
 		return fmt.Errorf("packet type (%v) limit exceeded: from=%v", pt, from)
 	}
 
-	if int(pt) < len(p.packetDispatchers) {
-		pd := p.packetDispatchers[pt]
-		if pd != nil {
-			// this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
-			var err error
-			packet, err = LazyPacketParse(packet)
-			if err != nil {
-				return err
-			}
+	if pd != nil {
+		// this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
+		var err error
+		packet, err = LazyPacketParse(packet)
+		if err != nil {
+			return err
+		}
 
-			err = pd.DispatchHostPacket(ctx, packet, from, verifyFlags)
-			if err != nil {
-				// TODO an error to ignore postpone?
-				return err
-			}
+		err = pd.DispatchHostPacket(ctx, packet, from, verifyFlags)
+		if err != nil {
+			// TODO an error to ignore postpone?
+			return err
 		}
 	}
 
