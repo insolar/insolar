@@ -208,8 +208,8 @@ func (m *Member) addBurnAddressesCall(params map[string]interface{}) (interface{
 }
 
 type GetBalanceResponse struct {
-	Balance  string        `json:"balance"`
-	Deposits []interface{} `json:"deposits"`
+	Balance  string                 `json:"balance"`
+	Deposits map[string]interface{} `json:"deposits"`
 }
 
 func (m *Member) getBalanceCall(params map[string]interface{}) (interface{}, error) {
@@ -234,7 +234,7 @@ func (m *Member) getBalanceCall(params map[string]interface{}) (interface{}, err
 		return nil, fmt.Errorf("failed to get balance: %s", err.Error())
 	}
 
-	var d []interface{}
+	var d map[string]interface{}
 	if referenceStr == m.GetReference().String() {
 		d, err = m.getDeposits()
 		if err != nil {
@@ -476,12 +476,12 @@ func (m *Member) depositMigration(txHash string, burnAddress string, amount *big
 }
 
 // GetDeposits get all deposits for this member
-func (m *Member) GetDeposits() ([]interface{}, error) {
+func (m *Member) GetDeposits() (map[string]interface{}, error) {
 	return m.getDeposits()
 }
-func (m *Member) getDeposits() ([]interface{}, error) {
-	var result []interface{}
-	for _, dRef := range m.Deposits {
+func (m *Member) getDeposits() (map[string]interface{}, error) {
+	result := map[string]interface{}{}
+	for tx, dRef := range m.Deposits {
 
 		d := deposit.GetObject(dRef)
 
@@ -490,7 +490,7 @@ func (m *Member) getDeposits() ([]interface{}, error) {
 			return nil, fmt.Errorf("failed to get deposit itself: %s", err.Error())
 		}
 
-		result = append(result, depositInfo)
+		result[tx] = depositInfo
 	}
 	return result, nil
 }

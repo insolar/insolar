@@ -219,7 +219,7 @@ func createMemberWithMigrationAddress(migrationAddress string) error {
 	return nil
 }
 
-func migrate(t *testing.T, memberRef string, amount string, tx string, ma string, mdNum int, depositNum int) map[string]interface{} {
+func migrate(t *testing.T, memberRef string, amount string, tx string, ma string, mdNum int) map[string]interface{} {
 	anotherMember := createMember(t)
 
 	_, err := signedRequest(
@@ -229,9 +229,9 @@ func migrate(t *testing.T, memberRef string, amount string, tx string, ma string
 	require.NoError(t, err)
 	res, err := signedRequest(anotherMember, "wallet.getBalance", map[string]interface{}{"reference": memberRef})
 	require.NoError(t, err)
-	deposits, ok := res.(map[string]interface{})["deposits"].([]interface{})
+	deposits, ok := res.(map[string]interface{})["deposits"].(map[string]interface{})
 	require.True(t, ok)
-	deposit, ok := deposits[depositNum].(map[string]interface{})
+	deposit, ok := deposits[tx].(map[string]interface{})
 	require.True(t, ok)
 	require.Equal(t, deposit["amount"], amount)
 	require.Equal(t, deposit["ethTxHash"], tx)
