@@ -256,7 +256,7 @@ func (g *Genesis) activateContract(ctx context.Context, state insolar.GenesisCon
 	protoName := name + rootdomain.GenesisPrototypeSuffix
 	protoRef := rootdomain.GenesisRef(protoName)
 
-	_, err := g.ArtifactManager.RegisterRequest(
+	reqId, err := g.ArtifactManager.RegisterRequest(
 		ctx,
 		record.IncomingRequest{
 			CallType: record.CTGenesis,
@@ -284,10 +284,10 @@ func (g *Genesis) activateContract(ctx context.Context, state insolar.GenesisCon
 		return nil, errors.Wrapf(err, "failed to activate object for '%v'", name)
 	}
 
-	id, err := g.ArtifactManager.RegisterResult(ctx, genesisrefs.ContractRootDomain, objRef, nil)
+	_, err = g.ArtifactManager.RegisterResult(ctx, genesisrefs.ContractRootDomain, objRef, nil)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to register result for '%v'", name)
 	}
 
-	return insolar.NewReference(*id), nil
+	return insolar.NewReference(*reqId), nil
 }
