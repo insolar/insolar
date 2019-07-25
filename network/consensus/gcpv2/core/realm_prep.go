@@ -53,6 +53,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
 	"sync"
@@ -85,7 +86,8 @@ type PrepRealm struct {
 	// queueToFull       chan packetrecorder.PostponedPacket
 	// phase2ExtLimit    uint8
 
-	limiters sync.Map
+	limiters           sync.Map
+	lastCloudStateHash cryptkit.DigestHolder
 
 	/* Other fields - need mutex */
 	// 	censusBuilder census.Builder
@@ -214,6 +216,10 @@ func (p *PrepRealm) GetOriginalPulse() proofs.OriginalPulsarPacket {
 	return p.coreRealm.originalPulse
 }
 
+func (p *PrepRealm) GetMandateRegistry() census.MandateRegistry {
+	return p.initialCensus.GetMandateRegistry()
+}
+
 func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bool, from endpoints.Inbound) error {
 	pd := pp.GetPulseData()
 
@@ -255,6 +261,10 @@ func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bo
 				epn, pn, localID, from))
 	}
 
+	//if p.IsJoiner() && p.lastCloudStateHash {
+	//
+	//}
+
 	p.originalPulse = pp.GetPulseDataEvidence()
 	p.pulseData = pd
 
@@ -263,14 +273,15 @@ func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bo
 	return nil
 }
 
-func (p *PrepRealm) ApplyPopulationHint(populationCount int, from endpoints.Inbound) error {
-	if populationCount == 0 {
-		return fmt.Errorf("packet from joiner was not expected: from=%v", from)
-	}
+func (p *PrepRealm) ApplyCloudIntro(lastCloudStateHash cryptkit.DigestHolder, populationCount int, from endpoints.Inbound) {
+
+	p.Lock()
+	defer p.Unlock()
 
 	popCount := member.AsIndex(populationCount)
 	if p.expectedPopulationSize < popCount {
 		p.expectedPopulationSize = popCount
 	}
-	return nil
+
+	p.lastCloudStateHash = lastCloudStateHash
 }

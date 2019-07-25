@@ -53,7 +53,6 @@ package ph01ctl
 import (
 	"context"
 	"fmt"
-
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/pulsectl"
@@ -92,31 +91,62 @@ func (c *JoinerPhase01PrepController) DispatchHostPacket(ctx context.Context, pa
 
 	var pp transport.PulsePacketReader
 	var nr member.Rank
+	mp := packet.GetMemberPacket()
 
 	switch packet.GetPacketType() {
 	case phases.PacketPhase0:
-		p0 := packet.GetMemberPacket().AsPhase0Packet()
+		p0 := mp.AsPhase0Packet()
+		// can take Phase0 packets only for nodes who has sent Phase1 ...
 		nr = p0.GetNodeRank()
-		pp = p0.GetEmbeddedPulsePacket()
 	case phases.PacketPhase1:
-		p1 := packet.GetMemberPacket().AsPhase1Packet()
+		p1 := mp.AsPhase1Packet()
 		nr = p1.GetAnnouncementReader().GetNodeRank()
 		if p1.HasPulseData() {
 			pp = p1.GetEmbeddedPulsePacket()
 		}
 	default:
-		panic("illegal value")
+		panic("not expected")
 	}
-	if nr.IsJoiner() && pp != nil {
-		return fmt.Errorf("pulse data in Phase0/Phas1 is not allowed from a joiner: from=%v", from)
-	}
-	if c.realm.IsJoiner() && !nr.IsJoiner() {
-		err := c.realm.ApplyPopulationHint(int(nr.GetTotalCount()), from)
-		if err != nil {
-			return err
+	if nr.IsJoiner() {
+		if pp != nil {
+			return fmt.Errorf("pulse data is not allowed from a joiner: from=%v", from)
 		}
+		return nil // postpone the packet
 	}
-	// if !c.realm.IsJoiner() { TODO check ranks? }
+	if packet.GetPacketType() != phases.PacketPhase1 {
+		return nil // postpone the packet
+	}
+
+	p1 := mp.AsPhase1Packet()
+	if !p1.HasFullIntro() || !p1.HasCloudIntro() {
+		return fmt.Errorf("joiner expects full & cloud intro in Phase1: from=%v", from)
+	}
+
+	mr := c.realm.GetMandateRegistry()
+	ci := p1.GetCloudIntroduction()
+
+	if !mr.GetCloudIdentity().Equals(ci.GetCloudIdentity()) {
+		return fmt.Errorf("mismatched cloud identity: from=%v", from)
+	}
+
+	// TODO collect a few proposals and choose only by getting some threshold
+	//if p1.HasJoinerSecret() {
+	//	c.realm.IsValidJoinerSecret()
+	//}
+	//
+	//
+
+	populationCount := int(nr.GetTotalCount())
+	lastCloudStateHash := ci.GetLastCloudStateHash()
+
+	if populationCount == 0 {
+		return fmt.Errorf("node count cant be zero: from=%v", from)
+	}
+	if lastCloudStateHash == nil {
+		return fmt.Errorf("packet error - last cloud state hash is missing: from=%v", from)
+	}
+
+	c.realm.ApplyCloudIntro(lastCloudStateHash, int(nr.GetTotalCount()), from)
 
 	// TODO joiner should wait for CloudIntro also!
 	ok, err := c.pulseStrategy.HandlePulsarPacket(ctx, pp, from, false)

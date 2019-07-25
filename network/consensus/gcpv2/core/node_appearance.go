@@ -421,11 +421,12 @@ func (c *NodeAppearance) GetNodeMembershipProfileOrEmpty() profiles.MembershipPr
 }
 
 func (c *NodeAppearance) ApplyNodeStateHashEvidenceForJoiner() (bool, error) {
-	nsh := c.profile.GetStatic().GetBriefIntroSignedDigest()
+	sp := c.profile.GetStatic()
+	nsh := sp.GetBriefIntroSignedDigest()
 
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	mp := profiles.NewMembershipProfileByNode(c.profile, nsh, nsh.GetSignatureHolder(), c.requestedPower)
+	mp := profiles.NewMembershipProfileByNode(c.profile, nsh, nsh.GetSignatureHolder(), sp.GetStartPower())
 	ma := profiles.NewMembershipAnnouncement(mp)
 	return c._applyNodeMembership(ma)
 }
