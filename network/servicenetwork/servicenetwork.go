@@ -87,7 +87,6 @@ import (
 )
 
 const deliverWatermillMsg = "ServiceNetwork.processIncoming"
-const PULSETIMEOUTSECONDS = 2
 
 var ack = []byte{1}
 
@@ -126,9 +125,12 @@ type ServiceNetwork struct {
 	gatewayMu sync.RWMutex
 }
 
+var PULSETIMEOUT time.Duration
+
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manager) (*ServiceNetwork, error) {
 	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, skip: conf.Service.Skip}
+	PULSETIMEOUT = time.Millisecond * time.Duration(conf.Pulsar.PulseTime)
 	return serviceNetwork, nil
 }
 
@@ -294,7 +296,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	defer close(done)
 	go func() {
 		select {
-		case <-time.After(PULSETIMEOUTSECONDS * time.Second):
+		case <-time.After(PULSETIMEOUT):
 			log.Fatal("Node stopped due to long pulse processing")
 		case <-done:
 		}
