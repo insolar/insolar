@@ -23,6 +23,9 @@ import (
 	"sync"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
@@ -32,8 +35,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentManager -o ./ -s _mock.go
@@ -51,7 +52,7 @@ type FilamentCalculator interface {
 	Requests(
 		ctx context.Context,
 		objectID, from insolar.ID,
-		readUntil, calcPulse insolar.PulseNumber,
+		readUntil insolar.PulseNumber,
 	) ([]record.CompositeFilamentRecord, error)
 
 	// PendingRequests returns all pending requests of object for provided pulse.
@@ -281,7 +282,10 @@ func NewFilamentCalculator(
 }
 
 func (c *FilamentCalculatorDefault) Requests(
-	ctx context.Context, objectID insolar.ID, from insolar.ID, readUntil, calcPulse insolar.PulseNumber,
+	ctx context.Context,
+	objectID,
+	from insolar.ID,
+	readUntil insolar.PulseNumber,
 ) ([]record.CompositeFilamentRecord, error) {
 	_, err := c.indexes.ForID(ctx, from.Pulse(), objectID)
 	if err != nil {

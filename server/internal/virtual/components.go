@@ -202,7 +202,15 @@ func initComponents(
 
 	cm.Inject(components...)
 
-	stopper := startWatermill(ctx, logger, pubSub, b, nw.SendMessageHandler, logicRunner.FlowDispatcher.Process, logicRunner.InnerFlowDispatcher.InnerSubscriber)
+	err = cm.Init(ctx)
+	checkError(ctx, err, "failed to init components")
+
+	stopper := startWatermill(
+		ctx, logger, pubSub, b,
+		nw.SendMessageHandler,
+		logicRunner.FlowDispatcher.Process,
+		logicRunner.InnerFlowDispatcher.InnerSubscriber,
+	)
 
 	return &cm, terminationHandler, stopper
 }
