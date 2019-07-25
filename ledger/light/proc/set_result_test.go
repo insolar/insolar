@@ -133,9 +133,10 @@ func TestSetResult_Proceed(t *testing.T) {
 		require.Equal(t, *res, r)
 		return nil, nil
 	}
-	filaments.PendingRequestsFunc = func(_ context.Context, pn insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error) {
+	filaments.OpenedRequestsFunc = func(_ context.Context, pn insolar.PulseNumber, objID insolar.ID, pendingOnly bool) ([]record.CompositeFilamentRecord, error) {
 		require.Equal(t, objectID, objID)
 		require.Equal(t, flow.Pulse(ctx), pn)
+		require.False(t, pendingOnly)
 
 		v := record.Wrap(record.IncomingRequest{})
 		return []record.CompositeFilamentRecord{
