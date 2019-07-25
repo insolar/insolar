@@ -92,7 +92,7 @@ type packetContext struct {
 
 func newPacketContext(ctx context.Context, header *Header) packetContext {
 	ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
-		"flags":          fmt.Sprintf("%08b", header.PacketFlags),
+		"packet_flags":   fmt.Sprintf("%08b", header.PacketFlags),
 		"payload_length": header.getPayloadLength(),
 	})
 

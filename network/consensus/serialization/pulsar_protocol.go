@@ -58,8 +58,7 @@ import (
 
 type PulsarPacketBody struct {
 	// ByteSize>=108
-	// TODO: hacked
-	PulseNumber           pulse.Number
+	PulseNumber           pulse.Number  `insolar-transport:"ignore=send"`
 	PulseDataExt          pulse.DataExt // ByteSize=44
 	PulsarConsensusProofs []byte        // variable lengths >=0
 }

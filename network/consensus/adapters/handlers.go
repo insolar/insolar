@@ -99,8 +99,9 @@ func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, b
 	}
 
 	ctx, logger = inslogger.WithFields(ctx, map[string]interface{}{
-		"sender_id":   packetParser.GetSourceID(),
-		"packet_type": packetParser.GetPacketType(),
+		"sender_id":    packetParser.GetSourceID(),
+		"packet_type":  packetParser.GetPacketType().String(),
+		"packet_pulse": packetParser.GetPulseNumber(),
 	})
 
 	hostIdentity := endpoints.InboundConnection{

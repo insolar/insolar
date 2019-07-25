@@ -82,7 +82,8 @@ func NewRoundStrategy(
 
 func (rs *RoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse pulse.Number, self profiles.LocalNode) context.Context {
 	ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
-		"is_joiner": self.IsJoiner(),
+		"is_joiner":   self.IsJoiner(),
+		"round_pulse": expectedPulse,
 	})
 	return ctx
 }

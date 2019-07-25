@@ -51,8 +51,6 @@
 package adapters
 
 import (
-	"context"
-
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
@@ -62,7 +60,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 )
 
@@ -73,9 +70,6 @@ func NewMisbehaviorRegistry() *MisbehaviorRegistry {
 }
 
 func (mr *MisbehaviorRegistry) AddReport(report misbehavior.Report) {
-	ctx := context.TODO()
-
-	inslogger.FromContext(ctx).Warnf("Got Report: %+v", report)
 }
 
 type MandateRegistry struct {

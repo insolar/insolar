@@ -160,6 +160,7 @@ func (r *coreRealm) initBeforePopulation(powerRequest power.Request, nbhSizes tr
 
 	nodeContext.initPrep(profile.GetNodeID(), r.verifierFactory,
 		func(report misbehavior.Report) interface{} {
+			inslogger.FromContext(r.roundContext).Warnf("Got Report: %+v", report)
 			r.initialCensus.GetMisbehaviorRegistry().AddReport(report)
 			return nil
 		})

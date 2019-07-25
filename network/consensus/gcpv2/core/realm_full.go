@@ -221,6 +221,7 @@ func (r *FullRealm) initBasics(census census.Active) {
 
 	r.nodeContext.initFull(r.GetSelfNodeID(), r.verifierFactory, uint8(r.nbhSizes.NeighbourhoodTrustThreshold),
 		func(report misbehavior.Report) interface{} {
+			inslogger.FromContext(r.roundContext).Warnf("Got Report: %+v", report)
 			r.census.GetMisbehaviorRegistry().AddReport(report)
 			return nil
 		})
