@@ -163,8 +163,6 @@ func (h *Handler) handleParcel(ctx context.Context, msg *watermillMsg.Message) e
 		rep, err = h.handleGetChildren(ctx, parcel)
 	case insolar.TypeGetDelegate.String():
 		rep, err = h.handleGetDelegate(ctx, parcel)
-	// case insolar.TypeGetJet.String():
-	// 	rep, err = h.handleGetJet(ctx, parcel)
 	case insolar.TypeGetObjectIndex.String():
 		rep, err = h.handleGetObjectIndex(ctx, parcel)
 	default:
@@ -202,11 +200,11 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 	case payload.TypeGetRequest:
 		p := proc.NewGetRequest(meta)
 		h.dep.GetRequest(p)
-		return p.Proceed(ctx)
+		err = p.Proceed(ctx)
 	case payload.TypeGetFilament:
 		p := proc.NewSendRequests(meta)
 		h.dep.SendRequests(p)
-		return p.Proceed(ctx)
+		err = p.Proceed(ctx)
 	case payload.TypePassState:
 		p := proc.NewPassState(meta)
 		h.dep.PassState(p)
@@ -223,6 +221,8 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 		err = h.handlePass(ctx, meta)
 	case payload.TypeError:
 		h.handleError(ctx, meta)
+	case payload.TypeGotHotConfirmation:
+		h.handleGotHotConfirmation(ctx, meta)
 	case payload.TypeReplication:
 		p := proc.NewReplication(meta, h.cfg)
 		h.dep.Replication(p)
@@ -271,8 +271,12 @@ func (h *Handler) handlePass(ctx context.Context, meta payload.Meta) error {
 		p := proc.NewGetCode(originMeta)
 		h.dep.GetCode(p)
 		err = p.Proceed(ctx)
+	case payload.TypeGetRequest:
+		p := proc.NewGetRequest(originMeta)
+		h.dep.GetRequest(p)
+		err = p.Proceed(ctx)
 	default:
-		err = fmt.Errorf("no pass handler for message type %s", payload.Type(originMeta.Polymorph).String())
+		err = fmt.Errorf("no pass handler for message type %s", payloadType.String())
 	}
 	if err != nil {
 		h.replyError(ctx, originMeta, err)
@@ -398,4 +402,29 @@ func (h *Handler) handleGetObjectIndex(ctx context.Context, parcel insolar.Parce
 	buf := object.EncodeLifeline(idx.Lifeline)
 
 	return &reply.ObjectIndex{Index: buf}, nil
+}
+
+func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Meta) {
+	logger := inslogger.FromContext(ctx)
+	confirm := payload.GotHotConfirmation{}
+	err := confirm.Unmarshal(meta.Payload)
+	if err != nil {
+		logger.Error(errors.Wrap(err, "failed to unmarshal to GotHotConfirmation"))
+		return
+	}
+
+	logger.Debug("handleGotHotConfirmation. pulse: ", confirm.Pulse, ". jet: ", confirm.JetID.DebugString())
+
+	err = h.JetModifier.Update(ctx, confirm.Pulse, true, confirm.JetID)
+	if err != nil {
+		logger.Error(errors.Wrapf(err, "failed to update jet %s", confirm.JetID.DebugString()))
+		return
+	}
+
+	err = h.JetKeeper.AddHotConfirmation(ctx, confirm.Pulse, confirm.JetID, confirm.Split)
+	if err != nil {
+		logger.Error(errors.Wrapf(err, "failed to add hot confitmation to JetKeeper jet=%v", confirm.String()))
+	} else {
+		logger.Debug("got confirmation: ", confirm.String())
+	}
 }

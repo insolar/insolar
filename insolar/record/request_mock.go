@@ -42,10 +42,10 @@ type RequestMock struct {
 	IsDetachedPreCounter uint64
 	IsDetachedMock       mRequestMockIsDetached
 
-	IsEmptyAPINodeFunc       func() (r bool)
-	IsEmptyAPINodeCounter    uint64
-	IsEmptyAPINodePreCounter uint64
-	IsEmptyAPINodeMock       mRequestMockIsEmptyAPINode
+	IsTemporaryUploadCodeFunc       func() (r bool)
+	IsTemporaryUploadCodeCounter    uint64
+	IsTemporaryUploadCodePreCounter uint64
+	IsTemporaryUploadCodeMock       mRequestMockIsTemporaryUploadCode
 
 	ReasonRefFunc       func() (r insolar.Reference)
 	ReasonRefCounter    uint64
@@ -66,7 +66,7 @@ func NewRequestMock(t minimock.Tester) *RequestMock {
 	m.IsAPIRequestMock = mRequestMockIsAPIRequest{mock: m}
 	m.IsCreationRequestMock = mRequestMockIsCreationRequest{mock: m}
 	m.IsDetachedMock = mRequestMockIsDetached{mock: m}
-	m.IsEmptyAPINodeMock = mRequestMockIsEmptyAPINode{mock: m}
+	m.IsTemporaryUploadCodeMock = mRequestMockIsTemporaryUploadCode{mock: m}
 	m.ReasonRefMock = mRequestMockReasonRef{mock: m}
 
 	return m
@@ -742,82 +742,82 @@ func (m *RequestMock) IsDetachedFinished() bool {
 	return true
 }
 
-type mRequestMockIsEmptyAPINode struct {
+type mRequestMockIsTemporaryUploadCode struct {
 	mock              *RequestMock
-	mainExpectation   *RequestMockIsEmptyAPINodeExpectation
-	expectationSeries []*RequestMockIsEmptyAPINodeExpectation
+	mainExpectation   *RequestMockIsTemporaryUploadCodeExpectation
+	expectationSeries []*RequestMockIsTemporaryUploadCodeExpectation
 }
 
-type RequestMockIsEmptyAPINodeExpectation struct {
-	result *RequestMockIsEmptyAPINodeResult
+type RequestMockIsTemporaryUploadCodeExpectation struct {
+	result *RequestMockIsTemporaryUploadCodeResult
 }
 
-type RequestMockIsEmptyAPINodeResult struct {
+type RequestMockIsTemporaryUploadCodeResult struct {
 	r bool
 }
 
-//Expect specifies that invocation of Request.IsEmptyAPINode is expected from 1 to Infinity times
-func (m *mRequestMockIsEmptyAPINode) Expect() *mRequestMockIsEmptyAPINode {
-	m.mock.IsEmptyAPINodeFunc = nil
+//Expect specifies that invocation of Request.IsTemporaryUploadCode is expected from 1 to Infinity times
+func (m *mRequestMockIsTemporaryUploadCode) Expect() *mRequestMockIsTemporaryUploadCode {
+	m.mock.IsTemporaryUploadCodeFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &RequestMockIsEmptyAPINodeExpectation{}
+		m.mainExpectation = &RequestMockIsTemporaryUploadCodeExpectation{}
 	}
 
 	return m
 }
 
-//Return specifies results of invocation of Request.IsEmptyAPINode
-func (m *mRequestMockIsEmptyAPINode) Return(r bool) *RequestMock {
-	m.mock.IsEmptyAPINodeFunc = nil
+//Return specifies results of invocation of Request.IsTemporaryUploadCode
+func (m *mRequestMockIsTemporaryUploadCode) Return(r bool) *RequestMock {
+	m.mock.IsTemporaryUploadCodeFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &RequestMockIsEmptyAPINodeExpectation{}
+		m.mainExpectation = &RequestMockIsTemporaryUploadCodeExpectation{}
 	}
-	m.mainExpectation.result = &RequestMockIsEmptyAPINodeResult{r}
+	m.mainExpectation.result = &RequestMockIsTemporaryUploadCodeResult{r}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of Request.IsEmptyAPINode is expected once
-func (m *mRequestMockIsEmptyAPINode) ExpectOnce() *RequestMockIsEmptyAPINodeExpectation {
-	m.mock.IsEmptyAPINodeFunc = nil
+//ExpectOnce specifies that invocation of Request.IsTemporaryUploadCode is expected once
+func (m *mRequestMockIsTemporaryUploadCode) ExpectOnce() *RequestMockIsTemporaryUploadCodeExpectation {
+	m.mock.IsTemporaryUploadCodeFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &RequestMockIsEmptyAPINodeExpectation{}
+	expectation := &RequestMockIsTemporaryUploadCodeExpectation{}
 
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *RequestMockIsEmptyAPINodeExpectation) Return(r bool) {
-	e.result = &RequestMockIsEmptyAPINodeResult{r}
+func (e *RequestMockIsTemporaryUploadCodeExpectation) Return(r bool) {
+	e.result = &RequestMockIsTemporaryUploadCodeResult{r}
 }
 
-//Set uses given function f as a mock of Request.IsEmptyAPINode method
-func (m *mRequestMockIsEmptyAPINode) Set(f func() (r bool)) *RequestMock {
+//Set uses given function f as a mock of Request.IsTemporaryUploadCode method
+func (m *mRequestMockIsTemporaryUploadCode) Set(f func() (r bool)) *RequestMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.IsEmptyAPINodeFunc = f
+	m.mock.IsTemporaryUploadCodeFunc = f
 	return m.mock
 }
 
-//IsEmptyAPINode implements github.com/insolar/insolar/insolar/record.Request interface
-func (m *RequestMock) IsEmptyAPINode() (r bool) {
-	counter := atomic.AddUint64(&m.IsEmptyAPINodePreCounter, 1)
-	defer atomic.AddUint64(&m.IsEmptyAPINodeCounter, 1)
+//IsTemporaryUploadCode implements github.com/insolar/insolar/insolar/record.Request interface
+func (m *RequestMock) IsTemporaryUploadCode() (r bool) {
+	counter := atomic.AddUint64(&m.IsTemporaryUploadCodePreCounter, 1)
+	defer atomic.AddUint64(&m.IsTemporaryUploadCodeCounter, 1)
 
-	if len(m.IsEmptyAPINodeMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.IsEmptyAPINodeMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to RequestMock.IsEmptyAPINode.")
+	if len(m.IsTemporaryUploadCodeMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.IsTemporaryUploadCodeMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to RequestMock.IsTemporaryUploadCode.")
 			return
 		}
 
-		result := m.IsEmptyAPINodeMock.expectationSeries[counter-1].result
+		result := m.IsTemporaryUploadCodeMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the RequestMock.IsEmptyAPINode")
+			m.t.Fatal("No results are set for the RequestMock.IsTemporaryUploadCode")
 			return
 		}
 
@@ -826,11 +826,11 @@ func (m *RequestMock) IsEmptyAPINode() (r bool) {
 		return
 	}
 
-	if m.IsEmptyAPINodeMock.mainExpectation != nil {
+	if m.IsTemporaryUploadCodeMock.mainExpectation != nil {
 
-		result := m.IsEmptyAPINodeMock.mainExpectation.result
+		result := m.IsTemporaryUploadCodeMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the RequestMock.IsEmptyAPINode")
+			m.t.Fatal("No results are set for the RequestMock.IsTemporaryUploadCode")
 		}
 
 		r = result.r
@@ -838,39 +838,39 @@ func (m *RequestMock) IsEmptyAPINode() (r bool) {
 		return
 	}
 
-	if m.IsEmptyAPINodeFunc == nil {
-		m.t.Fatalf("Unexpected call to RequestMock.IsEmptyAPINode.")
+	if m.IsTemporaryUploadCodeFunc == nil {
+		m.t.Fatalf("Unexpected call to RequestMock.IsTemporaryUploadCode.")
 		return
 	}
 
-	return m.IsEmptyAPINodeFunc()
+	return m.IsTemporaryUploadCodeFunc()
 }
 
-//IsEmptyAPINodeMinimockCounter returns a count of RequestMock.IsEmptyAPINodeFunc invocations
-func (m *RequestMock) IsEmptyAPINodeMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.IsEmptyAPINodeCounter)
+//IsTemporaryUploadCodeMinimockCounter returns a count of RequestMock.IsTemporaryUploadCodeFunc invocations
+func (m *RequestMock) IsTemporaryUploadCodeMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.IsTemporaryUploadCodeCounter)
 }
 
-//IsEmptyAPINodeMinimockPreCounter returns the value of RequestMock.IsEmptyAPINode invocations
-func (m *RequestMock) IsEmptyAPINodeMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.IsEmptyAPINodePreCounter)
+//IsTemporaryUploadCodeMinimockPreCounter returns the value of RequestMock.IsTemporaryUploadCode invocations
+func (m *RequestMock) IsTemporaryUploadCodeMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.IsTemporaryUploadCodePreCounter)
 }
 
-//IsEmptyAPINodeFinished returns true if mock invocations count is ok
-func (m *RequestMock) IsEmptyAPINodeFinished() bool {
+//IsTemporaryUploadCodeFinished returns true if mock invocations count is ok
+func (m *RequestMock) IsTemporaryUploadCodeFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.IsEmptyAPINodeMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.IsEmptyAPINodeCounter) == uint64(len(m.IsEmptyAPINodeMock.expectationSeries))
+	if len(m.IsTemporaryUploadCodeMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.IsTemporaryUploadCodeCounter) == uint64(len(m.IsTemporaryUploadCodeMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.IsEmptyAPINodeMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.IsEmptyAPINodeCounter) > 0
+	if m.IsTemporaryUploadCodeMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.IsTemporaryUploadCodeCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.IsEmptyAPINodeFunc != nil {
-		return atomic.LoadUint64(&m.IsEmptyAPINodeCounter) > 0
+	if m.IsTemporaryUploadCodeFunc != nil {
+		return atomic.LoadUint64(&m.IsTemporaryUploadCodeCounter) > 0
 	}
 
 	return true
@@ -1034,8 +1034,8 @@ func (m *RequestMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to RequestMock.IsDetached")
 	}
 
-	if !m.IsEmptyAPINodeFinished() {
-		m.t.Fatal("Expected call to RequestMock.IsEmptyAPINode")
+	if !m.IsTemporaryUploadCodeFinished() {
+		m.t.Fatal("Expected call to RequestMock.IsTemporaryUploadCode")
 	}
 
 	if !m.ReasonRefFinished() {
@@ -1079,8 +1079,8 @@ func (m *RequestMock) MinimockFinish() {
 		m.t.Fatal("Expected call to RequestMock.IsDetached")
 	}
 
-	if !m.IsEmptyAPINodeFinished() {
-		m.t.Fatal("Expected call to RequestMock.IsEmptyAPINode")
+	if !m.IsTemporaryUploadCodeFinished() {
+		m.t.Fatal("Expected call to RequestMock.IsTemporaryUploadCode")
 	}
 
 	if !m.ReasonRefFinished() {
@@ -1106,7 +1106,7 @@ func (m *RequestMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.IsAPIRequestFinished()
 		ok = ok && m.IsCreationRequestFinished()
 		ok = ok && m.IsDetachedFinished()
-		ok = ok && m.IsEmptyAPINodeFinished()
+		ok = ok && m.IsTemporaryUploadCodeFinished()
 		ok = ok && m.ReasonRefFinished()
 
 		if ok {
@@ -1136,8 +1136,8 @@ func (m *RequestMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to RequestMock.IsDetached")
 			}
 
-			if !m.IsEmptyAPINodeFinished() {
-				m.t.Error("Expected call to RequestMock.IsEmptyAPINode")
+			if !m.IsTemporaryUploadCodeFinished() {
+				m.t.Error("Expected call to RequestMock.IsTemporaryUploadCode")
 			}
 
 			if !m.ReasonRefFinished() {
@@ -1176,7 +1176,7 @@ func (m *RequestMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.IsEmptyAPINodeFinished() {
+	if !m.IsTemporaryUploadCodeFinished() {
 		return false
 	}
 

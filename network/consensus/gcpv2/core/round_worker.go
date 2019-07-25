@@ -113,39 +113,29 @@ func (p *RoundStateMachineWorker) OnFullRoundStarting() {
 }
 
 func (p *RoundStateMachineWorker) PreparePulseChange(report api.UpstreamReport, ch chan<- api.UpstreamState) {
-	p.sync(func() {
-		p.applyState(RoundPulsePreparing)
-		p.UpstreamController.PreparePulseChange(report, ch)
-	})
+	p.forceState(RoundPulsePreparing)
+	p.UpstreamController.PreparePulseChange(report, ch)
 }
 
 func (p *RoundStateMachineWorker) CommitPulseChange(report api.UpstreamReport, pd pulse.Data, activeCensus census.Operational) {
-	p.async(func() { // it goes as Async because must only be called after PreparePulseChange gave a result
-		p.applyState(RoundPulseCommitted)
-		p.UpstreamController.CommitPulseChange(report, pd, activeCensus)
-	})
+	p.forceState(RoundPulseCommitted)
+	p.UpstreamController.CommitPulseChange(report, pd, activeCensus)
 }
 
 func (p *RoundStateMachineWorker) CommitPulseChangeByJoiner(report api.UpstreamReport, pd pulse.Data, activeCensus census.Operational) {
-	p.async(func() {
-		p.applyState(RoundPulsePreparing)
-		p.applyState(RoundPulseCommitted)
-		p.UpstreamController.CommitPulseChange(report, pd, activeCensus)
-	})
+	p.forceState(RoundPulsePreparing)
+	p.applyState(RoundPulseCommitted)
+	p.UpstreamController.CommitPulseChange(report, pd, activeCensus)
 }
 
 func (p *RoundStateMachineWorker) CancelPulseChange() {
-	p.sync(func() {
-		p.applyState(RoundPulseAccepted)
-		p.UpstreamController.CancelPulseChange()
-	})
+	p.applyState(RoundPulseAccepted)
+	p.UpstreamController.CancelPulseChange()
 }
 
 func (p *RoundStateMachineWorker) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
-	p.async(func() {
-		p.applyState(RoundConsensusFinished)
-		p.UpstreamController.ConsensusFinished(report, expectedCensus)
-	})
+	p.forceState(RoundConsensusFinished)
+	p.UpstreamController.ConsensusFinished(report, expectedCensus)
 }
 
 func (p *RoundStateMachineWorker) SetTimeout(deadline time.Time) {
@@ -313,6 +303,10 @@ func (p *RoundStateMachineWorker) async(fn func()) {
 
 func (p *RoundStateMachineWorker) GetState() RoundState {
 	return RoundState(atomic.LoadUint32(&p.roundState))
+}
+
+func (p *RoundStateMachineWorker) forceState(newState RoundState) {
+	p.applyState(newState)
 }
 
 func (p *RoundStateMachineWorker) applyState(newState RoundState) {

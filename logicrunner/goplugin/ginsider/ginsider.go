@@ -461,16 +461,38 @@ func (gi *GoInsider) DeactivateObject(object insolar.Reference) error {
 
 // Serialize - CBOR serializer wrapper: `what` -> `to`
 func (gi *GoInsider) Serialize(what interface{}, to *[]byte) error {
-	ch := new(codec.CborHandle)
+	if to == nil {
+		return errors.New("GoInsider.Serialize: `to` is `nil`, cbor will fail with `Encoder not initialized` error")
+	}
+
 	log.Debugf("serializing %+v", what)
-	return codec.NewEncoderBytes(to, ch).Encode(what)
+
+	var handle codec.CborHandle
+	enc := codec.NewEncoderBytes(to, &handle)
+	err := enc.Encode(what)
+	if err != nil {
+		msg := fmt.Sprintf("GoInsider.Deserialize, what = %+v, to = %+v", what, to)
+		err = errors.Wrap(err, msg)
+	}
+	return err
 }
 
 // Deserialize - CBOR de-serializer wrapper: `from` -> `into`
 func (gi *GoInsider) Deserialize(from []byte, into interface{}) error {
-	ch := new(codec.CborHandle)
+	if from == nil {
+		return errors.New("GoInsider.Deserialize: `from` is `nil`, cbor will fail with `Decoder not initialized` error")
+	}
+
 	log.Debugf("de-serializing %+v", from)
-	return codec.NewDecoderBytes(from, ch).Decode(into)
+
+	var handle codec.CborHandle
+	dec := codec.NewDecoderBytes(from, &handle)
+	err := dec.Decode(into)
+	if err != nil {
+		msg := fmt.Sprintf("GoInsider.Deserialize, from = %+v, into = %+v", from, into)
+		err = errors.Wrap(err, msg)
+	}
+	return err
 }
 
 // MakeErrorSerializable converts errors satisfying error interface to foundation.Error

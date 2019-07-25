@@ -68,6 +68,8 @@ var (
 	}
 )
 
+const PulseStep insolar.PulseNumber = 10
+
 type Server struct {
 	pm           insolar.PulseManager
 	pulse        insolar.Pulse
@@ -210,10 +212,13 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 			Coordinator,
 			jetTreeUpdater,
 			ServerBus,
+			Pulses,
 		)
+		requestChecker := executor.NewRequestChecker(filamentCalculator, Coordinator, jetTreeUpdater, ServerBus)
 
 		handler.JetTreeUpdater = jetTreeUpdater
 		handler.FilamentCalculator = filamentCalculator
+		handler.RequestChecker = requestChecker
 
 		err := handler.Init(ctx)
 		if err != nil {
@@ -382,7 +387,7 @@ func (s *Server) Pulse(ctx context.Context) {
 	defer s.lock.Unlock()
 
 	s.pulse = insolar.Pulse{
-		PulseNumber: s.pulse.PulseNumber + 10,
+		PulseNumber: s.pulse.PulseNumber + PulseStep,
 	}
 	err := s.pm.Set(ctx, s.pulse)
 	if err != nil {

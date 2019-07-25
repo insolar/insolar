@@ -53,6 +53,7 @@ package serialization
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 
 	"github.com/insolar/insolar/insolar"
@@ -87,6 +88,9 @@ const (
 	flagIsBodyEncrypted   = Flag(1)
 
 	FlagHasPulsePacket = Flag(0)
+	FlagSelfIntro1     = Flag(1)
+	FlagSelfIntro2     = Flag(2)
+	FlagHasJoinerExt   = Flag(3)
 )
 
 const (
@@ -263,6 +267,11 @@ type Packet struct {
 	EncryptionData  []byte
 
 	PacketSignature longbits.Bits512 `insolar-transport:"generate=signature"` // ByteSize=64
+}
+
+func (p *Packet) String() string {
+	packetCtx := newPacketContext(context.Background(), &p.Header)
+	return fmt.Sprintf("h:%v b:{%v}", p.Header, p.EncryptableBody.DebugString(&packetCtx))
 }
 
 func (p *Packet) setSignature(signature cryptkit.SignatureHolder) {

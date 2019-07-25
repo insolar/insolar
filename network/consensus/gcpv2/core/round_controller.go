@@ -79,6 +79,7 @@ type RoundStrategy interface {
 
 	ConfigureRoundContext(ctx context.Context, expectedPulse pulse.Number, self profiles.LocalNode) context.Context
 	AdjustConsensusTimings(timings *api.RoundTimings)
+	IsEphemeralPulseAllowed() bool
 }
 
 var _ api.RoundController = &PhasedRoundController{}
@@ -89,6 +90,7 @@ type PhasedRoundController struct {
 	/* Derived from the provided externally - set at init() or start(). Don't need mutex */
 	chronicle api.ConsensusChronicles
 	bundle    PhaseControllersBundle
+
 	// fullCancel     context.CancelFunc /* cancels prepareCancel as well */
 	prepareCancel  context.CancelFunc
 	prevPulseRound api.RoundController
@@ -147,7 +149,7 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 
 	prep := PrepRealm{coreRealm: &r.realm.coreRealm}
 	prep.init(
-		r.bundle.IsEphemeralPulseAllowed(),
+		r.realm.strategy.IsEphemeralPulseAllowed(),
 		func(successful bool) {
 			if r.prepR == nil {
 				return
@@ -265,6 +267,9 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 	/* a separate method with lock is to ensure that further packet processing is not connected to a lock */
 	prep, filterPN, nextPN, prev := r.beforeHandlePacket()
 
+	sourceID := packet.GetSourceID()
+	localID := r.realm.self.GetNodeID()
+
 	switch {
 	case filterPN == pn:
 		// this is for us
@@ -287,14 +292,14 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 	default:
 		r.roundWorker.onUnexpectedPulse(pn)
 		return errors2.NewPulseRoundMismatchError(pn,
-			fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v", filterPN, pn))
+			fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v, source=%v, local=%d", filterPN, pn, sourceID, localID))
 	}
 
 	if prep != nil {
 		if !pn.IsUnknown() {
 			r.roundWorker.OnPulseDetected()
 		}
-		return prep.dispatchPacket(ctx, packet, from, packetrecorder.DefaultVerify) // prep realm can't inherit any flags
+		return prep.dispatchPacket(ctx, packet, from, packetrecorder.DefaultVerify|packetrecorder.SkipVerify) // prep realm can't inherit any flags
 	}
-	return r.realm.dispatchPacket(ctx, packet, from, verifyFlags)
+	return r.realm.dispatchPacket(ctx, packet, from, verifyFlags|packetrecorder.SkipVerify)
 }

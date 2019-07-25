@@ -93,12 +93,13 @@ func (js *JetSplitterDefault) Do(
 	inslog := inslogger.FromContext(ctx).WithField("new_pulse", newPulse.String())
 
 	// copy current jet tree for new pulse, for further modification of jets owned in ended pulse.
-	err := js.jetModifier.Clone(ctx, endedPulse, newPulse)
+	err := js.jetModifier.Clone(ctx, endedPulse, newPulse, false)
 	if err != nil {
 		panic("Failed to clone jets")
 	}
 
 	all := js.jetCalculator.MineForPulse(ctx, endedPulse)
+	inslog.Debugf("my jets: %s", insolar.JetIDCollection(all).DebugString())
 	result := make([]insolar.JetID, 0, len(all)*2)
 	for _, jetID := range all {
 		exceed, err := js.createDrop(ctx, jetID, endedPulse)
@@ -106,6 +107,7 @@ func (js *JetSplitterDefault) Do(
 			return nil, errors.Wrapf(err, "failed create drop for pulse=%v, jet=%v",
 				endedPulse, jetID.DebugString())
 		}
+		inslog.Debugf("created drop for pulse %s jet %s", endedPulse.String(), jetID.DebugString())
 
 		if !exceed {
 			// no split, just mark jet as actual for new pulse
@@ -113,6 +115,7 @@ func (js *JetSplitterDefault) Do(
 				panic("failed to update jets on LM-node: " + err.Error())
 			}
 			result = append(result, jetID)
+
 			continue
 		}
 
@@ -156,6 +159,7 @@ func (js *JetSplitterDefault) createDrop(
 	if recordsCount > js.cfg.ThresholdRecordsCount {
 		block.SplitThresholdExceeded = threshold + 1
 	}
+
 	// first return value is split needed
 	if block.SplitThresholdExceeded > js.cfg.ThresholdOverflowCount {
 		block.Split = true

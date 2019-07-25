@@ -200,6 +200,45 @@ func unmarshalCallResponse(t *testing.T, body []byte, response *requester.Contra
 	require.NoError(t, err)
 }
 
+func createMemberWithMigrationAddress(migrationAddress string) error {
+	member, err := newUserWithKeys()
+	if err != nil {
+		return err
+	}
+
+	_, err = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
+	if err != nil {
+		return err
+	}
+
+	_, err = retryableMemberMigrationCreate(member, true)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func migrate(t *testing.T, memberRef string, amount string, tx string, ma string, mdNum int) map[string]interface{} {
+	anotherMember := createMember(t)
+
+	_, err := signedRequest(
+		&migrationDaemons[mdNum],
+		"deposit.migration",
+		map[string]interface{}{"amount": amount, "ethTxHash": tx, "migrationAddress": ma})
+	require.NoError(t, err)
+	res, err := signedRequest(anotherMember, "wallet.getBalance", map[string]interface{}{"reference": memberRef})
+	require.NoError(t, err)
+	deposits, ok := res.(map[string]interface{})["deposits"].(map[string]interface{})
+	require.True(t, ok)
+	deposit, ok := deposits[tx].(map[string]interface{})
+	require.True(t, ok)
+	require.Equal(t, deposit["amount"], amount)
+	require.Equal(t, deposit["ethTxHash"], tx)
+
+	return deposit
+}
+
 func retryableMemberCreate(user *user, updatePublicKey bool) (interface{}, error) {
 	return retryableCreateMember(user, "member.create", updatePublicKey)
 }

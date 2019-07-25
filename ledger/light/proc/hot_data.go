@@ -19,6 +19,7 @@ package proc
 import (
 	"context"
 
+	wbus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -27,7 +28,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
@@ -55,7 +55,7 @@ type HotObjects struct {
 		JetReleaser   hot.JetReleaser
 		Coordinator   jet.Coordinator
 		Calculator    pulse.Calculator
-		Sender        bus.Sender
+		Sender        wbus.Sender
 	}
 }
 
@@ -76,6 +76,9 @@ func NewHotObjects(
 }
 
 func (p *HotObjects) Proceed(ctx context.Context) error {
+
+	inslogger.FromContext(ctx).Debug("Get hot. pulse: ", p.drop.Pulse, " jet: ", p.drop.JetID.DebugString())
+
 	err := p.Dep.DropModifier.Set(ctx, p.drop)
 	if err == drop.ErrOverride {
 		err = nil
@@ -104,7 +107,7 @@ func (p *HotObjects) Proceed(ctx context.Context) error {
 		}
 	}
 
-	logger.Debugf("[handleHotRecords] received %v hot indexes", len(p.indexes))
+	logger.Debugf("received %v hot indexes for jet %s and pulse %s", len(p.indexes), p.jetID.DebugString(), p.pulse)
 	for _, idx := range p.indexes {
 		objJetID, _ := p.Dep.JetStorage.ForID(ctx, p.pulse, idx.ObjID)
 		if objJetID != p.jetID {
@@ -136,7 +139,27 @@ func (p *HotObjects) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to release jets")
 	}
+
+	p.sendConfirmationToHeavy(ctx, p.jetID, p.drop.Pulse, p.drop.Split)
 	return nil
+}
+
+func (p *HotObjects) sendConfirmationToHeavy(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber, split bool) {
+	msg, err := payload.NewMessage(&payload.GotHotConfirmation{
+		JetID: jetID,
+		Pulse: pn,
+		Split: split,
+	})
+
+	if err != nil {
+		inslogger.FromContext(ctx).Error("Can't create GotHotConfirmation message: ", err)
+		return
+	}
+
+	inslogger.FromContext(ctx).Debug("Send hot confirmation to heavy. pulse: ", pn, " jet: ", p.drop.JetID.DebugString())
+
+	_, done := p.Dep.Sender.SendRole(ctx, msg, insolar.DynamicRoleHeavyExecutor, *insolar.NewReference(insolar.ID(jetID)))
+	done()
 }
 
 func (p *HotObjects) notifyPending(

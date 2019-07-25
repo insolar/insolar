@@ -141,6 +141,8 @@ type DigestSigner interface {
 	GetSignMethod() SignMethod
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.PublicKeyStore -o . -s _mock.go
+
 type PublicKeyStore interface {
 	PublicKeyStore()
 }

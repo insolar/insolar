@@ -65,6 +65,22 @@ type SimpleProfileIntroFactory struct {
 	pksFactory cryptkit.KeyStoreFactory
 }
 
+func (p *SimpleProfileIntroFactory) TryConvertUpgradableIntroProfile(profile profiles.StaticProfile) (profiles.StaticProfile, bool) {
+	ext := profile.GetExtension()
+	if ext == nil {
+		return profile, false
+	}
+	if _, ok := profile.(profiles.Upgradable); !ok {
+		return profile, false
+	}
+
+	pks := profile.GetPublicKeyStore()
+	if pks == nil {
+		pks = p.pksFactory.GetPublicKeyStore(profile.GetNodePublicKey())
+	}
+	return profiles.NewStaticProfileByExt(profile, ext, pks), true
+}
+
 func (p *SimpleProfileIntroFactory) CreateUpgradableIntroProfile(candidate profiles.BriefCandidateProfile) profiles.StaticProfile {
 	pks := p.pksFactory.GetPublicKeyStore(candidate.GetNodePublicKey())
 	return profiles.NewUpgradableProfileByBrief(candidate, pks)

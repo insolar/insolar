@@ -107,7 +107,7 @@ func (d *Deposit) Confirm(migrationDaemonIndex int, migrationDaemonRef string, t
 	}
 
 	if d.MigrationDaemonConfirms[migrationDaemonIndex] != "" {
-		return fmt.Errorf("confirm from the '%v' migration daemon already exists; member '%s' confirmed it", migrationDaemonIndex, migrationDaemonRef)
+		return fmt.Errorf("confirm from the '%v' migration daemon already exists; member '%s' already confirmed it", migrationDaemonIndex, migrationDaemonRef)
 	} else {
 		d.MigrationDaemonConfirms[migrationDaemonIndex] = migrationDaemonRef
 

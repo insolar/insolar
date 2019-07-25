@@ -11,23 +11,22 @@ func _() {
 	_ = x[TypeCallMethod-0]
 	_ = x[TypeReturnResults-1]
 	_ = x[TypeExecutorResults-2]
-	_ = x[TypeValidateCaseBind-3]
-	_ = x[TypeValidationResults-4]
-	_ = x[TypePendingFinished-5]
-	_ = x[TypeAdditionalCallFromPreviousExecutor-6]
-	_ = x[TypeStillExecuting-7]
-	_ = x[TypeGetDelegate-8]
-	_ = x[TypeGetChildren-9]
-	_ = x[TypeRegisterChild-10]
-	_ = x[TypeGetObjectIndex-11]
-	_ = x[TypeHeavyStartStop-12]
-	_ = x[TypeHeavyPayload-13]
-	_ = x[TypeGenesisRequest-14]
+	_ = x[TypeValidationResults-3]
+	_ = x[TypePendingFinished-4]
+	_ = x[TypeAdditionalCallFromPreviousExecutor-5]
+	_ = x[TypeStillExecuting-6]
+	_ = x[TypeGetDelegate-7]
+	_ = x[TypeGetChildren-8]
+	_ = x[TypeRegisterChild-9]
+	_ = x[TypeGetObjectIndex-10]
+	_ = x[TypeHeavyStartStop-11]
+	_ = x[TypeHeavyPayload-12]
+	_ = x[TypeGenesisRequest-13]
 }
 
-const _MessageType_name = "TypeCallMethodTypeReturnResultsTypeExecutorResultsTypeValidateCaseBindTypeValidationResultsTypePendingFinishedTypeAdditionalCallFromPreviousExecutorTypeStillExecutingTypeGetDelegateTypeGetChildrenTypeRegisterChildTypeGetObjectIndexTypeHeavyStartStopTypeHeavyPayloadTypeGenesisRequest"
+const _MessageType_name = "TypeCallMethodTypeReturnResultsTypeExecutorResultsTypeValidationResultsTypePendingFinishedTypeAdditionalCallFromPreviousExecutorTypeStillExecutingTypeGetDelegateTypeGetChildrenTypeRegisterChildTypeGetObjectIndexTypeHeavyStartStopTypeHeavyPayloadTypeGenesisRequest"
 
-var _MessageType_index = [...]uint16{0, 14, 31, 50, 70, 91, 110, 148, 166, 181, 196, 213, 231, 249, 265, 283}
+var _MessageType_index = [...]uint16{0, 14, 31, 50, 71, 90, 128, 146, 161, 176, 193, 211, 229, 245, 263}
 
 func (i MessageType) String() string {
 	if i >= MessageType(len(_MessageType_index)-1) {

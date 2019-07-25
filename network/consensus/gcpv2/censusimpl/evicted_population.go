@@ -58,7 +58,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
 
-func newEvictedPopulation(evicts []*updatableSlot) evictedPopulation {
+func newEvictedPopulation(evicts []*updatableSlot, detectedErrors census.RecoverableErrorTypes) evictedPopulation {
 
 	if len(evicts) == 0 {
 		return evictedPopulation{}
@@ -71,13 +71,22 @@ func newEvictedPopulation(evicts []*updatableSlot) evictedPopulation {
 			s.leaveReason}
 	}
 
-	return evictedPopulation{evictedNodes}
+	return evictedPopulation{evictedNodes, detectedErrors}
 }
 
 var _ census.EvictedPopulation = &evictedPopulation{}
 
 type evictedPopulation struct {
-	profiles map[insolar.ShortNodeID]profiles.EvictedNode
+	profiles       map[insolar.ShortNodeID]profiles.EvictedNode
+	detectedErrors census.RecoverableErrorTypes
+}
+
+func (p *evictedPopulation) IsValid() bool {
+	return p.detectedErrors != 0
+}
+
+func (p *evictedPopulation) GetDetectedErrors() census.RecoverableErrorTypes {
+	return p.detectedErrors
 }
 
 func (p *evictedPopulation) FindProfile(nodeID insolar.ShortNodeID) profiles.EvictedNode {
@@ -124,7 +133,7 @@ func (p *evictedSlot) GetOpMode() member.OpMode {
 }
 
 func (p *evictedSlot) GetLeaveReason() uint32 {
-	if p.mode != member.ModeEvictedGracefully {
+	if !p.mode.IsEvictedGracefully() {
 		return 0
 	}
 	return p.leaveReason
