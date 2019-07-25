@@ -88,6 +88,20 @@ func NewMembershipProfile(mode member.OpMode, power member.Power, index member.I
 	}
 }
 
+func NewMembershipProfileForJoiner(brief BriefCandidateProfile) MembershipProfile {
+
+	return MembershipProfile{
+		Index:          member.JoinerIndex,
+		Power:          0,
+		Mode:           0,
+		RequestedPower: brief.GetStartPower(),
+		NodeAnnouncedState: proofs.NodeAnnouncedState{
+			StateEvidence:     brief.GetBriefIntroSignedDigest(),
+			AnnounceSignature: brief.GetBriefIntroSignedDigest().GetSignatureHolder(),
+		},
+	}
+}
+
 func NewMembershipProfileByNode(np ActiveNode, nsh cryptkit.SignedDigestHolder, nas proofs.MemberAnnouncementSignature,
 	ep member.Power) MembershipProfile {
 
