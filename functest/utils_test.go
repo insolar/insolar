@@ -200,15 +200,21 @@ func unmarshalCallResponse(t *testing.T, body []byte, response *requester.Contra
 	require.NoError(t, err)
 }
 
-func createMemberWithMigrationAddress(t *testing.T, migrationAddress string) error {
+func createMemberWithMigrationAddress(migrationAddress string) error {
 	member, err := newUserWithKeys()
-	require.NoError(t, err)
+	if err != nil {
+		return err
+	}
 
 	_, err = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
-	require.NoError(t, err)
+	if err != nil {
+		return err
+	}
 
 	_, err = retryableMemberMigrationCreate(member, true)
-	require.NoError(t, err)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

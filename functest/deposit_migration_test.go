@@ -92,7 +92,7 @@ func TestMigrationTokenNotInTheList(t *testing.T) {
 
 func TestMigrationTokenZeroAmount(t *testing.T) {
 	ba := testutils.RandomString()
-	err := createMemberWithMigrationAddress(t, ba)
+	err := createMemberWithMigrationAddress(ba)
 	require.NoError(t, err)
 
 	result, err := signedRequest(
@@ -107,7 +107,7 @@ func TestMigrationTokenZeroAmount(t *testing.T) {
 
 func TestMigrationTokenMistakeField(t *testing.T) {
 	ba := testutils.RandomString()
-	err := createMemberWithMigrationAddress(t, ba)
+	err := createMemberWithMigrationAddress(ba)
 	require.NoError(t, err)
 
 	result, err := signedRequest(
@@ -120,7 +120,7 @@ func TestMigrationTokenMistakeField(t *testing.T) {
 
 func TestMigrationTokenNilValue(t *testing.T) {
 	ba := testutils.RandomString()
-	err := createMemberWithMigrationAddress(t, ba)
+	err := createMemberWithMigrationAddress(ba)
 	require.NoError(t, err)
 
 	result, err := signedRequest(&migrationDaemons[0], "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": nil, "migrationAddress": ba})
@@ -131,7 +131,7 @@ func TestMigrationTokenNilValue(t *testing.T) {
 
 func TestMigrationTokenMaxAmount(t *testing.T) {
 	ba := testutils.RandomString()
-	err := createMemberWithMigrationAddress(t, ba)
+	err := createMemberWithMigrationAddress(ba)
 	require.NoError(t, err)
 
 	result, err := signedRequest(
@@ -144,7 +144,7 @@ func TestMigrationTokenMaxAmount(t *testing.T) {
 
 func TestMigrationDoubleMigration(t *testing.T) {
 	ba := testutils.RandomString()
-	err := createMemberWithMigrationAddress(t, ba)
+	err := createMemberWithMigrationAddress(ba)
 	require.NoError(t, err)
 
 	resultMigr1, err := signedRequest(
@@ -161,7 +161,7 @@ func TestMigrationDoubleMigration(t *testing.T) {
 
 func TestMigrationAnotherAmountSameTx(t *testing.T) {
 	ba := testutils.RandomString()
-	err := createMemberWithMigrationAddress(t, ba)
+	err := createMemberWithMigrationAddress(ba)
 	require.NoError(t, err)
 
 	resultMigr1, err := signedRequest(
