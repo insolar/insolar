@@ -64,7 +64,7 @@ import (
 type FakeGateway struct {
 	gateway.Base
 	State   insolar.NetworkState
-	StateMu sync.Mutex
+	stateMu sync.RWMutex
 }
 
 func NewFakeGateway() network.Gateway {
@@ -75,8 +75,8 @@ func NewFakeGateway() network.Gateway {
 }
 
 func (g *FakeGateway) OnPulse(context.Context, insolar.Pulse) error {
-	g.StateMu.Lock()
-	defer g.StateMu.Unlock()
+	g.stateMu.Lock()
+	defer g.stateMu.Unlock()
 	g.State = insolar.CompleteNetworkState
 	return nil
 }
@@ -89,8 +89,8 @@ func (g *FakeGateway) Run(context.Context) {
 }
 
 func (g *FakeGateway) GetState() insolar.NetworkState {
-	g.StateMu.Lock()
-	defer g.StateMu.Unlock()
+	g.stateMu.RLock()
+	defer g.stateMu.RUnlock()
 	return g.State
 }
 
