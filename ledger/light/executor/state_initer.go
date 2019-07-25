@@ -32,6 +32,8 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.StateIniter -o ./ -s _mock.go
 
 type StateIniter interface {
+	// PrepareState prepares actual data to get the light started.
+	// Fetch necessary jets and drops from heavy.
 	PrepareState(ctx context.Context, pulse insolar.PulseNumber) error
 }
 
