@@ -80,6 +80,8 @@ func TestMarshalUnmarshal(t *testing.T) {
 		{tp: payload.TypePendingsInfo, pl: &payload.PendingsInfo{}},
 		{tp: payload.TypeGetJet, pl: &payload.GetJet{}},
 		{tp: payload.TypeAbandonedRequestsNotification, pl: &payload.AbandonedRequestsNotification{}},
+		{tp: payload.TypeGetInitialState, pl: &payload.GetInitialState{}},
+		{tp: payload.TypeInitialState, pl: &payload.InitialState{}},
 	}
 
 	for _, d := range table {
