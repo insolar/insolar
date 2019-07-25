@@ -63,6 +63,10 @@ type PulsarPacketBody struct {
 	PulsarConsensusProofs []byte        // variable lengths >=0
 }
 
+func (b *PulsarPacketBody) DebugString(ctx PacketContext) string {
+	return "pulsar packet body"
+}
+
 func (b *PulsarPacketBody) SerializeTo(_ SerializeContext, writer io.Writer) error {
 	// TODO: proofs
 	return write(writer, b.PulseDataExt)

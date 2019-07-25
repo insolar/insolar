@@ -52,6 +52,7 @@ package serialization
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 
 	"github.com/insolar/insolar/insolar"
@@ -103,6 +104,37 @@ type GlobulaConsensusPacketBody struct {
 	Vectors       NodeVectors   `insolar-transport:"Packet=3"` // ByteSize=133..599
 
 	Claims ClaimList `insolar-transport:"Packet=1,3"` // ByteSize= 1 + ...
+}
+
+func (b *GlobulaConsensusPacketBody) DebugString(ctx PacketContext) string {
+	switch ctx.GetPacketType().GetPayloadEquivalent() {
+	case phases.PacketPhase0:
+		return fmt.Sprintf("r:%v pp:%v", b.CurrentRank, b.PulsarPacket)
+	case phases.PacketPhase1:
+		return fmt.Sprintf(
+			"pp:%v ma:%v je:%v fsi:%v ci:%v js:%v",
+			b.PulsarPacket,
+			b.Announcement,
+			b.JoinerExt,
+			b.FullSelfIntro,
+			b.CloudIntro,
+			b.JoinerSecret,
+		)
+	case phases.PacketPhase2:
+		return fmt.Sprintf(
+			"ma:%v bsi:%v fsi:%v ci:%v js:%v ns:%v",
+			b.Announcement,
+			b.BriefSelfIntro,
+			b.FullSelfIntro,
+			b.CloudIntro,
+			b.JoinerSecret,
+			b.Neighbourhood,
+		)
+	case phases.PacketPhase3:
+		return fmt.Sprintf("vs:%v", b.Vectors)
+	default:
+		return "unknown packet"
+	}
 }
 
 func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io.Writer) error {
