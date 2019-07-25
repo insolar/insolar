@@ -296,6 +296,7 @@ func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 			return errors.Wrap(err, "failed to unmarshal payload type")
 		}
 		payloadType = pt
+		meta = originMeta
 	}
 
 	// Only allow read operations in the past.
