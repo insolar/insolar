@@ -86,7 +86,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
 	suite.NoError(err)
 	suite.api.SeedManager.Add(*seed, 0)
 
-	suite.api.timeout = 1 * time.Second
+	suite.api.timeout = 1 * time.Millisecond
 
 	seedString := base64.StdEncoding.EncodeToString(seed[:])
 
