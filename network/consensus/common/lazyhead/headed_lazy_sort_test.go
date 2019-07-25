@@ -233,7 +233,7 @@ func TestGetReversedHead(t *testing.T) {
 
 	require.Panics(t, func() { hl.GetReversedHead(2) })
 
-	k := hl.GetReversedHead(1)
+	k := hl.GetReversedHead(0)
 	require.Equal(t, 2, k.(int))
 }
 
@@ -251,15 +251,16 @@ func TestHasFullHead(t *testing.T) {
 func TestCheckHeadLen(t *testing.T) {
 	hl := NewHeadedLazySortedList(3, lessTestFn, 1)
 	hl.Add(2)
-	require.Panics(t, func() { hl.checkHeadLen(-1) })
+	require.Panics(t, func() { hl.checkAndGetAdjustedHeadLen(-1) })
 
-	require.Panics(t, func() { hl.checkHeadLen(4) })
+	require.Panics(t, func() { hl.checkAndGetAdjustedHeadLen(4) })
 
 	hl.Add(3)
-	n := hl.checkHeadLen(1)
-	require.Equal(t, hl.headLen, n)
+	hlr := 1
+	n := hl.checkAndGetAdjustedHeadLen(hlr)
+	require.Equal(t, hl.headLen-hlr, n)
 
-	n = hl.checkHeadLen(0)
+	n = hl.checkAndGetAdjustedHeadLen(0)
 	require.Equal(t, hl.data.len, n)
 }
 
@@ -320,13 +321,13 @@ func TestCutOffHead(t *testing.T) {
 	hl.Add(item1)
 	item2 := 2
 	hl.Add(item2)
-	require.Equal(t, []interface{}{item2, item1}, hl.CutOffHead(2))
+	require.Equal(t, []interface{}{item2}, hl.CutOffHead(1))
 
 	hl.Add(item1)
 	hl.Add(item2)
 	item3 := 3
 	hl.Add(item3)
-	require.Equal(t, []interface{}{item2, item3}, hl.CutOffHead(2))
+	require.Equal(t, []interface{}{item2, item3}, hl.CutOffHead(0))
 
 	require.Panics(t, func() { hl.CutOffHead(3) })
 }
@@ -375,7 +376,8 @@ func TestGetAvailableHeadLen(t *testing.T) {
 	hl.Add(item1)
 	item2 := 2
 	hl.Add(item2)
-	require.Equal(t, headLen, hl.GetAvailableHeadLen(1))
+	hlr := 1
+	require.Equal(t, headLen-hlr, hl.GetAvailableHeadLen(hlr))
 
 	require.Panics(t, func() { hl.GetAvailableHeadLen(-1) })
 

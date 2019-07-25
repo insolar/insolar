@@ -67,6 +67,7 @@ var defaultRoundTimings = api.RoundTimings{
 	EndOfPhase1:        250 * time.Millisecond,
 	EndOfPhase2:        400 * time.Millisecond,
 	EndOfPhase3:        500 * time.Millisecond,
+	EndOfConsensus:     600 * time.Millisecond,
 
 	BeforeInPhase2ChasingDelay: 0 * time.Millisecond,
 	BeforeInPhase3ChasingDelay: 0 * time.Millisecond,
@@ -76,6 +77,10 @@ type LocalNodeConfiguration struct {
 	ctx            context.Context
 	timings        api.RoundTimings
 	secretKeyStore cryptkit.SecretKeyStore
+}
+
+func (c *LocalNodeConfiguration) GetNodeCountHint() int {
+	return 10 // should provide some rough estimate of a size of a network to be joined
 }
 
 func NewLocalNodeConfiguration(ctx context.Context, keyStore insolar.KeyStore) *LocalNodeConfiguration {
@@ -109,6 +114,7 @@ func (c *LocalNodeConfiguration) GetConsensusTimings(nextPulseDelta uint16, isJo
 	t.EndOfPhase1 *= m
 	t.EndOfPhase2 *= m
 	t.EndOfPhase3 *= m
+	t.EndOfConsensus *= m
 	t.BeforeInPhase2ChasingDelay *= m
 	t.BeforeInPhase3ChasingDelay *= m
 

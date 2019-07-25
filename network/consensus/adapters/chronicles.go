@@ -51,18 +51,26 @@
 package adapters
 
 import (
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	census2 "github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/censusimpl"
 )
 
-func NewChronicles(pop censusimpl.ManyNodePopulation, pf profiles.Factory, vc census2.VersionedRegistries) api.ConsensusChronicles {
-	chronicles := censusimpl.NewLocalChronicles(pf)
-	censusimpl.NewPrimingCensus(&pop, vc).SetAsActiveTo(chronicles)
-	return chronicles
+func NewChronicles(pf profiles.Factory) censusimpl.LocalConsensusChronicles {
+	return censusimpl.NewLocalChronicles(pf)
 }
 
-func NewPopulation(localNode profiles.StaticProfile, nodes []profiles.StaticProfile) censusimpl.ManyNodePopulation {
-	return censusimpl.NewManyNodePopulation(localNode, nodes)
+func NewCensus(
+	localNode profiles.StaticProfile,
+	nodes []profiles.StaticProfile,
+	vc census2.VersionedRegistries,
+	vf cryptkit.SignatureVerifierFactory,
+) *censusimpl.PrimingCensusTemplate {
+
+	// if len(nodes) == 0 {
+	// 	return censusimpl.NewPrimingCensusForJoiner(localNode, vc, vf)
+	// }
+
+	return censusimpl.NewPrimingCensus(nodes, localNode, vc, vf)
 }

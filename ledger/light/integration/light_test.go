@@ -23,13 +23,15 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
 func Test_BootstrapCalls(t *testing.T) {
@@ -55,6 +57,123 @@ func Test_BootstrapCalls(t *testing.T) {
 		p, _ := callSetCode(ctx, t, s)
 		requireNotError(t, p)
 	})
+}
+
+func Test_LightReplication(t *testing.T) {
+	t.Parallel()
+
+	var secondPulseNumber = insolar.FirstPulseNumber + (PulseStep * 2)
+	var expectedLifeline record.Lifeline
+	var expectedObjectID insolar.ID
+
+	var expectedIds []insolar.ID
+	var receivedMessage = make(chan payload.Replication, 10)
+
+	ctx := inslogger.WithLoggerLevel(inslogger.TestContext(t), insolar.InfoLevel)
+	cfg := DefaultLightConfig()
+
+	s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) {
+		switch p := pl.(type) {
+		case *payload.Replication:
+			if p.Pulse == secondPulseNumber {
+				go func() {
+					receivedMessage <- *p
+				}()
+			}
+
+		}
+	})
+
+	require.NoError(t, err)
+
+	// First pulse goes in storage then interrupts.
+	s.Pulse(ctx)
+
+	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
+	s.Pulse(ctx)
+
+	{
+		// Creating root reason request.
+		var reasonID insolar.ID
+		{
+			p, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
+			requireNotError(t, p)
+			reasonID = p.(*payload.RequestInfo).RequestID
+		}
+
+		// Save and check code.
+		{
+			p, _ := callSetCode(ctx, t, s)
+			requireNotError(t, p)
+			payloadId := p.(*payload.ID).ID
+			expectedIds = append(expectedIds, payloadId)
+		}
+
+		// Set, get request.
+		{
+			p, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), reasonID, record.CTSaveAsChild)
+			requireNotError(t, p)
+			expectedObjectID = p.(*payload.RequestInfo).RequestID
+			expectedIds = append(expectedIds, expectedObjectID)
+		}
+		// Activate and check object.
+		{
+			p, state := callActivateObject(ctx, t, s, expectedObjectID)
+			requireNotError(t, p)
+
+			lifeline, material := requireGetObject(ctx, t, s, expectedObjectID)
+			expectedIds = append(expectedIds, *lifeline.LatestState)
+			require.Equal(t, &state, material.Virtual)
+		}
+		// Amend and check object.
+		{
+			p, _ := callSetIncomingRequest(ctx, t, s, expectedObjectID, reasonID, record.CTMethod)
+			requireNotError(t, p)
+
+			p, state := callAmendObject(ctx, t, s, expectedObjectID, p.(*payload.RequestInfo).RequestID)
+			requireNotError(t, p)
+			lifeline, material := requireGetObject(ctx, t, s, expectedObjectID)
+			require.Equal(t, &state, material.Virtual)
+
+			expectedLifeline = lifeline
+			expectedIds = append(expectedIds, *lifeline.LatestState)
+		}
+	}
+
+	// Third pulse activate replication of second's pulse records
+	s.Pulse(ctx)
+
+	{
+		replicationPayload := <-receivedMessage
+
+		var receivedLifeline record.Lifeline
+
+		for _, recordIndex := range replicationPayload.Indexes {
+			if recordIndex.ObjID == expectedObjectID {
+				receivedLifeline = recordIndex.Lifeline
+			}
+		}
+
+		replicatedIds := make(map[insolar.ID]struct{})
+
+		require.Equal(t, 13, len(replicationPayload.Records))
+		require.Equal(t, expectedLifeline, receivedLifeline)
+
+		// testing payload
+		cryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
+
+		for _, rec := range replicationPayload.Records {
+			hash := record.HashVirtual(cryptographyScheme.ReferenceHasher(), *rec.Virtual)
+			id := insolar.NewID(secondPulseNumber, hash)
+			replicatedIds[*id] = struct{}{}
+		}
+
+		for _, id := range expectedIds {
+			_, ok := replicatedIds[id]
+			require.True(t, ok, "No key in replicated data")
+		}
+	}
+
 }
 
 func Test_BasicOperations(t *testing.T) {
@@ -109,6 +228,8 @@ func Test_BasicOperations(t *testing.T) {
 			})
 			requireNotError(t, p)
 
+			reqID := p.(*payload.RequestInfo).RequestID
+			fmt.Println("asking for ", reqID.DebugString())
 			p = callGetRequest(ctx, t, s, p.(*payload.RequestInfo).RequestID)
 			requireNotError(t, p)
 			require.Equal(t, sent, p.(*payload.Request).Request)

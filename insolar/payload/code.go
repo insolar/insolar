@@ -17,9 +17,9 @@
 package payload
 
 const (
-	CodeUnknown        = 0
-	CodeDeactivated    = 1
-	CodeFlowCanceled   = 2
-	CodeObjectNotFound = 3
-	CodeNoPendings     = 4
+	CodeUnknown      = 0
+	CodeDeactivated  = 1
+	CodeFlowCanceled = 2
+	CodeNotFound     = 3
+	CodeNoPendings   = 4
 )

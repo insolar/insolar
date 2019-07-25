@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/stretchr/testify/require"
@@ -85,6 +86,7 @@ func callSetIncomingRequest(
 		Arguments: args,
 		CallType:  ct,
 		Reason:    *insolar.NewReference(reasonID),
+		APINode:   gen.Reference(),
 	})
 	reps, done := s.Send(ctx, &payload.SetIncomingRequest{
 		Request: rec,
@@ -103,9 +105,21 @@ func callSetIncomingRequest(
 		t.Fatalf("received unexpected reply %T", pl)
 	}
 
-	return insolar.ID{}, record.Virtual{}
+	return nil, record.Virtual{}
 }
 
+func sendMessage(
+	ctx context.Context, t *testing.T, s *Server, msg payload.Payload,
+) payload.Payload {
+	reps, done := s.Send(ctx, msg)
+	defer done()
+
+	rep := <-reps
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	require.NoError(t, err)
+
+	return pl
+}
 func callGetRequest(ctx context.Context, t *testing.T, s *Server, requestID insolar.ID) payload.Payload {
 	reps, done := s.Send(ctx, &payload.GetRequest{
 		RequestID: requestID,
@@ -280,4 +294,25 @@ func callGetObject(ctx context.Context, t *testing.T, s *Server, objectID insola
 	}
 	require.True(t, done())
 	return lifeline, state
+}
+
+func fetchPendings(ctx context.Context, t *testing.T, s *Server, objectID insolar.ID) payload.Payload {
+	reps, done := s.Send(ctx, &payload.GetPendings{
+		ObjectID: objectID,
+	})
+	defer done()
+
+	rep := <-reps
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	require.NoError(t, err)
+	switch pl.(type) {
+	case *payload.Error:
+		return pl
+	case *payload.IDs:
+		return pl
+	default:
+		t.Fatalf("received unexpected reply %T", pl)
+	}
+
+	return nil
 }

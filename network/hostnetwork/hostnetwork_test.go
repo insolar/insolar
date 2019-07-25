@@ -443,6 +443,7 @@ func TestStartStopSend(t *testing.T) {
 
 	err := s.cm1.Stop(s.ctx1)
 	require.NoError(t, err)
+	<-time.After(time.Millisecond * 10)
 
 	s.ctx1 = context.Background()
 	err = s.cm1.Start(s.ctx1)

@@ -51,11 +51,9 @@
 package censusimpl
 
 import (
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 )
@@ -66,6 +64,8 @@ type copyToOnlinePopulation interface {
 	copyToPopulation
 	census.OnlinePopulation
 }
+
+var _ census.Prime = &PrimingCensusTemplate{}
 
 type PrimingCensusTemplate struct {
 	chronicles *localChronicles
@@ -91,48 +91,32 @@ func (c *PrimingCensusTemplate) getVersionedRegistries() census.VersionedRegistr
 	return c.registries
 }
 
-func NewPrimingCensus(population copyToOnlinePopulation, registries census.VersionedRegistries) *PrimingCensusTemplate {
-	// TODO HACK - ugly sorting impl to establish initial node ordering
-	dp := NewDynamicPopulation(population)
-	sortedPopulation := ManyNodePopulation{}
-	sortedPopulation.makeCopyOfMapAndSort(dp.slotByID, dp.local, lessForNodeProfile)
+func NewPrimingCensusForJoiner(localProfile profiles.StaticProfile, registries census.VersionedRegistries,
+	vf cryptkit.SignatureVerifierFactory) *PrimingCensusTemplate {
 
+	pop := NewJoinerPopulation(localProfile, vf)
+	return newPrimingCensus(&pop, registries)
+}
+
+func NewPrimingCensus(intros []profiles.StaticProfile, localProfile profiles.StaticProfile, registries census.VersionedRegistries,
+	vf cryptkit.SignatureVerifierFactory) *PrimingCensusTemplate {
+
+	if len(intros) == 0 {
+		panic("illegal state")
+	}
+	localID := localProfile.GetStaticNodeID()
+	pop := NewManyNodePopulation(intros, localID, vf)
+	return newPrimingCensus(&pop, registries)
+}
+
+func newPrimingCensus(pop copyToOnlinePopulation, registries census.VersionedRegistries) *PrimingCensusTemplate {
 	r := &PrimingCensusTemplate{
 		registries: registries,
-		online:     &sortedPopulation,
+		online:     pop,
 		evicted:    &evictedPopulation{},
 		pd:         registries.GetVersionPulseData(),
 	}
 	return r
-}
-
-func nodeProfileOrdering(np profiles.ActiveNode) (member.PrimaryRole, member.Power, insolar.ShortNodeID) {
-	p := np.GetDeclaredPower()
-	r := np.GetStatic().GetPrimaryRole()
-	if p == 0 || np.GetOpMode().IsPowerless() {
-		return member.PrimaryRoleInactive, 0, np.GetNodeID()
-	}
-	return r, p, np.GetNodeID()
-}
-
-func lessForNodeProfile(c profiles.ActiveNode, o profiles.ActiveNode) bool {
-	cR, cP, cI := nodeProfileOrdering(c)
-	oR, oP, oI := nodeProfileOrdering(o)
-
-	/* Reversed order */
-	if cR < oR {
-		return false
-	} else if cR > oR {
-		return true
-	}
-
-	if cP < oP {
-		return true
-	} else if cP > oP {
-		return false
-	}
-
-	return cI < oI
 }
 
 func (c *PrimingCensusTemplate) SetAsActiveTo(chronicles LocalConsensusChronicles) {
@@ -156,6 +140,32 @@ func (c *PrimingCensusTemplate) GetExpectedPulseNumber() pulse.Number {
 		return c.pd.GetPulseNumber()
 	}
 	return c.pd.GetNextPulseNumber()
+}
+
+func (c *PrimingCensusTemplate) MakeExpected(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) census.Expected {
+	if csh == nil {
+		panic("illegal value: CSH is nil")
+	}
+	if gsh == nil {
+		panic("illegal value: GSH is nil")
+	}
+	epn := c.GetExpectedPulseNumber()
+	if !epn.IsUnknown() && pn != epn {
+		panic("illegal value")
+	}
+
+	r := &ExpectedCensusTemplate{
+		chronicles: c.chronicles,
+		prev:       c.chronicles.active,
+		csh:        csh,
+		gsh:        gsh,
+		pn:         pn,
+		online:     c.online,
+		evicted:    c.evicted,
+	}
+
+	c.chronicles.makeExpected(r)
+	return r
 }
 
 func (c *PrimingCensusTemplate) GetPulseNumber() pulse.Number {
@@ -237,13 +247,14 @@ func (c *ActiveCensusTemplate) GetCloudStateHash() proofs.CloudStateHash {
 var _ census.Expected = &ExpectedCensusTemplate{}
 
 type ExpectedCensusTemplate struct {
-	chronicles *localChronicles
-	online     copyToOnlinePopulation
-	evicted    census.EvictedPopulation
-	prev       census.Active
-	gsh        proofs.GlobulaStateHash
-	csh        proofs.CloudStateHash
-	pn         pulse.Number
+	chronicles   *localChronicles
+	online       copyToOnlinePopulation
+	evicted      census.EvictedPopulation
+	prev         census.Active
+	gsh          proofs.GlobulaStateHash
+	csh          proofs.CloudStateHash
+	pn           pulse.Number
+	isIncomplete bool
 }
 
 func (c *ExpectedCensusTemplate) GetProfileFactory(ksf cryptkit.KeyStoreFactory) profiles.Factory {
@@ -259,7 +270,10 @@ func (c *ExpectedCensusTemplate) GetExpectedPulseNumber() pulse.Number {
 }
 
 func (c *ExpectedCensusTemplate) GetCensusState() census.State {
-	return census.BuiltCensus
+	if c.isIncomplete {
+		return census.IncompleteCensus
+	}
+	return census.CompleteCensus
 }
 
 func (c *ExpectedCensusTemplate) GetPulseNumber() pulse.Number {

@@ -58,8 +58,8 @@ func TestMessageBus_SendTarget(t *testing.T) {
 	externalMsgCh, err := pubsub.Subscribe(ctx, TopicOutgoing)
 	require.NoError(t, err)
 
-	payload := []byte{1, 2, 3, 4, 5}
-	msg := message.NewMessage(watermill.NewUUID(), payload)
+	p := []byte{1, 2, 3, 4, 5}
+	msg := message.NewMessage(watermill.NewUUID(), p)
 
 	mapSizeBefore := len(b.replies)
 	results, done := b.SendTarget(ctx, msg, gen.Reference())
@@ -69,7 +69,7 @@ func TestMessageBus_SendTarget(t *testing.T) {
 	require.Equal(t, mapSizeBefore+1, len(b.replies))
 	externalMsg := <-externalMsgCh
 	require.Equal(t, msg.Metadata, externalMsg.Metadata)
-	require.Equal(t, payload, []byte(msg.Payload))
+	require.Equal(t, p, []byte(msg.Payload))
 	require.Equal(t, msg.UUID, externalMsg.UUID)
 }
 
@@ -99,8 +99,8 @@ func TestMessageBus_Send_Publish_Err(t *testing.T) {
 
 	b := NewBus(defaultConfig, pub, pulseMock, coordinatorMock, pcs)
 
-	payload := []byte{1, 2, 3, 4, 5}
-	msg := message.NewMessage(watermill.NewUUID(), payload)
+	p := []byte{1, 2, 3, 4, 5}
+	msg := message.NewMessage(watermill.NewUUID(), p)
 
 	mapSizeBefore := len(b.replies)
 	results, done := b.SendTarget(ctx, msg, gen.Reference())
@@ -127,8 +127,8 @@ func TestMessageBus_Send_Close(t *testing.T) {
 
 	b := NewBus(defaultConfig, &PublisherMock{pubErr: nil}, pulseMock, coordinatorMock, pcs)
 
-	payload := []byte{1, 2, 3, 4, 5}
-	msg := message.NewMessage(watermill.NewUUID(), payload)
+	p := []byte{1, 2, 3, 4, 5}
+	msg := message.NewMessage(watermill.NewUUID(), p)
 
 	mapSizeBefore := len(b.replies)
 	results, done := b.SendTarget(ctx, msg, gen.Reference())
@@ -199,10 +199,10 @@ func TestMessageBus_Send_Timeout_Close_Race(t *testing.T) {
 	pcs := testutils.NewPlatformCryptographyScheme()
 
 	b := NewBus(defaultConfig, pubsub, pulseMock, coordinatorMock, pcs)
-	b.timeout = time.Second
+	b.timeout = time.Millisecond
 
-	payload := []byte{1, 2, 3, 4, 5}
-	msg := message.NewMessage(watermill.NewUUID(), payload)
+	p := []byte{1, 2, 3, 4, 5}
+	msg := message.NewMessage(watermill.NewUUID(), p)
 
 	_, done := b.SendTarget(ctx, msg, gen.Reference())
 	<-time.After(b.timeout)
@@ -397,8 +397,8 @@ func TestMessageBus_Send_IncomingMessageRouter_ReadAfterTimeout(t *testing.T) {
 
 	ctx := context.Background()
 
-	payload := []byte{1, 2, 3, 4, 5}
-	msg := message.NewMessage(watermill.NewUUID(), payload)
+	p := []byte{1, 2, 3, 4, 5}
+	msg := message.NewMessage(watermill.NewUUID(), p)
 
 	results, _ := b.SendTarget(ctx, msg, gen.Reference())
 
@@ -459,7 +459,7 @@ func TestMessageBus_Send_IncomingMessageRouter_WriteAfterTimeout(t *testing.T) {
 }
 
 func TestMessageBus_Send_IncomingMessageRouter_SeveralMsg(t *testing.T) {
-	count := 1000
+	count := 100
 	isReplyOk := make(chan bool)
 	done := make(chan error)
 

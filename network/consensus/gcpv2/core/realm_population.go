@@ -53,38 +53,39 @@ package core
 import (
 	"context"
 
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
 
 type RealmPopulation interface {
-	GetNodeCount() int
-	GetOthersCount() int
+	GetIndexedCount() int
 	GetJoinersCount() int
 	GetBftMajorityCount() int
-	IsComplete() bool
+
+	GetSealedLimit() (int, bool)
+	SealIndex(indexedCountLimit int) bool
 
 	GetNodeAppearance(id insolar.ShortNodeID) *NodeAppearance
 	GetActiveNodeAppearance(id insolar.ShortNodeID) *NodeAppearance
 	GetJoinerNodeAppearance(id insolar.ShortNodeID) *NodeAppearance
 	GetNodeAppearanceByIndex(idx int) *NodeAppearance
 
-	GetShuffledOtherNodes() []*NodeAppearance /* no joiners or self included */
+	GetShuffledOtherNodes() []*NodeAppearance /* excludes joiners and self */
 	GetIndexedNodes() []*NodeAppearance       /* no joiners included */
+	GetIndexedNodesAndHasNil() ([]*NodeAppearance, bool)
+	GetCountAndCompleteness(includeJoiners bool) (int, bool)
 
 	GetSelf() *NodeAppearance
 
 	CreateNodeAppearance(ctx context.Context, inp profiles.ActiveNode) *NodeAppearance
 
-	//AddToPurgatory(n *NodeAppearance) (*NodeAppearance, PurgatoryNodeState)
-	AddToDynamics(n *NodeAppearance) *NodeAppearance
+	AddToDynamics(n *NodeAppearance) (*NodeAppearance, error)
+	GetAnyNodes(includeIndexed bool, shuffle bool) []*NodeAppearance
 
 	CreateVectorHelper() *RealmVectorHelper
+	CreatePacketLimiter() phases.PacketLimiter
 }
-
-type PurgatoryNodeState int
-
-const PurgatoryDuplicatePK PurgatoryNodeState = -1
-const PurgatoryExistingMember PurgatoryNodeState = -2
 
 type NodeInitFunc func(ctx context.Context, n *NodeAppearance)

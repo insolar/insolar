@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/hot"
@@ -105,7 +104,7 @@ func (p *HotObjects) Proceed(ctx context.Context) error {
 		}
 	}
 
-	logger.Debugf("[handleHotRecords] received %v hot indexes", len(p.indexes))
+	logger.Debugf("received %v hot indexes for jet %s and pulse %s", len(p.indexes), p.jetID.DebugString(), p.pulse)
 	for _, idx := range p.indexes {
 		objJetID, _ := p.Dep.JetStorage.ForID(ctx, p.pulse, idx.ObjID)
 		if objJetID != p.jetID {
@@ -156,10 +155,16 @@ func (p *HotObjects) notifyPending(
 		return
 	}
 
-	_, err := p.Dep.MessageBus.Send(ctx, &message.AbandonedRequestsNotification{
-		Object: objectID,
-	}, nil)
+	msg, err := payload.NewMessage(&payload.AbandonedRequestsNotification{
+		ObjectID: objectID,
+	})
 	if err != nil {
-		inslogger.FromContext(ctx).Error("failed to notify about pending requests")
+		inslogger.FromContext(ctx).Error("failed to notify about pending requests: ", err.Error())
+		return
 	}
+
+	// Hot data was sent to us by another light.
+	// Notification should be send to virtual for this object.
+	_, done := p.Dep.Sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, *insolar.NewReference(objectID))
+	done()
 }

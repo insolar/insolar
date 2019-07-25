@@ -77,7 +77,6 @@ type RequestHandler func(ctx context.Context, request ReceivedPacket) (response 
 
 // HostNetwork simple interface to send network requests and process network responses.
 type HostNetwork interface {
-	component.Initer
 	component.Starter
 	component.Stopper
 
@@ -291,4 +290,13 @@ type Auther interface {
 
 	// FilterJoinerNodes returns nodes which allowed to connect to this network in this state.
 	FilterJoinerNodes(certificate insolar.Certificate, nodes []insolar.NetworkNode) []insolar.NetworkNode
+}
+
+// Rules are responsible for a majority and minimum roles checking
+//go:generate minimock -i github.com/insolar/insolar/network.Rules -o ../testutils/network -s _mock.go
+type Rules interface {
+	// CheckMajorityRule returns true if MajorityRule check passed, also returns active discovery nodes count
+	CheckMajorityRule() (bool, int)
+	// CheckMinRole returns true if MinRole check passed
+	CheckMinRole() bool
 }

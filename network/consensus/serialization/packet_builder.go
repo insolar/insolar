@@ -59,7 +59,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/statevector"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
@@ -134,6 +133,9 @@ func (pb *PacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncementP
 	if (options & transport.SendWithoutPulseData) == 0 {
 		packet.Header.SetFlag(FlagHasPulsePacket)
 	}
+	if (options & transport.AlternativePhasePacket) != 0 {
+		packet.Header.setPacketType(phases.PacketReqPhase1)
+	}
 
 	body := packet.EncryptableBody.(*GlobulaConsensusPacketBody)
 	body.PulsarPacket.setData(pulsarPacket.AsBytes())
@@ -147,11 +149,11 @@ func (pb *PacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncementP
 	)
 	copy(
 		body.Announcement.Member.NodeState.NodeStateHash[:],
-		sender.GetNodeStateHashEvidence().GetNodeStateHash().AsBytes(),
+		sender.GetNodeStateHashEvidence().CopyOfSignedDigest().GetDigest().AsBytes(),
 	)
 	copy(
 		body.Announcement.Member.NodeState.GlobulaNodeStateSignature[:],
-		sender.GetNodeStateHashEvidence().GetGlobulaNodeStateSignature().AsBytes(),
+		sender.GetNodeStateHashEvidence().CopyOfSignedDigest().GetSignature().AsBytes(),
 	)
 
 	if sender.IsLeaving() {
@@ -170,7 +172,12 @@ func (pb *PacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncementP
 		body.Announcement.Member.Joiner.Endpoint = intro.GetDefaultEndpoint().GetIPAddress()
 	}
 
-	// TODO: fill joiner fields
+	// TODO:
+	// Fill JoinerExt
+	// Fill FullSelfIntro
+	// Fill CloudIntro
+	// Fill JoinerSecret
+	// Fill Claims
 
 	return pb.preparePacketSender(packet)
 }
@@ -179,6 +186,9 @@ func (pb *PacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncementP
 	neighbourhood []transport.MembershipAnnouncementReader, options transport.PacketSendOptions) transport.PreparedPacketSender {
 
 	packet := pb.preparePacket(sender, phases.PacketPhase2)
+	if (options & transport.AlternativePhasePacket) != 0 {
+		packet.Header.setPacketType(phases.PacketExtPhase2)
+	}
 
 	body := packet.EncryptableBody.(*GlobulaConsensusPacketBody)
 
@@ -188,11 +198,11 @@ func (pb *PacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncementP
 	copy(body.Announcement.AnnounceSignature[:], sender.GetAnnouncementSignature().AsBytes())
 	copy(
 		body.Announcement.Member.NodeState.NodeStateHash[:],
-		sender.GetNodeStateHashEvidence().GetNodeStateHash().AsBytes(),
+		sender.GetNodeStateHashEvidence().CopyOfSignedDigest().GetDigest().AsBytes(),
 	)
 	copy(
 		body.Announcement.Member.NodeState.GlobulaNodeStateSignature[:],
-		sender.GetNodeStateHashEvidence().GetGlobulaNodeStateSignature().AsBytes(),
+		sender.GetNodeStateHashEvidence().CopyOfSignedDigest().GetSignature().AsBytes(),
 	)
 
 	if sender.IsLeaving() {
@@ -210,6 +220,12 @@ func (pb *PacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncementP
 		copy(body.Announcement.Member.Joiner.NodePK[:], intro.GetNodePublicKey().AsBytes())
 		body.Announcement.Member.Joiner.Endpoint = intro.GetDefaultEndpoint().GetIPAddress()
 	}
+
+	// TODO:
+	// Fill BriefSelfIntro
+	// Fill FullSelfIntro
+	// Fill CloudIntro
+	// Fill JoinerSecret
 
 	body.Neighbourhood.NeighbourCount = uint8(len(neighbourhood))
 	body.Neighbourhood.Neighbours = make([]NeighbourAnnouncement, len(neighbourhood))
@@ -222,11 +238,11 @@ func (pb *PacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncementP
 		if neighbour.GetNodeRank() != 0 {
 			copy(
 				body.Neighbourhood.Neighbours[i].Member.NodeState.NodeStateHash[:],
-				neighbour.GetNodeStateHashEvidence().GetNodeStateHash().AsBytes(),
+				neighbour.GetNodeStateHashEvidence().CopyOfSignedDigest().GetDigest().AsBytes(),
 			)
 			copy(
 				body.Neighbourhood.Neighbours[i].Member.NodeState.GlobulaNodeStateSignature[:],
-				neighbour.GetNodeStateHashEvidence().GetGlobulaNodeStateSignature().AsBytes(),
+				neighbour.GetNodeStateHashEvidence().CopyOfSignedDigest().GetSignature().AsBytes(),
 			)
 		}
 
@@ -237,16 +253,16 @@ func (pb *PacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncementP
 
 		if announcement := neighbour.GetJoinerAnnouncement(); announcement != nil {
 			intro := announcement.GetBriefIntroduction()
-			body.Neighbourhood.Neighbours[i].Joiner.ShortID = sender.GetJoinerID()
+			body.Neighbourhood.Neighbours[i].Joiner.ShortID = sender.GetNodeID()
 			body.Neighbourhood.Neighbours[i].Joiner.setPrimaryRole(intro.GetPrimaryRole())
 			body.Neighbourhood.Neighbours[i].Joiner.setAddrMode(endpoints.IPEndpoint)
 			body.Neighbourhood.Neighbours[i].Joiner.SpecialRoles = intro.GetSpecialRoles()
 			body.Neighbourhood.Neighbours[i].Joiner.StartPower = intro.GetStartPower()
 			copy(body.Neighbourhood.Neighbours[i].Joiner.NodePK[:], intro.GetNodePublicKey().AsBytes())
 			body.Neighbourhood.Neighbours[i].Joiner.Endpoint = intro.GetDefaultEndpoint().GetIPAddress()
+			body.Neighbourhood.Neighbours[i].JoinerIntroducedBy = announcement.GetJoinerIntroducedByID()
 		}
 	}
-	// TODO: fill joiner fields
 
 	return pb.preparePacketSender(packet)
 }
@@ -255,6 +271,9 @@ func (pb *PacketBuilder) PreparePhase3Packet(sender *transport.NodeAnnouncementP
 	vectors statevector.Vector, options transport.PacketSendOptions) transport.PreparedPacketSender {
 
 	packet := pb.preparePacket(sender, phases.PacketPhase3)
+	if (options & transport.AlternativePhasePacket) != 0 {
+		packet.Header.setPacketType(phases.PacketFastPhase3)
+	}
 
 	body := packet.EncryptableBody.(*GlobulaConsensusPacketBody)
 	body.Vectors.StateVectorMask.SetBitset(vectors.Bitset)
@@ -270,6 +289,9 @@ func (pb *PacketBuilder) PreparePhase3Packet(sender *transport.NodeAnnouncementP
 		copy(body.Vectors.AdditionalStateVectors[0].SignedGlobulaStateHash[:], vectors.Doubted.StateSignature.AsBytes())
 		body.Vectors.AdditionalStateVectors[0].ExpectedRank = vectors.Doubted.ExpectedRank
 	}
+
+	// TODO:
+	// Fill Claims
 
 	return pb.preparePacketSender(packet)
 }
@@ -288,7 +310,7 @@ func (p *PreparedPacketSender) Copy() *PreparedPacketSender {
 	return &ppsCopy
 }
 
-func (p *PreparedPacketSender) SendTo(ctx context.Context, target profiles.ActiveNode, sendOptions transport.PacketSendOptions, sender transport.PacketSender) {
+func (p *PreparedPacketSender) SendTo(ctx context.Context, target transport.TargetProfile, sendOptions transport.PacketSendOptions, sender transport.PacketSender) {
 	p.packet.Header.TargetID = uint32(target.GetNodeID())
 	p.packet.Header.ReceiverID = uint32(target.GetNodeID())
 
@@ -306,7 +328,7 @@ func (p *PreparedPacketSender) SendTo(ctx context.Context, target profiles.Activ
 }
 
 func (p *PreparedPacketSender) SendToMany(ctx context.Context, targetCount int, sender transport.PacketSender,
-	filter func(ctx context.Context, targetIndex int) (profiles.ActiveNode, transport.PacketSendOptions)) {
+	filter func(ctx context.Context, targetIndex int) (transport.TargetProfile, transport.PacketSendOptions)) {
 
 	for i := 0; i < targetCount; i++ {
 		if np, options := filter(ctx, i); np != nil {

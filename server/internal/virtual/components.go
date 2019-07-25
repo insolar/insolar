@@ -20,6 +20,8 @@ import (
 	"context"
 	"io"
 
+	"github.com/insolar/insolar/network/rules"
+
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
@@ -173,6 +175,7 @@ func initComponents(
 		nodeNetwork,
 		nw,
 		pulsemanager.NewPulseManager(),
+		rules.NewRules(),
 	)
 
 	components := []interface{}{
@@ -199,7 +202,15 @@ func initComponents(
 
 	cm.Inject(components...)
 
-	stopper := startWatermill(ctx, logger, pubSub, b, nw.SendMessageHandler, logicRunner.FlowDispatcher.Process, logicRunner.InnerFlowDispatcher.InnerSubscriber)
+	err = cm.Init(ctx)
+	checkError(ctx, err, "failed to init components")
+
+	stopper := startWatermill(
+		ctx, logger, pubSub, b,
+		nw.SendMessageHandler,
+		logicRunner.FlowDispatcher.Process,
+		logicRunner.InnerFlowDispatcher.InnerSubscriber,
+	)
 
 	return &cm, terminationHandler, stopper
 }

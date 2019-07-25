@@ -51,6 +51,7 @@
 package longbits
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"math"
@@ -129,17 +130,14 @@ func TestAsByteString(t *testing.T) {
 	require.Equal(t, "abc", fs.AsByteString())
 }
 
-// Recursion
-/*func TestWriteTo(t *testing.T) {
-	fs := &fixedSize{data: []byte{}}
-
-	bits := NewBits64(0)
-
-	n, err := fs.WriteTo(&writerToComparer{other: &bits})
+func TestWriteTo(t *testing.T) {
+	fs := &fixedSize{data: []byte{0}}
+	buf := &bytes.Buffer{}
+	n, err := fs.WriteTo(buf)
 	require.True(t, err == nil)
 
-	require.Equal(t, 8, n)
-}*/
+	require.Equal(t, int64(1), n)
+}
 
 func TestRead(t *testing.T) {
 	item := byte(3)

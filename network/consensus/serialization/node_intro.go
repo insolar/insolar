@@ -58,6 +58,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/utils"
 
 	"github.com/pkg/errors"
 )
@@ -94,7 +95,9 @@ type NodeBriefIntro struct {
 	Endpoint [18]byte
 
 	// 128 bytes
-	NodePK          longbits.Bits512 // works as a unique node identity
+	NodePK longbits.Bits512 // works as a unique node identity
+
+	JoinerData      []byte           `insolar-transport:"ignore=send"` // ByteSize = 0
 	JoinerSignature longbits.Bits512 // ByteSize=64
 }
 
@@ -154,25 +157,29 @@ func (bi *NodeBriefIntro) SerializeTo(ctx SerializeContext, writer io.Writer) er
 }
 
 func (bi *NodeBriefIntro) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
-	if err := read(reader, &bi.PrimaryRoleAndFlags); err != nil {
+	capture := utils.NewCapturingReader(reader)
+
+	if err := read(capture, &bi.PrimaryRoleAndFlags); err != nil {
 		return errors.Wrap(err, "failed to deserialize PrimaryRoleAndFlags")
 	}
 
-	if err := read(reader, &bi.SpecialRoles); err != nil {
+	if err := read(capture, &bi.SpecialRoles); err != nil {
 		return errors.Wrap(err, "failed to deserialize SpecialRoles")
 	}
 
-	if err := read(reader, &bi.StartPower); err != nil {
+	if err := read(capture, &bi.StartPower); err != nil {
 		return errors.Wrap(err, "failed to deserialize StartPower")
 	}
 
-	if err := read(reader, &bi.Endpoint); err != nil {
+	if err := read(capture, &bi.Endpoint); err != nil {
 		return errors.Wrap(err, "failed to deserialize BasePort")
 	}
 
-	if err := read(reader, &bi.NodePK); err != nil {
+	if err := read(capture, &bi.NodePK); err != nil {
 		return errors.Wrap(err, "failed to deserialize NodePK")
 	}
+
+	bi.JoinerData = capture.Captured()
 
 	if err := read(reader, &bi.JoinerSignature); err != nil {
 		return errors.Wrap(err, "failed to deserialize JoinerSignature")

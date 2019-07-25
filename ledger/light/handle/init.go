@@ -88,7 +88,7 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		h := NewGetObject(s.dep, meta, false)
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeGetRequest:
-		h := NewGetRequest(s.dep, meta)
+		h := NewGetRequest(s.dep, meta, false)
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeGetFilament:
 		h := NewGetRequests(s.dep, meta)
@@ -246,6 +246,9 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 	case payload.TypeGetJet:
 		h := NewGetJet(s.dep, originMeta, true)
 		err = f.Handle(ctx, h.Present)
+	case payload.TypeGetRequest:
+		h := NewGetRequest(s.dep, originMeta, true)
+		err = f.Handle(ctx, h.Present)
 	default:
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())
 	}
@@ -257,7 +260,59 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 }
 
 func (s *Init) Past(ctx context.Context, f flow.Flow) error {
-	return s.Present(ctx, f)
+	msgType := s.message.Metadata.Get(wbus.MetaType)
+	if msgType != "" {
+		return s.Present(ctx, f)
+	}
+
+	meta := payload.Meta{}
+	err := meta.Unmarshal(s.message.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal meta")
+	}
+
+	payloadType, err := payload.UnmarshalType(meta.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal payload type")
+	}
+
+	if payloadType == payload.TypePass {
+		pl, err := payload.Unmarshal(meta.Payload)
+		if err != nil {
+			return errors.Wrap(err, "failed to unmarshal pass payload")
+		}
+		pass, ok := pl.(*payload.Pass)
+		if !ok {
+			return fmt.Errorf("unexpected pass type %T", pl)
+		}
+		originMeta := payload.Meta{}
+		err = originMeta.Unmarshal(pass.Origin)
+		if err != nil {
+			return errors.Wrap(err, "failed to unmarshal payload type")
+		}
+
+		pt, err := payload.UnmarshalType(originMeta.Payload)
+		if err != nil {
+			return errors.Wrap(err, "failed to unmarshal payload type")
+		}
+		payloadType = pt
+	}
+
+	// Only allow read operations in the past.
+	switch payloadType {
+	case
+		payload.TypeGetObject,
+		payload.TypeGetCode,
+		payload.TypeGetPendings,
+		payload.TypeHasPendings,
+		payload.TypeGetJet,
+		payload.TypeGetRequest,
+		payload.TypePassState:
+		return s.Present(ctx, f)
+	}
+
+	s.replyError(ctx, meta, flow.ErrCancelled)
+	return nil
 }
 
 func (s *Init) replyError(ctx context.Context, replyTo payload.Meta, err error) {
@@ -269,5 +324,5 @@ func (s *Init) replyError(ctx context.Context, replyTo payload.Meta, err error) 
 	if newErr != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
 	}
-	go s.sender.Reply(ctx, replyTo, errMsg)
+	s.sender.Reply(ctx, replyTo, errMsg)
 }
