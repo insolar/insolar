@@ -56,10 +56,8 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/utils"
@@ -114,11 +112,11 @@ func (e *entry) open(ctx context.Context) (io.ReadWriteCloser, error) {
 }
 
 func (e *entry) dial(ctx context.Context) (io.ReadWriteCloser, error) {
-	ctx, span := instracer.StartSpan(ctx, "connectionPool.open")
-	span.AddAttributes(
-		trace.StringAttribute("create connect to", e.host.String()),
-	)
-	defer span.End()
+	// ctx, span := instracer.StartSpan(ctx, "connectionPool.open")
+	// span.AddAttributes(
+	// 	trace.StringAttribute("create connect to", e.host.String()),
+	// )
+	// defer span.End()
 
 	conn, err := e.transport.Dial(ctx, e.host.Address.String())
 	if err != nil {
