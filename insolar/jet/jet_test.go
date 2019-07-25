@@ -54,3 +54,11 @@ func TestJet_SiblingParent(t *testing.T) {
 	require.True(t, jetID.Equal(Parent(left)))
 	require.True(t, jetID.Equal(Parent(right)))
 }
+
+func TestJet_NewJetIDSiblingParent(t *testing.T) {
+	jetID := *insolar.NewJetID(5, gen.ID().Bytes())
+
+	left, right := Siblings(jetID)
+	require.True(t, jetID.Equal(Parent(left)))
+	require.True(t, jetID.Equal(Parent(right)))
+}
