@@ -21,6 +21,8 @@ import (
 	"errors"
 	"sort"
 	"strings"
+
+	"github.com/insolar/insolar/insolar"
 )
 
 // StableMap is a `map[string]string` that can be deterministically serialized.
@@ -54,33 +56,47 @@ func NewStableMapFromInterface(i interface{}) (StableMap, error) {
 	return m, nil
 }
 
-func (m StableMap) MarshalJSON() ([]byte, error) {
+func newMapFromSlice(s [][2]string) StableMap {
+	m := make(StableMap)
+	for _, pair := range s {
+		m[pair[0]] = pair[1]
+	}
+	return m
+}
+
+func (m StableMap) slice() [][2]string {
 	res := make([][2]string, 0, len(m))
 	for k, v := range m {
 		res = append(res, [2]string{k, v})
 	}
-	sort.Slice(res, func(i, j int) bool { return strings.Compare(res[i][0], res[j][0]) == -1 })
-	return json.Marshal(res)
+	sort.SliceStable(res, func(i, j int) bool { return strings.Compare(res[i][0], res[j][0]) == -1 })
+	return res
+}
+
+func (m StableMap) MarshalJSON() ([]byte, error) {
+	return json.Marshal(m.slice())
 }
 
 func (m StableMap) MarshalBinary() ([]byte, error) {
-	return m.MarshalJSON()
+	return insolar.Serialize(m.slice())
 }
 
 func (m *StableMap) UnmarshalJSON(data []byte) error {
-	mm := make(StableMap)
 	res := make([][2]string, 0, len(*m))
 	err := json.Unmarshal(data, &res)
 	if err != nil {
 		return err
 	}
-	for _, pair := range res {
-		mm[pair[0]] = pair[1]
-	}
-	*m = mm
+	*m = newMapFromSlice(res)
 	return nil
 }
 
 func (m *StableMap) UnmarshalBinary(data []byte) error {
-	return m.UnmarshalJSON(data)
+	res := make([][2]string, 0, len(*m))
+	err := insolar.Deserialize(data, &res)
+	if err != nil {
+		return err
+	}
+	*m = newMapFromSlice(res)
+	return nil
 }
