@@ -257,7 +257,7 @@ func (b *Bus) SendTarget(
 				trace.StringAttribute("target", target.String()),
 				trace.BoolAttribute("error", true),
 			)
-			span.End()
+			defer span.End()
 			logger.Error(
 				errors.Errorf(
 					"can't return result for message with hash %s: timeout for reading (%s) was exceeded",
