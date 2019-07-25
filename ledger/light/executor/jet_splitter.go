@@ -99,6 +99,7 @@ func (js *JetSplitterDefault) Do(
 	}
 
 	all := js.jetCalculator.MineForPulse(ctx, endedPulse)
+	inslog.Debugf("my jets: %s", insolar.JetIDCollection(all).DebugString())
 	result := make([]insolar.JetID, 0, len(all)*2)
 	for _, jetID := range all {
 		exceed, err := js.createDrop(ctx, jetID, endedPulse)
@@ -106,6 +107,7 @@ func (js *JetSplitterDefault) Do(
 			return nil, errors.Wrapf(err, "failed create drop for pulse=%v, jet=%v",
 				endedPulse, jetID.DebugString())
 		}
+		inslog.Debugf("created drop for pulse %s jet %s", endedPulse.String(), jetID.DebugString())
 
 		if !exceed {
 			// no split, just mark jet as actual for new pulse

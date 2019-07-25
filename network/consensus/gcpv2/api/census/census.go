@@ -84,9 +84,16 @@ type Operational interface {
 	GetProfileFactory(ksf cryptkit.KeyStoreFactory) profiles.Factory
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.Active -o . -s _mock.go
+
 type Active interface {
 	Operational
 	GetPulseData() pulse.Data
+}
+
+type Prime interface {
+	Active
+	MakeExpected(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) Expected
 }
 
 type Expected interface {
@@ -108,6 +115,7 @@ type Builder interface {
 	IsSealed() bool
 
 	BuildAndMakeExpected(csh proofs.CloudStateHash) Expected
+	BuildAndMakeIncompleteExpected(csh proofs.CloudStateHash) Expected
 }
 
 type State uint8
@@ -115,7 +123,8 @@ type State uint8
 const (
 	DraftCensus State = iota
 	SealedCensus
-	BuiltCensus
+	CompleteCensus
+	IncompleteCensus
 	PrimingCensus
 )
 
@@ -128,5 +137,5 @@ func (v State) IsSealed() bool {
 }
 
 func (v State) IsBuilt() bool {
-	return v >= BuiltCensus
+	return v >= CompleteCensus
 }

@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,7 +46,7 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package pulse
 
@@ -75,8 +75,8 @@ func TestOfUnixTime(t *testing.T) {
 
 func TestAsApproximateTime(t *testing.T) {
 	n := Number(0)
-	time := n.AsApproximateTime()
-	require.Equal(t, timeOfMinTimePulse, time)
+	approx := n.AsApproximateTime()
+	require.Equal(t, timeOfMinTimePulse, approx)
 }
 
 func TestIsTimePulse(t *testing.T) {

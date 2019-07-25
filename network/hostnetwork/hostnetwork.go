@@ -111,7 +111,12 @@ type hostNetwork struct {
 	origin   *host.Host
 }
 
-func (hn *hostNetwork) Init(ctx context.Context) error {
+// Start listening to network requests, should be started in goroutine.
+func (hn *hostNetwork) Start(ctx context.Context) error {
+	if !atomic.CompareAndSwapUint32(&hn.started, 0, 1) {
+		inslogger.FromContext(ctx).Warn("HostNetwork component already started")
+		return nil
+	}
 
 	handler := NewStreamHandler(hn.handleRequest, hn.responseHandler)
 
@@ -122,15 +127,6 @@ func (hn *hostNetwork) Init(ctx context.Context) error {
 	}
 
 	hn.pool = pool.NewConnectionPool(hn.transport)
-	return err
-}
-
-// Start listening to network requests, should be started in goroutine.
-func (hn *hostNetwork) Start(ctx context.Context) error {
-	if !atomic.CompareAndSwapUint32(&hn.started, 0, 1) {
-		inslogger.FromContext(ctx).Warn("HostNetwork component already started")
-		return nil
-	}
 
 	hn.muOrigin.Lock()
 	defer hn.muOrigin.Unlock()

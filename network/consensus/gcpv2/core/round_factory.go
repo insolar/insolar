@@ -75,7 +75,7 @@ func (c *PhasedRoundControllerFactory) CreateConsensusRound(chronicle api.Consen
 	controlFeeder api.ConsensusControlFeeder, candidateFeeder api.CandidateControlFeeder,
 	prevPulseRound api.RoundController) api.RoundController {
 
-	strategy := c.strategyFactory.CreateRoundStrategy(chronicle, c.config)
-	return NewPhasedRoundController(strategy, chronicle, c.transport, c.config, controlFeeder, candidateFeeder,
+	strategy, bundle := c.strategyFactory.CreateRoundStrategy(chronicle, c.config)
+	return NewPhasedRoundController(strategy, chronicle, bundle, c.transport, c.config, controlFeeder, candidateFeeder,
 		prevPulseRound)
 }

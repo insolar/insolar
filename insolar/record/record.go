@@ -147,7 +147,9 @@ type Request interface {
 	ReasonRef() insolar.Reference
 	// GetCallType returns call type.
 	GetCallType() CallType
+	// IsAPIRequest tells is it API-request or not.
 	IsAPIRequest() bool
+	// IsCreationRequest checks a request-type.
 	IsCreationRequest() bool
 	// IsDetached check is request has detached state.
 	IsDetached() bool
@@ -155,7 +157,12 @@ type Request interface {
 
 func (r *IncomingRequest) AffinityRef() *insolar.Reference {
 	// IncomingRequests are affine to the Object on which the request
-	// is going to be executed.
+	// is going to be executed
+	// Exceptions are CTSaveAsMethod/CTSaveAsDelegate, we should
+	// calculate hash of message, so call CalculateRequestAffinityRef
+	if r.IsCreationRequest() {
+		return nil
+	}
 	return r.Object
 }
 
@@ -208,7 +215,6 @@ func (m *Lifeline) SetDelegate(key insolar.Reference, value insolar.Reference) {
 			return
 		}
 	}
-
 	m.Delegates = append(m.Delegates, LifelineDelegate{Key: key, Value: value})
 }
 
@@ -218,6 +224,20 @@ func (m *Lifeline) DelegateByKey(key insolar.Reference) (insolar.Reference, bool
 			return d.Value, true
 		}
 	}
-
 	return [64]byte{}, false
+}
+
+func CalculateRequestAffinityRef(
+	request Request,
+	pulseNumber insolar.PulseNumber,
+	scheme insolar.PlatformCryptographyScheme,
+) *insolar.Reference {
+	affinityRef := request.AffinityRef()
+	if affinityRef == nil {
+		virtualRecord := Wrap(request)
+		hash := HashVirtual(scheme.ReferenceHasher(), virtualRecord)
+		recID := insolar.NewID(pulseNumber, hash)
+		affinityRef = insolar.NewReference(*recID)
+	}
+	return affinityRef
 }
