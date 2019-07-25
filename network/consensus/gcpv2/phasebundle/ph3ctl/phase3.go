@@ -451,7 +451,7 @@ outer:
 		panic("illegal state")
 	}
 
-	sameWithActive := false
+	var sameWithActive bool
 	selectionSet := (*nodeset.ConsensusBitsetRow)(nil)
 
 	if consensusSelection.IsSameWithActive() {

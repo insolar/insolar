@@ -89,7 +89,7 @@ func NewLedger() Ledger {
 			ThresholdOverflowCount: 3,
 			DepthLimit:             10, // limit to 1024 jets
 		},
-		LightChainLimit: 5, // 5 pulses
+		LightChainLimit: 1, // 5 pulses
 
 		Exporter: Exporter{
 			ExportLag: 40, // 40 seconds
