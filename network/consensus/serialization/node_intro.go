@@ -101,22 +101,22 @@ type NodeBriefIntro struct {
 	JoinerSignature longbits.Bits512 // ByteSize=64
 }
 
-func (bi *NodeBriefIntro) getPrimaryRole() member.PrimaryRole {
+func (bi *NodeBriefIntro) GetPrimaryRole() member.PrimaryRole {
 	return member.PrimaryRole(bi.PrimaryRoleAndFlags & primaryRoleMask)
 }
 
-func (bi *NodeBriefIntro) setPrimaryRole(primaryRole member.PrimaryRole) {
+func (bi *NodeBriefIntro) SetPrimaryRole(primaryRole member.PrimaryRole) {
 	if primaryRole > primaryRoleMax {
 		panic("invalid primary role")
 	}
 
 	bi.PrimaryRoleAndFlags |= uint8(primaryRole)
 }
-func (bi *NodeBriefIntro) getAddrMode() endpoints.NodeEndpointType {
+func (bi *NodeBriefIntro) GetAddrMode() endpoints.NodeEndpointType {
 	return endpoints.NodeEndpointType(bi.PrimaryRoleAndFlags >> addrModeShift)
 }
 
-func (bi *NodeBriefIntro) setAddrMode(addrMode endpoints.NodeEndpointType) {
+func (bi *NodeBriefIntro) SetAddrMode(addrMode endpoints.NodeEndpointType) {
 	if addrMode > addrModeMax {
 		panic("invalid addr mode")
 	}
@@ -277,7 +277,7 @@ func (ei *NodeExtendedIntro) DeserializeFrom(ctx DeserializeContext, reader io.R
 
 	if ei.ProofLen > 0 {
 		ei.NodeRefProof = make([]longbits.Bits512, ei.ProofLen)
-		for i := 0; i < int(ei.EndpointLen); i++ {
+		for i := 0; i < int(ei.ProofLen); i++ {
 			if err := read(reader, &ei.NodeRefProof[i]); err != nil {
 				return errors.Wrapf(err, "failed to deserialize NodeRefProof[%d]", i)
 			}

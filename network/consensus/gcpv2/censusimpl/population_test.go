@@ -53,6 +53,8 @@ package censusimpl
 import (
 	"testing"
 
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
@@ -164,4 +166,119 @@ func TestMNPGetRolePopulation(t *testing.T) {
 	mnp.roles[role].container = nil
 	mnp.roles[role].idleCount = 1
 	require.NotNil(t, mnp.GetRolePopulation(role))
+}
+
+func TestMNPGetWorkingRoles(t *testing.T) {
+	mnp := ManyNodePopulation{}
+	require.Len(t, mnp.GetWorkingRoles(), 0)
+
+	mnp.workingRoles = make([]member.PrimaryRole, 2)
+	roleNumber := 1
+	mnp.workingRoles[roleNumber] = member.PrimaryRoleNeutral
+	require.Len(t, mnp.GetWorkingRoles(), len(mnp.workingRoles))
+
+	require.Equal(t, mnp.workingRoles[roleNumber], mnp.GetWorkingRoles()[roleNumber])
+}
+
+func TestMNPCopyTo(t *testing.T) {
+	sp := profiles.NewStaticProfileMock(t)
+	nodeID := insolar.ShortNodeID(0)
+	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return nodeID })
+	mnp := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}},
+		slots: []updatableSlot{updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}}
+	population := &DynamicPopulation{}
+	mnp.copyTo(population)
+	require.Equal(t, mnp.local, population.slotByID[nodeID])
+}
+
+func TestPanicOnRecoverable(t *testing.T) {
+	require.Panics(t, func() { panicOnRecoverable(census.EmptySlot, "") })
+}
+
+func TestMakeCopyOfMapAndSeparateEvicts(t *testing.T) {
+	mnp := ManyNodePopulation{}
+	sp := profiles.NewStaticProfileMock(t)
+	nodeID := insolar.ShortNodeID(0)
+	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return *(&nodeID) })
+	sp.GetPrimaryRoleMock.Set(func() member.PrimaryRole { return member.PrimaryRoleNeutral })
+	spe := profiles.NewStaticProfileExtensionMock(t)
+	sp.GetExtensionMock.Set(func() profiles.StaticProfileExtension { return spe })
+	local := &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}
+	require.Panics(t, func() { mnp.makeCopyOfMapAndSeparateEvicts(nil, local, nil) })
+
+	slots := make(map[insolar.ShortNodeID]*updatableSlot)
+	slots[nodeID] = &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}
+	require.Panics(t, func() { mnp.makeCopyOfMapAndSeparateEvicts(slots, local, nil) })
+
+	delete(slots, nodeID)
+	nodeID = 1
+	slots[nodeID] = &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp, mode: member.ModeEvictedGracefully}}
+	mnp.slotByID = make(map[insolar.ShortNodeID]*updatableSlot)
+	mnp.slotByID[nodeID] = slots[nodeID]
+	mnp.assignedSlotCount = 1
+	require.Len(t, mnp.makeCopyOfMapAndSeparateEvicts(slots, local, nil), 1)
+}
+
+func TestFilterAndFillInSlots(t *testing.T) {
+	mnp := ManyNodePopulation{}
+	slots := make(map[insolar.ShortNodeID]*updatableSlot, member.MaxNodeIndex+1)
+	for i := insolar.ShortNodeID(0); i <= member.MaxNodeIndex; i++ {
+		slots[i] = nil
+	}
+	require.Panics(t, func() { mnp._filterAndFillInSlots(slots, panicOnRecoverable) })
+
+	slots = make(map[insolar.ShortNodeID]*updatableSlot)
+	slots[1] = nil
+	require.Panics(t, func() { mnp._filterAndFillInSlots(slots, panicOnRecoverable) })
+
+	slots[1] = &updatableSlot{}
+	require.Panics(t, func() { mnp._filterAndFillInSlots(slots, panicOnRecoverable) })
+
+	delete(slots, 1)
+	sp := profiles.NewStaticProfileMock(t)
+	slots[insolar.AbsentShortNodeID] = &updatableSlot{}
+	slots[insolar.AbsentShortNodeID].StaticProfile = sp
+	require.Panics(t, func() { mnp._filterAndFillInSlots(slots, panicOnRecoverable) })
+
+	delete(slots, 0)
+	us := &updatableSlot{}
+	slots[1] = us
+	us.StaticProfile = sp
+	role := member.PrimaryRoleInactive
+	sp.GetPrimaryRoleMock.Set(func() member.PrimaryRole { return *(&role) })
+	require.Panics(t, func() { mnp._filterAndFillInSlots(slots, panicOnRecoverable) })
+
+	role = member.PrimaryRoleNeutral
+	us.index = member.JoinerIndex
+	require.Panics(t, func() { mnp._filterAndFillInSlots(slots, panicOnRecoverable) })
+
+	us.index = member.Index(1)
+	us.mode = member.ModeEvictedGracefully
+	evicts, slotCount := mnp._filterAndFillInSlots(slots, panicOnRecoverable)
+	require.Len(t, evicts, 1)
+
+	require.Zero(t, slotCount)
+
+	us.mode = member.ModeRestrictedAnnouncement
+	require.Panics(t, func() { mnp._filterAndFillInSlots(slots, panicOnRecoverable) })
+
+	us.index = member.Index(0)
+	sp.GetExtensionMock.Set(func() profiles.StaticProfileExtension { return nil })
+	require.Panics(t, func() { mnp._filterAndFillInSlots(slots, panicOnRecoverable) })
+
+	spe := profiles.NewStaticProfileExtensionMock(t)
+	sp.GetExtensionMock.Set(func() profiles.StaticProfileExtension { return spe })
+	slots[2] = us
+	require.Panics(t, func() { mnp._filterAndFillInSlots(slots, panicOnRecoverable) })
+
+	us2 := &updatableSlot{}
+	slots[2] = us2
+	us2.index = member.Index(1)
+	us2.mode = member.ModeRestrictedAnnouncement
+	us2.StaticProfile = sp
+	us.mode = member.ModeEvictedGracefully
+	evicts, slotCount = mnp._filterAndFillInSlots(slots, panicOnRecoverable)
+	require.Len(t, evicts, 1)
+
+	require.Equal(t, 1, slotCount)
 }

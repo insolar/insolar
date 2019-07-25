@@ -106,7 +106,7 @@ type GlobulaConsensusPacketBody struct {
 }
 
 func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io.Writer) error {
-	packetType := ctx.GetPacketType()
+	packetType := ctx.GetPacketType().GetPayloadEquivalent()
 
 	if packetType == phases.PacketPhase0 {
 		if err := write(writer, b.CurrentRank); err != nil {
@@ -184,7 +184,7 @@ func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io
 }
 
 func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
-	packetType := ctx.GetPacketType()
+	packetType := ctx.GetPacketType().GetPayloadEquivalent()
 
 	if packetType == phases.PacketPhase0 {
 		if err := read(reader, &b.CurrentRank); err != nil {
@@ -232,10 +232,11 @@ func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, rea
 				return errors.Wrap(err, "failed to deserialize CloudIntro")
 			}
 
-			if ctx.GetFlagRangeInt(1, 2) == 3 { // [1:2] == 3 - has joiner secret (only for member-to-joiner packet)
-				if err := read(reader, &b.JoinerSecret); err != nil {
-					return errors.Wrap(err, "failed to deserialize JoinerSecret")
-				}
+		}
+
+		if ctx.GetFlagRangeInt(1, 2) == 3 { // [1:2] == 3 - has joiner secret (only for member-to-joiner packet)
+			if err := read(reader, &b.JoinerSecret); err != nil {
+				return errors.Wrap(err, "failed to deserialize JoinerSecret")
 			}
 		}
 	}
@@ -429,7 +430,8 @@ func (na *NeighbourAnnouncement) SerializeTo(ctx SerializeContext, writer io.Wri
 	}
 
 	if na.CurrentRank == 0 {
-		if na.NeighbourNodeID != ctx.GetAnnouncedJoinerNodeID() {
+		announcedJoinerNodeID := ctx.GetAnnouncedJoinerNodeID()
+		if announcedJoinerNodeID.IsAbsent() || na.NeighbourNodeID != announcedJoinerNodeID {
 			if err := na.Joiner.SerializeTo(ctx, writer); err != nil {
 				return errors.Wrap(err, "failed to serialize Joiner")
 			}
@@ -441,7 +443,7 @@ func (na *NeighbourAnnouncement) SerializeTo(ctx SerializeContext, writer io.Wri
 		ctx.SetInContext(ContextNeighbourAnnouncement)
 		ctx.SetNeighbourNodeID(na.NeighbourNodeID)
 		defer ctx.SetInContext(NoContext)
-		defer ctx.SetNeighbourNodeID(0)
+		defer ctx.SetNeighbourNodeID(insolar.AbsentShortNodeID)
 
 		if err := na.Member.SerializeTo(ctx, writer); err != nil {
 			return errors.Wrap(err, "failed to serialize Member")
@@ -469,7 +471,8 @@ func (na *NeighbourAnnouncement) DeserializeFrom(ctx DeserializeContext, reader 
 	}
 
 	if na.CurrentRank == 0 {
-		if na.NeighbourNodeID != ctx.GetAnnouncedJoinerNodeID() {
+		announcedJoinerNodeID := ctx.GetAnnouncedJoinerNodeID()
+		if announcedJoinerNodeID.IsAbsent() || na.NeighbourNodeID != announcedJoinerNodeID {
 			if err := na.Joiner.DeserializeFrom(ctx, reader); err != nil {
 				return errors.Wrap(err, "failed to deserialize Joiner")
 			}
@@ -481,7 +484,7 @@ func (na *NeighbourAnnouncement) DeserializeFrom(ctx DeserializeContext, reader 
 		ctx.SetInContext(ContextNeighbourAnnouncement)
 		ctx.SetNeighbourNodeID(na.NeighbourNodeID)
 		defer ctx.SetInContext(NoContext)
-		defer ctx.SetNeighbourNodeID(0)
+		defer ctx.SetNeighbourNodeID(insolar.AbsentShortNodeID)
 
 		if err := na.Member.DeserializeFrom(ctx, reader); err != nil {
 			return errors.Wrap(err, "failed to deserialize Member")
@@ -506,10 +509,10 @@ type MembershipAnnouncement struct {
 	*/
 	ShortID insolar.ShortNodeID `insolar-transport:"ignore=send"` // ByteSize = 0
 
-	CurrentRank member.Rank // ByteSize=4
+	CurrentRank    member.Rank  // ByteSize=4
+	RequestedPower member.Power // ByteSize=1
 
 	/* For non-joiner ONLY */
-	RequestedPower    member.Power     `insolar-transport:"optional=CurrentRank!=0"` // ByteSize=1
 	Member            NodeAnnouncement `insolar-transport:"optional=CurrentRank!=0"` // ByteSize = 132, 136, 267, 269, 279
 	AnnounceSignature longbits.Bits512 `insolar-transport:"optional=CurrentRank!=0"` // ByteSize = 64
 	// AnnounceSignature = sign(LastCloudHash + hash(NodeFullIntro) + CurrentRank + fields of MembershipAnnouncement, SK(sender))
@@ -520,13 +523,13 @@ func (ma *MembershipAnnouncement) SerializeTo(ctx SerializeContext, writer io.Wr
 		return errors.Wrap(err, "failed to serialize CurrentRank")
 	}
 
+	if err := write(writer, ma.RequestedPower); err != nil {
+		return errors.Wrap(err, "failed to serialize RequestedPower")
+	}
+
 	if ma.CurrentRank != 0 {
 		ctx.SetInContext(ContextMembershipAnnouncement)
 		defer ctx.SetInContext(NoContext)
-
-		if err := write(writer, ma.RequestedPower); err != nil {
-			return errors.Wrap(err, "failed to serialize RequestedPower")
-		}
 
 		if err := ma.Member.SerializeTo(ctx, writer); err != nil {
 			return errors.Wrap(err, "failed to serialize Member")
@@ -545,13 +548,13 @@ func (ma *MembershipAnnouncement) DeserializeFrom(ctx DeserializeContext, reader
 		return errors.Wrap(err, "failed to deserialize CurrentRank")
 	}
 
+	if err := read(reader, &ma.RequestedPower); err != nil {
+		return errors.Wrap(err, "failed to deserialize RequestedPower")
+	}
+
 	if ma.CurrentRank != 0 {
 		ctx.SetInContext(ContextMembershipAnnouncement)
 		defer ctx.SetInContext(NoContext)
-
-		if err := read(reader, &ma.RequestedPower); err != nil {
-			return errors.Wrap(err, "failed to deserialize RequestedPower")
-		}
 
 		if err := ma.Member.DeserializeFrom(ctx, reader); err != nil {
 			return errors.Wrap(err, "failed to deserialize Member")
@@ -656,7 +659,7 @@ func (na *NodeAnnouncement) DeserializeFrom(ctx DeserializeContext, reader io.Re
 			if err := na.Joiner.DeserializeFrom(ctx, reader); err != nil {
 				return errors.Wrap(err, "failed to deserialize Joiner")
 			}
-			ctx.SetAnnouncedJoinerNodeID(na.Joiner.ShortID)
+			ctx.SetAnnouncedJoinerNodeID(na.AnnounceID)
 		}
 	}
 

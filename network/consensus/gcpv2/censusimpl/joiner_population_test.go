@@ -121,7 +121,7 @@ func TestOJPGetWorkingRoles(t *testing.T) {
 	require.Nil(t, ojp.GetWorkingRoles())
 }
 
-func TestCopyTo(t *testing.T) {
+func TestOJPCopyTo(t *testing.T) {
 	sp := profiles.NewStaticProfileMock(t)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
 	index := member.JoinerIndex
