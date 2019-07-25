@@ -58,7 +58,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensusv1/packets"
 )
 
 type Name string
@@ -85,7 +84,7 @@ type Outbound interface {
 	GetEndpointType() NodeEndpointType
 	GetRelayID() insolar.ShortNodeID
 	GetNameAddress() Name
-	GetIPAddress() packets.NodeAddress
+	GetIPAddress() IPAddress
 	AsByteString() string
 	CanAccept(connection Inbound) bool
 }
@@ -136,7 +135,7 @@ const (
 
 type Inbound interface {
 	GetNameAddress() Name
-	//	GetIPAddress() packets.NodeAddress // TODO
+	//	GetIPAddress() packets.IPAddress // TODO
 	GetTransportKey() cryptkit.SignatureKeyHolder
 	GetTransportCert() cryptkit.CertificateHolder
 	AsByteString() string

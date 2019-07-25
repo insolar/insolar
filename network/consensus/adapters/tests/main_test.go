@@ -71,7 +71,7 @@ func TestConsensusJoin(t *testing.T) {
 	nodeInfos := generateNodeInfos(nodeIdentities)
 	nodes, discoveryNodes := nodesFromInfo(nodeInfos)
 
-	joinIdentities := generateNodeIdentities(0, 0, 8, 8)
+	joinIdentities := generateNodeIdentities(0, 0, 2, 0)
 	joinInfos := generateNodeInfos(joinIdentities)
 	joiners, _ := nodesFromInfo(joinInfos)
 

@@ -68,7 +68,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"github.com/insolar/insolar/network/consensusv1/packets"
 )
 
 type originalPulsarPacket struct {
@@ -120,7 +119,12 @@ func newPacketParser(
 		return nil, err
 	}
 
-	logger := inslogger.FromContext(ctx)
+	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
+		"sender_id":    parser.GetSourceID(),
+		"packet_type":  parser.GetPacketType().String(),
+		"packet_pulse": parser.GetPulseNumber(),
+	})
+
 	if logger.Is(insolar.DebugLevel) {
 		logger.Debugf("Received packet: %s", parser.packet)
 	}
@@ -492,7 +496,7 @@ func (r *FullIntroductionReader) GetNodePublicKey() cryptkit.SignatureKeyHolder 
 }
 
 func (r *FullIntroductionReader) GetDefaultEndpoint() endpoints.Outbound {
-	return adapters.NewOutbound(packets.NodeAddress(r.intro.Endpoint).String())
+	return adapters.NewOutbound(endpoints.IPAddress(r.intro.Endpoint).String())
 }
 
 func (r *FullIntroductionReader) GetIssuedAtPulse() pulse.Number {

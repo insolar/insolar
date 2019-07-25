@@ -61,7 +61,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/stretchr/testify/require"
 )
@@ -122,34 +121,34 @@ func TestLessByNeighbourWeightForNodeAppearance(t *testing.T) {
 	require.False(t, LessByNeighbourWeightForNodeAppearance(r2, r1))
 }
 
-func TestCopySelfTo(t *testing.T) {
-	lp := profiles.NewLocalNodeMock(t)
-	lp.LocalNodeProfileMock.Set(func() {})
-	callback := &nodeContext{}
-
-	source := NewNodeAppearanceAsSelf(lp, callback)
-	source.stateEvidence = proofs.NewNodeStateHashEvidenceMock(t)
-	source.announceSignature = proofs.NewMemberAnnouncementSignatureMock(t)
-	source.requestedPower = 1
-	source.trust = member.TrustBySome
-
-	target := NewNodeAppearanceAsSelf(lp, callback)
-	//target.stateEvidence = proofs.NewNodeStateHashEvidenceMock(t)
-	//target.announceSignature = proofs.NewMemberAnnouncementSignatureMock(t)
-	target.requestedPower = 2
-	target.trust = member.TrustByNeighbors
-
-	target.copySelfTo(source)
-
-	//require.Equal(t, target.stateEvidence, source.stateEvidence)
-	//require.Equal(t, target.announceSignature, source.announceSignature)
-
-	require.Equal(t, target.requestedPower, source.requestedPower)
-
-	// require.Equal(t, target.state, source.state)
-
-	require.Equal(t, target.trust, source.trust)
-}
+//func TestCopySelfTo(t *testing.T) {
+//	lp := profiles.NewLocalNodeMock(t)
+//	lp.LocalNodeProfileMock.Set(func() {})
+//	callback := &nodeContext{}
+//
+//	source := NewNodeAppearanceAsSelf(lp, callback)
+//	source.stateEvidence = proofs.NewNodeStateHashEvidenceMock(t)
+//	source.announceSignature = proofs.NewMemberAnnouncementSignatureMock(t)
+//	source.requestedPower = 1
+//	source.trust = member.TrustBySome
+//
+//	target := NewNodeAppearanceAsSelf(lp, callback)
+//	//target.stateEvidence = proofs.NewNodeStateHashEvidenceMock(t)
+//	//target.announceSignature = proofs.NewMemberAnnouncementSignatureMock(t)
+//	target.requestedPower = 2
+//	target.trust = member.TrustByNeighbors
+//
+//	target.copySelfTo(source)
+//
+//	//require.Equal(t, target.stateEvidence, source.stateEvidence)
+//	//require.Equal(t, target.announceSignature, source.announceSignature)
+//
+//	require.Equal(t, target.requestedPower, source.requestedPower)
+//
+//	// require.Equal(t, target.state, source.state)
+//
+//	require.Equal(t, target.trust, source.trust)
+//}
 
 func TestIsJoiner(t *testing.T) {
 	lp := profiles.NewLocalNodeMock(t)

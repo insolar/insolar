@@ -282,3 +282,82 @@ func TestFilterAndFillInSlots(t *testing.T) {
 
 	require.Equal(t, 1, slotCount)
 }
+
+func doNothingOnRecoverable(census.RecoverableErrorTypes, string, ...interface{}) {
+	// Do nothing.
+}
+
+func TestFillInRoleStatsAndMap(t *testing.T) {
+	mnp := ManyNodePopulation{}
+	localID := insolar.ShortNodeID(0)
+	slotCount := 2
+	compactIndex := false
+	checkUniqueID := false
+	fail := panicOnRecoverable
+	require.Panics(t, func() {
+		mnp._fillInRoleStatsAndMap(localID, member.MaxNodeIndex+1, compactIndex, checkUniqueID, fail)
+	})
+
+	require.Panics(t, func() { mnp._fillInRoleStatsAndMap(localID, slotCount, compactIndex, checkUniqueID, fail) })
+
+	mnp = ManyNodePopulation{}
+	mnp.slots = make([]updatableSlot, 1)
+	mnp.slots[0] = updatableSlot{}
+	mnp.slotByID = make(map[insolar.ShortNodeID]*updatableSlot, slotCount)
+	mnp.slotByID[localID] = &mnp.slots[0]
+	slotCount = 0
+	mnp._fillInRoleStatsAndMap(localID, slotCount, compactIndex, checkUniqueID, fail)
+	require.False(t, mnp.isInvalid)
+
+	slotCount = 2
+	mnp._fillInRoleStatsAndMap(localID, slotCount, compactIndex, checkUniqueID, fail)
+	require.False(t, mnp.isInvalid)
+
+	mnp._fillInRoleStatsAndMap(localID, slotCount, !compactIndex, checkUniqueID, fail)
+	require.False(t, mnp.isInvalid)
+
+	sp := profiles.NewStaticProfileMock(t)
+	mnp.slots[0].StaticProfile = sp
+	nodeID := insolar.ShortNodeID(0)
+	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return *(&nodeID) })
+	role := member.PrimaryRoleNeutral
+	sp.GetPrimaryRoleMock.Set(func() member.PrimaryRole { return *(&role) })
+	mnp._fillInRoleStatsAndMap(localID, slotCount, compactIndex, checkUniqueID, fail)
+	require.False(t, mnp.isInvalid)
+
+	mnp.slots = append(mnp.slots, updatableSlot{})
+	mnp.slots[1].StaticProfile = sp
+	mnp.slots[0].StaticProfile = nil
+	mnp._fillInRoleStatsAndMap(localID, slotCount, !compactIndex, checkUniqueID, fail)
+	require.False(t, mnp.isInvalid)
+
+	require.Panics(t, func() { mnp._fillInRoleStatsAndMap(localID, slotCount, compactIndex, !checkUniqueID, fail) })
+
+	role = member.PrimaryRoleInactive
+	require.Panics(t, func() { mnp._fillInRoleStatsAndMap(localID, slotCount, compactIndex, checkUniqueID, fail) })
+
+	role = member.PrimaryRoleNeutral
+	mnp.slots[0].power = 1
+	mnp.slots[0].mode = member.ModeEvictedGracefully
+	mnp._fillInRoleStatsAndMap(localID, slotCount, compactIndex, checkUniqueID, fail)
+	require.True(t, mnp.isInvalid)
+
+	mnp.slots[0].mode = member.ModeFlagValidationWarning
+	mnp._fillInRoleStatsAndMap(localID, slotCount, compactIndex, checkUniqueID, fail)
+	require.True(t, mnp.isInvalid)
+
+	role = member.PrimaryRoleInactive
+	mnp.slots[0].mode = member.ModeNormal
+	mnp._fillInRoleStatsAndMap(localID, slotCount, compactIndex, checkUniqueID, doNothingOnRecoverable)
+	require.True(t, mnp.isInvalid)
+
+	mnp.slots[0].StaticProfile = sp
+	sp2 := profiles.NewStaticProfileMock(t)
+	mnp.slots[1].StaticProfile = sp2
+	sp2.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
+	role2 := member.PrimaryRoleHeavyMaterial
+	sp2.GetPrimaryRoleMock.Set(func() member.PrimaryRole { return *(&role2) })
+	mnp.slots[1].power = 1
+	mnp._fillInRoleStatsAndMap(localID, slotCount, compactIndex, checkUniqueID, doNothingOnRecoverable)
+	require.True(t, mnp.isInvalid)
+}

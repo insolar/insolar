@@ -68,10 +68,10 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/adapters"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/serialization"
-	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport"
@@ -285,7 +285,7 @@ func getAnnounceSignature(
 	}
 	brief.StartPower = 10
 
-	addr, err := packets.NewNodeAddress(node.Address())
+	addr, err := endpoints.NewIPAddress(node.Address())
 	if err != nil {
 		panic(err)
 	}
@@ -433,7 +433,7 @@ type stateUpdater struct {
 func (su *stateUpdater) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
 	inslogger.FromContext(ctx).Info(">>>>>> Update state called")
 
-	err := su.nodeKeeper.Sync(ctx, nodes, nil)
+	err := su.nodeKeeper.Sync(ctx, nodes)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(err)
 	}

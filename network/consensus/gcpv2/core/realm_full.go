@@ -501,10 +501,10 @@ func (r *FullRealm) CreateAnnouncement(n *NodeAppearance) *transport.NodeAnnounc
 		case jp != nil:
 			joiner = transport.NewAnyJoinerAnnouncement(jp, n.GetNodeID())
 		case n == r.self:
-			panic("illegal state - local joiner is missing")
+			panic(fmt.Sprintf("illegal state - local joiner is missing: %d", ma.JoinerID))
 		default:
 			//r.GetPurgatory().FindJoinerProfile(ma.JoinerID, n.GetNodeID())
-			panic("illegal state - joiner is missing")
+			panic(fmt.Sprintf("illegal state - joiner is missing: %d", ma.JoinerID))
 		}
 	} else if ma.Membership.IsJoiner() {
 		joiner = transport.NewAnyJoinerAnnouncement(n.GetStatic(), insolar.AbsentShortNodeID) // TODO provide an announcing node

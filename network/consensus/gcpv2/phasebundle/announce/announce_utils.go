@@ -115,7 +115,7 @@ func ApplyUnknownAnnouncement(ctx context.Context, announcerID insolar.ShortNode
 		ma := AnnouncementFromReader(na, full)
 		return purgatory.SelfFromMemberAnnouncement(ctx, announcerID, intro, nr, ma)
 	case brief != nil:
-		intro := realm.GetProfileFactory().CreateBriefIntroProfile(brief)
+		intro := realm.GetProfileFactory().CreateUpgradableIntroProfile(brief)
 		ma := AnnouncementFromReader(na, brief)
 		return purgatory.SelfFromMemberAnnouncement(ctx, announcerID, intro, nr, ma)
 	default:
@@ -173,11 +173,8 @@ func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementP
 		return false, 0, n.Blames().NewProtocolViolation(n.GetReportProfile(), "node is not allowed to add a joiner")
 	}
 
-	modified, err := n.ApplyNodeMembership(ma)
-
-	if err == nil && modified && !ma.JoinerID.IsAbsent() {
-		purgatory := realm.GetPurgatory()
-
+	purgatory := realm.GetPurgatory()
+	if !ma.JoinerID.IsAbsent() {
 		ja := na.GetJoinerAnnouncement()
 		// originID := ja.GetJoinerIntroducedByID() // applies to neighbourhood only
 
@@ -187,12 +184,18 @@ func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementP
 		} else {
 			joinerIntroProfile = realm.GetProfileFactory().CreateUpgradableIntroProfile(ja.GetBriefIntroduction())
 		}
-		err = purgatory.JoinerFromMemberAnnouncement(ctx, ma.JoinerID, joinerIntroProfile, announcerID)
-		if err == nil && ma.JoinerID == realm.GetSelfNodeID() {
-			// we trust more to these who has introduced us
-			// It is also REQUIRED as vector calculation requires at least one trusted node to work properly
-			n.UpdateNodeTrustLevel(member.TrustBySome)
-		}
+		err = purgatory.JoinerFromMemberAnnouncement(ctx, ma.JoinerID, joinerIntroProfile, insolar.AbsentShortNodeID /*avoids ascension */)
+	}
+
+	modified, err := n.ApplyNodeMembership(ma)
+
+	if err == nil && modified {
+		err = purgatory.JoinerFromMemberAnnouncement(ctx, ma.JoinerID, nil, announcerID) /* trigger accession */
+	}
+	if err == nil && ma.JoinerID == realm.GetSelfNodeID() {
+		// we trust more to these who has introduced us
+		// It is also REQUIRED as vector calculation requires at least one trusted node to work properly
+		n.UpdateNodeTrustLevel(member.TrustBySome)
 	}
 	return modified, ma.JoinerID, err
 }
@@ -235,7 +238,7 @@ func ApplyNeighbourJoinerAnnouncement(ctx context.Context, sender *core.NodeAppe
 	if neighbourJoinerAnnouncement == nil {
 		return neighbour.Blames().NewProtocolViolation(sender.GetReportProfile(), "joiner profile was not expected in neighbourhood")
 	}
-	return purgatory.JoinerFromNeighbourhood(ctx, neighbourID, nil, sender.GetNodeID())
+	return purgatory.JoinerFromNeighbourhood(ctx, neighbourID, nil, insolar.AbsentShortNodeID)
 }
 
 func AnnouncementFromReader(nb transport.MembershipAnnouncementReader, brief profiles.BriefCandidateProfile) profiles.MembershipAnnouncement {

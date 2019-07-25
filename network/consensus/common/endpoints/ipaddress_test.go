@@ -48,87 +48,89 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package packets
+package endpoints
 
 import (
-	"bytes"
-	"encoding/binary"
 	"net"
-	"strconv"
+	"testing"
 
-	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-const (
-	ipSize          = net.IPv6len
-	portSize        = 2
-	nodeAddressSize = ipSize + portSize
-
-	maxPortNumber = ^uint16(0)
-)
-
-var defaultByteOrder = binary.BigEndian
-
-type NodeAddress [nodeAddressSize]byte
-
-func NewNodeAddress(address string) (NodeAddress, error) {
-	var addr NodeAddress
-
-	host, port, err := net.SplitHostPort(address)
-	if err != nil {
-		return addr, errors.Errorf("invalid address: %s", address)
-	}
-
-	ip := net.ParseIP(host)
-	if ip == nil {
-		return addr, errors.Errorf("invalid ip: %s", host)
-	}
-
-	portNumber, err := strconv.Atoi(port)
-	if err != nil {
-		return addr, errors.Errorf("invalid port number: %s", port)
-	}
-
-	return addr, newNodeAddress(ip, portNumber, &addr)
+func TestNewIPAddress(t *testing.T) {
+	address, err := NewIPAddress("127.0.0.1:65534")
+	require.NoError(t, err)
+	assert.Len(t, address, ipAddressSize)
 }
 
-func newNodeAddress(ip net.IP, portNumber int, addr *NodeAddress) error {
-	switch ipSize {
-	case net.IPv6len:
-		ip = ip.To16()
-	case net.IPv4len:
-		ip = ip.To4()
-	default:
-		panic("not implemented")
-	}
-
-	if portNumber > int(maxPortNumber) || portNumber <= 0 {
-		return errors.Errorf("invalid port number: %d", portNumber)
-	}
-
-	portBytes := make([]byte, portSize)
-	defaultByteOrder.PutUint16(portBytes, uint16(portNumber))
-
-	copy(addr[:], ip)
-	copy(addr[ipSize:], portBytes)
-
-	return nil
+func TestNewIPAddress_InvalidAddress(t *testing.T) {
+	_, err := NewIPAddress("notaddress")
+	require.EqualError(t, err, "invalid address: notaddress")
 }
 
-func (address NodeAddress) String() string {
-	r := bytes.NewReader(address[:])
+func TestNewIPAddress_InvalidHost(t *testing.T) {
+	_, err := NewIPAddress("notip:1234")
+	require.EqualError(t, err, "invalid ip: notip")
+}
 
-	ipBytes := make([]byte, ipSize)
-	_, _ = r.Read(ipBytes)
+func TestNewIPAddress_InvalidPort(t *testing.T) {
+	_, err := NewIPAddress("127.0.0.1:notport")
+	require.EqualError(t, err, "invalid port number: notport")
 
-	portBytes := make([]byte, portSize)
-	_, _ = r.Read(portBytes)
+	_, err = NewIPAddress("127.0.0.1:65536")
+	require.EqualError(t, err, "invalid port number: 65536")
 
-	ip := net.IP(ipBytes)
-	portNumber := defaultByteOrder.Uint16(portBytes)
+	_, err = NewIPAddress("127.0.0.1:0")
+	require.EqualError(t, err, "invalid port number: 0")
+}
 
-	host := ip.String()
-	port := strconv.Itoa(int(portNumber))
+func TestIPAddress_Get(t *testing.T) {
+	tests := []struct {
+		name string
+		addr string
+	}{
+		{
+			name: "ip4_1",
+			addr: "127.0.0.1:65534",
+		},
+		{
+			name: "ip4_2",
+			addr: "182.30.233.10:65534",
+		},
+		{
+			name: "ip4_map",
+			addr: "[::ffff:192.0.2.128]:80",
+		},
+		{
+			name: "ip6",
+			addr: "[2001:0db8:85a3:0000:0000:8a2e:0370:7334]:80",
+		},
+		{
+			name: "ip6_omitzeros",
+			addr: "[2001:0db8:85a3:0:0:8a2e:0370:7334]:80",
+		},
+		{
+			name: "ip6_loopback",
+			addr: "[::1]:80",
+		},
+		{
+			name: "ip6_scope",
+			addr: "[fe80::1ff:fe23:4567:890a]:80",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			expected, err := net.ResolveTCPAddr("tcp", test.addr)
+			require.NoError(t, err)
 
-	return net.JoinHostPort(host, port)
+			address, err := NewIPAddress(test.addr)
+			require.NoError(t, err)
+
+			actual, err := net.ResolveTCPAddr("tcp", address.String())
+			require.NoError(t, err)
+
+			require.Equal(t, expected, actual)
+		})
+	}
 }

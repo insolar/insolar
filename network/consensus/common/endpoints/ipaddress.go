@@ -48,7 +48,7 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package packets
+package endpoints
 
 import (
 	"bytes"
@@ -60,19 +60,19 @@ import (
 )
 
 const (
-	ipSize          = net.IPv6len
-	portSize        = 2
-	nodeAddressSize = ipSize + portSize
+	ipSize        = net.IPv6len
+	portSize      = 2
+	ipAddressSize = ipSize + portSize
 
 	maxPortNumber = ^uint16(0)
 )
 
 var defaultByteOrder = binary.BigEndian
 
-type NodeAddress [nodeAddressSize]byte
+type IPAddress [ipAddressSize]byte
 
-func NewNodeAddress(address string) (NodeAddress, error) {
-	var addr NodeAddress
+func NewIPAddress(address string) (IPAddress, error) {
+	var addr IPAddress
 
 	host, port, err := net.SplitHostPort(address)
 	if err != nil {
@@ -89,10 +89,10 @@ func NewNodeAddress(address string) (NodeAddress, error) {
 		return addr, errors.Errorf("invalid port number: %s", port)
 	}
 
-	return addr, newNodeAddress(ip, portNumber, &addr)
+	return addr, newIPAddress(ip, portNumber, &addr)
 }
 
-func newNodeAddress(ip net.IP, portNumber int, addr *NodeAddress) error {
+func newIPAddress(ip net.IP, portNumber int, addr *IPAddress) error {
 	switch ipSize {
 	case net.IPv6len:
 		ip = ip.To16()
@@ -115,8 +115,8 @@ func newNodeAddress(ip net.IP, portNumber int, addr *NodeAddress) error {
 	return nil
 }
 
-func (address NodeAddress) String() string {
-	r := bytes.NewReader(address[:])
+func (a IPAddress) String() string {
+	r := bytes.NewReader(a[:])
 
 	ipBytes := make([]byte, ipSize)
 	_, _ = r.Read(ipBytes)
