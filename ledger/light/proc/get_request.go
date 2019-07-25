@@ -18,6 +18,7 @@ package proc
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -67,9 +68,9 @@ func (p *GetRequest) Proceed(ctx context.Context) error {
 	sendRequest := func(rec record.Material) error {
 		concrete := record.Unwrap(rec.Virtual)
 		_, isIncoming := concrete.(*record.IncomingRequest)
-		_, isOutgoing := concrete.(*record.IncomingRequest)
+		_, isOutgoing := concrete.(*record.OutgoingRequest)
 		if !isIncoming && !isOutgoing {
-			return errors.New("failed to decode request")
+			return fmt.Errorf("unexpected request type")
 		}
 
 		msg, err := payload.NewMessage(&payload.Request{

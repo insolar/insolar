@@ -163,8 +163,6 @@ func (h *Handler) handleParcel(ctx context.Context, msg *watermillMsg.Message) e
 		rep, err = h.handleGetChildren(ctx, parcel)
 	case insolar.TypeGetDelegate.String():
 		rep, err = h.handleGetDelegate(ctx, parcel)
-	// case insolar.TypeGetJet.String():
-	// 	rep, err = h.handleGetJet(ctx, parcel)
 	case insolar.TypeGetObjectIndex.String():
 		rep, err = h.handleGetObjectIndex(ctx, parcel)
 	default:
@@ -202,11 +200,11 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 	case payload.TypeGetRequest:
 		p := proc.NewGetRequest(meta)
 		h.dep.GetRequest(p)
-		return p.Proceed(ctx)
+		err = p.Proceed(ctx)
 	case payload.TypeGetFilament:
 		p := proc.NewSendRequests(meta)
 		h.dep.SendRequests(p)
-		return p.Proceed(ctx)
+		err = p.Proceed(ctx)
 	case payload.TypePassState:
 		p := proc.NewPassState(meta)
 		h.dep.PassState(p)
@@ -271,8 +269,12 @@ func (h *Handler) handlePass(ctx context.Context, meta payload.Meta) error {
 		p := proc.NewGetCode(originMeta)
 		h.dep.GetCode(p)
 		err = p.Proceed(ctx)
+	case payload.TypeGetRequest:
+		p := proc.NewGetRequest(originMeta)
+		h.dep.GetRequest(p)
+		err = p.Proceed(ctx)
 	default:
-		err = fmt.Errorf("no pass handler for message type %s", payload.Type(originMeta.Polymorph).String())
+		err = fmt.Errorf("no pass handler for message type %s", payloadType.String())
 	}
 	if err != nil {
 		h.replyError(ctx, originMeta, err)

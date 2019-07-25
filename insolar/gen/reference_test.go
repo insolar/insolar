@@ -25,7 +25,7 @@ import (
 )
 
 func TestGen_JetID(t *testing.T) {
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 100; i++ {
 		jetID := JetID()
 		recID := (*insolar.ID)(&jetID)
 		require.Equalf(t,
