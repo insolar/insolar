@@ -183,14 +183,13 @@ func (b *Bus) SendRole(
 // Replies will be written to the returned channel. Always read from the channel using multiple assignment
 // (rep, ok := <-ch) because the channel will be closed on timeout.
 func (b *Bus) SendTarget(
-	ctx context.Context, msg *message.Message, target insolar.Reference,
+	rootCtx context.Context, msg *message.Message, target insolar.Reference,
 ) (<-chan *message.Message, func()) {
-	ctx, span := instracer.StartSpan(ctx, "Bus.SendTarget")
-	span.AddAttributes(
+	ctx, startSpan := instracer.StartSpan(rootCtx, "Bus.SendTarget")
+	startSpan.AddAttributes(
 		trace.StringAttribute("type", "bus"),
 		trace.StringAttribute("target", target.String()),
 	)
-	defer span.End()
 
 	handleError := func(err error) (<-chan *message.Message, func()) {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to send message"))
@@ -204,6 +203,9 @@ func (b *Bus) SendTarget(
 		ctx, _ = inslogger.WithField(ctx, "sending_type", payloadType.String())
 	}
 	logger := inslogger.FromContext(ctx)
+	startSpan.AddAttributes(
+		trace.StringAttribute("sending_type", msg.Metadata.Get(MetaType)),
+	)
 
 	msg.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
 
@@ -244,20 +246,23 @@ func (b *Bus) SendTarget(
 		done()
 		return handleError(errors.Wrapf(err, "can't publish message to %s topic", TopicOutgoing))
 	}
+	startSpan.End()
 
 	go func() {
+		_, waitingSpan := instracer.StartSpan(rootCtx, "Bus.SendTarget waiting for reply")
+		defer waitingSpan.End()
+
 		logger.Debug("waiting for reply")
 		select {
 		case <-reply.done:
 			logger.Debugf("Done waiting replies for message with hash %s", msgHash.String())
 		case <-time.After(b.timeout):
-			_, span := instracer.StartSpan(ctx, "Bus.SendTarget timeout")
-			span.AddAttributes(
+
+			waitingSpan.AddAttributes(
 				trace.StringAttribute("type", "bus"),
 				trace.StringAttribute("target", target.String()),
 				trace.BoolAttribute("error", true),
 			)
-			defer span.End()
 			logger.Error(
 				errors.Errorf(
 					"can't return result for message with hash %s: timeout for reading (%s) was exceeded",
@@ -319,10 +324,22 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 // IncomingMessageRouter is watermill middleware for incoming messages - it decides, how to handle it: as request or as reply.
 func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerFunc {
 	return func(msg *message.Message) ([]*message.Message, error) {
-		_, logger := inslogger.WithTraceField(context.Background(), msg.Metadata.Get(MetaTraceID))
+		ctx, logger := inslogger.WithTraceField(context.Background(), msg.Metadata.Get(MetaTraceID))
+
+		parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(MetaSpanData)))
+		if err == nil {
+			ctx = instracer.WithParentSpan(ctx, parentSpan)
+		} else {
+			inslogger.FromContext(ctx).Error(err)
+		}
+
+		ctx, span := instracer.StartSpan(ctx, "Bus.IncomingMessageRouter starts")
+		span.AddAttributes(
+			trace.StringAttribute("type", "bus"),
+		)
 
 		meta := payload.Meta{}
-		err := meta.Unmarshal(msg.Payload)
+		err = meta.Unmarshal(msg.Payload)
 		if err != nil {
 			logger.Error(errors.Wrap(err, "failed to receive message"))
 			return nil, nil
@@ -358,6 +375,14 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 		logger.Debug("reply received")
 		reply.wg.Add(1)
 		b.repliesMutex.RUnlock()
+
+		span.End()
+
+		_, span = instracer.StartSpan(ctx, "Bus.IncomingMessageRouter waiting")
+		span.AddAttributes(
+			trace.StringAttribute("type", "bus"),
+		)
+		defer span.End()
 
 		select {
 		case reply.messages <- msg:
