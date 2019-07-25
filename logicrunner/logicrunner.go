@@ -318,6 +318,8 @@ func (lr *LogicRunner) CheckExecutionLoop(
 }
 
 func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
+	lr.ResultsMatcher.Clear()
+
 	lr.StateStorage.Lock()
 
 	lr.FlowDispatcher.ChangePulse(ctx, pulse)
@@ -369,8 +371,6 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 	}
 
 	lr.stopIfNeeded(ctx)
-
-	lr.ResultsMatcher.Clear()
 
 	return nil
 }
