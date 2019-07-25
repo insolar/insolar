@@ -20,6 +20,7 @@ import (
 	"sync"
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -30,19 +31,15 @@ import (
 type ObjectState struct {
 	sync.Mutex
 
-	ExecutionBroker *ExecutionBroker
-	Validation      *ExecutionState
+	ExecutionBroker ExecutionBrokerI
 }
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.StateStorage -o ./ -s _mock.go
 type StateStorage interface {
 	sync.Locker
 
-	UpsertExecutionState(ref insolar.Reference) *ExecutionBroker
-	GetExecutionState(ref insolar.Reference) *ExecutionBroker
-
-	UpsertValidationState(ref insolar.Reference) *ExecutionState
-	GetValidationState(ref insolar.Reference) *ExecutionState
+	UpsertExecutionState(ref insolar.Reference) ExecutionBrokerI
+	GetExecutionState(ref insolar.Reference) ExecutionBrokerI
 
 	DeleteObjectState(ref insolar.Reference)
 
@@ -60,28 +57,6 @@ type stateStorage struct {
 	artifactsManager artifacts.Client
 
 	state map[insolar.Reference]*ObjectState // if object exists, we are validating or executing it right now
-}
-
-func (ss *stateStorage) UpsertValidationState(ref insolar.Reference) *ExecutionState {
-	os := ss.upsertObjectState(ref)
-
-	os.Lock()
-	defer os.Unlock()
-
-	os.Validation = &ExecutionState{}
-	return os.Validation
-}
-
-func (ss *stateStorage) GetValidationState(ref insolar.Reference) *ExecutionState {
-	os := ss.getObjectState(ref)
-	if os == nil {
-		return nil
-	}
-
-	os.Lock()
-	defer os.Unlock()
-
-	return os.Validation
 }
 
 func NewStateStorage(
@@ -106,7 +81,7 @@ func NewStateStorage(
 	return ss
 }
 
-func (ss *stateStorage) UpsertExecutionState(ref insolar.Reference) *ExecutionBroker {
+func (ss *stateStorage) UpsertExecutionState(ref insolar.Reference) ExecutionBrokerI {
 	os := ss.upsertObjectState(ref)
 
 	os.Lock()
@@ -126,7 +101,7 @@ func (ss *stateStorage) UpsertExecutionState(ref insolar.Reference) *ExecutionBr
 	return os.ExecutionBroker
 }
 
-func (ss *stateStorage) GetExecutionState(ref insolar.Reference) *ExecutionBroker {
+func (ss *stateStorage) GetExecutionState(ref insolar.Reference) ExecutionBrokerI {
 	os := ss.getObjectState(ref)
 	if os == nil {
 		return nil
