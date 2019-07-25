@@ -150,6 +150,8 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 		return m.transferCall(params)
 	case "deposit.migration":
 		return nil, m.depositMigrationCall(params)
+	case "deposit.transfer":
+		return m.depositTransferCall(params)
 	}
 	return nil, fmt.Errorf("unknown method: '%s'", request.Params.CallSite)
 }
@@ -281,6 +283,37 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 
 	return w.Transfer(m.RootDomain, amount, recipientReference)
 }
+
+func (m *Member) depositTransferCall(params map[string]interface{}) (interface{}, error) {
+
+	ethTxHash, ok := params["ethTxHash"].(string)
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'ethTxHash' param")
+	}
+
+	amount, ok := params["amount"].(string)
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'amount' param")
+	}
+
+	w, err := wallet.GetImplementationFrom(m.GetReference())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get wallet implementation of sender: %s", err.Error())
+	}
+	wRef := w.Reference
+
+	find, dRef, err := m.FindDeposit(ethTxHash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find deposit: %s", err.Error())
+	}
+	if !find {
+		return nil, fmt.Errorf("can't find deposit")
+	}
+	d := deposit.GetObject(dRef)
+
+	return d.Transfer(amount, wRef)
+}
+
 func (m *Member) depositMigrationCall(params map[string]interface{}) error {
 
 	amountStr, ok := params["amount"].(string)

@@ -505,3 +505,94 @@ func (r *Deposit) ConfirmAsImmutable(migrationDaemonIndex int, migrationDaemonRe
 	}
 	return nil
 }
+
+// Transfer is proxy generated method
+func (r *Deposit) Transfer(amountStr string, wallerRef insolar.Reference) (interface{}, error) {
+	var args [2]interface{}
+	args[0] = amountStr
+	args[1] = wallerRef
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 interface{}
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "Transfer", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// TransferNoWait is proxy generated method
+func (r *Deposit) TransferNoWait(amountStr string, wallerRef insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = amountStr
+	args[1] = wallerRef
+
+	var argsSerialized []byte
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "Transfer", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// TransferAsImmutable is proxy generated method
+func (r *Deposit) TransferAsImmutable(amountStr string, wallerRef insolar.Reference) (interface{}, error) {
+	var args [2]interface{}
+	args[0] = amountStr
+	args[1] = wallerRef
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 interface{}
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "Transfer", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
