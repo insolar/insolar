@@ -263,7 +263,8 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	}
 	p.dep.sender.Reply(ctx, p.message, msg)
 	logger.WithFields(map[string]interface{}{
-		"is_creation": p.request.IsCreationRequest(),
+		"is_creation":                p.request.IsCreationRequest(),
+		"latest_pending_filament_id": filamentID.DebugString(),
 	}).Debug("request saved")
 	return nil
 }

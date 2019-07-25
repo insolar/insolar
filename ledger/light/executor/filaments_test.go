@@ -780,13 +780,13 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 	resetComponents()
 	t.Run("no records", func(t *testing.T) {
 		objectID := gen.ID()
-		fromPulse := gen.PulseNumber()
-		err := indexes.SetIndex(ctx, fromPulse, record.Index{
+		resultID := gen.ID()
+		err := indexes.SetIndex(ctx, resultID.Pulse(), record.Index{
 			ObjID: objectID,
 		})
 		require.NoError(t, err)
 
-		res, err := calculator.ResultDuplicate(ctx, objectID, gen.ID(), record.Result{Request: gen.Reference()})
+		res, err := calculator.ResultDuplicate(ctx, objectID, resultID, record.Result{Request: gen.Reference()})
 
 		assert.NoError(t, err)
 		assert.Nil(t, res)

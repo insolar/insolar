@@ -128,11 +128,10 @@ func Test_DuplicatedRequests(t *testing.T) {
 		require.Nil(t, reqInfo.Result)
 
 		// Check for the result
-		compositeRec := record.CompositeFilamentRecord{}
-		err = compositeRec.Unmarshal(reqInfo.Request)
+		receivedDuplicate := record.Material{}
+		err = receivedDuplicate.Unmarshal(reqInfo.Request)
 		require.NoError(t, err)
-		returnedReq := record.Unwrap(compositeRec.Record.Virtual)
-		require.Equal(t, &initReq, returnedReq)
+		require.Equal(t, &initReq, record.Unwrap(receivedDuplicate.Virtual))
 	})
 
 	t.Run("try to register outgoing request twice. no result", func(t *testing.T) {
@@ -181,11 +180,10 @@ func Test_DuplicatedRequests(t *testing.T) {
 		require.Nil(t, outReqSecondInfo.Result)
 
 		// Check for the result
-		compositeRec := record.CompositeFilamentRecord{}
-		err = compositeRec.Unmarshal(outReqSecondInfo.Request)
+		receivedDuplicate := record.Material{}
+		err = receivedDuplicate.Unmarshal(outReqSecondInfo.Request)
 		require.NoError(t, err)
-		returnedReq := record.Unwrap(compositeRec.Record.Virtual)
-		require.Equal(t, &outgoingReq, returnedReq)
+		require.Equal(t, &outgoingReq, record.Unwrap(receivedDuplicate.Virtual))
 	})
 
 	t.Run("try to register request twice. when there is result", func(t *testing.T) {
@@ -219,19 +217,18 @@ func Test_DuplicatedRequests(t *testing.T) {
 		require.NotNil(t, secondReqInfo.Result)
 
 		// Check for the request
-		compositeReq := record.CompositeFilamentRecord{}
-		err = compositeReq.Unmarshal(secondReqInfo.Request)
+		receivedDuplicateReq := record.Material{}
+		err = receivedDuplicateReq.Unmarshal(secondReqInfo.Request)
 		require.NoError(t, err)
-		returnedReq := record.Unwrap(compositeReq.Record.Virtual)
-		require.Equal(t, &initReq, returnedReq)
+		require.Equal(t, &initReq, record.Unwrap(receivedDuplicateReq.Virtual))
 
 		// Check for the result
-		compositeRes := record.CompositeFilamentRecord{}
-		err = compositeRes.Unmarshal(secondReqInfo.Result)
+		receivedDuplicateRes := record.Material{}
+		err = receivedDuplicateRes.Unmarshal(secondReqInfo.Result)
 		require.NoError(t, err)
-		returnedRes := record.Unwrap(compositeRes.Record.Virtual).(*record.Result)
-		require.Equal(t, *insolar.NewReference(reqInfo.RequestID), returnedRes.Request)
-		require.Equal(t, reqInfo.RequestID, returnedRes.Object)
+		resultRecord := record.Unwrap(receivedDuplicateRes.Virtual).(*record.Result)
+		require.Equal(t, *insolar.NewReference(reqInfo.RequestID), resultRecord.Request)
+		require.Equal(t, reqInfo.RequestID, resultRecord.Object)
 	})
 
 	t.Run("try to register result twice", func(t *testing.T) {

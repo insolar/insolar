@@ -18,6 +18,7 @@ package proc
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -81,7 +82,11 @@ func (p *SetResult) Dep(
 }
 
 func (p *SetResult) Proceed(ctx context.Context) error {
-	logger := inslogger.FromContext(ctx).WithField("result_id", p.resultID.DebugString())
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"object_id":  p.result.Object.DebugString(),
+		"result_id":  p.resultID.DebugString(),
+		"request_id": p.result.Request.Record().DebugString(),
+	})
 	logger.Debug("trying to save result")
 
 	// Prevent concurrent object modifications.
@@ -123,7 +128,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to find request being closed")
 	}
-	earliestPending, err := earliestPending(pendings, closedRequest.RecordID)
+	earliestPending, err := calcPending(pendings, closedRequest.RecordID)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate earliest pending")
 	}
@@ -157,11 +162,10 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		var filamentID insolar.ID
 		// Save filament record to storage.
 		{
-			rec := record.PendingFilament{
+			virtual := record.Wrap(record.PendingFilament{
 				RecordID:       p.resultID,
 				PreviousRecord: index.Lifeline.PendingPointer,
-			}
-			virtual := record.Wrap(rec)
+			})
 			hash := record.HashVirtual(p.dep.pcs.ReferenceHasher(), virtual)
 			id := *insolar.NewID(p.resultID.Pulse(), hash)
 			material := record.Material{Virtual: &virtual, JetID: p.jetID}
@@ -205,7 +209,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 
 // EarliestPending checks if received result closes earliest request. If so, it should return new earliest request or
 // nil if the last request was closed.
-func earliestPending(pendings []record.CompositeFilamentRecord, closedRequestID insolar.ID) (*insolar.PulseNumber, error) {
+func calcPending(pendings []record.CompositeFilamentRecord, closedRequestID insolar.ID) (*insolar.PulseNumber, error) {
 	// If we don't have pending requests BEFORE we try to save result, something went wrong.
 	if len(pendings) == 0 {
 		return nil, errors.New("no requests in pending before result")
@@ -245,7 +249,10 @@ func findClosed(reqs []record.CompositeFilamentRecord, result record.Result) (re
 		}
 	}
 
-	return record.CompositeFilamentRecord{}, errors.New("request not found")
+	return record.CompositeFilamentRecord{}, fmt.Errorf(
+		"request %s not found",
+		result.Request.Record().DebugString(),
+	)
 }
 
 // NotifyDetached sends notifications about detached requests that are ready for execution.
