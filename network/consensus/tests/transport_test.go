@@ -170,6 +170,8 @@ func (r *emuPacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncemen
 			},
 			pulsePacket: pp},
 	}
+	v.basePacket.adjustBySender(sender)
+
 	v.pn = pp.pulseData.PulseNumber
 	v.isAlternative = options&transport.AlternativePhasePacket != 0
 
@@ -227,6 +229,8 @@ func (r *emuPacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncemen
 		pulseNumber:   sender.GetPulseNumber(),
 		neighbourhood: neighbourhood,
 	}
+	v.basePacket.adjustBySender(sender)
+
 	v.isAlternative = options&transport.AlternativePhasePacket != 0
 
 	if v.joiner != nil && v.joiner.HasFullIntro() && options&transport.OnlyBriefIntroAboutJoiner != 0 {
@@ -268,6 +272,8 @@ func (r *emuPacketBuilder) PreparePhase3Packet(sender *transport.NodeAnnouncemen
 		pulseNumber: sender.GetPulseNumber(),
 		vectors:     vectors,
 	}
+	v.basePacket.adjustBySender(sender)
+
 	v.isAlternative = options&transport.AlternativePhasePacket != 0
 
 	return &emuPacketSender{&v}

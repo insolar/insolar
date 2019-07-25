@@ -142,8 +142,12 @@ func (c *Phase2PacketDispatcher) DispatchMemberPacket(ctx context.Context, reade
 		return err
 	}
 
+	ar := p2.GetAnnouncementReader()
 	neighbourhood := p2.GetNeighbourhood()
-	neighbours, err := announce.VerifyNeighbourhood(ctx, neighbourhood, sender, realm)
+	neighbours, err := announce.VerifyNeighbourhood(ctx, neighbourhood, sender,
+		ar.GetJoinerID(), ar.GetJoinerAnnouncement(),
+		realm)
+
 	if err != nil {
 		rep := misbehavior.FraudOf(err)
 		if rep != nil {

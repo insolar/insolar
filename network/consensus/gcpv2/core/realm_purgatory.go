@@ -223,12 +223,6 @@ func (p *RealmPurgatory) ascendFromPurgatory(ctx context.Context, id insolar.Sho
 	p.phantomByID[id] = nil // leave marker
 	// delete(p.phantomByEP, ...)
 	na, _ = p.population.AddToDynamics(na)
-	if na.IsJoiner() {
-		_, err := na.ApplyNodeStateHashEvidenceForJoiner()
-		if err != nil {
-			inslogger.FromContext(ctx).Error(err)
-		}
-	}
 
 	inslogger.FromContext(ctx).Debugf("Candidate/joiner has ascended as dynamic node: s=%d, t=%d, full=%v",
 		p.callback.localNodeID, np.GetNodeID(), np.GetStatic().GetExtension() != nil)

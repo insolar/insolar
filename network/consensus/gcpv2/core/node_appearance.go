@@ -167,8 +167,12 @@ func (c *NodeAppearance) copySelfTo(target *NodeAppearance) {
 	/* Ensure that the target is LocalNode */
 	target.profile.(profiles.LocalNode).LocalNodeProfile()
 
-	target.stateEvidence = c.stateEvidence
-	target.announceSignature = c.announceSignature
+	if c.stateEvidence != nil || c.announceSignature != nil {
+		panic("prep realm self can't have NSH")
+	}
+
+	//target.stateEvidence = c.stateEvidence
+	//target.announceSignature = c.announceSignature
 	target.requestedPower = c.requestedPower
 	target.requestedJoinerID = c.requestedJoinerID
 	target.requestedLeave = c.requestedLeave
@@ -420,15 +424,18 @@ func (c *NodeAppearance) GetNodeMembershipProfileOrEmpty() profiles.MembershipPr
 	return c.getMembership()
 }
 
-func (c *NodeAppearance) ApplyNodeStateHashEvidenceForJoiner() (bool, error) {
-	sp := c.profile.GetStatic()
-	nsh := sp.GetBriefIntroSignedDigest()
+func (c *NodeAppearance) onNodeAdded(ctx context.Context) {
 
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	mp := profiles.NewMembershipProfileByNode(c.profile, nsh, nsh.GetSignatureHolder(), sp.GetStartPower())
-	ma := profiles.NewMembershipAnnouncement(mp)
-	return c._applyNodeMembership(ma)
+	if c.IsJoiner() {
+		sp := c.profile.GetStatic()
+		nsh := sp.GetBriefIntroSignedDigest()
+		mp := profiles.NewMembershipProfileByNode(c.profile, nsh, nsh.GetSignatureHolder(), sp.GetStartPower())
+		ma := profiles.NewMembershipAnnouncement(mp)
+		_, err := c._applyNodeMembership(ma)
+		if err != nil {
+			inslogger.FromContext(ctx).Error("error was unexpected", err)
+		}
+	}
 }
 
 func (c *NodeAppearance) setLocalNodeStateHashEvidence(evidence proofs.NodeStateHashEvidence,
