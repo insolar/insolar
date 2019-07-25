@@ -87,6 +87,7 @@ import (
 )
 
 const deliverWatermillMsg = "ServiceNetwork.processIncoming"
+const PULSETIMEOUTSECONDS = 2
 
 var ack = []byte{1}
 
@@ -322,16 +323,16 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	}
 
 	done := make(chan struct{})
+	defer close(done)
 	go func() {
 		select {
-		case <-time.After(5 * time.Second):
+		case <-time.After(PULSETIMEOUTSECONDS * time.Second):
 			log.Fatal("Node stopped due to long pulse processing")
 		case <-done:
 		}
 	}()
 
 	n.ChangePulse(ctx, newPulse)
-	close(done)
 
 	go n.phaseManagerOnPulse(ctx, newPulse, pulseTime)
 }
