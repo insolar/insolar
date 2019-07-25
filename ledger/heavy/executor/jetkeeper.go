@@ -91,7 +91,7 @@ func (j *jetInfo) checkIncomingHot(incomingJetID insolar.JetID) error {
 	return nil
 }
 
-func (j *jetInfo) addHot(newJetID insolar.JetID, parentId insolar.JetID, split bool) error {
+func (j *jetInfo) addHot(newJetID insolar.JetID, parentId insolar.JetID) error {
 	err := j.checkIncomingHot(newJetID)
 	if err != nil {
 		return errors.Wrap(err, "incorrect incoming jet")
@@ -107,15 +107,23 @@ func (j *jetInfo) isConfirmed() bool {
 	if !j.DropConfirmed {
 		return false
 	}
-	if len(j.HotConfirmed) == 0 || j.HotConfirmed[0].IsEmpty() {
+
+	if len(j.HotConfirmed) == 0 {
 		return false
 	}
 
 	if !j.Split {
-		return j.DropConfirmed && j.HotConfirmed[0].Equal(j.JetID)
+		return j.HotConfirmed[0].Equal(j.JetID)
 	}
 
-	return len(j.HotConfirmed) == 2
+	if len(j.HotConfirmed) != 2 {
+		return false
+	}
+
+	parentFirst := jet.Parent(j.HotConfirmed[0])
+	parentSecond := jet.Parent(j.HotConfirmed[1])
+
+	return parentFirst.Equal(parentSecond) && parentSecond.Equal(j.JetID)
 }
 
 func (jk *dbJetKeeper) AddHotConfirmation(ctx context.Context, pn insolar.PulseNumber, id insolar.JetID, split bool) error {
@@ -201,67 +209,56 @@ func (jk *dbJetKeeper) topSyncPulse() insolar.PulseNumber {
 	return insolar.NewPulseNumber(val)
 }
 
-func (jk *dbJetKeeper) updateHot(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID, split bool) error {
+func (jk *dbJetKeeper) getForJet(ctx context.Context, pulse insolar.PulseNumber, jet insolar.JetID) (int, []jetInfo, error) {
 	logger := inslogger.FromContext(ctx)
 	jets, err := jk.get(pulse)
 	if err != nil && err != store.ErrNotFound {
-		return errors.Wrapf(err, "updateHot. can't get pulse: %d", pulse)
+		return 0, nil, errors.Wrapf(err, "updateHot. can't get pulse: %d", pulse)
 	}
-	var exists bool
+
+	for i := range jets {
+		if jets[i].JetID.Equal(jet) {
+			logger.Debug("getForJet. found. jet: ", jet.DebugString(), ", pulse: ", pulse)
+			return i, jets, nil
+		}
+	}
+
+	newInfo := jetInfo{}
+	jets = append(jets, newInfo)
+	logger.Debug("getForJet. create new. jet: ", jet.DebugString(), ", pulse: ", pulse)
+	return len(jets) - 1, jets, nil
+}
+
+func (jk *dbJetKeeper) updateHot(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID, split bool) error {
 	parentID := id
 	if split {
 		parentID = jet.Parent(id)
 	}
-	for i := range jets {
-		if jets[i].JetID.Equal(parentID) {
-			exists = true
-			err := jets[i].addHot(id, parentID, split)
-			if err != nil {
-				return errors.Wrap(err, "can't addHot")
-			}
-			logger.Debug("updateHot. update existing. pulse: ", pulse, ", Jet:", id.DebugString(), ", split: ", split)
-			break
-		}
+
+	idx, jets, err := jk.getForJet(ctx, pulse, parentID)
+	if err != nil {
+		return errors.Wrap(err, "Can't getForJet")
 	}
-	if !exists {
-		newInfo := jetInfo{}
-		err := newInfo.addHot(id, parentID, split)
-		if err != nil {
-			return errors.Wrap(err, "can't addHot ( not existing )")
-		}
-		jets = append(jets, newInfo)
-		logger.Debug("updateHot. not existing. pulse: ", pulse, ". Jet:", id.DebugString(), ", split: ", split)
+
+	err = jets[idx].addHot(id, parentID)
+	if err != nil {
+		return errors.Wrap(err, "can't addHot")
 	}
+
 	return jk.set(pulse, jets)
 }
 
 func (jk *dbJetKeeper) updateDrop(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID, split bool) error {
-	logger := inslogger.FromContext(ctx)
-	jets, err := jk.get(pulse)
-	if err != nil && err != store.ErrNotFound {
-		return errors.Wrapf(err, "updateDrop. can't get pulse: %d", pulse)
+	idx, jets, err := jk.getForJet(ctx, pulse, id)
+	if err != nil {
+		return errors.Wrap(err, "Can't getForJet")
 	}
-	var exists bool
-	for i := range jets {
-		if jets[i].JetID.Equal(id) {
-			exists = true
-			err := jets[i].addDrop(id, split)
-			if err != nil {
-				return errors.Wrap(err, "can't addDrop")
-			}
-			logger.Debug("updateDrop. update existing. pulse: ", pulse, ", Jet:", id.DebugString(), ", split: ", split)
-			break
-		}
+
+	err = jets[idx].addDrop(id, split)
+	if err != nil {
+		return errors.Wrap(err, "can't addHot")
 	}
-	if !exists {
-		newInfo := jetInfo{}
-		err := newInfo.addDrop(id, split)
-		if err != nil {
-			return errors.Wrap(err, "can't addDrop ( not existing )")
-		}
-		jets = append(jets, newInfo)
-		logger.Debug("updateDrop. not existing. pulse: ", pulse, ". Jet:", id.DebugString(), ", split: ", split)
-	}
+
 	return jk.set(pulse, jets)
 }
 

@@ -117,7 +117,7 @@ func TestDropStorageDB_TruncateHead(t *testing.T) {
 		require.NoError(t, err)
 
 		for i := 0; i < 3; i++ {
-			drop.JetID = *insolar.NewJetID(uint8(i), gen.ID().Bytes())
+			drop.JetID = *insolar.NewJetID(uint8(idx+i+50), gen.ID().Bytes())
 			err = dropStore.Set(ctx, drop)
 			require.NoError(t, err)
 		}

@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package executor
+package executor_test
 
 import (
 	"context"
@@ -25,6 +25,7 @@ import (
 	"github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
@@ -33,7 +34,7 @@ import (
 	"github.com/insolar/insolar/internal/ledger/store"
 )
 
-func initDB(t *testing.T, testPulse insolar.PulseNumber) (JetKeeper, string, *store.BadgerDB, *jet.DBStore) {
+func initDB(t *testing.T, testPulse insolar.PulseNumber) (executor.JetKeeper, string, *store.BadgerDB, *jet.DBStore) {
 	ctx := inslogger.TestContext(t)
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 
@@ -50,7 +51,7 @@ func initDB(t *testing.T, testPulse insolar.PulseNumber) (JetKeeper, string, *st
 	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: testPulse})
 	require.NoError(t, err)
 
-	jetKeeper := NewJetKeeper(jets, db, pulses)
+	jetKeeper := executor.NewJetKeeper(jets, db, pulses)
 
 	return jetKeeper, tmpdir, db, jets
 }
@@ -200,7 +201,7 @@ func TestNewJetKeeper(t *testing.T) {
 	defer db.Stop(context.Background())
 	jets := jet.NewDBStore(db)
 	pulses := pulse.NewCalculatorMock(t)
-	jetKeeper := NewJetKeeper(jets, db, pulses)
+	jetKeeper := executor.NewJetKeeper(jets, db, pulses)
 	require.NotNil(t, jetKeeper)
 }
 
@@ -269,7 +270,7 @@ func TestDbJetKeeper_AddDropConfirmation(t *testing.T) {
 	pulses.BackwardsFunc = func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
 		return insolar.Pulse{PulseNumber: p1 - insolar.PulseNumber(p2)}, nil
 	}
-	jetKeeper := NewJetKeeper(jets, db, pulses)
+	jetKeeper := executor.NewJetKeeper(jets, db, pulses)
 
 	var (
 		pulse insolar.PulseNumber
@@ -298,7 +299,7 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
 	require.NoError(t, err)
 
-	jetKeeper := NewJetKeeper(jets, db, pulses)
+	jetKeeper := executor.NewJetKeeper(jets, db, pulses)
 
 	require.Equal(t, insolar.GenesisPulse.PulseNumber, jetKeeper.TopSyncPulse())
 
@@ -359,7 +360,7 @@ func TestDbJetKeeper_TopSyncPulse_FinalizeMultiple(t *testing.T) {
 	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
 	require.NoError(t, err)
 
-	jetKeeper := NewJetKeeper(jets, db, pulses)
+	jetKeeper := executor.NewJetKeeper(jets, db, pulses)
 
 	require.Equal(t, insolar.GenesisPulse.PulseNumber, jetKeeper.TopSyncPulse())
 
