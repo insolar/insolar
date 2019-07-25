@@ -11,7 +11,6 @@ import (
 
 	"github.com/gojuno/minimock"
 	insolar "github.com/insolar/insolar/insolar"
-	packets "github.com/insolar/insolar/network/consensusv1/packets"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -35,7 +34,7 @@ type OutboundMock struct {
 	GetEndpointTypePreCounter uint64
 	GetEndpointTypeMock       mOutboundMockGetEndpointType
 
-	GetIPAddressFunc       func() (r packets.NodeAddress)
+	GetIPAddressFunc       func() (r IPAddress)
 	GetIPAddressCounter    uint64
 	GetIPAddressPreCounter uint64
 	GetIPAddressMock       mOutboundMockGetIPAddress
@@ -495,7 +494,7 @@ type OutboundMockGetIPAddressExpectation struct {
 }
 
 type OutboundMockGetIPAddressResult struct {
-	r packets.NodeAddress
+	r IPAddress
 }
 
 //Expect specifies that invocation of Outbound.GetIPAddress is expected from 1 to Infinity times
@@ -511,7 +510,7 @@ func (m *mOutboundMockGetIPAddress) Expect() *mOutboundMockGetIPAddress {
 }
 
 //Return specifies results of invocation of Outbound.GetIPAddress
-func (m *mOutboundMockGetIPAddress) Return(r packets.NodeAddress) *OutboundMock {
+func (m *mOutboundMockGetIPAddress) Return(r IPAddress) *OutboundMock {
 	m.mock.GetIPAddressFunc = nil
 	m.expectationSeries = nil
 
@@ -533,12 +532,12 @@ func (m *mOutboundMockGetIPAddress) ExpectOnce() *OutboundMockGetIPAddressExpect
 	return expectation
 }
 
-func (e *OutboundMockGetIPAddressExpectation) Return(r packets.NodeAddress) {
+func (e *OutboundMockGetIPAddressExpectation) Return(r IPAddress) {
 	e.result = &OutboundMockGetIPAddressResult{r}
 }
 
 //Set uses given function f as a mock of Outbound.GetIPAddress method
-func (m *mOutboundMockGetIPAddress) Set(f func() (r packets.NodeAddress)) *OutboundMock {
+func (m *mOutboundMockGetIPAddress) Set(f func() (r IPAddress)) *OutboundMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -547,7 +546,7 @@ func (m *mOutboundMockGetIPAddress) Set(f func() (r packets.NodeAddress)) *Outbo
 }
 
 //GetIPAddress implements github.com/insolar/insolar/network/consensus/common/endpoints.Outbound interface
-func (m *OutboundMock) GetIPAddress() (r packets.NodeAddress) {
+func (m *OutboundMock) GetIPAddress() (r IPAddress) {
 	counter := atomic.AddUint64(&m.GetIPAddressPreCounter, 1)
 	defer atomic.AddUint64(&m.GetIPAddressCounter, 1)
 

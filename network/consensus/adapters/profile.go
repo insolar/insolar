@@ -63,7 +63,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/utils"
 )
@@ -235,11 +234,11 @@ func (sp *StaticProfile) String() string {
 
 type Outbound struct {
 	name endpoints.Name
-	addr packets.NodeAddress
+	addr endpoints.IPAddress
 }
 
 func NewOutbound(address string) *Outbound {
-	addr, err := packets.NewNodeAddress(address)
+	addr, err := endpoints.NewIPAddress(address)
 	if err != nil {
 		panic(err)
 	}
@@ -266,7 +265,7 @@ func (p *Outbound) GetNameAddress() endpoints.Name {
 	return p.name
 }
 
-func (p *Outbound) GetIPAddress() packets.NodeAddress {
+func (p *Outbound) GetIPAddress() endpoints.IPAddress {
 	return p.addr
 }
 

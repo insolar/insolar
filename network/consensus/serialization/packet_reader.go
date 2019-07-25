@@ -67,7 +67,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/utils"
 )
 
@@ -492,7 +491,7 @@ func (r *FullIntroductionReader) GetNodePublicKey() cryptkit.SignatureKeyHolder 
 }
 
 func (r *FullIntroductionReader) GetDefaultEndpoint() endpoints.Outbound {
-	return adapters.NewOutbound(packets.NodeAddress(r.intro.Endpoint).String())
+	return adapters.NewOutbound(endpoints.IPAddress(r.intro.Endpoint).String())
 }
 
 func (r *FullIntroductionReader) GetIssuedAtPulse() pulse.Number {
