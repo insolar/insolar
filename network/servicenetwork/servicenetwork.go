@@ -290,6 +290,15 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 
 	n.lock.Lock()
 	defer n.lock.Unlock()
+	done := make(chan struct{})
+	defer close(done)
+	go func() {
+		select {
+		case <-time.After(PULSETIMEOUTSECONDS * time.Second):
+			log.Fatal("Node stopped due to long pulse processing")
+		case <-done:
+		}
+	}()
 
 	ctx = utils.NewPulseContext(ctx, uint32(newPulse.PulseNumber))
 	logger.Infof("Got new pulse number: %d", newPulse.PulseNumber)
@@ -321,16 +330,6 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 		logger.Infof("Incorrect pulse number. Current: %+v. New: %+v", n.CurrentPulse, newPulse)
 		return
 	}
-
-	done := make(chan struct{})
-	defer close(done)
-	go func() {
-		select {
-		case <-time.After(PULSETIMEOUTSECONDS * time.Second):
-			log.Fatal("Node stopped due to long pulse processing")
-		case <-done:
-		}
-	}()
 
 	n.ChangePulse(ctx, newPulse)
 
