@@ -61,16 +61,21 @@ func NewChronicles(pf profiles.Factory) censusimpl.LocalConsensusChronicles {
 	return censusimpl.NewLocalChronicles(pf)
 }
 
+func NewCensusForJoiner(
+	localNode profiles.StaticProfile,
+	vc census2.VersionedRegistries,
+	vf cryptkit.SignatureVerifierFactory,
+) *censusimpl.PrimingCensusTemplate {
+
+	return censusimpl.NewPrimingCensusForJoiner(localNode, vc, vf)
+}
+
 func NewCensus(
 	localNode profiles.StaticProfile,
 	nodes []profiles.StaticProfile,
 	vc census2.VersionedRegistries,
 	vf cryptkit.SignatureVerifierFactory,
 ) *censusimpl.PrimingCensusTemplate {
-
-	if len(nodes) == 0 {
-		return censusimpl.NewPrimingCensusForJoiner(localNode, vc, vf)
-	}
 
 	return censusimpl.NewPrimingCensus(nodes, localNode, vc, vf)
 }
