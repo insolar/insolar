@@ -250,7 +250,7 @@ func (p *PreparedPacketSender) SendTo(
 		"packet_pulse":     p.packet.getPulseNumber(),
 	})
 
-	p.beforeSend(sender, sendOptions, target)
+	p.beforeSend(sendOptions, target)
 
 	var buf [packetMaxSize]byte
 	buffer := bytes.NewBuffer(buf[0:0:packetMaxSize])
@@ -278,7 +278,6 @@ func (p *PreparedPacketSender) SendToMany(
 }
 
 func (p *PreparedPacketSender) beforeSend(
-	sender transport.PacketSender,
 	sendOptions transport.PacketSendOptions,
 	target transport.TargetProfile,
 ) {

@@ -74,7 +74,7 @@ func fillNodeState(s *CompactGlobulaNodeState, nodeStateHash proofs.NodeStateHas
 	)
 }
 
-func fillMembershipAnnouncement(a *MembershipAnnouncement, sender *transport.NodeAnnouncementProfile) {
+func fillMembershipAnnouncement(a *MembershipAnnouncement, sender transport.MembershipAnnouncementReader) {
 	a.ShortID = sender.GetNodeID()
 	a.CurrentRank = sender.GetNodeRank()
 	a.RequestedPower = sender.GetRequestedPower()
@@ -158,11 +158,9 @@ func fillNeighbourAnnouncement(n *NeighbourAnnouncement, neighbour transport.Mem
 		} else {
 			n.Member.AnnounceID = neighbour.GetJoinerID()
 		}
-	} else {
-		if announcement := neighbour.GetJoinerAnnouncement(); announcement != nil {
-			n.JoinerIntroducedBy = announcement.GetJoinerIntroducedByID()
-			fillBriefInto(&n.Joiner.NodeBriefIntro, announcement.GetBriefIntroduction())
-		}
+	} else if announcement := neighbour.GetJoinerAnnouncement(); announcement != nil {
+		n.JoinerIntroducedBy = announcement.GetJoinerIntroducedByID()
+		fillBriefInto(&n.Joiner.NodeBriefIntro, announcement.GetBriefIntroduction())
 	}
 }
 
