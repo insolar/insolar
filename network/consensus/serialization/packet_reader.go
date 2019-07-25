@@ -119,7 +119,12 @@ func newPacketParser(
 		return nil, err
 	}
 
-	logger := inslogger.FromContext(ctx)
+	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
+		"sender_id":    parser.GetSourceID(),
+		"packet_type":  parser.GetPacketType().String(),
+		"packet_pulse": parser.GetPulseNumber(),
+	})
+
 	if logger.Is(insolar.DebugLevel) {
 		logger.Debugf("Received packet: %s", parser.packet)
 	}
