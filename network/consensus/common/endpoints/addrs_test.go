@@ -57,8 +57,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 
-	"github.com/insolar/insolar/network/consensusv1/packets"
-
 	"github.com/stretchr/testify/require"
 )
 
@@ -183,10 +181,10 @@ func TestEqualOutboundEndpoints(t *testing.T) {
 
 	et1 = IPEndpoint
 	et2 = et1
-	ip1 := packets.NodeAddress{}
-	ip2 := packets.NodeAddress{1}
-	ob1.GetIPAddressMock.Set(func() packets.NodeAddress { return *(&ip1) })
-	ob2.GetIPAddressMock.Set(func() packets.NodeAddress { return *(&ip2) })
+	ip1 := IPAddress{}
+	ip2 := IPAddress{1}
+	ob1.GetIPAddressMock.Set(func() IPAddress { return *(&ip1) })
+	ob2.GetIPAddressMock.Set(func() IPAddress { return *(&ip2) })
 	require.False(t, EqualOutboundEndpoints(ob1, ob2))
 
 	ip2 = ip1
@@ -234,7 +232,7 @@ func TestEqualListOfOutboundEndpoints(t *testing.T) {
 	require.False(t, EqualListOfOutboundEndpoints(p, o))
 
 	ob3.GetEndpointTypeMock.Set(func() NodeEndpointType { return IPEndpoint })
-	ob2.GetIPAddressMock.Set(func() packets.NodeAddress { return packets.NodeAddress{1} })
-	ob3.GetIPAddressMock.Set(func() packets.NodeAddress { return packets.NodeAddress{1} })
+	ob2.GetIPAddressMock.Set(func() IPAddress { return IPAddress{1} })
+	ob3.GetIPAddressMock.Set(func() IPAddress { return IPAddress{1} })
 	require.True(t, EqualListOfOutboundEndpoints(p, o))
 }
