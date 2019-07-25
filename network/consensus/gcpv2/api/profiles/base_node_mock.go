@@ -7,7 +7,7 @@ The original interface "BaseNode" can be found in github.com/insolar/insolar/net
 */
 import (
 	"sync/atomic"
-	"time"
+	time "time"
 
 	"github.com/gojuno/minimock"
 	insolar "github.com/insolar/insolar/insolar"
