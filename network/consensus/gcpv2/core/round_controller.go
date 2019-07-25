@@ -299,7 +299,7 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 		if !pn.IsUnknown() {
 			r.roundWorker.OnPulseDetected()
 		}
-		return prep.dispatchPacket(ctx, packet, from, packetrecorder.DefaultVerify) // prep realm can't inherit any flags
+		return prep.dispatchPacket(ctx, packet, from, packetrecorder.DefaultVerify|packetrecorder.SkipVerify) // prep realm can't inherit any flags
 	}
-	return r.realm.dispatchPacket(ctx, packet, from, verifyFlags)
+	return r.realm.dispatchPacket(ctx, packet, from, verifyFlags|packetrecorder.SkipVerify)
 }

@@ -231,7 +231,7 @@ func (p *RealmPurgatory) ascendFromPurgatory(ctx context.Context, id insolar.Sho
 func (p *RealmPurgatory) IsBriefAscensionAllowed() bool {
 	// using false will delay processing of packets and may result in slower consensus
 	// using true may produce NodeAppearance objects with Brief profiles
-	return true
+	return false
 }
 
 func (p *RealmPurgatory) SelfFromMemberAnnouncement(ctx context.Context, id insolar.ShortNodeID, profile profiles.StaticProfile,

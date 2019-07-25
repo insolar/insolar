@@ -185,6 +185,9 @@ func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementP
 			joinerIntroProfile = realm.GetProfileFactory().CreateUpgradableIntroProfile(ja.GetBriefIntroduction())
 		}
 		err = purgatory.JoinerFromMemberAnnouncement(ctx, ma.JoinerID, joinerIntroProfile, insolar.AbsentShortNodeID /*avoids ascension */)
+		if err != nil {
+			return false, 0, err
+		}
 	}
 
 	modified, err := n.ApplyNodeMembership(ma)
@@ -204,7 +207,7 @@ func ApplyNeighbourJoinerAnnouncement(ctx context.Context, sender *core.NodeAppe
 	joinerAnnouncedBySender insolar.ShortNodeID, neighbour core.AnnouncingMember, joinerAnnouncedByNeighbour insolar.ShortNodeID,
 	neighbourJoinerAnnouncement transport.JoinerAnnouncementReader, realm *core.FullRealm) error {
 
-	if joinerAnnouncedByNeighbour.IsAbsent() {
+	if joinerAnnouncedByNeighbour.IsAbsent() && !neighbour.IsJoiner() {
 		if neighbourJoinerAnnouncement != nil {
 			return neighbour.Blames().NewProtocolViolation(sender.GetReportProfile(), "joiner profile is unexpected on neighbourhood")
 		}

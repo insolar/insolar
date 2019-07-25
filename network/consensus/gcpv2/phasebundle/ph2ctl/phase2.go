@@ -171,9 +171,9 @@ func (c *Phase2PacketDispatcher) DispatchMemberPacket(ctx context.Context, reade
 		}
 
 		if err == nil {
-			modified, err := nb.Neighbour.ApplyNeighbourEvidence(sender, nb.Announcement, c.isCapped)
+			modified, err2 := nb.Neighbour.ApplyNeighbourEvidence(sender, nb.Announcement, c.isCapped)
 
-			if err == nil {
+			if err2 == nil {
 				if modified {
 					signalSent = true
 				}
@@ -192,6 +192,10 @@ func (c *Phase2PacketDispatcher) DispatchMemberPacket(ctx context.Context, reade
 	}
 
 	return nil
+}
+
+func (*Phase2PacketDispatcher) HasCustomVerifyForHost(from endpoints.Inbound, strict bool) bool {
+	return true // TODO remove after verification fix
 }
 
 func (c *Phase2PacketDispatcher) TriggerUnknownMember(ctx context.Context, memberID insolar.ShortNodeID,
@@ -428,7 +432,8 @@ func (c *Phase2Controller) workerRetryOnMissingNodes(ctx context.Context) {
 	}
 
 	pr1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
-		c.R.GetOriginalPulse(), c.R.GetWelcomePackage(), transport.AlternativePhasePacket|c.packetPrepareOptions)
+		c.R.GetOriginalPulse(), c.R.GetWelcomePackage(),
+		transport.AlternativePhasePacket|transport.PrepareWithoutPulseData|c.packetPrepareOptions)
 
 	sendOptions := c.packetPrepareOptions.AsSendOptions()
 
