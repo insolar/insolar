@@ -18,7 +18,6 @@ package contracts
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
@@ -31,9 +30,11 @@ import (
 )
 
 func RootDomain() insolar.GenesisContractState {
-	if len(genesisrefs.ContractMigrationDaemonMembers) < insolar.GenesisAmountActiveMigrationDaemonMembers {
-		panic("need at least '" + strconv.Itoa(insolar.GenesisAmountActiveMigrationDaemonMembers) + "' migration daemons")
+	var activeMigrationDaemonMembers [insolar.GenesisAmountActiveMigrationDaemonMembers]insolar.Reference
+	for i := 0; i < insolar.GenesisAmountActiveMigrationDaemonMembers; i++ {
+		activeMigrationDaemonMembers[i] = genesisrefs.ContractMigrationDaemonMembers[i]
 	}
+
 	return insolar.GenesisContractState{
 		Name:       insolar.GenesisNameRootDomain,
 		Prototype:  insolar.GenesisNameRootDomain,
@@ -41,7 +42,7 @@ func RootDomain() insolar.GenesisContractState {
 
 		Memory: mustGenMemory(&rootdomain.RootDomain{
 			RootMember:             genesisrefs.ContractRootMember,
-			MigrationDaemonMembers: genesisrefs.ContractMigrationDaemonMembers[:insolar.GenesisAmountActiveMigrationDaemonMembers],
+			MigrationDaemonMembers: activeMigrationDaemonMembers,
 			MigrationAdminMember:   genesisrefs.ContractMigrationAdminMember,
 			MigrationWallet:        genesisrefs.ContractMigrationWallet,
 			CostCenter:             genesisrefs.ContractCostCenter,
