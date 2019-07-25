@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 )
 
 const (
@@ -152,6 +153,14 @@ func ReplyAsMessage(ctx context.Context, rep insolar.Reply) *message.Message {
 func (b *Bus) SendRole(
 	ctx context.Context, msg *message.Message, role insolar.DynamicRole, object insolar.Reference,
 ) (<-chan *message.Message, func()) {
+	ctx, span := instracer.StartSpan(ctx, "Bus.SendRole")
+	span.AddAttributes(
+		trace.StringAttribute("type", "bus"),
+		trace.StringAttribute("role", role.String()),
+		trace.StringAttribute("object", object.String()),
+	)
+	defer span.End()
+
 	handleError := func(err error) (<-chan *message.Message, func()) {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to send message"))
 		res := make(chan *message.Message)
@@ -176,6 +185,13 @@ func (b *Bus) SendRole(
 func (b *Bus) SendTarget(
 	ctx context.Context, msg *message.Message, target insolar.Reference,
 ) (<-chan *message.Message, func()) {
+	ctx, span := instracer.StartSpan(ctx, "Bus.SendTarget")
+	span.AddAttributes(
+		trace.StringAttribute("type", "bus"),
+		trace.StringAttribute("target", target.String()),
+	)
+	defer span.End()
+
 	handleError := func(err error) (<-chan *message.Message, func()) {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to send message"))
 		res := make(chan *message.Message)
@@ -235,6 +251,13 @@ func (b *Bus) SendTarget(
 		case <-reply.done:
 			logger.Debugf("Done waiting replies for message with hash %s", msgHash.String())
 		case <-time.After(b.timeout):
+			_, span := instracer.StartSpan(ctx, "Bus.SendTarget timeout")
+			span.AddAttributes(
+				trace.StringAttribute("type", "bus"),
+				trace.StringAttribute("target", target.String()),
+				trace.BoolAttribute("error", true),
+			)
+			span.End()
 			logger.Error(
 				errors.Errorf(
 					"can't return result for message with hash %s: timeout for reading (%s) was exceeded",
@@ -252,6 +275,13 @@ func (b *Bus) SendTarget(
 // Reply sends message in response to another message.
 func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Message) {
 	logger := inslogger.FromContext(ctx)
+
+	ctx, span := instracer.StartSpan(ctx, "Bus.Reply starts")
+	span.AddAttributes(
+		trace.StringAttribute("type", "bus"),
+		trace.StringAttribute("sender", origin.Sender.String()),
+	)
+	defer span.End()
 
 	originHash := payload.MessageHash{}
 	err := originHash.Unmarshal(origin.ID)
