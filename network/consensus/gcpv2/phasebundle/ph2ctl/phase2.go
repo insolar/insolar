@@ -144,8 +144,13 @@ func (c *Phase2PacketDispatcher) DispatchMemberPacket(ctx context.Context, reade
 
 	ar := p2.GetAnnouncementReader()
 	neighbourhood := p2.GetNeighbourhood()
+
+	if ar.GetNodeRank().IsJoiner() {
+		announcedJoinerID = sender.GetNodeID()
+	}
+
 	neighbours, err := announce.VerifyNeighbourhood(ctx, neighbourhood, sender,
-		ar.GetJoinerID(), ar.GetJoinerAnnouncement(),
+		announcedJoinerID, ar.GetJoinerAnnouncement(),
 		realm)
 
 	if err != nil {
