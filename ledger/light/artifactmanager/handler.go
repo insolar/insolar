@@ -19,16 +19,16 @@ package artifactmanager
 import (
 	"context"
 
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar/flow/dispatcher"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	wbus "github.com/insolar/insolar/insolar/bus"
+
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
-	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/node"
-	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/handle"
@@ -49,10 +49,6 @@ type MessageHandler struct {
 
 	DropModifier drop.Modifier `inject:""`
 
-	BlobModifier blob.Modifier `inject:""`
-	BlobAccessor blob.Accessor `inject:""`
-	Blobs        blob.Storage  `inject:""`
-
 	IndexLocker object.IndexLocker `inject:""`
 
 	Records object.RecordStorage `inject:""`
@@ -68,14 +64,15 @@ type MessageHandler struct {
 	PulseCalculator storage.PulseCalculator
 
 	conf           *configuration.Ledger
-	jetTreeUpdater jet.Fetcher
+	JetTreeUpdater executor.JetFetcher
 
-	Sender         wbus.Sender
+	Sender         bus.Sender
 	FlowDispatcher *dispatcher.Dispatcher
 	handlers       map[insolar.MessageType]insolar.MessageHandler
 
 	filamentModifier   *executor.FilamentModifierDefault
-	filamentCalculator *executor.FilamentCalculatorDefault
+	FilamentCalculator *executor.FilamentCalculatorDefault
+	RequestChecker     *executor.RequestCheckerDefault
 }
 
 // NewMessageHandler creates new handler.
@@ -92,11 +89,13 @@ func NewMessageHandler(
 		FetchJet: func(p *proc.FetchJet) {
 			p.Dep.JetAccessor = h.JetStorage
 			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.JetUpdater = h.jetTreeUpdater
-			p.Dep.JetFetcher = h.jetTreeUpdater
+			p.Dep.JetUpdater = h.JetTreeUpdater
+			p.Dep.JetFetcher = h.JetTreeUpdater
+			p.Dep.Sender = h.Sender
 		},
 		WaitHot: func(p *proc.WaitHot) {
 			p.Dep.Waiter = h.HotDataWaiter
+			p.Dep.Sender = h.Sender
 		},
 		GetIndex: func(p *proc.EnsureIndex) {
 			p.Dep.IndexAccessor = h.IndexStorage
@@ -104,11 +103,12 @@ func NewMessageHandler(
 			p.Dep.IndexModifier = h.IndexStorage
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.Bus = h.Bus
+			p.Dep.Sender = h.Sender
 		},
 		CheckJet: func(p *proc.CheckJet) {
 			p.Dep.JetAccessor = h.JetStorage
 			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.JetFetcher = h.jetTreeUpdater
+			p.Dep.JetFetcher = h.JetTreeUpdater
 			p.Dep.Sender = h.Sender
 		},
 		WaitHotWM: func(p *proc.WaitHotWM) {
@@ -126,10 +126,14 @@ func NewMessageHandler(
 		SetRequest: func(p *proc.SetRequest) {
 			p.Dep(
 				h.WriteAccessor,
-				h.Records,
-				h.filamentModifier,
+				h.FilamentCalculator,
 				h.Sender,
 				h.IndexLocker,
+				h.IndexStorage,
+				h.Records,
+				h.PCS,
+				h.RequestChecker,
+				h.JetCoordinator,
 			)
 		},
 		SetResult: func(p *proc.SetResult) {
@@ -160,17 +164,26 @@ func NewMessageHandler(
 				h.Sender,
 			)
 		},
-		SetBlob: func(p *proc.SetBlob) {
-			p.Dep.BlobAccessor = h.BlobAccessor
-			p.Dep.BlobModifier = h.BlobModifier
-			p.Dep.PCS = h.PCS
-			p.Dep.WriteAccessor = h.WriteAccessor
+		UpdateObject: func(p *proc.UpdateObject) {
+			p.Dep(
+				h.WriteAccessor,
+				h.IndexLocker,
+				h.Records,
+				h.IndexStorage,
+				h.filamentModifier,
+				h.Sender,
+			)
+		},
+		HasPendings: func(p *proc.HasPendings) {
+			p.Dep(
+				h.IndexStorage,
+				h.Sender,
+			)
 		},
 		SendObject: func(p *proc.SendObject) {
 			p.Dep.Jets = h.JetStorage
-			p.Dep.Blobs = h.Blobs
 			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.JetFetcher = h.jetTreeUpdater
+			p.Dep.JetFetcher = h.JetTreeUpdater
 			p.Dep.Bus = h.Bus
 			p.Dep.RecordAccessor = h.Records
 			p.Dep.Sender = h.Sender
@@ -178,24 +191,11 @@ func NewMessageHandler(
 		GetCode: func(p *proc.GetCode) {
 			p.Dep.RecordAccessor = h.Records
 			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.BlobAccessor = h.BlobAccessor
-			p.Dep.JetFetcher = h.jetTreeUpdater
+			p.Dep.JetFetcher = h.JetTreeUpdater
 			p.Dep.Sender = h.Sender
 		},
 		GetRequest: func(p *proc.GetRequest) {
-			p.Dep.RecordAccessor = h.Records
-		},
-		UpdateObject: func(p *proc.UpdateObject) {
-			p.Dep.RecordModifier = h.Records
-			p.Dep.Bus = h.Bus
-			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.BlobModifier = h.BlobModifier
-			p.Dep.PCS = h.PCS
-			p.Dep.IndexLocker = h.IndexLocker
-			p.Dep.IndexAccessor = h.IndexStorage
-			p.Dep.IndexModifier = h.IndexStorage
-			p.Dep.WriteAccessor = h.WriteAccessor
-			p.Dep.Filaments = h.filamentModifier
+			p.Dep(h.Records, h.Sender, h.JetCoordinator, h.JetTreeUpdater)
 		},
 		GetChildren: func(p *proc.GetChildren) {
 			p.Dep.IndexLocker = h.IndexLocker
@@ -204,7 +204,8 @@ func NewMessageHandler(
 			p.Dep.DelegationTokenFactory = h.DelegationTokenFactory
 			p.Dep.RecordAccessor = h.Records
 			p.Dep.JetStorage = h.JetStorage
-			p.Dep.JetTreeUpdater = h.jetTreeUpdater
+			p.Dep.JetTreeUpdater = h.JetTreeUpdater
+			p.Dep.Sender = h.Sender
 		},
 		RegisterChild: func(p *proc.RegisterChild) {
 			p.Dep.IndexLocker = h.IndexLocker
@@ -213,30 +214,34 @@ func NewMessageHandler(
 			p.Dep.JetCoordinator = h.JetCoordinator
 			p.Dep.RecordModifier = h.Records
 			p.Dep.PCS = h.PCS
+			p.Dep.Sender = h.Sender
 		},
-		GetPendingRequests: func(p *proc.GetPendingRequests) {
-			p.Dep(h.IndexStorage)
-		},
-		GetPendingRequestID: func(p *proc.GetPendingRequestID) {
-			p.Dep(h.filamentCalculator)
+		GetPendings: func(p *proc.GetPendings) {
+			p.Dep(
+				h.FilamentCalculator,
+				h.Sender,
+			)
 		},
 		GetJet: func(p *proc.GetJet) {
-			p.Dep.Jets = h.JetStorage
+			p.Dep(
+				h.JetStorage,
+				h.Sender,
+			)
 		},
-		HotData: func(p *proc.HotData) {
+		HotObjects: func(p *proc.HotObjects) {
 			p.Dep.DropModifier = h.DropModifier
 			p.Dep.MessageBus = h.Bus
 			p.Dep.IndexModifier = h.IndexStorage
 			p.Dep.JetStorage = h.JetStorage
-			p.Dep.JetFetcher = h.jetTreeUpdater
+			p.Dep.JetFetcher = h.JetTreeUpdater
 			p.Dep.JetReleaser = h.JetReleaser
+			p.Dep.Sender = h.Sender
 			p.Dep.Calculator = h.PulseCalculator
 		},
 		SendRequests: func(p *proc.SendRequests) {
-			p.Dep(h.Sender, h.filamentCalculator)
+			p.Dep(h.Sender, h.FilamentCalculator)
 		},
 		PassState: func(p *proc.PassState) {
-			p.Dep.Blobs = h.BlobAccessor
 			p.Dep.Sender = h.Sender
 			p.Dep.Records = h.Records
 		},
@@ -244,73 +249,42 @@ func NewMessageHandler(
 			p.Dep(h.PCS)
 		},
 		SetCode: func(p *proc.SetCode) {
-			p.Dep(h.WriteAccessor, h.Records, h.BlobModifier, h.PCS, h.Sender)
+			p.Dep(h.WriteAccessor, h.Records, h.PCS, h.Sender)
 		},
 		GetDelegate: func(p *proc.GetDelegate) {
 			p.Dep.IndexAccessor = h.IndexStorage
+			p.Dep.Sender = h.Sender
 		},
 	}
 
-	initHandle := func(msg bus.Message) *handle.Init {
+	initHandle := func(msg *message.Message) *handle.Init {
 		return handle.NewInit(dep, h.Sender, msg)
 	}
 
-	h.FlowDispatcher = dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
+	h.FlowDispatcher = dispatcher.NewDispatcher(func(msg *message.Message) flow.Handle {
 		return initHandle(msg).Present
-	}, func(msg bus.Message) flow.Handle {
+	}, func(msg *message.Message) flow.Handle {
 		return initHandle(msg).Future
+	}, func(msg *message.Message) flow.Handle {
+		return initHandle(msg).Past
 	})
 	return h
 }
 
 // Init initializes handlers and middleware.
 func (h *MessageHandler) Init(ctx context.Context) error {
-	h.jetTreeUpdater = jet.NewFetcher(h.Nodes, h.JetStorage, h.Bus, h.JetCoordinator)
-	h.filamentCalculator = executor.NewFilamentCalculator(
-		h.IndexStorage,
-		h.Records,
-		h.JetCoordinator,
-		h.jetTreeUpdater,
-		h.Sender,
-	)
 	h.filamentModifier = executor.NewFilamentModifier(
 		h.IndexStorage,
 		h.Records,
 		h.PCS,
-		h.filamentCalculator,
+		h.FilamentCalculator,
 		h.PulseCalculator,
+		h.Sender,
 	)
-	h.setHandlersForLight()
 
 	return nil
 }
 
 func (h *MessageHandler) OnPulse(ctx context.Context, pn insolar.Pulse) {
 	h.FlowDispatcher.ChangePulse(ctx, pn)
-}
-
-func (h *MessageHandler) setHandlersForLight() {
-	// Generic.
-
-	h.Bus.MustRegister(insolar.TypeGetCode, h.FlowDispatcher.WrapBusHandle)
-	h.Bus.MustRegister(insolar.TypeGetObject, h.FlowDispatcher.WrapBusHandle)
-	h.Bus.MustRegister(insolar.TypeUpdateObject, h.FlowDispatcher.WrapBusHandle)
-	h.Bus.MustRegister(insolar.TypeGetDelegate, h.FlowDispatcher.WrapBusHandle)
-
-	h.Bus.MustRegister(insolar.TypeGetChildren, h.FlowDispatcher.WrapBusHandle)
-
-	h.Bus.MustRegister(insolar.TypeSetRecord, h.FlowDispatcher.WrapBusHandle)
-	h.Bus.MustRegister(insolar.TypeRegisterChild, h.FlowDispatcher.WrapBusHandle)
-	h.Bus.MustRegister(insolar.TypeSetBlob, h.FlowDispatcher.WrapBusHandle)
-	h.Bus.MustRegister(insolar.TypeGetPendingRequests, h.FlowDispatcher.WrapBusHandle)
-	h.Bus.MustRegister(insolar.TypeGetJet, h.FlowDispatcher.WrapBusHandle)
-	h.Bus.MustRegister(insolar.TypeHotRecords, h.FlowDispatcher.WrapBusHandle)
-	h.Bus.MustRegister(insolar.TypeGetRequest, h.FlowDispatcher.WrapBusHandle)
-	h.Bus.MustRegister(insolar.TypeGetPendingRequestID, h.FlowDispatcher.WrapBusHandle)
-
-	h.Bus.MustRegister(insolar.TypeValidateRecord, h.handleValidateRecord)
-}
-
-func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	return &reply.OK{}, nil
 }

@@ -23,12 +23,14 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/stretchr/testify/require"
 )
@@ -49,9 +51,6 @@ func TestCleaner_cleanPulse(t *testing.T) {
 	dc := drop.NewCleanerMock(ctrl)
 	dc.DeleteForPNMock.Expect(ctx, inputPulse.PulseNumber)
 
-	bc := blob.NewCleanerMock(ctrl)
-	bc.DeleteForPNMock.Expect(ctx, inputPulse.PulseNumber)
-
 	rc := object.NewRecordCleanerMock(ctrl)
 	rc.DeleteForPNMock.Expect(ctx, inputPulse.PulseNumber)
 
@@ -61,7 +60,16 @@ func TestCleaner_cleanPulse(t *testing.T) {
 	ps := pulse.NewShifterMock(ctrl)
 	ps.ShiftMock.Expect(ctx, inputPulse.PulseNumber).Return(nil)
 
-	cleaner := NewCleaner(jm, nm, dc, bc, rc, ic, ps, nil, 0)
+	objID := gen.ID()
+	ia := object.NewIndexAccessorMock(ctrl)
+	ia.ForPulseMock.Expect(ctx, inputPulse.PulseNumber).Return([]record.Index{
+		{ObjID: objID, LifelineLastUsed: insolar.PulseNumber(110)},
+	})
+
+	fc := executor.NewFilamentCleanerMock(ctrl)
+	fc.ClearMock.Expect(objID)
+
+	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, nil, ia, fc, 0)
 
 	cleaner.cleanPulse(ctx, inputPulse.PulseNumber)
 
@@ -92,11 +100,6 @@ func TestCleaner_clean(t *testing.T) {
 	dc := drop.NewCleanerMock(ctrl)
 	dc.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
 
-	bc := blob.NewCleanerMock(ctrl)
-	bc.DeleteForPNFunc = func(p context.Context, pn insolar.PulseNumber) {
-		require.Equal(t, calculatedPulse.PulseNumber, pn)
-	}
-
 	rc := object.NewRecordCleanerMock(ctrl)
 	rc.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
 
@@ -116,7 +119,19 @@ func TestCleaner_clean(t *testing.T) {
 		return calculatedPulse, nil
 	}
 
-	cleaner := NewCleaner(jm, nm, dc, bc, rc, ic, ps, pc, limit)
+	objID := gen.ID()
+	ia := object.NewIndexAccessorMock(ctrl)
+	ia.ForPulseFunc = func(p context.Context, p1 insolar.PulseNumber) (r []record.Index) {
+		require.Equal(t, calculatedPulse.PulseNumber, p1)
+
+		return []record.Index{
+			{ObjID: objID, LifelineLastUsed: insolar.PulseNumber(110)},
+		}
+	}
+	fc := executor.NewFilamentCleanerMock(ctrl)
+	fc.ClearMock.Expect(objID)
+
+	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, pc, ia, fc, limit)
 	defer close(cleaner.pulseForClean)
 
 	go cleaner.clean(ctx)
@@ -143,9 +158,6 @@ func TestLightCleaner_NotifyAboutPulse(t *testing.T) {
 	dc := drop.NewCleanerMock(ctrl)
 	dc.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
 
-	bc := blob.NewCleanerMock(ctrl)
-	bc.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
-
 	rc := object.NewRecordCleanerMock(ctrl)
 	rc.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
 
@@ -165,7 +177,19 @@ func TestLightCleaner_NotifyAboutPulse(t *testing.T) {
 		return calculatedPulse, nil
 	}
 
-	cleaner := NewCleaner(jm, nm, dc, bc, rc, ic, ps, pc, limit)
+	objID := gen.ID()
+	ia := object.NewIndexAccessorMock(ctrl)
+	ia.ForPulseFunc = func(p context.Context, p1 insolar.PulseNumber) (r []record.Index) {
+		require.Equal(t, calculatedPulse.PulseNumber, p1)
+
+		return []record.Index{
+			{ObjID: objID, LifelineLastUsed: insolar.PulseNumber(110)},
+		}
+	}
+	fc := executor.NewFilamentCleanerMock(ctrl)
+	fc.ClearMock.Expect(objID)
+
+	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, pc, ia, fc, limit)
 	defer close(cleaner.pulseForClean)
 
 	go cleaner.NotifyAboutPulse(ctx, inputPulse.PulseNumber)

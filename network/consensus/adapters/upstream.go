@@ -52,19 +52,18 @@ package adapters
 
 import (
 	"context"
-	"time"
+
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network"
-	common2 "github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/utils"
 )
 
-type Stater interface {
+type StateGetter interface {
 	State() []byte
 }
 
@@ -72,85 +71,63 @@ type PulseChanger interface {
 	ChangePulse(ctx context.Context, newPulse insolar.Pulse)
 }
 
-type UpstreamPulseController struct {
-	stater       Stater
-	pulseChanger PulseChanger
-	nodeKeeper   network.NodeKeeper
+type StateUpdater interface {
+	UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte)
 }
 
-func NewUpstreamPulseController(stater Stater, pulseChanger PulseChanger, nodeKeeper network.NodeKeeper) *UpstreamPulseController {
+type UpstreamPulseController struct {
+	stateGetter  StateGetter
+	pulseChanger PulseChanger
+	stateUpdater StateUpdater
+}
+
+func NewUpstreamPulseController(stateGetter StateGetter, pulseChanger PulseChanger, stateUpdater StateUpdater) *UpstreamPulseController {
 	return &UpstreamPulseController{
-		stater:       stater,
+		stateGetter:  stateGetter,
 		pulseChanger: pulseChanger,
-		nodeKeeper:   nodeKeeper,
+		stateUpdater: stateUpdater,
 	}
 }
 
-func (u *UpstreamPulseController) PulseIsComing(anticipatedStart time.Time) {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) PulseDetected() {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) PreparePulseChange(report core.MembershipUpstreamReport) <-chan common.NodeStateHash {
-	nshChan := make(chan common.NodeStateHash)
-
-	go awaitState(nshChan, u.stater)
-
-	return nshChan
-}
-
-func (u *UpstreamPulseController) CommitPulseChange(report core.MembershipUpstreamReport, pulseData common2.PulseData, activeCensus census.OperationalCensus) {
+func (u *UpstreamPulseController) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
 	ctx := contextFromReport(report)
-	pulse := NewPulseFromPulseData(pulseData)
 
-	u.pulseChanger.ChangePulse(ctx, pulse)
+	if report.MemberMode.IsEvicted() {
+		return
+	}
+
+	population := expectedCensus.GetOnlinePopulation()
+	networkNodes := NewNetworkNodeList(population.GetProfiles())
+
+	u.stateUpdater.UpdateState(
+		ctx,
+		insolar.PulseNumber(report.PulseNumber),
+		networkNodes,
+		expectedCensus.GetCloudStateHash().AsBytes(),
+	)
+}
+
+func (u *UpstreamPulseController) PreparePulseChange(report api.UpstreamReport, ch chan<- api.UpstreamState) {
+	go awaitState(ch, u.stateGetter)
+}
+
+func (u *UpstreamPulseController) CommitPulseChange(report api.UpstreamReport, pulseData pulse.Data, activeCensus census.Operational) {
+	ctx := contextFromReport(report)
+	p := NewPulse(pulseData)
+
+	u.pulseChanger.ChangePulse(ctx, p)
 }
 
 func (u *UpstreamPulseController) CancelPulseChange() {
 	panic("implement me")
 }
 
-func (u *UpstreamPulseController) MembershipConfirmed(report core.MembershipUpstreamReport, expectedCensus census.OperationalCensus) {
-	// TODO: use nodekeeper in chronicles and remove setting sync list from here
-
-	ctx := contextFromReport(report)
-
-	inslogger.FromContext(ctx).Error()
-	population := expectedCensus.GetOnlinePopulation()
-
-	networkNodes := NewNetworkNodeList(population.GetProfiles())
-
-	err := u.nodeKeeper.Sync(ctx, networkNodes, nil)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(err)
+func awaitState(c chan<- api.UpstreamState, stater StateGetter) {
+	c <- api.UpstreamState{
+		NodeState: cryptkit.NewDigest(longbits.NewBits512FromBytes(stater.State()), SHA3512Digest).AsDigestHolder(),
 	}
-	u.nodeKeeper.SetCloudHash(expectedCensus.GetCloudStateHash().Bytes())
 }
 
-func (u *UpstreamPulseController) MembershipLost(graceful bool) {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) MembershipSuspended() {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) SuspendTraffic() {
-	panic("implement me")
-}
-
-func (u *UpstreamPulseController) ResumeTraffic() {
-	panic("implement me")
-}
-
-func awaitState(c chan<- common.NodeStateHash, stater Stater) {
-	stateHash := stater.State()
-	c <- common2.NewDigest(common2.NewBits512FromBytes(stateHash), SHA3512Digest).AsDigestHolder()
-}
-
-func contextFromReport(report core.MembershipUpstreamReport) context.Context {
+func contextFromReport(report api.UpstreamReport) context.Context {
 	return utils.NewPulseContext(context.Background(), uint32(report.PulseNumber))
 }

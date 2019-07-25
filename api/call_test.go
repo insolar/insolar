@@ -68,7 +68,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 			JSONRPC: "2.0",
 			ID:      1,
 			Method:  "api.call",
-			Params:  requester.Params{CallSite: "contract.createMember", CallParams: map[string]interface{}{}, PublicKey: suite.user.PublicKey},
+			Params:  requester.Params{CallSite: "member.create", CallParams: map[string]interface{}{}, PublicKey: suite.user.PublicKey},
 		},
 		seedString,
 	)
@@ -86,7 +86,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
 	suite.NoError(err)
 	suite.api.SeedManager.Add(*seed, 0)
 
-	suite.api.timeout = 1 * time.Second
+	suite.api.timeout = 1 * time.Millisecond
 
 	seedString := base64.StdEncoding.EncodeToString(seed[:])
 

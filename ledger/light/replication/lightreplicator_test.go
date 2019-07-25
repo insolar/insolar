@@ -18,69 +18,27 @@ package replication
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
+	message2 "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
 
-func TestLightReplicator_sendToHeavy(t *testing.T) {
-	t.Parallel()
-	mb := testutils.NewMessageBusMock(t)
-	mb.SendMock.Return(&reply.OK{}, nil)
-	r := &LightReplicatorDefault{
-		msgBus: mb,
-	}
-
-	res := r.sendToHeavy(inslogger.TestContext(t), nil)
-	require.Nil(t, res)
-}
-
-func TestLightReplicator_sendToHeavy_ErrReturned(t *testing.T) {
-	t.Parallel()
-	mb := testutils.NewMessageBusMock(t)
-	mb.SendMock.Return(nil, errors.New("expected"))
-	r := LightReplicatorDefault{
-		msgBus: mb,
-	}
-
-	res := r.sendToHeavy(inslogger.TestContext(t), nil)
-
-	require.Equal(t, res, errors.New("expected"))
-}
-
-func TestLightReplicator_sendToHeavy_HeavyErr(t *testing.T) {
-	t.Parallel()
-	mb := testutils.NewMessageBusMock(t)
-	heavyErr := reply.HeavyError{JetID: gen.JetID(), PulseNum: gen.PulseNumber()}
-	mb.SendMock.Return(&heavyErr, nil)
-	r := LightReplicatorDefault{
-		msgBus: mb,
-	}
-
-	res := r.sendToHeavy(inslogger.TestContext(t), nil)
-
-	require.Equal(t, &heavyErr, res)
-}
-
 func Test_NotifyAboutPulse(t *testing.T) {
 	t.Parallel()
-	ctrl := minimock.NewController(t)
+	mc := minimock.NewController(t)
 	ctx := context.Background()
 
 	jetID := jet.NewIDFromString("1010")
@@ -90,11 +48,7 @@ func Test_NotifyAboutPulse(t *testing.T) {
 		Pulse: expectPN,
 		Hash:  []byte{4, 2, 3},
 	}
-	expectBlob := blob.Blob{
-		JetID: gen.JetID(),
-		Value: []byte{1, 2, 3, 4, 5, 6, 7},
-	}
-	expectIndexes := []object.FilamentIndex{
+	expectIndexes := []record.Index{
 		{ObjID: gen.ID()},
 		{ObjID: gen.ID()},
 	}
@@ -103,56 +57,51 @@ func Test_NotifyAboutPulse(t *testing.T) {
 		{Signature: gen.Signature(256)},
 	}
 
-	expectMsg := &message.HeavyPayload{
-		JetID:        jetID,
-		PulseNum:     expectPN,
-		IndexBuckets: convertIndexBuckets(ctx, expectIndexes),
-		Drop:         drop.MustEncode(&expectDrop),
-		Blobs:        convertBlobs([]blob.Blob{expectBlob}),
-		Records:      convertRecords(ctx, expectRecords),
+	expectPL := payload.Replication{
+		Polymorph: uint32(payload.TypeReplication),
+		JetID:     jetID,
+		Pulse:     expectPN,
+		Indexes:   expectIndexes,
+		Drop:      drop.MustEncode(&expectDrop),
+		Records:   expectRecords,
 	}
 
-	mb := testutils.NewMessageBusMock(ctrl)
-	mb.SendFunc = func(_ context.Context, msg insolar.Message, opts *insolar.MessageSendOptions) (insolar.Reply, error) {
-		require.IsType(t, &message.HeavyPayload{}, msg, "got heavy payload message")
-		hMsg := msg.(*message.HeavyPayload)
-		require.Equal(t, expectMsg, hMsg, "heavy message payload")
-		return &reply.OK{}, nil
+	sender := bus.NewSenderMock(mc)
+	sender.SendRoleFunc = func(_ context.Context, msg *message2.Message, role insolar.DynamicRole, _ insolar.Reference) (r <-chan *message2.Message, r1 func()) {
+		pl, err := payload.Unmarshal(msg.Payload)
+		require.NoError(t, err)
+		require.Equal(t, &expectPL, pl, "heavy message payload")
+		return nil, func() {}
 	}
 
-	jetCalc := executor.NewJetCalculatorMock(ctrl)
+	jetCalc := executor.NewJetCalculatorMock(mc)
 	jetCalc.MineForPulseFunc = func(_ context.Context, _ insolar.PulseNumber) []insolar.JetID {
 		return []insolar.JetID{jetID}
 	}
 
-	cleaner := NewCleanerMock(ctrl)
+	cleaner := NewCleanerMock(mc)
 	cleaner.NotifyAboutPulseFunc = func(_ context.Context, _ insolar.PulseNumber) {}
 
-	pulseCalc := pulse.NewCalculatorMock(ctrl)
+	pulseCalc := pulse.NewCalculatorMock(mc)
 	pulseCalc.BackwardsMock.Expect(ctx, expectPN+1, 1).Return(
 		insolar.Pulse{PulseNumber: expectPN}, nil)
 
-	dropAccessor := drop.NewAccessorMock(ctrl)
+	dropAccessor := drop.NewAccessorMock(mc)
 	dropAccessor.ForPulseFunc = func(_ context.Context, _ insolar.JetID, _ insolar.PulseNumber) (r drop.Drop, r1 error) {
 		return expectDrop, nil
 	}
 
-	blobAccessor := blob.NewCollectionAccessorMock(ctrl)
-	blobAccessor.ForPulseFunc = func(_ context.Context, _ insolar.JetID, _ insolar.PulseNumber) (r []blob.Blob) {
-		return []blob.Blob{expectBlob}
-	}
-
-	recordAccessor := object.NewRecordCollectionAccessorMock(ctrl)
+	recordAccessor := object.NewRecordCollectionAccessorMock(mc)
 	recordAccessor.ForPulseFunc = func(_ context.Context, _ insolar.JetID, _ insolar.PulseNumber) (r []record.Material) {
 		return expectRecords
 	}
 
-	indexAccessor := object.NewIndexAccessorMock(ctrl)
-	indexAccessor.ForPulseFunc = func(_ context.Context, _ insolar.PulseNumber) []object.FilamentIndex {
+	indexAccessor := object.NewIndexAccessorMock(mc)
+	indexAccessor.ForPulseFunc = func(_ context.Context, _ insolar.PulseNumber) []record.Index {
 		return expectIndexes
 	}
 
-	jetAccessor := jet.NewAccessorMock(ctrl)
+	jetAccessor := jet.NewAccessorMock(mc)
 	jetAccessor.ForIDFunc = func(_ context.Context, _ insolar.PulseNumber, _ insolar.ID) (insolar.JetID, bool) {
 		return jetID, false
 	}
@@ -160,10 +109,9 @@ func Test_NotifyAboutPulse(t *testing.T) {
 	r := NewReplicatorDefault(
 		jetCalc,
 		cleaner,
-		mb,
+		sender,
 		pulseCalc,
 		dropAccessor,
-		blobAccessor,
 		recordAccessor,
 		indexAccessor,
 		jetAccessor,
@@ -171,6 +119,6 @@ func Test_NotifyAboutPulse(t *testing.T) {
 	defer close(r.syncWaitingPulses)
 
 	r.NotifyAboutPulse(ctx, expectPN+1)
-	ctrl.Wait(time.Minute)
-	ctrl.Finish()
+	mc.Wait(time.Minute)
+	mc.Finish()
 }

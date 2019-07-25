@@ -17,11 +17,11 @@
 package object
 
 import (
-	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/record"
 )
 
 // EncodeLifeline converts lifeline index into binary format.
-func EncodeLifeline(index Lifeline) []byte {
+func EncodeLifeline(index record.Lifeline) []byte {
 	res, err := index.Marshal()
 	if err != nil {
 		panic(err)
@@ -31,7 +31,7 @@ func EncodeLifeline(index Lifeline) []byte {
 }
 
 // MustDecodeLifeline converts byte array into lifeline index struct.
-func MustDecodeLifeline(buff []byte) (index Lifeline) {
+func MustDecodeLifeline(buff []byte) (index record.Lifeline) {
 	idx, err := DecodeLifeline(buff)
 	if err != nil {
 		panic(err)
@@ -41,14 +41,14 @@ func MustDecodeLifeline(buff []byte) (index Lifeline) {
 }
 
 // DecodeLifeline converts byte array into lifeline index struct.
-func DecodeLifeline(buff []byte) (Lifeline, error) {
-	lfl := Lifeline{}
+func DecodeLifeline(buff []byte) (record.Lifeline, error) {
+	lfl := record.Lifeline{}
 	err := lfl.Unmarshal(buff)
 	return lfl, err
 }
 
 // CloneLifeline returns copy of argument idx value.
-func CloneLifeline(idx Lifeline) Lifeline {
+func CloneLifeline(idx record.Lifeline) record.Lifeline {
 	if idx.LatestState != nil {
 		tmp := *idx.LatestState
 		idx.LatestState = &tmp
@@ -65,11 +65,11 @@ func CloneLifeline(idx Lifeline) Lifeline {
 	}
 
 	if idx.Delegates != nil {
-		cp := make([]LifelineDelegate, len(idx.Delegates))
+		cp := make([]record.LifelineDelegate, len(idx.Delegates))
 		copy(cp, idx.Delegates)
 		idx.Delegates = cp
 	} else {
-		idx.Delegates = []LifelineDelegate{}
+		idx.Delegates = []record.LifelineDelegate{}
 	}
 
 	if idx.EarliestOpenRequest != nil {
@@ -83,25 +83,4 @@ func CloneLifeline(idx Lifeline) Lifeline {
 	}
 
 	return idx
-}
-
-func (m *Lifeline) SetDelegate(key insolar.Reference, value insolar.Reference) {
-	for _, d := range m.Delegates {
-		if d.Key == key {
-			d.Value = value
-			return
-		}
-	}
-
-	m.Delegates = append(m.Delegates, LifelineDelegate{Key: key, Value: value})
-}
-
-func (m *Lifeline) DelegateByKey(key insolar.Reference) (insolar.Reference, bool) {
-	for _, d := range m.Delegates {
-		if d.Key == key {
-			return d.Value, true
-		}
-	}
-
-	return [64]byte{}, false
 }

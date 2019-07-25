@@ -20,14 +20,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/light/executor"
-	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 )
 
 type SendRequests struct {
@@ -65,7 +65,7 @@ func (p *SendRequests) Proceed(ctx context.Context) error {
 		trace.StringAttribute("readUntil", p.readUntil.String()),
 	)
 
-	records, err := p.dep.filaments.Requests(ctx, p.objID, p.startFrom, p.readUntil, flow.Pulse(ctx))
+	records, err := p.dep.filaments.Requests(ctx, p.objID, p.startFrom, p.readUntil)
 	if err != nil {
 		return errors.Wrap(err, "failed to fetch filament")
 	}

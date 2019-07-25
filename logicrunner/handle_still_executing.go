@@ -19,48 +19,30 @@ package logicrunner
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type HandleStillExecuting struct {
 	dep *Dependencies
 
-	Message bus.Message
+	Message payload.Meta
+	Parcel  insolar.Parcel
 }
 
 func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
-	logger := inslogger.FromContext(ctx)
-	parcel := h.Message.Parcel
-	lr := h.dep.lr
-	replyOk := bus.Reply{Reply: &reply.OK{}, Err: nil}
+	ctx = loggerWithTargetID(ctx, h.Parcel)
+	msg := h.Parcel.Message().(*message.StillExecuting)
+	h.dep.ResultsMatcher.AddStillExecution(ctx, msg)
 
-	logger.Debug("HandleStillExecuting.Present starts ...")
+	broker := h.dep.StateStorage.UpsertExecutionState(msg.Reference)
+	broker.PrevExecutorStillExecuting(ctx)
 
-	msg := parcel.Message().(*message.StillExecuting)
-	ref := msg.DefaultTarget()
-	es, _ := lr.StateStorage.UpsertExecutionState(*ref)
-
-	logger.Debugf("Got information that %s is still executing", ref.String())
-
-	es.Lock()
-	switch es.pending {
-	case message.NotPending:
-		// It might be when StillExecuting comes after PendingFinished
-		logger.Error("got StillExecuting message, but our state says that it's not in pending")
-	case message.InPending:
-		es.PendingConfirmed = true
-	case message.PendingUnknown:
-		// we are first, strange, soon ExecuteResults message should come
-		es.pending = message.InPending
-		es.PendingConfirmed = true
-	}
-	es.Unlock()
-
-	h.Message.ReplyTo <- replyOk
+	replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})
+	h.dep.Sender.Reply(ctx, h.Message, replyOk)
 	return nil
-
 }

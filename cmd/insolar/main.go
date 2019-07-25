@@ -67,14 +67,6 @@ func main() {
 	addURLFlag(infoCmd.Flags())
 	rootCmd.AddCommand(infoCmd)
 
-	rootCmd.AddCommand(&cobra.Command{
-		Use:   "logoff",
-		Short: "Stop network consensus on this node",
-		Run: func(cmd *cobra.Command, args []string) {
-			logOff(sendURL)
-		},
-	})
-
 	var logLevel string
 	var createMemberCmd = &cobra.Command{
 		Use:   "create-member",
@@ -204,7 +196,7 @@ func createMember(sendURL string, userName string, serverLogLevel string) {
 		ID:      1,
 		Method:  "api.call",
 		Params: requester.Params{
-			CallSite:   "contract.createMember",
+			CallSite:   "member.create",
 			CallParams: []interface{}{userName, cfg.PublicKey},
 			PublicKey:  ucfg.PublicKey,
 		},
@@ -295,12 +287,6 @@ func getInfo(url string) {
 	fmt.Printf("RootMember : %s\n", info.RootMember)
 	fmt.Printf("NodeDomain : %s\n", info.NodeDomain)
 	fmt.Printf("RootDomain : %s\n", info.RootDomain)
-}
-
-func logOff(url string) {
-	status, err := requester.LogOff(url)
-	check("[ sendRequest ]", err)
-	fmt.Printf("Network now  %s\n", status.NetworkState)
 }
 
 func check(msg string, err error) {

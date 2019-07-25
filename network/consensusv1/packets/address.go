@@ -82,8 +82,25 @@ func NewNodeAddress(address string) (NodeAddress, error) {
 	}
 
 	portNumber, err := strconv.Atoi(port)
-	if err != nil || portNumber > int(maxPortNumber) || portNumber <= 0 {
-		return addr, errors.Errorf("invalid port: %s", port)
+	if err != nil {
+		return addr, errors.Errorf("invalid port number: %s", port)
+	}
+
+	return addr, newNodeAddress(ip, portNumber, &addr)
+}
+
+func newNodeAddress(ip net.IP, portNumber int, addr *NodeAddress) error {
+	switch ipSize {
+	case net.IPv6len:
+		ip = ip.To16()
+	case net.IPv4len:
+		ip = ip.To4()
+	default:
+		panic("not implemented")
+	}
+
+	if portNumber > int(maxPortNumber) || portNumber <= 0 {
+		return errors.Errorf("invalid port number: %d", portNumber)
 	}
 
 	portBytes := make([]byte, portSize)
@@ -91,7 +108,8 @@ func NewNodeAddress(address string) (NodeAddress, error) {
 
 	copy(addr[:], ip)
 	copy(addr[ipSize:], portBytes)
-	return addr, nil
+
+	return nil
 }
 
 func (address NodeAddress) String() string {

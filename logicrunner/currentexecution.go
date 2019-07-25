@@ -18,6 +18,7 @@ package logicrunner
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"sync"
 
@@ -26,12 +27,19 @@ import (
 	"github.com/insolar/insolar/logicrunner/artifacts"
 )
 
+type OutgoingRequest struct {
+	Request   record.IncomingRequest
+	NewObject *Ref
+	Response  []byte
+	Error     error
+}
+
 type Transcript struct {
 	ObjectDescriptor artifacts.ObjectDescriptor
 	Context          context.Context
 	LogicContext     *insolar.LogicCallContext
 	Request          *record.IncomingRequest
-	RequestRef       *insolar.Reference
+	RequestRef       insolar.Reference
 	RequesterNode    *insolar.Reference
 	Nonce            uint64
 	Deactivate       bool
@@ -41,7 +49,7 @@ type Transcript struct {
 
 func NewTranscript(
 	ctx context.Context,
-	requestRef *insolar.Reference,
+	requestRef insolar.Reference,
 	request record.IncomingRequest,
 ) *Transcript {
 
@@ -54,13 +62,6 @@ func NewTranscript(
 
 		FromLedger: false,
 	}
-}
-
-type OutgoingRequest struct {
-	Request   record.IncomingRequest
-	NewObject *Ref
-	Response  []byte
-	Error     error
 }
 
 func (t *Transcript) AddOutgoingRequest(
@@ -98,16 +99,16 @@ func (ces *CurrentExecutionList) Get(requestRef insolar.Reference) *Transcript {
 	return rv
 }
 
-func (ces *CurrentExecutionList) Set(requestRef insolar.Reference, ce *Transcript) {
+func (ces *CurrentExecutionList) SetOnce(t *Transcript) error {
 	ces.lock.Lock()
-	ces.executions[requestRef] = ce
-	ces.lock.Unlock()
-}
+	defer ces.lock.Unlock()
 
-func (ces *CurrentExecutionList) SetTranscript(t *Transcript) {
-	ces.lock.Lock()
-	ces.executions[*t.RequestRef] = t
-	ces.lock.Unlock()
+	if _, has := ces.executions[t.RequestRef]; has {
+		return errors.New("not setting, already in the set")
+	}
+
+	ces.executions[t.RequestRef] = t
+	return nil
 }
 
 func (ces *CurrentExecutionList) Delete(requestRef insolar.Reference) {
@@ -161,6 +162,18 @@ func (ces *CurrentExecutionList) Has(requestRef insolar.Reference) bool {
 	defer ces.lock.RUnlock()
 	_, has := ces.executions[requestRef]
 	return has
+}
+
+func (ces *CurrentExecutionList) GetAllRequestRefs() []insolar.Reference {
+	ces.lock.RLock()
+	defer ces.lock.RUnlock()
+	out := make([]insolar.Reference, len(ces.executions))
+	i := 0
+	for key := range ces.executions {
+		out[i] = key
+		i++
+	}
+	return out
 }
 
 type CurrentExecutionPredicate func(*Transcript, interface{}) bool

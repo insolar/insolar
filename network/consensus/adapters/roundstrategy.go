@@ -54,54 +54,41 @@ import (
 	"context"
 	"math/rand"
 
-	common2 "github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
 type RoundStrategy struct {
-	bundle      core.PhaseControllersBundle
-	chronicle   census.ConsensusChronicles
-	localConfig core.LocalNodeConfiguration
+	chronicle   api.ConsensusChronicles
+	localConfig api.LocalNodeConfiguration
+}
+
+func (rs *RoundStrategy) IsEphemeralPulseAllowed() bool {
+	return false
 }
 
 func NewRoundStrategy(
-	bundle core.PhaseControllersBundle,
-	chronicle census.ConsensusChronicles,
-	localConfig core.LocalNodeConfiguration,
+	chronicle api.ConsensusChronicles,
+	localConfig api.LocalNodeConfiguration,
 ) *RoundStrategy {
 	return &RoundStrategy{
-		bundle:      bundle,
 		chronicle:   chronicle,
 		localConfig: localConfig,
 	}
 }
 
-func (rs *RoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse common2.PulseNumber, self common.LocalNodeProfile) context.Context {
+func (rs *RoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse pulse.Number, self profiles.LocalNode) context.Context {
 	ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
-		"node_id":   self.GetShortNodeID(),
-		"pulse":     expectedPulse,
-		"is_joiner": self.IsJoiner(),
+		"is_joiner":   self.IsJoiner(),
+		"round_pulse": expectedPulse,
 	})
 	return ctx
 }
 
-func (rs *RoundStrategy) GetPrepPhaseControllers() []core.PrepPhaseController {
-	return rs.bundle.GetPrepPhaseControllers()
-}
-
-func (rs *RoundStrategy) GetFullPhaseControllers(nodeCount int) []core.PhaseController {
-	return rs.bundle.GetFullPhaseControllers(nodeCount)
-}
-
-func (rs *RoundStrategy) GetNodeUpdateCallback() core.NodeUpdateCallback {
-	return rs.bundle.GetNodeUpdateCallback()
-}
-
-func (rs *RoundStrategy) RandUint32() uint32 {
+func (rs *RoundStrategy) GetBaselineWeightForNeighbours() uint32 {
 	return rand.Uint32()
 }
 
@@ -109,9 +96,5 @@ func (rs *RoundStrategy) ShuffleNodeSequence(n int, swap func(i, j int)) {
 	rand.Shuffle(n, swap)
 }
 
-func (rs *RoundStrategy) IsEphemeralPulseAllowed() bool {
-	return false
-}
-
-func (rs *RoundStrategy) AdjustConsensusTimings(timings *common.RoundTimings) {
+func (rs *RoundStrategy) AdjustConsensusTimings(timings *api.RoundTimings) {
 }

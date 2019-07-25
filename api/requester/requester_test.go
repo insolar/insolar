@@ -76,7 +76,7 @@ func FakeHandler(response http.ResponseWriter, req *http.Request) {
 
 	var respData = Result{}
 
-	if params.Method == "contract.createMember" {
+	if params.Method == "member.create" {
 		respData.ContractResult = TESTREFERENCE
 	} else {
 		respData.ContractResult = TESTSEED
@@ -238,7 +238,7 @@ func readConfigs(t *testing.T) (*UserConfigJSON, *Request) {
 func TestSend(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSend")
 	userConf, reqConf := readConfigs(t)
-	reqConf.Method = "contract.createMember"
+	reqConf.Method = "member.create"
 	resp, err := Send(ctx, URL, userConf, reqConf)
 	require.NoError(t, err)
 	require.Contains(t, string(resp), TESTREFERENCE)
@@ -247,7 +247,7 @@ func TestSend(t *testing.T) {
 func TestSendWithSeed(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed")
 	userConf, reqConf := readConfigs(t)
-	reqConf.Method = "contract.createMember"
+	reqConf.Method = "member.create"
 	resp, err := SendWithSeed(ctx, URL+"/call", userConf, reqConf, TESTSEED)
 	require.NoError(t, err)
 	require.Contains(t, string(resp), TESTREFERENCE)
@@ -278,7 +278,7 @@ func TestStatus(t *testing.T) {
 	require.Equal(t, resp, &testStatusResponse)
 }
 
-func TestPointToDER(t *testing.T) {
+func TestMarshalSig(t *testing.T) {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err)
 	msg := "test"
@@ -286,11 +286,13 @@ func TestPointToDER(t *testing.T) {
 
 	r1, s1, err := ecdsa.Sign(rand.Reader, privateKey, hash[:])
 	require.NoError(t, err)
-	derString := pointsToDER(r1, s1)
+	derString, err := marshalSig(r1, s1)
+	require.NoError(t, err)
 
 	sig, err := base64.StdEncoding.DecodeString(derString)
 
-	r2, s2 := foundation.PointsFromDER(sig)
+	r2, s2, err := foundation.UnmarshalSig(sig)
+	require.NoError(t, err)
 
 	require.Equal(t, r1, r2, errors.Errorf("Invalid S number"))
 	require.Equal(t, s1, s2, errors.Errorf("Invalid R number"))

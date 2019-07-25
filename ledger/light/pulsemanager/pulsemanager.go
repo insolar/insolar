@@ -39,19 +39,12 @@ var (
 	errNoPulse   = errors.New("no previous pulses")
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/pulsemanager.ActiveListSwapper -o ../../../testutils -s _mock.go
-
-type ActiveListSwapper interface {
-	MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error
-}
-
 // PulseManager implements insolar.PulseManager.
 type PulseManager struct {
-	Bus               insolar.MessageBus        `inject:""`
-	NodeNet           insolar.NodeNetwork       `inject:""`
-	GIL               insolar.GlobalInsolarLock `inject:""`
-	ActiveListSwapper ActiveListSwapper         `inject:""`
-	MessageHandler    *artifactmanager.MessageHandler
+	Bus            insolar.MessageBus        `inject:""`
+	NodeNet        insolar.NodeNetwork       `inject:""`
+	GIL            insolar.GlobalInsolarLock `inject:""`
+	MessageHandler *artifactmanager.MessageHandler
 
 	JetReleaser hot.JetReleaser `inject:""`
 
@@ -115,25 +108,17 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	jets, endedPulse, err := m.setUnderGilSection(ctx, newPulse)
 	if err != nil {
 		if err == errZeroNodes || err == errNoPulse {
+			logger.Debug("setUnderGilSection return error: ", err)
 			return nil
 		}
 		panic(errors.Wrap(err, "under gil error"))
 	}
 
-	err = m.WriteManager.CloseAndWait(ctx, endedPulse.PulseNumber)
-	if err != nil {
-		panic(errors.Wrap(err, "can't close pulse for writing"))
-	}
 	err = m.HotSender.SendHot(ctx, endedPulse.PulseNumber, newPulse.PulseNumber, jets)
 	if err != nil {
 		logger.Error("send Hot failed: ", err)
 	}
 	go m.LightReplicator.NotifyAboutPulse(ctx, newPulse.PulseNumber)
-
-	err = m.WriteManager.Open(ctx, newPulse.PulseNumber)
-	if err != nil {
-		panic(errors.Wrap(err, "failed to open pulse for writing"))
-	}
 
 	m.MessageHandler.OnPulse(ctx, newPulse)
 	return nil
@@ -154,37 +139,35 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 
 	// Dealing with node lists.
 	{
-		err := m.ActiveListSwapper.MoveSyncToActive(ctx, newPulse.PulseNumber)
-		if err != nil {
-			panic(errors.Wrap(err, "failed to apply new active node list"))
-		}
 		fromNetwork := m.NodeNet.GetWorkingNodes()
 		if len(fromNetwork) == 0 {
-			logger.Warnf("received zero nodes for pulse %d", newPulse.PulseNumber)
+			logger.Errorf("received zero nodes for pulse %d", newPulse.PulseNumber)
 			return nil, insolar.Pulse{}, errZeroNodes
 		}
 		toSet := make([]insolar.Node, 0, len(fromNetwork))
 		for _, n := range fromNetwork {
 			toSet = append(toSet, insolar.Node{ID: n.ID(), Role: n.Role()})
 		}
-		err = m.NodeSetter.Set(newPulse.PulseNumber, toSet)
+		err := m.NodeSetter.Set(newPulse.PulseNumber, toSet)
 		if err != nil {
 			panic(errors.Wrap(err, "call of SetActiveNodes failed"))
 		}
 	}
 
-	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
-		panic(errors.Wrap(err, "failed to add pulse"))
-	}
+	defer func() {
+		if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
+			panic(errors.Wrap(err, "failed to add pulse"))
+		}
+	}()
 
 	// Updating jet tree if its network start.
 	{
-		_, err := m.PulseCalculator.Backwards(ctx, newPulse.PulseNumber, 2)
+		_, err := m.PulseCalculator.Backwards(ctx, newPulse.PulseNumber, 1)
 		if err != nil {
 			if err == pulse.ErrNotFound {
 				err := m.JetModifier.Update(ctx, newPulse.PulseNumber, true, insolar.ZeroJetID)
 				if err != nil {
-					panic(errors.Wrap(err, "failed tp update jets"))
+					panic(errors.Wrap(err, "failed to update jets"))
 				}
 			} else {
 				panic(errors.Wrap(err, "failed to calculate previous pulse"))
@@ -192,9 +175,13 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		}
 	}
 
-	endedPulse, err := m.PulseCalculator.Backwards(ctx, newPulse.PulseNumber, 1)
+	endedPulse, err := m.PulseAccessor.Latest(ctx)
 	if err != nil {
 		if err == pulse.ErrNotFound {
+			err := m.JetModifier.Update(ctx, newPulse.PulseNumber, true, insolar.ZeroJetID)
+			if err != nil {
+				panic(errors.Wrap(err, "failed to update jets"))
+			}
 			return nil, insolar.Pulse{}, errNoPulse
 		}
 		panic(errors.Wrap(err, "failed to calculate ended pulse"))
@@ -206,5 +193,16 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	}
 
 	m.JetReleaser.ThrowTimeout(ctx, newPulse.PulseNumber)
+
+	err = m.WriteManager.CloseAndWait(ctx, endedPulse.PulseNumber)
+	if err != nil {
+		panic(errors.Wrap(err, "can't close pulse for writing"))
+	}
+
+	err = m.WriteManager.Open(ctx, newPulse.PulseNumber)
+	if err != nil {
+		panic(errors.Wrap(err, "failed to open pulse for writing"))
+	}
+
 	return jets, endedPulse, nil
 }

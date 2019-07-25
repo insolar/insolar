@@ -60,6 +60,7 @@ type GoInsider struct {
 	pluginsMutex sync.Mutex
 
 	lrCommon.Serializer
+	lrCommon.SystemError
 }
 
 // NewGoInsider creates a new GoInsider instance validating arguments
@@ -69,6 +70,7 @@ func NewGoInsider(path, network, address string) *GoInsider {
 	res.plugins = make(map[insolar.Reference]*pluginRec)
 	lrCommon.CurrentProxyCtx = &res
 	res.Serializer = lrCommon.NewCBORSerializer()
+	res.SystemError = lrCommon.NewSystemError()
 	return &res
 }
 
@@ -301,15 +303,20 @@ func MakeUpBaseReq() rpctypes.UpBaseReq {
 }
 
 // RouteCall ...
-func (gi *GoInsider) RouteCall(ref insolar.Reference, wait bool, immutable bool, method string, args []byte, proxyPrototype insolar.Reference) ([]byte, error) {
+func (gi *GoInsider) RouteCall(ref insolar.Reference, wait bool, immutable bool, saga bool, method string, args []byte, proxyPrototype insolar.Reference) ([]byte, error) {
 	client, err := gi.Upstream()
 	if err != nil {
 		return nil, err
 	}
+	if gi.GetSystemError() != nil {
+		return nil, gi.GetSystemError()
+	}
+
 	req := rpctypes.UpRouteReq{
 		UpBaseReq: MakeUpBaseReq(),
 		Wait:      wait,
 		Immutable: immutable,
+		Saga:      saga,
 		Object:    ref,
 		Method:    method,
 		Arguments: args,
@@ -319,6 +326,7 @@ func (gi *GoInsider) RouteCall(ref insolar.Reference, wait bool, immutable bool,
 	res := rpctypes.UpRouteResp{}
 	err = client.Call("RPC.RouteCall", req, &res)
 	if err != nil {
+		gi.SetSystemError(err)
 		if err == rpc.ErrShutdown {
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
@@ -335,6 +343,9 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef insolar.Reference, construc
 	if err != nil {
 		return insolar.Reference{}, err
 	}
+	if gi.GetSystemError() != nil {
+		return insolar.Reference{}, gi.GetSystemError()
+	}
 
 	req := rpctypes.UpSaveAsChildReq{
 		UpBaseReq:       MakeUpBaseReq(),
@@ -347,6 +358,7 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef insolar.Reference, construc
 	res := rpctypes.UpSaveAsChildResp{}
 	err = client.Call("RPC.SaveAsChild", req, &res)
 	if err != nil {
+		gi.SetSystemError(err)
 		if err == rpc.ErrShutdown {
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
@@ -357,46 +369,14 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef insolar.Reference, construc
 	return *res.Reference, nil
 }
 
-// GetObjChildrenIterator rpc call to insolard service, returns iterator over children of object with specified prototype
-// at first time call it without iteratorID
-// iteratorID is a cache key on service side, use it in all calls, except first
-func (gi *GoInsider) GetObjChildrenIterator(obj insolar.Reference, prototype insolar.Reference, iteratorID string) (*lrCommon.ChildrenTypedIterator, error) {
-	client, err := gi.Upstream()
-	if err != nil {
-		return &lrCommon.ChildrenTypedIterator{}, err
-	}
-
-	res := rpctypes.UpGetObjChildrenIteratorResp{}
-	req := rpctypes.UpGetObjChildrenIteratorReq{
-		UpBaseReq: MakeUpBaseReq(),
-
-		IteratorID: iteratorID,
-		Object:     obj,
-		Prototype:  prototype,
-	}
-	err = client.Call("RPC.GetObjChildrenIterator", req, &res)
-	if err != nil {
-		if err == rpc.ErrShutdown {
-			log.Fatal("GetObjChildrenIterator: ginsider can't connect to insgocc, shutdown")
-			os.Exit(0)
-		}
-		return &lrCommon.ChildrenTypedIterator{}, errors.Wrap(err, "on calling main API RPC.GetObjChildren")
-	}
-
-	return &lrCommon.ChildrenTypedIterator{
-		Parent:         obj,
-		ChildPrototype: prototype,
-		IteratorID:     res.Iterator.ID,
-		Buff:           res.Iterator.Buff,
-		CanFetch:       res.Iterator.CanFetch,
-	}, nil
-}
-
 // SaveAsDelegate ...
 func (gi *GoInsider) SaveAsDelegate(intoRef, classRef insolar.Reference, constructorName string, argsSerialized []byte) (insolar.Reference, error) {
 	client, err := gi.Upstream()
 	if err != nil {
 		return insolar.Reference{}, err
+	}
+	if gi.GetSystemError() != nil {
+		return insolar.Reference{}, gi.GetSystemError()
 	}
 
 	req := rpctypes.UpSaveAsDelegateReq{
@@ -410,6 +390,7 @@ func (gi *GoInsider) SaveAsDelegate(intoRef, classRef insolar.Reference, constru
 	res := rpctypes.UpSaveAsDelegateResp{}
 	err = client.Call("RPC.SaveAsDelegate", req, &res)
 	if err != nil {
+		gi.SetSystemError(err)
 		if err == rpc.ErrShutdown {
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
@@ -426,6 +407,9 @@ func (gi *GoInsider) GetDelegate(object, ofType insolar.Reference) (insolar.Refe
 	if err != nil {
 		return insolar.Reference{}, err
 	}
+	if gi.GetSystemError() != nil {
+		return insolar.Reference{}, gi.GetSystemError()
+	}
 
 	req := rpctypes.UpGetDelegateReq{
 		UpBaseReq: MakeUpBaseReq(),
@@ -436,6 +420,7 @@ func (gi *GoInsider) GetDelegate(object, ofType insolar.Reference) (insolar.Refe
 	res := rpctypes.UpGetDelegateResp{}
 	err = client.Call("RPC.GetDelegate", req, &res)
 	if err != nil {
+		gi.SetSystemError(err)
 		if err == rpc.ErrShutdown {
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
@@ -452,6 +437,9 @@ func (gi *GoInsider) DeactivateObject(object insolar.Reference) error {
 	if err != nil {
 		return err
 	}
+	if gi.GetSystemError() != nil {
+		return gi.GetSystemError()
+	}
 
 	req := rpctypes.UpDeactivateObjectReq{
 		UpBaseReq: MakeUpBaseReq(),
@@ -460,6 +448,7 @@ func (gi *GoInsider) DeactivateObject(object insolar.Reference) error {
 	res := rpctypes.UpDeactivateObjectResp{}
 	err = client.Call("RPC.DeactivateObject", req, &res)
 	if err != nil {
+		gi.SetSystemError(err)
 		if err == rpc.ErrShutdown {
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
@@ -472,16 +461,38 @@ func (gi *GoInsider) DeactivateObject(object insolar.Reference) error {
 
 // Serialize - CBOR serializer wrapper: `what` -> `to`
 func (gi *GoInsider) Serialize(what interface{}, to *[]byte) error {
-	ch := new(codec.CborHandle)
+	if to == nil {
+		return errors.New("GoInsider.Serialize: `to` is `nil`, cbor will fail with `Encoder not initialized` error")
+	}
+
 	log.Debugf("serializing %+v", what)
-	return codec.NewEncoderBytes(to, ch).Encode(what)
+
+	var handle codec.CborHandle
+	enc := codec.NewEncoderBytes(to, &handle)
+	err := enc.Encode(what)
+	if err != nil {
+		msg := fmt.Sprintf("GoInsider.Deserialize, what = %+v, to = %+v", what, to)
+		err = errors.Wrap(err, msg)
+	}
+	return err
 }
 
 // Deserialize - CBOR de-serializer wrapper: `from` -> `into`
 func (gi *GoInsider) Deserialize(from []byte, into interface{}) error {
-	ch := new(codec.CborHandle)
+	if from == nil {
+		return errors.New("GoInsider.Deserialize: `from` is `nil`, cbor will fail with `Decoder not initialized` error")
+	}
+
 	log.Debugf("de-serializing %+v", from)
-	return codec.NewDecoderBytes(from, ch).Decode(into)
+
+	var handle codec.CborHandle
+	dec := codec.NewDecoderBytes(from, &handle)
+	err := dec.Decode(into)
+	if err != nil {
+		msg := fmt.Sprintf("GoInsider.Deserialize, from = %+v, into = %+v", from, into)
+		err = errors.Wrap(err, msg)
+	}
+	return err
 }
 
 // MakeErrorSerializable converts errors satisfying error interface to foundation.Error

@@ -23,17 +23,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math/big"
+	"net/http"
 	"regexp"
 	"runtime"
 	"strings"
-
-	"io/ioutil"
-	"net/http"
 	"testing"
 
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/testutils"
+
 	"github.com/insolar/rpc/v2/json2"
 
 	"github.com/stretchr/testify/require"
@@ -108,18 +109,17 @@ func createMember(t *testing.T) *user {
 	require.NoError(t, err)
 	member.ref = root.ref
 
-	addBurnAddress(t)
-
-	result, err := retryableCreateMember(member, "contract.createMember", map[string]interface{}{}, true)
+	result, err := retryableCreateMember(member, "member.create", true)
 	require.NoError(t, err)
-	ref, ok := result.(string)
+	ref, ok := result.(map[string]interface{})["reference"].(string)
 	require.True(t, ok)
 	member.ref = ref
 	return member
 }
 
 func addBurnAddress(t *testing.T) {
-	_, err := signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{"fake_ba"}})
+	ba := testutils.RandomString()
+	_, err := signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
 	require.NoError(t, err)
 }
 
@@ -134,7 +134,7 @@ func getBalance(caller *user, reference string) (*big.Int, error) {
 	if err != nil {
 		return nil, err
 	}
-	amount, ok := new(big.Int).SetString(res.(string), 10)
+	amount, ok := new(big.Int).SetString(res.(map[string]interface{})["balance"].(string), 10)
 	if !ok {
 		return nil, fmt.Errorf("can't parse input amount")
 	}
@@ -200,14 +200,64 @@ func unmarshalCallResponse(t *testing.T, body []byte, response *requester.Contra
 	require.NoError(t, err)
 }
 
-func retryableCreateMember(user *user, method string, params map[string]interface{}, updatePublicKey bool) (interface{}, error) {
+func createMemberWithMigrationAddress(migrationAddress string) error {
+	member, err := newUserWithKeys()
+	if err != nil {
+		return err
+	}
+
+	_, err = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
+	if err != nil {
+		return err
+	}
+
+	_, err = retryableMemberMigrationCreate(member, true)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func migrate(t *testing.T, memberRef string, amount string, tx string, ma string, mdNum int) map[string]interface{} {
+	anotherMember := createMember(t)
+
+	_, err := signedRequest(
+		&migrationDaemons[mdNum],
+		"deposit.migration",
+		map[string]interface{}{"amount": amount, "ethTxHash": tx, "migrationAddress": ma})
+	require.NoError(t, err)
+	res, err := signedRequest(anotherMember, "wallet.getBalance", map[string]interface{}{"reference": memberRef})
+	require.NoError(t, err)
+	deposits, ok := res.(map[string]interface{})["deposits"].(map[string]interface{})
+	require.True(t, ok)
+	deposit, ok := deposits[tx].(map[string]interface{})
+	require.True(t, ok)
+	require.Equal(t, deposit["amount"], amount)
+	require.Equal(t, deposit["ethTxHash"], tx)
+
+	return deposit
+}
+
+func retryableMemberCreate(user *user, updatePublicKey bool) (interface{}, error) {
+	return retryableCreateMember(user, "member.create", updatePublicKey)
+}
+
+func retryableMemberMigrationCreate(user *user, updatePublicKey bool) (interface{}, error) {
+	return retryableCreateMember(user, "member.migrationCreate", updatePublicKey)
+}
+
+func retryableCreateMember(user *user, method string, updatePublicKey bool) (interface{}, error) {
 	// TODO: delete this after deduplication (INS-2778)
 	var result interface{}
 	var err error
 	currentIterNum := 1
 	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
-		result, err = signedRequest(user, method, params)
+		result, err = signedRequest(user, method, nil)
 		if err == nil || !strings.Contains(err.Error(), "member for this publicKey already exist") {
+			if err == nil {
+				user.ref = result.(map[string]interface{})["reference"].(string)
+			}
 			return result, err
 		}
 		fmt.Printf("CreateMember request was duplicated, retry. Attempt for duplicated: %d/%d\n", currentIterNum, sendRetryCount)
@@ -223,7 +273,7 @@ func retryableCreateMember(user *user, method string, params map[string]interfac
 	return result, err
 }
 
-func signedRequest(user *user, method string, params map[string]interface{}) (interface{}, error) {
+func signedRequest(user *user, method string, params interface{}) (interface{}, error) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(user.ref, user.privKey, user.pubKey)
 	if err != nil {
@@ -399,6 +449,13 @@ type callRes struct {
 func callMethod(t *testing.T, objectRef *insolar.Reference, method string, args ...interface{}) api.CallMethodReply {
 	callRes := callMethodNoChecks(t, objectRef, method, args...)
 	require.Empty(t, callRes.Error)
+
+	return callRes.Result
+}
+
+func callMethodExpectError(t *testing.T, objectRef *insolar.Reference, method string, args ...interface{}) api.CallMethodReply {
+	callRes := callMethodNoChecks(t, objectRef, method, args...)
+	require.NotEmpty(t, callRes.Error)
 
 	return callRes.Result
 }

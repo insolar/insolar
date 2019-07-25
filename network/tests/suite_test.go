@@ -64,10 +64,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/network/rules"
+
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/network/servicenetwork"
-	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -288,14 +292,14 @@ func (s *consensusSuite) TearDownTest() {
 
 func (s *consensusSuite) waitForConsensus(consensusCount int) {
 	for i := 0; i < consensusCount; i++ {
-		for _, n := range s.fixture().bootstrapNodes {
+		for i, n := range s.fixture().bootstrapNodes {
 			err := <-n.consensusResult
-			s.NoError(err)
+			require.NoError(s.T(), err, "Failed to pass consensus on bootstrapNodes[%d] %s ", i, n.host)
 		}
 
 		for _, n := range s.fixture().networkNodes {
 			err := <-n.consensusResult
-			s.NoError(err)
+			require.NoError(s.T(), err, "Failed to pass consensus on networkNodes[%d] %s ", i, n.host)
 		}
 	}
 }
@@ -307,7 +311,7 @@ func (s *consensusSuite) waitForConsensusExcept(consensusCount int, exception in
 				continue
 			}
 			err := <-n.consensusResult
-			s.NoError(err)
+			require.NoError(s.T(), err, "Failed to pass consensus on bootstrapNodes[%d] %s ", i, n.host)
 		}
 
 		for _, n := range s.fixture().networkNodes {
@@ -315,7 +319,7 @@ func (s *consensusSuite) waitForConsensusExcept(consensusCount int, exception in
 				continue
 			}
 			err := <-n.consensusResult
-			s.NoError(err)
+			require.NoError(s.T(), err, "Failed to pass consensus on networkNodes[%d] %s ", i, n.host)
 		}
 	}
 }
@@ -496,7 +500,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	cfg.Service.Consensus.Phase3Timeout = Phase3Timeout
 
 	node.componentManager = &component.Manager{}
-	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme())
+	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme(), rules.NewRules())
 	serviceNetwork, err := servicenetwork.NewServiceNetwork(cfg, node.componentManager)
 	s.Require().NoError(err)
 

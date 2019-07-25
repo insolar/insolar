@@ -19,42 +19,40 @@ package logicrunner
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/pkg/errors"
 )
 
 type HandlePendingFinished struct {
 	dep *Dependencies
 
-	Message bus.Message
+	Message payload.Meta
+	Parcel  insolar.Parcel
 }
 
-func (h *HandlePendingFinished) Present(ctx context.Context, f flow.Flow) error {
-	parcel := h.Message.Parcel
-	ctx = loggerWithTargetID(ctx, parcel)
-	lr := h.dep.lr
+func (h *HandlePendingFinished) Present(ctx context.Context, _ flow.Flow) error {
+	ctx = loggerWithTargetID(ctx, h.Parcel)
 	inslogger.FromContext(ctx).Debug("HandlePendingFinished.Present starts ...")
-	replyOk := bus.Reply{Reply: &reply.OK{}, Err: nil}
 
-	msg := parcel.Message().(*message.PendingFinished)
-	ref := msg.DefaultTarget()
+	msg := h.Parcel.Message().(*message.PendingFinished)
 
-	es, broker := lr.StateStorage.UpsertExecutionState(*ref)
+	broker := h.dep.StateStorage.UpsertExecutionState(msg.Reference)
 
-	es.Lock()
-	es.pending = message.NotPending
-	if !broker.currentList.Empty() {
-		es.Unlock()
-		return errors.New("[ HandlePendingFinished ] received PendingFinished when we are already executing")
+	err := broker.PrevExecutorFinishedPending(ctx)
+	if err != nil {
+		err = errors.Wrap(err, "can not finish pending")
+		inslogger.FromContext(ctx).Error(err.Error())
+		return err
 	}
-	es.Unlock()
 
-	broker.StartProcessorIfNeeded(ctx)
-
-	h.Message.ReplyTo <- replyOk
+	replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})
+	h.dep.Sender.Reply(ctx, h.Message, replyOk)
 	return nil
 }

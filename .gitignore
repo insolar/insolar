@@ -27,6 +27,8 @@ out
 
 # Go dep
 vendor
+.vendor-new
+*.lock
 
 # wasm tests
 vm/wasm/test/data/!simple!.wasm
@@ -53,5 +55,3 @@ network_cache
 
 # Local doc build directory
 /docs/build
-
-*.lock

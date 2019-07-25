@@ -120,9 +120,9 @@ func (br *BaseRecord) Create(ctx context.Context) error {
 	err = br.IndexModifier.SetIndex(
 		ctx,
 		insolar.FirstPulseNumber,
-		object.FilamentIndex{
+		record.Index{
 			ObjID: genesisID,
-			Lifeline: object.Lifeline{
+			Lifeline: record.Lifeline{
 				LatestState:         &genesisID,
 				LatestStateApproved: &genesisID,
 			},

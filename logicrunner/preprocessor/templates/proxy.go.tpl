@@ -110,7 +110,7 @@ func (r *{{ $.ContractType }}) GetPrototype() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -140,7 +140,7 @@ func (r *{{ $.ContractType }}) GetCode() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetCode", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetCode", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -173,7 +173,14 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}{{if $method.Immutable}}AsMutab
 		return {{ $method.ResultsWithErr }}
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
+	{{/* Saga call doesn't has a reply (it's `nil`), thus we shouldn't try to deserialize it. */}}
+	{{if $method.SagaInfo.IsSaga }}
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, true, false, {{ $method.SagaInfo.IsSaga }}, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return {{ $method.ResultsWithErr }}
+	}
+	{{else}}
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, {{ $method.SagaInfo.IsSaga }}, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return {{ $method.ResultsWithErr }}
 	}
@@ -186,6 +193,8 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}{{if $method.Immutable}}AsMutab
 	if {{ $method.ErrorVar }} != nil {
 		return {{ $method.Results }}
 	}
+	{{end -}}
+
 	return {{ $method.ResultsNilError }}
 }
 
@@ -200,7 +209,7 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}NoWait( {{ $method.Arguments }}
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -220,7 +229,7 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}{{if not $method.Immutable}}AsI
 		return {{ $method.ResultsWithErr }}
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return {{ $method.ResultsWithErr }}
 	}

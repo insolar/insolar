@@ -63,6 +63,7 @@ import (
 )
 
 func TestConsensusMain(t *testing.T) {
+
 	startedAt := time.Now()
 
 	ctx := context.Background()
@@ -72,26 +73,28 @@ func TestConsensusMain(t *testing.T) {
 
 	ctx = inslogger.SetLogger(ctx, logger)
 
-	strategy := NewDelayNetStrategy(DelayStrategyConf{
-		MinDelay:         100 * time.Millisecond,
-		MaxDelay:         300 * time.Millisecond,
+	netStrategy := NewDelayNetStrategy(DelayStrategyConf{
+		MinDelay:         10 * time.Millisecond,
+		MaxDelay:         30 * time.Millisecond,
 		Variance:         0.2,
 		SpikeProbability: 0.1,
 	})
-	network := NewEmuNetwork(strategy, ctx)
-	config := NewEmuLocalConfig(ctx)
-	primingCloudStateHash := NewEmuNodeStateHash(1234567890)
-	nodes := NewEmuNodeIntros(generateNameList(0, 1, 3, 5)...)
+	strategyFactory := &EmuRoundStrategyFactory{}
 
-	for i, n := range nodes {
-		chronicles := NewEmuChronicles(nodes, i, &primingCloudStateHash)
-		node := NewConsensusNode(n.GetDefaultEndpoint())
-		node.ConnectTo(chronicles, network, config)
+	nodes := NewEmuNodeIntros(generateNameList(0, 1, 3, 5)...)
+	netBuilder := newEmuNetworkBuilder(ctx, netStrategy, strategyFactory)
+
+	for i := range nodes {
+		netBuilder.connectEmuNode(nodes, i)
 	}
 
-	network.Start(ctx)
+	netBuilder.StartNetwork(ctx)
 
-	go CreateGenerator(2, 10, network.CreateSendToRandomChannel("pulsar0", 4+len(nodes)/10))
+	netBuilder.StartPulsar(20, 2, "pulsar0", nodes)
+
+	//time.AfterFunc(time.Second, func() {
+	//	netBuilder.network.DropHost("V0007")
+	//})
 
 	for {
 		fmt.Println("===", time.Since(startedAt), "=================================================")
@@ -100,22 +103,4 @@ func TestConsensusMain(t *testing.T) {
 			return
 		}
 	}
-}
-
-func generateNameList(countNeutral, countHeavy, countLight, countVirtual int) []string {
-	r := make([]string, 0, countNeutral+countHeavy+countLight+countVirtual)
-
-	r = _generateNameList(r, "n%03d", countNeutral)
-	r = _generateNameList(r, "h%03d", countHeavy)
-	r = _generateNameList(r, "l%03d", countLight)
-	r = _generateNameList(r, "v%03d", countVirtual)
-
-	return r
-}
-
-func _generateNameList(r []string, f string, count int) []string {
-	for i := 0; i < count; i++ {
-		r = append(r, fmt.Sprintf(f, len(r)))
-	}
-	return r
 }

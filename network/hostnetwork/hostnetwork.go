@@ -111,7 +111,12 @@ type hostNetwork struct {
 	origin   *host.Host
 }
 
-func (hn *hostNetwork) Init(ctx context.Context) error {
+// Start listening to network requests, should be started in goroutine.
+func (hn *hostNetwork) Start(ctx context.Context) error {
+	if !atomic.CompareAndSwapUint32(&hn.started, 0, 1) {
+		inslogger.FromContext(ctx).Warn("HostNetwork component already started")
+		return nil
+	}
 
 	handler := NewStreamHandler(hn.handleRequest, hn.responseHandler)
 
@@ -122,15 +127,6 @@ func (hn *hostNetwork) Init(ctx context.Context) error {
 	}
 
 	hn.pool = pool.NewConnectionPool(hn.transport)
-	return err
-}
-
-// Start listening to network requests, should be started in goroutine.
-func (hn *hostNetwork) Start(ctx context.Context) error {
-	if !atomic.CompareAndSwapUint32(&hn.started, 0, 1) {
-		inslogger.FromContext(ctx).Warn("HostNetwork component already started")
-		return nil
-	}
 
 	hn.muOrigin.Lock()
 	defer hn.muOrigin.Unlock()
@@ -152,6 +148,7 @@ func (hn *hostNetwork) Start(ctx context.Context) error {
 // Stop listening to network requests.
 func (hn *hostNetwork) Stop(ctx context.Context) error {
 	if atomic.CompareAndSwapUint32(&hn.started, 1, 0) {
+		hn.pool.Reset()
 		err := hn.transport.Stop(ctx)
 		if err != nil {
 			return errors.Wrap(err, "Failed to stop transport.")
@@ -179,7 +176,7 @@ func (hn *hostNetwork) PublicAddress() string {
 	return hn.getOrigin().Address.String()
 }
 
-func (hn *hostNetwork) handleRequest(ctx context.Context, p *packet.Packet) {
+func (hn *hostNetwork) handleRequest(ctx context.Context, p *packet.ReceivedPacket) {
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("Got %s request from host %s; RequestID = %d", p.GetType(), p.Sender, p.RequestID)
 	handler, exist := hn.handlers[p.GetType()]
@@ -283,7 +280,7 @@ func (hn *hostNetwork) SendRequest(ctx context.Context, packetType types.PacketT
 
 // RegisterRequestHandler register a handler function to process incoming requests of a specific type.
 func (hn *hostNetwork) RegisterRequestHandler(t types.PacketType, handler network.RequestHandler) {
-	f := func(ctx context.Context, request network.Packet) (network.Packet, error) {
+	f := func(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 		hn.Resolver.AddToKnownHosts(request.GetSenderHost())
 		return handler(ctx, request)
 	}

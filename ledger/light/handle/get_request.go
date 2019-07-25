@@ -19,28 +19,35 @@ package handle
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
+	"github.com/pkg/errors"
 )
 
 type GetRequest struct {
-	dep     *proc.Dependencies
-	replyTo chan<- bus.Reply
-	request insolar.ID
+	dep *proc.Dependencies
+
+	passed  bool
+	message payload.Meta
 }
 
-func NewGetRequest(dep *proc.Dependencies, rep chan<- bus.Reply, request insolar.ID) *GetRequest {
+func NewGetRequest(dep *proc.Dependencies, msg payload.Meta, passed bool) *GetRequest {
 	return &GetRequest{
 		dep:     dep,
-		request: request,
-		replyTo: rep,
+		message: msg,
+		passed:  passed,
 	}
 }
 
 func (s *GetRequest) Present(ctx context.Context, f flow.Flow) error {
-	code := proc.NewGetRequest(s.request, s.replyTo)
-	s.dep.GetRequest(code)
-	return f.Procedure(ctx, code, false)
+	msg := payload.GetRequest{}
+	err := msg.Unmarshal(s.message.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal GetRequest message")
+	}
+
+	req := proc.NewGetRequest(s.message, msg.ObjectID, msg.RequestID, s.passed)
+	s.dep.GetRequest(req)
+	return f.Procedure(ctx, req, false)
 }

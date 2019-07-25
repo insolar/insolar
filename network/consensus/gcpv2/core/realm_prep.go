@@ -53,96 +53,170 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
+	"sync"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
 
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
-
-	"github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
 
 /*
-PrepRealm is a functionally limited and temporary realm that is used when this node doesn't know a complete population (joiner)
+	PrepRealm is a functionally limited and temporary realm that is used when this node doesn't know pulse or last consensus.
+	It can ONLY pre-processed packets, but is disallowed to send them.
+
+	Pre-processed packets as postponed by default and processing will be repeated when FullRealm is activated.
 */
 type PrepRealm struct {
 	/* Provided externally. Don't need mutex */
-	*coreRealm                              // points the core part realms, it is shared between of all Realms of a Round
-	completeFn        func(successful bool) //
-	postponedPacketFn postponedPacketFunc
+	*coreRealm                                    // points the core part realms, it is shared between of all Realms of a Round
+	completeFn              func(successful bool) //
+	isEphemeralPulseAllowed bool
 
 	/* Derived from the provided externally - set at init() or start(). Don't need mutex */
-	handlers    []PrepPhasePacketHandler
-	queueToFull chan postponedPacket
+	packetDispatchers []PacketDispatcher
+	packetRecorder    packetrecorder.PacketRecorder
+	// queueToFull       chan packetrecorder.PostponedPacket
+	// phase2ExtLimit    uint8
+
+	limiters           sync.Map
+	lastCloudStateHash cryptkit.DigestHolder
 
 	/* Other fields - need mutex */
 	// 	censusBuilder census.Builder
 }
 
-/* LOCK - runs under RoundController lock */
-func (p *PrepRealm) start(ctx context.Context, controllers []PrepPhaseController, prepToFullQueueSize int) {
-
-	if p.postponedPacketFn != nil {
-		p.queueToFull = make(chan postponedPacket, prepToFullQueueSize)
-	}
-
-	p.handlers = make([]PrepPhasePacketHandler, packets.MaxPacketType)
-	for _, ctl := range controllers {
-		pt := ctl.GetPacketType()
-		if p.handlers[pt] != nil {
-			panic("multiple handlers for packet type")
-		}
-		p.handlers[pt] = ctl.HandleHostPacket
-	}
-
-	for _, ctl := range controllers {
-		ctl.BeforeStart(p)
-	}
-	for _, ctl := range controllers {
-		ctl.StartWorker(ctx)
-	}
+func (p *PrepRealm) init(isEphemeralPulseAllowed bool, completeFn func(successful bool)) {
+	p.isEphemeralPulseAllowed = isEphemeralPulseAllowed
+	p.completeFn = completeFn
 }
 
-/* LOCK - runs under RoundController lock */
-func (p *PrepRealm) stop() {
+func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
+	verifyFlags packetrecorder.PacketVerifyFlags) error {
+
+	pt := packet.GetPacketType()
+	selfID := p.GetSelfNodeID()
+
+	var limiterKey string
+	switch {
+	case pt.GetLimitPerSender() == 0:
+		return fmt.Errorf("packet type (%v) is unknown", pt)
+	case pt.IsMemberPacket():
+		strict, err := VerifyPacketRoute(ctx, packet, selfID)
+		if err != nil {
+			return err
+		}
+		if strict {
+			verifyFlags = packetrecorder.RequireStrictVerify
+		}
+		limiterKey = endpoints.ShortNodeIDAsByteString(packet.GetSourceID())
+	default:
+		limiterKey = from.AsByteString()
+
+		// TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
+		verifyFlags = packetrecorder.SkipVerify
+	}
+
 	/*
-		NB! do not close p.queueToFull here immediately, as some messages can still be in processing and will be lost
+		We use limiter here explicitly to ensure that the node's postpone queue can't be overflown during PrepPhase
 	*/
-	if p.postponedPacketFn != nil {
-		/* Do not give out a PrepRealm reference to avoid retention in memory */
-		go flushQueueTo(p.coreRealm.roundContext, p.queueToFull, p.postponedPacketFn)
+	limiter := phases.NewAtomicPacketLimiter(phases.NewPacketLimiter(p.nbhSizes.ExtendingNeighbourhoodLimit))
+	{
+		limiterI, _ := p.limiters.LoadOrStore(limiterKey, limiter)
+		limiter = limiterI.(*phases.AtomicPacketLimiter)
 	}
-}
 
-func (p *PrepRealm) PostponePacket(packet packets.PacketParser, from common.HostIdentityHolder) bool {
-	if p.queueToFull == nil {
-		return false
+	if !limiter.GetPacketLimiter().CanReceivePacket(pt) {
+		return fmt.Errorf("packet type (%v) limit exceeded: from=%v", pt, from)
 	}
-	p.queueToFull <- postponedPacket{packet: packet, from: from}
-	return true
-}
 
-type postponedPacketFunc func(packet packets.PacketParser, from common.HostIdentityHolder)
+	var pd PacketDispatcher
 
-type postponedPacket struct {
-	packet packets.PacketParser
-	from   common.HostIdentityHolder
-}
+	if int(pt) < len(p.packetDispatchers) {
+		pd = p.packetDispatchers[pt]
+	}
 
-func flushQueueTo(ctx context.Context, in chan postponedPacket, out postponedPacketFunc) {
-	for {
-		select {
-		case p, ok := <-in:
-			if !ok {
-				return
+	if verifyFlags&(packetrecorder.SkipVerify|packetrecorder.SuccesfullyVerified) == 0 {
+		strict := verifyFlags&packetrecorder.RequireStrictVerify != 0
+
+		if pd == nil || !pd.HasCustomVerifyForHost(from, strict) {
+			sourceID := packet.GetSourceID()
+
+			err := p.coreRealm.VerifyPacketAuthenticity(packet.GetPacketSignature(), sourceID, from, strict)
+
+			if err != nil {
+				return err
 			}
-			out(p.packet, p.from)
-		case <-ctx.Done():
-			return
+			verifyFlags |= packetrecorder.SuccesfullyVerified
 		}
 	}
+
+	if !limiter.SetPacketReceived(pt) {
+		return fmt.Errorf("packet type (%v) limit exceeded: from=%v", pt, from)
+	}
+
+	if pd != nil {
+		// this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
+		var err error
+		packet, err = LazyPacketParse(packet)
+		if err != nil {
+			return err
+		}
+
+		err = pd.DispatchHostPacket(ctx, packet, from, verifyFlags)
+		if err != nil {
+			// TODO an error to ignore postpone?
+			return err
+		}
+	}
+
+	p.packetRecorder.Record(packet, from, verifyFlags)
+	return nil
 }
 
-func (p *PrepRealm) GetOriginalPulse() common2.OriginalPulsarPacket {
+/* LOCK - runs under RoundController lock */
+func (p *PrepRealm) beforeStart(ctx context.Context, controllers []PrepPhaseController) {
+
+	if p.postponedPacketFn == nil {
+		panic("illegal state")
+	}
+	limiter := phases.NewPacketLimiter(p.nbhSizes.ExtendingNeighbourhoodLimit)
+	packetsPerSender := limiter.GetRemainingPacketCountDefault()
+	p.packetRecorder = packetrecorder.NewPacketRecorder(int(packetsPerSender) * 100)
+
+	p.packetDispatchers = make([]PacketDispatcher, phases.PacketTypeCount)
+	for _, ctl := range controllers {
+		for _, pt := range ctl.GetPacketType() {
+			if p.packetDispatchers[pt] != nil {
+				panic("multiple controllers for packet type")
+			}
+			p.packetDispatchers[pt] = ctl.CreatePacketDispatcher(pt, p)
+		}
+	}
+
+	for _, ctl := range controllers {
+		ctl.BeforeStart(ctx, p)
+	}
+}
+
+func (p *PrepRealm) startWorkers(ctx context.Context, controllers []PrepPhaseController) {
+	for _, ctl := range controllers {
+		ctl.StartWorker(ctx, p)
+	}
+}
+
+func (p *PrepRealm) stop() {
+	p.packetRecorder.Playback(p.postponedPacketFn)
+}
+
+func (p *PrepRealm) GetOriginalPulse() proofs.OriginalPulsarPacket {
 	p.RLock()
 	defer p.RUnlock()
 
@@ -150,7 +224,11 @@ func (p *PrepRealm) GetOriginalPulse() common2.OriginalPulsarPacket {
 	return p.coreRealm.originalPulse
 }
 
-func (p *PrepRealm) ApplyPulseData(pp packets.PulsePacketReader, fromPulsar bool) error {
+func (p *PrepRealm) GetMandateRegistry() census.MandateRegistry {
+	return p.initialCensus.GetMandateRegistry()
+}
+
+func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bool, from endpoints.Inbound) error {
 	pd := pp.GetPulseData()
 
 	p.Lock()
@@ -162,7 +240,7 @@ func (p *PrepRealm) ApplyPulseData(pp packets.PulsePacketReader, fromPulsar bool
 		if pd == p.pulseData {
 			return nil // got it already
 		}
-	case fromPulsar || !p.strategy.IsEphemeralPulseAllowed():
+	case fromPulsar || !p.isEphemeralPulseAllowed:
 		// Pulsars are NEVER ALLOWED to send ephemeral pulses
 		valid = pd.IsValidPulsarData()
 	default:
@@ -173,10 +251,27 @@ func (p *PrepRealm) ApplyPulseData(pp packets.PulsePacketReader, fromPulsar bool
 		// TODO blame pulsar and/or node
 		return fmt.Errorf("invalid pulse data")
 	}
-	epn := p.GetExpectedPulseNumber()
-	if !epn.IsUnknown() && epn != pd.PulseNumber {
-		return fmt.Errorf("unexpected pulse number: expected=%v, received=%v", epn, pd.PulseNumber)
+
+	epn := pulse.Unknown
+	if p.initialCensus.GetCensusState() == census.PrimingCensus || p.initialCensus.IsActive() {
+		epn = p.initialCensus.GetExpectedPulseNumber()
+	} else {
+		epn = p.initialCensus.GetPulseNumber()
 	}
+
+	//	sourceID := packet.GetSourceID()
+	localID := p.self.GetNodeID()
+
+	pn := pd.PulseNumber
+	if !epn.IsUnknown() && epn != pn {
+		return errors.NewPulseRoundMismatchError(pn,
+			fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v, local=%d, from=%v",
+				epn, pn, localID, from))
+	}
+
+	//if p.IsJoiner() && p.lastCloudStateHash {
+	//
+	//}
 
 	p.originalPulse = pp.GetPulseDataEvidence()
 	p.pulseData = pd
@@ -186,6 +281,15 @@ func (p *PrepRealm) ApplyPulseData(pp packets.PulsePacketReader, fromPulsar bool
 	return nil
 }
 
-func (p *PrepRealm) GetExpectedPulseNumber() common.PulseNumber {
-	return p.initialCensus.GetExpectedPulseNumber()
+func (p *PrepRealm) ApplyCloudIntro(lastCloudStateHash cryptkit.DigestHolder, populationCount int, from endpoints.Inbound) {
+
+	p.Lock()
+	defer p.Unlock()
+
+	popCount := member.AsIndex(populationCount)
+	if p.expectedPopulationSize < popCount {
+		p.expectedPopulationSize = popCount
+	}
+
+	p.lastCloudStateHash = lastCloudStateHash
 }

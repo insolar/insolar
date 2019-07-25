@@ -50,6 +50,7 @@
 
 package core
 
+// TODO pulse projections to fight possible fakes?
 type PulseProjection struct {
 	// mutex sync.Mutex
 	// id    int

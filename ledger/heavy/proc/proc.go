@@ -20,4 +20,7 @@ type Dependencies struct {
 	PassState    func(*PassState)
 	GetCode      func(*GetCode)
 	SendRequests func(*SendRequests)
+	GetRequest   func(*GetRequest)
+	Replication  func(*Replication)
+	GetJet       func(*GetJet)
 }

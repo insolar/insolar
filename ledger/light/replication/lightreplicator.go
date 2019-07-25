@@ -22,14 +22,13 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
@@ -49,14 +48,13 @@ type LightReplicatorDefault struct {
 
 	jetCalculator   executor.JetCalculator
 	cleaner         Cleaner
-	msgBus          insolar.MessageBus
+	sender          bus.Sender
 	pulseCalculator pulse.Calculator
 
-	dropAccessor  drop.Accessor
-	blobsAccessor blob.CollectionAccessor
-	recsAccessor  object.RecordCollectionAccessor
-	idxAccessor   object.IndexAccessor
-	jetAccessor   jet.Accessor
+	dropAccessor drop.Accessor
+	recsAccessor object.RecordCollectionAccessor
+	idxAccessor  object.IndexAccessor
+	jetAccessor  jet.Accessor
 
 	syncWaitingPulses chan insolar.PulseNumber
 }
@@ -65,10 +63,9 @@ type LightReplicatorDefault struct {
 func NewReplicatorDefault(
 	jetCalculator executor.JetCalculator,
 	cleaner Cleaner,
-	msgBus insolar.MessageBus,
+	sender bus.Sender,
 	calculator pulse.Calculator,
 	dropAccessor drop.Accessor,
-	blobsAccessor blob.CollectionAccessor,
 	recsAccessor object.RecordCollectionAccessor,
 	idxAccessor object.IndexAccessor,
 	jetAccessor jet.Accessor,
@@ -76,14 +73,13 @@ func NewReplicatorDefault(
 	return &LightReplicatorDefault{
 		jetCalculator:   jetCalculator,
 		cleaner:         cleaner,
-		msgBus:          msgBus,
+		sender:          sender,
 		pulseCalculator: calculator,
 
-		dropAccessor:  dropAccessor,
-		blobsAccessor: blobsAccessor,
-		recsAccessor:  recsAccessor,
-		idxAccessor:   idxAccessor,
-		jetAccessor:   jetAccessor,
+		dropAccessor: dropAccessor,
+		recsAccessor: recsAccessor,
+		idxAccessor:  idxAccessor,
+		jetAccessor:  jetAccessor,
 
 		syncWaitingPulses: make(chan insolar.PulseNumber),
 	}
@@ -120,7 +116,7 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 
 		allIndexes := lr.filterAndGroupIndexes(ctx, pn)
 		jets := lr.jetCalculator.MineForPulse(ctx, pn)
-		logger.Debugf("[Replicator][sync] founds %v jets", len(jets))
+		logger.Debugf("[Replicator][sync] founds %d jets", len(jets), ". Jets: ", insolar.JetIDCollection(jets).DebugString())
 
 		for _, jetID := range jets {
 			msg, err := lr.heavyPayload(ctx, pn, jetID, allIndexes[jetID])
@@ -138,7 +134,7 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 			if err != nil {
 				logger.Errorf("[Replicator][sync]  Problems with sending msg to a heavy node", err)
 			} else {
-				logger.Debugf("[Replicator][sync]  Data has been sent to a heavy. pn - %v, jetID - %v", msg.PulseNum, msg.JetID.DebugString())
+				logger.Debugf("[Replicator][sync]  Data has been sent to a heavy. pn - %v, jetID - %v", msg.Pulse, msg.JetID.DebugString())
 			}
 		}
 
@@ -146,23 +142,20 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 	}
 }
 
-func (lr *LightReplicatorDefault) sendToHeavy(ctx context.Context, data insolar.Message) error {
-	rep, err := lr.msgBus.Send(ctx, data, nil)
+func (lr *LightReplicatorDefault) sendToHeavy(ctx context.Context, pl payload.Replication) error {
+	msg, err := payload.NewMessage(&pl)
 	if err != nil {
 		stats.Record(ctx,
 			statErrHeavyPayloadCount.M(1),
 		)
 		return err
 	}
-	if rep != nil {
-		err, ok := rep.(*reply.HeavyError)
-		if ok {
-			stats.Record(ctx,
-				statErrHeavyPayloadCount.M(1),
-			)
-			return err
-		}
-	}
+
+	inslogger.FromContext(ctx).Debug("send drop to heavy. pulse: ", pl.Pulse, ". jet: ", pl.JetID.DebugString())
+
+	_, done := lr.sender.SendRole(ctx, msg, insolar.DynamicRoleHeavyExecutor, *insolar.NewReference(insolar.ID(pl.JetID)))
+	done()
+
 	stats.Record(ctx,
 		statHeavyPayloadCount.M(1),
 	)
@@ -171,8 +164,8 @@ func (lr *LightReplicatorDefault) sendToHeavy(ctx context.Context, data insolar.
 
 func (lr *LightReplicatorDefault) filterAndGroupIndexes(
 	ctx context.Context, pn insolar.PulseNumber,
-) map[insolar.JetID][]object.FilamentIndex {
-	byJet := map[insolar.JetID][]object.FilamentIndex{}
+) map[insolar.JetID][]record.Index {
+	byJet := map[insolar.JetID][]record.Index{}
 	indexes := lr.idxAccessor.ForPulse(ctx, pn)
 	for _, idx := range indexes {
 		jetID, _ := lr.jetAccessor.ForID(ctx, pn, idx.ObjID)
@@ -186,57 +179,20 @@ func (lr *LightReplicatorDefault) heavyPayload(
 	ctx context.Context,
 	pn insolar.PulseNumber,
 	jetID insolar.JetID,
-	indexes []object.FilamentIndex,
-) (*message.HeavyPayload, error) {
+	indexes []record.Index,
+) (payload.Replication, error) {
 	dr, err := lr.dropAccessor.ForPulse(ctx, jetID, pn)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch drop")
+		return payload.Replication{}, errors.Wrap(err, "failed to fetch drop")
 	}
 
-	bls := lr.blobsAccessor.ForPulse(ctx, jetID, pn)
 	records := lr.recsAccessor.ForPulse(ctx, jetID, pn)
 
-	return &message.HeavyPayload{
-		JetID:        jetID,
-		PulseNum:     pn,
-		IndexBuckets: convertIndexBuckets(ctx, indexes),
-		Drop:         drop.MustEncode(&dr),
-		Blobs:        convertBlobs(bls),
-		Records:      convertRecords(ctx, records),
+	return payload.Replication{
+		JetID:   jetID,
+		Pulse:   pn,
+		Indexes: indexes,
+		Drop:    drop.MustEncode(&dr),
+		Records: records,
 	}, nil
-}
-
-func convertIndexBuckets(ctx context.Context, buckets []object.FilamentIndex) [][]byte {
-	convertedBucks := make([][]byte, len(buckets))
-	for i, buck := range buckets {
-		buff, err := buck.Marshal()
-		if err != nil {
-			inslogger.FromContext(ctx).Errorf("problems with marshaling bucket - %v", err)
-			continue
-		}
-		convertedBucks[i] = buff
-	}
-
-	return convertedBucks
-}
-
-func convertBlobs(blobs []blob.Blob) [][]byte {
-	res := make([][]byte, len(blobs))
-	for i, b := range blobs {
-		temp := b
-		res[i] = blob.MustEncode(&temp)
-	}
-	return res
-}
-
-func convertRecords(ctx context.Context, records []record.Material) [][]byte {
-	res := make([][]byte, len(records))
-	for i, r := range records {
-		data, err := r.Marshal()
-		if err != nil {
-			inslogger.FromContext(ctx).Error("Can't serialize record", r)
-		}
-		res[i] = data
-	}
-	return res
 }

@@ -20,30 +20,50 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/insolar/payload"
+	"github.com/pkg/errors"
 )
 
 type GetJet struct {
-	msg     *message.GetJet
-	replyTo chan<- bus.Reply
+	message  payload.Meta
+	objectID insolar.ID
+	pulse    insolar.PulseNumber
 
-	Dep struct {
-		Jets jet.Storage
+	dep struct {
+		jets   jet.Accessor
+		sender bus.Sender
 	}
 }
 
-func NewGetJet(msg *message.GetJet, rep chan<- bus.Reply) *GetJet {
+func (p *GetJet) Dep(
+	jets jet.Accessor,
+	sender bus.Sender,
+) {
+	p.dep.jets = jets
+	p.dep.sender = sender
+}
+
+func NewGetJet(msg payload.Meta, objectID insolar.ID, pulse insolar.PulseNumber) *GetJet {
 	return &GetJet{
-		msg:     msg,
-		replyTo: rep,
+		message:  msg,
+		objectID: objectID,
+		pulse:    pulse,
 	}
 }
 
 func (p *GetJet) Proceed(ctx context.Context) error {
-	jetID, actual := p.Dep.Jets.ForID(ctx, p.msg.Pulse, p.msg.Object)
-	p.replyTo <- bus.Reply{Reply: &reply.Jet{ID: insolar.ID(jetID), Actual: actual}, Err: nil}
+	jetID, actual := p.dep.jets.ForID(ctx, p.pulse, p.objectID)
+
+	msg, err := payload.NewMessage(&payload.Jet{
+		JetID:  jetID,
+		Actual: actual,
+	})
+	if err != nil {
+		return errors.Wrap(err, "GetJet: failed to create reply")
+	}
+
+	p.dep.sender.Reply(ctx, p.message, msg)
 	return nil
 }

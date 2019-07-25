@@ -22,7 +22,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -98,60 +97,15 @@ func (r *RegisterIncomingRequest) Proceed(ctx context.Context) error {
 	return nil
 }
 
-// ------------- ClarifyPendingState
-
-type ClarifyPendingState struct {
-	es      *ExecutionState
-	request *record.IncomingRequest
-
-	ArtifactManager artifacts.Client
+type AddFreshRequest struct {
+	broker  ExecutionBrokerI
+	requestRef insolar.Reference
+	request record.IncomingRequest
 }
 
-func (c *ClarifyPendingState) Proceed(ctx context.Context) error {
-	ctx, span := instracer.StartSpan(ctx, "ClarifyPendingState")
-	defer span.End()
-
-	c.es.Lock()
-	if c.es.pending != message.PendingUnknown {
-		c.es.Unlock()
-		return nil
-	}
-
-	if c.request != nil {
-		if c.request.CallType != record.CTMethod {
-			// It's considered that we are not pending except someone calls a method.
-			c.es.pending = message.NotPending
-			c.es.Unlock()
-			return nil
-		}
-	}
-
-	c.es.Unlock()
-
-	c.es.HasPendingCheckMutex.Lock()
-	defer c.es.HasPendingCheckMutex.Unlock()
-
-	c.es.Lock()
-	if c.es.pending != message.PendingUnknown {
-		c.es.Unlock()
-		return nil
-	}
-	c.es.Unlock()
-
-	has, err := c.ArtifactManager.HasPendingRequests(ctx, c.es.Ref)
-	if err != nil {
-		return err
-	}
-
-	c.es.Lock()
-	if c.es.pending == message.PendingUnknown {
-		if has {
-			c.es.pending = message.InPending
-		} else {
-			c.es.pending = message.NotPending
-		}
-	}
-	c.es.Unlock()
-
+func (c *AddFreshRequest) Proceed(ctx context.Context) error {
+	requestCtx := freshContextFromContext(ctx)
+	tr := NewTranscript(requestCtx, c.requestRef, c.request)
+	c.broker.AddFreshRequest(ctx, tr)
 	return nil
 }

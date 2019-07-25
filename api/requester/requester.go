@@ -23,6 +23,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/asn1"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -232,43 +233,22 @@ func Sign(privateKey crypto.PrivateKey, data []byte) (string, error) {
 		return "", errors.Wrap(err, "[ sign ] Cant sign data")
 	}
 
-	return pointsToDER(r, s), nil
+	return marshalSig(r, s)
 }
 
-// Convert signature points do DER format
-func pointsToDER(r, s *big.Int) string {
-	prefixPoint := func(b []byte) []byte {
-		if len(b) == 0 {
-			b = []byte{0x00}
-		}
-		if b[0]&0x80 != 0 {
-			paddedBytes := make([]byte, len(b)+1)
-			copy(paddedBytes[1:], b)
-			b = paddedBytes
-		}
-		return b
+// marshalSig encodes ECDSA signature to ASN.1.
+func marshalSig(r, s *big.Int) (string, error) {
+	var ecdsaSig struct {
+		R, S *big.Int
+	}
+	ecdsaSig.R, ecdsaSig.S = r, s
+
+	asnSig, err := asn1.Marshal(ecdsaSig)
+	if err != nil {
+		return "", err
 	}
 
-	rb := prefixPoint(r.Bytes())
-	sb := prefixPoint(s.Bytes())
-
-	// DER encoding:
-	// der prefix - 30
-	// length of the res of signature - 45
-	// marker for r value - 02
-	// length of r value - 21
-	// r value
-	// marker for s value - 02
-	// length of s value - 21
-	// s value
-	// 0x30 + z + 0x02 + len(rb) + rb + 0x02 + len(sb) + sb
-	length := 2 + len(rb) + 2 + len(sb)
-
-	der := append([]byte{0x30, byte(length), 0x02, byte(len(rb))}, rb...)
-	der = append(der, 0x02, byte(len(sb)))
-	der = append(der, sb...)
-
-	return base64.StdEncoding.EncodeToString(der)
+	return base64.StdEncoding.EncodeToString(asnSig), nil
 }
 
 // Send first gets seed and after that makes target request
@@ -321,28 +301,6 @@ func Info(url string) (*InfoResponse, error) {
 // Status makes rpc request to info.Status method and extracts it
 func Status(url string) (*StatusResponse, error) {
 	params := getDefaultRPCParams("node.getStatus")
-
-	body, err := GetResponseBodyPlatform(url+"/rpc", params)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Status ]")
-	}
-
-	statusResp := rpcStatusResponse{}
-
-	err = json.Unmarshal(body, &statusResp)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Status ] Can't unmarshal")
-	}
-	if statusResp.Error != nil {
-		return nil, errors.New("[ Status ] Field 'error' is not nil: " + fmt.Sprint(statusResp.Error))
-	}
-
-	return &statusResp.Result, nil
-}
-
-// LogOff rpc request turns network state to NoNetwork to initiate reconnect sequence.
-func LogOff(url string) (*StatusResponse, error) {
-	params := getDefaultRPCParams("status.LogOff")
 
 	body, err := GetResponseBodyPlatform(url+"/rpc", params)
 	if err != nil {

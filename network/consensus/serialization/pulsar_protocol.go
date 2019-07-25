@@ -50,24 +50,36 @@
 
 package serialization
 
-import "github.com/insolar/insolar/network/consensus/common"
+import (
+	"io"
 
-type PulsarPulsePacket struct {
-	// ByteSize>=128
-	Header               UnifiedProtocolPacketHeader `insolar-transport:"proto=0x00,packet=0x0F"` // ByteSize=16
-	PulseNumber          common.PulseNumber          // ByteSize=4
-	PulsarPulsePacketExt                             // ByteSize>=108
-}
+	"github.com/insolar/insolar/network/consensus/common/pulse"
+)
 
-type PulsarPulsePacketExt struct {
+type PulsarPacketBody struct {
 	// ByteSize>=108
-	PulseDataExt          common.PulseDataExt // ByteSize=44
-	PulsarConsensusProofs []byte              // variable lengths >=0
-	PulsarSignature       common.Bits512      // ByteSize=64
+	PulseNumber           pulse.Number  `insolar-transport:"ignore=send"`
+	PulseDataExt          pulse.DataExt // ByteSize=44
+	PulsarConsensusProofs []byte        // variable lengths >=0
 }
 
-/*
+func (b *PulsarPacketBody) DebugString(ctx PacketContext) string {
+	return "pulsar packet body"
+}
 
-TODO Other packets for Pulsar Protocol
+func (b *PulsarPacketBody) SerializeTo(_ SerializeContext, writer io.Writer) error {
+	// TODO: proofs
+	return write(writer, b.PulseDataExt)
+}
 
-*/
+func (b *PulsarPacketBody) DeserializeFrom(_ DeserializeContext, reader io.Reader) error {
+	// TODO: proofs
+	return read(reader, &b.PulseDataExt)
+}
+
+func (b *PulsarPacketBody) getPulseData() pulse.Data {
+	return pulse.Data{
+		PulseNumber: b.PulseNumber,
+		DataExt:     b.PulseDataExt,
+	}
+}

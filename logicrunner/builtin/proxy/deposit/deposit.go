@@ -20,7 +20,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"time"
 )
 
 type status string
@@ -80,12 +79,11 @@ func GetImplementationFrom(object insolar.Reference) (*Deposit, error) {
 }
 
 // New is constructor
-func New(migrationDaemonConfirms map[insolar.Reference]bool, txHash string, amount string, holdReleaseDate time.Time) *ContractConstructorHolder {
-	var args [4]interface{}
+func New(migrationDaemonConfirms [3]string, txHash string, amount string) *ContractConstructorHolder {
+	var args [3]interface{}
 	args[0] = migrationDaemonConfirms
 	args[1] = txHash
 	args[2] = amount
-	args[3] = holdReleaseDate
 
 	var argsSerialized []byte
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
@@ -110,7 +108,7 @@ func (r *Deposit) GetPrototype() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -140,7 +138,7 @@ func (r *Deposit) GetCode() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetCode", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetCode", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -177,7 +175,7 @@ func (r *Deposit) GetTxHash() (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetTxHash", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetTxHash", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -204,7 +202,7 @@ func (r *Deposit) GetTxHashNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetTxHash", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetTxHash", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -229,7 +227,7 @@ func (r *Deposit) GetTxHashAsImmutable() (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetTxHash", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetTxHash", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -262,7 +260,7 @@ func (r *Deposit) GetAmount() (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetAmount", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetAmount", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -289,7 +287,7 @@ func (r *Deposit) GetAmountNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetAmount", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetAmount", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -314,7 +312,7 @@ func (r *Deposit) GetAmountAsImmutable() (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "GetAmount", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetAmount", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -330,14 +328,14 @@ func (r *Deposit) GetAmountAsImmutable() (string, error) {
 	return ret0, nil
 }
 
-// MapMarshal is proxy generated method
-func (r *Deposit) MapMarshal() (map[string]string, error) {
+// Itself is proxy generated method
+func (r *Deposit) Itself() (interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 map[string]string
+	var ret0 interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -347,7 +345,7 @@ func (r *Deposit) MapMarshal() (map[string]string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "MapMarshal", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "Itself", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -363,8 +361,8 @@ func (r *Deposit) MapMarshal() (map[string]string, error) {
 	return ret0, nil
 }
 
-// MapMarshalNoWait is proxy generated method
-func (r *Deposit) MapMarshalNoWait() error {
+// ItselfNoWait is proxy generated method
+func (r *Deposit) ItselfNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -374,7 +372,7 @@ func (r *Deposit) MapMarshalNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "MapMarshal", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "Itself", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -382,14 +380,14 @@ func (r *Deposit) MapMarshalNoWait() error {
 	return nil
 }
 
-// MapMarshalAsImmutable is proxy generated method
-func (r *Deposit) MapMarshalAsImmutable() (map[string]string, error) {
+// ItselfAsImmutable is proxy generated method
+func (r *Deposit) ItselfAsImmutable() (interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 map[string]string
+	var ret0 interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -399,7 +397,7 @@ func (r *Deposit) MapMarshalAsImmutable() (map[string]string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "MapMarshal", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "Itself", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -416,47 +414,47 @@ func (r *Deposit) MapMarshalAsImmutable() (map[string]string, error) {
 }
 
 // Confirm is proxy generated method
-func (r *Deposit) Confirm(migrationDaemon insolar.Reference, txHash string, amountStr string) (uint, error) {
-	var args [3]interface{}
-	args[0] = migrationDaemon
-	args[1] = txHash
-	args[2] = amountStr
+func (r *Deposit) Confirm(migrationDaemonIndex int, migrationDaemonRef string, txHash string, amountStr string) error {
+	var args [4]interface{}
+	args[0] = migrationDaemonIndex
+	args[1] = migrationDaemonRef
+	args[2] = txHash
+	args[3] = amountStr
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
-	var ret0 uint
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
 	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
 
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "Confirm", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "Confirm", argsSerialized, *PrototypeReference)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
 	err = common.CurrentProxyCtx.Deserialize(res, &ret)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
-	if ret1 != nil {
-		return ret0, ret1
+	if ret0 != nil {
+		return ret0
 	}
-	return ret0, nil
+	return nil
 }
 
 // ConfirmNoWait is proxy generated method
-func (r *Deposit) ConfirmNoWait(migrationDaemon insolar.Reference, txHash string, amountStr string) error {
-	var args [3]interface{}
-	args[0] = migrationDaemon
-	args[1] = txHash
-	args[2] = amountStr
+func (r *Deposit) ConfirmNoWait(migrationDaemonIndex int, migrationDaemonRef string, txHash string, amountStr string) error {
+	var args [4]interface{}
+	args[0] = migrationDaemonIndex
+	args[1] = migrationDaemonRef
+	args[2] = txHash
+	args[3] = amountStr
 
 	var argsSerialized []byte
 
@@ -465,7 +463,7 @@ func (r *Deposit) ConfirmNoWait(migrationDaemon insolar.Reference, txHash string
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "Confirm", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "Confirm", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -474,37 +472,36 @@ func (r *Deposit) ConfirmNoWait(migrationDaemon insolar.Reference, txHash string
 }
 
 // ConfirmAsImmutable is proxy generated method
-func (r *Deposit) ConfirmAsImmutable(migrationDaemon insolar.Reference, txHash string, amountStr string) (uint, error) {
-	var args [3]interface{}
-	args[0] = migrationDaemon
-	args[1] = txHash
-	args[2] = amountStr
+func (r *Deposit) ConfirmAsImmutable(migrationDaemonIndex int, migrationDaemonRef string, txHash string, amountStr string) error {
+	var args [4]interface{}
+	args[0] = migrationDaemonIndex
+	args[1] = migrationDaemonRef
+	args[2] = txHash
+	args[3] = amountStr
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
-	var ret0 uint
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
 	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
 
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, "Confirm", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "Confirm", argsSerialized, *PrototypeReference)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
 	err = common.CurrentProxyCtx.Deserialize(res, &ret)
 	if err != nil {
-		return ret0, err
+		return err
 	}
 
-	if ret1 != nil {
-		return ret0, ret1
+	if ret0 != nil {
+		return ret0
 	}
-	return ret0, nil
+	return nil
 }

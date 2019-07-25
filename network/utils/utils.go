@@ -51,6 +51,7 @@
 package utils
 
 import (
+	"bytes"
 	"context"
 	"hash/crc32"
 	"io"
@@ -119,8 +120,52 @@ func IsConnectionClosed(err error) bool {
 	return strings.Contains(err.Error(), "use of closed network connection")
 }
 
+func IsClosedPipe(err error) bool {
+	if err == nil {
+		return false
+	}
+	err = errors.Cause(err)
+	return strings.Contains(err.Error(), "read/write on closed pipe")
+}
+
 func NewPulseContext(ctx context.Context, pulseNumber uint32) context.Context {
 	insTraceID := "pulse_" + strconv.FormatUint(uint64(pulseNumber), 10)
 	ctx = inslogger.ContextWithTrace(ctx, insTraceID)
 	return ctx
+}
+
+type CapturingReader struct {
+	io.Reader
+	buffer bytes.Buffer
+}
+
+func NewCapturingReader(reader io.Reader) *CapturingReader {
+	return &CapturingReader{Reader: reader}
+}
+
+func (r *CapturingReader) Read(p []byte) (int, error) {
+	n, err := r.Reader.Read(p)
+	r.buffer.Write(p)
+	return n, err
+}
+
+func (r *CapturingReader) Captured() []byte {
+	return r.buffer.Bytes()
+}
+
+// FindDiscoveriesInNodeList returns only discovery nodes from active node list
+func FindDiscoveriesInNodeList(nodes []insolar.NetworkNode, cert insolar.Certificate) []insolar.NetworkNode {
+	discovery := cert.GetDiscoveryNodes()
+	result := make([]insolar.NetworkNode, 0)
+
+	for _, d := range discovery {
+		for _, n := range nodes {
+			if d.GetNodeRef().Equal(n.ID()) {
+				result = append(result, n)
+				break
+			}
+		}
+	}
+
+	return result
 }

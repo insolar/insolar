@@ -31,4 +31,6 @@ type TerminationHandler interface {
 	OnLeaveApproved(context.Context)
 	// Abort forces to stop all node components
 	Abort(reason string)
+	// Terminating is an accessor
+	Terminating() bool
 }

@@ -20,6 +20,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -49,6 +50,33 @@ func (s *DBStore) ForID(ctx context.Context, pulse insolar.PulseNumber, recordID
 
 	tree := s.get(pulse)
 	return tree.Find(recordID)
+}
+
+// TruncateHead remove all records after lastPulse
+func (s *DBStore) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
+	s.Lock()
+	defer s.Unlock()
+
+	it := s.db.NewIterator(pulseKey(from), false)
+	defer it.Close()
+
+	var hasKeys bool
+	for it.Next() {
+		hasKeys = true
+		key := newPulseKey(it.Key())
+		err := s.db.Delete(&key)
+		if err != nil {
+			return errors.Wrapf(err, "can't delete key: %+v", key)
+		}
+
+		inslogger.FromContext(ctx).Debugf("Erased key with pulse number: %s", insolar.PulseNumber(key))
+	}
+
+	if !hasKeys {
+		inslogger.FromContext(ctx).Debugf("No records. Nothing done. Pulse number: %s", from.String())
+	}
+
+	return nil
 }
 
 func (s *DBStore) Update(ctx context.Context, pulse insolar.PulseNumber, actual bool, ids ...insolar.JetID) error {
@@ -82,12 +110,12 @@ func (s *DBStore) Split(ctx context.Context, pulse insolar.PulseNumber, id insol
 	}
 	return left, right, nil
 }
-func (s *DBStore) Clone(ctx context.Context, from, to insolar.PulseNumber) error {
+func (s *DBStore) Clone(ctx context.Context, from, to insolar.PulseNumber, keepActual bool) error {
 	s.Lock()
 	defer s.Unlock()
 
 	tree := s.get(from)
-	newTree := tree.Clone(false)
+	newTree := tree.Clone(keepActual)
 	err := s.set(to, newTree)
 	if err != nil {
 		return errors.Wrapf(err, "failed to clone jet.Tree")
@@ -103,6 +131,11 @@ func (k pulseKey) Scope() store.Scope {
 
 func (k pulseKey) ID() []byte {
 	return insolar.PulseNumber(k).Bytes()
+}
+
+func newPulseKey(raw []byte) pulseKey {
+	key := pulseKey(insolar.NewPulseNumber(raw))
+	return key
 }
 
 func (s *DBStore) get(pn insolar.PulseNumber) *Tree {

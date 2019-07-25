@@ -67,6 +67,16 @@ func (e *ID) Type() insolar.ReplyType {
 	return TypeID
 }
 
+// ID is common reaction for methods returning id to lifeline states.
+type IDs struct {
+	IDs []insolar.ID
+}
+
+// Type implementation of Reply interface.
+func (e *IDs) Type() insolar.ReplyType {
+	return TypeIDs
+}
+
 // Children is common reaction for methods returning id to lifeline states.
 type Children struct {
 	Refs     []insolar.Reference
@@ -118,17 +128,6 @@ type Jet struct {
 // Type implementation of Reply interface.
 func (r *Jet) Type() insolar.ReplyType {
 	return TypeJet
-}
-
-// Request contains jet.
-type Request struct {
-	ID     insolar.ID
-	Record []byte
-}
-
-// Type implementation of Reply interface.
-func (r *Request) Type() insolar.ReplyType {
-	return TypeRequest
 }
 
 // OpenRequestsOnHeavy contains

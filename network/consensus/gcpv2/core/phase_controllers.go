@@ -53,110 +53,94 @@ package core
 import (
 	"context"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
-
-	"github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
 )
 
+type PacketDispatcher interface {
+	HasCustomVerifyForHost(from endpoints.Inbound, strict bool) bool
+
+	DispatchHostPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags) error
+
+	/* This method can validate and create a member, but MUST NOT apply any changes to members etc */
+	TriggerUnknownMember(ctx context.Context, memberID insolar.ShortNodeID, packet transport.MemberPacketReader,
+		from endpoints.Inbound) (bool, error)
+	DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, source *NodeAppearance) error
+}
+
+type MemberPacketSender interface {
+	transport.TargetProfile
+	SetPacketSent(pt phases.PacketType) bool
+}
+type MemberPacketReceiver interface {
+	GetNodeID() insolar.ShortNodeID
+	CanReceivePacket(pt phases.PacketType) bool
+	VerifyPacketAuthenticity(packetSignature cryptkit.SignedDigest, from endpoints.Inbound, strictFrom bool) error
+	SetPacketReceived(pt phases.PacketType) bool
+	DispatchMemberPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags,
+		pd PacketDispatcher) error
+}
+
+type PhasePerNodePacketFunc func(ctx context.Context, packet transport.MemberPacketReader, from *NodeAppearance, realm *FullRealm) error
+type PerNodePacketDispatcherFactory interface {
+	// PhasePerNodePacketFunc
+	CreatePerNodePacketHandler(perNodeContext context.Context, node *NodeAppearance) (context.Context, PhasePerNodePacketFunc)
+}
+
+// type PrepPhasePacketHandler func(ctx context.Context, reader transport.PacketParser, from endpoints.Inbound) (postpone bool, err error)
 type PrepPhaseController interface {
-	GetPacketType() packets.PacketType
-	HandleHostPacket(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) (postpone bool, err error)
-	BeforeStart(realm *PrepRealm)
-	StartWorker(ctx context.Context)
+	GetPacketType() []phases.PacketType
+	CreatePacketDispatcher(pt phases.PacketType, realm *PrepRealm) PacketDispatcher
+
+	// HandleHostPacket(ctx context.Context, reader transport.PacketParser, from endpoints.Inbound) (postpone bool, err error)
+
+	BeforeStart(ctx context.Context, realm *PrepRealm)
+	StartWorker(ctx context.Context, realm *PrepRealm)
 }
-
-type PrepPhasePacketHandler func(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) (postpone bool, err error)
-
-type PhaseControllerHandlerType uint8
-
-const (
-	HandlerTypeHostPacket PhaseControllerHandlerType = iota
-	HandlerTypeMemberPacket
-	HandlerTypePerNodePacket // This mode allows to attach a custom object(state) to each NodeAppearance
-)
-
-type PhaseController interface {
-	GetPacketType() packets.PacketType
-	IsPerNode() PhaseControllerHandlerType
-	HandleHostPacket(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) error // IsPerNode() == HandlerTypeHostPacket
-	HandleMemberPacket(ctx context.Context, reader packets.MemberPacketReader, src *NodeAppearance) error    // IsPerNode() == HandlerTypeMemberPacket
-	CreatePerNodePacketHandler(node *NodeAppearance) PhasePerNodePacketHandler                               // IsPerNode() == HandlerTypePerNodePacket
-	BeforeStart(realm *FullRealm)
-	StartWorker(ctx context.Context)
-}
-
-type PhaseHostPacketHandler func(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) error
-type PhaseNodePacketHandler func(ctx context.Context, reader packets.MemberPacketReader, from *NodeAppearance) error
 
 /* realm is provided for this handler to avoid being replicated in individual handlers */
-type PhasePerNodePacketHandler func(ctx context.Context, reader packets.MemberPacketReader, from *NodeAppearance, realm *FullRealm) error
 
-type PhaseControllerPerMemberTemplate struct {
-	R *FullRealm
+type PhaseController interface {
+	GetPacketType() []phases.PacketType
+	CreatePacketDispatcher(pt phases.PacketType, ctlIndex int, realm *FullRealm) (PacketDispatcher, PerNodePacketDispatcherFactory)
+
+	// HandleHostPacket(ctx context.Context, reader transport.PacketParser, from endpoints.Inbound) error                                   // GetHandlerType() == PacketHandlerTypeHost
+	// HandleMemberPacket(ctx context.Context, reader transport.MemberPacketReader, src *NodeAppearance) error                              // GetHandlerType() == PacketHandlerTypeMember OR PacketHandlerTypeMemberFromUnknown
+	// HandleUnknownMemberPacket(ctx context.Context, reader transport.MemberPacketReader, from endpoints.Inbound) (*NodeAppearance, error) // GetHandlerType() == PacketHandlerTypeMemberFromUnknown
+
+	BeforeStart(ctx context.Context, realm *FullRealm)
+	StartWorker(ctx context.Context, realm *FullRealm)
 }
 
-func (c *PhaseControllerPerMemberTemplate) BeforeStart(realm *FullRealm) {
-	c.R = realm
+type PhaseControllersBundle interface {
+	IsDynamicPopulationRequired() bool
+	CreatePrepPhaseControllers() []PrepPhaseController
+	CreateFullPhaseControllers(nodeCount int) ([]PhaseController, NodeUpdateCallback)
 }
 
-func (*PhaseControllerPerMemberTemplate) IsPerNode() PhaseControllerHandlerType {
-	return HandlerTypeMemberPacket
+type PhaseControllersBundleFactory interface {
+	CreateControllersBundle(population census.OnlinePopulation, config api.LocalNodeConfiguration /* strategy RoundStrategy */) PhaseControllersBundle
 }
 
-func (*PhaseControllerPerMemberTemplate) HandleHostPacket(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) error {
-	panic("illegal call")
-}
+type UpdateFlags uint32
 
-func (*PhaseControllerPerMemberTemplate) CreatePerNodePacketHandler(node *NodeAppearance) PhasePerNodePacketHandler {
-	panic("illegal call")
-}
+const (
+	FlagCreated UpdateFlags = 1 << iota
+	FlagProfileUpdated
+)
 
-func (*PhaseControllerPerMemberTemplate) StartWorker(ctx context.Context) {
-}
-
-// var _ PhaseController = &PhaseControllerPerNodeTemplate{}
-type PhaseControllerPerNodeTemplate struct {
-	R *FullRealm
-}
-
-func (c *PhaseControllerPerNodeTemplate) BeforeStart(realm *FullRealm) {
-	c.R = realm
-}
-
-func (*PhaseControllerPerNodeTemplate) IsPerNode() PhaseControllerHandlerType {
-	return HandlerTypePerNodePacket
-}
-
-func (*PhaseControllerPerNodeTemplate) HandleHostPacket(ctx context.Context, reader packets.PacketParser, from common.HostIdentityHolder) error {
-	panic("illegal call")
-}
-
-func (*PhaseControllerPerNodeTemplate) HandleMemberPacket(ctx context.Context, reader packets.MemberPacketReader, src *NodeAppearance) error {
-	panic("illegal call")
-}
-
-func (*PhaseControllerPerNodeTemplate) StartWorker(ctx context.Context) {
-}
-
-type PhaseControllerPerHostTemplate struct {
-	R *FullRealm
-}
-
-func (c *PhaseControllerPerHostTemplate) BeforeStart(realm *FullRealm) {
-	c.R = realm
-}
-
-func (*PhaseControllerPerHostTemplate) HandleMemberPacket(ctx context.Context, reader packets.MemberPacketReader, src *NodeAppearance) error {
-	panic("illegal call")
-}
-
-func (*PhaseControllerPerHostTemplate) CreatePerNodePacketHandler(node *NodeAppearance) PhasePerNodePacketHandler {
-	panic("illegal call")
-}
-
-func (*PhaseControllerPerHostTemplate) IsPerNode() PhaseControllerHandlerType {
-	return HandlerTypeHostPacket
-}
-
-func (*PhaseControllerPerHostTemplate) StartWorker(ctx context.Context) {
+type NodeUpdateCallback interface {
+	OnTrustUpdated(populationVersion uint32, n *NodeAppearance, before, after member.TrustLevel)
+	OnNodeStateAssigned(populationVersion uint32, n *NodeAppearance)
+	OnDynamicNodeUpdate(populationVersion uint32, n *NodeAppearance, flags UpdateFlags)
+	OnPurgatoryNodeUpdate(populationVersion uint32, n *NodePhantom, flags UpdateFlags)
+	OnCustomEvent(populationVersion uint32, n *NodeAppearance, event interface{})
+	OnDynamicPopulationCompleted(populationVersion uint32, indexedCount int)
 }

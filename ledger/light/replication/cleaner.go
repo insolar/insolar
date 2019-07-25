@@ -26,8 +26,8 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -48,12 +48,15 @@ type LightCleaner struct {
 	jetCleaner   jet.Cleaner
 	nodeModifier node.Modifier
 	dropCleaner  drop.Cleaner
-	blobCleaner  blob.Cleaner
 	recCleaner   object.RecordCleaner
-	indexCleaner object.IndexCleaner
-	pulseShifter pulse.Shifter
 
+	indexCleaner  object.IndexCleaner
+	indexAccessor object.IndexAccessor
+
+	pulseShifter    pulse.Shifter
 	pulseCalculator pulse.Calculator
+
+	filamentCleaner executor.FilamentCleaner
 
 	lightChainLimit int
 }
@@ -63,23 +66,25 @@ func NewCleaner(
 	jetCleaner jet.Cleaner,
 	nodeModifier node.Modifier,
 	dropCleaner drop.Cleaner,
-	blobCleaner blob.Cleaner,
 	recCleaner object.RecordCleaner,
 	indexCleaner object.IndexCleaner,
 	pulseShifter pulse.Shifter,
 	pulseCalculator pulse.Calculator,
+	indexAccessor object.IndexAccessor,
+	filamentCleaner executor.FilamentCleaner,
 	lightChainLimit int,
 ) *LightCleaner {
 	return &LightCleaner{
 		jetCleaner:      jetCleaner,
 		nodeModifier:    nodeModifier,
 		dropCleaner:     dropCleaner,
-		blobCleaner:     blobCleaner,
 		recCleaner:      recCleaner,
 		indexCleaner:    indexCleaner,
 		pulseShifter:    pulseShifter,
 		pulseCalculator: pulseCalculator,
 		lightChainLimit: lightChainLimit,
+		filamentCleaner: filamentCleaner,
+		indexAccessor:   indexAccessor,
 		pulseForClean:   make(chan insolar.PulseNumber),
 	}
 }
@@ -123,10 +128,17 @@ func (c *LightCleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
 	inslogger.FromContext(ctx).Debugf("[Cleaner][cleanPulse] start cleaning. pn - %v", pn)
 	c.nodeModifier.DeleteForPN(pn)
 	c.dropCleaner.DeleteForPN(ctx, pn)
-	c.blobCleaner.DeleteForPN(ctx, pn)
 	c.recCleaner.DeleteForPN(ctx, pn)
 
 	c.jetCleaner.DeleteForPN(ctx, pn)
+
+	idxs := c.indexAccessor.ForPulse(ctx, pn)
+	for _, idx := range idxs {
+		if idx.LifelineLastUsed < pn {
+			c.filamentCleaner.Clear(idx.ObjID)
+		}
+	}
+
 	c.indexCleaner.DeleteForPN(ctx, pn)
 
 	err := c.pulseShifter.Shift(ctx, pn)

@@ -186,8 +186,6 @@ const (
 	TypeReturnResults
 	// TypeExecutorResults message that goes to new Executor to validate previous Executor actions through CaseBind
 	TypeExecutorResults
-	// TypeValidateCaseBind sends CaseBind form Executor to Validators for redo all actions
-	TypeValidateCaseBind
 	// TypeValidationResults sends from Validator to new Executor with results of validation actions of previous Executor
 	TypeValidationResults
 	// TypePendingFinished is sent by the old executor to the current executor when pending execution finishes
@@ -201,40 +199,14 @@ const (
 
 	// Ledger
 
-	// TypeGetCode retrieves code from storage.
-	TypeGetCode
-	// TypeGetObject retrieves object from storage.
-	TypeGetObject
 	// TypeGetDelegate retrieves object represented as provided type.
 	TypeGetDelegate
 	// TypeGetChildren retrieves object's children.
 	TypeGetChildren
-	// TypeUpdateObject amends object.
-	TypeUpdateObject
 	// TypeRegisterChild registers child on the parent object.
 	TypeRegisterChild
-	// TypeSetRecord saves record in storage.
-	TypeSetRecord
-	// TypeValidateRecord saves record in storage.
-	TypeValidateRecord
-	// TypeSetBlob saves blob in storage.
-	TypeSetBlob
 	// TypeGetObjectIndex fetches object index from storage.
 	TypeGetObjectIndex
-	// TypeGetPendingRequests fetches pending requests for object.
-	TypeGetPendingRequests
-	// TypeHotRecords saves hot-records in storage.
-	TypeHotRecords
-	// TypeGetJet requests to calculate a jet for provided object.
-	TypeGetJet
-	// TypeAbandonedRequestsNotification informs virtual node about unclosed requests.
-	TypeAbandonedRequestsNotification
-	// TypeGetRequest fetches request from ledger.
-	TypeGetRequest
-	// TypeGetPendingRequestID fetches a pending request id from ledger
-	TypeGetPendingRequestID
-	// TypeGetOpenRequests fetches open pending requests from a heavy to a provided pulse
-	TypeGetOpenRequests
 
 	// Heavy replication
 

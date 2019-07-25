@@ -79,23 +79,6 @@ type GetCodeRedirectReply struct {
 	Token    insolar.DelegationToken
 }
 
-// NewGetCodeRedirect creates a new instance of GetChildrenRedirectReply.
-func NewGetCodeRedirect(
-	factory insolar.DelegationTokenFactory, parcel insolar.Parcel, receiver *insolar.Reference,
-) (*GetCodeRedirectReply, error) {
-	var err error
-	rep := GetCodeRedirectReply{
-		Receiver: receiver,
-	}
-	redirectedMessage := rep.Redirected(parcel.Message())
-	sender := parcel.GetSender()
-	rep.Token, err = factory.IssueGetCodeRedirect(&sender, redirectedMessage)
-	if err != nil {
-		return nil, err
-	}
-	return &rep, nil
-}
-
 // GetReceiver returns node reference to send message to.
 func (r *GetCodeRedirectReply) GetReceiver() *insolar.Reference {
 	return r.Receiver

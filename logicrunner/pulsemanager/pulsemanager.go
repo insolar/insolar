@@ -125,9 +125,7 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	if err != nil {
 		return errors.Wrap(err, "failed to apply new active node list")
 	}
-	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
-		return errors.Wrap(err, "call of AddPulse failed")
-	}
+
 	fromNetwork := m.NodeNet.GetWorkingNodes()
 	toSet := make([]insolar.Node, 0, len(fromNetwork))
 	for _, n := range fromNetwork {
@@ -138,10 +136,15 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		return errors.Wrap(err, "call of SetActiveNodes failed")
 	}
 
-	err = m.JetModifier.Clone(ctx, storagePulse.PulseNumber, newPulse.PulseNumber)
+	err = m.JetModifier.Clone(ctx, storagePulse.PulseNumber, newPulse.PulseNumber, false)
 	if err != nil {
 		return errors.Wrapf(err, "failed to clone jet.Tree fromPulse=%v toPulse=%v", storagePulse.PulseNumber, newPulse.PulseNumber)
 	}
+
+	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
+		return errors.Wrap(err, "call of AddPulse failed")
+	}
+
 	return nil
 }
 

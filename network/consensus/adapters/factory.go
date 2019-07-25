@@ -51,11 +51,16 @@
 package adapters
 
 import (
+	"crypto/ecdsa"
+
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-	"github.com/insolar/insolar/network/consensus/gcpv2/phases"
+	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle"
 )
 
 type ECDSASignatureVerifierFactory struct {
@@ -73,7 +78,7 @@ func NewECDSASignatureVerifierFactory(
 	}
 }
 
-func (vf *ECDSASignatureVerifierFactory) GetSignatureVerifierWithPKS(pks common.PublicKeyStore) common.SignatureVerifier {
+func (vf *ECDSASignatureVerifierFactory) GetSignatureVerifierWithPKS(pks cryptkit.PublicKeyStore) cryptkit.SignatureVerifier {
 	keyStore := pks.(*ECDSAPublicKeyStore)
 
 	return NewECDSASignatureVerifier(
@@ -83,27 +88,9 @@ func (vf *ECDSASignatureVerifierFactory) GetSignatureVerifierWithPKS(pks common.
 	)
 }
 
-type DigestFactory struct {
-	pcs insolar.PlatformCryptographyScheme
-}
-
-func NewDigestFactory(pcs insolar.PlatformCryptographyScheme) *DigestFactory {
-	return &DigestFactory{
-		pcs: pcs,
-	}
-}
-
-func (df *DigestFactory) GetPacketDigester() common.DataDigester {
-	return NewSha3512Digester(df.pcs)
-}
-
-func (df *DigestFactory) GetGshDigester() common.SequenceDigester {
-	return &gshDigester{}
-}
-
 type TransportCryptographyFactory struct {
 	verifierFactory *ECDSASignatureVerifierFactory
-	digestFactory   *DigestFactory
+	digestFactory   *ConsensusDigestFactory
 	scheme          insolar.PlatformCryptographyScheme
 }
 
@@ -113,49 +100,58 @@ func NewTransportCryptographyFactory(scheme insolar.PlatformCryptographyScheme) 
 			NewSha3512Digester(scheme),
 			scheme,
 		),
-		digestFactory: NewDigestFactory(scheme),
+		digestFactory: NewConsensusDigestFactory(scheme),
 		scheme:        scheme,
 	}
 }
 
-func (cf *TransportCryptographyFactory) GetSignatureVerifierWithPKS(pks common.PublicKeyStore) common.SignatureVerifier {
+func (cf *TransportCryptographyFactory) GetSignatureVerifierWithPKS(pks cryptkit.PublicKeyStore) cryptkit.SignatureVerifier {
 	return cf.verifierFactory.GetSignatureVerifierWithPKS(pks)
 }
 
-func (cf *TransportCryptographyFactory) GetDigestFactory() common.DigestFactory {
+func (cf *TransportCryptographyFactory) GetDigestFactory() transport.ConsensusDigestFactory {
 	return cf.digestFactory
 }
 
-func (cf *TransportCryptographyFactory) GetNodeSigner(sks common.SecretKeyStore) common.DigestSigner {
-	isks := sks.(*ECDSASecretKeyStore)
+func (cf *TransportCryptographyFactory) GetNodeSigner(sks cryptkit.SecretKeyStore) cryptkit.DigestSigner {
+	ks := sks.(*ECDSASecretKeyStore)
 
-	return NewECDSADigestSigner(isks.privateKey, cf.scheme)
+	return NewECDSADigestSigner(ks.privateKey, cf.scheme)
 }
 
-type RoundStrategyFactory struct{}
+func (cf *TransportCryptographyFactory) GetPublicKeyStore(skh cryptkit.SignatureKeyHolder) cryptkit.PublicKeyStore {
+	kh := skh.(*ECDSASignatureKeyHolder)
+
+	return NewECDSAPublicKeyStore(kh.publicKey)
+}
+
+type RoundStrategyFactory struct {
+	bundleFactory core.PhaseControllersBundleFactory
+}
 
 func NewRoundStrategyFactory() *RoundStrategyFactory {
-	return &RoundStrategyFactory{}
+	return &RoundStrategyFactory{
+		bundleFactory: phasebundle.NewStandardBundleFactoryDefault(),
+	}
 }
 
-func (rsf *RoundStrategyFactory) CreateRoundStrategy(chronicle census.ConsensusChronicles, config core.LocalNodeConfiguration) core.RoundStrategy {
-	return NewRoundStrategy(
-		phases.NewRegularPhaseBundleByDefault(),
-		chronicle,
-		config,
-	)
+func (rsf *RoundStrategyFactory) CreateRoundStrategy(chronicle api.ConsensusChronicles, config api.LocalNodeConfiguration) (core.RoundStrategy, core.PhaseControllersBundle) {
+	rs := NewRoundStrategy(chronicle, config)
+	pcb := rsf.bundleFactory.CreateControllersBundle(chronicle.GetLatestCensus().GetOnlinePopulation(), config)
+	return rs, pcb
+
 }
 
 type TransportFactory struct {
-	cryptographyFactory core.TransportCryptographyFactory
-	packetBuilder       core.PacketBuilder
-	packetSender        core.PacketSender
+	cryptographyFactory transport.CryptographyFactory
+	packetBuilder       transport.PacketBuilder
+	packetSender        transport.PacketSender
 }
 
 func NewTransportFactory(
-	cryptographyFactory core.TransportCryptographyFactory,
-	packetBuilder core.PacketBuilder,
-	packetSender core.PacketSender,
+	cryptographyFactory transport.CryptographyFactory,
+	packetBuilder transport.PacketBuilder,
+	packetSender transport.PacketSender,
 ) *TransportFactory {
 	return &TransportFactory{
 		cryptographyFactory: cryptographyFactory,
@@ -164,14 +160,59 @@ func NewTransportFactory(
 	}
 }
 
-func (tf *TransportFactory) GetPacketSender() core.PacketSender {
+func (tf *TransportFactory) GetPacketSender() transport.PacketSender {
 	return tf.packetSender
 }
 
-func (tf *TransportFactory) GetPacketBuilder(signer common.DigestSigner) core.PacketBuilder {
+func (tf *TransportFactory) GetPacketBuilder(signer cryptkit.DigestSigner) transport.PacketBuilder {
 	return tf.packetBuilder
 }
 
-func (tf *TransportFactory) GetCryptographyFactory() core.TransportCryptographyFactory {
+func (tf *TransportFactory) GetCryptographyFactory() transport.CryptographyFactory {
 	return tf.cryptographyFactory
+}
+
+type keyStoreFactory struct {
+	keyProcessor insolar.KeyProcessor
+}
+
+func (p *keyStoreFactory) GetPublicKeyStore(keyHolder cryptkit.SignatureKeyHolder) cryptkit.PublicKeyStore {
+	pk, err := p.keyProcessor.ImportPublicKeyBinary(keyHolder.AsBytes())
+	if err != nil {
+		panic(err)
+	}
+	return NewECDSAPublicKeyStore(pk.(*ecdsa.PublicKey))
+}
+
+func NewNodeProfileFactory(keyProcessor insolar.KeyProcessor) profiles.Factory {
+	return core.NewSimpleProfileIntroFactory(&keyStoreFactory{keyProcessor})
+}
+
+type ConsensusDigestFactory struct {
+	scheme insolar.PlatformCryptographyScheme
+}
+
+func NewConsensusDigestFactory(scheme insolar.PlatformCryptographyScheme) *ConsensusDigestFactory {
+	return &ConsensusDigestFactory{
+		scheme: scheme,
+	}
+}
+
+func (cdf *ConsensusDigestFactory) GetPacketDigester() cryptkit.DataDigester {
+	return NewSha3512Digester(cdf.scheme)
+}
+
+func (cdf *ConsensusDigestFactory) GetSequenceDigester() cryptkit.SequenceDigester {
+	return &seqDigester{}
+}
+
+func (cdf *ConsensusDigestFactory) GetAnnouncementDigester() cryptkit.SequenceDigester {
+	return &seqDigester{}
+}
+
+func (cdf *ConsensusDigestFactory) GetGlobulaStateDigester() transport.StateDigester {
+	return &gshDigester{
+		sd:            &seqDigester{},
+		defaultDigest: cryptkit.NewDigest(longbits.NewBits512FromBytes(make([]byte, 64)), "stubHash").AsDigestHolder(),
+	}
 }
