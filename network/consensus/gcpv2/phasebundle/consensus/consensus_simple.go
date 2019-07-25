@@ -60,9 +60,7 @@ func NewSimpleSelectionStrategyFactory() SelectionStrategyFactory {
 	return &simpleSelectionStrategyFactory{}
 }
 
-type simpleSelectionStrategyFactory struct {
-	fastConsensus bool
-}
+type simpleSelectionStrategyFactory struct{}
 
 func (*simpleSelectionStrategyFactory) CreateSelectionStrategy(aggressivePhasing bool) SelectionStrategy {
 	return &simpleSelectionStrategy{aggressivePhasing}
