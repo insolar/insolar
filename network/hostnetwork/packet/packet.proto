@@ -106,7 +106,8 @@ message CandidateProfile {
     uint32 ShortID = 3;
     PrimaryRole PrimaryRole = 4;
     SpecialRole SpecialRole = 5;
-    bytes Signature = 6;
+    bytes Digest = 6;
+    bytes Signature = 7;
 }
 
 message BootstrapRequest {

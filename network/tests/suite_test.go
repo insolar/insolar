@@ -56,6 +56,7 @@ import (
 	"context"
 	"crypto"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -273,7 +274,7 @@ func (s *testSuite) StartNodesNetwork(nodes []*networkNode) {
 	results := make(chan error, len(nodes))
 	startNode := func(node *networkNode) {
 		err := node.componentManager.Start(node.ctx)
-		node.serviceNetwork.RegisterConsensusFinishedNotifier(func(number insolar.PulseNumber) {
+		node.serviceNetwork.RegisterConsensusFinishedNotifier(func(_ member.OpMode, _ member.Power, number insolar.PulseNumber) {
 			node.consensusResult <- number
 		})
 		results <- err

@@ -51,8 +51,13 @@
 package servicenetwork
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/serialization"
+	"github.com/insolar/insolar/network/consensusv1/packets"
+	"github.com/insolar/insolar/network/node"
 	"sync"
 
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -183,6 +188,18 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		n.BaseGateway,
 		n.Gatewayer,
 	)
+
+	// sign origin
+	origin := n.NodeKeeper.GetOrigin()
+	digest, sign := getAnnounceSignature(
+		origin,
+		network.OriginIsDiscovery(cert),
+		n.KeyProcessor,
+		n.KeyStore,
+		n.CryptographyScheme,
+	)
+	origin.(node.MutableNode).SetSignature(digest, sign)
+
 	err = n.cm.Init(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to init internal components")
@@ -216,8 +233,8 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	n.Gatewayer.Gateway().Run(ctx)
 
 	n.consensusController = n.consensusInstaller.Install(n.pulseHandler, n.datagramHandler)
-	n.consensusController.RegisterFinishedNotifier(func(pulseNumber insolar.PulseNumber) {
-		n.Gatewayer.Gateway().OnConsensusFinished(pulseNumber)
+	n.consensusController.RegisterFinishedNotifier(func(_ member.OpMode, _ member.Power, effectiveSince insolar.PulseNumber) {
+		n.Gatewayer.Gateway().OnConsensusFinished(effectiveSince)
 	})
 	n.BaseGateway.ConsensusController = n.consensusController
 
@@ -299,4 +316,56 @@ func (n *ServiceNetwork) State() []byte {
 
 func (n *ServiceNetwork) RegisterConsensusFinishedNotifier(fn consensus.FinishedNotifier) {
 	n.consensusController.RegisterFinishedNotifier(fn)
+}
+
+func getAnnounceSignature(
+	node insolar.NetworkNode,
+	isDiscovery bool,
+	kp insolar.KeyProcessor,
+	keystore insolar.KeyStore,
+	scheme insolar.PlatformCryptographyScheme,
+) ([]byte, insolar.Signature) {
+
+	brief := serialization.NodeBriefIntro{}
+	brief.ShortID = node.ShortID()
+	brief.SetPrimaryRole(adapters.StaticRoleToPrimaryRole(node.Role()))
+	if isDiscovery {
+		brief.SpecialRoles = member.SpecialRoleDiscovery
+	}
+	brief.StartPower = 10
+
+	addr, err := packets.NewNodeAddress(node.Address())
+	if err != nil {
+		panic(err)
+	}
+	copy(brief.Endpoint[:], addr[:])
+
+	pk, err := kp.ExportPublicKeyBinary(node.PublicKey())
+	if err != nil {
+		panic(err)
+	}
+
+	copy(brief.NodePK[:], pk)
+
+	buf := &bytes.Buffer{}
+	err = brief.SerializeTo(nil, buf)
+	if err != nil {
+		panic(err)
+	}
+
+	data := buf.Bytes()
+	data = data[:len(data)-64]
+
+	key, err := keystore.GetPrivateKey("")
+	if err != nil {
+		panic(err)
+	}
+
+	digest := scheme.IntegrityHasher().Hash(data)
+	sign, err := scheme.DigestSigner(key).Sign(digest)
+	if err != nil {
+		panic(err)
+	}
+
+	return digest, *sign
 }

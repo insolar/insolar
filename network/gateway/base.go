@@ -55,6 +55,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/adapters"
+	"github.com/insolar/insolar/network/node"
 	"time"
 
 	"github.com/pkg/errors"
@@ -130,23 +131,8 @@ func (g *Base) Init(ctx context.Context) error {
 		return g.HostNetwork.BuildResponse(ctx, req, &packet.Ping{}), nil
 	})
 
-	var err error
-
-	// todo: use candidate profile
-	origin := g.NodeKeeper.GetOrigin()
-	g.originCandidateProfile = &packet.CandidateProfile{
-		Address:     origin.Address(),
-		Ref:         origin.ID(),
-		ShortID:     uint32(origin.ShortID()),
-		PrimaryRole: packet.Virtual,
-		SpecialRole: packet.None,
-		Signature:   nil,
-	}
-
 	g.createCandidateProfile()
-	//g.originCandidateProfile = adapters.NewCandidateProfile(p)
-	//g.joinClaim, err = g.NodeKeeper.GetOriginJoinClaim()
-	return err
+	return nil
 }
 
 func (g *Base) OnPulse(ctx context.Context, pu insolar.Pulse) error {
@@ -225,7 +211,6 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 	//TODO: how to ignore claim if node already bootstrap to other??
 
 	// TODO: check JoinClaim is from Discovery node
-	//g.NodeKeeper.GetClaimQueue().Push(data.CandidateProfile)
 	profile := adapters.NewCandidateProfile(data.CandidateProfile)
 	g.ConsensusController.AddJoinCandidate(profile)
 
@@ -365,10 +350,14 @@ func (g *Base) OnConsensusFinished(p insolar.PulseNumber) {
 
 func (g *Base) createCandidateProfile() {
 	origin := g.NodeKeeper.GetOrigin()
+	digest, sign := origin.(node.MutableNode).GetSignature()
+
 	p := &packet.CandidateProfile{}
 	p.Address = origin.Address()
 	p.Ref = origin.ID()
 	p.ShortID = uint32(origin.ShortID())
+	p.Digest = digest
+	p.Signature = sign.Bytes()
 
 	cert := g.CertificateManager.GetCertificate()
 	switch cert.GetRole() {
@@ -389,8 +378,4 @@ func (g *Base) createCandidateProfile() {
 	}
 
 	g.originCandidateProfile = p
-
-	//nodeBriefIntro := serialization.NodeBriefIntro{}
-	//nodeBriefIntro.SerializeTo()
-
 }

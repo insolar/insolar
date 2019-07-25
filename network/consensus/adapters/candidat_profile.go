@@ -133,10 +133,6 @@ func (c *CandidateProfile) GetBriefIntroSignedDigest() cryptkit.SignedDigestHold
 		cryptkit.NewSignature(&ds, "stubSign")).AsSignedDigestHolder()
 }
 
-func (c *CandidateProfile) GetJoinerSignature() cryptkit.SignatureHolder {
-	return nil
-}
-
 func (c *CandidateProfile) GetIssuedAtPulse() pulse.Number {
 	return 0
 }
