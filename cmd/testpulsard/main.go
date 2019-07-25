@@ -78,10 +78,16 @@ func main() {
 	http.HandleFunc("/pulse", func(writer http.ResponseWriter, request *http.Request) {
 		err := testPulsar.SendPulse(ctx)
 		if err != nil {
-			fmt.Fprintf(writer, "Error - r", err)
+			_, err := fmt.Fprintf(writer, "Error - %v", err)
+			if err != nil {
+				panic(err)
+			}
 		}
 
-		fmt.Fprint(writer, "OK")
+		_, err = fmt.Fprint(writer, "OK")
+		if err != nil {
+			panic(err)
+		}
 	})
 
 	fmt.Printf("Starting server for testing HTTP POST...\n")
