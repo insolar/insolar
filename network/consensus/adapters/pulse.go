@@ -141,15 +141,15 @@ func (p *PulsePacketParser) IsRelayForbidden() bool {
 }
 
 func (p *PulsePacketParser) GetSourceID() insolar.ShortNodeID {
-	return 0
+	return insolar.AbsentShortNodeID
 }
 
 func (p *PulsePacketParser) GetReceiverID() insolar.ShortNodeID {
-	return 0
+	return insolar.AbsentShortNodeID
 }
 
 func (p *PulsePacketParser) GetTargetID() insolar.ShortNodeID {
-	return 0
+	return insolar.AbsentShortNodeID
 }
 
 func (p *PulsePacketParser) GetPacketType() phases.PacketType {

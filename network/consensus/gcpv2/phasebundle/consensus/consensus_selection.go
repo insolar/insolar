@@ -63,10 +63,15 @@ type Selection interface {
 }
 
 type SelectionStrategy interface {
+	CanStartVectorsEarly(consensusMembers int, countFraud int, countTrustBySome int, countTrustByNeighbors int) bool
 	/* Result can be nil - it means no-decision */
 	TrySelectOnAdded(globulaStats *nodeset.ConsensusStatTable, addedNode profiles.StaticProfile,
 		nodeStats *nodeset.ConsensusStatRow) Selection
 	SelectOnStopped(globulaStats *nodeset.ConsensusStatTable, timeIsOut bool, bftMajority int) Selection
+}
+
+type SelectionStrategyFactory interface {
+	CreateSelectionStrategy(aggressivePhasing bool) SelectionStrategy
 }
 
 func NewSelection(canBeImproved bool, bitset nodeset.ConsensusBitsetRow) Selection {
