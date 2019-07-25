@@ -75,7 +75,13 @@ import (
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
+)
+
+var (
+	keyProcessor = platformpolicy.NewKeyProcessor()
+	scheme       = platformpolicy.NewPlatformCryptographyScheme()
 )
 
 func initJoiners(
@@ -203,10 +209,10 @@ func initNodes(
 	return controllers, pulseHandlers, contexts, nil
 }
 
-func initLogger() context.Context {
+func initLogger(level insolar.LogLevel) context.Context {
 	ctx := context.Background()
 	logger := inslogger.FromContext(ctx).WithCaller(false)
-	logger, _ = logger.WithLevelNumber(TestLogLevel)
+	logger, _ = logger.WithLevelNumber(level)
 	logger, _ = logger.WithFormat(insolar.TextFormat)
 	ctx = inslogger.SetLogger(ctx, logger)
 	return ctx

@@ -60,21 +60,12 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	keyProcessor = platformpolicy.NewKeyProcessor()
-	scheme       = platformpolicy.NewPlatformCryptographyScheme()
-)
-
-const TestLogLevel = insolar.DebugLevel
-
 func TestConsensusMain(t *testing.T) {
 	startedAt := time.Now()
-
-	ctx := initLogger()
+	ctx := initLogger(insolar.DebugLevel)
 
 	nodeIdentities := generateNodeIdentities(0, 1, 3, 5)
 	nodeInfos := generateNodeInfos(nodeIdentities)
