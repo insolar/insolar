@@ -246,8 +246,8 @@ func (p *PreparedPacketSender) SendTo(
 	ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
 		"receiver_node_id": p.packet.Header.ReceiverID,
 		"target_node_id":   p.packet.Header.TargetID,
-		"options":          sendOptions,
 		"packet_type":      p.packet.Header.GetPacketType().String(),
+		"packet_pulse":     p.packet.getPulseNumber(),
 	})
 
 	p.beforeSend(sender, sendOptions, target)
