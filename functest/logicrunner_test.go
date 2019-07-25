@@ -372,9 +372,9 @@ func (c *TestSagaSelfCallContract) Rollback(delta int) error {
 	checkPassed := false
 
 	for attempt := 0; attempt <= 10; attempt++ {
-		bal2 := callMethod(t, contractRef, "GetSagaCallsNum")
-		require.Empty(t, bal2.Error)
-		if bal2.ExtractedReply.(float64) != float64(1) {
+		res2 := callMethod(t, contractRef, "GetSagaCallsNum")
+		require.Empty(t, res2.Error)
+		if res2.ExtractedReply.(float64) != float64(1) {
 			// saga is not accepted yet
 			time.Sleep(10 * time.Millisecond)
 			continue
