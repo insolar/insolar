@@ -89,11 +89,11 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	})
 	logger.Debug("trying to save result")
 
-	// Prevent concurrent object modifications.
-	p.dep.locker.Lock(p.result.Object)
-	defer p.dep.locker.Unlock(p.result.Object)
-
 	objectID := p.result.Object
+
+	// Prevent concurrent object modifications.
+	p.dep.locker.Lock(objectID)
+	defer p.dep.locker.Unlock(objectID)
 
 	// Check for duplicates.
 	{
@@ -120,15 +120,15 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		}
 	}
 
-	pendings, err := p.dep.filament.PendingRequests(ctx, flow.Pulse(ctx), objectID)
+	opened, err := p.dep.filament.OpenedRequests(ctx, flow.Pulse(ctx), objectID, false)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate pending requests")
 	}
-	closedRequest, err := findClosed(pendings, p.result)
+	closedRequest, err := findClosed(opened, p.result)
 	if err != nil {
 		return errors.Wrap(err, "failed to find request being closed")
 	}
-	earliestPending, err := calcPending(pendings, closedRequest.RecordID)
+	earliestPending, err := calcPending(opened, closedRequest.RecordID)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate earliest pending")
 	}
@@ -192,7 +192,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 
 	// Outgoing request cannot be a reason. We are only interested in potential reason requests.
 	if _, ok := record.Unwrap(closedRequest.Record.Virtual).(*record.OutgoingRequest); ok {
-		notifyDetached(ctx, p.dep.sender, pendings, objectID, closedRequest.RecordID)
+		notifyDetached(ctx, p.dep.sender, opened, objectID, closedRequest.RecordID)
 	}
 
 	msg, err := payload.NewMessage(&payload.ResultInfo{
@@ -209,17 +209,17 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 
 // EarliestPending checks if received result closes earliest request. If so, it should return new earliest request or
 // nil if the last request was closed.
-func calcPending(pendings []record.CompositeFilamentRecord, closedRequestID insolar.ID) (*insolar.PulseNumber, error) {
+func calcPending(opened []record.CompositeFilamentRecord, closedRequestID insolar.ID) (*insolar.PulseNumber, error) {
 	// If we don't have pending requests BEFORE we try to save result, something went wrong.
-	if len(pendings) == 0 {
+	if len(opened) == 0 {
 		return nil, errors.New("no requests in pending before result")
 	}
 
-	currentEarliest := pendings[0]
+	currentEarliest := opened[0]
 	// Received result doesn't close earliest known request. It means the earliest Request is still the earliest.
 	if currentEarliest.RecordID != closedRequestID {
 		// If earliest request is not closed by received result and its the only request, something went wrong.
-		if len(pendings) < 2 {
+		if len(opened) < 2 {
 			return nil, errors.New("result doesn't match with any pending requests")
 		}
 		p := currentEarliest.RecordID.Pulse()
@@ -227,12 +227,12 @@ func calcPending(pendings []record.CompositeFilamentRecord, closedRequestID inso
 	}
 
 	// If earliest request is closed by received result and its the only request, no open requests left.
-	if len(pendings) < 2 {
+	if len(opened) < 2 {
 		return nil, nil
 	}
 
 	// Returning next earliest request.
-	newEarliest := pendings[1]
+	newEarliest := opened[1]
 	p := newEarliest.RecordID.Pulse()
 	return &p, nil
 }
@@ -259,10 +259,10 @@ func findClosed(reqs []record.CompositeFilamentRecord, result record.Result) (re
 func notifyDetached(
 	ctx context.Context,
 	sender bus.Sender,
-	pendings []record.CompositeFilamentRecord,
+	opened []record.CompositeFilamentRecord,
 	objectID, closedRequestID insolar.ID,
 ) {
-	for _, req := range pendings {
+	for _, req := range opened {
 		outgoing, ok := record.Unwrap(req.Record.Virtual).(*record.OutgoingRequest)
 		if !ok {
 			continue

@@ -54,8 +54,13 @@ type FilamentCalculator interface {
 		readUntil, calcPulse insolar.PulseNumber,
 	) ([]record.CompositeFilamentRecord, error)
 
-	// PendingRequests returns all pending requests of object for provided pulse.
-	PendingRequests(ctx context.Context, pulse insolar.PulseNumber, objectID insolar.ID) ([]record.CompositeFilamentRecord, error)
+	// OpenedRequests returns all opened requests of object for provided pulse.
+	OpenedRequests(
+		ctx context.Context,
+		pulse insolar.PulseNumber,
+		objectID insolar.ID,
+		pendingOnly bool,
+	) ([]record.CompositeFilamentRecord, error)
 
 	// RequestDuplicate searches two records on objectID chain:
 	// First one with same ID as requestID param.
@@ -178,7 +183,7 @@ func (m *FilamentModifierDefault) SetResult(ctx context.Context, resultID insola
 		return nil, errors.Wrap(err, "failed to create a meta-record about result")
 	}
 
-	pending, err := m.calculator.PendingRequests(ctx, resultID.Pulse(), objectID)
+	pending, err := m.calculator.OpenedRequests(ctx, resultID.Pulse(), objectID, true)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to calculate pending requests")
 	}
@@ -319,16 +324,18 @@ func (c *FilamentCalculatorDefault) Requests(
 	return segment, nil
 }
 
-func (c *FilamentCalculatorDefault) PendingRequests(ctx context.Context, pulse insolar.PulseNumber, objectID insolar.ID) ([]record.CompositeFilamentRecord, error) {
-	logger := inslogger.FromContext(ctx).WithField("object_id", objectID.DebugString())
-
-	logger.Debug("started collecting pending requests")
-	defer logger.Debug("finished collecting pending requests")
-
+func (c *FilamentCalculatorDefault) OpenedRequests(ctx context.Context, pulse insolar.PulseNumber, objectID insolar.ID, pendingOnly bool) ([]record.CompositeFilamentRecord, error) {
 	idx, err := c.indexes.ForID(ctx, pulse, objectID)
 	if err != nil {
 		return nil, err
 	}
+
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"object_id":           objectID.DebugString(),
+		"pending_filament_id": idx.Lifeline.PendingPointer.DebugString(),
+	})
+	logger.Debug("started collecting opened requests")
+	defer logger.Debug("finished collecting opened requests")
 
 	cache := c.cache.Get(objectID)
 	cache.Lock()
@@ -352,12 +359,17 @@ func (c *FilamentCalculatorDefault) PendingRequests(ctx context.Context, pulse i
 		c.sender,
 	)
 
-	var pending []record.CompositeFilamentRecord
+	var opened []record.CompositeFilamentRecord
 	hasResult := map[insolar.ID]struct{}{}
 	for iter.HasPrev() {
 		rec, err := iter.Prev(ctx)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to calculate pending")
+			return nil, errors.Wrap(err, "failed to calculate opened")
+		}
+
+		// Skip closed requests.
+		if _, ok := hasResult[rec.RecordID]; ok {
+			continue
 		}
 
 		virtual := record.Unwrap(rec.Record.Virtual)
@@ -365,36 +377,25 @@ func (c *FilamentCalculatorDefault) PendingRequests(ctx context.Context, pulse i
 		// result should always go first, before initial request
 		case *record.Result:
 			hasResult[*r.Request.Record()] = struct{}{}
+
 		case *record.IncomingRequest:
-			if _, ok := hasResult[rec.RecordID]; !ok {
-				pending = append(pending, rec)
-			}
-		// Outgoing without pending incoming reason request couldn't be registered,
-		// so pending outgoing request always goes:
-		// 1) after reason's request (before while iterating)
-		// 2) before reason's request Result. (after while iterating)
+			opened = append(opened, rec)
+
 		case *record.OutgoingRequest:
-			// Add only detached outgoing requests with incoming request which has result.
-			if !r.IsDetached() {
+			_, reasonClosed := hasResult[*r.Reason.Record()]
+			isReadyDetached := r.IsDetached() && reasonClosed
+			if pendingOnly && !isReadyDetached {
 				break
 			}
-			_, reasonClosed := hasResult[*r.Reason.Record()]
-			_, reqClose := hasResult[rec.RecordID]
 
-			if reqClose && !reasonClosed {
-				return nil, errors.New("impossible situation. reason should be closed before closing of outgoing")
-			}
-
-			if reasonClosed && !reqClose {
-				pending = append(pending, rec)
-			}
+			opened = append(opened, rec)
 		}
 	}
 
-	// We need to reverse pending because we iterated from the end when selecting them.
-	ordered := make([]record.CompositeFilamentRecord, len(pending))
-	count := len(pending)
-	for i, pend := range pending {
+	// We need to reverse opened because we iterated from the end when selecting them.
+	ordered := make([]record.CompositeFilamentRecord, len(opened))
+	count := len(opened)
+	for i, pend := range opened {
 		ordered[count-i-1] = pend
 	}
 
@@ -405,8 +406,9 @@ func (c *FilamentCalculatorDefault) ResultDuplicate(
 	ctx context.Context, objectID, resultID insolar.ID, result record.Result,
 ) (*record.CompositeFilamentRecord, error) {
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"object_id": objectID.DebugString(),
-		"result_id": resultID.DebugString(),
+		"object_id":  objectID.DebugString(),
+		"result_id":  resultID.DebugString(),
+		"request_id": result.Request.Record().DebugString(),
 	})
 
 	logger.Debug("started to search for duplicated results")

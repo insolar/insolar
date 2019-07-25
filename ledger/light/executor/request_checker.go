@@ -69,7 +69,7 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 
 	case *record.OutgoingRequest:
 		// FIXME: replace with "FindRequest" calculator method.
-		pendings, err := c.filaments.PendingRequests(ctx, requestID.Pulse(), *request.AffinityRef().Record())
+		pendings, err := c.filaments.OpenedRequests(ctx, requestID.Pulse(), *request.AffinityRef().Record(), true)
 		if err != nil {
 			return errors.Wrap(err, "failed fetch pending requests")
 		}

@@ -88,8 +88,6 @@ func (p *SetRequest) Dep(
 }
 
 func (p *SetRequest) Proceed(ctx context.Context) error {
-	logger := inslogger.FromContext(ctx).WithField("request_id", p.requestID.DebugString())
-	logger.Debug("trying to save request")
 
 	if p.requestID.IsEmpty() {
 		return errors.New("request id is empty")
@@ -104,6 +102,12 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	} else {
 		objectID = *p.request.AffinityRef().Record()
 	}
+
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"request_id": p.requestID.DebugString(),
+		"object_id":  objectID.DebugString(),
+	})
+	logger.Debug("trying to save request")
 
 	// Check virtual executor.
 	virtualExecutor, err := p.dep.coordinator.VirtualExecutorForObject(ctx, objectID, flow.Pulse(ctx))
