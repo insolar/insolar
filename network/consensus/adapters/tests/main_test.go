@@ -59,6 +59,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/stretchr/testify/require"
 )
@@ -71,7 +72,7 @@ func TestConsensusJoin(t *testing.T) {
 	nodeInfos := generateNodeInfos(nodeIdentities)
 	nodes, discoveryNodes := nodesFromInfo(nodeInfos)
 
-	joinIdentities := generateNodeIdentities(0, 0, 2, 0)
+	joinIdentities := generateNodeIdentities(0, 0, 2, 2)
 	joinInfos := generateNodeInfos(joinIdentities)
 	joiners, _ := nodesFromInfo(joinInfos)
 
@@ -82,10 +83,10 @@ func TestConsensusJoin(t *testing.T) {
 		SpikeProbability: 0.1,
 	})
 
-	controllers, pulseHandlers, _, _, err := initNodes(ctx, nodes, discoveryNodes, strategy, nodeInfos)
+	controllers, pulseHandlers, _, _, _, err := initNodes(ctx, consensus.ReadyNetwork, nodes, discoveryNodes, strategy, nodeInfos)
 	require.NoError(t, err)
 
-	joinerProfiles, err := initJoiners(ctx, joiners, discoveryNodes, strategy, joinInfos)
+	_, _, _, _, joinerProfiles, err := initNodes(ctx, consensus.Joiner, joiners, discoveryNodes, strategy, joinInfos)
 	require.NoError(t, err)
 
 	fmt.Println("===", len(nodes), "=================================================")
@@ -139,7 +140,7 @@ func TestConsensusLeave(t *testing.T) {
 		SpikeProbability: 0.1,
 	})
 
-	controllers, pulseHandlers, transports, contexts, err := initNodes(ctx, nodes, discoveryNodes, strategy, nodeInfos)
+	controllers, pulseHandlers, transports, contexts, _, err := initNodes(ctx, consensus.ReadyNetwork, nodes, discoveryNodes, strategy, nodeInfos)
 	require.NoError(t, err)
 
 	fmt.Println("===", len(nodes), "=================================================")
@@ -188,7 +189,7 @@ func TestConsensusDrop(t *testing.T) {
 		SpikeProbability: 0.1,
 	})
 
-	_, pulseHandlers, transports, contexts, err := initNodes(ctx, nodes, discoveryNodes, strategy, nodeInfos)
+	_, pulseHandlers, transports, contexts, _, err := initNodes(ctx, consensus.ReadyNetwork, nodes, discoveryNodes, strategy, nodeInfos)
 	require.NoError(t, err)
 
 	fmt.Println("===", len(nodes), "=================================================")
@@ -239,10 +240,10 @@ func TestConsensusAll(t *testing.T) {
 		SpikeProbability: 0.1,
 	})
 
-	controllers, pulseHandlers, transports, contexts, err := initNodes(ctx, nodes, discoveryNodes, strategy, nodeInfos)
+	controllers, pulseHandlers, transports, contexts, _, err := initNodes(ctx, consensus.ReadyNetwork, nodes, discoveryNodes, strategy, nodeInfos)
 	require.NoError(t, err)
 
-	joinerProfiles, err := initJoiners(ctx, joiners, discoveryNodes, strategy, joinInfos)
+	_, _, _, _, joinerProfiles, err := initNodes(ctx, consensus.Joiner, joiners, discoveryNodes, strategy, joinInfos)
 	require.NoError(t, err)
 
 	fmt.Println("===", len(nodes), "=================================================")

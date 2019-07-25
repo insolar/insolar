@@ -84,78 +84,20 @@ var (
 	scheme       = platformpolicy.NewPlatformCryptographyScheme()
 )
 
-func initJoiners(
-	ctx context.Context,
-	joiners []insolar.NetworkNode,
-	discoveryNodes []insolar.NetworkNode,
-	strategy NetStrategy,
-	joinInfos []*nodeInfo,
-) ([]profiles.StaticProfile, error) {
-
-	joinerProfiles := make([]profiles.StaticProfile, len(joiners))
-
-	for i, j := range joiners {
-		nodeKeeper := nodenetwork.NewNodeKeeper(j)
-		certificateManager := initCrypto(j, discoveryNodes)
-		datagramHandler := adapters.NewDatagramHandler()
-
-		conf := configuration.NewHostNetwork().Transport
-		conf.Address = j.Address()
-
-		transportFactory := transport.NewFactory(conf)
-		datagramTransport, err := transportFactory.CreateDatagramTransport(datagramHandler)
-		if err != nil {
-			return nil, err
-		}
-
-		pulseHandler := adapters.NewPulseHandler()
-
-		delayTransport := strategy.GetLink(datagramTransport)
-
-		_ = consensus.New(ctx, consensus.Dep{
-			PrimingCloudStateHash: [64]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
-			KeyProcessor:          keyProcessor,
-			Scheme:                scheme,
-			CertificateManager:    certificateManager,
-			KeyStore:              keystore.NewInplaceKeyStore(joinInfos[i].privateKey),
-			NodeKeeper:            nodeKeeper,
-			StateGetter:           &nshGen{nshDelay: defaultNshGenerationDelay},
-			PulseChanger: &pulseChanger{
-				nodeKeeper: nodeKeeper,
-			},
-			StateUpdater: &stateUpdater{
-				nodeKeeper: nodeKeeper,
-			},
-			DatagramTransport: delayTransport,
-		}).Install(datagramHandler, pulseHandler)
-
-		ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
-			"node_id":      j.ShortID(),
-			"node_address": j.Address(),
-		})
-		err = delayTransport.Start(ctx)
-		if err != nil {
-			return nil, err
-		}
-
-		joinerProfiles[i] = adapters.NewStaticProfile(j, certificateManager.GetCertificate(), keyProcessor)
-	}
-
-	return joinerProfiles, nil
-}
-
 func initNodes(
 	ctx context.Context,
+	mode consensus.Mode,
 	nodes []insolar.NetworkNode,
 	discoveryNodes []insolar.NetworkNode,
 	strategy NetStrategy,
 	nodeInfos []*nodeInfo,
-) ([]consensus.Controller, []network.PulseHandler, []transport.DatagramTransport, []context.Context, error) {
+) ([]consensus.Controller, []network.PulseHandler, []transport.DatagramTransport, []context.Context, []profiles.StaticProfile, error) {
 
 	controllers := make([]consensus.Controller, len(nodes))
 	transports := make([]transport.DatagramTransport, len(nodes))
 	contexts := make([]context.Context, len(nodes))
 	pulseHandlers := make([]network.PulseHandler, 0, len(nodes))
+	staticProfiles := make([]profiles.StaticProfile, len(nodes))
 
 	for i, n := range nodes {
 		nodeKeeper := nodenetwork.NewNodeKeeper(n)
@@ -169,7 +111,7 @@ func initNodes(
 		transportFactory := transport.NewFactory(conf)
 		datagramTransport, err := transportFactory.CreateDatagramTransport(datagramHandler)
 		if err != nil {
-			return nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, err
 		}
 
 		pulseHandler := adapters.NewPulseHandler()
@@ -193,7 +135,7 @@ func initNodes(
 				nodeKeeper: nodeKeeper,
 			},
 			DatagramTransport: delayTransport,
-		}).Install(datagramHandler, pulseHandler)
+		}).ControllerFor(mode, datagramHandler, pulseHandler)
 
 		ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
 			"node_id":      n.ShortID(),
@@ -202,11 +144,13 @@ func initNodes(
 		contexts[i] = ctx
 		err = delayTransport.Start(ctx)
 		if err != nil {
-			return nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, err
 		}
+
+		staticProfiles[i] = adapters.NewStaticProfile(n, certificateManager.GetCertificate(), keyProcessor)
 	}
 
-	return controllers, pulseHandlers, transports, contexts, nil
+	return controllers, pulseHandlers, transports, contexts, staticProfiles, nil
 }
 
 func initLogger(level insolar.LogLevel) context.Context {

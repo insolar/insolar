@@ -119,14 +119,14 @@ func newPacketParser(
 		return nil, err
 	}
 
-	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
+	_, logger := inslogger.WithFields(ctx, map[string]interface{}{
 		"sender_id":    parser.GetSourceID(),
 		"packet_type":  parser.GetPacketType().String(),
 		"packet_pulse": parser.GetPulseNumber(),
 	})
 
 	if logger.Is(insolar.DebugLevel) {
-		logger.Debugf("Received packet: %s", parser.packet)
+		logger.Debugf("Received packet s:%d t:%d payload:{%s}", parser.GetSourceID(), parser.GetTargetID(), parser.packet)
 	}
 
 	parser.data = capture.Captured()
