@@ -250,7 +250,7 @@ func (p *PreparedPacketSender) SendTo(
 		"packet_pulse":     p.packet.getPulseNumber(),
 	})
 
-	p.beforeSend(sendOptions, target)
+	p.finalizeFlags(sendOptions)
 
 	var buf [packetMaxSize]byte
 	buffer := bytes.NewBuffer(buf[0:0:packetMaxSize])
@@ -277,11 +277,7 @@ func (p *PreparedPacketSender) SendToMany(
 	}
 }
 
-func (p *PreparedPacketSender) beforeSend(
-	sendOptions transport.PacketSendOptions,
-	target transport.TargetProfile,
-) {
-
+func (p *PreparedPacketSender) finalizeFlags(sendOptions transport.PacketSendOptions) {
 	packetType := p.packet.Header.GetPacketType().GetPayloadEquivalent()
 
 	if packetType == phases.PacketPhase0 || packetType == phases.PacketPhase1 {
@@ -291,7 +287,7 @@ func (p *PreparedPacketSender) beforeSend(
 	}
 
 	if packetType == phases.PacketPhase1 || packetType == phases.PacketPhase2 {
-		if !target.IsJoiner() || !sendOptions.HasAny(transport.TargetNeedsIntro) {
+		if !sendOptions.HasAny(transport.TargetNeedsIntro) {
 			p.packet.Header.ClearFlag(FlagSelfIntro1)
 			p.packet.Header.ClearFlag(FlagSelfIntro2)
 		}
