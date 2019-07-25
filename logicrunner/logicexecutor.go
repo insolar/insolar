@@ -133,6 +133,7 @@ func (le *logicExecutor) ExecuteConstructor(
 	}
 
 	transcript.LogicContext = le.genLogicCallContext(ctx, transcript, protoDesc, codeDesc)
+
 	newData, err := executor.CallConstructor(ctx, transcript.LogicContext, *codeDesc.Ref(), request.Method, request.Arguments)
 	if err != nil {
 		return nil, errors.Wrap(err, "executor error")
