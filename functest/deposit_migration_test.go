@@ -36,20 +36,20 @@ func TestMigrationToken(t *testing.T) {
 	_, err = retryableMemberMigrationCreate(member, true)
 	require.NoError(t, err)
 
-	deposit := migrate(t, member.ref, "1000", "Test_TxHash", ma, 1, 0)
+	deposit := migrate(t, member.ref, "1000", "Test_TxHash", ma, 0, 0)
 
 	confirmerReferences, ok := deposit["confirmerReferences"].([]interface{})
 	require.True(t, ok, fmt.Sprintf("failed to cast result: expected []string, got %T", deposit["confirmerReferences"]))
-	require.Equal(t, confirmerReferences[1], migrationDaemons[1].ref)
+	require.Equal(t, confirmerReferences[0], migrationDaemons[0].ref)
 
-	deposit = migrate(t, member.ref, "1000", "Test_TxHash", ma, 0, 0)
+	deposit = migrate(t, member.ref, "1000", "Test_TxHash", ma, 2, 0)
 
 	confirmerReferences, ok = deposit["confirmerReferences"].([]interface{})
 	require.True(t, ok)
 	require.Equal(t, confirmerReferences[0], migrationDaemons[0].ref)
-	require.Equal(t, confirmerReferences[1], migrationDaemons[1].ref)
+	require.Equal(t, confirmerReferences[2], migrationDaemons[2].ref)
 
-	deposit = migrate(t, member.ref, "1000", "Test_TxHash", ma, 2, 0)
+	deposit = migrate(t, member.ref, "1000", "Test_TxHash", ma, 1, 0)
 
 	confirmerReferences, ok = deposit["confirmerReferences"].([]interface{})
 	require.True(t, ok)
