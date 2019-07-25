@@ -68,6 +68,8 @@ var (
 	}
 )
 
+const PulseStep insolar.PulseNumber = 10
+
 type Server struct {
 	pm           insolar.PulseManager
 	pulse        insolar.Pulse
@@ -385,7 +387,7 @@ func (s *Server) Pulse(ctx context.Context) {
 	defer s.lock.Unlock()
 
 	s.pulse = insolar.Pulse{
-		PulseNumber: s.pulse.PulseNumber + 10,
+		PulseNumber: s.pulse.PulseNumber + PulseStep,
 	}
 	err := s.pm.Set(ctx, s.pulse)
 	if err != nil {

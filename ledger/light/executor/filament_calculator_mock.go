@@ -36,7 +36,7 @@ type FilamentCalculatorMock struct {
 	RequestDuplicatePreCounter uint64
 	RequestDuplicateMock       mFilamentCalculatorMockRequestDuplicate
 
-	RequestsFunc       func(p context.Context, p1 insolar.ID, p2 insolar.ID, p3 insolar.PulseNumber, p4 insolar.PulseNumber) (r []record.CompositeFilamentRecord, r1 error)
+	RequestsFunc       func(p context.Context, p1 insolar.ID, p2 insolar.ID, p3 insolar.PulseNumber) (r []record.CompositeFilamentRecord, r1 error)
 	RequestsCounter    uint64
 	RequestsPreCounter uint64
 	RequestsMock       mFilamentCalculatorMockRequests
@@ -541,7 +541,6 @@ type FilamentCalculatorMockRequestsInput struct {
 	p1 insolar.ID
 	p2 insolar.ID
 	p3 insolar.PulseNumber
-	p4 insolar.PulseNumber
 }
 
 type FilamentCalculatorMockRequestsResult struct {
@@ -550,14 +549,14 @@ type FilamentCalculatorMockRequestsResult struct {
 }
 
 //Expect specifies that invocation of FilamentCalculator.Requests is expected from 1 to Infinity times
-func (m *mFilamentCalculatorMockRequests) Expect(p context.Context, p1 insolar.ID, p2 insolar.ID, p3 insolar.PulseNumber, p4 insolar.PulseNumber) *mFilamentCalculatorMockRequests {
+func (m *mFilamentCalculatorMockRequests) Expect(p context.Context, p1 insolar.ID, p2 insolar.ID, p3 insolar.PulseNumber) *mFilamentCalculatorMockRequests {
 	m.mock.RequestsFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &FilamentCalculatorMockRequestsExpectation{}
 	}
-	m.mainExpectation.input = &FilamentCalculatorMockRequestsInput{p, p1, p2, p3, p4}
+	m.mainExpectation.input = &FilamentCalculatorMockRequestsInput{p, p1, p2, p3}
 	return m
 }
 
@@ -574,12 +573,12 @@ func (m *mFilamentCalculatorMockRequests) Return(r []record.CompositeFilamentRec
 }
 
 //ExpectOnce specifies that invocation of FilamentCalculator.Requests is expected once
-func (m *mFilamentCalculatorMockRequests) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.ID, p3 insolar.PulseNumber, p4 insolar.PulseNumber) *FilamentCalculatorMockRequestsExpectation {
+func (m *mFilamentCalculatorMockRequests) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.ID, p3 insolar.PulseNumber) *FilamentCalculatorMockRequestsExpectation {
 	m.mock.RequestsFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &FilamentCalculatorMockRequestsExpectation{}
-	expectation.input = &FilamentCalculatorMockRequestsInput{p, p1, p2, p3, p4}
+	expectation.input = &FilamentCalculatorMockRequestsInput{p, p1, p2, p3}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -589,7 +588,7 @@ func (e *FilamentCalculatorMockRequestsExpectation) Return(r []record.CompositeF
 }
 
 //Set uses given function f as a mock of FilamentCalculator.Requests method
-func (m *mFilamentCalculatorMockRequests) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.ID, p3 insolar.PulseNumber, p4 insolar.PulseNumber) (r []record.CompositeFilamentRecord, r1 error)) *FilamentCalculatorMock {
+func (m *mFilamentCalculatorMockRequests) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.ID, p3 insolar.PulseNumber) (r []record.CompositeFilamentRecord, r1 error)) *FilamentCalculatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -598,18 +597,18 @@ func (m *mFilamentCalculatorMockRequests) Set(f func(p context.Context, p1 insol
 }
 
 //Requests implements github.com/insolar/insolar/ledger/light/executor.FilamentCalculator interface
-func (m *FilamentCalculatorMock) Requests(p context.Context, p1 insolar.ID, p2 insolar.ID, p3 insolar.PulseNumber, p4 insolar.PulseNumber) (r []record.CompositeFilamentRecord, r1 error) {
+func (m *FilamentCalculatorMock) Requests(p context.Context, p1 insolar.ID, p2 insolar.ID, p3 insolar.PulseNumber) (r []record.CompositeFilamentRecord, r1 error) {
 	counter := atomic.AddUint64(&m.RequestsPreCounter, 1)
 	defer atomic.AddUint64(&m.RequestsCounter, 1)
 
 	if len(m.RequestsMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.RequestsMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to FilamentCalculatorMock.Requests. %v %v %v %v %v", p, p1, p2, p3, p4)
+			m.t.Fatalf("Unexpected call to FilamentCalculatorMock.Requests. %v %v %v %v", p, p1, p2, p3)
 			return
 		}
 
 		input := m.RequestsMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, FilamentCalculatorMockRequestsInput{p, p1, p2, p3, p4}, "FilamentCalculator.Requests got unexpected parameters")
+		testify_assert.Equal(m.t, *input, FilamentCalculatorMockRequestsInput{p, p1, p2, p3}, "FilamentCalculator.Requests got unexpected parameters")
 
 		result := m.RequestsMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -627,7 +626,7 @@ func (m *FilamentCalculatorMock) Requests(p context.Context, p1 insolar.ID, p2 i
 
 		input := m.RequestsMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, FilamentCalculatorMockRequestsInput{p, p1, p2, p3, p4}, "FilamentCalculator.Requests got unexpected parameters")
+			testify_assert.Equal(m.t, *input, FilamentCalculatorMockRequestsInput{p, p1, p2, p3}, "FilamentCalculator.Requests got unexpected parameters")
 		}
 
 		result := m.RequestsMock.mainExpectation.result
@@ -642,11 +641,11 @@ func (m *FilamentCalculatorMock) Requests(p context.Context, p1 insolar.ID, p2 i
 	}
 
 	if m.RequestsFunc == nil {
-		m.t.Fatalf("Unexpected call to FilamentCalculatorMock.Requests. %v %v %v %v %v", p, p1, p2, p3, p4)
+		m.t.Fatalf("Unexpected call to FilamentCalculatorMock.Requests. %v %v %v %v", p, p1, p2, p3)
 		return
 	}
 
-	return m.RequestsFunc(p, p1, p2, p3, p4)
+	return m.RequestsFunc(p, p1, p2, p3)
 }
 
 //RequestsMinimockCounter returns a count of FilamentCalculatorMock.RequestsFunc invocations
