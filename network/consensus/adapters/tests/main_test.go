@@ -63,7 +63,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestConsensusMain(t *testing.T) {
+func TestConsensusJoin(t *testing.T) {
 	startedAt := time.Now()
 	ctx := initLogger(insolar.DebugLevel)
 
@@ -82,7 +82,7 @@ func TestConsensusMain(t *testing.T) {
 		SpikeProbability: 0.1,
 	})
 
-	controllers, pulseHandlers, _, err := initNodes(ctx, nodes, discoveryNodes, strategy, nodeInfos)
+	controllers, pulseHandlers, _, _, err := initNodes(ctx, nodes, discoveryNodes, strategy, nodeInfos)
 	require.NoError(t, err)
 
 	joinerProfiles, err := initJoiners(ctx, joiners, discoveryNodes, strategy, joinInfos)
@@ -97,34 +97,191 @@ func TestConsensusMain(t *testing.T) {
 		}
 	}()
 
-	// once1 := sync.Once{}
-	// once2 := sync.Once{}
+	once := sync.Once{}
+
+	for {
+		fmt.Println("===", time.Since(startedAt), "=================================================")
+		time.Sleep(time.Second)
+		if time.Since(startedAt) > 10*time.Second {
+			return
+		}
+
+		if time.Since(startedAt) > 1*time.Second {
+			once.Do(func() {
+				type candidate struct {
+					profiles.StaticProfile
+					profiles.StaticProfileExtension
+				}
+
+				for i, joiner := range joinerProfiles {
+					controllers[i].AddJoinCandidate(candidate{
+						joiner,
+						joiner.GetExtension(),
+					})
+				}
+			})
+		}
+	}
+}
+
+func TestConsensusLeave(t *testing.T) {
+	startedAt := time.Now()
+	ctx := initLogger(insolar.DebugLevel)
+
+	nodeIdentities := generateNodeIdentities(0, 1, 3, 5)
+	nodeInfos := generateNodeInfos(nodeIdentities)
+	nodes, discoveryNodes := nodesFromInfo(nodeInfos)
+
+	strategy := NewDelayNetStrategy(DelayStrategyConf{
+		MinDelay:         10 * time.Millisecond,
+		MaxDelay:         30 * time.Millisecond,
+		Variance:         0.2,
+		SpikeProbability: 0.1,
+	})
+
+	controllers, pulseHandlers, transports, contexts, err := initNodes(ctx, nodes, discoveryNodes, strategy, nodeInfos)
+	require.NoError(t, err)
+
+	fmt.Println("===", len(nodes), "=================================================")
+
+	pulsar := NewPulsar(2, pulseHandlers)
+	go func() {
+		for {
+			pulsar.Pulse(ctx, 4+len(nodes)/10)
+		}
+	}()
+
+	once := sync.Once{}
+
+	for {
+		fmt.Println("===", time.Since(startedAt), "=================================================")
+		time.Sleep(time.Second)
+		if time.Since(startedAt) > 10*time.Second {
+			return
+		}
+
+		nodeIdx := 0
+
+		if time.Since(startedAt) > 1*time.Second {
+			once.Do(func() {
+				<-controllers[nodeIdx].Leave(0)
+				err := transports[nodeIdx].Stop(contexts[nodeIdx])
+				require.NoError(t, err)
+				controllers[nodeIdx].Abort()
+			})
+		}
+	}
+}
+
+func TestConsensusDrop(t *testing.T) {
+	startedAt := time.Now()
+	ctx := initLogger(insolar.DebugLevel)
+
+	nodeIdentities := generateNodeIdentities(0, 1, 3, 5)
+	nodeInfos := generateNodeInfos(nodeIdentities)
+	nodes, discoveryNodes := nodesFromInfo(nodeInfos)
+
+	strategy := NewDelayNetStrategy(DelayStrategyConf{
+		MinDelay:         10 * time.Millisecond,
+		MaxDelay:         30 * time.Millisecond,
+		Variance:         0.2,
+		SpikeProbability: 0.1,
+	})
+
+	_, pulseHandlers, transports, contexts, err := initNodes(ctx, nodes, discoveryNodes, strategy, nodeInfos)
+	require.NoError(t, err)
+
+	fmt.Println("===", len(nodes), "=================================================")
+
+	pulsar := NewPulsar(2, pulseHandlers)
+	go func() {
+		for {
+			pulsar.Pulse(ctx, 4+len(nodes)/10)
+		}
+	}()
+
+	once := sync.Once{}
+
+	for {
+		fmt.Println("===", time.Since(startedAt), "=================================================")
+		time.Sleep(time.Second)
+		if time.Since(startedAt) > 10*time.Second {
+			return
+		}
+
+		nodeIdx := 0
+
+		if time.Since(startedAt) > 1*time.Second {
+			once.Do(func() {
+				err := transports[nodeIdx].Stop(contexts[nodeIdx])
+				require.NoError(t, err)
+			})
+		}
+	}
+}
+
+func TestConsensusAll(t *testing.T) {
+	startedAt := time.Now()
+	ctx := initLogger(insolar.DebugLevel)
+
+	nodeIdentities := generateNodeIdentities(0, 1, 3, 5)
+	nodeInfos := generateNodeInfos(nodeIdentities)
+	nodes, discoveryNodes := nodesFromInfo(nodeInfos)
+
+	joinIdentities := generateNodeIdentities(0, 0, 2, 2)
+	joinInfos := generateNodeInfos(joinIdentities)
+	joiners, _ := nodesFromInfo(joinInfos)
+
+	strategy := NewDelayNetStrategy(DelayStrategyConf{
+		MinDelay:         10 * time.Millisecond,
+		MaxDelay:         30 * time.Millisecond,
+		Variance:         0.2,
+		SpikeProbability: 0.1,
+	})
+
+	controllers, pulseHandlers, transports, contexts, err := initNodes(ctx, nodes, discoveryNodes, strategy, nodeInfos)
+	require.NoError(t, err)
+
+	joinerProfiles, err := initJoiners(ctx, joiners, discoveryNodes, strategy, joinInfos)
+	require.NoError(t, err)
+
+	fmt.Println("===", len(nodes), "=================================================")
+
+	pulsar := NewPulsar(2, pulseHandlers)
+	go func() {
+		for {
+			pulsar.Pulse(ctx, 4+len(nodes)/10)
+		}
+	}()
+
+	once1 := sync.Once{}
+	once2 := sync.Once{}
 	once3 := sync.Once{}
 
 	for {
 		fmt.Println("===", time.Since(startedAt), "=================================================")
 		time.Sleep(time.Second)
-		if time.Since(startedAt) > time.Minute {
+		if time.Since(startedAt) > 10*time.Second {
 			return
 		}
 
-		// if time.Since(startedAt) > 2*time.Second {
-		// 	once1.Do(func() {
-		// 		<-controllers[0].Leave(0)
-		// 		transports[0].Stop(contexts[0])
-		// 		controllers[0].Abort()
-		// 		fmt.Println("LEFT 0")
-		// 	})
-		// }
-		//
-		// if time.Since(startedAt) > 1*time.Second {
-		// 	once2.Do(func() {
-		// 		fmt.Println("DROP 1")
-		// 		transports[1].Stop(contexts[1])
-		// 	})
-		// }
-
 		if time.Since(startedAt) > 1*time.Second {
+			once1.Do(func() {
+				nodeIdx := 6
+
+				<-controllers[nodeIdx].Leave(0)
+				err := transports[nodeIdx].Stop(contexts[nodeIdx])
+				require.NoError(t, err)
+				controllers[nodeIdx].Abort()
+			})
+
+			once2.Do(func() {
+				nodeIdx := 7
+
+				err := transports[nodeIdx].Stop(contexts[nodeIdx])
+				require.NoError(t, err)
+			})
+
 			once3.Do(func() {
 				type candidate struct {
 					profiles.StaticProfile
@@ -136,7 +293,6 @@ func TestConsensusMain(t *testing.T) {
 						joiner,
 						joiner.GetExtension(),
 					})
-					break
 				}
 			})
 		}

@@ -150,7 +150,7 @@ func initNodes(
 	discoveryNodes []insolar.NetworkNode,
 	strategy NetStrategy,
 	nodeInfos []*nodeInfo,
-) ([]consensus.Controller, []network.PulseHandler, []context.Context, error) {
+) ([]consensus.Controller, []network.PulseHandler, []transport.DatagramTransport, []context.Context, error) {
 
 	controllers := make([]consensus.Controller, len(nodes))
 	transports := make([]transport.DatagramTransport, len(nodes))
@@ -169,7 +169,7 @@ func initNodes(
 		transportFactory := transport.NewFactory(conf)
 		datagramTransport, err := transportFactory.CreateDatagramTransport(datagramHandler)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, nil, nil, err
 		}
 
 		pulseHandler := adapters.NewPulseHandler()
@@ -202,11 +202,11 @@ func initNodes(
 		contexts[i] = ctx
 		err = delayTransport.Start(ctx)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, nil, nil, err
 		}
 	}
 
-	return controllers, pulseHandlers, contexts, nil
+	return controllers, pulseHandlers, transports, contexts, nil
 }
 
 func initLogger(level insolar.LogLevel) context.Context {

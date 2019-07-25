@@ -57,6 +57,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -117,6 +118,11 @@ func newPacketParser(
 	_, err := parser.packet.DeserializeFrom(ctx, capture)
 	if err != nil {
 		return nil, err
+	}
+
+	logger := inslogger.FromContext(ctx)
+	if logger.Is(insolar.DebugLevel) {
+		logger.Debugf("Received packet: %s", parser.packet)
 	}
 
 	parser.data = capture.Captured()
