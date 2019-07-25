@@ -51,7 +51,6 @@ func TestMigrationToken(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, deposit["amount"], "1000")
 	require.Equal(t, deposit["ethTxHash"], "Test_TxHash")
-	require.Equal(t, deposit["confirms"], float64(1))
 
 	confirmerReferences, ok := deposit["confirmerReferences"].([]interface{})
 	require.True(t, ok, fmt.Sprintf("failed to cast result: expected []string, got %T", deposit["confirmerReferences"]))
@@ -70,7 +69,6 @@ func TestMigrationToken(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, deposit["amount"], "1000")
 	require.Equal(t, deposit["ethTxHash"], "Test_TxHash")
-	require.Equal(t, deposit["confirms"], float64(2))
 
 	confirmerReferences, ok = deposit["confirmerReferences"].([]interface{})
 	require.True(t, ok)
@@ -90,7 +88,6 @@ func TestMigrationToken(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, deposit["amount"], "1000")
 	require.Equal(t, deposit["ethTxHash"], "Test_TxHash")
-	require.Equal(t, deposit["confirms"], float64(3))
 
 	confirmerReferences, ok = deposit["confirmerReferences"].([]interface{})
 	require.True(t, ok)
