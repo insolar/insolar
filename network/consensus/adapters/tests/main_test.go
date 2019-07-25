@@ -67,11 +67,11 @@ func TestConsensusJoin(t *testing.T) {
 	startedAt := time.Now()
 	ctx := initLogger(insolar.DebugLevel)
 
-	nodeIdentities := generateNodeIdentities(0, 1, 3, 5)
+	nodeIdentities := generateNodeIdentities(0, 1, 8, 8)
 	nodeInfos := generateNodeInfos(nodeIdentities)
 	nodes, discoveryNodes := nodesFromInfo(nodeInfos)
 
-	joinIdentities := generateNodeIdentities(0, 0, 2, 2)
+	joinIdentities := generateNodeIdentities(0, 0, 8, 8)
 	joinInfos := generateNodeInfos(joinIdentities)
 	joiners, _ := nodesFromInfo(joinInfos)
 
