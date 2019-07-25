@@ -721,5 +721,10 @@ func (r *NeighbourAnnouncementReader) GetJoinerID() insolar.ShortNodeID {
 }
 
 func (r *NeighbourAnnouncementReader) GetJoinerAnnouncement() transport.JoinerAnnouncementReader {
-	return nil
+	return &JoinerAnnouncementReader{
+		MemberPacketReader: r.MemberPacketReader,
+		joiner:             r.neighbour.Joiner,
+		introducedBy:       r.neighbour.JoinerIntroducedBy,
+		nodeID:             r.neighbour.NeighbourNodeID,
+	}
 }
