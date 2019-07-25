@@ -41,8 +41,6 @@ func getEmptyMessage(mt insolar.MessageType) (insolar.Message, error) {
 		return &ReturnResults{}, nil
 	case insolar.TypeExecutorResults:
 		return &ExecutorResults{}, nil
-	case insolar.TypeValidateCaseBind:
-		return &ValidateCaseBind{}, nil
 	case insolar.TypeValidationResults:
 		return &ValidationResults{}, nil
 	case insolar.TypePendingFinished:
@@ -61,8 +59,6 @@ func getEmptyMessage(mt insolar.MessageType) (insolar.Message, error) {
 		return &RegisterChild{}, nil
 	case insolar.TypeGetObjectIndex:
 		return &GetObjectIndex{}, nil
-	case insolar.TypeAbandonedRequestsNotification:
-		return &AbandonedRequestsNotification{}, nil
 
 	// heavy sync
 	case insolar.TypeHeavyPayload:
@@ -173,7 +169,6 @@ func init() {
 	gob.Register(&ReturnResults{})
 	gob.Register(&ExecutorResults{})
 	gob.Register(&AdditionalCallFromPreviousExecutor{})
-	gob.Register(&ValidateCaseBind{})
 	gob.Register(&ValidationResults{})
 	gob.Register(&PendingFinished{})
 	gob.Register(&StillExecuting{})
@@ -182,7 +177,6 @@ func init() {
 	gob.Register(&GetDelegate{})
 	gob.Register(&RegisterChild{})
 	gob.Register(&GetObjectIndex{})
-	gob.Register(&AbandonedRequestsNotification{})
 
 	// heavy
 	gob.Register(&HeavyPayload{})

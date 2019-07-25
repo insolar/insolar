@@ -91,9 +91,9 @@ func (p *AnnouncementSequenceCalc) ForkSequenceOf(s AnnouncementSequenceCalc) {
 	if !p.IsEmpty() {
 		panic("illegal state")
 	}
-	if s.IsEmpty() {
-		panic("illegal value")
-	}
+	// if s.IsEmpty() {
+	//	panic("illegal value")
+	// }
 
 	if s.digester != nil {
 		p.digester = s.digester.ForkSequence()
@@ -205,7 +205,7 @@ func (p *StateAndRankSequenceCalc) hashMemberEntry(v memberEntry, roleIndex memb
 	if v.state == nil {
 		p.digester.AddNext(nil, fr)
 	} else {
-		p.digester.AddNext(v.state.GetNodeStateHash(), fr)
+		p.digester.AddNext(v.state.GetDigestHolder(), fr)
 	}
 }
 

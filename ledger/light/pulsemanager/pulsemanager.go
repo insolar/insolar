@@ -108,6 +108,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	jets, endedPulse, err := m.setUnderGilSection(ctx, newPulse)
 	if err != nil {
 		if err == errZeroNodes || err == errNoPulse {
+			logger.Debug("setUnderGilSection return error: ", err)
 			return nil
 		}
 		panic(errors.Wrap(err, "under gil error"))
@@ -166,7 +167,7 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 			if err == pulse.ErrNotFound {
 				err := m.JetModifier.Update(ctx, newPulse.PulseNumber, true, insolar.ZeroJetID)
 				if err != nil {
-					panic(errors.Wrap(err, "failed tp update jets"))
+					panic(errors.Wrap(err, "failed to update jets"))
 				}
 			} else {
 				panic(errors.Wrap(err, "failed to calculate previous pulse"))
@@ -177,6 +178,10 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	endedPulse, err := m.PulseAccessor.Latest(ctx)
 	if err != nil {
 		if err == pulse.ErrNotFound {
+			err := m.JetModifier.Update(ctx, newPulse.PulseNumber, true, insolar.ZeroJetID)
+			if err != nil {
+				panic(errors.Wrap(err, "failed to update jets"))
+			}
 			return nil, insolar.Pulse{}, errNoPulse
 		}
 		panic(errors.Wrap(err, "failed to calculate ended pulse"))

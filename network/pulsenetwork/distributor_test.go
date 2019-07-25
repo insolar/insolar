@@ -90,11 +90,6 @@ func createHostNetwork(t *testing.T) (network.HostNetwork, error) {
 
 	ctx := context.Background()
 
-	err = n1.Init(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	err = n1.Start(ctx)
 	if err != nil {
 		return nil, err

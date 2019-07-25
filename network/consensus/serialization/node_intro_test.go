@@ -144,6 +144,7 @@ func TestNodeBriefIntro_DeserializeFrom(t *testing.T) {
 	err = ni2.DeserializeFrom(nil, buf)
 	require.NoError(t, err)
 
+	ni2.JoinerData = nil // Skip in comparison
 	require.Equal(t, ni1, ni2)
 }
 
@@ -172,7 +173,9 @@ func TestNodeBriefIntro_DeserializeFrom_NoShortID(t *testing.T) {
 	err = ni3.DeserializeFrom(nil, buf)
 	require.NoError(t, err)
 
+	ni3.JoinerData = nil // Skip in comparison
 	require.Equal(t, ni2, ni3)
+
 	require.EqualValues(t, 0, ni3.ShortID)
 }
 
@@ -209,6 +212,7 @@ func TestNodeFullIntro_DeserializeFrom(t *testing.T) {
 	err = ni2.DeserializeFrom(nil, buf)
 	require.NoError(t, err)
 
+	ni2.JoinerData = nil // Skip in comparison
 	require.Equal(t, ni1, ni2)
 }
 
@@ -238,6 +242,7 @@ func TestNodeFullIntro_DeserializeFrom_NoShortID(t *testing.T) {
 	err = ni3.DeserializeFrom(nil, buf)
 	require.NoError(t, err)
 
+	ni3.JoinerData = nil // Skip in comparison
 	require.Equal(t, ni2, ni3)
 	require.EqualValues(t, 0, ni3.ShortID)
 }
@@ -274,6 +279,7 @@ func TestNodeFullIntro_DeserializeFrom_Slices(t *testing.T) {
 	err = ni3.DeserializeFrom(nil, buf)
 	require.NoError(t, err)
 
+	ni3.JoinerData = nil // Skip in comparison
 	require.Equal(t, ni2, ni3)
 	require.EqualValues(t, 0, ni3.ShortID)
 }

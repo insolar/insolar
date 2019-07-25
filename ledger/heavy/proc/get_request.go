@@ -18,6 +18,7 @@ package proc
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
@@ -57,7 +58,7 @@ func (p *GetRequest) Proceed(ctx context.Context) error {
 	if err == object.ErrNotFound {
 		msg, err := payload.NewMessage(&payload.Error{
 			Text: object.ErrNotFound.Error(),
-			Code: payload.CodeObjectNotFound,
+			Code: payload.CodeNotFound,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
@@ -72,9 +73,9 @@ func (p *GetRequest) Proceed(ctx context.Context) error {
 
 	concrete := record.Unwrap(rec.Virtual)
 	_, isIncoming := concrete.(*record.IncomingRequest)
-	_, isOutgoing := concrete.(*record.IncomingRequest)
+	_, isOutgoing := concrete.(*record.OutgoingRequest)
 	if !isIncoming && !isOutgoing {
-		return errors.New("failed to decode request")
+		return fmt.Errorf("unexpected request type")
 	}
 
 	rep, err := payload.NewMessage(&payload.Request{

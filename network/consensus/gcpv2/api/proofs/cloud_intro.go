@@ -57,5 +57,5 @@ import (
 type NodeWelcomePackage struct {
 	CloudIdentity      cryptkit.DigestHolder
 	LastCloudStateHash cryptkit.DigestHolder
-	JoinerSecret       cryptkit.SignatureHolder // can be nil
+	JoinerSecret       cryptkit.DigestHolder // can be nil
 }

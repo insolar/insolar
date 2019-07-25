@@ -199,7 +199,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start MessageBus")
 		}
-		WmBus = bus.NewBus(pubSub, Pulses, Coordinator, CryptoScheme)
+		WmBus = bus.NewBus(cfg.Bus, pubSub, Pulses, Coordinator, CryptoScheme)
 	}
 
 	metricsHandler, err := metrics.NewMetrics(
@@ -258,10 +258,13 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Coordinator,
 			jetTreeUpdater,
 			WmBus,
+			Pulses,
 		)
+		requestChecker := executor.NewRequestChecker(filamentCalculator, Coordinator, jetTreeUpdater, WmBus)
 
 		handler.JetTreeUpdater = jetTreeUpdater
 		handler.FilamentCalculator = filamentCalculator
+		handler.RequestChecker = requestChecker
 
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
 		var lightCleaner = replication.NewCleaner(

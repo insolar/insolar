@@ -153,7 +153,7 @@ func initComponents(
 
 	jc := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
 	pulses := pulse.NewStorageMem()
-	b := bus.NewBus(pubSub, pulses, jc, pcs)
+	b := bus.NewBus(cfg.Bus, pubSub, pulses, jc, pcs)
 
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, pubSub, b)
 	checkError(ctx, err, "failed to start LogicRunner")
@@ -202,7 +202,15 @@ func initComponents(
 
 	cm.Inject(components...)
 
-	stopper := startWatermill(ctx, logger, pubSub, b, nw.SendMessageHandler, logicRunner.FlowDispatcher.Process, logicRunner.InnerFlowDispatcher.InnerSubscriber)
+	err = cm.Init(ctx)
+	checkError(ctx, err, "failed to init components")
+
+	stopper := startWatermill(
+		ctx, logger, pubSub, b,
+		nw.SendMessageHandler,
+		logicRunner.FlowDispatcher.Process,
+		logicRunner.InnerFlowDispatcher.InnerSubscriber,
+	)
 
 	return &cm, terminationHandler, stopper
 }

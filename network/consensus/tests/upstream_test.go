@@ -74,19 +74,17 @@ type EmuUpstreamPulseController struct {
 	nshDelay time.Duration
 }
 
-func (r *EmuUpstreamPulseController) PreparePulseChange(report api.UpstreamReport) <-chan proofs.NodeStateHash {
-	c := make(chan proofs.NodeStateHash, 1)
-	nsh := NewEmuNodeStateHash(rand.Uint64())
-	if r.nshDelay == 0 {
-		c <- nsh
+func (r *EmuUpstreamPulseController) PreparePulseChange(report api.UpstreamReport, c chan<- api.UpstreamState) {
+	fn := func() {
+		nsh := NewEmuNodeStateHash(rand.Uint64())
+		c <- api.UpstreamState{NodeState: nsh}
 		close(c)
-	} else {
-		time.AfterFunc(r.nshDelay, func() {
-			c <- nsh
-			close(c)
-		})
 	}
-	return c
+	if r.nshDelay == 0 {
+		fn()
+	} else {
+		time.AfterFunc(r.nshDelay, fn)
+	}
 }
 
 func (*EmuUpstreamPulseController) CommitPulseChange(report api.UpstreamReport, pd pulse.Data, activeCensus census.Operational) {
@@ -112,7 +110,7 @@ func (r *EmuNodeStateHash) CopyOfDigest() cryptkit.Digest {
 	return cryptkit.NewDigest(&r.Bits64, r.GetDigestMethod())
 }
 
-func (r *EmuNodeStateHash) SignWith(signer cryptkit.DigestSigner) cryptkit.SignedDigest {
+func (r *EmuNodeStateHash) SignWith(signer cryptkit.DigestSigner) cryptkit.SignedDigestHolder {
 	d := r.CopyOfDigest()
 	return d.SignWith(signer)
 }

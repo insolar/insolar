@@ -229,7 +229,7 @@ func TestDeactivateObject_FilamentSetResultErr(t *testing.T) {
 	idxStorageMock.ForIDMock.Return(record.Index{}, nil)
 	idxStorageMock.SetIndexMock.Return(nil)
 
-	filaments := executor.NewFilamentModifierMock(t)
+	filaments := executor.NewFilamentManagerMock(t)
 	filaments.SetResultMock.Return(nil, errors.New("something strange from filament.SetResult"))
 
 	p := proc.NewDeactivateObject(
@@ -276,7 +276,7 @@ func TestDeactivateObject_Proceed(t *testing.T) {
 	idxStorageMock.ForIDMock.Return(record.Index{}, nil)
 	idxStorageMock.SetIndexMock.Return(nil)
 
-	filaments := executor.NewFilamentModifierMock(t)
+	filaments := executor.NewFilamentManagerMock(t)
 	filaments.SetResultMock.Return(nil, nil)
 
 	sender := bus.NewSenderMock(t)

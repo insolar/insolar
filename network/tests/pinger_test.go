@@ -165,6 +165,7 @@ func (d *testnode) pingHost(ctx context.Context, host *host.Host) error {
 }
 
 func TestPingerStress(t *testing.T) {
+	t.Skip("skip until INS-2978 will fixed")
 	// defer leaktest.Check(t)()
 
 	nodes := make([]*testnode, 0)

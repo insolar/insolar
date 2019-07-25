@@ -21,6 +21,11 @@ import (
 type CandidateProfileMock struct {
 	t minimock.Tester
 
+	GetBriefIntroSignedDigestFunc       func() (r cryptkit.SignedDigestHolder)
+	GetBriefIntroSignedDigestCounter    uint64
+	GetBriefIntroSignedDigestPreCounter uint64
+	GetBriefIntroSignedDigestMock       mCandidateProfileMockGetBriefIntroSignedDigest
+
 	GetDefaultEndpointFunc       func() (r endpoints.Outbound)
 	GetDefaultEndpointCounter    uint64
 	GetDefaultEndpointPreCounter uint64
@@ -50,11 +55,6 @@ type CandidateProfileMock struct {
 	GetIssuerSignatureCounter    uint64
 	GetIssuerSignaturePreCounter uint64
 	GetIssuerSignatureMock       mCandidateProfileMockGetIssuerSignature
-
-	GetJoinerSignatureFunc       func() (r cryptkit.SignatureHolder)
-	GetJoinerSignatureCounter    uint64
-	GetJoinerSignaturePreCounter uint64
-	GetJoinerSignatureMock       mCandidateProfileMockGetJoinerSignature
 
 	GetNodePublicKeyFunc       func() (r cryptkit.SignatureKeyHolder)
 	GetNodePublicKeyCounter    uint64
@@ -100,13 +100,13 @@ func NewCandidateProfileMock(t minimock.Tester) *CandidateProfileMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.GetBriefIntroSignedDigestMock = mCandidateProfileMockGetBriefIntroSignedDigest{mock: m}
 	m.GetDefaultEndpointMock = mCandidateProfileMockGetDefaultEndpoint{mock: m}
 	m.GetExtraEndpointsMock = mCandidateProfileMockGetExtraEndpoints{mock: m}
 	m.GetIssuedAtPulseMock = mCandidateProfileMockGetIssuedAtPulse{mock: m}
 	m.GetIssuedAtTimeMock = mCandidateProfileMockGetIssuedAtTime{mock: m}
 	m.GetIssuerIDMock = mCandidateProfileMockGetIssuerID{mock: m}
 	m.GetIssuerSignatureMock = mCandidateProfileMockGetIssuerSignature{mock: m}
-	m.GetJoinerSignatureMock = mCandidateProfileMockGetJoinerSignature{mock: m}
 	m.GetNodePublicKeyMock = mCandidateProfileMockGetNodePublicKey{mock: m}
 	m.GetPowerLevelsMock = mCandidateProfileMockGetPowerLevels{mock: m}
 	m.GetPrimaryRoleMock = mCandidateProfileMockGetPrimaryRole{mock: m}
@@ -116,6 +116,140 @@ func NewCandidateProfileMock(t minimock.Tester) *CandidateProfileMock {
 	m.GetStaticNodeIDMock = mCandidateProfileMockGetStaticNodeID{mock: m}
 
 	return m
+}
+
+type mCandidateProfileMockGetBriefIntroSignedDigest struct {
+	mock              *CandidateProfileMock
+	mainExpectation   *CandidateProfileMockGetBriefIntroSignedDigestExpectation
+	expectationSeries []*CandidateProfileMockGetBriefIntroSignedDigestExpectation
+}
+
+type CandidateProfileMockGetBriefIntroSignedDigestExpectation struct {
+	result *CandidateProfileMockGetBriefIntroSignedDigestResult
+}
+
+type CandidateProfileMockGetBriefIntroSignedDigestResult struct {
+	r cryptkit.SignedDigestHolder
+}
+
+//Expect specifies that invocation of CandidateProfile.GetBriefIntroSignedDigest is expected from 1 to Infinity times
+func (m *mCandidateProfileMockGetBriefIntroSignedDigest) Expect() *mCandidateProfileMockGetBriefIntroSignedDigest {
+	m.mock.GetBriefIntroSignedDigestFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CandidateProfileMockGetBriefIntroSignedDigestExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of CandidateProfile.GetBriefIntroSignedDigest
+func (m *mCandidateProfileMockGetBriefIntroSignedDigest) Return(r cryptkit.SignedDigestHolder) *CandidateProfileMock {
+	m.mock.GetBriefIntroSignedDigestFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CandidateProfileMockGetBriefIntroSignedDigestExpectation{}
+	}
+	m.mainExpectation.result = &CandidateProfileMockGetBriefIntroSignedDigestResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of CandidateProfile.GetBriefIntroSignedDigest is expected once
+func (m *mCandidateProfileMockGetBriefIntroSignedDigest) ExpectOnce() *CandidateProfileMockGetBriefIntroSignedDigestExpectation {
+	m.mock.GetBriefIntroSignedDigestFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &CandidateProfileMockGetBriefIntroSignedDigestExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *CandidateProfileMockGetBriefIntroSignedDigestExpectation) Return(r cryptkit.SignedDigestHolder) {
+	e.result = &CandidateProfileMockGetBriefIntroSignedDigestResult{r}
+}
+
+//Set uses given function f as a mock of CandidateProfile.GetBriefIntroSignedDigest method
+func (m *mCandidateProfileMockGetBriefIntroSignedDigest) Set(f func() (r cryptkit.SignedDigestHolder)) *CandidateProfileMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetBriefIntroSignedDigestFunc = f
+	return m.mock
+}
+
+//GetBriefIntroSignedDigest implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.CandidateProfile interface
+func (m *CandidateProfileMock) GetBriefIntroSignedDigest() (r cryptkit.SignedDigestHolder) {
+	counter := atomic.AddUint64(&m.GetBriefIntroSignedDigestPreCounter, 1)
+	defer atomic.AddUint64(&m.GetBriefIntroSignedDigestCounter, 1)
+
+	if len(m.GetBriefIntroSignedDigestMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetBriefIntroSignedDigestMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to CandidateProfileMock.GetBriefIntroSignedDigest.")
+			return
+		}
+
+		result := m.GetBriefIntroSignedDigestMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the CandidateProfileMock.GetBriefIntroSignedDigest")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetBriefIntroSignedDigestMock.mainExpectation != nil {
+
+		result := m.GetBriefIntroSignedDigestMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the CandidateProfileMock.GetBriefIntroSignedDigest")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetBriefIntroSignedDigestFunc == nil {
+		m.t.Fatalf("Unexpected call to CandidateProfileMock.GetBriefIntroSignedDigest.")
+		return
+	}
+
+	return m.GetBriefIntroSignedDigestFunc()
+}
+
+//GetBriefIntroSignedDigestMinimockCounter returns a count of CandidateProfileMock.GetBriefIntroSignedDigestFunc invocations
+func (m *CandidateProfileMock) GetBriefIntroSignedDigestMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetBriefIntroSignedDigestCounter)
+}
+
+//GetBriefIntroSignedDigestMinimockPreCounter returns the value of CandidateProfileMock.GetBriefIntroSignedDigest invocations
+func (m *CandidateProfileMock) GetBriefIntroSignedDigestMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetBriefIntroSignedDigestPreCounter)
+}
+
+//GetBriefIntroSignedDigestFinished returns true if mock invocations count is ok
+func (m *CandidateProfileMock) GetBriefIntroSignedDigestFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetBriefIntroSignedDigestMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetBriefIntroSignedDigestCounter) == uint64(len(m.GetBriefIntroSignedDigestMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetBriefIntroSignedDigestMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetBriefIntroSignedDigestCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetBriefIntroSignedDigestFunc != nil {
+		return atomic.LoadUint64(&m.GetBriefIntroSignedDigestCounter) > 0
+	}
+
+	return true
 }
 
 type mCandidateProfileMockGetDefaultEndpoint struct {
@@ -917,140 +1051,6 @@ func (m *CandidateProfileMock) GetIssuerSignatureFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetIssuerSignatureFunc != nil {
 		return atomic.LoadUint64(&m.GetIssuerSignatureCounter) > 0
-	}
-
-	return true
-}
-
-type mCandidateProfileMockGetJoinerSignature struct {
-	mock              *CandidateProfileMock
-	mainExpectation   *CandidateProfileMockGetJoinerSignatureExpectation
-	expectationSeries []*CandidateProfileMockGetJoinerSignatureExpectation
-}
-
-type CandidateProfileMockGetJoinerSignatureExpectation struct {
-	result *CandidateProfileMockGetJoinerSignatureResult
-}
-
-type CandidateProfileMockGetJoinerSignatureResult struct {
-	r cryptkit.SignatureHolder
-}
-
-//Expect specifies that invocation of CandidateProfile.GetJoinerSignature is expected from 1 to Infinity times
-func (m *mCandidateProfileMockGetJoinerSignature) Expect() *mCandidateProfileMockGetJoinerSignature {
-	m.mock.GetJoinerSignatureFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &CandidateProfileMockGetJoinerSignatureExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of CandidateProfile.GetJoinerSignature
-func (m *mCandidateProfileMockGetJoinerSignature) Return(r cryptkit.SignatureHolder) *CandidateProfileMock {
-	m.mock.GetJoinerSignatureFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &CandidateProfileMockGetJoinerSignatureExpectation{}
-	}
-	m.mainExpectation.result = &CandidateProfileMockGetJoinerSignatureResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of CandidateProfile.GetJoinerSignature is expected once
-func (m *mCandidateProfileMockGetJoinerSignature) ExpectOnce() *CandidateProfileMockGetJoinerSignatureExpectation {
-	m.mock.GetJoinerSignatureFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &CandidateProfileMockGetJoinerSignatureExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *CandidateProfileMockGetJoinerSignatureExpectation) Return(r cryptkit.SignatureHolder) {
-	e.result = &CandidateProfileMockGetJoinerSignatureResult{r}
-}
-
-//Set uses given function f as a mock of CandidateProfile.GetJoinerSignature method
-func (m *mCandidateProfileMockGetJoinerSignature) Set(f func() (r cryptkit.SignatureHolder)) *CandidateProfileMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetJoinerSignatureFunc = f
-	return m.mock
-}
-
-//GetJoinerSignature implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.CandidateProfile interface
-func (m *CandidateProfileMock) GetJoinerSignature() (r cryptkit.SignatureHolder) {
-	counter := atomic.AddUint64(&m.GetJoinerSignaturePreCounter, 1)
-	defer atomic.AddUint64(&m.GetJoinerSignatureCounter, 1)
-
-	if len(m.GetJoinerSignatureMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetJoinerSignatureMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to CandidateProfileMock.GetJoinerSignature.")
-			return
-		}
-
-		result := m.GetJoinerSignatureMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the CandidateProfileMock.GetJoinerSignature")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetJoinerSignatureMock.mainExpectation != nil {
-
-		result := m.GetJoinerSignatureMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the CandidateProfileMock.GetJoinerSignature")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetJoinerSignatureFunc == nil {
-		m.t.Fatalf("Unexpected call to CandidateProfileMock.GetJoinerSignature.")
-		return
-	}
-
-	return m.GetJoinerSignatureFunc()
-}
-
-//GetJoinerSignatureMinimockCounter returns a count of CandidateProfileMock.GetJoinerSignatureFunc invocations
-func (m *CandidateProfileMock) GetJoinerSignatureMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetJoinerSignatureCounter)
-}
-
-//GetJoinerSignatureMinimockPreCounter returns the value of CandidateProfileMock.GetJoinerSignature invocations
-func (m *CandidateProfileMock) GetJoinerSignatureMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetJoinerSignaturePreCounter)
-}
-
-//GetJoinerSignatureFinished returns true if mock invocations count is ok
-func (m *CandidateProfileMock) GetJoinerSignatureFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetJoinerSignatureMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetJoinerSignatureCounter) == uint64(len(m.GetJoinerSignatureMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetJoinerSignatureMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetJoinerSignatureCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetJoinerSignatureFunc != nil {
-		return atomic.LoadUint64(&m.GetJoinerSignatureCounter) > 0
 	}
 
 	return true
@@ -1998,6 +1998,10 @@ func (m *CandidateProfileMock) GetStaticNodeIDFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *CandidateProfileMock) ValidateCallCounters() {
 
+	if !m.GetBriefIntroSignedDigestFinished() {
+		m.t.Fatal("Expected call to CandidateProfileMock.GetBriefIntroSignedDigest")
+	}
+
 	if !m.GetDefaultEndpointFinished() {
 		m.t.Fatal("Expected call to CandidateProfileMock.GetDefaultEndpoint")
 	}
@@ -2020,10 +2024,6 @@ func (m *CandidateProfileMock) ValidateCallCounters() {
 
 	if !m.GetIssuerSignatureFinished() {
 		m.t.Fatal("Expected call to CandidateProfileMock.GetIssuerSignature")
-	}
-
-	if !m.GetJoinerSignatureFinished() {
-		m.t.Fatal("Expected call to CandidateProfileMock.GetJoinerSignature")
 	}
 
 	if !m.GetNodePublicKeyFinished() {
@@ -2071,6 +2071,10 @@ func (m *CandidateProfileMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *CandidateProfileMock) MinimockFinish() {
 
+	if !m.GetBriefIntroSignedDigestFinished() {
+		m.t.Fatal("Expected call to CandidateProfileMock.GetBriefIntroSignedDigest")
+	}
+
 	if !m.GetDefaultEndpointFinished() {
 		m.t.Fatal("Expected call to CandidateProfileMock.GetDefaultEndpoint")
 	}
@@ -2093,10 +2097,6 @@ func (m *CandidateProfileMock) MinimockFinish() {
 
 	if !m.GetIssuerSignatureFinished() {
 		m.t.Fatal("Expected call to CandidateProfileMock.GetIssuerSignature")
-	}
-
-	if !m.GetJoinerSignatureFinished() {
-		m.t.Fatal("Expected call to CandidateProfileMock.GetJoinerSignature")
 	}
 
 	if !m.GetNodePublicKeyFinished() {
@@ -2141,13 +2141,13 @@ func (m *CandidateProfileMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
+		ok = ok && m.GetBriefIntroSignedDigestFinished()
 		ok = ok && m.GetDefaultEndpointFinished()
 		ok = ok && m.GetExtraEndpointsFinished()
 		ok = ok && m.GetIssuedAtPulseFinished()
 		ok = ok && m.GetIssuedAtTimeFinished()
 		ok = ok && m.GetIssuerIDFinished()
 		ok = ok && m.GetIssuerSignatureFinished()
-		ok = ok && m.GetJoinerSignatureFinished()
 		ok = ok && m.GetNodePublicKeyFinished()
 		ok = ok && m.GetPowerLevelsFinished()
 		ok = ok && m.GetPrimaryRoleFinished()
@@ -2162,6 +2162,10 @@ func (m *CandidateProfileMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
+
+			if !m.GetBriefIntroSignedDigestFinished() {
+				m.t.Error("Expected call to CandidateProfileMock.GetBriefIntroSignedDigest")
+			}
 
 			if !m.GetDefaultEndpointFinished() {
 				m.t.Error("Expected call to CandidateProfileMock.GetDefaultEndpoint")
@@ -2185,10 +2189,6 @@ func (m *CandidateProfileMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetIssuerSignatureFinished() {
 				m.t.Error("Expected call to CandidateProfileMock.GetIssuerSignature")
-			}
-
-			if !m.GetJoinerSignatureFinished() {
-				m.t.Error("Expected call to CandidateProfileMock.GetJoinerSignature")
 			}
 
 			if !m.GetNodePublicKeyFinished() {
@@ -2231,6 +2231,10 @@ func (m *CandidateProfileMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *CandidateProfileMock) AllMocksCalled() bool {
 
+	if !m.GetBriefIntroSignedDigestFinished() {
+		return false
+	}
+
 	if !m.GetDefaultEndpointFinished() {
 		return false
 	}
@@ -2252,10 +2256,6 @@ func (m *CandidateProfileMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetIssuerSignatureFinished() {
-		return false
-	}
-
-	if !m.GetJoinerSignatureFinished() {
 		return false
 	}
 

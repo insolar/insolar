@@ -65,7 +65,7 @@ type BlameError struct {
 	blameType    int
 	msg          string
 	violatorHost endpoints.InboundConnection
-	violatorNode profiles.ActiveNode
+	violatorNode profiles.BaseNode
 	details      []interface{}
 	captureMark  interface{}
 }
@@ -86,7 +86,7 @@ func (p *BlameError) Details() []interface{} {
 	return p.details
 }
 
-func (p *BlameError) ViolatorNode() profiles.ActiveNode {
+func (p *BlameError) ViolatorNode() profiles.BaseNode {
 	return p.violatorNode
 }
 
@@ -125,7 +125,7 @@ type BlameFactory struct {
 	capture ReportFunc
 }
 
-func (p BlameFactory) NewBlame(fraudType int, msg string, violatorHost endpoints.Inbound, violatorNode profiles.ActiveNode, details ...interface{}) BlameError {
+func (p BlameFactory) NewBlame(fraudType int, msg string, violatorHost endpoints.Inbound, violatorNode profiles.BaseNode, details ...interface{}) BlameError {
 	err := BlameError{
 		blameType:    fraudType,
 		msg:          msg,
@@ -140,7 +140,7 @@ func (p BlameFactory) NewBlame(fraudType int, msg string, violatorHost endpoints
 	return err
 }
 
-func (p BlameFactory) NewNodeBlame(fraudType int, msg string, violatorNode profiles.ActiveNode, details ...interface{}) BlameError {
+func (p BlameFactory) NewNodeBlame(fraudType int, msg string, violatorNode profiles.BaseNode, details ...interface{}) BlameError {
 	return p.NewBlame(fraudType, msg, nil, violatorNode, details...)
 }
 
@@ -148,18 +148,18 @@ func (p BlameFactory) NewHostBlame(fraudType int, msg string, violatorHost endpo
 	return p.NewBlame(fraudType, msg, violatorHost, nil, details...)
 }
 
-func (p BlameFactory) ExcessiveIntro(violator profiles.ActiveNode, evidence1 cryptkit.SignedEvidenceHolder, evidence2 cryptkit.SignedEvidenceHolder) BlameError {
+func (p BlameFactory) ExcessiveIntro(violator profiles.BaseNode, evidence1 cryptkit.SignedEvidenceHolder, evidence2 cryptkit.SignedEvidenceHolder) BlameError {
 	return p.NewNodeBlame(BlameExcessiveIntro, "excessive intro", violator, evidence1, evidence2)
 }
 
-func (p BlameFactory) NewMismatchedPulsarPacket(from endpoints.Inbound, expected proofs.OriginalPulsarPacket, received proofs.OriginalPulsarPacket) error {
+func (p BlameFactory) NewMismatchedPulsarPacket(from endpoints.Inbound, expected proofs.OriginalPulsarPacket, received proofs.OriginalPulsarPacket) BlameError {
 	return p.NewHostBlame(MismatchedPulsarPacket, "mixed pulsar pulses", from, expected, received)
 }
 
-func (p BlameFactory) NewMismatchedPulsePacket(from profiles.ActiveNode, expected proofs.OriginalPulsarPacket, received proofs.OriginalPulsarPacket) error {
+func (p BlameFactory) NewMismatchedPulsePacket(from profiles.BaseNode, expected proofs.OriginalPulsarPacket, received proofs.OriginalPulsarPacket) BlameError {
 	return p.NewNodeBlame(MismatchedPulsarPacket, "mixed pulsar pulses", from, expected, received)
 }
 
-func (p BlameFactory) NewProtocolViolation(violator profiles.ActiveNode, msg string) error {
+func (p BlameFactory) NewProtocolViolation(violator profiles.BaseNode, msg string) BlameError {
 	return p.NewNodeBlame(ProtocolViolation, msg, violator)
 }
