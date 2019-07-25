@@ -67,17 +67,17 @@ func TestMigrationTokenOnDifferentDeposits(t *testing.T) {
 	_, err = retryableMemberMigrationCreate(member, true)
 	require.NoError(t, err)
 
-	deposit := migrate(t, member.ref, "1000", "Test_TxHash1", ma, 0)
+	deposit := migrate(t, member.ref, "1000", "Test_TxHash1", ma, 1)
 
 	confirmerReferences, ok := deposit["confirmerReferences"].([]interface{})
 	require.True(t, ok, fmt.Sprintf("failed to cast result: expected []string, got %T", deposit["confirmerReferences"]))
-	require.Equal(t, confirmerReferences[0], migrationDaemons[0].ref)
+	require.Equal(t, confirmerReferences[1], migrationDaemons[1].ref)
 
 	deposit = migrate(t, member.ref, "1000", "Test_TxHash2", ma, 1)
 
 	confirmerReferences, ok = deposit["confirmerReferences"].([]interface{})
 	require.True(t, ok)
-	require.NotEqual(t, confirmerReferences[0], migrationDaemons[0].ref)
+	require.Equal(t, confirmerReferences[1], migrationDaemons[1].ref)
 }
 
 func TestMigrationTokenNotInTheList(t *testing.T) {
@@ -140,7 +140,7 @@ func TestMigrationTokenMaxAmount(t *testing.T) {
 	require.Nil(t, result)
 }
 
-func TestMigrationDoubleMigration(t *testing.T) {
+func TestMigrationDoubleMigrationFromSameDaemon(t *testing.T) {
 	ma := testutils.RandomString()
 	err := createMemberWithMigrationAddress(ma)
 	require.NoError(t, err)
@@ -168,7 +168,7 @@ func TestMigrationAnotherAmountSameTx(t *testing.T) {
 	require.Nil(t, resultMigr1)
 
 	_, err = signedRequest(
-		&migrationDaemons[0],
+		&migrationDaemons[1],
 		"deposit.migration",
 		map[string]interface{}{"amount": "30", "ethTxHash": "ethTxHash", "migrationAddress": ma})
 	require.Contains(t, err.Error(), "deposit with this transaction hash has different amount")
