@@ -144,7 +144,7 @@ func (p *standardBundleFactory) CreateControllersBundle(population census.Online
 	switch {
 	case mode.IsEvicted():
 		lockDown("EVICTED DETECTED")
-		panic("consensus can NOT be started for an evicted node")
+		// panic("consensus can NOT be started for an evicted node")
 		return nil
 	case lp.IsJoiner():
 		if population.GetIndexedCapacity() != 0 {
