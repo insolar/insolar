@@ -62,6 +62,7 @@ type PulseManager struct {
 	HotSender       executor.HotSender
 
 	WriteManager hot.WriteManager
+	StateIniter  executor.StateIniter
 
 	// setLock locks Set method call.
 	setLock sync.RWMutex
@@ -73,12 +74,14 @@ func NewPulseManager(
 	lightToHeavySyncer replication.LightReplicator,
 	writeManager hot.WriteManager,
 	hotSender executor.HotSender,
+	stateIniter executor.StateIniter,
 ) *PulseManager {
 	pm := &PulseManager{
 		JetSplitter:     jetSplitter,
 		LightReplicator: lightToHeavySyncer,
 		WriteManager:    writeManager,
 		HotSender:       hotSender,
+		StateIniter:     stateIniter,
 	}
 	return pm
 }
