@@ -119,7 +119,7 @@ func newPacketParser(
 		return nil, err
 	}
 
-	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
+	_, logger := inslogger.WithFields(ctx, map[string]interface{}{
 		"sender_id":    parser.GetSourceID(),
 		"packet_type":  parser.GetPacketType().String(),
 		"packet_pulse": parser.GetPulseNumber(),
