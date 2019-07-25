@@ -126,7 +126,7 @@ func newPacketParser(
 	})
 
 	if logger.Is(insolar.DebugLevel) {
-		logger.Debugf("Received packet: %s", parser.packet)
+		logger.Debugf("Received packet s:%d t:%d payload:{%s}", parser.GetSourceID(), parser.GetTargetID(), parser.packet)
 	}
 
 	parser.data = capture.Captured()
