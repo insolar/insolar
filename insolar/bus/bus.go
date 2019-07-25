@@ -183,13 +183,14 @@ func (b *Bus) SendRole(
 // Replies will be written to the returned channel. Always read from the channel using multiple assignment
 // (rep, ok := <-ch) because the channel will be closed on timeout.
 func (b *Bus) SendTarget(
-	rootCtx context.Context, msg *message.Message, target insolar.Reference,
+	ctx context.Context, msg *message.Message, target insolar.Reference,
 ) (<-chan *message.Message, func()) {
-	ctx, startSpan := instracer.StartSpan(rootCtx, "Bus.SendTarget")
+	ctx, startSpan := instracer.StartSpan(ctx, "Bus.SendTarget")
 	startSpan.AddAttributes(
 		trace.StringAttribute("type", "bus"),
 		trace.StringAttribute("target", target.String()),
 	)
+	defer startSpan.End()
 
 	handleError := func(err error) (<-chan *message.Message, func()) {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to send message"))
@@ -246,23 +247,13 @@ func (b *Bus) SendTarget(
 		done()
 		return handleError(errors.Wrapf(err, "can't publish message to %s topic", TopicOutgoing))
 	}
-	startSpan.End()
 
 	go func() {
-		_, waitingSpan := instracer.StartSpan(rootCtx, "Bus.SendTarget waiting for reply")
-		defer waitingSpan.End()
-
 		logger.Debug("waiting for reply")
 		select {
 		case <-reply.done:
 			logger.Debugf("Done waiting replies for message with hash %s", msgHash.String())
 		case <-time.After(b.timeout):
-
-			waitingSpan.AddAttributes(
-				trace.StringAttribute("type", "bus"),
-				trace.StringAttribute("target", target.String()),
-				trace.BoolAttribute("error", true),
-			)
 			logger.Error(
 				errors.Errorf(
 					"can't return result for message with hash %s: timeout for reading (%s) was exceeded",
