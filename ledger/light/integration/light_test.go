@@ -63,22 +63,21 @@ func Test_LightReplication(t *testing.T) {
 	t.Parallel()
 
 	var secondPulseNumber = insolar.FirstPulseNumber + (PulseStep * 2)
-	var sentLifeline record.Lifeline
-	var sentObjectID insolar.ID
+	var expectedLifeline record.Lifeline
+	var expectedObjectID insolar.ID
 
-	var sentIds = make(map[insolar.ID]struct{})
-	var replicationChannel = make(chan payload.Replication, 10)
+	var expectedIds []insolar.ID
+	var receivedMessage = make(chan payload.Replication, 10)
 
-	ctx := inslogger.WithLoggerLevel(inslogger.TestContext(t), insolar.ErrorLevel)
+	ctx := inslogger.WithLoggerLevel(inslogger.TestContext(t), insolar.InfoLevel)
 	cfg := DefaultLightConfig()
 
 	s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) {
-		switch pl.(type) {
+		switch p := pl.(type) {
 		case *payload.Replication:
-
-			if pl.(*payload.Replication).Pulse == secondPulseNumber {
+			if p.Pulse == secondPulseNumber {
 				go func() {
-					replicationChannel <- *pl.(*payload.Replication)
+					receivedMessage <- *p
 				}()
 			}
 
@@ -93,7 +92,7 @@ func Test_LightReplication(t *testing.T) {
 	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
 	s.Pulse(ctx)
 
-	t.Run("happy light replication", func(t *testing.T) {
+	{
 		// Creating root reason request.
 		var reasonID insolar.ID
 		{
@@ -104,98 +103,74 @@ func Test_LightReplication(t *testing.T) {
 
 		// Save and check code.
 		{
-			p, sent := callSetCode(ctx, t, s)
+			p, _ := callSetCode(ctx, t, s)
 			requireNotError(t, p)
 			payloadId := p.(*payload.ID).ID
-
-			p = callGetCode(ctx, t, s, p.(*payload.ID).ID)
-			requireNotError(t, p)
-
-			material := record.Material{}
-			err := material.Unmarshal(p.(*payload.Code).Record)
-			require.NoError(t, err)
-			require.Equal(t, &sent, material.Virtual)
-
-			sentIds[payloadId] = struct{}{}
+			expectedIds = append(expectedIds, payloadId)
 		}
 
 		// Set, get request.
 		{
-			p, sent := callSetIncomingRequest(ctx, t, s, gen.ID(), reasonID, record.CTSaveAsChild)
+			p, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), reasonID, record.CTSaveAsChild)
 			requireNotError(t, p)
-
-			payloadId := p.(*payload.RequestInfo).RequestID
-
-			p = callGetRequest(ctx, t, s, p.(*payload.RequestInfo).RequestID)
-			requireNotError(t, p)
-
-			require.Equal(t, sent, p.(*payload.Request).Request)
-			sentObjectID = p.(*payload.Request).RequestID
-
-			sentIds[payloadId] = struct{}{}
-
+			expectedObjectID = p.(*payload.RequestInfo).RequestID
+			expectedIds = append(expectedIds, expectedObjectID)
 		}
 		// Activate and check object.
 		{
-			p, state := callActivateObject(ctx, t, s, sentObjectID)
+			p, state := callActivateObject(ctx, t, s, expectedObjectID)
 			requireNotError(t, p)
 
-			lifeline, material := requireGetObject(ctx, t, s, sentObjectID)
-
-			sentIds[*lifeline.LatestState] = struct{}{}
-
+			lifeline, material := requireGetObject(ctx, t, s, expectedObjectID)
+			expectedIds = append(expectedIds, *lifeline.LatestState)
 			require.Equal(t, &state, material.Virtual)
 		}
 		// Amend and check object.
 		{
-			p, _ := callSetIncomingRequest(ctx, t, s, sentObjectID, reasonID, record.CTMethod)
+			p, _ := callSetIncomingRequest(ctx, t, s, expectedObjectID, reasonID, record.CTMethod)
 			requireNotError(t, p)
 
-			p, state := callAmendObject(ctx, t, s, sentObjectID, p.(*payload.RequestInfo).RequestID)
+			p, state := callAmendObject(ctx, t, s, expectedObjectID, p.(*payload.RequestInfo).RequestID)
 			requireNotError(t, p)
-			lifeline, material := requireGetObject(ctx, t, s, sentObjectID)
+			lifeline, material := requireGetObject(ctx, t, s, expectedObjectID)
 			require.Equal(t, &state, material.Virtual)
 
-			sentLifeline = lifeline
-			sentIds[*lifeline.LatestState] = struct{}{}
+			expectedLifeline = lifeline
+			expectedIds = append(expectedIds, *lifeline.LatestState)
 		}
-		fmt.Println("sending finished:", sentObjectID.String())
-	})
+	}
 
 	// Third pulse activate replication of second's pulse records
 	s.Pulse(ctx)
 
 	{
-		replicationPayload := <-replicationChannel
+		replicationPayload := <-receivedMessage
 
-		var currentLifeline record.Lifeline
+		var receivedLifeline record.Lifeline
 
 		for _, recordIndex := range replicationPayload.Indexes {
-			if recordIndex.ObjID == sentObjectID {
-				currentLifeline = recordIndex.Lifeline
+			if recordIndex.ObjID == expectedObjectID {
+				receivedLifeline = recordIndex.Lifeline
 			}
 		}
 
-		if replicationPayload.Pulse.Equal(secondPulseNumber) {
+		replicatedIds := make(map[insolar.ID]struct{})
 
-			replicatedIds := make(map[insolar.ID]struct{})
+		require.Equal(t, 13, len(replicationPayload.Records))
+		require.Equal(t, expectedLifeline, receivedLifeline)
 
-			require.Equal(t, 13, len(replicationPayload.Records))
-			require.Equal(t, sentLifeline, currentLifeline)
+		// testing payload
+		cryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
 
-			// testing payload
-			cryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
+		for _, rec := range replicationPayload.Records {
+			hash := record.HashVirtual(cryptographyScheme.ReferenceHasher(), *rec.Virtual)
+			id := insolar.NewID(secondPulseNumber, hash)
+			replicatedIds[*id] = struct{}{}
+		}
 
-			for _, rec := range replicationPayload.Records {
-				hash := record.HashVirtual(cryptographyScheme.ReferenceHasher(), *rec.Virtual)
-				id := insolar.NewID(secondPulseNumber, hash)
-				replicatedIds[*id] = struct{}{}
-			}
-
-			for k := range sentIds {
-				_, ok := replicatedIds[k]
-				require.True(t, ok, "No key in replicated data")
-			}
+		for _, id := range expectedIds {
+			_, ok := replicatedIds[id]
+			require.True(t, ok, "No key in replicated data")
 		}
 	}
 
