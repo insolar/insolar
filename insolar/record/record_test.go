@@ -297,10 +297,12 @@ func TestRequestInterface_IncomingRequest(t *testing.T) {
 	t.Parallel()
 	objref := gen.Reference()
 	req := &IncomingRequest{
+		Caller: gen.Reference(),
 		Object: &objref,
 		Reason: gen.Reference(),
 	}
 	iface := Request(req)
+	require.Equal(t, false, iface.IsTemporaryUploadCode())
 	require.Equal(t, false, iface.IsCreationRequest())
 	require.Equal(t, req.Object, iface.AffinityRef())
 	require.Equal(t, req.Reason, iface.ReasonRef())
@@ -315,6 +317,7 @@ func TestRequestInterface_OutgoingRequest(t *testing.T) {
 		Reason: gen.Reference(),
 	}
 	iface := Request(req)
+	require.Equal(t, false, iface.IsTemporaryUploadCode())
 	require.Equal(t, false, iface.IsCreationRequest())
 	require.Equal(t, &req.Caller, iface.AffinityRef())
 	require.Equal(t, req.Reason, iface.ReasonRef())
@@ -328,9 +331,11 @@ func TestRequestInterface_IncomingRequestSaveAsChild(t *testing.T) {
 		CallType: CTSaveAsChild,
 		Object:   &objref,
 		Reason:   gen.Reference(),
+		APINode:  gen.Reference(),
 	}
 
 	iface := Request(req)
+	require.Equal(t, false, iface.IsTemporaryUploadCode())
 	require.Equal(t, true, iface.IsCreationRequest())
 	require.Equal(t, (*insolar.Reference)(nil), iface.AffinityRef())
 	require.Equal(t, req.Reason, iface.ReasonRef())
@@ -351,9 +356,11 @@ func TestRequestInterface_IncomingRequestSaveAsDelegate(t *testing.T) {
 		CallType: CTSaveAsDelegate,
 		Object:   &objref,
 		Reason:   gen.Reference(),
+		APINode:  gen.Reference(),
 	}
 
 	iface := Request(req)
+	require.Equal(t, false, iface.IsTemporaryUploadCode())
 	require.Equal(t, true, iface.IsCreationRequest())
 	require.Equal(t, (*insolar.Reference)(nil), iface.AffinityRef())
 	require.Equal(t, req.Reason, iface.ReasonRef())
@@ -363,4 +370,37 @@ func TestRequestInterface_IncomingRequestSaveAsDelegate(t *testing.T) {
 
 	realAffinityRef := CalculateRequestAffinityRef(iface, pn, pcs)
 	assert.NotNil(t, realAffinityRef)
+}
+
+func TestRequestInterface_IncomingRequestIsTemporaryHack(t *testing.T) {
+	t.Parallel()
+
+	objref := gen.Reference()
+	req := &IncomingRequest{
+		CallType: CTSaveAsDelegate,
+		Object:   &objref,
+		Reason:   gen.Reference(),
+	}
+
+	iface := Request(req)
+	require.Equal(t, true, iface.IsTemporaryUploadCode())
+	require.Equal(t, true, iface.IsCreationRequest())
+	require.Equal(t, (*insolar.Reference)(nil), iface.AffinityRef())
+	require.Equal(t, req.Reason, iface.ReasonRef())
+}
+
+func TestRequestInterface_OutgoingRequestIsTemporaryHack(t *testing.T) {
+	t.Parallel()
+
+	objref := gen.Reference()
+	req := &OutgoingRequest{
+		CallType: CTSaveAsDelegate,
+		Object:   &objref,
+		Reason:   gen.Reference(),
+	}
+
+	iface := Request(req)
+	require.Equal(t, false, iface.IsTemporaryUploadCode())
+	require.Equal(t, false, iface.IsCreationRequest())
+	require.Equal(t, req.Reason, iface.ReasonRef())
 }
