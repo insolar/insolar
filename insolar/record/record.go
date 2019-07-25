@@ -153,6 +153,9 @@ type Request interface {
 	IsCreationRequest() bool
 	// IsDetached check is request has detached state.
 	IsDetached() bool
+	// IsTemporaryUploadCode tells us that that request is temporary hack
+	// for uploading code
+	IsTemporaryUploadCode() bool
 }
 
 func (r *IncomingRequest) AffinityRef() *insolar.Reference {
@@ -183,6 +186,10 @@ func (r *IncomingRequest) IsDetached() bool {
 	return isDetached(r.ReturnMode)
 }
 
+func (r *IncomingRequest) IsTemporaryUploadCode() bool {
+	return r.APINode.IsEmpty() && r.Caller.IsEmpty()
+}
+
 func (r *OutgoingRequest) AffinityRef() *insolar.Reference {
 	// OutgoingRequests are affine to the Caller which created the Request.
 	return &r.Caller
@@ -202,6 +209,10 @@ func (r *OutgoingRequest) IsCreationRequest() bool {
 
 func (r *OutgoingRequest) IsDetached() bool {
 	return isDetached(r.ReturnMode)
+}
+
+func (r *OutgoingRequest) IsTemporaryUploadCode() bool {
+	return false
 }
 
 func isDetached(rm ReturnMode) bool {

@@ -19,6 +19,8 @@ package proc
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
@@ -29,7 +31,6 @@ import (
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/pkg/errors"
 )
 
 type SetRequest struct {
@@ -115,7 +116,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	// - API request is used to upload code for test. Should be fixed.
 	// - Outgoing request is registered during Incoming request execution in the past, so can be received not from
 	//   current executor.
-	if _, ok := p.request.(*record.IncomingRequest); ok && !p.request.IsAPIRequest() {
+	if _, ok := p.request.(*record.IncomingRequest); ok && !p.request.IsTemporaryUploadCode() {
 		if p.message.Sender != *virtualExecutor {
 			// FIXME: virtuals don't pass this test.
 			logger.Errorf("sender isn't the executor. sender - %v, executor - %v", p.message.Sender, *virtualExecutor)
