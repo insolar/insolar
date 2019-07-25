@@ -218,10 +218,6 @@ func (r *coreRealm) GetSelf() *NodeAppearance {
 	return r.self
 }
 
-func (r *coreRealm) GetPrimingCloudHash() proofs.CloudStateHash {
-	return r.initialCensus.GetMandateRegistry().GetPrimingCloudHash()
-}
-
 func (r *coreRealm) VerifyPacketAuthenticity(packetSignature cryptkit.SignedDigest, from endpoints.Inbound, strictFrom bool) error {
 	nr := r.initialCensus.GetOfflinePopulation().FindRegisteredProfile(from)
 	if nr == nil {

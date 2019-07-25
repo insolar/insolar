@@ -422,7 +422,7 @@ func (c *NodeAppearance) GetNodeMembershipProfileOrEmpty() profiles.MembershipPr
 
 func (c *NodeAppearance) ApplyNodeStateHashEvidenceForJoiner() (bool, error) {
 	sp := c.profile.GetStatic()
-	nsh := c.profile.GetStatic().GetBriefIntroSignedDigest()
+	nsh := sp.GetBriefIntroSignedDigest()
 
 	c.mutex.Lock()
 	defer c.mutex.Unlock()

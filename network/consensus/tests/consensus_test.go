@@ -168,6 +168,9 @@ func (h *EmuHostConsensusAdapter) receive(ctx context.Context) (payload interfac
 }
 
 func (h *EmuHostConsensusAdapter) send(target endpoints.Outbound, payload interface{}) {
+	defer func() {
+		_ = recover()
+	}()
 	parser := payload.(transport.PacketParser)
 	pkt := Packet{Host: target.GetNameAddress(), Payload: WrapPacketParser(parser)}
 	//fmt.Println(">SEND> ", pkt)
