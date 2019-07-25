@@ -192,6 +192,10 @@ func (rd *RootDomain) CreateHelloWorld() (string, error) {
 	return m.GetReference().String(), nil
 }
 
+func (rd *RootDomain) GetAddressCount() (int, error) {
+	return len(rd.BurnAddressMap), nil
+}
+
 func trimPublicKey(publicKey string) string {
 	return trimBurnAddress(between(publicKey, "KEY-----", "-----END"))
 }

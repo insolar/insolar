@@ -152,6 +152,8 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 		return m.transferCall(params)
 	case "deposit.migration":
 		return m.migrationCall(params)
+	case "migration.getAddressCount":
+		return m.getAddressCountCall()
 	}
 	return nil, fmt.Errorf("unknown method: '%s'", request.Params.CallSite)
 }
@@ -298,6 +300,21 @@ func (m *Member) migrationCall(params map[string]interface{}) (interface{}, erro
 	}
 
 	return m.migration(txId, burnAddress, *amount, currentDate)
+}
+
+type GetAddressCountResponse struct {
+	Count int `json:"count"`
+}
+
+func (m *Member) getAddressCountCall() (*GetAddressCountResponse, error) {
+	rd := rootdomain.GetObject(m.RootDomain)
+
+	c, err := rd.GetAddressCount()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse 'currentDate': %s", err.Error())
+	}
+
+	return &GetAddressCountResponse{Count: c}, nil
 }
 
 // Platform methods.

@@ -26,6 +26,9 @@ import (
 type CreateResponse struct {
 	Reference string `json:"reference"`
 }
+type GetAddressCountResponse struct {
+	Count string `json:"count"`
+}
 type GetResponse struct {
 	Reference   string `json:"reference"`
 	BurnAddress string `json:"migrationAddress,omitempty"`
