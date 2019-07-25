@@ -6,6 +6,7 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "Active" can be found in github.com/insolar/insolar/network/consensus/gcpv2/api/census
 */
 import (
+	context "context"
 	"sync/atomic"
 	"time"
 
@@ -22,7 +23,7 @@ import (
 type ActiveMock struct {
 	t minimock.Tester
 
-	CreateBuilderFunc       func(p pulse.Number, p1 bool) (r Builder)
+	CreateBuilderFunc       func(p context.Context, p1 pulse.Number) (r Builder)
 	CreateBuilderCounter    uint64
 	CreateBuilderPreCounter uint64
 	CreateBuilderMock       mActiveMockCreateBuilder
@@ -131,8 +132,8 @@ type ActiveMockCreateBuilderExpectation struct {
 }
 
 type ActiveMockCreateBuilderInput struct {
-	p  pulse.Number
-	p1 bool
+	p  context.Context
+	p1 pulse.Number
 }
 
 type ActiveMockCreateBuilderResult struct {
@@ -140,7 +141,7 @@ type ActiveMockCreateBuilderResult struct {
 }
 
 //Expect specifies that invocation of Active.CreateBuilder is expected from 1 to Infinity times
-func (m *mActiveMockCreateBuilder) Expect(p pulse.Number, p1 bool) *mActiveMockCreateBuilder {
+func (m *mActiveMockCreateBuilder) Expect(p context.Context, p1 pulse.Number) *mActiveMockCreateBuilder {
 	m.mock.CreateBuilderFunc = nil
 	m.expectationSeries = nil
 
@@ -164,7 +165,7 @@ func (m *mActiveMockCreateBuilder) Return(r Builder) *ActiveMock {
 }
 
 //ExpectOnce specifies that invocation of Active.CreateBuilder is expected once
-func (m *mActiveMockCreateBuilder) ExpectOnce(p pulse.Number, p1 bool) *ActiveMockCreateBuilderExpectation {
+func (m *mActiveMockCreateBuilder) ExpectOnce(p context.Context, p1 pulse.Number) *ActiveMockCreateBuilderExpectation {
 	m.mock.CreateBuilderFunc = nil
 	m.mainExpectation = nil
 
@@ -179,7 +180,7 @@ func (e *ActiveMockCreateBuilderExpectation) Return(r Builder) {
 }
 
 //Set uses given function f as a mock of Active.CreateBuilder method
-func (m *mActiveMockCreateBuilder) Set(f func(p pulse.Number, p1 bool) (r Builder)) *ActiveMock {
+func (m *mActiveMockCreateBuilder) Set(f func(p context.Context, p1 pulse.Number) (r Builder)) *ActiveMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -188,7 +189,7 @@ func (m *mActiveMockCreateBuilder) Set(f func(p pulse.Number, p1 bool) (r Builde
 }
 
 //CreateBuilder implements github.com/insolar/insolar/network/consensus/gcpv2/api/census.Active interface
-func (m *ActiveMock) CreateBuilder(p pulse.Number, p1 bool) (r Builder) {
+func (m *ActiveMock) CreateBuilder(p context.Context, p1 pulse.Number) (r Builder) {
 	counter := atomic.AddUint64(&m.CreateBuilderPreCounter, 1)
 	defer atomic.AddUint64(&m.CreateBuilderCounter, 1)
 

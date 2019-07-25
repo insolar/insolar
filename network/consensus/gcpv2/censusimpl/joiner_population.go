@@ -53,6 +53,8 @@ package censusimpl
 import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
 
@@ -67,28 +69,53 @@ func NewJoinerPopulation(localNode profiles.StaticProfile, vf cryptkit.Signature
 	}
 }
 
+var _ census.OnlinePopulation = &OneJoinerPopulation{}
+
 type OneJoinerPopulation struct {
 	localNode updatableSlot
 }
 
-func (c *OneJoinerPopulation) Copy() ManyNodePopulation {
-	r := ManyNodePopulation{}
-	v := []updatableSlot{c.localNode}
-	v[0].index = 0 // removes Joiner status
-
-	r.makeFullCopyOf(v, &v[0])
-	return r
+func (c *OneJoinerPopulation) GetSuspendedCount() int {
+	return 0
 }
 
-func (c *OneJoinerPopulation) copyTo(p copyFromPopulation, fullCopy bool) {
+func (c *OneJoinerPopulation) GetMistrustedCount() int {
+	return 0
+}
+
+func (c *OneJoinerPopulation) GetIdleProfiles() []profiles.ActiveNode {
+	return nil
+}
+
+func (c *OneJoinerPopulation) GetIdleCount() int {
+	return 0
+}
+
+func (c *OneJoinerPopulation) GetIndexedCount() int {
+	return 0 // joiner is not counted
+}
+
+func (c *OneJoinerPopulation) GetIndexedCapacity() int {
+	return 0 // joiner is not counted
+}
+
+func (c *OneJoinerPopulation) IsValid() bool {
+	return true
+}
+
+func (c *OneJoinerPopulation) GetRolePopulation(role member.PrimaryRole) census.RolePopulation {
+	return nil
+}
+
+func (c *OneJoinerPopulation) GetWorkingRoles() []member.PrimaryRole {
+	return nil
+}
+
+func (c *OneJoinerPopulation) copyTo(p copyFromPopulation) {
 	v := []updatableSlot{c.localNode}
 	v[0].index = 0 // removes Joiner status
 
-	if fullCopy {
-		p.makeFullCopyOf(v, &v[0])
-	} else {
-		p.makeSelfCopyOf(v, &v[0])
-	}
+	p.makeCopyOf(v, &v[0])
 }
 
 func (c *OneJoinerPopulation) FindProfile(nodeID insolar.ShortNodeID) profiles.ActiveNode {
@@ -96,10 +123,6 @@ func (c *OneJoinerPopulation) FindProfile(nodeID insolar.ShortNodeID) profiles.A
 		return nil
 	}
 	return &c.localNode
-}
-
-func (c *OneJoinerPopulation) GetCount() int {
-	return 0 // joiner is not counted
 }
 
 func (c *OneJoinerPopulation) GetProfiles() []profiles.ActiveNode {

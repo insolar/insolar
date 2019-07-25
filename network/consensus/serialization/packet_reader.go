@@ -58,6 +58,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -117,6 +118,11 @@ func newPacketParser(
 	_, err := parser.packet.DeserializeFrom(ctx, capture)
 	if err != nil {
 		return nil, err
+	}
+
+	logger := inslogger.FromContext(ctx)
+	if logger.Is(insolar.DebugLevel) {
+		logger.Debugf("Received packet: %s", parser.packet)
 	}
 
 	parser.data = capture.Captured()
@@ -297,6 +303,7 @@ func (r *ExtendedIntroReader) GetFullIntroduction() transport.FullIntroductionRe
 	return &FullIntroductionReader{
 		MemberPacketReader: r.MemberPacketReader,
 		intro:              r.body.FullSelfIntro,
+		nodeID:             insolar.ShortNodeID(r.packet.Header.SourceID),
 	}
 }
 
@@ -349,6 +356,7 @@ func (r *Phase2PacketReader) GetBriefIntroduction() transport.BriefIntroductionR
 		intro: NodeFullIntro{
 			NodeBriefIntro: r.body.BriefSelfIntro,
 		},
+		nodeID: insolar.ShortNodeID(r.packet.Header.SourceID),
 	}
 }
 
@@ -452,7 +460,8 @@ func (r *CloudIntroductionReader) GetCloudIdentity() cryptkit.DigestHolder {
 
 type FullIntroductionReader struct {
 	MemberPacketReader
-	intro NodeFullIntro
+	intro  NodeFullIntro
+	nodeID insolar.ShortNodeID
 }
 
 func (r *FullIntroductionReader) GetBriefIntroSignedDigest() cryptkit.SignedDigestHolder {
@@ -463,11 +472,11 @@ func (r *FullIntroductionReader) GetBriefIntroSignedDigest() cryptkit.SignedDige
 }
 
 func (r *FullIntroductionReader) GetStaticNodeID() insolar.ShortNodeID {
-	return r.intro.ShortID
+	return r.nodeID
 }
 
 func (r *FullIntroductionReader) GetPrimaryRole() member.PrimaryRole {
-	return r.intro.getPrimaryRole()
+	return r.intro.GetPrimaryRole()
 }
 
 func (r *FullIntroductionReader) GetSpecialRoles() member.SpecialRole {
@@ -499,7 +508,7 @@ func (r *FullIntroductionReader) GetPowerLevels() member.PowerSet {
 }
 
 func (r *FullIntroductionReader) GetExtraEndpoints() []endpoints.Outbound {
-	// TODO:
+	// TODO: we have no extra endpoints atm
 	return nil
 }
 
@@ -528,12 +537,12 @@ type MembershipAnnouncementReader struct {
 	MemberPacketReader
 }
 
-func (r *MembershipAnnouncementReader) hasRank() bool {
-	return r.body.Announcement.CurrentRank != 0
+func (r *MembershipAnnouncementReader) isJoiner() bool {
+	return r.body.Announcement.CurrentRank.IsJoiner()
 }
 
 func (r *MembershipAnnouncementReader) GetNodeID() insolar.ShortNodeID {
-	return r.body.Announcement.ShortID
+	return insolar.ShortNodeID(r.packet.Header.SourceID)
 }
 
 func (r *MembershipAnnouncementReader) GetNodeRank() member.Rank {
@@ -541,15 +550,11 @@ func (r *MembershipAnnouncementReader) GetNodeRank() member.Rank {
 }
 
 func (r *MembershipAnnouncementReader) GetRequestedPower() member.Power {
-	if !r.hasRank() {
-		return 0
-	}
-
 	return r.body.Announcement.RequestedPower
 }
 
 func (r *MembershipAnnouncementReader) GetNodeStateHashEvidence() proofs.NodeStateHashEvidence {
-	if !r.hasRank() {
+	if r.isJoiner() {
 		return nil
 	}
 
@@ -560,7 +565,7 @@ func (r *MembershipAnnouncementReader) GetNodeStateHashEvidence() proofs.NodeSta
 }
 
 func (r *MembershipAnnouncementReader) GetAnnouncementSignature() proofs.MemberAnnouncementSignature {
-	if !r.hasRank() {
+	if r.isJoiner() {
 		return nil
 	}
 
@@ -571,7 +576,7 @@ func (r *MembershipAnnouncementReader) GetAnnouncementSignature() proofs.MemberA
 }
 
 func (r *MembershipAnnouncementReader) IsLeaving() bool {
-	if !r.hasRank() {
+	if r.isJoiner() {
 		return false
 	}
 
@@ -579,11 +584,7 @@ func (r *MembershipAnnouncementReader) IsLeaving() bool {
 }
 
 func (r *MembershipAnnouncementReader) GetLeaveReason() uint32 {
-	if !r.hasRank() {
-		return 0
-	}
-
-	if r.body.Announcement.Member.AnnounceID != insolar.ShortNodeID(r.packet.Header.SourceID) {
+	if !r.IsLeaving() {
 		return 0
 	}
 
@@ -591,19 +592,19 @@ func (r *MembershipAnnouncementReader) GetLeaveReason() uint32 {
 }
 
 func (r *MembershipAnnouncementReader) GetJoinerID() insolar.ShortNodeID {
-	if !r.hasRank() {
-		return 0
+	if r.isJoiner() {
+		return insolar.AbsentShortNodeID
 	}
 
-	if r.body.Announcement.Member.AnnounceID == insolar.ShortNodeID(r.packet.Header.SourceID) {
-		return 0
+	if r.IsLeaving() {
+		return insolar.AbsentShortNodeID
 	}
 
 	return r.body.Announcement.Member.AnnounceID
 }
 
 func (r *MembershipAnnouncementReader) GetJoinerAnnouncement() transport.JoinerAnnouncementReader {
-	if !r.hasRank() {
+	if r.isJoiner() {
 		return nil
 	}
 
@@ -612,27 +613,45 @@ func (r *MembershipAnnouncementReader) GetJoinerAnnouncement() transport.JoinerA
 		return nil
 	}
 
+	var ext *NodeExtendedIntro
+	if r.packet.Header.HasFlag(FlagHasJoinerExt) {
+		ext = &r.body.JoinerExt
+	}
+
 	return &JoinerAnnouncementReader{
 		MemberPacketReader: r.MemberPacketReader,
 		joiner:             r.body.Announcement.Member.Joiner,
+		introducedBy:       insolar.ShortNodeID(r.packet.Header.SourceID),
+		nodeID:             r.body.Announcement.Member.AnnounceID,
+		extIntro:           ext,
 	}
 }
 
 type JoinerAnnouncementReader struct {
 	MemberPacketReader
-	joiner JoinAnnouncement
+	joiner       JoinAnnouncement
+	introducedBy insolar.ShortNodeID
+	nodeID       insolar.ShortNodeID
+	extIntro     *NodeExtendedIntro
 }
 
 func (r *JoinerAnnouncementReader) GetJoinerIntroducedByID() insolar.ShortNodeID {
-	panic("implement me")
+	return r.introducedBy
 }
 
 func (r *JoinerAnnouncementReader) HasFullIntro() bool {
-	return false
+	return r.extIntro != nil
 }
 
 func (r *JoinerAnnouncementReader) GetFullIntroduction() transport.FullIntroductionReader {
-	return nil
+	return &FullIntroductionReader{
+		MemberPacketReader: r.MemberPacketReader,
+		intro: NodeFullIntro{
+			NodeBriefIntro:    r.joiner.NodeBriefIntro,
+			NodeExtendedIntro: *r.extIntro,
+		},
+		nodeID: r.nodeID,
+	}
 }
 
 func (r *JoinerAnnouncementReader) GetBriefIntroduction() transport.BriefIntroductionReader {
@@ -641,6 +660,7 @@ func (r *JoinerAnnouncementReader) GetBriefIntroduction() transport.BriefIntrodu
 		intro: NodeFullIntro{
 			NodeBriefIntro: r.joiner.NodeBriefIntro,
 		},
+		nodeID: r.nodeID,
 	}
 }
 
@@ -649,8 +669,8 @@ type NeighbourAnnouncementReader struct {
 	neighbour NeighbourAnnouncement
 }
 
-func (r *NeighbourAnnouncementReader) hasRank() bool {
-	return r.neighbour.CurrentRank != 0
+func (r *NeighbourAnnouncementReader) isJoiner() bool {
+	return r.neighbour.CurrentRank.IsJoiner()
 }
 
 func (r *NeighbourAnnouncementReader) GetNodeID() insolar.ShortNodeID {
@@ -680,7 +700,7 @@ func (r *NeighbourAnnouncementReader) GetAnnouncementSignature() proofs.MemberAn
 }
 
 func (r *NeighbourAnnouncementReader) IsLeaving() bool {
-	if !r.hasRank() {
+	if r.isJoiner() {
 		return false
 	}
 
@@ -688,11 +708,7 @@ func (r *NeighbourAnnouncementReader) IsLeaving() bool {
 }
 
 func (r *NeighbourAnnouncementReader) GetLeaveReason() uint32 {
-	if !r.hasRank() {
-		return 0
-	}
-
-	if r.neighbour.Member.AnnounceID != r.neighbour.NeighbourNodeID {
+	if r.IsLeaving() {
 		return 0
 	}
 
@@ -700,20 +716,22 @@ func (r *NeighbourAnnouncementReader) GetLeaveReason() uint32 {
 }
 
 func (r *NeighbourAnnouncementReader) GetJoinerID() insolar.ShortNodeID {
-	if r.hasRank() {
-		return 0
+	if r.isJoiner() {
+		return insolar.AbsentShortNodeID
 	}
 
-	return r.neighbour.NeighbourNodeID
+	if r.IsLeaving() {
+		return insolar.AbsentShortNodeID
+	}
+
+	return r.neighbour.Member.AnnounceID
 }
 
 func (r *NeighbourAnnouncementReader) GetJoinerAnnouncement() transport.JoinerAnnouncementReader {
-	if !r.hasRank() {
-		return nil
-	}
-
 	return &JoinerAnnouncementReader{
 		MemberPacketReader: r.MemberPacketReader,
-		joiner:             r.body.Announcement.Member.Joiner,
+		joiner:             r.neighbour.Joiner,
+		introducedBy:       r.neighbour.JoinerIntroducedBy,
+		nodeID:             r.neighbour.NeighbourNodeID,
 	}
 }
