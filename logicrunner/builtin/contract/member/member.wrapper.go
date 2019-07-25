@@ -133,7 +133,7 @@ func INSMETHOD_GetName(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetWallet(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.SetSystemError(nil)
 	self := new(Member)
 
 	if len(object) == 0 {
@@ -155,6 +155,10 @@ func INSMETHOD_GetWallet(object []byte, data []byte) ([]byte, []byte, error) {
 	}
 
 	ret0, ret1 := self.GetWallet()
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
@@ -458,11 +462,9 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	}
 
 	ret0, ret1 := New(args0, args1, args2, args3, args4)
-
 	if ph.GetSystemError() != nil {
 		return nil, ph.GetSystemError()
 	}
-
 	if ret1 != nil {
 		return nil, ret1
 	}
