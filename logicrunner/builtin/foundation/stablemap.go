@@ -18,105 +18,69 @@ package foundation
 
 import (
 	"encoding/json"
-
-	"github.com/davecgh/go-spew/spew"
+	"errors"
+	"sort"
+	"strings"
 )
 
-// StableMap is a `map[interface{}]interface{}` like structure that can be deterministically serialized.
-type StableMap struct {
-	Keys   []interface{}
-	Values []interface{}
+// StableMap is a `map[string]string` that can be deterministically serialized.
+type StableMap map[string]string
+
+// NewStableMapFromInterface tries to parse interface{} as [][]string and creates new StableMap.
+func NewStableMapFromInterface(i interface{}) (StableMap, error) {
+	m := make(StableMap)
+	s, ok := i.([]interface{})
+	if !ok {
+		return nil, errors.New("bad interface content")
+	}
+	for _, e := range s {
+		elem, ok := e.([]interface{})
+		if !ok {
+			return nil, errors.New("failed to parse slice")
+		}
+		if len(elem) < 2 {
+			return nil, errors.New("wrong number of elements in pair")
+		}
+		k, ok := elem[0].(string)
+		if !ok {
+			return nil, errors.New("failed to parse key")
+		}
+		v, ok := elem[1].(string)
+		if !ok {
+			return nil, errors.New("failed to parse value")
+		}
+		m[k] = v
+	}
+	return m, nil
 }
 
-func NewStableMap() (sm StableMap) {
-	sm.Keys = make([]interface{}, 0)
-	sm.Values = make([]interface{}, 0)
-	return sm
-}
-
-func NewStableMapFromMap(m map[interface{}]interface{}) (sm StableMap) {
-	sm.Keys = make([]interface{}, 0, len(m))
-	sm.Values = make([]interface{}, 0, len(m))
+func (m StableMap) MarshalJSON() ([]byte, error) {
+	res := make([][2]string, 0, len(m))
 	for k, v := range m {
-		sm.Keys = append(sm.Keys, k)
-		sm.Values = append(sm.Values, v)
+		res = append(res, [2]string{k, v})
 	}
-	return sm
-}
-
-// Len returns number of Keys in StableMap.
-func (m *StableMap) Len() int {
-	return len(m.Keys)
-}
-
-// Get returns value from StableMap.
-func (m *StableMap) Get(key interface{}) (val interface{}, ok bool) {
-	for idx, k := range m.Keys {
-		if k == key {
-			return m.Values[idx], true
-		}
-	}
-	return nil, false
-}
-
-// Set adds or replaces value in StableMap.
-func (m *StableMap) Set(key, val interface{}) {
-	for idx, k := range m.Keys {
-		if k == key {
-			m.Keys[idx] = key
-			m.Values[idx] = val
-			return
-		}
-	}
-	m.Keys = append(m.Keys, key)
-	m.Values = append(m.Values, val)
-}
-
-// Delete deletes value from StableMap. If there is no such key in map Delete does nothing.
-func (m *StableMap) Delete(key interface{}) {
-	for idx, k := range m.Keys {
-		if k == key {
-			m.Keys = append(m.Keys[:idx], m.Keys[idx+1:]...)
-			m.Values = append(m.Values[:idx], m.Values[idx+1:]...)
-			return
-		}
-	}
-}
-
-// GetKeys returns a slice of Keys from StableMap.
-func (m *StableMap) GetKeys() []interface{} {
-	return m.Keys
-}
-
-// GetValues returns a slice of Values from StableMap.
-func (m *StableMap) GetValues() []interface{} {
-	return m.Values
-}
-
-// Pairs returns a slice of key value pairs from StableMap.
-func (m *StableMap) Pairs() [][2]interface{} {
-	pairs := make([][2]interface{}, len(m.Keys))
-	for idx, key := range m.Keys {
-		pairs[idx] = [2]interface{}{key, m.Values[idx]}
-	}
-	return pairs
-}
-
-func (m *StableMap) MarshalJSON() ([]byte, error) {
-	res := [2][]interface{}{}
-	res[0] = m.Keys
-	res[1] = m.Values
+	sort.Slice(res, func(i, j int) bool { return strings.Compare(res[i][0], res[j][0]) == -1 })
 	return json.Marshal(res)
 }
 
+func (m StableMap) MarshalBinary() ([]byte, error) {
+	return m.MarshalJSON()
+}
+
 func (m *StableMap) UnmarshalJSON(data []byte) error {
-	res := [2][]interface{}{}
-	err := json.Unmarshal(data, res)
+	mm := make(StableMap)
+	res := make([][2]string, 0, len(*m))
+	err := json.Unmarshal(data, &res)
 	if err != nil {
 		return err
 	}
-	spew.Dump(res)
-	m.Keys = res[0]
-	m.Values = res[1]
+	for _, pair := range res {
+		mm[pair[0]] = pair[1]
+	}
+	*m = mm
 	return nil
+}
+
+func (m *StableMap) UnmarshalBinary(data []byte) error {
+	return m.UnmarshalJSON(data)
 }

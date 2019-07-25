@@ -78,12 +78,12 @@ func TestData_WriteNodeDomainData(t *testing.T) {
 	var ndMemory nodedomain.NodeDomain
 	insolar.Deserialize(objDesc.Memory(), &ndMemory)
 
-	expectIndexMap := foundation.NewStableMap()
+	expectIndexMap := make(foundation.StableMap)
 
 	for _, n := range nodes {
 		pKey := platformpolicy.MustPublicKeyToString(n.key)
 		ref := rootdomain.GenesisRef(pKey)
-		expectIndexMap.Set(pKey, ref.String())
+		expectIndexMap[pKey] = ref.String()
 
 		nodeObjDesc, err := am.GetObject(ctx, ref)
 		require.NoError(t, err, "nodeInfo object not found for public key: "+pKey)
@@ -100,7 +100,7 @@ func initArtifactManager(t *testing.T) artifact.Manager {
 	amMock := artifact.NewManagerMock(t)
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 
-	indexMap := foundation.NewStableMap()
+	indexMap := make(foundation.StableMap)
 	activatedMemory := map[insolar.Reference][]byte{}
 
 	amMock.GetObjectFunc = func(_ context.Context, ref insolar.Reference) (artifact.ObjectDescriptor, error) {

@@ -64,7 +64,6 @@ func (d *Deposit) GetAmount() (string, error) {
 // New creates new deposit.
 func New(migrationDaemonConfirms foundation.StableMap, txHash string, amount string, holdReleaseDate time.Time) (*Deposit, error) {
 	return &Deposit{
-
 		MigrationDaemonConfirms: migrationDaemonConfirms,
 		Confirms:                0,
 		TxHash:                  txHash,
@@ -106,11 +105,11 @@ func (d *Deposit) Confirm(migrationDaemon insolar.Reference, txHash string, amou
 		return 0, fmt.Errorf("amount is incorrect")
 	}
 
-	if confirm, ok := d.MigrationDaemonConfirms.Get(migrationDaemon); ok {
-		if confirm, ok := confirm.(bool); ok && confirm {
+	if confirm, ok := d.MigrationDaemonConfirms[migrationDaemon.String()]; ok {
+		if confirm != "0" {
 			return 0, fmt.Errorf("confirm from the migration daemon '%s' already exists", migrationDaemon.String())
 		} else {
-			d.MigrationDaemonConfirms.Set(migrationDaemon, true)
+			d.MigrationDaemonConfirms[migrationDaemon.String()] = "1"
 			d.Confirms++
 			if d.Confirms == confirms {
 				d.Status = statusHolding

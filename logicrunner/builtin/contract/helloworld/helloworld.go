@@ -111,18 +111,15 @@ func (hw *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
 
 	switch request.Params.CallSite {
 	case "Greet":
-		callParams, ok := request.Params.CallParams.(foundation.StableMap)
-		if !ok {
-			return nil, errors.New("failed to parse CallParams")
+		callParams, err := foundation.NewStableMapFromInterface(request.Params.CallParams)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to parse CallParams")
 		}
-		name, ok := callParams.Get("name")
+		name, ok := callParams["name"]
 		if !ok {
 			return hw.Greet("Anonymous")
 		}
-		if name, ok := name.(string); ok {
-			return hw.Greet(name)
-		}
-		return nil, errors.New("failed to parse name param")
+		return hw.Greet(name)
 	case "Count":
 		return hw.Count()
 	case "Errored":

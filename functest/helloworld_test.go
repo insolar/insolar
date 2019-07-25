@@ -47,7 +47,7 @@ func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "api.call",
-		Params:  requester.Params{CallSite: "CreateHelloWorld", CallParams: foundation.StableMap{}, PublicKey: rootCfg.PublicKey},
+		Params:  requester.Params{CallSite: "CreateHelloWorld", CallParams: make(foundation.StableMap), PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
 		return nil, err
@@ -82,8 +82,8 @@ func (i *HelloWorldInstance) Greet(ctx context.Context, name string) (string, er
 	}
 
 	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
-	callParams := foundation.StableMap{}
-	callParams.Set("name", name)
+	callParams := make(foundation.StableMap)
+	callParams["name"] = name
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
@@ -120,7 +120,7 @@ func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "api.call",
-		Params:  requester.Params{CallSite: "Count", CallParams: foundation.StableMap{}, PublicKey: rootCfg.PublicKey},
+		Params:  requester.Params{CallSite: "Count", CallParams: make(foundation.StableMap), PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
 		return 0, err
@@ -165,7 +165,7 @@ func (i *HelloWorldInstance) CreateChild(ctx context.Context) (*HelloWorldInstan
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "api.call",
-		Params:  requester.Params{CallSite: "CreateChild", CallParams: foundation.StableMap{}, PublicKey: rootCfg.PublicKey},
+		Params:  requester.Params{CallSite: "CreateChild", CallParams: make(foundation.StableMap), PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
 		return nil, err
@@ -204,7 +204,7 @@ func (i *HelloWorldInstance) ReturnObj(ctx context.Context) (map[string]interfac
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "api.call",
-		Params:  requester.Params{CallSite: "ReturnObj", CallParams: foundation.StableMap{}, PublicKey: rootCfg.PublicKey},
+		Params:  requester.Params{CallSite: "ReturnObj", CallParams: make(foundation.StableMap), PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
 		return nil, err
