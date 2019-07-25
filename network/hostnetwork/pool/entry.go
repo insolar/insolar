@@ -112,12 +112,6 @@ func (e *entry) open(ctx context.Context) (io.ReadWriteCloser, error) {
 }
 
 func (e *entry) dial(ctx context.Context) (io.ReadWriteCloser, error) {
-	// ctx, span := instracer.StartSpan(ctx, "connectionPool.open")
-	// span.AddAttributes(
-	// 	trace.StringAttribute("create connect to", e.host.String()),
-	// )
-	// defer span.End()
-
 	conn, err := e.transport.Dial(ctx, e.host.Address.String())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Open ] Failed to create TCP connection")

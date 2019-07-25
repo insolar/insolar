@@ -182,13 +182,6 @@ func (hn *hostNetwork) handleRequest(ctx context.Context, p *packet.ReceivedPack
 		}
 		return
 	}
-	// ctx, span := instracer.StartSpan(ctx, "hostTransport.processMessage")
-	// span.AddAttributes(
-	// 	trace.StringAttribute("msg receiver", p.Receiver.Address.String()),
-	// 	trace.StringAttribute("msg trace", p.TraceID),
-	// 	trace.StringAttribute("msg type", p.GetType().String()),
-	// )
-	// defer span.En
 	response, err := handler(ctx, p)
 	if err != nil {
 		logger.Errorf("Error handling request %s from node %s: %s", p.GetType(), p.Sender.NodeID, err)
