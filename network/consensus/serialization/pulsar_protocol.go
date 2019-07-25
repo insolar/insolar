@@ -58,10 +58,13 @@ import (
 
 type PulsarPacketBody struct {
 	// ByteSize>=108
-	// TODO: hacked
-	PulseNumber           pulse.Number
+	PulseNumber           pulse.Number  `insolar-transport:"ignore=send"`
 	PulseDataExt          pulse.DataExt // ByteSize=44
 	PulsarConsensusProofs []byte        // variable lengths >=0
+}
+
+func (b *PulsarPacketBody) DebugString(ctx PacketContext) string {
+	return "pulsar packet body"
 }
 
 func (b *PulsarPacketBody) SerializeTo(_ SerializeContext, writer io.Writer) error {

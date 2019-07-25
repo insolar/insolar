@@ -80,7 +80,7 @@ func (p *pulsePacketPrepDispatcher) DispatchHostPacket(ctx context.Context, pack
 	if err != nil || !ok {
 		return err
 	}
-	return p.R.ApplyPulseData(pp, true)
+	return p.R.ApplyPulseData(pp, true, from)
 }
 
 func (p *pulsePacketDispatcher) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,

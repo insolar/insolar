@@ -82,7 +82,7 @@ func TestClaimList_SerializeDeserialize(t *testing.T) {
 	buf := make([]byte, 0)
 	rw := bytes.NewBuffer(buf)
 	w := newTrackableWriter(rw)
-	packetCtx := newPacketContext(context.Background(), nil)
+	packetCtx := newPacketContext(context.Background(), &Header{})
 	serializeCtx := newSerializeContext(packetCtx, w, digester, signer, nil)
 
 	err := list.SerializeTo(serializeCtx, rw)

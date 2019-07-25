@@ -7,7 +7,7 @@ The original interface "ActiveNode" can be found in github.com/insolar/insolar/n
 */
 import (
 	"sync/atomic"
-	"time"
+	time "time"
 
 	"github.com/gojuno/minimock"
 	insolar "github.com/insolar/insolar/insolar"

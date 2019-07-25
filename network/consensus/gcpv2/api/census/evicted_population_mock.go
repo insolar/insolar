@@ -30,10 +30,20 @@ type EvictedPopulationMock struct {
 	GetCountPreCounter uint64
 	GetCountMock       mEvictedPopulationMockGetCount
 
+	GetDetectedErrorsFunc       func() (r RecoverableErrorTypes)
+	GetDetectedErrorsCounter    uint64
+	GetDetectedErrorsPreCounter uint64
+	GetDetectedErrorsMock       mEvictedPopulationMockGetDetectedErrors
+
 	GetProfilesFunc       func() (r []profiles.EvictedNode)
 	GetProfilesCounter    uint64
 	GetProfilesPreCounter uint64
 	GetProfilesMock       mEvictedPopulationMockGetProfiles
+
+	IsValidFunc       func() (r bool)
+	IsValidCounter    uint64
+	IsValidPreCounter uint64
+	IsValidMock       mEvictedPopulationMockIsValid
 }
 
 //NewEvictedPopulationMock returns a mock for github.com/insolar/insolar/network/consensus/gcpv2/api/census.EvictedPopulation
@@ -46,7 +56,9 @@ func NewEvictedPopulationMock(t minimock.Tester) *EvictedPopulationMock {
 
 	m.FindProfileMock = mEvictedPopulationMockFindProfile{mock: m}
 	m.GetCountMock = mEvictedPopulationMockGetCount{mock: m}
+	m.GetDetectedErrorsMock = mEvictedPopulationMockGetDetectedErrors{mock: m}
 	m.GetProfilesMock = mEvictedPopulationMockGetProfiles{mock: m}
+	m.IsValidMock = mEvictedPopulationMockIsValid{mock: m}
 
 	return m
 }
@@ -332,6 +344,140 @@ func (m *EvictedPopulationMock) GetCountFinished() bool {
 	return true
 }
 
+type mEvictedPopulationMockGetDetectedErrors struct {
+	mock              *EvictedPopulationMock
+	mainExpectation   *EvictedPopulationMockGetDetectedErrorsExpectation
+	expectationSeries []*EvictedPopulationMockGetDetectedErrorsExpectation
+}
+
+type EvictedPopulationMockGetDetectedErrorsExpectation struct {
+	result *EvictedPopulationMockGetDetectedErrorsResult
+}
+
+type EvictedPopulationMockGetDetectedErrorsResult struct {
+	r RecoverableErrorTypes
+}
+
+//Expect specifies that invocation of EvictedPopulation.GetDetectedErrors is expected from 1 to Infinity times
+func (m *mEvictedPopulationMockGetDetectedErrors) Expect() *mEvictedPopulationMockGetDetectedErrors {
+	m.mock.GetDetectedErrorsFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &EvictedPopulationMockGetDetectedErrorsExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of EvictedPopulation.GetDetectedErrors
+func (m *mEvictedPopulationMockGetDetectedErrors) Return(r RecoverableErrorTypes) *EvictedPopulationMock {
+	m.mock.GetDetectedErrorsFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &EvictedPopulationMockGetDetectedErrorsExpectation{}
+	}
+	m.mainExpectation.result = &EvictedPopulationMockGetDetectedErrorsResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of EvictedPopulation.GetDetectedErrors is expected once
+func (m *mEvictedPopulationMockGetDetectedErrors) ExpectOnce() *EvictedPopulationMockGetDetectedErrorsExpectation {
+	m.mock.GetDetectedErrorsFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &EvictedPopulationMockGetDetectedErrorsExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *EvictedPopulationMockGetDetectedErrorsExpectation) Return(r RecoverableErrorTypes) {
+	e.result = &EvictedPopulationMockGetDetectedErrorsResult{r}
+}
+
+//Set uses given function f as a mock of EvictedPopulation.GetDetectedErrors method
+func (m *mEvictedPopulationMockGetDetectedErrors) Set(f func() (r RecoverableErrorTypes)) *EvictedPopulationMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetDetectedErrorsFunc = f
+	return m.mock
+}
+
+//GetDetectedErrors implements github.com/insolar/insolar/network/consensus/gcpv2/api/census.EvictedPopulation interface
+func (m *EvictedPopulationMock) GetDetectedErrors() (r RecoverableErrorTypes) {
+	counter := atomic.AddUint64(&m.GetDetectedErrorsPreCounter, 1)
+	defer atomic.AddUint64(&m.GetDetectedErrorsCounter, 1)
+
+	if len(m.GetDetectedErrorsMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetDetectedErrorsMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to EvictedPopulationMock.GetDetectedErrors.")
+			return
+		}
+
+		result := m.GetDetectedErrorsMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the EvictedPopulationMock.GetDetectedErrors")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetDetectedErrorsMock.mainExpectation != nil {
+
+		result := m.GetDetectedErrorsMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the EvictedPopulationMock.GetDetectedErrors")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetDetectedErrorsFunc == nil {
+		m.t.Fatalf("Unexpected call to EvictedPopulationMock.GetDetectedErrors.")
+		return
+	}
+
+	return m.GetDetectedErrorsFunc()
+}
+
+//GetDetectedErrorsMinimockCounter returns a count of EvictedPopulationMock.GetDetectedErrorsFunc invocations
+func (m *EvictedPopulationMock) GetDetectedErrorsMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetDetectedErrorsCounter)
+}
+
+//GetDetectedErrorsMinimockPreCounter returns the value of EvictedPopulationMock.GetDetectedErrors invocations
+func (m *EvictedPopulationMock) GetDetectedErrorsMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetDetectedErrorsPreCounter)
+}
+
+//GetDetectedErrorsFinished returns true if mock invocations count is ok
+func (m *EvictedPopulationMock) GetDetectedErrorsFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetDetectedErrorsMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetDetectedErrorsCounter) == uint64(len(m.GetDetectedErrorsMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetDetectedErrorsMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetDetectedErrorsCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetDetectedErrorsFunc != nil {
+		return atomic.LoadUint64(&m.GetDetectedErrorsCounter) > 0
+	}
+
+	return true
+}
+
 type mEvictedPopulationMockGetProfiles struct {
 	mock              *EvictedPopulationMock
 	mainExpectation   *EvictedPopulationMockGetProfilesExpectation
@@ -466,6 +612,140 @@ func (m *EvictedPopulationMock) GetProfilesFinished() bool {
 	return true
 }
 
+type mEvictedPopulationMockIsValid struct {
+	mock              *EvictedPopulationMock
+	mainExpectation   *EvictedPopulationMockIsValidExpectation
+	expectationSeries []*EvictedPopulationMockIsValidExpectation
+}
+
+type EvictedPopulationMockIsValidExpectation struct {
+	result *EvictedPopulationMockIsValidResult
+}
+
+type EvictedPopulationMockIsValidResult struct {
+	r bool
+}
+
+//Expect specifies that invocation of EvictedPopulation.IsValid is expected from 1 to Infinity times
+func (m *mEvictedPopulationMockIsValid) Expect() *mEvictedPopulationMockIsValid {
+	m.mock.IsValidFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &EvictedPopulationMockIsValidExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of EvictedPopulation.IsValid
+func (m *mEvictedPopulationMockIsValid) Return(r bool) *EvictedPopulationMock {
+	m.mock.IsValidFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &EvictedPopulationMockIsValidExpectation{}
+	}
+	m.mainExpectation.result = &EvictedPopulationMockIsValidResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of EvictedPopulation.IsValid is expected once
+func (m *mEvictedPopulationMockIsValid) ExpectOnce() *EvictedPopulationMockIsValidExpectation {
+	m.mock.IsValidFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &EvictedPopulationMockIsValidExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *EvictedPopulationMockIsValidExpectation) Return(r bool) {
+	e.result = &EvictedPopulationMockIsValidResult{r}
+}
+
+//Set uses given function f as a mock of EvictedPopulation.IsValid method
+func (m *mEvictedPopulationMockIsValid) Set(f func() (r bool)) *EvictedPopulationMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.IsValidFunc = f
+	return m.mock
+}
+
+//IsValid implements github.com/insolar/insolar/network/consensus/gcpv2/api/census.EvictedPopulation interface
+func (m *EvictedPopulationMock) IsValid() (r bool) {
+	counter := atomic.AddUint64(&m.IsValidPreCounter, 1)
+	defer atomic.AddUint64(&m.IsValidCounter, 1)
+
+	if len(m.IsValidMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.IsValidMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to EvictedPopulationMock.IsValid.")
+			return
+		}
+
+		result := m.IsValidMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the EvictedPopulationMock.IsValid")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsValidMock.mainExpectation != nil {
+
+		result := m.IsValidMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the EvictedPopulationMock.IsValid")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsValidFunc == nil {
+		m.t.Fatalf("Unexpected call to EvictedPopulationMock.IsValid.")
+		return
+	}
+
+	return m.IsValidFunc()
+}
+
+//IsValidMinimockCounter returns a count of EvictedPopulationMock.IsValidFunc invocations
+func (m *EvictedPopulationMock) IsValidMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.IsValidCounter)
+}
+
+//IsValidMinimockPreCounter returns the value of EvictedPopulationMock.IsValid invocations
+func (m *EvictedPopulationMock) IsValidMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.IsValidPreCounter)
+}
+
+//IsValidFinished returns true if mock invocations count is ok
+func (m *EvictedPopulationMock) IsValidFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.IsValidMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.IsValidCounter) == uint64(len(m.IsValidMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.IsValidMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.IsValidCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.IsValidFunc != nil {
+		return atomic.LoadUint64(&m.IsValidCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *EvictedPopulationMock) ValidateCallCounters() {
@@ -478,8 +758,16 @@ func (m *EvictedPopulationMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to EvictedPopulationMock.GetCount")
 	}
 
+	if !m.GetDetectedErrorsFinished() {
+		m.t.Fatal("Expected call to EvictedPopulationMock.GetDetectedErrors")
+	}
+
 	if !m.GetProfilesFinished() {
 		m.t.Fatal("Expected call to EvictedPopulationMock.GetProfiles")
+	}
+
+	if !m.IsValidFinished() {
+		m.t.Fatal("Expected call to EvictedPopulationMock.IsValid")
 	}
 
 }
@@ -507,8 +795,16 @@ func (m *EvictedPopulationMock) MinimockFinish() {
 		m.t.Fatal("Expected call to EvictedPopulationMock.GetCount")
 	}
 
+	if !m.GetDetectedErrorsFinished() {
+		m.t.Fatal("Expected call to EvictedPopulationMock.GetDetectedErrors")
+	}
+
 	if !m.GetProfilesFinished() {
 		m.t.Fatal("Expected call to EvictedPopulationMock.GetProfiles")
+	}
+
+	if !m.IsValidFinished() {
+		m.t.Fatal("Expected call to EvictedPopulationMock.IsValid")
 	}
 
 }
@@ -527,7 +823,9 @@ func (m *EvictedPopulationMock) MinimockWait(timeout time.Duration) {
 		ok := true
 		ok = ok && m.FindProfileFinished()
 		ok = ok && m.GetCountFinished()
+		ok = ok && m.GetDetectedErrorsFinished()
 		ok = ok && m.GetProfilesFinished()
+		ok = ok && m.IsValidFinished()
 
 		if ok {
 			return
@@ -544,8 +842,16 @@ func (m *EvictedPopulationMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to EvictedPopulationMock.GetCount")
 			}
 
+			if !m.GetDetectedErrorsFinished() {
+				m.t.Error("Expected call to EvictedPopulationMock.GetDetectedErrors")
+			}
+
 			if !m.GetProfilesFinished() {
 				m.t.Error("Expected call to EvictedPopulationMock.GetProfiles")
+			}
+
+			if !m.IsValidFinished() {
+				m.t.Error("Expected call to EvictedPopulationMock.IsValid")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -568,7 +874,15 @@ func (m *EvictedPopulationMock) AllMocksCalled() bool {
 		return false
 	}
 
+	if !m.GetDetectedErrorsFinished() {
+		return false
+	}
+
 	if !m.GetProfilesFinished() {
+		return false
+	}
+
+	if !m.IsValidFinished() {
 		return false
 	}
 
