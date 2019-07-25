@@ -91,14 +91,14 @@ func (j *jetInfo) checkIncomingHot(incomingJetID insolar.JetID) error {
 	return nil
 }
 
-func (j *jetInfo) addHot(newJetID insolar.JetID, parentId insolar.JetID) error {
+func (j *jetInfo) addHot(newJetID insolar.JetID, parentID insolar.JetID) error {
 	err := j.checkIncomingHot(newJetID)
 	if err != nil {
 		return errors.Wrap(err, "incorrect incoming jet")
 	}
 
 	j.HotConfirmed = append(j.HotConfirmed, newJetID)
-	j.JetID = parentId
+	j.JetID = parentID
 
 	return nil
 }
