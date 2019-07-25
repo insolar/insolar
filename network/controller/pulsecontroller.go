@@ -74,7 +74,6 @@ type pulseController struct {
 	KeyProcessor        insolar.KeyProcessor               `inject:""`
 	CryptographyService insolar.CryptographyService        `inject:""`
 	Network             network.HostNetwork                `inject:""`
-	TerminationHandler  insolar.TerminationHandler         `inject:""`
 }
 
 func (pc *pulseController) Init(ctx context.Context) error {
@@ -87,25 +86,26 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Rec
 		return nil, errors.Errorf("process pulse: got invalid protobuf request message: %s", request)
 	}
 
+	logger := inslogger.FromContext(ctx)
+
 	data := request.GetRequest().GetPulse()
-	pulse := *pulse.FromProto(data.Pulse)
-	err := pc.verifyPulseSign(pulse)
+	p := *pulse.FromProto(data.Pulse)
+	err := pc.verifyPulseSign(p)
 	if err != nil {
+		logger.Error("[ pulseController ] processPulse: failed to verify p: ", err.Error())
 		return nil, errors.Wrap(err, "[ pulseController ] processPulse: failed to verify pulse")
 	}
-
-	inslog := inslogger.FromContext(ctx)
 
 	// Because we want to save our trace-context from a pulsar node
 	// We fetch TraceSpanData from msg and set a trace id and other stuff to current context
 	newCtx := context.Background()
 	parent, err := instracer.Deserialize(data.TraceSpanData)
 	if err != nil {
-		inslog.Errorf("failed to deserialize trace spans data on pulse process: %v", err)
+		logger.Errorf("failed to deserialize trace spans data on pulse process: %v", err)
 	} else {
 		newCtx = instracer.WithParentSpan(newCtx, parent)
 	}
-	go pc.PulseHandler.HandlePulse(newCtx, pulse, request)
+	go pc.PulseHandler.HandlePulse(newCtx, p, request)
 
 	return pc.Network.BuildResponse(ctx, request, &packet.BasicResponse{Success: true, Error: ""}), nil
 }
