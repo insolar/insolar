@@ -24,11 +24,9 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/messagebus"
@@ -696,9 +694,9 @@ func (m *client) activateObject(
 	asDelegate bool,
 	memory []byte,
 ) error {
-	parentDesc, err := m.GetObject(ctx, parent)
+	_, err := m.GetObject(ctx, parent)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "wrong parent")
 	}
 
 	activate := record.Activate{
@@ -739,71 +737,11 @@ func (m *client) activateObject(
 
 	switch p := pl.(type) {
 	case *payload.ResultInfo:
-		var (
-			asType *insolar.Reference
-		)
-		child := record.Child{Ref: obj}
-		if parentDesc.ChildPointer() != nil {
-			child.PrevChild = *parentDesc.ChildPointer()
-		}
-		if asDelegate {
-			asType = &prototype
-		}
-		virtChild := record.Wrap(child)
-
-		err = m.registerChild(
-			ctx,
-			virtChild,
-			parent,
-			obj,
-			asType,
-		)
-		if err != nil {
-			return errors.Wrap(err, "failed to register as child while activating")
-		}
 		return nil
 	case *payload.Error:
 		return errors.New(p.Text)
 	default:
 		return fmt.Errorf("ActivateObject: unexpected reply: %#v", p)
-	}
-}
-
-func (m *client) registerChild(
-	ctx context.Context,
-	rec record.Virtual,
-	parent insolar.Reference,
-	child insolar.Reference,
-	asType *insolar.Reference,
-) error {
-	data, err := rec.Marshal()
-	if err != nil {
-		return errors.Wrap(err, "setRecord: can't serialize record")
-	}
-	sender := messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(m.PulseAccessor),
-		messagebus.RetryJetSender(m.JetStorage),
-		messagebus.RetryFlowCancelled(m.PulseAccessor),
-	)
-	genericReact, err := sender(ctx, &message.RegisterChild{
-		Record: data,
-		Parent: parent,
-		Child:  child,
-		AsType: asType,
-	}, nil)
-
-	if err != nil {
-		return err
-	}
-
-	switch rep := genericReact.(type) {
-	case *reply.ID:
-		return nil
-	case *reply.Error:
-		return rep.Error()
-	default:
-		return fmt.Errorf("registerChild: unexpected reply: %#v", rep)
 	}
 }
 
@@ -846,9 +784,8 @@ func (m *client) RegisterResult(
 	}
 
 	var (
-		pl         payload.Payload
-		parentDesc ObjectDescriptor
-		err        error
+		pl  payload.Payload
+		err error
 	)
 
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.RegisterResult")
@@ -877,9 +814,9 @@ func (m *client) RegisterResult(
 	case RequestSideEffectActivate:
 		parentRef, imageRef, memory := result.Activate()
 
-		parentDesc, err = m.GetObject(ctx, parentRef)
+		_, err := m.GetObject(ctx, parentRef)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "wrong parent")
 		}
 
 		vResultRecord := record.Wrap(resultRecord)
@@ -970,31 +907,6 @@ func (m *client) RegisterResult(
 	_, err = sendResult(pl, result.ObjectReference())
 	if err != nil {
 		return errors.Wrapf(err, "RegisterResult: Failed to send results: %s", result.Type().String())
-	}
-
-	if result.Type() == RequestSideEffectActivate {
-		parentRef, _, _ := result.Activate()
-
-		var asType *insolar.Reference
-
-		child := record.Child{
-			Ref: result.ObjectReference(),
-		}
-
-		if parentDesc.ChildPointer() != nil {
-			child.PrevChild = *parentDesc.ChildPointer()
-		}
-
-		err = m.registerChild(
-			ctx,
-			record.Wrap(child),
-			parentRef,
-			result.ObjectReference(),
-			asType,
-		)
-		if err != nil {
-			return errors.Wrap(err, "failed to register as child while activating")
-		}
 	}
 
 	return nil
