@@ -150,8 +150,7 @@ func (c *Phase2PacketDispatcher) DispatchMemberPacket(ctx context.Context, reade
 	}
 
 	neighbours, err := announce.VerifyNeighbourhood(ctx, neighbourhood, sender,
-		announcedJoinerID, ar.GetJoinerAnnouncement(),
-		realm)
+		announcedJoinerID, ar.GetJoinerAnnouncement(), realm)
 
 	if err != nil {
 		rep := misbehavior.FraudOf(err)
@@ -161,14 +160,29 @@ func (c *Phase2PacketDispatcher) DispatchMemberPacket(ctx context.Context, reade
 		return err
 	}
 
-	for i, nb := range neighbours {
-		modified, err := nb.Neighbour.ApplyNeighbourEvidence(sender, nb.Announcement, c.isCapped)
-		if err == nil && modified {
-			signalSent = true
+	purgatory := realm.GetPurgatory()
+	senderID := sender.GetNodeID()
 
+	for i, nb := range neighbours {
+		isJoiner := nb.Announcement.Membership.IsJoiner()
+		if isJoiner {
 			err = announce.ApplyNeighbourJoinerAnnouncement(ctx, sender, announcedJoinerID, nb.Neighbour,
 				nb.Announcement.JoinerID, neighbourhood[i].GetJoinerAnnouncement(), realm)
 		}
+
+		if err == nil {
+			modified, err := nb.Neighbour.ApplyNeighbourEvidence(sender, nb.Announcement, c.isCapped)
+
+			if err == nil {
+				if modified {
+					signalSent = true
+				}
+				if isJoiner {
+					err = purgatory.JoinerFromNeighbourhood(ctx, nb.Neighbour.GetNodeID(), nil, senderID) // trigger ascension
+				}
+			}
+		}
+
 		if err != nil {
 			inslogger.FromContext(ctx).Error(err)
 		}

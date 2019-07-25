@@ -51,6 +51,7 @@
 package profiles
 
 import (
+	"fmt"
 	"github.com/insolar/insolar/network/consensus/common/args"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
@@ -126,8 +127,13 @@ func UpgradeStaticProfile(sp StaticProfile, brief BriefCandidateProfile, ext Can
 		return EqualProfileExtensions(spe, ext), nil
 	}
 
-	if sp.(Upgradable).UpgradeProfile(ext) {
-		return true, sp.GetExtension()
+	if upg, ok := sp.(Upgradable); ok {
+		if upg.UpgradeProfile(ext) {
+			return true, sp.GetExtension()
+		}
+	} else {
+		panic(fmt.Sprintf("not upgradable: %+v", sp))
 	}
+
 	return EqualProfileExtensions(sp.GetExtension(), ext), nil
 }
