@@ -286,14 +286,14 @@ outer:
 			indexedCount, isComplete := pop.GetCountAndCompleteness(false)
 			bftMajority := consensuskit.BftMajority(indexedCount)
 
-			updID := insolar.AbsentShortNodeID
-			if upd.UpdatedNode != nil {
-				updID = upd.UpdatedNode.GetNodeID()
-			}
-
-			log.Debugf("workerPrePhase3: id=%d upd=%d count=%d hasNsh=%d trustBySome=%d trustByNbh=%d purgatory=%d announced=%d fullJoiners=%d fraud=%d",
-				c.R.GetSelfNodeID(), updID,
-				indexedCount, countHasNsh, countTrustBySome, countTrustByNeighbors, countPurgatory, countAnnouncedJoiners, countFullJoiners, countFraud)
+			//updID := insolar.AbsentShortNodeID
+			//if upd.UpdatedNode != nil {
+			//	updID = upd.UpdatedNode.GetNodeID()
+			//}
+			//
+			//log.Debugf("workerPrePhase3: id=%d upd=%d count=%d hasNsh=%d trustBySome=%d trustByNbh=%d purgatory=%d announced=%d fullJoiners=%d fraud=%d",
+			//	c.R.GetSelfNodeID(), updID,
+			//	indexedCount, countHasNsh, countTrustBySome, countTrustByNeighbors, countPurgatory, countAnnouncedJoiners, countFullJoiners, countFraud)
 
 			// We have some-trusted from all nodes, and the majority of them are well-trusted
 			if isComplete && countFraud == 0 && countHasNsh >= indexedCount &&
