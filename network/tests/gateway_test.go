@@ -54,6 +54,7 @@ package tests
 
 import (
 	"context"
+	"sync"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
@@ -62,7 +63,8 @@ import (
 
 type FakeGateway struct {
 	gateway.Base
-	State insolar.NetworkState
+	State   insolar.NetworkState
+	StateMu sync.Mutex
 }
 
 func NewFakeGateway() network.Gateway {
@@ -73,6 +75,8 @@ func NewFakeGateway() network.Gateway {
 }
 
 func (g *FakeGateway) OnPulse(context.Context, insolar.Pulse) error {
+	g.StateMu.Lock()
+	defer g.StateMu.Unlock()
 	g.State = insolar.CompleteNetworkState
 	return nil
 }
@@ -85,6 +89,8 @@ func (g *FakeGateway) Run(context.Context) {
 }
 
 func (g *FakeGateway) GetState() insolar.NetworkState {
+	g.StateMu.Lock()
+	defer g.StateMu.Unlock()
 	return g.State
 }
 
