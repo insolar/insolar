@@ -138,10 +138,6 @@ type EnsureIndexWM struct {
 	jet     insolar.JetID
 	message payload.Meta
 
-	Result struct {
-		Lifeline record.Lifeline
-	}
-
 	Dep struct {
 		IndexLocker   object.IndexLocker
 		IndexModifier object.IndexModifier
@@ -181,8 +177,6 @@ func (p *EnsureIndexWM) process(ctx context.Context) error {
 
 	idx, err := p.Dep.IndexAccessor.ForID(ctx, flow.Pulse(ctx), p.object)
 	if err == nil {
-		p.Result.Lifeline = idx.Lifeline
-
 		idx.LifelineLastUsed = flow.Pulse(ctx)
 		err = p.Dep.IndexModifier.SetIndex(ctx, flow.Pulse(ctx), idx)
 		if err != nil {
@@ -222,14 +216,14 @@ func (p *EnsureIndexWM) process(ctx context.Context) error {
 
 	switch rep := pl.(type) {
 	case *payload.Index:
-		p.Result.Lifeline, err = object.DecodeLifeline(rep.Index)
+		idx, err := object.DecodeLifeline(rep.Index)
 		if err != nil {
 			return errors.Wrap(err, "EnsureIndexWM: failed to decode index")
 		}
 
 		err = p.Dep.IndexModifier.SetIndex(ctx, flow.Pulse(ctx), record.Index{
 			LifelineLastUsed: flow.Pulse(ctx),
-			Lifeline:         p.Result.Lifeline,
+			Lifeline:         idx,
 			PendingRecords:   []insolar.ID{},
 			ObjID:            p.object,
 		})

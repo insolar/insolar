@@ -181,12 +181,15 @@ func NewMessageHandler(
 			)
 		},
 		SendObject: func(p *proc.SendObject) {
-			p.Dep.Jets = h.JetStorage
-			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.JetFetcher = h.JetTreeUpdater
-			p.Dep.Bus = h.Bus
-			p.Dep.RecordAccessor = h.Records
-			p.Dep.Sender = h.Sender
+			p.Dep(
+				h.JetCoordinator,
+				h.JetStorage,
+				h.JetTreeUpdater,
+				h.Records,
+				h.IndexStorage,
+				h.Bus,
+				h.Sender,
+			)
 		},
 		GetCode: func(p *proc.GetCode) {
 			p.Dep.RecordAccessor = h.Records
