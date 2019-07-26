@@ -19,6 +19,7 @@
 package functest
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -29,8 +30,15 @@ import (
 func TestDepositTransferToken(t *testing.T) {
 	member := fullMigration(t, "Eth_TxHash_test")
 
+	firstBalance := getBalanceNoErr(t, member, member.ref)
+	secondBalance := new(big.Int).Add(firstBalance, big.NewInt(100))
+
 	_, err := signedRequest(member, "deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
 	require.NoError(t, err)
+
+	finalBalance := getBalanceNoErr(t, member, member.ref)
+
+	require.Equal(t, secondBalance, finalBalance)
 }
 
 func TestDepositTransferBiggerAmount(t *testing.T) {
