@@ -153,19 +153,19 @@ func TestIsValidAsPulseNumber(t *testing.T) {
 }
 
 func TestOfInt(t *testing.T) {
-	require.Equal(t, Number(0), OfInt(MaxTimePulse+1))
+	require.Zero(t, OfInt(MaxTimePulse+1))
 
 	require.Equal(t, Number(MaxTimePulse-1), OfInt(MaxTimePulse-1))
 }
 
 func TestOfUint32(t *testing.T) {
-	require.Equal(t, Number(0), OfUint32(MaxTimePulse+1))
+	require.Zero(t, OfUint32(MaxTimePulse+1))
 
 	require.Equal(t, Number(MaxTimePulse-1), OfUint32(MaxTimePulse-1))
 }
 
 func TestFlagsOf(t *testing.T) {
-	require.Equal(t, uint(0), FlagsOf(MaxTimePulse))
+	require.Zero(t, FlagsOf(MaxTimePulse))
 
 	require.Equal(t, uint(1), FlagsOf(MaxTimePulse+2))
 }
