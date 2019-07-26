@@ -221,7 +221,7 @@ func (m *executionProxyImplementation) RouteCall(
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
 func (m *executionProxyImplementation) SaveAsChild(
 	ctx context.Context, current *Transcript, req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp,
-) error {
+) error { // AALEKSEEV TODO consider returning constructorError to the proxy as well
 	inslogger.FromContext(ctx).Debug("RPC.SaveAsChild")
 	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsChild")
 	defer span.End()
@@ -236,16 +236,23 @@ func (m *executionProxyImplementation) SaveAsChild(
 
 	// Send the request
 	msg := &message.CallMethod{IncomingRequest: *incoming}
-	ref, err := m.cr.CallConstructor(ctx, msg)
-	current.AddOutgoingRequest(ctx, *incoming, nil, ref, err)
+	objectRef, ctorErr, err := m.cr.CallConstructor(ctx, msg)
+	current.AddOutgoingRequest(ctx, *incoming, nil, objectRef, err) // AALEKSEEV TODO objectRef can be nil
 	if err != nil {
 		return err
 	}
-	rep.Reference = ref
+	rep.Reference = objectRef
+	rep.ConstructorError = ctorErr
 
 	// Register result of the outgoing method
 	outgoingReqRef := insolar.NewReference(*outgoingReqID)
-	reqResult := newRequestResult(rep.Reference.Bytes(), req.Callee)
+
+	var refBytes []byte
+	if objectRef != nil {
+		// constructor succeeded
+		refBytes = rep.Reference.Bytes()
+	}
+	reqResult := newRequestResult(refBytes, req.Callee)
 	return m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
 }
 

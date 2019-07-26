@@ -708,6 +708,7 @@ func (r *One) Hello() (*string, error) {
 package main
 
 import (
+	"errors"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
@@ -715,7 +716,7 @@ type Two struct {
 	foundation.BaseContract
 }
 func New() (*Two, error) {
-	return nil, nil
+	return nil, errors.New("constructor failed")
 }
 `
 	uploadContractOnce(t, "constructor_return_nil_two", contractTwoCode)

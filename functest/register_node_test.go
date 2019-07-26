@@ -67,6 +67,7 @@ func TestRegisterNodeLightMaterial(t *testing.T) {
 
 func TestRegisterNodeNotExistRole(t *testing.T) {
 	_, err := registerNodeSignedCall(map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": "some_not_fancy_role"})
+	require.NotEmpty(t, err)
 	require.Contains(t, err.Error(),
 		"role is not supported: some_not_fancy_role")
 }

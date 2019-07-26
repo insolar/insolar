@@ -396,7 +396,7 @@ func TestSaveAsChildRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	}
 
 	newObjRef := gen.Reference()
-	cr.CallConstructorMock.Return(&newObjRef, nil)
+	cr.CallConstructorMock.Return(&newObjRef, "", nil)
 
 	// Make sure the result of the outgoing request is registered as well
 	am.RegisterResultMock.Set(func(ctx context.Context, reqref insolar.Reference, result artifacts.RequestResult) (r error) {

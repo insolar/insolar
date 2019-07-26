@@ -212,17 +212,17 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, inMsg insolar.Messa
 	return cr.Call(ctx, inMsg)
 }
 
-func (cr *ContractRequester) CallConstructor(ctx context.Context, inMsg insolar.Message) (*insolar.Reference, error) {
+func (cr *ContractRequester) CallConstructor(ctx context.Context, inMsg insolar.Message) (ref *insolar.Reference, ctorErr string, sysErr error) {
 	res, err := cr.Call(ctx, inMsg)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	rep, ok := res.(*reply.CallConstructor)
 	if !ok {
-		return nil, errors.New(fmt.Sprintf("Reply is not CallConstructor: %+v", res))
+		return nil, "", errors.New(fmt.Sprintf("Reply is not CallConstructor: %+v", res))
 	}
-	return rep.Object, nil
+	return rep.Object, rep.ConstructorError, nil
 }
 
 func (cr *ContractRequester) result(ctx context.Context, msg *message.ReturnResults) error {

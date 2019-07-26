@@ -32,7 +32,7 @@ func (r *CallMethod) Type() insolar.ReplyType {
 
 type CallConstructor struct {
 	Object           *insolar.Reference
-	ConstructorError error
+	ConstructorError string
 }
 
 // Type returns type of the reply

@@ -30,7 +30,7 @@ type requestResult struct {
 	objectImage      insolar.Reference // amend + activate
 	objectStateID    insolar.ID        // amend + deactivate
 	memory           []byte            // amend + activate
-	constructorError error
+	constructorError string            // gob can't serialize `error` thus we are using string here
 }
 
 func newRequestResult(result []byte, objectRef insolar.Reference) *requestResult {
@@ -57,11 +57,11 @@ func (s *requestResult) Deactivate() insolar.ID {
 	return s.objectStateID
 }
 
-func (s *requestResult) ConstructorError() error {
+func (s *requestResult) ConstructorError() string {
 	return s.constructorError
 }
 
-func (s *requestResult) SetConstructorError(err error) {
+func (s *requestResult) SetConstructorError(err string) {
 	s.sideEffectType = artifacts.RequestSideEffectNone
 
 	s.constructorError = err
