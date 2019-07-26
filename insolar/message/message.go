@@ -58,9 +58,6 @@ func getEmptyMessage(mt insolar.MessageType) (insolar.Message, error) {
 	case insolar.TypeGetObjectIndex:
 		return &GetObjectIndex{}, nil
 
-	// heavy sync
-	case insolar.TypeHeavyPayload:
-		return &HeavyPayload{}, nil
 	// Genesis
 	case insolar.TypeGenesisRequest:
 		return &GenesisRequest{}, nil
@@ -174,9 +171,6 @@ func init() {
 	// Ledger
 	gob.Register(&RegisterChild{})
 	gob.Register(&GetObjectIndex{})
-
-	// heavy
-	gob.Register(&HeavyPayload{})
 
 	// Bootstrap
 	gob.Register(&GenesisRequest{})

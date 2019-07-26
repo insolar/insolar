@@ -226,6 +226,11 @@ generate-protobuf: ## generate protobuf structs
 	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src insolar/payload/payload.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/pulse/pulse.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src network/hostnetwork/packet/packet.proto
+		protoc -I/usr/local/include -I./ \
+    		-I$(GOPATH)/src \
+    		--go_out=plugins=grpc:./  \
+    		ledger/heavy/exporter/record_exporter.proto
+
 
 regen-builtin: $(BININSGOCC) ## regenerate builtin contracts code
 	$(BININSGOCC) regen-builtin

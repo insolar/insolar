@@ -206,13 +206,6 @@ const (
 	// TypeGetObjectIndex fetches object index from storage.
 	TypeGetObjectIndex
 
-	// Heavy replication
-
-	// TypeHeavyStartStop carries start/stop signal for heavy replication.
-	TypeHeavyStartStop
-	// TypeHeavyPayload carries Key/Value records for replication to Heavy Material node.
-	TypeHeavyPayload
-
 	// Bootstrap
 
 	// TypeGenesisRequest used for bootstrap object generation.
