@@ -1,4 +1,4 @@
-//
+///
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,18 +12,29 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+///
+
+package bits
+
+// ResetBits returns a new byte slice with all bits in 'value' reset,
+// starting from 'start' number of bit.
 //
-
-package helper
-
-import "github.com/insolar/insolar/insolar"
-
-// Contains tells whether a contains x.
-func Contains(a []insolar.Reference, x insolar.Reference) bool {
-	for _, n := range a {
-		if x == n {
-			return true
-		}
+// If 'start' is bigger than len(value), the original slice will be returned.
+func ResetBits(value []byte, start uint8) []byte {
+	if int(start) >= len(value)*8 {
+		return value
 	}
-	return false
+
+	startByte := start / 8
+	startBit := start % 8
+
+	result := make([]byte, len(value))
+	copy(result, value[:startByte])
+
+	// Reset bits in starting byte.
+	mask := byte(0xFF)
+	mask <<= 8 - startBit
+	result[startByte] = value[startByte] & mask
+
+	return result
 }

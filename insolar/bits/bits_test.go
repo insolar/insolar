@@ -1,4 +1,4 @@
-//
+///
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,21 +12,23 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+///
 
-package helper
+package bits
 
 import (
-	"fmt"
-	"strconv"
-	"time"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-func ParseTimestamp(timeStr string) (time.Time, error) {
+func TestResetBits(t *testing.T) {
+	orig := []byte{0xFF}
+	got := ResetBits(orig, 5)
+	require.NotEqual(t, &orig, &got, "without overflow returns a new slice")
 
-	i, err := strconv.ParseInt(timeStr, 10, 64)
-	if err != nil {
-		return time.Unix(0, 0), fmt.Errorf("failed to parse time: %s", err.Error())
-	}
-	return time.Unix(i, 0), nil
+	gotWithOverflow := ResetBits(orig, 9)
+	require.Equal(t, []byte{0xFF}, gotWithOverflow, "returns equals slice on overflow")
+	require.Equal(t, &orig, &gotWithOverflow, "on overflow returns the same slice")
+	require.Equal(t, []byte{0xFF}, orig, "original unchanged after resetBits")
 }

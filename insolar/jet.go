@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/insolar/insolar/insolar/bits"
 	"github.com/pkg/errors"
 )
 
@@ -75,6 +76,7 @@ func NewJetID(depth uint8, prefix []byte) *JetID {
 	var id JetID
 	copy(id[:PulseNumberSize], PulseNumberJet.Bytes())
 	id[PulseNumberSize] = depth
+	prefix = bits.ResetBits(prefix, depth)
 	copy(id[JetPrefixOffset:], prefix)
 	return &id
 }
