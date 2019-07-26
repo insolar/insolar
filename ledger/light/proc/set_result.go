@@ -112,7 +112,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		p.dep.sender.Reply(ctx, p.message, msg)
 		return nil
 	}
-	if index.Lifeline.PendingPointer != nil && resultID.Pulse() < index.Lifeline.PendingPointer.Pulse() {
+	if index.Lifeline.LatestRequest != nil && resultID.Pulse() < index.Lifeline.LatestRequest.Pulse() {
 		return errors.New("result from the past")
 	}
 
@@ -180,7 +180,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		{
 			virtual := record.Wrap(&record.PendingFilament{
 				RecordID:       resultID,
-				PreviousRecord: index.Lifeline.PendingPointer,
+				PreviousRecord: index.Lifeline.LatestRequest,
 			})
 			hash := record.HashVirtual(p.dep.pcs.ReferenceHasher(), virtual)
 			id := *insolar.NewID(resultID.Pulse(), hash)
@@ -209,7 +209,6 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 
 				index.Lifeline.LatestState = &id
 				index.Lifeline.StateID = p.sideEffect.ID()
-				index.Lifeline.LatestUpdate = flow.Pulse(ctx)
 				if activate, ok := p.sideEffect.(*record.Activate); ok {
 					index.Lifeline.Parent = activate.Parent
 				}
@@ -218,7 +217,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 
 		// Save updated index.
 		index.LifelineLastUsed = flow.Pulse(ctx)
-		index.Lifeline.PendingPointer = &filamentID
+		index.Lifeline.LatestRequest = &filamentID
 		index.Lifeline.EarliestOpenRequest = earliestPending
 		err = p.dep.indexes.SetIndex(ctx, resultID.Pulse(), index)
 		if err != nil {

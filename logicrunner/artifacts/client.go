@@ -352,13 +352,12 @@ func (m *client) GetObject(
 	state := s
 
 	desc := &objectDescriptor{
-		head:         head,
-		state:        *index.LatestState,
-		prototype:    state.GetImage(),
-		isPrototype:  state.GetIsPrototype(),
-		childPointer: index.ChildPointer,
-		memory:       statePayload.Memory,
-		parent:       index.Parent,
+		head:        head,
+		state:       *index.LatestState,
+		prototype:   state.GetImage(),
+		isPrototype: state.GetIsPrototype(),
+		memory:      statePayload.Memory,
+		parent:      index.Parent,
 	}
 	return desc, err
 }

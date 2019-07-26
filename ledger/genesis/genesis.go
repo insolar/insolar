@@ -123,8 +123,7 @@ func (br *BaseRecord) Create(ctx context.Context) error {
 		record.Index{
 			ObjID: genesisID,
 			Lifeline: record.Lifeline{
-				LatestState:         &genesisID,
-				LatestStateApproved: &genesisID,
+				LatestState: &genesisID,
 			},
 			PendingRecords: []insolar.ID{},
 		},

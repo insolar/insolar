@@ -150,7 +150,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 			p.dep.sender.Reply(ctx, p.message, msg)
 			return nil
 		}
-		if idx.Lifeline.PendingPointer != nil && p.requestID.Pulse() < idx.Lifeline.PendingPointer.Pulse() {
+		if idx.Lifeline.LatestRequest != nil && p.requestID.Pulse() < idx.Lifeline.LatestRequest.Pulse() {
 			return errors.New("request from the past")
 		}
 		index = idx
@@ -235,7 +235,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	{
 		virtual := record.Wrap(&record.PendingFilament{
 			RecordID:       p.requestID,
-			PreviousRecord: index.Lifeline.PendingPointer,
+			PreviousRecord: index.Lifeline.LatestRequest,
 		})
 		hash := record.HashVirtual(p.dep.pcs.ReferenceHasher(), virtual)
 		id := *insolar.NewID(p.requestID.Pulse(), hash)
@@ -249,7 +249,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 
 	// Save updated index.
 	index.LifelineLastUsed = p.requestID.Pulse()
-	index.Lifeline.PendingPointer = &filamentID
+	index.Lifeline.LatestRequest = &filamentID
 	if index.Lifeline.EarliestOpenRequest == nil {
 		pn := p.requestID.Pulse()
 		index.Lifeline.EarliestOpenRequest = &pn

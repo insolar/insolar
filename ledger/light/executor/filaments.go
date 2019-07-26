@@ -155,7 +155,7 @@ func (c *FilamentCalculatorDefault) OpenedRequests(ctx context.Context, pulse in
 
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"object_id":           objectID.DebugString(),
-		"pending_filament_id": idx.Lifeline.PendingPointer.DebugString(),
+		"pending_filament_id": idx.Lifeline.LatestRequest.DebugString(),
 	})
 	logger.Debug("started collecting opened requests")
 	defer logger.Debug("finished collecting opened requests")
@@ -164,7 +164,7 @@ func (c *FilamentCalculatorDefault) OpenedRequests(ctx context.Context, pulse in
 	cache.Lock()
 	defer cache.Unlock()
 
-	if idx.Lifeline.PendingPointer == nil {
+	if idx.Lifeline.LatestRequest == nil {
 		return []record.CompositeFilamentRecord{}, nil
 	}
 	if idx.Lifeline.EarliestOpenRequest == nil {
@@ -175,7 +175,7 @@ func (c *FilamentCalculatorDefault) OpenedRequests(ctx context.Context, pulse in
 		ctx,
 		cache,
 		objectID,
-		*idx.Lifeline.PendingPointer,
+		*idx.Lifeline.LatestRequest,
 		*idx.Lifeline.EarliestOpenRequest,
 		c.jetFetcher,
 		c.coordinator,
@@ -244,7 +244,7 @@ func (c *FilamentCalculatorDefault) ResultDuplicate(
 	if err != nil {
 		return nil, err
 	}
-	if idx.Lifeline.PendingPointer == nil {
+	if idx.Lifeline.LatestRequest == nil {
 		return nil, nil
 	}
 
@@ -256,7 +256,7 @@ func (c *FilamentCalculatorDefault) ResultDuplicate(
 		ctx,
 		cache,
 		objectID,
-		*idx.Lifeline.PendingPointer,
+		*idx.Lifeline.LatestRequest,
 		result.Request.Record().Pulse(),
 		c.jetFetcher,
 		c.coordinator,
@@ -320,7 +320,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 		lifeline = l.Lifeline
 	}
 
-	if lifeline.PendingPointer == nil {
+	if lifeline.LatestRequest == nil {
 		return nil, nil, nil
 	}
 
@@ -332,7 +332,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 		ctx,
 		cache,
 		objectID,
-		*lifeline.PendingPointer,
+		*lifeline.LatestRequest,
 		reasonID.Pulse(),
 		c.jetFetcher,
 		c.coordinator,

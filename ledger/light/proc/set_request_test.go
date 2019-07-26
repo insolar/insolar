@@ -117,7 +117,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 				Lifeline: record.Lifeline{
 					StateID:             record.StateActivation,
 					EarliestOpenRequest: &pn,
-					PendingPointer:      pendingID,
+					LatestRequest:       pendingID,
 				},
 			}
 			require.Equal(t, expectedIndex, idx)

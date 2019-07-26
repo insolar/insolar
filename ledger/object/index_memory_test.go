@@ -36,7 +36,6 @@ func TestInMemoryIndex_SetIndex(t *testing.T) {
 		ObjID: objID,
 		Lifeline: record.Lifeline{
 			LatestState: &lflID,
-			Delegates:   []record.LifelineDelegate{},
 		},
 	}
 
@@ -68,7 +67,6 @@ func TestInMemoryIndex_SetIndex(t *testing.T) {
 			ObjID: objID,
 			Lifeline: record.Lifeline{
 				LatestState: &sLlflID,
-				Delegates:   []record.LifelineDelegate{},
 			},
 		}
 
