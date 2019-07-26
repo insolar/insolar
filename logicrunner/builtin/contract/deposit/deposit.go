@@ -30,7 +30,8 @@ import (
 type status string
 
 const (
-	month = 30 * 24 * 60 * 60
+	// month = 30 * 24 * 60 * 60
+	month = 0
 
 	confirms           uint                = 3
 	offsetDepositPulse insolar.PulseNumber = 6 * month
@@ -129,8 +130,35 @@ func (d *Deposit) Confirm(migrationDaemonIndex int, migrationDaemonRef string, t
 	}
 }
 
+func (d *Deposit) canTransfer() error {
+	c := 0
+	for _, r := range d.MigrationDaemonConfirms {
+		if r != "" {
+			c++
+		}
+	}
+	if c < 3 {
+		return fmt.Errorf("number of confirms is less then 3")
+	}
+
+	p, err := foundation.GetPulseNumber()
+	if err != nil {
+		return fmt.Errorf("failed to get pulse number: %s", err.Error())
+	}
+	if d.PulseDepositUnHold > p {
+		return fmt.Errorf("hold period didn't end")
+	}
+
+	return nil
+}
+
 // MapMarshal gets deposit information.
 func (d *Deposit) Transfer(amountStr string, wallerRef insolar.Reference) (interface{}, error) {
+	err := d.canTransfer()
+	if err != nil {
+		return nil, fmt.Errorf("can't start transfer: %s", err.Error())
+	}
+
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {
 		return nil, fmt.Errorf("can't parse input amount")
@@ -142,7 +170,7 @@ func (d *Deposit) Transfer(amountStr string, wallerRef insolar.Reference) (inter
 
 	balance, ok := new(big.Int).SetString(d.Amount, 10)
 	if !ok {
-		return nil, fmt.Errorf("can't parse wallet balance")
+		return nil, fmt.Errorf("can't parse deposit balance")
 	}
 	newBalance, err := safemath.Sub(balance, amount)
 	if err != nil {
