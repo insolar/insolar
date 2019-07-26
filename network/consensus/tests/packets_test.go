@@ -170,25 +170,71 @@ func (r *EmuPulsarNetPacket) String() string {
 
 // var _ gcp_v2.PhasePacketReader = &basePacket{}
 // var _ gcp_v2.MemberPacketReader = &basePacket{}
-var _ cryptkit.SignedEvidenceHolder = &basePacket{}
+// var _ cryptkit.SignedEvidenceHolder = &basePacket{}
 
 type basePacket struct {
-	src             insolar.ShortNodeID
-	tgt             insolar.ShortNodeID
-	nodeCount       uint16
-	mp              profiles.MembershipProfile
-	isLeaving       bool
-	leaveReason     uint32
-	joiner          transport.JoinerAnnouncementReader
-	joinerAnnouncer insolar.ShortNodeID
+	src           insolar.ShortNodeID
+	tgt           insolar.ShortNodeID
+	isAlternative bool
+	nodeCount     uint16
+	mp            profiles.MembershipProfile
+	isLeaving     bool
+	leaveReason   uint32
+	joiner        transport.JoinerAnnouncementReader
+	// joinerAnnouncer insolar.ShortNodeID
+	cloudIntro *proofs.NodeWelcomePackage
+
+	profiles.BriefCandidateProfile
+	profiles.CandidateProfileExtension
 }
 
-func (r *basePacket) GetJoinerIntroducedByID() insolar.ShortNodeID {
-	if r.joiner == nil {
-		return insolar.AbsentShortNodeID
-	}
-	return r.joinerAnnouncer
+func (r *basePacket) GetLastCloudStateHash() cryptkit.DigestHolder {
+	return r.cloudIntro.LastCloudStateHash
 }
+
+func (r *basePacket) GetCloudIdentity() cryptkit.DigestHolder {
+	return r.cloudIntro.CloudIdentity
+}
+
+func (r *basePacket) HasFullIntro() bool {
+	return r.CandidateProfileExtension != nil && r.BriefCandidateProfile != nil
+}
+
+func (r *basePacket) GetCloudIntroduction() transport.CloudIntroductionReader {
+	if !r.HasCloudIntro() {
+		return nil
+	}
+	return r
+}
+
+func (r *basePacket) GetFullIntroduction() transport.FullIntroductionReader {
+	if r.HasFullIntro() {
+		return r
+	}
+	return nil
+}
+
+func (r *basePacket) HasCloudIntro() bool {
+	return r.cloudIntro != nil
+}
+
+func (r *basePacket) HasJoinerSecret() bool {
+	return r.cloudIntro != nil && r.cloudIntro.JoinerSecret != nil
+}
+
+func (r *basePacket) GetJoinerSecret() cryptkit.DigestHolder {
+	if !r.HasJoinerSecret() {
+		return nil
+	}
+	return r.cloudIntro.JoinerSecret
+}
+
+// func (r *basePacket) GetJoinerIntroducedByID() insolar.ShortNodeID {
+//	if r.joiner == nil {
+//		return insolar.AbsentShortNodeID
+//	}
+//	return r.joinerAnnouncer
+// }
 
 func (r *basePacket) ParsePacketBody() (transport.PacketParser, error) {
 	return nil, nil
@@ -217,10 +263,6 @@ func (r *basePacket) GetJoinerAnnouncement() transport.JoinerAnnouncementReader 
 	return r.joiner
 }
 
-func (r *basePacket) GetNodeStateHashEvidence() proofs.NodeStateHashEvidence {
-	return r.mp.StateEvidence
-}
-
 func (r *basePacket) GetAnnouncementSignature() proofs.MemberAnnouncementSignature {
 	return r.mp.AnnounceSignature
 }
@@ -230,13 +272,16 @@ func (r *basePacket) GetNodeID() insolar.ShortNodeID {
 }
 
 func (r *basePacket) GetNodeRank() member.Rank {
-	return member.NewMembershipRank(r.mp.Mode, r.mp.Power, r.mp.Index, r.nodeCount)
+	return r.mp.AsRankUint16(r.nodeCount)
 }
 
 func (r *basePacket) GetAnnouncementReader() transport.MembershipAnnouncementReader {
 	return r
 }
 
+func (r *basePacket) GetNodeStateHashEvidence() proofs.NodeStateHashEvidence {
+	return r.mp.StateEvidence
+}
 func (r *basePacket) GetEvidence() cryptkit.SignedData {
 	v := longbits.NewBits64(0)
 	d := cryptkit.NewDigest(&v, "stub")
@@ -285,11 +330,35 @@ func (r *basePacket) AsPhase3Packet() transport.Phase3PacketReader {
 }
 
 func (r *basePacket) String() string {
-	leaving := ""
-	if r.isLeaving {
-		leaving = fmt.Sprintf(" leave:%d", r.leaveReason)
+	intro := ""
+	if r.HasFullIntro() {
+		intro = " intro:full"
+	} else if r.BriefCandidateProfile != nil {
+		intro = " intro:brief"
 	}
-	return fmt.Sprintf("s:%v t:%v%s", r.src, r.tgt, leaving)
+	cloud := ""
+	if r.HasCloudIntro() {
+		cloud = fmt.Sprintf(" cloud:%v", *r.cloudIntro)
+	}
+	announcement := ""
+	if r.isLeaving {
+		announcement = fmt.Sprintf(" leave:%d", r.leaveReason)
+	} else if r.joiner != nil {
+		joinerID := r.GetJoinerID()
+		if r.joiner.HasFullIntro() {
+			announcement = fmt.Sprintf(" join:%d+full", joinerID)
+		} else {
+			announcement = fmt.Sprintf(" join:%d", joinerID)
+		}
+	}
+	return fmt.Sprintf("s:%v t:%v%s%s%s", r.src, r.tgt, announcement, intro, cloud)
+}
+
+func (r *basePacket) adjustBySender(profile *transport.NodeAnnouncementProfile) {
+	if profile.GetNodeRank().IsJoiner() {
+		r.mp.AnnounceSignature = nil
+		r.mp.StateEvidence = nil
+	}
 }
 
 var _ transport.Phase0PacketReader = &EmuPhase0NetPacket{}
@@ -336,44 +405,19 @@ var _ transport.PacketParser = &EmuPhase1NetPacket{}
 
 type EmuPhase1NetPacket struct {
 	EmuPhase0NetPacket
-	isRequest bool
 	// packetType uint8 // to reuse this type for Phase1 and Phase1Req
-}
-
-func (r *EmuPhase1NetPacket) HasFullIntro() bool {
-	return false
-}
-
-func (r *EmuPhase1NetPacket) HasCloudIntro() bool {
-	return false
-}
-
-func (r *EmuPhase1NetPacket) HasJoinerSecret() bool {
-	return false
-}
-
-func (r *EmuPhase1NetPacket) GetJoinerSecret() cryptkit.SignatureHolder {
-	panic("implement me")
-}
-
-func (r *EmuPhase1NetPacket) GetCloudIntroduction() transport.CloudIntroductionReader {
-	panic("implement me")
-}
-
-func (r *EmuPhase1NetPacket) GetFullIntroduction() transport.FullIntroductionReader {
-	panic("implement me")
 }
 
 func (r *EmuPhase1NetPacket) String() string {
 	suffix := ""
-	if r.isRequest {
+	if r.isAlternative {
 		suffix = "rq"
 	}
 	return fmt.Sprintf("ph:1%s %s pulsePkt:{%v} mp:{%v} nc:%d", suffix, r.basePacket.String(), r.pulsePacket, r.mp, r.nodeCount)
 }
 
 func (r *EmuPhase1NetPacket) GetPacketType() phases.PacketType {
-	if r.isRequest {
+	if r.isAlternative {
 		return phases.PacketReqPhase1
 	} else {
 		return phases.PacketPhase1
@@ -410,44 +454,28 @@ type EmuPhase2NetPacket struct {
 	neighbourhood []transport.MembershipAnnouncementReader
 }
 
-func (r *EmuPhase2NetPacket) HasFullIntro() bool {
-	return false
-}
-
-func (r *EmuPhase2NetPacket) GetFullIntroduction() transport.FullIntroductionReader {
-	panic("implement me")
-}
-
-func (r *EmuPhase2NetPacket) HasCloudIntro() bool {
-	return false
-}
-
-func (r *EmuPhase2NetPacket) GetCloudIntroduction() transport.CloudIntroductionReader {
-	panic("implement me")
-}
-
-func (r *EmuPhase2NetPacket) HasJoinerSecret() bool {
-	return false
-}
-
-func (r *EmuPhase2NetPacket) GetJoinerSecret() cryptkit.SignatureHolder {
-	panic("implement me")
-}
-
 func (r *EmuPhase2NetPacket) GetBriefIntroduction() transport.BriefIntroductionReader {
-	return nil
+	return r.BriefCandidateProfile
 }
 
 func (r *EmuPhase2NetPacket) String() string {
-	return fmt.Sprintf("ph:2 %s pn:%v mp:{%v} nc:%d ngbh:%v", r.basePacket.String(), r.pulseNumber, r.mp, r.nodeCount, r.neighbourhood)
+	suffix := ""
+	if r.isAlternative {
+		suffix = "xt"
+	}
+	return fmt.Sprintf("ph:2%s %s pn:%v mp:{%v} nc:%d ngbh:%v", suffix, r.basePacket.String(), r.pulseNumber, r.mp, r.nodeCount, r.neighbourhood)
+}
+
+func (r *EmuPhase2NetPacket) GetPacketType() phases.PacketType {
+	if r.isAlternative {
+		return phases.PacketExtPhase2
+	} else {
+		return phases.PacketPhase2
+	}
 }
 
 func (r *EmuPhase2NetPacket) GetNeighbourhood() []transport.MembershipAnnouncementReader {
 	return r.neighbourhood
-}
-
-func (r *EmuPhase2NetPacket) GetPacketType() phases.PacketType {
-	return phases.PacketPhase2
 }
 
 func (r *EmuPhase2NetPacket) AsPhase2Packet() transport.Phase2PacketReader {
@@ -496,17 +524,25 @@ func (r *EmuPhase3NetPacket) GetDoubtedGlobulaStateSignature() proofs.GlobulaSta
 	return r.vectors.Doubted.StateSignature
 }
 
+func (r *EmuPhase3NetPacket) GetPacketType() phases.PacketType {
+	if r.isAlternative {
+		return phases.PacketFastPhase3
+	} else {
+		return phases.PacketPhase3
+	}
+}
+
 func (r *EmuPhase3NetPacket) String() string {
-	return fmt.Sprintf("ph:3 %s, pn:%v set:%v gahT:%v gahD:%v", r.basePacket.String(), r.pulseNumber,
+	suffix := ""
+	if r.isAlternative {
+		suffix = "ft"
+	}
+	return fmt.Sprintf("ph:3%s %s, pn:%v set:%v gahT:%v gahD:%v", suffix, r.basePacket.String(), r.pulseNumber,
 		r.vectors.Bitset, r.GetTrustedGlobulaAnnouncementHash(), r.GetDoubtedGlobulaAnnouncementHash())
 }
 
 func (r *EmuPhase3NetPacket) GetBitset() member.StateBitset {
 	return r.vectors.Bitset
-}
-
-func (r *EmuPhase3NetPacket) GetPacketType() phases.PacketType {
-	return phases.PacketPhase3
 }
 
 func (r *EmuPhase3NetPacket) AsPhase3Packet() transport.Phase3PacketReader {

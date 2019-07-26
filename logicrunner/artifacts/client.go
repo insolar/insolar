@@ -120,10 +120,13 @@ func NewClient(sender bus.Sender) *client { // nolint
 
 // registerRequest registers incoming or outgoing request.
 func (m *client) registerRequest(
-	ctx context.Context, req record.Record, msgPayload payload.Payload, callType record.CallType,
-	objectRef *insolar.Reference, retriesNumber int,
+	ctx context.Context, req record.Request, msgPayload payload.Payload, retriesNumber int,
 ) (*insolar.ID, error) {
-	var err error
+	affinityRef, err := m.calculateAffinityReference(ctx, req)
+	if err != nil {
+		return nil, errors.Wrap(err, "registerRequest: failed to calculate affinity reference")
+	}
+
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.registerRequest")
 	instrumenter := instrument(ctx, "registerRequest").err(&err)
 	defer func() {
@@ -134,32 +137,7 @@ func (m *client) registerRequest(
 		instrumenter.end()
 	}()
 
-	virtRec := record.Wrap(req)
-	buf, err := virtRec.Marshal()
-	if err != nil {
-		return nil, errors.Wrap(err, "registerRequest: failed to marshal record")
-	}
-
-	h := m.PCS.ReferenceHasher()
-	_, err = h.Write(buf)
-	if err != nil {
-		return nil, errors.Wrap(err, "registerRequest: failed to calculate hash")
-	}
-
-	var recRef *insolar.Reference
-	switch callType {
-	case record.CTMethod:
-		recRef = objectRef
-	case record.CTSaveAsChild, record.CTSaveAsDelegate, record.CTGenesis:
-		recRef, err = m.genReferenceForCallTypeOtherThanCTMethod(ctx)
-	default:
-		err = errors.New("registerRequest: not supported call type " + callType.String())
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	pl, err := m.sendWithRetry(ctx, msgPayload, insolar.DynamicRoleLightExecutor, *recRef, retriesNumber)
+	pl, err := m.sendWithRetry(ctx, msgPayload, insolar.DynamicRoleLightExecutor, *affinityRef, retriesNumber)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't register request")
 	}
@@ -174,26 +152,24 @@ func (m *client) registerRequest(
 	}
 }
 
-func (m *client) genReferenceForCallTypeOtherThanCTMethod(ctx context.Context) (*insolar.Reference, error) {
-	h := m.PCS.ReferenceHasher()
-	currentPN, err := m.pulse(ctx)
+func (m *client) calculateAffinityReference(ctx context.Context, requestRecord record.Request) (*insolar.Reference, error) {
+	pulseNumber, err := m.pulse(ctx)
 	if err != nil {
 		return nil, err
 	}
-	recID := *insolar.NewID(currentPN, h.Sum(nil))
-	return insolar.NewReference(recID), nil
+	return record.CalculateRequestAffinityRef(requestRecord, pulseNumber, m.PCS), nil
+	// recID := *insolar.NewID(currentPN, h.Sum(nil))
+	// return insolar.NewReference(recID), nil
 }
 
 // RegisterIncomingRequest sends message for incoming request registration,
 // returns request record Ref if request successfully created or already exists.
-func (m *client) RegisterIncomingRequest(
-	ctx context.Context, request *record.IncomingRequest,
-) (*insolar.ID, error) {
+func (m *client) RegisterIncomingRequest(ctx context.Context, request *record.IncomingRequest) (*insolar.ID, error) {
 	incomingRequest := &payload.SetIncomingRequest{Request: record.Wrap(request)}
 
 	// retriesNumber is zero, because we don't retry registering of incoming requests - the caller should
 	// re-send the request instead.
-	id, err := m.registerRequest(ctx, request, incomingRequest, request.CallType, request.AffinityRef(), 0)
+	id, err := m.registerRequest(ctx, request, incomingRequest, 0)
 	if err != nil {
 		return id, errors.Wrap(err, "RegisterIncomingRequest")
 	}
@@ -204,7 +180,7 @@ func (m *client) RegisterIncomingRequest(
 // returns request record Ref if request successfully created or already exists.
 func (m *client) RegisterOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) (*insolar.ID, error) {
 	outgoingRequest := &payload.SetOutgoingRequest{Request: record.Wrap(request)}
-	id, err := m.registerRequest(ctx, request, outgoingRequest, request.CallType, request.AffinityRef(), 3)
+	id, err := m.registerRequest(ctx, request, outgoingRequest, 3)
 	if err != nil {
 		return id, errors.Wrap(err, "RegisterOutgoingRequest")
 	}
@@ -409,19 +385,14 @@ func (m *client) GetIncomingRequest(
 		instrumenter.end()
 	}()
 
-	requestID := reqRef.Record()
-	node, err := m.JetCoordinator.NodeForObject(ctx, *object.Record(), requestID.Pulse())
-	if err != nil {
-		return nil, err
-	}
-
 	msg, err := payload.NewMessage(&payload.GetRequest{
-		RequestID: *requestID,
+		ObjectID:  *object.Record(),
+		RequestID: *reqRef.Record(),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create a message")
 	}
-	reps, done := m.sender.SendTarget(ctx, msg, *node)
+	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, object)
 	defer done()
 	res, ok := <-reps
 	if !ok {
@@ -497,7 +468,7 @@ func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]i
 	}
 }
 
-// HasPendingRequests returns true if object has unclosed requests.
+// HasPendings returns true if object has unclosed requests.
 func (m *client) HasPendings(
 	ctx context.Context,
 	object insolar.Reference,
@@ -744,43 +715,6 @@ func (m *client) ActivatePrototype(
 		instrumenter.end()
 	}()
 	err = m.activateObject(ctx, object, code, true, parent, false, memory)
-	return err
-}
-
-// RegisterValidation marks provided object state as approved or disapproved.
-//
-// When fetching object, validity can be specified.
-func (m *client) RegisterValidation(
-	ctx context.Context,
-	object insolar.Reference,
-	state insolar.ID,
-	isValid bool,
-	validationMessages []insolar.Message,
-) error {
-	var err error
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.RegisterValidation")
-	instrumenter := instrument(ctx, "RegisterValidation").err(&err)
-	defer func() {
-		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
-		}
-		span.End()
-		instrumenter.end()
-	}()
-
-	msg := message.ValidateRecord{
-		Object:             object,
-		State:              state,
-		IsValid:            isValid,
-		ValidationMessages: validationMessages,
-	}
-
-	sender := messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryJetSender(m.JetStorage),
-	)
-	_, err = sender(ctx, &msg, nil)
-
 	return err
 }
 

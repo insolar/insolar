@@ -19,7 +19,9 @@ package integration_test
 import (
 	"context"
 	"crypto"
+	"math"
 	"sync"
+	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
@@ -66,6 +68,8 @@ var (
 	}
 )
 
+const PulseStep insolar.PulseNumber = 10
+
 type Server struct {
 	pm           insolar.PulseManager
 	pulse        insolar.Pulse
@@ -76,7 +80,11 @@ type Server struct {
 func DefaultLightConfig() configuration.Configuration {
 	cfg := configuration.Configuration{}
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
-	cfg.Ledger.LightChainLimit = 5
+	cfg.Ledger.LightChainLimit = math.MaxInt32
+	cfg.Ledger.JetSplit.DepthLimit = math.MaxUint8
+	cfg.Ledger.JetSplit.ThresholdOverflowCount = math.MaxInt32
+	cfg.Ledger.JetSplit.ThresholdRecordsCount = math.MaxInt32
+	cfg.Bus.ReplyTimeout = time.Minute
 	return cfg
 }
 
@@ -150,7 +158,7 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 		Bus = &stub{}
 		ServerPubSub = gochannel.NewGoChannel(gochannel.Config{}, logger)
 		ClientPubSub = gochannel.NewGoChannel(gochannel.Config{}, logger)
-		ServerBus = bus.NewBus(ServerPubSub, Pulses, Coordinator, CryptoScheme)
+		ServerBus = bus.NewBus(cfg.Bus, ServerPubSub, Pulses, Coordinator, CryptoScheme)
 
 		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
 		c.PulseCalculator = Pulses
@@ -159,7 +167,7 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 		c.NodeNet = newNodeNetMock(&virtual)
 		c.PlatformCryptographyScheme = CryptoScheme
 		c.Nodes = Nodes
-		ClientBus = bus.NewBus(ClientPubSub, Pulses, c, CryptoScheme)
+		ClientBus = bus.NewBus(cfg.Bus, ClientPubSub, Pulses, c, CryptoScheme)
 	}
 
 	// Light components.
@@ -179,6 +187,7 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 
 		handler := artifactmanager.NewMessageHandler(&conf)
 		handler.PulseCalculator = Pulses
+		handler.FlowDispatcher.PulseAccessor = Pulses
 
 		handler.Bus = Bus
 		handler.PCS = CryptoScheme
@@ -196,17 +205,20 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 		handler.Sender = ServerBus
 		handler.IndexStorage = indexes
 
-		jetTreeUpdater := jet.NewFetcher(Nodes, Jets, Bus, Coordinator)
+		jetTreeUpdater := executor.NewFetcher(Nodes, Jets, ServerBus, Coordinator)
 		filamentCalculator := executor.NewFilamentCalculator(
 			indexes,
 			records,
 			Coordinator,
 			jetTreeUpdater,
 			ServerBus,
+			Pulses,
 		)
+		requestChecker := executor.NewRequestChecker(filamentCalculator, Coordinator, jetTreeUpdater, ServerBus)
 
 		handler.JetTreeUpdater = jetTreeUpdater
 		handler.FilamentCalculator = filamentCalculator
+		handler.RequestChecker = requestChecker
 
 		err := handler.Init(ctx)
 		if err != nil {
@@ -375,7 +387,7 @@ func (s *Server) Pulse(ctx context.Context) {
 	defer s.lock.Unlock()
 
 	s.pulse = insolar.Pulse{
-		PulseNumber: s.pulse.PulseNumber + 10,
+		PulseNumber: s.pulse.PulseNumber + PulseStep,
 	}
 	err := s.pm.Set(ctx, s.pulse)
 	if err != nil {

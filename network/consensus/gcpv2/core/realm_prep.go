@@ -53,9 +53,14 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
 	"sync"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
+
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
@@ -71,45 +76,52 @@ import (
 */
 type PrepRealm struct {
 	/* Provided externally. Don't need mutex */
-	*coreRealm                              // points the core part realms, it is shared between of all Realms of a Round
-	completeFn        func(successful bool) //
-	postponedPacketFn postponedPacketFunc
+	*coreRealm                                    // points the core part realms, it is shared between of all Realms of a Round
+	completeFn              func(successful bool) //
+	isEphemeralPulseAllowed bool
 
 	/* Derived from the provided externally - set at init() or start(). Don't need mutex */
 	packetDispatchers []PacketDispatcher
-	queueToFull       chan postponedPacket
-	//phase2ExtLimit    uint8
+	packetRecorder    packetrecorder.PacketRecorder
+	// queueToFull       chan packetrecorder.PostponedPacket
+	// phase2ExtLimit    uint8
 
-	limiters sync.Map
+	limiters           sync.Map
+	lastCloudStateHash cryptkit.DigestHolder
 
 	/* Other fields - need mutex */
 	// 	censusBuilder census.Builder
 }
 
+func (p *PrepRealm) init(isEphemeralPulseAllowed bool, completeFn func(successful bool)) {
+	p.isEphemeralPulseAllowed = isEphemeralPulseAllowed
+	p.completeFn = completeFn
+}
+
 func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
-	_ interface{}) error {
+	verifyFlags packetrecorder.PacketVerifyFlags) error {
 
 	pt := packet.GetPacketType()
-	verifyFlags := DefaultVerify
+	selfID := p.GetSelfNodeID()
 
 	var limiterKey string
 	switch {
 	case pt.GetLimitPerSender() == 0:
 		return fmt.Errorf("packet type (%v) is unknown", pt)
 	case pt.IsMemberPacket():
-		strict, err := VerifyPacketRoute(ctx, packet, p.GetSelfNodeID())
+		strict, err := VerifyPacketRoute(ctx, packet, selfID)
 		if err != nil {
 			return err
 		}
 		if strict {
-			verifyFlags = RequireStrictVerify
+			verifyFlags = packetrecorder.RequireStrictVerify
 		}
 		limiterKey = endpoints.ShortNodeIDAsByteString(packet.GetSourceID())
 	default:
 		limiterKey = from.AsByteString()
 
 		// TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
-		verifyFlags = SkipVerify
+		verifyFlags = packetrecorder.SkipVerify
 	}
 
 	/*
@@ -125,10 +137,24 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		return fmt.Errorf("packet type (%v) limit exceeded: from=%v", pt, from)
 	}
 
-	if verifyFlags&SkipVerify == 0 {
-		err := p.coreRealm.VerifyPacketAuthenticity(packet, from, verifyFlags&RequireStrictVerify != 0)
-		if err != nil {
-			return err
+	var pd PacketDispatcher
+
+	if int(pt) < len(p.packetDispatchers) {
+		pd = p.packetDispatchers[pt]
+	}
+
+	if verifyFlags&(packetrecorder.SkipVerify|packetrecorder.SuccesfullyVerified) == 0 {
+		strict := verifyFlags&packetrecorder.RequireStrictVerify != 0
+
+		if pd == nil || !pd.HasCustomVerifyForHost(from, strict) {
+			sourceID := packet.GetSourceID()
+
+			err := p.coreRealm.VerifyPacketAuthenticity(packet.GetPacketSignature(), sourceID, from, strict)
+
+			if err != nil {
+				return err
+			}
+			verifyFlags |= packetrecorder.SuccesfullyVerified
 		}
 	}
 
@@ -136,48 +162,34 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		return fmt.Errorf("packet type (%v) limit exceeded: from=%v", pt, from)
 	}
 
-	if int(pt) < len(p.packetDispatchers) {
-		pd := p.packetDispatchers[pt]
-		if pd != nil {
+	if pd != nil {
+		// this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
+		var err error
+		packet, err = LazyPacketParse(packet)
+		if err != nil {
+			return err
+		}
 
-			//this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
-			var err error
-			packet, err = LazyPacketParse(packet)
-			if err != nil {
-				return err
-			}
-
-			err = pd.DispatchHostPacket(ctx, packet, from, verifyFlags)
-			if err != nil {
-				// TODO an error to ignore postpone?
-				return err
-			}
+		err = pd.DispatchHostPacket(ctx, packet, from, verifyFlags)
+		if err != nil {
+			// TODO an error to ignore postpone?
+			return err
 		}
 	}
 
-	if !p.postponePacket(packet, from) {
-		inslogger.FromContext(ctx).Warnf("unable to postpone packet: type=%v", pt)
-	}
+	p.packetRecorder.Record(packet, from, verifyFlags)
 	return nil
 }
 
 /* LOCK - runs under RoundController lock */
-func (p *PrepRealm) start(ctx context.Context, controllers []PrepPhaseController) {
+func (p *PrepRealm) beforeStart(ctx context.Context, controllers []PrepPhaseController) {
 
-	if p.postponedPacketFn != nil {
-		limiter := phases.NewPacketLimiter(p.nbhSizes.ExtendingNeighbourhoodLimit)
-		packetsPerSender := limiter.GetRemainingPacketCount(5)
-
-		prepToFullQueueSize := int(packetsPerSender) * int(p.expectedPopulationSize)
-		switch {
-		case prepToFullQueueSize < 100:
-			prepToFullQueueSize = 100
-		case prepToFullQueueSize > 10000:
-			inslogger.FromContext(ctx).Warnf("estimated postponed packet count (%d) is too high", prepToFullQueueSize)
-			prepToFullQueueSize = 10000
-		}
-		p.queueToFull = make(chan postponedPacket, prepToFullQueueSize)
+	if p.postponedPacketFn == nil {
+		panic("illegal state")
 	}
+	limiter := phases.NewPacketLimiter(p.nbhSizes.ExtendingNeighbourhoodLimit)
+	packetsPerSender := limiter.GetRemainingPacketCountDefault()
+	p.packetRecorder = packetrecorder.NewPacketRecorder(int(packetsPerSender) * 100)
 
 	p.packetDispatchers = make([]PacketDispatcher, phases.PacketTypeCount)
 	for _, ctl := range controllers {
@@ -190,43 +202,18 @@ func (p *PrepRealm) start(ctx context.Context, controllers []PrepPhaseController
 	}
 
 	for _, ctl := range controllers {
-		ctl.BeforeStart(p)
+		ctl.BeforeStart(ctx, p)
 	}
+}
+
+func (p *PrepRealm) startWorkers(ctx context.Context, controllers []PrepPhaseController) {
 	for _, ctl := range controllers {
 		ctl.StartWorker(ctx, p)
 	}
 }
 
-/* LOCK - runs under RoundController lock */
 func (p *PrepRealm) stop() {
-	/*
-		NB! do not close p.queueToFull here immediately, as some messages can still be in processing and will be lost
-	*/
-	if p.postponedPacketFn != nil {
-		/* Do not give out a PrepRealm reference to avoid retention in memory */
-		go flushQueueTo(p.coreRealm.roundContext, p.queueToFull, p.postponedPacketFn)
-	}
-}
-
-type postponedPacketFunc func(packet transport.PacketParser, from endpoints.Inbound)
-
-type postponedPacket struct {
-	packet transport.PacketParser
-	from   endpoints.Inbound
-}
-
-func flushQueueTo(ctx context.Context, in chan postponedPacket, out postponedPacketFunc) {
-	for {
-		select {
-		case p, ok := <-in:
-			if !ok {
-				return
-			}
-			out(p.packet, p.from)
-		case <-ctx.Done():
-			return
-		}
-	}
+	p.packetRecorder.Playback(p.postponedPacketFn)
 }
 
 func (p *PrepRealm) GetOriginalPulse() proofs.OriginalPulsarPacket {
@@ -237,7 +224,11 @@ func (p *PrepRealm) GetOriginalPulse() proofs.OriginalPulsarPacket {
 	return p.coreRealm.originalPulse
 }
 
-func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bool) error {
+func (p *PrepRealm) GetMandateRegistry() census.MandateRegistry {
+	return p.initialCensus.GetMandateRegistry()
+}
+
+func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bool, from endpoints.Inbound) error {
 	pd := pp.GetPulseData()
 
 	p.Lock()
@@ -249,7 +240,7 @@ func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bo
 		if pd == p.pulseData {
 			return nil // got it already
 		}
-	case fromPulsar || !p.strategy.IsEphemeralPulseAllowed():
+	case fromPulsar || !p.isEphemeralPulseAllowed:
 		// Pulsars are NEVER ALLOWED to send ephemeral pulses
 		valid = pd.IsValidPulsarData()
 	default:
@@ -260,10 +251,27 @@ func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bo
 		// TODO blame pulsar and/or node
 		return fmt.Errorf("invalid pulse data")
 	}
-	epn := p.GetExpectedPulseNumber()
-	if !epn.IsUnknown() && epn != pd.PulseNumber {
-		return fmt.Errorf("unexpected pulse number: expected=%v, received=%v", epn, pd.PulseNumber)
+
+	epn := pulse.Unknown
+	if p.initialCensus.GetCensusState() == census.PrimingCensus || p.initialCensus.IsActive() {
+		epn = p.initialCensus.GetExpectedPulseNumber()
+	} else {
+		epn = p.initialCensus.GetPulseNumber()
 	}
+
+	//	sourceID := packet.GetSourceID()
+	localID := p.self.GetNodeID()
+
+	pn := pd.PulseNumber
+	if !epn.IsUnknown() && epn != pn {
+		return errors.NewPulseRoundMismatchError(pn,
+			fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v, local=%d, from=%v",
+				epn, pn, localID, from))
+	}
+
+	//if p.IsJoiner() && p.lastCloudStateHash {
+	//
+	//}
 
 	p.originalPulse = pp.GetPulseDataEvidence()
 	p.pulseData = pd
@@ -273,14 +281,15 @@ func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bo
 	return nil
 }
 
-func (p *PrepRealm) GetExpectedPulseNumber() pulse.Number {
-	return p.initialCensus.GetExpectedPulseNumber()
-}
+func (p *PrepRealm) ApplyCloudIntro(lastCloudStateHash cryptkit.DigestHolder, populationCount int, from endpoints.Inbound) {
 
-func (p *PrepRealm) postponePacket(packet transport.PacketParser, from endpoints.Inbound) bool {
-	if p.queueToFull == nil {
-		return false
+	p.Lock()
+	defer p.Unlock()
+
+	popCount := member.AsIndex(populationCount)
+	if p.expectedPopulationSize < popCount {
+		p.expectedPopulationSize = popCount
 	}
-	p.queueToFull <- postponedPacket{packet: packet, from: from}
-	return true
+
+	p.lastCloudStateHash = lastCloudStateHash
 }

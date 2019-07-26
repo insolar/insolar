@@ -64,7 +64,7 @@ type MessageHandler struct {
 	PulseCalculator storage.PulseCalculator
 
 	conf           *configuration.Ledger
-	JetTreeUpdater jet.Fetcher
+	JetTreeUpdater executor.JetFetcher
 
 	Sender         bus.Sender
 	FlowDispatcher *dispatcher.Dispatcher
@@ -72,6 +72,7 @@ type MessageHandler struct {
 
 	filamentModifier   *executor.FilamentModifierDefault
 	FilamentCalculator *executor.FilamentCalculatorDefault
+	RequestChecker     *executor.RequestCheckerDefault
 }
 
 // NewMessageHandler creates new handler.
@@ -125,10 +126,14 @@ func NewMessageHandler(
 		SetRequest: func(p *proc.SetRequest) {
 			p.Dep(
 				h.WriteAccessor,
-				h.filamentModifier,
+				h.FilamentCalculator,
 				h.Sender,
 				h.IndexLocker,
 				h.IndexStorage,
+				h.Records,
+				h.PCS,
+				h.RequestChecker,
+				h.JetCoordinator,
 			)
 		},
 		SetResult: func(p *proc.SetResult) {
@@ -190,8 +195,7 @@ func NewMessageHandler(
 			p.Dep.Sender = h.Sender
 		},
 		GetRequest: func(p *proc.GetRequest) {
-			p.Dep.RecordAccessor = h.Records
-			p.Dep.Sender = h.Sender
+			p.Dep(h.Records, h.Sender, h.JetCoordinator, h.JetTreeUpdater)
 		},
 		GetChildren: func(p *proc.GetChildren) {
 			p.Dep.IndexLocker = h.IndexLocker
@@ -218,15 +222,11 @@ func NewMessageHandler(
 				h.Sender,
 			)
 		},
-		GetPendingRequests: func(p *proc.GetPendingRequests) {
-			p.Dep(h.IndexStorage, h.Sender)
-		},
-		GetPendingRequestID: func(p *proc.GetPendingRequestID) {
-			p.Dep(h.FilamentCalculator, h.Sender)
-		},
 		GetJet: func(p *proc.GetJet) {
-			p.Dep.Jets = h.JetStorage
-			p.Dep.Sender = h.Sender
+			p.Dep(
+				h.JetStorage,
+				h.Sender,
+			)
 		},
 		HotObjects: func(p *proc.HotObjects) {
 			p.Dep.DropModifier = h.DropModifier

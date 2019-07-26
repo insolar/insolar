@@ -90,7 +90,7 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 
 func INSMETHOD_GetName(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.SetSystemError(nil)
 	self := new(Member)
 
 	if len(object) == 0 {
@@ -113,6 +113,10 @@ func INSMETHOD_GetName(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.GetName()
 
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -129,7 +133,7 @@ func INSMETHOD_GetName(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetPublicKey(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.SetSystemError(nil)
 	self := new(Member)
 
 	if len(object) == 0 {
@@ -152,6 +156,10 @@ func INSMETHOD_GetPublicKey(object []byte, data []byte) ([]byte, []byte, error) 
 
 	ret0, ret1 := self.GetPublicKey()
 
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -168,7 +176,7 @@ func INSMETHOD_GetPublicKey(object []byte, data []byte) ([]byte, []byte, error) 
 
 func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.SetSystemError(nil)
 	self := new(Member)
 
 	if len(object) == 0 {
@@ -193,6 +201,53 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.Call(args0)
 
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret1 = ph.MakeErrorSerializable(ret1)
+
+	ret := []byte{}
+	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+
+	return state, ret, err
+}
+
+func INSMETHOD_GetDeposits(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
+	self := new(Member)
+
+	if len(object) == 0 {
+		return nil, nil, &ExtendableError{S: "[ FakeGetDeposits ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeGetDeposits ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := []interface{}{}
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeGetDeposits ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0, ret1 := self.GetDeposits()
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -209,7 +264,7 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_FindDeposit(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.SetSystemError(nil)
 	self := new(Member)
 
 	if len(object) == 0 {
@@ -222,11 +277,9 @@ func INSMETHOD_FindDeposit(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	args := [2]interface{}{}
+	args := [1]interface{}{}
 	var args0 string
 	args[0] = &args0
-	var args1 string
-	args[1] = &args1
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
@@ -234,7 +287,11 @@ func INSMETHOD_FindDeposit(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	ret0, ret1, ret2 := self.FindDeposit(args0, args1)
+	ret0, ret1, ret2 := self.FindDeposit(args0)
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
@@ -250,32 +307,38 @@ func INSMETHOD_FindDeposit(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
-func INSMETHOD_SetDeposit(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_AddDeposit(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.SetSystemError(nil)
 	self := new(Member)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeSetDeposit ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &ExtendableError{S: "[ FakeAddDeposit ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeSetDeposit ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeAddDeposit ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
-	args := [1]interface{}{}
-	var args0 insolar.Reference
+	args := [2]interface{}{}
+	var args0 string
 	args[0] = &args0
+	var args1 insolar.Reference
+	args[1] = &args1
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeSetDeposit ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeAddDeposit ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
-	ret0 := self.SetDeposit(args0)
+	ret0 := self.AddDeposit(args0, args1)
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
@@ -293,7 +356,7 @@ func INSMETHOD_SetDeposit(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetBurnAddress(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.SetSystemError(nil)
 	self := new(Member)
 
 	if len(object) == 0 {
@@ -316,6 +379,10 @@ func INSMETHOD_GetBurnAddress(object []byte, data []byte) ([]byte, []byte, error
 
 	ret0, ret1 := self.GetBurnAddress()
 
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -332,6 +399,7 @@ func INSMETHOD_GetBurnAddress(object []byte, data []byte) ([]byte, []byte, error
 
 func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
 	args := [4]interface{}{}
 	var args0 insolar.Reference
 	args[0] = &args0
@@ -349,6 +417,9 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	}
 
 	ret0, ret1 := New(args0, args1, args2, args3)
+	if ph.GetSystemError() != nil {
+		return nil, ph.GetSystemError()
+	}
 	if ret1 != nil {
 		return nil, ret1
 	}
@@ -375,8 +446,9 @@ func Initialize() XXX_insolar.ContractWrapper {
 			"GetName":        INSMETHOD_GetName,
 			"GetPublicKey":   INSMETHOD_GetPublicKey,
 			"Call":           INSMETHOD_Call,
+			"GetDeposits":    INSMETHOD_GetDeposits,
 			"FindDeposit":    INSMETHOD_FindDeposit,
-			"SetDeposit":     INSMETHOD_SetDeposit,
+			"AddDeposit":     INSMETHOD_AddDeposit,
 			"GetBurnAddress": INSMETHOD_GetBurnAddress,
 		},
 		Constructors: XXX_insolar.ContractConstructors{

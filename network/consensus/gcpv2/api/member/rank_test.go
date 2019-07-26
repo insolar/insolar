@@ -61,13 +61,15 @@ func TestGetPower(t *testing.T) {
 }
 
 func TestGetIndex(t *testing.T) {
-	require.Equal(t, Index(0), Rank((1<<8)-1).GetIndex())
+	require.Equal(t, JoinerIndex, JoinerRank.GetIndex())
+
+	require.Zero(t, Rank((1<<8)-1).GetIndex())
 
 	require.Equal(t, Index(1), Rank(1<<8).GetIndex())
 }
 
 func TestGetTotalCount(t *testing.T) {
-	require.Equal(t, uint16(0), Rank((1<<18)-1).GetTotalCount())
+	require.Zero(t, Rank((1<<18)-1).GetTotalCount())
 
 	require.Equal(t, uint16(1), Rank(1<<18).GetTotalCount())
 }
@@ -99,10 +101,12 @@ func TestNewMembershipRank(t *testing.T) {
 	require.Equal(t, Rank(0x80101), NewMembershipRank(ModeNormal, Power(1), 1, 2))
 }
 
-func TestEnsureNodeIndex(t *testing.T) {
-	t.Skipped()
-	// TODO
-	//require.Panics(t, func() { ensureNodeIndex(0x03FF + 1) })
-	//
-	//require.Equal(t, uint32(2), ensureNodeIndex(2))
+func TestAsMembershipRank(t *testing.T) {
+	fr := FullRank{}
+	fr.OpMode = ModeNormal
+	fr.Power = 1
+	fr.TotalIndex = 1
+	require.Equal(t, Rank(0x80101), fr.AsMembershipRank(2))
+
+	require.Panics(t, func() { fr.AsMembershipRank(0) })
 }

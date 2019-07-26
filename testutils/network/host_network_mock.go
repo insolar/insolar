@@ -28,11 +28,6 @@ type HostNetworkMock struct {
 	BuildResponsePreCounter uint64
 	BuildResponseMock       mHostNetworkMockBuildResponse
 
-	InitFunc       func(p context.Context) (r error)
-	InitCounter    uint64
-	InitPreCounter uint64
-	InitMock       mHostNetworkMockInit
-
 	PublicAddressFunc       func() (r string)
 	PublicAddressCounter    uint64
 	PublicAddressPreCounter uint64
@@ -73,7 +68,6 @@ func NewHostNetworkMock(t minimock.Tester) *HostNetworkMock {
 	}
 
 	m.BuildResponseMock = mHostNetworkMockBuildResponse{mock: m}
-	m.InitMock = mHostNetworkMockInit{mock: m}
 	m.PublicAddressMock = mHostNetworkMockPublicAddress{mock: m}
 	m.RegisterRequestHandlerMock = mHostNetworkMockRegisterRequestHandler{mock: m}
 	m.SendRequestMock = mHostNetworkMockSendRequest{mock: m}
@@ -228,153 +222,6 @@ func (m *HostNetworkMock) BuildResponseFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.BuildResponseFunc != nil {
 		return atomic.LoadUint64(&m.BuildResponseCounter) > 0
-	}
-
-	return true
-}
-
-type mHostNetworkMockInit struct {
-	mock              *HostNetworkMock
-	mainExpectation   *HostNetworkMockInitExpectation
-	expectationSeries []*HostNetworkMockInitExpectation
-}
-
-type HostNetworkMockInitExpectation struct {
-	input  *HostNetworkMockInitInput
-	result *HostNetworkMockInitResult
-}
-
-type HostNetworkMockInitInput struct {
-	p context.Context
-}
-
-type HostNetworkMockInitResult struct {
-	r error
-}
-
-//Expect specifies that invocation of HostNetwork.Init is expected from 1 to Infinity times
-func (m *mHostNetworkMockInit) Expect(p context.Context) *mHostNetworkMockInit {
-	m.mock.InitFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &HostNetworkMockInitExpectation{}
-	}
-	m.mainExpectation.input = &HostNetworkMockInitInput{p}
-	return m
-}
-
-//Return specifies results of invocation of HostNetwork.Init
-func (m *mHostNetworkMockInit) Return(r error) *HostNetworkMock {
-	m.mock.InitFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &HostNetworkMockInitExpectation{}
-	}
-	m.mainExpectation.result = &HostNetworkMockInitResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of HostNetwork.Init is expected once
-func (m *mHostNetworkMockInit) ExpectOnce(p context.Context) *HostNetworkMockInitExpectation {
-	m.mock.InitFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &HostNetworkMockInitExpectation{}
-	expectation.input = &HostNetworkMockInitInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *HostNetworkMockInitExpectation) Return(r error) {
-	e.result = &HostNetworkMockInitResult{r}
-}
-
-//Set uses given function f as a mock of HostNetwork.Init method
-func (m *mHostNetworkMockInit) Set(f func(p context.Context) (r error)) *HostNetworkMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.InitFunc = f
-	return m.mock
-}
-
-//Init implements github.com/insolar/insolar/network.HostNetwork interface
-func (m *HostNetworkMock) Init(p context.Context) (r error) {
-	counter := atomic.AddUint64(&m.InitPreCounter, 1)
-	defer atomic.AddUint64(&m.InitCounter, 1)
-
-	if len(m.InitMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.InitMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to HostNetworkMock.Init. %v", p)
-			return
-		}
-
-		input := m.InitMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, HostNetworkMockInitInput{p}, "HostNetwork.Init got unexpected parameters")
-
-		result := m.InitMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the HostNetworkMock.Init")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.InitMock.mainExpectation != nil {
-
-		input := m.InitMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, HostNetworkMockInitInput{p}, "HostNetwork.Init got unexpected parameters")
-		}
-
-		result := m.InitMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the HostNetworkMock.Init")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.InitFunc == nil {
-		m.t.Fatalf("Unexpected call to HostNetworkMock.Init. %v", p)
-		return
-	}
-
-	return m.InitFunc(p)
-}
-
-//InitMinimockCounter returns a count of HostNetworkMock.InitFunc invocations
-func (m *HostNetworkMock) InitMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.InitCounter)
-}
-
-//InitMinimockPreCounter returns the value of HostNetworkMock.Init invocations
-func (m *HostNetworkMock) InitMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.InitPreCounter)
-}
-
-//InitFinished returns true if mock invocations count is ok
-func (m *HostNetworkMock) InitFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.InitMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.InitCounter) == uint64(len(m.InitMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.InitMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.InitCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.InitFunc != nil {
-		return atomic.LoadUint64(&m.InitCounter) > 0
 	}
 
 	return true
@@ -1246,10 +1093,6 @@ func (m *HostNetworkMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to HostNetworkMock.BuildResponse")
 	}
 
-	if !m.InitFinished() {
-		m.t.Fatal("Expected call to HostNetworkMock.Init")
-	}
-
 	if !m.PublicAddressFinished() {
 		m.t.Fatal("Expected call to HostNetworkMock.PublicAddress")
 	}
@@ -1295,10 +1138,6 @@ func (m *HostNetworkMock) MinimockFinish() {
 		m.t.Fatal("Expected call to HostNetworkMock.BuildResponse")
 	}
 
-	if !m.InitFinished() {
-		m.t.Fatal("Expected call to HostNetworkMock.Init")
-	}
-
 	if !m.PublicAddressFinished() {
 		m.t.Fatal("Expected call to HostNetworkMock.PublicAddress")
 	}
@@ -1338,7 +1177,6 @@ func (m *HostNetworkMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.BuildResponseFinished()
-		ok = ok && m.InitFinished()
 		ok = ok && m.PublicAddressFinished()
 		ok = ok && m.RegisterRequestHandlerFinished()
 		ok = ok && m.SendRequestFinished()
@@ -1355,10 +1193,6 @@ func (m *HostNetworkMock) MinimockWait(timeout time.Duration) {
 
 			if !m.BuildResponseFinished() {
 				m.t.Error("Expected call to HostNetworkMock.BuildResponse")
-			}
-
-			if !m.InitFinished() {
-				m.t.Error("Expected call to HostNetworkMock.Init")
 			}
 
 			if !m.PublicAddressFinished() {
@@ -1398,10 +1232,6 @@ func (m *HostNetworkMock) MinimockWait(timeout time.Duration) {
 func (m *HostNetworkMock) AllMocksCalled() bool {
 
 	if !m.BuildResponseFinished() {
-		return false
-	}
-
-	if !m.InitFinished() {
 		return false
 	}
 

@@ -19,16 +19,18 @@ package dispatcher
 import (
 	"context"
 	"strconv"
-	"sync/atomic"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/insolar"
+	insPulse "github.com/insolar/insolar/insolar/pulse"
+
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/internal/pulse"
 	"github.com/insolar/insolar/insolar/flow/internal/thread"
@@ -40,8 +42,8 @@ type Dispatcher struct {
 		future  flow.MakeHandle
 		past    flow.MakeHandle
 	}
-	controller         *thread.Controller
-	currentPulseNumber uint32
+	controller    *thread.Controller
+	PulseAccessor insPulse.Accessor
 }
 
 func NewDispatcher(present flow.MakeHandle, future flow.MakeHandle, past flow.MakeHandle) *Dispatcher {
@@ -51,22 +53,29 @@ func NewDispatcher(present flow.MakeHandle, future flow.MakeHandle, past flow.Ma
 	d.handles.present = present
 	d.handles.future = future
 	d.handles.past = past
-	d.currentPulseNumber = insolar.FirstPulseNumber
 	return d
 }
 
 // ChangePulse is a handle for pulse change vent.
 func (d *Dispatcher) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
 	d.controller.Pulse()
-	atomic.StoreUint32(&d.currentPulseNumber, uint32(pulse.PulseNumber))
+	inslogger.FromContext(ctx).Debugf("Pulse was changed to %s", pulse.PulseNumber)
 }
 
-func (d *Dispatcher) getHandleByPulse(msgPulseNumber insolar.PulseNumber) flow.MakeHandle {
-	currentPulse := atomic.LoadUint32(&d.currentPulseNumber)
-	if uint32(msgPulseNumber) > currentPulse {
+func (d *Dispatcher) getHandleByPulse(ctx context.Context, msgPulseNumber insolar.PulseNumber) flow.MakeHandle {
+	currentPulseNumber := insolar.PulseNumber(insolar.FirstPulseNumber)
+	p, err := d.PulseAccessor.Latest(ctx)
+	if err == nil {
+		currentPulseNumber = p.PulseNumber
+	} else {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to fetch pulse in dispatcher"))
+	}
+
+	if msgPulseNumber > currentPulseNumber {
+		inslogger.FromContext(ctx).Debugf("Get message from future (pulse in msg %d, current pulse %d)", msgPulseNumber, currentPulseNumber)
 		return d.handles.future
 	}
-	if uint32(msgPulseNumber) < currentPulse {
+	if msgPulseNumber < currentPulseNumber {
 		return d.handles.past
 	}
 	return d.handles.present
@@ -115,7 +124,7 @@ func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 	ctx = instracer.WithParentSpan(ctx, parentSpan)
 	go func() {
 		f := thread.NewThread(msg, d.controller)
-		handle := d.getHandleByPulse(pn)
+		handle := d.getHandleByPulse(ctx, pn)
 		err := f.Run(ctx, handle(msg))
 		if err != nil {
 			logger.Error(errors.Wrap(err, "Handling failed: "))

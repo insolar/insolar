@@ -103,9 +103,6 @@ func (s *Server) Serve() {
 	ctx = inslogger.SetLogger(ctx, inslog)
 	log.SetGlobalLogger(inslog)
 
-	err = cm.Init(ctx)
-	checkError(ctx, err, "failed to init components")
-
 	var gracefulStop = make(chan os.Signal, 1)
 	signal.Notify(gracefulStop, syscall.SIGTERM)
 	signal.Notify(gracefulStop, syscall.SIGINT)

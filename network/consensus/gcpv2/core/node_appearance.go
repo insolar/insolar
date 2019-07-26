@@ -56,6 +56,10 @@ import (
 	"math"
 	"sync"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/consensus/common/args"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -71,26 +75,25 @@ import (
 func NewNodeAppearanceAsSelf(np profiles.LocalNode, callback *nodeContext) *NodeAppearance {
 	np.LocalNodeProfile() // to avoid linter's paranoia
 
-	r := &NodeAppearance{
-		trust: member.SelfTrust,
-	}
-	r.init(np, callback, 0, 0)
-	r.limiter = phases.NewLocalPacketLimiter()
+	r := &NodeAppearance{}
+	r.init(np, callback, 0, phases.NewLocalPacketLimiter())
 	return r
 }
 
 func (c *NodeAppearance) init(np profiles.ActiveNode, callback NodeContextHolder, baselineWeight uint32,
-	phase2ExtLimit uint8) {
+	limiter phases.PacketLimiter) {
+
 	if np == nil {
 		panic("node profile is nil")
 	}
-	c.limiter = phases.NewPacketLimiter(phase2ExtLimit)
+	c.limiter = limiter
 	c.profile = np
 	c.callback = callback
 	c.neighbourWeight = baselineWeight
 }
 
 var _ MemberPacketReceiver = &NodeAppearance{}
+var _ MemberPacketSender = &NodeAppearance{}
 
 type NodeAppearance struct {
 	mutex sync.Mutex
@@ -107,9 +110,10 @@ type NodeAppearance struct {
 	stateEvidence     proofs.NodeStateHashEvidence       // one-time set
 	requestedPower    member.Power                       // one-time set
 
-	requestedJoinerID    insolar.ShortNodeID // one-time set
-	requestedLeave       bool                // one-time set
-	requestedLeaveReason uint32              // one-time set
+	joinerSecret         cryptkit.DigestHolder // TODO implement
+	requestedJoinerID    insolar.ShortNodeID   // one-time set
+	requestedLeave       bool                  // one-time set
+	requestedLeaveReason uint32                // one-time set
 
 	firstFraudDetails *misbehavior.FraudError
 
@@ -120,15 +124,37 @@ type NodeAppearance struct {
 	neighborReports uint8
 }
 
-func (c *NodeAppearance) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, pd PacketDispatcher) error {
-	return pd.DispatchMemberPacket(ctx, packet, c)
+func (c *NodeAppearance) EncryptJoinerSecret(joinerSecret cryptkit.DigestHolder) cryptkit.DigestHolder {
+	// TODO encryption of joinerSecret
+	return joinerSecret
+}
+
+func (c *NodeAppearance) GetStatic() profiles.StaticProfile {
+	return c.profile.GetStatic()
+}
+
+func (c *NodeAppearance) CanIntroduceJoiner() bool {
+	return c.profile.GetOpMode().CanIntroduceJoiner(c.profile.IsJoiner())
+}
+
+func (c *NodeAppearance) GetReportProfile() profiles.BaseNode {
+	return c.profile
+}
+
+func (c *NodeAppearance) GetRank(nodeCount int) member.Rank {
+	return profiles.ProfileAsRank(c.profile, nodeCount)
+}
+
+func (c *NodeAppearance) DispatchMemberPacket(ctx context.Context, packet transport.PacketParser,
+	from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags, pd PacketDispatcher) error {
+
+	return pd.DispatchMemberPacket(ctx, packet.GetMemberPacket(), c)
 }
 
 func (c *NodeAppearance) String() string {
 	return fmt.Sprintf("node:{%v}", c.profile)
 }
 
-// Unsafe
 func LessByNeighbourWeightForNodeAppearance(n1, n2 interface{}) bool {
 	return n1.(*NodeAppearance).neighbourWeight < n2.(*NodeAppearance).neighbourWeight
 }
@@ -141,8 +167,14 @@ func (c *NodeAppearance) copySelfTo(target *NodeAppearance) {
 	/* Ensure that the target is LocalNode */
 	target.profile.(profiles.LocalNode).LocalNodeProfile()
 
-	target.stateEvidence = c.stateEvidence
-	target.announceSignature = c.announceSignature
+	if c.stateEvidence != nil || c.announceSignature != nil {
+		panic("prep realm self can't have NSH")
+	}
+
+	//target.stateEvidence = c.stateEvidence
+	//target.announceSignature = c.announceSignature
+	//target.trust = c.trust
+
 	target.requestedPower = c.requestedPower
 	target.requestedJoinerID = c.requestedJoinerID
 	target.requestedLeave = c.requestedLeave
@@ -150,7 +182,6 @@ func (c *NodeAppearance) copySelfTo(target *NodeAppearance) {
 	target.firstFraudDetails = c.firstFraudDetails
 
 	target.limiter = c.limiter
-	target.trust = c.trust
 	target.callback.updatePopulationVersion()
 }
 
@@ -176,8 +207,8 @@ func (c *NodeAppearance) GetProfile() profiles.ActiveNode {
 	return c.profile
 }
 
-func (c *NodeAppearance) VerifyPacketAuthenticity(packet transport.PacketParser, from endpoints.Inbound, strictFrom bool) error {
-	return VerifyPacketAuthenticityBy(packet, c.profile.GetStatic(), c.profile.GetSignatureVerifier(), from, strictFrom)
+func (c *NodeAppearance) VerifyPacketAuthenticity(ps cryptkit.SignedDigest, from endpoints.Inbound, strictFrom bool) error {
+	return VerifyPacketAuthenticityBy(ps, c.profile.GetStatic(), c.profile.GetSignatureVerifier(), from, strictFrom)
 }
 
 func (c *NodeAppearance) SetPacketReceived(pt phases.PacketType) bool {
@@ -231,7 +262,8 @@ func (c *NodeAppearance) ApplyNodeMembership(mp profiles.MembershipAnnouncement)
 }
 
 /* Evidence MUST be verified before this call */
-func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp profiles.MembershipAnnouncement) (bool, error) {
+func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp profiles.MembershipAnnouncement,
+	cappedTrust bool) (bool, error) {
 
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -240,20 +272,8 @@ func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp prof
 	trustBefore := c.trust
 	modified, err := c._applyNodeMembership(mp)
 
-	if err == nil && witness.GetNodeID() != c.GetNodeID() { // a node can't be a witness to itself
-		switch {
-		case c.neighborReports == 0:
-			c.trust.UpdateKeepNegative(member.TrustBySome)
-		case c.neighborReports == uint8(math.MaxUint8):
-			panic("overflow")
-		case c.neighborReports > c.GetNeighborTrustThreshold():
-			break // to allow the next statement to fire only once
-		case c.neighborReports+1 > c.GetNeighborTrustThreshold():
-			c.trust.UpdateKeepNegative(member.TrustByNeighbors)
-		}
-
-		c.neighborReports++
-		updVersion = c.callback.updatePopulationVersion()
+	if err == nil && witness.GetNodeID() != c.GetNodeID() /* a node can't be a witness to itself */ {
+		updVersion = c.incNeighborReports(cappedTrust)
 	} else {
 		updVersion = c.callback.GetPopulationVersion()
 	}
@@ -262,6 +282,43 @@ func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp prof
 	}
 
 	return modified, err
+}
+
+func (c *NodeAppearance) incNeighborReports(cappedTrust bool) uint32 {
+	switch {
+	case c.neighborReports == 0:
+		c.trust.UpdateKeepNegative(member.TrustBySome)
+	case cappedTrust:
+		// we can't increase trust higher than basic
+		return c.callback.GetPopulationVersion()
+	case c.neighborReports == uint8(math.MaxUint8):
+		panic("overflow")
+	case c.neighborReports > c.GetNeighborTrustThreshold():
+		break // to allow the next statement to fire only once
+	case c.neighborReports+1 > c.GetNeighborTrustThreshold():
+		c.trust.UpdateKeepNegative(member.TrustByNeighbors)
+	}
+
+	c.neighborReports++
+	return c.callback.updatePopulationVersion()
+}
+
+func (c *NodeAppearance) UpdateNodeTrustLevel(trust member.TrustLevel) bool {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	updVersion := c.callback.GetPopulationVersion()
+	trustBefore := c.trust
+
+	modified := c.trust.Update(trust)
+	if modified {
+		updVersion = c.callback.updatePopulationVersion()
+	}
+	if trustBefore != c.trust {
+		c.callback.onTrustUpdated(updVersion, c, trustBefore, c.trust)
+	}
+
+	return modified
 }
 
 func (c *NodeAppearance) Frauds() misbehavior.FraudFactory {
@@ -281,7 +338,7 @@ func (c *NodeAppearance) _applyNodeMembership(ma profiles.MembershipAnnouncement
 
 	if c.stateEvidence != nil {
 		lmp := c.getMembership()
-		//var lma profiles.MembershipAnnouncement
+		// var lma profiles.MembershipAnnouncement
 		if ma.Membership.Equals(lmp) && ma.IsLeaving == c.requestedLeave {
 			switch {
 			case c.requestedLeave:
@@ -300,17 +357,45 @@ func (c *NodeAppearance) _applyNodeMembership(ma profiles.MembershipAnnouncement
 
 	updVersion := c.callback.updatePopulationVersion()
 
-	if ma.IsLeaving {
-		c.requestedLeave = true
-		c.requestedLeaveReason = ma.LeaveReason
-	} else {
-		c.requestedJoinerID = ma.JoinerID
+	switch {
+	case ma.IsLeaving:
+		if c.IsJoiner() {
+			c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "joiner can't request leave"))
+		} else {
+			c.requestedLeave = true
+			c.requestedLeaveReason = ma.LeaveReason
+		}
+	case ma.JoinerID.IsAbsent() || c.CanIntroduceJoiner():
+		break
+	case c.IsJoiner():
+		c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "joiner can't add a joiner"))
+	default:
+		c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "restricted/suspended nodes can't add a joiner"))
 	}
 
-	c.neighbourWeight ^= longbits.FoldUint64(ma.Membership.StateEvidence.GetNodeStateHash().FoldToUint64())
+	switch {
+	case c.IsJoiner():
+		sp := c.profile.GetStatic().GetStartPower()
+		if ma.Membership.RequestedPower != sp {
+			c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "start power is different"))
+		}
+		ma.Membership.RequestedPower = sp
+	case ma.Membership.RequestedPower == 0:
+		break
+	case c.profile.GetStatic().GetExtension() == nil:
+		if ma.Membership.RequestedPower != c.profile.GetStatic().GetStartPower() {
+			c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "unable to verify power"))
+			return false, nil // let the node to be "unset"
+		}
+	case !c.profile.GetStatic().GetExtension().GetPowerLevels().IsAllowed(ma.Membership.RequestedPower):
+		return false, c.RegisterFraud(c.Frauds().NewInvalidPowerLevel(c.profile))
+	}
+
+	c.neighbourWeight ^= longbits.FoldUint64(ma.Membership.StateEvidence.GetDigestHolder().FoldToUint64())
 	c.stateEvidence = ma.Membership.StateEvidence
 	c.announceSignature = ma.Membership.AnnounceSignature
 	c.requestedPower = ma.Membership.RequestedPower
+	c.requestedJoinerID = ma.JoinerID
 
 	c.callback.onNodeStateAssigned(updVersion, c)
 
@@ -340,7 +425,24 @@ func (c *NodeAppearance) GetNodeMembershipProfileOrEmpty() profiles.MembershipPr
 	return c.getMembership()
 }
 
-func (c *NodeAppearance) SetLocalNodeStateHashEvidence(evidence proofs.NodeStateHashEvidence, announce proofs.MemberAnnouncementSignature) {
+func (c *NodeAppearance) onNodeAdded(ctx context.Context) {
+
+	if c.IsJoiner() {
+		sp := c.profile.GetStatic()
+		nsh := sp.GetBriefIntroSignedDigest()
+		mp := profiles.NewMembershipProfileByNode(c.profile, nsh, nsh.GetSignatureHolder(), sp.GetStartPower())
+		ma := profiles.NewMembershipAnnouncement(mp)
+		_, err := c._applyNodeMembership(ma)
+		if err != nil {
+			inslogger.FromContext(ctx).Error("error was unexpected", err)
+		}
+		c.UpdateNodeTrustLevel(member.SelfTrust)
+	}
+}
+
+func (c *NodeAppearance) setLocalNodeStateHashEvidence(evidence proofs.NodeStateHashEvidence,
+	announce proofs.MemberAnnouncementSignature) {
+
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -351,10 +453,17 @@ func (c *NodeAppearance) SetLocalNodeStateHashEvidence(evidence proofs.NodeState
 		panic("illegal param")
 	}
 
-	c.neighbourWeight ^= longbits.FoldUint64(evidence.GetNodeStateHash().FoldToUint64())
+	trustBefore := c.trust
+	c.trust.Update(member.SelfTrust)
+	c.neighbourWeight ^= longbits.FoldUint64(evidence.GetDigestHolder().FoldToUint64())
 	c.stateEvidence = evidence
 	c.announceSignature = announce
-	c.callback.updatePopulationVersion()
+	updVersion := c.callback.updatePopulationVersion()
+
+	c.callback.onNodeStateAssigned(c.callback.updatePopulationVersion(), c)
+	if trustBefore != c.trust {
+		c.callback.onTrustUpdated(updVersion, c, trustBefore, c.trust)
+	}
 }
 
 func (c *NodeAppearance) IsNshRequired() bool {
@@ -404,6 +513,11 @@ func (c *NodeAppearance) RegisterFraud(fraud misbehavior.FraudError) error {
 
 	_, err := c.registerFraud(fraud)
 	return err
+}
+
+func (c *NodeAppearance) RegisterBlame(blame misbehavior.BlameError) {
+	// TODO
+	// inslogger.FromContext(ctx).Error(blame)
 }
 
 // MUST BE NO LOCK
@@ -471,7 +585,7 @@ func (c *NodeAppearance) GetRequestedState() NodeRequestedState {
 	if m.Mode.IsEvicted() {
 		panic("illegal state")
 	}
-	if m.Mode.IsRestricted() && !c.requestedJoinerID.IsAbsent() {
+	if !c.requestedJoinerID.IsAbsent() && !m.CanIntroduceJoiner() {
 		panic("illegal state")
 	}
 
@@ -481,8 +595,6 @@ func (c *NodeAppearance) GetRequestedState() NodeRequestedState {
 		reqMode = member.ModeEvictedGracefully
 	case c.IsJoiner():
 		reqMode = member.ModeRestrictedAnnouncement
-	case m.Mode.IsSuspended() && m.IsEmpty():
-		reqMode = member.ModeEvictedAsSuspected
 	}
 
 	return NodeRequestedState{
@@ -500,9 +612,51 @@ func (c *NodeAppearance) getMembershipAnnouncement() profiles.MembershipAnnounce
 		return profiles.NewMembershipAnnouncementWithJoinerID(mb, c.requestedJoinerID)
 	}
 }
+
 func (c *NodeAppearance) GetRequestedAnnouncement() profiles.MembershipAnnouncement {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	return c.getMembershipAnnouncement()
+}
+
+func (c *NodeAppearance) UpgradeDynamicNodeProfile(ctx context.Context, full transport.FullIntroductionReader) bool {
+	return c.upgradeDynamicNodeProfile(ctx, full, full)
+}
+
+func (c *NodeAppearance) upgradeDynamicNodeProfile(ctx context.Context, brief profiles.BriefCandidateProfile, ext profiles.CandidateProfileExtension) bool {
+
+	match, create := profiles.UpgradeStaticProfile(c.profile.GetStatic(), brief, ext)
+	if match && create != nil {
+		// here we should check/apply all related attributes
+		// TODO handle possible mismatch
+		// c.requestedPower = c.profile.GetStatic().GetExtension().GetPowerLevels().FindNearestValid(c.requestedPower)
+
+		inslogger.FromContext(ctx).Debugf("Node profile was upgraded: s=%d, t=%d",
+			c.callback.localNodeID, c.GetNodeID())
+
+		c.callback.onDynamicNodeUpdate(c.callback.updatePopulationVersion(), c, FlagProfileUpdated)
+	}
+	return match
+}
+
+func (c *NodeAppearance) DispatchAnnouncement(ctx context.Context, rank member.Rank, profile profiles.StaticProfile,
+	announcement *profiles.MembershipAnnouncement, introducedByID insolar.ShortNodeID) error {
+
+	// TODO additional checks
+
+	if args.IsNil(profile) {
+		return nil
+	}
+	if !c.upgradeDynamicNodeProfile(ctx, profile, profile.GetExtension()) {
+		return fmt.Errorf("mismatch")
+	}
+
+	return nil
+}
+
+func (c *NodeAppearance) getRequestedLeave() (bool, uint32) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c.requestedLeave, c.requestedLeaveReason
 }

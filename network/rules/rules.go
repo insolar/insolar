@@ -48,7 +48,7 @@ func (r *rules) CheckMajorityRule() (bool, int) {
 func (r *rules) CheckMinRole() bool {
 	cert := r.CertificateManager.GetCertificate()
 
-	nodes := r.NodeKeeper.GetWorkingNodes()
+	nodes := r.NodeKeeper.GetAccessor().GetActiveNodes()
 
 	var virtualCount, heavyCount, lightCount uint
 	for _, n := range nodes {

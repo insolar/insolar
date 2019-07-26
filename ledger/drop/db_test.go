@@ -17,7 +17,7 @@
 package drop
 
 import (
-	context "context"
+	"context"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -110,14 +110,14 @@ func TestDropStorageDB_TruncateHead(t *testing.T) {
 	for _, idx := range indexes {
 		drop := Drop{}
 		drop.Pulse = startPulseNumber + insolar.PulseNumber(idx)
-		jets[idx] = gen.JetID()
+		jets[idx] = *insolar.NewJetID(uint8(idx), gen.ID().Bytes())
 
 		drop.JetID = jets[idx]
 		err := dropStore.Set(ctx, drop)
 		require.NoError(t, err)
 
 		for i := 0; i < 3; i++ {
-			drop.JetID = gen.JetID()
+			drop.JetID = *insolar.NewJetID(uint8(idx+i+50), gen.ID().Bytes())
 			err = dropStore.Set(ctx, drop)
 			require.NoError(t, err)
 		}

@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,7 +46,7 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package endpoints
 
@@ -56,8 +56,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 
 	"github.com/insolar/insolar/insolar"
-
-	"github.com/insolar/insolar/network/consensusv1/packets"
 
 	"github.com/stretchr/testify/require"
 )
@@ -113,58 +111,6 @@ func TestString(t *testing.T) {
 	require.Equal(t, s, h1.String())
 }
 
-func TestEqualEndpoints(t *testing.T) {
-	ob1 := NewOutboundMock(t)
-	require.False(t, EqualEndpoints(nil, ob1))
-
-	require.False(t, EqualEndpoints(ob1, nil))
-
-	require.True(t, EqualEndpoints(ob1, ob1))
-
-	et1 := NameEndpoint
-	ob1.GetEndpointTypeMock.Set(func() NodeEndpointType { return *(&et1) })
-	ob2 := NewOutboundMock(t)
-	et2 := RelayEndpoint
-	ob2.GetEndpointTypeMock.Set(func() NodeEndpointType { return *(&et2) })
-	require.False(t, EqualEndpoints(ob1, ob2))
-
-	et2 = et1
-	addr1 := Name("addr")
-	addr2 := Name("addr2")
-	ob1.GetNameAddressMock.Set(func() Name { return *(&addr1) })
-	ob2.GetNameAddressMock.Set(func() Name { return *(&addr2) })
-	require.False(t, EqualEndpoints(ob1, ob2))
-
-	addr2 = addr1
-	require.True(t, EqualEndpoints(ob1, ob2))
-
-	et1 = IPEndpoint
-	et2 = et1
-	ip1 := packets.NodeAddress{}
-	ip2 := packets.NodeAddress{1}
-	ob1.GetIPAddressMock.Set(func() packets.NodeAddress { return *(&ip1) })
-	ob2.GetIPAddressMock.Set(func() packets.NodeAddress { return *(&ip2) })
-	require.False(t, EqualEndpoints(ob1, ob2))
-
-	ip2 = ip1
-	require.True(t, EqualEndpoints(ob1, ob2))
-
-	et1 = RelayEndpoint
-	et2 = et1
-	rID1 := insolar.ShortNodeID(1)
-	rID2 := insolar.ShortNodeID(2)
-	ob1.GetRelayIDMock.Set(func() insolar.ShortNodeID { return *(&rID1) })
-	ob2.GetRelayIDMock.Set(func() insolar.ShortNodeID { return *(&rID2) })
-	require.False(t, EqualEndpoints(ob1, ob2))
-
-	rID2 = rID1
-	require.True(t, EqualEndpoints(ob1, ob2))
-
-	et1 = NodeEndpointType(4)
-	et2 = et1
-	require.Panics(t, func() { EqualEndpoints(ob1, ob2) })
-}
-
 func TestNewHostIdentityFromHolder(t *testing.T) {
 	in := NewInboundMock(t)
 	addr := Name("addr")
@@ -182,12 +128,12 @@ func TestNewHostIdentityFromHolder(t *testing.T) {
 }
 
 func TestShortNodeIDAsByteString(t *testing.T) {
-	require.True(t, ShortNodeIDAsByteString(insolar.ShortNodeID(123)) != "")
+	require.NotEmpty(t, ShortNodeIDAsByteString(insolar.ShortNodeID(123)))
 }
 
 func TestAsByteString(t *testing.T) {
 	inc := InboundConnection{Addr: "test"}
-	require.True(t, inc.AsByteString() != "")
+	require.NotEmpty(t, inc.AsByteString())
 }
 
 func TestGetNameAddress(t *testing.T) {
@@ -206,4 +152,87 @@ func TestGetTransportCert(t *testing.T) {
 	ch := cryptkit.NewCertificateHolderMock(t)
 	inc := InboundConnection{Cert: ch}
 	require.Equal(t, ch, inc.GetTransportCert())
+}
+
+func TestEqualOutboundEndpoints(t *testing.T) {
+	ob1 := NewOutboundMock(t)
+	require.False(t, EqualOutboundEndpoints(nil, ob1))
+
+	require.False(t, EqualOutboundEndpoints(ob1, nil))
+
+	require.True(t, EqualOutboundEndpoints(ob1, ob1))
+
+	et1 := NameEndpoint
+	ob1.GetEndpointTypeMock.Set(func() NodeEndpointType { return *(&et1) })
+	ob2 := NewOutboundMock(t)
+	et2 := RelayEndpoint
+	ob2.GetEndpointTypeMock.Set(func() NodeEndpointType { return *(&et2) })
+	require.False(t, EqualOutboundEndpoints(ob1, ob2))
+
+	et2 = et1
+	addr1 := Name("addr")
+	addr2 := Name("addr2")
+	ob1.GetNameAddressMock.Set(func() Name { return *(&addr1) })
+	ob2.GetNameAddressMock.Set(func() Name { return *(&addr2) })
+	require.False(t, EqualOutboundEndpoints(ob1, ob2))
+
+	addr2 = addr1
+	require.True(t, EqualOutboundEndpoints(ob1, ob2))
+
+	et1 = IPEndpoint
+	et2 = et1
+	ip1 := IPAddress{}
+	ip2 := IPAddress{1}
+	ob1.GetIPAddressMock.Set(func() IPAddress { return *(&ip1) })
+	ob2.GetIPAddressMock.Set(func() IPAddress { return *(&ip2) })
+	require.False(t, EqualOutboundEndpoints(ob1, ob2))
+
+	ip2 = ip1
+	require.True(t, EqualOutboundEndpoints(ob1, ob2))
+
+	et1 = RelayEndpoint
+	et2 = et1
+	rID1 := insolar.ShortNodeID(1)
+	rID2 := insolar.ShortNodeID(2)
+	ob1.GetRelayIDMock.Set(func() insolar.ShortNodeID { return *(&rID1) })
+	ob2.GetRelayIDMock.Set(func() insolar.ShortNodeID { return *(&rID2) })
+	require.False(t, EqualOutboundEndpoints(ob1, ob2))
+
+	rID2 = rID1
+	require.True(t, EqualOutboundEndpoints(ob1, ob2))
+
+	et1 = NodeEndpointType(4)
+	et2 = et1
+	require.Panics(t, func() { EqualOutboundEndpoints(ob1, ob2) })
+}
+
+func TestEqualListOfOutboundEndpoints(t *testing.T) {
+	require.True(t, EqualListOfOutboundEndpoints(nil, nil))
+
+	var o, p []Outbound
+	require.True(t, EqualListOfOutboundEndpoints(p, nil))
+
+	require.True(t, EqualListOfOutboundEndpoints(nil, o))
+
+	ob1 := NewOutboundMock(t)
+	p = append(p, ob1)
+	require.False(t, EqualListOfOutboundEndpoints(p, o))
+
+	o = append(o, ob1)
+	require.True(t, EqualListOfOutboundEndpoints(p, o))
+
+	ob2 := NewOutboundMock(t)
+	ob2.GetEndpointTypeMock.Set(func() NodeEndpointType { return IPEndpoint })
+	p = append(p, ob2)
+	require.False(t, EqualListOfOutboundEndpoints(p, o))
+
+	ob3 := NewOutboundMock(t)
+	ob3.GetEndpointTypeMock.Set(func() NodeEndpointType { return NameEndpoint })
+	o = append(o, ob3)
+	require.False(t, EqualListOfOutboundEndpoints(p, o))
+
+	ob3.GetEndpointTypeMock.Set(func() NodeEndpointType { return IPEndpoint })
+	ob2.GetIPAddressMock.Set(func() IPAddress { return IPAddress{1} })
+	ob3.GetIPAddressMock.Set(func() IPAddress { return IPAddress{1} })
+	require.True(t, EqualListOfOutboundEndpoints(p, o))
 }

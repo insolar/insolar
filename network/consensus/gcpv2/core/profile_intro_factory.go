@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,7 +46,7 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package core
 
@@ -63,6 +63,27 @@ var _ profiles.Factory = &SimpleProfileIntroFactory{}
 
 type SimpleProfileIntroFactory struct {
 	pksFactory cryptkit.KeyStoreFactory
+}
+
+func (p *SimpleProfileIntroFactory) TryConvertUpgradableIntroProfile(profile profiles.StaticProfile) (profiles.StaticProfile, bool) {
+	ext := profile.GetExtension()
+	if ext == nil {
+		return profile, false
+	}
+	if _, ok := profile.(profiles.Upgradable); !ok {
+		return profile, false
+	}
+
+	pks := profile.GetPublicKeyStore()
+	if pks == nil {
+		pks = p.pksFactory.GetPublicKeyStore(profile.GetNodePublicKey())
+	}
+	return profiles.NewStaticProfileByExt(profile, ext, pks), true
+}
+
+func (p *SimpleProfileIntroFactory) CreateUpgradableIntroProfile(candidate profiles.BriefCandidateProfile) profiles.StaticProfile {
+	pks := p.pksFactory.GetPublicKeyStore(candidate.GetNodePublicKey())
+	return profiles.NewUpgradableProfileByBrief(candidate, pks)
 }
 
 func (p *SimpleProfileIntroFactory) CreateBriefIntroProfile(candidate profiles.BriefCandidateProfile) profiles.StaticProfile {

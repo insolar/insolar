@@ -33,6 +33,7 @@ const (
 	TypeError
 	TypeID
 	TypeIDs
+	TypeJet
 	TypeState
 	TypeGetObject
 	TypePassState
@@ -53,6 +54,7 @@ const (
 	TypeSetResult
 	TypeActivate
 	TypeRequestInfo
+	TypeGotHotConfirmation
 	TypeDeactivate
 	TypeUpdate
 	TypeHotObjects
@@ -61,6 +63,8 @@ const (
 	TypeHasPendings
 	TypePendingsInfo
 	TypeReplication
+	TypeGetJet
+	TypeAbandonedRequestsNotification
 
 	TypeReturnResults
 	TypeCallMethod
@@ -164,6 +168,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *IDs:
 		pl.Polymorph = uint32(TypeIDs)
 		return pl.Marshal()
+	case *Jet:
+		pl.Polymorph = uint32(TypeJet)
+		return pl.Marshal()
 	case *State:
 		pl.Polymorph = uint32(TypeState)
 		return pl.Marshal()
@@ -211,6 +218,9 @@ func Marshal(payload Payload) ([]byte, error) {
 		return pl.Marshal()
 	case *RequestInfo:
 		pl.Polymorph = uint32(TypeRequestInfo)
+		return pl.Marshal()
+	case *GotHotConfirmation:
+		pl.Polymorph = uint32(TypeGotHotConfirmation)
 		return pl.Marshal()
 	case *GetRequest:
 		pl.Polymorph = uint32(TypeGetRequest)
@@ -260,6 +270,12 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *StillExecuting:
 		pl.Polymorph = uint32(TypeStillExecuting)
 		return pl.Marshal()
+	case *GetJet:
+		pl.Polymorph = uint32(TypeGetJet)
+		return pl.Marshal()
+	case *AbandonedRequestsNotification:
+		pl.Polymorph = uint32(TypeAbandonedRequestsNotification)
+		return pl.Marshal()
 	}
 
 	return nil, errors.New("unknown payload type")
@@ -285,6 +301,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeIDs:
 		pl := IDs{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeJet:
+		pl := Jet{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	case TypeState:
@@ -351,6 +371,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		pl := RequestInfo{}
 		err := pl.Unmarshal(data)
 		return &pl, err
+	case TypeGotHotConfirmation:
+		pl := GotHotConfirmation{}
+		err := pl.Unmarshal(data)
+		return &pl, err
 	case TypeGetRequest:
 		pl := GetRequest{}
 		err := pl.Unmarshal(data)
@@ -413,6 +437,14 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeStillExecuting:
 		pl := StillExecuting{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeGetJet:
+		pl := GetJet{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeAbandonedRequestsNotification:
+		pl := AbandonedRequestsNotification{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}

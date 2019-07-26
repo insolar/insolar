@@ -19,13 +19,15 @@ package proc
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/hot"
-	"github.com/pkg/errors"
 )
 
 type FetchJet struct {
@@ -40,8 +42,8 @@ type FetchJet struct {
 	Dep struct {
 		JetAccessor jet.Accessor
 		Coordinator jet.Coordinator
-		JetUpdater  jet.Fetcher
-		JetFetcher  jet.Fetcher
+		JetUpdater  executor.JetFetcher
+		JetFetcher  executor.JetFetcher
 		Sender      bus.Sender
 	}
 }
@@ -138,7 +140,7 @@ type CheckJet struct {
 	Dep struct {
 		JetAccessor jet.Accessor
 		Coordinator jet.Coordinator
-		JetFetcher  jet.Fetcher
+		JetFetcher  executor.JetFetcher
 		Sender      bus.Sender
 	}
 }

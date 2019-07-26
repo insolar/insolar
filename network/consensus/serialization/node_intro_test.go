@@ -65,52 +65,52 @@ import (
 func TestNodeBriefIntro_getPrimaryRole(t *testing.T) {
 	ni := NodeBriefIntro{}
 
-	require.Equal(t, member.PrimaryRoleInactive, ni.getPrimaryRole())
+	require.Equal(t, member.PrimaryRoleInactive, ni.GetPrimaryRole())
 
 	ni.PrimaryRoleAndFlags = 1
-	require.Equal(t, member.PrimaryRoleNeutral, ni.getPrimaryRole())
+	require.Equal(t, member.PrimaryRoleNeutral, ni.GetPrimaryRole())
 
 	ni.PrimaryRoleAndFlags = 2
-	require.Equal(t, member.PrimaryRoleHeavyMaterial, ni.getPrimaryRole())
+	require.Equal(t, member.PrimaryRoleHeavyMaterial, ni.GetPrimaryRole())
 }
 
 func TestNodeBriefIntro_setPrimaryRole(t *testing.T) {
 	ni := NodeBriefIntro{}
 
-	require.Equal(t, member.PrimaryRoleInactive, ni.getPrimaryRole())
+	require.Equal(t, member.PrimaryRoleInactive, ni.GetPrimaryRole())
 
-	ni.setPrimaryRole(member.PrimaryRoleVirtual)
-	require.Equal(t, member.PrimaryRoleVirtual, ni.getPrimaryRole())
+	ni.SetPrimaryRole(member.PrimaryRoleVirtual)
+	require.Equal(t, member.PrimaryRoleVirtual, ni.GetPrimaryRole())
 }
 
 func TestNodeBriefIntro_setPrimaryRole_Panic(t *testing.T) {
 	ni := NodeBriefIntro{}
 
-	require.Panics(t, func() { ni.setPrimaryRole(primaryRoleMax + 1) })
+	require.Panics(t, func() { ni.SetPrimaryRole(primaryRoleMax + 1) })
 }
 
 func TestNodeBriefIntro_getAddrMode(t *testing.T) {
 	ni := NodeBriefIntro{}
 
-	require.Equal(t, endpoints.IPEndpoint, ni.getAddrMode())
+	require.Equal(t, endpoints.IPEndpoint, ni.GetAddrMode())
 
 	ni.PrimaryRoleAndFlags = 64 // 0b01000000
-	require.Equal(t, endpoints.NameEndpoint, ni.getAddrMode())
+	require.Equal(t, endpoints.NameEndpoint, ni.GetAddrMode())
 }
 
 func TestNodeBriefIntro_setAddrMode(t *testing.T) {
 	ni := NodeBriefIntro{}
 
-	require.Equal(t, endpoints.IPEndpoint, ni.getAddrMode())
+	require.Equal(t, endpoints.IPEndpoint, ni.GetAddrMode())
 
-	ni.setAddrMode(endpoints.RelayEndpoint)
-	require.Equal(t, endpoints.RelayEndpoint, ni.getAddrMode())
+	ni.SetAddrMode(endpoints.RelayEndpoint)
+	require.Equal(t, endpoints.RelayEndpoint, ni.GetAddrMode())
 }
 
 func TestNodeBriefIntro_setAddrMode_Panic(t *testing.T) {
 	ni := NodeBriefIntro{}
 
-	require.Panics(t, func() { ni.setAddrMode(addrModeMax + 1) })
+	require.Panics(t, func() { ni.SetAddrMode(addrModeMax + 1) })
 }
 
 func TestNodeBriefIntro_SerializeTo(t *testing.T) {
@@ -144,6 +144,7 @@ func TestNodeBriefIntro_DeserializeFrom(t *testing.T) {
 	err = ni2.DeserializeFrom(nil, buf)
 	require.NoError(t, err)
 
+	ni2.JoinerData = nil // Skip in comparison
 	require.Equal(t, ni1, ni2)
 }
 
@@ -172,7 +173,9 @@ func TestNodeBriefIntro_DeserializeFrom_NoShortID(t *testing.T) {
 	err = ni3.DeserializeFrom(nil, buf)
 	require.NoError(t, err)
 
+	ni3.JoinerData = nil // Skip in comparison
 	require.Equal(t, ni2, ni3)
+
 	require.EqualValues(t, 0, ni3.ShortID)
 }
 
@@ -209,6 +212,7 @@ func TestNodeFullIntro_DeserializeFrom(t *testing.T) {
 	err = ni2.DeserializeFrom(nil, buf)
 	require.NoError(t, err)
 
+	ni2.JoinerData = nil // Skip in comparison
 	require.Equal(t, ni1, ni2)
 }
 
@@ -238,6 +242,7 @@ func TestNodeFullIntro_DeserializeFrom_NoShortID(t *testing.T) {
 	err = ni3.DeserializeFrom(nil, buf)
 	require.NoError(t, err)
 
+	ni3.JoinerData = nil // Skip in comparison
 	require.Equal(t, ni2, ni3)
 	require.EqualValues(t, 0, ni3.ShortID)
 }
@@ -274,6 +279,7 @@ func TestNodeFullIntro_DeserializeFrom_Slices(t *testing.T) {
 	err = ni3.DeserializeFrom(nil, buf)
 	require.NoError(t, err)
 
+	ni3.JoinerData = nil // Skip in comparison
 	require.Equal(t, ni2, ni3)
 	require.EqualValues(t, 0, ni3.ShortID)
 }

@@ -57,22 +57,54 @@ import (
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/consensus/gcpv2"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	transport2 "github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/network/consensus/gcpv2/censusimpl"
 	"github.com/insolar/insolar/network/consensus/serialization"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/adapters"
-	"github.com/insolar/insolar/network/consensus/gcpv2"
-	"github.com/insolar/insolar/network/consensus/gcpv2/censusimpl"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/transport"
 )
+
+type packetProcessorSetter interface {
+	SetPacketProcessor(adapters.PacketProcessor)
+	SetPacketParserFactory(factory adapters.PacketParserFactory)
+}
+
+type Mode uint
+
+const (
+	ReadyNetwork = Mode(iota)
+	Joiner
+)
+
+func New(ctx context.Context, dep Dep) Installer {
+	dep.verify()
+
+	constructor := newConstructor(ctx, &dep)
+	constructor.verify()
+
+	return newInstaller(constructor, &dep)
+}
+
+func verify(s interface{}) {
+	cdValue := reflect.Indirect(reflect.ValueOf(s))
+	cdType := cdValue.Type()
+
+	for i := 0; i < cdValue.NumField(); i++ {
+		fieldMeta := cdValue.Field(i)
+
+		if (fieldMeta.Kind() == reflect.Interface || fieldMeta.Kind() == reflect.Ptr) && fieldMeta.IsNil() {
+			panic(fmt.Sprintf("%s field %s is nil", cdType.Name(), cdType.Field(i).Name))
+		}
+	}
+}
 
 type Dep struct {
 	PrimingCloudStateHash [64]byte
@@ -93,15 +125,13 @@ func (cd *Dep) verify() {
 	verify(cd)
 }
 
-type Consensus struct {
-	population                   censusimpl.ManyNodePopulation // TODO: there should be interface
+type constructor struct {
 	consensusConfiguration       census.ConsensusConfiguration
 	mandateRegistry              census.MandateRegistry
 	misbehaviorRegistry          census.MisbehaviorRegistry
 	offlinePopulation            census.OfflinePopulation
 	versionedRegistries          census.VersionedRegistries
 	nodeProfileFactory           profiles.Factory
-	consensusChronicles          api.ConsensusChronicles
 	localNodeConfiguration       api.LocalNodeConfiguration
 	upstreamPulseController      api.UpstreamController
 	roundStrategyFactory         core.RoundStrategyFactory
@@ -109,127 +139,154 @@ type Consensus struct {
 	packetBuilder                transport2.PacketBuilder
 	packetSender                 transport2.PacketSender
 	transportFactory             transport2.Factory
-	consensusController          api.ConsensusController
-	packetParserFactory          adapters.PacketParserFactory
 }
 
-func New(ctx context.Context, dep Dep) Consensus {
-	dep.verify()
+func newConstructor(ctx context.Context, dep *Dep) *constructor {
+	c := &constructor{}
 
-	consensus := Consensus{}
-
-	certificate := dep.CertificateManager.GetCertificate()
-	origin := dep.NodeKeeper.GetOrigin()
-	knownNodes := dep.NodeKeeper.GetAccessor().GetActiveNodes()
-
-	consensus.population = adapters.NewPopulation(
-		adapters.NewNodeIntroProfile(origin, certificate, dep.KeyProcessor),
-		adapters.NewNodeIntroProfileList(knownNodes, certificate, dep.KeyProcessor),
-	)
-	consensus.consensusConfiguration = adapters.NewConsensusConfiguration()
-	consensus.mandateRegistry = adapters.NewMandateRegistry(
+	c.consensusConfiguration = adapters.NewConsensusConfiguration()
+	c.mandateRegistry = adapters.NewMandateRegistry(
 		cryptkit.NewDigest(
 			longbits.NewBits512FromBytes(
 				dep.PrimingCloudStateHash[:],
 			),
 			adapters.SHA3512Digest,
 		).AsDigestHolder(),
-		consensus.consensusConfiguration,
+		c.consensusConfiguration,
 	)
-	consensus.misbehaviorRegistry = adapters.NewMisbehaviorRegistry()
-	consensus.offlinePopulation = adapters.NewOfflinePopulation(
+	c.misbehaviorRegistry = adapters.NewMisbehaviorRegistry()
+	c.offlinePopulation = adapters.NewOfflinePopulation(
 		dep.NodeKeeper,
 		dep.CertificateManager,
 		dep.KeyProcessor,
 	)
-	consensus.versionedRegistries = adapters.NewVersionedRegistries(
-		consensus.mandateRegistry,
-		consensus.misbehaviorRegistry,
-		consensus.offlinePopulation,
+	c.versionedRegistries = adapters.NewVersionedRegistries(
+		c.mandateRegistry,
+		c.misbehaviorRegistry,
+		c.offlinePopulation,
 	)
-	consensus.nodeProfileFactory = adapters.NewNodeProfileFactory(dep.KeyProcessor)
-	consensus.consensusChronicles = adapters.NewChronicles(
-		consensus.population,
-		consensus.nodeProfileFactory,
-		consensus.versionedRegistries,
-	)
-	consensus.localNodeConfiguration = adapters.NewLocalNodeConfiguration(
+	c.nodeProfileFactory = adapters.NewNodeProfileFactory(dep.KeyProcessor)
+	c.localNodeConfiguration = adapters.NewLocalNodeConfiguration(
 		ctx,
 		dep.KeyStore,
 	)
-	consensus.upstreamPulseController = adapters.NewUpstreamPulseController(
+	c.upstreamPulseController = adapters.NewUpstreamPulseController(
 		dep.StateGetter,
 		dep.PulseChanger,
 		dep.StateUpdater,
 	)
-	consensus.roundStrategyFactory = adapters.NewRoundStrategyFactory()
-	consensus.transportCryptographyFactory = adapters.NewTransportCryptographyFactory(dep.Scheme)
-	consensus.packetBuilder = serialization.NewPacketBuilder(
-		consensus.transportCryptographyFactory,
-		consensus.localNodeConfiguration,
+	c.roundStrategyFactory = adapters.NewRoundStrategyFactory()
+	c.transportCryptographyFactory = adapters.NewTransportCryptographyFactory(dep.Scheme)
+	c.packetBuilder = serialization.NewPacketBuilder(
+		c.transportCryptographyFactory,
+		c.localNodeConfiguration,
 	)
-	consensus.packetSender = adapters.NewPacketSender(dep.DatagramTransport)
-	consensus.transportFactory = adapters.NewTransportFactory(
-		consensus.transportCryptographyFactory,
-		consensus.packetBuilder,
-		consensus.packetSender,
-	)
-	consensus.consensusController = gcpv2.NewConsensusMemberController(
-		consensus.consensusChronicles,
-		consensus.upstreamPulseController,
-		core.NewPhasedRoundControllerFactory(
-			consensus.localNodeConfiguration,
-			consensus.transportFactory,
-			consensus.roundStrategyFactory,
-		),
-		&core.SequentialCandidateFeeder{},
-		adapters.NewConsensusControlFeeder(),
-	)
-	consensus.packetParserFactory = serialization.NewPacketParserFactory(
-		consensus.transportCryptographyFactory.GetDigestFactory().GetPacketDigester(),
-		consensus.transportCryptographyFactory.GetNodeSigner(consensus.localNodeConfiguration.GetSecretKeyStore()).GetSignMethod(),
-		dep.KeyProcessor,
+	c.packetSender = adapters.NewPacketSender(dep.DatagramTransport)
+	c.transportFactory = adapters.NewTransportFactory(
+		c.transportCryptographyFactory,
+		c.packetBuilder,
+		c.packetSender,
 	)
 
-	consensus.verify()
-	return consensus
+	return c
 }
 
-type packetProcessorSetter interface {
-	SetPacketProcessor(adapters.PacketProcessor)
-	SetPacketParserFactory(factory adapters.PacketParserFactory)
-}
-
-type Controller interface {
-	Abort()
-	/* Graceful exit, actual moment of leave will be indicated via Upstream */
-	// RequestLeave()
-
-	/* This node power in the active population, and pulse number of such. Without active population returns (0,0) */
-	GetActivePowerLimit() (member.Power, pulse.Number)
-}
-
-func (c Consensus) Install(setters ...packetProcessorSetter) Controller {
-	for _, setter := range setters {
-		setter.SetPacketProcessor(c.consensusController)
-		setter.SetPacketParserFactory(c.packetParserFactory)
-	}
-	return c.consensusController
-}
-
-func (c *Consensus) verify() {
+func (c *constructor) verify() {
 	verify(c)
 }
 
-func verify(s interface{}) {
-	cdValue := reflect.Indirect(reflect.ValueOf(s))
-	cdType := cdValue.Type()
+type Installer struct {
+	dep       *Dep
+	consensus *constructor
+}
 
-	for i := 0; i < cdValue.NumField(); i++ {
-		fieldMeta := cdValue.Field(i)
+func newInstaller(constructor *constructor, dep *Dep) Installer {
+	return Installer{
+		dep:       dep,
+		consensus: constructor,
+	}
+}
 
-		if (fieldMeta.Kind() == reflect.Interface || fieldMeta.Kind() == reflect.Ptr) && fieldMeta.IsNil() {
-			panic(fmt.Sprintf("%s field %s is nil", cdType.Name(), cdType.Field(i).Name))
-		}
+func (c Installer) ControllerFor(mode Mode, setters ...packetProcessorSetter) Controller {
+	controlFeederInterceptor := adapters.InterceptConsensusControl(adapters.NewConsensusControlFeeder())
+	candidateFeeder := &core.SequentialCandidateFeeder{}
+
+	consensusChronicles := c.createConsensusChronicles(mode)
+	consensusController := c.createConsensusController(
+		consensusChronicles,
+		controlFeederInterceptor.Feeder(),
+		candidateFeeder,
+	)
+	packetParserFactory := c.createPacketParserFactory()
+
+	c.bind(setters, consensusController, packetParserFactory)
+
+	return newController(controlFeederInterceptor, candidateFeeder, consensusController)
+}
+
+func (c *Installer) createCensus(mode Mode) *censusimpl.PrimingCensusTemplate {
+	certificate := c.dep.CertificateManager.GetCertificate()
+	origin := c.dep.NodeKeeper.GetOrigin()
+	knownNodes := c.dep.NodeKeeper.GetAccessor().GetActiveNodes()
+
+	node := adapters.NewStaticProfile(origin, certificate, c.dep.KeyProcessor)
+	nodes := adapters.NewStaticProfileList(knownNodes, certificate, c.dep.KeyProcessor)
+
+	if mode == Joiner {
+		return adapters.NewCensusForJoiner(
+			node,
+			c.consensus.versionedRegistries,
+			c.consensus.transportCryptographyFactory,
+		)
+	}
+
+	return adapters.NewCensus(
+		node,
+		nodes,
+		c.consensus.versionedRegistries,
+		c.consensus.transportCryptographyFactory,
+	)
+}
+
+func (c *Installer) createConsensusChronicles(mode Mode) censusimpl.LocalConsensusChronicles {
+	consensusChronicles := adapters.NewChronicles(c.consensus.nodeProfileFactory)
+	c.createCensus(mode).SetAsActiveTo(consensusChronicles)
+	return consensusChronicles
+}
+
+func (c *Installer) createConsensusController(
+	consensusChronicles censusimpl.LocalConsensusChronicles,
+	controlFeeder api.ConsensusControlFeeder,
+	candidateFeeder api.CandidateControlFeeder,
+) api.ConsensusController {
+	return gcpv2.NewConsensusMemberController(
+		consensusChronicles,
+		c.consensus.upstreamPulseController,
+		core.NewPhasedRoundControllerFactory(
+			c.consensus.localNodeConfiguration,
+			c.consensus.transportFactory,
+			c.consensus.roundStrategyFactory,
+		),
+		candidateFeeder,
+		controlFeeder,
+	)
+}
+
+func (c *Installer) createPacketParserFactory() adapters.PacketParserFactory {
+	return serialization.NewPacketParserFactory(
+		c.consensus.transportCryptographyFactory.GetDigestFactory().GetPacketDigester(),
+		c.consensus.transportCryptographyFactory.GetNodeSigner(c.consensus.localNodeConfiguration.GetSecretKeyStore()).GetSignMethod(),
+		c.dep.KeyProcessor,
+	)
+}
+
+func (c *Installer) bind(
+	setters []packetProcessorSetter,
+	packetProcessor adapters.PacketProcessor,
+	packetParserFactory adapters.PacketParserFactory,
+) {
+	for _, setter := range setters {
+		setter.SetPacketProcessor(packetProcessor)
+		setter.SetPacketParserFactory(packetParserFactory)
 	}
 }

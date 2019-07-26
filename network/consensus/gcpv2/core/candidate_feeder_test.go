@@ -60,14 +60,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPickNextJoinCandidate(t *testing.T) {
+// TODO
+/*func TestPickNextJoinCandidate(t *testing.T) {
 	require.Equal(t, nil, (&SequentialCandidateFeeder{}).PickNextJoinCandidate())
 
 	s := &SequentialCandidateFeeder{buf: make([]profiles.CandidateProfile, 1)}
 	c := profiles.NewCandidateProfileMock(t)
 	s.buf[0] = c
 	require.Equal(t, c, s.PickNextJoinCandidate())
-}
+}*/
 
 func TestRemoveJoinCandidate(t *testing.T) {
 	require.False(t, (&SequentialCandidateFeeder{}).RemoveJoinCandidate(false, insolar.ShortNodeID(0)))

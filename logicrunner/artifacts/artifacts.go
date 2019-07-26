@@ -44,11 +44,6 @@ type Client interface {
 	// HasPendings returns true if object has unclosed requests.
 	HasPendings(ctx context.Context, object insolar.Reference) (bool, error)
 
-	// RegisterValidation marks provided object state as approved or disapproved.
-	//
-	// When fetching object, validity can be specified.
-	RegisterValidation(ctx context.Context, object insolar.Reference, state insolar.ID, isValid bool, validationMessages []insolar.Message) error
-
 	// GetCode returns code from code record by provided reference according to provided machine preference.
 	//
 	// This method is used by VM to fetch code for execution.

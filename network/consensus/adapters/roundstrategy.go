@@ -59,22 +59,22 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
 type RoundStrategy struct {
-	bundle      core.PhaseControllersBundle
 	chronicle   api.ConsensusChronicles
 	localConfig api.LocalNodeConfiguration
 }
 
+func (rs *RoundStrategy) IsEphemeralPulseAllowed() bool {
+	return false
+}
+
 func NewRoundStrategy(
-	bundle core.PhaseControllersBundle,
 	chronicle api.ConsensusChronicles,
 	localConfig api.LocalNodeConfiguration,
 ) *RoundStrategy {
 	return &RoundStrategy{
-		bundle:      bundle,
 		chronicle:   chronicle,
 		localConfig: localConfig,
 	}
@@ -82,31 +82,18 @@ func NewRoundStrategy(
 
 func (rs *RoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse pulse.Number, self profiles.LocalNode) context.Context {
 	ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
-		"node_id": self.GetNodeID(),
-		"pulse":   expectedPulse,
-		// "is_joiner": self.IsRecentlyJoiner(),
+		"is_joiner":   self.IsJoiner(),
+		"round_pulse": expectedPulse,
 	})
 	return ctx
 }
 
-func (rs *RoundStrategy) GetPrepPhaseControllers() []core.PrepPhaseController {
-	return rs.bundle.GetPrepPhaseControllers()
-}
-
-func (rs *RoundStrategy) GetFullPhaseControllers(nodeCount int) ([]core.PhaseController, core.NodeUpdateCallback) {
-	return rs.bundle.GetFullPhaseControllers(nodeCount)
-}
-
-func (rs *RoundStrategy) RandUint32() uint32 {
+func (rs *RoundStrategy) GetBaselineWeightForNeighbours() uint32 {
 	return rand.Uint32()
 }
 
 func (rs *RoundStrategy) ShuffleNodeSequence(n int, swap func(i, j int)) {
 	rand.Shuffle(n, swap)
-}
-
-func (rs *RoundStrategy) IsEphemeralPulseAllowed() bool {
-	return false
 }
 
 func (rs *RoundStrategy) AdjustConsensusTimings(timings *api.RoundTimings) {

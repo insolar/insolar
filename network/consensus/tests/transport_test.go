@@ -58,7 +58,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/statevector"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
@@ -89,20 +88,19 @@ func (r *emuTransport) GetCryptographyFactory() transport.CryptographyFactory {
 }
 
 type emuPackerCloner interface {
-	clonePacketFor(target profiles.ActiveNode, sendOptions transport.PacketSendOptions) transport.PacketParser
+	clonePacketFor(target transport.TargetProfile, sendOptions transport.PacketSendOptions) transport.PacketParser
 }
 
 type emuPacketSender struct {
 	cloner emuPackerCloner
 }
 
-func (r *emuPacketSender) SendTo(ctx context.Context, t profiles.ActiveNode, sendOptions transport.PacketSendOptions, s transport.PacketSender) {
+func (r *emuPacketSender) SendTo(ctx context.Context, t transport.TargetProfile, sendOptions transport.PacketSendOptions, s transport.PacketSender) {
 	c := r.cloner.clonePacketFor(t, sendOptions)
 	s.SendPacketToTransport(ctx, t, sendOptions, c)
 }
 
-func (r *emuPacketSender) SendToMany(ctx context.Context, targetCount int, s transport.PacketSender,
-	filter func(ctx context.Context, targetIndex int) (profiles.ActiveNode, transport.PacketSendOptions)) {
+func (r *emuPacketSender) SendToMany(ctx context.Context, targetCount int, s transport.PacketSender, filter transport.ProfileFilter) {
 
 	for i := 0; i < targetCount; i++ {
 		sendTo, sendOptions := filter(ctx, i)
@@ -127,7 +125,7 @@ func (r *emuPacketBuilder) GetNeighbourhoodSize() transport.NeighbourhoodSizes {
 }
 
 func (r *emuPacketBuilder) PreparePhase0Packet(sender *transport.NodeAnnouncementProfile, pulsarPacket proofs.OriginalPulsarPacket,
-	options transport.PacketSendOptions) transport.PreparedPacketSender {
+	options transport.PacketPrepareOptions) transport.PreparedPacketSender {
 	v := EmuPhase0NetPacket{
 		basePacket: basePacket{
 			src:       sender.GetNodeID(),
@@ -135,17 +133,22 @@ func (r *emuPacketBuilder) PreparePhase0Packet(sender *transport.NodeAnnouncemen
 			mp:        sender.GetMembershipProfile(),
 		},
 		pulsePacket: pulsarPacket.(*EmuPulsarNetPacket)}
+
+	if options&transport.AlternativePhasePacket != 0 {
+		panic("illegal value")
+	}
+
 	return &emuPacketSender{&v}
 }
 
-func (r *EmuPhase0NetPacket) clonePacketFor(t profiles.ActiveNode, sendOptions transport.PacketSendOptions) transport.PacketParser {
+func (r *EmuPhase0NetPacket) clonePacketFor(t transport.TargetProfile, sendOptions transport.PacketSendOptions) transport.PacketParser {
 	c := *r
 	c.tgt = t.GetNodeID()
 	return &c
 }
 
 func (r *emuPacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncementProfile, pulsarPacket proofs.OriginalPulsarPacket,
-	welcome *proofs.NodeWelcomePackage, options transport.PacketSendOptions) transport.PreparedPacketSender {
+	welcome *proofs.NodeWelcomePackage, options transport.PacketPrepareOptions) transport.PreparedPacketSender {
 
 	pp := pulsarPacket.(*EmuPulsarNetPacket)
 	if pp == nil || !pp.pulseData.IsValidPulseData() {
@@ -155,32 +158,51 @@ func (r *emuPacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncemen
 	v := EmuPhase1NetPacket{
 		EmuPhase0NetPacket: EmuPhase0NetPacket{
 			basePacket: basePacket{
-				src:             sender.GetNodeID(),
-				nodeCount:       sender.GetNodeCount(),
-				mp:              sender.GetMembershipProfile(),
-				isLeaving:       sender.IsLeaving(),
-				leaveReason:     sender.GetLeaveReason(),
-				joiner:          sender.GetJoinerAnnouncement(),
-				joinerAnnouncer: sender.GetJoinerIntroducedByID(),
+				src:                       sender.GetNodeID(),
+				nodeCount:                 sender.GetNodeCount(),
+				mp:                        sender.GetMembershipProfile(),
+				isLeaving:                 sender.IsLeaving(),
+				leaveReason:               sender.GetLeaveReason(),
+				joiner:                    sender.GetJoinerAnnouncement(),
+				cloudIntro:                welcome,
+				BriefCandidateProfile:     sender.GetStatic(),
+				CandidateProfileExtension: sender.GetStatic().GetExtension(),
 			},
 			pulsePacket: pp},
 	}
+	v.basePacket.adjustBySender(sender)
+
 	v.pn = pp.pulseData.PulseNumber
-	v.isRequest = options&transport.RequestForPhase1 != 0
-	if v.isRequest || options&transport.SendWithoutPulseData != 0 {
+	v.isAlternative = options&transport.AlternativePhasePacket != 0
+
+	if v.isAlternative || options&transport.PrepareWithoutPulseData != 0 {
 		v.pulsePacket = nil
+	}
+
+	if v.joiner != nil && v.joiner.HasFullIntro() && options&transport.OnlyBriefIntroAboutJoiner != 0 {
+		v.joiner = transport.NewBriefJoinerAnnouncementByFull(v.joiner)
 	}
 
 	return &emuPacketSender{&v}
 }
 
-func (r *EmuPhase1NetPacket) clonePacketFor(t profiles.ActiveNode, sendOptions transport.PacketSendOptions) transport.PacketParser {
+func (r *EmuPhase1NetPacket) clonePacketFor(t transport.TargetProfile, sendOptions transport.PacketSendOptions) transport.PacketParser {
 	c := *r
 	c.tgt = t.GetNodeID()
 
-	// if !t.IsJoiner() {
-	//	c.selfIntro = nil
-	// }
+	if c.joiner != nil && c.joiner.HasFullIntro() && c.GetJoinerID() == t.GetNodeID() {
+		c.joiner = transport.NewBriefJoinerAnnouncementByFull(c.joiner)
+	}
+
+	if !t.IsJoiner() {
+		c.cloudIntro = nil
+	}
+
+	if !c.mp.IsJoiner() && !t.IsJoiner() {
+		c.BriefCandidateProfile = nil
+		c.CandidateProfileExtension = nil
+	}
+
 	if sendOptions&transport.SendWithoutPulseData != 0 {
 		c.pulsePacket = nil
 	}
@@ -190,42 +212,56 @@ func (r *EmuPhase1NetPacket) clonePacketFor(t profiles.ActiveNode, sendOptions t
 
 func (r *emuPacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncementProfile,
 	welcome *proofs.NodeWelcomePackage, neighbourhood []transport.MembershipAnnouncementReader,
-	options transport.PacketSendOptions) transport.PreparedPacketSender {
+	options transport.PacketPrepareOptions) transport.PreparedPacketSender {
 
 	v := EmuPhase2NetPacket{
 		basePacket: basePacket{
-			src:         sender.GetNodeID(),
-			nodeCount:   sender.GetNodeCount(),
-			mp:          sender.GetMembershipProfile(),
-			isLeaving:   sender.IsLeaving(),
-			leaveReason: sender.GetLeaveReason(),
+			src:                       sender.GetNodeID(),
+			nodeCount:                 sender.GetNodeCount(),
+			mp:                        sender.GetMembershipProfile(),
+			isLeaving:                 sender.IsLeaving(),
+			leaveReason:               sender.GetLeaveReason(),
+			joiner:                    sender.GetJoinerAnnouncement(),
+			cloudIntro:                welcome,
+			BriefCandidateProfile:     sender.GetStatic(),
+			CandidateProfileExtension: sender.GetStatic().GetExtension(),
 		},
 		pulseNumber:   sender.GetPulseNumber(),
 		neighbourhood: neighbourhood,
 	}
+	v.basePacket.adjustBySender(sender)
+
+	v.isAlternative = options&transport.AlternativePhasePacket != 0
+
+	if v.joiner != nil && v.joiner.HasFullIntro() && options&transport.OnlyBriefIntroAboutJoiner != 0 {
+		v.joiner = transport.NewBriefJoinerAnnouncementByFull(v.joiner)
+	}
+
 	return &emuPacketSender{&v}
 }
 
-func (r *EmuPhase2NetPacket) clonePacketFor(t profiles.ActiveNode, sendOptions transport.PacketSendOptions) transport.PacketParser {
+func (r *EmuPhase2NetPacket) clonePacketFor(t transport.TargetProfile, sendOptions transport.PacketSendOptions) transport.PacketParser {
 	c := *r
 	c.tgt = t.GetNodeID()
 
-	// if !t.IsJoiner() || len(c.intros) == 1 /* the only joiner */ {
-	//	c.intros = nil
-	// } else {
-	//	c.intros = make([]common2.NodeIntroduction, 0, len(r.intros)-1)
-	//	for _, ni := range r.intros {
-	//		if ni.GetNodeID() == t.GetNodeID() {
-	//			continue
-	//		}
-	//		c.intros = append(c.intros, ni)
-	//	}
-	// }
+	if c.joiner != nil && c.joiner.HasFullIntro() && c.GetJoinerID() == t.GetNodeID() {
+		c.joiner = transport.NewBriefJoinerAnnouncementByFull(c.joiner)
+	}
+
+	if !t.IsJoiner() {
+		c.cloudIntro = nil
+	}
+
+	if !c.mp.IsJoiner() && !t.IsJoiner() {
+		c.BriefCandidateProfile = nil
+		c.CandidateProfileExtension = nil
+	}
+
 	return &c
 }
 
 func (r *emuPacketBuilder) PreparePhase3Packet(sender *transport.NodeAnnouncementProfile, vectors statevector.Vector,
-	options transport.PacketSendOptions) transport.PreparedPacketSender {
+	options transport.PacketPrepareOptions) transport.PreparedPacketSender {
 
 	v := EmuPhase3NetPacket{
 		basePacket: basePacket{
@@ -236,10 +272,14 @@ func (r *emuPacketBuilder) PreparePhase3Packet(sender *transport.NodeAnnouncemen
 		pulseNumber: sender.GetPulseNumber(),
 		vectors:     vectors,
 	}
+	v.basePacket.adjustBySender(sender)
+
+	v.isAlternative = options&transport.AlternativePhasePacket != 0
+
 	return &emuPacketSender{&v}
 }
 
-func (r *EmuPhase3NetPacket) clonePacketFor(t profiles.ActiveNode, sendOptions transport.PacketSendOptions) transport.PacketParser {
+func (r *EmuPhase3NetPacket) clonePacketFor(t transport.TargetProfile, sendOptions transport.PacketSendOptions) transport.PacketParser {
 	c := *r
 	c.tgt = t.GetNodeID()
 	return &c

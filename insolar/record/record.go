@@ -147,15 +147,25 @@ type Request interface {
 	ReasonRef() insolar.Reference
 	// GetCallType returns call type.
 	GetCallType() CallType
+	// IsAPIRequest tells is it API-request or not.
 	IsAPIRequest() bool
+	// IsCreationRequest checks a request-type.
 	IsCreationRequest() bool
 	// IsDetached check is request has detached state.
 	IsDetached() bool
+	// IsTemporaryUploadCode tells us that that request is temporary hack
+	// for uploading code
+	IsTemporaryUploadCode() bool
 }
 
 func (r *IncomingRequest) AffinityRef() *insolar.Reference {
 	// IncomingRequests are affine to the Object on which the request
-	// is going to be executed.
+	// is going to be executed
+	// Exceptions are CTSaveAsMethod/CTSaveAsDelegate, we should
+	// calculate hash of message, so call CalculateRequestAffinityRef
+	if r.IsCreationRequest() {
+		return nil
+	}
 	return r.Object
 }
 
@@ -174,6 +184,10 @@ func (r *IncomingRequest) IsCreationRequest() bool {
 func (r *IncomingRequest) IsDetached() bool {
 	// incoming requests never should't be in detached state, app code should check it and raise some kind of error.
 	return isDetached(r.ReturnMode)
+}
+
+func (r *IncomingRequest) IsTemporaryUploadCode() bool {
+	return r.APINode.IsEmpty() && r.Caller.IsEmpty()
 }
 
 func (r *OutgoingRequest) AffinityRef() *insolar.Reference {
@@ -197,6 +211,10 @@ func (r *OutgoingRequest) IsDetached() bool {
 	return isDetached(r.ReturnMode)
 }
 
+func (r *OutgoingRequest) IsTemporaryUploadCode() bool {
+	return false
+}
+
 func isDetached(rm ReturnMode) bool {
 	return rm == ReturnSaga
 }
@@ -208,7 +226,6 @@ func (m *Lifeline) SetDelegate(key insolar.Reference, value insolar.Reference) {
 			return
 		}
 	}
-
 	m.Delegates = append(m.Delegates, LifelineDelegate{Key: key, Value: value})
 }
 
@@ -218,6 +235,20 @@ func (m *Lifeline) DelegateByKey(key insolar.Reference) (insolar.Reference, bool
 			return d.Value, true
 		}
 	}
-
 	return [64]byte{}, false
+}
+
+func CalculateRequestAffinityRef(
+	request Request,
+	pulseNumber insolar.PulseNumber,
+	scheme insolar.PlatformCryptographyScheme,
+) *insolar.Reference {
+	affinityRef := request.AffinityRef()
+	if affinityRef == nil {
+		virtualRecord := Wrap(request)
+		hash := HashVirtual(scheme.ReferenceHasher(), virtualRecord)
+		recID := insolar.NewID(pulseNumber, hash)
+		affinityRef = insolar.NewReference(*recID)
+	}
+	return affinityRef
 }
