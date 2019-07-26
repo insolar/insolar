@@ -54,11 +54,12 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"sync"
+
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/serialization"
-	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/node"
-	"sync"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -336,7 +337,7 @@ func getAnnounceSignature(
 	}
 	brief.StartPower = 10
 
-	addr, err := packets.NewNodeAddress(node.Address())
+	addr, err := endpoints.NewIPAddress(node.Address())
 	if err != nil {
 		panic(err)
 	}
