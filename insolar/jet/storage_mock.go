@@ -25,7 +25,7 @@ type StorageMock struct {
 	AllPreCounter uint64
 	AllMock       mStorageMockAll
 
-	CloneFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber) (r error)
+	CloneFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber, p3 bool) (r error)
 	CloneCounter    uint64
 	ClonePreCounter uint64
 	CloneMock       mStorageMockClone
@@ -226,6 +226,7 @@ type StorageMockCloneInput struct {
 	p  context.Context
 	p1 insolar.PulseNumber
 	p2 insolar.PulseNumber
+	p3 bool
 }
 
 type StorageMockCloneResult struct {
@@ -233,14 +234,14 @@ type StorageMockCloneResult struct {
 }
 
 //Expect specifies that invocation of Storage.Clone is expected from 1 to Infinity times
-func (m *mStorageMockClone) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber) *mStorageMockClone {
+func (m *mStorageMockClone) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber, p3 bool) *mStorageMockClone {
 	m.mock.CloneFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &StorageMockCloneExpectation{}
 	}
-	m.mainExpectation.input = &StorageMockCloneInput{p, p1, p2}
+	m.mainExpectation.input = &StorageMockCloneInput{p, p1, p2, p3}
 	return m
 }
 
@@ -257,12 +258,12 @@ func (m *mStorageMockClone) Return(r error) *StorageMock {
 }
 
 //ExpectOnce specifies that invocation of Storage.Clone is expected once
-func (m *mStorageMockClone) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber) *StorageMockCloneExpectation {
+func (m *mStorageMockClone) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber, p3 bool) *StorageMockCloneExpectation {
 	m.mock.CloneFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &StorageMockCloneExpectation{}
-	expectation.input = &StorageMockCloneInput{p, p1, p2}
+	expectation.input = &StorageMockCloneInput{p, p1, p2, p3}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -272,7 +273,7 @@ func (e *StorageMockCloneExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of Storage.Clone method
-func (m *mStorageMockClone) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber) (r error)) *StorageMock {
+func (m *mStorageMockClone) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber, p3 bool) (r error)) *StorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -281,18 +282,18 @@ func (m *mStorageMockClone) Set(f func(p context.Context, p1 insolar.PulseNumber
 }
 
 //Clone implements github.com/insolar/insolar/insolar/jet.Storage interface
-func (m *StorageMock) Clone(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber) (r error) {
+func (m *StorageMock) Clone(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber, p3 bool) (r error) {
 	counter := atomic.AddUint64(&m.ClonePreCounter, 1)
 	defer atomic.AddUint64(&m.CloneCounter, 1)
 
 	if len(m.CloneMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.CloneMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to StorageMock.Clone. %v %v %v", p, p1, p2)
+			m.t.Fatalf("Unexpected call to StorageMock.Clone. %v %v %v %v", p, p1, p2, p3)
 			return
 		}
 
 		input := m.CloneMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, StorageMockCloneInput{p, p1, p2}, "Storage.Clone got unexpected parameters")
+		testify_assert.Equal(m.t, *input, StorageMockCloneInput{p, p1, p2, p3}, "Storage.Clone got unexpected parameters")
 
 		result := m.CloneMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -309,7 +310,7 @@ func (m *StorageMock) Clone(p context.Context, p1 insolar.PulseNumber, p2 insola
 
 		input := m.CloneMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, StorageMockCloneInput{p, p1, p2}, "Storage.Clone got unexpected parameters")
+			testify_assert.Equal(m.t, *input, StorageMockCloneInput{p, p1, p2, p3}, "Storage.Clone got unexpected parameters")
 		}
 
 		result := m.CloneMock.mainExpectation.result
@@ -323,11 +324,11 @@ func (m *StorageMock) Clone(p context.Context, p1 insolar.PulseNumber, p2 insola
 	}
 
 	if m.CloneFunc == nil {
-		m.t.Fatalf("Unexpected call to StorageMock.Clone. %v %v %v", p, p1, p2)
+		m.t.Fatalf("Unexpected call to StorageMock.Clone. %v %v %v %v", p, p1, p2, p3)
 		return
 	}
 
-	return m.CloneFunc(p, p1, p2)
+	return m.CloneFunc(p, p1, p2, p3)
 }
 
 //CloneMinimockCounter returns a count of StorageMock.CloneFunc invocations

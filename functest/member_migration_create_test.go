@@ -30,7 +30,6 @@ import (
 func TestMemberMigrationCreate(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
-	member.ref = root.ref
 	ba := testutils.RandomString()
 	_, _ = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
 	result, err := retryableMemberMigrationCreate(member, true)
@@ -44,14 +43,12 @@ func TestMemberMigrationCreate(t *testing.T) {
 func TestMemberMigrationCreateWhenNoBurnAddressesLeft(t *testing.T) {
 	member1, err := newUserWithKeys()
 	require.NoError(t, err)
-	member1.ref = root.ref
 	addBurnAddress(t)
 	_, err = retryableMemberMigrationCreate(member1, true)
 	require.Nil(t, err)
 
 	member2, err := newUserWithKeys()
 	require.NoError(t, err)
-	member2.ref = root.ref
 
 	_, err = retryableMemberMigrationCreate(member2, true)
 	require.NotNil(t, err)
@@ -61,7 +58,6 @@ func TestMemberMigrationCreateWhenNoBurnAddressesLeft(t *testing.T) {
 func TestMemberMigrationCreateWithBadKey(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
-	member.ref = root.ref
 	member.pubKey = "fake"
 	_, err = retryableMemberMigrationCreate(member, false)
 	require.NotNil(t, err)
@@ -71,7 +67,6 @@ func TestMemberMigrationCreateWithBadKey(t *testing.T) {
 func TestMemberMigrationCreateWithSamePublicKey(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
-	member.ref = root.ref
 
 	addBurnAddress(t)
 
@@ -86,7 +81,6 @@ func TestMemberMigrationCreateWithSamePublicKey(t *testing.T) {
 
 	memberForBurn, err := newUserWithKeys()
 	require.NoError(t, err)
-	memberForBurn.ref = root.ref
 
 	_, err = retryableMemberMigrationCreate(memberForBurn, true)
 }
@@ -94,7 +88,6 @@ func TestMemberMigrationCreateWithSamePublicKey(t *testing.T) {
 func TestMemberMigrationCreateWithSameBurnAddress(t *testing.T) {
 	member1, err := newUserWithKeys()
 	require.NoError(t, err)
-	member1.ref = root.ref
 
 	ba := testutils.RandomString()
 	_, _ = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba, ba}})
@@ -104,7 +97,6 @@ func TestMemberMigrationCreateWithSameBurnAddress(t *testing.T) {
 
 	member2, err := newUserWithKeys()
 	require.NoError(t, err)
-	member2.ref = root.ref
 
 	_, err = retryableMemberMigrationCreate(member2, true)
 	require.NotNil(t, err)

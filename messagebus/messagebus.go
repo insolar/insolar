@@ -50,19 +50,12 @@ import (
 const deliverRPCMethodName = "MessageBus.Deliver"
 
 var transferredToWatermill = map[insolar.MessageType]struct{}{
-	insolar.TypeSetBlob:                            {},
 	insolar.TypeGetChildren:                        {},
-	insolar.TypeUpdateObject:                       {},
-	insolar.TypeGetPendingRequests:                 {},
 	insolar.TypeRegisterChild:                      {},
-	insolar.TypeGetJet:                             {},
 	insolar.TypeCallMethod:                         {},
 	insolar.TypePendingFinished:                    {},
 	insolar.TypeStillExecuting:                     {},
-	insolar.TypeAbandonedRequestsNotification:      {},
 	insolar.TypeExecutorResults:                    {},
-	insolar.TypeGetPendingRequestID:                {},
-	insolar.TypeGetDelegate:                        {},
 	insolar.TypeAdditionalCallFromPreviousExecutor: {},
 	insolar.TypeHeavyPayload:                       {},
 	insolar.TypeGetObjectIndex:                     {},
@@ -409,15 +402,8 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel insolar.Parcel, loc
 		// Parcel is from past. Return error for some messages, allow for others.
 		switch parcel.Message().(type) {
 		case
-			*message.GetObject,
-			*message.GetDelegate,
 			*message.GetChildren,
-			*message.SetRecord,
-			*message.UpdateObject,
 			*message.RegisterChild,
-			*message.SetBlob,
-			*message.GetPendingRequests,
-			*message.ValidateRecord,
 			*message.CallMethod:
 			inslogger.FromContext(ctx).Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d) Msg: %s", ppn, pulse.PulseNumber, parcel.Message().Type().String())
 			return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)  Msg: %s", ppn, pulse.PulseNumber, parcel.Message().Type().String())

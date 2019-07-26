@@ -266,7 +266,7 @@ func TestPCTCreateBuilder(t *testing.T) {
 	sp := profiles.NewStaticProfileMock(t)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
 	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}},
-		slots: []updatableSlot{updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}}
+		slots: []updatableSlot{{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}}
 
 	pct := PrimingCensusTemplate{chronicles: chronicles, online: population}
 	builder := pct.CreateBuilder(context.Background(), pn)
@@ -386,7 +386,7 @@ func TestECTCreateBuilder(t *testing.T) {
 	sp := profiles.NewStaticProfileMock(t)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
 	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}},
-		slots: []updatableSlot{updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}}
+		slots: []updatableSlot{{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}}
 
 	ect := ExpectedCensusTemplate{chronicles: chronicles, online: population}
 	builder := ect.CreateBuilder(context.Background(), pn)

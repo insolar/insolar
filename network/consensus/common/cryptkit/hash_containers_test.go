@@ -439,7 +439,7 @@ func TestGetSignatureKeyMethod(t *testing.T) {
 func TestGetSignatureKeyType(t *testing.T) {
 	fd := longbits.NewFoldableReaderMock(t)
 	kt := PublicAsymmetricKey
-	sk := NewSignatureKey(fd, SignatureMethod("test"), kt)
+	sk := NewSignatureKey(fd, "test", kt)
 	require.Equal(t, kt, sk.GetSignatureKeyType())
 }
 
@@ -447,13 +447,13 @@ func TestEquals(t *testing.T) {
 	fd := longbits.NewFoldableReaderMock(t)
 	fd.FixedByteSizeMock.Set(func() int { return 0 })
 	fd.WriteToMock.Set(func(io.Writer) (int64, error) { return 0, nil })
-	sk1 := NewSignatureKey(fd, SignatureMethod("test"), PublicAsymmetricKey)
-	sk2 := NewSignatureKey(fd, SignatureMethod("test"), PublicAsymmetricKey)
+	sk1 := NewSignatureKey(fd, "test", PublicAsymmetricKey)
+	sk2 := NewSignatureKey(fd, "test", PublicAsymmetricKey)
 	require.False(t, sk1.Equals(&sk2))
 }
 
 func TestSignatureKeyString(t *testing.T) {
 	fd := longbits.NewFoldableReaderMock(t)
-	sk := NewSignatureKey(fd, SignatureMethod("test"), PublicAsymmetricKey)
+	sk := NewSignatureKey(fd, "test", PublicAsymmetricKey)
 	require.NotEmpty(t, sk.String())
 }

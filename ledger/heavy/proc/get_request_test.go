@@ -58,7 +58,7 @@ func TestGetRequest_Proceed(t *testing.T) {
 			rep := payload.Error{}
 			err := rep.Unmarshal(msg.Payload)
 			require.NoError(t, err)
-			require.Equal(t, int(rep.Code), payload.CodeObjectNotFound)
+			require.Equal(t, int(rep.Code), payload.CodeNotFound)
 			require.Equal(t, rep.Text, object.ErrNotFound.Error())
 		}
 		p := newProc(payload.Meta{})

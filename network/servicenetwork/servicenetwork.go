@@ -55,19 +55,19 @@ import (
 	"context"
 	"crypto/rand"
 	"sync"
+	"time"
 
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/network/consensus"
+	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/serialization"
-	"github.com/insolar/insolar/network/node"
-
-	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/network/consensus"
-	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/gateway"
 	"github.com/insolar/insolar/network/gateway/bootstrap"
+	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/network/rules"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -76,6 +76,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller"
 	"github.com/insolar/insolar/network/hostnetwork"
@@ -100,6 +101,7 @@ type ServiceNetwork struct {
 	TransportFactory    transport.Factory                  `inject:""`
 	NodeKeeper          network.NodeKeeper                 `inject:""`
 	TerminationHandler  insolar.TerminationHandler         `inject:""`
+	ContractRequester   insolar.ContractRequester          `inject:""`
 
 	// watermill support interfaces
 	Pub message.Publisher `inject:""`
@@ -127,9 +129,12 @@ type ServiceNetwork struct {
 	lock sync.Mutex
 }
 
+var PULSETIMEOUT time.Duration
+
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manager) (*ServiceNetwork, error) {
 	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, ConsensusMode: consensus.Joiner}
+	PULSETIMEOUT = time.Millisecond * time.Duration(conf.Pulsar.PulseTime)
 	return serviceNetwork, nil
 }
 
@@ -190,6 +195,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		network.NewRules(),
 		n.BaseGateway,
 		n.Gatewayer,
+		rules.NewRules(),
 	)
 
 	// sign origin

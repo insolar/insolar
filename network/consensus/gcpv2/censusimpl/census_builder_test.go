@@ -76,7 +76,7 @@ func TestNewLocalCensusBuilder(t *testing.T) {
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
 
 	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}},
-		slots: []updatableSlot{updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}}
+		slots: []updatableSlot{{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}}
 	lcb := newLocalCensusBuilder(context.Background(), chronicles, pn, population)
 	require.Equal(t, pn, lcb.populationBuilder.census.pulseNumber)
 }

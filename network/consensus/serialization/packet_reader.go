@@ -126,7 +126,12 @@ func newPacketParser(
 	})
 
 	if logger.Is(insolar.DebugLevel) {
-		logger.Debugf("Received packet s:%d t:%d payload:{%s}", parser.GetSourceID(), parser.GetTargetID(), parser.packet)
+		logger.Debugf(
+			"Received packet s:%d t:%d pt:%s payload:{%s}",
+			parser.GetSourceID(),
+			parser.GetTargetID(),
+			parser.GetPacketType(),
+			parser.packet)
 	}
 
 	parser.data = capture.Captured()
@@ -648,6 +653,10 @@ func (r *JoinerAnnouncementReader) HasFullIntro() bool {
 }
 
 func (r *JoinerAnnouncementReader) GetFullIntroduction() transport.FullIntroductionReader {
+	if !r.HasFullIntro() {
+		return nil
+	}
+
 	return &FullIntroductionReader{
 		MemberPacketReader: r.MemberPacketReader,
 		intro: NodeFullIntro{
@@ -732,6 +741,18 @@ func (r *NeighbourAnnouncementReader) GetJoinerID() insolar.ShortNodeID {
 }
 
 func (r *NeighbourAnnouncementReader) GetJoinerAnnouncement() transport.JoinerAnnouncementReader {
+	if !r.isJoiner() {
+		return nil
+	}
+
+	if r.IsLeaving() {
+		return nil
+	}
+
+	if r.neighbour.NeighbourNodeID == r.body.Announcement.Member.AnnounceID {
+		return nil
+	}
+
 	return &JoinerAnnouncementReader{
 		MemberPacketReader: r.MemberPacketReader,
 		joiner:             r.neighbour.Joiner,

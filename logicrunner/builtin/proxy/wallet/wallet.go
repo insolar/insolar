@@ -18,8 +18,8 @@ package wallet
 
 import (
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 // PrototypeReference to prototype of this contract
@@ -48,15 +48,6 @@ func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*Wallet, 
 	return &Wallet{Reference: ref}, nil
 }
 
-// AsDelegate saves object as delegate
-func (r *ContractConstructorHolder) AsDelegate(objRef insolar.Reference) (*Wallet, error) {
-	ref, err := common.CurrentProxyCtx.SaveAsDelegate(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
-	if err != nil {
-		return nil, err
-	}
-	return &Wallet{Reference: ref}, nil
-}
-
 // GetObject returns proxy object
 func GetObject(ref insolar.Reference) (r *Wallet) {
 	return &Wallet{Reference: ref}
@@ -65,15 +56,6 @@ func GetObject(ref insolar.Reference) (r *Wallet) {
 // GetPrototype returns reference to the prototype
 func GetPrototype() insolar.Reference {
 	return *PrototypeReference
-}
-
-// GetImplementationFrom returns proxy to delegate of given type
-func GetImplementationFrom(object insolar.Reference) (*Wallet, error) {
-	ref, err := common.CurrentProxyCtx.GetDelegate(object, *PrototypeReference)
-	if err != nil {
-		return nil, err
-	}
-	return GetObject(ref), nil
 }
 
 // New is constructor
@@ -155,10 +137,11 @@ func (r *Wallet) GetCode() (insolar.Reference, error) {
 }
 
 // Transfer is proxy generated method
-func (r *Wallet) Transfer(amountStr string, toMember *insolar.Reference) (interface{}, error) {
-	var args [2]interface{}
-	args[0] = amountStr
-	args[1] = toMember
+func (r *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toMember *insolar.Reference) (interface{}, error) {
+	var args [3]interface{}
+	args[0] = rootDomainRef
+	args[1] = amountStr
+	args[2] = toMember
 
 	var argsSerialized []byte
 
@@ -190,10 +173,11 @@ func (r *Wallet) Transfer(amountStr string, toMember *insolar.Reference) (interf
 }
 
 // TransferNoWait is proxy generated method
-func (r *Wallet) TransferNoWait(amountStr string, toMember *insolar.Reference) error {
-	var args [2]interface{}
-	args[0] = amountStr
-	args[1] = toMember
+func (r *Wallet) TransferNoWait(rootDomainRef insolar.Reference, amountStr string, toMember *insolar.Reference) error {
+	var args [3]interface{}
+	args[0] = rootDomainRef
+	args[1] = amountStr
+	args[2] = toMember
 
 	var argsSerialized []byte
 
@@ -211,10 +195,11 @@ func (r *Wallet) TransferNoWait(amountStr string, toMember *insolar.Reference) e
 }
 
 // TransferAsImmutable is proxy generated method
-func (r *Wallet) TransferAsImmutable(amountStr string, toMember *insolar.Reference) (interface{}, error) {
-	var args [2]interface{}
-	args[0] = amountStr
-	args[1] = toMember
+func (r *Wallet) TransferAsImmutable(rootDomainRef insolar.Reference, amountStr string, toMember *insolar.Reference) (interface{}, error) {
+	var args [3]interface{}
+	args[0] = rootDomainRef
+	args[1] = amountStr
+	args[2] = toMember
 
 	var argsSerialized []byte
 
@@ -314,6 +299,90 @@ func (r *Wallet) AcceptAsImmutable(amountStr string) error {
 	}
 
 	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "Accept", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	if err != nil {
+		return err
+	}
+
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
+}
+
+// RollBack is proxy generated method
+func (r *Wallet) RollBack(amountStr string) error {
+	var args [1]interface{}
+	args[0] = amountStr
+
+	var argsSerialized []byte
+
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "RollBack", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	if err != nil {
+		return err
+	}
+
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
+}
+
+// RollBackNoWait is proxy generated method
+func (r *Wallet) RollBackNoWait(amountStr string) error {
+	var args [1]interface{}
+	args[0] = amountStr
+
+	var argsSerialized []byte
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "RollBack", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// RollBackAsImmutable is proxy generated method
+func (r *Wallet) RollBackAsImmutable(amountStr string) error {
+	var args [1]interface{}
+	args[0] = amountStr
+
+	var argsSerialized []byte
+
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "RollBack", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}

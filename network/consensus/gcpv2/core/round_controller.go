@@ -295,11 +295,14 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 			fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v, source=%v, local=%d", filterPN, pn, sourceID, localID))
 	}
 
+	// TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
+	defaultOptions := packetrecorder.SkipVerify // packetrecorder.DefaultVerify
+
 	if prep != nil {
 		if !pn.IsUnknown() {
 			r.roundWorker.OnPulseDetected()
 		}
-		return prep.dispatchPacket(ctx, packet, from, packetrecorder.DefaultVerify|packetrecorder.SkipVerify) // prep realm can't inherit any flags
+		return prep.dispatchPacket(ctx, packet, from, defaultOptions) // prep realm can't inherit any flags
 	}
-	return r.realm.dispatchPacket(ctx, packet, from, verifyFlags|packetrecorder.SkipVerify)
+	return r.realm.dispatchPacket(ctx, packet, from, verifyFlags|defaultOptions)
 }

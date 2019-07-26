@@ -22,9 +22,10 @@ import (
 	"fmt"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -39,9 +40,11 @@ const (
 )
 
 type Dependencies struct {
-	Publisher message.Publisher
-	lr        *LogicRunner
-	Sender    bus.Sender
+	Publisher      message.Publisher
+	StateStorage   StateStorage
+	ResultsMatcher ResultMatcher
+	lr             *LogicRunner
+	Sender         bus.Sender
 }
 
 type Init struct {
@@ -77,6 +80,12 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	switch payloadType {
 	case payload.TypeSagaCallAcceptNotification:
 		h := &HandleSagaCallAcceptNotification{
+			dep:  s.dep,
+			meta: meta,
+		}
+		return f.Handle(ctx, h.Present)
+	case payload.TypeAbandonedRequestsNotification:
+		h := &HandleAbandonedRequestsNotification{
 			dep:  s.dep,
 			meta: meta,
 		}
@@ -126,13 +135,6 @@ func (s *Init) handleParcel(ctx context.Context, f flow.Flow) error {
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeStillExecuting.String():
 		h := &HandleStillExecuting{
-			dep:     s.dep,
-			Message: meta,
-			Parcel:  parcel,
-		}
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeAbandonedRequestsNotification.String():
-		h := &HandleAbandonedRequestsNotification{
 			dep:     s.dep,
 			Message: meta,
 			Parcel:  parcel,

@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -39,7 +40,7 @@ type GetCode struct {
 		RecordAccessor object.RecordAccessor
 		Coordinator    jet.Coordinator
 		Sender         bus.Sender
-		JetFetcher     jet.Fetcher
+		JetFetcher     executor.JetFetcher
 	}
 }
 

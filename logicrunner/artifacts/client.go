@@ -120,10 +120,13 @@ func NewClient(sender bus.Sender) *client { // nolint
 
 // registerRequest registers incoming or outgoing request.
 func (m *client) registerRequest(
-	ctx context.Context, req record.Record, msgPayload payload.Payload, callType record.CallType,
-	objectRef *insolar.Reference, retriesNumber int,
+	ctx context.Context, req record.Request, msgPayload payload.Payload, retriesNumber int,
 ) (*insolar.ID, error) {
-	var err error
+	affinityRef, err := m.calculateAffinityReference(ctx, req)
+	if err != nil {
+		return nil, errors.Wrap(err, "registerRequest: failed to calculate affinity reference")
+	}
+
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.registerRequest")
 	instrumenter := instrument(ctx, "registerRequest").err(&err)
 	defer func() {
@@ -134,32 +137,7 @@ func (m *client) registerRequest(
 		instrumenter.end()
 	}()
 
-	virtRec := record.Wrap(req)
-	buf, err := virtRec.Marshal()
-	if err != nil {
-		return nil, errors.Wrap(err, "registerRequest: failed to marshal record")
-	}
-
-	h := m.PCS.ReferenceHasher()
-	_, err = h.Write(buf)
-	if err != nil {
-		return nil, errors.Wrap(err, "registerRequest: failed to calculate hash")
-	}
-
-	var recRef *insolar.Reference
-	switch callType {
-	case record.CTMethod:
-		recRef = objectRef
-	case record.CTSaveAsChild, record.CTSaveAsDelegate, record.CTGenesis:
-		recRef, err = m.genReferenceForCallTypeOtherThanCTMethod(ctx)
-	default:
-		err = errors.New("registerRequest: not supported call type " + callType.String())
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	pl, err := m.sendWithRetry(ctx, msgPayload, insolar.DynamicRoleLightExecutor, *recRef, retriesNumber)
+	pl, err := m.sendWithRetry(ctx, msgPayload, insolar.DynamicRoleLightExecutor, *affinityRef, retriesNumber)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't register request")
 	}
@@ -174,26 +152,24 @@ func (m *client) registerRequest(
 	}
 }
 
-func (m *client) genReferenceForCallTypeOtherThanCTMethod(ctx context.Context) (*insolar.Reference, error) {
-	h := m.PCS.ReferenceHasher()
-	currentPN, err := m.pulse(ctx)
+func (m *client) calculateAffinityReference(ctx context.Context, requestRecord record.Request) (*insolar.Reference, error) {
+	pulseNumber, err := m.pulse(ctx)
 	if err != nil {
 		return nil, err
 	}
-	recID := *insolar.NewID(currentPN, h.Sum(nil))
-	return insolar.NewReference(recID), nil
+	return record.CalculateRequestAffinityRef(requestRecord, pulseNumber, m.PCS), nil
+	// recID := *insolar.NewID(currentPN, h.Sum(nil))
+	// return insolar.NewReference(recID), nil
 }
 
 // RegisterIncomingRequest sends message for incoming request registration,
 // returns request record Ref if request successfully created or already exists.
-func (m *client) RegisterIncomingRequest(
-	ctx context.Context, request *record.IncomingRequest,
-) (*insolar.ID, error) {
+func (m *client) RegisterIncomingRequest(ctx context.Context, request *record.IncomingRequest) (*insolar.ID, error) {
 	incomingRequest := &payload.SetIncomingRequest{Request: record.Wrap(request)}
 
 	// retriesNumber is zero, because we don't retry registering of incoming requests - the caller should
 	// re-send the request instead.
-	id, err := m.registerRequest(ctx, request, incomingRequest, request.CallType, request.AffinityRef(), 0)
+	id, err := m.registerRequest(ctx, request, incomingRequest, 0)
 	if err != nil {
 		return id, errors.Wrap(err, "RegisterIncomingRequest")
 	}
@@ -204,7 +180,7 @@ func (m *client) RegisterIncomingRequest(
 // returns request record Ref if request successfully created or already exists.
 func (m *client) RegisterOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) (*insolar.ID, error) {
 	outgoingRequest := &payload.SetOutgoingRequest{Request: record.Wrap(request)}
-	id, err := m.registerRequest(ctx, request, outgoingRequest, request.CallType, request.AffinityRef(), 3)
+	id, err := m.registerRequest(ctx, request, outgoingRequest, 3)
 	if err != nil {
 		return id, errors.Wrap(err, "RegisterOutgoingRequest")
 	}
@@ -409,19 +385,14 @@ func (m *client) GetIncomingRequest(
 		instrumenter.end()
 	}()
 
-	requestID := reqRef.Record()
-	node, err := m.JetCoordinator.NodeForObject(ctx, *object.Record(), requestID.Pulse())
-	if err != nil {
-		return nil, err
-	}
-
 	msg, err := payload.NewMessage(&payload.GetRequest{
-		RequestID: *requestID,
+		ObjectID:  *object.Record(),
+		RequestID: *reqRef.Record(),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create a message")
 	}
-	reps, done := m.sender.SendTarget(ctx, msg, *node)
+	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, object)
 	defer done()
 	res, ok := <-reps
 	if !ok {
@@ -459,77 +430,52 @@ func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]i
 		instrumenter.end()
 	}()
 
-	sender := messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(m.PulseAccessor),
-		messagebus.RetryJetSender(m.JetStorage),
-	)
-
-	genericReply, err := sender(ctx, &message.GetPendingRequestID{
+	msg, err := payload.NewMessage(&payload.GetPendings{
 		ObjectID: *object.Record(),
-	}, nil)
+	})
+
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "GetPendings: failed to create a message")
 	}
 
-	var IDs []insolar.ID
-	switch r := genericReply.(type) {
-	case *reply.IDs:
-		IDs = r.IDs
-	case *reply.Error:
-		return nil, r.Error()
+	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, object)
+
+	defer done()
+	res, ok := <-reps
+	if !ok {
+		return []insolar.Reference{}, errors.New("GetPendings: no reply")
+	}
+
+	pl, err := payload.UnmarshalFromMeta(res.Payload)
+	if err != nil {
+		return []insolar.Reference{}, errors.Wrap(err, "GetPendings: failed to unmarshal reply")
+	}
+
+	switch concrete := pl.(type) {
+	case *payload.IDs:
+		res := make([]insolar.Reference, len(concrete.IDs))
+		for i := range concrete.IDs {
+			res[i] = *insolar.NewReference(concrete.IDs[i])
+		}
+		return res, nil
+	case *payload.Error:
+		if concrete.Code == payload.CodeNoPendings {
+			return []insolar.Reference{}, insolar.ErrNoPendingRequest
+		}
+		return []insolar.Reference{}, errors.New(concrete.Text)
 	default:
-		return nil, fmt.Errorf("GetPendingRequest: unexpected reply: %#v", genericReply)
+		return []insolar.Reference{}, fmt.Errorf("unexpected reply %T", pl)
 	}
-
-	res := make([]insolar.Reference, len(IDs))
-	for i := range IDs {
-		res[i] = *insolar.NewReference(IDs[i])
-	}
-
-	return res, nil
 }
 
-// HasPendingRequests returns true if object has unclosed requests.
-func (m *client) HasPendingRequests(
+// HasPendings returns true if object has unclosed requests.
+func (m *client) HasPendings(
 	ctx context.Context,
 	object insolar.Reference,
 ) (bool, error) {
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.HasPendingRequests")
-	defer span.End()
-
-	sender := messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(m.PulseAccessor),
-		messagebus.RetryJetSender(m.JetStorage),
-	)
-
-	genericReact, err := sender(ctx, &message.GetPendingRequests{Object: object}, nil)
-
-	if err != nil {
-		return false, err
-	}
-
-	switch rep := genericReact.(type) {
-	case *reply.HasPendingRequests:
-		return rep.Has, nil
-	case *reply.Error:
-		return false, rep.Error()
-	default:
-		return false, fmt.Errorf("HasPendingRequests: unexpected reply: %#v", rep)
-	}
-}
-
-// GetDelegate returns provided object's delegate reference for provided prototype.
-//
-// Object delegate should be previously created for this object. If object delegate does not exist, an error will
-// be returned.
-func (m *client) GetDelegate(
-	ctx context.Context, head, asType insolar.Reference,
-) (*insolar.Reference, error) {
 	var err error
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetDelegate")
-	instrumenter := instrument(ctx, "GetDelegate").err(&err)
+	instrumenter := instrument(ctx, "HasPendings").err(&err)
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.HasPendings")
 	defer func() {
 		if err != nil {
 			span.AddAttributes(trace.StringAttribute("error", err.Error()))
@@ -538,27 +484,34 @@ func (m *client) GetDelegate(
 		instrumenter.end()
 	}()
 
-	sender := messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(m.PulseAccessor),
-		messagebus.FollowRedirectSender(m.DefaultBus),
-		messagebus.RetryJetSender(m.JetStorage),
-	)
-	genericReact, err := sender(ctx, &message.GetDelegate{
-		Head:   head,
-		AsType: asType,
-	}, nil)
+	msg, err := payload.NewMessage(&payload.HasPendings{
+		ObjectID: *object.Record(),
+	})
+
 	if err != nil {
-		return nil, err
+		return false, errors.Wrap(err, "HasPendings: failed to create a message")
 	}
 
-	switch rep := genericReact.(type) {
-	case *reply.Delegate:
-		return &rep.Head, nil
-	case *reply.Error:
-		return nil, rep.Error()
+	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, object)
+
+	defer done()
+	res, ok := <-reps
+	if !ok {
+		return false, errors.New("HasPendings: no reply")
+	}
+
+	pl, err := payload.UnmarshalFromMeta(res.Payload)
+	if err != nil {
+		return false, errors.Wrap(err, "HasPendings: failed to unmarshal reply")
+	}
+
+	switch concrete := pl.(type) {
+	case *payload.PendingsInfo:
+		return concrete.HasPendings, nil
+	case *payload.Error:
+		return false, errors.New(concrete.Text)
 	default:
-		return nil, fmt.Errorf("GetDelegate: unexpected reply: %#v", rep)
+		return false, fmt.Errorf("HasPendings: unexpected reply %T", pl)
 	}
 }
 
@@ -720,43 +673,6 @@ func (m *client) ActivatePrototype(
 		instrumenter.end()
 	}()
 	err = m.activateObject(ctx, object, code, true, parent, false, memory)
-	return err
-}
-
-// RegisterValidation marks provided object state as approved or disapproved.
-//
-// When fetching object, validity can be specified.
-func (m *client) RegisterValidation(
-	ctx context.Context,
-	object insolar.Reference,
-	state insolar.ID,
-	isValid bool,
-	validationMessages []insolar.Message,
-) error {
-	var err error
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.RegisterValidation")
-	instrumenter := instrument(ctx, "RegisterValidation").err(&err)
-	defer func() {
-		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
-		}
-		span.End()
-		instrumenter.end()
-	}()
-
-	msg := message.ValidateRecord{
-		Object:             object,
-		State:              state,
-		IsValid:            isValid,
-		ValidationMessages: validationMessages,
-	}
-
-	sender := messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryJetSender(m.JetStorage),
-	)
-	_, err = sender(ctx, &msg, nil)
-
 	return err
 }
 
@@ -959,7 +875,7 @@ func (m *client) RegisterResult(
 	//
 	// Request reference will be this object's identifier and referred as "object head".
 	case RequestSideEffectActivate:
-		parentRef, imageRef, asDelegate, memory := result.Activate()
+		parentRef, imageRef, memory := result.Activate()
 
 		parentDesc, err = m.GetObject(ctx, parentRef)
 		if err != nil {
@@ -973,7 +889,6 @@ func (m *client) RegisterResult(
 			Image:       imageRef,
 			IsPrototype: false,
 			Parent:      parentRef,
-			IsDelegate:  asDelegate,
 		})
 
 		plTyped := payload.Activate{}
@@ -1058,7 +973,7 @@ func (m *client) RegisterResult(
 	}
 
 	if result.Type() == RequestSideEffectActivate {
-		parentRef, imageRef, asDelegate, _ := result.Activate()
+		parentRef, _, _ := result.Activate()
 
 		var asType *insolar.Reference
 
@@ -1068,9 +983,6 @@ func (m *client) RegisterResult(
 
 		if parentDesc.ChildPointer() != nil {
 			child.PrevChild = *parentDesc.ChildPointer()
-		}
-		if asDelegate {
-			asType = &imageRef
 		}
 
 		err = m.registerChild(

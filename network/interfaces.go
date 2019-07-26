@@ -69,7 +69,6 @@ type RequestHandler func(ctx context.Context, request ReceivedPacket) (response 
 
 // HostNetwork simple interface to send network requests and process network responses.
 type HostNetwork interface {
-	component.Initer
 	component.Starter
 	component.Stopper
 
@@ -225,6 +224,8 @@ type Bootstrapper interface {
 	HandleUpdateSchedule(context.Context, Packet) (Packet, error)
 	HandleReconnect(context.Context, Packet) (Packet, error)
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network.Rules -o ../testutils/network -s _mock.go
 
 // Rules are responsible for a majority and minimum roles checking
 type Rules interface {

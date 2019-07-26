@@ -19,25 +19,27 @@ package logicrunner
 import (
 	"context"
 	"math"
+	"sync"
 	"testing"
 	"time"
 
 	wmMessage "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar/bus"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/testutils"
-	"github.com/insolar/insolar/testutils/network"
 )
 
 type publisherMock struct{}
@@ -62,196 +64,6 @@ func wait(check func(...interface{}) bool, args ...interface{}) bool {
 	return false
 }
 
-type TranscriptDequeueSuite struct{ suite.Suite }
-
-func TestTranscriptDequeue(t *testing.T) { suite.Run(t, new(TranscriptDequeueSuite)) }
-
-func (s *TranscriptDequeueSuite) TestBasic() {
-	d := NewTranscriptDequeue()
-	s.Require().NotNil(d)
-
-	// [] + [1, 2]
-	d.Push(&Transcript{Nonce: 1}, &Transcript{Nonce: 2})
-
-	// 1, [2]
-	tr := d.Pop()
-	s.Require().NotNil(tr)
-	s.Equal(uint64(1), tr.Nonce)
-
-	// [3, 4] + [2]
-	d.Prepend(&Transcript{Nonce: 3}, &Transcript{Nonce: 4})
-
-	// 3, [4, 2]
-	tr = d.Pop()
-	s.Require().NotNil(tr)
-	s.Equal(uint64(3), tr.Nonce)
-
-	// 4, [2]
-	tr = d.Pop()
-	s.Require().NotNil(tr)
-	s.Equal(uint64(4), tr.Nonce)
-
-	// 2, []
-	tr = d.Pop()
-	s.Require().NotNil(tr)
-	s.Equal(uint64(2), tr.Nonce)
-
-	// nil, []
-	s.Nil(d.Pop())
-}
-
-func (s *TranscriptDequeueSuite) TestRotate() {
-	d := NewTranscriptDequeue()
-	s.Require().NotNil(d)
-
-	d.Push(&Transcript{Nonce: 1}, &Transcript{Nonce: 2})
-
-	rotated := d.Rotate()
-	s.Require().Len(rotated, 2)
-
-	s.Nil(d.Pop())
-
-	rotated = d.Rotate()
-	s.Require().Len(rotated, 0)
-
-	s.Nil(d.Pop())
-}
-
-func (s *TranscriptDequeueSuite) TestHasFromLedger() {
-	d := NewTranscriptDequeue()
-	s.Require().NotNil(d)
-
-	d.Prepend(&Transcript{Nonce: 3}, &Transcript{Nonce: 4})
-	s.False(d.HasFromLedger() != nil)
-
-	d.Push(&Transcript{FromLedger: true})
-	s.True(d.HasFromLedger() != nil)
-
-	d.Push(&Transcript{FromLedger: true})
-	s.True(d.HasFromLedger() != nil)
-}
-
-func (s *TranscriptDequeueSuite) TestPopByReference() {
-	d := NewTranscriptDequeue()
-	s.Require().NotNil(d)
-
-	ref1, ref2, ref3 := gen.Reference(), gen.Reference(), gen.Reference()
-
-	d.Prepend(
-		&Transcript{Nonce: 3, RequestRef: ref1},
-		&Transcript{Nonce: 4, RequestRef: ref2},
-		&Transcript{Nonce: 5, RequestRef: ref3},
-	)
-
-	tr := d.PopByReference(ref2)
-	s.Require().NotNil(tr)
-	s.Require().Equal(tr.RequestRef.Bytes(), ref2.Bytes())
-
-	tr = d.PopByReference(ref2)
-	s.Nil(tr)
-
-	s.Nil(d.first.prev)
-	s.Equal(d.first.next, d.last)
-	s.Nil(d.last.next)
-	s.Equal(d.last.prev, d.first)
-	s.Equal(d.first.value.Nonce, uint64(3))
-	s.Equal(d.last.value.Nonce, uint64(5))
-
-	s.Equal(d.Length(), 2)
-}
-
-func (s *TranscriptDequeueSuite) TestPopByReferenceHead() {
-	d := NewTranscriptDequeue()
-	s.Require().NotNil(d)
-
-	ref1, ref2, ref3 := gen.Reference(), gen.Reference(), gen.Reference()
-	el1 := &Transcript{Nonce: 3, RequestRef: ref1}
-	el2 := &Transcript{Nonce: 4, RequestRef: ref2}
-	el3 := &Transcript{Nonce: 5, RequestRef: ref3}
-	d.Prepend(el1, el2, el3)
-
-	tr := d.PopByReference(ref1)
-	s.Require().NotNil(tr)
-	s.Require().Equal(tr.RequestRef.Bytes(), ref1.Bytes())
-
-	s.Nil(d.first.prev)
-	s.Equal(d.first.next, d.last)
-	s.Nil(d.last.next)
-	s.Equal(d.last.prev, d.first)
-	s.Equal(d.first.value.Nonce, uint64(4))
-	s.Equal(d.last.value.Nonce, uint64(5))
-
-	s.Equal(d.Length(), 2)
-}
-
-func (s *TranscriptDequeueSuite) TestPopByReferenceTail() {
-	d := NewTranscriptDequeue()
-	s.Require().NotNil(d)
-
-	ref1, ref2, ref3 := gen.Reference(), gen.Reference(), gen.Reference()
-	el1 := &Transcript{Nonce: 3, RequestRef: ref1}
-	el2 := &Transcript{Nonce: 4, RequestRef: ref2}
-	el3 := &Transcript{Nonce: 5, RequestRef: ref3}
-	d.Prepend(el1, el2, el3)
-
-	tr := d.PopByReference(ref3)
-	s.Require().NotNil(tr)
-	s.Require().Equal(tr.RequestRef.Bytes(), ref3.Bytes())
-
-	s.Nil(d.first.prev)
-	s.Equal(d.first.next, d.last)
-	s.Nil(d.last.next)
-	s.Equal(d.last.prev, d.first)
-	s.Equal(d.first.value.Nonce, uint64(3))
-	s.Equal(d.last.value.Nonce, uint64(4))
-
-	s.Equal(d.Length(), 2)
-}
-
-func (s *TranscriptDequeueSuite) TestPopByReferenceOneElement() {
-	d := NewTranscriptDequeue()
-	s.Require().NotNil(d)
-
-	ref1 := gen.Reference()
-
-	d.Prepend(
-		&Transcript{Nonce: 3, RequestRef: ref1},
-	)
-
-	tr := d.PopByReference(ref1)
-	s.Require().NotNil(tr)
-	s.Require().Equal(tr.RequestRef.Bytes(), ref1.Bytes())
-
-	s.Nil(d.first)
-	s.Nil(d.last)
-	s.Equal(d.Length(), 0)
-}
-
-func (s *TranscriptDequeueSuite) TestTake() {
-	d := NewTranscriptDequeue()
-	s.Require().NotNil(d)
-
-	for i := 0; i < 15; i++ {
-		d.Push(&Transcript{Nonce: uint64(i)})
-	}
-
-	trs := d.Take(0)
-	s.Require().NotNil(d)
-	s.Len(trs, 0)
-
-	trs = d.Take(10)
-	s.Require().NotNil(d)
-	s.Len(trs, 10)
-
-	trs = d.Take(10)
-	s.Require().NotNil(d)
-	s.Len(trs, 5)
-
-	trs = d.Take(10)
-	s.Require().NotNil(d)
-	s.Len(trs, 0)
-}
-
 type ExecutionBrokerSuite struct {
 	suite.Suite
 	Context    context.Context
@@ -272,45 +84,6 @@ func waitOnChannel(channel chan struct{}) bool {
 	case <-time.After(1 * time.Minute):
 		return false
 	}
-}
-
-func channelIsEmpty(channel chan struct{}) bool {
-	select {
-	case <-channel:
-		return false
-	default:
-		return true
-	}
-}
-
-func (s *ExecutionBrokerSuite) prepareLogicRunner(t *testing.T) *LogicRunner {
-	sender := bus.NewSenderMock(s.Controller)
-	pm := &publisherMock{}
-	lr, _ := NewLogicRunner(&configuration.LogicRunner{}, pm, sender)
-
-	// initialize mocks
-	am := artifacts.NewClientMock(s.Controller)
-	dc := artifacts.NewDescriptorsCacheMock(s.Controller)
-	mm := &mmanager{}
-	re := NewRequestsExecutorMock(s.Controller)
-	mb := testutils.NewMessageBusMock(s.Controller)
-	jc := jet.NewCoordinatorMock(s.Controller)
-	ps := pulse.NewAccessorMock(s.Controller)
-	nn := network.NewNodeNetworkMock(s.Controller)
-
-	// initialize lr
-	lr.ArtifactManager = am
-	lr.DescriptorsCache = dc
-	lr.MessageBus = mb
-	lr.MachinesManager = mm
-	lr.JetCoordinator = jc
-	lr.PulseAccessor = ps
-	lr.NodeNetwork = nn
-	lr.RequestsExecutor = re
-
-	_ = lr.Init(s.Context)
-
-	return lr
 }
 
 func immutableCount(args ...interface{}) bool {
@@ -335,10 +108,8 @@ func processorStatus(args ...interface{}) bool {
 }
 
 func (s *ExecutionBrokerSuite) TestPut() {
-	lr := s.prepareLogicRunner(s.T())
-
 	waitChannel := make(chan struct{})
-	rem := lr.RequestsExecutor.(*RequestsExecutorMock)
+	rem := NewRequestsExecutorMock(s.T())
 	rem.ExecuteAndSaveMock.Set(func(_ context.Context, t *Transcript) (r insolar.Reply, r1 error) {
 		if !t.Request.Immutable {
 			waitChannel <- struct{}{}
@@ -348,8 +119,12 @@ func (s *ExecutionBrokerSuite) TestPut() {
 	rem.SendReplyMock.Return()
 
 	objectRef := gen.Reference()
-	b := lr.StateStorage.UpsertExecutionState(objectRef)
-	b.executionState.pending = message.NotPending
+	b := NewExecutionBroker(
+		objectRef,
+		nil, rem, nil,
+		nil, nil, nil,
+	)
+	b.pending = insolar.NotPending
 
 	tr := NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{})
 
@@ -368,19 +143,16 @@ func (s *ExecutionBrokerSuite) TestPut() {
 	s.Equal(b.immutable.Length(), 0)
 	s.Equal(b.finished.Length(), 2)
 
-	rotationResults := b.Rotate(10)
+	rotationResults := b.rotate(10)
 	s.Len(rotationResults.Requests, 0)
 	s.Equal(rotationResults.LedgerHasMoreRequests, false)
 	s.Len(rotationResults.Finished, 2)
-
-	_ = lr.Stop(s.Context)
 }
 
 func (s *ExecutionBrokerSuite) TestPrepend() {
-	lr := s.prepareLogicRunner(s.T())
 
 	waitChannel := make(chan struct{})
-	rem := lr.RequestsExecutor.(*RequestsExecutorMock)
+	rem := NewRequestsExecutorMock(s.T())
 	rem.ExecuteAndSaveMock.Set(func(_ context.Context, t *Transcript) (r insolar.Reply, r1 error) {
 		if !t.Request.Immutable {
 			waitChannel <- struct{}{}
@@ -390,8 +162,12 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 	rem.SendReplyMock.Return()
 
 	objectRef := gen.Reference()
-	b := lr.StateStorage.UpsertExecutionState(objectRef)
-	b.executionState.pending = message.NotPending
+	b := NewExecutionBroker(
+		objectRef,
+		nil, rem, nil,
+		nil, nil, nil,
+	)
+	b.pending = insolar.NotPending
 
 	reqRef1 := gen.Reference()
 	tr := NewTranscript(s.Context, reqRef1, record.IncomingRequest{})
@@ -410,21 +186,17 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 	s.Equal(b.immutable.Length(), 0)
 	s.Equal(b.finished.Length(), 2)
 
-	rotationResults := b.Rotate(10)
+	rotationResults := b.rotate(10)
 	s.Len(rotationResults.Requests, 0)
 	s.Equal(rotationResults.LedgerHasMoreRequests, false)
 	s.Len(rotationResults.Finished, 2)
-
-	_ = lr.Stop(s.Context)
 }
 
 func (s *ExecutionBrokerSuite) TestImmutable_NotPending() {
-	lr := s.prepareLogicRunner(s.T())
-
 	waitMutableChannel := make(chan struct{})
 	waitImmutableChannel := make(chan struct{})
 
-	rem := lr.RequestsExecutor.(*RequestsExecutorMock)
+	rem := NewRequestsExecutorMock(s.T())
 	rem.ExecuteAndSaveMock.Set(func(_ context.Context, t *Transcript) (r insolar.Reply, r1 error) {
 		if !t.Request.Immutable {
 			waitMutableChannel <- struct{}{}
@@ -436,8 +208,12 @@ func (s *ExecutionBrokerSuite) TestImmutable_NotPending() {
 	rem.SendReplyMock.Return()
 
 	objectRef := gen.Reference()
-	b := lr.StateStorage.UpsertExecutionState(objectRef)
-	b.executionState.pending = message.NotPending
+	b := NewExecutionBroker(
+		objectRef,
+		nil, rem, nil,
+		nil, nil, nil,
+	)
+	b.pending = insolar.NotPending
 
 	tr := NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{Immutable: true})
 
@@ -452,17 +228,13 @@ func (s *ExecutionBrokerSuite) TestImmutable_NotPending() {
 	s.Require().True(waitOnChannel(waitImmutableChannel), "failed to wait while processing is finished")
 	s.Require().True(wait(processorStatus, b, false))
 	s.Require().Empty(waitMutableChannel)
-
-	_ = lr.Stop(s.Context)
 }
 
 func (s *ExecutionBrokerSuite) TestImmutable_InPending() {
-	lr := s.prepareLogicRunner(s.T())
-
 	waitMutableChannel := make(chan struct{})
 	waitImmutableChannel := make(chan struct{})
 
-	rem := lr.RequestsExecutor.(*RequestsExecutorMock)
+	rem := NewRequestsExecutorMock(s.T())
 	rem.ExecuteAndSaveMock.Set(func(_ context.Context, t *Transcript) (r insolar.Reply, r1 error) {
 		if !t.Request.Immutable {
 			waitMutableChannel <- struct{}{}
@@ -474,8 +246,12 @@ func (s *ExecutionBrokerSuite) TestImmutable_InPending() {
 	rem.SendReplyMock.Return()
 
 	objectRef := gen.Reference()
-	b := lr.StateStorage.UpsertExecutionState(objectRef)
-	b.executionState.pending = message.InPending
+	b := NewExecutionBroker(
+		objectRef,
+		nil, rem, nil,
+		nil, nil, nil,
+	)
+	b.pending = insolar.InPending
 
 	tr := NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{Immutable: true})
 
@@ -496,24 +272,20 @@ func (s *ExecutionBrokerSuite) TestImmutable_InPending() {
 	s.Empty(waitMutableChannel)
 	s.Empty(waitImmutableChannel)
 
-	rotationResults := b.Rotate(10)
+	rotationResults := b.rotate(10)
 	s.Len(rotationResults.Requests, 2)
 	s.Equal(rotationResults.LedgerHasMoreRequests, false)
 	s.Len(rotationResults.Finished, 0)
-
-	_ = lr.Stop(s.Context)
 }
 
 func (s *ExecutionBrokerSuite) TestRotate() {
-	lr := s.prepareLogicRunner(s.T())
-
-	rem := lr.RequestsExecutor.(*RequestsExecutorMock)
-	rem.ExecuteAndSaveMock.Return(nil, nil)
-	rem.SendReplyMock.Return()
-
 	objectRef := gen.Reference()
-	b := lr.StateStorage.UpsertExecutionState(objectRef)
-	b.executionState.pending = message.NotPending
+	b := NewExecutionBroker(
+		objectRef,
+		nil, nil, nil,
+		nil, nil, nil,
+	)
+	b.pending = insolar.NotPending
 
 	for i := 0; i < 4; i++ {
 		b.stateLock.Lock()
@@ -522,7 +294,7 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 		b.stateLock.Unlock()
 	}
 
-	rotationResults := b.Rotate(10)
+	rotationResults := b.rotate(10)
 	s.Equal(b.immutable.Length(), 0)
 	s.Equal(b.mutable.Length(), 0)
 	s.Equal(b.finished.Length(), 0)
@@ -536,7 +308,7 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 		b.stateLock.Unlock()
 	}
 
-	rotationResults = b.Rotate(10)
+	rotationResults = b.rotate(10)
 	s.Equal(b.immutable.Length(), 0)
 	s.Equal(b.mutable.Length(), 0)
 	s.Equal(b.finished.Length(), 0)
@@ -549,7 +321,7 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 		b.immutable.Push(&Transcript{})
 	}
 
-	rotationResults = b.Rotate(10)
+	rotationResults = b.rotate(10)
 	s.Equal(b.immutable.Length(), 0)
 	s.Equal(b.mutable.Length(), 0)
 	s.Equal(b.finished.Length(), 0)
@@ -562,27 +334,24 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 		b.immutable.Push(&Transcript{})
 	}
 
-	rotationResults = b.Rotate(10)
+	rotationResults = b.rotate(10)
 	s.Equal(b.immutable.Length(), 0)
 	s.Equal(b.mutable.Length(), 0)
 	s.Equal(b.finished.Length(), 0)
 	s.Len(rotationResults.Requests, 10)
 	s.Len(rotationResults.Finished, 0)
 	s.True(rotationResults.LedgerHasMoreRequests)
-
-	_ = lr.Stop(s.Context)
 }
 
 func (s *ExecutionBrokerSuite) TestDeduplication() {
-	lr := s.prepareLogicRunner(s.T())
-
-	rem := lr.RequestsExecutor.(*RequestsExecutorMock)
-	rem.ExecuteAndSaveMock.Return(nil, nil)
-	rem.SendReplyMock.Return()
-
 	objectRef := gen.Reference()
-	b := lr.StateStorage.UpsertExecutionState(objectRef)
-	b.executionState.pending = message.InPending
+	b := NewExecutionBroker(
+		objectRef,
+		nil, nil, nil,
+		nil, nil, nil,
+	)
+
+	b.pending = insolar.InPending
 
 	reqRef1 := gen.Reference()
 	b.Put(s.Context, false, NewTranscript(s.Context, reqRef1, record.IncomingRequest{})) // no duplication
@@ -590,6 +359,492 @@ func (s *ExecutionBrokerSuite) TestDeduplication() {
 
 	b.Put(s.Context, false, NewTranscript(s.Context, reqRef1, record.IncomingRequest{})) // duplication
 	s.Equal(b.mutable.Length(), 1)
+}
 
-	_ = lr.Stop(s.Context)
+func TestExecutionBroker_FinishPendingIfNeed(t *testing.T) {
+	meRef := testutils.RandomRef()
+
+	tests := []struct {
+		name             string
+		mocks            func(t minimock.Tester) *ExecutionBroker
+		pending          insolar.PendingState
+		pendingConfirmed bool
+	}{
+		{
+			name: "success, complete",
+			mocks: func(t minimock.Tester) *ExecutionBroker {
+				obj := gen.Reference()
+				broker := &ExecutionBroker{
+					Ref: obj,
+
+					pending: insolar.InPending,
+
+					pulseAccessor: pulse.NewAccessorMock(t).LatestMock.Return(insolar.Pulse{}, nil),
+
+					jetCoordinator: jet.NewCoordinatorMock(t).
+						MeMock.Return(meRef).
+						IsAuthorizedMock.Return(false, nil),
+
+					messageBus: testutils.NewMessageBusMock(t).SendMock.Return(&reply.OK{}, nil),
+				}
+
+				return broker
+			},
+			pending: insolar.NotPending,
+		},
+		{
+			name: "success, me is next executor",
+			mocks: func(t minimock.Tester) *ExecutionBroker {
+				obj := gen.Reference()
+				broker := &ExecutionBroker{
+					Ref: obj,
+
+					pending: insolar.InPending,
+
+					pulseAccessor: pulse.NewAccessorMock(t).LatestMock.Return(insolar.Pulse{}, nil),
+
+					jetCoordinator: jet.NewCoordinatorMock(t).
+						MeMock.Return(meRef).
+						IsAuthorizedMock.Return(true, nil),
+				}
+
+				return broker
+			},
+			pending: insolar.NotPending,
+		},
+		{
+			name: "success, not in pending",
+			mocks: func(t minimock.Tester) *ExecutionBroker {
+				obj := gen.Reference()
+				broker := &ExecutionBroker{
+					Ref:     obj,
+					pending: insolar.NotPending,
+				}
+				return broker
+			},
+			pending: insolar.NotPending,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := inslogger.TestContext(t)
+			mc := minimock.NewController(t)
+
+			broker := test.mocks(mc)
+			broker.finishPendingIfNeeded(ctx)
+
+			mc.Wait(1 * time.Minute)
+			mc.Finish()
+
+			require.Equal(t, test.pending, broker.pending)
+			require.Equal(t, test.pendingConfirmed, broker.PendingConfirmed)
+		})
+	}
+}
+
+func (s *LogicRunnerTestSuite) TestImmutableOrder() {
+	// prepare default object and execution state
+	objectRef := gen.Reference()
+	broker := NewExecutionBroker(
+		objectRef,
+		nil, s.re, nil,
+		nil, nil, nil,
+	)
+	broker.pending = insolar.NotPending
+
+	// prepare request objects
+	mutableRequestRef := gen.Reference()
+	immutableRequestRef1 := gen.Reference()
+	immutableRequestRef2 := gen.Reference()
+
+	// prepare all three requests
+	mutableRequest := record.IncomingRequest{
+		ReturnMode:   record.ReturnResult,
+		Object:       &objectRef,
+		APIRequestID: utils.RandTraceID(),
+		Immutable:    false,
+	}
+	mutableTranscript := NewTranscript(s.ctx, mutableRequestRef, mutableRequest)
+
+	immutableRequest1 := record.IncomingRequest{
+		ReturnMode:   record.ReturnResult,
+		Object:       &objectRef,
+		APIRequestID: utils.RandTraceID(),
+		Immutable:    true,
+	}
+	immutableTranscript1 := NewTranscript(s.ctx, immutableRequestRef1, immutableRequest1)
+
+	immutableRequest2 := record.IncomingRequest{
+		ReturnMode:   record.ReturnResult,
+		Object:       &objectRef,
+		APIRequestID: utils.RandTraceID(),
+		Immutable:    true,
+	}
+	immutableTranscript2 := NewTranscript(s.ctx, immutableRequestRef2, immutableRequest2)
+
+	// Set custom executor, that'll:
+	// 1) mutable will start execution and wait until something will ping it on channel 1
+	// 2) immutable 1 will start execution and will wait on channel 2 until something will ping it
+	// 3) immutable 2 will start execution and will ping on channel 2 and exit
+	// 4) immutable 1 will ping on channel 1 and exit
+	// 5) mutable request will continue execution and exit
+
+	var mutableChan = make(chan interface{}, 1)
+	var immutableChan chan interface{} = nil
+	var immutableLock = sync.Mutex{}
+
+	s.re.SendReplyMock.Return()
+	s.re.ExecuteAndSaveMock.Set(func(ctx context.Context, transcript *Transcript) (insolar.Reply, error) {
+
+		if transcript.RequestRef.Equal(mutableRequestRef) {
+			log.Debug("mutableChan 1")
+			select {
+			case _ = <-mutableChan:
+
+				log.Info("mutable got notifications")
+				return &reply.CallMethod{Result: []byte{1, 2, 3}}, nil
+			case <-time.After(2 * time.Minute):
+				panic("timeout on waiting for immutable request 1 pinged us")
+			}
+		} else if transcript.RequestRef.Equal(immutableRequestRef1) || transcript.RequestRef.Equal(immutableRequestRef2) {
+			newChan := false
+			immutableLock.Lock()
+			if immutableChan == nil {
+				immutableChan = make(chan interface{}, 1)
+				newChan = true
+			}
+			immutableLock.Unlock()
+			if newChan {
+				log.Debug("immutableChan 1")
+				select {
+				case _ = <-immutableChan:
+					mutableChan <- struct{}{}
+					log.Info("notify mutable chan and exit")
+					return &reply.CallMethod{Result: []byte{1, 2, 3}}, nil
+				case <-time.After(2 * time.Minute):
+					panic("timeout on waiting for immutable request 2 pinged us")
+				}
+			} else {
+				log.Info("notify immutable chan and exit")
+				immutableChan <- struct{}{}
+			}
+		} else {
+			panic("unreachable")
+		}
+		return &reply.CallMethod{Result: []byte{1, 2, 3}}, nil
+	})
+
+	broker.Put(s.ctx, true, mutableTranscript)
+	broker.Put(s.ctx, true, immutableTranscript1, immutableTranscript2)
+
+	s.True(wait(finishedCount, broker, 3))
+}
+
+func TestExecutionBroker_ExecuteImmutable(t *testing.T) {
+	// TODO .Put should become private, we should test interface
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+	defer mc.Wait(1 * time.Second)
+
+	// prepare default object and execution state
+	objectRef := gen.Reference()
+	re := NewRequestsExecutorMock(mc)
+	broker := NewExecutionBroker(
+		objectRef,
+		nil, re, nil,
+		nil, nil, nil,
+	)
+	broker.pending = insolar.NotPending
+
+	immutableRequestRef1 := gen.Reference()
+	immutableRequest1 := record.IncomingRequest{
+		ReturnMode:   record.ReturnResult,
+		Object:       &objectRef,
+		APIRequestID: utils.RandTraceID(),
+		Immutable:    true,
+	}
+	immutableTranscript1 := NewTranscript(ctx, immutableRequestRef1, immutableRequest1)
+
+	re.ExecuteAndSaveMock.Return(&reply.CallMethod{Result: []byte{1, 2, 3}}, nil)
+	re.SendReplyMock.Return()
+
+	broker.Put(ctx, true, immutableTranscript1)
+}
+
+func TestExecutionBroker_OnPulse(t *testing.T) {
+	randTranscript := func(ctx context.Context) *Transcript {
+		reqRef := gen.Reference()
+		return NewTranscript(ctx, reqRef, record.IncomingRequest{})
+	}
+
+	table := []struct {
+		name string
+
+		meNext           bool
+		mocks            func(ctx context.Context, t minimock.Tester) *ExecutionBroker
+		numberOfMessages int
+		pending          insolar.PendingState
+		pendingConfirmed bool
+		ledgerHasMore    bool
+		end              bool
+	}{
+		{
+			name: "next is not me, not active, queue",
+			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
+				objectRef := gen.Reference()
+				broker := NewExecutionBroker(
+					objectRef,
+					nil, nil, nil,
+					nil, nil, nil,
+				)
+				// fetcher is stopped
+				broker.requestsFetcher = NewRequestsFetcherMock(t).
+					AbortMock.Return()
+				broker.mutable.Push(randTranscript(ctx), randTranscript(ctx))
+				return broker
+			},
+			numberOfMessages: 1,
+			end:              true,
+		},
+		{
+			// We aren't next executor but we're currently executing.
+			// Expecting sending message to new executor and moving state to InPending
+			name: "next is not me, active, no queue",
+			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
+				objectRef := gen.Reference()
+				jc := jet.NewCoordinatorMock(t).MeMock.Return(gen.Reference())
+				broker := NewExecutionBroker(
+					objectRef,
+					nil, nil, nil,
+					jc, nil, nil,
+				)
+				broker.currentList.SetOnce(randTranscript(ctx))
+				return broker
+			},
+			numberOfMessages: 2,
+			pending:          insolar.InPending,
+		},
+		{
+			name: "next is not me, not confirmed pending",
+			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
+				objectRef := gen.Reference()
+				broker := NewExecutionBroker(
+					objectRef,
+					nil, nil, nil,
+					nil, nil, nil,
+				)
+				broker.pending = insolar.InPending
+				return broker
+			},
+			numberOfMessages: 1,
+			pending:          insolar.NotPending,
+			ledgerHasMore:    true,
+			end:              true,
+		},
+		{
+			name: "next is not me, not active, no pending, finished a request",
+			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
+				objectRef := gen.Reference()
+				broker := NewExecutionBroker(
+					objectRef,
+					nil, nil, nil,
+					nil, nil, nil,
+				)
+				broker.finished.Push(randTranscript(ctx), randTranscript(ctx))
+				return broker
+			},
+			numberOfMessages: 1,
+			end:              true,
+		},
+		{
+			name: "next is not me, did nothing",
+			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
+				objectRef := gen.Reference()
+				broker := NewExecutionBroker(
+					objectRef,
+					nil, nil, nil,
+					nil, nil, nil,
+				)
+				return broker
+			},
+			numberOfMessages: 0,
+			end:              true,
+		},
+		{
+			name:   "next is me, active",
+			meNext: true,
+			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
+				objectRef := gen.Reference()
+				broker := NewExecutionBroker(
+					objectRef,
+					nil, nil, nil,
+					nil, nil, nil,
+				)
+				broker.requestsFetcher = NewRequestsFetcherMock(t)
+				broker.currentList.SetOnce(randTranscript(ctx))
+				return broker
+			},
+			numberOfMessages: 0,
+			pending:          insolar.InPending,
+			pendingConfirmed: true,
+		},
+		{
+			// We're the next executor, previous executor confirmed that this task
+			// is executing and still in pending. We expect that previous executor
+			// come to the current executor every pulse to confirm pending
+			name:   "next is me, not active, in confirmed pending",
+			meNext: true,
+			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
+				objectRef := gen.Reference()
+				broker := NewExecutionBroker(
+					objectRef,
+					nil, nil, nil,
+					nil, nil, nil,
+				)
+				broker.requestsFetcher = NewRequestsFetcherMock(t)
+				broker.pending = insolar.InPending
+				broker.PendingConfirmed = true
+				return broker
+			},
+			numberOfMessages: 0,
+			pending:          insolar.InPending,
+		},
+		{
+			// We're the next executor and no one confirmed that this object is executing
+			// restarting execution and fetching tasks off ledger
+			name:   "next is me, not active, not confirmed pending",
+			meNext: true,
+			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
+				objectRef := gen.Reference()
+				broker := NewExecutionBroker(
+					objectRef,
+					nil, nil, nil,
+					nil, nil, nil,
+				)
+				broker.pending = insolar.InPending
+				broker.requestsFetcher = NewRequestsFetcherMock(t).
+					FetchPendingsMock.Return()
+				return broker
+			},
+			numberOfMessages: 0,
+			pending:          insolar.NotPending,
+			ledgerHasMore:    true,
+		},
+	}
+
+	for _, test := range table {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := inslogger.TestContext(t)
+			mc := minimock.NewController(t)
+
+			broker := test.mocks(ctx, mc)
+			end, messages := broker.OnPulse(ctx, test.meNext)
+
+			mc.Wait(1 * time.Minute)
+			mc.Finish()
+
+			require.Equal(t, test.pending, broker.pending)
+			require.Equal(t, test.pendingConfirmed, broker.PendingConfirmed)
+			require.Equal(t, test.end, end)
+			require.Equal(t, test.ledgerHasMore, broker.ledgerHasMoreRequests)
+			require.Len(t, messages, test.numberOfMessages)
+		})
+	}
+}
+
+func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
+	objectRef := gen.Reference()
+
+	table := []struct {
+		name   string
+		mocks  func(ctx context.Context, t minimock.Tester) (*ExecutionBroker, *bool, *[]insolar.Message)
+		end    bool
+		checks func(ctx context.Context, t *testing.T, msgs []insolar.Message)
+	}{
+		{
+			name: "pulse change in HasPendings",
+			mocks: func(ctx context.Context, t minimock.Tester) (*ExecutionBroker, *bool, *[]insolar.Message) {
+				am := artifacts.NewClientMock(t)
+				broker := NewExecutionBroker(
+					objectRef,
+					nil, nil, nil,
+					nil, nil, am,
+				)
+				var end bool
+				var msgs []insolar.Message
+				am.HasPendingsMock.Set(func(ctx context.Context, ref insolar.Reference) (bool, error) {
+					end, msgs = broker.OnPulse(ctx, false)
+					return false, nil
+				})
+				return broker, &end, &msgs
+			},
+			end: true,
+			checks: func(ctx context.Context, t *testing.T, msgs []insolar.Message) {
+				require.Len(t, msgs, 1)
+				results, ok := msgs[0].(*message.ExecutorResults)
+				require.True(t, ok)
+
+				require.False(t, results.LedgerHasMoreRequests)
+				require.Equal(t, insolar.PendingUnknown, results.Pending)
+				require.Len(t, results.Queue, 1)
+			},
+		},
+		{
+			name: "pulse change in Execute",
+			mocks: func(ctx context.Context, t minimock.Tester) (*ExecutionBroker, *bool, *[]insolar.Message) {
+				am := artifacts.NewClientMock(t).
+					HasPendingsMock.Return(false, nil)
+				re := NewRequestsExecutorMock(t)
+				jc := jet.NewCoordinatorMock(t).MeMock.Return(gen.Reference()).
+					IsAuthorizedMock.Return(true, nil)
+				pa := pulse.NewAccessorMock(t).LatestMock.Return(insolar.Pulse{}, nil)
+				broker := NewExecutionBroker(
+					objectRef,
+					nil, re, nil,
+					jc, pa, am,
+				)
+				var end bool
+				var msgs []insolar.Message
+				re.ExecuteAndSaveMock.Set(func(ctx context.Context, tr *Transcript) (insolar.Reply, error) {
+					end, msgs = broker.OnPulse(ctx, false)
+					return &reply.OK{}, nil
+				})
+				re.SendReplyMock.Return()
+				return broker, &end, &msgs
+			},
+			checks: func(ctx context.Context, t *testing.T, msgs []insolar.Message) {
+				require.Len(t, msgs, 2)
+
+				still, ok := msgs[0].(*message.StillExecuting)
+				require.True(t, ok)
+				require.Len(t, still.RequestRefs, 1)
+
+				results, ok := msgs[1].(*message.ExecutorResults)
+				require.True(t, ok)
+				require.False(t, results.LedgerHasMoreRequests)
+				require.Equal(t, insolar.InPending, results.Pending)
+				require.Len(t, results.Queue, 0)
+			},
+		},
+	}
+
+	for _, test := range table {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			ctx := inslogger.TestContext(t)
+			mc := minimock.NewController(t)
+
+			broker, end, msgs := test.mocks(ctx, mc)
+
+			reqRef := gen.Reference()
+			broker.AddFreshRequest(ctx, NewTranscript(ctx, reqRef, record.IncomingRequest{}))
+
+			mc.Wait(1 * time.Second)
+			mc.Finish()
+
+			require.Equal(t, test.end, *end)
+			test.checks(ctx, t, *msgs)
+		})
+	}
 }

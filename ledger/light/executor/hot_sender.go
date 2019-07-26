@@ -128,7 +128,6 @@ func (m *HotSenderDefault) SendHot(
 
 		// send data for every jet asynchronously
 		go func() {
-			logger.Infof("SPLIT> fire sendForJet in goroutine")
 			err := m.sendForJet(ctx, jetID, newPulse, idxByJet[jetID], block)
 			if err != nil {
 				logger.WithField("error", err.Error()).Error("hot sender: sendForJet failed")
@@ -177,7 +176,7 @@ func (m *HotSenderDefault) findDrop(
 	block, err := m.dropAccessor.ForPulse(ctx, jetID, pn)
 	if err == drop.ErrNotFound {
 		jetID = jet.Parent(jetID)
-		// try to get parent
+		// try to get parent's drop
 		block, err = m.dropAccessor.ForPulse(ctx, jetID, pn)
 		if err == drop.ErrNotFound {
 			err = errors.Wrap(err, "drop for parent jet not found too")

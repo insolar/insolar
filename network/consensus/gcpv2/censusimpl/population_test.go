@@ -133,9 +133,9 @@ func TestMNPGetIndexedCount(t *testing.T) {
 }
 
 func TestMNPGetIndexedCapacity(t *testing.T) {
-	len := 1
-	mnp := ManyNodePopulation{slots: make([]updatableSlot, len)}
-	require.Equal(t, len, mnp.GetIndexedCapacity())
+	size := 1
+	mnp := ManyNodePopulation{slots: make([]updatableSlot, size)}
+	require.Equal(t, size, mnp.GetIndexedCapacity())
 }
 
 func TestMNPIsValid(t *testing.T) {
@@ -185,7 +185,7 @@ func TestMNPCopyTo(t *testing.T) {
 	nodeID := insolar.ShortNodeID(0)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return nodeID })
 	mnp := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}},
-		slots: []updatableSlot{updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}}
+		slots: []updatableSlot{{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}}
 	population := &DynamicPopulation{}
 	mnp.copyTo(population)
 	require.Equal(t, mnp.local, population.slotByID[nodeID])

@@ -24,7 +24,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member/signer"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 
 	hwProxy "github.com/insolar/insolar/logicrunner/builtin/proxy/helloworld"
 )
@@ -90,7 +90,7 @@ type Params struct {
 	CallSite   string      `json:"callSite"`
 	CallParams interface{} `json:"callParams"`
 	Reference  string      `json:"reference"`
-	PublicKey  string      `json:"memberPublicKey"`
+	PublicKey  string      `json:"publicKey"`
 }
 
 func (hw *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
@@ -111,7 +111,15 @@ func (hw *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
 
 	switch request.Params.CallSite {
 	case "Greet":
-		return hw.Greet(request.Params.CallParams.(map[string]interface{})["name"].(string))
+		callParams, err := foundation.NewStableMapFromInterface(request.Params.CallParams)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to parse CallParams")
+		}
+		name, ok := callParams["name"]
+		if !ok {
+			return hw.Greet("Anonymous")
+		}
+		return hw.Greet(name)
 	case "Count":
 		return hw.Count()
 	case "Errored":
@@ -123,7 +131,7 @@ func (hw *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
 	case "PulseNumber":
 		return hw.PulseNumber()
 	default:
-		return nil, errors.New("Unknown method " + request.Params.CallSite)
+		return nil, errors.New("unknown method " + request.Params.CallSite)
 	}
 }
 

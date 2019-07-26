@@ -90,7 +90,7 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 
 func INSMETHOD_Transfer(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.SetSystemError(nil)
 	self := new(Wallet)
 
 	if len(object) == 0 {
@@ -103,11 +103,13 @@ func INSMETHOD_Transfer(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	args := [2]interface{}{}
-	var args0 string
+	args := [3]interface{}{}
+	var args0 insolar.Reference
 	args[0] = &args0
-	var args1 *insolar.Reference
+	var args1 string
 	args[1] = &args1
+	var args2 *insolar.Reference
+	args[2] = &args2
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
@@ -115,7 +117,11 @@ func INSMETHOD_Transfer(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.Transfer(args0, args1)
+	ret0, ret1 := self.Transfer(args0, args1, args2)
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
@@ -133,7 +139,7 @@ func INSMETHOD_Transfer(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_Accept(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.SetSystemError(nil)
 	self := new(Wallet)
 
 	if len(object) == 0 {
@@ -158,6 +164,55 @@ func INSMETHOD_Accept(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0 := self.Accept(args0)
 
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret0 = ph.MakeErrorSerializable(ret0)
+
+	ret := []byte{}
+	err = ph.Serialize([]interface{}{ret0}, &ret)
+
+	return state, ret, err
+}
+
+func INSMETHOD_RollBack(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
+	self := new(Wallet)
+
+	if len(object) == 0 {
+		return nil, nil, &ExtendableError{S: "[ FakeRollBack ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeRollBack ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := [1]interface{}{}
+	var args0 string
+	args[0] = &args0
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeRollBack ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0 := self.RollBack(args0)
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -174,7 +229,7 @@ func INSMETHOD_Accept(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetBalance(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.SetSystemError(nil)
 	self := new(Wallet)
 
 	if len(object) == 0 {
@@ -197,6 +252,10 @@ func INSMETHOD_GetBalance(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.GetBalance()
 
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -213,6 +272,7 @@ func INSMETHOD_GetBalance(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
 	args := [1]interface{}{}
 	var args0 string
 	args[0] = &args0
@@ -224,6 +284,9 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	}
 
 	ret0, ret1 := New(args0)
+	if ph.GetSystemError() != nil {
+		return nil, ph.GetSystemError()
+	}
 	if ret1 != nil {
 		return nil, ret1
 	}
@@ -249,6 +312,7 @@ func Initialize() XXX_insolar.ContractWrapper {
 		Methods: XXX_insolar.ContractMethods{
 			"Transfer":   INSMETHOD_Transfer,
 			"Accept":     INSMETHOD_Accept,
+			"RollBack":   INSMETHOD_RollBack,
 			"GetBalance": INSMETHOD_GetBalance,
 		},
 		Constructors: XXX_insolar.ContractConstructors{

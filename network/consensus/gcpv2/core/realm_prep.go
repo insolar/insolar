@@ -53,10 +53,11 @@ package core
 import (
 	"context"
 	"fmt"
+	"sync"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
-	"sync"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
@@ -114,14 +115,11 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 			return err
 		}
 		if strict {
-			verifyFlags = packetrecorder.RequireStrictVerify
+			verifyFlags |= packetrecorder.RequireStrictVerify
 		}
 		limiterKey = endpoints.ShortNodeIDAsByteString(packet.GetSourceID())
 	default:
 		limiterKey = from.AsByteString()
-
-		// TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
-		verifyFlags = packetrecorder.SkipVerify
 	}
 
 	/*
@@ -269,9 +267,9 @@ func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bo
 				epn, pn, localID, from))
 	}
 
-	//if p.IsJoiner() && p.lastCloudStateHash {
+	// if p.IsJoiner() && p.lastCloudStateHash {
 	//
-	//}
+	// }
 
 	p.originalPulse = pp.GetPulseDataEvidence()
 	p.pulseData = pd

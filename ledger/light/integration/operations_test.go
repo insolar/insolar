@@ -22,23 +22,22 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/stretchr/testify/require"
 )
 
-func setCode(ctx context.Context, t *testing.T, s *Server) (payload.Payload, record.Virtual) {
+func callSetCode(ctx context.Context, t *testing.T, s *Server) (payload.Payload, record.Virtual) {
 	code := make([]byte, 100)
 	_, err := rand.Read(code)
 	require.NoError(t, err)
 	rec := record.Wrap(record.Code{Code: code})
 	buf, err := rec.Marshal()
 	require.NoError(t, err)
-	msg, err := payload.NewMessage(&payload.SetCode{
+	reps, done := s.Send(ctx, &payload.SetCode{
 		Record: buf,
 	})
-	require.NoError(t, err)
-	reps, done := s.Send(ctx, msg)
 	defer done()
 
 	rep := <-reps
@@ -56,12 +55,10 @@ func setCode(ctx context.Context, t *testing.T, s *Server) (payload.Payload, rec
 	return nil, rec
 }
 
-func getCode(ctx context.Context, t *testing.T, s *Server, id insolar.ID) payload.Payload {
-	msg, err := payload.NewMessage(&payload.GetCode{
+func callGetCode(ctx context.Context, t *testing.T, s *Server, id insolar.ID) payload.Payload {
+	reps, done := s.Send(ctx, &payload.GetCode{
 		CodeID: id,
 	})
-
-	reps, done := s.Send(ctx, msg)
 	defer done()
 
 	rep := <-reps
@@ -78,7 +75,7 @@ func getCode(ctx context.Context, t *testing.T, s *Server, id insolar.ID) payloa
 	return nil
 }
 
-func setIncomingRequest(
+func callSetIncomingRequest(
 	ctx context.Context, t *testing.T, s *Server, objectID, reasonID insolar.ID, ct record.CallType,
 ) (payload.Payload, record.Virtual) {
 	args := make([]byte, 100)
@@ -89,12 +86,11 @@ func setIncomingRequest(
 		Arguments: args,
 		CallType:  ct,
 		Reason:    *insolar.NewReference(reasonID),
+		APINode:   gen.Reference(),
 	})
-	msg, err := payload.NewMessage(&payload.SetIncomingRequest{
+	reps, done := s.Send(ctx, &payload.SetIncomingRequest{
 		Request: rec,
 	})
-	require.NoError(t, err)
-	reps, done := s.Send(ctx, msg)
 	defer done()
 
 	rep := <-reps
@@ -109,15 +105,25 @@ func setIncomingRequest(
 		t.Fatalf("received unexpected reply %T", pl)
 	}
 
-	return insolar.ID{}, record.Virtual{}
+	return nil, record.Virtual{}
 }
 
-func getRequest(ctx context.Context, t *testing.T, s *Server, requestID insolar.ID) payload.Payload {
-	msg, err := payload.NewMessage(&payload.GetRequest{
+func sendMessage(
+	ctx context.Context, t *testing.T, s *Server, msg payload.Payload,
+) payload.Payload {
+	reps, done := s.Send(ctx, msg)
+	defer done()
+
+	rep := <-reps
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	require.NoError(t, err)
+
+	return pl
+}
+func callGetRequest(ctx context.Context, t *testing.T, s *Server, requestID insolar.ID) payload.Payload {
+	reps, done := s.Send(ctx, &payload.GetRequest{
 		RequestID: requestID,
 	})
-	require.NoError(t, err)
-	reps, done := s.Send(ctx, msg)
 	defer done()
 
 	rep := <-reps
@@ -135,7 +141,7 @@ func getRequest(ctx context.Context, t *testing.T, s *Server, requestID insolar.
 	return nil
 }
 
-func activateObject(ctx context.Context, t *testing.T, s *Server, objectID insolar.ID) (payload.Payload, record.Virtual) {
+func callActivateObject(ctx context.Context, t *testing.T, s *Server, objectID insolar.ID) (payload.Payload, record.Virtual) {
 	mem := make([]byte, 100)
 	_, err := rand.Read(mem)
 	require.NoError(t, err)
@@ -156,12 +162,10 @@ func activateObject(ctx context.Context, t *testing.T, s *Server, objectID insol
 	resBuf, err := resultRecord.Marshal()
 	require.NoError(t, err)
 
-	msg, err := payload.NewMessage(&payload.Activate{
+	reps, done := s.Send(ctx, &payload.Activate{
 		Record: buf,
 		Result: resBuf,
 	})
-	require.NoError(t, err)
-	reps, done := s.Send(ctx, msg)
 	defer done()
 
 	rep := <-reps
@@ -178,7 +182,7 @@ func activateObject(ctx context.Context, t *testing.T, s *Server, objectID insol
 	return nil, rec
 }
 
-func amendObject(ctx context.Context, t *testing.T, s *Server, objectID, requestID insolar.ID) (payload.Payload, record.Virtual) {
+func callAmendObject(ctx context.Context, t *testing.T, s *Server, objectID, requestID insolar.ID) (payload.Payload, record.Virtual) {
 	mem := make([]byte, 100)
 	_, err := rand.Read(mem)
 	require.NoError(t, err)
@@ -198,13 +202,10 @@ func amendObject(ctx context.Context, t *testing.T, s *Server, objectID, request
 	resBuf, err := resultRecord.Marshal()
 	require.NoError(t, err)
 
-	msg, err := payload.NewMessage(&payload.Update{
+	reps, done := s.Send(ctx, &payload.Update{
 		Record: buf,
 		Result: resBuf,
 	})
-	require.NoError(t, err)
-
-	reps, done := s.Send(ctx, msg)
 	defer done()
 
 	rep := <-reps
@@ -221,7 +222,7 @@ func amendObject(ctx context.Context, t *testing.T, s *Server, objectID, request
 	return nil, rec
 }
 
-func deactivateObject(ctx context.Context, t *testing.T, s *Server, objectID, requestID insolar.ID) (payload.Payload, record.Virtual) {
+func callDeactivateObject(ctx context.Context, t *testing.T, s *Server, objectID, requestID insolar.ID) (payload.Payload, record.Virtual) {
 	mem := make([]byte, 100)
 	_, err := rand.Read(mem)
 	require.NoError(t, err)
@@ -241,12 +242,10 @@ func deactivateObject(ctx context.Context, t *testing.T, s *Server, objectID, re
 	resBuf, err := resultRecord.Marshal()
 	require.NoError(t, err)
 
-	msg, err := payload.NewMessage(&payload.Deactivate{
+	reps, done := s.Send(ctx, &payload.Deactivate{
 		Record: buf,
 		Result: resBuf,
 	})
-	require.NoError(t, err)
-	reps, done := s.Send(ctx, msg)
 	defer done()
 
 	rep := <-reps
@@ -263,12 +262,10 @@ func deactivateObject(ctx context.Context, t *testing.T, s *Server, objectID, re
 	return pl, rec
 }
 
-func getObject(ctx context.Context, t *testing.T, s *Server, objectID insolar.ID) (payload.Payload, payload.Payload) {
-	msg, err := payload.NewMessage(&payload.GetObject{
+func callGetObject(ctx context.Context, t *testing.T, s *Server, objectID insolar.ID) (payload.Payload, payload.Payload) {
+	reps, d := s.Send(ctx, &payload.GetObject{
 		ObjectID: objectID,
 	})
-	require.NoError(t, err)
-	reps, d := s.Send(ctx, msg)
 	defer d()
 
 	var (
@@ -297,4 +294,25 @@ func getObject(ctx context.Context, t *testing.T, s *Server, objectID insolar.ID
 	}
 	require.True(t, done())
 	return lifeline, state
+}
+
+func fetchPendings(ctx context.Context, t *testing.T, s *Server, objectID insolar.ID) payload.Payload {
+	reps, done := s.Send(ctx, &payload.GetPendings{
+		ObjectID: objectID,
+	})
+	defer done()
+
+	rep := <-reps
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	require.NoError(t, err)
+	switch pl.(type) {
+	case *payload.Error:
+		return pl
+	case *payload.IDs:
+		return pl
+	default:
+		t.Fatalf("received unexpected reply %T", pl)
+	}
+
+	return nil
 }
