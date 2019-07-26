@@ -194,7 +194,8 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 		Caller: gen.Reference(),
 		Reason: gen.Reference(),
 	}
-	outgoingBytes, err := outgoing.Marshal()
+	virtual := record.Wrap(&outgoing)
+	outgoingBytes, err := virtual.Marshal()
 	suite.Require().NoError(err)
 
 	outgoingReqId := gen.ID()
