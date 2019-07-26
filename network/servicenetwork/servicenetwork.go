@@ -51,8 +51,13 @@
 package servicenetwork
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/serialization"
+	"github.com/insolar/insolar/network/consensusv1/packets"
+	"github.com/insolar/insolar/network/node"
 	"sync"
 
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -71,7 +76,6 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/controller"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/routing"
@@ -117,15 +121,14 @@ type ServiceNetwork struct {
 	consensusInstaller  consensus.Installer
 	consensusController consensus.Controller
 
-	lock sync.Mutex
+	ConsensusMode consensus.Mode
 
-	// for testing purposes :(
-	onStateUpdate func()
+	lock sync.Mutex
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manager) (*ServiceNetwork, error) {
-	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf}
+	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, ConsensusMode: consensus.Joiner}
 	return serviceNetwork, nil
 }
 
@@ -151,14 +154,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to create hostnetwork")
 	}
 	n.HostNetwork = hostNetwork
-
-	//consensusNetwork, err := hostnetwork.NewConsensusNetwork(
-	//	n.CertificateManager.GetCertificate().GetNodeRef().String(),
-	//	n.NodeKeeper.GetOrigin().ShortID(),
-	//)
-	//if err != nil {
-	//	return errors.Wrap(err, "Failed to create consensus network.")
-	//}
 
 	options := common.ConfigureOptions(n.cfg)
 
@@ -195,6 +190,18 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		n.BaseGateway,
 		n.Gatewayer,
 	)
+
+	// sign origin
+	origin := n.NodeKeeper.GetOrigin()
+	digest, sign := getAnnounceSignature(
+		origin,
+		network.OriginIsDiscovery(cert),
+		n.KeyProcessor,
+		n.KeyStore,
+		n.CryptographyScheme,
+	)
+	origin.(node.MutableNode).SetSignature(digest, sign)
+
 	err = n.cm.Init(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to init internal components")
@@ -218,10 +225,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	return nil
 }
 
-func (n *ServiceNetwork) SetOnStateUpdate(f func()) {
-	n.onStateUpdate = f
-}
-
 // Start implements component.Starter
 func (n *ServiceNetwork) Start(ctx context.Context) error {
 	err := n.cm.Start(ctx)
@@ -230,7 +233,12 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	}
 
 	n.Gatewayer.Gateway().Run(ctx)
-	n.consensusController = n.consensusInstaller.Install(n.pulseHandler, n.datagramHandler)
+
+	n.consensusController = n.consensusInstaller.ControllerFor(n.ConsensusMode, n.pulseHandler, n.datagramHandler)
+	n.consensusController.RegisterFinishedNotifier(func(_ member.OpMode, _ member.Power, effectiveSince insolar.PulseNumber) {
+		n.Gatewayer.Gateway().OnConsensusFinished(effectiveSince)
+	})
+	n.BaseGateway.ConsensusController = n.consensusController
 
 	n.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
 
@@ -242,7 +250,8 @@ func (n *ServiceNetwork) Leave(ctx context.Context, eta insolar.PulseNumber) {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("Gracefully stopping service network")
 
-	n.NodeKeeper.GetClaimQueue().Push(&packets.NodeLeaveClaim{ETA: eta})
+	// TODO: fix leave
+	//n.consensusController.Leave(0)
 }
 
 func (n *ServiceNetwork) GracefulStop(ctx context.Context) error {
@@ -294,19 +303,71 @@ func (n *ServiceNetwork) ChangePulse(ctx context.Context, newPulse insolar.Pulse
 }
 
 func (n *ServiceNetwork) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
-	err := n.NodeKeeper.Sync(ctx, nodes, nil)
+	err := n.NodeKeeper.Sync(ctx, nodes)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(err)
 	}
 	n.NodeKeeper.SetCloudHash(cloudStateHash)
-
-	if n.onStateUpdate != nil {
-		n.onStateUpdate()
-	}
 }
 
 func (n *ServiceNetwork) State() []byte {
 	nshBytes := make([]byte, 64)
 	_, _ = rand.Read(nshBytes)
 	return nshBytes
+}
+
+func (n *ServiceNetwork) RegisterConsensusFinishedNotifier(fn consensus.FinishedNotifier) {
+	n.consensusController.RegisterFinishedNotifier(fn)
+}
+
+func getAnnounceSignature(
+	node insolar.NetworkNode,
+	isDiscovery bool,
+	kp insolar.KeyProcessor,
+	keystore insolar.KeyStore,
+	scheme insolar.PlatformCryptographyScheme,
+) ([]byte, insolar.Signature) {
+
+	brief := serialization.NodeBriefIntro{}
+	brief.ShortID = node.ShortID()
+	brief.SetPrimaryRole(adapters.StaticRoleToPrimaryRole(node.Role()))
+	if isDiscovery {
+		brief.SpecialRoles = member.SpecialRoleDiscovery
+	}
+	brief.StartPower = 10
+
+	addr, err := packets.NewNodeAddress(node.Address())
+	if err != nil {
+		panic(err)
+	}
+	copy(brief.Endpoint[:], addr[:])
+
+	pk, err := kp.ExportPublicKeyBinary(node.PublicKey())
+	if err != nil {
+		panic(err)
+	}
+
+	copy(brief.NodePK[:], pk)
+
+	buf := &bytes.Buffer{}
+	err = brief.SerializeTo(nil, buf)
+	if err != nil {
+		panic(err)
+	}
+
+	data := buf.Bytes()
+	data = data[:len(data)-64]
+
+	key, err := keystore.GetPrivateKey("")
+	if err != nil {
+		panic(err)
+	}
+
+	digest := scheme.IntegrityHasher().Hash(data)
+	sign, err := scheme.DigestSigner(key).Sign(digest)
+	if err != nil {
+		panic(err)
+	}
+
+	return digest, *sign
 }

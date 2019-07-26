@@ -63,7 +63,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
@@ -73,7 +72,7 @@ import (
 
 type Requester interface {
 	Authorize(context.Context, *host.Host, insolar.AuthorizationCertificate) (*packet.AuthorizeResponse, error)
-	Bootstrap(context.Context, *packet.Permit, *packets.NodeJoinClaim, *insolar.Pulse) (*packet.BootstrapResponse, error)
+	Bootstrap(context.Context, *packet.Permit, packet.CandidateProfile, *insolar.Pulse) (*packet.BootstrapResponse, error)
 	UpdateSchedule(context.Context, *packet.Permit, insolar.PulseNumber) (*packet.UpdateScheduleResponse, error)
 	Reconnect(context.Context, *host.Host, *packet.Permit) (*packet.ReconnectResponse, error)
 }
@@ -160,12 +159,12 @@ func (ac *requester) authorizeWithTimestamp(ctx context.Context, h *host.Host, a
 	return response.GetResponse().GetAuthorize(), nil
 }
 
-func (ac *requester) Bootstrap(ctx context.Context, permit *packet.Permit, joinClaim *packets.NodeJoinClaim, p *insolar.Pulse) (*packet.BootstrapResponse, error) {
+func (ac *requester) Bootstrap(ctx context.Context, permit *packet.Permit, candidateProfile packet.CandidateProfile, p *insolar.Pulse) (*packet.BootstrapResponse, error) {
 
 	req := &packet.BootstrapRequest{
-		JoinClaim: joinClaim,
-		Pulse:     *pulse.ToProto(p),
-		Permit:    permit,
+		CandidateProfile: candidateProfile,
+		Pulse:            *pulse.ToProto(p),
+		Permit:           permit,
 	}
 
 	f, err := ac.HostNetwork.SendRequestToHost(ctx, types.Bootstrap, req, permit.Payload.ReconnectTo)

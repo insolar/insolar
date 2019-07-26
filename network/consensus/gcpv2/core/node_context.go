@@ -53,20 +53,24 @@ package core
 import (
 	"sync/atomic"
 
+	"github.com/insolar/insolar/insolar"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 )
 
-func (p *nodeContext) initPrep(signatureVerifierFactory cryptkit.SignatureVerifierFactory, capture misbehavior.ReportFunc) {
+func (p *nodeContext) initPrep(localNodeID insolar.ShortNodeID, signatureVerifierFactory cryptkit.SignatureVerifierFactory, capture misbehavior.ReportFunc) {
+	p.localNodeID = localNodeID
 	p.signatureVerifierFactory = signatureVerifierFactory
 	p.fraudFactory = misbehavior.NewFraudFactory(capture)
 	p.blameFactory = misbehavior.NewBlameFactory(capture)
 }
 
-func (p *nodeContext) initFull(signatureVerifierFactory cryptkit.SignatureVerifierFactory,
+func (p *nodeContext) initFull(localNodeID insolar.ShortNodeID, signatureVerifierFactory cryptkit.SignatureVerifierFactory,
 	neighborTrustThreshold uint8, capture misbehavior.ReportFunc) {
 
+	p.localNodeID = localNodeID
 	p.signatureVerifierFactory = signatureVerifierFactory
 	p.fraudFactory = misbehavior.NewFraudFactory(capture)
 	p.blameFactory = misbehavior.NewBlameFactory(capture)
@@ -88,6 +92,7 @@ type nodeContext struct {
 
 	signatureVerifierFactory cryptkit.SignatureVerifierFactory
 	nbTrustThreshold         uint8
+	localNodeID              insolar.ShortNodeID
 }
 
 func (p *nodeContext) updatePopulationVersion() uint32 {
@@ -131,18 +136,18 @@ func (p *nodeContext) onNodeStateAssigned(populationVersion uint32, n *NodeAppea
 	p.phaseControllerCallback.OnNodeStateAssigned(populationVersion, n)
 }
 
-func (p *nodeContext) onDynamicNodeAdded(populationVersion uint32, n *NodeAppearance, fullIntro bool) {
+func (p *nodeContext) onDynamicNodeUpdate(populationVersion uint32, n *NodeAppearance, flags UpdateFlags) {
 	if p.phaseControllerCallback == nil {
 		return
 	}
-	p.phaseControllerCallback.OnDynamicNodeAdded(populationVersion, n, fullIntro)
+	p.phaseControllerCallback.OnDynamicNodeUpdate(populationVersion, n, flags)
 }
 
-func (p *nodeContext) onPurgatoryNodeAdded(populationVersion uint32, n *NodePhantom) {
+func (p *nodeContext) onPurgatoryNodeUpdate(populationVersion uint32, n *NodePhantom, flags UpdateFlags) {
 	if p.phaseControllerCallback == nil {
 		return
 	}
-	p.phaseControllerCallback.OnPurgatoryNodeAdded(populationVersion, n)
+	p.phaseControllerCallback.OnPurgatoryNodeUpdate(populationVersion, n, flags)
 }
 
 func (p *nodeContext) onCustomEvent(populationVersion uint32, n *NodeAppearance, event interface{}) {
@@ -157,4 +162,8 @@ func (p *nodeContext) onDynamicPopulationCompleted(populationVersion uint32, ind
 		return
 	}
 	p.phaseControllerCallback.OnDynamicPopulationCompleted(populationVersion, indexedCount)
+}
+
+func (p *nodeContext) GetLocalNodeID() insolar.ShortNodeID {
+	return p.localNodeID
 }

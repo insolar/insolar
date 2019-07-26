@@ -52,6 +52,7 @@ package packets
 
 import (
 	"bytes"
+	"encoding/binary"
 	"net"
 	"strconv"
 
@@ -65,6 +66,8 @@ const (
 
 	maxPortNumber = ^uint16(0)
 )
+
+var defaultByteOrder = binary.BigEndian
 
 type NodeAddress [nodeAddressSize]byte
 
@@ -86,11 +89,6 @@ func NewNodeAddress(address string) (NodeAddress, error) {
 		return addr, errors.Errorf("invalid port number: %s", port)
 	}
 
-	return addr, newNodeAddress(ip, portNumber, &addr)
-}
-
-func NewNodeAddressOf(ip net.IP, portNumber int) (NodeAddress, error) {
-	var addr NodeAddress
 	return addr, newNodeAddress(ip, portNumber, &addr)
 }
 

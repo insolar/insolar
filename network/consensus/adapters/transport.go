@@ -53,7 +53,6 @@ package adapters
 import (
 	"context"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	transport2 "github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -70,17 +69,15 @@ func NewPacketSender(datagramTransport transport.DatagramTransport) *PacketSende
 	}
 }
 
-func (ps *PacketSender) SendPacketToTransport(ctx context.Context, to profiles.StaticProfile, sendOptions transport2.PacketSendOptions, payload interface{}) {
-	addr := to.GetDefaultEndpoint().GetNameAddress().String()
+func (ps *PacketSender) SendPacketToTransport(ctx context.Context, to transport2.TargetProfile, sendOptions transport2.PacketSendOptions, payload interface{}) {
+	addr := to.GetStatic().GetDefaultEndpoint().GetIPAddress().String()
 
-	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"receiver_addr":    addr,
-		"receiver_node_id": to.GetStaticNodeID(),
-		"options":          sendOptions,
+	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
+		"receiver_addr": addr,
 	})
 
 	err := ps.datagramTransport.SendDatagram(ctx, addr, payload.([]byte))
 	if err != nil {
-		logger.Error("Failed to send datagram")
+		logger.Error("Failed to send datagram: ", err)
 	}
 }

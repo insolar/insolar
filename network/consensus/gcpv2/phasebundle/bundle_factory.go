@@ -51,60 +51,115 @@
 package phasebundle
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
+	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/consensus"
+	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/inspectors"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/pulsectl"
-	"time"
 )
 
 const loopingMinimalDelay = 2 * time.Millisecond
 
 func NewStandardBundleFactoryDefault() core.PhaseControllersBundleFactory {
-	return NewStandardBundleFactory(CreateStandardBundleConfig())
+	return NewStandardBundleFactory(CreateDefaultBundleFactoryConfig(), CreateDefaultBundleConfig())
 }
 
-func NewStandardBundleFactory(config BundleConfig) core.PhaseControllersBundleFactory {
-	return &standardBundleFactory{config}
+func NewStandardBundleFactory(factoryConfig BundleFactoryConfig, config BundleConfig) core.PhaseControllersBundleFactory {
+	return &standardBundleFactory{factoryConfig, config}
 }
 
-func CreateStandardBundleConfig() BundleConfig {
+func CreateDefaultBundleFactoryConfig() BundleFactoryConfig {
+	return BundleFactoryConfig{
+		pulsectl.NewTakeFirstSelectionStrategyFactory(),
+		consensus.NewSimpleSelectionStrategyFactory(),
+		inspectors.NewVectorInspectionFactory(),
+	}
+}
+
+func CreateDefaultBundleConfig() BundleConfig {
 	return BundleConfig{
-		pulsectl.NewTakeFirstSelectionStrategy(),
 		loopingMinimalDelay,
-		transport.AllowFullJoinerIntroForPhase1,
+		transport.OnlyBriefIntroAboutJoiner,
 		0,
+		0,
+		false,
+		false,
+		false,
+		false,
 	}
 }
 
 type BundleConfig struct {
-	PulseSelectionStrategy pulsectl.PulseSelectionStrategy
-	LoopingMinimalDelay    time.Duration
+	LoopingMinimalDelay time.Duration
 
-	MemberOptions transport.PacketSendOptions
-	JoinerOptions transport.PacketSendOptions
+	MemberOptions                   transport.PacketPrepareOptions
+	JoinerOptions                   transport.PacketPrepareOptions
+	VectorInspectInliningLimit      int
+	DisableVectorInspectionOnJoiner bool
+	EnableFastPhase3                bool
+	IgnoreVectorHashes              bool
+	DisableAggressivePhasing        bool
+}
+
+type BundleFactories struct {
+	PulseSelectionStrategy pulsectl.PulseSelectionStrategy
+	ConsensusStrategy      consensus.SelectionStrategy
+	VectorInspection       inspectors.VectorInspection
+}
+
+type BundleFactoryConfig struct {
+	PulseSelectionStrategyFactory pulsectl.PulseSelectionStrategyFactory
+	ConsensusStrategyFactory      consensus.SelectionStrategyFactory
+	VectorInspectionFactory       inspectors.VectorInspectionFactory
 }
 
 type standardBundleFactory struct {
-	BundleConfig
+	factories      BundleFactoryConfig
+	configTemplate BundleConfig
 }
 
-func (p *standardBundleFactory) CreateControllersBundle(population census.OnlinePopulation, config api.LocalNodeConfiguration) core.PhaseControllersBundle {
+func (p *standardBundleFactory) CreateControllersBundle(population census.OnlinePopulation,
+	config api.LocalNodeConfiguration) core.PhaseControllersBundle {
 
 	lp := population.GetLocalProfile()
 	mode := lp.GetOpMode()
+
+	bundleConfig := p.configTemplate
+	//strategy.AdjustBundleConfig(&bundleConfig)
+
+	aggressivePhasing := !bundleConfig.DisableAggressivePhasing && population.IsValid() &&
+		population.GetSuspendedCount() == 0 && population.GetMistrustedCount() == 0
+
+	bf := BundleFactories{
+		p.factories.PulseSelectionStrategyFactory.CreatePulseSelectionStrategy(population, config),
+		p.factories.ConsensusStrategyFactory.CreateSelectionStrategy(aggressivePhasing),
+		p.factories.VectorInspectionFactory.CreateVectorInspection(bundleConfig.VectorInspectInliningLimit),
+	}
+
 	switch {
 	case mode.IsEvicted():
-		panic("unable to start consensus for an evicted node")
+		lockDown("EVICTED DETECTED")
+		panic("consensus can NOT be started for an evicted node")
 	case lp.IsJoiner():
-		if population.GetCount() != 1 {
-			panic("joiner can only start with a one-node population")
+		if population.GetIndexedCapacity() != 0 {
+			panic("joiner can only start with a zero node population")
 		}
-		return NewJoinerPhaseBundle(p.BundleConfig)
-	case mode.IsSuspended():
-		panic("not implemented")
+		return NewJoinerPhaseBundle(bf, bundleConfig)
+	case mode.IsSuspended() || !population.IsValid():
+		lockDown("SUSPENDED DETECTED")
+		// TODO work as suspected
+		return nil
 	default:
-		return NewRegularPhaseBundle(p.BundleConfig)
+		return NewRegularPhaseBundle(bf, bundleConfig)
 	}
+}
+
+func lockDown(msg string) { // TODO must be removed after debugging
+	fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>> DEBUG LOCK: ", msg)
+	<-(<-chan struct{})(nil)
 }

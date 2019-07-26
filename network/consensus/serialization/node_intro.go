@@ -51,6 +51,7 @@
 package serialization
 
 import (
+	"github.com/insolar/insolar/network"
 	"io"
 
 	"github.com/insolar/insolar/insolar"
@@ -94,26 +95,28 @@ type NodeBriefIntro struct {
 	Endpoint [18]byte
 
 	// 128 bytes
-	NodePK          longbits.Bits512 // works as a unique node identity
+	NodePK longbits.Bits512 // works as a unique node identity
+
+	JoinerData      []byte           `insolar-transport:"ignore=send"` // ByteSize = 0
 	JoinerSignature longbits.Bits512 // ByteSize=64
 }
 
-func (bi *NodeBriefIntro) getPrimaryRole() member.PrimaryRole {
+func (bi *NodeBriefIntro) GetPrimaryRole() member.PrimaryRole {
 	return member.PrimaryRole(bi.PrimaryRoleAndFlags & primaryRoleMask)
 }
 
-func (bi *NodeBriefIntro) setPrimaryRole(primaryRole member.PrimaryRole) {
+func (bi *NodeBriefIntro) SetPrimaryRole(primaryRole member.PrimaryRole) {
 	if primaryRole > primaryRoleMax {
 		panic("invalid primary role")
 	}
 
 	bi.PrimaryRoleAndFlags |= uint8(primaryRole)
 }
-func (bi *NodeBriefIntro) getAddrMode() endpoints.NodeEndpointType {
+func (bi *NodeBriefIntro) GetAddrMode() endpoints.NodeEndpointType {
 	return endpoints.NodeEndpointType(bi.PrimaryRoleAndFlags >> addrModeShift)
 }
 
-func (bi *NodeBriefIntro) setAddrMode(addrMode endpoints.NodeEndpointType) {
+func (bi *NodeBriefIntro) SetAddrMode(addrMode endpoints.NodeEndpointType) {
 	if addrMode > addrModeMax {
 		panic("invalid addr mode")
 	}
@@ -122,10 +125,6 @@ func (bi *NodeBriefIntro) setAddrMode(addrMode endpoints.NodeEndpointType) {
 }
 
 func (bi *NodeBriefIntro) SerializeTo(ctx SerializeContext, writer io.Writer) error {
-	// TODO: linter hack
-	bi.setPrimaryRole(bi.getPrimaryRole())
-	bi.setAddrMode(bi.getAddrMode())
-
 	if err := write(writer, bi.PrimaryRoleAndFlags); err != nil {
 		return errors.Wrap(err, "failed to serialize PrimaryRoleAndFlags")
 	}
@@ -154,38 +153,35 @@ func (bi *NodeBriefIntro) SerializeTo(ctx SerializeContext, writer io.Writer) er
 }
 
 func (bi *NodeBriefIntro) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
-	if err := read(reader, &bi.PrimaryRoleAndFlags); err != nil {
+	capture := network.NewCapturingReader(reader)
+
+	if err := read(capture, &bi.PrimaryRoleAndFlags); err != nil {
 		return errors.Wrap(err, "failed to deserialize PrimaryRoleAndFlags")
 	}
 
-	if err := read(reader, &bi.SpecialRoles); err != nil {
+	if err := read(capture, &bi.SpecialRoles); err != nil {
 		return errors.Wrap(err, "failed to deserialize SpecialRoles")
 	}
 
-	if err := read(reader, &bi.StartPower); err != nil {
+	if err := read(capture, &bi.StartPower); err != nil {
 		return errors.Wrap(err, "failed to deserialize StartPower")
 	}
 
-	if err := read(reader, &bi.Endpoint); err != nil {
+	if err := read(capture, &bi.Endpoint); err != nil {
 		return errors.Wrap(err, "failed to deserialize BasePort")
 	}
 
-	if err := read(reader, &bi.NodePK); err != nil {
+	if err := read(capture, &bi.NodePK); err != nil {
 		return errors.Wrap(err, "failed to deserialize NodePK")
 	}
+
+	bi.JoinerData = capture.Captured()
 
 	if err := read(reader, &bi.JoinerSignature); err != nil {
 		return errors.Wrap(err, "failed to deserialize JoinerSignature")
 	}
 
 	return nil
-}
-
-type NodeFullIntro struct {
-	// ByteSize= >=86 + (135, 137, 147) = >(221, 223, 233)
-
-	NodeBriefIntro    // ByteSize= 135, 137, 147
-	NodeExtendedIntro // ByteSize>=86
 }
 
 type NodeExtendedIntro struct {
@@ -281,7 +277,7 @@ func (ei *NodeExtendedIntro) DeserializeFrom(ctx DeserializeContext, reader io.R
 
 	if ei.ProofLen > 0 {
 		ei.NodeRefProof = make([]longbits.Bits512, ei.ProofLen)
-		for i := 0; i < int(ei.EndpointLen); i++ {
+		for i := 0; i < int(ei.ProofLen); i++ {
 			if err := read(reader, &ei.NodeRefProof[i]); err != nil {
 				return errors.Wrapf(err, "failed to deserialize NodeRefProof[%d]", i)
 			}
@@ -297,6 +293,13 @@ func (ei *NodeExtendedIntro) DeserializeFrom(ctx DeserializeContext, reader io.R
 	}
 
 	return nil
+}
+
+type NodeFullIntro struct {
+	// ByteSize= >=86 + (135, 137, 147) = >(221, 223, 233)
+
+	NodeBriefIntro    // ByteSize= 135, 137, 147
+	NodeExtendedIntro // ByteSize>=86
 }
 
 func (fi *NodeFullIntro) SerializeTo(ctx SerializeContext, writer io.Writer) error {

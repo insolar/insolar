@@ -92,7 +92,3 @@ func (g *FakeGateway) GetState() insolar.NetworkState {
 func (g *FakeGateway) ValidateCert(ctx context.Context, certificate insolar.AuthorizationCertificate) (bool, error) {
 	return true, nil
 }
-
-func (g *FakeGateway) FilterJoinerNodes(certificate insolar.Certificate, nodes []insolar.NetworkNode) []insolar.NetworkNode {
-	return nodes
-}

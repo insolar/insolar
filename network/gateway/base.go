@@ -52,9 +52,11 @@ package gateway
 
 import (
 	"context"
+	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network/consensus"
+	"github.com/insolar/insolar/network/consensus/adapters"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"time"
-
-	"github.com/insolar/insolar/network/consensusv1/packets"
 
 	"github.com/pkg/errors"
 
@@ -89,13 +91,13 @@ type Base struct {
 	PulseAppender       pulse.Appender              `inject:""`
 	PulseManager        insolar.PulseManager        `inject:""`
 	BootstrapRequester  bootstrap.Requester         `inject:""`
-	//PhaseManager        phases.PhaseManager         `inject:""`
-	Rules        network.Rules        `inject:""`
-	KeyProcessor insolar.KeyProcessor `inject:""`
+	Rules               network.Rules               `inject:""`
+	KeyProcessor        insolar.KeyProcessor        `inject:""`
 
-	// DiscoveryBootstrapper bootstrap.DiscoveryBootstrapper `inject:""`
-	bootstrapETA insolar.PulseNumber
-	joinClaim    *packets.NodeJoinClaim
+	ConsensusController consensus.Controller
+
+	bootstrapETA           insolar.PulseNumber
+	originCandidateProfile *packet.CandidateProfile
 }
 
 // NewGateway creates new gateway on top of existing
@@ -129,9 +131,8 @@ func (g *Base) Init(ctx context.Context) error {
 		return g.HostNetwork.BuildResponse(ctx, req, &packet.Ping{}), nil
 	})
 
-	var err error
-	g.joinClaim, err = g.NodeKeeper.GetOriginJoinClaim()
-	return err
+	g.createCandidateProfile()
+	return nil
 }
 
 func (g *Base) OnPulse(ctx context.Context, pu insolar.Pulse) error {
@@ -168,21 +169,6 @@ func (g *Base) ValidateCert(ctx context.Context, certificate insolar.Authorizati
 	return g.CertificateManager.VerifyAuthorizationCertificate(certificate)
 }
 
-func (g *Base) FilterJoinerNodes(certificate insolar.Certificate, nodes []insolar.NetworkNode) []insolar.NetworkNode {
-	//dNodes := make(map[insolar.Reference]struct{}, len(certificate.GetDiscoveryNodes()))
-	//for _, dn := range certificate.GetDiscoveryNodes() {
-	//	dNodes[*dn.GetNodeRef()] = struct{}{}
-	//}
-	//ret := []insolar.NetworkNode{}
-	//for _, n := range nodes {
-	//	if _, ok := dNodes[n.ID()]; ok {
-	//		ret = append(ret, n)
-	//	}
-	//}
-	//return ret
-	return nodes
-}
-
 // ============= Bootstrap =======
 
 func (g *Base) ShouldIgnorePulse(context.Context, insolar.Pulse) bool {
@@ -195,7 +181,9 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 	}
 
 	data := request.GetRequest().GetBootstrap()
-	if network.CheckShortIDCollision(g.NodeKeeper.GetAccessor().GetActiveNodes(), data.JoinClaim.ShortNodeID) {
+	//candidate := data.CandidateProfile
+
+	if network.CheckShortIDCollision(g.NodeKeeper.GetAccessor().GetActiveNodes(), insolar.ShortNodeID(data.CandidateProfile.ShortID)) {
 		return g.HostNetwork.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.UpdateShortID}), nil
 	}
 
@@ -210,9 +198,9 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 	if err != nil {
 		lastPulse = *insolar.GenesisPulse
 	}
-	if lastPulse.PulseNumber > data.Pulse.PulseNumber {
-		return g.HostNetwork.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.UpdateSchedule}), nil
-	}
+	//if lastPulse.PulseNumber > data.Pulse.PulseNumber {
+	//	return g.HostNetwork.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.UpdateSchedule}), nil
+	//}
 
 	err = bootstrap.ValidatePermit(data.Permit, g.CertificateManager.GetCertificate(), g.CryptographyService)
 	if err != nil {
@@ -223,7 +211,14 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 	//TODO: how to ignore claim if node already bootstrap to other??
 
 	// TODO: check JoinClaim is from Discovery node
-	g.NodeKeeper.GetClaimQueue().Push(data.JoinClaim)
+	type candidate struct {
+		profiles.StaticProfile
+		profiles.StaticProfileExtension
+	}
+
+	profile := adapters.NewStaticProfileFromPacket(data.CandidateProfile, g.KeyProcessor)
+	g.ConsensusController.AddJoinCandidate(candidate{profile, profile.GetExtension()})
+
 	go func() {
 		// TODO:
 		//pulseStartTime := time.Unix(0, data.Pulse.PulseTimestamp)
@@ -352,4 +347,53 @@ func (g *Base) HandleReconnect(ctx context.Context, request network.ReceivedPack
 
 	// TODO:
 	return g.HostNetwork.BuildResponse(ctx, request, &packet.ReconnectResponse{}), nil
+}
+
+func (g *Base) OnConsensusFinished(p insolar.PulseNumber) {
+	log.Infof("================== OnConsensusFinished for pulse %d", p)
+}
+
+func (g *Base) createCandidateProfile() {
+
+	origin := g.NodeKeeper.GetOrigin()
+
+	staticProfile := adapters.NewStaticProfile(origin, g.CertificateManager.GetCertificate(), g.KeyProcessor)
+
+	staticProfile.GetExtension().GetIssuerSignature().AsBytes()
+	//digest, sign := origin.(node.MutableNode).GetSignature()
+
+	pubKey, err := g.KeyProcessor.ExportPublicKeyBinary(origin.PublicKey())
+	if err != nil {
+		panic("Failed ExportPublicKeyBinary")
+	}
+
+	p := &packet.CandidateProfile{}
+	p.Address = origin.Address()
+	p.Ref = origin.ID()
+	p.ShortID = uint32(origin.ShortID())
+	p.Digest = staticProfile.GetBriefIntroSignedDigest().GetDigestHolder().AsBytes()
+	p.Signature = staticProfile.GetBriefIntroSignedDigest().GetSignatureHolder().AsBytes()
+	//p.Signature = staticProfile.GetExtension().GetIssuerSignature().AsBytes()
+
+	p.PublicKey = pubKey
+
+	cert := g.CertificateManager.GetCertificate()
+	switch cert.GetRole() {
+	case insolar.StaticRoleVirtual:
+		p.PrimaryRole = packet.Virtual
+	case insolar.StaticRoleHeavyMaterial:
+		p.PrimaryRole = packet.HeavyMaterial
+	case insolar.StaticRoleLightMaterial:
+		p.PrimaryRole = packet.LightMaterial
+	default:
+		panic("unknown role")
+	}
+
+	if network.OriginIsDiscovery(cert) {
+		p.SpecialRole = packet.Discovery
+	} else {
+		p.SpecialRole = packet.None
+	}
+
+	g.originCandidateProfile = p
 }

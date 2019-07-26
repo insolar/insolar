@@ -91,17 +91,29 @@ func TestPercentAndMin(t *testing.T) {
 }
 
 func TestDelta(t *testing.T) {
-	require.Equal(t, uint16(0), Power(1).Delta(Power(1)))
+	require.Zero(t, Power(1).Delta(Power(1)))
 
 	require.Equal(t, uint16(1), Power(2).Delta(Power(1)))
 }
 
 func TestAbsDelta(t *testing.T) {
-	require.Equal(t, uint16(0), Power(1).AbsDelta(Power(1)))
+	require.Zero(t, Power(1).AbsDelta(Power(1)))
 
 	require.Equal(t, uint16(1), Power(2).AbsDelta(Power(1)))
 
 	require.Equal(t, uint16(1), Power(1).AbsDelta(Power(2)))
+}
+
+func TestPowerSetOf(t *testing.T) {
+	require.Equal(t, PowerSet([...]Power{0, 0, 0, 0}), PowerSetOf(0))
+
+	require.Equal(t, PowerSet([...]Power{1, 2, 3, 4}), PowerSetOf(67305985))
+}
+
+func TestPowerSetAsUint32(t *testing.T) {
+	require.Zero(t, PowerSet([...]Power{0, 0, 0, 0}).AsUint32())
+
+	require.Equal(t, uint32(67305985), PowerSet([...]Power{1, 2, 3, 4}).AsUint32())
 }
 
 func TestNormalize(t *testing.T) {
@@ -200,7 +212,7 @@ func TestMin(t *testing.T) {
 
 func TestForLevel(t *testing.T) {
 	ps := PowerSet([...]Power{10, 20, 30, 40})
-	require.Equal(t, Power(0), ps.ForLevel(capacity.LevelZero))
+	require.Zero(t, ps.ForLevel(capacity.LevelZero))
 
 	require.Equal(t, Power(ps[0]), ps.ForLevel(capacity.LevelMinimal))
 
@@ -215,9 +227,9 @@ func TestForLevel(t *testing.T) {
 
 func TestForLevelWithPercents(t *testing.T) {
 	psBase := PowerSet([...]Power{10, 20, 30, 40})
-	require.Equal(t, Power(0), psBase.ForLevelWithPercents(capacity.LevelZero, 0, 0, 0))
+	require.Zero(t, psBase.ForLevelWithPercents(capacity.LevelZero, 0, 0, 0))
 
-	require.Equal(t, Power(0), PowerSet([...]Power{0, 0, 0, 0}).ForLevelWithPercents(capacity.LevelMinimal,
+	require.Zero(t, PowerSet([...]Power{0, 0, 0, 0}).ForLevelWithPercents(capacity.LevelMinimal,
 		0, 0, 0))
 
 	require.Equal(t, psBase[0], psBase.ForLevelWithPercents(capacity.LevelMinimal, 0, 0, 0))
@@ -279,7 +291,7 @@ func TestForLevelWithPercents(t *testing.T) {
 func TestFindNearestValid(t *testing.T) {
 	psBase := PowerSet([...]Power{10, 20, 30, 40})
 	ps := psBase
-	require.Equal(t, Power(0), ps.FindNearestValid(0))
+	require.Zero(t, ps.FindNearestValid(0))
 
 	require.Equal(t, ps[0], ps.FindNearestValid(ps[0]))
 

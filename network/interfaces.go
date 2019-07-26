@@ -56,7 +56,6 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
@@ -134,37 +133,12 @@ type NodeKeeper interface {
 	// GetAccessor get accessor to the internal snapshot for the current pulse
 	// TODO: add pulse to the function signature to get data of various pulses
 	GetAccessor() Accessor
-	// GetOriginJoinClaim get origin NodeJoinClaim
-	GetOriginJoinClaim() (*packets.NodeJoinClaim, error)
-	// GetOriginAnnounceClaim get origin NodeAnnounceClaim
-	GetOriginAnnounceClaim(mapper packets.BitSetMapper) (*packets.NodeAnnounceClaim, error)
-	// GetClaimQueue get the internal queue of claims
-	GetClaimQueue() ClaimQueue
 	// GetSnapshotCopy get copy of the current nodekeeper snapshot
 	GetSnapshotCopy() *node.Snapshot
 	// Sync move unsync -> sync
-	Sync(context.Context, []insolar.NetworkNode, []packets.ReferendumClaim) error
+	Sync(context.Context, []insolar.NetworkNode) error
 	// MoveSyncToActive merge sync list with active nodes
 	MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error
-	// GetConsensusInfo get additional info for the current consensus process
-	GetConsensusInfo() ConsensusInfo
-}
-
-// ConsensusInfo additional info for the current consensus process
-// TODO: refactor code and make it not necessary
-type ConsensusInfo interface {
-	// NodesJoinedDuringPreviousPulse returns true if the last Sync call contained approved Join claims
-	NodesJoinedDuringPreviousPulse() bool
-	// AddTemporaryMapping add temporary mapping till the next pulse for consensus
-	AddTemporaryMapping(nodeID insolar.Reference, shortID insolar.ShortNodeID, address string) error
-	// ResolveConsensus get temporary mapping by short ID
-	ResolveConsensus(shortID insolar.ShortNodeID) *host.Host
-	// ResolveConsensusRef get temporary mapping by node ID
-	ResolveConsensusRef(nodeID insolar.Reference) *host.Host
-	// SetIsJoiner instruct current node whether it should perform consensus as joiner or not
-	SetIsJoiner(isJoiner bool)
-	// IsJoiner true if current node should perform consensus as joiner
-	IsJoiner() bool
 }
 
 // PartitionPolicy contains all rules how to initiate globule resharding.
@@ -178,30 +152,10 @@ type PartitionPolicy interface {
 type RoutingTable interface {
 	// Resolve NodeID -> ShortID, Address. Can initiate network requests.
 	Resolve(insolar.Reference) (*host.Host, error)
-	// ResolveConsensus ShortID -> NodeID, Address for node inside current globe for current consensus.
-	ResolveConsensus(insolar.ShortNodeID) (*host.Host, error)
-	// ResolveConsensusRef NodeID -> ShortID, Address for node inside current globe for current consensus.
-	ResolveConsensusRef(insolar.Reference) (*host.Host, error)
 	// AddToKnownHosts add host to routing table.
 	AddToKnownHosts(*host.Host)
 	// Rebalance recreate shards of routing table with known hosts according to new partition policy.
 	Rebalance(PartitionPolicy)
-}
-
-//go:generate minimock -i github.com/insolar/insolar/network.ClaimQueue -o ../testutils/network -s _mock.go
-
-// ClaimQueue is the queue that contains consensus claims.
-type ClaimQueue interface {
-	// Pop takes claim from the queue.
-	Pop() packets.ReferendumClaim
-	// Front returns claim from the queue without removing it from the queue.
-	Front() packets.ReferendumClaim
-	// Length returns the length of the queue
-	Length() int
-	// Push adds claim to the queue.
-	Push(claim packets.ReferendumClaim)
-	// Clear removes all claims from queue
-	Clear()
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network.Accessor -o ../testutils/network -s _mock.go
@@ -247,6 +201,7 @@ type Gateway interface {
 	Run(context.Context)
 	GetState() insolar.NetworkState
 	OnPulse(context.Context, insolar.Pulse) error
+	OnConsensusFinished(p insolar.PulseNumber)
 	NewGateway(context.Context, insolar.NetworkState) Gateway
 	Auther() Auther
 	NeedLockMessageBus() bool
@@ -261,9 +216,6 @@ type Auther interface {
 	// ValidateCert checks certificate signature
 	// TODO make this cert.validate()
 	ValidateCert(context.Context, insolar.AuthorizationCertificate) (bool, error)
-
-	// FilterJoinerNodes returns nodes which allowed to connect to this network in this state.
-	FilterJoinerNodes(certificate insolar.Certificate, nodes []insolar.NetworkNode) []insolar.NetworkNode
 }
 
 // Bootstrapper interface used to change behavior of handlers in different network states

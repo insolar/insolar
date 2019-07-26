@@ -54,12 +54,13 @@ import (
 	"context"
 	"time"
 
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
@@ -80,7 +81,7 @@ type ConsensusController interface {
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api.CandidateControlFeeder -o . -s _mock.go
 type CandidateControlFeeder interface {
-	PickNextJoinCandidate() profiles.CandidateProfile
+	PickNextJoinCandidate() (profiles.CandidateProfile /* joinerSecret */, cryptkit.DigestHolder)
 	RemoveJoinCandidate(candidateAdded bool, nodeID insolar.ShortNodeID) bool
 }
 
@@ -98,26 +99,36 @@ type ConsensusControlFeeder interface {
 	TrafficControlFeeder
 
 	GetRequiredPowerLevel() power.Request
-	OnAppliedPowerLevel(pw member.Power, effectiveSince pulse.Number)
+	OnAppliedMembershipProfile(mode member.OpMode, pw member.Power, effectiveSince pulse.Number)
 
 	GetRequiredGracefulLeave() (bool, uint32)
 	OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse.Number)
+}
+
+type MaintenancePollFunc func(ctx context.Context) bool
+
+type RoundStateCallback interface {
+	UpstreamController
 
 	/* Called on receiving seem-to-be-valid Pulsar or Phase0 packets. Can be called multiple time in sequence.
 	Application MUST NOT consider it as a new pulse. */
-	PulseDetected()
+	OnPulseDetected()
 
-	/* Consensus is finished. If expectedCensus == 0 then this node was evicted from consensus.	*/
-	ConsensusFinished(report UpstreamReport, expectedCensus census.Operational)
+	OnFullRoundStarting()
+	// TODO pulse committed
+
+	// A special case for joiner, as it doesnt request NSG with PreparePulseChange
+	CommitPulseChangeByJoiner(report UpstreamReport, pd pulse.Data, activeCensus census.Operational)
 
 	// /* Consensus has stopped abnormally	*/
 	// ConsensusFailed(report UpstreamReport)
 }
 
 type RoundController interface {
-	HandlePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound) error
+	PrepareConsensusRound(upstream UpstreamController)
+	StartConsensusRound()
 	StopConsensusRound()
-	StartConsensusRound(upstream UpstreamController)
+	HandlePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound) (bool, error)
 }
 
 type RoundControllerFactory interface {

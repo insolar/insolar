@@ -56,6 +56,8 @@ import (
 	"context"
 	"crypto"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -64,10 +66,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/keystore"
-	"github.com/insolar/insolar/network/node"
-
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/keystore"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/network/servicenetwork"
@@ -79,7 +79,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/platformpolicy"
@@ -100,11 +99,6 @@ const (
 
 	reqTimeoutMs int32 = 2000
 	pulseDelta   int32 = 1
-
-	Phase1Timeout  float64 = 0.30
-	Phase2Timeout  float64 = 0.50
-	Phase21Timeout float64 = 0.70
-	Phase3Timeout  float64 = 0.90
 )
 
 type fixture struct {
@@ -197,19 +191,12 @@ func (s *consensusSuite) SetupTest() {
 	suiteLogger.Info("Setup bootstrap nodes")
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
 	if UseFakeBootstrap {
-
 		bnodes := make([]insolar.NetworkNode, 0)
 		for _, n := range s.fixture().bootstrapNodes {
-
-			sign, err := n.cryptographyService.Sign([]byte{1, 2, 3, 4, 5})
-			s.Require().NoError(err)
-
-			origin := n.serviceNetwork.NodeKeeper.GetOrigin()
-			origin.(node.MutableNode).SetSignature(*sign)
-
-			bnodes = append(bnodes, origin)
+			bnodes = append(bnodes, n.serviceNetwork.NodeKeeper.GetOrigin())
 		}
 		for _, n := range s.fixture().bootstrapNodes {
+			n.serviceNetwork.ConsensusMode = consensus.ReadyNetwork
 			n.serviceNetwork.NodeKeeper.SetInitialSnapshot(bnodes)
 			n.serviceNetwork.Gatewayer.SwitchState(s.fixture().ctx, insolar.CompleteNetworkState)
 			pulseReceivers = append(pulseReceivers, n.host)
@@ -266,8 +253,8 @@ func (s *testSuite) waitResults(results chan error, expected int) {
 }
 
 func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
-	for _, node := range nodes {
-		s.preInitNode(node)
+	for _, n := range nodes {
+		s.preInitNode(n)
 	}
 
 	results := make(chan error, len(nodes))
@@ -277,8 +264,8 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 	}
 
 	suiteLogger.Info("Init nodes")
-	for _, node := range nodes {
-		go initNode(node)
+	for _, n := range nodes {
+		go initNode(n)
 	}
 	s.waitResults(results, len(nodes))
 }
@@ -289,11 +276,14 @@ func (s *testSuite) StartNodesNetwork(nodes []*networkNode) {
 	results := make(chan error, len(nodes))
 	startNode := func(node *networkNode) {
 		err := node.componentManager.Start(node.ctx)
+		node.serviceNetwork.RegisterConsensusFinishedNotifier(func(_ member.OpMode, _ member.Power, number insolar.PulseNumber) {
+			node.consensusResult <- number
+		})
 		results <- err
 	}
 
-	for _, node := range nodes {
-		go startNode(node)
+	for _, n := range nodes {
+		go startNode(n)
 	}
 	s.waitResults(results, len(nodes))
 	atomic.StoreUint32(&s.fixture().discoveriesAreBootstrapped, 1)
@@ -383,7 +373,7 @@ type networkNode struct {
 	componentManager   *component.Manager
 	serviceNetwork     *servicenetwork.ServiceNetwork
 	terminationHandler *testutils.TerminationHandlerMock
-	consensusResult    chan struct{}
+	consensusResult    chan insolar.PulseNumber
 }
 
 // newNetworkNode returns networkNode initialized only with id, host address and key pair
@@ -398,7 +388,7 @@ func (s *testSuite) newNetworkNode(name string) *networkNode {
 		privateKey:          key,
 		cryptographyService: cryptography.NewKeyBoundCryptographyService(key),
 		host:                address,
-		consensusResult:     make(chan struct{}, 1),
+		consensusResult:     make(chan insolar.PulseNumber, 1),
 	}
 
 	nodeContext, _ := inslogger.WithFields(s.fixture().ctx, map[string]interface{}{
@@ -531,15 +521,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme())
 	serviceNetwork, err := servicenetwork.NewServiceNetwork(cfg, node.componentManager)
 	s.Require().NoError(err)
-	serviceNetwork.SetOnStateUpdate(func() {
-		node.consensusResult <- struct{}{}
-	})
-
-	amMock := staterMock{
-		stateFunc: func() []byte {
-			return make([]byte, packets.HashLength)
-		},
-	}
 
 	certManager, cryptographyService := s.initCrypto(node)
 
@@ -562,7 +543,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		realKeeper,
 		newPulseManagerMock(realKeeper.(network.NodeKeeper)),
 		pubMock,
-		&amMock,
 		certManager,
 		cryptographyService,
 		keystore.NewInplaceKeyStore(node.privateKey),

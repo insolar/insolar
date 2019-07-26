@@ -60,7 +60,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/consensusv1/packets"
 )
 
 type bootstrapSuite struct {
@@ -81,11 +80,7 @@ func (f *fakeConsensus) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulse
 		activeNodes = append(activeNodes, n.serviceNetwork.NodeKeeper.GetOrigin())
 	}
 
-	var claims []packets.ReferendumClaim
-	// snapshot := f.node.serviceNetwork.NodeKeeper.GetSnapshotCopy()
-	// snapshot.
-
-	return f.node.serviceNetwork.NodeKeeper.Sync(f.node.ctx, activeNodes, claims)
+	return f.node.serviceNetwork.NodeKeeper.Sync(f.node.ctx, activeNodes)
 }
 
 func (s *bootstrapSuite) SetupTest() {

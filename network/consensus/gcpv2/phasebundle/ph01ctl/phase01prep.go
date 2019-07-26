@@ -52,6 +52,10 @@ package ph01ctl
 
 import (
 	"context"
+	"fmt"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/pulsectl"
 
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -84,21 +88,36 @@ func (c *Phase01PrepController) GetPacketType() []phases.PacketType {
 }
 
 func (c *Phase01PrepController) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
-	from endpoints.Inbound, flags core.PacketVerifyFlags) error {
+	from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags) error {
 
-	// TODO check ranks?
+	var pp transport.PulsePacketReader
+	var nr member.Rank
 
 	switch packet.GetPacketType() {
 	case phases.PacketPhase0:
 		p0 := packet.GetMemberPacket().AsPhase0Packet()
-		return c.pulseStrategy.HandlePrepPulsarPacket(ctx, p0.GetEmbeddedPulsePacket(), from, c.realm, false)
+		nr = p0.GetNodeRank()
+		pp = p0.GetEmbeddedPulsePacket()
 	case phases.PacketPhase1:
 		p1 := packet.GetMemberPacket().AsPhase1Packet()
-		if !p1.HasPulseData() {
-			return nil
+		if p1.HasFullIntro() || p1.HasCloudIntro() || p1.HasJoinerSecret() {
+			return fmt.Errorf("introduction data were not expected: from=%v", from)
 		}
-		return c.pulseStrategy.HandlePrepPulsarPacket(ctx, p1.GetEmbeddedPulsePacket(), from, c.realm, false)
+		nr = p1.GetAnnouncementReader().GetNodeRank()
+		if p1.HasPulseData() {
+			pp = p1.GetEmbeddedPulsePacket()
+		}
 	default:
 		panic("illegal value")
 	}
+	if nr.IsJoiner() && pp != nil {
+		return fmt.Errorf("pulse data in Phase0/Phas1 is not allowed from a joiner: from=%v", from)
+	}
+	// if { TODO check ranks? }
+
+	ok, err := c.pulseStrategy.HandlePulsarPacket(ctx, pp, from, false)
+	if err != nil || !ok {
+		return err
+	}
+	return c.realm.ApplyPulseData(pp, false, from)
 }

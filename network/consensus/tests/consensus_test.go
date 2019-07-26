@@ -53,9 +53,10 @@ package tests
 import (
 	"context"
 	"errors"
-	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle"
 	"math/rand"
 	"time"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle"
 
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -115,12 +116,25 @@ func (h *EmuHostConsensusAdapter) run(ctx context.Context) {
 		var err error
 		payload, from, err := h.receive(ctx)
 		if err == nil {
+			if payload == nil && from == nil {
+				h.controller.Abort()
+				return
+			}
+
 			var packet transport.PacketParser
 
 			packet, err = h.parsePayload(payload)
 			if err == nil {
 				if packet != nil {
 					hostFrom := endpoints.InboundConnection{Addr: *from}
+
+					sourceID := packet.GetSourceID()
+					targetID := packet.GetTargetID()
+
+					if sourceID != 0 && sourceID == targetID { // TODO for debugging
+						panic("must not")
+					}
+
 					err = h.controller.ProcessPacket(ctx, packet, &hostFrom)
 				}
 			}
@@ -132,16 +146,17 @@ func (h *EmuHostConsensusAdapter) run(ctx context.Context) {
 	}
 }
 
-func (h *EmuHostConsensusAdapter) SendPacketToTransport(ctx context.Context, t profiles.StaticProfile, sendOptions transport.PacketSendOptions, payload interface{}) {
-	h.send(t.GetDefaultEndpoint(), payload)
+func (h *EmuHostConsensusAdapter) SendPacketToTransport(ctx context.Context, t transport.TargetProfile, sendOptions transport.PacketSendOptions, payload interface{}) {
+	h.send(t.GetStatic().GetDefaultEndpoint(), payload)
 }
 
 func (h *EmuHostConsensusAdapter) receive(ctx context.Context) (payload interface{}, from *endpoints.Name, err error) {
 	packet, ok := <-h.inbound
 	if !ok {
-		panic(errors.New("connection closed"))
+		inslogger.FromContext(ctx).Debugf("host is dead: %s", h.hostAddr)
+		return nil, nil, nil
 	}
-	inslogger.FromContext(ctx).Infof("receivedBy: %s - %+v", h.hostAddr, packet)
+	inslogger.FromContext(ctx).Debugf("receivedBy: %s - %+v", h.hostAddr, packet)
 	if packet.Payload == nil {
 		return nil, &packet.Host, errors.New("missing payload")
 	}
@@ -153,8 +168,12 @@ func (h *EmuHostConsensusAdapter) receive(ctx context.Context) (payload interfac
 }
 
 func (h *EmuHostConsensusAdapter) send(target endpoints.Outbound, payload interface{}) {
+	defer func() {
+		_ = recover()
+	}()
 	parser := payload.(transport.PacketParser)
 	pkt := Packet{Host: target.GetNameAddress(), Payload: WrapPacketParser(parser)}
+	//fmt.Println(">SEND> ", pkt)
 	h.outbound <- pkt
 }
 
@@ -185,6 +204,10 @@ func (p *EmuRoundStrategyFactory) CreateRoundStrategy(chronicle api.ConsensusChr
 type EmuRoundStrategy struct {
 }
 
+func (*EmuRoundStrategy) IsEphemeralPulseAllowed() bool {
+	return false
+}
+
 func (*EmuRoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse pulse.Number, self profiles.LocalNode) context.Context {
 	return ctx
 }
@@ -206,6 +229,9 @@ type EmuControlFeeder struct {
 	leaveReason uint32
 }
 
+func (p *EmuControlFeeder) OnAppliedMembershipProfile(mode member.OpMode, pw member.Power, effectiveSince pulse.Number) {
+}
+
 func (*EmuControlFeeder) SetTrafficLimit(level capacity.Level, duration time.Duration) {
 }
 
@@ -220,9 +246,6 @@ func (*EmuControlFeeder) ConsensusFinished(report api.UpstreamReport, expectedCe
 
 func (*EmuControlFeeder) GetRequiredPowerLevel() power.Request {
 	return power.NewRequestByLevel(capacity.LevelNormal)
-}
-
-func (*EmuControlFeeder) OnAppliedPowerLevel(pw member.Power, effectiveSince pulse.Number) {
 }
 
 func (p *EmuControlFeeder) GetRequiredGracefulLeave() (bool, uint32) {

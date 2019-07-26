@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,7 +46,7 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package pulse
 
@@ -75,8 +75,8 @@ func TestOfUnixTime(t *testing.T) {
 
 func TestAsApproximateTime(t *testing.T) {
 	n := Number(0)
-	time := n.AsApproximateTime()
-	require.Equal(t, timeOfMinTimePulse, time)
+	approx := n.AsApproximateTime()
+	require.Equal(t, timeOfMinTimePulse, approx)
 }
 
 func TestIsTimePulse(t *testing.T) {
@@ -153,19 +153,19 @@ func TestIsValidAsPulseNumber(t *testing.T) {
 }
 
 func TestOfInt(t *testing.T) {
-	require.Equal(t, Number(0), OfInt(MaxTimePulse+1))
+	require.Zero(t, OfInt(MaxTimePulse+1))
 
 	require.Equal(t, Number(MaxTimePulse-1), OfInt(MaxTimePulse-1))
 }
 
 func TestOfUint32(t *testing.T) {
-	require.Equal(t, Number(0), OfUint32(MaxTimePulse+1))
+	require.Zero(t, OfUint32(MaxTimePulse+1))
 
 	require.Equal(t, Number(MaxTimePulse-1), OfUint32(MaxTimePulse-1))
 }
 
 func TestFlagsOf(t *testing.T) {
-	require.Equal(t, uint(0), FlagsOf(MaxTimePulse))
+	require.Zero(t, FlagsOf(MaxTimePulse))
 
 	require.Equal(t, uint(1), FlagsOf(MaxTimePulse+2))
 }

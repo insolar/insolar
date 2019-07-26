@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,27 +46,33 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package core
 
 import (
 	"context"
+	"fmt"
+	"sync"
+
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"sync"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
 )
 
 func NewNodePhantom(purgatory *RealmPurgatory, nodeID insolar.ShortNodeID, limiter phases.PacketLimiter) *NodePhantom {
 	return &NodePhantom{
-		purgatory:        purgatory,
-		nodeID:           nodeID,
-		limiter:          limiter,
-		postponedPackets: make([]PostponedPacket, 0, 1+limiter.GetRemainingPacketCountDefault()<<1),
+		purgatory: purgatory,
+		nodeID:    nodeID,
+		limiter:   limiter,
+		recorder:  packetrecorder.NewUnsafePacketRecorder(int(limiter.GetRemainingPacketCountDefault())),
 	}
 }
 
@@ -76,14 +82,40 @@ var _ MemberPacketSender = &NodePhantom{}
 type NodePhantom struct {
 	purgatory *RealmPurgatory
 
-	nodeID  insolar.ShortNodeID
-	mutex   sync.Mutex
-	limiter phases.PacketLimiter
+	nodeID    insolar.ShortNodeID
+	mutex     sync.Mutex
+	limiter   phases.PacketLimiter
+	recorder  packetrecorder.UnsafePacketRecorder
+	hasAscent bool
 
 	figment figment
-	//figments map[string]*figment
 
-	postponedPackets []PostponedPacket
+	// figments map[string]*figment
+}
+
+func (p *NodePhantom) ApplyNeighbourEvidence(n *NodeAppearance, an profiles.MembershipAnnouncement, cappedTrust bool) (bool, error) {
+	return false, nil
+}
+
+func (p *NodePhantom) Blames() misbehavior.BlameFactory {
+	return p.purgatory.callback.GetBlameFactory()
+}
+
+func (p *NodePhantom) Frauds() misbehavior.FraudFactory {
+	return p.purgatory.callback.GetFraudFactory()
+}
+
+func (p *NodePhantom) GetReportProfile() profiles.BaseNode {
+	panic("implement me")
+}
+
+func (p *NodePhantom) IsJoiner() bool {
+	return p.figment.rank.IsJoiner()
+}
+
+func (p *NodePhantom) EncryptJoinerSecret(joinerSecret cryptkit.DigestHolder) cryptkit.DigestHolder {
+	// TODO encryption of joinerSecret
+	return joinerSecret
 }
 
 func (p *NodePhantom) GetStatic() profiles.StaticProfile {
@@ -131,138 +163,145 @@ func (p *NodePhantom) SetPacketReceived(pt phases.PacketType) bool {
 }
 
 func (p *NodePhantom) DispatchMemberPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
-	flags PacketVerifyFlags, pd PacketDispatcher) error {
+	flags packetrecorder.PacketVerifyFlags, pd PacketDispatcher) error {
 
-	if p.WasAscent() {
-		// MUST be outside of locks
-		p.purgatory.sendPostponedPacket(ctx, packet, from, flags)
-		return nil
+	_, err := pd.TriggerUnknownMember(ctx, p.nodeID, packet.GetMemberPacket(), from)
+	if err != nil {
+		return err
 	}
 
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-	p.postponedPackets = append(p.postponedPackets, PostponedPacket{packet, from, flags})
+	p.postponePacket(ctx, packet, from, flags)
 	return nil
 }
 
-func (p *NodePhantom) ApplyNodeIntro(ctx context.Context,
-	brief profiles.BriefCandidateProfile, full profiles.CandidateProfile,
-	announcerID insolar.ShortNodeID, originID insolar.ShortNodeID) error {
+func (p *NodePhantom) postponePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags) {
+
+	inslogger.FromContext(ctx).Debugf("packet added to purgatory: s=%d t=%d pt=%v",
+		packet.GetSourceID(), packet.GetTargetID(), packet.GetPacketType())
+
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	p.recorder.Record(packet, from, flags)
+}
+
+func (p *NodePhantom) DispatchAnnouncement(ctx context.Context, rank member.Rank, profile profiles.StaticProfile,
+	announcement *profiles.MembershipAnnouncement, introducedByID insolar.ShortNodeID) error {
 
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	if (brief == nil) == (full == nil) {
-		panic("illegal value")
+	return p.figment.dispatchAnnouncement(ctx, p, rank, profile, announcement, introducedByID)
+}
+
+func (p *NodePhantom) ascend(ctx context.Context, nsp profiles.StaticProfile, rank member.Rank, sv cryptkit.SignatureVerifier) bool {
+
+	if p.hasAscent {
+		return false
 	}
+	p.hasAscent = true
 
-	return p.figment.applyNodeIntro(ctx, p, brief, full, announcerID, originID)
+	p.purgatory.ascendFromPurgatory(ctx, p.nodeID, nsp, rank, sv)
+	p.recorder.Playback(p.purgatory.postponedPacketFn)
+	return true
 }
 
-func (p *NodePhantom) WasAscent() bool {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-	return p.postponedPackets == nil
-}
-
-func (p *NodePhantom) ascend(ctx context.Context, nsp profiles.StaticProfile, sv cryptkit.SignatureVerifier) {
-
-	if p.postponedPackets == nil {
-		panic("illegal state")
-	}
-
-	packets := p.postponedPackets
-	p.postponedPackets = nil //mark
-
-	p.purgatory.ascendFromPurgatory(ctx, p.nodeID, nsp, sv, packets)
-}
+//func (p *NodePhantom) IntroducedBy( /* introducedBy */ insolar.ShortNodeID) {
+//
+//	// TODO do we need it?
+//}
 
 type figment struct {
 	phantom     *NodePhantom
-	originID    insolar.ShortNodeID
 	announcerID insolar.ShortNodeID
+	rank        member.Rank
 
 	profile profiles.StaticProfile
 
-	//announceSignature proofs.MemberAnnouncementSignature // one-time set
-	//stateEvidence     proofs.NodeStateHashEvidence       // one-time set
-	//firstFraudDetails *misbehavior.FraudError
-	//neighborReports int
+	// announceSignature proofs.MemberAnnouncementSignature // one-time set
+	// stateEvidence     proofs.NodeStateHashEvidence       // one-time set
+	// firstFraudDetails *misbehavior.FraudError
+	// neighborReports int
 }
 
-func (p *figment) applyNodeIntro(ctx context.Context, phantom *NodePhantom,
-	brief profiles.BriefCandidateProfile, full profiles.CandidateProfile,
-	announcerID insolar.ShortNodeID, originID insolar.ShortNodeID) error {
+func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom, rank member.Rank, profile profiles.StaticProfile,
+	announcement *profiles.MembershipAnnouncement, announcedBy insolar.ShortNodeID) error {
 
+	flags := UpdateFlags(0)
+	hasUpdate := false
 	if p.phantom == nil {
 		p.phantom = phantom
-	}
-	if p.originID.IsAbsent() {
-		p.originID = originID
-	}
+		p.rank = rank
 
+		prof := "none"
+		if p.profile != nil {
+			if p.profile.GetExtension() != nil {
+				prof = "full"
+			} else {
+				prof = "brief"
+			}
+		}
+		inslogger.FromContext(ctx).Debugf("Phantom node added: s=%d, t=%d, profile=%s",
+			p.phantom.purgatory.callback.localNodeID, p.phantom.nodeID, prof)
+
+		flags |= FlagCreated
+	}
 	ascentWithBrief := p.phantom.purgatory.IsBriefAscensionAllowed()
 
-	hasUpdate, hasMismatch := p.updateProfile(brief, full, ascentWithBrief)
+	hasProfileUpdate, hasMismatch := p.updateProfile(rank, profile)
 	if hasMismatch {
-		panic("InconsistentNeighbourAnnouncement") // TODO
-		//return p.RegisterFraud(p.Frauds().NewInconsistentNeighbourAnnouncement(p.GetReportProfile()))
+		panic(fmt.Sprintf("inconsistent neighbour announcement: local=%d, phantom=%d, announcer=%d, rank=%v, profile=%+v, firmentRank=%v, figmentProfile=%+v, ann=%+v",
+			p.phantom.purgatory.callback.localNodeID, p.phantom.nodeID, announcedBy, rank, profile, p.rank, p.profile, announcement))
+		// TODO return p.RegisterFraud(p.Frauds().NewInconsistentNeighbourAnnouncement(p.GetReportProfile()))
 	}
 
-	if p.announcerID.IsAbsent() {
-		if announcerID.IsAbsent() || announcerID == p.phantom.nodeID /* self-ascension is not allowed */ {
-			return nil
-		}
-		// TODO do we need to double-check, that the announcerID is an active node?
-		p.announcerID = announcerID
-		if p.profile == nil {
-			return nil
-		}
-	} else if !hasUpdate {
+	if hasProfileUpdate {
+		flags |= FlagProfileUpdated
+		hasUpdate = true
+	}
+	if p.announcerID.IsAbsent() && !announcedBy.IsAbsent() && (announcedBy != phantom.nodeID || !p.rank.IsJoiner()) {
+		p.announcerID = announcedBy
+		hasUpdate = true
+	}
+
+	if flags != 0 {
+		p.phantom.purgatory.onNodeUpdated(p.phantom, flags)
+	}
+	if !hasUpdate || p.profile == nil {
 		return nil
 	}
 
-	if p.profile.GetExtension() != nil || ascentWithBrief {
-		p.phantom.ascend(ctx, p.profile, nil)
-	} else {
-		p.phantom.purgatory.onBriefProfileCreated(p.phantom)
+	switch {
+	case p.rank.IsJoiner() && p.announcerID.IsAbsent():
+		/* self-ascension is not allowed for joiners */
+	case p.profile.GetExtension() != nil || ascentWithBrief:
+		inslogger.FromContext(ctx).Debugf("Phantom node ascension: s=%d, t=%d, full=%v",
+			p.phantom.purgatory.callback.localNodeID, p.phantom.nodeID, p.profile.GetExtension() != nil)
+
+		p.phantom.ascend(ctx, p.profile, p.rank, nil)
 	}
 	return nil
 }
 
-func (p *figment) updateProfile(brief profiles.BriefCandidateProfile, full profiles.CandidateProfile, ascentWithBrief bool) (bool, bool) {
+func (p *figment) updateProfile(rank member.Rank, profile profiles.StaticProfile) (updated bool, mismatched bool) {
 
 	switch {
+	case rank != p.rank:
+		return false, true
+	case profile == nil:
+		return false, false
 	case p.profile == nil:
-		switch {
-		case full != nil:
-			p.profile = p.phantom.purgatory.GetProfileFactory().CreateFullIntroProfile(full)
-		case brief != nil:
-			if ascentWithBrief {
-				p.profile = p.phantom.purgatory.GetProfileFactory().CreateUpgradableIntroProfile(brief)
-			} else {
-				p.profile = p.phantom.purgatory.GetProfileFactory().CreateBriefIntroProfile(brief)
-			}
-		default:
-			return false, false
-		}
+		p.profile = profile
 		return true, false
-	case full != nil:
-		matches, created := profiles.ApplyNodeIntro(p.profile, brief, full)
-		if !matches {
-			if created != nil {
-				panic("illegal state")
-			}
+	case profile.GetExtension() == nil:
+		return false, !profiles.EqualStaticProfiles(p.profile, profile)
+	case p.profile.GetExtension() == nil:
+		if !profiles.EqualStaticProfiles(p.profile, profile) {
 			return false, true
 		}
-		return created != nil, false
-	case brief != nil:
-		matches, created := profiles.ApplyNodeIntro(p.profile, brief, full)
-		if created != nil { //it is impossible to create a full profile on a brief intro
-			panic("illegal state")
-		}
-		return false, !matches
+		p.profile = profile
+		return true, false
 	default:
-		return false, false
+		return false, !profiles.EqualStaticProfiles(p.profile, profile) ||
+			!profiles.EqualProfileExtensions(p.profile.GetExtension(), profile.GetExtension())
 	}
 }

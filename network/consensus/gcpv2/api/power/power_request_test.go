@@ -87,7 +87,7 @@ func TestAsCapacityLevel(t *testing.T) {
 func TestAsMemberPower(t *testing.T) {
 	b, l := Request(1).AsMemberPower()
 	require.True(t, b)
-	require.Equal(t, member.Power(0), l)
+	require.Zero(t, l)
 
 	b, l = Request(-1).AsMemberPower()
 	require.False(t, b)
@@ -100,4 +100,40 @@ func TestAsMemberPower(t *testing.T) {
 
 	r = Request(-1)
 	require.Equal(t, member.Power(r), l)
+}
+
+func TestIsEmpty(t *testing.T) {
+	require.True(t, EmptyRequest.IsEmpty())
+
+	require.False(t, Request(1).IsEmpty())
+}
+
+func TestUpdate(t *testing.T) {
+	pws := member.PowerSet([...]member.Power{10, 20, 30, 40})
+	pwBase := member.Power(1)
+	pw := pwBase
+
+	require.True(t, Request(-1).Update(&pw, pws))
+
+	require.Zero(t, pw)
+
+	pw = pwBase
+	require.True(t, Request(-2).Update(&pw, pws))
+
+	require.Equal(t, member.Power(10), pw)
+
+	pw = pwBase
+	require.True(t, Request(10).Update(&pw, pws))
+
+	require.Equal(t, member.Power(10), pw)
+
+	pw = pwBase
+	require.True(t, Request(100).Update(&pw, pws))
+
+	require.Equal(t, member.Power(40), pw)
+
+	pw = pwBase
+	require.False(t, Request(0).Update(&pw, pws))
+
+	require.Equal(t, member.Power(1), pw)
 }

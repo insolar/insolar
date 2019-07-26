@@ -56,14 +56,12 @@ import (
 
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 )
 
 type (
-	OnFinished func(pulse pulse.Number)
+	OnFinished func(mode member.OpMode, pw member.Power, effectiveSince pulse.Number)
 )
 
 type ConsensusControlFeeder struct {
@@ -78,7 +76,7 @@ func NewConsensusControlFeeder() *ConsensusControlFeeder {
 	return &ConsensusControlFeeder{
 		mu:            &sync.RWMutex{},
 		capacityLevel: capacity.LevelNormal,
-		onFinished:    func(pulse pulse.Number) {},
+		onFinished:    func(mode member.OpMode, pw member.Power, effectiveSince pulse.Number) {},
 	}
 }
 
@@ -118,17 +116,14 @@ func (cf *ConsensusControlFeeder) SetOnFinished(f OnFinished) {
 	cf.onFinished = f
 }
 
-func (cf *ConsensusControlFeeder) OnAppliedPowerLevel(pw member.Power, effectiveSince pulse.Number) {
-}
-
-func (cf *ConsensusControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse.Number) {
-}
-
-func (cf *ConsensusControlFeeder) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
+func (cf *ConsensusControlFeeder) OnAppliedMembershipProfile(mode member.OpMode, pw member.Power, effectiveSince pulse.Number) {
 	cf.mu.RLock()
 	defer cf.mu.RUnlock()
 
-	cf.onFinished(report.PulseNumber)
+	cf.onFinished(mode, pw, effectiveSince)
+}
+
+func (cf *ConsensusControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse.Number) {
 }
 
 func (cf *ConsensusControlFeeder) SetTrafficLimit(level capacity.Level, duration time.Duration) {
@@ -151,10 +146,10 @@ func InterceptConsensusControl(originalFeeder *ConsensusControlFeeder) *ControlF
 }
 
 type ControlFeederInterceptor struct {
-	internal internalControlFeederAdapter
+	internal InternalControlFeederAdapter
 }
 
-func (i *ControlFeederInterceptor) Feeder() *internalControlFeederAdapter {
+func (i *ControlFeederInterceptor) Feeder() *InternalControlFeederAdapter {
 	return &i.internal
 }
 
@@ -189,7 +184,7 @@ func (i *ControlFeederInterceptor) Leave(leaveReason uint32) <-chan struct{} {
 	return i.internal.leavingChannel
 }
 
-type internalControlFeederAdapter struct {
+type InternalControlFeederAdapter struct {
 	*ConsensusControlFeeder
 
 	mu *sync.Mutex
@@ -204,7 +199,7 @@ type internalControlFeederAdapter struct {
 	leavingChannel   chan struct{}
 }
 
-func (cf *internalControlFeederAdapter) GetRequiredPowerLevel() power.Request {
+func (cf *InternalControlFeederAdapter) GetRequiredPowerLevel() power.Request {
 	cf.mu.Lock()
 	defer cf.mu.Unlock()
 
@@ -214,7 +209,7 @@ func (cf *internalControlFeederAdapter) GetRequiredPowerLevel() power.Request {
 	return cf.ConsensusControlFeeder.GetRequiredPowerLevel()
 }
 
-func (cf *internalControlFeederAdapter) OnAppliedPowerLevel(pw member.Power, effectiveSince pulse.Number) {
+func (cf *InternalControlFeederAdapter) OnAppliedMembershipProfile(mode member.OpMode, pw member.Power, effectiveSince pulse.Number) {
 	cf.mu.Lock()
 	defer cf.mu.Unlock()
 
@@ -222,10 +217,15 @@ func (cf *internalControlFeederAdapter) OnAppliedPowerLevel(pw member.Power, eff
 	if pw == 0 && cf.zeroReadyChannel != nil {
 		cf.setHasZero()
 	}
-	cf.ConsensusControlFeeder.OnAppliedPowerLevel(pw, effectiveSince)
+
+	if mode.IsEvicted() {
+		cf.setHasLeft()
+	}
+
+	cf.ConsensusControlFeeder.OnAppliedMembershipProfile(mode, pw, effectiveSince)
 }
 
-func (cf *internalControlFeederAdapter) GetRequiredGracefulLeave() (bool, uint32) {
+func (cf *InternalControlFeederAdapter) GetRequiredGracefulLeave() (bool, uint32) {
 	cf.mu.Lock()
 	defer cf.mu.Unlock()
 
@@ -235,11 +235,11 @@ func (cf *internalControlFeederAdapter) GetRequiredGracefulLeave() (bool, uint32
 	return cf.ConsensusControlFeeder.GetRequiredGracefulLeave()
 }
 
-func (cf *internalControlFeederAdapter) OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse.Number) {
+func (cf *InternalControlFeederAdapter) OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse.Number) {
 	cf.ConsensusControlFeeder.OnAppliedGracefulLeave(exitCode, effectiveSince)
 }
 
-func (cf *internalControlFeederAdapter) PulseDetected() {
+func (cf *InternalControlFeederAdapter) PulseDetected() {
 	cf.mu.Lock()
 	defer cf.mu.Unlock()
 
@@ -249,24 +249,14 @@ func (cf *internalControlFeederAdapter) PulseDetected() {
 	cf.ConsensusControlFeeder.PulseDetected()
 }
 
-func (cf *internalControlFeederAdapter) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
-	cf.mu.Lock()
-	defer cf.mu.Unlock()
-
-	if report.MemberMode.IsEvicted() {
-		cf.setHasLeft()
-	}
-	cf.ConsensusControlFeeder.ConsensusFinished(report, expectedCensus)
-}
-
-func (cf *internalControlFeederAdapter) setHasZero() {
+func (cf *InternalControlFeederAdapter) setHasZero() {
 	if !cf.hasZero && cf.zeroReadyChannel != nil {
 		close(cf.zeroReadyChannel)
 	}
 	cf.hasZero = true
 }
 
-func (cf *internalControlFeederAdapter) setHasLeft() {
+func (cf *InternalControlFeederAdapter) setHasLeft() {
 	cf.setHasZero()
 
 	if !cf.hasLeft && cf.leavingChannel != nil {

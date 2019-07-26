@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,7 +46,7 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package misbehavior
 
@@ -111,17 +111,17 @@ func TestBlameType(t *testing.T) {
 
 func TestBlameError(t *testing.T) {
 	be := &BlameError{}
-	require.True(t, be.Error() != "")
+	require.NotEmpty(t, be.Error())
 
 	bn := profiles.NewBaseNodeMock(t)
 	be.violatorNode = bn
-	require.True(t, be.Error() != "")
+	require.NotEmpty(t, be.Error())
 
 	be.captureMark = 1
-	require.True(t, be.Error() != "")
+	require.NotEmpty(t, be.Error())
 }
 
-func reportFunc(Report) interface{} {
+func reportFunc(_ Report) interface{} {
 	return 1
 }
 

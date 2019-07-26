@@ -106,10 +106,6 @@ func (g *Complete) NeedLockMessageBus() bool {
 	return false
 }
 
-func (g *Complete) FilterJoinerNodes(certificate insolar.Certificate, nodes []insolar.NetworkNode) []insolar.NetworkNode {
-	return nodes
-}
-
 // ValidateCert validates node certificate
 func (g *Complete) ValidateCert(ctx context.Context, certificate insolar.AuthorizationCertificate) (bool, error) {
 	return g.CertificateManager.VerifyAuthorizationCertificate(certificate)

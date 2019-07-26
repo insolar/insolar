@@ -87,15 +87,13 @@ func (g *DiscoveryBootstrap) Run(ctx context.Context) {
 	//	return
 	//}
 
-	g.NodeKeeper.GetConsensusInfo().SetIsJoiner(false)
-
 	_, err = g.PulseAccessor.Latest(ctx)
 	pp := pulse.FromProto(authorizeRes.Pulse)
 	if err != nil {
 		g.PulseAppender.Append(ctx, *pp)
 	}
 
-	resp, err := g.BootstrapRequester.Bootstrap(ctx, authorizeRes.Permit, g.joinClaim, pp)
+	resp, err := g.BootstrapRequester.Bootstrap(ctx, authorizeRes.Permit, *g.originCandidateProfile, pp)
 	if err != nil {
 
 	}

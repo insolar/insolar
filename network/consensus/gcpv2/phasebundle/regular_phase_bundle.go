@@ -63,19 +63,20 @@ import (
 
 var _ core.PhaseControllersBundle = &RegularPhaseBundle{}
 
-func NewRegularPhaseBundle(config BundleConfig) core.PhaseControllersBundle {
-	return &RegularPhaseBundle{config}
+func NewRegularPhaseBundle(factories BundleFactories, config BundleConfig) core.PhaseControllersBundle {
+	return &RegularPhaseBundle{factories, config}
 }
 
 type RegularPhaseBundle struct {
+	BundleFactories
 	BundleConfig
 }
 
-func (r *RegularPhaseBundle) IsDynamicPopulationRequired() bool {
-	return false
+func (r RegularPhaseBundle) String() string {
+	return "RegularPhaseBundle"
 }
 
-func (r *RegularPhaseBundle) IsEphemeralPulseAllowed() bool {
+func (r *RegularPhaseBundle) IsDynamicPopulationRequired() bool {
 	return false
 }
 
@@ -92,24 +93,36 @@ func (r *RegularPhaseBundle) CreatePrepPhaseControllers() []core.PrepPhaseContro
 }
 
 type regularCallback struct {
-	qNshReady    chan *core.NodeAppearance
-	qTrustLvlUpd chan ph2ctl.TrustUpdateSignal
-	qJoiners     chan core.MemberPacketSender
+	qNshReady    chan *core.NodeAppearance    // can NOT handle duplicate events
+	qTrustLvlUpd chan ph2ctl.UpdateSignal     // can NOT handle duplicate events
+	qIntro       chan core.MemberPacketSender // can handle duplicate events
 }
 
-func (p *regularCallback) OnPurgatoryNodeAdded(populationVersion uint32, n *core.NodePhantom) {
-	p.qJoiners <- n
+func (p *regularCallback) OnPurgatoryNodeUpdate(populationVersion uint32, n *core.NodePhantom, flags core.UpdateFlags) {
+	if flags&core.FlagCreated != 0 {
+		p.qTrustLvlUpd <- ph2ctl.NewDynamicNodeCreated(nil)
+	}
+	if flags&core.FlagProfileUpdated != 0 {
+		p.qIntro <- n
+	}
 }
 
-func (p *regularCallback) OnDynamicNodeAdded(populationVersion uint32, n *core.NodeAppearance, fullIntro bool) {
-	p.qJoiners <- n
+func (p *regularCallback) OnDynamicNodeUpdate(populationVersion uint32, n *core.NodeAppearance, flags core.UpdateFlags) {
+
+	if flags&core.FlagCreated != 0 {
+		p.qIntro <- n
+		//		p.qTrustLvlUpd <- ph2ctl.NewDynamicNodeCreated(n)
+	}
+	if flags&core.FlagProfileUpdated != 0 {
+		p.qTrustLvlUpd <- ph2ctl.NewDynamicNodeReady(n)
+	}
 }
 
 func (p *regularCallback) OnDynamicPopulationCompleted(populationVersion uint32, indexedCount int) {
 }
 
 func (p *regularCallback) OnCustomEvent(populationVersion uint32, n *core.NodeAppearance, event interface{}) {
-	if te, ok := event.(ph2ctl.TrustUpdateSignal); ok && te.IsPingSignal() {
+	if te, ok := event.(ph2ctl.UpdateSignal); ok && te.IsPingSignal() {
 		p.qTrustLvlUpd <- te
 		return
 	}
@@ -117,42 +130,48 @@ func (p *regularCallback) OnCustomEvent(populationVersion uint32, n *core.NodeAp
 }
 
 func (p *regularCallback) OnTrustUpdated(populationVersion uint32, n *core.NodeAppearance, trustBefore, trustAfter member.TrustLevel) {
+
 	switch {
-	case trustBefore < member.TrustByNeighbors && trustAfter >= member.TrustByNeighbors:
-		trustAfter = member.TrustByNeighbors
-	case trustBefore < member.TrustBySome && trustAfter >= member.TrustBySome:
-		trustAfter = member.TrustBySome
-	case !trustBefore.IsNegative() && trustAfter.IsNegative():
-	default:
+	case trustBefore == trustAfter:
 		return
+	case trustAfter.IsNegative():
+		if !trustBefore.IsNegative() {
+			p.qTrustLvlUpd <- ph2ctl.UpdateSignal{NewTrustLevel: trustAfter, UpdatedNode: n}
+		}
+		return
+	case trustBefore == member.UnknownTrust && trustAfter >= member.TrustBySome:
+		p.qTrustLvlUpd <- ph2ctl.UpdateSignal{NewTrustLevel: member.TrustBySome, UpdatedNode: n}
 	}
-	p.qTrustLvlUpd <- ph2ctl.TrustUpdateSignal{NewTrustLevel: trustAfter, UpdatedNode: n}
+	if trustBefore < member.TrustByNeighbors && trustAfter >= member.TrustByNeighbors {
+		p.qTrustLvlUpd <- ph2ctl.UpdateSignal{NewTrustLevel: member.TrustByNeighbors, UpdatedNode: n}
+	}
 }
 
 func (p *regularCallback) OnNodeStateAssigned(populationVersion uint32, n *core.NodeAppearance) {
 	p.qNshReady <- n
-	p.qTrustLvlUpd <- ph2ctl.TrustUpdateSignal{NewTrustLevel: member.UnknownTrust, UpdatedNode: n}
+	p.qTrustLvlUpd <- ph2ctl.NewTrustUpdateSignal(n, member.UnknownTrust)
 }
 
 func (r *RegularPhaseBundle) CreateFullPhaseControllers(nodeCount int) ([]core.PhaseController, core.NodeUpdateCallback) {
 
 	/* Ensure sufficient sizes of queues to avoid lockups */
-	rcb := &regularCallback{
-		make(chan *core.NodeAppearance, nodeCount),
-		make(chan ph2ctl.TrustUpdateSignal, nodeCount*3), // up-to ~3 updates for every node
-		make(chan core.MemberPacketSender, nodeCount),
+	if nodeCount == 0 {
+		panic("illegal value")
 	}
 
-	consensusStrategy := ph3ctl.NewSimpleConsensusSelectionStrategy()
-	inspectionFactory := ph3ctl.NewVectorInspectionFactory(0)
+	rcb := &regularCallback{
+		make(chan *core.NodeAppearance, nodeCount),
+		make(chan ph2ctl.UpdateSignal, nodeCount*3), // up-to ~3 updates for every node
+		make(chan core.MemberPacketSender, nodeCount),
+	}
 
 	packetPrepareOptions := r.MemberOptions
 
 	return []core.PhaseController{
 		pulsectl.NewPulseController(),
-		ph01ctl.NewPhase01Controller(packetPrepareOptions, rcb.qJoiners),
+		ph01ctl.NewPhase01Controller(packetPrepareOptions, rcb.qIntro),
 		ph2ctl.NewPhase2Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qNshReady),
 		ph3ctl.NewPhase3Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qTrustLvlUpd,
-			consensusStrategy, inspectionFactory),
+			r.ConsensusStrategy, r.VectorInspection, r.EnableFastPhase3),
 	}, rcb
 }

@@ -67,7 +67,6 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
@@ -106,12 +105,12 @@ func TestRequester_Bootstrap(t *testing.T) {
 	})
 
 	p := &packet.Permit{}
-	claim := &packets.NodeJoinClaim{}
+	candidateProfile := packet.CandidateProfile{}
 	r := NewRequester(options)
 	// inject HostNetwork
 	r.(*requester).HostNetwork = hn
 
-	resp, err := r.Bootstrap(context.Background(), p, claim, insolar.GenesisPulse)
+	resp, err := r.Bootstrap(context.Background(), p, candidateProfile, insolar.GenesisPulse)
 	assert.Nil(t, resp)
 	assert.Error(t, err)
 }

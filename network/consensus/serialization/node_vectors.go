@@ -277,10 +277,8 @@ func (nab *NodeAppearanceBitset) DeserializeFrom(ctx DeserializeContext, reader 
 	length := nab.getLength()
 	if length > 0 {
 		nab.Bytes = make([]byte, length)
-		for i := 0; i < int(length); i++ {
-			if err := read(reader, &nab.Bytes[i]); err != nil {
-				return errors.Wrapf(err, "failed to serialize Bytes[%d]", i)
-			}
+		if err := read(reader, &nab.Bytes); err != nil {
+			return errors.Wrapf(err, "failed to serialize Bytes")
 		}
 	}
 	return nil

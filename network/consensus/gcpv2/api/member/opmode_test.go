@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,7 +46,7 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package member
 
@@ -64,10 +64,28 @@ func TestIsEvicted(t *testing.T) {
 	require.True(t, ModeEvictedAsSuspected.IsEvicted())
 }
 
+func TestIsEvictedForcefully(t *testing.T) {
+	require.False(t, ModeRestrictedAnnouncement.IsEvictedForcefully())
+
+	require.False(t, ModeEvictedGracefully.IsEvictedForcefully())
+
+	require.True(t, ModeEvictedAsSuspected.IsEvictedForcefully())
+}
+
 func TestIsRestricted(t *testing.T) {
 	require.False(t, ModeSuspected.IsRestricted())
 
 	require.True(t, ModeEvictedGracefully.IsRestricted())
+}
+
+func TestCanIntroduceJoiner(t *testing.T) {
+	require.False(t, ModeRestrictedAnnouncement.CanIntroduceJoiner(false))
+
+	require.False(t, ModePossibleFraudAndSuspected.CanIntroduceJoiner(false))
+
+	require.False(t, ModePossibleFraud.CanIntroduceJoiner(true))
+
+	require.True(t, ModePossibleFraud.CanIntroduceJoiner(false))
 }
 
 func TestIsMistrustful(t *testing.T) {
@@ -97,21 +115,21 @@ func TestAsUnit32(t *testing.T) {
 }
 
 func TestOpModeString(t *testing.T) {
-	require.True(t, OpMode(ModeNormal).String() != "")
+	require.NotEmpty(t, OpMode(ModeNormal).String())
 
-	require.True(t, OpMode(ModeSuspected).String() != "")
+	require.NotEmpty(t, OpMode(ModeSuspected).String())
 
-	require.True(t, OpMode(ModePossibleFraud).String() != "")
+	require.NotEmpty(t, OpMode(ModePossibleFraud).String())
 
-	require.True(t, OpMode(ModePossibleFraudAndSuspected).String() != "")
+	require.NotEmpty(t, OpMode(ModePossibleFraudAndSuspected).String())
 
-	require.True(t, OpMode(ModeRestrictedAnnouncement).String() != "")
+	require.NotEmpty(t, OpMode(ModeRestrictedAnnouncement).String())
 
-	require.True(t, OpMode(ModeEvictedGracefully).String() != "")
+	require.NotEmpty(t, OpMode(ModeEvictedGracefully).String())
 
-	require.True(t, OpMode(ModeEvictedAsFraud).String() != "")
+	require.NotEmpty(t, OpMode(ModeEvictedAsFraud).String())
 
-	require.True(t, OpMode(ModeEvictedAsSuspected).String() != "")
+	require.NotEmpty(t, OpMode(ModeEvictedAsSuspected).String())
 
-	require.True(t, OpMode(1<<ModeBits).String() != "")
+	require.NotEmpty(t, OpMode(1<<ModeBits).String())
 }

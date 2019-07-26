@@ -53,10 +53,11 @@ package endpoints
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/network/consensus/common/args"
+
 	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensusv1/packets"
 )
 
 type Name string
@@ -83,13 +84,13 @@ type Outbound interface {
 	GetEndpointType() NodeEndpointType
 	GetRelayID() insolar.ShortNodeID
 	GetNameAddress() Name
-	GetIPAddress() packets.NodeAddress
+	GetIPAddress() IPAddress
 	AsByteString() string
 	CanAccept(connection Inbound) bool
 }
 
-func EqualEndpoints(p, o Outbound) bool {
-	if p == nil || o == nil {
+func EqualOutboundEndpoints(p, o Outbound) bool {
+	if args.IsNil(p) || args.IsNil(o) {
 		return false
 	}
 	if p == o {
@@ -110,6 +111,18 @@ func EqualEndpoints(p, o Outbound) bool {
 	panic("missing")
 }
 
+func EqualListOfOutboundEndpoints(p []Outbound, o []Outbound) bool {
+	if len(p) != len(o) {
+		return false
+	}
+	for i, pi := range p {
+		if !EqualOutboundEndpoints(pi, o[i]) {
+			return false
+		}
+	}
+	return true
+}
+
 type NodeEndpointType uint8
 
 const (
@@ -122,7 +135,7 @@ const (
 
 type Inbound interface {
 	GetNameAddress() Name
-	//	GetIPAddress() packets.NodeAddress // TODO
+	//	GetIPAddress() packets.IPAddress // TODO
 	GetTransportKey() cryptkit.SignatureKeyHolder
 	GetTransportCert() cryptkit.CertificateHolder
 	AsByteString() string
@@ -163,38 +176,4 @@ func (v *InboundConnection) GetTransportKey() cryptkit.SignatureKeyHolder {
 
 func (v *InboundConnection) GetTransportCert() cryptkit.CertificateHolder {
 	return v.Cert
-}
-
-func EqualOutboundEndpoints(p Outbound, o Outbound) bool {
-	if p == nil || o == nil {
-		return false
-	}
-	if p == o {
-		return true
-	}
-	if p.GetEndpointType() != o.GetEndpointType() {
-		return false
-	}
-	switch p.GetEndpointType() {
-	case NameEndpoint:
-		return p.GetNameAddress() == o.GetNameAddress()
-	case IPEndpoint:
-		return p.GetIPAddress() == o.GetIPAddress()
-	case RelayEndpoint:
-		return p.GetRelayID() == o.GetRelayID()
-	default:
-		panic("not implemented")
-	}
-}
-
-func EqualListOfOutboundEndpoints(p []Outbound, o []Outbound) bool {
-	if len(p) == 0 || len(o) == 0 || len(p) != len(o) {
-		return false
-	}
-	for i, pi := range p {
-		if !EqualOutboundEndpoints(pi, o[i]) {
-			return false
-		}
-	}
-	return true
 }

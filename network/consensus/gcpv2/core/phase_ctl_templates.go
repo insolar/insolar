@@ -52,7 +52,9 @@ package core
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
 
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
@@ -61,7 +63,7 @@ import (
 type PhaseControllerTemplate struct {
 }
 
-func (c *PhaseControllerTemplate) BeforeStart(realm *FullRealm) {
+func (c *PhaseControllerTemplate) BeforeStart(ctx context.Context, realm *FullRealm) {
 }
 
 func (*PhaseControllerTemplate) StartWorker(ctx context.Context, realm *FullRealm) {
@@ -70,18 +72,18 @@ func (*PhaseControllerTemplate) StartWorker(ctx context.Context, realm *FullReal
 type PrepPhaseControllerTemplate struct {
 }
 
-func (c *PrepPhaseControllerTemplate) BeforeStart(realm *PrepRealm) {
+func (c *PrepPhaseControllerTemplate) BeforeStart(ctx context.Context, realm *PrepRealm) {
 }
 
 func (*PrepPhaseControllerTemplate) StartWorker(ctx context.Context, realm *PrepRealm) {
 }
 
-//var _ PacketDispatcher = &HostPacketDispatcherTemplate{}
+// var _ PacketDispatcher = &HostPacketDispatcherTemplate{}
 
 type HostPacketDispatcherTemplate struct {
 }
 
-func (*HostPacketDispatcherTemplate) DispatchUnknownMemberPacket(ctx context.Context, memberID insolar.ShortNodeID,
+func (*HostPacketDispatcherTemplate) TriggerUnknownMember(ctx context.Context, memberID insolar.ShortNodeID,
 	packet transport.MemberPacketReader, from endpoints.Inbound) (bool, error) {
 	return false, nil
 }
@@ -95,12 +97,12 @@ func (*HostPacketDispatcherTemplate) DispatchMemberPacket(ctx context.Context, p
 	panic("illegal state")
 }
 
-//var _ PacketDispatcher = &MemberPacketDispatcherTemplate{}
+// var _ PacketDispatcher = &MemberPacketDispatcherTemplate{}
 
 type MemberPacketDispatcherTemplate struct {
 }
 
-func (*MemberPacketDispatcherTemplate) DispatchUnknownMemberPacket(ctx context.Context, memberID insolar.ShortNodeID,
+func (*MemberPacketDispatcherTemplate) TriggerUnknownMember(ctx context.Context, memberID insolar.ShortNodeID,
 	packet transport.MemberPacketReader, from endpoints.Inbound) (bool, error) {
 	return false, nil
 }
@@ -110,6 +112,6 @@ func (*MemberPacketDispatcherTemplate) HasCustomVerifyForHost(from endpoints.Inb
 }
 
 func (*MemberPacketDispatcherTemplate) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
-	from endpoints.Inbound, flags PacketVerifyFlags) error {
+	from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags) error {
 	panic("illegal state")
 }

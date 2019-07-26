@@ -64,7 +64,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/node"
-	"github.com/insolar/insolar/network/nodenetwork"
 )
 
 var (
@@ -86,11 +85,14 @@ func TestServiceNetworkManyBootstraps(t *testing.T) {
 // Consensus suite tests
 
 func (s *consensusSuite) TestNetworkConsensus3Times() {
-	s.waitForConsensus(3)
+	s.waitForConsensus(5)
+	s.AssertActiveNodesCountDelta(0)
 }
 
 func (s *consensusSuite) TestJoinerNodeConnect() {
-	testNode := s.newNetworkNode("testNode")
+	s.waitForConsensus(1)
+
+	testNode := s.newNetworkNode("JoinerNode")
 	s.preInitNode(testNode)
 
 	s.InitNode(testNode)
@@ -99,7 +101,7 @@ func (s *consensusSuite) TestJoinerNodeConnect() {
 		s.StopNode(testNode)
 	}(s)
 
-	s.waitForConsensus(1)
+	s.waitForConsensus(2)
 
 	s.AssertActiveNodesCountDelta(0)
 
@@ -419,10 +421,8 @@ func (s *consensusSuite) TestDiscoveryDown() {
 
 func flushNodeKeeper(keeper network.NodeKeeper) {
 	// keeper.SetIsBootstrapped(false)
-	keeper.GetConsensusInfo().(*nodenetwork.ConsensusInfo).Flush(false)
 	keeper.SetCloudHash(nil)
 	keeper.SetInitialSnapshot([]insolar.NetworkNode{})
-	keeper.GetClaimQueue().Clear()
 	keeper.GetOrigin().(node.MutableNode).SetState(insolar.NodeReady)
 }
 

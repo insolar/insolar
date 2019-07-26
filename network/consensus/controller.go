@@ -58,11 +58,20 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
 
-type FinishedNotifier func(insolar.PulseNumber)
+type FinishedNotifier func(mode member.OpMode, pw member.Power, effectiveSince insolar.PulseNumber)
+
+type candidateController interface {
+	AddJoinCandidate(candidate transport.FullIntroductionReader)
+}
 
 type Controller interface {
+	AddJoinCandidate(candidate profiles.CandidateProfile)
+
 	Abort()
 
 	ChangePower(level capacity.Level)
@@ -73,18 +82,23 @@ type Controller interface {
 }
 
 type controller struct {
-	consensusControlFeeder   api.ConsensusControlFeeder
 	consensusController      api.ConsensusController
 	controlFeederInterceptor *adapters.ControlFeederInterceptor
+	candidateController      candidateController
 
 	mu        *sync.RWMutex
 	notifiers []FinishedNotifier
 }
 
-func newController(controlFeederInterceptor *adapters.ControlFeederInterceptor, consensusController api.ConsensusController) *controller {
+func newController(
+	controlFeederInterceptor *adapters.ControlFeederInterceptor,
+	candidateController candidateController,
+	consensusController api.ConsensusController,
+) *controller {
 	controller := &controller{
 		controlFeederInterceptor: controlFeederInterceptor,
 		consensusController:      consensusController,
+		candidateController:      candidateController,
 
 		mu:        &sync.RWMutex{},
 		notifiers: make([]FinishedNotifier, 0),
@@ -93,6 +107,10 @@ func newController(controlFeederInterceptor *adapters.ControlFeederInterceptor, 
 	controlFeederInterceptor.Feeder().SetOnFinished(controller.onFinished)
 
 	return controller
+}
+
+func (c *controller) AddJoinCandidate(candidate profiles.CandidateProfile) {
+	c.candidateController.AddJoinCandidate(candidate)
 }
 
 func (c *controller) Abort() {
@@ -118,11 +136,11 @@ func (c *controller) RegisterFinishedNotifier(fn FinishedNotifier) {
 	c.notifiers = append(c.notifiers, fn)
 }
 
-func (c *controller) onFinished(pulse pulse.Number) {
+func (c *controller) onFinished(mode member.OpMode, pw member.Power, pulse pulse.Number) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
 	for _, n := range c.notifiers {
-		go n(insolar.PulseNumber(pulse))
+		go n(mode, pw, insolar.PulseNumber(pulse))
 	}
 }

@@ -62,6 +62,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	transport2 "github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/network/consensus/gcpv2/censusimpl"
 	"github.com/insolar/insolar/network/consensus/serialization"
 
 	"github.com/insolar/insolar/insolar"
@@ -75,6 +76,13 @@ type packetProcessorSetter interface {
 	SetPacketProcessor(adapters.PacketProcessor)
 	SetPacketParserFactory(factory adapters.PacketParserFactory)
 }
+
+type Mode uint
+
+const (
+	ReadyNetwork = Mode(iota)
+	Joiner
+)
 
 func New(ctx context.Context, dep Dep) Installer {
 	dep.verify()
@@ -199,34 +207,58 @@ func newInstaller(constructor *constructor, dep *Dep) Installer {
 	}
 }
 
-func (c Installer) Install(setters ...packetProcessorSetter) Controller {
+func (c Installer) ControllerFor(mode Mode, setters ...packetProcessorSetter) Controller {
 	controlFeederInterceptor := adapters.InterceptConsensusControl(adapters.NewConsensusControlFeeder())
 	candidateFeeder := &core.SequentialCandidateFeeder{}
 
-	consensusController := c.createConsensusController(controlFeederInterceptor.Feeder(), candidateFeeder)
+	consensusChronicles := c.createConsensusChronicles(mode)
+	consensusController := c.createConsensusController(
+		consensusChronicles,
+		controlFeederInterceptor.Feeder(),
+		candidateFeeder,
+	)
 	packetParserFactory := c.createPacketParserFactory()
 
-	c.install(setters, consensusController, packetParserFactory)
+	c.bind(setters, consensusController, packetParserFactory)
 
-	return newController(controlFeederInterceptor, consensusController)
+	return newController(controlFeederInterceptor, candidateFeeder, consensusController)
 }
 
-func (c *Installer) createConsensusController(controlFeeder api.ConsensusControlFeeder, candidateFeeder api.CandidateControlFeeder) api.ConsensusController {
+func (c *Installer) createCensus(mode Mode) *censusimpl.PrimingCensusTemplate {
 	certificate := c.dep.CertificateManager.GetCertificate()
 	origin := c.dep.NodeKeeper.GetOrigin()
 	knownNodes := c.dep.NodeKeeper.GetAccessor().GetActiveNodes()
 
-	population := adapters.NewPopulation(
-		adapters.NewNodeIntroProfile(origin, certificate, c.dep.KeyProcessor),
-		adapters.NewNodeIntroProfileList(knownNodes, certificate, c.dep.KeyProcessor),
-	)
+	node := adapters.NewStaticProfile(origin, certificate, c.dep.KeyProcessor)
+	nodes := adapters.NewStaticProfileList(knownNodes, certificate, c.dep.KeyProcessor)
 
-	consensusChronicles := adapters.NewChronicles(
-		population,
-		c.consensus.nodeProfileFactory,
+	if mode == Joiner {
+		return adapters.NewCensusForJoiner(
+			node,
+			c.consensus.versionedRegistries,
+			c.consensus.transportCryptographyFactory,
+		)
+	}
+
+	return adapters.NewCensus(
+		node,
+		nodes,
 		c.consensus.versionedRegistries,
+		c.consensus.transportCryptographyFactory,
 	)
+}
 
+func (c *Installer) createConsensusChronicles(mode Mode) censusimpl.LocalConsensusChronicles {
+	consensusChronicles := adapters.NewChronicles(c.consensus.nodeProfileFactory)
+	c.createCensus(mode).SetAsActiveTo(consensusChronicles)
+	return consensusChronicles
+}
+
+func (c *Installer) createConsensusController(
+	consensusChronicles censusimpl.LocalConsensusChronicles,
+	controlFeeder api.ConsensusControlFeeder,
+	candidateFeeder api.CandidateControlFeeder,
+) api.ConsensusController {
 	return gcpv2.NewConsensusMemberController(
 		consensusChronicles,
 		c.consensus.upstreamPulseController,
@@ -248,7 +280,7 @@ func (c *Installer) createPacketParserFactory() adapters.PacketParserFactory {
 	)
 }
 
-func (c *Installer) install(
+func (c *Installer) bind(
 	setters []packetProcessorSetter,
 	packetProcessor adapters.PacketProcessor,
 	packetParserFactory adapters.PacketParserFactory,

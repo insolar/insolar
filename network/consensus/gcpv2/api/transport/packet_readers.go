@@ -73,7 +73,7 @@ type PacketParser interface {
 	IsRelayForbidden() bool
 
 	GetPacketSignature() cryptkit.SignedDigest
-	ParsePacketBody() (PacketParser, error) //enables lazy parsing / parsing only after packet validation
+	ParsePacketBody() (PacketParser, error) // enables lazy parsing / parsing only after packet validation
 
 	GetPulsePacket() PulsePacketReader
 	GetMemberPacket() MemberPacketReader
@@ -115,7 +115,7 @@ type ExtendedIntroReader interface {
 	GetCloudIntroduction() CloudIntroductionReader
 
 	HasJoinerSecret() bool
-	GetJoinerSecret() cryptkit.SignatureHolder
+	GetJoinerSecret() cryptkit.DigestHolder
 }
 
 type AnnouncementPacketReader interface {
@@ -187,7 +187,7 @@ type JoinerAnnouncementReader interface {
 
 type CloudIntroductionReader interface {
 	GetLastCloudStateHash() cryptkit.DigestHolder
-	GetJoinerSecret() cryptkit.DigestHolder
+	//GetAnnouncedJoinerSecret() cryptkit.DigestHolder
 	GetCloudIdentity() cryptkit.DigestHolder
 }
 

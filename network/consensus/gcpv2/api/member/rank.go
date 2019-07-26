@@ -94,7 +94,7 @@ func (v Rank) String() string {
 }
 
 func NewMembershipRank(mode OpMode, pw Power, idx Index, count Index) Rank {
-	if idx.Ensure() >= count {
+	if idx >= count {
 		panic("illegal value")
 	}
 

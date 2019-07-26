@@ -51,16 +51,12 @@
 package nodenetwork
 
 import (
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/node"
 )
 
 type MergedListCopy struct {
-	ActiveList                 map[insolar.Reference]insolar.NetworkNode
-	NodesJoinedDuringPrevPulse bool
+	ActiveList map[insolar.Reference]insolar.NetworkNode
 }
 
 func copyActiveNodes(nodes []insolar.NetworkNode) map[insolar.Reference]insolar.NetworkNode {
@@ -72,46 +68,10 @@ func copyActiveNodes(nodes []insolar.NetworkNode) map[insolar.Reference]insolar.
 	return result
 }
 
-func GetMergedCopy(nodes []insolar.NetworkNode, claims []packets.ReferendumClaim) (*MergedListCopy, error) {
+func GetMergedCopy(nodes []insolar.NetworkNode) (*MergedListCopy, error) {
 	nodesMap := copyActiveNodes(nodes)
 
-	var nodesJoinedDuringPrevPulse bool
-	for _, claim := range claims {
-		isJoin, err := mergeClaim(nodesMap, claim)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ GetMergedCopy ] failed to merge a claim")
-		}
-		nodesJoinedDuringPrevPulse = nodesJoinedDuringPrevPulse || isJoin
-	}
-
 	return &MergedListCopy{
-		ActiveList:                 nodesMap,
-		NodesJoinedDuringPrevPulse: nodesJoinedDuringPrevPulse,
+		ActiveList: nodesMap,
 	}, nil
-}
-
-func mergeClaim(nodes map[insolar.Reference]insolar.NetworkNode, claim packets.ReferendumClaim) (bool, error) {
-	isJoinClaim := false
-
-	switch t := claim.(type) {
-	case *packets.NodeJoinClaim:
-		isJoinClaim = true
-		// TODO: fix version
-		n, err := node.ClaimToNode("", t)
-		if err != nil {
-			return isJoinClaim, errors.Wrap(err, "[ mergeClaim ] failed to convert Claim -> NetworkNode")
-		}
-		n.(node.MutableNode).SetState(insolar.NodePending)
-		nodes[n.ID()] = n
-	case *packets.NodeLeaveClaim:
-		if nodes[t.NodeID] == nil {
-			break
-		}
-		n := nodes[t.NodeID].(node.MutableNode)
-		if t.ETA == 0 || n.GetState() != insolar.NodeLeaving {
-			n.SetLeavingETA(t.ETA)
-		}
-	}
-
-	return isJoinClaim, nil
 }

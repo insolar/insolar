@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,7 +46,7 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package census
 
@@ -61,7 +61,7 @@ func TestHasPulseNumber(t *testing.T) {
 
 	require.True(t, SealedCensus.HasPulseNumber())
 
-	require.True(t, BuiltCensus.HasPulseNumber())
+	require.True(t, CompleteCensus.HasPulseNumber())
 
 	require.True(t, PrimingCensus.HasPulseNumber())
 }
@@ -71,7 +71,7 @@ func TestIsSealed(t *testing.T) {
 
 	require.True(t, SealedCensus.IsSealed())
 
-	require.True(t, BuiltCensus.IsSealed())
+	require.True(t, CompleteCensus.IsSealed())
 
 	require.True(t, PrimingCensus.IsSealed())
 }
@@ -81,7 +81,7 @@ func TestIsBuilt(t *testing.T) {
 
 	require.False(t, SealedCensus.IsBuilt())
 
-	require.True(t, BuiltCensus.IsBuilt())
+	require.True(t, CompleteCensus.IsBuilt())
 
 	require.True(t, PrimingCensus.IsBuilt())
 }

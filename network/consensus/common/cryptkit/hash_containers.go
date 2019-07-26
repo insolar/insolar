@@ -84,7 +84,7 @@ type DigestFactory interface {
 
 type DigestHolder interface {
 	longbits.FoldableReader
-	SignWith(signer DigestSigner) SignedDigest
+	SignWith(signer DigestSigner) SignedDigestHolder
 	CopyOfDigest() Digest
 	GetDigestMethod() DigestMethod
 	Equals(other DigestHolder) bool
@@ -109,6 +109,16 @@ type SignatureKeyHolder interface {
 	Equals(other SignatureKeyHolder) bool
 }
 
+type SignedDigestHolder interface {
+	CopyOfSignedDigest() SignedDigest
+	Equals(o SignedDigestHolder) bool
+	GetDigestHolder() DigestHolder
+	GetSignatureHolder() SignatureHolder
+	GetSignatureMethod() SignatureMethod
+	IsVerifiableBy(v SignatureVerifier) bool
+	VerifyWith(v SignatureVerifier) bool
+}
+
 type SignatureKeyType uint8
 
 const (
@@ -130,6 +140,8 @@ type DigestSigner interface {
 	SignDigest(digest Digest) Signature
 	GetSignMethod() SignMethod
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.PublicKeyStore -o . -s _mock.go
 
 type PublicKeyStore interface {
 	PublicKeyStore()
@@ -156,6 +168,8 @@ type SignatureVerifier interface {
 type SignatureVerifierFactory interface {
 	GetSignatureVerifierWithPKS(pks PublicKeyStore) SignatureVerifier
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.KeyStoreFactory -o . -s _mock.go
 
 type KeyStoreFactory interface {
 	GetPublicKeyStore(skh SignatureKeyHolder) PublicKeyStore
@@ -249,8 +263,9 @@ func (d *Digest) GetDigestMethod() DigestMethod {
 	return d.digestMethod
 }
 
-func (d *Digest) SignWith(signer DigestSigner) SignedDigest {
-	return NewSignedDigest(*d, signer.SignDigest(*d))
+func (d *Digest) SignWith(signer DigestSigner) SignedDigestHolder {
+	sd := NewSignedDigest(*d, signer.SignDigest(*d))
+	return &sd
 }
 
 func (d Digest) String() string {
@@ -288,6 +303,8 @@ func (p Signature) String() string {
 	return fmt.Sprintf("§%v", p.hFoldReader)
 }
 
+var _ SignedDigestHolder = &SignedDigest{}
+
 type SignedDigest struct {
 	digest    Digest
 	signature Signature
@@ -301,8 +318,9 @@ func (r *SignedDigest) CopyOfSignedDigest() SignedDigest {
 	return NewSignedDigest(r.digest.CopyOfDigest(), r.signature.CopyOfSignature())
 }
 
-func (r *SignedDigest) Equals(o *SignedDigest) bool {
-	return longbits.EqualFixedLenWriterTo(r.digest, o.digest) && longbits.EqualFixedLenWriterTo(r.signature, o.signature)
+func (r *SignedDigest) Equals(o SignedDigestHolder) bool {
+	return longbits.EqualFixedLenWriterTo(r.digest, o.GetDigestHolder()) &&
+		longbits.EqualFixedLenWriterTo(r.signature, o.GetSignatureHolder())
 }
 
 func (r SignedDigest) GetDigest() Digest {
@@ -313,11 +331,11 @@ func (r SignedDigest) GetSignature() Signature {
 	return r.signature
 }
 
-func (r SignedDigest) GetDigestHolder() DigestHolder {
+func (r *SignedDigest) GetDigestHolder() DigestHolder {
 	return &r.digest
 }
 
-func (r SignedDigest) GetSignatureHolder() SignatureHolder {
+func (r *SignedDigest) GetSignatureHolder() SignatureHolder {
 	return &r.signature
 }
 
@@ -329,12 +347,16 @@ func (r *SignedDigest) IsVerifiableBy(v SignatureVerifier) bool {
 	return v.IsSignOfSignatureMethodSupported(r.signature.GetSignatureMethod())
 }
 
-func (r SignedDigest) VerifyWith(v SignatureVerifier) bool {
+func (r *SignedDigest) VerifyWith(v SignatureVerifier) bool {
 	return v.IsValidDigestSignature(&r.digest, &r.signature)
 }
 
 func (r SignedDigest) String() string {
 	return fmt.Sprintf("%v%v", r.digest, r.signature)
+}
+
+func (r SignedDigest) AsSignedDigestHolder() SignedDigestHolder {
+	return &r
 }
 
 type hReader io.Reader
