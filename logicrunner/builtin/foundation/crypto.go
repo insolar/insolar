@@ -41,7 +41,7 @@ func UnmarshalSig(b []byte) (r, s *big.Int, err error) {
 }
 
 // VerifySignature used for checking the signature using rawpublicpem and rawRequest.
-// selfSigned flag need to compare public keys.
+// selfSigned flag need to compare public Keys.
 func VerifySignature(rawRequest []byte, signature string, key string, rawpublicpem string, selfSigned bool) error {
 	sig, err := base64.StdEncoding.DecodeString(signature)
 	if err != nil {
