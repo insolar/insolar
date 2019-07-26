@@ -169,3 +169,7 @@ func (c *updatableSlot) SetIndex(index member.Index) {
 func (c *updatableSlot) SetSignatureVerifier(verifier cryptkit.SignatureVerifier) {
 	c.verifier = verifier
 }
+
+func (c *updatableSlot) IsEmpty() bool {
+	return c.StaticProfile == nil
+}

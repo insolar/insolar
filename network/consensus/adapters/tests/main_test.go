@@ -65,9 +65,9 @@ import (
 )
 
 const (
-	defaultPulseDelta   = 2
+	defaultPulseDelta   = 5
 	defaultLogLevel     = insolar.DebugLevel
-	defaultTestDuration = 10 * time.Second
+	defaultTestDuration = defaultPulseDelta * time.Second * 10
 )
 
 var strategy = NewDelayNetStrategy(DelayStrategyConf{
@@ -85,7 +85,7 @@ func TestConsensusJoin(t *testing.T) {
 	nodeInfos := generateNodeInfos(nodeIdentities)
 	nodes, discoveryNodes := nodesFromInfo(nodeInfos)
 
-	joinIdentities := generateNodeIdentities(0, 0, 8, 8)
+	joinIdentities := generateNodeIdentities(0, 0, 4, 4)
 	joinInfos := generateNodeInfos(joinIdentities)
 	joiners, _ := nodesFromInfo(joinInfos)
 

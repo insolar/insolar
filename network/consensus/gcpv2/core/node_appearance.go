@@ -390,8 +390,8 @@ func (c *NodeAppearance) _applyNodeMembership(ma profiles.MemberAnnouncement, re
 	case ma.JoinerID.IsAbsent() != ma.Joiner.IsEmpty():
 		if ma.JoinerID.IsAbsent() {
 			c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "joiner announcement was provided but a joiner was not declared"))
-		} else {
-			c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "joiner was declared but an announcement was not provided"))
+			//} else {
+			//	c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "joiner was declared but an announcement was not provided"))
 		}
 	case c.CanIntroduceJoiner() || ma.JoinerID.IsAbsent():
 	case c.IsJoiner():

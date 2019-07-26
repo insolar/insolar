@@ -282,7 +282,7 @@ func (p *RealmPurgatory) AddJoinerAndEnsureAscendancy(
 
 	sp := p.FindJoinerProfile(joinerID, announcedByID)
 	if sp == nil {
-		panic(fmt.Sprintf("failed addiiton of a joiner: id=%d announcedByID=%d", joinerID, announcedByID))
+		panic(fmt.Sprintf("failed addition of a joiner: id=%d announcedByID=%d", joinerID, announcedByID))
 	}
 	return err
 }
@@ -309,22 +309,4 @@ func (p *RealmPurgatory) UnknownFromNeighbourhood(ctx context.Context, rank memb
 	} else {
 		return m.DispatchAnnouncement(ctx, rank, nil, announcement)
 	}
-	// if isJoiner {
-	//	err = announce.ApplyNeighbourJoinerAnnouncement(ctx, sender, announcedJoinerID, nb.Neighbour,
-	//		nb.Announcement.JoinerID, neighbourhood[i].GetJoinerAnnouncement(), realm)
-	// }
-	// isJoiner := nb.Announcement.Membership.IsJoiner()
-	//
-	// neighbourID := neighbour.GetNodeID()
-	// purgatory := realm.GetPurgatory()
-	//
-	// brief := neighbourJoinerAnnouncement.GetBriefIntroduction()
-	// nbIntroProfile := realm.GetProfileFactory().CreateUpgradableIntroProfile(brief)
-	//
-	// introducedByID := neighbourJoinerAnnouncement.GetJoinerIntroducedByID()
-	// if introducedByID.IsAbsent() {
-	//	introducedByID = sender.GetNodeID()
-	// }
-	// return purgatory.JoinerFromNeighbourhood(ctx, neighbourID, nbIntroProfile, introducedByID)
-
 }

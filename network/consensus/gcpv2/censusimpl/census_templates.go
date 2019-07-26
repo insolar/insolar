@@ -52,6 +52,7 @@ package censusimpl
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
@@ -65,32 +66,6 @@ var _ localActiveCensus = &PrimingCensusTemplate{}
 type copyToOnlinePopulation interface {
 	copyToPopulation
 	census.OnlinePopulation
-}
-
-var _ census.Prime = &PrimingCensusTemplate{}
-
-type PrimingCensusTemplate struct {
-	chronicles *localChronicles
-	online     copyToOnlinePopulation
-	evicted    census.EvictedPopulation
-	pd         pulse.Data
-
-	registries census.VersionedRegistries
-}
-
-func (c *PrimingCensusTemplate) GetProfileFactory(ksf cryptkit.KeyStoreFactory) profiles.Factory {
-	return c.chronicles.profileFactory
-}
-
-func (c *PrimingCensusTemplate) setVersionedRegistries(vr census.VersionedRegistries) {
-	if vr == nil {
-		panic("versioned registries are nil")
-	}
-	c.registries = vr
-}
-
-func (c *PrimingCensusTemplate) getVersionedRegistries() census.VersionedRegistries {
-	return c.registries
 }
 
 func NewPrimingCensusForJoiner(localProfile profiles.StaticProfile, registries census.VersionedRegistries,
@@ -112,13 +87,23 @@ func NewPrimingCensus(intros []profiles.StaticProfile, localProfile profiles.Sta
 }
 
 func newPrimingCensus(pop copyToOnlinePopulation, registries census.VersionedRegistries) *PrimingCensusTemplate {
-	r := &PrimingCensusTemplate{
+	r := &PrimingCensusTemplate{CensusTemplate{
 		registries: registries,
 		online:     pop,
 		evicted:    &evictedPopulation{},
 		pd:         registries.GetVersionPulseData(),
-	}
+	}}
 	return r
+}
+
+var _ census.Prime = &PrimingCensusTemplate{}
+
+type PrimingCensusTemplate struct {
+	CensusTemplate
+}
+
+func (c *PrimingCensusTemplate) IsActive() bool {
+	return c.chronicles.GetActiveCensus() == c
 }
 
 func (c *PrimingCensusTemplate) SetAsActiveTo(chronicles LocalConsensusChronicles) {
@@ -130,10 +115,6 @@ func (c *PrimingCensusTemplate) SetAsActiveTo(chronicles LocalConsensusChronicle
 	lc.makeActive(nil, c)
 }
 
-func (*PrimingCensusTemplate) GetCensusState() census.State {
-	return census.PrimingCensus
-}
-
 func (c *PrimingCensusTemplate) GetExpectedPulseNumber() pulse.Number {
 	switch {
 	case c.pd.IsEmpty():
@@ -142,6 +123,10 @@ func (c *PrimingCensusTemplate) GetExpectedPulseNumber() pulse.Number {
 		return c.pd.GetPulseNumber()
 	}
 	return c.pd.GetNextPulseNumber()
+}
+
+func (*PrimingCensusTemplate) GetCensusState() census.State {
+	return census.PrimingCensus
 }
 
 func (c *PrimingCensusTemplate) MakeExpected(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) census.Expected {
@@ -186,40 +171,72 @@ func (*PrimingCensusTemplate) GetCloudStateHash() proofs.CloudStateHash {
 	return nil
 }
 
-func (c *PrimingCensusTemplate) GetOnlinePopulation() census.OnlinePopulation {
+func (c PrimingCensusTemplate) String() string {
+	return fmt.Sprintf("priming %s", c.CensusTemplate.String())
+}
+
+type CensusTemplate struct {
+	chronicles *localChronicles
+	online     copyToOnlinePopulation
+	evicted    census.EvictedPopulation
+	pd         pulse.Data
+
+	registries census.VersionedRegistries
+}
+
+func (c *CensusTemplate) GetProfileFactory(ksf cryptkit.KeyStoreFactory) profiles.Factory {
+	return c.chronicles.profileFactory
+}
+
+func (c *CensusTemplate) setVersionedRegistries(vr census.VersionedRegistries) {
+	if vr == nil {
+		panic("versioned registries are nil")
+	}
+	c.registries = vr
+}
+
+func (c *CensusTemplate) getVersionedRegistries() census.VersionedRegistries {
+	return c.registries
+}
+
+func (c *CensusTemplate) GetOnlinePopulation() census.OnlinePopulation {
 	return c.online
 }
 
-func (c *PrimingCensusTemplate) GetEvictedPopulation() census.EvictedPopulation {
+func (c *CensusTemplate) GetEvictedPopulation() census.EvictedPopulation {
 	return c.evicted
 }
 
-func (c *PrimingCensusTemplate) GetOfflinePopulation() census.OfflinePopulation {
+func (c *CensusTemplate) GetOfflinePopulation() census.OfflinePopulation {
 	return c.registries.GetOfflinePopulation()
 }
 
-func (c *PrimingCensusTemplate) IsActive() bool {
-	return c.chronicles.GetActiveCensus() == c
-}
-
-func (c *PrimingCensusTemplate) GetMisbehaviorRegistry() census.MisbehaviorRegistry {
+func (c *CensusTemplate) GetMisbehaviorRegistry() census.MisbehaviorRegistry {
 	return c.registries.GetMisbehaviorRegistry()
 }
 
-func (c *PrimingCensusTemplate) GetMandateRegistry() census.MandateRegistry {
+func (c *CensusTemplate) GetMandateRegistry() census.MandateRegistry {
 	return c.registries.GetMandateRegistry()
 }
 
-func (c *PrimingCensusTemplate) CreateBuilder(ctx context.Context, pn pulse.Number) census.Builder {
+func (c *CensusTemplate) CreateBuilder(ctx context.Context, pn pulse.Number) census.Builder {
 	return newLocalCensusBuilder(ctx, c.chronicles, pn, c.online)
+}
+
+func (c CensusTemplate) String() string {
+	return fmt.Sprintf("pd:%v evicted:%v online:[%v]", c.pd, c.evicted, c.online)
 }
 
 var _ census.Active = &ActiveCensusTemplate{}
 
 type ActiveCensusTemplate struct {
-	PrimingCensusTemplate
+	CensusTemplate
 	gsh proofs.GlobulaStateHash
 	csh proofs.CloudStateHash
+}
+
+func (c *ActiveCensusTemplate) IsActive() bool {
+	return c.chronicles.GetActiveCensus() == c
 }
 
 func (c *ActiveCensusTemplate) GetExpectedPulseNumber() pulse.Number {
@@ -244,6 +261,14 @@ func (c *ActiveCensusTemplate) GetGlobulaStateHash() proofs.GlobulaStateHash {
 
 func (c *ActiveCensusTemplate) GetCloudStateHash() proofs.CloudStateHash {
 	return c.csh
+}
+
+func (c ActiveCensusTemplate) String() string {
+	mode := "active"
+	if !c.IsActive() {
+		mode = "ex-active"
+	}
+	return fmt.Sprintf("%s %s gsh:%v csh:%v", mode, c.CensusTemplate.String(), c.gsh, c.csh)
 }
 
 var _ census.Expected = &ExpectedCensusTemplate{}
@@ -316,7 +341,7 @@ func (c *ExpectedCensusTemplate) GetPrevious() census.Active {
 func (c *ExpectedCensusTemplate) MakeActive(pd pulse.Data) census.Active {
 
 	a := ActiveCensusTemplate{
-		PrimingCensusTemplate: PrimingCensusTemplate{
+		CensusTemplate: CensusTemplate{
 			chronicles: c.chronicles,
 			online:     c.online,
 			evicted:    c.evicted,
@@ -332,4 +357,8 @@ func (c *ExpectedCensusTemplate) MakeActive(pd pulse.Data) census.Active {
 
 func (c *ExpectedCensusTemplate) IsActive() bool {
 	return false
+}
+
+func (c ExpectedCensusTemplate) String() string {
+	return fmt.Sprintf("expected pn:%v evicted:%v online:[%v] gsh:%v csh:%v", c.pn, c.evicted, c.online, c.gsh, c.csh)
 }
