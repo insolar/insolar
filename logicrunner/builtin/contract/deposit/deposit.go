@@ -152,7 +152,7 @@ func (d *Deposit) canTransfer() error {
 	return nil
 }
 
-// MapMarshal gets deposit information.
+// Transfer transfers money from deposit to wallet.It can be called only after deposit hold period.
 func (d *Deposit) Transfer(amountStr string, wallerRef insolar.Reference) (interface{}, error) {
 
 	amount, ok := new(big.Int).SetString(amountStr, 10)

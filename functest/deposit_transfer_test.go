@@ -68,7 +68,7 @@ func TestDepositTransferAnotherTx(t *testing.T) {
 	require.Contains(t, err.Error(), "can't find deposit")
 }
 
-func TestDepositTransferThashAmount(t *testing.T) {
+func TestDepositTransferWrongValueAmount(t *testing.T) {
 	member := fullMigration(t, "Eth_TxHash_test")
 
 	_, err := signedRequest(member, "deposit.transfer", map[string]interface{}{"amount": "foo", "ethTxHash": "Eth_TxHash_test"})
