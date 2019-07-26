@@ -26,10 +26,11 @@ type requestResult struct {
 	result          []byte                      // every
 	objectReference insolar.Reference           // every
 
-	parentReference insolar.Reference // activate
-	objectImage     insolar.Reference // amend + activate
-	objectStateID   insolar.ID        // amend + deactivate
-	memory          []byte            // amend + activate
+	parentReference  insolar.Reference // activate
+	objectImage      insolar.Reference // amend + activate
+	objectStateID    insolar.ID        // amend + deactivate
+	memory           []byte            // amend + activate
+	constructorError error
 }
 
 func newRequestResult(result []byte, objectRef insolar.Reference) *requestResult {
@@ -56,13 +57,22 @@ func (s *requestResult) Deactivate() insolar.ID {
 	return s.objectStateID
 }
 
+func (s *requestResult) ConstructorError() error {
+	return s.constructorError
+}
+
+func (s *requestResult) SetConstructorError(err error) {
+	s.sideEffectType = artifacts.RequestSideEffectNone
+
+	s.constructorError = err
+}
+
 func (s *requestResult) SetActivate(parent, image insolar.Reference, memory []byte) {
 	s.sideEffectType = artifacts.RequestSideEffectActivate
 
 	s.parentReference = parent
 	s.objectImage = image
 	s.memory = memory
-
 }
 
 func (s *requestResult) SetAmend(object artifacts.ObjectDescriptor, memory []byte) {

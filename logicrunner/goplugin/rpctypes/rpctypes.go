@@ -51,7 +51,8 @@ type DownCallConstructorReq struct {
 
 // DownCallConstructorResp is response from CallConstructor RPC in the runner
 type DownCallConstructorResp struct {
-	Ret insolar.Arguments
+	Ret              insolar.Arguments
+	ConstructorError error
 }
 
 // UpBaseReq  is a base type for all insgorund -> logicrunner requests

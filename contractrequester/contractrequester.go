@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
+	"fmt"
 	"sync"
 	"time"
 
@@ -219,7 +220,7 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, inMsg insolar.
 
 	rep, ok := res.(*reply.CallConstructor)
 	if !ok {
-		return nil, errors.New("Reply is not CallConstructor")
+		return nil, errors.New(fmt.Sprintf("Reply is not CallConstructor: %+v", res))
 	}
 	return rep.Object, nil
 }

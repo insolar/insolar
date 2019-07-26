@@ -113,10 +113,13 @@ func (e *requestsExecutor) Save(
 		return nil, errors.Wrapf(err, "couldn't save result with %s side effect", res.Type().String())
 	}
 
-	switch res.Type() {
-	case artifacts.RequestSideEffectActivate:
+	if res.Type() == artifacts.RequestSideEffectActivate {
+		// Constructor called successfully
 		return &reply.CallConstructor{Object: &transcript.RequestRef}, nil
-	default:
+	} else if res.Type() == artifacts.RequestSideEffectNone && res.ConstructorError() != nil {
+		// Constructor returned an error
+		return &reply.CallConstructor{ConstructorError: res.ConstructorError()}, nil
+	} else {
 		return &reply.CallMethod{Result: res.Result()}, nil
 	}
 }

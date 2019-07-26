@@ -154,36 +154,37 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 
 // CallConstructor is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
-func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpctypes.DownCallConstructorResp) (err error) {
+func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpctypes.DownCallConstructorResp) (sysErr error) {
 	metrics.InsgorundCallsTotal.Inc()
 	ctx := inslogger.ContextWithTrace(context.Background(), args.Context.TraceID)
 	inslogger.FromContext(ctx).Debugf("Calling constructor %q in code %q", args.Name, args.Code)
-	defer recoverRPC(ctx, &err)
+	defer recoverRPC(ctx, &sysErr)
 
 	gls.Set("callCtx", args.Context)
 	defer gls.Cleanup()
 
-	p, err := t.GI.Plugin(ctx, args.Code)
-	if err != nil {
-		return err
+	p, sysErr := t.GI.Plugin(ctx, args.Code)
+	if sysErr != nil {
+		return sysErr
 	}
 
-	symbol, err := p.Lookup("INSCONSTRUCTOR_" + args.Name)
-	if err != nil {
-		return errors.Wrapf(err, "Can't find wrapper for %s", args.Name)
+	symbol, sysErr := p.Lookup("INSCONSTRUCTOR_" + args.Name)
+	if sysErr != nil {
+		return errors.Wrapf(sysErr, "Can't find wrapper for %s", args.Name)
 	}
 
-	f, ok := symbol.(func(data []byte) ([]byte, error))
+	f, ok := symbol.(func(data []byte) ([]byte, error, error))
 	if !ok {
 		return errors.New("Wrapper with wrong signature")
 	}
 
-	resValues, err := f(args.Arguments)
-	if err != nil {
-		return errors.Wrapf(err, "Can't call constructor %s", args.Name)
+	resValues, ctorErr, sysErr := f(args.Arguments)
+	if sysErr != nil {
+		return errors.Wrapf(sysErr, "Can't call constructor %s", args.Name)
 	}
 
 	reply.Ret = resValues
+	reply.ConstructorError = ctorErr
 
 	return nil
 }

@@ -214,7 +214,7 @@ func (gp *GoPlugin) CallConstructor(
 	ctx context.Context, callContext *insolar.LogicCallContext,
 	code insolar.Reference, name string, args insolar.Arguments,
 ) (
-	[]byte, error,
+	objectState []byte, ctorErr error, sysErr error,
 ) {
 
 	res := rpctypes.DownCallConstructorResp{}
@@ -231,11 +231,11 @@ func (gp *GoPlugin) CallConstructor(
 	select {
 	case callResult := <-resultChan:
 		if callResult.Error != nil {
-			return nil, errors.Wrap(callResult.Error, "problem with API call")
+			return nil, nil, errors.Wrap(callResult.Error, "problem with API call")
 		}
-		return callResult.Response.Ret, nil
+		return callResult.Response.Ret, callResult.Response.ConstructorError, nil
 	case <-time.After(timeout):
 		inslogger.FromContext(ctx).Debug("CallConstructor waiting results timeout")
-		return nil, errors.New("logicrunner execution timeout")
+		return nil, nil, errors.New("logicrunner execution timeout")
 	}
 }
