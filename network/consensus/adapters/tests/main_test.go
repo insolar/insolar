@@ -53,21 +53,21 @@
 package tests
 
 import (
-	"fmt"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 const (
-	defaultPulseDelta   = 2
-	defaultLogLevel     = insolar.DebugLevel
-	defaultTestDuration = 10 * time.Second
+	defaultLogLevel       = insolar.DebugLevel
+	defaultPulseDelta     = 2
+	defaultTestDuration   = 10 * time.Second
+	defaultStartCaseAfter = 1 * time.Second
 )
 
 var strategy = NewDelayNetStrategy(DelayStrategyConf{
@@ -77,210 +77,127 @@ var strategy = NewDelayNetStrategy(DelayStrategyConf{
 	SpikeProbability: 0.1,
 })
 
+var ctx = initLogger(defaultLogLevel)
+
 func TestConsensusJoin(t *testing.T) {
-	startedAt := time.Now()
-	ctx := initLogger(defaultLogLevel)
-
-	nodeIdentities := generateNodeIdentities(0, 1, 8, 8)
-	nodeInfos := generateNodeInfos(nodeIdentities)
-	nodes, discoveryNodes := nodesFromInfo(nodeInfos)
-
-	joinIdentities := generateNodeIdentities(0, 0, 8, 8)
-	joinInfos := generateNodeInfos(joinIdentities)
-	joiners, _ := nodesFromInfo(joinInfos)
-
-	controllers, pulseHandlers, _, _, _, err := initNodes(ctx, consensus.ReadyNetwork, nodes, discoveryNodes, strategy, nodeInfos)
+	nodes, err := generateNodes(0, 1, 8, 8, nil)
 	require.NoError(t, err)
 
-	_, _, _, _, joinerProfiles, err := initNodes(ctx, consensus.Joiner, joiners, discoveryNodes, strategy, joinInfos)
+	joiners, err := generateNodes(0, 0, 8, 8, nodes.discoveryNodes)
 	require.NoError(t, err)
 
-	fmt.Println("===", len(nodes), "=================================================")
+	ns, err := initNodes(ctx, consensus.ReadyNetwork, *nodes, strategy)
+	require.NoError(t, err)
 
-	pulsar := NewPulsar(defaultPulseDelta, pulseHandlers)
-	go func() {
-		for {
-			pulsar.Pulse(ctx, 4+len(nodes)/10)
-		}
-	}()
+	js, err := initNodes(ctx, consensus.Joiner, *joiners, strategy)
+	require.NoError(t, err)
 
-	once := sync.Once{}
+	initPulsar(defaultPulseDelta, *ns)
 
-	for {
-		fmt.Println("===", time.Since(startedAt), "=================================================")
-		time.Sleep(time.Second)
-		if time.Since(startedAt) > defaultTestDuration {
-			return
-		}
-
-		if time.Since(startedAt) > 1*time.Second {
-			once.Do(func() {
-				type candidate struct {
-					profiles.StaticProfile
-					profiles.StaticProfileExtension
-				}
-
-				for i, joiner := range joinerProfiles {
-					controllers[i].AddJoinCandidate(candidate{
-						joiner,
-						joiner.GetExtension(),
-					})
-				}
+	testCase(defaultTestDuration, defaultStartCaseAfter, func() {
+		for i, joiner := range js.staticProfiles {
+			ns.controllers[i].AddJoinCandidate(candidate{
+				joiner,
+				joiner.GetExtension(),
 			})
 		}
-	}
+	})
+
+	require.Len(t, ns.nodeKeepers[0].GetAccessor().GetActiveNodes(), 33)
 }
 
 func TestConsensusLeave(t *testing.T) {
-	startedAt := time.Now()
-	ctx := initLogger(defaultLogLevel)
-
-	nodeIdentities := generateNodeIdentities(0, 1, 3, 5)
-	nodeInfos := generateNodeInfos(nodeIdentities)
-	nodes, discoveryNodes := nodesFromInfo(nodeInfos)
-
-	controllers, pulseHandlers, transports, contexts, _, err := initNodes(ctx, consensus.ReadyNetwork, nodes, discoveryNodes, strategy, nodeInfos)
+	nodes, err := generateNodes(0, 1, 3, 5, nil)
 	require.NoError(t, err)
 
-	fmt.Println("===", len(nodes), "=================================================")
+	ns, err := initNodes(ctx, consensus.ReadyNetwork, *nodes, strategy)
+	require.NoError(t, err)
 
-	pulsar := NewPulsar(defaultPulseDelta, pulseHandlers)
-	go func() {
-		for {
-			pulsar.Pulse(ctx, 4+len(nodes)/10)
-		}
-	}()
+	initPulsar(defaultPulseDelta, *ns)
 
-	once := sync.Once{}
+	testCase(defaultTestDuration, defaultStartCaseAfter, func() {
+		nodeIdx := 1
 
-	for {
-		fmt.Println("===", time.Since(startedAt), "=================================================")
-		time.Sleep(time.Second)
-		if time.Since(startedAt) > defaultTestDuration {
-			return
-		}
+		<-ns.controllers[nodeIdx].Leave(0)
+		err := ns.transports[nodeIdx].Stop(ns.contexts[nodeIdx])
+		require.NoError(t, err)
+		ns.controllers[nodeIdx].Abort()
+	})
 
-		nodeIdx := 0
-
-		if time.Since(startedAt) > 1*time.Second {
-			once.Do(func() {
-				<-controllers[nodeIdx].Leave(0)
-				err := transports[nodeIdx].Stop(contexts[nodeIdx])
-				require.NoError(t, err)
-				controllers[nodeIdx].Abort()
-			})
-		}
-	}
+	require.Len(t, ns.nodeKeepers[0].GetAccessor().GetActiveNodes(), 8)
 }
 
 func TestConsensusDrop(t *testing.T) {
-	startedAt := time.Now()
-	ctx := initLogger(defaultLogLevel)
-
-	nodeIdentities := generateNodeIdentities(0, 1, 3, 5)
-	nodeInfos := generateNodeInfos(nodeIdentities)
-	nodes, discoveryNodes := nodesFromInfo(nodeInfos)
-
-	_, pulseHandlers, transports, contexts, _, err := initNodes(ctx, consensus.ReadyNetwork, nodes, discoveryNodes, strategy, nodeInfos)
+	nodes, err := generateNodes(0, 1, 3, 5, nil)
 	require.NoError(t, err)
 
-	fmt.Println("===", len(nodes), "=================================================")
+	ns, err := initNodes(ctx, consensus.ReadyNetwork, *nodes, strategy)
+	require.NoError(t, err)
 
-	pulsar := NewPulsar(defaultPulseDelta, pulseHandlers)
-	go func() {
-		for {
-			pulsar.Pulse(ctx, 4+len(nodes)/10)
-		}
-	}()
+	initPulsar(defaultPulseDelta, *ns)
 
-	once := sync.Once{}
+	testCase(defaultTestDuration, defaultStartCaseAfter, func() {
+		nodeIdx := 1
 
-	for {
-		fmt.Println("===", time.Since(startedAt), "=================================================")
-		time.Sleep(time.Second)
-		if time.Since(startedAt) > defaultTestDuration {
-			return
-		}
+		err := ns.transports[nodeIdx].Stop(ns.contexts[nodeIdx])
+		require.NoError(t, err)
+	})
 
-		nodeIdx := 0
-
-		if time.Since(startedAt) > 1*time.Second {
-			once.Do(func() {
-				err := transports[nodeIdx].Stop(contexts[nodeIdx])
-				require.NoError(t, err)
-			})
-		}
-	}
+	require.Len(t, ns.nodeKeepers[0].GetAccessor().GetActiveNodes(), 8)
 }
 
 func TestConsensusAll(t *testing.T) {
-	startedAt := time.Now()
-	ctx := initLogger(defaultLogLevel)
-
-	nodeIdentities := generateNodeIdentities(0, 1, 3, 5)
-	nodeInfos := generateNodeInfos(nodeIdentities)
-	nodes, discoveryNodes := nodesFromInfo(nodeInfos)
-
-	joinIdentities := generateNodeIdentities(0, 0, 2, 2)
-	joinInfos := generateNodeInfos(joinIdentities)
-	joiners, _ := nodesFromInfo(joinInfos)
-
-	controllers, pulseHandlers, transports, contexts, _, err := initNodes(ctx, consensus.ReadyNetwork, nodes, discoveryNodes, strategy, nodeInfos)
+	nodes, err := generateNodes(0, 1, 3, 5, nil)
 	require.NoError(t, err)
 
-	_, _, _, _, joinerProfiles, err := initNodes(ctx, consensus.Joiner, joiners, discoveryNodes, strategy, joinInfos)
+	joiners, err := generateNodes(0, 0, 1, 1, nodes.discoveryNodes)
 	require.NoError(t, err)
 
-	fmt.Println("===", len(nodes), "=================================================")
+	ns, err := initNodes(ctx, consensus.ReadyNetwork, *nodes, strategy)
+	require.NoError(t, err)
 
-	pulsar := NewPulsar(defaultPulseDelta, pulseHandlers)
-	go func() {
-		for {
-			pulsar.Pulse(ctx, 4+len(nodes)/10)
-		}
-	}()
+	js, err := initNodes(ctx, consensus.Joiner, *joiners, strategy)
+	require.NoError(t, err)
 
-	once1 := sync.Once{}
-	once2 := sync.Once{}
-	once3 := sync.Once{}
+	initPulsar(defaultPulseDelta, *ns)
 
-	for {
-		fmt.Println("===", time.Since(startedAt), "=================================================")
-		time.Sleep(time.Second)
-		if time.Since(startedAt) > defaultTestDuration {
-			return
-		}
+	testCase(defaultTestDuration, defaultStartCaseAfter, func() {
+		wg := &sync.WaitGroup{}
+		wg.Add(3)
 
-		if time.Since(startedAt) > 1*time.Second {
-			once1.Do(func() {
-				nodeIdx := 6
+		go func() {
+			nodeIdx := 6
 
-				<-controllers[nodeIdx].Leave(0)
-				err := transports[nodeIdx].Stop(contexts[nodeIdx])
-				require.NoError(t, err)
-				controllers[nodeIdx].Abort()
-			})
+			<-ns.controllers[nodeIdx].Leave(0)
+			err := ns.transports[nodeIdx].Stop(ns.contexts[nodeIdx])
+			assert.NoError(t, err)
+			ns.controllers[nodeIdx].Abort()
 
-			once2.Do(func() {
-				nodeIdx := 7
+			wg.Done()
+		}()
 
-				err := transports[nodeIdx].Stop(contexts[nodeIdx])
-				require.NoError(t, err)
-			})
+		go func() {
+			nodeIdx := 7
 
-			once3.Do(func() {
-				type candidate struct {
-					profiles.StaticProfile
-					profiles.StaticProfileExtension
-				}
+			err := ns.transports[nodeIdx].Stop(ns.contexts[nodeIdx])
+			assert.NoError(t, err)
 
-				for i, joiner := range joinerProfiles {
-					controllers[i].AddJoinCandidate(candidate{
-						joiner,
-						joiner.GetExtension(),
-					})
-				}
-			})
-		}
-	}
+			wg.Done()
+		}()
+
+		go func() {
+			for i, joiner := range js.staticProfiles {
+				ns.controllers[i].AddJoinCandidate(candidate{
+					joiner,
+					joiner.GetExtension(),
+				})
+			}
+
+			wg.Done()
+		}()
+
+		wg.Wait()
+	})
+
+	require.Len(t, ns.nodeKeepers[0].GetAccessor().GetActiveNodes(), 9)
 }
