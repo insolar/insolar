@@ -19,16 +19,16 @@ package logicrunner
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 )
 
 type initializeAbandonedRequestsNotificationExecutionState struct {

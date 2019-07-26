@@ -36,10 +36,6 @@ import (
 
 const InnerMsgTopic = "InnerMsg"
 
-const (
-	getLedgerPendingRequestMsg = "GetLedgerPendingRequest"
-)
-
 type Dependencies struct {
 	Publisher      message.Publisher
 	StateStorage   StateStorage
@@ -190,8 +186,5 @@ type InnerInit struct {
 }
 
 func (s *InnerInit) Present(ctx context.Context, f flow.Flow) error {
-	switch s.Message.Metadata.Get(bus.MetaType) {
-	default:
-		return fmt.Errorf("[ InnerInit.Present ] no handler for message type %s", s.Message.Metadata.Get("Type"))
-	}
+	return fmt.Errorf("[ InnerInit.Present ] no handler for message type %s", s.Message.Metadata.Get("Type"))
 }
