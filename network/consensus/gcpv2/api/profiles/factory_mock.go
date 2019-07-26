@@ -7,9 +7,11 @@ The original interface "Factory" can be found in github.com/insolar/insolar/netw
 */
 import (
 	"sync/atomic"
-	time "time"
 
 	"github.com/gojuno/minimock"
+
+	time "time"
+
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
