@@ -239,19 +239,23 @@ func migrate(t *testing.T, memberRef string, amount string, tx string, ma string
 	return deposit
 }
 
+func generateMigrationAddress() string {
+	return testutils.RandomString()
+}
+
 func fullMigration(t *testing.T, txHash string) *user {
 
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
-	ma := testutils.RandomString()
-	_, err = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ma}})
+	migrationAddress := generateMigrationAddress()
+	_, err = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
 	require.NoError(t, err)
 	_, err = retryableMemberMigrationCreate(member, true)
 	require.NoError(t, err)
 
-	migrate(t, member.ref, "1000", txHash, ma, 0)
-	migrate(t, member.ref, "1000", txHash, ma, 2)
-	migrate(t, member.ref, "1000", txHash, ma, 1)
+	migrate(t, member.ref, "1000", txHash, migrationAddress, 0)
+	migrate(t, member.ref, "1000", txHash, migrationAddress, 2)
+	migrate(t, member.ref, "1000", txHash, migrationAddress, 1)
 
 	return member
 }

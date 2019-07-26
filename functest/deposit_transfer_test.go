@@ -21,10 +21,9 @@ package functest
 import (
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/insolar/insolar/testutils"
 )
 
 func TestDepositTransferToken(t *testing.T) {
@@ -33,12 +32,26 @@ func TestDepositTransferToken(t *testing.T) {
 	firstBalance := getBalanceNoErr(t, member, member.ref)
 	secondBalance := new(big.Int).Add(firstBalance, big.NewInt(100))
 
-	_, err := signedRequest(member, "deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
-	require.NoError(t, err)
+	for i := 0; i <= 10; i++ {
+		time.Sleep(time.Second)
+		_, err := signedRequest(member, "deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
+		if err != nil {
+			require.Contains(t, err.Error(), "hold period didn't end")
+		} else {
+			break
+		}
+	}
 
 	finalBalance := getBalanceNoErr(t, member, member.ref)
 
 	require.Equal(t, secondBalance, finalBalance)
+}
+
+func TestDepositTransferBeforeUnhold(t *testing.T) {
+	member := fullMigration(t, "Eth_TxHash_test")
+
+	_, err := signedRequest(member, "deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
+	require.Contains(t, err.Error(), "hold period didn't end")
 }
 
 func TestDepositTransferBiggerAmount(t *testing.T) {
@@ -65,14 +78,14 @@ func TestDepositTransferThashAmount(t *testing.T) {
 func TestDepositTransferNotEnoughConfirms(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
-	ma := testutils.RandomString()
-	_, err = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ma}})
+	migrationAddress := generateMigrationAddress()
+	_, err = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
 	require.NoError(t, err)
 	_, err = retryableMemberMigrationCreate(member, true)
 	require.NoError(t, err)
 
-	migrate(t, member.ref, "1000", "Eth_TxHash_test", ma, 2)
-	migrate(t, member.ref, "1000", "Eth_TxHash_test", ma, 0)
+	migrate(t, member.ref, "1000", "Eth_TxHash_test", migrationAddress, 2)
+	migrate(t, member.ref, "1000", "Eth_TxHash_test", migrationAddress, 0)
 
 	_, err = signedRequest(member, "deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
 	require.Contains(t, err.Error(), "number of confirms is less then 3")

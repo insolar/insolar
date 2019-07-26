@@ -30,11 +30,11 @@ import (
 type status string
 
 const (
-	// month = 30 * 24 * 60 * 60
-	month = 0
+	month = 30 * 24 * 60 * 60
 
-	confirms           uint                = 3
-	offsetDepositPulse insolar.PulseNumber = 6 * month
+	confirms uint = 3
+	// offsetDepositPulse insolar.PulseNumber = 6 * month
+	offsetDepositPulse insolar.PulseNumber = 10
 
 	statusOpen    status = "Open"
 	statusHolding status = "Holding"
