@@ -78,7 +78,7 @@ func TestDropStorageDB_TruncateHead_NoSuchPulse(t *testing.T) {
 	dropStore := NewDB(dbMock)
 
 	err = dropStore.TruncateHead(ctx, insolar.GenesisPulse.PulseNumber)
-	require.Contains(t, err.Error(), "No required pulse")
+	require.NoError(t, err)
 }
 
 func TestDropStorageDB_TruncateHead(t *testing.T) {

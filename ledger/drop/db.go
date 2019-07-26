@@ -103,7 +103,7 @@ func (ds *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error 
 		inslogger.FromContext(ctx).Debugf("Erased key. Pulse number: %s. Jet prefix: %s", key.pn.String(), base58.Encode(key.jetPrefix))
 	}
 	if !hasKeys {
-		return errors.New("No required pulse: " + from.String())
+		inslogger.FromContext(ctx).Debug("No records. Nothing done. Pulse number: " + from.String())
 	}
 
 	return nil
