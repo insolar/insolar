@@ -1,4 +1,4 @@
-//
+///
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+///
 
 package artifactmanager
 
@@ -196,25 +196,6 @@ func NewMessageHandler(
 		},
 		GetRequest: func(p *proc.GetRequest) {
 			p.Dep(h.Records, h.Sender, h.JetCoordinator, h.JetTreeUpdater)
-		},
-		GetChildren: func(p *proc.GetChildren) {
-			p.Dep.IndexLocker = h.IndexLocker
-			p.Dep.IndexAccessor = h.IndexStorage
-			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.DelegationTokenFactory = h.DelegationTokenFactory
-			p.Dep.RecordAccessor = h.Records
-			p.Dep.JetStorage = h.JetStorage
-			p.Dep.JetTreeUpdater = h.JetTreeUpdater
-			p.Dep.Sender = h.Sender
-		},
-		RegisterChild: func(p *proc.RegisterChild) {
-			p.Dep.IndexLocker = h.IndexLocker
-			p.Dep.IndexAccessor = h.IndexStorage
-			p.Dep.IndexModifier = h.IndexStorage
-			p.Dep.JetCoordinator = h.JetCoordinator
-			p.Dep.RecordModifier = h.Records
-			p.Dep.PCS = h.PCS
-			p.Dep.Sender = h.Sender
 		},
 		GetPendings: func(p *proc.GetPendings) {
 			p.Dep(

@@ -35,10 +35,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-const (
-	getChildrenChunkSize = 10 * 1000
-)
-
 type localStorage struct {
 	initialized bool
 	storage     map[insolar.Reference]interface{}
@@ -95,7 +91,6 @@ type client struct {
 	JetCoordinator jet.Coordinator                    `inject:""`
 
 	sender               bus.Sender
-	getChildrenChunkSize int
 	senders              *messagebus.Senders
 	localStorage         *localStorage
 }
@@ -109,7 +104,6 @@ func (m *client) State() []byte {
 // NewClient creates new client instance.
 func NewClient(sender bus.Sender) *client { // nolint
 	return &client{
-		getChildrenChunkSize: getChildrenChunkSize,
 		senders:              messagebus.NewSenders(),
 		sender:               sender,
 		localStorage:         newLocalStorage(),
@@ -511,34 +505,6 @@ func (m *client) HasPendings(
 	default:
 		return false, fmt.Errorf("HasPendings: unexpected reply %T", pl)
 	}
-}
-
-// GetChildren returns children iterator.
-//
-// During iteration children refs will be fetched from remote source (parent object).
-func (m *client) GetChildren(
-	ctx context.Context, parent insolar.Reference, pulse *insolar.PulseNumber,
-) (RefIterator, error) {
-	var err error
-
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetChildren")
-	instrumenter := instrument(ctx, "GetChildren").err(&err)
-	defer func() {
-		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
-		}
-		span.End()
-		instrumenter.end()
-	}()
-
-	sender := messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(m.PulseAccessor),
-		messagebus.FollowRedirectSender(m.DefaultBus),
-		messagebus.RetryJetSender(m.JetStorage),
-	)
-	iter, err := NewChildIterator(ctx, sender, parent, pulse, m.getChildrenChunkSize)
-	return iter, err
 }
 
 // DeployCode creates new code record in storage.

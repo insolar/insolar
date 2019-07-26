@@ -51,10 +51,6 @@ func getEmptyMessage(mt insolar.MessageType) (insolar.Message, error) {
 		return &StillExecuting{}, nil
 
 	// Ledger
-	case insolar.TypeGetChildren:
-		return &GetChildren{}, nil
-	case insolar.TypeRegisterChild:
-		return &RegisterChild{}, nil
 	case insolar.TypeGetObjectIndex:
 		return &GetObjectIndex{}, nil
 
@@ -172,7 +168,6 @@ func init() {
 	gob.Register(&StillExecuting{})
 
 	// Ledger
-	gob.Register(&RegisterChild{})
 	gob.Register(&GetObjectIndex{})
 
 	// heavy
@@ -182,5 +177,4 @@ func init() {
 	gob.Register(&GenesisRequest{})
 	gob.Register(&Parcel{})
 	gob.Register(insolar.Reference{})
-	gob.Register(&GetChildren{})
 }
