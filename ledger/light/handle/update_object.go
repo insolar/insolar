@@ -60,13 +60,6 @@ func (s *UpdateObject) Present(ctx context.Context, f flow.Flow) error {
 		return fmt.Errorf("wrong update record type: %T", upd)
 	}
 
-	calcUpd := proc.NewCalculateID(msg.Record, flow.Pulse(ctx))
-	s.dep.CalculateID(calcUpd)
-	if err := f.Procedure(ctx, calcUpd, true); err != nil {
-		return err
-	}
-	updateID := calcUpd.Result.ID
-
 	resultVirt := record.Virtual{}
 	err = resultVirt.Unmarshal(msg.Result)
 	if err != nil {
@@ -83,13 +76,6 @@ func (s *UpdateObject) Present(ctx context.Context, f flow.Flow) error {
 	if obj.IsEmpty() {
 		return errors.New("object is nil")
 	}
-
-	calcRes := proc.NewCalculateID(msg.Result, flow.Pulse(ctx))
-	s.dep.CalculateID(calcRes)
-	if err := f.Procedure(ctx, calcRes, true); err != nil {
-		return err
-	}
-	resultID := calcRes.Result.ID
 
 	passIfNotExecutor := !s.passed
 	jet := proc.NewCheckJet(obj, flow.Pulse(ctx), s.message, passIfNotExecutor)
@@ -117,7 +103,7 @@ func (s *UpdateObject) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
-	updateObject := proc.NewUpdateObject(s.message, *update, updateID, *result, resultID, objJetID)
-	s.dep.UpdateObject(updateObject)
-	return f.Procedure(ctx, updateObject, false)
+	setResult := proc.NewSetResult(s.message, objJetID, *result, update)
+	s.dep.SetResult(setResult)
+	return f.Procedure(ctx, setResult, false)
 }

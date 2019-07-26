@@ -179,7 +179,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetIncomingRequest_Success() {
 
 	finalResponse := &payload.Request{
 		RequestID: *requestRef.Record(),
-		Request:   record.Wrap(req),
+		Request:   record.Wrap(&req),
 	}
 	reqMsg, err := payload.NewMessage(finalResponse)
 	require.NoError(s.T(), err)

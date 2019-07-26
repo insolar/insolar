@@ -17,28 +17,25 @@
 package proc
 
 type Dependencies struct {
-	FetchJet         func(*FetchJet)
-	CheckJet         func(*CheckJet)
-	WaitHot          func(*WaitHot)
-	WaitHotWM        func(*WaitHotWM)
-	GetIndex         func(*EnsureIndex)
-	EnsureIndex      func(*EnsureIndexWM)
-	SendObject       func(*SendObject)
-	GetCode          func(*GetCode)
-	GetRequest       func(*GetRequest)
-	SetRequest       func(*SetRequest)
-	SetResult        func(*SetResult)
-	ActivateObject   func(*ActivateObject)
-	DeactivateObject func(*DeactivateObject)
-	UpdateObject     func(*UpdateObject)
-	GetPendings      func(*GetPendings)
-	GetJet           func(*GetJet)
-	HotObjects       func(*HotObjects)
-	PassState        func(*PassState)
-	CalculateID      func(*CalculateID)
-	SetCode          func(*SetCode)
-	SendRequests     func(*SendRequests)
-	HasPendings      func(*HasPendings)
+	FetchJet     func(*FetchJet)
+	CheckJet     func(*CheckJet)
+	WaitHot      func(*WaitHot)
+	WaitHotWM    func(*WaitHotWM)
+	GetIndex     func(*EnsureIndex)
+	EnsureIndex  func(*EnsureIndexWM)
+	SendObject   func(*SendObject)
+	GetCode      func(*GetCode)
+	GetRequest   func(*GetRequest)
+	SetRequest   func(*SetRequest)
+	SetResult    func(*SetResult)
+	GetPendings  func(*GetPendings)
+	GetJet       func(*GetJet)
+	HotObjects   func(*HotObjects)
+	PassState    func(*PassState)
+	CalculateID  func(*CalculateID)
+	SetCode      func(*SetCode)
+	SendRequests func(*SendRequests)
+	HasPendings  func(*HasPendings)
 }
 
 // NewDependenciesMock returns all dependencies for handlers.
@@ -46,26 +43,23 @@ type Dependencies struct {
 // Use it ONLY for tests.
 func NewDependenciesMock() *Dependencies {
 	return &Dependencies{
-		FetchJet:         func(*FetchJet) {},
-		CheckJet:         func(*CheckJet) {},
-		WaitHot:          func(*WaitHot) {},
-		WaitHotWM:        func(*WaitHotWM) {},
-		GetIndex:         func(*EnsureIndex) {},
-		EnsureIndex:      func(*EnsureIndexWM) {},
-		SendObject:       func(*SendObject) {},
-		GetCode:          func(*GetCode) {},
-		SetRequest:       func(*SetRequest) {},
-		SetResult:        func(*SetResult) {},
-		ActivateObject:   func(*ActivateObject) {},
-		DeactivateObject: func(*DeactivateObject) {},
-		UpdateObject:     func(*UpdateObject) {},
-		GetPendings:      func(*GetPendings) {},
-		GetJet:           func(*GetJet) {},
-		HotObjects:       func(*HotObjects) {},
-		PassState:        func(*PassState) {},
-		CalculateID:      func(*CalculateID) {},
-		SetCode:          func(*SetCode) {},
-		SendRequests:     func(*SendRequests) {},
-		HasPendings:      func(*HasPendings) {},
+		FetchJet:     func(*FetchJet) {},
+		CheckJet:     func(*CheckJet) {},
+		WaitHot:      func(*WaitHot) {},
+		WaitHotWM:    func(*WaitHotWM) {},
+		GetIndex:     func(*EnsureIndex) {},
+		EnsureIndex:  func(*EnsureIndexWM) {},
+		SendObject:   func(*SendObject) {},
+		GetCode:      func(*GetCode) {},
+		SetRequest:   func(*SetRequest) {},
+		SetResult:    func(*SetResult) {},
+		GetPendings:  func(*GetPendings) {},
+		GetJet:       func(*GetJet) {},
+		HotObjects:   func(*HotObjects) {},
+		PassState:    func(*PassState) {},
+		CalculateID:  func(*CalculateID) {},
+		SetCode:      func(*SetCode) {},
+		SendRequests: func(*SendRequests) {},
+		HasPendings:  func(*HasPendings) {},
 	}
 }

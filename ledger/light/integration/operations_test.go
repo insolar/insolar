@@ -32,7 +32,7 @@ func callSetCode(ctx context.Context, t *testing.T, s *Server) (payload.Payload,
 	code := make([]byte, 100)
 	_, err := rand.Read(code)
 	require.NoError(t, err)
-	rec := record.Wrap(record.Code{Code: code})
+	rec := record.Wrap(&record.Code{Code: code})
 	buf, err := rec.Marshal()
 	require.NoError(t, err)
 	reps, done := s.Send(ctx, &payload.SetCode{
@@ -81,8 +81,12 @@ func callSetIncomingRequest(
 	args := make([]byte, 100)
 	_, err := rand.Read(args)
 	require.NoError(t, err)
-	rec := record.Wrap(record.IncomingRequest{
-		Object:    insolar.NewReference(objectID),
+	var object *insolar.Reference
+	if ct != record.CTSaveAsChild {
+		object = insolar.NewReference(objectID)
+	}
+	rec := record.Wrap(&record.IncomingRequest{
+		Object:    object,
 		Arguments: args,
 		CallType:  ct,
 		Reason:    *insolar.NewReference(reasonID),
@@ -100,6 +104,76 @@ func callSetIncomingRequest(
 	case *payload.Error:
 		return pl, rec
 	case *payload.RequestInfo:
+		return pl, rec
+	default:
+		t.Fatalf("received unexpected reply %T", pl)
+	}
+
+	return nil, record.Virtual{}
+}
+
+func callSetOutgoingRequest(
+	ctx context.Context, t *testing.T, s *Server, objectID, reasonID insolar.ID, detached bool,
+) (payload.Payload, record.Virtual) {
+	args := make([]byte, 100)
+	_, err := rand.Read(args)
+	require.NoError(t, err)
+	rm := record.ReturnResult
+	if detached {
+		rm = record.ReturnSaga
+	}
+	rec := record.Wrap(&record.OutgoingRequest{
+		Caller:     *insolar.NewReference(objectID),
+		Arguments:  args,
+		ReturnMode: rm,
+		Reason:     *insolar.NewReference(reasonID),
+		APINode:    gen.Reference(),
+	})
+	reps, done := s.Send(ctx, &payload.SetOutgoingRequest{
+		Request: rec,
+	})
+	defer done()
+
+	rep := <-reps
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	require.NoError(t, err)
+	switch pl.(type) {
+	case *payload.Error:
+		return pl, rec
+	case *payload.RequestInfo:
+		return pl, rec
+	default:
+		t.Fatalf("received unexpected reply %T", pl)
+	}
+
+	return nil, record.Virtual{}
+}
+
+func callSetResult(
+	ctx context.Context, t *testing.T, s *Server, objectID, requestID insolar.ID,
+) (payload.Payload, record.Virtual) {
+	data := make([]byte, 100)
+	_, err := rand.Read(data)
+	require.NoError(t, err)
+	rec := record.Wrap(&record.Result{
+		Object:  objectID,
+		Request: *insolar.NewReference(requestID),
+		Payload: data,
+	})
+	buf, err := rec.Marshal()
+	require.NoError(t, err)
+	reps, done := s.Send(ctx, &payload.SetResult{
+		Result: buf,
+	})
+	defer done()
+
+	rep := <-reps
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	require.NoError(t, err)
+	switch pl.(type) {
+	case *payload.Error:
+		return pl, rec
+	case *payload.ResultInfo:
 		return pl, rec
 	default:
 		t.Fatalf("received unexpected reply %T", pl)
@@ -145,7 +219,7 @@ func callActivateObject(ctx context.Context, t *testing.T, s *Server, objectID i
 	mem := make([]byte, 100)
 	_, err := rand.Read(mem)
 	require.NoError(t, err)
-	rec := record.Wrap(record.Activate{
+	rec := record.Wrap(&record.Activate{
 		Request: *insolar.NewReference(objectID),
 		Memory:  mem,
 	})
@@ -154,7 +228,7 @@ func callActivateObject(ctx context.Context, t *testing.T, s *Server, objectID i
 	res := make([]byte, 100)
 	_, err = rand.Read(res)
 	require.NoError(t, err)
-	resultRecord := record.Wrap(record.Result{
+	resultRecord := record.Wrap(&record.Result{
 		Request: *insolar.NewReference(objectID),
 		Object:  objectID,
 		Payload: res,
@@ -186,7 +260,7 @@ func callAmendObject(ctx context.Context, t *testing.T, s *Server, objectID, req
 	mem := make([]byte, 100)
 	_, err := rand.Read(mem)
 	require.NoError(t, err)
-	rec := record.Wrap(record.Amend{
+	rec := record.Wrap(&record.Amend{
 		Memory: mem,
 	})
 	buf, err := rec.Marshal()
@@ -194,7 +268,7 @@ func callAmendObject(ctx context.Context, t *testing.T, s *Server, objectID, req
 	res := make([]byte, 100)
 	_, err = rand.Read(res)
 	require.NoError(t, err)
-	resultRecord := record.Wrap(record.Result{
+	resultRecord := record.Wrap(&record.Result{
 		Request: *insolar.NewReference(requestID),
 		Object:  objectID,
 		Payload: res,
@@ -226,7 +300,7 @@ func callDeactivateObject(ctx context.Context, t *testing.T, s *Server, objectID
 	mem := make([]byte, 100)
 	_, err := rand.Read(mem)
 	require.NoError(t, err)
-	rec := record.Wrap(record.Deactivate{
+	rec := record.Wrap(&record.Deactivate{
 		Request: *insolar.NewReference(objectID),
 	})
 	buf, err := rec.Marshal()
@@ -234,7 +308,7 @@ func callDeactivateObject(ctx context.Context, t *testing.T, s *Server, objectID
 	res := make([]byte, 100)
 	_, err = rand.Read(res)
 	require.NoError(t, err)
-	resultRecord := record.Wrap(record.Result{
+	resultRecord := record.Wrap(&record.Result{
 		Request: *insolar.NewReference(requestID),
 		Object:  objectID,
 		Payload: res,

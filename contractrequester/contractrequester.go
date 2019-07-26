@@ -120,7 +120,7 @@ func (cr *ContractRequester) SendRequestWithPulse(ctx context.Context, ref *inso
 func (cr *ContractRequester) calcRequestHash(request record.IncomingRequest) ([insolar.RecordHashSize]byte, error) {
 	var hash [insolar.RecordHashSize]byte
 
-	virtRec := record.Wrap(request)
+	virtRec := record.Wrap(&request)
 	buf, err := virtRec.Marshal()
 	if err != nil {
 		return hash, errors.Wrap(err, "[ ContractRequester::calcRequestHash ] Failed to marshal record")

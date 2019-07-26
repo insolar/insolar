@@ -359,7 +359,7 @@ func TestActivateObject_ErrorFromWaitHot(t *testing.T) {
 				return nil
 			case *proc.WaitHotWM:
 				return nil
-			case *proc.ActivateObject:
+			case *proc.SetResult:
 				return nil
 			default:
 				panic("unknown procedure")
@@ -381,7 +381,7 @@ func TestActivateObject_ErrorFromActivateObject(t *testing.T) {
 
 	msg := metaActivateMsg(t)
 
-	t.Run("activateobject procedure returns err", func(t *testing.T) {
+	t.Run("SetResult procedure returns err", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
@@ -392,8 +392,8 @@ func TestActivateObject_ErrorFromActivateObject(t *testing.T) {
 				return nil
 			case *proc.WaitHotWM:
 				return nil
-			case *proc.ActivateObject:
-				return errors.New("error from activateobject")
+			case *proc.SetResult:
+				return errors.New("error from SetResult")
 			default:
 				panic("unknown procedure")
 			}
@@ -401,10 +401,10 @@ func TestActivateObject_ErrorFromActivateObject(t *testing.T) {
 
 		handler := handle.NewActivateObject(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
-		assert.EqualError(t, err, "error from activateobject")
+		assert.EqualError(t, err, "error from SetResult")
 	})
 
-	t.Run("activateobject procedure returns nil err", func(t *testing.T) {
+	t.Run("SetResult procedure returns nil err", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
@@ -415,7 +415,7 @@ func TestActivateObject_ErrorFromActivateObject(t *testing.T) {
 				return nil
 			case *proc.WaitHotWM:
 				return nil
-			case *proc.ActivateObject:
+			case *proc.SetResult:
 				return nil
 			default:
 				panic("unknown procedure")

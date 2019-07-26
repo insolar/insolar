@@ -231,12 +231,12 @@ func TestIndexDB_FetchFilament(t *testing.T) {
 	firstFil := record.PendingFilament{
 		RecordID: *first,
 	}
-	firstFilV := record.Wrap(firstFil)
+	firstFilV := record.Wrap(&firstFil)
 	secondFil := record.PendingFilament{
 		RecordID:       *second,
 		PreviousRecord: first,
 	}
-	secondFilV := record.Wrap(secondFil)
+	secondFilV := record.Wrap(&secondFil)
 
 	_ = recordStorage.Set(ctx, *first, record.Material{})
 	_ = recordStorage.Set(ctx, *second, record.Material{})
@@ -279,7 +279,7 @@ func TestIndexDB_NextFilament(t *testing.T) {
 		firstFil := record.PendingFilament{
 			PreviousRecord: first,
 		}
-		firstFilV := record.Wrap(firstFil)
+		firstFilV := record.Wrap(&firstFil)
 
 		_ = recordStorage.Set(ctx, firstMeta, record.Material{Virtual: &firstFilV})
 
@@ -307,7 +307,7 @@ func TestIndexDB_NextFilament(t *testing.T) {
 		index := NewIndexDB(db)
 
 		firstFil := record.PendingFilament{}
-		firstFilV := record.Wrap(firstFil)
+		firstFilV := record.Wrap(&firstFil)
 
 		_ = recordStorage.Set(ctx, firstMeta, record.Material{Virtual: &firstFilV})
 
@@ -379,33 +379,33 @@ func TestIndexDB_Records(t *testing.T) {
 		// Records
 		idT := insolar.NewID(pnT, nil)
 		rT := record.IncomingRequest{Object: insolar.NewReference(gen.ID())}
-		rTV := record.Wrap(rT)
+		rTV := record.Wrap(&rT)
 		_ = rms.set(*idT, record.Material{Virtual: &rTV})
 
 		idS := insolar.NewID(pnS, nil)
 		rS := record.IncomingRequest{Object: insolar.NewReference(gen.ID())}
-		rSV := record.Wrap(rS)
+		rSV := record.Wrap(&rS)
 		_ = rms.set(*idS, record.Material{Virtual: &rSV})
 
 		id := insolar.NewID(pn, nil)
 		r := record.IncomingRequest{Object: insolar.NewReference(gen.ID())}
-		rv := record.Wrap(r)
+		rv := record.Wrap(&r)
 		_ = rms.set(*id, record.Material{Virtual: &rv})
 
 		// Pending filaments
 		midT := insolar.NewID(pnT, []byte{1})
 		mT := record.PendingFilament{RecordID: *idT}
-		mTV := record.Wrap(mT)
+		mTV := record.Wrap(&mT)
 		_ = rms.set(*midT, record.Material{Virtual: &mTV})
 
 		midS := insolar.NewID(pnS, []byte{1})
 		mS := record.PendingFilament{RecordID: *idS, PreviousRecord: midT}
-		mSV := record.Wrap(mS)
+		mSV := record.Wrap(&mS)
 		_ = rms.set(*midS, record.Material{Virtual: &mSV})
 
 		mid := insolar.NewID(pn, []byte{1})
 		m := record.PendingFilament{RecordID: *id, PreviousRecord: midS}
-		mV := record.Wrap(m)
+		mV := record.Wrap(&m)
 		_ = rms.set(*mid, record.Material{Virtual: &mV})
 
 		objID := gen.ID()
