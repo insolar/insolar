@@ -99,7 +99,7 @@ func New(cfg configuration.Ledger) *Handler {
 				h.JetKeeper,
 			)
 		},
-		GetJet: func(p *proc.GetJet) {
+		SendJet: func(p *proc.SendJet) {
 			p.Dep(
 				h.JetAccessor,
 				h.Sender)
@@ -224,8 +224,8 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 		h.dep.Replication(p)
 		err = p.Proceed(ctx)
 	case payload.TypeGetJet:
-		p := proc.NewGetJet(meta)
-		h.dep.GetJet(p)
+		p := proc.NewSendJet(meta)
+		h.dep.SendJet(p)
 		err = p.Proceed(ctx)
 	case payload.TypeEnsureIndex:
 		p := proc.NewEnsureIndex(meta)

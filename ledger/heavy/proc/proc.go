@@ -22,6 +22,6 @@ type Dependencies struct {
 	SendRequests func(*SendRequests)
 	GetRequest   func(*GetRequest)
 	Replication  func(*Replication)
-	GetJet       func(*GetJet)
+	SendJet      func(*SendJet)
 	SendIndex    func(*SendIndex)
 }

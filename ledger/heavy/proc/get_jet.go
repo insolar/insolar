@@ -25,7 +25,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type GetJet struct {
+type SendJet struct {
 	meta payload.Meta
 
 	dep struct {
@@ -34,7 +34,7 @@ type GetJet struct {
 	}
 }
 
-func (p *GetJet) Dep(
+func (p *SendJet) Dep(
 	jets jet.Accessor,
 	sender bus.Sender,
 ) {
@@ -42,17 +42,17 @@ func (p *GetJet) Dep(
 	p.dep.sender = sender
 }
 
-func NewGetJet(meta payload.Meta) *GetJet {
-	return &GetJet{
+func NewSendJet(meta payload.Meta) *SendJet {
+	return &SendJet{
 		meta: meta,
 	}
 }
 
-func (p *GetJet) Proceed(ctx context.Context) error {
+func (p *SendJet) Proceed(ctx context.Context) error {
 	getJet := payload.GetJet{}
 	err := getJet.Unmarshal(p.meta.Payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal GetJet message")
+		return errors.Wrap(err, "SendJet: failed to unmarshal GetJet message")
 	}
 
 	jetID, actual := p.dep.jets.ForID(ctx, getJet.PulseNumber, getJet.ObjectID)
@@ -62,7 +62,7 @@ func (p *GetJet) Proceed(ctx context.Context) error {
 		Actual: actual,
 	})
 	if err != nil {
-		return errors.Wrap(err, "GetJet: failed to create reply")
+		return errors.Wrap(err, "SendJet: failed to create reply")
 	}
 
 	p.dep.sender.Reply(ctx, p.meta, msg)
