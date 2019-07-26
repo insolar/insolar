@@ -31,11 +31,6 @@ type ClientMock struct {
 	DeployCodePreCounter uint64
 	DeployCodeMock       mClientMockDeployCode
 
-	GetChildrenFunc       func(p context.Context, p1 insolar.Reference, p2 *insolar.PulseNumber) (r RefIterator, r1 error)
-	GetChildrenCounter    uint64
-	GetChildrenPreCounter uint64
-	GetChildrenMock       mClientMockGetChildren
-
 	GetCodeFunc       func(p context.Context, p1 insolar.Reference) (r CodeDescriptor, r1 error)
 	GetCodeCounter    uint64
 	GetCodePreCounter uint64
@@ -107,7 +102,6 @@ func NewClientMock(t minimock.Tester) *ClientMock {
 
 	m.ActivatePrototypeMock = mClientMockActivatePrototype{mock: m}
 	m.DeployCodeMock = mClientMockDeployCode{mock: m}
-	m.GetChildrenMock = mClientMockGetChildren{mock: m}
 	m.GetCodeMock = mClientMockGetCode{mock: m}
 	m.GetIncomingRequestMock = mClientMockGetIncomingRequest{mock: m}
 	m.GetObjectMock = mClientMockGetObject{mock: m}
@@ -424,158 +418,6 @@ func (m *ClientMock) DeployCodeFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.DeployCodeFunc != nil {
 		return atomic.LoadUint64(&m.DeployCodeCounter) > 0
-	}
-
-	return true
-}
-
-type mClientMockGetChildren struct {
-	mock              *ClientMock
-	mainExpectation   *ClientMockGetChildrenExpectation
-	expectationSeries []*ClientMockGetChildrenExpectation
-}
-
-type ClientMockGetChildrenExpectation struct {
-	input  *ClientMockGetChildrenInput
-	result *ClientMockGetChildrenResult
-}
-
-type ClientMockGetChildrenInput struct {
-	p  context.Context
-	p1 insolar.Reference
-	p2 *insolar.PulseNumber
-}
-
-type ClientMockGetChildrenResult struct {
-	r  RefIterator
-	r1 error
-}
-
-//Expect specifies that invocation of Client.GetChildren is expected from 1 to Infinity times
-func (m *mClientMockGetChildren) Expect(p context.Context, p1 insolar.Reference, p2 *insolar.PulseNumber) *mClientMockGetChildren {
-	m.mock.GetChildrenFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ClientMockGetChildrenExpectation{}
-	}
-	m.mainExpectation.input = &ClientMockGetChildrenInput{p, p1, p2}
-	return m
-}
-
-//Return specifies results of invocation of Client.GetChildren
-func (m *mClientMockGetChildren) Return(r RefIterator, r1 error) *ClientMock {
-	m.mock.GetChildrenFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ClientMockGetChildrenExpectation{}
-	}
-	m.mainExpectation.result = &ClientMockGetChildrenResult{r, r1}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Client.GetChildren is expected once
-func (m *mClientMockGetChildren) ExpectOnce(p context.Context, p1 insolar.Reference, p2 *insolar.PulseNumber) *ClientMockGetChildrenExpectation {
-	m.mock.GetChildrenFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &ClientMockGetChildrenExpectation{}
-	expectation.input = &ClientMockGetChildrenInput{p, p1, p2}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *ClientMockGetChildrenExpectation) Return(r RefIterator, r1 error) {
-	e.result = &ClientMockGetChildrenResult{r, r1}
-}
-
-//Set uses given function f as a mock of Client.GetChildren method
-func (m *mClientMockGetChildren) Set(f func(p context.Context, p1 insolar.Reference, p2 *insolar.PulseNumber) (r RefIterator, r1 error)) *ClientMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetChildrenFunc = f
-	return m.mock
-}
-
-//GetChildren implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
-func (m *ClientMock) GetChildren(p context.Context, p1 insolar.Reference, p2 *insolar.PulseNumber) (r RefIterator, r1 error) {
-	counter := atomic.AddUint64(&m.GetChildrenPreCounter, 1)
-	defer atomic.AddUint64(&m.GetChildrenCounter, 1)
-
-	if len(m.GetChildrenMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetChildrenMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ClientMock.GetChildren. %v %v %v", p, p1, p2)
-			return
-		}
-
-		input := m.GetChildrenMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ClientMockGetChildrenInput{p, p1, p2}, "Client.GetChildren got unexpected parameters")
-
-		result := m.GetChildrenMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the ClientMock.GetChildren")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.GetChildrenMock.mainExpectation != nil {
-
-		input := m.GetChildrenMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, ClientMockGetChildrenInput{p, p1, p2}, "Client.GetChildren got unexpected parameters")
-		}
-
-		result := m.GetChildrenMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the ClientMock.GetChildren")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.GetChildrenFunc == nil {
-		m.t.Fatalf("Unexpected call to ClientMock.GetChildren. %v %v %v", p, p1, p2)
-		return
-	}
-
-	return m.GetChildrenFunc(p, p1, p2)
-}
-
-//GetChildrenMinimockCounter returns a count of ClientMock.GetChildrenFunc invocations
-func (m *ClientMock) GetChildrenMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetChildrenCounter)
-}
-
-//GetChildrenMinimockPreCounter returns the value of ClientMock.GetChildren invocations
-func (m *ClientMock) GetChildrenMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetChildrenPreCounter)
-}
-
-//GetChildrenFinished returns true if mock invocations count is ok
-func (m *ClientMock) GetChildrenFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetChildrenMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetChildrenCounter) == uint64(len(m.GetChildrenMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetChildrenMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetChildrenCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetChildrenFunc != nil {
-		return atomic.LoadUint64(&m.GetChildrenCounter) > 0
 	}
 
 	return true
@@ -2292,10 +2134,6 @@ func (m *ClientMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ClientMock.DeployCode")
 	}
 
-	if !m.GetChildrenFinished() {
-		m.t.Fatal("Expected call to ClientMock.GetChildren")
-	}
-
 	if !m.GetCodeFinished() {
 		m.t.Fatal("Expected call to ClientMock.GetCode")
 	}
@@ -2369,10 +2207,6 @@ func (m *ClientMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ClientMock.DeployCode")
 	}
 
-	if !m.GetChildrenFinished() {
-		m.t.Fatal("Expected call to ClientMock.GetChildren")
-	}
-
 	if !m.GetCodeFinished() {
 		m.t.Fatal("Expected call to ClientMock.GetCode")
 	}
@@ -2437,7 +2271,6 @@ func (m *ClientMock) MinimockWait(timeout time.Duration) {
 		ok := true
 		ok = ok && m.ActivatePrototypeFinished()
 		ok = ok && m.DeployCodeFinished()
-		ok = ok && m.GetChildrenFinished()
 		ok = ok && m.GetCodeFinished()
 		ok = ok && m.GetIncomingRequestFinished()
 		ok = ok && m.GetObjectFinished()
@@ -2464,10 +2297,6 @@ func (m *ClientMock) MinimockWait(timeout time.Duration) {
 
 			if !m.DeployCodeFinished() {
 				m.t.Error("Expected call to ClientMock.DeployCode")
-			}
-
-			if !m.GetChildrenFinished() {
-				m.t.Error("Expected call to ClientMock.GetChildren")
 			}
 
 			if !m.GetCodeFinished() {
@@ -2535,10 +2364,6 @@ func (m *ClientMock) AllMocksCalled() bool {
 	}
 
 	if !m.DeployCodeFinished() {
-		return false
-	}
-
-	if !m.GetChildrenFinished() {
 		return false
 	}
 

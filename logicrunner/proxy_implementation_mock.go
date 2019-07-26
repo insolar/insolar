@@ -30,11 +30,6 @@ type ProxyImplementationMock struct {
 	GetCodePreCounter uint64
 	GetCodeMock       mProxyImplementationMockGetCode
 
-	GetObjChildrenIteratorFunc       func(p context.Context, p1 *Transcript, p2 rpctypes.UpGetObjChildrenIteratorReq, p3 *rpctypes.UpGetObjChildrenIteratorResp) (r error)
-	GetObjChildrenIteratorCounter    uint64
-	GetObjChildrenIteratorPreCounter uint64
-	GetObjChildrenIteratorMock       mProxyImplementationMockGetObjChildrenIterator
-
 	RouteCallFunc       func(p context.Context, p1 *Transcript, p2 rpctypes.UpRouteReq, p3 *rpctypes.UpRouteResp) (r error)
 	RouteCallCounter    uint64
 	RouteCallPreCounter uint64
@@ -56,7 +51,6 @@ func NewProxyImplementationMock(t minimock.Tester) *ProxyImplementationMock {
 
 	m.DeactivateObjectMock = mProxyImplementationMockDeactivateObject{mock: m}
 	m.GetCodeMock = mProxyImplementationMockGetCode{mock: m}
-	m.GetObjChildrenIteratorMock = mProxyImplementationMockGetObjChildrenIterator{mock: m}
 	m.RouteCallMock = mProxyImplementationMockRouteCall{mock: m}
 	m.SaveAsChildMock = mProxyImplementationMockSaveAsChild{mock: m}
 
@@ -358,156 +352,6 @@ func (m *ProxyImplementationMock) GetCodeFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetCodeFunc != nil {
 		return atomic.LoadUint64(&m.GetCodeCounter) > 0
-	}
-
-	return true
-}
-
-type mProxyImplementationMockGetObjChildrenIterator struct {
-	mock              *ProxyImplementationMock
-	mainExpectation   *ProxyImplementationMockGetObjChildrenIteratorExpectation
-	expectationSeries []*ProxyImplementationMockGetObjChildrenIteratorExpectation
-}
-
-type ProxyImplementationMockGetObjChildrenIteratorExpectation struct {
-	input  *ProxyImplementationMockGetObjChildrenIteratorInput
-	result *ProxyImplementationMockGetObjChildrenIteratorResult
-}
-
-type ProxyImplementationMockGetObjChildrenIteratorInput struct {
-	p  context.Context
-	p1 *Transcript
-	p2 rpctypes.UpGetObjChildrenIteratorReq
-	p3 *rpctypes.UpGetObjChildrenIteratorResp
-}
-
-type ProxyImplementationMockGetObjChildrenIteratorResult struct {
-	r error
-}
-
-//Expect specifies that invocation of ProxyImplementation.GetObjChildrenIterator is expected from 1 to Infinity times
-func (m *mProxyImplementationMockGetObjChildrenIterator) Expect(p context.Context, p1 *Transcript, p2 rpctypes.UpGetObjChildrenIteratorReq, p3 *rpctypes.UpGetObjChildrenIteratorResp) *mProxyImplementationMockGetObjChildrenIterator {
-	m.mock.GetObjChildrenIteratorFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ProxyImplementationMockGetObjChildrenIteratorExpectation{}
-	}
-	m.mainExpectation.input = &ProxyImplementationMockGetObjChildrenIteratorInput{p, p1, p2, p3}
-	return m
-}
-
-//Return specifies results of invocation of ProxyImplementation.GetObjChildrenIterator
-func (m *mProxyImplementationMockGetObjChildrenIterator) Return(r error) *ProxyImplementationMock {
-	m.mock.GetObjChildrenIteratorFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ProxyImplementationMockGetObjChildrenIteratorExpectation{}
-	}
-	m.mainExpectation.result = &ProxyImplementationMockGetObjChildrenIteratorResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of ProxyImplementation.GetObjChildrenIterator is expected once
-func (m *mProxyImplementationMockGetObjChildrenIterator) ExpectOnce(p context.Context, p1 *Transcript, p2 rpctypes.UpGetObjChildrenIteratorReq, p3 *rpctypes.UpGetObjChildrenIteratorResp) *ProxyImplementationMockGetObjChildrenIteratorExpectation {
-	m.mock.GetObjChildrenIteratorFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &ProxyImplementationMockGetObjChildrenIteratorExpectation{}
-	expectation.input = &ProxyImplementationMockGetObjChildrenIteratorInput{p, p1, p2, p3}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *ProxyImplementationMockGetObjChildrenIteratorExpectation) Return(r error) {
-	e.result = &ProxyImplementationMockGetObjChildrenIteratorResult{r}
-}
-
-//Set uses given function f as a mock of ProxyImplementation.GetObjChildrenIterator method
-func (m *mProxyImplementationMockGetObjChildrenIterator) Set(f func(p context.Context, p1 *Transcript, p2 rpctypes.UpGetObjChildrenIteratorReq, p3 *rpctypes.UpGetObjChildrenIteratorResp) (r error)) *ProxyImplementationMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetObjChildrenIteratorFunc = f
-	return m.mock
-}
-
-//GetObjChildrenIterator implements github.com/insolar/insolar/logicrunner.ProxyImplementation interface
-func (m *ProxyImplementationMock) GetObjChildrenIterator(p context.Context, p1 *Transcript, p2 rpctypes.UpGetObjChildrenIteratorReq, p3 *rpctypes.UpGetObjChildrenIteratorResp) (r error) {
-	counter := atomic.AddUint64(&m.GetObjChildrenIteratorPreCounter, 1)
-	defer atomic.AddUint64(&m.GetObjChildrenIteratorCounter, 1)
-
-	if len(m.GetObjChildrenIteratorMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetObjChildrenIteratorMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ProxyImplementationMock.GetObjChildrenIterator. %v %v %v %v", p, p1, p2, p3)
-			return
-		}
-
-		input := m.GetObjChildrenIteratorMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ProxyImplementationMockGetObjChildrenIteratorInput{p, p1, p2, p3}, "ProxyImplementation.GetObjChildrenIterator got unexpected parameters")
-
-		result := m.GetObjChildrenIteratorMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the ProxyImplementationMock.GetObjChildrenIterator")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetObjChildrenIteratorMock.mainExpectation != nil {
-
-		input := m.GetObjChildrenIteratorMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, ProxyImplementationMockGetObjChildrenIteratorInput{p, p1, p2, p3}, "ProxyImplementation.GetObjChildrenIterator got unexpected parameters")
-		}
-
-		result := m.GetObjChildrenIteratorMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the ProxyImplementationMock.GetObjChildrenIterator")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetObjChildrenIteratorFunc == nil {
-		m.t.Fatalf("Unexpected call to ProxyImplementationMock.GetObjChildrenIterator. %v %v %v %v", p, p1, p2, p3)
-		return
-	}
-
-	return m.GetObjChildrenIteratorFunc(p, p1, p2, p3)
-}
-
-//GetObjChildrenIteratorMinimockCounter returns a count of ProxyImplementationMock.GetObjChildrenIteratorFunc invocations
-func (m *ProxyImplementationMock) GetObjChildrenIteratorMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetObjChildrenIteratorCounter)
-}
-
-//GetObjChildrenIteratorMinimockPreCounter returns the value of ProxyImplementationMock.GetObjChildrenIterator invocations
-func (m *ProxyImplementationMock) GetObjChildrenIteratorMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetObjChildrenIteratorPreCounter)
-}
-
-//GetObjChildrenIteratorFinished returns true if mock invocations count is ok
-func (m *ProxyImplementationMock) GetObjChildrenIteratorFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetObjChildrenIteratorMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetObjChildrenIteratorCounter) == uint64(len(m.GetObjChildrenIteratorMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetObjChildrenIteratorMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetObjChildrenIteratorCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetObjChildrenIteratorFunc != nil {
-		return atomic.LoadUint64(&m.GetObjChildrenIteratorCounter) > 0
 	}
 
 	return true
@@ -825,10 +669,6 @@ func (m *ProxyImplementationMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ProxyImplementationMock.GetCode")
 	}
 
-	if !m.GetObjChildrenIteratorFinished() {
-		m.t.Fatal("Expected call to ProxyImplementationMock.GetObjChildrenIterator")
-	}
-
 	if !m.RouteCallFinished() {
 		m.t.Fatal("Expected call to ProxyImplementationMock.RouteCall")
 	}
@@ -862,10 +702,6 @@ func (m *ProxyImplementationMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ProxyImplementationMock.GetCode")
 	}
 
-	if !m.GetObjChildrenIteratorFinished() {
-		m.t.Fatal("Expected call to ProxyImplementationMock.GetObjChildrenIterator")
-	}
-
 	if !m.RouteCallFinished() {
 		m.t.Fatal("Expected call to ProxyImplementationMock.RouteCall")
 	}
@@ -890,7 +726,6 @@ func (m *ProxyImplementationMock) MinimockWait(timeout time.Duration) {
 		ok := true
 		ok = ok && m.DeactivateObjectFinished()
 		ok = ok && m.GetCodeFinished()
-		ok = ok && m.GetObjChildrenIteratorFinished()
 		ok = ok && m.RouteCallFinished()
 		ok = ok && m.SaveAsChildFinished()
 
@@ -907,10 +742,6 @@ func (m *ProxyImplementationMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetCodeFinished() {
 				m.t.Error("Expected call to ProxyImplementationMock.GetCode")
-			}
-
-			if !m.GetObjChildrenIteratorFinished() {
-				m.t.Error("Expected call to ProxyImplementationMock.GetObjChildrenIterator")
 			}
 
 			if !m.RouteCallFinished() {
@@ -938,10 +769,6 @@ func (m *ProxyImplementationMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetCodeFinished() {
-		return false
-	}
-
-	if !m.GetObjChildrenIteratorFinished() {
 		return false
 	}
 
