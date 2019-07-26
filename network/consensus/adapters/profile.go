@@ -60,31 +60,37 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/utils"
 )
 
 type StaticProfileExtension struct {
-	shortID insolar.ShortNodeID
-	ref     insolar.Reference
+	shortID   insolar.ShortNodeID
+	ref       insolar.Reference
+	signature cryptkit.SignatureHolder
 }
 
 func NewStaticProfileExtension(networkNode insolar.NetworkNode) *StaticProfileExtension {
+	_, signature := networkNode.(node.MutableNode).GetSignature()
+
 	return newStaticProfileExtension(
 		networkNode.ShortID(),
 		networkNode.ID(),
+		cryptkit.NewSignature(
+			longbits.NewBits512FromBytes(signature.Bytes()),
+			SHA3512Digest.SignedBy(SECP256r1Sign),
+		).AsSignatureHolder(),
 	)
 }
 
-func newStaticProfileExtension(shortID insolar.ShortNodeID, ref insolar.Reference) *StaticProfileExtension {
+func newStaticProfileExtension(shortID insolar.ShortNodeID, ref insolar.Reference, signature cryptkit.SignatureHolder) *StaticProfileExtension {
 	return &StaticProfileExtension{
-		shortID: shortID,
-		ref:     ref,
+		shortID:   shortID,
+		ref:       ref,
+		signature: signature,
 	}
 }
 
@@ -97,44 +103,27 @@ func (ni *StaticProfileExtension) GetIntroducedNodeID() insolar.ShortNodeID {
 }
 
 func (ni *StaticProfileExtension) GetExtraEndpoints() []endpoints.Outbound {
-	panic("implement me")
+	return nil
 }
 
 func (ni *StaticProfileExtension) GetIssuedAtPulse() pulse.Number {
-	panic("implement me")
+	return pulse.NewFirstEphemeralData().PulseNumber
 }
 
 func (ni *StaticProfileExtension) GetIssuedAtTime() time.Time {
-	panic("implement me")
+	return time.Unix(int64(pulse.NewFirstEphemeralData().Timestamp), 0)
 }
 
 func (ni *StaticProfileExtension) GetIssuerID() insolar.ShortNodeID {
-	panic("implement me")
+	return ni.shortID
 }
 
 func (ni *StaticProfileExtension) GetIssuerSignature() cryptkit.SignatureHolder {
-	panic("implement me")
-}
-
-func (ni *StaticProfileExtension) ConvertPowerRequest(request power.Request) member.Power {
-	if ok, cl := request.AsCapacityLevel(); ok {
-		return member.PowerOf(uint16(cl.DefaultPercent()))
-	}
-	_, pw := request.AsMemberPower()
-	return pw
+	return ni.signature
 }
 
 func (ni *StaticProfileExtension) GetReference() insolar.Reference {
 	return ni.ref
-}
-
-func (ni *StaticProfileExtension) IsAllowedPower(p member.Power) bool {
-	// TODO: do something with power
-	return true
-}
-
-func (ni *StaticProfileExtension) GetShortNodeID() insolar.ShortNodeID {
-	return ni.shortID
 }
 
 type StaticProfile struct {
@@ -245,11 +234,11 @@ func (sp *StaticProfile) String() string {
 
 type Outbound struct {
 	name endpoints.Name
-	addr packets.NodeAddress
+	addr endpoints.IPAddress
 }
 
 func NewOutbound(address string) *Outbound {
-	addr, err := packets.NewNodeAddress(address)
+	addr, err := endpoints.NewIPAddress(address)
 	if err != nil {
 		panic(err)
 	}
@@ -265,7 +254,7 @@ func (p *Outbound) CanAccept(connection endpoints.Inbound) bool {
 }
 
 func (p *Outbound) GetEndpointType() endpoints.NodeEndpointType {
-	return endpoints.NameEndpoint
+	return endpoints.IPEndpoint
 }
 
 func (*Outbound) GetRelayID() insolar.ShortNodeID {
@@ -276,7 +265,7 @@ func (p *Outbound) GetNameAddress() endpoints.Name {
 	return p.name
 }
 
-func (p *Outbound) GetIPAddress() packets.NodeAddress {
+func (p *Outbound) GetIPAddress() endpoints.IPAddress {
 	return p.addr
 }
 

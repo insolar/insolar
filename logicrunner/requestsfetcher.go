@@ -25,6 +25,8 @@ import (
 	"github.com/insolar/insolar/logicrunner/artifacts"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/logicrunner.RequestsFetcher -o ./ -s _mock.go
+
 type RequestsFetcher interface {
 	FetchPendings(ctx context.Context)
 	Abort(ctx context.Context)
@@ -118,8 +120,9 @@ func (rf *requestsFetcher) fetch(ctx context.Context) error {
 		default:
 		}
 
-		tr := NewTranscript(ctx, reqRef, *request)
-		rf.broker.Prepend(ctx, true, tr)
+		requestCtx := freshContextFromContextAndRequest(ctx, *request)
+		tr := NewTranscript(requestCtx, reqRef, *request)
+		rf.broker.AddRequestsFromLedger(ctx, tr)
 	}
 
 	return nil

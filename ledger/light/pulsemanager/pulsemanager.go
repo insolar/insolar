@@ -62,6 +62,7 @@ type PulseManager struct {
 	HotSender       executor.HotSender
 
 	WriteManager hot.WriteManager
+	StateIniter  executor.StateIniter
 
 	// setLock locks Set method call.
 	setLock sync.RWMutex
@@ -73,12 +74,14 @@ func NewPulseManager(
 	lightToHeavySyncer replication.LightReplicator,
 	writeManager hot.WriteManager,
 	hotSender executor.HotSender,
+	stateIniter executor.StateIniter,
 ) *PulseManager {
 	pm := &PulseManager{
 		JetSplitter:     jetSplitter,
 		LightReplicator: lightToHeavySyncer,
 		WriteManager:    writeManager,
 		HotSender:       hotSender,
+		StateIniter:     stateIniter,
 	}
 	return pm
 }
@@ -108,6 +111,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	jets, endedPulse, err := m.setUnderGilSection(ctx, newPulse)
 	if err != nil {
 		if err == errZeroNodes || err == errNoPulse {
+			logger.Debug("setUnderGilSection return error: ", err)
 			return nil
 		}
 		panic(errors.Wrap(err, "under gil error"))
@@ -159,14 +163,20 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		}
 	}()
 
-	// Updating jet tree if its network start.
+	// FIXME: special for @ivanshibitov (uncomment this when INS-3031 is ready).
+	// if err := m.StateIniter.PrepareState(ctx, newPulse.PulseNumber); err != nil {
+	// 	logger.Error("failed to prepare light for start: ", err.Error())
+	// 	panic("failed to prepare light for start")
+	// }
+
+	// Updating jet tree if its network start. Remove when INS-3031 is ready.
 	{
 		_, err := m.PulseCalculator.Backwards(ctx, newPulse.PulseNumber, 1)
 		if err != nil {
 			if err == pulse.ErrNotFound {
 				err := m.JetModifier.Update(ctx, newPulse.PulseNumber, true, insolar.ZeroJetID)
 				if err != nil {
-					panic(errors.Wrap(err, "failed tp update jets"))
+					panic(errors.Wrap(err, "failed to update jets"))
 				}
 			} else {
 				panic(errors.Wrap(err, "failed to calculate previous pulse"))
@@ -177,6 +187,10 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	endedPulse, err := m.PulseAccessor.Latest(ctx)
 	if err != nil {
 		if err == pulse.ErrNotFound {
+			err := m.JetModifier.Update(ctx, newPulse.PulseNumber, true, insolar.ZeroJetID)
+			if err != nil {
+				panic(errors.Wrap(err, "failed to update jets"))
+			}
 			return nil, insolar.Pulse{}, errNoPulse
 		}
 		panic(errors.Wrap(err, "failed to calculate ended pulse"))

@@ -33,7 +33,7 @@ func TestSingleContract(t *testing.T) {
 	var contractCode = `
 package main
 
-import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import "github.com/insolar/insolar/logicrunner/builtin/foundation"
 
 type One struct {
 	foundation.BaseContract
@@ -86,7 +86,7 @@ func TestContractCallingContract(t *testing.T) {
 	var contractOneCode = `
 package main
 
-import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import "github.com/insolar/insolar/logicrunner/builtin/foundation"
 import "github.com/insolar/insolar/application/proxy/two"
 import "github.com/insolar/insolar/insolar"
 import "errors"
@@ -154,7 +154,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 type Two struct {
@@ -231,91 +231,172 @@ func (r *Two) GetPayloadString() (string, error) {
 	)
 }
 
-func TestInjectingDelegate(t *testing.T) {
-	var contractOneCode = `
-package main
-
-import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import two "github.com/insolar/insolar/application/proxy/injection_delegate_two"
-
-type One struct {
-	foundation.BaseContract
-}
-
-func New() (*One, error) {
-	return &One{}, nil
-}
-
-func (r *One) Hello(s string) (string, error) {
-	holder := two.New()
-	friend, err := holder.AsDelegate(r.GetReference())
-	if err != nil {
-		return "", err
-	}
-
-	res, err := friend.Hello(s)
-	if err != nil {
-		return "", err
-	}
-
-	return "Hi, " + s + "! Two said: " + res, nil
-}
-
-func (r *One) HelloFromDelegate(s string) (string, error) {
-	friend, err := two.GetImplementationFrom(r.GetReference())
-	if err != nil {
-		return "", err
-	}
-
-	return friend.Hello(s)
-}
-`
-
-	var contractTwoCode = `
+// Make sure a contract can make a saga call to another contract
+func TestSagaSimpleCall(t *testing.T) {
+	balance := float64(100)
+	amount := float64(10)
+	var contractCode = `
 package main
 
 import (
-	"fmt"
-
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+"github.com/insolar/insolar/insolar"
+"github.com/insolar/insolar/logicrunner/builtin/foundation"
+"github.com/insolar/insolar/application/proxy/test_saga_simple_contract"
 )
 
-type Two struct {
+type TestSagaSimpleCallContract struct {
 	foundation.BaseContract
-	X int
+	Friend insolar.Reference
+	Amount int
 }
 
-func New() (*Two, error) {
-	return &Two{X:322}, nil
+func New() (*TestSagaSimpleCallContract, error) {
+	return &TestSagaSimpleCallContract{Amount: 100}, nil
 }
 
-func (r *Two) Hello(s string) (string, error) {
-	r.X *= 2
-	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X), nil
+func (r *TestSagaSimpleCallContract) Transfer(n int) (string, error) {
+	second := test_saga_simple_contract.New()
+	w2, err := second.AsChild(r.GetReference())
+	if err != nil {
+		return "1", err
+	}
+
+	r.Amount -= n
+
+	err = w2.Accept(n)
+	if err != nil {
+		return "2", err
+	}
+	return w2.GetReference().String(), nil
+}
+
+func (w *TestSagaSimpleCallContract) GetBalance() (int, error) {
+	return w.Amount, nil
+}
+
+//ins:saga(Rollback)
+func (w *TestSagaSimpleCallContract) Accept(amount int) error {
+	w.Amount += amount
+	return nil
+}
+
+func (w *TestSagaSimpleCallContract) Rollback(amount int) error {
+	w.Amount -= amount
+	return nil
 }
 `
-
-	uploadContractOnce(t, "injection_delegate_two", contractTwoCode)
-	obj := callConstructor(t, uploadContractOnce(t, "injection_delegate_one", contractOneCode), "New")
-
-	resp := callMethod(t, obj, "Hello", "ins")
+	prototype := uploadContractOnce(t, "test_saga_simple_contract", contractCode)
+	firstWalletRef := callConstructor(t, prototype, "New")
+	resp := callMethod(t, firstWalletRef, "Transfer", int(amount))
 	require.Empty(t, resp.Error)
-	require.Equal(t, "Hi, ins! Two said: Hello you too, ins. 644 times!", resp.ExtractedReply)
 
-	resp = callMethod(t, obj, "HelloFromDelegate", "ins")
+	secondWalletRef, err := insolar.NewReferenceFromBase58(resp.ExtractedReply.(string))
+	require.NoError(t, err)
+
+	checkPassed := false
+
+	for attempt := 0; attempt <= 10; attempt++ {
+		bal2 := callMethod(t, secondWalletRef, "GetBalance")
+		require.Empty(t, bal2.Error)
+		if bal2.ExtractedReply.(float64) != balance+amount {
+			// money are not accepted yet
+			time.Sleep(10 * time.Millisecond)
+			continue
+		}
+
+		bal1 := callMethod(t, firstWalletRef, "GetBalance")
+		require.Empty(t, bal1.Error)
+		require.Equal(t, balance-amount, bal1.ExtractedReply.(float64))
+		require.Equal(t, balance+amount, bal2.ExtractedReply.(float64))
+
+		checkPassed = true
+		break
+	}
+
+	require.True(t, checkPassed)
+}
+
+// Make sure a contract can make a saga call to itself
+func TestSagaSelfCall(t *testing.T) {
+	var contractCode = `
+package main
+
+import (
+"github.com/insolar/insolar/logicrunner/builtin/foundation"
+"github.com/insolar/insolar/application/proxy/test_saga_self_contract"
+)
+
+type TestSagaSelfCallContract struct {
+	foundation.BaseContract
+	SagaCallsNum int
+}
+
+func New() (*TestSagaSelfCallContract, error) {
+	return &TestSagaSelfCallContract{SagaCallsNum: 0}, nil
+}
+
+func (c *TestSagaSelfCallContract) Transfer(delta int) error {
+	proxy := test_saga_self_contract.GetObject(c.GetReference())
+	err := proxy.Accept(delta)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *TestSagaSelfCallContract) GetSagaCallsNum() (int, error) {
+	return c.SagaCallsNum, nil
+}
+
+//ins:saga(Rollback)
+func (c *TestSagaSelfCallContract) Accept(delta int) error {
+	c.SagaCallsNum += delta
+	return nil
+}
+
+func (c *TestSagaSelfCallContract) Rollback(delta int) error {
+	c.SagaCallsNum -= delta
+	return nil
+}
+`
+	prototype := uploadContractOnce(t, "test_saga_self_contract", contractCode)
+	contractRef := callConstructor(t, prototype, "New")
+
+	res1 := callMethod(t, contractRef, "GetSagaCallsNum")
+	require.Empty(t, res1.Error)
+	require.Equal(t, float64(0), res1.ExtractedReply.(float64))
+
+	resp := callMethod(t, contractRef, "Transfer", 1)
 	require.Empty(t, resp.Error)
-	require.Equal(t, "Hello you too, ins. 1288 times!", resp.ExtractedReply)
+
+	checkPassed := false
+
+	for attempt := 0; attempt <= 10; attempt++ {
+		res2 := callMethod(t, contractRef, "GetSagaCallsNum")
+		require.Empty(t, res2.Error)
+		if res2.ExtractedReply.(float64) != float64(1) {
+			// saga is not accepted yet
+			time.Sleep(10 * time.Millisecond)
+			continue
+		}
+		checkPassed = true
+		break
+	}
+
+	require.True(t, checkPassed)
 }
 
 func TestNoWaitCall(t *testing.T) {
 	var contractOneCode = `
 package main
 
-import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import "github.com/insolar/insolar/logicrunner/builtin/foundation"
+import "github.com/insolar/insolar/insolar"
 import two "github.com/insolar/insolar/application/proxy/basic_notification_call_two"
 
 type One struct {
 	foundation.BaseContract
+	Friend insolar.Reference
 }
 
 func New() (*One, error) {
@@ -325,10 +406,12 @@ func New() (*One, error) {
 func (r *One) Hello() error {
 	holder := two.New()
 
-	friend, err := holder.AsDelegate(r.GetReference())
+	friend, err := holder.AsChild(r.GetReference())
 	if err != nil {
 		return err
 	}
+
+	r.Friend = friend.GetReference()
 
 	err = friend.MultiplyNoWait()
 	if err != nil {
@@ -339,12 +422,7 @@ func (r *One) Hello() error {
 }
 
 func (r *One) Value() (int, error) {
-	friend, err := two.GetImplementationFrom(r.GetReference())
-	if err != nil {
-		return 0, err
-	}
-
-	return friend.GetValue()
+	return two.GetObject(r.Friend).GetValue()
 }
 `
 
@@ -354,7 +432,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 type Two struct {
@@ -398,7 +476,7 @@ func TestContextPassing(t *testing.T) {
 	var contractOneCode = `
 package main
 
-import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import "github.com/insolar/insolar/logicrunner/builtin/foundation"
 
 type One struct {
 	foundation.BaseContract
@@ -424,7 +502,7 @@ func TestDeactivation(t *testing.T) {
 	var contractOneCode = `
 package main
 
-import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import "github.com/insolar/insolar/logicrunner/builtin/foundation"
 
 type One struct {
 	foundation.BaseContract
@@ -452,7 +530,7 @@ func TestPanic(t *testing.T) {
 	var panicContractCode = `
 package main
 
-import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import "github.com/insolar/insolar/logicrunner/builtin/foundation"
 
 type One struct {
 	foundation.BaseContract
@@ -479,7 +557,7 @@ func TestErrorInterface(t *testing.T) {
 package main
 
 import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	two "github.com/insolar/insolar/application/proxy/error_interface_two"
 )
 
@@ -518,7 +596,7 @@ package main
 import (
 	"errors"
 
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 type Two struct {
@@ -549,7 +627,7 @@ func TestNilResult(t *testing.T) {
 package main
 
 import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	two "github.com/insolar/insolar/application/proxy/nil_result_two"
 )
 
@@ -576,7 +654,7 @@ func (r *One) Hello() (*string, error) {
 package main
 
 import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 type Two struct {
@@ -603,7 +681,7 @@ func TestConstructorReturnNil(t *testing.T) {
 package main
 
 import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	two "github.com/insolar/insolar/application/proxy/constructor_return_nil_two"
 )
 
@@ -630,7 +708,7 @@ func (r *One) Hello() (*string, error) {
 package main
 
 import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 type Two struct {
@@ -652,7 +730,7 @@ func TestRecursiveCallError(t *testing.T) {
 package main
 
 import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	recursive "github.com/insolar/insolar/application/proxy/recursive_call_one"
 )
 type One struct {
@@ -686,7 +764,7 @@ func TestGetParent(t *testing.T) {
  package main
 
  import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
  	"github.com/insolar/insolar/insolar"
 	two "github.com/insolar/insolar/application/proxy/get_parent_two"
  )
@@ -714,7 +792,7 @@ func (r *One) AddChildAndReturnMyselfAsParent() (string, error) {
 package main
 
 import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 type Two struct {
@@ -748,7 +826,7 @@ func TestGetRemoteData(t *testing.T) {
 package main
 
 import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	two "github.com/insolar/insolar/application/proxy/get_remote_data_two"
 	"github.com/insolar/insolar/insolar"
 )
@@ -776,7 +854,7 @@ func (r *One) GetChildPrototype() (string, error) {
 package main
 
 import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
  
 type Two struct {
@@ -800,7 +878,7 @@ func TestNoLoopsWhileNotificationCall(t *testing.T) {
 package main
 
 import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	two "github.com/insolar/insolar/application/proxy/no_loops_while_notification_call_two"
 )
 
@@ -830,7 +908,7 @@ func (r *One) IncrementBy100() (int, error) {
 package main
 
 import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 type Two struct {
@@ -862,7 +940,7 @@ func TestPrototypeMismatch(t *testing.T) {
 package main
 
 import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	first "github.com/insolar/insolar/application/proxy/prototype_mismatch_first"
 	"github.com/insolar/insolar/insolar"
 )
@@ -885,7 +963,7 @@ func (c *Contract) Test(firstRef *insolar.Reference) (string, error) {
 package main
 
 import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 type First struct {
@@ -902,7 +980,7 @@ func (c *First) GetName() (string, error) {
 package main
 
 import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 type First struct {
@@ -930,7 +1008,7 @@ func TestImmutableAnnotation(t *testing.T) {
 package main
 
 import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	two "github.com/insolar/insolar/application/proxy/immutable_annotation_two"
 )
 
@@ -965,7 +1043,7 @@ func (r *One) ExternalImmutableCallMakesExternalCall() (error) {
 package main
 
 import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	three "github.com/insolar/insolar/application/proxy/immutable_annotation_three"
 )
 
@@ -996,7 +1074,7 @@ func (r *Two) Immutable() (error) {
 	var contractThreeCode = `
 package main
 
-import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import "github.com/insolar/insolar/logicrunner/builtin/foundation"
 
 type Three struct {
 	foundation.BaseContract
@@ -1027,7 +1105,7 @@ func TestMultipleConstructorsCall(t *testing.T) {
 	var contractCode = `
 package main
 
-import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import "github.com/insolar/insolar/logicrunner/builtin/foundation"
 
 type One struct {
 	foundation.BaseContract

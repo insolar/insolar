@@ -55,12 +55,6 @@ type Client interface {
 	// provide methods for fetching all related data.
 	GetObject(ctx context.Context, head insolar.Reference) (ObjectDescriptor, error)
 
-	// GetDelegate returns provided object's delegate reference for provided type.
-	//
-	// Object delegate should be previously created for this object. If object delegate does not exist, an error will
-	// be returned.
-	GetDelegate(ctx context.Context, head, asType insolar.Reference) (*insolar.Reference, error)
-
 	// GetChildren returns children iterator.
 	//
 	// During iteration children refs will be fetched from remote source (parent object).
@@ -179,7 +173,7 @@ func (t RequestResultType) String() string {
 type RequestResult interface {
 	Type() RequestResultType
 
-	Activate() (insolar.Reference, insolar.Reference, bool, []byte)
+	Activate() (insolar.Reference, insolar.Reference, []byte)
 	Amend() (insolar.ID, insolar.Reference, []byte)
 	Deactivate() insolar.ID
 

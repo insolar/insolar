@@ -127,6 +127,14 @@ func (h *EmuHostConsensusAdapter) run(ctx context.Context) {
 			if err == nil {
 				if packet != nil {
 					hostFrom := endpoints.InboundConnection{Addr: *from}
+
+					sourceID := packet.GetSourceID()
+					targetID := packet.GetTargetID()
+
+					if sourceID != 0 && sourceID == targetID { // TODO for debugging
+						panic("must not")
+					}
+
 					err = h.controller.ProcessPacket(ctx, packet, &hostFrom)
 				}
 			}
@@ -145,10 +153,10 @@ func (h *EmuHostConsensusAdapter) SendPacketToTransport(ctx context.Context, t t
 func (h *EmuHostConsensusAdapter) receive(ctx context.Context) (payload interface{}, from *endpoints.Name, err error) {
 	packet, ok := <-h.inbound
 	if !ok {
-		inslogger.FromContext(ctx).Infof("host is dead: %s", h.hostAddr)
+		inslogger.FromContext(ctx).Debugf("host is dead: %s", h.hostAddr)
 		return nil, nil, nil
 	}
-	inslogger.FromContext(ctx).Infof("receivedBy: %s - %+v", h.hostAddr, packet)
+	inslogger.FromContext(ctx).Debugf("receivedBy: %s - %+v", h.hostAddr, packet)
 	if packet.Payload == nil {
 		return nil, &packet.Host, errors.New("missing payload")
 	}
@@ -160,9 +168,12 @@ func (h *EmuHostConsensusAdapter) receive(ctx context.Context) (payload interfac
 }
 
 func (h *EmuHostConsensusAdapter) send(target endpoints.Outbound, payload interface{}) {
+	defer func() {
+		_ = recover()
+	}()
 	parser := payload.(transport.PacketParser)
 	pkt := Packet{Host: target.GetNameAddress(), Payload: WrapPacketParser(parser)}
-	// fmt.Println(">SEND> ", pkt)
+	//fmt.Println(">SEND> ", pkt)
 	h.outbound <- pkt
 }
 
@@ -191,6 +202,10 @@ func (p *EmuRoundStrategyFactory) CreateRoundStrategy(chronicle api.ConsensusChr
 }
 
 type EmuRoundStrategy struct {
+}
+
+func (*EmuRoundStrategy) IsEphemeralPulseAllowed() bool {
+	return false
 }
 
 func (*EmuRoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse pulse.Number, self profiles.LocalNode) context.Context {

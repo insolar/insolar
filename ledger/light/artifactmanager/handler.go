@@ -251,10 +251,6 @@ func NewMessageHandler(
 		SetCode: func(p *proc.SetCode) {
 			p.Dep(h.WriteAccessor, h.Records, h.PCS, h.Sender)
 		},
-		GetDelegate: func(p *proc.GetDelegate) {
-			p.Dep.IndexAccessor = h.IndexStorage
-			p.Dep.Sender = h.Sender
-		},
 	}
 
 	initHandle := func(msg *message.Message) *handle.Init {

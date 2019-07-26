@@ -473,7 +473,7 @@ func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]i
 	}
 }
 
-// HasPendingRequests returns true if object has unclosed requests.
+// HasPendings returns true if object has unclosed requests.
 func (m *client) HasPendings(
 	ctx context.Context,
 	object insolar.Reference,
@@ -518,49 +518,6 @@ func (m *client) HasPendings(
 		return false, errors.New(concrete.Text)
 	default:
 		return false, fmt.Errorf("HasPendings: unexpected reply %T", pl)
-	}
-}
-
-// GetDelegate returns provided object's delegate reference for provided prototype.
-//
-// Object delegate should be previously created for this object. If object delegate does not exist, an error will
-// be returned.
-func (m *client) GetDelegate(
-	ctx context.Context, head, asType insolar.Reference,
-) (*insolar.Reference, error) {
-	var err error
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetDelegate")
-	instrumenter := instrument(ctx, "GetDelegate").err(&err)
-	defer func() {
-		if err != nil {
-			span.AddAttributes(trace.BoolAttribute("error", true))
-			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
-		}
-		span.End()
-		instrumenter.end()
-	}()
-
-	sender := messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(m.PulseAccessor),
-		messagebus.FollowRedirectSender(m.DefaultBus),
-		messagebus.RetryJetSender(m.JetStorage),
-	)
-	genericReact, err := sender(ctx, &message.GetDelegate{
-		Head:   head,
-		AsType: asType,
-	}, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	switch rep := genericReact.(type) {
-	case *reply.Delegate:
-		return &rep.Head, nil
-	case *reply.Error:
-		return nil, rep.Error()
-	default:
-		return nil, fmt.Errorf("GetDelegate: unexpected reply: %#v", rep)
 	}
 }
 
@@ -928,7 +885,7 @@ func (m *client) RegisterResult(
 	//
 	// Request reference will be this object's identifier and referred as "object head".
 	case RequestSideEffectActivate:
-		parentRef, imageRef, asDelegate, memory := result.Activate()
+		parentRef, imageRef, memory := result.Activate()
 
 		parentDesc, err = m.GetObject(ctx, parentRef)
 		if err != nil {
@@ -942,7 +899,6 @@ func (m *client) RegisterResult(
 			Image:       imageRef,
 			IsPrototype: false,
 			Parent:      parentRef,
-			IsDelegate:  asDelegate,
 		})
 
 		plTyped := payload.Activate{}
@@ -1027,7 +983,7 @@ func (m *client) RegisterResult(
 	}
 
 	if result.Type() == RequestSideEffectActivate {
-		parentRef, imageRef, asDelegate, _ := result.Activate()
+		parentRef, _, _ := result.Activate()
 
 		var asType *insolar.Reference
 
@@ -1037,9 +993,6 @@ func (m *client) RegisterResult(
 
 		if parentDesc.ChildPointer() != nil {
 			child.PrevChild = *parentDesc.ChildPointer()
-		}
-		if asDelegate {
-			asType = &imageRef
 		}
 
 		err = m.registerChild(
