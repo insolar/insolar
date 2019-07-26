@@ -25,7 +25,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type EnsureIndex struct {
+type SendIndex struct {
 	meta payload.Meta
 
 	dep struct {
@@ -34,7 +34,7 @@ type EnsureIndex struct {
 	}
 }
 
-func (p *EnsureIndex) Dep(
+func (p *SendIndex) Dep(
 	indices object.IndexAccessor,
 	sender bus.Sender,
 ) {
@@ -42,24 +42,24 @@ func (p *EnsureIndex) Dep(
 	p.dep.sender = sender
 }
 
-func NewEnsureIndex(meta payload.Meta) *EnsureIndex {
-	return &EnsureIndex{
+func NewEnsureIndex(meta payload.Meta) *SendIndex {
+	return &SendIndex{
 		meta: meta,
 	}
 }
 
-func (p *EnsureIndex) Proceed(ctx context.Context) error {
+func (p *SendIndex) Proceed(ctx context.Context) error {
 	ensureIndex := payload.EnsureIndex{}
 	err := ensureIndex.Unmarshal(p.meta.Payload)
 	if err != nil {
-		return errors.Wrap(err, "EnsureIndex: failed to unmarshal ensureIndex message")
+		return errors.Wrap(err, "SendIndex: failed to unmarshal ensureIndex message")
 	}
 
 	idx, err := p.dep.indices.ForID(ctx, p.meta.Pulse, ensureIndex.ObjectID)
 	if err != nil {
 		return errors.Wrapf(
 			err,
-			"EnsureIndex: failed to fetch object index for %v", ensureIndex.ObjectID.String(),
+			"SendIndex: failed to fetch object index for %v", ensureIndex.ObjectID.String(),
 		)
 	}
 
@@ -68,7 +68,7 @@ func (p *EnsureIndex) Proceed(ctx context.Context) error {
 		Index: buf,
 	})
 	if err != nil {
-		return errors.Wrap(err, "EnsureIndex: failed to create reply")
+		return errors.Wrap(err, "SendIndex: failed to create reply")
 	}
 
 	p.dep.sender.Reply(ctx, p.meta, msg)

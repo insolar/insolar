@@ -104,7 +104,7 @@ func New(cfg configuration.Ledger) *Handler {
 				h.JetAccessor,
 				h.Sender)
 		},
-		EnsureIndex: func(p *proc.EnsureIndex) {
+		SendIndex: func(p *proc.SendIndex) {
 			p.Dep(
 				h.IndexAccessor,
 				h.Sender,
@@ -229,7 +229,7 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 		err = p.Proceed(ctx)
 	case payload.TypeEnsureIndex:
 		p := proc.NewEnsureIndex(meta)
-		h.dep.EnsureIndex(p)
+		h.dep.SendIndex(p)
 		err = p.Proceed(ctx)
 	case payload.TypePass:
 		err = h.handlePass(ctx, meta)
