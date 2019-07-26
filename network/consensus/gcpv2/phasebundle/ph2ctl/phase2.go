@@ -52,10 +52,11 @@ package ph2ctl
 
 import (
 	"context"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"math"
 	"time"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/announce"

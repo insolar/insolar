@@ -52,6 +52,7 @@ package census
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"

@@ -53,10 +53,11 @@ package core
 import (
 	"context"
 	"fmt"
+	"sync"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
-	"sync"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
