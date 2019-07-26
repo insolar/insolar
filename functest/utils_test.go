@@ -271,6 +271,9 @@ func retryableCreateMember(user *user, method string, updatePublicKey bool) (int
 			user.pubKey = newUser.pubKey
 		}
 	}
+	if err == nil {
+		user.ref = result.(map[string]interface{})["reference"].(string)
+	}
 	return result, err
 }
 
