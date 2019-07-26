@@ -85,7 +85,7 @@ func New(cfg configuration.Ledger) *Handler {
 		SendRequests: func(p *proc.SendRequests) {
 			p.Dep(h.Sender, h.RecordAccessor, h.IndexAccessor)
 		},
-		GetRequest: func(p *proc.GetRequest) {
+		SendRequest: func(p *proc.SendRequest) {
 			p.Dep(h.RecordAccessor, h.Sender)
 		},
 		Replication: func(p *proc.Replication) {
@@ -204,8 +204,8 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 
 	switch payloadType {
 	case payload.TypeGetRequest:
-		p := proc.NewGetRequest(meta)
-		h.dep.GetRequest(p)
+		p := proc.NewSendRequest(meta)
+		h.dep.SendRequest(p)
 		err = p.Proceed(ctx)
 	case payload.TypeGetFilament:
 		p := proc.NewSendRequests(meta)
@@ -282,8 +282,8 @@ func (h *Handler) handlePass(ctx context.Context, meta payload.Meta) error {
 		h.dep.SendCode(p)
 		err = p.Proceed(ctx)
 	case payload.TypeGetRequest:
-		p := proc.NewGetRequest(originMeta)
-		h.dep.GetRequest(p)
+		p := proc.NewSendRequest(originMeta)
+		h.dep.SendRequest(p)
 		err = p.Proceed(ctx)
 	default:
 		err = fmt.Errorf("no pass handler for message type %s", payloadType.String())
