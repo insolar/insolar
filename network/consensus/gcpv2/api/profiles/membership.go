@@ -196,13 +196,17 @@ func NewMemberAnnouncement(memberID insolar.ShortNodeID, mp MembershipProfile,
 	}
 }
 
-func NewJoinerAnnouncement(memberID insolar.ShortNodeID, brief BriefCandidateProfile,
+func NewJoinerAnnouncement(brief StaticProfile,
 	announcerID insolar.ShortNodeID) MemberAnnouncement {
 
 	return MemberAnnouncement{
-		MemberID:               memberID,
+		MemberID:               brief.GetStaticNodeID(),
 		MembershipAnnouncement: NewMembershipAnnouncement(NewMembershipProfileForJoiner(brief)),
 		AnnouncedByID:          announcerID,
+		Joiner: JoinerAnnouncement{
+			JoinerProfile:  brief,
+			IntroducedByID: announcerID,
+		},
 	}
 }
 

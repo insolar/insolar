@@ -52,6 +52,7 @@ package announce
 
 import (
 	"context"
+	"fmt"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
@@ -112,15 +113,24 @@ func ApplyUnknownAnnouncement(ctx context.Context, announcerID insolar.ShortNode
 		intro = realm.GetProfileFactory().CreateUpgradableIntroProfile(brief)
 	}
 
+	var ma profiles.MemberAnnouncement
+
 	na := reader.GetAnnouncementReader()
 	nr := na.GetNodeRank()
-	ma, _ := AnnouncementFromReader(announcerID, na, brief, announcerID, realm.GetProfileFactory())
+	if nr.IsJoiner() {
+		if intro == nil {
+			return false, fmt.Errorf("unknown joiner announcement is incorrect: id=%d", announcerID)
+		}
+		ma = profiles.NewJoinerAnnouncement(intro, announcerID)
+	} else {
+		ma, _ = AnnouncementFromReaderNotForJoiner(announcerID, na, announcerID, realm.GetProfileFactory())
+	}
 
 	return realm.GetPurgatory().UnknownAsSelfFromMemberAnnouncement(ctx, announcerID, intro, nr, ma)
 }
 
 func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementPacketReader, brief transport.BriefIntroductionReader,
-	fullIntroRequired bool, n *core.NodeAppearance, realm *core.FullRealm) (bool, insolar.ShortNodeID, error) {
+	fullIntroRequired bool, n *core.NodeAppearance, realm *core.FullRealm) (bool, profiles.StaticProfile, error) {
 
 	// err := ValidateIntrosOnMember(reader, brief, fullIntroRequired, n)
 	// if err != nil {
@@ -131,7 +141,7 @@ func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementP
 	nr := na.GetNodeRank()
 
 	if n.GetRank(realm.GetNodeCount()) != nr {
-		return false, 0, n.Frauds().NewMismatchedNeighbourRank(n.GetReportProfile())
+		return false, nil, n.Frauds().NewMismatchedNeighbourRank(n.GetReportProfile())
 	}
 
 	var err error
@@ -140,42 +150,48 @@ func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementP
 
 	// TODO verify announcement content and signature
 
+	var profile profiles.StaticProfile
 	if reader.HasFullIntro() {
 		full := reader.GetFullIntroduction()
 		matches = n.UpgradeDynamicNodeProfile(ctx, full)
-		brief = full
-	} else {
-		matches = brief == nil || profiles.EqualBriefProfiles(n.GetReportProfile().GetStatic(), brief)
+		profile = n.GetStatic()
+	} else if brief != nil {
+		profile = n.GetStatic()
+		matches = profiles.EqualBriefProfiles(profile, brief)
 	}
 	if !matches {
 		// TODO should be fraud
-		return false, 0, n.Blames().NewProtocolViolation(n.GetReportProfile(), "announcement is incorrect")
+		return false, nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "announcement is incorrect")
 	}
 
-	ma, joinerID := AnnouncementFromReader(n.GetNodeID(), na, brief, announcerID, realm.GetProfileFactory())
+	var ma profiles.MemberAnnouncement
+	if nr.IsJoiner() {
+		if profile == nil {
+			return false, nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner announcement is incorrect")
+		}
+		ma = profiles.NewJoinerAnnouncement(profile, announcerID)
+	} else {
+		var joinerID insolar.ShortNodeID
+		ma, joinerID = AnnouncementFromReaderNotForJoiner(n.GetNodeID(), na, announcerID, realm.GetProfileFactory())
 
-	if !joinerID.IsAbsent() && joinerID != ma.JoinerID {
-		return false, 0, n.Blames().NewProtocolViolation(n.GetReportProfile(), "announced joiner id and joiner profile mismatched")
+		if !joinerID.IsAbsent() && joinerID != ma.JoinerID {
+			return false, nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "announced joiner id and joiner profile mismatched")
+		}
 	}
 
 	if !n.CanIntroduceJoiner() && !ma.JoinerID.IsAbsent() {
-		return false, 0, n.Blames().NewProtocolViolation(n.GetReportProfile(), "node is not allowed to add a joiner")
+		return false, nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "node is not allowed to add a joiner")
 	}
 
 	modified, err := n.ApplyNodeMembership(ma, realm)
 
-	return modified, ma.JoinerID, err
+	return modified, ma.Joiner.JoinerProfile, err
 }
 
-func AnnouncementFromReader(senderID insolar.ShortNodeID, ma transport.MembershipAnnouncementReader,
-	senderBrief profiles.BriefCandidateProfile, announcerID insolar.ShortNodeID,
-	pf profiles.Factory) (profiles.MemberAnnouncement, insolar.ShortNodeID) {
+func AnnouncementFromReaderNotForJoiner(senderID insolar.ShortNodeID, ma transport.MembershipAnnouncementReader,
+	announcerID insolar.ShortNodeID, pf profiles.Factory) (profiles.MemberAnnouncement, insolar.ShortNodeID) {
 
 	nr := ma.GetNodeRank()
-
-	if nr.IsJoiner() {
-		return profiles.NewJoinerAnnouncement(senderID, senderBrief, announcerID), senderID
-	}
 
 	mp := profiles.NewMembershipProfile(nr.GetMode(), nr.GetPower(), nr.GetIndex(), ma.GetNodeStateHashEvidence(),
 		ma.GetAnnouncementSignature(), ma.GetRequestedPower())
@@ -213,8 +229,7 @@ type ResolvedNeighbour struct {
 }
 
 func VerifyNeighbourhood(ctx context.Context, neighbourhood []transport.MembershipAnnouncementReader,
-	n *core.NodeAppearance, announcedJoinerID insolar.ShortNodeID, announcedJoiner transport.JoinerAnnouncementReader,
-	realm *core.FullRealm) ([]ResolvedNeighbour, error) {
+	n *core.NodeAppearance, announcedJoiner profiles.StaticProfile, realm *core.FullRealm) ([]ResolvedNeighbour, error) {
 
 	hasThis := false
 	hasSelf := false
@@ -247,7 +262,7 @@ func VerifyNeighbourhood(ctx context.Context, neighbourhood []transport.Membersh
 			//	return nil, n.Frauds().NewMismatchedNeighbourRank(n.GetReportProfile())
 			// }
 
-			ma, joinerID := AnnouncementFromReader(nid, nb, nil, senderID, pf)
+			ma, joinerID := AnnouncementFromReaderNotForJoiner(nid, nb, senderID, pf)
 
 			if !joinerID.IsAbsent() && joinerID != ma.JoinerID {
 				return nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "announced joiner id and joiner profile mismatched")
@@ -263,28 +278,29 @@ func VerifyNeighbourhood(ctx context.Context, neighbourhood []transport.Membersh
 					// TODO fraud
 					return nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "member is not allowed to introduce joiner")
 				}
-				if ma.Joiner.IsEmpty() /* && ma.JoinerID != announcedJoinerID */ {
+				if !ma.Joiner.IsEmpty() /* && ma.JoinerID != announcedJoinerID */ {
 					// TODO fraud
-					return nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner profile is missing in neighbourhood")
+					return nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner profile was not expected in neighbourhood")
 				}
 			}
 
 			neighbours[idx].Announcement = ma
 		} else {
-			var mp profiles.MembershipProfile
-
 			if nb.IsLeaving() || !nb.GetJoinerID().IsAbsent() {
 				// TODO fraud
 				return nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner is not allowed to leave or to introduce joiner")
 			}
 
 			introducedBy := senderID
-			if nb.GetNodeID() == announcedJoinerID {
-				if nb.GetJoinerAnnouncement() != nil {
+
+			var joinerProfile profiles.StaticProfile
+			if announcedJoiner != nil && nb.GetNodeID() == announcedJoiner.GetStaticNodeID() {
+				jar := nb.GetJoinerAnnouncement()
+				if jar != nil {
 					// TODO fraud
 					return nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner profile is duplicated in neighbourhood")
 				}
-				mp = profiles.NewMembershipProfileForJoiner(announcedJoiner.GetBriefIntroduction())
+				joinerProfile = announcedJoiner
 			} else {
 				ja := nb.GetJoinerAnnouncement()
 				if ja == nil {
@@ -292,14 +308,10 @@ func VerifyNeighbourhood(ctx context.Context, neighbourhood []transport.Membersh
 					return nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner profile is missing in neighbourhood")
 				}
 				introducedBy = ja.GetJoinerIntroducedByID()
-				mp = profiles.NewMembershipProfileForJoiner(ja.GetBriefIntroduction())
+				joinerProfile = pf.CreateUpgradableIntroProfile(ja.GetBriefIntroduction())
 			}
 
-			neighbours[idx].Announcement = profiles.MemberAnnouncement{
-				MembershipAnnouncement: profiles.NewMembershipAnnouncement(mp),
-				AnnouncedByID:          senderID,
-			}
-			neighbours[idx].Announcement.Joiner.IntroducedByID = introducedBy
+			neighbours[idx].Announcement = profiles.NewJoinerAnnouncement(joinerProfile, introducedBy)
 		}
 
 		neighbours[idx].Neighbour, _ = purgatory.VerifyNeighbour(neighbours[idx].Announcement, n)

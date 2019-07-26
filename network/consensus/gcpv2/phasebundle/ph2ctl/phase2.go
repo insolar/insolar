@@ -135,25 +135,18 @@ func (c *Phase2PacketDispatcher) DispatchMemberPacket(ctx context.Context, reade
 	p2 := reader.AsPhase2Packet()
 	realm := c.ctl.R
 
-	signalSent, announcedJoinerID, err := announce.ApplyMemberAnnouncement(ctx, p2,
+	signalSent, announcedJoiner, err := announce.ApplyMemberAnnouncement(ctx, p2,
 		p2.GetBriefIntroduction(), false, sender, realm)
 
 	if err != nil {
 		return err
 	}
 
-	ar := p2.GetAnnouncementReader()
 	neighbourhood := p2.GetNeighbourhood()
-
-	if ar.GetNodeRank().IsJoiner() {
-		announcedJoinerID = sender.GetNodeID()
-	}
-
-	neighbours, err := announce.VerifyNeighbourhood(ctx, neighbourhood, sender,
-		announcedJoinerID, ar.GetJoinerAnnouncement(), realm)
+	neighbours, err := announce.VerifyNeighbourhood(ctx, neighbourhood, sender, announcedJoiner, realm)
 
 	if err != nil {
-		rep := misbehavior.FraudOf(err)
+		rep := misbehavior.FraudOf(err) // TODO unify approach to fraud registration
 		if rep != nil {
 			return sender.RegisterFraud(*rep)
 		}
@@ -167,6 +160,12 @@ func (c *Phase2PacketDispatcher) DispatchMemberPacket(ctx context.Context, reade
 		modified := false
 		if nb.Neighbour == nil {
 			rank := neighbourhood[i].GetNodeRank()
+			if rank.IsJoiner() && nb.Announcement.Joiner.JoinerProfile == nil {
+				if announcedJoiner == nil || announcedJoiner.GetStaticNodeID() != nb.Announcement.MemberID {
+					panic("unexpected")
+				}
+				continue
+			}
 			err = purgatory.UnknownFromNeighbourhood(ctx, rank, nb.Announcement, c.isCapped, c.ctl.R)
 		} else {
 			modified, err = nb.Neighbour.ApplyNeighbourEvidence(sender, nb.Announcement, c.isCapped, c.ctl.R)

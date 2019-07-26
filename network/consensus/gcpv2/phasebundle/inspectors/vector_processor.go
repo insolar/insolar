@@ -470,45 +470,47 @@ func (p *inspectedVector) doVerifyVectorHashes(ctx context.Context) nodeset.Node
 		p.trustedPart = nodeset.SvcIgnore
 	}
 
-	if validTrusted || validDoubted {
-		recalcTrusted := p.trustedPart.IsRecalc() && validTrusted
-		recalcDoubted := p.doubtedPart.IsRecalc() && validDoubted
+	// TODO make a controlled parameter!
 
-		gshTrusted, gshDoubted := selfData.Trusted.CalcStateWithRank, selfData.Doubted.CalcStateWithRank
-		if recalcTrusted || recalcDoubted {
-			gshTrusted, gshDoubted = vectorBuilder.BuildGlobulaStateHashesAndRanks(recalcTrusted, recalcDoubted,
-				p.node.GetNodeID(), gshTrusted, gshDoubted)
-
-			if recalcTrusted {
-				validTrusted = gshTrusted.ExpectedRank == p.otherData.Trusted.ExpectedRank
-			}
-			if recalcDoubted {
-				validDoubted = gshDoubted.ExpectedRank == p.otherData.Doubted.ExpectedRank
-			}
-
-			if log.Is(insolar.DebugLevel) {
-				if recalcTrusted && !validTrusted || recalcDoubted && !validDoubted {
-					log.Errorf("mismatched ExpectedRank:\n Here: %v %v\nThere: %v %v",
-						gshTrusted.ExpectedRank, gshDoubted.ExpectedRank,
-						p.otherData.Trusted.ExpectedRank, p.otherData.Doubted.ExpectedRank)
-				}
-			}
-		}
-
-		prevValidTrusted := validTrusted
-		prevValidDoubted := validDoubted
-
-		validTrusted = validTrusted && p.verifySignature(gshTrusted.StateHash, p.otherData.Trusted.StateSignature)
-		validDoubted = validDoubted && p.verifySignature(gshDoubted.StateHash, p.otherData.Doubted.StateSignature)
-
-		if log.Is(insolar.DebugLevel) {
-			if validTrusted != prevValidTrusted || validDoubted != prevValidDoubted {
-				log.Errorf("mismatched signature of StateHash:\n Here: %v %v\nThere: %v %v",
-					gshTrusted.StateHash, gshDoubted.StateHash,
-					p.otherData.Trusted.StateSignature, p.otherData.Doubted.StateSignature)
-			}
-		}
-	}
+	//if validTrusted || validDoubted {
+	//	recalcTrusted := p.trustedPart.IsRecalc() && validTrusted
+	//	recalcDoubted := p.doubtedPart.IsRecalc() && validDoubted
+	//
+	//	gshTrusted, gshDoubted := selfData.Trusted.CalcStateWithRank, selfData.Doubted.CalcStateWithRank
+	//	if recalcTrusted || recalcDoubted {
+	//		gshTrusted, gshDoubted = vectorBuilder.BuildGlobulaStateHashesAndRanks(recalcTrusted, recalcDoubted,
+	//			p.node.GetNodeID(), gshTrusted, gshDoubted)
+	//
+	//		if recalcTrusted {
+	//			validTrusted = gshTrusted.ExpectedRank == p.otherData.Trusted.ExpectedRank
+	//		}
+	//		if recalcDoubted {
+	//			validDoubted = gshDoubted.ExpectedRank == p.otherData.Doubted.ExpectedRank
+	//		}
+	//
+	//		if log.Is(insolar.DebugLevel) {
+	//			if recalcTrusted && !validTrusted || recalcDoubted && !validDoubted {
+	//				log.Errorf("mismatched ExpectedRank:\n Here: %v %v\nThere: %v %v",
+	//					gshTrusted.ExpectedRank, gshDoubted.ExpectedRank,
+	//					p.otherData.Trusted.ExpectedRank, p.otherData.Doubted.ExpectedRank)
+	//			}
+	//		}
+	//	}
+	//
+	//	prevValidTrusted := validTrusted
+	//	prevValidDoubted := validDoubted
+	//
+	//	validTrusted = validTrusted && p.verifySignature(gshTrusted.StateHash, p.otherData.Trusted.StateSignature)
+	//	validDoubted = validDoubted && p.verifySignature(gshDoubted.StateHash, p.otherData.Doubted.StateSignature)
+	//
+	//	if log.Is(insolar.DebugLevel) {
+	//		if validTrusted != prevValidTrusted || validDoubted != prevValidDoubted {
+	//			log.Errorf("mismatched signature of StateHash:\n Here: %v %v\nThere: %v %v",
+	//				gshTrusted.StateHash, gshDoubted.StateHash,
+	//				p.otherData.Trusted.StateSignature, p.otherData.Doubted.StateSignature)
+	//		}
+	//	}
+	//}
 
 	if p.trustedPart.IsNeeded() {
 		verifyRes.SetTrusted(validTrusted, p.trustedPart.IsRecalc())

@@ -240,7 +240,7 @@ func (p *RealmPurgatory) ascendFromPurgatory(ctx context.Context, id insolar.Sho
 func (p *RealmPurgatory) IsBriefAscensionAllowed() bool {
 	// using false will delay processing of packets and may result in slower consensus
 	// using true may produce NodeAppearance objects with Brief profiles
-	return true
+	return false
 }
 
 func (p *RealmPurgatory) UnknownAsSelfFromMemberAnnouncement(ctx context.Context, id insolar.ShortNodeID,
@@ -278,7 +278,7 @@ func (p *RealmPurgatory) AddJoinerAndEnsureAscendancy(
 	joinerID := jp.GetStaticNodeID()
 	err := p.getOrCreateMember(joinerID).DispatchAnnouncement(context.TODO(), // TODO context
 		member.JoinerRank, jp,
-		profiles.NewJoinerAnnouncement(joinerID, jp, announcedByID))
+		profiles.NewJoinerAnnouncement(jp, announcedByID))
 
 	if !p.IsBriefAscensionAllowed() && jp.GetExtension() == nil {
 		return err
@@ -311,7 +311,7 @@ func (p *RealmPurgatory) UnknownFromNeighbourhood(ctx context.Context, rank memb
 	m := p.getOrCreateMember(announcement.MemberID)
 	if announcement.Membership.IsJoiner() {
 		if announcement.Joiner.JoinerProfile == nil {
-			panic("announcement.Joiner.JoinerProfile")
+			panic("announcement.Joiner.JoinerProfile == nil") // it must be checked by caller
 		}
 		return m.DispatchAnnouncement(ctx, rank, announcement.Joiner.JoinerProfile, announcement)
 	} else {
