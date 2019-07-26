@@ -37,7 +37,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/insolar/insolar/metrics"
 	"github.com/pkg/errors"
-	"github.com/tylerb/gls"
 )
 
 type pluginRec struct {
@@ -99,8 +98,8 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 	inslogger.FromContext(ctx).Debugf("Calling method %q on object %q", args.Method, args.Context.Callee)
 	defer recoverRPC(ctx, &err)
 
-	gls.Set("callCtx", args.Context)
-	defer gls.Cleanup()
+	foundation.SetLogicalContext(args.Context)
+	defer foundation.ClearContext()
 
 	p, err := t.GI.Plugin(ctx, args.Code)
 	if err != nil {
@@ -158,8 +157,8 @@ func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpcty
 	inslogger.FromContext(ctx).Debugf("Calling constructor %q in code %q", args.Name, args.Code)
 	defer recoverRPC(ctx, &err)
 
-	gls.Set("callCtx", args.Context)
-	defer gls.Cleanup()
+	foundation.SetLogicalContext(args.Context)
+	defer foundation.ClearContext()
 
 	p, err := t.GI.Plugin(ctx, args.Code)
 	if err != nil {
@@ -287,10 +286,7 @@ func (gi *GoInsider) getPluginRec(ref insolar.Reference) *pluginRec {
 
 // MakeUpBaseReq makes base of request from current CallContext
 func MakeUpBaseReq() rpctypes.UpBaseReq {
-	callCtx, ok := gls.Get("callCtx").(*insolar.LogicCallContext)
-	if !ok {
-		panic("Wrong or unexistent call context, you probably started a goroutine")
-	}
+	callCtx := foundation.GetLogicalContext()
 
 	return rpctypes.UpBaseReq{
 		Mode:            callCtx.Mode,
