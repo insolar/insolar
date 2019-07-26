@@ -162,30 +162,20 @@ func (c *Phase2PacketDispatcher) DispatchMemberPacket(ctx context.Context, reade
 	}
 
 	purgatory := realm.GetPurgatory()
-	senderID := sender.GetNodeID()
+	//senderID := sender.GetNodeID()
 
 	for i, nb := range neighbours {
-		isJoiner := nb.Announcement.Membership.IsJoiner()
-		if isJoiner {
-			err = announce.ApplyNeighbourJoinerAnnouncement(ctx, sender, announcedJoinerID, nb.Neighbour,
-				nb.Announcement.JoinerID, neighbourhood[i].GetJoinerAnnouncement(), realm)
+		modified := false
+		if nb.Neighbour == nil {
+			rank := neighbourhood[i].GetNodeRank()
+			err = purgatory.UnknownFromNeighbourhood(ctx, rank, nb.Announcement, c.isCapped, c.ctl.R)
+		} else {
+			modified, err = nb.Neighbour.ApplyNeighbourEvidence(sender, nb.Announcement, c.isCapped, c.ctl.R)
 		}
-
-		if err == nil {
-			modified, err2 := nb.Neighbour.ApplyNeighbourEvidence(sender, nb.Announcement, c.isCapped)
-
-			if err2 == nil {
-				if modified {
-					signalSent = true
-				}
-				if isJoiner {
-					err = purgatory.JoinerFromNeighbourhood(ctx, nb.Neighbour.GetNodeID(), nil, senderID) // trigger ascension
-				}
-			}
-		}
-
 		if err != nil {
 			inslogger.FromContext(ctx).Error(err)
+		} else if modified {
+			signalSent = true
 		}
 	}
 	if !signalSent {

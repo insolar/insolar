@@ -295,7 +295,7 @@ func (r *DynamicRealmPopulation) AddToDynamics(na *NodeAppearance) (*NodeAppeara
 
 	if na == nna {
 		na.onNodeAdded(context.TODO()) // TODO context?
-	} else if !profiles.EqualStaticProfiles(nna.profile.GetStatic(), na.profile.GetStatic()) {
+	} else if !profiles.EqualBriefProfiles(nna.profile.GetStatic(), na.profile.GetStatic()) {
 		return nil, fmt.Errorf("multiple joiners on same id(%v): %v", na.GetNodeID(), []*NodeAppearance{na, nna})
 	}
 

@@ -301,7 +301,7 @@ outer:
 				c.consensusStrategy.CanStartVectorsEarly(indexedCount, countFraud, countTrustBySome, countTrustByNeighbors) {
 				// (countTrustBySome >= bftMajority || countTrustByNeighbors >= 1+indexedCount>>1) {
 
-				log.Debug(">>>>workerPrePhase3: all and complete")
+				log.Debugf(">>>>workerPrePhase3: all and complete: %d", c.R.GetSelfNodeID())
 				break outer
 			}
 
@@ -311,7 +311,7 @@ outer:
 				!didFastPhase3 {
 
 				didFastPhase3 = true
-				log.Debug(">>>>workerPrePhase3: try FastPhase3")
+				log.Debugf(">>>>workerPrePhase3: try FastPhase3: %d", c.R.GetSelfNodeID())
 				go c.workerSendFastPhase3(ctx)
 			}
 
@@ -319,11 +319,11 @@ outer:
 				// We have answers from all nodes, and the majority of them are well-trusted
 				if countHasNsh >= indexedCount && countTrustByNeighbors >= bftMajority {
 					chasingDelayTimer.RestartChase()
-					log.Debug(">>>>workerPrePhase3: chaseStartedAll")
+					log.Debugf(">>>>workerPrePhase3: chaseStartedAll: %d", c.R.GetSelfNodeID())
 				} else if countTrustBySome-countFraud >= bftMajority {
 					// We can start chasing-timeout after getting answers from majority of some-trusted nodes
 					chasingDelayTimer.RestartChase()
-					log.Debug(">>>>workerPrePhase3: chaseStartedSome")
+					log.Debugf(">>>>workerPrePhase3: chaseStartedSome: %d", c.R.GetSelfNodeID())
 				}
 			}
 		}

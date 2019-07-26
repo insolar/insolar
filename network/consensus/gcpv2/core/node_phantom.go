@@ -93,7 +93,9 @@ type NodePhantom struct {
 	// figments map[string]*figment
 }
 
-func (p *NodePhantom) ApplyNeighbourEvidence(n *NodeAppearance, an profiles.MembershipAnnouncement, cappedTrust bool) (bool, error) {
+func (p *NodePhantom) ApplyNeighbourEvidence(n *NodeAppearance, ma profiles.MemberAnnouncement,
+	cappedTrust bool, realm *FullRealm) (bool, error) {
+
 	return false, nil
 }
 
@@ -185,12 +187,12 @@ func (p *NodePhantom) postponePacket(ctx context.Context, packet transport.Packe
 }
 
 func (p *NodePhantom) DispatchAnnouncement(ctx context.Context, rank member.Rank, profile profiles.StaticProfile,
-	announcement *profiles.MembershipAnnouncement, introducedByID insolar.ShortNodeID) error {
+	announcement profiles.MemberAnnouncement) error {
 
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	return p.figment.dispatchAnnouncement(ctx, p, rank, profile, announcement, introducedByID)
+	return p.figment.dispatchAnnouncement(ctx, p, rank, profile, announcement)
 }
 
 func (p *NodePhantom) ascend(ctx context.Context, nsp profiles.StaticProfile, rank member.Rank, sv cryptkit.SignatureVerifier) bool {
@@ -224,7 +226,7 @@ type figment struct {
 }
 
 func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom, rank member.Rank, profile profiles.StaticProfile,
-	announcement *profiles.MembershipAnnouncement, announcedBy insolar.ShortNodeID) error {
+	announcement profiles.MemberAnnouncement) error {
 
 	flags := UpdateFlags(0)
 	hasUpdate := false
@@ -233,8 +235,8 @@ func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom
 		p.rank = rank
 
 		prof := "none"
-		if p.profile != nil {
-			if p.profile.GetExtension() != nil {
+		if profile != nil {
+			if profile.GetExtension() != nil {
 				prof = "full"
 			} else {
 				prof = "brief"
@@ -247,6 +249,7 @@ func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom
 	}
 	ascentWithBrief := p.phantom.purgatory.IsBriefAscensionAllowed()
 
+	announcedBy := announcement.AnnouncedByID
 	hasProfileUpdate, hasMismatch := p.updateProfile(rank, profile)
 	if hasMismatch {
 		panic(fmt.Sprintf("inconsistent neighbour announcement: local=%d, phantom=%d, announcer=%d, rank=%v, profile=%+v, firmentRank=%v, figmentProfile=%+v, ann=%+v",
@@ -292,16 +295,14 @@ func (p *figment) updateProfile(rank member.Rank, profile profiles.StaticProfile
 	case p.profile == nil:
 		p.profile = profile
 		return true, false
+	case !profiles.EqualBriefProfiles(p.profile, profile):
+		return false, true
 	case profile.GetExtension() == nil:
-		return false, !profiles.EqualStaticProfiles(p.profile, profile)
+		return false, false
 	case p.profile.GetExtension() == nil:
-		if !profiles.EqualStaticProfiles(p.profile, profile) {
-			return false, true
-		}
 		p.profile = profile
 		return true, false
 	default:
-		return false, !profiles.EqualStaticProfiles(p.profile, profile) ||
-			!profiles.EqualProfileExtensions(p.profile.GetExtension(), profile.GetExtension())
+		return false, !profiles.EqualProfileExtensions(p.profile.GetExtension(), profile.GetExtension())
 	}
 }
