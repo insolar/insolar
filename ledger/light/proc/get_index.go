@@ -200,7 +200,7 @@ func (p *EnsureIndexWM) process(ctx context.Context) error {
 		return errors.Wrap(err, "EnsureIndexWM: failed to calculate heavy")
 	}
 
-	ensureIndex, err := payload.NewMessage(&payload.EnsureIndex{
+	ensureIndex, err := payload.NewMessage(&payload.GetIndex{
 		ObjectID: p.object,
 	})
 	if err != nil {

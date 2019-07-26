@@ -49,17 +49,17 @@ func NewSendIndex(meta payload.Meta) *SendIndex {
 }
 
 func (p *SendIndex) Proceed(ctx context.Context) error {
-	ensureIndex := payload.EnsureIndex{}
+	ensureIndex := payload.GetIndex{}
 	err := ensureIndex.Unmarshal(p.meta.Payload)
 	if err != nil {
-		return errors.Wrap(err, "SendIndex: failed to unmarshal ensureIndex message")
+		return errors.Wrap(err, "failed to unmarshal ensureIndex message")
 	}
 
 	idx, err := p.dep.indices.ForID(ctx, p.meta.Pulse, ensureIndex.ObjectID)
 	if err != nil {
 		return errors.Wrapf(
 			err,
-			"SendIndex: failed to fetch object index for %v", ensureIndex.ObjectID.String(),
+			"failed to fetch object index for %v", ensureIndex.ObjectID.String(),
 		)
 	}
 
@@ -68,7 +68,7 @@ func (p *SendIndex) Proceed(ctx context.Context) error {
 		Index: buf,
 	})
 	if err != nil {
-		return errors.Wrap(err, "SendIndex: failed to create reply")
+		return errors.Wrap(err, "failed to create reply")
 	}
 
 	p.dep.sender.Reply(ctx, p.meta, msg)

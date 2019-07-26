@@ -52,7 +52,7 @@ func (p *SendJet) Proceed(ctx context.Context) error {
 	getJet := payload.GetJet{}
 	err := getJet.Unmarshal(p.meta.Payload)
 	if err != nil {
-		return errors.Wrap(err, "SendJet: failed to unmarshal GetJet message")
+		return errors.Wrap(err, "failed to unmarshal GetJet message")
 	}
 
 	jetID, actual := p.dep.jets.ForID(ctx, getJet.PulseNumber, getJet.ObjectID)
@@ -62,7 +62,7 @@ func (p *SendJet) Proceed(ctx context.Context) error {
 		Actual: actual,
 	})
 	if err != nil {
-		return errors.Wrap(err, "SendJet: failed to create reply")
+		return errors.Wrap(err, "failed to create reply")
 	}
 
 	p.dep.sender.Reply(ctx, p.meta, msg)

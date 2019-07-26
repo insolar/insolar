@@ -225,7 +225,7 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 		p := proc.NewSendJet(meta)
 		h.dep.SendJet(p)
 		err = p.Proceed(ctx)
-	case payload.TypeEnsureIndex:
+	case payload.TypeGetIndex:
 		p := proc.NewSendIndex(meta)
 		h.dep.SendIndex(p)
 		err = p.Proceed(ctx)

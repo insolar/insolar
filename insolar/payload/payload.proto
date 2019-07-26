@@ -327,7 +327,7 @@ message LightInitialState {
     repeated bytes Drops = 21;
 }
 
-message EnsureIndex {
+message GetIndex {
     uint32 Polymorph = 16;
 
     bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
