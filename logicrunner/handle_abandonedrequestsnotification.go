@@ -19,27 +19,25 @@ package logicrunner
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar"
-
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/pkg/errors"
 )
 
-type initializeAbandonedRequestsNotificationExecutionState struct {
-	dep *Dependencies
-	msg payload.AbandonedRequestsNotification
-}
-
-// Proceed initializes or sets LedgerHasMoreRequests to right value
-func (p *initializeAbandonedRequestsNotificationExecutionState) Proceed(ctx context.Context) error {
-	ref := *insolar.NewReference(p.msg.ObjectID)
-
-	broker := p.dep.StateStorage.UpsertExecutionState(ref)
-	broker.AbandonedRequestsOnLedger(ctx)
-
-	return nil
-}
+// type initializeAbandonedRequestsNotificationExecutionState struct { //
+// 	dep *Dependencies
+// 	msg payload.AbandonedRequestsNotification
+// }
+//
+// // Proceed initializes or sets LedgerHasMoreRequests to right value
+// func (p *initializeAbandonedRequestsNotificationExecutionState) Proceed(ctx context.Context) error {
+// 	ref := *insolar.NewReference(p.msg.ObjectID)
+//
+// 	broker := p.dep.StateStorage.UpsertExecutionState(ref)
+// 	broker.AbandonedRequestsOnLedger(ctx)
+//
+// 	return nil
+// }
 
 type HandleAbandonedRequestsNotification struct {
 	dep  *Dependencies
@@ -52,8 +50,6 @@ func (h *HandleAbandonedRequestsNotification) Present(ctx context.Context, f flo
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal AbandonedRequestsNotification message")
 	}
-
-
 
 	return nil
 

@@ -22,7 +22,6 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -48,21 +47,6 @@ import (
 const maxQueueLength = 10
 
 type Ref = insolar.Reference
-
-func makeWMMessage(ctx context.Context, payLoad watermillMsg.Payload, msgType string) *watermillMsg.Message {
-	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payLoad)
-	wmMsg.Metadata.Set(bus.MetaTraceID, inslogger.TraceID(ctx))
-
-	sp, err := instracer.Serialize(ctx)
-	if err == nil {
-		wmMsg.Metadata.Set(bus.MetaSpanData, string(sp))
-	} else {
-		inslogger.FromContext(ctx).Error(err)
-	}
-
-	wmMsg.Metadata.Set(bus.MetaType, msgType)
-	return wmMsg
-}
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
