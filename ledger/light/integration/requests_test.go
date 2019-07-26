@@ -28,7 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_Pending_RequestRegistration_Incoming(t *testing.T) {
+func Test_IncomingRequests(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
@@ -83,6 +83,52 @@ func Test_Pending_RequestRegistration_Incoming(t *testing.T) {
 		ids := secondPendings.(*payload.IDs)
 		require.Equal(t, 1, len(ids.IDs))
 		require.Equal(t, secondReqInfo.RequestID, ids.IDs[0])
+	})
+}
+
+func Test_OutgoingRequests(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	cfg := DefaultLightConfig()
+
+	received := make(chan payload.SagaCallAcceptNotification)
+	s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) {
+		if notification, ok := pl.(*payload.SagaCallAcceptNotification); ok {
+			received <- *notification
+		}
+	})
+	require.NoError(t, err)
+
+	// First pulse goes in storage then interrupts.
+	s.Pulse(ctx)
+	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
+	s.Pulse(ctx)
+
+	t.Run("detached notification sent", func(t *testing.T) {
+		p, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
+		requireNotError(t, p)
+		objectID := p.(*payload.RequestInfo).ObjectID
+
+		p, _ = callSetIncomingRequest(ctx, t, s, objectID, gen.ID(), record.CTMethod)
+		requireNotError(t, p)
+		reasonID := p.(*payload.RequestInfo).RequestID
+
+		p, detachedRec := callSetOutgoingRequest(ctx, t, s, objectID, reasonID, true)
+		requireNotError(t, p)
+		detachedID := p.(*payload.RequestInfo).RequestID
+
+		p, _ = callSetResult(ctx, t, s, objectID, reasonID)
+		requireNotError(t, p)
+
+		notification := <-received
+		require.Equal(t, objectID, notification.ObjectID)
+		require.Equal(t, detachedID, notification.DetachedRequestID)
+
+		receivedRec := record.Virtual{}
+		err := receivedRec.Unmarshal(notification.Request)
+		require.NoError(t, err)
+		require.Equal(t, detachedRec, receivedRec)
 	})
 }
 
@@ -296,7 +342,7 @@ func Test_DuplicatedRequests(t *testing.T) {
 	})
 }
 
-func Test_Reason_Requests(t *testing.T) {
+func Test_CheckRequests(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)

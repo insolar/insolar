@@ -230,8 +230,8 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		return err
 	}
 
-	// Outgoing request cannot be a reason. We are only interested in potential reason requests.
-	if _, ok := record.Unwrap(closedRequest.Record.Virtual).(*record.OutgoingRequest); ok {
+	// Only incoming request cannot be a reason. We are only interested in potential reason requests.
+	if _, ok := record.Unwrap(closedRequest.Record.Virtual).(*record.IncomingRequest); ok {
 		notifyDetached(ctx, p.dep.sender, opened, objectID, closedRequest.RecordID)
 	}
 
@@ -314,7 +314,7 @@ func notifyDetached(
 			continue
 		}
 
-		buf, err := outgoing.Marshal()
+		buf, err := req.Record.Virtual.Marshal()
 		if err != nil {
 			inslogger.FromContext(ctx).Error(
 				errors.Wrapf(err, "failed to notify about detached %s", req.RecordID.DebugString()),
@@ -322,9 +322,9 @@ func notifyDetached(
 			return
 		}
 		msg, err := payload.NewMessage(&payload.SagaCallAcceptNotification{
-			ObjectID:      objectID,
-			OutgoingReqID: closedRequestID,
-			Request:       buf,
+			ObjectID:          objectID,
+			DetachedRequestID: req.RecordID,
+			Request:           buf,
 		})
 		if err != nil {
 			inslogger.FromContext(ctx).Error(

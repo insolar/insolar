@@ -114,7 +114,7 @@ message SagaCallAcceptNotification {
 
     // OutgoingReqID contains the id of registered outgoing request.
     // VE needs it to register the result of the outgoing request.
-    bytes OutgoingReqID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes DetachedRequestID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
 
     // Request contains original OutgoingRequest registered by VE
     bytes Request = 22;

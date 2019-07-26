@@ -290,6 +290,14 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 				panic(errors.Wrap(err, "failed to unmarshal meta"))
 			}
 
+			if receive != nil {
+				pl, err := payload.Unmarshal(meta.Payload)
+				if err != nil {
+					panic(nil)
+				}
+				go receive(meta, pl)
+			}
+
 			// Republish as incoming to self.
 			if meta.Receiver == light.ID() {
 				err = ServerPubSub.Publish(bus.TopicIncoming, msg)
@@ -297,14 +305,6 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 					panic(err)
 				}
 				return nil, nil
-			}
-
-			if receive != nil {
-				pl, err := payload.Unmarshal(meta.Payload)
-				if err != nil {
-					panic(nil)
-				}
-				receive(meta, pl)
 			}
 
 			clientHandler := func(msg *message.Message) (messages []*message.Message, e error) {

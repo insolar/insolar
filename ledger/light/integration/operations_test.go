@@ -81,8 +81,12 @@ func callSetIncomingRequest(
 	args := make([]byte, 100)
 	_, err := rand.Read(args)
 	require.NoError(t, err)
+	var object *insolar.Reference
+	if ct != record.CTSaveAsChild {
+		object = insolar.NewReference(objectID)
+	}
 	rec := record.Wrap(&record.IncomingRequest{
-		Object:    insolar.NewReference(objectID),
+		Object:    object,
 		Arguments: args,
 		CallType:  ct,
 		Reason:    *insolar.NewReference(reasonID),
@@ -100,6 +104,76 @@ func callSetIncomingRequest(
 	case *payload.Error:
 		return pl, rec
 	case *payload.RequestInfo:
+		return pl, rec
+	default:
+		t.Fatalf("received unexpected reply %T", pl)
+	}
+
+	return nil, record.Virtual{}
+}
+
+func callSetOutgoingRequest(
+	ctx context.Context, t *testing.T, s *Server, objectID, reasonID insolar.ID, detached bool,
+) (payload.Payload, record.Virtual) {
+	args := make([]byte, 100)
+	_, err := rand.Read(args)
+	require.NoError(t, err)
+	rm := record.ReturnResult
+	if detached {
+		rm = record.ReturnSaga
+	}
+	rec := record.Wrap(&record.OutgoingRequest{
+		Caller:     *insolar.NewReference(objectID),
+		Arguments:  args,
+		ReturnMode: rm,
+		Reason:     *insolar.NewReference(reasonID),
+		APINode:    gen.Reference(),
+	})
+	reps, done := s.Send(ctx, &payload.SetOutgoingRequest{
+		Request: rec,
+	})
+	defer done()
+
+	rep := <-reps
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	require.NoError(t, err)
+	switch pl.(type) {
+	case *payload.Error:
+		return pl, rec
+	case *payload.RequestInfo:
+		return pl, rec
+	default:
+		t.Fatalf("received unexpected reply %T", pl)
+	}
+
+	return nil, record.Virtual{}
+}
+
+func callSetResult(
+	ctx context.Context, t *testing.T, s *Server, objectID, requestID insolar.ID,
+) (payload.Payload, record.Virtual) {
+	data := make([]byte, 100)
+	_, err := rand.Read(data)
+	require.NoError(t, err)
+	rec := record.Wrap(&record.Result{
+		Object:  objectID,
+		Request: *insolar.NewReference(requestID),
+		Payload: data,
+	})
+	buf, err := rec.Marshal()
+	require.NoError(t, err)
+	reps, done := s.Send(ctx, &payload.SetResult{
+		Result: buf,
+	})
+	defer done()
+
+	rep := <-reps
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	require.NoError(t, err)
+	switch pl.(type) {
+	case *payload.Error:
+		return pl, rec
+	case *payload.ResultInfo:
 		return pl, rec
 	default:
 		t.Fatalf("received unexpected reply %T", pl)
