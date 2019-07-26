@@ -488,14 +488,14 @@ func (r *FullRealm) PrepareAndSetLocalNodeStateHashEvidence(nsh proofs.NodeState
 	r.notifyCommitPulseChange()
 }
 
-func (r *FullRealm) CreateAnnouncement(n *NodeAppearance) *transport.NodeAnnouncementProfile {
+func (r *FullRealm) CreateAnnouncement(n *NodeAppearance, isJoinerProfileRequired bool) *transport.NodeAnnouncementProfile {
 	ma := n.GetRequestedAnnouncement()
 	if ma.Membership.IsEmpty() {
 		panic("illegal state")
 	}
 
 	var joiner *transport.JoinerAnnouncement
-	if !ma.JoinerID.IsAbsent() {
+	if !ma.JoinerID.IsAbsent() && isJoinerProfileRequired {
 		jp := r.GetPurgatory().FindJoinerProfile(ma.JoinerID, n.GetNodeID())
 		switch {
 		case jp != nil:
@@ -503,7 +503,6 @@ func (r *FullRealm) CreateAnnouncement(n *NodeAppearance) *transport.NodeAnnounc
 		case n == r.self:
 			panic(fmt.Sprintf("illegal state - local joiner is missing: %d", ma.JoinerID))
 		default:
-			// r.GetPurgatory().FindJoinerProfile(ma.JoinerID, n.GetNodeID())
 			panic(fmt.Sprintf("illegal state - joiner is missing: s=%d n=%d j=%d",
 				r.self.GetNodeID(), n.GetNodeID(), ma.JoinerID))
 		}
@@ -515,7 +514,7 @@ func (r *FullRealm) CreateAnnouncement(n *NodeAppearance) *transport.NodeAnnounc
 }
 
 func (r *FullRealm) CreateLocalAnnouncement() *transport.NodeAnnouncementProfile {
-	return r.CreateAnnouncement(r.self)
+	return r.CreateAnnouncement(r.self, true)
 }
 
 func (r *FullRealm) FinishRound(ctx context.Context, builder census.Builder, csh proofs.CloudStateHash) {

@@ -92,7 +92,7 @@ func ValidateIntrosOnMember(reader transport.ExtendedIntroReader, brief transpor
 }
 
 func ApplyUnknownAnnouncement(ctx context.Context, announcerID insolar.ShortNodeID,
-	reader transport.AnnouncementPacketReader, brief transport.BriefIntroductionReader,
+	reader transport.AnnouncementPacketReader, briefReader transport.BriefIntroductionReader,
 	_ /* full is required */ bool, realm *core.FullRealm) (bool, error) {
 
 	// var err error
@@ -108,9 +108,8 @@ func ApplyUnknownAnnouncement(ctx context.Context, announcerID insolar.ShortNode
 	case reader.HasFullIntro():
 		full := reader.GetFullIntroduction()
 		intro = realm.GetProfileFactory().CreateFullIntroProfile(full)
-		brief = full
-	case brief != nil:
-		intro = realm.GetProfileFactory().CreateUpgradableIntroProfile(brief)
+	case briefReader != nil:
+		intro = realm.GetProfileFactory().CreateUpgradableIntroProfile(briefReader)
 	}
 
 	var ma profiles.MemberAnnouncement

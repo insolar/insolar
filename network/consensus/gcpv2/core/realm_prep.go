@@ -115,14 +115,11 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 			return err
 		}
 		if strict {
-			verifyFlags = packetrecorder.RequireStrictVerify
+			verifyFlags |= packetrecorder.RequireStrictVerify
 		}
 		limiterKey = endpoints.ShortNodeIDAsByteString(packet.GetSourceID())
 	default:
 		limiterKey = from.AsByteString()
-
-		// TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
-		verifyFlags = packetrecorder.SkipVerify
 	}
 
 	/*

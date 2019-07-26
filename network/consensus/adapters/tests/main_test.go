@@ -72,7 +72,7 @@ func TestConsensusJoin(t *testing.T) {
 	nodeInfos := generateNodeInfos(nodeIdentities)
 	nodes, discoveryNodes := nodesFromInfo(nodeInfos)
 
-	joinIdentities := generateNodeIdentities(0, 0, 2, 2)
+	joinIdentities := generateNodeIdentities(0, 0, 8, 8)
 	joinInfos := generateNodeInfos(joinIdentities)
 	joiners, _ := nodesFromInfo(joinInfos)
 
@@ -91,7 +91,7 @@ func TestConsensusJoin(t *testing.T) {
 
 	fmt.Println("===", len(nodes), "=================================================")
 
-	pulsar := NewPulsar(2, pulseHandlers)
+	pulsar := NewPulsar(10, pulseHandlers)
 	go func() {
 		for {
 			pulsar.Pulse(ctx, 4+len(nodes)/10)
@@ -103,7 +103,7 @@ func TestConsensusJoin(t *testing.T) {
 	for {
 		fmt.Println("===", time.Since(startedAt), "=================================================")
 		time.Sleep(time.Second)
-		if time.Since(startedAt) > 10*time.Second {
+		if time.Since(startedAt) > 1000*time.Second {
 			return
 		}
 

@@ -418,7 +418,7 @@ func (c *NodeAppearance) _applyNodeMembership(ma profiles.MemberAnnouncement, re
 		return false, c.RegisterFraud(c.Frauds().NewInvalidPowerLevel(c.profile))
 	}
 
-	if !ma.Joiner.IsEmpty() {
+	if !ma.Joiner.IsEmpty() { // by it can be EMPTY when !ma.JoinerID.IsAbsent() - it is normal
 		err := realm.GetPurgatory().AddJoinerAndEnsureAscendancy(ma.Joiner, ma.AnnouncedByID)
 		if err != nil {
 			return false, err
