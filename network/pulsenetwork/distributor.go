@@ -192,7 +192,7 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 
 			err := d.sendPulseToHost(ctx, &pulse, bootstrapHost)
 			if err != nil {
-				logger.Errorf("[ Distribute pulse %d ] Failed to send pulse: %s", pulse.PulseNumber, err)
+				logger.Errorf("[ Distribute pulse %d ] Failed to send pulse to host: %s %s", pulse.PulseNumber, bootstrapHost.Address.String(), err)
 				return
 			}
 			logger.Infof("[ Distribute pulse %d ] Successfully sent pulse to node %s", pulse.PulseNumber, bootstrapHost)

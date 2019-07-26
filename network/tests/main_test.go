@@ -110,7 +110,7 @@ func (s *consensusSuite) TestJoinerNodeConnect() {
 	s.AssertActiveNodesCountDelta(1)
 	s.AssertWorkingNodesCountDelta(1)
 
-	s.waitForConsensus(5)
+	s.waitForConsensus(1)
 
 	s.AssertActiveNodesCountDelta(1)
 	s.AssertWorkingNodesCountDelta(1)
