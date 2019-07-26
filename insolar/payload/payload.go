@@ -65,7 +65,7 @@ const (
 	TypeReplication
 	TypeGetJet
 	TypeAbandonedRequestsNotification
-	TypeGetIndex
+	TypeEnsureIndex
 
 	TypeReturnResults
 	TypeCallMethod
@@ -277,8 +277,8 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *AbandonedRequestsNotification:
 		pl.Polymorph = uint32(TypeAbandonedRequestsNotification)
 		return pl.Marshal()
-	case *GetIndex:
-		pl.Polymorph = uint32(TypeGetIndex)
+	case *EnsureIndex:
+		pl.Polymorph = uint32(TypeEnsureIndex)
 		return pl.Marshal()
 	}
 
@@ -451,8 +451,8 @@ func Unmarshal(data []byte) (Payload, error) {
 		pl := AbandonedRequestsNotification{}
 		err := pl.Unmarshal(data)
 		return &pl, err
-	case TypeGetIndex:
-		pl := GetIndex{}
+	case TypeEnsureIndex:
+		pl := EnsureIndex{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}

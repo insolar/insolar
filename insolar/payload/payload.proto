@@ -314,7 +314,7 @@ message AbandonedRequestsNotification {
     bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
 }
 
-message GetIndex {
+message EnsureIndex {
     uint32 Polymorph = 16;
 
     bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];

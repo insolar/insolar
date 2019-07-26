@@ -82,7 +82,7 @@ func TestMarshalUnmarshal(t *testing.T) {
 		{tp: payload.TypePendingsInfo, pl: &payload.PendingsInfo{}},
 		{tp: payload.TypeGetJet, pl: &payload.GetJet{}},
 		{tp: payload.TypeAbandonedRequestsNotification, pl: &payload.AbandonedRequestsNotification{}},
-		{tp: payload.TypeGetIndex, pl: &payload.GetIndex{}},
+		{tp: payload.TypeEnsureIndex, pl: &payload.EnsureIndex{}},
 	}
 
 	for _, d := range table {
