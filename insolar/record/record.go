@@ -178,7 +178,7 @@ func (r *IncomingRequest) IsAPIRequest() bool {
 }
 
 func (r *IncomingRequest) IsCreationRequest() bool {
-	return r.GetCallType() == CTSaveAsChild || r.GetCallType() == CTSaveAsDelegate
+	return r.GetCallType() == CTSaveAsChild
 }
 
 func (r *IncomingRequest) IsDetached() bool {

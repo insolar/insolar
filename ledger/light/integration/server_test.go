@@ -182,7 +182,6 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 		records := object.NewRecordMemory()
 		indexes := object.NewIndexStorageMemory()
 		writeController := hot.NewWriteController()
-
 		waiter := hot.NewChannelWaiter()
 
 		handler := artifactmanager.NewMessageHandler(&conf)
@@ -261,11 +260,14 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 			ServerBus,
 		)
 
+		stateIniter := executor.NewStateIniter(Jets, waiter, drops, Coordinator, ServerBus)
+
 		pm := pulsemanager.NewPulseManager(
 			jetSplitter,
 			lthSyncer,
 			writeController,
 			hotSender,
+			stateIniter,
 		)
 		pm.MessageHandler = handler
 		pm.Bus = Bus

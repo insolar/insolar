@@ -29,30 +29,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/contract/wallet"
 )
 
-// GenesisContractsStates returns list contract configs for genesis.
-//
-// Hint: order matters, because of dependency contracts on each other.
-func GenesisContractsStates(cfg insolar.GenesisContractsConfig) []insolar.GenesisContractState {
-	result := []insolar.GenesisContractState{
-		rootDomain(),
-		nodeDomain(),
-		getMemberGenesisContractState(cfg.RootPublicKey, insolar.GenesisNameRootMember, insolar.GenesisNameRootDomain),
-		getWalletGenesisContractState(cfg.RootBalance, insolar.GenesisNameRootWallet, insolar.GenesisNameRootMember),
-		getMemberGenesisContractState(cfg.MigrationAdminPublicKey, insolar.GenesisNameMigrationAdminMember, insolar.GenesisNameRootDomain),
-		getWalletGenesisContractState(cfg.MDBalance, insolar.GenesisNameMigrationWallet, insolar.GenesisNameMigrationAdminMember),
-		getWalletGenesisContractState("0", insolar.GenesisNameFeeWallet, insolar.GenesisNameRootDomain),
-		getCostCenterGenesisContractState(),
-		getTariffGenesisContractState(),
-	}
-
-	for i, key := range cfg.MigrationDaemonPublicKeys {
-		result = append(result, getMemberGenesisContractState(key, insolar.GenesisNameMigrationDaemonMembers[i], insolar.GenesisNameRootDomain))
-	}
-
-	return result
-}
-
-func rootDomain() insolar.GenesisContractState {
+func RootDomain() insolar.GenesisContractState {
 	var activeMigrationDaemonMembers [insolar.GenesisAmountActiveMigrationDaemonMembers]insolar.Reference
 	for i := 0; i < insolar.GenesisAmountActiveMigrationDaemonMembers; i++ {
 		activeMigrationDaemonMembers[i] = genesisrefs.ContractMigrationDaemonMembers[i]
@@ -78,7 +55,7 @@ func rootDomain() insolar.GenesisContractState {
 	}
 }
 
-func nodeDomain() insolar.GenesisContractState {
+func NodeDomain() insolar.GenesisContractState {
 	nd, _ := nodedomain.NewNodeDomain()
 	return insolar.GenesisContractState{
 		Name:       insolar.GenesisNameNodeDomain,
@@ -88,11 +65,13 @@ func nodeDomain() insolar.GenesisContractState {
 	}
 }
 
-func getMemberGenesisContractState(publicKey string, name string, parent string) insolar.GenesisContractState {
-	m, err := member.New(genesisrefs.ContractRootDomain, name, publicKey, "")
+func GetMemberGenesisContractState(publicKey string, name string, parent string, walletRef insolar.Reference) insolar.GenesisContractState {
+	m, err := member.New(genesisrefs.ContractRootDomain, name, publicKey, "", insolar.Reference{})
 	if err != nil {
 		panic(fmt.Sprintf("'%s' member constructor failed", name))
 	}
+
+	m.Wallet = walletRef
 
 	return insolar.GenesisContractState{
 		Name:       name,
@@ -102,7 +81,7 @@ func getMemberGenesisContractState(publicKey string, name string, parent string)
 	}
 }
 
-func getWalletGenesisContractState(balance string, name string, parent string) insolar.GenesisContractState {
+func GetWalletGenesisContractState(balance string, name string, parent string) insolar.GenesisContractState {
 	w, err := wallet.New(balance)
 	if err != nil {
 		panic("failed to create ` " + name + "` wallet instance")
@@ -117,7 +96,7 @@ func getWalletGenesisContractState(balance string, name string, parent string) i
 	}
 }
 
-func getCostCenterGenesisContractState() insolar.GenesisContractState {
+func GetCostCenterGenesisContractState() insolar.GenesisContractState {
 	cc, err := costcenter.New(genesisrefs.ContractFeeWallet, genesisrefs.ContractStandardTariff)
 	if err != nil {
 		panic("failed to create cost center instance")
@@ -132,7 +111,7 @@ func getCostCenterGenesisContractState() insolar.GenesisContractState {
 	}
 }
 
-func getTariffGenesisContractState() insolar.GenesisContractState {
+func GetTariffGenesisContractState() insolar.GenesisContractState {
 	t, err := tariff.New()
 	if err != nil {
 		panic("failed to create tariff instance")

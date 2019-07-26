@@ -41,11 +41,6 @@ type ClientMock struct {
 	GetCodePreCounter uint64
 	GetCodeMock       mClientMockGetCode
 
-	GetDelegateFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference) (r *insolar.Reference, r1 error)
-	GetDelegateCounter    uint64
-	GetDelegatePreCounter uint64
-	GetDelegateMock       mClientMockGetDelegate
-
 	GetIncomingRequestFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference) (r *record.IncomingRequest, r1 error)
 	GetIncomingRequestCounter    uint64
 	GetIncomingRequestPreCounter uint64
@@ -114,7 +109,6 @@ func NewClientMock(t minimock.Tester) *ClientMock {
 	m.DeployCodeMock = mClientMockDeployCode{mock: m}
 	m.GetChildrenMock = mClientMockGetChildren{mock: m}
 	m.GetCodeMock = mClientMockGetCode{mock: m}
-	m.GetDelegateMock = mClientMockGetDelegate{mock: m}
 	m.GetIncomingRequestMock = mClientMockGetIncomingRequest{mock: m}
 	m.GetObjectMock = mClientMockGetObject{mock: m}
 	m.GetPendingsMock = mClientMockGetPendings{mock: m}
@@ -733,158 +727,6 @@ func (m *ClientMock) GetCodeFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetCodeFunc != nil {
 		return atomic.LoadUint64(&m.GetCodeCounter) > 0
-	}
-
-	return true
-}
-
-type mClientMockGetDelegate struct {
-	mock              *ClientMock
-	mainExpectation   *ClientMockGetDelegateExpectation
-	expectationSeries []*ClientMockGetDelegateExpectation
-}
-
-type ClientMockGetDelegateExpectation struct {
-	input  *ClientMockGetDelegateInput
-	result *ClientMockGetDelegateResult
-}
-
-type ClientMockGetDelegateInput struct {
-	p  context.Context
-	p1 insolar.Reference
-	p2 insolar.Reference
-}
-
-type ClientMockGetDelegateResult struct {
-	r  *insolar.Reference
-	r1 error
-}
-
-//Expect specifies that invocation of Client.GetDelegate is expected from 1 to Infinity times
-func (m *mClientMockGetDelegate) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Reference) *mClientMockGetDelegate {
-	m.mock.GetDelegateFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ClientMockGetDelegateExpectation{}
-	}
-	m.mainExpectation.input = &ClientMockGetDelegateInput{p, p1, p2}
-	return m
-}
-
-//Return specifies results of invocation of Client.GetDelegate
-func (m *mClientMockGetDelegate) Return(r *insolar.Reference, r1 error) *ClientMock {
-	m.mock.GetDelegateFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ClientMockGetDelegateExpectation{}
-	}
-	m.mainExpectation.result = &ClientMockGetDelegateResult{r, r1}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Client.GetDelegate is expected once
-func (m *mClientMockGetDelegate) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Reference) *ClientMockGetDelegateExpectation {
-	m.mock.GetDelegateFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &ClientMockGetDelegateExpectation{}
-	expectation.input = &ClientMockGetDelegateInput{p, p1, p2}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *ClientMockGetDelegateExpectation) Return(r *insolar.Reference, r1 error) {
-	e.result = &ClientMockGetDelegateResult{r, r1}
-}
-
-//Set uses given function f as a mock of Client.GetDelegate method
-func (m *mClientMockGetDelegate) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference) (r *insolar.Reference, r1 error)) *ClientMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetDelegateFunc = f
-	return m.mock
-}
-
-//GetDelegate implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
-func (m *ClientMock) GetDelegate(p context.Context, p1 insolar.Reference, p2 insolar.Reference) (r *insolar.Reference, r1 error) {
-	counter := atomic.AddUint64(&m.GetDelegatePreCounter, 1)
-	defer atomic.AddUint64(&m.GetDelegateCounter, 1)
-
-	if len(m.GetDelegateMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetDelegateMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ClientMock.GetDelegate. %v %v %v", p, p1, p2)
-			return
-		}
-
-		input := m.GetDelegateMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ClientMockGetDelegateInput{p, p1, p2}, "Client.GetDelegate got unexpected parameters")
-
-		result := m.GetDelegateMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the ClientMock.GetDelegate")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.GetDelegateMock.mainExpectation != nil {
-
-		input := m.GetDelegateMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, ClientMockGetDelegateInput{p, p1, p2}, "Client.GetDelegate got unexpected parameters")
-		}
-
-		result := m.GetDelegateMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the ClientMock.GetDelegate")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.GetDelegateFunc == nil {
-		m.t.Fatalf("Unexpected call to ClientMock.GetDelegate. %v %v %v", p, p1, p2)
-		return
-	}
-
-	return m.GetDelegateFunc(p, p1, p2)
-}
-
-//GetDelegateMinimockCounter returns a count of ClientMock.GetDelegateFunc invocations
-func (m *ClientMock) GetDelegateMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetDelegateCounter)
-}
-
-//GetDelegateMinimockPreCounter returns the value of ClientMock.GetDelegate invocations
-func (m *ClientMock) GetDelegateMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetDelegatePreCounter)
-}
-
-//GetDelegateFinished returns true if mock invocations count is ok
-func (m *ClientMock) GetDelegateFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetDelegateMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetDelegateCounter) == uint64(len(m.GetDelegateMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetDelegateMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetDelegateCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetDelegateFunc != nil {
-		return atomic.LoadUint64(&m.GetDelegateCounter) > 0
 	}
 
 	return true
@@ -2458,10 +2300,6 @@ func (m *ClientMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ClientMock.GetCode")
 	}
 
-	if !m.GetDelegateFinished() {
-		m.t.Fatal("Expected call to ClientMock.GetDelegate")
-	}
-
 	if !m.GetIncomingRequestFinished() {
 		m.t.Fatal("Expected call to ClientMock.GetIncomingRequest")
 	}
@@ -2539,10 +2377,6 @@ func (m *ClientMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ClientMock.GetCode")
 	}
 
-	if !m.GetDelegateFinished() {
-		m.t.Fatal("Expected call to ClientMock.GetDelegate")
-	}
-
 	if !m.GetIncomingRequestFinished() {
 		m.t.Fatal("Expected call to ClientMock.GetIncomingRequest")
 	}
@@ -2605,7 +2439,6 @@ func (m *ClientMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.DeployCodeFinished()
 		ok = ok && m.GetChildrenFinished()
 		ok = ok && m.GetCodeFinished()
-		ok = ok && m.GetDelegateFinished()
 		ok = ok && m.GetIncomingRequestFinished()
 		ok = ok && m.GetObjectFinished()
 		ok = ok && m.GetPendingsFinished()
@@ -2639,10 +2472,6 @@ func (m *ClientMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetCodeFinished() {
 				m.t.Error("Expected call to ClientMock.GetCode")
-			}
-
-			if !m.GetDelegateFinished() {
-				m.t.Error("Expected call to ClientMock.GetDelegate")
 			}
 
 			if !m.GetIncomingRequestFinished() {
@@ -2714,10 +2543,6 @@ func (m *ClientMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetCodeFinished() {
-		return false
-	}
-
-	if !m.GetDelegateFinished() {
 		return false
 	}
 
