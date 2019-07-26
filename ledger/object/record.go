@@ -317,7 +317,7 @@ func (r *RecordDB) getNextPosition(pn insolar.PulseNumber) (uint32, error) {
 	if err != nil {
 		return 0, err
 	}
-	return binary.BigEndian.Uint32(buff), nil
+	return binary.BigEndian.Uint32(buff) + 1, nil
 }
 
 func (r *RecordDB) setLastKnownPosition(pn insolar.PulseNumber, order uint32) error {

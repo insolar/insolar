@@ -307,6 +307,102 @@ func TestRecordStorage_ForPulse(t *testing.T) {
 
 func TestRecordStorage_PositionIndex(t *testing.T) {
 	t.Parallel()
+
+	t.Run("getNextPosition returns 1, when no info", func(t *testing.T) {
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
+
+		recordStorage := NewRecordDB(db)
+		pn := gen.PulseNumber()
+
+		next, err := recordStorage.getNextPosition(pn)
+
+		require.NoError(t, err)
+		require.Equal(t, uint32(1), next)
+	})
+
+	t.Run("getNextPosition works fine", func(t *testing.T) {
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
+
+		recordStorage := NewRecordDB(db)
+		pn := gen.PulseNumber()
+
+		id := gen.ID()
+		id.SetPulse(pn)
+		rec := getMaterialRecord()
+
+		err = recordStorage.Set(inslogger.TestContext(t), id, rec)
+		require.NoError(t, err)
+
+		next, err := recordStorage.getNextPosition(pn)
+
+		require.NoError(t, err)
+		require.Equal(t, uint32(2), next)
+	})
+
+	t.Run("setLastKnownPosition works fine", func(t *testing.T) {
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
+
+		recordStorage := NewRecordDB(db)
+
+		pn := gen.PulseNumber()
+		err = recordStorage.setLastKnownPosition(pn, 123)
+		require.NoError(t, err)
+
+		next, err := recordStorage.getNextPosition(pn)
+
+		require.NoError(t, err)
+		require.Equal(t, uint32(124), next)
+	})
+
+	t.Run("incrementPosition works fine", func(t *testing.T) {
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
+
+		recordStorage := NewRecordDB(db)
+		pn := gen.PulseNumber()
+
+		id := gen.ID()
+		id.SetPulse(pn)
+		sID := gen.ID()
+		sID.SetPulse(pn)
+		tID := gen.ID()
+		tID.SetPulse(pn)
+
+		err = recordStorage.incrementPosition(id)
+		require.NoError(t, err)
+		err = recordStorage.incrementPosition(sID)
+		require.NoError(t, err)
+		err = recordStorage.incrementPosition(tID)
+		require.NoError(t, err)
+
+		next, err := recordStorage.getNextPosition(pn)
+
+		require.NoError(t, err)
+		require.Equal(t, uint32(4), next)
+	})
 }
 
 // getVirtualRecord generates random Virtual record
