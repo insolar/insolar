@@ -53,6 +53,7 @@ package ph01ctl
 import (
 	"context"
 	"fmt"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/pulsectl"
@@ -134,9 +135,9 @@ func (c *JoinerPhase01PrepController) DispatchHostPacket(ctx context.Context, pa
 	}
 
 	// TODO collect a few proposals and choose only by getting some threshold
-	//if p1.HasJoinerSecret() {
+	// if p1.HasJoinerSecret() {
 	//	c.realm.IsValidJoinerSecret()
-	//}
+	// }
 	//
 	//
 

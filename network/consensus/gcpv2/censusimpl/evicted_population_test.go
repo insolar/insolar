@@ -70,7 +70,7 @@ func TestNewEvictedPopulation(t *testing.T) {
 
 	sp := profiles.NewStaticProfileMock(t)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
-	evicts := []*updatableSlot{&updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
+	evicts := []*updatableSlot{{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
 	ep := newEvictedPopulation(evicts, 0)
 	require.Equal(t, 1, ep.GetCount())
 }
@@ -81,8 +81,8 @@ func TestEPFindProfile(t *testing.T) {
 	sp1.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return nodeID })
 	sp2 := profiles.NewStaticProfileMock(t)
 	sp2.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 1 })
-	evicts := []*updatableSlot{&updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp1}},
-		&updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp2}}}
+	evicts := []*updatableSlot{{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp1}},
+		{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp2}}}
 	ep := newEvictedPopulation(evicts, 0)
 	en := ep.FindProfile(nodeID)
 	require.NotNil(t, en)
@@ -97,8 +97,8 @@ func TestEPGetCount(t *testing.T) {
 	sp2 := profiles.NewStaticProfileMock(t)
 	nodeID := insolar.ShortNodeID(0)
 	sp2.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return *(&nodeID) })
-	evicts := []*updatableSlot{&updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp1}},
-		&updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp2}}}
+	evicts := []*updatableSlot{{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp1}},
+		{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp2}}}
 	ep := newEvictedPopulation(evicts, 0)
 	require.Equal(t, 1, ep.GetCount())
 
@@ -113,8 +113,8 @@ func TestEPGetProfiles(t *testing.T) {
 	sp1.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return nodeID })
 	sp2 := profiles.NewStaticProfileMock(t)
 	sp2.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 1 })
-	evicts := []*updatableSlot{&updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp1}},
-		&updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp2}}}
+	evicts := []*updatableSlot{{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp1}},
+		{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp2}}}
 	ep := newEvictedPopulation(evicts, 0)
 	require.Len(t, ep.GetProfiles(), len(evicts))
 }

@@ -52,8 +52,9 @@ package censusimpl
 
 import (
 	"context"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"sync"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/pulse"

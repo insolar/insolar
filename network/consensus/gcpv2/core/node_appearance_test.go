@@ -121,7 +121,7 @@ func TestLessByNeighbourWeightForNodeAppearance(t *testing.T) {
 	require.False(t, LessByNeighbourWeightForNodeAppearance(r2, r1))
 }
 
-//func TestCopySelfTo(t *testing.T) {
+// func TestCopySelfTo(t *testing.T) {
 //	lp := profiles.NewLocalNodeMock(t)
 //	lp.LocalNodeProfileMock.Set(func() {})
 //	callback := &nodeContext{}
@@ -148,7 +148,7 @@ func TestLessByNeighbourWeightForNodeAppearance(t *testing.T) {
 //	// require.Equal(t, target.state, source.state)
 //
 //	require.Equal(t, target.trust, source.trust)
-//}
+// }
 
 func TestIsJoiner(t *testing.T) {
 	lp := profiles.NewLocalNodeMock(t)

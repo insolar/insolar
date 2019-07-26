@@ -130,7 +130,7 @@ func (p *standardBundleFactory) CreateControllersBundle(population census.Online
 	mode := lp.GetOpMode()
 
 	bundleConfig := p.configTemplate
-	//strategy.AdjustBundleConfig(&bundleConfig)
+	// strategy.AdjustBundleConfig(&bundleConfig)
 
 	aggressivePhasing := !bundleConfig.DisableAggressivePhasing && population.IsValid() &&
 		population.GetSuspendedCount() == 0 && population.GetMistrustedCount() == 0

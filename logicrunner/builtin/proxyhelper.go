@@ -23,8 +23,8 @@ import (
 	"github.com/tylerb/gls"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 

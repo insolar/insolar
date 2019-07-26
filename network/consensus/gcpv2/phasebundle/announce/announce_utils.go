@@ -252,7 +252,7 @@ func VerifyNeighbourhood(ctx context.Context, neighbourhood []transport.Membersh
 		// TODO validate node proof - if fails, then fraud on sender
 		// neighbourProfile.IsValidPacketSignature(nshEvidence.GetSignature())
 
-		//neighbours[idx].Neighbour = neighbour
+		// neighbours[idx].Neighbour = neighbour
 
 		nr := nb.GetNodeRank()
 		if !nr.IsJoiner() {

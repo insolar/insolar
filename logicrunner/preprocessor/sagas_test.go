@@ -42,7 +42,7 @@ import (
 "fmt"
 "errors"
 
-"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 type SagaTestWallet struct {
@@ -133,7 +133,7 @@ import (
 "fmt"
 "errors"
 
-"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 type SagaTestWallet struct {
@@ -179,7 +179,7 @@ import (
 "fmt"
 "errors"
 
-"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 type SagaTestWallet struct {
@@ -228,7 +228,7 @@ import (
 "fmt"
 "errors"
 
-"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 type SagaTestWallet struct {

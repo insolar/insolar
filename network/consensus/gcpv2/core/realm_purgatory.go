@@ -286,7 +286,7 @@ func (p *RealmPurgatory) AddJoinerAndEnsureAscendancy(
 
 	_, na := p.getMember(joinerID, announcedByID)
 	if na == nil {
-		//err = p.getOrCreateMember(joinerID).DispatchAnnouncement(context.TODO(), // TODO context
+		// err = p.getOrCreateMember(joinerID).DispatchAnnouncement(context.TODO(), // TODO context
 		//	member.JoinerRank, jp,
 		//	profiles.NewJoinerAnnouncement(joinerID, jp, announcedByID))
 		//
@@ -317,22 +317,22 @@ func (p *RealmPurgatory) UnknownFromNeighbourhood(ctx context.Context, rank memb
 	} else {
 		return m.DispatchAnnouncement(ctx, rank, nil, announcement)
 	}
-	//if isJoiner {
+	// if isJoiner {
 	//	err = announce.ApplyNeighbourJoinerAnnouncement(ctx, sender, announcedJoinerID, nb.Neighbour,
 	//		nb.Announcement.JoinerID, neighbourhood[i].GetJoinerAnnouncement(), realm)
-	//}
-	//isJoiner := nb.Announcement.Membership.IsJoiner()
+	// }
+	// isJoiner := nb.Announcement.Membership.IsJoiner()
 	//
-	//neighbourID := neighbour.GetNodeID()
-	//purgatory := realm.GetPurgatory()
+	// neighbourID := neighbour.GetNodeID()
+	// purgatory := realm.GetPurgatory()
 	//
-	//brief := neighbourJoinerAnnouncement.GetBriefIntroduction()
-	//nbIntroProfile := realm.GetProfileFactory().CreateUpgradableIntroProfile(brief)
+	// brief := neighbourJoinerAnnouncement.GetBriefIntroduction()
+	// nbIntroProfile := realm.GetProfileFactory().CreateUpgradableIntroProfile(brief)
 	//
-	//introducedByID := neighbourJoinerAnnouncement.GetJoinerIntroducedByID()
-	//if introducedByID.IsAbsent() {
+	// introducedByID := neighbourJoinerAnnouncement.GetJoinerIntroducedByID()
+	// if introducedByID.IsAbsent() {
 	//	introducedByID = sender.GetNodeID()
-	//}
-	//return purgatory.JoinerFromNeighbourhood(ctx, neighbourID, nbIntroProfile, introducedByID)
+	// }
+	// return purgatory.JoinerFromNeighbourhood(ctx, neighbourID, nbIntroProfile, introducedByID)
 
 }
