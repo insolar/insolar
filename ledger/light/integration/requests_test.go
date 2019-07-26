@@ -309,28 +309,27 @@ func Test_Reason_Requests(t *testing.T) {
 	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
 	s.Pulse(ctx)
 
-	// t.Run("outgoing with closed reason", func(t *testing.T) {
-	// 	p, _ := setIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
-	// 	requirePayloadNotError(t, p)
-	// 	reqInfo := p.(*payload.RequestInfo)
-	//
-	// 	p, _ = activateObject(ctx, t, s, reqInfo.RequestID)
-	// 	requirePayloadNotError(t, p)
-	//
-	// 	outgoingReq := record.OutgoingRequest{
-	// 		Object:   insolar.NewReference(reqInfo.RequestID),
-	// 		Reason:   *insolar.NewReference(reqInfo.RequestID),
-	// 		CallType: record.CTMethod,
-	// 		Caller:   *insolar.NewReference(reqInfo.RequestID),
-	// 	}
-	// 	outgoingReqMsg := &payload.SetOutgoingRequest{
-	// 		Request: record.Wrap(outgoingReq),
-	// 	}
-	//
-	// 	// Set outgoing request
-	// 	outP := sendMessage(ctx, t, s, outgoingReqMsg)
-	// 	errP, ok := outP.(*payload.Error)
-	// 	require.Equal(t, true, ok)
-	// 	require.NotNil(t, errP)
-	// })
+	t.Run("detached incoming fails with error", func(t *testing.T) {
+		args := make([]byte, 100)
+		_, err := rand.Read(args)
+		require.NoError(t, err)
+		initReq := record.IncomingRequest{
+			Object:    insolar.NewReference(gen.ID()),
+			Arguments: args,
+			CallType:  record.CTSaveAsChild,
+			Reason:    *insolar.NewReference(*insolar.NewID(s.pulse.PulseNumber, []byte{1, 2, 3})),
+			APINode:   gen.Reference(),
+			// Incoming can't be a detached request
+			ReturnMode: record.ReturnSaga,
+		}
+		initReqMsg := &payload.SetIncomingRequest{
+			Request: record.Wrap(&initReq),
+		}
+
+		// Set first request
+		p := sendMessage(ctx, t, s, initReqMsg)
+		errP, ok := p.(*payload.Error)
+		require.Equal(t, true, ok)
+		require.NotNil(t, errP)
+	})
 }

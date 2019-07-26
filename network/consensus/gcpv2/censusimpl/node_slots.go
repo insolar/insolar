@@ -156,7 +156,7 @@ func (c *updatableSlot) SetOpModeAndLeaveReason(index member.Index, leaveReason 
 }
 
 func (c *updatableSlot) GetLeaveReason() uint32 {
-	if c.mode != member.ModeEvictedGracefully {
+	if !c.mode.IsEvictedGracefully() {
 		return 0
 	}
 	return c.leaveReason

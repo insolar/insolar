@@ -54,6 +54,7 @@ const (
 	TypeSetResult
 	TypeActivate
 	TypeRequestInfo
+	TypeGotHotConfirmation
 	TypeDeactivate
 	TypeUpdate
 	TypeHotObjects
@@ -64,6 +65,9 @@ const (
 	TypeReplication
 	TypeGetJet
 	TypeAbandonedRequestsNotification
+	TypeGetLightInitialState
+	TypeLightInitialState
+	TypeGetIndex
 
 	TypeReturnResults
 	TypeCallMethod
@@ -218,6 +222,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *RequestInfo:
 		pl.Polymorph = uint32(TypeRequestInfo)
 		return pl.Marshal()
+	case *GotHotConfirmation:
+		pl.Polymorph = uint32(TypeGotHotConfirmation)
+		return pl.Marshal()
 	case *GetRequest:
 		pl.Polymorph = uint32(TypeGetRequest)
 		return pl.Marshal()
@@ -271,6 +278,15 @@ func Marshal(payload Payload) ([]byte, error) {
 		return pl.Marshal()
 	case *AbandonedRequestsNotification:
 		pl.Polymorph = uint32(TypeAbandonedRequestsNotification)
+		return pl.Marshal()
+	case *GetLightInitialState:
+		pl.Polymorph = uint32(TypeGetLightInitialState)
+		return pl.Marshal()
+	case *LightInitialState:
+		pl.Polymorph = uint32(TypeLightInitialState)
+		return pl.Marshal()
+	case *GetIndex:
+		pl.Polymorph = uint32(TypeGetIndex)
 		return pl.Marshal()
 	}
 
@@ -367,6 +383,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		pl := RequestInfo{}
 		err := pl.Unmarshal(data)
 		return &pl, err
+	case TypeGotHotConfirmation:
+		pl := GotHotConfirmation{}
+		err := pl.Unmarshal(data)
+		return &pl, err
 	case TypeGetRequest:
 		pl := GetRequest{}
 		err := pl.Unmarshal(data)
@@ -437,6 +457,18 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeAbandonedRequestsNotification:
 		pl := AbandonedRequestsNotification{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeGetLightInitialState:
+		pl := GetLightInitialState{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeLightInitialState:
+		pl := LightInitialState{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeGetIndex:
+		pl := GetIndex{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}

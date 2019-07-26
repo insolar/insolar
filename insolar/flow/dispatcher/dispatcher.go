@@ -21,9 +21,10 @@ import (
 	"strconv"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 

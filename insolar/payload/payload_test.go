@@ -18,12 +18,11 @@ package payload_test
 
 import (
 	"math/rand"
+	"reflect"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -64,13 +63,14 @@ func TestMarshalUnmarshal(t *testing.T) {
 		{tp: payload.TypeGetCode, pl: &payload.GetCode{}},
 		{tp: payload.TypeSetCode, pl: &payload.SetCode{}},
 		{tp: payload.TypeGetFilament, pl: &payload.GetFilament{}},
-		// FIXME: uncomment after removing virtual record wrapper.
-		// {tp: payload.TypeFilamentSegment, pl: &payload.FilamentSegment{}},
-		// {tp: payload.TypeSetIncomingRequest, pl: &payload.SetIncomingRequest{}},
-		// {tp: payload.TypeRequest, pl: &payload.Request{}},
-		// {tp: payload.TypeReplication, pl: &payload.Replication{}},
+		{tp: payload.TypeFilamentSegment, pl: &payload.FilamentSegment{}},
+		{tp: payload.TypeSetIncomingRequest, pl: &payload.SetIncomingRequest{}},
+		{tp: payload.TypeRequest, pl: &payload.Request{}},
+		{tp: payload.TypeReplication, pl: &payload.Replication{}},
 		{tp: payload.TypeSetResult, pl: &payload.SetResult{}},
 		{tp: payload.TypeActivate, pl: &payload.Activate{}},
+		{tp: payload.TypeRequestInfo, pl: &payload.RequestInfo{}},
+		{tp: payload.TypeGotHotConfirmation, pl: &payload.GotHotConfirmation{}},
 		{tp: payload.TypeDeactivate, pl: &payload.Deactivate{}},
 		{tp: payload.TypeUpdate, pl: &payload.Update{}},
 		{tp: payload.TypeHotObjects, pl: &payload.HotObjects{}},
@@ -80,16 +80,18 @@ func TestMarshalUnmarshal(t *testing.T) {
 		{tp: payload.TypePendingsInfo, pl: &payload.PendingsInfo{}},
 		{tp: payload.TypeGetJet, pl: &payload.GetJet{}},
 		{tp: payload.TypeAbandonedRequestsNotification, pl: &payload.AbandonedRequestsNotification{}},
+		{tp: payload.TypeGetLightInitialState, pl: &payload.GetLightInitialState{}},
+		{tp: payload.TypeLightInitialState, pl: &payload.LightInitialState{}},
+		{tp: payload.TypeGetIndex, pl: &payload.GetIndex{}},
 	}
 
 	for _, d := range table {
 		t.Run(d.tp.String(), func(t *testing.T) {
-			fuzz.New().Fuzz(d.pl)
-			encoded, err := payload.Marshal(d.pl)
+			_, err := payload.Marshal(d.pl)
 			require.NoError(t, err)
-			decoded, err := payload.Unmarshal(encoded)
-			require.NoError(t, err)
-			assert.Equal(t, d.pl, decoded)
+			r := reflect.ValueOf(d.pl)
+			f := reflect.Indirect(r).FieldByName("Polymorph")
+			require.Equal(t, int(d.tp), int(f.Uint()))
 		})
 	}
 }

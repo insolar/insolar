@@ -70,8 +70,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/censusimpl"
 
-	"github.com/insolar/insolar/network/consensusv1/packets"
-
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -195,7 +193,7 @@ func (p *emuEndpoint) AsByteString() string {
 	return fmt.Sprintf("out:name:%s", p.name)
 }
 
-func (p *emuEndpoint) GetIPAddress() packets.NodeAddress {
+func (p *emuEndpoint) GetIPAddress() endpoints.IPAddress {
 	panic("implement me")
 }
 

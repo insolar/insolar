@@ -42,6 +42,11 @@ type RequestMock struct {
 	IsDetachedPreCounter uint64
 	IsDetachedMock       mRequestMockIsDetached
 
+	IsTemporaryUploadCodeFunc       func() (r bool)
+	IsTemporaryUploadCodeCounter    uint64
+	IsTemporaryUploadCodePreCounter uint64
+	IsTemporaryUploadCodeMock       mRequestMockIsTemporaryUploadCode
+
 	ReasonRefFunc       func() (r insolar.Reference)
 	ReasonRefCounter    uint64
 	ReasonRefPreCounter uint64
@@ -61,6 +66,7 @@ func NewRequestMock(t minimock.Tester) *RequestMock {
 	m.IsAPIRequestMock = mRequestMockIsAPIRequest{mock: m}
 	m.IsCreationRequestMock = mRequestMockIsCreationRequest{mock: m}
 	m.IsDetachedMock = mRequestMockIsDetached{mock: m}
+	m.IsTemporaryUploadCodeMock = mRequestMockIsTemporaryUploadCode{mock: m}
 	m.ReasonRefMock = mRequestMockReasonRef{mock: m}
 
 	return m
@@ -736,6 +742,140 @@ func (m *RequestMock) IsDetachedFinished() bool {
 	return true
 }
 
+type mRequestMockIsTemporaryUploadCode struct {
+	mock              *RequestMock
+	mainExpectation   *RequestMockIsTemporaryUploadCodeExpectation
+	expectationSeries []*RequestMockIsTemporaryUploadCodeExpectation
+}
+
+type RequestMockIsTemporaryUploadCodeExpectation struct {
+	result *RequestMockIsTemporaryUploadCodeResult
+}
+
+type RequestMockIsTemporaryUploadCodeResult struct {
+	r bool
+}
+
+//Expect specifies that invocation of Request.IsTemporaryUploadCode is expected from 1 to Infinity times
+func (m *mRequestMockIsTemporaryUploadCode) Expect() *mRequestMockIsTemporaryUploadCode {
+	m.mock.IsTemporaryUploadCodeFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &RequestMockIsTemporaryUploadCodeExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of Request.IsTemporaryUploadCode
+func (m *mRequestMockIsTemporaryUploadCode) Return(r bool) *RequestMock {
+	m.mock.IsTemporaryUploadCodeFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &RequestMockIsTemporaryUploadCodeExpectation{}
+	}
+	m.mainExpectation.result = &RequestMockIsTemporaryUploadCodeResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Request.IsTemporaryUploadCode is expected once
+func (m *mRequestMockIsTemporaryUploadCode) ExpectOnce() *RequestMockIsTemporaryUploadCodeExpectation {
+	m.mock.IsTemporaryUploadCodeFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &RequestMockIsTemporaryUploadCodeExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *RequestMockIsTemporaryUploadCodeExpectation) Return(r bool) {
+	e.result = &RequestMockIsTemporaryUploadCodeResult{r}
+}
+
+//Set uses given function f as a mock of Request.IsTemporaryUploadCode method
+func (m *mRequestMockIsTemporaryUploadCode) Set(f func() (r bool)) *RequestMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.IsTemporaryUploadCodeFunc = f
+	return m.mock
+}
+
+//IsTemporaryUploadCode implements github.com/insolar/insolar/insolar/record.Request interface
+func (m *RequestMock) IsTemporaryUploadCode() (r bool) {
+	counter := atomic.AddUint64(&m.IsTemporaryUploadCodePreCounter, 1)
+	defer atomic.AddUint64(&m.IsTemporaryUploadCodeCounter, 1)
+
+	if len(m.IsTemporaryUploadCodeMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.IsTemporaryUploadCodeMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to RequestMock.IsTemporaryUploadCode.")
+			return
+		}
+
+		result := m.IsTemporaryUploadCodeMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the RequestMock.IsTemporaryUploadCode")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsTemporaryUploadCodeMock.mainExpectation != nil {
+
+		result := m.IsTemporaryUploadCodeMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the RequestMock.IsTemporaryUploadCode")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsTemporaryUploadCodeFunc == nil {
+		m.t.Fatalf("Unexpected call to RequestMock.IsTemporaryUploadCode.")
+		return
+	}
+
+	return m.IsTemporaryUploadCodeFunc()
+}
+
+//IsTemporaryUploadCodeMinimockCounter returns a count of RequestMock.IsTemporaryUploadCodeFunc invocations
+func (m *RequestMock) IsTemporaryUploadCodeMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.IsTemporaryUploadCodeCounter)
+}
+
+//IsTemporaryUploadCodeMinimockPreCounter returns the value of RequestMock.IsTemporaryUploadCode invocations
+func (m *RequestMock) IsTemporaryUploadCodeMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.IsTemporaryUploadCodePreCounter)
+}
+
+//IsTemporaryUploadCodeFinished returns true if mock invocations count is ok
+func (m *RequestMock) IsTemporaryUploadCodeFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.IsTemporaryUploadCodeMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.IsTemporaryUploadCodeCounter) == uint64(len(m.IsTemporaryUploadCodeMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.IsTemporaryUploadCodeMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.IsTemporaryUploadCodeCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.IsTemporaryUploadCodeFunc != nil {
+		return atomic.LoadUint64(&m.IsTemporaryUploadCodeCounter) > 0
+	}
+
+	return true
+}
+
 type mRequestMockReasonRef struct {
 	mock              *RequestMock
 	mainExpectation   *RequestMockReasonRefExpectation
@@ -894,6 +1034,10 @@ func (m *RequestMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to RequestMock.IsDetached")
 	}
 
+	if !m.IsTemporaryUploadCodeFinished() {
+		m.t.Fatal("Expected call to RequestMock.IsTemporaryUploadCode")
+	}
+
 	if !m.ReasonRefFinished() {
 		m.t.Fatal("Expected call to RequestMock.ReasonRef")
 	}
@@ -935,6 +1079,10 @@ func (m *RequestMock) MinimockFinish() {
 		m.t.Fatal("Expected call to RequestMock.IsDetached")
 	}
 
+	if !m.IsTemporaryUploadCodeFinished() {
+		m.t.Fatal("Expected call to RequestMock.IsTemporaryUploadCode")
+	}
+
 	if !m.ReasonRefFinished() {
 		m.t.Fatal("Expected call to RequestMock.ReasonRef")
 	}
@@ -958,6 +1106,7 @@ func (m *RequestMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.IsAPIRequestFinished()
 		ok = ok && m.IsCreationRequestFinished()
 		ok = ok && m.IsDetachedFinished()
+		ok = ok && m.IsTemporaryUploadCodeFinished()
 		ok = ok && m.ReasonRefFinished()
 
 		if ok {
@@ -985,6 +1134,10 @@ func (m *RequestMock) MinimockWait(timeout time.Duration) {
 
 			if !m.IsDetachedFinished() {
 				m.t.Error("Expected call to RequestMock.IsDetached")
+			}
+
+			if !m.IsTemporaryUploadCodeFinished() {
+				m.t.Error("Expected call to RequestMock.IsTemporaryUploadCode")
 			}
 
 			if !m.ReasonRefFinished() {
@@ -1020,6 +1173,10 @@ func (m *RequestMock) AllMocksCalled() bool {
 	}
 
 	if !m.IsDetachedFinished() {
+		return false
+	}
+
+	if !m.IsTemporaryUploadCodeFinished() {
 		return false
 	}
 

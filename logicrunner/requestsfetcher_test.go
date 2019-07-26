@@ -50,7 +50,7 @@ func TestRequestsFetcher_FetchPendings(t *testing.T) {
 					GetIncomingRequestMock.Return(&record.IncomingRequest{}, nil)
 				broker := NewExecutionBrokerIMock(t).
 					IsKnownRequestMock.Return(false).
-					PrependMock.Return()
+					AddRequestsFromLedgerMock.Return()
 
 				return obj, am, broker
 			},

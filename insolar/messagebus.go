@@ -186,8 +186,6 @@ const (
 	TypeReturnResults
 	// TypeExecutorResults message that goes to new Executor to validate previous Executor actions through CaseBind
 	TypeExecutorResults
-	// TypeValidateCaseBind sends CaseBind form Executor to Validators for redo all actions
-	TypeValidateCaseBind
 	// TypeValidationResults sends from Validator to new Executor with results of validation actions of previous Executor
 	TypeValidationResults
 	// TypePendingFinished is sent by the old executor to the current executor when pending execution finishes
@@ -201,12 +199,6 @@ const (
 
 	// Ledger
 
-	// TypeGetDelegate retrieves object represented as provided type.
-	TypeGetDelegate
-	// TypeGetChildren retrieves object's children.
-	TypeGetChildren
-	// TypeRegisterChild registers child on the parent object.
-	TypeRegisterChild
 	// TypeGetObjectIndex fetches object index from storage.
 	TypeGetObjectIndex
 
@@ -231,6 +223,5 @@ const (
 	// DTTypePendingExecution allows to continue method calls
 	DTTypePendingExecution DelegationTokenType = iota + 1
 	DTTypeGetObjectRedirect
-	DTTypeGetChildrenRedirect
 	DTTypeGetCodeRedirect
 )

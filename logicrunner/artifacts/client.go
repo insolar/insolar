@@ -24,21 +24,15 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/messagebus"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
-)
-
-const (
-	getChildrenChunkSize = 10 * 1000
 )
 
 type localStorage struct {
@@ -96,10 +90,9 @@ type client struct {
 	PulseAccessor  pulse.Accessor                     `inject:""`
 	JetCoordinator jet.Coordinator                    `inject:""`
 
-	sender               bus.Sender
-	getChildrenChunkSize int
-	senders              *messagebus.Senders
-	localStorage         *localStorage
+	sender       bus.Sender
+	senders      *messagebus.Senders
+	localStorage *localStorage
 }
 
 // State returns hash state for artifact manager.
@@ -111,10 +104,9 @@ func (m *client) State() []byte {
 // NewClient creates new client instance.
 func NewClient(sender bus.Sender) *client { // nolint
 	return &client{
-		getChildrenChunkSize: getChildrenChunkSize,
-		senders:              messagebus.NewSenders(),
-		sender:               sender,
-		localStorage:         newLocalStorage(),
+		senders:      messagebus.NewSenders(),
+		sender:       sender,
+		localStorage: newLocalStorage(),
 	}
 }
 
@@ -468,7 +460,7 @@ func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]i
 	}
 }
 
-// HasPendingRequests returns true if object has unclosed requests.
+// HasPendings returns true if object has unclosed requests.
 func (m *client) HasPendings(
 	ctx context.Context,
 	object insolar.Reference,
@@ -513,76 +505,6 @@ func (m *client) HasPendings(
 	default:
 		return false, fmt.Errorf("HasPendings: unexpected reply %T", pl)
 	}
-}
-
-// GetDelegate returns provided object's delegate reference for provided prototype.
-//
-// Object delegate should be previously created for this object. If object delegate does not exist, an error will
-// be returned.
-func (m *client) GetDelegate(
-	ctx context.Context, head, asType insolar.Reference,
-) (*insolar.Reference, error) {
-	var err error
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetDelegate")
-	instrumenter := instrument(ctx, "GetDelegate").err(&err)
-	defer func() {
-		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
-		}
-		span.End()
-		instrumenter.end()
-	}()
-
-	sender := messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(m.PulseAccessor),
-		messagebus.FollowRedirectSender(m.DefaultBus),
-		messagebus.RetryJetSender(m.JetStorage),
-	)
-	genericReact, err := sender(ctx, &message.GetDelegate{
-		Head:   head,
-		AsType: asType,
-	}, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	switch rep := genericReact.(type) {
-	case *reply.Delegate:
-		return &rep.Head, nil
-	case *reply.Error:
-		return nil, rep.Error()
-	default:
-		return nil, fmt.Errorf("GetDelegate: unexpected reply: %#v", rep)
-	}
-}
-
-// GetChildren returns children iterator.
-//
-// During iteration children refs will be fetched from remote source (parent object).
-func (m *client) GetChildren(
-	ctx context.Context, parent insolar.Reference, pulse *insolar.PulseNumber,
-) (RefIterator, error) {
-	var err error
-
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetChildren")
-	instrumenter := instrument(ctx, "GetChildren").err(&err)
-	defer func() {
-		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
-		}
-		span.End()
-		instrumenter.end()
-	}()
-
-	sender := messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(m.PulseAccessor),
-		messagebus.FollowRedirectSender(m.DefaultBus),
-		messagebus.RetryJetSender(m.JetStorage),
-	)
-	iter, err := NewChildIterator(ctx, sender, parent, pulse, m.getChildrenChunkSize)
-	return iter, err
 }
 
 // DeployCode creates new code record in storage.
@@ -738,9 +660,9 @@ func (m *client) activateObject(
 	asDelegate bool,
 	memory []byte,
 ) error {
-	parentDesc, err := m.GetObject(ctx, parent)
+	_, err := m.GetObject(ctx, parent)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "wrong parent")
 	}
 
 	activate := record.Activate{
@@ -781,71 +703,11 @@ func (m *client) activateObject(
 
 	switch p := pl.(type) {
 	case *payload.ResultInfo:
-		var (
-			asType *insolar.Reference
-		)
-		child := record.Child{Ref: obj}
-		if parentDesc.ChildPointer() != nil {
-			child.PrevChild = *parentDesc.ChildPointer()
-		}
-		if asDelegate {
-			asType = &prototype
-		}
-		virtChild := record.Wrap(&child)
-
-		err = m.registerChild(
-			ctx,
-			virtChild,
-			parent,
-			obj,
-			asType,
-		)
-		if err != nil {
-			return errors.Wrap(err, "failed to register as child while activating")
-		}
 		return nil
 	case *payload.Error:
 		return errors.New(p.Text)
 	default:
 		return fmt.Errorf("ActivateObject: unexpected reply: %#v", p)
-	}
-}
-
-func (m *client) registerChild(
-	ctx context.Context,
-	rec record.Virtual,
-	parent insolar.Reference,
-	child insolar.Reference,
-	asType *insolar.Reference,
-) error {
-	data, err := rec.Marshal()
-	if err != nil {
-		return errors.Wrap(err, "setRecord: can't serialize record")
-	}
-	sender := messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(m.PulseAccessor),
-		messagebus.RetryJetSender(m.JetStorage),
-		messagebus.RetryFlowCancelled(m.PulseAccessor),
-	)
-	genericReact, err := sender(ctx, &message.RegisterChild{
-		Record: data,
-		Parent: parent,
-		Child:  child,
-		AsType: asType,
-	}, nil)
-
-	if err != nil {
-		return err
-	}
-
-	switch rep := genericReact.(type) {
-	case *reply.ID:
-		return nil
-	case *reply.Error:
-		return rep.Error()
-	default:
-		return fmt.Errorf("registerChild: unexpected reply: %#v", rep)
 	}
 }
 
@@ -888,9 +750,8 @@ func (m *client) RegisterResult(
 	}
 
 	var (
-		pl         payload.Payload
-		parentDesc ObjectDescriptor
-		err        error
+		pl  payload.Payload
+		err error
 	)
 
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.RegisterResult")
@@ -917,11 +778,11 @@ func (m *client) RegisterResult(
 	//
 	// Request reference will be this object's identifier and referred as "object head".
 	case RequestSideEffectActivate:
-		parentRef, imageRef, asDelegate, memory := result.Activate()
+		parentRef, imageRef, memory := result.Activate()
 
-		parentDesc, err = m.GetObject(ctx, parentRef)
+		_, err := m.GetObject(ctx, parentRef)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "wrong parent")
 		}
 
 		vResultRecord := record.Wrap(&resultRecord)
@@ -931,7 +792,6 @@ func (m *client) RegisterResult(
 			Image:       imageRef,
 			IsPrototype: false,
 			Parent:      parentRef,
-			IsDelegate:  asDelegate,
 		})
 
 		plTyped := payload.Activate{}
@@ -1013,34 +873,6 @@ func (m *client) RegisterResult(
 	_, err = sendResult(pl, result.ObjectReference())
 	if err != nil {
 		return errors.Wrapf(err, "RegisterResult: Failed to send results: %s", result.Type().String())
-	}
-
-	if result.Type() == RequestSideEffectActivate {
-		parentRef, imageRef, asDelegate, _ := result.Activate()
-
-		var asType *insolar.Reference
-
-		child := record.Child{
-			Ref: result.ObjectReference(),
-		}
-
-		if parentDesc.ChildPointer() != nil {
-			child.PrevChild = *parentDesc.ChildPointer()
-		}
-		if asDelegate {
-			asType = &imageRef
-		}
-
-		err = m.registerChild(
-			ctx,
-			record.Wrap(&child),
-			parentRef,
-			result.ObjectReference(),
-			asType,
-		)
-		if err != nil {
-			return errors.Wrap(err, "failed to register as child while activating")
-		}
 	}
 
 	return nil

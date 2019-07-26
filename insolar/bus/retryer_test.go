@@ -81,6 +81,7 @@ func TestRetryerSend_Send_Timeout(t *testing.T) {
 	once := sync.Once{}
 	sender := NewSenderMock(t)
 	sender.LatestPulseMock.Set(accessorMock(t).Latest)
+	ch := make(chan struct{})
 
 	innerReps := make(chan *message.Message)
 	sender.SendRoleFunc = func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
@@ -88,7 +89,7 @@ func TestRetryerSend_Send_Timeout(t *testing.T) {
 			once.Do(func() { close(innerReps) })
 		}
 		go func() {
-			time.Sleep(time.Second * 2)
+			<-ch
 			done()
 		}()
 		return innerReps, done
@@ -98,6 +99,7 @@ func TestRetryerSend_Send_Timeout(t *testing.T) {
 	require.NoError(t, err)
 	r := NewRetrySender(sender, 3)
 	reps, _ := r.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
+	close(ch)
 	select {
 	case _, ok := <-reps:
 		require.False(t, ok, "channel with replies must be closed, without any messages received")

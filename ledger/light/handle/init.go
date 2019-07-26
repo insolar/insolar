@@ -17,19 +17,15 @@
 package handle
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
 	wmessage "github.com/ThreeDotsLabs/watermill/message"
 
-	"github.com/insolar/insolar/insolar"
 	wbus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/pkg/errors"
 )
@@ -62,11 +58,6 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 }
 
 func (s *Init) handle(ctx context.Context, f flow.Flow) error {
-	msgType := s.message.Metadata.Get(wbus.MetaType)
-	if msgType != "" {
-		return s.handleParcel(ctx, f)
-	}
-
 	var err error
 
 	meta := payload.Meta{}
@@ -142,42 +133,6 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		s.replyError(ctx, meta, err)
 	}
 	return err
-}
-
-func (s *Init) handleParcel(ctx context.Context, f flow.Flow) error {
-	meta := payload.Meta{}
-	err := meta.Unmarshal(s.message.Payload)
-	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal meta")
-	}
-
-	parcel, err := message.DeserializeParcel(bytes.NewBuffer(meta.Payload))
-	if err != nil {
-		return errors.Wrap(err, "can't deserialize payload")
-	}
-
-	msgType := s.message.Metadata.Get(wbus.MetaType)
-	ctx, logger := inslogger.WithField(ctx, "msg_type", msgType)
-
-	logger.Debug("Start to handle new message (from parcel)")
-
-	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("Present %v", parcel.Message().Type().String()))
-	defer span.End()
-
-	switch msgType {
-	case insolar.TypeGetChildren.String():
-		h := NewGetChildren(s.dep, meta, parcel)
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeGetDelegate.String():
-		h := NewGetDelegate(s.dep, meta, parcel)
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeRegisterChild.String():
-		msg := parcel.Message().(*message.RegisterChild)
-		h := NewRegisterChild(s.dep, meta, msg, parcel.Pulse())
-		return f.Handle(ctx, h.Present)
-	default:
-		return fmt.Errorf("no handler for message type %s (from parcel)", msgType)
-	}
 }
 
 func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) error {
@@ -262,7 +217,7 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 	msgType := s.message.Metadata.Get(wbus.MetaType)
 	if msgType != "" {
-		return flow.ErrCancelled
+		return s.Present(ctx, f)
 	}
 
 	meta := payload.Meta{}
@@ -276,6 +231,29 @@ func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
 
+	if payloadType == payload.TypePass {
+		pl, err := payload.Unmarshal(meta.Payload)
+		if err != nil {
+			return errors.Wrap(err, "failed to unmarshal pass payload")
+		}
+		pass, ok := pl.(*payload.Pass)
+		if !ok {
+			return fmt.Errorf("unexpected pass type %T", pl)
+		}
+		originMeta := payload.Meta{}
+		err = originMeta.Unmarshal(pass.Origin)
+		if err != nil {
+			return errors.Wrap(err, "failed to unmarshal payload type")
+		}
+
+		pt, err := payload.UnmarshalType(originMeta.Payload)
+		if err != nil {
+			return errors.Wrap(err, "failed to unmarshal payload type")
+		}
+		payloadType = pt
+		meta = originMeta
+	}
+
 	// Only allow read operations in the past.
 	switch payloadType {
 	case
@@ -284,7 +262,8 @@ func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 		payload.TypeGetPendings,
 		payload.TypeHasPendings,
 		payload.TypeGetJet,
-		payload.TypeGetRequest:
+		payload.TypeGetRequest,
+		payload.TypePassState:
 		return s.Present(ctx, f)
 	}
 

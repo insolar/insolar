@@ -21,6 +21,7 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/stretchr/testify/assert"
@@ -135,7 +136,7 @@ func TestHashMaterial(t *testing.T) {
 		hashBefore, err := record.HashMaterial(h, rec)
 		require.NoError(t, err)
 
-		rec.JetID = gen.JetID()
+		rec.JetID = *insolar.NewJetID(uint8(rand.Int()), gen.ID().Bytes())
 		h = sha256.New()
 		hashAfter, err := record.HashMaterial(h, rec)
 		require.NoError(t, err)
@@ -181,7 +182,7 @@ func getMaterialRecord() record.Material {
 
 	materialRecord := record.Material{
 		Virtual: &virtRec,
-		JetID:   gen.JetID(),
+		JetID:   *insolar.NewJetID(uint8(rand.Int()), gen.ID().Bytes()),
 	}
 
 	return materialRecord

@@ -41,8 +41,6 @@ func getEmptyMessage(mt insolar.MessageType) (insolar.Message, error) {
 		return &ReturnResults{}, nil
 	case insolar.TypeExecutorResults:
 		return &ExecutorResults{}, nil
-	case insolar.TypeValidateCaseBind:
-		return &ValidateCaseBind{}, nil
 	case insolar.TypeValidationResults:
 		return &ValidationResults{}, nil
 	case insolar.TypePendingFinished:
@@ -53,12 +51,6 @@ func getEmptyMessage(mt insolar.MessageType) (insolar.Message, error) {
 		return &StillExecuting{}, nil
 
 	// Ledger
-	case insolar.TypeGetDelegate:
-		return &GetDelegate{}, nil
-	case insolar.TypeGetChildren:
-		return &GetChildren{}, nil
-	case insolar.TypeRegisterChild:
-		return &RegisterChild{}, nil
 	case insolar.TypeGetObjectIndex:
 		return &GetObjectIndex{}, nil
 
@@ -171,14 +163,11 @@ func init() {
 	gob.Register(&ReturnResults{})
 	gob.Register(&ExecutorResults{})
 	gob.Register(&AdditionalCallFromPreviousExecutor{})
-	gob.Register(&ValidateCaseBind{})
 	gob.Register(&ValidationResults{})
 	gob.Register(&PendingFinished{})
 	gob.Register(&StillExecuting{})
 
 	// Ledger
-	gob.Register(&GetDelegate{})
-	gob.Register(&RegisterChild{})
 	gob.Register(&GetObjectIndex{})
 
 	// heavy
@@ -188,5 +177,4 @@ func init() {
 	gob.Register(&GenesisRequest{})
 	gob.Register(&Parcel{})
 	gob.Register(insolar.Reference{})
-	gob.Register(&GetChildren{})
 }

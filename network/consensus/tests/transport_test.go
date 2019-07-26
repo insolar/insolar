@@ -100,8 +100,7 @@ func (r *emuPacketSender) SendTo(ctx context.Context, t transport.TargetProfile,
 	s.SendPacketToTransport(ctx, t, sendOptions, c)
 }
 
-func (r *emuPacketSender) SendToMany(ctx context.Context, targetCount int, s transport.PacketSender,
-	filter func(ctx context.Context, targetIndex int) (transport.TargetProfile, transport.PacketSendOptions)) {
+func (r *emuPacketSender) SendToMany(ctx context.Context, targetCount int, s transport.PacketSender, filter transport.ProfileFilter) {
 
 	for i := 0; i < targetCount; i++ {
 		sendTo, sendOptions := filter(ctx, i)
@@ -126,7 +125,7 @@ func (r *emuPacketBuilder) GetNeighbourhoodSize() transport.NeighbourhoodSizes {
 }
 
 func (r *emuPacketBuilder) PreparePhase0Packet(sender *transport.NodeAnnouncementProfile, pulsarPacket proofs.OriginalPulsarPacket,
-	options transport.PacketSendOptions) transport.PreparedPacketSender {
+	options transport.PacketPrepareOptions) transport.PreparedPacketSender {
 	v := EmuPhase0NetPacket{
 		basePacket: basePacket{
 			src:       sender.GetNodeID(),
@@ -149,7 +148,7 @@ func (r *EmuPhase0NetPacket) clonePacketFor(t transport.TargetProfile, sendOptio
 }
 
 func (r *emuPacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncementProfile, pulsarPacket proofs.OriginalPulsarPacket,
-	welcome *proofs.NodeWelcomePackage, options transport.PacketSendOptions) transport.PreparedPacketSender {
+	welcome *proofs.NodeWelcomePackage, options transport.PacketPrepareOptions) transport.PreparedPacketSender {
 
 	pp := pulsarPacket.(*EmuPulsarNetPacket)
 	if pp == nil || !pp.pulseData.IsValidPulseData() {
@@ -171,10 +170,12 @@ func (r *emuPacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncemen
 			},
 			pulsePacket: pp},
 	}
+	v.basePacket.adjustBySender(sender)
+
 	v.pn = pp.pulseData.PulseNumber
 	v.isAlternative = options&transport.AlternativePhasePacket != 0
 
-	if v.isAlternative || options&transport.SendWithoutPulseData != 0 {
+	if v.isAlternative || options&transport.PrepareWithoutPulseData != 0 {
 		v.pulsePacket = nil
 	}
 
@@ -211,7 +212,7 @@ func (r *EmuPhase1NetPacket) clonePacketFor(t transport.TargetProfile, sendOptio
 
 func (r *emuPacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncementProfile,
 	welcome *proofs.NodeWelcomePackage, neighbourhood []transport.MembershipAnnouncementReader,
-	options transport.PacketSendOptions) transport.PreparedPacketSender {
+	options transport.PacketPrepareOptions) transport.PreparedPacketSender {
 
 	v := EmuPhase2NetPacket{
 		basePacket: basePacket{
@@ -228,6 +229,8 @@ func (r *emuPacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncemen
 		pulseNumber:   sender.GetPulseNumber(),
 		neighbourhood: neighbourhood,
 	}
+	v.basePacket.adjustBySender(sender)
+
 	v.isAlternative = options&transport.AlternativePhasePacket != 0
 
 	if v.joiner != nil && v.joiner.HasFullIntro() && options&transport.OnlyBriefIntroAboutJoiner != 0 {
@@ -258,7 +261,7 @@ func (r *EmuPhase2NetPacket) clonePacketFor(t transport.TargetProfile, sendOptio
 }
 
 func (r *emuPacketBuilder) PreparePhase3Packet(sender *transport.NodeAnnouncementProfile, vectors statevector.Vector,
-	options transport.PacketSendOptions) transport.PreparedPacketSender {
+	options transport.PacketPrepareOptions) transport.PreparedPacketSender {
 
 	v := EmuPhase3NetPacket{
 		basePacket: basePacket{
@@ -269,6 +272,8 @@ func (r *emuPacketBuilder) PreparePhase3Packet(sender *transport.NodeAnnouncemen
 		pulseNumber: sender.GetPulseNumber(),
 		vectors:     vectors,
 	}
+	v.basePacket.adjustBySender(sender)
+
 	v.isAlternative = options&transport.AlternativePhasePacket != 0
 
 	return &emuPacketSender{&v}
