@@ -18,7 +18,7 @@ package proc
 
 type Dependencies struct {
 	PassState    func(*PassState)
-	GetCode      func(*GetCode)
+	SendCode     func(*SendCode)
 	SendRequests func(*SendRequests)
 	GetRequest   func(*GetRequest)
 	Replication  func(*Replication)

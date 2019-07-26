@@ -26,7 +26,7 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 )
 
-type GetCode struct {
+type SendCode struct {
 	message payload.Meta
 
 	Dep struct {
@@ -35,32 +35,32 @@ type GetCode struct {
 	}
 }
 
-func NewGetCode(msg payload.Meta) *GetCode {
-	return &GetCode{
+func NewSendCode(msg payload.Meta) *SendCode {
+	return &SendCode{
 		message: msg,
 	}
 }
 
-func (p *GetCode) Proceed(ctx context.Context) error {
+func (p *SendCode) Proceed(ctx context.Context) error {
 	getCode := payload.GetCode{}
 	err := getCode.Unmarshal(p.message.Payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal GetCode message")
+		return errors.Wrap(err, "SendCode: failed to unmarshal GetCode message")
 	}
 
 	rec, err := p.Dep.RecordAccessor.ForID(ctx, getCode.CodeID)
 	if err != nil {
-		return errors.Wrap(err, "failed to fetch record")
+		return errors.Wrap(err, "SendCode: failed to fetch record")
 	}
 	buf, err := rec.Marshal()
 	if err != nil {
-		return errors.Wrap(err, "failed to marshal record")
+		return errors.Wrap(err, "SendCode: failed to marshal record")
 	}
 	msg, err := payload.NewMessage(&payload.Code{
 		Record: buf,
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to create message")
+		return errors.Wrap(err, "SendCode: failed to create message")
 	}
 
 	go p.Dep.Sender.Reply(ctx, p.message, msg)

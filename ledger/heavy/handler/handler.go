@@ -78,7 +78,7 @@ func New(cfg configuration.Ledger) *Handler {
 			p.Dep.Records = h.RecordAccessor
 			p.Dep.Sender = h.Sender
 		},
-		GetCode: func(p *proc.GetCode) {
+		SendCode: func(p *proc.SendCode) {
 			p.Dep.Sender = h.Sender
 			p.Dep.RecordAccessor = h.RecordAccessor
 		},
@@ -216,8 +216,8 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 		h.dep.PassState(p)
 		err = p.Proceed(ctx)
 	case payload.TypeGetCode:
-		p := proc.NewGetCode(meta)
-		h.dep.GetCode(p)
+		p := proc.NewSendCode(meta)
+		h.dep.SendCode(p)
 		err = p.Proceed(ctx)
 	case payload.TypeReplication:
 		p := proc.NewReplication(meta, h.cfg)
@@ -278,8 +278,8 @@ func (h *Handler) handlePass(ctx context.Context, meta payload.Meta) error {
 
 	switch payloadType { // nolint
 	case payload.TypeGetCode:
-		p := proc.NewGetCode(originMeta)
-		h.dep.GetCode(p)
+		p := proc.NewSendCode(originMeta)
+		h.dep.SendCode(p)
 		err = p.Proceed(ctx)
 	case payload.TypeGetRequest:
 		p := proc.NewGetRequest(originMeta)
