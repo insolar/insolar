@@ -2,6 +2,7 @@ package logicrunner
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
@@ -23,10 +24,15 @@ func (h *HandleSagaCallAcceptNotification) Present(ctx context.Context, f flow.F
 		return err
 	}
 
-	outgoing := record.OutgoingRequest{}
-	err = outgoing.Unmarshal(msg.Request)
+	virtual := record.Virtual{}
+	err = virtual.Unmarshal(msg.Request)
 	if err != nil {
 		return err
+	}
+	rec := record.Unwrap(&virtual)
+	outgoing, ok := rec.(*record.OutgoingRequest)
+	if !ok {
+		return fmt.Errorf("unexpected request received %T", rec)
 	}
 
 	// restore IncomingRequest by OutgoingRequest fields
