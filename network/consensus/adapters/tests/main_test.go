@@ -66,7 +66,7 @@ import (
 const (
 	defaultLogLevel       = insolar.DebugLevel
 	defaultPulseDelta     = 2
-	defaultTestDuration   = 10 * time.Second
+    defaultTestDuration = defaultPulseDelta * time.Second * 10
 	defaultStartCaseAfter = 1 * time.Second
 )
 

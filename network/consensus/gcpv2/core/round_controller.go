@@ -171,9 +171,26 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 		r.realm.coreRealm.pollingWorker.Start(r.realm.roundContext, 100*time.Millisecond)
 		r.prepR.startWorkers(prepCtx, preps)
 	},
-		nil,
+		r.onConsensusStopper,
 		r.onConsensusFinished,
 	)
+}
+
+func (r *PhasedRoundController) onConsensusStopper() {
+	latest := r.chronicle.GetLatestCensus()
+
+	inslogger.FromContext(r.realm.roundContext).Debugf(
+		"Stopping consensus round: self={%v}, bundle=%v, census=%+v", r.realm.GetLocalProfile(), r.bundle, latest)
+
+	if latest.GetOnlinePopulation().GetLocalProfile().IsJoiner() {
+		panic("local remains as joiner")
+	}
+
+	if r.chronicle.GetExpectedCensus() == nil {
+		panic("consensus didn't finish")
+	}
+
+	//b := strings.Builder{}
 }
 
 func (r *PhasedRoundController) onConsensusFinished() {

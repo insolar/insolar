@@ -343,7 +343,7 @@ outer:
 
 	// enables parallel use
 	if !localInspector.PrepareForInspection(ctx) {
-		log.Errorf("consensus terminated abnormally - unable to build a minimal vector: %d", c.R.GetSelf())
+		log.Errorf("consensus terminated abnormally - unable to build a minimal vector: %d", c.R.GetSelfNodeID())
 		return nil
 	}
 	return localInspector

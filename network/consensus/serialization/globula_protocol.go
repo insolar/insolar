@@ -106,29 +106,29 @@ type GlobulaConsensusPacketBody struct {
 	Claims ClaimList `insolar-transport:"Packet=1,3"` // ByteSize= 1 + ...
 }
 
-func (b *GlobulaConsensusPacketBody) DebugString(ctx PacketContext) string {
+func (b *GlobulaConsensusPacketBody) Debug(ctx PacketContext) string {
+	flags := ctx.GetFlagRangeInt(1, 2)
+	hasBrief := flags == 1
+	hasFull := flags == 2 || flags == 3
+	intro := "no"
+	if hasBrief {
+		intro = "brief"
+	}
+	if hasFull {
+		intro = "full"
+	}
+
 	switch ctx.GetPacketType().GetPayloadEquivalent() {
 	case phases.PacketPhase0:
-		return fmt.Sprintf("r:%v pp:%v", b.CurrentRank, b.PulsarPacket)
+		return fmt.Sprintf("r:%v", b.CurrentRank)
 	case phases.PacketPhase1:
-		return fmt.Sprintf(
-			"pp:%v ma:%v je:%v fsi:%v ci:%v js:%v",
-			b.PulsarPacket,
-			b.Announcement,
-			b.JoinerExt,
-			b.FullSelfIntro,
-			b.CloudIntro,
-			b.JoinerSecret,
-		)
+		return fmt.Sprintf("ma:%s i:%s", b.Announcement.String(), intro)
 	case phases.PacketPhase2:
 		return fmt.Sprintf(
-			"ma:%v bsi:%v fsi:%v ci:%v js:%v ns:%v",
-			b.Announcement,
-			b.BriefSelfIntro,
-			b.FullSelfIntro,
-			b.CloudIntro,
-			b.JoinerSecret,
-			b.Neighbourhood,
+			"ma:%s intro:%s nh:%s",
+			b.Announcement.String(),
+			intro,
+			b.Neighbourhood.String(),
 		)
 	case phases.PacketPhase3:
 		return fmt.Sprintf("vs:%v", b.Vectors)
@@ -392,6 +392,15 @@ type Neighbourhood struct {
 	Neighbours     []NeighbourAnnouncement
 }
 
+func (n *Neighbourhood) String() string {
+	s := "["
+	for _, n := range n.Neighbours {
+		s += fmt.Sprintf("{%s}", n.String())
+	}
+	s += "]"
+	return fmt.Sprintf("ns:%s", s)
+}
+
 func (n *Neighbourhood) SerializeTo(ctx SerializeContext, writer io.Writer) error {
 	if err := write(writer, n.NeighbourCount); err != nil {
 		return errors.Wrap(err, "failed to serialize NeighbourCount")
@@ -446,6 +455,20 @@ type NeighbourAnnouncement struct {
 
 	/* AnnounceSignature is copied from the original Phase1 */
 	AnnounceSignature longbits.Bits512 // ByteSize = 64
+}
+
+func (na *NeighbourAnnouncement) String() string {
+	if !na.Member.AnnounceID.IsAbsent() {
+		return fmt.Sprintf(
+			"id:%d cr:%s rp:%d announce:%d",
+			na.NeighbourNodeID,
+			na.CurrentRank.String(),
+			na.RequestedPower,
+			na.Member.AnnounceID,
+		)
+	}
+
+	return fmt.Sprintf("id:%d cr:%s rp:%d", na.NeighbourNodeID, na.CurrentRank.String(), na.RequestedPower)
 }
 
 func (na *NeighbourAnnouncement) SerializeTo(ctx SerializeContext, writer io.Writer) error {
@@ -548,6 +571,19 @@ type MembershipAnnouncement struct {
 	Member            NodeAnnouncement `insolar-transport:"optional=CurrentRank!=0"` // ByteSize = 132, 136, 267, 269, 279
 	AnnounceSignature longbits.Bits512 `insolar-transport:"optional=CurrentRank!=0"` // ByteSize = 64
 	// AnnounceSignature = sign(LastCloudHash + hash(NodeFullIntro) + CurrentRank + fields of MembershipAnnouncement, SK(sender))
+}
+
+func (ma *MembershipAnnouncement) String() string {
+	if !ma.Member.AnnounceID.IsAbsent() {
+		return fmt.Sprintf(
+			"cr:%s rp:%d announce:%d",
+			ma.CurrentRank.String(),
+			ma.RequestedPower,
+			ma.Member.AnnounceID,
+		)
+	}
+
+	return fmt.Sprintf("cr:%s rp:%d", ma.CurrentRank.String(), ma.RequestedPower)
 }
 
 func (ma *MembershipAnnouncement) SerializeTo(ctx SerializeContext, writer io.Writer) error {
