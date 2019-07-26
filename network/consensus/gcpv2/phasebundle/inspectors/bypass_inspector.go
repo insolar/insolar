@@ -73,7 +73,7 @@ func (*bypassVectorInspector) CreateNextPopulation(nodeset.ConsensusBitsetRow) (
 	panic("illegal state")
 }
 
-func (*bypassVectorInspector) PrepareForInspection(ctx context.Context) {
+func (*bypassVectorInspector) PrepareForInspection(ctx context.Context) bool {
 	panic("illegal state")
 }
 

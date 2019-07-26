@@ -280,17 +280,9 @@ func (p *RealmPurgatory) AddJoinerAndEnsureAscendancy(
 		member.JoinerRank, jp,
 		profiles.NewJoinerAnnouncement(jp, announcedByID))
 
-	if !p.IsBriefAscensionAllowed() && jp.GetExtension() == nil {
-		return err
-	}
-
-	_, na := p.getMember(joinerID, announcedByID)
-	if na == nil {
-		// err = p.getOrCreateMember(joinerID).DispatchAnnouncement(context.TODO(), // TODO context
-		//	member.JoinerRank, jp,
-		//	profiles.NewJoinerAnnouncement(joinerID, jp, announcedByID))
-		//
-		panic(fmt.Sprintf("ascent has failed: id=%d announcedByID=%d", joinerID, announcedByID))
+	sp := p.FindJoinerProfile(joinerID, announcedByID)
+	if sp == nil {
+		panic(fmt.Sprintf("failed addiiton of a joiner: id=%d announcedByID=%d", joinerID, announcedByID))
 	}
 	return err
 }

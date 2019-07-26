@@ -65,8 +65,8 @@ import (
 
 const (
 	defaultLogLevel       = insolar.DebugLevel
-	defaultPulseDelta     = 1
-	defaultTestDuration   = 5 * time.Second
+	defaultPulseDelta     = 2
+	defaultTestDuration   = 10 * time.Second
 	defaultStartCaseAfter = 1 * time.Second
 )
 
@@ -80,10 +80,10 @@ var strategy = NewDelayNetStrategy(DelayStrategyConf{
 var ctx = initLogger(defaultLogLevel)
 
 func TestConsensusJoin(t *testing.T) {
-	nodes, err := generateNodes(0, 1, 3, 5, nil)
+	nodes, err := generateNodes(0, 1, 8, 8, nil)
 	require.NoError(t, err)
 
-	joiners, err := generateNodes(0, 0, 1, 1, nodes.discoveryNodes)
+	joiners, err := generateNodes(0, 0, 8, 8, nodes.discoveryNodes)
 	require.NoError(t, err)
 
 	ns, err := initNodes(ctx, consensus.ReadyNetwork, *nodes, strategy)
@@ -103,7 +103,7 @@ func TestConsensusJoin(t *testing.T) {
 		}
 	})
 
-	require.Len(t, ns.nodeKeepers[0].GetAccessor().GetActiveNodes(), 11)
+	require.Len(t, ns.nodeKeepers[0].GetAccessor().GetActiveNodes(), 33)
 }
 
 func TestConsensusLeave(t *testing.T) {

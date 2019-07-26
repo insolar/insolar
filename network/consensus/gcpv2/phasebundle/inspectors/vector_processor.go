@@ -79,7 +79,7 @@ type VectorInspection interface {
 type VectorInspector interface {
 	GetBitset() member.StateBitset
 	/* Must be called before any CreateVector or InspectVector, and before any parallel access */
-	PrepareForInspection(ctx context.Context)
+	PrepareForInspection(ctx context.Context) bool
 	CreateVector(cryptkit.DigestSigner) statevector.Vector
 	InspectVector(ctx context.Context, sender *core.NodeAppearance, customOptions uint32, otherData statevector.Vector) InspectedVector
 	CreateNextPopulation(nodeset.ConsensusBitsetRow) ([]profiles.PopulationRank, proofs.CloudStateHash, proofs.GlobulaStateHash)
@@ -159,7 +159,8 @@ func (p *vectorIgnorantInspectorImpl) CreateNextPopulation(selectionSet nodeset.
 	return createNextPopulation(&p.VectorBuilder, selectionSet)
 }
 
-func (p *vectorIgnorantInspectorImpl) PrepareForInspection(ctx context.Context) {
+func (p *vectorIgnorantInspectorImpl) PrepareForInspection(ctx context.Context) bool {
+	return true
 }
 
 func (p *vectorIgnorantInspectorImpl) CreateVector(signer cryptkit.DigestSigner) statevector.Vector {
@@ -278,16 +279,22 @@ func (p *vectorInspectorImpl) ensureHashes() {
 	}
 }
 
-func (p *vectorInspectorImpl) PrepareForInspection(ctx context.Context) {
+func (p *vectorInspectorImpl) PrepareForInspection(ctx context.Context) bool {
 	if p.Trusted.AnnouncementHash != nil {
 		panic("illegal state")
 	}
 
 	p.Trusted.AnnouncementHash, p.Doubted.AnnouncementHash = p.BuildAllGlobulaAnnouncementHashes()
 
+	if p.Trusted.AnnouncementHash == nil {
+		return false
+	}
+
 	p.Trusted.CalcStateWithRank, p.Doubted.CalcStateWithRank =
 		p.BuildGlobulaStateHashesAndRanks(true, p.Doubted.AnnouncementHash != nil, p.nodeID,
 			statevector.CalcStateWithRank{}, statevector.CalcStateWithRank{})
+
+	return true
 }
 
 func (p *vectorInspectorImpl) CreateVector(signer cryptkit.DigestSigner) statevector.Vector {
@@ -298,9 +305,6 @@ func (p *vectorInspectorImpl) CreateVector(signer cryptkit.DigestSigner) stateve
 func (p *vectorInspectorImpl) InspectVector(ctx context.Context, sender *core.NodeAppearance, customOptions uint32,
 	otherVector statevector.Vector) InspectedVector {
 
-	if p.GetBitset().Len() != otherVector.Bitset.Len() {
-		panic("illegal state - StateBitset length mismatch")
-	}
 	p.ensureHashes()
 
 	r := newInspectedVectorAndPreInspect(ctx, p, sender, customOptions, otherVector)
@@ -311,9 +315,14 @@ func newInspectedVectorAndPreInspect(ctx context.Context, p *vectorInspectorImpl
 	customOptions uint32, otherVector statevector.Vector) inspectedVector {
 
 	r := inspectedVector{parent: p, node: sender, otherData: otherVector, customOptions: customOptions}
-	r.comparedStats = nodeset.CompareToStatRow(p.GetBitset(), otherVector.Bitset)
-
 	r.verifyResult = nodeset.NvrNotVerified
+
+	if p.GetBitset().Len() != otherVector.Bitset.Len() {
+		r.verifyResult |= nodeset.NvrSenderFault
+		return r
+	}
+
+	r.comparedStats = nodeset.CompareToStatRow(p.GetBitset(), otherVector.Bitset)
 
 	if otherVector.Trusted.AnnouncementHash == nil && otherVector.Doubted.AnnouncementHash == nil {
 		r.verifyResult |= nodeset.NvrSenderFault

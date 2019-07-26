@@ -138,8 +138,8 @@ func (c *Phase3PacketDispatcher) DispatchMemberPacket(ctx context.Context, reade
 		statevector.NewSubVector(p3.GetTrustedGlobulaAnnouncementHash(), p3.GetTrustedGlobulaStateSignature(), p3.GetTrustedExpectedRank()),
 		statevector.NewSubVector(p3.GetDoubtedGlobulaAnnouncementHash(), p3.GetDoubtedGlobulaStateSignature(), p3.GetDoubtedExpectedRank())))
 
-	if iv == nil {
-		panic("illegal state")
+	if iv == nil || iv.HasSenderFault() {
+		return n.RegisterFraud(n.Frauds().NewMismatchedMembershipRank(n.GetProfile(), n.GetNodeMembershipProfileOrEmpty()))
 	}
 	c.ctl.queuePh3Recv <- iv
 
@@ -168,19 +168,15 @@ func (c *Phase3Controller) StartWorker(ctx context.Context, realm *core.FullReal
 
 func (c *Phase3Controller) workerPhase3(ctx context.Context) {
 
-	if !c.workerPrePhase3(ctx) {
+	localInspector := c.workerPrePhase3(ctx)
+	if localInspector == nil {
+
 		// context was stopped in a hard way, we are dead in terms of consensus
 		// TODO should wait for further packets to decide if we need to turn ourselves into suspended state
 		// c.R.StopRoundByTimeout()
 		return
 	}
 
-	vectorHelper := c.R.GetPopulation().CreateVectorHelper()
-	localProjection := vectorHelper.CreateProjection()
-	localInspector := c.inspectionFactory.CreateInspector(&localProjection, c.R.GetDigestFactory(), c.R.GetSelfNodeID())
-
-	// enables parallel use
-	localInspector.PrepareForInspection(ctx)
 	c.setInspector(localInspector)
 
 	if !c.R.IsJoiner() {
@@ -219,7 +215,7 @@ func workerQueueFlusher(realm *core.FullRealm, q0 chan inspectors.InspectedVecto
 	})
 }
 
-func (c *Phase3Controller) workerPrePhase3(ctx context.Context) bool {
+func (c *Phase3Controller) workerPrePhase3(ctx context.Context) inspectors.VectorInspector {
 	log := inslogger.FromContext(ctx)
 
 	log.Debug(">>>>workerPrePhase3: begin")
@@ -250,7 +246,7 @@ outer:
 		select {
 		case <-ctx.Done():
 			log.Debug(">>>>workerPrePhase3: ctx.Done")
-			return false // ctx.Err() ?
+			return nil // ctx.Err() ?
 		case <-chasingDelayTimer.Channel():
 			log.Debug(">>>>workerPrePhase3: chaseExpired")
 			break outer
@@ -335,12 +331,22 @@ outer:
 		select {
 		case <-ctx.Done():
 			log.Debug(">>>>workerPrePhase3: ctx.Done")
-			return false // ctx.Err() ?
+			return nil // ctx.Err() ?
 		case <-c.queueTrustUpdated:
 		case <-time.After(c.loopingMinimalDelay):
 		}
 	}
-	return true
+
+	vectorHelper := c.R.GetPopulation().CreateVectorHelper()
+	localProjection := vectorHelper.CreateProjection()
+	localInspector := c.inspectionFactory.CreateInspector(&localProjection, c.R.GetDigestFactory(), c.R.GetSelfNodeID())
+
+	// enables parallel use
+	if !localInspector.PrepareForInspection(ctx) {
+		log.Errorf("consensus terminated abnormally - unable to build a minimal vector: %d", c.R.GetSelf())
+		return nil
+	}
+	return localInspector
 }
 
 func (c *Phase3Controller) workerRescanForMissing(ctx context.Context, missing chan inspectors.InspectedVector) {

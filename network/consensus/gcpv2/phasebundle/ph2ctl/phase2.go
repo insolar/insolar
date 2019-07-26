@@ -394,7 +394,7 @@ func (c *Phase2Controller) sendPhase2(ctx context.Context, neighbourhood []*core
 
 	neighbourhoodAnnouncements := make([]transport.MembershipAnnouncementReader, len(neighbourhood))
 	for i, np := range neighbourhood {
-		neighbourhoodAnnouncements[i] = c.R.CreateAnnouncement(np)
+		neighbourhoodAnnouncements[i] = c.R.CreateAnnouncement(np, false)
 	}
 
 	p2 := c.R.GetPacketBuilder().PreparePhase2Packet(c.R.CreateLocalAnnouncement(), nil,
