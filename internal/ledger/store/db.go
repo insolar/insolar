@@ -74,16 +74,12 @@ const (
 	ScopeIndex Scope = 4
 	// ScopeLastKnownIndexPN is the scope for a last known pulse number of the index bucket
 	ScopeLastKnownIndexPN Scope = 5
-
-	// ScopeBlob is the scope for a blobs records.
-	ScopeBlob Scope = 7
-
 	// ScopeGenesis is the scope for a genesis records.
-	ScopeGenesis Scope = 8
-
+	ScopeGenesis Scope = 6
 	// ScopeJetTree is the scope for a jet tree storage.
-	ScopeJetTree Scope = 9
-
+	ScopeJetTree Scope = 7
 	// ScopeJetKeeper is the scope for a jet id storage.
-	ScopeJetKeeper Scope = 10
+	ScopeJetKeeper            Scope = 8
+	ScopeRecordOrder          Scope = 9
+	ScopeLastKnownRecordOrder Scope = 10
 )

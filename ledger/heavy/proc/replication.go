@@ -145,7 +145,7 @@ func storeDrop(
 
 func storeRecords(
 	ctx context.Context,
-	mod object.RecordModifier,
+	recordStorage object.RecordModifier,
 	pcs insolar.PlatformCryptographyScheme,
 	pn insolar.PulseNumber,
 	records []record.Material,
@@ -156,7 +156,7 @@ func storeRecords(
 		virtRec := *rec.Virtual
 		hash := record.HashVirtual(pcs.ReferenceHasher(), virtRec)
 		id := insolar.NewID(pn, hash)
-		err := mod.Set(ctx, *id, rec)
+		err := recordStorage.Set(ctx, *id, rec)
 		if err != nil {
 			inslog.Error(err, "heavyserver: store record failed")
 			continue
