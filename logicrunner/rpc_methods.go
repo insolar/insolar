@@ -221,7 +221,7 @@ func (m *executionProxyImplementation) RouteCall(
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
 func (m *executionProxyImplementation) SaveAsChild(
 	ctx context.Context, current *Transcript, req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp,
-) error { // AALEKSEEV TODO consider returning constructorError to the proxy as well
+) error {
 	inslogger.FromContext(ctx).Debug("RPC.SaveAsChild")
 	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsChild")
 	defer span.End()
@@ -237,7 +237,7 @@ func (m *executionProxyImplementation) SaveAsChild(
 	// Send the request
 	msg := &message.CallMethod{IncomingRequest: *incoming}
 	objectRef, ctorErr, err := m.cr.CallConstructor(ctx, msg)
-	current.AddOutgoingRequest(ctx, *incoming, nil, objectRef, err) // AALEKSEEV TODO objectRef can be nil
+	current.AddOutgoingRequest(ctx, *incoming, nil, objectRef, err)
 	if err != nil {
 		return err
 	}

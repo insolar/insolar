@@ -104,7 +104,7 @@ func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *Transcri
 	return res, nil
 }
 
-func (le *logicExecutor) ExecuteConstructor( // AALEKSEEV TODO any changes needed where this method is called?
+func (le *logicExecutor) ExecuteConstructor(
 	ctx context.Context, transcript *Transcript,
 ) (
 	artifacts.RequestResult, error,
