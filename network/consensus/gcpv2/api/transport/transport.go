@@ -78,7 +78,7 @@ type TargetProfile interface {
 	GetNodeID() insolar.ShortNodeID
 	GetStatic() profiles.StaticProfile
 	IsJoiner() bool
-	//GetOpMode() member.OpMode
+	// GetOpMode() member.OpMode
 	EncryptJoinerSecret(joinerSecret cryptkit.DigestHolder) cryptkit.DigestHolder
 }
 

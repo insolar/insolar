@@ -248,7 +248,7 @@ func AnnouncementFromReader(nb transport.MembershipAnnouncementReader, brief pro
 
 	nr := nb.GetNodeRank()
 	if nr.IsJoiner() {
-		if nb.IsLeaving() { //|| !nb.GetJoinerID().IsAbsent() && nb.GetJoinerID() != nb.GetNodeID() {
+		if nb.IsLeaving() { // || !nb.GetJoinerID().IsAbsent() && nb.GetJoinerID() != nb.GetNodeID() {
 			panic("illegal membership announcement") // TODO report by error
 		}
 		mp := profiles.NewMembershipProfileForJoiner(brief)

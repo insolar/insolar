@@ -135,9 +135,9 @@ func (c *JoinerPhase01PrepController) DispatchHostPacket(ctx context.Context, pa
 	}
 
 	// TODO collect a few proposals and choose only by getting some threshold
-	//if p1.HasJoinerSecret() {
+	// if p1.HasJoinerSecret() {
 	//	c.realm.IsValidJoinerSecret()
-	//}
+	// }
 	//
 	//
 

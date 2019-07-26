@@ -270,9 +270,9 @@ func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bo
 				epn, pn, localID, from))
 	}
 
-	//if p.IsJoiner() && p.lastCloudStateHash {
+	// if p.IsJoiner() && p.lastCloudStateHash {
 	//
-	//}
+	// }
 
 	p.originalPulse = pp.GetPulseDataEvidence()
 	p.pulseData = pd

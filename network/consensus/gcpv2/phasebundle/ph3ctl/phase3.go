@@ -265,11 +265,11 @@ outer:
 				switch {
 				case upd.UpdatedNode == nil: // joiner notification
 					countPurgatory++
-				case upd.NewTrustLevel == member.TrustBySome: //full profile joiner
+				case upd.NewTrustLevel == member.TrustBySome: // full profile joiner
 					countFullJoiners++
 				}
 			case upd.UpdatedNode.IsJoiner():
-				continue //ignore
+				continue // ignore
 			case upd.NewTrustLevel == member.UnknownTrust:
 				if !upd.UpdatedNode.GetRequestedState().JoinerID.IsAbsent() {
 					countAnnouncedJoiners++
@@ -286,12 +286,12 @@ outer:
 			indexedCount, isComplete := pop.GetCountAndCompleteness(false)
 			bftMajority := consensuskit.BftMajority(indexedCount)
 
-			//updID := insolar.AbsentShortNodeID
-			//if upd.UpdatedNode != nil {
+			// updID := insolar.AbsentShortNodeID
+			// if upd.UpdatedNode != nil {
 			//	updID = upd.UpdatedNode.GetNodeID()
-			//}
+			// }
 			//
-			//log.Debugf("workerPrePhase3: id=%d upd=%d count=%d hasNsh=%d trustBySome=%d trustByNbh=%d purgatory=%d announced=%d fullJoiners=%d fraud=%d",
+			// log.Debugf("workerPrePhase3: id=%d upd=%d count=%d hasNsh=%d trustBySome=%d trustByNbh=%d purgatory=%d announced=%d fullJoiners=%d fraud=%d",
 			//	c.R.GetSelfNodeID(), updID,
 			//	indexedCount, countHasNsh, countTrustBySome, countTrustByNeighbors, countPurgatory, countAnnouncedJoiners, countFullJoiners, countFraud)
 
@@ -299,7 +299,7 @@ outer:
 			if isComplete && countFraud == 0 && countHasNsh >= indexedCount &&
 				countFullJoiners >= countAnnouncedJoiners && countFullJoiners >= countPurgatory &&
 				c.consensusStrategy.CanStartVectorsEarly(indexedCount, countFraud, countTrustBySome, countTrustByNeighbors) {
-				//(countTrustBySome >= bftMajority || countTrustByNeighbors >= 1+indexedCount>>1) {
+				// (countTrustBySome >= bftMajority || countTrustByNeighbors >= 1+indexedCount>>1) {
 
 				log.Debug(">>>>workerPrePhase3: all and complete")
 				break outer

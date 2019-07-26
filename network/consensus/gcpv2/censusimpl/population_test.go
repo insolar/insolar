@@ -185,7 +185,7 @@ func TestMNPCopyTo(t *testing.T) {
 	nodeID := insolar.ShortNodeID(0)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return nodeID })
 	mnp := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}},
-		slots: []updatableSlot{updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}}
+		slots: []updatableSlot{{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}}
 	population := &DynamicPopulation{}
 	mnp.copyTo(population)
 	require.Equal(t, mnp.local, population.slotByID[nodeID])

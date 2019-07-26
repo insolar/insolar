@@ -471,8 +471,8 @@ func (r *FullRealm) GetLocalProfile() profiles.LocalNode {
 
 func (r *FullRealm) PrepareAndSetLocalNodeStateHashEvidenceForJoiner() {
 
-	//nsh := r.self.profile.GetStatic().GetBriefIntroSignedDigest()
-	//r.self.setLocalNodeStateHashEvidence(nsh, nsh.GetSignatureHolder())
+	// nsh := r.self.profile.GetStatic().GetBriefIntroSignedDigest()
+	// r.self.setLocalNodeStateHashEvidence(nsh, nsh.GetSignatureHolder())
 	r.notifyCommitPulseChange()
 }
 
@@ -503,7 +503,7 @@ func (r *FullRealm) CreateAnnouncement(n *NodeAppearance) *transport.NodeAnnounc
 		case n == r.self:
 			panic(fmt.Sprintf("illegal state - local joiner is missing: %d", ma.JoinerID))
 		default:
-			//r.GetPurgatory().FindJoinerProfile(ma.JoinerID, n.GetNodeID())
+			// r.GetPurgatory().FindJoinerProfile(ma.JoinerID, n.GetNodeID())
 			panic(fmt.Sprintf("illegal state - joiner is missing: s=%d n=%d j=%d",
 				r.self.GetNodeID(), n.GetNodeID(), ma.JoinerID))
 		}

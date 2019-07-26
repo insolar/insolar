@@ -310,11 +310,11 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 		switch {
 		case isComplete && available >= remainingNodes+remainingJoiners:
 			maxWeight = math.MaxUint32
-		case nodeCapacity > neighbourSize<<2: //only works for large enough populations, > 4*neighbourhood size
+		case nodeCapacity > neighbourSize<<2: // only works for large enough populations, > 4*neighbourhood size
 			coverage := processedNodes + processedJoiners + available
 
-			if coverage > nodeCapacity>>1 { //only if more half of members arrived
-				const zeroCorrection = math.MaxUint32 >> 2 //zero correction value - scale is limited by 3/4
+			if coverage > nodeCapacity>>1 { // only if more half of members arrived
+				const zeroCorrection = math.MaxUint32 >> 2 // zero correction value - scale is limited by 3/4
 
 				k := uint64(math.MaxUint32) * uint64(coverage) / uint64(nodeCapacity)
 				newWeight := uint32(0)

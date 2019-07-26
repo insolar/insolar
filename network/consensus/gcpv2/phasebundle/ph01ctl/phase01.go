@@ -323,7 +323,7 @@ func (c *Phase01Controller) workerSendPhase1ToDynamics(ctx context.Context) {
 			if selfID == introTo.GetNodeID() {
 				continue
 			}
-			//|| !introTo.SetPacketSent(phases.PacketPhase1)
+			// || !introTo.SetPacketSent(phases.PacketPhase1)
 			p1.SendTo(ctx, introTo, sendOptions, c.R.GetPacketSender())
 		}
 	}

@@ -135,7 +135,7 @@ type EvictedPopulation interface {
 
 type PopulationBuilder interface {
 	GetCount() int
-	//SetCapacity
+	// SetCapacity
 	AddProfile(intro profiles.StaticProfile) profiles.Updatable
 	RemoveProfile(nodeID insolar.ShortNodeID)
 	GetUnorderedProfiles() []profiles.Updatable

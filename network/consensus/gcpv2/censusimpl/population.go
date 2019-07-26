@@ -322,7 +322,7 @@ func (c *ManyNodePopulation) _fillInRoleStatsAndMap(localID insolar.ShortNodeID,
 
 func (c *ManyNodePopulation) _adjustSlotsAndCopyEvicts(localID insolar.ShortNodeID, evicts []*updatableSlot) []*updatableSlot {
 
-	evictCopies := c.slots[c.assignedSlotCount:] //reuse remaining capacity for copies of evicts
+	evictCopies := c.slots[c.assignedSlotCount:] // reuse remaining capacity for copies of evicts
 	if c.assignedSlotCount == 0 {
 		c.slots = nil
 	} else {

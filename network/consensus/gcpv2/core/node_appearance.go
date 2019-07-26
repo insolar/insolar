@@ -171,9 +171,9 @@ func (c *NodeAppearance) copySelfTo(target *NodeAppearance) {
 		panic("prep realm self can't have NSH")
 	}
 
-	//target.stateEvidence = c.stateEvidence
-	//target.announceSignature = c.announceSignature
-	//target.trust = c.trust
+	// target.stateEvidence = c.stateEvidence
+	// target.announceSignature = c.announceSignature
+	// target.trust = c.trust
 
 	target.requestedPower = c.requestedPower
 	target.requestedJoinerID = c.requestedJoinerID
