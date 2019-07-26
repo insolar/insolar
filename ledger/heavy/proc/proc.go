@@ -23,4 +23,5 @@ type Dependencies struct {
 	GetRequest   func(*GetRequest)
 	Replication  func(*Replication)
 	GetJet       func(*GetJet)
+	EnsureIndex  func(*EnsureIndex)
 }

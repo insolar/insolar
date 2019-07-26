@@ -104,6 +104,12 @@ func New(cfg configuration.Ledger) *Handler {
 				h.JetAccessor,
 				h.Sender)
 		},
+		EnsureIndex: func(p *proc.EnsureIndex) {
+			p.Dep(
+				h.IndexAccessor,
+				h.Sender,
+			)
+		},
 	}
 	h.dep = &dep
 	return h
@@ -213,9 +219,17 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 		p := proc.NewGetCode(meta)
 		h.dep.GetCode(p)
 		err = p.Proceed(ctx)
+	case payload.TypeReplication:
+		p := proc.NewReplication(meta, h.cfg)
+		h.dep.Replication(p)
+		err = p.Proceed(ctx)
 	case payload.TypeGetJet:
 		p := proc.NewGetJet(meta)
 		h.dep.GetJet(p)
+		err = p.Proceed(ctx)
+	case payload.TypeEnsureIndex:
+		p := proc.NewEnsureIndex(meta)
+		h.dep.EnsureIndex(p)
 		err = p.Proceed(ctx)
 	case payload.TypePass:
 		err = h.handlePass(ctx, meta)
@@ -223,10 +237,6 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 		h.handleError(ctx, meta)
 	case payload.TypeGotHotConfirmation:
 		h.handleGotHotConfirmation(ctx, meta)
-	case payload.TypeReplication:
-		p := proc.NewReplication(meta, h.cfg)
-		h.dep.Replication(p)
-		err = p.Proceed(ctx)
 	default:
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())
 	}
