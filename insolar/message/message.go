@@ -51,8 +51,6 @@ func getEmptyMessage(mt insolar.MessageType) (insolar.Message, error) {
 		return &StillExecuting{}, nil
 
 	// Ledger
-	case insolar.TypeGetDelegate:
-		return &GetDelegate{}, nil
 	case insolar.TypeGetChildren:
 		return &GetChildren{}, nil
 	case insolar.TypeRegisterChild:
@@ -174,7 +172,6 @@ func init() {
 	gob.Register(&StillExecuting{})
 
 	// Ledger
-	gob.Register(&GetDelegate{})
 	gob.Register(&RegisterChild{})
 	gob.Register(&GetObjectIndex{})
 
