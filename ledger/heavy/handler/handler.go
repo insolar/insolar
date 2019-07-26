@@ -78,14 +78,14 @@ func New(cfg configuration.Ledger) *Handler {
 			p.Dep.Records = h.RecordAccessor
 			p.Dep.Sender = h.Sender
 		},
-		GetCode: func(p *proc.GetCode) {
+		SendCode: func(p *proc.SendCode) {
 			p.Dep.Sender = h.Sender
 			p.Dep.RecordAccessor = h.RecordAccessor
 		},
 		SendRequests: func(p *proc.SendRequests) {
 			p.Dep(h.Sender, h.RecordAccessor, h.IndexAccessor)
 		},
-		GetRequest: func(p *proc.GetRequest) {
+		SendRequest: func(p *proc.SendRequest) {
 			p.Dep(h.RecordAccessor, h.Sender)
 		},
 		Replication: func(p *proc.Replication) {
@@ -99,10 +99,16 @@ func New(cfg configuration.Ledger) *Handler {
 				h.JetKeeper,
 			)
 		},
-		GetJet: func(p *proc.GetJet) {
+		SendJet: func(p *proc.SendJet) {
 			p.Dep(
 				h.JetAccessor,
 				h.Sender)
+		},
+		SendIndex: func(p *proc.SendIndex) {
+			p.Dep(
+				h.IndexAccessor,
+				h.Sender,
+			)
 		},
 	}
 	h.dep = &dep
@@ -196,8 +202,8 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 
 	switch payloadType {
 	case payload.TypeGetRequest:
-		p := proc.NewGetRequest(meta)
-		h.dep.GetRequest(p)
+		p := proc.NewSendRequest(meta)
+		h.dep.SendRequest(p)
 		err = p.Proceed(ctx)
 	case payload.TypeGetFilament:
 		p := proc.NewSendRequests(meta)
@@ -208,12 +214,20 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 		h.dep.PassState(p)
 		err = p.Proceed(ctx)
 	case payload.TypeGetCode:
-		p := proc.NewGetCode(meta)
-		h.dep.GetCode(p)
+		p := proc.NewSendCode(meta)
+		h.dep.SendCode(p)
+		err = p.Proceed(ctx)
+	case payload.TypeReplication:
+		p := proc.NewReplication(meta, h.cfg)
+		h.dep.Replication(p)
 		err = p.Proceed(ctx)
 	case payload.TypeGetJet:
-		p := proc.NewGetJet(meta)
-		h.dep.GetJet(p)
+		p := proc.NewSendJet(meta)
+		h.dep.SendJet(p)
+		err = p.Proceed(ctx)
+	case payload.TypeGetIndex:
+		p := proc.NewSendIndex(meta)
+		h.dep.SendIndex(p)
 		err = p.Proceed(ctx)
 	case payload.TypePass:
 		err = h.handlePass(ctx, meta)
@@ -221,10 +235,6 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 		h.handleError(ctx, meta)
 	case payload.TypeGotHotConfirmation:
 		h.handleGotHotConfirmation(ctx, meta)
-	case payload.TypeReplication:
-		p := proc.NewReplication(meta, h.cfg)
-		h.dep.Replication(p)
-		err = p.Proceed(ctx)
 	default:
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())
 	}
@@ -266,12 +276,12 @@ func (h *Handler) handlePass(ctx context.Context, meta payload.Meta) error {
 
 	switch payloadType { // nolint
 	case payload.TypeGetCode:
-		p := proc.NewGetCode(originMeta)
-		h.dep.GetCode(p)
+		p := proc.NewSendCode(originMeta)
+		h.dep.SendCode(p)
 		err = p.Proceed(ctx)
 	case payload.TypeGetRequest:
-		p := proc.NewGetRequest(originMeta)
-		h.dep.GetRequest(p)
+		p := proc.NewSendRequest(originMeta)
+		h.dep.SendRequest(p)
 		err = p.Proceed(ctx)
 	default:
 		err = fmt.Errorf("no pass handler for message type %s", payloadType.String())

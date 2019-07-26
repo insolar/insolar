@@ -82,6 +82,7 @@ func TestMarshalUnmarshal(t *testing.T) {
 		{tp: payload.TypeAbandonedRequestsNotification, pl: &payload.AbandonedRequestsNotification{}},
 		{tp: payload.TypeGetLightInitialState, pl: &payload.GetLightInitialState{}},
 		{tp: payload.TypeLightInitialState, pl: &payload.LightInitialState{}},
+		{tp: payload.TypeGetIndex, pl: &payload.GetIndex{}},
 	}
 
 	for _, d := range table {

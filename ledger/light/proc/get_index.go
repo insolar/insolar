@@ -186,50 +186,64 @@ func (p *EnsureIndexWM) process(ctx context.Context) error {
 		idx.LifelineLastUsed = flow.Pulse(ctx)
 		err = p.Dep.IndexModifier.SetIndex(ctx, flow.Pulse(ctx), idx)
 		if err != nil {
-			return errors.Wrap(err, "failed to update lifeline usage")
+			return errors.Wrap(err, "EnsureIndexWM: failed to update lifeline usage")
 		}
 		return nil
 	}
 	if err != object.ErrIndexNotFound {
-		return errors.Wrap(err, "failed to fetch index")
+		return errors.Wrap(err, "EnsureIndexWM: failed to fetch index")
 	}
 
-	logger.Debug("failed to fetch index (fetching from heavy)")
+	logger.Debug("EnsureIndexWM: failed to fetch index (fetching from heavy)")
 	heavy, err := p.Dep.Coordinator.Heavy(ctx)
 	if err != nil {
-		return errors.Wrap(err, "failed to calculate heavy")
+		return errors.Wrap(err, "EnsureIndexWM: failed to calculate heavy")
 	}
-	genericReply, err := p.Dep.Bus.Send(ctx, &message.GetObjectIndex{
-		Object: *insolar.NewReference(p.object),
-	}, &insolar.MessageSendOptions{
-		Receiver: heavy,
+
+	ensureIndex, err := payload.NewMessage(&payload.GetIndex{
+		ObjectID: p.object,
 	})
 	if err != nil {
+		return errors.Wrap(err, "EnsureIndexWM: failed to create EnsureIndex message")
+	}
+
+	reps, done := p.Dep.Sender.SendTarget(ctx, ensureIndex, *heavy)
+	defer done()
+
+	res, ok := <-reps
+	if !ok {
+		return errors.New("EnsureIndexWM: no reply")
+	}
+
+	pl, err := payload.UnmarshalFromMeta(res.Payload)
+	if err != nil {
+		return errors.Wrap(err, "EnsureIndexWM: failed to unmarshal reply")
+	}
+
+	switch rep := pl.(type) {
+	case *payload.Index:
+		p.Result.Lifeline, err = object.DecodeLifeline(rep.Index)
+		if err != nil {
+			return errors.Wrap(err, "EnsureIndexWM: failed to decode index")
+		}
+
+		err = p.Dep.IndexModifier.SetIndex(ctx, flow.Pulse(ctx), record.Index{
+			LifelineLastUsed: flow.Pulse(ctx),
+			Lifeline:         p.Result.Lifeline,
+			PendingRecords:   []insolar.ID{},
+			ObjID:            p.object,
+		})
+		if err != nil {
+			return errors.Wrap(err, "EnsureIndexWM: failed to save lifeline")
+		}
+		return nil
+	case *payload.Error:
 		logger.WithFields(map[string]interface{}{
 			"jet": p.jet.DebugString(),
 			"pn":  flow.Pulse(ctx),
-		}).Error(errors.Wrapf(err, "failed to fetch index from heavy - %v", p.object.DebugString()))
-		return errors.Wrap(err, "failed to fetch index from heavy")
+		}).Error(errors.Wrapf(err, "EnsureIndexWM: failed to fetch index from heavy - %v", p.object.DebugString()))
+		return errors.Wrap(err, "EnsureIndexWM: failed to fetch index from heavy")
+	default:
+		return fmt.Errorf("EnsureIndexWM: unexpected reply %T", pl)
 	}
-	rep, ok := genericReply.(*reply.ObjectIndex)
-	if !ok {
-		return fmt.Errorf("failed to fetch index from heavy: unexpected reply type %T", genericReply)
-	}
-
-	p.Result.Lifeline, err = object.DecodeLifeline(rep.Index)
-	if err != nil {
-		return errors.Wrap(err, "failed to decode index")
-	}
-
-	err = p.Dep.IndexModifier.SetIndex(ctx, flow.Pulse(ctx), record.Index{
-		LifelineLastUsed: flow.Pulse(ctx),
-		Lifeline:         p.Result.Lifeline,
-		PendingRecords:   []insolar.ID{},
-		ObjID:            p.object,
-	})
-	if err != nil {
-		return errors.Wrap(err, "failed to save lifeline")
-	}
-
-	return nil
 }
