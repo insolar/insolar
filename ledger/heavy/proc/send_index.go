@@ -42,7 +42,7 @@ func (p *SendIndex) Dep(
 	p.dep.sender = sender
 }
 
-func NewEnsureIndex(meta payload.Meta) *SendIndex {
+func NewSendIndex(meta payload.Meta) *SendIndex {
 	return &SendIndex{
 		meta: meta,
 	}
