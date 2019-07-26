@@ -271,7 +271,13 @@ type Packet struct {
 
 func (p *Packet) String() string {
 	packetCtx := newPacketContext(context.Background(), &p.Header)
-	return fmt.Sprintf("h:%v b:{%v}", p.Header, p.EncryptableBody.DebugString(&packetCtx))
+	return fmt.Sprintf(
+		"s:%d t:%d pt:%s b:{%v}",
+		p.Header.SourceID,
+		p.Header.TargetID,
+		p.Header.GetPacketType().String(),
+		p.EncryptableBody.Debug(&packetCtx),
+	)
 }
 
 func (p *Packet) setSignature(signature cryptkit.SignatureHolder) {
