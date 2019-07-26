@@ -203,6 +203,10 @@ func (p *EnsureIndexWM) process(ctx context.Context) error {
 	ensureIndex, err := payload.NewMessage(&payload.EnsureIndex{
 		ObjectID: p.object,
 	})
+	if err != nil {
+		return errors.Wrap(err, "EnsureIndexWM: failed to create EnsureIndex message")
+	}
+
 	reps, done := p.Dep.Sender.SendTarget(ctx, ensureIndex, *heavy)
 	defer done()
 
