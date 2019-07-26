@@ -224,11 +224,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		records := object.NewRecordMemory()
 		indexes := object.NewIndexStorageMemory()
 		writeController := hot.NewWriteController()
+		waiter := hot.NewChannelWaiter()
 
 		c := component.Manager{}
 		c.Inject(CryptoScheme)
-
-		waiter := hot.NewChannelWaiter()
 
 		handler := artifactmanager.NewMessageHandler(&conf)
 		handler.PulseCalculator = Pulses
@@ -304,11 +303,14 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			WmBus,
 		)
 
+		stateIniter := executor.NewStateIniter(Jets, waiter, drops, Coordinator, WmBus)
+
 		pm := pulsemanager.NewPulseManager(
 			jetSplitter,
 			lthSyncer,
 			writeController,
 			hotSender,
+			stateIniter,
 		)
 		pm.MessageHandler = handler
 		pm.Bus = Bus

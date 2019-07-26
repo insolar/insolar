@@ -146,7 +146,6 @@ func (nm *DiscoveryNodeManager) activateNodeRecord(
 		*contract,
 		genesisrefs.ContractNodeDomain,
 		rootdomain.GenesisRef(insolar.GenesisNameNodeRecord+"_proto"),
-		false,
 		nodeData,
 	)
 	if err != nil {

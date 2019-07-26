@@ -45,19 +45,20 @@ func _() {
 	_ = x[TypeReplication-34]
 	_ = x[TypeGetJet-35]
 	_ = x[TypeAbandonedRequestsNotification-36]
-	_ = x[TypeEnsureIndex-37]
-	_ = x[TypeReturnResults-38]
-	_ = x[TypeCallMethod-39]
-	_ = x[TypeExecutorResults-40]
-	_ = x[TypePendingFinished-41]
-	_ = x[TypeAdditionalCallFromPreviousExecutor-42]
-	_ = x[TypeStillExecuting-43]
-	_ = x[_latestType-44]
+	_ = x[TypeGetLightInitialState-37]
+	_ = x[TypeLightInitialState-38]
+	_ = x[TypeReturnResults-39]
+	_ = x[TypeCallMethod-40]
+	_ = x[TypeExecutorResults-41]
+	_ = x[TypePendingFinished-42]
+	_ = x[TypeAdditionalCallFromPreviousExecutor-43]
+	_ = x[TypeStillExecuting-44]
+	_ = x[_latestType-45]
 }
 
-const _Type_name = "TypeUnknownTypeMetaTypeErrorTypeIDTypeIDsTypeJetTypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndexTypePassTypeGetCodeTypeCodeTypeSetCodeTypeSetIncomingRequestTypeSetOutgoingRequestTypeSagaCallAcceptNotificationTypeGetFilamentTypeGetRequestTypeRequestTypeFilamentSegmentTypeSetResultTypeActivateTypeRequestInfoTypeGotHotConfirmationTypeDeactivateTypeUpdateTypeHotObjectsTypeResultInfoTypeGetPendingsTypeHasPendingsTypePendingsInfoTypeReplicationTypeGetJetTypeAbandonedRequestsNotificationTypeEnsureIndexTypeReturnResultsTypeCallMethodTypeExecutorResultsTypePendingFinishedTypeAdditionalCallFromPreviousExecutorTypeStillExecuting_latestType"
+const _Type_name = "TypeUnknownTypeMetaTypeErrorTypeIDTypeIDsTypeJetTypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndexTypePassTypeGetCodeTypeCodeTypeSetCodeTypeSetIncomingRequestTypeSetOutgoingRequestTypeSagaCallAcceptNotificationTypeGetFilamentTypeGetRequestTypeRequestTypeFilamentSegmentTypeSetResultTypeActivateTypeRequestInfoTypeGotHotConfirmationTypeDeactivateTypeUpdateTypeHotObjectsTypeResultInfoTypeGetPendingsTypeHasPendingsTypePendingsInfoTypeReplicationTypeGetJetTypeAbandonedRequestsNotificationTypeGetLightInitialStateTypeLightInitialStateTypeReturnResultsTypeCallMethodTypeExecutorResultsTypePendingFinishedTypeAdditionalCallFromPreviousExecutorTypeStillExecuting_latestType"
 
-var _Type_index = [...]uint16{0, 11, 19, 28, 34, 41, 48, 57, 70, 83, 95, 107, 116, 124, 135, 143, 154, 176, 198, 228, 243, 257, 268, 287, 300, 312, 327, 349, 363, 373, 387, 401, 416, 431, 447, 462, 472, 505, 520, 537, 551, 570, 589, 627, 645, 656}
+var _Type_index = [...]uint16{0, 11, 19, 28, 34, 41, 48, 57, 70, 83, 95, 107, 116, 124, 135, 143, 154, 176, 198, 228, 243, 257, 268, 287, 300, 312, 327, 349, 363, 373, 387, 401, 416, 431, 447, 462, 472, 505, 529, 550, 567, 581, 600, 619, 657, 675, 686}
 
 func (i Type) String() string {
 	if i >= Type(len(_Type_index)-1) {

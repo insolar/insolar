@@ -48,7 +48,6 @@ type Manager interface {
 	ActivateObject(
 		ctx context.Context,
 		domain, obj, parent, prototype insolar.Reference,
-		asDelegate bool,
 		memory []byte,
 	) error
 
@@ -147,10 +146,9 @@ func (m *Scope) RegisterResult(
 func (m *Scope) ActivateObject(
 	ctx context.Context,
 	domain, obj, parent, prototype insolar.Reference,
-	asDelegate bool,
 	memory []byte,
 ) error {
-	return m.activateObject(ctx, domain, obj, prototype, false, parent, asDelegate, memory)
+	return m.activateObject(ctx, domain, obj, prototype, false, parent, memory)
 }
 
 func (m *Scope) activateObject(
@@ -160,7 +158,6 @@ func (m *Scope) activateObject(
 	prototype insolar.Reference,
 	isPrototype bool,
 	parent insolar.Reference,
-	asDelegate bool,
 	memory []byte,
 ) error {
 	parentIdx, err := m.IndexAccessor.ForID(ctx, m.PulseNumber, *parent.Record())
@@ -174,7 +171,6 @@ func (m *Scope) activateObject(
 		Image:       prototype,
 		IsPrototype: isPrototype,
 		Parent:      parent,
-		IsDelegate:  asDelegate,
 	}
 	err = m.updateStateObject(ctx, obj, stateRecord, memory)
 	if err != nil {
@@ -182,9 +178,6 @@ func (m *Scope) activateObject(
 	}
 
 	asType := &prototype
-	if !asDelegate {
-		asType = nil
-	}
 	err = m.registerChild(
 		ctx,
 		obj,

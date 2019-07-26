@@ -33,9 +33,8 @@ message Jet {
 enum CallType {
     CTMethod = 0;
     CTSaveAsChild = 1;
-    CTSaveAsDelegate = 2;
 
-    CTGenesis = 3;
+    CTGenesis = 2;
 }
 
 enum ReturnMode {
