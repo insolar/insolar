@@ -19,6 +19,7 @@ package goplugin
 
 import (
 	"context"
+	"fmt"
 	"net/rpc"
 	"sync"
 	"time"
@@ -231,6 +232,7 @@ func (gp *GoPlugin) CallConstructor(
 	select {
 	case callResult := <-resultChan:
 		if callResult.Error != nil {
+			fmt.Printf("AALEKSEEV: CallConstructor, callResult = %v\n\n", callResult) // AALEKSEEV TODO FIXME CallConstructor, callResult = {{[] <nil>} reading body EOF}
 			return nil, nil, errors.Wrap(callResult.Error, "problem with API call")
 		}
 		return callResult.Response.Ret, callResult.Response.ConstructorError, nil

@@ -305,7 +305,7 @@ func startNet() error {
 		return errors.Wrap(err, "[ startNet  ] Can't change dir")
 	}
 
-	cmd = exec.Command("./scripts/insolard/launchnet.sh", "-ngw")
+	cmd = exec.Command("./scripts/insolard/launchnet.sh", "-gw") // AALEKSEEV: was -ngw
 	stdout, _ = cmd.StdoutPipe()
 	if err != nil {
 		return errors.Wrap(err, "[ startNet ] could't set stdout: ")
