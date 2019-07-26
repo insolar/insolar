@@ -36,7 +36,7 @@ type SetResult struct {
 	message    payload.Meta
 	result     record.Result
 	jetID      insolar.JetID
-	sideEffect record.Record
+	sideEffect record.State
 
 	dep struct {
 		writer   hot.WriteAccessor
@@ -51,9 +51,9 @@ type SetResult struct {
 
 func NewSetResult(
 	msg payload.Meta,
-	result record.Result,
 	jetID insolar.JetID,
-	sideEffect record.Record,
+	result record.Result,
+	sideEffect record.State,
 ) *SetResult {
 	return &SetResult{
 		message:    msg,
@@ -84,7 +84,7 @@ func (p *SetResult) Dep(
 func (p *SetResult) Proceed(ctx context.Context) error {
 	var resultID insolar.ID
 	{
-		hash := record.HashVirtual(p.dep.pcs.ReferenceHasher(), record.Wrap(p.result))
+		hash := record.HashVirtual(p.dep.pcs.ReferenceHasher(), record.Wrap(&p.result))
 		resultID = *insolar.NewID(flow.Pulse(ctx), hash)
 	}
 	objectID := p.result.Object
@@ -167,7 +167,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 
 		// Save request record to storage.
 		{
-			virtual := record.Wrap(p.result)
+			virtual := record.Wrap(&p.result)
 			material := record.Material{Virtual: &virtual, JetID: p.jetID}
 			err := p.dep.records.Set(ctx, resultID, material)
 			if err != nil {
@@ -178,7 +178,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		var filamentID insolar.ID
 		// Save filament record to storage.
 		{
-			virtual := record.Wrap(record.PendingFilament{
+			virtual := record.Wrap(&record.PendingFilament{
 				RecordID:       resultID,
 				PreviousRecord: index.Lifeline.PendingPointer,
 			})
@@ -206,11 +206,18 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 				if err != nil {
 					return errors.Wrap(err, "failed to save filament record")
 				}
+
+				index.Lifeline.LatestState = &id
+				index.Lifeline.StateID = p.sideEffect.ID()
+				index.Lifeline.LatestUpdate = flow.Pulse(ctx)
+				if activate, ok := p.sideEffect.(*record.Activate); ok {
+					index.Lifeline.Parent = activate.Parent
+				}
 			}
 		}
 
 		// Save updated index.
-		index.LifelineLastUsed = resultID.Pulse()
+		index.LifelineLastUsed = flow.Pulse(ctx)
 		index.Lifeline.PendingPointer = &filamentID
 		index.Lifeline.EarliestOpenRequest = earliestPending
 		err = p.dep.indexes.SetIndex(ctx, resultID.Pulse(), index)
@@ -328,431 +335,4 @@ func notifyDetached(
 		_, done := sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, *insolar.NewReference(objectID))
 		done()
 	}
-}
-
-type ActivateObject struct {
-	message    payload.Meta
-	activate   record.Activate
-	activateID insolar.ID
-	result     record.Result
-	resultID   insolar.ID
-	jetID      insolar.JetID
-
-	dep struct {
-		writeAccessor hot.WriteAccessor
-		indexLocker   object.IndexLocker
-		records       object.RecordModifier
-		indexStorage  object.IndexStorage
-		filament      executor.FilamentManager
-		sender        bus.Sender
-	}
-}
-
-func NewActivateObject(
-	msg payload.Meta,
-	activate record.Activate,
-	activateID insolar.ID,
-	res record.Result,
-	resID insolar.ID,
-	jetID insolar.JetID,
-) *ActivateObject {
-	return &ActivateObject{
-		message:    msg,
-		activate:   activate,
-		activateID: activateID,
-		result:     res,
-		resultID:   resID,
-		jetID:      jetID,
-	}
-}
-
-func (a *ActivateObject) Dep(
-	w hot.WriteAccessor,
-	il object.IndexLocker,
-	r object.RecordModifier,
-	is object.IndexStorage,
-	f executor.FilamentManager,
-	s bus.Sender,
-) {
-	a.dep.records = r
-	a.dep.indexLocker = il
-	a.dep.indexStorage = is
-	a.dep.filament = f
-	a.dep.writeAccessor = w
-	a.dep.sender = s
-}
-
-func (a *ActivateObject) Proceed(ctx context.Context) error {
-	done, err := a.dep.writeAccessor.Begin(ctx, flow.Pulse(ctx))
-	if err == hot.ErrWriteClosed {
-		return flow.ErrCancelled
-	}
-	if err != nil {
-		return errors.Wrap(err, "failed to start write")
-	}
-	defer done()
-
-	logger := inslogger.FromContext(ctx)
-
-	a.dep.indexLocker.Lock(*a.activate.Request.Record())
-	defer a.dep.indexLocker.Unlock(*a.activate.Request.Record())
-
-	idx, err := a.dep.indexStorage.ForID(ctx, flow.Pulse(ctx), *a.activate.Request.Record())
-	if err != nil {
-		return errors.Wrap(err, "failed to save result")
-	}
-	if idx.Lifeline.StateID == record.StateDeactivation {
-		msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeDeactivated})
-		if err != nil {
-			return errors.Wrap(err, "failed to create reply")
-		}
-
-		a.dep.sender.Reply(ctx, a.message, msg)
-		return nil
-	}
-
-	foundRes, err := a.dep.filament.SetResult(ctx, a.resultID, a.jetID, a.result)
-	if err != nil {
-		return errors.Wrap(err, "failed to save result")
-	}
-
-	if foundRes != nil {
-		logger.Errorf("duplicated result. resultID: %v, requestID: %v", a.resultID.DebugString(), a.result.Request.Record().DebugString())
-		foundResBuf, err := foundRes.Record.Virtual.Marshal()
-		if err != nil {
-			return err
-		}
-
-		msg, err := payload.NewMessage(&payload.ResultInfo{
-			ObjectID: *a.activate.Request.Record(),
-			ResultID: a.resultID,
-			Result:   foundResBuf,
-		})
-		if err != nil {
-			return errors.Wrap(err, "failed to create reply")
-		}
-
-		a.dep.sender.Reply(ctx, a.message, msg)
-
-		return nil
-	}
-
-	activateVirt := record.Wrap(a.activate)
-	rec := record.Material{
-		Virtual: &activateVirt,
-		JetID:   a.jetID,
-	}
-
-	err = a.dep.records.Set(ctx, a.activateID, rec)
-	if err != nil {
-		return errors.Wrap(err, "can't save record into storage")
-	}
-
-	idx, err = a.dep.indexStorage.ForID(ctx, flow.Pulse(ctx), *a.activate.Request.Record())
-	if err != nil {
-		return errors.Wrap(err, "failed to save result")
-	}
-	idx.Lifeline.LatestState = &a.activateID
-	idx.Lifeline.StateID = a.activate.ID()
-	idx.Lifeline.Parent = a.activate.Parent
-	idx.Lifeline.LatestUpdate = flow.Pulse(ctx)
-
-	err = a.dep.indexStorage.SetIndex(ctx, flow.Pulse(ctx), idx)
-	if err != nil {
-		return err
-	}
-	logger.WithField("state", idx.Lifeline.LatestState.DebugString()).Debug("saved object")
-
-	msg, err := payload.NewMessage(&payload.ResultInfo{
-		ObjectID: *a.activate.Request.Record(),
-		ResultID: a.resultID,
-	})
-	if err != nil {
-		return errors.Wrap(err, "failed to create reply")
-	}
-
-	a.dep.sender.Reply(ctx, a.message, msg)
-
-	return nil
-}
-
-type UpdateObject struct {
-	message  payload.Meta
-	update   record.Amend
-	updateID insolar.ID
-	result   record.Result
-	resultID insolar.ID
-	jetID    insolar.JetID
-
-	dep struct {
-		writeAccessor hot.WriteAccessor
-		indexLocker   object.IndexLocker
-		records       object.RecordModifier
-		index         object.IndexStorage
-		filament      executor.FilamentManager
-		sender        bus.Sender
-	}
-}
-
-func NewUpdateObject(
-	msg payload.Meta,
-	update record.Amend,
-	updateID insolar.ID,
-	res record.Result,
-	resID insolar.ID,
-	jetID insolar.JetID,
-) *UpdateObject {
-	return &UpdateObject{
-		message:  msg,
-		update:   update,
-		updateID: updateID,
-		result:   res,
-		resultID: resID,
-		jetID:    jetID,
-	}
-}
-
-func (a *UpdateObject) Dep(
-	w hot.WriteAccessor,
-	il object.IndexLocker,
-	r object.RecordModifier,
-	i object.IndexStorage,
-	f executor.FilamentManager,
-	s bus.Sender,
-) {
-	a.dep.records = r
-	a.dep.indexLocker = il
-	a.dep.index = i
-	a.dep.filament = f
-	a.dep.writeAccessor = w
-	a.dep.sender = s
-}
-
-func (a *UpdateObject) Proceed(ctx context.Context) error {
-	done, err := a.dep.writeAccessor.Begin(ctx, flow.Pulse(ctx))
-	if err == hot.ErrWriteClosed {
-		return flow.ErrCancelled
-	}
-	if err != nil {
-		return errors.Wrap(err, "failed to start write")
-	}
-	defer done()
-
-	logger := inslogger.FromContext(ctx)
-
-	a.dep.indexLocker.Lock(a.result.Object)
-	defer a.dep.indexLocker.Unlock(a.result.Object)
-
-	idx, err := a.dep.index.ForID(ctx, flow.Pulse(ctx), a.result.Object)
-	if err != nil {
-		return errors.Wrap(err, "can't get index from storage")
-	}
-	if idx.Lifeline.StateID == record.StateDeactivation {
-		msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeDeactivated})
-		if err != nil {
-			return errors.Wrap(err, "failed to create reply")
-		}
-
-		a.dep.sender.Reply(ctx, a.message, msg)
-		return nil
-	}
-
-	updateVirt := record.Wrap(a.update)
-	rec := record.Material{
-		Virtual: &updateVirt,
-		JetID:   a.jetID,
-	}
-
-	err = a.dep.records.Set(ctx, a.updateID, rec)
-
-	if err == object.ErrOverride {
-		// Since there is no deduplication yet it's quite possible that there will be
-		// two writes by the same key. For this reason currently instead of reporting
-		// an error we return OK (nil error). When deduplication will be implemented
-		// we should change `nil` to `ErrOverride` here.
-		logger.Errorf("can't save record into storage: %s", err)
-		return nil
-	} else if err != nil {
-		return errors.Wrap(err, "can't save record into storage")
-	}
-
-	idx.Lifeline.LatestState = &a.updateID
-	idx.Lifeline.StateID = a.update.ID()
-	idx.Lifeline.LatestUpdate = flow.Pulse(ctx)
-	idx.LifelineLastUsed = flow.Pulse(ctx)
-
-	logger.Debugf("object is updated")
-
-	err = a.dep.index.SetIndex(ctx, flow.Pulse(ctx), idx)
-	if err != nil {
-		return err
-	}
-	logger.WithField("state", idx.Lifeline.LatestState.DebugString()).Debug("saved object")
-
-	foundRes, err := a.dep.filament.SetResult(ctx, a.resultID, a.jetID, a.result)
-	if err != nil {
-		return errors.Wrap(err, "failed to save result")
-	}
-
-	var foundResBuf []byte
-	if foundRes != nil {
-		logger.Errorf("duplicated result. resultID: %v, requestID: %v", a.resultID.DebugString(), a.result.Request.Record().DebugString())
-		foundResBuf, err = foundRes.Record.Virtual.Marshal()
-		if err != nil {
-			return err
-		}
-	}
-
-	msg, err := payload.NewMessage(&payload.ResultInfo{
-		ObjectID: a.result.Object,
-		ResultID: a.resultID,
-		Result:   foundResBuf,
-	})
-	if err != nil {
-		return errors.Wrap(err, "failed to create reply")
-	}
-
-	a.dep.sender.Reply(ctx, a.message, msg)
-
-	return nil
-}
-
-type DeactivateObject struct {
-	message      payload.Meta
-	deactivate   record.Deactivate
-	deactivateID insolar.ID
-	result       record.Result
-	resultID     insolar.ID
-	jetID        insolar.JetID
-
-	dep struct {
-		writeAccessor hot.WriteAccessor
-		indexLocker   object.IndexLocker
-		records       object.RecordModifier
-		indices       object.IndexStorage
-		filament      executor.FilamentManager
-		sender        bus.Sender
-	}
-}
-
-func NewDeactivateObject(
-	msg payload.Meta,
-	deactivate record.Deactivate,
-	deactivateID insolar.ID,
-	res record.Result,
-	resID insolar.ID,
-	jetID insolar.JetID,
-) *DeactivateObject {
-	return &DeactivateObject{
-		message:      msg,
-		deactivate:   deactivate,
-		deactivateID: deactivateID,
-		result:       res,
-		resultID:     resID,
-		jetID:        jetID,
-	}
-}
-
-func (a *DeactivateObject) Dep(
-	w hot.WriteAccessor,
-	il object.IndexLocker,
-	r object.RecordModifier,
-	i object.IndexStorage,
-	f executor.FilamentManager,
-	s bus.Sender,
-) {
-	a.dep.records = r
-	a.dep.indexLocker = il
-	a.dep.indices = i
-	a.dep.filament = f
-	a.dep.writeAccessor = w
-	a.dep.sender = s
-}
-
-func (a *DeactivateObject) Proceed(ctx context.Context) error {
-	done, err := a.dep.writeAccessor.Begin(ctx, flow.Pulse(ctx))
-	if err == hot.ErrWriteClosed {
-		return flow.ErrCancelled
-	}
-	if err != nil {
-		return errors.Wrap(err, "failed to start write")
-	}
-	defer done()
-
-	logger := inslogger.FromContext(ctx)
-
-	a.dep.indexLocker.Lock(a.result.Object)
-	defer a.dep.indexLocker.Unlock(a.result.Object)
-
-	idx, err := a.dep.indices.ForID(ctx, flow.Pulse(ctx), a.result.Object)
-	if err != nil {
-		return errors.Wrap(err, "can't get index from storage")
-	}
-	if idx.Lifeline.StateID == record.StateDeactivation {
-		msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeDeactivated})
-		if err != nil {
-			return errors.Wrap(err, "failed to create reply")
-		}
-
-		a.dep.sender.Reply(ctx, a.message, msg)
-		return nil
-	}
-
-	deactivateVirt := record.Wrap(a.deactivate)
-	rec := record.Material{
-		Virtual: &deactivateVirt,
-		JetID:   a.jetID,
-	}
-
-	err = a.dep.records.Set(ctx, a.deactivateID, rec)
-
-	if err == object.ErrOverride {
-		// Since there is no deduplication yet it's quite possible that there will be
-		// two writes by the same key. For this reason currently instead of reporting
-		// an error we return OK (nil error). When deduplication will be implemented
-		// we should change `nil` to `ErrOverride` here.
-		logger.Errorf("can't save record into storage: %s", err)
-		return nil
-	} else if err != nil {
-		return errors.Wrap(err, "can't save record into storage")
-	}
-
-	idx.Lifeline.LatestState = &a.deactivateID
-	idx.Lifeline.StateID = a.deactivate.ID()
-	idx.Lifeline.LatestUpdate = flow.Pulse(ctx)
-	idx.LifelineLastUsed = flow.Pulse(ctx)
-
-	logger.Debugf("object is deactivated")
-
-	err = a.dep.indices.SetIndex(ctx, flow.Pulse(ctx), idx)
-	if err != nil {
-		return err
-	}
-	logger.WithField("state", idx.Lifeline.LatestState.DebugString()).Debug("saved object")
-
-	foundRes, err := a.dep.filament.SetResult(ctx, a.resultID, a.jetID, a.result)
-	if err != nil {
-		return errors.Wrap(err, "failed to save result")
-	}
-	var foundResBuf []byte
-	if foundRes != nil {
-		logger.Errorf("duplicated result. resultID: %v, requestID: %v", a.resultID.DebugString(), a.result.Request.Record().DebugString())
-		foundResBuf, err = foundRes.Record.Virtual.Marshal()
-		if err != nil {
-			return err
-		}
-	}
-
-	msg, err := payload.NewMessage(&payload.ResultInfo{
-		ObjectID: a.result.Object,
-		ResultID: a.resultID,
-		Result:   foundResBuf,
-	})
-	if err != nil {
-		return errors.Wrap(err, "failed to create reply")
-	}
-
-	a.dep.sender.Reply(ctx, a.message, msg)
-
-	return nil
 }

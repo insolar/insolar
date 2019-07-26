@@ -32,7 +32,7 @@ func callSetCode(ctx context.Context, t *testing.T, s *Server) (payload.Payload,
 	code := make([]byte, 100)
 	_, err := rand.Read(code)
 	require.NoError(t, err)
-	rec := record.Wrap(record.Code{Code: code})
+	rec := record.Wrap(&record.Code{Code: code})
 	buf, err := rec.Marshal()
 	require.NoError(t, err)
 	reps, done := s.Send(ctx, &payload.SetCode{
@@ -81,7 +81,7 @@ func callSetIncomingRequest(
 	args := make([]byte, 100)
 	_, err := rand.Read(args)
 	require.NoError(t, err)
-	rec := record.Wrap(record.IncomingRequest{
+	rec := record.Wrap(&record.IncomingRequest{
 		Object:    insolar.NewReference(objectID),
 		Arguments: args,
 		CallType:  ct,
@@ -145,7 +145,7 @@ func callActivateObject(ctx context.Context, t *testing.T, s *Server, objectID i
 	mem := make([]byte, 100)
 	_, err := rand.Read(mem)
 	require.NoError(t, err)
-	rec := record.Wrap(record.Activate{
+	rec := record.Wrap(&record.Activate{
 		Request: *insolar.NewReference(objectID),
 		Memory:  mem,
 	})
@@ -154,7 +154,7 @@ func callActivateObject(ctx context.Context, t *testing.T, s *Server, objectID i
 	res := make([]byte, 100)
 	_, err = rand.Read(res)
 	require.NoError(t, err)
-	resultRecord := record.Wrap(record.Result{
+	resultRecord := record.Wrap(&record.Result{
 		Request: *insolar.NewReference(objectID),
 		Object:  objectID,
 		Payload: res,
@@ -186,7 +186,7 @@ func callAmendObject(ctx context.Context, t *testing.T, s *Server, objectID, req
 	mem := make([]byte, 100)
 	_, err := rand.Read(mem)
 	require.NoError(t, err)
-	rec := record.Wrap(record.Amend{
+	rec := record.Wrap(&record.Amend{
 		Memory: mem,
 	})
 	buf, err := rec.Marshal()
@@ -194,7 +194,7 @@ func callAmendObject(ctx context.Context, t *testing.T, s *Server, objectID, req
 	res := make([]byte, 100)
 	_, err = rand.Read(res)
 	require.NoError(t, err)
-	resultRecord := record.Wrap(record.Result{
+	resultRecord := record.Wrap(&record.Result{
 		Request: *insolar.NewReference(requestID),
 		Object:  objectID,
 		Payload: res,
@@ -226,7 +226,7 @@ func callDeactivateObject(ctx context.Context, t *testing.T, s *Server, objectID
 	mem := make([]byte, 100)
 	_, err := rand.Read(mem)
 	require.NoError(t, err)
-	rec := record.Wrap(record.Deactivate{
+	rec := record.Wrap(&record.Deactivate{
 		Request: *insolar.NewReference(objectID),
 	})
 	buf, err := rec.Marshal()
@@ -234,7 +234,7 @@ func callDeactivateObject(ctx context.Context, t *testing.T, s *Server, objectID
 	res := make([]byte, 100)
 	_, err = rand.Read(res)
 	require.NoError(t, err)
-	resultRecord := record.Wrap(record.Result{
+	resultRecord := record.Wrap(&record.Result{
 		Request: *insolar.NewReference(requestID),
 		Object:  objectID,
 		Payload: res,

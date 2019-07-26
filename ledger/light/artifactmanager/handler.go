@@ -70,7 +70,6 @@ type MessageHandler struct {
 	FlowDispatcher *dispatcher.Dispatcher
 	handlers       map[insolar.MessageType]insolar.MessageHandler
 
-	filamentModifier   *executor.FilamentModifierDefault
 	FilamentCalculator *executor.FilamentCalculatorDefault
 	RequestChecker     *executor.RequestCheckerDefault
 }
@@ -145,36 +144,6 @@ func NewMessageHandler(
 				h.Records,
 				h.IndexStorage,
 				h.PCS,
-			)
-		},
-		ActivateObject: func(p *proc.ActivateObject) {
-			p.Dep(
-				h.WriteAccessor,
-				h.IndexLocker,
-				h.Records,
-				h.IndexStorage,
-				h.filamentModifier,
-				h.Sender,
-			)
-		},
-		DeactivateObject: func(p *proc.DeactivateObject) {
-			p.Dep(
-				h.WriteAccessor,
-				h.IndexLocker,
-				h.Records,
-				h.IndexStorage,
-				h.filamentModifier,
-				h.Sender,
-			)
-		},
-		UpdateObject: func(p *proc.UpdateObject) {
-			p.Dep(
-				h.WriteAccessor,
-				h.IndexLocker,
-				h.Records,
-				h.IndexStorage,
-				h.filamentModifier,
-				h.Sender,
 			)
 		},
 		HasPendings: func(p *proc.HasPendings) {
@@ -272,20 +241,6 @@ func NewMessageHandler(
 		return initHandle(msg).Past
 	})
 	return h
-}
-
-// Init initializes handlers and middleware.
-func (h *MessageHandler) Init(ctx context.Context) error {
-	h.filamentModifier = executor.NewFilamentModifier(
-		h.IndexStorage,
-		h.Records,
-		h.PCS,
-		h.FilamentCalculator,
-		h.PulseCalculator,
-		h.Sender,
-	)
-
-	return nil
 }
 
 func (h *MessageHandler) OnPulse(ctx context.Context, pn insolar.Pulse) {

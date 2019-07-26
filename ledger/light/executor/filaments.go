@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
@@ -35,13 +34,6 @@ import (
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 )
-
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentManager -o ./ -s _mock.go
-
-type FilamentManager interface {
-	// SetResult creates result record.
-	SetResult(ctx context.Context, resID insolar.ID, jetID insolar.JetID, result record.Result) (foundResult *record.CompositeFilamentRecord, err error)
-}
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCalculator -o ./ -s _mock.go
 
@@ -84,185 +76,12 @@ type FilamentCalculator interface {
 		foundResult *record.CompositeFilamentRecord,
 		err error,
 	)
-
-	FindRecord(ctx context.Context, startFrom insolar.ID, objectID, recordID insolar.ID) (record.CompositeFilamentRecord, error)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCleaner -o ./ -s _mock.go
 
 type FilamentCleaner interface {
 	Clear(objID insolar.ID)
-}
-
-// NewFilamentModifier creates FilamentModifierDefault with all required components.
-func NewFilamentModifier(
-	indexes object.IndexStorage,
-	recordStorage object.RecordStorage,
-	pcs insolar.PlatformCryptographyScheme,
-	calculator FilamentCalculator,
-	pulses pulse.Calculator,
-	sender bus.Sender,
-) *FilamentModifierDefault {
-	return &FilamentModifierDefault{
-		calculator: calculator,
-		indexes:    indexes,
-		records:    recordStorage,
-		pcs:        pcs,
-		pulses:     pulses,
-		sender:     sender,
-	}
-}
-
-// FilamentModifierDefault implements FilamentManager.
-type FilamentModifierDefault struct {
-	calculator FilamentCalculator
-	indexes    object.IndexStorage
-	records    object.RecordStorage
-	pcs        insolar.PlatformCryptographyScheme
-	pulses     pulse.Calculator
-	sender     bus.Sender
-}
-
-func (m *FilamentModifierDefault) SetResult(ctx context.Context, resultID insolar.ID, jetID insolar.JetID, result record.Result) (*record.CompositeFilamentRecord, error) {
-	if resultID.IsEmpty() {
-		return nil, errors.New("request id is empty")
-	}
-	if !jetID.IsValid() {
-		return nil, errors.New("jet is not valid")
-	}
-	if result.Object.IsEmpty() {
-		return nil, errors.New("object is empty")
-	}
-
-	objectID := result.Object
-
-	idx, err := m.indexes.ForID(ctx, resultID.Pulse(), objectID)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to update a result's filament")
-	}
-
-	foundRes, err := m.calculator.ResultDuplicate(ctx, objectID, resultID, result)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to save a result record")
-	}
-	if foundRes != nil {
-		return foundRes, nil
-	}
-
-	// Save request record to storage.
-	{
-		virtual := record.Wrap(result)
-		material := record.Material{Virtual: &virtual, JetID: jetID}
-		err := m.records.Set(ctx, resultID, material)
-		if err != nil && err != object.ErrOverride {
-			return nil, errors.Wrap(err, "failed to save a result record")
-		}
-	}
-
-	var filamentID insolar.ID
-	// Save filament record to storage.
-	{
-		rec := record.PendingFilament{
-			RecordID:       resultID,
-			PreviousRecord: idx.Lifeline.PendingPointer,
-		}
-		virtual := record.Wrap(rec)
-		hash := record.HashVirtual(m.pcs.ReferenceHasher(), virtual)
-		id := *insolar.NewID(resultID.Pulse(), hash)
-		material := record.Material{Virtual: &virtual, JetID: jetID}
-		err := m.records.Set(ctx, id, material)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to save filament record")
-		}
-		filamentID = id
-	}
-
-	idx.Lifeline.PendingPointer = &filamentID
-	err = m.indexes.SetIndex(ctx, resultID.Pulse(), idx)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create a meta-record about result")
-	}
-
-	pending, err := m.calculator.OpenedRequests(ctx, resultID.Pulse(), objectID, true)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to calculate pending requests")
-	}
-	if len(pending) > 0 {
-		calculatedEarliest := pending[0].RecordID.Pulse()
-		idx.Lifeline.EarliestOpenRequest = &calculatedEarliest
-		err := m.notifyDetached(ctx, pending, *result.Request.Record(), result.Object, filamentID)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to check detaches")
-		}
-	} else {
-		idx.Lifeline.EarliestOpenRequest = nil
-	}
-
-	err = m.indexes.SetIndex(ctx, resultID.Pulse(), idx)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create a meta-record about pending request")
-	}
-
-	inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"object_id":  objectID.DebugString(),
-		"request_id": result.Request.Record().DebugString(),
-		"result_id":  resultID.DebugString(),
-	}).Debug("set result")
-
-	return nil, nil
-}
-
-func (m *FilamentModifierDefault) notifyDetached(ctx context.Context, pendingReqs []record.CompositeFilamentRecord, reqID, objID, resFilID insolar.ID) error {
-	closedReq, err := m.calculator.FindRecord(ctx, resFilID, objID, reqID)
-	if err != nil {
-		return errors.Wrap(err, "failed to notify about detached")
-	}
-
-	_, isOutgoing := record.Unwrap(closedReq.Record.Virtual).(*record.OutgoingRequest)
-	if isOutgoing {
-		return nil
-	}
-
-	needToBeeNotified := func(rec record.CompositeFilamentRecord) (bool, *record.OutgoingRequest) {
-		outReq, isOutgoing := record.Unwrap(rec.Record.Virtual).(*record.OutgoingRequest)
-		if isOutgoing && outReq.IsDetached() && outReq.Reason.Record().Equal(reqID) {
-			return true, outReq
-		}
-
-		return false, nil
-	}
-
-	prepareMessage := func(reqID insolar.ID, outReq *record.OutgoingRequest) (*message.Message, error) {
-		buf, err := outReq.Marshal()
-		if err != nil {
-			return nil, err
-		}
-
-		msg, err := payload.NewMessage(&payload.SagaCallAcceptNotification{
-			ObjectID:      objID,
-			OutgoingReqID: reqID,
-			Request:       buf,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		return msg, nil
-	}
-
-	for _, pendingReq := range pendingReqs {
-		if ok, outReq := needToBeeNotified(pendingReq); ok {
-			msg, err := prepareMessage(pendingReq.RecordID, outReq)
-			if err != nil {
-				return errors.Wrap(err, "failed to notify about detached")
-			}
-
-			_, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, *insolar.NewReference(objID))
-			done()
-		}
-	}
-
-	return nil
 }
 
 type FilamentCalculatorDefault struct {
@@ -540,36 +359,6 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	}
 
 	return foundRequest, foundResult, nil
-}
-
-func (c *FilamentCalculatorDefault) FindRecord(ctx context.Context, startFrom insolar.ID, objectID, recordID insolar.ID) (record.CompositeFilamentRecord, error) {
-	cache := c.cache.Get(objectID)
-	cache.Lock()
-	defer cache.Unlock()
-
-	iter := newFetchingIterator(
-		ctx,
-		cache,
-		objectID,
-		startFrom,
-		recordID.Pulse(),
-		c.jetFetcher,
-		c.coordinator,
-		c.sender,
-	)
-
-	for iter.HasPrev() {
-		rec, err := iter.Prev(ctx)
-		if err != nil {
-			return record.CompositeFilamentRecord{}, errors.Wrap(err, "failed to calculate pending")
-		}
-
-		if rec.RecordID == recordID {
-			return rec, nil
-		}
-	}
-
-	return record.CompositeFilamentRecord{}, ErrRecordNotFound
 }
 
 func (c *FilamentCalculatorDefault) Clear(objID insolar.ID) {

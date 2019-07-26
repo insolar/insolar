@@ -110,7 +110,7 @@ func Test_DuplicatedRequests(t *testing.T) {
 			APINode:   gen.Reference(),
 		}
 		initReqMsg := &payload.SetIncomingRequest{
-			Request: record.Wrap(initReq),
+			Request: record.Wrap(&initReq),
 		}
 
 		// Set first request
@@ -145,7 +145,7 @@ func Test_DuplicatedRequests(t *testing.T) {
 			APINode:   gen.Reference(),
 		}
 		initReqMsg := &payload.SetIncomingRequest{
-			Request: record.Wrap(initReq),
+			Request: record.Wrap(&initReq),
 		}
 
 		// Set first request
@@ -162,7 +162,7 @@ func Test_DuplicatedRequests(t *testing.T) {
 			Caller:   *insolar.NewReference(reqInfo.RequestID),
 		}
 		outgoingReqMsg := &payload.SetOutgoingRequest{
-			Request: record.Wrap(outgoingReq),
+			Request: record.Wrap(&outgoingReq),
 		}
 
 		// Set outgoing request
@@ -197,7 +197,7 @@ func Test_DuplicatedRequests(t *testing.T) {
 			APINode:   gen.Reference(),
 		}
 		initReqMsg := &payload.SetIncomingRequest{
-			Request: record.Wrap(initReq),
+			Request: record.Wrap(&initReq),
 		}
 
 		// Set first request
@@ -242,7 +242,7 @@ func Test_DuplicatedRequests(t *testing.T) {
 			APINode:   gen.Reference(),
 		}
 		initReqMsg := &payload.SetIncomingRequest{
-			Request: record.Wrap(initReq),
+			Request: record.Wrap(&initReq),
 		}
 
 		// Set first request
@@ -254,7 +254,7 @@ func Test_DuplicatedRequests(t *testing.T) {
 		mem := make([]byte, 100)
 		_, err = rand.Read(mem)
 		require.NoError(t, err)
-		rec := record.Wrap(record.Activate{
+		rec := record.Wrap(&record.Activate{
 			Request: *insolar.NewReference(reqInfo.RequestID),
 			Memory:  mem,
 		})
@@ -263,7 +263,7 @@ func Test_DuplicatedRequests(t *testing.T) {
 		res := make([]byte, 100)
 		_, err = rand.Read(res)
 		require.NoError(t, err)
-		resultRecord := record.Wrap(record.Result{
+		resultRecord := record.Wrap(&record.Result{
 			Request: *insolar.NewReference(reqInfo.RequestID),
 			Object:  reqInfo.RequestID,
 			Payload: res,
@@ -287,10 +287,10 @@ func Test_DuplicatedRequests(t *testing.T) {
 		require.NotNil(t, secondReqInfo.Result)
 
 		// Check for the result
-		returnedResult := record.Virtual{}
+		returnedResult := record.Material{}
 		err = returnedResult.Unmarshal(secondReqInfo.Result)
 		require.NoError(t, err)
-		returnedRes := record.Unwrap(&returnedResult).(*record.Result)
+		returnedRes := record.Unwrap(returnedResult.Virtual).(*record.Result)
 		require.Equal(t, *insolar.NewReference(reqInfo.RequestID), returnedRes.Request)
 		require.Equal(t, reqInfo.RequestID, returnedRes.Object)
 	})

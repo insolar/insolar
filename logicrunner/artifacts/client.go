@@ -617,7 +617,7 @@ func (m *client) DeployCode(
 		Code:        code,
 		MachineType: machineType,
 	}
-	virtual := record.Wrap(codeRec)
+	virtual := record.Wrap(&codeRec)
 	buf, err := virtual.Marshal()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal record")
@@ -757,8 +757,8 @@ func (m *client) activateObject(
 		Request: obj,
 	}
 
-	virtActivate := record.Wrap(activate)
-	virtResult := record.Wrap(result)
+	virtActivate := record.Wrap(&activate)
+	virtResult := record.Wrap(&result)
 
 	activateBuf, err := virtActivate.Marshal()
 	if err != nil {
@@ -791,7 +791,7 @@ func (m *client) activateObject(
 		if asDelegate {
 			asType = &prototype
 		}
-		virtChild := record.Wrap(child)
+		virtChild := record.Wrap(&child)
 
 		err = m.registerChild(
 			ctx,
@@ -924,8 +924,8 @@ func (m *client) RegisterResult(
 			return err
 		}
 
-		vResultRecord := record.Wrap(resultRecord)
-		vActivateRecord := record.Wrap(record.Activate{
+		vResultRecord := record.Wrap(&resultRecord)
+		vActivateRecord := record.Wrap(&record.Activate{
 			Request:     request,
 			Memory:      memory,
 			Image:       imageRef,
@@ -952,8 +952,8 @@ func (m *client) RegisterResult(
 	case RequestSideEffectAmend:
 		objectStateID, objectImage, memory := result.Amend()
 
-		vResultRecord := record.Wrap(resultRecord)
-		vAmendRecord := record.Wrap(record.Amend{
+		vResultRecord := record.Wrap(&resultRecord)
+		vAmendRecord := record.Wrap(&record.Amend{
 			Request:     request,
 			Memory:      memory,
 			Image:       objectImage,
@@ -979,8 +979,8 @@ func (m *client) RegisterResult(
 	case RequestSideEffectDeactivate:
 		objectStateID := result.Deactivate()
 
-		vResultRecord := record.Wrap(resultRecord)
-		vDeactivateRecord := record.Wrap(record.Deactivate{
+		vResultRecord := record.Wrap(&resultRecord)
+		vDeactivateRecord := record.Wrap(&record.Deactivate{
 			Request:   request,
 			PrevState: objectStateID,
 		})
@@ -997,7 +997,7 @@ func (m *client) RegisterResult(
 		pl = &plTyped
 
 	case RequestSideEffectNone:
-		vResultRecord := record.Wrap(resultRecord)
+		vResultRecord := record.Wrap(&resultRecord)
 
 		plTyped := payload.SetResult{}
 		plTyped.Result, err = vResultRecord.Marshal()
@@ -1033,7 +1033,7 @@ func (m *client) RegisterResult(
 
 		err = m.registerChild(
 			ctx,
-			record.Wrap(child),
+			record.Wrap(&child),
 			parentRef,
 			result.ObjectReference(),
 			asType,

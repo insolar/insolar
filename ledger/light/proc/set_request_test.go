@@ -106,7 +106,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 		idxStorage.SetIndexFunc = func(_ context.Context, pn insolar.PulseNumber, idx record.Index) (r error) {
 			require.Equal(t, requestID.Pulse(), pn)
 
-			virtual = record.Wrap(record.PendingFilament{
+			virtual = record.Wrap(&record.PendingFilament{
 				RecordID:       requestID,
 				PreviousRecord: nil,
 			})
@@ -220,58 +220,4 @@ func TestSetRequest_Proceed(t *testing.T) {
 
 		mc.Finish()
 	})
-}
-
-func TestDeactivateObject_ObjectIsDeactivated(t *testing.T) {
-	t.Parallel()
-
-	ctx := flow.TestContextWithPulse(
-		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
-	)
-
-	writeAccessor := hot.NewWriteAccessorMock(t)
-	writeAccessor.BeginMock.Return(func() {}, nil)
-
-	idxLockMock := object.NewIndexLockerMock(t)
-	idxLockMock.LockMock.Return()
-	idxLockMock.UnlockMock.Return()
-
-	idxStorageMock := object.NewIndexStorageMock(t)
-	idxStorageMock.ForIDMock.Return(record.Index{
-		Lifeline: record.Lifeline{
-			StateID: record.StateDeactivation,
-		},
-	}, nil)
-	idxStorageMock.SetIndexMock.Return(nil)
-
-	sender := bus.NewSenderMock(t)
-	sender.ReplyFunc = func(_ context.Context, _ payload.Meta, inMsg *message.Message) {
-		resp, err := payload.Unmarshal(inMsg.Payload)
-		require.NoError(t, err)
-
-		res, ok := resp.(*payload.Error)
-		require.True(t, ok)
-		require.Equal(t, payload.CodeDeactivated, int(res.Code))
-	}
-
-	p := proc.NewDeactivateObject(
-		payload.Meta{},
-		record.Deactivate{},
-		gen.ID(),
-		record.Result{},
-		gen.ID(),
-		gen.JetID(),
-	)
-	p.Dep(
-		writeAccessor,
-		idxLockMock,
-		nil,
-		idxStorageMock,
-		nil,
-		sender,
-	)
-
-	err := p.Proceed(ctx)
-	require.NoError(t, err)
 }

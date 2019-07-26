@@ -218,11 +218,6 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 		handler.FilamentCalculator = filamentCalculator
 		handler.RequestChecker = requestChecker
 
-		err := handler.Init(ctx)
-		if err != nil {
-			return nil, err
-		}
-
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
 		var lightCleaner = replication.NewCleaner(
 			Jets.(jet.Cleaner),

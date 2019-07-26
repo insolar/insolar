@@ -362,7 +362,7 @@ func TestUpdateObject_ErrorFromWaitHot(t *testing.T) {
 				return nil
 			case *proc.EnsureIndexWM:
 				return nil
-			case *proc.UpdateObject:
+			case *proc.SetResult:
 				return nil
 			default:
 				panic("unknown procedure")
@@ -421,7 +421,7 @@ func TestUpdateObject_ErrorFromEnsureIndex(t *testing.T) {
 				return nil
 			case *proc.EnsureIndexWM:
 				return nil
-			case *proc.UpdateObject:
+			case *proc.SetResult:
 				return nil
 			default:
 				panic("unknown procedure")
@@ -443,7 +443,7 @@ func TestUpdateObject_ErrorFromUpdateObject(t *testing.T) {
 
 	msg := metaUpdateMsg(t)
 
-	t.Run("updateobject procedure returns err", func(t *testing.T) {
+	t.Run("SetResult procedure returns err", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
@@ -456,8 +456,8 @@ func TestUpdateObject_ErrorFromUpdateObject(t *testing.T) {
 				return nil
 			case *proc.EnsureIndexWM:
 				return nil
-			case *proc.UpdateObject:
-				return errors.New("error from updateobject")
+			case *proc.SetResult:
+				return errors.New("error from SetResult")
 			default:
 				panic("unknown procedure")
 			}
@@ -465,10 +465,10 @@ func TestUpdateObject_ErrorFromUpdateObject(t *testing.T) {
 
 		handler := handle.NewUpdateObject(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
-		assert.EqualError(t, err, "error from updateobject")
+		assert.EqualError(t, err, "error from SetResult")
 	})
 
-	t.Run("updateobject procedure returns nil err", func(t *testing.T) {
+	t.Run("SetResult procedure returns nil err", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
@@ -481,7 +481,7 @@ func TestUpdateObject_ErrorFromUpdateObject(t *testing.T) {
 				return nil
 			case *proc.EnsureIndexWM:
 				return nil
-			case *proc.UpdateObject:
+			case *proc.SetResult:
 				return nil
 			default:
 				panic("unknown procedure")

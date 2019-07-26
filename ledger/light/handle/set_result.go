@@ -89,7 +89,7 @@ func (s *SetResult) Present(ctx context.Context, f flow.Flow) error {
 		return errors.Wrap(err, "can't get index")
 	}
 
-	setResult := proc.NewSetResult(s.message, *result, jetID, nil)
+	setResult := proc.NewSetResult(s.message, jetID, *result, nil)
 	s.dep.SetResult(setResult)
 	return f.Procedure(ctx, setResult, false)
 }

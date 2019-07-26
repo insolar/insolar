@@ -60,13 +60,6 @@ func (s *DeactivateObject) Present(ctx context.Context, f flow.Flow) error {
 		return fmt.Errorf("wrong deactivate record type: %T", deact)
 	}
 
-	calcDeact := proc.NewCalculateID(msg.Record, flow.Pulse(ctx))
-	s.dep.CalculateID(calcDeact)
-	if err := f.Procedure(ctx, calcDeact, true); err != nil {
-		return err
-	}
-	deactivateID := calcDeact.Result.ID
-
 	resultVirt := record.Virtual{}
 	err = resultVirt.Unmarshal(msg.Result)
 	if err != nil {
@@ -83,13 +76,6 @@ func (s *DeactivateObject) Present(ctx context.Context, f flow.Flow) error {
 	if obj.IsEmpty() {
 		return errors.New("object is nil")
 	}
-
-	calcRes := proc.NewCalculateID(msg.Result, flow.Pulse(ctx))
-	s.dep.CalculateID(calcRes)
-	if err := f.Procedure(ctx, calcRes, true); err != nil {
-		return err
-	}
-	resultID := calcRes.Result.ID
 
 	passIfNotExecutor := !s.passed
 	jet := proc.NewCheckJet(obj, flow.Pulse(ctx), s.message, passIfNotExecutor)
@@ -116,7 +102,7 @@ func (s *DeactivateObject) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
-	deactivateObject := proc.NewDeactivateObject(s.message, *deactivate, deactivateID, *result, resultID, objJetID)
-	s.dep.DeactivateObject(deactivateObject)
-	return f.Procedure(ctx, deactivateObject, false)
+	setResult := proc.NewSetResult(s.message, objJetID, *result, deactivate)
+	s.dep.SetResult(setResult)
+	return f.Procedure(ctx, setResult, false)
 }

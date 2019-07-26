@@ -232,7 +232,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	// Store filament record.
 	var filamentID insolar.ID
 	{
-		virtual := record.Wrap(record.PendingFilament{
+		virtual := record.Wrap(&record.PendingFilament{
 			RecordID:       p.requestID,
 			PreviousRecord: index.Lifeline.PendingPointer,
 		})
