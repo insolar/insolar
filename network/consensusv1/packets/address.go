@@ -89,11 +89,6 @@ func NewNodeAddress(address string) (NodeAddress, error) {
 	return addr, newNodeAddress(ip, portNumber, &addr)
 }
 
-func NewNodeAddressOf(ip net.IP, portNumber int) (NodeAddress, error) {
-	var addr NodeAddress
-	return addr, newNodeAddress(ip, portNumber, &addr)
-}
-
 func newNodeAddress(ip net.IP, portNumber int, addr *NodeAddress) error {
 	switch ipSize {
 	case net.IPv6len:

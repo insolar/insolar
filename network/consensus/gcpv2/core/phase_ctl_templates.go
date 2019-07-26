@@ -83,7 +83,7 @@ func (*PrepPhaseControllerTemplate) StartWorker(ctx context.Context, realm *Prep
 type HostPacketDispatcherTemplate struct {
 }
 
-func (*HostPacketDispatcherTemplate) DispatchUnknownMemberPacket(ctx context.Context, memberID insolar.ShortNodeID,
+func (*HostPacketDispatcherTemplate) TriggerUnknownMember(ctx context.Context, memberID insolar.ShortNodeID,
 	packet transport.MemberPacketReader, from endpoints.Inbound) (bool, error) {
 	return false, nil
 }
@@ -102,7 +102,7 @@ func (*HostPacketDispatcherTemplate) DispatchMemberPacket(ctx context.Context, p
 type MemberPacketDispatcherTemplate struct {
 }
 
-func (*MemberPacketDispatcherTemplate) DispatchUnknownMemberPacket(ctx context.Context, memberID insolar.ShortNodeID,
+func (*MemberPacketDispatcherTemplate) TriggerUnknownMember(ctx context.Context, memberID insolar.ShortNodeID,
 	packet transport.MemberPacketReader, from endpoints.Inbound) (bool, error) {
 	return false, nil
 }

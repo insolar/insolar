@@ -402,12 +402,12 @@ func TestWriteTo(t *testing.T) {
 	n, err := sd.WriteTo(buf)
 	require.Equal(t, int64(8), n)
 
-	require.Equal(t, nil, err)
+	require.Nil(t, err)
 }
 
 func TestSignedDataString(t *testing.T) {
 	bits := longbits.NewBits64(0)
-	require.True(t, NewSignedData(&bits, Digest{}, Signature{}).String() != "")
+	require.NotEmpty(t, NewSignedData(&bits, Digest{}, Signature{}).String())
 }
 
 func TestNewSignatureKey(t *testing.T) {
@@ -455,5 +455,5 @@ func TestEquals(t *testing.T) {
 func TestSignatureKeyString(t *testing.T) {
 	fd := longbits.NewFoldableReaderMock(t)
 	sk := NewSignatureKey(fd, SignatureMethod("test"), PublicAsymmetricKey)
-	require.True(t, sk.String() != "")
+	require.NotEmpty(t, sk.String())
 }

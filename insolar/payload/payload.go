@@ -54,6 +54,7 @@ const (
 	TypeSetResult
 	TypeActivate
 	TypeRequestInfo
+	TypeGotHotConfirmation
 	TypeDeactivate
 	TypeUpdate
 	TypeHotObjects
@@ -220,6 +221,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *RequestInfo:
 		pl.Polymorph = uint32(TypeRequestInfo)
 		return pl.Marshal()
+	case *GotHotConfirmation:
+		pl.Polymorph = uint32(TypeGotHotConfirmation)
+		return pl.Marshal()
 	case *GetRequest:
 		pl.Polymorph = uint32(TypeGetRequest)
 		return pl.Marshal()
@@ -373,6 +377,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeRequestInfo:
 		pl := RequestInfo{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeGotHotConfirmation:
+		pl := GotHotConfirmation{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	case TypeGetRequest:

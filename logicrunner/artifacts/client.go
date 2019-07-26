@@ -468,7 +468,7 @@ func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]i
 	}
 }
 
-// HasPendingRequests returns true if object has unclosed requests.
+// HasPendings returns true if object has unclosed requests.
 func (m *client) HasPendings(
 	ctx context.Context,
 	object insolar.Reference,

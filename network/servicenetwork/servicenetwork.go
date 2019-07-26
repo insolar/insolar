@@ -125,9 +125,12 @@ type ServiceNetwork struct {
 	gatewayMu sync.RWMutex
 }
 
+var PULSETIMEOUT time.Duration
+
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manager) (*ServiceNetwork, error) {
 	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, skip: conf.Service.Skip}
+	PULSETIMEOUT = time.Millisecond * time.Duration(conf.Pulsar.PulseTime)
 	return serviceNetwork, nil
 }
 
@@ -289,6 +292,15 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 
 	n.lock.Lock()
 	defer n.lock.Unlock()
+	done := make(chan struct{})
+	defer close(done)
+	go func() {
+		select {
+		case <-time.After(PULSETIMEOUT):
+			log.Error("Node stopped due to long pulse processing")
+		case <-done:
+		}
+	}()
 
 	ctx = utils.NewPulseContext(ctx, uint32(newPulse.PulseNumber))
 	logger.Infof("Got new pulse number: %d", newPulse.PulseNumber)
@@ -316,8 +328,8 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 
 	//TODO: use network pulsestorage here
 
-	if n.CurrentPulse.PulseNumber != insolar.GenesisPulse.PulseNumber && !isNextPulse(&n.CurrentPulse, &newPulse) {
-		logger.Infof("Incorrect pulse number. Current: %+v. New: %+v", n.CurrentPulse, newPulse)
+	if n.CurrentPulse.PulseNumber != insolar.GenesisPulse.PulseNumber && isOldPulse(&n.CurrentPulse, &newPulse) {
+		logger.Warnf("Incorrect pulse number. Current: %+v. New: %+v", n.CurrentPulse, newPulse)
 		return
 	}
 
@@ -426,8 +438,8 @@ func (n *ServiceNetwork) sendMessage(ctx context.Context, msg *message.Message) 
 	return nil
 }
 
-func isNextPulse(currentPulse, newPulse *insolar.Pulse) bool {
-	return newPulse.PulseNumber > currentPulse.PulseNumber && newPulse.PulseNumber >= currentPulse.NextPulseNumber
+func isOldPulse(currentPulse, newPulse *insolar.Pulse) bool {
+	return newPulse.PulseNumber <= currentPulse.PulseNumber || newPulse.PulseNumber < currentPulse.NextPulseNumber
 }
 
 func (n *ServiceNetwork) processIncoming(ctx context.Context, args []byte) ([]byte, error) {

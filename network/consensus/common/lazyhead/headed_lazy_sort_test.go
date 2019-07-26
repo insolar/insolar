@@ -62,7 +62,7 @@ func lessTestFn(v1 interface{}, v2 interface{}) bool {
 
 func TestNewHeadedLazySortedList(t *testing.T) {
 	hl := NewHeadedLazySortedList(1, lessTestFn, -1)
-	require.Equal(t, 0, len(hl.data.data))
+	require.Len(t, hl.data.data, 0)
 
 	require.Equal(t, 2, cap(hl.data.data))
 
@@ -136,7 +136,7 @@ func TestInnerGet(t *testing.T) {
 
 func TestLen(t *testing.T) {
 	hl := NewHeadedLazySortedList(1, lessTestFn, 1)
-	require.Equal(t, 0, hl.Len())
+	require.Zero(t, hl.Len())
 
 	hl.Add(2)
 	require.Equal(t, 1, hl.Len())
@@ -205,25 +205,25 @@ func TestInnerCutOffHeadByLen(t *testing.T) {
 	inl.Add(2)
 	inl.Add(3)
 	to := inl.cutOffHeadByLen(0, nil)
-	require.Equal(t, 0, len(to))
+	require.Len(t, to, 0)
 
-	require.Equal(t, 2, len(inl.data))
+	require.Len(t, inl.data, 2)
 
 	to = inl.cutOffHeadByLen(1, nil)
-	require.Equal(t, 1, len(to))
+	require.Len(t, to, 1)
 
 	require.Equal(t, 1, inl.len)
 
-	require.Equal(t, nil, inl.data[1])
+	require.Nil(t, inl.data[1])
 
 	inl.Add(4)
 	to2 := make([]interface{}, 1)
 	to = inl.cutOffHeadByLen(2, to2)
-	require.Equal(t, 3, len(to))
+	require.Len(t, to, 3)
 
-	require.Equal(t, 0, inl.len)
+	require.Zero(t, inl.len)
 
-	require.Equal(t, nil, inl.data[1])
+	require.Nil(t, inl.data[1])
 }
 
 func TestGetReversedHead(t *testing.T) {
@@ -269,7 +269,7 @@ func TestCutOffHeadInto(t *testing.T) {
 	item := 2
 	hl.Add(item)
 	to := hl.CutOffHeadInto(1, nil)
-	require.Equal(t, 1, len(to))
+	require.Len(t, to, 1)
 
 	require.Equal(t, []interface{}{item}, to)
 }
@@ -279,11 +279,11 @@ func TestCutOffHeadByLenInto(t *testing.T) {
 	item1 := 2
 	hl.Add(item1)
 	to := hl.CutOffHeadByLenInto(0, nil)
-	require.Equal(t, []interface{}(nil), to)
+	require.Nil(t, to)
 
 	to2 := make([]interface{}, 1)
 	to = hl.CutOffHeadByLenInto(0, to2)
-	require.Equal(t, len(to2), len(to))
+	require.Len(t, to, len(to2))
 
 	item2 := 3
 	hl.Add(item2)

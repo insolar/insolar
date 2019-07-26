@@ -63,13 +63,13 @@ func TestNewBits64(t *testing.T) {
 
 	require.Equal(t, uint8(0x22), bits.AsBytes()[1])
 
-	require.Equal(t, uint8(0), bits.AsBytes()[7])
+	require.Zero(t, bits.AsBytes()[7])
 }
 
 func TestBits64WriteTo(t *testing.T) {
 	bits := NewBits64(1)
 	n, err := bits.WriteTo(&writerToComparer{other: &bits})
-	require.Equal(t, nil, err)
+	require.Nil(t, err)
 
 	require.Equal(t, int64(8), n)
 
@@ -82,7 +82,7 @@ func TestBits64Read(t *testing.T) {
 	bits := NewBits64(1)
 	dest := make([]byte, 2)
 	n, err := bits.Read(dest)
-	require.Equal(t, nil, err)
+	require.Nil(t, err)
 
 	require.Equal(t, 2, n)
 
@@ -90,7 +90,7 @@ func TestBits64Read(t *testing.T) {
 
 	dest = make([]byte, 9)
 	n, err = bits.Read(dest)
-	require.Equal(t, nil, err)
+	require.Nil(t, err)
 
 	require.Equal(t, 8, n)
 
@@ -98,9 +98,9 @@ func TestBits64Read(t *testing.T) {
 
 	n, err = bits.Read(nil)
 
-	require.Equal(t, nil, err)
+	require.Nil(t, err)
 
-	require.Equal(t, 0, n)
+	require.Zero(t, n)
 }
 
 func TestBits64FoldToUint64(t *testing.T) {
@@ -120,7 +120,7 @@ func TestBits64AsByteString(t *testing.T) {
 }
 
 func TestBits64String(t *testing.T) {
-	require.True(t, NewBits64(1).String() != "")
+	require.NotEmpty(t, NewBits64(1).String())
 }
 
 func TestBits64AsBytes(t *testing.T) {
@@ -147,7 +147,7 @@ func TestNewBits128(t *testing.T) {
 func TestBits128WriteTo(t *testing.T) {
 	bits := NewBits128(1, 2)
 	n, err := bits.WriteTo(&writerToComparer{other: &bits})
-	require.Equal(t, nil, err)
+	require.Nil(t, err)
 
 	require.Equal(t, int64(16), n)
 
@@ -162,7 +162,7 @@ func TestBits128Read(t *testing.T) {
 	bits := NewBits128(1, 2)
 	dest := make([]byte, 2)
 	n, err := bits.Read(dest)
-	require.Equal(t, nil, err)
+	require.Nil(t, err)
 
 	require.Equal(t, 2, n)
 
@@ -170,7 +170,7 @@ func TestBits128Read(t *testing.T) {
 
 	dest = make([]byte, 17)
 	n, err = bits.Read(dest)
-	require.Equal(t, nil, err)
+	require.Nil(t, err)
 
 	require.Equal(t, 16, n)
 
@@ -179,9 +179,9 @@ func TestBits128Read(t *testing.T) {
 	require.Equal(t, uint8(2), dest[8])
 
 	n, err = bits.Read(nil)
-	require.Equal(t, nil, err)
+	require.Nil(t, err)
 
-	require.Equal(t, 0, n)
+	require.Zero(t, n)
 }
 
 func TestBits128FoldToUint64(t *testing.T) {
@@ -197,7 +197,7 @@ func TestBits128FixedByteSize(t *testing.T) {
 }
 
 func TestBits128String(t *testing.T) {
-	require.True(t, NewBits128(1, 2).String() != "")
+	require.NotEmpty(t, NewBits128(1, 2).String())
 }
 
 func TestBits128AsByteString(t *testing.T) {
@@ -226,7 +226,7 @@ func TestBits224Read(t *testing.T) {
 	bits := Bits224{1, 2, 3}
 	dest := make([]byte, 2)
 	n, err := bits.Read(dest)
-	require.Equal(t, nil, err)
+	require.Nil(t, err)
 
 	require.Equal(t, 2, n)
 
@@ -234,16 +234,16 @@ func TestBits224Read(t *testing.T) {
 
 	dest = make([]byte, 25)
 	n, err = bits.Read(dest)
-	require.Equal(t, nil, err)
+	require.Nil(t, err)
 
 	require.Equal(t, 24, n)
 
 	require.Equal(t, uint8(1), dest[0])
 
 	n, err = bits.Read(nil)
-	require.Equal(t, nil, err)
+	require.Nil(t, err)
 
-	require.Equal(t, 0, n)
+	require.Zero(t, n)
 }
 
 func TestBits224FoldToUint64(t *testing.T) {
@@ -260,7 +260,7 @@ func TestBits224FixedByteSize(t *testing.T) {
 }
 
 func TestBits224String(t *testing.T) {
-	require.True(t, Bits224{}.String() != "")
+	require.NotEmpty(t, Bits224{}.String())
 }
 
 func TestBits224AsByteString(t *testing.T) {
@@ -283,7 +283,7 @@ func TestBits224AsBytes(t *testing.T) {
 func TestBits256WriteTo(t *testing.T) {
 	bits := Bits256{1}
 	n, err := bits.WriteTo(&writerToComparer{other: &bits})
-	require.Equal(t, nil, err)
+	require.Nil(t, err)
 
 	require.Equal(t, int64(32), n)
 
@@ -296,7 +296,7 @@ func TestBits256Read(t *testing.T) {
 	bits := Bits256{1, 2, 3}
 	dest := make([]byte, 2)
 	n, err := bits.Read(dest)
-	require.Equal(t, nil, err)
+	require.Nil(t, err)
 
 	require.Equal(t, 2, n)
 
@@ -304,16 +304,16 @@ func TestBits256Read(t *testing.T) {
 
 	dest = make([]byte, 33)
 	n, err = bits.Read(dest)
-	require.Equal(t, nil, err)
+	require.Nil(t, err)
 
 	require.Equal(t, 32, n)
 
 	require.Equal(t, uint8(1), dest[0])
 
 	n, err = bits.Read(nil)
-	require.Equal(t, nil, err)
+	require.Nil(t, err)
 
-	require.Equal(t, 0, n)
+	require.Zero(t, n)
 }
 
 func TestBits256FoldToUint64(t *testing.T) {
@@ -350,7 +350,7 @@ func TestBits256FixedByteSize(t *testing.T) {
 }
 
 func TestBits256String(t *testing.T) {
-	require.True(t, Bits256{}.String() != "")
+	require.NotEmpty(t, Bits256{}.String())
 }
 
 func TestBits256AsByteString(t *testing.T) {
@@ -375,7 +375,7 @@ func TestBits256AsBytes(t *testing.T) {
 func TestBits512WriteTo(t *testing.T) {
 	bits := Bits512{1}
 	n, err := bits.WriteTo(&writerToComparer{other: &bits})
-	require.Equal(t, nil, err)
+	require.Nil(t, err)
 
 	require.Equal(t, int64(64), n)
 
@@ -388,7 +388,7 @@ func TestBits512Read(t *testing.T) {
 	bits := Bits512{1, 2, 3}
 	dest := make([]byte, 2)
 	n, err := bits.Read(dest)
-	require.Equal(t, nil, err)
+	require.Nil(t, err)
 
 	require.Equal(t, 2, n)
 
@@ -396,16 +396,16 @@ func TestBits512Read(t *testing.T) {
 
 	dest = make([]byte, 65)
 	n, err = bits.Read(dest)
-	require.Equal(t, nil, err)
+	require.Nil(t, err)
 
 	require.Equal(t, 64, n)
 
 	require.Equal(t, uint8(1), dest[0])
 
 	n, err = bits.Read(nil)
-	require.Equal(t, nil, err)
+	require.Nil(t, err)
 
-	require.Equal(t, 0, n)
+	require.Zero(t, n)
 }
 
 func TestBits512FoldToUint64(t *testing.T) {
@@ -455,7 +455,7 @@ func TestBits512FixedByteSize(t *testing.T) {
 }
 
 func TestBits512String(t *testing.T) {
-	require.True(t, Bits512{}.String() != "")
+	require.NotEmpty(t, Bits512{}.String())
 }
 
 func TestBits512AsByteString(t *testing.T) {
@@ -509,59 +509,14 @@ func TestFillBitsWithStaticNoise(t *testing.T) {
 	require.Panics(t, func() { FillBitsWithStaticNoise(1, []byte{1}) })
 }
 
-func TestReadFromArray(t *testing.T) {
-	t.Skipped()
-	// var d, s []byte
-	// n, err := readFromArray(d, s)
-	// require.Equal(t, 0, n)
-	//
-	// require.Equal(t, nil, err)
-	//
-	// d = make([]byte, 1)
-	// n, err = readFromArray(d, s)
-	// require.Equal(t, 0, n)
-	//
-	// require.Equal(t, nil, err)
-	//
-	// d = nil
-	// s = []byte{1}
-	// n, err = readFromArray(d, s)
-	// require.Equal(t, 0, n)
-	//
-	// require.Equal(t, nil, err)
-	//
-	// d = make([]byte, 1)
-	// n, err = readFromArray(d, s)
-	// require.Equal(t, 1, n)
-	//
-	// require.Equal(t, nil, err)
-	//
-	// require.Equal(t, s[0], d[0])
-	//
-	// require.Equal(t, uint8(1), d[0])
-	//
-	// d = make([]byte, 2)
-	// n, err = readFromArray(d, s)
-	// require.Equal(t, 1, n)
-	//
-	// require.Equal(t, nil, err)
-	//
-	// d = make([]byte, 1)
-	// s = make([]byte, 2)
-	// n, err = readFromArray(d, s)
-	// require.Equal(t, 1, n)
-	//
-	// require.Equal(t, nil, err)
-}
-
 func TestBitsToStringDefault(t *testing.T) {
 	bits := Bits64{1}
-	require.True(t, bitsToStringDefault(&bits) != "")
+	require.NotEmpty(t, bitsToStringDefault(&bits))
 }
 
 func TestBytesToDigestString(t *testing.T) {
 	bits := Bits64{1}
-	require.True(t, BytesToDigestString(&bits, "abc") != "")
+	require.NotEmpty(t, BytesToDigestString(&bits, "abc"))
 }
 
 func TestCopyToFixedBits(t *testing.T) {

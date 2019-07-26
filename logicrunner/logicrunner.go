@@ -22,25 +22,23 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/ThreeDotsLabs/watermill"
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
-	"github.com/ThreeDotsLabs/watermill"
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
-
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
-	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/log"
-
-	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
@@ -111,19 +109,38 @@ func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publi
 		SenderWithRetry: bus.NewWaitOKWithRetrySender(sender, 3),
 	}
 
-	initHandlers(&res)
 	res.ResultsMatcher = newResultsMatcher(&res)
-
 	return &res, nil
 }
 
 func (lr *LogicRunner) LRI() {}
 
-func initHandlers(lr *LogicRunner) {
+func (lr *LogicRunner) Init(ctx context.Context) error {
+	lr.StateStorage = NewStateStorage(
+		lr.Publisher,
+		lr.RequestsExecutor,
+		lr.MessageBus,
+		lr.JetCoordinator,
+		lr.PulseAccessor,
+		lr.ArtifactManager,
+	)
+	lr.rpc = lrCommon.NewRPC(
+		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage),
+		lr.Cfg,
+	)
+
+	lr.initHandlers()
+
+	return nil
+}
+
+func (lr *LogicRunner) initHandlers() {
 	dep := &Dependencies{
-		Publisher: lr.Publisher,
-		lr:        lr,
-		Sender:    lr.Sender,
+		Publisher:      lr.Publisher,
+		StateStorage:   lr.StateStorage,
+		ResultsMatcher: lr.ResultsMatcher,
+		lr:             lr,
+		Sender:         lr.Sender,
 	}
 
 	initHandle := func(msg *watermillMsg.Message) *Init {
@@ -132,13 +149,17 @@ func initHandlers(lr *LogicRunner) {
 			Message: msg,
 		}
 	}
-	lr.FlowDispatcher = dispatcher.NewDispatcher(func(msg *watermillMsg.Message) flow.Handle {
-		return initHandle(msg).Present
-	}, func(msg *watermillMsg.Message) flow.Handle {
-		return initHandle(msg).Future
-	}, func(msg *watermillMsg.Message) flow.Handle {
-		return initHandle(msg).Past
-	})
+	lr.FlowDispatcher = dispatcher.NewDispatcher(
+		func(msg *watermillMsg.Message) flow.Handle {
+			return initHandle(msg).Present
+		},
+		func(msg *watermillMsg.Message) flow.Handle {
+			return initHandle(msg).Future
+		},
+		func(msg *watermillMsg.Message) flow.Handle {
+			return initHandle(msg).Past
+		},
+	)
 
 	innerInitHandle := func(msg *watermillMsg.Message) *InnerInit {
 		return &InnerInit{
@@ -182,23 +203,6 @@ func (lr *LogicRunner) initializeGoPlugin(ctx context.Context) error {
 	if err := lr.MachinesManager.RegisterExecutor(insolar.MachineTypeGoPlugin, gp); err != nil {
 		return err
 	}
-
-	return nil
-}
-
-func (lr *LogicRunner) Init(ctx context.Context) error {
-	lr.StateStorage = NewStateStorage(
-		lr.Publisher,
-		lr.RequestsExecutor,
-		lr.MessageBus,
-		lr.JetCoordinator,
-		lr.PulseAccessor,
-		lr.ArtifactManager,
-	)
-	lr.rpc = lrCommon.NewRPC(
-		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage),
-		lr.Cfg,
-	)
 
 	return nil
 }
@@ -273,50 +277,6 @@ func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context
 	return ctx
 }
 
-// values here (boolean flags) are inverted here, since it's common "predicate" checking function
-func noLoopCheckerPredicate(current *Transcript, args interface{}) bool {
-	apiReqID := args.(string)
-	if current.Request.ReturnMode == record.ReturnNoWait ||
-		current.Request.APIRequestID != apiReqID {
-		return true
-	}
-	return false
-}
-
-func (lr *LogicRunner) CheckExecutionLoop(
-	ctx context.Context, request record.IncomingRequest,
-) bool {
-
-	if request.ReturnMode == record.ReturnNoWait {
-		return false
-	}
-	if request.CallType != record.CTMethod {
-		return false
-	}
-	if request.Object == nil {
-		// should be catched by other code
-		return false
-	}
-
-	broker := lr.StateStorage.GetExecutionState(*request.Object)
-	if broker == nil {
-		return false
-	}
-
-	broker.executionState.Lock()
-	defer broker.executionState.Unlock()
-
-	if broker.currentList.Empty() {
-		return false
-	}
-	if broker.currentList.Check(noLoopCheckerPredicate, request.APIRequestID) {
-		return false
-	}
-
-	inslogger.FromContext(ctx).Error("loop detected")
-	return true
-}
-
 func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 	lr.ResultsMatcher.Clear()
 
@@ -339,25 +299,16 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 		state.Lock()
 
 		if broker := state.ExecutionBroker; broker != nil {
-			broker.executionState.Lock()
-
-			toSend := state.ExecutionBroker.OnPulse(ctx, meNext)
-			messages = append(messages, toSend...)
-
-			if !meNext && state.ExecutionBroker.currentList.Empty() {
+			end, toSend := broker.OnPulse(ctx, meNext)
+			if end {
 				// we're not executing and we have nothing to process
 				state.ExecutionBroker = nil
-			} else if meNext && broker.executionState.pending == insolar.NotPending {
-				// we're executing, micro optimization, check pending
-				// status, reset ledger check status and start execution
-				state.ExecutionBroker.ResetLedgerCheck()
-				state.ExecutionBroker.StartProcessorIfNeeded(ctx)
 			}
 
-			broker.executionState.Unlock()
+			messages = append(messages, toSend...)
 		}
 
-		if state.Validation == nil && state.ExecutionBroker == nil {
+		if state.ExecutionBroker == nil {
 			lr.StateStorage.DeleteObjectState(ref)
 		}
 
@@ -452,6 +403,34 @@ func contextFromServiceData(data message.ServiceData) context.Context {
 		return instracer.WithParentSpan(ctx, parentSpan)
 	}
 	return ctx
+}
+
+func freshContextFromContext(ctx context.Context) context.Context {
+	res := inslogger.ContextWithTrace(
+		context.Background(),
+		inslogger.TraceID(ctx),
+	)
+	//FIXME: need way to get level out of context
+	//res = inslogger.WithLoggerLevel(res, data.LogLevel)
+	parentSpan, ok := instracer.ParentSpan(ctx)
+	if ok {
+		res = instracer.WithParentSpan(res, parentSpan)
+	}
+	return res
+}
+
+func freshContextFromContextAndRequest(ctx context.Context, req record.IncomingRequest) context.Context {
+	res := inslogger.ContextWithTrace(
+		context.Background(),
+		req.APIRequestID, // this is HACK based on awareness, we just know how trace id is formed
+	)
+	//FIXME: need way to get level out of context
+	//res = inslogger.WithLoggerLevel(res, data.LogLevel)
+	parentSpan, ok := instracer.ParentSpan(ctx)
+	if ok {
+		res = instracer.WithParentSpan(res, parentSpan)
+	}
+	return res
 }
 
 func serviceDataFromContext(ctx context.Context) message.ServiceData {

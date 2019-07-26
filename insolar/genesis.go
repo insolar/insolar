@@ -48,9 +48,9 @@ const (
 	GenesisAmountActiveMigrationDaemonMembers = 3
 )
 
-var GenesisNameMigrationDaemonMembers = func() (result []string) {
+var GenesisNameMigrationDaemonMembers = func() (result [GenesisAmountMigrationDaemonMembers]string) {
 	for i := 0; i < GenesisAmountMigrationDaemonMembers; i++ {
-		result = append(result, "migration_daemon_"+strconv.Itoa(i)+GenesisNameMember)
+		result[i] = "migration_daemon_" + strconv.Itoa(i) + GenesisNameMember
 	}
 	return
 }()

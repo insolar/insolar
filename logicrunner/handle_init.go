@@ -22,9 +22,10 @@ import (
 	"fmt"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -39,9 +40,11 @@ const (
 )
 
 type Dependencies struct {
-	Publisher message.Publisher
-	lr        *LogicRunner
-	Sender    bus.Sender
+	Publisher      message.Publisher
+	StateStorage   StateStorage
+	ResultsMatcher ResultMatcher
+	lr             *LogicRunner
+	Sender         bus.Sender
 }
 
 type Init struct {
