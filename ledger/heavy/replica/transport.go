@@ -33,4 +33,5 @@ type Transport interface {
 	Me() string
 }
 
+// Handle is a callback function to process Replication messages.
 type Handle func(data []byte) ([]byte, error)

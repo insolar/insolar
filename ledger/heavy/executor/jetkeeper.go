@@ -24,8 +24,10 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/network/storage"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/heavy/executor.JetKeeper -o ./ -s _gen_mock.go
@@ -217,20 +219,6 @@ func (jk *dbJetKeeper) topSyncPulse() insolar.PulseNumber {
 	return insolar.NewPulseNumber(val)
 }
 
-func (jk *dbJetKeeper) Subscribe(at insolar.PulseNumber, handler func(insolar.PulseNumber)) {
-	jk.Lock()
-	defer jk.Unlock()
-
-	jk.subscriptions = append(jk.subscriptions, subscription{pulse: at, handler: handler})
-}
-
-func (jk *dbJetKeeper) Update(sync insolar.PulseNumber) error {
-	jk.Lock()
-	defer jk.Unlock()
-
-	return jk.updateSyncPulse(sync)
-}
-
 func (jk *dbJetKeeper) getForJet(ctx context.Context, pulse insolar.PulseNumber, jet insolar.JetID) (int, []jetInfo, error) {
 	logger := inslogger.FromContext(ctx)
 	jets, err := jk.get(pulse)
@@ -408,8 +396,6 @@ func (jk *dbJetKeeper) updateSyncPulse(pn insolar.PulseNumber) error {
 	return nil
 }
 
-
-
 func (jk *dbJetKeeper) publish(pn insolar.PulseNumber) {
 	tmp := jk.subscriptions[:0]
 	for _, s := range jk.subscriptions {
@@ -420,4 +406,18 @@ func (jk *dbJetKeeper) publish(pn insolar.PulseNumber) {
 		}
 	}
 	jk.subscriptions = tmp
+}
+
+func (jk *dbJetKeeper) Subscribe(at insolar.PulseNumber, handler func(insolar.PulseNumber)) {
+	jk.Lock()
+	defer jk.Unlock()
+
+	jk.subscriptions = append(jk.subscriptions, subscription{pulse: at, handler: handler})
+}
+
+func (jk *dbJetKeeper) Update(sync insolar.PulseNumber) error {
+	jk.Lock()
+	defer jk.Unlock()
+
+	return jk.updateSyncPulse(sync)
 }
