@@ -201,8 +201,8 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 	outgoingRequestRef := insolar.NewReference(outgoingReqId)
 
 	pl := &payload.SagaCallAcceptNotification{
-		OutgoingReqID: outgoingReqId,
-		Request:       outgoingBytes,
+		DetachedRequestID: outgoingReqId,
+		Request:           outgoingBytes,
 	}
 	msg, err := payload.NewMessage(pl)
 	suite.Require().NoError(err)
