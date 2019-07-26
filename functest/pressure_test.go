@@ -40,15 +40,18 @@ func New() (*One, error) {
 	return &One{}, nil
 }
 
+var INSATTR_Inc_API = true
 func (c *One) Inc() (int, error) {
 	c.Number++
 	return c.Number, nil
 }
 
+var INSATTR_Get_API = true
 func (c *One) Get() (int, error) {
 	return c.Number, nil
 }
 
+var INSATTR_Dec_API = true
 func (c *One) Dec() (int, error) {
 	c.Number--
 	return c.Number, nil
