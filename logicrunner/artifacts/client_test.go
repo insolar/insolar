@@ -35,7 +35,6 @@ import (
 	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -205,10 +204,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetIncomingRequest_Success() {
 	objectRef := gen.Reference()
 	requestRef := gen.Reference()
 
-	node := testutils.RandomRef()
-
 	jc := jet.NewCoordinatorMock(mc)
-	jc.NodeForObjectMock.Return(&node, nil)
 
 	pulseAccessor := pulse.NewAccessorMock(s.T())
 	pulseAccessor.LatestMock.Return(*insolar.GenesisPulse, nil)
@@ -225,13 +221,15 @@ func (s *amSuite) TestLedgerArtifactManager_GetIncomingRequest_Success() {
 	require.NoError(s.T(), err)
 
 	sender := bus.NewSenderMock(s.T())
-	sender.SendTargetFunc = func(_ context.Context, msg *wmMessage.Message, n insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
+	sender.SendRoleFunc = func(_ context.Context, msg *wmMessage.Message, role insolar.DynamicRole, n insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
+		require.Equal(s.T(), insolar.DynamicRoleLightExecutor, role)
+
 		getReq := payload.GetRequest{}
 		err := getReq.Unmarshal(msg.Payload)
 		require.NoError(s.T(), err)
 
 		require.Equal(s.T(), *requestRef.Record(), getReq.RequestID)
-		require.Equal(s.T(), node, n)
+		require.Equal(s.T(), objectRef, n)
 
 		meta := payload.Meta{Payload: reqMsg.Payload}
 		buf, err := meta.Marshal()
@@ -267,23 +265,33 @@ func (s *amSuite) TestLedgerArtifactManager_GetPendings_Success() {
 	pulseAccessor := pulse.NewAccessorMock(s.T())
 	pulseAccessor.LatestMock.Return(*insolar.GenesisPulse, nil)
 
-	mb := testutils.NewMessageBusMock(s.T())
-	mb.SendFunc = func(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
-		switch mb.SendCounter {
-		case 0:
-			casted, ok := p1.(*message.GetPendingRequestID)
-			require.Equal(s.T(), true, ok)
-			require.Equal(s.T(), *objectRef.Record(), casted.ObjectID)
-			return &reply.IDs{IDs: []insolar.ID{*requestRef.Record()}}, nil
-		default:
-			panic("test is totally broken")
-		}
+	resultIDs := &payload.IDs{
+		IDs: []insolar.ID{*requestRef.Record()},
+	}
+	resMsg, err := payload.NewMessage(resultIDs)
+	require.NoError(s.T(), err)
+
+	sender := bus.NewSenderMock(s.T())
+	sender.SendRoleFunc = func(p context.Context, msg *wmMessage.Message, role insolar.DynamicRole, ref insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
+		getPendings := payload.GetPendings{}
+		err := getPendings.Unmarshal(msg.Payload)
+		require.NoError(s.T(), err)
+
+		require.Equal(s.T(), *objectRef.Record(), getPendings.ObjectID)
+
+		meta := payload.Meta{Payload: resMsg.Payload}
+		buf, err := meta.Marshal()
+		require.NoError(s.T(), err)
+		resMsg.Payload = buf
+		ch := make(chan *wmMessage.Message, 1)
+		ch <- resMsg
+		return ch, func() {}
 	}
 
 	am := NewClient(nil)
 	am.JetCoordinator = jc
-	am.DefaultBus = mb
 	am.PulseAccessor = pulseAccessor
+	am.sender = sender
 
 	// Act
 	res, err := am.GetPendings(inslogger.TestContext(s.T()), objectRef)
@@ -291,4 +299,43 @@ func (s *amSuite) TestLedgerArtifactManager_GetPendings_Success() {
 	// Assert
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), []insolar.Reference{requestRef}, res)
+}
+
+func (s *amSuite) TestLedgerArtifactManager_HasPendings_Success() {
+	// Arrange
+	mc := minimock.NewController(s.T())
+	defer mc.Finish()
+	objectRef := gen.Reference()
+
+	resultHas := &payload.PendingsInfo{
+		HasPendings: true,
+	}
+	resMsg, err := payload.NewMessage(resultHas)
+	require.NoError(s.T(), err)
+
+	sender := bus.NewSenderMock(s.T())
+	sender.SendRoleFunc = func(p context.Context, msg *wmMessage.Message, role insolar.DynamicRole, ref insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
+		hasPendings := payload.HasPendings{}
+		err := hasPendings.Unmarshal(msg.Payload)
+		require.NoError(s.T(), err)
+
+		require.Equal(s.T(), *objectRef.Record(), hasPendings.ObjectID)
+
+		meta := payload.Meta{Payload: resMsg.Payload}
+		buf, err := meta.Marshal()
+		require.NoError(s.T(), err)
+		resMsg.Payload = buf
+		ch := make(chan *wmMessage.Message, 1)
+		ch <- resMsg
+		return ch, func() {}
+	}
+
+	am := NewClient(sender)
+
+	// Act
+	res, err := am.HasPendings(inslogger.TestContext(s.T()), objectRef)
+
+	// Assert
+	require.NoError(s.T(), err)
+	require.Equal(s.T(), true, res)
 }

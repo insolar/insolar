@@ -52,10 +52,11 @@ package ph2ctl
 
 import (
 	"context"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"math"
 	"time"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/announce"
@@ -135,25 +136,18 @@ func (c *Phase2PacketDispatcher) DispatchMemberPacket(ctx context.Context, reade
 	p2 := reader.AsPhase2Packet()
 	realm := c.ctl.R
 
-	signalSent, announcedJoinerID, err := announce.ApplyMemberAnnouncement(ctx, p2,
+	signalSent, announcedJoiner, err := announce.ApplyMemberAnnouncement(ctx, p2,
 		p2.GetBriefIntroduction(), false, sender, realm)
 
 	if err != nil {
 		return err
 	}
 
-	ar := p2.GetAnnouncementReader()
 	neighbourhood := p2.GetNeighbourhood()
-
-	if ar.GetNodeRank().IsJoiner() {
-		announcedJoinerID = sender.GetNodeID()
-	}
-
-	neighbours, err := announce.VerifyNeighbourhood(ctx, neighbourhood, sender,
-		announcedJoinerID, ar.GetJoinerAnnouncement(), realm)
+	neighbours, err := announce.VerifyNeighbourhood(ctx, neighbourhood, sender, announcedJoiner, realm)
 
 	if err != nil {
-		rep := misbehavior.FraudOf(err)
+		rep := misbehavior.FraudOf(err) // TODO unify approach to fraud registration
 		if rep != nil {
 			return sender.RegisterFraud(*rep)
 		}
@@ -161,30 +155,26 @@ func (c *Phase2PacketDispatcher) DispatchMemberPacket(ctx context.Context, reade
 	}
 
 	purgatory := realm.GetPurgatory()
-	senderID := sender.GetNodeID()
+	// senderID := sender.GetNodeID()
 
 	for i, nb := range neighbours {
-		isJoiner := nb.Announcement.Membership.IsJoiner()
-		if isJoiner {
-			err = announce.ApplyNeighbourJoinerAnnouncement(ctx, sender, announcedJoinerID, nb.Neighbour,
-				nb.Announcement.JoinerID, neighbourhood[i].GetJoinerAnnouncement(), realm)
-		}
-
-		if err == nil {
-			modified, err2 := nb.Neighbour.ApplyNeighbourEvidence(sender, nb.Announcement, c.isCapped)
-
-			if err2 == nil {
-				if modified {
-					signalSent = true
+		modified := false
+		if nb.Neighbour == nil {
+			rank := neighbourhood[i].GetNodeRank()
+			if rank.IsJoiner() && nb.Announcement.Joiner.JoinerProfile == nil {
+				if announcedJoiner == nil || announcedJoiner.GetStaticNodeID() != nb.Announcement.MemberID {
+					panic("unexpected")
 				}
-				if isJoiner {
-					err = purgatory.JoinerFromNeighbourhood(ctx, nb.Neighbour.GetNodeID(), nil, senderID) // trigger ascension
-				}
+				continue
 			}
+			err = purgatory.UnknownFromNeighbourhood(ctx, rank, nb.Announcement, c.isCapped, c.ctl.R)
+		} else {
+			modified, err = nb.Neighbour.ApplyNeighbourEvidence(sender, nb.Announcement, c.isCapped, c.ctl.R)
 		}
-
 		if err != nil {
 			inslogger.FromContext(ctx).Error(err)
+		} else if modified {
+			signalSent = true
 		}
 	}
 	if !signalSent {
@@ -309,11 +299,11 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 		switch {
 		case isComplete && available >= remainingNodes+remainingJoiners:
 			maxWeight = math.MaxUint32
-		case nodeCapacity > neighbourSize<<2: //only works for large enough populations, > 4*neighbourhood size
+		case nodeCapacity > neighbourSize<<2: // only works for large enough populations, > 4*neighbourhood size
 			coverage := processedNodes + processedJoiners + available
 
-			if coverage > nodeCapacity>>1 { //only if more half of members arrived
-				const zeroCorrection = math.MaxUint32 >> 2 //zero correction value - scale is limited by 3/4
+			if coverage > nodeCapacity>>1 { // only if more half of members arrived
+				const zeroCorrection = math.MaxUint32 >> 2 // zero correction value - scale is limited by 3/4
 
 				k := uint64(math.MaxUint32) * uint64(coverage) / uint64(nodeCapacity)
 				newWeight := uint32(0)
@@ -404,7 +394,7 @@ func (c *Phase2Controller) sendPhase2(ctx context.Context, neighbourhood []*core
 
 	neighbourhoodAnnouncements := make([]transport.MembershipAnnouncementReader, len(neighbourhood))
 	for i, np := range neighbourhood {
-		neighbourhoodAnnouncements[i] = c.R.CreateAnnouncement(np)
+		neighbourhoodAnnouncements[i] = c.R.CreateAnnouncement(np, false)
 	}
 
 	p2 := c.R.GetPacketBuilder().PreparePhase2Packet(c.R.CreateLocalAnnouncement(), nil,

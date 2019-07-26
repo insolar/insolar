@@ -94,6 +94,7 @@ const (
 	ErrNoPendingRequests
 	// ErrTooManyPendingRequests is returned when a limit of pending requests has been reached
 	ErrTooManyPendingRequests
+	FlowCancelled
 )
 
 func getEmptyReply(t insolar.ReplyType) (insolar.Reply, error) {

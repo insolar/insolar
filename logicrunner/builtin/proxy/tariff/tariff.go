@@ -18,8 +18,8 @@ package tariff
 
 import (
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 // PrototypeReference to prototype of this contract
@@ -48,15 +48,6 @@ func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*Tariff, 
 	return &Tariff{Reference: ref}, nil
 }
 
-// AsDelegate saves object as delegate
-func (r *ContractConstructorHolder) AsDelegate(objRef insolar.Reference) (*Tariff, error) {
-	ref, err := common.CurrentProxyCtx.SaveAsDelegate(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
-	if err != nil {
-		return nil, err
-	}
-	return &Tariff{Reference: ref}, nil
-}
-
 // GetObject returns proxy object
 func GetObject(ref insolar.Reference) (r *Tariff) {
 	return &Tariff{Reference: ref}
@@ -67,19 +58,9 @@ func GetPrototype() insolar.Reference {
 	return *PrototypeReference
 }
 
-// GetImplementationFrom returns proxy to delegate of given type
-func GetImplementationFrom(object insolar.Reference) (*Tariff, error) {
-	ref, err := common.CurrentProxyCtx.GetDelegate(object, *PrototypeReference)
-	if err != nil {
-		return nil, err
-	}
-	return GetObject(ref), nil
-}
-
 // New is constructor
-func New(commissionRate string) *ContractConstructorHolder {
-	var args [1]interface{}
-	args[0] = commissionRate
+func New() *ContractConstructorHolder {
+	var args [0]interface{}
 
 	var argsSerialized []byte
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
@@ -154,8 +135,8 @@ func (r *Tariff) GetCode() (insolar.Reference, error) {
 	return r.Code, nil
 }
 
-// CalcCommission is proxy generated method
-func (r *Tariff) CalcCommission(amountStr string) (string, error) {
+// CalcFee is proxy generated method
+func (r *Tariff) CalcFee(amountStr string) (string, error) {
 	var args [1]interface{}
 	args[0] = amountStr
 
@@ -172,7 +153,7 @@ func (r *Tariff) CalcCommission(amountStr string) (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "CalcCommission", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "CalcFee", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -188,8 +169,8 @@ func (r *Tariff) CalcCommission(amountStr string) (string, error) {
 	return ret0, nil
 }
 
-// CalcCommissionNoWait is proxy generated method
-func (r *Tariff) CalcCommissionNoWait(amountStr string) error {
+// CalcFeeNoWait is proxy generated method
+func (r *Tariff) CalcFeeNoWait(amountStr string) error {
 	var args [1]interface{}
 	args[0] = amountStr
 
@@ -200,7 +181,7 @@ func (r *Tariff) CalcCommissionNoWait(amountStr string) error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "CalcCommission", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "CalcFee", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -208,8 +189,8 @@ func (r *Tariff) CalcCommissionNoWait(amountStr string) error {
 	return nil
 }
 
-// CalcCommissionAsImmutable is proxy generated method
-func (r *Tariff) CalcCommissionAsImmutable(amountStr string) (string, error) {
+// CalcFeeAsImmutable is proxy generated method
+func (r *Tariff) CalcFeeAsImmutable(amountStr string) (string, error) {
 	var args [1]interface{}
 	args[0] = amountStr
 
@@ -226,7 +207,7 @@ func (r *Tariff) CalcCommissionAsImmutable(amountStr string) (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "CalcCommission", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "CalcFee", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}

@@ -171,9 +171,9 @@ func (c *NodeAppearance) copySelfTo(target *NodeAppearance) {
 		panic("prep realm self can't have NSH")
 	}
 
-	//target.stateEvidence = c.stateEvidence
-	//target.announceSignature = c.announceSignature
-	//target.trust = c.trust
+	// target.stateEvidence = c.stateEvidence
+	// target.announceSignature = c.announceSignature
+	// target.trust = c.trust
 
 	target.requestedPower = c.requestedPower
 	target.requestedJoinerID = c.requestedJoinerID
@@ -254,29 +254,42 @@ func (c *NodeAppearance) GetSignatureVerifier() cryptkit.SignatureVerifier {
 }
 
 /* Evidence MUST be verified before this call */
-func (c *NodeAppearance) ApplyNodeMembership(mp profiles.MembershipAnnouncement) (bool, error) {
+func (c *NodeAppearance) ApplyNodeMembership(mp profiles.MemberAnnouncement, realm *FullRealm) (bool, error) {
 
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	return c._applyNodeMembership(mp)
+	return c._applyNodeMembership(mp, realm)
 }
 
 /* Evidence MUST be verified before this call */
-func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp profiles.MembershipAnnouncement,
-	cappedTrust bool) (bool, error) {
+func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp profiles.MemberAnnouncement,
+	cappedTrust bool, realm *FullRealm) (bool, error) {
 
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	var updVersion uint32
 	trustBefore := c.trust
-	modified, err := c._applyNodeMembership(mp)
+	modified, err := c._applyNodeMembership(mp, realm)
 
-	if err == nil && witness.GetNodeID() != c.GetNodeID() /* a node can't be a witness to itself */ {
-		updVersion = c.incNeighborReports(cappedTrust)
-	} else {
-		updVersion = c.callback.GetPopulationVersion()
+	if err == nil {
+		switch {
+		case witness.GetNodeID() != c.GetNodeID(): /* a node can't be a witness to itself */
+			updVersion = c.incNeighborReports(cappedTrust)
+		case mp.JoinerID == realm.GetSelfNodeID() && realm.IsJoiner():
+			// we trust to those who has introduced us
+			// It is also REQUIRED as vector calculation requires at least one trusted node to work properly
+			if c.trust.Update(member.TrustBySome) {
+				modified = true
+				updVersion = c.callback.updatePopulationVersion()
+				break
+			}
+			fallthrough
+		default:
+			updVersion = c.callback.GetPopulationVersion()
+		}
 	}
+
 	if trustBefore != c.trust {
 		c.callback.onTrustUpdated(updVersion, c, trustBefore, c.trust)
 	}
@@ -330,10 +343,14 @@ func (c *NodeAppearance) Blames() misbehavior.BlameFactory {
 }
 
 /* Evidence MUST be verified before this call */
-func (c *NodeAppearance) _applyNodeMembership(ma profiles.MembershipAnnouncement) (bool, error) {
+func (c *NodeAppearance) _applyNodeMembership(ma profiles.MemberAnnouncement, realm *FullRealm) (bool, error) {
 
 	if ma.Membership.IsEmpty() {
-		panic(fmt.Sprintf("membership evidence is nil: for=%v", c.GetNodeID()))
+		panic(fmt.Sprintf("membership evidence is nil: %v", c.GetNodeID()))
+	}
+
+	if ma.MemberID != c.GetNodeID() {
+		panic(fmt.Sprintf("member announcement is for a wrong node: %v %v", c.GetNodeID(), ma.MemberID))
 	}
 
 	if c.stateEvidence != nil {
@@ -352,21 +369,31 @@ func (c *NodeAppearance) _applyNodeMembership(ma profiles.MembershipAnnouncement
 			}
 		}
 		lma := c.getMembershipAnnouncement()
-		return c.registerFraud(c.Frauds().NewInconsistentMembershipAnnouncement(c.GetProfile(), lma, ma))
+		return c.registerFraud(c.Frauds().NewInconsistentMembershipAnnouncement(c.GetProfile(), lma, ma.MembershipAnnouncement))
 	}
 
 	updVersion := c.callback.updatePopulationVersion()
 
 	switch {
 	case ma.IsLeaving:
-		if c.IsJoiner() {
+		switch {
+		case c.IsJoiner():
 			c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "joiner can't request leave"))
-		} else {
+		case !ma.JoinerID.IsAbsent():
+			c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "leaver can't introduce a joiner"))
+		case !ma.Joiner.IsEmpty():
+			c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "joiner announcement was not expected"))
+		default:
 			c.requestedLeave = true
 			c.requestedLeaveReason = ma.LeaveReason
 		}
-	case ma.JoinerID.IsAbsent() || c.CanIntroduceJoiner():
-		break
+	case ma.JoinerID.IsAbsent() != ma.Joiner.IsEmpty():
+		if ma.JoinerID.IsAbsent() {
+			c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "joiner announcement was provided but a joiner was not declared"))
+		} else {
+			c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "joiner was declared but an announcement was not provided"))
+		}
+	case c.CanIntroduceJoiner() || ma.JoinerID.IsAbsent():
 	case c.IsJoiner():
 		c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "joiner can't add a joiner"))
 	default:
@@ -389,6 +416,13 @@ func (c *NodeAppearance) _applyNodeMembership(ma profiles.MembershipAnnouncement
 		}
 	case !c.profile.GetStatic().GetExtension().GetPowerLevels().IsAllowed(ma.Membership.RequestedPower):
 		return false, c.RegisterFraud(c.Frauds().NewInvalidPowerLevel(c.profile))
+	}
+
+	if !ma.Joiner.IsEmpty() { // by it can be EMPTY when !ma.JoinerID.IsAbsent() - it is normal
+		err := realm.GetPurgatory().AddJoinerAndEnsureAscendancy(ma.Joiner, ma.AnnouncedByID)
+		if err != nil {
+			return false, err
+		}
 	}
 
 	c.neighbourWeight ^= longbits.FoldUint64(ma.Membership.StateEvidence.GetDigestHolder().FoldToUint64())
@@ -431,8 +465,10 @@ func (c *NodeAppearance) onNodeAdded(ctx context.Context) {
 		sp := c.profile.GetStatic()
 		nsh := sp.GetBriefIntroSignedDigest()
 		mp := profiles.NewMembershipProfileByNode(c.profile, nsh, nsh.GetSignatureHolder(), sp.GetStartPower())
-		ma := profiles.NewMembershipAnnouncement(mp)
-		_, err := c._applyNodeMembership(ma)
+
+		_, err := c._applyNodeMembership(profiles.NewMemberAnnouncement(c.GetNodeID(), mp,
+			insolar.AbsentShortNodeID /* TODO introducedBy */), nil)
+
 		if err != nil {
 			inslogger.FromContext(ctx).Error("error was unexpected", err)
 		}
@@ -641,7 +677,7 @@ func (c *NodeAppearance) upgradeDynamicNodeProfile(ctx context.Context, brief pr
 }
 
 func (c *NodeAppearance) DispatchAnnouncement(ctx context.Context, rank member.Rank, profile profiles.StaticProfile,
-	announcement *profiles.MembershipAnnouncement, introducedByID insolar.ShortNodeID) error {
+	announcement profiles.MemberAnnouncement) error {
 
 	// TODO additional checks
 

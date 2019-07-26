@@ -90,7 +90,7 @@ func (s *consensusSuite) TestNetworkConsensus3Times() {
 }
 
 func (s *consensusSuite) TestJoinerNodeConnect() {
-	s.waitForConsensus(1)
+	//s.waitForConsensus(1)
 
 	testNode := s.newNetworkNode("JoinerNode")
 	s.preInitNode(testNode)
@@ -105,12 +105,12 @@ func (s *consensusSuite) TestJoinerNodeConnect() {
 
 	s.AssertActiveNodesCountDelta(0)
 
-	s.waitForConsensus(1)
+	s.waitForConsensus(2)
 
 	s.AssertActiveNodesCountDelta(1)
-	s.AssertWorkingNodesCountDelta(0)
+	s.AssertWorkingNodesCountDelta(1)
 
-	s.waitForConsensus(1)
+	s.waitForConsensus(5)
 
 	s.AssertActiveNodesCountDelta(1)
 	s.AssertWorkingNodesCountDelta(1)

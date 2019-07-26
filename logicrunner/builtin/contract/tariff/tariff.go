@@ -20,35 +20,63 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 type Tariff struct {
 	foundation.BaseContract
-	CommissionRate string
 }
 
 // New creates new tariff.
-func New(commissionRate string) (*Tariff, error) {
-	return &Tariff{
-		CommissionRate: commissionRate,
-	}, nil
+func New() (*Tariff, error) {
+	return &Tariff{}, nil
 }
 
-// CalcCommission calculates commission for amount.
-func (t Tariff) CalcCommission(amountStr string) (string, error) {
+func calcFeeRate(amountStr string) (string, error) {
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {
 		return "", fmt.Errorf("can't parse amount")
 	}
 
-	commissionRate, ok := new(big.Int).SetString(t.CommissionRate, 10)
+	if amount.Cmp(big.NewInt(1000*1000*1000)) >= 0 {
+		return "1000000000", nil // 1000 * 1000 * 1000 = 10%
+	}
+	if amount.Cmp(big.NewInt(1000*1000)) >= 0 {
+		return "2000000000", nil // 2 * 1000 * 1000 * 1000 = 20%
+	}
+	if amount.Cmp(big.NewInt(1000)) >= 0 {
+		return "3000000000", nil // 3 * 1000 * 1000 * 1000 = 30%
+	}
+	return "4000000000", nil // 4 * 1000 * 1000 * 1000 = 40%
+
+}
+
+// CalcFee calculates fee for amount. Returns fee.
+func (t Tariff) CalcFee(amountStr string) (string, error) {
+	amount, ok := new(big.Int).SetString(amountStr, 10)
+	if !ok {
+		return "", fmt.Errorf("can't parse amount")
+	}
+
+	commissionRateStr, err := calcFeeRate(amountStr)
+	if err != nil {
+		return "", fmt.Errorf("failed to calc fee rate")
+	}
+
+	commissionRate, ok := new(big.Int).SetString(commissionRateStr, 10)
 	if !ok {
 		return "", fmt.Errorf("can't parse commission rate")
 	}
 
 	preResult := new(big.Int).Mul(amount, commissionRate)
-	result := new(big.Int).Div(preResult, big.NewInt(10000000000))
+
+	capacity := big.NewInt(10 * 1000 * 1000 * 1000)
+	result := new(big.Int).Div(preResult, capacity)
+
+	mod := new(big.Int).Mod(preResult, capacity)
+	if mod.Cmp(big.NewInt(0)) == 1 {
+		result = new(big.Int).Add(result, big.NewInt(1))
+	}
 
 	return result.String(), nil
 }

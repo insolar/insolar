@@ -125,7 +125,7 @@ func (p *emuNetworkBuilder) _connectEmuNode(nodes []profiles.StaticProfile, self
 			p._connectEmuNode([]profiles.StaticProfile{intro}, 0, true)
 		}
 
-		//case selfIndex%5 == 2:
+		// case selfIndex%5 == 2:
 		//	controlFeeder.leaveReason = uint32(selfIndex) // simulate leave
 	}
 

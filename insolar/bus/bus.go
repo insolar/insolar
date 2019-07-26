@@ -23,6 +23,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
@@ -106,9 +107,15 @@ type Bus struct {
 }
 
 // NewBus creates Bus instance with provided values.
-func NewBus(pub message.Publisher, pulses pulse.Accessor, jc jet.Coordinator, pcs insolar.PlatformCryptographyScheme) *Bus {
+func NewBus(
+	cfg configuration.Bus,
+	pub message.Publisher,
+	pulses pulse.Accessor,
+	jc jet.Coordinator,
+	pcs insolar.PlatformCryptographyScheme,
+) *Bus {
 	return &Bus{
-		timeout:     time.Second * 15,
+		timeout:     cfg.ReplyTimeout,
 		pub:         pub,
 		replies:     make(map[payload.MessageHash]*lockedReply),
 		pulses:      pulses,
@@ -174,6 +181,11 @@ func (b *Bus) SendTarget(
 		res := make(chan *message.Message)
 		close(res)
 		return res, func() {}
+	}
+	ctx, _ = inslogger.WithField(ctx, "sending_type", msg.Metadata.Get(MetaType))
+	payloadType, err := payload.UnmarshalType(msg.Payload)
+	if err == nil {
+		ctx, _ = inslogger.WithField(ctx, "sending_type", payloadType.String())
 	}
 	logger := inslogger.FromContext(ctx)
 

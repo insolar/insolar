@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
@@ -44,7 +45,7 @@ type GetChildren struct {
 		Coordinator            jet.Coordinator
 		RecordAccessor         object.RecordAccessor
 		JetStorage             jet.Storage
-		JetTreeUpdater         jet.Fetcher
+		JetTreeUpdater         executor.JetFetcher
 		DelegationTokenFactory insolar.DelegationTokenFactory
 		Sender                 wmBus.Sender
 	}
@@ -81,6 +82,9 @@ func (p *GetChildren) reply(ctx context.Context) bus.Reply {
 	idx, err := p.Dep.IndexAccessor.ForID(ctx, p.parcel.Pulse(), *p.msg.Parent.Record())
 	if err != nil {
 		return bus.Reply{Err: err}
+	}
+	if idx.Lifeline.LatestState == nil {
+		return bus.Reply{Err: ErrNotActivated}
 	}
 
 	// The object has no children.

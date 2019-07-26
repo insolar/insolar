@@ -73,7 +73,7 @@ func TestSetResult_Proceed(t *testing.T) {
 		Payload: resultBuf,
 	}
 
-	filamentModifier := executor.NewFilamentModifierMock(t)
+	filamentModifier := executor.NewFilamentManagerMock(t)
 	filamentModifier.SetResultFunc = func(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.Result) (fRes *record.CompositeFilamentRecord, r error) {
 		require.Equal(t, id, p1)
 		require.Equal(t, jetID, p2)
@@ -128,7 +128,7 @@ func TestSetResult_Proceed_ResultDuplicated(t *testing.T) {
 		Payload: resultBuf,
 	}
 
-	filamentModifier := executor.NewFilamentModifierMock(t)
+	filamentModifier := executor.NewFilamentManagerMock(t)
 	filamentModifier.SetResultFunc = func(p context.Context, p1 insolar.ID, p2 insolar.JetID, p3 record.Result) (fRes *record.CompositeFilamentRecord, r error) {
 		require.Equal(t, objectID, p1)
 		require.Equal(t, jetID, p2)

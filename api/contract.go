@@ -33,7 +33,7 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/insolar/insolar/testutils"
 )
@@ -143,6 +143,7 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 			CallType:        record.CTSaveAsChild,
 			APIRequestID:    utils.TraceID(ctx),
 			Reason:          insolarApi.MakeReason(pulse.PulseNumber, args.MethodArgs),
+			APINode:         s.runner.JetCoordinator.Me(),
 		},
 	}
 
@@ -200,6 +201,7 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 			Arguments:    args.MethodArgs,
 			APIRequestID: utils.TraceID(ctx),
 			Reason:       insolarApi.MakeReason(pulse.PulseNumber, args.MethodArgs),
+			APINode:      s.runner.JetCoordinator.Me(),
 		},
 	}
 
