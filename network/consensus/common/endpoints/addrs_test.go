@@ -67,7 +67,7 @@ func TestIsLocalHost(t *testing.T) {
 	h := Name("")
 	require.True(t, h.IsLocalHost())
 
-	h = Name("addr")
+	h = "addr"
 	require.False(t, h.IsLocalHost())
 }
 
@@ -79,11 +79,11 @@ func TestEquals(t *testing.T) {
 	h3 := h2
 	require.True(t, h2.Equals(h3))
 
-	h2 = Name("addr")
-	h3 = Name("addr")
+	h2 = "addr"
+	h3 = "addr"
 	require.True(t, h2.Equals(h3))
 
-	h3 = Name("addr1")
+	h3 = "addr1"
 	require.False(t, h2.Equals(h3))
 }
 
@@ -94,10 +94,10 @@ func TestEqualsToString(t *testing.T) {
 	h2 := Name("")
 	require.True(t, h2.EqualsToString(""))
 
-	h2 = Name("addr")
+	h2 = "addr"
 	require.True(t, h2.EqualsToString("addr"))
 
-	h2 = Name("addr")
+	h2 = "addr"
 	require.False(t, h2.EqualsToString("addr1"))
 }
 
