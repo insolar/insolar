@@ -162,7 +162,7 @@ func (c *Phase2PacketDispatcher) DispatchMemberPacket(ctx context.Context, reade
 	}
 
 	purgatory := realm.GetPurgatory()
-	//senderID := sender.GetNodeID()
+	// senderID := sender.GetNodeID()
 
 	for i, nb := range neighbours {
 		modified := false

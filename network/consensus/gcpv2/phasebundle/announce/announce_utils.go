@@ -52,6 +52,7 @@ package announce
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
@@ -237,7 +238,7 @@ func VerifyNeighbourhood(ctx context.Context, neighbourhood []transport.Membersh
 		// TODO validate node proof - if fails, then fraud on sender
 		// neighbourProfile.IsValidPacketSignature(nshEvidence.GetSignature())
 
-		//neighbours[idx].Neighbour = neighbour
+		// neighbours[idx].Neighbour = neighbour
 
 		nr := nb.GetNodeRank()
 		if !nr.IsJoiner() {
