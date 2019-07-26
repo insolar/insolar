@@ -206,8 +206,8 @@ func (k recordPositionKey) Scope() store.Scope {
 }
 
 func (k recordPositionKey) ID() []byte {
-	var parsedNum []byte
-	binary.LittleEndian.PutUint32(parsedNum, k.number)
+	parsedNum := make([]byte, 4)
+	binary.BigEndian.PutUint32(parsedNum, k.number)
 	return bytes.Join([][]byte{k.pn.Bytes(), parsedNum}, nil)
 }
 
@@ -317,13 +317,13 @@ func (r *RecordDB) getNextPosition(pn insolar.PulseNumber) (uint32, error) {
 	if err != nil {
 		return 0, err
 	}
-	return binary.LittleEndian.Uint32(buff), nil
+	return binary.BigEndian.Uint32(buff), nil
 }
 
 func (r *RecordDB) setLastKnownPosition(pn insolar.PulseNumber, order uint32) error {
 	lastOrderKey := lastKnownRecordPositionKey{pn: pn}
-	var parsedOrder []byte
-	binary.LittleEndian.PutUint32(parsedOrder, order)
+	parsedOrder := make([]byte, 4)
+	binary.BigEndian.PutUint32(parsedOrder, order)
 	return r.db.Set(lastOrderKey, parsedOrder)
 }
 

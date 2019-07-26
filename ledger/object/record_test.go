@@ -17,6 +17,7 @@
 package object
 
 import (
+	"context"
 	"crypto/sha256"
 	"io/ioutil"
 	"math/rand"
@@ -175,6 +176,53 @@ func TestRecordStorage_Set(t *testing.T) {
 	})
 }
 
+func TestRecordStorage_DB_Set(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+
+	id := gen.ID()
+	rec := getMaterialRecord()
+
+	t.Run("saves correct record-value", func(t *testing.T) {
+		t.Parallel()
+
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
+
+		recordStorage := NewRecordDB(db)
+
+		err = recordStorage.Set(ctx, id, rec)
+		require.NoError(t, err)
+	})
+
+	t.Run("returns override error when saving with the same id", func(t *testing.T) {
+		t.Parallel()
+
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
+
+		recordStorage := NewRecordDB(db)
+
+		err = recordStorage.Set(ctx, id, rec)
+		require.NoError(t, err)
+
+		err = recordStorage.Set(ctx, id, rec)
+		require.Error(t, err)
+		assert.Equal(t, ErrOverride, err)
+	})
+}
+
 func TestRecordStorage_Delete(t *testing.T) {
 	t.Parallel()
 
@@ -255,6 +303,10 @@ func TestRecordStorage_ForPulse(t *testing.T) {
 		_, ok := searchRecs[*rID]
 		require.Equal(t, true, ok)
 	}
+}
+
+func TestRecordStorage_PositionIndex(t *testing.T) {
+	t.Parallel()
 }
 
 // getVirtualRecord generates random Virtual record
