@@ -96,7 +96,7 @@ func TestAsUint32(t *testing.T) {
 }
 
 func TestIsSpecialOrTimePulse(t *testing.T) {
-	n := Number(Unknown)
+	n := Unknown
 	require.False(t, n.IsSpecialOrTimePulse())
 
 	n = Number(MaxTimePulse + 1)
@@ -107,7 +107,7 @@ func TestIsSpecialOrTimePulse(t *testing.T) {
 }
 
 func TestIsUnknown(t *testing.T) {
-	n := Number(Unknown)
+	n := Unknown
 	require.True(t, n.IsUnknown())
 
 	n = Number(MaxTimePulse)
@@ -115,7 +115,7 @@ func TestIsUnknown(t *testing.T) {
 }
 
 func TestIsUnknownOrEqualTo(t *testing.T) {
-	n1 := Number(Unknown)
+	n1 := Unknown
 	n2 := Number(MaxTimePulse)
 	require.True(t, n1.IsUnknownOrEqualTo(n2))
 

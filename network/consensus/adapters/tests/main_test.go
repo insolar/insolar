@@ -64,9 +64,22 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	defaultPulseDelta   = 2
+	defaultLogLevel     = insolar.DebugLevel
+	defaultTestDuration = 10 * time.Second
+)
+
+var strategy = NewDelayNetStrategy(DelayStrategyConf{
+	MinDelay:         10 * time.Millisecond,
+	MaxDelay:         30 * time.Millisecond,
+	Variance:         0.2,
+	SpikeProbability: 0.1,
+})
+
 func TestConsensusJoin(t *testing.T) {
 	startedAt := time.Now()
-	ctx := initLogger(insolar.DebugLevel)
+	ctx := initLogger(defaultLogLevel)
 
 	nodeIdentities := generateNodeIdentities(0, 1, 8, 8)
 	nodeInfos := generateNodeInfos(nodeIdentities)
@@ -76,13 +89,6 @@ func TestConsensusJoin(t *testing.T) {
 	joinInfos := generateNodeInfos(joinIdentities)
 	joiners, _ := nodesFromInfo(joinInfos)
 
-	strategy := NewDelayNetStrategy(DelayStrategyConf{
-		MinDelay:         10 * time.Millisecond,
-		MaxDelay:         30 * time.Millisecond,
-		Variance:         0.2,
-		SpikeProbability: 0.1,
-	})
-
 	controllers, pulseHandlers, _, _, _, err := initNodes(ctx, consensus.ReadyNetwork, nodes, discoveryNodes, strategy, nodeInfos)
 	require.NoError(t, err)
 
@@ -91,7 +97,7 @@ func TestConsensusJoin(t *testing.T) {
 
 	fmt.Println("===", len(nodes), "=================================================")
 
-	pulsar := NewPulsar(10, pulseHandlers)
+	pulsar := NewPulsar(defaultPulseDelta, pulseHandlers)
 	go func() {
 		for {
 			pulsar.Pulse(ctx, 4+len(nodes)/10)
@@ -103,7 +109,7 @@ func TestConsensusJoin(t *testing.T) {
 	for {
 		fmt.Println("===", time.Since(startedAt), "=================================================")
 		time.Sleep(time.Second)
-		if time.Since(startedAt) > 1000*time.Second {
+		if time.Since(startedAt) > defaultTestDuration {
 			return
 		}
 
@@ -127,25 +133,18 @@ func TestConsensusJoin(t *testing.T) {
 
 func TestConsensusLeave(t *testing.T) {
 	startedAt := time.Now()
-	ctx := initLogger(insolar.DebugLevel)
+	ctx := initLogger(defaultLogLevel)
 
 	nodeIdentities := generateNodeIdentities(0, 1, 3, 5)
 	nodeInfos := generateNodeInfos(nodeIdentities)
 	nodes, discoveryNodes := nodesFromInfo(nodeInfos)
-
-	strategy := NewDelayNetStrategy(DelayStrategyConf{
-		MinDelay:         10 * time.Millisecond,
-		MaxDelay:         30 * time.Millisecond,
-		Variance:         0.2,
-		SpikeProbability: 0.1,
-	})
 
 	controllers, pulseHandlers, transports, contexts, _, err := initNodes(ctx, consensus.ReadyNetwork, nodes, discoveryNodes, strategy, nodeInfos)
 	require.NoError(t, err)
 
 	fmt.Println("===", len(nodes), "=================================================")
 
-	pulsar := NewPulsar(2, pulseHandlers)
+	pulsar := NewPulsar(defaultPulseDelta, pulseHandlers)
 	go func() {
 		for {
 			pulsar.Pulse(ctx, 4+len(nodes)/10)
@@ -157,7 +156,7 @@ func TestConsensusLeave(t *testing.T) {
 	for {
 		fmt.Println("===", time.Since(startedAt), "=================================================")
 		time.Sleep(time.Second)
-		if time.Since(startedAt) > 10*time.Second {
+		if time.Since(startedAt) > defaultTestDuration {
 			return
 		}
 
@@ -176,25 +175,18 @@ func TestConsensusLeave(t *testing.T) {
 
 func TestConsensusDrop(t *testing.T) {
 	startedAt := time.Now()
-	ctx := initLogger(insolar.DebugLevel)
+	ctx := initLogger(defaultLogLevel)
 
 	nodeIdentities := generateNodeIdentities(0, 1, 3, 5)
 	nodeInfos := generateNodeInfos(nodeIdentities)
 	nodes, discoveryNodes := nodesFromInfo(nodeInfos)
-
-	strategy := NewDelayNetStrategy(DelayStrategyConf{
-		MinDelay:         10 * time.Millisecond,
-		MaxDelay:         30 * time.Millisecond,
-		Variance:         0.2,
-		SpikeProbability: 0.1,
-	})
 
 	_, pulseHandlers, transports, contexts, _, err := initNodes(ctx, consensus.ReadyNetwork, nodes, discoveryNodes, strategy, nodeInfos)
 	require.NoError(t, err)
 
 	fmt.Println("===", len(nodes), "=================================================")
 
-	pulsar := NewPulsar(2, pulseHandlers)
+	pulsar := NewPulsar(defaultPulseDelta, pulseHandlers)
 	go func() {
 		for {
 			pulsar.Pulse(ctx, 4+len(nodes)/10)
@@ -206,7 +198,7 @@ func TestConsensusDrop(t *testing.T) {
 	for {
 		fmt.Println("===", time.Since(startedAt), "=================================================")
 		time.Sleep(time.Second)
-		if time.Since(startedAt) > 10*time.Second {
+		if time.Since(startedAt) > defaultTestDuration {
 			return
 		}
 
@@ -223,7 +215,7 @@ func TestConsensusDrop(t *testing.T) {
 
 func TestConsensusAll(t *testing.T) {
 	startedAt := time.Now()
-	ctx := initLogger(insolar.DebugLevel)
+	ctx := initLogger(defaultLogLevel)
 
 	nodeIdentities := generateNodeIdentities(0, 1, 3, 5)
 	nodeInfos := generateNodeInfos(nodeIdentities)
@@ -233,13 +225,6 @@ func TestConsensusAll(t *testing.T) {
 	joinInfos := generateNodeInfos(joinIdentities)
 	joiners, _ := nodesFromInfo(joinInfos)
 
-	strategy := NewDelayNetStrategy(DelayStrategyConf{
-		MinDelay:         10 * time.Millisecond,
-		MaxDelay:         30 * time.Millisecond,
-		Variance:         0.2,
-		SpikeProbability: 0.1,
-	})
-
 	controllers, pulseHandlers, transports, contexts, _, err := initNodes(ctx, consensus.ReadyNetwork, nodes, discoveryNodes, strategy, nodeInfos)
 	require.NoError(t, err)
 
@@ -248,7 +233,7 @@ func TestConsensusAll(t *testing.T) {
 
 	fmt.Println("===", len(nodes), "=================================================")
 
-	pulsar := NewPulsar(2, pulseHandlers)
+	pulsar := NewPulsar(defaultPulseDelta, pulseHandlers)
 	go func() {
 		for {
 			pulsar.Pulse(ctx, 4+len(nodes)/10)
@@ -262,7 +247,7 @@ func TestConsensusAll(t *testing.T) {
 	for {
 		fmt.Println("===", time.Since(startedAt), "=================================================")
 		time.Sleep(time.Second)
-		if time.Since(startedAt) > 10*time.Second {
+		if time.Since(startedAt) > defaultTestDuration {
 			return
 		}
 

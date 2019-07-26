@@ -68,8 +68,7 @@ import (
 )
 
 const (
-	initialPulse      = 100000
-	defaultPulseDelta = 10
+	initialPulse = 100000
 )
 
 type Pulsar struct {

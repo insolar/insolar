@@ -133,9 +133,9 @@ func TestMNPGetIndexedCount(t *testing.T) {
 }
 
 func TestMNPGetIndexedCapacity(t *testing.T) {
-	len := 1
-	mnp := ManyNodePopulation{slots: make([]updatableSlot, len)}
-	require.Equal(t, len, mnp.GetIndexedCapacity())
+	size := 1
+	mnp := ManyNodePopulation{slots: make([]updatableSlot, size)}
+	require.Equal(t, size, mnp.GetIndexedCapacity())
 }
 
 func TestMNPIsValid(t *testing.T) {

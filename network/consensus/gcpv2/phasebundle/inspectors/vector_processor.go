@@ -481,7 +481,7 @@ func (p *inspectedVector) doVerifyVectorHashes(ctx context.Context) nodeset.Node
 
 	// TODO make a controlled parameter!
 
-	//if validTrusted || validDoubted {
+	// if validTrusted || validDoubted {
 	//	recalcTrusted := p.trustedPart.IsRecalc() && validTrusted
 	//	recalcDoubted := p.doubtedPart.IsRecalc() && validDoubted
 	//
@@ -519,7 +519,7 @@ func (p *inspectedVector) doVerifyVectorHashes(ctx context.Context) nodeset.Node
 	//				p.otherData.Trusted.StateSignature, p.otherData.Doubted.StateSignature)
 	//		}
 	//	}
-	//}
+	// }
 
 	if p.trustedPart.IsNeeded() {
 		verifyRes.SetTrusted(validTrusted, p.trustedPart.IsRecalc())
