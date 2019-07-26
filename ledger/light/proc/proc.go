@@ -32,10 +32,8 @@ type Dependencies struct {
 	ActivateObject   func(*ActivateObject)
 	DeactivateObject func(*DeactivateObject)
 	UpdateObject     func(*UpdateObject)
-	RegisterChild    func(*RegisterChild)
 	GetPendings      func(*GetPendings)
 	GetJet           func(*GetJet)
-	GetChildren      func(*GetChildren)
 	HotObjects       func(*HotObjects)
 	PassState        func(*PassState)
 	CalculateID      func(*CalculateID)
@@ -63,10 +61,8 @@ func NewDependenciesMock() *Dependencies {
 		ActivateObject:   func(*ActivateObject) {},
 		DeactivateObject: func(*DeactivateObject) {},
 		UpdateObject:     func(*UpdateObject) {},
-		RegisterChild:    func(*RegisterChild) {},
 		GetPendings:      func(*GetPendings) {},
 		GetJet:           func(*GetJet) {},
-		GetChildren:      func(*GetChildren) {},
 		HotObjects:       func(*HotObjects) {},
 		PassState:        func(*PassState) {},
 		CalculateID:      func(*CalculateID) {},
