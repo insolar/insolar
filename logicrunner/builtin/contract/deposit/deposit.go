@@ -154,10 +154,6 @@ func (d *Deposit) canTransfer() error {
 
 // MapMarshal gets deposit information.
 func (d *Deposit) Transfer(amountStr string, wallerRef insolar.Reference) (interface{}, error) {
-	err := d.canTransfer()
-	if err != nil {
-		return nil, fmt.Errorf("can't start transfer: %s", err.Error())
-	}
 
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {
@@ -176,6 +172,12 @@ func (d *Deposit) Transfer(amountStr string, wallerRef insolar.Reference) (inter
 	if err != nil {
 		return nil, fmt.Errorf("not enough balance for transfer: %s", err.Error())
 	}
+
+	err = d.canTransfer()
+	if err != nil {
+		return nil, fmt.Errorf("can't start transfer: %s", err.Error())
+	}
+
 	d.Amount = newBalance.String()
 
 	w := wallet.GetObject(wallerRef)
