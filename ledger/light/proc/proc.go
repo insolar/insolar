@@ -22,7 +22,6 @@ type Dependencies struct {
 	WaitHot          func(*WaitHot)
 	WaitHotWM        func(*WaitHotWM)
 	GetIndex         func(*EnsureIndex)
-	GetIndexWM       func(*GetIndex)
 	EnsureIndex      func(*EnsureIndexWM)
 	SendObject       func(*SendObject)
 	GetCode          func(*GetCode)
@@ -51,7 +50,6 @@ func NewDependenciesMock() *Dependencies {
 		CheckJet:         func(*CheckJet) {},
 		WaitHot:          func(*WaitHot) {},
 		WaitHotWM:        func(*WaitHotWM) {},
-		GetIndexWM:       func(*GetIndex) {},
 		GetIndex:         func(*EnsureIndex) {},
 		EnsureIndex:      func(*EnsureIndexWM) {},
 		SendObject:       func(*SendObject) {},

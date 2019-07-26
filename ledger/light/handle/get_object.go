@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar/flow"
@@ -75,19 +74,7 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
-	getIdx := proc.NewGetIndex(msg.ObjectID)
-	s.dep.GetIndexWM(getIdx)
-	if err := f.Procedure(ctx, getIdx, false); err != nil {
-		return err
-	}
-
-	idx := getIdx.Result.Lifeline
-
-	if idx.StateID == record.StateDeactivation {
-		return errors.New("object is deactivated")
-	}
-
-	send := proc.NewSendObject(s.meta, msg.ObjectID, idx)
+	send := proc.NewSendObject(s.meta, msg.ObjectID)
 	s.dep.SendObject(send)
 	return f.Procedure(ctx, send, false)
 }
