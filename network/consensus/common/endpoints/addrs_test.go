@@ -62,6 +62,7 @@ import (
 
 func TestIsLocalHost(t *testing.T) {
 	var ha *Name
+	//noinspection ALL
 	require.False(t, ha.IsLocalHost())
 
 	h := Name("")
@@ -74,6 +75,7 @@ func TestIsLocalHost(t *testing.T) {
 func TestEquals(t *testing.T) {
 	var h1 *Name
 	h2 := Name("")
+	//noinspection ALL
 	require.False(t, h1.Equals(h2))
 
 	h3 := h2
@@ -89,6 +91,7 @@ func TestEquals(t *testing.T) {
 
 func TestEqualsToString(t *testing.T) {
 	var h1 *Name
+	//noinspection ALL
 	require.False(t, h1.EqualsToString(""))
 
 	h2 := Name("")
