@@ -114,10 +114,6 @@ func (le *logicExecutor) ExecuteConstructor(
 
 	request := transcript.Request
 
-	if request.Caller.IsEmpty() {
-		return nil, errors.New("Call constructor from nowhere")
-	}
-
 	if request.Prototype == nil {
 		return nil, errors.New("prototype reference is required")
 	}
