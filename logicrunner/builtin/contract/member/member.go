@@ -24,12 +24,12 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member/signer"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/deposit"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/nodedomain"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 // Member - basic member contract.

@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/internal/ledger/artifact"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/nodedomain"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/noderecord"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
@@ -168,9 +169,11 @@ func (nm *DiscoveryNodeManager) updateNodeDomainIndex(
 		return err
 	}
 
+	indexStableMap := foundation.StableMap(indexMap)
+
 	updateData, err := insolar.Serialize(
 		&nodedomain.NodeDomain{
-			NodeIndexPublicKey: indexMap,
+			NodeIndexPublicKey: indexStableMap,
 		},
 	)
 	if err != nil {
