@@ -744,6 +744,10 @@ func (r *NeighbourAnnouncementReader) GetJoinerAnnouncement() transport.JoinerAn
 		return nil
 	}
 
+	if r.neighbour.NeighbourNodeID == r.body.Announcement.Member.AnnounceID {
+		return nil
+	}
+
 	return &JoinerAnnouncementReader{
 		MemberPacketReader: r.MemberPacketReader,
 		joiner:             r.neighbour.Joiner,
