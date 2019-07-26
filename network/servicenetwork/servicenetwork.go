@@ -121,12 +121,14 @@ type ServiceNetwork struct {
 	consensusInstaller  consensus.Installer
 	consensusController consensus.Controller
 
+	ConsensusMode consensus.Mode
+
 	lock sync.Mutex
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manager) (*ServiceNetwork, error) {
-	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf}
+	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, ConsensusMode: consensus.Joiner}
 	return serviceNetwork, nil
 }
 
@@ -232,7 +234,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 
 	n.Gatewayer.Gateway().Run(ctx)
 
-	n.consensusController = n.consensusInstaller.Install(n.pulseHandler, n.datagramHandler)
+	n.consensusController = n.consensusInstaller.ControllerFor(n.ConsensusMode, n.pulseHandler, n.datagramHandler)
 	n.consensusController.RegisterFinishedNotifier(func(_ member.OpMode, _ member.Power, effectiveSince insolar.PulseNumber) {
 		n.Gatewayer.Gateway().OnConsensusFinished(effectiveSince)
 	})

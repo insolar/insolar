@@ -55,7 +55,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/adapters"
-	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"time"
 
 	"github.com/pkg/errors"
@@ -211,8 +211,13 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 	//TODO: how to ignore claim if node already bootstrap to other??
 
 	// TODO: check JoinClaim is from Discovery node
-	profile := adapters.NewCandidateProfile(data.CandidateProfile)
-	g.ConsensusController.AddJoinCandidate(profile)
+	type candidate struct {
+		profiles.StaticProfile
+		profiles.StaticProfileExtension
+	}
+
+	profile := adapters.NewStaticProfileFromPacket(data.CandidateProfile, g.KeyProcessor)
+	g.ConsensusController.AddJoinCandidate(candidate{profile, profile.GetExtension()})
 
 	go func() {
 		// TODO:
@@ -349,15 +354,28 @@ func (g *Base) OnConsensusFinished(p insolar.PulseNumber) {
 }
 
 func (g *Base) createCandidateProfile() {
+
 	origin := g.NodeKeeper.GetOrigin()
-	digest, sign := origin.(node.MutableNode).GetSignature()
+
+	staticProfile := adapters.NewStaticProfile(origin, g.CertificateManager.GetCertificate(), g.KeyProcessor)
+
+	staticProfile.GetExtension().GetIssuerSignature().AsBytes()
+	//digest, sign := origin.(node.MutableNode).GetSignature()
+
+	pubKey, err := g.KeyProcessor.ExportPublicKeyBinary(origin.PublicKey())
+	if err != nil {
+		panic("Failed ExportPublicKeyBinary")
+	}
 
 	p := &packet.CandidateProfile{}
 	p.Address = origin.Address()
 	p.Ref = origin.ID()
 	p.ShortID = uint32(origin.ShortID())
-	p.Digest = digest
-	p.Signature = sign.Bytes()
+	p.Digest = staticProfile.GetBriefIntroSignedDigest().GetDigestHolder().AsBytes()
+	p.Signature = staticProfile.GetBriefIntroSignedDigest().GetSignatureHolder().AsBytes()
+	//p.Signature = staticProfile.GetExtension().GetIssuerSignature().AsBytes()
+
+	p.PublicKey = pubKey
 
 	cert := g.CertificateManager.GetCertificate()
 	switch cert.GetRole() {

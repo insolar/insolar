@@ -51,18 +51,110 @@
 package adapters
 
 import (
-	"fmt"
+	"crypto/ecdsa"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
-	"time"
 )
+
+func NewStaticProfileFromPacket(p packet.CandidateProfile, keyProcessor insolar.KeyProcessor) *StaticProfile {
+
+	// networkNode := node.NewNode(p.Ref, p.)
+
+	//return &StaticProfile{
+	//	shortID:     insolar.ShortNodeID(p.ShortID),
+	//	primaryRole: primaryRole(p.PrimaryRole),
+	//	specialRole: specialRole(p.SpecialRole),
+	//	intro:       NewStaticProfileExtension(),
+	//	endpoint:    NewOutbound(p.Address),
+	//	store:       NewECDSAPublicKeyStore(),
+	//	keyHolder:   NewECDSASignatureKeyHolder(),
+	//	signature:   cryptkit.NewSignedDigest(),
+	//}
+
+	publicKey, err := keyProcessor.ImportPublicKeyBinary(p.PublicKey)
+	if err != nil {
+		panic("Failed ImportPublicKeyBinary")
+	}
+
+	signHolder := cryptkit.NewSignature(
+		longbits.NewBits512FromBytes(p.Signature),
+		SHA3512Digest.SignedBy(SECP256r1Sign),
+	).AsSignatureHolder()
+
+	extension := newStaticProfileExtension(
+		insolar.ShortNodeID(p.ShortID),
+		p.Ref,
+		signHolder,
+	)
+
+	return newStaticProfile(
+		insolar.ShortNodeID(p.ShortID),
+		primaryRole(p.PrimaryRole),
+		specialRole(p.SpecialRole),
+		extension,
+		NewOutbound(p.Address),
+		NewECDSAPublicKeyStore(publicKey.(*ecdsa.PublicKey)),
+		NewECDSASignatureKeyHolder(publicKey.(*ecdsa.PublicKey), keyProcessor),
+		cryptkit.NewSignedDigest(
+			cryptkit.NewDigest(longbits.NewBits512FromBytes(p.Digest), SHA3512Digest),
+			cryptkit.NewSignature(longbits.NewBits512FromBytes(p.Signature), SHA3512Digest.SignedBy(SECP256r1Sign)),
+		).AsSignedDigestHolder(),
+	)
+
+	//specialRole := member.SpecialRoleNone
+	//if network.IsDiscovery(networkNode.ID(), certificate) {
+	//	specialRole = member.SpecialRoleDiscovery
+	//}
+	//
+	//publicKey := networkNode.PublicKey().(*ecdsa.PublicKey)
+	//mutableNode := networkNode.(node.MutableNode)
+	//digest, signature := mutableNode.GetSignature()
+	//
+	//return newStaticProfile(
+	//	networkNode.ShortID(),
+	//	StaticRoleToPrimaryRole(networkNode.Role()),
+	//	specialRole,
+	//	NewStaticProfileExtension(networkNode),
+	//	NewOutbound(networkNode.Address()),
+	//	NewECDSAPublicKeyStore(publicKey),
+	//	NewECDSASignatureKeyHolder(publicKey, keyProcessor),
+	//	cryptkit.NewSignedDigest(
+	//		cryptkit.NewDigest(longbits.NewBits512FromBytes(digest), SHA3512Digest),
+	//		cryptkit.NewSignature(longbits.NewBits512FromBytes(signature.Bytes()), SHA3512Digest.SignedBy(SECP256r1Sign)),
+	//	).AsSignedDigestHolder(),
+	//)
+}
+
+func primaryRole(role packet.PrimaryRole) member.PrimaryRole {
+	switch role {
+	case packet.Inactive:
+		return member.PrimaryRoleInactive
+	case packet.Neutral:
+		return member.PrimaryRoleNeutral
+	case packet.HeavyMaterial:
+		return member.PrimaryRoleHeavyMaterial
+	case packet.LightMaterial:
+		return member.PrimaryRoleLightMaterial
+	case packet.Virtual:
+		return member.PrimaryRoleVirtual
+	default:
+		panic("unknown PrimaryRole")
+	}
+}
+
+func specialRole(role packet.SpecialRole) member.SpecialRole {
+	switch role {
+	case packet.None:
+		return member.SpecialRoleNone
+	case packet.Discovery:
+		return member.SpecialRoleDiscovery
+	default:
+		panic("unknown SpecialRole")
+	}
+}
 
 //func NewCandidateProfile(
 //	address string,
@@ -79,10 +171,6 @@ import (
 //		ref:         ref,
 //	}
 //}
-
-func NewCandidateProfile(p packet.CandidateProfile) *CandidateProfile {
-	return &CandidateProfile{CandidateProfile: p}
-}
 
 //func NewCandidateProfileFromJoinClaim(joinClaim *packets.NodeJoinClaim, isDiscovery bool) *CandidateProfile {
 //	specialRole := member.SpecialRoleNone
@@ -110,135 +198,130 @@ func NewCandidateProfile(p packet.CandidateProfile) *CandidateProfile {
 //	}
 //}
 
-var _ profiles.CandidateProfile = &CandidateProfile{}
+//func NewCandidateProfile(p packet.CandidateProfile) *CandidateProfile {
+//	return &CandidateProfile{CandidateProfile: p}
+//}
 
-type CandidateProfile struct {
-	packet.CandidateProfile
-
-	// NodeBriefIntro - hash and signature
-
-	//n           endpoints.Outbound
-	//id          insolar.ShortNodeID
-	//primaryRole member.PrimaryRole
-	//specialRole member.SpecialRole
-	//ref         insolar.Reference
-}
-
-func (c *CandidateProfile) GetBriefIntroSignedDigest() cryptkit.SignedDigestHolder {
-	dd := longbits.NewBits64(uint64(1000000 + c.ShortID))
-	ds := longbits.NewBits64(uint64(1000000+c.ShortID) << 32)
-
-	return cryptkit.NewSignedDigest(
-		cryptkit.NewDigest(&dd, "stubHash"),
-		cryptkit.NewSignature(&ds, "stubSign")).AsSignedDigestHolder()
-}
-
-func (c *CandidateProfile) GetIssuedAtPulse() pulse.Number {
-	return 0
-}
-
-func (c *CandidateProfile) GetIssuedAtTime() time.Time {
-	return time.Now()
-}
-
-func (c *CandidateProfile) GetPowerLevels() member.PowerSet {
-	return member.PowerSet{0, 0, 0, 0xFF}
-}
-
-func (c *CandidateProfile) GetExtraEndpoints() []endpoints.Outbound {
-	return nil
-}
-
-func (c *CandidateProfile) GetIssuerID() insolar.ShortNodeID {
-	return 0
-}
-
-func (c *CandidateProfile) GetIssuerSignature() cryptkit.SignatureHolder {
-	ds := longbits.NewBits64(uint64(5000000+c.ShortID) << 32)
-
-	return cryptkit.NewSignature(&ds, "stubSign").AsSignatureHolder()
-}
-
-func (c *CandidateProfile) GetNodePublicKey() cryptkit.SignatureKeyHolder {
-	v := &longbits.Bits512{}
-	longbits.FillBitsWithStaticNoise(c.ShortID, v[:])
-	k := cryptkit.NewSignatureKey(v, "stub/stub", cryptkit.PublicAsymmetricKey)
-	return &k
-}
-
-func (c *CandidateProfile) GetStartPower() member.Power {
-	return 10
-}
-
-func (c *CandidateProfile) GetReference() insolar.Reference {
-	return c.Ref
-}
-
-func (c *CandidateProfile) ConvertPowerRequest(request power.Request) member.Power {
-	if ok, cl := request.AsCapacityLevel(); ok {
-		return member.PowerOf(uint16(cl.DefaultPercent()))
-	}
-	_, pw := request.AsMemberPower()
-	return pw
-}
-
-func (c *CandidateProfile) GetPrimaryRole() member.PrimaryRole {
-	switch c.PrimaryRole {
-	case packet.Inactive:
-		return member.PrimaryRoleInactive
-	case packet.Neutral:
-		return member.PrimaryRoleNeutral
-	case packet.HeavyMaterial:
-		return member.PrimaryRoleHeavyMaterial
-	case packet.LightMaterial:
-		return member.PrimaryRoleLightMaterial
-	case packet.Virtual:
-		return member.PrimaryRoleVirtual
-	default:
-		panic("unknown PrimaryRole")
-	}
-}
-
-func (c *CandidateProfile) GetSpecialRoles() member.SpecialRole {
-	switch c.SpecialRole {
-	case packet.None:
-		return member.SpecialRoleNone
-	case packet.Discovery:
-		return member.SpecialRoleDiscovery
-	default:
-		panic("unknown SpecialRole")
-	}
-}
-
-func (*CandidateProfile) IsAllowedPower(p member.Power) bool {
-	return true
-}
-
-func (c *CandidateProfile) GetDefaultEndpoint() endpoints.Outbound {
-	return NewOutbound(c.Address)
-}
-
-func (*CandidateProfile) GetPublicKeyStore() cryptkit.PublicKeyStore {
-	return nil
-}
-
-func (c *CandidateProfile) IsAcceptableHost(from endpoints.Inbound) bool {
-	address := from.GetNameAddress()
-	return address.EqualsToString(c.Address)
-}
-
-func (c *CandidateProfile) GetStaticNodeID() insolar.ShortNodeID {
-	return insolar.ShortNodeID(c.ShortID)
-}
-
-func (c *CandidateProfile) GetIntroducedNodeID() insolar.ShortNodeID {
-	return insolar.ShortNodeID(c.ShortID)
-}
-
-func (c *CandidateProfile) GetExtension() profiles.StaticProfileExtension {
-	return c
-}
-
-func (c *CandidateProfile) String() string {
-	return fmt.Sprintf("{sid:%v, n:%v}", c.ShortID, c.Address)
-}
+//var _ profiles.CandidateProfile = &CandidateProfile{}
+//
+//type CandidateProfile struct {
+//	packet.CandidateProfile
+//
+//}
+//
+//func (c *CandidateProfile) GetBriefIntroSignedDigest() cryptkit.SignedDigestHolder {
+//	return cryptkit.NewSignedDigest(
+//		cryptkit.NewDigest(longbits.NewBits512FromBytes(c.Digest), SHA3512Digest),
+//		cryptkit.NewSignature(longbits.NewBits512FromBytes(c.Signature), SHA3512Digest.SignedBy(SECP256r1Sign)),
+//	).AsSignedDigestHolder()
+//}
+//
+//func (c *CandidateProfile) GetIssuedAtPulse() pulse.Number {
+//	return 0
+//}
+//
+//func (c *CandidateProfile) GetIssuedAtTime() time.Time {
+//	return time.Now()
+//}
+//
+//func (c *CandidateProfile) GetPowerLevels() member.PowerSet {
+//	return member.PowerSet{0, 0, 0, 0xFF}
+//}
+//
+//func (c *CandidateProfile) GetExtraEndpoints() []endpoints.Outbound {
+//	return nil
+//}
+//
+//func (c *CandidateProfile) GetIssuerID() insolar.ShortNodeID {
+//	return 0
+//}
+//
+//func (c *CandidateProfile) GetIssuerSignature() cryptkit.SignatureHolder {
+//	ds := longbits.NewBits64(uint64(5000000+c.ShortID) << 32)
+//
+//	return cryptkit.NewSignature(&ds, "stubSign").AsSignatureHolder()
+//}
+//
+//func (c *CandidateProfile) GetNodePublicKey() cryptkit.SignatureKeyHolder {
+//	v := &longbits.Bits512{}
+//	longbits.FillBitsWithStaticNoise(c.ShortID, v[:])
+//	k := cryptkit.NewSignatureKey(v, "stub/stub", cryptkit.PublicAsymmetricKey)
+//	return &k
+//}
+//
+//func (c *CandidateProfile) GetStartPower() member.Power {
+//	return 10
+//}
+//
+//func (c *CandidateProfile) GetReference() insolar.Reference {
+//	return c.Ref
+//}
+//
+//func (c *CandidateProfile) ConvertPowerRequest(request power.Request) member.Power {
+//	if ok, cl := request.AsCapacityLevel(); ok {
+//		return member.PowerOf(uint16(cl.DefaultPercent()))
+//	}
+//	_, pw := request.AsMemberPower()
+//	return pw
+//}
+//
+//func (c *CandidateProfile) GetPrimaryRole() member.PrimaryRole {
+//	switch c.PrimaryRole {
+//	case packet.Inactive:
+//		return member.PrimaryRoleInactive
+//	case packet.Neutral:
+//		return member.PrimaryRoleNeutral
+//	case packet.HeavyMaterial:
+//		return member.PrimaryRoleHeavyMaterial
+//	case packet.LightMaterial:
+//		return member.PrimaryRoleLightMaterial
+//	case packet.Virtual:
+//		return member.PrimaryRoleVirtual
+//	default:
+//		panic("unknown PrimaryRole")
+//	}
+//}
+//
+//func (c *CandidateProfile) GetSpecialRoles() member.SpecialRole {
+//	switch c.SpecialRole {
+//	case packet.None:
+//		return member.SpecialRoleNone
+//	case packet.Discovery:
+//		return member.SpecialRoleDiscovery
+//	default:
+//		panic("unknown SpecialRole")
+//	}
+//}
+//
+//func (*CandidateProfile) IsAllowedPower(p member.Power) bool {
+//	return true
+//}
+//
+//func (c *CandidateProfile) GetDefaultEndpoint() endpoints.Outbound {
+//	return NewOutbound(c.Address)
+//}
+//
+//func (*CandidateProfile) GetPublicKeyStore() cryptkit.PublicKeyStore {
+//	return nil
+//}
+//
+//func (c *CandidateProfile) IsAcceptableHost(from endpoints.Inbound) bool {
+//	address := from.GetNameAddress()
+//	return address.EqualsToString(c.Address)
+//}
+//
+//func (c *CandidateProfile) GetStaticNodeID() insolar.ShortNodeID {
+//	return insolar.ShortNodeID(c.ShortID)
+//}
+//
+//func (c *CandidateProfile) GetIntroducedNodeID() insolar.ShortNodeID {
+//	return insolar.ShortNodeID(c.ShortID)
+//}
+//
+//func (c *CandidateProfile) GetExtension() profiles.StaticProfileExtension {
+//	return c
+//}
+//
+//func (c *CandidateProfile) String() string {
+//	return fmt.Sprintf("{sid:%v, n:%v}", c.ShortID, c.Address)
+//}

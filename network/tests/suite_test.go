@@ -56,6 +56,7 @@ import (
 	"context"
 	"crypto"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"math/rand"
 	"strconv"
@@ -195,6 +196,7 @@ func (s *consensusSuite) SetupTest() {
 			bnodes = append(bnodes, n.serviceNetwork.NodeKeeper.GetOrigin())
 		}
 		for _, n := range s.fixture().bootstrapNodes {
+			n.serviceNetwork.ConsensusMode = consensus.ReadyNetwork
 			n.serviceNetwork.NodeKeeper.SetInitialSnapshot(bnodes)
 			n.serviceNetwork.Gatewayer.SwitchState(s.fixture().ctx, insolar.CompleteNetworkState)
 			pulseReceivers = append(pulseReceivers, n.host)

@@ -108,6 +108,7 @@ message CandidateProfile {
     SpecialRole SpecialRole = 5;
     bytes Digest = 6;
     bytes Signature = 7;
+    bytes PublicKey = 8;
 }
 
 message BootstrapRequest {
