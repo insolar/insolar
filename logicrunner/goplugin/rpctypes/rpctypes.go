@@ -128,32 +128,6 @@ type ChildIterator struct {
 	CanFetch bool
 }
 
-// UpSaveAsDelegateReq is a set of arguments for SaveAsDelegate RPC in goplugin
-type UpSaveAsDelegateReq struct {
-	UpBaseReq
-	Into            insolar.Reference
-	Prototype       insolar.Reference
-	ConstructorName string
-	ArgsSerialized  []byte
-}
-
-// UpSaveAsDelegateResp is response from SaveAsDelegate RPC in goplugin
-type UpSaveAsDelegateResp struct {
-	Reference *insolar.Reference
-}
-
-// UpGetDelegateReq is a set of arguments for GetDelegate RPC in goplugin
-type UpGetDelegateReq struct {
-	UpBaseReq
-	Object insolar.Reference
-	OfType insolar.Reference
-}
-
-// UpGetDelegateResp is response from GetDelegate RPC in goplugin
-type UpGetDelegateResp struct {
-	Object insolar.Reference
-}
-
 // UpDeactivateObjectReq is a set of arguments for DeactivateObject RPC in goplugin
 type UpDeactivateObjectReq struct {
 	UpBaseReq

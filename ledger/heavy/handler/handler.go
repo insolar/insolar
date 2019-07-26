@@ -161,8 +161,6 @@ func (h *Handler) handleParcel(ctx context.Context, msg *watermillMsg.Message) e
 	switch msgType {
 	case insolar.TypeGetChildren.String():
 		rep, err = h.handleGetChildren(ctx, parcel)
-	case insolar.TypeGetDelegate.String():
-		rep, err = h.handleGetDelegate(ctx, parcel)
 	case insolar.TypeGetObjectIndex.String():
 		rep, err = h.handleGetObjectIndex(ctx, parcel)
 	default:
@@ -294,25 +292,6 @@ func (h *Handler) replyError(ctx context.Context, replyTo payload.Meta, err erro
 
 func (h *Handler) Init(ctx context.Context) error {
 	return nil
-}
-
-func (h *Handler) handleGetDelegate(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetDelegate)
-
-	idx, err := h.IndexAccessor.ForID(ctx, parcel.Pulse(), *msg.Head.Record())
-	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch index for %v", msg.Head.Record()))
-	}
-
-	delegateRef, ok := idx.Lifeline.DelegateByKey(msg.AsType)
-	if !ok {
-		return nil, errors.New("the object has no delegate for this type")
-	}
-	rep := reply.Delegate{
-		Head: delegateRef,
-	}
-
-	return &rep, nil
 }
 
 func (h *Handler) handleGetChildren(

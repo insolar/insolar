@@ -150,7 +150,6 @@ func initArtifactManager(t *testing.T) artifact.Manager {
 	amMock.ActivateObjectFunc = func(
 		_ context.Context,
 		domain, obj, parent, prototype insolar.Reference,
-		asDelegate bool,
 		memory []byte,
 	) error {
 		activatedMemory[obj] = memory

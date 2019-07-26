@@ -49,7 +49,7 @@ func (le *logicExecutor) Execute(ctx context.Context, transcript *Transcript) (a
 	switch transcript.Request.CallType {
 	case record.CTMethod:
 		return le.ExecuteMethod(ctx, transcript)
-	case record.CTSaveAsChild, record.CTSaveAsDelegate:
+	case record.CTSaveAsChild:
 		return le.ExecuteConstructor(ctx, transcript)
 	default:
 		return nil, errors.New("Unknown request call type")
@@ -143,7 +143,6 @@ func (le *logicExecutor) ExecuteConstructor(
 	res.SetActivate(
 		*request.Base,
 		*request.Prototype,
-		request.CallType == record.CTSaveAsDelegate,
 		newData,
 	)
 	return res, nil

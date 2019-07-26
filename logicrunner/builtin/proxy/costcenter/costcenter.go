@@ -48,15 +48,6 @@ func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*CostCent
 	return &CostCenter{Reference: ref}, nil
 }
 
-// AsDelegate saves object as delegate
-func (r *ContractConstructorHolder) AsDelegate(objRef insolar.Reference) (*CostCenter, error) {
-	ref, err := common.CurrentProxyCtx.SaveAsDelegate(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
-	if err != nil {
-		return nil, err
-	}
-	return &CostCenter{Reference: ref}, nil
-}
-
 // GetObject returns proxy object
 func GetObject(ref insolar.Reference) (r *CostCenter) {
 	return &CostCenter{Reference: ref}
@@ -65,15 +56,6 @@ func GetObject(ref insolar.Reference) (r *CostCenter) {
 // GetPrototype returns reference to the prototype
 func GetPrototype() insolar.Reference {
 	return *PrototypeReference
-}
-
-// GetImplementationFrom returns proxy to delegate of given type
-func GetImplementationFrom(object insolar.Reference) (*CostCenter, error) {
-	ref, err := common.CurrentProxyCtx.GetDelegate(object, *PrototypeReference)
-	if err != nil {
-		return nil, err
-	}
-	return GetObject(ref), nil
 }
 
 // New is constructor

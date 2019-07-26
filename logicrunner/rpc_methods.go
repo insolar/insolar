@@ -39,9 +39,7 @@ type ProxyImplementation interface {
 	GetCode(context.Context, *Transcript, rpctypes.UpGetCodeReq, *rpctypes.UpGetCodeResp) error
 	RouteCall(context.Context, *Transcript, rpctypes.UpRouteReq, *rpctypes.UpRouteResp) error
 	SaveAsChild(context.Context, *Transcript, rpctypes.UpSaveAsChildReq, *rpctypes.UpSaveAsChildResp) error
-	SaveAsDelegate(context.Context, *Transcript, rpctypes.UpSaveAsDelegateReq, *rpctypes.UpSaveAsDelegateResp) error
 	GetObjChildrenIterator(context.Context, *Transcript, rpctypes.UpGetObjChildrenIteratorReq, *rpctypes.UpGetObjChildrenIteratorResp) error
-	GetDelegate(context.Context, *Transcript, rpctypes.UpGetDelegateReq, *rpctypes.UpGetDelegateResp) error
 	DeactivateObject(context.Context, *Transcript, rpctypes.UpDeactivateObjectReq, *rpctypes.UpDeactivateObjectResp) error
 }
 
@@ -117,15 +115,6 @@ func (m *RPCMethods) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.Up
 	return impl.SaveAsChild(current.Context, current, req, rep)
 }
 
-// SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
-func (m *RPCMethods) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp) error {
-	impl, current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
-	if err != nil {
-		return errors.Wrap(err, "Failed to fetch current execution")
-	}
-	return impl.SaveAsDelegate(current.Context, current, req, rep)
-}
-
 // GetObjChildrenIterator is an RPC returns an iterator over object children with specified prototype
 func (m *RPCMethods) GetObjChildrenIterator(
 	req rpctypes.UpGetObjChildrenIteratorReq,
@@ -137,16 +126,6 @@ func (m *RPCMethods) GetObjChildrenIterator(
 	}
 
 	return impl.GetObjChildrenIterator(current.Context, current, req, rep)
-}
-
-// GetDelegate is an RPC saving data as memory of a contract as child a parent
-func (m *RPCMethods) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDelegateResp) error {
-	impl, current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
-	if err != nil {
-		return errors.Wrap(err, "Failed to fetch current execution")
-	}
-
-	return impl.GetDelegate(current.Context, current, req, rep)
 }
 
 // DeactivateObject is an RPC saving data as memory of a contract as child a parent
@@ -270,37 +249,6 @@ func (m *executionProxyImplementation) SaveAsChild(
 	return m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
 }
 
-// SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
-func (m *executionProxyImplementation) SaveAsDelegate(
-	ctx context.Context, current *Transcript, req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp,
-) error {
-	inslogger.FromContext(ctx).Debug("RPC.SaveAsDelegate")
-	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsDelegate")
-	defer span.End()
-
-	// Send the request
-	incoming, outgoing := buildIncomingAndOutgoingSaveAsDelegateRequests(ctx, current, req)
-
-	// Register outgoing request
-	outgoingReqID, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
-	if err != nil {
-		return err
-	}
-
-	msg := &message.CallMethod{IncomingRequest: *incoming}
-	ref, err := m.cr.CallConstructor(ctx, msg)
-	if err != nil {
-		return err
-	}
-	current.AddOutgoingRequest(ctx, *incoming, nil, ref, err)
-	rep.Reference = ref
-
-	// Register result of the outgoing method
-	outgoingReqRef := insolar.NewReference(*outgoingReqID)
-	reqResult := newRequestResult(rep.Reference.Bytes(), req.Callee)
-	return m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
-}
-
 var iteratorBuffSize = 1000
 var iteratorMap = make(map[string]artifacts.RefIterator)
 var iteratorMapLock = sync.RWMutex{}
@@ -377,17 +325,6 @@ func (m *executionProxyImplementation) GetObjChildrenIterator(
 		iteratorMapLock.Unlock()
 	}
 
-	return nil
-}
-
-func (m *executionProxyImplementation) GetDelegate(
-	ctx context.Context, current *Transcript, req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDelegateResp,
-) error {
-	ref, err := m.am.GetDelegate(ctx, req.Object, req.OfType)
-	if err != nil {
-		return err
-	}
-	rep.Object = *ref
 	return nil
 }
 
@@ -469,36 +406,12 @@ func (m *validationProxyImplementation) SaveAsChild(
 	return nil
 }
 
-func (m *validationProxyImplementation) SaveAsDelegate(
-	ctx context.Context, current *Transcript, req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp,
-) error {
-	incoming, _ := buildIncomingAndOutgoingSaveAsDelegateRequests(ctx, current, req)
-
-	reqRes := current.HasOutgoingRequest(ctx, *incoming)
-	if reqRes == nil {
-		return errors.New("unexpected outgoing call during validation")
-	}
-	if reqRes.Error != nil {
-		return reqRes.Error
-	}
-
-	rep.Reference = reqRes.NewObject
-
-	return nil
-}
-
 func (m *validationProxyImplementation) GetObjChildrenIterator(
 	ctx context.Context, current *Transcript,
 	req rpctypes.UpGetObjChildrenIteratorReq,
 	rep *rpctypes.UpGetObjChildrenIteratorResp,
 ) error {
 	panic("won't implement, ATM")
-}
-
-func (m *validationProxyImplementation) GetDelegate(
-	ctx context.Context, current *Transcript, req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDelegateResp,
-) error {
-	panic("implement me")
 }
 
 func (m *validationProxyImplementation) DeactivateObject(
@@ -596,45 +509,6 @@ func buildIncomingAndOutgoingSaveAsChildRequests(
 
 		CallType:  record.CTSaveAsChild,
 		Base:      &req.Parent,
-		Prototype: &req.Prototype,
-		Method:    req.ConstructorName,
-		Arguments: req.ArgsSerialized,
-
-		APIRequestID: current.Request.APIRequestID,
-		Reason:       current.RequestRef,
-	}
-
-	return &incoming, &outgoing
-}
-
-func buildIncomingAndOutgoingSaveAsDelegateRequests(
-	_ context.Context, current *Transcript, req rpctypes.UpSaveAsDelegateReq,
-) (*record.IncomingRequest, *record.OutgoingRequest) {
-
-	current.Nonce++
-
-	incoming := record.IncomingRequest{
-		Caller:          req.Callee,
-		CallerPrototype: req.CalleePrototype,
-		Nonce:           current.Nonce,
-
-		CallType:  record.CTSaveAsDelegate,
-		Base:      &req.Into,
-		Prototype: &req.Prototype,
-		Method:    req.ConstructorName,
-		Arguments: req.ArgsSerialized,
-
-		APIRequestID: current.Request.APIRequestID,
-		Reason:       current.RequestRef,
-	}
-
-	outgoing := record.OutgoingRequest{
-		Caller:          req.Callee,
-		CallerPrototype: req.CalleePrototype,
-		Nonce:           current.Nonce,
-
-		CallType:  record.CTSaveAsDelegate,
-		Base:      &req.Into,
 		Prototype: &req.Prototype,
 		Method:    req.ConstructorName,
 		Arguments: req.ArgsSerialized,
