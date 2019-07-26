@@ -192,34 +192,34 @@ func newRecordKey(raw []byte) recordKey {
 	return recordKey(*insolar.NewID(pulse, hash))
 }
 
-type recordOrderKey struct {
+type recordPositionKey struct {
 	pn     insolar.PulseNumber
 	number uint32
 }
 
-func newRecordOrderKey(pn insolar.PulseNumber, number uint32) recordOrderKey {
-	return recordOrderKey{pn: pn, number: number}
+func newRecordOrderKey(pn insolar.PulseNumber, number uint32) recordPositionKey {
+	return recordPositionKey{pn: pn, number: number}
 }
 
-func (k recordOrderKey) Scope() store.Scope {
-	return store.ScopeRecordOrder
+func (k recordPositionKey) Scope() store.Scope {
+	return store.ScopeRecordPosition
 }
 
-func (k recordOrderKey) ID() []byte {
+func (k recordPositionKey) ID() []byte {
 	var parsedNum []byte
 	binary.LittleEndian.PutUint32(parsedNum, k.number)
 	return bytes.Join([][]byte{k.pn.Bytes(), parsedNum}, nil)
 }
 
-type lastKnownRecordOrderKey struct {
+type lastKnownRecordPositionKey struct {
 	pn insolar.PulseNumber
 }
 
-func (k lastKnownRecordOrderKey) Scope() store.Scope {
-	return store.ScopeLastKnownRecordOrder
+func (k lastKnownRecordPositionKey) Scope() store.Scope {
+	return store.ScopeLastKnownRecordPosition
 }
 
-func (k lastKnownRecordOrderKey) ID() []byte {
+func (k lastKnownRecordPositionKey) ID() []byte {
 	return bytes.Join([][]byte{k.pn.Bytes()}, nil)
 }
 
@@ -238,6 +238,7 @@ func (r *RecordDB) Set(ctx context.Context, id insolar.ID, rec record.Material) 
 		return err
 	}
 
+	return r.incrementPosition(id)
 }
 
 // TruncateHead remove all records after lastPulse
@@ -308,8 +309,8 @@ func (r *RecordDB) get(id insolar.ID) (record.Material, error) {
 	return rec, err
 }
 
-func (r *RecordDB) getNextOrder(pn insolar.PulseNumber) (uint32, error) {
-	buff, err := r.db.Get(lastKnownRecordOrderKey{pn: pn})
+func (r *RecordDB) getNextPosition(pn insolar.PulseNumber) (uint32, error) {
+	buff, err := r.db.Get(lastKnownRecordPositionKey{pn: pn})
 	if err == store.ErrNotFound {
 		return 1, nil
 	}
@@ -319,15 +320,15 @@ func (r *RecordDB) getNextOrder(pn insolar.PulseNumber) (uint32, error) {
 	return binary.LittleEndian.Uint32(buff), nil
 }
 
-func (r *RecordDB) setLastKnownOrder(pn insolar.PulseNumber, order uint32) error {
-	lastOrderKey := lastKnownRecordOrderKey{pn: pn}
+func (r *RecordDB) setLastKnownPosition(pn insolar.PulseNumber, order uint32) error {
+	lastOrderKey := lastKnownRecordPositionKey{pn: pn}
 	var parsedOrder []byte
 	binary.LittleEndian.PutUint32(parsedOrder, order)
 	return r.db.Set(lastOrderKey, parsedOrder)
 }
 
-func (r *RecordDB) incrementOrder(recID insolar.ID) error {
-	nextOrder, err := r.getNextOrder(recID.Pulse())
+func (r *RecordDB) incrementPosition(recID insolar.ID) error {
+	nextOrder, err := r.getNextPosition(recID.Pulse())
 	if err != nil {
 		return err
 	}
@@ -344,5 +345,5 @@ func (r *RecordDB) incrementOrder(recID insolar.ID) error {
 		return err
 	}
 
-	return r.setLastKnownOrder(recID.Pulse(), nextOrder)
+	return r.setLastKnownPosition(recID.Pulse(), nextOrder)
 }
