@@ -199,10 +199,6 @@ const (
 
 	// Ledger
 
-	// TypeGetChildren retrieves object's children.
-	TypeGetChildren
-	// TypeRegisterChild registers child on the parent object.
-	TypeRegisterChild
 	// TypeGetObjectIndex fetches object index from storage.
 	TypeGetObjectIndex
 
@@ -227,6 +223,5 @@ const (
 	// DTTypePendingExecution allows to continue method calls
 	DTTypePendingExecution DelegationTokenType = iota + 1
 	DTTypeGetObjectRedirect
-	DTTypeGetChildrenRedirect
 	DTTypeGetCodeRedirect
 )

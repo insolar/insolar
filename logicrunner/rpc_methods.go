@@ -20,9 +20,6 @@ import (
 	"context"
 	"sync"
 
-	"github.com/pkg/errors"
-	uuid "github.com/satori/go.uuid"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
@@ -31,6 +28,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
+	"github.com/pkg/errors"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.ProxyImplementation -o ./ -s _mock.go
@@ -39,7 +37,6 @@ type ProxyImplementation interface {
 	GetCode(context.Context, *Transcript, rpctypes.UpGetCodeReq, *rpctypes.UpGetCodeResp) error
 	RouteCall(context.Context, *Transcript, rpctypes.UpRouteReq, *rpctypes.UpRouteResp) error
 	SaveAsChild(context.Context, *Transcript, rpctypes.UpSaveAsChildReq, *rpctypes.UpSaveAsChildResp) error
-	GetObjChildrenIterator(context.Context, *Transcript, rpctypes.UpGetObjChildrenIteratorReq, *rpctypes.UpGetObjChildrenIteratorResp) error
 	DeactivateObject(context.Context, *Transcript, rpctypes.UpDeactivateObjectReq, *rpctypes.UpDeactivateObjectResp) error
 }
 
@@ -113,19 +110,6 @@ func (m *RPCMethods) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.Up
 	}
 
 	return impl.SaveAsChild(current.Context, current, req, rep)
-}
-
-// GetObjChildrenIterator is an RPC returns an iterator over object children with specified prototype
-func (m *RPCMethods) GetObjChildrenIterator(
-	req rpctypes.UpGetObjChildrenIteratorReq,
-	rep *rpctypes.UpGetObjChildrenIteratorResp,
-) error {
-	impl, current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
-	if err != nil {
-		return errors.Wrap(err, "Failed to fetch current execution")
-	}
-
-	return impl.GetObjChildrenIterator(current.Context, current, req, rep)
 }
 
 // DeactivateObject is an RPC saving data as memory of a contract as child a parent
@@ -253,81 +237,6 @@ var iteratorBuffSize = 1000
 var iteratorMap = make(map[string]artifacts.RefIterator)
 var iteratorMapLock = sync.RWMutex{}
 
-// GetObjChildrenIterator is an RPC returns an iterator over object children with specified prototype
-func (m *executionProxyImplementation) GetObjChildrenIterator(
-	ctx context.Context, current *Transcript,
-	req rpctypes.UpGetObjChildrenIteratorReq,
-	rep *rpctypes.UpGetObjChildrenIteratorResp,
-) error {
-	ctx, span := instracer.StartSpan(ctx, "RPC.GetObjChildrenIterator")
-	defer span.End()
-
-	iteratorID := req.IteratorID
-
-	iteratorMapLock.RLock()
-	iterator, ok := iteratorMap[iteratorID]
-	iteratorMapLock.RUnlock()
-
-	if !ok {
-		newIterator, err := m.am.GetChildren(ctx, req.Object, nil)
-		if err != nil {
-			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't get children")
-		}
-
-		id, err := uuid.NewV4()
-		if err != nil {
-			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't generate UUID")
-		}
-
-		iteratorID = id.String()
-
-		iteratorMapLock.Lock()
-		iterator, ok = iteratorMap[iteratorID]
-		if !ok {
-			iteratorMap[iteratorID] = newIterator
-			iterator = newIterator
-		}
-		iteratorMapLock.Unlock()
-	}
-
-	iter := iterator
-
-	rep.Iterator.ID = iteratorID
-	rep.Iterator.CanFetch = iter.HasNext()
-	for len(rep.Iterator.Buff) < iteratorBuffSize && iter.HasNext() {
-		r, err := iter.Next()
-		if err != nil {
-			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't get Next")
-		}
-		rep.Iterator.CanFetch = iter.HasNext()
-
-		o, err := m.am.GetObject(ctx, *r)
-
-		if err != nil {
-			if err == insolar.ErrDeactivated {
-				continue
-			}
-			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't call GetObject on Next")
-		}
-		protoRef, err := o.Prototype()
-		if err != nil {
-			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't get prototype reference")
-		}
-
-		if protoRef.Equal(req.Prototype) {
-			rep.Iterator.Buff = append(rep.Iterator.Buff, *r)
-		}
-	}
-
-	if !iter.HasNext() {
-		iteratorMapLock.Lock()
-		delete(iteratorMap, rep.Iterator.ID)
-		iteratorMapLock.Unlock()
-	}
-
-	return nil
-}
-
 func (m *executionProxyImplementation) DeactivateObject(
 	ctx context.Context, current *Transcript, req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp,
 ) error {
@@ -404,14 +313,6 @@ func (m *validationProxyImplementation) SaveAsChild(
 	rep.Reference = reqRes.NewObject
 
 	return nil
-}
-
-func (m *validationProxyImplementation) GetObjChildrenIterator(
-	ctx context.Context, current *Transcript,
-	req rpctypes.UpGetObjChildrenIteratorReq,
-	rep *rpctypes.UpGetObjChildrenIteratorResp,
-) error {
-	panic("won't implement, ATM")
 }
 
 func (m *validationProxyImplementation) DeactivateObject(

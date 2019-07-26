@@ -25,26 +25,22 @@ import (
 
 	wmMessage "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils"
 )
 
 func TestClientImplements(t *testing.T) {
@@ -163,38 +159,6 @@ func genRefWithID(id *insolar.ID) *insolar.Reference {
 
 func genRandomRef(pulse insolar.PulseNumber) *insolar.Reference {
 	return genRefWithID(genRandomID(pulse))
-}
-
-func (s *amSuite) TestLedgerArtifactManager_GetChildren_FollowsRedirect() {
-	mc := minimock.NewController(s.T())
-	am := NewClient(nil)
-	mb := testutils.NewMessageBusMock(mc)
-
-	objRef := genRandomRef(0)
-	nodeRef := genRandomRef(0)
-	mb.SendFunc = func(c context.Context, m insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
-		o = o.Safe()
-		if o.Receiver == nil {
-			return &reply.GetChildrenRedirectReply{
-				Receiver: nodeRef,
-				Token:    &delegationtoken.GetChildrenRedirectToken{Signature: []byte{1, 2, 3}},
-			}, nil
-		}
-
-		token, ok := o.Token.(*delegationtoken.GetChildrenRedirectToken)
-		assert.True(s.T(), ok)
-		assert.Equal(s.T(), []byte{1, 2, 3}, token.Signature)
-		assert.Equal(s.T(), nodeRef, o.Receiver)
-		return &reply.Children{}, nil
-	}
-	am.DefaultBus = mb
-
-	pa := pulse.NewAccessorMock(s.T())
-	pa.LatestMock.Return(*insolar.GenesisPulse, nil)
-	am.PulseAccessor = pa
-
-	_, err := am.GetChildren(s.ctx, *objRef, nil)
-	require.NoError(s.T(), err)
 }
 
 func (s *amSuite) TestLedgerArtifactManager_GetIncomingRequest_Success() {
