@@ -121,7 +121,7 @@ func (m *Scope) GetObject(
 
 // RegisterRequest creates request record in storage.
 func (m *Scope) RegisterRequest(ctx context.Context, req record.IncomingRequest) (*insolar.ID, error) {
-	virtRec := record.Wrap(req)
+	virtRec := record.Wrap(&req)
 	return m.setRecord(ctx, virtRec)
 }
 
@@ -134,7 +134,7 @@ func (m *Scope) RegisterResult(
 		Request: request,
 		Payload: payload,
 	}
-	virtRec := record.Wrap(res)
+	virtRec := record.Wrap(&res)
 
 	return m.setRecord(ctx, virtRec)
 }
@@ -172,7 +172,7 @@ func (m *Scope) activateObject(
 		IsPrototype: isPrototype,
 		Parent:      parent,
 	}
-	err = m.updateStateObject(ctx, obj, stateRecord, memory)
+	err = m.updateStateObject(ctx, obj, &stateRecord, memory)
 	if err != nil {
 		return errors.Wrap(err, "fail to store activation state")
 	}
@@ -228,7 +228,7 @@ func (m *Scope) UpdateObject(
 		PrevState:   *objDesc.StateID(),
 	}
 
-	return m.updateStateObject(ctx, *objDesc.HeadRef(), amendRecord, memory)
+	return m.updateStateObject(ctx, *objDesc.HeadRef(), &amendRecord, memory)
 }
 
 // DeployCode creates new code record in storage (code records are used to activate prototypes).
@@ -248,7 +248,7 @@ func (m *Scope) DeployCode(
 
 	return m.setRecord(
 		ctx,
-		record.Wrap(codeRec),
+		record.Wrap(&codeRec),
 	)
 }
 
@@ -280,7 +280,7 @@ func (m *Scope) registerChild(
 		childRec.PrevChild = *prevChild
 	}
 
-	hash := record.HashVirtual(m.PCS.ReferenceHasher(), record.Wrap(childRec))
+	hash := record.HashVirtual(m.PCS.ReferenceHasher(), record.Wrap(&childRec))
 	recID := insolar.NewID(m.PulseNumber, hash)
 
 	// Children exist and pointer does not match (preserving chain consistency).
@@ -289,7 +289,7 @@ func (m *Scope) registerChild(
 		return errors.New("invalid child record")
 	}
 
-	child, err := m.setRecord(ctx, record.Wrap(childRec))
+	child, err := m.setRecord(ctx, record.Wrap(&childRec))
 	if err != nil {
 		return err
 	}
@@ -311,10 +311,10 @@ func (m *Scope) updateStateObject(
 	var virtRecord record.Virtual
 
 	switch so := stateObject.(type) {
-	case record.Activate:
+	case *record.Activate:
 		so.Memory = memory
 		virtRecord = record.Wrap(so)
-	case record.Amend:
+	case *record.Amend:
 		so.Memory = memory
 		virtRecord = record.Wrap(so)
 	default:
@@ -348,7 +348,7 @@ func (m *Scope) updateStateObject(
 	idx.Lifeline.LatestState = id
 	idx.Lifeline.LatestUpdate = m.PulseNumber
 	if stateObject.ID() == record.StateActivation {
-		idx.Lifeline.Parent = stateObject.(record.Activate).Parent
+		idx.Lifeline.Parent = stateObject.(*record.Activate).Parent
 	}
 	err = m.IndexModifier.SetIndex(ctx, m.PulseNumber, idx)
 	if err != nil {

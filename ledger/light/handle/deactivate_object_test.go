@@ -362,7 +362,7 @@ func TestDeactivateObject_ErrorFromWaitHot(t *testing.T) {
 				return nil
 			case *proc.EnsureIndexWM:
 				return nil
-			case *proc.DeactivateObject:
+			case *proc.SetResult:
 				return nil
 			default:
 				panic("unknown procedure")
@@ -421,7 +421,7 @@ func TestDeactivateObject_ErrorFromEnsureIndex(t *testing.T) {
 				return nil
 			case *proc.EnsureIndexWM:
 				return nil
-			case *proc.DeactivateObject:
+			case *proc.SetResult:
 				return nil
 			default:
 				panic("unknown procedure")
@@ -443,7 +443,7 @@ func TestDeactivateObject_ErrorFromDeactivateObject(t *testing.T) {
 
 	msg := metaDeactivateMsg(t)
 
-	t.Run("deactivateobject procedure returns err", func(t *testing.T) {
+	t.Run("SetResult procedure returns err", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
@@ -456,8 +456,8 @@ func TestDeactivateObject_ErrorFromDeactivateObject(t *testing.T) {
 				return nil
 			case *proc.EnsureIndexWM:
 				return nil
-			case *proc.DeactivateObject:
-				return errors.New("error from deactivateobject")
+			case *proc.SetResult:
+				return errors.New("error from SetResult")
 			default:
 				panic("unknown procedure")
 			}
@@ -465,10 +465,10 @@ func TestDeactivateObject_ErrorFromDeactivateObject(t *testing.T) {
 
 		handler := handle.NewDeactivateObject(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
-		assert.EqualError(t, err, "error from deactivateobject")
+		assert.EqualError(t, err, "error from SetResult")
 	})
 
-	t.Run("deactivateobject procedure returns nil err", func(t *testing.T) {
+	t.Run("SetResult procedure returns nil err", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
@@ -481,7 +481,7 @@ func TestDeactivateObject_ErrorFromDeactivateObject(t *testing.T) {
 				return nil
 			case *proc.EnsureIndexWM:
 				return nil
-			case *proc.DeactivateObject:
+			case *proc.SetResult:
 				return nil
 			default:
 				panic("unknown procedure")

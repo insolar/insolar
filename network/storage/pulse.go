@@ -51,14 +51,10 @@
 package storage
 
 import (
-	"bytes"
 	"context"
-
-	"github.com/insolar/insolar/insolar"
-
 	"sync"
 
-	"github.com/ugorji/go/codec"
+	"github.com/insolar/insolar/insolar"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/network/storage.PulseAccessor -o ../../testutils/network -s _mock.go
@@ -296,14 +292,10 @@ func (p *PulseStorage) setHead(pn insolar.PulseNumber) error {
 }
 
 func serialize(nd dbNode) []byte {
-	buff := bytes.NewBuffer(nil)
-	enc := codec.NewEncoder(buff, &codec.CborHandle{})
-	enc.MustEncode(nd)
-	return buff.Bytes()
+	return insolar.MustSerialize(nd)
 }
 
 func deserialize(buf []byte) (nd dbNode) {
-	dec := codec.NewDecoderBytes(buf, &codec.CborHandle{})
-	dec.MustDecode(&nd)
+	insolar.MustDeserialize(buf, &nd)
 	return nd
 }

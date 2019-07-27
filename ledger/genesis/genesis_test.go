@@ -30,7 +30,7 @@ func TestGenesisRecordMarshalUnmarshal(t *testing.T) {
 		Hash: insolar.GenesisRecord,
 	}
 
-	virtGenIn := record.Wrap(genIn)
+	virtGenIn := record.Wrap(&genIn)
 
 	data, err := virtGenIn.Marshal()
 	require.NoError(t, err)

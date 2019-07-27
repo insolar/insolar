@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 
 	"github.com/pkg/errors"
-	"github.com/ugorji/go/codec"
 )
 
 // Arguments is a dedicated type for arguments, that represented as binary cbored blob
@@ -41,7 +40,7 @@ func (args *Arguments) MarshalJSON() ([]byte, error) {
 
 func convertArgs(args []byte, result *[]interface{}) error {
 	var value interface{}
-	err := codec.NewDecoderBytes(args, &codec.CborHandle{}).Decode(&value)
+	err := Deserialize(args, &value)
 	if err != nil {
 		return errors.Wrap(err, "Can't deserialize record")
 	}
@@ -200,10 +199,6 @@ const (
 
 	// Ledger
 
-	// TypeGetChildren retrieves object's children.
-	TypeGetChildren
-	// TypeRegisterChild registers child on the parent object.
-	TypeRegisterChild
 	// TypeGetObjectIndex fetches object index from storage.
 	TypeGetObjectIndex
 
@@ -228,6 +223,5 @@ const (
 	// DTTypePendingExecution allows to continue method calls
 	DTTypePendingExecution DelegationTokenType = iota + 1
 	DTTypeGetObjectRedirect
-	DTTypeGetChildrenRedirect
 	DTTypeGetCodeRedirect
 )

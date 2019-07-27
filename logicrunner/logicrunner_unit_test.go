@@ -194,15 +194,16 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 		Caller: gen.Reference(),
 		Reason: gen.Reference(),
 	}
-	outgoingBytes, err := outgoing.Marshal()
+	virtual := record.Wrap(&outgoing)
+	outgoingBytes, err := virtual.Marshal()
 	suite.Require().NoError(err)
 
 	outgoingReqId := gen.ID()
 	outgoingRequestRef := insolar.NewReference(outgoingReqId)
 
 	pl := &payload.SagaCallAcceptNotification{
-		OutgoingReqID: outgoingReqId,
-		Request:       outgoingBytes,
+		DetachedRequestID: outgoingReqId,
+		Request:           outgoingBytes,
 	}
 	msg, err := payload.NewMessage(pl)
 	suite.Require().NoError(err)
