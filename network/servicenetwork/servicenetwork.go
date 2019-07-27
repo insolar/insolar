@@ -58,6 +58,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
@@ -98,8 +99,6 @@ type ServiceNetwork struct {
 	CryptographyService insolar.CryptographyService        `inject:""`
 	CryptographyScheme  insolar.PlatformCryptographyScheme `inject:""`
 	KeyProcessor        insolar.KeyProcessor               `inject:""`
-	KeyStore            insolar.KeyStore                   `inject:""`
-	TransportFactory    transport.Factory                  `inject:""`
 	NodeKeeper          network.NodeKeeper                 `inject:""`
 	TerminationHandler  insolar.TerminationHandler         `inject:""`
 	ContractRequester   insolar.ContractRequester          `inject:""`
@@ -108,8 +107,9 @@ type ServiceNetwork struct {
 	Pub message.Publisher `inject:""`
 
 	// subcomponents
-	RPC   controller.RPCController `inject:"subcomponent"`
-	Rules network.Rules            `inject:"subcomponent"`
+	RPC              controller.RPCController `inject:"subcomponent"`
+	Rules            network.Rules            `inject:"subcomponent"`
+	TransportFactory transport.Factory        `inject:"subcomponent"`
 
 	HostNetwork network.HostNetwork
 
@@ -179,7 +179,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		cert,
 		transport.NewFactory(n.cfg.Host.Transport),
 		hostNetwork,
-		n.datagramTransport,
 
 		controller.NewRPCController(options),
 		controller.NewPulseController(),
@@ -198,7 +197,9 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 
 	// sign origin
 	origin := n.NodeKeeper.GetOrigin()
-	key, err := n.KeyStore.GetPrivateKey("")
+	// TODO: hack
+	ks := n.CryptographyService.(*cryptography.NodeCryptographyService).KeyStore
+	key, err := ks.GetPrivateKey("")
 	if err != nil {
 		return errors.Wrap(err, "failed to get private key")
 	}
@@ -227,7 +228,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		KeyProcessor:          n.KeyProcessor,
 		Scheme:                n.CryptographyScheme,
 		CertificateManager:    n.CertificateManager,
-		KeyStore:              n.KeyStore,
+		KeyStore:              ks,
 		NodeKeeper:            n.NodeKeeper,
 		StateGetter:           n,
 		PulseChanger:          n,
@@ -240,7 +241,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 
 func (n *ServiceNetwork) initConsensus() {
 
-	pulseHandler := adapters.NewPulseHandler()
+	pulseHandler := adapters.NewPulseHandler(n.NodeKeeper.GetOrigin().ShortID())
 	n.consensusController = n.consensusInstaller.ControllerFor(n.ConsensusMode, pulseHandler, n.datagramHandler)
 	n.consensusController.RegisterFinishedNotifier(func(_ member.OpMode, _ member.Power, effectiveSince insolar.PulseNumber) {
 		n.Gatewayer.Gateway().OnConsensusFinished(effectiveSince)
@@ -251,7 +252,12 @@ func (n *ServiceNetwork) initConsensus() {
 
 // Start implements component.Starter
 func (n *ServiceNetwork) Start(ctx context.Context) error {
-	err := n.cm.Start(ctx)
+	err := n.datagramTransport.Start(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Failed to start datagram transport")
+	}
+
+	err = n.cm.Start(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to start component manager")
 	}
@@ -260,8 +266,14 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	nodes := make([]insolar.NetworkNode, len(cert.GetDiscoveryNodes()))
 	for i, dn := range cert.GetDiscoveryNodes() {
 		nodes[i] = node.NewNode(*dn.GetNodeRef(), dn.GetRole(), dn.GetPublicKey(), dn.GetHost(), "")
+		nodes[i].(node.MutableNode).SetEvidence(cryptkit.NewSignedDigest(
+			cryptkit.NewDigest(longbits.NewBits512FromBytes(dn.GetBriefDigest()), adapters.SHA3512Digest),
+			cryptkit.NewSignature(longbits.NewBits512FromBytes(dn.GetBriefSign()), adapters.SHA3512Digest.SignedBy(adapters.SECP256r1Sign)),
+		))
 	}
+	n.operableFunc(ctx, false)
 	n.NodeKeeper.SetInitialSnapshot(nodes)
+	n.Gatewayer.SwitchState(ctx, insolar.CompleteNetworkState)
 	n.ConsensusMode = consensus.ReadyNetwork
 
 	n.initConsensus()
@@ -295,6 +307,11 @@ func (n *ServiceNetwork) GracefulStop(ctx context.Context) error {
 
 // Stop implements insolar.Component
 func (n *ServiceNetwork) Stop(ctx context.Context) error {
+	err := n.datagramTransport.Stop(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Failed to stop datagram transport")
+	}
+
 	return n.cm.Stop(ctx)
 }
 

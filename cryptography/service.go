@@ -26,13 +26,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-type nodeCryptographyService struct {
+type NodeCryptographyService struct {
 	KeyStore                   insolar.KeyStore                   `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 	KeyProcessor               insolar.KeyProcessor               `inject:""`
 }
 
-func (cs *nodeCryptographyService) GetPublicKey() (crypto.PublicKey, error) {
+func (cs *NodeCryptographyService) GetPublicKey() (crypto.PublicKey, error) {
 	privateKey, err := cs.KeyStore.GetPrivateKey("")
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Sign ] Failed to get private privateKey")
@@ -41,7 +41,7 @@ func (cs *nodeCryptographyService) GetPublicKey() (crypto.PublicKey, error) {
 	return cs.KeyProcessor.ExtractPublicKey(privateKey), nil
 }
 
-func (cs *nodeCryptographyService) Sign(payload []byte) (*insolar.Signature, error) {
+func (cs *NodeCryptographyService) Sign(payload []byte) (*insolar.Signature, error) {
 	privateKey, err := cs.KeyStore.GetPrivateKey("")
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Sign ] Failed to get private privateKey")
@@ -56,12 +56,12 @@ func (cs *nodeCryptographyService) Sign(payload []byte) (*insolar.Signature, err
 	return signature, nil
 }
 
-func (cs *nodeCryptographyService) Verify(publicKey crypto.PublicKey, signature insolar.Signature, payload []byte) bool {
+func (cs *NodeCryptographyService) Verify(publicKey crypto.PublicKey, signature insolar.Signature, payload []byte) bool {
 	return cs.PlatformCryptographyScheme.DataVerifier(publicKey, cs.PlatformCryptographyScheme.IntegrityHasher()).Verify(signature, payload)
 }
 
 func NewCryptographyService() insolar.CryptographyService {
-	return &nodeCryptographyService{}
+	return &NodeCryptographyService{}
 }
 
 func NewKeyBoundCryptographyService(privateKey crypto.PrivateKey) insolar.CryptographyService {

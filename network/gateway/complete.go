@@ -103,6 +103,12 @@ func (g *Complete) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
 		logger.Fatalf("Failed to set new pulse: %s", err.Error())
 	}
 	logger.Infof("Set new current pulse number: %d", pu.PulseNumber)
+
+	// swap active nodes
+	err = g.Base.NodeKeeper.MoveSyncToActive(ctx, pu.PulseNumber)
+	if err != nil {
+		logger.Fatalf("failed to apply new active node list: %s", err.Error())
+	}
 }
 
 func (g *Complete) NeedLockMessageBus() bool {
