@@ -88,7 +88,7 @@ func (g *Complete) GetState() insolar.NetworkState {
 	return insolar.CompleteNetworkState
 }
 
-func (g *Complete) OnPulse(ctx context.Context, pu insolar.Pulse) error {
+func (g *Complete) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
 
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("Gateway.Complete: pulse happens %d", pu.PulseNumber)
@@ -98,8 +98,6 @@ func (g *Complete) OnPulse(ctx context.Context, pu insolar.Pulse) error {
 		logger.Fatalf("Failed to set new pulse: %s", err.Error())
 	}
 	logger.Infof("Set new current pulse number: %d", pu.PulseNumber)
-
-	return nil
 }
 
 func (g *Complete) NeedLockMessageBus() bool {

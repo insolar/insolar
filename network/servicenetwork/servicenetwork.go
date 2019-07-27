@@ -54,7 +54,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/serialization"
 	"github.com/insolar/insolar/network/consensusv1/packets"
@@ -64,24 +63,22 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/network/consensus"
-	"github.com/insolar/insolar/network/consensus/adapters"
-	"github.com/insolar/insolar/network/controller/common"
-	"github.com/insolar/insolar/network/gateway"
-	"github.com/insolar/insolar/network/gateway/bootstrap"
-	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
-
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensus"
+	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/controller"
+	"github.com/insolar/insolar/network/controller/common"
+	"github.com/insolar/insolar/network/gateway"
+	"github.com/insolar/insolar/network/gateway/bootstrap"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/routing"
 	"github.com/insolar/insolar/network/transport"
+	"github.com/pkg/errors"
 )
 
 // ServiceNetwork is facade for network.
@@ -107,7 +104,6 @@ type ServiceNetwork struct {
 	Pub message.Publisher `inject:""`
 
 	// subcomponents
-	//PhaseManager phases.PhaseManager      `inject:"subcomponent"`
 	RPC   controller.RPCController `inject:"subcomponent"`
 	Rules network.Rules            `inject:"subcomponent"`
 
@@ -118,9 +114,9 @@ type ServiceNetwork struct {
 	BaseGateway  *gateway.Base
 	operableFunc insolar.NetworkOperableCallback
 
-	pulseHandler        *adapters.PulseHandler
-	datagramHandler     *adapters.DatagramHandler
-	datagramTransport   transport.DatagramTransport
+	datagramHandler   *adapters.DatagramHandler
+	datagramTransport transport.DatagramTransport
+
 	consensusInstaller  consensus.Installer
 	consensusController consensus.Controller
 
@@ -172,7 +168,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		}
 	})
 
-	n.pulseHandler = adapters.NewPulseHandler()
 	n.datagramHandler = adapters.NewDatagramHandler()
 	datagramTransport, err := n.TransportFactory.CreateDatagramTransport(n.datagramHandler)
 	if err != nil {
@@ -185,8 +180,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		cert,
 		transport.NewFactory(n.cfg.Host.Transport),
 		hostNetwork,
-		n.pulseHandler,
-		n.datagramHandler,
 		n.datagramTransport,
 
 		controller.NewRPCController(options),
@@ -232,6 +225,17 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	return nil
 }
 
+func (n *ServiceNetwork) initConsensus() {
+
+	pulseHandler := adapters.NewPulseHandler()
+	n.consensusController = n.consensusInstaller.ControllerFor(n.ConsensusMode, pulseHandler, n.datagramHandler)
+	n.consensusController.RegisterFinishedNotifier(func(_ member.OpMode, _ member.Power, effectiveSince insolar.PulseNumber) {
+		n.Gatewayer.Gateway().OnConsensusFinished(effectiveSince)
+	})
+	n.BaseGateway.ConsensusController = n.consensusController
+	n.BaseGateway.ConsensusPulseHandler = pulseHandler
+}
+
 // Start implements component.Starter
 func (n *ServiceNetwork) Start(ctx context.Context) error {
 	err := n.cm.Start(ctx)
@@ -239,13 +243,8 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to start component manager")
 	}
 
+	n.initConsensus()
 	n.Gatewayer.Gateway().Run(ctx)
-
-	n.consensusController = n.consensusInstaller.ControllerFor(n.ConsensusMode, n.pulseHandler, n.datagramHandler)
-	n.consensusController.RegisterFinishedNotifier(func(_ member.OpMode, _ member.Power, effectiveSince insolar.PulseNumber) {
-		n.Gatewayer.Gateway().OnConsensusFinished(effectiveSince)
-	})
-	n.BaseGateway.ConsensusController = n.consensusController
 
 	n.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
 
@@ -286,45 +285,27 @@ func (n *ServiceNetwork) SetOperableFunc(f insolar.NetworkOperableCallback) {
 	n.operableFunc = f
 }
 
+// HandlePulse process pulse from PulseController
+func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse insolar.Pulse, originalPacket network.ReceivedPacket) {
+	n.Gatewayer.Gateway().OnPulseFromPulsar(ctx, pulse, originalPacket)
+}
+
 // consensus handlers here
 
-func (n *ServiceNetwork) ChangePulse(ctx context.Context, newPulse insolar.Pulse) {
-	logger := inslogger.FromContext(ctx)
-
-	logger.Infof("Got new pulse number: %d", newPulse.PulseNumber)
-	ctx, span := instracer.StartSpan(ctx, "ServiceNetwork.Handlepulse")
-	span.AddAttributes(
-		trace.Int64Attribute("pulse.PulseNumber", int64(newPulse.PulseNumber)),
-	)
-	defer span.End()
-
-	n.CurrentPulse = newPulse
-
-	if err := n.NodeKeeper.MoveSyncToActive(ctx, newPulse.PulseNumber); err != nil {
-		logger.Warn("MoveSyncToActive failed: ", err.Error())
-	}
-
-	if err := n.Gatewayer.Gateway().OnPulse(ctx, newPulse); err != nil {
-		logger.Error(errors.Wrap(err, "Failed to call OnPulse on Gateway"))
-	}
+// ChangePulse process pulse from Consensus
+func (n *ServiceNetwork) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
+	n.CurrentPulse = pulse
+	n.Gatewayer.Gateway().OnPulseFromConsensus(ctx, pulse)
 }
 
 func (n *ServiceNetwork) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
-	err := n.NodeKeeper.Sync(ctx, nodes)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(err)
-	}
-	n.NodeKeeper.SetCloudHash(cloudStateHash)
+	n.Gatewayer.Gateway().UpdateState(ctx, pulseNumber, nodes, cloudStateHash)
 }
 
 func (n *ServiceNetwork) State() []byte {
 	nshBytes := make([]byte, 64)
 	_, _ = rand.Read(nshBytes)
 	return nshBytes
-}
-
-func (n *ServiceNetwork) RegisterConsensusFinishedNotifier(fn consensus.FinishedNotifier) {
-	n.consensusController.RegisterFinishedNotifier(fn)
 }
 
 func getAnnounceSignature(
@@ -377,4 +358,9 @@ func getAnnounceSignature(
 	}
 
 	return digest, *sign
+}
+
+// RegisterConsensusFinishedNotifier for integrtest TODO: remove
+func (n *ServiceNetwork) RegisterConsensusFinishedNotifier(fn consensus.FinishedNotifier) {
+	n.consensusController.RegisterFinishedNotifier(fn)
 }

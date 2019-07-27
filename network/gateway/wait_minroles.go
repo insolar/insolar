@@ -71,12 +71,10 @@ func (g *WaitMinRoles) GetState() insolar.NetworkState {
 	return insolar.WaitMinRoles
 }
 
-func (g *WaitMinRoles) OnPulse(ctx context.Context, pu insolar.Pulse) error {
+func (g *WaitMinRoles) OnConsensusFinished(p insolar.PulseNumber) {
 	// TODO: check min roles and switch state
 
 	if g.Rules.CheckMinRole() {
-		g.Gatewayer.SwitchState(ctx, insolar.CompleteNetworkState)
+		g.Gatewayer.SwitchState(context.Background(), insolar.CompleteNetworkState)
 	}
-
-	return g.Base.OnPulse(ctx, pu)
 }

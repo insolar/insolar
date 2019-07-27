@@ -199,8 +199,10 @@ type Gatewayer interface {
 type Gateway interface {
 	Run(context.Context)
 	GetState() insolar.NetworkState
-	OnPulse(context.Context, insolar.Pulse) error
+	OnPulseFromPulsar(context.Context, insolar.Pulse, ReceivedPacket)
+	OnPulseFromConsensus(context.Context, insolar.Pulse)
 	OnConsensusFinished(p insolar.PulseNumber)
+	UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte)
 	NewGateway(context.Context, insolar.NetworkState) Gateway
 	Auther() Auther
 	NeedLockMessageBus() bool

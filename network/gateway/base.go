@@ -52,10 +52,12 @@ package gateway
 
 import (
 	"context"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"go.opencensus.io/trace"
 	"time"
 
 	"github.com/pkg/errors"
@@ -94,7 +96,8 @@ type Base struct {
 	Rules               network.Rules               `inject:""`
 	KeyProcessor        insolar.KeyProcessor        `inject:""`
 
-	ConsensusController consensus.Controller
+	ConsensusController   consensus.Controller
+	ConsensusPulseHandler network.PulseHandler
 
 	bootstrapETA           insolar.PulseNumber
 	originCandidateProfile *packet.CandidateProfile
@@ -135,8 +138,33 @@ func (g *Base) Init(ctx context.Context) error {
 	return nil
 }
 
-func (g *Base) OnPulse(ctx context.Context, pu insolar.Pulse) error {
-	return nil
+func (g *Base) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, originalPacket network.ReceivedPacket) {
+	// forward pulse to Consensus
+	g.ConsensusPulseHandler.HandlePulse(ctx, pu, originalPacket)
+}
+
+func (n *Base) OnPulseFromConsensus(ctx context.Context, newPulse insolar.Pulse) {
+	logger := inslogger.FromContext(ctx)
+
+	logger.Infof("Got new pulse number: %d", newPulse.PulseNumber)
+	ctx, span := instracer.StartSpan(ctx, "ServiceNetwork.Handlepulse")
+	span.AddAttributes(
+		trace.Int64Attribute("pulse.PulseNumber", int64(newPulse.PulseNumber)),
+	)
+	defer span.End()
+
+	if err := n.NodeKeeper.MoveSyncToActive(ctx, newPulse.PulseNumber); err != nil {
+		logger.Warn("MoveSyncToActive failed: ", err.Error())
+	}
+
+}
+
+func (n *Base) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
+	err := n.NodeKeeper.Sync(ctx, nodes)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(err)
+	}
+	n.NodeKeeper.SetCloudHash(cloudStateHash)
 }
 
 func (g *Base) NeedLockMessageBus() bool {
@@ -225,7 +253,7 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 
 		//pulseStartTime := time.Now()
 		//g.PulseAppender.Append(ctx, lastPulse)
-		//if err = g.PhaseManager.OnPulse(ctx, &lastPulse, pulseStartTime); err != nil {
+		//if err = g.PhaseManager.OnPulseFromPulsar(ctx, &lastPulse, pulseStartTime); err != nil {
 		//	inslogger.FromContext(ctx).Error("Failed to pass consensus: ", err.Error())
 		//}
 		//if err = g.NodeKeeper.MoveSyncToActive(ctx, lastPulse.PulseNumber); err != nil {
@@ -234,7 +262,7 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 
 		// fixme twice consensus call
 		//lastPulse.PulseNumber += 1
-		//if err := g.PhaseManager.OnPulse(ctx, &lastPulse, pulseStartTime); err != nil {
+		//if err := g.PhaseManager.OnPulseFromPulsar(ctx, &lastPulse, pulseStartTime); err != nil {
 		//	inslogger.FromContext(ctx).Error("Failed to pass consensus: ", err.Error())
 		//}
 	}()

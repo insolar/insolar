@@ -74,11 +74,16 @@ func NewFakeGateway() network.Gateway {
 	return g
 }
 
-func (g *FakeGateway) OnPulse(context.Context, insolar.Pulse) error {
+func (g *FakeGateway) OnPulseFromPulsar(context.Context, insolar.Pulse, network.ReceivedPacket) {
 	g.stateMu.Lock()
 	defer g.stateMu.Unlock()
 	g.State = insolar.CompleteNetworkState
-	return nil
+}
+
+func (g *FakeGateway) OnPulseFromConsensus(context.Context, insolar.Pulse) {
+	g.stateMu.Lock()
+	defer g.stateMu.Unlock()
+	g.State = insolar.CompleteNetworkState
 }
 
 func (g *FakeGateway) NeedLockMessageBus() bool {
