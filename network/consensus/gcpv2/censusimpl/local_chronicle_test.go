@@ -80,7 +80,7 @@ func TestGetLatestCensus(t *testing.T) {
 	require.Equal(t, exp, lc.GetLatestCensus())
 
 	lc.expected = nil
-	pct := &PrimingCensusTemplate{pd: pulse.Data{PulseNumber: 1}}
+	pct := &PrimingCensusTemplate{CensusTemplate{pd: pulse.Data{PulseNumber: 1}}}
 	lc.active = pct
 	require.Equal(t, pct, lc.GetLatestCensus())
 }
@@ -99,7 +99,7 @@ func TestGetRecentCensus(t *testing.T) {
 	lc.expected = nil
 	require.Panics(t, func() { lc.GetRecentCensus(pn) })
 
-	pct := &PrimingCensusTemplate{pd: pulse.Data{PulseNumber: pn}}
+	pct := &PrimingCensusTemplate{CensusTemplate{pd: pulse.Data{PulseNumber: pn}}}
 	lc.active = pct
 	require.Equal(t, pct, lc.GetRecentCensus(pn))
 
@@ -108,7 +108,7 @@ func TestGetRecentCensus(t *testing.T) {
 
 func TestGetActiveCensus(t *testing.T) {
 	lc := localChronicles{}
-	pct := &PrimingCensusTemplate{pd: pulse.Data{PulseNumber: 1}}
+	pct := &PrimingCensusTemplate{CensusTemplate{pd: pulse.Data{PulseNumber: 1}}}
 	lc.active = pct
 	require.Equal(t, pct, lc.GetActiveCensus())
 }
@@ -125,7 +125,7 @@ func TestLCMakeActive(t *testing.T) {
 	exp1 := census.NewExpectedMock(t)
 	lc.expected = exp1
 	pn := pulse.Number(pulse.MinTimePulse)
-	pct := &PrimingCensusTemplate{pd: pulse.Data{PulseNumber: pn}}
+	pct := &PrimingCensusTemplate{CensusTemplate{pd: pulse.Data{PulseNumber: pn}}}
 	lc.active = pct
 	exp2 := census.NewExpectedMock(t)
 	require.Panics(t, func() { lc.makeActive(exp2, pct) })
@@ -175,8 +175,8 @@ func TestLCMakeActive(t *testing.T) {
 	require.Nil(t, lc.expected)
 
 	lc = localChronicles{expected: exp1}
-	pct = &PrimingCensusTemplate{registries: registries, pd: pulse.Data{PulseNumber: pn,
-		DataExt: pulse.DataExt{NextPulseDelta: 1, PulseEpoch: pulse.MaxTimePulse}}}
+	pct = &PrimingCensusTemplate{CensusTemplate{registries: registries, pd: pulse.Data{PulseNumber: pn,
+		DataExt: pulse.DataExt{NextPulseDelta: 1, PulseEpoch: pulse.MaxTimePulse}}}}
 	lc.makeActive(exp1, pct)
 	require.Equal(t, pn+pulse.Number(pct.pd.NextPulseDelta), lc.expectedPulseNumber)
 
@@ -185,8 +185,8 @@ func TestLCMakeActive(t *testing.T) {
 	require.Nil(t, lc.expected)
 
 	lc = localChronicles{expected: exp1}
-	pct = &PrimingCensusTemplate{registries: registries, pd: pulse.Data{PulseNumber: pn,
-		DataExt: pulse.DataExt{NextPulseDelta: 1, PulseEpoch: pulse.MaxTimePulse + 1}}}
+	pct = &PrimingCensusTemplate{CensusTemplate{registries: registries, pd: pulse.Data{PulseNumber: pn,
+		DataExt: pulse.DataExt{NextPulseDelta: 1, PulseEpoch: pulse.MaxTimePulse + 1}}}}
 	lc.makeActive(exp1, pct)
 	require.Equal(t, pulse.Unknown, lc.expectedPulseNumber)
 

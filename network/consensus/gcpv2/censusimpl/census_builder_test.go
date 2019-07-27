@@ -238,7 +238,7 @@ func TestRemoveOthers(t *testing.T) {
 	require.Len(t, lcb.population.slotByID, 1)
 }
 
-func TestGetUnorderedProfiles(t *testing.T) {
+func TestDPBGetUnorderedProfiles(t *testing.T) {
 	chronicles := &localChronicles{}
 	pn := pulse.Number(1)
 	sp := profiles.NewStaticProfileMock(t)
@@ -292,7 +292,7 @@ func TestDPBFindProfile(t *testing.T) {
 	require.Panics(t, func() { dpb.FindProfile(1).GetLeaveReason() })
 }
 
-func TestAddProfile(t *testing.T) {
+func TestDPBAddProfile(t *testing.T) {
 	chronicles := &localChronicles{}
 	pn := pulse.Number(1)
 	sp1 := profiles.NewStaticProfileMock(t)

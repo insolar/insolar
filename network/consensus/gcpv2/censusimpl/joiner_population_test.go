@@ -134,7 +134,7 @@ func TestOJPCopyTo(t *testing.T) {
 	require.Zero(t, population.local.index)
 }
 
-func TestFindProfile(t *testing.T) {
+func TestOJPFindProfile(t *testing.T) {
 	sp := profiles.NewStaticProfileMock(t)
 	nodeID := insolar.ShortNodeID(0)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return nodeID })
