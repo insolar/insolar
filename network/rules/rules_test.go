@@ -113,7 +113,7 @@ func getDiscoveryNodes(count int) ([]insolar.NetworkNode, []insolar.DiscoveryNod
 
 	for i := 0; i < count; i++ {
 		n := newNode(i)
-		d := certificate.NewBootstrapNode(nil, "", "127.0.0.1:3000", n.ID().String())
+		d := certificate.NewBootstrapNode(nil, "", "127.0.0.1:3000", n.ID().String(), n.Role().String())
 		result1[i] = n
 		result2[i] = d
 	}

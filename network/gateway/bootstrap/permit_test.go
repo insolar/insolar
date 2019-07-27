@@ -87,7 +87,7 @@ func TestCreateAndVerifyPermit(t *testing.T) {
 	cert := testutils.NewCertificateMock(t)
 	cert.GetDiscoveryNodesMock.Set(func() (r []insolar.DiscoveryNode) {
 		pk, _ := cryptographyService.GetPublicKey()
-		node := certificate.NewBootstrapNode(pk, "", origin.Address.String(), origin.NodeID.String())
+		node := certificate.NewBootstrapNode(pk, "", origin.Address.String(), origin.NodeID.String(), insolar.StaticRoleVirtual.String())
 		return []insolar.DiscoveryNode{node}
 	})
 

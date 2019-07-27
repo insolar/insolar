@@ -40,17 +40,19 @@ type BootstrapNode struct {
 	NetworkSign []byte `json:"network_sign"`
 	NodeSign    []byte `json:"node_sign"`
 	NodeRef     string `json:"node_ref"`
+	NodeRole    string `json:"node_role"`
 
 	// preprocessed fields
 	nodePublicKey crypto.PublicKey
 }
 
-func NewBootstrapNode(pubKey crypto.PublicKey, publicKey, host, noderef string) *BootstrapNode {
+func NewBootstrapNode(pubKey crypto.PublicKey, publicKey, host, noderef, role string) *BootstrapNode {
 	return &BootstrapNode{
 		PublicKey:     publicKey,
 		Host:          host,
 		NodeRef:       noderef,
 		nodePublicKey: pubKey,
+		NodeRole:      role,
 	}
 }
 
@@ -72,6 +74,11 @@ func (bn *BootstrapNode) GetPublicKey() crypto.PublicKey {
 // GetHost returns host of bootstrap node
 func (bn *BootstrapNode) GetHost() string {
 	return bn.Host
+}
+
+// GetRole returns role of bootstrap node
+func (bn *BootstrapNode) GetRole() insolar.StaticRole {
+	return insolar.GetStaticRoleFromString(bn.NodeRole)
 }
 
 // NodeSign returns signed information about some node
@@ -136,7 +143,7 @@ func (cert *Certificate) SerializeNetworkPart() []byte {
 	out += strings.Join(cert.PulsarPublicKeys, "")
 	nodes := make([]string, len(cert.BootstrapNodes))
 	for i, node := range cert.BootstrapNodes {
-		nodes[i] = node.PublicKey + node.NodeRef + node.Host
+		nodes[i] = node.PublicKey + node.NodeRef + node.Host + node.NodeRole
 	}
 	sort.Strings(nodes)
 	out += strings.Join(nodes, "")

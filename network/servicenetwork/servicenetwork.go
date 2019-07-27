@@ -173,11 +173,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	})
 
 	n.datagramHandler = adapters.NewDatagramHandler()
-	datagramTransport, err := n.TransportFactory.CreateDatagramTransport(n.datagramHandler)
-	if err != nil {
-		return errors.Wrap(err, "failed to create datagramTransport")
-	}
-	n.datagramTransport = datagramTransport
 
 	n.cm.Inject(n,
 		&routing.Table{},
@@ -194,6 +189,12 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		n.Gatewayer,
 		rules.NewRules(),
 	)
+
+	datagramTransport, err := n.TransportFactory.CreateDatagramTransport(n.datagramHandler)
+	if err != nil {
+		return errors.Wrap(err, "failed to create datagramTransport")
+	}
+	n.datagramTransport = datagramTransport
 
 	// sign origin
 	origin := n.NodeKeeper.GetOrigin()
@@ -254,6 +255,14 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to start component manager")
 	}
+
+	cert := n.CertificateManager.GetCertificate()
+	nodes := make([]insolar.NetworkNode, len(cert.GetDiscoveryNodes()))
+	for i, dn := range cert.GetDiscoveryNodes() {
+		nodes[i] = node.NewNode(*dn.GetNodeRef(), dn.GetRole(), dn.GetPublicKey(), dn.GetHost(), "")
+	}
+	n.NodeKeeper.SetInitialSnapshot(nodes)
+	n.ConsensusMode = consensus.ReadyNetwork
 
 	n.initConsensus()
 	n.Gatewayer.Gateway().Run(ctx)

@@ -56,8 +56,6 @@ import (
 	"context"
 	"crypto"
 	"fmt"
-	"github.com/insolar/insolar/network/consensus"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -65,6 +63,9 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/insolar/insolar/network/consensus"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 
 	"github.com/insolar/insolar/network/rules"
 
@@ -438,7 +439,8 @@ func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManag
 			pubKey,
 			string(pubKeyBuf[:]),
 			b.host,
-			b.id.String())
+			b.id.String(),
+			b.role.String())
 
 		cert.BootstrapNodes = append(cert.BootstrapNodes, *bootstrapNode)
 	}

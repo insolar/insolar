@@ -343,6 +343,7 @@ func initCrypto(node insolar.NetworkNode, discoveryNodes []insolar.NetworkNode) 
 			string(pubKeyBuf[:]),
 			dn.Address(),
 			dn.ID().String(),
+			dn.Role().String(),
 		)
 		bootstrapNodes = append(bootstrapNodes, *bootstrapNode)
 	}

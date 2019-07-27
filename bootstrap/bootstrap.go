@@ -156,6 +156,7 @@ func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeI
 				PublicKey: n2.publicKey,
 				Host:      host,
 				NodeRef:   n2.reference().String(),
+				NodeRole:  n2.role,
 			})
 		}
 
