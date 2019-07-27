@@ -255,13 +255,13 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to start component manager")
 	}
 
-	cert := n.CertificateManager.GetCertificate()
-	nodes := make([]insolar.NetworkNode, len(cert.GetDiscoveryNodes()))
-	for i, dn := range cert.GetDiscoveryNodes() {
-		nodes[i] = node.NewNode(*dn.GetNodeRef(), dn.GetRole(), dn.GetPublicKey(), dn.GetHost(), "")
-	}
-	n.NodeKeeper.SetInitialSnapshot(nodes)
-	n.ConsensusMode = consensus.ReadyNetwork
+	//cert := n.CertificateManager.GetCertificate()
+	//nodes := make([]insolar.NetworkNode, len(cert.GetDiscoveryNodes()))
+	//for i, dn := range cert.GetDiscoveryNodes() {
+	//	nodes[i] = node.NewNode(*dn.GetNodeRef(), dn.GetRole(), dn.GetPublicKey(), dn.GetHost(), "")
+	//}
+	//n.NodeKeeper.SetInitialSnapshot(nodes)
+	//n.ConsensusMode = consensus.ReadyNetwork
 
 	n.initConsensus()
 	n.Gatewayer.Gateway().Run(ctx)
