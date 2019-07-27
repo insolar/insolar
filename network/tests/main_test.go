@@ -85,7 +85,7 @@ func TestServiceNetworkManyBootstraps(t *testing.T) {
 // Consensus suite tests
 
 func (s *consensusSuite) TestNetworkConsensus3Times() {
-	s.waitForConsensus(5)
+	s.waitForConsensus(9)
 	s.AssertActiveNodesCountDelta(0)
 }
 
@@ -178,24 +178,24 @@ func (s *consensusSuite) TestNodeLeave() {
 		s.StopNode(testNode)
 	}(s)
 
-	s.waitForConsensus(2)
-	s.AssertActiveNodesCountDelta(1)
-	s.AssertWorkingNodesCountDelta(0)
-
-	// node become working after 3 consensuses
 	s.waitForConsensus(1)
+
+	s.AssertActiveNodesCountDelta(0)
+
+	s.waitForConsensus(2)
+
 	s.AssertActiveNodesCountDelta(1)
 	s.AssertWorkingNodesCountDelta(1)
 
 	testNode.serviceNetwork.Leave(context.Background(), 0)
 
-	s.waitForConsensus(2)
+	s.waitForConsensus(3)
 
 	// one active node becomes "not working"
 	s.AssertWorkingNodesCountDelta(0)
 
 	// but all nodes are active
-	s.AssertActiveNodesCountDelta(1)
+	s.AssertActiveNodesCountDelta(0)
 }
 
 func (s *consensusSuite) TestNodeLeaveAtETA() {

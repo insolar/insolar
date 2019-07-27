@@ -88,7 +88,7 @@ import (
 )
 
 var (
-	testNetworkPort uint32 = 10010
+	testNetworkPort uint32 = 10000
 )
 
 var (
@@ -96,7 +96,7 @@ var (
 )
 
 const (
-	UseFakeTransport = true
+	UseFakeTransport = false
 	UseFakeBootstrap = true
 
 	reqTimeoutMs int32 = 2000
@@ -539,6 +539,8 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		// little hack: this Register will override transport.Factory
 		// in servicenetwork internal component manager with fake factory
 		node.componentManager.Register(transport.NewFakeFactory(cfg.Host.Transport))
+	} else {
+		node.componentManager.Register(transport.NewFactory(cfg.Host.Transport))
 	}
 
 	node.componentManager.Inject(

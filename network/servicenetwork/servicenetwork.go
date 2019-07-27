@@ -258,7 +258,7 @@ func (n *ServiceNetwork) Leave(ctx context.Context, eta insolar.PulseNumber) {
 	logger.Info("Gracefully stopping service network")
 
 	// TODO: fix leave
-	//n.consensusController.Leave(0)
+	n.consensusController.Leave(0)
 }
 
 func (n *ServiceNetwork) GracefulStop(ctx context.Context) error {

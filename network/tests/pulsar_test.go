@@ -167,8 +167,8 @@ func (tp *testPulsar) distribute(ctx context.Context) {
 		select {
 		case <-time.After(time.Duration(tp.pulseDelta) * time.Second):
 			go func(pulse insolar.Pulse) {
-				//tp.activityMutex.Lock()
-				//defer tp.activityMutex.Unlock()
+				tp.activityMutex.Lock()
+				defer tp.activityMutex.Unlock()
 
 				pulse.PulseTimestamp = time.Now().UnixNano()
 
