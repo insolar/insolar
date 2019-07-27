@@ -56,7 +56,7 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"fmt"
-	"testing"
+	"sync"
 	"time"
 
 	"github.com/insolar/insolar/certificate"
@@ -69,6 +69,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/consensus/constestus"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/serialization"
@@ -77,8 +78,6 @@ import (
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -105,9 +104,66 @@ type nodeComponents struct {
 
 type nodeIdentity struct {
 	addr       string
+	id         insolar.ShortNodeID
+	ref        insolar.Reference
 	role       insolar.StaticRole
 	privateKey crypto.PrivateKey
 	publicKey  crypto.PublicKey
+}
+
+func (i nodeIdentity) createNode() insolar.NetworkNode {
+	n := node.NewNode(
+		i.ref,
+		i.role,
+		i.publicKey,
+		i.addr,
+		"",
+	)
+	mn := n.(node.MutableNode)
+	mn.SetShortID(i.id)
+
+	return mn
+}
+
+type identityGenerator struct {
+	baseAddr string
+
+	mu         *sync.Mutex
+	portOffset uint16
+	idOffset   uint32
+}
+
+func (g *identityGenerator) generateShared() (insolar.ShortNodeID, uint16) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	id := g.idOffset
+	g.idOffset++
+
+	port := g.portOffset
+	g.portOffset++
+
+	return insolar.ShortNodeID(id), port
+}
+
+func (g *identityGenerator) generateIdentity(role insolar.StaticRole) (*nodeIdentity, error) {
+	privateKey, err := keyProcessor.GeneratePrivateKey()
+	if err != nil {
+		return nil, err
+	}
+
+	id, port := g.generateShared()
+
+	identity := &nodeIdentity{
+		addr:       fmt.Sprintf("%s:%d", g.baseAddr, port),
+		id:         id,
+		ref:        testutils.RandomRef(),
+		role:       role,
+		privateKey: privateKey,
+		publicKey:  keyProcessor.ExtractPublicKey(privateKey),
+	}
+
+	return identity, nil
 }
 
 type networkNode struct {
@@ -121,26 +177,6 @@ type NodeCount struct {
 	Virtual uint
 	Light   uint
 	Neutral uint
-}
-
-type Network struct {
-	testing.T
-
-	DiscoveryNodes NodeCount
-	Nodes          NodeCount
-	Strategy       NetworkStrategy
-}
-
-func (n *Network) Require() *require.Assertions {
-	return require.New(n)
-}
-
-func (n *Network) Assert() *assert.Assertions {
-	return assert.New(n)
-}
-
-func (n *Network) Init(ctx context.Context) {
-
 }
 
 func testCase(stopAfter, startCaseAfter time.Duration, test func()) {
@@ -214,10 +250,12 @@ func initNodes(ctx context.Context, mode consensus.Mode, nodes GeneratedNodes, s
 		nodeKeeper.SetInitialSnapshot(nodes.nodes)
 		ns.nodeKeepers[i] = nodeKeeper
 
-		certificateManager, err := initCrypto(n, nodes.discoveryNodes)
+		cert, err := generateCertificate(n, nodes.discoveryNodes)
 		if err != nil {
 			return nil, err
 		}
+		certificateManager := certificate.NewCertificateManager(cert)
+
 		datagramHandler := adapters.NewDatagramHandler()
 
 		conf := configuration.NewHostNetwork().Transport
@@ -270,13 +308,13 @@ func initNodes(ctx context.Context, mode consensus.Mode, nodes GeneratedNodes, s
 }
 
 func initPulsar(ctx context.Context, delta uint16, ns InitializedNodes) {
-	data := *pulse.NewFirstPulsarData(delta, randBits256())
+	data := *pulse.NewFirstPulsarData(delta, constestus.RandomEntropy())
 	// data := *pulse.NewFirstEphemeralData()
 
-	pulsar := NewPulsar(data, ns.pulseHandlers)
+	pulsar := constestus.NewPulsar(data, ns.pulseHandlers)
 	go func() {
 		for {
-			pulsar.Pulse(ctx, 4+len(ns.staticProfiles)/10)
+			_ = pulsar.Pulse(ctx, 4+len(ns.staticProfiles)/10)
 		}
 	}()
 }
@@ -304,17 +342,22 @@ func generateNodeIdentities(countNeutral, countHeavy, countLight, countVirtual i
 func _generateNodeIdentity(r []nodeIdentity, count int, role insolar.StaticRole) []nodeIdentity {
 	for i := 0; i < count; i++ {
 		port := portOffset
+		shortID := shortNodeIdOffset
 
 		privateKey, _ := keyProcessor.GeneratePrivateKey()
 		publicKey := keyProcessor.ExtractPublicKey(privateKey)
 
 		r = append(r, nodeIdentity{
-			role:       role,
 			addr:       fmt.Sprintf("127.0.0.1:%d", port),
+			id:         insolar.ShortNodeID(shortID),
+			ref:        testutils.RandomRef(),
+			role:       role,
 			privateKey: privateKey,
 			publicKey:  publicKey,
 		})
-		portOffset += 1
+
+		portOffset++
+		shortNodeIdOffset++
 	}
 	return r
 }
@@ -376,7 +419,7 @@ func nodesFromInfo(nodeInfos []nodeIdentity) ([]insolar.NetworkNode, []insolar.N
 			isDiscovery = true
 		}
 
-		nn := newNetworkNode(info.addr, info.role, info.publicKey)
+		nn := info.createNode()
 		nodes[i] = nn
 		if isDiscovery {
 			discoveryNodes = append(discoveryNodes, nn)
@@ -396,30 +439,6 @@ func nodesFromInfo(nodeInfos []nodeIdentity) ([]insolar.NetworkNode, []insolar.N
 	}
 
 	return nodes, discoveryNodes, nil
-}
-
-func newNetworkNode(addr string, role insolar.StaticRole, pk crypto.PublicKey) node.MutableNode {
-	n := node.NewNode(
-		testutils.RandomRef(),
-		role,
-		pk,
-		addr,
-		"",
-	)
-	mn := n.(node.MutableNode)
-	mn.SetShortID(insolar.ShortNodeID(shortNodeIdOffset))
-
-	shortNodeIdOffset += 1
-	return mn
-}
-
-func initCrypto(node insolar.NetworkNode, discoveryNodes []insolar.NetworkNode) (*certificate.CertificateManager, error) {
-	cert, err := generateCertificate(node, discoveryNodes)
-	if err != nil {
-		return nil, err
-	}
-
-	return certificate.NewCertificateManager(cert), nil
 }
 
 func generateCertificate(node insolar.NetworkNode, discoveryNodes []insolar.NetworkNode) (*certificate.Certificate, error) {
