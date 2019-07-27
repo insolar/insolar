@@ -67,42 +67,30 @@ import (
 	"github.com/insolar/insolar/network/consensus/adapters"
 )
 
-const (
-	initialPulse = 100000
-)
-
 type Pulsar struct {
-	pulseDelta    uint16
-	pulseNumber   pulse.Number
+	pulse         pulse.Data
 	pulseHandlers []network.PulseHandler
 
 	mu *sync.Mutex
 }
 
-func NewPulsar(pulseDelta uint16, pulseHandlers []network.PulseHandler) Pulsar {
+func NewPulsar(firstPulse pulse.Data, pulseHandlers []network.PulseHandler) Pulsar {
 	return Pulsar{
-		pulseDelta:    pulseDelta,
-		pulseNumber:   initialPulse,
 		pulseHandlers: pulseHandlers,
 		mu:            &sync.Mutex{},
+		pulse:         firstPulse,
 	}
 }
 
 func (p *Pulsar) Pulse(ctx context.Context, attempts int) {
 	p.mu.Lock()
-	defer time.AfterFunc(time.Duration(p.pulseDelta)*time.Second, func() {
+	defer time.AfterFunc(time.Duration(p.pulse.NextPulseDelta)*time.Second, func() {
 		p.mu.Unlock()
 	})
 
-	prevDelta := p.pulseDelta
-	if p.pulseNumber == initialPulse {
-		prevDelta = 0
-	}
+	p.pulse = *p.pulse.CreateNextPulse(randBits256)
 
-	data := *pulse.NewPulsarData(p.pulseNumber, p.pulseDelta, prevDelta, randBits256())
-	p.pulseNumber += pulse.Number(p.pulseDelta)
-
-	pu := adapters.NewPulse(data)
+	pu := adapters.NewPulse(p.pulse)
 	ph, _ := host.NewHost("127.0.0.1:1")
 	th, _ := host.NewHost("127.0.0.1:2")
 	pp := pulsenetwork.NewPulsePacket(ctx, &pu, ph, th, 0)

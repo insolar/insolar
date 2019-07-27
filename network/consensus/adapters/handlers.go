@@ -116,10 +116,14 @@ func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, b
 
 type PulseHandler struct {
 	packetProcessor PacketProcessor
+
+	localNodeID insolar.ShortNodeID
 }
 
-func NewPulseHandler() *PulseHandler {
-	return &PulseHandler{}
+func NewPulseHandler(nodeID insolar.ShortNodeID) *PulseHandler {
+	return &PulseHandler{
+		localNodeID: nodeID,
+	}
 }
 
 func (ph *PulseHandler) SetPacketProcessor(packetProcessor PacketProcessor) {
@@ -129,7 +133,7 @@ func (ph *PulseHandler) SetPacketProcessor(packetProcessor PacketProcessor) {
 func (ph *PulseHandler) SetPacketParserFactory(PacketParserFactory) {}
 
 func (ph *PulseHandler) HandlePulse(ctx context.Context, pulse insolar.Pulse, packet network.ReceivedPacket) {
-	pulsePayload := NewPulsePacketParser(pulse, packet.Bytes())
+	pulsePayload := NewPulseParser(pulse, packet.Bytes(), ph.localNodeID)
 
 	err := ph.packetProcessor.ProcessPacket(ctx, pulsePayload, &endpoints.InboundConnection{
 		Addr: "pulsar",

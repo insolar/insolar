@@ -108,6 +108,7 @@ func verify(s interface{}) {
 
 type Dep struct {
 	PrimingCloudStateHash [64]byte
+	EphemeralPulseAllowed adapters.EphemeralPulseAllowedFn
 
 	KeyProcessor       insolar.KeyProcessor
 	Scheme             insolar.PlatformCryptographyScheme
@@ -175,7 +176,7 @@ func newConstructor(ctx context.Context, dep *Dep) *constructor {
 		dep.PulseChanger,
 		dep.StateUpdater,
 	)
-	c.roundStrategyFactory = adapters.NewRoundStrategyFactory()
+	c.roundStrategyFactory = adapters.NewRoundStrategyFactory(dep.EphemeralPulseAllowed)
 	c.transportCryptographyFactory = adapters.NewTransportCryptographyFactory(dep.Scheme)
 	c.packetBuilder = serialization.NewPacketBuilder(
 		c.transportCryptographyFactory,

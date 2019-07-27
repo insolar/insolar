@@ -59,7 +59,7 @@ import (
 	"github.com/insolar/insolar/network/transport"
 )
 
-type NetStrategy interface {
+type NetworkStrategy interface {
 	GetLink(datagramTransport transport.DatagramTransport) transport.DatagramTransport
 }
 
@@ -75,7 +75,7 @@ type delayNetStrategy struct {
 	conf DelayStrategyConf
 }
 
-func NewDelayNetStrategy(conf DelayStrategyConf) NetStrategy {
+func NewDelayNetStrategy(conf DelayStrategyConf) NetworkStrategy {
 	if conf.MinDelay > conf.MaxDelay {
 		panic("MinDelay must <= MaxDelay")
 	}

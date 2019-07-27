@@ -51,12 +51,14 @@
 package adapters
 
 import (
+	"math"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
@@ -94,80 +96,161 @@ func NewPulseData(p insolar.Pulse) pulse.Data {
 		uint16(p.PulseNumber-p.PrevPulseNumber),
 		longbits.NewBits512FromBytes(p.Entropy[:]).FoldToBits256(),
 	)
+	data.PulseEpoch = uint32(p.EpochPulseNumber)
 	data.Timestamp = uint32(p.PulseTimestamp / nanosecondsInSecond)
 	return *data
 }
 
-type PulsePacketReader struct {
+type pulseReader struct {
 	longbits.FixedReader
-	data pulse.Data
+	pulse pulse.Data
 }
 
-func (p *PulsePacketReader) OriginalPulsarPacket() {}
+func (p *pulseReader) OriginalPulsarPacket() {}
 
-func (p *PulsePacketReader) GetPulseData() pulse.Data {
-	return p.data
+func (p *pulseReader) GetPulseData() pulse.Data {
+	return p.pulse
 }
 
-func (p *PulsePacketReader) GetPulseDataEvidence() proofs.OriginalPulsarPacket {
+func (p *pulseReader) GetPulseDataEvidence() proofs.OriginalPulsarPacket {
 	return p
 }
 
-func NewPulsePacketReader(pulse insolar.Pulse, data []byte) *PulsePacketReader {
-	return &PulsePacketReader{
+type pulsarPulseReader struct {
+	pulseReader
+}
+
+func newPulsarPulseReader(pd pulse.Data, data []byte) *pulsarPulseReader {
+	return &pulsarPulseReader{pulseReader{
 		FixedReader: longbits.NewFixedReader(data),
-		data:        NewPulseData(pulse),
-	}
+		pulse:       pd,
+	}}
 }
 
-type PulsePacketParser struct {
-	pulse       insolar.Pulse
-	pulsePacket *PulsePacketReader
-}
-
-func (p *PulsePacketParser) ParsePacketBody() (transport.PacketParser, error) {
+func (p *pulsarPulseReader) ParsePacketBody() (transport.PacketParser, error) {
 	return nil, nil
 }
 
-func NewPulsePacketParser(pulse insolar.Pulse, data []byte) *PulsePacketParser {
-	return &PulsePacketParser{
-		pulse:       pulse,
-		pulsePacket: NewPulsePacketReader(pulse, data),
-	}
-}
-
-func (p *PulsePacketParser) IsRelayForbidden() bool {
+func (p *pulsarPulseReader) IsRelayForbidden() bool {
 	return true
 }
 
-func (p *PulsePacketParser) GetSourceID() insolar.ShortNodeID {
+func (p *pulsarPulseReader) GetSourceID() insolar.ShortNodeID {
 	return insolar.AbsentShortNodeID
 }
 
-func (p *PulsePacketParser) GetReceiverID() insolar.ShortNodeID {
+func (p *pulsarPulseReader) GetReceiverID() insolar.ShortNodeID {
 	return insolar.AbsentShortNodeID
 }
 
-func (p *PulsePacketParser) GetTargetID() insolar.ShortNodeID {
+func (p *pulsarPulseReader) GetTargetID() insolar.ShortNodeID {
 	return insolar.AbsentShortNodeID
 }
 
-func (p *PulsePacketParser) GetPacketType() phases.PacketType {
+func (p *pulsarPulseReader) GetPacketType() phases.PacketType {
 	return phases.PacketPulse
 }
 
-func (p *PulsePacketParser) GetPulseNumber() pulse.Number {
-	return pulse.Number(p.pulse.PulseNumber)
+func (p *pulsarPulseReader) GetPulseNumber() pulse.Number {
+	return p.pulse.PulseNumber
 }
 
-func (p *PulsePacketParser) GetPulsePacket() transport.PulsePacketReader {
-	return p.pulsePacket
+func (p *pulsarPulseReader) GetPulsePacket() transport.PulsePacketReader {
+	return p
 }
 
-func (p *PulsePacketParser) GetMemberPacket() transport.MemberPacketReader {
+func (p *pulsarPulseReader) GetMemberPacket() transport.MemberPacketReader {
 	return nil
 }
 
-func (p *PulsePacketParser) GetPacketSignature() cryptkit.SignedDigest {
+func (p *pulsarPulseReader) GetPacketSignature() cryptkit.SignedDigest {
 	return cryptkit.SignedDigest{}
+}
+
+type ephemeralPulseReader struct {
+	pulseReader
+	localNodeID insolar.ShortNodeID
+}
+
+func newEphemeralPulseReader(pd pulse.Data, data []byte, localNodeID insolar.ShortNodeID) *ephemeralPulseReader {
+	return &ephemeralPulseReader{
+		pulseReader: pulseReader{
+			FixedReader: longbits.NewFixedReader(data),
+			pulse:       pd,
+		},
+		localNodeID: localNodeID,
+	}
+}
+
+func (p *ephemeralPulseReader) ParsePacketBody() (transport.PacketParser, error) {
+	return nil, nil
+}
+
+func (p *ephemeralPulseReader) IsRelayForbidden() bool {
+	return true
+}
+
+func (p *ephemeralPulseReader) GetSourceID() insolar.ShortNodeID {
+	return insolar.AbsentShortNodeID
+}
+
+func (p *ephemeralPulseReader) GetReceiverID() insolar.ShortNodeID {
+	return p.localNodeID
+}
+
+func (p *ephemeralPulseReader) GetTargetID() insolar.ShortNodeID {
+	return p.localNodeID
+}
+
+func (p *ephemeralPulseReader) GetPacketType() phases.PacketType {
+	return phases.PacketPhase0
+}
+
+func (p *ephemeralPulseReader) GetPulseNumber() pulse.Number {
+	return p.pulse.PulseNumber
+}
+
+func (p *ephemeralPulseReader) GetPacketSignature() cryptkit.SignedDigest {
+	return cryptkit.SignedDigest{}
+}
+
+func (p *ephemeralPulseReader) GetPulsePacket() transport.PulsePacketReader {
+	return nil
+}
+
+func (p *ephemeralPulseReader) GetMemberPacket() transport.MemberPacketReader {
+	return p
+}
+
+func (p *ephemeralPulseReader) AsPhase0Packet() transport.Phase0PacketReader {
+	return p
+}
+
+func (p *ephemeralPulseReader) AsPhase1Packet() transport.Phase1PacketReader {
+	return nil
+}
+
+func (p *ephemeralPulseReader) AsPhase2Packet() transport.Phase2PacketReader {
+	return nil
+}
+
+func (p *ephemeralPulseReader) AsPhase3Packet() transport.Phase3PacketReader {
+	return nil
+}
+
+func (p *ephemeralPulseReader) GetNodeRank() member.Rank {
+	return math.MaxUint32
+}
+
+func (p *ephemeralPulseReader) GetEmbeddedPulsePacket() transport.PulsePacketReader {
+	return p
+}
+
+func NewPulseParser(pulse insolar.Pulse, data []byte, localNodeID insolar.ShortNodeID) transport.PacketParser {
+	pd := NewPulseData(pulse)
+	if pd.IsFromEphemeral() {
+		return newEphemeralPulseReader(pd, data, localNodeID)
+	}
+
+	return newPulsarPulseReader(pd, data)
 }

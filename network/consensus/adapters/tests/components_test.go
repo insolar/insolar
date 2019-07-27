@@ -48,58 +48,58 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package adapters
+package tests
 
 import (
 	"context"
 	"math/rand"
+	"time"
 
-	"github.com/insolar/insolar/network/consensus/common/pulse"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
 )
 
-type EphemeralPulseAllowedFn func() bool
+const defaultNshGenerationDelay = time.Millisecond * 0
 
-type RoundStrategy struct {
-	chronicle             api.ConsensusChronicles
-	localConfig           api.LocalNodeConfiguration
-	ephemeralPulseAllowed EphemeralPulseAllowedFn
+type nshGen struct {
+	nshDelay time.Duration
 }
 
-func (rs *RoundStrategy) IsEphemeralPulseAllowed() bool {
-	return rs.ephemeralPulseAllowed()
+func (ng *nshGen) State() []byte {
+	delay := ng.nshDelay
+	if delay != 0 {
+		time.Sleep(delay)
+	}
+
+	nshBytes := make([]byte, 64)
+	rand.Read(nshBytes)
+
+	return nshBytes
 }
 
-func NewRoundStrategy(
-	chronicle api.ConsensusChronicles,
-	localConfig api.LocalNodeConfiguration,
-	ephemeralPulseAllowed EphemeralPulseAllowedFn,
-) *RoundStrategy {
-	return &RoundStrategy{
-		chronicle:             chronicle,
-		localConfig:           localConfig,
-		ephemeralPulseAllowed: ephemeralPulseAllowed,
+type pulseChanger struct {
+	nodeKeeper network.NodeKeeper
+}
+
+func (pc *pulseChanger) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
+	inslogger.FromContext(ctx).Info(">>>>>> Change pulse called")
+	err := pc.nodeKeeper.MoveSyncToActive(ctx, pulse.PulseNumber)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(err)
 	}
 }
 
-func (rs *RoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse pulse.Number, self profiles.LocalNode) context.Context {
-	ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
-		"is_joiner":   self.IsJoiner(),
-		"round_pulse": expectedPulse,
-	})
-	return ctx
+type stateUpdater struct {
+	nodeKeeper network.NodeKeeper
 }
 
-func (rs *RoundStrategy) GetBaselineWeightForNeighbours() uint32 {
-	return rand.Uint32()
-}
+func (su *stateUpdater) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
+	inslogger.FromContext(ctx).Info(">>>>>> Update state called")
 
-func (rs *RoundStrategy) ShuffleNodeSequence(n int, swap func(i, j int)) {
-	rand.Shuffle(n, swap)
-}
-
-func (rs *RoundStrategy) AdjustConsensusTimings(timings *api.RoundTimings) {
+	err := su.nodeKeeper.Sync(ctx, nodes, nil)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(err)
+	}
+	su.nodeKeeper.SetCloudHash(cloudStateHash)
 }

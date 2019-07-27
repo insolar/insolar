@@ -56,8 +56,7 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"fmt"
-	"math/rand"
-	"strings"
+	"testing"
 	"time"
 
 	"github.com/insolar/insolar/certificate"
@@ -69,6 +68,7 @@ import (
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/serialization"
@@ -77,6 +77,8 @@ import (
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -92,6 +94,53 @@ var (
 type candidate struct {
 	profiles.StaticProfile
 	profiles.StaticProfileExtension
+}
+
+type nodeComponents struct {
+	controller   consensus.Controller
+	nodeKeeper   network.NodeKeeper
+	transport    transport.DatagramTransport
+	pulseHandler network.PulseHandler
+}
+
+type nodeIdentity struct {
+	addr       string
+	role       insolar.StaticRole
+	privateKey crypto.PrivateKey
+	publicKey  crypto.PublicKey
+}
+
+type networkNode struct {
+	identity   nodeIdentity
+	components nodeComponents
+	ctx        context.Context
+}
+
+type NodeCount struct {
+	Heavy   uint
+	Virtual uint
+	Light   uint
+	Neutral uint
+}
+
+type Network struct {
+	testing.T
+
+	DiscoveryNodes NodeCount
+	Nodes          NodeCount
+	Strategy       NetworkStrategy
+}
+
+func (n *Network) Require() *require.Assertions {
+	return require.New(n)
+}
+
+func (n *Network) Assert() *assert.Assertions {
+	return assert.New(n)
+}
+
+func (n *Network) Init(ctx context.Context) {
+
 }
 
 func testCase(stopAfter, startCaseAfter time.Duration, test func()) {
@@ -123,14 +172,13 @@ type InitializedNodes struct {
 
 type GeneratedNodes struct {
 	nodes          []insolar.NetworkNode
-	meta           []*nodeMeta
+	meta           []nodeIdentity
 	discoveryNodes []insolar.NetworkNode
 }
 
 func generateNodes(countNeutral, countHeavy, countLight, countVirtual int, discoveryNodes []insolar.NetworkNode) (*GeneratedNodes, error) {
 	nodeIdentities := generateNodeIdentities(countNeutral, countHeavy, countLight, countVirtual)
-	nodeInfos := generateNodeInfos(nodeIdentities)
-	nodes, dn, err := nodesFromInfo(nodeInfos)
+	nodes, dn, err := nodesFromInfo(nodeIdentities)
 
 	if len(discoveryNodes) > 0 {
 		dn = discoveryNodes
@@ -142,7 +190,7 @@ func generateNodes(countNeutral, countHeavy, countLight, countVirtual int, disco
 
 	return &GeneratedNodes{
 		nodes:          nodes,
-		meta:           nodeInfos,
+		meta:           nodeIdentities,
 		discoveryNodes: dn,
 	}, nil
 }
@@ -158,7 +206,7 @@ func newNodes(size int) InitializedNodes {
 	}
 }
 
-func initNodes(ctx context.Context, mode consensus.Mode, nodes GeneratedNodes, strategy NetStrategy) (*InitializedNodes, error) {
+func initNodes(ctx context.Context, mode consensus.Mode, nodes GeneratedNodes, strategy NetworkStrategy) (*InitializedNodes, error) {
 	ns := newNodes(len(nodes.nodes))
 
 	for i, n := range nodes.nodes {
@@ -166,7 +214,10 @@ func initNodes(ctx context.Context, mode consensus.Mode, nodes GeneratedNodes, s
 		nodeKeeper.SetInitialSnapshot(nodes.nodes)
 		ns.nodeKeepers[i] = nodeKeeper
 
-		certificateManager := initCrypto(n, nodes.discoveryNodes)
+		certificateManager, err := initCrypto(n, nodes.discoveryNodes)
+		if err != nil {
+			return nil, err
+		}
 		datagramHandler := adapters.NewDatagramHandler()
 
 		conf := configuration.NewHostNetwork().Transport
@@ -178,7 +229,7 @@ func initNodes(ctx context.Context, mode consensus.Mode, nodes GeneratedNodes, s
 			return nil, err
 		}
 
-		pulseHandler := adapters.NewPulseHandler()
+		pulseHandler := adapters.NewPulseHandler(nodeKeeper.GetOrigin().ShortID())
 		ns.pulseHandlers = append(ns.pulseHandlers, pulseHandler)
 
 		delayTransport := strategy.GetLink(datagramTransport)
@@ -186,6 +237,7 @@ func initNodes(ctx context.Context, mode consensus.Mode, nodes GeneratedNodes, s
 
 		ns.controllers[i] = consensus.New(ctx, consensus.Dep{
 			PrimingCloudStateHash: [64]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
+			EphemeralPulseAllowed: func() bool { return false },
 			KeyProcessor:          keyProcessor,
 			Scheme:                scheme,
 			CertificateManager:    certificateManager,
@@ -218,7 +270,10 @@ func initNodes(ctx context.Context, mode consensus.Mode, nodes GeneratedNodes, s
 }
 
 func initPulsar(ctx context.Context, delta uint16, ns InitializedNodes) {
-	pulsar := NewPulsar(delta, ns.pulseHandlers)
+	data := *pulse.NewFirstPulsarData(delta, randBits256())
+	// data := *pulse.NewFirstEphemeralData()
+
+	pulsar := NewPulsar(data, ns.pulseHandlers)
 	go func() {
 		for {
 			pulsar.Pulse(ctx, 4+len(ns.staticProfiles)/10)
@@ -249,39 +304,19 @@ func generateNodeIdentities(countNeutral, countHeavy, countLight, countVirtual i
 func _generateNodeIdentity(r []nodeIdentity, count int, role insolar.StaticRole) []nodeIdentity {
 	for i := 0; i < count; i++ {
 		port := portOffset
+
+		privateKey, _ := keyProcessor.GeneratePrivateKey()
+		publicKey := keyProcessor.ExtractPublicKey(privateKey)
+
 		r = append(r, nodeIdentity{
-			role: role,
-			addr: fmt.Sprintf("127.0.0.1:%d", port),
+			role:       role,
+			addr:       fmt.Sprintf("127.0.0.1:%d", port),
+			privateKey: privateKey,
+			publicKey:  publicKey,
 		})
 		portOffset += 1
 	}
 	return r
-}
-
-func generateNodeInfos(nodeIdentities []nodeIdentity) []*nodeMeta {
-	nodeInfos := make([]*nodeMeta, 0, len(nodeIdentities))
-	for _, ni := range nodeIdentities {
-		privateKey, _ := keyProcessor.GeneratePrivateKey()
-		publicKey := keyProcessor.ExtractPublicKey(privateKey)
-
-		nodeInfos = append(nodeInfos, &nodeMeta{
-			nodeIdentity: ni,
-			publicKey:    publicKey,
-			privateKey:   privateKey,
-		})
-	}
-	return nodeInfos
-}
-
-type nodeIdentity struct {
-	role insolar.StaticRole
-	addr string
-}
-
-type nodeMeta struct {
-	nodeIdentity
-	privateKey crypto.PrivateKey
-	publicKey  crypto.PublicKey
 }
 
 func getAnnounceSignature(
@@ -331,7 +366,7 @@ func getAnnounceSignature(
 	return digest, sign, nil
 }
 
-func nodesFromInfo(nodeInfos []*nodeMeta) ([]insolar.NetworkNode, []insolar.NetworkNode, error) {
+func nodesFromInfo(nodeInfos []nodeIdentity) ([]insolar.NetworkNode, []insolar.NetworkNode, error) {
 	nodes := make([]insolar.NetworkNode, len(nodeInfos))
 	discoveryNodes := make([]insolar.NetworkNode, 0)
 
@@ -378,15 +413,24 @@ func newNetworkNode(addr string, role insolar.StaticRole, pk crypto.PublicKey) n
 	return mn
 }
 
-func initCrypto(node insolar.NetworkNode, discoveryNodes []insolar.NetworkNode) *certificate.CertificateManager {
-	pubKey := node.PublicKey()
+func initCrypto(node insolar.NetworkNode, discoveryNodes []insolar.NetworkNode) (*certificate.CertificateManager, error) {
+	cert, err := generateCertificate(node, discoveryNodes)
+	if err != nil {
+		return nil, err
+	}
 
-	publicKey, _ := keyProcessor.ExportPublicKeyPEM(pubKey)
+	return certificate.NewCertificateManager(cert), nil
+}
 
+func generateCertificate(node insolar.NetworkNode, discoveryNodes []insolar.NetworkNode) (*certificate.Certificate, error) {
+	publicKey, _ := keyProcessor.ExportPublicKeyPEM(node.PublicKey())
 	bootstrapNodes := make([]certificate.BootstrapNode, 0, len(discoveryNodes))
 	for _, dn := range discoveryNodes {
 		pubKey := dn.PublicKey()
-		pubKeyBuf, _ := keyProcessor.ExportPublicKeyPEM(pubKey)
+		pubKeyBuf, err := keyProcessor.ExportPublicKeyPEM(pubKey)
+		if err != nil {
+			return nil, err
+		}
 
 		bootstrapNode := certificate.NewBootstrapNode(
 			pubKey,
@@ -405,53 +449,5 @@ func initCrypto(node insolar.NetworkNode, discoveryNodes []insolar.NetworkNode) 
 		},
 		BootstrapNodes: bootstrapNodes,
 	}
-
-	// dump cert and read it again from json for correct private files initialization
-	jsonCert, _ := cert.Dump()
-	cert, _ = certificate.ReadCertificateFromReader(pubKey, keyProcessor, strings.NewReader(jsonCert))
-	return certificate.NewCertificateManager(cert)
-}
-
-const defaultNshGenerationDelay = time.Millisecond * 0
-
-type nshGen struct {
-	nshDelay time.Duration
-}
-
-func (ng *nshGen) State() []byte {
-	delay := ng.nshDelay
-	if delay != 0 {
-		time.Sleep(delay)
-	}
-
-	nshBytes := make([]byte, 64)
-	rand.Read(nshBytes)
-
-	return nshBytes
-}
-
-type pulseChanger struct {
-	nodeKeeper network.NodeKeeper
-}
-
-func (pc *pulseChanger) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
-	inslogger.FromContext(ctx).Info(">>>>>> Change pulse called")
-	err := pc.nodeKeeper.MoveSyncToActive(ctx, pulse.PulseNumber)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(err)
-	}
-}
-
-type stateUpdater struct {
-	nodeKeeper network.NodeKeeper
-}
-
-func (su *stateUpdater) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
-	inslogger.FromContext(ctx).Info(">>>>>> Update state called")
-
-	err := su.nodeKeeper.Sync(ctx, nodes, nil)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(err)
-	}
-	su.nodeKeeper.SetCloudHash(cloudStateHash)
+	return cert, nil
 }

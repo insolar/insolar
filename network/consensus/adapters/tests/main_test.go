@@ -48,8 +48,6 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-// +build never_run
-
 package tests
 
 import (

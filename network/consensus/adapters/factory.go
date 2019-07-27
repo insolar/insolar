@@ -126,17 +126,23 @@ func (cf *TransportCryptographyFactory) GetPublicKeyStore(skh cryptkit.Signature
 }
 
 type RoundStrategyFactory struct {
-	bundleFactory core.PhaseControllersBundleFactory
+	bundleFactory         core.PhaseControllersBundleFactory
+	ephemeralPulseAllowed EphemeralPulseAllowedFn
 }
 
-func NewRoundStrategyFactory() *RoundStrategyFactory {
+func NewRoundStrategyFactory(ephemeralPulseAllowed EphemeralPulseAllowedFn) *RoundStrategyFactory {
 	return &RoundStrategyFactory{
-		bundleFactory: phasebundle.NewStandardBundleFactoryDefault(),
+		bundleFactory:         phasebundle.NewStandardBundleFactoryDefault(),
+		ephemeralPulseAllowed: ephemeralPulseAllowed,
 	}
 }
 
-func (rsf *RoundStrategyFactory) CreateRoundStrategy(chronicle api.ConsensusChronicles, config api.LocalNodeConfiguration) (core.RoundStrategy, core.PhaseControllersBundle) {
-	rs := NewRoundStrategy(chronicle, config)
+func (rsf *RoundStrategyFactory) CreateRoundStrategy(
+	chronicle api.ConsensusChronicles,
+	config api.LocalNodeConfiguration,
+) (core.RoundStrategy, core.PhaseControllersBundle) {
+
+	rs := NewRoundStrategy(chronicle, config, rsf.ephemeralPulseAllowed)
 	pcb := rsf.bundleFactory.CreateControllersBundle(chronicle.GetLatestCensus().GetOnlinePopulation(), config)
 	return rs, pcb
 
