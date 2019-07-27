@@ -93,7 +93,7 @@ func TestSwitch(t *testing.T) {
 	gatewayer.SwitchStateFunc = func(ctx context.Context, s insolar.NetworkState) { ge = ge.NewGateway(ctx, s) }
 	gilreleased := false
 
-	ge.OnPulseFromPulsar(ctx, insolar.Pulse{})
+	ge.OnPulseFromPulsar(ctx, insolar.Pulse{}, nil)
 
 	require.Equal(t, "CompleteNetworkState", ge.GetState().String())
 	require.False(t, gilreleased)
@@ -112,7 +112,7 @@ func TestSwitch(t *testing.T) {
 		_, err = au.ValidateCert(ctx, &certificate.Certificate{})
 		require.Error(t, err)
 
-		ge.OnPulseFromPulsar(ctx, insolar.Pulse{})
+		ge.OnPulseFromPulsar(ctx, insolar.Pulse{}, nil)
 
 	}
 
@@ -148,7 +148,7 @@ func TestDumbComplete_GetCert(t *testing.T) {
 	gatewayer.SwitchStateFunc = func(ctx context.Context, s insolar.NetworkState) { ge = ge.NewGateway(ctx, s) }
 	gilreleased := false
 
-	ge.OnPulseFromPulsar(ctx, insolar.Pulse{})
+	ge.OnPulseFromPulsar(ctx, insolar.Pulse{}, nil)
 
 	require.Equal(t, "CompleteNetworkState", ge.GetState().String())
 	require.False(t, gilreleased)
