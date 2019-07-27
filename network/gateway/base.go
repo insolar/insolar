@@ -52,13 +52,14 @@ package gateway
 
 import (
 	"context"
+	"time"
+
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"go.opencensus.io/trace"
-	"time"
 
 	"github.com/pkg/errors"
 
@@ -387,7 +388,7 @@ func (g *Base) createCandidateProfile() {
 	staticProfile := adapters.NewStaticProfile(origin, g.CertificateManager.GetCertificate(), g.KeyProcessor)
 
 	staticProfile.GetExtension().GetIssuerSignature().AsBytes()
-	//digest, sign := origin.(node.MutableNode).GetSignature()
+	//digest, sign := origin.(node.MutableNode).GetEvidence()
 
 	pubKey, err := g.KeyProcessor.ExportPublicKeyBinary(origin.PublicKey())
 	if err != nil {

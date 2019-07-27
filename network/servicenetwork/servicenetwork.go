@@ -53,14 +53,18 @@ package servicenetwork
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
 	"crypto/rand"
+	"sync"
+	"time"
+
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/serialization"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/rules"
-	"sync"
-	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/component"
@@ -153,7 +157,7 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method insolar.Rem
 func (n *ServiceNetwork) Init(ctx context.Context) error {
 	hostNetwork, err := hostnetwork.NewHostNetwork(n.CertificateManager.GetCertificate().GetNodeRef().String())
 	if err != nil {
-		return errors.Wrap(err, "Failed to create hostnetwork")
+		return errors.Wrap(err, "failed to create hostnetwork")
 	}
 	n.HostNetwork = hostNetwork
 
@@ -171,7 +175,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	n.datagramHandler = adapters.NewDatagramHandler()
 	datagramTransport, err := n.TransportFactory.CreateDatagramTransport(n.datagramHandler)
 	if err != nil {
-		return errors.Wrap(err, "Failed to create datagramTransport")
+		return errors.Wrap(err, "failed to create datagramTransport")
 	}
 	n.datagramTransport = datagramTransport
 
@@ -193,18 +197,26 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 
 	// sign origin
 	origin := n.NodeKeeper.GetOrigin()
-	digest, sign := getAnnounceSignature(
+	key, err := n.KeyStore.GetPrivateKey("")
+	if err != nil {
+		return errors.Wrap(err, "failed to get private key")
+	}
+	evidence, err := GetAnnounceEvidence(
 		origin,
 		network.OriginIsDiscovery(cert),
 		n.KeyProcessor,
-		n.KeyStore,
+		key.(*ecdsa.PrivateKey),
 		n.CryptographyScheme,
 	)
-	origin.(node.MutableNode).SetSignature(digest, sign)
+	if err != nil {
+		return errors.Wrap(err, "failed to generate announce evidence")
+	}
+
+	origin.(node.MutableNode).SetEvidence(*evidence)
 
 	err = n.cm.Init(ctx)
 	if err != nil {
-		return errors.Wrap(err, "Failed to init internal components")
+		return errors.Wrap(err, "failed to init internal components")
 	}
 
 	n.CurrentPulse = *insolar.GenesisPulse
@@ -308,13 +320,13 @@ func (n *ServiceNetwork) State() []byte {
 	return nshBytes
 }
 
-func getAnnounceSignature(
+func GetAnnounceEvidence(
 	node insolar.NetworkNode,
 	isDiscovery bool,
 	kp insolar.KeyProcessor,
-	keystore insolar.KeyStore,
+	key *ecdsa.PrivateKey,
 	scheme insolar.PlatformCryptographyScheme,
-) ([]byte, insolar.Signature) {
+) (*cryptkit.SignedDigest, error) {
 
 	brief := serialization.NodeBriefIntro{}
 	brief.ShortID = node.ShortID()
@@ -326,13 +338,13 @@ func getAnnounceSignature(
 
 	addr, err := endpoints.NewIPAddress(node.Address())
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	copy(brief.Endpoint[:], addr[:])
 
 	pk, err := kp.ExportPublicKeyBinary(node.PublicKey())
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	copy(brief.NodePK[:], pk)
@@ -340,24 +352,30 @@ func getAnnounceSignature(
 	buf := &bytes.Buffer{}
 	err = brief.SerializeTo(nil, buf)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	data := buf.Bytes()
 	data = data[:len(data)-64]
 
-	key, err := keystore.GetPrivateKey("")
-	if err != nil {
-		panic(err)
-	}
-
 	digest := scheme.IntegrityHasher().Hash(data)
 	sign, err := scheme.DigestSigner(key).Sign(digest)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return digest, *sign
+	sd := cryptkit.NewSignedDigest(
+		cryptkit.NewDigest(
+			longbits.NewBits512FromBytes(digest),
+			adapters.SHA3512Digest,
+		),
+		cryptkit.NewSignature(
+			longbits.NewBits512FromBytes(sign.Bytes()),
+			adapters.SHA3512Digest.SignedBy(adapters.SECP256r1Sign),
+		),
+	)
+
+	return &sd, nil
 }
 
 // RegisterConsensusFinishedNotifier for integrtest TODO: remove
