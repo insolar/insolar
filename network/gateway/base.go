@@ -139,8 +139,7 @@ func (g *Base) Init(ctx context.Context) error {
 }
 
 func (g *Base) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, originalPacket network.ReceivedPacket) {
-	// forward pulse to Consensus
-	g.ConsensusPulseHandler.HandlePulse(ctx, pu, originalPacket)
+	inslogger.FromContext(ctx).Infof("Skip pulse from pulsar: %d", pu.PulseNumber)
 }
 
 func (n *Base) OnPulseFromConsensus(ctx context.Context, newPulse insolar.Pulse) {

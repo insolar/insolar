@@ -52,6 +52,7 @@ package gateway
 
 import (
 	"context"
+	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/insolar/insolar"
 )
@@ -77,4 +78,9 @@ func (g *WaitMinRoles) OnConsensusFinished(p insolar.PulseNumber) {
 	if g.Rules.CheckMinRole() {
 		g.Gatewayer.SwitchState(context.Background(), insolar.CompleteNetworkState)
 	}
+}
+
+func (g *WaitMinRoles) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, originalPacket network.ReceivedPacket) {
+	// forward pulse to Consensus
+	g.ConsensusPulseHandler.HandlePulse(ctx, pu, originalPacket)
 }
