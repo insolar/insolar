@@ -53,34 +53,14 @@
 package tests
 
 import (
-	"context"
 	"fmt"
-	"time"
-
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/log"
+	"github.com/stretchr/testify/suite"
+	"testing"
 )
 
 type bootstrapSuite struct {
 	testSuite
-
-	joiner networkNode
-}
-
-type fakeConsensus struct {
-	node  *networkNode
-	suite *bootstrapSuite
-}
-
-func (f *fakeConsensus) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error {
-
-	activeNodes := make([]insolar.NetworkNode, 0)
-	for _, n := range f.suite.fixture().bootstrapNodes {
-		activeNodes = append(activeNodes, n.serviceNetwork.NodeKeeper.GetOrigin())
-	}
-
-	return f.node.serviceNetwork.NodeKeeper.Sync(f.node.ctx, activeNodes)
 }
 
 func (s *bootstrapSuite) SetupTest() {
@@ -101,22 +81,32 @@ func (s *bootstrapSuite) SetupTest() {
 	//
 	//}
 
-	pulseReceivers := make([]string, 0)
-	for _, node := range s.fixture().bootstrapNodes {
-		pulseReceivers = append(pulseReceivers, node.host)
-	}
+	//pulseReceivers := make([]string, 0)
+	//for _, node := range s.fixture().bootstrapNodes {
+	//	pulseReceivers = append(pulseReceivers, node.host)
+	//}
 
-	log.Info("Start test pulsar")
-	err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
-	s.Require().NoError(err)
-
-	// TODO: fake bootstrap
-	// s.StartNodesNetwork(s.fixture().bootstrapNodes)
+	//log.Info("Start test pulsar")
+	//err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
+	//s.Require().NoError(err)
 }
 
 func (s *bootstrapSuite) TearDownTest() {
 	inslogger.FromContext(s.fixture().ctx).Info("TearDownTest -- ")
 
+	suiteLogger.Info("Stop bootstrap nodes")
+	for _, n := range s.fixture().bootstrapNodes {
+		err := n.componentManager.Stop(n.ctx)
+		s.NoError(err)
+	}
+}
+
+func (s *bootstrapSuite) waitForConsensus(consensusCount int) {
+	for i := 0; i < consensusCount; i++ {
+		for _, n := range s.fixture().bootstrapNodes {
+			<-n.consensusResult
+		}
+	}
 }
 
 func newBootstraptSuite(bootstrapCount int) *bootstrapSuite {
@@ -125,26 +115,21 @@ func newBootstraptSuite(bootstrapCount int) *bootstrapSuite {
 	}
 }
 
-//func TestBootstrap(t *testing.T) {
-//	t.Skip("fix in new consensus")
-//	s := newBootstraptSuite(1)
-//	suite.Run(t, s)
-//}
+func TestBootstrap(t *testing.T) {
+	//t.Skip("fix in new consensus")
+	s := newBootstraptSuite(1)
+	suite.Run(t, s)
+}
 
 func (s *bootstrapSuite) TestExample() {
 	inslogger.FromContext(s.fixture().ctx).Info("Log -- ")
 	s.True(true)
 
-	testNode := s.newNetworkNode("testNode")
-	s.preInitNode(testNode)
+	s.StartNodesNetwork(s.fixture().bootstrapNodes)
 
-	s.InitNode(testNode)
-	s.StartNode(testNode)
-	defer func(s *bootstrapSuite) {
-		s.StopNode(testNode)
-	}(s)
+	s.waitForConsensus(1)
 
-	// s.waitForConsensus(1)
+	//
 	//
 	// s.AssertActiveNodesCountDelta(0)
 	//
