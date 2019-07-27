@@ -179,16 +179,24 @@ func (ces *CurrentExecutionList) GetAllRequestRefs() []insolar.Reference {
 type CurrentExecutionPredicate func(*Transcript, interface{}) bool
 
 func (ces *CurrentExecutionList) Check(predicate CurrentExecutionPredicate, args interface{}) bool {
-	rv := true
 	ces.lock.RLock()
+	defer ces.lock.RUnlock()
+
 	for _, current := range ces.executions {
 		if !predicate(current, args) {
-			rv = false
-			break
+			return false
 		}
 	}
-	ces.lock.RUnlock()
-	return rv
+	return true
+}
+
+func (ces *CurrentExecutionList) Archive(archiver Archiver) {
+	ces.lock.RLock()
+	defer ces.lock.RUnlock()
+
+	for _, current := range ces.executions {
+		archiver.Archive(current)
+	}
 }
 
 func NewCurrentExecutionList() *CurrentExecutionList {

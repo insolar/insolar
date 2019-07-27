@@ -699,27 +699,14 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 
 				lr.initHandlers()
 
-				lr.JetCoordinator = jet.NewCoordinatorMock(mc).
-					MeMock.Return(gen.Reference()).
-					IsAuthorizedMock.Return(true, nil)
-
 				lr.MessageBus = testutils.NewMessageBusMock(mc).
 					SendMock.Return(&reply.OK{}, nil)
 
-				broker := NewExecutionBrokerIMock(mc).
-					OnPulseMock.Return(
-					false,
-					[]insolar.Message{&message.ExecutorResults{}},
-				)
-				stateMap := map[insolar.Reference]*ObjectState{
-					gen.Reference(): {
-						ExecutionBroker: broker,
-					},
-				}
 				lr.StateStorage = NewStateStorageMock(mc).
 					LockMock.Return().
 					UnlockMock.Return().
-					StateMapMock.Return(&stateMap)
+					IsEmptyMock.Return(false).
+					OnPulseMock.Return([]insolar.Message{&message.ExecutorResults{}})
 
 				return lr
 			},
@@ -732,62 +719,11 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 
 				lr.initHandlers()
 
-				lr.JetCoordinator = jet.NewCoordinatorMock(mc).
-					MeMock.Return(gen.Reference()).
-					IsAuthorizedMock.Return(true, nil)
-
-				stateMap := map[insolar.Reference]*ObjectState{
-					gen.Reference(): {
-						ExecutionBroker: NewExecutionBrokerIMock(mc).
-							OnPulseMock.Return(true, []insolar.Message{}),
-					},
-				}
 				lr.StateStorage = NewStateStorageMock(mc).
 					LockMock.Return().
 					UnlockMock.Return().
-					StateMapMock.Return(&stateMap).
-					DeleteObjectStateMock.Return()
-
-				return lr
-			},
-		},
-		{
-			name: "one empty object state record",
-			mocks: func(ctx context.Context, mc minimock.Tester) *LogicRunner {
-				lr, err := NewLogicRunner(&configuration.LogicRunner{}, nil, nil)
-				require.NoError(t, err)
-
-				lr.initHandlers()
-
-				lr.JetCoordinator = jet.NewCoordinatorMock(mc).
-					MeMock.Return(gen.Reference()).
-					IsAuthorizedMock.Return(true, nil)
-
-				stateMap := map[insolar.Reference]*ObjectState{
-					gen.Reference(): {},
-				}
-				lr.StateStorage = NewStateStorageMock(mc).
-					LockMock.Return().
-					UnlockMock.Return().
-					StateMapMock.Return(&stateMap).
-					DeleteObjectStateMock.Return()
-
-				return lr
-			},
-		},
-		{
-			name: "empty state map",
-			mocks: func(ctx context.Context, mc minimock.Tester) *LogicRunner {
-				lr, err := NewLogicRunner(&configuration.LogicRunner{}, nil, nil)
-				require.NoError(t, err)
-
-				lr.initHandlers()
-
-				stateMap := map[insolar.Reference]*ObjectState{}
-				lr.StateStorage = NewStateStorageMock(mc).
-					LockMock.Return().
-					UnlockMock.Return().
-					StateMapMock.Return(&stateMap)
+					IsEmptyMock.Return(true).
+					OnPulseMock.Return([]insolar.Message{})
 
 				return lr
 			},

@@ -54,18 +54,25 @@ func TestRPCMethods_DeactivateObject(t *testing.T) {
 
 	tr := &Transcript{RequestRef: reqRef}
 
-	execList := NewCurrentExecutionList()
-	err := execList.SetOnce(tr)
-	require.NoError(t, err)
+	executionArchive := NewExecutionArchiveMock(mc).GetActiveTranscriptMock.Set(
+		func(ref insolar.Reference) (r *Transcript) {
+			if ref.Equal(reqRef) {
+				return tr
+			} else {
+				return nil
+			}
+		},
+	)
 
-	ss := NewStateStorageMock(t).
-		GetExecutionStateMock.Set(func(ref insolar.Reference) (r ExecutionBrokerI) {
-		if ref.Equal(objRef) {
-			return &ExecutionBroker{currentList: execList}
-		} else {
-			return nil
-		}
-	})
+	ss := NewStateStorageMock(t).GetExecutionArchiveMock.Set(
+		func(ref insolar.Reference) (r ExecutionArchive) {
+			if ref.Equal(objRef) {
+				return executionArchive
+			} else {
+				return nil
+			}
+		},
+	)
 
 	m := &RPCMethods{
 		ss:        ss,

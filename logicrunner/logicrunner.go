@@ -262,44 +262,15 @@ func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context
 }
 
 func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
-	lr.ResultsMatcher.Clear()
-
-	lr.StateStorage.Lock()
-
-	lr.FlowDispatcher.ChangePulse(ctx, pulse)
-	lr.InnerFlowDispatcher.ChangePulse(ctx, pulse)
-
 	ctx, span := instracer.StartSpan(ctx, "pulse.logicrunner")
 	defer span.End()
 
-	messages := make([]insolar.Message, 0)
+	lr.ResultsMatcher.Clear()
 
-	objects := lr.StateStorage.StateMap()
-	inslogger.FromContext(ctx).Debug("Processing ", len(*objects), " on pulse change")
-	for ref, state := range *objects {
-		meNext, _ := lr.JetCoordinator.IsAuthorized(
-			ctx, insolar.DynamicRoleVirtualExecutor, *ref.Record(), pulse.PulseNumber, lr.JetCoordinator.Me(),
-		)
-		state.Lock()
+	messages := lr.StateStorage.OnPulse(ctx, pulse)
 
-		if broker := state.ExecutionBroker; broker != nil {
-			end, toSend := broker.OnPulse(ctx, meNext)
-			if end {
-				// we're not executing and we have nothing to process
-				state.ExecutionBroker = nil
-			}
-
-			messages = append(messages, toSend...)
-		}
-
-		if state.ExecutionBroker == nil {
-			lr.StateStorage.DeleteObjectState(ref)
-		}
-
-		state.Unlock()
-	}
-
-	lr.StateStorage.Unlock()
+	lr.FlowDispatcher.ChangePulse(ctx, pulse)
+	lr.InnerFlowDispatcher.ChangePulse(ctx, pulse)
 
 	if len(messages) > 0 {
 		go lr.sendOnPulseMessagesAsync(ctx, messages)
@@ -315,7 +286,7 @@ func (lr *LogicRunner) stopIfNeeded(ctx context.Context) {
 	lr.StateStorage.Lock()
 	defer lr.StateStorage.Unlock()
 
-	if len(*lr.StateStorage.StateMap()) == 0 {
+	if lr.StateStorage.IsEmpty() {
 		lr.stopLock.Lock()
 		if lr.isStopping {
 			inslogger.FromContext(ctx).Debug("LogicRunner ready to stop")

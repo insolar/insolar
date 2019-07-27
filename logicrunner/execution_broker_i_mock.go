@@ -45,11 +45,6 @@ type ExecutionBrokerIMock struct {
 	AddRequestsFromPrevExecutorPreCounter uint64
 	AddRequestsFromPrevExecutorMock       mExecutionBrokerIMockAddRequestsFromPrevExecutor
 
-	CheckExecutionLoopFunc       func(p context.Context, p1 string) (r bool)
-	CheckExecutionLoopCounter    uint64
-	CheckExecutionLoopPreCounter uint64
-	CheckExecutionLoopMock       mExecutionBrokerIMockCheckExecutionLoop
-
 	FetchMoreRequestsFromLedgerFunc       func(p context.Context)
 	FetchMoreRequestsFromLedgerCounter    uint64
 	FetchMoreRequestsFromLedgerPreCounter uint64
@@ -59,6 +54,11 @@ type ExecutionBrokerIMock struct {
 	GetActiveTranscriptCounter    uint64
 	GetActiveTranscriptPreCounter uint64
 	GetActiveTranscriptMock       mExecutionBrokerIMockGetActiveTranscript
+
+	IsActiveFunc       func() (r bool)
+	IsActiveCounter    uint64
+	IsActivePreCounter uint64
+	IsActiveMock       mExecutionBrokerIMockIsActive
 
 	IsKnownRequestFunc       func(p context.Context, p1 insolar.Reference) (r bool)
 	IsKnownRequestCounter    uint64
@@ -75,7 +75,7 @@ type ExecutionBrokerIMock struct {
 	NoMoreRequestsOnLedgerPreCounter uint64
 	NoMoreRequestsOnLedgerMock       mExecutionBrokerIMockNoMoreRequestsOnLedger
 
-	OnPulseFunc       func(p context.Context, p1 bool) (r bool, r1 []insolar.Message)
+	OnPulseFunc       func(p context.Context, p1 bool) (r []insolar.Message)
 	OnPulseCounter    uint64
 	OnPulsePreCounter uint64
 	OnPulseMock       mExecutionBrokerIMockOnPulse
@@ -119,9 +119,9 @@ func NewExecutionBrokerIMock(t minimock.Tester) *ExecutionBrokerIMock {
 	m.AddFreshRequestMock = mExecutionBrokerIMockAddFreshRequest{mock: m}
 	m.AddRequestsFromLedgerMock = mExecutionBrokerIMockAddRequestsFromLedger{mock: m}
 	m.AddRequestsFromPrevExecutorMock = mExecutionBrokerIMockAddRequestsFromPrevExecutor{mock: m}
-	m.CheckExecutionLoopMock = mExecutionBrokerIMockCheckExecutionLoop{mock: m}
 	m.FetchMoreRequestsFromLedgerMock = mExecutionBrokerIMockFetchMoreRequestsFromLedger{mock: m}
 	m.GetActiveTranscriptMock = mExecutionBrokerIMockGetActiveTranscript{mock: m}
+	m.IsActiveMock = mExecutionBrokerIMockIsActive{mock: m}
 	m.IsKnownRequestMock = mExecutionBrokerIMockIsKnownRequest{mock: m}
 	m.MoreRequestsOnLedgerMock = mExecutionBrokerIMockMoreRequestsOnLedger{mock: m}
 	m.NoMoreRequestsOnLedgerMock = mExecutionBrokerIMockNoMoreRequestsOnLedger{mock: m}
@@ -754,154 +754,6 @@ func (m *ExecutionBrokerIMock) AddRequestsFromPrevExecutorFinished() bool {
 	return true
 }
 
-type mExecutionBrokerIMockCheckExecutionLoop struct {
-	mock              *ExecutionBrokerIMock
-	mainExpectation   *ExecutionBrokerIMockCheckExecutionLoopExpectation
-	expectationSeries []*ExecutionBrokerIMockCheckExecutionLoopExpectation
-}
-
-type ExecutionBrokerIMockCheckExecutionLoopExpectation struct {
-	input  *ExecutionBrokerIMockCheckExecutionLoopInput
-	result *ExecutionBrokerIMockCheckExecutionLoopResult
-}
-
-type ExecutionBrokerIMockCheckExecutionLoopInput struct {
-	p  context.Context
-	p1 string
-}
-
-type ExecutionBrokerIMockCheckExecutionLoopResult struct {
-	r bool
-}
-
-//Expect specifies that invocation of ExecutionBrokerI.CheckExecutionLoop is expected from 1 to Infinity times
-func (m *mExecutionBrokerIMockCheckExecutionLoop) Expect(p context.Context, p1 string) *mExecutionBrokerIMockCheckExecutionLoop {
-	m.mock.CheckExecutionLoopFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ExecutionBrokerIMockCheckExecutionLoopExpectation{}
-	}
-	m.mainExpectation.input = &ExecutionBrokerIMockCheckExecutionLoopInput{p, p1}
-	return m
-}
-
-//Return specifies results of invocation of ExecutionBrokerI.CheckExecutionLoop
-func (m *mExecutionBrokerIMockCheckExecutionLoop) Return(r bool) *ExecutionBrokerIMock {
-	m.mock.CheckExecutionLoopFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ExecutionBrokerIMockCheckExecutionLoopExpectation{}
-	}
-	m.mainExpectation.result = &ExecutionBrokerIMockCheckExecutionLoopResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of ExecutionBrokerI.CheckExecutionLoop is expected once
-func (m *mExecutionBrokerIMockCheckExecutionLoop) ExpectOnce(p context.Context, p1 string) *ExecutionBrokerIMockCheckExecutionLoopExpectation {
-	m.mock.CheckExecutionLoopFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &ExecutionBrokerIMockCheckExecutionLoopExpectation{}
-	expectation.input = &ExecutionBrokerIMockCheckExecutionLoopInput{p, p1}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *ExecutionBrokerIMockCheckExecutionLoopExpectation) Return(r bool) {
-	e.result = &ExecutionBrokerIMockCheckExecutionLoopResult{r}
-}
-
-//Set uses given function f as a mock of ExecutionBrokerI.CheckExecutionLoop method
-func (m *mExecutionBrokerIMockCheckExecutionLoop) Set(f func(p context.Context, p1 string) (r bool)) *ExecutionBrokerIMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.CheckExecutionLoopFunc = f
-	return m.mock
-}
-
-//CheckExecutionLoop implements github.com/insolar/insolar/logicrunner.ExecutionBrokerI interface
-func (m *ExecutionBrokerIMock) CheckExecutionLoop(p context.Context, p1 string) (r bool) {
-	counter := atomic.AddUint64(&m.CheckExecutionLoopPreCounter, 1)
-	defer atomic.AddUint64(&m.CheckExecutionLoopCounter, 1)
-
-	if len(m.CheckExecutionLoopMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.CheckExecutionLoopMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ExecutionBrokerIMock.CheckExecutionLoop. %v %v", p, p1)
-			return
-		}
-
-		input := m.CheckExecutionLoopMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ExecutionBrokerIMockCheckExecutionLoopInput{p, p1}, "ExecutionBrokerI.CheckExecutionLoop got unexpected parameters")
-
-		result := m.CheckExecutionLoopMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the ExecutionBrokerIMock.CheckExecutionLoop")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.CheckExecutionLoopMock.mainExpectation != nil {
-
-		input := m.CheckExecutionLoopMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, ExecutionBrokerIMockCheckExecutionLoopInput{p, p1}, "ExecutionBrokerI.CheckExecutionLoop got unexpected parameters")
-		}
-
-		result := m.CheckExecutionLoopMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the ExecutionBrokerIMock.CheckExecutionLoop")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.CheckExecutionLoopFunc == nil {
-		m.t.Fatalf("Unexpected call to ExecutionBrokerIMock.CheckExecutionLoop. %v %v", p, p1)
-		return
-	}
-
-	return m.CheckExecutionLoopFunc(p, p1)
-}
-
-//CheckExecutionLoopMinimockCounter returns a count of ExecutionBrokerIMock.CheckExecutionLoopFunc invocations
-func (m *ExecutionBrokerIMock) CheckExecutionLoopMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.CheckExecutionLoopCounter)
-}
-
-//CheckExecutionLoopMinimockPreCounter returns the value of ExecutionBrokerIMock.CheckExecutionLoop invocations
-func (m *ExecutionBrokerIMock) CheckExecutionLoopMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.CheckExecutionLoopPreCounter)
-}
-
-//CheckExecutionLoopFinished returns true if mock invocations count is ok
-func (m *ExecutionBrokerIMock) CheckExecutionLoopFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.CheckExecutionLoopMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.CheckExecutionLoopCounter) == uint64(len(m.CheckExecutionLoopMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.CheckExecutionLoopMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.CheckExecutionLoopCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.CheckExecutionLoopFunc != nil {
-		return atomic.LoadUint64(&m.CheckExecutionLoopCounter) > 0
-	}
-
-	return true
-}
-
 type mExecutionBrokerIMockFetchMoreRequestsFromLedger struct {
 	mock              *ExecutionBrokerIMock
 	mainExpectation   *ExecutionBrokerIMockFetchMoreRequestsFromLedgerExpectation
@@ -1167,6 +1019,140 @@ func (m *ExecutionBrokerIMock) GetActiveTranscriptFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetActiveTranscriptFunc != nil {
 		return atomic.LoadUint64(&m.GetActiveTranscriptCounter) > 0
+	}
+
+	return true
+}
+
+type mExecutionBrokerIMockIsActive struct {
+	mock              *ExecutionBrokerIMock
+	mainExpectation   *ExecutionBrokerIMockIsActiveExpectation
+	expectationSeries []*ExecutionBrokerIMockIsActiveExpectation
+}
+
+type ExecutionBrokerIMockIsActiveExpectation struct {
+	result *ExecutionBrokerIMockIsActiveResult
+}
+
+type ExecutionBrokerIMockIsActiveResult struct {
+	r bool
+}
+
+//Expect specifies that invocation of ExecutionBrokerI.IsActive is expected from 1 to Infinity times
+func (m *mExecutionBrokerIMockIsActive) Expect() *mExecutionBrokerIMockIsActive {
+	m.mock.IsActiveFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ExecutionBrokerIMockIsActiveExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of ExecutionBrokerI.IsActive
+func (m *mExecutionBrokerIMockIsActive) Return(r bool) *ExecutionBrokerIMock {
+	m.mock.IsActiveFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ExecutionBrokerIMockIsActiveExpectation{}
+	}
+	m.mainExpectation.result = &ExecutionBrokerIMockIsActiveResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of ExecutionBrokerI.IsActive is expected once
+func (m *mExecutionBrokerIMockIsActive) ExpectOnce() *ExecutionBrokerIMockIsActiveExpectation {
+	m.mock.IsActiveFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ExecutionBrokerIMockIsActiveExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *ExecutionBrokerIMockIsActiveExpectation) Return(r bool) {
+	e.result = &ExecutionBrokerIMockIsActiveResult{r}
+}
+
+//Set uses given function f as a mock of ExecutionBrokerI.IsActive method
+func (m *mExecutionBrokerIMockIsActive) Set(f func() (r bool)) *ExecutionBrokerIMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.IsActiveFunc = f
+	return m.mock
+}
+
+//IsActive implements github.com/insolar/insolar/logicrunner.ExecutionBrokerI interface
+func (m *ExecutionBrokerIMock) IsActive() (r bool) {
+	counter := atomic.AddUint64(&m.IsActivePreCounter, 1)
+	defer atomic.AddUint64(&m.IsActiveCounter, 1)
+
+	if len(m.IsActiveMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.IsActiveMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ExecutionBrokerIMock.IsActive.")
+			return
+		}
+
+		result := m.IsActiveMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the ExecutionBrokerIMock.IsActive")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsActiveMock.mainExpectation != nil {
+
+		result := m.IsActiveMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the ExecutionBrokerIMock.IsActive")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsActiveFunc == nil {
+		m.t.Fatalf("Unexpected call to ExecutionBrokerIMock.IsActive.")
+		return
+	}
+
+	return m.IsActiveFunc()
+}
+
+//IsActiveMinimockCounter returns a count of ExecutionBrokerIMock.IsActiveFunc invocations
+func (m *ExecutionBrokerIMock) IsActiveMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.IsActiveCounter)
+}
+
+//IsActiveMinimockPreCounter returns the value of ExecutionBrokerIMock.IsActive invocations
+func (m *ExecutionBrokerIMock) IsActiveMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.IsActivePreCounter)
+}
+
+//IsActiveFinished returns true if mock invocations count is ok
+func (m *ExecutionBrokerIMock) IsActiveFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.IsActiveMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.IsActiveCounter) == uint64(len(m.IsActiveMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.IsActiveMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.IsActiveCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.IsActiveFunc != nil {
+		return atomic.LoadUint64(&m.IsActiveCounter) > 0
 	}
 
 	return true
@@ -1583,8 +1569,7 @@ type ExecutionBrokerIMockOnPulseInput struct {
 }
 
 type ExecutionBrokerIMockOnPulseResult struct {
-	r  bool
-	r1 []insolar.Message
+	r []insolar.Message
 }
 
 //Expect specifies that invocation of ExecutionBrokerI.OnPulse is expected from 1 to Infinity times
@@ -1600,14 +1585,14 @@ func (m *mExecutionBrokerIMockOnPulse) Expect(p context.Context, p1 bool) *mExec
 }
 
 //Return specifies results of invocation of ExecutionBrokerI.OnPulse
-func (m *mExecutionBrokerIMockOnPulse) Return(r bool, r1 []insolar.Message) *ExecutionBrokerIMock {
+func (m *mExecutionBrokerIMockOnPulse) Return(r []insolar.Message) *ExecutionBrokerIMock {
 	m.mock.OnPulseFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ExecutionBrokerIMockOnPulseExpectation{}
 	}
-	m.mainExpectation.result = &ExecutionBrokerIMockOnPulseResult{r, r1}
+	m.mainExpectation.result = &ExecutionBrokerIMockOnPulseResult{r}
 	return m.mock
 }
 
@@ -1622,12 +1607,12 @@ func (m *mExecutionBrokerIMockOnPulse) ExpectOnce(p context.Context, p1 bool) *E
 	return expectation
 }
 
-func (e *ExecutionBrokerIMockOnPulseExpectation) Return(r bool, r1 []insolar.Message) {
-	e.result = &ExecutionBrokerIMockOnPulseResult{r, r1}
+func (e *ExecutionBrokerIMockOnPulseExpectation) Return(r []insolar.Message) {
+	e.result = &ExecutionBrokerIMockOnPulseResult{r}
 }
 
 //Set uses given function f as a mock of ExecutionBrokerI.OnPulse method
-func (m *mExecutionBrokerIMockOnPulse) Set(f func(p context.Context, p1 bool) (r bool, r1 []insolar.Message)) *ExecutionBrokerIMock {
+func (m *mExecutionBrokerIMockOnPulse) Set(f func(p context.Context, p1 bool) (r []insolar.Message)) *ExecutionBrokerIMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1636,7 +1621,7 @@ func (m *mExecutionBrokerIMockOnPulse) Set(f func(p context.Context, p1 bool) (r
 }
 
 //OnPulse implements github.com/insolar/insolar/logicrunner.ExecutionBrokerI interface
-func (m *ExecutionBrokerIMock) OnPulse(p context.Context, p1 bool) (r bool, r1 []insolar.Message) {
+func (m *ExecutionBrokerIMock) OnPulse(p context.Context, p1 bool) (r []insolar.Message) {
 	counter := atomic.AddUint64(&m.OnPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.OnPulseCounter, 1)
 
@@ -1656,7 +1641,6 @@ func (m *ExecutionBrokerIMock) OnPulse(p context.Context, p1 bool) (r bool, r1 [
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -1674,7 +1658,6 @@ func (m *ExecutionBrokerIMock) OnPulse(p context.Context, p1 bool) (r bool, r1 [
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -2392,16 +2375,16 @@ func (m *ExecutionBrokerIMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ExecutionBrokerIMock.AddRequestsFromPrevExecutor")
 	}
 
-	if !m.CheckExecutionLoopFinished() {
-		m.t.Fatal("Expected call to ExecutionBrokerIMock.CheckExecutionLoop")
-	}
-
 	if !m.FetchMoreRequestsFromLedgerFinished() {
 		m.t.Fatal("Expected call to ExecutionBrokerIMock.FetchMoreRequestsFromLedger")
 	}
 
 	if !m.GetActiveTranscriptFinished() {
 		m.t.Fatal("Expected call to ExecutionBrokerIMock.GetActiveTranscript")
+	}
+
+	if !m.IsActiveFinished() {
+		m.t.Fatal("Expected call to ExecutionBrokerIMock.IsActive")
 	}
 
 	if !m.IsKnownRequestFinished() {
@@ -2477,16 +2460,16 @@ func (m *ExecutionBrokerIMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ExecutionBrokerIMock.AddRequestsFromPrevExecutor")
 	}
 
-	if !m.CheckExecutionLoopFinished() {
-		m.t.Fatal("Expected call to ExecutionBrokerIMock.CheckExecutionLoop")
-	}
-
 	if !m.FetchMoreRequestsFromLedgerFinished() {
 		m.t.Fatal("Expected call to ExecutionBrokerIMock.FetchMoreRequestsFromLedger")
 	}
 
 	if !m.GetActiveTranscriptFinished() {
 		m.t.Fatal("Expected call to ExecutionBrokerIMock.GetActiveTranscript")
+	}
+
+	if !m.IsActiveFinished() {
+		m.t.Fatal("Expected call to ExecutionBrokerIMock.IsActive")
 	}
 
 	if !m.IsKnownRequestFinished() {
@@ -2544,9 +2527,9 @@ func (m *ExecutionBrokerIMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.AddFreshRequestFinished()
 		ok = ok && m.AddRequestsFromLedgerFinished()
 		ok = ok && m.AddRequestsFromPrevExecutorFinished()
-		ok = ok && m.CheckExecutionLoopFinished()
 		ok = ok && m.FetchMoreRequestsFromLedgerFinished()
 		ok = ok && m.GetActiveTranscriptFinished()
+		ok = ok && m.IsActiveFinished()
 		ok = ok && m.IsKnownRequestFinished()
 		ok = ok && m.MoreRequestsOnLedgerFinished()
 		ok = ok && m.NoMoreRequestsOnLedgerFinished()
@@ -2584,16 +2567,16 @@ func (m *ExecutionBrokerIMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to ExecutionBrokerIMock.AddRequestsFromPrevExecutor")
 			}
 
-			if !m.CheckExecutionLoopFinished() {
-				m.t.Error("Expected call to ExecutionBrokerIMock.CheckExecutionLoop")
-			}
-
 			if !m.FetchMoreRequestsFromLedgerFinished() {
 				m.t.Error("Expected call to ExecutionBrokerIMock.FetchMoreRequestsFromLedger")
 			}
 
 			if !m.GetActiveTranscriptFinished() {
 				m.t.Error("Expected call to ExecutionBrokerIMock.GetActiveTranscript")
+			}
+
+			if !m.IsActiveFinished() {
+				m.t.Error("Expected call to ExecutionBrokerIMock.IsActive")
 			}
 
 			if !m.IsKnownRequestFinished() {
@@ -2664,15 +2647,15 @@ func (m *ExecutionBrokerIMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.CheckExecutionLoopFinished() {
-		return false
-	}
-
 	if !m.FetchMoreRequestsFromLedgerFinished() {
 		return false
 	}
 
 	if !m.GetActiveTranscriptFinished() {
+		return false
+	}
+
+	if !m.IsActiveFinished() {
 		return false
 	}
 
