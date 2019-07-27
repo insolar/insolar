@@ -123,23 +123,31 @@ func (a *Accessor) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Ref
 
 func GetSnapshotActiveNodes(snapshot *Snapshot) []insolar.NetworkNode {
 	joining := snapshot.nodeList[ListJoiner]
+	idle := snapshot.nodeList[ListIdle]
 	working := snapshot.nodeList[ListWorking]
 	leaving := snapshot.nodeList[ListLeaving]
 
-	result := make([]insolar.NetworkNode, len(joining)+len(working)+len(leaving))
-	copy(result[:len(joining)], joining)
-	copy(result[len(joining):len(joining)+len(working)], working)
-	copy(result[len(joining)+len(working):], leaving)
+	joinersCount := len(joining)
+	idlersCount := len(idle)
+	workingCount := len(working)
+	leavingCount := len(leaving)
+
+	result := make([]insolar.NetworkNode, joinersCount+idlersCount+workingCount+leavingCount)
+
+	copy(result[:joinersCount], joining)
+	copy(result[joinersCount:joinersCount+idlersCount], idle)
+	copy(result[joinersCount+idlersCount:joinersCount+idlersCount+workingCount], working)
+	copy(result[joinersCount+idlersCount+workingCount:], leaving)
 
 	return result
 }
 
-func (a *Accessor) addToIndex(node insolar.NetworkNode) {
+func (a *Accessor) addToIndex(node MutableNode) {
 	a.refIndex[node.ID()] = node
 	a.sidIndex[node.ShortID()] = node
 	a.addrIndex[node.Address()] = node
 
-	if node.GetState() != insolar.NodeReady {
+	if node.GetState() != insolar.NodeReady || node.GetPower() == 0 {
 		return
 	}
 
@@ -162,7 +170,7 @@ func NewAccessor(snapshot *Snapshot) *Accessor {
 	}
 	result.active = GetSnapshotActiveNodes(snapshot)
 	for _, node := range result.active {
-		result.addToIndex(node)
+		result.addToIndex(node.(MutableNode))
 	}
 	return result
 }

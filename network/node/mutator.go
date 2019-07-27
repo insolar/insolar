@@ -66,7 +66,9 @@ func (m *Mutator) AddWorkingNode(n insolar.NetworkNode) {
 	if _, ok := m.refIndex[n.ID()]; ok {
 		return
 	}
-	m.addToIndex(n)
-	m.snapshot.nodeList[ListWorking] = append(m.snapshot.nodeList[ListWorking], n)
+	mutableNode := n.(MutableNode)
+	m.addToIndex(mutableNode)
+	listType := nodeStateToListType(mutableNode)
+	m.snapshot.nodeList[listType] = append(m.snapshot.nodeList[listType], n)
 	m.active = append(m.active, n)
 }
