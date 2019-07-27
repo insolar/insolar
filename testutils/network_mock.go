@@ -20,6 +20,11 @@ import (
 type NetworkMock struct {
 	t minimock.Tester
 
+	GetCertFunc       func(p context.Context, p1 *insolar.Reference) (r insolar.Certificate, r1 error)
+	GetCertCounter    uint64
+	GetCertPreCounter uint64
+	GetCertMock       mNetworkMockGetCert
+
 	GetStateFunc       func() (r insolar.NetworkState)
 	GetStateCounter    uint64
 	GetStatePreCounter uint64
@@ -59,6 +64,7 @@ func NewNetworkMock(t minimock.Tester) *NetworkMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.GetCertMock = mNetworkMockGetCert{mock: m}
 	m.GetStateMock = mNetworkMockGetState{mock: m}
 	m.LeaveMock = mNetworkMockLeave{mock: m}
 	m.RemoteProcedureRegisterMock = mNetworkMockRemoteProcedureRegister{mock: m}
@@ -67,6 +73,157 @@ func NewNetworkMock(t minimock.Tester) *NetworkMock {
 	m.SetOperableFuncMock = mNetworkMockSetOperableFunc{mock: m}
 
 	return m
+}
+
+type mNetworkMockGetCert struct {
+	mock              *NetworkMock
+	mainExpectation   *NetworkMockGetCertExpectation
+	expectationSeries []*NetworkMockGetCertExpectation
+}
+
+type NetworkMockGetCertExpectation struct {
+	input  *NetworkMockGetCertInput
+	result *NetworkMockGetCertResult
+}
+
+type NetworkMockGetCertInput struct {
+	p  context.Context
+	p1 *insolar.Reference
+}
+
+type NetworkMockGetCertResult struct {
+	r  insolar.Certificate
+	r1 error
+}
+
+//Expect specifies that invocation of Network.GetCert is expected from 1 to Infinity times
+func (m *mNetworkMockGetCert) Expect(p context.Context, p1 *insolar.Reference) *mNetworkMockGetCert {
+	m.mock.GetCertFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NetworkMockGetCertExpectation{}
+	}
+	m.mainExpectation.input = &NetworkMockGetCertInput{p, p1}
+	return m
+}
+
+//Return specifies results of invocation of Network.GetCert
+func (m *mNetworkMockGetCert) Return(r insolar.Certificate, r1 error) *NetworkMock {
+	m.mock.GetCertFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NetworkMockGetCertExpectation{}
+	}
+	m.mainExpectation.result = &NetworkMockGetCertResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Network.GetCert is expected once
+func (m *mNetworkMockGetCert) ExpectOnce(p context.Context, p1 *insolar.Reference) *NetworkMockGetCertExpectation {
+	m.mock.GetCertFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &NetworkMockGetCertExpectation{}
+	expectation.input = &NetworkMockGetCertInput{p, p1}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *NetworkMockGetCertExpectation) Return(r insolar.Certificate, r1 error) {
+	e.result = &NetworkMockGetCertResult{r, r1}
+}
+
+//Set uses given function f as a mock of Network.GetCert method
+func (m *mNetworkMockGetCert) Set(f func(p context.Context, p1 *insolar.Reference) (r insolar.Certificate, r1 error)) *NetworkMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetCertFunc = f
+	return m.mock
+}
+
+//GetCert implements github.com/insolar/insolar/insolar.Network interface
+func (m *NetworkMock) GetCert(p context.Context, p1 *insolar.Reference) (r insolar.Certificate, r1 error) {
+	counter := atomic.AddUint64(&m.GetCertPreCounter, 1)
+	defer atomic.AddUint64(&m.GetCertCounter, 1)
+
+	if len(m.GetCertMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetCertMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to NetworkMock.GetCert. %v %v", p, p1)
+			return
+		}
+
+		input := m.GetCertMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, NetworkMockGetCertInput{p, p1}, "Network.GetCert got unexpected parameters")
+
+		result := m.GetCertMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the NetworkMock.GetCert")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.GetCertMock.mainExpectation != nil {
+
+		input := m.GetCertMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, NetworkMockGetCertInput{p, p1}, "Network.GetCert got unexpected parameters")
+		}
+
+		result := m.GetCertMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the NetworkMock.GetCert")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.GetCertFunc == nil {
+		m.t.Fatalf("Unexpected call to NetworkMock.GetCert. %v %v", p, p1)
+		return
+	}
+
+	return m.GetCertFunc(p, p1)
+}
+
+//GetCertMinimockCounter returns a count of NetworkMock.GetCertFunc invocations
+func (m *NetworkMock) GetCertMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetCertCounter)
+}
+
+//GetCertMinimockPreCounter returns the value of NetworkMock.GetCert invocations
+func (m *NetworkMock) GetCertMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetCertPreCounter)
+}
+
+//GetCertFinished returns true if mock invocations count is ok
+func (m *NetworkMock) GetCertFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetCertMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetCertCounter) == uint64(len(m.GetCertMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetCertMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetCertCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetCertFunc != nil {
+		return atomic.LoadUint64(&m.GetCertCounter) > 0
+	}
+
+	return true
 }
 
 type mNetworkMockGetState struct {
@@ -879,6 +1036,10 @@ func (m *NetworkMock) SetOperableFuncFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *NetworkMock) ValidateCallCounters() {
 
+	if !m.GetCertFinished() {
+		m.t.Fatal("Expected call to NetworkMock.GetCert")
+	}
+
 	if !m.GetStateFinished() {
 		m.t.Fatal("Expected call to NetworkMock.GetState")
 	}
@@ -920,6 +1081,10 @@ func (m *NetworkMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *NetworkMock) MinimockFinish() {
 
+	if !m.GetCertFinished() {
+		m.t.Fatal("Expected call to NetworkMock.GetCert")
+	}
+
 	if !m.GetStateFinished() {
 		m.t.Fatal("Expected call to NetworkMock.GetState")
 	}
@@ -958,6 +1123,7 @@ func (m *NetworkMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
+		ok = ok && m.GetCertFinished()
 		ok = ok && m.GetStateFinished()
 		ok = ok && m.LeaveFinished()
 		ok = ok && m.RemoteProcedureRegisterFinished()
@@ -971,6 +1137,10 @@ func (m *NetworkMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
+
+			if !m.GetCertFinished() {
+				m.t.Error("Expected call to NetworkMock.GetCert")
+			}
 
 			if !m.GetStateFinished() {
 				m.t.Error("Expected call to NetworkMock.GetState")
@@ -1007,6 +1177,10 @@ func (m *NetworkMock) MinimockWait(timeout time.Duration) {
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *NetworkMock) AllMocksCalled() bool {
+
+	if !m.GetCertFinished() {
+		return false
+	}
 
 	if !m.GetStateFinished() {
 		return false

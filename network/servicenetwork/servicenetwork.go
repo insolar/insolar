@@ -173,6 +173,11 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	})
 
 	n.datagramHandler = adapters.NewDatagramHandler()
+	datagramTransport, err := n.TransportFactory.CreateDatagramTransport(n.datagramHandler)
+	if err != nil {
+		return errors.Wrap(err, "failed to create datagramTransport")
+	}
+	n.datagramTransport = datagramTransport
 
 	n.cm.Inject(n,
 		&routing.Table{},
@@ -189,12 +194,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		n.Gatewayer,
 		rules.NewRules(),
 	)
-
-	datagramTransport, err := n.TransportFactory.CreateDatagramTransport(n.datagramHandler)
-	if err != nil {
-		return errors.Wrap(err, "failed to create datagramTransport")
-	}
-	n.datagramTransport = datagramTransport
 
 	// sign origin
 	origin := n.NodeKeeper.GetOrigin()
@@ -390,4 +389,8 @@ func GetAnnounceEvidence(
 // RegisterConsensusFinishedNotifier for integrtest TODO: remove
 func (n *ServiceNetwork) RegisterConsensusFinishedNotifier(fn consensus.FinishedNotifier) {
 	n.consensusController.RegisterFinishedNotifier(fn)
+}
+
+func (n *ServiceNetwork) GetCert(ctx context.Context, ref *insolar.Reference) (insolar.Certificate, error) {
+	return n.Gatewayer.Gateway().Auther().GetCert(ctx, ref)
 }

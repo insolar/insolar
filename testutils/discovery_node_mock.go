@@ -32,6 +32,11 @@ type DiscoveryNodeMock struct {
 	GetPublicKeyCounter    uint64
 	GetPublicKeyPreCounter uint64
 	GetPublicKeyMock       mDiscoveryNodeMockGetPublicKey
+
+	GetRoleFunc       func() (r insolar.StaticRole)
+	GetRoleCounter    uint64
+	GetRolePreCounter uint64
+	GetRoleMock       mDiscoveryNodeMockGetRole
 }
 
 //NewDiscoveryNodeMock returns a mock for github.com/insolar/insolar/insolar.DiscoveryNode
@@ -45,6 +50,7 @@ func NewDiscoveryNodeMock(t minimock.Tester) *DiscoveryNodeMock {
 	m.GetHostMock = mDiscoveryNodeMockGetHost{mock: m}
 	m.GetNodeRefMock = mDiscoveryNodeMockGetNodeRef{mock: m}
 	m.GetPublicKeyMock = mDiscoveryNodeMockGetPublicKey{mock: m}
+	m.GetRoleMock = mDiscoveryNodeMockGetRole{mock: m}
 
 	return m
 }
@@ -451,6 +457,140 @@ func (m *DiscoveryNodeMock) GetPublicKeyFinished() bool {
 	return true
 }
 
+type mDiscoveryNodeMockGetRole struct {
+	mock              *DiscoveryNodeMock
+	mainExpectation   *DiscoveryNodeMockGetRoleExpectation
+	expectationSeries []*DiscoveryNodeMockGetRoleExpectation
+}
+
+type DiscoveryNodeMockGetRoleExpectation struct {
+	result *DiscoveryNodeMockGetRoleResult
+}
+
+type DiscoveryNodeMockGetRoleResult struct {
+	r insolar.StaticRole
+}
+
+//Expect specifies that invocation of DiscoveryNode.GetRole is expected from 1 to Infinity times
+func (m *mDiscoveryNodeMockGetRole) Expect() *mDiscoveryNodeMockGetRole {
+	m.mock.GetRoleFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &DiscoveryNodeMockGetRoleExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of DiscoveryNode.GetRole
+func (m *mDiscoveryNodeMockGetRole) Return(r insolar.StaticRole) *DiscoveryNodeMock {
+	m.mock.GetRoleFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &DiscoveryNodeMockGetRoleExpectation{}
+	}
+	m.mainExpectation.result = &DiscoveryNodeMockGetRoleResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of DiscoveryNode.GetRole is expected once
+func (m *mDiscoveryNodeMockGetRole) ExpectOnce() *DiscoveryNodeMockGetRoleExpectation {
+	m.mock.GetRoleFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &DiscoveryNodeMockGetRoleExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *DiscoveryNodeMockGetRoleExpectation) Return(r insolar.StaticRole) {
+	e.result = &DiscoveryNodeMockGetRoleResult{r}
+}
+
+//Set uses given function f as a mock of DiscoveryNode.GetRole method
+func (m *mDiscoveryNodeMockGetRole) Set(f func() (r insolar.StaticRole)) *DiscoveryNodeMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetRoleFunc = f
+	return m.mock
+}
+
+//GetRole implements github.com/insolar/insolar/insolar.DiscoveryNode interface
+func (m *DiscoveryNodeMock) GetRole() (r insolar.StaticRole) {
+	counter := atomic.AddUint64(&m.GetRolePreCounter, 1)
+	defer atomic.AddUint64(&m.GetRoleCounter, 1)
+
+	if len(m.GetRoleMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetRoleMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to DiscoveryNodeMock.GetRole.")
+			return
+		}
+
+		result := m.GetRoleMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the DiscoveryNodeMock.GetRole")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetRoleMock.mainExpectation != nil {
+
+		result := m.GetRoleMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the DiscoveryNodeMock.GetRole")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetRoleFunc == nil {
+		m.t.Fatalf("Unexpected call to DiscoveryNodeMock.GetRole.")
+		return
+	}
+
+	return m.GetRoleFunc()
+}
+
+//GetRoleMinimockCounter returns a count of DiscoveryNodeMock.GetRoleFunc invocations
+func (m *DiscoveryNodeMock) GetRoleMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetRoleCounter)
+}
+
+//GetRoleMinimockPreCounter returns the value of DiscoveryNodeMock.GetRole invocations
+func (m *DiscoveryNodeMock) GetRoleMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetRolePreCounter)
+}
+
+//GetRoleFinished returns true if mock invocations count is ok
+func (m *DiscoveryNodeMock) GetRoleFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetRoleMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetRoleCounter) == uint64(len(m.GetRoleMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetRoleMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetRoleCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetRoleFunc != nil {
+		return atomic.LoadUint64(&m.GetRoleCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *DiscoveryNodeMock) ValidateCallCounters() {
@@ -465,6 +605,10 @@ func (m *DiscoveryNodeMock) ValidateCallCounters() {
 
 	if !m.GetPublicKeyFinished() {
 		m.t.Fatal("Expected call to DiscoveryNodeMock.GetPublicKey")
+	}
+
+	if !m.GetRoleFinished() {
+		m.t.Fatal("Expected call to DiscoveryNodeMock.GetRole")
 	}
 
 }
@@ -496,6 +640,10 @@ func (m *DiscoveryNodeMock) MinimockFinish() {
 		m.t.Fatal("Expected call to DiscoveryNodeMock.GetPublicKey")
 	}
 
+	if !m.GetRoleFinished() {
+		m.t.Fatal("Expected call to DiscoveryNodeMock.GetRole")
+	}
+
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -513,6 +661,7 @@ func (m *DiscoveryNodeMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetHostFinished()
 		ok = ok && m.GetNodeRefFinished()
 		ok = ok && m.GetPublicKeyFinished()
+		ok = ok && m.GetRoleFinished()
 
 		if ok {
 			return
@@ -531,6 +680,10 @@ func (m *DiscoveryNodeMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetPublicKeyFinished() {
 				m.t.Error("Expected call to DiscoveryNodeMock.GetPublicKey")
+			}
+
+			if !m.GetRoleFinished() {
+				m.t.Error("Expected call to DiscoveryNodeMock.GetRole")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -554,6 +707,10 @@ func (m *DiscoveryNodeMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetPublicKeyFinished() {
+		return false
+	}
+
+	if !m.GetRoleFinished() {
 		return false
 	}
 

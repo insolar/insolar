@@ -52,6 +52,7 @@ type Network interface {
 	GetState() NetworkState
 	// SetOperableFunc registers callback for notifying of network state
 	SetOperableFunc(NetworkOperableCallback)
+	GetCert(context.Context, *Reference) (Certificate, error)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.PulseDistributor -o ../testutils -s _mock.go
