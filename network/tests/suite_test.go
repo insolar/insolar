@@ -492,7 +492,7 @@ func (p *pulseManagerMock) Set(ctx context.Context, pulse insolar.Pulse) error {
 	p.pulse = pulse
 	p.lock.Unlock()
 
-	return p.keeper.MoveSyncToActive(ctx, pulse.PulseNumber)
+	return nil
 }
 
 type staterMock struct {

@@ -67,7 +67,7 @@ type RoundStrategy struct {
 }
 
 func (rs *RoundStrategy) IsEphemeralPulseAllowed() bool {
-	return false
+	return true
 }
 
 func NewRoundStrategy(

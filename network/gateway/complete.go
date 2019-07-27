@@ -93,18 +93,6 @@ func (g *Complete) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, orig
 	g.ConsensusPulseHandler.HandlePulse(ctx, pu, originalPacket)
 }
 
-func (g *Complete) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
-
-	logger := inslogger.FromContext(ctx)
-	logger.Debugf("Gateway.Complete: pulse happens %d", pu.PulseNumber)
-	logger.Debugf("Before set new current pulse number: %d", pu.PulseNumber)
-	err := g.PulseManager.Set(ctx, pu)
-	if err != nil {
-		logger.Fatalf("Failed to set new pulse: %s", err.Error())
-	}
-	logger.Infof("Set new current pulse number: %d", pu.PulseNumber)
-}
-
 func (g *Complete) NeedLockMessageBus() bool {
 	return false
 }

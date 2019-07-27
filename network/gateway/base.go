@@ -52,6 +52,7 @@ package gateway
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/pulsenetwork"
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -143,17 +144,23 @@ func (g *Base) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, original
 	inslogger.FromContext(ctx).Infof("Skip pulse from pulsar: %d", pu.PulseNumber)
 }
 
-func (n *Base) OnPulseFromConsensus(ctx context.Context, newPulse insolar.Pulse) {
+func (n *Base) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
 	logger := inslogger.FromContext(ctx)
 
-	logger.Infof("Got new pulse number: %d", newPulse.PulseNumber)
+	logger.Infof("Got new pulse number: %d", pu.PulseNumber)
 	ctx, span := instracer.StartSpan(ctx, "ServiceNetwork.Handlepulse")
 	span.AddAttributes(
-		trace.Int64Attribute("pulse.PulseNumber", int64(newPulse.PulseNumber)),
+		trace.Int64Attribute("pulse.PulseNumber", int64(pu.PulseNumber)),
 	)
 	defer span.End()
 
-	if err := n.NodeKeeper.MoveSyncToActive(ctx, newPulse.PulseNumber); err != nil {
+	err := n.PulseManager.Set(ctx, pu)
+	if err != nil {
+		logger.Fatalf("Failed to set new pulse: %s", err.Error())
+	}
+	logger.Infof("Set new current pulse number: %d", pu.PulseNumber)
+
+	if err := n.NodeKeeper.MoveSyncToActive(ctx, pu.PulseNumber); err != nil {
 		logger.Warn("MoveSyncToActive failed: ", err.Error())
 	}
 
@@ -246,6 +253,22 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 
 	profile := adapters.NewStaticProfileFromPacket(data.CandidateProfile, g.KeyProcessor)
 	g.ConsensusController.AddJoinCandidate(candidate{profile, profile.GetExtension()})
+
+	if g.Gatewayer.Gateway().GetState() != insolar.CompleteNetworkState {
+
+		p := pulse.FromProto(&data.Pulse)
+		//p.PulseNumber++
+		//p.EpochPulseNumber = 1
+
+		ph, _ := host.NewHost("127.0.0.1:1")
+		th, _ := host.NewHost("127.0.0.1:2")
+
+		pp := pulsenetwork.NewPulsePacket(ctx, p, ph, th, 0)
+
+		bs, _ := packet.SerializePacket(pp)
+
+		g.ConsensusPulseHandler.HandlePulse(ctx, *p, packet.NewReceivedPacket(pp, bs))
+	}
 
 	go func() {
 		// TODO:

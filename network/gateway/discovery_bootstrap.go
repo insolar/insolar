@@ -73,29 +73,32 @@ type DiscoveryBootstrap struct {
 }
 
 func (g *DiscoveryBootstrap) Run(ctx context.Context) {
-
+	logger := inslogger.FromContext(ctx)
 	authorizeRes, err := g.authorize(ctx)
 	if err != nil {
-		// log warn
+		logger.Error(err.Error())
 		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState)
 		return
 	}
 
 	// TODO: check authorize result and switch to JoinerBootstrap if other network is complete
-	//if err == nil && !insolar.IsEphemeralPulse(&p) {
-	//	g.Gatewayer.SwitchState(insolar.JoinerBootstrap)
-	//	return
-	//}
+	p := pulse.FromProto(authorizeRes.Pulse)
 
-	_, err = g.PulseAccessor.Latest(ctx)
-	pp := pulse.FromProto(authorizeRes.Pulse)
-	if err != nil {
-		g.PulseAppender.Append(ctx, *pp)
+	if !insolar.IsEphemeralPulse(p) {
+		g.Gatewayer.SwitchState(ctx, insolar.JoinerBootstrap)
+		return
 	}
 
-	resp, err := g.BootstrapRequester.Bootstrap(ctx, authorizeRes.Permit, *g.originCandidateProfile, pp)
-	if err != nil {
+	//_, err = g.PulseAccessor.Latest(ctx)
+	//if err != nil {
+	//	g.PulseAppender.Append(ctx, *pulse)
+	//}
 
+	resp, err := g.BootstrapRequester.Bootstrap(ctx, authorizeRes.Permit, *g.originCandidateProfile, p)
+	if err != nil {
+		logger.Error(err.Error())
+		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState)
+		return
 	}
 
 	//  ConsensusWaiting, ETA

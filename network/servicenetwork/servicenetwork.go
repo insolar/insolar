@@ -260,7 +260,8 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	//for i, dn := range cert.GetDiscoveryNodes() {
 	//	nodes[i] = node.NewNode(*dn.GetNodeRef(), dn.GetRole(), dn.GetPublicKey(), dn.GetHost(), "")
 	//}
-	//n.NodeKeeper.SetInitialSnapshot(nodes)
+
+	//n.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{n.NodeKeeper.GetOrigin()})
 	//n.ConsensusMode = consensus.ReadyNetwork
 
 	n.initConsensus()
