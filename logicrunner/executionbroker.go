@@ -36,8 +36,6 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.ExecutionBrokerI -o ./ -s _mock.go -g
 
 type ExecutionBrokerI interface {
-	CheckExecutionLoop(ctx context.Context, apiRequestID string) bool
-
 	AddFreshRequest(ctx context.Context, transcript *Transcript)
 	AddRequestsFromPrevExecutor(ctx context.Context, transcripts ...*Transcript)
 	AddRequestsFromLedger(ctx context.Context, transcripts ...*Transcript)
@@ -57,7 +55,9 @@ type ExecutionBrokerI interface {
 	NoMoreRequestsOnLedger(ctx context.Context)
 	FetchMoreRequestsFromLedger(ctx context.Context)
 
-	OnPulse(ctx context.Context, meNext bool) (bool, []insolar.Message)
+	IsActive() bool
+
+	OnPulse(ctx context.Context, meNext bool) []insolar.Message
 }
 
 type ExecutionBroker struct {
@@ -65,10 +65,11 @@ type ExecutionBroker struct {
 
 	stateLock sync.Mutex
 
-	mutable     *TranscriptDequeue
-	immutable   *TranscriptDequeue
-	finished    *TranscriptDequeue
-	currentList *CurrentExecutionList
+	mutable          *TranscriptDequeue
+	immutable        *TranscriptDequeue
+	finished         *TranscriptDequeue
+	currentList      *CurrentExecutionList
+	executionArchive ExecutionArchive
 
 	publisher        watermillMsg.Publisher
 	requestsExecutor RequestsExecutor
@@ -96,6 +97,7 @@ func NewExecutionBroker(
 	jetCoordinator jet.Coordinator,
 	_ pulse.Accessor,
 	artifactsManager artifacts.Client,
+	executionArchive ExecutionArchive,
 ) *ExecutionBroker {
 	return &ExecutionBroker{
 		Ref: ref,
@@ -110,6 +112,7 @@ func NewExecutionBroker(
 		messageBus:       messageBus,
 		jetCoordinator:   jetCoordinator,
 		artifactsManager: artifactsManager,
+		executionArchive: executionArchive,
 
 		processorActive: 0,
 
@@ -149,6 +152,7 @@ func (q *ExecutionBroker) getImmutableTask(ctx context.Context) *Transcript {
 		inslogger.FromContext(ctx).Error("couldn't get immutable task: ", err.Error())
 		return nil
 	}
+	q.executionArchive.Archive(transcript)
 
 	return transcript
 }
@@ -167,6 +171,7 @@ func (q *ExecutionBroker) getMutableTask(ctx context.Context) *Transcript {
 		inslogger.FromContext(ctx).Error("couldn't get mutable task: ", err.Error())
 		return nil
 	}
+	q.executionArchive.Archive(transcript)
 
 	return transcript
 }
@@ -176,6 +181,7 @@ func (q *ExecutionBroker) storeCurrent(ctx context.Context, transcript *Transcri
 	if err != nil {
 		inslogger.FromContext(ctx).Error("couldn't store task in current list: ", err.Error())
 	}
+	q.executionArchive.Archive(transcript)
 }
 
 func (q *ExecutionBroker) releaseTask(_ context.Context, transcript *Transcript) {
@@ -186,6 +192,7 @@ func (q *ExecutionBroker) releaseTask(_ context.Context, transcript *Transcript)
 		return
 	}
 	q.currentList.Delete(transcript.RequestRef)
+	q.executionArchive.Done(transcript)
 
 	queue := q.mutable
 	if transcript.Request.Immutable {
@@ -207,6 +214,7 @@ func (q *ExecutionBroker) finishTask(ctx context.Context, transcript *Transcript
 		logger.Error("[ ExecutionBroker.FinishTask ] task '%s' is not in current", transcript.RequestRef.String())
 	} else {
 		q.currentList.Delete(transcript.RequestRef)
+		q.executionArchive.Done(transcript)
 	}
 }
 
@@ -244,8 +252,11 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *Tra
 	return true
 }
 
-func (q *ExecutionBroker) storeWithoutDuplication(_ context.Context, transcript *Transcript) bool {
+func (q *ExecutionBroker) storeWithoutDuplication(ctx context.Context, transcript *Transcript) bool {
 	if _, ok := q.deduplicationTable[transcript.RequestRef]; ok {
+		logger := inslogger.FromContext(ctx)
+		logger.Infof("Already know about request %s, skipping", transcript.RequestRef.String())
+
 		return true
 	}
 	q.deduplicationTable[transcript.RequestRef] = true
@@ -255,10 +266,6 @@ func (q *ExecutionBroker) storeWithoutDuplication(_ context.Context, transcript 
 func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts ...*Transcript) {
 	for _, transcript := range transcripts {
 		if q.storeWithoutDuplication(ctx, transcript) {
-			inslogger.FromContext(ctx).Info(
-				"Already know about request ",
-				transcript.RequestRef.String(), ", skipping",
-			)
 			continue
 		}
 
@@ -278,10 +285,6 @@ func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts .
 func (q *ExecutionBroker) Put(ctx context.Context, start bool, transcripts ...*Transcript) {
 	for _, transcript := range transcripts {
 		if q.storeWithoutDuplication(ctx, transcript) {
-			inslogger.FromContext(ctx).Info(
-				"Already know about request ",
-				transcript.RequestRef.String(), ", skipping",
-			)
 			continue
 		}
 
@@ -466,25 +469,18 @@ func (q *ExecutionBroker) finishPendingIfNeeded(ctx context.Context) {
 	}
 }
 
-func (q *ExecutionBroker) onPulseWeNotNext(ctx context.Context) (bool, []insolar.Message) {
+func (q *ExecutionBroker) onPulseWeNotNext(ctx context.Context) []insolar.Message {
 	logger := inslogger.FromContext(ctx)
 
 	q.stopRequestsFetcher(ctx)
 
 	messages := make([]insolar.Message, 0)
 	sendExecResults := false
-	active := q.isActive()
 
 	switch {
-	case active:
+	case q.IsActive():
 		q.pending = insolar.InPending
 		sendExecResults = true
-		msg := &message.StillExecuting{
-			Reference:   q.Ref,
-			Executor:    q.jetCoordinator.Me(),
-			RequestRefs: q.currentList.GetAllRequestRefs(),
-		}
-		messages = append(messages, msg)
 	case q.notConfirmedPending():
 		logger.Warn("looks like pending executor died, continuing execution on next executor")
 		q.pending = insolar.NotPending
@@ -511,14 +507,14 @@ func (q *ExecutionBroker) onPulseWeNotNext(ctx context.Context) (bool, []insolar
 		messages = append(messages, resultsMsg)
 	}
 
-	return !active, messages
+	return messages
 }
 
-func (q *ExecutionBroker) onPulseWeNext(ctx context.Context) (bool, []insolar.Message) {
+func (q *ExecutionBroker) onPulseWeNext(ctx context.Context) []insolar.Message {
 	logger := inslogger.FromContext(ctx)
 
 	switch {
-	case q.isActive():
+	case q.IsActive():
 		// no pending should be as we are executing
 		logger.Info("continuing pending execution on pulse")
 		q.pending = insolar.InPending
@@ -536,7 +532,7 @@ func (q *ExecutionBroker) onPulseWeNext(ctx context.Context) (bool, []insolar.Me
 
 	}
 
-	return false, make([]insolar.Message, 0)
+	return make([]insolar.Message, 0)
 }
 
 // notConfirmedPending checks that we were in pending and waiting
@@ -545,7 +541,7 @@ func (q *ExecutionBroker) notConfirmedPending() bool {
 	return q.pending == insolar.InPending && !q.PendingConfirmed
 }
 
-func (q *ExecutionBroker) OnPulse(ctx context.Context, meNext bool) (bool, []insolar.Message) {
+func (q *ExecutionBroker) OnPulse(ctx context.Context, meNext bool) []insolar.Message {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
@@ -553,7 +549,7 @@ func (q *ExecutionBroker) OnPulse(ctx context.Context, meNext bool) (bool, []ins
 		return q.onPulseWeNext(ctx)
 	}
 
-	return q.onPulseWeNotNext(ctx)
+	return append(q.onPulseWeNotNext(ctx), q.executionArchive.OnPulse(ctx)...)
 }
 
 func (q *ExecutionBroker) NoMoreRequestsOnLedger(ctx context.Context) {
@@ -586,7 +582,7 @@ func (q *ExecutionBroker) PrevExecutorPendingResult(ctx context.Context, prevExe
 
 	switch q.pending {
 	case insolar.InPending:
-		if q.isActive() {
+		if q.IsActive() {
 			logger.Debug("execution returned to node that is still executing pending")
 
 			q.pending = insolar.NotPending
@@ -628,7 +624,7 @@ func (q *ExecutionBroker) PrevExecutorFinishedPending(ctx context.Context) error
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
-	if q.isActive() {
+	if q.IsActive() {
 		return errors.New("already executing")
 	}
 
@@ -690,29 +686,6 @@ func (q *ExecutionBroker) stopRequestsFetcher(ctx context.Context) {
 	}
 }
 
-// values here (boolean flags) are inverted here, since it's common "predicate" checking function
-func noLoopCheckerPredicate(current *Transcript, args interface{}) bool {
-	apiReqID := args.(string)
-	if current.Request.ReturnMode == record.ReturnNoWait ||
-		current.Request.APIRequestID != apiReqID {
-		return true
-	}
-	return false
-}
-
-func (q *ExecutionBroker) CheckExecutionLoop(ctx context.Context, apiRequestID string) bool {
-	q.stateLock.Lock()
-	defer q.stateLock.Unlock()
-
-	if !q.isActive() {
-		return false
-	}
-	if q.currentList.Check(noLoopCheckerPredicate, apiRequestID) {
-		return false
-	}
-	return true
-}
-
 func (q *ExecutionBroker) AddFreshRequest(
 	ctx context.Context, tr *Transcript,
 ) {
@@ -764,7 +737,7 @@ func (q *ExecutionBroker) AddAdditionalRequestFromPrevExecutor(
 	q.Put(ctx, true, tr)
 }
 
-func (q *ExecutionBroker) isActive() bool {
+func (q *ExecutionBroker) IsActive() bool {
 	return !q.currentList.Empty()
 }
 
