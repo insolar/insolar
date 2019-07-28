@@ -57,8 +57,6 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
@@ -122,17 +120,17 @@ func (g *NoNetwork) GetState() insolar.NetworkState {
 // 	}
 // }
 
+//func findNodeByAddress(address string, nodes []insolar.DiscoveryNode) (insolar.DiscoveryNode, error) {
+//	for _, node := range nodes {
+//		if node.GetHost() == address {
+//			return node, nil
+//		}
+//	}
+//	return nil, errors.New("Failed to find a discovery node with address: " + address)
+//}
+
 // todo: remove this workaround
 func (g *NoNetwork) zeroBootstrap(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("[ Bootstrap ] Zero bootstrap")
 	g.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{g.NodeKeeper.GetOrigin()})
-}
-
-func findNodeByAddress(address string, nodes []insolar.DiscoveryNode) (insolar.DiscoveryNode, error) {
-	for _, node := range nodes {
-		if node.GetHost() == address {
-			return node, nil
-		}
-	}
-	return nil, errors.New("Failed to find a discovery node with address: " + address)
 }

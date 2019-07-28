@@ -121,11 +121,6 @@ func (op *OfflinePopulation) FindRegisteredProfile(identity endpoints.Inbound) p
 		return nil
 	}
 	cert := op.manager.GetCertificate()
-
-	if node == nil {
-		panic("networkNode is nil")
-	}
-
 	return NewStaticProfile(node, cert, op.keyProcessor)
 }
 

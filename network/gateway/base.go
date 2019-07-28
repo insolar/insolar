@@ -72,7 +72,6 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
-	"github.com/insolar/insolar/network/storage"
 	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/insolar"
@@ -101,7 +100,7 @@ type Base struct {
 	ConsensusController   consensus.Controller
 	ConsensusPulseHandler network.PulseHandler
 
-	bootstrapETA           insolar.PulseNumber
+	bootstrapETA           insolar.PulseNumber //nolint: unused
 	originCandidateProfile *packet.CandidateProfile
 }
 
@@ -144,7 +143,7 @@ func (g *Base) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, original
 	inslogger.FromContext(ctx).Infof("Skip pulse from pulsar: %d", pu.PulseNumber)
 }
 
-func (n *Base) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
+func (g *Base) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
 	logger := inslogger.FromContext(ctx)
 
 	logger.Infof("Got new pulse number: %d", pu.PulseNumber)
@@ -154,24 +153,24 @@ func (n *Base) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
 	)
 	defer span.End()
 
-	err := n.PulseManager.Set(ctx, pu)
+	err := g.PulseManager.Set(ctx, pu)
 	if err != nil {
 		logger.Fatalf("Failed to set new pulse: %s", err.Error())
 	}
 	logger.Infof("Set new current pulse number: %d", pu.PulseNumber)
 
-	if err := n.NodeKeeper.MoveSyncToActive(ctx, pu.PulseNumber); err != nil {
+	if err := g.NodeKeeper.MoveSyncToActive(ctx, pu.PulseNumber); err != nil {
 		logger.Warn("MoveSyncToActive failed: ", err.Error())
 	}
 
 }
 
-func (n *Base) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
-	err := n.NodeKeeper.Sync(ctx, nodes)
+func (g *Base) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
+	err := g.NodeKeeper.Sync(ctx, nodes)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(err)
 	}
-	n.NodeKeeper.SetCloudHash(cloudStateHash)
+	g.NodeKeeper.SetCloudHash(cloudStateHash)
 }
 
 func (g *Base) NeedLockMessageBus() bool {
@@ -303,7 +302,7 @@ func validateTimestamp(timestamp int64, delta time.Duration) bool {
 
 func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 	if !network.OriginIsDiscovery(g.CertificateManager.GetCertificate()) {
-		return nil, errors.New("Only discovery nodes could authorize other nodes. I am not a discovery node.")
+		return nil, errors.New("only discovery nodes could authorize other nodes. I am not a discovery node.")
 	}
 
 	if request.GetRequest() == nil || request.GetRequest().GetAuthorize() == nil {
@@ -330,7 +329,9 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.R
 			err = errors.New("Certificate validation failed")
 		}
 
+		inslogger.FromContext(ctx).Error(err.Error())
 		// FIXME
+		//panic(err.Error())
 		//return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{Code: packet.WrongMandate, Error: err.Error()}), nil
 	}
 
@@ -380,7 +381,7 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.R
 }
 
 func (g *Base) HandleUpdateSchedule(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
-	storage.NewSnapshotStorage()
+	//storage.NewSnapshotStorage()
 	// TODO:
 	return g.HostNetwork.BuildResponse(ctx, request, &packet.UpdateScheduleResponse{}), nil
 }

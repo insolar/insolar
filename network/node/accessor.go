@@ -105,11 +105,11 @@ func (a *Accessor) GetWorkingNodes() []insolar.NetworkNode {
 
 func (a *Accessor) GetRandomWorkingNode() insolar.NetworkNode {
 	workingList := a.snapshot.nodeList[ListWorking]
-	if l := len(workingList); l == 0 {
+	l := len(workingList)
+	if l == 0 {
 		return nil
-	} else {
-		return workingList[rand.Intn(l)]
 	}
+	return workingList[rand.Intn(l)]
 }
 
 func (a *Accessor) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference {

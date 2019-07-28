@@ -104,7 +104,6 @@ func (g *DiscoveryBootstrap) Run(ctx context.Context) {
 	//  ConsensusWaiting, ETA
 	g.bootstrapETA = insolar.PulseNumber(resp.ETA)
 	g.Gatewayer.SwitchState(ctx, insolar.WaitConsensus)
-	return
 
 	// Authorize(utc) permit, check version
 	// process response: trueAccept, redirect with permit, posibleAccept(regen shortId, updateScedule, update time utc)

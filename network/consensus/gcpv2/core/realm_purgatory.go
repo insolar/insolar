@@ -189,7 +189,7 @@ func (p *RealmPurgatory) FindMember(id insolar.ShortNodeID, introducedBy insolar
 	return am
 }
 
-func (p *RealmPurgatory) getMember(id insolar.ShortNodeID, introducedBy insolar.ShortNodeID) (AnnouncingMember, *NodeAppearance) {
+func (p *RealmPurgatory) getMember(id insolar.ShortNodeID, _ insolar.ShortNodeID) (AnnouncingMember, *NodeAppearance) {
 
 	na := p.population.GetNodeAppearance(id)
 	if na != nil { // main path
