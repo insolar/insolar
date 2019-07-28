@@ -55,8 +55,6 @@ package tests
 import (
 	"fmt"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/stretchr/testify/suite"
-	"testing"
 )
 
 type bootstrapSuite struct {
@@ -115,10 +113,10 @@ func newBootstraptSuite(bootstrapCount int) *bootstrapSuite {
 	}
 }
 
-func TestBootstrap(t *testing.T) {
-	s := newBootstraptSuite(2)
-	suite.Run(t, s)
-}
+//func TestBootstrap(t *testing.T) {
+//	s := newBootstraptSuite(2)
+//	suite.Run(t, s)
+//}
 
 func (s *bootstrapSuite) TestExample() {
 	inslogger.FromContext(s.fixture().ctx).Info("Log -- ")
