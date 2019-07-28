@@ -99,7 +99,7 @@ func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader
 
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
-				mainLogger.Info("[ HandleStream ] Connection closed by peer")
+				mainLogger.Debug("[ HandleStream ] Connection closed by peer")
 				network.CloseVerbose(reader)
 				return
 			}
