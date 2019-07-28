@@ -55,6 +55,16 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
+
+	"github.com/insolar/insolar/cryptography"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/serialization"
+	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/network/rules"
+
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -64,19 +74,12 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/adapters"
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/longbits"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/serialization"
 	"github.com/insolar/insolar/network/controller"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/gateway"
 	"github.com/insolar/insolar/network/gateway/bootstrap"
 	"github.com/insolar/insolar/network/hostnetwork"
-	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/routing"
-	"github.com/insolar/insolar/network/rules"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/pkg/errors"
 )
@@ -94,8 +97,6 @@ type ServiceNetwork struct {
 	CryptographyService insolar.CryptographyService        `inject:""`
 	CryptographyScheme  insolar.PlatformCryptographyScheme `inject:""`
 	KeyProcessor        insolar.KeyProcessor               `inject:""`
-	KeyStore            insolar.KeyStore                   `inject:""`
-	TransportFactory    transport.Factory                  `inject:""`
 	NodeKeeper          network.NodeKeeper                 `inject:""`
 	TerminationHandler  insolar.TerminationHandler         `inject:""`
 	ContractRequester   insolar.ContractRequester          `inject:""`
@@ -104,8 +105,9 @@ type ServiceNetwork struct {
 	Pub message.Publisher `inject:""`
 
 	// subcomponents
-	RPC   controller.RPCController `inject:"subcomponent"`
-	Rules network.Rules            `inject:"subcomponent"`
+	RPC              controller.RPCController `inject:"subcomponent"`
+	Rules            network.Rules            `inject:"subcomponent"`
+	TransportFactory transport.Factory        `inject:"subcomponent"`
 
 	HostNetwork network.HostNetwork
 
@@ -166,18 +168,11 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		}
 	})
 
-	n.datagramHandler = adapters.NewDatagramHandler()
-	datagramTransport, err := n.TransportFactory.CreateDatagramTransport(n.datagramHandler)
-	if err != nil {
-		return errors.Wrap(err, "failed to create datagramTransport")
-	}
-	n.datagramTransport = datagramTransport
-
 	n.cm.Inject(n,
 		&routing.Table{},
 		cert,
+		transport.NewFactory(n.cfg.Host.Transport),
 		hostNetwork,
-		n.datagramTransport,
 		controller.NewRPCController(options),
 		controller.NewPulseController(),
 		bootstrap.NewRequester(options),
@@ -187,9 +182,18 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		rules.NewRules(),
 	)
 
+	n.datagramHandler = adapters.NewDatagramHandler()
+	datagramTransport, err := n.TransportFactory.CreateDatagramTransport(n.datagramHandler)
+	if err != nil {
+		return errors.Wrap(err, "failed to create datagramTransport")
+	}
+	n.datagramTransport = datagramTransport
+
 	// sign origin
 	origin := n.NodeKeeper.GetOrigin()
-	key, err := n.KeyStore.GetPrivateKey("")
+	// TODO: hack
+	ks := n.CryptographyService.(*cryptography.NodeCryptographyService).KeyStore
+	key, err := ks.GetPrivateKey("")
 	if err != nil {
 		return errors.Wrap(err, "failed to get private key")
 	}
@@ -218,7 +222,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		KeyProcessor:          n.KeyProcessor,
 		Scheme:                n.CryptographyScheme,
 		CertificateManager:    n.CertificateManager,
-		KeyStore:              n.KeyStore,
+		KeyStore:              ks,
 		NodeKeeper:            n.NodeKeeper,
 		StateGetter:           n,
 		PulseChanger:          n,
@@ -242,19 +246,31 @@ func (n *ServiceNetwork) initConsensus() {
 
 // Start implements component.Starter
 func (n *ServiceNetwork) Start(ctx context.Context) error {
-	err := n.cm.Start(ctx)
+	err := n.datagramTransport.Start(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Failed to start datagram transport")
+	}
+
+	err = n.cm.Start(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to start component manager")
 	}
 
-	//cert := n.CertificateManager.GetCertificate()
-	//nodes := make([]insolar.NetworkNode, len(cert.GetDiscoveryNodes()))
-	//for i, dn := range cert.GetDiscoveryNodes() {
-	//	nodes[i] = node.NewNode(*dn.GetNodeRef(), dn.GetRole(), dn.GetPublicKey(), dn.GetHost(), "")
-	//}
-
-	//n.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{n.NodeKeeper.GetOrigin()})
-	//n.ConsensusMode = consensus.ReadyNetwork
+	if !n.cfg.Service.ConsensusEnabled {
+		cert := n.CertificateManager.GetCertificate()
+		nodes := make([]insolar.NetworkNode, len(cert.GetDiscoveryNodes()))
+		for i, dn := range cert.GetDiscoveryNodes() {
+			nodes[i] = node.NewNode(*dn.GetNodeRef(), dn.GetRole(), dn.GetPublicKey(), dn.GetHost(), "")
+			nodes[i].(node.MutableNode).SetEvidence(cryptkit.NewSignedDigest(
+				cryptkit.NewDigest(longbits.NewBits512FromBytes(dn.GetBriefDigest()), adapters.SHA3512Digest),
+				cryptkit.NewSignature(longbits.NewBits512FromBytes(dn.GetBriefSign()), adapters.SHA3512Digest.SignedBy(adapters.SECP256r1Sign)),
+			))
+		}
+		n.operableFunc(ctx, false)
+		n.NodeKeeper.SetInitialSnapshot(nodes)
+		n.Gatewayer.SwitchState(ctx, insolar.CompleteNetworkState)
+		n.ConsensusMode = consensus.ReadyNetwork
+	}
 
 	n.initConsensus()
 	n.Gatewayer.Gateway().Run(ctx)
@@ -286,6 +302,11 @@ func (n *ServiceNetwork) GracefulStop(ctx context.Context) error {
 
 // Stop implements insolar.Component
 func (n *ServiceNetwork) Stop(ctx context.Context) error {
+	err := n.datagramTransport.Stop(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Failed to stop datagram transport")
+	}
+
 	return n.cm.Stop(ctx)
 }
 

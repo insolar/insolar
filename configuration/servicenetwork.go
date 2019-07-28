@@ -18,22 +18,14 @@ package configuration
 
 // ServiceNetwork is configuration for ServiceNetwork.
 type ServiceNetwork struct {
-	// Skip             int // magic number that indicates what delta after last ignored pulse we should wait
-	CacheDirectory string
-}
-
-type Consensus struct {
-	// timeouts for all phases measured in fractions of pulse duration
-	Phase1Timeout  float64
-	Phase2Timeout  float64
-	Phase21Timeout float64
-	Phase3Timeout  float64
+	CacheDirectory   string
+	ConsensusEnabled bool
 }
 
 // NewServiceNetwork creates a new ServiceNetwork configuration.
 func NewServiceNetwork() ServiceNetwork {
 	return ServiceNetwork{
-		// Skip:             10,
-		CacheDirectory: "network_cache",
+		CacheDirectory:   "network_cache",
+		ConsensusEnabled: true,
 	}
 }

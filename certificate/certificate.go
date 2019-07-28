@@ -42,6 +42,10 @@ type BootstrapNode struct {
 	NodeRef     string `json:"node_ref"`
 	NodeRole    string `json:"node_role"`
 
+	// TODO: remove when consensus is ready
+	BriefDigest    []byte `json:"brief_digest"`
+	BriefSignature []byte `json:"brief_signature"`
+
 	// preprocessed fields
 	nodePublicKey crypto.PublicKey
 }
@@ -84,6 +88,16 @@ func (bn *BootstrapNode) GetRole() insolar.StaticRole {
 // NodeSign returns signed information about some node
 func (bn *BootstrapNode) GetNodeSign() []byte {
 	return bn.NodeSign
+}
+
+// NodeSign returns signed information about some node
+func (bn *BootstrapNode) GetBriefDigest() []byte {
+	return bn.BriefDigest
+}
+
+// NodeSign returns signed information about some node
+func (bn *BootstrapNode) GetBriefSign() []byte {
+	return bn.BriefSignature
 }
 
 var scheme = platformpolicy.NewPlatformCryptographyScheme()
@@ -143,7 +157,7 @@ func (cert *Certificate) SerializeNetworkPart() []byte {
 	out += strings.Join(cert.PulsarPublicKeys, "")
 	nodes := make([]string, len(cert.BootstrapNodes))
 	for i, node := range cert.BootstrapNodes {
-		nodes[i] = node.PublicKey + node.NodeRef + node.Host + node.NodeRole
+		nodes[i] = node.PublicKey + node.NodeRef + node.Host + node.NodeRole + string(node.BriefDigest) + string(node.BriefSignature)
 	}
 	sort.Strings(nodes)
 	out += strings.Join(nodes, "")
