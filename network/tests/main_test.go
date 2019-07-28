@@ -84,14 +84,12 @@ func TestServiceNetworkManyBootstraps(t *testing.T) {
 
 // Consensus suite tests
 
-func (s *consensusSuite) TestNetworkConsensus3Times() {
+func (s *consensusSuite) TestNetworkConsensusManyTimes() {
 	s.waitForConsensus(9)
 	s.AssertActiveNodesCountDelta(0)
 }
 
 func (s *consensusSuite) TestJoinerNodeConnect() {
-	//s.waitForConsensus(1)
-
 	testNode := s.newNetworkNode("JoinerNode")
 	s.preInitNode(testNode)
 

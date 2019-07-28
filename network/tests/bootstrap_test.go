@@ -66,7 +66,7 @@ type bootstrapSuite struct {
 func (s *bootstrapSuite) SetupTest() {
 	s.fixtureMap[s.T().Name()] = newFixture(s.T())
 	var err error
-	s.fixture().pulsar, err = NewTestPulsar(reqTimeoutMs, pulseDelta)
+	s.fixture().pulsar, err = NewTestPulsar(reqTimeoutMs*10, pulseDelta*10)
 	s.Require().NoError(err)
 
 	inslogger.FromContext(s.fixture().ctx).Info("SetupTest -- ")
@@ -85,7 +85,7 @@ func (s *bootstrapSuite) SetupTest() {
 	//for _, node := range s.fixture().bootstrapNodes {
 	//	pulseReceivers = append(pulseReceivers, node.host)
 	//}
-
+	//
 	//log.Info("Start test pulsar")
 	//err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
 	//s.Require().NoError(err)
@@ -111,13 +111,12 @@ func (s *bootstrapSuite) waitForConsensus(consensusCount int) {
 
 func newBootstraptSuite(bootstrapCount int) *bootstrapSuite {
 	return &bootstrapSuite{
-		testSuite: newTestSuite(3, 0),
+		testSuite: newTestSuite(bootstrapCount, 0),
 	}
 }
 
 func TestBootstrap(t *testing.T) {
-	//t.Skip("fix in new consensus")
-	s := newBootstraptSuite(1)
+	s := newBootstraptSuite(2)
 	suite.Run(t, s)
 }
 

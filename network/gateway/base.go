@@ -254,41 +254,38 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 	profile := adapters.NewStaticProfileFromPacket(data.CandidateProfile, g.KeyProcessor)
 	g.ConsensusController.AddJoinCandidate(candidate{profile, profile.GetExtension()})
 
+	// for discovery bootstrap
 	if g.Gatewayer.Gateway().GetState() != insolar.CompleteNetworkState {
-
 		p := pulse.FromProto(&data.Pulse)
-		//p.PulseNumber++
-		//p.EpochPulseNumber = 1
+		p.PulseNumber = 1
+		p.PrevPulseNumber = p.PulseNumber - 1
 
 		ph, _ := host.NewHost("127.0.0.1:1")
-		th, _ := host.NewHost("127.0.0.1:2")
+		th, _ := host.NewHost(g.NodeKeeper.GetOrigin().Address())
 
 		pp := pulsenetwork.NewPulsePacket(ctx, p, ph, th, 0)
 
-		bs, _ := packet.SerializePacket(pp)
+		bs, err := packet.SerializePacket(pp)
+		if err != nil {
+			panic(err.Error())
+		}
 
 		g.ConsensusPulseHandler.HandlePulse(ctx, *p, packet.NewReceivedPacket(pp, bs))
 	}
 
-	go func() {
-		// TODO:
-		//pulseStartTime := time.Unix(0, data.Pulse.PulseTimestamp)
-
-		//pulseStartTime := time.Now()
-		//g.PulseAppender.Append(ctx, lastPulse)
-		//if err = g.PhaseManager.OnPulseFromPulsar(ctx, &lastPulse, pulseStartTime); err != nil {
-		//	inslogger.FromContext(ctx).Error("Failed to pass consensus: ", err.Error())
-		//}
-		//if err = g.NodeKeeper.MoveSyncToActive(ctx, lastPulse.PulseNumber); err != nil {
-		//	inslogger.FromContext(ctx).Error("Failed to MoveSyncToActive: ", err.Error())
-		//}
-
-		// fixme twice consensus call
-		//lastPulse.PulseNumber += 1
-		//if err := g.PhaseManager.OnPulseFromPulsar(ctx, &lastPulse, pulseStartTime); err != nil {
-		//	inslogger.FromContext(ctx).Error("Failed to pass consensus: ", err.Error())
-		//}
-	}()
+	//go func() {
+	//	// TODO:
+	//	//pulseStartTime := time.Unix(0, data.Pulse.PulseTimestamp)
+	//
+	//	//pulseStartTime := time.Now()
+	//	//g.PulseAppender.Append(ctx, lastPulse)
+	//	//if err = g.PhaseManager.OnPulseFromPulsar(ctx, &lastPulse, pulseStartTime); err != nil {
+	//	//	inslogger.FromContext(ctx).Error("Failed to pass consensus: ", err.Error())
+	//	//}
+	//	//if err = g.NodeKeeper.MoveSyncToActive(ctx, lastPulse.PulseNumber); err != nil {
+	//	//	inslogger.FromContext(ctx).Error("Failed to MoveSyncToActive: ", err.Error())
+	//	//}
+	//}()
 
 	// networkSize := uint32(len(g.NodeKeeper.GetAccessor().GetActiveNodes()))
 	return g.HostNetwork.BuildResponse(ctx, request,

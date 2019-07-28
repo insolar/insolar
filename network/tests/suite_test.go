@@ -467,7 +467,9 @@ type pulseManagerMock struct {
 }
 
 func newPulseManagerMock(keeper network.NodeKeeper) *pulseManagerMock {
-	return &pulseManagerMock{pulse: *insolar.GenesisPulse, keeper: keeper}
+	p := *insolar.GenesisPulse
+	p.EpochPulseNumber = insolar.EphemeralPulseEpoch
+	return &pulseManagerMock{pulse: p, keeper: keeper}
 }
 
 func (p *pulseManagerMock) ForPulseNumber(context.Context, insolar.PulseNumber) (insolar.Pulse, error) {
