@@ -55,17 +55,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
-	"sync"
-	"time"
-
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/longbits"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/serialization"
-	"github.com/insolar/insolar/network/node"
-	"github.com/insolar/insolar/network/rules"
-
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -75,12 +64,19 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/adapters"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/serialization"
 	"github.com/insolar/insolar/network/controller"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/gateway"
 	"github.com/insolar/insolar/network/gateway/bootstrap"
 	"github.com/insolar/insolar/network/hostnetwork"
+	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/routing"
+	"github.com/insolar/insolar/network/rules"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/pkg/errors"
 )
@@ -125,16 +121,14 @@ type ServiceNetwork struct {
 	consensusController consensus.Controller
 
 	ConsensusMode consensus.Mode
-
-	lock sync.Mutex
 }
 
-var PULSETIMEOUT time.Duration
+//var PULSETIMEOUT time.Duration
 
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manager) (*ServiceNetwork, error) {
 	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, ConsensusMode: consensus.Joiner}
-	PULSETIMEOUT = time.Millisecond * time.Duration(conf.Pulsar.PulseTime)
+	//PULSETIMEOUT = time.Millisecond * time.Duration(conf.Pulsar.PulseTime)
 	return serviceNetwork, nil
 }
 
