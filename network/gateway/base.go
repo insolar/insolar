@@ -400,7 +400,7 @@ func (g *Base) HandleReconnect(ctx context.Context, request network.ReceivedPack
 }
 
 func (g *Base) OnConsensusFinished(p insolar.PulseNumber) {
-	log.Infof("================== OnConsensusFinished for pulse %d", p)
+	log.Infof("OnConsensusFinished for pulse %d", p)
 }
 
 func (g *Base) createCandidateProfile() {
