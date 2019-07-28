@@ -91,9 +91,9 @@ func (r *JoinerPhaseBundle) CreateFullPhaseControllers(nodeCount int) ([]core.Ph
 	}
 
 	rcb := &regularCallback{
-		make(chan *core.NodeAppearance, nodeCount),
-		make(chan ph2ctl.UpdateSignal, nodeCount*3), // up-to ~3 updates for every node
-		make(chan core.MemberPacketSender, nodeCount),
+		make(chan *core.NodeAppearance, 1+nodeCount*2),
+		make(chan ph2ctl.UpdateSignal, 1+nodeCount*6),
+		make(chan core.MemberPacketSender, 1+nodeCount*2),
 	}
 
 	vif := r.VectorInspection
