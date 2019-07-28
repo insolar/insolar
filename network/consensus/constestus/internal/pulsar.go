@@ -72,13 +72,14 @@ type Pulsar struct {
 	pulse *pulse.Data
 }
 
-func NewPulsar(config cloud.Network) Pulsar {
+func NewPulsar(config cloud.Pulses) Pulsar {
 	var firstPulse *pulse.Data
 
-	if config.Consensus.EphemeralPulses {
+	if config.Ephemeral {
 		firstPulse = pulse.NewFirstEphemeralData()
 	} else {
-		firstPulse = pulse.NewFirstPulsarData(config.Consensus.PulseDelta, randomEntropy())
+		pulseDuration := config.Duration / time.Second
+		firstPulse = pulse.NewFirstPulsarData(uint16(pulseDuration), randomEntropy())
 	}
 
 	return Pulsar{
@@ -87,13 +88,10 @@ func NewPulsar(config cloud.Network) Pulsar {
 	}
 }
 
-func (p Pulsar) Pulse(ctx context.Context, activeNodes ActiveNodes, attempts int) error {
+func (p *Pulsar) Pulse(ctx context.Context, activeNodes ActiveNodes, attempts int) error {
 	p.mu.Lock()
-	defer time.AfterFunc(time.Duration(p.pulse.NextPulseDelta)*time.Second, func() {
-		p.mu.Unlock()
-	})
-
 	p.pulse = p.pulse.CreateNextPulse(randomEntropy)
+	p.mu.Unlock()
 
 	newPulse := adapters.NewPulse(*p.pulse)
 	pulsePacket, err := getReceivedPulsarPacket(ctx, newPulse)
@@ -101,12 +99,14 @@ func (p Pulsar) Pulse(ctx context.Context, activeNodes ActiveNodes, attempts int
 		return err
 	}
 
-	for i := 0; i < attempts; i++ {
-		node := activeNodes[rand.Intn(len(activeNodes))]
-		pulseHandler := node.components.pulseHandler
+	go func() {
+		for i := 0; i < attempts; i++ {
+			node := activeNodes[rand.Intn(len(activeNodes))]
+			pulseHandler := node.components.pulseHandler
 
-		go pulseHandler.HandlePulse(ctx, newPulse, pulsePacket)
-	}
+			go pulseHandler.HandlePulse(ctx, newPulse, pulsePacket)
+		}
+	}()
 
 	return nil
 }

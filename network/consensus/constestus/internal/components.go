@@ -84,26 +84,28 @@ func (ng *nshGen) State() []byte {
 
 type pulseChanger struct {
 	nodeKeeper network.NodeKeeper
+	ctx        context.Context
 }
 
 func (pc *pulseChanger) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
-	inslogger.FromContext(ctx).Info(">>>>>> Change pulse called")
-	err := pc.nodeKeeper.MoveSyncToActive(ctx, pulse.PulseNumber)
+	inslogger.FromContext(pc.ctx).Info(">>>>>> Change pulse called")
+	err := pc.nodeKeeper.MoveSyncToActive(pc.ctx, pulse.PulseNumber)
 	if err != nil {
-		inslogger.FromContext(ctx).Error(err)
+		inslogger.FromContext(pc.ctx).Error(err)
 	}
 }
 
 type stateUpdater struct {
 	nodeKeeper network.NodeKeeper
+	ctx        context.Context
 }
 
 func (su *stateUpdater) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
-	inslogger.FromContext(ctx).Info(">>>>>> Update state called")
+	inslogger.FromContext(su.ctx).Info(">>>>>> Update state called")
 
-	err := su.nodeKeeper.Sync(ctx, nodes, nil)
+	err := su.nodeKeeper.Sync(su.ctx, nodes, nil)
 	if err != nil {
-		inslogger.FromContext(ctx).Error(err)
+		inslogger.FromContext(su.ctx).Error(err)
 	}
 	su.nodeKeeper.SetCloudHash(cloudStateHash)
 }

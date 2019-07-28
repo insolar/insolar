@@ -51,114 +51,66 @@
 package internal
 
 import (
-	"context"
-	"math/rand"
-	"time"
+	"net"
+	"strconv"
+	"sync"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/constestus/cloud"
-	"github.com/insolar/insolar/network/transport"
+	"github.com/insolar/insolar/testutils"
+	"github.com/pkg/errors"
 )
 
-type NetworkStrategy interface {
-	GetLink(datagramTransport transport.DatagramTransport) transport.DatagramTransport
+type IdentityFactory interface {
+	CreateIdentity(role insolar.StaticRole) (*Identity, error)
 }
 
-type delayNetStrategy struct {
-	conf cloud.Delay
+type identityFactory struct {
+	baseAddr string
+
+	mu         *sync.Mutex
+	portOffset uint16
+	idOffset   uint32
 }
 
-func NewDelayNetStrategy(conf cloud.Delay) NetworkStrategy {
-	return &delayNetStrategy{
-		conf: conf,
+func newIdentityFactory(config cloud.Identity) *identityFactory {
+	return &identityFactory{
+		baseAddr:   config.BaseAddr,
+		mu:         &sync.Mutex{},
+		portOffset: config.BasePort,
+		idOffset:   config.BaseID,
 	}
 }
 
-func (dns *delayNetStrategy) getDelay() time.Duration {
-	if dns.conf.Max == dns.conf.Min {
-		return dns.conf.Max
-	}
+func (g *identityFactory) generateShared() (insolar.ShortNodeID, uint16) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
 
-	if dns.conf.Max > 0 {
-		randomDelay := rand.Intn(int(dns.conf.Max)-int(dns.conf.Min)) + int(dns.conf.Min)
-		return time.Duration(randomDelay)
-	}
+	id := g.idOffset
+	g.idOffset++
 
-	return 0
+	port := g.portOffset
+	g.portOffset++
+
+	return insolar.ShortNodeID(id), port
 }
 
-func (dns *delayNetStrategy) GetLink(datagramTransport transport.DatagramTransport) transport.DatagramTransport {
-	return newDelayLinkStrategy(
-		datagramTransport,
-		dns.getDelay(),
-		dns.conf.Spike,
-		dns.conf.Variance,
-		dns.conf.SpikeProbability,
-	)
-}
-
-type delayLinkStrategy struct {
-	transport.DatagramTransport
-
-	normalDelay time.Duration
-	spikeDelay  time.Duration
-
-	normalDelayMaxVariance int
-	spikeDelayMaxVariance  int
-
-	spikeProbability float32
-}
-
-func newDelayLinkStrategy(transport transport.DatagramTransport, normalDelay, spikeDelay time.Duration, variance, spikeProbability float32) *delayLinkStrategy {
-	return &delayLinkStrategy{
-		DatagramTransport: transport,
-
-		normalDelay: normalDelay,
-		spikeDelay:  spikeDelay,
-
-		normalDelayMaxVariance: int(float32(normalDelay) * variance),
-		spikeDelayMaxVariance:  int(float32(spikeDelay) * variance),
-
-		spikeProbability: spikeProbability,
-	}
-}
-
-func (dls *delayLinkStrategy) calculateDelay() time.Duration {
-	var (
-		initialDelay     time.Duration
-		delayMaxVariance int
-	)
-
-	if rand.Float32() <= dls.spikeProbability {
-		initialDelay = dls.spikeDelay
-		delayMaxVariance = dls.spikeDelayMaxVariance
-	} else {
-		initialDelay = dls.normalDelay
-		delayMaxVariance = dls.normalDelayMaxVariance
+func (g *identityFactory) CreateIdentity(role insolar.StaticRole) (*Identity, error) {
+	privateKey, err := keyProcessor.GeneratePrivateKey()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to generate private key")
 	}
 
-	delay := initialDelay
+	id, port := g.generateShared()
 
-	if delayMaxVariance > 0 {
-		delay += time.Duration(rand.Intn(delayMaxVariance))
+	identity := &Identity{
+		addr:       net.JoinHostPort(g.baseAddr, strconv.Itoa(int(port))),
+		id:         id,
+		ref:        testutils.RandomRef(),
+		role:       role,
+		privateKey: privateKey,
+		publicKey:  keyProcessor.ExtractPublicKey(privateKey),
 	}
 
-	return delay
-}
-
-func (dls *delayLinkStrategy) delay(f func()) {
-	if delay := dls.calculateDelay(); delay > 0 {
-		time.AfterFunc(delay, f)
-	} else {
-		f()
-	}
-}
-
-func (dls *delayLinkStrategy) SendDatagram(ctx context.Context, address string, data []byte) error {
-	dls.delay(func() {
-		if err := dls.DatagramTransport.SendDatagram(ctx, address, data); err != nil {
-			inslogger.FromContext(ctx).Error(err)
-		}
-	})
-	return nil
+	return identity, nil
 }

@@ -56,7 +56,7 @@ package constestus
 // 	c.Intercept(joinerNode).
 // 		Outgoing(phases.PacketPhase1).Filter(c.F().P().HasFullIntro).Drop().Once().
 // 		Then().Intercept().
-// 		Outgoing(phases.PacketPhase2).Delay(Delay{SpikeDelay: 1000 * time.Millisecond, SpikeProbability: 1}).Minority().
+// 		Outgoing(phases.PacketPhase2).Delay(Delay{Spike: 1000 * time.Millisecond, SpikeProbability: 1}).Minority().
 // 		Then().Do(node.Disconnect).
 // 		BindTo(node)
 //

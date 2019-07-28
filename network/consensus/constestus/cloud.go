@@ -58,29 +58,28 @@ import (
 	"github.com/insolar/insolar/network/consensus/constestus/cloud"
 	"github.com/insolar/insolar/network/consensus/constestus/internal"
 	"github.com/insolar/insolar/network/consensus/constestus/internal/interfaces"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
+
+type InitializedCloud interface {
+	Start(ctx context.Context, t *testing.T) C
+}
 
 type C interface {
 	testing.TB
 	interfaces.Cloud
 
 	NodeByID(id insolar.ShortNodeID) interfaces.Node
-
 	Pulse()
-	// AwaitConsensus()
 
-	Require() *require.Assertions
-	Assert() *assert.Assertions
+	Require() *Require
+	Assert() *Assert
 }
 
-func CloudOf(t *testing.T, ctx context.Context, config cloud.Config) C {
-	cl, err := internal.NewCloud(ctx, config)
-	require.NoError(t, err)
+func CloudOf(config cloud.Config) InitializedCloud {
+	cl, err := internal.NewCloud(config)
 
-	return c{
-		T:     t,
-		cloud: *cl,
+	return ic{
+		err:   err,
+		cloud: cl,
 	}
 }

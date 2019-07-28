@@ -48,117 +48,77 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package internal
+package tests
 
 import (
+	"bytes"
 	"context"
 	"math/rand"
+	"sync"
 	"time"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/consensus/constestus/cloud"
-	"github.com/insolar/insolar/network/transport"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensus/adapters"
+	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/pulsenetwork"
 )
 
-type NetworkStrategy interface {
-	GetLink(datagramTransport transport.DatagramTransport) transport.DatagramTransport
+const (
+	initialPulse = 100000
+)
+
+type Pulsar struct {
+	pulseDelta    uint16
+	pulseNumber   pulse.Number
+	pulseHandlers []network.PulseHandler
+
+	mu *sync.Mutex
 }
 
-type delayNetStrategy struct {
-	conf cloud.Delay
-}
-
-func NewDelayNetStrategy(conf cloud.Delay) NetworkStrategy {
-	return &delayNetStrategy{
-		conf: conf,
+func NewPulsar(pulseDelta uint16, pulseHandlers []network.PulseHandler) Pulsar {
+	return Pulsar{
+		pulseDelta:    pulseDelta,
+		pulseNumber:   initialPulse,
+		pulseHandlers: pulseHandlers,
+		mu:            &sync.Mutex{},
 	}
 }
 
-func (dns *delayNetStrategy) getDelay() time.Duration {
-	if dns.conf.Max == dns.conf.Min {
-		return dns.conf.Max
-	}
-
-	if dns.conf.Max > 0 {
-		randomDelay := rand.Intn(int(dns.conf.Max)-int(dns.conf.Min)) + int(dns.conf.Min)
-		return time.Duration(randomDelay)
-	}
-
-	return 0
-}
-
-func (dns *delayNetStrategy) GetLink(datagramTransport transport.DatagramTransport) transport.DatagramTransport {
-	return newDelayLinkStrategy(
-		datagramTransport,
-		dns.getDelay(),
-		dns.conf.Spike,
-		dns.conf.Variance,
-		dns.conf.SpikeProbability,
-	)
-}
-
-type delayLinkStrategy struct {
-	transport.DatagramTransport
-
-	normalDelay time.Duration
-	spikeDelay  time.Duration
-
-	normalDelayMaxVariance int
-	spikeDelayMaxVariance  int
-
-	spikeProbability float32
-}
-
-func newDelayLinkStrategy(transport transport.DatagramTransport, normalDelay, spikeDelay time.Duration, variance, spikeProbability float32) *delayLinkStrategy {
-	return &delayLinkStrategy{
-		DatagramTransport: transport,
-
-		normalDelay: normalDelay,
-		spikeDelay:  spikeDelay,
-
-		normalDelayMaxVariance: int(float32(normalDelay) * variance),
-		spikeDelayMaxVariance:  int(float32(spikeDelay) * variance),
-
-		spikeProbability: spikeProbability,
-	}
-}
-
-func (dls *delayLinkStrategy) calculateDelay() time.Duration {
-	var (
-		initialDelay     time.Duration
-		delayMaxVariance int
-	)
-
-	if rand.Float32() <= dls.spikeProbability {
-		initialDelay = dls.spikeDelay
-		delayMaxVariance = dls.spikeDelayMaxVariance
-	} else {
-		initialDelay = dls.normalDelay
-		delayMaxVariance = dls.normalDelayMaxVariance
-	}
-
-	delay := initialDelay
-
-	if delayMaxVariance > 0 {
-		delay += time.Duration(rand.Intn(delayMaxVariance))
-	}
-
-	return delay
-}
-
-func (dls *delayLinkStrategy) delay(f func()) {
-	if delay := dls.calculateDelay(); delay > 0 {
-		time.AfterFunc(delay, f)
-	} else {
-		f()
-	}
-}
-
-func (dls *delayLinkStrategy) SendDatagram(ctx context.Context, address string, data []byte) error {
-	dls.delay(func() {
-		if err := dls.DatagramTransport.SendDatagram(ctx, address, data); err != nil {
-			inslogger.FromContext(ctx).Error(err)
-		}
+func (p *Pulsar) Pulse(ctx context.Context, attempts int) {
+	p.mu.Lock()
+	defer time.AfterFunc(time.Duration(p.pulseDelta)*time.Second, func() {
+		p.mu.Unlock()
 	})
-	return nil
+
+	prevDelta := p.pulseDelta
+	if p.pulseNumber == initialPulse {
+		prevDelta = 0
+	}
+
+	data := *pulse.NewPulsarData(p.pulseNumber, p.pulseDelta, prevDelta, randBits256())
+	p.pulseNumber += pulse.Number(p.pulseDelta)
+
+	pu := adapters.NewPulse(data)
+	ph, _ := host.NewHost("127.0.0.1:1")
+	th, _ := host.NewHost("127.0.0.1:2")
+	pp := pulsenetwork.NewPulsePacket(ctx, &pu, ph, th, 0)
+
+	bs, _ := packet.SerializePacket(pp)
+	rp, _ := packet.DeserializePacketRaw(bytes.NewReader(bs))
+
+	go func() {
+		for i := 0; i < attempts; i++ {
+			handler := p.pulseHandlers[rand.Intn(len(p.pulseHandlers))]
+			go handler.HandlePulse(ctx, pu, rp)
+		}
+	}()
+}
+
+func randBits256() longbits.Bits256 {
+	v := longbits.Bits256{}
+	_, _ = rand.Read(v[:])
+	return v
 }

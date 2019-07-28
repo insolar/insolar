@@ -51,16 +51,17 @@
 package internal
 
 import (
+	"bytes"
 	"crypto"
-	"fmt"
-	"sync"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/adapters"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/serialization"
 	"github.com/insolar/insolar/network/node"
-	"github.com/insolar/insolar/testutils"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/network/utils"
 )
 
 type Identities []Identity
@@ -89,7 +90,47 @@ type Identity struct {
 	publicKey  crypto.PublicKey
 }
 
-func (i Identity) createNetworkNode() insolar.NetworkNode {
+func (i Identity) createAnnounce(cert insolar.Certificate) ([]byte, *insolar.Signature, error) {
+	brief := serialization.NodeBriefIntro{}
+	brief.ShortID = i.id
+	brief.SetPrimaryRole(adapters.StaticRoleToPrimaryRole(i.role))
+	if utils.IsDiscovery(i.ref, cert) {
+		brief.SpecialRoles = member.SpecialRoleDiscovery
+	}
+	brief.StartPower = 10
+
+	addr, err := endpoints.NewIPAddress(i.addr)
+	if err != nil {
+		return nil, nil, err
+	}
+	copy(brief.Endpoint[:], addr[:])
+
+	pk, err := keyProcessor.ExportPublicKeyBinary(i.publicKey)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	copy(brief.NodePK[:], pk)
+
+	buf := &bytes.Buffer{}
+	err = brief.SerializeTo(nil, buf)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	data := buf.Bytes()
+	data = data[:len(data)-64]
+
+	digest := scheme.IntegrityHasher().Hash(data)
+	sign, err := scheme.DigestSigner(i.privateKey).Sign(digest)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return digest, sign, nil
+}
+
+func (i Identity) createNetworkNode(cert insolar.Certificate) (insolar.NetworkNode, error) {
 	n := node.NewNode(
 		i.ref,
 		i.role,
@@ -100,7 +141,14 @@ func (i Identity) createNetworkNode() insolar.NetworkNode {
 	mn := n.(node.MutableNode)
 	mn.SetShortID(i.id)
 
-	return mn
+	digest, signature, err := i.createAnnounce(cert)
+	if err != nil {
+		return nil, err
+	}
+
+	mn.SetSignature(digest, *signature)
+
+	return mn, err
 }
 
 func (i Identity) createCertificate(discoveries []Identity) (insolar.Certificate, error) {
@@ -137,7 +185,10 @@ func (i Identity) CreateNode(discoveries []Identity) (*Node, error) {
 		return nil, err
 	}
 
-	networkNode := i.createNetworkNode()
+	networkNode, err := i.createNetworkNode(cert)
+	if err != nil {
+		return nil, err
+	}
 
 	n := Node{
 		networkNode: networkNode,
@@ -146,54 +197,4 @@ func (i Identity) CreateNode(discoveries []Identity) (*Node, error) {
 		certificate: cert,
 	}
 	return &n, nil
-}
-
-type IdentityFactory struct {
-	baseAddr string
-
-	mu         *sync.Mutex
-	portOffset uint16
-	idOffset   uint32
-}
-
-func NewIdentityFactory(baseAddr string, basePort uint16, baseID uint32) IdentityFactory {
-	return IdentityFactory{
-		baseAddr:   baseAddr,
-		mu:         &sync.Mutex{},
-		portOffset: basePort,
-		idOffset:   baseID,
-	}
-}
-
-func (g *IdentityFactory) generateShared() (insolar.ShortNodeID, uint16) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	id := g.idOffset
-	g.idOffset++
-
-	port := g.portOffset
-	g.portOffset++
-
-	return insolar.ShortNodeID(id), port
-}
-
-func (g *IdentityFactory) CreateIdentity(role insolar.StaticRole) (*Identity, error) {
-	privateKey, err := keyProcessor.GeneratePrivateKey()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to generate private key")
-	}
-
-	id, port := g.generateShared()
-
-	identity := &Identity{
-		addr:       fmt.Sprintf("%s:%d", g.baseAddr, port),
-		id:         id,
-		ref:        testutils.RandomRef(),
-		role:       role,
-		privateKey: privateKey,
-		publicKey:  keyProcessor.ExtractPublicKey(privateKey),
-	}
-
-	return identity, nil
 }

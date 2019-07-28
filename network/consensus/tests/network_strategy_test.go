@@ -71,7 +71,7 @@ type delayNetStrategy struct {
 
 func NewDelayNetStrategy(conf DelayStrategyConf) NetStrategy {
 	if conf.MinDelay > conf.MaxDelay {
-		panic("MinDelay must <= MaxDelay")
+		panic("Min must <= Max")
 	}
 
 	if conf.Variance < 0 {

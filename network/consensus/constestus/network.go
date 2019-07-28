@@ -51,6 +51,7 @@
 package constestus
 
 import (
+	"context"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
@@ -59,6 +60,22 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type ic struct {
+	err   error
+	cloud *internal.InitializedCloud
+}
+
+func (ic ic) Start(ctx context.Context, t *testing.T) C {
+	require.NoError(t, ic.err)
+
+	cl, err := ic.cloud.Start(ctx)
+	require.NoError(t, err)
+	return c{
+		T:     t,
+		cloud: *cl,
+	}
+}
 
 type c struct {
 	*testing.T
@@ -82,12 +99,24 @@ func (c c) NodeByID(id insolar.ShortNodeID) interfaces.Node {
 	}
 }
 
-func (c c) Require() *require.Assertions {
-	return require.New(c)
+func (c c) Require() *Require {
+	assertions := require.New(c)
+	return &Require{
+		Assertions: assertions,
+		consensusAssertions: consensusAssertions{
+			equal: assertions,
+		},
+	}
 }
 
-func (c c) Assert() *assert.Assertions {
-	return assert.New(c)
+func (c c) Assert() *Assert {
+	assertions := assert.New(c)
+	return &Assert{
+		Assertions: assertions,
+		//consensusAssertions: consensusAssertions{
+		//	equal: assertions,
+		//},
+	}
 }
 
 type node struct {

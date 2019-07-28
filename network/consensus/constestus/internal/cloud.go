@@ -52,6 +52,7 @@ package internal
 
 import (
 	"context"
+	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus"
@@ -60,27 +61,33 @@ import (
 	"github.com/pkg/errors"
 )
 
-type cloudConfig cloud.Config
+type cloudConfig struct {
+	*cloud.Config
+}
 
-func (c *cloudConfig) VerifyAndReplace() error {
-	if c.Network.Delays.MinDelay > c.Network.Delays.MaxDelay {
-		return errors.New("invalid Delays - MinDelay must <= MaxDelay")
+func (c cloudConfig) VerifyAndReplace() error {
+	if c.Network.Delay.Min > c.Network.Delay.Max {
+		return errors.New("invalid Network.Delay - Min must <= Max")
 	}
 
-	if c.Network.Delays.Variance < 0 {
-		return errors.New("invalid Delays - Variance must be in [0, Inf)")
+	if c.Network.Delay.Variance < 0 {
+		return errors.New("invalid Network.Delay.Variance -  must be in [0, Inf)")
 	}
 
-	if c.Network.Delays.SpikeProbability < 0 || c.Network.Delays.SpikeProbability > 1 {
-		return errors.New("invalid Delays - SpikeProbability must be in [0, 1]")
+	if c.Network.Delay.SpikeProbability < 0 || c.Network.Delay.SpikeProbability > 1 {
+		return errors.New("invalid Network.Delay.SpikeProbability - must be in [0, 1]")
 	}
 
-	if c.Network.Delays.SpikeDelay == 0 {
-		c.Network.Delays.SpikeDelay = c.Network.Delays.MaxDelay
+	if c.Network.Delay.Spike == 0 {
+		c.Network.Delay.Spike = c.Network.Delay.Max
+	}
+
+	if c.Network.Pulse.Duration%time.Second != 0 {
+		return errors.New("invalid Network.Pulse.Duration - must be a multiple of a second")
 	}
 
 	if c.DiscoveryNodes.GetTotal() == 0 {
-		return errors.New("invalid Config - discovery nodes must exits")
+		return errors.New("invalid DiscoveryNodes - discovery activeNodes must exist")
 	}
 
 	if c.Identity.BaseAddr == "" {
@@ -88,7 +95,7 @@ func (c *cloudConfig) VerifyAndReplace() error {
 	}
 
 	if c.Identity.BasePort == 0 {
-		c.Identity.BasePort = 1000
+		c.Identity.BasePort = 10000
 	}
 
 	if c.Identity.BaseID == 0 {
@@ -98,29 +105,21 @@ func (c *cloudConfig) VerifyAndReplace() error {
 	return nil
 }
 
-type Cloud struct {
+type InitializedCloud struct {
 	config  cloud.Config
 	factory IdentityFactory
 
-	ctx      context.Context
-	nodes    ActiveNodes
-	nodesMap map[insolar.ShortNodeID]ActiveNode
-	pulsar   Pulsar
+	nodes Nodes
 }
 
-func NewCloud(ctx context.Context, config cloud.Config) (*Cloud, error) {
-	err := cloudConfig(config).VerifyAndReplace()
+func NewCloud(config cloud.Config) (*InitializedCloud, error) {
+	cloudConfig := cloudConfig{&config}
+	err := cloudConfig.VerifyAndReplace()
 	if err != nil {
 		return nil, err
 	}
 
-	factory := NewIdentityFactory(config.Identity.BaseAddr, config.Identity.BasePort, config.Identity.BaseID)
-
-	c := Cloud{
-		ctx:     ctx,
-		config:  config,
-		factory: factory,
-	}
+	factory := newIdentityFactory(config.Identity)
 
 	discoveryIdentities, err := NodeCounts(config.DiscoveryNodes).createIdentities(factory)
 	if err != nil {
@@ -142,19 +141,41 @@ func NewCloud(ctx context.Context, config cloud.Config) (*Cloud, error) {
 		return nil, err
 	}
 
-	allNodes := make([]Node, len(discoveryNodes)+len(nodes))
+	allNodes := make([]Node, 0, len(discoveryNodes)+len(nodes))
 	allNodes = append(allNodes, discoveryNodes...)
 	allNodes = append(allNodes, nodes...)
 
-	activeNodes, err := Nodes(allNodes).CreateActiveNodes(ctx, consensus.ReadyNetwork, config.Network)
+	return &InitializedCloud{
+		config:  config,
+		factory: factory,
+
+		nodes: allNodes,
+	}, nil
+}
+
+func (ic InitializedCloud) Start(ctx context.Context) (*Cloud, error) {
+	activeNodes, err := ic.nodes.CreateActiveNodes(ctx, consensus.ReadyNetwork, ic.config.Network)
 	if err != nil {
 		return nil, err
 	}
 
-	c.nodes = activeNodes
-	c.pulsar = NewPulsar(config.Network)
+	if err := activeNodes.Connect(); err != nil {
+		return nil, err
+	}
 
-	return &c, nil
+	return &Cloud{
+		ctx:         ctx,
+		activeNodes: activeNodes,
+		pulsar:      NewPulsar(ic.config.Network.Pulse),
+	}, nil
+}
+
+type Cloud struct {
+	ctx context.Context
+
+	pulsar         Pulsar
+	activeNodes    ActiveNodes
+	activeNodesMap map[insolar.ShortNodeID]ActiveNode
 }
 
 func (c Cloud) Intercept(nodes ...interfaces.Node) interfaces.TypedInterceptor {
@@ -162,9 +183,9 @@ func (c Cloud) Intercept(nodes ...interfaces.Node) interfaces.TypedInterceptor {
 }
 
 func (c Cloud) Pulse() error {
-	return c.pulsar.Pulse(c.ctx, c.nodes, 4+len(c.nodes)/10)
+	return c.pulsar.Pulse(c.ctx, c.activeNodes, 4+len(c.activeNodes)/10)
 }
 
 func (c Cloud) GetNode(id insolar.ShortNodeID) ActiveNode {
-	return c.nodesMap[id]
+	return c.activeNodes[id]
 }

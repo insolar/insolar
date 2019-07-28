@@ -57,6 +57,8 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus"
+	"github.com/insolar/insolar/network/consensus/constestus"
+	"github.com/insolar/insolar/network/consensus/constestus/cloud"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -335,4 +337,31 @@ func TestConsensusAll(t *testing.T) {
 	})
 
 	require.Len(t, ns.nodeKeepers[0].GetAccessor().GetActiveNodes(), len(nodes.nodes)+len(joiners.nodes)-2)
+}
+
+func Test(t *testing.T) {
+	c := constestus.CloudOf(cloud.Config{
+		DiscoveryNodes: cloud.Nodes{
+			Heavy:   5,
+			Virtual: 5,
+			Light:   5,
+		},
+		Network: cloud.Network{
+			Delay: cloud.Delay{
+				Min:              10 * time.Millisecond,
+				Max:              30 * time.Millisecond,
+				Variance:         0.2,
+				SpikeProbability: 0.1,
+			},
+			Pulse: cloud.Pulses{
+				Ephemeral: true,
+				Duration:  1 * time.Second,
+			},
+		},
+	}).Start(ctx, t)
+
+	c.Pulse()
+	time.Sleep(2 * time.Second)
+	c.Pulse()
+	time.Sleep(2 * time.Second)
 }

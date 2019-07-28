@@ -126,12 +126,12 @@ func (n Node) createComponents(
 		return nil, err
 	}
 
-	strategy := NewDelayNetStrategy(config.Delays)
+	strategy := NewDelayNetStrategy(config.Delay)
 	delayTransport := strategy.GetLink(datagramTransport)
 
 	controller := consensus.New(ctx, consensus.Dep{
 		PrimingCloudStateHash: [64]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
-		EphemeralPulseAllowed: func() bool { return false },
+		EphemeralPulseAllowed: func() bool { return config.Pulse.Ephemeral },
 		KeyProcessor:          keyProcessor,
 		Scheme:                scheme,
 		CertificateManager:    certificate.NewCertificateManager(n.certificate),
@@ -140,9 +140,11 @@ func (n Node) createComponents(
 		StateGetter:           &nshGen{nshDelay: config.Consensus.NodeStateHashGenerationDelay},
 		PulseChanger: &pulseChanger{
 			nodeKeeper: nodeKeeper,
+			ctx:        ctx,
 		},
 		StateUpdater: &stateUpdater{
 			nodeKeeper: nodeKeeper,
+			ctx:        ctx,
 		},
 		DatagramTransport: delayTransport,
 	}).ControllerFor(mode, datagramHandler, pulseHandler)

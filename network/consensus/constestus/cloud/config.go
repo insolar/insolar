@@ -54,10 +54,10 @@ import (
 	"time"
 )
 
-type Delays struct {
-	MinDelay         time.Duration
-	MaxDelay         time.Duration
-	SpikeDelay       time.Duration
+type Delay struct {
+	Min              time.Duration
+	Max              time.Duration
+	Spike            time.Duration
 	Variance         float32
 	SpikeProbability float32
 }
@@ -79,15 +79,19 @@ type Identity struct {
 	BaseID   uint32
 }
 
+type Pulses struct {
+	Duration  time.Duration
+	Ephemeral bool
+}
+
 type Network struct {
-	Delays    Delays
+	Delay     Delay
 	Consensus Consensus
+	Pulse     Pulses
 }
 
 type Consensus struct {
 	NodeStateHashGenerationDelay time.Duration
-	EphemeralPulses              bool
-	PulseDelta                   uint16
 }
 
 type Config struct {

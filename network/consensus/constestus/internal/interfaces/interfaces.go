@@ -127,7 +127,7 @@ type LimitInterceptor interface {
 
 type Decider interface {
 	Filter(filters ...Filter) DecisionInterceptor
-	Delay(config cloud.Delays) LimitInterceptor
+	Delay(config cloud.Delay) LimitInterceptor
 	Drop() LimitInterceptor
 	Pass() LimitInterceptor
 }
