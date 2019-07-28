@@ -83,8 +83,6 @@ func (g *NoNetwork) Run(ctx context.Context) {
 
 	if len(discoveryNodes) == 0 {
 		g.zeroBootstrap(ctx)
-		// create complete network
-		g.Gatewayer.SwitchState(ctx, insolar.CompleteNetworkState)
 		return
 	}
 
