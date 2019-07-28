@@ -57,7 +57,6 @@ import (
 	"fmt"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
@@ -68,19 +67,12 @@ import (
 	"github.com/insolar/insolar/network/node"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/fortytw2/leaktest"
 )
 
 var (
 	consensusMin    = 5 // minimum count of participants that can survive when one node leaves
 	consensusMinMsg = fmt.Sprintf("skip test for bootstrap nodes < %d", consensusMin)
 )
-
-func leakTestWithTimeout(t *testing.T) {
-	<-time.After(10 * time.Millisecond)
-	leaktest.Check(t)()
-}
 
 func serviceNetworkManyBootstraps(t *testing.T) *consensusSuite {
 	cs := newConsensusSuite(t, 12, 0)
@@ -98,8 +90,6 @@ func serviceNetworkManyBootstraps(t *testing.T) *consensusSuite {
 // Consensus suite tests
 
 func TestNetworkConsensus3Times(t *testing.T) {
-	defer leakTestWithTimeout(t)
-
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
@@ -107,8 +97,6 @@ func TestNetworkConsensus3Times(t *testing.T) {
 }
 
 func TestNodeConnect(t *testing.T) {
-	defer leakTestWithTimeout(t)
-
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
@@ -137,8 +125,6 @@ func TestNodeConnect(t *testing.T) {
 }
 
 func TestNodeConnectInvalidVersion(t *testing.T) {
-	defer leakTestWithTimeout(t)
-
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
@@ -152,8 +138,6 @@ func TestNodeConnectInvalidVersion(t *testing.T) {
 }
 
 func TestManyNodesConnect(t *testing.T) {
-	defer leakTestWithTimeout(t)
-
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
@@ -196,8 +180,6 @@ func TestManyNodesConnect(t *testing.T) {
 }
 
 func TestNodeLeave(t *testing.T) {
-	defer leakTestWithTimeout(t)
-
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
@@ -233,8 +215,6 @@ func TestNodeLeave(t *testing.T) {
 }
 
 func TestNodeLeaveAtETA(t *testing.T) {
-	defer leakTestWithTimeout(t)
-
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
@@ -283,8 +263,6 @@ func TestNodeLeaveAtETA(t *testing.T) {
 }
 
 func TestNodeComeAfterAnotherNodeSendLeaveETA(t *testing.T) {
-	defer leakTestWithTimeout(t)
-
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
@@ -361,8 +339,6 @@ func TestNodeComeAfterAnotherNodeSendLeaveETA(t *testing.T) {
 }
 
 func TestFullTimeOut(t *testing.T) {
-	defer leakTestWithTimeout(t)
-
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
@@ -377,8 +353,6 @@ func TestFullTimeOut(t *testing.T) {
 // Partial timeout
 
 func TestPartialPositive1PhaseTimeOut(t *testing.T) {
-	defer leakTestWithTimeout(t)
-
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
@@ -392,8 +366,6 @@ func TestPartialPositive1PhaseTimeOut(t *testing.T) {
 }
 
 func TestPartialPositive2PhaseTimeOut(t *testing.T) {
-	defer leakTestWithTimeout(t)
-
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
@@ -407,8 +379,6 @@ func TestPartialPositive2PhaseTimeOut(t *testing.T) {
 }
 
 func TestPartialNegative1PhaseTimeOut(t *testing.T) {
-	defer leakTestWithTimeout(t)
-
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
@@ -422,8 +392,6 @@ func TestPartialNegative1PhaseTimeOut(t *testing.T) {
 }
 
 func TestPartialNegative2PhaseTimeOut(t *testing.T) {
-	defer leakTestWithTimeout(t)
-
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
@@ -437,8 +405,6 @@ func TestPartialNegative2PhaseTimeOut(t *testing.T) {
 }
 
 func TestPartialNegative3PhaseTimeOut(t *testing.T) {
-	defer leakTestWithTimeout(t)
-
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
@@ -452,8 +418,6 @@ func TestPartialNegative3PhaseTimeOut(t *testing.T) {
 }
 
 func TestPartialPositive3PhaseTimeOut(t *testing.T) {
-	defer leakTestWithTimeout(t)
-
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
@@ -467,8 +431,6 @@ func TestPartialPositive3PhaseTimeOut(t *testing.T) {
 }
 
 func TestPartialNegative23PhaseTimeOut(t *testing.T) {
-	defer leakTestWithTimeout(t)
-
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
@@ -482,8 +444,6 @@ func TestPartialNegative23PhaseTimeOut(t *testing.T) {
 }
 
 func TestPartialPositive23PhaseTimeOut(t *testing.T) {
-	defer leakTestWithTimeout(t)
-
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
@@ -497,8 +457,6 @@ func TestPartialPositive23PhaseTimeOut(t *testing.T) {
 }
 
 func TestDiscoveryDown(t *testing.T) {
-	defer leakTestWithTimeout(t)
-
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
@@ -521,8 +479,6 @@ func flushNodeKeeper(keeper network.NodeKeeper) {
 }
 
 func TestDiscoveryRestart(t *testing.T) {
-	defer leakTestWithTimeout(t)
-
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
@@ -553,8 +509,6 @@ func TestDiscoveryRestart(t *testing.T) {
 }
 
 func TestDiscoveryRestartNoWait(t *testing.T) {
-	defer leakTestWithTimeout(t)
-
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
@@ -586,8 +540,6 @@ func TestDiscoveryRestartNoWait(t *testing.T) {
 }
 
 func TestJoinerSplitPackets(t *testing.T) {
-	defer leakTestWithTimeout(t)
-
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
