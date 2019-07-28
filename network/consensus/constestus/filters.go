@@ -51,13 +51,14 @@
 package constestus
 
 import (
+	"github.com/insolar/insolar/network/consensus/constestus/internal/interfaces"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
 
 type Filters struct{}
 
-func (Filters) All(conditions ...Filter) Filter {
+func (Filters) All(conditions ...interfaces.Filter) interfaces.Filter {
 	return func(parser transport.PacketParser) bool {
 		for _, c := range conditions {
 			if !c(parser) {
@@ -68,7 +69,7 @@ func (Filters) All(conditions ...Filter) Filter {
 	}
 }
 
-func (Filters) Any(conditions ...Filter) Filter {
+func (Filters) Any(conditions ...interfaces.Filter) interfaces.Filter {
 	return func(parser transport.PacketParser) bool {
 		for _, c := range conditions {
 			if c(parser) {
@@ -79,13 +80,23 @@ func (Filters) Any(conditions ...Filter) Filter {
 	}
 }
 
-func (Filters) Not(condition Filter) Filter {
+func (Filters) Not(condition interfaces.Filter) interfaces.Filter {
 	return func(parser transport.PacketParser) bool {
 		return !condition(parser)
 	}
 }
 
-func HasEmbeddedPulsePacket(parser transport.PacketParser) bool {
+func (Filters) P() Packets {
+	return Packets{}
+}
+
+type Packets struct{}
+
+func (Packets) IsPulsePacket(parser transport.PacketParser) bool {
+	return parser.GetPacketType() == phases.PacketPulse
+}
+
+func (Packets) HasEmbeddedPulsePacket(parser transport.PacketParser) bool {
 	switch parser.GetPacketType() {
 	case phases.PacketPhase0:
 		return true
@@ -96,7 +107,7 @@ func HasEmbeddedPulsePacket(parser transport.PacketParser) bool {
 	return false
 }
 
-func HasFullIntro(parser transport.PacketParser) bool {
+func (Packets) HasFullIntro(parser transport.PacketParser) bool {
 	switch parser.GetPacketType() {
 	case phases.PacketPhase1:
 		return parser.GetMemberPacket().AsPhase1Packet().HasFullIntro()

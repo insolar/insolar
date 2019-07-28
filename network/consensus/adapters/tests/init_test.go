@@ -69,7 +69,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
-	"github.com/insolar/insolar/network/consensus/constestus"
+	"github.com/insolar/insolar/network/consensus/constestus/internal"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/serialization"
@@ -308,10 +308,10 @@ func initNodes(ctx context.Context, mode consensus.Mode, nodes GeneratedNodes, s
 }
 
 func initPulsar(ctx context.Context, delta uint16, ns InitializedNodes) {
-	data := *pulse.NewFirstPulsarData(delta, constestus.RandomEntropy())
+	data := *pulse.NewFirstPulsarData(delta, internal.RandomEntropy())
 	// data := *pulse.NewFirstEphemeralData()
 
-	pulsar := constestus.NewPulsar(data, ns.pulseHandlers)
+	pulsar := internal.NewPulsar(data, ns.pulseHandlers)
 	go func() {
 		for {
 			_ = pulsar.Pulse(ctx, 4+len(ns.staticProfiles)/10)

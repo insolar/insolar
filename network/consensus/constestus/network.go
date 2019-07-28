@@ -49,3 +49,69 @@
 //
 
 package constestus
+
+import (
+	"testing"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/constestus/internal"
+	"github.com/insolar/insolar/network/consensus/constestus/internal/interfaces"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+type c struct {
+	*testing.T
+	cloud internal.Cloud
+}
+
+func (c c) Intercept(nodes ...interfaces.Node) interfaces.TypedInterceptor {
+	panic("implement me")
+}
+
+func (c c) Pulse() {
+	c.Require().NoError(c.cloud.Pulse())
+}
+
+func (c c) NodeByID(id insolar.ShortNodeID) interfaces.Node {
+	activeNode := c.cloud.GetNode(id)
+	return node{
+		C:           c,
+		NetworkNode: activeNode.NetworkNode(),
+		ActiveNode:  activeNode,
+	}
+}
+
+func (c c) Require() *require.Assertions {
+	return require.New(c)
+}
+
+func (c c) Assert() *assert.Assertions {
+	return assert.New(c)
+}
+
+type node struct {
+	C
+	insolar.NetworkNode
+	internal.ActiveNode
+}
+
+func (n node) Connect() {
+	n.C.Require().NoError(n.ActiveNode.Connect())
+}
+
+func (n node) Join(cloud interfaces.Cloud) {
+	n.C.Require().NoError(n.ActiveNode.Join(cloud))
+}
+
+func (n node) Disconnect() {
+	n.C.Require().NoError(n.ActiveNode.Disconnect())
+}
+
+func (n node) Leave(reason uint32) {
+	n.C.Require().NoError(n.ActiveNode.Leave(reason))
+}
+
+func (n node) Intercept(nodes ...interfaces.Node) interfaces.TypedInterceptor {
+	panic("not implemented")
+}

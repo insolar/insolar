@@ -48,39 +48,98 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package constestus
+package interfaces
 
 import (
-	"context"
-	"testing"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/constestus/cloud"
-	"github.com/insolar/insolar/network/consensus/constestus/internal"
-	"github.com/insolar/insolar/network/consensus/constestus/internal/interfaces"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
 
-type C interface {
-	testing.TB
-	interfaces.Cloud
+type Node interface {
+	insolar.NetworkNode
 
-	NodeByID(id insolar.ShortNodeID) interfaces.Node
-
-	Pulse()
-	// AwaitConsensus()
-
-	Require() *require.Assertions
-	Assert() *assert.Assertions
+	Connect()
+	Disconnect()
+	Join(cloud Cloud)
+	Leave(reason uint32)
 }
 
-func CloudOf(t *testing.T, ctx context.Context, config cloud.Config) C {
-	cl, err := internal.NewCloud(ctx, config)
-	require.NoError(t, err)
+type Cloud interface {
+	I
+}
 
-	return c{
-		T:     t,
-		cloud: *cl,
-	}
+type Filter func(parser transport.PacketParser) bool
+type LimitBy func(limited uint, parser transport.PacketParser) bool
+type Action func()
+
+type I interface {
+	Intercept(nodes ...Node) TypedInterceptor
+}
+
+type Interceptor interface {
+	Intercepted() uint
+
+	BindTo(node Node)
+	Done()
+}
+
+type ActionInterceptor interface {
+	I
+	Do(action Action) LinkInterceptor
+}
+
+type Linker interface {
+	Then() ActionInterceptor
+}
+
+type LinkInterceptor interface {
+	Interceptor
+	Linker
+}
+
+type OnceLimiter interface {
+	Once() LinkInterceptor
+}
+
+type BFTLimiter interface {
+	Minority() LinkInterceptor
+	Majority() LinkInterceptor
+}
+
+type Limiter interface {
+	Limit(count uint) LinkInterceptor
+}
+
+type LimiterBy interface {
+	LimitBy(filter LimitBy) LinkInterceptor
+}
+
+type LimitInterceptor interface {
+	LinkInterceptor
+
+	OnceLimiter
+	Limiter
+	BFTLimiter
+	LimiterBy
+}
+
+type Decider interface {
+	Filter(filters ...Filter) DecisionInterceptor
+	Delay(config cloud.Delays) LimitInterceptor
+	Drop() LimitInterceptor
+	Pass() LimitInterceptor
+}
+
+type DecisionInterceptor interface {
+	Interceptor
+	Decider
+}
+
+type TypedInterceptor interface {
+	Decider
+
+	Incoming(packets ...phases.PacketType) DecisionInterceptor
+	Outgoing(packets ...phases.PacketType) DecisionInterceptor
 }

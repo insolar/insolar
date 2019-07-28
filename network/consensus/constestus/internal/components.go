@@ -48,39 +48,62 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package constestus
+package internal
 
 import (
 	"context"
-	"testing"
+	"math/rand"
+	"time"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/constestus/cloud"
-	"github.com/insolar/insolar/network/consensus/constestus/internal"
-	"github.com/insolar/insolar/network/consensus/constestus/internal/interfaces"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
-type C interface {
-	testing.TB
-	interfaces.Cloud
+var (
+	keyProcessor = platformpolicy.NewKeyProcessor()
+	scheme       = platformpolicy.NewPlatformCryptographyScheme()
+)
 
-	NodeByID(id insolar.ShortNodeID) interfaces.Node
-
-	Pulse()
-	// AwaitConsensus()
-
-	Require() *require.Assertions
-	Assert() *assert.Assertions
+type nshGen struct {
+	nshDelay time.Duration
 }
 
-func CloudOf(t *testing.T, ctx context.Context, config cloud.Config) C {
-	cl, err := internal.NewCloud(ctx, config)
-	require.NoError(t, err)
-
-	return c{
-		T:     t,
-		cloud: *cl,
+func (ng *nshGen) State() []byte {
+	delay := ng.nshDelay
+	if delay != 0 {
+		time.Sleep(delay)
 	}
+
+	nshBytes := make([]byte, 64)
+	rand.Read(nshBytes)
+
+	return nshBytes
+}
+
+type pulseChanger struct {
+	nodeKeeper network.NodeKeeper
+}
+
+func (pc *pulseChanger) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
+	inslogger.FromContext(ctx).Info(">>>>>> Change pulse called")
+	err := pc.nodeKeeper.MoveSyncToActive(ctx, pulse.PulseNumber)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(err)
+	}
+}
+
+type stateUpdater struct {
+	nodeKeeper network.NodeKeeper
+}
+
+func (su *stateUpdater) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
+	inslogger.FromContext(ctx).Info(">>>>>> Update state called")
+
+	err := su.nodeKeeper.Sync(ctx, nodes, nil)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(err)
+	}
+	su.nodeKeeper.SetCloudHash(cloudStateHash)
 }

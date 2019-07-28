@@ -48,39 +48,123 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package constestus
+package internal
 
 import (
 	"context"
-	"testing"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/constestus/cloud"
-	"github.com/insolar/insolar/network/consensus/constestus/internal"
 	"github.com/insolar/insolar/network/consensus/constestus/internal/interfaces"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/pkg/errors"
 )
 
-type C interface {
-	testing.TB
-	interfaces.Cloud
+type cloudConfig cloud.Config
 
-	NodeByID(id insolar.ShortNodeID) interfaces.Node
+func (c *cloudConfig) VerifyAndReplace() error {
+	if c.Network.Delays.MinDelay > c.Network.Delays.MaxDelay {
+		return errors.New("invalid Delays - MinDelay must <= MaxDelay")
+	}
 
-	Pulse()
-	// AwaitConsensus()
+	if c.Network.Delays.Variance < 0 {
+		return errors.New("invalid Delays - Variance must be in [0, Inf)")
+	}
 
-	Require() *require.Assertions
-	Assert() *assert.Assertions
+	if c.Network.Delays.SpikeProbability < 0 || c.Network.Delays.SpikeProbability > 1 {
+		return errors.New("invalid Delays - SpikeProbability must be in [0, 1]")
+	}
+
+	if c.Network.Delays.SpikeDelay == 0 {
+		c.Network.Delays.SpikeDelay = c.Network.Delays.MaxDelay
+	}
+
+	if c.DiscoveryNodes.GetTotal() == 0 {
+		return errors.New("invalid Config - discovery nodes must exits")
+	}
+
+	if c.Identity.BaseAddr == "" {
+		c.Identity.BaseAddr = "127.0.0.1"
+	}
+
+	if c.Identity.BasePort == 0 {
+		c.Identity.BasePort = 1000
+	}
+
+	if c.Identity.BaseID == 0 {
+		c.Identity.BaseID = 1000
+	}
+
+	return nil
 }
 
-func CloudOf(t *testing.T, ctx context.Context, config cloud.Config) C {
-	cl, err := internal.NewCloud(ctx, config)
-	require.NoError(t, err)
+type Cloud struct {
+	config  cloud.Config
+	factory IdentityFactory
 
-	return c{
-		T:     t,
-		cloud: *cl,
+	ctx      context.Context
+	nodes    ActiveNodes
+	nodesMap map[insolar.ShortNodeID]ActiveNode
+	pulsar   Pulsar
+}
+
+func NewCloud(ctx context.Context, config cloud.Config) (*Cloud, error) {
+	err := cloudConfig(config).VerifyAndReplace()
+	if err != nil {
+		return nil, err
 	}
+
+	factory := NewIdentityFactory(config.Identity.BaseAddr, config.Identity.BasePort, config.Identity.BaseID)
+
+	c := Cloud{
+		ctx:     ctx,
+		config:  config,
+		factory: factory,
+	}
+
+	discoveryIdentities, err := NodeCounts(config.DiscoveryNodes).createIdentities(factory)
+	if err != nil {
+		return nil, err
+	}
+
+	discoveryNodes, err := discoveryIdentities.CreateNodes(discoveryIdentities)
+	if err != nil {
+		return nil, err
+	}
+
+	nodeIdentities, err := NodeCounts(config.Nodes).createIdentities(factory)
+	if err != nil {
+		return nil, err
+	}
+
+	nodes, err := nodeIdentities.CreateNodes(discoveryIdentities)
+	if err != nil {
+		return nil, err
+	}
+
+	allNodes := make([]Node, len(discoveryNodes)+len(nodes))
+	allNodes = append(allNodes, discoveryNodes...)
+	allNodes = append(allNodes, nodes...)
+
+	activeNodes, err := Nodes(allNodes).CreateActiveNodes(ctx, consensus.ReadyNetwork, config.Network)
+	if err != nil {
+		return nil, err
+	}
+
+	c.nodes = activeNodes
+	c.pulsar = NewPulsar(config.Network)
+
+	return &c, nil
+}
+
+func (c Cloud) Intercept(nodes ...interfaces.Node) interfaces.TypedInterceptor {
+	panic("implement me")
+}
+
+func (c Cloud) Pulse() error {
+	return c.pulsar.Pulse(c.ctx, c.nodes, 4+len(c.nodes)/10)
+}
+
+func (c Cloud) GetNode(id insolar.ShortNodeID) ActiveNode {
+	return c.nodesMap[id]
 }

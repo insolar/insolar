@@ -48,49 +48,63 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package constestus
+package internal
 
 import (
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"context"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/constestus/internal/interfaces"
 )
 
-type Filter func(parser transport.PacketParser) bool
-type Action func()
+type ActiveNodes []ActiveNode
 
-type Interceptor interface {
-	Do() Interceptor
-	Done()
-	Intercepted() uint
+func (ns ActiveNodes) Connect() error {
+	for _, activeNode := range ns {
+		if err := activeNode.Connect(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
-type LinkInterceptor interface {
-	Interceptor
-
-	Then(action Action) TypedInterceptor
-	Link(nodes ...N) TypedInterceptor
+type ActiveNode struct {
+	node       Node
+	components Components
+	ctx        context.Context
 }
 
-type LimitInterceptor interface {
-	LinkInterceptor
-
-	Once() LinkInterceptor
-	Minority() LinkInterceptor
-	Majority() LinkInterceptor
-	Limit(count uint) LinkInterceptor
+func (n ActiveNode) NetworkNode() insolar.NetworkNode {
+	return n.node.networkNode
 }
 
-type DecisionInterceptor interface {
-	Interceptor
-
-	Filter(filters ...Filter) DecisionInterceptor
-	Delay(config DelayConfig) LimitInterceptor
-	Drop() LimitInterceptor
+func (n ActiveNode) Connect() error {
+	return n.components.transport.Start(n.ctx)
 }
 
-type TypedInterceptor interface {
-	DecisionInterceptor
+func (n ActiveNode) Disconnect() error {
+	if err := n.components.transport.Stop(n.ctx); err != nil {
+		return err
+	}
 
-	Incoming(packets ...phases.PacketType) DecisionInterceptor
-	Outgoing(packets ...phases.PacketType) DecisionInterceptor
+	return nil
+}
+
+func (n ActiveNode) join(cloud Cloud) error {
+	panic("not implemented")
+}
+
+func (n ActiveNode) Join(cloud interfaces.Cloud) error {
+	return n.join(*cloud.(*Cloud))
+}
+
+func (n ActiveNode) Leave(reason uint32) error {
+	<-n.components.controller.Leave(reason)
+	if err := n.Disconnect(); err != nil {
+		return err
+	}
+
+	n.components.controller.Abort()
+	return nil
 }

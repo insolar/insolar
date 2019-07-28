@@ -48,39 +48,55 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package constestus
+package internal
 
 import (
-	"context"
-	"testing"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/constestus/cloud"
-	"github.com/insolar/insolar/network/consensus/constestus/internal"
-	"github.com/insolar/insolar/network/consensus/constestus/internal/interfaces"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-type C interface {
-	testing.TB
-	interfaces.Cloud
+type NodeCounts cloud.Nodes
 
-	NodeByID(id insolar.ShortNodeID) interfaces.Node
-
-	Pulse()
-	// AwaitConsensus()
-
-	Require() *require.Assertions
-	Assert() *assert.Assertions
+func (nc NodeCounts) getCounts() map[insolar.StaticRole]int {
+	return map[insolar.StaticRole]int{
+		insolar.StaticRoleHeavyMaterial: int(nc.Heavy),
+		insolar.StaticRoleLightMaterial: int(nc.Light),
+		insolar.StaticRoleVirtual:       int(nc.Virtual),
+		insolar.StaticRoleUnknown:       int(nc.Neutral),
+	}
 }
 
-func CloudOf(t *testing.T, ctx context.Context, config cloud.Config) C {
-	cl, err := internal.NewCloud(ctx, config)
-	require.NoError(t, err)
+func (nc NodeCounts) createRoleIdentities(
+	factory IdentityFactory,
+	identities []Identity,
+	role insolar.StaticRole,
+	count int,
+) error {
 
-	return c{
-		T:     t,
-		cloud: *cl,
+	for i := 0; i < count; i++ {
+		identity, err := factory.CreateIdentity(role)
+		if err != nil {
+			return err
+		}
+
+		identities[i] = *identity
 	}
+
+	return nil
+}
+
+func (nc NodeCounts) createIdentities(factory IdentityFactory) (Identities, error) {
+	counts := nc.getCounts()
+	identities := make([]Identity, cloud.Nodes(nc).GetTotal())
+	offset := 0
+
+	for role, count := range counts {
+		err := nc.createRoleIdentities(factory, identities[offset:offset+count], role, count)
+		if err != nil {
+			return nil, err
+		}
+		offset += count
+	}
+
+	return identities, nil
 }

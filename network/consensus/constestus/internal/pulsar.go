@@ -48,7 +48,7 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package constestus
+package internal
 
 import (
 	"bytes"
@@ -58,41 +58,42 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/consensus/constestus/cloud"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/pulsenetwork"
 )
 
-type Pulsar interface {
-	Pulse(ctx context.Context, attempts int) error
-}
-
-type pulsar struct {
-	pulseHandlers []network.PulseHandler
-
+type Pulsar struct {
 	mu    *sync.Mutex
 	pulse *pulse.Data
 }
 
-func NewPulsar(firstPulse pulse.Data, pulseHandlers []network.PulseHandler) Pulsar {
-	return pulsar{
-		pulseHandlers: pulseHandlers,
-		mu:            &sync.Mutex{},
-		pulse:         &firstPulse,
+func NewPulsar(config cloud.Network) Pulsar {
+	var firstPulse *pulse.Data
+
+	if config.Consensus.EphemeralPulses {
+		firstPulse = pulse.NewFirstEphemeralData()
+	} else {
+		firstPulse = pulse.NewFirstPulsarData(config.Consensus.PulseDelta, randomEntropy())
+	}
+
+	return Pulsar{
+		mu:    &sync.Mutex{},
+		pulse: firstPulse,
 	}
 }
 
-func (p pulsar) Pulse(ctx context.Context, attempts int) error {
+func (p Pulsar) Pulse(ctx context.Context, activeNodes ActiveNodes, attempts int) error {
 	p.mu.Lock()
 	defer time.AfterFunc(time.Duration(p.pulse.NextPulseDelta)*time.Second, func() {
 		p.mu.Unlock()
 	})
 
-	p.pulse = p.pulse.CreateNextPulse(RandomEntropy)
+	p.pulse = p.pulse.CreateNextPulse(randomEntropy)
 
 	newPulse := adapters.NewPulse(*p.pulse)
 	pulsePacket, err := getReceivedPulsarPacket(ctx, newPulse)
@@ -100,12 +101,12 @@ func (p pulsar) Pulse(ctx context.Context, attempts int) error {
 		return err
 	}
 
-	go func() {
-		for i := 0; i < attempts; i++ {
-			handler := p.pulseHandlers[rand.Intn(len(p.pulseHandlers))]
-			go handler.HandlePulse(ctx, newPulse, pulsePacket)
-		}
-	}()
+	for i := 0; i < attempts; i++ {
+		node := activeNodes[rand.Intn(len(activeNodes))]
+		pulseHandler := node.components.pulseHandler
+
+		go pulseHandler.HandlePulse(ctx, newPulse, pulsePacket)
+	}
 
 	return nil
 }
@@ -135,7 +136,7 @@ func getReceivedPulsarPacket(ctx context.Context, pu insolar.Pulse) (*packet.Rec
 	return rp, nil
 }
 
-func RandomEntropy() longbits.Bits256 {
+func randomEntropy() longbits.Bits256 {
 	v := longbits.Bits256{}
 	_, _ = rand.Read(v[:])
 	return v

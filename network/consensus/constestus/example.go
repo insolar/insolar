@@ -50,37 +50,26 @@
 
 package constestus
 
-import (
-	"context"
-	"testing"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/constestus/cloud"
-	"github.com/insolar/insolar/network/consensus/constestus/internal"
-	"github.com/insolar/insolar/network/consensus/constestus/internal/interfaces"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-)
-
-type C interface {
-	testing.TB
-	interfaces.Cloud
-
-	NodeByID(id insolar.ShortNodeID) interfaces.Node
-
-	Pulse()
-	// AwaitConsensus()
-
-	Require() *require.Assertions
-	Assert() *assert.Assertions
-}
-
-func CloudOf(t *testing.T, ctx context.Context, config cloud.Config) C {
-	cl, err := internal.NewCloud(ctx, config)
-	require.NoError(t, err)
-
-	return c{
-		T:     t,
-		cloud: *cl,
-	}
-}
+// func test(c C, node N) {
+// 	joinerNode := node
+//
+// 	c.Intercept(joinerNode).
+// 		Outgoing(phases.PacketPhase1).Filter(c.F().P().HasFullIntro).Drop().Once().
+// 		Then().Intercept().
+// 		Outgoing(phases.PacketPhase2).Delay(Delay{SpikeDelay: 1000 * time.Millisecond, SpikeProbability: 1}).Minority().
+// 		Then().Do(node.Disconnect).
+// 		BindTo(node)
+//
+// 	c.Intercept().
+// 		Incoming(phases.PacketPulse, phases.PacketPhase0, phases.PacketPhase1).
+// 		Filter(c.F().Any(c.F().P().IsPulsePacket, c.F().P().HasEmbeddedPulsePacket)).
+// 		Pass().Once().
+// 		Then().Do(node.Disconnect).
+// 		BindTo(node)
+//
+// 	c.Intercept().
+// 		Incoming(phases.PacketPhase0).Pass().Once().Then().Do(node.Disconnect).
+// 		Then().Intercept().
+// 		Outgoing(phases.PacketPhase1).Pass().Once().Then().Do(node.Connect).
+// 		BindTo(node)
+// }

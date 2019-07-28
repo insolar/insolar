@@ -48,7 +48,7 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package constestus
+package internal
 
 import (
 	"context"
@@ -56,6 +56,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/consensus/constestus/cloud"
 	"github.com/insolar/insolar/network/transport"
 )
 
@@ -64,26 +65,10 @@ type NetworkStrategy interface {
 }
 
 type delayNetStrategy struct {
-	conf DelayConfig
+	conf cloud.Delays
 }
 
-func NewDelayNetStrategy(conf DelayConfig) NetworkStrategy {
-	if conf.MinDelay > conf.MaxDelay {
-		panic("MinDelay must <= MaxDelay")
-	}
-
-	if conf.Variance < 0 {
-		panic("Variance must be in [0, Inf)")
-	}
-
-	if conf.SpikeProbability < 0 || conf.SpikeProbability > 1 {
-		panic("SpikeProbability must be in [0, 1]")
-	}
-
-	if conf.SpikeDelay == 0 {
-		conf.SpikeDelay = conf.MaxDelay
-	}
-
+func NewDelayNetStrategy(conf cloud.Delays) NetworkStrategy {
 	return &delayNetStrategy{
 		conf: conf,
 	}

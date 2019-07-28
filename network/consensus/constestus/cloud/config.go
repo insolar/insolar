@@ -48,39 +48,52 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package constestus
+package cloud
 
 import (
-	"context"
-	"testing"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/constestus/cloud"
-	"github.com/insolar/insolar/network/consensus/constestus/internal"
-	"github.com/insolar/insolar/network/consensus/constestus/internal/interfaces"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"time"
 )
 
-type C interface {
-	testing.TB
-	interfaces.Cloud
-
-	NodeByID(id insolar.ShortNodeID) interfaces.Node
-
-	Pulse()
-	// AwaitConsensus()
-
-	Require() *require.Assertions
-	Assert() *assert.Assertions
+type Delays struct {
+	MinDelay         time.Duration
+	MaxDelay         time.Duration
+	SpikeDelay       time.Duration
+	Variance         float32
+	SpikeProbability float32
 }
 
-func CloudOf(t *testing.T, ctx context.Context, config cloud.Config) C {
-	cl, err := internal.NewCloud(ctx, config)
-	require.NoError(t, err)
+type Nodes struct {
+	Heavy   uint
+	Light   uint
+	Virtual uint
+	Neutral uint
+}
 
-	return c{
-		T:     t,
-		cloud: *cl,
-	}
+func (c Nodes) GetTotal() int {
+	return int(c.Heavy + c.Light + c.Virtual + c.Neutral)
+}
+
+type Identity struct {
+	BaseAddr string
+	BasePort uint16
+	BaseID   uint32
+}
+
+type Network struct {
+	Delays    Delays
+	Consensus Consensus
+}
+
+type Consensus struct {
+	NodeStateHashGenerationDelay time.Duration
+	EphemeralPulses              bool
+	PulseDelta                   uint16
+}
+
+type Config struct {
+	DiscoveryNodes Nodes
+	Nodes          Nodes
+
+	Network  Network
+	Identity Identity
 }

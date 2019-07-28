@@ -48,23 +48,39 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package constestus
+package internal
 
 import (
-	"context"
 	"crypto"
 	"fmt"
 	"sync"
 
+	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus"
+	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/node"
-	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/testutils"
+	"github.com/pkg/errors"
 )
 
-type nodeIdentity struct {
+type Identities []Identity
+
+func (is Identities) CreateNodes(discoveries []Identity) (Nodes, error) {
+	nodes := make([]Node, len(is))
+
+	for i, identity := range is {
+		n, err := identity.CreateNode(discoveries)
+		if err != nil {
+			return nil, err
+		}
+
+		nodes[i] = *n
+	}
+
+	return nodes, nil
+}
+
+type Identity struct {
 	addr       string
 	id         insolar.ShortNodeID
 	ref        insolar.Reference
@@ -73,7 +89,7 @@ type nodeIdentity struct {
 	publicKey  crypto.PublicKey
 }
 
-func (i nodeIdentity) createNode() insolar.NetworkNode {
+func (i Identity) createNetworkNode() insolar.NetworkNode {
 	n := node.NewNode(
 		i.ref,
 		i.role,
@@ -87,9 +103,52 @@ func (i nodeIdentity) createNode() insolar.NetworkNode {
 	return mn
 }
 
-type identityGenerator struct {
-	keyProcessor insolar.KeyProcessor
+func (i Identity) createCertificate(discoveries []Identity) (insolar.Certificate, error) {
+	publicKey, _ := keyProcessor.ExportPublicKeyPEM(i.publicKey)
+	bootstrapNodes := make([]certificate.BootstrapNode, len(discoveries))
 
+	for i, discovery := range discoveries {
+		publicKeyBytes, err := keyProcessor.ExportPublicKeyPEM(discovery.publicKey)
+		if err != nil {
+			return nil, err
+		}
+
+		bootstrapNodes[i] = *certificate.NewBootstrapNode(
+			publicKey,
+			string(publicKeyBytes[:]),
+			discovery.addr,
+			discovery.ref.String(),
+		)
+	}
+
+	return &certificate.Certificate{
+		AuthorizationCertificate: certificate.AuthorizationCertificate{
+			PublicKey: string(publicKey[:]),
+			Reference: i.ref.String(),
+			Role:      i.role.String(),
+		},
+		BootstrapNodes: bootstrapNodes,
+	}, nil
+}
+
+func (i Identity) CreateNode(discoveries []Identity) (*Node, error) {
+	cert, err := i.createCertificate(discoveries)
+	if err != nil {
+		return nil, err
+	}
+
+	networkNode := i.createNetworkNode()
+
+	n := Node{
+		networkNode: networkNode,
+		profile:     adapters.NewStaticProfile(networkNode, cert, keyProcessor),
+		identity:    i,
+		certificate: cert,
+	}
+	return &n, nil
+}
+
+type IdentityFactory struct {
 	baseAddr string
 
 	mu         *sync.Mutex
@@ -97,7 +156,16 @@ type identityGenerator struct {
 	idOffset   uint32
 }
 
-func (g *identityGenerator) generateShared() (insolar.ShortNodeID, uint16) {
+func NewIdentityFactory(baseAddr string, basePort uint16, baseID uint32) IdentityFactory {
+	return IdentityFactory{
+		baseAddr:   baseAddr,
+		mu:         &sync.Mutex{},
+		portOffset: basePort,
+		idOffset:   baseID,
+	}
+}
+
+func (g *IdentityFactory) generateShared() (insolar.ShortNodeID, uint16) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -110,86 +178,22 @@ func (g *identityGenerator) generateShared() (insolar.ShortNodeID, uint16) {
 	return insolar.ShortNodeID(id), port
 }
 
-func (g *identityGenerator) generateIdentity(role insolar.StaticRole) (*nodeIdentity, error) {
-	privateKey, err := g.keyProcessor.GeneratePrivateKey()
+func (g *IdentityFactory) CreateIdentity(role insolar.StaticRole) (*Identity, error) {
+	privateKey, err := keyProcessor.GeneratePrivateKey()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to generate private key")
 	}
 
 	id, port := g.generateShared()
 
-	identity := &nodeIdentity{
+	identity := &Identity{
 		addr:       fmt.Sprintf("%s:%d", g.baseAddr, port),
 		id:         id,
 		ref:        testutils.RandomRef(),
 		role:       role,
 		privateKey: privateKey,
-		publicKey:  g.keyProcessor.ExtractPublicKey(privateKey),
+		publicKey:  keyProcessor.ExtractPublicKey(privateKey),
 	}
 
 	return identity, nil
-}
-
-type nodeComponents struct {
-	controller   consensus.Controller
-	nodeKeeper   network.NodeKeeper
-	transport    transport.DatagramTransport
-	pulseHandler network.PulseHandler
-}
-
-type networkNode struct {
-	identity   nodeIdentity
-	components nodeComponents
-	ctx        context.Context
-}
-
-func (n networkNode) Connect() error {
-	return n.components.transport.Start(n.ctx)
-}
-
-func (n networkNode) Join(cloud C) error {
-	panic("not implemented")
-}
-
-func (n networkNode) Disconnect() error {
-	if err := n.components.transport.Stop(n.ctx); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (n networkNode) Leave(reason uint32) error {
-	<-n.components.controller.Leave(reason)
-	if err := n.Disconnect(); err != nil {
-		return err
-	}
-
-	n.components.controller.Abort()
-	return nil
-}
-
-type cloudNode struct {
-	C
-	networkNode
-}
-
-func (n cloudNode) Connect() {
-	n.C.Require().NoError(n.networkNode.Connect())
-}
-
-func (n cloudNode) Join(cloud C) {
-	n.C.Require().NoError(n.networkNode.Join(cloud))
-}
-
-func (n cloudNode) Disconnect() {
-	n.C.Require().NoError(n.networkNode.Disconnect())
-}
-
-func (n cloudNode) Leave(reason uint32) {
-	n.C.Require().NoError(n.networkNode.Leave(reason))
-}
-
-func (n cloudNode) Intercept(nodes ...N) TypedInterceptor {
-	panic("not implemented")
 }
