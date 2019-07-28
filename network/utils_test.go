@@ -120,6 +120,18 @@ func (t *testNode) GetHost() string {
 	return ""
 }
 
+func (t *testNode) GetBriefDigest() []byte {
+	return nil
+}
+
+func (t *testNode) GetBriefSign() []byte {
+	return nil
+}
+
+func (t *testNode) GetRole() insolar.StaticRole {
+	return insolar.StaticRoleVirtual
+}
+
 func TestExcludeOrigin(t *testing.T) {
 	origin := testutils.RandomRef()
 	originNode := &testNode{origin}
