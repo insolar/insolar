@@ -306,7 +306,6 @@ func (p *RealmPurgatory) UnknownFromNeighbourhood(ctx context.Context, rank memb
 			panic("announcement.Joiner.JoinerProfile == nil") // it must be checked by caller
 		}
 		return m.DispatchAnnouncement(ctx, rank, announcement.Joiner.JoinerProfile, announcement)
-	} else {
-		return m.DispatchAnnouncement(ctx, rank, nil, announcement)
 	}
+	return m.DispatchAnnouncement(ctx, rank, nil, announcement)
 }

@@ -165,5 +165,5 @@ func (g *DiscoveryBootstrap) authorize(ctx context.Context) (*packet.AuthorizeRe
 		return res, nil
 	}
 
-	return nil, errors.New("Failed to authorize to any discovery node.")
+	return nil, errors.New("failed to authorize to any discovery node")
 }

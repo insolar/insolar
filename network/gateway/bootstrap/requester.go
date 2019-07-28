@@ -112,9 +112,9 @@ func (ac *requester) Authorize(ctx context.Context, host *host.Host, cert insola
 	case packet.Success:
 		return response, nil
 	case packet.WrongMandate:
-		return response, errors.New("Failed to authorize, wrong mandate.")
+		return response, errors.New("failed to authorize, wrong mandate")
 	case packet.WrongVersion:
-		return response, errors.New("Failed to authorize, wrong version.")
+		return response, errors.New("failed to authorize, wrong version")
 	}
 
 	// retry with received timestamp
