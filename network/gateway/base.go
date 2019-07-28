@@ -100,7 +100,7 @@ type Base struct {
 	ConsensusController   consensus.Controller
 	ConsensusPulseHandler network.PulseHandler
 
-	bootstrapETA           insolar.PulseNumber //nolint: unused
+	bootstrapETA           insolar.PulseNumber
 	originCandidateProfile *packet.CandidateProfile
 }
 
@@ -136,6 +136,7 @@ func (g *Base) Init(ctx context.Context) error {
 	})
 
 	g.createCandidateProfile()
+	g.bootstrapETA = 0
 	return nil
 }
 
@@ -302,7 +303,7 @@ func validateTimestamp(timestamp int64, delta time.Duration) bool {
 
 func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 	if !network.OriginIsDiscovery(g.CertificateManager.GetCertificate()) {
-		return nil, errors.New("only discovery nodes could authorize other nodes. I am not a discovery node.")
+		return nil, errors.New("only discovery nodes could authorize other nodes, this is not a discovery node")
 	}
 
 	if request.GetRequest() == nil || request.GetRequest().GetAuthorize() == nil {

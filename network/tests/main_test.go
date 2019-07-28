@@ -55,15 +55,11 @@ package tests
 import (
 	"context"
 	"fmt"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/suite"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/node"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -71,10 +67,10 @@ var (
 	consensusMinMsg = fmt.Sprintf("skip test for bootstrap nodes < %d", consensusMin)
 )
 
-func TestServiceNetworkManyBootstraps(t *testing.T) {
-	s := newConsensusSuite(10, 0)
-	suite.Run(t, s)
-}
+//func TestServiceNetworkManyBootstraps(t *testing.T) {
+//	s := newConsensusSuite(10, 0)
+//	suite.Run(t, s)
+//}
 
 //func TestServiceNetworkManyNodes(t *testing.T) {
 //	t.Skip("Long time setup, wait for mock bootstrap")
