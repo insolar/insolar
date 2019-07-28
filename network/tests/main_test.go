@@ -78,7 +78,7 @@ var (
 )
 
 func leakTestWithTimeout(t *testing.T) {
-	<-time.After(time.Millisecond)
+	<-time.After(10 * time.Millisecond)
 	leaktest.Check(t)()
 }
 
