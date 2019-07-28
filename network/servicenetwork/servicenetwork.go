@@ -182,10 +182,8 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	n.cm.Inject(n,
 		&routing.Table{},
 		cert,
-		transport.NewFactory(n.cfg.Host.Transport),
 		hostNetwork,
 		n.datagramTransport,
-
 		controller.NewRPCController(options),
 		controller.NewPulseController(),
 		bootstrap.NewRequester(options),
@@ -269,7 +267,6 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 
 	n.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
 
-	// logger.Info("Service network started")
 	return nil
 }
 
