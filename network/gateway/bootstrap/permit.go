@@ -61,13 +61,13 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 )
 
-const permitTtl = 300
+const permitTTL = 300
 
 // CreatePermit creates permit as signed protobuf for joiner node to
 func CreatePermit(authorityNodeRef insolar.Reference, reconnectHost *host.Host, joinerPublicKey []byte, signer insolar.Signer) (*packet.Permit, error) {
 	payload := packet.PermitPayload{
 		AuthorityNodeRef: authorityNodeRef,
-		ExpireTimestamp:  time.Now().Unix() + permitTtl,
+		ExpireTimestamp:  time.Now().Unix() + permitTTL,
 		ReconnectTo:      reconnectHost,
 		JoinerPublicKey:  joinerPublicKey,
 	}

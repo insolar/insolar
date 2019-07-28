@@ -127,5 +127,5 @@ func (g *JoinerBootstrap) authorize(ctx context.Context) (*packet.Permit, error)
 		return res.Permit, nil
 	}
 
-	return nil, errors.New("Failed to authorize to any discovery node.")
+	return nil, errors.New("failed to authorize to any discovery node")
 }
