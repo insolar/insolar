@@ -222,9 +222,9 @@ func TestRecordIterator_Next(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Equal(t, uint32(1), iter.read)
-		require.Equal(t, pn, next.PulseNumber)
+		require.Equal(t, pn, next.Record.ID.Pulse())
 		require.Equal(t, uint32(2), next.RecordNumber)
-		require.Equal(t, id, next.RecordID)
+		require.Equal(t, id, next.Record.ID)
 		require.Equal(t, record, next.Record)
 	})
 
@@ -270,9 +270,9 @@ func TestRecordIterator_Next(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, nextPN, iter.currentPulse)
 			require.Equal(t, uint32(1), iter.read)
-			require.Equal(t, nextPN, next.PulseNumber)
+			require.Equal(t, nextPN, next.Record.ID.Pulse())
 			require.Equal(t, uint32(1), next.RecordNumber)
-			require.Equal(t, id, next.RecordID)
+			require.Equal(t, id, next.Record.ID)
 			require.Equal(t, record, next.Record)
 		})
 	})
@@ -284,7 +284,7 @@ func TestRecordServer_Export(t *testing.T) {
 	t.Run("count can't be 0", func(t *testing.T) {
 		server := &RecordServer{}
 
-		res, err := server.Export(inslogger.TestContext(t), &GetRecords{Count: 0})
+		res, err := server.Export(&GetRecords{Count: 0})
 
 		require.Error(t, err)
 		require.Nil(t, res)
