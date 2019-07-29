@@ -89,7 +89,7 @@ func TestSetResult_Proceed(t *testing.T) {
 	hash = record.HashVirtual(pcs.ReferenceHasher(), record.Wrap(&expectedFilament))
 	expectedFilamentID := *insolar.NewID(resultID.Pulse(), hash)
 
-	indexes := object.NewIndexStorageMock(mc)
+	indexes := object.NewMemoryIndexStorageMock(mc)
 	indexes.ForIDFunc = func(_ context.Context, pn insolar.PulseNumber, id insolar.ID) (record.Index, error) {
 		require.Equal(t, flow.Pulse(ctx), pn)
 		require.Equal(t, objectID, id)
@@ -101,7 +101,7 @@ func TestSetResult_Proceed(t *testing.T) {
 			},
 		}, nil
 	}
-	indexes.SetIndexFunc = func(_ context.Context, pn insolar.PulseNumber, idx record.Index) (r error) {
+	indexes.SetFunc = func(_ context.Context, pn insolar.PulseNumber, idx record.Index) {
 		require.Equal(t, resultID.Pulse(), pn)
 		expectedIndex := record.Index{
 			LifelineLastUsed: resultID.Pulse(),
@@ -111,19 +111,18 @@ func TestSetResult_Proceed(t *testing.T) {
 			},
 		}
 		require.Equal(t, expectedIndex, idx)
-		return nil
 	}
-	records := object.NewRecordModifierMock(mc)
-	records.SetFunc = func(_ context.Context, id insolar.ID, rec record.Material) (r error) {
-		switch r := record.Unwrap(&rec.Virtual).(type) {
-		case *record.Result:
-			require.Equal(t, resultID, id)
-			require.Equal(t, resultRecord, r)
-		case *record.PendingFilament:
-			require.Equal(t, expectedFilamentID, id)
-			require.Equal(t, &expectedFilament, record.Unwrap(&rec.Virtual))
-		}
+	records := object.NewAtomicRecordModifierMock(mc)
+	records.SetAtomicFunc = func(_ context.Context, recs ...record.Material) (r error) {
+		require.Equal(t, 2, len(recs))
 
+		result := recs[0]
+		filament := recs[1]
+		require.Equal(t, resultID, result.ID)
+		require.Equal(t, resultRecord, record.Unwrap(&result.Virtual))
+
+		require.Equal(t, expectedFilamentID, filament.ID)
+		require.Equal(t, &expectedFilament, record.Unwrap(&filament.Virtual))
 		return nil
 	}
 
@@ -165,8 +164,8 @@ func TestSetResult_Proceed_ResultDuplicated(t *testing.T) {
 
 	writeAccessor := hot.NewWriteAccessorMock(mc)
 	writeAccessor.BeginMock.Return(func() {}, nil)
-	records := object.NewRecordModifierMock(mc)
-	indexes := object.NewIndexStorageMock(mc)
+	records := object.NewAtomicRecordModifierMock(mc)
+	indexes := object.NewMemoryIndexStorageMock(mc)
 	indexes.ForIDMock.Return(record.Index{}, nil)
 	pcs := testutils.NewPlatformCryptographyScheme()
 

@@ -29,5 +29,5 @@ type ContractRequester interface {
 	SendRequestWithPulse(ctx context.Context, ref *Reference, method string, argsIn []interface{}, pulse PulseNumber) (Reply, error)
 	// CallMethod - low level calls contract
 	CallMethod(ctx context.Context, msg Message) (Reply, error)
-	CallConstructor(ctx context.Context, msg Message) (*Reference, error)
+	CallConstructor(ctx context.Context, msg Message) (ref *Reference, ctorErr string, sysErr error)
 }

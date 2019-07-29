@@ -108,8 +108,9 @@ type CallConstructorArgs struct {
 
 // CallConstructorReply is reply that Contract.CallConstructor returns
 type CallConstructorReply struct {
-	ObjectRef string `json:"ObjectRef"`
-	TraceID   string `json:"TraceID"`
+	ObjectRef        string `json:"ObjectRef"`
+	ConstructorError string `json:"ConstructorError"`
+	TraceID          string `json:"TraceID"`
 }
 
 // CallConstructor make an object from its prototype
@@ -148,12 +149,15 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 		},
 	}
 
-	callConstructorReply, err := s.runner.ContractRequester.CallConstructor(ctx, msg)
+	objectRef, ctorErr, err := s.runner.ContractRequester.CallConstructor(ctx, msg)
 	if err != nil {
 		return errors.Wrap(err, "CallConstructor error")
 	}
 
-	reply.ObjectRef = callConstructorReply.String()
+	if objectRef != nil {
+		reply.ObjectRef = objectRef.String()
+	}
+	reply.ConstructorError = ctorErr
 
 	return nil
 }

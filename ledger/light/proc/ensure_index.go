@@ -38,7 +38,7 @@ type EnsureIndex struct {
 
 	dep struct {
 		indexLocker object.IndexLocker
-		indices     object.IndexStorage
+		indices     object.MemoryIndexStorage
 		coordinator jet.Coordinator
 		sender      bus.Sender
 	}
@@ -54,7 +54,7 @@ func NewEnsureIndex(obj insolar.ID, jetID insolar.JetID, msg payload.Meta) *Ensu
 
 func (p *EnsureIndex) Dep(
 	il object.IndexLocker,
-	idxs object.IndexStorage,
+	idxs object.MemoryIndexStorage,
 	c jet.Coordinator,
 	s bus.Sender,
 ) {
@@ -85,10 +85,7 @@ func (p *EnsureIndex) process(ctx context.Context) error {
 	idx, err := p.dep.indices.ForID(ctx, flow.Pulse(ctx), p.object)
 	if err == nil {
 		idx.LifelineLastUsed = flow.Pulse(ctx)
-		err = p.dep.indices.SetIndex(ctx, flow.Pulse(ctx), idx)
-		if err != nil {
-			return errors.Wrap(err, "EnsureIndex: failed to update lifeline usage")
-		}
+		p.dep.indices.Set(ctx, flow.Pulse(ctx), idx)
 		return nil
 	}
 	if err != object.ErrIndexNotFound {
@@ -128,15 +125,12 @@ func (p *EnsureIndex) process(ctx context.Context) error {
 			return errors.Wrap(err, "EnsureIndex: failed to decode index")
 		}
 
-		err = p.dep.indices.SetIndex(ctx, flow.Pulse(ctx), record.Index{
+		p.dep.indices.Set(ctx, flow.Pulse(ctx), record.Index{
 			LifelineLastUsed: flow.Pulse(ctx),
 			Lifeline:         idx,
 			PendingRecords:   []insolar.ID{},
 			ObjID:            p.object,
 		})
-		if err != nil {
-			return errors.Wrap(err, "EnsureIndex: failed to save lifeline")
-		}
 		return nil
 	case *payload.Error:
 		logger.WithFields(map[string]interface{}{
