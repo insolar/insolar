@@ -185,7 +185,7 @@ func TestSetResult_FlowWithPassedFlag(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return errors.New("something strange from checkjet")
 			default:
 				panic("unknown procedure")
@@ -204,7 +204,7 @@ func TestSetResult_FlowWithPassedFlag(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return proc.ErrNotExecutor
 			default:
 				panic("unknown procedure")
@@ -223,7 +223,7 @@ func TestSetResult_FlowWithPassedFlag(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return proc.ErrNotExecutor
 			default:
 				panic("unknown procedure")
@@ -253,7 +253,7 @@ func TestSetResult_ErrorFromWaitHot(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return nil
 			case *proc.WaitHot:
 				return errors.New("error from waithot")
@@ -274,7 +274,7 @@ func TestSetResult_ErrorFromWaitHot(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return nil
 			case *proc.WaitHot:
 				return nil
@@ -309,7 +309,7 @@ func TestSetResult_ErrorFromGetIndex(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return nil
 			case *proc.WaitHot:
 				return nil
@@ -332,7 +332,7 @@ func TestSetResult_ErrorFromGetIndex(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return nil
 			case *proc.WaitHot:
 				return nil
@@ -367,7 +367,7 @@ func TestSetResult_ErrorFromSetResult(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return nil
 			case *proc.WaitHot:
 				return nil
@@ -392,7 +392,7 @@ func TestSetResult_ErrorFromSetResult(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return nil
 			case *proc.WaitHot:
 				return nil

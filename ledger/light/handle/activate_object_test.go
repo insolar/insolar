@@ -264,7 +264,7 @@ func TestActivateObject_FlowWithPassedFlag(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return errors.New("something strange from checkjet")
 			default:
 				panic("unknown procedure")
@@ -283,7 +283,7 @@ func TestActivateObject_FlowWithPassedFlag(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return proc.ErrNotExecutor
 			default:
 				panic("unknown procedure")
@@ -302,7 +302,7 @@ func TestActivateObject_FlowWithPassedFlag(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return proc.ErrNotExecutor
 			case *proc.EnsureIndex:
 				return nil
@@ -334,7 +334,7 @@ func TestActivateObject_ErrorFromWaitHot(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return nil
 			case *proc.WaitHot:
 				return errors.New("error from waithot")
@@ -355,7 +355,7 @@ func TestActivateObject_ErrorFromWaitHot(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return nil
 			case *proc.WaitHot:
 				return nil
@@ -388,7 +388,7 @@ func TestActivateObject_ErrorFromActivateObject(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return nil
 			case *proc.WaitHot:
 				return nil
@@ -411,7 +411,7 @@ func TestActivateObject_ErrorFromActivateObject(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return nil
 			case *proc.WaitHot:
 				return nil

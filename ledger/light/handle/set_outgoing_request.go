@@ -71,8 +71,8 @@ func (s *SetOutgoingRequest) Present(ctx context.Context, f flow.Flow) error {
 	reqID := calc.Result.ID
 
 	passIfNotExecutor := !s.passed
-	jet := proc.NewCheckJet(*request.AffinityRef().Record(), flow.Pulse(ctx), s.message, passIfNotExecutor)
-	s.dep.CheckJet(jet)
+	jet := proc.NewFetchJet(*request.AffinityRef().Record(), flow.Pulse(ctx), s.message, passIfNotExecutor)
+	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
 		if err == proc.ErrNotExecutor && passIfNotExecutor {
 			return nil

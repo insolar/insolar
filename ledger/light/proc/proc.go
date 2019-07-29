@@ -17,7 +17,7 @@
 package proc
 
 type Dependencies struct {
-	CheckJet     func(*CheckJet)
+	FetchJet     func(*FetchJet)
 	WaitHot      func(*WaitHot)
 	EnsureIndex  func(*EnsureIndex)
 	SendObject   func(*SendObject)
@@ -40,7 +40,7 @@ type Dependencies struct {
 // Use it ONLY for tests.
 func NewDependenciesMock() *Dependencies {
 	return &Dependencies{
-		CheckJet:     func(*CheckJet) {},
+		FetchJet:     func(*FetchJet) {},
 		WaitHot:      func(*WaitHot) {},
 		EnsureIndex:  func(*EnsureIndex) {},
 		SendObject:   func(*SendObject) {},

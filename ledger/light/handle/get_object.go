@@ -52,8 +52,8 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 	ctx, _ = inslogger.WithField(ctx, "object", msg.ObjectID.DebugString())
 
 	passIfNotExecutor := !s.passed
-	jet := proc.NewCheckJet(msg.ObjectID, flow.Pulse(ctx), s.meta, passIfNotExecutor)
-	s.dep.CheckJet(jet)
+	jet := proc.NewFetchJet(msg.ObjectID, flow.Pulse(ctx), s.meta, passIfNotExecutor)
+	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, false); err != nil {
 		if err == proc.ErrNotExecutor && passIfNotExecutor {
 			return nil

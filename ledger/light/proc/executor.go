@@ -29,7 +29,7 @@ import (
 	"github.com/insolar/insolar/ledger/light/hot"
 )
 
-type CheckJet struct {
+type FetchJet struct {
 	target  insolar.ID
 	pulse   insolar.PulseNumber
 	message payload.Meta
@@ -39,16 +39,16 @@ type CheckJet struct {
 		Jet insolar.JetID
 	}
 
-	Dep struct {
-		JetAccessor jet.Accessor
-		Coordinator jet.Coordinator
-		JetFetcher  executor.JetFetcher
-		Sender      bus.Sender
+	dep struct {
+		jetAccessor jet.Accessor
+		jetFetcher  executor.JetFetcher
+		coordinator jet.Coordinator
+		sender      bus.Sender
 	}
 }
 
-func NewCheckJet(target insolar.ID, pn insolar.PulseNumber, msg payload.Meta, pass bool) *CheckJet {
-	return &CheckJet{
+func NewFetchJet(target insolar.ID, pn insolar.PulseNumber, msg payload.Meta, pass bool) *FetchJet {
+	return &FetchJet{
 		target:  target,
 		pulse:   pn,
 		message: msg,
@@ -56,17 +56,29 @@ func NewCheckJet(target insolar.ID, pn insolar.PulseNumber, msg payload.Meta, pa
 	}
 }
 
-func (p *CheckJet) Proceed(ctx context.Context) error {
-	jetID, err := p.Dep.JetFetcher.Fetch(ctx, p.target, p.pulse)
+func (p *FetchJet) Dep(
+	jets jet.Accessor,
+	fetcher executor.JetFetcher,
+	c jet.Coordinator,
+	s bus.Sender,
+) {
+	p.dep.jetAccessor = jets
+	p.dep.jetFetcher = fetcher
+	p.dep.coordinator = c
+	p.dep.sender = s
+}
+
+func (p *FetchJet) Proceed(ctx context.Context) error {
+	jetID, err := p.dep.jetFetcher.Fetch(ctx, p.target, p.pulse)
 	if err != nil {
 		return errors.Wrap(err, "failed to fetch jet")
 	}
 
-	worker, err := p.Dep.Coordinator.LightExecutorForJet(ctx, *jetID, p.pulse)
+	worker, err := p.dep.coordinator.LightExecutorForJet(ctx, *jetID, p.pulse)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate executor for jet")
 	}
-	if *worker != p.Dep.Coordinator.Me() {
+	if *worker != p.dep.coordinator.Me() {
 		if !p.pass {
 			return ErrNotExecutor
 		}
@@ -82,7 +94,7 @@ func (p *CheckJet) Proceed(ctx context.Context) error {
 			return errors.Wrap(err, "failed to create reply")
 		}
 		go func() {
-			_, done := p.Dep.Sender.SendTarget(ctx, msg, *worker)
+			_, done := p.dep.sender.SendTarget(ctx, msg, *worker)
 			done()
 		}()
 		return ErrNotExecutor
