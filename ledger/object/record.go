@@ -77,9 +77,13 @@ type RecordCleaner interface {
 	DeleteForPN(ctx context.Context, pulse insolar.PulseNumber)
 }
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordPositionModifier -o ./ -s _mock.go
+
 type RecordPositionModifier interface {
 	IncrementPosition(recID insolar.ID) error
 }
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordPositionAccessor -o ./ -s _mock.go
 
 type RecordPositionAccessor interface {
 	LastKnownPosition(pn insolar.PulseNumber) (uint32, error)
@@ -286,6 +290,10 @@ func (r *RecordDB) get(id insolar.ID) (record.Material, error) {
 type RecordPositionDB struct {
 	lock sync.RWMutex
 	db   store.DB
+}
+
+func NewRecordPositionDB(db store.DB) *RecordPositionDB {
+	return &RecordPositionDB{db: db}
 }
 
 type recordPositionKey struct {

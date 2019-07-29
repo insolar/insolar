@@ -305,10 +305,10 @@ func TestRecordStorage_ForPulse(t *testing.T) {
 	}
 }
 
-func TestRecordStorage_PositionIndex(t *testing.T) {
+func TestRecordPositionDB(t *testing.T) {
 	t.Parallel()
 
-	t.Run("getNextPosition returns 1, when no info", func(t *testing.T) {
+	t.Run("Las returns error, when no info", func(t *testing.T) {
 		tmpdir, err := ioutil.TempDir("", "bdb-test-")
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
@@ -317,16 +317,41 @@ func TestRecordStorage_PositionIndex(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordDB(db)
+		recordStorage := NewRecordPositionDB(db)
 		pn := gen.PulseNumber()
 
-		next, err := recordStorage.getNextPosition(pn)
+		position, err := recordStorage.LastKnownPosition(pn)
+
+		require.Error(t, err)
+		require.Equal(t, err.Error(), store.ErrNotFound.Error())
+		require.Equal(t, uint32(0), position)
+	})
+
+	t.Run("LastKnownPosition works fine", func(t *testing.T) {
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
+
+		recordStorage := NewRecordPositionDB(db)
+		pn := gen.PulseNumber()
+
+		id := gen.ID()
+		id.SetPulse(pn)
+
+		err = recordStorage.IncrementPosition(id)
+		require.NoError(t, err)
+
+		next, err := recordStorage.LastKnownPosition(pn)
 
 		require.NoError(t, err)
 		require.Equal(t, uint32(1), next)
 	})
 
-	t.Run("getNextPosition works fine", func(t *testing.T) {
+	t.Run("IncrementPosition works fine", func(t *testing.T) {
 		tmpdir, err := ioutil.TempDir("", "bdb-test-")
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
@@ -335,53 +360,7 @@ func TestRecordStorage_PositionIndex(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordDB(db)
-		pn := gen.PulseNumber()
-
-		id := gen.ID()
-		id.SetPulse(pn)
-		rec := getMaterialRecord()
-
-		err = recordStorage.Set(inslogger.TestContext(t), id, rec)
-		require.NoError(t, err)
-
-		next, err := recordStorage.getNextPosition(pn)
-
-		require.NoError(t, err)
-		require.Equal(t, uint32(2), next)
-	})
-
-	t.Run("setLastKnownPosition works fine", func(t *testing.T) {
-		tmpdir, err := ioutil.TempDir("", "bdb-test-")
-		defer os.RemoveAll(tmpdir)
-		require.NoError(t, err)
-
-		db, err := store.NewBadgerDB(tmpdir)
-		require.NoError(t, err)
-		defer db.Stop(context.Background())
-
-		recordStorage := NewRecordDB(db)
-
-		pn := gen.PulseNumber()
-		err = recordStorage.setLastKnownPosition(pn, 123)
-		require.NoError(t, err)
-
-		next, err := recordStorage.getNextPosition(pn)
-
-		require.NoError(t, err)
-		require.Equal(t, uint32(124), next)
-	})
-
-	t.Run("incrementPosition works fine", func(t *testing.T) {
-		tmpdir, err := ioutil.TempDir("", "bdb-test-")
-		defer os.RemoveAll(tmpdir)
-		require.NoError(t, err)
-
-		db, err := store.NewBadgerDB(tmpdir)
-		require.NoError(t, err)
-		defer db.Stop(context.Background())
-
-		recordStorage := NewRecordDB(db)
+		recordStorage := NewRecordPositionDB(db)
 		pn := gen.PulseNumber()
 
 		id := gen.ID()
@@ -391,17 +370,81 @@ func TestRecordStorage_PositionIndex(t *testing.T) {
 		tID := gen.ID()
 		tID.SetPulse(pn)
 
-		err = recordStorage.incrementPosition(id)
+		err = recordStorage.IncrementPosition(id)
 		require.NoError(t, err)
-		err = recordStorage.incrementPosition(sID)
+		err = recordStorage.IncrementPosition(sID)
 		require.NoError(t, err)
-		err = recordStorage.incrementPosition(tID)
+		err = recordStorage.IncrementPosition(tID)
 		require.NoError(t, err)
 
-		next, err := recordStorage.getNextPosition(pn)
+		next, err := recordStorage.LastKnownPosition(pn)
 
 		require.NoError(t, err)
-		require.Equal(t, uint32(4), next)
+		require.Equal(t, uint32(3), next)
+	})
+
+	t.Run("AtPosition works fine", func(t *testing.T) {
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
+
+		recordStorage := NewRecordPositionDB(db)
+		pn := gen.PulseNumber()
+
+		id := gen.ID()
+		id.SetPulse(pn)
+		sID := gen.ID()
+		sID.SetPulse(pn)
+		tID := gen.ID()
+		tID.SetPulse(pn)
+
+		err = recordStorage.IncrementPosition(id)
+		require.NoError(t, err)
+		savedID, err := recordStorage.AtPosition(pn, 1)
+		require.NoError(t, err)
+		require.Equal(t, id, savedID)
+
+		err = recordStorage.IncrementPosition(sID)
+		require.NoError(t, err)
+		savedID, err = recordStorage.AtPosition(pn, 2)
+		require.NoError(t, err)
+		require.Equal(t, sID, savedID)
+
+		err = recordStorage.IncrementPosition(tID)
+		require.NoError(t, err)
+		savedID, err = recordStorage.AtPosition(pn, 3)
+		require.NoError(t, err)
+		require.Equal(t, tID, savedID)
+	})
+
+	t.Run("AtPosition returns error, when the passed position is biggest then saved", func(t *testing.T) {
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
+
+		recordStorage := NewRecordPositionDB(db)
+		pn := gen.PulseNumber()
+
+		_, err = recordStorage.AtPosition(pn, 1)
+		require.Error(t, err)
+		require.Equal(t, err, store.ErrNotFound)
+
+		id := gen.ID()
+		id.SetPulse(pn)
+
+		err = recordStorage.IncrementPosition(id)
+		require.NoError(t, err)
+		savedID, err := recordStorage.AtPosition(pn, 1)
+		require.NoError(t, err)
+		require.Equal(t, id, savedID)
 	})
 }
 

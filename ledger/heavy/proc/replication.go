@@ -39,13 +39,14 @@ type Replication struct {
 	cfg     configuration.Ledger
 
 	dep struct {
-		records object.RecordModifier
-		indexes object.IndexModifier
-		pcs     insolar.PlatformCryptographyScheme
-		pulses  pulse.Accessor
-		drops   drop.Modifier
-		jets    jet.Modifier
-		keeper  executor.JetKeeper
+		records          object.RecordModifier
+		recordsPositions object.RecordPositionModifier
+		indexes          object.IndexModifier
+		pcs              insolar.PlatformCryptographyScheme
+		pulses           pulse.Accessor
+		drops            drop.Modifier
+		jets             jet.Modifier
+		keeper           executor.JetKeeper
 	}
 }
 
@@ -59,6 +60,7 @@ func NewReplication(msg payload.Meta, cfg configuration.Ledger) *Replication {
 func (p *Replication) Dep(
 	records object.RecordModifier,
 	indexes object.IndexModifier,
+	recordsPositions object.RecordPositionModifier,
 	pcs insolar.PlatformCryptographyScheme,
 	pulses pulse.Accessor,
 	drops drop.Modifier,
@@ -67,6 +69,7 @@ func (p *Replication) Dep(
 ) {
 	p.dep.records = records
 	p.dep.indexes = indexes
+	p.dep.recordsPositions = recordsPositions
 	p.dep.pcs = pcs
 	p.dep.pulses = pulses
 	p.dep.drops = drops
@@ -84,7 +87,7 @@ func (p *Replication) Proceed(ctx context.Context) error {
 		return fmt.Errorf("unexpected payload %T", pl)
 	}
 
-	storeRecords(ctx, p.dep.records, p.dep.pcs, msg.Pulse, msg.Records)
+	storeRecords(ctx, p.dep.records, p.dep.recordsPositions, p.dep.pcs, msg.Pulse, msg.Records)
 	if err := storeIndexes(ctx, p.dep.indexes, msg.Indexes, msg.Pulse); err != nil {
 		return errors.Wrap(err, "failed to store indexes")
 	}
@@ -92,10 +95,6 @@ func (p *Replication) Proceed(ctx context.Context) error {
 	dr, err := storeDrop(ctx, p.dep.drops, msg.Drop)
 	if err != nil {
 		return errors.Wrap(err, "failed to store drop")
-	}
-
-	if err != nil {
-		return errors.Wrapf(err, "failed to split/update jet=%v pulse=%v", dr.JetID.DebugString(), dr.Pulse)
 	}
 
 	if err := p.dep.keeper.AddDropConfirmation(ctx, dr.Pulse, dr.JetID, dr.Split); err != nil {

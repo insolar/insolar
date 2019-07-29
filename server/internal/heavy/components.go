@@ -235,6 +235,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	)
 	{
 		records := object.NewRecordDB(DB)
+		recordsPositions := object.NewRecordPositionDB(DB)
 		indexes := object.NewIndexDB(DB)
 		drops := drop.NewDB(DB)
 		jets := jet.NewDBStore(DB)
@@ -253,6 +254,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 
 		h := handler.New(cfg.Ledger)
 		h.RecordAccessor = records
+		h.RecordPositions = recordsPositions
 		h.RecordModifier = records
 		h.JetCoordinator = Coordinator
 		h.IndexAccessor = indexes
