@@ -149,8 +149,7 @@ func storeRecords(
 	inslog := inslogger.FromContext(ctx)
 
 	for _, rec := range records {
-		virtRec := *rec.Virtual
-		hash := record.HashVirtual(pcs.ReferenceHasher(), virtRec)
+		hash := record.HashVirtual(pcs.ReferenceHasher(), rec.Virtual)
 		id := insolar.NewID(pn, hash)
 		err := mod.Set(ctx, *id, rec)
 		if err != nil {

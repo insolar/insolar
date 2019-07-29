@@ -91,7 +91,7 @@ func TestGetRequest_Proceed(t *testing.T) {
 		}
 
 		records.ForIDMock.Return(record.Material{
-			Virtual: &req,
+			Virtual: req,
 		}, nil)
 		sender.ReplyFunc = func(_ context.Context, origin payload.Meta, rep *message.Message) {
 			require.Equal(t, receivedMeta, origin)

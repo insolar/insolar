@@ -70,7 +70,7 @@ func (p *PassState) Proceed(ctx context.Context) error {
 	}
 
 	virtual := rec.Virtual
-	concrete := record.Unwrap(virtual)
+	concrete := record.Unwrap(&virtual)
 	state, ok := concrete.(record.State)
 	if !ok {
 		return fmt.Errorf("invalid object record %#v", virtual)

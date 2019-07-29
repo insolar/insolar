@@ -177,7 +177,7 @@ func Test_DuplicatedRequests(t *testing.T) {
 		receivedDuplicate := record.Material{}
 		err = receivedDuplicate.Unmarshal(reqInfo.Request)
 		require.NoError(t, err)
-		require.Equal(t, &initReq, record.Unwrap(receivedDuplicate.Virtual))
+		require.Equal(t, &initReq, record.Unwrap(&receivedDuplicate.Virtual))
 	})
 
 	t.Run("try to register outgoing request twice. no result", func(t *testing.T) {
@@ -229,7 +229,7 @@ func Test_DuplicatedRequests(t *testing.T) {
 		receivedDuplicate := record.Material{}
 		err = receivedDuplicate.Unmarshal(outReqSecondInfo.Request)
 		require.NoError(t, err)
-		require.Equal(t, &outgoingReq, record.Unwrap(receivedDuplicate.Virtual))
+		require.Equal(t, &outgoingReq, record.Unwrap(&receivedDuplicate.Virtual))
 	})
 
 	t.Run("try to register request twice. when there is result", func(t *testing.T) {
@@ -266,13 +266,13 @@ func Test_DuplicatedRequests(t *testing.T) {
 		receivedDuplicateReq := record.Material{}
 		err = receivedDuplicateReq.Unmarshal(secondReqInfo.Request)
 		require.NoError(t, err)
-		require.Equal(t, &initReq, record.Unwrap(receivedDuplicateReq.Virtual))
+		require.Equal(t, &initReq, record.Unwrap(&receivedDuplicateReq.Virtual))
 
 		// Check for the result
 		receivedDuplicateRes := record.Material{}
 		err = receivedDuplicateRes.Unmarshal(secondReqInfo.Result)
 		require.NoError(t, err)
-		resultRecord := record.Unwrap(receivedDuplicateRes.Virtual).(*record.Result)
+		resultRecord := record.Unwrap(&receivedDuplicateRes.Virtual).(*record.Result)
 		require.Equal(t, *insolar.NewReference(reqInfo.RequestID), resultRecord.Request)
 		require.Equal(t, reqInfo.RequestID, resultRecord.Object)
 	})
@@ -336,7 +336,7 @@ func Test_DuplicatedRequests(t *testing.T) {
 		returnedResult := record.Material{}
 		err = returnedResult.Unmarshal(secondReqInfo.Result)
 		require.NoError(t, err)
-		returnedRes := record.Unwrap(returnedResult.Virtual).(*record.Result)
+		returnedRes := record.Unwrap(&returnedResult.Virtual).(*record.Result)
 		require.Equal(t, *insolar.NewReference(reqInfo.RequestID), returnedRes.Request)
 		require.Equal(t, reqInfo.RequestID, returnedRes.Object)
 	})

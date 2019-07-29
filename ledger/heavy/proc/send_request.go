@@ -71,7 +71,7 @@ func (p *SendRequest) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to find a request")
 	}
 
-	concrete := record.Unwrap(rec.Virtual)
+	concrete := record.Unwrap(&rec.Virtual)
 	_, isIncoming := concrete.(*record.IncomingRequest)
 	_, isOutgoing := concrete.(*record.OutgoingRequest)
 	if !isIncoming && !isOutgoing {
@@ -80,7 +80,7 @@ func (p *SendRequest) Proceed(ctx context.Context) error {
 
 	rep, err := payload.NewMessage(&payload.Request{
 		RequestID: msg.RequestID,
-		Request:   *rec.Virtual,
+		Request:   rec.Virtual,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create a Request message")

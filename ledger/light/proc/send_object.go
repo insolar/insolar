@@ -78,7 +78,7 @@ func (p *SendObject) Dep(
 func (p *SendObject) Proceed(ctx context.Context) error {
 	sendState := func(rec record.Material) error {
 		virtual := rec.Virtual
-		concrete := record.Unwrap(virtual)
+		concrete := record.Unwrap(&virtual)
 		state, ok := concrete.(record.State)
 		if !ok {
 			return fmt.Errorf("invalid object record %#v", virtual)

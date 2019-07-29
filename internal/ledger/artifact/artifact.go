@@ -99,7 +99,7 @@ func (m *Scope) GetObject(
 		return nil, err
 	}
 
-	concrete := record.Unwrap(rec.Virtual)
+	concrete := record.Unwrap(&rec.Virtual)
 	state, ok := concrete.(record.State)
 	if !ok {
 		return nil, errors.New("invalid object record")
@@ -257,7 +257,7 @@ func (m *Scope) setRecord(ctx context.Context, rec record.Virtual) (*insolar.ID,
 	id := insolar.NewID(m.PulseNumber, hash)
 
 	matRec := record.Material{
-		Virtual: &rec,
+		Virtual: rec,
 		JetID:   insolar.ZeroJetID,
 	}
 	return id, m.RecordModifier.Set(ctx, *id, matRec)
