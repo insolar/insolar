@@ -410,7 +410,7 @@ func (g *Base) createCandidateProfile() {
 	staticProfile := adapters.NewStaticProfile(origin, g.CertificateManager.GetCertificate(), g.KeyProcessor)
 
 	staticProfile.GetExtension().GetIssuerSignature().AsBytes()
-	//digest, sign := origin.(node.MutableNode).GetEvidence()
+	//digest, sign := origin.(node.MutableNode).GetSignature()
 
 	pubKey, err := g.KeyProcessor.ExportPublicKeyBinary(origin.PublicKey())
 	if err != nil {

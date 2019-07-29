@@ -57,7 +57,6 @@ import (
 	"sync/atomic"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 )
 
@@ -66,14 +65,19 @@ type MutableNode interface {
 
 	SetShortID(shortID insolar.ShortNodeID)
 	SetState(state insolar.NodeState)
+	GetSignature() ([]byte, insolar.Signature)
+	SetSignature(digest []byte, signature insolar.Signature)
 	ChangeState()
 	SetLeavingETA(number insolar.PulseNumber)
 	SetVersion(version string)
 	GetPower() member.Power
 	SetPower(power member.Power)
+}
 
-	GetEvidence() cryptkit.SignedDigestHolder
-	SetEvidence(evidence cryptkit.SignedDigest)
+type Evidence struct {
+	Data      []byte
+	Digest    []byte
+	Signature []byte
 }
 
 // GenerateUintShortID generate short ID for node without checking collisions
@@ -91,7 +95,8 @@ type node struct {
 	NodeAddress string
 
 	mutex          sync.RWMutex
-	evidence       cryptkit.SignedDigest
+	digest         []byte
+	signature      insolar.Signature
 	NodeVersion    string
 	NodeLeavingETA uint32
 	state          uint32
@@ -186,18 +191,19 @@ func (n *node) Version() string {
 	return n.NodeVersion
 }
 
-func (n *node) GetEvidence() cryptkit.SignedDigestHolder {
+func (n *node) GetSignature() ([]byte, insolar.Signature) {
 	n.mutex.RLock()
 	defer n.mutex.RUnlock()
 
-	return n.evidence.AsSignedDigestHolder()
+	return n.digest, n.signature
 }
 
-func (n *node) SetEvidence(evidence cryptkit.SignedDigest) {
+func (n *node) SetSignature(digest []byte, signature insolar.Signature) {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 
-	n.evidence = evidence
+	n.signature = signature
+	n.digest = digest
 }
 
 func (n *node) SetShortID(id insolar.ShortNodeID) {

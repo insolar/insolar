@@ -53,13 +53,11 @@ package servicenetwork
 import (
 	"bytes"
 	"context"
-	"crypto/ecdsa"
 	"crypto/rand"
 
 	"github.com/insolar/insolar/cryptography"
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/serialization"
 	"github.com/insolar/insolar/network/node"
@@ -193,22 +191,18 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	origin := n.NodeKeeper.GetOrigin()
 	// TODO: hack
 	ks := n.CryptographyService.(*cryptography.NodeCryptographyService).KeyStore
-	key, err := ks.GetPrivateKey("")
-	if err != nil {
-		return errors.Wrap(err, "failed to get private key")
-	}
-	evidence, err := GetAnnounceEvidence(
+	digest, sign, err := getAnnounceSignature(
 		origin,
 		network.OriginIsDiscovery(cert),
 		n.KeyProcessor,
-		key.(*ecdsa.PrivateKey),
+		ks,
 		n.CryptographyScheme,
 	)
 	if err != nil {
-		return errors.Wrap(err, "failed to generate announce evidence")
+		return errors.Wrap(err, "failed to getAnnounceSignature")
 	}
 
-	origin.(node.MutableNode).SetEvidence(*evidence)
+	origin.(node.MutableNode).SetSignature(digest, *sign)
 
 	err = n.cm.Init(ctx)
 	if err != nil {
@@ -248,12 +242,12 @@ func (n *ServiceNetwork) initConsensus() {
 func (n *ServiceNetwork) Start(ctx context.Context) error {
 	err := n.datagramTransport.Start(ctx)
 	if err != nil {
-		return errors.Wrap(err, "Failed to start datagram transport")
+		return errors.Wrap(err, "failed to start datagram transport")
 	}
 
 	err = n.cm.Start(ctx)
 	if err != nil {
-		return errors.Wrap(err, "Failed to start component manager")
+		return errors.Wrap(err, "failed to start component manager")
 	}
 
 	//if !n.cfg.Service.ConsensusEnabled {
@@ -304,7 +298,7 @@ func (n *ServiceNetwork) GracefulStop(ctx context.Context) error {
 func (n *ServiceNetwork) Stop(ctx context.Context) error {
 	err := n.datagramTransport.Stop(ctx)
 	if err != nil {
-		return errors.Wrap(err, "Failed to stop datagram transport")
+		return errors.Wrap(err, "failed to stop datagram transport")
 	}
 
 	return n.cm.Stop(ctx)
@@ -357,13 +351,13 @@ func (n *ServiceNetwork) State() []byte {
 	return nshBytes
 }
 
-func GetAnnounceEvidence(
+func getAnnounceSignature(
 	node insolar.NetworkNode,
 	isDiscovery bool,
 	kp insolar.KeyProcessor,
-	key *ecdsa.PrivateKey,
+	keystore insolar.KeyStore,
 	scheme insolar.PlatformCryptographyScheme,
-) (*cryptkit.SignedDigest, error) {
+) ([]byte, *insolar.Signature, error) {
 
 	brief := serialization.NodeBriefIntro{}
 	brief.ShortID = node.ShortID()
@@ -375,13 +369,13 @@ func GetAnnounceEvidence(
 
 	addr, err := endpoints.NewIPAddress(node.Address())
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	copy(brief.Endpoint[:], addr[:])
 
 	pk, err := kp.ExportPublicKeyBinary(node.PublicKey())
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	copy(brief.NodePK[:], pk)
@@ -389,30 +383,24 @@ func GetAnnounceEvidence(
 	buf := &bytes.Buffer{}
 	err = brief.SerializeTo(nil, buf)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	data := buf.Bytes()
 	data = data[:len(data)-64]
 
+	key, err := keystore.GetPrivateKey("")
+	if err != nil {
+		panic(err)
+	}
+
 	digest := scheme.IntegrityHasher().Hash(data)
 	sign, err := scheme.DigestSigner(key).Sign(digest)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
-	sd := cryptkit.NewSignedDigest(
-		cryptkit.NewDigest(
-			longbits.NewBits512FromBytes(digest),
-			adapters.SHA3512Digest,
-		),
-		cryptkit.NewSignature(
-			longbits.NewBits512FromBytes(sign.Bytes()),
-			adapters.SHA3512Digest.SignedBy(adapters.SECP256r1Sign),
-		),
-	)
-
-	return &sd, nil
+	return digest, sign, nil
 }
 
 // RegisterConsensusFinishedNotifier for integrtest TODO: remove

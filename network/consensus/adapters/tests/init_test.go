@@ -51,6 +51,7 @@
 package tests
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/ecdsa"
@@ -67,10 +68,12 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/adapters"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/serialization"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/nodenetwork"
-	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -281,6 +284,53 @@ type nodeMeta struct {
 	publicKey  crypto.PublicKey
 }
 
+func getAnnounceSignature(
+	node insolar.NetworkNode,
+	isDiscovery bool,
+	kp insolar.KeyProcessor,
+	key *ecdsa.PrivateKey,
+	scheme insolar.PlatformCryptographyScheme,
+) ([]byte, *insolar.Signature, error) {
+
+	brief := serialization.NodeBriefIntro{}
+	brief.ShortID = node.ShortID()
+	brief.SetPrimaryRole(adapters.StaticRoleToPrimaryRole(node.Role()))
+	if isDiscovery {
+		brief.SpecialRoles = member.SpecialRoleDiscovery
+	}
+	brief.StartPower = 10
+
+	addr, err := endpoints.NewIPAddress(node.Address())
+	if err != nil {
+		return nil, nil, err
+	}
+	copy(brief.Endpoint[:], addr[:])
+
+	pk, err := kp.ExportPublicKeyBinary(node.PublicKey())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	copy(brief.NodePK[:], pk)
+
+	buf := &bytes.Buffer{}
+	err = brief.SerializeTo(nil, buf)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	data := buf.Bytes()
+	data = data[:len(data)-64]
+
+	digest := scheme.IntegrityHasher().Hash(data)
+	sign, err := scheme.DigestSigner(key).Sign(digest)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return digest, sign, nil
+}
+
 func nodesFromInfo(nodeInfos []*nodeMeta) ([]insolar.NetworkNode, []insolar.NetworkNode, error) {
 	nodes := make([]insolar.NetworkNode, len(nodeInfos))
 	discoveryNodes := make([]insolar.NetworkNode, 0)
@@ -297,7 +347,7 @@ func nodesFromInfo(nodeInfos []*nodeMeta) ([]insolar.NetworkNode, []insolar.Netw
 			discoveryNodes = append(discoveryNodes, nn)
 		}
 
-		evidence, err := servicenetwork.GetAnnounceEvidence(
+		d, s, err := getAnnounceSignature(
 			nn,
 			isDiscovery,
 			keyProcessor,
@@ -307,7 +357,7 @@ func nodesFromInfo(nodeInfos []*nodeMeta) ([]insolar.NetworkNode, []insolar.Netw
 		if err != nil {
 			return nil, nil, err
 		}
-		nn.(node.MutableNode).SetEvidence(*evidence)
+		nn.(node.MutableNode).SetSignature(d, *s)
 	}
 
 	return nodes, discoveryNodes, nil

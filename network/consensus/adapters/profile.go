@@ -53,12 +53,12 @@ package adapters
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"time"
-
 	"github.com/insolar/insolar/network"
+	"time"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
@@ -74,12 +74,15 @@ type StaticProfileExtension struct {
 }
 
 func NewStaticProfileExtension(networkNode insolar.NetworkNode) *StaticProfileExtension {
-	evidence := networkNode.(node.MutableNode).GetEvidence()
+	_, signature := networkNode.(node.MutableNode).GetSignature()
 
 	return newStaticProfileExtension(
 		networkNode.ShortID(),
 		networkNode.ID(),
-		evidence.GetSignatureHolder(),
+		cryptkit.NewSignature(
+			longbits.NewBits512FromBytes(signature.Bytes()),
+			SHA3512Digest.SignedBy(SECP256r1Sign),
+		).AsSignatureHolder(),
 	)
 }
 
@@ -144,7 +147,7 @@ func NewStaticProfile(networkNode insolar.NetworkNode, certificate insolar.Certi
 
 	publicKey := networkNode.PublicKey().(*ecdsa.PublicKey)
 	mutableNode := networkNode.(node.MutableNode)
-	evidence := mutableNode.GetEvidence()
+	digest, signature := mutableNode.GetSignature()
 
 	return newStaticProfile(
 		networkNode.ShortID(),
@@ -154,7 +157,10 @@ func NewStaticProfile(networkNode insolar.NetworkNode, certificate insolar.Certi
 		NewOutbound(networkNode.Address()),
 		NewECDSAPublicKeyStore(publicKey),
 		NewECDSASignatureKeyHolder(publicKey, keyProcessor),
-		evidence,
+		cryptkit.NewSignedDigest(
+			cryptkit.NewDigest(longbits.NewBits512FromBytes(digest), SHA3512Digest),
+			cryptkit.NewSignature(longbits.NewBits512FromBytes(signature.Bytes()), SHA3512Digest.SignedBy(SECP256r1Sign)),
+		).AsSignedDigestHolder(),
 	)
 }
 
@@ -297,7 +303,11 @@ func NewNetworkNode(profile profiles.ActiveNode) insolar.NetworkNode {
 	mutableNode.SetState(insolar.NodeReady)
 	mutableNode.SetPower(profile.GetDeclaredPower())
 
-	mutableNode.SetEvidence(nip.GetBriefIntroSignedDigest().CopyOfSignedDigest())
+	sd := nip.GetBriefIntroSignedDigest()
+	mutableNode.SetSignature(
+		sd.GetDigestHolder().AsBytes(),
+		insolar.SignatureFromBytes(sd.GetSignatureHolder().AsBytes()),
+	)
 
 	return networkNode
 }
