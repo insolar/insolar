@@ -98,9 +98,21 @@ func NewPulseData(p insolar.Pulse) pulse.Data {
 	return *data
 }
 
+func NewPulseDigest(data pulse.Data) cryptkit.Digest {
+	entropySize := data.PulseEntropy.FixedByteSize()
+
+	bits := longbits.Bits512{}
+	copy(bits[:entropySize], data.PulseEntropy[:])
+	copy(bits[entropySize:], data.PulseEntropy[:])
+
+	// It's not digest actually :)
+	return cryptkit.NewDigest(&bits, SHA3512Digest)
+}
+
 type PulsePacketReader struct {
 	longbits.FixedReader
-	data pulse.Data
+	digest cryptkit.DigestHolder
+	data   pulse.Data
 }
 
 func (p *PulsePacketReader) GetPulseNumber() pulse.Number {
@@ -108,7 +120,7 @@ func (p *PulsePacketReader) GetPulseNumber() pulse.Number {
 }
 
 func (p *PulsePacketReader) GetPulseDataDigest() cryptkit.DigestHolder {
-	return nil
+	return p.digest
 }
 
 func (p *PulsePacketReader) OriginalPulsarPacket() {}
@@ -122,9 +134,11 @@ func (p *PulsePacketReader) GetPulseDataEvidence() proofs.OriginalPulsarPacket {
 }
 
 func NewPulsePacketReader(pulse insolar.Pulse, data []byte) *PulsePacketReader {
+	pulseData := NewPulseData(pulse)
 	return &PulsePacketReader{
 		FixedReader: longbits.NewFixedReader(data),
-		data:        NewPulseData(pulse),
+		digest:      NewPulseDigest(pulseData).AsDigestHolder(),
+		data:        pulseData,
 	}
 }
 

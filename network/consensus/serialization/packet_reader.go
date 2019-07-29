@@ -84,7 +84,7 @@ func (p *originalPulsarPacket) GetPulseData() pulse.Data {
 }
 
 func (p *originalPulsarPacket) GetPulseDataDigest() cryptkit.DigestHolder {
-	return nil // TODO implement
+	return adapters.NewPulseDigest(p.pd).AsDigestHolder()
 }
 
 func (p *originalPulsarPacket) OriginalPulsarPacket() {}
