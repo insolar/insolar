@@ -369,7 +369,16 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef insolar.Reference, construc
 		return insolar.Reference{}, errors.Wrap(err, "[ SaveAsChild ] on calling main API")
 	}
 
-	return *res.Reference, nil
+	// return logical error to the calling contract, don't register system error
+	if res.ConstructorError != "" {
+		return insolar.Reference{}, errors.New("[Constructor failed] " + res.ConstructorError)
+	}
+
+	if res.Reference == nil {
+		return insolar.Reference{}, errors.New("[ SaveAsChild ] system error - res.Reference is nil AALEKSEEV")
+	}
+
+	return *res.Reference, nil // AALEKSEEV nil pointer dereference here if ctorRef != nil (fixed now?)
 }
 
 // DeactivateObject ...

@@ -117,11 +117,23 @@ func (h *ProxyHelper) SaveAsChild(parentRef, classRef insolar.Reference, constru
 		h.SetSystemError(err)
 		return insolar.Reference{}, err
 	}
-	if res.Reference == nil {
-		// Constructor returned an error
-		// Return a _logical_ error to the calling contract, don't register a system error.
-		return insolar.Reference{}, errors.New("[Logical error, constructor failed] " + res.ConstructorError)
+
+	// return logical error to the calling contract, don't register a system error
+	if res.ConstructorError != "" {
+		return insolar.Reference{}, errors.New("[Constructor failed] " + res.ConstructorError)
 	}
+
+	if res.Reference == nil {
+		return insolar.Reference{}, errors.New("[ SaveAsChild ] system error - res.Reference is nil AALEKSEEV")
+	}
+
+	// AALEKSEEV remove this?
+	//if res.Reference == nil {
+	//	// Constructor returned an error
+	//	// Return a _logical_ error to the calling contract, don't register a system error.
+	//	return insolar.Reference{}, errors.New("[Logical error, constructor failed] " + res.ConstructorError)
+	//}
+
 	return *res.Reference, nil
 }
 

@@ -676,7 +676,8 @@ func (r *Two) Hello() (*string, error) {
 	require.Nil(t, resp.ExtractedReply)
 }
 
-// If a contract constructor returns `nil, nil` it's considered a logical error
+// If a contract constructor returns `nil, nil` it's considered a logical error,
+// which is returned to the calling contract and/or API.
 func TestConstructorReturnNil(t *testing.T) {
 	var contractOneCode = `
 package main
@@ -724,11 +725,13 @@ func New() (*Two, error) {
 	obj := callConstructor(t, uploadContractOnce(t, "constructor_return_nil_one", contractOneCode), "New")
 
 	resp := callMethodNoChecks(t, obj, "Hello")
-	require.NotEmpty(t, resp.Error)
-	fmt.Printf("AALEKSEEV resp.Error = %v\n\n", resp.Error)
+	require.Empty(t, resp.Error)
+	require.NotNil(t, resp.Result.Error)
+	require.Contains(t, resp.Result.Error.Error(), "( Generated Method ) Constructor returns nil")
 }
 
-// If a contract constructor fails it's considered a logical error
+// If a contract constructor fails it's considered a logical error,
+// which is returned to the calling contract and/or API.
 func TestConstructorReturnError(t *testing.T) {
 	var contractOneCode = `
 package main
@@ -769,15 +772,16 @@ type Two struct {
 	foundation.BaseContract
 }
 func New() (*Two, error) {
-	return nil, errors.New("constructor failed")
+	return nil, errors.New("Epic fail in two.New()")
 }
 `
 	uploadContractOnce(t, "constructor_return_error_two", contractTwoCode)
 	obj := callConstructor(t, uploadContractOnce(t, "constructor_return_error_one", contractOneCode), "New")
 
 	resp := callMethodNoChecks(t, obj, "Hello")
-	require.NotEmpty(t, resp.Error)
-	fmt.Printf("AALEKSEEV resp.Error = %v\n\n", resp.Error)
+	require.Empty(t, resp.Error)
+	require.NotNil(t, resp.Result.Error)
+	require.Contains(t, resp.Result.Error.Error(), "Epic fail in two.New()")
 }
 
 func TestRecursiveCallError(t *testing.T) {
