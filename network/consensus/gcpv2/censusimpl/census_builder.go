@@ -160,7 +160,7 @@ func (c *LocalCensusBuilder) build(markBroken bool, csh proofs.CloudStateHash) (
 	c.state = census.CompleteCensus
 	log := inslogger.FromContext(c.ctx)
 	pop, evicts := c.population.CopyAndSeparate(markBroken, func(e census.RecoverableErrorTypes, msg string, args ...interface{}) {
-		log.Debugf(msg, args)
+		log.Debugf(msg, args...)
 	})
 	return pop, evicts
 }

@@ -48,16 +48,31 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package core
+package transport
 
-// TODO pulse projections to fight possible fakes?
-type PulseProjection struct {
-	// mutex sync.Mutex
-	// id    int
-	//
-	// // countFromPulsars	high32
-	// // countFromNodes	low32
-	// // counters       uint64 // atomic
-	// pulseData      common.PulseData
-	// originalPacket common2.OriginalPulsarPacket
+import (
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+)
+
+type CryptographyAssistant interface {
+	cryptkit.SignatureVerifierFactory
+	cryptkit.KeyStoreFactory
+	GetDigestFactory() ConsensusDigestFactory
+	CreateNodeSigner(sks cryptkit.SecretKeyStore) cryptkit.DigestSigner
+}
+
+type ConsensusDigestFactory interface {
+	cryptkit.DigestFactory
+	CreateAnnouncementDigester() cryptkit.SequenceDigester
+	CreateGlobulaStateDigester() StateDigester
+}
+
+type StateDigester interface {
+	AddNext(digest longbits.FoldableReader, fullRank member.FullRank)
+	GetDigestMethod() cryptkit.DigestMethod
+	ForkSequence() StateDigester
+
+	FinishSequence() cryptkit.Digest
 }

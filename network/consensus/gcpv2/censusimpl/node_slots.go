@@ -69,14 +69,6 @@ type NodeProfileSlot struct {
 	power    member.Power
 }
 
-func (c *NodeProfileSlot) GetNodeID() insolar.ShortNodeID {
-	return c.GetStaticNodeID()
-}
-
-func (c *NodeProfileSlot) GetStatic() profiles.StaticProfile {
-	return c.StaticProfile
-}
-
 func NewNodeProfile(index member.Index, p profiles.StaticProfile, verifier cryptkit.SignatureVerifier, pw member.Power) NodeProfileSlot {
 
 	return NodeProfileSlot{index: index.Ensure(), StaticProfile: p, verifier: verifier, power: pw}
@@ -112,8 +104,36 @@ func (c *NodeProfileSlot) IsJoiner() bool {
 	return c.index.IsJoiner()
 }
 
+func (c *NodeProfileSlot) IsPowered() bool {
+	return !c.index.IsJoiner() && !c.mode.IsPowerless() && c.power > 0
+}
+
+func (c *NodeProfileSlot) IsVoter() bool {
+	return !c.index.IsJoiner() && c.mode.CanVote()
+}
+
+func (c *NodeProfileSlot) IsStateful() bool {
+	return !c.index.IsJoiner() && c.mode.CanHaveState()
+}
+
 func (c *NodeProfileSlot) GetSignatureVerifier() cryptkit.SignatureVerifier {
 	return c.verifier
+}
+
+func (c *NodeProfileSlot) CanIntroduceJoiner() bool {
+	return c.mode.CanIntroduceJoiner(c.index.IsJoiner())
+}
+
+func (c *NodeProfileSlot) GetNodeID() insolar.ShortNodeID {
+	return c.GetStaticNodeID()
+}
+
+func (c *NodeProfileSlot) GetStatic() profiles.StaticProfile {
+	return c.StaticProfile
+}
+
+func (c *NodeProfileSlot) HasFullProfile() bool {
+	return c.StaticProfile.GetExtension() != nil
 }
 
 func (c NodeProfileSlot) String() string {

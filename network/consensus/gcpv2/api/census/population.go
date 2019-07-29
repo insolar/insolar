@@ -124,22 +124,22 @@ const (
 func (v RecoverableErrorTypes) String() string {
 	b := strings.Builder{}
 	b.WriteRune('[')
-	appendByBit(b, &v, "External")
-	appendByBit(b, &v, "EmptySlot")
-	appendByBit(b, &v, "IllegalRole")
-	appendByBit(b, &v, "IllegalMode")
-	appendByBit(b, &v, "IllegalIndex")
-	appendByBit(b, &v, "DuplicateIndex")
-	appendByBit(b, &v, "BriefProfile")
-	appendByBit(b, &v, "DuplicateID")
-	appendByBit(b, &v, "IllegalSorting")
-	appendByBit(b, &v, "MissingSelf")
+	appendByBit(&b, &v, "External")
+	appendByBit(&b, &v, "EmptySlot")
+	appendByBit(&b, &v, "IllegalRole")
+	appendByBit(&b, &v, "IllegalMode")
+	appendByBit(&b, &v, "IllegalIndex")
+	appendByBit(&b, &v, "DuplicateIndex")
+	appendByBit(&b, &v, "BriefProfile")
+	appendByBit(&b, &v, "DuplicateID")
+	appendByBit(&b, &v, "IllegalSorting")
+	appendByBit(&b, &v, "MissingSelf")
 	b.WriteRune(']')
 
 	return b.String()
 }
 
-func appendByBit(b strings.Builder, v *RecoverableErrorTypes, s string) {
+func appendByBit(b *strings.Builder, v *RecoverableErrorTypes, s string) {
 	if *v&1 != 0 {
 		b.WriteString(s)
 		b.WriteByte(' ')

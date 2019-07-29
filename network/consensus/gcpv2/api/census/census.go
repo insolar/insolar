@@ -66,6 +66,8 @@ type Pulse interface {
 	GetExpectedPulseNumber() pulse.Number
 	GetGlobulaStateHash() proofs.GlobulaStateHash
 	GetCloudStateHash() proofs.CloudStateHash
+	// returns true, when PulseData belongs to this census, PulseData can be empty for PrimingCensus
+	GetNearestPulseData() (bool, pulse.Data)
 }
 
 type Archived interface {

@@ -52,23 +52,21 @@ package core
 
 import (
 	"context"
-	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
-
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
@@ -84,25 +82,28 @@ type coreRealm struct {
 	/* Provided externally at construction. Don't need mutex */
 	hLocker
 
-	roundContext  context.Context
-	strategy      RoundStrategy
-	config        api.LocalNodeConfiguration
-	initialCensus census.Operational
+	roundContext    context.Context
+	strategy        RoundStrategy
+	config          api.LocalNodeConfiguration
+	initialCensus   census.Operational
+	controlFeeder   api.ConsensusControlFeeder
+	candidateFeeder api.CandidateControlFeeder
+	ephemeralMode   api.EphemeralMode
 
-	pollingWorker PollingWorker
+	pollingWorker coreapi.PollingWorker
 
 	/* Derived from the ones provided externally - set at init() or start(). Don't need mutex */
 	signer            cryptkit.DigestSigner
 	digest            transport.ConsensusDigestFactory
-	verifierFactory   transport.CryptographyFactory
+	assistant         transport.CryptographyAssistant
 	stateMachine      api.RoundStateCallback
 	roundStartedAt    time.Time
-	postponedPacketFn packetrecorder.PostponedPacketFunc
+	postponedPacketFn packetdispatch.PostponedPacketFunc
 
 	expectedPopulationSize member.Index
 	nbhSizes               transport.NeighbourhoodSizes
 
-	self *NodeAppearance /* Special case - this field is set twice, by start() of PrepRealm and FullRealm */
+	self *population.NodeAppearance /* Special case - this field is set twice, by start() of PrepRealm and FullRealm */
 
 	requestedPowerFlag bool
 
@@ -115,7 +116,8 @@ type coreRealm struct {
 }
 
 func (r *coreRealm) initBefore(hLocker hLocker, strategy RoundStrategy, transport transport.Factory,
-	config api.LocalNodeConfiguration, initialCensus census.Operational) {
+	config api.LocalNodeConfiguration, initialCensus census.Operational, controlFeeder api.ConsensusControlFeeder,
+	candidateFeeder api.CandidateControlFeeder) {
 
 	r.hLocker = hLocker
 
@@ -123,23 +125,27 @@ func (r *coreRealm) initBefore(hLocker hLocker, strategy RoundStrategy, transpor
 	r.config = config
 	r.initialCensus = initialCensus
 
-	r.verifierFactory = transport.GetCryptographyFactory()
-	r.digest = r.verifierFactory.GetDigestFactory()
+	r.assistant = transport.GetCryptographyFactory()
+	r.digest = r.assistant.GetDigestFactory()
 
 	sks := config.GetSecretKeyStore()
-	r.signer = r.verifierFactory.GetNodeSigner(sks)
+	r.signer = r.assistant.CreateNodeSigner(sks)
+
+	r.controlFeeder = controlFeeder
+	r.candidateFeeder = candidateFeeder
+
+	r.ephemeralMode = controlFeeder.GetRequiredEphemeralMode(r.initialCensus)
 }
 
-func (r *coreRealm) initBeforePopulation(powerRequest power.Request, nbhSizes transport.NeighbourhoodSizes) {
+func (r *coreRealm) initBeforePopulation(nbhSizes transport.NeighbourhoodSizes) {
 
 	r.nbhSizes = nbhSizes
-	population := r.initialCensus.GetOnlinePopulation()
+	pop := r.initialCensus.GetOnlinePopulation()
 
 	/*
 		Here we initialize self like for PrepRealm. This is not perfect, but it enables access to Self earlier.
 	*/
-	nodeContext := &nodeContext{}
-	profile := population.GetLocalProfile()
+	profile := pop.GetLocalProfile()
 
 	if profile.GetOpMode().IsEvicted() {
 		/*
@@ -147,25 +153,30 @@ func (r *coreRealm) initBeforePopulation(powerRequest power.Request, nbhSizes tr
 		*/
 		panic("illegal state")
 	}
-
-	r.self = NewNodeAppearanceAsSelf(profile, nodeContext)
-
-	r.requestedPowerFlag = !powerRequest.IsEmpty()
-
-	if profile.IsJoiner() {
-		r.self.requestedPower = profile.GetStatic().GetStartPower()
-	} else {
-		powerRequest.Update(&r.self.requestedPower, profile.GetStatic().GetExtension().GetPowerLevels())
+	if r.ephemeralMode.IsActive() && !profile.IsVoter() {
+		// only voters can be active
+		r.ephemeralMode = api.EphemeralPassive
 	}
 
-	nodeContext.initPrep(profile.GetNodeID(), r.verifierFactory,
-		func(report misbehavior.Report) interface{} {
-			inslogger.FromContext(r.roundContext).Warnf("Got Report: %+v", report)
-			r.initialCensus.GetMisbehaviorRegistry().AddReport(report)
-			return nil
-		})
+	pn := r.initialCensus.GetExpectedPulseNumber()
 
-	r.expectedPopulationSize = member.AsIndex(population.GetIndexedCapacity())
+	nodeContext := population.NewHook(profile,
+		population.NewPanicDispatcher("updates of stub-self are not allowed"),
+		population.NewSharedNodeContextByPulseNumber(r.assistant, pn, 0, r.ephemeralMode,
+			func(report misbehavior.Report) interface{} {
+				inslogger.FromContext(r.roundContext).Warnf("Got Report: %+v", report)
+				r.initialCensus.GetMisbehaviorRegistry().AddReport(report)
+				return nil
+			},
+		))
+
+	powerRequest := r.controlFeeder.GetRequiredPowerLevel()
+	r.requestedPowerFlag = !powerRequest.IsEmpty()
+	selfNode := population.NewNodeAppearanceAsSelf(profile, powerRequest, &nodeContext)
+
+	r.self = &selfNode
+
+	r.expectedPopulationSize = member.AsIndex(pop.GetIndexedCapacity())
 }
 
 func (r *coreRealm) GetStrategy() RoundStrategy {
@@ -173,7 +184,7 @@ func (r *coreRealm) GetStrategy() RoundStrategy {
 }
 
 func (r *coreRealm) GetVerifierFactory() cryptkit.SignatureVerifierFactory {
-	return r.verifierFactory
+	return r.assistant
 }
 
 func (r *coreRealm) GetDigestFactory() transport.ConsensusDigestFactory {
@@ -185,7 +196,7 @@ func (r *coreRealm) GetSigner() cryptkit.DigestSigner {
 }
 
 func (r *coreRealm) GetSignatureVerifier(pks cryptkit.PublicKeyStore) cryptkit.SignatureVerifier {
-	return r.verifierFactory.GetSignatureVerifierWithPKS(pks)
+	return r.assistant.CreateSignatureVerifierWithPKS(pks)
 }
 
 func (r *coreRealm) GetStartedAt() time.Time {
@@ -212,93 +223,26 @@ func (r *coreRealm) IsJoiner() bool {
 }
 
 func (r *coreRealm) GetSelfNodeID() insolar.ShortNodeID {
-	return r.self.profile.GetNodeID()
+	return r.self.GetNodeID()
 }
 
-func (r *coreRealm) GetSelf() *NodeAppearance {
+func (r *coreRealm) GetSelf() *population.NodeAppearance {
 	return r.self
 }
 
-func (r *coreRealm) VerifyPacketAuthenticity(packetSignature cryptkit.SignedDigest, sourceID insolar.ShortNodeID, from endpoints.Inbound, strictFrom bool) error {
-	var nr profiles.Host
+func (r *coreRealm) VerifyPacketAuthenticity(packetSignature cryptkit.SignedDigest, sourceID insolar.ShortNodeID, from endpoints.Inbound, strictFrom bool) (bool, error) {
 
-	np := r.initialCensus.GetOnlinePopulation().FindProfile(sourceID)
-	if np != nil {
-		nr = np.GetStatic()
-	}
-
+	nr := coreapi.FindHostProfile(sourceID, from, r.initialCensus)
 	if nr == nil {
-		nr = r.initialCensus.GetOfflinePopulation().FindRegisteredProfile(from)
-		if nr == nil {
-			nr = r.initialCensus.GetMandateRegistry().FindRegisteredProfile(from)
-			if nr == nil {
-				return fmt.Errorf("unable to identify sender: %v", from)
-			}
-		}
+		return false, nil
 	}
-	sf := r.verifierFactory.GetSignatureVerifierWithPKS(nr.GetPublicKeyStore())
-	return VerifyPacketAuthenticityBy(packetSignature, nr, sf, from, strictFrom)
+
+	sf := r.assistant.CreateSignatureVerifierWithPKS(nr.GetPublicKeyStore())
+	err := coreapi.VerifyPacketAuthenticityBy(packetSignature, nr, sf, from, strictFrom)
+	return err == nil, err
 }
 
-func VerifyPacketAuthenticityBy(packetSignature cryptkit.SignedDigest, nr profiles.Host, sf cryptkit.SignatureVerifier,
-	from endpoints.Inbound, strictFrom bool) error {
-
-	if strictFrom && !nr.IsAcceptableHost(from) {
-		return fmt.Errorf("host is not allowed by node registration: node=%v, host=%v", nr, from)
-	}
-
-	if !packetSignature.IsVerifiableBy(sf) {
-		return fmt.Errorf("unable to verify packet signature from sender: %v", from)
-	}
-	if !packetSignature.VerifyWith(sf) {
-		return fmt.Errorf("packet signature doesn't match for sender: %v", from)
-	}
-	return nil
-}
-
-func VerifyPacketRoute(ctx context.Context, packet transport.PacketParser, selfID insolar.ShortNodeID) (bool, error) {
-
-	sid := packet.GetSourceID()
-	if sid == selfID {
-		return false, fmt.Errorf("loopback, SourceID(%v) == thisNodeID(%v)", sid, selfID)
-	}
-
-	rid := packet.GetReceiverID()
-	if rid != selfID {
-		return false, fmt.Errorf("receiverID(%v) != thisNodeID(%v)", rid, selfID)
-	}
-
-	tid := packet.GetTargetID()
-	if tid != selfID {
-		// Relaying
-		if packet.IsRelayForbidden() {
-			return false, fmt.Errorf("sender doesn't allow relaying for targetID(%v)", tid)
-		}
-
-		// TODO relay support
-		err := fmt.Errorf("unsupported: relay is required for targetID(%v)", tid)
-		inslogger.FromContext(ctx).Errorf(err.Error())
-		// allow sender to be different from source
-		return false, err
-	}
-
-	// sender must be source
-	return packet.IsRelayForbidden(), nil
-}
-
-func LazyPacketParse(packet transport.PacketParser) (transport.PacketParser, error) {
-
-	// this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
-	newPacket, err := packet.ParsePacketBody()
-	if err != nil {
-		return packet, err
-	}
-	if newPacket == nil {
-		return packet, nil
-	}
-	return newPacket, nil
-}
-
+// polling fn must be fast, and it will remain in polling until it returns false
 func (r *coreRealm) AddPoll(fn api.MaintenancePollFunc) {
 	r.pollingWorker.AddPoll(fn)
 }

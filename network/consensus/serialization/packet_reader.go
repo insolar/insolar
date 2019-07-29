@@ -72,6 +72,19 @@ import (
 
 type originalPulsarPacket struct {
 	longbits.FixedReader
+	pd pulse.Data
+}
+
+func (p *originalPulsarPacket) GetPulseNumber() pulse.Number {
+	return p.pd.PulseNumber
+}
+
+func (p *originalPulsarPacket) GetPulseData() pulse.Data {
+	return p.pd
+}
+
+func (p *originalPulsarPacket) GetPulseDataDigest() cryptkit.DigestHolder {
+	return nil // TODO implement
 }
 
 func (p *originalPulsarPacket) OriginalPulsarPacket() {}
@@ -211,6 +224,7 @@ func (r *PulsePacketReader) GetPulseData() pulse.Data {
 func (r *PulsePacketReader) GetPulseDataEvidence() proofs.OriginalPulsarPacket {
 	return &originalPulsarPacket{
 		FixedReader: longbits.NewFixedReader(r.data),
+		pd:          r.GetPulseData(),
 	}
 }
 

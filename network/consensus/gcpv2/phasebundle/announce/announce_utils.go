@@ -53,6 +53,9 @@ package announce
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/purgatory"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
@@ -61,7 +64,7 @@ import (
 )
 
 func ValidateIntrosOnMember(reader transport.ExtendedIntroReader, brief transport.BriefIntroductionReader,
-	fullIntroRequired bool, n core.AnnouncingMember) error {
+	fullIntroRequired bool, n purgatory.AnnouncingMember) error {
 
 	if reader.HasJoinerSecret() {
 		return n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner secret was not expected")
@@ -130,7 +133,7 @@ func ApplyUnknownAnnouncement(ctx context.Context, announcerID insolar.ShortNode
 }
 
 func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementPacketReader, brief transport.BriefIntroductionReader,
-	fullIntroRequired bool, n *core.NodeAppearance, realm *core.FullRealm) (bool, profiles.StaticProfile, error) {
+	fullIntroRequired bool, n *population.NodeAppearance, realm *core.FullRealm) (bool, profiles.StaticProfile, error) {
 
 	// err := ValidateIntrosOnMember(reader, brief, fullIntroRequired, n)
 	// if err != nil {
@@ -183,7 +186,12 @@ func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementP
 		return false, nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "node is not allowed to add a joiner")
 	}
 
-	modified, err := n.ApplyNodeMembership(ma, realm)
+	modified, err := n.ApplyNodeMembership(ma, func(ma profiles.MemberAnnouncement) error {
+		if !ma.Joiner.IsEmpty() { // by it can be EMPTY when !ma.JoinerID.IsAbsent() - it is normal
+			return realm.GetPurgatory().AddJoinerAndEnsureAscendancy(ma.Joiner, ma.AnnouncedByID)
+		}
+		return nil
+	})
 
 	return modified, ma.Joiner.JoinerProfile, err
 }
@@ -207,7 +215,8 @@ func AnnouncementFromReaderNotForJoiner(senderID insolar.ShortNodeID, ma transpo
 	var ja profiles.JoinerAnnouncement
 
 	if jar == nil {
-		return profiles.NewMemberAnnouncementWithJoinerID(senderID, mp, ma.GetJoinerID(), announcerID), ma.GetJoinerID()
+		return profiles.NewMemberAnnouncementWithJoinerID(senderID, mp, ma.GetJoinerID(),
+			nil /* TODO joiner secret */, announcerID), ma.GetJoinerID()
 	}
 	ja.IntroducedByID = jar.GetJoinerIntroducedByID()
 	if ja.IntroducedByID.IsAbsent() {
@@ -224,12 +233,12 @@ func AnnouncementFromReaderNotForJoiner(senderID insolar.ShortNodeID, ma transpo
 }
 
 type ResolvedNeighbour struct {
-	Neighbour    core.AnnouncingMember
+	Neighbour    purgatory.AnnouncingMember
 	Announcement profiles.MemberAnnouncement
 }
 
 func VerifyNeighbourhood(ctx context.Context, neighbourhood []transport.MembershipAnnouncementReader,
-	n *core.NodeAppearance, announcedJoiner profiles.StaticProfile, realm *core.FullRealm) ([]ResolvedNeighbour, error) {
+	n *population.NodeAppearance, announcedJoiner profiles.StaticProfile, realm *core.FullRealm) ([]ResolvedNeighbour, error) {
 
 	hasThis := false
 	hasSelf := false
@@ -239,6 +248,7 @@ func VerifyNeighbourhood(ctx context.Context, neighbourhood []transport.Membersh
 	localID := realm.GetSelfNodeID()
 	senderID := n.GetNodeID()
 	pf := realm.GetProfileFactory()
+	log := inslogger.FromContext(ctx)
 
 	for idx, nb := range neighbourhood {
 		nid := nb.GetNodeID()
@@ -298,7 +308,8 @@ func VerifyNeighbourhood(ctx context.Context, neighbourhood []transport.Membersh
 				jar := nb.GetJoinerAnnouncement()
 				if jar != nil {
 					// TODO fraud
-					return nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner profile is duplicated in neighbourhood")
+					log.Error("joiner profile is duplicated in neighbourhood")
+					//return nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner profile is duplicated in neighbourhood")
 				}
 				joinerProfile = announcedJoiner
 			} else {

@@ -53,16 +53,15 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
 	"sync"
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
-
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 
@@ -79,7 +78,6 @@ type RoundStrategy interface {
 
 	ConfigureRoundContext(ctx context.Context, expectedPulse pulse.Number, self profiles.LocalNode) context.Context
 	AdjustConsensusTimings(timings *api.RoundTimings)
-	IsEphemeralPulseAllowed() bool
 }
 
 var _ api.RoundController = &PhasedRoundController{}
@@ -109,9 +107,10 @@ func NewPhasedRoundController(strategy RoundStrategy, chronicle api.ConsensusChr
 
 	r := &PhasedRoundController{chronicle: chronicle, prevPulseRound: prevPulseRound, bundle: bundle}
 
-	r.realm.coreRealm.initBefore(&r.rw, strategy, transport, config, chronicle.GetLatestCensus())
-	nbhSizes := r.realm.initBefore(transport, controlFeeder, candidateFeeder)
-	r.realm.coreRealm.initBeforePopulation(controlFeeder.GetRequiredPowerLevel(), nbhSizes)
+	r.realm.coreRealm.initBefore(&r.rw, strategy, transport, config, chronicle.GetLatestCensus(),
+		controlFeeder, candidateFeeder)
+	nbhSizes := r.realm.initBefore(transport)
+	r.realm.coreRealm.initBeforePopulation(nbhSizes)
 
 	return r
 }
@@ -129,7 +128,7 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 
 	r.realm.coreRealm.stateMachine = &r.roundWorker
 
-	r.realm.coreRealm.postponedPacketFn = func(packet transport.PacketParser, from endpoints.Inbound, verifyFlags packetrecorder.PacketVerifyFlags) bool {
+	r.realm.coreRealm.postponedPacketFn = func(packet transport.PacketParser, from endpoints.Inbound, verifyFlags coreapi.PacketVerifyFlags) bool {
 		// There is no real context for delayed reprocessing, so we use the round context
 		ctx := r.realm.coreRealm.roundContext
 		err := r.handlePacket(ctx, packet, from, verifyFlags)
@@ -149,7 +148,6 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 
 	prep := PrepRealm{coreRealm: &r.realm.coreRealm}
 	prep.init(
-		r.realm.strategy.IsEphemeralPulseAllowed(),
 		func(successful bool) {
 			if r.prepR == nil {
 				return
@@ -183,11 +181,11 @@ func (r *PhasedRoundController) onConsensusStopper() {
 		"Stopping consensus round: self={%v}, bundle=%v, census=%+v", r.realm.GetLocalProfile(), r.bundle, latest)
 
 	if latest.GetOnlinePopulation().GetLocalProfile().IsJoiner() {
-		panic("local remains as joiner")
+		panic("DEBUG FAIL-FAST: local remains as joiner")
 	}
 
 	if r.chronicle.GetExpectedCensus() == nil {
-		panic("consensus didn't finish")
+		panic("DEBUG FAIL-FAST: consensus didn't finish")
 	}
 
 	//b := strings.Builder{}
@@ -273,12 +271,12 @@ func (r *PhasedRoundController) startFullRealm() {
 }
 
 func (r *PhasedRoundController) HandlePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound) (bool, error) {
-	err := r.handlePacket(ctx, packet, from, packetrecorder.DefaultVerify)
+	err := r.handlePacket(ctx, packet, from, coreapi.DefaultVerify)
 	return r.roundWorker.IsRunning(), err
 }
 
 func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
-	verifyFlags packetrecorder.PacketVerifyFlags) error {
+	verifyFlags coreapi.PacketVerifyFlags) error {
 
 	pn := packet.GetPulseNumber()
 	/* a separate method with lock is to ensure that further packet processing is not connected to a lock */
@@ -313,7 +311,7 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 	}
 
 	// TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
-	defaultOptions := packetrecorder.SkipVerify // packetrecorder.DefaultVerify
+	defaultOptions := coreapi.SkipVerify // coreapi.DefaultVerify
 
 	if prep != nil {
 		if !pn.IsUnknown() {

@@ -55,8 +55,6 @@ import (
 	"math"
 	"time"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
@@ -88,7 +86,7 @@ func NewEmuChronicles(intros []profiles.StaticProfile, localNodeIndex int, asJoi
 		localCensus = censusimpl.NewPrimingCensus(intros, intros[localNodeIndex], registries, EmuDefaultCryptography)
 	}
 
-	chronicles := censusimpl.NewLocalChronicles(core.NewSimpleProfileIntroFactory(EmuDefaultCryptography))
+	chronicles := censusimpl.NewLocalChronicles(profiles.NewSimpleProfileIntroFactory(EmuDefaultCryptography))
 	localCensus.SetAsActiveTo(chronicles)
 	return chronicles
 }

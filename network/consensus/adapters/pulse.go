@@ -103,6 +103,14 @@ type PulsePacketReader struct {
 	data pulse.Data
 }
 
+func (p *PulsePacketReader) GetPulseNumber() pulse.Number {
+	return p.data.PulseNumber
+}
+
+func (p *PulsePacketReader) GetPulseDataDigest() cryptkit.DigestHolder {
+	return nil
+}
+
 func (p *PulsePacketReader) OriginalPulsarPacket() {}
 
 func (p *PulsePacketReader) GetPulseData() pulse.Data {

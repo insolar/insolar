@@ -48,17 +48,17 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package core
+package population
 
 import (
 	"context"
-
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/common/args"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 )
 
-func NewFixedRealmPopulation(strategy RoundStrategy, population census.OnlinePopulation, phase2ExtLimit uint8,
-	fn NodeInitFunc) *FixedRealmPopulation {
+func NewFixedRealmPopulation(population census.OnlinePopulation, phase2ExtLimit uint8,
+	shuffleFn args.ShuffleFunc, baselineWeight uint32, hookCfg SharedNodeContext, fn DispatchFactoryFunc) *FixedRealmPopulation {
 
 	if !population.IsValid() || population.GetIndexedCount() != population.GetIndexedCapacity() {
 		panic("illegal value - fixed realm population can't be initialized on incomplete/invalid population")
@@ -72,20 +72,21 @@ func NewFixedRealmPopulation(strategy RoundStrategy, population census.OnlinePop
 	r := &FixedRealmPopulation{
 		population: population,
 		dynPop: dynPop{DynamicRealmPopulation{
-			nodeInit:       fn,
-			shuffleFunc:    strategy.ShuffleNodeSequence,
-			baselineWeight: strategy.GetBaselineWeightForNeighbours(),
-			phase2ExtLimit: phase2ExtLimit,
-			indexedCount:   nodeCount,
-			nodeIndex:      make([]*NodeAppearance, nodeCount),
-			nodeShuffle:    make([]*NodeAppearance, otherCount),
-			shuffledCount:  otherCount,
-			dynamicNodes:   make(map[insolar.ShortNodeID]*NodeAppearance),
-			indexedLenSet:  true, // locks down SealIndexed
+			dispatchFactory: fn,
+			shuffleFunc:     shuffleFn,
+			baselineWeight:  baselineWeight,
+			phase2ExtLimit:  phase2ExtLimit,
+			indexedCount:    nodeCount,
+			nodeIndex:       make([]*NodeAppearance, nodeCount),
+			nodeShuffle:     make([]*NodeAppearance, otherCount),
+			shuffledCount:   otherCount,
+			dynamicNodes:    make(map[insolar.ShortNodeID]*NodeAppearance),
+			indexedLenSet:   true, // locks down SealIndexed
+			hook:            NewHook(nil, nil, hookCfg),
 		}},
 	}
 	r.initPopulation()
-	ShuffleNodeAppearances(strategy.ShuffleNodeSequence, r.nodeShuffle)
+	ShuffleNodeAppearances(shuffleFn, r.nodeShuffle)
 
 	return r
 }
@@ -104,6 +105,9 @@ func (r *FixedRealmPopulation) GetSealedCapacity() (int, bool) {
 }
 
 func (r *FixedRealmPopulation) initPopulation() {
+
+	ctx := context.Background()
+
 	activeProfiles := r.population.GetProfiles()
 	thisNodeID := r.population.GetLocalProfile().GetNodeID()
 
@@ -111,15 +115,19 @@ func (r *FixedRealmPopulation) initPopulation() {
 
 	var j = 0
 	for i, p := range activeProfiles {
-		n := &nodes[i]
-		r.nodeIndex[i] = n
-
 		if p.GetOpMode().IsEvicted() {
 			panic("illegal state")
 		}
+		if p.IsJoiner() {
+			panic("illegal state")
+		}
 
-		n.init(p, nil, r.baselineWeight, r.CreatePacketLimiter())
-		r.nodeInit(context.Background(), n)
+		n := &nodes[i]
+		*n = NewNodeAppearance(p, r.baselineWeight,
+			r.CreatePacketLimiter(false), &r.hook,
+			nil)
+		r.nodeIndex[i] = n
+		n.handlers = r.dispatchFactory(ctx, n)
 
 		if p.GetNodeID() == thisNodeID {
 			if r.self != nil {
@@ -133,6 +141,23 @@ func (r *FixedRealmPopulation) initPopulation() {
 	}
 	if r.self == nil {
 		panic("illegal state")
+	}
+	r.initHook()
+}
+
+func (r *FixedRealmPopulation) NotifyAllOnAdded(ctx context.Context) {
+	r.rw.RLock()
+	defer r.rw.RUnlock()
+
+	for _, n := range r.nodeIndex {
+		if n == nil {
+			continue
+		}
+		n.onAddedToPopulation(ctx, true)
+	}
+
+	for _, n := range r.dynamicNodes {
+		n.onAddedToPopulation(ctx, false)
 	}
 }
 
@@ -176,11 +201,11 @@ func (r *FixedRealmPopulation) SealIndexed(indexedCountLimit int) bool {
 	return r.indexedCount == indexedCountLimit
 }
 
-func (r *FixedRealmPopulation) AddToDynamics(n *NodeAppearance) (*NodeAppearance, error) {
-	if !n.profile.IsJoiner() {
-		panic("illegal value")
-	}
-	return r.dynPop.AddToDynamics(n)
+func (r *FixedRealmPopulation) AddToDynamics(ctx context.Context, n *NodeAppearance) (*NodeAppearance, error) {
+	//if !n.profile.IsJoiner() {
+	//	panic("illegal value")
+	//}
+	return r.dynPop.AddToDynamics(ctx, n)
 }
 
 func (r *FixedRealmPopulation) CreateVectorHelper() *RealmVectorHelper {

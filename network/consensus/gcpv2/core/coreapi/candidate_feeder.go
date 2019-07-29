@@ -48,70 +48,55 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package member
+package coreapi
 
-type TrustLevel int8
+import (
+	"sync"
 
-const (
-	FraudByBlacklist TrustLevel = -5 // in the blacklist
-	FraudByNetwork   TrustLevel = -4 // >2/3 of network have indicated fraud
-	FraudByNeighbors TrustLevel = -3 // >50% of neighborhood have indicated fraud
-	FraudBySome      TrustLevel = -2 // some nodes have indicated fraud
-	// unused                   = -1
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 
-	UnknownTrust TrustLevel = 0 // initial state
-
-	TrustBySelf      TrustLevel = 1 // node has provided a liveness proof or NSH
-	TrustBySome      TrustLevel = 2 // some nodes have indicated trust (same NSH)
-	TrustByNeighbors TrustLevel = 3 // >50% of neighborhood have indicated trust
-	TrustByNetwork   TrustLevel = 4 // >2/3 of network have indicated trust
-	TrustByMandate   TrustLevel = 5 // on- or off-network node with a temporary mandate, e.g. pulsar or discovery
-	TrustByCouncil   TrustLevel = 6 // on- or off-network node with a permanent mandate
-
-	LocalSelfTrust  = TrustByNeighbors // MUST be not less than TrustByNeighbors
-	FraudByThisNode = FraudByNeighbors // fraud is detected by this node
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
 
-func (v TrustLevel) abs() int8 {
-	if v >= 0 {
-		return int8(v)
+type SequentialCandidateFeeder struct {
+	mx  sync.Mutex
+	buf []profiles.CandidateProfile
+}
+
+func (p *SequentialCandidateFeeder) PickNextJoinCandidate() (profiles.CandidateProfile, cryptkit.DigestHolder) {
+	p.mx.Lock()
+	defer p.mx.Unlock()
+
+	if len(p.buf) == 0 {
+		return nil, nil
 	}
-	return int8(-v)
+	return p.buf[0], nil
 }
 
-func (v TrustLevel) WrapRange(hi TrustLevel) uint16 {
-	return uint16(v) | uint16(hi)<<8
-}
+func (p *SequentialCandidateFeeder) RemoveJoinCandidate(candidateAdded bool, nodeID insolar.ShortNodeID) bool {
+	p.mx.Lock()
+	defer p.mx.Unlock()
 
-func UnwrapTrustRange(wrapped uint16) (lo, hi TrustLevel) {
-	return TrustLevel(wrapped), TrustLevel(wrapped >> 8)
-}
-
-// Updates only to better/worse levels. Negative level of the same magnitude prevails.
-func (v *TrustLevel) Update(newLevel TrustLevel) (modified bool) {
-	if newLevel == UnknownTrust || newLevel == *v {
+	if len(p.buf) == 0 || p.buf[0].GetStaticNodeID() != nodeID {
 		return false
 	}
-	if newLevel > UnknownTrust {
-		if newLevel.abs() <= v.abs() {
-			return false
-		}
-	} else { // negative prevails hence update on |newLevel| == |v|
-		if newLevel.abs() < v.abs() {
-			return false
-		}
+	if len(p.buf) == 1 {
+		p.buf = nil
+	} else {
+		p.buf[0] = nil
+		p.buf = p.buf[1:]
 	}
-	*v = newLevel
 	return true
 }
 
-func (v *TrustLevel) UpdateKeepNegative(newLevel TrustLevel) (modified bool) {
-	if newLevel > UnknownTrust && *v < UnknownTrust {
-		return false
+func (p *SequentialCandidateFeeder) AddJoinCandidate(candidate transport.FullIntroductionReader) {
+	if candidate == nil {
+		panic("illegal value")
 	}
-	return v.Update(newLevel)
-}
+	p.mx.Lock()
+	defer p.mx.Unlock()
 
-func (v *TrustLevel) IsNegative() bool {
-	return *v < UnknownTrust
+	p.buf = append(p.buf, candidate)
 }

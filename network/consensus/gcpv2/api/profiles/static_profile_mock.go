@@ -779,7 +779,7 @@ type StaticProfileMockGetPublicKeyStoreResult struct {
 	r cryptkit.PublicKeyStore
 }
 
-//Expect specifies that invocation of StaticProfile.GetPublicKeyStore is expected from 1 to Infinity times
+//Expect specifies that invocation of StaticProfile.CreatePublicKeyStore is expected from 1 to Infinity times
 func (m *mStaticProfileMockGetPublicKeyStore) Expect() *mStaticProfileMockGetPublicKeyStore {
 	m.mock.GetPublicKeyStoreFunc = nil
 	m.expectationSeries = nil
@@ -791,7 +791,7 @@ func (m *mStaticProfileMockGetPublicKeyStore) Expect() *mStaticProfileMockGetPub
 	return m
 }
 
-//Return specifies results of invocation of StaticProfile.GetPublicKeyStore
+//Return specifies results of invocation of StaticProfile.CreatePublicKeyStore
 func (m *mStaticProfileMockGetPublicKeyStore) Return(r cryptkit.PublicKeyStore) *StaticProfileMock {
 	m.mock.GetPublicKeyStoreFunc = nil
 	m.expectationSeries = nil
@@ -803,7 +803,7 @@ func (m *mStaticProfileMockGetPublicKeyStore) Return(r cryptkit.PublicKeyStore) 
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of StaticProfile.GetPublicKeyStore is expected once
+//ExpectOnce specifies that invocation of StaticProfile.CreatePublicKeyStore is expected once
 func (m *mStaticProfileMockGetPublicKeyStore) ExpectOnce() *StaticProfileMockGetPublicKeyStoreExpectation {
 	m.mock.GetPublicKeyStoreFunc = nil
 	m.mainExpectation = nil
@@ -818,7 +818,7 @@ func (e *StaticProfileMockGetPublicKeyStoreExpectation) Return(r cryptkit.Public
 	e.result = &StaticProfileMockGetPublicKeyStoreResult{r}
 }
 
-//Set uses given function f as a mock of StaticProfile.GetPublicKeyStore method
+//Set uses given function f as a mock of StaticProfile.CreatePublicKeyStore method
 func (m *mStaticProfileMockGetPublicKeyStore) Set(f func() (r cryptkit.PublicKeyStore)) *StaticProfileMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -827,20 +827,20 @@ func (m *mStaticProfileMockGetPublicKeyStore) Set(f func() (r cryptkit.PublicKey
 	return m.mock
 }
 
-//GetPublicKeyStore implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.StaticProfile interface
+//CreatePublicKeyStore implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.StaticProfile interface
 func (m *StaticProfileMock) GetPublicKeyStore() (r cryptkit.PublicKeyStore) {
 	counter := atomic.AddUint64(&m.GetPublicKeyStorePreCounter, 1)
 	defer atomic.AddUint64(&m.GetPublicKeyStoreCounter, 1)
 
 	if len(m.GetPublicKeyStoreMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.GetPublicKeyStoreMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to StaticProfileMock.GetPublicKeyStore.")
+			m.t.Fatalf("Unexpected call to StaticProfileMock.CreatePublicKeyStore.")
 			return
 		}
 
 		result := m.GetPublicKeyStoreMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the StaticProfileMock.GetPublicKeyStore")
+			m.t.Fatal("No results are set for the StaticProfileMock.CreatePublicKeyStore")
 			return
 		}
 
@@ -853,7 +853,7 @@ func (m *StaticProfileMock) GetPublicKeyStore() (r cryptkit.PublicKeyStore) {
 
 		result := m.GetPublicKeyStoreMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the StaticProfileMock.GetPublicKeyStore")
+			m.t.Fatal("No results are set for the StaticProfileMock.CreatePublicKeyStore")
 		}
 
 		r = result.r
@@ -862,7 +862,7 @@ func (m *StaticProfileMock) GetPublicKeyStore() (r cryptkit.PublicKeyStore) {
 	}
 
 	if m.GetPublicKeyStoreFunc == nil {
-		m.t.Fatalf("Unexpected call to StaticProfileMock.GetPublicKeyStore.")
+		m.t.Fatalf("Unexpected call to StaticProfileMock.CreatePublicKeyStore.")
 		return
 	}
 
@@ -874,7 +874,7 @@ func (m *StaticProfileMock) GetPublicKeyStoreMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetPublicKeyStoreCounter)
 }
 
-//GetPublicKeyStoreMinimockPreCounter returns the value of StaticProfileMock.GetPublicKeyStore invocations
+//GetPublicKeyStoreMinimockPreCounter returns the value of StaticProfileMock.CreatePublicKeyStore invocations
 func (m *StaticProfileMock) GetPublicKeyStoreMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetPublicKeyStorePreCounter)
 }
@@ -1473,7 +1473,7 @@ func (m *StaticProfileMock) ValidateCallCounters() {
 	}
 
 	if !m.GetPublicKeyStoreFinished() {
-		m.t.Fatal("Expected call to StaticProfileMock.GetPublicKeyStore")
+		m.t.Fatal("Expected call to StaticProfileMock.CreatePublicKeyStore")
 	}
 
 	if !m.GetSpecialRolesFinished() {
@@ -1530,7 +1530,7 @@ func (m *StaticProfileMock) MinimockFinish() {
 	}
 
 	if !m.GetPublicKeyStoreFinished() {
-		m.t.Fatal("Expected call to StaticProfileMock.GetPublicKeyStore")
+		m.t.Fatal("Expected call to StaticProfileMock.CreatePublicKeyStore")
 	}
 
 	if !m.GetSpecialRolesFinished() {
@@ -1602,7 +1602,7 @@ func (m *StaticProfileMock) MinimockWait(timeout time.Duration) {
 			}
 
 			if !m.GetPublicKeyStoreFinished() {
-				m.t.Error("Expected call to StaticProfileMock.GetPublicKeyStore")
+				m.t.Error("Expected call to StaticProfileMock.CreatePublicKeyStore")
 			}
 
 			if !m.GetSpecialRolesFinished() {

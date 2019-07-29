@@ -52,6 +52,7 @@ package pulse
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"strings"
 	"time"
 
@@ -66,6 +67,12 @@ var _ DataReader = &Data{}
 type Data struct {
 	PulseNumber Number
 	DataExt
+}
+
+type DataHolder interface {
+	GetPulseNumber() Number
+	GetPulseData() Data
+	GetPulseDataDigest() cryptkit.DigestHolder
 }
 
 type DataExt struct {

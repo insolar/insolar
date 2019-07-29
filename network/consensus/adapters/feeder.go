@@ -51,6 +51,9 @@
 package adapters
 
 import (
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"sync"
 	"time"
 
@@ -197,6 +200,20 @@ type InternalControlFeederAdapter struct {
 	leaveReason      uint32
 	zeroReadyChannel chan struct{}
 	leavingChannel   chan struct{}
+}
+
+func (cf *InternalControlFeederAdapter) GetRequiredEphemeralMode(census census.Operational) api.EphemeralMode {
+	return api.EphemeralNotAllowed
+}
+
+func (cf *InternalControlFeederAdapter) CreateEphemeralPulsePacket(census census.Operational) proofs.OriginalPulsarPacket {
+
+	//if _, pd := census.GetNearestPulseData(); !pd.IsEmpty() {
+	//	return pd.CreateNextEphemeralPulse()
+	//} else {
+	//	return pulse.NewFirstEphemeralData()
+	//}
+	panic("illegal state")
 }
 
 func (cf *InternalControlFeederAdapter) GetRequiredPowerLevel() power.Request {

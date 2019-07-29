@@ -53,6 +53,7 @@ package consensus
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
 	"reflect"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -135,7 +136,7 @@ type constructor struct {
 	localNodeConfiguration       api.LocalNodeConfiguration
 	upstreamPulseController      api.UpstreamController
 	roundStrategyFactory         core.RoundStrategyFactory
-	transportCryptographyFactory transport2.CryptographyFactory
+	transportCryptographyFactory transport2.CryptographyAssistant
 	packetBuilder                transport2.PacketBuilder
 	packetSender                 transport2.PacketSender
 	transportFactory             transport2.Factory
@@ -209,7 +210,7 @@ func newInstaller(constructor *constructor, dep *Dep) Installer {
 
 func (c Installer) ControllerFor(mode Mode, setters ...packetProcessorSetter) Controller {
 	controlFeederInterceptor := adapters.InterceptConsensusControl(adapters.NewConsensusControlFeeder())
-	candidateFeeder := &core.SequentialCandidateFeeder{}
+	candidateFeeder := &coreapi.SequentialCandidateFeeder{}
 
 	consensusChronicles := c.createConsensusChronicles(mode)
 	consensusController := c.createConsensusController(
@@ -274,8 +275,8 @@ func (c *Installer) createConsensusController(
 
 func (c *Installer) createPacketParserFactory() adapters.PacketParserFactory {
 	return serialization.NewPacketParserFactory(
-		c.consensus.transportCryptographyFactory.GetDigestFactory().GetPacketDigester(),
-		c.consensus.transportCryptographyFactory.GetNodeSigner(c.consensus.localNodeConfiguration.GetSecretKeyStore()).GetSignMethod(),
+		c.consensus.transportCryptographyFactory.GetDigestFactory().CreatePacketDigester(),
+		c.consensus.transportCryptographyFactory.CreateNodeSigner(c.consensus.localNodeConfiguration.GetSecretKeyStore()).GetSignMethod(),
 		c.dep.KeyProcessor,
 	)
 }

@@ -93,6 +93,10 @@ type EmuPulsarNetPacket struct {
 	pulseData pulse.Data
 }
 
+func (r *EmuPulsarNetPacket) GetPulseDataDigest() cryptkit.DigestHolder {
+	return nil
+}
+
 func (r *EmuPulsarNetPacket) ParsePacketBody() (transport.PacketParser, error) {
 	return nil, nil
 }

@@ -52,12 +52,12 @@ package phasebundle
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"time"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/consensus"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/inspectors"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/pulsectl"
@@ -91,19 +91,21 @@ func CreateDefaultBundleConfig() BundleConfig {
 		false,
 		false,
 		false,
+		true,
 	}
 }
 
 type BundleConfig struct {
 	LoopingMinimalDelay time.Duration
 
-	MemberOptions                   transport.PacketPrepareOptions
-	JoinerOptions                   transport.PacketPrepareOptions
+	MemberPacketOptions             transport.PacketPrepareOptions
+	JoinerPacketOptions             transport.PacketPrepareOptions
 	VectorInspectInliningLimit      int
 	DisableVectorInspectionOnJoiner bool
 	EnableFastPhase3                bool
 	IgnoreVectorHashes              bool
 	DisableAggressivePhasing        bool
+	IgnoreHostVerificationForPulses bool
 }
 
 type BundleFactories struct {

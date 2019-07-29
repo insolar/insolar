@@ -55,7 +55,7 @@ type KeyStoreFactoryMockGetPublicKeyStoreResult struct {
 	r PublicKeyStore
 }
 
-//Expect specifies that invocation of KeyStoreFactory.GetPublicKeyStore is expected from 1 to Infinity times
+//Expect specifies that invocation of KeyStoreFactory.CreatePublicKeyStore is expected from 1 to Infinity times
 func (m *mKeyStoreFactoryMockGetPublicKeyStore) Expect(p SignatureKeyHolder) *mKeyStoreFactoryMockGetPublicKeyStore {
 	m.mock.GetPublicKeyStoreFunc = nil
 	m.expectationSeries = nil
@@ -67,7 +67,7 @@ func (m *mKeyStoreFactoryMockGetPublicKeyStore) Expect(p SignatureKeyHolder) *mK
 	return m
 }
 
-//Return specifies results of invocation of KeyStoreFactory.GetPublicKeyStore
+//Return specifies results of invocation of KeyStoreFactory.CreatePublicKeyStore
 func (m *mKeyStoreFactoryMockGetPublicKeyStore) Return(r PublicKeyStore) *KeyStoreFactoryMock {
 	m.mock.GetPublicKeyStoreFunc = nil
 	m.expectationSeries = nil
@@ -79,7 +79,7 @@ func (m *mKeyStoreFactoryMockGetPublicKeyStore) Return(r PublicKeyStore) *KeySto
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of KeyStoreFactory.GetPublicKeyStore is expected once
+//ExpectOnce specifies that invocation of KeyStoreFactory.CreatePublicKeyStore is expected once
 func (m *mKeyStoreFactoryMockGetPublicKeyStore) ExpectOnce(p SignatureKeyHolder) *KeyStoreFactoryMockGetPublicKeyStoreExpectation {
 	m.mock.GetPublicKeyStoreFunc = nil
 	m.mainExpectation = nil
@@ -94,7 +94,7 @@ func (e *KeyStoreFactoryMockGetPublicKeyStoreExpectation) Return(r PublicKeyStor
 	e.result = &KeyStoreFactoryMockGetPublicKeyStoreResult{r}
 }
 
-//Set uses given function f as a mock of KeyStoreFactory.GetPublicKeyStore method
+//Set uses given function f as a mock of KeyStoreFactory.CreatePublicKeyStore method
 func (m *mKeyStoreFactoryMockGetPublicKeyStore) Set(f func(p SignatureKeyHolder) (r PublicKeyStore)) *KeyStoreFactoryMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -103,23 +103,23 @@ func (m *mKeyStoreFactoryMockGetPublicKeyStore) Set(f func(p SignatureKeyHolder)
 	return m.mock
 }
 
-//GetPublicKeyStore implements github.com/insolar/insolar/network/consensus/common/cryptkit.KeyStoreFactory interface
-func (m *KeyStoreFactoryMock) GetPublicKeyStore(p SignatureKeyHolder) (r PublicKeyStore) {
+//CreatePublicKeyStore implements github.com/insolar/insolar/network/consensus/common/cryptkit.KeyStoreFactory interface
+func (m *KeyStoreFactoryMock) CreatePublicKeyStore(p SignatureKeyHolder) (r PublicKeyStore) {
 	counter := atomic.AddUint64(&m.GetPublicKeyStorePreCounter, 1)
 	defer atomic.AddUint64(&m.GetPublicKeyStoreCounter, 1)
 
 	if len(m.GetPublicKeyStoreMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.GetPublicKeyStoreMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to KeyStoreFactoryMock.GetPublicKeyStore. %v", p)
+			m.t.Fatalf("Unexpected call to KeyStoreFactoryMock.CreatePublicKeyStore. %v", p)
 			return
 		}
 
 		input := m.GetPublicKeyStoreMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, KeyStoreFactoryMockGetPublicKeyStoreInput{p}, "KeyStoreFactory.GetPublicKeyStore got unexpected parameters")
+		testify_assert.Equal(m.t, *input, KeyStoreFactoryMockGetPublicKeyStoreInput{p}, "KeyStoreFactory.CreatePublicKeyStore got unexpected parameters")
 
 		result := m.GetPublicKeyStoreMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the KeyStoreFactoryMock.GetPublicKeyStore")
+			m.t.Fatal("No results are set for the KeyStoreFactoryMock.CreatePublicKeyStore")
 			return
 		}
 
@@ -132,12 +132,12 @@ func (m *KeyStoreFactoryMock) GetPublicKeyStore(p SignatureKeyHolder) (r PublicK
 
 		input := m.GetPublicKeyStoreMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, KeyStoreFactoryMockGetPublicKeyStoreInput{p}, "KeyStoreFactory.GetPublicKeyStore got unexpected parameters")
+			testify_assert.Equal(m.t, *input, KeyStoreFactoryMockGetPublicKeyStoreInput{p}, "KeyStoreFactory.CreatePublicKeyStore got unexpected parameters")
 		}
 
 		result := m.GetPublicKeyStoreMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the KeyStoreFactoryMock.GetPublicKeyStore")
+			m.t.Fatal("No results are set for the KeyStoreFactoryMock.CreatePublicKeyStore")
 		}
 
 		r = result.r
@@ -146,7 +146,7 @@ func (m *KeyStoreFactoryMock) GetPublicKeyStore(p SignatureKeyHolder) (r PublicK
 	}
 
 	if m.GetPublicKeyStoreFunc == nil {
-		m.t.Fatalf("Unexpected call to KeyStoreFactoryMock.GetPublicKeyStore. %v", p)
+		m.t.Fatalf("Unexpected call to KeyStoreFactoryMock.CreatePublicKeyStore. %v", p)
 		return
 	}
 
@@ -158,7 +158,7 @@ func (m *KeyStoreFactoryMock) GetPublicKeyStoreMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetPublicKeyStoreCounter)
 }
 
-//GetPublicKeyStoreMinimockPreCounter returns the value of KeyStoreFactoryMock.GetPublicKeyStore invocations
+//GetPublicKeyStoreMinimockPreCounter returns the value of KeyStoreFactoryMock.CreatePublicKeyStore invocations
 func (m *KeyStoreFactoryMock) GetPublicKeyStoreMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetPublicKeyStorePreCounter)
 }
@@ -188,7 +188,7 @@ func (m *KeyStoreFactoryMock) GetPublicKeyStoreFinished() bool {
 func (m *KeyStoreFactoryMock) ValidateCallCounters() {
 
 	if !m.GetPublicKeyStoreFinished() {
-		m.t.Fatal("Expected call to KeyStoreFactoryMock.GetPublicKeyStore")
+		m.t.Fatal("Expected call to KeyStoreFactoryMock.CreatePublicKeyStore")
 	}
 
 }
@@ -209,7 +209,7 @@ func (m *KeyStoreFactoryMock) Finish() {
 func (m *KeyStoreFactoryMock) MinimockFinish() {
 
 	if !m.GetPublicKeyStoreFinished() {
-		m.t.Fatal("Expected call to KeyStoreFactoryMock.GetPublicKeyStore")
+		m.t.Fatal("Expected call to KeyStoreFactoryMock.CreatePublicKeyStore")
 	}
 
 }
@@ -236,7 +236,7 @@ func (m *KeyStoreFactoryMock) MinimockWait(timeout time.Duration) {
 		case <-timeoutCh:
 
 			if !m.GetPublicKeyStoreFinished() {
-				m.t.Error("Expected call to KeyStoreFactoryMock.GetPublicKeyStore")
+				m.t.Error("Expected call to KeyStoreFactoryMock.CreatePublicKeyStore")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)

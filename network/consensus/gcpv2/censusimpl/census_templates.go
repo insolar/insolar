@@ -184,6 +184,10 @@ type CensusTemplate struct {
 	registries census.VersionedRegistries
 }
 
+func (c *CensusTemplate) GetNearestPulseData() (bool, pulse.Data) {
+	return true, c.pd
+}
+
 func (c *CensusTemplate) GetProfileFactory(ksf cryptkit.KeyStoreFactory) profiles.Factory {
 	return c.chronicles.profileFactory
 }
@@ -281,6 +285,10 @@ type ExpectedCensusTemplate struct {
 	gsh        proofs.GlobulaStateHash
 	csh        proofs.CloudStateHash
 	pn         pulse.Number
+}
+
+func (c *ExpectedCensusTemplate) GetNearestPulseData() (bool, pulse.Data) {
+	return false, c.prev.GetPulseData()
 }
 
 func (c *ExpectedCensusTemplate) GetProfileFactory(ksf cryptkit.KeyStoreFactory) profiles.Factory {

@@ -122,7 +122,7 @@ func (p *RoundStateMachineWorker) CommitPulseChange(report api.UpstreamReport, p
 	p.UpstreamController.CommitPulseChange(report, pd, activeCensus)
 }
 
-func (p *RoundStateMachineWorker) CommitPulseChangeByJoiner(report api.UpstreamReport, pd pulse.Data, activeCensus census.Operational) {
+func (p *RoundStateMachineWorker) CommitPulseChangeByStateless(report api.UpstreamReport, pd pulse.Data, activeCensus census.Operational) {
 	p.forceState(RoundPulsePreparing)
 	p.applyState(RoundPulseCommitted)
 	p.UpstreamController.CommitPulseChange(report, pd, activeCensus)
@@ -320,8 +320,8 @@ func (p *RoundStateMachineWorker) applyState(newState RoundState) {
 		case curState == RoundPulsePreparing && newState == RoundPulseAccepted:
 		default:
 			// invalid transition attempt
-			inslogger.FromContext(p.ctx).Errorf("invalid state transition: current=%v new=%v", curState, newState)
-			return
+			inslogger.FromContext(p.ctx).Warnf("invalid state transition: current=%v new=%v", curState, newState)
+			//return
 		}
 		if atomic.CompareAndSwapUint32(&p.roundState, uint32(curState), uint32(newState)) {
 			return

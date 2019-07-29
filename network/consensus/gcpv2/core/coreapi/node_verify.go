@@ -48,119 +48,99 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package censusimpl
+package coreapi
 
 import (
+	"context"
 	"fmt"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-	"strings"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
 
-func newEvictedPopulation(evicts []*updatableSlot, detectedErrors census.RecoverableErrorTypes) evictedPopulation {
+func VerifyPacketAuthenticityBy(packetSignature cryptkit.SignedDigest, nr profiles.Host, sf cryptkit.SignatureVerifier,
+	from endpoints.Inbound, strictFrom bool) error {
 
-	if len(evicts) == 0 {
-		return evictedPopulation{}
+	if strictFrom && !nr.IsAcceptableHost(from) {
+		return fmt.Errorf("host is not allowed by node registration: node=%v, host=%v", nr, from)
 	}
-	evictedNodes := make(map[insolar.ShortNodeID]profiles.EvictedNode, len(evicts))
-
-	for _, s := range evicts {
-		id := s.GetNodeID()
-		evictedNodes[id] = &evictedSlot{s.StaticProfile, s.verifier, s.mode,
-			s.leaveReason}
+	if !packetSignature.IsVerifiableBy(sf) {
+		return fmt.Errorf("unable to verify packet signature from sender: %v", from)
+	}
+	if !packetSignature.VerifyWith(sf) {
+		return fmt.Errorf("packet signature doesn't match for sender: %v", from)
 	}
 
-	return evictedPopulation{evictedNodes, detectedErrors}
+	return nil
 }
 
-var _ census.EvictedPopulation = &evictedPopulation{}
+func FindHostProfile(memberID insolar.ShortNodeID, from endpoints.Inbound, initialCensus census.Operational) profiles.Host {
 
-type evictedPopulation struct {
-	profiles       map[insolar.ShortNodeID]profiles.EvictedNode
-	detectedErrors census.RecoverableErrorTypes
+	if np := initialCensus.GetOnlinePopulation().FindProfile(memberID); np != nil {
+		return np.GetStatic()
+	}
+	if nr := initialCensus.GetOfflinePopulation().FindRegisteredProfile(from); nr != nil {
+		return nr
+	}
+	if nr := initialCensus.GetMandateRegistry().FindRegisteredProfile(from); nr != nil {
+		return nr
+	}
+	return nil
 }
 
-func (p evictedPopulation) String() string {
-	if p.detectedErrors == 0 && len(p.profiles) == 0 {
-		return "[]"
+func VerifyPacketRoute(ctx context.Context, packet transport.PacketParser, selfID insolar.ShortNodeID, from endpoints.Inbound) (bool, error) {
+
+	sid := packet.GetSourceID()
+	if sid.IsAbsent() {
+		return false, fmt.Errorf("invalid sourceID(0): from=%v", from)
+	}
+	if sid == selfID {
+		return false, fmt.Errorf("loopback, SourceID(%v) == thisNodeID(%v): from=%v", sid, selfID, from)
 	}
 
-	b := strings.Builder{}
-	if p.detectedErrors != 0 {
-		b.WriteString(fmt.Sprintf("errors:%v ", p.detectedErrors.String()))
+	rid := packet.GetReceiverID()
+	if rid.IsAbsent() {
+		return false, fmt.Errorf("invalid receiverID(0): from=%v", from)
 	}
-	if len(p.profiles) > 0 {
-		b.WriteString(fmt.Sprintf("profiles:%d[", len(p.profiles)))
+	if rid != selfID {
+		return false, fmt.Errorf("receiverID(%v) != thisNodeID(%v): from=%v", rid, selfID, from)
+	}
 
-		if len(p.profiles) < 50 {
-			for id := range p.profiles {
-				b.WriteString(fmt.Sprintf(" %04d ", id))
-			}
-		} else {
-			b.WriteString("too many")
+	tid := packet.GetTargetID()
+	if rid.IsAbsent() {
+		return false, fmt.Errorf("invalid targetID(0): from=%v", from)
+	}
+
+	if tid != selfID {
+		// Relaying
+		if packet.IsRelayForbidden() {
+			return false, fmt.Errorf("sender doesn't allow relaying for targetID(%v)", tid)
 		}
-		b.WriteRune(']')
+
+		// TODO relay support
+		err := fmt.Errorf("unsupported: relay is required for targetID(%v)", tid)
+		inslogger.FromContext(ctx).Errorf(err.Error())
+		// allow sender to be different from source
+		return false, err
 	}
-	return b.String()
+
+	// sender must be source
+	return packet.IsRelayForbidden(), nil
 }
 
-func (p *evictedPopulation) IsValid() bool {
-	return p.detectedErrors != 0
-}
+func LazyPacketParse(packet transport.PacketParser) (transport.PacketParser, error) {
 
-func (p *evictedPopulation) GetDetectedErrors() census.RecoverableErrorTypes {
-	return p.detectedErrors
-}
-
-func (p *evictedPopulation) FindProfile(nodeID insolar.ShortNodeID) profiles.EvictedNode {
-	return p.profiles[nodeID]
-}
-
-func (p *evictedPopulation) GetCount() int {
-	return len(p.profiles)
-}
-
-func (p *evictedPopulation) GetProfiles() []profiles.EvictedNode {
-	r := make([]profiles.EvictedNode, len(p.profiles))
-	idx := 0
-	for _, v := range p.profiles {
-		r[idx] = v
-		idx++
+	// this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
+	newPacket, err := packet.ParsePacketBody()
+	if err != nil {
+		return packet, err
 	}
-	return r
-}
-
-var _ profiles.EvictedNode = &evictedSlot{}
-
-type evictedSlot struct {
-	profiles.StaticProfile
-	sf          cryptkit.SignatureVerifier
-	mode        member.OpMode
-	leaveReason uint32
-}
-
-func (p *evictedSlot) GetNodeID() insolar.ShortNodeID {
-	return p.GetStaticNodeID()
-}
-
-func (p *evictedSlot) GetStatic() profiles.StaticProfile {
-	return p.StaticProfile
-}
-
-func (p *evictedSlot) GetSignatureVerifier() cryptkit.SignatureVerifier {
-	return p.sf
-}
-
-func (p *evictedSlot) GetOpMode() member.OpMode {
-	return p.mode
-}
-
-func (p *evictedSlot) GetLeaveReason() uint32 {
-	if !p.mode.IsEvictedGracefully() {
-		return 0
+	if newPacket == nil {
+		return packet, nil
 	}
-	return p.leaveReason
+	return newPacket, nil
 }

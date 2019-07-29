@@ -48,11 +48,14 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package core
+package purgatory
 
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -64,7 +67,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
 )
 
 func NewNodePhantom(purgatory *RealmPurgatory, nodeID insolar.ShortNodeID, limiter phases.PacketLimiter) *NodePhantom {
@@ -72,12 +74,12 @@ func NewNodePhantom(purgatory *RealmPurgatory, nodeID insolar.ShortNodeID, limit
 		purgatory: purgatory,
 		nodeID:    nodeID,
 		limiter:   limiter,
-		recorder:  packetrecorder.NewUnsafePacketRecorder(int(limiter.GetRemainingPacketCountDefault())),
+		recorder:  packetdispatch.NewUnsafePacketRecorder(int(limiter.GetRemainingPacketCountDefault())),
 	}
 }
 
-var _ MemberPacketReceiver = &NodePhantom{}
-var _ MemberPacketSender = &NodePhantom{}
+var _ packetdispatch.MemberPacketReceiver = &NodePhantom{}
+var _ population.MemberPacketSender = &NodePhantom{}
 
 type NodePhantom struct {
 	purgatory *RealmPurgatory
@@ -85,7 +87,7 @@ type NodePhantom struct {
 	nodeID    insolar.ShortNodeID
 	mutex     sync.Mutex
 	limiter   phases.PacketLimiter
-	recorder  packetrecorder.UnsafePacketRecorder
+	recorder  packetdispatch.UnsafePacketRecorder
 	hasAscent bool
 
 	figment figment
@@ -93,18 +95,18 @@ type NodePhantom struct {
 	// figments map[string]*figment
 }
 
-func (p *NodePhantom) ApplyNeighbourEvidence(n *NodeAppearance, ma profiles.MemberAnnouncement,
-	cappedTrust bool, realm *FullRealm) (bool, error) {
+func (p *NodePhantom) ApplyNeighbourEvidence(n *population.NodeAppearance, ma profiles.MemberAnnouncement,
+	cappedTrust bool, applyAfterChecks population.MembershipApplyFunc) (bool, error) {
 
 	return false, nil
 }
 
 func (p *NodePhantom) Blames() misbehavior.BlameFactory {
-	return p.purgatory.callback.GetBlameFactory()
+	return p.purgatory.hook.GetBlameFactory()
 }
 
 func (p *NodePhantom) Frauds() misbehavior.FraudFactory {
-	return p.purgatory.callback.GetFraudFactory()
+	return p.purgatory.hook.GetFraudFactory()
 }
 
 func (p *NodePhantom) GetReportProfile() profiles.BaseNode {
@@ -165,7 +167,7 @@ func (p *NodePhantom) SetPacketReceived(pt phases.PacketType) bool {
 }
 
 func (p *NodePhantom) DispatchMemberPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
-	flags packetrecorder.PacketVerifyFlags, pd PacketDispatcher) error {
+	flags coreapi.PacketVerifyFlags, pd population.PacketDispatcher) error {
 
 	_, err := pd.TriggerUnknownMember(ctx, p.nodeID, packet.GetMemberPacket(), from)
 	if err != nil {
@@ -176,7 +178,7 @@ func (p *NodePhantom) DispatchMemberPacket(ctx context.Context, packet transport
 	return nil
 }
 
-func (p *NodePhantom) postponePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags) {
+func (p *NodePhantom) postponePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound, flags coreapi.PacketVerifyFlags) {
 
 	inslogger.FromContext(ctx).Debugf("packet added to purgatory: s=%d t=%d pt=%v",
 		packet.GetSourceID(), packet.GetTargetID(), packet.GetPacketType())
@@ -228,7 +230,7 @@ type figment struct {
 func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom, rank member.Rank, profile profiles.StaticProfile,
 	announcement profiles.MemberAnnouncement) error {
 
-	flags := UpdateFlags(0)
+	flags := population.UpdateFlags(0)
 	hasUpdate := false
 	if p.phantom == nil {
 		p.phantom = phantom
@@ -243,9 +245,9 @@ func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom
 			}
 		}
 		inslogger.FromContext(ctx).Debugf("Phantom node added: s=%d, t=%d, profile=%s",
-			p.phantom.purgatory.callback.localNodeID, p.phantom.nodeID, prof)
+			p.phantom.purgatory.hook.GetLocalNodeID(), p.phantom.nodeID, prof)
 
-		flags |= FlagCreated
+		flags |= population.FlagCreated
 	}
 	ascentWithBrief := p.phantom.purgatory.IsBriefAscensionAllowed()
 
@@ -253,12 +255,12 @@ func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom
 	hasProfileUpdate, hasMismatch := p.updateProfile(rank, profile)
 	if hasMismatch {
 		panic(fmt.Sprintf("inconsistent neighbour announcement: local=%d, phantom=%d, announcer=%d, rank=%v, profile=%+v, firmentRank=%v, figmentProfile=%+v, ann=%+v",
-			p.phantom.purgatory.callback.localNodeID, p.phantom.nodeID, announcedBy, rank, profile, p.rank, p.profile, announcement))
+			p.phantom.purgatory.hook.GetLocalNodeID(), p.phantom.nodeID, announcedBy, rank, profile, p.rank, p.profile, announcement))
 		// TODO return p.RegisterFraud(p.Frauds().NewInconsistentNeighbourAnnouncement(p.GetReportProfile()))
 	}
 
 	if hasProfileUpdate {
-		flags |= FlagProfileUpdated
+		flags |= population.FlagUpdatedProfile
 		hasUpdate = true
 	}
 	if p.announcerID.IsAbsent() && !announcedBy.IsAbsent() && (announcedBy != phantom.nodeID || !p.rank.IsJoiner()) {
@@ -278,7 +280,7 @@ func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom
 		/* self-ascension is not allowed for joiners */
 	case p.profile.GetExtension() != nil || ascentWithBrief:
 		inslogger.FromContext(ctx).Debugf("Phantom node ascension: s=%d, t=%d, full=%v",
-			p.phantom.purgatory.callback.localNodeID, p.phantom.nodeID, p.profile.GetExtension() != nil)
+			p.phantom.purgatory.hook.GetLocalNodeID(), p.phantom.nodeID, p.profile.GetExtension() != nil)
 
 		p.phantom.ascend(ctx, p.profile, p.rank, nil)
 	}
