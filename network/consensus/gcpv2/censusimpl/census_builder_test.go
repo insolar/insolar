@@ -222,7 +222,7 @@ func TestLCBMakeExpected(t *testing.T) {
 	require.Equal(t, pn, ce.GetPulseNumber())
 }
 
-func TestRemoveOthers(t *testing.T) {
+func TestDPBRemoveOthers(t *testing.T) {
 	chronicles := &localChronicles{}
 	pn := pulse.Number(1)
 	sp := profiles.NewStaticProfileMock(t)
@@ -238,7 +238,7 @@ func TestRemoveOthers(t *testing.T) {
 	require.Len(t, lcb.population.slotByID, 1)
 }
 
-func TestGetUnorderedProfiles(t *testing.T) {
+func TestDPBGetUnorderedProfiles(t *testing.T) {
 	chronicles := &localChronicles{}
 	pn := pulse.Number(1)
 	sp := profiles.NewStaticProfileMock(t)
@@ -292,7 +292,7 @@ func TestDPBFindProfile(t *testing.T) {
 	require.Panics(t, func() { dpb.FindProfile(1).GetLeaveReason() })
 }
 
-func TestAddProfile(t *testing.T) {
+func TestDPBAddProfile(t *testing.T) {
 	chronicles := &localChronicles{}
 	pn := pulse.Number(1)
 	sp1 := profiles.NewStaticProfileMock(t)
@@ -314,7 +314,7 @@ func TestAddProfile(t *testing.T) {
 	require.Len(t, lcb.population.slotByID, 2)
 }
 
-func TestRemoveProfile(t *testing.T) {
+func TestDPBRemoveProfile(t *testing.T) {
 	chronicles := &localChronicles{}
 	pn := pulse.Number(1)
 	sp1 := profiles.NewStaticProfileMock(t)

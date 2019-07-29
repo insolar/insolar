@@ -84,6 +84,11 @@ var (
 	scheme       = platformpolicy.NewPlatformCryptographyScheme()
 )
 
+var (
+	shortNodeIdOffset = 1000
+	portOffset        = 10000
+)
+
 type candidate struct {
 	profiles.StaticProfile
 	profiles.StaticProfileExtension
@@ -212,7 +217,7 @@ func initNodes(ctx context.Context, mode consensus.Mode, nodes GeneratedNodes, s
 	return &ns, nil
 }
 
-func initPulsar(delta uint16, ns InitializedNodes) {
+func initPulsar(ctx context.Context, delta uint16, ns InitializedNodes) {
 	pulsar := NewPulsar(delta, ns.pulseHandlers)
 	go func() {
 		for {
@@ -240,8 +245,6 @@ func generateNodeIdentities(countNeutral, countHeavy, countLight, countVirtual i
 
 	return r
 }
-
-var portOffset = 10000
 
 func _generateNodeIdentity(r []nodeIdentity, count int, role insolar.StaticRole) []nodeIdentity {
 	for i := 0; i < count; i++ {
@@ -359,8 +362,6 @@ func nodesFromInfo(nodeInfos []*nodeMeta) ([]insolar.NetworkNode, []insolar.Netw
 
 	return nodes, discoveryNodes, nil
 }
-
-var shortNodeIdOffset = 1000
 
 func newNetworkNode(addr string, role insolar.StaticRole, pk crypto.PublicKey) node.MutableNode {
 	n := node.NewNode(
