@@ -56,6 +56,7 @@ import (
 	"context"
 	"crypto"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus"
 	"github.com/stretchr/testify/require"
 	"math/rand"
 	"strconv"
@@ -65,7 +66,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 
 	"github.com/insolar/insolar/network/rules"

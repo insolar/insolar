@@ -229,6 +229,10 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 
 func (n *ServiceNetwork) initConsensus() {
 
+	if n.NodeKeeper.GetOrigin().Role() == insolar.StaticRoleHeavyMaterial {
+		n.ConsensusMode = consensus.ReadyNetwork
+	}
+
 	pulseHandler := adapters.NewPulseHandler()
 	n.consensusController = n.consensusInstaller.ControllerFor(n.ConsensusMode, pulseHandler, n.datagramHandler)
 	n.consensusController.RegisterFinishedNotifier(func(_ member.OpMode, _ member.Power, effectiveSince insolar.PulseNumber) {

@@ -73,6 +73,8 @@ type DiscoveryBootstrap struct {
 }
 
 func (g *DiscoveryBootstrap) Run(ctx context.Context) {
+	panic("Bootstrap simplified. Can't switch to this state")
+
 	logger := inslogger.FromContext(ctx)
 	authorizeRes, err := g.authorize(ctx)
 	if err != nil {

@@ -54,9 +54,6 @@ package gateway
 
 import (
 	"context"
-	"math/rand"
-	"time"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
@@ -74,17 +71,16 @@ type NoNetwork struct {
 func (g *NoNetwork) Run(ctx context.Context) {
 
 	cert := g.CertificateManager.GetCertificate()
-	discoveryNodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), g.NodeKeeper.GetOrigin().ID())
+	origin := g.NodeKeeper.GetOrigin()
+	discoveryNodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), origin.ID())
 
 	// TODO: clear NodeKeeper state
-	g.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{g.NodeKeeper.GetOrigin()})
+	g.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{origin})
 
 	if len(discoveryNodes) == 0 {
-		g.zeroBootstrap(ctx)
+		inslogger.FromContext(ctx).Warn("[ Bootstrap ] No discovery nodes found in certificate")
 		return
 	}
-
-	<-time.After(time.Second * time.Duration(rand.Intn(5)))
 
 	// run bootstrap
 	if !network.OriginIsDiscovery(cert) {
@@ -92,45 +88,15 @@ func (g *NoNetwork) Run(ctx context.Context) {
 		return
 	}
 
-	p, err := g.PulseAccessor.Latest(ctx)
-	if err == nil && !insolar.IsEphemeralPulse(&p) {
+	// Simplified bootstrap
+	if origin.Role() != insolar.StaticRoleHeavyMaterial {
 		g.Gatewayer.SwitchState(ctx, insolar.JoinerBootstrap)
 		return
 	}
 
-	g.Gatewayer.SwitchState(ctx, insolar.DiscoveryBootstrap)
+	g.Gatewayer.SwitchState(ctx, insolar.WaitMinRoles)
 }
 
 func (g *NoNetwork) GetState() insolar.NetworkState {
 	return insolar.NoNetworkState
-}
-
-// func (g *NoNetwork) connectToNewNetwork(ctx context.Context, address string) {
-// 	g.NodeKeeper.GetClaimQueue().Push(&packets.ChangeNetworkClaim{Address: address})
-// 	logger := inslogger.FromContext(ctx)
-//
-// 	// node, err := findNodeByAddress(address, g.CertificateManager.GetCertificate().GetDiscoveryNodes())
-// 	// if err != nil {
-// 	// 	logger.Warnf("Failed to find a discovery node: ", err)
-// 	// }
-//
-// 	err := g.Bootstrapper.AuthenticateToDiscoveryNode(ctx, nil /*node*/)
-// 	if err != nil {
-// 		logger.Errorf("Failed to authenticate a node: " + err.Error())
-// 	}
-// }
-
-//func findNodeByAddress(address string, nodes []insolar.DiscoveryNode) (insolar.DiscoveryNode, error) {
-//	for _, node := range nodes {
-//		if node.GetHost() == address {
-//			return node, nil
-//		}
-//	}
-//	return nil, errors.New("Failed to find a discovery node with address: " + address)
-//}
-
-// todo: remove this workaround
-func (g *NoNetwork) zeroBootstrap(ctx context.Context) {
-	inslogger.FromContext(ctx).Info("[ Bootstrap ] Zero bootstrap")
-	g.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{g.NodeKeeper.GetOrigin()})
 }
