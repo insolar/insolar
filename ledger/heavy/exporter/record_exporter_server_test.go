@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/heavy/executor"
@@ -120,13 +121,133 @@ func TestRecordIterator_HasNext(t *testing.T) {
 			jetKeeper := executor.NewJetKeeperMock(t)
 			jetKeeper.TopSyncPulseMock.Return(101)
 
-			iter := newRecordIterator(pn, 0, 0, positionAccessor, nil, jetKeeper, pulseCalculator)
-			iter.currentPosition = 2
+			iter := newRecordIterator(pn, 2, 0, positionAccessor, nil, jetKeeper, pulseCalculator)
 
 			hasNext := iter.HasNext(ctx)
 
 			require.True(t, hasNext)
 		})
 
+	})
+}
+
+func TestRecordIterator_Next(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+
+	t.Run("returns err, if LastKnownPosition returns err", func(t *testing.T) {
+		pn := gen.PulseNumber()
+		positionAccessor := object.NewRecordPositionAccessorMock(t)
+		positionAccessor.LastKnownPositionMock.Expect(pn).Return(0, errors.New("some error"))
+
+		iter := newRecordIterator(pn, 0, 0, positionAccessor, nil, nil, nil)
+
+		_, err := iter.Next(ctx)
+
+		require.Error(t, err)
+	})
+
+	t.Run("returns err, if AtPosition returns err", func(t *testing.T) {
+		pn := gen.PulseNumber()
+		positionAccessor := object.NewRecordPositionAccessorMock(t)
+		positionAccessor.LastKnownPositionMock.Expect(pn).Return(10, nil)
+		positionAccessor.AtPositionMock.Expect(pn, uint32(2)).Return(insolar.ID{}, store.ErrNotFound)
+
+		iter := newRecordIterator(pn, 1, 0, positionAccessor, nil, nil, nil)
+
+		_, err := iter.Next(ctx)
+
+		require.Error(t, err)
+		require.Equal(t, err.Error(), store.ErrNotFound.Error())
+	})
+
+	t.Run("returns err, if ForID returns err", func(t *testing.T) {
+		pn := gen.PulseNumber()
+		id := gen.ID()
+		positionAccessor := object.NewRecordPositionAccessorMock(t)
+		positionAccessor.LastKnownPositionMock.Expect(pn).Return(10, nil)
+		positionAccessor.AtPositionMock.Expect(pn, uint32(2)).Return(id, nil)
+
+		recordsAccessor := object.NewRecordAccessorMock(t)
+		recordsAccessor.ForIDMock.Expect(ctx, id).Return(record.Material{}, store.ErrNotFound)
+
+		iter := newRecordIterator(pn, 1, 0, positionAccessor, recordsAccessor, nil, nil)
+
+		_, err := iter.Next(ctx)
+
+		require.Error(t, err)
+		require.Equal(t, err.Error(), store.ErrNotFound.Error())
+	})
+
+	t.Run("reading data works", func(t *testing.T) {
+		pn := gen.PulseNumber()
+		id := gen.ID()
+		positionAccessor := object.NewRecordPositionAccessorMock(t)
+		positionAccessor.LastKnownPositionMock.Expect(pn).Return(10, nil)
+		positionAccessor.AtPositionMock.Expect(pn, uint32(2)).Return(id, nil)
+
+		record := record.Material{
+			JetID: gen.JetID(),
+		}
+		recordsAccessor := object.NewRecordAccessorMock(t)
+		recordsAccessor.ForIDMock.Expect(ctx, id).Return(record, nil)
+
+		iter := newRecordIterator(pn, 1, 0, positionAccessor, recordsAccessor, nil, nil)
+		next, err := iter.Next(ctx)
+
+		require.NoError(t, err)
+		require.Equal(t, uint32(1), iter.read)
+		require.Equal(t, pn, next.PulseNumber)
+		require.Equal(t, uint32(2), next.RecordNumber)
+		require.Equal(t, id, next.RecordID)
+		require.Equal(t, record, next.Record)
+	})
+
+	t.Run("cross-pulse edges", func(t *testing.T) {
+		t.Run("Forwards returns error", func(t *testing.T) {
+			pn := gen.PulseNumber()
+			positionAccessor := object.NewRecordPositionAccessorMock(t)
+			positionAccessor.LastKnownPositionMock.Expect(pn).Return(1, nil)
+
+			pulseCalculator := network.NewPulseCalculatorMock(t)
+			pulseCalculator.ForwardsMock.Expect(ctx, pn, 1).Return(insolar.Pulse{}, store.ErrNotFound)
+
+			iter := newRecordIterator(pn, 1, 0, positionAccessor, nil, nil, pulseCalculator)
+
+			_, err := iter.Next(ctx)
+
+			require.Error(t, err)
+			require.Equal(t, err.Error(), store.ErrNotFound.Error())
+		})
+
+		t.Run("Changing pulse works successfully", func(t *testing.T) {
+			firstPN := gen.PulseNumber()
+			nextPN := gen.PulseNumber()
+			id := gen.ID()
+
+			positionAccessor := object.NewRecordPositionAccessorMock(t)
+			positionAccessor.LastKnownPositionMock.Expect(firstPN).Return(5, nil)
+			positionAccessor.AtPositionMock.Expect(nextPN, uint32(1)).Return(id, nil)
+
+			record := record.Material{
+				JetID: gen.JetID(),
+			}
+			recordsAccessor := object.NewRecordAccessorMock(t)
+			recordsAccessor.ForIDMock.Expect(ctx, id).Return(record, nil)
+
+			pulseCalculator := network.NewPulseCalculatorMock(t)
+			pulseCalculator.ForwardsMock.Expect(ctx, firstPN, 1).Return(insolar.Pulse{PulseNumber: nextPN}, nil)
+
+			iter := newRecordIterator(firstPN, 10, 0, positionAccessor, recordsAccessor, nil, pulseCalculator)
+
+			next, err := iter.Next(ctx)
+
+			require.NoError(t, err)
+			require.Equal(t, nextPN, iter.currentPulse)
+			require.Equal(t, uint32(1), iter.read)
+			require.Equal(t, nextPN, next.PulseNumber)
+			require.Equal(t, uint32(1), next.RecordNumber)
+			require.Equal(t, id, next.RecordID)
+			require.Equal(t, record, next.Record)
+		})
 	})
 }
