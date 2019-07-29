@@ -105,7 +105,7 @@ func Test_OutgoingRequests(t *testing.T) {
 	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
 	s.Pulse(ctx)
 
-	t.Run("detached notification sent", func(t *testing.T) {
+	t.Run("detached notification sent on detached reason close", func(t *testing.T) {
 		p, _ := callSetIncomingRequest(ctx, s, gen.ID(), gen.ID(), true, true)
 		requireNotError(t, p)
 		objectID := p.(*payload.RequestInfo).ObjectID
