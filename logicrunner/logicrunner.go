@@ -257,21 +257,6 @@ func (lr *LogicRunner) GracefulStop(ctx context.Context) error {
 	return nil
 }
 
-func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg insolar.Message, role insolar.DynamicRole) error {
-	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
-	target := msg.DefaultTarget()
-	isAuthorized, err := lr.JetCoordinator.IsAuthorized(
-		ctx, role, *target.Record(), lr.pulse(ctx).PulseNumber, lr.JetCoordinator.Me(),
-	)
-	if err != nil {
-		return errors.Wrap(err, "authorization failed with error")
-	}
-	if !isAuthorized {
-		return errors.New("can't executeAndReply this object")
-	}
-	return nil
-}
-
 func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context {
 	ctx, _ = inslogger.WithField(ctx, "targetid", msg.DefaultTarget().String())
 	return ctx
@@ -293,8 +278,8 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 	objects := lr.StateStorage.StateMap()
 	inslogger.FromContext(ctx).Debug("Processing ", len(*objects), " on pulse change")
 	for ref, state := range *objects {
-		meNext, _ := lr.JetCoordinator.IsAuthorized(
-			ctx, insolar.DynamicRoleVirtualExecutor, *ref.Record(), pulse.PulseNumber, lr.JetCoordinator.Me(),
+		meNext, _ := lr.JetCoordinator.IsMeAuthorizedNow(
+			ctx, insolar.DynamicRoleVirtualExecutor, *ref.Record(),
 		)
 		state.Lock()
 

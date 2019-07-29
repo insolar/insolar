@@ -73,6 +73,9 @@ type Coordinator interface {
 	// IsAuthorized checks for role on concrete pulse for the address.
 	IsAuthorized(ctx context.Context, role insolar.DynamicRole, obj insolar.ID, pulse insolar.PulseNumber, node insolar.Reference) (bool, error)
 
+	// IsMeAuthorizedNow checks role of the current node in the current pulse for the address. Sugar for IsAuthorized.
+	IsMeAuthorizedNow(ctx context.Context, role insolar.DynamicRole, obj insolar.ID) (bool, error)
+
 	// QueryRole returns node refs responsible for role bound operations for given object and pulse.
 	QueryRole(ctx context.Context, role insolar.DynamicRole, obj insolar.ID, pulse insolar.PulseNumber) ([]insolar.Reference, error)
 
