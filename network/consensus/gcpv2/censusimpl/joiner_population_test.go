@@ -71,7 +71,7 @@ func TestNewJoinerPopulation(t *testing.T) {
 	sp.GetPublicKeyStoreMock.Set(func() cryptkit.PublicKeyStore { return pks })
 	vf := cryptkit.NewSignatureVerifierFactoryMock(t)
 	sv := cryptkit.NewSignatureVerifierMock(t)
-	vf.GetSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
+	vf.CreateSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
 	ojp := NewJoinerPopulation(sp, vf)
 	require.Zero(t, ojp.localNode.mode)
 }

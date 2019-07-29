@@ -222,7 +222,7 @@ func TestSignGetSignatureMethod(t *testing.T) {
 }
 
 func TestAsSignatureHolder(t *testing.T) {
-	s := Signature{signatureMethod: "test"}
+	s := Signature{hFoldReader: longbits.NewBits512FromBytes(nil), signatureMethod: "test"}
 	sh := s.AsSignatureHolder()
 	require.Equal(t, sh.GetSignatureMethod(), s.signatureMethod)
 
@@ -298,15 +298,15 @@ func TestGetSignature(t *testing.T) {
 }
 
 func TestGetDigestHolder(t *testing.T) {
-	d := Digest{digestMethod: "testDigest"}
-	s := Signature{signatureMethod: "testSignature"}
+	d := Digest{hFoldReader: longbits.NewBits512FromBytes(nil), digestMethod: "testDigest"}
+	s := Signature{hFoldReader: longbits.NewBits512FromBytes(nil), signatureMethod: "testSignature"}
 	sd := NewSignedDigest(d, s)
 	require.Equal(t, d.AsDigestHolder(), sd.GetDigestHolder())
 }
 
 func TestGetSignatureHolder(t *testing.T) {
-	d := Digest{digestMethod: "testDigest"}
-	s := Signature{signatureMethod: "testSignature"}
+	d := Digest{hFoldReader: longbits.NewBits512FromBytes(nil), digestMethod: "testDigest"}
+	s := Signature{hFoldReader: longbits.NewBits512FromBytes(nil), signatureMethod: "testSignature"}
 	sd := NewSignedDigest(d, s)
 	require.Equal(t, s.AsSignatureHolder(), sd.GetSignatureHolder())
 }
@@ -344,8 +344,8 @@ func TestSignedDigestString(t *testing.T) {
 }
 
 func TestAsSignedDigestHolder(t *testing.T) {
-	d := Digest{digestMethod: "testDigest"}
-	s := Signature{signatureMethod: "testSignature"}
+	d := Digest{hFoldReader: longbits.NewBits512FromBytes(nil), digestMethod: "testDigest"}
+	s := Signature{hFoldReader: longbits.NewBits512FromBytes(nil), signatureMethod: "testSignature"}
 	sd := NewSignedDigest(d, s)
 	sdh := sd.AsSignedDigestHolder()
 
@@ -371,7 +371,7 @@ func TestSignDataByDataSigner(t *testing.T) {
 	ds := NewDataSignerMock(t)
 	td := DigestMethod("testDigest")
 	ts := SignatureMethod("testSign")
-	ds.GetSignOfDataMock.Set(func(io.Reader) SignedDigest {
+	ds.SignDataMock.Set(func(io.Reader) SignedDigest {
 		return SignedDigest{digest: Digest{digestMethod: td}, signature: Signature{signatureMethod: ts}}
 	})
 	sd := SignDataByDataSigner(&bits, ds)

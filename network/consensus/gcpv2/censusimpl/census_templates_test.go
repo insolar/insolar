@@ -102,7 +102,7 @@ func TestNewPrimingCensusForJoiner(t *testing.T) {
 	registries.GetVersionPulseDataMock.Set(func() pulse.Data { return pulse.Data{PulseNumber: pn} })
 	vf := cryptkit.NewSignatureVerifierFactoryMock(t)
 	sv := cryptkit.NewSignatureVerifierMock(t)
-	vf.GetSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
+	vf.CreateSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
 	pcj := NewPrimingCensusForJoiner(sp, registries, vf)
 	require.Equal(t, pn, pcj.GetPulseNumber())
 }
@@ -121,7 +121,7 @@ func TestNewPrimingCensus(t *testing.T) {
 	sps = append(sps, sp)
 	vf := cryptkit.NewSignatureVerifierFactoryMock(t)
 	sv := cryptkit.NewSignatureVerifierMock(t)
-	vf.GetSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
+	vf.CreateSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
 	require.Panics(t, func() { NewPrimingCensus(nil, sp, registries, vf) })
 
 	require.Panics(t, func() { NewPrimingCensus(sps, sp, registries, vf) })

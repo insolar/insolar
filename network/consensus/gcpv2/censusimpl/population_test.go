@@ -69,7 +69,7 @@ import (
 func TestNewManyNodePopulation(t *testing.T) {
 	svf := cryptkit.NewSignatureVerifierFactoryMock(t)
 	sv := cryptkit.NewSignatureVerifierMock(t)
-	svf.GetSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
+	svf.CreateSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
 	require.Panics(t, func() { NewManyNodePopulation(nil, 0, nil) })
 
 	sp := profiles.NewStaticProfileMock(t)
@@ -409,7 +409,7 @@ func TestMakeOfProfiles(t *testing.T) {
 	mnp := ManyNodePopulation{}
 	svf := cryptkit.NewSignatureVerifierFactoryMock(t)
 	sv := cryptkit.NewSignatureVerifierMock(t)
-	svf.GetSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
+	svf.CreateSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
 	localNodeID := insolar.AbsentShortNodeID
 	require.Panics(t, func() { mnp.makeOfProfiles(nodes, localNodeID, svf) })
 
