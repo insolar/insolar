@@ -63,7 +63,7 @@ func (p *SendCode) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to create message")
 	}
 
-	go p.Dep.Sender.Reply(ctx, p.message, msg)
+	p.Dep.Sender.Reply(ctx, p.message, msg)
 
 	return nil
 }

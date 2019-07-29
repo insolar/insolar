@@ -78,7 +78,7 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 			return errors.Wrap(err, "failed to create message")
 		}
 
-		go p.dep.sender.Reply(ctx, p.message, msg)
+		p.dep.sender.Reply(ctx, p.message, msg)
 
 		return nil
 	}

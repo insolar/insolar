@@ -114,6 +114,6 @@ func (p *SendRequests) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create a FilamentSegment message")
 	}
-	go p.dep.sender.Reply(ctx, p.meta, rep)
+	p.dep.sender.Reply(ctx, p.meta, rep)
 	return nil
 }
