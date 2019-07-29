@@ -250,6 +250,7 @@ outer:
 			log.Debug(">>>>workerPrePhase3: ctx.Done")
 			return nil // ctx.Err() ?
 		case <-chasingDelayTimer.Channel():
+			chasingDelayTimer.ClearExpired()
 			log.Debug(">>>>workerPrePhase3: chaseExpired")
 			break outer
 		case <-startOfPhase3:
@@ -455,6 +456,7 @@ outer:
 			consensusSelection = c.consensusStrategy.SelectOnStopped(&verifiedStatTbl, true, consensuskit.BftMajority(popCount))
 			break outer
 		case <-chasingDelayTimer.Channel():
+			chasingDelayTimer.ClearExpired()
 			log.Debug("Phase3 chasing expired")
 			consensusSelection = c.consensusStrategy.SelectOnStopped(&verifiedStatTbl, true, consensuskit.BftMajority(popCount))
 			break outer

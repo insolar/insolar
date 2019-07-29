@@ -87,6 +87,8 @@ func (p *PollingWorker) pollingWorker(pollingInterval time.Duration) {
 		case <-p.ctx.Done():
 			return
 		case <-pollingTimer.Channel():
+			pollingTimer.ClearExpired()
+
 			if p.scanPolls() {
 				pollingTimer.RestartChase()
 			}
