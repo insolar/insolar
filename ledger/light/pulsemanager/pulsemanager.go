@@ -101,7 +101,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	}()
 
 	ctx, span := instracer.StartSpan(
-		ctx, "pulse.process", trace.WithSampler(trace.AlwaysSample()),
+		ctx, "PulseManager.Set", trace.WithSampler(trace.AlwaysSample()),
 	)
 	span.AddAttributes(
 		trace.Int64Attribute("pulse.PulseNumber", int64(newPulse.PulseNumber)),
@@ -131,7 +131,7 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	[]insolar.JetID, insolar.Pulse, error,
 ) {
 	m.GIL.Acquire(ctx)
-	ctx, span := instracer.StartSpan(ctx, "pulse.gil_locked")
+	ctx, span := instracer.StartSpan(ctx, "PulseManager.setUnderGilSection")
 	defer span.End()
 	defer m.GIL.Release(ctx)
 
