@@ -15,15 +15,14 @@ func _() {
 	_ = x[TypePendingFinished-4]
 	_ = x[TypeAdditionalCallFromPreviousExecutor-5]
 	_ = x[TypeStillExecuting-6]
-	_ = x[TypeGetObjectIndex-7]
-	_ = x[TypeHeavyStartStop-8]
-	_ = x[TypeHeavyPayload-9]
-	_ = x[TypeGenesisRequest-10]
+	_ = x[TypeHeavyStartStop-7]
+	_ = x[TypeHeavyPayload-8]
+	_ = x[TypeGenesisRequest-9]
 }
 
-const _MessageType_name = "TypeCallMethodTypeReturnResultsTypeExecutorResultsTypeValidationResultsTypePendingFinishedTypeAdditionalCallFromPreviousExecutorTypeStillExecutingTypeGetObjectIndexTypeHeavyStartStopTypeHeavyPayloadTypeGenesisRequest"
+const _MessageType_name = "TypeCallMethodTypeReturnResultsTypeExecutorResultsTypeValidationResultsTypePendingFinishedTypeAdditionalCallFromPreviousExecutorTypeStillExecutingTypeHeavyStartStopTypeHeavyPayloadTypeGenesisRequest"
 
-var _MessageType_index = [...]uint8{0, 14, 31, 50, 71, 90, 128, 146, 164, 182, 198, 216}
+var _MessageType_index = [...]uint8{0, 14, 31, 50, 71, 90, 128, 146, 164, 180, 198}
 
 func (i MessageType) String() string {
 	if i >= MessageType(len(_MessageType_index)-1) {

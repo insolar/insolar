@@ -47,8 +47,8 @@ func (s *GetPendings) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	passIfNotExecutor := !s.passed
-	jet := proc.NewCheckJet(msg.ObjectID, flow.Pulse(ctx), s.meta, passIfNotExecutor)
-	s.dep.CheckJet(jet)
+	jet := proc.NewFetchJet(msg.ObjectID, flow.Pulse(ctx), s.meta, passIfNotExecutor)
+	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
 		if err == proc.ErrNotExecutor && passIfNotExecutor {
 			return nil
@@ -58,8 +58,8 @@ func (s *GetPendings) Present(ctx context.Context, f flow.Flow) error {
 
 	objJetID := jet.Result.Jet
 
-	hot := proc.NewWaitHotWM(objJetID, flow.Pulse(ctx), s.meta)
-	s.dep.WaitHotWM(hot)
+	hot := proc.NewWaitHot(objJetID, flow.Pulse(ctx), s.meta)
+	s.dep.WaitHot(hot)
 	if err := f.Procedure(ctx, hot, false); err != nil {
 		return err
 	}

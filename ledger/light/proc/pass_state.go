@@ -30,9 +30,9 @@ import (
 type PassState struct {
 	message payload.Meta
 
-	Dep struct {
-		Sender  bus.Sender
-		Records object.RecordAccessor
+	dep struct {
+		sender  bus.Sender
+		records object.RecordAccessor
 	}
 }
 
@@ -40,6 +40,14 @@ func NewPassState(meta payload.Meta) *PassState {
 	return &PassState{
 		message: meta,
 	}
+}
+
+func (p *PassState) Dep(
+	records object.RecordAccessor,
+	sender bus.Sender,
+) {
+	p.dep.records = records
+	p.dep.sender = sender
 }
 
 func (p *PassState) Proceed(ctx context.Context) error {
@@ -55,14 +63,14 @@ func (p *PassState) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to decode origin message")
 	}
 
-	rec, err := p.Dep.Records.ForID(ctx, pass.StateID)
+	rec, err := p.dep.records.ForID(ctx, pass.StateID)
 	if err == object.ErrNotFound {
 		msg, err := payload.NewMessage(&payload.Error{Text: "no such state"})
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
 
-		go p.Dep.Sender.Reply(ctx, origin, msg)
+		p.dep.sender.Reply(ctx, origin, msg)
 		return nil
 	}
 	if err != nil {
@@ -82,7 +90,7 @@ func (p *PassState) Proceed(ctx context.Context) error {
 			return errors.Wrap(err, "failed to create reply")
 		}
 
-		go p.Dep.Sender.Reply(ctx, origin, msg)
+		p.dep.sender.Reply(ctx, origin, msg)
 		return nil
 	}
 
@@ -98,7 +106,7 @@ func (p *PassState) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to create message")
 	}
 
-	go p.Dep.Sender.Reply(ctx, origin, msg)
+	p.dep.sender.Reply(ctx, origin, msg)
 
 	return nil
 }
