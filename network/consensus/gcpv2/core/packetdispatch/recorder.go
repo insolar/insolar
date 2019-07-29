@@ -48,21 +48,22 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package packetrecorder
+package packetdispatch
 
 import (
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
 	"sync"
 
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
 
-type PostponedPacketFunc func(packet transport.PacketParser, from endpoints.Inbound, verifyFlags PacketVerifyFlags) bool
+type PostponedPacketFunc func(packet transport.PacketParser, from endpoints.Inbound, verifyFlags coreapi.PacketVerifyFlags) bool
 
 type PostponedPacket struct {
 	Packet      transport.PacketParser
 	From        endpoints.Inbound
-	VerifyFlags PacketVerifyFlags
+	VerifyFlags coreapi.PacketVerifyFlags
 }
 
 func NewPacketRecorder(recordingSize int) PacketRecorder {
@@ -77,7 +78,7 @@ type packetRecording struct {
 	packets []PostponedPacket
 }
 
-func (p *packetRecording) Record(packet transport.PacketParser, from endpoints.Inbound, verifyFlags PacketVerifyFlags) {
+func (p *packetRecording) Record(packet transport.PacketParser, from endpoints.Inbound, verifyFlags coreapi.PacketVerifyFlags) {
 	p.packets = append(p.packets, PostponedPacket{packet, from, verifyFlags})
 }
 
@@ -86,7 +87,7 @@ type PacketRecorder struct {
 	pr   UnsafePacketRecorder
 }
 
-func (p *PacketRecorder) Record(packet transport.PacketParser, from endpoints.Inbound, verifyFlags PacketVerifyFlags) {
+func (p *PacketRecorder) Record(packet transport.PacketParser, from endpoints.Inbound, verifyFlags coreapi.PacketVerifyFlags) {
 	p.sync.Lock()
 	defer p.sync.Unlock()
 	p.pr.Record(packet, from, verifyFlags)
@@ -108,7 +109,7 @@ func (p *UnsafePacketRecorder) IsRecording() bool {
 	return p.playbackFn == nil
 }
 
-func (p *UnsafePacketRecorder) Record(packet transport.PacketParser, from endpoints.Inbound, verifyFlags PacketVerifyFlags) {
+func (p *UnsafePacketRecorder) Record(packet transport.PacketParser, from endpoints.Inbound, verifyFlags coreapi.PacketVerifyFlags) {
 	if p.playbackFn != nil {
 		go p.playbackFn(packet, from, verifyFlags)
 		return
@@ -146,13 +147,3 @@ func playbackPackets(recordings []packetRecording, to PostponedPacketFunc) {
 		}
 	}
 }
-
-type PacketVerifyFlags uint32
-
-const DefaultVerify PacketVerifyFlags = 0
-
-const (
-	SkipVerify PacketVerifyFlags = 1 << iota
-	RequireStrictVerify
-	SuccesfullyVerified
-)

@@ -129,7 +129,8 @@ func (ph *PulseHandler) SetPacketProcessor(packetProcessor PacketProcessor) {
 func (ph *PulseHandler) SetPacketParserFactory(PacketParserFactory) {}
 
 func (ph *PulseHandler) HandlePulse(ctx context.Context, pulse insolar.Pulse, packet network.ReceivedPacket) {
-	pulsePayload := NewPulsePacketParser(pulse, packet.Bytes())
+	pulseData := NewPulseData(pulse)
+	pulsePayload := NewPulsePacketParser(pulseData, packet.Bytes())
 
 	err := ph.packetProcessor.ProcessPacket(ctx, pulsePayload, &endpoints.InboundConnection{
 		Addr: "pulsar",

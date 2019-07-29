@@ -90,7 +90,7 @@ func (p evictedPopulation) String() string {
 
 	b := strings.Builder{}
 	if p.detectedErrors != 0 {
-		b.WriteString(fmt.Sprintf("errors:%v ", p.detectedErrors))
+		b.WriteString(fmt.Sprintf("errors:%v ", p.detectedErrors.String()))
 	}
 	if len(p.profiles) > 0 {
 		b.WriteString(fmt.Sprintf("profiles:%d[", len(p.profiles)))

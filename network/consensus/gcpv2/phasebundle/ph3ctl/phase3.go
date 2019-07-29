@@ -53,6 +53,8 @@ package ph3ctl
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/common/args"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 	"sync"
 	"time"
 
@@ -116,7 +118,7 @@ type Phase3PacketDispatcher struct {
 
 const outOfOrderPhase3 = 1
 
-func (c *Phase3Controller) CreatePacketDispatcher(pt phases.PacketType, ctlIndex int, realm *core.FullRealm) (core.PacketDispatcher, core.PerNodePacketDispatcherFactory) {
+func (c *Phase3Controller) CreatePacketDispatcher(pt phases.PacketType, ctlIndex int, realm *core.FullRealm) (population.PacketDispatcher, core.PerNodePacketDispatcherFactory) {
 	customOptions := uint32(0)
 	if pt != phases.PacketPhase3 {
 		customOptions = outOfOrderPhase3
@@ -128,7 +130,7 @@ func (*Phase3Controller) GetPacketType() []phases.PacketType {
 	return []phases.PacketType{phases.PacketPhase3, phases.PacketFastPhase3}
 }
 
-func (c *Phase3PacketDispatcher) DispatchMemberPacket(ctx context.Context, reader transport.MemberPacketReader, n *core.NodeAppearance) error {
+func (c *Phase3PacketDispatcher) DispatchMemberPacket(ctx context.Context, reader transport.MemberPacketReader, n *population.NodeAppearance) error {
 
 	p3 := reader.AsPhase3Packet()
 
@@ -248,6 +250,7 @@ outer:
 			log.Debug(">>>>workerPrePhase3: ctx.Done")
 			return nil // ctx.Err() ?
 		case <-chasingDelayTimer.Channel():
+			chasingDelayTimer.ClearExpired()
 			log.Debug(">>>>workerPrePhase3: chaseExpired")
 			break outer
 		case <-startOfPhase3:
@@ -282,14 +285,16 @@ outer:
 			indexedCount, isComplete := pop.GetCountAndCompleteness(false)
 			bftMajority := consensuskit.BftMajority(indexedCount)
 
-			// updID := insolar.AbsentShortNodeID
-			// if upd.UpdatedNode != nil {
-			//	updID = upd.UpdatedNode.GetNodeID()
-			// }
-			//
-			// log.Debugf("workerPrePhase3: id=%d upd=%d count=%d hasNsh=%d trustBySome=%d trustByNbh=%d purgatory=%d announced=%d fullJoiners=%d fraud=%d",
-			//	c.R.GetSelfNodeID(), updID,
-			//	indexedCount, countHasNsh, countTrustBySome, countTrustByNeighbors, countPurgatory, countAnnouncedJoiners, countFullJoiners, countFraud)
+			updID := insolar.AbsentShortNodeID
+			if upd.UpdatedNode != nil {
+				updID = upd.UpdatedNode.GetNodeID()
+			}
+
+			log.Debug(fmt.Sprintf("workerPrePhase3: \nid=%d upd=%d count=%d hasNsh=%d trustBySome=%d trustByNbh=%d purg=%d ann=%d full=%d fraud=%d"+
+				"\nid=%[1]d upd=%[2]d dyns=%[11]v purg=%v trust=%v",
+				c.R.GetSelfNodeID(), updID,
+				indexedCount, countHasNsh, countTrustBySome, countTrustByNeighbors, countPurgatory, countAnnouncedJoiners, countFullJoiners, countFraud,
+				args.AsUint16Slice(pop.GetDynamicCounts()), args.AsUint16Slice(pop.GetPurgatoryCounts()), args.AsUint16Slice(pop.GetTrustCounts())))
 
 			// We have some-trusted from all nodes, and the majority of them are well-trusted
 			if isComplete && countFraud == 0 && countHasNsh >= indexedCount &&
@@ -326,7 +331,7 @@ outer:
 	}
 
 	/* Ensure that NSH is available, otherwise we can't normally build packets */
-	for c.R.GetSelf().IsNshRequired() {
+	for c.R.GetSelf().IsNSHRequired() {
 		log.Debug(">>>>workerPrePhase3: nsh is required")
 		select {
 		case <-ctx.Done():
@@ -451,6 +456,7 @@ outer:
 			consensusSelection = c.consensusStrategy.SelectOnStopped(&verifiedStatTbl, true, consensuskit.BftMajority(popCount))
 			break outer
 		case <-chasingDelayTimer.Channel():
+			chasingDelayTimer.ClearExpired()
 			log.Debug("Phase3 chasing expired")
 			consensusSelection = c.consensusStrategy.SelectOnStopped(&verifiedStatTbl, true, consensuskit.BftMajority(popCount))
 			break outer
@@ -489,6 +495,7 @@ outer:
 				if inspectedNode.IsJoiner() {
 					panic("not implemented")
 				} else {
+					//inspectedNode.GetJoinerID()
 					nodeIndex = inspectedNode.GetIndex().AsInt()
 				}
 

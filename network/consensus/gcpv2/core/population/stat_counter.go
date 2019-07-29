@@ -48,59 +48,97 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package core
+package population
 
 import (
-	"testing"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-
-	"github.com/stretchr/testify/require"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"sync/atomic"
 )
 
-// TODO
-/*func TestPickNextJoinCandidate(t *testing.T) {
-	require.Equal(t, nil, (&SequentialCandidateFeeder{}).PickNextJoinCandidate())
+var _ EventDispatcher = &AtomicEventStats{}
 
-	s := &SequentialCandidateFeeder{buf: make([]profiles.CandidateProfile, 1)}
-	c := profiles.NewCandidateProfileMock(t)
-	s.buf[0] = c
-	require.Equal(t, c, s.PickNextJoinCandidate())
-}*/
-
-func TestRemoveJoinCandidate(t *testing.T) {
-	require.False(t, (&SequentialCandidateFeeder{}).RemoveJoinCandidate(false, insolar.ShortNodeID(0)))
-
-	s := &SequentialCandidateFeeder{buf: make([]profiles.CandidateProfile, 1)}
-	c := profiles.NewCandidateProfileMock(t)
-
-	s.buf[0] = c
-	c.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return insolar.ShortNodeID(1) })
-	require.False(t, s.RemoveJoinCandidate(false, insolar.ShortNodeID(2)))
-
-	c.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return insolar.ShortNodeID(1) })
-	require.True(t, s.RemoveJoinCandidate(false, insolar.ShortNodeID(1)))
-
-	require.Equal(t, []profiles.CandidateProfile(nil), s.buf)
-
-	s.buf = make([]profiles.CandidateProfile, 2)
-	s.buf[0] = c
-	c2 := profiles.NewCandidateProfileMock(t)
-	s.buf[1] = c2
-	require.True(t, s.RemoveJoinCandidate(false, insolar.ShortNodeID(1)))
-
-	require.Equal(t, 1, len(s.buf))
-
-	require.True(t, len(s.buf) > 0 && s.buf[0] == c2)
+type AtomicEventStats struct {
+	purgatoryCounts  uint32
+	dynamicsCounts   uint32
+	trustLevelCounts uint64
 }
 
-func TestAddJoinCandidate(t *testing.T) {
-	require.Panics(t, func() { (&SequentialCandidateFeeder{}).AddJoinCandidate(nil) })
+func (p *AtomicEventStats) OnTrustUpdated(populationVersion uint32, n *NodeAppearance, trustBefore member.TrustLevel, trustAfter member.TrustLevel) {
+	delta := uint64(0)
 
-	f := transport.NewFullIntroductionReaderMock(t)
-	s := &SequentialCandidateFeeder{}
-	s.AddJoinCandidate(f)
-	require.True(t, len(s.buf) == 1 && s.buf[0] == f)
+	switch {
+	case trustBefore == trustAfter:
+		return
+	case trustAfter.IsNegative():
+		if trustBefore.IsNegative() {
+			return
+		}
+		delta |= 1
+	default:
+		if trustBefore == member.UnknownTrust && trustAfter >= member.TrustBySelf {
+			delta |= 1 << 16
+		}
+		if trustBefore < member.TrustBySome && trustAfter >= member.TrustBySome {
+			delta |= 1 << 32
+		}
+		if trustBefore < member.TrustByNeighbors && trustAfter >= member.TrustByNeighbors {
+			delta |= 1 << 48
+		}
+		if delta == 0 {
+			return
+		}
+	}
+	atomic.AddUint64(&p.trustLevelCounts, delta)
+}
+
+func (p *AtomicEventStats) GetTrustCounts() (fraudCount, bySelfCount, bySomeCount, byNeighborsCount uint16) {
+	dc := atomic.LoadUint64(&p.trustLevelCounts)
+	return uint16(dc), uint16(dc >> 16), uint16(dc >> 32), uint16(dc >> 48)
+}
+
+func (p *AtomicEventStats) OnDynamicNodeUpdate(populationVersion uint32, n *NodeAppearance, flags UpdateFlags) {
+
+	if flags&(FlagFixedInit) != 0 {
+		return // not a dynamic node
+	}
+	delta := uint32(0)
+	if flags&(FlagCreated) != 0 {
+		delta |= 1
+	}
+	if flags&FlagUpdatedProfile != 0 {
+		delta |= 1 << 16
+	}
+	atomic.AddUint32(&p.dynamicsCounts, delta)
+}
+
+func (p *AtomicEventStats) GetDynamicCounts() (briefCount, fullCount uint16) {
+	dc := atomic.LoadUint32(&p.dynamicsCounts)
+	return uint16(dc), uint16(dc >> 16)
+}
+
+func (p *AtomicEventStats) OnPurgatoryNodeUpdate(populationVersion uint32, n MemberPacketSender, flags UpdateFlags) {
+	delta := uint32(0)
+	if flags&FlagCreated != 0 {
+		delta |= 1
+	}
+	if flags&FlagAscent != 0 {
+		delta |= 1 << 16
+	}
+	if delta != 0 {
+		atomic.AddUint32(&p.purgatoryCounts, delta)
+	}
+}
+
+func (p *AtomicEventStats) GetPurgatoryCounts() (addedCount, ascentCount uint16) {
+	dc := atomic.LoadUint32(&p.purgatoryCounts)
+	return uint16(dc), uint16(dc >> 16)
+}
+
+func (p *AtomicEventStats) OnCustomEvent(populationVersion uint32, n *NodeAppearance, event interface{}) {
+}
+
+func (p *AtomicEventStats) OnDynamicPopulationCompleted(populationVersion uint32, indexedCount int) {
+}
+
+func (p *AtomicEventStats) OnNodeStateAssigned(populationVersion uint32, n *NodeAppearance) {
 }

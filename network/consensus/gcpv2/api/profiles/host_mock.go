@@ -7,7 +7,7 @@ The original interface "Host" can be found in github.com/insolar/insolar/network
 */
 import (
 	"sync/atomic"
-	time "time"
+	"time"
 
 	"github.com/gojuno/minimock"
 	cryptkit "github.com/insolar/insolar/network/consensus/common/cryptkit"

@@ -76,8 +76,8 @@ type SequenceDigester interface {
 }
 
 type DigestFactory interface {
-	GetPacketDigester() DataDigester
-	GetSequenceDigester() SequenceDigester
+	CreatePacketDigester() DataDigester
+	CreateSequenceDigester() SequenceDigester
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.DigestHolder -o . -s _mock.go
@@ -166,13 +166,13 @@ type SignatureVerifier interface {
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureVerifierFactory -o . -s _mock.go
 
 type SignatureVerifierFactory interface {
-	GetSignatureVerifierWithPKS(pks PublicKeyStore) SignatureVerifier
+	CreateSignatureVerifierWithPKS(pks PublicKeyStore) SignatureVerifier
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.KeyStoreFactory -o . -s _mock.go
 
 type KeyStoreFactory interface {
-	GetPublicKeyStore(skh SignatureKeyHolder) PublicKeyStore
+	CreatePublicKeyStore(skh SignatureKeyHolder) PublicKeyStore
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.DataSigner -o . -s _mock.go
@@ -180,7 +180,7 @@ type KeyStoreFactory interface {
 type DataSigner interface {
 	DigestSigner
 	DataDigester
-	GetSignOfData(reader io.Reader) SignedDigest
+	SignData(reader io.Reader) SignedDigest
 	GetSignatureMethod() SignatureMethod
 }
 
@@ -243,6 +243,10 @@ type Digest struct {
 	digestMethod DigestMethod
 }
 
+func (d Digest) IsEmpty() bool {
+	return d.hFoldReader == nil
+}
+
 func (d *Digest) CopyOfDigest() Digest {
 	return Digest{hFoldReader: longbits.CopyFixedSize(d.hFoldReader), digestMethod: d.digestMethod}
 }
@@ -252,6 +256,9 @@ func (d *Digest) Equals(o DigestHolder) bool {
 }
 
 func (d Digest) AsDigestHolder() DigestHolder {
+	if d.IsEmpty() {
+		return nil
+	}
 	return &d
 }
 
@@ -279,6 +286,10 @@ type Signature struct {
 	signatureMethod SignatureMethod
 }
 
+func (p Signature) IsEmpty() bool {
+	return p.hFoldReader == nil
+}
+
 func (p *Signature) CopyOfSignature() Signature {
 	return Signature{hFoldReader: longbits.CopyFixedSize(p.hFoldReader), signatureMethod: p.signatureMethod}
 }
@@ -296,6 +307,9 @@ func (p *Signature) GetSignatureMethod() SignatureMethod {
 }
 
 func (p Signature) AsSignatureHolder() SignatureHolder {
+	if p.IsEmpty() {
+		return nil
+	}
 	return &p
 }
 
@@ -312,6 +326,10 @@ type SignedDigest struct {
 
 func NewSignedDigest(digest Digest, signature Signature) SignedDigest {
 	return SignedDigest{digest: digest, signature: signature}
+}
+
+func (r SignedDigest) IsEmpty() bool {
+	return r.digest.IsEmpty() && r.signature.IsEmpty()
 }
 
 func (r *SignedDigest) CopyOfSignedDigest() SignedDigest {
@@ -356,11 +374,16 @@ func (r SignedDigest) String() string {
 }
 
 func (r SignedDigest) AsSignedDigestHolder() SignedDigestHolder {
+	if r.IsEmpty() {
+		return nil
+	}
 	return &r
 }
 
 type hReader io.Reader
-type hSignedDigest SignedDigest
+type hSignedDigest struct {
+	SignedDigest
+}
 
 var _ io.WriterTo = &SignedData{}
 
@@ -370,16 +393,20 @@ type SignedData struct {
 }
 
 func NewSignedData(data io.Reader, digest Digest, signature Signature) SignedData {
-	return SignedData{hReader: data, hSignedDigest: hSignedDigest{digest, signature}}
+	return SignedData{hReader: data, hSignedDigest: hSignedDigest{SignedDigest{digest, signature}}}
 }
 
 func SignDataByDataSigner(data io.Reader, signer DataSigner) SignedData {
-	sd := signer.GetSignOfData(data)
+	sd := signer.SignData(data)
 	return NewSignedData(data, sd.digest, sd.signature)
 }
 
+func (r SignedData) IsEmpty() bool {
+	return r.hReader == nil && r.hSignedDigest.IsEmpty()
+}
+
 func (r *SignedData) GetSignedDigest() SignedDigest {
-	return SignedDigest(r.hSignedDigest)
+	return r.SignedDigest
 }
 
 func (r *SignedData) WriteTo(w io.Writer) (int64, error) {
@@ -404,6 +431,10 @@ type SignatureKey struct {
 	hFoldReader
 	signatureMethod SignatureMethod
 	keyType         SignatureKeyType
+}
+
+func (p SignatureKey) IsEmpty() bool {
+	return p.hFoldReader == nil
 }
 
 func (p *SignatureKey) GetSignMethod() SignMethod {

@@ -86,7 +86,7 @@ func TestEmbeddedPulsarData_DeserializeFrom(t *testing.T) {
 	require.NoError(t, err)
 	th, err := host.NewHost("127.0.0.1:2")
 	require.NoError(t, err)
-	pp := pulsenetwork.NewPulsePacket(context.Background(), &pu, ph, th, 0)
+	pp := pulsenetwork.NewPulsePacketWithTrace(context.Background(), &pu, ph, th, 0)
 
 	bs, err := packet.SerializePacket(pp)
 	require.NoError(t, err)
@@ -305,7 +305,7 @@ func TestGlobulaConsensusPacketBody_Phases_Flag0(t *testing.T) {
 	require.NoError(t, err)
 	th, err := host.NewHost("127.0.0.1:2")
 	require.NoError(t, err)
-	pp := pulsenetwork.NewPulsePacket(context.Background(), &pu, ph, th, 0)
+	pp := pulsenetwork.NewPulsePacketWithTrace(context.Background(), &pu, ph, th, 0)
 
 	bs, err := packet.SerializePacket(pp)
 	require.NoError(t, err)
@@ -387,7 +387,7 @@ func TestGlobulaConsensusPacketBody_Phases_Flag0Reset(t *testing.T) {
 	require.NoError(t, err)
 	th, err := host.NewHost("127.0.0.1:2")
 	require.NoError(t, err)
-	pp := pulsenetwork.NewPulsePacket(context.Background(), &pu, ph, th, 0)
+	pp := pulsenetwork.NewPulsePacketWithTrace(context.Background(), &pu, ph, th, 0)
 
 	bs, err := packet.SerializePacket(pp)
 	require.NoError(t, err)

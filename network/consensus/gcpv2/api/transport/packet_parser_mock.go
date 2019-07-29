@@ -7,7 +7,7 @@ The original interface "PacketParser" can be found in github.com/insolar/insolar
 */
 import (
 	"sync/atomic"
-	time "time"
+	"time"
 
 	"github.com/gojuno/minimock"
 	insolar "github.com/insolar/insolar/insolar"

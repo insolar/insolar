@@ -105,10 +105,6 @@ func (g *JoinerBootstrap) GetState() insolar.NetworkState {
 	return insolar.JoinerBootstrap
 }
 
-func (g *JoinerBootstrap) ShouldIgnorePulse(context.Context, insolar.Pulse) bool {
-	return false
-}
-
 func (g *JoinerBootstrap) authorize(ctx context.Context) (*packet.Permit, error) {
 	cert := g.CertificateManager.GetCertificate()
 	discoveryNodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), g.NodeKeeper.GetOrigin().ID())

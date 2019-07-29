@@ -52,68 +52,28 @@ package core
 
 import (
 	"context"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 )
 
-type PacketDispatcher interface {
-	HasCustomVerifyForHost(from endpoints.Inbound, strict bool) bool
-
-	DispatchHostPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags) error
-
-	/* This method can validate and create a member, but MUST NOT apply any changes to members etc */
-	TriggerUnknownMember(ctx context.Context, memberID insolar.ShortNodeID, packet transport.MemberPacketReader,
-		from endpoints.Inbound) (bool, error)
-	DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, source *NodeAppearance) error
-}
-
-type MemberPacketSender interface {
-	transport.TargetProfile
-	SetPacketSent(pt phases.PacketType) bool
-}
-type MemberPacketReceiver interface {
-	GetNodeID() insolar.ShortNodeID
-	CanReceivePacket(pt phases.PacketType) bool
-	VerifyPacketAuthenticity(packetSignature cryptkit.SignedDigest, from endpoints.Inbound, strictFrom bool) error
-	SetPacketReceived(pt phases.PacketType) bool
-	DispatchMemberPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags,
-		pd PacketDispatcher) error
-}
-
-type PhasePerNodePacketFunc func(ctx context.Context, packet transport.MemberPacketReader, from *NodeAppearance, realm *FullRealm) error
 type PerNodePacketDispatcherFactory interface {
-	// PhasePerNodePacketFunc
-	CreatePerNodePacketHandler(perNodeContext context.Context, node *NodeAppearance) (context.Context, PhasePerNodePacketFunc)
+	CreatePerNodePacketHandler(perNodeContext context.Context, node *population.NodeAppearance) (context.Context, population.DispatchMemberPacketFunc)
 }
 
-// type PrepPhasePacketHandler func(ctx context.Context, reader transport.PacketParser, from endpoints.Inbound) (postpone bool, err error)
 type PrepPhaseController interface {
 	GetPacketType() []phases.PacketType
-	CreatePacketDispatcher(pt phases.PacketType, realm *PrepRealm) PacketDispatcher
-
-	// HandleHostPacket(ctx context.Context, reader transport.PacketParser, from endpoints.Inbound) (postpone bool, err error)
+	CreatePacketDispatcher(pt phases.PacketType, realm *PrepRealm) population.PacketDispatcher
 
 	BeforeStart(ctx context.Context, realm *PrepRealm)
 	StartWorker(ctx context.Context, realm *PrepRealm)
 }
 
 /* realm is provided for this handler to avoid being replicated in individual handlers */
-
 type PhaseController interface {
 	GetPacketType() []phases.PacketType
-	CreatePacketDispatcher(pt phases.PacketType, ctlIndex int, realm *FullRealm) (PacketDispatcher, PerNodePacketDispatcherFactory)
-
-	// HandleHostPacket(ctx context.Context, reader transport.PacketParser, from endpoints.Inbound) error                                   // GetHandlerType() == PacketHandlerTypeHost
-	// HandleMemberPacket(ctx context.Context, reader transport.MemberPacketReader, src *NodeAppearance) error                              // GetHandlerType() == PacketHandlerTypeMember OR PacketHandlerTypeMemberFromUnknown
-	// HandleUnknownMemberPacket(ctx context.Context, reader transport.MemberPacketReader, from endpoints.Inbound) (*NodeAppearance, error) // GetHandlerType() == PacketHandlerTypeMemberFromUnknown
+	CreatePacketDispatcher(pt phases.PacketType, ctlIndex int, realm *FullRealm) (population.PacketDispatcher, PerNodePacketDispatcherFactory)
 
 	BeforeStart(ctx context.Context, realm *FullRealm)
 	StartWorker(ctx context.Context, realm *FullRealm)
@@ -129,18 +89,6 @@ type PhaseControllersBundleFactory interface {
 	CreateControllersBundle(population census.OnlinePopulation, config api.LocalNodeConfiguration /* strategy RoundStrategy */) PhaseControllersBundle
 }
 
-type UpdateFlags uint32
-
-const (
-	FlagCreated UpdateFlags = 1 << iota
-	FlagProfileUpdated
-)
-
 type NodeUpdateCallback interface {
-	OnTrustUpdated(populationVersion uint32, n *NodeAppearance, before, after member.TrustLevel)
-	OnNodeStateAssigned(populationVersion uint32, n *NodeAppearance)
-	OnDynamicNodeUpdate(populationVersion uint32, n *NodeAppearance, flags UpdateFlags)
-	OnPurgatoryNodeUpdate(populationVersion uint32, n *NodePhantom, flags UpdateFlags)
-	OnCustomEvent(populationVersion uint32, n *NodeAppearance, event interface{})
-	OnDynamicPopulationCompleted(populationVersion uint32, indexedCount int)
+	population.EventDispatcher
 }

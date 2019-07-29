@@ -105,7 +105,7 @@ func (p *Pulsar) Pulse(ctx context.Context, attempts int) {
 	pu := adapters.NewPulse(data)
 	ph, _ := host.NewHost("127.0.0.1:1")
 	th, _ := host.NewHost("127.0.0.1:2")
-	pp := pulsenetwork.NewPulsePacket(ctx, &pu, ph, th, 0)
+	pp := pulsenetwork.NewPulsePacketWithTrace(ctx, &pu, ph, th, 0)
 
 	bs, _ := packet.SerializePacket(pp)
 	rp, _ := packet.DeserializePacketRaw(bytes.NewReader(bs))

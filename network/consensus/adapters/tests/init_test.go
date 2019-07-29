@@ -184,23 +184,28 @@ func initNodes(ctx context.Context, mode consensus.Mode, nodes GeneratedNodes, s
 		delayTransport := strategy.GetLink(datagramTransport)
 		ns.transports[i] = delayTransport
 
-		ns.controllers[i] = consensus.New(ctx, consensus.Dep{
-			PrimingCloudStateHash: [64]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
-			KeyProcessor:          keyProcessor,
-			Scheme:                scheme,
-			CertificateManager:    certificateManager,
-			KeyStore:              keystore.NewInplaceKeyStore(nodes.meta[i].privateKey),
-			NodeKeeper:            nodeKeeper,
-			StateGetter:           &nshGen{nshDelay: defaultNshGenerationDelay},
+		controller := consensus.New(ctx, consensus.Dep{
+			KeyProcessor:       keyProcessor,
+			Scheme:             scheme,
+			CertificateManager: certificateManager,
+			KeyStore:           keystore.NewInplaceKeyStore(nodes.meta[i].privateKey),
+
+			NodeKeeper:        nodeKeeper,
+			DatagramTransport: delayTransport,
+
+			StateGetter: &nshGen{nshDelay: defaultNshGenerationDelay},
 			PulseChanger: &pulseChanger{
 				nodeKeeper: nodeKeeper,
 			},
 			StateUpdater: &stateUpdater{
 				nodeKeeper: nodeKeeper,
 			},
-			DatagramTransport: delayTransport,
+			EphemeralController: &ephemeralController{
+				allowed: true,
+			},
 		}).ControllerFor(mode, datagramHandler, pulseHandler)
 
+		ns.controllers[i] = controller
 		ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
 			"node_id":      n.ShortID(),
 			"node_address": n.Address(),
@@ -210,6 +215,7 @@ func initNodes(ctx context.Context, mode consensus.Mode, nodes GeneratedNodes, s
 		if err != nil {
 			return nil, err
 		}
+		controller.Prepare()
 
 		ns.staticProfiles[i] = adapters.NewStaticProfile(n, certificateManager.GetCertificate(), keyProcessor)
 	}
@@ -455,4 +461,12 @@ func (su *stateUpdater) UpdateState(ctx context.Context, pulseNumber insolar.Pul
 		inslogger.FromContext(ctx).Error(err)
 	}
 	su.nodeKeeper.SetCloudHash(cloudStateHash)
+}
+
+type ephemeralController struct {
+	allowed bool
+}
+
+func (e *ephemeralController) EphemeralMode() bool {
+	return e.allowed
 }

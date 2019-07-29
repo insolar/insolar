@@ -54,6 +54,7 @@ package tests
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -73,7 +74,11 @@ func (s *bootstrapSuite) SetupTest() {
 	inslogger.FromContext(s.fixture().ctx).Info("SetupTest -- ")
 
 	for i := 0; i < s.bootstrapCount; i++ {
-		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, s.newNetworkNode(fmt.Sprintf("bootstrap_%d", i)))
+		role := insolar.StaticRoleVirtual
+		if i == 0 {
+			role = insolar.StaticRoleHeavyMaterial
+		}
+		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, s.newNetworkNodeWithRole(fmt.Sprintf("bootstrap_%d", i), role))
 	}
 
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes)

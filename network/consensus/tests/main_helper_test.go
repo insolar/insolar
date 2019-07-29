@@ -53,6 +53,7 @@ package tests
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
 	"math/rand"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -115,9 +116,9 @@ func (p *emuNetworkBuilder) connectEmuNode(nodes []profiles.StaticProfile, selfI
 func (p *emuNetworkBuilder) _connectEmuNode(nodes []profiles.StaticProfile, selfIndex int, asJoiner bool) {
 
 	controlFeeder := &EmuControlFeeder{}
-	candidateFeeder := &core.SequentialCandidateFeeder{}
+	candidateFeeder := &coreapi.SequentialCandidateFeeder{}
 	switch {
-	case !asJoiner: // && selfIndex%3 == 1
+	case !asJoiner && selfIndex == 1:
 		for i := 5000; i < 8000; i += 1000 {
 			introID := i + selfIndex
 			intro := NewEmuNodeIntroByName(introID, fmt.Sprintf(fmtNodeName, "V", introID))

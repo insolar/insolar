@@ -166,6 +166,7 @@ func (p MembershipProfile) String() string {
 type JoinerAnnouncement struct {
 	JoinerProfile  StaticProfile
 	IntroducedByID insolar.ShortNodeID
+	JoinerSecret   cryptkit.DigestHolder
 }
 
 func (v JoinerAnnouncement) IsEmpty() bool {
@@ -173,10 +174,11 @@ func (v JoinerAnnouncement) IsEmpty() bool {
 }
 
 type MembershipAnnouncement struct {
-	Membership  MembershipProfile
-	IsLeaving   bool
-	LeaveReason uint32
-	JoinerID    insolar.ShortNodeID
+	Membership   MembershipProfile
+	IsLeaving    bool
+	LeaveReason  uint32
+	JoinerID     insolar.ShortNodeID
+	JoinerSecret cryptkit.DigestHolder
 }
 
 type MemberAnnouncement struct {
@@ -199,6 +201,8 @@ func NewMemberAnnouncement(memberID insolar.ShortNodeID, mp MembershipProfile,
 func NewJoinerAnnouncement(brief StaticProfile,
 	announcerID insolar.ShortNodeID) MemberAnnouncement {
 
+	// TODO joiner secret
+
 	return MemberAnnouncement{
 		MemberID:               brief.GetStaticNodeID(),
 		MembershipAnnouncement: NewMembershipAnnouncement(NewMembershipProfileForJoiner(brief)),
@@ -220,12 +224,13 @@ func NewMemberAnnouncementWithLeave(memberID insolar.ShortNodeID, mp MembershipP
 	}
 }
 
-func NewMemberAnnouncementWithJoinerID(memberID insolar.ShortNodeID, mp MembershipProfile, joinerID insolar.ShortNodeID,
+func NewMemberAnnouncementWithJoinerID(memberID insolar.ShortNodeID, mp MembershipProfile,
+	joinerID insolar.ShortNodeID, joinerSecret cryptkit.DigestHolder,
 	announcerID insolar.ShortNodeID) MemberAnnouncement {
 
 	return MemberAnnouncement{
 		MemberID:               memberID,
-		MembershipAnnouncement: NewMembershipAnnouncementWithJoinerID(mp, joinerID),
+		MembershipAnnouncement: NewMembershipAnnouncementWithJoinerID(mp, joinerID, joinerSecret),
 		AnnouncedByID:          announcerID,
 	}
 }
@@ -234,10 +239,11 @@ func NewMemberAnnouncementWithJoiner(memberID insolar.ShortNodeID, mp Membership
 	announcerID insolar.ShortNodeID) MemberAnnouncement {
 
 	return MemberAnnouncement{
-		MemberID:               memberID,
-		MembershipAnnouncement: NewMembershipAnnouncementWithJoinerID(mp, joiner.JoinerProfile.GetStaticNodeID()),
-		Joiner:                 joiner,
-		AnnouncedByID:          announcerID,
+		MemberID: memberID,
+		MembershipAnnouncement: NewMembershipAnnouncementWithJoinerID(mp,
+			joiner.JoinerProfile.GetStaticNodeID(), joiner.JoinerSecret),
+		Joiner:        joiner,
+		AnnouncedByID: announcerID,
 	}
 }
 
@@ -247,10 +253,13 @@ func NewMembershipAnnouncement(mp MembershipProfile) MembershipAnnouncement {
 	}
 }
 
-func NewMembershipAnnouncementWithJoinerID(mp MembershipProfile, joinerID insolar.ShortNodeID) MembershipAnnouncement {
+func NewMembershipAnnouncementWithJoinerID(mp MembershipProfile,
+	joinerID insolar.ShortNodeID, joinerSecret cryptkit.DigestHolder) MembershipAnnouncement {
+
 	return MembershipAnnouncement{
-		Membership: mp,
-		JoinerID:   joinerID,
+		Membership:   mp,
+		JoinerID:     joinerID,
+		JoinerSecret: joinerSecret,
 	}
 }
 

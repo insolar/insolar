@@ -212,16 +212,16 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	n.CurrentPulse = *insolar.GenesisPulse
 
 	n.consensusInstaller = consensus.New(ctx, consensus.Dep{
-		PrimingCloudStateHash: [64]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
-		KeyProcessor:          n.KeyProcessor,
-		Scheme:                n.CryptographyScheme,
-		CertificateManager:    n.CertificateManager,
-		KeyStore:              ks,
-		NodeKeeper:            n.NodeKeeper,
-		StateGetter:           n,
-		PulseChanger:          n,
-		StateUpdater:          n,
-		DatagramTransport:     n.datagramTransport,
+		KeyProcessor:        n.KeyProcessor,
+		Scheme:              n.CryptographyScheme,
+		CertificateManager:  n.CertificateManager,
+		KeyStore:            ks,
+		NodeKeeper:          n.NodeKeeper,
+		StateGetter:         n,
+		PulseChanger:        n,
+		StateUpdater:        n,
+		DatagramTransport:   n.datagramTransport,
+		EphemeralController: n,
 	})
 
 	return nil
@@ -414,4 +414,9 @@ func (n *ServiceNetwork) RegisterConsensusFinishedNotifier(fn consensus.Finished
 
 func (n *ServiceNetwork) GetCert(ctx context.Context, ref *insolar.Reference) (insolar.Certificate, error) {
 	return n.Gatewayer.Gateway().Auther().GetCert(ctx, ref)
+}
+
+func (n *ServiceNetwork) EphemeralMode() bool {
+	//return n.Gatewayer.Gateway().EphemeralMode()
+	return false
 }

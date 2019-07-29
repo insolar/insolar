@@ -65,8 +65,8 @@ import (
 
 const (
 	defaultLogLevel       = insolar.DebugLevel
-	defaultTestDuration   = defaultPulseDelta * time.Second * 7
 	defaultPulseDelta     = 1
+	defaultTestDuration   = defaultPulseDelta * time.Second * 7
 	defaultStartCaseAfter = 1 * time.Second
 )
 
@@ -92,7 +92,7 @@ func TestConsensusJoin(t *testing.T) {
 	js, err := initNodes(ctx, consensus.Joiner, *joiners, strategy)
 	require.NoError(t, err)
 
-	initPulsar(ctx, defaultPulseDelta, *ns)
+	//initPulsar(ctx, defaultPulseDelta, *ns)
 
 	testCase(defaultTestDuration, defaultStartCaseAfter, func() {
 		for i, joiner := range js.staticProfiles {

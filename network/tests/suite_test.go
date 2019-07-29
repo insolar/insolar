@@ -58,7 +58,6 @@ import (
 	"fmt"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/stretchr/testify/require"
-	"math/rand"
 	"strconv"
 	"strings"
 	"sync"
@@ -179,7 +178,11 @@ func (s *consensusSuite) SetupTest() {
 	suiteLogger.Info("SetupTest")
 
 	for i := 0; i < s.bootstrapCount; i++ {
-		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, s.newNetworkNode(fmt.Sprintf("bootstrap_%d", i)))
+		role := insolar.StaticRoleVirtual
+		if i == 0 {
+			role = insolar.StaticRoleHeavyMaterial
+		}
+		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, s.newNetworkNodeWithRole(fmt.Sprintf("bootstrap_%d", i), role))
 	}
 
 	for i := 0; i < s.nodesCount; i++ {
@@ -379,15 +382,19 @@ type networkNode struct {
 	consensusResult    chan insolar.PulseNumber
 }
 
-// newNetworkNode returns networkNode initialized only with id, host address and key pair
 func (s *testSuite) newNetworkNode(name string) *networkNode {
+	return s.newNetworkNodeWithRole(name, insolar.StaticRoleVirtual)
+}
+
+// newNetworkNode returns networkNode initialized only with id, host address and key pair
+func (s *testSuite) newNetworkNodeWithRole(name string, role insolar.StaticRole) *networkNode {
 	key, err := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	require.NoError(s.t, err)
 	address := "127.0.0.1:" + strconv.Itoa(incrementTestPort())
 
 	n := &networkNode{
 		id:                  testutils.RandomRef(),
-		role:                RandomRole(),
+		role:                role,
 		privateKey:          key,
 		cryptographyService: cryptography.NewKeyBoundCryptographyService(key),
 		host:                address,
@@ -452,11 +459,6 @@ func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManag
 	cert, err = certificate.ReadCertificateFromReader(pubKey, proc, strings.NewReader(jsonCert))
 	require.NoError(s.t, err)
 	return certificate.NewCertificateManager(cert), node.cryptographyService
-}
-
-func RandomRole() insolar.StaticRole {
-	i := rand.Int()%3 + 1
-	return insolar.StaticRole(i)
 }
 
 type pulseManagerMock struct {

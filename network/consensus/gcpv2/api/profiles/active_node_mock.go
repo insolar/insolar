@@ -19,6 +19,11 @@ import (
 type ActiveNodeMock struct {
 	t minimock.Tester
 
+	CanIntroduceJoinerFunc       func() (r bool)
+	CanIntroduceJoinerCounter    uint64
+	CanIntroduceJoinerPreCounter uint64
+	CanIntroduceJoinerMock       mActiveNodeMockCanIntroduceJoiner
+
 	GetDeclaredPowerFunc       func() (r member.Power)
 	GetDeclaredPowerCounter    uint64
 	GetDeclaredPowerPreCounter uint64
@@ -49,10 +54,30 @@ type ActiveNodeMock struct {
 	GetStaticPreCounter uint64
 	GetStaticMock       mActiveNodeMockGetStatic
 
+	HasFullProfileFunc       func() (r bool)
+	HasFullProfileCounter    uint64
+	HasFullProfilePreCounter uint64
+	HasFullProfileMock       mActiveNodeMockHasFullProfile
+
 	IsJoinerFunc       func() (r bool)
 	IsJoinerCounter    uint64
 	IsJoinerPreCounter uint64
 	IsJoinerMock       mActiveNodeMockIsJoiner
+
+	IsPoweredFunc       func() (r bool)
+	IsPoweredCounter    uint64
+	IsPoweredPreCounter uint64
+	IsPoweredMock       mActiveNodeMockIsPowered
+
+	IsStatefulFunc       func() (r bool)
+	IsStatefulCounter    uint64
+	IsStatefulPreCounter uint64
+	IsStatefulMock       mActiveNodeMockIsStateful
+
+	IsVoterFunc       func() (r bool)
+	IsVoterCounter    uint64
+	IsVoterPreCounter uint64
+	IsVoterMock       mActiveNodeMockIsVoter
 }
 
 //NewActiveNodeMock returns a mock for github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.ActiveNode
@@ -63,15 +88,154 @@ func NewActiveNodeMock(t minimock.Tester) *ActiveNodeMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.CanIntroduceJoinerMock = mActiveNodeMockCanIntroduceJoiner{mock: m}
 	m.GetDeclaredPowerMock = mActiveNodeMockGetDeclaredPower{mock: m}
 	m.GetIndexMock = mActiveNodeMockGetIndex{mock: m}
 	m.GetNodeIDMock = mActiveNodeMockGetNodeID{mock: m}
 	m.GetOpModeMock = mActiveNodeMockGetOpMode{mock: m}
 	m.GetSignatureVerifierMock = mActiveNodeMockGetSignatureVerifier{mock: m}
 	m.GetStaticMock = mActiveNodeMockGetStatic{mock: m}
+	m.HasFullProfileMock = mActiveNodeMockHasFullProfile{mock: m}
 	m.IsJoinerMock = mActiveNodeMockIsJoiner{mock: m}
+	m.IsPoweredMock = mActiveNodeMockIsPowered{mock: m}
+	m.IsStatefulMock = mActiveNodeMockIsStateful{mock: m}
+	m.IsVoterMock = mActiveNodeMockIsVoter{mock: m}
 
 	return m
+}
+
+type mActiveNodeMockCanIntroduceJoiner struct {
+	mock              *ActiveNodeMock
+	mainExpectation   *ActiveNodeMockCanIntroduceJoinerExpectation
+	expectationSeries []*ActiveNodeMockCanIntroduceJoinerExpectation
+}
+
+type ActiveNodeMockCanIntroduceJoinerExpectation struct {
+	result *ActiveNodeMockCanIntroduceJoinerResult
+}
+
+type ActiveNodeMockCanIntroduceJoinerResult struct {
+	r bool
+}
+
+//Expect specifies that invocation of ActiveNode.CanIntroduceJoiner is expected from 1 to Infinity times
+func (m *mActiveNodeMockCanIntroduceJoiner) Expect() *mActiveNodeMockCanIntroduceJoiner {
+	m.mock.CanIntroduceJoinerFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ActiveNodeMockCanIntroduceJoinerExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of ActiveNode.CanIntroduceJoiner
+func (m *mActiveNodeMockCanIntroduceJoiner) Return(r bool) *ActiveNodeMock {
+	m.mock.CanIntroduceJoinerFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ActiveNodeMockCanIntroduceJoinerExpectation{}
+	}
+	m.mainExpectation.result = &ActiveNodeMockCanIntroduceJoinerResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of ActiveNode.CanIntroduceJoiner is expected once
+func (m *mActiveNodeMockCanIntroduceJoiner) ExpectOnce() *ActiveNodeMockCanIntroduceJoinerExpectation {
+	m.mock.CanIntroduceJoinerFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ActiveNodeMockCanIntroduceJoinerExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *ActiveNodeMockCanIntroduceJoinerExpectation) Return(r bool) {
+	e.result = &ActiveNodeMockCanIntroduceJoinerResult{r}
+}
+
+//Set uses given function f as a mock of ActiveNode.CanIntroduceJoiner method
+func (m *mActiveNodeMockCanIntroduceJoiner) Set(f func() (r bool)) *ActiveNodeMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.CanIntroduceJoinerFunc = f
+	return m.mock
+}
+
+//CanIntroduceJoiner implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.ActiveNode interface
+func (m *ActiveNodeMock) CanIntroduceJoiner() (r bool) {
+	counter := atomic.AddUint64(&m.CanIntroduceJoinerPreCounter, 1)
+	defer atomic.AddUint64(&m.CanIntroduceJoinerCounter, 1)
+
+	if len(m.CanIntroduceJoinerMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.CanIntroduceJoinerMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ActiveNodeMock.CanIntroduceJoiner.")
+			return
+		}
+
+		result := m.CanIntroduceJoinerMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the ActiveNodeMock.CanIntroduceJoiner")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.CanIntroduceJoinerMock.mainExpectation != nil {
+
+		result := m.CanIntroduceJoinerMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the ActiveNodeMock.CanIntroduceJoiner")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.CanIntroduceJoinerFunc == nil {
+		m.t.Fatalf("Unexpected call to ActiveNodeMock.CanIntroduceJoiner.")
+		return
+	}
+
+	return m.CanIntroduceJoinerFunc()
+}
+
+//CanIntroduceJoinerMinimockCounter returns a count of ActiveNodeMock.CanIntroduceJoinerFunc invocations
+func (m *ActiveNodeMock) CanIntroduceJoinerMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.CanIntroduceJoinerCounter)
+}
+
+//CanIntroduceJoinerMinimockPreCounter returns the value of ActiveNodeMock.CanIntroduceJoiner invocations
+func (m *ActiveNodeMock) CanIntroduceJoinerMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.CanIntroduceJoinerPreCounter)
+}
+
+//CanIntroduceJoinerFinished returns true if mock invocations count is ok
+func (m *ActiveNodeMock) CanIntroduceJoinerFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.CanIntroduceJoinerMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.CanIntroduceJoinerCounter) == uint64(len(m.CanIntroduceJoinerMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.CanIntroduceJoinerMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.CanIntroduceJoinerCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.CanIntroduceJoinerFunc != nil {
+		return atomic.LoadUint64(&m.CanIntroduceJoinerCounter) > 0
+	}
+
+	return true
 }
 
 type mActiveNodeMockGetDeclaredPower struct {
@@ -878,6 +1042,140 @@ func (m *ActiveNodeMock) GetStaticFinished() bool {
 	return true
 }
 
+type mActiveNodeMockHasFullProfile struct {
+	mock              *ActiveNodeMock
+	mainExpectation   *ActiveNodeMockHasFullProfileExpectation
+	expectationSeries []*ActiveNodeMockHasFullProfileExpectation
+}
+
+type ActiveNodeMockHasFullProfileExpectation struct {
+	result *ActiveNodeMockHasFullProfileResult
+}
+
+type ActiveNodeMockHasFullProfileResult struct {
+	r bool
+}
+
+//Expect specifies that invocation of ActiveNode.HasFullProfile is expected from 1 to Infinity times
+func (m *mActiveNodeMockHasFullProfile) Expect() *mActiveNodeMockHasFullProfile {
+	m.mock.HasFullProfileFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ActiveNodeMockHasFullProfileExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of ActiveNode.HasFullProfile
+func (m *mActiveNodeMockHasFullProfile) Return(r bool) *ActiveNodeMock {
+	m.mock.HasFullProfileFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ActiveNodeMockHasFullProfileExpectation{}
+	}
+	m.mainExpectation.result = &ActiveNodeMockHasFullProfileResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of ActiveNode.HasFullProfile is expected once
+func (m *mActiveNodeMockHasFullProfile) ExpectOnce() *ActiveNodeMockHasFullProfileExpectation {
+	m.mock.HasFullProfileFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ActiveNodeMockHasFullProfileExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *ActiveNodeMockHasFullProfileExpectation) Return(r bool) {
+	e.result = &ActiveNodeMockHasFullProfileResult{r}
+}
+
+//Set uses given function f as a mock of ActiveNode.HasFullProfile method
+func (m *mActiveNodeMockHasFullProfile) Set(f func() (r bool)) *ActiveNodeMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.HasFullProfileFunc = f
+	return m.mock
+}
+
+//HasFullProfile implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.ActiveNode interface
+func (m *ActiveNodeMock) HasFullProfile() (r bool) {
+	counter := atomic.AddUint64(&m.HasFullProfilePreCounter, 1)
+	defer atomic.AddUint64(&m.HasFullProfileCounter, 1)
+
+	if len(m.HasFullProfileMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.HasFullProfileMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ActiveNodeMock.HasFullProfile.")
+			return
+		}
+
+		result := m.HasFullProfileMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the ActiveNodeMock.HasFullProfile")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.HasFullProfileMock.mainExpectation != nil {
+
+		result := m.HasFullProfileMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the ActiveNodeMock.HasFullProfile")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.HasFullProfileFunc == nil {
+		m.t.Fatalf("Unexpected call to ActiveNodeMock.HasFullProfile.")
+		return
+	}
+
+	return m.HasFullProfileFunc()
+}
+
+//HasFullProfileMinimockCounter returns a count of ActiveNodeMock.HasFullProfileFunc invocations
+func (m *ActiveNodeMock) HasFullProfileMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.HasFullProfileCounter)
+}
+
+//HasFullProfileMinimockPreCounter returns the value of ActiveNodeMock.HasFullProfile invocations
+func (m *ActiveNodeMock) HasFullProfileMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.HasFullProfilePreCounter)
+}
+
+//HasFullProfileFinished returns true if mock invocations count is ok
+func (m *ActiveNodeMock) HasFullProfileFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.HasFullProfileMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.HasFullProfileCounter) == uint64(len(m.HasFullProfileMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.HasFullProfileMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.HasFullProfileCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.HasFullProfileFunc != nil {
+		return atomic.LoadUint64(&m.HasFullProfileCounter) > 0
+	}
+
+	return true
+}
+
 type mActiveNodeMockIsJoiner struct {
 	mock              *ActiveNodeMock
 	mainExpectation   *ActiveNodeMockIsJoinerExpectation
@@ -1012,9 +1310,415 @@ func (m *ActiveNodeMock) IsJoinerFinished() bool {
 	return true
 }
 
+type mActiveNodeMockIsPowered struct {
+	mock              *ActiveNodeMock
+	mainExpectation   *ActiveNodeMockIsPoweredExpectation
+	expectationSeries []*ActiveNodeMockIsPoweredExpectation
+}
+
+type ActiveNodeMockIsPoweredExpectation struct {
+	result *ActiveNodeMockIsPoweredResult
+}
+
+type ActiveNodeMockIsPoweredResult struct {
+	r bool
+}
+
+//Expect specifies that invocation of ActiveNode.IsPowered is expected from 1 to Infinity times
+func (m *mActiveNodeMockIsPowered) Expect() *mActiveNodeMockIsPowered {
+	m.mock.IsPoweredFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ActiveNodeMockIsPoweredExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of ActiveNode.IsPowered
+func (m *mActiveNodeMockIsPowered) Return(r bool) *ActiveNodeMock {
+	m.mock.IsPoweredFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ActiveNodeMockIsPoweredExpectation{}
+	}
+	m.mainExpectation.result = &ActiveNodeMockIsPoweredResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of ActiveNode.IsPowered is expected once
+func (m *mActiveNodeMockIsPowered) ExpectOnce() *ActiveNodeMockIsPoweredExpectation {
+	m.mock.IsPoweredFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ActiveNodeMockIsPoweredExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *ActiveNodeMockIsPoweredExpectation) Return(r bool) {
+	e.result = &ActiveNodeMockIsPoweredResult{r}
+}
+
+//Set uses given function f as a mock of ActiveNode.IsPowered method
+func (m *mActiveNodeMockIsPowered) Set(f func() (r bool)) *ActiveNodeMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.IsPoweredFunc = f
+	return m.mock
+}
+
+//IsPowered implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.ActiveNode interface
+func (m *ActiveNodeMock) IsPowered() (r bool) {
+	counter := atomic.AddUint64(&m.IsPoweredPreCounter, 1)
+	defer atomic.AddUint64(&m.IsPoweredCounter, 1)
+
+	if len(m.IsPoweredMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.IsPoweredMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ActiveNodeMock.IsPowered.")
+			return
+		}
+
+		result := m.IsPoweredMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the ActiveNodeMock.IsPowered")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsPoweredMock.mainExpectation != nil {
+
+		result := m.IsPoweredMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the ActiveNodeMock.IsPowered")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsPoweredFunc == nil {
+		m.t.Fatalf("Unexpected call to ActiveNodeMock.IsPowered.")
+		return
+	}
+
+	return m.IsPoweredFunc()
+}
+
+//IsPoweredMinimockCounter returns a count of ActiveNodeMock.IsPoweredFunc invocations
+func (m *ActiveNodeMock) IsPoweredMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.IsPoweredCounter)
+}
+
+//IsPoweredMinimockPreCounter returns the value of ActiveNodeMock.IsPowered invocations
+func (m *ActiveNodeMock) IsPoweredMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.IsPoweredPreCounter)
+}
+
+//IsPoweredFinished returns true if mock invocations count is ok
+func (m *ActiveNodeMock) IsPoweredFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.IsPoweredMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.IsPoweredCounter) == uint64(len(m.IsPoweredMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.IsPoweredMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.IsPoweredCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.IsPoweredFunc != nil {
+		return atomic.LoadUint64(&m.IsPoweredCounter) > 0
+	}
+
+	return true
+}
+
+type mActiveNodeMockIsStateful struct {
+	mock              *ActiveNodeMock
+	mainExpectation   *ActiveNodeMockIsStatefulExpectation
+	expectationSeries []*ActiveNodeMockIsStatefulExpectation
+}
+
+type ActiveNodeMockIsStatefulExpectation struct {
+	result *ActiveNodeMockIsStatefulResult
+}
+
+type ActiveNodeMockIsStatefulResult struct {
+	r bool
+}
+
+//Expect specifies that invocation of ActiveNode.IsStateful is expected from 1 to Infinity times
+func (m *mActiveNodeMockIsStateful) Expect() *mActiveNodeMockIsStateful {
+	m.mock.IsStatefulFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ActiveNodeMockIsStatefulExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of ActiveNode.IsStateful
+func (m *mActiveNodeMockIsStateful) Return(r bool) *ActiveNodeMock {
+	m.mock.IsStatefulFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ActiveNodeMockIsStatefulExpectation{}
+	}
+	m.mainExpectation.result = &ActiveNodeMockIsStatefulResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of ActiveNode.IsStateful is expected once
+func (m *mActiveNodeMockIsStateful) ExpectOnce() *ActiveNodeMockIsStatefulExpectation {
+	m.mock.IsStatefulFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ActiveNodeMockIsStatefulExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *ActiveNodeMockIsStatefulExpectation) Return(r bool) {
+	e.result = &ActiveNodeMockIsStatefulResult{r}
+}
+
+//Set uses given function f as a mock of ActiveNode.IsStateful method
+func (m *mActiveNodeMockIsStateful) Set(f func() (r bool)) *ActiveNodeMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.IsStatefulFunc = f
+	return m.mock
+}
+
+//IsStateful implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.ActiveNode interface
+func (m *ActiveNodeMock) IsStateful() (r bool) {
+	counter := atomic.AddUint64(&m.IsStatefulPreCounter, 1)
+	defer atomic.AddUint64(&m.IsStatefulCounter, 1)
+
+	if len(m.IsStatefulMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.IsStatefulMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ActiveNodeMock.IsStateful.")
+			return
+		}
+
+		result := m.IsStatefulMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the ActiveNodeMock.IsStateful")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsStatefulMock.mainExpectation != nil {
+
+		result := m.IsStatefulMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the ActiveNodeMock.IsStateful")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsStatefulFunc == nil {
+		m.t.Fatalf("Unexpected call to ActiveNodeMock.IsStateful.")
+		return
+	}
+
+	return m.IsStatefulFunc()
+}
+
+//IsStatefulMinimockCounter returns a count of ActiveNodeMock.IsStatefulFunc invocations
+func (m *ActiveNodeMock) IsStatefulMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.IsStatefulCounter)
+}
+
+//IsStatefulMinimockPreCounter returns the value of ActiveNodeMock.IsStateful invocations
+func (m *ActiveNodeMock) IsStatefulMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.IsStatefulPreCounter)
+}
+
+//IsStatefulFinished returns true if mock invocations count is ok
+func (m *ActiveNodeMock) IsStatefulFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.IsStatefulMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.IsStatefulCounter) == uint64(len(m.IsStatefulMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.IsStatefulMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.IsStatefulCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.IsStatefulFunc != nil {
+		return atomic.LoadUint64(&m.IsStatefulCounter) > 0
+	}
+
+	return true
+}
+
+type mActiveNodeMockIsVoter struct {
+	mock              *ActiveNodeMock
+	mainExpectation   *ActiveNodeMockIsVoterExpectation
+	expectationSeries []*ActiveNodeMockIsVoterExpectation
+}
+
+type ActiveNodeMockIsVoterExpectation struct {
+	result *ActiveNodeMockIsVoterResult
+}
+
+type ActiveNodeMockIsVoterResult struct {
+	r bool
+}
+
+//Expect specifies that invocation of ActiveNode.IsVoter is expected from 1 to Infinity times
+func (m *mActiveNodeMockIsVoter) Expect() *mActiveNodeMockIsVoter {
+	m.mock.IsVoterFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ActiveNodeMockIsVoterExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of ActiveNode.IsVoter
+func (m *mActiveNodeMockIsVoter) Return(r bool) *ActiveNodeMock {
+	m.mock.IsVoterFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ActiveNodeMockIsVoterExpectation{}
+	}
+	m.mainExpectation.result = &ActiveNodeMockIsVoterResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of ActiveNode.IsVoter is expected once
+func (m *mActiveNodeMockIsVoter) ExpectOnce() *ActiveNodeMockIsVoterExpectation {
+	m.mock.IsVoterFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ActiveNodeMockIsVoterExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *ActiveNodeMockIsVoterExpectation) Return(r bool) {
+	e.result = &ActiveNodeMockIsVoterResult{r}
+}
+
+//Set uses given function f as a mock of ActiveNode.IsVoter method
+func (m *mActiveNodeMockIsVoter) Set(f func() (r bool)) *ActiveNodeMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.IsVoterFunc = f
+	return m.mock
+}
+
+//IsVoter implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.ActiveNode interface
+func (m *ActiveNodeMock) IsVoter() (r bool) {
+	counter := atomic.AddUint64(&m.IsVoterPreCounter, 1)
+	defer atomic.AddUint64(&m.IsVoterCounter, 1)
+
+	if len(m.IsVoterMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.IsVoterMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ActiveNodeMock.IsVoter.")
+			return
+		}
+
+		result := m.IsVoterMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the ActiveNodeMock.IsVoter")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsVoterMock.mainExpectation != nil {
+
+		result := m.IsVoterMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the ActiveNodeMock.IsVoter")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsVoterFunc == nil {
+		m.t.Fatalf("Unexpected call to ActiveNodeMock.IsVoter.")
+		return
+	}
+
+	return m.IsVoterFunc()
+}
+
+//IsVoterMinimockCounter returns a count of ActiveNodeMock.IsVoterFunc invocations
+func (m *ActiveNodeMock) IsVoterMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.IsVoterCounter)
+}
+
+//IsVoterMinimockPreCounter returns the value of ActiveNodeMock.IsVoter invocations
+func (m *ActiveNodeMock) IsVoterMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.IsVoterPreCounter)
+}
+
+//IsVoterFinished returns true if mock invocations count is ok
+func (m *ActiveNodeMock) IsVoterFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.IsVoterMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.IsVoterCounter) == uint64(len(m.IsVoterMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.IsVoterMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.IsVoterCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.IsVoterFunc != nil {
+		return atomic.LoadUint64(&m.IsVoterCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *ActiveNodeMock) ValidateCallCounters() {
+
+	if !m.CanIntroduceJoinerFinished() {
+		m.t.Fatal("Expected call to ActiveNodeMock.CanIntroduceJoiner")
+	}
 
 	if !m.GetDeclaredPowerFinished() {
 		m.t.Fatal("Expected call to ActiveNodeMock.GetDeclaredPower")
@@ -1040,8 +1744,24 @@ func (m *ActiveNodeMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ActiveNodeMock.GetStatic")
 	}
 
+	if !m.HasFullProfileFinished() {
+		m.t.Fatal("Expected call to ActiveNodeMock.HasFullProfile")
+	}
+
 	if !m.IsJoinerFinished() {
 		m.t.Fatal("Expected call to ActiveNodeMock.IsJoiner")
+	}
+
+	if !m.IsPoweredFinished() {
+		m.t.Fatal("Expected call to ActiveNodeMock.IsPowered")
+	}
+
+	if !m.IsStatefulFinished() {
+		m.t.Fatal("Expected call to ActiveNodeMock.IsStateful")
+	}
+
+	if !m.IsVoterFinished() {
+		m.t.Fatal("Expected call to ActiveNodeMock.IsVoter")
 	}
 
 }
@@ -1061,6 +1781,10 @@ func (m *ActiveNodeMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *ActiveNodeMock) MinimockFinish() {
 
+	if !m.CanIntroduceJoinerFinished() {
+		m.t.Fatal("Expected call to ActiveNodeMock.CanIntroduceJoiner")
+	}
+
 	if !m.GetDeclaredPowerFinished() {
 		m.t.Fatal("Expected call to ActiveNodeMock.GetDeclaredPower")
 	}
@@ -1085,8 +1809,24 @@ func (m *ActiveNodeMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ActiveNodeMock.GetStatic")
 	}
 
+	if !m.HasFullProfileFinished() {
+		m.t.Fatal("Expected call to ActiveNodeMock.HasFullProfile")
+	}
+
 	if !m.IsJoinerFinished() {
 		m.t.Fatal("Expected call to ActiveNodeMock.IsJoiner")
+	}
+
+	if !m.IsPoweredFinished() {
+		m.t.Fatal("Expected call to ActiveNodeMock.IsPowered")
+	}
+
+	if !m.IsStatefulFinished() {
+		m.t.Fatal("Expected call to ActiveNodeMock.IsStateful")
+	}
+
+	if !m.IsVoterFinished() {
+		m.t.Fatal("Expected call to ActiveNodeMock.IsVoter")
 	}
 
 }
@@ -1103,13 +1843,18 @@ func (m *ActiveNodeMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
+		ok = ok && m.CanIntroduceJoinerFinished()
 		ok = ok && m.GetDeclaredPowerFinished()
 		ok = ok && m.GetIndexFinished()
 		ok = ok && m.GetNodeIDFinished()
 		ok = ok && m.GetOpModeFinished()
 		ok = ok && m.GetSignatureVerifierFinished()
 		ok = ok && m.GetStaticFinished()
+		ok = ok && m.HasFullProfileFinished()
 		ok = ok && m.IsJoinerFinished()
+		ok = ok && m.IsPoweredFinished()
+		ok = ok && m.IsStatefulFinished()
+		ok = ok && m.IsVoterFinished()
 
 		if ok {
 			return
@@ -1117,6 +1862,10 @@ func (m *ActiveNodeMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
+
+			if !m.CanIntroduceJoinerFinished() {
+				m.t.Error("Expected call to ActiveNodeMock.CanIntroduceJoiner")
+			}
 
 			if !m.GetDeclaredPowerFinished() {
 				m.t.Error("Expected call to ActiveNodeMock.GetDeclaredPower")
@@ -1142,8 +1891,24 @@ func (m *ActiveNodeMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to ActiveNodeMock.GetStatic")
 			}
 
+			if !m.HasFullProfileFinished() {
+				m.t.Error("Expected call to ActiveNodeMock.HasFullProfile")
+			}
+
 			if !m.IsJoinerFinished() {
 				m.t.Error("Expected call to ActiveNodeMock.IsJoiner")
+			}
+
+			if !m.IsPoweredFinished() {
+				m.t.Error("Expected call to ActiveNodeMock.IsPowered")
+			}
+
+			if !m.IsStatefulFinished() {
+				m.t.Error("Expected call to ActiveNodeMock.IsStateful")
+			}
+
+			if !m.IsVoterFinished() {
+				m.t.Error("Expected call to ActiveNodeMock.IsVoter")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -1157,6 +1922,10 @@ func (m *ActiveNodeMock) MinimockWait(timeout time.Duration) {
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *ActiveNodeMock) AllMocksCalled() bool {
+
+	if !m.CanIntroduceJoinerFinished() {
+		return false
+	}
 
 	if !m.GetDeclaredPowerFinished() {
 		return false
@@ -1182,7 +1951,23 @@ func (m *ActiveNodeMock) AllMocksCalled() bool {
 		return false
 	}
 
+	if !m.HasFullProfileFinished() {
+		return false
+	}
+
 	if !m.IsJoinerFinished() {
+		return false
+	}
+
+	if !m.IsPoweredFinished() {
+		return false
+	}
+
+	if !m.IsStatefulFinished() {
+		return false
+	}
+
+	if !m.IsVoterFinished() {
 		return false
 	}
 

@@ -53,9 +53,9 @@ package ph01ctl
 import (
 	"context"
 	"fmt"
-
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/pulsectl"
 
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -78,7 +78,7 @@ type JoinerPhase01PrepController struct {
 	pulseStrategy pulsectl.PulseSelectionStrategy
 }
 
-func (c *JoinerPhase01PrepController) CreatePacketDispatcher(pt phases.PacketType, realm *core.PrepRealm) core.PacketDispatcher {
+func (c *JoinerPhase01PrepController) CreatePacketDispatcher(pt phases.PacketType, realm *core.PrepRealm) population.PacketDispatcher {
 	c.realm = realm
 	return c
 }
@@ -87,12 +87,8 @@ func (c *JoinerPhase01PrepController) GetPacketType() []phases.PacketType {
 	return []phases.PacketType{phases.PacketPhase0, phases.PacketPhase1}
 }
 
-func (*JoinerPhase01PrepController) HasCustomVerifyForHost(from endpoints.Inbound, strict bool) bool {
-	return true // TODO remove after verification fix
-}
-
 func (c *JoinerPhase01PrepController) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
-	from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags) error {
+	from endpoints.Inbound, flags coreapi.PacketVerifyFlags) error {
 
 	var pp transport.PulsePacketReader
 	var nr member.Rank

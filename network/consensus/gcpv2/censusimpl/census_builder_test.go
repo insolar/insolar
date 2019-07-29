@@ -222,7 +222,7 @@ func TestLCBMakeExpected(t *testing.T) {
 	require.Equal(t, pn, ce.GetPulseNumber())
 }
 
-func TestRemoveOthers(t *testing.T) {
+func TestDPBRemoveOthers(t *testing.T) {
 	chronicles := &localChronicles{}
 	pn := pulse.Number(1)
 	sp := profiles.NewStaticProfileMock(t)
@@ -314,7 +314,7 @@ func TestDPBAddProfile(t *testing.T) {
 	require.Len(t, lcb.population.slotByID, 2)
 }
 
-func TestRemoveProfile(t *testing.T) {
+func TestDPBRemoveProfile(t *testing.T) {
 	chronicles := &localChronicles{}
 	pn := pulse.Number(1)
 	sp1 := profiles.NewStaticProfileMock(t)

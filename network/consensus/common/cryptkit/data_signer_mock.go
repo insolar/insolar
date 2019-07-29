@@ -34,15 +34,15 @@ type DataSignerMock struct {
 	GetSignMethodPreCounter uint64
 	GetSignMethodMock       mDataSignerMockGetSignMethod
 
-	GetSignOfDataFunc       func(p io.Reader) (r SignedDigest)
-	GetSignOfDataCounter    uint64
-	GetSignOfDataPreCounter uint64
-	GetSignOfDataMock       mDataSignerMockGetSignOfData
-
 	GetSignatureMethodFunc       func() (r SignatureMethod)
 	GetSignatureMethodCounter    uint64
 	GetSignatureMethodPreCounter uint64
 	GetSignatureMethodMock       mDataSignerMockGetSignatureMethod
+
+	SignDataFunc       func(p io.Reader) (r SignedDigest)
+	SignDataCounter    uint64
+	SignDataPreCounter uint64
+	SignDataMock       mDataSignerMockSignData
 
 	SignDigestFunc       func(p Digest) (r Signature)
 	SignDigestCounter    uint64
@@ -61,8 +61,8 @@ func NewDataSignerMock(t minimock.Tester) *DataSignerMock {
 	m.GetDigestMethodMock = mDataSignerMockGetDigestMethod{mock: m}
 	m.GetDigestOfMock = mDataSignerMockGetDigestOf{mock: m}
 	m.GetSignMethodMock = mDataSignerMockGetSignMethod{mock: m}
-	m.GetSignOfDataMock = mDataSignerMockGetSignOfData{mock: m}
 	m.GetSignatureMethodMock = mDataSignerMockGetSignatureMethod{mock: m}
+	m.SignDataMock = mDataSignerMockSignData{mock: m}
 	m.SignDigestMock = mDataSignerMockSignDigest{mock: m}
 
 	return m
@@ -483,153 +483,6 @@ func (m *DataSignerMock) GetSignMethodFinished() bool {
 	return true
 }
 
-type mDataSignerMockGetSignOfData struct {
-	mock              *DataSignerMock
-	mainExpectation   *DataSignerMockGetSignOfDataExpectation
-	expectationSeries []*DataSignerMockGetSignOfDataExpectation
-}
-
-type DataSignerMockGetSignOfDataExpectation struct {
-	input  *DataSignerMockGetSignOfDataInput
-	result *DataSignerMockGetSignOfDataResult
-}
-
-type DataSignerMockGetSignOfDataInput struct {
-	p io.Reader
-}
-
-type DataSignerMockGetSignOfDataResult struct {
-	r SignedDigest
-}
-
-//Expect specifies that invocation of DataSigner.GetSignOfData is expected from 1 to Infinity times
-func (m *mDataSignerMockGetSignOfData) Expect(p io.Reader) *mDataSignerMockGetSignOfData {
-	m.mock.GetSignOfDataFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &DataSignerMockGetSignOfDataExpectation{}
-	}
-	m.mainExpectation.input = &DataSignerMockGetSignOfDataInput{p}
-	return m
-}
-
-//Return specifies results of invocation of DataSigner.GetSignOfData
-func (m *mDataSignerMockGetSignOfData) Return(r SignedDigest) *DataSignerMock {
-	m.mock.GetSignOfDataFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &DataSignerMockGetSignOfDataExpectation{}
-	}
-	m.mainExpectation.result = &DataSignerMockGetSignOfDataResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of DataSigner.GetSignOfData is expected once
-func (m *mDataSignerMockGetSignOfData) ExpectOnce(p io.Reader) *DataSignerMockGetSignOfDataExpectation {
-	m.mock.GetSignOfDataFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &DataSignerMockGetSignOfDataExpectation{}
-	expectation.input = &DataSignerMockGetSignOfDataInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *DataSignerMockGetSignOfDataExpectation) Return(r SignedDigest) {
-	e.result = &DataSignerMockGetSignOfDataResult{r}
-}
-
-//Set uses given function f as a mock of DataSigner.GetSignOfData method
-func (m *mDataSignerMockGetSignOfData) Set(f func(p io.Reader) (r SignedDigest)) *DataSignerMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetSignOfDataFunc = f
-	return m.mock
-}
-
-//GetSignOfData implements github.com/insolar/insolar/network/consensus/common/cryptkit.DataSigner interface
-func (m *DataSignerMock) GetSignOfData(p io.Reader) (r SignedDigest) {
-	counter := atomic.AddUint64(&m.GetSignOfDataPreCounter, 1)
-	defer atomic.AddUint64(&m.GetSignOfDataCounter, 1)
-
-	if len(m.GetSignOfDataMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetSignOfDataMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to DataSignerMock.GetSignOfData. %v", p)
-			return
-		}
-
-		input := m.GetSignOfDataMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, DataSignerMockGetSignOfDataInput{p}, "DataSigner.GetSignOfData got unexpected parameters")
-
-		result := m.GetSignOfDataMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the DataSignerMock.GetSignOfData")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetSignOfDataMock.mainExpectation != nil {
-
-		input := m.GetSignOfDataMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, DataSignerMockGetSignOfDataInput{p}, "DataSigner.GetSignOfData got unexpected parameters")
-		}
-
-		result := m.GetSignOfDataMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the DataSignerMock.GetSignOfData")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetSignOfDataFunc == nil {
-		m.t.Fatalf("Unexpected call to DataSignerMock.GetSignOfData. %v", p)
-		return
-	}
-
-	return m.GetSignOfDataFunc(p)
-}
-
-//GetSignOfDataMinimockCounter returns a count of DataSignerMock.GetSignOfDataFunc invocations
-func (m *DataSignerMock) GetSignOfDataMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetSignOfDataCounter)
-}
-
-//GetSignOfDataMinimockPreCounter returns the value of DataSignerMock.GetSignOfData invocations
-func (m *DataSignerMock) GetSignOfDataMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetSignOfDataPreCounter)
-}
-
-//GetSignOfDataFinished returns true if mock invocations count is ok
-func (m *DataSignerMock) GetSignOfDataFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetSignOfDataMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetSignOfDataCounter) == uint64(len(m.GetSignOfDataMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetSignOfDataMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetSignOfDataCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetSignOfDataFunc != nil {
-		return atomic.LoadUint64(&m.GetSignOfDataCounter) > 0
-	}
-
-	return true
-}
-
 type mDataSignerMockGetSignatureMethod struct {
 	mock              *DataSignerMock
 	mainExpectation   *DataSignerMockGetSignatureMethodExpectation
@@ -759,6 +612,153 @@ func (m *DataSignerMock) GetSignatureMethodFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetSignatureMethodFunc != nil {
 		return atomic.LoadUint64(&m.GetSignatureMethodCounter) > 0
+	}
+
+	return true
+}
+
+type mDataSignerMockSignData struct {
+	mock              *DataSignerMock
+	mainExpectation   *DataSignerMockSignDataExpectation
+	expectationSeries []*DataSignerMockSignDataExpectation
+}
+
+type DataSignerMockSignDataExpectation struct {
+	input  *DataSignerMockSignDataInput
+	result *DataSignerMockSignDataResult
+}
+
+type DataSignerMockSignDataInput struct {
+	p io.Reader
+}
+
+type DataSignerMockSignDataResult struct {
+	r SignedDigest
+}
+
+//Expect specifies that invocation of DataSigner.SignData is expected from 1 to Infinity times
+func (m *mDataSignerMockSignData) Expect(p io.Reader) *mDataSignerMockSignData {
+	m.mock.SignDataFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &DataSignerMockSignDataExpectation{}
+	}
+	m.mainExpectation.input = &DataSignerMockSignDataInput{p}
+	return m
+}
+
+//Return specifies results of invocation of DataSigner.SignData
+func (m *mDataSignerMockSignData) Return(r SignedDigest) *DataSignerMock {
+	m.mock.SignDataFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &DataSignerMockSignDataExpectation{}
+	}
+	m.mainExpectation.result = &DataSignerMockSignDataResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of DataSigner.SignData is expected once
+func (m *mDataSignerMockSignData) ExpectOnce(p io.Reader) *DataSignerMockSignDataExpectation {
+	m.mock.SignDataFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &DataSignerMockSignDataExpectation{}
+	expectation.input = &DataSignerMockSignDataInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *DataSignerMockSignDataExpectation) Return(r SignedDigest) {
+	e.result = &DataSignerMockSignDataResult{r}
+}
+
+//Set uses given function f as a mock of DataSigner.SignData method
+func (m *mDataSignerMockSignData) Set(f func(p io.Reader) (r SignedDigest)) *DataSignerMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.SignDataFunc = f
+	return m.mock
+}
+
+//SignData implements github.com/insolar/insolar/network/consensus/common/cryptkit.DataSigner interface
+func (m *DataSignerMock) SignData(p io.Reader) (r SignedDigest) {
+	counter := atomic.AddUint64(&m.SignDataPreCounter, 1)
+	defer atomic.AddUint64(&m.SignDataCounter, 1)
+
+	if len(m.SignDataMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.SignDataMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to DataSignerMock.SignData. %v", p)
+			return
+		}
+
+		input := m.SignDataMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, DataSignerMockSignDataInput{p}, "DataSigner.SignData got unexpected parameters")
+
+		result := m.SignDataMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the DataSignerMock.SignData")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.SignDataMock.mainExpectation != nil {
+
+		input := m.SignDataMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, DataSignerMockSignDataInput{p}, "DataSigner.SignData got unexpected parameters")
+		}
+
+		result := m.SignDataMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the DataSignerMock.SignData")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.SignDataFunc == nil {
+		m.t.Fatalf("Unexpected call to DataSignerMock.SignData. %v", p)
+		return
+	}
+
+	return m.SignDataFunc(p)
+}
+
+//SignDataMinimockCounter returns a count of DataSignerMock.SignDataFunc invocations
+func (m *DataSignerMock) SignDataMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.SignDataCounter)
+}
+
+//SignDataMinimockPreCounter returns the value of DataSignerMock.SignData invocations
+func (m *DataSignerMock) SignDataMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.SignDataPreCounter)
+}
+
+//SignDataFinished returns true if mock invocations count is ok
+func (m *DataSignerMock) SignDataFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.SignDataMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.SignDataCounter) == uint64(len(m.SignDataMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.SignDataMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.SignDataCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.SignDataFunc != nil {
+		return atomic.LoadUint64(&m.SignDataCounter) > 0
 	}
 
 	return true
@@ -927,12 +927,12 @@ func (m *DataSignerMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to DataSignerMock.GetSignMethod")
 	}
 
-	if !m.GetSignOfDataFinished() {
-		m.t.Fatal("Expected call to DataSignerMock.GetSignOfData")
-	}
-
 	if !m.GetSignatureMethodFinished() {
 		m.t.Fatal("Expected call to DataSignerMock.GetSignatureMethod")
+	}
+
+	if !m.SignDataFinished() {
+		m.t.Fatal("Expected call to DataSignerMock.SignData")
 	}
 
 	if !m.SignDigestFinished() {
@@ -968,12 +968,12 @@ func (m *DataSignerMock) MinimockFinish() {
 		m.t.Fatal("Expected call to DataSignerMock.GetSignMethod")
 	}
 
-	if !m.GetSignOfDataFinished() {
-		m.t.Fatal("Expected call to DataSignerMock.GetSignOfData")
-	}
-
 	if !m.GetSignatureMethodFinished() {
 		m.t.Fatal("Expected call to DataSignerMock.GetSignatureMethod")
+	}
+
+	if !m.SignDataFinished() {
+		m.t.Fatal("Expected call to DataSignerMock.SignData")
 	}
 
 	if !m.SignDigestFinished() {
@@ -997,8 +997,8 @@ func (m *DataSignerMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetDigestMethodFinished()
 		ok = ok && m.GetDigestOfFinished()
 		ok = ok && m.GetSignMethodFinished()
-		ok = ok && m.GetSignOfDataFinished()
 		ok = ok && m.GetSignatureMethodFinished()
+		ok = ok && m.SignDataFinished()
 		ok = ok && m.SignDigestFinished()
 
 		if ok {
@@ -1020,12 +1020,12 @@ func (m *DataSignerMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to DataSignerMock.GetSignMethod")
 			}
 
-			if !m.GetSignOfDataFinished() {
-				m.t.Error("Expected call to DataSignerMock.GetSignOfData")
-			}
-
 			if !m.GetSignatureMethodFinished() {
 				m.t.Error("Expected call to DataSignerMock.GetSignatureMethod")
+			}
+
+			if !m.SignDataFinished() {
+				m.t.Error("Expected call to DataSignerMock.SignData")
 			}
 
 			if !m.SignDigestFinished() {
@@ -1056,11 +1056,11 @@ func (m *DataSignerMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.GetSignOfDataFinished() {
+	if !m.GetSignatureMethodFinished() {
 		return false
 	}
 
-	if !m.GetSignatureMethodFinished() {
+	if !m.SignDataFinished() {
 		return false
 	}
 

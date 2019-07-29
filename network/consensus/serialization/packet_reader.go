@@ -62,19 +62,12 @@ import (
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
-
-type originalPulsarPacket struct {
-	longbits.FixedReader
-}
-
-func (p *originalPulsarPacket) OriginalPulsarPacket() {}
 
 type packetData struct {
 	data   []byte
@@ -158,10 +151,8 @@ func (f *PacketParserFactory) ParsePacket(ctx context.Context, reader io.Reader)
 }
 
 func (p *PacketParser) GetPulsePacket() transport.PulsePacketReader {
-	return &PulsePacketReader{
-		data: p.packetData.data,
-		body: p.packet.EncryptableBody.(*PulsarPacketBody),
-	}
+	pulsarBody := p.packet.EncryptableBody.(*PulsarPacketBody)
+	return adapters.NewPulsePacketParser(pulsarBody.getPulseData(), p.packetData.data)
 }
 
 func (p *PacketParser) GetMemberPacket() transport.MemberPacketReader {
@@ -197,21 +188,6 @@ func (p *PacketParser) GetPacketSignature() cryptkit.SignedDigest {
 	signature := cryptkit.NewSignature(&p.packet.PacketSignature, p.digester.GetDigestMethod().SignedBy(p.signMethod))
 	digest := p.digester.GetDigestOf(payloadReader)
 	return cryptkit.NewSignedDigest(digest, signature)
-}
-
-type PulsePacketReader struct {
-	data []byte
-	body *PulsarPacketBody
-}
-
-func (r *PulsePacketReader) GetPulseData() pulse.Data {
-	return r.body.getPulseData()
-}
-
-func (r *PulsePacketReader) GetPulseDataEvidence() proofs.OriginalPulsarPacket {
-	return &originalPulsarPacket{
-		FixedReader: longbits.NewFixedReader(r.data),
-	}
 }
 
 type MemberPacketReader struct {
@@ -266,10 +242,7 @@ func (r *EmbeddedPulseReader) GetEmbeddedPulsePacket() transport.PulsePacketRead
 		return nil
 	}
 
-	return &PulsePacketReader{
-		data: r.body.PulsarPacket.Data,
-		body: &r.body.PulsarPacket.PulsarPacketBody,
-	}
+	return adapters.NewPulsePacketParser(r.body.PulsarPacket.PulsarPacketBody.getPulseData(), r.body.PulsarPacket.Data)
 }
 
 type Phase0PacketReader struct {

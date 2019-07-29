@@ -69,7 +69,7 @@ import (
 func TestNewManyNodePopulation(t *testing.T) {
 	svf := cryptkit.NewSignatureVerifierFactoryMock(t)
 	sv := cryptkit.NewSignatureVerifierMock(t)
-	svf.GetSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
+	svf.CreateSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
 	require.Panics(t, func() { NewManyNodePopulation(nil, 0, nil) })
 
 	sp := profiles.NewStaticProfileMock(t)
@@ -409,7 +409,7 @@ func TestMakeOfProfiles(t *testing.T) {
 	mnp := ManyNodePopulation{}
 	svf := cryptkit.NewSignatureVerifierFactoryMock(t)
 	sv := cryptkit.NewSignatureVerifierMock(t)
-	svf.GetSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
+	svf.CreateSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
 	localNodeID := insolar.AbsentShortNodeID
 	require.Panics(t, func() { mnp.makeOfProfiles(nodes, localNodeID, svf) })
 
@@ -520,11 +520,36 @@ func TestFindUpdatableProfile(t *testing.T) {
 
 func TestGetCount(t *testing.T) {
 	dp := DynamicPopulation{}
-	dp.slotByID = make(map[insolar.ShortNodeID]*updatableSlot, 1)
+	dp.slotByID = make(map[insolar.ShortNodeID]*updatableSlot, 2)
 	us := &updatableSlot{}
 	dp.slotByID[1] = us
 	dp.slotByID[2] = us
 	require.Equal(t, 2, dp.GetCount())
+}
+
+func testLessFunc(c profiles.ActiveNode, o profiles.ActiveNode) bool {
+	return c.GetIndex() < o.GetIndex()
+}
+
+func TestSort(t *testing.T) {
+	dp := DynamicPopulation{}
+	dp.slotByID = make(map[insolar.ShortNodeID]*updatableSlot, 2)
+	sp1 := profiles.NewStaticProfileMock(t)
+	nodeID1 := insolar.ShortNodeID(2)
+	sp1.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return nodeID1 })
+	dp.AddProfile(sp1)
+	sp2 := profiles.NewStaticProfileMock(t)
+	nodeID2 := insolar.ShortNodeID(1)
+	sp2.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return nodeID2 })
+	dp.AddProfile(sp2)
+	require.Zero(t, dp.slotByID[1].index)
+
+	require.Zero(t, dp.slotByID[2].index)
+
+	dp.Sort(testLessFunc)
+	require.Equal(t, member.Index(1), dp.slotByID[1].index)
+
+	require.Zero(t, dp.slotByID[2].index)
 }
 
 func TestDPGetProfiles(t *testing.T) {
@@ -596,4 +621,89 @@ func TestCopyAndSeparate(t *testing.T) {
 
 	delete(dp.slotByID, nodeID)
 	require.Panics(t, func() { dp.CopyAndSeparate(true, panicOnRecoverable) })
+}
+
+func TestDPAddProfile(t *testing.T) {
+	dp := DynamicPopulation{}
+	dp.slotByID = make(map[insolar.ShortNodeID]*updatableSlot, 1)
+	sp := profiles.NewStaticProfileMock(t)
+	nodeID := insolar.ShortNodeID(1)
+	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return nodeID })
+	dp.AddProfile(sp)
+	require.NotNil(t, dp.slotByID[nodeID])
+
+	require.Panics(t, func() { dp.AddProfile(sp) })
+}
+
+func TestDPRemoveProfile(t *testing.T) {
+	dp := DynamicPopulation{}
+	dp.slotByID = make(map[insolar.ShortNodeID]*updatableSlot, 1)
+	sp := profiles.NewStaticProfileMock(t)
+	nodeID := insolar.ShortNodeID(1)
+	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return nodeID })
+	dp.AddProfile(sp)
+	require.NotNil(t, dp.slotByID[nodeID])
+
+	dp.RemoveProfile(nodeID)
+	require.Nil(t, dp.slotByID[nodeID])
+}
+
+func TestRemoveOthers(t *testing.T) {
+	dp := DynamicPopulation{}
+	dp.slotByID = make(map[insolar.ShortNodeID]*updatableSlot, 2)
+	sp1 := profiles.NewStaticProfileMock(t)
+	nodeID1 := insolar.ShortNodeID(1)
+	sp1.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return nodeID1 })
+	dp.AddProfile(sp1)
+	sp2 := profiles.NewStaticProfileMock(t)
+	nodeID2 := insolar.ShortNodeID(2)
+	sp2.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return nodeID2 })
+	dp.AddProfile(sp2)
+	dp.local = dp.slotByID[2]
+
+	require.Len(t, dp.slotByID, 2)
+	dp.RemoveOthers()
+	require.Len(t, dp.slotByID, 1)
+
+	require.Equal(t, dp.local, dp.slotByID[2])
+}
+
+func TestLen(t *testing.T) {
+	ss := slotSorter{}
+	size := 2
+	ss.values = make([]*updatableSlot, size)
+	require.Equal(t, size, ss.Len())
+}
+
+func TestLess(t *testing.T) {
+	ss := slotSorter{lessFn: testLessFunc}
+	ss.values = make([]*updatableSlot, 2)
+	us1 := updatableSlot{}
+	us1.index = 2
+	ss.values[0] = &us1
+	us2 := updatableSlot{}
+	us2.index = 1
+	ss.values[1] = &us2
+	require.False(t, ss.Less(0, 1))
+}
+
+func TestSwap(t *testing.T) {
+	ss := slotSorter{lessFn: testLessFunc}
+	ss.values = make([]*updatableSlot, 2)
+	us1 := updatableSlot{}
+	ind1 := member.Index(2)
+	ind2 := member.Index(1)
+	us1.index = ind1
+	ss.values[0] = &us1
+	us2 := updatableSlot{}
+	us2.index = ind2
+	ss.values[1] = &us2
+	require.Equal(t, ind1, ss.values[0].index)
+
+	require.Equal(t, ind2, ss.values[1].index)
+
+	ss.Swap(0, 1)
+	require.Equal(t, ind2, ss.values[0].index)
+
+	require.Equal(t, ind1, ss.values[1].index)
 }

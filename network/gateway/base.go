@@ -206,10 +206,6 @@ func (g *Base) ValidateCert(ctx context.Context, certificate insolar.Authorizati
 
 // ============= Bootstrap =======
 
-func (g *Base) ShouldIgnorePulse(context.Context, insolar.Pulse) bool {
-	return false
-}
-
 func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 	if request.GetRequest() == nil || request.GetRequest().GetBootstrap() == nil {
 		return nil, errors.Errorf("process bootstrap: got invalid protobuf request message: %s", request)
@@ -263,7 +259,7 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 		ph, _ := host.NewHost("127.0.0.1:1")
 		th, _ := host.NewHost(g.NodeKeeper.GetOrigin().Address())
 
-		pp := pulsenetwork.NewPulsePacket(ctx, p, ph, th, 0)
+		pp := pulsenetwork.NewPulsePacket(p, ph, th, 0)
 
 		bs, err := packet.SerializePacket(pp)
 		if err != nil {
@@ -446,4 +442,8 @@ func (g *Base) createCandidateProfile() {
 	}
 
 	g.originCandidateProfile = p
+}
+
+func (g *Base) EphemeralMode() bool {
+	return true
 }

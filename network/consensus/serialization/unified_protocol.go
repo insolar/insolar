@@ -269,14 +269,14 @@ type Packet struct {
 	PacketSignature longbits.Bits512 `insolar-transport:"generate=signature"` // ByteSize=64
 }
 
-func (p *Packet) String() string {
+func (p Packet) String() string {
 	packetCtx := newPacketContext(context.Background(), &p.Header)
 	return fmt.Sprintf(
-		"s:%d t:%d pt:%s b:{%v}",
+		"<s=%d t=%d pt=%s body=%s>",
 		p.Header.SourceID,
 		p.Header.TargetID,
-		p.Header.GetPacketType().String(),
-		p.EncryptableBody.Debug(&packetCtx),
+		p.Header.GetPacketType(),
+		p.EncryptableBody.String(&packetCtx),
 	)
 }
 

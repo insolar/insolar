@@ -52,6 +52,7 @@ package nodenetwork
 
 import (
 	"crypto"
+	"crypto/rand"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
@@ -105,14 +106,13 @@ func TestNewNodeKeeper(t *testing.T) {
 	assert.NotNil(t, nk.GetSnapshotCopy())
 }
 
-//func TestNodekeeper_GetCloudHash(t *testing.T) {
-//	nk := newNodeKeeper(t, nil)
-//	assert.Nil(t, nk.GetCloudHash())
-//	cloudHash := make([]byte, packets.HashLength)
-//	rand.Read(cloudHash)
-//	nk.SetCloudHash(cloudHash)
-//	assert.Equal(t, cloudHash, nk.GetCloudHash())
-//}
+func TestNodekeeper_GetCloudHash(t *testing.T) {
+	nk := newNodeKeeper(t, nil)
+	cloudHash := make([]byte, 64)
+	rand.Read(cloudHash)
+	nk.SetCloudHash(cloudHash)
+	assert.Equal(t, cloudHash, nk.GetCloudHash())
+}
 
 //func TestNodekeeper_GetWorkingNodes(t *testing.T) {
 //	nk := newNodeKeeper(t, nil)

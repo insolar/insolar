@@ -52,6 +52,7 @@ package api
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"time"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
@@ -68,6 +69,7 @@ import (
 )
 
 type ConsensusController interface {
+	Prepare()
 	ProcessPacket(ctx context.Context, payload transport.PacketParser, from endpoints.Inbound) error
 
 	/* Ungraceful stop */
@@ -95,8 +97,33 @@ type TrafficControlFeeder interface {
 	ResumeTraffic()
 }
 
+type EphemeralMode uint8
+
+const (
+	EphemeralNotAllowed EphemeralMode = iota
+	EphemeralPassive                  // only accepts ephemeral pulses
+	EphemeralActive                   // can generate ephemeral pulses
+)
+
+func (mode EphemeralMode) IsEnabled() bool {
+	return mode != EphemeralNotAllowed
+}
+
+func (mode EphemeralMode) IsActive() bool {
+	return mode == EphemeralActive
+}
+
+type PulseControlFeeder interface {
+	GetRequiredEphemeralMode(census census.Operational) EphemeralMode
+	CreateEphemeralPulsePacket(census census.Operational) proofs.OriginalPulsarPacket
+
+	//CanStopOnUnexpectedPulse(isEphemeral bool, pd pulse.Data) bool
+	//CanStopOnHastyExpectedPulse(isEphemeral bool, pd pulse.Data, advanceOf time.Duration) bool
+}
+
 type ConsensusControlFeeder interface {
 	TrafficControlFeeder
+	PulseControlFeeder
 
 	GetRequiredPowerLevel() power.Request
 	OnAppliedMembershipProfile(mode member.OpMode, pw member.Power, effectiveSince pulse.Number)
@@ -118,7 +145,7 @@ type RoundStateCallback interface {
 	// TODO pulse committed
 
 	// A special case for joiner, as it doesnt request NSG with PreparePulseChange
-	CommitPulseChangeByJoiner(report UpstreamReport, pd pulse.Data, activeCensus census.Operational)
+	CommitPulseChangeByStateless(report UpstreamReport, pd pulse.Data, activeCensus census.Operational)
 
 	// /* Consensus has stopped abnormally	*/
 	// ConsensusFailed(report UpstreamReport)
@@ -126,7 +153,8 @@ type RoundStateCallback interface {
 
 type RoundController interface {
 	PrepareConsensusRound(upstream UpstreamController)
-	StartConsensusRound()
+	// StartConsensusRound() bool
+	// StartConsensusRoundWithPulseData(pd pulse.Data)
 	StopConsensusRound()
 	HandlePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound) (bool, error)
 }

@@ -84,3 +84,7 @@ func (g *WaitMinRoles) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, 
 	// forward pulse to Consensus
 	g.ConsensusPulseHandler.HandlePulse(ctx, pu, originalPacket)
 }
+
+func (g *WaitMinRoles) EphemeralMode() bool {
+	return false
+}

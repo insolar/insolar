@@ -414,7 +414,7 @@ func (c *ManyNodePopulation) makeOfProfiles(nodes []profiles.StaticProfile, loca
 		if n.GetStaticNodeID().IsAbsent() {
 			panic("illegal value")
 		}
-		verifier := vf.GetSignatureVerifierWithPKS(n.GetPublicKeyStore())
+		verifier := vf.CreateSignatureVerifierWithPKS(n.GetPublicKeyStore())
 		buf[i].NodeProfileSlot = NewNodeProfile(member.Index(i), n, verifier, 0) // Power MUST BE zero, index will be assigned later
 	}
 	c.slots = buf

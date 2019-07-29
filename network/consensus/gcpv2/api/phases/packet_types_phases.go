@@ -131,6 +131,15 @@ func (p PacketType) GetLimitCounterIndex() int {
 	}
 }
 
+func (p PacketType) IsAllowedForJoiner() bool {
+	switch p {
+	case PacketPulse, PacketPhase0:
+		return false
+	default:
+		return true
+	}
+}
+
 const PacketCountedLimits = 2
 
 type LimitCounters [PacketCountedLimits]uint8
@@ -184,28 +193,40 @@ func (v LimitCounters) String() string {
 }
 
 var limitCounters LimitCounters
+var joinerInits uint16
 
-func CreateLimitCounters(maxExtPhase2 uint8) LimitCounters {
+func fillLimitCounters() (LimitCounters, uint16) {
+	var limits LimitCounters
+	var inits = uint16(0)
+	idx := 0
+	for i := PacketType(0); i < maxPacketType; i++ {
+		limit := i.GetLimitPerSender()
+		if limit <= 1 {
+			continue
+		}
+		if idx != i.GetLimitCounterIndex() {
+			panic("illegal state")
+		}
+		limits[idx] = limit
+		idx++
+
+		if !i.IsAllowedForJoiner() {
+			inits |= 1 << i
+		}
+	}
+	return limits, inits
+}
+
+func CreateLimitCounters(maxExtPhase2 uint8) (LimitCounters, uint16) {
 	if limitCounters[0] == 0 {
 		/* we don't need mutex here as parallel initialization will lead to identical results,
 		hence there will be no effect of a possible racing
 		*/
-		idx := 0
-		for i := PacketType(0); i < maxPacketType; i++ {
-			limit := i.GetLimitPerSender()
-			if limit <= 1 {
-				continue
-			}
-			if idx != i.GetLimitCounterIndex() {
-				panic("illegal state")
-			}
-			limitCounters[idx] = limit
-			idx++
-		}
+		limitCounters, joinerInits = fillLimitCounters()
 	}
 	r := limitCounters
 	r[PacketExtPhase2.GetLimitCounterIndex()] = maxExtPhase2
-	return r
+	return r, joinerInits
 }
 
 func (p PacketType) IsPhasedPacket() bool {

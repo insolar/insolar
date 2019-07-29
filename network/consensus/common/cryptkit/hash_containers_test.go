@@ -151,6 +151,10 @@ func TestDigestEquals(t *testing.T) {
 func TestAsDigestHolder(t *testing.T) {
 	d := Digest{digestMethod: "test"}
 	dh := d.AsDigestHolder()
+	require.Nil(t, dh)
+
+	d.hFoldReader = NewDigestHolderMock(t)
+	dh = d.AsDigestHolder()
 	require.Equal(t, dh.GetDigestMethod(), d.digestMethod)
 
 	require.Implements(t, (*DigestHolder)(nil), dh)
@@ -222,7 +226,8 @@ func TestSignGetSignatureMethod(t *testing.T) {
 }
 
 func TestAsSignatureHolder(t *testing.T) {
-	s := Signature{signatureMethod: "test"}
+	fd := longbits.NewFoldableReaderMock(t)
+	s := Signature{hFoldReader: fd, signatureMethod: "test"}
 	sh := s.AsSignatureHolder()
 	require.Equal(t, sh.GetSignatureMethod(), s.signatureMethod)
 
@@ -298,15 +303,17 @@ func TestGetSignature(t *testing.T) {
 }
 
 func TestGetDigestHolder(t *testing.T) {
-	d := Digest{digestMethod: "testDigest"}
-	s := Signature{signatureMethod: "testSignature"}
+	fd := longbits.NewFoldableReaderMock(t)
+	d := Digest{hFoldReader: fd, digestMethod: "testDigest"}
+	s := Signature{hFoldReader: fd, signatureMethod: "testSignature"}
 	sd := NewSignedDigest(d, s)
 	require.Equal(t, d.AsDigestHolder(), sd.GetDigestHolder())
 }
 
 func TestGetSignatureHolder(t *testing.T) {
-	d := Digest{digestMethod: "testDigest"}
-	s := Signature{signatureMethod: "testSignature"}
+	fd := longbits.NewFoldableReaderMock(t)
+	d := Digest{hFoldReader: fd, digestMethod: "testDigest"}
+	s := Signature{hFoldReader: fd, signatureMethod: "testSignature"}
 	sd := NewSignedDigest(d, s)
 	require.Equal(t, s.AsSignatureHolder(), sd.GetSignatureHolder())
 }
@@ -344,8 +351,9 @@ func TestSignedDigestString(t *testing.T) {
 }
 
 func TestAsSignedDigestHolder(t *testing.T) {
-	d := Digest{digestMethod: "testDigest"}
-	s := Signature{signatureMethod: "testSignature"}
+	fd := longbits.NewFoldableReaderMock(t)
+	d := Digest{hFoldReader: fd, digestMethod: "testDigest"}
+	s := Signature{hFoldReader: fd, signatureMethod: "testSignature"}
 	sd := NewSignedDigest(d, s)
 	sdh := sd.AsSignedDigestHolder()
 
@@ -371,7 +379,7 @@ func TestSignDataByDataSigner(t *testing.T) {
 	ds := NewDataSignerMock(t)
 	td := DigestMethod("testDigest")
 	ts := SignatureMethod("testSign")
-	ds.GetSignOfDataMock.Set(func(io.Reader) SignedDigest {
+	ds.SignDataMock.Set(func(io.Reader) SignedDigest {
 		return SignedDigest{digest: Digest{digestMethod: td}, signature: Signature{signatureMethod: ts}}
 	})
 	sd := SignDataByDataSigner(&bits, ds)

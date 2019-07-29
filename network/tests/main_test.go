@@ -87,7 +87,7 @@ func TestNetworkConsensusManyTimes(t *testing.T) {
 }
 
 func TestJoinerNodeConnect(t *testing.T) {
-	t.Skip("FIXME")
+	//t.Skip("FIXME")
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
@@ -100,7 +100,7 @@ func TestJoinerNodeConnect(t *testing.T) {
 		s.StopNode(testNode)
 	}(s)
 
-	s.waitForConsensus(2)
+	s.waitForConsensus(1)
 
 	s.AssertActiveNodesCountDelta(0)
 

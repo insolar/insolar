@@ -245,7 +245,7 @@ func (d *distributor) sendPulseToHost(ctx context.Context, p *insolar.Pulse, hos
 	ctx, span := instracer.StartSpan(ctx, "distributor.sendPulseToHosts")
 	defer span.End()
 
-	pulseRequest := NewPulsePacket(ctx, p, d.pulsarHost, host, uint64(d.generateID()))
+	pulseRequest := NewPulsePacketWithTrace(ctx, p, d.pulsarHost, host, uint64(d.generateID()))
 
 	_, err := d.sendRequestToHost(ctx, pulseRequest, host)
 	if err != nil {
@@ -266,12 +266,17 @@ func (d *distributor) sendRequestToHost(ctx context.Context, packet *packet.Pack
 	return nil, nil
 }
 
-func NewPulsePacket(ctx context.Context, p *insolar.Pulse, pulsarHost, to *host.Host, id uint64) *packet.Packet {
+func NewPulsePacket(p *insolar.Pulse, pulsarHost, to *host.Host, id uint64) *packet.Packet {
 	pulseRequest := packet.NewPacket(pulsarHost, to, types.Pulse, id)
 	request := &packet.PulseRequest{
-		TraceSpanData: instracer.MustSerialize(ctx),
-		Pulse:         pulse.ToProto(p),
+		Pulse: pulse.ToProto(p),
 	}
 	pulseRequest.SetRequest(request)
 	return pulseRequest
+}
+
+func NewPulsePacketWithTrace(ctx context.Context, p *insolar.Pulse, pulsarHost, to *host.Host, id uint64) *packet.Packet {
+	pulsePacket := NewPulsePacket(p, pulsarHost, to, id)
+	pulsePacket.GetRequest().GetPulse().TraceSpanData = instracer.MustSerialize(ctx)
+	return pulsePacket
 }

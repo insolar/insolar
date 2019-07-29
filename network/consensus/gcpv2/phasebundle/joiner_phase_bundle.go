@@ -85,28 +85,19 @@ func (r *JoinerPhaseBundle) CreatePrepPhaseControllers() []core.PrepPhaseControl
 
 func (r *JoinerPhaseBundle) CreateFullPhaseControllers(nodeCount int) ([]core.PhaseController, core.NodeUpdateCallback) {
 
-	/* Ensure sufficient sizes of queues to avoid lockups */
-	if nodeCount == 0 {
-		panic("illegal value")
-	}
-
-	rcb := &regularCallback{
-		make(chan *core.NodeAppearance, 1+nodeCount*2),
-		make(chan ph2ctl.UpdateSignal, 1+nodeCount*6),
-		make(chan core.MemberPacketSender, 1+nodeCount*2),
-	}
+	rcb := newPopulationEventHandler(nodeCount)
 
 	vif := r.VectorInspection
 	if r.DisableVectorInspectionOnJoiner {
 		vif = inspectors.NewIgnorantVectorInspection()
 	}
 
-	packetPrepareOptions := r.JoinerOptions | transport.PrepareWithIntro
+	packetPrepareOptions := r.JoinerPacketOptions | transport.PrepareWithIntro
 
 	return []core.PhaseController{
-		ph01ctl.NewPhase01Controller(packetPrepareOptions|transport.PrepareWithoutPulseData, rcb.qIntro),
-		ph2ctl.NewPhase2Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qNshReady /*->*/),
-		ph3ctl.NewPhase3Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qTrustLvlUpd, /*->*/
+		ph01ctl.NewPhase01Controller(packetPrepareOptions|transport.PrepareWithoutPulseData, rcb.qForPhase1),
+		ph2ctl.NewPhase2Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qForPhase2 /*->*/),
+		ph3ctl.NewPhase3Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qForPhase3, /*->*/
 			r.ConsensusStrategy, vif, r.EnableFastPhase3),
 	}, rcb
 }
