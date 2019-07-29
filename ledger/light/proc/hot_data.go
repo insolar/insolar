@@ -19,6 +19,8 @@ package proc
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar/bus"
+	wbus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -27,7 +29,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
@@ -46,16 +47,15 @@ type HotObjects struct {
 	indexes []record.Index
 	pulse   insolar.PulseNumber
 
-	Dep struct {
-		DropModifier  drop.Modifier
-		MessageBus    insolar.MessageBus
-		IndexModifier object.IndexModifier
-		JetStorage    jet.Storage
-		JetFetcher    executor.JetFetcher
-		JetReleaser   hot.JetReleaser
-		Coordinator   jet.Coordinator
-		Calculator    pulse.Calculator
-		Sender        bus.Sender
+	dep struct {
+		drops       drop.Modifier
+		indices     object.IndexModifier
+		jetStorage  jet.Storage
+		jetFetcher  executor.JetFetcher
+		jetReleaser hot.JetReleaser
+		coordinator jet.Coordinator
+		calculator  pulse.Calculator
+		sender      wbus.Sender
 	}
 }
 
@@ -75,8 +75,30 @@ func NewHotObjects(
 	}
 }
 
+func (p *HotObjects) Dep(
+	drops drop.Modifier,
+	indices object.IndexModifier,
+	jStore jet.Storage,
+	jFetcher executor.JetFetcher,
+	jReleaser hot.JetReleaser,
+	coordinator jet.Coordinator,
+	pCalc pulse.Calculator,
+	sender bus.Sender,
+) {
+	p.dep.drops = drops
+	p.dep.indices = indices
+	p.dep.jetStorage = jStore
+	p.dep.jetFetcher = jFetcher
+	p.dep.jetReleaser = jReleaser
+	p.dep.coordinator = coordinator
+	p.dep.calculator = pCalc
+	p.dep.sender = sender
+}
+
 func (p *HotObjects) Proceed(ctx context.Context) error {
-	err := p.Dep.DropModifier.Set(ctx, p.drop)
+	inslogger.FromContext(ctx).Debug("Get hot. pulse: ", p.drop.Pulse, " jet: ", p.drop.JetID.DebugString())
+
+	err := p.dep.drops.Set(ctx, p.drop)
 	if err == drop.ErrOverride {
 		err = nil
 	}
@@ -84,7 +106,7 @@ func (p *HotObjects) Proceed(ctx context.Context) error {
 		return errors.Wrapf(err, "[HotObjects.process]: drop error (pulse: %v)", p.drop.Pulse)
 	}
 
-	err = p.Dep.JetStorage.Update(
+	err = p.dep.jetStorage.Update(
 		ctx, p.pulse, true, p.jetID,
 	)
 	if err != nil {
@@ -95,7 +117,7 @@ func (p *HotObjects) Proceed(ctx context.Context) error {
 		"jet": p.jetID.DebugString(),
 	})
 
-	pendingNotifyPulse, err := p.Dep.Calculator.Backwards(ctx, flow.Pulse(ctx), pendingNotifyThreshold)
+	pendingNotifyPulse, err := p.dep.calculator.Backwards(ctx, flow.Pulse(ctx), pendingNotifyThreshold)
 	if err != nil {
 		if err == pulse.ErrNotFound {
 			pendingNotifyPulse = *insolar.GenesisPulse
@@ -106,13 +128,13 @@ func (p *HotObjects) Proceed(ctx context.Context) error {
 
 	logger.Debugf("received %v hot indexes for jet %s and pulse %s", len(p.indexes), p.jetID.DebugString(), p.pulse)
 	for _, idx := range p.indexes {
-		objJetID, _ := p.Dep.JetStorage.ForID(ctx, p.pulse, idx.ObjID)
+		objJetID, _ := p.dep.jetStorage.ForID(ctx, p.pulse, idx.ObjID)
 		if objJetID != p.jetID {
 			logger.Warn("received wrong id")
 			continue
 		}
 
-		err = p.Dep.IndexModifier.SetIndex(
+		err = p.dep.indices.SetIndex(
 			ctx,
 			p.pulse,
 			record.Index{
@@ -131,12 +153,32 @@ func (p *HotObjects) Proceed(ctx context.Context) error {
 		go p.notifyPending(ctx, idx.ObjID, idx.Lifeline, pendingNotifyPulse.PulseNumber)
 	}
 
-	p.Dep.JetFetcher.Release(ctx, p.jetID, p.pulse)
-	err = p.Dep.JetReleaser.Unlock(ctx, insolar.ID(p.jetID))
+	p.dep.jetFetcher.Release(ctx, p.jetID, p.pulse)
+	err = p.dep.jetReleaser.Unlock(ctx, insolar.ID(p.jetID))
 	if err != nil {
 		return errors.Wrap(err, "failed to release jets")
 	}
+
+	p.sendConfirmationToHeavy(ctx, p.jetID, p.drop.Pulse, p.drop.Split)
 	return nil
+}
+
+func (p *HotObjects) sendConfirmationToHeavy(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber, split bool) {
+	msg, err := payload.NewMessage(&payload.GotHotConfirmation{
+		JetID: jetID,
+		Pulse: pn,
+		Split: split,
+	})
+
+	if err != nil {
+		inslogger.FromContext(ctx).Error("Can't create GotHotConfirmation message: ", err)
+		return
+	}
+
+	inslogger.FromContext(ctx).Debug("Send hot confirmation to heavy. pulse: ", pn, " jet: ", p.drop.JetID.DebugString())
+
+	_, done := p.dep.sender.SendRole(ctx, msg, insolar.DynamicRoleHeavyExecutor, *insolar.NewReference(insolar.ID(jetID)))
+	done()
 }
 
 func (p *HotObjects) notifyPending(
@@ -165,6 +207,6 @@ func (p *HotObjects) notifyPending(
 
 	// Hot data was sent to us by another light.
 	// Notification should be send to virtual for this object.
-	_, done := p.Dep.Sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, *insolar.NewReference(objectID))
+	_, done := p.dep.sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, *insolar.NewReference(objectID))
 	done()
 }

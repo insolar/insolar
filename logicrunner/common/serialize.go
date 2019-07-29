@@ -17,8 +17,7 @@
 package common
 
 import (
-	"github.com/ugorji/go/codec"
-
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 )
 
@@ -29,16 +28,15 @@ type Serializer interface {
 
 type CBORSerializer struct{}
 
-func (s *CBORSerializer) Serialize(what interface{}, to *[]byte) error {
-	ch := new(codec.CborHandle)
+func (s *CBORSerializer) Serialize(what interface{}, to *[]byte) (err error) {
 	log.Debugf("serializing %+v", what)
-	return codec.NewEncoderBytes(to, ch).Encode(what)
+	*to, err = insolar.Serialize(what)
+	return err
 }
 
-func (s *CBORSerializer) Deserialize(from []byte, into interface{}) error {
-	ch := new(codec.CborHandle)
+func (s *CBORSerializer) Deserialize(from []byte, to interface{}) error {
 	log.Debugf("de-serializing %+v", from)
-	return codec.NewDecoderBytes(from, ch).Decode(into)
+	return insolar.Deserialize(from, to)
 }
 
 func NewCBORSerializer() *CBORSerializer {

@@ -18,13 +18,16 @@ package member
 
 import (
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/deposit"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 type CreateResponse struct {
 	Reference string `json:"reference"`
+}
+type GetBalanceResponse struct {
+	Balance  string                 `json:"balance"`
+	Deposits map[string]interface{} `json:"deposits"`
 }
 type GetResponse struct {
 	Reference   string `json:"reference"`
@@ -78,15 +81,6 @@ func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*Member, 
 	return &Member{Reference: ref}, nil
 }
 
-// AsDelegate saves object as delegate
-func (r *ContractConstructorHolder) AsDelegate(objRef insolar.Reference) (*Member, error) {
-	ref, err := common.CurrentProxyCtx.SaveAsDelegate(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
-	if err != nil {
-		return nil, err
-	}
-	return &Member{Reference: ref}, nil
-}
-
 // GetObject returns proxy object
 func GetObject(ref insolar.Reference) (r *Member) {
 	return &Member{Reference: ref}
@@ -97,22 +91,14 @@ func GetPrototype() insolar.Reference {
 	return *PrototypeReference
 }
 
-// GetImplementationFrom returns proxy to delegate of given type
-func GetImplementationFrom(object insolar.Reference) (*Member, error) {
-	ref, err := common.CurrentProxyCtx.GetDelegate(object, *PrototypeReference)
-	if err != nil {
-		return nil, err
-	}
-	return GetObject(ref), nil
-}
-
 // New is constructor
-func New(rootDomain insolar.Reference, name string, key string, burnAddress string) *ContractConstructorHolder {
-	var args [4]interface{}
+func New(rootDomain insolar.Reference, name string, key string, burnAddress string, walletRef insolar.Reference) *ContractConstructorHolder {
+	var args [5]interface{}
 	args[0] = rootDomain
 	args[1] = name
 	args[2] = key
 	args[3] = burnAddress
+	args[4] = walletRef
 
 	var argsSerialized []byte
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
@@ -257,6 +243,91 @@ func (r *Member) GetNameAsImmutable() (string, error) {
 	}
 
 	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetName", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// GetWallet is proxy generated method
+func (r *Member) GetWallet() (insolar.Reference, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 insolar.Reference
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetWallet", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// GetWalletNoWait is proxy generated method
+func (r *Member) GetWalletNoWait() error {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetWallet", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetWalletAsImmutable is proxy generated method
+func (r *Member) GetWalletAsImmutable() (insolar.Reference, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 insolar.Reference
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetWallet", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -445,18 +516,102 @@ func (r *Member) CallAsImmutable(signedRequest []byte) (interface{}, error) {
 	return ret0, nil
 }
 
+// GetDeposits is proxy generated method
+func (r *Member) GetDeposits() (map[string]interface{}, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 map[string]interface{}
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetDeposits", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// GetDepositsNoWait is proxy generated method
+func (r *Member) GetDepositsNoWait() error {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetDeposits", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetDepositsAsImmutable is proxy generated method
+func (r *Member) GetDepositsAsImmutable() (map[string]interface{}, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 map[string]interface{}
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetDeposits", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
 // FindDeposit is proxy generated method
-func (r *Member) FindDeposit(txHash string, inputAmountStr string) (bool, deposit.Deposit, error) {
-	var args [2]interface{}
-	args[0] = txHash
-	args[1] = inputAmountStr
+func (r *Member) FindDeposit(transactionsHash string) (bool, insolar.Reference, error) {
+	var args [1]interface{}
+	args[0] = transactionsHash
 
 	var argsSerialized []byte
 
 	ret := [3]interface{}{}
 	var ret0 bool
 	ret[0] = &ret0
-	var ret1 deposit.Deposit
+	var ret1 insolar.Reference
 	ret[1] = &ret1
 	var ret2 *foundation.Error
 	ret[2] = &ret2
@@ -483,10 +638,9 @@ func (r *Member) FindDeposit(txHash string, inputAmountStr string) (bool, deposi
 }
 
 // FindDepositNoWait is proxy generated method
-func (r *Member) FindDepositNoWait(txHash string, inputAmountStr string) error {
-	var args [2]interface{}
-	args[0] = txHash
-	args[1] = inputAmountStr
+func (r *Member) FindDepositNoWait(transactionsHash string) error {
+	var args [1]interface{}
+	args[0] = transactionsHash
 
 	var argsSerialized []byte
 
@@ -504,17 +658,16 @@ func (r *Member) FindDepositNoWait(txHash string, inputAmountStr string) error {
 }
 
 // FindDepositAsImmutable is proxy generated method
-func (r *Member) FindDepositAsImmutable(txHash string, inputAmountStr string) (bool, deposit.Deposit, error) {
-	var args [2]interface{}
-	args[0] = txHash
-	args[1] = inputAmountStr
+func (r *Member) FindDepositAsImmutable(transactionsHash string) (bool, insolar.Reference, error) {
+	var args [1]interface{}
+	args[0] = transactionsHash
 
 	var argsSerialized []byte
 
 	ret := [3]interface{}{}
 	var ret0 bool
 	ret[0] = &ret0
-	var ret1 deposit.Deposit
+	var ret1 insolar.Reference
 	ret[1] = &ret1
 	var ret2 *foundation.Error
 	ret[2] = &ret2
@@ -540,10 +693,11 @@ func (r *Member) FindDepositAsImmutable(txHash string, inputAmountStr string) (b
 	return ret0, ret1, nil
 }
 
-// SetDeposit is proxy generated method
-func (r *Member) SetDeposit(reference insolar.Reference) error {
-	var args [1]interface{}
-	args[0] = reference
+// AddDeposit is proxy generated method
+func (r *Member) AddDeposit(txId string, deposit insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = txId
+	args[1] = deposit
 
 	var argsSerialized []byte
 
@@ -556,7 +710,7 @@ func (r *Member) SetDeposit(reference insolar.Reference) error {
 		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "SetDeposit", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "AddDeposit", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -572,10 +726,11 @@ func (r *Member) SetDeposit(reference insolar.Reference) error {
 	return nil
 }
 
-// SetDepositNoWait is proxy generated method
-func (r *Member) SetDepositNoWait(reference insolar.Reference) error {
-	var args [1]interface{}
-	args[0] = reference
+// AddDepositNoWait is proxy generated method
+func (r *Member) AddDepositNoWait(txId string, deposit insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = txId
+	args[1] = deposit
 
 	var argsSerialized []byte
 
@@ -584,7 +739,7 @@ func (r *Member) SetDepositNoWait(reference insolar.Reference) error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "SetDeposit", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "AddDeposit", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -592,10 +747,11 @@ func (r *Member) SetDepositNoWait(reference insolar.Reference) error {
 	return nil
 }
 
-// SetDepositAsImmutable is proxy generated method
-func (r *Member) SetDepositAsImmutable(reference insolar.Reference) error {
-	var args [1]interface{}
-	args[0] = reference
+// AddDepositAsImmutable is proxy generated method
+func (r *Member) AddDepositAsImmutable(txId string, deposit insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = txId
+	args[1] = deposit
 
 	var argsSerialized []byte
 
@@ -608,7 +764,7 @@ func (r *Member) SetDepositAsImmutable(reference insolar.Reference) error {
 		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "SetDeposit", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "AddDeposit", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}

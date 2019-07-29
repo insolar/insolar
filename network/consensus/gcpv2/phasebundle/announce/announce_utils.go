@@ -94,7 +94,7 @@ func ValidateIntrosOnMember(reader transport.ExtendedIntroReader, brief transpor
 
 func ApplyUnknownAnnouncement(ctx context.Context, announcerID insolar.ShortNodeID,
 	reader transport.AnnouncementPacketReader, brief transport.BriefIntroductionReader,
-	_ bool, realm *core.FullRealm) (bool, error) {
+	_ /* full is required */ bool, realm *core.FullRealm) (bool, error) {
 
 	// var err error
 	// err := ValidateIntrosOnMember(reader, brief, fullIntroRequired, nil)
@@ -105,7 +105,6 @@ func ApplyUnknownAnnouncement(ctx context.Context, announcerID insolar.ShortNode
 	na := reader.GetAnnouncementReader()
 	nr := na.GetNodeRank()
 
-	ma := AnnouncementFromReader(na)
 	// TODO verify announcement content and signature
 
 	purgatory := realm.GetPurgatory()
@@ -113,11 +112,14 @@ func ApplyUnknownAnnouncement(ctx context.Context, announcerID insolar.ShortNode
 	case reader.HasFullIntro():
 		full := reader.GetFullIntroduction()
 		intro := realm.GetProfileFactory().CreateFullIntroProfile(full)
+		ma := AnnouncementFromReader(na, full)
 		return purgatory.SelfFromMemberAnnouncement(ctx, announcerID, intro, nr, ma)
 	case brief != nil:
-		intro := realm.GetProfileFactory().CreateBriefIntroProfile(brief)
+		intro := realm.GetProfileFactory().CreateUpgradableIntroProfile(brief)
+		ma := AnnouncementFromReader(na, brief)
 		return purgatory.SelfFromMemberAnnouncement(ctx, announcerID, intro, nr, ma)
 	default:
+		ma := AnnouncementFromReader(na, nil)
 		return purgatory.SelfFromMemberAnnouncement(ctx, announcerID, nil, nr, ma)
 	}
 }
@@ -141,7 +143,8 @@ func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementP
 	var matches = true
 	announcerID := n.GetNodeID()
 
-	ma := AnnouncementFromReader(na)
+	var ma profiles.MembershipAnnouncement
+
 	// TODO verify announcement content and signature
 
 	if reader.HasFullIntro() {
@@ -151,12 +154,16 @@ func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementP
 			// TODO should be fraud
 			return false, 0, n.Blames().NewProtocolViolation(n.GetReportProfile(), "announcement is incorrect")
 		}
-	} else if brief != nil {
-		matches = profiles.EqualStaticProfiles(n.GetReportProfile().GetStatic(), brief)
-		if !matches {
-			// TODO should be fraud
-			return false, 0, n.Blames().NewProtocolViolation(n.GetReportProfile(), "announcement is incorrect")
+		ma = AnnouncementFromReader(na, full)
+	} else {
+		if brief != nil {
+			matches = profiles.EqualStaticProfiles(n.GetReportProfile().GetStatic(), brief)
+			if !matches {
+				// TODO should be fraud
+				return false, 0, n.Blames().NewProtocolViolation(n.GetReportProfile(), "announcement is incorrect")
+			}
 		}
+		ma = AnnouncementFromReader(na, brief)
 	}
 	if !matches {
 		// TODO should be fraud
@@ -166,11 +173,8 @@ func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementP
 		return false, 0, n.Blames().NewProtocolViolation(n.GetReportProfile(), "node is not allowed to add a joiner")
 	}
 
-	modified, err := n.ApplyNodeMembership(ma)
-
-	if err == nil && modified && !ma.JoinerID.IsAbsent() {
-		purgatory := realm.GetPurgatory()
-
+	purgatory := realm.GetPurgatory()
+	if !ma.JoinerID.IsAbsent() {
 		ja := na.GetJoinerAnnouncement()
 		// originID := ja.GetJoinerIntroducedByID() // applies to neighbourhood only
 
@@ -180,12 +184,21 @@ func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementP
 		} else {
 			joinerIntroProfile = realm.GetProfileFactory().CreateUpgradableIntroProfile(ja.GetBriefIntroduction())
 		}
-		err = purgatory.JoinerFromMemberAnnouncement(ctx, ma.JoinerID, joinerIntroProfile, announcerID)
-		if err == nil && ma.JoinerID == realm.GetSelfNodeID() {
-			// we trust more to these who has introduced us
-			// It is also REQUIRED as vector calculation requires at least one trusted node to work properly
-			n.UpdateNodeTrustLevel(member.TrustBySome)
+		err = purgatory.JoinerFromMemberAnnouncement(ctx, ma.JoinerID, joinerIntroProfile, insolar.AbsentShortNodeID /*avoids ascension */)
+		if err != nil {
+			return false, 0, err
 		}
+	}
+
+	modified, err := n.ApplyNodeMembership(ma)
+
+	if err == nil && modified {
+		err = purgatory.JoinerFromMemberAnnouncement(ctx, ma.JoinerID, nil, announcerID) /* trigger accession */
+	}
+	if err == nil && ma.JoinerID == realm.GetSelfNodeID() {
+		// we trust more to these who has introduced us
+		// It is also REQUIRED as vector calculation requires at least one trusted node to work properly
+		n.UpdateNodeTrustLevel(member.TrustBySome)
 	}
 	return modified, ma.JoinerID, err
 }
@@ -194,7 +207,7 @@ func ApplyNeighbourJoinerAnnouncement(ctx context.Context, sender *core.NodeAppe
 	joinerAnnouncedBySender insolar.ShortNodeID, neighbour core.AnnouncingMember, joinerAnnouncedByNeighbour insolar.ShortNodeID,
 	neighbourJoinerAnnouncement transport.JoinerAnnouncementReader, realm *core.FullRealm) error {
 
-	if joinerAnnouncedByNeighbour.IsAbsent() {
+	if joinerAnnouncedByNeighbour.IsAbsent() && !neighbour.IsJoiner() {
 		if neighbourJoinerAnnouncement != nil {
 			return neighbour.Blames().NewProtocolViolation(sender.GetReportProfile(), "joiner profile is unexpected on neighbourhood")
 		}
@@ -228,12 +241,20 @@ func ApplyNeighbourJoinerAnnouncement(ctx context.Context, sender *core.NodeAppe
 	if neighbourJoinerAnnouncement == nil {
 		return neighbour.Blames().NewProtocolViolation(sender.GetReportProfile(), "joiner profile was not expected in neighbourhood")
 	}
-	return purgatory.JoinerFromNeighbourhood(ctx, neighbourID, nil, sender.GetNodeID())
+	return purgatory.JoinerFromNeighbourhood(ctx, neighbourID, nil, insolar.AbsentShortNodeID)
 }
 
-func AnnouncementFromReader(nb transport.MembershipAnnouncementReader) profiles.MembershipAnnouncement {
+func AnnouncementFromReader(nb transport.MembershipAnnouncementReader, brief profiles.BriefCandidateProfile) profiles.MembershipAnnouncement {
 
 	nr := nb.GetNodeRank()
+	if nr.IsJoiner() {
+		if nb.IsLeaving() { //|| !nb.GetJoinerID().IsAbsent() && nb.GetJoinerID() != nb.GetNodeID() {
+			panic("illegal membership announcement") // TODO report by error
+		}
+		mp := profiles.NewMembershipProfileForJoiner(brief)
+		return profiles.NewMembershipAnnouncement(mp)
+	}
+
 	mp := profiles.NewMembershipProfile(nr.GetMode(), nr.GetPower(), nr.GetIndex(), nb.GetNodeStateHashEvidence(),
 		nb.GetAnnouncementSignature(), nb.GetRequestedPower())
 
@@ -245,13 +266,37 @@ func AnnouncementFromReader(nb transport.MembershipAnnouncementReader) profiles.
 	}
 }
 
+func AnnouncementFromNbhReaderForJoiner(nb transport.MembershipAnnouncementReader,
+	announcedJoinerID insolar.ShortNodeID, announcedJoiner transport.JoinerAnnouncementReader) profiles.MembershipAnnouncement {
+
+	var mp profiles.MembershipProfile
+
+	nr := nb.GetNodeRank()
+	if !nr.IsJoiner() || nb.IsLeaving() || !nb.GetJoinerID().IsAbsent() {
+		panic("illegal membership announcement") // TODO report by error
+	}
+
+	if nb.GetNodeID() == announcedJoinerID {
+		mp = profiles.NewMembershipProfileForJoiner(announcedJoiner.GetBriefIntroduction())
+	} else {
+		ja := nb.GetJoinerAnnouncement()
+		if ja == nil {
+			panic("illegal membership announcement") // TODO report by error
+		}
+		mp = profiles.NewMembershipProfileForJoiner(ja.GetBriefIntroduction())
+	}
+
+	return profiles.NewMembershipAnnouncement(mp)
+}
+
 type ResolvedNeighbour struct {
 	Neighbour    core.AnnouncingMember
 	Announcement profiles.MembershipAnnouncement
 }
 
 func VerifyNeighbourhood(ctx context.Context, neighbourhood []transport.MembershipAnnouncementReader,
-	n *core.NodeAppearance, realm *core.FullRealm) ([]ResolvedNeighbour, error) {
+	n *core.NodeAppearance, announcedJoinerID insolar.ShortNodeID,
+	announcedJoiner transport.JoinerAnnouncementReader, realm *core.FullRealm) ([]ResolvedNeighbour, error) {
 
 	hasThis := false
 	hasSelf := false
@@ -266,8 +311,15 @@ func VerifyNeighbourhood(ctx context.Context, neighbourhood []transport.Membersh
 		if nid == n.GetNodeID() {
 			hasSelf = true
 		}
+
 		nr := nb.GetNodeRank()
-		nba := AnnouncementFromReader(nb)
+		var nba profiles.MembershipAnnouncement
+		if nr.IsJoiner() {
+			nba = AnnouncementFromNbhReaderForJoiner(nb, announcedJoinerID, announcedJoiner)
+		} else {
+			nba = AnnouncementFromReader(nb, nil)
+		}
+
 		neighbour, err := purgatory.MemberFromNeighbourhood(ctx, nid, nr, nba, senderID)
 		if err != nil {
 			return nil, err

@@ -51,6 +51,7 @@
 package censusimpl
 
 import (
+	"context"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
@@ -208,8 +209,8 @@ func (c *PrimingCensusTemplate) GetMandateRegistry() census.MandateRegistry {
 	return c.registries.GetMandateRegistry()
 }
 
-func (c *PrimingCensusTemplate) CreateBuilder(pn pulse.Number, fullCopy bool) census.Builder {
-	return newLocalCensusBuilder(c.chronicles, pn, c.online, fullCopy)
+func (c *PrimingCensusTemplate) CreateBuilder(ctx context.Context, pn pulse.Number) census.Builder {
+	return newLocalCensusBuilder(ctx, c.chronicles, pn, c.online)
 }
 
 var _ census.Active = &ActiveCensusTemplate{}
@@ -247,14 +248,13 @@ func (c *ActiveCensusTemplate) GetCloudStateHash() proofs.CloudStateHash {
 var _ census.Expected = &ExpectedCensusTemplate{}
 
 type ExpectedCensusTemplate struct {
-	chronicles   *localChronicles
-	online       copyToOnlinePopulation
-	evicted      census.EvictedPopulation
-	prev         census.Active
-	gsh          proofs.GlobulaStateHash
-	csh          proofs.CloudStateHash
-	pn           pulse.Number
-	isIncomplete bool
+	chronicles *localChronicles
+	online     copyToOnlinePopulation
+	evicted    census.EvictedPopulation
+	prev       census.Active
+	gsh        proofs.GlobulaStateHash
+	csh        proofs.CloudStateHash
+	pn         pulse.Number
 }
 
 func (c *ExpectedCensusTemplate) GetProfileFactory(ksf cryptkit.KeyStoreFactory) profiles.Factory {
@@ -270,9 +270,6 @@ func (c *ExpectedCensusTemplate) GetExpectedPulseNumber() pulse.Number {
 }
 
 func (c *ExpectedCensusTemplate) GetCensusState() census.State {
-	if c.isIncomplete {
-		return census.IncompleteCensus
-	}
 	return census.CompleteCensus
 }
 
@@ -307,8 +304,8 @@ func (c *ExpectedCensusTemplate) GetMandateRegistry() census.MandateRegistry {
 	return c.prev.GetMandateRegistry()
 }
 
-func (c *ExpectedCensusTemplate) CreateBuilder(pn pulse.Number, fullCopy bool) census.Builder {
-	return newLocalCensusBuilder(c.chronicles, pn, c.online, fullCopy)
+func (c *ExpectedCensusTemplate) CreateBuilder(ctx context.Context, pn pulse.Number) census.Builder {
+	return newLocalCensusBuilder(ctx, c.chronicles, pn, c.online)
 }
 
 func (c *ExpectedCensusTemplate) GetPrevious() census.Active {

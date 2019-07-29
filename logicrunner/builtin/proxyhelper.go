@@ -20,15 +20,12 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
-	"github.com/tylerb/gls"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
-
-const glsCallContextKey = "callCtx"
 
 type ProxyHelper struct {
 	lrCommon.Serializer
@@ -45,14 +42,7 @@ func NewProxyHelper(runner lrCommon.LogicRunnerRPCStub) *ProxyHelper {
 }
 
 func (h *ProxyHelper) getUpBaseReq() rpctypes.UpBaseReq {
-	callContextInterface := gls.Get(glsCallContextKey)
-	if callContextInterface == nil {
-		panic("Failed to find call context")
-	}
-	callContext, ok := callContextInterface.(*insolar.LogicCallContext)
-	if !ok {
-		panic("Unknown value stored in '" + glsCallContextKey + "'")
-	}
+	callContext := foundation.GetLogicalContext()
 
 	return rpctypes.UpBaseReq{
 		Mode:            callContext.Mode,
@@ -118,56 +108,6 @@ func (h *ProxyHelper) SaveAsChild(parentRef, classRef insolar.Reference, constru
 		return insolar.Reference{}, err
 	}
 	return *res.Reference, nil
-}
-
-func (h *ProxyHelper) SaveAsDelegate(parentRef, classRef insolar.Reference, constructorName string,
-	argsSerialized []byte) (insolar.Reference, error) {
-
-	if h.GetSystemError() != nil {
-		return insolar.Reference{}, h.GetSystemError()
-	}
-
-	res := rpctypes.UpSaveAsDelegateResp{}
-	req := rpctypes.UpSaveAsDelegateReq{
-		UpBaseReq: h.getUpBaseReq(),
-
-		Into:            parentRef,
-		Prototype:       classRef,
-		ConstructorName: constructorName,
-		ArgsSerialized:  argsSerialized,
-	}
-
-	if err := h.methods.SaveAsDelegate(req, &res); err != nil {
-		h.SetSystemError(err)
-		return insolar.Reference{}, err
-	}
-	if res.Reference == nil {
-		err := errors.New("Unexpected result, empty reference")
-		h.SetSystemError(err)
-		return insolar.Reference{}, err
-	}
-	return *res.Reference, nil
-
-}
-
-func (h *ProxyHelper) GetDelegate(object, ofType insolar.Reference) (insolar.Reference, error) {
-	if h.GetSystemError() != nil {
-		return insolar.Reference{}, h.GetSystemError()
-	}
-
-	res := rpctypes.UpGetDelegateResp{}
-	req := rpctypes.UpGetDelegateReq{
-		UpBaseReq: h.getUpBaseReq(),
-
-		Object: object,
-		OfType: ofType,
-	}
-
-	if err := h.methods.GetDelegate(req, &res); err != nil {
-		h.SetSystemError(err)
-		return insolar.Reference{}, err
-	}
-	return res.Object, nil
 }
 
 func (h *ProxyHelper) DeactivateObject(object insolar.Reference) error {

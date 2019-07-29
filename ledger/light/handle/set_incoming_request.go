@@ -81,8 +81,8 @@ func (s *SetIncomingRequest) setActivationRequest(
 	reqID := calc.Result.ID
 
 	passIfNotExecutor := !s.passed
-	jet := proc.NewCheckJet(reqID, flow.Pulse(ctx), s.message, passIfNotExecutor)
-	s.dep.CheckJet(jet)
+	jet := proc.NewFetchJet(reqID, flow.Pulse(ctx), s.message, passIfNotExecutor)
+	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
 		if err == proc.ErrNotExecutor && passIfNotExecutor {
 			return nil
@@ -91,8 +91,8 @@ func (s *SetIncomingRequest) setActivationRequest(
 	}
 	reqJetID := jet.Result.Jet
 
-	hot := proc.NewWaitHotWM(reqJetID, flow.Pulse(ctx), s.message)
-	s.dep.WaitHotWM(hot)
+	hot := proc.NewWaitHot(reqJetID, flow.Pulse(ctx), s.message)
+	s.dep.WaitHot(hot)
 	if err := f.Procedure(ctx, hot, false); err != nil {
 		return err
 	}
@@ -125,8 +125,8 @@ func (s *SetIncomingRequest) setRequest(
 	reqID := calc.Result.ID
 
 	passIfNotExecutor := !s.passed
-	jet := proc.NewCheckJet(*request.Object.Record(), flow.Pulse(ctx), s.message, passIfNotExecutor)
-	s.dep.CheckJet(jet)
+	jet := proc.NewFetchJet(*request.Object.Record(), flow.Pulse(ctx), s.message, passIfNotExecutor)
+	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
 		if err == proc.ErrNotExecutor && passIfNotExecutor {
 			return nil
@@ -135,15 +135,15 @@ func (s *SetIncomingRequest) setRequest(
 	}
 	objJetID := jet.Result.Jet
 
-	hot := proc.NewWaitHotWM(objJetID, flow.Pulse(ctx), s.message)
-	s.dep.WaitHotWM(hot)
+	hot := proc.NewWaitHot(objJetID, flow.Pulse(ctx), s.message)
+	s.dep.WaitHot(hot)
 	if err := f.Procedure(ctx, hot, false); err != nil {
 		return err
 	}
 
 	// To ensure, that we have the index. Because index can be on a heavy node.
 	// If we don't have it and heavy does, SetRequest fails because it should update light's index state
-	getIndex := proc.NewEnsureIndexWM(*request.Object.Record(), objJetID, s.message)
+	getIndex := proc.NewEnsureIndex(*request.Object.Record(), objJetID, s.message)
 	s.dep.EnsureIndex(getIndex)
 	if err := f.Procedure(ctx, getIndex, false); err != nil {
 		return err

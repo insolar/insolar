@@ -31,7 +31,6 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/jetcoordinator"
@@ -67,6 +66,8 @@ var (
 		role: insolar.StaticRoleVirtual,
 	}
 )
+
+const PulseStep insolar.PulseNumber = 10
 
 type Server struct {
 	pm           insolar.PulseManager
@@ -146,13 +147,11 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 
 	// Communication.
 	var (
-		Tokens                     insolar.DelegationTokenFactory
 		Bus                        insolar.MessageBus
 		ServerBus, ClientBus       *bus.Bus
 		ServerPubSub, ClientPubSub message.PubSub
 	)
 	{
-		Tokens = delegationtoken.NewDelegationTokenFactory()
 		Bus = &stub{}
 		ServerPubSub = gochannel.NewGoChannel(gochannel.Config{}, logger)
 		ClientPubSub = gochannel.NewGoChannel(gochannel.Config{}, logger)
@@ -180,23 +179,18 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 		records := object.NewRecordMemory()
 		indexes := object.NewIndexStorageMemory()
 		writeController := hot.NewWriteController()
-
 		waiter := hot.NewChannelWaiter()
 
 		handler := artifactmanager.NewMessageHandler(&conf)
 		handler.PulseCalculator = Pulses
 		handler.FlowDispatcher.PulseAccessor = Pulses
 
-		handler.Bus = Bus
 		handler.PCS = CryptoScheme
 		handler.JetCoordinator = Coordinator
-		handler.CryptographyService = CryptoService
-		handler.DelegationTokenFactory = Tokens
 		handler.JetStorage = Jets
 		handler.DropModifier = drops
 		handler.IndexLocker = idLocker
 		handler.Records = records
-		handler.Nodes = Nodes
 		handler.HotDataWaiter = waiter
 		handler.JetReleaser = waiter
 		handler.WriteAccessor = writeController
@@ -217,11 +211,6 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 		handler.JetTreeUpdater = jetTreeUpdater
 		handler.FilamentCalculator = filamentCalculator
 		handler.RequestChecker = requestChecker
-
-		err := handler.Init(ctx)
-		if err != nil {
-			return nil, err
-		}
 
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
 		var lightCleaner = replication.NewCleaner(
@@ -259,11 +248,14 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 			ServerBus,
 		)
 
+		stateIniter := executor.NewStateIniter(Jets, waiter, drops, Coordinator, ServerBus)
+
 		pm := pulsemanager.NewPulseManager(
 			jetSplitter,
 			lthSyncer,
 			writeController,
 			hotSender,
+			stateIniter,
 		)
 		pm.MessageHandler = handler
 		pm.Bus = Bus
@@ -291,6 +283,14 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 				panic(errors.Wrap(err, "failed to unmarshal meta"))
 			}
 
+			if receive != nil {
+				pl, err := payload.Unmarshal(meta.Payload)
+				if err != nil {
+					panic(nil)
+				}
+				go receive(meta, pl)
+			}
+
 			// Republish as incoming to self.
 			if meta.Receiver == light.ID() {
 				err = ServerPubSub.Publish(bus.TopicIncoming, msg)
@@ -298,14 +298,6 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 					panic(err)
 				}
 				return nil, nil
-			}
-
-			if receive != nil {
-				pl, err := payload.Unmarshal(meta.Payload)
-				if err != nil {
-					panic(nil)
-				}
-				receive(meta, pl)
 			}
 
 			clientHandler := func(msg *message.Message) (messages []*message.Message, e error) {
@@ -385,7 +377,7 @@ func (s *Server) Pulse(ctx context.Context) {
 	defer s.lock.Unlock()
 
 	s.pulse = insolar.Pulse{
-		PulseNumber: s.pulse.PulseNumber + 10,
+		PulseNumber: s.pulse.PulseNumber + PulseStep,
 	}
 	err := s.pm.Set(ctx, s.pulse)
 	if err != nil {

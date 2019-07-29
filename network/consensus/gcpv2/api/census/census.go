@@ -51,6 +51,7 @@
 package census
 
 import (
+	"context"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
@@ -76,7 +77,7 @@ type Operational interface {
 	GetOnlinePopulation() OnlinePopulation
 	GetEvictedPopulation() EvictedPopulation
 	GetOfflinePopulation() OfflinePopulation
-	CreateBuilder(pn pulse.Number, fullCopy bool) Builder
+	CreateBuilder(ctx context.Context, pn pulse.Number) Builder
 	IsActive() bool
 
 	GetMisbehaviorRegistry() MisbehaviorRegistry
@@ -95,6 +96,8 @@ type Prime interface {
 	Active
 	MakeExpected(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) Expected
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.Expected -o . -s _mock.go
 
 type Expected interface {
 	Operational
@@ -115,7 +118,7 @@ type Builder interface {
 	IsSealed() bool
 
 	BuildAndMakeExpected(csh proofs.CloudStateHash) Expected
-	BuildAndMakeIncompleteExpected(csh proofs.CloudStateHash) Expected
+	BuildAndMakeBrokenExpected(csh proofs.CloudStateHash) Expected
 }
 
 type State uint8
@@ -124,7 +127,6 @@ const (
 	DraftCensus State = iota
 	SealedCensus
 	CompleteCensus
-	IncompleteCensus
 	PrimingCensus
 )
 

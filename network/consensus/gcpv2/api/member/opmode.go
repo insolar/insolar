@@ -75,6 +75,14 @@ func (v OpMode) IsEvicted() bool {
 	return v >= ModeEvictedGracefully
 }
 
+func (v OpMode) IsEvictedForcefully() bool {
+	return v > ModeEvictedGracefully
+}
+
+func (v OpMode) IsEvictedGracefully() bool {
+	return v == ModeEvictedGracefully
+}
+
 func (v OpMode) IsRestricted() bool {
 	return v&ModeFlagRestrictedBehavior != 0
 }

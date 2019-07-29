@@ -67,7 +67,11 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
-type VectorInspectorFactory interface {
+type VectorInspectionFactory interface {
+	CreateVectorInspection(inlineLimit int) VectorInspection
+}
+
+type VectorInspection interface {
 	CreateInspector(scanner nodeset.VectorEntryScanner, digestFactory transport.ConsensusDigestFactory,
 		nodeID insolar.ShortNodeID) VectorInspector
 }
@@ -95,19 +99,30 @@ type InspectedVector interface {
 	GetCustomOptions() uint32
 }
 
-func NewVectorInspectionFactory(maxPopulationForInlineHashing int) VectorInspectorFactory {
-	return &vectorInspectionFactory{maxPopulationForInlineHashing}
-}
-
-func NewIgnorantVectorInspectionFactory() VectorInspectorFactory {
-	return &IgnorantVectorInspectionFactory{}
+func NewVectorInspectionFactory() VectorInspectionFactory {
+	return &vectorInspectionFactory{}
 }
 
 type vectorInspectionFactory struct {
+}
+
+func (v vectorInspectionFactory) CreateVectorInspection(inlineLimit int) VectorInspection {
+	return NewVectorInspection(inlineLimit)
+}
+
+func NewVectorInspection(maxPopulationForInlineHashing int) VectorInspection {
+	return &vectorInspection{maxPopulationForInlineHashing}
+}
+
+func NewIgnorantVectorInspection() VectorInspection {
+	return &ignorantVectorInspection{}
+}
+
+type vectorInspection struct {
 	maxPopulationForInlineHashing int
 }
 
-func (p *vectorInspectionFactory) CreateInspector(scanner nodeset.VectorEntryScanner, digestFactory transport.ConsensusDigestFactory,
+func (p vectorInspection) CreateInspector(scanner nodeset.VectorEntryScanner, digestFactory transport.ConsensusDigestFactory,
 	nodeID insolar.ShortNodeID) VectorInspector {
 
 	r := &vectorInspectorImpl{VectorBuilder: nodeset.NewVectorBuilder(digestFactory, scanner,
@@ -120,10 +135,10 @@ func (p *vectorInspectionFactory) CreateInspector(scanner nodeset.VectorEntrySca
 	return r
 }
 
-type IgnorantVectorInspectionFactory struct {
+type ignorantVectorInspection struct {
 }
 
-func (p *IgnorantVectorInspectionFactory) CreateInspector(scanner nodeset.VectorEntryScanner, digestFactory transport.ConsensusDigestFactory,
+func (p ignorantVectorInspection) CreateInspector(scanner nodeset.VectorEntryScanner, digestFactory transport.ConsensusDigestFactory,
 	nodeID insolar.ShortNodeID) VectorInspector {
 
 	r := &vectorIgnorantInspectorImpl{VectorBuilder: nodeset.NewVectorBuilder(digestFactory, scanner,
@@ -440,7 +455,7 @@ func (p *inspectedVector) doVerifyVectorHashes(ctx context.Context) nodeset.Node
 
 	if log.Is(insolar.DebugLevel) {
 		if validTrusted != p.trustedPart.IsNeeded() || validDoubted != p.doubtedPart.IsNeeded() {
-			log.Debugf("mismatched AnnouncementHash:\n Here: %v %v\nThere: %v %v",
+			log.Errorf("mismatched AnnouncementHash:\n Here: %v %v\nThere: %v %v",
 				gahTrusted, gahDoubted, p.otherData.Trusted.AnnouncementHash, p.otherData.Doubted.AnnouncementHash)
 		}
 	}
@@ -473,7 +488,7 @@ func (p *inspectedVector) doVerifyVectorHashes(ctx context.Context) nodeset.Node
 
 			if log.Is(insolar.DebugLevel) {
 				if recalcTrusted && !validTrusted || recalcDoubted && !validDoubted {
-					log.Debugf("mismatched ExpectedRank:\n Here: %v %v\nThere: %v %v",
+					log.Errorf("mismatched ExpectedRank:\n Here: %v %v\nThere: %v %v",
 						gshTrusted.ExpectedRank, gshDoubted.ExpectedRank,
 						p.otherData.Trusted.ExpectedRank, p.otherData.Doubted.ExpectedRank)
 				}
@@ -488,7 +503,7 @@ func (p *inspectedVector) doVerifyVectorHashes(ctx context.Context) nodeset.Node
 
 		if log.Is(insolar.DebugLevel) {
 			if validTrusted != prevValidTrusted || validDoubted != prevValidDoubted {
-				log.Debugf("mismatched signature of StateHash:\n Here: %v %v\nThere: %v %v",
+				log.Errorf("mismatched signature of StateHash:\n Here: %v %v\nThere: %v %v",
 					gshTrusted.StateHash, gshDoubted.StateHash,
 					p.otherData.Trusted.StateSignature, p.otherData.Doubted.StateSignature)
 			}
@@ -513,7 +528,7 @@ func createNextPopulation(p *nodeset.VectorBuilder, selectionSet nodeset.Consens
 		func(nodeData nodeset.VectorEntryData, postponed bool, filter uint32) {
 
 			mode := member.OpMode(filter)
-			if postponed != mode.IsPowerless() {
+			if mode.IsPowerless() && !postponed {
 				panic("illegal state")
 			}
 

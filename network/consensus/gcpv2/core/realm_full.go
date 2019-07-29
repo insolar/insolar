@@ -138,7 +138,7 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		case pd.HasCustomVerifyForHost(from, strict):
 			// skip default
 		default:
-			err = r.coreRealm.VerifyPacketAuthenticity(packet.GetPacketSignature(), from, strict)
+			err = r.coreRealm.VerifyPacketAuthenticity(packet.GetPacketSignature(), sourceID, from, strict)
 			if err != nil {
 				return err
 			}
@@ -164,12 +164,12 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 	}
 
 	if sourceNode == nil {
-		memberCreated := false
-		memberCreated, err = pd.DispatchUnknownMemberPacket(ctx, sourceID, memberPacket, from)
+		memberTriggered := false
+		memberTriggered, err = pd.TriggerUnknownMember(ctx, sourceID, memberPacket, from)
 		if err != nil {
 			return err
 		}
-		if !memberCreated {
+		if !memberTriggered {
 			return fmt.Errorf("packet type (%v) from unknown sourceID(%v): from=%v", pt, sourceID, from)
 		}
 
@@ -191,7 +191,7 @@ func (r *FullRealm) start(census census.Active, population census.OnlinePopulati
 	r.initBasics(census)
 
 	isDynamic := bundle.IsDynamicPopulationRequired()
-	allControllers, perNodeControllers := r.initHandlers(isDynamic, population.GetCount(), bundle)
+	allControllers, perNodeControllers := r.initHandlers(isDynamic, population.GetIndexedCapacity(), bundle)
 
 	r.initPopulation(isDynamic, population, perNodeControllers)
 	r.initSelf()
@@ -221,6 +221,7 @@ func (r *FullRealm) initBasics(census census.Active) {
 
 	r.nodeContext.initFull(r.GetSelfNodeID(), r.verifierFactory, uint8(r.nbhSizes.NeighbourhoodTrustThreshold),
 		func(report misbehavior.Report) interface{} {
+			inslogger.FromContext(r.roundContext).Warnf("Got Report: %+v", report)
 			r.census.GetMisbehaviorRegistry().AddReport(report)
 			return nil
 		})
@@ -279,14 +280,19 @@ func (r *FullRealm) initPopulation(needsDynamic bool, population census.OnlinePo
 
 	if needsDynamic {
 		expectedSize := r.expectedPopulationSize.AsInt()
+		if population.GetIndexedCapacity() > expectedSize {
+			expectedSize = population.GetIndexedCapacity()
+		}
+
 		r.population = NewDynamicRealmPopulation(r.strategy, population, expectedSize,
 			r.nbhSizes.ExtendingNeighbourhoodLimit, r.strategy.ShuffleNodeSequence, initNodeFn)
 
 		// TODO probably should happen at later stages, closer to Phase3 analysis
-		r.population.SealIndex(expectedSize)
+		r.population.SealIndexed(expectedSize)
 	} else {
-		if population.GetCount() == 0 {
-			panic("dynamic population is required for joiner")
+		if population.GetIndexedCount() == 0 || !population.IsValid() ||
+			population.GetIndexedCount() != population.GetIndexedCapacity() {
+			panic("dynamic population is required for joiner or suspect")
 		}
 		r.population = NewFixedRealmPopulation(r.strategy, population,
 			r.nbhSizes.ExtendingNeighbourhoodLimit, initNodeFn)
@@ -465,8 +471,8 @@ func (r *FullRealm) GetLocalProfile() profiles.LocalNode {
 
 func (r *FullRealm) PrepareAndSetLocalNodeStateHashEvidenceForJoiner() {
 
-	nsh := r.self.profile.GetStatic().GetBriefIntroSignedDigest()
-	r.self.setLocalNodeStateHashEvidence(nsh, nsh.GetSignatureHolder())
+	//nsh := r.self.profile.GetStatic().GetBriefIntroSignedDigest()
+	//r.self.setLocalNodeStateHashEvidence(nsh, nsh.GetSignatureHolder())
 	r.notifyCommitPulseChange()
 }
 
@@ -495,11 +501,14 @@ func (r *FullRealm) CreateAnnouncement(n *NodeAppearance) *transport.NodeAnnounc
 		case jp != nil:
 			joiner = transport.NewAnyJoinerAnnouncement(jp, n.GetNodeID())
 		case n == r.self:
-			panic("illegal state - local joiner is missing")
+			panic(fmt.Sprintf("illegal state - local joiner is missing: %d", ma.JoinerID))
 		default:
-			r.GetPurgatory().FindJoinerProfile(ma.JoinerID, n.GetNodeID())
-			panic("illegal state - joiner is missing")
+			//r.GetPurgatory().FindJoinerProfile(ma.JoinerID, n.GetNodeID())
+			panic(fmt.Sprintf("illegal state - joiner is missing: s=%d n=%d j=%d",
+				r.self.GetNodeID(), n.GetNodeID(), ma.JoinerID))
 		}
+	} else if ma.Membership.IsJoiner() {
+		joiner = transport.NewAnyJoinerAnnouncement(n.GetStatic(), insolar.AbsentShortNodeID) // TODO provide an announcing node
 	}
 
 	return transport.NewNodeAnnouncement(n.profile, ma, r.GetNodeCount(), r.pulseData.PulseNumber, joiner)
@@ -509,7 +518,7 @@ func (r *FullRealm) CreateLocalAnnouncement() *transport.NodeAnnouncementProfile
 	return r.CreateAnnouncement(r.self)
 }
 
-func (r *FullRealm) FinishRound(builder census.Builder, csh proofs.CloudStateHash) {
+func (r *FullRealm) FinishRound(ctx context.Context, builder census.Builder, csh proofs.CloudStateHash) {
 	r.Lock()
 	defer r.Unlock()
 
@@ -518,23 +527,22 @@ func (r *FullRealm) FinishRound(builder census.Builder, csh proofs.CloudStateHas
 	}
 	r.isFinished = true
 
-	local := builder.GetPopulationBuilder().GetLocalProfile()
+	pb := builder.GetPopulationBuilder()
+	local := pb.GetLocalProfile()
 
 	var expected census.Expected
-	successful := false
 	mode := local.GetOpMode()
-	if mode.IsEvicted() {
-		expected = builder.BuildAndMakeIncompleteExpected(csh)
-		// expected = builder.BuildAndMakeExpected(csh)
-	} else {
+	// ModeEvictedGracefully
+	if csh != nil && !mode.IsEvictedForcefully() {
 		expected = builder.BuildAndMakeExpected(csh)
-		successful = true
+	} else {
+		expected = builder.BuildAndMakeBrokenExpected(csh)
 	}
 
 	r.notifyConsensusFinished(expected.GetOnlinePopulation().GetLocalProfile(), expected)
 
 	nextNP := expected.GetPulseNumber()
-	if successful {
+	if expected.GetOnlinePopulation().IsValid() {
 		switch {
 		case r.self.requestedLeave:
 			r.controlFeeder.OnAppliedGracefulLeave(r.self.requestedLeaveReason, nextNP)
@@ -543,6 +551,8 @@ func (r *FullRealm) FinishRound(builder census.Builder, csh proofs.CloudStateHas
 		}
 		// if r.requestedPowerFlag {
 		// }
+	} else {
+		inslogger.FromContext(ctx).Debugf("got a broken population: s=%d %v", local.GetNodeID(), expected.GetOnlinePopulation())
 	}
 	pw := r.self.requestedPower
 	if mode.IsPowerless() {
@@ -591,7 +601,7 @@ func (r *FullRealm) GetWelcomePackage() *proofs.NodeWelcomePackage {
 func (r *FullRealm) BuildNextPopulation(ctx context.Context, ranks []profiles.PopulationRank,
 	gsh proofs.GlobulaStateHash, csh proofs.CloudStateHash) bool {
 
-	b := r.census.CreateBuilder(r.GetNextPulseNumber(), false)
+	b := r.census.CreateBuilder(ctx, r.GetNextPulseNumber())
 	pb := b.GetPopulationBuilder()
 	selfID := r.GetSelfNodeID()
 	localUpdProfile := pb.GetLocalProfile()
@@ -607,15 +617,16 @@ func (r *FullRealm) BuildNextPopulation(ctx context.Context, ranks []profiles.Po
 		if nodeID == selfID {
 			selfMode = pr.OpMode
 		} else {
-			// na = r.population.GetNodeAppearance(pr.NodeID)
-			nextAP = pb.AddProfile(prevAP.GetStatic())
+			static := prevAP.GetStatic()
+			static, _ = r.profileFactory.TryConvertUpgradableIntroProfile(static)
+			nextAP = pb.AddProfile(static)
 		}
 		if pr.OpMode.IsPowerless() && pr.Power != 0 {
 			panic("illegal state")
 		}
 
 		nextAP.SetSignatureVerifier(prevAP.GetSignatureVerifier())
-		if pr.OpMode == member.ModeEvictedGracefully {
+		if pr.OpMode.IsEvictedGracefully() {
 			na := r.self
 			if nodeID != selfID {
 				na = r.population.GetNodeAppearance(nodeID)
@@ -634,7 +645,7 @@ func (r *FullRealm) BuildNextPopulation(ctx context.Context, ranks []profiles.Po
 	b.SetGlobulaStateHash(gsh)
 	b.SealCensus()
 
-	r.FinishRound(b, csh)
+	r.FinishRound(ctx, b, csh)
 
 	if selfMode.IsEvicted() {
 		inslogger.FromContext(ctx).Info("Node has left")

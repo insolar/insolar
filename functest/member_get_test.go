@@ -19,6 +19,7 @@
 package functest
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/insolar/insolar/testutils"
@@ -43,11 +44,18 @@ func TestMigrationMemberGet(t *testing.T) {
 	_, _ = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
 
 	res1, err := retryableMemberMigrationCreate(member1, true)
-
-	member2 := *member1
-	res2, err := signedRequest(&member2, "member.get", nil)
 	require.Nil(t, err)
-	require.Equal(t, res1.(map[string]interface{})["reference"].(string), res2.(map[string]interface{})["reference"].(string))
+
+	decodedRes1, ok := res1.(map[string]interface{})
+	require.True(t, ok, fmt.Sprintf("failed to decode: expected map[string]interface{}, got %T", res1))
+
+	res2, err := signedRequest(member1, "member.get", nil)
+	require.Nil(t, err)
+
+	decodedRes2, ok := res2.(map[string]interface{})
+	require.True(t, ok, fmt.Sprintf("failed to decode: expected map[string]interface{}, got %T", res2))
+
+	require.Equal(t, decodedRes1["reference"].(string), decodedRes2["reference"].(string))
 	require.Equal(t, ba, res2.(map[string]interface{})["migrationAddress"].(string))
 }
 

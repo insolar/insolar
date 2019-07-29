@@ -82,10 +82,10 @@ func TestSendRequests_Proceed(t *testing.T) {
 	resetComponents()
 	t.Run("happy basic", func(t *testing.T) {
 		b := newFilamentBuilder(ctx, pcs, records)
-		rec1 := b.Append(insolar.FirstPulseNumber+1, record.IncomingRequest{Nonce: rand.Uint64()})
-		rec2 := b.Append(insolar.FirstPulseNumber+2, record.IncomingRequest{Nonce: rand.Uint64()})
-		rec3 := b.Append(insolar.FirstPulseNumber+4, record.IncomingRequest{Nonce: rand.Uint64()})
-		b.Append(insolar.FirstPulseNumber+5, record.IncomingRequest{Nonce: rand.Uint64()})
+		rec1 := b.Append(insolar.FirstPulseNumber+1, &record.IncomingRequest{Nonce: rand.Uint64()})
+		rec2 := b.Append(insolar.FirstPulseNumber+2, &record.IncomingRequest{Nonce: rand.Uint64()})
+		rec3 := b.Append(insolar.FirstPulseNumber+4, &record.IncomingRequest{Nonce: rand.Uint64()})
+		b.Append(insolar.FirstPulseNumber+5, &record.IncomingRequest{Nonce: rand.Uint64()})
 
 		msg := payload.GetFilament{
 			ObjectID:  gen.ID(),
@@ -155,7 +155,7 @@ func (b *filamentBuilder) append(pn insolar.PulseNumber, rec record.Record, pers
 		virtual := record.Wrap(rec)
 		hash := record.HashVirtual(b.pcs.ReferenceHasher(), virtual)
 		id := *insolar.NewID(pn, hash)
-		material := record.Material{Virtual: &virtual, JetID: insolar.ZeroJetID}
+		material := record.Material{Virtual: virtual, JetID: insolar.ZeroJetID}
 		if persist {
 			err := b.records.Set(b.ctx, id, material)
 			if err != nil {
@@ -172,10 +172,10 @@ func (b *filamentBuilder) append(pn insolar.PulseNumber, rec record.Record, pers
 			curr := b.currentID
 			rec.PreviousRecord = &curr
 		}
-		virtual := record.Wrap(rec)
+		virtual := record.Wrap(&rec)
 		hash := record.HashVirtual(b.pcs.ReferenceHasher(), virtual)
 		id := *insolar.NewID(pn, hash)
-		material := record.Material{Virtual: &virtual, JetID: insolar.ZeroJetID}
+		material := record.Material{Virtual: virtual, JetID: insolar.ZeroJetID}
 		if persist {
 			err := b.records.Set(b.ctx, id, material)
 			if err != nil {
