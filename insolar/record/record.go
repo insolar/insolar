@@ -223,25 +223,6 @@ func isDetached(rm ReturnMode) bool {
 	return rm == ReturnSaga
 }
 
-func (m *Lifeline) SetDelegate(key insolar.Reference, value insolar.Reference) {
-	for _, d := range m.Delegates {
-		if d.Key == key {
-			d.Value = value
-			return
-		}
-	}
-	m.Delegates = append(m.Delegates, LifelineDelegate{Key: key, Value: value})
-}
-
-func (m *Lifeline) DelegateByKey(key insolar.Reference) (insolar.Reference, bool) {
-	for _, d := range m.Delegates {
-		if d.Key == key {
-			return d.Value, true
-		}
-	}
-	return [64]byte{}, false
-}
-
 func CalculateRequestAffinityRef(
 	request Request,
 	pulseNumber insolar.PulseNumber,
