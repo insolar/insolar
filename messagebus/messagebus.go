@@ -54,7 +54,6 @@ var transferredToWatermill = map[insolar.MessageType]struct{}{
 	insolar.TypeExecutorResults:                    {},
 	insolar.TypeAdditionalCallFromPreviousExecutor: {},
 	insolar.TypeHeavyPayload:                       {},
-	insolar.TypeGetObjectIndex:                     {},
 }
 
 // MessageBus is component that routes application logic requests,

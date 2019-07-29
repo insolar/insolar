@@ -17,7 +17,6 @@
 package handler
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
@@ -36,8 +35,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -145,45 +142,7 @@ func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, e
 	return nil, nil
 }
 
-func (h *Handler) handleParcel(ctx context.Context, msg *watermillMsg.Message) error {
-	meta := payload.Meta{}
-	err := meta.Unmarshal(msg.Payload)
-	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal meta")
-	}
-
-	parcel, err := message.DeserializeParcel(bytes.NewBuffer(meta.Payload))
-	if err != nil {
-		return errors.Wrap(err, "can't deserialize payload to parcel")
-	}
-
-	msgType := msg.Metadata.Get(bus.MetaType)
-	ctx, _ = inslogger.WithField(ctx, "msg_type", msgType)
-	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("Present %v", parcel.Message().Type().String()))
-	defer span.End()
-
-	var rep insolar.Reply
-	switch msgType {
-	case insolar.TypeGetObjectIndex.String():
-		rep, err = h.handleGetObjectIndex(ctx, parcel)
-	default:
-		err = fmt.Errorf("no handler for message type %s", msgType)
-	}
-	if err != nil {
-		h.replyError(ctx, meta, errors.Wrap(err, "error while handle parcel"))
-	} else {
-		resAsMsg := bus.ReplyAsMessage(ctx, rep)
-		h.Sender.Reply(ctx, meta, resAsMsg)
-	}
-	return err
-}
-
 func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
-	msgType := msg.Metadata.Get(bus.MetaType)
-	if msgType != "" {
-		return h.handleParcel(ctx, msg)
-	}
-
 	var err error
 
 	meta := payload.Meta{}
@@ -299,19 +258,6 @@ func (h *Handler) replyError(ctx context.Context, replyTo payload.Meta, err erro
 
 func (h *Handler) Init(ctx context.Context) error {
 	return nil
-}
-
-func (h *Handler) handleGetObjectIndex(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetObjectIndex)
-
-	idx, err := h.IndexAccessor.ForID(ctx, parcel.Pulse(), *msg.Object.Record())
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to fetch object index for %v", msg.Object.Record().String())
-	}
-
-	buf := object.EncodeLifeline(idx.Lifeline)
-
-	return &reply.ObjectIndex{Index: buf}, nil
 }
 
 func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Meta) {
