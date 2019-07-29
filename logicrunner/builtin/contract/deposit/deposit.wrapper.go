@@ -19,6 +19,10 @@ package deposit
 import (
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+
+	"strings"
+	// TODO: this is the end of a horrible hack, please remove it
 )
 
 type ExtendableError struct {
@@ -112,7 +116,16 @@ func INSMETHOD_GetTxHash(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.GetTxHash()
 
-	if ph.GetSystemError() != nil {
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -155,7 +168,16 @@ func INSMETHOD_GetAmount(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.GetAmount()
 
-	if ph.GetSystemError() != nil {
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -198,7 +220,16 @@ func INSMETHOD_Itself(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.Itself()
 
-	if ph.GetSystemError() != nil {
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -249,7 +280,16 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0 := self.Confirm(args0, args1, args2, args3)
 
-	if ph.GetSystemError() != nil {
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret0 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 

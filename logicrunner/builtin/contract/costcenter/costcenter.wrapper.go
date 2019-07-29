@@ -20,6 +20,10 @@ import (
 	"github.com/insolar/insolar/insolar"
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+
+	"strings"
+	// TODO: this is the end of a horrible hack, please remove it
 )
 
 type ExtendableError struct {
@@ -115,7 +119,16 @@ func INSMETHOD_SetTariffs(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0 := self.SetTariffs(args0)
 
-	if ph.GetSystemError() != nil {
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret0 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -158,7 +171,16 @@ func INSMETHOD_GetTariffs(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.GetTariffs()
 
-	if ph.GetSystemError() != nil {
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -203,7 +225,16 @@ func INSMETHOD_SetCurrentTariff(object []byte, data []byte) ([]byte, []byte, err
 
 	ret0 := self.SetCurrentTariff(args0)
 
-	if ph.GetSystemError() != nil {
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret0 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -246,7 +277,16 @@ func INSMETHOD_GetCurrentTariff(object []byte, data []byte) ([]byte, []byte, err
 
 	ret0, ret1 := self.GetCurrentTariff()
 
-	if ph.GetSystemError() != nil {
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 

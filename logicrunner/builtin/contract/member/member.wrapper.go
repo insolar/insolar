@@ -20,6 +20,10 @@ import (
 	"github.com/insolar/insolar/insolar"
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+
+	"strings"
+	// TODO: this is the end of a horrible hack, please remove it
 )
 
 type ExtendableError struct {
@@ -113,7 +117,16 @@ func INSMETHOD_GetName(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.GetName()
 
-	if ph.GetSystemError() != nil {
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -156,7 +169,16 @@ func INSMETHOD_GetWallet(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.GetWallet()
 
-	if ph.GetSystemError() != nil {
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -199,7 +221,16 @@ func INSMETHOD_GetPublicKey(object []byte, data []byte) ([]byte, []byte, error) 
 
 	ret0, ret1 := self.GetPublicKey()
 
-	if ph.GetSystemError() != nil {
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -244,7 +275,16 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.Call(args0)
 
-	if ph.GetSystemError() != nil {
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -287,7 +327,16 @@ func INSMETHOD_GetDeposits(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.GetDeposits()
 
-	if ph.GetSystemError() != nil {
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -332,7 +381,16 @@ func INSMETHOD_FindDeposit(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1, ret2 := self.FindDeposit(args0)
 
-	if ph.GetSystemError() != nil {
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret2 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -379,7 +437,16 @@ func INSMETHOD_AddDeposit(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0 := self.AddDeposit(args0, args1)
 
-	if ph.GetSystemError() != nil {
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret0 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -422,7 +489,16 @@ func INSMETHOD_GetBurnAddress(object []byte, data []byte) ([]byte, []byte, error
 
 	ret0, ret1 := self.GetBurnAddress()
 
-	if ph.GetSystemError() != nil {
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
