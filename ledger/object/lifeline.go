@@ -54,6 +54,11 @@ func CloneLifeline(idx record.Lifeline) record.Lifeline {
 		idx.LatestState = &tmp
 	}
 
+	if idx.LatestRequest != nil {
+		r := *idx.LatestRequest
+		idx.LatestRequest = &r
+	}
+
 	if idx.EarliestOpenRequest != nil {
 		tmp := *idx.EarliestOpenRequest
 		idx.EarliestOpenRequest = &tmp
