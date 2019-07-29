@@ -134,19 +134,15 @@ func TestSetRequest_Proceed(t *testing.T) {
 			return &virtualRef, nil
 		}
 		records.SetAtomicFunc = func(_ context.Context, recs ...record.Material) (r error) {
-			require.Equal(t, len(recs), 1)
-			rec := recs[0]
-			switch record.Unwrap(&rec.Virtual).(type) {
-			case *record.IncomingRequest:
-				require.Equal(t, requestID, rec.ID)
-			case *record.PendingFilament:
-				hash := record.HashVirtual(pcs.ReferenceHasher(), rec.Virtual)
-				calcID := *insolar.NewID(requestID.Pulse(), hash)
-				require.Equal(t, calcID, rec.ID)
-			default:
-				t.Fatal("unknown record saved")
-			}
+			require.Equal(t, len(recs), 2)
+			req := recs[0]
+			filament := recs[1]
 
+			require.Equal(t, requestID, req.ID)
+			require.Equal(t, record.Unwrap(&req.Virtual), &request)
+			hash := record.HashVirtual(pcs.ReferenceHasher(), filament.Virtual)
+			calcID := *insolar.NewID(requestID.Pulse(), hash)
+			require.Equal(t, calcID, filament.ID)
 			return nil
 		}
 		checker.CheckRequestFunc = func(_ context.Context, id insolar.ID, req record.Request) (r error) {

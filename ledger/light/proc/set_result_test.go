@@ -115,18 +115,15 @@ func TestSetResult_Proceed(t *testing.T) {
 	}
 	records := object.NewAtomicRecordModifierMock(mc)
 	records.SetAtomicFunc = func(_ context.Context, recs ...record.Material) (r error) {
-		require.Equal(t, 1, len(recs))
-		rec := recs[0]
+		require.Equal(t, 2, len(recs))
 
-		switch r := record.Unwrap(&rec.Virtual).(type) {
-		case *record.Result:
-			require.Equal(t, resultID, rec.ID)
-			require.Equal(t, resultRecord, r)
-		case *record.PendingFilament:
-			require.Equal(t, expectedFilamentID, rec.ID)
-			require.Equal(t, &expectedFilament, record.Unwrap(&rec.Virtual))
-		}
+		result := recs[0]
+		filament := recs[1]
+		require.Equal(t, resultID, result.ID)
+		require.Equal(t, resultRecord, record.Unwrap(&result.Virtual))
 
+		require.Equal(t, expectedFilamentID, filament.ID)
+		require.Equal(t, &expectedFilament, record.Unwrap(&filament.Virtual))
 		return nil
 	}
 
