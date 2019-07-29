@@ -79,8 +79,9 @@ import (
 */
 type PrepRealm struct {
 	/* Provided externally. Don't need mutex */
-	*coreRealm                       // points the core part realms, it is shared between of all Realms of a Round
-	completeFn func(successful bool) //
+	*coreRealm // points the core part realms, it is shared between of all Realms of a Round
+
+	completeFn func(successful bool) // MUST be called under lock, consequent calls are ignored
 
 	/* Derived from the provided externally - set at init() or start(). Don't need mutex */
 	packetDispatchers []population.PacketDispatcher
@@ -211,27 +212,16 @@ func (p *PrepRealm) beforeStart(ctx context.Context, controllers []PrepPhaseCont
 	}
 }
 
-func (p *PrepRealm) startWorkers(ctx context.Context, controllers []PrepPhaseController) {
+// runs under lock
+func (p *PrepRealm) _startWorkers(ctx context.Context, controllers []PrepPhaseController) {
 
-	if p.ephemeralMode.IsActive() {
-		if p.checkEphemeralStart() {
-			// we have a candidate - time to go
-			if p.pushEphemeralPulse(ctx) {
-				// we are all set for FullRealm
-				return
-			}
-			// don't add pulling if pushEphemeralPulse has failed
-			// but continue as passive
-		} else {
-			p.AddPoll(func(ctx context.Context) bool {
-				if !p.checkEphemeralStart() {
-					return true // stay in polling
-				}
-				p.pushEphemeralPulse(ctx)
-				// stop polling anyway - repeating of unsuccessful is bad
-				return false
-			})
-		}
+	if p.ephemeralMode.IsActive() && p.checkEphemeralStart() {
+		p.pushEphemeralPulse(ctx)
+	}
+
+	if p.originalPulse != nil {
+		// we were set for FullRealm, so skip prep workers
+		return
 	}
 
 	for _, ctl := range controllers {
@@ -239,14 +229,38 @@ func (p *PrepRealm) startWorkers(ctx context.Context, controllers []PrepPhaseCon
 	}
 }
 
+func (p *PrepRealm) prepareEphemeralPolling(ctxPrep context.Context) {
+	if !p.ephemeralMode.IsActive() {
+		return
+	}
+
+	p.AddPoll(func(ctxOfPolling context.Context) bool {
+		select {
+		case <-ctxOfPolling.Done():
+		case <-ctxPrep.Done():
+			// stop polling when prep is finished
+		default:
+			if !p.checkEphemeralStart() {
+				return true // stay in polling
+			}
+			p.pushEphemeralPulse(ctxPrep)
+			// stop polling anyway - repeating of unsuccessful is bad
+		}
+		return false
+	})
+}
+
 func (p *PrepRealm) pushEphemeralPulse(ctx context.Context) bool {
 	pde := p.controlFeeder.CreateEphemeralPulsePacket(p.initialCensus)
-	ok, _ := p._applyPulseData(pde, false)
+	ok, pn := p._applyPulseData(pde, false)
 
 	if ok {
+		p.completeFn(true)
 		return true
 	}
-	inslogger.FromContext(ctx).Error("active ephemeral start has failed, going to passive")
+	if pn != pde.GetPulseNumber() {
+		inslogger.FromContext(ctx).Error("active ephemeral start has failed, going to passive")
+	}
 	return false
 }
 
@@ -279,16 +293,23 @@ func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bo
 		return fmt.Errorf("pulse data and pulse data evidence are mismatched: %v, %v", pd, pde)
 	}
 
+	p.Lock()
+	defer p.Unlock()
+
 	ok, epn := p._applyPulseData(pde, fromPulsar)
+
 	if ok {
+		p.completeFn(true)
+		return nil
+	}
+	pn := pd.PulseNumber
+	if !epn.IsUnknown() && epn == pn {
 		return nil
 	}
 
 	// TODO blame pulsar and/or node
-	//	sourceID := packet.GetSourceID()
 	localID := p.self.GetNodeID()
 
-	pn := pd.PulseNumber
 	return errors.NewPulseRoundMismatchError(pn,
 		fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v, local=%d, from=%v",
 			epn, pn, localID, from))
@@ -298,15 +319,10 @@ func (p *PrepRealm) _applyPulseData(pdp proofs.OriginalPulsarPacket, fromPulsar 
 
 	pd := pdp.GetPulseData()
 
-	p.Lock()
-	defer p.Unlock()
-
 	valid := false
 	switch {
 	case p.originalPulse != nil:
-		if pd == p.pulseData {
-			return true, pd.PulseNumber // got it already
-		}
+		return false, p.pulseData.PulseNumber // got something already
 	case fromPulsar || !p.ephemeralMode.IsEnabled():
 		// Pulsars are NEVER ALLOWED to send ephemeral pulses
 		valid = pd.IsValidPulsarData()
@@ -324,7 +340,7 @@ func (p *PrepRealm) _applyPulseData(pdp proofs.OriginalPulsarPacket, fromPulsar 
 		epn = p.initialCensus.GetPulseNumber()
 	}
 
-	pn := pd.PulseNumber
+	pn := pd.PulseNumber // it can't be zero as pulseData was validated above
 	if !epn.IsUnknown() && epn != pn {
 		return false, epn
 	}

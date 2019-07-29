@@ -94,6 +94,10 @@ type ConsensusMemberController struct {
 	isTerminated            bool
 }
 
+func (h *ConsensusMemberController) Prepare() {
+	h.ensureRound()
+}
+
 func (h *ConsensusMemberController) Abort() {
 	h.discardRound(true, nil)
 }
@@ -133,7 +137,7 @@ func (h *ConsensusMemberController) _getOrCreateRound() (api.RoundController, bo
 	h.currentRound = h.roundFactory.CreateConsensusRound(h.chronicle, h, h.candidateFeeder, h.prevRound)
 	h.prevRound = nil
 	h.currentRound.PrepareConsensusRound(h.upstream)
-	h.currentRound.StartConsensusRound()
+	//h.currentRound.StartConsensusRound()
 	return h.currentRound, true
 }
 

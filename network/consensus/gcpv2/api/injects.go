@@ -69,6 +69,7 @@ import (
 )
 
 type ConsensusController interface {
+	Prepare()
 	ProcessPacket(ctx context.Context, payload transport.PacketParser, from endpoints.Inbound) error
 
 	/* Ungraceful stop */
@@ -152,8 +153,8 @@ type RoundStateCallback interface {
 
 type RoundController interface {
 	PrepareConsensusRound(upstream UpstreamController)
-	StartConsensusRound()
-	//	StartConsensusRoundWithPulseData(pd pulse.Data)
+	// StartConsensusRound() bool
+	// StartConsensusRoundWithPulseData(pd pulse.Data)
 	StopConsensusRound()
 	HandlePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound) (bool, error)
 }

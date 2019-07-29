@@ -177,15 +177,30 @@ func (p *RoundStateMachineWorker) init(starterFn func(), stopperFn func(), finis
 	p.finishedFn = finishedFn
 }
 
+func (p *RoundStateMachineWorker) SafeStartAndGetIsRunning() bool {
+	return p.startAndGetIsRunning(true)
+}
+
 func (p *RoundStateMachineWorker) Start() {
+	p.startAndGetIsRunning(false)
+}
+
+func (p *RoundStateMachineWorker) startAndGetIsRunning(safe bool) bool {
 	if !atomic.CompareAndSwapInt32(&p.runStatus, runStatusInitialized, runStatusStarted) {
-		panic("illegal state")
+		if atomic.LoadInt32(&p.runStatus) >= runStatusStopping {
+			if safe {
+				return false
+			}
+			panic("illegal state")
+		}
+		return true // isRunning
 	}
 	if p.starterFn != nil {
 		p.starterFn()
 	}
 	atomic.CompareAndSwapUint32(&p.roundState, uint32(RoundInactive), uint32(RoundAwaitingPulse))
 	go p.stateWorker()
+	return true
 }
 
 func (p *RoundStateMachineWorker) stateWorker() {
@@ -270,6 +285,11 @@ func (p *RoundStateMachineWorker) flushAsync() {
 			return
 		}
 	}
+}
+
+func (p *RoundStateMachineWorker) IsStartedAndRunning() (bool, bool) {
+	s := atomic.LoadInt32(&p.runStatus)
+	return s >= runStatusStarted, s == runStatusStarted
 }
 
 func (p *RoundStateMachineWorker) IsRunning() bool {

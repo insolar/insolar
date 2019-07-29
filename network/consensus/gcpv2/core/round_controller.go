@@ -149,12 +149,14 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 	prep := PrepRealm{coreRealm: &r.realm.coreRealm}
 	prep.init(
 		func(successful bool) {
+			// RUNS under lock
 			if r.prepR == nil {
 				return
 			}
 			defer r.prepR.stop() // initiates handover from PrepRealm
 			r.prepR = nil
-			r.startFullRealm()
+			r.roundWorker.Start() // ensures that worker was started
+			r._startFullRealm(successful)
 		})
 
 	var prepCtx context.Context
@@ -165,13 +167,19 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 	r.prepR.beforeStart(prepCtx, preps)
 
 	r.roundWorker.init(func() {
-		r.setStartedAt()
-		r.realm.coreRealm.pollingWorker.Start(r.realm.roundContext, 100*time.Millisecond)
-		r.prepR.startWorkers(prepCtx, preps)
+		// requires r.roundWorker.StartXXX to happen under lock
+		if r.prepR != nil { // PrepRealm can be finished before starting
+			r._setStartedAt()
+			r.prepR._startWorkers(prepCtx, preps)
+		}
 	},
+		// both further handlers MUST not use a lock inside
 		r.onConsensusStopper,
 		r.onConsensusFinished,
 	)
+
+	r.prepR.prepareEphemeralPolling(prepCtx)
+	r.realm.coreRealm.pollingWorker.Start(r.realm.roundContext, 100*time.Millisecond)
 }
 
 func (r *PhasedRoundController) onConsensusStopper() {
@@ -188,7 +196,7 @@ func (r *PhasedRoundController) onConsensusStopper() {
 		panic("DEBUG FAIL-FAST: consensus didn't finish")
 	}
 
-	//b := strings.Builder{}
+	// TODO print purgatory
 }
 
 func (r *PhasedRoundController) onConsensusFinished() {
@@ -205,18 +213,10 @@ func (r *PhasedRoundController) _onConsensusFinished() {
 	r.prevPulseRound = nil
 }
 
-func (r *PhasedRoundController) setStartedAt() {
-	r.rw.Lock()
-	defer r.rw.Unlock()
-
-	if !r.realm.roundStartedAt.IsZero() {
-		panic("illegal state")
+func (r *PhasedRoundController) _setStartedAt() {
+	if r.realm.roundStartedAt.IsZero() { // can be called a few times
+		r.realm.roundStartedAt = time.Now()
 	}
-	r.realm.roundStartedAt = time.Now()
-}
-
-func (r *PhasedRoundController) StartConsensusRound() {
-	r.roundWorker.Start()
 }
 
 func (r *PhasedRoundController) StopConsensusRound() {
@@ -241,7 +241,11 @@ func (r *PhasedRoundController) beforeHandlePacket() (prep *PrepRealm, current p
 	return nil, r.realm.GetPulseNumber(), r.realm.GetNextPulseNumber(), r.prevPulseRound
 }
 
-func (r *PhasedRoundController) startFullRealm() {
+/*
+RUNS under lock.
+Can be called from a polling function (for ephemeral), and happen BEFORE PrepRealm start
+*/
+func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 
 	r.roundWorker.OnFullRoundStarting()
 
@@ -270,9 +274,23 @@ func (r *PhasedRoundController) startFullRealm() {
 	r.roundWorker.SetTimeout(r.realm.roundStartedAt.Add(r.realm.timings.EndOfConsensus))
 }
 
+func (r *PhasedRoundController) ensureStarted() bool {
+
+	isStarted, isRunning := r.roundWorker.IsStartedAndRunning()
+	if isStarted {
+		return isRunning
+	}
+
+	r.rw.Lock() // ensure that starting closure will run under lock
+	defer r.rw.Unlock()
+	return r.roundWorker.SafeStartAndGetIsRunning()
+}
+
 func (r *PhasedRoundController) HandlePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound) (bool, error) {
+
+	isRunning := r.ensureStarted()
 	err := r.handlePacket(ctx, packet, from, coreapi.DefaultVerify)
-	return r.roundWorker.IsRunning(), err
+	return isRunning, err
 }
 
 func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
