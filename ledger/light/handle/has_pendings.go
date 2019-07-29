@@ -66,7 +66,7 @@ func (s *HasPendings) Present(ctx context.Context, f flow.Flow) error {
 
 	// To ensure, that we have the index. Because index can be on a heavy node.
 	// If we don't have it and heavy does, UpdateObject fails because it should update light's index state
-	getIndex := proc.NewEnsureIndexWM(msg.ObjectID, objJetID, s.meta)
+	getIndex := proc.NewEnsureIndex(msg.ObjectID, objJetID, s.meta)
 	s.dep.EnsureIndex(getIndex)
 	if err := f.Procedure(ctx, getIndex, false); err != nil {
 		return err

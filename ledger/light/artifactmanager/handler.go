@@ -96,14 +96,6 @@ func NewMessageHandler(
 			p.Dep.Waiter = h.HotDataWaiter
 			p.Dep.Sender = h.Sender
 		},
-		GetIndex: func(p *proc.EnsureIndex) {
-			p.Dep.IndexAccessor = h.IndexStorage
-			p.Dep.IndexLocker = h.IndexLocker
-			p.Dep.IndexModifier = h.IndexStorage
-			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.Bus = h.Bus
-			p.Dep.Sender = h.Sender
-		},
 		CheckJet: func(p *proc.CheckJet) {
 			p.Dep.JetAccessor = h.JetStorage
 			p.Dep.Coordinator = h.JetCoordinator
@@ -114,13 +106,13 @@ func NewMessageHandler(
 			p.Dep.Waiter = h.HotDataWaiter
 			p.Dep.Sender = h.Sender
 		},
-		EnsureIndex: func(p *proc.EnsureIndexWM) {
-			p.Dep.IndexModifier = h.IndexStorage
-			p.Dep.IndexAccessor = h.IndexStorage
-			p.Dep.IndexLocker = h.IndexLocker
-			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.Bus = h.Bus
-			p.Dep.Sender = h.Sender
+		EnsureIndex: func(p *proc.EnsureIndex) {
+			p.Dep(
+				h.IndexLocker,
+				h.IndexStorage,
+				h.JetCoordinator,
+				h.Sender,
+			)
 		},
 		SetRequest: func(p *proc.SetRequest) {
 			p.Dep(

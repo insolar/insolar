@@ -304,7 +304,7 @@ func TestActivateObject_FlowWithPassedFlag(t *testing.T) {
 				return nil
 			case *proc.CheckJet:
 				return proc.ErrNotExecutor
-			case *proc.EnsureIndexWM:
+			case *proc.EnsureIndex:
 				return nil
 			default:
 				panic("unknown procedure")

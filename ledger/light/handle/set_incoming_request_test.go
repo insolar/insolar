@@ -187,7 +187,7 @@ func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
 				return nil
 			case *proc.CheckJet:
 				return proc.ErrNotExecutor
-			case *proc.EnsureIndexWM:
+			case *proc.EnsureIndex:
 				return nil
 			default:
 				panic("unknown procedure")
@@ -242,7 +242,7 @@ func TestSetRequest_ErrorFromWaitHot(t *testing.T) {
 				return nil
 			case *proc.WaitHotWM:
 				return nil
-			case *proc.EnsureIndexWM:
+			case *proc.EnsureIndex:
 				return nil
 			case *proc.SetRequest:
 				return nil
@@ -277,7 +277,7 @@ func TestSetRequest_ErrorFromGetIndex(t *testing.T) {
 				return nil
 			case *proc.WaitHotWM:
 				return nil
-			case *proc.EnsureIndexWM:
+			case *proc.EnsureIndex:
 				return errors.New("can't get index: error from getindex")
 			default:
 				panic("unknown procedure")
@@ -300,7 +300,7 @@ func TestSetRequest_ErrorFromGetIndex(t *testing.T) {
 				return nil
 			case *proc.WaitHotWM:
 				return nil
-			case *proc.EnsureIndexWM:
+			case *proc.EnsureIndex:
 				return nil
 			case *proc.SetRequest:
 				return nil
@@ -335,7 +335,7 @@ func TestSetRequest_ErrorFromSetRequest(t *testing.T) {
 				return nil
 			case *proc.WaitHotWM:
 				return nil
-			case *proc.EnsureIndexWM:
+			case *proc.EnsureIndex:
 				return nil
 			case *proc.SetRequest:
 				return errors.New("error from setrequest")
@@ -360,7 +360,7 @@ func TestSetRequest_ErrorFromSetRequest(t *testing.T) {
 				return nil
 			case *proc.WaitHotWM:
 				return nil
-			case *proc.EnsureIndexWM:
+			case *proc.EnsureIndex:
 				return nil
 			case *proc.SetRequest:
 				return nil

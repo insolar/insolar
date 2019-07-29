@@ -360,7 +360,7 @@ func TestUpdateObject_ErrorFromWaitHot(t *testing.T) {
 				return nil
 			case *proc.WaitHotWM:
 				return nil
-			case *proc.EnsureIndexWM:
+			case *proc.EnsureIndex:
 				return nil
 			case *proc.SetResult:
 				return nil
@@ -395,7 +395,7 @@ func TestUpdateObject_ErrorFromEnsureIndex(t *testing.T) {
 				return nil
 			case *proc.WaitHotWM:
 				return nil
-			case *proc.EnsureIndexWM:
+			case *proc.EnsureIndex:
 				return errors.New("error from ensureindex")
 
 			default:
@@ -419,7 +419,7 @@ func TestUpdateObject_ErrorFromEnsureIndex(t *testing.T) {
 				return nil
 			case *proc.WaitHotWM:
 				return nil
-			case *proc.EnsureIndexWM:
+			case *proc.EnsureIndex:
 				return nil
 			case *proc.SetResult:
 				return nil
@@ -454,7 +454,7 @@ func TestUpdateObject_ErrorFromUpdateObject(t *testing.T) {
 				return nil
 			case *proc.WaitHotWM:
 				return nil
-			case *proc.EnsureIndexWM:
+			case *proc.EnsureIndex:
 				return nil
 			case *proc.SetResult:
 				return errors.New("error from SetResult")
@@ -479,7 +479,7 @@ func TestUpdateObject_ErrorFromUpdateObject(t *testing.T) {
 				return nil
 			case *proc.WaitHotWM:
 				return nil
-			case *proc.EnsureIndexWM:
+			case *proc.EnsureIndex:
 				return nil
 			case *proc.SetResult:
 				return nil
