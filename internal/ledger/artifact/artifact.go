@@ -99,19 +99,18 @@ func (m *Scope) GetObject(
 		return nil, err
 	}
 
-	concrete := record.Unwrap(rec.Virtual)
+	concrete := record.Unwrap(&rec.Virtual)
 	state, ok := concrete.(record.State)
 	if !ok {
 		return nil, errors.New("invalid object record")
 	}
 
 	desc := &objectDescriptor{
-		head:         head,
-		state:        *idx.Lifeline.LatestState,
-		prototype:    state.GetImage(),
-		isPrototype:  state.GetIsPrototype(),
-		childPointer: idx.Lifeline.ChildPointer,
-		parent:       idx.Lifeline.Parent,
+		head:        head,
+		state:       *idx.Lifeline.LatestState,
+		prototype:   state.GetImage(),
+		isPrototype: state.GetIsPrototype(),
+		parent:      idx.Lifeline.Parent,
 	}
 	if state.GetMemory() != nil {
 		desc.memory = state.GetMemory()
@@ -160,7 +159,7 @@ func (m *Scope) activateObject(
 	parent insolar.Reference,
 	memory []byte,
 ) error {
-	parentIdx, err := m.IndexAccessor.ForID(ctx, m.PulseNumber, *parent.Record())
+	_, err := m.IndexAccessor.ForID(ctx, m.PulseNumber, *parent.Record())
 	if err != nil {
 		return errors.Wrapf(err, "not found parent index for activated object: %v", parent.String())
 	}
@@ -176,19 +175,6 @@ func (m *Scope) activateObject(
 	if err != nil {
 		return errors.Wrap(err, "fail to store activation state")
 	}
-
-	asType := &prototype
-	err = m.registerChild(
-		ctx,
-		obj,
-		parent,
-		parentIdx.Lifeline.ChildPointer,
-		asType,
-	)
-	if err != nil {
-		return errors.Wrap(err, "failed to activate")
-	}
-
 	return nil
 }
 
@@ -257,49 +243,10 @@ func (m *Scope) setRecord(ctx context.Context, rec record.Virtual) (*insolar.ID,
 	id := insolar.NewID(m.PulseNumber, hash)
 
 	matRec := record.Material{
-		Virtual: &rec,
+		Virtual: rec,
 		JetID:   insolar.ZeroJetID,
 	}
 	return id, m.RecordModifier.Set(ctx, *id, matRec)
-}
-
-func (m *Scope) registerChild(
-	ctx context.Context,
-	obj insolar.Reference,
-	parent insolar.Reference,
-	prevChild *insolar.ID,
-	asType *insolar.Reference,
-) error {
-	idx, err := m.IndexAccessor.ForID(ctx, m.PulseNumber, *parent.Record())
-	if err != nil {
-		return err
-	}
-
-	childRec := record.Child{Ref: obj}
-	if prevChild != nil && prevChild.NotEmpty() {
-		childRec.PrevChild = *prevChild
-	}
-
-	hash := record.HashVirtual(m.PCS.ReferenceHasher(), record.Wrap(&childRec))
-	recID := insolar.NewID(m.PulseNumber, hash)
-
-	// Children exist and pointer does not match (preserving chain consistency).
-	// For the case when vm can't save or send result to another vm and it tries to update the same record again
-	if idx.Lifeline.ChildPointer != nil && !childRec.PrevChild.Equal(*idx.Lifeline.ChildPointer) && idx.Lifeline.ChildPointer != recID {
-		return errors.New("invalid child record")
-	}
-
-	child, err := m.setRecord(ctx, record.Wrap(&childRec))
-	if err != nil {
-		return err
-	}
-
-	idx.Lifeline.ChildPointer = child
-	if asType != nil {
-		idx.Lifeline.SetDelegate(*asType, obj)
-	}
-	idx.Lifeline.LatestUpdate = m.PulseNumber
-	return m.IndexModifier.SetIndex(ctx, m.PulseNumber, idx)
 }
 
 func (m *Scope) updateStateObject(
@@ -346,7 +293,6 @@ func (m *Scope) updateStateObject(
 	// update index
 	idx.Lifeline.StateID = stateObject.ID()
 	idx.Lifeline.LatestState = id
-	idx.Lifeline.LatestUpdate = m.PulseNumber
 	if stateObject.ID() == record.StateActivation {
 		idx.Lifeline.Parent = stateObject.(*record.Activate).Parent
 	}

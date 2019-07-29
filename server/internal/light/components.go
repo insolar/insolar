@@ -233,16 +233,12 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.PulseCalculator = Pulses
 		handler.FlowDispatcher.PulseAccessor = Pulses
 
-		handler.Bus = Bus
 		handler.PCS = CryptoScheme
 		handler.JetCoordinator = Coordinator
-		handler.CryptographyService = CryptoService
-		handler.DelegationTokenFactory = Tokens
 		handler.JetStorage = Jets
 		handler.DropModifier = drops
 		handler.IndexLocker = idLocker
 		handler.Records = records
-		handler.Nodes = Nodes
 		handler.HotDataWaiter = waiter
 		handler.JetReleaser = waiter
 		handler.Sender = WmBus

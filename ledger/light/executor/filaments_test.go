@@ -95,7 +95,7 @@ func TestFilamentCalculatorDefault_Requests(t *testing.T) {
 		err := indexes.SetIndex(ctx, fromID.Pulse(), record.Index{
 			ObjID: objectID,
 			Lifeline: record.Lifeline{
-				PendingPointer:      &storageRecs[3].MetaID,
+				LatestRequest:       &storageRecs[3].MetaID,
 				EarliestOpenRequest: &earliestPending,
 			},
 		})
@@ -183,7 +183,7 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 		err := indexes.SetIndex(ctx, fromPulse, record.Index{
 			ObjID: objectID,
 			Lifeline: record.Lifeline{
-				PendingPointer:      &rec4.MetaID,
+				LatestRequest:       &rec4.MetaID,
 				EarliestOpenRequest: &earliestPending,
 			},
 		})
@@ -213,7 +213,7 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 		err := indexes.SetIndex(ctx, fromPulse, record.Index{
 			ObjID: objectID,
 			Lifeline: record.Lifeline{
-				PendingPointer:      &rec4.MetaID,
+				LatestRequest:       &rec4.MetaID,
 				EarliestOpenRequest: &earliestPending,
 			},
 		})
@@ -296,7 +296,7 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 		err := indexes.SetIndex(ctx, fromPulse, record.Index{
 			ObjID: objectID,
 			Lifeline: record.Lifeline{
-				PendingPointer:      &rec4.MetaID,
+				LatestRequest:       &rec4.MetaID,
 				EarliestOpenRequest: &earliestPending,
 			},
 		})
@@ -367,7 +367,7 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 		err := indexes.SetIndex(ctx, fromPulse, record.Index{
 			ObjID: objectID,
 			Lifeline: record.Lifeline{
-				PendingPointer:      &rec1.MetaID,
+				LatestRequest:       &rec1.MetaID,
 				EarliestOpenRequest: &earliestPending,
 			},
 		})
@@ -399,7 +399,7 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 		err := indexes.SetIndex(ctx, fromPulse, record.Index{
 			ObjID: objectID,
 			Lifeline: record.Lifeline{
-				PendingPointer:      &outgoingRes.MetaID,
+				LatestRequest:       &outgoingRes.MetaID,
 				EarliestOpenRequest: &earliestPending,
 			},
 		})
@@ -430,7 +430,7 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 		err := indexes.SetIndex(ctx, fromPulse, record.Index{
 			ObjID: objectID,
 			Lifeline: record.Lifeline{
-				PendingPointer:      &reasonRes.MetaID,
+				LatestRequest:       &reasonRes.MetaID,
 				EarliestOpenRequest: &earliestPending,
 			},
 		})
@@ -507,7 +507,7 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 		err := indexes.SetIndex(ctx, fromPulse, record.Index{
 			ObjID: objectID,
 			Lifeline: record.Lifeline{
-				PendingPointer: &res1.MetaID,
+				LatestRequest: &res1.MetaID,
 			},
 		})
 		require.NoError(t, err)
@@ -532,7 +532,7 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 		err := indexes.SetIndex(ctx, fromPulse, record.Index{
 			ObjID: objectID,
 			Lifeline: record.Lifeline{
-				PendingPointer: &req.MetaID,
+				LatestRequest: &req.MetaID,
 			},
 		})
 		require.NoError(t, err)
@@ -556,7 +556,7 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 		err := indexes.SetIndex(ctx, fromPulse, record.Index{
 			ObjID: objectID,
 			Lifeline: record.Lifeline{
-				PendingPointer: &req1.MetaID,
+				LatestRequest: &req1.MetaID,
 			},
 		})
 		require.NoError(t, err)
@@ -633,7 +633,7 @@ func TestFilamentCalculatorDefault_RequestDuplicate(t *testing.T) {
 		err := indexes.SetIndex(ctx, req1.RecordID.Pulse(), record.Index{
 			ObjID: objectID,
 			Lifeline: record.Lifeline{
-				PendingPointer: &res1.MetaID,
+				LatestRequest: &res1.MetaID,
 			},
 		})
 		require.NoError(t, err)
@@ -659,7 +659,7 @@ func TestFilamentCalculatorDefault_RequestDuplicate(t *testing.T) {
 		err := indexes.SetIndex(ctx, req1.RecordID.Pulse(), record.Index{
 			ObjID: objectID,
 			Lifeline: record.Lifeline{
-				PendingPointer: &req2.MetaID,
+				LatestRequest: &req2.MetaID,
 			},
 		})
 		require.NoError(t, err)
@@ -707,7 +707,7 @@ func (b *filamentBuilder) append(pn insolar.PulseNumber, rec record.Record, pers
 		virtual := record.Wrap(rec)
 		hash := record.HashVirtual(b.pcs.ReferenceHasher(), virtual)
 		id := *insolar.NewID(pn, hash)
-		material := record.Material{Virtual: &virtual, JetID: insolar.ZeroJetID}
+		material := record.Material{Virtual: virtual, JetID: insolar.ZeroJetID}
 		if persist {
 			err := b.records.Set(b.ctx, id, material)
 			if err != nil {
@@ -727,7 +727,7 @@ func (b *filamentBuilder) append(pn insolar.PulseNumber, rec record.Record, pers
 		virtual := record.Wrap(&rec)
 		hash := record.HashVirtual(b.pcs.ReferenceHasher(), virtual)
 		id := *insolar.NewID(pn, hash)
-		material := record.Material{Virtual: &virtual, JetID: insolar.ZeroJetID}
+		material := record.Material{Virtual: virtual, JetID: insolar.ZeroJetID}
 		if persist {
 			err := b.records.Set(b.ctx, id, material)
 			if err != nil {

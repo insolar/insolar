@@ -18,9 +18,6 @@
 package foundation
 
 import (
-	"github.com/pkg/errors"
-	"github.com/tylerb/gls"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
 )
@@ -64,48 +61,10 @@ func (bc *BaseContract) GetCode() insolar.Reference {
 
 // GetContext returns current calling context OBSOLETED.
 func (bc *BaseContract) GetContext() *insolar.LogicCallContext {
-	return GetContext()
-}
-
-// GetPulseNumber returns current pulse from context.
-func GetPulseNumber() (insolar.PulseNumber, error) {
-	req := GetContext().Request
-	if req == nil {
-		return insolar.PulseNumber(0), errors.New("request from LogicCallContext is nil, get pulse is failed")
-	}
-	return req.Record().Pulse(), nil
-}
-
-// GetContext returns current calling context.
-func GetContext() *insolar.LogicCallContext {
-	ctx := gls.Get("callCtx")
-	if ctx == nil {
-		panic("object has no context")
-	} else if ctx, ok := ctx.(*insolar.LogicCallContext); ok {
-		return ctx
-	} else {
-		panic("wrong type of context")
-	}
-}
-
-// GetObject create proxy by address
-// unimplemented
-func GetObject(ref insolar.Reference) ProxyInterface {
-	panic("not implemented")
+	return GetLogicalContext()
 }
 
 // SelfDestruct contract will be marked as deleted
 func (bc *BaseContract) SelfDestruct() error {
 	return common.CurrentProxyCtx.DeactivateObject(bc.GetReference())
-}
-
-// Error elementary string based error struct satisfying builtin error interface
-//    foundation.Error{"some err"}
-type Error struct {
-	S string
-}
-
-// Error returns error in string format
-func (e *Error) Error() string {
-	return e.S
 }
