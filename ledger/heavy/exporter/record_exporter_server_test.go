@@ -474,10 +474,10 @@ func TestRecordServer_Export_Composite(t *testing.T) {
 		require.Equal(t, 1, len(res.Records))
 
 		resRecord := res.Records[0]
-		require.Equal(t, secondPN, resRecord.PulseNumber)
-		require.Equal(t, uint32(1), resRecord.RecordNumber)
-		require.Equal(t, firstID, resRecord.RecordID)
-		require.Equal(t, firstRec, resRecord.Record)
+		require.Equal(t, firstPN, resRecord.PulseNumber)
+		require.Equal(t, uint32(2), resRecord.RecordNumber)
+		require.Equal(t, secondID, resRecord.RecordID)
+		require.Equal(t, secondRec, resRecord.Record)
 	})
 
 }
