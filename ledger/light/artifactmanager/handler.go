@@ -85,9 +85,11 @@ func NewMessageHandler(
 			p.Dep.JetFetcher = h.JetTreeUpdater
 			p.Dep.Sender = h.Sender
 		},
-		WaitHotWM: func(p *proc.WaitHotWM) {
-			p.Dep.Waiter = h.HotDataWaiter
-			p.Dep.Sender = h.Sender
+		WaitHot: func(p *proc.WaitHot) {
+			p.Dep(
+				h.HotDataWaiter,
+				h.Sender,
+			)
 		},
 		EnsureIndex: func(p *proc.EnsureIndex) {
 			p.Dep(

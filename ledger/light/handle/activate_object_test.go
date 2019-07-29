@@ -336,7 +336,7 @@ func TestActivateObject_ErrorFromWaitHot(t *testing.T) {
 				return nil
 			case *proc.CheckJet:
 				return nil
-			case *proc.WaitHotWM:
+			case *proc.WaitHot:
 				return errors.New("error from waithot")
 			default:
 				panic("unknown procedure")
@@ -357,7 +357,7 @@ func TestActivateObject_ErrorFromWaitHot(t *testing.T) {
 				return nil
 			case *proc.CheckJet:
 				return nil
-			case *proc.WaitHotWM:
+			case *proc.WaitHot:
 				return nil
 			case *proc.SetResult:
 				return nil
@@ -390,7 +390,7 @@ func TestActivateObject_ErrorFromActivateObject(t *testing.T) {
 				return nil
 			case *proc.CheckJet:
 				return nil
-			case *proc.WaitHotWM:
+			case *proc.WaitHot:
 				return nil
 			case *proc.SetResult:
 				return errors.New("error from SetResult")
@@ -413,7 +413,7 @@ func TestActivateObject_ErrorFromActivateObject(t *testing.T) {
 				return nil
 			case *proc.CheckJet:
 				return nil
-			case *proc.WaitHotWM:
+			case *proc.WaitHot:
 				return nil
 			case *proc.SetResult:
 				return nil

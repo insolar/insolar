@@ -160,27 +160,35 @@ func (p *CheckJet) Proceed(ctx context.Context) error {
 	return nil
 }
 
-type WaitHotWM struct {
+type WaitHot struct {
 	jetID   insolar.JetID
 	pulse   insolar.PulseNumber
 	message payload.Meta
 
-	Dep struct {
-		Waiter hot.JetWaiter
-		Sender bus.Sender
+	dep struct {
+		waiter hot.JetWaiter
+		sender bus.Sender
 	}
 }
 
-func NewWaitHotWM(j insolar.JetID, pn insolar.PulseNumber, msg payload.Meta) *WaitHotWM {
-	return &WaitHotWM{
+func NewWaitHot(j insolar.JetID, pn insolar.PulseNumber, msg payload.Meta) *WaitHot {
+	return &WaitHot{
 		jetID:   j,
 		pulse:   pn,
 		message: msg,
 	}
 }
 
-func (p *WaitHotWM) Proceed(ctx context.Context) error {
-	return p.Dep.Waiter.Wait(ctx, insolar.ID(p.jetID), p.pulse)
+func (p *WaitHot) Dep(
+	w hot.JetWaiter,
+	s bus.Sender,
+) {
+	p.dep.waiter = w
+	p.dep.sender = s
+}
+
+func (p *WaitHot) Proceed(ctx context.Context) error {
+	return p.dep.waiter.Wait(ctx, insolar.ID(p.jetID), p.pulse)
 }
 
 type CalculateID struct {

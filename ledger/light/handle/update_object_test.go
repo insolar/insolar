@@ -337,7 +337,7 @@ func TestUpdateObject_ErrorFromWaitHot(t *testing.T) {
 				return nil
 			case *proc.CheckJet:
 				return nil
-			case *proc.WaitHotWM:
+			case *proc.WaitHot:
 				return errors.New("error from waithot")
 			default:
 				panic("unknown procedure")
@@ -358,7 +358,7 @@ func TestUpdateObject_ErrorFromWaitHot(t *testing.T) {
 				return nil
 			case *proc.CheckJet:
 				return nil
-			case *proc.WaitHotWM:
+			case *proc.WaitHot:
 				return nil
 			case *proc.EnsureIndex:
 				return nil
@@ -393,7 +393,7 @@ func TestUpdateObject_ErrorFromEnsureIndex(t *testing.T) {
 				return nil
 			case *proc.CheckJet:
 				return nil
-			case *proc.WaitHotWM:
+			case *proc.WaitHot:
 				return nil
 			case *proc.EnsureIndex:
 				return errors.New("error from ensureindex")
@@ -417,7 +417,7 @@ func TestUpdateObject_ErrorFromEnsureIndex(t *testing.T) {
 				return nil
 			case *proc.CheckJet:
 				return nil
-			case *proc.WaitHotWM:
+			case *proc.WaitHot:
 				return nil
 			case *proc.EnsureIndex:
 				return nil
@@ -452,7 +452,7 @@ func TestUpdateObject_ErrorFromUpdateObject(t *testing.T) {
 				return nil
 			case *proc.CheckJet:
 				return nil
-			case *proc.WaitHotWM:
+			case *proc.WaitHot:
 				return nil
 			case *proc.EnsureIndex:
 				return nil
@@ -477,7 +477,7 @@ func TestUpdateObject_ErrorFromUpdateObject(t *testing.T) {
 				return nil
 			case *proc.CheckJet:
 				return nil
-			case *proc.WaitHotWM:
+			case *proc.WaitHot:
 				return nil
 			case *proc.EnsureIndex:
 				return nil

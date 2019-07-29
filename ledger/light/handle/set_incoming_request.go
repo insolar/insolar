@@ -91,8 +91,8 @@ func (s *SetIncomingRequest) setActivationRequest(
 	}
 	reqJetID := jet.Result.Jet
 
-	hot := proc.NewWaitHotWM(reqJetID, flow.Pulse(ctx), s.message)
-	s.dep.WaitHotWM(hot)
+	hot := proc.NewWaitHot(reqJetID, flow.Pulse(ctx), s.message)
+	s.dep.WaitHot(hot)
 	if err := f.Procedure(ctx, hot, false); err != nil {
 		return err
 	}
@@ -135,8 +135,8 @@ func (s *SetIncomingRequest) setRequest(
 	}
 	objJetID := jet.Result.Jet
 
-	hot := proc.NewWaitHotWM(objJetID, flow.Pulse(ctx), s.message)
-	s.dep.WaitHotWM(hot)
+	hot := proc.NewWaitHot(objJetID, flow.Pulse(ctx), s.message)
+	s.dep.WaitHot(hot)
 	if err := f.Procedure(ctx, hot, false); err != nil {
 		return err
 	}

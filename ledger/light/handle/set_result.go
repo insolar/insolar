@@ -75,8 +75,8 @@ func (s *SetResult) Present(ctx context.Context, f flow.Flow) error {
 	}
 	jetID := jet.Result.Jet
 
-	hot := proc.NewWaitHotWM(jetID, flow.Pulse(ctx), s.message)
-	s.dep.WaitHotWM(hot)
+	hot := proc.NewWaitHot(jetID, flow.Pulse(ctx), s.message)
+	s.dep.WaitHot(hot)
 	if err := f.Procedure(ctx, hot, false); err != nil {
 		return err
 	}

@@ -88,8 +88,8 @@ func (s *DeactivateObject) Present(ctx context.Context, f flow.Flow) error {
 	}
 	objJetID := jet.Result.Jet
 
-	hot := proc.NewWaitHotWM(objJetID, flow.Pulse(ctx), s.message)
-	s.dep.WaitHotWM(hot)
+	hot := proc.NewWaitHot(objJetID, flow.Pulse(ctx), s.message)
+	s.dep.WaitHot(hot)
 	if err := f.Procedure(ctx, hot, false); err != nil {
 		return err
 	}
