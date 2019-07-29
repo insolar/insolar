@@ -151,36 +151,39 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 
 // CallConstructor is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
-func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpctypes.DownCallConstructorResp) (err error) {
+func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpctypes.DownCallConstructorResp) (sysErr error) {
 	metrics.InsgorundCallsTotal.Inc()
 	ctx := inslogger.ContextWithTrace(context.Background(), args.Context.TraceID)
 	inslogger.FromContext(ctx).Debugf("Calling constructor %q in code %q", args.Name, args.Code)
-	defer recoverRPC(ctx, &err)
+	defer recoverRPC(ctx, &sysErr)
 
 	foundation.SetLogicalContext(args.Context)
 	defer foundation.ClearContext()
 
-	p, err := t.GI.Plugin(ctx, args.Code)
-	if err != nil {
-		return err
+	p, sysErr := t.GI.Plugin(ctx, args.Code)
+	if sysErr != nil {
+		return sysErr
 	}
 
-	symbol, err := p.Lookup("INSCONSTRUCTOR_" + args.Name)
-	if err != nil {
-		return errors.Wrapf(err, "Can't find wrapper for %s", args.Name)
+	symbol, sysErr := p.Lookup("INSCONSTRUCTOR_" + args.Name)
+	if sysErr != nil {
+		return errors.Wrapf(sysErr, "Can't find wrapper for %s", args.Name)
 	}
 
-	f, ok := symbol.(func(data []byte) ([]byte, error))
+	f, ok := symbol.(func(data []byte) ([]byte, error, error))
 	if !ok {
 		return errors.New("Wrapper with wrong signature")
 	}
 
-	resValues, err := f(args.Arguments)
-	if err != nil {
-		return errors.Wrapf(err, "Can't call constructor %s", args.Name)
+	resValues, ctorErr, sysErr := f(args.Arguments)
+	if sysErr != nil {
+		return errors.Wrapf(sysErr, "Can't call constructor %s", args.Name)
 	}
 
 	reply.Ret = resValues
+	if ctorErr != nil {
+		reply.ConstructorError = ctorErr.Error()
+	}
 
 	return nil
 }
@@ -358,6 +361,19 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef insolar.Reference, construc
 			os.Exit(0)
 		}
 		return insolar.Reference{}, errors.Wrap(err, "[ SaveAsChild ] on calling main API")
+	}
+
+	// return logical error to the calling contract, don't register system error
+	if res.ConstructorError != "" {
+		return insolar.Reference{}, errors.New("[Constructor failed] " + res.ConstructorError)
+	}
+
+	if res.Reference == nil {
+		// this should never happen, but if it will it's better to return a readable
+		// error than dereference a nil pointer
+		err = errors.New("[ SaveAsChild ] system error - res.Reference is nil")
+		gi.SetSystemError(err)
+		return insolar.Reference{}, err
 	}
 
 	return *res.Reference, nil

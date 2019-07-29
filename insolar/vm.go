@@ -51,7 +51,7 @@ type MachineLogicExecutor interface {
 		ctx context.Context, callContext *LogicCallContext,
 		code Reference, name string, args Arguments,
 	) (
-		objectState []byte, err error,
+		objectState []byte, ctorErr string, sysErr error,
 	)
 }
 
@@ -109,7 +109,7 @@ type ContractMethod func([]byte, []byte) ([]byte, []byte, error)
 type ContractMethods map[string]ContractMethod
 
 // ContractConstructor is a typedef of typical contract constructor
-type ContractConstructor func([]byte) ([]byte, error)
+type ContractConstructor func([]byte) (state []byte, ctorErr error, sysErr error)
 
 // ContractConstructors maps name to contract constructor
 type ContractConstructors map[string]ContractConstructor

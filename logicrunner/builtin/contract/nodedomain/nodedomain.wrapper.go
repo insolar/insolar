@@ -225,7 +225,7 @@ func INSMETHOD_RemoveNode(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
-func INSCONSTRUCTOR_NewNodeDomain(data []byte) ([]byte, error) {
+func INSCONSTRUCTOR_NewNodeDomain(data []byte) ([]byte, error, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
 	args := []interface{}{}
@@ -233,29 +233,31 @@ func INSCONSTRUCTOR_NewNodeDomain(data []byte) ([]byte, error) {
 	err := ph.Deserialize(data, &args)
 	if err != nil {
 		e := &ExtendableError{S: "[ FakeNewNodeDomain ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, e
+		return nil, nil, e
 	}
 
 	ret0, ret1 := NewNodeDomain()
 	if ph.GetSystemError() != nil {
-		return nil, ph.GetSystemError()
+		return nil, nil, ph.GetSystemError()
 	}
 	if ret1 != nil {
-		return nil, ret1
+		// logical error, the result should be registered with type RequestSideEffectNone
+		return nil, ret1, nil
+	}
+
+	if ret0 == nil {
+		// logical error, the result should be registered with type RequestSideEffectNone
+		e := &ExtendableError{S: "[ FakeNewNodeDomain ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil"}
+		return nil, e, nil
 	}
 
 	ret := []byte{}
 	err = ph.Serialize(ret0, &ret)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	if ret0 == nil {
-		e := &ExtendableError{S: "[ FakeNewNodeDomain ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil"}
-		return nil, e
-	}
-
-	return ret, err
+	return ret, nil, err
 }
 
 func Initialize() XXX_insolar.ContractWrapper {
