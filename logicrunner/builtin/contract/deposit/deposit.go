@@ -33,6 +33,7 @@ const (
 	month = 30 * 24 * 60 * 60
 
 	confirms uint = 3
+	// TODO: https://insolar.atlassian.net/browse/WLT-768
 	// offsetDepositPulse insolar.PulseNumber = 6 * month
 	offsetDepositPulse insolar.PulseNumber = 10
 

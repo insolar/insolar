@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TODO: https://insolar.atlassian.net/browse/WLT-768
 func TestDepositTransferToken(t *testing.T) {
 	member := fullMigration(t, "Eth_TxHash_test")
 
