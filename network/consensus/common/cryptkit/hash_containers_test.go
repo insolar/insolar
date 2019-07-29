@@ -226,7 +226,8 @@ func TestSignGetSignatureMethod(t *testing.T) {
 }
 
 func TestAsSignatureHolder(t *testing.T) {
-	s := Signature{hFoldReader: longbits.NewBits512FromBytes(nil), signatureMethod: "test"}
+	fd := longbits.NewFoldableReaderMock(t)
+	s := Signature{hFoldReader: fd, signatureMethod: "test"}
 	sh := s.AsSignatureHolder()
 	require.Equal(t, sh.GetSignatureMethod(), s.signatureMethod)
 
@@ -302,15 +303,17 @@ func TestGetSignature(t *testing.T) {
 }
 
 func TestGetDigestHolder(t *testing.T) {
-	d := Digest{hFoldReader: longbits.NewBits512FromBytes(nil), digestMethod: "testDigest"}
-	s := Signature{hFoldReader: longbits.NewBits512FromBytes(nil), signatureMethod: "testSignature"}
+	fd := longbits.NewFoldableReaderMock(t)
+	d := Digest{hFoldReader: fd, digestMethod: "testDigest"}
+	s := Signature{hFoldReader: fd, signatureMethod: "testSignature"}
 	sd := NewSignedDigest(d, s)
 	require.Equal(t, d.AsDigestHolder(), sd.GetDigestHolder())
 }
 
 func TestGetSignatureHolder(t *testing.T) {
-	d := Digest{hFoldReader: longbits.NewBits512FromBytes(nil), digestMethod: "testDigest"}
-	s := Signature{hFoldReader: longbits.NewBits512FromBytes(nil), signatureMethod: "testSignature"}
+	fd := longbits.NewFoldableReaderMock(t)
+	d := Digest{hFoldReader: fd, digestMethod: "testDigest"}
+	s := Signature{hFoldReader: fd, signatureMethod: "testSignature"}
 	sd := NewSignedDigest(d, s)
 	require.Equal(t, s.AsSignatureHolder(), sd.GetSignatureHolder())
 }
@@ -348,8 +351,9 @@ func TestSignedDigestString(t *testing.T) {
 }
 
 func TestAsSignedDigestHolder(t *testing.T) {
-	d := Digest{hFoldReader: longbits.NewBits512FromBytes(nil), digestMethod: "testDigest"}
-	s := Signature{hFoldReader: longbits.NewBits512FromBytes(nil), signatureMethod: "testSignature"}
+	fd := longbits.NewFoldableReaderMock(t)
+	d := Digest{hFoldReader: fd, digestMethod: "testDigest"}
+	s := Signature{hFoldReader: fd, signatureMethod: "testSignature"}
 	sd := NewSignedDigest(d, s)
 	sdh := sd.AsSignedDigestHolder()
 

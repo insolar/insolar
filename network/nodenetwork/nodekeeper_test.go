@@ -123,7 +123,6 @@ func TestNodekeeper_IsBootstrapped(t *testing.T) {
 
 func TestNodekeeper_GetCloudHash(t *testing.T) {
 	nk := newNodeKeeper(t, nil)
-	assert.Nil(t, nk.GetCloudHash())
 	cloudHash := make([]byte, packets.HashLength)
 	rand.Read(cloudHash)
 	nk.SetCloudHash(cloudHash)
