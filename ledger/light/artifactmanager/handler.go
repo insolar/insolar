@@ -72,13 +72,6 @@ func NewMessageHandler(
 	}
 
 	dep := &proc.Dependencies{
-		FetchJet: func(p *proc.FetchJet) {
-			p.Dep.JetAccessor = h.JetStorage
-			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.JetUpdater = h.JetTreeUpdater
-			p.Dep.JetFetcher = h.JetTreeUpdater
-			p.Dep.Sender = h.Sender
-		},
 		CheckJet: func(p *proc.CheckJet) {
 			p.Dep.JetAccessor = h.JetStorage
 			p.Dep.Coordinator = h.JetCoordinator

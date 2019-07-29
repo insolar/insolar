@@ -25,77 +25,9 @@ import (
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/hot"
 )
-
-type FetchJet struct {
-	target  insolar.ID
-	pulse   insolar.PulseNumber
-	message payload.Meta
-
-	Result struct {
-		Jet insolar.JetID
-	}
-
-	Dep struct {
-		JetAccessor jet.Accessor
-		Coordinator jet.Coordinator
-		JetUpdater  executor.JetFetcher
-		JetFetcher  executor.JetFetcher
-		Sender      bus.Sender
-	}
-}
-
-func NewFetchJet(target insolar.ID, pn insolar.PulseNumber, message payload.Meta) *FetchJet {
-	return &FetchJet{
-		target:  target,
-		pulse:   pn,
-		message: message,
-	}
-}
-
-func (p *FetchJet) Proceed(ctx context.Context) error {
-	// Special case for genesis pulse. No one was executor at that time, so anyone can fetch data from it.
-	if p.pulse <= insolar.FirstPulseNumber {
-		p.Result.Jet = *insolar.NewJetID(0, nil)
-		return nil
-	}
-
-	jetID, err := p.Dep.JetFetcher.Fetch(ctx, p.target, p.pulse)
-	if err != nil {
-		err := errors.Wrap(err, "failed to fetch jet")
-		if err != nil {
-			msg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
-			if err != nil {
-				return err
-			}
-			go p.Dep.Sender.Reply(ctx, p.message, msg)
-		}
-		return err
-	}
-	executor, err := p.Dep.Coordinator.LightExecutorForJet(ctx, *jetID, p.pulse)
-	if err != nil {
-		err := errors.Wrap(err, "failed to calculate executor for jet")
-		if err != nil {
-			msg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
-			if err != nil {
-				return err
-			}
-			go p.Dep.Sender.Reply(ctx, p.message, msg)
-		}
-		return err
-	}
-	if *executor != p.Dep.Coordinator.Me() {
-		msg := bus.ReplyAsMessage(ctx, &reply.JetMiss{JetID: *jetID, Pulse: p.pulse})
-		go p.Dep.Sender.Reply(ctx, p.message, msg)
-		return errors.New("jet miss")
-	}
-
-	p.Result.Jet = insolar.JetID(*jetID)
-	return nil
-}
 
 type CheckJet struct {
 	target  insolar.ID
@@ -130,11 +62,11 @@ func (p *CheckJet) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to fetch jet")
 	}
 
-	executor, err := p.Dep.Coordinator.LightExecutorForJet(ctx, *jetID, p.pulse)
+	worker, err := p.Dep.Coordinator.LightExecutorForJet(ctx, *jetID, p.pulse)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate executor for jet")
 	}
-	if *executor != p.Dep.Coordinator.Me() {
+	if *worker != p.Dep.Coordinator.Me() {
 		if !p.pass {
 			return ErrNotExecutor
 		}
@@ -150,7 +82,7 @@ func (p *CheckJet) Proceed(ctx context.Context) error {
 			return errors.Wrap(err, "failed to create reply")
 		}
 		go func() {
-			_, done := p.Dep.Sender.SendTarget(ctx, msg, *executor)
+			_, done := p.Dep.Sender.SendTarget(ctx, msg, *worker)
 			done()
 		}()
 		return ErrNotExecutor
