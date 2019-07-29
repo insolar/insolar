@@ -181,8 +181,10 @@ func NewMessageHandler(
 			)
 		},
 		PassState: func(p *proc.PassState) {
-			p.Dep.Sender = h.Sender
-			p.Dep.Records = h.Records
+			p.Dep(
+				h.Records,
+				h.Sender,
+			)
 		},
 		CalculateID: func(p *proc.CalculateID) {
 			p.Dep(h.PCS)
