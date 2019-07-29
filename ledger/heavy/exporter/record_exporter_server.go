@@ -39,7 +39,12 @@ func NewRecordServer(
 	recordAccessor object.RecordAccessor,
 	jetKeeper executor.JetKeeper,
 ) *RecordServer {
-	return &RecordServer{pulseCalculator: pulseCalculator, recordIndex: recordIndex, recordAccessor: recordAccessor, jetKeeper: jetKeeper}
+	return &RecordServer{
+		pulseCalculator: pulseCalculator,
+		recordIndex:     recordIndex,
+		recordAccessor:  recordAccessor,
+		jetKeeper:       jetKeeper,
+	}
 }
 
 func (r *RecordServer) Export(ctx context.Context, getRecords *GetRecords) (*Records, error) {
@@ -122,6 +127,19 @@ func (r *recordIterator) HasNext(ctx context.Context) bool {
 	return r.read < r.needToRead
 }
 
+func (r *recordIterator) checkNextPulse(ctx context.Context) bool {
+	nextPulse, err := r.pulseCalculator.Forwards(ctx, r.currentPulse, 1)
+	if err != nil {
+		return false
+	}
+	topPulse := r.jetKeeper.TopSyncPulse()
+	if topPulse < nextPulse.PulseNumber {
+		return false
+	}
+
+	return true
+}
+
 func (r *recordIterator) Next(ctx context.Context) (*Record, error) {
 	r.currentPosition++
 
@@ -155,19 +173,6 @@ func (r *recordIterator) Next(ctx context.Context) (*Record, error) {
 		RecordID:     id,
 		Record:       rec,
 	}, nil
-}
-
-func (r *recordIterator) checkNextPulse(ctx context.Context) bool {
-	nextPulse, err := r.pulseCalculator.Forwards(ctx, r.currentPulse, 1)
-	if err != nil {
-		return false
-	}
-	topPulse := r.jetKeeper.TopSyncPulse()
-	if topPulse < nextPulse.PulseNumber {
-		return false
-	}
-
-	return true
 }
 
 func (r *recordIterator) setNextPulse(ctx context.Context) error {
