@@ -74,12 +74,6 @@ type MutableNode interface {
 	SetPower(power member.Power)
 }
 
-type Evidence struct {
-	Data      []byte
-	Digest    []byte
-	Signature []byte
-}
-
 // GenerateUintShortID generate short ID for node without checking collisions
 func GenerateUintShortID(ref insolar.Reference) uint32 {
 	return crc32.ChecksumIEEE(ref[:])

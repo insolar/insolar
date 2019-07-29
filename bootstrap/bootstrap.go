@@ -19,18 +19,12 @@ package bootstrap
 import (
 	"context"
 	"crypto"
-	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"path"
 	"strconv"
-
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	node2 "github.com/insolar/insolar/network/node"
-	"github.com/insolar/insolar/network/servicenetwork"
-	"github.com/insolar/insolar/platformpolicy"
-	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
@@ -137,31 +131,6 @@ func (ni nodeInfo) reference() insolar.Reference {
 	return rootdomain.GenesisRef(ni.publicKey)
 }
 
-func (g *Generator) makeAnnounceEvidence(host string, dn nodeInfo) cryptkit.SignedDigest {
-	kp := platformpolicy.NewKeyProcessor()
-	scheme := platformpolicy.NewPlatformCryptographyScheme()
-
-	key, err := kp.ImportPublicKeyPEM([]byte(dn.publicKey))
-	if err != nil {
-		panic(err.Error())
-	}
-
-	node := node2.NewNode(
-		dn.reference(),
-		insolar.GetStaticRoleFromString(dn.role),
-		key,
-		host,
-		"",
-	)
-
-	evidence, err := servicenetwork.GetAnnounceEvidence(node, true, kp, dn.privateKey.(*ecdsa.PrivateKey), scheme)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	return *evidence
-}
-
 func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeInfo) error {
 	certs := make([]certificate.Certificate, 0, len(g.config.DiscoveryNodes))
 	for _, node := range discoveryNodes {
@@ -182,16 +151,11 @@ func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeI
 
 		for j, n2 := range discoveryNodes {
 			host := g.config.DiscoveryNodes[j].Host
-
-			e := g.makeAnnounceEvidence(host, n2)
-
 			c.BootstrapNodes = append(c.BootstrapNodes, certificate.BootstrapNode{
-				PublicKey:      n2.publicKey,
-				Host:           host,
-				NodeRef:        n2.reference().String(),
-				NodeRole:       n2.role,
-				BriefDigest:    e.GetDigest().AsBytes(),
-				BriefSignature: e.GetSignature().AsBytes(),
+				PublicKey: n2.publicKey,
+				Host:      host,
+				NodeRef:   n2.reference().String(),
+				NodeRole:  n2.role,
 			})
 		}
 

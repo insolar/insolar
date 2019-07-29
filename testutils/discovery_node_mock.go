@@ -18,16 +18,6 @@ import (
 type DiscoveryNodeMock struct {
 	t minimock.Tester
 
-	GetBriefDigestFunc       func() (r []byte)
-	GetBriefDigestCounter    uint64
-	GetBriefDigestPreCounter uint64
-	GetBriefDigestMock       mDiscoveryNodeMockGetBriefDigest
-
-	GetBriefSignFunc       func() (r []byte)
-	GetBriefSignCounter    uint64
-	GetBriefSignPreCounter uint64
-	GetBriefSignMock       mDiscoveryNodeMockGetBriefSign
-
 	GetHostFunc       func() (r string)
 	GetHostCounter    uint64
 	GetHostPreCounter uint64
@@ -57,282 +47,12 @@ func NewDiscoveryNodeMock(t minimock.Tester) *DiscoveryNodeMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.GetBriefDigestMock = mDiscoveryNodeMockGetBriefDigest{mock: m}
-	m.GetBriefSignMock = mDiscoveryNodeMockGetBriefSign{mock: m}
 	m.GetHostMock = mDiscoveryNodeMockGetHost{mock: m}
 	m.GetNodeRefMock = mDiscoveryNodeMockGetNodeRef{mock: m}
 	m.GetPublicKeyMock = mDiscoveryNodeMockGetPublicKey{mock: m}
 	m.GetRoleMock = mDiscoveryNodeMockGetRole{mock: m}
 
 	return m
-}
-
-type mDiscoveryNodeMockGetBriefDigest struct {
-	mock              *DiscoveryNodeMock
-	mainExpectation   *DiscoveryNodeMockGetBriefDigestExpectation
-	expectationSeries []*DiscoveryNodeMockGetBriefDigestExpectation
-}
-
-type DiscoveryNodeMockGetBriefDigestExpectation struct {
-	result *DiscoveryNodeMockGetBriefDigestResult
-}
-
-type DiscoveryNodeMockGetBriefDigestResult struct {
-	r []byte
-}
-
-//Expect specifies that invocation of DiscoveryNode.GetBriefDigest is expected from 1 to Infinity times
-func (m *mDiscoveryNodeMockGetBriefDigest) Expect() *mDiscoveryNodeMockGetBriefDigest {
-	m.mock.GetBriefDigestFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &DiscoveryNodeMockGetBriefDigestExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of DiscoveryNode.GetBriefDigest
-func (m *mDiscoveryNodeMockGetBriefDigest) Return(r []byte) *DiscoveryNodeMock {
-	m.mock.GetBriefDigestFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &DiscoveryNodeMockGetBriefDigestExpectation{}
-	}
-	m.mainExpectation.result = &DiscoveryNodeMockGetBriefDigestResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of DiscoveryNode.GetBriefDigest is expected once
-func (m *mDiscoveryNodeMockGetBriefDigest) ExpectOnce() *DiscoveryNodeMockGetBriefDigestExpectation {
-	m.mock.GetBriefDigestFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &DiscoveryNodeMockGetBriefDigestExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *DiscoveryNodeMockGetBriefDigestExpectation) Return(r []byte) {
-	e.result = &DiscoveryNodeMockGetBriefDigestResult{r}
-}
-
-//Set uses given function f as a mock of DiscoveryNode.GetBriefDigest method
-func (m *mDiscoveryNodeMockGetBriefDigest) Set(f func() (r []byte)) *DiscoveryNodeMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetBriefDigestFunc = f
-	return m.mock
-}
-
-//GetBriefDigest implements github.com/insolar/insolar/insolar.DiscoveryNode interface
-func (m *DiscoveryNodeMock) GetBriefDigest() (r []byte) {
-	counter := atomic.AddUint64(&m.GetBriefDigestPreCounter, 1)
-	defer atomic.AddUint64(&m.GetBriefDigestCounter, 1)
-
-	if len(m.GetBriefDigestMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetBriefDigestMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to DiscoveryNodeMock.GetBriefDigest.")
-			return
-		}
-
-		result := m.GetBriefDigestMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the DiscoveryNodeMock.GetBriefDigest")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetBriefDigestMock.mainExpectation != nil {
-
-		result := m.GetBriefDigestMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the DiscoveryNodeMock.GetBriefDigest")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetBriefDigestFunc == nil {
-		m.t.Fatalf("Unexpected call to DiscoveryNodeMock.GetBriefDigest.")
-		return
-	}
-
-	return m.GetBriefDigestFunc()
-}
-
-//GetBriefDigestMinimockCounter returns a count of DiscoveryNodeMock.GetBriefDigestFunc invocations
-func (m *DiscoveryNodeMock) GetBriefDigestMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetBriefDigestCounter)
-}
-
-//GetBriefDigestMinimockPreCounter returns the value of DiscoveryNodeMock.GetBriefDigest invocations
-func (m *DiscoveryNodeMock) GetBriefDigestMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetBriefDigestPreCounter)
-}
-
-//GetBriefDigestFinished returns true if mock invocations count is ok
-func (m *DiscoveryNodeMock) GetBriefDigestFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetBriefDigestMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetBriefDigestCounter) == uint64(len(m.GetBriefDigestMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetBriefDigestMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetBriefDigestCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetBriefDigestFunc != nil {
-		return atomic.LoadUint64(&m.GetBriefDigestCounter) > 0
-	}
-
-	return true
-}
-
-type mDiscoveryNodeMockGetBriefSign struct {
-	mock              *DiscoveryNodeMock
-	mainExpectation   *DiscoveryNodeMockGetBriefSignExpectation
-	expectationSeries []*DiscoveryNodeMockGetBriefSignExpectation
-}
-
-type DiscoveryNodeMockGetBriefSignExpectation struct {
-	result *DiscoveryNodeMockGetBriefSignResult
-}
-
-type DiscoveryNodeMockGetBriefSignResult struct {
-	r []byte
-}
-
-//Expect specifies that invocation of DiscoveryNode.GetBriefSign is expected from 1 to Infinity times
-func (m *mDiscoveryNodeMockGetBriefSign) Expect() *mDiscoveryNodeMockGetBriefSign {
-	m.mock.GetBriefSignFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &DiscoveryNodeMockGetBriefSignExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of DiscoveryNode.GetBriefSign
-func (m *mDiscoveryNodeMockGetBriefSign) Return(r []byte) *DiscoveryNodeMock {
-	m.mock.GetBriefSignFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &DiscoveryNodeMockGetBriefSignExpectation{}
-	}
-	m.mainExpectation.result = &DiscoveryNodeMockGetBriefSignResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of DiscoveryNode.GetBriefSign is expected once
-func (m *mDiscoveryNodeMockGetBriefSign) ExpectOnce() *DiscoveryNodeMockGetBriefSignExpectation {
-	m.mock.GetBriefSignFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &DiscoveryNodeMockGetBriefSignExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *DiscoveryNodeMockGetBriefSignExpectation) Return(r []byte) {
-	e.result = &DiscoveryNodeMockGetBriefSignResult{r}
-}
-
-//Set uses given function f as a mock of DiscoveryNode.GetBriefSign method
-func (m *mDiscoveryNodeMockGetBriefSign) Set(f func() (r []byte)) *DiscoveryNodeMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetBriefSignFunc = f
-	return m.mock
-}
-
-//GetBriefSign implements github.com/insolar/insolar/insolar.DiscoveryNode interface
-func (m *DiscoveryNodeMock) GetBriefSign() (r []byte) {
-	counter := atomic.AddUint64(&m.GetBriefSignPreCounter, 1)
-	defer atomic.AddUint64(&m.GetBriefSignCounter, 1)
-
-	if len(m.GetBriefSignMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetBriefSignMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to DiscoveryNodeMock.GetBriefSign.")
-			return
-		}
-
-		result := m.GetBriefSignMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the DiscoveryNodeMock.GetBriefSign")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetBriefSignMock.mainExpectation != nil {
-
-		result := m.GetBriefSignMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the DiscoveryNodeMock.GetBriefSign")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetBriefSignFunc == nil {
-		m.t.Fatalf("Unexpected call to DiscoveryNodeMock.GetBriefSign.")
-		return
-	}
-
-	return m.GetBriefSignFunc()
-}
-
-//GetBriefSignMinimockCounter returns a count of DiscoveryNodeMock.GetBriefSignFunc invocations
-func (m *DiscoveryNodeMock) GetBriefSignMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetBriefSignCounter)
-}
-
-//GetBriefSignMinimockPreCounter returns the value of DiscoveryNodeMock.GetBriefSign invocations
-func (m *DiscoveryNodeMock) GetBriefSignMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetBriefSignPreCounter)
-}
-
-//GetBriefSignFinished returns true if mock invocations count is ok
-func (m *DiscoveryNodeMock) GetBriefSignFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetBriefSignMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetBriefSignCounter) == uint64(len(m.GetBriefSignMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetBriefSignMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetBriefSignCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetBriefSignFunc != nil {
-		return atomic.LoadUint64(&m.GetBriefSignCounter) > 0
-	}
-
-	return true
 }
 
 type mDiscoveryNodeMockGetHost struct {
@@ -875,14 +595,6 @@ func (m *DiscoveryNodeMock) GetRoleFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *DiscoveryNodeMock) ValidateCallCounters() {
 
-	if !m.GetBriefDigestFinished() {
-		m.t.Fatal("Expected call to DiscoveryNodeMock.GetBriefDigest")
-	}
-
-	if !m.GetBriefSignFinished() {
-		m.t.Fatal("Expected call to DiscoveryNodeMock.GetBriefSign")
-	}
-
 	if !m.GetHostFinished() {
 		m.t.Fatal("Expected call to DiscoveryNodeMock.GetHost")
 	}
@@ -916,14 +628,6 @@ func (m *DiscoveryNodeMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *DiscoveryNodeMock) MinimockFinish() {
 
-	if !m.GetBriefDigestFinished() {
-		m.t.Fatal("Expected call to DiscoveryNodeMock.GetBriefDigest")
-	}
-
-	if !m.GetBriefSignFinished() {
-		m.t.Fatal("Expected call to DiscoveryNodeMock.GetBriefSign")
-	}
-
 	if !m.GetHostFinished() {
 		m.t.Fatal("Expected call to DiscoveryNodeMock.GetHost")
 	}
@@ -954,8 +658,6 @@ func (m *DiscoveryNodeMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.GetBriefDigestFinished()
-		ok = ok && m.GetBriefSignFinished()
 		ok = ok && m.GetHostFinished()
 		ok = ok && m.GetNodeRefFinished()
 		ok = ok && m.GetPublicKeyFinished()
@@ -967,14 +669,6 @@ func (m *DiscoveryNodeMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
-
-			if !m.GetBriefDigestFinished() {
-				m.t.Error("Expected call to DiscoveryNodeMock.GetBriefDigest")
-			}
-
-			if !m.GetBriefSignFinished() {
-				m.t.Error("Expected call to DiscoveryNodeMock.GetBriefSign")
-			}
 
 			if !m.GetHostFinished() {
 				m.t.Error("Expected call to DiscoveryNodeMock.GetHost")
@@ -1003,14 +697,6 @@ func (m *DiscoveryNodeMock) MinimockWait(timeout time.Duration) {
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *DiscoveryNodeMock) AllMocksCalled() bool {
-
-	if !m.GetBriefDigestFinished() {
-		return false
-	}
-
-	if !m.GetBriefSignFinished() {
-		return false
-	}
 
 	if !m.GetHostFinished() {
 		return false

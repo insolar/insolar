@@ -45,8 +45,6 @@ type DiscoveryNode interface {
 
 	GetRole() StaticRole
 	GetHost() string
-	GetBriefDigest() []byte
-	GetBriefSign() []byte
 }
 
 // AuthorizationCertificate interface provides methods to manage info about node from it certificate

@@ -78,8 +78,6 @@ func (m *CertificateManager) NewUnsignedCertificate(pKey string, role string, re
 		newCert.BootstrapNodes[i].PublicKey = node.PublicKey
 		newCert.BootstrapNodes[i].NetworkSign = node.NetworkSign
 		newCert.BootstrapNodes[i].NodeRole = node.NodeRole
-		newCert.BootstrapNodes[i].BriefDigest = node.BriefDigest
-		newCert.BootstrapNodes[i].BriefSignature = node.BriefSignature
 	}
 	return &newCert, nil
 }
