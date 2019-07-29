@@ -31,35 +31,35 @@ func TestReferences(t *testing.T) {
 	}{
 		insolar.GenesisNameRootDomain: {
 			got:    ContractRootDomain,
-			expect: "1tJCSAhchCSKZhV8cLzWQ6d1NQFWeDDnkG9Ubcbj5R.11111111111111111111111111111111",
+			expect: "1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8.11111111111111111111111111111111",
 		},
 		insolar.GenesisNameNodeDomain: {
 			got:    ContractNodeDomain,
-			expect: "1tJECUCoRtbpMeaHrMkzGVpjbUkAXtCjcW57Noubik.11111111111111111111111111111111",
+			expect: "1tJDPJd6QDhsKhhgc5bCCJuDEZyrPpe2EkSCVgMoeQ.11111111111111111111111111111111",
 		},
 		insolar.GenesisNameNodeRecord: {
 			got:    ContractNodeRecord,
-			expect: "1tJE3KYJVRHaSbBx4jeXCrpcUgo1kawvNLPH9Ke3VZ.11111111111111111111111111111111",
+			expect: "1tJCCeN3WNGKi6w3YqxHPV7tjxLxsCcookXTe9i6uD.11111111111111111111111111111111",
 		},
 		insolar.GenesisNameRootMember: {
 			got:    ContractRootMember,
-			expect: "1tJE6PFMLHeNmQ5gR8dRt6yAhb8NeUv7sNbsRv49uE.11111111111111111111111111111111",
+			expect: "1tJDb3zZnEns6R4ChKhE4RFhzbUVxvxUdj58YF22yP.11111111111111111111111111111111",
 		},
 		insolar.GenesisNameRootWallet: {
 			got:    ContractRootWallet,
-			expect: "1tJDWFghNhav2zu73YCFpK1b2KTTuqEBY1QXQXzHHc.11111111111111111111111111111111",
+			expect: "1tJCLgYKxM4TABHW8tY3DBxeBZZixWua6iwReJAL4g.11111111111111111111111111111111",
 		},
 		insolar.GenesisNameDeposit: {
 			got:    ContractDeposit,
-			expect: "1tJDxESz1Vn6aDqzupAofBFQJa6yCrr3jTUFoVrGLm.11111111111111111111111111111111",
+			expect: "1tJCUhUMyeumaDA9wPksSjugbQ5uFJ5iYfpsX9yZ7j.11111111111111111111111111111111",
 		},
 		insolar.GenesisNameTariff: {
 			got:    ContractStandardTariff,
-			expect: "1tJBiXErALbFCemdJeub4VstKjbL5is6Vrq6p5SPUW.11111111111111111111111111111111",
+			expect: "1tJBhczj15YCWdz4AqT2cS2JRs7tYKby8fVogP3GcE.11111111111111111111111111111111",
 		},
 		insolar.GenesisNameCostCenter: {
 			got:    ContractCostCenter,
-			expect: "1tJDFtT3ALAMWcGRnzMcvfJPPNHQH7B64zFj3xjpnQ.11111111111111111111111111111111",
+			expect: "1tJDyWCLK4y4JLw7dsCaD9KzEqYTgyGXN5Zp4HuteA.11111111111111111111111111111111",
 		},
 	}
 

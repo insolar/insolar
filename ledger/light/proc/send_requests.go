@@ -80,6 +80,6 @@ func (p *SendRequests) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create message")
 	}
-	go p.dep.sender.Reply(ctx, p.message, msg)
+	p.dep.sender.Reply(ctx, p.message, msg)
 	return nil
 }

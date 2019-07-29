@@ -21,7 +21,7 @@ import (
 type ManagerMock struct {
 	t minimock.Tester
 
-	ActivateObjectFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r error)
+	ActivateObjectFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 []byte) (r error)
 	ActivateObjectCounter    uint64
 	ActivateObjectPreCounter uint64
 	ActivateObjectMock       mManagerMockActivateObject
@@ -87,8 +87,7 @@ type ManagerMockActivateObjectInput struct {
 	p2 insolar.Reference
 	p3 insolar.Reference
 	p4 insolar.Reference
-	p5 bool
-	p6 []byte
+	p5 []byte
 }
 
 type ManagerMockActivateObjectResult struct {
@@ -96,14 +95,14 @@ type ManagerMockActivateObjectResult struct {
 }
 
 //Expect specifies that invocation of Manager.ActivateObject is expected from 1 to Infinity times
-func (m *mManagerMockActivateObject) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) *mManagerMockActivateObject {
+func (m *mManagerMockActivateObject) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 []byte) *mManagerMockActivateObject {
 	m.mock.ActivateObjectFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ManagerMockActivateObjectExpectation{}
 	}
-	m.mainExpectation.input = &ManagerMockActivateObjectInput{p, p1, p2, p3, p4, p5, p6}
+	m.mainExpectation.input = &ManagerMockActivateObjectInput{p, p1, p2, p3, p4, p5}
 	return m
 }
 
@@ -120,12 +119,12 @@ func (m *mManagerMockActivateObject) Return(r error) *ManagerMock {
 }
 
 //ExpectOnce specifies that invocation of Manager.ActivateObject is expected once
-func (m *mManagerMockActivateObject) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) *ManagerMockActivateObjectExpectation {
+func (m *mManagerMockActivateObject) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 []byte) *ManagerMockActivateObjectExpectation {
 	m.mock.ActivateObjectFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &ManagerMockActivateObjectExpectation{}
-	expectation.input = &ManagerMockActivateObjectInput{p, p1, p2, p3, p4, p5, p6}
+	expectation.input = &ManagerMockActivateObjectInput{p, p1, p2, p3, p4, p5}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -135,7 +134,7 @@ func (e *ManagerMockActivateObjectExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of Manager.ActivateObject method
-func (m *mManagerMockActivateObject) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r error)) *ManagerMock {
+func (m *mManagerMockActivateObject) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 []byte) (r error)) *ManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -144,18 +143,18 @@ func (m *mManagerMockActivateObject) Set(f func(p context.Context, p1 insolar.Re
 }
 
 //ActivateObject implements github.com/insolar/insolar/internal/ledger/artifact.Manager interface
-func (m *ManagerMock) ActivateObject(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r error) {
+func (m *ManagerMock) ActivateObject(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 []byte) (r error) {
 	counter := atomic.AddUint64(&m.ActivateObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.ActivateObjectCounter, 1)
 
 	if len(m.ActivateObjectMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.ActivateObjectMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ManagerMock.ActivateObject. %v %v %v %v %v %v %v", p, p1, p2, p3, p4, p5, p6)
+			m.t.Fatalf("Unexpected call to ManagerMock.ActivateObject. %v %v %v %v %v %v", p, p1, p2, p3, p4, p5)
 			return
 		}
 
 		input := m.ActivateObjectMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ManagerMockActivateObjectInput{p, p1, p2, p3, p4, p5, p6}, "Manager.ActivateObject got unexpected parameters")
+		testify_assert.Equal(m.t, *input, ManagerMockActivateObjectInput{p, p1, p2, p3, p4, p5}, "Manager.ActivateObject got unexpected parameters")
 
 		result := m.ActivateObjectMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -172,7 +171,7 @@ func (m *ManagerMock) ActivateObject(p context.Context, p1 insolar.Reference, p2
 
 		input := m.ActivateObjectMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, ManagerMockActivateObjectInput{p, p1, p2, p3, p4, p5, p6}, "Manager.ActivateObject got unexpected parameters")
+			testify_assert.Equal(m.t, *input, ManagerMockActivateObjectInput{p, p1, p2, p3, p4, p5}, "Manager.ActivateObject got unexpected parameters")
 		}
 
 		result := m.ActivateObjectMock.mainExpectation.result
@@ -186,11 +185,11 @@ func (m *ManagerMock) ActivateObject(p context.Context, p1 insolar.Reference, p2
 	}
 
 	if m.ActivateObjectFunc == nil {
-		m.t.Fatalf("Unexpected call to ManagerMock.ActivateObject. %v %v %v %v %v %v %v", p, p1, p2, p3, p4, p5, p6)
+		m.t.Fatalf("Unexpected call to ManagerMock.ActivateObject. %v %v %v %v %v %v", p, p1, p2, p3, p4, p5)
 		return
 	}
 
-	return m.ActivateObjectFunc(p, p1, p2, p3, p4, p5, p6)
+	return m.ActivateObjectFunc(p, p1, p2, p3, p4, p5)
 }
 
 //ActivateObjectMinimockCounter returns a count of ManagerMock.ActivateObjectFunc invocations

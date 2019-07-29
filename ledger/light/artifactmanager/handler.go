@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/handle"
@@ -40,39 +39,26 @@ import (
 
 // MessageHandler processes messages for local storage interaction.
 type MessageHandler struct {
-	Bus                    insolar.MessageBus                 `inject:""`
-	PCS                    insolar.PlatformCryptographyScheme `inject:""`
-	JetCoordinator         jet.Coordinator                    `inject:""`
-	CryptographyService    insolar.CryptographyService        `inject:""`
-	DelegationTokenFactory insolar.DelegationTokenFactory     `inject:""`
-	JetStorage             jet.Storage                        `inject:""`
+	PCS            insolar.PlatformCryptographyScheme `inject:""`
+	JetCoordinator jet.Coordinator                    `inject:""`
+	JetStorage     jet.Storage                        `inject:""`
+	JetReleaser    hot.JetReleaser                    `inject:""`
+	DropModifier   drop.Modifier                      `inject:""`
+	IndexLocker    object.IndexLocker                 `inject:""`
+	Records        object.RecordStorage               `inject:""`
+	HotDataWaiter  hot.JetWaiter                      `inject:""`
 
-	DropModifier drop.Modifier `inject:""`
-
-	IndexLocker object.IndexLocker `inject:""`
-
-	Records object.RecordStorage `inject:""`
-	Nodes   node.Accessor        `inject:""`
-
-	HotDataWaiter hot.JetWaiter   `inject:""`
-	JetReleaser   hot.JetReleaser `inject:""`
-
-	WriteAccessor hot.WriteAccessor
-
-	IndexStorage object.IndexStorage
-
-	PulseCalculator storage.PulseCalculator
-
-	conf           *configuration.Ledger
-	JetTreeUpdater executor.JetFetcher
-
-	Sender         bus.Sender
-	FlowDispatcher *dispatcher.Dispatcher
-	handlers       map[insolar.MessageType]insolar.MessageHandler
-
-	filamentModifier   *executor.FilamentModifierDefault
+	WriteAccessor      hot.WriteAccessor
+	IndexStorage       object.IndexStorage
+	PulseCalculator    storage.PulseCalculator
+	JetTreeUpdater     executor.JetFetcher
+	Sender             bus.Sender
+	FlowDispatcher     *dispatcher.Dispatcher
 	FilamentCalculator *executor.FilamentCalculatorDefault
 	RequestChecker     *executor.RequestCheckerDefault
+
+	conf     *configuration.Ledger
+	handlers map[insolar.MessageType]insolar.MessageHandler
 }
 
 // NewMessageHandler creates new handler.
@@ -87,41 +73,26 @@ func NewMessageHandler(
 
 	dep := &proc.Dependencies{
 		FetchJet: func(p *proc.FetchJet) {
-			p.Dep.JetAccessor = h.JetStorage
-			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.JetUpdater = h.JetTreeUpdater
-			p.Dep.JetFetcher = h.JetTreeUpdater
-			p.Dep.Sender = h.Sender
+			p.Dep(
+				h.JetStorage,
+				h.JetTreeUpdater,
+				h.JetCoordinator,
+				h.Sender,
+			)
 		},
 		WaitHot: func(p *proc.WaitHot) {
-			p.Dep.Waiter = h.HotDataWaiter
-			p.Dep.Sender = h.Sender
+			p.Dep(
+				h.HotDataWaiter,
+				h.Sender,
+			)
 		},
-		GetIndex: func(p *proc.EnsureIndex) {
-			p.Dep.IndexAccessor = h.IndexStorage
-			p.Dep.IndexLocker = h.IndexLocker
-			p.Dep.IndexModifier = h.IndexStorage
-			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.Bus = h.Bus
-			p.Dep.Sender = h.Sender
-		},
-		CheckJet: func(p *proc.CheckJet) {
-			p.Dep.JetAccessor = h.JetStorage
-			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.JetFetcher = h.JetTreeUpdater
-			p.Dep.Sender = h.Sender
-		},
-		WaitHotWM: func(p *proc.WaitHotWM) {
-			p.Dep.Waiter = h.HotDataWaiter
-			p.Dep.Sender = h.Sender
-		},
-		EnsureIndex: func(p *proc.EnsureIndexWM) {
-			p.Dep.IndexModifier = h.IndexStorage
-			p.Dep.IndexAccessor = h.IndexStorage
-			p.Dep.IndexLocker = h.IndexLocker
-			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.Bus = h.Bus
-			p.Dep.Sender = h.Sender
+		EnsureIndex: func(p *proc.EnsureIndex) {
+			p.Dep(
+				h.IndexLocker,
+				h.IndexStorage,
+				h.JetCoordinator,
+				h.Sender,
+			)
 		},
 		SetRequest: func(p *proc.SetRequest) {
 			p.Dep(
@@ -141,37 +112,10 @@ func NewMessageHandler(
 				h.WriteAccessor,
 				h.Sender,
 				h.IndexLocker,
-				h.filamentModifier,
-			)
-		},
-		ActivateObject: func(p *proc.ActivateObject) {
-			p.Dep(
-				h.WriteAccessor,
-				h.IndexLocker,
+				h.FilamentCalculator,
 				h.Records,
 				h.IndexStorage,
-				h.filamentModifier,
-				h.Sender,
-			)
-		},
-		DeactivateObject: func(p *proc.DeactivateObject) {
-			p.Dep(
-				h.WriteAccessor,
-				h.IndexLocker,
-				h.Records,
-				h.IndexStorage,
-				h.filamentModifier,
-				h.Sender,
-			)
-		},
-		UpdateObject: func(p *proc.UpdateObject) {
-			p.Dep(
-				h.WriteAccessor,
-				h.IndexLocker,
-				h.Records,
-				h.IndexStorage,
-				h.filamentModifier,
-				h.Sender,
+				h.PCS,
 			)
 		},
 		HasPendings: func(p *proc.HasPendings) {
@@ -181,40 +125,30 @@ func NewMessageHandler(
 			)
 		},
 		SendObject: func(p *proc.SendObject) {
-			p.Dep.Jets = h.JetStorage
-			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.JetFetcher = h.JetTreeUpdater
-			p.Dep.Bus = h.Bus
-			p.Dep.RecordAccessor = h.Records
-			p.Dep.Sender = h.Sender
+			p.Dep(
+				h.JetCoordinator,
+				h.JetStorage,
+				h.JetTreeUpdater,
+				h.Records,
+				h.IndexStorage,
+				h.Sender,
+			)
 		},
 		GetCode: func(p *proc.GetCode) {
-			p.Dep.RecordAccessor = h.Records
-			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.JetFetcher = h.JetTreeUpdater
-			p.Dep.Sender = h.Sender
+			p.Dep(
+				h.Records,
+				h.JetCoordinator,
+				h.JetTreeUpdater,
+				h.Sender,
+			)
 		},
 		GetRequest: func(p *proc.GetRequest) {
-			p.Dep(h.Records, h.Sender, h.JetCoordinator, h.JetTreeUpdater)
-		},
-		GetChildren: func(p *proc.GetChildren) {
-			p.Dep.IndexLocker = h.IndexLocker
-			p.Dep.IndexAccessor = h.IndexStorage
-			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.DelegationTokenFactory = h.DelegationTokenFactory
-			p.Dep.RecordAccessor = h.Records
-			p.Dep.JetStorage = h.JetStorage
-			p.Dep.JetTreeUpdater = h.JetTreeUpdater
-			p.Dep.Sender = h.Sender
-		},
-		RegisterChild: func(p *proc.RegisterChild) {
-			p.Dep.IndexLocker = h.IndexLocker
-			p.Dep.IndexAccessor = h.IndexStorage
-			p.Dep.IndexModifier = h.IndexStorage
-			p.Dep.JetCoordinator = h.JetCoordinator
-			p.Dep.RecordModifier = h.Records
-			p.Dep.PCS = h.PCS
-			p.Dep.Sender = h.Sender
+			p.Dep(
+				h.Records,
+				h.Sender,
+				h.JetCoordinator,
+				h.JetTreeUpdater,
+			)
 		},
 		GetPendings: func(p *proc.GetPendings) {
 			p.Dep(
@@ -229,31 +163,39 @@ func NewMessageHandler(
 			)
 		},
 		HotObjects: func(p *proc.HotObjects) {
-			p.Dep.DropModifier = h.DropModifier
-			p.Dep.MessageBus = h.Bus
-			p.Dep.IndexModifier = h.IndexStorage
-			p.Dep.JetStorage = h.JetStorage
-			p.Dep.JetFetcher = h.JetTreeUpdater
-			p.Dep.JetReleaser = h.JetReleaser
-			p.Dep.Sender = h.Sender
-			p.Dep.Calculator = h.PulseCalculator
+			p.Dep(
+				h.DropModifier,
+				h.IndexStorage,
+				h.JetStorage,
+				h.JetTreeUpdater,
+				h.JetReleaser,
+				h.JetCoordinator,
+				h.PulseCalculator,
+				h.Sender,
+			)
 		},
 		SendRequests: func(p *proc.SendRequests) {
-			p.Dep(h.Sender, h.FilamentCalculator)
+			p.Dep(
+				h.Sender,
+				h.FilamentCalculator,
+			)
 		},
 		PassState: func(p *proc.PassState) {
-			p.Dep.Sender = h.Sender
-			p.Dep.Records = h.Records
+			p.Dep(
+				h.Records,
+				h.Sender,
+			)
 		},
 		CalculateID: func(p *proc.CalculateID) {
 			p.Dep(h.PCS)
 		},
 		SetCode: func(p *proc.SetCode) {
-			p.Dep(h.WriteAccessor, h.Records, h.PCS, h.Sender)
-		},
-		GetDelegate: func(p *proc.GetDelegate) {
-			p.Dep.IndexAccessor = h.IndexStorage
-			p.Dep.Sender = h.Sender
+			p.Dep(
+				h.WriteAccessor,
+				h.Records,
+				h.PCS,
+				h.Sender,
+			)
 		},
 	}
 
@@ -269,20 +211,6 @@ func NewMessageHandler(
 		return initHandle(msg).Past
 	})
 	return h
-}
-
-// Init initializes handlers and middleware.
-func (h *MessageHandler) Init(ctx context.Context) error {
-	h.filamentModifier = executor.NewFilamentModifier(
-		h.IndexStorage,
-		h.Records,
-		h.PCS,
-		h.FilamentCalculator,
-		h.PulseCalculator,
-		h.Sender,
-	)
-
-	return nil
 }
 
 func (h *MessageHandler) OnPulse(ctx context.Context, pn insolar.Pulse) {

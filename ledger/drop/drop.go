@@ -17,10 +17,7 @@
 package drop
 
 import (
-	"bytes"
 	"context"
-
-	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/insolar"
 )
@@ -72,22 +69,12 @@ type Drop struct {
 
 // MustEncode serializes jet drop.
 func MustEncode(drop *Drop) []byte {
-	var buf bytes.Buffer
-	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
-	err := enc.Encode(drop)
-	if err != nil {
-		panic(err)
-	}
-	return buf.Bytes()
+	return insolar.MustSerialize(drop)
 }
 
 // Decode deserializes jet drop.
 func Decode(buf []byte) (*Drop, error) {
-	dec := codec.NewDecoder(bytes.NewReader(buf), &codec.CborHandle{})
 	var drop Drop
-	err := dec.Decode(&drop)
-	if err != nil {
-		return nil, err
-	}
-	return &drop, nil
+	err := insolar.Deserialize(buf, &drop)
+	return &drop, err
 }

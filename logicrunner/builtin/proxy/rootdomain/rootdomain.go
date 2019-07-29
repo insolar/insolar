@@ -18,8 +18,8 @@ package rootdomain
 
 import (
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 // PrototypeReference to prototype of this contract
@@ -48,15 +48,6 @@ func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*RootDoma
 	return &RootDomain{Reference: ref}, nil
 }
 
-// AsDelegate saves object as delegate
-func (r *ContractConstructorHolder) AsDelegate(objRef insolar.Reference) (*RootDomain, error) {
-	ref, err := common.CurrentProxyCtx.SaveAsDelegate(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
-	if err != nil {
-		return nil, err
-	}
-	return &RootDomain{Reference: ref}, nil
-}
-
 // GetObject returns proxy object
 func GetObject(ref insolar.Reference) (r *RootDomain) {
 	return &RootDomain{Reference: ref}
@@ -65,15 +56,6 @@ func GetObject(ref insolar.Reference) (r *RootDomain) {
 // GetPrototype returns reference to the prototype
 func GetPrototype() insolar.Reference {
 	return *PrototypeReference
-}
-
-// GetImplementationFrom returns proxy to delegate of given type
-func GetImplementationFrom(object insolar.Reference) (*RootDomain, error) {
-	ref, err := common.CurrentProxyCtx.GetDelegate(object, *PrototypeReference)
-	if err != nil {
-		return nil, err
-	}
-	return GetObject(ref), nil
 }
 
 // GetReference returns reference of the object

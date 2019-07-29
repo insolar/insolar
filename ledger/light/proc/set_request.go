@@ -89,8 +89,6 @@ func (p *SetRequest) Dep(
 }
 
 func (p *SetRequest) Proceed(ctx context.Context) error {
-	logger := inslogger.FromContext(ctx).WithField("request_id", p.requestID.DebugString())
-	logger.Debug("trying to save request")
 
 	if p.requestID.IsEmpty() {
 		return errors.New("request id is empty")
@@ -105,6 +103,12 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	} else {
 		objectID = *p.request.AffinityRef().Record()
 	}
+
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"request_id": p.requestID.DebugString(),
+		"object_id":  objectID.DebugString(),
+	})
+	logger.Debug("trying to save request")
 
 	// Check virtual executor.
 	virtualExecutor, err := p.dep.coordinator.VirtualExecutorForObject(ctx, objectID, flow.Pulse(ctx))
@@ -127,6 +131,31 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	p.dep.locker.Lock(objectID)
 	defer p.dep.locker.Unlock(objectID)
 
+	var index record.Index
+	if p.request.IsCreationRequest() {
+		index = record.Index{
+			ObjID:            objectID,
+			LifelineLastUsed: p.requestID.Pulse(),
+		}
+	} else {
+		idx, err := p.dep.indexes.ForID(ctx, flow.Pulse(ctx), objectID)
+		if err != nil {
+			return errors.Wrap(err, "failed to check an object state")
+		}
+		if index.Lifeline.StateID == record.StateDeactivation {
+			msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeDeactivated})
+			if err != nil {
+				return errors.Wrap(err, "failed to create reply")
+			}
+			p.dep.sender.Reply(ctx, p.message, msg)
+			return nil
+		}
+		if idx.Lifeline.LatestRequest != nil && p.requestID.Pulse() < idx.Lifeline.LatestRequest.Pulse() {
+			return errors.New("request from the past")
+		}
+		index = idx
+	}
+
 	// Check for request duplicates.
 	{
 		var (
@@ -140,7 +169,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		}
 		if req != nil || res != nil {
 			if req != nil {
-				reqBuf, err = req.Marshal()
+				reqBuf, err = req.Record.Marshal()
 				if err != nil {
 					return errors.Wrap(err, "failed to marshal stored record")
 				}
@@ -150,7 +179,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 				}
 			}
 			if res != nil {
-				resBuf, err = res.Marshal()
+				resBuf, err = res.Record.Marshal()
 				if err != nil {
 					return errors.Wrap(err, "failed to marshal stored record")
 				}
@@ -191,35 +220,10 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	}
 	defer done()
 
-	var index record.Index
-	if p.request.IsCreationRequest() {
-		index = record.Index{
-			ObjID:            objectID,
-			LifelineLastUsed: p.requestID.Pulse(),
-		}
-	} else {
-		idx, err := p.dep.indexes.ForID(ctx, flow.Pulse(ctx), objectID)
-		if err != nil {
-			return errors.Wrap(err, "failed to check an object state")
-		}
-		if index.Lifeline.StateID == record.StateDeactivation {
-			msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeDeactivated})
-			if err != nil {
-				return errors.Wrap(err, "failed to create reply")
-			}
-			p.dep.sender.Reply(ctx, p.message, msg)
-			return nil
-		}
-		if idx.Lifeline.PendingPointer != nil && p.requestID.Pulse() < idx.Lifeline.PendingPointer.Pulse() {
-			return errors.New("request from the past")
-		}
-		index = idx
-	}
-
 	// Store request record.
 	{
 		virtual := record.Wrap(p.request)
-		material := record.Material{Virtual: &virtual, JetID: p.jetID}
+		material := record.Material{Virtual: virtual, JetID: p.jetID}
 		err := p.dep.records.Set(ctx, p.requestID, material)
 		if err != nil {
 			return errors.Wrap(err, "failed to save request record")
@@ -229,13 +233,13 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	// Store filament record.
 	var filamentID insolar.ID
 	{
-		virtual := record.Wrap(record.PendingFilament{
+		virtual := record.Wrap(&record.PendingFilament{
 			RecordID:       p.requestID,
-			PreviousRecord: index.Lifeline.PendingPointer,
+			PreviousRecord: index.Lifeline.LatestRequest,
 		})
 		hash := record.HashVirtual(p.dep.pcs.ReferenceHasher(), virtual)
 		id := *insolar.NewID(p.requestID.Pulse(), hash)
-		material := record.Material{Virtual: &virtual, JetID: p.jetID}
+		material := record.Material{Virtual: virtual, JetID: p.jetID}
 		err = p.dep.records.Set(ctx, id, material)
 		if err != nil {
 			return errors.Wrap(err, "failed to save filament record")
@@ -245,7 +249,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 
 	// Save updated index.
 	index.LifelineLastUsed = p.requestID.Pulse()
-	index.Lifeline.PendingPointer = &filamentID
+	index.Lifeline.LatestRequest = &filamentID
 	if index.Lifeline.EarliestOpenRequest == nil {
 		pn := p.requestID.Pulse()
 		index.Lifeline.EarliestOpenRequest = &pn
@@ -264,7 +268,8 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	}
 	p.dep.sender.Reply(ctx, p.message, msg)
 	logger.WithFields(map[string]interface{}{
-		"is_creation": p.request.IsCreationRequest(),
+		"is_creation":                p.request.IsCreationRequest(),
+		"latest_pending_filament_id": filamentID.DebugString(),
 	}).Debug("request saved")
 	return nil
 }

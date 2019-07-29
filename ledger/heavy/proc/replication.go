@@ -94,10 +94,6 @@ func (p *Replication) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to store drop")
 	}
 
-	if err != nil {
-		return errors.Wrapf(err, "failed to split/update jet=%v pulse=%v", dr.JetID.DebugString(), dr.Pulse)
-	}
-
 	if err := p.dep.keeper.AddDropConfirmation(ctx, dr.Pulse, dr.JetID, dr.Split); err != nil {
 		return errors.Wrapf(err, "failed to add jet to JetKeeper jet=%v", dr.JetID.DebugString())
 	}
@@ -153,8 +149,7 @@ func storeRecords(
 	inslog := inslogger.FromContext(ctx)
 
 	for _, rec := range records {
-		virtRec := *rec.Virtual
-		hash := record.HashVirtual(pcs.ReferenceHasher(), virtRec)
+		hash := record.HashVirtual(pcs.ReferenceHasher(), rec.Virtual)
 		id := insolar.NewID(pn, hash)
 		err := mod.Set(ctx, *id, rec)
 		if err != nil {
