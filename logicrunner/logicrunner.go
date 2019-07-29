@@ -77,6 +77,7 @@ type LogicRunner struct {
 	JetCoordinator             jet.Coordinator                    `inject:""`
 	RequestsExecutor           RequestsExecutor                   `inject:""`
 	MachinesManager            MachinesManager                    `inject:""`
+	JetStorage                 jet.Storage                        `inject:""`
 	Publisher                  watermillMsg.Publisher
 	Sender                     bus.Sender
 	SenderWithRetry            *bus.WaitOKSender
@@ -141,6 +142,7 @@ func (lr *LogicRunner) initHandlers() {
 		ResultsMatcher: lr.ResultsMatcher,
 		lr:             lr,
 		Sender:         lr.Sender,
+		JetStorage:     lr.JetStorage,
 	}
 
 	initHandle := func(msg *watermillMsg.Message) *Init {
