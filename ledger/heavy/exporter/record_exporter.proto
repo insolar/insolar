@@ -32,5 +32,5 @@ message Record {
 message Records {
     uint32 Polymorph = 16;
 
-    repeated Record Records = 20;
+    repeated Record Records = 20 [(gogoproto.nullable) = false];
 }

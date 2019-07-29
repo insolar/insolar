@@ -146,6 +146,7 @@ func storeDrop(
 func storeRecords(
 	ctx context.Context,
 	recordStorage object.RecordModifier,
+	recordIndex object.RecordPositionModifier,
 	pcs insolar.PlatformCryptographyScheme,
 	pn insolar.PulseNumber,
 	records []record.Material,
@@ -159,6 +160,11 @@ func storeRecords(
 		err := recordStorage.Set(ctx, *id, rec)
 		if err != nil {
 			inslog.Error(err, "heavyserver: store record failed")
+			continue
+		}
+		err = recordIndex.IncrementPosition(*id)
+		if err != nil {
+			inslog.Error(err, "heavyserver: fail to store record position")
 			continue
 		}
 	}

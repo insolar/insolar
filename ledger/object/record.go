@@ -77,6 +77,15 @@ type RecordCleaner interface {
 	DeleteForPN(ctx context.Context, pulse insolar.PulseNumber)
 }
 
+type RecordPositionModifier interface {
+	IncrementPosition(recID insolar.ID) error
+}
+
+type RecordPositionAccessor interface {
+	LastKnownPosition(pn insolar.PulseNumber) (uint32, error)
+	AtPosition(pn insolar.PulseNumber, position uint32) (insolar.ID, error)
+}
+
 // RecordMemory is an in-indexStorage struct for record-storage.
 type RecordMemory struct {
 	jetIndex         store.JetIndexModifier
@@ -192,37 +201,6 @@ func newRecordKey(raw []byte) recordKey {
 	return recordKey(*insolar.NewID(pulse, hash))
 }
 
-type recordPositionKey struct {
-	pn     insolar.PulseNumber
-	number uint32
-}
-
-func newRecordOrderKey(pn insolar.PulseNumber, number uint32) recordPositionKey {
-	return recordPositionKey{pn: pn, number: number}
-}
-
-func (k recordPositionKey) Scope() store.Scope {
-	return store.ScopeRecordPosition
-}
-
-func (k recordPositionKey) ID() []byte {
-	parsedNum := make([]byte, 4)
-	binary.BigEndian.PutUint32(parsedNum, k.number)
-	return bytes.Join([][]byte{k.pn.Bytes(), parsedNum}, nil)
-}
-
-type lastKnownRecordPositionKey struct {
-	pn insolar.PulseNumber
-}
-
-func (k lastKnownRecordPositionKey) Scope() store.Scope {
-	return store.ScopeLastKnownRecordPosition
-}
-
-func (k lastKnownRecordPositionKey) ID() []byte {
-	return bytes.Join([][]byte{k.pn.Bytes()}, nil)
-}
-
 // NewRecordDB creates new DB storage instance.
 func NewRecordDB(db store.DB) *RecordDB {
 	return &RecordDB{db: db}
@@ -233,12 +211,7 @@ func (r *RecordDB) Set(ctx context.Context, id insolar.ID, rec record.Material) 
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	err := r.set(id, rec)
-	if err != nil {
-		return err
-	}
-
-	return r.incrementPosition(id)
+	return r.set(id, rec)
 }
 
 // TruncateHead remove all records after lastPulse
@@ -309,31 +282,86 @@ func (r *RecordDB) get(id insolar.ID) (record.Material, error) {
 	return rec, err
 }
 
-func (r *RecordDB) getNextPosition(pn insolar.PulseNumber) (uint32, error) {
+// RecordPositionDB is a DB storage implementation. It saves records position to DB.
+type RecordPositionDB struct {
+	lock sync.RWMutex
+	db   store.DB
+}
+
+type recordPositionKey struct {
+	pn     insolar.PulseNumber
+	number uint32
+}
+
+func newRecordPositionKey(pn insolar.PulseNumber, number uint32) recordPositionKey {
+	return recordPositionKey{pn: pn, number: number}
+}
+
+func (k recordPositionKey) Scope() store.Scope {
+	return store.ScopeRecordPosition
+}
+
+func (k recordPositionKey) ID() []byte {
+	parsedNum := make([]byte, 4)
+	binary.BigEndian.PutUint32(parsedNum, k.number)
+	return bytes.Join([][]byte{k.pn.Bytes(), parsedNum}, nil)
+}
+
+type lastKnownRecordPositionKey struct {
+	pn insolar.PulseNumber
+}
+
+func (k lastKnownRecordPositionKey) Scope() store.Scope {
+	return store.ScopeLastKnownRecordPosition
+}
+
+func (k lastKnownRecordPositionKey) ID() []byte {
+	return bytes.Join([][]byte{k.pn.Bytes()}, nil)
+}
+
+func (r *RecordPositionDB) LastKnownPosition(pn insolar.PulseNumber) (uint32, error) {
 	buff, err := r.db.Get(lastKnownRecordPositionKey{pn: pn})
-	if err == store.ErrNotFound {
-		return 1, nil
-	}
 	if err != nil {
 		return 0, err
 	}
-	return binary.BigEndian.Uint32(buff) + 1, nil
+	return binary.BigEndian.Uint32(buff), nil
 }
 
-func (r *RecordDB) setLastKnownPosition(pn insolar.PulseNumber, order uint32) error {
+func (r *RecordPositionDB) AtPosition(pn insolar.PulseNumber, position uint32) (insolar.ID, error) {
+	lastKnownPosition, err := r.LastKnownPosition(pn)
+	if err != nil {
+		return insolar.ID{}, err
+	}
+	if uint32(position) > lastKnownPosition {
+		return insolar.ID{}, store.ErrNotFound
+	}
+
+	positionKey := newRecordPositionKey(pn, position)
+	rawID, err := r.db.Get(positionKey)
+	if err != nil {
+		return insolar.ID{}, err
+	}
+
+	return *insolar.NewIDFromBytes(rawID), nil
+}
+
+func (r *RecordPositionDB) setLastKnownPosition(pn insolar.PulseNumber, order uint32) error {
 	lastOrderKey := lastKnownRecordPositionKey{pn: pn}
 	parsedOrder := make([]byte, 4)
 	binary.BigEndian.PutUint32(parsedOrder, order)
 	return r.db.Set(lastOrderKey, parsedOrder)
 }
 
-func (r *RecordDB) incrementPosition(recID insolar.ID) error {
-	nextOrder, err := r.getNextPosition(recID.Pulse())
-	if err != nil {
+func (r *RecordPositionDB) IncrementPosition(recID insolar.ID) error {
+	currentPosition, err := r.LastKnownPosition(recID.Pulse())
+	if err != nil && err != store.ErrNotFound {
 		return err
 	}
 
-	orderKey := newRecordOrderKey(recID.Pulse(), nextOrder)
+	nextPosition := currentPosition
+	nextPosition++
+
+	orderKey := newRecordPositionKey(recID.Pulse(), nextPosition)
 
 	_, err = r.db.Get(orderKey)
 	if err == nil {
@@ -345,5 +373,37 @@ func (r *RecordDB) incrementPosition(recID insolar.ID) error {
 		return err
 	}
 
-	return r.setLastKnownPosition(recID.Pulse(), nextOrder)
+	return r.setLastKnownPosition(recID.Pulse(), nextPosition)
 }
+
+// func (r *RecordPositionDB) IDs(pn insolar.PulseNumber, since uint32, count uint32) ([]OrderedID, error) {
+// 	lastKnownPosition, err := r.getLastKnownPosition(pn)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	if uint32(since) >= lastKnownPosition {
+// 		return nil, store.ErrNotFound
+// 	}
+//
+// 	readUntil := uint32(0)
+// 	if since+count > lastKnownPosition {
+// 		readUntil = lastKnownPosition
+// 	}
+//
+// 	var ids []OrderedID
+//
+// 	for i := since; i < readUntil; i++ {
+// 		positionKey := newRecordPositionKey(pn, i)
+// 		rawID, err := r.db.Get(positionKey)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+//
+// 		ids = append(ids, OrderedID{
+// 			ID:       *insolar.NewIDFromBytes(rawID),
+// 			Position: i,
+// 		})
+// 	}
+//
+// 	return ids, nil
+// }
