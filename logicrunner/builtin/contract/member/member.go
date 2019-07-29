@@ -303,12 +303,6 @@ func (m *Member) depositTransferCall(params map[string]interface{}) (interface{}
 		return nil, fmt.Errorf("incorect input: failed to get 'amount' param")
 	}
 
-	w, err := wallet.GetImplementationFrom(m.GetReference())
-	if err != nil {
-		return nil, fmt.Errorf("failed to get wallet implementation of sender: %s", err.Error())
-	}
-	wRef := w.Reference
-
 	find, dRef, err := m.FindDeposit(ethTxHash)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find deposit: %s", err.Error())
@@ -318,7 +312,7 @@ func (m *Member) depositTransferCall(params map[string]interface{}) (interface{}
 	}
 	d := deposit.GetObject(dRef)
 
-	return d.Transfer(amount, wRef)
+	return d.Transfer(amount, m.Wallet)
 }
 
 func (m *Member) depositMigrationCall(params map[string]interface{}) error {

@@ -21,7 +21,7 @@ import (
 	"math/big"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/logicrunner/builtin/contract/deposit/safemath"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation/safemath"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
