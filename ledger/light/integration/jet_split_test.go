@@ -36,7 +36,7 @@ func TestJetSplit(t *testing.T) {
 
 	var testPulsesQuantity = 5
 
-	ctx := inslogger.WithLoggerLevel(inslogger.TestContext(t), insolar.InfoLevel)
+	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	cfg.Ledger.JetSplit.DepthLimit = 5
 	cfg.Ledger.JetSplit.ThresholdOverflowCount = 0
