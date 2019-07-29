@@ -131,6 +131,17 @@ func (cr *ContractRequester) calcRequestHash(request record.IncomingRequest) ([i
 	return hash, nil
 }
 
+func (cr *ContractRequester) checkCall(_ context.Context, msg *message.CallMethod) error {
+	switch {
+	case msg.Caller.IsEmpty() && msg.APINode.IsEmpty():
+		return errors.New("either Caller or APINode should be set, both empty")
+	case !msg.Caller.IsEmpty() && !msg.APINode.IsEmpty():
+		return errors.New("either Caller or APINode should be set, both set")
+	}
+
+	return nil
+}
+
 func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (insolar.Reply, error) {
 	ctx, span := instracer.StartSpan(ctx, "ContractRequester.Call")
 	defer span.End()
@@ -141,6 +152,11 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 
 	if msg.Nonce == 0 {
 		msg.Nonce = randomUint64()
+	}
+
+	err := cr.checkCall(ctx, msg)
+	if err != nil {
+		return nil, errors.Wrap(err, "incorrect request")
 	}
 
 	var ch chan *message.ReturnResults

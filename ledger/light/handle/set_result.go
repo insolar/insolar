@@ -65,8 +65,8 @@ func (s *SetResult) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	passIfNotExecutor := !s.passed
-	jet := proc.NewCheckJet(result.Object, flow.Pulse(ctx), s.message, passIfNotExecutor)
-	s.dep.CheckJet(jet)
+	jet := proc.NewFetchJet(result.Object, flow.Pulse(ctx), s.message, passIfNotExecutor)
+	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
 		if err == proc.ErrNotExecutor && passIfNotExecutor {
 			return nil
@@ -75,15 +75,15 @@ func (s *SetResult) Present(ctx context.Context, f flow.Flow) error {
 	}
 	jetID := jet.Result.Jet
 
-	hot := proc.NewWaitHotWM(jetID, flow.Pulse(ctx), s.message)
-	s.dep.WaitHotWM(hot)
+	hot := proc.NewWaitHot(jetID, flow.Pulse(ctx), s.message)
+	s.dep.WaitHot(hot)
 	if err := f.Procedure(ctx, hot, false); err != nil {
 		return err
 	}
 
 	// To ensure, that we have the index. Because index can be on a heavy node.
 	// If we don't have it and heavy does, SetResult fails because it should update light's index state
-	idx := proc.NewEnsureIndexWM(result.Object, jetID, s.message)
+	idx := proc.NewEnsureIndex(result.Object, jetID, s.message)
 	s.dep.EnsureIndex(idx)
 	if err := f.Procedure(ctx, idx, false); err != nil {
 		return errors.Wrap(err, "can't get index")

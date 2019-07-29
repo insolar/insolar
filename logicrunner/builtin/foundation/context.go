@@ -14,31 +14,36 @@
 // limitations under the License.
 //
 
-package common
+package foundation
 
 import (
+	"github.com/tylerb/gls"
+
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/log"
 )
 
-type Serializer interface {
-	Serialize(interface{}, *[]byte) error
-	Deserialize([]byte, interface{}) error
+const glsCallContextKey = "callCtx"
+
+// GetLogicalContext returns current calling context.
+func GetLogicalContext() *insolar.LogicCallContext {
+	ctx := gls.Get(glsCallContextKey)
+	if ctx == nil {
+		panic("object has no context")
+	}
+
+	if ctx, ok := ctx.(*insolar.LogicCallContext); ok {
+		return ctx
+	}
+
+	panic("wrong type of context")
 }
 
-type CBORSerializer struct{}
-
-func (s *CBORSerializer) Serialize(what interface{}, to *[]byte) (err error) {
-	log.Debugf("serializing %+v", what)
-	*to, err = insolar.Serialize(what)
-	return err
+// SetLogicalContext saves current calling context
+func SetLogicalContext(ctx *insolar.LogicCallContext) {
+	gls.Set(glsCallContextKey, ctx)
 }
 
-func (s *CBORSerializer) Deserialize(from []byte, to interface{}) error {
-	log.Debugf("de-serializing %+v", from)
-	return insolar.Deserialize(from, to)
-}
-
-func NewCBORSerializer() *CBORSerializer {
-	return &CBORSerializer{}
+// ClearContext clears underlying gls context
+func ClearContext() {
+	gls.Cleanup()
 }

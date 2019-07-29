@@ -21,11 +21,10 @@ import (
 	"context"
 	"errors"
 
-	"github.com/tylerb/gls"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
@@ -73,8 +72,8 @@ func (b *BuiltIn) CallConstructor(ctx context.Context, callCtx *insolar.LogicCal
 	ctx, span := instracer.StartSpan(ctx, "builtin.CallConstructor")
 	defer span.End()
 
-	gls.Set("callCtx", callCtx)
-	defer gls.Cleanup()
+	foundation.SetLogicalContext(callCtx)
+	defer foundation.ClearContext()
 
 	contractName, ok := b.CodeRefRegistry[codeRef]
 	if !ok {
@@ -96,8 +95,8 @@ func (b *BuiltIn) CallMethod(ctx context.Context, callCtx *insolar.LogicCallCont
 	ctx, span := instracer.StartSpan(ctx, "builtin.CallMethod")
 	defer span.End()
 
-	gls.Set("callCtx", callCtx)
-	defer gls.Cleanup()
+	foundation.SetLogicalContext(callCtx)
+	defer foundation.ClearContext()
 
 	contractName, ok := b.CodeRefRegistry[codeRef]
 	if !ok {

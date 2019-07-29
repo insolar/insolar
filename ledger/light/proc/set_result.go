@@ -168,7 +168,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		// Save request record to storage.
 		{
 			virtual := record.Wrap(&p.result)
-			material := record.Material{Virtual: &virtual, JetID: p.jetID}
+			material := record.Material{Virtual: virtual, JetID: p.jetID}
 			err := p.dep.records.Set(ctx, resultID, material)
 			if err != nil {
 				return errors.Wrap(err, "failed to save a result record")
@@ -184,7 +184,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 			})
 			hash := record.HashVirtual(p.dep.pcs.ReferenceHasher(), virtual)
 			id := *insolar.NewID(resultID.Pulse(), hash)
-			material := record.Material{Virtual: &virtual, JetID: p.jetID}
+			material := record.Material{Virtual: virtual, JetID: p.jetID}
 			err := p.dep.records.Set(ctx, id, material)
 			if err != nil {
 				return errors.Wrap(err, "failed to save filament record")
@@ -199,7 +199,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 				hash := record.HashVirtual(p.dep.pcs.ReferenceHasher(), virtual)
 				id := *insolar.NewID(resultID.Pulse(), hash)
 				material := record.Material{
-					Virtual: &virtual,
+					Virtual: virtual,
 					JetID:   p.jetID,
 				}
 				err := p.dep.records.Set(ctx, id, material)
@@ -230,7 +230,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	}
 
 	// Only incoming request cannot be a reason. We are only interested in potential reason requests.
-	if _, ok := record.Unwrap(closedRequest.Record.Virtual).(*record.IncomingRequest); ok {
+	if _, ok := record.Unwrap(&closedRequest.Record.Virtual).(*record.IncomingRequest); ok {
 		notifyDetached(ctx, p.dep.sender, opened, objectID, closedRequest.RecordID)
 	}
 
@@ -280,7 +280,7 @@ func calcPending(opened []record.CompositeFilamentRecord, closedRequestID insola
 func findClosed(reqs []record.CompositeFilamentRecord, result record.Result) (record.CompositeFilamentRecord, error) {
 	for _, req := range reqs {
 		if req.RecordID == *result.Request.Record() {
-			found := record.Unwrap(req.Record.Virtual)
+			found := record.Unwrap(&req.Record.Virtual)
 			if _, ok := found.(record.Request); ok {
 				return req, nil
 			}
@@ -302,7 +302,7 @@ func notifyDetached(
 	objectID, closedRequestID insolar.ID,
 ) {
 	for _, req := range opened {
-		outgoing, ok := record.Unwrap(req.Record.Virtual).(*record.OutgoingRequest)
+		outgoing, ok := record.Unwrap(&req.Record.Virtual).(*record.OutgoingRequest)
 		if !ok {
 			continue
 		}

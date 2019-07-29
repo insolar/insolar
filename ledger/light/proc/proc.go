@@ -18,11 +18,8 @@ package proc
 
 type Dependencies struct {
 	FetchJet     func(*FetchJet)
-	CheckJet     func(*CheckJet)
 	WaitHot      func(*WaitHot)
-	WaitHotWM    func(*WaitHotWM)
-	GetIndex     func(*EnsureIndex)
-	EnsureIndex  func(*EnsureIndexWM)
+	EnsureIndex  func(*EnsureIndex)
 	SendObject   func(*SendObject)
 	GetCode      func(*GetCode)
 	GetRequest   func(*GetRequest)
@@ -44,11 +41,8 @@ type Dependencies struct {
 func NewDependenciesMock() *Dependencies {
 	return &Dependencies{
 		FetchJet:     func(*FetchJet) {},
-		CheckJet:     func(*CheckJet) {},
 		WaitHot:      func(*WaitHot) {},
-		WaitHotWM:    func(*WaitHotWM) {},
-		GetIndex:     func(*EnsureIndex) {},
-		EnsureIndex:  func(*EnsureIndexWM) {},
+		EnsureIndex:  func(*EnsureIndex) {},
 		SendObject:   func(*SendObject) {},
 		GetCode:      func(*GetCode) {},
 		SetRequest:   func(*SetRequest) {},

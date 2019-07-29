@@ -19,7 +19,6 @@ package artifacts
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -112,7 +111,7 @@ func NewClient(sender bus.Sender) *client { // nolint
 
 // registerRequest registers incoming or outgoing request.
 func (m *client) registerRequest(
-	ctx context.Context, req record.Request, msgPayload payload.Payload, retriesNumber int,
+	ctx context.Context, req record.Request, msgPayload payload.Payload, sender bus.Sender,
 ) (*insolar.ID, error) {
 	affinityRef, err := m.calculateAffinityReference(ctx, req)
 	if err != nil {
@@ -129,7 +128,7 @@ func (m *client) registerRequest(
 		instrumenter.end()
 	}()
 
-	pl, err := m.sendWithRetry(ctx, msgPayload, insolar.DynamicRoleLightExecutor, *affinityRef, retriesNumber)
+	pl, err := m.sendToLight(ctx, sender, msgPayload, *affinityRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't register request")
 	}
@@ -161,7 +160,7 @@ func (m *client) RegisterIncomingRequest(ctx context.Context, request *record.In
 
 	// retriesNumber is zero, because we don't retry registering of incoming requests - the caller should
 	// re-send the request instead.
-	id, err := m.registerRequest(ctx, request, incomingRequest, 0)
+	id, err := m.registerRequest(ctx, request, incomingRequest, m.sender)
 	if err != nil {
 		return id, errors.Wrap(err, "RegisterIncomingRequest")
 	}
@@ -172,7 +171,9 @@ func (m *client) RegisterIncomingRequest(ctx context.Context, request *record.In
 // returns request record Ref if request successfully created or already exists.
 func (m *client) RegisterOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) (*insolar.ID, error) {
 	outgoingRequest := &payload.SetOutgoingRequest{Request: record.Wrap(request)}
-	id, err := m.registerRequest(ctx, request, outgoingRequest, 3)
+	id, err := m.registerRequest(
+		ctx, request, outgoingRequest, bus.NewRetrySender(m.sender, 3),
+	)
 	if err != nil {
 		return id, errors.Wrap(err, "RegisterOutgoingRequest")
 	}
@@ -205,25 +206,13 @@ func (m *client) GetCode(
 		instrumenter.end()
 	}()
 
-	msg, err := payload.NewMessage(&payload.GetCode{
-		CodeID: *code.Record(),
-	})
+	getCodePl := &payload.GetCode{CodeID: *code.Record()}
+
+	pl, err := m.sendToLight(
+		ctx, bus.NewRetrySender(m.sender, 3), getCodePl, code,
+	)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal message")
-	}
-
-	r := bus.NewRetrySender(m.sender, 3)
-	reps, done := r.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, code)
-	defer done()
-
-	rep, ok := <-reps
-	if !ok {
-		return nil, ErrNoReply
-	}
-
-	pl, err := payload.UnmarshalFromMeta(rep.Payload)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal reply")
+		return nil, errors.Wrap(err, "failed to send GetCode")
 	}
 
 	switch p := pl.(type) {
@@ -233,7 +222,7 @@ func (m *client) GetCode(
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to unmarshal record")
 		}
-		virtual := record.Unwrap(rec.Virtual)
+		virtual := record.Unwrap(&rec.Virtual)
 		codeRecord, ok := virtual.(*record.Code)
 		if !ok {
 			return nil, errors.Wrapf(err, "unexpected record %T", virtual)
@@ -344,7 +333,7 @@ func (m *client) GetObject(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal state")
 	}
-	virtual := record.Unwrap(rec.Virtual)
+	virtual := record.Unwrap(&rec.Virtual)
 	s, ok := virtual.(record.State)
 	if !ok {
 		return nil, errors.New("wrong state record")
@@ -376,23 +365,14 @@ func (m *client) GetIncomingRequest(
 		instrumenter.end()
 	}()
 
-	msg, err := payload.NewMessage(&payload.GetRequest{
+	getRequestPl := &payload.GetRequest{
 		ObjectID:  *object.Record(),
 		RequestID: *reqRef.Record(),
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create a message")
-	}
-	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, object)
-	defer done()
-	res, ok := <-reps
-	if !ok {
-		return nil, errors.New("no reply while fetching request")
 	}
 
-	pl, err := payload.UnmarshalFromMeta(res.Payload)
+	pl, err := m.sendToLight(ctx, m.sender, getRequestPl, object)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal reply")
+		return nil, errors.Wrap(err, "failed to send GetRequest")
 	}
 	req, ok := pl.(*payload.Request)
 	if !ok {
@@ -421,25 +401,13 @@ func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]i
 		instrumenter.end()
 	}()
 
-	msg, err := payload.NewMessage(&payload.GetPendings{
+	getPendingsPl := &payload.GetPendings{
 		ObjectID: *object.Record(),
-	})
-
-	if err != nil {
-		return nil, errors.Wrap(err, "GetPendings: failed to create a message")
 	}
 
-	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, object)
-
-	defer done()
-	res, ok := <-reps
-	if !ok {
-		return []insolar.Reference{}, errors.New("GetPendings: no reply")
-	}
-
-	pl, err := payload.UnmarshalFromMeta(res.Payload)
+	pl, err := m.sendToLight(ctx, m.sender, getPendingsPl, object)
 	if err != nil {
-		return []insolar.Reference{}, errors.Wrap(err, "GetPendings: failed to unmarshal reply")
+		return []insolar.Reference{}, errors.Wrap(err, "failed to send GetPendings")
 	}
 
 	switch concrete := pl.(type) {
@@ -475,25 +443,13 @@ func (m *client) HasPendings(
 		instrumenter.end()
 	}()
 
-	msg, err := payload.NewMessage(&payload.HasPendings{
+	hasPendingsPl := &payload.HasPendings{
 		ObjectID: *object.Record(),
-	})
-
-	if err != nil {
-		return false, errors.Wrap(err, "HasPendings: failed to create a message")
 	}
 
-	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, object)
-
-	defer done()
-	res, ok := <-reps
-	if !ok {
-		return false, errors.New("HasPendings: no reply")
-	}
-
-	pl, err := payload.UnmarshalFromMeta(res.Payload)
+	pl, err := m.sendToLight(ctx, m.sender, hasPendingsPl, object)
 	if err != nil {
-		return false, errors.Wrap(err, "HasPendings: failed to unmarshal reply")
+		return false, errors.Wrap(err, "failed to send HasPendings")
 	}
 
 	switch concrete := pl.(type) {
@@ -555,10 +511,14 @@ func (m *client) DeployCode(
 		Record: buf,
 	}
 
-	pl, err := m.sendWithRetry(ctx, psc, insolar.DynamicRoleLightExecutor, *insolar.NewReference(recID), 3)
+	pl, err := m.sendToLight(
+		ctx, bus.NewRetrySender(m.sender, 3),
+		psc, *insolar.NewReference(recID),
+	)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to send SetCode")
 	}
+
 	switch p := pl.(type) {
 	case *payload.ID:
 		return &p.ID, nil
@@ -567,53 +527,6 @@ func (m *client) DeployCode(
 	default:
 		return nil, fmt.Errorf("DeployCode: unexpected reply: %#v", p)
 	}
-}
-
-// sendWithRetry sends given Payload to the specified DynamicRole with provided `retriesNumber`.
-// If retriesNumber is zero the methods sends the message only once.
-func (m *client) sendWithRetry(
-	ctx context.Context, ppl payload.Payload, role insolar.DynamicRole, // nolint: unparam
-	ref insolar.Reference, retriesNumber int) (payload.Payload, error) {
-	var lastPulse insolar.PulseNumber
-
-	for retriesNumber >= 0 {
-		currentPulse, err := m.PulseAccessor.Latest(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ sendWithRetry ] Can't get latest pulse")
-		}
-
-		if currentPulse.PulseNumber == lastPulse {
-			inslogger.FromContext(ctx).Debugf("[ sendWithRetry ]  wait for pulse change. Current: %d", currentPulse)
-			time.Sleep(100 * time.Millisecond)
-			continue
-		}
-		lastPulse = currentPulse.PulseNumber
-
-		msg, err := payload.NewMessage(ppl)
-
-		if err != nil {
-			return nil, err
-		}
-
-		reps, done := m.sender.SendRole(ctx, msg, role, ref)
-		rep, ok := <-reps
-		done()
-
-		if !ok {
-			return nil, ErrNoReply
-		}
-		pl, err := payload.UnmarshalFromMeta(rep.Payload)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ sendWithRetry ] failed to unmarshal reply")
-		}
-
-		if p, ok := pl.(*payload.Error); !ok || p.Code != payload.CodeFlowCanceled {
-			return pl, nil
-		}
-		inslogger.FromContext(ctx).Debug("[ sendWithRetry ] flow cancelled, retrying")
-		retriesNumber--
-	}
-	return nil, fmt.Errorf("[ sendWithRetry ] flow cancelled, retries exceeded")
 }
 
 // ActivatePrototype creates activate object record in storage. Provided prototype reference will be used as objects prototype
@@ -695,7 +608,7 @@ func (m *client) activateObject(
 		Result: resultBuf,
 	}
 
-	pl, err := m.sendWithRetry(ctx, pa, insolar.DynamicRoleLightExecutor, obj, 3)
+	pl, err := m.sendToLight(ctx, bus.NewRetrySender(m.sender, 3), pa, obj)
 	if err != nil {
 		return errors.Wrap(err, "can't send activation and result records")
 	}
@@ -733,7 +646,10 @@ func (m *client) RegisterResult(
 		payloadInput payload.Payload,
 		obj insolar.Reference,
 	) (*insolar.ID, error) {
-		payloadOutput, err := m.sendWithRetry(ctx, payloadInput, insolar.DynamicRoleLightExecutor, obj, 3)
+
+		payloadOutput, err := m.sendToLight(
+			ctx, bus.NewRetrySender(m.sender, 3), payloadInput, obj,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -875,4 +791,32 @@ func (m *client) RegisterResult(
 	}
 
 	return nil
+}
+
+func (m *client) sendToLight(
+	ctx context.Context,
+	sender bus.Sender,
+	ppl payload.Payload,
+	ref insolar.Reference,
+) (payload.Payload, error) {
+
+	msg, err := payload.NewMessage(ppl)
+	if err != nil {
+		return nil, err
+	}
+
+	reps, done := sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, ref)
+	defer done()
+
+	rep, ok := <-reps
+	if !ok {
+		return nil, ErrNoReply
+	}
+
+	pl, err := payload.UnmarshalFromMeta(rep.Payload)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal reply")
+	}
+
+	return pl, nil
 }

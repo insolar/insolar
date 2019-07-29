@@ -134,11 +134,11 @@ func TestSetRequest_Proceed(t *testing.T) {
 			return &virtualRef, nil
 		}
 		records.SetFunc = func(_ context.Context, id insolar.ID, rec record.Material) (r error) {
-			switch record.Unwrap(rec.Virtual).(type) {
+			switch record.Unwrap(&rec.Virtual).(type) {
 			case *record.IncomingRequest:
 				require.Equal(t, requestID, id)
 			case *record.PendingFilament:
-				hash := record.HashVirtual(pcs.ReferenceHasher(), *rec.Virtual)
+				hash := record.HashVirtual(pcs.ReferenceHasher(), rec.Virtual)
 				calcID := *insolar.NewID(requestID.Pulse(), hash)
 				require.Equal(t, calcID, id)
 			default:
