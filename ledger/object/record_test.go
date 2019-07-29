@@ -148,25 +148,25 @@ func TestRecordStorage_Set(t *testing.T) {
 
 	ctx := inslogger.TestContext(t)
 
-	id := gen.ID()
-	rec := getMaterialRecord()
-	rec.ID = id
-
 	t.Run("saves correct record-value", func(t *testing.T) {
 		t.Parallel()
 
 		recordStorage := NewRecordMemory()
+		rec := getMaterialRecord()
+		rec.ID = gen.ID()
 
 		err := recordStorage.SetAtomic(ctx, rec)
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(recordStorage.recsStor))
-		assert.Equal(t, rec, recordStorage.recsStor[id])
+		assert.Equal(t, rec, recordStorage.recsStor[rec.ID])
 	})
 
 	t.Run("returns override error when saving with the same id", func(t *testing.T) {
 		t.Parallel()
 
 		recordStorage := NewRecordMemory()
+		rec := getMaterialRecord()
+		rec.ID = gen.ID()
 
 		err := recordStorage.SetAtomic(ctx, rec)
 		require.NoError(t, err)
@@ -181,14 +181,14 @@ func TestRecordStorage_Set(t *testing.T) {
 
 		recordStorage := NewRecordMemory()
 		var recs []record.Material
-		fuzz.New().NumElements(10, 20).Funcs(func(r *record.Material, c fuzz.Continue) {
+		fuzz.New().NumElements(10, 20).NilChance(0).Funcs(func(r *record.Material, c fuzz.Continue) {
 			r.ID = gen.ID()
 		}).Fuzz(&recs)
 		err := recordStorage.SetAtomic(ctx, recs...)
 		require.NoError(t, err)
 
 		for _, r := range recs {
-			rec, err = recordStorage.ForID(ctx, r.ID)
+			rec, err := recordStorage.ForID(ctx, r.ID)
 			require.NoError(t, err)
 			require.Equal(t, rec, r)
 		}
@@ -199,7 +199,7 @@ func TestRecordStorage_Set(t *testing.T) {
 
 		recordStorage := NewRecordMemory()
 		var recs []record.Material
-		fuzz.New().NumElements(10, 20).Funcs(func(r *record.Material, c fuzz.Continue) {
+		fuzz.New().NumElements(10, 20).NilChance(0).Funcs(func(r *record.Material, c fuzz.Continue) {
 			r.ID = gen.ID()
 		}).Fuzz(&recs)
 
@@ -210,7 +210,7 @@ func TestRecordStorage_Set(t *testing.T) {
 		require.Equal(t, ErrOverride, err)
 
 		for _, r := range recs[1:] {
-			rec, err = recordStorage.ForID(ctx, r.ID)
+			_, err := recordStorage.ForID(ctx, r.ID)
 			require.Equal(t, ErrNotFound, err)
 		}
 	})

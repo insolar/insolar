@@ -44,7 +44,7 @@ type SetResult struct {
 		sender   bus.Sender
 		locker   object.IndexLocker
 		records  object.AtomicRecordModifier
-		indexes  object.IndexStorage
+		indexes  object.MemoryIndexStorage
 		pcs      insolar.PlatformCryptographyScheme
 	}
 }
@@ -69,7 +69,7 @@ func (p *SetResult) Dep(
 	l object.IndexLocker,
 	f executor.FilamentCalculator,
 	r object.AtomicRecordModifier,
-	i object.IndexStorage,
+	i object.MemoryIndexStorage,
 	pcs insolar.PlatformCryptographyScheme,
 ) {
 	p.dep.writer = w
@@ -221,10 +221,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		index.LifelineLastUsed = flow.Pulse(ctx)
 		index.Lifeline.LatestRequest = &Filament.ID
 		index.Lifeline.EarliestOpenRequest = earliestPending
-		err = p.dep.indexes.SetIndex(ctx, resultID.Pulse(), index)
-		if err != nil {
-			return errors.Wrap(err, "failed to update index")
-		}
+		p.dep.indexes.Set(ctx, resultID.Pulse(), index)
 		return nil
 	}()
 	if err != nil {

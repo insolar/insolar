@@ -44,7 +44,7 @@ type SetRequest struct {
 		filament    executor.FilamentCalculator
 		sender      bus.Sender
 		locker      object.IndexLocker
-		indexes     object.IndexStorage
+		indexes     object.MemoryIndexStorage
 		records     object.AtomicRecordModifier
 		pcs         insolar.PlatformCryptographyScheme
 		checker     executor.RequestChecker
@@ -71,7 +71,7 @@ func (p *SetRequest) Dep(
 	f executor.FilamentCalculator,
 	s bus.Sender,
 	l object.IndexLocker,
-	i object.IndexStorage,
+	i object.MemoryIndexStorage,
 	r object.AtomicRecordModifier,
 	pcs insolar.PlatformCryptographyScheme,
 	rc executor.RequestChecker,
@@ -257,10 +257,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		pn := p.requestID.Pulse()
 		index.Lifeline.EarliestOpenRequest = &pn
 	}
-	err = p.dep.indexes.SetIndex(ctx, p.requestID.Pulse(), index)
-	if err != nil {
-		return errors.Wrap(err, "failed to update index")
-	}
+	p.dep.indexes.Set(ctx, p.requestID.Pulse(), index)
 
 	msg, err := payload.NewMessage(&payload.RequestInfo{
 		ObjectID:  objectID,

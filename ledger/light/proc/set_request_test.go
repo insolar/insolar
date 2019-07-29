@@ -53,7 +53,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 		writeAccessor *hot.WriteAccessorMock
 		sender        *bus.SenderMock
 		filaments     *executor.FilamentCalculatorMock
-		idxStorage    *object.IndexStorageMock
+		idxStorage    *object.MemoryIndexStorageMock
 		records       *object.AtomicRecordModifierMock
 		checker       *executor.RequestCheckerMock
 		coordinator   *jet.CoordinatorMock
@@ -63,7 +63,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 		writeAccessor = hot.NewWriteAccessorMock(mc)
 		sender = bus.NewSenderMock(mc)
 		filaments = executor.NewFilamentCalculatorMock(mc)
-		idxStorage = object.NewIndexStorageMock(mc)
+		idxStorage = object.NewMemoryIndexStorageMock(mc)
 		records = object.NewAtomicRecordModifierMock(mc)
 		checker = executor.NewRequestCheckerMock(mc)
 		coordinator = jet.NewCoordinatorMock(t)
@@ -103,7 +103,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 				StateID: record.StateActivation,
 			},
 		}, nil)
-		idxStorage.SetIndexFunc = func(_ context.Context, pn insolar.PulseNumber, idx record.Index) (r error) {
+		idxStorage.SetFunc = func(_ context.Context, pn insolar.PulseNumber, idx record.Index) {
 			require.Equal(t, requestID.Pulse(), pn)
 
 			virtual = record.Wrap(&record.PendingFilament{
@@ -121,7 +121,6 @@ func TestSetRequest_Proceed(t *testing.T) {
 				},
 			}
 			require.Equal(t, expectedIndex, idx)
-			return nil
 		}
 
 		writeAccessor.BeginMock.Return(func() {}, nil)
