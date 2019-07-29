@@ -7,7 +7,7 @@ The original interface "Host" can be found in github.com/insolar/insolar/network
 */
 import (
 	"sync/atomic"
-	time "time"
+	"time"
 
 	"github.com/gojuno/minimock"
 	cryptkit "github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -199,7 +199,7 @@ type HostMockGetPublicKeyStoreResult struct {
 	r cryptkit.PublicKeyStore
 }
 
-//Expect specifies that invocation of Host.CreatePublicKeyStore is expected from 1 to Infinity times
+//Expect specifies that invocation of Host.GetPublicKeyStore is expected from 1 to Infinity times
 func (m *mHostMockGetPublicKeyStore) Expect() *mHostMockGetPublicKeyStore {
 	m.mock.GetPublicKeyStoreFunc = nil
 	m.expectationSeries = nil
@@ -211,7 +211,7 @@ func (m *mHostMockGetPublicKeyStore) Expect() *mHostMockGetPublicKeyStore {
 	return m
 }
 
-//Return specifies results of invocation of Host.CreatePublicKeyStore
+//Return specifies results of invocation of Host.GetPublicKeyStore
 func (m *mHostMockGetPublicKeyStore) Return(r cryptkit.PublicKeyStore) *HostMock {
 	m.mock.GetPublicKeyStoreFunc = nil
 	m.expectationSeries = nil
@@ -223,7 +223,7 @@ func (m *mHostMockGetPublicKeyStore) Return(r cryptkit.PublicKeyStore) *HostMock
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of Host.CreatePublicKeyStore is expected once
+//ExpectOnce specifies that invocation of Host.GetPublicKeyStore is expected once
 func (m *mHostMockGetPublicKeyStore) ExpectOnce() *HostMockGetPublicKeyStoreExpectation {
 	m.mock.GetPublicKeyStoreFunc = nil
 	m.mainExpectation = nil
@@ -238,7 +238,7 @@ func (e *HostMockGetPublicKeyStoreExpectation) Return(r cryptkit.PublicKeyStore)
 	e.result = &HostMockGetPublicKeyStoreResult{r}
 }
 
-//Set uses given function f as a mock of Host.CreatePublicKeyStore method
+//Set uses given function f as a mock of Host.GetPublicKeyStore method
 func (m *mHostMockGetPublicKeyStore) Set(f func() (r cryptkit.PublicKeyStore)) *HostMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -247,20 +247,20 @@ func (m *mHostMockGetPublicKeyStore) Set(f func() (r cryptkit.PublicKeyStore)) *
 	return m.mock
 }
 
-//CreatePublicKeyStore implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.Host interface
+//GetPublicKeyStore implements github.com/insolar/insolar/network/consensus/gcpv2/api/profiles.Host interface
 func (m *HostMock) GetPublicKeyStore() (r cryptkit.PublicKeyStore) {
 	counter := atomic.AddUint64(&m.GetPublicKeyStorePreCounter, 1)
 	defer atomic.AddUint64(&m.GetPublicKeyStoreCounter, 1)
 
 	if len(m.GetPublicKeyStoreMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.GetPublicKeyStoreMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to HostMock.CreatePublicKeyStore.")
+			m.t.Fatalf("Unexpected call to HostMock.GetPublicKeyStore.")
 			return
 		}
 
 		result := m.GetPublicKeyStoreMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the HostMock.CreatePublicKeyStore")
+			m.t.Fatal("No results are set for the HostMock.GetPublicKeyStore")
 			return
 		}
 
@@ -273,7 +273,7 @@ func (m *HostMock) GetPublicKeyStore() (r cryptkit.PublicKeyStore) {
 
 		result := m.GetPublicKeyStoreMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the HostMock.CreatePublicKeyStore")
+			m.t.Fatal("No results are set for the HostMock.GetPublicKeyStore")
 		}
 
 		r = result.r
@@ -282,7 +282,7 @@ func (m *HostMock) GetPublicKeyStore() (r cryptkit.PublicKeyStore) {
 	}
 
 	if m.GetPublicKeyStoreFunc == nil {
-		m.t.Fatalf("Unexpected call to HostMock.CreatePublicKeyStore.")
+		m.t.Fatalf("Unexpected call to HostMock.GetPublicKeyStore.")
 		return
 	}
 
@@ -294,7 +294,7 @@ func (m *HostMock) GetPublicKeyStoreMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetPublicKeyStoreCounter)
 }
 
-//GetPublicKeyStoreMinimockPreCounter returns the value of HostMock.CreatePublicKeyStore invocations
+//GetPublicKeyStoreMinimockPreCounter returns the value of HostMock.GetPublicKeyStore invocations
 func (m *HostMock) GetPublicKeyStoreMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetPublicKeyStorePreCounter)
 }
@@ -475,7 +475,7 @@ func (m *HostMock) ValidateCallCounters() {
 	}
 
 	if !m.GetPublicKeyStoreFinished() {
-		m.t.Fatal("Expected call to HostMock.CreatePublicKeyStore")
+		m.t.Fatal("Expected call to HostMock.GetPublicKeyStore")
 	}
 
 	if !m.IsAcceptableHostFinished() {
@@ -504,7 +504,7 @@ func (m *HostMock) MinimockFinish() {
 	}
 
 	if !m.GetPublicKeyStoreFinished() {
-		m.t.Fatal("Expected call to HostMock.CreatePublicKeyStore")
+		m.t.Fatal("Expected call to HostMock.GetPublicKeyStore")
 	}
 
 	if !m.IsAcceptableHostFinished() {
@@ -541,7 +541,7 @@ func (m *HostMock) MinimockWait(timeout time.Duration) {
 			}
 
 			if !m.GetPublicKeyStoreFinished() {
-				m.t.Error("Expected call to HostMock.CreatePublicKeyStore")
+				m.t.Error("Expected call to HostMock.GetPublicKeyStore")
 			}
 
 			if !m.IsAcceptableHostFinished() {

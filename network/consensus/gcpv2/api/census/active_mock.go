@@ -63,6 +63,11 @@ type ActiveMock struct {
 	GetMisbehaviorRegistryPreCounter uint64
 	GetMisbehaviorRegistryMock       mActiveMockGetMisbehaviorRegistry
 
+	GetNearestPulseDataFunc       func() (r bool, r1 pulse.Data)
+	GetNearestPulseDataCounter    uint64
+	GetNearestPulseDataPreCounter uint64
+	GetNearestPulseDataMock       mActiveMockGetNearestPulseData
+
 	GetOfflinePopulationFunc       func() (r OfflinePopulation)
 	GetOfflinePopulationCounter    uint64
 	GetOfflinePopulationPreCounter uint64
@@ -110,6 +115,7 @@ func NewActiveMock(t minimock.Tester) *ActiveMock {
 	m.GetGlobulaStateHashMock = mActiveMockGetGlobulaStateHash{mock: m}
 	m.GetMandateRegistryMock = mActiveMockGetMandateRegistry{mock: m}
 	m.GetMisbehaviorRegistryMock = mActiveMockGetMisbehaviorRegistry{mock: m}
+	m.GetNearestPulseDataMock = mActiveMockGetNearestPulseData{mock: m}
 	m.GetOfflinePopulationMock = mActiveMockGetOfflinePopulation{mock: m}
 	m.GetOnlinePopulationMock = mActiveMockGetOnlinePopulation{mock: m}
 	m.GetProfileFactoryMock = mActiveMockGetProfileFactory{mock: m}
@@ -1206,6 +1212,143 @@ func (m *ActiveMock) GetMisbehaviorRegistryFinished() bool {
 	return true
 }
 
+type mActiveMockGetNearestPulseData struct {
+	mock              *ActiveMock
+	mainExpectation   *ActiveMockGetNearestPulseDataExpectation
+	expectationSeries []*ActiveMockGetNearestPulseDataExpectation
+}
+
+type ActiveMockGetNearestPulseDataExpectation struct {
+	result *ActiveMockGetNearestPulseDataResult
+}
+
+type ActiveMockGetNearestPulseDataResult struct {
+	r  bool
+	r1 pulse.Data
+}
+
+//Expect specifies that invocation of Active.GetNearestPulseData is expected from 1 to Infinity times
+func (m *mActiveMockGetNearestPulseData) Expect() *mActiveMockGetNearestPulseData {
+	m.mock.GetNearestPulseDataFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ActiveMockGetNearestPulseDataExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of Active.GetNearestPulseData
+func (m *mActiveMockGetNearestPulseData) Return(r bool, r1 pulse.Data) *ActiveMock {
+	m.mock.GetNearestPulseDataFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ActiveMockGetNearestPulseDataExpectation{}
+	}
+	m.mainExpectation.result = &ActiveMockGetNearestPulseDataResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Active.GetNearestPulseData is expected once
+func (m *mActiveMockGetNearestPulseData) ExpectOnce() *ActiveMockGetNearestPulseDataExpectation {
+	m.mock.GetNearestPulseDataFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ActiveMockGetNearestPulseDataExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *ActiveMockGetNearestPulseDataExpectation) Return(r bool, r1 pulse.Data) {
+	e.result = &ActiveMockGetNearestPulseDataResult{r, r1}
+}
+
+//Set uses given function f as a mock of Active.GetNearestPulseData method
+func (m *mActiveMockGetNearestPulseData) Set(f func() (r bool, r1 pulse.Data)) *ActiveMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetNearestPulseDataFunc = f
+	return m.mock
+}
+
+//GetNearestPulseData implements github.com/insolar/insolar/network/consensus/gcpv2/api/census.Active interface
+func (m *ActiveMock) GetNearestPulseData() (r bool, r1 pulse.Data) {
+	counter := atomic.AddUint64(&m.GetNearestPulseDataPreCounter, 1)
+	defer atomic.AddUint64(&m.GetNearestPulseDataCounter, 1)
+
+	if len(m.GetNearestPulseDataMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetNearestPulseDataMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ActiveMock.GetNearestPulseData.")
+			return
+		}
+
+		result := m.GetNearestPulseDataMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the ActiveMock.GetNearestPulseData")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.GetNearestPulseDataMock.mainExpectation != nil {
+
+		result := m.GetNearestPulseDataMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the ActiveMock.GetNearestPulseData")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.GetNearestPulseDataFunc == nil {
+		m.t.Fatalf("Unexpected call to ActiveMock.GetNearestPulseData.")
+		return
+	}
+
+	return m.GetNearestPulseDataFunc()
+}
+
+//GetNearestPulseDataMinimockCounter returns a count of ActiveMock.GetNearestPulseDataFunc invocations
+func (m *ActiveMock) GetNearestPulseDataMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetNearestPulseDataCounter)
+}
+
+//GetNearestPulseDataMinimockPreCounter returns the value of ActiveMock.GetNearestPulseData invocations
+func (m *ActiveMock) GetNearestPulseDataMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetNearestPulseDataPreCounter)
+}
+
+//GetNearestPulseDataFinished returns true if mock invocations count is ok
+func (m *ActiveMock) GetNearestPulseDataFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetNearestPulseDataMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetNearestPulseDataCounter) == uint64(len(m.GetNearestPulseDataMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetNearestPulseDataMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetNearestPulseDataCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetNearestPulseDataFunc != nil {
+		return atomic.LoadUint64(&m.GetNearestPulseDataCounter) > 0
+	}
+
+	return true
+}
+
 type mActiveMockGetOfflinePopulation struct {
 	mock              *ActiveMock
 	mainExpectation   *ActiveMockGetOfflinePopulationExpectation
@@ -2059,6 +2202,10 @@ func (m *ActiveMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ActiveMock.GetMisbehaviorRegistry")
 	}
 
+	if !m.GetNearestPulseDataFinished() {
+		m.t.Fatal("Expected call to ActiveMock.GetNearestPulseData")
+	}
+
 	if !m.GetOfflinePopulationFinished() {
 		m.t.Fatal("Expected call to ActiveMock.GetOfflinePopulation")
 	}
@@ -2132,6 +2279,10 @@ func (m *ActiveMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ActiveMock.GetMisbehaviorRegistry")
 	}
 
+	if !m.GetNearestPulseDataFinished() {
+		m.t.Fatal("Expected call to ActiveMock.GetNearestPulseData")
+	}
+
 	if !m.GetOfflinePopulationFinished() {
 		m.t.Fatal("Expected call to ActiveMock.GetOfflinePopulation")
 	}
@@ -2178,6 +2329,7 @@ func (m *ActiveMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetGlobulaStateHashFinished()
 		ok = ok && m.GetMandateRegistryFinished()
 		ok = ok && m.GetMisbehaviorRegistryFinished()
+		ok = ok && m.GetNearestPulseDataFinished()
 		ok = ok && m.GetOfflinePopulationFinished()
 		ok = ok && m.GetOnlinePopulationFinished()
 		ok = ok && m.GetProfileFactoryFinished()
@@ -2222,6 +2374,10 @@ func (m *ActiveMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetMisbehaviorRegistryFinished() {
 				m.t.Error("Expected call to ActiveMock.GetMisbehaviorRegistry")
+			}
+
+			if !m.GetNearestPulseDataFinished() {
+				m.t.Error("Expected call to ActiveMock.GetNearestPulseData")
 			}
 
 			if !m.GetOfflinePopulationFinished() {
@@ -2289,6 +2445,10 @@ func (m *ActiveMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetMisbehaviorRegistryFinished() {
+		return false
+	}
+
+	if !m.GetNearestPulseDataFinished() {
 		return false
 	}
 
