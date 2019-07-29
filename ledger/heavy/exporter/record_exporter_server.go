@@ -121,7 +121,7 @@ func (r *recordIterator) HasNext(ctx context.Context) bool {
 	}
 
 	if lastKnown < r.currentPosition+1 {
-		return r.checkNextPulse(ctx)
+		return r.read < r.needToRead && r.checkNextPulse(ctx)
 	}
 
 	return r.read < r.needToRead
