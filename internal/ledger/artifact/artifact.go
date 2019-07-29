@@ -259,8 +259,9 @@ func (m *Scope) setRecord(ctx context.Context, rec record.Virtual) (*insolar.ID,
 	matRec := record.Material{
 		Virtual: rec,
 		JetID:   insolar.ZeroJetID,
+		ID:      *id,
 	}
-	return id, m.RecordModifier.Set(ctx, *id, matRec)
+	return id, m.RecordModifier.Set(ctx, matRec)
 }
 
 func (m *Scope) registerChild(

@@ -65,7 +65,7 @@ type RecordCollectionAccessor interface {
 // RecordModifier provides methods for setting record-values to storage.
 type RecordModifier interface {
 	// Set saves new record-value in storage.
-	Set(ctx context.Context, id insolar.ID, rec record.Material) error
+	Set(ctx context.Context, rec record.Material) error
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordCleaner -o ./ -s _mock.go
@@ -96,17 +96,21 @@ func NewRecordMemory() *RecordMemory {
 }
 
 // Set saves new record-value in storage.
-func (m *RecordMemory) Set(ctx context.Context, id insolar.ID, rec record.Material) error {
+func (m *RecordMemory) Set(ctx context.Context, rec record.Material) error {
+	if rec.ID.IsEmpty() {
+		return errors.New("id is empty")
+	}
+
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	_, ok := m.recsStor[id]
+	_, ok := m.recsStor[rec.ID]
 	if ok {
 		return ErrOverride
 	}
 
-	m.recsStor[id] = rec
-	m.jetIndex.Add(id, rec.JetID)
+	m.recsStor[rec.ID] = rec
+	m.jetIndex.Add(rec.ID, rec.JetID)
 
 	stats.Record(ctx,
 		statRecordInMemoryAddedCount.M(1),
@@ -197,11 +201,14 @@ func NewRecordDB(db store.DB) *RecordDB {
 }
 
 // Set saves new record-value in storage.
-func (r *RecordDB) Set(ctx context.Context, id insolar.ID, rec record.Material) error {
+func (r *RecordDB) Set(ctx context.Context, rec record.Material) error {
+	if rec.ID.IsEmpty() {
+		return errors.New("id is empty")
+	}
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	return r.set(id, rec)
+	return r.set(rec)
 }
 
 // TruncateHead remove all records after lastPulse
@@ -240,8 +247,8 @@ func (r *RecordDB) ForID(ctx context.Context, id insolar.ID) (record.Material, e
 	return r.get(id)
 }
 
-func (r *RecordDB) set(id insolar.ID, rec record.Material) error {
-	key := recordKey(id)
+func (r *RecordDB) set(rec record.Material) error {
+	key := recordKey(rec.ID)
 
 	_, err := r.db.Get(key)
 	if err == nil {

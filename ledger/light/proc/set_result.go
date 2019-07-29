@@ -168,8 +168,12 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		// Save request record to storage.
 		{
 			virtual := record.Wrap(&p.result)
-			material := record.Material{Virtual: virtual, JetID: p.jetID}
-			err := p.dep.records.Set(ctx, resultID, material)
+			material := record.Material{
+				Virtual: virtual,
+				ID:      resultID,
+				JetID:   p.jetID,
+			}
+			err := p.dep.records.Set(ctx, material)
 			if err != nil {
 				return errors.Wrap(err, "failed to save a result record")
 			}
@@ -184,8 +188,12 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 			})
 			hash := record.HashVirtual(p.dep.pcs.ReferenceHasher(), virtual)
 			id := *insolar.NewID(resultID.Pulse(), hash)
-			material := record.Material{Virtual: virtual, JetID: p.jetID}
-			err := p.dep.records.Set(ctx, id, material)
+			material := record.Material{
+				Virtual: virtual,
+				ID:      id,
+				JetID:   p.jetID,
+			}
+			err := p.dep.records.Set(ctx, material)
 			if err != nil {
 				return errors.Wrap(err, "failed to save filament record")
 			}
@@ -200,9 +208,10 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 				id := *insolar.NewID(resultID.Pulse(), hash)
 				material := record.Material{
 					Virtual: virtual,
+					ID:      id,
 					JetID:   p.jetID,
 				}
-				err := p.dep.records.Set(ctx, id, material)
+				err := p.dep.records.Set(ctx, material)
 				if err != nil {
 					return errors.Wrap(err, "failed to save filament record")
 				}

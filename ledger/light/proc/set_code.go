@@ -80,9 +80,10 @@ func (p *SetCode) Proceed(ctx context.Context) error {
 	material := record.Material{
 		Virtual: p.record,
 		JetID:   p.jetID,
+		ID:      p.recordID,
 	}
 
-	err = p.dep.records.Set(ctx, p.recordID, material)
+	err = p.dep.records.Set(ctx, material)
 	if err == object.ErrOverride {
 		inslogger.FromContext(ctx).Errorf("can't save record into storage: %s", err)
 		// Since there is no deduplication yet it's quite possible that there will be

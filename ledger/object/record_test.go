@@ -75,10 +75,10 @@ func TestRecordStorage_TruncateHead(t *testing.T) {
 		pulse := startPulseNumber + insolar.PulseNumber(idx)
 		ids[idx] = *insolar.NewID(pulse, []byte(testutils.RandomString()))
 
-		recordStore.Set(ctx, ids[idx], record.Material{JetID: *insolar.NewJetID(uint8(idx), nil)})
+		recordStore.Set(ctx, record.Material{JetID: *insolar.NewJetID(uint8(idx), nil), ID: ids[idx]})
 
 		for i := 0; i < 5; i++ {
-			recordStore.Set(ctx, ids[idx], record.Material{JetID: *insolar.NewJetID(uint8(i), nil)})
+			recordStore.Set(ctx, record.Material{JetID: *insolar.NewJetID(uint8(i), nil), ID: ids[idx]})
 		}
 
 		require.NoError(t, err)
@@ -149,13 +149,14 @@ func TestRecordStorage_Set(t *testing.T) {
 
 	id := gen.ID()
 	rec := getMaterialRecord()
+	rec.ID = id
 
 	t.Run("saves correct record-value", func(t *testing.T) {
 		t.Parallel()
 
 		recordStorage := NewRecordMemory()
 
-		err := recordStorage.Set(ctx, id, rec)
+		err := recordStorage.Set(ctx, rec)
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(recordStorage.recsStor))
 		assert.Equal(t, rec, recordStorage.recsStor[id])
@@ -166,10 +167,10 @@ func TestRecordStorage_Set(t *testing.T) {
 
 		recordStorage := NewRecordMemory()
 
-		err := recordStorage.Set(ctx, id, rec)
+		err := recordStorage.Set(ctx, rec)
 		require.NoError(t, err)
 
-		err = recordStorage.Set(ctx, id, rec)
+		err = recordStorage.Set(ctx, rec)
 		require.Error(t, err)
 		assert.Equal(t, ErrOverride, err)
 	})
@@ -194,14 +195,14 @@ func TestRecordStorage_Delete(t *testing.T) {
 		for i := int32(0); i < countFirstPulse; i++ {
 			randID := gen.ID()
 			id := insolar.NewID(firstPulse, randID.Hash())
-			err := recordStorage.Set(ctx, *id, record.Material{})
+			err := recordStorage.Set(ctx, record.Material{ID: *id})
 			require.NoError(t, err)
 		}
 
 		for i := int32(0); i < countSecondPulse; i++ {
 			randID := gen.ID()
 			id := insolar.NewID(secondPulse, randID.Hash())
-			err := recordStorage.Set(ctx, *id, record.Material{})
+			err := recordStorage.Set(ctx, record.Material{ID: *id})
 			require.NoError(t, err)
 		}
 		assert.Equal(t, countFirstPulse+countSecondPulse, int32(len(recordStorage.recsStor)))
@@ -228,10 +229,10 @@ func TestRecordStorage_ForPulse(t *testing.T) {
 		h := sha256.New()
 		hash := record.HashVirtual(h, rec.Virtual)
 
-		id := insolar.NewID(searchPN, hash)
+		rec.ID = *insolar.NewID(searchPN, hash)
 
-		searchRecs[*id] = struct{}{}
-		err := recordMemory.Set(ctx, *id, rec)
+		searchRecs[rec.ID] = struct{}{}
+		err := recordMemory.Set(ctx, rec)
 		require.NoError(t, err)
 	}
 
@@ -239,8 +240,8 @@ func TestRecordStorage_ForPulse(t *testing.T) {
 		rec := getMaterialRecord()
 
 		randID := gen.ID()
-		rID := insolar.NewID(gen.PulseNumber(), randID.Hash())
-		err := recordMemory.Set(ctx, *rID, rec)
+		rec.ID = *insolar.NewID(gen.PulseNumber(), randID.Hash())
+		err := recordMemory.Set(ctx, rec)
 		require.NoError(t, err)
 	}
 

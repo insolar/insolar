@@ -707,9 +707,13 @@ func (b *filamentBuilder) append(pn insolar.PulseNumber, rec record.Record, pers
 		virtual := record.Wrap(rec)
 		hash := record.HashVirtual(b.pcs.ReferenceHasher(), virtual)
 		id := *insolar.NewID(pn, hash)
-		material := record.Material{Virtual: virtual, JetID: insolar.ZeroJetID}
+		material := record.Material{
+			Virtual: virtual,
+			ID:      id,
+			JetID:   insolar.ZeroJetID,
+		}
 		if persist {
-			err := b.records.Set(b.ctx, id, material)
+			err := b.records.Set(b.ctx, material)
 			if err != nil {
 				panic(err)
 			}
@@ -727,9 +731,13 @@ func (b *filamentBuilder) append(pn insolar.PulseNumber, rec record.Record, pers
 		virtual := record.Wrap(&rec)
 		hash := record.HashVirtual(b.pcs.ReferenceHasher(), virtual)
 		id := *insolar.NewID(pn, hash)
-		material := record.Material{Virtual: virtual, JetID: insolar.ZeroJetID}
+		material := record.Material{
+			Virtual: virtual,
+			ID:      id,
+			JetID:   insolar.ZeroJetID,
+		}
 		if persist {
-			err := b.records.Set(b.ctx, id, material)
+			err := b.records.Set(b.ctx, material)
 			if err != nil {
 				panic(err)
 			}

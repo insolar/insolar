@@ -114,13 +114,13 @@ func TestSetResult_Proceed(t *testing.T) {
 		return nil
 	}
 	records := object.NewRecordModifierMock(mc)
-	records.SetFunc = func(_ context.Context, id insolar.ID, rec record.Material) (r error) {
+	records.SetFunc = func(_ context.Context, rec record.Material) (r error) {
 		switch r := record.Unwrap(&rec.Virtual).(type) {
 		case *record.Result:
-			require.Equal(t, resultID, id)
+			require.Equal(t, resultID, rec.ID)
 			require.Equal(t, resultRecord, r)
 		case *record.PendingFilament:
-			require.Equal(t, expectedFilamentID, id)
+			require.Equal(t, expectedFilamentID, rec.ID)
 			require.Equal(t, &expectedFilament, record.Unwrap(&rec.Virtual))
 		}
 

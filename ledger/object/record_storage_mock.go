@@ -26,7 +26,7 @@ type RecordStorageMock struct {
 	ForIDPreCounter uint64
 	ForIDMock       mRecordStorageMockForID
 
-	SetFunc       func(p context.Context, p1 insolar.ID, p2 record.Material) (r error)
+	SetFunc       func(p context.Context, p1 record.Material) (r error)
 	SetCounter    uint64
 	SetPreCounter uint64
 	SetMock       mRecordStorageMockSet
@@ -210,8 +210,7 @@ type RecordStorageMockSetExpectation struct {
 
 type RecordStorageMockSetInput struct {
 	p  context.Context
-	p1 insolar.ID
-	p2 record.Material
+	p1 record.Material
 }
 
 type RecordStorageMockSetResult struct {
@@ -219,14 +218,14 @@ type RecordStorageMockSetResult struct {
 }
 
 //Expect specifies that invocation of RecordStorage.Set is expected from 1 to Infinity times
-func (m *mRecordStorageMockSet) Expect(p context.Context, p1 insolar.ID, p2 record.Material) *mRecordStorageMockSet {
+func (m *mRecordStorageMockSet) Expect(p context.Context, p1 record.Material) *mRecordStorageMockSet {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &RecordStorageMockSetExpectation{}
 	}
-	m.mainExpectation.input = &RecordStorageMockSetInput{p, p1, p2}
+	m.mainExpectation.input = &RecordStorageMockSetInput{p, p1}
 	return m
 }
 
@@ -243,12 +242,12 @@ func (m *mRecordStorageMockSet) Return(r error) *RecordStorageMock {
 }
 
 //ExpectOnce specifies that invocation of RecordStorage.Set is expected once
-func (m *mRecordStorageMockSet) ExpectOnce(p context.Context, p1 insolar.ID, p2 record.Material) *RecordStorageMockSetExpectation {
+func (m *mRecordStorageMockSet) ExpectOnce(p context.Context, p1 record.Material) *RecordStorageMockSetExpectation {
 	m.mock.SetFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &RecordStorageMockSetExpectation{}
-	expectation.input = &RecordStorageMockSetInput{p, p1, p2}
+	expectation.input = &RecordStorageMockSetInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -258,7 +257,7 @@ func (e *RecordStorageMockSetExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of RecordStorage.Set method
-func (m *mRecordStorageMockSet) Set(f func(p context.Context, p1 insolar.ID, p2 record.Material) (r error)) *RecordStorageMock {
+func (m *mRecordStorageMockSet) Set(f func(p context.Context, p1 record.Material) (r error)) *RecordStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -267,18 +266,18 @@ func (m *mRecordStorageMockSet) Set(f func(p context.Context, p1 insolar.ID, p2 
 }
 
 //Set implements github.com/insolar/insolar/ledger/object.RecordStorage interface
-func (m *RecordStorageMock) Set(p context.Context, p1 insolar.ID, p2 record.Material) (r error) {
+func (m *RecordStorageMock) Set(p context.Context, p1 record.Material) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
 
 	if len(m.SetMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.SetMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to RecordStorageMock.Set. %v %v %v", p, p1, p2)
+			m.t.Fatalf("Unexpected call to RecordStorageMock.Set. %v %v", p, p1)
 			return
 		}
 
 		input := m.SetMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, RecordStorageMockSetInput{p, p1, p2}, "RecordStorage.Set got unexpected parameters")
+		testify_assert.Equal(m.t, *input, RecordStorageMockSetInput{p, p1}, "RecordStorage.Set got unexpected parameters")
 
 		result := m.SetMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -295,7 +294,7 @@ func (m *RecordStorageMock) Set(p context.Context, p1 insolar.ID, p2 record.Mate
 
 		input := m.SetMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, RecordStorageMockSetInput{p, p1, p2}, "RecordStorage.Set got unexpected parameters")
+			testify_assert.Equal(m.t, *input, RecordStorageMockSetInput{p, p1}, "RecordStorage.Set got unexpected parameters")
 		}
 
 		result := m.SetMock.mainExpectation.result
@@ -309,11 +308,11 @@ func (m *RecordStorageMock) Set(p context.Context, p1 insolar.ID, p2 record.Mate
 	}
 
 	if m.SetFunc == nil {
-		m.t.Fatalf("Unexpected call to RecordStorageMock.Set. %v %v %v", p, p1, p2)
+		m.t.Fatalf("Unexpected call to RecordStorageMock.Set. %v %v", p, p1)
 		return
 	}
 
-	return m.SetFunc(p, p1, p2)
+	return m.SetFunc(p, p1)
 }
 
 //SetMinimockCounter returns a count of RecordStorageMock.SetFunc invocations

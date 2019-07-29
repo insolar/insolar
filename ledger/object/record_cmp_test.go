@@ -27,7 +27,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -38,16 +37,11 @@ import (
 func TestRecord_Components(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	type tempRecord struct {
-		id  insolar.ID
-		rec record.Material
-	}
+	var records []record.Material
 
-	var records []tempRecord
-
-	f := fuzz.New().Funcs(func(t *tempRecord, c fuzz.Continue) {
-		t.id = gen.ID()
-		t.rec = getMaterialRecord()
+	f := fuzz.New().Funcs(func(t *record.Material, c fuzz.Continue) {
+		*t = getMaterialRecord()
+		t.ID = gen.ID()
 	})
 	f.NilChance(0)
 	f.NumElements(10, 20)
@@ -67,20 +61,20 @@ func TestRecord_Components(t *testing.T) {
 		dbStorage := object.NewRecordDB(db)
 
 		for _, r := range records {
-			memErr := memStorage.Set(ctx, r.id, r.rec)
-			dbErr := dbStorage.Set(ctx, r.id, r.rec)
+			memErr := memStorage.Set(ctx, r)
+			dbErr := dbStorage.Set(ctx, r)
 			require.NoError(t, memErr)
 			require.NoError(t, dbErr)
 		}
 
 		for _, r := range records {
-			memRecord, memErr := memStorage.ForID(ctx, r.id)
-			dbRecord, dbErr := dbStorage.ForID(ctx, r.id)
+			memRecord, memErr := memStorage.ForID(ctx, r.ID)
+			dbRecord, dbErr := dbStorage.ForID(ctx, r.ID)
 			require.NoError(t, memErr)
 			require.NoError(t, dbErr)
 
-			assert.Equal(t, r.rec, memRecord)
-			assert.Equal(t, r.rec, dbRecord)
+			assert.Equal(t, r, memRecord)
+			assert.Equal(t, r, dbRecord)
 		}
 	})
 
@@ -119,15 +113,15 @@ func TestRecord_Components(t *testing.T) {
 		dbStorage := object.NewRecordDB(db1)
 
 		for _, r := range records {
-			memErr := memStorage.Set(ctx, r.id, r.rec)
-			dbErr := dbStorage.Set(ctx, r.id, r.rec)
+			memErr := memStorage.Set(ctx, r)
+			dbErr := dbStorage.Set(ctx, r)
 			require.NoError(t, memErr)
 			require.NoError(t, dbErr)
 		}
 
 		for _, r := range records {
-			memErr := memStorage.Set(ctx, r.id, r.rec)
-			dbErr := dbStorage.Set(ctx, r.id, r.rec)
+			memErr := memStorage.Set(ctx, r)
+			dbErr := dbStorage.Set(ctx, r)
 			require.Error(t, memErr)
 			require.Error(t, dbErr)
 			assert.Equal(t, object.ErrOverride, memErr)
