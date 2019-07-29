@@ -45,7 +45,7 @@ type SetRequest struct {
 		sender      bus.Sender
 		locker      object.IndexLocker
 		indexes     object.IndexStorage
-		records     object.RecordModifier
+		records     object.AtomicRecordModifier
 		pcs         insolar.PlatformCryptographyScheme
 		checker     executor.RequestChecker
 		coordinator jet.Coordinator
@@ -72,7 +72,7 @@ func (p *SetRequest) Dep(
 	s bus.Sender,
 	l object.IndexLocker,
 	i object.IndexStorage,
-	r object.RecordModifier,
+	r object.AtomicRecordModifier,
 	pcs insolar.PlatformCryptographyScheme,
 	rc executor.RequestChecker,
 	c jet.Coordinator,
@@ -228,7 +228,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 			ID:      p.requestID,
 			JetID:   p.jetID,
 		}
-		err := p.dep.records.Set(ctx, material)
+		err := p.dep.records.SetAtomic(ctx, material)
 		if err != nil {
 			return errors.Wrap(err, "failed to save request record")
 		}
@@ -248,7 +248,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 			ID:      id,
 			JetID:   p.jetID,
 		}
-		err = p.dep.records.Set(ctx, material)
+		err = p.dep.records.SetAtomic(ctx, material)
 		if err != nil {
 			return errors.Wrap(err, "failed to save filament record")
 		}

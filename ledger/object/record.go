@@ -44,6 +44,14 @@ type RecordStorage interface {
 	RecordModifier
 }
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.AtomicRecordStorage -o ./ -s _mock.go
+
+// AtomicRecordStorage is an union of RecordAccessor and RecordModifier
+type AtomicRecordStorage interface {
+	RecordAccessor
+	AtomicRecordModifier
+}
+
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordAccessor -o ./ -s _mock.go
 
 // RecordAccessor provides info about record-values from storage.
@@ -66,6 +74,14 @@ type RecordCollectionAccessor interface {
 type RecordModifier interface {
 	// Set saves new record-value in storage.
 	Set(ctx context.Context, rec record.Material) error
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.AtomicRecordModifier -o ./ -s _mock.go
+
+// AtomicRecordModifier allows to modify multiple record atomically.
+type AtomicRecordModifier interface {
+	// SetAtomic atomically stores records to storage. Guarantees to either store all records or none.
+	SetAtomic(ctx context.Context, records ...record.Material) error
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordCleaner -o ./ -s _mock.go
@@ -95,27 +111,29 @@ func NewRecordMemory() *RecordMemory {
 	}
 }
 
-// Set saves new record-value in storage.
-func (m *RecordMemory) Set(ctx context.Context, rec record.Material) error {
-	if rec.ID.IsEmpty() {
-		return errors.New("id is empty")
-	}
-
+// SetAtomic atomically stores records to storage. Guarantees to either store all records or none.
+func (m *RecordMemory) SetAtomic(ctx context.Context, recs ...record.Material) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	_, ok := m.recsStor[rec.ID]
-	if ok {
-		return ErrOverride
+	for _, r := range recs {
+		if r.ID.IsEmpty() {
+			return errors.New("id is empty")
+		}
+		_, ok := m.recsStor[r.ID]
+		if ok {
+			return ErrOverride
+		}
 	}
 
-	m.recsStor[rec.ID] = rec
-	m.jetIndex.Add(rec.ID, rec.JetID)
+	for _, r := range recs {
+		m.recsStor[r.ID] = r
+		m.jetIndex.Add(r.ID, r.JetID)
+	}
 
 	stats.Record(ctx,
-		statRecordInMemoryAddedCount.M(1),
+		statRecordInMemoryAddedCount.M(int64(len(recs))),
 	)
-
 	return nil
 }
 

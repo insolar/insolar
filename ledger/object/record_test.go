@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/record"
@@ -156,7 +157,7 @@ func TestRecordStorage_Set(t *testing.T) {
 
 		recordStorage := NewRecordMemory()
 
-		err := recordStorage.Set(ctx, rec)
+		err := recordStorage.SetAtomic(ctx, rec)
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(recordStorage.recsStor))
 		assert.Equal(t, rec, recordStorage.recsStor[id])
@@ -167,12 +168,51 @@ func TestRecordStorage_Set(t *testing.T) {
 
 		recordStorage := NewRecordMemory()
 
-		err := recordStorage.Set(ctx, rec)
+		err := recordStorage.SetAtomic(ctx, rec)
 		require.NoError(t, err)
 
-		err = recordStorage.Set(ctx, rec)
+		err = recordStorage.SetAtomic(ctx, rec)
 		require.Error(t, err)
 		assert.Equal(t, ErrOverride, err)
+	})
+
+	t.Run("saves multiple records", func(t *testing.T) {
+		t.Parallel()
+
+		recordStorage := NewRecordMemory()
+		var recs []record.Material
+		fuzz.New().NumElements(10, 20).Funcs(func(r *record.Material, c fuzz.Continue) {
+			r.ID = gen.ID()
+		}).Fuzz(&recs)
+		err := recordStorage.SetAtomic(ctx, recs...)
+		require.NoError(t, err)
+
+		for _, r := range recs {
+			rec, err = recordStorage.ForID(ctx, r.ID)
+			require.NoError(t, err)
+			require.Equal(t, rec, r)
+		}
+	})
+
+	t.Run("override on single record saves none", func(t *testing.T) {
+		t.Parallel()
+
+		recordStorage := NewRecordMemory()
+		var recs []record.Material
+		fuzz.New().NumElements(10, 20).Funcs(func(r *record.Material, c fuzz.Continue) {
+			r.ID = gen.ID()
+		}).Fuzz(&recs)
+
+		err := recordStorage.SetAtomic(ctx, recs[0])
+		require.NoError(t, err)
+
+		err = recordStorage.SetAtomic(ctx, recs...)
+		require.Equal(t, ErrOverride, err)
+
+		for _, r := range recs[1:] {
+			rec, err = recordStorage.ForID(ctx, r.ID)
+			require.Equal(t, ErrNotFound, err)
+		}
 	})
 }
 
@@ -195,14 +235,14 @@ func TestRecordStorage_Delete(t *testing.T) {
 		for i := int32(0); i < countFirstPulse; i++ {
 			randID := gen.ID()
 			id := insolar.NewID(firstPulse, randID.Hash())
-			err := recordStorage.Set(ctx, record.Material{ID: *id})
+			err := recordStorage.SetAtomic(ctx, record.Material{ID: *id})
 			require.NoError(t, err)
 		}
 
 		for i := int32(0); i < countSecondPulse; i++ {
 			randID := gen.ID()
 			id := insolar.NewID(secondPulse, randID.Hash())
-			err := recordStorage.Set(ctx, record.Material{ID: *id})
+			err := recordStorage.SetAtomic(ctx, record.Material{ID: *id})
 			require.NoError(t, err)
 		}
 		assert.Equal(t, countFirstPulse+countSecondPulse, int32(len(recordStorage.recsStor)))
@@ -232,7 +272,7 @@ func TestRecordStorage_ForPulse(t *testing.T) {
 		rec.ID = *insolar.NewID(searchPN, hash)
 
 		searchRecs[rec.ID] = struct{}{}
-		err := recordMemory.Set(ctx, rec)
+		err := recordMemory.SetAtomic(ctx, rec)
 		require.NoError(t, err)
 	}
 
@@ -241,7 +281,7 @@ func TestRecordStorage_ForPulse(t *testing.T) {
 
 		randID := gen.ID()
 		rec.ID = *insolar.NewID(gen.PulseNumber(), randID.Hash())
-		err := recordMemory.Set(ctx, rec)
+		err := recordMemory.SetAtomic(ctx, rec)
 		require.NoError(t, err)
 	}
 

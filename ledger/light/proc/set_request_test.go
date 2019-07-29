@@ -54,7 +54,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 		sender        *bus.SenderMock
 		filaments     *executor.FilamentCalculatorMock
 		idxStorage    *object.IndexStorageMock
-		records       *object.RecordModifierMock
+		records       *object.AtomicRecordModifierMock
 		checker       *executor.RequestCheckerMock
 		coordinator   *jet.CoordinatorMock
 	)
@@ -64,7 +64,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 		sender = bus.NewSenderMock(mc)
 		filaments = executor.NewFilamentCalculatorMock(mc)
 		idxStorage = object.NewIndexStorageMock(mc)
-		records = object.NewRecordModifierMock(mc)
+		records = object.NewAtomicRecordModifierMock(mc)
 		checker = executor.NewRequestCheckerMock(mc)
 		coordinator = jet.NewCoordinatorMock(t)
 	}
@@ -133,7 +133,9 @@ func TestSetRequest_Proceed(t *testing.T) {
 
 			return &virtualRef, nil
 		}
-		records.SetFunc = func(_ context.Context, rec record.Material) (r error) {
+		records.SetAtomicFunc = func(_ context.Context, recs ...record.Material) (r error) {
+			require.Equal(t, len(recs), 1)
+			rec := recs[0]
 			switch record.Unwrap(&rec.Virtual).(type) {
 			case *record.IncomingRequest:
 				require.Equal(t, requestID, rec.ID)

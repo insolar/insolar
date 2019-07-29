@@ -43,7 +43,7 @@ type SetResult struct {
 		filament executor.FilamentCalculator
 		sender   bus.Sender
 		locker   object.IndexLocker
-		records  object.RecordModifier
+		records  object.AtomicRecordModifier
 		indexes  object.IndexStorage
 		pcs      insolar.PlatformCryptographyScheme
 	}
@@ -68,7 +68,7 @@ func (p *SetResult) Dep(
 	s bus.Sender,
 	l object.IndexLocker,
 	f executor.FilamentCalculator,
-	r object.RecordModifier,
+	r object.AtomicRecordModifier,
 	i object.IndexStorage,
 	pcs insolar.PlatformCryptographyScheme,
 ) {
@@ -173,7 +173,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 				ID:      resultID,
 				JetID:   p.jetID,
 			}
-			err := p.dep.records.Set(ctx, material)
+			err := p.dep.records.SetAtomic(ctx, material)
 			if err != nil {
 				return errors.Wrap(err, "failed to save a result record")
 			}
@@ -193,7 +193,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 				ID:      id,
 				JetID:   p.jetID,
 			}
-			err := p.dep.records.Set(ctx, material)
+			err := p.dep.records.SetAtomic(ctx, material)
 			if err != nil {
 				return errors.Wrap(err, "failed to save filament record")
 			}
@@ -211,7 +211,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 					ID:      id,
 					JetID:   p.jetID,
 				}
-				err := p.dep.records.Set(ctx, material)
+				err := p.dep.records.SetAtomic(ctx, material)
 				if err != nil {
 					return errors.Wrap(err, "failed to save filament record")
 				}

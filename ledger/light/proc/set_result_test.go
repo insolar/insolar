@@ -113,8 +113,11 @@ func TestSetResult_Proceed(t *testing.T) {
 		require.Equal(t, expectedIndex, idx)
 		return nil
 	}
-	records := object.NewRecordModifierMock(mc)
-	records.SetFunc = func(_ context.Context, rec record.Material) (r error) {
+	records := object.NewAtomicRecordModifierMock(mc)
+	records.SetAtomicFunc = func(_ context.Context, recs ...record.Material) (r error) {
+		require.Equal(t, 1, len(recs))
+		rec := recs[0]
+
 		switch r := record.Unwrap(&rec.Virtual).(type) {
 		case *record.Result:
 			require.Equal(t, resultID, rec.ID)
@@ -165,7 +168,7 @@ func TestSetResult_Proceed_ResultDuplicated(t *testing.T) {
 
 	writeAccessor := hot.NewWriteAccessorMock(mc)
 	writeAccessor.BeginMock.Return(func() {}, nil)
-	records := object.NewRecordModifierMock(mc)
+	records := object.NewAtomicRecordModifierMock(mc)
 	indexes := object.NewIndexStorageMock(mc)
 	indexes.ForIDMock.Return(record.Index{}, nil)
 	pcs := testutils.NewPlatformCryptographyScheme()

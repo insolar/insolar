@@ -123,7 +123,7 @@ func TestSendRequests_Proceed(t *testing.T) {
 }
 
 type filamentBuilder struct {
-	records   object.RecordModifier
+	records   object.AtomicRecordModifier
 	currentID insolar.ID
 	ctx       context.Context
 	pcs       insolar.PlatformCryptographyScheme
@@ -132,7 +132,7 @@ type filamentBuilder struct {
 func newFilamentBuilder(
 	ctx context.Context,
 	pcs insolar.PlatformCryptographyScheme,
-	records object.RecordModifier,
+	records object.AtomicRecordModifier,
 ) *filamentBuilder {
 	return &filamentBuilder{
 		ctx:     ctx,
@@ -161,7 +161,7 @@ func (b *filamentBuilder) append(pn insolar.PulseNumber, rec record.Record, pers
 			JetID:   insolar.ZeroJetID,
 		}
 		if persist {
-			err := b.records.Set(b.ctx, material)
+			err := b.records.SetAtomic(b.ctx, material)
 			if err != nil {
 				panic(err)
 			}
@@ -185,7 +185,7 @@ func (b *filamentBuilder) append(pn insolar.PulseNumber, rec record.Record, pers
 			JetID:   insolar.ZeroJetID,
 		}
 		if persist {
-			err := b.records.Set(b.ctx, material)
+			err := b.records.SetAtomic(b.ctx, material)
 			if err != nil {
 				panic(err)
 			}

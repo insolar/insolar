@@ -51,8 +51,8 @@ type MessageHandler struct {
 
 	IndexLocker object.IndexLocker `inject:""`
 
-	Records object.RecordStorage `inject:""`
-	Nodes   node.Accessor        `inject:""`
+	Records object.AtomicRecordStorage `inject:""`
+	Nodes   node.Accessor              `inject:""`
 
 	HotDataWaiter hot.JetWaiter   `inject:""`
 	JetReleaser   hot.JetReleaser `inject:""`
