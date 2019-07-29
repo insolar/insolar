@@ -98,11 +98,14 @@ func (p *FetchJet) Proceed(ctx context.Context) error {
 		_, done := p.dep.sender.SendTarget(ctx, msg, *worker)
 		done()
 
-		// Send calculated to virtual node.
+		// Send calculated jet to virtual node.
 		msg, err = payload.NewMessage(&payload.UpdateJet{
 			Pulse: p.pulse,
 			JetID: insolar.JetID(*jetID),
 		})
+		if err != nil {
+			return errors.Wrap(err, "failed to create jet message")
+		}
 		_, done = p.dep.sender.SendTarget(ctx, msg, p.message.Sender)
 		done()
 		return ErrNotExecutor
