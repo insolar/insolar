@@ -159,6 +159,11 @@ func (m *Scope) activateObject(
 	parent insolar.Reference,
 	memory []byte,
 ) error {
+	_, err := m.IndexAccessor.ForID(ctx, m.PulseNumber, *parent.Record())
+	if err != nil {
+		return errors.Wrapf(err, "not found parent index for activated object: %v", parent.String())
+	}
+
 	stateRecord := record.Activate{
 		Domain:      domain,
 		Request:     obj,
@@ -166,7 +171,7 @@ func (m *Scope) activateObject(
 		IsPrototype: isPrototype,
 		Parent:      parent,
 	}
-	err := m.updateStateObject(ctx, obj, &stateRecord, memory)
+	err = m.updateStateObject(ctx, obj, &stateRecord, memory)
 	if err != nil {
 		return errors.Wrap(err, "fail to store activation state")
 	}
