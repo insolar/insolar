@@ -22,7 +22,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 type status string
@@ -78,7 +78,7 @@ func calculateUnHoldPulse(currentPulse insolar.PulseNumber) insolar.PulseNumber 
 	return currentPulse + offsetDepositPulse
 }
 
-// MapMarshal gets deposit information.
+// Itself gets deposit information.
 func (d *Deposit) Itself() (interface{}, error) {
 	return *d, nil
 }

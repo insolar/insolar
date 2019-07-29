@@ -53,6 +53,9 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
 	"sync"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
@@ -83,7 +86,8 @@ type PrepRealm struct {
 	// queueToFull       chan packetrecorder.PostponedPacket
 	// phase2ExtLimit    uint8
 
-	limiters sync.Map
+	limiters           sync.Map
+	lastCloudStateHash cryptkit.DigestHolder
 
 	/* Other fields - need mutex */
 	// 	censusBuilder census.Builder
@@ -133,35 +137,43 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		return fmt.Errorf("packet type (%v) limit exceeded: from=%v", pt, from)
 	}
 
+	var pd PacketDispatcher
+
+	if int(pt) < len(p.packetDispatchers) {
+		pd = p.packetDispatchers[pt]
+	}
+
 	if verifyFlags&(packetrecorder.SkipVerify|packetrecorder.SuccesfullyVerified) == 0 {
 		strict := verifyFlags&packetrecorder.RequireStrictVerify != 0
-		err := p.coreRealm.VerifyPacketAuthenticity(packet.GetPacketSignature(), from, strict)
 
-		if err != nil {
-			return err
+		if pd == nil || !pd.HasCustomVerifyForHost(from, strict) {
+			sourceID := packet.GetSourceID()
+
+			err := p.coreRealm.VerifyPacketAuthenticity(packet.GetPacketSignature(), sourceID, from, strict)
+
+			if err != nil {
+				return err
+			}
+			verifyFlags |= packetrecorder.SuccesfullyVerified
 		}
-		verifyFlags |= packetrecorder.SuccesfullyVerified
 	}
 
 	if !limiter.SetPacketReceived(pt) {
 		return fmt.Errorf("packet type (%v) limit exceeded: from=%v", pt, from)
 	}
 
-	if int(pt) < len(p.packetDispatchers) {
-		pd := p.packetDispatchers[pt]
-		if pd != nil {
-			// this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
-			var err error
-			packet, err = LazyPacketParse(packet)
-			if err != nil {
-				return err
-			}
+	if pd != nil {
+		// this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
+		var err error
+		packet, err = LazyPacketParse(packet)
+		if err != nil {
+			return err
+		}
 
-			err = pd.DispatchHostPacket(ctx, packet, from, verifyFlags)
-			if err != nil {
-				// TODO an error to ignore postpone?
-				return err
-			}
+		err = pd.DispatchHostPacket(ctx, packet, from, verifyFlags)
+		if err != nil {
+			// TODO an error to ignore postpone?
+			return err
 		}
 	}
 
@@ -212,7 +224,11 @@ func (p *PrepRealm) GetOriginalPulse() proofs.OriginalPulsarPacket {
 	return p.coreRealm.originalPulse
 }
 
-func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bool) error {
+func (p *PrepRealm) GetMandateRegistry() census.MandateRegistry {
+	return p.initialCensus.GetMandateRegistry()
+}
+
+func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bool, from endpoints.Inbound) error {
 	pd := pp.GetPulseData()
 
 	p.Lock()
@@ -235,10 +251,27 @@ func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bo
 		// TODO blame pulsar and/or node
 		return fmt.Errorf("invalid pulse data")
 	}
-	epn := p.GetExpectedPulseNumber()
-	if !epn.IsUnknown() && epn != pd.PulseNumber {
-		return fmt.Errorf("unexpected pulse number: expected=%v, received=%v", epn, pd.PulseNumber)
+
+	epn := pulse.Unknown
+	if p.initialCensus.GetCensusState() == census.PrimingCensus || p.initialCensus.IsActive() {
+		epn = p.initialCensus.GetExpectedPulseNumber()
+	} else {
+		epn = p.initialCensus.GetPulseNumber()
 	}
+
+	//	sourceID := packet.GetSourceID()
+	localID := p.self.GetNodeID()
+
+	pn := pd.PulseNumber
+	if !epn.IsUnknown() && epn != pn {
+		return errors.NewPulseRoundMismatchError(pn,
+			fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v, local=%d, from=%v",
+				epn, pn, localID, from))
+	}
+
+	//if p.IsJoiner() && p.lastCloudStateHash {
+	//
+	//}
 
 	p.originalPulse = pp.GetPulseDataEvidence()
 	p.pulseData = pd
@@ -248,18 +281,15 @@ func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bo
 	return nil
 }
 
-func (p *PrepRealm) GetExpectedPulseNumber() pulse.Number {
-	return p.initialCensus.GetExpectedPulseNumber()
-}
+func (p *PrepRealm) ApplyCloudIntro(lastCloudStateHash cryptkit.DigestHolder, populationCount int, from endpoints.Inbound) {
 
-func (p *PrepRealm) ApplyPopulationHint(populationCount int, from endpoints.Inbound) error {
-	if populationCount == 0 {
-		return fmt.Errorf("packet from joiner was not expected: from=%v", from)
-	}
+	p.Lock()
+	defer p.Unlock()
 
 	popCount := member.AsIndex(populationCount)
 	if p.expectedPopulationSize < popCount {
 		p.expectedPopulationSize = popCount
 	}
-	return nil
+
+	p.lastCloudStateHash = lastCloudStateHash
 }

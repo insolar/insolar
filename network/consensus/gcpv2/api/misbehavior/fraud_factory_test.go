@@ -76,7 +76,7 @@ func TestFraudOf(t *testing.T) {
 	require.Equal(t, &fe, FraudOf(&fe))
 
 	err := errors.New("test")
-	require.True(t, FraudOf(err) == nil)
+	require.Nil(t, FraudOf(err))
 }
 
 func TestFraudIsUnknown(t *testing.T) {
@@ -129,19 +129,19 @@ func TestFraudType(t *testing.T) {
 
 func TestFraudError(t *testing.T) {
 	fe := &FraudError{}
-	require.True(t, fe.Error() != "")
+	require.NotEmpty(t, fe.Error())
 
 	bn := profiles.NewBaseNodeMock(t)
 	fe.violatorNode = bn
-	require.True(t, fe.Error() != "")
+	require.NotEmpty(t, fe.Error())
 
 	fe.captureMark = 1
-	require.True(t, fe.Error() != "")
+	require.NotEmpty(t, fe.Error())
 }
 
 func TestNewFraudFactory(t *testing.T) {
 	ff := NewFraudFactory(reportFunc)
-	require.True(t, ff.capture != nil)
+	require.NotNil(t, ff.capture)
 }
 
 func TestNewFraud(t *testing.T) {
@@ -165,12 +165,12 @@ func TestNewFraud(t *testing.T) {
 
 	require.Equal(t, details[1], be.details[1])
 
-	require.True(t, be.captureMark != nil)
+	require.NotNil(t, be.captureMark)
 
 	bf = NewFraudFactory(nil)
 	be = bf.NewFraud(fraudType, msg, nil, violatorNode, details...)
 
-	require.True(t, be.captureMark == nil)
+	require.Nil(t, be.captureMark)
 }
 
 func TestNewNodeFraud(t *testing.T) {

@@ -446,15 +446,6 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 			},
 			error: true,
 		},
-		{
-			name: "error, empty caller",
-			transcript: &Transcript{
-				Request: &record.IncomingRequest{
-					CallType: record.CTSaveAsChild,
-				},
-			},
-			error: true,
-		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

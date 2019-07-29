@@ -80,7 +80,7 @@ func (m *Senders) CachedSender(scheme insolar.PlatformCryptographyScheme) PreSen
 	return func(sender Sender) Sender {
 		return func(ctx context.Context, msg insolar.Message, options *insolar.MessageSendOptions) (insolar.Reply, error) {
 
-			msgHash := string(scheme.IntegrityHasher().Hash(message.ToBytes(msg)))
+			msgHash := string(scheme.IntegrityHasher().Hash(message.MustSerialize(msg)))
 
 			m.cacheLock.Lock()
 			entry, ok := m.caches[msgHash]

@@ -24,12 +24,12 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member/signer"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/deposit"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/nodedomain"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 // Member - basic member contract.
@@ -40,11 +40,17 @@ type Member struct {
 	Name        string
 	PublicKey   string
 	BurnAddress string
+	Wallet      insolar.Reference
 }
 
 // GetName gets name.
 func (m *Member) GetName() (string, error) {
 	return m.Name, nil
+}
+
+// GetWallet gets wallet.
+func (m *Member) GetWallet() (insolar.Reference, error) {
+	return m.Wallet, nil
 }
 
 var INSATTR_GetPublicKey_API = true
@@ -55,13 +61,14 @@ func (m *Member) GetPublicKey() (string, error) {
 }
 
 // New creates new member.
-func New(rootDomain insolar.Reference, name string, key string, burnAddress string) (*Member, error) {
+func New(rootDomain insolar.Reference, name string, key string, burnAddress string, walletRef insolar.Reference) (*Member, error) {
 	return &Member{
 		RootDomain:  rootDomain,
 		Deposits:    map[string]insolar.Reference{},
 		Name:        name,
 		PublicKey:   key,
 		BurnAddress: burnAddress,
+		Wallet:      walletRef,
 	}, nil
 }
 
@@ -213,7 +220,6 @@ type GetBalanceResponse struct {
 }
 
 func (m *Member) getBalanceCall(params map[string]interface{}) (interface{}, error) {
-
 	referenceStr, ok := params["reference"].(string)
 	if !ok {
 		return nil, fmt.Errorf("incorect input: failed to get 'reference' param")
@@ -223,13 +229,20 @@ func (m *Member) getBalanceCall(params map[string]interface{}) (interface{}, err
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse 'reference': %s", err.Error())
 	}
-	user := member.GetObject(*reference)
 
-	w, err := wallet.GetImplementationFrom(user.GetReference())
-	if err != nil {
-		return nil, fmt.Errorf("failed to get implementation: %s", err.Error())
+	var walletRef insolar.Reference
+
+	if *reference == m.GetReference() {
+		walletRef = m.Wallet
+	} else {
+		m2 := member.GetObject(*reference)
+		walletRef, err = m2.GetWallet()
+		if err != nil {
+			return 0, fmt.Errorf("can't get members wallet: %s", err.Error())
+		}
 	}
-	b, err := w.GetBalance()
+
+	b, err := wallet.GetObject(walletRef).GetBalance()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get balance: %s", err.Error())
 	}
@@ -241,7 +254,7 @@ func (m *Member) getBalanceCall(params map[string]interface{}) (interface{}, err
 			return nil, fmt.Errorf("failed to get deposits: %s", err.Error())
 		}
 	} else {
-		d, err = user.GetDeposits()
+		d, err = member.GetObject(*reference).GetDeposits()
 		if err != nil {
 			return nil, fmt.Errorf("failed to get deposits for user: %s", err.Error())
 		}
@@ -255,7 +268,6 @@ type TransferResponse struct {
 }
 
 func (m *Member) transferCall(params map[string]interface{}) (interface{}, error) {
-
 	recipientReferenceStr, ok := params["toMemberReference"].(string)
 	if !ok {
 		return nil, fmt.Errorf("incorect input: failed to get 'toMemberReference' param")
@@ -274,12 +286,7 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 		return nil, fmt.Errorf("recipient must be different from the sender")
 	}
 
-	w, err := wallet.GetImplementationFrom(m.GetReference())
-	if err != nil {
-		return nil, fmt.Errorf("failed to get wallet implementation of sender: %s", err.Error())
-	}
-
-	return w.Transfer(m.RootDomain, amount, recipientReference)
+	return wallet.GetObject(m.Wallet).Transfer(m.RootDomain, amount, recipientReference)
 }
 func (m *Member) depositMigrationCall(params map[string]interface{}) error {
 
@@ -400,16 +407,16 @@ func (m *Member) createMember(name string, key string, burnAddress string) (*mem
 		return nil, fmt.Errorf("key is not valid")
 	}
 
-	memberHolder := member.New(m.RootDomain, name, key, burnAddress)
+	wHolder := wallet.New(big.NewInt(1000000000).String())
+	walletRef, err := wHolder.AsChild(m.RootDomain)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create wallet for  member: %s", err.Error())
+	}
+
+	memberHolder := member.New(m.RootDomain, name, key, burnAddress, walletRef.Reference)
 	created, err := memberHolder.AsChild(m.RootDomain)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save as child: %s", err.Error())
-	}
-
-	wHolder := wallet.New(big.NewInt(1000000000).String())
-	_, err = wHolder.AsDelegate(created.Reference)
-	if err != nil {
-		return nil, fmt.Errorf("failed to save as delegate: %s", err.Error())
 	}
 
 	return created, nil
@@ -455,7 +462,7 @@ func (m *Member) depositMigration(txHash string, burnAddress string, amount *big
 		migrationDaemonConfirms := [3]string{}
 		migrationDaemonConfirms[mdIndex] = m.GetReference().String()
 		dHolder := deposit.New(migrationDaemonConfirms, txHash, amount.String())
-		txDeposit, err := dHolder.AsDelegate(tokenHolderRef)
+		txDeposit, err := dHolder.AsChild(tokenHolderRef)
 		if err != nil {
 			return fmt.Errorf("failed to save as delegate: %s", err.Error())
 		}

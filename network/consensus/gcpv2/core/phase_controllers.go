@@ -65,11 +65,14 @@ import (
 )
 
 type PacketDispatcher interface {
-	DispatchHostPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags) error
-	DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, source *NodeAppearance) error
-	DispatchUnknownMemberPacket(ctx context.Context, memberID insolar.ShortNodeID, packet transport.MemberPacketReader,
-		from endpoints.Inbound) (bool, error)
 	HasCustomVerifyForHost(from endpoints.Inbound, strict bool) bool
+
+	DispatchHostPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags) error
+
+	/* This method can validate and create a member, but MUST NOT apply any changes to members etc */
+	TriggerUnknownMember(ctx context.Context, memberID insolar.ShortNodeID, packet transport.MemberPacketReader,
+		from endpoints.Inbound) (bool, error)
+	DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, source *NodeAppearance) error
 }
 
 type MemberPacketSender interface {
@@ -117,21 +120,27 @@ type PhaseController interface {
 }
 
 type PhaseControllersBundle interface {
-	IsEphemeralPulseAllowed() bool
 	IsDynamicPopulationRequired() bool
 	CreatePrepPhaseControllers() []PrepPhaseController
 	CreateFullPhaseControllers(nodeCount int) ([]PhaseController, NodeUpdateCallback)
 }
 
 type PhaseControllersBundleFactory interface {
-	CreateControllersBundle(population census.OnlinePopulation, config api.LocalNodeConfiguration) PhaseControllersBundle
+	CreateControllersBundle(population census.OnlinePopulation, config api.LocalNodeConfiguration /* strategy RoundStrategy */) PhaseControllersBundle
 }
+
+type UpdateFlags uint32
+
+const (
+	FlagCreated UpdateFlags = 1 << iota
+	FlagProfileUpdated
+)
 
 type NodeUpdateCallback interface {
 	OnTrustUpdated(populationVersion uint32, n *NodeAppearance, before, after member.TrustLevel)
 	OnNodeStateAssigned(populationVersion uint32, n *NodeAppearance)
-	OnDynamicNodeAdded(populationVersion uint32, n *NodeAppearance, fullIntro bool)
-	OnPurgatoryNodeAdded(populationVersion uint32, n *NodePhantom)
+	OnDynamicNodeUpdate(populationVersion uint32, n *NodeAppearance, flags UpdateFlags)
+	OnPurgatoryNodeUpdate(populationVersion uint32, n *NodePhantom, flags UpdateFlags)
 	OnCustomEvent(populationVersion uint32, n *NodeAppearance, event interface{})
 	OnDynamicPopulationCompleted(populationVersion uint32, indexedCount int)
 }

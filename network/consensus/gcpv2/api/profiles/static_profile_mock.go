@@ -7,7 +7,7 @@ The original interface "StaticProfile" can be found in github.com/insolar/insola
 */
 import (
 	"sync/atomic"
-	"time"
+	time "time"
 
 	"github.com/gojuno/minimock"
 	insolar "github.com/insolar/insolar/insolar"

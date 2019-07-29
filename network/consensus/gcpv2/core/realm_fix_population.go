@@ -54,14 +54,16 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common/consensuskit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 )
 
 func NewFixedRealmPopulation(strategy RoundStrategy, population census.OnlinePopulation, phase2ExtLimit uint8,
 	fn NodeInitFunc) *FixedRealmPopulation {
 
-	nodeCount := population.GetCount()
+	if !population.IsValid() || population.GetIndexedCount() != population.GetIndexedCapacity() {
+		panic("illegal value - fixed realm population can't be initialized on incomplete/invalid population")
+	}
+	nodeCount := population.GetIndexedCount()
 	otherCount := nodeCount
 	if otherCount > 0 && !population.GetLocalProfile().IsJoiner() {
 		otherCount-- // remove self when it is not a joiner
@@ -79,9 +81,8 @@ func NewFixedRealmPopulation(strategy RoundStrategy, population census.OnlinePop
 			nodeShuffle:    make([]*NodeAppearance, otherCount),
 			shuffledCount:  otherCount,
 			dynamicNodes:   make(map[insolar.ShortNodeID]*NodeAppearance),
-			indexedLenSet:  true, // locks down SealIndex
+			indexedLenSet:  true, // locks down SealIndexed
 		}},
-		bftMajorityCount: consensuskit.BftMajority(nodeCount),
 	}
 	r.initPopulation()
 	ShuffleNodeAppearances(strategy.ShuffleNodeSequence, r.nodeShuffle)
@@ -96,11 +97,9 @@ type dynPop struct{ DynamicRealmPopulation }
 type FixedRealmPopulation struct {
 	dynPop
 	population census.OnlinePopulation
-
-	bftMajorityCount int
 }
 
-func (r *FixedRealmPopulation) GetSealedLimit() (int, bool) {
+func (r *FixedRealmPopulation) GetSealedCapacity() (int, bool) {
 	return len(r.nodeIndex), true
 }
 
@@ -141,10 +140,6 @@ func (r *FixedRealmPopulation) GetIndexedCount() int {
 	return r.indexedCount
 }
 
-func (r *FixedRealmPopulation) GetBftMajorityCount() int {
-	return r.bftMajorityCount
-}
-
 func (r *FixedRealmPopulation) GetActiveNodeAppearance(id insolar.ShortNodeID) *NodeAppearance {
 	np := r.population.FindProfile(id)
 	if np != nil && !np.IsJoiner() {
@@ -177,7 +172,7 @@ func (r *FixedRealmPopulation) GetIndexedNodesAndHasNil() ([]*NodeAppearance, bo
 	return r.nodeIndex, true
 }
 
-func (r *FixedRealmPopulation) SealIndex(indexedCountLimit int) bool {
+func (r *FixedRealmPopulation) SealIndexed(indexedCountLimit int) bool {
 	return r.indexedCount == indexedCountLimit
 }
 

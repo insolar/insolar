@@ -160,11 +160,12 @@ func (r *coreRealm) initBeforePopulation(powerRequest power.Request, nbhSizes tr
 
 	nodeContext.initPrep(profile.GetNodeID(), r.verifierFactory,
 		func(report misbehavior.Report) interface{} {
+			inslogger.FromContext(r.roundContext).Warnf("Got Report: %+v", report)
 			r.initialCensus.GetMisbehaviorRegistry().AddReport(report)
 			return nil
 		})
 
-	r.expectedPopulationSize = member.AsIndex(population.GetCount())
+	r.expectedPopulationSize = member.AsIndex(population.GetIndexedCapacity())
 }
 
 func (r *coreRealm) GetStrategy() RoundStrategy {
@@ -218,16 +219,21 @@ func (r *coreRealm) GetSelf() *NodeAppearance {
 	return r.self
 }
 
-func (r *coreRealm) GetPrimingCloudHash() proofs.CloudStateHash {
-	return r.initialCensus.GetMandateRegistry().GetPrimingCloudHash()
-}
+func (r *coreRealm) VerifyPacketAuthenticity(packetSignature cryptkit.SignedDigest, sourceID insolar.ShortNodeID, from endpoints.Inbound, strictFrom bool) error {
+	var nr profiles.Host
 
-func (r *coreRealm) VerifyPacketAuthenticity(packetSignature cryptkit.SignedDigest, from endpoints.Inbound, strictFrom bool) error {
-	nr := r.initialCensus.GetOfflinePopulation().FindRegisteredProfile(from)
+	np := r.initialCensus.GetOnlinePopulation().FindProfile(sourceID)
+	if np != nil {
+		nr = np.GetStatic()
+	}
+
 	if nr == nil {
-		nr = r.initialCensus.GetMandateRegistry().FindRegisteredProfile(from)
+		nr = r.initialCensus.GetOfflinePopulation().FindRegisteredProfile(from)
 		if nr == nil {
-			return fmt.Errorf("unable to identify sender: %v", from)
+			nr = r.initialCensus.GetMandateRegistry().FindRegisteredProfile(from)
+			if nr == nil {
+				return fmt.Errorf("unable to identify sender: %v", from)
+			}
 		}
 	}
 	sf := r.verifierFactory.GetSignatureVerifierWithPKS(nr.GetPublicKeyStore())

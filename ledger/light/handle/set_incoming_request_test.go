@@ -147,7 +147,7 @@ func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return errors.New("something strange from checkjet")
 			default:
 				panic("unknown procedure")
@@ -166,7 +166,7 @@ func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return proc.ErrNotExecutor
 			default:
 				panic("unknown procedure")
@@ -185,9 +185,9 @@ func TestSetRequest_FlowWithPassedFlag(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return proc.ErrNotExecutor
-			case *proc.EnsureIndexWM:
+			case *proc.EnsureIndex:
 				return nil
 			default:
 				panic("unknown procedure")
@@ -217,9 +217,9 @@ func TestSetRequest_ErrorFromWaitHot(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return nil
-			case *proc.WaitHotWM:
+			case *proc.WaitHot:
 				return errors.New("error from waithot")
 			default:
 				panic("unknown procedure")
@@ -238,11 +238,11 @@ func TestSetRequest_ErrorFromWaitHot(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return nil
-			case *proc.WaitHotWM:
+			case *proc.WaitHot:
 				return nil
-			case *proc.EnsureIndexWM:
+			case *proc.EnsureIndex:
 				return nil
 			case *proc.SetRequest:
 				return nil
@@ -273,11 +273,11 @@ func TestSetRequest_ErrorFromGetIndex(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return nil
-			case *proc.WaitHotWM:
+			case *proc.WaitHot:
 				return nil
-			case *proc.EnsureIndexWM:
+			case *proc.EnsureIndex:
 				return errors.New("can't get index: error from getindex")
 			default:
 				panic("unknown procedure")
@@ -296,11 +296,11 @@ func TestSetRequest_ErrorFromGetIndex(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return nil
-			case *proc.WaitHotWM:
+			case *proc.WaitHot:
 				return nil
-			case *proc.EnsureIndexWM:
+			case *proc.EnsureIndex:
 				return nil
 			case *proc.SetRequest:
 				return nil
@@ -331,11 +331,11 @@ func TestSetRequest_ErrorFromSetRequest(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return nil
-			case *proc.WaitHotWM:
+			case *proc.WaitHot:
 				return nil
-			case *proc.EnsureIndexWM:
+			case *proc.EnsureIndex:
 				return nil
 			case *proc.SetRequest:
 				return errors.New("error from setrequest")
@@ -356,11 +356,11 @@ func TestSetRequest_ErrorFromSetRequest(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return nil
-			case *proc.WaitHotWM:
+			case *proc.WaitHot:
 				return nil
-			case *proc.EnsureIndexWM:
+			case *proc.EnsureIndex:
 				return nil
 			case *proc.SetRequest:
 				return nil

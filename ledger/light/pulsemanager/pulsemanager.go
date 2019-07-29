@@ -62,6 +62,7 @@ type PulseManager struct {
 	HotSender       executor.HotSender
 
 	WriteManager hot.WriteManager
+	StateIniter  executor.StateIniter
 
 	// setLock locks Set method call.
 	setLock sync.RWMutex
@@ -73,12 +74,14 @@ func NewPulseManager(
 	lightToHeavySyncer replication.LightReplicator,
 	writeManager hot.WriteManager,
 	hotSender executor.HotSender,
+	stateIniter executor.StateIniter,
 ) *PulseManager {
 	pm := &PulseManager{
 		JetSplitter:     jetSplitter,
 		LightReplicator: lightToHeavySyncer,
 		WriteManager:    writeManager,
 		HotSender:       hotSender,
+		StateIniter:     stateIniter,
 	}
 	return pm
 }
@@ -98,7 +101,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	}()
 
 	ctx, span := instracer.StartSpan(
-		ctx, "pulse.process", trace.WithSampler(trace.AlwaysSample()),
+		ctx, "PulseManager.Set", trace.WithSampler(trace.AlwaysSample()),
 	)
 	span.AddAttributes(
 		trace.Int64Attribute("pulse.PulseNumber", int64(newPulse.PulseNumber)),
@@ -128,7 +131,7 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	[]insolar.JetID, insolar.Pulse, error,
 ) {
 	m.GIL.Acquire(ctx)
-	ctx, span := instracer.StartSpan(ctx, "pulse.gil_locked")
+	ctx, span := instracer.StartSpan(ctx, "PulseManager.setUnderGilSection")
 	defer span.End()
 	defer m.GIL.Release(ctx)
 
@@ -160,7 +163,13 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		}
 	}()
 
-	// Updating jet tree if its network start.
+	// FIXME: special for @ivanshibitov (uncomment this when INS-3031 is ready).
+	// if err := m.StateIniter.PrepareState(ctx, newPulse.PulseNumber); err != nil {
+	// 	logger.Error("failed to prepare light for start: ", err.Error())
+	// 	panic("failed to prepare light for start")
+	// }
+
+	// Updating jet tree if its network start. Remove when INS-3031 is ready.
 	{
 		_, err := m.PulseCalculator.Backwards(ctx, newPulse.PulseNumber, 1)
 		if err != nil {
