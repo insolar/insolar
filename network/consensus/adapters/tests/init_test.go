@@ -185,20 +185,24 @@ func initNodes(ctx context.Context, mode consensus.Mode, nodes GeneratedNodes, s
 		ns.transports[i] = delayTransport
 
 		ns.controllers[i] = consensus.New(ctx, consensus.Dep{
-			PrimingCloudStateHash: [64]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
-			KeyProcessor:          keyProcessor,
-			Scheme:                scheme,
-			CertificateManager:    certificateManager,
-			KeyStore:              keystore.NewInplaceKeyStore(nodes.meta[i].privateKey),
-			NodeKeeper:            nodeKeeper,
-			StateGetter:           &nshGen{nshDelay: defaultNshGenerationDelay},
+			KeyProcessor:       keyProcessor,
+			Scheme:             scheme,
+			CertificateManager: certificateManager,
+			KeyStore:           keystore.NewInplaceKeyStore(nodes.meta[i].privateKey),
+
+			NodeKeeper:        nodeKeeper,
+			DatagramTransport: delayTransport,
+
+			StateGetter: &nshGen{nshDelay: defaultNshGenerationDelay},
 			PulseChanger: &pulseChanger{
 				nodeKeeper: nodeKeeper,
 			},
 			StateUpdater: &stateUpdater{
 				nodeKeeper: nodeKeeper,
 			},
-			DatagramTransport: delayTransport,
+			EphemeralController: &ephemeralController{
+				allowed: false,
+			},
 		}).ControllerFor(mode, datagramHandler, pulseHandler)
 
 		ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
@@ -454,4 +458,12 @@ func (su *stateUpdater) UpdateState(ctx context.Context, pulseNumber insolar.Pul
 		inslogger.FromContext(ctx).Error(err)
 	}
 	su.nodeKeeper.SetCloudHash(cloudStateHash)
+}
+
+type ephemeralController struct {
+	allowed bool
+}
+
+func (e *ephemeralController) EphemeralMode() bool {
+	return e.allowed
 }

@@ -53,9 +53,11 @@ package consensus
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
 	"reflect"
 
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/gcpv2"
@@ -64,12 +66,9 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	transport2 "github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/insolar/insolar/network/consensus/gcpv2/censusimpl"
-	"github.com/insolar/insolar/network/consensus/serialization"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
+	"github.com/insolar/insolar/network/consensus/serialization"
 	"github.com/insolar/insolar/network/transport"
 )
 
@@ -108,18 +107,18 @@ func verify(s interface{}) {
 }
 
 type Dep struct {
-	PrimingCloudStateHash [64]byte
-
 	KeyProcessor       insolar.KeyProcessor
 	Scheme             insolar.PlatformCryptographyScheme
 	CertificateManager insolar.CertificateManager
 	KeyStore           insolar.KeyStore
-	NodeKeeper         network.NodeKeeper
-	DatagramTransport  transport.DatagramTransport
 
-	StateGetter  adapters.StateGetter
-	PulseChanger adapters.PulseChanger
-	StateUpdater adapters.StateUpdater
+	NodeKeeper        network.NodeKeeper
+	DatagramTransport transport.DatagramTransport
+
+	StateGetter         adapters.StateGetter
+	PulseChanger        adapters.PulseChanger
+	StateUpdater        adapters.StateUpdater
+	EphemeralController adapters.EphemeralController
 }
 
 func (cd *Dep) verify() {
@@ -149,7 +148,7 @@ func newConstructor(ctx context.Context, dep *Dep) *constructor {
 	c.mandateRegistry = adapters.NewMandateRegistry(
 		cryptkit.NewDigest(
 			longbits.NewBits512FromBytes(
-				dep.PrimingCloudStateHash[:],
+				dep.NodeKeeper.GetCloudHash(),
 			),
 			adapters.SHA3512Digest,
 		).AsDigestHolder(),
@@ -209,7 +208,9 @@ func newInstaller(constructor *constructor, dep *Dep) Installer {
 }
 
 func (c Installer) ControllerFor(mode Mode, setters ...packetProcessorSetter) Controller {
-	controlFeederInterceptor := adapters.InterceptConsensusControl(adapters.NewConsensusControlFeeder())
+	controlFeederInterceptor := adapters.InterceptConsensusControl(
+		adapters.NewConsensusControlFeeder(c.dep.EphemeralController),
+	)
 	candidateFeeder := &coreapi.SequentialCandidateFeeder{}
 
 	consensusChronicles := c.createConsensusChronicles(mode)
