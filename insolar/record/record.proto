@@ -164,7 +164,7 @@ message PendingFilament {
 }
 
 message Lifeline {
-    int32  Polymorph  = 16;
+    int32 Polymorph = 16;
 
     bytes LatestState = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
     bytes LatestStateApproved = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
@@ -179,14 +179,14 @@ message Lifeline {
 }
 
 message LifelineDelegate {
-    int32 Polymorph  = 16;
+    int32 Polymorph = 16;
 
     bytes Key = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes Value = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
 }
 
 message Index {
-    int32 Polymorph  = 16;
+    int32 Polymorph = 16;
 
     bytes ObjID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
 
@@ -220,7 +220,7 @@ message Virtual {
 message Material {
     int32 polymorph = 16;
 
-    Virtual Virtual = 20;
+    Virtual Virtual = 20 [(gogoproto.nullable) = false];
     bytes JetID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
 
     bytes Signature = 200;

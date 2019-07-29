@@ -78,7 +78,7 @@ func (p *SetCode) Proceed(ctx context.Context) error {
 	defer done()
 
 	material := record.Material{
-		Virtual: &p.record,
+		Virtual: p.record,
 		JetID:   p.jetID,
 	}
 

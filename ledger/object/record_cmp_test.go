@@ -157,7 +157,7 @@ func getMaterialRecord() record.Material {
 	virtRec := getVirtualRecord()
 
 	materialRecord := record.Material{
-		Virtual: &virtRec,
+		Virtual: virtRec,
 		JetID:   gen.JetID(),
 	}
 

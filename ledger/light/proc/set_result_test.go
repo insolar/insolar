@@ -115,13 +115,13 @@ func TestSetResult_Proceed(t *testing.T) {
 	}
 	records := object.NewRecordModifierMock(mc)
 	records.SetFunc = func(_ context.Context, id insolar.ID, rec record.Material) (r error) {
-		switch r := record.Unwrap(rec.Virtual).(type) {
+		switch r := record.Unwrap(&rec.Virtual).(type) {
 		case *record.Result:
 			require.Equal(t, resultID, id)
 			require.Equal(t, resultRecord, r)
 		case *record.PendingFilament:
 			require.Equal(t, expectedFilamentID, id)
-			require.Equal(t, &expectedFilament, record.Unwrap(rec.Virtual))
+			require.Equal(t, &expectedFilament, record.Unwrap(&rec.Virtual))
 		}
 
 		return nil
@@ -142,7 +142,7 @@ func TestSetResult_Proceed(t *testing.T) {
 		return []record.CompositeFilamentRecord{
 			{
 				RecordID: requestID,
-				Record:   record.Material{Virtual: &v},
+				Record:   record.Material{Virtual: v},
 			},
 		}, nil
 	}
@@ -184,7 +184,7 @@ func TestSetResult_Proceed_ResultDuplicated(t *testing.T) {
 			Result: res,
 		},
 	}
-	m := record.Material{Virtual: &virtual}
+	m := record.Material{Virtual: virtual}
 	duplicateBuf, err := m.Marshal()
 	require.NoError(t, err)
 
@@ -204,7 +204,7 @@ func TestSetResult_Proceed_ResultDuplicated(t *testing.T) {
 		require.Equal(t, *res, r)
 
 		return &record.CompositeFilamentRecord{
-			Record:   record.Material{Virtual: &virtual},
+			Record:   record.Material{Virtual: virtual},
 			RecordID: resultID,
 		}, nil
 	}

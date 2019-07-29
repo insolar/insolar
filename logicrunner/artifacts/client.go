@@ -222,7 +222,7 @@ func (m *client) GetCode(
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to unmarshal record")
 		}
-		virtual := record.Unwrap(rec.Virtual)
+		virtual := record.Unwrap(&rec.Virtual)
 		codeRecord, ok := virtual.(*record.Code)
 		if !ok {
 			return nil, errors.Wrapf(err, "unexpected record %T", virtual)
@@ -333,7 +333,7 @@ func (m *client) GetObject(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal state")
 	}
-	virtual := record.Unwrap(rec.Virtual)
+	virtual := record.Unwrap(&rec.Virtual)
 	s, ok := virtual.(record.State)
 	if !ok {
 		return nil, errors.New("wrong state record")
