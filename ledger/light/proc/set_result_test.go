@@ -81,10 +81,10 @@ func TestSetResult_Proceed(t *testing.T) {
 	msg := payload.Meta{
 		Payload: resultBuf,
 	}
-	pendingPointer := gen.IDWithPulse(flowPulse)
+	LatestRequest := gen.IDWithPulse(flowPulse)
 	expectedFilament := record.PendingFilament{
 		RecordID:       resultID,
-		PreviousRecord: &pendingPointer,
+		PreviousRecord: &LatestRequest,
 	}
 	hash = record.HashVirtual(pcs.ReferenceHasher(), record.Wrap(&expectedFilament))
 	expectedFilamentID := *insolar.NewID(resultID.Pulse(), hash)
@@ -96,7 +96,7 @@ func TestSetResult_Proceed(t *testing.T) {
 		earliestPN := requestID.Pulse()
 		return record.Index{
 			Lifeline: record.Lifeline{
-				PendingPointer:      &pendingPointer,
+				LatestRequest:       &LatestRequest,
 				EarliestOpenRequest: &earliestPN,
 			},
 		}, nil
@@ -106,7 +106,7 @@ func TestSetResult_Proceed(t *testing.T) {
 		expectedIndex := record.Index{
 			LifelineLastUsed: resultID.Pulse(),
 			Lifeline: record.Lifeline{
-				PendingPointer:      &expectedFilamentID,
+				LatestRequest:       &expectedFilamentID,
 				EarliestOpenRequest: nil,
 			},
 		}
