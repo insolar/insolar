@@ -20,11 +20,6 @@ import (
 type StateStorageMock struct {
 	t minimock.Tester
 
-	DeleteObjectStateFunc       func(p insolar.Reference)
-	DeleteObjectStateCounter    uint64
-	DeleteObjectStatePreCounter uint64
-	DeleteObjectStateMock       mStateStorageMockDeleteObjectState
-
 	GetExecutionArchiveFunc       func(p insolar.Reference) (r ExecutionArchive)
 	GetExecutionArchiveCounter    uint64
 	GetExecutionArchivePreCounter uint64
@@ -69,7 +64,6 @@ func NewStateStorageMock(t minimock.Tester) *StateStorageMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.DeleteObjectStateMock = mStateStorageMockDeleteObjectState{mock: m}
 	m.GetExecutionArchiveMock = mStateStorageMockGetExecutionArchive{mock: m}
 	m.GetExecutionStateMock = mStateStorageMockGetExecutionState{mock: m}
 	m.IsEmptyMock = mStateStorageMockIsEmpty{mock: m}
@@ -79,129 +73,6 @@ func NewStateStorageMock(t minimock.Tester) *StateStorageMock {
 	m.UpsertExecutionStateMock = mStateStorageMockUpsertExecutionState{mock: m}
 
 	return m
-}
-
-type mStateStorageMockDeleteObjectState struct {
-	mock              *StateStorageMock
-	mainExpectation   *StateStorageMockDeleteObjectStateExpectation
-	expectationSeries []*StateStorageMockDeleteObjectStateExpectation
-}
-
-type StateStorageMockDeleteObjectStateExpectation struct {
-	input *StateStorageMockDeleteObjectStateInput
-}
-
-type StateStorageMockDeleteObjectStateInput struct {
-	p insolar.Reference
-}
-
-//Expect specifies that invocation of StateStorage.DeleteObjectState is expected from 1 to Infinity times
-func (m *mStateStorageMockDeleteObjectState) Expect(p insolar.Reference) *mStateStorageMockDeleteObjectState {
-	m.mock.DeleteObjectStateFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &StateStorageMockDeleteObjectStateExpectation{}
-	}
-	m.mainExpectation.input = &StateStorageMockDeleteObjectStateInput{p}
-	return m
-}
-
-//Return specifies results of invocation of StateStorage.DeleteObjectState
-func (m *mStateStorageMockDeleteObjectState) Return() *StateStorageMock {
-	m.mock.DeleteObjectStateFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &StateStorageMockDeleteObjectStateExpectation{}
-	}
-
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of StateStorage.DeleteObjectState is expected once
-func (m *mStateStorageMockDeleteObjectState) ExpectOnce(p insolar.Reference) *StateStorageMockDeleteObjectStateExpectation {
-	m.mock.DeleteObjectStateFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &StateStorageMockDeleteObjectStateExpectation{}
-	expectation.input = &StateStorageMockDeleteObjectStateInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-//Set uses given function f as a mock of StateStorage.DeleteObjectState method
-func (m *mStateStorageMockDeleteObjectState) Set(f func(p insolar.Reference)) *StateStorageMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.DeleteObjectStateFunc = f
-	return m.mock
-}
-
-//DeleteObjectState implements github.com/insolar/insolar/logicrunner.StateStorage interface
-func (m *StateStorageMock) DeleteObjectState(p insolar.Reference) {
-	counter := atomic.AddUint64(&m.DeleteObjectStatePreCounter, 1)
-	defer atomic.AddUint64(&m.DeleteObjectStateCounter, 1)
-
-	if len(m.DeleteObjectStateMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.DeleteObjectStateMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to StateStorageMock.DeleteObjectState. %v", p)
-			return
-		}
-
-		input := m.DeleteObjectStateMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, StateStorageMockDeleteObjectStateInput{p}, "StateStorage.DeleteObjectState got unexpected parameters")
-
-		return
-	}
-
-	if m.DeleteObjectStateMock.mainExpectation != nil {
-
-		input := m.DeleteObjectStateMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, StateStorageMockDeleteObjectStateInput{p}, "StateStorage.DeleteObjectState got unexpected parameters")
-		}
-
-		return
-	}
-
-	if m.DeleteObjectStateFunc == nil {
-		m.t.Fatalf("Unexpected call to StateStorageMock.DeleteObjectState. %v", p)
-		return
-	}
-
-	m.DeleteObjectStateFunc(p)
-}
-
-//DeleteObjectStateMinimockCounter returns a count of StateStorageMock.DeleteObjectStateFunc invocations
-func (m *StateStorageMock) DeleteObjectStateMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.DeleteObjectStateCounter)
-}
-
-//DeleteObjectStateMinimockPreCounter returns the value of StateStorageMock.DeleteObjectState invocations
-func (m *StateStorageMock) DeleteObjectStateMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.DeleteObjectStatePreCounter)
-}
-
-//DeleteObjectStateFinished returns true if mock invocations count is ok
-func (m *StateStorageMock) DeleteObjectStateFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.DeleteObjectStateMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.DeleteObjectStateCounter) == uint64(len(m.DeleteObjectStateMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.DeleteObjectStateMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.DeleteObjectStateCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.DeleteObjectStateFunc != nil {
-		return atomic.LoadUint64(&m.DeleteObjectStateCounter) > 0
-	}
-
-	return true
 }
 
 type mStateStorageMockGetExecutionArchive struct {
@@ -1151,10 +1022,6 @@ func (m *StateStorageMock) UpsertExecutionStateFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *StateStorageMock) ValidateCallCounters() {
 
-	if !m.DeleteObjectStateFinished() {
-		m.t.Fatal("Expected call to StateStorageMock.DeleteObjectState")
-	}
-
 	if !m.GetExecutionArchiveFinished() {
 		m.t.Fatal("Expected call to StateStorageMock.GetExecutionArchive")
 	}
@@ -1200,10 +1067,6 @@ func (m *StateStorageMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *StateStorageMock) MinimockFinish() {
 
-	if !m.DeleteObjectStateFinished() {
-		m.t.Fatal("Expected call to StateStorageMock.DeleteObjectState")
-	}
-
 	if !m.GetExecutionArchiveFinished() {
 		m.t.Fatal("Expected call to StateStorageMock.GetExecutionArchive")
 	}
@@ -1246,7 +1109,6 @@ func (m *StateStorageMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.DeleteObjectStateFinished()
 		ok = ok && m.GetExecutionArchiveFinished()
 		ok = ok && m.GetExecutionStateFinished()
 		ok = ok && m.IsEmptyFinished()
@@ -1261,10 +1123,6 @@ func (m *StateStorageMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
-
-			if !m.DeleteObjectStateFinished() {
-				m.t.Error("Expected call to StateStorageMock.DeleteObjectState")
-			}
 
 			if !m.GetExecutionArchiveFinished() {
 				m.t.Error("Expected call to StateStorageMock.GetExecutionArchive")
@@ -1305,10 +1163,6 @@ func (m *StateStorageMock) MinimockWait(timeout time.Duration) {
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *StateStorageMock) AllMocksCalled() bool {
-
-	if !m.DeleteObjectStateFinished() {
-		return false
-	}
 
 	if !m.GetExecutionArchiveFinished() {
 		return false
