@@ -184,7 +184,7 @@ func initNodes(ctx context.Context, mode consensus.Mode, nodes GeneratedNodes, s
 		delayTransport := strategy.GetLink(datagramTransport)
 		ns.transports[i] = delayTransport
 
-		ns.controllers[i] = consensus.New(ctx, consensus.Dep{
+		controller := consensus.New(ctx, consensus.Dep{
 			KeyProcessor:       keyProcessor,
 			Scheme:             scheme,
 			CertificateManager: certificateManager,
@@ -205,6 +205,7 @@ func initNodes(ctx context.Context, mode consensus.Mode, nodes GeneratedNodes, s
 			},
 		}).ControllerFor(mode, datagramHandler, pulseHandler)
 
+		ns.controllers[i] = controller
 		ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
 			"node_id":      n.ShortID(),
 			"node_address": n.Address(),
@@ -214,6 +215,7 @@ func initNodes(ctx context.Context, mode consensus.Mode, nodes GeneratedNodes, s
 		if err != nil {
 			return nil, err
 		}
+		controller.Prepare()
 
 		ns.staticProfiles[i] = adapters.NewStaticProfile(n, certificateManager.GetCertificate(), keyProcessor)
 	}
