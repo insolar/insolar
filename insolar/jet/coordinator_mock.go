@@ -35,6 +35,11 @@ type CoordinatorMock struct {
 	IsBeyondLimitPreCounter uint64
 	IsBeyondLimitMock       mCoordinatorMockIsBeyondLimit
 
+	IsMeAuthorizedNowFunc       func(p context.Context, p1 insolar.DynamicRole, p2 insolar.ID) (r bool, r1 error)
+	IsMeAuthorizedNowCounter    uint64
+	IsMeAuthorizedNowPreCounter uint64
+	IsMeAuthorizedNowMock       mCoordinatorMockIsMeAuthorizedNow
+
 	LightExecutorForJetFunc       func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r *insolar.Reference, r1 error)
 	LightExecutorForJetCounter    uint64
 	LightExecutorForJetPreCounter uint64
@@ -97,6 +102,7 @@ func NewCoordinatorMock(t minimock.Tester) *CoordinatorMock {
 	m.HeavyMock = mCoordinatorMockHeavy{mock: m}
 	m.IsAuthorizedMock = mCoordinatorMockIsAuthorized{mock: m}
 	m.IsBeyondLimitMock = mCoordinatorMockIsBeyondLimit{mock: m}
+	m.IsMeAuthorizedNowMock = mCoordinatorMockIsMeAuthorizedNow{mock: m}
 	m.LightExecutorForJetMock = mCoordinatorMockLightExecutorForJet{mock: m}
 	m.LightExecutorForObjectMock = mCoordinatorMockLightExecutorForObject{mock: m}
 	m.LightValidatorsForJetMock = mCoordinatorMockLightValidatorsForJet{mock: m}
@@ -561,6 +567,158 @@ func (m *CoordinatorMock) IsBeyondLimitFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.IsBeyondLimitFunc != nil {
 		return atomic.LoadUint64(&m.IsBeyondLimitCounter) > 0
+	}
+
+	return true
+}
+
+type mCoordinatorMockIsMeAuthorizedNow struct {
+	mock              *CoordinatorMock
+	mainExpectation   *CoordinatorMockIsMeAuthorizedNowExpectation
+	expectationSeries []*CoordinatorMockIsMeAuthorizedNowExpectation
+}
+
+type CoordinatorMockIsMeAuthorizedNowExpectation struct {
+	input  *CoordinatorMockIsMeAuthorizedNowInput
+	result *CoordinatorMockIsMeAuthorizedNowResult
+}
+
+type CoordinatorMockIsMeAuthorizedNowInput struct {
+	p  context.Context
+	p1 insolar.DynamicRole
+	p2 insolar.ID
+}
+
+type CoordinatorMockIsMeAuthorizedNowResult struct {
+	r  bool
+	r1 error
+}
+
+//Expect specifies that invocation of Coordinator.IsMeAuthorizedNow is expected from 1 to Infinity times
+func (m *mCoordinatorMockIsMeAuthorizedNow) Expect(p context.Context, p1 insolar.DynamicRole, p2 insolar.ID) *mCoordinatorMockIsMeAuthorizedNow {
+	m.mock.IsMeAuthorizedNowFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CoordinatorMockIsMeAuthorizedNowExpectation{}
+	}
+	m.mainExpectation.input = &CoordinatorMockIsMeAuthorizedNowInput{p, p1, p2}
+	return m
+}
+
+//Return specifies results of invocation of Coordinator.IsMeAuthorizedNow
+func (m *mCoordinatorMockIsMeAuthorizedNow) Return(r bool, r1 error) *CoordinatorMock {
+	m.mock.IsMeAuthorizedNowFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CoordinatorMockIsMeAuthorizedNowExpectation{}
+	}
+	m.mainExpectation.result = &CoordinatorMockIsMeAuthorizedNowResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Coordinator.IsMeAuthorizedNow is expected once
+func (m *mCoordinatorMockIsMeAuthorizedNow) ExpectOnce(p context.Context, p1 insolar.DynamicRole, p2 insolar.ID) *CoordinatorMockIsMeAuthorizedNowExpectation {
+	m.mock.IsMeAuthorizedNowFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &CoordinatorMockIsMeAuthorizedNowExpectation{}
+	expectation.input = &CoordinatorMockIsMeAuthorizedNowInput{p, p1, p2}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *CoordinatorMockIsMeAuthorizedNowExpectation) Return(r bool, r1 error) {
+	e.result = &CoordinatorMockIsMeAuthorizedNowResult{r, r1}
+}
+
+//Set uses given function f as a mock of Coordinator.IsMeAuthorizedNow method
+func (m *mCoordinatorMockIsMeAuthorizedNow) Set(f func(p context.Context, p1 insolar.DynamicRole, p2 insolar.ID) (r bool, r1 error)) *CoordinatorMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.IsMeAuthorizedNowFunc = f
+	return m.mock
+}
+
+//IsMeAuthorizedNow implements github.com/insolar/insolar/insolar/jet.Coordinator interface
+func (m *CoordinatorMock) IsMeAuthorizedNow(p context.Context, p1 insolar.DynamicRole, p2 insolar.ID) (r bool, r1 error) {
+	counter := atomic.AddUint64(&m.IsMeAuthorizedNowPreCounter, 1)
+	defer atomic.AddUint64(&m.IsMeAuthorizedNowCounter, 1)
+
+	if len(m.IsMeAuthorizedNowMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.IsMeAuthorizedNowMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to CoordinatorMock.IsMeAuthorizedNow. %v %v %v", p, p1, p2)
+			return
+		}
+
+		input := m.IsMeAuthorizedNowMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, CoordinatorMockIsMeAuthorizedNowInput{p, p1, p2}, "Coordinator.IsMeAuthorizedNow got unexpected parameters")
+
+		result := m.IsMeAuthorizedNowMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the CoordinatorMock.IsMeAuthorizedNow")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.IsMeAuthorizedNowMock.mainExpectation != nil {
+
+		input := m.IsMeAuthorizedNowMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, CoordinatorMockIsMeAuthorizedNowInput{p, p1, p2}, "Coordinator.IsMeAuthorizedNow got unexpected parameters")
+		}
+
+		result := m.IsMeAuthorizedNowMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the CoordinatorMock.IsMeAuthorizedNow")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.IsMeAuthorizedNowFunc == nil {
+		m.t.Fatalf("Unexpected call to CoordinatorMock.IsMeAuthorizedNow. %v %v %v", p, p1, p2)
+		return
+	}
+
+	return m.IsMeAuthorizedNowFunc(p, p1, p2)
+}
+
+//IsMeAuthorizedNowMinimockCounter returns a count of CoordinatorMock.IsMeAuthorizedNowFunc invocations
+func (m *CoordinatorMock) IsMeAuthorizedNowMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.IsMeAuthorizedNowCounter)
+}
+
+//IsMeAuthorizedNowMinimockPreCounter returns the value of CoordinatorMock.IsMeAuthorizedNow invocations
+func (m *CoordinatorMock) IsMeAuthorizedNowMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.IsMeAuthorizedNowPreCounter)
+}
+
+//IsMeAuthorizedNowFinished returns true if mock invocations count is ok
+func (m *CoordinatorMock) IsMeAuthorizedNowFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.IsMeAuthorizedNowMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.IsMeAuthorizedNowCounter) == uint64(len(m.IsMeAuthorizedNowMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.IsMeAuthorizedNowMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.IsMeAuthorizedNowCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.IsMeAuthorizedNowFunc != nil {
+		return atomic.LoadUint64(&m.IsMeAuthorizedNowCounter) > 0
 	}
 
 	return true
@@ -2085,6 +2243,10 @@ func (m *CoordinatorMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to CoordinatorMock.IsBeyondLimit")
 	}
 
+	if !m.IsMeAuthorizedNowFinished() {
+		m.t.Fatal("Expected call to CoordinatorMock.IsMeAuthorizedNow")
+	}
+
 	if !m.LightExecutorForJetFinished() {
 		m.t.Fatal("Expected call to CoordinatorMock.LightExecutorForJet")
 	}
@@ -2154,6 +2316,10 @@ func (m *CoordinatorMock) MinimockFinish() {
 		m.t.Fatal("Expected call to CoordinatorMock.IsBeyondLimit")
 	}
 
+	if !m.IsMeAuthorizedNowFinished() {
+		m.t.Fatal("Expected call to CoordinatorMock.IsMeAuthorizedNow")
+	}
+
 	if !m.LightExecutorForJetFinished() {
 		m.t.Fatal("Expected call to CoordinatorMock.LightExecutorForJet")
 	}
@@ -2211,6 +2377,7 @@ func (m *CoordinatorMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.HeavyFinished()
 		ok = ok && m.IsAuthorizedFinished()
 		ok = ok && m.IsBeyondLimitFinished()
+		ok = ok && m.IsMeAuthorizedNowFinished()
 		ok = ok && m.LightExecutorForJetFinished()
 		ok = ok && m.LightExecutorForObjectFinished()
 		ok = ok && m.LightValidatorsForJetFinished()
@@ -2239,6 +2406,10 @@ func (m *CoordinatorMock) MinimockWait(timeout time.Duration) {
 
 			if !m.IsBeyondLimitFinished() {
 				m.t.Error("Expected call to CoordinatorMock.IsBeyondLimit")
+			}
+
+			if !m.IsMeAuthorizedNowFinished() {
+				m.t.Error("Expected call to CoordinatorMock.IsMeAuthorizedNow")
 			}
 
 			if !m.LightExecutorForJetFinished() {
@@ -2302,6 +2473,10 @@ func (m *CoordinatorMock) AllMocksCalled() bool {
 	}
 
 	if !m.IsBeyondLimitFinished() {
+		return false
+	}
+
+	if !m.IsMeAuthorizedNowFinished() {
 		return false
 	}
 

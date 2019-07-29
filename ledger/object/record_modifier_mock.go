@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
 	record "github.com/insolar/insolar/insolar/record"
 
 	testify_assert "github.com/stretchr/testify/assert"
@@ -21,7 +20,7 @@ import (
 type RecordModifierMock struct {
 	t minimock.Tester
 
-	SetFunc       func(p context.Context, p1 insolar.ID, p2 record.Material) (r error)
+	SetFunc       func(p context.Context, p1 record.Material) (r error)
 	SetCounter    uint64
 	SetPreCounter uint64
 	SetMock       mRecordModifierMockSet
@@ -53,8 +52,7 @@ type RecordModifierMockSetExpectation struct {
 
 type RecordModifierMockSetInput struct {
 	p  context.Context
-	p1 insolar.ID
-	p2 record.Material
+	p1 record.Material
 }
 
 type RecordModifierMockSetResult struct {
@@ -62,14 +60,14 @@ type RecordModifierMockSetResult struct {
 }
 
 //Expect specifies that invocation of RecordModifier.Set is expected from 1 to Infinity times
-func (m *mRecordModifierMockSet) Expect(p context.Context, p1 insolar.ID, p2 record.Material) *mRecordModifierMockSet {
+func (m *mRecordModifierMockSet) Expect(p context.Context, p1 record.Material) *mRecordModifierMockSet {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &RecordModifierMockSetExpectation{}
 	}
-	m.mainExpectation.input = &RecordModifierMockSetInput{p, p1, p2}
+	m.mainExpectation.input = &RecordModifierMockSetInput{p, p1}
 	return m
 }
 
@@ -86,12 +84,12 @@ func (m *mRecordModifierMockSet) Return(r error) *RecordModifierMock {
 }
 
 //ExpectOnce specifies that invocation of RecordModifier.Set is expected once
-func (m *mRecordModifierMockSet) ExpectOnce(p context.Context, p1 insolar.ID, p2 record.Material) *RecordModifierMockSetExpectation {
+func (m *mRecordModifierMockSet) ExpectOnce(p context.Context, p1 record.Material) *RecordModifierMockSetExpectation {
 	m.mock.SetFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &RecordModifierMockSetExpectation{}
-	expectation.input = &RecordModifierMockSetInput{p, p1, p2}
+	expectation.input = &RecordModifierMockSetInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -101,7 +99,7 @@ func (e *RecordModifierMockSetExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of RecordModifier.Set method
-func (m *mRecordModifierMockSet) Set(f func(p context.Context, p1 insolar.ID, p2 record.Material) (r error)) *RecordModifierMock {
+func (m *mRecordModifierMockSet) Set(f func(p context.Context, p1 record.Material) (r error)) *RecordModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -110,18 +108,18 @@ func (m *mRecordModifierMockSet) Set(f func(p context.Context, p1 insolar.ID, p2
 }
 
 //Set implements github.com/insolar/insolar/ledger/object.RecordModifier interface
-func (m *RecordModifierMock) Set(p context.Context, p1 insolar.ID, p2 record.Material) (r error) {
+func (m *RecordModifierMock) Set(p context.Context, p1 record.Material) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
 
 	if len(m.SetMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.SetMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to RecordModifierMock.Set. %v %v %v", p, p1, p2)
+			m.t.Fatalf("Unexpected call to RecordModifierMock.Set. %v %v", p, p1)
 			return
 		}
 
 		input := m.SetMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, RecordModifierMockSetInput{p, p1, p2}, "RecordModifier.Set got unexpected parameters")
+		testify_assert.Equal(m.t, *input, RecordModifierMockSetInput{p, p1}, "RecordModifier.Set got unexpected parameters")
 
 		result := m.SetMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -138,7 +136,7 @@ func (m *RecordModifierMock) Set(p context.Context, p1 insolar.ID, p2 record.Mat
 
 		input := m.SetMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, RecordModifierMockSetInput{p, p1, p2}, "RecordModifier.Set got unexpected parameters")
+			testify_assert.Equal(m.t, *input, RecordModifierMockSetInput{p, p1}, "RecordModifier.Set got unexpected parameters")
 		}
 
 		result := m.SetMock.mainExpectation.result
@@ -152,11 +150,11 @@ func (m *RecordModifierMock) Set(p context.Context, p1 insolar.ID, p2 record.Mat
 	}
 
 	if m.SetFunc == nil {
-		m.t.Fatalf("Unexpected call to RecordModifierMock.Set. %v %v %v", p, p1, p2)
+		m.t.Fatalf("Unexpected call to RecordModifierMock.Set. %v %v", p, p1)
 		return
 	}
 
-	return m.SetFunc(p, p1, p2)
+	return m.SetFunc(p, p1)
 }
 
 //SetMinimockCounter returns a count of RecordModifierMock.SetFunc invocations

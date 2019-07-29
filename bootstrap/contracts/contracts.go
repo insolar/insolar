@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/contract/rootdomain"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/tariff"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/wallet"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 func RootDomain() insolar.GenesisContractState {
@@ -47,8 +48,8 @@ func RootDomain() insolar.GenesisContractState {
 			MigrationWallet:        genesisrefs.ContractMigrationWallet,
 			CostCenter:             genesisrefs.ContractCostCenter,
 			FeeWallet:              genesisrefs.ContractFeeWallet,
-			BurnAddressMap:         map[string]insolar.Reference{},
-			PublicKeyMap:           map[string]insolar.Reference{},
+			BurnAddressMap:         make(foundation.StableMap),
+			PublicKeyMap:           make(foundation.StableMap),
 			FreeBurnAddresses:      []string{},
 			NodeDomain:             genesisrefs.ContractNodeDomain,
 		}),

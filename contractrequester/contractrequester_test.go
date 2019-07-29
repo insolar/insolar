@@ -196,6 +196,7 @@ func TestContractRequester_CallMethod_Timeout(t *testing.T) {
 
 	msg := &message.CallMethod{
 		IncomingRequest: record.IncomingRequest{
+			Caller:    gen.Reference(),
 			Object:    &ref,
 			Prototype: &prototypeRef,
 			Method:    method,

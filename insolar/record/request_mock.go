@@ -47,6 +47,11 @@ type RequestMock struct {
 	IsTemporaryUploadCodePreCounter uint64
 	IsTemporaryUploadCodeMock       mRequestMockIsTemporaryUploadCode
 
+	MarshalFunc       func() (r []byte, r1 error)
+	MarshalCounter    uint64
+	MarshalPreCounter uint64
+	MarshalMock       mRequestMockMarshal
+
 	ReasonRefFunc       func() (r insolar.Reference)
 	ReasonRefCounter    uint64
 	ReasonRefPreCounter uint64
@@ -67,6 +72,7 @@ func NewRequestMock(t minimock.Tester) *RequestMock {
 	m.IsCreationRequestMock = mRequestMockIsCreationRequest{mock: m}
 	m.IsDetachedMock = mRequestMockIsDetached{mock: m}
 	m.IsTemporaryUploadCodeMock = mRequestMockIsTemporaryUploadCode{mock: m}
+	m.MarshalMock = mRequestMockMarshal{mock: m}
 	m.ReasonRefMock = mRequestMockReasonRef{mock: m}
 
 	return m
@@ -876,6 +882,143 @@ func (m *RequestMock) IsTemporaryUploadCodeFinished() bool {
 	return true
 }
 
+type mRequestMockMarshal struct {
+	mock              *RequestMock
+	mainExpectation   *RequestMockMarshalExpectation
+	expectationSeries []*RequestMockMarshalExpectation
+}
+
+type RequestMockMarshalExpectation struct {
+	result *RequestMockMarshalResult
+}
+
+type RequestMockMarshalResult struct {
+	r  []byte
+	r1 error
+}
+
+//Expect specifies that invocation of Request.Marshal is expected from 1 to Infinity times
+func (m *mRequestMockMarshal) Expect() *mRequestMockMarshal {
+	m.mock.MarshalFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &RequestMockMarshalExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of Request.Marshal
+func (m *mRequestMockMarshal) Return(r []byte, r1 error) *RequestMock {
+	m.mock.MarshalFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &RequestMockMarshalExpectation{}
+	}
+	m.mainExpectation.result = &RequestMockMarshalResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Request.Marshal is expected once
+func (m *mRequestMockMarshal) ExpectOnce() *RequestMockMarshalExpectation {
+	m.mock.MarshalFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &RequestMockMarshalExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *RequestMockMarshalExpectation) Return(r []byte, r1 error) {
+	e.result = &RequestMockMarshalResult{r, r1}
+}
+
+//Set uses given function f as a mock of Request.Marshal method
+func (m *mRequestMockMarshal) Set(f func() (r []byte, r1 error)) *RequestMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.MarshalFunc = f
+	return m.mock
+}
+
+//Marshal implements github.com/insolar/insolar/insolar/record.Request interface
+func (m *RequestMock) Marshal() (r []byte, r1 error) {
+	counter := atomic.AddUint64(&m.MarshalPreCounter, 1)
+	defer atomic.AddUint64(&m.MarshalCounter, 1)
+
+	if len(m.MarshalMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.MarshalMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to RequestMock.Marshal.")
+			return
+		}
+
+		result := m.MarshalMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the RequestMock.Marshal")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.MarshalMock.mainExpectation != nil {
+
+		result := m.MarshalMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the RequestMock.Marshal")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.MarshalFunc == nil {
+		m.t.Fatalf("Unexpected call to RequestMock.Marshal.")
+		return
+	}
+
+	return m.MarshalFunc()
+}
+
+//MarshalMinimockCounter returns a count of RequestMock.MarshalFunc invocations
+func (m *RequestMock) MarshalMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.MarshalCounter)
+}
+
+//MarshalMinimockPreCounter returns the value of RequestMock.Marshal invocations
+func (m *RequestMock) MarshalMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.MarshalPreCounter)
+}
+
+//MarshalFinished returns true if mock invocations count is ok
+func (m *RequestMock) MarshalFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.MarshalMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.MarshalCounter) == uint64(len(m.MarshalMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.MarshalMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.MarshalCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.MarshalFunc != nil {
+		return atomic.LoadUint64(&m.MarshalCounter) > 0
+	}
+
+	return true
+}
+
 type mRequestMockReasonRef struct {
 	mock              *RequestMock
 	mainExpectation   *RequestMockReasonRefExpectation
@@ -1038,6 +1181,10 @@ func (m *RequestMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to RequestMock.IsTemporaryUploadCode")
 	}
 
+	if !m.MarshalFinished() {
+		m.t.Fatal("Expected call to RequestMock.Marshal")
+	}
+
 	if !m.ReasonRefFinished() {
 		m.t.Fatal("Expected call to RequestMock.ReasonRef")
 	}
@@ -1083,6 +1230,10 @@ func (m *RequestMock) MinimockFinish() {
 		m.t.Fatal("Expected call to RequestMock.IsTemporaryUploadCode")
 	}
 
+	if !m.MarshalFinished() {
+		m.t.Fatal("Expected call to RequestMock.Marshal")
+	}
+
 	if !m.ReasonRefFinished() {
 		m.t.Fatal("Expected call to RequestMock.ReasonRef")
 	}
@@ -1107,6 +1258,7 @@ func (m *RequestMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.IsCreationRequestFinished()
 		ok = ok && m.IsDetachedFinished()
 		ok = ok && m.IsTemporaryUploadCodeFinished()
+		ok = ok && m.MarshalFinished()
 		ok = ok && m.ReasonRefFinished()
 
 		if ok {
@@ -1138,6 +1290,10 @@ func (m *RequestMock) MinimockWait(timeout time.Duration) {
 
 			if !m.IsTemporaryUploadCodeFinished() {
 				m.t.Error("Expected call to RequestMock.IsTemporaryUploadCode")
+			}
+
+			if !m.MarshalFinished() {
+				m.t.Error("Expected call to RequestMock.Marshal")
 			}
 
 			if !m.ReasonRefFinished() {
@@ -1177,6 +1333,10 @@ func (m *RequestMock) AllMocksCalled() bool {
 	}
 
 	if !m.IsTemporaryUploadCodeFinished() {
+		return false
+	}
+
+	if !m.MarshalFinished() {
 		return false
 	}
 

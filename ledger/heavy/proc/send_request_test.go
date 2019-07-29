@@ -46,8 +46,8 @@ func TestGetRequest_Proceed(t *testing.T) {
 		records = object.NewRecordAccessorMock(t)
 	}
 
-	newProc := func(msg payload.Meta) *proc.GetRequest {
-		p := proc.NewGetRequest(msg)
+	newProc := func(msg payload.Meta) *proc.SendRequest {
+		p := proc.NewSendRequest(msg)
 		p.Dep(records, sender)
 		return p
 	}
@@ -91,7 +91,7 @@ func TestGetRequest_Proceed(t *testing.T) {
 		}
 
 		records.ForIDMock.Return(record.Material{
-			Virtual: &req,
+			Virtual: req,
 		}, nil)
 		sender.ReplyFunc = func(_ context.Context, origin payload.Meta, rep *message.Message) {
 			require.Equal(t, receivedMeta, origin)

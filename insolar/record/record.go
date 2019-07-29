@@ -20,7 +20,9 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-type Record interface{}
+type Record interface {
+	Marshal() (dAtA []byte, err error)
+}
 
 // StateID is a state of lifeline records.
 type StateID int
@@ -42,6 +44,7 @@ func (s *StateID) Equal(other StateID) bool {
 
 // State is common object state record.
 type State interface {
+	Record
 	// ID returns state id.
 	ID() StateID
 	// GetImage returns state code.
@@ -138,6 +141,7 @@ func (Genesis) GetIsPrototype() bool {
 
 // Request is a common request interface.
 type Request interface {
+	Record
 	// AffinityRef returns a pointer to the reference of the object the
 	// Request is affine to. The result can be nil, e.g. in case of creating
 	// a new object.
@@ -217,25 +221,6 @@ func (r *OutgoingRequest) IsTemporaryUploadCode() bool {
 
 func isDetached(rm ReturnMode) bool {
 	return rm == ReturnSaga
-}
-
-func (m *Lifeline) SetDelegate(key insolar.Reference, value insolar.Reference) {
-	for _, d := range m.Delegates {
-		if d.Key == key {
-			d.Value = value
-			return
-		}
-	}
-	m.Delegates = append(m.Delegates, LifelineDelegate{Key: key, Value: value})
-}
-
-func (m *Lifeline) DelegateByKey(key insolar.Reference) (insolar.Reference, bool) {
-	for _, d := range m.Delegates {
-		if d.Key == key {
-			return d.Value, true
-		}
-	}
-	return [64]byte{}, false
 }
 
 func CalculateRequestAffinityRef(

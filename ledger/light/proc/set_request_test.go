@@ -53,8 +53,8 @@ func TestSetRequest_Proceed(t *testing.T) {
 		writeAccessor *hot.WriteAccessorMock
 		sender        *bus.SenderMock
 		filaments     *executor.FilamentCalculatorMock
-		idxStorage    *object.IndexStorageMock
-		records       *object.RecordModifierMock
+		idxStorage    *object.MemoryIndexStorageMock
+		records       *object.AtomicRecordModifierMock
 		checker       *executor.RequestCheckerMock
 		coordinator   *jet.CoordinatorMock
 	)
@@ -63,8 +63,8 @@ func TestSetRequest_Proceed(t *testing.T) {
 		writeAccessor = hot.NewWriteAccessorMock(mc)
 		sender = bus.NewSenderMock(mc)
 		filaments = executor.NewFilamentCalculatorMock(mc)
-		idxStorage = object.NewIndexStorageMock(mc)
-		records = object.NewRecordModifierMock(mc)
+		idxStorage = object.NewMemoryIndexStorageMock(mc)
+		records = object.NewAtomicRecordModifierMock(mc)
 		checker = executor.NewRequestCheckerMock(mc)
 		coordinator = jet.NewCoordinatorMock(t)
 	}
@@ -103,10 +103,10 @@ func TestSetRequest_Proceed(t *testing.T) {
 				StateID: record.StateActivation,
 			},
 		}, nil)
-		idxStorage.SetIndexFunc = func(_ context.Context, pn insolar.PulseNumber, idx record.Index) (r error) {
+		idxStorage.SetFunc = func(_ context.Context, pn insolar.PulseNumber, idx record.Index) {
 			require.Equal(t, requestID.Pulse(), pn)
 
-			virtual = record.Wrap(record.PendingFilament{
+			virtual = record.Wrap(&record.PendingFilament{
 				RecordID:       requestID,
 				PreviousRecord: nil,
 			})
@@ -117,11 +117,10 @@ func TestSetRequest_Proceed(t *testing.T) {
 				Lifeline: record.Lifeline{
 					StateID:             record.StateActivation,
 					EarliestOpenRequest: &pn,
-					PendingPointer:      pendingID,
+					LatestRequest:       pendingID,
 				},
 			}
 			require.Equal(t, expectedIndex, idx)
-			return nil
 		}
 
 		writeAccessor.BeginMock.Return(func() {}, nil)
@@ -133,18 +132,16 @@ func TestSetRequest_Proceed(t *testing.T) {
 
 			return &virtualRef, nil
 		}
-		records.SetFunc = func(_ context.Context, id insolar.ID, rec record.Material) (r error) {
-			switch record.Unwrap(rec.Virtual).(type) {
-			case *record.IncomingRequest:
-				require.Equal(t, requestID, id)
-			case *record.PendingFilament:
-				hash := record.HashVirtual(pcs.ReferenceHasher(), *rec.Virtual)
-				calcID := *insolar.NewID(requestID.Pulse(), hash)
-				require.Equal(t, calcID, id)
-			default:
-				t.Fatal("unknown record saved")
-			}
+		records.SetAtomicFunc = func(_ context.Context, recs ...record.Material) (r error) {
+			require.Equal(t, len(recs), 2)
+			req := recs[0]
+			filament := recs[1]
 
+			require.Equal(t, requestID, req.ID)
+			require.Equal(t, record.Unwrap(&req.Virtual), &request)
+			hash := record.HashVirtual(pcs.ReferenceHasher(), filament.Virtual)
+			calcID := *insolar.NewID(requestID.Pulse(), hash)
+			require.Equal(t, calcID, filament.ID)
 			return nil
 		}
 		checker.CheckRequestFunc = func(_ context.Context, id insolar.ID, req record.Request) (r error) {
@@ -166,6 +163,11 @@ func TestSetRequest_Proceed(t *testing.T) {
 	t.Run("duplicate returns correct requestID", func(t *testing.T) {
 		reqID := gen.ID()
 		resID := gen.ID()
+		idxStorage.ForIDMock.Return(record.Index{
+			Lifeline: record.Lifeline{
+				StateID: record.StateActivation,
+			},
+		}, nil)
 		filaments.RequestDuplicateMock.Return(
 			&record.CompositeFilamentRecord{RecordID: reqID},
 			&record.CompositeFilamentRecord{RecordID: resID},
@@ -215,58 +217,4 @@ func TestSetRequest_Proceed(t *testing.T) {
 
 		mc.Finish()
 	})
-}
-
-func TestDeactivateObject_ObjectIsDeactivated(t *testing.T) {
-	t.Parallel()
-
-	ctx := flow.TestContextWithPulse(
-		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
-	)
-
-	writeAccessor := hot.NewWriteAccessorMock(t)
-	writeAccessor.BeginMock.Return(func() {}, nil)
-
-	idxLockMock := object.NewIndexLockerMock(t)
-	idxLockMock.LockMock.Return()
-	idxLockMock.UnlockMock.Return()
-
-	idxStorageMock := object.NewIndexStorageMock(t)
-	idxStorageMock.ForIDMock.Return(record.Index{
-		Lifeline: record.Lifeline{
-			StateID: record.StateDeactivation,
-		},
-	}, nil)
-	idxStorageMock.SetIndexMock.Return(nil)
-
-	sender := bus.NewSenderMock(t)
-	sender.ReplyFunc = func(_ context.Context, _ payload.Meta, inMsg *message.Message) {
-		resp, err := payload.Unmarshal(inMsg.Payload)
-		require.NoError(t, err)
-
-		res, ok := resp.(*payload.Error)
-		require.True(t, ok)
-		require.Equal(t, payload.CodeDeactivated, int(res.Code))
-	}
-
-	p := proc.NewDeactivateObject(
-		payload.Meta{},
-		record.Deactivate{},
-		gen.ID(),
-		record.Result{},
-		gen.ID(),
-		gen.JetID(),
-	)
-	p.Dep(
-		writeAccessor,
-		idxLockMock,
-		nil,
-		idxStorageMock,
-		nil,
-		sender,
-	)
-
-	err := p.Proceed(ctx)
-	require.NoError(t, err)
 }

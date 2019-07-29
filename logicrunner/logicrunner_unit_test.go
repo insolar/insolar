@@ -194,15 +194,16 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 		Caller: gen.Reference(),
 		Reason: gen.Reference(),
 	}
-	outgoingBytes, err := outgoing.Marshal()
+	virtual := record.Wrap(&outgoing)
+	outgoingBytes, err := virtual.Marshal()
 	suite.Require().NoError(err)
 
 	outgoingReqId := gen.ID()
 	outgoingRequestRef := insolar.NewReference(outgoingReqId)
 
 	pl := &payload.SagaCallAcceptNotification{
-		OutgoingReqID: outgoingReqId,
-		Request:       outgoingBytes,
+		DetachedRequestID: outgoingReqId,
+		Request:           outgoingBytes,
 	}
 	msg, err := payload.NewMessage(pl)
 	suite.Require().NoError(err)
@@ -699,8 +700,7 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 				lr.initHandlers()
 
 				lr.JetCoordinator = jet.NewCoordinatorMock(mc).
-					MeMock.Return(gen.Reference()).
-					IsAuthorizedMock.Return(true, nil)
+					IsMeAuthorizedNowMock.Return(true, nil)
 
 				lr.MessageBus = testutils.NewMessageBusMock(mc).
 					SendMock.Return(&reply.OK{}, nil)
@@ -732,8 +732,7 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 				lr.initHandlers()
 
 				lr.JetCoordinator = jet.NewCoordinatorMock(mc).
-					MeMock.Return(gen.Reference()).
-					IsAuthorizedMock.Return(true, nil)
+					IsMeAuthorizedNowMock.Return(true, nil)
 
 				stateMap := map[insolar.Reference]*ObjectState{
 					gen.Reference(): {
@@ -759,8 +758,7 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 				lr.initHandlers()
 
 				lr.JetCoordinator = jet.NewCoordinatorMock(mc).
-					MeMock.Return(gen.Reference()).
-					IsAuthorizedMock.Return(true, nil)
+					IsMeAuthorizedNowMock.Return(true, nil)
 
 				stateMap := map[insolar.Reference]*ObjectState{
 					gen.Reference(): {},
