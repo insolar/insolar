@@ -41,11 +41,11 @@ func Test_IncomingRequests(t *testing.T) {
 	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
 	s.Pulse(ctx)
 
-	t.Run("pending was added", func(t *testing.T) {
-		p, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
+	t.Run("registered API request appears in pendings", func(t *testing.T) {
+		p, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), true, true)
 		requireNotError(t, p)
 		reqInfo := p.(*payload.RequestInfo)
-		p = fetchPendings(ctx, t, s, reqInfo.RequestID)
+		p = callGetPendings(ctx, t, s, reqInfo.RequestID)
 		requireNotError(t, p)
 
 		ids := p.(*payload.IDs)
@@ -53,37 +53,38 @@ func Test_IncomingRequests(t *testing.T) {
 		require.Equal(t, reqInfo.RequestID, ids.IDs[0])
 	})
 
-	t.Run("pending was added and closed", func(t *testing.T) {
-		p, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
-		requireNotError(t, p)
-		reqInfo := p.(*payload.RequestInfo)
-
-		p, _ = callActivateObject(ctx, t, s, reqInfo.RequestID)
-		requireNotError(t, p)
-
-		p = fetchPendings(ctx, t, s, reqInfo.RequestID)
-
-		err := p.(*payload.Error)
-		require.Equal(t, insolar.ErrNoPendingRequest.Error(), err.Text)
-	})
-
-	t.Run("reason on the another object", func(t *testing.T) {
-		firstObjP, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
+	t.Run("registered request appears in pendings", func(t *testing.T) {
+		firstObjP, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), true, true)
 		requireNotError(t, firstObjP)
 		reqInfo := firstObjP.(*payload.RequestInfo)
 		firstObjP, _ = callActivateObject(ctx, t, s, reqInfo.RequestID)
 		requireNotError(t, firstObjP)
 
-		secondObjP, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), reqInfo.RequestID, record.CTSaveAsChild)
+		secondObjP, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), reqInfo.RequestID, true, true)
 		requireNotError(t, secondObjP)
 		secondReqInfo := secondObjP.(*payload.RequestInfo)
-		secondPendings := fetchPendings(ctx, t, s, secondReqInfo.RequestID)
+		secondPendings := callGetPendings(ctx, t, s, secondReqInfo.RequestID)
 		requireNotError(t, secondPendings)
 
 		ids := secondPendings.(*payload.IDs)
 		require.Equal(t, 1, len(ids.IDs))
 		require.Equal(t, secondReqInfo.RequestID, ids.IDs[0])
 	})
+
+	t.Run("pending was added and closed", func(t *testing.T) {
+		p, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), true, true)
+		requireNotError(t, p)
+		reqInfo := p.(*payload.RequestInfo)
+
+		p, _ = callActivateObject(ctx, t, s, reqInfo.RequestID)
+		requireNotError(t, p)
+
+		p = callGetPendings(ctx, t, s, reqInfo.RequestID)
+
+		err := p.(*payload.Error)
+		require.Equal(t, insolar.ErrNoPendingRequest.Error(), err.Text)
+	})
+
 }
 
 func Test_OutgoingRequests(t *testing.T) {
@@ -106,11 +107,11 @@ func Test_OutgoingRequests(t *testing.T) {
 	s.Pulse(ctx)
 
 	t.Run("detached notification sent", func(t *testing.T) {
-		p, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
+		p, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), true, true)
 		requireNotError(t, p)
 		objectID := p.(*payload.RequestInfo).ObjectID
 
-		p, _ = callSetIncomingRequest(ctx, t, s, objectID, gen.ID(), record.CTMethod)
+		p, _ = callSetIncomingRequest(ctx, t, s, objectID, gen.ID(), false, true)
 		requireNotError(t, p)
 		reasonID := p.(*payload.RequestInfo).RequestID
 

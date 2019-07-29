@@ -96,7 +96,7 @@ func Test_LightReplication(t *testing.T) {
 		// Creating root reason request.
 		var reasonID insolar.ID
 		{
-			p, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
+			p, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), true, true)
 			requireNotError(t, p)
 			reasonID = p.(*payload.RequestInfo).RequestID
 		}
@@ -111,7 +111,7 @@ func Test_LightReplication(t *testing.T) {
 
 		// Set, get request.
 		{
-			p, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), reasonID, record.CTSaveAsChild)
+			p, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), reasonID, true, true)
 			requireNotError(t, p)
 			expectedObjectID = p.(*payload.RequestInfo).RequestID
 			expectedIds = append(expectedIds, expectedObjectID)
@@ -127,7 +127,7 @@ func Test_LightReplication(t *testing.T) {
 		}
 		// Amend and check object.
 		{
-			p, _ := callSetIncomingRequest(ctx, t, s, expectedObjectID, reasonID, record.CTMethod)
+			p, _ := callSetIncomingRequest(ctx, t, s, expectedObjectID, reasonID, false, true)
 			requireNotError(t, p)
 
 			p, state := callAmendObject(ctx, t, s, expectedObjectID, p.(*payload.RequestInfo).RequestID)
@@ -194,7 +194,7 @@ func Test_BasicOperations(t *testing.T) {
 		var reasonID insolar.ID
 		{
 			p := retryIfCancelled(func() payload.Payload {
-				p, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
+				p, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), true, true)
 				return p
 			})
 			requireNotError(t, p)
@@ -222,7 +222,7 @@ func Test_BasicOperations(t *testing.T) {
 		{
 			var sent record.Virtual
 			p := retryIfCancelled(func() payload.Payload {
-				p, s := callSetIncomingRequest(ctx, t, s, gen.ID(), reasonID, record.CTSaveAsChild)
+				p, s := callSetIncomingRequest(ctx, t, s, gen.ID(), reasonID, true, true)
 				sent = s
 				return p
 			})
@@ -250,7 +250,7 @@ func Test_BasicOperations(t *testing.T) {
 		// Amend and check object.
 		{
 			p := retryIfCancelled(func() payload.Payload {
-				p, _ := callSetIncomingRequest(ctx, t, s, objectID, reasonID, record.CTMethod)
+				p, _ := callSetIncomingRequest(ctx, t, s, objectID, reasonID, false, true)
 				return p
 			})
 			requireNotError(t, p)
@@ -269,7 +269,7 @@ func Test_BasicOperations(t *testing.T) {
 		// Deactivate and check object.
 		{
 			p := retryIfCancelled(func() payload.Payload {
-				p, _ := callSetIncomingRequest(ctx, t, s, objectID, reasonID, record.CTMethod)
+				p, _ := callSetIncomingRequest(ctx, t, s, objectID, reasonID, false, true)
 				return p
 			})
 			requireNotError(t, p)

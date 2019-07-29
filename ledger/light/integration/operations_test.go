@@ -76,22 +76,25 @@ func callGetCode(ctx context.Context, t *testing.T, s *Server, id insolar.ID) pa
 }
 
 func callSetIncomingRequest(
-	ctx context.Context, t *testing.T, s *Server, objectID, reasonID insolar.ID, ct record.CallType,
+	ctx context.Context, t *testing.T, s *Server, objectID, reasonID insolar.ID, isCreation, isAPI bool,
 ) (payload.Payload, record.Virtual) {
 	args := make([]byte, 100)
 	_, err := rand.Read(args)
 	require.NoError(t, err)
-	var object *insolar.Reference
-	if ct != record.CTSaveAsChild {
-		object = insolar.NewReference(objectID)
-	}
-	rec := record.Wrap(&record.IncomingRequest{
-		Object:    object,
+
+	req := record.IncomingRequest{
 		Arguments: args,
-		CallType:  ct,
 		Reason:    *insolar.NewReference(reasonID),
-		APINode:   gen.Reference(),
-	})
+	}
+	if isCreation {
+		req.CallType = record.CTSaveAsChild
+	} else {
+		req.Object = insolar.NewReference(objectID)
+	}
+	if isAPI {
+		req.APINode = gen.Reference()
+	}
+	rec := record.Wrap(&req)
 	reps, done := s.Send(ctx, &payload.SetIncomingRequest{
 		Request: rec,
 	})
@@ -370,7 +373,7 @@ func callGetObject(ctx context.Context, t *testing.T, s *Server, objectID insola
 	return lifeline, state
 }
 
-func fetchPendings(ctx context.Context, t *testing.T, s *Server, objectID insolar.ID) payload.Payload {
+func callGetPendings(ctx context.Context, t *testing.T, s *Server, objectID insolar.ID) payload.Payload {
 	reps, done := s.Send(ctx, &payload.GetPendings{
 		ObjectID: objectID,
 	})
