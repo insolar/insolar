@@ -61,6 +61,7 @@ type MachineLogicExecutor interface {
 type LogicRunner interface {
 	LRI()
 	OnPulse(context.Context, Pulse) error
+	AddUnwantedResponse(ctx context.Context, msg Message) error
 }
 
 // CallMode indicates whether we execute or validate
@@ -120,4 +121,17 @@ type ContractWrapper struct {
 
 	Methods      ContractMethods
 	Constructors ContractConstructors
+}
+
+// PendingState is a state of execution for each object
+type PendingState int
+
+const (
+	PendingUnknown PendingState = iota // PendingUnknown signalizes that we don't know about execution state
+	NotPending                         // NotPending means that we know that this task is not executed by another VE
+	InPending                          // InPending means that we know that method on object is executed by another VE
+)
+
+func (s PendingState) Equal(other PendingState) bool {
+	return s == other
 }

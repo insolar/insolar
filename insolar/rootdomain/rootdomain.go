@@ -41,7 +41,7 @@ var predefinedPrototypes = map[string]insolar.Reference{
 	insolar.GenesisNameRootMember + GenesisPrototypeSuffix:           *member.PrototypeReference,
 	insolar.GenesisNameRootWallet + GenesisPrototypeSuffix:           *wallet.PrototypeReference,
 	insolar.GenesisNameCostCenter + GenesisPrototypeSuffix:           *costcenter.PrototypeReference,
-	insolar.GenesisNameCommissionWallet + GenesisPrototypeSuffix:     *wallet.PrototypeReference,
+	insolar.GenesisNameFeeWallet + GenesisPrototypeSuffix:            *wallet.PrototypeReference,
 	insolar.GenesisNameDeposit + GenesisPrototypeSuffix:              *deposit.PrototypeReference,
 	insolar.GenesisNameMember + GenesisPrototypeSuffix:               *member.PrototypeReference,
 	insolar.GenesisNameMigrationAdminMember + GenesisPrototypeSuffix: *member.PrototypeReference,
@@ -80,7 +80,7 @@ func (r Record) ID() insolar.ID {
 		CallType: record.CTGenesis,
 		Method:   insolar.GenesisNameRootDomain,
 	}
-	virtRec := record.Wrap(req)
+	virtRec := record.Wrap(&req)
 	hash := record.HashVirtual(r.PCS.ReferenceHasher(), virtRec)
 	return *insolar.NewID(genesisPulse, hash)
 }
@@ -95,7 +95,7 @@ func GenesisRef(name string) insolar.Reference {
 		CallType: record.CTGenesis,
 		Method:   name,
 	}
-	virtRec := record.Wrap(req)
+	virtRec := record.Wrap(&req)
 	hash := record.HashVirtual(pcs.ReferenceHasher(), virtRec)
 	id := insolar.NewID(insolar.FirstPulseNumber, hash)
 	return *insolar.NewReference(*id)

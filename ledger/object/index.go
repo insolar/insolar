@@ -38,7 +38,7 @@ type IndexModifier interface {
 // IndexAccessor provides an interface for fetching buckets from an index.
 type IndexAccessor interface {
 	ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (record.Index, error)
-	// ForPulse returns a collection of buckets for a provided pn and jetID
+	// ForPulse returns a collection of buckets for a provided pulse number.
 	ForPulse(ctx context.Context, pn insolar.PulseNumber) []record.Index
 }
 

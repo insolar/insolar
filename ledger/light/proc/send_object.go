@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -27,41 +29,53 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/object"
 )
 
 type SendObject struct {
 	message  payload.Meta
 	objectID insolar.ID
-	index    record.Lifeline
 
-	Dep struct {
-		Coordinator    jet.Coordinator
-		Jets           jet.Storage
-		JetFetcher     jet.Fetcher
-		RecordAccessor object.RecordAccessor
-		Bus            insolar.MessageBus
-		Sender         bus.Sender
+	dep struct {
+		coordinator jet.Coordinator
+		jets        jet.Storage
+		jetFetcher  executor.JetFetcher
+		records     object.RecordAccessor
+		indices     object.IndexAccessor
+		sender      bus.Sender
 	}
 }
 
 func NewSendObject(
 	msg payload.Meta,
 	id insolar.ID,
-	idx record.Lifeline,
 ) *SendObject {
 	return &SendObject{
 		message:  msg,
-		index:    idx,
 		objectID: id,
 	}
+}
+
+func (p *SendObject) Dep(
+	coordinator jet.Coordinator,
+	jets jet.Storage,
+	jetFetcher executor.JetFetcher,
+	records object.RecordAccessor,
+	indices object.IndexAccessor,
+	sender bus.Sender,
+) {
+	p.dep.coordinator = coordinator
+	p.dep.jets = jets
+	p.dep.jetFetcher = jetFetcher
+	p.dep.records = records
+	p.dep.indices = indices
+	p.dep.sender = sender
 }
 
 func (p *SendObject) Proceed(ctx context.Context) error {
 	sendState := func(rec record.Material) error {
 		virtual := rec.Virtual
-		concrete := record.Unwrap(virtual)
+		concrete := record.Unwrap(&virtual)
 		state, ok := concrete.(record.State)
 		if !ok {
 			return fmt.Errorf("invalid object record %#v", virtual)
@@ -72,7 +86,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 			if err != nil {
 				return errors.Wrap(err, "failed to create reply")
 			}
-			go p.Dep.Sender.Reply(ctx, p.message, msg)
+			p.dep.sender.Reply(ctx, p.message, msg)
 			return nil
 		}
 
@@ -87,7 +101,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create message")
 		}
-		go p.Dep.Sender.Reply(ctx, p.message, msg)
+		p.dep.sender.Reply(ctx, p.message, msg)
 
 		return nil
 	}
@@ -105,23 +119,23 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 			return errors.Wrap(err, "failed to create reply")
 		}
 
-		onHeavy, err := p.Dep.Coordinator.IsBeyondLimit(ctx, stateID.Pulse())
+		onHeavy, err := p.dep.coordinator.IsBeyondLimit(ctx, stateID.Pulse())
 		if err != nil {
 			return errors.Wrap(err, "failed to calculate pulse")
 		}
 		var node insolar.Reference
 		if onHeavy {
-			h, err := p.Dep.Coordinator.Heavy(ctx)
+			h, err := p.dep.coordinator.Heavy(ctx)
 			if err != nil {
 				return errors.Wrap(err, "failed to calculate heavy")
 			}
 			node = *h
 		} else {
-			jetID, err := p.Dep.JetFetcher.Fetch(ctx, p.objectID, stateID.Pulse())
+			jetID, err := p.dep.jetFetcher.Fetch(ctx, p.objectID, stateID.Pulse())
 			if err != nil {
 				return errors.Wrap(err, "failed to fetch jet")
 			}
-			l, err := p.Dep.Coordinator.LightExecutorForJet(ctx, *jetID, stateID.Pulse())
+			l, err := p.dep.coordinator.LightExecutorForJet(ctx, *jetID, stateID.Pulse())
 			if err != nil {
 				return errors.Wrap(err, "failed to calculate role")
 			}
@@ -129,15 +143,29 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		}
 
 		go func() {
-			_, done := p.Dep.Sender.SendTarget(ctx, msg, node)
+			_, done := p.dep.sender.SendTarget(ctx, msg, node)
 			done()
 		}()
 		return nil
 	}
 
-	logger := inslogger.FromContext(ctx)
+	idx, err := p.dep.indices.ForID(ctx, flow.Pulse(ctx), p.objectID)
+	if err != nil {
+		return errors.Wrap(err, "can't get index from storage")
+	}
+
+	lifeline := idx.Lifeline
+
+	if lifeline.StateID == record.StateDeactivation {
+		return errors.New("object is deactivated")
+	}
+
+	if lifeline.LatestState == nil {
+		return ErrNotActivated
+	}
+
 	{
-		buf, err := p.index.Marshal()
+		buf, err := lifeline.Marshal()
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal index")
 		}
@@ -148,18 +176,15 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 			return errors.Wrap(err, "failed to create reply")
 		}
 
-		go p.Dep.Sender.Reply(ctx, p.message, msg)
-		logger.Info("sending index")
+		p.dep.sender.Reply(ctx, p.message, msg)
 	}
 
-	rec, err := p.Dep.RecordAccessor.ForID(ctx, *p.index.LatestState)
+	rec, err := p.dep.records.ForID(ctx, *lifeline.LatestState)
 	switch err {
 	case nil:
-		logger.Info("sending state")
 		return sendState(rec)
 	case object.ErrNotFound:
-		logger.Info("state not found (sending pass)")
-		return sendPassState(*p.index.LatestState)
+		return sendPassState(*lifeline.LatestState)
 	default:
 		return errors.Wrap(err, "failed to fetch record")
 	}

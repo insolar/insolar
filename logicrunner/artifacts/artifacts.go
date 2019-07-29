@@ -32,13 +32,17 @@ type Client interface {
 	// RegisterIncomingRequest creates an outgoing request record in storage.
 	RegisterOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) (*insolar.ID, error)
 
-	// RegisterValidation marks provided object state as approved or disapproved.
-	//
-	// When fetching object, validity can be specified.
-	RegisterValidation(ctx context.Context, object insolar.Reference, state insolar.ID, isValid bool, validationMessages []insolar.Message) error
+	// RegisterResult saves VM method call result and side-effect
+	RegisterResult(ctx context.Context, request insolar.Reference, result RequestResult) error
 
-	// RegisterResult saves VM method call result.
-	RegisterResult(ctx context.Context, object, request insolar.Reference, payload []byte) (*insolar.ID, error)
+	// GetIncomingRequest returns an incoming request for an object.
+	GetIncomingRequest(ctx context.Context, objectRef, reqRef insolar.Reference) (*record.IncomingRequest, error)
+
+	// GetPendings returns pending request IDs of an object.
+	GetPendings(ctx context.Context, objectRef insolar.Reference) ([]insolar.Reference, error)
+
+	// HasPendings returns true if object has unclosed requests.
+	HasPendings(ctx context.Context, object insolar.Reference) (bool, error)
 
 	// GetCode returns code from code record by provided reference according to provided machine preference.
 	//
@@ -50,23 +54,6 @@ type Client interface {
 	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 	// provide methods for fetching all related data.
 	GetObject(ctx context.Context, head insolar.Reference) (ObjectDescriptor, error)
-
-	// GetPendingRequest returns a pending request for object.
-	GetPendingRequest(ctx context.Context, objectID insolar.ID) (*insolar.Reference, *record.IncomingRequest, error)
-
-	// HasPendingRequests returns true if object has unclosed requests.
-	HasPendingRequests(ctx context.Context, object insolar.Reference) (bool, error)
-
-	// GetDelegate returns provided object's delegate reference for provided type.
-	//
-	// Object delegate should be previously created for this object. If object delegate does not exist, an error will
-	// be returned.
-	GetDelegate(ctx context.Context, head, asType insolar.Reference) (*insolar.Reference, error)
-
-	// GetChildren returns children iterator.
-	//
-	// During iteration children refs will be fetched from remote source (parent object).
-	GetChildren(ctx context.Context, parent insolar.Reference, pulse *insolar.PulseNumber) (RefIterator, error)
 
 	// DeployCode creates new code record in storage.
 	//
@@ -83,45 +70,14 @@ type Client interface {
 		memory []byte,
 	) error
 
-	// ActivateObject creates activate object record in storage. If memory is not provided, the prototype default
-	// memory will be used.
-	//
-	// Request reference will be this object's identifier and referred as "object head".
-	ActivateObject(
-		ctx context.Context,
-		request, parent, prototype insolar.Reference,
-		asDelegate bool,
-		memory []byte,
-	) error
-
-	// UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
-	// object. Provided memory well be the new object memory.
-	//
-	// Returned reference will be the latest object state (exact) reference.
-	UpdateObject(
-		ctx context.Context,
-		request insolar.Reference,
-		obj ObjectDescriptor,
-		memory []byte,
-		result []byte,
-	) error
-
-	// DeactivateObject creates deactivate object record in storage. Provided reference should be a reference to the head
-	// of the object. If object is already deactivated, an error should be returned.
-	//
-	// Deactivated object cannot be changed.
-	DeactivateObject(
-		ctx context.Context,
-		request insolar.Reference,
-		obj ObjectDescriptor,
-		result []byte,
-	) error
-
 	// State returns hash state for artifact manager.
 	State() []byte
 
+	// InjectCodeDescriptor injects code descriptor needed by builtin contracts
 	InjectCodeDescriptor(insolar.Reference, CodeDescriptor)
+	// InjectObjectDescriptor injects object descriptor needed by builtin contracts (to store prototypes)
 	InjectObjectDescriptor(insolar.Reference, ObjectDescriptor)
+	// InjectFinish finalizes all injects, all next injects will panic
 	InjectFinish()
 }
 
@@ -183,4 +139,39 @@ type DescriptorsCache interface {
 	ByObjectDescriptor(ctx context.Context, obj ObjectDescriptor) (ObjectDescriptor, CodeDescriptor, error)
 	GetPrototype(ctx context.Context, ref insolar.Reference) (ObjectDescriptor, error)
 	GetCode(ctx context.Context, ref insolar.Reference) (CodeDescriptor, error)
+}
+
+type RequestResultType uint8
+
+const (
+	RequestSideEffectNone RequestResultType = iota
+	RequestSideEffectActivate
+	RequestSideEffectAmend
+	RequestSideEffectDeactivate
+)
+
+func (t RequestResultType) String() string {
+	switch t {
+	case RequestSideEffectNone:
+		return "None"
+	case RequestSideEffectActivate:
+		return "Activate"
+	case RequestSideEffectAmend:
+		return "Amend"
+	case RequestSideEffectDeactivate:
+		return "Deactivate"
+	default:
+		return "Unknown"
+	}
+}
+
+type RequestResult interface {
+	Type() RequestResultType
+
+	Activate() (insolar.Reference, insolar.Reference, []byte)
+	Amend() (insolar.ID, insolar.Reference, []byte)
+	Deactivate() insolar.ID
+
+	Result() []byte
+	ObjectReference() insolar.Reference
 }

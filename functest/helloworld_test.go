@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -46,7 +47,7 @@ func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "api.call",
-		Params:  requester.Params{CallSite: "CreateHelloWorld", CallParams: map[string]interface{}{}, PublicKey: rootCfg.PublicKey},
+		Params:  requester.Params{CallSite: "CreateHelloWorld", CallParams: make(foundation.StableMap), PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
 		return nil, err
@@ -81,11 +82,13 @@ func (i *HelloWorldInstance) Greet(ctx context.Context, name string) (string, er
 	}
 
 	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
+	callParams := make(foundation.StableMap)
+	callParams["name"] = name
 	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "api.call",
-		Params:  requester.Params{CallSite: "Greet", CallParams: map[string]interface{}{"name": name}, PublicKey: rootCfg.PublicKey},
+		Params:  requester.Params{CallSite: "Greet", CallParams: callParams, PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
 		return "", err
@@ -117,7 +120,7 @@ func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "api.call",
-		Params:  requester.Params{CallSite: "Count", CallParams: map[string]interface{}{}, PublicKey: rootCfg.PublicKey},
+		Params:  requester.Params{CallSite: "Count", CallParams: make(foundation.StableMap), PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
 		return 0, err
@@ -138,6 +141,19 @@ func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
 	return int(rv), nil
 }
 
+func (i *HelloWorldInstance) PulseNumber(ctx context.Context) (int, error) {
+	member := &user{i.Ref.String(), root.privKey, root.pubKey}
+	result, err := signedRequest(member, "PulseNumber", nil)
+	if err != nil {
+		return 0, err
+	}
+	rv, ok := result.(float64)
+	if !ok {
+		return 0, errors.Errorf("failed to decode: expected float64, got %T", result)
+	}
+	return int(rv), nil
+}
+
 func (i *HelloWorldInstance) CreateChild(ctx context.Context) (*HelloWorldInstance, error) {
 	seed, err := requester.GetSeed(TestAPIURL)
 	if err != nil {
@@ -149,7 +165,7 @@ func (i *HelloWorldInstance) CreateChild(ctx context.Context) (*HelloWorldInstan
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "api.call",
-		Params:  requester.Params{CallSite: "CreateChild", CallParams: map[string]interface{}{}, PublicKey: rootCfg.PublicKey},
+		Params:  requester.Params{CallSite: "CreateChild", CallParams: make(foundation.StableMap), PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
 		return nil, err
@@ -188,7 +204,7 @@ func (i *HelloWorldInstance) ReturnObj(ctx context.Context) (map[string]interfac
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "api.call",
-		Params:  requester.Params{CallSite: "ReturnObj", CallParams: map[string]interface{}{}, PublicKey: rootCfg.PublicKey},
+		Params:  requester.Params{CallSite: "ReturnObj", CallParams: make(foundation.StableMap), PublicKey: rootCfg.PublicKey},
 	}, seed)
 	if err != nil {
 		return nil, err
@@ -230,6 +246,18 @@ func TestCallHelloWorld(t *testing.T) {
 	a.LessOrEqual(100, count)
 }
 
+func TestCallPulseNumber(t *testing.T) {
+	a, r := assert.New(t), require.New(t)
+	ctx := context.TODO()
+
+	hw, err := NewHelloWorld(ctx)
+	r.NoError(err, "Unexpected error")
+	a.NotEmpty(hw.Ref, "Ref doesn't exists")
+	pulseNum, err := hw.PulseNumber(ctx)
+	r.NoError(err)
+
+	r.True(pulseNum > 0)
+}
 func TestCallHelloWorldReturnObj(t *testing.T) {
 	a, r := assert.New(t), require.New(t)
 	ctx := context.TODO()

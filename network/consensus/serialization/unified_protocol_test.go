@@ -56,20 +56,22 @@ import (
 	"crypto/ecdsa"
 	"testing"
 
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
+
 	"github.com/insolar/insolar/network/consensus/adapters"
-	"github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/require"
 )
 
-var digester = func() common.DataDigester {
+var digester = func() cryptkit.DataDigester {
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	digester := adapters.NewSha3512Digester(scheme)
 	return digester
 }()
 
-var signer = func() common.DigestSigner {
+var signer = func() cryptkit.DigestSigner {
 	processor := platformpolicy.NewKeyProcessor()
 	key, _ := processor.GeneratePrivateKey()
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
@@ -197,7 +199,7 @@ func TestHeader_GetSourceID(t *testing.T) {
 		SourceID: 123,
 	}
 
-	require.Equal(t, common.ShortNodeID(123), h.GetSourceID())
+	require.Equal(t, insolar.ShortNodeID(123), h.GetSourceID())
 }
 
 func TestHeader_GetProtocolType(t *testing.T) {
@@ -227,22 +229,22 @@ func TestHeader_setProtocolType_Panic(t *testing.T) {
 func TestHeader_GetPacketType(t *testing.T) {
 	h := Header{}
 
-	require.Equal(t, packets.PacketPhase0, h.GetPacketType())
+	require.Equal(t, phases.PacketPhase0, h.GetPacketType())
 
 	h.ProtocolAndPacketType = 1 // 0b00000001
-	require.Equal(t, packets.PacketPhase1, h.GetPacketType())
+	require.Equal(t, phases.PacketPhase1, h.GetPacketType())
 
 	h.ProtocolAndPacketType = 2 // 0b00000010
-	require.Equal(t, packets.PacketPhase2, h.GetPacketType())
+	require.Equal(t, phases.PacketPhase2, h.GetPacketType())
 }
 
 func TestHeader_setPacketType(t *testing.T) {
 	h := Header{}
 
-	require.Equal(t, packets.PacketPhase0, h.GetPacketType())
+	require.Equal(t, phases.PacketPhase0, h.GetPacketType())
 
-	h.setPacketType(packets.PacketPhase3)
-	require.Equal(t, packets.PacketPhase3, h.GetPacketType())
+	h.setPacketType(phases.PacketPhase3)
+	require.Equal(t, phases.PacketPhase3, h.GetPacketType())
 }
 
 func TestHeader_setPacketType_Panic(t *testing.T) {
@@ -284,7 +286,7 @@ func TestHeader_SerializeTo(t *testing.T) {
 	h.setIsBodyEncrypted(true)
 	h.setIsRelayRestricted(true)
 	h.setProtocolType(ProtocolTypeGlobulaConsensus)
-	h.setPacketType(packets.PacketPhase3)
+	h.setPacketType(phases.PacketPhase3)
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
 
@@ -302,7 +304,7 @@ func TestHeader_DeserializeFrom(t *testing.T) {
 	h1.setIsBodyEncrypted(true)
 	h1.setIsRelayRestricted(true)
 	h1.setProtocolType(ProtocolTypeGlobulaConsensus)
-	h1.setPacketType(packets.PacketPhase3)
+	h1.setPacketType(phases.PacketPhase3)
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
 	err := h1.SerializeTo(nil, buf)
@@ -361,6 +363,6 @@ func TestPacket_DeserializeFrom_NilBody(t *testing.T) {
 
 	n, err := p.DeserializeFrom(context.Background(), buf)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), ErrNilBody.Error())
+	require.Contains(t, err.Error(), ErrInvalidProtocol.Error())
 	require.EqualValues(t, 0, n)
 }

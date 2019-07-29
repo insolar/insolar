@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 
 	"github.com/pkg/errors"
-	"github.com/ugorji/go/codec"
 )
 
 // Arguments is a dedicated type for arguments, that represented as binary cbored blob
@@ -41,7 +40,7 @@ func (args *Arguments) MarshalJSON() ([]byte, error) {
 
 func convertArgs(args []byte, result *[]interface{}) error {
 	var value interface{}
-	err := codec.NewDecoderBytes(args, &codec.CborHandle{}).Decode(&value)
+	err := Deserialize(args, &value)
 	if err != nil {
 		return errors.Wrap(err, "Can't deserialize record")
 	}
@@ -186,8 +185,6 @@ const (
 	TypeReturnResults
 	// TypeExecutorResults message that goes to new Executor to validate previous Executor actions through CaseBind
 	TypeExecutorResults
-	// TypeValidateCaseBind sends CaseBind form Executor to Validators for redo all actions
-	TypeValidateCaseBind
 	// TypeValidationResults sends from Validator to new Executor with results of validation actions of previous Executor
 	TypeValidationResults
 	// TypePendingFinished is sent by the old executor to the current executor when pending execution finishes
@@ -198,41 +195,6 @@ const (
 	// TypeStillExecuting is sent by an old executor on pulse switch if it wants to continue executing
 	// to the current executor
 	TypeStillExecuting
-
-	// Ledger
-
-	// TypeGetCode retrieves code from storage.
-	TypeGetCode
-	// TypeGetObject retrieves object from storage.
-	TypeGetObject
-	// TypeGetDelegate retrieves object represented as provided type.
-	TypeGetDelegate
-	// TypeGetChildren retrieves object's children.
-	TypeGetChildren
-	// TypeUpdateObject amends object.
-	TypeUpdateObject
-	// TypeRegisterChild registers child on the parent object.
-	TypeRegisterChild
-	// TypeSetRecord saves record in storage.
-	TypeSetRecord
-	// TypeValidateRecord saves record in storage.
-	TypeValidateRecord
-	// TypeSetBlob saves blob in storage.
-	TypeSetBlob
-	// TypeGetObjectIndex fetches object index from storage.
-	TypeGetObjectIndex
-	// TypeGetPendingRequests fetches pending requests for object.
-	TypeGetPendingRequests
-	// TypeHotRecords saves hot-records in storage.
-	TypeHotRecords
-	// TypeGetJet requests to calculate a jet for provided object.
-	TypeGetJet
-	// TypeAbandonedRequestsNotification informs virtual node about unclosed requests.
-	TypeAbandonedRequestsNotification
-	// TypeGetPendingRequestID fetches a pending request id from ledger
-	TypeGetPendingRequestID
-	// TypeGetOpenRequests fetches open pending requests from a heavy to a provided pulse
-	TypeGetOpenRequests
 
 	// Heavy replication
 
@@ -255,6 +217,5 @@ const (
 	// DTTypePendingExecution allows to continue method calls
 	DTTypePendingExecution DelegationTokenType = iota + 1
 	DTTypeGetObjectRedirect
-	DTTypeGetChildrenRedirect
 	DTTypeGetCodeRedirect
 )

@@ -32,7 +32,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
@@ -278,7 +278,7 @@ func TestStatus(t *testing.T) {
 	require.Equal(t, resp, &testStatusResponse)
 }
 
-func TestPointToDER(t *testing.T) {
+func TestMarshalSig(t *testing.T) {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err)
 	msg := "test"
@@ -286,11 +286,13 @@ func TestPointToDER(t *testing.T) {
 
 	r1, s1, err := ecdsa.Sign(rand.Reader, privateKey, hash[:])
 	require.NoError(t, err)
-	derString := pointsToDER(r1, s1)
+	derString, err := marshalSig(r1, s1)
+	require.NoError(t, err)
 
 	sig, err := base64.StdEncoding.DecodeString(derString)
 
-	r2, s2 := foundation.PointsFromDER(sig)
+	r2, s2, err := foundation.UnmarshalSig(sig)
+	require.NoError(t, err)
 
 	require.Equal(t, r1, r2, errors.Errorf("Invalid S number"))
 	require.Equal(t, s1, s2, errors.Errorf("Invalid R number"))

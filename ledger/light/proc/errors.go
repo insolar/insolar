@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	ErrInvalidRef        = errors.New("invalid reference")
-	ErrObjectDeactivated = errors.New("object is deactivated")
-	ErrNotExecutor       = errors.New("not executor for jet")
+	ErrNotExecutor      = errors.New("not executor for jet")
+	ErrExecutorMismatch = errors.New("sender isn't executor for object")
+	ErrNotActivated = errors.New("object should be activated")
 )

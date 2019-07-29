@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar/flow"
@@ -53,8 +52,8 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 	ctx, _ = inslogger.WithField(ctx, "object", msg.ObjectID.DebugString())
 
 	passIfNotExecutor := !s.passed
-	jet := proc.NewCheckJet(msg.ObjectID, flow.Pulse(ctx), s.meta, passIfNotExecutor)
-	s.dep.CheckJet(jet)
+	jet := proc.NewFetchJet(msg.ObjectID, flow.Pulse(ctx), s.meta, passIfNotExecutor)
+	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, false); err != nil {
 		if err == proc.ErrNotExecutor && passIfNotExecutor {
 			return nil
@@ -63,23 +62,19 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 	}
 	objJetID := jet.Result.Jet
 
-	hot := proc.NewWaitHotWM(objJetID, flow.Pulse(ctx), s.meta)
-	s.dep.WaitHotWM(hot)
+	hot := proc.NewWaitHot(objJetID, flow.Pulse(ctx), s.meta)
+	s.dep.WaitHot(hot)
 	if err := f.Procedure(ctx, hot, false); err != nil {
 		return err
 	}
 
-	idx := proc.NewEnsureIndexWM(msg.ObjectID, objJetID, s.meta)
-	s.dep.EnsureIndex(idx)
-	if err := f.Procedure(ctx, idx, false); err != nil {
+	ensureIdx := proc.NewEnsureIndex(msg.ObjectID, objJetID, s.meta)
+	s.dep.EnsureIndex(ensureIdx)
+	if err := f.Procedure(ctx, ensureIdx, false); err != nil {
 		return err
 	}
 
-	if idx.Result.Lifeline.StateID == record.StateDeactivation {
-		return errors.New("object is deactivated")
-	}
-
-	send := proc.NewSendObject(s.meta, msg.ObjectID, idx.Result.Lifeline)
+	send := proc.NewSendObject(s.meta, msg.ObjectID)
 	s.dep.SendObject(send)
 	return f.Procedure(ctx, send, false)
 }

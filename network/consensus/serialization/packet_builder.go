@@ -55,35 +55,44 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	common2 "github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/statevector"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
 
-type PacketBuilder struct {
-	crypto      core.TransportCryptographyFactory
-	localConfig core.LocalNodeConfiguration
+var defaultNeighbourhoodSize = transport.NeighbourhoodSizes{
+	NeighbourhoodSize:           5,
+	NeighbourhoodTrustThreshold: 2,
+	JoinersPerNeighbourhood:     2,
+	JoinersBoost:                1,
 }
 
-func NewPacketBuilder(crypto core.TransportCryptographyFactory, localConfig core.LocalNodeConfiguration) *PacketBuilder {
+type fullReader struct {
+	profiles.StaticProfile
+	profiles.StaticProfileExtension
+}
+
+type PacketBuilder struct {
+	crypto      transport.CryptographyFactory
+	localConfig api.LocalNodeConfiguration
+}
+
+func NewPacketBuilder(crypto transport.CryptographyFactory, localConfig api.LocalNodeConfiguration) *PacketBuilder {
 	return &PacketBuilder{
 		crypto:      crypto,
 		localConfig: localConfig,
 	}
 }
 
-func (p *PacketBuilder) GetNeighbourhoodSize() common.NeighbourhoodSizes {
-	return common.NeighbourhoodSizes{
-		NeighbourhoodSize:           5,
-		NeighbourhoodTrustThreshold: 2,
-		JoinersPerNeighbourhood:     2,
-		JoinersBoost:                1,
-	}
+func (pb *PacketBuilder) GetNeighbourhoodSize() transport.NeighbourhoodSizes {
+	return defaultNeighbourhoodSize
 }
 
-func (p *PacketBuilder) preparePacket(sender *packets.NodeAnnouncementProfile, packetType packets.PacketType) *Packet {
+func (pb *PacketBuilder) preparePacket(sender *transport.NodeAnnouncementProfile, packetType phases.PacketType) *Packet {
 	packet := &Packet{
 		Header: Header{
 			SourceID: uint32(sender.GetNodeID()),
@@ -101,95 +110,186 @@ func (p *PacketBuilder) preparePacket(sender *packets.NodeAnnouncementProfile, p
 	return packet
 }
 
-func (p *PacketBuilder) prepareWrapper(packet *Packet) *preparedPacketWrapper {
-	return &preparedPacketWrapper{
+func (pb *PacketBuilder) preparePacketSender(packet *Packet) *PreparedPacketSender {
+	return &PreparedPacketSender{
 		packet:   packet,
-		digester: p.crypto.GetDigestFactory().GetPacketDigester(),
-		signer:   p.crypto.GetNodeSigner(p.localConfig.GetSecretKeyStore()),
+		digester: pb.crypto.GetDigestFactory().GetPacketDigester(),
+		signer:   pb.crypto.GetNodeSigner(pb.localConfig.GetSecretKeyStore()),
 	}
 }
 
-func (p *PacketBuilder) PreparePhase0Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket common.OriginalPulsarPacket,
-	options core.PacketSendOptions) core.PreparedPacketSender {
+func (pb *PacketBuilder) PreparePhase0Packet(
+	sender *transport.NodeAnnouncementProfile,
+	pulsarPacket proofs.OriginalPulsarPacket,
+	options transport.PacketPrepareOptions,
+) transport.PreparedPacketSender {
 
-	packet := p.preparePacket(sender, packets.PacketPhase0)
-	if (options & core.SendWithoutPulseData) == 0 {
+	packet := pb.preparePacket(sender, phases.PacketPhase0)
+	fillPhase0(packet.EncryptableBody.(*GlobulaConsensusPacketBody), sender, pulsarPacket)
+
+	if !options.HasAny(transport.PrepareWithoutPulseData) {
 		packet.Header.SetFlag(FlagHasPulsePacket)
 	}
 
-	body := packet.EncryptableBody.(*GlobulaConsensusPacketBody)
-	body.CurrentRank = sender.GetNodeRank()
-	body.PulsarPacket.Data = pulsarPacket.AsBytes()
-
-	return p.prepareWrapper(packet)
+	return pb.preparePacketSender(packet)
 }
 
-func (p *PacketBuilder) PreparePhase1Packet(sender *packets.NodeAnnouncementProfile, pulsarPacket common.OriginalPulsarPacket,
-	options core.PacketSendOptions) core.PreparedPacketSender {
+func (pb *PacketBuilder) PreparePhase1Packet(
+	sender *transport.NodeAnnouncementProfile,
+	pulsarPacket proofs.OriginalPulsarPacket,
+	welcome *proofs.NodeWelcomePackage,
+	options transport.PacketPrepareOptions,
+) transport.PreparedPacketSender {
 
-	packet := p.preparePacket(sender, packets.PacketPhase1)
-	if (options & core.SendWithoutPulseData) == 0 {
+	packet := pb.preparePacket(sender, phases.PacketPhase1)
+	fillPhase1(packet.EncryptableBody.(*GlobulaConsensusPacketBody), sender, pulsarPacket, welcome)
+
+	if !options.HasAny(transport.PrepareWithoutPulseData) {
 		packet.Header.SetFlag(FlagHasPulsePacket)
 	}
 
-	body := packet.EncryptableBody.(*GlobulaConsensusPacketBody)
-	body.PulsarPacket.Data = pulsarPacket.AsBytes()
+	if options.HasAny(transport.AlternativePhasePacket) {
+		packet.Header.setPacketType(phases.PacketReqPhase1)
+	}
 
-	// TODO: fixed linter :)
-	body.FullSelfIntro.setAddrMode(body.FullSelfIntro.getAddrMode())
-	body.FullSelfIntro.setPrimaryRole(body.FullSelfIntro.getPrimaryRole())
+	if !options.HasAny(transport.OnlyBriefIntroAboutJoiner) {
+		packet.Header.SetFlag(FlagHasJoinerExt)
+	}
 
-	return p.prepareWrapper(packet)
+	packet.Header.SetFlag(FlagSelfIntro1)
+	if welcome != nil {
+		packet.Header.ClearFlag(FlagSelfIntro1)
+		packet.Header.SetFlag(FlagSelfIntro2)
+
+		if welcome.JoinerSecret != nil {
+			packet.Header.SetFlag(FlagSelfIntro1)
+		}
+	}
+
+	return pb.preparePacketSender(packet)
 }
 
-func (p *PacketBuilder) PreparePhase2Packet(sender *packets.NodeAnnouncementProfile,
-	neighbourhood []packets.MembershipAnnouncementReader, options core.PacketSendOptions) core.PreparedPacketSender {
+func (pb *PacketBuilder) PreparePhase2Packet(
+	sender *transport.NodeAnnouncementProfile,
+	welcome *proofs.NodeWelcomePackage,
+	neighbourhood []transport.MembershipAnnouncementReader,
+	options transport.PacketPrepareOptions,
+) transport.PreparedPacketSender {
 
-	packet := p.preparePacket(sender, packets.PacketPhase2)
+	packet := pb.preparePacket(sender, phases.PacketPhase2)
+	fullPhase2(packet.EncryptableBody.(*GlobulaConsensusPacketBody), sender, welcome, neighbourhood)
 
-	return p.prepareWrapper(packet)
+	if options.HasAny(transport.AlternativePhasePacket) {
+		packet.Header.setPacketType(phases.PacketExtPhase2)
+	}
+
+	if !options.HasAny(transport.OnlyBriefIntroAboutJoiner) {
+		packet.Header.SetFlag(FlagHasJoinerExt)
+	}
+
+	packet.Header.SetFlag(FlagSelfIntro1)
+	if welcome != nil {
+		packet.Header.ClearFlag(FlagSelfIntro1)
+		packet.Header.SetFlag(FlagSelfIntro2)
+
+		if welcome.JoinerSecret != nil {
+			packet.Header.SetFlag(FlagSelfIntro1)
+		}
+	}
+
+	return pb.preparePacketSender(packet)
 }
 
-func (p *PacketBuilder) PreparePhase3Packet(sender *packets.NodeAnnouncementProfile,
-	vectors nodeset.HashedNodeVector, options core.PacketSendOptions) core.PreparedPacketSender {
+func (pb *PacketBuilder) PreparePhase3Packet(
+	sender *transport.NodeAnnouncementProfile,
+	vectors statevector.Vector,
+	options transport.PacketPrepareOptions,
+) transport.PreparedPacketSender {
 
-	packet := p.preparePacket(sender, packets.PacketPhase3)
+	packet := pb.preparePacket(sender, phases.PacketPhase3)
+	fillPhase3(packet.EncryptableBody.(*GlobulaConsensusPacketBody), vectors)
 
-	body := packet.EncryptableBody.(*GlobulaConsensusPacketBody)
-	body.Vectors.StateVectorMask.SetBitset(vectors.Bitset)
+	if options.HasAny(transport.AlternativePhasePacket) {
+		packet.Header.setPacketType(phases.PacketFastPhase3)
+	}
 
-	return p.prepareWrapper(packet)
+	if vectors.Doubted.AnnouncementHash != nil {
+		packet.Header.SetFlag(1)
+	}
+
+	return pb.preparePacketSender(packet)
 }
 
-type preparedPacketWrapper struct {
+type PreparedPacketSender struct {
 	packet   *Packet
-	buf      [packetMaxSize]byte
-	digester common2.DataDigester
-	signer   common2.DigestSigner
+	digester cryptkit.DataDigester
+	signer   cryptkit.DigestSigner
 }
 
-func (p *preparedPacketWrapper) SendTo(ctx context.Context, target common.NodeProfile, sendOptions core.PacketSendOptions, sender core.PacketSender) {
-	p.packet.Header.TargetID = uint32(target.GetShortNodeID())
+func (p *PreparedPacketSender) Copy() *PreparedPacketSender {
+	ppsCopy := *p
+	pCopy := *p.packet
+	ppsCopy.packet = &pCopy
+	return &ppsCopy
+}
 
-	if (sendOptions & core.SendWithoutPulseData) != 0 {
-		p.packet.Header.ClearFlag(FlagHasPulsePacket)
-	}
+func (p *PreparedPacketSender) SendTo(
+	ctx context.Context,
+	target transport.TargetProfile,
+	sendOptions transport.PacketSendOptions,
+	sender transport.PacketSender,
+) {
 
-	buf := bytes.NewBuffer(p.buf[0:0:packetMaxSize])
-	_, err := p.packet.SerializeTo(ctx, buf, p.digester, p.signer)
+	p.packet.Header.TargetID = uint32(target.GetNodeID())
+	p.packet.Header.ReceiverID = uint32(target.GetNodeID())
+
+	ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
+		"receiver_node_id": p.packet.Header.ReceiverID,
+		"target_node_id":   p.packet.Header.TargetID,
+		"packet_type":      p.packet.Header.GetPacketType().String(),
+		"packet_pulse":     p.packet.getPulseNumber(),
+	})
+
+	p.finalizeFlags(sendOptions)
+
+	var buf [packetMaxSize]byte
+	buffer := bytes.NewBuffer(buf[0:0:packetMaxSize])
+
+	_, err := p.packet.SerializeTo(ctx, buffer, p.digester, p.signer)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(err)
 	}
 
-	sender.SendPacketToTransport(ctx, target, sendOptions, p.buf[:buf.Len()])
+	sender.SendPacketToTransport(ctx, target, sendOptions, buffer.Bytes())
 }
 
-func (p *preparedPacketWrapper) SendToMany(ctx context.Context, targetCount int, sender core.PacketSender,
-	filter func(ctx context.Context, targetIndex int) (common.NodeProfile, core.PacketSendOptions)) {
+func (p *PreparedPacketSender) SendToMany(
+	ctx context.Context,
+	targetCount int,
+	sender transport.PacketSender,
+	filter transport.ProfileFilter,
+) {
 
-	for i := 0; i <= targetCount; i++ {
+	for i := 0; i < targetCount; i++ {
 		if np, options := filter(ctx, i); np != nil {
-			p.SendTo(ctx, np, options, sender)
+			p.Copy().SendTo(ctx, np, options, sender)
+		}
+	}
+}
+
+func (p *PreparedPacketSender) finalizeFlags(sendOptions transport.PacketSendOptions) {
+	packetType := p.packet.Header.GetPacketType().GetPayloadEquivalent()
+
+	if packetType == phases.PacketPhase0 || packetType == phases.PacketPhase1 {
+		if sendOptions.HasAny(transport.SendWithoutPulseData) {
+			p.packet.Header.ClearFlag(FlagHasPulsePacket)
+		}
+	}
+
+	if packetType == phases.PacketPhase1 || packetType == phases.PacketPhase2 {
+		if !sendOptions.HasAny(transport.TargetNeedsIntro) {
+			p.packet.Header.ClearFlag(FlagSelfIntro1)
+			p.packet.Header.ClearFlag(FlagSelfIntro2)
 		}
 	}
 }

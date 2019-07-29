@@ -20,7 +20,9 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-type Record interface{}
+type Record interface {
+	Marshal() (dAtA []byte, err error)
+}
 
 // StateID is a state of lifeline records.
 type StateID int
@@ -42,6 +44,7 @@ func (s *StateID) Equal(other StateID) bool {
 
 // State is common object state record.
 type State interface {
+	Record
 	// ID returns state id.
 	ID() StateID
 	// GetImage returns state code.
@@ -134,7 +137,11 @@ func (Genesis) GetIsPrototype() bool {
 	return false
 }
 
+//go:generate minimock -i github.com/insolar/insolar/insolar/record.Request -o ./ -s _mock.go
+
+// Request is a common request interface.
 type Request interface {
+	Record
 	// AffinityRef returns a pointer to the reference of the object the
 	// Request is affine to. The result can be nil, e.g. in case of creating
 	// a new object.
@@ -142,17 +149,49 @@ type Request interface {
 	// ReasonRef returns a reference of the Request that caused the creating
 	// of this Request.
 	ReasonRef() insolar.Reference
+	// GetCallType returns call type.
 	GetCallType() CallType
+	// IsAPIRequest tells is it API-request or not.
+	IsAPIRequest() bool
+	// IsCreationRequest checks a request-type.
+	IsCreationRequest() bool
+	// IsDetached check is request has detached state.
+	IsDetached() bool
+	// IsTemporaryUploadCode tells us that that request is temporary hack
+	// for uploading code
+	IsTemporaryUploadCode() bool
 }
 
 func (r *IncomingRequest) AffinityRef() *insolar.Reference {
 	// IncomingRequests are affine to the Object on which the request
-	// is going to be executed.
+	// is going to be executed
+	// Exceptions are CTSaveAsMethod/CTSaveAsDelegate, we should
+	// calculate hash of message, so call CalculateRequestAffinityRef
+	if r.IsCreationRequest() {
+		return nil
+	}
 	return r.Object
 }
 
 func (r *IncomingRequest) ReasonRef() insolar.Reference {
 	return r.Reason
+}
+
+func (r *IncomingRequest) IsAPIRequest() bool {
+	return !r.APINode.IsEmpty()
+}
+
+func (r *IncomingRequest) IsCreationRequest() bool {
+	return r.GetCallType() == CTSaveAsChild
+}
+
+func (r *IncomingRequest) IsDetached() bool {
+	// incoming requests never should't be in detached state, app code should check it and raise some kind of error.
+	return isDetached(r.ReturnMode)
+}
+
+func (r *IncomingRequest) IsTemporaryUploadCode() bool {
+	return r.APINode.IsEmpty() && r.Caller.IsEmpty()
 }
 
 func (r *OutgoingRequest) AffinityRef() *insolar.Reference {
@@ -164,23 +203,37 @@ func (r *OutgoingRequest) ReasonRef() insolar.Reference {
 	return r.Reason
 }
 
-func (m *Lifeline) SetDelegate(key insolar.Reference, value insolar.Reference) {
-	for _, d := range m.Delegates {
-		if d.Key == key {
-			d.Value = value
-			return
-		}
-	}
-
-	m.Delegates = append(m.Delegates, LifelineDelegate{Key: key, Value: value})
+func (r *OutgoingRequest) IsAPIRequest() bool {
+	return false
 }
 
-func (m *Lifeline) DelegateByKey(key insolar.Reference) (insolar.Reference, bool) {
-	for _, d := range m.Delegates {
-		if d.Key == key {
-			return d.Value, true
-		}
-	}
+func (r *OutgoingRequest) IsCreationRequest() bool {
+	return false
+}
 
-	return [64]byte{}, false
+func (r *OutgoingRequest) IsDetached() bool {
+	return isDetached(r.ReturnMode)
+}
+
+func (r *OutgoingRequest) IsTemporaryUploadCode() bool {
+	return false
+}
+
+func isDetached(rm ReturnMode) bool {
+	return rm == ReturnSaga
+}
+
+func CalculateRequestAffinityRef(
+	request Request,
+	pulseNumber insolar.PulseNumber,
+	scheme insolar.PlatformCryptographyScheme,
+) *insolar.Reference {
+	affinityRef := request.AffinityRef()
+	if affinityRef == nil {
+		virtualRecord := Wrap(request)
+		hash := HashVirtual(scheme.ReferenceHasher(), virtualRecord)
+		recID := insolar.NewID(pulseNumber, hash)
+		affinityRef = insolar.NewReference(*recID)
+	}
+	return affinityRef
 }

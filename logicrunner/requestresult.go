@@ -16,28 +16,73 @@
 
 package logicrunner
 
-type RequestResult struct {
-	Result       []byte
-	NewMemory    []byte
-	Activation   bool
-	Deactivation bool
+import (
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/artifacts"
+)
+
+type requestResult struct {
+	sideEffectType  artifacts.RequestResultType // every
+	result          []byte                      // every
+	objectReference insolar.Reference           // every
+
+	parentReference insolar.Reference // activate
+	objectImage     insolar.Reference // amend + activate
+	objectStateID   insolar.ID        // amend + deactivate
+	memory          []byte            // amend + activate
 }
 
-func NewRequestResult(res []byte) *RequestResult {
-	return &RequestResult{
-		Result: res,
+func newRequestResult(result []byte, objectRef insolar.Reference) *requestResult {
+	return &requestResult{
+		sideEffectType:  artifacts.RequestSideEffectNone,
+		result:          result,
+		objectReference: objectRef,
 	}
 }
 
-func (rr *RequestResult) Activate(mem []byte) {
-	rr.Activation = true
-	rr.NewMemory = mem
+func (s *requestResult) Result() []byte {
+	return s.result
 }
 
-func (rr *RequestResult) Update(mem []byte) {
-	rr.NewMemory = mem
+func (s *requestResult) Activate() (insolar.Reference, insolar.Reference, []byte) {
+	return s.parentReference, s.objectImage, s.memory
 }
 
-func (rr *RequestResult) Deactivate() {
-	rr.Deactivation = true
+func (s *requestResult) Amend() (insolar.ID, insolar.Reference, []byte) {
+	return s.objectStateID, s.objectImage, s.memory
+}
+
+func (s *requestResult) Deactivate() insolar.ID {
+	return s.objectStateID
+}
+
+func (s *requestResult) SetActivate(parent, image insolar.Reference, memory []byte) {
+	s.sideEffectType = artifacts.RequestSideEffectActivate
+
+	s.parentReference = parent
+	s.objectImage = image
+	s.memory = memory
+
+}
+
+func (s *requestResult) SetAmend(object artifacts.ObjectDescriptor, memory []byte) {
+	s.sideEffectType = artifacts.RequestSideEffectAmend
+	s.memory = memory
+	s.objectStateID = *object.StateID()
+
+	prototype, _ := object.Prototype()
+	s.objectImage = *prototype
+}
+
+func (s *requestResult) SetDeactivate(object artifacts.ObjectDescriptor) {
+	s.sideEffectType = artifacts.RequestSideEffectDeactivate
+	s.objectStateID = *object.StateID()
+}
+
+func (s requestResult) Type() artifacts.RequestResultType {
+	return s.sideEffectType
+}
+
+func (s *requestResult) ObjectReference() insolar.Reference {
+	return s.objectReference
 }

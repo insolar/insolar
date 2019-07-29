@@ -17,7 +17,6 @@
 package handler
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
@@ -27,7 +26,6 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/drop"
@@ -35,11 +33,8 @@ import (
 
 	"github.com/insolar/insolar/ledger/heavy/proc"
 	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -79,15 +74,37 @@ func New(cfg configuration.Ledger) *Handler {
 			p.Dep.Records = h.RecordAccessor
 			p.Dep.Sender = h.Sender
 		},
-		GetCode: func(p *proc.GetCode) {
+		SendCode: func(p *proc.SendCode) {
 			p.Dep.Sender = h.Sender
 			p.Dep.RecordAccessor = h.RecordAccessor
 		},
 		SendRequests: func(p *proc.SendRequests) {
 			p.Dep(h.Sender, h.RecordAccessor, h.IndexAccessor)
 		},
-		GetRequest: func(p *proc.GetRequest) {
+		SendRequest: func(p *proc.SendRequest) {
 			p.Dep(h.RecordAccessor, h.Sender)
+		},
+		Replication: func(p *proc.Replication) {
+			p.Dep(
+				h.RecordModifier,
+				h.IndexModifier,
+				h.PCS,
+				h.PulseAccessor,
+				h.DropModifier,
+				h.JetModifier,
+				h.JetKeeper,
+			)
+		},
+		SendJet: func(p *proc.SendJet) {
+			p.Dep(
+				h.JetAccessor,
+				h.Sender)
+		},
+		SendIndex: func(p *proc.SendIndex) {
+			p.Dep(
+				h.IndexAccessor,
+				h.Sender,
+			)
 		},
 	}
 	h.dep = &dep
@@ -104,6 +121,9 @@ func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, e
 	}
 
 	for k, v := range msg.Metadata {
+		if k == bus.MetaSpanData || k == bus.MetaTraceID {
+			continue
+		}
 		ctx, _ = inslogger.WithField(ctx, k, v)
 	}
 	logger := inslogger.FromContext(ctx)
@@ -122,53 +142,7 @@ func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, e
 	return nil, nil
 }
 
-func (h *Handler) handleParcel(ctx context.Context, msg *watermillMsg.Message) error {
-	meta := payload.Meta{}
-	err := meta.Unmarshal(msg.Payload)
-	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal meta")
-	}
-
-	parcel, err := message.DeserializeParcel(bytes.NewBuffer(meta.Payload))
-	if err != nil {
-		return errors.Wrap(err, "can't deserialize payload to parcel")
-	}
-
-	msgType := msg.Metadata.Get(bus.MetaType)
-	ctx, _ = inslogger.WithField(ctx, "msg_type", msgType)
-	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("Present %v", parcel.Message().Type().String()))
-	defer span.End()
-
-	var rep insolar.Reply
-	switch msgType {
-	case insolar.TypeGetChildren.String():
-		rep, err = h.handleGetChildren(ctx, parcel)
-	case insolar.TypeGetDelegate.String():
-		rep, err = h.handleGetDelegate(ctx, parcel)
-	case insolar.TypeGetJet.String():
-		rep, err = h.handleGetJet(ctx, parcel)
-	case insolar.TypeHeavyPayload.String():
-		rep, err = h.handleHeavyPayload(ctx, parcel)
-	case insolar.TypeGetObjectIndex.String():
-		rep, err = h.handleGetObjectIndex(ctx, parcel)
-	default:
-		err = fmt.Errorf("no handler for message type %s", msgType)
-	}
-	if err != nil {
-		h.replyError(ctx, meta, errors.Wrap(err, "error while handle parcel"))
-	} else {
-		resAsMsg := bus.ReplyAsMessage(ctx, rep)
-		h.Sender.Reply(ctx, meta, resAsMsg)
-	}
-	return err
-}
-
 func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
-	msgType := msg.Metadata.Get(bus.MetaType)
-	if msgType != "" {
-		return h.handleParcel(ctx, msg)
-	}
-
 	var err error
 
 	meta := payload.Meta{}
@@ -184,25 +158,39 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 
 	switch payloadType {
 	case payload.TypeGetRequest:
-		p := proc.NewGetRequest(meta)
-		h.dep.GetRequest(p)
-		return p.Proceed(ctx)
+		p := proc.NewSendRequest(meta)
+		h.dep.SendRequest(p)
+		err = p.Proceed(ctx)
 	case payload.TypeGetFilament:
 		p := proc.NewSendRequests(meta)
 		h.dep.SendRequests(p)
-		return p.Proceed(ctx)
+		err = p.Proceed(ctx)
 	case payload.TypePassState:
 		p := proc.NewPassState(meta)
 		h.dep.PassState(p)
 		err = p.Proceed(ctx)
 	case payload.TypeGetCode:
-		p := proc.NewGetCode(meta)
-		h.dep.GetCode(p)
+		p := proc.NewSendCode(meta)
+		h.dep.SendCode(p)
+		err = p.Proceed(ctx)
+	case payload.TypeReplication:
+		p := proc.NewReplication(meta, h.cfg)
+		h.dep.Replication(p)
+		err = p.Proceed(ctx)
+	case payload.TypeGetJet:
+		p := proc.NewSendJet(meta)
+		h.dep.SendJet(p)
+		err = p.Proceed(ctx)
+	case payload.TypeGetIndex:
+		p := proc.NewSendIndex(meta)
+		h.dep.SendIndex(p)
 		err = p.Proceed(ctx)
 	case payload.TypePass:
 		err = h.handlePass(ctx, meta)
 	case payload.TypeError:
 		h.handleError(ctx, meta)
+	case payload.TypeGotHotConfirmation:
+		h.handleGotHotConfirmation(ctx, meta)
 	default:
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())
 	}
@@ -244,11 +232,15 @@ func (h *Handler) handlePass(ctx context.Context, meta payload.Meta) error {
 
 	switch payloadType { // nolint
 	case payload.TypeGetCode:
-		p := proc.NewGetCode(originMeta)
-		h.dep.GetCode(p)
+		p := proc.NewSendCode(originMeta)
+		h.dep.SendCode(p)
+		err = p.Proceed(ctx)
+	case payload.TypeGetRequest:
+		p := proc.NewSendRequest(originMeta)
+		h.dep.SendRequest(p)
 		err = p.Proceed(ctx)
 	default:
-		err = fmt.Errorf("no pass handler for message type %s", payload.Type(originMeta.Polymorph).String())
+		err = fmt.Errorf("no pass handler for message type %s", payloadType.String())
 	}
 	if err != nil {
 		h.replyError(ctx, originMeta, err)
@@ -268,158 +260,27 @@ func (h *Handler) Init(ctx context.Context) error {
 	return nil
 }
 
-func (h *Handler) handleGetDelegate(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetDelegate)
-
-	idx, err := h.IndexAccessor.ForID(ctx, parcel.Pulse(), *msg.Head.Record())
-	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch index for %v", msg.Head.Record()))
-	}
-
-	delegateRef, ok := idx.Lifeline.DelegateByKey(msg.AsType)
-	if !ok {
-		return nil, errors.New("the object has no delegate for this type")
-	}
-	rep := reply.Delegate{
-		Head: delegateRef,
-	}
-
-	return &rep, nil
-}
-
-func (h *Handler) handleGetChildren(
-	ctx context.Context, parcel insolar.Parcel,
-) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetChildren)
-
-	idx, err := h.IndexAccessor.ForID(ctx, parcel.Pulse(), *msg.Parent.Record())
-	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch index for %v", msg.Parent.Record()))
-	}
-
-	var (
-		refs         []insolar.Reference
-		currentChild *insolar.ID
-	)
-
-	// Counting from specified child or the latest.
-	if msg.FromChild != nil {
-		currentChild = msg.FromChild
-	} else {
-		currentChild = idx.Lifeline.ChildPointer
-	}
-
-	// The object has no children.
-	if currentChild == nil {
-		return &reply.Children{Refs: nil, NextFrom: nil}, nil
-	}
-
-	// Try to fetch the first child.
-	_, err = h.RecordAccessor.ForID(ctx, *currentChild)
-	if err == object.ErrNotFound {
-		text := fmt.Sprintf(
-			"failed to fetch child %s for %s",
-			currentChild.DebugString(),
-			msg.Parent.Record().DebugString(),
-		)
-		return nil, errors.Wrap(err, text)
-	}
-
-	counter := 0
-	for currentChild != nil {
-		// We have enough results.
-		if counter >= msg.Amount {
-			return &reply.Children{Refs: refs, NextFrom: currentChild}, nil
-		}
-		counter++
-
-		rec, err := h.RecordAccessor.ForID(ctx, *currentChild)
-
-		// We don't have this child reference. Return what was collected.
-		if err == object.ErrNotFound {
-			return &reply.Children{Refs: refs, NextFrom: currentChild}, nil
-		}
-		if err != nil {
-			return nil, errors.New("failed to retrieve children")
-		}
-
-		virtRec := rec.Virtual
-		concrete := record.Unwrap(virtRec)
-		childRec, ok := concrete.(*record.Child)
-		if !ok {
-			return nil, errors.New("failed to retrieve children")
-		}
-
-		currentChild = &childRec.PrevChild
-
-		// Skip records later than specified pulse.
-		recPulse := childRec.Ref.Record().Pulse()
-		if msg.FromPulse != nil && recPulse > *msg.FromPulse {
-			continue
-		}
-		refs = append(refs, childRec.Ref)
-	}
-
-	return &reply.Children{Refs: refs, NextFrom: nil}, nil
-}
-
-func (h *Handler) handleGetJet(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetJet)
-	jet, actual := h.JetAccessor.ForID(ctx, msg.Pulse, msg.Object)
-
-	return &reply.Jet{ID: insolar.ID(jet), Actual: actual}, nil
-}
-
-func (h *Handler) handleGetObjectIndex(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetObjectIndex)
-
-	idx, err := h.IndexAccessor.ForID(ctx, parcel.Pulse(), *msg.Object.Record())
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to fetch object index for %v", msg.Object.Record().String())
-	}
-
-	buf := object.EncodeLifeline(idx.Lifeline)
-
-	return &reply.ObjectIndex{Index: buf}, nil
-}
-
-func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Parcel) (insolar.Reply, error) {
+func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Meta) {
 	logger := inslogger.FromContext(ctx)
-	msg := genericMsg.Message().(*message.HeavyPayload)
-
-	storeRecords(ctx, h.RecordModifier, h.PCS, msg.PulseNum, msg.Records)
-	if err := storeIndexBuckets(ctx, h.IndexModifier, msg.IndexBuckets, msg.PulseNum); err != nil {
-		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
-	}
-
-	pulse, err := h.PulseAccessor.Latest(ctx)
+	confirm := payload.GotHotConfirmation{}
+	err := confirm.Unmarshal(meta.Payload)
 	if err != nil {
-		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
+		logger.Error(errors.Wrap(err, "failed to unmarshal to GotHotConfirmation"))
+		return
 	}
-	futurePulse := pulse.NextPulseNumber
-	drop, err := storeDrop(ctx, h.DropModifier, msg.Drop)
+
+	logger.Debug("handleGotHotConfirmation. pulse: ", confirm.Pulse, ". jet: ", confirm.JetID.DebugString())
+
+	err = h.JetModifier.Update(ctx, confirm.Pulse, true, confirm.JetID)
 	if err != nil {
-		logger.Error(errors.Wrapf(err, "failed to store drop"))
-		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
+		logger.Error(errors.Wrapf(err, "failed to update jet %s", confirm.JetID.DebugString()))
+		return
 	}
-	if drop.SplitThresholdExceeded > h.cfg.JetSplit.ThresholdOverflowCount {
-		_, _, err = h.JetModifier.Split(ctx, futurePulse, drop.JetID)
+
+	err = h.JetKeeper.AddHotConfirmation(ctx, confirm.Pulse, confirm.JetID, confirm.Split)
+	if err != nil {
+		logger.Error(errors.Wrapf(err, "failed to add hot confitmation to JetKeeper jet=%v", confirm.String()))
 	} else {
-		err = h.JetModifier.Update(ctx, futurePulse, false, drop.JetID)
+		logger.Debug("got confirmation: ", confirm.String())
 	}
-	if err != nil {
-		logger.Error(errors.Wrapf(err, "failed to split/update jet=%v pulse=%v", drop.JetID.DebugString(), futurePulse))
-		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
-	}
-
-	if err := h.JetKeeper.Add(ctx, drop.Pulse, drop.JetID); err != nil {
-		logger.Error(errors.Wrapf(err, "failed to add jet to JetKeeper jet=%v", msg.JetID.DebugString()))
-		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
-	}
-
-	stats.Record(ctx,
-		statReceivedHeavyPayloadCount.M(1),
-	)
-
-	return &reply.OK{}, nil
 }

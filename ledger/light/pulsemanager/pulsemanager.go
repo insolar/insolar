@@ -39,19 +39,12 @@ var (
 	errNoPulse   = errors.New("no previous pulses")
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/pulsemanager.ActiveListSwapper -o ../../../testutils -s _mock.go
-
-type ActiveListSwapper interface {
-	MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error
-}
-
 // PulseManager implements insolar.PulseManager.
 type PulseManager struct {
-	Bus               insolar.MessageBus        `inject:""`
-	NodeNet           insolar.NodeNetwork       `inject:""`
-	GIL               insolar.GlobalInsolarLock `inject:""`
-	ActiveListSwapper ActiveListSwapper         `inject:""`
-	MessageHandler    *artifactmanager.MessageHandler
+	Bus            insolar.MessageBus        `inject:""`
+	NodeNet        insolar.NodeNetwork       `inject:""`
+	GIL            insolar.GlobalInsolarLock `inject:""`
+	MessageHandler *artifactmanager.MessageHandler
 
 	JetReleaser hot.JetReleaser `inject:""`
 
@@ -69,6 +62,7 @@ type PulseManager struct {
 	HotSender       executor.HotSender
 
 	WriteManager hot.WriteManager
+	StateIniter  executor.StateIniter
 
 	// setLock locks Set method call.
 	setLock sync.RWMutex
@@ -80,12 +74,14 @@ func NewPulseManager(
 	lightToHeavySyncer replication.LightReplicator,
 	writeManager hot.WriteManager,
 	hotSender executor.HotSender,
+	stateIniter executor.StateIniter,
 ) *PulseManager {
 	pm := &PulseManager{
 		JetSplitter:     jetSplitter,
 		LightReplicator: lightToHeavySyncer,
 		WriteManager:    writeManager,
 		HotSender:       hotSender,
+		StateIniter:     stateIniter,
 	}
 	return pm
 }
@@ -105,7 +101,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	}()
 
 	ctx, span := instracer.StartSpan(
-		ctx, "pulse.process", trace.WithSampler(trace.AlwaysSample()),
+		ctx, "PulseManager.Set", trace.WithSampler(trace.AlwaysSample()),
 	)
 	span.AddAttributes(
 		trace.Int64Attribute("pulse.PulseNumber", int64(newPulse.PulseNumber)),
@@ -115,25 +111,17 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	jets, endedPulse, err := m.setUnderGilSection(ctx, newPulse)
 	if err != nil {
 		if err == errZeroNodes || err == errNoPulse {
+			logger.Debug("setUnderGilSection return error: ", err)
 			return nil
 		}
 		panic(errors.Wrap(err, "under gil error"))
 	}
 
-	err = m.WriteManager.CloseAndWait(ctx, endedPulse.PulseNumber)
-	if err != nil {
-		panic(errors.Wrap(err, "can't close pulse for writing"))
-	}
 	err = m.HotSender.SendHot(ctx, endedPulse.PulseNumber, newPulse.PulseNumber, jets)
 	if err != nil {
 		logger.Error("send Hot failed: ", err)
 	}
 	go m.LightReplicator.NotifyAboutPulse(ctx, newPulse.PulseNumber)
-
-	err = m.WriteManager.Open(ctx, newPulse.PulseNumber)
-	if err != nil {
-		panic(errors.Wrap(err, "failed to open pulse for writing"))
-	}
 
 	m.MessageHandler.OnPulse(ctx, newPulse)
 	return nil
@@ -143,7 +131,7 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	[]insolar.JetID, insolar.Pulse, error,
 ) {
 	m.GIL.Acquire(ctx)
-	ctx, span := instracer.StartSpan(ctx, "pulse.gil_locked")
+	ctx, span := instracer.StartSpan(ctx, "PulseManager.setUnderGilSection")
 	defer span.End()
 	defer m.GIL.Release(ctx)
 
@@ -154,10 +142,6 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 
 	// Dealing with node lists.
 	{
-		err := m.ActiveListSwapper.MoveSyncToActive(ctx, newPulse.PulseNumber)
-		if err != nil {
-			panic(errors.Wrap(err, "failed to apply new active node list"))
-		}
 		fromNetwork := m.NodeNet.GetWorkingNodes()
 		if len(fromNetwork) == 0 {
 			logger.Errorf("received zero nodes for pulse %d", newPulse.PulseNumber)
@@ -167,24 +151,32 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		for _, n := range fromNetwork {
 			toSet = append(toSet, insolar.Node{ID: n.ID(), Role: n.Role()})
 		}
-		err = m.NodeSetter.Set(newPulse.PulseNumber, toSet)
+		err := m.NodeSetter.Set(newPulse.PulseNumber, toSet)
 		if err != nil {
 			panic(errors.Wrap(err, "call of SetActiveNodes failed"))
 		}
 	}
 
-	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
-		panic(errors.Wrap(err, "failed to add pulse"))
-	}
+	defer func() {
+		if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
+			panic(errors.Wrap(err, "failed to add pulse"))
+		}
+	}()
 
-	// Updating jet tree if its network start.
+	// FIXME: special for @ivanshibitov (uncomment this when INS-3031 is ready).
+	// if err := m.StateIniter.PrepareState(ctx, newPulse.PulseNumber); err != nil {
+	// 	logger.Error("failed to prepare light for start: ", err.Error())
+	// 	panic("failed to prepare light for start")
+	// }
+
+	// Updating jet tree if its network start. Remove when INS-3031 is ready.
 	{
-		_, err := m.PulseCalculator.Backwards(ctx, newPulse.PulseNumber, 2)
+		_, err := m.PulseCalculator.Backwards(ctx, newPulse.PulseNumber, 1)
 		if err != nil {
 			if err == pulse.ErrNotFound {
 				err := m.JetModifier.Update(ctx, newPulse.PulseNumber, true, insolar.ZeroJetID)
 				if err != nil {
-					panic(errors.Wrap(err, "failed tp update jets"))
+					panic(errors.Wrap(err, "failed to update jets"))
 				}
 			} else {
 				panic(errors.Wrap(err, "failed to calculate previous pulse"))
@@ -192,9 +184,13 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		}
 	}
 
-	endedPulse, err := m.PulseCalculator.Backwards(ctx, newPulse.PulseNumber, 1)
+	endedPulse, err := m.PulseAccessor.Latest(ctx)
 	if err != nil {
 		if err == pulse.ErrNotFound {
+			err := m.JetModifier.Update(ctx, newPulse.PulseNumber, true, insolar.ZeroJetID)
+			if err != nil {
+				panic(errors.Wrap(err, "failed to update jets"))
+			}
 			return nil, insolar.Pulse{}, errNoPulse
 		}
 		panic(errors.Wrap(err, "failed to calculate ended pulse"))
@@ -206,5 +202,16 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	}
 
 	m.JetReleaser.ThrowTimeout(ctx, newPulse.PulseNumber)
+
+	err = m.WriteManager.CloseAndWait(ctx, endedPulse.PulseNumber)
+	if err != nil {
+		panic(errors.Wrap(err, "can't close pulse for writing"))
+	}
+
+	err = m.WriteManager.Open(ctx, newPulse.PulseNumber)
+	if err != nil {
+		panic(errors.Wrap(err, "failed to open pulse for writing"))
+	}
+
 	return jets, endedPulse, nil
 }

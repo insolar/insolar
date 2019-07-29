@@ -53,10 +53,9 @@ package adapters
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar"
+	transport2 "github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/transport"
 )
 
@@ -70,25 +69,14 @@ func NewPacketSender(datagramTransport transport.DatagramTransport) *PacketSende
 	}
 }
 
-type payloadWrapper struct {
-	Payload interface{}
-}
+func (ps *PacketSender) SendPacketToTransport(ctx context.Context, to transport2.TargetProfile, sendOptions transport2.PacketSendOptions, payload interface{}) {
+	addr := to.GetStatic().GetDefaultEndpoint().GetIPAddress().String()
 
-func (ps *PacketSender) SendPacketToTransport(ctx context.Context, to common2.NodeProfile, sendOptions core.PacketSendOptions, payload interface{}) {
-	addr := to.GetDefaultEndpoint().GetNameAddress().String()
-
-	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"receiver_addr":    addr,
-		"receiver_node_id": to.GetShortNodeID(),
-		"options":          sendOptions,
+	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
+		"receiver_addr": addr,
 	})
 
-	bs, err := insolar.Serialize(payload)
-	if err != nil {
-		logger.Error("Failed to serialize payload")
-	}
-
-	err = ps.datagramTransport.SendDatagram(ctx, addr, bs)
+	err := ps.datagramTransport.SendDatagram(ctx, addr, payload.([]byte))
 	if err != nil {
 		logger.Error("Failed to send datagram")
 	}

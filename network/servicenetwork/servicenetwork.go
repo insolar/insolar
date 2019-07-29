@@ -56,6 +56,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/network/rules"
+
 	"github.com/insolar/insolar/network/gateway"
 
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -102,6 +104,7 @@ type ServiceNetwork struct {
 	TerminationHandler  insolar.TerminationHandler  `inject:""`
 	Pub                 message.Publisher           `inject:""`
 	ContractRequester   insolar.ContractRequester   `inject:""`
+	Rules               network.Rules               `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager           `inject:"subcomponent"`
@@ -111,6 +114,8 @@ type ServiceNetwork struct {
 	HostNetwork  network.HostNetwork
 	OperableFunc func(ctx context.Context, operable bool)
 
+	CurrentPulse insolar.Pulse
+
 	isDiscovery bool
 	skip        int
 
@@ -118,11 +123,14 @@ type ServiceNetwork struct {
 
 	gateway   network.Gateway
 	gatewayMu sync.RWMutex
+
+	pulseTimeout time.Duration
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manager) (*ServiceNetwork, error) {
 	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, skip: conf.Service.Skip}
+	serviceNetwork.pulseTimeout = time.Millisecond * time.Duration(conf.Pulsar.PulseTime)
 	return serviceNetwork, nil
 }
 
@@ -217,12 +225,14 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		bootstrap.NewBootstrapper(options),
 		bootstrap.NewAuthorizationController(options),
 		bootstrap.NewNetworkBootstrapper(),
+		rules.NewRules(),
 	)
 	err = n.cm.Init(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to init internal components")
 	}
 
+	n.CurrentPulse = *insolar.GenesisPulse
 	return nil
 }
 
@@ -244,7 +254,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 
 	n.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
 
-	n.SetGateway(gateway.NewNoNetwork(n, n.NodeKeeper, n.ContractRequester,
+	n.SetGateway(gateway.NewNoNetwork(n, n.PulseManager, n.NodeKeeper, n.ContractRequester,
 		n.CryptographyService, n.HostNetwork, n.CertificateManager))
 
 	logger.Info("Service network started")
@@ -282,6 +292,15 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 
 	n.lock.Lock()
 	defer n.lock.Unlock()
+	done := make(chan struct{})
+	defer close(done)
+	go func() {
+		select {
+		case <-time.After(n.pulseTimeout):
+			log.Error("Node stopped due to long pulse processing")
+		case <-done:
+		}
+	}()
 
 	ctx = utils.NewPulseContext(ctx, uint32(newPulse.PulseNumber))
 	logger.Infof("Got new pulse number: %d", newPulse.PulseNumber)
@@ -307,19 +326,11 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 		return
 	}
 
-	// Ignore insolar.ErrNotFound because
-	// sometimes we can't fetch current pulse in new nodes
-	// (for fresh bootstrapped light-material with in-memory pulse-tracker)
-	// TODO: remove pulse checks here after new consensus ready
-	if currentPulse, err := n.PulseAccessor.Latest(ctx); err != nil {
-		if err != pulse.ErrNotFound {
-			currentPulse = *insolar.GenesisPulse
-		}
-	} else {
-		if !isNextPulse(&currentPulse, &newPulse) {
-			logger.Infof("Incorrect pulse number. Current: %+v. New: %+v", currentPulse, newPulse)
-			return
-		}
+	//TODO: use network pulsestorage here
+
+	if n.CurrentPulse.PulseNumber != insolar.GenesisPulse.PulseNumber && isOldPulse(&n.CurrentPulse, &newPulse) {
+		logger.Warnf("Incorrect pulse number. Current: %+v. New: %+v", n.CurrentPulse, newPulse)
+		return
 	}
 
 	n.ChangePulse(ctx, newPulse)
@@ -329,18 +340,15 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 
 func (n *ServiceNetwork) ChangePulse(ctx context.Context, newPulse insolar.Pulse) {
 	logger := inslogger.FromContext(ctx)
+	n.CurrentPulse = newPulse
+
+	if err := n.NodeKeeper.MoveSyncToActive(ctx, newPulse.PulseNumber); err != nil {
+		logger.Warn("MoveSyncToActive failed: ", err.Error())
+	}
 
 	if err := n.Gateway().OnPulse(ctx, newPulse); err != nil {
 		logger.Error(errors.Wrap(err, "Failed to call OnPulse on Gateway"))
 	}
-
-	logger.Debugf("Before set new current pulse number: %d", newPulse.PulseNumber)
-	err := n.PulseManager.Set(ctx, newPulse)
-	if err != nil {
-		logger.Fatalf("Failed to set new pulse: %s", err.Error())
-	}
-	logger.Infof("Set new current pulse number: %d", newPulse.PulseNumber)
-
 }
 
 func (n *ServiceNetwork) shoudIgnorePulse(newPulse insolar.Pulse) bool {
@@ -351,8 +359,23 @@ func (n *ServiceNetwork) shoudIgnorePulse(newPulse insolar.Pulse) bool {
 func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insolar.Pulse, pulseStartTime time.Time) {
 	logger := inslogger.FromContext(ctx)
 
+	defer func() {
+		if n.NodeKeeper.IsBootstrapped() && n.Gateway().GetState() == insolar.CompleteNetworkState {
+			if !n.Rules.CheckMinRole() {
+				logger.Fatal("CheckMinRole() failed")
+			}
+
+			if ok, _ := n.Rules.CheckMajorityRule(); !ok {
+				logger.Fatal("CheckMajorityRule() failed")
+			}
+		}
+	}()
+
 	if !n.cfg.Service.ConsensusEnabled {
 		logger.Warn("Consensus is disabled")
+		if n.TerminationHandler.Terminating() {
+			n.TerminationHandler.OnLeaveApproved(ctx)
+		}
 		return
 	}
 
@@ -361,6 +384,7 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insol
 		logger.Error(errMsg)
 		n.SetGateway(n.Gateway().NewGateway(insolar.NoNetworkState))
 	}
+
 }
 
 // SendMessageHandler async sends message with confirmation of delivery.
@@ -414,8 +438,8 @@ func (n *ServiceNetwork) sendMessage(ctx context.Context, msg *message.Message) 
 	return nil
 }
 
-func isNextPulse(currentPulse, newPulse *insolar.Pulse) bool {
-	return newPulse.PulseNumber > currentPulse.PulseNumber && newPulse.PulseNumber >= currentPulse.NextPulseNumber
+func isOldPulse(currentPulse, newPulse *insolar.Pulse) bool {
+	return newPulse.PulseNumber <= currentPulse.PulseNumber || newPulse.PulseNumber < currentPulse.NextPulseNumber
 }
 
 func (n *ServiceNetwork) processIncoming(ctx context.Context, args []byte) ([]byte, error) {

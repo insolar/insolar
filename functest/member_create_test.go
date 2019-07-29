@@ -28,7 +28,6 @@ import (
 func TestMemberCreate(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
-	member.ref = root.ref
 	result, err := retryableMemberCreate(member, true)
 	require.NoError(t, err)
 	output, ok := result.(map[string]interface{})
@@ -39,7 +38,6 @@ func TestMemberCreate(t *testing.T) {
 func TestMemberCreateWithBadKey(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
-	member.ref = root.ref
 	member.pubKey = "fake"
 	_, err = retryableMemberCreate(member, false)
 	require.NotNil(t, err)
@@ -49,7 +47,6 @@ func TestMemberCreateWithBadKey(t *testing.T) {
 func TestMemberCreateWithSamePublicKey(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
-	member.ref = root.ref
 
 	_, err = retryableMemberCreate(member, true)
 	require.NoError(t, err)

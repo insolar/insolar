@@ -31,35 +31,35 @@ func TestReferences(t *testing.T) {
 	}{
 		insolar.GenesisNameRootDomain: {
 			got:    ContractRootDomain,
-			expect: "1tJBs4NHBSTZKqGET49Se31ken7i6oVhEfsnVyu6VK.11111111111111111111111111111111",
+			expect: "1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8.11111111111111111111111111111111",
 		},
 		insolar.GenesisNameNodeDomain: {
 			got:    ContractNodeDomain,
-			expect: "1tJBxdoc3hAM5aLStE4AWqVhx4DexNp85WdAWkZgQ3.11111111111111111111111111111111",
+			expect: "1tJDPJd6QDhsKhhgc5bCCJuDEZyrPpe2EkSCVgMoeQ.11111111111111111111111111111111",
 		},
 		insolar.GenesisNameNodeRecord: {
 			got:    ContractNodeRecord,
-			expect: "1tJBtBaT1r27eYNfFFkeKWpcp39ahVXaEfdaVDVT7K.11111111111111111111111111111111",
+			expect: "1tJCCeN3WNGKi6w3YqxHPV7tjxLxsCcookXTe9i6uD.11111111111111111111111111111111",
 		},
 		insolar.GenesisNameRootMember: {
 			got:    ContractRootMember,
-			expect: "1tJBqpFDFVRnHghz4bFtZx5Cidnf3U5vvVqgxMBKKX.11111111111111111111111111111111",
+			expect: "1tJDb3zZnEns6R4ChKhE4RFhzbUVxvxUdj58YF22yP.11111111111111111111111111111111",
 		},
 		insolar.GenesisNameRootWallet: {
 			got:    ContractRootWallet,
-			expect: "1tJBjgjkRDcjiqCt14hLN5bNCCUnxg9PcH3naR5vbL.11111111111111111111111111111111",
+			expect: "1tJCLgYKxM4TABHW8tY3DBxeBZZixWua6iwReJAL4g.11111111111111111111111111111111",
 		},
 		insolar.GenesisNameDeposit: {
 			got:    ContractDeposit,
-			expect: "1tJDXFp5aTKYSX4u1k9JY1bhEDhPqyggagprNtdvir.11111111111111111111111111111111",
+			expect: "1tJCUhUMyeumaDA9wPksSjugbQ5uFJ5iYfpsX9yZ7j.11111111111111111111111111111111",
 		},
 		insolar.GenesisNameTariff: {
-			got:    ContractTariff,
-			expect: "1tJDwWoTjy1WArGJ8vWWyooAXGmtKuDxTyEqvNwTk7.11111111111111111111111111111111",
+			got:    ContractStandardTariff,
+			expect: "1tJBhczj15YCWdz4AqT2cS2JRs7tYKby8fVogP3GcE.11111111111111111111111111111111",
 		},
 		insolar.GenesisNameCostCenter: {
 			got:    ContractCostCenter,
-			expect: "1tJCwPq32u3rFaTx7akLTcYLMa9FLTUrz2ykV1Md8t.11111111111111111111111111111111",
+			expect: "1tJDyWCLK4y4JLw7dsCaD9KzEqYTgyGXN5Zp4HuteA.11111111111111111111111111111111",
 		},
 	}
 

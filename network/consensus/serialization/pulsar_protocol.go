@@ -53,13 +53,18 @@ package serialization
 import (
 	"io"
 
-	"github.com/insolar/insolar/network/consensus/common"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
 )
 
 type PulsarPacketBody struct {
 	// ByteSize>=108
-	PulseDataExt          common.PulseDataExt // ByteSize=44
-	PulsarConsensusProofs []byte              // variable lengths >=0
+	PulseNumber           pulse.Number  `insolar-transport:"ignore=send"`
+	PulseDataExt          pulse.DataExt // ByteSize=44
+	PulsarConsensusProofs []byte        // variable lengths >=0
+}
+
+func (b *PulsarPacketBody) DebugString(ctx PacketContext) string {
+	return "pulsar packet body"
 }
 
 func (b *PulsarPacketBody) SerializeTo(_ SerializeContext, writer io.Writer) error {
@@ -70,4 +75,11 @@ func (b *PulsarPacketBody) SerializeTo(_ SerializeContext, writer io.Writer) err
 func (b *PulsarPacketBody) DeserializeFrom(_ DeserializeContext, reader io.Reader) error {
 	// TODO: proofs
 	return read(reader, &b.PulseDataExt)
+}
+
+func (b *PulsarPacketBody) getPulseData() pulse.Data {
+	return pulse.Data{
+		PulseNumber: b.PulseNumber,
+		DataExt:     b.PulseDataExt,
+	}
 }
