@@ -89,11 +89,9 @@ func (m *GetRecords) GetCount() uint32 {
 }
 
 type Record struct {
-	Polymorph    uint32                                         `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
-	PulseNumber  github_com_insolar_insolar_insolar.PulseNumber `protobuf:"bytes,20,opt,name=PulseNumber,proto3,customtype=github.com/insolar/insolar/insolar.PulseNumber" json:"PulseNumber"`
-	RecordNumber uint32                                         `protobuf:"varint,21,opt,name=RecordNumber,proto3" json:"RecordNumber,omitempty"`
-	RecordID     github_com_insolar_insolar_insolar.ID          `protobuf:"bytes,22,opt,name=RecordID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"RecordID"`
-	Record       record.Material                                `protobuf:"bytes,23,opt,name=Record,proto3" json:"Record"`
+	Polymorph    uint32          `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
+	RecordNumber uint32          `protobuf:"varint,21,opt,name=RecordNumber,proto3" json:"RecordNumber,omitempty"`
+	Record       record.Material `protobuf:"bytes,23,opt,name=Record,proto3" json:"Record"`
 }
 
 func (m *Record) Reset()      { *m = Record{} }
@@ -149,61 +147,9 @@ func (m *Record) GetRecord() record.Material {
 	return record.Material{}
 }
 
-type Records struct {
-	Polymorph uint32   `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
-	Records   []Record `protobuf:"bytes,20,rep,name=Records,proto3" json:"Records"`
-}
-
-func (m *Records) Reset()      { *m = Records{} }
-func (*Records) ProtoMessage() {}
-func (*Records) Descriptor() ([]byte, []int) {
-	return fileDescriptor_dfb4fbd68f50939d, []int{2}
-}
-func (m *Records) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *Records) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_Records.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *Records) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Records.Merge(m, src)
-}
-func (m *Records) XXX_Size() int {
-	return m.Size()
-}
-func (m *Records) XXX_DiscardUnknown() {
-	xxx_messageInfo_Records.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_Records proto.InternalMessageInfo
-
-func (m *Records) GetPolymorph() uint32 {
-	if m != nil {
-		return m.Polymorph
-	}
-	return 0
-}
-
-func (m *Records) GetRecords() []Record {
-	if m != nil {
-		return m.Records
-	}
-	return nil
-}
-
 func init() {
 	proto.RegisterType((*GetRecords)(nil), "exporter.GetRecords")
 	proto.RegisterType((*Record)(nil), "exporter.Record")
-	proto.RegisterType((*Records)(nil), "exporter.Records")
 }
 
 func init() {
@@ -211,7 +157,7 @@ func init() {
 }
 
 var fileDescriptor_dfb4fbd68f50939d = []byte{
-	// 397 bytes of a gzipped FileDescriptorProto
+	// 353 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xd2, 0xce, 0x49, 0x4d, 0x49,
 	0x4f, 0x2d, 0xd2, 0xcf, 0x48, 0x4d, 0x2c, 0xab, 0xd4, 0x4f, 0xad, 0x28, 0xc8, 0x2f, 0x2a, 0x49,
 	0x2d, 0xd2, 0x2f, 0x4a, 0x4d, 0xce, 0x2f, 0x4a, 0x89, 0x87, 0xf1, 0xf5, 0x0a, 0x8a, 0xf2, 0x4b,
@@ -224,19 +170,17 @@ var fileDescriptor_dfb4fbd68f50939d = []byte{
 	0xd5, 0xaf, 0x34, 0x37, 0x29, 0xb5, 0x48, 0x42, 0x44, 0x81, 0x51, 0x83, 0xc7, 0xc9, 0xec, 0xc4,
 	0x3d, 0x79, 0x86, 0x5b, 0xf7, 0xe4, 0xf5, 0x08, 0xbb, 0x40, 0x0f, 0x49, 0x77, 0x10, 0xb2, 0x51,
 	0x42, 0x4a, 0x5c, 0x3c, 0x10, 0x27, 0x40, 0x8d, 0x16, 0x05, 0x5b, 0x8d, 0x22, 0x26, 0x24, 0xc2,
-	0xc5, 0xea, 0x9c, 0x5f, 0x9a, 0x57, 0x22, 0x21, 0x06, 0x96, 0x84, 0x70, 0x94, 0xe6, 0x33, 0x71,
-	0xb1, 0x41, 0x94, 0x0d, 0x6a, 0xc7, 0x7b, 0x72, 0x71, 0x40, 0xf8, 0x9e, 0x2e, 0x60, 0xf7, 0xf3,
-	0x38, 0xe9, 0x42, 0xad, 0x56, 0x25, 0xc2, 0x6a, 0x4f, 0x97, 0x20, 0xb8, 0x76, 0x21, 0x3d, 0x98,
-	0x87, 0x25, 0xc4, 0x15, 0x18, 0x35, 0xb8, 0x8d, 0x04, 0xf4, 0xa0, 0x31, 0xea, 0x9b, 0x58, 0x92,
-	0x5a, 0x94, 0x99, 0x98, 0xe3, 0xc4, 0x02, 0x32, 0x3a, 0x08, 0xaa, 0x4a, 0x29, 0x92, 0x8b, 0x9d,
-	0xb8, 0xe8, 0x35, 0x80, 0x2b, 0x94, 0x10, 0x51, 0x60, 0x06, 0x9b, 0x0c, 0x4f, 0x9e, 0x10, 0x09,
-	0xa8, 0xc9, 0x30, 0x65, 0x46, 0xae, 0x5c, 0x7c, 0x10, 0xa6, 0x2b, 0x54, 0x9d, 0x90, 0x31, 0x17,
-	0x1b, 0x84, 0x2d, 0x24, 0x82, 0xd0, 0x8c, 0x48, 0x60, 0x52, 0x82, 0xe8, 0x46, 0x16, 0x2b, 0x31,
-	0x38, 0x99, 0x5c, 0x78, 0x28, 0xc7, 0x70, 0xe3, 0xa1, 0x1c, 0xc3, 0x87, 0x87, 0x72, 0x8c, 0x0d,
-	0x8f, 0xe4, 0x18, 0x57, 0x3c, 0x92, 0x63, 0x3c, 0xf1, 0x48, 0x8e, 0xf1, 0xc2, 0x23, 0x39, 0xc6,
-	0x07, 0x8f, 0xe4, 0x18, 0x5f, 0x3c, 0x92, 0x63, 0xf8, 0xf0, 0x48, 0x8e, 0x71, 0xc2, 0x63, 0x39,
-	0x86, 0x0b, 0x8f, 0xe5, 0x18, 0x6e, 0x3c, 0x96, 0x63, 0x48, 0x62, 0x03, 0xa7, 0x60, 0x63, 0x40,
-	0x00, 0x00, 0x00, 0xff, 0xff, 0x75, 0x86, 0x13, 0x8a, 0x61, 0x03, 0x00, 0x00,
+	0xc5, 0xea, 0x9c, 0x5f, 0x9a, 0x57, 0x22, 0x21, 0x06, 0x96, 0x84, 0x70, 0x94, 0xaa, 0xb8, 0xd8,
+	0x20, 0xaa, 0x08, 0xb8, 0x9d, 0x18, 0x1b, 0xf4, 0x60, 0x66, 0x49, 0x88, 0x2b, 0x30, 0x6a, 0x70,
+	0x1b, 0x09, 0xe8, 0x41, 0xc3, 0xca, 0x37, 0xb1, 0x24, 0xb5, 0x28, 0x33, 0x31, 0xc7, 0x89, 0x05,
+	0xe4, 0xd9, 0x20, 0xa8, 0x2a, 0x23, 0x37, 0x2e, 0x3e, 0x08, 0xcb, 0x15, 0x1a, 0x6b, 0x42, 0x26,
+	0x5c, 0x6c, 0x10, 0xb6, 0x90, 0x88, 0x1e, 0x3c, 0x6a, 0x11, 0xe1, 0x2b, 0x25, 0x80, 0x10, 0x85,
+	0x08, 0x29, 0x31, 0x18, 0x30, 0x3a, 0x99, 0x5c, 0x78, 0x28, 0xc7, 0x70, 0xe3, 0xa1, 0x1c, 0xc3,
+	0x87, 0x87, 0x72, 0x8c, 0x0d, 0x8f, 0xe4, 0x18, 0x57, 0x3c, 0x92, 0x63, 0x3c, 0xf1, 0x48, 0x8e,
+	0xf1, 0xc2, 0x23, 0x39, 0xc6, 0x07, 0x8f, 0xe4, 0x18, 0x5f, 0x3c, 0x92, 0x63, 0xf8, 0xf0, 0x48,
+	0x8e, 0x71, 0xc2, 0x63, 0x39, 0x86, 0x0b, 0x8f, 0xe5, 0x18, 0x6e, 0x3c, 0x96, 0x63, 0x48, 0x62,
+	0x03, 0xc7, 0xa0, 0x31, 0x20, 0x00, 0x00, 0xff, 0xff, 0x82, 0xbd, 0xdd, 0x97, 0x61, 0x02, 0x00,
+	0x00,
 }
 
 func (this *GetRecords) Equal(that interface{}) bool {
@@ -294,49 +238,11 @@ func (this *Record) Equal(that interface{}) bool {
 	if this.Polymorph != that1.Polymorph {
 		return false
 	}
-	if !this.PulseNumber.Equal(that1.PulseNumber) {
-		return false
-	}
 	if this.RecordNumber != that1.RecordNumber {
-		return false
-	}
-	if !this.RecordID.Equal(that1.RecordID) {
 		return false
 	}
 	if !this.Record.Equal(&that1.Record) {
 		return false
-	}
-	return true
-}
-func (this *Records) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Records)
-	if !ok {
-		that2, ok := that.(Records)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Polymorph != that1.Polymorph {
-		return false
-	}
-	if len(this.Records) != len(that1.Records) {
-		return false
-	}
-	for i := range this.Records {
-		if !this.Records[i].Equal(&that1.Records[i]) {
-			return false
-		}
 	}
 	return true
 }
@@ -357,30 +263,11 @@ func (this *Record) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 9)
+	s := make([]string, 0, 7)
 	s = append(s, "&exporter.Record{")
 	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
-	s = append(s, "PulseNumber: "+fmt.Sprintf("%#v", this.PulseNumber)+",\n")
 	s = append(s, "RecordNumber: "+fmt.Sprintf("%#v", this.RecordNumber)+",\n")
-	s = append(s, "RecordID: "+fmt.Sprintf("%#v", this.RecordID)+",\n")
 	s = append(s, "Record: "+strings.Replace(this.Record.GoString(), `&`, ``, 1)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *Records) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&exporter.Records{")
-	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
-	if this.Records != nil {
-		vs := make([]*Record, len(this.Records))
-		for i := range vs {
-			vs[i] = &this.Records[i]
-		}
-		s = append(s, "Records: "+fmt.Sprintf("%#v", vs)+",\n")
-	}
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -405,7 +292,7 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type RecordExporterClient interface {
-	Export(ctx context.Context, in *GetRecords, opts ...grpc.CallOption) (*Records, error)
+	Export(ctx context.Context, in *GetRecords, opts ...grpc.CallOption) (RecordExporter_ExportClient, error)
 }
 
 type recordExporterClient struct {
@@ -416,52 +303,79 @@ func NewRecordExporterClient(cc *grpc.ClientConn) RecordExporterClient {
 	return &recordExporterClient{cc}
 }
 
-func (c *recordExporterClient) Export(ctx context.Context, in *GetRecords, opts ...grpc.CallOption) (*Records, error) {
-	out := new(Records)
-	err := c.cc.Invoke(ctx, "/exporter.RecordExporter/Export", in, out, opts...)
+func (c *recordExporterClient) Export(ctx context.Context, in *GetRecords, opts ...grpc.CallOption) (RecordExporter_ExportClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_RecordExporter_serviceDesc.Streams[0], "/exporter.RecordExporter/Export", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &recordExporterExportClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type RecordExporter_ExportClient interface {
+	Recv() (*Record, error)
+	grpc.ClientStream
+}
+
+type recordExporterExportClient struct {
+	grpc.ClientStream
+}
+
+func (x *recordExporterExportClient) Recv() (*Record, error) {
+	m := new(Record)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // RecordExporterServer is the server API for RecordExporter service.
 type RecordExporterServer interface {
-	Export(context.Context, *GetRecords) (*Records, error)
+	Export(*GetRecords, RecordExporter_ExportServer) error
 }
 
 func RegisterRecordExporterServer(s *grpc.Server, srv RecordExporterServer) {
 	s.RegisterService(&_RecordExporter_serviceDesc, srv)
 }
 
-func _RecordExporter_Export_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetRecords)
-	if err := dec(in); err != nil {
-		return nil, err
+func _RecordExporter_Export_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(GetRecords)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	if interceptor == nil {
-		return srv.(RecordExporterServer).Export(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/exporter.RecordExporter/Export",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RecordExporterServer).Export(ctx, req.(*GetRecords))
-	}
-	return interceptor(ctx, in, info, handler)
+	return srv.(RecordExporterServer).Export(m, &recordExporterExportServer{stream})
+}
+
+type RecordExporter_ExportServer interface {
+	Send(*Record) error
+	grpc.ServerStream
+}
+
+type recordExporterExportServer struct {
+	grpc.ServerStream
+}
+
+func (x *recordExporterExportServer) Send(m *Record) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 var _RecordExporter_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "exporter.RecordExporter",
 	HandlerType: (*RecordExporterServer)(nil),
-	Methods: []grpc.MethodDesc{
+	Methods:     []grpc.MethodDesc{},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "Export",
-			Handler:    _RecordExporter_Export_Handler,
+			StreamName:    "Export",
+			Handler:       _RecordExporter_Export_Handler,
+			ServerStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "ledger/heavy/exporter/record_exporter.proto",
 }
 
@@ -536,16 +450,6 @@ func (m *Record) MarshalTo(dAtA []byte) (int, error) {
 		i++
 		i = encodeVarintRecordExporter(dAtA, i, uint64(m.Polymorph))
 	}
-	dAtA[i] = 0xa2
-	i++
-	dAtA[i] = 0x1
-	i++
-	i = encodeVarintRecordExporter(dAtA, i, uint64(m.PulseNumber.Size()))
-	n2, err := m.PulseNumber.MarshalTo(dAtA[i:])
-	if err != nil {
-		return 0, err
-	}
-	i += n2
 	if m.RecordNumber != 0 {
 		dAtA[i] = 0xa8
 		i++
@@ -553,65 +457,16 @@ func (m *Record) MarshalTo(dAtA []byte) (int, error) {
 		i++
 		i = encodeVarintRecordExporter(dAtA, i, uint64(m.RecordNumber))
 	}
-	dAtA[i] = 0xb2
-	i++
-	dAtA[i] = 0x1
-	i++
-	i = encodeVarintRecordExporter(dAtA, i, uint64(m.RecordID.Size()))
-	n3, err := m.RecordID.MarshalTo(dAtA[i:])
-	if err != nil {
-		return 0, err
-	}
-	i += n3
 	dAtA[i] = 0xba
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecordExporter(dAtA, i, uint64(m.Record.Size()))
-	n4, err := m.Record.MarshalTo(dAtA[i:])
+	n2, err := m.Record.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n4
-	return i, nil
-}
-
-func (m *Records) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *Records) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	if m.Polymorph != 0 {
-		dAtA[i] = 0x80
-		i++
-		dAtA[i] = 0x1
-		i++
-		i = encodeVarintRecordExporter(dAtA, i, uint64(m.Polymorph))
-	}
-	if len(m.Records) > 0 {
-		for _, msg := range m.Records {
-			dAtA[i] = 0xa2
-			i++
-			dAtA[i] = 0x1
-			i++
-			i = encodeVarintRecordExporter(dAtA, i, uint64(msg.Size()))
-			n, err := msg.MarshalTo(dAtA[i:])
-			if err != nil {
-				return 0, err
-			}
-			i += n
-		}
-	}
+	i += n2
 	return i, nil
 }
 
@@ -653,33 +508,11 @@ func (m *Record) Size() (n int) {
 	if m.Polymorph != 0 {
 		n += 2 + sovRecordExporter(uint64(m.Polymorph))
 	}
-	l = m.PulseNumber.Size()
-	n += 2 + l + sovRecordExporter(uint64(l))
 	if m.RecordNumber != 0 {
 		n += 2 + sovRecordExporter(uint64(m.RecordNumber))
 	}
-	l = m.RecordID.Size()
-	n += 2 + l + sovRecordExporter(uint64(l))
 	l = m.Record.Size()
 	n += 2 + l + sovRecordExporter(uint64(l))
-	return n
-}
-
-func (m *Records) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Polymorph != 0 {
-		n += 2 + sovRecordExporter(uint64(m.Polymorph))
-	}
-	if len(m.Records) > 0 {
-		for _, e := range m.Records {
-			l = e.Size()
-			n += 2 + l + sovRecordExporter(uint64(l))
-		}
-	}
 	return n
 }
 
@@ -715,21 +548,8 @@ func (this *Record) String() string {
 	}
 	s := strings.Join([]string{`&Record{`,
 		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
-		`PulseNumber:` + fmt.Sprintf("%v", this.PulseNumber) + `,`,
 		`RecordNumber:` + fmt.Sprintf("%v", this.RecordNumber) + `,`,
-		`RecordID:` + fmt.Sprintf("%v", this.RecordID) + `,`,
 		`Record:` + strings.Replace(strings.Replace(this.Record.String(), "Material", "record.Material", 1), `&`, ``, 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Records) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Records{`,
-		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
-		`Records:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.Records), "Record", "Record", 1), `&`, ``, 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -933,39 +753,6 @@ func (m *Record) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 20:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PulseNumber", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowRecordExporter
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthRecordExporter
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthRecordExporter
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if err := m.PulseNumber.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
 		case 21:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field RecordNumber", wireType)
@@ -985,39 +772,6 @@ func (m *Record) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 22:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field RecordID", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowRecordExporter
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthRecordExporter
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthRecordExporter
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if err := m.RecordID.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
 		case 23:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Record", wireType)
@@ -1048,112 +802,6 @@ func (m *Record) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if err := m.Record.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipRecordExporter(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthRecordExporter
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthRecordExporter
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *Records) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowRecordExporter
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Records: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Records: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 16:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Polymorph", wireType)
-			}
-			m.Polymorph = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowRecordExporter
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Polymorph |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 20:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Records", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowRecordExporter
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthRecordExporter
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthRecordExporter
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Records = append(m.Records, Record{})
-			if err := m.Records[len(m.Records)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex

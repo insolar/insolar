@@ -47,15 +47,17 @@ func NewRecordServer(
 	}
 }
 
-func (r *RecordServer) Export(ctx context.Context, getRecords *GetRecords) (*Records, error) {
+func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_ExportServer) error {
+	ctx := context.Background()
+
 	if getRecords.Count == 0 {
-		return nil, errors.New("count can't be 0")
+		return errors.New("count can't be 0")
 	}
 
 	if getRecords.PulseNumber != 0 {
 		topPulse := r.jetKeeper.TopSyncPulse()
 		if topPulse < getRecords.PulseNumber {
-			return nil, errors.New("trying to get a non-finalized pulse data")
+			return errors.New("trying to get a non-finalized pulse data")
 		}
 	}
 
@@ -69,16 +71,19 @@ func (r *RecordServer) Export(ctx context.Context, getRecords *GetRecords) (*Rec
 		r.pulseCalculator,
 	)
 
-	result := &Records{}
 	for iter.HasNext(ctx) {
 		record, err := iter.Next(ctx)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		result.Records = append(result.Records, *record)
+
+		err = stream.Send(record)
+		if err != nil {
+			return err
+		}
 	}
 
-	return result, nil
+	return nil
 }
 
 type recordIterator struct {
@@ -168,9 +173,7 @@ func (r *recordIterator) Next(ctx context.Context) (*Record, error) {
 	r.read++
 
 	return &Record{
-		PulseNumber:  r.currentPulse,
 		RecordNumber: r.currentPosition,
-		RecordID:     id,
 		Record:       rec,
 	}, nil
 }

@@ -7,7 +7,7 @@ import "github.com/insolar/insolar/insolar/record/record.proto";
 
 
 service RecordExporter {
-    rpc Export (GetRecords) returns (Records) {
+    rpc Export (GetRecords) returns (stream Record) {
     }
 }
 
@@ -22,15 +22,6 @@ message GetRecords {
 message Record {
     uint32 Polymorph = 16;
 
-    bytes PulseNumber = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
     uint32 RecordNumber = 21;
-    bytes RecordID = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
     record.Material Record = 23 [(gogoproto.nullable) = false];
-}
-
-
-message Records {
-    uint32 Polymorph = 16;
-
-    repeated Record Records = 20 [(gogoproto.nullable) = false];
 }
