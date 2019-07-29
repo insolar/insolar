@@ -55,6 +55,9 @@ package tests
 import (
 	"fmt"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 type bootstrapSuite struct {
@@ -62,10 +65,10 @@ type bootstrapSuite struct {
 }
 
 func (s *bootstrapSuite) SetupTest() {
-	s.fixtureMap[s.T().Name()] = newFixture(s.T())
+	s.fixtureMap[s.t.Name()] = newFixture(s.t)
 	var err error
 	s.fixture().pulsar, err = NewTestPulsar(reqTimeoutMs*10, pulseDelta*10)
-	s.Require().NoError(err)
+	require.NoError(s.t, err)
 
 	inslogger.FromContext(s.fixture().ctx).Info("SetupTest -- ")
 
@@ -95,7 +98,7 @@ func (s *bootstrapSuite) TearDownTest() {
 	suiteLogger.Info("Stop bootstrap nodes")
 	for _, n := range s.fixture().bootstrapNodes {
 		err := n.componentManager.Stop(n.ctx)
-		s.NoError(err)
+		assert.NoError(s.t, err)
 	}
 }
 
@@ -107,20 +110,25 @@ func (s *bootstrapSuite) waitForConsensus(consensusCount int) {
 	}
 }
 
-func newBootstraptSuite(bootstrapCount int) *bootstrapSuite {
+func newBootstraptSuite(t *testing.T, bootstrapCount int) *bootstrapSuite {
 	return &bootstrapSuite{
-		testSuite: newTestSuite(bootstrapCount, 0),
+		testSuite: newTestSuite(t, bootstrapCount, 0),
 	}
 }
 
-//func TestBootstrap(t *testing.T) {
-//	s := newBootstraptSuite(2)
-//	suite.Run(t, s)
-//}
+func testBootstrap(t *testing.T) *bootstrapSuite {
+	s := newBootstraptSuite(t, 2)
+	s.SetupTest()
+	return s
+}
 
-func (s *bootstrapSuite) TestExample() {
+func TestExample(t *testing.T) {
+	t.Skip("FIXME")
+	s := testBootstrap(t)
+	defer s.TearDownTest()
+
 	inslogger.FromContext(s.fixture().ctx).Info("Log -- ")
-	s.True(true)
+	assert.True(s.t, true)
 
 	s.StartNodesNetwork(s.fixture().bootstrapNodes)
 

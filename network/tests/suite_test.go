@@ -56,6 +56,7 @@ import (
 	"context"
 	"crypto"
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -71,7 +72,6 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/keystore"
-	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/network/servicenetwork"
 
@@ -133,48 +133,48 @@ func newFixture(t *testing.T) *fixture {
 
 // testSuite is base test suite
 type testSuite struct {
-	suite.Suite
 	fixtureMap     map[string]*fixture
 	bootstrapCount int
 	nodesCount     int
+	t              *testing.T
 }
 
 type consensusSuite struct {
 	testSuite
 }
 
-func newTestSuite(bootstrapCount, nodesCount int) testSuite {
+func newTestSuite(t *testing.T, bootstrapCount, nodesCount int) testSuite {
 	return testSuite{
-		Suite:          suite.Suite{},
 		fixtureMap:     make(map[string]*fixture, 0),
 		bootstrapCount: bootstrapCount,
 		nodesCount:     nodesCount,
+		t:              t,
 	}
 }
 
-func newConsensusSuite(bootstrapCount, nodesCount int) *consensusSuite {
+func newConsensusSuite(t *testing.T, bootstrapCount, nodesCount int) *consensusSuite {
 	return &consensusSuite{
-		testSuite: newTestSuite(bootstrapCount, nodesCount),
+		testSuite: newTestSuite(t, bootstrapCount, nodesCount),
 	}
 }
 
 func (s *testSuite) fixture() *fixture {
-	return s.fixtureMap[s.T().Name()]
+	return s.fixtureMap[s.t.Name()]
 }
 
 // CheckDiscoveryCount skips test if bootstrap nodes count less then consensusMin
 func (s *consensusSuite) CheckBootstrapCount() {
 	if len(s.fixture().bootstrapNodes) < consensusMin {
-		s.T().Skip(consensusMinMsg)
+		s.t.Skip(consensusMinMsg)
 	}
 }
 
 // SetupSuite creates and run network with bootstrap and common nodes once before run all tests in the suite
 func (s *consensusSuite) SetupTest() {
-	s.fixtureMap[s.T().Name()] = newFixture(s.T())
+	s.fixtureMap[s.t.Name()] = newFixture(s.t)
 	var err error
 	s.fixture().pulsar, err = NewTestPulsar(reqTimeoutMs, pulseDelta)
-	s.Require().NoError(err)
+	require.NoError(s.t, err)
 
 	suiteLogger.Info("SetupTest")
 
@@ -225,7 +225,7 @@ func (s *consensusSuite) SetupTest() {
 	}
 
 	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
-	s.Require().Equal(len(s.fixture().bootstrapNodes), len(activeNodes))
+	require.Equal(s.t, len(s.fixture().bootstrapNodes), len(activeNodes))
 
 	if len(s.fixture().networkNodes) > 0 {
 		suiteLogger.Info("Setup network nodes")
@@ -238,19 +238,19 @@ func (s *consensusSuite) SetupTest() {
 		activeNodes1 := s.fixture().networkNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 		activeNodes2 := s.fixture().networkNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 
-		s.Require().Equal(s.getNodesCount(), len(activeNodes1))
-		s.Require().Equal(s.getNodesCount(), len(activeNodes2))
+		require.Equal(s.t, s.getNodesCount(), len(activeNodes1))
+		require.Equal(s.t, s.getNodesCount(), len(activeNodes2))
 	}
 	suiteLogger.Info("Start test pulsar")
 	err = s.fixture().pulsar.Start(initLogger(s.fixture().ctx, insolar.ErrorLevel), pulseReceivers)
-	s.Require().NoError(err)
+	require.NoError(s.t, err)
 }
 
 func (s *testSuite) waitResults(results chan error, expected int) {
 	count := 0
 	for count < expected {
 		err := <-results
-		s.Require().NoError(err)
+		require.NoError(s.t, err)
 		count++
 	}
 }
@@ -298,12 +298,12 @@ func (s *consensusSuite) TearDownTest() {
 	suiteLogger.Info("Stop network nodes")
 	for _, n := range s.fixture().networkNodes {
 		err := n.componentManager.Stop(n.ctx)
-		s.NoError(err)
+		require.NoError(s.t, err)
 	}
 	suiteLogger.Info("Stop bootstrap nodes")
 	for _, n := range s.fixture().bootstrapNodes {
 		err := n.componentManager.Stop(n.ctx)
-		s.NoError(err)
+		require.NoError(s.t, err)
 	}
 	suiteLogger.Info("Stop test pulsar")
 	s.fixture().pulsar.Stop(s.fixture().ctx)
@@ -347,21 +347,21 @@ func (s *testSuite) getNodesCount() int {
 func (s *testSuite) InitNode(node *networkNode) {
 	if node.componentManager != nil {
 		err := node.init()
-		s.Require().NoError(err)
+		require.NoError(s.t, err)
 	}
 }
 
 func (s *testSuite) StartNode(node *networkNode) {
 	if node.componentManager != nil {
 		err := node.componentManager.Start(node.ctx)
-		s.Require().NoError(err)
+		require.NoError(s.t, err)
 	}
 }
 
 func (s *testSuite) StopNode(node *networkNode) {
 	if node.componentManager != nil {
 		err := node.componentManager.Stop(s.fixture().ctx)
-		s.NoError(err)
+		require.NoError(s.t, err)
 	}
 }
 
@@ -382,7 +382,7 @@ type networkNode struct {
 // newNetworkNode returns networkNode initialized only with id, host address and key pair
 func (s *testSuite) newNetworkNode(name string) *networkNode {
 	key, err := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
-	s.Require().NoError(err)
+	require.NoError(s.t, err)
 	address := "127.0.0.1:" + strconv.Itoa(incrementTestPort())
 
 	n := &networkNode{
@@ -416,13 +416,13 @@ func (n *networkNode) init() error {
 
 func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManager, insolar.CryptographyService) {
 	pubKey, err := node.cryptographyService.GetPublicKey()
-	s.Require().NoError(err)
+	require.NoError(s.t, err)
 
 	// init certificate
 
 	proc := platformpolicy.NewKeyProcessor()
 	publicKey, err := proc.ExportPublicKeyPEM(pubKey)
-	s.Require().NoError(err)
+	require.NoError(s.t, err)
 
 	cert := &certificate.Certificate{}
 	cert.PublicKey = string(publicKey[:])
@@ -433,7 +433,7 @@ func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManag
 	for _, b := range s.fixture().bootstrapNodes {
 		pubKey, _ := b.cryptographyService.GetPublicKey()
 		pubKeyBuf, err := proc.ExportPublicKeyPEM(pubKey)
-		s.Require().NoError(err)
+		require.NoError(s.t, err)
 
 		bootstrapNode := certificate.NewBootstrapNode(
 			pubKey,
@@ -447,10 +447,10 @@ func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManag
 
 	// dump cert and read it again from json for correct private files initialization
 	jsonCert, err := cert.Dump()
-	s.Require().NoError(err)
+	require.NoError(s.t, err)
 
 	cert, err = certificate.ReadCertificateFromReader(pubKey, proc, strings.NewReader(jsonCert))
-	s.Require().NoError(err)
+	require.NoError(s.t, err)
 	return certificate.NewCertificateManager(cert), node.cryptographyService
 }
 
@@ -479,10 +479,6 @@ func (p *pulseManagerMock) ForPulseNumber(context.Context, insolar.PulseNumber) 
 func (p *pulseManagerMock) Latest(ctx context.Context) (insolar.Pulse, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-
-	//if p.pulse.PulseNumber == insolar.FirstPulseNumber {
-	//	return p.pulse, pulse.ErrNotFound
-	//}
 	return p.pulse, nil
 }
 func (p *pulseManagerMock) Append(ctx context.Context, pulse insolar.Pulse) error {
@@ -517,7 +513,6 @@ func (p *PublisherMock) Close() error {
 
 // preInitNode inits previously created node with mocks and external dependencies
 func (s *testSuite) preInitNode(node *networkNode) {
-	t := s.T()
 	cfg := configuration.NewConfiguration()
 	cfg.Pulsar.PulseTime = pulseDelta * 1000
 	cfg.Host.Transport.Address = node.host
@@ -526,13 +521,13 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	node.componentManager = &component.Manager{}
 	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme(), rules.NewRules())
 	serviceNetwork, err := servicenetwork.NewServiceNetwork(cfg, node.componentManager)
-	s.Require().NoError(err)
+	require.NoError(s.t, err)
 
 	certManager, cryptographyService := s.initCrypto(node)
 
 	realKeeper, err := nodenetwork.NewNodeNetwork(cfg.Host.Transport, certManager.GetCertificate())
-	s.Require().NoError(err)
-	terminationHandler := testutils.NewTerminationHandlerMock(t)
+	require.NoError(s.t, err)
+	terminationHandler := testutils.NewTerminationHandlerMock(s.t)
 	terminationHandler.LeaveFunc = func(p context.Context, p1 insolar.PulseNumber) {}
 	terminationHandler.OnLeaveApprovedFunc = func(p context.Context) {}
 	terminationHandler.AbortFunc = func(reason string) { suiteLogger.Error(reason) }
@@ -557,7 +552,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		serviceNetwork,
 		keyProc,
 		terminationHandler,
-		testutils.NewContractRequesterMock(t),
+		testutils.NewContractRequesterMock(s.t),
 		//pulse.NewStorageMem(),
 	)
 	//serviceNetwork.SetOperableFunc(func(ctx context.Context, operable bool) {})
@@ -614,10 +609,10 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 func (s *testSuite) AssertActiveNodesCountDelta(delta int) {
 	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
-	s.Equal(s.getNodesCount()+delta, len(activeNodes))
+	require.Equal(s.t, s.getNodesCount()+delta, len(activeNodes))
 }
 
 func (s *testSuite) AssertWorkingNodesCountDelta(delta int) {
 	workingNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetWorkingNodes()
-	s.Equal(s.getNodesCount()+delta, len(workingNodes))
+	require.Equal(s.t, s.getNodesCount()+delta, len(workingNodes))
 }
