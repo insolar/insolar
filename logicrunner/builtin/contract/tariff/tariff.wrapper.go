@@ -19,6 +19,8 @@ package tariff
 import (
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
+
+	"strings"
 )
 
 type ExtendableError struct {
@@ -114,7 +116,14 @@ func INSMETHOD_CalcFee(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.CalcFee(args0)
 
-	if ph.GetSystemError() != nil {
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 

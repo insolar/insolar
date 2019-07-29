@@ -38,12 +38,12 @@ type NodeRecord struct {
 
 // NewNodeRecord creates new NodeRecord.
 func NewNodeRecord(publicKey string, roleStr string) (*NodeRecord, error) {
-	if len(publicKey) == 0 {
-		return nil, fmt.Errorf("public key is required")
-	}
-	if len(roleStr) == 0 {
-		return nil, fmt.Errorf("role is required")
-	}
+	// if len(publicKey) == 0 {
+	// 	return nil, fmt.Errorf("public key is required")
+	// }
+	// if len(roleStr) == 0 {
+	// 	return nil, fmt.Errorf("role is required")
+	// }
 
 	role := insolar.GetStaticRoleFromString(roleStr)
 	if role == insolar.StaticRoleUnknown {

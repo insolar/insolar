@@ -20,6 +20,8 @@ import (
 	"github.com/insolar/insolar/insolar"
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
+
+	"strings"
 )
 
 type ExtendableError struct {
@@ -119,7 +121,14 @@ func INSMETHOD_Transfer(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.Transfer(args0, args1, args2)
 
-	if ph.GetSystemError() != nil {
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -164,7 +173,14 @@ func INSMETHOD_Accept(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0 := self.Accept(args0)
 
-	if ph.GetSystemError() != nil {
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret0 = systemErr
+		systemErr = nil
+	}
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -209,7 +225,14 @@ func INSMETHOD_RollBack(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0 := self.RollBack(args0)
 
-	if ph.GetSystemError() != nil {
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret0 = systemErr
+		systemErr = nil
+	}
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -252,7 +275,14 @@ func INSMETHOD_GetBalance(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.GetBalance()
 
-	if ph.GetSystemError() != nil {
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 

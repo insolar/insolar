@@ -19,6 +19,8 @@ package helloworld
 import (
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
+
+	"strings"
 )
 
 type ExtendableError struct {
@@ -112,7 +114,14 @@ func INSMETHOD_ReturnObj(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.ReturnObj()
 
-	if ph.GetSystemError() != nil {
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -157,7 +166,14 @@ func INSMETHOD_Greet(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.Greet(args0)
 
-	if ph.GetSystemError() != nil {
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -200,7 +216,14 @@ func INSMETHOD_Count(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.Count()
 
-	if ph.GetSystemError() != nil {
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -243,7 +266,14 @@ func INSMETHOD_Errored(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.Errored()
 
-	if ph.GetSystemError() != nil {
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -286,7 +316,14 @@ func INSMETHOD_PulseNumber(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.PulseNumber()
 
-	if ph.GetSystemError() != nil {
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -329,7 +366,14 @@ func INSMETHOD_CreateChild(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.CreateChild()
 
-	if ph.GetSystemError() != nil {
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -374,7 +418,14 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.Call(args0)
 
-	if ph.GetSystemError() != nil {
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+
+	if systemErr != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
