@@ -36,11 +36,11 @@ type GetCode struct {
 	codeID  insolar.ID
 	pass    bool
 
-	Dep struct {
-		RecordAccessor object.RecordAccessor
-		Coordinator    jet.Coordinator
-		Sender         bus.Sender
-		JetFetcher     executor.JetFetcher
+	dep struct {
+		records     object.RecordAccessor
+		coordinator jet.Coordinator
+		jetFetcher  executor.JetFetcher
+		sender      bus.Sender
 	}
 }
 
@@ -50,6 +50,18 @@ func NewGetCode(msg payload.Meta, codeID insolar.ID, pass bool) *GetCode {
 		codeID:  codeID,
 		pass:    pass,
 	}
+}
+
+func (p *GetCode) Dep(
+	r object.RecordAccessor,
+	c jet.Coordinator,
+	f executor.JetFetcher,
+	s bus.Sender,
+) {
+	p.dep.records = r
+	p.dep.coordinator = c
+	p.dep.jetFetcher = f
+	p.dep.sender = s
 }
 
 func (p *GetCode) Proceed(ctx context.Context) error {
@@ -66,7 +78,7 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 			return errors.Wrap(err, "failed to create message")
 		}
 
-		go p.Dep.Sender.Reply(ctx, p.message, msg)
+		go p.dep.sender.Reply(ctx, p.message, msg)
 
 		return nil
 	}
@@ -83,24 +95,24 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 			return errors.Wrap(err, "failed to create reply")
 		}
 
-		onHeavy, err := p.Dep.Coordinator.IsBeyondLimit(ctx, p.codeID.Pulse())
+		onHeavy, err := p.dep.coordinator.IsBeyondLimit(ctx, p.codeID.Pulse())
 		if err != nil {
 			return errors.Wrap(err, "failed to calculate pulse")
 		}
 		var node insolar.Reference
 		if onHeavy {
-			h, err := p.Dep.Coordinator.Heavy(ctx)
+			h, err := p.dep.coordinator.Heavy(ctx)
 			if err != nil {
 				return errors.Wrap(err, "failed to calculate heavy")
 			}
 			node = *h
 		} else {
-			jetID, err := p.Dep.JetFetcher.Fetch(ctx, p.codeID, p.codeID.Pulse())
+			jetID, err := p.dep.jetFetcher.Fetch(ctx, p.codeID, p.codeID.Pulse())
 			if err != nil {
 				return errors.Wrap(err, "failed to fetch jet")
 			}
 			logger.Debug("calculated jet for pass: %s", jetID.DebugString())
-			l, err := p.Dep.Coordinator.LightExecutorForJet(ctx, *jetID, p.codeID.Pulse())
+			l, err := p.dep.coordinator.LightExecutorForJet(ctx, *jetID, p.codeID.Pulse())
 			if err != nil {
 				return errors.Wrap(err, "failed to calculate role")
 			}
@@ -108,14 +120,14 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 		}
 
 		go func() {
-			_, done := p.Dep.Sender.SendTarget(ctx, msg, node)
+			_, done := p.dep.sender.SendTarget(ctx, msg, node)
 			done()
 			logger.Debug("passed GetCode")
 		}()
 		return nil
 	}
 
-	rec, err := p.Dep.RecordAccessor.ForID(ctx, p.codeID)
+	rec, err := p.dep.records.ForID(ctx, p.codeID)
 	switch err {
 	case nil:
 		logger.Debug("sending code")

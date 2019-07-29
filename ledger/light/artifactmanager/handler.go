@@ -135,13 +135,20 @@ func NewMessageHandler(
 			)
 		},
 		GetCode: func(p *proc.GetCode) {
-			p.Dep.RecordAccessor = h.Records
-			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.JetFetcher = h.JetTreeUpdater
-			p.Dep.Sender = h.Sender
+			p.Dep(
+				h.Records,
+				h.JetCoordinator,
+				h.JetTreeUpdater,
+				h.Sender,
+			)
 		},
 		GetRequest: func(p *proc.GetRequest) {
-			p.Dep(h.Records, h.Sender, h.JetCoordinator, h.JetTreeUpdater)
+			p.Dep(
+				h.Records,
+				h.Sender,
+				h.JetCoordinator,
+				h.JetTreeUpdater,
+			)
 		},
 		GetPendings: func(p *proc.GetPendings) {
 			p.Dep(
@@ -175,7 +182,12 @@ func NewMessageHandler(
 			p.Dep(h.PCS)
 		},
 		SetCode: func(p *proc.SetCode) {
-			p.Dep(h.WriteAccessor, h.Records, h.PCS, h.Sender)
+			p.Dep(
+				h.WriteAccessor,
+				h.Records,
+				h.PCS,
+				h.Sender,
+			)
 		},
 	}
 
