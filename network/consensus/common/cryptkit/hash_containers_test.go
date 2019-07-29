@@ -151,6 +151,10 @@ func TestDigestEquals(t *testing.T) {
 func TestAsDigestHolder(t *testing.T) {
 	d := Digest{digestMethod: "test"}
 	dh := d.AsDigestHolder()
+	require.Nil(t, dh)
+
+	d.hFoldReader = NewDigestHolderMock(t)
+	dh = d.AsDigestHolder()
 	require.Equal(t, dh.GetDigestMethod(), d.digestMethod)
 
 	require.Implements(t, (*DigestHolder)(nil), dh)
