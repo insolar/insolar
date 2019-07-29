@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// RecordPositionAccessorMock implements github.com/insolar/insolar/ledger/object.RecordPositionAccessor
+//RecordPositionAccessorMock implements github.com/insolar/insolar/ledger/object.RecordPositionAccessor
 type RecordPositionAccessorMock struct {
 	t minimock.Tester
 
@@ -30,7 +30,7 @@ type RecordPositionAccessorMock struct {
 	LastKnownPositionMock       mRecordPositionAccessorMockLastKnownPosition
 }
 
-// NewRecordPositionAccessorMock returns a mock for github.com/insolar/insolar/ledger/object.RecordPositionAccessor
+//NewRecordPositionAccessorMock returns a mock for github.com/insolar/insolar/ledger/object.RecordPositionAccessor
 func NewRecordPositionAccessorMock(t minimock.Tester) *RecordPositionAccessorMock {
 	m := &RecordPositionAccessorMock{t: t}
 
@@ -65,7 +65,7 @@ type RecordPositionAccessorMockAtPositionResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of RecordPositionAccessor.AtPosition is expected from 1 to Infinity times
+//Expect specifies that invocation of RecordPositionAccessor.AtPosition is expected from 1 to Infinity times
 func (m *mRecordPositionAccessorMockAtPosition) Expect(p insolar.PulseNumber, p1 uint32) *mRecordPositionAccessorMockAtPosition {
 	m.mock.AtPositionFunc = nil
 	m.expectationSeries = nil
@@ -77,7 +77,7 @@ func (m *mRecordPositionAccessorMockAtPosition) Expect(p insolar.PulseNumber, p1
 	return m
 }
 
-// Return specifies results of invocation of RecordPositionAccessor.AtPosition
+//Return specifies results of invocation of RecordPositionAccessor.AtPosition
 func (m *mRecordPositionAccessorMockAtPosition) Return(r insolar.ID, r1 error) *RecordPositionAccessorMock {
 	m.mock.AtPositionFunc = nil
 	m.expectationSeries = nil
@@ -89,7 +89,7 @@ func (m *mRecordPositionAccessorMockAtPosition) Return(r insolar.ID, r1 error) *
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of RecordPositionAccessor.AtPosition is expected once
+//ExpectOnce specifies that invocation of RecordPositionAccessor.AtPosition is expected once
 func (m *mRecordPositionAccessorMockAtPosition) ExpectOnce(p insolar.PulseNumber, p1 uint32) *RecordPositionAccessorMockAtPositionExpectation {
 	m.mock.AtPositionFunc = nil
 	m.mainExpectation = nil
@@ -104,7 +104,7 @@ func (e *RecordPositionAccessorMockAtPositionExpectation) Return(r insolar.ID, r
 	e.result = &RecordPositionAccessorMockAtPositionResult{r, r1}
 }
 
-// Set uses given function f as a mock of RecordPositionAccessor.AtPosition method
+//Set uses given function f as a mock of RecordPositionAccessor.AtPosition method
 func (m *mRecordPositionAccessorMockAtPosition) Set(f func(p insolar.PulseNumber, p1 uint32) (r insolar.ID, r1 error)) *RecordPositionAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -113,7 +113,7 @@ func (m *mRecordPositionAccessorMockAtPosition) Set(f func(p insolar.PulseNumber
 	return m.mock
 }
 
-// AtPosition implements github.com/insolar/insolar/ledger/object.RecordPositionAccessor interface
+//AtPosition implements github.com/insolar/insolar/ledger/object.RecordPositionAccessor interface
 func (m *RecordPositionAccessorMock) AtPosition(p insolar.PulseNumber, p1 uint32) (r insolar.ID, r1 error) {
 	counter := atomic.AddUint64(&m.AtPositionPreCounter, 1)
 	defer atomic.AddUint64(&m.AtPositionCounter, 1)
@@ -165,17 +165,17 @@ func (m *RecordPositionAccessorMock) AtPosition(p insolar.PulseNumber, p1 uint32
 	return m.AtPositionFunc(p, p1)
 }
 
-// AtPositionMinimockCounter returns a count of RecordPositionAccessorMock.AtPositionFunc invocations
+//AtPositionMinimockCounter returns a count of RecordPositionAccessorMock.AtPositionFunc invocations
 func (m *RecordPositionAccessorMock) AtPositionMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.AtPositionCounter)
 }
 
-// AtPositionMinimockPreCounter returns the value of RecordPositionAccessorMock.AtPosition invocations
+//AtPositionMinimockPreCounter returns the value of RecordPositionAccessorMock.AtPosition invocations
 func (m *RecordPositionAccessorMock) AtPositionMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.AtPositionPreCounter)
 }
 
-// AtPositionFinished returns true if mock invocations count is ok
+//AtPositionFinished returns true if mock invocations count is ok
 func (m *RecordPositionAccessorMock) AtPositionFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.AtPositionMock.expectationSeries) > 0 {
@@ -215,7 +215,7 @@ type RecordPositionAccessorMockLastKnownPositionResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of RecordPositionAccessor.LastKnownPosition is expected from 1 to Infinity times
+//Expect specifies that invocation of RecordPositionAccessor.LastKnownPosition is expected from 1 to Infinity times
 func (m *mRecordPositionAccessorMockLastKnownPosition) Expect(p insolar.PulseNumber) *mRecordPositionAccessorMockLastKnownPosition {
 	m.mock.LastKnownPositionFunc = nil
 	m.expectationSeries = nil
@@ -227,7 +227,7 @@ func (m *mRecordPositionAccessorMockLastKnownPosition) Expect(p insolar.PulseNum
 	return m
 }
 
-// Return specifies results of invocation of RecordPositionAccessor.LastKnownPosition
+//Return specifies results of invocation of RecordPositionAccessor.LastKnownPosition
 func (m *mRecordPositionAccessorMockLastKnownPosition) Return(r uint32, r1 error) *RecordPositionAccessorMock {
 	m.mock.LastKnownPositionFunc = nil
 	m.expectationSeries = nil
@@ -239,7 +239,7 @@ func (m *mRecordPositionAccessorMockLastKnownPosition) Return(r uint32, r1 error
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of RecordPositionAccessor.LastKnownPosition is expected once
+//ExpectOnce specifies that invocation of RecordPositionAccessor.LastKnownPosition is expected once
 func (m *mRecordPositionAccessorMockLastKnownPosition) ExpectOnce(p insolar.PulseNumber) *RecordPositionAccessorMockLastKnownPositionExpectation {
 	m.mock.LastKnownPositionFunc = nil
 	m.mainExpectation = nil
@@ -254,7 +254,7 @@ func (e *RecordPositionAccessorMockLastKnownPositionExpectation) Return(r uint32
 	e.result = &RecordPositionAccessorMockLastKnownPositionResult{r, r1}
 }
 
-// Set uses given function f as a mock of RecordPositionAccessor.LastKnownPosition method
+//Set uses given function f as a mock of RecordPositionAccessor.LastKnownPosition method
 func (m *mRecordPositionAccessorMockLastKnownPosition) Set(f func(p insolar.PulseNumber) (r uint32, r1 error)) *RecordPositionAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -263,7 +263,7 @@ func (m *mRecordPositionAccessorMockLastKnownPosition) Set(f func(p insolar.Puls
 	return m.mock
 }
 
-// LastKnownPosition implements github.com/insolar/insolar/ledger/object.RecordPositionAccessor interface
+//LastKnownPosition implements github.com/insolar/insolar/ledger/object.RecordPositionAccessor interface
 func (m *RecordPositionAccessorMock) LastKnownPosition(p insolar.PulseNumber) (r uint32, r1 error) {
 	counter := atomic.AddUint64(&m.LastKnownPositionPreCounter, 1)
 	defer atomic.AddUint64(&m.LastKnownPositionCounter, 1)
@@ -315,17 +315,17 @@ func (m *RecordPositionAccessorMock) LastKnownPosition(p insolar.PulseNumber) (r
 	return m.LastKnownPositionFunc(p)
 }
 
-// LastKnownPositionMinimockCounter returns a count of RecordPositionAccessorMock.LastKnownPositionFunc invocations
+//LastKnownPositionMinimockCounter returns a count of RecordPositionAccessorMock.LastKnownPositionFunc invocations
 func (m *RecordPositionAccessorMock) LastKnownPositionMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.LastKnownPositionCounter)
 }
 
-// LastKnownPositionMinimockPreCounter returns the value of RecordPositionAccessorMock.LastKnownPosition invocations
+//LastKnownPositionMinimockPreCounter returns the value of RecordPositionAccessorMock.LastKnownPosition invocations
 func (m *RecordPositionAccessorMock) LastKnownPositionMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.LastKnownPositionPreCounter)
 }
 
-// LastKnownPositionFinished returns true if mock invocations count is ok
+//LastKnownPositionFinished returns true if mock invocations count is ok
 func (m *RecordPositionAccessorMock) LastKnownPositionFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.LastKnownPositionMock.expectationSeries) > 0 {
@@ -345,8 +345,8 @@ func (m *RecordPositionAccessorMock) LastKnownPositionFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *RecordPositionAccessorMock) ValidateCallCounters() {
 
 	if !m.AtPositionFinished() {
@@ -359,19 +359,19 @@ func (m *RecordPositionAccessorMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *RecordPositionAccessorMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *RecordPositionAccessorMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *RecordPositionAccessorMock) MinimockFinish() {
 
 	if !m.AtPositionFinished() {
@@ -384,14 +384,14 @@ func (m *RecordPositionAccessorMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *RecordPositionAccessorMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *RecordPositionAccessorMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -422,8 +422,8 @@ func (m *RecordPositionAccessorMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *RecordPositionAccessorMock) AllMocksCalled() bool {
 
 	if !m.AtPositionFinished() {
