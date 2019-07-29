@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/handle"
@@ -40,38 +39,26 @@ import (
 
 // MessageHandler processes messages for local storage interaction.
 type MessageHandler struct {
-	Bus                    insolar.MessageBus                 `inject:""`
-	PCS                    insolar.PlatformCryptographyScheme `inject:""`
-	JetCoordinator         jet.Coordinator                    `inject:""`
-	CryptographyService    insolar.CryptographyService        `inject:""`
-	DelegationTokenFactory insolar.DelegationTokenFactory     `inject:""`
-	JetStorage             jet.Storage                        `inject:""`
+	PCS            insolar.PlatformCryptographyScheme `inject:""`
+	JetCoordinator jet.Coordinator                    `inject:""`
+	JetStorage     jet.Storage                        `inject:""`
+	JetReleaser    hot.JetReleaser                    `inject:""`
+	DropModifier   drop.Modifier                      `inject:""`
+	IndexLocker    object.IndexLocker                 `inject:""`
+	Records        object.RecordStorage               `inject:""`
+	HotDataWaiter  hot.JetWaiter                      `inject:""`
 
-	DropModifier drop.Modifier `inject:""`
-
-	IndexLocker object.IndexLocker `inject:""`
-
-	Records object.RecordStorage `inject:""`
-	Nodes   node.Accessor        `inject:""`
-
-	HotDataWaiter hot.JetWaiter   `inject:""`
-	JetReleaser   hot.JetReleaser `inject:""`
-
-	WriteAccessor hot.WriteAccessor
-
-	IndexStorage object.IndexStorage
-
-	PulseCalculator storage.PulseCalculator
-
-	conf           *configuration.Ledger
-	JetTreeUpdater executor.JetFetcher
-
-	Sender         bus.Sender
-	FlowDispatcher *dispatcher.Dispatcher
-	handlers       map[insolar.MessageType]insolar.MessageHandler
-
+	WriteAccessor      hot.WriteAccessor
+	IndexStorage       object.IndexStorage
+	PulseCalculator    storage.PulseCalculator
+	JetTreeUpdater     executor.JetFetcher
+	Sender             bus.Sender
+	FlowDispatcher     *dispatcher.Dispatcher
 	FilamentCalculator *executor.FilamentCalculatorDefault
 	RequestChecker     *executor.RequestCheckerDefault
+
+	conf     *configuration.Ledger
+	handlers map[insolar.MessageType]insolar.MessageHandler
 }
 
 // NewMessageHandler creates new handler.
@@ -151,7 +138,6 @@ func NewMessageHandler(
 				h.JetTreeUpdater,
 				h.Records,
 				h.IndexStorage,
-				h.Bus,
 				h.Sender,
 			)
 		},
@@ -178,7 +164,6 @@ func NewMessageHandler(
 		},
 		HotObjects: func(p *proc.HotObjects) {
 			p.Dep.DropModifier = h.DropModifier
-			p.Dep.MessageBus = h.Bus
 			p.Dep.IndexModifier = h.IndexStorage
 			p.Dep.JetStorage = h.JetStorage
 			p.Dep.JetFetcher = h.JetTreeUpdater

@@ -48,7 +48,6 @@ type HotObjects struct {
 
 	Dep struct {
 		DropModifier  drop.Modifier
-		MessageBus    insolar.MessageBus
 		IndexModifier object.IndexModifier
 		JetStorage    jet.Storage
 		JetFetcher    executor.JetFetcher
