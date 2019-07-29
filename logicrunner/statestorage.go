@@ -176,20 +176,28 @@ func (ss *stateStorage) OnPulse(ctx context.Context, pulse insolar.Pulse) []inso
 			ctx, insolar.DynamicRoleVirtualExecutor, *objectRef.Record(), pulse.PulseNumber, ss.jetCoordinator.Me(),
 		)
 
-		if broker := objectState.ExecutionBroker; broker != nil {
-			onPulseMessages = append(onPulseMessages, broker.OnPulse(ctx, meNext)...)
+		if objectState.ExecutionBroker == nil {
+			objectState.Unlock()
+			continue
 		}
 
-		if archive := objectState.ExecutionArchive; archive != nil {
-			onPulseMessages = append(onPulseMessages, archive.OnPulse(ctx)...)
+		onPulseMessages = append(onPulseMessages, objectState.ExecutionBroker.OnPulse(ctx, meNext)...)
+
+		archive := objectState.ExecutionArchive
+
+		if archive == nil {
+			objectState.Unlock()
+			continue
 		}
 
-		if meNext && objectState.ExecutionArchive != nil {
+		onPulseMessages = append(onPulseMessages, archive.OnPulse(ctx)...)
+
+		if meNext {
 			ss.state[objectRef] = &ObjectState{
 				ExecutionArchive: objectState.ExecutionArchive,
 				ExecutionBroker:  objectState.ExecutionBroker,
 			}
-		} else if objectState.ExecutionArchive != nil && !objectState.ExecutionArchive.IsEmpty() {
+		} else if !objectState.ExecutionArchive.IsEmpty() {
 			// import previous ExecutionArchive if it's not empty
 			ss.state[objectRef] = &ObjectState{
 				ExecutionArchive: objectState.ExecutionArchive,
