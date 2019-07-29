@@ -398,8 +398,8 @@ type fetchingIterator struct {
 	iter  filamentIterator
 	cache *filamentCache
 
-	objectID             insolar.ID
-	readUntil, calcPulse insolar.PulseNumber
+	objectID  insolar.ID
+	readUntil insolar.PulseNumber
 
 	jetFetcher  JetFetcher
 	coordinator jet.Coordinator
