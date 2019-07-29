@@ -256,21 +256,21 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to start component manager")
 	}
 
-	if !n.cfg.Service.ConsensusEnabled {
-		cert := n.CertificateManager.GetCertificate()
-		nodes := make([]insolar.NetworkNode, len(cert.GetDiscoveryNodes()))
-		for i, dn := range cert.GetDiscoveryNodes() {
-			nodes[i] = node.NewNode(*dn.GetNodeRef(), dn.GetRole(), dn.GetPublicKey(), dn.GetHost(), "")
-			nodes[i].(node.MutableNode).SetEvidence(cryptkit.NewSignedDigest(
-				cryptkit.NewDigest(longbits.NewBits512FromBytes(dn.GetBriefDigest()), adapters.SHA3512Digest),
-				cryptkit.NewSignature(longbits.NewBits512FromBytes(dn.GetBriefSign()), adapters.SHA3512Digest.SignedBy(adapters.SECP256r1Sign)),
-			))
-		}
-		n.operableFunc(ctx, false)
-		n.NodeKeeper.SetInitialSnapshot(nodes)
-		n.Gatewayer.SwitchState(ctx, insolar.CompleteNetworkState)
-		n.ConsensusMode = consensus.ReadyNetwork
-	}
+	//if !n.cfg.Service.ConsensusEnabled {
+	//	cert := n.CertificateManager.GetCertificate()
+	//	nodes := make([]insolar.NetworkNode, len(cert.GetDiscoveryNodes()))
+	//	for i, dn := range cert.GetDiscoveryNodes() {
+	//		nodes[i] = node.NewNode(*dn.GetNodeRef(), dn.GetRole(), dn.GetPublicKey(), dn.GetHost(), "")
+	//		nodes[i].(node.MutableNode).SetEvidence(cryptkit.NewSignedDigest(
+	//			cryptkit.NewDigest(longbits.NewBits512FromBytes(dn.GetBriefDigest()), adapters.SHA3512Digest),
+	//			cryptkit.NewSignature(longbits.NewBits512FromBytes(dn.GetBriefSign()), adapters.SHA3512Digest.SignedBy(adapters.SECP256r1Sign)),
+	//		))
+	//	}
+	//	n.operableFunc(ctx, false)
+	//	n.NodeKeeper.SetInitialSnapshot(nodes)
+	//	n.Gatewayer.SwitchState(ctx, insolar.CompleteNetworkState)
+	//	n.ConsensusMode = consensus.ReadyNetwork
+	//}
 
 	n.initConsensus()
 	n.Gatewayer.Gateway().Run(ctx)
