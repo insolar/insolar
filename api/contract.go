@@ -198,6 +198,7 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 	if err != nil {
 		return errors.Wrap(err, "can't get current pulse")
 	}
+
 	msg := &message.CallMethod{
 		IncomingRequest: record.IncomingRequest{
 			Object:       objectRef,
@@ -211,7 +212,7 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 
 	callMethodReply, err := s.runner.ContractRequester.Call(ctx, msg)
 	if err != nil {
-		inslogger.FromContext(ctx).Error("failed to call: ", err.Error())
+		inslog.Error("failed to call: ", err.Error())
 		return errors.Wrap(err, "CallMethod failed with error")
 	}
 

@@ -19,7 +19,6 @@ package proc
 import (
 	"context"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -84,14 +83,7 @@ func (p *SetCode) Proceed(ctx context.Context) error {
 	}
 
 	err = p.dep.records.SetAtomic(ctx, material)
-	if err == object.ErrOverride {
-		inslogger.FromContext(ctx).Errorf("can't save record into storage: %s", err)
-		// Since there is no deduplication yet it's quite possible that there will be
-		// two writes by the same key. For this reason currently instead of reporting
-		// an error we return OK (nil error). When deduplication will be implemented
-		// we should change `nil` to `ErrOverride` here.
-		return nil
-	} else if err != nil {
+	if err != nil {
 		return errors.Wrap(err, "failed to store record")
 	}
 
