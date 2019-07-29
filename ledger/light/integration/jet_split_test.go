@@ -17,7 +17,6 @@
 package integration_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -37,21 +36,15 @@ func TestJetSplit(t *testing.T) {
 
 	var testPulsesQuantity = 5
 
-	// todo: InfoLevel
-	ctx := inslogger.WithLoggerLevel(inslogger.TestContext(t), insolar.PanicLevel)
+	ctx := inslogger.WithLoggerLevel(inslogger.TestContext(t), insolar.InfoLevel)
 	cfg := DefaultLightConfig()
 	cfg.Ledger.JetSplit.DepthLimit = 5
 	cfg.Ledger.JetSplit.ThresholdOverflowCount = 0
 	cfg.Ledger.JetSplit.ThresholdRecordsCount = 0
 
 	s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) {
-
-		// fmt.Printf("type %T \n", pl)
-
 		switch p := pl.(type) {
 		case *payload.Replication:
-			fmt.Printf("jetNum %s \n", p.JetID.DebugString())
-			fmt.Printf("pulse index %s \n", p.Pulse.String())
 			replication <- p.JetID
 
 		case *payload.HotObjects:
@@ -66,14 +59,12 @@ func TestJetSplit(t *testing.T) {
 
 	// First pulse goes in storage then interrupts.
 	s.Pulse(ctx)
-	fmt.Println("init pulse")
 
 	{
 		expectedJets := []insolar.JetID{insolar.ZeroJetID}
 
 		for i := 0; i < testPulsesQuantity; i++ {
 
-			fmt.Printf("\n\npulse: %d, %s\n", i, s.pulse.PulseNumber.String())
 			s.Pulse(ctx)
 
 			previousPulseJets := expectedJets
@@ -88,13 +79,7 @@ func TestJetSplit(t *testing.T) {
 				hotObjectsConfirmReceived[<-hotObjectConfirm] = struct{}{}
 			}
 
-			for kk := range hotObjectsReceived {
-				fmt.Println("replication jet id: ", kk.DebugString())
-			}
-
 			for _, expectedJetId := range expectedJets {
-				fmt.Println("exp jet id: ", expectedJetId.DebugString())
-
 				_, ok := hotObjectsReceived[expectedJetId]
 				require.True(t, ok, "No expected jetId in hotObjectsReceived")
 
@@ -109,7 +94,6 @@ func TestJetSplit(t *testing.T) {
 			}
 
 			for _, expectedJetId := range previousPulseJets {
-				fmt.Println("prev jet id: ", expectedJetId.DebugString())
 				_, ok := replicationObjectsReceived[expectedJetId]
 				require.True(t, ok, "No expected jetId in replicationObjectsReceived")
 			}
