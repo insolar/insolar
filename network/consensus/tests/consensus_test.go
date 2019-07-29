@@ -53,6 +53,7 @@ package tests
 import (
 	"context"
 	"errors"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"math/rand"
 	"time"
 
@@ -227,6 +228,14 @@ var _ api.ConsensusControlFeeder = &EmuControlFeeder{}
 
 type EmuControlFeeder struct {
 	leaveReason uint32
+}
+
+func (p *EmuControlFeeder) GetRequiredEphemeralMode(census census.Operational) api.EphemeralMode {
+	return api.EphemeralNotAllowed
+}
+
+func (p *EmuControlFeeder) CreateEphemeralPulsePacket(census census.Operational) proofs.OriginalPulsarPacket {
+	panic("implement me")
 }
 
 func (p *EmuControlFeeder) OnAppliedMembershipProfile(mode member.OpMode, pw member.Power, effectiveSince pulse.Number) {

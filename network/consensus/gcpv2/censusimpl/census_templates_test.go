@@ -71,7 +71,7 @@ import (
 )
 
 func TestPCTGetProfileFactory(t *testing.T) {
-	pct := PrimingCensusTemplate{chronicles: &localChronicles{}}
+	pct := PrimingCensusTemplate{CensusTemplate: CensusTemplate{chronicles: &localChronicles{}}}
 	pf := pct.GetProfileFactory(nil)
 	require.Nil(t, pf)
 }
@@ -220,7 +220,7 @@ func TestPCTGetOnlinePopulation(t *testing.T) {
 
 func TestPCTGetEvictedPopulation(t *testing.T) {
 	ep := census.NewEvictedPopulationMock(t)
-	pct := PrimingCensusTemplate{evicted: ep}
+	pct := PrimingCensusTemplate{CensusTemplate: CensusTemplate{evicted: ep}}
 	require.Equal(t, ep, pct.GetEvictedPopulation())
 }
 
@@ -228,13 +228,13 @@ func TestPCTGetOfflinePopulation(t *testing.T) {
 	registries := census.NewVersionedRegistriesMock(t)
 	op := census.NewOfflinePopulationMock(t)
 	registries.GetOfflinePopulationMock.Set(func() census.OfflinePopulation { return op })
-	pct := PrimingCensusTemplate{registries: registries}
+	pct := PrimingCensusTemplate{CensusTemplate: CensusTemplate{registries: registries}}
 	require.Equal(t, op, pct.GetOfflinePopulation())
 }
 
 func TestPCTIsActive(t *testing.T) {
 	chronicles := &localChronicles{}
-	pct := PrimingCensusTemplate{chronicles: chronicles}
+	pct := PrimingCensusTemplate{CensusTemplate: CensusTemplate{chronicles: chronicles}}
 	require.False(t, pct.IsActive())
 
 	pct.chronicles = nil
@@ -248,7 +248,7 @@ func TestPCTGetMisbehaviorRegistry(t *testing.T) {
 	registries := census.NewVersionedRegistriesMock(t)
 	mr := census.NewMisbehaviorRegistryMock(t)
 	registries.GetMisbehaviorRegistryMock.Set(func() census.MisbehaviorRegistry { return mr })
-	pct := PrimingCensusTemplate{registries: registries}
+	pct := PrimingCensusTemplate{CensusTemplate: CensusTemplate{registries: registries}}
 	require.Equal(t, mr, pct.GetMisbehaviorRegistry())
 }
 
@@ -256,7 +256,7 @@ func TestPCTGetMandateRegistry(t *testing.T) {
 	registries := census.NewVersionedRegistriesMock(t)
 	mr := census.NewMandateRegistryMock(t)
 	registries.GetMandateRegistryMock.Set(func() census.MandateRegistry { return mr })
-	pct := PrimingCensusTemplate{registries: registries}
+	pct := PrimingCensusTemplate{CensusTemplate: CensusTemplate{registries: registries}}
 	require.Equal(t, mr, pct.GetMandateRegistry())
 }
 
@@ -268,7 +268,7 @@ func TestPCTCreateBuilder(t *testing.T) {
 	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}},
 		slots: []updatableSlot{{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}}
 
-	pct := PrimingCensusTemplate{chronicles: chronicles, online: population}
+	pct := PrimingCensusTemplate{CensusTemplate: CensusTemplate{chronicles: chronicles, online: population}}
 	builder := pct.CreateBuilder(context.Background(), pn)
 	require.Equal(t, pn, builder.GetPulseNumber())
 }
