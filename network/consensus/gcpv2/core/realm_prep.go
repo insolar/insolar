@@ -215,7 +215,7 @@ func (p *PrepRealm) beforeStart(ctx context.Context, controllers []PrepPhaseCont
 // runs under lock
 func (p *PrepRealm) _startWorkers(ctx context.Context, controllers []PrepPhaseController) {
 
-	if p.ephemeralMode.IsActive() && p.checkEphemeralStart() {
+	if p.ephemeralMode.IsActive() && p.checkEphemeralStart(ctx) {
 		p.pushEphemeralPulse(ctx)
 	}
 
@@ -240,7 +240,7 @@ func (p *PrepRealm) prepareEphemeralPolling(ctxPrep context.Context) {
 		case <-ctxPrep.Done():
 			// stop polling when prep is finished
 		default:
-			if !p.checkEphemeralStart() {
+			if !p.checkEphemeralStart(ctxPrep) {
 				return true // stay in polling
 			}
 			p.pushEphemeralPulse(ctxPrep)
@@ -264,8 +264,9 @@ func (p *PrepRealm) pushEphemeralPulse(ctx context.Context) bool {
 	return false
 }
 
-func (p *PrepRealm) checkEphemeralStart() bool {
+func (p *PrepRealm) checkEphemeralStart(context.Context) bool {
 	jc, _ := p.candidateFeeder.PickNextJoinCandidate()
+	//inslogger.FromContext(ctx).Debug("polling candidate: ", jc)
 	return jc != nil
 }
 

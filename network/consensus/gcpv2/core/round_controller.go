@@ -168,18 +168,18 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 
 	r.roundWorker.init(func() {
 		// requires r.roundWorker.StartXXX to happen under lock
+		r._setStartedAt()
 		if r.prepR != nil { // PrepRealm can be finished before starting
-			r._setStartedAt()
 			r.prepR._startWorkers(prepCtx, preps)
 		}
 	},
-		// both further handlers MUST not use a lock inside
+		// both further handlers MUST not use round's lock inside
 		r.onConsensusStopper,
 		r.onConsensusFinished,
 	)
 
-	r.prepR.prepareEphemeralPolling(prepCtx)
 	r.realm.coreRealm.pollingWorker.Start(r.realm.roundContext, 100*time.Millisecond)
+	r.prepR.prepareEphemeralPolling(prepCtx)
 }
 
 func (r *PhasedRoundController) onConsensusStopper() {
