@@ -27,7 +27,7 @@ type CreateResponse struct {
 	Reference string `json:"reference"`
 }
 type GetAddressCountResponse struct {
-	Count string `json:"count"`
+	ShardCounts []int `json:"shardCounts"`
 }
 type GetResponse struct {
 	Reference   string `json:"reference"`

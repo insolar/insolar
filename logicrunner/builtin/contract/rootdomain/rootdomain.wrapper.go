@@ -837,18 +837,18 @@ func INSMETHOD_CreateHelloWorld(object []byte, data []byte) ([]byte, []byte, err
 	return state, ret, err
 }
 
-func INSMETHOD_GetAddressCount(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_GetShardAddressCounts(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
 	self := new(RootDomain)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeGetAddressCount ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &ExtendableError{S: "[ FakeGetShardAddressCounts ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetAddressCount ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeGetShardAddressCounts ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -856,11 +856,11 @@ func INSMETHOD_GetAddressCount(object []byte, data []byte) ([]byte, []byte, erro
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetAddressCount ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeGetShardAddressCounts ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.GetAddressCount()
+	ret0, ret1 := self.GetShardAddressCounts()
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
@@ -902,7 +902,7 @@ func Initialize() XXX_insolar.ContractWrapper {
 			"AddNewMemberToMaps":         INSMETHOD_AddNewMemberToMaps,
 			"AddNewMemberToPublicKeyMap": INSMETHOD_AddNewMemberToPublicKeyMap,
 			"CreateHelloWorld":           INSMETHOD_CreateHelloWorld,
-			"GetAddressCount":            INSMETHOD_GetAddressCount,
+			"GetShardAddressCounts":      INSMETHOD_GetShardAddressCounts,
 		},
 		Constructors: XXX_insolar.ContractConstructors{},
 	}

@@ -1596,14 +1596,14 @@ func (r *RootDomain) CreateHelloWorldAsImmutable() (string, error) {
 	return ret0, nil
 }
 
-// GetAddressCount is proxy generated method
-func (r *RootDomain) GetAddressCount() (int, error) {
+// GetShardAddressCounts is proxy generated method
+func (r *RootDomain) GetShardAddressCounts() ([]int, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 int
+	var ret0 []int
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -1613,7 +1613,7 @@ func (r *RootDomain) GetAddressCount() (int, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetAddressCount", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetShardAddressCounts", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -1629,8 +1629,8 @@ func (r *RootDomain) GetAddressCount() (int, error) {
 	return ret0, nil
 }
 
-// GetAddressCountNoWait is proxy generated method
-func (r *RootDomain) GetAddressCountNoWait() error {
+// GetShardAddressCountsNoWait is proxy generated method
+func (r *RootDomain) GetShardAddressCountsNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -1640,7 +1640,7 @@ func (r *RootDomain) GetAddressCountNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetAddressCount", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetShardAddressCounts", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -1648,14 +1648,14 @@ func (r *RootDomain) GetAddressCountNoWait() error {
 	return nil
 }
 
-// GetAddressCountAsImmutable is proxy generated method
-func (r *RootDomain) GetAddressCountAsImmutable() (int, error) {
+// GetShardAddressCountsAsImmutable is proxy generated method
+func (r *RootDomain) GetShardAddressCountsAsImmutable() ([]int, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 int
+	var ret0 []int
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -1665,7 +1665,7 @@ func (r *RootDomain) GetAddressCountAsImmutable() (int, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetAddressCount", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetShardAddressCounts", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}

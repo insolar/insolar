@@ -303,18 +303,18 @@ func (m *Member) migrationCall(params map[string]interface{}) (interface{}, erro
 }
 
 type GetAddressCountResponse struct {
-	Count int `json:"count"`
+	ShardCounts []int `json:"shardCounts"`
 }
 
 func (m *Member) getAddressCountCall() (*GetAddressCountResponse, error) {
 	rd := rootdomain.GetObject(m.RootDomain)
 
-	c, err := rd.GetAddressCount()
+	c, err := rd.GetShardAddressCounts()
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse 'currentDate': %s", err.Error())
 	}
 
-	return &GetAddressCountResponse{Count: c}, nil
+	return &GetAddressCountResponse{ShardCounts: c}, nil
 }
 
 // Platform methods.
