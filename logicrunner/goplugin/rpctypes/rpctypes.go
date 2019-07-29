@@ -110,26 +110,6 @@ type UpSaveAsChildResp struct {
 	ConstructorError string
 }
 
-// UpGetObjChildrenIteratorReq is a set of arguments for GetObjChildrenIterator RPC in goplugin
-type UpGetObjChildrenIteratorReq struct {
-	UpBaseReq
-	IteratorID string
-	Object     insolar.Reference
-	Prototype  insolar.Reference
-}
-
-// UpGetObjChildrenIteratorResp is response from GetObjChildren RPC in goplugin
-type UpGetObjChildrenIteratorResp struct {
-	Iterator ChildIterator
-}
-
-// ChildIterator hold an iterator data of GetObjChildrenIterator method
-type ChildIterator struct {
-	ID       string
-	Buff     []insolar.Reference
-	CanFetch bool
-}
-
 // UpDeactivateObjectReq is a set of arguments for DeactivateObject RPC in goplugin
 type UpDeactivateObjectReq struct {
 	UpBaseReq

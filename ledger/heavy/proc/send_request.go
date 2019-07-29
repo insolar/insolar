@@ -27,7 +27,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type GetRequest struct {
+type SendRequest struct {
 	meta payload.Meta
 
 	dep struct {
@@ -36,18 +36,18 @@ type GetRequest struct {
 	}
 }
 
-func NewGetRequest(meta payload.Meta) *GetRequest {
-	return &GetRequest{
+func NewSendRequest(meta payload.Meta) *SendRequest {
+	return &SendRequest{
 		meta: meta,
 	}
 }
 
-func (p *GetRequest) Dep(records object.RecordAccessor, sender bus.Sender) {
+func (p *SendRequest) Dep(records object.RecordAccessor, sender bus.Sender) {
 	p.dep.records = records
 	p.dep.sender = sender
 }
 
-func (p *GetRequest) Proceed(ctx context.Context) error {
+func (p *SendRequest) Proceed(ctx context.Context) error {
 	msg := payload.GetRequest{}
 	err := msg.Unmarshal(p.meta.Payload)
 	if err != nil {
@@ -71,7 +71,7 @@ func (p *GetRequest) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to find a request")
 	}
 
-	concrete := record.Unwrap(rec.Virtual)
+	concrete := record.Unwrap(&rec.Virtual)
 	_, isIncoming := concrete.(*record.IncomingRequest)
 	_, isOutgoing := concrete.(*record.OutgoingRequest)
 	if !isIncoming && !isOutgoing {
@@ -80,10 +80,10 @@ func (p *GetRequest) Proceed(ctx context.Context) error {
 
 	rep, err := payload.NewMessage(&payload.Request{
 		RequestID: msg.RequestID,
-		Request:   *rec.Virtual,
+		Request:   rec.Virtual,
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to create a PendingFilament message")
+		return errors.Wrap(err, "failed to create a Request message")
 	}
 	p.dep.sender.Reply(ctx, p.meta, rep)
 	return nil

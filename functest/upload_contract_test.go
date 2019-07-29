@@ -36,6 +36,7 @@ func TestCallUploadedContract(t *testing.T) {
 		func New() (*One, error){
 			return &One{}, nil}
 	
+		var INSATTR_Hello_API = true
 		func (r *One) Hello(str string) (string, error) {
 			return str, nil
 		}`

@@ -123,7 +123,7 @@ func Test_LightReplication(t *testing.T) {
 
 			lifeline, material := requireGetObject(ctx, t, s, expectedObjectID)
 			expectedIds = append(expectedIds, *lifeline.LatestState)
-			require.Equal(t, &state, material.Virtual)
+			require.Equal(t, state, material.Virtual)
 		}
 		// Amend and check object.
 		{
@@ -133,7 +133,7 @@ func Test_LightReplication(t *testing.T) {
 			p, state := callAmendObject(ctx, t, s, expectedObjectID, p.(*payload.RequestInfo).RequestID)
 			requireNotError(t, p)
 			lifeline, material := requireGetObject(ctx, t, s, expectedObjectID)
-			require.Equal(t, &state, material.Virtual)
+			require.Equal(t, state, material.Virtual)
 
 			expectedLifeline = lifeline
 			expectedIds = append(expectedIds, *lifeline.LatestState)
@@ -163,7 +163,7 @@ func Test_LightReplication(t *testing.T) {
 		cryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
 
 		for _, rec := range replicationPayload.Records {
-			hash := record.HashVirtual(cryptographyScheme.ReferenceHasher(), *rec.Virtual)
+			hash := record.HashVirtual(cryptographyScheme.ReferenceHasher(), rec.Virtual)
 			id := insolar.NewID(secondPulseNumber, hash)
 			replicatedIds[*id] = struct{}{}
 		}
@@ -215,7 +215,7 @@ func Test_BasicOperations(t *testing.T) {
 			material := record.Material{}
 			err := material.Unmarshal(p.(*payload.Code).Record)
 			require.NoError(t, err)
-			require.Equal(t, &sent, material.Virtual)
+			require.Equal(t, sent, material.Virtual)
 		}
 		var objectID insolar.ID
 		// Set, get request.
@@ -245,7 +245,7 @@ func Test_BasicOperations(t *testing.T) {
 			})
 			requireNotError(t, p)
 			_, material := requireGetObject(ctx, t, s, objectID)
-			require.Equal(t, &state, material.Virtual)
+			require.Equal(t, state, material.Virtual)
 		}
 		// Amend and check object.
 		{
@@ -264,7 +264,7 @@ func Test_BasicOperations(t *testing.T) {
 			requireNotError(t, p)
 
 			_, material := requireGetObject(ctx, t, s, objectID)
-			require.Equal(t, &state, material.Virtual)
+			require.Equal(t, state, material.Virtual)
 		}
 		// Deactivate and check object.
 		{

@@ -124,7 +124,7 @@ func initArtifactManager(t *testing.T) artifact.Manager {
 		_ context.Context,
 		req record.IncomingRequest,
 	) (*insolar.ID, error) {
-		virtRec := record.Wrap(req)
+		virtRec := record.Wrap(&req)
 		hash := record.HashVirtual(pcs.ReferenceHasher(), virtRec)
 		return insolar.NewID(insolar.FirstPulseNumber, hash), nil
 	}

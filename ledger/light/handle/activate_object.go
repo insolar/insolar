@@ -64,13 +64,6 @@ func (s *ActivateObject) Present(ctx context.Context, f flow.Flow) error {
 		return errors.New("request is empty")
 	}
 
-	calcAct := proc.NewCalculateID(msg.Record, flow.Pulse(ctx))
-	s.dep.CalculateID(calcAct)
-	if err := f.Procedure(ctx, calcAct, true); err != nil {
-		return err
-	}
-	activateID := calcAct.Result.ID
-
 	resultVirt := record.Virtual{}
 	err = resultVirt.Unmarshal(msg.Result)
 	if err != nil {
@@ -83,16 +76,9 @@ func (s *ActivateObject) Present(ctx context.Context, f flow.Flow) error {
 		return fmt.Errorf("wrong result record type: %T", res)
 	}
 
-	calcRes := proc.NewCalculateID(msg.Result, flow.Pulse(ctx))
-	s.dep.CalculateID(calcRes)
-	if err := f.Procedure(ctx, calcRes, true); err != nil {
-		return err
-	}
-	resultID := calcRes.Result.ID
-
 	passIfNotExecutor := !s.passed
-	jet := proc.NewCheckJet(*activate.Request.Record(), flow.Pulse(ctx), s.message, passIfNotExecutor)
-	s.dep.CheckJet(jet)
+	jet := proc.NewFetchJet(*activate.Request.Record(), flow.Pulse(ctx), s.message, passIfNotExecutor)
+	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
 		if err == proc.ErrNotExecutor && passIfNotExecutor {
 			return nil
@@ -101,13 +87,13 @@ func (s *ActivateObject) Present(ctx context.Context, f flow.Flow) error {
 	}
 	objJetID := jet.Result.Jet
 
-	hot := proc.NewWaitHotWM(objJetID, flow.Pulse(ctx), s.message)
-	s.dep.WaitHotWM(hot)
+	hot := proc.NewWaitHot(objJetID, flow.Pulse(ctx), s.message)
+	s.dep.WaitHot(hot)
 	if err := f.Procedure(ctx, hot, false); err != nil {
 		return err
 	}
 
-	activateObject := proc.NewActivateObject(s.message, *activate, activateID, *result, resultID, objJetID)
-	s.dep.ActivateObject(activateObject)
-	return f.Procedure(ctx, activateObject, false)
+	setResult := proc.NewSetResult(s.message, objJetID, *result, activate)
+	s.dep.SetResult(setResult)
+	return f.Procedure(ctx, setResult, false)
 }

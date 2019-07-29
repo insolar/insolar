@@ -82,7 +82,9 @@ func (s *ContractService) Upload(r *http.Request, args *UploadArgs, reply *Uploa
 			inslog.Infof("[ ContractService.Upload ] can't build preprocessor %#v", err)
 			return errors.Wrap(err, "can't build preprocessor")
 		}
-		s.cb = goplugintestutils.NewContractBuilder(s.runner.ArtifactManager, insgocc, s.runner.PulseAccessor)
+		s.cb = goplugintestutils.NewContractBuilder(
+			insgocc, s.runner.ArtifactManager, s.runner.PulseAccessor, s.runner.JetCoordinator,
+		)
 	}
 
 	contractMap := make(map[string]string)
@@ -138,7 +140,6 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 			Method:          args.Method,
 			Arguments:       args.MethodArgs,
 			Base:            &base,
-			Caller:          testutils.RandomRef(),
 			CallerPrototype: testutils.RandomRef(),
 			Prototype:       protoRef,
 			CallType:        record.CTSaveAsChild,
@@ -199,7 +200,6 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 	}
 	msg := &message.CallMethod{
 		IncomingRequest: record.IncomingRequest{
-			Caller:       testutils.RandomRef(),
 			Object:       objectRef,
 			Method:       args.Method,
 			Arguments:    args.MethodArgs,

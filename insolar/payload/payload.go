@@ -67,6 +67,7 @@ const (
 	TypeAbandonedRequestsNotification
 	TypeGetLightInitialState
 	TypeLightInitialState
+	TypeGetIndex
 
 	TypeReturnResults
 	TypeCallMethod
@@ -284,6 +285,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *LightInitialState:
 		pl.Polymorph = uint32(TypeLightInitialState)
 		return pl.Marshal()
+	case *GetIndex:
+		pl.Polymorph = uint32(TypeGetIndex)
+		return pl.Marshal()
 	}
 
 	return nil, errors.New("unknown payload type")
@@ -461,6 +465,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeLightInitialState:
 		pl := LightInitialState{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeGetIndex:
+		pl := GetIndex{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}

@@ -68,14 +68,22 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 		}
 
 	case *record.OutgoingRequest:
+		if request.IsCreationRequest() {
+			return errors.New("outgoing cannot be creating request")
+		}
+
 		// FIXME: replace with "FindRequest" calculator method.
-		pendings, err := c.filaments.PendingRequests(ctx, requestID.Pulse(), *request.AffinityRef().Record())
+		requests, err := c.filaments.OpenedRequests(
+			ctx,
+			requestID.Pulse(),
+			*request.AffinityRef().Record(),
+			false,
+		)
 		if err != nil {
 			return errors.Wrap(err, "failed fetch pending requests")
 		}
-		reasonInPendings := inFilament(pendings, reasonID)
 
-		// Reason should be open.
+		reasonInPendings := contains(requests, reasonID)
 		if !reasonInPendings {
 			return errors.New("request reason should be open")
 		}
@@ -143,12 +151,11 @@ func (c *RequestCheckerDefault) checkIncomingReason(
 	}
 }
 
-func inFilament(pendings []record.CompositeFilamentRecord, requestID insolar.ID) bool {
+func contains(pendings []record.CompositeFilamentRecord, requestID insolar.ID) bool {
 	for _, p := range pendings {
 		if p.RecordID == requestID {
 			return true
 		}
 	}
-
 	return false
 }

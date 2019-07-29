@@ -226,7 +226,7 @@ func TestRecordStorage_ForPulse(t *testing.T) {
 		rec.JetID = searchJetID
 
 		h := sha256.New()
-		hash := record.HashVirtual(h, *rec.Virtual)
+		hash := record.HashVirtual(h, rec.Virtual)
 
 		id := insolar.NewID(searchPN, hash)
 
@@ -249,7 +249,7 @@ func TestRecordStorage_ForPulse(t *testing.T) {
 
 	for _, r := range res {
 		h := sha256.New()
-		hash := record.HashVirtual(h, *r.Virtual)
+		hash := record.HashVirtual(h, r.Virtual)
 
 		rID := insolar.NewID(searchPN, hash)
 		_, ok := searchRecs[*rID]
@@ -278,7 +278,7 @@ func getMaterialRecord() record.Material {
 	virtRec := getVirtualRecord()
 
 	materialRecord := record.Material{
-		Virtual: &virtRec,
+		Virtual: virtRec,
 		JetID:   gen.JetID(),
 	}
 

@@ -26,7 +26,7 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 )
 
-type GetCode struct {
+type SendCode struct {
 	message payload.Meta
 
 	Dep struct {
@@ -35,13 +35,13 @@ type GetCode struct {
 	}
 }
 
-func NewGetCode(msg payload.Meta) *GetCode {
-	return &GetCode{
+func NewSendCode(msg payload.Meta) *SendCode {
+	return &SendCode{
 		message: msg,
 	}
 }
 
-func (p *GetCode) Proceed(ctx context.Context) error {
+func (p *SendCode) Proceed(ctx context.Context) error {
 	getCode := payload.GetCode{}
 	err := getCode.Unmarshal(p.message.Payload)
 	if err != nil {
@@ -63,7 +63,7 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to create message")
 	}
 
-	go p.Dep.Sender.Reply(ctx, p.message, msg)
+	p.Dep.Sender.Reply(ctx, p.message, msg)
 
 	return nil
 }

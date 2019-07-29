@@ -107,9 +107,9 @@ func (br *BaseRecord) Create(ctx context.Context) error {
 
 	genesisID := insolar.GenesisRecord.ID()
 	genesisRecord := record.Genesis{Hash: insolar.GenesisRecord}
-	virtRec := record.Wrap(genesisRecord)
+	virtRec := record.Wrap(&genesisRecord)
 	rec := record.Material{
-		Virtual: &virtRec,
+		Virtual: virtRec,
 		JetID:   insolar.ZeroJetID,
 	}
 	err = br.RecordModifier.Set(ctx, genesisID, rec)
@@ -123,8 +123,7 @@ func (br *BaseRecord) Create(ctx context.Context) error {
 		record.Index{
 			ObjID: genesisID,
 			Lifeline: record.Lifeline{
-				LatestState:         &genesisID,
-				LatestStateApproved: &genesisID,
+				LatestState: &genesisID,
 			},
 			PendingRecords: []insolar.ID{},
 		},

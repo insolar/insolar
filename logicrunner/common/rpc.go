@@ -30,7 +30,6 @@ type LogicRunnerRPCStub interface {
 	GetCode(rpctypes.UpGetCodeReq, *rpctypes.UpGetCodeResp) error
 	RouteCall(rpctypes.UpRouteReq, *rpctypes.UpRouteResp) error
 	SaveAsChild(rpctypes.UpSaveAsChildReq, *rpctypes.UpSaveAsChildResp) error
-	GetObjChildrenIterator(rpctypes.UpGetObjChildrenIteratorReq, *rpctypes.UpGetObjChildrenIteratorResp) error
 	DeactivateObject(rpctypes.UpDeactivateObjectReq, *rpctypes.UpDeactivateObjectResp) error
 }
 

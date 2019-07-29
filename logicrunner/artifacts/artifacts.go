@@ -55,11 +55,6 @@ type Client interface {
 	// provide methods for fetching all related data.
 	GetObject(ctx context.Context, head insolar.Reference) (ObjectDescriptor, error)
 
-	// GetChildren returns children iterator.
-	//
-	// During iteration children refs will be fetched from remote source (parent object).
-	GetChildren(ctx context.Context, parent insolar.Reference, pulse *insolar.PulseNumber) (RefIterator, error)
-
 	// DeployCode creates new code record in storage.
 	//
 	// Code records are used to activate prototype.

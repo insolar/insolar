@@ -20,15 +20,12 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
-	"github.com/tylerb/gls"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
-
-const glsCallContextKey = "callCtx"
 
 type ProxyHelper struct {
 	lrCommon.Serializer
@@ -45,14 +42,7 @@ func NewProxyHelper(runner lrCommon.LogicRunnerRPCStub) *ProxyHelper {
 }
 
 func (h *ProxyHelper) getUpBaseReq() rpctypes.UpBaseReq {
-	callContextInterface := gls.Get(glsCallContextKey)
-	if callContextInterface == nil {
-		panic("Failed to find call context")
-	}
-	callContext, ok := callContextInterface.(*insolar.LogicCallContext)
-	if !ok {
-		panic("Unknown value stored in '" + glsCallContextKey + "'")
-	}
+	callContext := foundation.GetLogicalContext()
 
 	return rpctypes.UpBaseReq{
 		Mode:            callContext.Mode,
