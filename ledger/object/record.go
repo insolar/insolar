@@ -46,7 +46,7 @@ type RecordStorage interface {
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.AtomicRecordStorage -o ./ -s _mock.go
 
-// AtomicRecordStorage is an union of RecordAccessor and RecordModifier
+// AtomicRecordStorage is an union of RecordAccessor and AtomicRecordModifier
 type AtomicRecordStorage interface {
 	RecordAccessor
 	AtomicRecordModifier

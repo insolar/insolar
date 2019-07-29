@@ -153,7 +153,11 @@ func storeRecords(
 		id := *insolar.NewID(pn, hash)
 		// FIXME: skipping errors will lead to inconsistent state.
 		if rec.ID != id {
-			inslog.Error(errors.New("record id does not match"), "heavyserver: store record failed")
+			inslog.Error(fmt.Errorf(
+				"record id does not match (calculated: %s, received: %s)",
+				id.DebugString(),
+				rec.ID.DebugString(),
+			))
 			continue
 		}
 		err := mod.Set(ctx, rec)
