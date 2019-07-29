@@ -201,7 +201,7 @@ func initNodes(ctx context.Context, mode consensus.Mode, nodes GeneratedNodes, s
 				nodeKeeper: nodeKeeper,
 			},
 			EphemeralController: &ephemeralController{
-				allowed: false,
+				allowed: true,
 			},
 		}).ControllerFor(mode, datagramHandler, pulseHandler)
 
