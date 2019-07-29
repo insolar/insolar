@@ -68,15 +68,15 @@ var (
 // children jets
 var (
 	// left and right children for jet10
-	jet10_left  = jet.NewIDFromString("100")
-	jet10_right = jet.NewIDFromString("101")
+	jet10Left  = jet.NewIDFromString("100")
+	jet10Right = jet.NewIDFromString("101")
 )
 
 var splitCases = []splitCase{
 	{
 		name: "no_split",
 		cfg: configuration.JetSplit{
-			ThresholdRecordsCount:  5,
+			ThresholdRecordsCount:  6,
 			ThresholdOverflowCount: 0,
 			DepthLimit:             defaultDepthLimit,
 		},
@@ -94,7 +94,7 @@ var splitCases = []splitCase{
 		},
 		pulses: []map[insolar.JetID]jetConfig{
 			{jet10: {5, 1, true}},
-			{jet10_left: {3, 0, false}},
+			{jet10Left: {3, 0, false}},
 		},
 	},
 	{
@@ -107,13 +107,13 @@ var splitCases = []splitCase{
 		pulses: []map[insolar.JetID]jetConfig{
 			{jet10: {5, 1, false}},
 			{jet10: {5, 2, true}},
-			{jet10_left: {5, 1, false}},
+			{jet10Left: {5, 1, false}},
 		},
 	},
 	{
 		name: "no_split_with_overflow",
 		cfg: configuration.JetSplit{
-			ThresholdRecordsCount:  4,
+			ThresholdRecordsCount:  5,
 			ThresholdOverflowCount: 1,
 			DepthLimit:             defaultDepthLimit,
 		},
@@ -133,7 +133,7 @@ var splitCases = []splitCase{
 		},
 		pulses: []map[insolar.JetID]jetConfig{
 			{jet10: {5, 1, true}},
-			{jet10_left: {5, 0, false}},
+			{jet10Left: {5, 0, false}},
 		},
 	},
 }
