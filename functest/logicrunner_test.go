@@ -785,6 +785,7 @@ func New() (*One, error) {
 	return &One{}, nil
 }
 
+var INSATTR_Hello_API = true
 func (r *One) Hello() (*string, error) {
 	holder := two.New()
 	_, err := holder.AsChild(r.GetReference())
