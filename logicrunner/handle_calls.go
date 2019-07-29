@@ -70,7 +70,6 @@ func (h *HandleCall) sendToNextExecutor(
 		ObjectReference: objectRef,
 		RequestRef:      requestRef,
 		Request:         request,
-		ServiceData:     serviceDataFromContext(ctx),
 	}
 
 	if ps == insolar.PendingUnknown {
@@ -212,5 +211,3 @@ func (h *HandleCall) checkExecutionLoop(
 	inslogger.FromContext(ctx).Error("loop detected")
 	return true
 }
-
-

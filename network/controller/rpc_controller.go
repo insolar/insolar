@@ -78,9 +78,9 @@ import (
 type RPCController interface {
 	component.Initer
 
-	SendMessage(nodeID insolar.Reference, name string, msg insolar.Parcel) ([]byte, error)
+	SendMessage(ctx context.Context, nodeID insolar.Reference, name string, msg insolar.Parcel) ([]byte, error)
 	SendBytes(ctx context.Context, nodeID insolar.Reference, name string, msgBytes []byte) ([]byte, error)
-	SendCascadeMessage(data insolar.Cascade, method string, msg insolar.Parcel) error
+	SendCascadeMessage(ctx context.Context, data insolar.Cascade, method string, msg insolar.Parcel) error
 	RemoteProcedureRegister(name string, method insolar.RemoteProcedure)
 }
 
@@ -105,7 +105,7 @@ func (rpc *rpcController) invoke(ctx context.Context, name string, data []byte) 
 	return method(ctx, data)
 }
 
-func (rpc *rpcController) SendCascadeMessage(data insolar.Cascade, method string, msg insolar.Parcel) error {
+func (rpc *rpcController) SendCascadeMessage(ctx context.Context, data insolar.Cascade, method string, msg insolar.Parcel) error {
 	if msg == nil {
 		return errors.New("message is nil")
 	}
@@ -116,7 +116,6 @@ func (rpc *rpcController) SendCascadeMessage(data insolar.Cascade, method string
 		trace.StringAttribute("msg.DefaultTarget", msg.DefaultTarget().String()),
 	)
 	defer span.End()
-	ctx = msg.Context(ctx)
 	return rpc.initCascadeSendMessage(ctx, data, false, method, message.ParcelToBytes(msg))
 }
 
@@ -238,9 +237,8 @@ func (rpc *rpcController) SendBytes(ctx context.Context, nodeID insolar.Referenc
 	return data.Result, nil
 }
 
-func (rpc *rpcController) SendMessage(nodeID insolar.Reference, name string, msg insolar.Parcel) ([]byte, error) {
+func (rpc *rpcController) SendMessage(ctx context.Context, nodeID insolar.Reference, name string, msg insolar.Parcel) ([]byte, error) {
 	msgBytes := message.ParcelToBytes(msg)
-	ctx := context.Background() // TODO: ctx as argument
 	ctx = insmetrics.InsertTag(ctx, tagMessageType, msg.Type().String())
 	stats.Record(ctx, statParcelsSentSizeBytes.M(int64(len(msgBytes))))
 	request := &packet.RPCRequest{
@@ -249,7 +247,6 @@ func (rpc *rpcController) SendMessage(nodeID insolar.Reference, name string, msg
 	}
 
 	start := time.Now()
-	ctx = msg.Context(ctx)
 	logger := inslogger.FromContext(ctx)
 	// TODO: change sendrequest signature to have request as argument
 	logger.Debugf("Before SendParcel with nodeID = %s method = %s, message reference = %s", nodeID.String(),

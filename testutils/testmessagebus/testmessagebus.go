@@ -153,8 +153,6 @@ func (mb *TestMessageBus) Send(ctx context.Context, m insolar.Message, _ *insola
 		return nil, errors.New(fmt.Sprint("[ TestMessageBus ] no handler for message type:", t.String()))
 	}
 
-	ctx = parcel.Context(context.Background())
-
 	reply, err := handler(ctx, parcel)
 	if mb.WritingTape != nil {
 		// WARNING! The following commented line of code is cursed.

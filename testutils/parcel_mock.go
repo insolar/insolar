@@ -6,7 +6,6 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "Parcel" can be found in github.com/insolar/insolar/insolar
 */
 import (
-	context "context"
 	"sync/atomic"
 	"time"
 
@@ -24,11 +23,6 @@ type ParcelMock struct {
 	AllowedSenderObjectAndRoleCounter    uint64
 	AllowedSenderObjectAndRolePreCounter uint64
 	AllowedSenderObjectAndRoleMock       mParcelMockAllowedSenderObjectAndRole
-
-	ContextFunc       func(p context.Context) (r context.Context)
-	ContextCounter    uint64
-	ContextPreCounter uint64
-	ContextMock       mParcelMockContext
 
 	DefaultRoleFunc       func() (r insolar.DynamicRole)
 	DefaultRoleCounter    uint64
@@ -90,7 +84,6 @@ func NewParcelMock(t minimock.Tester) *ParcelMock {
 	}
 
 	m.AllowedSenderObjectAndRoleMock = mParcelMockAllowedSenderObjectAndRole{mock: m}
-	m.ContextMock = mParcelMockContext{mock: m}
 	m.DefaultRoleMock = mParcelMockDefaultRole{mock: m}
 	m.DefaultTargetMock = mParcelMockDefaultTarget{mock: m}
 	m.DelegationTokenMock = mParcelMockDelegationToken{mock: m}
@@ -237,153 +230,6 @@ func (m *ParcelMock) AllowedSenderObjectAndRoleFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.AllowedSenderObjectAndRoleFunc != nil {
 		return atomic.LoadUint64(&m.AllowedSenderObjectAndRoleCounter) > 0
-	}
-
-	return true
-}
-
-type mParcelMockContext struct {
-	mock              *ParcelMock
-	mainExpectation   *ParcelMockContextExpectation
-	expectationSeries []*ParcelMockContextExpectation
-}
-
-type ParcelMockContextExpectation struct {
-	input  *ParcelMockContextInput
-	result *ParcelMockContextResult
-}
-
-type ParcelMockContextInput struct {
-	p context.Context
-}
-
-type ParcelMockContextResult struct {
-	r context.Context
-}
-
-//Expect specifies that invocation of Parcel.Context is expected from 1 to Infinity times
-func (m *mParcelMockContext) Expect(p context.Context) *mParcelMockContext {
-	m.mock.ContextFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ParcelMockContextExpectation{}
-	}
-	m.mainExpectation.input = &ParcelMockContextInput{p}
-	return m
-}
-
-//Return specifies results of invocation of Parcel.Context
-func (m *mParcelMockContext) Return(r context.Context) *ParcelMock {
-	m.mock.ContextFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ParcelMockContextExpectation{}
-	}
-	m.mainExpectation.result = &ParcelMockContextResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Parcel.Context is expected once
-func (m *mParcelMockContext) ExpectOnce(p context.Context) *ParcelMockContextExpectation {
-	m.mock.ContextFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &ParcelMockContextExpectation{}
-	expectation.input = &ParcelMockContextInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *ParcelMockContextExpectation) Return(r context.Context) {
-	e.result = &ParcelMockContextResult{r}
-}
-
-//Set uses given function f as a mock of Parcel.Context method
-func (m *mParcelMockContext) Set(f func(p context.Context) (r context.Context)) *ParcelMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.ContextFunc = f
-	return m.mock
-}
-
-//Context implements github.com/insolar/insolar/insolar.Parcel interface
-func (m *ParcelMock) Context(p context.Context) (r context.Context) {
-	counter := atomic.AddUint64(&m.ContextPreCounter, 1)
-	defer atomic.AddUint64(&m.ContextCounter, 1)
-
-	if len(m.ContextMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.ContextMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ParcelMock.Context. %v", p)
-			return
-		}
-
-		input := m.ContextMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ParcelMockContextInput{p}, "Parcel.Context got unexpected parameters")
-
-		result := m.ContextMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the ParcelMock.Context")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.ContextMock.mainExpectation != nil {
-
-		input := m.ContextMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, ParcelMockContextInput{p}, "Parcel.Context got unexpected parameters")
-		}
-
-		result := m.ContextMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the ParcelMock.Context")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.ContextFunc == nil {
-		m.t.Fatalf("Unexpected call to ParcelMock.Context. %v", p)
-		return
-	}
-
-	return m.ContextFunc(p)
-}
-
-//ContextMinimockCounter returns a count of ParcelMock.ContextFunc invocations
-func (m *ParcelMock) ContextMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.ContextCounter)
-}
-
-//ContextMinimockPreCounter returns the value of ParcelMock.Context invocations
-func (m *ParcelMock) ContextMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.ContextPreCounter)
-}
-
-//ContextFinished returns true if mock invocations count is ok
-func (m *ParcelMock) ContextFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.ContextMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.ContextCounter) == uint64(len(m.ContextMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.ContextMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.ContextCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.ContextFunc != nil {
-		return atomic.LoadUint64(&m.ContextCounter) > 0
 	}
 
 	return true
@@ -1726,10 +1572,6 @@ func (m *ParcelMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ParcelMock.AllowedSenderObjectAndRole")
 	}
 
-	if !m.ContextFinished() {
-		m.t.Fatal("Expected call to ParcelMock.Context")
-	}
-
 	if !m.DefaultRoleFinished() {
 		m.t.Fatal("Expected call to ParcelMock.DefaultRole")
 	}
@@ -1791,10 +1633,6 @@ func (m *ParcelMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ParcelMock.AllowedSenderObjectAndRole")
 	}
 
-	if !m.ContextFinished() {
-		m.t.Fatal("Expected call to ParcelMock.Context")
-	}
-
 	if !m.DefaultRoleFinished() {
 		m.t.Fatal("Expected call to ParcelMock.DefaultRole")
 	}
@@ -1850,7 +1688,6 @@ func (m *ParcelMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.AllowedSenderObjectAndRoleFinished()
-		ok = ok && m.ContextFinished()
 		ok = ok && m.DefaultRoleFinished()
 		ok = ok && m.DefaultTargetFinished()
 		ok = ok && m.DelegationTokenFinished()
@@ -1871,10 +1708,6 @@ func (m *ParcelMock) MinimockWait(timeout time.Duration) {
 
 			if !m.AllowedSenderObjectAndRoleFinished() {
 				m.t.Error("Expected call to ParcelMock.AllowedSenderObjectAndRole")
-			}
-
-			if !m.ContextFinished() {
-				m.t.Error("Expected call to ParcelMock.Context")
 			}
 
 			if !m.DefaultRoleFinished() {
@@ -1930,10 +1763,6 @@ func (m *ParcelMock) MinimockWait(timeout time.Duration) {
 func (m *ParcelMock) AllMocksCalled() bool {
 
 	if !m.AllowedSenderObjectAndRoleFinished() {
-		return false
-	}
-
-	if !m.ContextFinished() {
 		return false
 	}
 

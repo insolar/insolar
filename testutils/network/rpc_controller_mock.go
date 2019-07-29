@@ -35,12 +35,12 @@ type RPCControllerMock struct {
 	SendBytesPreCounter uint64
 	SendBytesMock       mRPCControllerMockSendBytes
 
-	SendCascadeMessageFunc       func(p insolar.Cascade, p1 string, p2 insolar.Parcel) (r error)
+	SendCascadeMessageFunc       func(p context.Context, p1 insolar.Cascade, p2 string, p3 insolar.Parcel) (r error)
 	SendCascadeMessageCounter    uint64
 	SendCascadeMessagePreCounter uint64
 	SendCascadeMessageMock       mRPCControllerMockSendCascadeMessage
 
-	SendMessageFunc       func(p insolar.Reference, p1 string, p2 insolar.Parcel) (r []byte, r1 error)
+	SendMessageFunc       func(p context.Context, p1 insolar.Reference, p2 string, p3 insolar.Parcel) (r []byte, r1 error)
 	SendMessageCounter    uint64
 	SendMessagePreCounter uint64
 	SendMessageMock       mRPCControllerMockSendMessage
@@ -499,9 +499,10 @@ type RPCControllerMockSendCascadeMessageExpectation struct {
 }
 
 type RPCControllerMockSendCascadeMessageInput struct {
-	p  insolar.Cascade
-	p1 string
-	p2 insolar.Parcel
+	p  context.Context
+	p1 insolar.Cascade
+	p2 string
+	p3 insolar.Parcel
 }
 
 type RPCControllerMockSendCascadeMessageResult struct {
@@ -509,14 +510,14 @@ type RPCControllerMockSendCascadeMessageResult struct {
 }
 
 //Expect specifies that invocation of RPCController.SendCascadeMessage is expected from 1 to Infinity times
-func (m *mRPCControllerMockSendCascadeMessage) Expect(p insolar.Cascade, p1 string, p2 insolar.Parcel) *mRPCControllerMockSendCascadeMessage {
+func (m *mRPCControllerMockSendCascadeMessage) Expect(p context.Context, p1 insolar.Cascade, p2 string, p3 insolar.Parcel) *mRPCControllerMockSendCascadeMessage {
 	m.mock.SendCascadeMessageFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &RPCControllerMockSendCascadeMessageExpectation{}
 	}
-	m.mainExpectation.input = &RPCControllerMockSendCascadeMessageInput{p, p1, p2}
+	m.mainExpectation.input = &RPCControllerMockSendCascadeMessageInput{p, p1, p2, p3}
 	return m
 }
 
@@ -533,12 +534,12 @@ func (m *mRPCControllerMockSendCascadeMessage) Return(r error) *RPCControllerMoc
 }
 
 //ExpectOnce specifies that invocation of RPCController.SendCascadeMessage is expected once
-func (m *mRPCControllerMockSendCascadeMessage) ExpectOnce(p insolar.Cascade, p1 string, p2 insolar.Parcel) *RPCControllerMockSendCascadeMessageExpectation {
+func (m *mRPCControllerMockSendCascadeMessage) ExpectOnce(p context.Context, p1 insolar.Cascade, p2 string, p3 insolar.Parcel) *RPCControllerMockSendCascadeMessageExpectation {
 	m.mock.SendCascadeMessageFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &RPCControllerMockSendCascadeMessageExpectation{}
-	expectation.input = &RPCControllerMockSendCascadeMessageInput{p, p1, p2}
+	expectation.input = &RPCControllerMockSendCascadeMessageInput{p, p1, p2, p3}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -548,7 +549,7 @@ func (e *RPCControllerMockSendCascadeMessageExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of RPCController.SendCascadeMessage method
-func (m *mRPCControllerMockSendCascadeMessage) Set(f func(p insolar.Cascade, p1 string, p2 insolar.Parcel) (r error)) *RPCControllerMock {
+func (m *mRPCControllerMockSendCascadeMessage) Set(f func(p context.Context, p1 insolar.Cascade, p2 string, p3 insolar.Parcel) (r error)) *RPCControllerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -557,18 +558,18 @@ func (m *mRPCControllerMockSendCascadeMessage) Set(f func(p insolar.Cascade, p1 
 }
 
 //SendCascadeMessage implements github.com/insolar/insolar/network/controller.RPCController interface
-func (m *RPCControllerMock) SendCascadeMessage(p insolar.Cascade, p1 string, p2 insolar.Parcel) (r error) {
+func (m *RPCControllerMock) SendCascadeMessage(p context.Context, p1 insolar.Cascade, p2 string, p3 insolar.Parcel) (r error) {
 	counter := atomic.AddUint64(&m.SendCascadeMessagePreCounter, 1)
 	defer atomic.AddUint64(&m.SendCascadeMessageCounter, 1)
 
 	if len(m.SendCascadeMessageMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.SendCascadeMessageMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to RPCControllerMock.SendCascadeMessage. %v %v %v", p, p1, p2)
+			m.t.Fatalf("Unexpected call to RPCControllerMock.SendCascadeMessage. %v %v %v %v", p, p1, p2, p3)
 			return
 		}
 
 		input := m.SendCascadeMessageMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, RPCControllerMockSendCascadeMessageInput{p, p1, p2}, "RPCController.SendCascadeMessage got unexpected parameters")
+		testify_assert.Equal(m.t, *input, RPCControllerMockSendCascadeMessageInput{p, p1, p2, p3}, "RPCController.SendCascadeMessage got unexpected parameters")
 
 		result := m.SendCascadeMessageMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -585,7 +586,7 @@ func (m *RPCControllerMock) SendCascadeMessage(p insolar.Cascade, p1 string, p2 
 
 		input := m.SendCascadeMessageMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, RPCControllerMockSendCascadeMessageInput{p, p1, p2}, "RPCController.SendCascadeMessage got unexpected parameters")
+			testify_assert.Equal(m.t, *input, RPCControllerMockSendCascadeMessageInput{p, p1, p2, p3}, "RPCController.SendCascadeMessage got unexpected parameters")
 		}
 
 		result := m.SendCascadeMessageMock.mainExpectation.result
@@ -599,11 +600,11 @@ func (m *RPCControllerMock) SendCascadeMessage(p insolar.Cascade, p1 string, p2 
 	}
 
 	if m.SendCascadeMessageFunc == nil {
-		m.t.Fatalf("Unexpected call to RPCControllerMock.SendCascadeMessage. %v %v %v", p, p1, p2)
+		m.t.Fatalf("Unexpected call to RPCControllerMock.SendCascadeMessage. %v %v %v %v", p, p1, p2, p3)
 		return
 	}
 
-	return m.SendCascadeMessageFunc(p, p1, p2)
+	return m.SendCascadeMessageFunc(p, p1, p2, p3)
 }
 
 //SendCascadeMessageMinimockCounter returns a count of RPCControllerMock.SendCascadeMessageFunc invocations
@@ -648,9 +649,10 @@ type RPCControllerMockSendMessageExpectation struct {
 }
 
 type RPCControllerMockSendMessageInput struct {
-	p  insolar.Reference
-	p1 string
-	p2 insolar.Parcel
+	p  context.Context
+	p1 insolar.Reference
+	p2 string
+	p3 insolar.Parcel
 }
 
 type RPCControllerMockSendMessageResult struct {
@@ -659,14 +661,14 @@ type RPCControllerMockSendMessageResult struct {
 }
 
 //Expect specifies that invocation of RPCController.SendMessage is expected from 1 to Infinity times
-func (m *mRPCControllerMockSendMessage) Expect(p insolar.Reference, p1 string, p2 insolar.Parcel) *mRPCControllerMockSendMessage {
+func (m *mRPCControllerMockSendMessage) Expect(p context.Context, p1 insolar.Reference, p2 string, p3 insolar.Parcel) *mRPCControllerMockSendMessage {
 	m.mock.SendMessageFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &RPCControllerMockSendMessageExpectation{}
 	}
-	m.mainExpectation.input = &RPCControllerMockSendMessageInput{p, p1, p2}
+	m.mainExpectation.input = &RPCControllerMockSendMessageInput{p, p1, p2, p3}
 	return m
 }
 
@@ -683,12 +685,12 @@ func (m *mRPCControllerMockSendMessage) Return(r []byte, r1 error) *RPCControlle
 }
 
 //ExpectOnce specifies that invocation of RPCController.SendMessage is expected once
-func (m *mRPCControllerMockSendMessage) ExpectOnce(p insolar.Reference, p1 string, p2 insolar.Parcel) *RPCControllerMockSendMessageExpectation {
+func (m *mRPCControllerMockSendMessage) ExpectOnce(p context.Context, p1 insolar.Reference, p2 string, p3 insolar.Parcel) *RPCControllerMockSendMessageExpectation {
 	m.mock.SendMessageFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &RPCControllerMockSendMessageExpectation{}
-	expectation.input = &RPCControllerMockSendMessageInput{p, p1, p2}
+	expectation.input = &RPCControllerMockSendMessageInput{p, p1, p2, p3}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -698,7 +700,7 @@ func (e *RPCControllerMockSendMessageExpectation) Return(r []byte, r1 error) {
 }
 
 //Set uses given function f as a mock of RPCController.SendMessage method
-func (m *mRPCControllerMockSendMessage) Set(f func(p insolar.Reference, p1 string, p2 insolar.Parcel) (r []byte, r1 error)) *RPCControllerMock {
+func (m *mRPCControllerMockSendMessage) Set(f func(p context.Context, p1 insolar.Reference, p2 string, p3 insolar.Parcel) (r []byte, r1 error)) *RPCControllerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -707,18 +709,18 @@ func (m *mRPCControllerMockSendMessage) Set(f func(p insolar.Reference, p1 strin
 }
 
 //SendMessage implements github.com/insolar/insolar/network/controller.RPCController interface
-func (m *RPCControllerMock) SendMessage(p insolar.Reference, p1 string, p2 insolar.Parcel) (r []byte, r1 error) {
+func (m *RPCControllerMock) SendMessage(p context.Context, p1 insolar.Reference, p2 string, p3 insolar.Parcel) (r []byte, r1 error) {
 	counter := atomic.AddUint64(&m.SendMessagePreCounter, 1)
 	defer atomic.AddUint64(&m.SendMessageCounter, 1)
 
 	if len(m.SendMessageMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.SendMessageMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to RPCControllerMock.SendMessage. %v %v %v", p, p1, p2)
+			m.t.Fatalf("Unexpected call to RPCControllerMock.SendMessage. %v %v %v %v", p, p1, p2, p3)
 			return
 		}
 
 		input := m.SendMessageMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, RPCControllerMockSendMessageInput{p, p1, p2}, "RPCController.SendMessage got unexpected parameters")
+		testify_assert.Equal(m.t, *input, RPCControllerMockSendMessageInput{p, p1, p2, p3}, "RPCController.SendMessage got unexpected parameters")
 
 		result := m.SendMessageMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -736,7 +738,7 @@ func (m *RPCControllerMock) SendMessage(p insolar.Reference, p1 string, p2 insol
 
 		input := m.SendMessageMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, RPCControllerMockSendMessageInput{p, p1, p2}, "RPCController.SendMessage got unexpected parameters")
+			testify_assert.Equal(m.t, *input, RPCControllerMockSendMessageInput{p, p1, p2, p3}, "RPCController.SendMessage got unexpected parameters")
 		}
 
 		result := m.SendMessageMock.mainExpectation.result
@@ -751,11 +753,11 @@ func (m *RPCControllerMock) SendMessage(p insolar.Reference, p1 string, p2 insol
 	}
 
 	if m.SendMessageFunc == nil {
-		m.t.Fatalf("Unexpected call to RPCControllerMock.SendMessage. %v %v %v", p, p1, p2)
+		m.t.Fatalf("Unexpected call to RPCControllerMock.SendMessage. %v %v %v %v", p, p1, p2, p3)
 		return
 	}
 
-	return m.SendMessageFunc(p, p1, p2)
+	return m.SendMessageFunc(p, p1, p2, p3)
 }
 
 //SendMessageMinimockCounter returns a count of RPCControllerMock.SendMessageFunc invocations

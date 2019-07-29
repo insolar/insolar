@@ -22,8 +22,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/pkg/errors"
 )
 
@@ -47,19 +45,12 @@ func (pf *parcelFactory) Create(ctx context.Context, msg insolar.Message, sender
 		return nil, err
 	}
 
-	serviceData := message.ServiceData{
-		LogTraceID:    inslogger.TraceID(ctx),
-		LogLevel:      inslogger.GetLoggerLevel(ctx),
-		TraceSpanData: instracer.MustSerialize(ctx),
-	}
-
 	return &message.Parcel{
 		Msg:         msg,
 		Signature:   signature.Bytes(),
 		Sender:      sender,
 		Token:       token,
 		PulseNumber: currentPulse.PulseNumber,
-		ServiceData: serviceData,
 	}, nil
 }
 

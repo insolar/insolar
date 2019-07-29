@@ -38,7 +38,6 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
@@ -374,9 +373,8 @@ func convertQueueToMessageQueue(ctx context.Context, queue []*Transcript) []mess
 	var traces string
 	for _, elem := range queue {
 		mq = append(mq, message.ExecutionQueueElement{
-			RequestRef:  elem.RequestRef,
-			Request:     *elem.Request,
-			ServiceData: serviceDataFromContext(elem.Context),
+			RequestRef: elem.RequestRef,
+			Request:    *elem.Request,
 		})
 
 		traces += inslogger.TraceID(elem.Context) + ", "
@@ -393,16 +391,6 @@ func (lr *LogicRunner) pulse(ctx context.Context) *insolar.Pulse {
 		panic(err)
 	}
 	return &p
-}
-
-func contextFromServiceData(data message.ServiceData) context.Context {
-	ctx := inslogger.ContextWithTrace(context.Background(), data.LogTraceID)
-	ctx = inslogger.WithLoggerLevel(ctx, data.LogLevel)
-	if data.TraceSpanData != nil {
-		parentSpan := instracer.MustDeserialize(data.TraceSpanData)
-		return instracer.WithParentSpan(ctx, parentSpan)
-	}
-	return ctx
 }
 
 func freshContextFromContext(ctx context.Context) context.Context {
@@ -431,16 +419,4 @@ func freshContextFromContextAndRequest(ctx context.Context, req record.IncomingR
 		res = instracer.WithParentSpan(res, parentSpan)
 	}
 	return res
-}
-
-func serviceDataFromContext(ctx context.Context) message.ServiceData {
-	if ctx == nil {
-		log.Error("nil context, can't create correct ServiceData")
-		return message.ServiceData{}
-	}
-	return message.ServiceData{
-		LogTraceID:    inslogger.TraceID(ctx),
-		LogLevel:      inslogger.GetLoggerLevel(ctx),
-		TraceSpanData: instracer.MustSerialize(ctx),
-	}
 }

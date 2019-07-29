@@ -65,7 +65,6 @@ func (h *HandleAdditionalCallFromPreviousExecutor) Present(ctx context.Context, 
 	inslogger.FromContext(ctx).Debug("HandleAdditionalCallFromPreviousExecutor.Present starts ...")
 
 	msg := h.Parcel.Message().(*message.AdditionalCallFromPreviousExecutor)
-	ctx = contextFromServiceData(msg.ServiceData)
 
 	ctx, span := instracer.StartSpan(ctx, "HandleAdditionalCallFromPreviousExecutor.Present")
 	span.AddAttributes(
@@ -81,4 +80,3 @@ func (h *HandleAdditionalCallFromPreviousExecutor) Present(ctx context.Context, 
 
 	return nil
 }
-

@@ -172,13 +172,13 @@ func (n *ServiceNetwork) GetState() insolar.NetworkState {
 }
 
 // SendMessage sends a message from MessageBus.
-func (n *ServiceNetwork) SendMessage(nodeID insolar.Reference, method string, msg insolar.Parcel) ([]byte, error) {
-	return n.RPC.SendMessage(nodeID, method, msg)
+func (n *ServiceNetwork) SendMessage(ctx context.Context, nodeID insolar.Reference, method string, msg insolar.Parcel) ([]byte, error) {
+	return n.RPC.SendMessage(ctx, nodeID, method, msg)
 }
 
 // SendCascadeMessage sends a message from MessageBus to a cascade of nodes
-func (n *ServiceNetwork) SendCascadeMessage(data insolar.Cascade, method string, msg insolar.Parcel) error {
-	return n.RPC.SendCascadeMessage(data, method, msg)
+func (n *ServiceNetwork) SendCascadeMessage(ctx context.Context, data insolar.Cascade, method string, msg insolar.Parcel) error {
+	return n.RPC.SendCascadeMessage(ctx, data, method, msg)
 }
 
 // RemoteProcedureRegister registers procedure for remote call on this host.

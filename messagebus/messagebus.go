@@ -307,7 +307,7 @@ func (mb *MessageBus) SendParcel(
 			Entropy:           currentPulse.Entropy,
 			ReplicationFactor: 2,
 		}
-		err := mb.Network.SendCascadeMessage(cascade, deliverRPCMethodName, parcel)
+		err := mb.Network.SendCascadeMessage(ctx, cascade, deliverRPCMethodName, parcel)
 		return nil, err
 	}
 
@@ -315,10 +315,10 @@ func (mb *MessageBus) SendParcel(
 	origin := mb.NodeNetwork.GetOrigin()
 	if nodes[0].Equal(origin.ID()) {
 		stats.Record(ctx, statLocallyDeliveredParcelsTotal.M(1))
-		return mb.doDeliver(parcel.Context(context.Background()), parcel)
+		return mb.doDeliver(ctx, parcel)
 	}
 
-	res, err := mb.Network.SendMessage(nodes[0], deliverRPCMethodName, parcel)
+	res, err := mb.Network.SendMessage(ctx, nodes[0], deliverRPCMethodName, parcel)
 	if err != nil {
 		return nil, err
 	}
@@ -468,23 +468,22 @@ func (mb *MessageBus) deliver(ctx context.Context, args []byte) (result []byte, 
 		return nil, err
 	}
 
-	parcelCtx := parcel.Context(context.Background()) // use ctx when network provide context
 	inslogger.FromContext(ctx).Debugf("MessageBus.deliver after deserialize msg. Msg Type: %s", parcel.Type())
 
 	mb.globalLock.RLock()
 
-	if err = mb.checkPulse(parcelCtx, parcel, true); err != nil {
+	if err = mb.checkPulse(ctx, parcel, true); err != nil {
 		mb.globalLock.RUnlock()
 		return nil, err
 	}
 
-	if err = mb.checkParcel(parcelCtx, parcel); err != nil {
+	if err = mb.checkParcel(ctx, parcel); err != nil {
 		mb.globalLock.RUnlock()
 		return nil, err
 	}
 	mb.globalLock.RUnlock()
 
-	resp, err := mb.doDeliver(parcelCtx, parcel)
+	resp, err := mb.doDeliver(ctx, parcel)
 	if err != nil {
 		return nil, err
 	}

@@ -52,8 +52,7 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 	if len(p.msg.Queue) > 0 {
 		transcripts := make([]*Transcript, len(p.msg.Queue))
 		for i, qe := range p.msg.Queue {
-			requestCtx := contextFromServiceData(qe.ServiceData)
-			transcripts[i] = NewTranscript(requestCtx, qe.RequestRef, qe.Request)
+			transcripts[i] = NewTranscript(ctx, qe.RequestRef, qe.Request)
 		}
 		broker.AddRequestsFromPrevExecutor(ctx, transcripts...)
 	}

@@ -35,12 +35,12 @@ type NetworkMock struct {
 	RemoteProcedureRegisterPreCounter uint64
 	RemoteProcedureRegisterMock       mNetworkMockRemoteProcedureRegister
 
-	SendCascadeMessageFunc       func(p insolar.Cascade, p1 string, p2 insolar.Parcel) (r error)
+	SendCascadeMessageFunc       func(p context.Context, p1 insolar.Cascade, p2 string, p3 insolar.Parcel) (r error)
 	SendCascadeMessageCounter    uint64
 	SendCascadeMessagePreCounter uint64
 	SendCascadeMessageMock       mNetworkMockSendCascadeMessage
 
-	SendMessageFunc       func(p insolar.Reference, p1 string, p2 insolar.Parcel) (r []byte, r1 error)
+	SendMessageFunc       func(p context.Context, p1 insolar.Reference, p2 string, p3 insolar.Parcel) (r []byte, r1 error)
 	SendMessageCounter    uint64
 	SendMessagePreCounter uint64
 	SendMessageMock       mNetworkMockSendMessage
@@ -463,9 +463,10 @@ type NetworkMockSendCascadeMessageExpectation struct {
 }
 
 type NetworkMockSendCascadeMessageInput struct {
-	p  insolar.Cascade
-	p1 string
-	p2 insolar.Parcel
+	p  context.Context
+	p1 insolar.Cascade
+	p2 string
+	p3 insolar.Parcel
 }
 
 type NetworkMockSendCascadeMessageResult struct {
@@ -473,14 +474,14 @@ type NetworkMockSendCascadeMessageResult struct {
 }
 
 //Expect specifies that invocation of Network.SendCascadeMessage is expected from 1 to Infinity times
-func (m *mNetworkMockSendCascadeMessage) Expect(p insolar.Cascade, p1 string, p2 insolar.Parcel) *mNetworkMockSendCascadeMessage {
+func (m *mNetworkMockSendCascadeMessage) Expect(p context.Context, p1 insolar.Cascade, p2 string, p3 insolar.Parcel) *mNetworkMockSendCascadeMessage {
 	m.mock.SendCascadeMessageFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &NetworkMockSendCascadeMessageExpectation{}
 	}
-	m.mainExpectation.input = &NetworkMockSendCascadeMessageInput{p, p1, p2}
+	m.mainExpectation.input = &NetworkMockSendCascadeMessageInput{p, p1, p2, p3}
 	return m
 }
 
@@ -497,12 +498,12 @@ func (m *mNetworkMockSendCascadeMessage) Return(r error) *NetworkMock {
 }
 
 //ExpectOnce specifies that invocation of Network.SendCascadeMessage is expected once
-func (m *mNetworkMockSendCascadeMessage) ExpectOnce(p insolar.Cascade, p1 string, p2 insolar.Parcel) *NetworkMockSendCascadeMessageExpectation {
+func (m *mNetworkMockSendCascadeMessage) ExpectOnce(p context.Context, p1 insolar.Cascade, p2 string, p3 insolar.Parcel) *NetworkMockSendCascadeMessageExpectation {
 	m.mock.SendCascadeMessageFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &NetworkMockSendCascadeMessageExpectation{}
-	expectation.input = &NetworkMockSendCascadeMessageInput{p, p1, p2}
+	expectation.input = &NetworkMockSendCascadeMessageInput{p, p1, p2, p3}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -512,7 +513,7 @@ func (e *NetworkMockSendCascadeMessageExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of Network.SendCascadeMessage method
-func (m *mNetworkMockSendCascadeMessage) Set(f func(p insolar.Cascade, p1 string, p2 insolar.Parcel) (r error)) *NetworkMock {
+func (m *mNetworkMockSendCascadeMessage) Set(f func(p context.Context, p1 insolar.Cascade, p2 string, p3 insolar.Parcel) (r error)) *NetworkMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -521,18 +522,18 @@ func (m *mNetworkMockSendCascadeMessage) Set(f func(p insolar.Cascade, p1 string
 }
 
 //SendCascadeMessage implements github.com/insolar/insolar/insolar.Network interface
-func (m *NetworkMock) SendCascadeMessage(p insolar.Cascade, p1 string, p2 insolar.Parcel) (r error) {
+func (m *NetworkMock) SendCascadeMessage(p context.Context, p1 insolar.Cascade, p2 string, p3 insolar.Parcel) (r error) {
 	counter := atomic.AddUint64(&m.SendCascadeMessagePreCounter, 1)
 	defer atomic.AddUint64(&m.SendCascadeMessageCounter, 1)
 
 	if len(m.SendCascadeMessageMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.SendCascadeMessageMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NetworkMock.SendCascadeMessage. %v %v %v", p, p1, p2)
+			m.t.Fatalf("Unexpected call to NetworkMock.SendCascadeMessage. %v %v %v %v", p, p1, p2, p3)
 			return
 		}
 
 		input := m.SendCascadeMessageMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, NetworkMockSendCascadeMessageInput{p, p1, p2}, "Network.SendCascadeMessage got unexpected parameters")
+		testify_assert.Equal(m.t, *input, NetworkMockSendCascadeMessageInput{p, p1, p2, p3}, "Network.SendCascadeMessage got unexpected parameters")
 
 		result := m.SendCascadeMessageMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -549,7 +550,7 @@ func (m *NetworkMock) SendCascadeMessage(p insolar.Cascade, p1 string, p2 insola
 
 		input := m.SendCascadeMessageMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, NetworkMockSendCascadeMessageInput{p, p1, p2}, "Network.SendCascadeMessage got unexpected parameters")
+			testify_assert.Equal(m.t, *input, NetworkMockSendCascadeMessageInput{p, p1, p2, p3}, "Network.SendCascadeMessage got unexpected parameters")
 		}
 
 		result := m.SendCascadeMessageMock.mainExpectation.result
@@ -563,11 +564,11 @@ func (m *NetworkMock) SendCascadeMessage(p insolar.Cascade, p1 string, p2 insola
 	}
 
 	if m.SendCascadeMessageFunc == nil {
-		m.t.Fatalf("Unexpected call to NetworkMock.SendCascadeMessage. %v %v %v", p, p1, p2)
+		m.t.Fatalf("Unexpected call to NetworkMock.SendCascadeMessage. %v %v %v %v", p, p1, p2, p3)
 		return
 	}
 
-	return m.SendCascadeMessageFunc(p, p1, p2)
+	return m.SendCascadeMessageFunc(p, p1, p2, p3)
 }
 
 //SendCascadeMessageMinimockCounter returns a count of NetworkMock.SendCascadeMessageFunc invocations
@@ -612,9 +613,10 @@ type NetworkMockSendMessageExpectation struct {
 }
 
 type NetworkMockSendMessageInput struct {
-	p  insolar.Reference
-	p1 string
-	p2 insolar.Parcel
+	p  context.Context
+	p1 insolar.Reference
+	p2 string
+	p3 insolar.Parcel
 }
 
 type NetworkMockSendMessageResult struct {
@@ -623,14 +625,14 @@ type NetworkMockSendMessageResult struct {
 }
 
 //Expect specifies that invocation of Network.SendMessage is expected from 1 to Infinity times
-func (m *mNetworkMockSendMessage) Expect(p insolar.Reference, p1 string, p2 insolar.Parcel) *mNetworkMockSendMessage {
+func (m *mNetworkMockSendMessage) Expect(p context.Context, p1 insolar.Reference, p2 string, p3 insolar.Parcel) *mNetworkMockSendMessage {
 	m.mock.SendMessageFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &NetworkMockSendMessageExpectation{}
 	}
-	m.mainExpectation.input = &NetworkMockSendMessageInput{p, p1, p2}
+	m.mainExpectation.input = &NetworkMockSendMessageInput{p, p1, p2, p3}
 	return m
 }
 
@@ -647,12 +649,12 @@ func (m *mNetworkMockSendMessage) Return(r []byte, r1 error) *NetworkMock {
 }
 
 //ExpectOnce specifies that invocation of Network.SendMessage is expected once
-func (m *mNetworkMockSendMessage) ExpectOnce(p insolar.Reference, p1 string, p2 insolar.Parcel) *NetworkMockSendMessageExpectation {
+func (m *mNetworkMockSendMessage) ExpectOnce(p context.Context, p1 insolar.Reference, p2 string, p3 insolar.Parcel) *NetworkMockSendMessageExpectation {
 	m.mock.SendMessageFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &NetworkMockSendMessageExpectation{}
-	expectation.input = &NetworkMockSendMessageInput{p, p1, p2}
+	expectation.input = &NetworkMockSendMessageInput{p, p1, p2, p3}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -662,7 +664,7 @@ func (e *NetworkMockSendMessageExpectation) Return(r []byte, r1 error) {
 }
 
 //Set uses given function f as a mock of Network.SendMessage method
-func (m *mNetworkMockSendMessage) Set(f func(p insolar.Reference, p1 string, p2 insolar.Parcel) (r []byte, r1 error)) *NetworkMock {
+func (m *mNetworkMockSendMessage) Set(f func(p context.Context, p1 insolar.Reference, p2 string, p3 insolar.Parcel) (r []byte, r1 error)) *NetworkMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -671,18 +673,18 @@ func (m *mNetworkMockSendMessage) Set(f func(p insolar.Reference, p1 string, p2 
 }
 
 //SendMessage implements github.com/insolar/insolar/insolar.Network interface
-func (m *NetworkMock) SendMessage(p insolar.Reference, p1 string, p2 insolar.Parcel) (r []byte, r1 error) {
+func (m *NetworkMock) SendMessage(p context.Context, p1 insolar.Reference, p2 string, p3 insolar.Parcel) (r []byte, r1 error) {
 	counter := atomic.AddUint64(&m.SendMessagePreCounter, 1)
 	defer atomic.AddUint64(&m.SendMessageCounter, 1)
 
 	if len(m.SendMessageMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.SendMessageMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NetworkMock.SendMessage. %v %v %v", p, p1, p2)
+			m.t.Fatalf("Unexpected call to NetworkMock.SendMessage. %v %v %v %v", p, p1, p2, p3)
 			return
 		}
 
 		input := m.SendMessageMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, NetworkMockSendMessageInput{p, p1, p2}, "Network.SendMessage got unexpected parameters")
+		testify_assert.Equal(m.t, *input, NetworkMockSendMessageInput{p, p1, p2, p3}, "Network.SendMessage got unexpected parameters")
 
 		result := m.SendMessageMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -700,7 +702,7 @@ func (m *NetworkMock) SendMessage(p insolar.Reference, p1 string, p2 insolar.Par
 
 		input := m.SendMessageMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, NetworkMockSendMessageInput{p, p1, p2}, "Network.SendMessage got unexpected parameters")
+			testify_assert.Equal(m.t, *input, NetworkMockSendMessageInput{p, p1, p2, p3}, "Network.SendMessage got unexpected parameters")
 		}
 
 		result := m.SendMessageMock.mainExpectation.result
@@ -715,11 +717,11 @@ func (m *NetworkMock) SendMessage(p insolar.Reference, p1 string, p2 insolar.Par
 	}
 
 	if m.SendMessageFunc == nil {
-		m.t.Fatalf("Unexpected call to NetworkMock.SendMessage. %v %v %v", p, p1, p2)
+		m.t.Fatalf("Unexpected call to NetworkMock.SendMessage. %v %v %v %v", p, p1, p2, p3)
 		return
 	}
 
-	return m.SendMessageFunc(p, p1, p2)
+	return m.SendMessageFunc(p, p1, p2, p3)
 }
 
 //SendMessageMinimockCounter returns a count of NetworkMock.SendMessageFunc invocations

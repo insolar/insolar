@@ -112,7 +112,6 @@ type Parcel interface {
 	MessageSignature
 
 	Message() Message
-	Context(context.Context) context.Context
 
 	Pulse() PulseNumber
 

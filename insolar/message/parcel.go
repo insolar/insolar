@@ -21,21 +21,12 @@ import (
 	"crypto"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
 )
 
 // ParcelFactory is used for creating parcels
 type ParcelFactory interface {
 	Create(context.Context, insolar.Message, insolar.Reference, insolar.DelegationToken, insolar.Pulse) (insolar.Parcel, error)
 	Validate(crypto.PublicKey, insolar.Parcel) error
-}
-
-// ServiceData is a structure with utility fields like log level and trace id.
-type ServiceData struct {
-	LogTraceID    string
-	LogLevel      insolar.LogLevel
-	TraceSpanData []byte
 }
 
 // Parcel is a message signed by senders private key.
@@ -45,7 +36,6 @@ type Parcel struct {
 	Signature   []byte
 	Token       insolar.DelegationToken
 	PulseNumber insolar.PulseNumber
-	ServiceData ServiceData
 }
 
 // AllowedSenderObjectAndRole implements interface method
@@ -71,17 +61,6 @@ func (p *Parcel) Pulse() insolar.PulseNumber {
 // Message returns current instance's message
 func (p *Parcel) Message() insolar.Message {
 	return p.Msg
-}
-
-// Context returns initialized context with propagated data with ctx as parent.
-func (p *Parcel) Context(ctx context.Context) context.Context {
-	ctx = inslogger.ContextWithTrace(ctx, p.ServiceData.LogTraceID)
-	ctx = inslogger.WithLoggerLevel(ctx, p.ServiceData.LogLevel)
-	if p.ServiceData.TraceSpanData == nil {
-		return ctx
-	}
-	parentSpan := instracer.MustDeserialize(p.ServiceData.TraceSpanData)
-	return instracer.WithParentSpan(ctx, parentSpan)
 }
 
 func (p *Parcel) DelegationToken() insolar.DelegationToken {
