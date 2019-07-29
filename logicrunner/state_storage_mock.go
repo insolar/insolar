@@ -16,12 +16,6 @@ import (
 type StateStorageMock struct {
 	t minimock.Tester
 
-	funcDeleteObjectState          func(ref insolar.Reference)
-	inspectFuncDeleteObjectState   func(ref insolar.Reference)
-	afterDeleteObjectStateCounter  uint64
-	beforeDeleteObjectStateCounter uint64
-	DeleteObjectStateMock          mStateStorageMockDeleteObjectState
-
 	funcGetExecutionArchive          func(ref insolar.Reference) (e1 ExecutionArchive)
 	inspectFuncGetExecutionArchive   func(ref insolar.Reference)
 	afterGetExecutionArchiveCounter  uint64
@@ -72,9 +66,6 @@ func NewStateStorageMock(t minimock.Tester) *StateStorageMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.DeleteObjectStateMock = mStateStorageMockDeleteObjectState{mock: m}
-	m.DeleteObjectStateMock.callArgs = []*StateStorageMockDeleteObjectStateParams{}
-
 	m.GetExecutionArchiveMock = mStateStorageMockGetExecutionArchive{mock: m}
 	m.GetExecutionArchiveMock.callArgs = []*StateStorageMockGetExecutionArchiveParams{}
 
@@ -94,193 +85,6 @@ func NewStateStorageMock(t minimock.Tester) *StateStorageMock {
 	m.UpsertExecutionStateMock.callArgs = []*StateStorageMockUpsertExecutionStateParams{}
 
 	return m
-}
-
-type mStateStorageMockDeleteObjectState struct {
-	mock               *StateStorageMock
-	defaultExpectation *StateStorageMockDeleteObjectStateExpectation
-	expectations       []*StateStorageMockDeleteObjectStateExpectation
-
-	callArgs []*StateStorageMockDeleteObjectStateParams
-	mutex    sync.RWMutex
-}
-
-// StateStorageMockDeleteObjectStateExpectation specifies expectation struct of the StateStorage.DeleteObjectState
-type StateStorageMockDeleteObjectStateExpectation struct {
-	mock   *StateStorageMock
-	params *StateStorageMockDeleteObjectStateParams
-
-	Counter uint64
-}
-
-// StateStorageMockDeleteObjectStateParams contains parameters of the StateStorage.DeleteObjectState
-type StateStorageMockDeleteObjectStateParams struct {
-	ref insolar.Reference
-}
-
-// Expect sets up expected params for StateStorage.DeleteObjectState
-func (mmDeleteObjectState *mStateStorageMockDeleteObjectState) Expect(ref insolar.Reference) *mStateStorageMockDeleteObjectState {
-	if mmDeleteObjectState.mock.funcDeleteObjectState != nil {
-		mmDeleteObjectState.mock.t.Fatalf("StateStorageMock.DeleteObjectState mock is already set by Set")
-	}
-
-	if mmDeleteObjectState.defaultExpectation == nil {
-		mmDeleteObjectState.defaultExpectation = &StateStorageMockDeleteObjectStateExpectation{}
-	}
-
-	mmDeleteObjectState.defaultExpectation.params = &StateStorageMockDeleteObjectStateParams{ref}
-	for _, e := range mmDeleteObjectState.expectations {
-		if minimock.Equal(e.params, mmDeleteObjectState.defaultExpectation.params) {
-			mmDeleteObjectState.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmDeleteObjectState.defaultExpectation.params)
-		}
-	}
-
-	return mmDeleteObjectState
-}
-
-// Inspect accepts an inspector function that has same arguments as the StateStorage.DeleteObjectState
-func (mmDeleteObjectState *mStateStorageMockDeleteObjectState) Inspect(f func(ref insolar.Reference)) *mStateStorageMockDeleteObjectState {
-	if mmDeleteObjectState.mock.inspectFuncDeleteObjectState != nil {
-		mmDeleteObjectState.mock.t.Fatalf("Inspect function is already set for StateStorageMock.DeleteObjectState")
-	}
-
-	mmDeleteObjectState.mock.inspectFuncDeleteObjectState = f
-
-	return mmDeleteObjectState
-}
-
-// Return sets up results that will be returned by StateStorage.DeleteObjectState
-func (mmDeleteObjectState *mStateStorageMockDeleteObjectState) Return() *StateStorageMock {
-	if mmDeleteObjectState.mock.funcDeleteObjectState != nil {
-		mmDeleteObjectState.mock.t.Fatalf("StateStorageMock.DeleteObjectState mock is already set by Set")
-	}
-
-	if mmDeleteObjectState.defaultExpectation == nil {
-		mmDeleteObjectState.defaultExpectation = &StateStorageMockDeleteObjectStateExpectation{mock: mmDeleteObjectState.mock}
-	}
-
-	return mmDeleteObjectState.mock
-}
-
-//Set uses given function f to mock the StateStorage.DeleteObjectState method
-func (mmDeleteObjectState *mStateStorageMockDeleteObjectState) Set(f func(ref insolar.Reference)) *StateStorageMock {
-	if mmDeleteObjectState.defaultExpectation != nil {
-		mmDeleteObjectState.mock.t.Fatalf("Default expectation is already set for the StateStorage.DeleteObjectState method")
-	}
-
-	if len(mmDeleteObjectState.expectations) > 0 {
-		mmDeleteObjectState.mock.t.Fatalf("Some expectations are already set for the StateStorage.DeleteObjectState method")
-	}
-
-	mmDeleteObjectState.mock.funcDeleteObjectState = f
-	return mmDeleteObjectState.mock
-}
-
-// DeleteObjectState implements StateStorage
-func (mmDeleteObjectState *StateStorageMock) DeleteObjectState(ref insolar.Reference) {
-	mm_atomic.AddUint64(&mmDeleteObjectState.beforeDeleteObjectStateCounter, 1)
-	defer mm_atomic.AddUint64(&mmDeleteObjectState.afterDeleteObjectStateCounter, 1)
-
-	if mmDeleteObjectState.inspectFuncDeleteObjectState != nil {
-		mmDeleteObjectState.inspectFuncDeleteObjectState(ref)
-	}
-
-	params := &StateStorageMockDeleteObjectStateParams{ref}
-
-	// Record call args
-	mmDeleteObjectState.DeleteObjectStateMock.mutex.Lock()
-	mmDeleteObjectState.DeleteObjectStateMock.callArgs = append(mmDeleteObjectState.DeleteObjectStateMock.callArgs, params)
-	mmDeleteObjectState.DeleteObjectStateMock.mutex.Unlock()
-
-	for _, e := range mmDeleteObjectState.DeleteObjectStateMock.expectations {
-		if minimock.Equal(e.params, params) {
-			mm_atomic.AddUint64(&e.Counter, 1)
-			return
-		}
-	}
-
-	if mmDeleteObjectState.DeleteObjectStateMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmDeleteObjectState.DeleteObjectStateMock.defaultExpectation.Counter, 1)
-		want := mmDeleteObjectState.DeleteObjectStateMock.defaultExpectation.params
-		got := StateStorageMockDeleteObjectStateParams{ref}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmDeleteObjectState.t.Errorf("StateStorageMock.DeleteObjectState got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
-		}
-
-		return
-
-	}
-	if mmDeleteObjectState.funcDeleteObjectState != nil {
-		mmDeleteObjectState.funcDeleteObjectState(ref)
-		return
-	}
-	mmDeleteObjectState.t.Fatalf("Unexpected call to StateStorageMock.DeleteObjectState. %v", ref)
-
-}
-
-// DeleteObjectStateAfterCounter returns a count of finished StateStorageMock.DeleteObjectState invocations
-func (mmDeleteObjectState *StateStorageMock) DeleteObjectStateAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmDeleteObjectState.afterDeleteObjectStateCounter)
-}
-
-// DeleteObjectStateBeforeCounter returns a count of StateStorageMock.DeleteObjectState invocations
-func (mmDeleteObjectState *StateStorageMock) DeleteObjectStateBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmDeleteObjectState.beforeDeleteObjectStateCounter)
-}
-
-// Calls returns a list of arguments used in each call to StateStorageMock.DeleteObjectState.
-// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmDeleteObjectState *mStateStorageMockDeleteObjectState) Calls() []*StateStorageMockDeleteObjectStateParams {
-	mmDeleteObjectState.mutex.RLock()
-
-	argCopy := make([]*StateStorageMockDeleteObjectStateParams, len(mmDeleteObjectState.callArgs))
-	copy(argCopy, mmDeleteObjectState.callArgs)
-
-	mmDeleteObjectState.mutex.RUnlock()
-
-	return argCopy
-}
-
-// MinimockDeleteObjectStateDone returns true if the count of the DeleteObjectState invocations corresponds
-// the number of defined expectations
-func (m *StateStorageMock) MinimockDeleteObjectStateDone() bool {
-	for _, e := range m.DeleteObjectStateMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.DeleteObjectStateMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterDeleteObjectStateCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcDeleteObjectState != nil && mm_atomic.LoadUint64(&m.afterDeleteObjectStateCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockDeleteObjectStateInspect logs each unmet expectation
-func (m *StateStorageMock) MinimockDeleteObjectStateInspect() {
-	for _, e := range m.DeleteObjectStateMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to StateStorageMock.DeleteObjectState with params: %#v", *e.params)
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.DeleteObjectStateMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterDeleteObjectStateCounter) < 1 {
-		if m.DeleteObjectStateMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to StateStorageMock.DeleteObjectState")
-		} else {
-			m.t.Errorf("Expected call to StateStorageMock.DeleteObjectState with params: %#v", *m.DeleteObjectStateMock.defaultExpectation.params)
-		}
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcDeleteObjectState != nil && mm_atomic.LoadUint64(&m.afterDeleteObjectStateCounter) < 1 {
-		m.t.Error("Expected call to StateStorageMock.DeleteObjectState")
-	}
 }
 
 type mStateStorageMockGetExecutionArchive struct {
@@ -1560,8 +1364,6 @@ func (m *StateStorageMock) MinimockUpsertExecutionStateInspect() {
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *StateStorageMock) MinimockFinish() {
 	if !m.minimockDone() {
-		m.MinimockDeleteObjectStateInspect()
-
 		m.MinimockGetExecutionArchiveInspect()
 
 		m.MinimockGetExecutionStateInspect()
@@ -1598,7 +1400,6 @@ func (m *StateStorageMock) MinimockWait(timeout mm_time.Duration) {
 func (m *StateStorageMock) minimockDone() bool {
 	done := true
 	return done &&
-		m.MinimockDeleteObjectStateDone() &&
 		m.MinimockGetExecutionArchiveDone() &&
 		m.MinimockGetExecutionStateDone() &&
 		m.MinimockIsEmptyDone() &&

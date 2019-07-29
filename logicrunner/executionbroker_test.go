@@ -570,10 +570,7 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 				objectRef := gen.Reference()
 				broker := NewExecutionBroker(objectRef, nil, nil, nil, nil, nil, nil, nil)
 				// fetcher is stopped
-				broker.executionArchive = NewExecutionArchiveMock(t).
-					OnPulseMock.Return(make([]insolar.Message, 0))
-				broker.requestsFetcher = NewRequestsFetcherMock(t).
-					AbortMock.Return()
+				broker.requestsFetcher = NewRequestsFetcherMock(t).AbortMock.Return()
 				broker.mutable.Push(randTranscript(ctx), randTranscript(ctx))
 				return broker
 			},
@@ -586,14 +583,11 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 			name: "next is not me, active, no queue",
 			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
 				objectRef := gen.Reference()
-				// jc := jet.NewCoordinatorMock(t).MeMock.Return(gen.Reference())
-				ea := NewExecutionArchiveMock(t).
-					OnPulseMock.Return(make([]insolar.Message, 1))
-				broker := NewExecutionBroker(objectRef, nil, nil, nil, nil, nil, nil, ea)
+				broker := NewExecutionBroker(objectRef, nil, nil, nil, nil, nil, nil, nil)
 				broker.currentList.SetOnce(randTranscript(ctx))
 				return broker
 			},
-			numberOfMessages: 2,
+			numberOfMessages: 1,
 			pending:          insolar.InPending,
 		},
 		{
@@ -601,8 +595,6 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
 				objectRef := gen.Reference()
 				broker := NewExecutionBroker(objectRef, nil, nil, nil, nil, nil, nil, nil)
-				broker.executionArchive = NewExecutionArchiveMock(t).
-					OnPulseMock.Return(make([]insolar.Message, 0))
 				broker.pending = insolar.InPending
 				return broker
 			},
@@ -616,8 +608,6 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
 				objectRef := gen.Reference()
 				broker := NewExecutionBroker(objectRef, nil, nil, nil, nil, nil, nil, nil)
-				broker.executionArchive = NewExecutionArchiveMock(t).
-					OnPulseMock.Return(make([]insolar.Message, 0))
 				broker.finished.Push(randTranscript(ctx), randTranscript(ctx))
 				return broker
 			},
@@ -629,8 +619,6 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
 				objectRef := gen.Reference()
 				broker := NewExecutionBroker(objectRef, nil, nil, nil, nil, nil, nil, nil)
-				broker.executionArchive = NewExecutionArchiveMock(t).
-					OnPulseMock.Return(make([]insolar.Message, 0))
 				return broker
 			},
 			numberOfMessages: 0,
@@ -720,12 +708,10 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 			name: "pulse change in HasPendings",
 			mocks: func(ctx context.Context, t minimock.Tester) (*ExecutionBroker, *[]insolar.Message) {
 				am := artifacts.NewClientMock(t)
-				ea := NewExecutionArchiveMock(t).
-					OnPulseMock.Return(nil)
 
 				broker := NewExecutionBroker(objectRef,
 					nil, nil, nil,
-					nil, nil, am, ea)
+					nil, nil, am, nil)
 
 				var msgs []insolar.Message
 				am.HasPendingsMock.Set(func(ctx context.Context, ref insolar.Reference) (bool, error) {
@@ -748,7 +734,6 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 			name: "pulse change in Execute",
 			mocks: func(ctx context.Context, t minimock.Tester) (*ExecutionBroker, *[]insolar.Message) {
 				ea := NewExecutionArchiveMock(t).
-					OnPulseMock.Return([]insolar.Message{&message.StillExecuting{}}).
 					ArchiveMock.Return().
 					DoneMock.Return(true)
 				am := artifacts.NewClientMock(t).
@@ -770,17 +755,13 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 				return broker, &msgs
 			},
 			checks: func(ctx context.Context, t *testing.T, msgs []insolar.Message) {
-				require.Len(t, msgs, 2)
+				require.Len(t, msgs, 1)
 
 				results, ok := msgs[0].(*message.ExecutorResults)
 				require.True(t, ok)
 				require.False(t, results.LedgerHasMoreRequests)
 				require.Equal(t, insolar.InPending, results.Pending)
 				require.Len(t, results.Queue, 0)
-
-				_, ok = msgs[1].(*message.StillExecuting)
-				require.True(t, ok)
-
 			},
 		},
 	}

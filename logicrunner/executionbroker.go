@@ -549,7 +549,7 @@ func (q *ExecutionBroker) OnPulse(ctx context.Context, meNext bool) []insolar.Me
 		return q.onPulseWeNext(ctx)
 	}
 
-	return append(q.onPulseWeNotNext(ctx), q.executionArchive.OnPulse(ctx)...)
+	return q.onPulseWeNotNext(ctx)
 }
 
 func (q *ExecutionBroker) NoMoreRequestsOnLedger(ctx context.Context) {

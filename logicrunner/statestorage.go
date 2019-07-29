@@ -44,8 +44,6 @@ type StateStorage interface {
 	GetExecutionState(ref insolar.Reference) ExecutionBrokerI
 	GetExecutionArchive(ref insolar.Reference) ExecutionArchive
 
-	DeleteObjectState(ref insolar.Reference)
-
 	IsEmpty() bool
 	OnPulse(ctx context.Context, pulse insolar.Pulse) []insolar.Message
 }
@@ -159,10 +157,6 @@ func (ss *stateStorage) upsertObjectState(ref insolar.Reference) *ObjectState {
 	return ss.state[ref]
 }
 
-func (ss *stateStorage) DeleteObjectState(ref insolar.Reference) {
-	delete(ss.state, ref)
-}
-
 func (ss *stateStorage) IsEmpty() bool {
 	return len(ss.state) == 0
 }
@@ -184,19 +178,21 @@ func (ss *stateStorage) OnPulse(ctx context.Context, pulse insolar.Pulse) []inso
 
 		if broker := objectState.ExecutionBroker; broker != nil {
 			onPulseMessages = append(onPulseMessages, broker.OnPulse(ctx, meNext)...)
+		}
 
-			if meNext {
-				ss.state[objectRef] = &ObjectState{
-					ExecutionArchive: objectState.ExecutionArchive,
-					ExecutionBroker:  objectState.ExecutionBroker,
-				}
-			} else {
-				// import previous ExecutionArhive if it's not empty
-				if !objectState.ExecutionArchive.IsEmpty() {
-					ss.state[objectRef] = &ObjectState{
-						ExecutionArchive: objectState.ExecutionArchive,
-					}
-				}
+		if archive := objectState.ExecutionArchive; archive != nil {
+			onPulseMessages = append(onPulseMessages, archive.OnPulse(ctx)...)
+		}
+
+		if meNext && objectState.ExecutionArchive != nil {
+			ss.state[objectRef] = &ObjectState{
+				ExecutionArchive: objectState.ExecutionArchive,
+				ExecutionBroker:  objectState.ExecutionBroker,
+			}
+		} else if objectState.ExecutionArchive != nil && !objectState.ExecutionArchive.IsEmpty() {
+			// import previous ExecutionArchive if it's not empty
+			ss.state[objectRef] = &ObjectState{
+				ExecutionArchive: objectState.ExecutionArchive,
 			}
 		}
 
