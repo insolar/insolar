@@ -220,22 +220,15 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	}
 	defer done()
 
-	// Store request record.
-	{
-		virtual := record.Wrap(p.request)
-		material := record.Material{
-			Virtual: virtual,
-			ID:      p.requestID,
-			JetID:   p.jetID,
-		}
-		err := p.dep.records.SetAtomic(ctx, material)
-		if err != nil {
-			return errors.Wrap(err, "failed to save request record")
-		}
+	// Create request record.
+	Request := record.Material{
+		Virtual: record.Wrap(p.request),
+		ID:      p.requestID,
+		JetID:   p.jetID,
 	}
 
-	// Store filament record.
-	var filamentID insolar.ID
+	// Create filament record.
+	var Filament record.Material
 	{
 		virtual := record.Wrap(&record.PendingFilament{
 			RecordID:       p.requestID,
@@ -248,16 +241,18 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 			ID:      id,
 			JetID:   p.jetID,
 		}
-		err = p.dep.records.SetAtomic(ctx, material)
-		if err != nil {
-			return errors.Wrap(err, "failed to save filament record")
-		}
-		filamentID = id
+		Filament = material
+	}
+
+	// Save all records.
+	err = p.dep.records.SetAtomic(ctx, Request, Filament)
+	if err != nil {
+		return errors.Wrap(err, "failed to save records")
 	}
 
 	// Save updated index.
 	index.LifelineLastUsed = p.requestID.Pulse()
-	index.Lifeline.LatestRequest = &filamentID
+	index.Lifeline.LatestRequest = &Filament.ID
 	if index.Lifeline.EarliestOpenRequest == nil {
 		pn := p.requestID.Pulse()
 		index.Lifeline.EarliestOpenRequest = &pn
@@ -277,7 +272,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	p.dep.sender.Reply(ctx, p.message, msg)
 	logger.WithFields(map[string]interface{}{
 		"is_creation":                p.request.IsCreationRequest(),
-		"latest_pending_filament_id": filamentID.DebugString(),
+		"latest_pending_filament_id": Filament.ID.DebugString(),
 	}).Debug("request saved")
 	return nil
 }
