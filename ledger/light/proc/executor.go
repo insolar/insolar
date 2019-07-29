@@ -97,36 +97,6 @@ func (p *FetchJet) Proceed(ctx context.Context) error {
 	return nil
 }
 
-type WaitHot struct {
-	jetID   insolar.JetID
-	pulse   insolar.PulseNumber
-	message payload.Meta
-
-	Dep struct {
-		Waiter hot.JetWaiter
-		Sender bus.Sender
-	}
-}
-
-func NewWaitHot(j insolar.JetID, pn insolar.PulseNumber, message payload.Meta) *WaitHot {
-	return &WaitHot{
-		jetID:   j,
-		pulse:   pn,
-		message: message,
-	}
-}
-
-func (p *WaitHot) Proceed(ctx context.Context) error {
-	err := p.Dep.Waiter.Wait(ctx, insolar.ID(p.jetID), p.pulse)
-	if err != nil {
-		msg := bus.ReplyAsMessage(ctx, &reply.Error{ErrType: reply.ErrHotDataTimeout})
-		go p.Dep.Sender.Reply(ctx, p.message, msg)
-		return err
-	}
-
-	return nil
-}
-
 type CheckJet struct {
 	target  insolar.ID
 	pulse   insolar.PulseNumber
