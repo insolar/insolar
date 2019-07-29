@@ -66,8 +66,6 @@ func TestRegisterNodeLightMaterial(t *testing.T) {
 }
 
 func TestRegisterNodeNotExistRole(t *testing.T) {
-	t.Skip("skipping until we fix a few bugs (INS-3096)")
-
 	_, err := registerNodeSignedCall(map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": "some_not_fancy_role"})
 	require.NotEmpty(t, err)
 	require.Contains(t, err.Error(),
@@ -78,6 +76,7 @@ func TestRegisterNodeByNoRoot(t *testing.T) {
 	member := createMember(t)
 	const testRole = "virtual"
 	_, err := signedRequest(member, "contract.registerNode", map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
+	require.NotEmpty(t, err)
 	require.Contains(t, err.Error(), "only root member can register node")
 }
 
