@@ -51,23 +51,29 @@
 package adapters
 
 import (
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"sync"
 	"time"
 
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 )
+
+type EphemeralController interface {
+	EphemeralMode() bool
+}
 
 type (
 	OnFinished func(mode member.OpMode, pw member.Power, effectiveSince pulse.Number)
 )
 
 type ConsensusControlFeeder struct {
+	ephemeralController EphemeralController
+
 	mu            *sync.RWMutex
 	onFinished    OnFinished
 	capacityLevel capacity.Level
@@ -75,11 +81,12 @@ type ConsensusControlFeeder struct {
 	leaveReason   uint32
 }
 
-func NewConsensusControlFeeder() *ConsensusControlFeeder {
+func NewConsensusControlFeeder(ephemeralController EphemeralController) *ConsensusControlFeeder {
 	return &ConsensusControlFeeder{
-		mu:            &sync.RWMutex{},
-		capacityLevel: capacity.LevelNormal,
-		onFinished:    func(mode member.OpMode, pw member.Power, effectiveSince pulse.Number) {},
+		ephemeralController: ephemeralController,
+		mu:                  &sync.RWMutex{},
+		capacityLevel:       capacity.LevelNormal,
+		onFinished:          func(mode member.OpMode, pw member.Power, effectiveSince pulse.Number) {},
 	}
 }
 
@@ -127,6 +134,25 @@ func (cf *ConsensusControlFeeder) OnAppliedMembershipProfile(mode member.OpMode,
 }
 
 func (cf *ConsensusControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse.Number) {
+}
+
+func (cf *ConsensusControlFeeder) GetRequiredEphemeralMode(census census.Operational) api.EphemeralMode {
+	if cf.ephemeralController.EphemeralMode() {
+		return api.EphemeralActive
+	}
+
+	return api.EphemeralNotAllowed
+}
+
+func (cf *ConsensusControlFeeder) CreateEphemeralPulsePacket(census census.Operational) proofs.OriginalPulsarPacket {
+	_, pd := census.GetNearestPulseData()
+	if pd.IsEmpty() {
+		pd = *pulse.NewFirstEphemeralData()
+	}
+
+	data := CreateEphemeralPulseData(pd)
+
+	return NewPulsePacketParser(pd, data)
 }
 
 func (cf *ConsensusControlFeeder) SetTrafficLimit(level capacity.Level, duration time.Duration) {
@@ -200,20 +226,6 @@ type InternalControlFeederAdapter struct {
 	leaveReason      uint32
 	zeroReadyChannel chan struct{}
 	leavingChannel   chan struct{}
-}
-
-func (cf *InternalControlFeederAdapter) GetRequiredEphemeralMode(census census.Operational) api.EphemeralMode {
-	return api.EphemeralNotAllowed
-}
-
-func (cf *InternalControlFeederAdapter) CreateEphemeralPulsePacket(census census.Operational) proofs.OriginalPulsarPacket {
-
-	//if _, pd := census.GetNearestPulseData(); !pd.IsEmpty() {
-	//	return pd.CreateNextEphemeralPulse()
-	//} else {
-	//	return pulse.NewFirstEphemeralData()
-	//}
-	panic("illegal state")
 }
 
 func (cf *InternalControlFeederAdapter) GetRequiredPowerLevel() power.Request {
