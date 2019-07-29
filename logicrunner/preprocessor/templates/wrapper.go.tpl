@@ -138,12 +138,15 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, e
 // TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
 	systemErr := ph.GetSystemError()
 
+{{ $errLastIndex := 0 }}
 {{ range $i := $method.ErrorInterfaceInRes }}
+    {{ $errLastIndex = $i }}
+{{ end }}
+
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret{{ $i }} = systemErr
+		ret{{ $errLastIndex }} = systemErr
 		systemErr = nil
 	}
-{{ end }}
 // TODO: this is the end of a horrible hack, please remove it
 
 	if systemErr != nil {
