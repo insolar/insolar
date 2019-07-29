@@ -20,9 +20,14 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
+	"go.opencensus.io/trace"
 
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/pkg/errors"
 )
 
@@ -53,34 +58,29 @@ func (h *HandleAbandonedRequestsNotification) Present(ctx context.Context, f flo
 		return errors.Wrap(err, "failed to unmarshal AbandonedRequestsNotification message")
 	}
 
+	ctx, _ = inslogger.WithField(ctx, "targetid", abandoned.ObjectID.String())
+	logger := inslogger.FromContext(ctx)
 
+	logger.Debug("HandleAbandonedRequestsNotification.Present starts ...")
 
+	ctx, span := instracer.StartSpan(ctx, "HandleAbandonedRequestsNotification.Present")
+	span.AddAttributes(trace.StringAttribute("msg.Type", payload.TypeAbandonedRequestsNotification.String()))
+	defer span.End()
+
+	procInitializeExecutionState := initializeAbandonedRequestsNotificationExecutionState{
+		dep: h.dep,
+		msg: abandoned,
+	}
+	if err := f.Procedure(ctx, &procInitializeExecutionState, false); err != nil {
+		err := errors.Wrap(err, "[ HandleExecutorResults ] Failed to initialize execution state")
+		rep, newErr := payload.NewMessage(&payload.Error{Text: err.Error()})
+		if newErr != nil {
+			return newErr
+		}
+		go h.dep.Sender.Reply(ctx, h.meta, rep)
+		return err
+	}
+	replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})
+	go h.dep.Sender.Reply(ctx, h.meta, replyOk)
 	return nil
-
-	// FIXME: uncomment and fix this (if needed) after enabling abandoned requests
-	// ctx, _ = inslogger.WithField(ctx, "targetid", abandoned.ObjectID.String())
-	// logger := inslogger.FromContext(ctx)
-	//
-	// logger.Debug("HandleAbandonedRequestsNotification.Present starts ...")
-	//
-	// ctx, span := instracer.StartSpan(ctx, "HandleAbandonedRequestsNotification.Present")
-	// span.AddAttributes(trace.StringAttribute("msg.Type", payload.TypeAbandonedRequestsNotification.String()))
-	// defer span.End()
-	//
-	// procInitializeExecutionState := initializeAbandonedRequestsNotificationExecutionState{
-	// 	LR:  h.dep.lr,
-	// 	msg: abandoned,
-	// }
-	// if err := f.Procedure(ctx, &procInitializeExecutionState, false); err != nil {
-	// 	err := errors.Wrap(err, "[ HandleExecutorResults ] Failed to initialize execution state")
-	// 	rep, newErr := payload.NewMessage(&payload.Error{Text: err.Error()})
-	// 	if newErr != nil {
-	// 		return newErr
-	// 	}
-	// 	go h.dep.Sender.Reply(ctx, h.meta, rep)
-	// 	return err
-	// }
-	// replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})
-	// go h.dep.Sender.Reply(ctx, h.meta, replyOk)
-	// return nil
 }

@@ -32,7 +32,6 @@ import (
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
@@ -362,8 +361,6 @@ func (s *ExecutionBrokerSuite) TestDeduplication() {
 }
 
 func TestExecutionBroker_FinishPendingIfNeed(t *testing.T) {
-	meRef := testutils.RandomRef()
-
 	tests := []struct {
 		name             string
 		mocks            func(t minimock.Tester) *ExecutionBroker
@@ -379,11 +376,8 @@ func TestExecutionBroker_FinishPendingIfNeed(t *testing.T) {
 
 					pending: insolar.InPending,
 
-					pulseAccessor: pulse.NewAccessorMock(t).LatestMock.Return(insolar.Pulse{}, nil),
-
 					jetCoordinator: jet.NewCoordinatorMock(t).
-						MeMock.Return(meRef).
-						IsAuthorizedMock.Return(false, nil),
+						IsMeAuthorizedNowMock.Return(false, nil),
 
 					messageBus: testutils.NewMessageBusMock(t).SendMock.Return(&reply.OK{}, nil),
 				}
@@ -401,11 +395,8 @@ func TestExecutionBroker_FinishPendingIfNeed(t *testing.T) {
 
 					pending: insolar.InPending,
 
-					pulseAccessor: pulse.NewAccessorMock(t).LatestMock.Return(insolar.Pulse{}, nil),
-
 					jetCoordinator: jet.NewCoordinatorMock(t).
-						MeMock.Return(meRef).
-						IsAuthorizedMock.Return(true, nil),
+						IsMeAuthorizedNowMock.Return(true, nil),
 				}
 
 				return broker
@@ -796,13 +787,13 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 				am := artifacts.NewClientMock(t).
 					HasPendingsMock.Return(false, nil)
 				re := NewRequestsExecutorMock(t)
-				jc := jet.NewCoordinatorMock(t).MeMock.Return(gen.Reference()).
-					IsAuthorizedMock.Return(true, nil)
-				pa := pulse.NewAccessorMock(t).LatestMock.Return(insolar.Pulse{}, nil)
+				jc := jet.NewCoordinatorMock(t).
+					MeMock.Return(gen.Reference()).
+					IsMeAuthorizedNowMock.Return(true, nil)
 				broker := NewExecutionBroker(
 					objectRef,
 					nil, re, nil,
-					jc, pa, am,
+					jc, nil, am,
 				)
 				var end bool
 				var msgs []insolar.Message

@@ -486,7 +486,7 @@ func callMethodNoChecks(t testing.TB, objectRef *insolar.Reference, method strin
 	argsSerialized, err := insolar.Serialize(args)
 	require.NoError(t, err)
 
-	callMethodBody := getRPSResponseBody(t, postParams{
+	respBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
 		"method":  "contract.callMethod",
 		"id":      "",
@@ -496,7 +496,7 @@ func callMethodNoChecks(t testing.TB, objectRef *insolar.Reference, method strin
 			"MethodArgs":      argsSerialized,
 		},
 	})
-	require.NotEmpty(t, callMethodBody)
+	require.NotEmpty(t, respBody)
 
 	callRes := struct {
 		Version string              `json:"jsonrpc"`
@@ -505,7 +505,7 @@ func callMethodNoChecks(t testing.TB, objectRef *insolar.Reference, method strin
 		Error   json2.Error         `json:"error"`
 	}{}
 
-	err = json.Unmarshal(callMethodBody, &callRes)
+	err = json.Unmarshal(respBody, &callRes)
 	require.NoError(t, err)
 
 	return callRes

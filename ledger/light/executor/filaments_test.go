@@ -43,7 +43,7 @@ func TestFilamentCalculatorDefault_Requests(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	var (
-		indexes    object.IndexStorage
+		indexes    object.MemoryIndexStorage
 		records    *object.RecordMemory
 		pcs        insolar.PlatformCryptographyScheme
 		calculator *executor.FilamentCalculatorDefault
@@ -67,10 +67,9 @@ func TestFilamentCalculatorDefault_Requests(t *testing.T) {
 	t.Run("empty response", func(t *testing.T) {
 		objectID := gen.ID()
 		fromID := gen.ID()
-		err := indexes.SetIndex(ctx, fromID.Pulse(), record.Index{
+		indexes.Set(ctx, fromID.Pulse(), record.Index{
 			ObjID: objectID,
 		})
-		require.NoError(t, err)
 
 		recs, err := calculator.Requests(ctx, objectID, fromID, gen.PulseNumber())
 		assert.NoError(t, err)
@@ -92,14 +91,13 @@ func TestFilamentCalculatorDefault_Requests(t *testing.T) {
 		objectID := gen.ID()
 		fromID := storageRecs[3].MetaID
 		earliestPending := storageRecs[0].MetaID.Pulse()
-		err := indexes.SetIndex(ctx, fromID.Pulse(), record.Index{
+		indexes.Set(ctx, fromID.Pulse(), record.Index{
 			ObjID: objectID,
 			Lifeline: record.Lifeline{
 				LatestRequest:       &storageRecs[3].MetaID,
 				EarliestOpenRequest: &earliestPending,
 			},
 		})
-		require.NoError(t, err)
 
 		// First time, records accessed from storage.
 		recs, err := calculator.Requests(ctx, objectID, fromID, storageRecs[1].MetaID.Pulse())
@@ -126,8 +124,8 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	var (
-		indexes     object.IndexStorage
-		records     object.RecordStorage
+		indexes     object.MemoryIndexStorage
+		records     object.AtomicRecordStorage
 		coordinator *jet.CoordinatorMock
 		jetFetcher  *executor.JetFetcherMock
 		sender      *bus.SenderMock
@@ -156,10 +154,9 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 	t.Run("empty response", func(t *testing.T) {
 		objectID := gen.ID()
 		fromPulse := gen.PulseNumber()
-		err := indexes.SetIndex(ctx, fromPulse, record.Index{
+		indexes.Set(ctx, fromPulse, record.Index{
 			ObjID: objectID,
 		})
-		require.NoError(t, err)
 
 		recs, err := calculator.OpenedRequests(ctx, fromPulse, objectID, true)
 		require.NoError(t, err)
@@ -180,14 +177,13 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 		objectID := gen.ID()
 		fromPulse := rec4.MetaID.Pulse()
 		earliestPending := rec1.MetaID.Pulse()
-		err := indexes.SetIndex(ctx, fromPulse, record.Index{
+		indexes.Set(ctx, fromPulse, record.Index{
 			ObjID: objectID,
 			Lifeline: record.Lifeline{
 				LatestRequest:       &rec4.MetaID,
 				EarliestOpenRequest: &earliestPending,
 			},
 		})
-		require.NoError(t, err)
 
 		recs, err := calculator.OpenedRequests(ctx, fromPulse, objectID, true)
 		require.NoError(t, err)
@@ -210,14 +206,13 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 		objectID := gen.ID()
 		fromPulse := rec4.MetaID.Pulse()
 		earliestPending := rec1.MetaID.Pulse()
-		err := indexes.SetIndex(ctx, fromPulse, record.Index{
+		indexes.Set(ctx, fromPulse, record.Index{
 			ObjID: objectID,
 			Lifeline: record.Lifeline{
 				LatestRequest:       &rec4.MetaID,
 				EarliestOpenRequest: &earliestPending,
 			},
 		})
-		require.NoError(t, err)
 
 		coordinator.IsBeyondLimitFunc = func(_ context.Context, target insolar.PulseNumber) (bool, error) {
 			require.Equal(t, missingRec.MetaID.Pulse(), target)
@@ -293,14 +288,13 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 		objectID := gen.ID()
 		fromPulse := rec4.MetaID.Pulse()
 		earliestPending := rec1.MetaID.Pulse()
-		err := indexes.SetIndex(ctx, fromPulse, record.Index{
+		indexes.Set(ctx, fromPulse, record.Index{
 			ObjID: objectID,
 			Lifeline: record.Lifeline{
 				LatestRequest:       &rec4.MetaID,
 				EarliestOpenRequest: &earliestPending,
 			},
 		})
-		require.NoError(t, err)
 
 		coordinator.IsBeyondLimitFunc = func(_ context.Context, target insolar.PulseNumber) (bool, error) {
 			require.Equal(t, missingRec.MetaID.Pulse(), target)
@@ -364,14 +358,13 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 		objectID := gen.ID()
 		fromPulse := rec1.MetaID.Pulse()
 		earliestPending := rec1.MetaID.Pulse()
-		err := indexes.SetIndex(ctx, fromPulse, record.Index{
+		indexes.Set(ctx, fromPulse, record.Index{
 			ObjID: objectID,
 			Lifeline: record.Lifeline{
 				LatestRequest:       &rec1.MetaID,
 				EarliestOpenRequest: &earliestPending,
 			},
 		})
-		require.NoError(t, err)
 
 		recs, err := calculator.OpenedRequests(ctx, fromPulse, objectID, true)
 		require.NoError(t, err)
@@ -396,14 +389,13 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 		objectID := gen.ID()
 		fromPulse := outgoingRes.MetaID.Pulse()
 		earliestPending := outgoingRes.MetaID.Pulse()
-		err := indexes.SetIndex(ctx, fromPulse, record.Index{
+		indexes.Set(ctx, fromPulse, record.Index{
 			ObjID: objectID,
 			Lifeline: record.Lifeline{
 				LatestRequest:       &outgoingRes.MetaID,
 				EarliestOpenRequest: &earliestPending,
 			},
 		})
-		require.NoError(t, err)
 
 		recs, err := calculator.OpenedRequests(ctx, fromPulse, objectID, true)
 		require.NoError(t, err)
@@ -427,14 +419,13 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 		objectID := gen.ID()
 		fromPulse := reasonRes.MetaID.Pulse()
 		earliestPending := reasonRes.MetaID.Pulse()
-		err := indexes.SetIndex(ctx, fromPulse, record.Index{
+		indexes.Set(ctx, fromPulse, record.Index{
 			ObjID: objectID,
 			Lifeline: record.Lifeline{
 				LatestRequest:       &reasonRes.MetaID,
 				EarliestOpenRequest: &earliestPending,
 			},
 		})
-		require.NoError(t, err)
 
 		recs, err := calculator.OpenedRequests(ctx, fromPulse, objectID, true)
 		require.NoError(t, err)
@@ -451,8 +442,8 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	var (
-		indexes     object.IndexStorage
-		records     object.RecordStorage
+		indexes     object.MemoryIndexStorage
+		records     object.AtomicRecordStorage
 		coordinator *jet.CoordinatorMock
 		jetFetcher  *executor.JetFetcherMock
 		sender      *bus.SenderMock
@@ -481,10 +472,9 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 	t.Run("no records", func(t *testing.T) {
 		objectID := gen.ID()
 		resultID := gen.ID()
-		err := indexes.SetIndex(ctx, resultID.Pulse(), record.Index{
+		indexes.Set(ctx, resultID.Pulse(), record.Index{
 			ObjID: objectID,
 		})
-		require.NoError(t, err)
 
 		res, err := calculator.ResultDuplicate(ctx, objectID, resultID, record.Result{Request: gen.Reference()})
 
@@ -504,13 +494,12 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 
 		objectID := gen.ID()
 		fromPulse := res1.MetaID.Pulse()
-		err := indexes.SetIndex(ctx, fromPulse, record.Index{
+		indexes.Set(ctx, fromPulse, record.Index{
 			ObjID: objectID,
 			Lifeline: record.Lifeline{
 				LatestRequest: &res1.MetaID,
 			},
 		})
-		require.NoError(t, err)
 
 		fRes, err := calculator.ResultDuplicate(ctx, objectID, res1.RecordID, res)
 		require.NoError(t, err)
@@ -529,15 +518,14 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 
 		objectID := gen.ID()
 		fromPulse := req.MetaID.Pulse()
-		err := indexes.SetIndex(ctx, fromPulse, record.Index{
+		indexes.Set(ctx, fromPulse, record.Index{
 			ObjID: objectID,
 			Lifeline: record.Lifeline{
 				LatestRequest: &req.MetaID,
 			},
 		})
-		require.NoError(t, err)
 
-		_, err = calculator.ResultDuplicate(ctx, objectID, req.RecordID, record.Result{Request: gen.Reference()})
+		_, err := calculator.ResultDuplicate(ctx, objectID, req.RecordID, record.Result{Request: gen.Reference()})
 		require.Error(t, err)
 
 		mc.Finish()
@@ -553,13 +541,12 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 
 		objectID := gen.ID()
 		fromPulse := req1.MetaID.Pulse()
-		err := indexes.SetIndex(ctx, fromPulse, record.Index{
+		indexes.Set(ctx, fromPulse, record.Index{
 			ObjID: objectID,
 			Lifeline: record.Lifeline{
 				LatestRequest: &req1.MetaID,
 			},
 		})
-		require.NoError(t, err)
 
 		fRes, err := calculator.ResultDuplicate(ctx, objectID, *resID, res)
 		require.NoError(t, err)
@@ -575,8 +562,8 @@ func TestFilamentCalculatorDefault_RequestDuplicate(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	var (
-		indexes     object.IndexStorage
-		records     object.RecordStorage
+		indexes     object.MemoryIndexStorage
+		records     object.AtomicRecordStorage
 		coordinator *jet.CoordinatorMock
 		jetFetcher  *executor.JetFetcherMock
 		sender      *bus.SenderMock
@@ -605,10 +592,9 @@ func TestFilamentCalculatorDefault_RequestDuplicate(t *testing.T) {
 	t.Run("no records", func(t *testing.T) {
 		objectID := gen.ID()
 		fromPulse := gen.PulseNumber()
-		err := indexes.SetIndex(ctx, fromPulse, record.Index{
+		indexes.Set(ctx, fromPulse, record.Index{
 			ObjID: objectID,
 		})
-		require.NoError(t, err)
 
 		req, res, err := calculator.RequestDuplicate(ctx, objectID, gen.IDWithPulse(fromPulse), &record.IncomingRequest{
 			Reason: gen.Reference(),
@@ -630,13 +616,12 @@ func TestFilamentCalculatorDefault_RequestDuplicate(t *testing.T) {
 		res1 := b.Append(insolar.FirstPulseNumber+2, &record.Result{Request: *insolar.NewReference(req1.RecordID)})
 
 		objectID := gen.ID()
-		err := indexes.SetIndex(ctx, req1.RecordID.Pulse(), record.Index{
+		indexes.Set(ctx, req1.RecordID.Pulse(), record.Index{
 			ObjID: objectID,
 			Lifeline: record.Lifeline{
 				LatestRequest: &res1.MetaID,
 			},
 		})
-		require.NoError(t, err)
 
 		fReq, fRes, err := calculator.RequestDuplicate(ctx, objectID, req1.RecordID, &req)
 		assert.NoError(t, err)
@@ -656,13 +641,12 @@ func TestFilamentCalculatorDefault_RequestDuplicate(t *testing.T) {
 		req2 := b.Append(insolar.FirstPulseNumber+2, &reqR2)
 
 		objectID := gen.ID()
-		err := indexes.SetIndex(ctx, req1.RecordID.Pulse(), record.Index{
+		indexes.Set(ctx, req1.RecordID.Pulse(), record.Index{
 			ObjID: objectID,
 			Lifeline: record.Lifeline{
 				LatestRequest: &req2.MetaID,
 			},
 		})
-		require.NoError(t, err)
 
 		fReq, fRes, err := calculator.RequestDuplicate(ctx, objectID, req1.RecordID, &reqR)
 		require.NoError(t, err)
@@ -675,7 +659,7 @@ func TestFilamentCalculatorDefault_RequestDuplicate(t *testing.T) {
 }
 
 type filamentBuilder struct {
-	records   object.RecordModifier
+	records   object.AtomicRecordModifier
 	currentID insolar.ID
 	ctx       context.Context
 	pcs       insolar.PlatformCryptographyScheme
@@ -684,7 +668,7 @@ type filamentBuilder struct {
 func newFilamentBuilder(
 	ctx context.Context,
 	pcs insolar.PlatformCryptographyScheme,
-	records object.RecordModifier,
+	records object.AtomicRecordModifier,
 ) *filamentBuilder {
 	return &filamentBuilder{
 		ctx:     ctx,
@@ -707,9 +691,13 @@ func (b *filamentBuilder) append(pn insolar.PulseNumber, rec record.Record, pers
 		virtual := record.Wrap(rec)
 		hash := record.HashVirtual(b.pcs.ReferenceHasher(), virtual)
 		id := *insolar.NewID(pn, hash)
-		material := record.Material{Virtual: virtual, JetID: insolar.ZeroJetID}
+		material := record.Material{
+			Virtual: virtual,
+			ID:      id,
+			JetID:   insolar.ZeroJetID,
+		}
 		if persist {
-			err := b.records.Set(b.ctx, id, material)
+			err := b.records.SetAtomic(b.ctx, material)
 			if err != nil {
 				panic(err)
 			}
@@ -727,9 +715,13 @@ func (b *filamentBuilder) append(pn insolar.PulseNumber, rec record.Record, pers
 		virtual := record.Wrap(&rec)
 		hash := record.HashVirtual(b.pcs.ReferenceHasher(), virtual)
 		id := *insolar.NewID(pn, hash)
-		material := record.Material{Virtual: virtual, JetID: insolar.ZeroJetID}
+		material := record.Material{
+			Virtual: virtual,
+			ID:      id,
+			JetID:   insolar.ZeroJetID,
+		}
 		if persist {
-			err := b.records.Set(b.ctx, id, material)
+			err := b.records.SetAtomic(b.ctx, material)
 			if err != nil {
 				panic(err)
 			}

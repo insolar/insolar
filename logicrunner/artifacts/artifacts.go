@@ -174,4 +174,5 @@ type RequestResult interface {
 
 	Result() []byte
 	ObjectReference() insolar.Reference
+	ConstructorError() string
 }
