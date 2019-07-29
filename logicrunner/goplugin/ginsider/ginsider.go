@@ -375,10 +375,14 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef insolar.Reference, construc
 	}
 
 	if res.Reference == nil {
-		return insolar.Reference{}, errors.New("[ SaveAsChild ] system error - res.Reference is nil AALEKSEEV")
+		// this should never happen, but if it will it's better to return a readable
+		// error than dereference a nil pointer
+		err = errors.New("[ SaveAsChild ] system error - res.Reference is nil")
+		gi.SetSystemError(err)
+		return insolar.Reference{}, err
 	}
 
-	return *res.Reference, nil // AALEKSEEV nil pointer dereference here if ctorRef != nil (fixed now?)
+	return *res.Reference, nil
 }
 
 // DeactivateObject ...

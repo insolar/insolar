@@ -487,8 +487,6 @@ func callMethodNoChecks(t testing.TB, objectRef *insolar.Reference, method strin
 	err = json.Unmarshal(respBody, &callRes)
 	require.NoError(t, err)
 
-	fmt.Printf("AALEKSEEV respBody = %v\n\n", string(respBody))
-
 	return callRes
 }
 
