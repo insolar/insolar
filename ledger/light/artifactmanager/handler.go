@@ -163,16 +163,22 @@ func NewMessageHandler(
 			)
 		},
 		HotObjects: func(p *proc.HotObjects) {
-			p.Dep.DropModifier = h.DropModifier
-			p.Dep.IndexModifier = h.IndexStorage
-			p.Dep.JetStorage = h.JetStorage
-			p.Dep.JetFetcher = h.JetTreeUpdater
-			p.Dep.JetReleaser = h.JetReleaser
-			p.Dep.Sender = h.Sender
-			p.Dep.Calculator = h.PulseCalculator
+			p.Dep(
+				h.DropModifier,
+				h.IndexStorage,
+				h.JetStorage,
+				h.JetTreeUpdater,
+				h.JetReleaser,
+				h.JetCoordinator,
+				h.PulseCalculator,
+				h.Sender,
+			)
 		},
 		SendRequests: func(p *proc.SendRequests) {
-			p.Dep(h.Sender, h.FilamentCalculator)
+			p.Dep(
+				h.Sender,
+				h.FilamentCalculator,
+			)
 		},
 		PassState: func(p *proc.PassState) {
 			p.Dep.Sender = h.Sender
