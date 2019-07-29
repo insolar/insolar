@@ -51,7 +51,7 @@ type MachineLogicExecutor interface {
 		ctx context.Context, callContext *LogicCallContext,
 		code Reference, name string, args Arguments,
 	) (
-		objectState []byte, ctorErr error, sysErr error,
+		objectState []byte, ctorErr string, sysErr error,
 	)
 }
 

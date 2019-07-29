@@ -153,7 +153,9 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 		return errors.Wrap(err, "CallConstructor error")
 	}
 
-	reply.ObjectRef = objectRef.String()
+	if objectRef != nil {
+		reply.ObjectRef = objectRef.String()
+	}
 	reply.ConstructorError = ctorErr
 
 	return nil

@@ -250,7 +250,7 @@ func (m *executionProxyImplementation) SaveAsChild(
 	var refBytes []byte
 	if objectRef != nil {
 		// constructor succeeded
-		refBytes = rep.Reference.Bytes()
+		refBytes = objectRef.Bytes()
 	}
 	reqResult := newRequestResult(refBytes, req.Callee)
 	return m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)

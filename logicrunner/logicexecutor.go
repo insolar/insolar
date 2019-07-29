@@ -140,12 +140,12 @@ func (le *logicExecutor) ExecuteConstructor(
 	}
 
 	res := newRequestResult(nil, transcript.RequestRef)
-	if ctorErr == nil { // AALKEKSEEV TODO this breaks everything!!!1
+	if ctorErr == "" { // AALKEKSEEV TODO ok?
 		res.SetActivate(*request.Base, *request.Prototype, newData)
 	} else {
 		// constructor returned an error
 		// res.SetActivate(*request.Base, *request.Prototype, newData)
-		res.SetConstructorError(ctorErr.Error())
+		res.SetConstructorError(ctorErr)
 	}
 	return res, nil
 }

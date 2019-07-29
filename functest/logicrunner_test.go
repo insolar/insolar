@@ -728,16 +728,6 @@ func New() (*Two, error) {
 	fmt.Printf("AALEKSEEV resp.Error = %v\n\n", resp.Error)
 }
 
-/* AALEKSEEV TODO FIXME:
-
-2019-07-26T20:03:21.970586000+03:00 DBG Calling constructor "New" in code "7d9eVesgYX5WETAYouBhxrN55PYFBB69rkuhVXP4jZg.11111111111111111111111111111111" file=usr/local/go/src/reflect/value.go:447 traceid=2896306a-edb7-47ec-a323-fac2ffee2607
-2019-07-26T20:03:21.970709000+03:00 DBG obtaining code "7d9eVesgYX5WETAYouBhxrN55PYFBB69rkuhVXP4jZg.11111111111111111111111111111111" file=logicrunner/goplugin/ginsider/ginsider.go:166 traceid=2896306a-edb7-47ec-a323-fac2ffee2607
-2019-07-26T20:03:21.987527000+03:00 DBG Opening plugin "7d9eVesgYX5WETAYouBhxrN55PYFBB69rkuhVXP4jZg.11111111111111111111111111111111" from file "/var/folders/vl/st0t3kyj4b71r04v2vf9dwt00000gn/T/contractcache-995403776/7d9eVesgYX5WETAYouBhxrN55PYFBB69rkuhVXP4jZg.11111111111111111111111111111111" file=usr/local/go/src/runtime/asm_amd64.s:525 traceid=2896306a-edb7-47ec-a323-fac2ffee2607
-2019-07-26T20:03:22.003834000+03:00 DBG de-serializing [128] file=logicrunner/goplugin/ginsider/ginsider.go:425
-2019/07/26 20:03:22 rpc: gob error encoding body: gob: type not registered for interface: errors.errorString
-
-*/
-
 // If a contract constructor fails it's considered a logical error
 func TestConstructorReturnError(t *testing.T) {
 	var contractOneCode = `

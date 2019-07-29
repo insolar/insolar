@@ -20,7 +20,7 @@ import (
 type MachineLogicExecutorMock struct {
 	t minimock.Tester
 
-	CallConstructorFunc       func(p context.Context, p1 *insolar.LogicCallContext, p2 insolar.Reference, p3 string, p4 insolar.Arguments) (r []byte, r1 error, r2 error)
+	CallConstructorFunc       func(p context.Context, p1 *insolar.LogicCallContext, p2 insolar.Reference, p3 string, p4 insolar.Arguments) (r []byte, r1 string, r2 error)
 	CallConstructorCounter    uint64
 	CallConstructorPreCounter uint64
 	CallConstructorMock       mMachineLogicExecutorMockCallConstructor
@@ -66,7 +66,7 @@ type MachineLogicExecutorMockCallConstructorInput struct {
 
 type MachineLogicExecutorMockCallConstructorResult struct {
 	r  []byte
-	r1 error
+	r1 string
 	r2 error
 }
 
@@ -83,7 +83,7 @@ func (m *mMachineLogicExecutorMockCallConstructor) Expect(p context.Context, p1 
 }
 
 //Return specifies results of invocation of MachineLogicExecutor.CallConstructor
-func (m *mMachineLogicExecutorMockCallConstructor) Return(r []byte, r1 error, r2 error) *MachineLogicExecutorMock {
+func (m *mMachineLogicExecutorMockCallConstructor) Return(r []byte, r1 string, r2 error) *MachineLogicExecutorMock {
 	m.mock.CallConstructorFunc = nil
 	m.expectationSeries = nil
 
@@ -105,12 +105,12 @@ func (m *mMachineLogicExecutorMockCallConstructor) ExpectOnce(p context.Context,
 	return expectation
 }
 
-func (e *MachineLogicExecutorMockCallConstructorExpectation) Return(r []byte, r1 error, r2 error) {
+func (e *MachineLogicExecutorMockCallConstructorExpectation) Return(r []byte, r1 string, r2 error) {
 	e.result = &MachineLogicExecutorMockCallConstructorResult{r, r1, r2}
 }
 
 //Set uses given function f as a mock of MachineLogicExecutor.CallConstructor method
-func (m *mMachineLogicExecutorMockCallConstructor) Set(f func(p context.Context, p1 *insolar.LogicCallContext, p2 insolar.Reference, p3 string, p4 insolar.Arguments) (r []byte, r1 error, r2 error)) *MachineLogicExecutorMock {
+func (m *mMachineLogicExecutorMockCallConstructor) Set(f func(p context.Context, p1 *insolar.LogicCallContext, p2 insolar.Reference, p3 string, p4 insolar.Arguments) (r []byte, r1 string, r2 error)) *MachineLogicExecutorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -119,7 +119,7 @@ func (m *mMachineLogicExecutorMockCallConstructor) Set(f func(p context.Context,
 }
 
 //CallConstructor implements github.com/insolar/insolar/insolar.MachineLogicExecutor interface
-func (m *MachineLogicExecutorMock) CallConstructor(p context.Context, p1 *insolar.LogicCallContext, p2 insolar.Reference, p3 string, p4 insolar.Arguments) (r []byte, r1 error, r2 error) {
+func (m *MachineLogicExecutorMock) CallConstructor(p context.Context, p1 *insolar.LogicCallContext, p2 insolar.Reference, p3 string, p4 insolar.Arguments) (r []byte, r1 string, r2 error) {
 	counter := atomic.AddUint64(&m.CallConstructorPreCounter, 1)
 	defer atomic.AddUint64(&m.CallConstructorCounter, 1)
 

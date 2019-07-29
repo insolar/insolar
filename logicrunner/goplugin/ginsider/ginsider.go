@@ -184,7 +184,9 @@ func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpcty
 	}
 
 	reply.Ret = resValues
-	reply.ConstructorError = ctorErr
+	if ctorErr != nil {
+		reply.ConstructorError = ctorErr.Error()
+	}
 
 	return nil
 }

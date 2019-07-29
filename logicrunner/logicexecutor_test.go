@@ -346,7 +346,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 				GetExecutorMock.
 				Return(
 					testutils.NewMachineLogicExecutorMock(mc).
-						CallConstructorMock.Return([]byte{1, 2, 3}, nil, nil),
+						CallConstructorMock.Return([]byte{1, 2, 3}, "", nil),
 					nil,
 				),
 			dc: artifacts.NewDescriptorsCacheMock(mc).
@@ -380,7 +380,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 				GetExecutorMock.
 				Return(
 					testutils.NewMachineLogicExecutorMock(mc).
-						CallConstructorMock.Return(nil, nil, errors.New("some")),
+						CallConstructorMock.Return(nil, "", errors.New("some")),
 					nil,
 				),
 			dc: artifacts.NewDescriptorsCacheMock(mc).
