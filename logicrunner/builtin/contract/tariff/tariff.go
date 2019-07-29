@@ -28,7 +28,7 @@ type Tariff struct {
 }
 
 // New creates new tariff.
-func New() (*Tariff, error) {
+func NewTariff() (*Tariff, error) {
 	return &Tariff{}, nil
 }
 

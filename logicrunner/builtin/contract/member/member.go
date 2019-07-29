@@ -61,7 +61,7 @@ func (m *Member) GetPublicKey() (string, error) {
 }
 
 // New creates new member.
-func New(rootDomain insolar.Reference, name string, key string, burnAddress string, walletRef insolar.Reference) (*Member, error) {
+func NewMember(rootDomain insolar.Reference, name string, key string, burnAddress string, walletRef insolar.Reference) (*Member, error) {
 	return &Member{
 		RootDomain:  rootDomain,
 		Deposits:    map[string]insolar.Reference{},
@@ -407,13 +407,13 @@ func (m *Member) createMember(name string, key string, burnAddress string) (*mem
 		return nil, fmt.Errorf("key is not valid")
 	}
 
-	wHolder := wallet.New(big.NewInt(1000000000).String())
+	wHolder := wallet.NewWallet(big.NewInt(1000000000).String())
 	walletRef, err := wHolder.AsChild(m.RootDomain)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create wallet for  member: %s", err.Error())
 	}
 
-	memberHolder := member.New(m.RootDomain, name, key, burnAddress, walletRef.Reference)
+	memberHolder := member.NewMember(m.RootDomain, name, key, burnAddress, walletRef.Reference)
 	created, err := memberHolder.AsChild(m.RootDomain)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save as child: %s", err.Error())
@@ -461,7 +461,7 @@ func (m *Member) depositMigration(txHash string, burnAddress string, amount *big
 	if !found {
 		migrationDaemonConfirms := [3]string{}
 		migrationDaemonConfirms[mdIndex] = m.GetReference().String()
-		dHolder := deposit.New(migrationDaemonConfirms, txHash, amount.String())
+		dHolder := deposit.NewDeposit(migrationDaemonConfirms, txHash, amount.String())
 		txDeposit, err := dHolder.AsChild(tokenHolderRef)
 		if err != nil {
 			return fmt.Errorf("failed to save as delegate: %s", err.Error())

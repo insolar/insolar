@@ -440,7 +440,7 @@ func INSMETHOD_GetBurnAddress(object []byte, data []byte) ([]byte, []byte, error
 	return state, ret, err
 }
 
-func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
+func INSCONSTRUCTOR_NewMember(data []byte) ([]byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
 	args := [5]interface{}{}
@@ -457,11 +457,11 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 
 	err := ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeNewMember ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, e
 	}
 
-	ret0, ret1 := New(args0, args1, args2, args3, args4)
+	ret0, ret1 := NewMember(args0, args1, args2, args3, args4)
 	if ph.GetSystemError() != nil {
 		return nil, ph.GetSystemError()
 	}
@@ -476,7 +476,7 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	}
 
 	if ret0 == nil {
-		e := &ExtendableError{S: "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil"}
+		e := &ExtendableError{S: "[ FakeNewMember ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil"}
 		return nil, e
 	}
 
@@ -498,7 +498,7 @@ func Initialize() XXX_insolar.ContractWrapper {
 			"GetBurnAddress": INSMETHOD_GetBurnAddress,
 		},
 		Constructors: XXX_insolar.ContractConstructors{
-			"New": INSCONSTRUCTOR_New,
+			"NewMember": INSCONSTRUCTOR_NewMember,
 		},
 	}
 }

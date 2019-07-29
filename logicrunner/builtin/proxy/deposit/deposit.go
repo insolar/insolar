@@ -60,8 +60,8 @@ func GetPrototype() insolar.Reference {
 	return *PrototypeReference
 }
 
-// New is constructor
-func New(migrationDaemonConfirms [3]string, txHash string, amount string) *ContractConstructorHolder {
+// NewDeposit is constructor
+func NewDeposit(migrationDaemonConfirms [3]string, txHash string, amount string) *ContractConstructorHolder {
 	var args [3]interface{}
 	args[0] = migrationDaemonConfirms
 	args[1] = txHash
@@ -73,7 +73,7 @@ func New(migrationDaemonConfirms [3]string, txHash string, amount string) *Contr
 		panic(err)
 	}
 
-	return &ContractConstructorHolder{constructorName: "New", argsSerialized: argsSerialized}
+	return &ContractConstructorHolder{constructorName: "NewDeposit", argsSerialized: argsSerialized}
 }
 
 // GetReference returns reference of the object

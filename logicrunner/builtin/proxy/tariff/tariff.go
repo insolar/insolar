@@ -58,8 +58,8 @@ func GetPrototype() insolar.Reference {
 	return *PrototypeReference
 }
 
-// New is constructor
-func New() *ContractConstructorHolder {
+// NewTariff is constructor
+func NewTariff() *ContractConstructorHolder {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -68,7 +68,7 @@ func New() *ContractConstructorHolder {
 		panic(err)
 	}
 
-	return &ContractConstructorHolder{constructorName: "New", argsSerialized: argsSerialized}
+	return &ContractConstructorHolder{constructorName: "NewTariff", argsSerialized: argsSerialized}
 }
 
 // GetReference returns reference of the object

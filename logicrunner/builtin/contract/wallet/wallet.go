@@ -38,7 +38,7 @@ type Wallet struct {
 }
 
 // New creates new wallet.
-func New(balance string) (*Wallet, error) {
+func NewWallet(balance string) (*Wallet, error) {
 	return &Wallet{
 		Balance: balance,
 	}, nil

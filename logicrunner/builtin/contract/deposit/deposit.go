@@ -61,7 +61,7 @@ func (d *Deposit) GetAmount() (string, error) {
 }
 
 // New creates new deposit.
-func New(migrationDaemonConfirms [3]string, txHash string, amount string) (*Deposit, error) {
+func NewDeposit(migrationDaemonConfirms [3]string, txHash string, amount string) (*Deposit, error) {
 	currentPulse, err := foundation.GetPulseNumber()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get current pulse: %s", err.Error())

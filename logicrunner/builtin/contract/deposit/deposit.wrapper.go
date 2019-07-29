@@ -267,7 +267,7 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
-func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
+func INSCONSTRUCTOR_NewDeposit(data []byte) ([]byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
 	args := [3]interface{}{}
@@ -280,11 +280,11 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 
 	err := ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeNewDeposit ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, e
 	}
 
-	ret0, ret1 := New(args0, args1, args2)
+	ret0, ret1 := NewDeposit(args0, args1, args2)
 	if ph.GetSystemError() != nil {
 		return nil, ph.GetSystemError()
 	}
@@ -299,7 +299,7 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	}
 
 	if ret0 == nil {
-		e := &ExtendableError{S: "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil"}
+		e := &ExtendableError{S: "[ FakeNewDeposit ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil"}
 		return nil, e
 	}
 
@@ -317,7 +317,7 @@ func Initialize() XXX_insolar.ContractWrapper {
 			"Confirm":   INSMETHOD_Confirm,
 		},
 		Constructors: XXX_insolar.ContractConstructors{
-			"New": INSCONSTRUCTOR_New,
+			"NewDeposit": INSCONSTRUCTOR_NewDeposit,
 		},
 	}
 }

@@ -58,8 +58,8 @@ func GetPrototype() insolar.Reference {
 	return *PrototypeReference
 }
 
-// New is constructor
-func New(commissionWallet insolar.Reference, currentTariff insolar.Reference) *ContractConstructorHolder {
+// NewCostCenter is constructor
+func NewCostCenter(commissionWallet insolar.Reference, currentTariff insolar.Reference) *ContractConstructorHolder {
 	var args [2]interface{}
 	args[0] = commissionWallet
 	args[1] = currentTariff
@@ -70,7 +70,7 @@ func New(commissionWallet insolar.Reference, currentTariff insolar.Reference) *C
 		panic(err)
 	}
 
-	return &ContractConstructorHolder{constructorName: "New", argsSerialized: argsSerialized}
+	return &ContractConstructorHolder{constructorName: "NewCostCenter", argsSerialized: argsSerialized}
 }
 
 // GetReference returns reference of the object

@@ -91,8 +91,8 @@ func GetPrototype() insolar.Reference {
 	return *PrototypeReference
 }
 
-// New is constructor
-func New(rootDomain insolar.Reference, name string, key string, burnAddress string, walletRef insolar.Reference) *ContractConstructorHolder {
+// NewMember is constructor
+func NewMember(rootDomain insolar.Reference, name string, key string, burnAddress string, walletRef insolar.Reference) *ContractConstructorHolder {
 	var args [5]interface{}
 	args[0] = rootDomain
 	args[1] = name
@@ -106,7 +106,7 @@ func New(rootDomain insolar.Reference, name string, key string, burnAddress stri
 		panic(err)
 	}
 
-	return &ContractConstructorHolder{constructorName: "New", argsSerialized: argsSerialized}
+	return &ContractConstructorHolder{constructorName: "NewMember", argsSerialized: argsSerialized}
 }
 
 // GetReference returns reference of the object

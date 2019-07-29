@@ -30,7 +30,7 @@ type CostCenter struct {
 }
 
 // New creates new cost center.
-func New(commissionWallet insolar.Reference, currentTariff insolar.Reference) (*CostCenter, error) {
+func NewCostCenter(commissionWallet insolar.Reference, currentTariff insolar.Reference) (*CostCenter, error) {
 	return &CostCenter{
 		CommissionWallet: commissionWallet,
 		CurrentTariff:    currentTariff,

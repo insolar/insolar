@@ -67,7 +67,7 @@ func NodeDomain() insolar.GenesisContractState {
 }
 
 func GetMemberGenesisContractState(publicKey string, name string, parent string, walletRef insolar.Reference) insolar.GenesisContractState {
-	m, err := member.New(genesisrefs.ContractRootDomain, name, publicKey, "", insolar.Reference{})
+	m, err := member.NewMember(genesisrefs.ContractRootDomain, name, publicKey, "", insolar.Reference{})
 	if err != nil {
 		panic(fmt.Sprintf("'%s' member constructor failed", name))
 	}
@@ -83,7 +83,7 @@ func GetMemberGenesisContractState(publicKey string, name string, parent string,
 }
 
 func GetWalletGenesisContractState(balance string, name string, parent string) insolar.GenesisContractState {
-	w, err := wallet.New(balance)
+	w, err := wallet.NewWallet(balance)
 	if err != nil {
 		panic("failed to create ` " + name + "` wallet instance")
 	}
@@ -98,7 +98,7 @@ func GetWalletGenesisContractState(balance string, name string, parent string) i
 }
 
 func GetCostCenterGenesisContractState() insolar.GenesisContractState {
-	cc, err := costcenter.New(genesisrefs.ContractFeeWallet, genesisrefs.ContractStandardTariff)
+	cc, err := costcenter.NewCostCenter(genesisrefs.ContractFeeWallet, genesisrefs.ContractStandardTariff)
 	if err != nil {
 		panic("failed to create cost center instance")
 	}
@@ -113,7 +113,7 @@ func GetCostCenterGenesisContractState() insolar.GenesisContractState {
 }
 
 func GetTariffGenesisContractState() insolar.GenesisContractState {
-	t, err := tariff.New()
+	t, err := tariff.NewTariff()
 	if err != nil {
 		panic("failed to create tariff instance")
 	}
