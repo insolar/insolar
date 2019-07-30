@@ -150,9 +150,25 @@ func (r *One) TestPayload() (two.Payload, error) {
 	if p.Str != str { return two.Payload{}, errors.New("Oops") }
 
 	return p, nil
-
 }
 
+var INSATTR_ManyTimes_API = true
+func (r *One) ManyTimes() (error) {
+	holder := two.New()
+	friend, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < 100; i++ {
+		_, err := friend.Hello("some")
+		if err != nil {
+			return err
+		}
+	}
+
+    return nil
+}
 `
 
 	var contractTwoCode = `
@@ -240,6 +256,10 @@ func (r *Two) GetPayloadString() (string, error) {
 		goplugintestutils.CBORMarshal(t, expected),
 		resp.Reply.Result,
 	)
+
+	resp = callMethod(t, objectRef, "ManyTimes")
+	require.Empty(t, resp.Error)
+	require.Empty(t, resp.ExtractedError)
 }
 
 // Make sure a contract can make a saga call to another contract
