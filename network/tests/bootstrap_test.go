@@ -123,7 +123,7 @@ func newBootstraptSuite(t *testing.T, bootstrapCount int) *bootstrapSuite {
 }
 
 func testBootstrap(t *testing.T) *bootstrapSuite {
-	s := newBootstraptSuite(t, 2)
+	s := newBootstraptSuite(t, 5)
 	s.SetupTest()
 	return s
 }
@@ -139,6 +139,10 @@ func TestExample(t *testing.T) {
 	s.StartNodesNetwork(s.fixture().bootstrapNodes)
 
 	s.waitForConsensus(1)
+	s.AssertActiveNodesCountDelta(0)
+
+	s.waitForConsensus(1)
+	s.AssertActiveNodesCountDelta(0)
 
 	//
 	//
