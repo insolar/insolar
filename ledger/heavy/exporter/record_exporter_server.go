@@ -136,11 +136,7 @@ func (r *recordIterator) checkNextPulse(ctx context.Context) bool {
 		return false
 	}
 	topPulse := r.jetKeeper.TopSyncPulse()
-	if topPulse < nextPulse.PulseNumber {
-		return false
-	}
-
-	return true
+	return topPulse > nextPulse.PulseNumber
 }
 
 func (r *recordIterator) Next(ctx context.Context) (*Record, error) {
