@@ -52,8 +52,9 @@ package api
 
 import (
 	"context"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"time"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 
@@ -114,7 +115,7 @@ type EphemeralControlFeeder interface {
 	IsActive() bool
 	CreateEphemeralPulsePacket(census census.Operational) proofs.OriginalPulsarPacket
 
-	OnEphemeralIncompatiblePacket(parser transport.PacketParser, inbound endpoints.Inbound) error
+	OnEphemeralIncompatiblePacket(ctx context.Context, parser transport.PacketParser, inbound endpoints.Inbound) error
 
 	CanStopOnHastyPulse(pn pulse.Number, expectedEndOfConsensus time.Time) bool
 	ConsensusFinished(report UpstreamReport, startedAt time.Time, expectedCensus census.Operational)
