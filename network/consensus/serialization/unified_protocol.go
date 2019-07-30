@@ -272,10 +272,11 @@ type Packet struct {
 func (p Packet) String() string {
 	packetCtx := newPacketContext(context.Background(), &p.Header)
 	return fmt.Sprintf(
-		"<s=%d t=%d pt=%s body=%s>",
+		"<s=%d t=%d pt=%s f=%s body=%s>",
 		p.Header.SourceID,
 		p.Header.TargetID,
 		p.Header.GetPacketType(),
+		fmt.Sprintf("%08b", p.Header.PacketFlags),
 		p.EncryptableBody.String(&packetCtx),
 	)
 }
