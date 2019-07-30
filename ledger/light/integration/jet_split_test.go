@@ -22,8 +22,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
@@ -99,13 +101,18 @@ func TestJetSplit(t *testing.T) {
 			}
 		}
 	}
+
+	for _, sc := range splitCases {
+		t.Run(sc.name, func(t *testing.T) { testCase(t, sc) })
+	}
+
 }
 
-func calculateExpectedJets(jetsMap []insolar.JetID, depthLimit uint8) []insolar.JetID {
+func calculateExpectedJets(jets []insolar.JetID, depthLimit uint8) []insolar.JetID {
 
-	result := make([]insolar.JetID, 0, len(jetsMap)*2)
+	result := make([]insolar.JetID, 0, len(jets)*2)
 
-	for _, jetID := range jetsMap {
+	for _, jetID := range jets {
 		if jetID.Depth() >= depthLimit {
 			result = append(result, jetID)
 		} else {
