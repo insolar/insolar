@@ -107,6 +107,10 @@ func (u *UpstreamPulseController) ConsensusFinished(report api.UpstreamReport, e
 	)
 }
 
+func (u *UpstreamPulseController) ConsensusAborted() {
+	// TODO implement
+}
+
 func (u *UpstreamPulseController) PreparePulseChange(report api.UpstreamReport, ch chan<- api.UpstreamState) {
 	go awaitState(ch, u.stateGetter)
 }
@@ -119,7 +123,7 @@ func (u *UpstreamPulseController) CommitPulseChange(report api.UpstreamReport, p
 }
 
 func (u *UpstreamPulseController) CancelPulseChange() {
-	panic("implement me")
+	// TODO implement
 }
 
 func awaitState(c chan<- api.UpstreamState, stater StateGetter) {

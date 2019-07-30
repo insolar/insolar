@@ -537,7 +537,7 @@ func (r *MembershipAnnouncementReader) GetNodeStateHashEvidence() proofs.NodeSta
 
 	return cryptkit.NewSignedDigest(
 		cryptkit.NewDigest(&r.body.Announcement.Member.NodeState.NodeStateHash, r.digester.GetDigestMethod()),
-		cryptkit.NewSignature(&r.body.Announcement.Member.NodeState.GlobulaNodeStateSignature, r.digester.GetDigestMethod().SignedBy(r.signMethod)),
+		cryptkit.NewSignature(&r.body.Announcement.Member.NodeState.NodeStateHashSignature, r.digester.GetDigestMethod().SignedBy(r.signMethod)),
 	).AsSignedDigestHolder()
 }
 
@@ -669,7 +669,7 @@ func (r *NeighbourAnnouncementReader) GetRequestedPower() member.Power {
 func (r *NeighbourAnnouncementReader) GetNodeStateHashEvidence() proofs.NodeStateHashEvidence {
 	return cryptkit.NewSignedDigest(
 		cryptkit.NewDigest(&r.neighbour.Member.NodeState.NodeStateHash, r.digester.GetDigestMethod()),
-		cryptkit.NewSignature(&r.neighbour.Member.NodeState.GlobulaNodeStateSignature, r.digester.GetDigestMethod().SignedBy(r.signMethod)),
+		cryptkit.NewSignature(&r.neighbour.Member.NodeState.NodeStateHashSignature, r.digester.GetDigestMethod().SignedBy(r.signMethod)),
 	).AsSignedDigestHolder()
 }
 

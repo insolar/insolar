@@ -213,6 +213,11 @@ func TestPCTGetCloudStateHash(t *testing.T) {
 	require.Nil(t, pct.GetCloudStateHash())
 }
 
+func TestPCTString(t *testing.T) {
+	pct := PrimingCensusTemplate{}
+	require.NotEmpty(t, pct.String())
+}
+
 func TestPCTGetOnlinePopulation(t *testing.T) {
 	pct := PrimingCensusTemplate{}
 	require.Nil(t, pct.GetOnlinePopulation())

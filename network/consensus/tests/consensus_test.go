@@ -53,17 +53,17 @@ package tests
 import (
 	"context"
 	"errors"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"math/rand"
 	"time"
 
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle"
 
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
@@ -88,7 +88,7 @@ type EmuHostConsensusAdapter struct {
 
 func (h *EmuHostConsensusAdapter) ConnectTo(chronicles api.ConsensusChronicles, network *EmuNetwork,
 	strategyFactory core.RoundStrategyFactory, candidateFeeder api.CandidateControlFeeder,
-	controlFeeder api.ConsensusControlFeeder, config api.LocalNodeConfiguration) {
+	controlFeeder api.ConsensusControlFeeder, ephemeralFeeder api.EphemeralControlFeeder, config api.LocalNodeConfiguration) {
 
 	ctx := network.ctx
 	// &EmuConsensusStrategy{ctx: ctx}
@@ -99,6 +99,7 @@ func (h *EmuHostConsensusAdapter) ConnectTo(chronicles api.ConsensusChronicles, 
 		core.NewPhasedRoundControllerFactory(config, NewEmuTransport(h), strategyFactory),
 		candidateFeeder,
 		controlFeeder,
+		ephemeralFeeder,
 	)
 
 	h.inbound, h.outbound = network.AddHost(ctx, h.hostAddr)
@@ -230,12 +231,8 @@ type EmuControlFeeder struct {
 	leaveReason uint32
 }
 
-func (p *EmuControlFeeder) GetRequiredEphemeralMode(census census.Operational) api.EphemeralMode {
-	return api.EphemeralNotAllowed
-}
-
-func (p *EmuControlFeeder) CreateEphemeralPulsePacket(census census.Operational) proofs.OriginalPulsarPacket {
-	panic("implement me")
+func (p *EmuControlFeeder) CanStopOnHastyPulse(pn pulse.Number, expectedEndOfConsensus time.Time) bool {
+	return false
 }
 
 func (p *EmuControlFeeder) OnAppliedMembershipProfile(mode member.OpMode, pw member.Power, effectiveSince pulse.Number) {
@@ -247,12 +244,6 @@ func (*EmuControlFeeder) SetTrafficLimit(level capacity.Level, duration time.Dur
 func (*EmuControlFeeder) ResumeTraffic() {
 }
 
-func (*EmuControlFeeder) PulseDetected() {
-}
-
-func (*EmuControlFeeder) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
-}
-
 func (*EmuControlFeeder) GetRequiredPowerLevel() power.Request {
 	return power.NewRequestByLevel(capacity.LevelNormal)
 }
@@ -262,4 +253,33 @@ func (p *EmuControlFeeder) GetRequiredGracefulLeave() (bool, uint32) {
 }
 
 func (*EmuControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse.Number) {
+}
+
+type EmuEphemeralFeeder struct{}
+
+func (e EmuEphemeralFeeder) GetEphemeralTimings(c api.LocalNodeConfiguration) api.RoundTimings {
+	return c.GetConsensusTimings(2)
+}
+
+func (e EmuEphemeralFeeder) CanBeEphemeral() (beEphemeral bool, minDuration time.Duration) {
+	return false, 0
+}
+
+func (e EmuEphemeralFeeder) IsActive() bool {
+	return false
+}
+
+func (e EmuEphemeralFeeder) CreateEphemeralPulsePacket(census census.Operational) proofs.OriginalPulsarPacket {
+	return nil
+}
+
+func (e EmuEphemeralFeeder) OnEphemeralIncompatiblePacket(ctx context.Context, parser transport.PacketParser, inbound endpoints.Inbound) error {
+	return nil
+}
+
+func (e EmuEphemeralFeeder) CanStopOnHastyPulse(pn pulse.Number, expectedEndOfConsensus time.Time) bool {
+	return false
+}
+
+func (e EmuEphemeralFeeder) ConsensusFinished(report api.UpstreamReport, startedAt time.Time, expectedCensus census.Operational) {
 }

@@ -74,6 +74,9 @@ type UpstreamController interface {
 
 	/* Consensus is finished. If expectedCensus == nil then this node was evicted from consensus.	*/
 	ConsensusFinished(report UpstreamReport, expectedCensus census.Operational)
+
+	/* Consensus was stopped abnormally */
+	ConsensusAborted()
 }
 
 type UpstreamReport struct {

@@ -450,11 +450,12 @@ type NeighbourAnnouncement struct {
 func (na NeighbourAnnouncement) String() string {
 	if !na.Member.AnnounceID.IsAbsent() {
 		return fmt.Sprintf(
-			"<node_id=%d current_rank=%s power=%d announce=%s>",
+			"<node_id=%d current_rank=%s power=%d announce=%s §announce=%s>",
 			na.NeighbourNodeID,
 			na.CurrentRank,
 			na.RequestedPower,
 			na.Member,
+			na.AnnounceSignature,
 		)
 	}
 
@@ -568,10 +569,11 @@ type MembershipAnnouncement struct {
 func (ma MembershipAnnouncement) String() string {
 	if !ma.Member.AnnounceID.IsAbsent() {
 		return fmt.Sprintf(
-			"<current_rank=%s power=%d announce=%s>",
+			"<current_rank=%s power=%d announce=%s §announce=%s>",
 			ma.CurrentRank,
 			ma.RequestedPower,
 			ma.Member,
+			ma.AnnounceSignature,
 		)
 	}
 
@@ -634,8 +636,8 @@ type CompactGlobulaNodeState struct {
 	// FoldedLastCloudStateHash common.Bits224 //available externally
 	// NodeRank                 Rank //available externally
 
-	NodeStateHash             longbits.Bits512 // ByteSize=64
-	GlobulaNodeStateSignature longbits.Bits512 // ByteSize=64, :=Sign(NodePK, Merkle512(NodeStateHash, (LastCloudStateHash.FoldTo224() << 32 | Rank)))
+	NodeStateHash          longbits.Bits512 // ByteSize=64
+	NodeStateHashSignature longbits.Bits512 // ByteSize=64, :=Sign(NodePK, Merkle512(NodeStateHash, (LastCloudStateHash.FoldTo224() << 32 | Rank)))
 }
 
 func (gns *CompactGlobulaNodeState) SerializeTo(_ SerializeContext, writer io.Writer) error {
@@ -670,10 +672,10 @@ type NodeAnnouncement struct {
 
 func (na NodeAnnouncement) String() string {
 	return fmt.Sprintf(
-		"<announce_id=%d nsh=%s §gsh=%s>",
+		"<announce_id=%d nsh=%s §nsh=%s>",
 		na.AnnounceID,
 		na.NodeState.NodeStateHash,
-		na.NodeState.GlobulaNodeStateSignature,
+		na.NodeState.NodeStateHashSignature,
 	)
 }
 

@@ -142,26 +142,19 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		pd = p.packetDispatchers[pt]
 	}
 
-	if verifyFlags&(coreapi.SkipVerify|coreapi.SuccessfullyVerified) == 0 {
+	var err error
+	verifyFlags, err = p.coreRealm.VerifyPacketAuthenticity(ctx, packet, from, nil, coreapi.DefaultVerify,
+		pd, verifyFlags)
 
-		if pd == nil || !pd.HasCustomVerifyForHost(from, verifyFlags) {
-			sourceID := packet.GetSourceID()
+	if err != nil {
+		return err
+	}
 
-			strict := verifyFlags&coreapi.RequireStrictVerify != 0
-			verified, err := p.coreRealm.VerifyPacketAuthenticity(packet.GetPacketSignature(), sourceID, from, strict)
-			if err != nil {
-				return err
-			}
-			if verified {
-				verifyFlags |= coreapi.SuccessfullyVerified
-			} else {
-				if strict || verifyFlags&coreapi.AllowUnverified == 0 {
-					return fmt.Errorf("unable to verify sender for packet type (%v): from=%v", pt, from)
-				}
-				inslogger.FromContext(ctx).Errorf("unable to verify sender for packet type (%v): from=%v", pt, from)
-				// should try again on FullRealm, so don't set coreapi.SkipVerify
-			}
-		}
+	var canHandle bool
+	canHandle, err = p.coreRealm.VerifyPacketPulseNumber(ctx, packet, from, p.initialCensus.GetExpectedPulseNumber(), 0)
+
+	if !canHandle || err != nil {
+		return err
 	}
 
 	if !limiter.SetPacketReceived(pt) {
@@ -170,7 +163,6 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 
 	if pd != nil {
 		// this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
-		var err error
 		packet, err = coreapi.LazyPacketParse(packet)
 		if err != nil {
 			return err
@@ -215,10 +207,6 @@ func (p *PrepRealm) beforeStart(ctx context.Context, controllers []PrepPhaseCont
 // runs under lock
 func (p *PrepRealm) _startWorkers(ctx context.Context, controllers []PrepPhaseController) {
 
-	if p.ephemeralMode.IsActive() && p.checkEphemeralStart(ctx) {
-		p.pushEphemeralPulse(ctx)
-	}
-
 	if p.originalPulse != nil {
 		// we were set for FullRealm, so skip prep workers
 		return
@@ -230,7 +218,7 @@ func (p *PrepRealm) _startWorkers(ctx context.Context, controllers []PrepPhaseCo
 }
 
 func (p *PrepRealm) prepareEphemeralPolling(ctxPrep context.Context) {
-	if !p.ephemeralMode.IsActive() {
+	if p.ephemeralFeeder == nil || !p.ephemeralFeeder.IsActive() {
 		return
 	}
 
@@ -251,7 +239,7 @@ func (p *PrepRealm) prepareEphemeralPolling(ctxPrep context.Context) {
 }
 
 func (p *PrepRealm) pushEphemeralPulse(ctx context.Context) bool {
-	pde := p.controlFeeder.CreateEphemeralPulsePacket(p.initialCensus)
+	pde := p.ephemeralFeeder.CreateEphemeralPulsePacket(p.initialCensus)
 	ok, pn := p._applyPulseData(pde, false)
 
 	if ok {
@@ -264,7 +252,7 @@ func (p *PrepRealm) pushEphemeralPulse(ctx context.Context) bool {
 	return false
 }
 
-func (p *PrepRealm) checkEphemeralStart(context.Context) bool {
+func (p *PrepRealm) checkEphemeralStart(ctx context.Context) bool {
 	jc, _ := p.candidateFeeder.PickNextJoinCandidate()
 	//inslogger.FromContext(ctx).Debug("polling candidate: ", jc)
 	return jc != nil
@@ -324,12 +312,17 @@ func (p *PrepRealm) _applyPulseData(pdp proofs.OriginalPulsarPacket, fromPulsar 
 	switch {
 	case p.originalPulse != nil:
 		return false, p.pulseData.PulseNumber // got something already
-	case fromPulsar || !p.ephemeralMode.IsEnabled():
+	case fromPulsar || p.ephemeralFeeder == nil:
 		// Pulsars are NEVER ALLOWED to send ephemeral pulses
 		valid = pd.IsValidPulsarData()
 	default:
 		valid = pd.IsValidPulseData()
 	}
+
+	// TODO redirect ephemeral pulses
+	//if p.ephemeralMode.IsEnabled() && !pd.IsFromEphemeral() {
+	//}
+
 	if !valid {
 		return false, pulse.Unknown
 	}

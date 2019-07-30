@@ -113,17 +113,17 @@ func (p *RoundStateMachineWorker) OnFullRoundStarting() {
 }
 
 func (p *RoundStateMachineWorker) PreparePulseChange(report api.UpstreamReport, ch chan<- api.UpstreamState) {
-	p.forceState(RoundPulsePreparing)
+	p.applyState(RoundPulsePreparing)
 	p.UpstreamController.PreparePulseChange(report, ch)
 }
 
 func (p *RoundStateMachineWorker) CommitPulseChange(report api.UpstreamReport, pd pulse.Data, activeCensus census.Operational) {
-	p.forceState(RoundPulseCommitted)
+	p.applyState(RoundPulseCommitted)
 	p.UpstreamController.CommitPulseChange(report, pd, activeCensus)
 }
 
 func (p *RoundStateMachineWorker) CommitPulseChangeByStateless(report api.UpstreamReport, pd pulse.Data, activeCensus census.Operational) {
-	p.forceState(RoundPulsePreparing)
+	p.applyState(RoundPulsePreparing)
 	p.applyState(RoundPulseCommitted)
 	p.UpstreamController.CommitPulseChange(report, pd, activeCensus)
 }
@@ -134,7 +134,7 @@ func (p *RoundStateMachineWorker) CancelPulseChange() {
 }
 
 func (p *RoundStateMachineWorker) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
-	p.forceState(RoundConsensusFinished)
+	p.applyState(RoundConsensusFinished)
 	p.UpstreamController.ConsensusFinished(report, expectedCensus)
 }
 
@@ -142,6 +142,18 @@ func (p *RoundStateMachineWorker) SetTimeout(deadline time.Time) {
 	p.sync(func() {
 		p.timeout = time.After(time.Until(deadline))
 	})
+}
+
+func (p *RoundStateMachineWorker) OnRoundStopped(ctx context.Context) {
+	err := ctx.Err()
+	switch {
+	case err == nil:
+		p.applyState(RoundStopped)
+	case err == context.DeadlineExceeded:
+		p.applyState(RoundTimedOut)
+	default:
+		p.applyState(RoundAborted)
+	}
 }
 
 func (p *RoundStateMachineWorker) onUnexpectedPulse(pulse.Number) {
@@ -325,25 +337,46 @@ func (p *RoundStateMachineWorker) GetState() RoundState {
 	return RoundState(atomic.LoadUint32(&p.roundState))
 }
 
-func (p *RoundStateMachineWorker) forceState(newState RoundState) {
-	p.applyState(newState)
-}
+//func (p *RoundStateMachineWorker) forceState(newState RoundState) {
+//	p.applyState(newState)
+//}
 
 func (p *RoundStateMachineWorker) applyState(newState RoundState) {
 	for {
+		attention := false
+
 		curState := p.GetState()
-		switch {
+		switch { // normal transitions
 		case curState == newState:
-			return
-		case newState == curState+1:
-		case curState == RoundAwaitingPulse && newState <= RoundPulsePreparing:
+			return // no transition
+		case newState == curState+1 && curState <= RoundConsensusFinished:
+			break // next non-stopped step
+		case curState == RoundConsensusFinished && newState > RoundConsensusFinished:
+			break // stop
 		case curState == RoundPulsePreparing && newState == RoundPulseAccepted:
+			break // prepare was cancelled by caller
+		case curState > RoundConsensusFinished && newState > RoundConsensusFinished:
+			// first state is correct
+			return
+		//case curState < RoundConsensusFinished && newState == RoundConsensusFinished:
+		//	break // early finish
 		default:
-			// invalid transition attempt
-			inslogger.FromContext(p.ctx).Warnf("invalid state transition: current=%v new=%v", curState, newState)
-			//return
+			attention = true
+			switch { // transition from a state that require cancellation
+			case curState == RoundPulsePreparing:
+				p.UpstreamController.CancelPulseChange()
+			case curState < RoundConsensusFinished && newState > RoundConsensusFinished:
+				p.UpstreamController.ConsensusAborted()
+			}
 		}
 		if atomic.CompareAndSwapUint32(&p.roundState, uint32(curState), uint32(newState)) {
+			if attention {
+				if newState < curState {
+					inslogger.FromContext(p.ctx).Errorf("backward state transition: current=%v new=%v", curState, newState)
+				} else {
+					inslogger.FromContext(p.ctx).Warnf("fast-forward state transition: current=%v new=%v", curState, newState)
+				}
+			}
 			return
 		}
 	}

@@ -215,7 +215,6 @@ func initNodes(ctx context.Context, mode consensus.Mode, nodes GeneratedNodes, s
 		if err != nil {
 			return nil, err
 		}
-		controller.Prepare()
 
 		ns.staticProfiles[i] = adapters.NewStaticProfile(n, certificateManager.GetCertificate(), keyProcessor)
 	}

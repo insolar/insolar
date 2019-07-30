@@ -145,7 +145,7 @@ func (r *EmuPulsarNetPacket) GetPacketSignature() cryptkit.SignedDigest {
 }
 
 func (*EmuPulsarNetPacket) GetPacketType() phases.PacketType {
-	return phases.PacketPulse
+	return phases.PacketPulsarPulse
 }
 
 func (*EmuPulsarNetPacket) GetMemberPacket() transport.MemberPacketReader {
