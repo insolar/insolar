@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/record"
@@ -75,10 +76,10 @@ func TestRecordStorage_TruncateHead(t *testing.T) {
 		pulse := startPulseNumber + insolar.PulseNumber(idx)
 		ids[idx] = *insolar.NewID(pulse, []byte(testutils.RandomString()))
 
-		recordStore.Set(ctx, ids[idx], record.Material{JetID: *insolar.NewJetID(uint8(idx), nil)})
+		recordStore.Set(ctx, record.Material{JetID: *insolar.NewJetID(uint8(idx), nil), ID: ids[idx]})
 
 		for i := 0; i < 5; i++ {
-			recordStore.Set(ctx, ids[idx], record.Material{JetID: *insolar.NewJetID(uint8(i), nil)})
+			recordStore.Set(ctx, record.Material{JetID: *insolar.NewJetID(uint8(i), nil), ID: ids[idx]})
 		}
 
 		require.NoError(t, err)
@@ -147,31 +148,71 @@ func TestRecordStorage_Set(t *testing.T) {
 
 	ctx := inslogger.TestContext(t)
 
-	id := gen.ID()
-	rec := getMaterialRecord()
-
 	t.Run("saves correct record-value", func(t *testing.T) {
 		t.Parallel()
 
 		recordStorage := NewRecordMemory()
+		rec := getMaterialRecord()
+		rec.ID = gen.ID()
 
-		err := recordStorage.Set(ctx, id, rec)
+		err := recordStorage.SetAtomic(ctx, rec)
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(recordStorage.recsStor))
-		assert.Equal(t, rec, recordStorage.recsStor[id])
+		assert.Equal(t, rec, recordStorage.recsStor[rec.ID])
 	})
 
 	t.Run("returns override error when saving with the same id", func(t *testing.T) {
 		t.Parallel()
 
 		recordStorage := NewRecordMemory()
+		rec := getMaterialRecord()
+		rec.ID = gen.ID()
 
-		err := recordStorage.Set(ctx, id, rec)
+		err := recordStorage.SetAtomic(ctx, rec)
 		require.NoError(t, err)
 
-		err = recordStorage.Set(ctx, id, rec)
+		err = recordStorage.SetAtomic(ctx, rec)
 		require.Error(t, err)
 		assert.Equal(t, ErrOverride, err)
+	})
+
+	t.Run("saves multiple records", func(t *testing.T) {
+		t.Parallel()
+
+		recordStorage := NewRecordMemory()
+		var recs []record.Material
+		fuzz.New().NumElements(10, 20).NilChance(0).Funcs(func(r *record.Material, c fuzz.Continue) {
+			r.ID = gen.ID()
+		}).Fuzz(&recs)
+		err := recordStorage.SetAtomic(ctx, recs...)
+		require.NoError(t, err)
+
+		for _, r := range recs {
+			rec, err := recordStorage.ForID(ctx, r.ID)
+			require.NoError(t, err)
+			require.Equal(t, rec, r)
+		}
+	})
+
+	t.Run("override on single record saves none", func(t *testing.T) {
+		t.Parallel()
+
+		recordStorage := NewRecordMemory()
+		var recs []record.Material
+		fuzz.New().NumElements(10, 20).NilChance(0).Funcs(func(r *record.Material, c fuzz.Continue) {
+			r.ID = gen.ID()
+		}).Fuzz(&recs)
+
+		err := recordStorage.SetAtomic(ctx, recs[0])
+		require.NoError(t, err)
+
+		err = recordStorage.SetAtomic(ctx, recs...)
+		require.Equal(t, ErrOverride, err)
+
+		for _, r := range recs[1:] {
+			_, err := recordStorage.ForID(ctx, r.ID)
+			require.Equal(t, ErrNotFound, err)
+		}
 	})
 }
 
@@ -194,14 +235,14 @@ func TestRecordStorage_Delete(t *testing.T) {
 		for i := int32(0); i < countFirstPulse; i++ {
 			randID := gen.ID()
 			id := insolar.NewID(firstPulse, randID.Hash())
-			err := recordStorage.Set(ctx, *id, record.Material{})
+			err := recordStorage.SetAtomic(ctx, record.Material{ID: *id})
 			require.NoError(t, err)
 		}
 
 		for i := int32(0); i < countSecondPulse; i++ {
 			randID := gen.ID()
 			id := insolar.NewID(secondPulse, randID.Hash())
-			err := recordStorage.Set(ctx, *id, record.Material{})
+			err := recordStorage.SetAtomic(ctx, record.Material{ID: *id})
 			require.NoError(t, err)
 		}
 		assert.Equal(t, countFirstPulse+countSecondPulse, int32(len(recordStorage.recsStor)))
@@ -228,10 +269,10 @@ func TestRecordStorage_ForPulse(t *testing.T) {
 		h := sha256.New()
 		hash := record.HashVirtual(h, rec.Virtual)
 
-		id := insolar.NewID(searchPN, hash)
+		rec.ID = *insolar.NewID(searchPN, hash)
 
-		searchRecs[*id] = struct{}{}
-		err := recordMemory.Set(ctx, *id, rec)
+		searchRecs[rec.ID] = struct{}{}
+		err := recordMemory.SetAtomic(ctx, rec)
 		require.NoError(t, err)
 	}
 
@@ -239,8 +280,8 @@ func TestRecordStorage_ForPulse(t *testing.T) {
 		rec := getMaterialRecord()
 
 		randID := gen.ID()
-		rID := insolar.NewID(gen.PulseNumber(), randID.Hash())
-		err := recordMemory.Set(ctx, *rID, rec)
+		rec.ID = *insolar.NewID(gen.PulseNumber(), randID.Hash())
+		err := recordMemory.SetAtomic(ctx, rec)
 		require.NoError(t, err)
 	}
 

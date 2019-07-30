@@ -43,8 +43,8 @@ type SetResult struct {
 		filament executor.FilamentCalculator
 		sender   bus.Sender
 		locker   object.IndexLocker
-		records  object.RecordModifier
-		indexes  object.IndexStorage
+		records  object.AtomicRecordModifier
+		indexes  object.MemoryIndexStorage
 		pcs      insolar.PlatformCryptographyScheme
 	}
 }
@@ -68,8 +68,8 @@ func (p *SetResult) Dep(
 	s bus.Sender,
 	l object.IndexLocker,
 	f executor.FilamentCalculator,
-	r object.RecordModifier,
-	i object.IndexStorage,
+	r object.AtomicRecordModifier,
+	i object.MemoryIndexStorage,
 	pcs insolar.PlatformCryptographyScheme,
 ) {
 	p.dep.writer = w
@@ -112,7 +112,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		p.dep.sender.Reply(ctx, p.message, msg)
 		return nil
 	}
-	if index.Lifeline.PendingPointer != nil && resultID.Pulse() < index.Lifeline.PendingPointer.Pulse() {
+	if index.Lifeline.LatestRequest != nil && resultID.Pulse() < index.Lifeline.LatestRequest.Pulse() {
 		return errors.New("result from the past")
 	}
 
@@ -165,34 +165,32 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		}
 		defer done()
 
-		// Save request record to storage.
-		{
-			virtual := record.Wrap(&p.result)
-			material := record.Material{Virtual: virtual, JetID: p.jetID}
-			err := p.dep.records.Set(ctx, resultID, material)
-			if err != nil {
-				return errors.Wrap(err, "failed to save a result record")
-			}
+		// Create result record
+		Result := record.Material{
+			Virtual: record.Wrap(&p.result),
+			ID:      resultID,
+			JetID:   p.jetID,
 		}
 
-		var filamentID insolar.ID
-		// Save filament record to storage.
+		// Create filament record.
+		var Filament record.Material
 		{
 			virtual := record.Wrap(&record.PendingFilament{
 				RecordID:       resultID,
-				PreviousRecord: index.Lifeline.PendingPointer,
+				PreviousRecord: index.Lifeline.LatestRequest,
 			})
 			hash := record.HashVirtual(p.dep.pcs.ReferenceHasher(), virtual)
 			id := *insolar.NewID(resultID.Pulse(), hash)
-			material := record.Material{Virtual: virtual, JetID: p.jetID}
-			err := p.dep.records.Set(ctx, id, material)
-			if err != nil {
-				return errors.Wrap(err, "failed to save filament record")
+			material := record.Material{
+				Virtual: virtual,
+				ID:      id,
+				JetID:   p.jetID,
 			}
-			filamentID = id
+			Filament = material
 		}
 
-		// Save side effect.
+		toSave := []record.Material{Result, Filament}
+		// Create side effect record.
 		{
 			if p.sideEffect != nil {
 				virtual := record.Wrap(p.sideEffect)
@@ -200,30 +198,30 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 				id := *insolar.NewID(resultID.Pulse(), hash)
 				material := record.Material{
 					Virtual: virtual,
+					ID:      id,
 					JetID:   p.jetID,
 				}
-				err := p.dep.records.Set(ctx, id, material)
-				if err != nil {
-					return errors.Wrap(err, "failed to save filament record")
-				}
 
+				toSave = append(toSave, material)
 				index.Lifeline.LatestState = &id
 				index.Lifeline.StateID = p.sideEffect.ID()
-				index.Lifeline.LatestUpdate = flow.Pulse(ctx)
 				if activate, ok := p.sideEffect.(*record.Activate); ok {
 					index.Lifeline.Parent = activate.Parent
 				}
 			}
 		}
 
+		// Save all records.
+		err = p.dep.records.SetAtomic(ctx, toSave...)
+		if err != nil {
+			return errors.Wrap(err, "failed to save records")
+		}
+
 		// Save updated index.
 		index.LifelineLastUsed = flow.Pulse(ctx)
-		index.Lifeline.PendingPointer = &filamentID
+		index.Lifeline.LatestRequest = &Filament.ID
 		index.Lifeline.EarliestOpenRequest = earliestPending
-		err = p.dep.indexes.SetIndex(ctx, resultID.Pulse(), index)
-		if err != nil {
-			return errors.Wrap(err, "failed to update index")
-		}
+		p.dep.indexes.Set(ctx, resultID.Pulse(), index)
 		return nil
 	}()
 	if err != nil {
