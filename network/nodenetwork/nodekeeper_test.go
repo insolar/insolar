@@ -70,21 +70,21 @@ import (
 
 func TestNewNodeNetwork(t *testing.T) {
 	cfg := configuration.Transport{Address: "invalid"}
-	certMock := testutils.CertificateMock{}
-	certMock.GetRoleFunc = func() insolar.StaticRole { return insolar.StaticRoleUnknown }
-	certMock.GetPublicKeyFunc = func() crypto.PublicKey { return nil }
-	certMock.GetNodeRefFunc = func() *insolar.Reference { return &insolar.Reference{0} }
-	certMock.GetDiscoveryNodesFunc = func() []insolar.DiscoveryNode { return nil }
-	_, err := NewNodeNetwork(cfg, &certMock)
+	certMock := testutils.NewCertificateMock(t)
+	certMock.GetRoleMock.Set(func() insolar.StaticRole { return insolar.StaticRoleUnknown })
+	certMock.GetPublicKeyMock.Set(func() crypto.PublicKey { return nil })
+	certMock.GetNodeRefMock.Set(func() *insolar.Reference { return &insolar.Reference{0} })
+	certMock.GetDiscoveryNodesMock.Set(func() []insolar.DiscoveryNode { return nil })
+	_, err := NewNodeNetwork(cfg, certMock)
 	assert.Error(t, err)
 	cfg.Address = "127.0.0.1:3355"
-	_, err = NewNodeNetwork(cfg, &certMock)
+	_, err = NewNodeNetwork(cfg, certMock)
 	assert.NoError(t, err)
 }
 
 func newNodeKeeper(t *testing.T, service insolar.CryptographyService) network.NodeKeeper {
 	cfg := configuration.Transport{Address: "127.0.0.1:3355"}
-	certMock := &testutils.CertificateMock{}
+	certMock := testutils.NewCertificateMock(t)
 	keyProcessor := platformpolicy.NewKeyProcessor()
 	secret, err := keyProcessor.GeneratePrivateKey()
 	require.NoError(t, err)
@@ -93,10 +93,10 @@ func newNodeKeeper(t *testing.T, service insolar.CryptographyService) network.No
 		service = cryptography.NewKeyBoundCryptographyService(secret)
 	}
 	require.NoError(t, err)
-	certMock.GetRoleFunc = func() insolar.StaticRole { return insolar.StaticRoleUnknown }
-	certMock.GetPublicKeyFunc = func() crypto.PublicKey { return pk }
-	certMock.GetNodeRefFunc = func() *insolar.Reference { return &insolar.Reference{137} }
-	certMock.GetDiscoveryNodesFunc = func() []insolar.DiscoveryNode { return nil }
+	certMock.GetRoleMock.Set(func() insolar.StaticRole { return insolar.StaticRoleUnknown })
+	certMock.GetPublicKeyMock.Set(func() crypto.PublicKey { return pk })
+	certMock.GetNodeRefMock.Set(func() *insolar.Reference { return &insolar.Reference{137} })
+	certMock.GetDiscoveryNodesMock.Set(func() []insolar.DiscoveryNode { return nil })
 	nw, err := NewNodeNetwork(cfg, certMock)
 	require.NoError(t, err)
 	nw.(*nodekeeper).Cryptography = service
@@ -182,9 +182,9 @@ func TestNodekeeper_GracefulStop(t *testing.T) {
 	nk := newNodeKeeper(t, nil)
 	nodeLeaveTriggered := false
 	handler := testutils.NewTerminationHandlerMock(t)
-	handler.OnLeaveApprovedFunc = func(context.Context) {
+	handler.OnLeaveApprovedMock.Set(func(context.Context) {
 		nodeLeaveTriggered = true
-	}
+	})
 	nk.(*nodekeeper).TerminationHandler = handler
 	nodes := []insolar.NetworkNode{
 		nk.GetOrigin(),
@@ -213,7 +213,7 @@ func TestNodekeeper_GetOriginJoinClaim(t *testing.T) {
 
 func TestNodekeeper_GetOriginJoinClaimError(t *testing.T) {
 	service := testutils.NewCryptographyServiceMock(t)
-	service.SignFunc = func(p []byte) (*insolar.Signature, error) { return nil, errors.New("sign error") }
+	service.SignMock.Set(func(p []byte) (*insolar.Signature, error) { return nil, errors.New("sign error") })
 	nk := newNodeKeeper(t, service)
 	_, err := nk.GetOriginJoinClaim()
 	assert.Error(t, err)
@@ -221,8 +221,8 @@ func TestNodekeeper_GetOriginJoinClaimError(t *testing.T) {
 
 func TestNodekeeper_GetOriginAnnounceClaim(t *testing.T) {
 	bm := packets.NewBitSetMapperMock(t)
-	bm.RefToIndexFunc = func(insolar.Reference) (r int, r1 error) { return 0, nil }
-	bm.LengthFunc = func() int { return 2 }
+	bm.RefToIndexMock.Set(func(insolar.Reference) (r int, r1 error) { return 0, nil })
+	bm.LengthMock.Set(func() int { return 2 })
 	nk := newNodeKeeper(t, nil)
 	cloudHash := make([]byte, packets.HashLength)
 	claim, err := nk.GetOriginAnnounceClaim(bm)
@@ -249,8 +249,8 @@ func TestNodekeeper_GetOriginAnnounceClaim(t *testing.T) {
 
 func TestNodekeeper_GetOriginAnnounceClaimError(t *testing.T) {
 	bm := packets.NewBitSetMapperMock(t)
-	bm.RefToIndexFunc = func(insolar.Reference) (r int, r1 error) { return 0, errors.New("map error") }
-	bm.LengthFunc = func() int { return 2 }
+	bm.RefToIndexMock.Set(func(insolar.Reference) (r int, r1 error) { return 0, errors.New("map error") })
+	bm.LengthMock.Set(func() int { return 2 })
 	nk := newNodeKeeper(t, nil)
 	_, err := nk.GetOriginAnnounceClaim(bm)
 	assert.Error(t, err)

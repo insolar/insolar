@@ -32,7 +32,7 @@ func (s *Signature) Bytes() []byte {
 	return s.raw
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.CryptographyService -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.CryptographyService -o ../testutils -s _mock.go -g
 type CryptographyService interface {
 	GetPublicKey() (crypto.PublicKey, error)
 	Sign([]byte) (*Signature, error)

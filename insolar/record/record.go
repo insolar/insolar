@@ -137,7 +137,7 @@ func (Genesis) GetIsPrototype() bool {
 	return false
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/record.Request -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar/record.Request -o ./ -s _mock.go -g
 
 // Request is a common request interface.
 type Request interface {

@@ -161,9 +161,9 @@ func TestJetSplitter(t *testing.T) {
 		)
 
 		// no filter for ID
-		jetCalc.MineForPulseFunc = func(ctx context.Context, pn insolar.PulseNumber) []insolar.JetID {
+		jetCalc.MineForPulseMock.Set(func(ctx context.Context, pn insolar.PulseNumber) []insolar.JetID {
 			return jetStore.All(ctx, pn)
-		}
+		})
 
 		var initialPulse insolar.PulseNumber = 60000
 		initialJets := []insolar.JetID{jet0, jet10, jet11}
@@ -181,13 +181,13 @@ func TestJetSplitter(t *testing.T) {
 			// jets state before possible split
 			pulseStartedWithJets := jetStore.All(ctx, ended)
 
-			collectionAccessor.ForPulseFunc = func(_ context.Context, jetID insolar.JetID, pn insolar.PulseNumber) []record.Material {
+			collectionAccessor.ForPulseMock.Set(func(_ context.Context, jetID insolar.JetID, pn insolar.PulseNumber) []record.Material {
 				jConf, ok := jetsConfig[jetID]
 				if !ok {
 					return nil
 				}
 				return make([]record.Material, jConf.records)
-			}
+			})
 
 			gotJets, err := splitter.Do(ctx, ended, newpulse)
 			require.NoError(t, err, "splitter.Do performed")

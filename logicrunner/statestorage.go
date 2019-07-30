@@ -34,7 +34,7 @@ type ObjectState struct {
 	ExecutionBroker ExecutionBrokerI
 }
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner.StateStorage -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/logicrunner.StateStorage -o ./ -s _mock.go -g
 type StateStorage interface {
 	sync.Locker
 

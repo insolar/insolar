@@ -13,7 +13,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.RequestChecker -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.RequestChecker -o ./ -s _mock.go -g
 
 type RequestChecker interface {
 	CheckRequest(ctx context.Context, requestID insolar.ID, request record.Request) error

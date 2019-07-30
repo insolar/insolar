@@ -224,10 +224,11 @@ func TestNodeLeaveAtETA(t *testing.T) {
 	s.preInitNode(testNode)
 
 	s.InitNode(testNode)
-	testNode.terminationHandler.OnLeaveApprovedFinished()
-	testNode.terminationHandler.OnLeaveApprovedFunc = func(p context.Context) {
+	leaveApprovedCalls := 0
+	testNode.terminationHandler.OnLeaveApprovedMock.Set(func(p context.Context) {
+		leaveApprovedCalls++
 		s.StopNode(testNode)
-	}
+	})
 	s.StartNode(testNode)
 	defer func(s *consensusSuite) {
 		s.StopNode(testNode)
@@ -255,7 +256,7 @@ func TestNodeLeaveAtETA(t *testing.T) {
 	s.waitForConsensus(1)
 	s.AssertActiveNodesCountDelta(1)
 	s.AssertWorkingNodesCountDelta(0)
-	require.True(t, testNode.terminationHandler.OnLeaveApprovedFinished())
+	require.Equal(t, 1, leaveApprovedCalls)
 
 	s.waitForConsensus(1)
 	s.AssertActiveNodesCountDelta(0)
