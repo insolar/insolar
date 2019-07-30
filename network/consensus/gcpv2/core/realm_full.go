@@ -599,6 +599,9 @@ func (r *FullRealm) notifyConsensusFinished(newSelf profiles.ActiveNode, expecte
 		MemberMode:  newSelf.GetOpMode(),
 	}
 	r.stateMachine.ConsensusFinished(report, expectedCensus)
+	if r.ephemeralFeeder != nil {
+		r.ephemeralFeeder.ConsensusFinished(report, r.roundStartedAt, expectedCensus)
+	}
 }
 
 func (r *FullRealm) GetProfileFactory() profiles.Factory {

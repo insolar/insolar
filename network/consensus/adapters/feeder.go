@@ -316,7 +316,7 @@ func (f *EphemeralControlFeeder) CreateEphemeralPulsePacket(census census.Operat
 	if pd.IsEmpty() {
 		pd = *pulse.NewFirstEphemeralData()
 	}
-
+	pd = *pd.CreateNextEphemeralPulse()
 	data := CreateEphemeralPulseData(pd)
 
 	return NewPulsePacketParser(pd, data)
