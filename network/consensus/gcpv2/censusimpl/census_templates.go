@@ -102,6 +102,9 @@ type PrimingCensusTemplate struct {
 	CensusTemplate
 }
 
+func (c *PrimingCensusTemplate) onMadeActive() {
+}
+
 func (c *PrimingCensusTemplate) IsActive() bool {
 	return c.chronicles.GetActiveCensus() == c
 }
@@ -234,8 +237,13 @@ var _ census.Active = &ActiveCensusTemplate{}
 
 type ActiveCensusTemplate struct {
 	CensusTemplate
-	gsh proofs.GlobulaStateHash
-	csh proofs.CloudStateHash
+	activeRef *ActiveCensusTemplate // hack for stringer
+	gsh       proofs.GlobulaStateHash
+	csh       proofs.CloudStateHash
+}
+
+func (c *ActiveCensusTemplate) onMadeActive() {
+	c.activeRef = c
 }
 
 func (c *ActiveCensusTemplate) IsActive() bool {
@@ -268,7 +276,7 @@ func (c *ActiveCensusTemplate) GetCloudStateHash() proofs.CloudStateHash {
 
 func (c ActiveCensusTemplate) String() string {
 	mode := "active"
-	if !c.IsActive() {
+	if c.activeRef != c.chronicles.GetActiveCensus() {
 		mode = "ex-active"
 	}
 	return fmt.Sprintf("%s %s gsh:%v csh:%v", mode, c.CensusTemplate.String(), c.gsh, c.csh)
