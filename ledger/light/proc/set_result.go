@@ -167,9 +167,10 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 
 		// Create result record
 		Result := record.Material{
-			Virtual: record.Wrap(&p.result),
-			ID:      resultID,
-			JetID:   p.jetID,
+			Virtual:  record.Wrap(&p.result),
+			ID:       resultID,
+			ObjectID: objectID,
+			JetID:    p.jetID,
 		}
 
 		// Create filament record.

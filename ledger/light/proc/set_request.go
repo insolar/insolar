@@ -222,9 +222,10 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 
 	// Create request record.
 	Request := record.Material{
-		Virtual: record.Wrap(p.request),
-		ID:      p.requestID,
-		JetID:   p.jetID,
+		Virtual:  record.Wrap(p.request),
+		ID:       p.requestID,
+		ObjectID: objectID,
+		JetID:    p.jetID,
 	}
 
 	// Create filament record.
