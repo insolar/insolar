@@ -18,6 +18,10 @@ package proc
 
 type Dependencies struct {
 	PassState    func(*PassState)
-	GetCode      func(*GetCode)
+	SendCode     func(*SendCode)
 	SendRequests func(*SendRequests)
+	SendRequest  func(*SendRequest)
+	Replication  func(*Replication)
+	SendJet      func(*SendJet)
+	SendIndex    func(*SendIndex)
 }

@@ -51,7 +51,7 @@ type MachineLogicExecutor interface {
 		ctx context.Context, callContext *LogicCallContext,
 		code Reference, name string, args Arguments,
 	) (
-		objectState []byte, err error,
+		objectState []byte, ctorErr string, sysErr error,
 	)
 }
 
@@ -61,6 +61,7 @@ type MachineLogicExecutor interface {
 type LogicRunner interface {
 	LRI()
 	OnPulse(context.Context, Pulse) error
+	AddUnwantedResponse(ctx context.Context, msg Message) error
 }
 
 // CallMode indicates whether we execute or validate
@@ -86,19 +87,19 @@ func (m CallMode) String() string {
 // that is required to implement foundation functions. This struct
 // shouldn't be used in core components.
 type LogicCallContext struct {
-	Mode            CallMode   // either "execution" or "validation"
+	Mode CallMode // either "execution" or "validation"
 
-	Request         *Reference // reference of incoming request record
+	Request *Reference // reference of incoming request record
 
-	Callee          *Reference // Contract that is called
-	Parent          *Reference // Parent of the callee
-	Prototype       *Reference // Prototype (base class) of the callee
-	Code            *Reference // Code reference of the callee
+	Callee    *Reference // Contract that is called
+	Parent    *Reference // Parent of the callee
+	Prototype *Reference // Prototype (base class) of the callee
+	Code      *Reference // Code reference of the callee
 
 	Caller          *Reference // Contract that made the call
 	CallerPrototype *Reference // Prototype (base class) of the caller
 
-	TraceID         string     // trace mark for Jaegar and friends
+	TraceID string // trace mark for Jaegar and friends
 }
 
 // ContractConstructor is a typedef for wrapper contract header
@@ -108,7 +109,7 @@ type ContractMethod func([]byte, []byte) ([]byte, []byte, error)
 type ContractMethods map[string]ContractMethod
 
 // ContractConstructor is a typedef of typical contract constructor
-type ContractConstructor func([]byte) ([]byte, error)
+type ContractConstructor func([]byte) (state []byte, ctorErr error, sysErr error)
 
 // ContractConstructors maps name to contract constructor
 type ContractConstructors map[string]ContractConstructor
@@ -120,4 +121,17 @@ type ContractWrapper struct {
 
 	Methods      ContractMethods
 	Constructors ContractConstructors
+}
+
+// PendingState is a state of execution for each object
+type PendingState int
+
+const (
+	PendingUnknown PendingState = iota // PendingUnknown signalizes that we don't know about execution state
+	NotPending                         // NotPending means that we know that this task is not executed by another VE
+	InPending                          // InPending means that we know that method on object is executed by another VE
+)
+
+func (s PendingState) Equal(other PendingState) bool {
+	return s == other
 }

@@ -20,22 +20,22 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/noderecord"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 // NodeDomain holds node records.
 type NodeDomain struct {
 	foundation.BaseContract
 
-	NodeIndexPublicKey map[string]string
+	NodeIndexPublicKey foundation.StableMap
 }
 
 // NewNodeDomain create new NodeDomain.
 func NewNodeDomain() (*NodeDomain, error) {
 	return &NodeDomain{
-		NodeIndexPublicKey: make(map[string]string),
+		NodeIndexPublicKey: make(foundation.StableMap),
 	}, nil
 }
 
@@ -50,7 +50,7 @@ func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error
 	if err != nil {
 		return "", fmt.Errorf("failed to get root member reference: %s", err.Error())
 	}
-	if *nd.GetContext().Caller != *root {
+	if *nd.GetContext().Caller != root {
 		return "", fmt.Errorf("only root member can register node")
 	}
 
@@ -70,7 +70,7 @@ func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error
 func (nd *NodeDomain) GetNodeRefByPublicKey(publicKey string) (string, error) {
 	nodeRef, ok := nd.NodeIndexPublicKey[publicKey]
 	if !ok {
-		return nodeRef, fmt.Errorf("network node not found by public key: %s", publicKey)
+		return "", fmt.Errorf("network node not found by public key: %s", publicKey)
 	}
 	return nodeRef, nil
 }

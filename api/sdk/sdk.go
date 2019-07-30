@@ -176,7 +176,7 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 	}
 	publicKeyStr := string(publicKey)
 
-	userConfig, err := requester.CreateUserConfig(sdk.rootMember.Caller, privateKeyStr, publicKeyStr)
+	userConfig, err := requester.CreateUserConfig("", privateKeyStr, publicKeyStr)
 	if err != nil {
 		return nil, "", errors.Wrap(err, "failed to create user config for request")
 	}
@@ -230,7 +230,7 @@ func (sdk *SDK) Transfer(amount string, from *Member, to *Member) (string, error
 	}
 	response, err := sdk.DoRequest(
 		userConfig,
-		"wallet.transfer",
+		"member.transfer",
 		map[string]interface{}{"amount": amount, "toMemberReference": to.Reference},
 	)
 	if err != nil {
@@ -255,7 +255,7 @@ func (sdk *SDK) GetBalance(m *Member) (*big.Int, error) {
 		return nil, errors.Wrap(err, "request was failed ")
 	}
 
-	result, ok := new(big.Int).SetString(response.ContractResult.(string), 10)
+	result, ok := new(big.Int).SetString(response.ContractResult.(map[string]interface{})["balance"].(string), 10)
 	if !ok {
 		return nil, errors.Errorf("can't parse returned balance")
 	}

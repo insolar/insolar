@@ -51,16 +51,31 @@
 package adapters
 
 import (
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/common"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	census2 "github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/gcpv2/censusimpl"
 )
 
-func NewChronicles(pop census.ManyNodePopulation, pf common.NodeProfileFactory, vc census.VersionedRegistries) census.ConsensusChronicles {
-	chronicles := census.NewLocalChronicles()
-	census.NewPrimingCensus(&pop, pf, vc).SetAsActiveTo(chronicles)
-	return chronicles
+func NewChronicles(pf profiles.Factory) censusimpl.LocalConsensusChronicles {
+	return censusimpl.NewLocalChronicles(pf)
 }
 
-func NewPopulation(localNode common.NodeIntroProfile, nodes []common.NodeIntroProfile) census.ManyNodePopulation {
-	return census.NewManyNodePopulation(localNode, nodes)
+func NewCensusForJoiner(
+	localNode profiles.StaticProfile,
+	vc census2.VersionedRegistries,
+	vf cryptkit.SignatureVerifierFactory,
+) *censusimpl.PrimingCensusTemplate {
+
+	return censusimpl.NewPrimingCensusForJoiner(localNode, vc, vf)
+}
+
+func NewCensus(
+	localNode profiles.StaticProfile,
+	nodes []profiles.StaticProfile,
+	vc census2.VersionedRegistries,
+	vf cryptkit.SignatureVerifierFactory,
+) *censusimpl.PrimingCensusTemplate {
+
+	return censusimpl.NewPrimingCensus(nodes, localNode, vc, vf)
 }

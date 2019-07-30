@@ -56,11 +56,9 @@ import (
 	"sync/atomic"
 
 	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
@@ -102,6 +100,7 @@ type hostNetwork struct {
 	started           uint32
 	transport         transport.StreamTransport
 	sequenceGenerator sequence.Generator
+	muHandlers        sync.RWMutex
 	handlers          map[types.PacketType]network.RequestHandler
 	futureManager     future.Manager
 	responseHandler   future.PacketHandler
@@ -111,7 +110,12 @@ type hostNetwork struct {
 	origin   *host.Host
 }
 
-func (hn *hostNetwork) Init(ctx context.Context) error {
+// Start listening to network requests, should be started in goroutine.
+func (hn *hostNetwork) Start(ctx context.Context) error {
+	if !atomic.CompareAndSwapUint32(&hn.started, 0, 1) {
+		inslogger.FromContext(ctx).Warn("HostNetwork component already started")
+		return nil
+	}
 
 	handler := NewStreamHandler(hn.handleRequest, hn.responseHandler)
 
@@ -122,15 +126,6 @@ func (hn *hostNetwork) Init(ctx context.Context) error {
 	}
 
 	hn.pool = pool.NewConnectionPool(hn.transport)
-	return err
-}
-
-// Start listening to network requests, should be started in goroutine.
-func (hn *hostNetwork) Start(ctx context.Context) error {
-	if !atomic.CompareAndSwapUint32(&hn.started, 0, 1) {
-		inslogger.FromContext(ctx).Warn("HostNetwork component already started")
-		return nil
-	}
 
 	hn.muOrigin.Lock()
 	defer hn.muOrigin.Unlock()
@@ -178,7 +173,11 @@ func (hn *hostNetwork) PublicAddress() string {
 func (hn *hostNetwork) handleRequest(ctx context.Context, p *packet.ReceivedPacket) {
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("Got %s request from host %s; RequestID = %d", p.GetType(), p.Sender, p.RequestID)
+
+	hn.muHandlers.RLock()
 	handler, exist := hn.handlers[p.GetType()]
+	hn.muHandlers.RUnlock()
+
 	if !exist {
 		logger.Errorf("No handler set for packet type %s from node %s", p.GetType(), p.Sender.NodeID)
 		ep := hn.BuildResponse(ctx, p, &packet.ErrorResponse{Error: "UNKNOWN RPC ENDPOINT"}).(*packet.Packet)
@@ -188,13 +187,6 @@ func (hn *hostNetwork) handleRequest(ctx context.Context, p *packet.ReceivedPack
 		}
 		return
 	}
-	ctx, span := instracer.StartSpan(ctx, "hostTransport.processMessage")
-	span.AddAttributes(
-		trace.StringAttribute("msg receiver", p.Receiver.Address.String()),
-		trace.StringAttribute("msg trace", p.TraceID),
-		trace.StringAttribute("msg type", p.GetType().String()),
-	)
-	defer span.End()
 	response, err := handler(ctx, p)
 	if err != nil {
 		logger.Errorf("Error handling request %s from node %s: %s", p.GetType(), p.Sender.NodeID, err)
@@ -238,6 +230,9 @@ func (hn *hostNetwork) SendRequestToHost(ctx context.Context, packetType types.P
 
 // RegisterPacketHandler register a handler function to process incoming request packets of a specific type.
 func (hn *hostNetwork) RegisterPacketHandler(t types.PacketType, handler network.RequestHandler) {
+	hn.muHandlers.Lock()
+	defer hn.muHandlers.Unlock()
+
 	_, exists := hn.handlers[t]
 	if exists {
 		log.Warnf("Multiple handlers for packet type %s are not supported! New handler will replace the old one!", t)

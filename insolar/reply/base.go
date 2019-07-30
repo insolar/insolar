@@ -40,8 +40,6 @@ const (
 	TypeGetCodeRedirect
 	// TypeGetObjectRedirect is a redirect reply for object-call
 	TypeGetObjectRedirect
-	// TypeGetChildrenRedirect is a redirect reply for children-call
-	TypeGetChildrenRedirect
 
 	// Logicrunner
 
@@ -70,16 +68,14 @@ const (
 	TypeJetMiss
 	// TypePendingRequests contains unclosed requests for an object.
 	TypePendingRequests
-	// TypePendingRequestID contains ID of unclosed request for an object.
-	TypePendingRequestID
 	// TypeJet contains jet.
 	TypeJet
-	// TypeRequest contains request.
-	TypeRequest
 	// TypeOpenRequestsOnHeavy returns open requests from a heavy
 	TypeOpenRequestsOnHeavy
 	// TypeHeavyError carries heavy record sync
 	TypeHeavyError
+	// TypeIDs is common reply for methods returning list of IDs.
+	TypeIDs
 )
 
 // ErrType is used to determine and compare reply errors.
@@ -96,6 +92,7 @@ const (
 	ErrNoPendingRequests
 	// ErrTooManyPendingRequests is returned when a limit of pending requests has been reached
 	ErrTooManyPendingRequests
+	FlowCancelled
 )
 
 func getEmptyReply(t insolar.ReplyType) (insolar.Reply, error) {
@@ -114,6 +111,8 @@ func getEmptyReply(t insolar.ReplyType) (insolar.Reply, error) {
 		return &Delegate{}, nil
 	case TypeID:
 		return &ID{}, nil
+	case TypeIDs:
+		return &IDs{}, nil
 	case TypeChildren:
 		return &Children{}, nil
 	case TypeError:
@@ -126,16 +125,12 @@ func getEmptyReply(t insolar.ReplyType) (insolar.Reply, error) {
 		return &ObjectIndex{}, nil
 	case TypeGetCodeRedirect:
 		return &GetCodeRedirectReply{}, nil
-	case TypeGetChildrenRedirect:
-		return &GetChildrenRedirectReply{}, nil
 	case TypeJetMiss:
 		return &JetMiss{}, nil
 	case TypePendingRequests:
 		return &HasPendingRequests{}, nil
 	case TypeJet:
 		return &Jet{}, nil
-	case TypeRequest:
-		return &Request{}, nil
 
 	default:
 		return nil, errors.Errorf("unimplemented reply type: '%d'", t)
@@ -189,14 +184,13 @@ func init() {
 	gob.Register(&Object{})
 	gob.Register(&Delegate{})
 	gob.Register(&ID{})
+	gob.Register(&IDs{})
 	gob.Register(&Children{})
 	gob.Register(&Error{})
 	gob.Register(&OK{})
 	gob.Register(&ObjectIndex{})
 	gob.Register(&GetCodeRedirectReply{})
-	gob.Register(&GetChildrenRedirectReply{})
 	gob.Register(&HeavyError{})
 	gob.Register(&JetMiss{})
 	gob.Register(&HasPendingRequests{})
-	gob.Register(&Request{})
 }

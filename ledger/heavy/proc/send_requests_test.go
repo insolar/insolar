@@ -82,10 +82,10 @@ func TestSendRequests_Proceed(t *testing.T) {
 	resetComponents()
 	t.Run("happy basic", func(t *testing.T) {
 		b := newFilamentBuilder(ctx, pcs, records)
-		rec1 := b.Append(insolar.FirstPulseNumber+1, record.IncomingRequest{Nonce: rand.Uint64()})
-		rec2 := b.Append(insolar.FirstPulseNumber+2, record.IncomingRequest{Nonce: rand.Uint64()})
-		rec3 := b.Append(insolar.FirstPulseNumber+4, record.IncomingRequest{Nonce: rand.Uint64()})
-		b.Append(insolar.FirstPulseNumber+5, record.IncomingRequest{Nonce: rand.Uint64()})
+		rec1 := b.Append(insolar.FirstPulseNumber+1, &record.IncomingRequest{Nonce: rand.Uint64()})
+		rec2 := b.Append(insolar.FirstPulseNumber+2, &record.IncomingRequest{Nonce: rand.Uint64()})
+		rec3 := b.Append(insolar.FirstPulseNumber+4, &record.IncomingRequest{Nonce: rand.Uint64()})
+		b.Append(insolar.FirstPulseNumber+5, &record.IncomingRequest{Nonce: rand.Uint64()})
 
 		msg := payload.GetFilament{
 			ObjectID:  gen.ID(),
@@ -119,12 +119,11 @@ func TestSendRequests_Proceed(t *testing.T) {
 
 		mc.Wait(10 * time.Minute)
 		mc.Finish()
-		_, _ = rec1, rec2
 	})
 }
 
 type filamentBuilder struct {
-	records   object.RecordModifier
+	records   object.AtomicRecordModifier
 	currentID insolar.ID
 	ctx       context.Context
 	pcs       insolar.PlatformCryptographyScheme
@@ -133,7 +132,7 @@ type filamentBuilder struct {
 func newFilamentBuilder(
 	ctx context.Context,
 	pcs insolar.PlatformCryptographyScheme,
-	records object.RecordModifier,
+	records object.AtomicRecordModifier,
 ) *filamentBuilder {
 	return &filamentBuilder{
 		ctx:     ctx,
@@ -156,9 +155,13 @@ func (b *filamentBuilder) append(pn insolar.PulseNumber, rec record.Record, pers
 		virtual := record.Wrap(rec)
 		hash := record.HashVirtual(b.pcs.ReferenceHasher(), virtual)
 		id := *insolar.NewID(pn, hash)
-		material := record.Material{Virtual: &virtual, JetID: insolar.ZeroJetID}
+		material := record.Material{
+			Virtual: virtual,
+			ID:      id,
+			JetID:   insolar.ZeroJetID,
+		}
 		if persist {
-			err := b.records.Set(b.ctx, id, material)
+			err := b.records.SetAtomic(b.ctx, material)
 			if err != nil {
 				panic(err)
 			}
@@ -173,12 +176,16 @@ func (b *filamentBuilder) append(pn insolar.PulseNumber, rec record.Record, pers
 			curr := b.currentID
 			rec.PreviousRecord = &curr
 		}
-		virtual := record.Wrap(rec)
+		virtual := record.Wrap(&rec)
 		hash := record.HashVirtual(b.pcs.ReferenceHasher(), virtual)
 		id := *insolar.NewID(pn, hash)
-		material := record.Material{Virtual: &virtual, JetID: insolar.ZeroJetID}
+		material := record.Material{
+			Virtual: virtual,
+			ID:      id,
+			JetID:   insolar.ZeroJetID,
+		}
 		if persist {
-			err := b.records.Set(b.ctx, id, material)
+			err := b.records.SetAtomic(b.ctx, material)
 			if err != nil {
 				panic(err)
 			}

@@ -22,18 +22,20 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
+	"go.opencensus.io/trace"
 )
 
 // LightReplicator is a base interface for a sync component
@@ -48,7 +50,7 @@ type LightReplicatorDefault struct {
 
 	jetCalculator   executor.JetCalculator
 	cleaner         Cleaner
-	msgBus          insolar.MessageBus
+	sender          bus.Sender
 	pulseCalculator pulse.Calculator
 
 	dropAccessor drop.Accessor
@@ -63,7 +65,7 @@ type LightReplicatorDefault struct {
 func NewReplicatorDefault(
 	jetCalculator executor.JetCalculator,
 	cleaner Cleaner,
-	msgBus insolar.MessageBus,
+	sender bus.Sender,
 	calculator pulse.Calculator,
 	dropAccessor drop.Accessor,
 	recsAccessor object.RecordCollectionAccessor,
@@ -73,7 +75,7 @@ func NewReplicatorDefault(
 	return &LightReplicatorDefault{
 		jetCalculator:   jetCalculator,
 		cleaner:         cleaner,
-		msgBus:          msgBus,
+		sender:          sender,
 		pulseCalculator: calculator,
 
 		dropAccessor: dropAccessor,
@@ -114,13 +116,20 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 		ctx, logger := inslogger.WithTraceField(ctx, utils.RandTraceID())
 		logger.Debugf("[Replicator][sync] pn received - %v", pn)
 
+		ctx, span := instracer.StartSpan(ctx, "LightReplicatorDefault.sync")
+		span.AddAttributes(
+			trace.Int64Attribute("pulse", int64(pn)),
+		)
+
 		allIndexes := lr.filterAndGroupIndexes(ctx, pn)
 		jets := lr.jetCalculator.MineForPulse(ctx, pn)
-		logger.Debugf("[Replicator][sync] founds %v jets", len(jets))
+		logger.Debugf("[Replicator][sync] founds %d jets", len(jets), ". Jets: ", insolar.JetIDCollection(jets).DebugString())
 
 		for _, jetID := range jets {
 			msg, err := lr.heavyPayload(ctx, pn, jetID, allIndexes[jetID])
 			if err != nil {
+				span.AddAttributes(trace.BoolAttribute("error", true))
+				span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
 				panic(
 					fmt.Sprintf(
 						"[Replicator][sync] Problems with gather data for a pulse - %v and jet - %v. err - %v",
@@ -132,33 +141,34 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 			}
 			err = lr.sendToHeavy(ctx, msg)
 			if err != nil {
+				span.AddAttributes(trace.BoolAttribute("error", true))
+				span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
+
 				logger.Errorf("[Replicator][sync]  Problems with sending msg to a heavy node", err)
 			} else {
-				logger.Debugf("[Replicator][sync]  Data has been sent to a heavy. pn - %v, jetID - %v", msg.PulseNum, msg.JetID.DebugString())
+				logger.Debugf("[Replicator][sync]  Data has been sent to a heavy. pn - %v, jetID - %v", msg.Pulse, msg.JetID.DebugString())
 			}
 		}
 
 		lr.cleaner.NotifyAboutPulse(ctx, pn)
+		span.End()
 	}
 }
 
-func (lr *LightReplicatorDefault) sendToHeavy(ctx context.Context, data insolar.Message) error {
-	rep, err := lr.msgBus.Send(ctx, data, nil)
+func (lr *LightReplicatorDefault) sendToHeavy(ctx context.Context, pl payload.Replication) error {
+	msg, err := payload.NewMessage(&pl)
 	if err != nil {
 		stats.Record(ctx,
 			statErrHeavyPayloadCount.M(1),
 		)
 		return err
 	}
-	if rep != nil {
-		err, ok := rep.(*reply.HeavyError)
-		if ok {
-			stats.Record(ctx,
-				statErrHeavyPayloadCount.M(1),
-			)
-			return err
-		}
-	}
+
+	inslogger.FromContext(ctx).Debug("send drop to heavy. pulse: ", pl.Pulse, ". jet: ", pl.JetID.DebugString())
+
+	_, done := lr.sender.SendRole(ctx, msg, insolar.DynamicRoleHeavyExecutor, *insolar.NewReference(insolar.ID(pl.JetID)))
+	done()
+
 	stats.Record(ctx,
 		statHeavyPayloadCount.M(1),
 	)
@@ -183,45 +193,19 @@ func (lr *LightReplicatorDefault) heavyPayload(
 	pn insolar.PulseNumber,
 	jetID insolar.JetID,
 	indexes []record.Index,
-) (*message.HeavyPayload, error) {
+) (payload.Replication, error) {
 	dr, err := lr.dropAccessor.ForPulse(ctx, jetID, pn)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch drop")
+		return payload.Replication{}, errors.Wrap(err, "failed to fetch drop")
 	}
 
 	records := lr.recsAccessor.ForPulse(ctx, jetID, pn)
 
-	return &message.HeavyPayload{
-		JetID:        jetID,
-		PulseNum:     pn,
-		IndexBuckets: convertIndexBuckets(ctx, indexes),
-		Drop:         drop.MustEncode(&dr),
-		Records:      convertRecords(ctx, records),
+	return payload.Replication{
+		JetID:   jetID,
+		Pulse:   pn,
+		Indexes: indexes,
+		Drop:    drop.MustEncode(&dr),
+		Records: records,
 	}, nil
-}
-
-func convertIndexBuckets(ctx context.Context, buckets []record.Index) [][]byte {
-	convertedBucks := make([][]byte, len(buckets))
-	for i, buck := range buckets {
-		buff, err := buck.Marshal()
-		if err != nil {
-			inslogger.FromContext(ctx).Errorf("problems with marshaling bucket - %v", err)
-			continue
-		}
-		convertedBucks[i] = buff
-	}
-
-	return convertedBucks
-}
-
-func convertRecords(ctx context.Context, records []record.Material) [][]byte {
-	res := make([][]byte, len(records))
-	for i, r := range records {
-		data, err := r.Marshal()
-		if err != nil {
-			inslogger.FromContext(ctx).Error("Can't serialize record", r)
-		}
-		res[i] = data
-	}
-	return res
 }

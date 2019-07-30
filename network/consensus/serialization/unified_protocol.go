@@ -53,10 +53,14 @@ package serialization
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 
-	"github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/packets"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 )
 
 const (
@@ -84,6 +88,9 @@ const (
 	flagIsBodyEncrypted   = Flag(1)
 
 	FlagHasPulsePacket = Flag(0)
+	FlagSelfIntro1     = Flag(1)
+	FlagSelfIntro2     = Flag(2)
+	FlagHasJoinerExt   = Flag(3)
 )
 
 const (
@@ -109,7 +116,10 @@ func (pt ProtocolType) NewBody() PacketBody {
 	return nil
 }
 
-var ErrNilBody = errors.New("body is nil")
+var (
+	ErrNilBody         = errors.New("body is nil")
+	ErrInvalidProtocol = errors.New("invalid protocol")
+)
 
 /*
 	ByteSize=16
@@ -135,19 +145,20 @@ func (h *Header) DeserializeFrom(_ DeserializeContext, reader io.Reader) error {
 	return read(reader, h)
 }
 
-func (h *Header) GetSourceID() common.ShortNodeID {
-	return common.ShortNodeID(h.SourceID)
+func (h *Header) GetSourceID() insolar.ShortNodeID {
+	return insolar.ShortNodeID(h.SourceID)
 }
 
-func (h *Header) GetPacketType() packets.PacketType {
-	return packets.PacketType(h.ProtocolAndPacketType) & packetTypeMask
+func (h *Header) GetPacketType() phases.PacketType {
+	return phases.PacketType(h.ProtocolAndPacketType) & packetTypeMask
 }
 
-func (h *Header) setPacketType(packetType packets.PacketType) {
+func (h *Header) setPacketType(packetType phases.PacketType) {
 	if packetType > packetTypeMax {
 		panic("invalid packet type")
 	}
 
+	h.ProtocolAndPacketType ^= h.ProtocolAndPacketType & packetTypeMask
 	h.ProtocolAndPacketType |= uint8(packetType)
 }
 
@@ -172,6 +183,7 @@ func (h *Header) setPayloadLength(payloadLength uint16) {
 		panic("invalid payload length")
 	}
 
+	h.HeaderAndPayloadLength ^= h.HeaderAndPayloadLength & payloadLengthMask
 	h.HeaderAndPayloadLength |= payloadLength
 }
 
@@ -248,16 +260,21 @@ func (h *Header) getFlagRangeInt(from, to uint8) uint8 {
 }
 
 type Packet struct {
-	Header      Header             `insolar-transport:"Protocol=0x01;Packet=0-4"` // ByteSize=16
-	PulseNumber common.PulseNumber `insolar-transport:"[30-31]=0"`                // [30-31] MUST ==0, ByteSize=4
+	Header      Header       `insolar-transport:"Protocol=0x01;Packet=0-4"` // ByteSize=16
+	PulseNumber pulse.Number `insolar-transport:"[30-31]=0"`                // [30-31] MUST ==0, ByteSize=4
 
 	EncryptableBody PacketBody
 	EncryptionData  []byte
 
-	PacketSignature common.Bits512 `insolar-transport:"generate=signature"` // ByteSize=64
+	PacketSignature longbits.Bits512 `insolar-transport:"generate=signature"` // ByteSize=64
 }
 
-func (p *Packet) setSignature(signature common.SignatureHolder) {
+func (p *Packet) String() string {
+	packetCtx := newPacketContext(context.Background(), &p.Header)
+	return fmt.Sprintf("h:%v b:{%v}", p.Header, p.EncryptableBody.DebugString(&packetCtx))
+}
+
+func (p *Packet) setSignature(signature cryptkit.SignatureHolder) {
 	copy(p.PacketSignature[:], signature.AsBytes())
 }
 
@@ -265,11 +282,11 @@ func (p *Packet) setPayloadLength(payloadLength uint16) {
 	p.Header.setPayloadLength(payloadLength)
 }
 
-func (p *Packet) getPulseNumber() common.PulseNumber {
+func (p *Packet) getPulseNumber() pulse.Number {
 	return p.PulseNumber & pulseNumberMask
 }
 
-func (p *Packet) setPulseNumber(pulseNumber common.PulseNumber) {
+func (p *Packet) setPulseNumber(pulseNumber pulse.Number) {
 	if pulseNumber > pulseNumberMax {
 		panic("invalid pulse number")
 	}
@@ -277,24 +294,24 @@ func (p *Packet) setPulseNumber(pulseNumber common.PulseNumber) {
 	p.PulseNumber |= pulseNumber
 }
 
-func (p *Packet) SerializeTo(ctx context.Context, writer io.Writer, digester common.DataDigester, signer common.DigestSigner) (int64, error) {
+func (p *Packet) SerializeTo(ctx context.Context, writer io.Writer, digester cryptkit.DataDigester, signer cryptkit.DigestSigner) (int64, error) {
 	if p.EncryptableBody == nil {
 		return 0, ErrMalformedPacketBody(ErrNilBody)
 	}
 
 	w := newTrackableWriter(writer)
-	pctx := newPacketContext(ctx, &p.Header)
-	sctx := newSerializeContext(pctx, w, digester, signer, p)
+	packetCtx := newPacketContext(ctx, &p.Header)
+	serializeCtx := newSerializeContext(packetCtx, w, digester, signer, p)
 
-	if err := write(sctx, &p.PulseNumber); err != nil {
+	if err := write(serializeCtx, &p.PulseNumber); err != nil {
 		return 0, ErrMalformedPulseNumber(err)
 	}
 
-	if err := p.EncryptableBody.SerializeTo(sctx, sctx); err != nil {
+	if err := p.EncryptableBody.SerializeTo(serializeCtx, serializeCtx); err != nil {
 		return 0, ErrMalformedPacketBody(err)
 	}
 
-	return sctx.Finalize()
+	return serializeCtx.Finalize()
 }
 
 func (p *Packet) DeserializeFrom(ctx context.Context, reader io.Reader) (int64, error) {
@@ -304,25 +321,25 @@ func (p *Packet) DeserializeFrom(ctx context.Context, reader io.Reader) (int64, 
 		return r.totalRead, ErrMalformedHeader(err)
 	}
 
-	pctx := newPacketContext(ctx, &p.Header)
-	dctx := newDeserializeContext(pctx, r, &p.Header)
+	packetCtx := newPacketContext(ctx, &p.Header)
+	deserializeCtx := newDeserializeContext(packetCtx, r, &p.Header)
 
-	if err := read(dctx, &p.PulseNumber); err != nil {
+	if err := read(deserializeCtx, &p.PulseNumber); err != nil {
 		return r.totalRead, ErrMalformedPulseNumber(err)
 	}
 
-	p.EncryptableBody = pctx.GetProtocolType().NewBody()
+	p.EncryptableBody = packetCtx.GetProtocolType().NewBody()
 	if p.EncryptableBody == nil {
-		return 0, ErrMalformedPacketBody(ErrNilBody)
+		return 0, ErrMalformedPacketBody(ErrInvalidProtocol)
 	}
 
-	if err := p.EncryptableBody.DeserializeFrom(dctx, dctx); err != nil {
+	if err := p.EncryptableBody.DeserializeFrom(deserializeCtx, deserializeCtx); err != nil {
 		return r.totalRead, ErrMalformedPacketBody(err)
 	}
 
-	if err := read(dctx, &p.PacketSignature); err != nil {
+	if err := read(deserializeCtx, &p.PacketSignature); err != nil {
 		return r.totalRead, ErrMalformedPacketSignature(err)
 	}
 
-	return dctx.Finalize()
+	return deserializeCtx.Finalize()
 }

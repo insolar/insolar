@@ -21,9 +21,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,42 +42,30 @@ func TestPolymorphProducesExpectedBinary(t *testing.T) {
 	require.Equal(t, morph, uint32(morph64))
 }
 
-func TestMarshalUnmarshal(t *testing.T) {
-	type data struct {
-		tp payload.Type
-		pl payload.Payload
-	}
-	table := []data{
-		{tp: payload.TypeMeta, pl: &payload.Meta{}},
-		{tp: payload.TypeError, pl: &payload.Error{}},
-		{tp: payload.TypeID, pl: &payload.ID{}},
-		{tp: payload.TypeState, pl: &payload.State{}},
-		{tp: payload.TypeGetObject, pl: &payload.GetObject{}},
-		{tp: payload.TypePassState, pl: &payload.PassState{}},
-		{tp: payload.TypeIndex, pl: &payload.Index{}},
-		{tp: payload.TypePass, pl: &payload.Pass{}},
-		{tp: payload.TypeCode, pl: &payload.Code{}},
-		{tp: payload.TypeGetCode, pl: &payload.GetCode{}},
-		{tp: payload.TypeSetCode, pl: &payload.SetCode{}},
-		{tp: payload.TypeGetFilament, pl: &payload.GetFilament{}},
-		// FIXME: uncomment after removing virtual record wrapper.
-		// {tp: payload.TypeFilamentSegment, pl: &payload.FilamentSegment{}},
-		// {tp: payload.TypeSetIncomingRequest, pl: &payload.SetIncomingRequest{}},
-		{tp: payload.TypeSetResult, pl: &payload.SetResult{}},
-		{tp: payload.TypeActivate, pl: &payload.Activate{}},
-		{tp: payload.TypeDeactivate, pl: &payload.Deactivate{}},
-		{tp: payload.TypeUpdate, pl: &payload.Update{}},
-		{tp: payload.TypeHotObjects, pl: &payload.HotObjects{}},
-	}
+func TestMarshalUnmarshalType(t *testing.T) {
+	for _, expectedType := range payload.TypesMap {
+		buf, err := payload.MarshalType(expectedType)
+		require.NoError(t, err)
 
-	for _, d := range table {
-		t.Run(d.tp.String(), func(t *testing.T) {
-			fuzz.New().Fuzz(d.pl)
-			encoded, err := payload.Marshal(d.pl)
-			require.NoError(t, err)
-			decoded, err := payload.Unmarshal(encoded)
-			require.NoError(t, err)
-			assert.Equal(t, d.pl, decoded)
-		})
+		tp, err := payload.UnmarshalType(buf)
+		require.NoError(t, err)
+		require.Equal(t, expectedType, tp)
+	}
+}
+
+func TestMarshalUnmarshal(t *testing.T) {
+	for _, expectedType := range payload.TypesMap {
+		if expectedType == payload.TypeUnknown {
+			continue
+		}
+		typeBuf, err := payload.MarshalType(expectedType)
+		require.NoError(t, err)
+		pl, err := payload.Unmarshal(typeBuf)
+		require.NoError(t, err, "Unmarshal() unknown type %s", expectedType.String())
+		buf, err := payload.Marshal(pl)
+		require.NoError(t, err, "Marshal() unknown type %s", expectedType.String())
+		tp, err := payload.UnmarshalType(buf)
+		require.NoError(t, err)
+		require.Equal(t, expectedType, tp, "type mismatch between Marshal() and Unmarshal()")
 	}
 }

@@ -51,15 +51,16 @@
 package adapters
 
 import (
-	"context"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/census"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/errors"
 )
 
 type MisbehaviorRegistry struct{}
@@ -68,33 +69,34 @@ func NewMisbehaviorRegistry() *MisbehaviorRegistry {
 	return &MisbehaviorRegistry{}
 }
 
-func (mr *MisbehaviorRegistry) AddReport(report errors.MisbehaviorReport) {
-	ctx := context.TODO()
-
-	inslogger.FromContext(ctx).Warnf("Got MisbehaviorReport")
+func (mr *MisbehaviorRegistry) AddReport(report misbehavior.Report) {
 }
 
 type MandateRegistry struct {
-	cloudHash              common2.CloudStateHash
+	cloudHash              proofs.CloudStateHash
 	consensusConfiguration census.ConsensusConfiguration
 }
 
-func NewMandateRegistry(cloudHash common2.CloudStateHash, consensusConfiguration census.ConsensusConfiguration) *MandateRegistry {
+func NewMandateRegistry(cloudHash proofs.CloudStateHash, consensusConfiguration census.ConsensusConfiguration) *MandateRegistry {
 	return &MandateRegistry{
 		cloudHash:              cloudHash,
 		consensusConfiguration: consensusConfiguration,
 	}
 }
 
-func (mr *MandateRegistry) FindRegisteredProfile(host common.HostIdentityHolder) common2.HostProfile {
-	panic("implement me")
+func (mr *MandateRegistry) FindRegisteredProfile(host endpoints.Inbound) profiles.Host {
+	return nil
+}
+
+func (mr *MandateRegistry) GetCloudIdentity() cryptkit.DigestHolder {
+	return mr.cloudHash
 }
 
 func (mr *MandateRegistry) GetConsensusConfiguration() census.ConsensusConfiguration {
 	return mr.consensusConfiguration
 }
 
-func (mr *MandateRegistry) GetPrimingCloudHash() common2.CloudStateHash {
+func (mr *MandateRegistry) GetPrimingCloudHash() proofs.CloudStateHash {
 	return mr.cloudHash
 }
 
@@ -113,11 +115,14 @@ func NewOfflinePopulation(nodeKeeper network.NodeKeeper, manager insolar.Certifi
 	}
 }
 
-func (op *OfflinePopulation) FindRegisteredProfile(identity common.HostIdentityHolder) common2.HostProfile {
-	node := op.nodeKeeper.GetAccessor().GetActiveNodeByAddr(identity.GetHostAddress().String())
+func (op *OfflinePopulation) FindRegisteredProfile(identity endpoints.Inbound) profiles.Host {
+	node := op.nodeKeeper.GetAccessor().GetActiveNodeByAddr(identity.GetNameAddress().String())
+	if node == nil {
+		return nil
+	}
 	cert := op.manager.GetCertificate()
 
-	return NewNodeIntroProfile(node, cert, op.keyProcessor)
+	return NewStaticProfile(node, cert, op.keyProcessor)
 }
 
 type VersionedRegistries struct {
@@ -125,7 +130,7 @@ type VersionedRegistries struct {
 	misbehaviorRegistry census.MisbehaviorRegistry
 	offlinePopulation   census.OfflinePopulation
 
-	pulseData common.PulseData
+	pulseData pulse.Data
 }
 
 func NewVersionedRegistries(
@@ -140,7 +145,7 @@ func NewVersionedRegistries(
 	}
 }
 
-func (c *VersionedRegistries) CommitNextPulse(pd common.PulseData, population census.OnlinePopulation) census.VersionedRegistries {
+func (c *VersionedRegistries) CommitNextPulse(pd pulse.Data, population census.OnlinePopulation) census.VersionedRegistries {
 	pd.EnsurePulseData()
 	cp := *c
 	cp.pulseData = pd
@@ -159,6 +164,6 @@ func (c *VersionedRegistries) GetOfflinePopulation() census.OfflinePopulation {
 	return c.offlinePopulation
 }
 
-func (c *VersionedRegistries) GetVersionPulseData() common.PulseData {
+func (c *VersionedRegistries) GetVersionPulseData() pulse.Data {
 	return c.pulseData
 }

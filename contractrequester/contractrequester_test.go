@@ -49,7 +49,7 @@ func TestNew(t *testing.T) {
 	jetCoordinator := jet.NewCoordinatorMock(t)
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 
-	contractRequester, err := New()
+	contractRequester, err := New(nil)
 
 	cm := &component.Manager{}
 	cm.Inject(messageBus, contractRequester, pulseAccessor, jetCoordinator, pcs)
@@ -84,7 +84,7 @@ func TestContractRequester_Start(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
-	cReq, err := New()
+	cReq, err := New(nil)
 	require.NoError(t, err)
 
 	cReq.MessageBus = testutils.NewMessageBusMock(mc).
@@ -101,7 +101,7 @@ func TestContractRequester_SendRequest(t *testing.T) {
 
 	ref := gen.Reference()
 
-	cReq, err := New()
+	cReq, err := New(nil)
 	require.NoError(t, err)
 
 	cReq.PulseAccessor = mockPulseAccessor(mc)
@@ -139,7 +139,7 @@ func TestContractRequester_SendRequest(t *testing.T) {
 					require.NoError(t, err)
 					requestRef := insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, hash[:]))
 
-					resultSender := func () {
+					resultSender := func() {
 						res := test.resultMessage
 						res.RequestRef = *requestRef
 						cReq.result(ctx, &res)
@@ -168,15 +168,15 @@ func TestContractRequester_CallMethod_Timeout(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
-	cr, err := New()
+	cr, err := New(nil)
 	require.NoError(t, err)
 
-	cr.callTimeout = 1*time.Nanosecond
+	cr.callTimeout = 1 * time.Nanosecond
 
 	cr.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
 
 	cr.PulseAccessor = mockPulseAccessor(mc)
-	cr.JetCoordinator = mockJetCoordinator(mc)
+	cr.JetCoordinator = jet.NewCoordinatorMock(t)
 
 	ref := testutils.RandomRef()
 	prototypeRef := testutils.RandomRef()
@@ -196,6 +196,7 @@ func TestContractRequester_CallMethod_Timeout(t *testing.T) {
 
 	msg := &message.CallMethod{
 		IncomingRequest: record.IncomingRequest{
+			Caller:    gen.Reference(),
 			Object:    &ref,
 			Prototype: &prototypeRef,
 			Method:    method,
@@ -214,7 +215,7 @@ func TestReceiveResult(t *testing.T) {
 	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*10)
 	defer cancelFunc()
 
-	cr, err := New()
+	cr, err := New(nil)
 	require.NoError(t, err)
 
 	mc := minimock.NewController(t)

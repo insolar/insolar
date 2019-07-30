@@ -30,11 +30,10 @@ import (
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.LogicExecutor -o ./ -s _mock.go
-
 type LogicExecutor interface {
-	Execute(ctx context.Context, transcript *Transcript) (*RequestResult, error)
-	ExecuteMethod(ctx context.Context, transcript *Transcript) (*RequestResult, error)
-	ExecuteConstructor(ctx context.Context, transcript *Transcript) (*RequestResult, error)
+	Execute(ctx context.Context, transcript *Transcript) (artifacts.RequestResult, error)
+	ExecuteMethod(ctx context.Context, transcript *Transcript) (artifacts.RequestResult, error)
+	ExecuteConstructor(ctx context.Context, transcript *Transcript) (artifacts.RequestResult, error)
 }
 
 type logicExecutor struct {
@@ -46,18 +45,18 @@ func NewLogicExecutor() LogicExecutor {
 	return &logicExecutor{}
 }
 
-func (le *logicExecutor) Execute(ctx context.Context, transcript *Transcript) (*RequestResult, error) {
+func (le *logicExecutor) Execute(ctx context.Context, transcript *Transcript) (artifacts.RequestResult, error) {
 	switch transcript.Request.CallType {
 	case record.CTMethod:
 		return le.ExecuteMethod(ctx, transcript)
-	case record.CTSaveAsChild, record.CTSaveAsDelegate:
+	case record.CTSaveAsChild:
 		return le.ExecuteConstructor(ctx, transcript)
 	default:
 		return nil, errors.New("Unknown request call type")
 	}
 }
 
-func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *Transcript) (*RequestResult, error) {
+func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *Transcript) (artifacts.RequestResult, error) {
 	ctx, span := instracer.StartSpan(ctx, "logicExecutor.ExecuteMethod")
 	defer span.End()
 
@@ -89,56 +88,60 @@ func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *Transcri
 		return nil, errors.Wrap(err, "executor error")
 	}
 
-	res := NewRequestResult(result)
+	res := newRequestResult(result, *objDesc.HeadRef())
+
 	if request.Immutable {
 		return res, nil
 	}
 
-	if transcript.Deactivate {
-		res.Deactivate()
-	} else if !bytes.Equal(objDesc.Memory(), newData) {
-		res.Update(newData)
+	switch {
+	case transcript.Deactivate:
+		res.SetDeactivate(objDesc)
+	case !bytes.Equal(objDesc.Memory(), newData):
+		res.SetAmend(objDesc, newData)
 	}
+
 	return res, nil
 }
 
 func (le *logicExecutor) ExecuteConstructor(
 	ctx context.Context, transcript *Transcript,
 ) (
-	*RequestResult, error,
+	artifacts.RequestResult, error,
 ) {
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.executeConstructorCall")
 	defer span.End()
 
 	request := transcript.Request
 
-	if request.Caller.IsEmpty() {
-		return nil, errors.New("Call constructor from nowhere")
-	}
-
 	if request.Prototype == nil {
 		return nil, errors.New("prototype reference is required")
 	}
 
-	protoDesc, codeDesc, err := le.DescriptorsCache.ByPrototypeRef(ctx, *request.Prototype)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get descriptors")
+	protoDesc, codeDesc, sysErr := le.DescriptorsCache.ByPrototypeRef(ctx, *request.Prototype)
+	if sysErr != nil {
+		return nil, errors.Wrap(sysErr, "couldn't get descriptors")
 	}
 
-	executor, err := le.MachinesManager.GetExecutor(codeDesc.MachineType())
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get executor")
+	executor, sysErr := le.MachinesManager.GetExecutor(codeDesc.MachineType())
+	if sysErr != nil {
+		return nil, errors.Wrap(sysErr, "couldn't get executor")
 	}
 
 	transcript.LogicContext = le.genLogicCallContext(ctx, transcript, protoDesc, codeDesc)
 
-	newData, err := executor.CallConstructor(ctx, transcript.LogicContext, *codeDesc.Ref(), request.Method, request.Arguments)
-	if err != nil {
-		return nil, errors.Wrap(err, "executor error")
+	newData, ctorErr, sysErr := executor.CallConstructor(ctx, transcript.LogicContext, *codeDesc.Ref(), request.Method, request.Arguments)
+	if sysErr != nil {
+		return nil, errors.Wrap(sysErr, "executor error")
 	}
 
-	res := NewRequestResult(nil)
-	res.Activate(newData)
+	res := newRequestResult(nil, transcript.RequestRef)
+	if ctorErr == "" {
+		res.SetActivate(*request.Base, *request.Prototype, newData)
+	} else {
+		// constructor returned an error
+		res.SetConstructorError(ctorErr)
+	}
 	return res, nil
 }
 

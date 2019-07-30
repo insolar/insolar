@@ -56,9 +56,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
+
+	"github.com/insolar/insolar/insolar/pulse"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -164,6 +165,7 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 	)
 	defer span.End()
 
+	// TODO: Move to config reader
 	bootstrapHosts := make([]*host.Host, 0, len(d.bootstrapHosts))
 	for _, node := range d.bootstrapHosts {
 		bootstrapHost, err := host.NewHost(node)
@@ -179,12 +181,7 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 		return
 	}
 
-	// TODO: Bronin. workaround for INS-2946
-	// if err := d.resume(ctx); err != nil {
-	// 	logger.Error("[ Distribute ] resume distribution error: " + err.Error())
-	// 	return
-	// }
-	// defer d.pause(ctx)
+	d.pool.Reset()
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(bootstrapHosts))
@@ -192,14 +189,6 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 	for _, bootstrapHost := range bootstrapHosts {
 		go func(ctx context.Context, pulse insolar.Pulse, bootstrapHost *host.Host) {
 			defer wg.Done()
-
-			if bootstrapHost.NodeID.IsEmpty() {
-				err := d.pingHost(ctx, bootstrapHost)
-				if err != nil {
-					logger.Errorf("[ Distribute pulse %d ] Failed to ping and fill node id: %s", pulse.PulseNumber, err)
-					return
-				}
-			}
 
 			err := d.sendPulseToHost(ctx, &pulse, bootstrapHost)
 			if err != nil {
@@ -235,6 +224,7 @@ func (d *distributor) pingHost(ctx context.Context, host *host.Host) error {
 	result, err := pingCall.WaitResponse(d.pingRequestTimeout)
 	if err != nil {
 		logger.Error(err)
+		panic(err.Error())
 		return errors.Wrap(err, "[ pingHost ] failed to get ping result")
 	}
 
@@ -254,49 +244,34 @@ func (d *distributor) sendPulseToHost(ctx context.Context, p *insolar.Pulse, hos
 
 	ctx, span := instracer.StartSpan(ctx, "distributor.sendPulseToHosts")
 	defer span.End()
-	pulseRequest := packet.NewPacket(d.pulsarHost, host, types.Pulse, uint64(d.generateID()))
-	request := &packet.PulseRequest{
-		TraceSpanData: instracer.MustSerialize(ctx),
-		Pulse:         pulse.ToProto(p),
-	}
-	pulseRequest.SetRequest(request)
-	call, err := d.sendRequestToHost(ctx, pulseRequest, host)
-	if err != nil {
-		return err
-	}
-	_, err = call.WaitResponse(d.pulseRequestTimeout)
-	if err != nil {
-		return err
-	}
 
+	pulseRequest := NewPulsePacket(ctx, p, d.pulsarHost, host, uint64(d.generateID()))
+
+	_, err := d.sendRequestToHost(ctx, pulseRequest, host)
+	if err != nil {
+		return err
+	}
 	return nil
-}
-
-func (d *distributor) pause(ctx context.Context) {
-	logger := inslogger.FromContext(ctx)
-	logger.Info("[ Pause ] Pause distribution, stopping transport")
-	d.pool.Reset()
-	err := d.transport.Stop(ctx)
-	if err != nil {
-		logger.Errorf("Failed to stop network: %s", err.Error())
-	}
-}
-
-func (d *distributor) resume(ctx context.Context) error {
-	inslogger.FromContext(ctx).Info("[ Resume ] Resume distribution, starting transport")
-	return d.transport.Start(ctx)
 }
 
 func (d *distributor) sendRequestToHost(ctx context.Context, packet *packet.Packet, receiver *host.Host) (network.Future, error) {
 	inslogger.FromContext(ctx).Debugf("Send %s request to %s with RequestID = %d",
 		packet.GetType(), receiver.String(), packet.GetRequestID())
 
-	f := d.futureManager.Create(packet)
 	err := hostnetwork.SendPacket(ctx, d.pool, packet)
 	if err != nil {
-		f.Cancel()
 		return nil, errors.Wrap(err, "Failed to send transport packet")
 	}
 	metrics.NetworkPacketSentTotal.WithLabelValues(packet.GetType().String()).Inc()
-	return f, nil
+	return nil, nil
+}
+
+func NewPulsePacket(ctx context.Context, p *insolar.Pulse, pulsarHost, to *host.Host, id uint64) *packet.Packet {
+	pulseRequest := packet.NewPacket(pulsarHost, to, types.Pulse, id)
+	request := &packet.PulseRequest{
+		TraceSpanData: instracer.MustSerialize(ctx),
+		Pulse:         pulse.ToProto(p),
+	}
+	pulseRequest.SetRequest(request)
+	return pulseRequest
 }

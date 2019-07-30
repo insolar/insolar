@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
+	"fmt"
 	"sync"
 	"time"
 
@@ -46,6 +47,7 @@ type ContractRequester struct {
 	PulseAccessor              pulse.Accessor                     `inject:""`
 	JetCoordinator             jet.Coordinator                    `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
+	lr                         insolar.LogicRunner
 
 	ResultMutex sync.Mutex
 	ResultMap   map[[insolar.RecordHashSize]byte]chan *message.ReturnResults
@@ -56,10 +58,11 @@ type ContractRequester struct {
 }
 
 // New creates new ContractRequester
-func New() (*ContractRequester, error) {
+func New(lr insolar.LogicRunner) (*ContractRequester, error) {
 	return &ContractRequester{
 		ResultMap:   make(map[[insolar.RecordHashSize]byte]chan *message.ReturnResults),
 		callTimeout: 25 * time.Second,
+		lr:          lr,
 	}, nil
 }
 
@@ -103,6 +106,7 @@ func (cr *ContractRequester) SendRequestWithPulse(ctx context.Context, ref *inso
 			Arguments:    args,
 			APIRequestID: utils.TraceID(ctx),
 			Reason:       api.MakeReason(pulse, args),
+			APINode:      cr.JetCoordinator.Me(),
 		},
 	}
 
@@ -117,7 +121,7 @@ func (cr *ContractRequester) SendRequestWithPulse(ctx context.Context, ref *inso
 func (cr *ContractRequester) calcRequestHash(request record.IncomingRequest) ([insolar.RecordHashSize]byte, error) {
 	var hash [insolar.RecordHashSize]byte
 
-	virtRec := record.Wrap(request)
+	virtRec := record.Wrap(&request)
 	buf, err := virtRec.Marshal()
 	if err != nil {
 		return hash, errors.Wrap(err, "[ ContractRequester::calcRequestHash ] Failed to marshal record")
@@ -126,6 +130,17 @@ func (cr *ContractRequester) calcRequestHash(request record.IncomingRequest) ([i
 	hasher := cr.PlatformCryptographyScheme.ReferenceHasher()
 	copy(hash[:], hasher.Hash(buf)[0:insolar.RecordHashSize])
 	return hash, nil
+}
+
+func (cr *ContractRequester) checkCall(_ context.Context, msg *message.CallMethod) error {
+	switch {
+	case msg.Caller.IsEmpty() && msg.APINode.IsEmpty():
+		return errors.New("either Caller or APINode should be set, both empty")
+	case !msg.Caller.IsEmpty() && !msg.APINode.IsEmpty():
+		return errors.New("either Caller or APINode should be set, both set")
+	}
+
+	return nil
 }
 
 func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (insolar.Reply, error) {
@@ -139,7 +154,11 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 	if msg.Nonce == 0 {
 		msg.Nonce = randomUint64()
 	}
-	msg.Sender = cr.JetCoordinator.Me()
+
+	err := cr.checkCall(ctx, msg)
+	if err != nil {
+		return nil, errors.Wrap(err, "incorrect request")
+	}
 
 	var ch chan *message.ReturnResults
 	var reqHash [insolar.RecordHashSize]byte
@@ -200,6 +219,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 		cr.ResultMutex.Lock()
 		delete(cr.ResultMap, reqHash)
 		cr.ResultMutex.Unlock()
+		logger.Error("Request timeout")
 		return nil, errors.Errorf("request to contract was canceled: timeout of %s was exceeded", cr.callTimeout)
 	}
 }
@@ -208,20 +228,20 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, inMsg insolar.Messa
 	return cr.Call(ctx, inMsg)
 }
 
-func (cr *ContractRequester) CallConstructor(ctx context.Context, inMsg insolar.Message) (*insolar.Reference, error) {
+func (cr *ContractRequester) CallConstructor(ctx context.Context, inMsg insolar.Message) (ref *insolar.Reference, ctorErr string, sysErr error) {
 	res, err := cr.Call(ctx, inMsg)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	rep, ok := res.(*reply.CallConstructor)
 	if !ok {
-		return nil, errors.New("Reply is not CallConstructor")
+		return nil, "", errors.New(fmt.Sprintf("Reply is not CallConstructor: %+v", res))
 	}
-	return rep.Object, nil
+	return rep.Object, rep.ConstructorError, nil
 }
 
-func (cr *ContractRequester) result(ctx context.Context, msg *message.ReturnResults) {
+func (cr *ContractRequester) result(ctx context.Context, msg *message.ReturnResults) error {
 	cr.ResultMutex.Lock()
 	defer cr.ResultMutex.Unlock()
 
@@ -229,12 +249,17 @@ func (cr *ContractRequester) result(ctx context.Context, msg *message.ReturnResu
 	copy(reqHash[:], msg.RequestRef.Record().Hash())
 	c, ok := cr.ResultMap[reqHash]
 	if !ok {
-		inslogger.FromContext(ctx).Warn("unwaited results of request ", msg.RequestRef.String())
-		return
+		inslogger.FromContext(ctx).Info("unwaited results of request ", msg.RequestRef.String())
+		if cr.lr != nil {
+			return cr.lr.AddUnwantedResponse(ctx, msg)
+		}
+		inslogger.FromContext(ctx).Warn("drop unwanted ", msg.RequestRef.String())
+		return nil
 	}
 
 	c <- msg
 	delete(cr.ResultMap, reqHash)
+	return nil
 }
 
 func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
@@ -246,7 +271,10 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel insolar.P
 	ctx, span := instracer.StartSpan(ctx, "ContractRequester.ReceiveResult")
 	defer span.End()
 
-	cr.result(ctx, msg)
+	err := cr.result(ctx, msg)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ReceiveResult ]")
+	}
 
 	return &reply.OK{}, nil
 }

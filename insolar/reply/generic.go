@@ -16,7 +16,10 @@
 
 package reply
 
-import "github.com/insolar/insolar/insolar"
+import (
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/flow"
+)
 
 // OK is a generic reply for signaling a positive result.
 type OK struct {
@@ -59,6 +62,8 @@ func (e *Error) Error() error {
 		return insolar.ErrNoPendingRequest
 	case ErrTooManyPendingRequests:
 		return insolar.ErrTooManyPendingRequests
+	case FlowCancelled:
+		return flow.ErrCancelled
 	}
 
 	return insolar.ErrUnknown

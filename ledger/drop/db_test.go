@@ -17,7 +17,7 @@
 package drop
 
 import (
-	context "context"
+	"context"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -78,7 +78,7 @@ func TestDropStorageDB_TruncateHead_NoSuchPulse(t *testing.T) {
 	dropStore := NewDB(dbMock)
 
 	err = dropStore.TruncateHead(ctx, insolar.GenesisPulse.PulseNumber)
-	require.Contains(t, err.Error(), "No required pulse")
+	require.NoError(t, err)
 }
 
 func TestDropStorageDB_TruncateHead(t *testing.T) {
@@ -110,14 +110,14 @@ func TestDropStorageDB_TruncateHead(t *testing.T) {
 	for _, idx := range indexes {
 		drop := Drop{}
 		drop.Pulse = startPulseNumber + insolar.PulseNumber(idx)
-		jets[idx] = gen.JetID()
+		jets[idx] = *insolar.NewJetID(uint8(idx), gen.ID().Bytes())
 
 		drop.JetID = jets[idx]
 		err := dropStore.Set(ctx, drop)
 		require.NoError(t, err)
 
 		for i := 0; i < 3; i++ {
-			drop.JetID = gen.JetID()
+			drop.JetID = *insolar.NewJetID(uint8(idx+i+50), gen.ID().Bytes())
 			err = dropStore.Set(ctx, drop)
 			require.NoError(t, err)
 		}

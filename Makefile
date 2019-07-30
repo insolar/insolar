@@ -4,6 +4,7 @@ INSOLAR = insolar
 INSOLARD = insolard
 INSGOCC = insgocc
 PULSARD = pulsard
+TESTPULSARD = testpulsard
 INSGORUND = insgorund
 BENCHMARK = benchmark
 PULSEWATCHER = pulsewatcher
@@ -90,7 +91,7 @@ ensure: ## install all dependencies
 	dep ensure
 
 .PHONY: build
-build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(APIREQUESTER) $(PULSEWATCHER) ## build all binaries
+build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(APIREQUESTER) $(PULSEWATCHER) ## build all binaries
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
@@ -112,6 +113,10 @@ $(BININSGOCC): $(INSGOCC)
 .PHONY: $(PULSARD)
 $(PULSARD):
 	$(GOBUILD) -o $(BIN_DIR)/$(PULSARD) -ldflags "${LDFLAGS}" cmd/pulsard/*.go
+
+.PHONY: $(TESTPULSARD)
+$(TESTPULSARD):
+	$(GOBUILD) -o $(BIN_DIR)/$(TESTPULSARD) -ldflags "${LDFLAGS}" cmd/testpulsard/*.go
 
 .PHONY: $(INSGORUND)
 $(INSGORUND):
@@ -191,7 +196,7 @@ ci_test_slow: ## run slow tests just once, redirects json output to file (CI)
 ci_test_func: ## run functest 3 times, redirects json output to file (CI)
 	# GOMAXPROCS=2, because we launch at least 5 insolard nodes in functest + 1 pulsar,
 	# so try to be more honest with processors allocation.
-	GOMAXPROCS=2 CGO_ENABLED=1 INSOLAR_LOG_LEVEL=error \
+	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1  \
 		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags functest -v ./functest -count 3 -failfast | tee ci_test_func.json
 
 .PHONY: ci_test_integrtest

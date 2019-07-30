@@ -20,39 +20,29 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
-	"github.com/tylerb/gls"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
-)
-
-const (
-	glsCallContextKey = "callCtx"
 )
 
 type ProxyHelper struct {
 	lrCommon.Serializer
+	lrCommon.SystemError
 	methods lrCommon.LogicRunnerRPCStub
 }
 
 func NewProxyHelper(runner lrCommon.LogicRunnerRPCStub) *ProxyHelper {
 	return &ProxyHelper{
-		Serializer: lrCommon.NewCBORSerializer(),
-		methods:    runner,
+		Serializer:  lrCommon.NewCBORSerializer(),
+		SystemError: lrCommon.NewSystemError(),
+		methods:     runner,
 	}
 }
 
 func (h *ProxyHelper) getUpBaseReq() rpctypes.UpBaseReq {
-	callContextInterface := gls.Get(glsCallContextKey)
-	if callContextInterface == nil {
-		panic("Failed to find call context")
-	}
-	callContext, ok := callContextInterface.(*insolar.LogicCallContext)
-	if !ok {
-		panic("Unknown value stored in '" + glsCallContextKey + "'")
-	}
+	callContext := foundation.GetLogicalContext()
 
 	return rpctypes.UpBaseReq{
 		Mode:            callContext.Mode,
@@ -64,6 +54,10 @@ func (h *ProxyHelper) getUpBaseReq() rpctypes.UpBaseReq {
 
 func (h *ProxyHelper) RouteCall(ref insolar.Reference, wait bool, immutable bool, saga bool, method string, args []byte,
 	proxyPrototype insolar.Reference) ([]byte, error) {
+
+	if h.GetSystemError() != nil {
+		return nil, h.GetSystemError()
+	}
 
 	res := rpctypes.UpRouteResp{}
 	req := rpctypes.UpRouteReq{
@@ -81,13 +75,21 @@ func (h *ProxyHelper) RouteCall(ref insolar.Reference, wait bool, immutable bool
 	err := h.methods.RouteCall(req, &res)
 
 	if err != nil {
+		h.SetSystemError(err)
 		return nil, err
 	}
 	return res.Result, nil
 }
 
 func (h *ProxyHelper) SaveAsChild(parentRef, classRef insolar.Reference, constructorName string,
-	argsSerialized []byte) (insolar.Reference, error) {
+	argsSerialized []byte) (objRef insolar.Reference, err error) {
+
+	if h.GetSystemError() != nil {
+		// There was a system error during execution of the contract.
+		// Immediately return this error to the calling contract - any
+		// results will not be registered on LME anyway.
+		return insolar.Reference{}, h.GetSystemError()
+	}
 
 	res := rpctypes.UpSaveAsChildResp{}
 	req := rpctypes.UpSaveAsChildReq{
@@ -100,85 +102,40 @@ func (h *ProxyHelper) SaveAsChild(parentRef, classRef insolar.Reference, constru
 	}
 
 	if err := h.methods.SaveAsChild(req, &res); err != nil {
+		// A new system error occurred.
+		// Register it and immediately return to the calling contract.
+		h.SetSystemError(err)
 		return insolar.Reference{}, err
 	}
+
+	// return logical error to the calling contract, don't register a system error
+	if res.ConstructorError != "" {
+		return insolar.Reference{}, errors.New("[Constructor failed] " + res.ConstructorError)
+	}
+
 	if res.Reference == nil {
-		return insolar.Reference{}, errors.New("Unexpected result, empty reference")
-	}
-	return *res.Reference, nil
-}
-
-func (h *ProxyHelper) GetObjChildrenIterator(head insolar.Reference, prototype insolar.Reference,
-	iteratorID string) (*lrCommon.ChildrenTypedIterator, error) {
-
-	res := rpctypes.UpGetObjChildrenIteratorResp{}
-	req := rpctypes.UpGetObjChildrenIteratorReq{
-		UpBaseReq: h.getUpBaseReq(),
-
-		IteratorID: iteratorID,
-		Object:     head,
-		Prototype:  prototype,
-	}
-
-	err := h.methods.GetObjChildrenIterator(req, &res)
-
-	if err != nil {
-		return &lrCommon.ChildrenTypedIterator{}, errors.Wrap(err, "on calling GetObjChildren")
-	}
-	return &lrCommon.ChildrenTypedIterator{
-		Parent:         head,
-		ChildPrototype: prototype,
-		IteratorID:     res.Iterator.ID,
-		Buff:           res.Iterator.Buff,
-		CanFetch:       res.Iterator.CanFetch,
-	}, nil
-}
-
-func (h *ProxyHelper) SaveAsDelegate(parentRef, classRef insolar.Reference, constructorName string,
-	argsSerialized []byte) (insolar.Reference, error) {
-
-	res := rpctypes.UpSaveAsDelegateResp{}
-	req := rpctypes.UpSaveAsDelegateReq{
-		UpBaseReq: h.getUpBaseReq(),
-
-		Into:            parentRef,
-		Prototype:       classRef,
-		ConstructorName: constructorName,
-		ArgsSerialized:  argsSerialized,
-	}
-
-	if err := h.methods.SaveAsDelegate(req, &res); err != nil {
+		// this should never happen, but if it will it's better to return a readable
+		// error than dereference a nil pointer
+		err = errors.New("[ SaveAsChild ] system error - res.Reference is nil")
+		h.SetSystemError(err)
 		return insolar.Reference{}, err
 	}
-	if res.Reference == nil {
-		return insolar.Reference{}, errors.New("Unexpected result, empty reference")
-	}
+
 	return *res.Reference, nil
-
-}
-
-func (h *ProxyHelper) GetDelegate(object, ofType insolar.Reference) (insolar.Reference, error) {
-	res := rpctypes.UpGetDelegateResp{}
-	req := rpctypes.UpGetDelegateReq{
-		UpBaseReq: h.getUpBaseReq(),
-
-		Object: object,
-		OfType: ofType,
-	}
-
-	if err := h.methods.GetDelegate(req, &res); err != nil {
-		return insolar.Reference{}, err
-	}
-	return res.Object, nil
 }
 
 func (h *ProxyHelper) DeactivateObject(object insolar.Reference) error {
+	if h.GetSystemError() != nil {
+		return h.GetSystemError()
+	}
+
 	res := rpctypes.UpDeactivateObjectResp{}
 	req := rpctypes.UpDeactivateObjectReq{
 		UpBaseReq: h.getUpBaseReq(),
 	}
 
 	if err := h.methods.DeactivateObject(req, &res); err != nil {
+		h.SetSystemError(err)
 		return err
 	}
 	return nil

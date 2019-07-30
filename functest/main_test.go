@@ -28,6 +28,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -42,7 +43,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-const HOST = "http://localhost:19101"
+const HOST = "http://localhost:19102"
 const HOST_DEBUG = "http://localhost:8001"
 const TestAPIURL = HOST + "/api"
 const TestRPCUrl = TestAPIURL + "/rpc"
@@ -76,6 +77,7 @@ func launchnetPath(a ...string) string {
 var info *requester.InfoResponse
 var root user
 var migrationAdmin user
+var migrationDaemons [insolar.GenesisAmountActiveMigrationDaemonMembers]user
 
 type user struct {
 	ref     string
@@ -143,7 +145,19 @@ func loadAllMembersKeys() error {
 	if err != nil {
 		return err
 	}
-	return loadMemberKeys(insolarMigrationAdminMemberKeysPath, &migrationAdmin)
+	err = loadMemberKeys(insolarMigrationAdminMemberKeysPath, &migrationAdmin)
+	if err != nil {
+		return err
+	}
+	for i, md := range migrationDaemons {
+		err = loadMemberKeys(launchnetPath("configs", "migration_daemon_"+strconv.Itoa(i)+"_member_keys.json"), &md)
+		if err != nil {
+			return err
+		}
+		migrationDaemons[i] = md
+	}
+
+	return nil
 }
 
 func setInfo() error {
@@ -291,7 +305,11 @@ func startNet() error {
 		return errors.Wrap(err, "[ startNet  ] Can't change dir")
 	}
 
-	cmd = exec.Command("./scripts/insolard/launchnet.sh", "-ngw")
+	// If you want to add -n flag here please make sure that insgorund will
+	// be eventually started with --log-level=debug. Otherwise someone will spent
+	// a lot of time trying to figure out why insgorund debug logs are missing
+	// during execution of functests.
+	cmd = exec.Command("./scripts/insolard/launchnet.sh", "-gw")
 	stdout, _ = cmd.StdoutPipe()
 	if err != nil {
 		return errors.Wrap(err, "[ startNet ] could't set stdout: ")
@@ -397,6 +415,9 @@ func setup() error {
 	fmt.Println("[ setup ] references successfully received")
 	root.ref = info.RootMember
 	migrationAdmin.ref = info.MigrationAdminMember
+	for i, _ := range migrationDaemons {
+		migrationDaemons[i].ref = info.MigrationDaemonMembers[i]
+	}
 
 	contracts = make(map[string]*contractInfo)
 

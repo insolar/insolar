@@ -23,19 +23,21 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/messagebus"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.RequestsExecutor -o ./ -s _mock.go
 
 type RequestsExecutor interface {
 	ExecuteAndSave(ctx context.Context, current *Transcript) (insolar.Reply, error)
-	Execute(ctx context.Context, current *Transcript) (*RequestResult, error)
-	Save(ctx context.Context, current *Transcript, res *RequestResult) (insolar.Reply, error)
+	Execute(ctx context.Context, current *Transcript) (artifacts.RequestResult, error)
+	Save(ctx context.Context, current *Transcript, res artifacts.RequestResult) (insolar.Reply, error)
 	SendReply(ctx context.Context, current *Transcript, re insolar.Reply, err error)
 }
 
@@ -44,6 +46,7 @@ type requestsExecutor struct {
 	NodeNetwork     insolar.NodeNetwork `inject:""`
 	LogicExecutor   LogicExecutor       `inject:""`
 	ArtifactManager artifacts.Client    `inject:""`
+	PulseAccessor   pulse.Accessor      `inject:""`
 }
 
 func NewRequestsExecutor() RequestsExecutor {
@@ -76,7 +79,7 @@ func (e *requestsExecutor) ExecuteAndSave(
 func (e *requestsExecutor) Execute(
 	ctx context.Context, transcript *Transcript,
 ) (
-	*RequestResult, error,
+	artifacts.RequestResult, error,
 ) {
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.executeLogic")
 	defer span.End()
@@ -100,49 +103,25 @@ func (e *requestsExecutor) Execute(
 }
 
 func (e *requestsExecutor) Save(
-	ctx context.Context, transcript *Transcript, res *RequestResult,
+	ctx context.Context, transcript *Transcript, res artifacts.RequestResult,
 ) (
 	insolar.Reply, error,
 ) {
 	inslogger.FromContext(ctx).Debug("Saving result")
 
-	am := e.ArtifactManager
-	request := transcript.Request
-	reqRef := transcript.RequestRef
+	if err := e.ArtifactManager.RegisterResult(ctx, transcript.RequestRef, res); err != nil {
+		return nil, errors.Wrapf(err, "couldn't save result with %s side effect", res.Type().String())
+	}
 
 	switch {
-	case res.Activation:
-		err := e.ArtifactManager.ActivateObject(
-			ctx, reqRef, *request.Base, *request.Prototype,
-			request.CallType == record.CTSaveAsDelegate,
-			res.NewMemory,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't activate object")
-		}
-		return &reply.CallConstructor{Object: &reqRef}, err
-	case res.Deactivation:
-		err := am.DeactivateObject(
-			ctx, reqRef, transcript.ObjectDescriptor, res.Result,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't deactivate object")
-		}
-		return &reply.CallMethod{Result: res.Result}, nil
-	case res.NewMemory != nil:
-		err := am.UpdateObject(
-			ctx, reqRef, transcript.ObjectDescriptor, res.NewMemory, res.Result,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't update object")
-		}
-		return &reply.CallMethod{Result: res.Result}, nil
+	case res.Type() == artifacts.RequestSideEffectActivate:
+		// Constructor called successfully
+		return &reply.CallConstructor{Object: &transcript.RequestRef}, nil
+	case res.Type() == artifacts.RequestSideEffectNone && res.ConstructorError() != "":
+		// Constructor returned an error
+		return &reply.CallConstructor{ConstructorError: res.ConstructorError()}, nil
 	default:
-		_, err := am.RegisterResult(ctx, *request.Object, reqRef, res.Result)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't save results")
-		}
-		return &reply.CallMethod{Result: res.Result}, nil
+		return &reply.CallMethod{Result: res.Result()}, nil
 	}
 }
 
@@ -158,24 +137,41 @@ func (e *requestsExecutor) SendReply(
 
 	inslogger.FromContext(ctx).Debug("Returning result")
 
-	target := transcript.Request.Sender
-
 	errstr := ""
 	if err != nil {
 		errstr = err.Error()
 	}
-	_, err = e.MessageBus.Send(
-		ctx,
-		&message.ReturnResults{
-			Target:     target,
-			RequestRef: transcript.RequestRef,
-			Reply:      re,
-			Error:      errstr,
-		},
-		&insolar.MessageSendOptions{
-			Receiver: &target,
-		},
+	sender := messagebus.BuildSender(
+		e.MessageBus.Send,
+		messagebus.RetryIncorrectPulse(e.PulseAccessor),
+		messagebus.RetryFlowCancelled(e.PulseAccessor),
 	)
+
+	if transcript.Request.APINode.IsEmpty() {
+		_, err = sender(
+			ctx,
+			&message.ReturnResults{
+				Target:     transcript.Request.Caller,
+				RequestRef: transcript.RequestRef,
+				Reason:     transcript.Request.Reason,
+				Reply:      re,
+				Error:      errstr,
+			},
+			&insolar.MessageSendOptions{},
+		)
+	} else {
+		_, err = sender(
+			ctx,
+			&message.ReturnResults{
+				RequestRef: transcript.RequestRef,
+				Reply:      re,
+				Error:      errstr,
+			},
+			&insolar.MessageSendOptions{
+				Receiver: &transcript.Request.APINode,
+			},
+		)
+	}
 	if err != nil {
 		inslogger.FromContext(ctx).Error("couldn't deliver results: ", err)
 	}

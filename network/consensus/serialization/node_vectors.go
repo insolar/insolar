@@ -54,9 +54,9 @@ import (
 	"io"
 	"math"
 
-	"github.com/insolar/insolar/network/consensus/common"
-	common2 "github.com/insolar/insolar/network/consensus/gcpv2/common"
-	"github.com/insolar/insolar/network/consensus/gcpv2/nodeset"
+	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+
 	"github.com/pkg/errors"
 )
 
@@ -139,7 +139,7 @@ type NodeAppearanceBitset struct {
 	Bytes            []byte
 }
 
-func (nab *NodeAppearanceBitset) SetBitset(bitset nodeset.NodeBitset) {
+func (nab *NodeAppearanceBitset) SetBitset(bitset member.StateBitset) {
 	length := bitset.Len()
 	if length > math.MaxUint16 {
 		panic("invalid length")
@@ -155,15 +155,15 @@ func (nab *NodeAppearanceBitset) SetBitset(bitset nodeset.NodeBitset) {
 	}
 }
 
-func (nab *NodeAppearanceBitset) GetBitset() nodeset.NodeBitset {
+func (nab *NodeAppearanceBitset) GetBitset() member.StateBitset {
 	length := nab.getLength()
 	if nab.isCompressed() {
 		panic("not implemented")
 	}
 
-	bitset := make([]nodeset.NodeBitsetEntry, length)
+	bitset := make([]member.BitsetEntry, length)
 	for i, b := range nab.Bytes {
-		bitset[i] = nodeset.NodeBitsetEntry(b)
+		bitset[i] = member.BitsetEntry(b)
 	}
 
 	return bitset
@@ -277,10 +277,8 @@ func (nab *NodeAppearanceBitset) DeserializeFrom(ctx DeserializeContext, reader 
 	length := nab.getLength()
 	if length > 0 {
 		nab.Bytes = make([]byte, length)
-		for i := 0; i < int(length); i++ {
-			if err := read(reader, &nab.Bytes[i]); err != nil {
-				return errors.Wrapf(err, "failed to serialize Bytes[%d]", i)
-			}
+		if err := read(reader, &nab.Bytes); err != nil {
+			return errors.Wrapf(err, "failed to serialize Bytes")
 		}
 	}
 	return nil
@@ -288,9 +286,9 @@ func (nab *NodeAppearanceBitset) DeserializeFrom(ctx DeserializeContext, reader 
 
 type GlobulaStateVector struct {
 	// ByteSize=132
-	ExpectedRank           common2.MembershipRank // ByteSize=4
-	VectorHash             common.Bits512         // ByteSize=64
-	SignedGlobulaStateHash common.Bits512         // ByteSize=64
+	ExpectedRank           member.Rank      // ByteSize=4
+	VectorHash             longbits.Bits512 // ByteSize=64
+	SignedGlobulaStateHash longbits.Bits512 // ByteSize=64
 }
 
 func (gsv *GlobulaStateVector) SerializeTo(_ SerializeContext, writer io.Writer) error {

@@ -109,7 +109,7 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 	parcel.GetSenderFunc = func() (r insolar.Reference) {
 		return testutils.RandomRef()
 	}
-	parcel.MessageMock.Return(&message.GetObject{})
+	parcel.MessageMock.Return(&message.CallMethod{})
 
 	return mb, ps, parcel, expectedRef
 }
@@ -207,7 +207,7 @@ func TestMessageBus_createWatermillMessage(t *testing.T) {
 		PulseNumber: insolar.PulseNumber(100),
 	}
 	parcel := &message.Parcel{
-		Msg: &message.GetObject{},
+		Msg: &message.CallMethod{},
 	}
 
 	msg := mb.createWatermillMessage(ctx, parcel, pulse)

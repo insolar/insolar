@@ -23,27 +23,29 @@ import (
 	"os"
 	"testing"
 
+	wmMessage "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/internal/ledger/store"
-
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/delegationtoken"
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/node"
-	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils"
 )
+
+func TestClientImplements(t *testing.T) {
+	require.Implements(t, (*Client)(nil), &client{})
+}
 
 type amSuite struct {
 	suite.Suite
@@ -159,49 +161,14 @@ func genRandomRef(pulse insolar.PulseNumber) *insolar.Reference {
 	return genRefWithID(genRandomID(pulse))
 }
 
-func (s *amSuite) TestLedgerArtifactManager_GetChildren_FollowsRedirect() {
-	mc := minimock.NewController(s.T())
-	am := NewClient(nil)
-	mb := testutils.NewMessageBusMock(mc)
-
-	objRef := genRandomRef(0)
-	nodeRef := genRandomRef(0)
-	mb.SendFunc = func(c context.Context, m insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
-		o = o.Safe()
-		if o.Receiver == nil {
-			return &reply.GetChildrenRedirectReply{
-				Receiver: nodeRef,
-				Token:    &delegationtoken.GetChildrenRedirectToken{Signature: []byte{1, 2, 3}},
-			}, nil
-		}
-
-		token, ok := o.Token.(*delegationtoken.GetChildrenRedirectToken)
-		assert.True(s.T(), ok)
-		assert.Equal(s.T(), []byte{1, 2, 3}, token.Signature)
-		assert.Equal(s.T(), nodeRef, o.Receiver)
-		return &reply.Children{}, nil
-	}
-	am.DefaultBus = mb
-
-	pa := pulse.NewAccessorMock(s.T())
-	pa.LatestMock.Return(*insolar.GenesisPulse, nil)
-	am.PulseAccessor = pa
-
-	_, err := am.GetChildren(s.ctx, *objRef, nil)
-	require.NoError(s.T(), err)
-}
-
-func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
+func (s *amSuite) TestLedgerArtifactManager_GetIncomingRequest_Success() {
 	// Arrange
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	objectID := testutils.RandomID()
-	requestID := testutils.RandomID()
-
-	node := testutils.RandomRef()
+	objectRef := gen.Reference()
+	requestRef := gen.Reference()
 
 	jc := jet.NewCoordinatorMock(mc)
-	jc.NodeForObjectMock.Return(&node, nil)
 
 	pulseAccessor := pulse.NewAccessorMock(s.T())
 	pulseAccessor.LatestMock.Return(*insolar.GenesisPulse, nil)
@@ -209,39 +176,130 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 	req := record.IncomingRequest{
 		Method: "test",
 	}
-	virtRec := record.Wrap(req)
-	data, err := virtRec.Marshal()
-	require.NoError(s.T(), err)
-	finalResponse := &reply.Request{Record: data}
 
-	mb := testutils.NewMessageBusMock(s.T())
-	mb.SendFunc = func(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
-		switch mb.SendCounter {
-		case 0:
-			casted, ok := p1.(*message.GetPendingRequestID)
-			require.Equal(s.T(), true, ok)
-			require.Equal(s.T(), objectID, casted.ObjectID)
-			return &reply.ID{ID: requestID}, nil
-		case 1:
-			casted, ok := p1.(*message.GetRequest)
-			require.Equal(s.T(), true, ok)
-			require.Equal(s.T(), requestID, casted.Request)
-			require.Equal(s.T(), node, *p2.Receiver)
-			return finalResponse, nil
-		default:
-			panic("test is totally broken")
-		}
+	finalResponse := &payload.Request{
+		RequestID: *requestRef.Record(),
+		Request:   record.Wrap(&req),
+	}
+	reqMsg, err := payload.NewMessage(finalResponse)
+	require.NoError(s.T(), err)
+
+	sender := bus.NewSenderMock(s.T())
+	sender.SendRoleFunc = func(_ context.Context, msg *wmMessage.Message, role insolar.DynamicRole, n insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
+		require.Equal(s.T(), insolar.DynamicRoleLightExecutor, role)
+
+		getReq := payload.GetRequest{}
+		err := getReq.Unmarshal(msg.Payload)
+		require.NoError(s.T(), err)
+
+		require.Equal(s.T(), *requestRef.Record(), getReq.RequestID)
+		require.Equal(s.T(), objectRef, n)
+
+		meta := payload.Meta{Payload: reqMsg.Payload}
+		buf, err := meta.Marshal()
+		require.NoError(s.T(), err)
+		reqMsg.Payload = buf
+		ch := make(chan *wmMessage.Message, 1)
+		ch <- reqMsg
+		return ch, func() {}
 	}
 
 	am := NewClient(nil)
 	am.JetCoordinator = jc
-	am.DefaultBus = mb
 	am.PulseAccessor = pulseAccessor
+	am.sender = sender
 
 	// Act
-	_, res, err := am.GetPendingRequest(inslogger.TestContext(s.T()), objectID)
+	res, err := am.GetIncomingRequest(inslogger.TestContext(s.T()), objectRef, requestRef)
 
 	// Assert
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), "test", res.Method)
+}
+
+func (s *amSuite) TestLedgerArtifactManager_GetPendings_Success() {
+	// Arrange
+	mc := minimock.NewController(s.T())
+	defer mc.Finish()
+	objectRef := gen.Reference()
+	requestRef := gen.Reference()
+
+	jc := jet.NewCoordinatorMock(mc)
+
+	pulseAccessor := pulse.NewAccessorMock(s.T())
+	pulseAccessor.LatestMock.Return(*insolar.GenesisPulse, nil)
+
+	resultIDs := &payload.IDs{
+		IDs: []insolar.ID{*requestRef.Record()},
+	}
+	resMsg, err := payload.NewMessage(resultIDs)
+	require.NoError(s.T(), err)
+
+	sender := bus.NewSenderMock(s.T())
+	sender.SendRoleFunc = func(p context.Context, msg *wmMessage.Message, role insolar.DynamicRole, ref insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
+		getPendings := payload.GetPendings{}
+		err := getPendings.Unmarshal(msg.Payload)
+		require.NoError(s.T(), err)
+
+		require.Equal(s.T(), *objectRef.Record(), getPendings.ObjectID)
+
+		meta := payload.Meta{Payload: resMsg.Payload}
+		buf, err := meta.Marshal()
+		require.NoError(s.T(), err)
+		resMsg.Payload = buf
+		ch := make(chan *wmMessage.Message, 1)
+		ch <- resMsg
+		return ch, func() {}
+	}
+
+	am := NewClient(nil)
+	am.JetCoordinator = jc
+	am.PulseAccessor = pulseAccessor
+	am.sender = sender
+
+	// Act
+	res, err := am.GetPendings(inslogger.TestContext(s.T()), objectRef)
+
+	// Assert
+	require.NoError(s.T(), err)
+	require.Equal(s.T(), []insolar.Reference{requestRef}, res)
+}
+
+func (s *amSuite) TestLedgerArtifactManager_HasPendings_Success() {
+	// Arrange
+	mc := minimock.NewController(s.T())
+	defer mc.Finish()
+	objectRef := gen.Reference()
+
+	resultHas := &payload.PendingsInfo{
+		HasPendings: true,
+	}
+	resMsg, err := payload.NewMessage(resultHas)
+	require.NoError(s.T(), err)
+
+	sender := bus.NewSenderMock(s.T())
+	sender.SendRoleFunc = func(p context.Context, msg *wmMessage.Message, role insolar.DynamicRole, ref insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
+		hasPendings := payload.HasPendings{}
+		err := hasPendings.Unmarshal(msg.Payload)
+		require.NoError(s.T(), err)
+
+		require.Equal(s.T(), *objectRef.Record(), hasPendings.ObjectID)
+
+		meta := payload.Meta{Payload: resMsg.Payload}
+		buf, err := meta.Marshal()
+		require.NoError(s.T(), err)
+		resMsg.Payload = buf
+		ch := make(chan *wmMessage.Message, 1)
+		ch <- resMsg
+		return ch, func() {}
+	}
+
+	am := NewClient(sender)
+
+	// Act
+	res, err := am.HasPendings(inslogger.TestContext(s.T()), objectRef)
+
+	// Assert
+	require.NoError(s.T(), err)
+	require.Equal(s.T(), true, res)
 }

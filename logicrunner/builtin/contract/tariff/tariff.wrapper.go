@@ -19,6 +19,10 @@ package tariff
 import (
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+
+	"strings"
+	// TODO: this is the end of a horrible hack, please remove it
 )
 
 type ExtendableError struct {
@@ -87,18 +91,18 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 	return state, ret, err
 }
 
-func INSMETHOD_CalcCommission(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_CalcFee(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.SetSystemError(nil)
 	self := new(Tariff)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeCalcCommission ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &ExtendableError{S: "[ FakeCalcFee ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeCalcCommission ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeCalcFee ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -108,11 +112,24 @@ func INSMETHOD_CalcCommission(object []byte, data []byte) ([]byte, []byte, error
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeCalcCommission ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeCalcFee ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.CalcCommission(args0)
+	ret0, ret1 := self.CalcFee(args0)
+
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
+		return nil, nil, ph.GetSystemError()
+	}
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
@@ -128,35 +145,39 @@ func INSMETHOD_CalcCommission(object []byte, data []byte) ([]byte, []byte, error
 	return state, ret, err
 }
 
-func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
+func INSCONSTRUCTOR_New(data []byte) ([]byte, error, error) {
 	ph := common.CurrentProxyCtx
-	args := [1]interface{}{}
-	var args0 string
-	args[0] = &args0
+	ph.SetSystemError(nil)
+	args := []interface{}{}
 
 	err := ph.Deserialize(data, &args)
 	if err != nil {
 		e := &ExtendableError{S: "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, e
+		return nil, nil, e
 	}
 
-	ret0, ret1 := New(args0)
+	ret0, ret1 := New()
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
 	if ret1 != nil {
-		return nil, ret1
+		// logical error, the result should be registered with type RequestSideEffectNone
+		return nil, ret1, nil
+	}
+
+	if ret0 == nil {
+		// logical error, the result should be registered with type RequestSideEffectNone
+		e := &ExtendableError{S: "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil"}
+		return nil, e, nil
 	}
 
 	ret := []byte{}
 	err = ph.Serialize(ret0, &ret)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	if ret0 == nil {
-		e := &ExtendableError{S: "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil"}
-		return nil, e
-	}
-
-	return ret, err
+	return ret, nil, err
 }
 
 func Initialize() XXX_insolar.ContractWrapper {
@@ -164,7 +185,7 @@ func Initialize() XXX_insolar.ContractWrapper {
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: XXX_insolar.ContractMethods{
-			"CalcCommission": INSMETHOD_CalcCommission,
+			"CalcFee": INSMETHOD_CalcFee,
 		},
 		Constructors: XXX_insolar.ContractConstructors{
 			"New": INSCONSTRUCTOR_New,

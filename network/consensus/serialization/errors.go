@@ -54,8 +54,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-func ErrPayloadLengthMissmatch(expected, actual int64) error {
-	return errors.Errorf("payload length missmatch expected: %d, actual: %d", expected, actual)
+func ErrPayloadLengthMismatch(expected, actual int64) error {
+	return errors.Errorf("payload length mismatch - expected: %d, actual: %d", expected, actual)
 }
 
 func ErrMalformedPulseNumber(err error) error {

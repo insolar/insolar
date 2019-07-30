@@ -20,6 +20,10 @@ import (
 	"github.com/insolar/insolar/insolar"
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+
+	"strings"
+	// TODO: this is the end of a horrible hack, please remove it
 )
 
 type ExtendableError struct {
@@ -90,7 +94,7 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 
 func INSMETHOD_SetTariffs(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.SetSystemError(nil)
 	self := new(CostCenter)
 
 	if len(object) == 0 {
@@ -115,6 +119,19 @@ func INSMETHOD_SetTariffs(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0 := self.SetTariffs(args0)
 
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret0 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -131,7 +148,7 @@ func INSMETHOD_SetTariffs(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetTariffs(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.SetSystemError(nil)
 	self := new(CostCenter)
 
 	if len(object) == 0 {
@@ -154,6 +171,19 @@ func INSMETHOD_GetTariffs(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.GetTariffs()
 
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -170,7 +200,7 @@ func INSMETHOD_GetTariffs(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_SetCurrentTariff(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.SetSystemError(nil)
 	self := new(CostCenter)
 
 	if len(object) == 0 {
@@ -195,6 +225,19 @@ func INSMETHOD_SetCurrentTariff(object []byte, data []byte) ([]byte, []byte, err
 
 	ret0 := self.SetCurrentTariff(args0)
 
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret0 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -211,7 +254,7 @@ func INSMETHOD_SetCurrentTariff(object []byte, data []byte) ([]byte, []byte, err
 
 func INSMETHOD_GetCurrentTariff(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.SetSystemError(nil)
 	self := new(CostCenter)
 
 	if len(object) == 0 {
@@ -234,6 +277,19 @@ func INSMETHOD_GetCurrentTariff(object []byte, data []byte) ([]byte, []byte, err
 
 	ret0, ret1 := self.GetCurrentTariff()
 
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -248,8 +304,9 @@ func INSMETHOD_GetCurrentTariff(object []byte, data []byte) ([]byte, []byte, err
 	return state, ret, err
 }
 
-func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
+func INSCONSTRUCTOR_New(data []byte) ([]byte, error, error) {
 	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
 	args := [2]interface{}{}
 	var args0 insolar.Reference
 	args[0] = &args0
@@ -259,26 +316,31 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	err := ph.Deserialize(data, &args)
 	if err != nil {
 		e := &ExtendableError{S: "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, e
+		return nil, nil, e
 	}
 
 	ret0, ret1 := New(args0, args1)
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
 	if ret1 != nil {
-		return nil, ret1
+		// logical error, the result should be registered with type RequestSideEffectNone
+		return nil, ret1, nil
+	}
+
+	if ret0 == nil {
+		// logical error, the result should be registered with type RequestSideEffectNone
+		e := &ExtendableError{S: "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil"}
+		return nil, e, nil
 	}
 
 	ret := []byte{}
 	err = ph.Serialize(ret0, &ret)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	if ret0 == nil {
-		e := &ExtendableError{S: "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil"}
-		return nil, e
-	}
-
-	return ret, err
+	return ret, nil, err
 }
 
 func Initialize() XXX_insolar.ContractWrapper {

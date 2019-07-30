@@ -17,10 +17,12 @@
 package deposit
 
 import (
-	"github.com/insolar/insolar/insolar"
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
-	"time"
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+
+	"strings"
+	// TODO: this is the end of a horrible hack, please remove it
 )
 
 type ExtendableError struct {
@@ -91,7 +93,7 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 
 func INSMETHOD_GetTxHash(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.SetSystemError(nil)
 	self := new(Deposit)
 
 	if len(object) == 0 {
@@ -114,6 +116,19 @@ func INSMETHOD_GetTxHash(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.GetTxHash()
 
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -130,7 +145,7 @@ func INSMETHOD_GetTxHash(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetAmount(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.SetSystemError(nil)
 	self := new(Deposit)
 
 	if len(object) == 0 {
@@ -153,6 +168,19 @@ func INSMETHOD_GetAmount(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.GetAmount()
 
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
 	state := []byte{}
 	err = ph.Serialize(self, &state)
 	if err != nil {
@@ -167,18 +195,18 @@ func INSMETHOD_GetAmount(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
-func INSMETHOD_MapMarshal(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_Itself(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.SetSystemError(nil)
 	self := new(Deposit)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeMapMarshal ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &ExtendableError{S: "[ FakeItself ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeMapMarshal ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeItself ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -186,11 +214,24 @@ func INSMETHOD_MapMarshal(object []byte, data []byte) ([]byte, []byte, error) {
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeMapMarshal ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeItself ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.MapMarshal()
+	ret0, ret1 := self.Itself()
+
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
+		return nil, nil, ph.GetSystemError()
+	}
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
@@ -208,7 +249,7 @@ func INSMETHOD_MapMarshal(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-
+	ph.SetSystemError(nil)
 	self := new(Deposit)
 
 	if len(object) == 0 {
@@ -221,13 +262,15 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	args := [3]interface{}{}
-	var args0 insolar.Reference
+	args := [4]interface{}{}
+	var args0 int
 	args[0] = &args0
 	var args1 string
 	args[1] = &args1
 	var args2 string
 	args[2] = &args2
+	var args3 string
+	args[3] = &args3
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
@@ -235,7 +278,20 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.Confirm(args0, args1, args2)
+	ret0 := self.Confirm(args0, args1, args2, args3)
+
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret0 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
+		return nil, nil, ph.GetSystemError()
+	}
 
 	state := []byte{}
 	err = ph.Serialize(self, &state)
@@ -243,49 +299,53 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, err
 	}
 
-	ret1 = ph.MakeErrorSerializable(ret1)
+	ret0 = ph.MakeErrorSerializable(ret0)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+	err = ph.Serialize([]interface{}{ret0}, &ret)
 
 	return state, ret, err
 }
 
-func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
+func INSCONSTRUCTOR_New(data []byte) ([]byte, error, error) {
 	ph := common.CurrentProxyCtx
-	args := [4]interface{}{}
-	var args0 map[insolar.Reference]bool
+	ph.SetSystemError(nil)
+	args := [3]interface{}{}
+	var args0 [3]string
 	args[0] = &args0
 	var args1 string
 	args[1] = &args1
 	var args2 string
 	args[2] = &args2
-	var args3 time.Time
-	args[3] = &args3
 
 	err := ph.Deserialize(data, &args)
 	if err != nil {
 		e := &ExtendableError{S: "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, e
+		return nil, nil, e
 	}
 
-	ret0, ret1 := New(args0, args1, args2, args3)
+	ret0, ret1 := New(args0, args1, args2)
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
 	if ret1 != nil {
-		return nil, ret1
+		// logical error, the result should be registered with type RequestSideEffectNone
+		return nil, ret1, nil
+	}
+
+	if ret0 == nil {
+		// logical error, the result should be registered with type RequestSideEffectNone
+		e := &ExtendableError{S: "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil"}
+		return nil, e, nil
 	}
 
 	ret := []byte{}
 	err = ph.Serialize(ret0, &ret)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	if ret0 == nil {
-		e := &ExtendableError{S: "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil"}
-		return nil, e
-	}
-
-	return ret, err
+	return ret, nil, err
 }
 
 func Initialize() XXX_insolar.ContractWrapper {
@@ -293,10 +353,10 @@ func Initialize() XXX_insolar.ContractWrapper {
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: XXX_insolar.ContractMethods{
-			"GetTxHash":  INSMETHOD_GetTxHash,
-			"GetAmount":  INSMETHOD_GetAmount,
-			"MapMarshal": INSMETHOD_MapMarshal,
-			"Confirm":    INSMETHOD_Confirm,
+			"GetTxHash": INSMETHOD_GetTxHash,
+			"GetAmount": INSMETHOD_GetAmount,
+			"Itself":    INSMETHOD_Itself,
+			"Confirm":   INSMETHOD_Confirm,
 		},
 		Constructors: XXX_insolar.ContractConstructors{
 			"New": INSCONSTRUCTOR_New,

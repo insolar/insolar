@@ -30,7 +30,14 @@ import (
 // With using of IndexModifier there is a possibility to set buckets from outside of an index.
 type IndexModifier interface {
 	// SetIndex adds a bucket with provided pulseNumber and ID
-	SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket record.Index) error
+	SetIndex(ctx context.Context, pn insolar.PulseNumber, index record.Index) error
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.MemoryIndexModifier -o ./ -s _mock.go
+
+// MemoryIndexModifier writes index to in-memory storage.
+type MemoryIndexModifier interface {
+	Set(ctx context.Context, pn insolar.PulseNumber, index record.Index)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexAccessor -o ./ -s _mock.go
@@ -38,7 +45,7 @@ type IndexModifier interface {
 // IndexAccessor provides an interface for fetching buckets from an index.
 type IndexAccessor interface {
 	ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (record.Index, error)
-	// ForPulse returns a collection of buckets for a provided pn and jetID
+	// ForPulse returns a collection of buckets for a provided pulse number.
 	ForPulse(ctx context.Context, pn insolar.PulseNumber) []record.Index
 }
 
@@ -47,6 +54,13 @@ type IndexAccessor interface {
 type IndexStorage interface {
 	IndexAccessor
 	IndexModifier
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.MemoryIndexStorage -o ./ -s _mock.go
+
+type MemoryIndexStorage interface {
+	IndexAccessor
+	MemoryIndexModifier
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexCleaner -o ./ -s _mock.go
