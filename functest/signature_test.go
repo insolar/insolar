@@ -20,6 +20,7 @@ package functest
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -28,15 +29,23 @@ import (
 	"github.com/insolar/insolar/api/requester"
 )
 
-//type signCases struct {
-//	input string
-//	expectedErr string
-//}
+type signCases struct {
+	input       string
+	expectedErr string
+}
 
-func IncorrectSign(t *testing.T, signature string) ([]byte, error) {
+func IncorrectSignTableTests(t *testing.T, signature string, error string) {
 	testMember := createMember(t)
 	seed, err := requester.GetSeed(TestAPIURL)
 	require.NoError(t, err)
+
+	//debug
+	fmt.Println("input : ")
+	fmt.Println(signature)
+	fmt.Println("expectedErr : ")
+	fmt.Println(error)
+	//debug end
+
 	body, err := requester.GetResponseBodyContract(
 		TestCallUrl,
 		requester.Request{
@@ -46,65 +55,41 @@ func IncorrectSign(t *testing.T, signature string) ([]byte, error) {
 			Params:  requester.Params{Seed: seed, Reference: testMember.ref, PublicKey: testMember.pubKey, CallSite: "wallet.getBalance", CallParams: map[string]interface{}{"reference": testMember.ref}},
 		},
 		signature)
-	return body, nil
-}
-
-//func TestTableSignData(t *testing.T){
-//	data := []signCases{
-//		{"MEQCIAvgBR42vSccBKynBIC7gb5GffqtW8q2XWRP+DlJ0IeUAiAeKCxZNSSRSsYcz2d49CT6KlSLpr5L7VlOokOiI9dsvQ==", "invalid signature"},
-//		{"","invalid signature"},
-//	}
-//
-//
-//}
-
-func TestIncorrectSign(t *testing.T) {
-	body, err := IncorrectSign(t, "MEQCIAvgBR42vSccBKynBIC7gb5GffqtW8q2XWRP+DlJ0IeUAiAeKCxZNSSRSsYcz2d49CT6KlSLpr5L7VlOokOiI9dsvQ==")
 	require.NoError(t, err)
 	var res requester.ContractAnswer
 	err = json.Unmarshal(body, &res)
 	require.NoError(t, err)
-	require.Contains(t, res.Error.Message, "invalid signature")
+	require.Contains(t, res.Error.Message, error)
 }
 
-func TestEmptyStrSign(t *testing.T) {
-	body, err := IncorrectSign(t, "")
-	require.NoError(t, err)
-	var res requester.ContractAnswer
-	err = json.Unmarshal(body, &res)
-	require.NoError(t, err)
-	require.Contains(t, res.Error.Message, "invalid signature")
+func TestTableSignData(t *testing.T) {
+	data := []signCases{
+		{"MEQCIAvgBR42vSccBKynBIC7gb5GffqtW8q2XWRP+DlJ0IeUAiAeKCxZNSSRSsYcz2d49CT6KlSLpr5L7VlOokOiI9dsvQ==", "invalid signature"},
+		{"", "empty signature"},
+		{"  MEQCIAvgBR42vSccBKynBIC7gb5GffqtW8q2XWRP+DlJ0IeUAiAeKCxZNSSRSsYcz2d49CT6KlSLpr5L7VlOokOiI9dsvQ==   ",
+			"[ makeCall ] Error in called method: error while verify signature: cant decode signature illegal base64 data at input byte 0"},
+	}
+	for _, tc := range data {
+		IncorrectSignTableTests(t, tc.input, tc.expectedErr)
+	}
+
 }
 
-func TestSignWithSpaces(t *testing.T) {
-	body, err := IncorrectSign(t, "  MEQCIAvgBR42vSccBKynBIC7gb5GffqtW8q2XWRP+DlJ0IeUAiAeKCxZNSSRSsYcz2d49CT6KlSLpr5L7VlOokOiI9dsvQ==   ")
-	require.NoError(t, err)
-	var res requester.ContractAnswer
-	err = json.Unmarshal(body, &res)
-	require.NoError(t, err)
-	require.Contains(t, res.Error.Message, "invalid signature")
-}
-
-func TestSignOtherMemberWithPubKeyWords(t *testing.T) {
+//bug https://insolar.atlassian.net/browse/INS-3115
+func TestTableSignData1(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
-	body, err := IncorrectSign(t, member.pubKey)
-	require.NoError(t, err)
-	var res requester.ContractAnswer
-	err = json.Unmarshal(body, &res)
-	require.NoError(t, err)
-	require.Contains(t, res.Error.Message, "invalid signature")
-}
 
-func TestSignOtherMember(t *testing.T) {
-	member, err := newUserWithKeys()
+	member2, err := newUserWithKeys()
 	require.NoError(t, err)
-	s := strings.Split(member.pubKey, "-----")
-	sign := s[2]
-	body, err := IncorrectSign(t, sign)
-	require.NoError(t, err)
-	var res requester.ContractAnswer
-	err = json.Unmarshal(body, &res)
-	require.NoError(t, err)
-	require.Contains(t, res.Error.Message, "invalid signature")
+	sign := strings.ReplaceAll(
+		strings.Split(member2.pubKey, "-----")[2], "\n", "")
+
+	data := []signCases{
+		{member.pubKey, "empty signature"},
+		{sign, "invalid signature"},
+	}
+	for _, tc := range data {
+		IncorrectSignTableTests(t, tc.input, tc.expectedErr)
+	}
 }
