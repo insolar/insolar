@@ -295,10 +295,7 @@ type ExpectedCensusTemplate struct {
 }
 
 func (c *ExpectedCensusTemplate) ConvertEphemeralAndMakeExpected(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) census.Expected {
-	pd := c.prev.GetPulseData()
-	if !pd.IsEmpty() && !pd.IsFromEphemeral() {
-		panic("illegal state")
-	}
+
 	if csh == nil || gsh == nil || !pn.IsUnknownOrTimePulse() {
 		panic("illegal value")
 	}
@@ -306,7 +303,7 @@ func (c *ExpectedCensusTemplate) ConvertEphemeralAndMakeExpected(pn pulse.Number
 	cp.pn = pn
 	cp.csh = csh
 	cp.gsh = gsh
-	return cp.chronicles.makeExpected(&cp)
+	return cp.chronicles.replaceExpected(c, &cp)
 }
 
 func (c *ExpectedCensusTemplate) GetNearestPulseData() (bool, pulse.Data) {
