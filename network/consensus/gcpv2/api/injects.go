@@ -109,7 +109,7 @@ type PulseControlFeeder interface {
 
 type EphemeralControlFeeder interface {
 	GetEphemeralTimings(LocalNodeConfiguration) RoundTimings
-	CanBeEphemeral() (beEphemeral bool, minDuration time.Duration) // TODO expected pulse number
+	CanBeEphemeral() (beEphemeral bool, minDuration time.Duration) // TODO expected non-ephemeral pulse number
 
 	IsActive() bool
 	CreateEphemeralPulsePacket(census census.Operational) proofs.OriginalPulsarPacket
