@@ -25,6 +25,6 @@ type Exporter struct {
 // NewExporter creates new default configuration for export.
 func NewExporter() Exporter {
 	return Exporter{
-		Addr: ":1514",
+		Addr: ":5678",
 	}
 }

@@ -18,6 +18,7 @@ package heavy
 
 import (
 	"context"
+	"fmt"
 	"net"
 
 	"github.com/insolar/insolar/ledger/heavy/exporter"
@@ -240,13 +241,13 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		JetKeeper      executor.JetKeeper
 	)
 	{
-		records := object.NewRecordDB(DB)
+		Records = object.NewRecordDB(DB)
 		RecordPosition = object.NewRecordPositionDB(DB)
 		indexes := object.NewIndexDB(DB)
 		drops := drop.NewDB(DB)
 		jets := jet.NewDBStore(DB)
-		JetKeeper := executor.NewJetKeeper(jets, DB, Pulses)
-		c.rollback = executor.NewDBRollback(JetKeeper, Pulses, drops, records, indexes, jets, Pulses)
+		JetKeeper = executor.NewJetKeeper(jets, DB, Pulses)
+		c.rollback = executor.NewDBRollback(JetKeeper, Pulses, drops, Records, indexes, jets, Pulses)
 
 		pm := pulsemanager.NewPulseManager()
 		pm.Bus = Bus
@@ -259,9 +260,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		pm.FinalizationKeeper = executor.NewFinalizationKeeperDefault(JetKeeper, Termination, Pulses, cfg.Ledger.LightChainLimit)
 
 		h := handler.New(cfg.Ledger)
-		h.RecordAccessor = records
+		h.RecordAccessor = Records
 		h.RecordPositions = RecordPosition
-		h.RecordModifier = records
+		h.RecordModifier = Records
 		h.JetCoordinator = Coordinator
 		h.IndexAccessor = indexes
 		h.IndexModifier = indexes
@@ -280,8 +281,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		artifactManager := &artifact.Scope{
 			PulseNumber:    insolar.FirstPulseNumber,
 			PCS:            CryptoScheme,
-			RecordAccessor: records,
-			RecordModifier: records,
+			RecordAccessor: Records,
+			RecordModifier: Records,
 			IndexModifier:  indexes,
 			IndexAccessor:  indexes,
 		}
@@ -292,7 +293,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 				DropModifier:   drops,
 				PulseAppender:  Pulses,
 				PulseAccessor:  Pulses,
-				RecordModifier: records,
+				RecordModifier: Records,
 				IndexModifier:  indexes,
 			},
 
@@ -309,13 +310,15 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		recordExporter = exporter.NewRecordServer(Pulses, RecordPosition, Records, JetKeeper)
 		lis, err := net.Listen("tcp", cfg.Exporter.Addr)
 		if err != nil {
-			log.Fatalf("failed to listen: %v", err)
+			return nil, errors.Wrap(err, "failed to open port for Exporter")
 		}
 		grpcServer := grpc.NewServer()
 		exporter.RegisterRecordExporterServer(grpcServer, recordExporter)
-		if err := grpcServer.Serve(lis); err != nil {
-			log.Fatalf("failed to serve: %s", err)
-		}
+		go func() {
+			if err := grpcServer.Serve(lis); err != nil {
+				panic(fmt.Errorf("exporter failed to serve: %s", err))
+			}
+		}()
 	}
 
 	c.cmp.Inject(
