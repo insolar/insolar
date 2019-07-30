@@ -74,13 +74,8 @@ type EphemeralController interface {
 	EphemeralMode() bool
 }
 
-type (
-	OnFinished func(mode member.OpMode, pw member.Power, effectiveSince pulse.Number)
-)
-
 type ConsensusControlFeeder struct {
 	mu            *sync.RWMutex
-	onFinished    OnFinished
 	capacityLevel capacity.Level
 	leave         bool
 	leaveReason   uint32
@@ -90,7 +85,6 @@ func NewConsensusControlFeeder() *ConsensusControlFeeder {
 	return &ConsensusControlFeeder{
 		mu:            &sync.RWMutex{},
 		capacityLevel: capacity.LevelNormal,
-		onFinished:    func(mode member.OpMode, pw member.Power, effectiveSince pulse.Number) {},
 	}
 }
 
@@ -123,18 +117,7 @@ func (cf *ConsensusControlFeeder) GetRequiredPowerLevel() power.Request {
 	return power.NewRequestByLevel(capacity.LevelNormal)
 }
 
-func (cf *ConsensusControlFeeder) SetOnFinished(f OnFinished) {
-	cf.mu.Lock()
-	defer cf.mu.Unlock()
-
-	cf.onFinished = f
-}
-
 func (cf *ConsensusControlFeeder) OnAppliedMembershipProfile(mode member.OpMode, pw member.Power, effectiveSince pulse.Number) {
-	cf.mu.RLock()
-	defer cf.mu.RUnlock()
-
-	cf.onFinished(mode, pw, effectiveSince)
 }
 
 func (cf *ConsensusControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse.Number) {
