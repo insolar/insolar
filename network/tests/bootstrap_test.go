@@ -56,6 +56,7 @@ import (
 	"fmt"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -87,14 +88,14 @@ func (s *bootstrapSuite) SetupTest() {
 	//
 	//}
 
-	//pulseReceivers := make([]string, 0)
-	//for _, node := range s.fixture().bootstrapNodes {
-	//	pulseReceivers = append(pulseReceivers, node.host)
-	//}
-	//
-	//log.Info("Start test pulsar")
-	//err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
-	//s.Require().NoError(err)
+	pulseReceivers := make([]string, 0)
+	for _, node := range s.fixture().bootstrapNodes {
+		pulseReceivers = append(pulseReceivers, node.host)
+	}
+
+	log.Info("Start test pulsar")
+	err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
+	require.NoError(s.t, err)
 }
 
 func (s *bootstrapSuite) TearDownTest() {
@@ -128,7 +129,7 @@ func testBootstrap(t *testing.T) *bootstrapSuite {
 }
 
 func TestExample(t *testing.T) {
-	t.Skip("FIXME")
+	//t.Skip("FIXME")
 	s := testBootstrap(t)
 	defer s.TearDownTest()
 

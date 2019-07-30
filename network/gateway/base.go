@@ -52,7 +52,6 @@ package gateway
 
 import (
 	"context"
-	"github.com/insolar/insolar/network/pulsenetwork"
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -249,25 +248,7 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 
 	profile := adapters.NewStaticProfileFromPacket(data.CandidateProfile, g.KeyProcessor)
 	g.ConsensusController.AddJoinCandidate(candidate{profile, profile.GetExtension()})
-
-	// for discovery bootstrap
-	if g.Gatewayer.Gateway().GetState() != insolar.CompleteNetworkState {
-		p := pulse.FromProto(&data.Pulse)
-		p.PulseNumber = 1
-		p.PrevPulseNumber = p.PulseNumber - 1
-
-		ph, _ := host.NewHost("127.0.0.1:1")
-		th, _ := host.NewHost(g.NodeKeeper.GetOrigin().Address())
-
-		pp := pulsenetwork.NewPulsePacket(p, ph, th, 0)
-
-		bs, err := packet.SerializePacket(pp)
-		if err != nil {
-			panic(err.Error())
-		}
-
-		g.ConsensusPulseHandler.HandlePulse(ctx, *p, packet.NewReceivedPacket(pp, bs))
-	}
+	inslogger.FromContext(ctx).Infof("=== AddJoinCandidate id = %d, address = %s ", data.CandidateProfile.ShortID, data.CandidateProfile.Address)
 
 	//go func() {
 	//	// TODO:
@@ -326,7 +307,7 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.R
 			err = errors.New("Certificate validation failed")
 		}
 
-		inslogger.FromContext(ctx).Error(err.Error())
+		inslogger.FromContext(ctx).Warn(err.Error())
 		// FIXME
 		//panic(err.Error())
 		//return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{Code: packet.WrongMandate, Error: err.Error()}), nil

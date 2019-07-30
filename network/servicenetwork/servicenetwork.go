@@ -203,6 +203,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	}
 
 	origin.(node.MutableNode).SetSignature(digest, *sign)
+	n.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{origin})
 
 	err = n.cm.Init(ctx)
 	if err != nil {
@@ -417,6 +418,6 @@ func (n *ServiceNetwork) GetCert(ctx context.Context, ref *insolar.Reference) (i
 }
 
 func (n *ServiceNetwork) EphemeralMode() bool {
-	//return n.Gatewayer.Gateway().EphemeralMode()
-	return false
+	return n.Gatewayer.Gateway().EphemeralMode()
+	//return false
 }

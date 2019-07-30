@@ -124,7 +124,7 @@ func initLogger(ctx context.Context, level insolar.LogLevel) context.Context {
 
 func newFixture(t *testing.T) *fixture {
 	return &fixture{
-		ctx:            initLogger(inslogger.TestContext(t), insolar.InfoLevel),
+		ctx:            initLogger(inslogger.TestContext(t), insolar.DebugLevel),
 		bootstrapNodes: make([]*networkNode, 0),
 		networkNodes:   make([]*networkNode, 0),
 	}
