@@ -356,6 +356,10 @@ func (r *RecordPositionDB) LastKnownPosition(pn insolar.PulseNumber) (uint32, er
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 
+	return r.lastKnownPosition(pn)
+}
+
+func (r *RecordPositionDB) lastKnownPosition(pn insolar.PulseNumber) (uint32, error) {
 	buff, err := r.db.Get(lastKnownRecordPositionKey{pn: pn})
 	if err != nil {
 		return 0, err
@@ -395,7 +399,7 @@ func (r *RecordPositionDB) IncrementPosition(recID insolar.ID) error {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	currentPosition, err := r.LastKnownPosition(recID.Pulse())
+	currentPosition, err := r.lastKnownPosition(recID.Pulse())
 	if err != nil && err != store.ErrNotFound {
 		return err
 	}
