@@ -65,6 +65,10 @@ const (
 
 const PrimaryRoleCount = int(maxPrimaryRole)
 
+func (v PrimaryRole) Equal(other PrimaryRole) bool {
+	return v == other
+}
+
 func (v PrimaryRole) IsMaterial() bool {
 	return v == PrimaryRoleHeavyMaterial || v == PrimaryRoleLightMaterial
 }
@@ -94,4 +98,8 @@ const (
 
 func (v SpecialRole) IsDiscovery() bool {
 	return v == SpecialRoleDiscovery
+}
+
+func (v SpecialRole) Equal(other SpecialRole) bool {
+	return v == other
 }

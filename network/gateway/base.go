@@ -52,8 +52,9 @@ package gateway
 
 import (
 	"context"
-	"github.com/insolar/insolar/network/pulsenetwork"
 	"time"
+
+	"github.com/insolar/insolar/network/pulsenetwork"
 
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
@@ -101,7 +102,7 @@ type Base struct {
 	ConsensusPulseHandler network.PulseHandler
 
 	bootstrapETA           insolar.PulseNumber
-	originCandidateProfile *packet.CandidateProfile
+	originCandidateProfile *adapters.CandidateProfile
 }
 
 // NewGateway creates new gateway on top of existing
@@ -247,7 +248,8 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 		profiles.StaticProfileExtension
 	}
 
-	profile := adapters.NewStaticProfileFromPacket(data.CandidateProfile, g.KeyProcessor)
+	profile := adapters.CandidateProfile(data.CandidateProfile).StaticProfile(g.KeyProcessor)
+
 	g.ConsensusController.AddJoinCandidate(candidate{profile, profile.GetExtension()})
 
 	// for discovery bootstrap
@@ -400,48 +402,12 @@ func (g *Base) OnConsensusFinished(p insolar.PulseNumber) {
 }
 
 func (g *Base) createCandidateProfile() {
-
 	origin := g.NodeKeeper.GetOrigin()
 
 	staticProfile := adapters.NewStaticProfile(origin, g.CertificateManager.GetCertificate(), g.KeyProcessor)
+	candidateProfile := adapters.NewCandidateProfile(staticProfile, g.KeyProcessor)
 
-	staticProfile.GetExtension().GetIssuerSignature().AsBytes()
-	//digest, sign := origin.(node.MutableNode).GetSignature()
-
-	pubKey, err := g.KeyProcessor.ExportPublicKeyBinary(origin.PublicKey())
-	if err != nil {
-		panic("Failed ExportPublicKeyBinary")
-	}
-
-	p := &packet.CandidateProfile{}
-	p.Address = origin.Address()
-	p.Ref = origin.ID()
-	p.ShortID = uint32(origin.ShortID())
-	p.Digest = staticProfile.GetBriefIntroSignedDigest().GetDigestHolder().AsBytes()
-	p.Signature = staticProfile.GetBriefIntroSignedDigest().GetSignatureHolder().AsBytes()
-	//p.Signature = staticProfile.GetExtension().GetIssuerSignature().AsBytes()
-
-	p.PublicKey = pubKey
-
-	cert := g.CertificateManager.GetCertificate()
-	switch cert.GetRole() {
-	case insolar.StaticRoleVirtual:
-		p.PrimaryRole = packet.Virtual
-	case insolar.StaticRoleHeavyMaterial:
-		p.PrimaryRole = packet.HeavyMaterial
-	case insolar.StaticRoleLightMaterial:
-		p.PrimaryRole = packet.LightMaterial
-	default:
-		panic("unknown role")
-	}
-
-	if network.OriginIsDiscovery(cert) {
-		p.SpecialRole = packet.Discovery
-	} else {
-		p.SpecialRole = packet.None
-	}
-
-	g.originCandidateProfile = p
+	g.originCandidateProfile = candidateProfile
 }
 
 func (g *Base) EphemeralMode() bool {

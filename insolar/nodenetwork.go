@@ -31,6 +31,8 @@ const AbsentShortNodeID ShortNodeID = 0
 
 func (v ShortNodeID) IsAbsent() bool { return v == AbsentShortNodeID }
 
+func (v ShortNodeID) Equal(other ShortNodeID) bool { return v == other }
+
 // GlobuleID is the ID of the globe
 type GlobuleID uint32
 
