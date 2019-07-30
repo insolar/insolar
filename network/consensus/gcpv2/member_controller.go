@@ -218,19 +218,18 @@ type ephemeralInterceptor struct {
 	round      api.RoundController
 }
 
-func (p *ephemeralInterceptor) ConsensusFinished(report api.UpstreamReport, startedAt time.Time, expectedCensus census.Operational) {
-	p.EphemeralControlFeeder.ConsensusFinished(report, startedAt, expectedCensus)
+func (p *ephemeralInterceptor) EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time,
+	expected census.Operational) {
 
 	p.controller.mutex.Lock()
 	defer p.controller.mutex.Unlock()
-	beEphemeral, minDuration := p.EphemeralControlFeeder.CanBeEphemeral()
 
-	if !beEphemeral {
+	if !isNextEphemeral {
 		p.EphemeralControlFeeder = nil
 		return
 	}
 
-	untilNextStart := time.Until(startedAt.Add(minDuration))
+	untilNextStart := time.Until(roundStartedAt.Add(p.GetMinDuration()))
 	if untilNextStart > 0 {
 		time.AfterFunc(untilNextStart, p.startNext)
 	} else {

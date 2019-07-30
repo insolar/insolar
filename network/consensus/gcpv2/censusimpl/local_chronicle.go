@@ -159,7 +159,7 @@ func (c *localChronicles) makeActive(ce census.Expected, ca localActiveCensus) {
 	c.expected = nil
 }
 
-func (c *localChronicles) makeExpected(ce census.Expected) {
+func (c *localChronicles) makeExpected(ce census.Expected) census.Expected {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 
@@ -172,6 +172,7 @@ func (c *localChronicles) makeExpected(ce census.Expected) {
 	}
 
 	c.expected = ce
+	return ce
 }
 
 func (c *localChronicles) GetProfileFactory(factory cryptkit.KeyStoreFactory) profiles.Factory {

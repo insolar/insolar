@@ -293,7 +293,7 @@ func (r *coreRealm) VerifyPacketPulseNumber(ctx context.Context, packet transpor
 	filterPN, nextPN pulse.Number) (bool, error) {
 
 	if r.ephemeralFeeder != nil && !packet.GetPacketType().IsEphemeralPacket() {
-		return false, r.ephemeralFeeder.OnEphemeralIncompatiblePacket(ctx, packet, from)
+		return false, r.ephemeralFeeder.OnNonEphemeralPacket(ctx, packet, from)
 	}
 
 	pn := packet.GetPulseNumber()

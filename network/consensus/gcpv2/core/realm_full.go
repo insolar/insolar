@@ -571,7 +571,29 @@ func (r *FullRealm) finishRound(ctx context.Context, builder census.Builder, csh
 		expected = builder.BuildAndMakeBrokenExpected(csh)
 	}
 
-	r.notifyConsensusFinished(expected.GetOnlinePopulation().GetLocalProfile(), expected)
+	isNextEphemeral := false
+	if r.ephemeralFeeder != nil {
+		wasConverted, convertedExpected := r.ephemeralFeeder.TryConvertFromEphemeral(expected)
+		if wasConverted {
+			expected = convertedExpected
+		} else {
+			isNextEphemeral = true
+		}
+	}
+
+	newSelf := expected.GetOnlinePopulation().GetLocalProfile()
+	report := api.UpstreamReport{
+		PulseNumber: r.pulseData.PulseNumber,
+		MemberPower: newSelf.GetDeclaredPower(),
+		MemberMode:  newSelf.GetOpMode(),
+	}
+
+	// MUST happen before ephemeralFeeder to trigger proper worker stare
+	r.stateMachine.ConsensusFinished(report, expected)
+
+	if r.ephemeralFeeder != nil {
+		r.ephemeralFeeder.EphemeralConsensusFinished(isNextEphemeral, r.roundStartedAt, expected)
+	}
 
 	nextNP := expected.GetPulseNumber()
 	rs := r.self.GetRequestedState()
@@ -590,18 +612,6 @@ func (r *FullRealm) finishRound(ctx context.Context, builder census.Builder, csh
 		pw = 0
 	}
 	r.controlFeeder.OnAppliedMembershipProfile(mode, pw, nextNP)
-}
-
-func (r *FullRealm) notifyConsensusFinished(newSelf profiles.ActiveNode, expectedCensus census.Operational) {
-	report := api.UpstreamReport{
-		PulseNumber: r.pulseData.PulseNumber,
-		MemberPower: newSelf.GetDeclaredPower(),
-		MemberMode:  newSelf.GetOpMode(),
-	}
-	r.stateMachine.ConsensusFinished(report, expectedCensus)
-	if r.ephemeralFeeder != nil {
-		r.ephemeralFeeder.ConsensusFinished(report, r.roundStartedAt, expectedCensus)
-	}
 }
 
 func (r *FullRealm) GetProfileFactory() profiles.Factory {
