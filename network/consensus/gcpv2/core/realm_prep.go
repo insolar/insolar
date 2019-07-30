@@ -89,11 +89,10 @@ type PrepRealm struct {
 	// queueToFull       chan packetrecorder.PostponedPacket
 	// phase2ExtLimit    uint8
 
+	/* Other fields - need mutex */
+
 	limiters           sync.Map
 	lastCloudStateHash cryptkit.DigestHolder
-
-	/* Other fields - need mutex */
-	// 	censusBuilder census.Builder
 }
 
 func (p *PrepRealm) init(completeFn func(successful bool)) {
@@ -231,7 +230,7 @@ func (p *PrepRealm) prepareEphemeralPolling(ctxPrep context.Context) {
 			if !p.checkEphemeralStart(ctxPrep) {
 				return true // stay in polling
 			}
-			p.pushEphemeralPulse(ctxPrep)
+			go p.pushEphemeralPulse(ctxPrep)
 			// stop polling anyway - repeating of unsuccessful is bad
 		}
 		return false
@@ -239,17 +238,20 @@ func (p *PrepRealm) prepareEphemeralPolling(ctxPrep context.Context) {
 }
 
 func (p *PrepRealm) pushEphemeralPulse(ctx context.Context) bool {
+
+	p.Lock()
+	defer p.Unlock()
+
+	if p.ephemeralFeeder == nil {
+		return false // ephemeral mode was deactivated
+	}
+
 	pde := p.ephemeralFeeder.CreateEphemeralPulsePacket(p.initialCensus)
 	ok, pn := p._applyPulseData(pde, false)
-
-	if ok {
-		p.completeFn(true)
-		return true
-	}
-	if pn != pde.GetPulseNumber() {
+	if !ok && pn != pde.GetPulseNumber() {
 		inslogger.FromContext(ctx).Error("active ephemeral start has failed, going to passive")
 	}
-	return false
+	return ok
 }
 
 func (p *PrepRealm) checkEphemeralStart(ctx context.Context) bool {
@@ -278,6 +280,7 @@ func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bo
 
 	pde := pp.GetPulseDataEvidence()
 	pd := pp.GetPulseData()
+	pn := pd.PulseNumber
 	if pde.GetPulseData() != pd {
 		return fmt.Errorf("pulse data and pulse data evidence are mismatched: %v, %v", pd, pde)
 	}
@@ -286,13 +289,7 @@ func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bo
 	defer p.Unlock()
 
 	ok, epn := p._applyPulseData(pde, fromPulsar)
-
-	if ok {
-		p.completeFn(true)
-		return nil
-	}
-	pn := pd.PulseNumber
-	if !epn.IsUnknown() && epn == pn {
+	if ok || !epn.IsUnknown() && epn == pn {
 		return nil
 	}
 
@@ -319,24 +316,33 @@ func (p *PrepRealm) _applyPulseData(pdp proofs.OriginalPulsarPacket, fromPulsar 
 		valid = pd.IsValidPulseData()
 	}
 
-	// TODO redirect ephemeral pulses
-	//if p.ephemeralMode.IsEnabled() && !pd.IsFromEphemeral() {
-	//}
-
 	if !valid {
 		return false, pulse.Unknown
 	}
 
-	epn := pulse.Unknown
-	if p.initialCensus.GetCensusState() == census.PrimingCensus || p.initialCensus.IsActive() {
-		epn = p.initialCensus.GetExpectedPulseNumber()
-	} else {
-		epn = p.initialCensus.GetPulseNumber()
-	}
+	switch {
+	case p.ephemeralFeeder != nil && pd.IsFromPulsar():
+		if fromPulsar { // we cant receive pulsar packets directly from pulsars when ephemeral
+			panic("illegal state")
+		}
+		if p.ephemeralFeeder.CanAcceptTimePulseToStopEphemeral(pd) {
+			panic("not implemented")
+			//p.isPulseConvertedFromEphemeral = true
+			//p.ephemeralFeeder = nil
+		}
+		fallthrough
+	default:
+		epn := pulse.Unknown
+		if p.initialCensus.GetCensusState() == census.PrimingCensus || p.initialCensus.IsActive() {
+			epn = p.initialCensus.GetExpectedPulseNumber()
+		} else {
+			epn = p.initialCensus.GetPulseNumber()
+		}
 
-	pn := pd.PulseNumber // it can't be zero as pulseData was validated above
-	if !epn.IsUnknown() && epn != pn {
-		return false, epn
+		pn := pd.PulseNumber // it can't be zero as pulseData was validated above
+		if !epn.IsUnknown() && epn != pn {
+			return false, epn
+		}
 	}
 
 	p.originalPulse = pdp

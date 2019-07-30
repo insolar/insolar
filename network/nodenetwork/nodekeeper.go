@@ -133,9 +133,10 @@ type nodekeeper struct {
 	cloudHashLock sync.RWMutex
 	cloudHash     []byte
 
-	activeLock sync.RWMutex
-	snapshot   *node.Snapshot
-	accessor   *node.Accessor
+	activeLock  sync.RWMutex
+	snapshot    *node.Snapshot
+	accessor    *node.Accessor
+	pulseNumber insolar.PulseNumber
 
 	syncLock  sync.Mutex
 	syncNodes []insolar.NetworkNode
@@ -246,6 +247,11 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context, number insolar.Pulse
 		nk.syncLock.Unlock()
 		nk.activeLock.Unlock()
 	}()
+
+	if nk.pulseNumber == number {
+		return nil
+	}
+	nk.pulseNumber = number
 
 	mergeResult, err := GetMergedCopy(nk.syncNodes)
 	if err != nil {

@@ -159,7 +159,7 @@ type ExpectedMockConvertEphemeralResult struct {
 	r Expected
 }
 
-//Expect specifies that invocation of Expected.ConvertEphemeral is expected from 1 to Infinity times
+//Expect specifies that invocation of Expected.ConvertEphemeralAndMakeExpected is expected from 1 to Infinity times
 func (m *mExpectedMockConvertEphemeral) Expect(p pulse.Number, p1 proofs.CloudStateHash, p2 proofs.GlobulaStateHash) *mExpectedMockConvertEphemeral {
 	m.mock.ConvertEphemeralFunc = nil
 	m.expectationSeries = nil
@@ -171,7 +171,7 @@ func (m *mExpectedMockConvertEphemeral) Expect(p pulse.Number, p1 proofs.CloudSt
 	return m
 }
 
-//Return specifies results of invocation of Expected.ConvertEphemeral
+//Return specifies results of invocation of Expected.ConvertEphemeralAndMakeExpected
 func (m *mExpectedMockConvertEphemeral) Return(r Expected) *ExpectedMock {
 	m.mock.ConvertEphemeralFunc = nil
 	m.expectationSeries = nil
@@ -183,7 +183,7 @@ func (m *mExpectedMockConvertEphemeral) Return(r Expected) *ExpectedMock {
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of Expected.ConvertEphemeral is expected once
+//ExpectOnce specifies that invocation of Expected.ConvertEphemeralAndMakeExpected is expected once
 func (m *mExpectedMockConvertEphemeral) ExpectOnce(p pulse.Number, p1 proofs.CloudStateHash, p2 proofs.GlobulaStateHash) *ExpectedMockConvertEphemeralExpectation {
 	m.mock.ConvertEphemeralFunc = nil
 	m.mainExpectation = nil
@@ -198,7 +198,7 @@ func (e *ExpectedMockConvertEphemeralExpectation) Return(r Expected) {
 	e.result = &ExpectedMockConvertEphemeralResult{r}
 }
 
-//Set uses given function f as a mock of Expected.ConvertEphemeral method
+//Set uses given function f as a mock of Expected.ConvertEphemeralAndMakeExpected method
 func (m *mExpectedMockConvertEphemeral) Set(f func(p pulse.Number, p1 proofs.CloudStateHash, p2 proofs.GlobulaStateHash) (r Expected)) *ExpectedMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -207,23 +207,23 @@ func (m *mExpectedMockConvertEphemeral) Set(f func(p pulse.Number, p1 proofs.Clo
 	return m.mock
 }
 
-//ConvertEphemeral implements github.com/insolar/insolar/network/consensus/gcpv2/api/census.Expected interface
-func (m *ExpectedMock) ConvertEphemeral(p pulse.Number, p1 proofs.CloudStateHash, p2 proofs.GlobulaStateHash) (r Expected) {
+//ConvertEphemeralAndMakeExpected implements github.com/insolar/insolar/network/consensus/gcpv2/api/census.Expected interface
+func (m *ExpectedMock) ConvertEphemeralAndMakeExpected(p pulse.Number, p1 proofs.CloudStateHash, p2 proofs.GlobulaStateHash) (r Expected) {
 	counter := atomic.AddUint64(&m.ConvertEphemeralPreCounter, 1)
 	defer atomic.AddUint64(&m.ConvertEphemeralCounter, 1)
 
 	if len(m.ConvertEphemeralMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.ConvertEphemeralMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ExpectedMock.ConvertEphemeral. %v %v %v", p, p1, p2)
+			m.t.Fatalf("Unexpected call to ExpectedMock.ConvertEphemeralAndMakeExpected. %v %v %v", p, p1, p2)
 			return
 		}
 
 		input := m.ConvertEphemeralMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ExpectedMockConvertEphemeralInput{p, p1, p2}, "Expected.ConvertEphemeral got unexpected parameters")
+		testify_assert.Equal(m.t, *input, ExpectedMockConvertEphemeralInput{p, p1, p2}, "Expected.ConvertEphemeralAndMakeExpected got unexpected parameters")
 
 		result := m.ConvertEphemeralMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the ExpectedMock.ConvertEphemeral")
+			m.t.Fatal("No results are set for the ExpectedMock.ConvertEphemeralAndMakeExpected")
 			return
 		}
 
@@ -236,12 +236,12 @@ func (m *ExpectedMock) ConvertEphemeral(p pulse.Number, p1 proofs.CloudStateHash
 
 		input := m.ConvertEphemeralMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, ExpectedMockConvertEphemeralInput{p, p1, p2}, "Expected.ConvertEphemeral got unexpected parameters")
+			testify_assert.Equal(m.t, *input, ExpectedMockConvertEphemeralInput{p, p1, p2}, "Expected.ConvertEphemeralAndMakeExpected got unexpected parameters")
 		}
 
 		result := m.ConvertEphemeralMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the ExpectedMock.ConvertEphemeral")
+			m.t.Fatal("No results are set for the ExpectedMock.ConvertEphemeralAndMakeExpected")
 		}
 
 		r = result.r
@@ -250,7 +250,7 @@ func (m *ExpectedMock) ConvertEphemeral(p pulse.Number, p1 proofs.CloudStateHash
 	}
 
 	if m.ConvertEphemeralFunc == nil {
-		m.t.Fatalf("Unexpected call to ExpectedMock.ConvertEphemeral. %v %v %v", p, p1, p2)
+		m.t.Fatalf("Unexpected call to ExpectedMock.ConvertEphemeralAndMakeExpected. %v %v %v", p, p1, p2)
 		return
 	}
 
@@ -262,7 +262,7 @@ func (m *ExpectedMock) ConvertEphemeralMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.ConvertEphemeralCounter)
 }
 
-//ConvertEphemeralMinimockPreCounter returns the value of ExpectedMock.ConvertEphemeral invocations
+//ConvertEphemeralMinimockPreCounter returns the value of ExpectedMock.ConvertEphemeralAndMakeExpected invocations
 func (m *ExpectedMock) ConvertEphemeralMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ConvertEphemeralPreCounter)
 }
@@ -2479,7 +2479,7 @@ func (m *ExpectedMock) MakeActiveFinished() bool {
 func (m *ExpectedMock) ValidateCallCounters() {
 
 	if !m.ConvertEphemeralFinished() {
-		m.t.Fatal("Expected call to ExpectedMock.ConvertEphemeral")
+		m.t.Fatal("Expected call to ExpectedMock.ConvertEphemeralAndMakeExpected")
 	}
 
 	if !m.CreateBuilderFinished() {
@@ -2564,7 +2564,7 @@ func (m *ExpectedMock) Finish() {
 func (m *ExpectedMock) MinimockFinish() {
 
 	if !m.ConvertEphemeralFinished() {
-		m.t.Fatal("Expected call to ExpectedMock.ConvertEphemeral")
+		m.t.Fatal("Expected call to ExpectedMock.ConvertEphemeralAndMakeExpected")
 	}
 
 	if !m.CreateBuilderFinished() {
@@ -2671,7 +2671,7 @@ func (m *ExpectedMock) MinimockWait(timeout time.Duration) {
 		case <-timeoutCh:
 
 			if !m.ConvertEphemeralFinished() {
-				m.t.Error("Expected call to ExpectedMock.ConvertEphemeral")
+				m.t.Error("Expected call to ExpectedMock.ConvertEphemeralAndMakeExpected")
 			}
 
 			if !m.CreateBuilderFinished() {

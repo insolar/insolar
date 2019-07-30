@@ -56,11 +56,29 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/network/node"
 )
+
+type Report struct {
+	PulseNumber     insolar.PulseNumber
+	MemberPower     member.Power
+	MemberMode      member.OpMode
+	IsJoiner        bool
+	PopulationValid bool
+}
+
+type OnConsensusFinished func(report Report)
+
+type BootstrapResult struct {
+	Host *host.Host
+	// FirstPulseTime    time.Time
+	ReconnectRequired bool
+	NetworkSize       int
+}
 
 // RequestHandler handler function to process incoming requests from network and return responses to these requests.
 type RequestHandler func(ctx context.Context, request ReceivedPacket) (response Packet, err error)

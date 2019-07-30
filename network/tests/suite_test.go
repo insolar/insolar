@@ -65,8 +65,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-
 	"github.com/insolar/insolar/network/rules"
 
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -282,8 +280,8 @@ func (s *testSuite) StartNodesNetwork(nodes []*networkNode) {
 	results := make(chan error, len(nodes))
 	startNode := func(node *networkNode) {
 		err := node.componentManager.Start(node.ctx)
-		node.serviceNetwork.RegisterConsensusFinishedNotifier(func(_ member.OpMode, _ member.Power, number insolar.PulseNumber) {
-			node.consensusResult <- number
+		node.serviceNetwork.RegisterConsensusFinishedNotifier(func(report network.Report) {
+			node.consensusResult <- report.PulseNumber
 		})
 		results <- err
 	}
@@ -612,7 +610,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 //}
 
 func (s *testSuite) AssertActiveNodesCountDelta(delta int) {
-	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	require.Equal(s.t, s.getNodesCount()+delta, len(activeNodes))
 }
 

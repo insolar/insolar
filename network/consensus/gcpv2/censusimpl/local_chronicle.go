@@ -161,6 +161,29 @@ func (c *localChronicles) makeActive(ce census.Expected, ca localActiveCensus) {
 	ca.onMadeActive()
 }
 
+func (c *localChronicles) replaceExpected(ce census.Expected, ce2 census.Expected) census.Expected {
+	c.rw.Lock()
+	defer c.rw.Unlock()
+
+	if c.expected != nil && c.expected != ce {
+		panic("illegal state")
+	}
+
+	if !c.expectedPulseNumber.IsUnknown() && c.expectedPulseNumber != ce.GetPulseNumber() {
+		if c.active != nil {
+			pd := c.active.GetPulseData()
+
+			if !pd.IsEmpty() && !pd.IsFromEphemeral() {
+				panic("illegal state")
+			}
+		}
+		c.expectedPulseNumber = ce2.GetPulseNumber()
+	}
+
+	c.expected = ce2
+	return ce2
+}
+
 func (c *localChronicles) makeExpected(ce census.Expected) census.Expected {
 	c.rw.Lock()
 	defer c.rw.Unlock()

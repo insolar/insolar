@@ -114,8 +114,9 @@ type coreRealm struct {
 		Other fields - need mutex during PrepRealm, unless accessed by start() of PrepRealm
 		FullRealm doesnt need a lock to read them
 	*/
-	pulseData     pulse.Data
-	originalPulse proofs.OriginalPulsarPacket
+	pulseData                     pulse.Data
+	originalPulse                 proofs.OriginalPulsarPacket
+	isPulseConvertedFromEphemeral bool
 }
 
 func (r *coreRealm) initBefore(hLocker hLocker, strategy RoundStrategy, transport transport.Factory,
@@ -159,7 +160,8 @@ func (r *coreRealm) initBeforePopulation(nbhSizes transport.NeighbourhoodSizes) 
 
 	pn := r.initialCensus.GetExpectedPulseNumber()
 
-	nodeContext := population.NewHook(profile,
+	/* Will only be used during PrepRealm */
+	selfNodeHookTmp := population.NewHook(profile,
 		population.NewPanicDispatcher("updates of stub-self are not allowed"),
 		population.NewSharedNodeContextByPulseNumber(r.assistant, pn, 0, r.getEphemeralMode(),
 			func(report misbehavior.Report) interface{} {
@@ -171,7 +173,7 @@ func (r *coreRealm) initBeforePopulation(nbhSizes transport.NeighbourhoodSizes) 
 
 	powerRequest := r.controlFeeder.GetRequiredPowerLevel()
 	r.requestedPowerFlag = !powerRequest.IsEmpty()
-	selfNode := population.NewNodeAppearanceAsSelf(profile, powerRequest, &nodeContext)
+	selfNode := population.NewNodeAppearanceAsSelf(profile, powerRequest, &selfNodeHookTmp)
 
 	r.self = &selfNode
 

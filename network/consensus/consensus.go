@@ -133,7 +133,6 @@ type constructor struct {
 	versionedRegistries          census.VersionedRegistries
 	nodeProfileFactory           profiles.Factory
 	localNodeConfiguration       api.LocalNodeConfiguration
-	upstreamPulseController      api.UpstreamController
 	roundStrategyFactory         core.RoundStrategyFactory
 	transportCryptographyFactory transport2.CryptographyAssistant
 	packetBuilder                transport2.PacketBuilder
@@ -169,11 +168,6 @@ func newConstructor(ctx context.Context, dep *Dep) *constructor {
 	c.localNodeConfiguration = adapters.NewLocalNodeConfiguration(
 		ctx,
 		dep.KeyStore,
-	)
-	c.upstreamPulseController = adapters.NewUpstreamPulseController(
-		dep.StateGetter,
-		dep.PulseChanger,
-		dep.StateUpdater,
 	)
 	c.roundStrategyFactory = adapters.NewRoundStrategyFactory()
 	c.transportCryptographyFactory = adapters.NewTransportCryptographyFactory(dep.Scheme)
@@ -218,12 +212,19 @@ func (c Installer) ControllerFor(mode Mode, setters ...packetProcessorSetter) Co
 		ephemeralFeeder = adapters.NewEphemeralControlFeeder(c.dep.PulseChanger, c.dep.EphemeralController)
 	}
 
+	upstreamController := adapters.NewUpstreamPulseController(
+		c.dep.StateGetter,
+		c.dep.PulseChanger,
+		c.dep.StateUpdater,
+	)
+
 	consensusChronicles := c.createConsensusChronicles(mode)
 	consensusController := c.createConsensusController(
 		consensusChronicles,
 		controlFeederInterceptor.Feeder(),
 		candidateFeeder,
 		ephemeralFeeder,
+		upstreamController,
 	)
 	packetParserFactory := c.createPacketParserFactory()
 
@@ -231,7 +232,7 @@ func (c Installer) ControllerFor(mode Mode, setters ...packetProcessorSetter) Co
 
 	consensusController.Prepare()
 
-	return newController(controlFeederInterceptor, candidateFeeder, consensusController)
+	return newController(controlFeederInterceptor, candidateFeeder, consensusController, upstreamController)
 }
 
 func (c *Installer) createCensus(mode Mode) *censusimpl.PrimingCensusTemplate {
@@ -269,10 +270,11 @@ func (c *Installer) createConsensusController(
 	controlFeeder api.ConsensusControlFeeder,
 	candidateFeeder api.CandidateControlFeeder,
 	ephemeralFeeder api.EphemeralControlFeeder,
+	upstreamController api.UpstreamController,
 ) api.ConsensusController {
 	return gcpv2.NewConsensusMemberController(
 		consensusChronicles,
-		c.consensus.upstreamPulseController,
+		upstreamController,
 		core.NewPhasedRoundControllerFactory(
 			c.consensus.localNodeConfiguration,
 			c.consensus.transportFactory,
