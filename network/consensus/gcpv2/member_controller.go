@@ -53,13 +53,14 @@ package gcpv2
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"sync"
-	"time"
 )
 
 func NewConsensusMemberController(chronicle api.ConsensusChronicles, upstream api.UpstreamController,
@@ -220,6 +221,8 @@ type ephemeralInterceptor struct {
 
 func (p *ephemeralInterceptor) EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time,
 	expected census.Operational) {
+
+	p.EphemeralControlFeeder.EphemeralConsensusFinished(isNextEphemeral, roundStartedAt, expected)
 
 	p.controller.mutex.Lock()
 	defer p.controller.mutex.Unlock()

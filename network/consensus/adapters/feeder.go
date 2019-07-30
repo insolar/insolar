@@ -65,6 +65,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/network/utils"
 )
 
 const defaultEphemeralPulseDuration = 2 * time.Second
@@ -282,14 +283,16 @@ func (cf *InternalControlFeederAdapter) setHasLeft() {
 	cf.hasLeft = true
 }
 
-func NewEphemeralControlFeeder(ephemeralController EphemeralController) *EphemeralControlFeeder {
+func NewEphemeralControlFeeder(pulseChanger PulseChanger, ephemeralController EphemeralController) *EphemeralControlFeeder {
 	return &EphemeralControlFeeder{
+		pulseChanger:        pulseChanger,
 		ephemeralController: ephemeralController,
 		pulseDuration:       defaultEphemeralPulseDuration,
 	}
 }
 
 type EphemeralControlFeeder struct {
+	pulseChanger        PulseChanger
 	ephemeralController EphemeralController
 	pulseDuration       time.Duration
 }
@@ -314,7 +317,11 @@ func (f *EphemeralControlFeeder) TryConvertFromEphemeral(expected census.Expecte
 }
 
 func (f *EphemeralControlFeeder) EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time, expected census.Operational) {
-	// nothing
+	pulseNumber := expected.GetPulseNumber()
+	_, pulseData := expected.GetNearestPulseData()
+	ctx := utils.NewPulseContext(context.Background(), uint32(pulseNumber))
+
+	f.pulseChanger.ChangePulse(ctx, NewPulse(pulseData))
 }
 
 func (f *EphemeralControlFeeder) GetEphemeralTimings(config api.LocalNodeConfiguration) api.RoundTimings {

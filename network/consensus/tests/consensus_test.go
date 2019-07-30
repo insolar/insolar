@@ -257,12 +257,23 @@ func (*EmuControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince 
 
 type EmuEphemeralFeeder struct{}
 
-func (e EmuEphemeralFeeder) GetEphemeralTimings(c api.LocalNodeConfiguration) api.RoundTimings {
-	return c.GetConsensusTimings(2)
+func (e EmuEphemeralFeeder) GetMinDuration() time.Duration {
+	return 2 * time.Second
 }
 
-func (e EmuEphemeralFeeder) CanBeEphemeral() (beEphemeral bool, minDuration time.Duration) {
-	return false, 0
+func (e EmuEphemeralFeeder) OnNonEphemeralPacket(ctx context.Context, parser transport.PacketParser, inbound endpoints.Inbound) error {
+	return nil
+}
+
+func (e EmuEphemeralFeeder) TryConvertFromEphemeral(expected census.Expected) (wasConverted bool, converted census.Expected) {
+	return false, nil
+}
+
+func (e EmuEphemeralFeeder) EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time, expected census.Operational) {
+}
+
+func (e EmuEphemeralFeeder) GetEphemeralTimings(c api.LocalNodeConfiguration) api.RoundTimings {
+	return c.GetConsensusTimings(2)
 }
 
 func (e EmuEphemeralFeeder) IsActive() bool {
@@ -273,13 +284,6 @@ func (e EmuEphemeralFeeder) CreateEphemeralPulsePacket(census census.Operational
 	return nil
 }
 
-func (e EmuEphemeralFeeder) OnEphemeralIncompatiblePacket(ctx context.Context, parser transport.PacketParser, inbound endpoints.Inbound) error {
-	return nil
-}
-
 func (e EmuEphemeralFeeder) CanStopOnHastyPulse(pn pulse.Number, expectedEndOfConsensus time.Time) bool {
 	return false
-}
-
-func (e EmuEphemeralFeeder) ConsensusFinished(report api.UpstreamReport, startedAt time.Time, expectedCensus census.Operational) {
 }
