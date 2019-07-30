@@ -29,7 +29,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.StateIniter -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.StateIniter -o ./ -s _mock.go -g
 
 type StateIniter interface {
 	// PrepareState prepares actual data to get the light started.

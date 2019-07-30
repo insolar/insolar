@@ -33,7 +33,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/artifacts"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner.ExecutionBrokerI -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/logicrunner.ExecutionBrokerI -o ./ -s _mock.go -g
 
 type ExecutionBrokerI interface {
 	CheckExecutionLoop(ctx context.Context, apiRequestID string) bool

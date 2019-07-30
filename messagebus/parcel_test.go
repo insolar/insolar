@@ -35,13 +35,13 @@ func Test_parcelFactory_Create_CheckLogLevel(t *testing.T) {
 
 	/* Prepare CryptographyService mock, Parcel factory, DelegationToken factory */
 	mock := testutils.NewCryptographyServiceMock(t)
-	mock.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
+	mock.SignMock.Set(func(p []byte) (r *insolar.Signature, r1 error) {
 		signature := insolar.SignatureFromBytes(nil)
 		return &signature, nil
-	}
-	mock.GetPublicKeyFunc = func() (r crypto.PublicKey, r1 error) {
+	})
+	mock.GetPublicKeyMock.Set(func() (r crypto.PublicKey, r1 error) {
 		return nil, nil
-	}
+	})
 
 	parcelFactory := NewParcelFactory()
 

@@ -29,7 +29,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/artifacts"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner.LogicExecutor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/logicrunner.LogicExecutor -o ./ -s _mock.go -g
 type LogicExecutor interface {
 	Execute(ctx context.Context, transcript *Transcript) (artifacts.RequestResult, error)
 	ExecuteMethod(ctx context.Context, transcript *Transcript) (artifacts.RequestResult, error)

@@ -90,7 +90,7 @@ func TestSetResult_Proceed(t *testing.T) {
 	expectedFilamentID := *insolar.NewID(resultID.Pulse(), hash)
 
 	indexes := object.NewMemoryIndexStorageMock(mc)
-	indexes.ForIDFunc = func(_ context.Context, pn insolar.PulseNumber, id insolar.ID) (record.Index, error) {
+	indexes.ForIDMock.Set(func(_ context.Context, pn insolar.PulseNumber, id insolar.ID) (record.Index, error) {
 		require.Equal(t, flow.Pulse(ctx), pn)
 		require.Equal(t, objectID, id)
 		earliestPN := requestID.Pulse()
@@ -100,8 +100,8 @@ func TestSetResult_Proceed(t *testing.T) {
 				EarliestOpenRequest: &earliestPN,
 			},
 		}, nil
-	}
-	indexes.SetFunc = func(_ context.Context, pn insolar.PulseNumber, idx record.Index) {
+	})
+	indexes.SetMock.Set(func(_ context.Context, pn insolar.PulseNumber, idx record.Index) {
 		require.Equal(t, resultID.Pulse(), pn)
 		expectedIndex := record.Index{
 			LifelineLastUsed: resultID.Pulse(),
@@ -111,9 +111,9 @@ func TestSetResult_Proceed(t *testing.T) {
 			},
 		}
 		require.Equal(t, expectedIndex, idx)
-	}
+	})
 	records := object.NewAtomicRecordModifierMock(mc)
-	records.SetAtomicFunc = func(_ context.Context, recs ...record.Material) (r error) {
+	records.SetAtomicMock.Set(func(_ context.Context, recs ...record.Material) (r error) {
 		require.Equal(t, 2, len(recs))
 
 		result := recs[0]
@@ -124,15 +124,15 @@ func TestSetResult_Proceed(t *testing.T) {
 		require.Equal(t, expectedFilamentID, filament.ID)
 		require.Equal(t, &expectedFilament, record.Unwrap(&filament.Virtual))
 		return nil
-	}
+	})
 
 	filaments := executor.NewFilamentCalculatorMock(mc)
-	filaments.ResultDuplicateFunc = func(_ context.Context, objID insolar.ID, resID insolar.ID, r record.Result) (*record.CompositeFilamentRecord, error) {
+	filaments.ResultDuplicateMock.Set(func(_ context.Context, objID insolar.ID, resID insolar.ID, r record.Result) (*record.CompositeFilamentRecord, error) {
 		require.Equal(t, objectID, objID)
 		require.Equal(t, *resultRecord, r)
 		return nil, nil
-	}
-	filaments.OpenedRequestsFunc = func(_ context.Context, pn insolar.PulseNumber, objID insolar.ID, pendingOnly bool) ([]record.CompositeFilamentRecord, error) {
+	})
+	filaments.OpenedRequestsMock.Set(func(_ context.Context, pn insolar.PulseNumber, objID insolar.ID, pendingOnly bool) ([]record.CompositeFilamentRecord, error) {
 		require.Equal(t, objectID, objID)
 		require.Equal(t, flow.Pulse(ctx), pn)
 		require.False(t, pendingOnly)
@@ -144,7 +144,7 @@ func TestSetResult_Proceed(t *testing.T) {
 				Record:   record.Material{Virtual: v},
 			},
 		}, nil
-	}
+	})
 
 	setResultProc := proc.NewSetResult(msg, jetID, *resultRecord, nil)
 	setResultProc.Dep(writeAccessor, sender, object.NewIndexLocker(), filaments, records, indexes, pcs)
@@ -198,7 +198,7 @@ func TestSetResult_Proceed_ResultDuplicated(t *testing.T) {
 	}
 
 	filaments := executor.NewFilamentCalculatorMock(mc)
-	filaments.ResultDuplicateFunc = func(_ context.Context, objID insolar.ID, resID insolar.ID, r record.Result) (*record.CompositeFilamentRecord, error) {
+	filaments.ResultDuplicateMock.Set(func(_ context.Context, objID insolar.ID, resID insolar.ID, r record.Result) (*record.CompositeFilamentRecord, error) {
 		require.Equal(t, objectID, objID)
 		require.Equal(t, *res, r)
 
@@ -206,8 +206,8 @@ func TestSetResult_Proceed_ResultDuplicated(t *testing.T) {
 			Record:   record.Material{Virtual: virtual},
 			RecordID: resultID,
 		}, nil
-	}
-	sender.ReplyFunc = func(_ context.Context, receivedMeta payload.Meta, resMsg *message.Message) {
+	})
+	sender.ReplyMock.Set(func(_ context.Context, receivedMeta payload.Meta, resMsg *message.Message) {
 		require.Equal(t, msg, receivedMeta)
 
 		resp, err := payload.Unmarshal(resMsg.Payload)
@@ -217,7 +217,7 @@ func TestSetResult_Proceed_ResultDuplicated(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, duplicateBuf, res.Result)
 		require.Equal(t, resultID, res.ResultID)
-	}
+	})
 
 	setResultProc := proc.NewSetResult(msg, jetID, *res, nil)
 	setResultProc.Dep(writeAccessor, sender, object.NewIndexLocker(), filaments, records, indexes, pcs)
