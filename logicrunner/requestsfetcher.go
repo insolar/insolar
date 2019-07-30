@@ -107,7 +107,7 @@ func (rf *requestsFetcher) fetch(ctx context.Context) error {
 			continue
 		}
 
-		request, err := rf.am.GetIncomingRequest(ctx, rf.object, reqRef)
+		incoming, outgoing, err := rf.am.GetIncomingOrOutgoingRequest(ctx, rf.object, reqRef)
 		if err != nil {
 			logger.Error("couldn't get request: ", err.Error())
 			continue
@@ -120,9 +120,17 @@ func (rf *requestsFetcher) fetch(ctx context.Context) error {
 		default:
 		}
 
-		requestCtx := freshContextFromContextAndRequest(ctx, *request)
-		tr := NewTranscript(requestCtx, reqRef, *request)
-		rf.broker.AddRequestsFromLedger(ctx, tr)
+		switch {
+		case incoming != nil:
+			requestCtx := freshContextFromContextAndRequest(ctx, *incoming)
+			tr := NewTranscript(requestCtx, reqRef, *incoming)
+			rf.broker.AddRequestsFromLedger(ctx, tr)
+		case outgoing != nil:
+			// AALEKSEEV TODO FIXME
+			logger.Error("AALEKSEEV TODO FIXME add support of handling OutgoingRequests notifications")
+		default:
+			logger.Error("requestsFetcher.fetch: both `incoming` and `outgoing` are nils")
+		}
 	}
 
 	return nil

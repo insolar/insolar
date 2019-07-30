@@ -354,12 +354,12 @@ func (m *client) GetObject(
 	return desc, err
 }
 
-func (m *client) GetIncomingRequest(
+func (m *client) GetIncomingOrOutgoingRequest(
 	ctx context.Context, object, reqRef insolar.Reference,
-) (*record.IncomingRequest, error) {
+) (*record.IncomingRequest, *record.OutgoingRequest, error) {
 	var err error
-	instrumenter := instrument(ctx, "GetRequest").err(&err)
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetRequest")
+	instrumenter := instrument(ctx, "GetIncomingOrOutgoingRequest").err(&err)
+	ctx, span := instracer.StartSpan(ctx, "artifacts.GetIncomingOrOutgoingRequest")
 	defer func() {
 		if err != nil {
 			span.AddAttributes(trace.BoolAttribute("error", true))
@@ -376,20 +376,24 @@ func (m *client) GetIncomingRequest(
 
 	pl, err := m.sendToLight(ctx, m.sender, getRequestPl, object)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to send GetRequest")
+		return nil, nil, errors.Wrap(err, "failed to send GetRequest")
 	}
 	req, ok := pl.(*payload.Request)
 	if !ok {
-		return nil, fmt.Errorf("unexpected reply %T", pl)
+		return nil, nil, fmt.Errorf("unexpected reply %T", pl)
 	}
 
 	concrete := record.Unwrap(&req.Request)
-	castedRecord, ok := concrete.(*record.IncomingRequest)
+	incomingRequest, ok := concrete.(*record.IncomingRequest)
 	if !ok {
-		return nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", concrete)
+		outgoingRequest, ok := concrete.(*record.OutgoingRequest)
+		if !ok {
+			return nil, nil, fmt.Errorf("GetIncomingOrOutgoingRequest: unexpected message: %#v", concrete)
+		}
+		return nil, outgoingRequest, nil
 	}
 
-	return castedRecord, nil
+	return incomingRequest, nil, nil
 }
 
 // GetPendings returns a list of pending requests
