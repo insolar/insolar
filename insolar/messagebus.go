@@ -103,7 +103,7 @@ type MessageSignature interface {
 	SetSender(Reference)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.Parcel -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.Parcel -o ../testutils -s _mock.go -g
 
 // Parcel by senders private key.
 type Parcel interface {
@@ -148,7 +148,7 @@ func (o *MessageSendOptions) Safe() *MessageSendOptions {
 	return o
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.MessageBus -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.MessageBus -o ../testutils -s _mock.go -g
 
 // MessageBus interface
 type MessageBus interface {
@@ -163,7 +163,7 @@ type MessageBus interface {
 	OnPulse(context.Context, Pulse) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.GlobalInsolarLock -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.GlobalInsolarLock -o ../testutils -s _mock.go -g
 
 // GlobalInsolarLock is lock of all incoming and outcoming network calls.
 // It's not intended to be used in multiple threads. And main use of it is `Set` method of `PulseManager`.

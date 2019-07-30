@@ -22,7 +22,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/internal/ledger/store.JetIndexModifier -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/internal/ledger/store.JetIndexModifier -o ./ -s _mock.go -g -g
 
 // JetIndexModifier is an interface for modifying index records.
 type JetIndexModifier interface {
@@ -30,7 +30,7 @@ type JetIndexModifier interface {
 	Delete(id insolar.ID, jetID insolar.JetID)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/internal/ledger/store.JetIndexAccesssor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/internal/ledger/store.JetIndexAccessor -o ./ -s _mock.go -g
 
 // JetIndexAccessor is an interface for modifying index records.
 type JetIndexAccessor interface {

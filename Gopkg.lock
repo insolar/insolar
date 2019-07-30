@@ -141,12 +141,12 @@
   version = "v1.2.1"
 
 [[projects]]
-  branch = "master"
-  digest = "1:e9c0ca7abaa1fdcf8dab7c5bc100c2ff1ecc1dabf46861d78159c6e8951af970"
+  digest = "1:1e03a48a110b7c5a26bc26c31431efdcc93c6e8d6b35d6ae31e15d2b5beabd96"
   name = "github.com/gojuno/minimock"
   packages = ["."]
   pruneopts = "UT"
-  revision = "2692d7ec07f98b20146c0b6afa17c5dcbf8acb56"
+  revision = "49d47c6ba53c89ce3171ee2c50763b410a394a36"
+  version = "v2.1.8"
 
 [[projects]]
   digest = "1:489a99067cd08971bd9c1ee0055119ba8febc1429f9200ab0bec68d35e8c4833"

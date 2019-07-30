@@ -37,7 +37,7 @@ type TypeID uint32
 // TypeIDSize is a size of TypeID type.
 const TypeIDSize = 4
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordStorage -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordStorage -o ./ -s _mock.go -g
 
 // RecordStorage is an union of RecordAccessor and RecordModifier
 type RecordStorage interface {
@@ -45,7 +45,7 @@ type RecordStorage interface {
 	RecordModifier
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.AtomicRecordStorage -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.AtomicRecordStorage -o ./ -s _mock.go -g
 
 // AtomicRecordStorage is an union of RecordAccessor and AtomicRecordModifier
 type AtomicRecordStorage interface {
@@ -53,7 +53,7 @@ type AtomicRecordStorage interface {
 	AtomicRecordModifier
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordAccessor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordAccessor -o ./ -s _mock.go -g
 
 // RecordAccessor provides info about record-values from storage.
 type RecordAccessor interface {
@@ -61,7 +61,7 @@ type RecordAccessor interface {
 	ForID(ctx context.Context, id insolar.ID) (record.Material, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordCollectionAccessor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordCollectionAccessor -o ./ -s _mock.go -g
 
 // RecordCollectionAccessor provides methods for querying records with specific search conditions.
 type RecordCollectionAccessor interface {
@@ -69,7 +69,7 @@ type RecordCollectionAccessor interface {
 	ForPulse(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) []record.Material
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordModifier -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordModifier -o ./ -s _mock.go -g
 
 // RecordModifier provides methods for setting record-values to storage.
 type RecordModifier interface {
@@ -85,7 +85,7 @@ type AtomicRecordModifier interface {
 	SetAtomic(ctx context.Context, records ...record.Material) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordCleaner -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordCleaner -o ./ -s _mock.go -g
 
 // RecordCleaner provides an interface for removing records from a storage.
 type RecordCleaner interface {

@@ -23,13 +23,14 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/pkg/errors"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.StateIniter -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.StateIniter -o ./ -s _mock.go -g
 
 type StateIniter interface {
 	// PrepareState prepares actual data to get the light started.
@@ -42,14 +43,14 @@ func NewStateIniter(
 	jetModifier jet.Modifier,
 	jetReleaser hot.JetReleaser,
 	drops drop.Modifier,
-	coordinator jet.Coordinator,
+	nodes node.Accessor,
 	sender bus.Sender,
 ) *StateIniterDefault {
 	return &StateIniterDefault{
 		jetModifier: jetModifier,
 		jetReleaser: jetReleaser,
 		drops:       drops,
-		coordinator: coordinator,
+		nodes:       nodes,
 		sender:      sender,
 	}
 }
@@ -59,7 +60,7 @@ type StateIniterDefault struct {
 	jetModifier jet.Modifier
 	jetReleaser hot.JetReleaser
 	drops       drop.Modifier
-	coordinator jet.Coordinator
+	nodes       node.Accessor
 	sender      bus.Sender
 }
 
@@ -68,11 +69,14 @@ func (s *StateIniterDefault) PrepareState(ctx context.Context, pulse insolar.Pul
 		return errors.Errorf("invalid pulse %s for light state initialization ", pulse)
 	}
 
-	heavyRef, err := s.coordinator.Heavy(ctx)
+	candidates, err := s.nodes.InRole(pulse, insolar.StaticRoleHeavyMaterial)
 	if err != nil {
-		return errors.Wrap(err, "failed to get heavy ref from coordinator")
+		return errors.Wrap(err, "failed to calculate heavy node for pulse")
 	}
-
+	if len(candidates) == 0 {
+		return errors.Wrap(err, "failed to calculate heavy node for pulse")
+	}
+	heavy := candidates[0].ID
 	msg, err := payload.NewMessage(&payload.GetLightInitialState{
 		Pulse: pulse,
 	})
@@ -80,7 +84,7 @@ func (s *StateIniterDefault) PrepareState(ctx context.Context, pulse insolar.Pul
 		return errors.Wrap(err, "failed to create GetInitialState message")
 	}
 
-	reps, done := s.sender.SendTarget(ctx, msg, *heavyRef)
+	reps, done := s.sender.SendTarget(ctx, msg, heavy)
 	defer done()
 
 	res, ok := <-reps

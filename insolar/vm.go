@@ -36,7 +36,7 @@ func (m MachineType) Equal(other MachineType) bool {
 	return m == other
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.MachineLogicExecutor -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.MachineLogicExecutor -o ../testutils -s _mock.go -g
 
 // MachineLogicExecutor is an interface for implementers of one particular machine type
 type MachineLogicExecutor interface {
@@ -55,7 +55,7 @@ type MachineLogicExecutor interface {
 	)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.LogicRunner -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.LogicRunner -o ../testutils -s _mock.go -g
 
 // LogicRunner is an interface that should satisfy logic executor
 type LogicRunner interface {
