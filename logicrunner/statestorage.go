@@ -172,9 +172,7 @@ func (ss *stateStorage) OnPulse(ctx context.Context, pulse insolar.Pulse) []inso
 	for objectRef, objectState := range oldState {
 		objectState.Lock()
 
-		meNext, _ := ss.jetCoordinator.IsAuthorized(
-			ctx, insolar.DynamicRoleVirtualExecutor, *objectRef.Record(), pulse.PulseNumber, ss.jetCoordinator.Me(),
-		)
+		meNext, _ := ss.jetCoordinator.IsMeAuthorizedNow(ctx, insolar.DynamicRoleVirtualExecutor, *objectRef.Record())
 
 		if broker := objectState.ExecutionBroker; broker != nil {
 			onPulseMessages = append(onPulseMessages, broker.OnPulse(ctx, meNext)...)

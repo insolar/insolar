@@ -339,18 +339,13 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	protoRef := testutils.RandomRef()
 	codeRef := testutils.RandomRef()
 
-	meRef := testutils.RandomRef()
 	notMeRef := testutils.RandomRef()
-	suite.jc.MeMock.Return(meRef)
 
 	pulseNum := insolar.PulseNumber(insolar.FirstPulseNumber)
 
-	suite.jc.IsAuthorizedMock.Set(func(
-		ctx context.Context, role insolar.DynamicRole, id insolar.ID, pn insolar.PulseNumber, obj insolar.Reference,
-	) (bool, error) {
-		return true, nil
-	})
+	suite.jc.IsMeAuthorizedNowMock.Return(true, nil)
 
+	meRef := testutils.RandomRef()
 	nodeMock := network.NewNetworkNodeMock(suite.T())
 	nodeMock.IDMock.Return(meRef)
 
@@ -435,9 +430,9 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 	objectRef := testutils.RandomRef()
 	protoRef := testutils.RandomRef()
 
-	meRef := testutils.RandomRef()
+	// meRef := testutils.RandomRef()
 	notMeRef := testutils.RandomRef()
-	suite.jc.MeMock.Return(meRef)
+	// suite.jc.MeMock.Return(meRef)
 
 	// If you think you are smart enough to make this test 'more effective'
 	// by using atomic variables or goroutines or anything else, you are wrong.
@@ -521,12 +516,12 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				return
 			}
 
-			suite.jc.IsAuthorizedMock.Set(func(
-				ctx context.Context, role insolar.DynamicRole, id insolar.ID, pnArg insolar.PulseNumber, obj insolar.Reference,
+			suite.jc.IsMeAuthorizedNowMock.Set(func(
+				ctx context.Context, role insolar.DynamicRole, id insolar.ID,
 			) (bool, error) {
-				if pnArg == insolar.FirstPulseNumber+1 {
-					return false, nil
-				}
+				// if pnArg == insolar.FirstPulseNumber+1 {
+				// 	return false, nil
+				// }
 
 				if test.when == whenIsAuthorized {
 					// Please note that changePulse calls LogicRunner.ChangePulse which calls IsAuthorized.
@@ -698,9 +693,6 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 				require.NoError(t, err)
 
 				lr.initHandlers()
-
-				lr.JetCoordinator = jet.NewCoordinatorMock(mc).
-					IsMeAuthorizedNowMock.Return(true, nil)
 
 				lr.MessageBus = testutils.NewMessageBusMock(mc).
 					SendMock.Return(&reply.OK{}, nil)

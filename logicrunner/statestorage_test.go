@@ -52,8 +52,7 @@ func (s *StateStorageSuite) TestOnPulse() {
 	objectRef := gen.Reference()
 
 	jc := jet.NewCoordinatorMock(mc).
-		MeMock.Return(gen.Reference()).
-		IsAuthorizedMock.Return(false, nil)
+		IsMeAuthorizedNowMock.Return(false, nil)
 
 	ss := NewStateStorage(nil, nil, nil, jc, nil, nil)
 	rawStateStorage := ss.(*stateStorage)
@@ -91,6 +90,8 @@ func (s *StateStorageSuite) TestOnPulse() {
 		msgs := rawStateStorage.OnPulse(ctx, pulse)
 		s.Len(msgs, 1)
 		s.Len(rawStateStorage.state, 1)
+
+		delete(rawStateStorage.state, objectRef)
 	}
 
 	{ // state storage with execution archive and execution broker
@@ -117,21 +118,35 @@ func (s *StateStorageSuite) TestOnPulse() {
 		msgs := rawStateStorage.OnPulse(ctx, pulse)
 		s.Len(msgs, 2)
 		s.Len(rawStateStorage.state, 1)
+
+		delete(rawStateStorage.state, objectRef)
 	}
 
-	jc.IsAuthorizedMock.Return(true, nil)
+	jc.IsMeAuthorizedNowMock.Return(false, nil)
 
 	{ // state storage with multiple objects
-		rawStateStorage.state[objectRef] = &ObjectState{
+		objectRef1 := gen.Reference()
+		objectRef2 := gen.Reference()
+		rawStateStorage.state[objectRef1] = &ObjectState{
 			ExecutionBroker: NewExecutionBrokerIMock(mc).
 				OnPulseMock.Return([]insolar.Message{&message.ExecutorResults{}}),
 			ExecutionArchive: NewExecutionArchiveMock(mc).
-				OnPulseMock.Return(nil),
+				OnPulseMock.Return(nil).
+				IsEmptyMock.Return(true),
+		}
+		rawStateStorage.state[objectRef2] = &ObjectState{
+			ExecutionBroker: NewExecutionBrokerIMock(mc).
+				OnPulseMock.Return([]insolar.Message{&message.ExecutorResults{}}),
+			ExecutionArchive: NewExecutionArchiveMock(mc).
+				OnPulseMock.Return([]insolar.Message{&message.StillExecuting{}}).
+				IsEmptyMock.Return(false),
 		}
 		msgs := rawStateStorage.OnPulse(ctx, pulse)
-		s.Len(msgs, 1)
+		s.Len(msgs, 3)
 		s.Len(rawStateStorage.state, 1)
-		s.NotNil(rawStateStorage.state[objectRef].ExecutionArchive)
-		s.NotNil(rawStateStorage.state[objectRef].ExecutionBroker)
+		s.NotNil(rawStateStorage.state[objectRef2].ExecutionArchive)
+		s.Nil(rawStateStorage.state[objectRef2].ExecutionBroker)
+
+		delete(rawStateStorage.state, objectRef2)
 	}
 }

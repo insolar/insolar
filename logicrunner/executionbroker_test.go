@@ -32,7 +32,6 @@ import (
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
@@ -741,11 +740,10 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 				re := NewRequestsExecutorMock(t).
 					SendReplyMock.Return()
 				jc := jet.NewCoordinatorMock(t).
-					MeMock.Return(gen.Reference()).
 					IsMeAuthorizedNowMock.Return(true, nil)
-				pa := pulse.NewAccessorMock(t).LatestMock.Return(insolar.Pulse{}, nil)
+				// pa := pulse.NewAccessorMock(t).LatestMock.Return(insolar.Pulse{}, nil)
 
-				broker := NewExecutionBroker(objectRef, nil, re, nil, jc, pa, am, ea)
+				broker := NewExecutionBroker(objectRef, nil, re, nil, jc, nil, am, ea)
 
 				var msgs []insolar.Message
 				re.ExecuteAndSaveMock.Set(func(ctx context.Context, tr *Transcript) (insolar.Reply, error) {
