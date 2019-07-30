@@ -92,6 +92,8 @@ func callSetIncomingRequest(
 	}
 	if isAPI {
 		req.APINode = gen.Reference()
+	} else {
+		req.Caller = gen.Reference()
 	}
 	rec := record.Wrap(&req)
 	reps, done := s.Send(ctx, &payload.SetIncomingRequest{
