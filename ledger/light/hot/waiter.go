@@ -33,8 +33,8 @@ type JetWaiter interface {
 
 // JetReleaser provides methods for releasing jet waiters.
 type JetReleaser interface {
-	Unlock(ctx context.Context, jetID insolar.ID) error
-	ThrowTimeout(ctx context.Context, pulse insolar.PulseNumber)
+	Unlock(ctx context.Context, pulse insolar.PulseNumber, jetID insolar.ID) error
+	Close(ctx context.Context, pulse insolar.PulseNumber)
 }
 
 // ChannelWaiter implements methods for locking and unlocking a certain jet id.
@@ -105,8 +105,8 @@ func (w *ChannelWaiter) Unlock(ctx context.Context, pulse insolar.PulseNumber, j
 	return nil
 }
 
-// ThrowTimeout raises timeouts on all waiters for pulse.
-func (w *ChannelWaiter) ThrowTimeout(ctx context.Context, pn insolar.PulseNumber) {
+// Close raises timeouts on all waiters for pulse.
+func (w *ChannelWaiter) Close(ctx context.Context, pn insolar.PulseNumber) {
 	w.lock.Lock()
 	defer w.lock.Unlock()
 

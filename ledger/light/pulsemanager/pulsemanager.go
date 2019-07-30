@@ -163,8 +163,6 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		}
 	}()
 
-	m.JetReleaser.ThrowTimeout(ctx, newPulse.PulseNumber)
-
 	// FIXME: uncomment me in INS-3031.
 	// if err := m.StateIniter.PrepareState(ctx, newPulse.PulseNumber); err != nil {
 	// 	logger.Fatal(errors.Wrap(err, "failed to prepare light for start"))
@@ -197,6 +195,8 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		}
 		panic(errors.Wrap(err, "failed to calculate ended pulse"))
 	}
+
+	m.JetReleaser.Close(ctx, endedPulse.PulseNumber)
 
 	jets, err := m.JetSplitter.Do(ctx, endedPulse.PulseNumber, newPulse.PulseNumber)
 	if err != nil {
