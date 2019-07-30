@@ -118,6 +118,8 @@ func (cb *ContractsBuilder) Clean() {
 
 // Build ...
 func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]string) error {
+	logger := inslogger.FromContext(ctx)
+
 	for name := range contracts {
 		nonce := testutils.RandomRef()
 		pulse, err := cb.pulseAccessor.Latest(ctx)
@@ -136,7 +138,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 			return errors.Wrap(err, "[ Build ] Can't RegisterIncomingRequest")
 		}
 		protoRef := insolar.NewReference(*protoID)
-		log.Debugf("Registered prototype %q for contract %q in %q", protoRef.String(), name, cb.root)
+		logger.Debugf("Registered prototype %q for contract %q in %q", protoRef.String(), name, cb.root)
 		cb.Prototypes[name] = protoRef
 	}
 
@@ -158,19 +160,20 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 	}
 
 	for name := range contracts {
-		log.Debugf("Building plugin for contract %q in %q", name, cb.root)
+		logger.Debug("Building plugin for contract ", name, " in ", cb.root)
+
 		err := cb.plugin(name)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't call plugin")
 		}
-		log.Debugf("Built plugin for contract %q", name)
+		logger.Debug("Built plugin for contract ", name)
 
 		pluginBinary, err := ioutil.ReadFile(filepath.Join(cb.root, "plugins", name+".so"))
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't ReadFile")
 		}
 
-		log.Debugf("Deploying code for contract %q", name)
+		logger.Debug("Deploying code for contract ", name)
 		codeID, err := cb.artifactManager.DeployCode(
 			ctx,
 			insolar.Reference{}, insolar.Reference{},
@@ -182,7 +185,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 
 		codeRef := insolar.NewReference(*codeID)
 
-		log.Debugf("Deployed code %q for contract %q in %q", codeRef.String(), name, cb.root)
+		logger.Debugf("Deployed code %q for contract %q in %q", codeRef.String(), name, cb.root)
 		cb.Codes[name] = codeRef
 
 		// FIXME: It's a temporary fix and should not be here. Ii will NOT work properly on production. Remove it ASAP!
