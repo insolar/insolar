@@ -33,7 +33,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/artifacts"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner.ExecutionBrokerI -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/logicrunner.ExecutionBrokerI -o ./ -s _mock.go -g
 
 type ExecutionBrokerI interface {
 	CheckExecutionLoop(ctx context.Context, apiRequestID string) bool
@@ -74,7 +74,6 @@ type ExecutionBroker struct {
 	requestsExecutor RequestsExecutor
 	messageBus       insolar.MessageBus
 	jetCoordinator   jet.Coordinator
-	pulseAccessor    pulse.Accessor
 	artifactsManager artifacts.Client
 	requestsFetcher  RequestsFetcher
 
@@ -95,7 +94,7 @@ func NewExecutionBroker(
 	requestsExecutor RequestsExecutor,
 	messageBus insolar.MessageBus,
 	jetCoordinator jet.Coordinator,
-	pulseAccessor pulse.Accessor,
+	_ pulse.Accessor,
 	artifactsManager artifacts.Client,
 ) *ExecutionBroker {
 	return &ExecutionBroker{
@@ -110,7 +109,6 @@ func NewExecutionBroker(
 		requestsExecutor: requestsExecutor,
 		messageBus:       messageBus,
 		jetCoordinator:   jetCoordinator,
-		pulseAccessor:    pulseAccessor,
 		artifactsManager: artifactsManager,
 
 		processorActive: 0,
@@ -460,13 +458,8 @@ func (q *ExecutionBroker) finishPendingIfNeeded(ctx context.Context) {
 	q.pending = insolar.NotPending
 	q.PendingConfirmed = false
 
-	pulseObj, err := q.pulseAccessor.Latest(ctx)
-	if err != nil {
-		inslogger.FromContext(ctx).Error("Failed to obtain latest pulse:", err)
-	}
-	me := q.jetCoordinator.Me()
-	meCurrent, _ := q.jetCoordinator.IsAuthorized(
-		ctx, insolar.DynamicRoleVirtualExecutor, *q.Ref.Record(), pulseObj.PulseNumber, me,
+	meCurrent, _ := q.jetCoordinator.IsMeAuthorizedNow(
+		ctx, insolar.DynamicRoleVirtualExecutor, *q.Ref.Record(),
 	)
 	if !meCurrent {
 		go q.finishPending(ctx)

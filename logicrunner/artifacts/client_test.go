@@ -185,7 +185,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetIncomingRequest_Success() {
 	require.NoError(s.T(), err)
 
 	sender := bus.NewSenderMock(s.T())
-	sender.SendRoleFunc = func(_ context.Context, msg *wmMessage.Message, role insolar.DynamicRole, n insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
+	sender.SendRoleMock.Set(func(_ context.Context, msg *wmMessage.Message, role insolar.DynamicRole, n insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
 		require.Equal(s.T(), insolar.DynamicRoleLightExecutor, role)
 
 		getReq := payload.GetRequest{}
@@ -202,7 +202,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetIncomingRequest_Success() {
 		ch := make(chan *wmMessage.Message, 1)
 		ch <- reqMsg
 		return ch, func() {}
-	}
+	})
 
 	am := NewClient(nil)
 	am.JetCoordinator = jc
@@ -236,7 +236,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetPendings_Success() {
 	require.NoError(s.T(), err)
 
 	sender := bus.NewSenderMock(s.T())
-	sender.SendRoleFunc = func(p context.Context, msg *wmMessage.Message, role insolar.DynamicRole, ref insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
+	sender.SendRoleMock.Set(func(p context.Context, msg *wmMessage.Message, role insolar.DynamicRole, ref insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
 		getPendings := payload.GetPendings{}
 		err := getPendings.Unmarshal(msg.Payload)
 		require.NoError(s.T(), err)
@@ -250,7 +250,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetPendings_Success() {
 		ch := make(chan *wmMessage.Message, 1)
 		ch <- resMsg
 		return ch, func() {}
-	}
+	})
 
 	am := NewClient(nil)
 	am.JetCoordinator = jc
@@ -278,7 +278,7 @@ func (s *amSuite) TestLedgerArtifactManager_HasPendings_Success() {
 	require.NoError(s.T(), err)
 
 	sender := bus.NewSenderMock(s.T())
-	sender.SendRoleFunc = func(p context.Context, msg *wmMessage.Message, role insolar.DynamicRole, ref insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
+	sender.SendRoleMock.Set(func(p context.Context, msg *wmMessage.Message, role insolar.DynamicRole, ref insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
 		hasPendings := payload.HasPendings{}
 		err := hasPendings.Unmarshal(msg.Payload)
 		require.NoError(s.T(), err)
@@ -292,7 +292,7 @@ func (s *amSuite) TestLedgerArtifactManager_HasPendings_Success() {
 		ch := make(chan *wmMessage.Message, 1)
 		ch <- resMsg
 		return ch, func() {}
-	}
+	})
 
 	am := NewClient(sender)
 

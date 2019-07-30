@@ -16,7 +16,7 @@
 
 package store
 
-//go:generate minimock -i github.com/insolar/insolar/internal/ledger/store.DB -o ./ -s _gen_mock.go
+//go:generate minimock -i github.com/insolar/insolar/internal/ledger/store.DB -o ./ -s _gen_mock.go -g
 
 // DB provides a simple key-value store interface for persisting data.
 // But it is internally ordered ( lexicographically by key bytes )
@@ -28,7 +28,7 @@ type DB interface {
 	NewIterator(pivot Key, reverse bool) Iterator
 }
 
-//go:generate minimock -i github.com/insolar/insolar/internal/ledger/store.Iterator -o ./ -s _gen_mock.go
+//go:generate minimock -i github.com/insolar/insolar/internal/ledger/store.Iterator -o ./ -s _gen_mock.go -g
 
 // Iterator provides an interface for walking through the storage record sequence (where records are sorted lexicographically).
 type Iterator interface {

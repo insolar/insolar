@@ -23,6 +23,11 @@ import (
 {{ if $.GenerateInitialize -}}
     XXX_insolar "github.com/insolar/insolar/insolar"
 {{- end }}
+// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+{{ if .Methods }}
+    "strings"
+{{ end }}
+// TODO: this is the end of a horrible hack, please remove it
 )
 
 type ExtendableError struct{
@@ -130,8 +135,22 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, e
 	self.{{ $method.Name }}( {{ $method.Arguments }} )
 {{ end }}
 
-	if ph.GetSystemError() != nil {
-	    return nil, nil, ph.GetSystemError()
+// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+{{ $errLastIndex := 0 }}
+{{ range $i := $method.ErrorInterfaceInRes }}
+    {{ $errLastIndex = $i }}
+{{ end }}
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret{{ $errLastIndex }} = systemErr
+		systemErr = nil
+	}
+// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
+		return nil, nil, ph.GetSystemError()
 	}
 
 	state := []byte{}
@@ -153,36 +172,38 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, e
 
 
 {{ range $f := .Functions }}
-func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, error) {
+func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, error, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
 	{{ $f.ArgumentsZeroList }}
 	err := ph.Deserialize(data, &args)
 	if err != nil {
 		e := &ExtendableError{ S: "[ Fake{{ $f.Name }} ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error() }
-		return nil, e
+		return nil, nil, e
 	}
 
 	{{ $f.Results }} := {{ $f.Name }}( {{ $f.Arguments }} )
 	if ph.GetSystemError() != nil {
-		return nil, ph.GetSystemError()
+		return nil, nil, ph.GetSystemError()
 	}
 	if ret1 != nil {
-		return nil, ret1
+		// logical error, the result should be registered with type RequestSideEffectNone
+		return nil, ret1, nil
+	}
+
+	if ret0 == nil {
+		// logical error, the result should be registered with type RequestSideEffectNone
+		e := &ExtendableError{ S: "[ Fake{{ $f.Name }} ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil" }
+		return nil, e, nil
 	}
 
 	ret := []byte{}
 	err = ph.Serialize(ret0, &ret)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	if ret0 == nil {
-		e := &ExtendableError{ S: "[ Fake{{ $f.Name }} ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil" }
-		return nil, e
-	}
-
-	return ret, err
+	return ret, nil, err
 }
 {{ end }}
 

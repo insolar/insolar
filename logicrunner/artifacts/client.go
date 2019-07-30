@@ -122,7 +122,8 @@ func (m *client) registerRequest(
 	instrumenter := instrument(ctx, "registerRequest").err(&err)
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+			span.AddAttributes(trace.BoolAttribute("error", true))
+			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
 		}
 		span.End()
 		instrumenter.end()
@@ -200,7 +201,8 @@ func (m *client) GetCode(
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetCode")
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+			span.AddAttributes(trace.StringAttribute("error", "true"))
+			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
 		}
 		span.End()
 		instrumenter.end()
@@ -260,7 +262,8 @@ func (m *client) GetObject(
 	instrumenter := instrument(ctx, "GetObject").err(&err)
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+			span.AddAttributes(trace.BoolAttribute("error", true))
+			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
 		}
 		span.End()
 		if err != nil && err == ErrObjectDeactivated {
@@ -359,7 +362,8 @@ func (m *client) GetIncomingRequest(
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetRequest")
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+			span.AddAttributes(trace.BoolAttribute("error", true))
+			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
 		}
 		span.End()
 		instrumenter.end()
@@ -395,7 +399,8 @@ func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]i
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetPendings")
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+			span.AddAttributes(trace.BoolAttribute("error", true))
+			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
 		}
 		span.End()
 		instrumenter.end()
@@ -437,7 +442,8 @@ func (m *client) HasPendings(
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.HasPendings")
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+			span.AddAttributes(trace.BoolAttribute("error", true))
+			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
 		}
 		span.End()
 		instrumenter.end()
@@ -477,7 +483,8 @@ func (m *client) DeployCode(
 	instrumenter := instrument(ctx, "DeployCode").err(&err)
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+			span.AddAttributes(trace.BoolAttribute("error", true))
+			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
 		}
 		span.End()
 		instrumenter.end()
@@ -543,7 +550,8 @@ func (m *client) ActivatePrototype(
 	instrumenter := instrument(ctx, "ActivatePrototype").err(&err)
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+			span.AddAttributes(trace.BoolAttribute("error", true))
+			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
 		}
 		span.End()
 		instrumenter.end()
@@ -673,7 +681,8 @@ func (m *client) RegisterResult(
 	instrumenter := instrument(ctx, "RegisterResult").err(&err)
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+			span.AddAttributes(trace.BoolAttribute("error", true))
+			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
 		}
 		span.End()
 		instrumenter.end()
