@@ -108,7 +108,7 @@ func (s *StateIniterDefault) PrepareState(ctx context.Context, pulse insolar.Pul
 	}
 
 	for _, jetID := range jets {
-		err = s.jetReleaser.Unlock(ctx, pulse, insolar.ID(jetID))
+		err = s.jetReleaser.Unlock(ctx, pulse, jetID)
 		if err != nil {
 			return errors.Wrap(err, "failed to unlock jet")
 		}

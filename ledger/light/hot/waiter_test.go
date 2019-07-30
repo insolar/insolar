@@ -25,12 +25,11 @@ import (
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/hot"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestHotDataWaiterConcrete_Wait_UnlockHotData(t *testing.T) {
+func Test_HotDataWaiterConcrete_WaitUnlock(t *testing.T) {
 	t.Parallel()
 	// Arrange
 	waitingStarted := make(chan struct{}, 1)
@@ -44,7 +43,7 @@ func TestHotDataWaiterConcrete_Wait_UnlockHotData(t *testing.T) {
 
 		return hdw
 	}
-	jetID := testutils.RandomID()
+	jetID := gen.JetID()
 	pulse := gen.PulseNumber()
 
 	// Act
@@ -69,7 +68,7 @@ func TestHotDataWaiterConcrete_Wait_UnlockHotData(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestHotDataWaiterConcrete_Close(t *testing.T) {
+func Test_HotDataWaiterConcrete_Close(t *testing.T) {
 	t.Parallel()
 	// Arrange
 	waitingStarted := make(chan struct{}, 1)
@@ -84,7 +83,7 @@ func TestHotDataWaiterConcrete_Close(t *testing.T) {
 		return hdw
 	}
 
-	jetID := testutils.RandomID()
+	jetID := gen.JetID()
 	pulse := gen.PulseNumber()
 
 	// Act
@@ -99,12 +98,15 @@ func TestHotDataWaiterConcrete_Close(t *testing.T) {
 	<-waitingStarted
 	time.Sleep(1 * time.Second)
 
-	hdwGetter().Close(inslogger.TestContext(t), pulse)
+	hdwGetter().CloseAllUntil(inslogger.TestContext(t), pulse)
 
 	<-waitingFinished
+
+	err := hdwGetter().Wait(inslogger.TestContext(t), jetID, pulse)
+	require.Nil(t, err)
 }
 
-func TestHotDataWaiterConcrete_Wait_ThrowTimeout_MultipleMembers(t *testing.T) {
+func Test_HotDataWaiterConcrete_WaitClose_MultipleMembers(t *testing.T) {
 	t.Parallel()
 	// Arrange
 	waitingStarted := make(chan struct{}, 2)
@@ -120,8 +122,8 @@ func TestHotDataWaiterConcrete_Wait_ThrowTimeout_MultipleMembers(t *testing.T) {
 	}
 
 	pulse := gen.PulseNumber()
-	jetID := testutils.RandomID()
-	secondJetID := testutils.RandomID()
+	jetID := gen.JetID()
+	secondJetID := gen.JetID()
 
 	// Act
 	go func() {
@@ -143,7 +145,7 @@ func TestHotDataWaiterConcrete_Wait_ThrowTimeout_MultipleMembers(t *testing.T) {
 	<-waitingStarted
 	time.Sleep(1 * time.Second)
 
-	hdwGetter().Close(inslogger.TestContext(t), pulse)
+	hdwGetter().CloseAllUntil(inslogger.TestContext(t), pulse)
 
 	<-waitingFinished
 	<-waitingFinished
