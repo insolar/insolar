@@ -52,15 +52,16 @@ package adapters
 
 import (
 	"context"
-	"github.com/insolar/insolar/network"
+	"sync"
 
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
-
-	"github.com/insolar/insolar/insolar"
 )
 
 type StateGetter interface {
@@ -75,29 +76,47 @@ type StateUpdater interface {
 	UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte)
 }
 
-type UpstreamPulseController struct {
+type UpstreamController struct {
 	stateGetter  StateGetter
 	pulseChanger PulseChanger
 	stateUpdater StateUpdater
+
+	mu         *sync.RWMutex
+	onFinished network.OnConsensusFinished
 }
 
-func NewUpstreamPulseController(stateGetter StateGetter, pulseChanger PulseChanger, stateUpdater StateUpdater) *UpstreamPulseController {
-	return &UpstreamPulseController{
+func NewUpstreamPulseController(stateGetter StateGetter, pulseChanger PulseChanger, stateUpdater StateUpdater) *UpstreamController {
+	return &UpstreamController{
 		stateGetter:  stateGetter,
 		pulseChanger: pulseChanger,
 		stateUpdater: stateUpdater,
+
+		mu:         &sync.RWMutex{},
+		onFinished: func(report network.Report) {},
 	}
 }
 
-func (u *UpstreamPulseController) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
+func (u *UpstreamController) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
 	ctx := contextFromReport(report)
-
-	if report.MemberMode.IsEvicted() {
-		return
-	}
-
+	logger := inslogger.FromContext(ctx)
 	population := expectedCensus.GetOnlinePopulation()
-	networkNodes := NewNetworkNodeList(population.GetProfiles())
+
+	var networkNodes []insolar.NetworkNode
+	if report.MemberMode.IsEvicted() || !population.IsValid() {
+		if report.MemberMode.IsEvictedForcefully() {
+			logger.Warn("Node is evicted by network")
+		}
+
+		if !population.IsValid() {
+			logger.Warn("Consensus finished with invalid population")
+		}
+
+		networkNodes = []insolar.NetworkNode{
+			NewNetworkNode(expectedCensus.GetOnlinePopulation().GetLocalProfile()),
+		}
+	} else {
+		networkNodes = NewNetworkNodeList(population.GetProfiles())
+	}
 
 	u.stateUpdater.UpdateState(
 		ctx,
@@ -105,25 +124,43 @@ func (u *UpstreamPulseController) ConsensusFinished(report api.UpstreamReport, e
 		networkNodes,
 		expectedCensus.GetCloudStateHash().AsBytes(),
 	)
+
+	u.mu.RLock()
+	defer u.mu.RUnlock()
+
+	u.onFinished(network.Report{
+		PulseNumber:     insolar.PulseNumber(report.PulseNumber),
+		MemberPower:     report.MemberPower,
+		MemberMode:      report.MemberMode,
+		IsJoiner:        report.IsJoiner,
+		PopulationValid: population.IsValid(),
+	})
 }
 
-func (u *UpstreamPulseController) ConsensusAborted() {
+func (u *UpstreamController) ConsensusAborted() {
 	// TODO implement
 }
 
-func (u *UpstreamPulseController) PreparePulseChange(report api.UpstreamReport, ch chan<- api.UpstreamState) {
+func (u *UpstreamController) PreparePulseChange(report api.UpstreamReport, ch chan<- api.UpstreamState) {
 	go awaitState(ch, u.stateGetter)
 }
 
-func (u *UpstreamPulseController) CommitPulseChange(report api.UpstreamReport, pulseData pulse.Data, activeCensus census.Operational) {
+func (u *UpstreamController) CommitPulseChange(report api.UpstreamReport, pulseData pulse.Data, activeCensus census.Operational) {
 	ctx := contextFromReport(report)
 	p := NewPulse(pulseData)
 
 	u.pulseChanger.ChangePulse(ctx, p)
 }
 
-func (u *UpstreamPulseController) CancelPulseChange() {
+func (u *UpstreamController) CancelPulseChange() {
 	// TODO implement
+}
+
+func (u *UpstreamController) SetOnFinished(f network.OnConsensusFinished) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+
+	u.onFinished = f
 }
 
 func awaitState(c chan<- api.UpstreamState, stater StateGetter) {

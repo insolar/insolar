@@ -378,8 +378,8 @@ func (g *Base) HandleReconnect(ctx context.Context, request network.ReceivedPack
 	return g.HostNetwork.BuildResponse(ctx, request, &packet.ReconnectResponse{}), nil
 }
 
-func (g *Base) OnConsensusFinished(p insolar.PulseNumber) {
-	log.Infof("OnConsensusFinished for pulse %d", p)
+func (g *Base) OnConsensusFinished(report network.Report) {
+	log.Infof("OnConsensusFinished for pulse %d", report.PulseNumber)
 }
 
 func (g *Base) createCandidateProfile() {

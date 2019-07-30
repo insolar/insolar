@@ -56,6 +56,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
@@ -65,7 +66,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"github.com/insolar/insolar/network/utils"
 )
 
 const defaultEphemeralPulseDuration = 2 * time.Second
@@ -74,13 +74,8 @@ type EphemeralController interface {
 	EphemeralMode() bool
 }
 
-type (
-	OnFinished func(mode member.OpMode, pw member.Power, effectiveSince pulse.Number)
-)
-
 type ConsensusControlFeeder struct {
 	mu            *sync.RWMutex
-	onFinished    OnFinished
 	capacityLevel capacity.Level
 	leave         bool
 	leaveReason   uint32
@@ -90,7 +85,6 @@ func NewConsensusControlFeeder() *ConsensusControlFeeder {
 	return &ConsensusControlFeeder{
 		mu:            &sync.RWMutex{},
 		capacityLevel: capacity.LevelNormal,
-		onFinished:    func(mode member.OpMode, pw member.Power, effectiveSince pulse.Number) {},
 	}
 }
 
@@ -123,18 +117,7 @@ func (cf *ConsensusControlFeeder) GetRequiredPowerLevel() power.Request {
 	return power.NewRequestByLevel(capacity.LevelNormal)
 }
 
-func (cf *ConsensusControlFeeder) SetOnFinished(f OnFinished) {
-	cf.mu.Lock()
-	defer cf.mu.Unlock()
-
-	cf.onFinished = f
-}
-
 func (cf *ConsensusControlFeeder) OnAppliedMembershipProfile(mode member.OpMode, pw member.Power, effectiveSince pulse.Number) {
-	cf.mu.RLock()
-	defer cf.mu.RUnlock()
-
-	cf.onFinished(mode, pw, effectiveSince)
 }
 
 func (cf *ConsensusControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse.Number) {
@@ -326,7 +309,7 @@ func (f *EphemeralControlFeeder) TryConvertFromEphemeral(expected census.Expecte
 func (f *EphemeralControlFeeder) EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time, expected census.Operational) {
 	pulseNumber := expected.GetPulseNumber()
 	_, pulseData := expected.GetNearestPulseData()
-	ctx := utils.NewPulseContext(context.Background(), uint32(pulseNumber))
+	ctx := network.NewPulseContext(context.Background(), uint32(pulseNumber))
 
 	f.pulseChanger.ChangePulse(ctx, NewPulse(pulseData))
 }

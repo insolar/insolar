@@ -52,7 +52,9 @@ package gateway
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -73,8 +75,8 @@ func (g *WaitConsensus) GetState() insolar.NetworkState {
 	return insolar.WaitConsensus
 }
 
-func (g *WaitConsensus) OnConsensusFinished(p insolar.PulseNumber) {
-	log.Infof("================== WaitConsensus gateway. OnConsensusFinished for pulse %d", p)
+func (g *WaitConsensus) OnConsensusFinished(report network.Report) {
+	log.Infof("================== WaitConsensus gateway. OnConsensusFinished for pulse %d", report.PulseNumber)
 
 	nodes := g.NodeKeeper.GetAccessor().GetActiveNodes()
 	wnodes := g.NodeKeeper.GetAccessor().GetWorkingNodes()
