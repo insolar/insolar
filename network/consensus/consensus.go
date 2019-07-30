@@ -212,7 +212,11 @@ func (c Installer) ControllerFor(mode Mode, setters ...packetProcessorSetter) Co
 		adapters.NewConsensusControlFeeder(),
 	)
 	candidateFeeder := &coreapi.SequentialCandidateFeeder{}
-	ephemeralFeeder := adapters.NewEphemeralControlFeeder(c.dep.EphemeralController)
+
+	var ephemeralFeeder api.EphemeralControlFeeder
+	if c.dep.EphemeralController.EphemeralMode() {
+		ephemeralFeeder = adapters.NewEphemeralControlFeeder(c.dep.EphemeralController)
+	}
 
 	consensusChronicles := c.createConsensusChronicles(mode)
 	consensusController := c.createConsensusController(
