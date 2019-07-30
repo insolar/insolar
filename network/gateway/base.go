@@ -52,9 +52,8 @@ package gateway
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"time"
-
-	"github.com/insolar/insolar/network/pulsenetwork"
 
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
@@ -107,7 +106,7 @@ type Base struct {
 
 // NewGateway creates new gateway on top of existing
 func (g *Base) NewGateway(ctx context.Context, state insolar.NetworkState) network.Gateway {
-	inslogger.FromContext(ctx).Infof("NewGateway %s", state.String())
+	inslogger.FromContext(ctx).Infof(" ======== =====   NewGateway %s", state.String())
 	switch state {
 	case insolar.NoNetworkState:
 		g.Self = newNoNetwork(g)

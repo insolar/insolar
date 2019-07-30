@@ -139,6 +139,7 @@ message BootstrapResponse {
     uint32 ETA = 2;
 //    uint32 AssignShortID = 3;
     pulse.PulseProto Pulse = 3 [(gogoproto.nullable) = false];
+    bool isEphemeral = 4;
 }
 
 message BasicResponse {

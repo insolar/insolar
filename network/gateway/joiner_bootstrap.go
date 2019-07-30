@@ -52,7 +52,6 @@ package gateway
 
 import (
 	"context"
-
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
@@ -98,6 +97,7 @@ func (g *JoinerBootstrap) Run(ctx context.Context) {
 
 	//  ConsensusWaiting, ETA
 	g.bootstrapETA = insolar.PulseNumber(resp.ETA)
+
 	g.Gatewayer.SwitchState(ctx, insolar.WaitConsensus)
 }
 

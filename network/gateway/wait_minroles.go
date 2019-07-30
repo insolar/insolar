@@ -53,12 +53,13 @@ package gateway
 import (
 	"context"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 
 	"github.com/insolar/insolar/insolar"
 )
 
-func newWaitMinRoles(b *Base) *WaitConsensus {
-	return &WaitConsensus{b}
+func newWaitMinRoles(b *Base) *WaitMinRoles {
+	return &WaitMinRoles{b}
 }
 
 type WaitMinRoles struct {
@@ -85,6 +86,6 @@ func (g *WaitMinRoles) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, 
 	g.ConsensusPulseHandler.HandlePulse(ctx, pu, originalPacket)
 }
 
-func (g *WaitMinRoles) EphemeralMode() bool {
-	return false
-}
+//func (g *WaitMinRoles) EphemeralMode() bool {
+//	return false
+//}

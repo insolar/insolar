@@ -178,3 +178,13 @@ func TestDumbComplete_GetCert(t *testing.T) {
 	require.NotNil(t, cert)
 	require.Equal(t, cert, &certificate.Certificate{})
 }
+
+//func TestSwitchWaitMinRoles(t *testing.T) {
+//	ctx := context.Background()
+//	b := &Base{}
+//	gatewayer := NewGatewayer(b.NewGateway(ctx, insolar.NoNetworkState), func(ctx context.Context, isNetworkOperable bool) {})
+//	gatewayer.Gateway().OnPulseFromPulsar(ctx, insolar.Pulse{}, nil)
+//
+//	gatewayer.SwitchState(ctx, insolar.WaitMinRoles)
+//	gatewayer.Gateway().OnPulseFromPulsar(ctx, insolar.Pulse{}, nil)
+//}
