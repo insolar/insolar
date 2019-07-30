@@ -238,7 +238,8 @@ func TestRecordStorage_DB_Set(t *testing.T) {
 
 		recordStorage := NewRecordDB(db)
 
-		err = recordStorage.Set(ctx, id, rec)
+		rec.ID = id
+		err = recordStorage.Set(ctx, rec)
 		require.NoError(t, err)
 	})
 
@@ -255,10 +256,11 @@ func TestRecordStorage_DB_Set(t *testing.T) {
 
 		recordStorage := NewRecordDB(db)
 
-		err = recordStorage.Set(ctx, id, rec)
+		rec.ID = id
+		err = recordStorage.Set(ctx, rec)
 		require.NoError(t, err)
 
-		err = recordStorage.Set(ctx, id, rec)
+		err = recordStorage.Set(ctx, rec)
 		require.Error(t, err)
 		assert.Equal(t, ErrOverride, err)
 	})

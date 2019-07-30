@@ -48,8 +48,6 @@ func NewRecordServer(
 }
 
 func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_ExportServer) error {
-	ctx := context.Background()
-
 	if getRecords.Count == 0 {
 		return errors.New("count can't be 0")
 	}
@@ -71,8 +69,8 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 		r.pulseCalculator,
 	)
 
-	for iter.HasNext(ctx) {
-		record, err := iter.Next(ctx)
+	for iter.HasNext(stream.Context()) {
+		record, err := iter.Next(stream.Context())
 		if err != nil {
 			return err
 		}

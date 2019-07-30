@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/metadata"
 )
 
 func TestRecordIterator_HasNext(t *testing.T) {
@@ -207,12 +208,15 @@ func TestRecordIterator_Next(t *testing.T) {
 	t.Run("reading data works", func(t *testing.T) {
 		pn := gen.PulseNumber()
 		id := gen.ID()
+		id.SetPulse(pn)
+
 		positionAccessor := object.NewRecordPositionAccessorMock(t)
 		positionAccessor.LastKnownPositionMock.Expect(pn).Return(10, nil)
 		positionAccessor.AtPositionMock.Expect(pn, uint32(2)).Return(id, nil)
 
 		record := record.Material{
 			JetID: gen.JetID(),
+			ID:    id,
 		}
 		recordsAccessor := object.NewRecordAccessorMock(t)
 		recordsAccessor.ForIDMock.Expect(ctx, id).Return(record, nil)
@@ -249,6 +253,7 @@ func TestRecordIterator_Next(t *testing.T) {
 			firstPN := gen.PulseNumber()
 			nextPN := gen.PulseNumber()
 			id := gen.ID()
+			id.SetPulse(nextPN)
 
 			positionAccessor := object.NewRecordPositionAccessorMock(t)
 			positionAccessor.LastKnownPositionMock.Expect(firstPN).Return(5, nil)
@@ -256,6 +261,7 @@ func TestRecordIterator_Next(t *testing.T) {
 
 			record := record.Material{
 				JetID: gen.JetID(),
+				ID:    id,
 			}
 			recordsAccessor := object.NewRecordAccessorMock(t)
 			recordsAccessor.ForIDMock.Expect(ctx, id).Return(record, nil)
@@ -278,16 +284,47 @@ func TestRecordIterator_Next(t *testing.T) {
 	})
 }
 
+type streamMock struct {
+	checker func(*Record) error
+}
+
+func (s streamMock) Send(rec *Record) error {
+	return s.checker(rec)
+}
+
+func (s streamMock) SetHeader(metadata.MD) error {
+	panic("implement me")
+}
+
+func (s streamMock) SendHeader(metadata.MD) error {
+	panic("implement me")
+}
+
+func (s streamMock) SetTrailer(metadata.MD) {
+	panic("implement me")
+}
+
+func (s streamMock) Context() context.Context {
+	return context.Background()
+}
+
+func (s streamMock) SendMsg(m interface{}) error {
+	panic("implement me")
+}
+
+func (s streamMock) RecvMsg(m interface{}) error {
+	panic("implement me")
+}
+
 func TestRecordServer_Export(t *testing.T) {
 	t.Parallel()
 
 	t.Run("count can't be 0", func(t *testing.T) {
 		server := &RecordServer{}
 
-		res, err := server.Export(&GetRecords{Count: 0})
+		err := server.Export(&GetRecords{Count: 0}, nil)
 
 		require.Error(t, err)
-		require.Nil(t, res)
 	})
 
 	t.Run("PulseNumber can't be more than TopSyncPulseNumber", func(t *testing.T) {
@@ -297,10 +334,9 @@ func TestRecordServer_Export(t *testing.T) {
 			jetKeeper: jetKeeper,
 		}
 
-		res, err := server.Export(inslogger.TestContext(t), &GetRecords{Count: 1, PulseNumber: insolar.FirstPulseNumber})
+		err := server.Export(&GetRecords{Count: 1, PulseNumber: insolar.FirstPulseNumber}, nil)
 
 		require.Error(t, err)
-		require.Nil(t, res)
 	})
 
 	t.Run("returns empty slice of records, if no records", func(t *testing.T) {
@@ -319,15 +355,18 @@ func TestRecordServer_Export(t *testing.T) {
 
 		recordServer := NewRecordServer(nil, recordPosition, nil, jetKeeper)
 
-		res, err := recordServer.Export(inslogger.TestContext(t), &GetRecords{
+		streamMock := &streamMock{checker: func(i *Record) error {
+			t.Error("it shouldn't be called")
+			return nil
+		}}
+
+		err = recordServer.Export(&GetRecords{
 			PulseNumber:  insolar.FirstPulseNumber,
 			RecordNumber: 0,
 			Count:        10,
-		})
+		}, streamMock)
 
 		require.NoError(t, err)
-		require.NotNil(t, res)
-		require.Equal(t, 0, len(res.Records))
 	})
 }
 
@@ -352,7 +391,7 @@ func getMaterialRecord() record.Material {
 	virtRec := getVirtualRecord()
 
 	materialRecord := record.Material{
-		Virtual: &virtRec,
+		Virtual: virtRec,
 		JetID:   gen.JetID(),
 	}
 
@@ -376,14 +415,17 @@ func TestRecordServer_Export_Composite(t *testing.T) {
 	firstID := gen.ID()
 	firstID.SetPulse(firstPN)
 	firstRec := getMaterialRecord()
+	firstRec.ID = firstID
 
 	secondID := gen.ID()
 	secondID.SetPulse(firstPN)
 	secondRec := getMaterialRecord()
+	secondRec.ID = secondID
 
 	thirdID := gen.ID()
 	thirdID.SetPulse(secondPN)
 	thirdRec := getMaterialRecord()
+	thirdRec.ID = thirdID
 
 	// TempDB
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
@@ -399,17 +441,17 @@ func TestRecordServer_Export_Composite(t *testing.T) {
 	recordPosition := object.NewRecordPositionDB(db)
 
 	// Save records to DB
-	err = recordStorage.Set(ctx, firstID, firstRec)
+	err = recordStorage.Set(ctx, firstRec)
 	require.NoError(t, err)
 	err = recordPosition.IncrementPosition(firstID)
 	require.NoError(t, err)
 
-	err = recordStorage.Set(ctx, secondID, secondRec)
+	err = recordStorage.Set(ctx, secondRec)
 	require.NoError(t, err)
 	err = recordPosition.IncrementPosition(secondID)
 	require.NoError(t, err)
 
-	err = recordStorage.Set(ctx, thirdID, thirdRec)
+	err = recordStorage.Set(ctx, thirdRec)
 	require.NoError(t, err)
 	err = recordPosition.IncrementPosition(thirdID)
 	require.NoError(t, err)
@@ -423,60 +465,84 @@ func TestRecordServer_Export_Composite(t *testing.T) {
 	recordServer := NewRecordServer(pulseStorage, recordPosition, recordStorage, jetKeeper)
 
 	t.Run("export 1 of 3. first pulse", func(t *testing.T) {
-		res, err := recordServer.Export(ctx, &GetRecords{
+		var recs []*Record
+		streamMock := &streamMock{checker: func(i *Record) error {
+			recs = append(recs, i)
+			return nil
+		}}
+
+		err := recordServer.Export(&GetRecords{
 			PulseNumber:  firstPN,
 			RecordNumber: 0,
 			Count:        1,
-		})
+		}, streamMock)
 		require.NoError(t, err)
-		require.Equal(t, 1, len(res.Records))
+		require.Equal(t, 1, len(recs))
 
-		resRecord := res.Records[0]
-		require.Equal(t, firstPN, resRecord.PulseNumber)
+		resRecord := recs[0]
+		require.Equal(t, firstPN, resRecord.Record.ID.Pulse())
 		require.Equal(t, uint32(1), resRecord.RecordNumber)
-		require.Equal(t, firstID, resRecord.RecordID)
+		require.Equal(t, firstID, resRecord.Record.ID)
 		require.Equal(t, firstRec, resRecord.Record)
 	})
 
 	t.Run("export 1 of 3. second pulse", func(t *testing.T) {
-		res, err := recordServer.Export(ctx, &GetRecords{
+		var recs []*Record
+		streamMock := &streamMock{checker: func(i *Record) error {
+			recs = append(recs, i)
+			return nil
+		}}
+
+		err := recordServer.Export(&GetRecords{
 			PulseNumber:  secondPN,
 			RecordNumber: 0,
 			Count:        1,
-		})
+		}, streamMock)
 		require.NoError(t, err)
-		require.Equal(t, 1, len(res.Records))
+		require.Equal(t, 1, len(recs))
 
-		resRecord := res.Records[0]
-		require.Equal(t, secondPN, resRecord.PulseNumber)
+		resRecord := recs[0]
+		require.Equal(t, secondPN, resRecord.Record.ID.Pulse())
 		require.Equal(t, uint32(1), resRecord.RecordNumber)
-		require.Equal(t, thirdID, resRecord.RecordID)
+		require.Equal(t, thirdID, resRecord.Record.ID)
 		require.Equal(t, thirdRec, resRecord.Record)
 	})
 
 	t.Run("export 3 of 3. first pulse", func(t *testing.T) {
-		res, err := recordServer.Export(ctx, &GetRecords{
+		var recs []*Record
+		streamMock := &streamMock{checker: func(i *Record) error {
+			recs = append(recs, i)
+			return nil
+		}}
+
+		err := recordServer.Export(&GetRecords{
 			PulseNumber:  firstPN,
 			RecordNumber: 0,
 			Count:        5,
-		})
+		}, streamMock)
 		require.NoError(t, err)
-		require.Equal(t, 3, len(res.Records))
+		require.Equal(t, 3, len(recs))
 	})
 
 	t.Run("export 2d. first pulse, set previousRecordNumber", func(t *testing.T) {
-		res, err := recordServer.Export(ctx, &GetRecords{
+		var recs []*Record
+		streamMock := &streamMock{checker: func(i *Record) error {
+			recs = append(recs, i)
+			return nil
+		}}
+
+		err := recordServer.Export(&GetRecords{
 			PulseNumber:  firstPN,
 			RecordNumber: 1,
 			Count:        1,
-		})
+		}, streamMock)
 		require.NoError(t, err)
-		require.Equal(t, 1, len(res.Records))
+		require.Equal(t, 1, len(recs))
 
-		resRecord := res.Records[0]
-		require.Equal(t, firstPN, resRecord.PulseNumber)
+		resRecord := recs[0]
+		require.Equal(t, firstPN, resRecord.Record.ID.Pulse())
 		require.Equal(t, uint32(2), resRecord.RecordNumber)
-		require.Equal(t, secondID, resRecord.RecordID)
+		require.Equal(t, secondID, resRecord.Record.ID)
 		require.Equal(t, secondRec, resRecord.Record)
 	})
 
