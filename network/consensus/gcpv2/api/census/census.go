@@ -52,6 +52,7 @@ package census
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
@@ -85,7 +86,7 @@ type Operational interface {
 	GetProfileFactory(ksf cryptkit.KeyStoreFactory) profiles.Factory
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.Active -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.Active -o . -s _mock.go -g
 
 type Active interface {
 	Operational
@@ -97,7 +98,7 @@ type Prime interface {
 	MakeExpected(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) Expected
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.Expected -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.Expected -o . -s _mock.go -g
 
 type Expected interface {
 	Operational

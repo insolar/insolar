@@ -54,18 +54,25 @@ func TestRPCMethods_DeactivateObject(t *testing.T) {
 
 	tr := &Transcript{RequestRef: reqRef}
 
-	execList := NewCurrentExecutionList()
-	err := execList.SetOnce(tr)
-	require.NoError(t, err)
+	executionArchive := NewExecutionArchiveMock(mc).GetActiveTranscriptMock.Set(
+		func(ref insolar.Reference) (r *Transcript) {
+			if ref.Equal(reqRef) {
+				return tr
+			} else {
+				return nil
+			}
+		},
+	)
 
-	ss := NewStateStorageMock(t).
-		GetExecutionStateMock.Set(func(ref insolar.Reference) (r ExecutionBrokerI) {
-		if ref.Equal(objRef) {
-			return &ExecutionBroker{currentList: execList}
-		} else {
-			return nil
-		}
-	})
+	ss := NewStateStorageMock(t).GetExecutionArchiveMock.Set(
+		func(ref insolar.Reference) (r ExecutionArchive) {
+			if ref.Equal(objRef) {
+				return executionArchive
+			} else {
+				return nil
+			}
+		},
+	)
 
 	m := &RPCMethods{
 		ss:        ss,
@@ -314,13 +321,13 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	outgoingReqID := gen.ID()
 	outgoingReqRef := insolar.NewReference(outgoingReqID)
 	// Make sure an outgoing request is registered
-	am.RegisterOutgoingRequestFunc = func(ctx context.Context, r *record.OutgoingRequest) (*insolar.ID, error) {
+	am.RegisterOutgoingRequestMock.Set(func(ctx context.Context, r *record.OutgoingRequest) (*insolar.ID, error) {
 		require.Nil(t, outreq)
 		require.Equal(t, record.ReturnResult, r.ReturnMode)
 		outreq = r
 		id := outgoingReqID
 		return &id, nil
-	}
+	})
 
 	cr.CallMethodMock.Return(&reply.CallMethod{}, nil)
 	// Make sure the result of the outgoing request is registered as well
@@ -353,13 +360,13 @@ func TestRouteCallRegistersSaga(t *testing.T) {
 	var outreq *record.OutgoingRequest
 	outgoingReqID := gen.ID()
 	// Make sure an outgoing request is registered
-	am.RegisterOutgoingRequestFunc = func(ctx context.Context, r *record.OutgoingRequest) (*insolar.ID, error) {
+	am.RegisterOutgoingRequestMock.Set(func(ctx context.Context, r *record.OutgoingRequest) (*insolar.ID, error) {
 		require.Nil(t, outreq)
 		require.Equal(t, record.ReturnSaga, r.ReturnMode)
 		outreq = r
 		id := outgoingReqID
 		return &id, nil
-	}
+	})
 
 	// cr.CallMethod and am.RegisterResults are NOT called
 
@@ -388,15 +395,15 @@ func TestSaveAsChildRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	outgoingReqID := gen.ID()
 	outgoingReqRef := insolar.NewReference(outgoingReqID)
 	// Make sure an outgoing request is registered
-	am.RegisterOutgoingRequestFunc = func(ctx context.Context, r *record.OutgoingRequest) (*insolar.ID, error) {
+	am.RegisterOutgoingRequestMock.Set(func(ctx context.Context, r *record.OutgoingRequest) (*insolar.ID, error) {
 		require.Nil(t, outreq)
 		outreq = r
 		id := outgoingReqID
 		return &id, nil
-	}
+	})
 
 	newObjRef := gen.Reference()
-	cr.CallConstructorMock.Return(&newObjRef, nil)
+	cr.CallConstructorMock.Return(&newObjRef, "", nil)
 
 	// Make sure the result of the outgoing request is registered as well
 	am.RegisterResultMock.Set(func(ctx context.Context, reqref insolar.Reference, result artifacts.RequestResult) (r error) {

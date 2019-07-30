@@ -95,13 +95,13 @@ func (s *communicatorSuite) SetupTest() {
 	nodeN.GetOriginMock.Return(s.originNode)
 
 	cryptoServ := testutils.NewCryptographyServiceMock(s.T())
-	cryptoServ.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
+	cryptoServ.SignMock.Set(func(p []byte) (r *insolar.Signature, r1 error) {
 		signature := insolar.SignatureFromBytes(nil)
 		return &signature, nil
-	}
-	cryptoServ.VerifyFunc = func(p crypto.PublicKey, p1 insolar.Signature, p2 []byte) (r bool) {
+	})
+	cryptoServ.VerifyMock.Set(func(p crypto.PublicKey, p1 insolar.Signature, p2 []byte) (r bool) {
 		return true
-	}
+	})
 
 	s.consensusNetworkMock.RegisterPacketHandlerMock.Set(func(p packets.PacketType, p1 network.ConsensusPacketHandler) {
 

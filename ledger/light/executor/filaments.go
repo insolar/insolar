@@ -36,7 +36,7 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCalculator -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCalculator -o ./ -s _mock.go -g
 
 type FilamentCalculator interface {
 	// Requests returns request records for objectID's chain, starts from provided id until provided pulse.
@@ -79,7 +79,7 @@ type FilamentCalculator interface {
 	)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCleaner -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCleaner -o ./ -s _mock.go -g
 
 type FilamentCleaner interface {
 	Clear(objID insolar.ID)
@@ -155,7 +155,7 @@ func (c *FilamentCalculatorDefault) OpenedRequests(ctx context.Context, pulse in
 
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"object_id":           objectID.DebugString(),
-		"pending_filament_id": idx.Lifeline.PendingPointer.DebugString(),
+		"pending_filament_id": idx.Lifeline.LatestRequest.DebugString(),
 	})
 	logger.Debug("started collecting opened requests")
 	defer logger.Debug("finished collecting opened requests")
@@ -164,7 +164,7 @@ func (c *FilamentCalculatorDefault) OpenedRequests(ctx context.Context, pulse in
 	cache.Lock()
 	defer cache.Unlock()
 
-	if idx.Lifeline.PendingPointer == nil {
+	if idx.Lifeline.LatestRequest == nil {
 		return []record.CompositeFilamentRecord{}, nil
 	}
 	if idx.Lifeline.EarliestOpenRequest == nil {
@@ -175,7 +175,7 @@ func (c *FilamentCalculatorDefault) OpenedRequests(ctx context.Context, pulse in
 		ctx,
 		cache,
 		objectID,
-		*idx.Lifeline.PendingPointer,
+		*idx.Lifeline.LatestRequest,
 		*idx.Lifeline.EarliestOpenRequest,
 		c.jetFetcher,
 		c.coordinator,
@@ -195,7 +195,7 @@ func (c *FilamentCalculatorDefault) OpenedRequests(ctx context.Context, pulse in
 			continue
 		}
 
-		virtual := record.Unwrap(rec.Record.Virtual)
+		virtual := record.Unwrap(&rec.Record.Virtual)
 		switch r := virtual.(type) {
 		// result should always go first, before initial request
 		case *record.Result:
@@ -244,7 +244,7 @@ func (c *FilamentCalculatorDefault) ResultDuplicate(
 	if err != nil {
 		return nil, err
 	}
-	if idx.Lifeline.PendingPointer == nil {
+	if idx.Lifeline.LatestRequest == nil {
 		return nil, nil
 	}
 
@@ -256,7 +256,7 @@ func (c *FilamentCalculatorDefault) ResultDuplicate(
 		ctx,
 		cache,
 		objectID,
-		*idx.Lifeline.PendingPointer,
+		*idx.Lifeline.LatestRequest,
 		result.Request.Record().Pulse(),
 		c.jetFetcher,
 		c.coordinator,
@@ -320,7 +320,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 		lifeline = l.Lifeline
 	}
 
-	if lifeline.PendingPointer == nil {
+	if lifeline.LatestRequest == nil {
 		return nil, nil, nil
 	}
 
@@ -332,7 +332,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 		ctx,
 		cache,
 		objectID,
-		*lifeline.PendingPointer,
+		*lifeline.LatestRequest,
 		reasonID.Pulse(),
 		c.jetFetcher,
 		c.coordinator,
@@ -353,7 +353,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 			logger.Debugf("found duplicate %s", rec.RecordID.DebugString())
 		}
 
-		virtual := record.Unwrap(rec.Record.Virtual)
+		virtual := record.Unwrap(&rec.Record.Virtual)
 		if r, ok := virtual.(*record.Result); ok {
 			if bytes.Equal(r.Request.Record().Hash(), requestID.Hash()) {
 				foundResult = &rec
@@ -490,7 +490,7 @@ func (i *filamentIterator) Prev(ctx context.Context) (record.CompositeFilamentRe
 
 	composite, ok := i.cache.cache[*i.currentID]
 	if ok {
-		virtual := record.Unwrap(composite.Meta.Virtual)
+		virtual := record.Unwrap(&composite.Meta.Virtual)
 		filament, ok := virtual.(*record.PendingFilament)
 		if !ok {
 			return record.CompositeFilamentRecord{}, fmt.Errorf("unexpected filament record %T", virtual)
@@ -504,7 +504,7 @@ func (i *filamentIterator) Prev(ctx context.Context) (record.CompositeFilamentRe
 	if err != nil {
 		return record.CompositeFilamentRecord{}, err
 	}
-	virtual := record.Unwrap(filamentRecord.Virtual)
+	virtual := record.Unwrap(&filamentRecord.Virtual)
 	filament, ok := virtual.(*record.PendingFilament)
 	if !ok {
 		return record.CompositeFilamentRecord{}, fmt.Errorf("unexpected filament record %T", virtual)

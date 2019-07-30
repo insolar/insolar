@@ -85,7 +85,7 @@ func (p *SendRequests) Proceed(ctx context.Context) error {
 		composite.Meta = filamentRecord
 
 		// Fetching primary record.
-		virtual := record.Unwrap(filamentRecord.Virtual)
+		virtual := record.Unwrap(&filamentRecord.Virtual)
 		filament, ok := virtual.(*record.PendingFilament)
 		if !ok {
 			return errors.New("failed to convert filament record")

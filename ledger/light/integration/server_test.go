@@ -248,7 +248,7 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 			ServerBus,
 		)
 
-		stateIniter := executor.NewStateIniter(Jets, waiter, drops, Coordinator, ServerBus)
+		stateIniter := executor.NewStateIniter(Jets, waiter, drops, Nodes, ServerBus)
 
 		pm := pulsemanager.NewPulseManager(
 			jetSplitter,

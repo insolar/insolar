@@ -711,6 +711,8 @@ func (r *Two) Hello() (*string, error) {
 	require.Nil(t, resp.ExtractedReply)
 }
 
+// If a contract constructor returns `nil, nil` it's considered a logical error,
+// which is returned to the calling contract and/or API.
 func TestConstructorReturnNil(t *testing.T) {
 	var contractOneCode = `
 package main
@@ -751,14 +753,72 @@ type Two struct {
 	foundation.BaseContract
 }
 func New() (*Two, error) {
+	// nil, nil is considered a logical error in the constructor
 	return nil, nil
 }
 `
 	uploadContractOnce(t, "constructor_return_nil_two", contractTwoCode)
 	obj := callConstructor(t, uploadContractOnce(t, "constructor_return_nil_one", contractOneCode), "New")
 
-	resp := callMethodExpectError(t, obj, "Hello")
-	require.Empty(t, resp.Reply.Result)
+	resp := callMethodNoChecks(t, obj, "Hello")
+	require.Empty(t, resp.Error)
+	require.NotNil(t, resp.Result.Error)
+	require.Contains(t, resp.Result.Error.Error(), "( Generated Method ) Constructor returns nil")
+}
+
+// If a contract constructor fails it's considered a logical error,
+// which is returned to the calling contract and/or API.
+func TestConstructorReturnError(t *testing.T) {
+	var contractOneCode = `
+package main
+
+import (
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	two "github.com/insolar/insolar/application/proxy/constructor_return_error_two"
+)
+
+type One struct {
+	foundation.BaseContract
+}
+
+func New() (*One, error) {
+	return &One{}, nil
+}
+
+var INSATTR_Hello_API = true
+func (r *One) Hello() (*string, error) {
+	holder := two.New()
+	_, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return nil, err
+	}
+	ok := "all was well"
+	return &ok, nil
+}
+`
+
+	var contractTwoCode = `
+package main
+
+import (
+	"errors"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+)
+
+type Two struct {
+	foundation.BaseContract
+}
+func New() (*Two, error) {
+	return nil, errors.New("Epic fail in two.New()")
+}
+`
+	uploadContractOnce(t, "constructor_return_error_two", contractTwoCode)
+	obj := callConstructor(t, uploadContractOnce(t, "constructor_return_error_one", contractOneCode), "New")
+
+	resp := callMethodNoChecks(t, obj, "Hello")
+	require.Empty(t, resp.Error)
+	require.NotNil(t, resp.Result.Error)
+	require.Contains(t, resp.Result.Error.Error(), "Epic fail in two.New()")
 }
 
 func TestRecursiveCallError(t *testing.T) {

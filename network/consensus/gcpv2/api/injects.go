@@ -79,7 +79,7 @@ type ConsensusController interface {
 	GetActivePowerLimit() (member.Power, pulse.Number)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api.CandidateControlFeeder -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api.CandidateControlFeeder -o . -s _mock.go -g
 type CandidateControlFeeder interface {
 	PickNextJoinCandidate() (profiles.CandidateProfile /* joinerSecret */, cryptkit.DigestHolder)
 	RemoveJoinCandidate(candidateAdded bool, nodeID insolar.ShortNodeID) bool

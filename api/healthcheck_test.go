@@ -57,9 +57,9 @@ func randomNodeList(t *testing.T, size int) []insolar.DiscoveryNode {
 	for i := 0; i < size; i++ {
 		dn := testutils.NewDiscoveryNodeMock(t)
 		r := testutils.RandomRef()
-		dn.GetNodeRefFunc = func() *insolar.Reference {
+		dn.GetNodeRefMock.Set(func() *insolar.Reference {
 			return &r
-		}
+		})
 		list[i] = dn
 	}
 	return list
@@ -67,13 +67,13 @@ func randomNodeList(t *testing.T, size int) []insolar.DiscoveryNode {
 
 func mockCertManager(t *testing.T, nodeList []insolar.DiscoveryNode) *testutils.CertificateManagerMock {
 	cm := testutils.NewCertificateManagerMock(t)
-	cm.GetCertificateFunc = func() insolar.Certificate {
+	cm.GetCertificateMock.Set(func() insolar.Certificate {
 		c := testutils.NewCertificateMock(t)
-		c.GetDiscoveryNodesFunc = func() []insolar.DiscoveryNode {
+		c.GetDiscoveryNodesMock.Set(func() []insolar.DiscoveryNode {
 			return nodeList
-		}
+		})
 		return c
-	}
+	})
 	return cm
 }
 
@@ -83,12 +83,12 @@ func mockNodeNetwork(t *testing.T, nodeList []insolar.DiscoveryNode) *network.No
 	for _, node := range nodeList {
 		nodeMap[*node.GetNodeRef()] = node
 	}
-	nn.GetWorkingNodeFunc = func(ref insolar.Reference) insolar.NetworkNode {
+	nn.GetWorkingNodeMock.Set(func(ref insolar.Reference) insolar.NetworkNode {
 		if _, ok := nodeMap[ref]; ok {
 			return network.NewNetworkNodeMock(t)
 		}
 		return nil
-	}
+	})
 	return nn
 }
 

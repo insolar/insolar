@@ -45,9 +45,7 @@ func (ch *CheckOurRole) Proceed(ctx context.Context) error {
 
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
 	target := ch.msg.DefaultTarget()
-	isAuthorized, err := ch.lr.JetCoordinator.IsAuthorized(
-		ctx, ch.role, *target.Record(), ch.pulseNumber, ch.lr.JetCoordinator.Me(),
-	)
+	isAuthorized, err := ch.lr.JetCoordinator.IsMeAuthorizedNow(ctx, ch.role, *target.Record())
 	if err != nil {
 		return errors.Wrap(err, "authorization failed with error")
 	}
@@ -98,9 +96,9 @@ func (r *RegisterIncomingRequest) Proceed(ctx context.Context) error {
 }
 
 type AddFreshRequest struct {
-	broker  ExecutionBrokerI
+	broker     ExecutionBrokerI
 	requestRef insolar.Reference
-	request record.IncomingRequest
+	request    record.IncomingRequest
 }
 
 func (c *AddFreshRequest) Proceed(ctx context.Context) error {

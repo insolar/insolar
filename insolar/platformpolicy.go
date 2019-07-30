@@ -50,7 +50,7 @@ type PlatformCryptographyScheme interface {
 	DigestVerifier(crypto.PublicKey) Verifier
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.KeyProcessor -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.KeyProcessor -o ../testutils -s _mock.go -g
 type KeyProcessor interface {
 	GeneratePrivateKey() (crypto.PrivateKey, error)
 	ExtractPublicKey(crypto.PrivateKey) crypto.PublicKey
