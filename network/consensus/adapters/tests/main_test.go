@@ -92,7 +92,7 @@ func TestConsensusJoin(t *testing.T) {
 	js, err := initNodes(ctx, consensus.Joiner, *joiners, strategy)
 	require.NoError(t, err)
 
-	// initPulsar(ctx, defaultPulseDelta, *ns)
+	initPulsar(ctx, defaultPulseDelta, *ns)
 
 	testCase(defaultTestDuration, defaultStartCaseAfter, func() {
 		for _, joiner := range js.staticProfiles {

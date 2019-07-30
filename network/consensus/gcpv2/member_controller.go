@@ -221,6 +221,8 @@ type ephemeralInterceptor struct {
 func (p *ephemeralInterceptor) EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time,
 	expected census.Operational) {
 
+	p.EphemeralControlFeeder.EphemeralConsensusFinished(isNextEphemeral, roundStartedAt, expected)
+
 	p.controller.mutex.Lock()
 	defer p.controller.mutex.Unlock()
 

@@ -292,9 +292,9 @@ func (r *coreRealm) VerifyPacketAuthenticity(ctx context.Context, packet transpo
 func (r *coreRealm) VerifyPacketPulseNumber(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
 	filterPN, nextPN pulse.Number) (bool, error) {
 
-	if r.ephemeralFeeder != nil && !packet.GetPacketType().IsEphemeralPacket() {
-		return false, r.ephemeralFeeder.OnNonEphemeralPacket(ctx, packet, from)
-	}
+	//if r.ephemeralFeeder != nil && !packet.GetPacketType().IsEphemeralPacket() {
+	//	return false, r.ephemeralFeeder.OnNonEphemeralPacket(ctx, packet, from)
+	//}
 
 	pn := packet.GetPulseNumber()
 	if filterPN == pn || filterPN.IsUnknown() || pn.IsUnknown() {
