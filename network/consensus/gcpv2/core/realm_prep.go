@@ -320,17 +320,18 @@ func (p *PrepRealm) _applyPulseData(pdp proofs.OriginalPulsarPacket, fromPulsar 
 		return false, pulse.Unknown
 	}
 
-	if p.ephemeralFeeder != nil && pd.IsFromPulsar() {
+	switch {
+	case p.ephemeralFeeder != nil && pd.IsFromPulsar():
 		if fromPulsar { // we cant receive pulsar packets directly from pulsars when ephemeral
 			panic("illegal state")
 		}
-		if !p.ephemeralFeeder.CanAcceptTimePulseToStopEphemeral(pd) {
-			return false, pulse.Unknown
+		if p.ephemeralFeeder.CanAcceptTimePulseToStopEphemeral(pd) {
+			panic("not implemented")
+			//p.isPulseConvertedFromEphemeral = true
+			//p.ephemeralFeeder = nil
 		}
-
-		p.isPulseConvertedFromEphemeral = true
-		p.ephemeralFeeder = nil
-	} else {
+		fallthrough
+	default:
 		epn := pulse.Unknown
 		if p.initialCensus.GetCensusState() == census.PrimingCensus || p.initialCensus.IsActive() {
 			epn = p.initialCensus.GetExpectedPulseNumber()

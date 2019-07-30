@@ -280,6 +280,10 @@ type EphemeralControlFeeder struct {
 	pulseDuration       time.Duration
 }
 
+func (f *EphemeralControlFeeder) CanAcceptTimePulseToStopEphemeral(pd pulse.Data /*, sourceNode profiles.ActiveNode*/) bool {
+	return false
+}
+
 func (f *EphemeralControlFeeder) GetMinDuration() time.Duration {
 	return f.pulseDuration
 }
@@ -292,7 +296,7 @@ func (f *EphemeralControlFeeder) OnNonEphemeralPacket(ctx context.Context, parse
 		"packet_pulse":   parser.GetPulseNumber(),
 	})
 
-	logger.Info("Incompatible consensus packet")
+	logger.Info("non-ephemeral packet")
 	return nil
 }
 
