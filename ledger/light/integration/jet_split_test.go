@@ -17,17 +17,14 @@
 package integration_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
@@ -77,16 +74,11 @@ func TestJetSplitEveryPulse(t *testing.T) {
 
 		s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) {
 
-			// fmt.Printf("type %T \n", pl)
-
 			switch p := pl.(type) {
 			case *payload.Replication:
-				fmt.Printf("callback r jetNum %s %s \n", p.JetID.DebugString(), p.Pulse.String())
-
 				replication <- p.JetID
 
 			case *payload.HotObjects:
-				fmt.Printf("hobj jetNum %s %s \n", p.JetID.DebugString(), p.Pulse.String())
 				hotObjects <- p.JetID
 
 			case *payload.GotHotConfirmation:
@@ -104,7 +96,6 @@ func TestJetSplitEveryPulse(t *testing.T) {
 
 			for i := 0; i < testPulsesQuantity; i++ {
 
-				fmt.Printf("\n\npulse: %d\n", i)
 				s.Pulse(ctx)
 
 				previousPulseJets := expectedJets
@@ -119,18 +110,12 @@ func TestJetSplitEveryPulse(t *testing.T) {
 					hotObjectsConfirmReceived[<-hotObjectConfirm] = struct{}{}
 				}
 
-				// for kk := range hotObjectsReceived {
-				// fmt.Println("HO jet id: ", kk.DebugString())
-				// }
-
 				for _, expectedJetId := range expectedJets {
-					// fmt.Println("exp jet id: ", expectedJetId.DebugString())
-
 					_, ok := hotObjectsReceived[expectedJetId]
-					require.True(t, ok, "No expected jetId in hotObjectsReceived")
+					require.True(t, ok, "No expected jetId %s in hotObjectsReceived", expectedJetId.DebugString())
 
 					_, ok = hotObjectsConfirmReceived[expectedJetId]
-					require.True(t, ok, "No expected jetId in hotObjectsConfirmReceived")
+					require.True(t, ok, "No expected jetId %s in hotObjectsConfirmReceived", expectedJetId.DebugString())
 				}
 
 				// collecting Replication
@@ -138,16 +123,10 @@ func TestJetSplitEveryPulse(t *testing.T) {
 				for range previousPulseJets {
 					replicationObjectsReceived[<-replication] = struct{}{}
 				}
-				fmt.Println("REPL len : ", len(replicationObjectsReceived))
-
-				for kk := range replicationObjectsReceived {
-					fmt.Println("REPL jet id: ", kk.DebugString())
-				}
 
 				for _, expectedJetId := range previousPulseJets {
-					fmt.Println("prev jet id: ", expectedJetId.DebugString())
 					_, ok := replicationObjectsReceived[expectedJetId]
-					require.True(t, ok, "No expected jetId in replicationObjectsReceived")
+					require.True(t, ok, "No expected jetId %s in replicationObjectsReceived", expectedJetId.DebugString())
 				}
 
 				// check depthLimit works
@@ -186,10 +165,6 @@ func TestJetSplitOnThirdPulse(t *testing.T) {
 			replication <- p.JetID
 
 		case *payload.HotObjects:
-			fmt.Printf("callback HO jetNum %s %s len: %d \n", p.JetID.DebugString(), p.Pulse.String(), len(p.Indexes))
-			for k, v := range p.Indexes {
-				fmt.Println(k, v.String())
-			}
 			hotObjects <- p.JetID
 
 		case *payload.GotHotConfirmation:
@@ -215,7 +190,6 @@ func TestJetSplitOnThirdPulse(t *testing.T) {
 
 	// First pulse goes in storage then interrupts.
 	s.Pulse(ctx)
-	fmt.Println("init pulse")
 
 	{
 		expectedJets := []insolar.JetID{insolar.ZeroJetID}
@@ -223,7 +197,6 @@ func TestJetSplitOnThirdPulse(t *testing.T) {
 
 		for i := 0; i < pulsesQuantity; i++ {
 
-			fmt.Printf("\n\npulse: %d, %s\n", i, s.pulse.PulseNumber+PulseStep)
 			s.Pulse(ctx)
 
 			// Saving previous for Replication check
@@ -232,36 +205,23 @@ func TestJetSplitOnThirdPulse(t *testing.T) {
 			// Starting to split test jet tree
 			if i > splitOnPulse {
 				expectedJets = calculateExpectedJetsByTree(splittingJets, jetTree, cfg.Ledger.JetSplit.DepthLimit, cfg.Ledger.JetSplit.ThresholdRecordsCount)
-				fmt.Printf("update tree ")
-				fmt.Println(jetTree.String())
-
 			}
 
 			// Starting to send messages
 			if i >= splitOnPulse {
 				splittingJets = sendMessages(jetTree)
-				fmt.Printf("messages sent\n")
-				for spj, val := range splittingJets {
-					fmt.Printf("must split on next pulse: %s, %d\n", spj.DebugString(), val)
-				}
 			}
 
 			hotObjectsReceived := make(map[insolar.JetID]struct{})
 			hotObjectsConfirmReceived := make(map[insolar.JetID]struct{})
 
 			// collecting HO and HCO
-			fmt.Println("expectedJets len: ", len(expectedJets))
 			for range expectedJets {
 				hotObjectsReceived[<-hotObjects] = struct{}{}
 				hotObjectsConfirmReceived[<-hotObjectConfirm] = struct{}{}
 			}
 
-			for kk := range hotObjectsReceived {
-				fmt.Println("ho jet id: ", kk.DebugString())
-			}
-
 			for _, expectedJetId := range expectedJets {
-				fmt.Println("exp jet id: ", expectedJetId.DebugString())
 
 				_, ok := hotObjectsReceived[expectedJetId]
 				require.True(t, ok, "No expected jetId %s in hotObjectsReceived", expectedJetId.DebugString())
@@ -276,11 +236,7 @@ func TestJetSplitOnThirdPulse(t *testing.T) {
 				replicationObjectsReceived[<-replication] = struct{}{}
 			}
 
-			for kk := range replicationObjectsReceived {
-				fmt.Println("repl jet id: ", kk.DebugString())
-			}
 			for _, expectedJetId := range previousPulseJets {
-				fmt.Println("prev jet id: ", expectedJetId.DebugString())
 				_, ok := replicationObjectsReceived[expectedJetId]
 				require.True(t, ok, "No expected jetId %s in replicationObjectsReceived", expectedJetId.DebugString())
 			}
