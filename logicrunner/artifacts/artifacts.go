@@ -23,7 +23,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.Client -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.Client -o ./ -s _mock.go -g
 
 // Client is a high level storage interface.
 type Client interface {
@@ -81,7 +81,7 @@ type Client interface {
 	InjectFinish()
 }
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.CodeDescriptor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.CodeDescriptor -o ./ -s _mock.go -g
 
 // CodeDescriptor represents meta info required to fetch all code data.
 type CodeDescriptor interface {
@@ -95,7 +95,7 @@ type CodeDescriptor interface {
 	Code() ([]byte, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.ObjectDescriptor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.ObjectDescriptor -o ./ -s _mock.go -g
 
 // ObjectDescriptor represents meta info required to fetch all object data.
 type ObjectDescriptor interface {
@@ -130,7 +130,7 @@ type RefIterator interface {
 	HasNext() bool
 }
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.DescriptorsCache -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.DescriptorsCache -o ./ -s _mock.go -g
 
 // DescriptorsCache provides convenient way to get prototype and code descriptors
 // of objects without fetching them twice

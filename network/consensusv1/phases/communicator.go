@@ -70,7 +70,7 @@ import (
 	"github.com/insolar/insolar/network/consensusv1/packets"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensusv1/phases.Communicator -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensusv1/phases.Communicator -o . -s _mock.go -g -g
 
 // Communicator interface provides methods to exchange data between nodes
 type Communicator interface {

@@ -25,7 +25,7 @@ import (
 	"github.com/insolar/insolar/insolar/bits"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Accessor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Accessor -o ./ -s _mock.go -g
 
 // Accessor provides an interface for accessing jet IDs.
 type Accessor interface {
@@ -36,7 +36,7 @@ type Accessor interface {
 	ForID(ctx context.Context, pulse insolar.PulseNumber, recordID insolar.ID) (insolar.JetID, bool)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Modifier -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Modifier -o ./ -s _mock.go -g
 
 // Modifier provides an interface for modifying jet IDs.
 type Modifier interface {
@@ -54,7 +54,7 @@ type Cleaner interface {
 	DeleteForPN(ctx context.Context, pulse insolar.PulseNumber)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Storage -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Storage -o ./ -s _mock.go -g
 
 // Storage composes Accessor and Modifier interfaces.
 type Storage interface {
@@ -62,7 +62,7 @@ type Storage interface {
 	Modifier
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Coordinator -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Coordinator -o ./ -s _mock.go -g
 
 // Coordinator provides methods for calculating Jet affinity
 // (e.g. to which Jet a message should be sent).

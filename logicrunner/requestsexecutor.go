@@ -32,7 +32,7 @@ import (
 	"github.com/insolar/insolar/messagebus"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner.RequestsExecutor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/logicrunner.RequestsExecutor -o ./ -s _mock.go -g
 
 type RequestsExecutor interface {
 	ExecuteAndSave(ctx context.Context, current *Transcript) (insolar.Reply, error)
