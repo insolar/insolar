@@ -81,8 +81,6 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	)
 	defer span.End()
 
-	m.StartPulse.OnPulse(ctx, newPulse)
-
 	err := m.FinalizationKeeper.OnPulse(ctx, newPulse.PulseNumber)
 	if err != nil {
 		return errors.Wrap(err, "got error calling FinalizationKeeper.OnPulse")
@@ -96,6 +94,8 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		}
 		return err
 	}
+
+	m.StartPulse.OnPulse(ctx, newPulse)
 
 	err = m.Bus.OnPulse(ctx, newPulse)
 	if err != nil {

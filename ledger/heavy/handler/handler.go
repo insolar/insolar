@@ -297,10 +297,11 @@ func (h *Handler) handleGetLightInitialState(ctx context.Context, meta payload.M
 		return
 	}
 	if meta.Pulse == startPulse {
+		topSyncPulse := h.JetKeeper.TopSyncPulse()
 		var IDs []insolar.JetID
 		var drops [][]byte
-		for _, id := range h.JetTree.All(ctx, startPulse) {
-			light, _ := h.JetCoordinator.LightExecutorForJet(ctx, insolar.ID(id), startPulse)
+		for _, id := range h.JetTree.All(ctx, topSyncPulse) {
+			light, _ := h.JetCoordinator.LightExecutorForJet(ctx, insolar.ID(id), topSyncPulse)
 			if light.Equal(meta.Sender) {
 				IDs = append(IDs, id)
 				drop, _ := h.DropDB.ForPulse(ctx, id, startPulse)
@@ -309,9 +310,11 @@ func (h *Handler) handleGetLightInitialState(ctx context.Context, meta payload.M
 		}
 
 
+		p, _ := h.PulseAccessor.ForPulseNumber(ctx, topSyncPulse)
 		msg, _ := payload.NewMessage(&payload.LightInitialState{
 			JetIDs: IDs,
 			Drops: drops,
+			Pulse: pulse.ToProto(&p),
 		})
 		_, _ = h.Sender.SendTarget(ctx, msg, meta.Sender)
 	}
