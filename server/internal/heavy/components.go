@@ -241,6 +241,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		jetKeeper := executor.NewJetKeeper(jets, DB, Pulses)
 		c.rollback = executor.NewDBRollback(jetKeeper, Pulses, drops, records, indexes, jets, Pulses)
 
+		sp := pulse.NewStartPulse()
+
 		pm := pulsemanager.NewPulseManager()
 		pm.Bus = Bus
 		pm.NodeNet = NodeNetwork
@@ -249,6 +251,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		pm.PulseAppender = Pulses
 		pm.PulseAccessor = Pulses
 		pm.JetModifier = jets
+		pm.StartPulse = sp
 		pm.FinalizationKeeper = executor.NewFinalizationKeeperDefault(jetKeeper, Termination, Pulses, cfg.Ledger.LightChainLimit)
 
 		h := handler.New(cfg.Ledger)
@@ -261,9 +264,13 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		h.DropModifier = drops
 		h.PCS = CryptoScheme
 		h.PulseAccessor = Pulses
+		h.PulseCalculator = Pulses
+		h.StartPulse = sp
 		h.JetModifier = jets
 		h.JetAccessor = jets
 		h.JetKeeper = jetKeeper
+		h.JetTree = jets
+		h.DropDB = drops
 		h.Sender = WmBus
 
 		PulseManager = pm

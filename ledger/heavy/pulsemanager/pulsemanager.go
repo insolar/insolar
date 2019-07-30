@@ -49,6 +49,7 @@ type PulseManager struct {
 	JetModifier        jet.Modifier                `inject:""`
 
 	currentPulse insolar.Pulse
+	StartPulse   pulse.StartPulse
 
 	// setLock locks Set method call.
 	setLock sync.RWMutex
@@ -79,6 +80,8 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		trace.Int64Attribute("pulse.PulseNumber", int64(newPulse.PulseNumber)),
 	)
 	defer span.End()
+
+	m.StartPulse.OnPulse(ctx, newPulse)
 
 	err := m.FinalizationKeeper.OnPulse(ctx, newPulse.PulseNumber)
 	if err != nil {

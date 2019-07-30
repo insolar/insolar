@@ -58,6 +58,10 @@ type Handler struct {
 	JetKeeper     executor.JetKeeper
 
 	Sender bus.Sender
+	StartPulse   pulse.StartPulse
+	PulseCalculator pulse.Calculator
+	JetTree         jet.Storage
+	DropDB          *drop.DB
 
 	jetID insolar.JetID
 	dep   *proc.Dependencies
@@ -191,6 +195,8 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 		h.handleError(ctx, meta)
 	case payload.TypeGotHotConfirmation:
 		h.handleGotHotConfirmation(ctx, meta)
+	case payload.TypeGetLightInitialState:
+		h.handleGetLightInitialState(ctx, meta)
 	default:
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())
 	}
@@ -282,5 +288,31 @@ func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Met
 		logger.Error(errors.Wrapf(err, "failed to add hot confitmation to JetKeeper jet=%v", confirm.String()))
 	} else {
 		logger.Debug("got confirmation: ", confirm.String())
+	}
+}
+
+func (h *Handler) handleGetLightInitialState(ctx context.Context, meta payload.Meta) {
+	startPulse, err := h.StartPulse.PulseNumber()
+	if err != nil {
+		return
+	}
+	if meta.Pulse == startPulse {
+		var IDs []insolar.JetID
+		var drops [][]byte
+		for _, id := range h.JetTree.All(ctx, startPulse) {
+			light, _ := h.JetCoordinator.LightExecutorForJet(ctx, insolar.ID(id), startPulse)
+			if light.Equal(meta.Sender) {
+				IDs = append(IDs, id)
+				drop, _ := h.DropDB.ForPulse(ctx, id, startPulse)
+				drops = append(drops, drop.Hash)
+			}
+		}
+
+
+		msg, _ := payload.NewMessage(&payload.LightInitialState{
+			JetIDs: IDs,
+			Drops: drops,
+		})
+		_, _ = h.Sender.SendTarget(ctx, msg, meta.Sender)
 	}
 }
