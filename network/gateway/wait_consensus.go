@@ -82,8 +82,7 @@ func (g *WaitConsensus) OnConsensusFinished(report network.Report) {
 	wnodes := g.NodeKeeper.GetAccessor().GetWorkingNodes()
 	inslogger.FromContext(context.Background()).Infof("-=-=-=-= NodeKeeper active %d, working, %d", len(nodes), len(wnodes))
 
-	n := g.NodeKeeper.GetAccessor().GetActiveNode(g.NodeKeeper.GetOrigin().ID())
-	if n != nil {
+	if report.PopulationValid && !report.MemberMode.IsEvicted() {
 		// todo: check majority
 		g.Gatewayer.SwitchState(context.Background(), insolar.WaitMinRoles)
 	}

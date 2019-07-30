@@ -52,7 +52,6 @@ package gateway
 
 import (
 	"context"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -141,7 +140,8 @@ func (g *Base) Init(ctx context.Context) error {
 }
 
 func (g *Base) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, originalPacket network.ReceivedPacket) {
-	inslogger.FromContext(ctx).Infof("Skip pulse from pulsar: %d", pu.PulseNumber)
+	//inslogger.FromContext(ctx).Infof("Skip pulse from pulsar: %d", pu.PulseNumber)
+	g.ConsensusPulseHandler.HandlePulse(ctx, pu, originalPacket)
 }
 
 func (g *Base) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {

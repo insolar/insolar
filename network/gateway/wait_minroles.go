@@ -53,10 +53,8 @@ package gateway
 import (
 	"context"
 
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network"
 )
 
 func newWaitMinRoles(b *Base) *WaitMinRoles {

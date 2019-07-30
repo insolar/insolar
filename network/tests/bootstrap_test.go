@@ -83,10 +83,6 @@ func (s *bootstrapSuite) SetupTest() {
 	}
 
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
-	//for _, n := range s.fixture().bootstrapNodes {
-	//	n.serviceNetwork.PhaseManager.(*phaseManagerWrapper).original = &fakeConsensus{n, s}
-	//
-	//}
 
 	pulseReceivers := make([]string, 0)
 	for _, node := range s.fixture().bootstrapNodes {
@@ -123,13 +119,12 @@ func newBootstraptSuite(t *testing.T, bootstrapCount int) *bootstrapSuite {
 }
 
 func testBootstrap(t *testing.T) *bootstrapSuite {
-	s := newBootstraptSuite(t, 2)
+	s := newBootstraptSuite(t, 5)
 	s.SetupTest()
 	return s
 }
 
-func TestExample(t *testing.T) {
-	//t.Skip("FIXME")
+func TestBootstrap(t *testing.T) {
 	s := testBootstrap(t)
 	defer s.TearDownTest()
 
@@ -139,18 +134,8 @@ func TestExample(t *testing.T) {
 	s.StartNodesNetwork(s.fixture().bootstrapNodes)
 
 	s.waitForConsensus(1)
+	s.AssertActiveNodesCountDelta(0)
 
-	//
-	//
-	// s.AssertActiveNodesCountDelta(0)
-	//
-	// s.waitForConsensus(1)
-	//
-	// s.AssertActiveNodesCountDelta(1)
-	// s.AssertWorkingNodesCountDelta(0)
-	//
-	// s.waitForConsensus(2)
-	//
-	// s.AssertActiveNodesCountDelta(1)
-	// s.AssertWorkingNodesCountDelta(1)
+	s.waitForConsensus(1)
+	s.AssertActiveNodesCountDelta(0)
 }
