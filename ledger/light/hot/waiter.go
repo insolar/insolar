@@ -40,9 +40,20 @@ type JetReleaser interface {
 // ChannelWaiter implements methods for locking and unlocking a certain jet id.
 type ChannelWaiter struct {
 	lock    sync.Mutex
+	waiters map[insolar.PulseNumber]*pulseWaiter
+}
+
+type pulseWaiter struct {
 	pulse   insolar.PulseNumber
 	waiters map[insolar.ID]waiter
 	timeout chan struct{}
+}
+
+func (pw *pulseWaiter) getOrCreate(jetID insolar.ID) waiter {
+	if _, ok := pw.waiters[jetID]; !ok {
+		pw.waiters[jetID] = make(waiter)
+	}
+	return pw.waiters[jetID]
 }
 
 type waiter chan struct{}
@@ -59,17 +70,8 @@ func (w waiter) isClosed() bool {
 // NewChannelWaiter creates new waiter instance.
 func NewChannelWaiter() *ChannelWaiter {
 	return &ChannelWaiter{
-		waiters: map[insolar.ID]waiter{},
-		pulse:   insolar.FirstPulseNumber + 1,
-		timeout: make(chan struct{}),
+		waiters: map[insolar.PulseNumber]*pulseWaiter{},
 	}
-}
-
-func (w *ChannelWaiter) waiterForJet(jetID insolar.ID) waiter {
-	if _, ok := w.waiters[jetID]; !ok {
-		w.waiters[jetID] = make(waiter)
-	}
-	return w.waiters[jetID]
 }
 
 // Wait waits for the raising one of two channels.
@@ -77,17 +79,13 @@ func (w *ChannelWaiter) waiterForJet(jetID insolar.ID) waiter {
 // Either nil or ErrHotDataTimeout
 func (w *ChannelWaiter) Wait(ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber) error {
 	w.lock.Lock()
-	if pulse < w.pulse {
-		w.lock.Unlock()
-		return nil
-	}
-
-	waiter := w.waiterForJet(jetID)
-	timeout := w.timeout
+	pWaiter := w.getOrCreate(pulse)
+	timeout := pWaiter.timeout
+	waitCh := pWaiter.getOrCreate(jetID)
 	w.lock.Unlock()
 
 	select {
-	case <-waiter:
+	case <-waitCh:
 		return nil
 	case <-timeout:
 		return insolar.ErrHotDataTimeout
@@ -95,26 +93,48 @@ func (w *ChannelWaiter) Wait(ctx context.Context, jetID insolar.ID, pulse insola
 }
 
 // Unlock raises hotDataChannel
-func (w *ChannelWaiter) Unlock(ctx context.Context, jetID insolar.ID) error {
+func (w *ChannelWaiter) Unlock(ctx context.Context, pulse insolar.PulseNumber, jetID insolar.ID) error {
 	w.lock.Lock()
 	defer w.lock.Unlock()
 
-	waiter := w.waiterForJet(jetID)
-	if waiter.isClosed() {
+	waitCh := w.getOrCreate(pulse).getOrCreate(jetID)
+	if waitCh.isClosed() {
 		return ErrWaiterNotLocked
 	}
-	close(waiter)
+	close(waitCh)
 	return nil
 }
 
-// ThrowTimeout raises all timeoutChannel
-func (w *ChannelWaiter) ThrowTimeout(ctx context.Context, newPulse insolar.PulseNumber) {
+// ThrowTimeout raises timeouts on all waiters for pulse.
+func (w *ChannelWaiter) ThrowTimeout(ctx context.Context, pn insolar.PulseNumber) {
 	w.lock.Lock()
 	defer w.lock.Unlock()
 
 	inslogger.FromContext(ctx).Debug("raising timeout for requests")
-	close(w.timeout)
-	w.timeout = make(chan struct{})
-	w.waiters = map[insolar.ID]waiter{}
-	w.pulse = newPulse
+	w.close(pn)
+}
+
+func (w *ChannelWaiter) getOrCreate(pn insolar.PulseNumber) *pulseWaiter {
+	pWaiter, ok := w.waiters[pn]
+	if ok {
+		return pWaiter
+	}
+
+	pWaiter = &pulseWaiter{
+		pulse:   pn,
+		waiters: map[insolar.ID]waiter{},
+		timeout: make(chan struct{}),
+	}
+	w.waiters[pn] = pWaiter
+	return pWaiter
+}
+
+func (w *ChannelWaiter) close(pn insolar.PulseNumber) {
+	pWaiter, ok := w.waiters[pn]
+	if !ok {
+		return
+	}
+
+	close(pWaiter.timeout)
+	delete(w.waiters, pn)
 }
