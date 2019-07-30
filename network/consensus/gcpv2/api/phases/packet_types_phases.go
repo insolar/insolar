@@ -70,7 +70,7 @@ const (
 	_ // 6
 	_ // 7
 
-	PacketPulse // PacketPhase0 | PacketOffPhase /* Triggers Phase0-1 */
+	PacketPulsarPulse // PacketPhase0 | PacketOffPhase /* Triggers Phase0-1 */
 
 	PacketReqPhase1 // PacketPhase1 | PacketOffPhase
 	/*  Request to resend own NSH - will be replied with PacketPhase1 without PulseData.
@@ -106,7 +106,7 @@ func (p PacketType) GetLimitPerSender() uint8 {
 	switch p {
 	case PacketPhase0, PacketPhase1, PacketPhase2, PacketPhase3, PacketPhase4:
 		return 1
-	case PacketPulse:
+	case PacketPulsarPulse:
 		return 1
 	case PacketReqPhase1:
 		return 2
@@ -133,7 +133,7 @@ func (p PacketType) GetLimitCounterIndex() int {
 
 func (p PacketType) IsAllowedForJoiner() bool {
 	switch p {
-	case PacketPulse, PacketPhase0:
+	case PacketPulsarPulse, PacketPhase0:
 		return false
 	default:
 		return true
@@ -234,7 +234,11 @@ func (p PacketType) IsPhasedPacket() bool {
 }
 
 func (p PacketType) IsMemberPacket() bool {
-	return p < maxPacketType && p != PacketPulse
+	return p < maxPacketType && p != PacketPulsarPulse
+}
+
+func (p PacketType) IsEphemeralPacket() bool {
+	return p != PacketPulsarPulse
 }
 
 func (p PacketType) GetPayloadEquivalent() PacketType {
@@ -279,7 +283,7 @@ func (p PacketType) String() string {
 		return "ph3"
 	case PacketPhase4:
 		return "ph4"
-	case PacketPulse:
+	case PacketPulsarPulse:
 		return "pulse"
 	case PacketReqPhase1:
 		return "ph1rq"

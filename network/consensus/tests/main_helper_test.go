@@ -53,8 +53,9 @@ package tests
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
 	"math/rand"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -117,6 +118,8 @@ func (p *emuNetworkBuilder) _connectEmuNode(nodes []profiles.StaticProfile, self
 
 	controlFeeder := &EmuControlFeeder{}
 	candidateFeeder := &coreapi.SequentialCandidateFeeder{}
+	ephemeralFeeder := &EmuEphemeralFeeder{}
+
 	switch {
 	case !asJoiner && selfIndex == 1:
 		for i := 5000; i < 8000; i += 1000 {
@@ -133,7 +136,7 @@ func (p *emuNetworkBuilder) _connectEmuNode(nodes []profiles.StaticProfile, self
 	chronicles := NewEmuChronicles(nodes, selfIndex, asJoiner, p.primingCloudStateHash)
 	self := nodes[selfIndex]
 	node := NewConsensusHost(self.GetDefaultEndpoint().GetNameAddress())
-	node.ConnectTo(chronicles, p.network, p.strategyFactory, candidateFeeder, controlFeeder, p.config)
+	node.ConnectTo(chronicles, p.network, p.strategyFactory, candidateFeeder, controlFeeder, ephemeralFeeder, p.config)
 }
 
 func generateNameList(countNeutral, countHeavy, countLight, countVirtual int) []string {

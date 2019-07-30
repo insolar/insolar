@@ -155,7 +155,7 @@ func (p *PulsePacketParser) GetTargetID() insolar.ShortNodeID {
 }
 
 func (p *PulsePacketParser) GetPacketType() phases.PacketType {
-	return phases.PacketPulse
+	return phases.PacketPulsarPulse
 }
 
 func (p *PulsePacketParser) GetPulseNumber() pulse.Number {

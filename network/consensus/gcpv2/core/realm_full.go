@@ -53,11 +53,6 @@ package core
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
-	pop "github.com/insolar/insolar/network/consensus/gcpv2/core/population"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/purgatory"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -72,6 +67,10 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/insolar/insolar/network/consensus/gcpv2/censusimpl"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
+	pop "github.com/insolar/insolar/network/consensus/gcpv2/core/population"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/purgatory"
 )
 
 var _ pulse.DataHolder = &FullRealm{}
@@ -129,37 +128,22 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 
 	pd := r.packetDispatchers[pt] // was checked above for != nil
 
-	if verifyFlags&(coreapi.SkipVerify|coreapi.SuccessfullyVerified) == 0 {
-		var err error
-		strict := verifyFlags&coreapi.RequireStrictVerify != 0
-		switch {
-		case sourceNode != nil:
-			err = sourceNode.VerifyPacketAuthenticity(packet.GetPacketSignature(), from, strict)
-			if err != nil {
-				return err
-			}
-			verifyFlags |= coreapi.SuccessfullyVerified
-		case pd.HasCustomVerifyForHost(from, verifyFlags):
-			// skip default
-		default:
-			verified, err := r.coreRealm.VerifyPacketAuthenticity(packet.GetPacketSignature(), sourceID, from, strict)
-			if err != nil {
-				return err
-			}
-			if verified {
-				verifyFlags |= coreapi.SuccessfullyVerified
-			} else {
-				if strict || verifyFlags&coreapi.AllowUnverified == 0 {
-					return fmt.Errorf("unable to verify sender for packet type (%v): from=%v", pt, from)
-				}
-				inslogger.FromContext(ctx).Errorf("unable to verify sender for packet type (%v): from=%v", pt, from)
-				verifyFlags |= coreapi.SkipVerify // don't try again
-			}
-		}
+	var err error
+	verifyFlags, err = r.coreRealm.VerifyPacketAuthenticity(ctx, packet, from, sourceNode, coreapi.SkipVerify,
+		pd, verifyFlags)
+
+	if err != nil {
+		return err
+	}
+
+	var canHandle bool
+	canHandle, err = r.coreRealm.VerifyPacketPulseNumber(ctx, packet, from, r.GetPulseNumber(), r.GetNextPulseNumber())
+
+	if !canHandle || err != nil {
+		return err
 	}
 
 	// this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
-	var err error
 	packet, err = coreapi.LazyPacketParse(packet)
 	if err != nil {
 		return err
@@ -210,6 +194,12 @@ func (r *FullRealm) start(census census.Active, population census.OnlinePopulati
 }
 
 func (r *FullRealm) initBefore(transport transport.Factory) transport.NeighbourhoodSizes {
+
+	if r.ephemeralFeeder != nil {
+		r.timings = r.ephemeralFeeder.GetEphemeralTimings(r.config)
+		r.strategy.AdjustConsensusTimings(&r.timings)
+	}
+
 	r.packetSender = transport.GetPacketSender()
 	r.packetBuilder = transport.GetPacketBuilder(r.signer)
 	return r.packetBuilder.GetNeighbourhoodSize()
@@ -220,8 +210,10 @@ func (r *FullRealm) initBasics(census census.Active) {
 	r.census = census
 	r.profileFactory = census.GetProfileFactory(r.assistant)
 
-	r.timings = r.config.GetConsensusTimings(r.pulseData.NextPulseDelta, r.IsJoiner())
-	r.strategy.AdjustConsensusTimings(&r.timings)
+	if r.ephemeralFeeder == nil { // ephemeral timings are initialized earlier, in initBefore()
+		r.timings = r.config.GetConsensusTimings(r.pulseData.NextPulseDelta)
+		r.strategy.AdjustConsensusTimings(&r.timings)
+	}
 
 	if r.expectedPopulationSize == 0 {
 		r.expectedPopulationSize = member.AsIndex(r.config.GetNodeCountHint())
@@ -287,7 +279,7 @@ func (r *FullRealm) initPopulation(needsDynamic bool, population census.OnlinePo
 
 	log := inslogger.FromContext(r.roundContext)
 
-	hookCfg := pop.NewSharedNodeContext(r.assistant, r, uint8(r.nbhSizes.NeighbourhoodTrustThreshold), r.ephemeralMode,
+	hookCfg := pop.NewSharedNodeContext(r.assistant, r, uint8(r.nbhSizes.NeighbourhoodTrustThreshold), r.getEphemeralMode(),
 		func(report misbehavior.Report) interface{} {
 			log.Warnf("Got Report: %+v", report)
 			r.census.GetMisbehaviorRegistry().AddReport(report)
@@ -558,7 +550,7 @@ func (r *FullRealm) CreateLocalPhase0Announcement() *transport.NodeAnnouncementP
 	return transport.NewNodeAnnouncement(r.self.GetProfile(), ma, r.GetNodeCount(), r.pulseData.PulseNumber, nil)
 }
 
-func (r *FullRealm) FinishRound(ctx context.Context, builder census.Builder, csh proofs.CloudStateHash) {
+func (r *FullRealm) finishRound(ctx context.Context, builder census.Builder, csh proofs.CloudStateHash) {
 	r.Lock()
 	defer r.Unlock()
 
@@ -607,6 +599,9 @@ func (r *FullRealm) notifyConsensusFinished(newSelf profiles.ActiveNode, expecte
 		MemberMode:  newSelf.GetOpMode(),
 	}
 	r.stateMachine.ConsensusFinished(report, expectedCensus)
+	if r.ephemeralFeeder != nil {
+		r.ephemeralFeeder.ConsensusFinished(report, r.roundStartedAt, expectedCensus)
+	}
 }
 
 func (r *FullRealm) GetProfileFactory() profiles.Factory {
@@ -684,7 +679,7 @@ func (r *FullRealm) BuildNextPopulation(ctx context.Context, ranks []profiles.Po
 	b.SetGlobulaStateHash(gsh)
 	b.SealCensus()
 
-	r.FinishRound(ctx, b, csh)
+	r.finishRound(ctx, b, csh)
 
 	if selfMode.IsEvicted() {
 		inslogger.FromContext(ctx).Info("Node has left")
@@ -696,4 +691,8 @@ func (r *FullRealm) BuildNextPopulation(ctx context.Context, ranks []profiles.Po
 func (r *FullRealm) MonitorOtherPulses(packet transport.PulsePacketReader, from endpoints.Inbound) error {
 
 	return r.Blames().NewMismatchedPulsarPacket(from, r.GetOriginalPulse(), packet.GetPulseDataEvidence())
+}
+
+func (r *FullRealm) NotifyRoundStopped(ctx context.Context) {
+	r.stateMachine.OnRoundStopped(ctx)
 }
