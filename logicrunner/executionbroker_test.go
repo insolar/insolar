@@ -117,12 +117,10 @@ func (s *ExecutionBrokerSuite) TestPut() {
 	})
 	rem.SendReplyMock.Return()
 
+	ea := NewExecutionArchiveMock(s.T()).ArchiveMock.Return().DoneMock.Return(true)
+
 	objectRef := gen.Reference()
-	b := NewExecutionBroker(
-		objectRef,
-		nil, rem, nil,
-		nil, nil, nil,
-	)
+	b := NewExecutionBroker(objectRef, nil, rem, nil, nil, nil, nil, ea)
 	b.pending = insolar.NotPending
 
 	tr := NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{})
@@ -160,12 +158,10 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 	})
 	rem.SendReplyMock.Return()
 
+	ea := NewExecutionArchiveMock(s.T()).ArchiveMock.Return().DoneMock.Return(true)
+
 	objectRef := gen.Reference()
-	b := NewExecutionBroker(
-		objectRef,
-		nil, rem, nil,
-		nil, nil, nil,
-	)
+	b := NewExecutionBroker(objectRef, nil, rem, nil, nil, nil, nil, ea)
 	b.pending = insolar.NotPending
 
 	reqRef1 := gen.Reference()
@@ -206,12 +202,10 @@ func (s *ExecutionBrokerSuite) TestImmutable_NotPending() {
 	})
 	rem.SendReplyMock.Return()
 
+	ea := NewExecutionArchiveMock(s.T()).ArchiveMock.Return().DoneMock.Return(true)
+
 	objectRef := gen.Reference()
-	b := NewExecutionBroker(
-		objectRef,
-		nil, rem, nil,
-		nil, nil, nil,
-	)
+	b := NewExecutionBroker(objectRef, nil, rem, nil, nil, nil, nil, ea)
 	b.pending = insolar.NotPending
 
 	tr := NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{Immutable: true})
@@ -244,12 +238,10 @@ func (s *ExecutionBrokerSuite) TestImmutable_InPending() {
 	})
 	rem.SendReplyMock.Return()
 
+	ea := NewExecutionArchiveMock(s.T()).ArchiveMock.Return().DoneMock.Return(true)
+
 	objectRef := gen.Reference()
-	b := NewExecutionBroker(
-		objectRef,
-		nil, rem, nil,
-		nil, nil, nil,
-	)
+	b := NewExecutionBroker(objectRef, nil, rem, nil, nil, nil, nil, ea)
 	b.pending = insolar.InPending
 
 	tr := NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{Immutable: true})
@@ -279,11 +271,7 @@ func (s *ExecutionBrokerSuite) TestImmutable_InPending() {
 
 func (s *ExecutionBrokerSuite) TestRotate() {
 	objectRef := gen.Reference()
-	b := NewExecutionBroker(
-		objectRef,
-		nil, nil, nil,
-		nil, nil, nil,
-	)
+	b := NewExecutionBroker(objectRef, nil, nil, nil, nil, nil, nil, nil)
 	b.pending = insolar.NotPending
 
 	for i := 0; i < 4; i++ {
@@ -344,11 +332,7 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 
 func (s *ExecutionBrokerSuite) TestDeduplication() {
 	objectRef := gen.Reference()
-	b := NewExecutionBroker(
-		objectRef,
-		nil, nil, nil,
-		nil, nil, nil,
-	)
+	b := NewExecutionBroker(objectRef, nil, nil, nil, nil, nil, nil, nil)
 
 	b.pending = insolar.InPending
 
@@ -434,13 +418,14 @@ func TestExecutionBroker_FinishPendingIfNeed(t *testing.T) {
 }
 
 func (s *LogicRunnerTestSuite) TestImmutableOrder() {
+
+	ea := NewExecutionArchiveMock(s.mc).
+		ArchiveMock.Return().
+		DoneMock.Return(true)
+
 	// prepare default object and execution state
 	objectRef := gen.Reference()
-	broker := NewExecutionBroker(
-		objectRef,
-		nil, s.re, nil,
-		nil, nil, nil,
-	)
+	broker := NewExecutionBroker(objectRef, nil, s.re, nil, nil, nil, nil, ea)
 	broker.pending = insolar.NotPending
 
 	// prepare request objects
@@ -536,16 +521,14 @@ func TestExecutionBroker_ExecuteImmutable(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	defer mc.Finish()
-	defer mc.Wait(1 * time.Second)
+	defer mc.Wait(1 * time.Minute)
+
+	ea := NewExecutionArchiveMock(mc).ArchiveMock.Return().DoneMock.Return(true)
 
 	// prepare default object and execution state
 	objectRef := gen.Reference()
 	re := NewRequestsExecutorMock(mc)
-	broker := NewExecutionBroker(
-		objectRef,
-		nil, re, nil,
-		nil, nil, nil,
-	)
+	broker := NewExecutionBroker(objectRef, nil, re, nil, nil, nil, nil, ea)
 	broker.pending = insolar.NotPending
 
 	immutableRequestRef1 := gen.Reference()
@@ -584,14 +567,9 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 			name: "next is not me, not active, queue",
 			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
 				objectRef := gen.Reference()
-				broker := NewExecutionBroker(
-					objectRef,
-					nil, nil, nil,
-					nil, nil, nil,
-				)
+				broker := NewExecutionBroker(objectRef, nil, nil, nil, nil, nil, nil, nil)
 				// fetcher is stopped
-				broker.requestsFetcher = NewRequestsFetcherMock(t).
-					AbortMock.Return()
+				broker.requestsFetcher = NewRequestsFetcherMock(t).AbortMock.Return()
 				broker.mutable.Push(randTranscript(ctx), randTranscript(ctx))
 				return broker
 			},
@@ -604,27 +582,18 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 			name: "next is not me, active, no queue",
 			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
 				objectRef := gen.Reference()
-				jc := jet.NewCoordinatorMock(t).MeMock.Return(gen.Reference())
-				broker := NewExecutionBroker(
-					objectRef,
-					nil, nil, nil,
-					jc, nil, nil,
-				)
+				broker := NewExecutionBroker(objectRef, nil, nil, nil, nil, nil, nil, nil)
 				broker.currentList.SetOnce(randTranscript(ctx))
 				return broker
 			},
-			numberOfMessages: 2,
+			numberOfMessages: 1,
 			pending:          insolar.InPending,
 		},
 		{
 			name: "next is not me, not confirmed pending",
 			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
 				objectRef := gen.Reference()
-				broker := NewExecutionBroker(
-					objectRef,
-					nil, nil, nil,
-					nil, nil, nil,
-				)
+				broker := NewExecutionBroker(objectRef, nil, nil, nil, nil, nil, nil, nil)
 				broker.pending = insolar.InPending
 				return broker
 			},
@@ -637,11 +606,7 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 			name: "next is not me, not active, no pending, finished a request",
 			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
 				objectRef := gen.Reference()
-				broker := NewExecutionBroker(
-					objectRef,
-					nil, nil, nil,
-					nil, nil, nil,
-				)
+				broker := NewExecutionBroker(objectRef, nil, nil, nil, nil, nil, nil, nil)
 				broker.finished.Push(randTranscript(ctx), randTranscript(ctx))
 				return broker
 			},
@@ -652,11 +617,7 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 			name: "next is not me, did nothing",
 			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
 				objectRef := gen.Reference()
-				broker := NewExecutionBroker(
-					objectRef,
-					nil, nil, nil,
-					nil, nil, nil,
-				)
+				broker := NewExecutionBroker(objectRef, nil, nil, nil, nil, nil, nil, nil)
 				return broker
 			},
 			numberOfMessages: 0,
@@ -667,11 +628,7 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 			meNext: true,
 			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
 				objectRef := gen.Reference()
-				broker := NewExecutionBroker(
-					objectRef,
-					nil, nil, nil,
-					nil, nil, nil,
-				)
+				broker := NewExecutionBroker(objectRef, nil, nil, nil, nil, nil, nil, nil)
 				broker.requestsFetcher = NewRequestsFetcherMock(t)
 				broker.currentList.SetOnce(randTranscript(ctx))
 				return broker
@@ -688,11 +645,7 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 			meNext: true,
 			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
 				objectRef := gen.Reference()
-				broker := NewExecutionBroker(
-					objectRef,
-					nil, nil, nil,
-					nil, nil, nil,
-				)
+				broker := NewExecutionBroker(objectRef, nil, nil, nil, nil, nil, nil, nil)
 				broker.requestsFetcher = NewRequestsFetcherMock(t)
 				broker.pending = insolar.InPending
 				broker.PendingConfirmed = true
@@ -700,6 +653,7 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 			},
 			numberOfMessages: 0,
 			pending:          insolar.InPending,
+			end:              true,
 		},
 		{
 			// We're the next executor and no one confirmed that this object is executing
@@ -708,11 +662,7 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 			meNext: true,
 			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
 				objectRef := gen.Reference()
-				broker := NewExecutionBroker(
-					objectRef,
-					nil, nil, nil,
-					nil, nil, nil,
-				)
+				broker := NewExecutionBroker(objectRef, nil, nil, nil, nil, nil, nil, nil)
 				broker.pending = insolar.InPending
 				broker.requestsFetcher = NewRequestsFetcherMock(t).
 					FetchPendingsMock.Return()
@@ -721,6 +671,7 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 			numberOfMessages: 0,
 			pending:          insolar.NotPending,
 			ledgerHasMore:    true,
+			end:              true,
 		},
 	}
 
@@ -730,14 +681,14 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 			mc := minimock.NewController(t)
 
 			broker := test.mocks(ctx, mc)
-			end, messages := broker.OnPulse(ctx, test.meNext)
+			messages := broker.OnPulse(ctx, test.meNext)
 
 			mc.Wait(1 * time.Minute)
 			mc.Finish()
 
 			require.Equal(t, test.pending, broker.pending)
 			require.Equal(t, test.pendingConfirmed, broker.PendingConfirmed)
-			require.Equal(t, test.end, end)
+			require.Equal(t, test.end, !broker.isActive())
 			require.Equal(t, test.ledgerHasMore, broker.ledgerHasMoreRequests)
 			require.Len(t, messages, test.numberOfMessages)
 		})
@@ -749,28 +700,25 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 
 	table := []struct {
 		name   string
-		mocks  func(ctx context.Context, t minimock.Tester) (*ExecutionBroker, *bool, *[]insolar.Message)
-		end    bool
+		mocks  func(ctx context.Context, t minimock.Tester) (*ExecutionBroker, *[]insolar.Message)
 		checks func(ctx context.Context, t *testing.T, msgs []insolar.Message)
 	}{
 		{
 			name: "pulse change in HasPendings",
-			mocks: func(ctx context.Context, t minimock.Tester) (*ExecutionBroker, *bool, *[]insolar.Message) {
+			mocks: func(ctx context.Context, t minimock.Tester) (*ExecutionBroker, *[]insolar.Message) {
 				am := artifacts.NewClientMock(t)
-				broker := NewExecutionBroker(
-					objectRef,
+
+				broker := NewExecutionBroker(objectRef,
 					nil, nil, nil,
-					nil, nil, am,
-				)
-				var end bool
+					nil, nil, am, nil)
+
 				var msgs []insolar.Message
 				am.HasPendingsMock.Set(func(ctx context.Context, ref insolar.Reference) (bool, error) {
-					end, msgs = broker.OnPulse(ctx, false)
+					msgs = broker.OnPulse(ctx, false)
 					return false, nil
 				})
-				return broker, &end, &msgs
+				return broker, &msgs
 			},
-			end: true,
 			checks: func(ctx context.Context, t *testing.T, msgs []insolar.Message) {
 				require.Len(t, msgs, 1)
 				results, ok := msgs[0].(*message.ExecutorResults)
@@ -783,35 +731,31 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 		},
 		{
 			name: "pulse change in Execute",
-			mocks: func(ctx context.Context, t minimock.Tester) (*ExecutionBroker, *bool, *[]insolar.Message) {
+			mocks: func(ctx context.Context, t minimock.Tester) (*ExecutionBroker, *[]insolar.Message) {
+				ea := NewExecutionArchiveMock(t).
+					ArchiveMock.Return().
+					DoneMock.Return(true)
 				am := artifacts.NewClientMock(t).
 					HasPendingsMock.Return(false, nil)
-				re := NewRequestsExecutorMock(t)
+				re := NewRequestsExecutorMock(t).
+					SendReplyMock.Return()
 				jc := jet.NewCoordinatorMock(t).
-					MeMock.Return(gen.Reference()).
 					IsMeAuthorizedNowMock.Return(true, nil)
-				broker := NewExecutionBroker(
-					objectRef,
-					nil, re, nil,
-					jc, nil, am,
-				)
-				var end bool
+				// pa := pulse.NewAccessorMock(t).LatestMock.Return(insolar.Pulse{}, nil)
+
+				broker := NewExecutionBroker(objectRef, nil, re, nil, jc, nil, am, ea)
+
 				var msgs []insolar.Message
 				re.ExecuteAndSaveMock.Set(func(ctx context.Context, tr *Transcript) (insolar.Reply, error) {
-					end, msgs = broker.OnPulse(ctx, false)
+					msgs = broker.OnPulse(ctx, false)
 					return &reply.OK{}, nil
 				})
-				re.SendReplyMock.Return()
-				return broker, &end, &msgs
+				return broker, &msgs
 			},
 			checks: func(ctx context.Context, t *testing.T, msgs []insolar.Message) {
-				require.Len(t, msgs, 2)
+				require.Len(t, msgs, 1)
 
-				still, ok := msgs[0].(*message.StillExecuting)
-				require.True(t, ok)
-				require.Len(t, still.RequestRefs, 1)
-
-				results, ok := msgs[1].(*message.ExecutorResults)
+				results, ok := msgs[0].(*message.ExecutorResults)
 				require.True(t, ok)
 				require.False(t, results.LedgerHasMoreRequests)
 				require.Equal(t, insolar.InPending, results.Pending)
@@ -826,7 +770,7 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 			ctx := inslogger.TestContext(t)
 			mc := minimock.NewController(t)
 
-			broker, end, msgs := test.mocks(ctx, mc)
+			broker, msgs := test.mocks(ctx, mc)
 
 			reqRef := gen.Reference()
 			broker.AddFreshRequest(ctx, NewTranscript(ctx, reqRef, record.IncomingRequest{}))
@@ -834,7 +778,6 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 			mc.Wait(1 * time.Second)
 			mc.Finish()
 
-			require.Equal(t, test.end, *end)
 			test.checks(ctx, t, *msgs)
 		})
 	}
