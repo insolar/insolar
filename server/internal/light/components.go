@@ -299,7 +299,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			WmBus,
 		)
 
-		stateIniter := executor.NewStateIniter(Jets, waiter, drops, Coordinator, WmBus)
+		stateIniter := executor.NewStateIniter(Jets, waiter, drops, Nodes, WmBus)
 
 		pm := pulsemanager.NewPulseManager(
 			jetSplitter,
