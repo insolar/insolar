@@ -1,0 +1,11 @@
+{
+  "jsonrpc": "2.0",
+  "method": "call.api",
+  "id": 1,
+  "params": {
+    "seed": "fhDEwRRbSnYnbMnALKMh8gXdzaSvRv/nfsGC9S7kqik=",
+    "callSite": "contract.getMember",
+    "callParams": {},
+    "memberPublicKey": "-----BEGIN PUBLIC KEY-----\\nMFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEWKiBN0MTYbV7u4zDS+UG18GB3bJXOW3O\\nr8pLUmkHIMp15DijiAmOei3igh9HOek8GdRy9Div4lO/jy9PNs9PRg==\\n-----END PUBLIC KEY-----"
+  }
+}

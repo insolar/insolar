@@ -4,8 +4,7 @@
   "id": 1,
   "params": {
 
-    "callSite": "contract.createMember",
+    "callSite": "member.create",
     "callParams": {}
-
   }
 }

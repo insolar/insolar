@@ -1,0 +1,16 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "api.call",
+  "params": {
+    "seed": "",
+    "callSite": "migration.addBurnAddresses",
+    "callParams": {
+      "burnAddresses": [
+        "0x03801EfB0EFe2a25ede5Dd3a003Ae880C0292e4d"
+      ]
+    },
+    "reference": "1tJDPYSrTmJQnto3iGxBgcUpAwGGaCNF9WoWEmhFqz.11111111111111111111111111111111"
+
+  }
+}

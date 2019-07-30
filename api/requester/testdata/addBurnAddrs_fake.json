@@ -1,0 +1,25 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "api.call",
+  "params": {
+    "seed": "+zlBjHtnOVokvxur4d+Bay4I9nuDASKePR3p2m5BP48=",
+    "callSite": "migration.addBurnAddresses",
+    "callParams": {
+      "burnAddresses": [
+        "fake_ba_0",
+        "fake_ba_1",
+        "fake_ba_2",
+        "fake_ba_3",
+        "fake_ba_4",
+        "fake_ba_5",
+        "fake_ba_6",
+        "fake_ba_7",
+        "fake_ba_8",
+        "fake_ba_9"
+      ]
+    },
+    "reference": "1tJCWretYuHKdY2GR6bT7c7xqNkDRpTnmf9gKgGvmz.11111111111111111111111111111111",
+    "memberPublicKey": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE3j/7QeUIS/yWA3ybsUD+t8EY7Kiu\n1Iizrtw7KTEONNInsLHzD+4asi638mBZtnjyO6qR297xe5D/+RfUGkDBnQ==\n-----END PUBLIC KEY-----"
+  }
+}

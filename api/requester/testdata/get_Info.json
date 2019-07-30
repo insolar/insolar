@@ -1,6 +1,0 @@
-{
-  "jsonrpc": "2.0",
-  "method": "network.getInfo",
-  "id": 1,
-  "params": ""
-}

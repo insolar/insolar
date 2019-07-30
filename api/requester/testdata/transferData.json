@@ -12,6 +12,6 @@
       "toMemberRef": "6rpRnPeq7VyyzoqMC2e2qJtgWNGHi1eZ74FbxLgee9j.11111111111111111111111111111111"
     },
     "reference": "6rpRnPeq7VyyzoqMC2e2qJtgWNGHi1eZ74FbxLgee9j.11111111111111111111111111111111",
-    "memberPubKey": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEJm4goCJVLWST6mbyYKbXJIwwjOyY\nascxKxksDc1Qqk3EEwkP2sAP4AsUL/Pl/21g/83Xf93b8Ov65z82rLQ5Lw==\n-----END PUBLIC KEY-----"
+    "memberPublicKey": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEJm4goCJVLWST6mbyYKbXJIwwjOyY\nascxKxksDc1Qqk3EEwkP2sAP4AsUL/Pl/21g/83Xf93b8Ov65z82rLQ5Lw==\n-----END PUBLIC KEY-----"
   }
 }

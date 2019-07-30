@@ -1,0 +1,15 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "api.call",
+  "params": {
+    "seed": "U1wGm8xl+WUFIPFLdFupTXKMXbLoJbv0nA/ImZAtHZk=",
+    "callSite": "wallet.transfer",
+    "callParams": {
+      "amount": "1000",
+      "toMemberReference": "7BNx3igctce5BgdDGwY9SiCEhxkpkwYxrhaqdbLKXSd.11111111111111111111111111111111"
+    },
+    "memberPublicKey": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZwHsquGCHMQGJoFnPyMio+cLBFpn\nIbrDs94+j+EpFwZl/tfr79YWI46angSJYPbrFvLpA2EP+9mhhCuLgPd6mA==\n-----END PUBLIC KEY-----",
+    "reference": "7BNJnwc8c6irqbcqjreweee5q2RFMJvjZnAi5uJybd4.11111111111111111111111111111111"
+  }
+}

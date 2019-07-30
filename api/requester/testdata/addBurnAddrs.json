@@ -3,7 +3,7 @@
   "id": 1,
   "method": "api.call",
   "params": {
-    "seed": "knqXjMbNYKZpb5f7vF4Lr2Aiqxvvt1yVzCh2e2WJQpo",
+    "seed": "+zlBjHtnOVokvxur4d+Bay4I9nuDASKePR3p2m5BP48=",
     "callSite": "migration.addBurnAddresses",
     "callParams": {
       "burnAddresses": [
@@ -29,7 +29,7 @@
         "0x4388d818f3973ea13b3cd2ef98197a9cfac99ef3"
       ]
     },
-    "reference": "1tJBqpFDFVRnHghz4bFtZx5Cidnf3U5vvVqgxMBKKX.11111111111111111111111111111111",
-    "memberPubKey": "-----BEGIN PUBLIC KEY-----\\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEMSbA4KvO/jlwY+8WFDEdwhCLlsEC\\nF3/GYvu9iTWHwCctx1wTbGGjNLY03EjXyYxaf8coNbSbZeu+jXcWeMHG0A==\\n-----END PUBLIC KEY-----"
+    "reference": "1tJCWretYuHKdY2GR6bT7c7xqNkDRpTnmf9gKgGvmz.11111111111111111111111111111111",
+    "memberPublicKey": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE3j/7QeUIS/yWA3ybsUD+t8EY7Kiu\n1Iizrtw7KTEONNInsLHzD+4asi638mBZtnjyO6qR297xe5D/+RfUGkDBnQ==\n-----END PUBLIC KEY-----"
   }
 }
