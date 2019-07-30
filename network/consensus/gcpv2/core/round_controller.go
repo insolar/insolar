@@ -297,8 +297,6 @@ func (r *PhasedRoundController) HandlePacket(ctx context.Context, packet transpo
 func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
 	verifyFlags coreapi.PacketVerifyFlags) (api.RoundControlCode, error) {
 
-	r.ensureStarted()
-
 	pn := packet.GetPulseNumber()
 	/* a separate method with lock is to ensure that further packet processing is not connected to a lock */
 	prep, filterPN, _, prev := r.beforeHandlePacket()
@@ -313,11 +311,23 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 		//defaultOptions = coreapi.SkipVerify // validation was done by the prev controller
 	}
 
+	if r.realm.ephemeralFeeder != nil && !packet.GetPacketType().IsEphemeralPacket() {
+		_, err := r.realm.VerifyPacketAuthenticity(ctx, packet, from, nil, coreapi.DefaultVerify, nil, defaultOptions)
+		if err == nil {
+			err = r.realm.ephemeralFeeder.OnNonEphemeralPacket(ctx, packet, from)
+		}
+		return api.KeepRound, err
+	}
+
 	var err error
 	if prep != nil {
+		// NB! Round may NOT be running yet here - ensure it is working before calling the state machine
+		r.ensureStarted()
+
 		if !pn.IsUnknown() && (filterPN.IsUnknown() || filterPN == pn) {
 			r.roundWorker.OnPulseDetected()
 		}
+
 		err = prep.dispatchPacket(ctx, packet, from, defaultOptions) // prep realm can't inherit flags
 	} else {
 		err = r.realm.dispatchPacket(ctx, packet, from, verifyFlags|defaultOptions)

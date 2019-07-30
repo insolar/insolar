@@ -278,6 +278,107 @@ func TestPCTCreateBuilder(t *testing.T) {
 	require.Equal(t, pn, builder.GetPulseNumber())
 }
 
+func TestCTGetNearestPulseData(t *testing.T) {
+	ct := CensusTemplate{}
+	pulseNumber := pulse.Number(1)
+	pd := pulse.Data{PulseNumber: pulseNumber}
+	ct.pd = pd
+	b, data := ct.GetNearestPulseData()
+	require.True(t, b)
+
+	require.Equal(t, pd, data)
+}
+
+func TestCTGetProfileFactory(t *testing.T) {
+	ksf := cryptkit.NewKeyStoreFactoryMock(t)
+	ct := CensusTemplate{}
+	ct.chronicles = &localChronicles{}
+	f := profiles.NewFactoryMock(t)
+	ct.chronicles.profileFactory = f
+	require.Equal(t, f, ct.GetProfileFactory(ksf))
+}
+
+func TestCTSetVersionedRegistries(t *testing.T) {
+	ct := CensusTemplate{}
+	require.Panics(t, func() { ct.setVersionedRegistries(nil) })
+
+	vr := census.NewVersionedRegistriesMock(t)
+	ct.setVersionedRegistries(vr)
+	require.Equal(t, vr, ct.registries)
+}
+
+func TestCTGetVersionedRegistries(t *testing.T) {
+	ct := CensusTemplate{}
+	vr := census.NewVersionedRegistriesMock(t)
+	ct.setVersionedRegistries(vr)
+	require.Equal(t, vr, ct.getVersionedRegistries())
+}
+
+func TestGetOnlinePopulation(t *testing.T) {
+	ct := CensusTemplate{}
+	population := &ManyNodePopulation{}
+	ct.online = population
+	require.Equal(t, population, ct.GetOnlinePopulation())
+}
+
+func TestCTGetEvictedPopulation(t *testing.T) {
+	ep := census.NewEvictedPopulationMock(t)
+	ct := CensusTemplate{evicted: ep}
+	require.Equal(t, ep, ct.GetEvictedPopulation())
+}
+
+func TestCTGetOfflinePopulation(t *testing.T) {
+	offPop := census.NewOfflinePopulationMock(t)
+	registries := census.NewVersionedRegistriesMock(t)
+	registries.GetOfflinePopulationMock.Set(func() census.OfflinePopulation { return offPop })
+	ct := CensusTemplate{registries: registries}
+	require.Equal(t, offPop, ct.GetOfflinePopulation())
+}
+
+func TestCTGetMisbehaviorRegistry(t *testing.T) {
+	registries := census.NewVersionedRegistriesMock(t)
+	mr := census.NewMisbehaviorRegistryMock(t)
+	registries.GetMisbehaviorRegistryMock.Set(func() census.MisbehaviorRegistry { return mr })
+	ct := CensusTemplate{registries: registries}
+	require.Equal(t, mr, ct.GetMisbehaviorRegistry())
+}
+
+func TestCTGetMandateRegistry(t *testing.T) {
+	registries := census.NewVersionedRegistriesMock(t)
+	mr := census.NewMandateRegistryMock(t)
+	registries.GetMandateRegistryMock.Set(func() census.MandateRegistry { return mr })
+	ct := CensusTemplate{registries: registries}
+	require.Equal(t, mr, ct.GetMandateRegistry())
+}
+
+func TestCTCreateBuilder(t *testing.T) {
+	chronicles := &localChronicles{}
+	pn := pulse.Number(1)
+	sp := profiles.NewStaticProfileMock(t)
+	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
+	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}},
+		slots: []updatableSlot{{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}}
+
+	ct := CensusTemplate{chronicles: chronicles, online: population}
+	builder := ct.CreateBuilder(context.Background(), pn)
+	require.Equal(t, pn, builder.GetPulseNumber())
+}
+
+func TestCTString(t *testing.T) {
+	ct := CensusTemplate{}
+	require.NotEmpty(t, ct.String())
+}
+
+func TestACTIsActive(t *testing.T) {
+	act := ActiveCensusTemplate{}
+	chronicles := &localChronicles{}
+	act.chronicles = chronicles
+	require.False(t, act.IsActive())
+
+	act.chronicles.active = &act
+	require.True(t, act.IsActive())
+}
+
 func TestACTGetExpectedPulseNumber(t *testing.T) {
 	act := ActiveCensusTemplate{}
 	act.pd.PulseNumber = pulse.MinTimePulse
@@ -315,6 +416,30 @@ func TestACTGetGlobulaStateHash(t *testing.T) {
 func TestACTGetCloudStateHash(t *testing.T) {
 	act := ActiveCensusTemplate{}
 	require.Nil(t, act.GetCloudStateHash())
+}
+
+func TestACTString(t *testing.T) {
+	act := ActiveCensusTemplate{}
+	chronicles := &localChronicles{}
+	act.chronicles = chronicles
+	require.NotEmpty(t, act.String())
+
+	act.activeRef = &act
+	act.chronicles.active = &act
+	require.NotEmpty(t, act.String())
+}
+
+func TestECTGetNearestPulseData(t *testing.T) {
+	ect := ExpectedCensusTemplate{}
+	act := census.NewActiveMock(t)
+	pulseNumber := pulse.Number(1)
+	pd := pulse.Data{PulseNumber: pulseNumber}
+	act.GetPulseDataMock.Set(func() pulse.Data { return pd })
+	ect.prev = act
+	b, data := ect.GetNearestPulseData()
+	require.False(t, b)
+
+	require.Equal(t, pulseNumber, data.PulseNumber)
 }
 
 func TestECTGetProfileFactory(t *testing.T) {
@@ -438,4 +563,9 @@ func TestECTMakeActive(t *testing.T) {
 func TestECTIsActive(t *testing.T) {
 	ect := ExpectedCensusTemplate{}
 	require.False(t, ect.IsActive())
+}
+
+func TestECTString(t *testing.T) {
+	ect := ExpectedCensusTemplate{}
+	require.NotEmpty(t, ect.String())
 }

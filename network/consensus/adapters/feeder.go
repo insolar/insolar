@@ -65,6 +65,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/network/utils"
 )
 
 const defaultEphemeralPulseDuration = 2 * time.Second
@@ -282,14 +283,16 @@ func (cf *InternalControlFeederAdapter) setHasLeft() {
 	cf.hasLeft = true
 }
 
-func NewEphemeralControlFeeder(ephemeralController EphemeralController) *EphemeralControlFeeder {
+func NewEphemeralControlFeeder(pulseChanger PulseChanger, ephemeralController EphemeralController) *EphemeralControlFeeder {
 	return &EphemeralControlFeeder{
+		pulseChanger:        pulseChanger,
 		ephemeralController: ephemeralController,
 		pulseDuration:       defaultEphemeralPulseDuration,
 	}
 }
 
 type EphemeralControlFeeder struct {
+	pulseChanger        PulseChanger
 	ephemeralController EphemeralController
 	pulseDuration       time.Duration
 }
@@ -299,7 +302,14 @@ func (f *EphemeralControlFeeder) GetMinDuration() time.Duration {
 }
 
 func (f *EphemeralControlFeeder) OnNonEphemeralPacket(ctx context.Context, parser transport.PacketParser, inbound endpoints.Inbound) error {
-	// TODO not implemented, capture real pulses?
+	_, logger := inslogger.WithFields(ctx, map[string]interface{}{
+		"sender_address": inbound.GetNameAddress().String(),
+		"sender_id":      parser.GetSourceID(),
+		"packet_type":    parser.GetPacketType().String(),
+		"packet_pulse":   parser.GetPulseNumber(),
+	})
+
+	logger.Info("Incompatible consensus packet")
 	return nil
 }
 
@@ -314,7 +324,11 @@ func (f *EphemeralControlFeeder) TryConvertFromEphemeral(expected census.Expecte
 }
 
 func (f *EphemeralControlFeeder) EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time, expected census.Operational) {
-	// nothing
+	pulseNumber := expected.GetPulseNumber()
+	_, pulseData := expected.GetNearestPulseData()
+	ctx := utils.NewPulseContext(context.Background(), uint32(pulseNumber))
+
+	f.pulseChanger.ChangePulse(ctx, NewPulse(pulseData))
 }
 
 func (f *EphemeralControlFeeder) GetEphemeralTimings(config api.LocalNodeConfiguration) api.RoundTimings {
@@ -341,15 +355,6 @@ func (f *EphemeralControlFeeder) CreateEphemeralPulsePacket(census census.Operat
 	return NewPulsePacketParser(pd, data)
 }
 
-func (f *EphemeralControlFeeder) OnEphemeralIncompatiblePacket(ctx context.Context, parser transport.PacketParser, inbound endpoints.Inbound) error {
-	inslogger.FromContext(ctx).Info("Got incompatible consensus packet")
-	return nil
-}
-
 func (f *EphemeralControlFeeder) CanStopOnHastyPulse(pn pulse.Number, expectedEndOfConsensus time.Time) bool {
 	return false
-}
-
-func (f *EphemeralControlFeeder) ConsensusFinished(report api.UpstreamReport, startedAt time.Time, expectedCensus census.Operational) {
-
 }

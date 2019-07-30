@@ -215,7 +215,7 @@ func (c Installer) ControllerFor(mode Mode, setters ...packetProcessorSetter) Co
 
 	var ephemeralFeeder api.EphemeralControlFeeder
 	if c.dep.EphemeralController.EphemeralMode() {
-		ephemeralFeeder = adapters.NewEphemeralControlFeeder(c.dep.EphemeralController)
+		ephemeralFeeder = adapters.NewEphemeralControlFeeder(c.dep.PulseChanger, c.dep.EphemeralController)
 	}
 
 	consensusChronicles := c.createConsensusChronicles(mode)
