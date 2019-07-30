@@ -101,8 +101,8 @@ type Base struct {
 	ConsensusController   consensus.Controller
 	ConsensusPulseHandler network.PulseHandler
 
-	bootstrapETA           insolar.PulseNumber
-	originCandidateProfile *adapters.CandidateProfile
+	bootstrapETA    insolar.PulseNumber
+	originCandidate *adapters.Candidate
 }
 
 // NewGateway creates new gateway on top of existing
@@ -213,7 +213,7 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 	}
 
 	data := request.GetRequest().GetBootstrap()
-	//candidate := data.CandidateProfile
+	//candidate := data.Candidate
 
 	if network.CheckShortIDCollision(g.NodeKeeper.GetAccessor().GetActiveNodes(), insolar.ShortNodeID(data.CandidateProfile.ShortID)) {
 		return g.HostNetwork.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.UpdateShortID}), nil
@@ -248,7 +248,7 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 		profiles.StaticProfileExtension
 	}
 
-	profile := adapters.CandidateProfile(data.CandidateProfile).StaticProfile(g.KeyProcessor)
+	profile := adapters.Candidate(data.CandidateProfile).StaticProfile(g.KeyProcessor)
 
 	g.ConsensusController.AddJoinCandidate(candidate{profile, profile.GetExtension()})
 	inslogger.FromContext(ctx).Infof("=== AddJoinCandidate id = %d, address = %s ", data.CandidateProfile.ShortID, data.CandidateProfile.Address)
@@ -387,9 +387,9 @@ func (g *Base) createCandidateProfile() {
 	origin := g.NodeKeeper.GetOrigin()
 
 	staticProfile := adapters.NewStaticProfile(origin, g.CertificateManager.GetCertificate(), g.KeyProcessor)
-	candidateProfile := adapters.NewCandidateProfile(staticProfile, g.KeyProcessor)
+	candidate := adapters.NewCandidate(staticProfile, g.KeyProcessor)
 
-	g.originCandidateProfile = candidateProfile
+	g.originCandidate = candidate
 }
 
 func (g *Base) EphemeralMode() bool {

@@ -73,7 +73,7 @@ import (
 
 type Requester interface {
 	Authorize(context.Context, *host.Host, insolar.AuthorizationCertificate) (*packet.AuthorizeResponse, error)
-	Bootstrap(context.Context, *packet.Permit, adapters.CandidateProfile, *insolar.Pulse) (*packet.BootstrapResponse, error)
+	Bootstrap(context.Context, *packet.Permit, adapters.Candidate, *insolar.Pulse) (*packet.BootstrapResponse, error)
 	UpdateSchedule(context.Context, *packet.Permit, insolar.PulseNumber) (*packet.UpdateScheduleResponse, error)
 	Reconnect(context.Context, *host.Host, *packet.Permit) (*packet.ReconnectResponse, error)
 }
@@ -160,10 +160,10 @@ func (ac *requester) authorizeWithTimestamp(ctx context.Context, h *host.Host, a
 	return response.GetResponse().GetAuthorize(), nil
 }
 
-func (ac *requester) Bootstrap(ctx context.Context, permit *packet.Permit, candidateProfile adapters.CandidateProfile, p *insolar.Pulse) (*packet.BootstrapResponse, error) {
+func (ac *requester) Bootstrap(ctx context.Context, permit *packet.Permit, candidate adapters.Candidate, p *insolar.Pulse) (*packet.BootstrapResponse, error) {
 
 	req := &packet.BootstrapRequest{
-		CandidateProfile: candidateProfile.Profile(),
+		CandidateProfile: candidate.Profile(),
 		Pulse:            *pulse.ToProto(p),
 		Permit:           permit,
 	}

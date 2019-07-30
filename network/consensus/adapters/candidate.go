@@ -59,46 +59,45 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/longbits"
 )
 
-type CandidateProfile candidate.Profile
+type Candidate candidate.Profile
 
-//noinspection GoReceiverNames
-func (cp CandidateProfile) StaticProfile(keyProcessor insolar.KeyProcessor) *StaticProfile {
-	publicKey, err := keyProcessor.ImportPublicKeyBinary(cp.PublicKey)
+func (c Candidate) StaticProfile(keyProcessor insolar.KeyProcessor) *StaticProfile {
+	publicKey, err := keyProcessor.ImportPublicKeyBinary(c.PublicKey)
 	if err != nil {
 		panic("Failed to import public key")
 	}
 
 	signHolder := cryptkit.NewSignature(
-		longbits.NewBits512FromBytes(cp.Signature),
+		longbits.NewBits512FromBytes(c.Signature),
 		SHA3512Digest.SignedBy(SECP256r1Sign),
 	).AsSignatureHolder()
 
 	extension := newStaticProfileExtension(
-		cp.ShortID,
-		cp.Ref,
+		c.ShortID,
+		c.Ref,
 		signHolder,
 	)
 
 	return newStaticProfile(
-		cp.ShortID,
-		cp.PrimaryRole,
-		cp.SpecialRole,
+		c.ShortID,
+		c.PrimaryRole,
+		c.SpecialRole,
 		extension,
-		NewOutbound(cp.Address),
+		NewOutbound(c.Address),
 		NewECDSAPublicKeyStore(publicKey.(*ecdsa.PublicKey)),
 		NewECDSASignatureKeyHolder(publicKey.(*ecdsa.PublicKey), keyProcessor),
 		cryptkit.NewSignedDigest(
-			cryptkit.NewDigest(longbits.NewBits512FromBytes(cp.Digest), SHA3512Digest),
-			cryptkit.NewSignature(longbits.NewBits512FromBytes(cp.Signature), SHA3512Digest.SignedBy(SECP256r1Sign)),
+			cryptkit.NewDigest(longbits.NewBits512FromBytes(c.Digest), SHA3512Digest),
+			cryptkit.NewSignature(longbits.NewBits512FromBytes(c.Signature), SHA3512Digest.SignedBy(SECP256r1Sign)),
 		).AsSignedDigestHolder(),
 	)
 }
 
-func (cp CandidateProfile) Profile() candidate.Profile {
-	return candidate.Profile(cp)
+func (c Candidate) Profile() candidate.Profile {
+	return candidate.Profile(c)
 }
 
-func NewCandidateProfile(staticProfile *StaticProfile, keyProcessor insolar.KeyProcessor) *CandidateProfile {
+func NewCandidate(staticProfile *StaticProfile, keyProcessor insolar.KeyProcessor) *Candidate {
 	pubKey, err := keyProcessor.ExportPublicKeyBinary(staticProfile.store.(*ECDSAPublicKeyStore).publicKey)
 	if err != nil {
 		panic("failed to export public key")
@@ -106,7 +105,7 @@ func NewCandidateProfile(staticProfile *StaticProfile, keyProcessor insolar.KeyP
 
 	signedDigest := staticProfile.GetBriefIntroSignedDigest()
 
-	return &CandidateProfile{
+	return &Candidate{
 		Address:     staticProfile.GetDefaultEndpoint().GetIPAddress().String(),
 		Ref:         staticProfile.GetExtension().GetReference(),
 		ShortID:     staticProfile.GetStaticNodeID(),

@@ -89,7 +89,7 @@ func (g *JoinerBootstrap) Run(ctx context.Context) {
 		pulse = *insolar.GenesisPulse
 	}
 
-	resp, err := g.BootstrapRequester.Bootstrap(ctx, permit, *g.originCandidateProfile, &pulse)
+	resp, err := g.BootstrapRequester.Bootstrap(ctx, permit, *g.originCandidate, &pulse)
 	if err != nil {
 		logger.Error(err.Error())
 		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState)
