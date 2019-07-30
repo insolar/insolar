@@ -28,34 +28,35 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-type splitCase struct {
-	name               string
-	cfg                configuration.JetSplit
-	testPulsesQuantity int
-}
+func Test_JetSplitEveryPulse(t *testing.T) {
 
-var splitCases = []splitCase{
-	{
-		name: "splitEveryPulse",
-		cfg: configuration.JetSplit{
-			ThresholdRecordsCount:  0,
-			ThresholdOverflowCount: 0,
-			DepthLimit:             15,
-		},
-		testPulsesQuantity: 1,
-	},
-	{
-		name: "splitEveryPulseLimitedDepth",
-		cfg: configuration.JetSplit{
-			ThresholdRecordsCount:  0,
-			ThresholdOverflowCount: 0,
-			DepthLimit:             3,
-		},
-		testPulsesQuantity: 5,
-	},
-}
+	type splitCase struct {
+		name               string
+		cfg                configuration.JetSplit
+		testPulsesQuantity int
+	}
 
-func TestJetSplitEveryPulse(t *testing.T) {
+	var splitCases = []splitCase{
+		{
+			name: "splitEveryPulse",
+			cfg: configuration.JetSplit{
+				ThresholdRecordsCount:  0,
+				ThresholdOverflowCount: 0,
+				DepthLimit:             15,
+			},
+			testPulsesQuantity: 1,
+		},
+		{
+			name: "splitEveryPulseLimitedDepth",
+			cfg: configuration.JetSplit{
+				ThresholdRecordsCount:  0,
+				ThresholdOverflowCount: 0,
+				DepthLimit:             3,
+			},
+			testPulsesQuantity: 5,
+		},
+	}
+
 	t.Parallel()
 
 	testCase := func(t *testing.T, sc splitCase) {
@@ -87,6 +88,21 @@ func TestJetSplitEveryPulse(t *testing.T) {
 		})
 
 		require.NoError(t, err)
+
+		calculateExpectedJets := func(jets []insolar.JetID, depthLimit uint8) []insolar.JetID {
+
+			result := make([]insolar.JetID, 0, len(jets)*2)
+
+			for _, jetID := range jets {
+				if jetID.Depth() >= depthLimit {
+					result = append(result, jetID)
+				} else {
+					jet1, jet2 := jet.Siblings(jetID)
+					result = append(result, jet1, jet2)
+				}
+			}
+			return result
+		}
 
 		// First pulse goes in storage then interrupts.
 		s.Pulse(ctx)
@@ -141,7 +157,7 @@ func TestJetSplitEveryPulse(t *testing.T) {
 
 }
 
-func TestJetSplitOnThirdPulse(t *testing.T) {
+func Test_JetSplitsWhenOverflows(t *testing.T) {
 	t.Parallel()
 
 	var hotObjects = make(chan insolar.JetID)
@@ -188,6 +204,15 @@ func TestJetSplitOnThirdPulse(t *testing.T) {
 		return splittingJets
 	}
 
+	calculateExpectedJetsByTree := func(splittingJets map[insolar.JetID]int, jetTree *jet.Tree, depthLimit uint8, thresholdRecordsCount int) []insolar.JetID {
+
+		for jetID, val := range splittingJets {
+			if val >= thresholdRecordsCount && jetID.Depth() < depthLimit {
+				_, _, _ = jetTree.Split(jetID)
+			}
+		}
+		return jetTree.LeafIDs()
+	}
 	// First pulse goes in storage then interrupts.
 	s.Pulse(ctx)
 
@@ -243,31 +268,4 @@ func TestJetSplitOnThirdPulse(t *testing.T) {
 
 		}
 	}
-}
-
-func calculateExpectedJets(jets []insolar.JetID, depthLimit uint8) []insolar.JetID {
-
-	result := make([]insolar.JetID, 0, len(jets)*2)
-
-	for _, jetID := range jets {
-		if jetID.Depth() >= depthLimit {
-			result = append(result, jetID)
-		} else {
-			jet1, jet2 := jet.Siblings(jetID)
-			result = append(result, jet1, jet2)
-		}
-
-	}
-
-	return result
-}
-
-func calculateExpectedJetsByTree(splittingJets map[insolar.JetID]int, jetTree *jet.Tree, depthLimit uint8, thresholdRecordsCount int) []insolar.JetID {
-
-	for jetID, val := range splittingJets {
-		if val >= thresholdRecordsCount && jetID.Depth() < depthLimit {
-			_, _, _ = jetTree.Split(jetID)
-		}
-	}
-	return jetTree.LeafIDs()
 }
