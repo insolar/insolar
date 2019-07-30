@@ -52,7 +52,9 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 	"sync"
@@ -88,7 +90,7 @@ type coreRealm struct {
 	initialCensus   census.Operational
 	controlFeeder   api.ConsensusControlFeeder
 	candidateFeeder api.CandidateControlFeeder
-	ephemeralMode   api.EphemeralMode
+	ephemeralFeeder api.EphemeralControlFeeder
 
 	pollingWorker coreapi.PollingWorker
 
@@ -116,8 +118,9 @@ type coreRealm struct {
 }
 
 func (r *coreRealm) initBefore(hLocker hLocker, strategy RoundStrategy, transport transport.Factory,
-	config api.LocalNodeConfiguration, initialCensus census.Operational, controlFeeder api.ConsensusControlFeeder,
-	candidateFeeder api.CandidateControlFeeder) {
+	config api.LocalNodeConfiguration, initialCensus census.Operational,
+	controlFeeder api.ConsensusControlFeeder, candidateFeeder api.CandidateControlFeeder,
+	ephemeralFeeder api.EphemeralControlFeeder) {
 
 	r.hLocker = hLocker
 
@@ -133,8 +136,7 @@ func (r *coreRealm) initBefore(hLocker hLocker, strategy RoundStrategy, transpor
 
 	r.controlFeeder = controlFeeder
 	r.candidateFeeder = candidateFeeder
-
-	r.ephemeralMode = controlFeeder.GetRequiredEphemeralMode(r.initialCensus)
+	r.ephemeralFeeder = ephemeralFeeder
 }
 
 func (r *coreRealm) initBeforePopulation(nbhSizes transport.NeighbourhoodSizes) {
@@ -153,16 +155,12 @@ func (r *coreRealm) initBeforePopulation(nbhSizes transport.NeighbourhoodSizes) 
 		*/
 		panic("illegal state")
 	}
-	if r.ephemeralMode.IsActive() && !profile.IsVoter() {
-		// only voters can be active
-		r.ephemeralMode = api.EphemeralPassive
-	}
 
 	pn := r.initialCensus.GetExpectedPulseNumber()
 
 	nodeContext := population.NewHook(profile,
 		population.NewPanicDispatcher("updates of stub-self are not allowed"),
-		population.NewSharedNodeContextByPulseNumber(r.assistant, pn, 0, r.ephemeralMode,
+		population.NewSharedNodeContextByPulseNumber(r.assistant, pn, 0, r.getEphemeralMode(),
 			func(report misbehavior.Report) interface{} {
 				inslogger.FromContext(r.roundContext).Warnf("Got Report: %+v", report)
 				r.initialCensus.GetMisbehaviorRegistry().AddReport(report)
@@ -177,6 +175,13 @@ func (r *coreRealm) initBeforePopulation(nbhSizes transport.NeighbourhoodSizes) 
 	r.self = &selfNode
 
 	r.expectedPopulationSize = member.AsIndex(pop.GetIndexedCapacity())
+}
+
+func (r *coreRealm) getEphemeralMode() api.EphemeralMode {
+	if r.ephemeralFeeder == nil {
+		return api.EphemeralNotAllowed
+	}
+	return api.EphemeralAllowed
 }
 
 func (r *coreRealm) GetStrategy() RoundStrategy {
@@ -200,6 +205,9 @@ func (r *coreRealm) GetSignatureVerifier(pks cryptkit.PublicKeyStore) cryptkit.S
 }
 
 func (r *coreRealm) GetStartedAt() time.Time {
+	//r.Lock()
+	//defer r.Unlock()
+
 	if r.roundStartedAt.IsZero() {
 		panic("illegal state")
 	}
@@ -230,19 +238,76 @@ func (r *coreRealm) GetSelf() *population.NodeAppearance {
 	return r.self
 }
 
-func (r *coreRealm) VerifyPacketAuthenticity(packetSignature cryptkit.SignedDigest, sourceID insolar.ShortNodeID, from endpoints.Inbound, strictFrom bool) (bool, error) {
-
-	nr := coreapi.FindHostProfile(sourceID, from, r.initialCensus)
-	if nr == nil {
-		return false, nil
-	}
-
-	sf := r.assistant.CreateSignatureVerifierWithPKS(nr.GetPublicKeyStore())
-	err := coreapi.VerifyPacketAuthenticityBy(packetSignature, nr, sf, from, strictFrom)
-	return err == nil, err
-}
-
 // polling fn must be fast, and it will remain in polling until it returns false
 func (r *coreRealm) AddPoll(fn api.MaintenancePollFunc) {
 	r.pollingWorker.AddPoll(fn)
+}
+
+func (r *coreRealm) VerifyPacketAuthenticity(ctx context.Context, packet transport.PacketParser,
+	from endpoints.Inbound, sourceNode packetdispatch.MemberPacketReceiver, unverifiedFlag coreapi.PacketVerifyFlags,
+	pd population.PacketDispatcher, verifyFlags coreapi.PacketVerifyFlags) (coreapi.PacketVerifyFlags, error) {
+
+	if verifyFlags&(coreapi.SkipVerify|coreapi.SuccessfullyVerified) != 0 {
+		return 0, nil
+	}
+
+	var err error
+	strict := verifyFlags&coreapi.RequireStrictVerify != 0
+
+	switch {
+	case sourceNode != nil:
+		err = sourceNode.VerifyPacketAuthenticity(packet.GetPacketSignature(), from, strict)
+		if err != nil {
+			return 0, err
+		}
+		verifyFlags |= coreapi.SuccessfullyVerified
+	case pd != nil && pd.HasCustomVerifyForHost(from, verifyFlags):
+		// skip default behavior
+	default:
+		sourceID := packet.GetSourceID()
+
+		nr := coreapi.FindHostProfile(sourceID, from, r.initialCensus)
+		if nr != nil {
+			sf := r.assistant.CreateSignatureVerifierWithPKS(nr.GetPublicKeyStore())
+			err := coreapi.VerifyPacketAuthenticityBy(packet.GetPacketSignature(), nr, sf, from, strict)
+			if err != nil {
+				return 0, err
+			}
+			verifyFlags |= coreapi.SuccessfullyVerified
+
+		} else {
+			pt := packet.GetPacketType()
+
+			if strict || verifyFlags&coreapi.AllowUnverified == 0 {
+				return 0, fmt.Errorf("unable to verify sender for packet type (%v): from=%v", pt, from)
+			}
+			inslogger.FromContext(ctx).Errorf("unable to verify sender for packet type (%v): from=%v", pt, from)
+			verifyFlags |= unverifiedFlag
+		}
+	}
+	return verifyFlags, nil
+}
+
+func (r *coreRealm) VerifyPacketPulseNumber(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
+	filterPN, nextPN pulse.Number) (bool, error) {
+
+	if r.ephemeralFeeder != nil && !packet.GetPacketType().IsEphemeralPacket() {
+		return false, r.ephemeralFeeder.OnEphemeralIncompatiblePacket(packet, from)
+	}
+
+	pn := packet.GetPulseNumber()
+	if filterPN == pn || filterPN.IsUnknown() || pn.IsUnknown() {
+		return true, nil
+	}
+
+	sourceID := packet.GetSourceID()
+	localID := r.self.GetNodeID()
+	msg := fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v, source=%v, local=%d", filterPN, pn, sourceID, localID)
+
+	if !nextPN.IsUnknown() && nextPN == pn {
+		// TODO verify new pulse data to match prevDelta
+		// is it time for the next round?
+		return false, errors.NewNextPulseArrivedError(pn, msg)
+	}
+	return false, errors.NewPulseRoundMismatchError(pn, msg)
 }

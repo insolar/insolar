@@ -118,7 +118,7 @@ func (p *PulsePrepController) CreatePacketDispatcher(pt phases.PacketType, realm
 }
 
 func (*PulsePrepController) GetPacketType() []phases.PacketType {
-	return []phases.PacketType{phases.PacketPulse}
+	return []phases.PacketType{phases.PacketPulsarPulse}
 }
 
 var _ core.PhaseController = &PulseController{}
@@ -136,5 +136,5 @@ func (p *PulseController) CreatePacketDispatcher(pt phases.PacketType, ctlIndex 
 }
 
 func (*PulseController) GetPacketType() []phases.PacketType {
-	return []phases.PacketType{phases.PacketPulse}
+	return []phases.PacketType{phases.PacketPulsarPulse}
 }

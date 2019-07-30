@@ -56,7 +56,6 @@ import (
 
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
@@ -136,13 +135,13 @@ func (cf *ConsensusControlFeeder) OnAppliedMembershipProfile(mode member.OpMode,
 func (cf *ConsensusControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse.Number) {
 }
 
-func (cf *ConsensusControlFeeder) GetRequiredEphemeralMode(census census.Operational) api.EphemeralMode {
-	if cf.ephemeralController.EphemeralMode() {
-		return api.EphemeralActive
-	}
-
-	return api.EphemeralNotAllowed
-}
+//func (cf *ConsensusControlFeeder) GetRequiredEphemeralMode(census census.Operational) api.EphemeralMode {
+//	if cf.ephemeralController.EphemeralMode() {
+//		return api.EphemeralActive
+//	}
+//
+//	return api.EphemeralNotAllowed
+//}
 
 func (cf *ConsensusControlFeeder) CreateEphemeralPulsePacket(census census.Operational) proofs.OriginalPulsarPacket {
 	_, pd := census.GetNearestPulseData()
@@ -226,6 +225,10 @@ type InternalControlFeederAdapter struct {
 	leaveReason      uint32
 	zeroReadyChannel chan struct{}
 	leavingChannel   chan struct{}
+}
+
+func (cf *InternalControlFeederAdapter) CanStopOnHastyPulse(pn pulse.Number, expectedEndOfConsensus time.Time) bool {
+	return true
 }
 
 func (cf *InternalControlFeederAdapter) GetRequiredPowerLevel() power.Request {

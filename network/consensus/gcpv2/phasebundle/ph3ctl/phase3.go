@@ -170,6 +170,8 @@ func (c *Phase3Controller) StartWorker(ctx context.Context, realm *core.FullReal
 
 func (c *Phase3Controller) workerPhase3(ctx context.Context) {
 
+	defer c.R.NotifyRoundStopped(ctx)
+
 	localInspector := c.workerPrePhase3(ctx)
 	if localInspector == nil {
 

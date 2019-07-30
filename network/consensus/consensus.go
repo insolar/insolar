@@ -271,6 +271,7 @@ func (c *Installer) createConsensusController(
 		),
 		candidateFeeder,
 		controlFeeder,
+		nil, // TODO ephemeralFeeder
 	)
 }
 

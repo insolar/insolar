@@ -53,76 +53,68 @@ package gcpv2
 import (
 	"context"
 	"fmt"
-	"sync"
-
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
+	"sync"
+	"time"
 )
 
 func NewConsensusMemberController(chronicle api.ConsensusChronicles, upstream api.UpstreamController,
 	roundFactory api.RoundControllerFactory, candidateFeeder api.CandidateControlFeeder,
-	controlFeeder api.ConsensusControlFeeder) api.ConsensusController {
+	controlFeeder api.ConsensusControlFeeder, ephemeralFeeder api.EphemeralControlFeeder) api.ConsensusController {
 
 	return &ConsensusMemberController{
-		upstream:        upstream,
-		chronicle:       chronicle,
-		roundFactory:    roundFactory,
-		candidateFeeder: candidateFeeder,
-		controlFeeder:   controlFeeder,
+		upstream:             upstream,
+		chronicle:            chronicle,
+		roundFactory:         roundFactory,
+		candidateFeeder:      candidateFeeder,
+		controlFeeder:        controlFeeder,
+		ephemeralInterceptor: ephemeralInterceptor{EphemeralControlFeeder: ephemeralFeeder},
 	}
 }
 
-type controlFeeder api.ConsensusControlFeeder
-
 type ConsensusMemberController struct {
 	/* No mutex needed. Set on construction */
-	controlFeeder
 
-	chronicle       api.ConsensusChronicles
-	roundFactory    api.RoundControllerFactory
-	candidateFeeder api.CandidateControlFeeder
-	upstream        api.UpstreamController
+	chronicle            api.ConsensusChronicles
+	roundFactory         api.RoundControllerFactory
+	candidateFeeder      api.CandidateControlFeeder
+	upstream             api.UpstreamController
+	controlFeeder        api.ConsensusControlFeeder
+	ephemeralInterceptor ephemeralInterceptor
 
 	mutex sync.RWMutex
 	/* mutex needed */
-	prevRound, currentRound api.RoundController
 	isTerminated            bool
+	prevRound, currentRound api.RoundController
 }
 
 func (h *ConsensusMemberController) Prepare() {
-	h.ensureRound()
+	h.getOrCreate()
 }
 
 func (h *ConsensusMemberController) Abort() {
-	h.discardRound(true, nil)
+	h.terminate()
 }
 
-func (h *ConsensusMemberController) GetActivePowerLimit() (member.Power, pulse.Number) {
-	actCensus := h.chronicle.GetActiveCensus()
-	// TODO adjust power by state
-	return actCensus.GetOnlinePopulation().GetLocalProfile().GetDeclaredPower(), actCensus.GetPulseNumber()
-}
-
-func (h *ConsensusMemberController) getCurrentRound() api.RoundController {
+func (h *ConsensusMemberController) getCurrent() api.RoundController {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 	return h.currentRound
 }
 
-func (h *ConsensusMemberController) ensureRound() (api.RoundController, bool) {
-	r := h.getCurrentRound()
+func (h *ConsensusMemberController) getOrCreate() (api.RoundController, bool) {
+	r := h.getCurrent()
 	if r != nil {
 		return r, false
 	}
-	return h._getOrCreateRound()
+	return h.getOrCreateInternal()
 }
 
-func (h *ConsensusMemberController) _getOrCreateRound() (api.RoundController, bool) {
+func (h *ConsensusMemberController) getOrCreateInternal() (api.RoundController, bool) {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 
@@ -134,22 +126,27 @@ func (h *ConsensusMemberController) _getOrCreateRound() (api.RoundController, bo
 		return nil, false
 	}
 
-	h.currentRound = h.roundFactory.CreateConsensusRound(h.chronicle, h, h.candidateFeeder, h.prevRound)
-	h.prevRound = nil
+	ephemeralFeeder := h.ephemeralInterceptor.prepare(h)
+
+	h.prevRound, h.currentRound = nil, h.roundFactory.CreateConsensusRound(h.chronicle, h.controlFeeder,
+		h.candidateFeeder, ephemeralFeeder, h.prevRound)
+
+	h.ephemeralInterceptor.attachTo(h.currentRound)
+
 	h.currentRound.PrepareConsensusRound(h.upstream)
-	//h.currentRound.StartConsensusRound()
 	return h.currentRound, true
 }
 
-func (h *ConsensusMemberController) _discardRound(terminateMember bool, toBeDiscarded api.RoundController) api.RoundController {
+func (h *ConsensusMemberController) discardInternal(terminateMember bool, toBeDiscarded api.RoundController) bool {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 
 	round := h.currentRound
 	if round == nil || toBeDiscarded != nil && toBeDiscarded != round {
 		// This round was already discarded
-		return nil
+		return false
 	}
+
 	h.currentRound = nil
 	if terminateMember {
 		h.prevRound = nil
@@ -158,50 +155,114 @@ func (h *ConsensusMemberController) _discardRound(terminateMember bool, toBeDisc
 		h.prevRound = round
 	}
 
-	return round
+	go round.StopConsensusRound()
+	return true
 }
 
-func (h *ConsensusMemberController) discardRound(terminateMember bool, toBeDiscarded api.RoundController) {
-	round := h._discardRound(terminateMember, toBeDiscarded)
-	if round != nil {
-		// TODO this has to be postponed for this round to be reused inside a next round
-		go round.StopConsensusRound()
-	}
+func (h *ConsensusMemberController) discard(toBeDiscarded api.RoundController) bool {
+	return h.discardInternal(false, toBeDiscarded)
 }
 
-func (h *ConsensusMemberController) _processPacket(ctx context.Context, payload transport.PacketParser, from endpoints.Inbound) (api.RoundController, bool, error) {
-	round, created := h.ensureRound()
+func (h *ConsensusMemberController) terminate() {
+	h.discardInternal(true, nil)
+}
 
-	if round == nil {
-		// terminated
-		return nil, false, fmt.Errorf("member controller is terminated")
+func (h *ConsensusMemberController) processPacket(ctx context.Context, round api.RoundController,
+	payload transport.PacketParser, from endpoints.Inbound) (bool, error) {
+
+	code, err := round.HandlePacket(ctx, payload, from)
+
+	switch code {
+	case api.KeepRound:
+		return false, err
+	case api.StartNextRound:
+		//return true, err
+	case api.NextRoundTerminate:
+		h.terminate()
+	default:
+		panic("unexpected")
 	}
-
-	_, err := round.HandlePacket(ctx, payload, from)
-
-	return round, created, err
+	if err != nil {
+		inslogger.FromContext(ctx).Error(err)
+	}
+	return code == api.StartNextRound, nil
 }
 
 func (h *ConsensusMemberController) ProcessPacket(ctx context.Context, payload transport.PacketParser, from endpoints.Inbound) error {
 
-	round, created, err := h._processPacket(ctx, payload, from)
+	round, isCreated := h.getOrCreate()
 
-	if created || err == nil {
-		return err
+	if round != nil {
+		retry, err := h.processPacket(ctx, round, payload, from)
+		if !retry {
+			return err
+		}
+		if isCreated {
+			return fmt.Errorf("illegal behavior - packet can not be re-processed for a just created round")
+		}
 	}
 
-	if isNextPulse, _ := errors.IsNextPulseArrivedError(err); !isNextPulse {
-		return err
-	}
+	h.discard(round)
 
-	h.discardRound(false, round)
-	_, _, err = h._processPacket(ctx, payload, from)
+	round, _ = h.getOrCreate()
+	retry, err := h.processPacket(ctx, round, payload, from)
+	if retry {
+		return fmt.Errorf("illegal behavior - packet can not be re-processed twice")
+	}
 	return err
 }
 
-// func (h *ConsensusMemberController) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
-//	if expectedCensus == nil || report.MemberMode.IsEvicted() {
-//		h.discardRound(true, nil)
-//	}
-//	//h.controlFeeder.ConsensusFinished(report, expectedCensus)
-// }
+type ephemeralInterceptor struct {
+	api.EphemeralControlFeeder
+	controller *ConsensusMemberController
+	round      api.RoundController
+}
+
+func (p *ephemeralInterceptor) ConsensusFinished(report api.UpstreamReport, startedAt time.Time, expectedCensus census.Operational) {
+	p.EphemeralControlFeeder.ConsensusFinished(report, startedAt, expectedCensus)
+
+	p.controller.mutex.Lock()
+	defer p.controller.mutex.Unlock()
+	beEphemeral, minDuration := p.EphemeralControlFeeder.CanBeEphemeral()
+
+	if !beEphemeral {
+		p.EphemeralControlFeeder = nil
+		return
+	}
+
+	untilNextStart := time.Until(startedAt.Add(minDuration))
+	if untilNextStart > 0 {
+		time.AfterFunc(untilNextStart, p.startNext)
+	} else {
+		go p.startNext()
+	}
+}
+
+func (p *ephemeralInterceptor) prepare(controller *ConsensusMemberController) api.EphemeralControlFeeder {
+	if p.controller == nil {
+		p.controller = controller
+	}
+	p.round = nil
+
+	if p.EphemeralControlFeeder == nil {
+		return nil
+	}
+	return p
+}
+
+func (p *ephemeralInterceptor) attachTo(round api.RoundController) {
+	if p.round != nil {
+		panic("illegal state")
+	}
+	p.round = round
+}
+
+func (p *ephemeralInterceptor) startNext() {
+	if p.round == nil || p.controller == nil {
+		return
+	}
+
+	if p.controller.discard(p.round) {
+		p.controller.Prepare() // initiates prepare for the next round
+	}
+}

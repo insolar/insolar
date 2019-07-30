@@ -92,6 +92,7 @@ type PhasedRoundController struct {
 	// fullCancel     context.CancelFunc /* cancels prepareCancel as well */
 	prepareCancel  context.CancelFunc
 	prevPulseRound api.RoundController
+	minDuration    time.Duration
 
 	roundWorker RoundStateMachineWorker
 
@@ -102,13 +103,14 @@ type PhasedRoundController struct {
 
 func NewPhasedRoundController(strategy RoundStrategy, chronicle api.ConsensusChronicles, bundle PhaseControllersBundle,
 	transport transport.Factory, config api.LocalNodeConfiguration,
-	controlFeeder api.ConsensusControlFeeder, candidateFeeder api.CandidateControlFeeder,
+	controlFeeder api.ConsensusControlFeeder, candidateFeeder api.CandidateControlFeeder, ephemeralFeeder api.EphemeralControlFeeder,
 	prevPulseRound api.RoundController) *PhasedRoundController {
 
 	r := &PhasedRoundController{chronicle: chronicle, prevPulseRound: prevPulseRound, bundle: bundle}
 
 	r.realm.coreRealm.initBefore(&r.rw, strategy, transport, config, chronicle.GetLatestCensus(),
-		controlFeeder, candidateFeeder)
+		controlFeeder, candidateFeeder, ephemeralFeeder)
+
 	nbhSizes := r.realm.initBefore(transport)
 	r.realm.coreRealm.initBeforePopulation(nbhSizes)
 
@@ -131,7 +133,7 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 	r.realm.coreRealm.postponedPacketFn = func(packet transport.PacketParser, from endpoints.Inbound, verifyFlags coreapi.PacketVerifyFlags) bool {
 		// There is no real context for delayed reprocessing, so we use the round context
 		ctx := r.realm.coreRealm.roundContext
-		err := r.handlePacket(ctx, packet, from, verifyFlags)
+		_, err := r.handlePacket(ctx, packet, from, verifyFlags)
 		if err != nil {
 			inslogger.FromContext(ctx).Error(err)
 		}
@@ -286,56 +288,71 @@ func (r *PhasedRoundController) ensureStarted() bool {
 	return r.roundWorker.SafeStartAndGetIsRunning()
 }
 
-func (r *PhasedRoundController) HandlePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound) (bool, error) {
+func (r *PhasedRoundController) HandlePacket(ctx context.Context, packet transport.PacketParser,
+	from endpoints.Inbound) (api.RoundControlCode, error) {
 
-	isRunning := r.ensureStarted()
-	err := r.handlePacket(ctx, packet, from, coreapi.DefaultVerify)
-	return isRunning, err
+	return r.handlePacket(ctx, packet, from, coreapi.DefaultVerify)
 }
 
 func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
-	verifyFlags coreapi.PacketVerifyFlags) error {
+	verifyFlags coreapi.PacketVerifyFlags) (api.RoundControlCode, error) {
+
+	r.ensureStarted()
 
 	pn := packet.GetPulseNumber()
 	/* a separate method with lock is to ensure that further packet processing is not connected to a lock */
-	prep, filterPN, nextPN, prev := r.beforeHandlePacket()
-
-	sourceID := packet.GetSourceID()
-	localID := r.realm.self.GetNodeID()
-
-	switch {
-	case filterPN == pn:
-		// this is for us
-	case filterPN.IsUnknown() || pn.IsUnknown():
-		// we will take any packet or it is a special packet
-	case !nextPN.IsUnknown() && nextPN == pn:
-		// time for the next round?
-		r.roundWorker.onNextPulse(pn)
-		return errors2.NewNextPulseArrivedError(pn)
-	case filterPN > pn:
-		// something from a previous round?
-		if prev != nil {
-			_, err := prev.HandlePacket(ctx, packet, from)
-			// don't let pulse errors to go through - it will mess up the consensus controller
-			if !errors2.IsNextPulseError(err) {
-				return err
-			}
-		}
-		fallthrough
-	default:
-		r.roundWorker.onUnexpectedPulse(pn)
-		return errors2.NewPulseRoundMismatchError(pn,
-			fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v, source=%v, local=%d", filterPN, pn, sourceID, localID))
-	}
+	prep, filterPN, _, prev := r.beforeHandlePacket()
 
 	// TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
 	defaultOptions := coreapi.SkipVerify // coreapi.DefaultVerify
 
+	if prev != nil && filterPN > pn {
+		// something from a previous round?
+		_, err := prev.HandlePacket(ctx, packet, from)
+		return api.KeepRound, err
+		//defaultOptions = coreapi.SkipVerify // validation was done by the prev controller
+	}
+
+	var err error
 	if prep != nil {
-		if !pn.IsUnknown() {
+		if !pn.IsUnknown() && (filterPN.IsUnknown() || filterPN == pn) {
 			r.roundWorker.OnPulseDetected()
 		}
-		return prep.dispatchPacket(ctx, packet, from, defaultOptions) // prep realm can't inherit any flags
+		err = prep.dispatchPacket(ctx, packet, from, defaultOptions) // prep realm can't inherit flags
+	} else {
+		err = r.realm.dispatchPacket(ctx, packet, from, verifyFlags|defaultOptions)
 	}
-	return r.realm.dispatchPacket(ctx, packet, from, verifyFlags|defaultOptions)
+
+	isNextPulse, nextPN := errors2.IsNextPulseArrivedError(err)
+	if !isNextPulse {
+		if errors2.IsNextPulseError(err) {
+			r.roundWorker.onUnexpectedPulse(pn)
+		}
+		return api.KeepRound, err
+	}
+
+	if r.roundWorker.IsRunning() {
+		canStop := false
+		endOfConsensus := r.realm.GetStartedAt().Add(r.realm.timings.EndOfConsensus)
+		if r.realm.ephemeralFeeder != nil {
+			canStop = r.realm.ephemeralFeeder.CanStopOnHastyPulse(nextPN, endOfConsensus)
+		} else {
+			canStop = r.realm.controlFeeder.CanStopOnHastyPulse(nextPN, endOfConsensus)
+		}
+
+		if !canStop {
+			r.roundWorker.onUnexpectedPulse(pn)
+			return api.KeepRound, err
+		}
+		r.StopConsensusRound()
+		// TODO should allow some time to handover a broken population?
+		// TODO build a one-node population for Suspected mode
+	} else {
+		expected := r.chronicle.GetExpectedCensus()
+		if expected == nil || !expected.GetOnlinePopulation().IsValid() {
+			return api.NextRoundTerminate, fmt.Errorf("next population is invalid or not ready on: %v", err)
+		}
+	}
+	r.roundWorker.onNextPulse(pn)
+	return api.StartNextRound, err
 }

@@ -208,6 +208,7 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 	timings := c.R.GetTimings()
 	// endOfPhase := time.After(c.R.AdjustedAfter(timings.EndOfPhase2))
 	weightScaler := NewScalerInt64(timings.EndOfPhase1.Nanoseconds())
+	startedAt := c.R.GetStartedAt()
 
 	if timings.StartPhase1RetryAt > 0 {
 		timer := time.AfterFunc(c.R.AdjustedAfter(timings.StartPhase1RetryAt), func() {
@@ -278,7 +279,7 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 			continue
 		}
 
-		maxWeight := weightScaler.ScaleInt64(time.Since(c.R.GetStartedAt()).Nanoseconds())
+		maxWeight := weightScaler.ScaleInt64(time.Since(startedAt).Nanoseconds())
 
 		pop := c.R.GetPopulation()
 		nodeCount, isComplete := pop.GetCountAndCompleteness(false)
