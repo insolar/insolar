@@ -353,6 +353,9 @@ func (k lastKnownRecordPositionKey) ID() []byte {
 }
 
 func (r *RecordPositionDB) LastKnownPosition(pn insolar.PulseNumber) (uint32, error) {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+
 	buff, err := r.db.Get(lastKnownRecordPositionKey{pn: pn})
 	if err != nil {
 		return 0, err
@@ -361,11 +364,14 @@ func (r *RecordPositionDB) LastKnownPosition(pn insolar.PulseNumber) (uint32, er
 }
 
 func (r *RecordPositionDB) AtPosition(pn insolar.PulseNumber, position uint32) (insolar.ID, error) {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+
 	lastKnownPosition, err := r.LastKnownPosition(pn)
 	if err != nil {
 		return insolar.ID{}, err
 	}
-	if uint32(position) > lastKnownPosition {
+	if position > lastKnownPosition {
 		return insolar.ID{}, store.ErrNotFound
 	}
 
@@ -386,6 +392,9 @@ func (r *RecordPositionDB) setLastKnownPosition(pn insolar.PulseNumber, order ui
 }
 
 func (r *RecordPositionDB) IncrementPosition(recID insolar.ID) error {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
 	currentPosition, err := r.LastKnownPosition(recID.Pulse())
 	if err != nil && err != store.ErrNotFound {
 		return err
@@ -408,35 +417,3 @@ func (r *RecordPositionDB) IncrementPosition(recID insolar.ID) error {
 
 	return r.setLastKnownPosition(recID.Pulse(), nextPosition)
 }
-
-// func (r *RecordPositionDB) IDs(pn insolar.PulseNumber, since uint32, count uint32) ([]OrderedID, error) {
-// 	lastKnownPosition, err := r.getLastKnownPosition(pn)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	if uint32(since) >= lastKnownPosition {
-// 		return nil, store.ErrNotFound
-// 	}
-//
-// 	readUntil := uint32(0)
-// 	if since+count > lastKnownPosition {
-// 		readUntil = lastKnownPosition
-// 	}
-//
-// 	var ids []OrderedID
-//
-// 	for i := since; i < readUntil; i++ {
-// 		positionKey := newRecordPositionKey(pn, i)
-// 		rawID, err := r.db.Get(positionKey)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-//
-// 		ids = append(ids, OrderedID{
-// 			ID:       *insolar.NewIDFromBytes(rawID),
-// 			Position: i,
-// 		})
-// 	}
-//
-// 	return ids, nil
-// }
