@@ -107,27 +107,6 @@ func TestCrazyJSON(t *testing.T) {
 	require.Contains(t, res["error"].(map[string]interface{})["message"].(string), "[ UnmarshalRequest ] Can't unmarshal input params: invalid")
 }
 
-func TestIncorrectSign(t *testing.T) {
-	testMember := createMember(t)
-	seed, err := requester.GetSeed(TestAPIURL)
-	require.NoError(t, err)
-	body, err := requester.GetResponseBodyContract(
-		TestCallUrl,
-		requester.Request{
-			JSONRPC: "2.0",
-			ID:      1,
-			Method:  "api.call",
-			Params:  requester.Params{Seed: seed, Reference: testMember.ref, PublicKey: testMember.pubKey, CallSite: "wallet.getBalance", CallParams: map[string]interface{}{"reference": testMember.ref}},
-		},
-		"MEQCIAvgBR42vSccBKynBIC7gb5GffqtW8q2XWRP+DlJ0IeUAiAeKCxZNSSRSsYcz2d49CT6KlSLpr5L7VlOokOiI9dsvQ==",
-	)
-	require.NoError(t, err)
-	var res requester.ContractAnswer
-	err = json.Unmarshal(body, &res)
-	require.NoError(t, err)
-	require.Contains(t, res.Error.Message, "invalid signature")
-}
-
 func TestIncorrectMethodName(t *testing.T) {
 	ctx := context.TODO()
 	seed, err := requester.GetSeed(TestAPIURL)
