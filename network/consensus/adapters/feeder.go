@@ -56,6 +56,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
@@ -65,7 +66,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"github.com/insolar/insolar/network/utils"
 )
 
 const defaultEphemeralPulseDuration = 2 * time.Second
@@ -309,7 +309,7 @@ func (f *EphemeralControlFeeder) TryConvertFromEphemeral(expected census.Expecte
 func (f *EphemeralControlFeeder) EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time, expected census.Operational) {
 	pulseNumber := expected.GetPulseNumber()
 	_, pulseData := expected.GetNearestPulseData()
-	ctx := utils.NewPulseContext(context.Background(), uint32(pulseNumber))
+	ctx := network.NewPulseContext(context.Background(), uint32(pulseNumber))
 
 	f.pulseChanger.ChangePulse(ctx, NewPulse(pulseData))
 }

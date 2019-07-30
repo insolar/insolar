@@ -54,7 +54,6 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus/adapters"
 
 	"github.com/insolar/insolar/insolar"
 )
@@ -74,7 +73,7 @@ func (g *WaitMinRoles) GetState() insolar.NetworkState {
 	return insolar.WaitMinRoles
 }
 
-func (g *WaitMinRoles) OnConsensusFinished(report adapters.Report) {
+func (g *WaitMinRoles) OnConsensusFinished(report network.Report) {
 	// TODO: check min roles and switch state
 
 	if g.Rules.CheckMinRole() {

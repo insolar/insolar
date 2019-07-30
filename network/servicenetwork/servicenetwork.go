@@ -235,7 +235,7 @@ func (n *ServiceNetwork) initConsensus() {
 
 	pulseHandler := adapters.NewPulseHandler()
 	n.consensusController = n.consensusInstaller.ControllerFor(n.ConsensusMode, pulseHandler, n.datagramHandler)
-	n.consensusController.RegisterFinishedNotifier(func(report adapters.Report) {
+	n.consensusController.RegisterFinishedNotifier(func(report network.Report) {
 		n.Gatewayer.Gateway().OnConsensusFinished(report)
 	})
 	n.BaseGateway.ConsensusController = n.consensusController
@@ -408,7 +408,7 @@ func getAnnounceSignature(
 }
 
 // RegisterConsensusFinishedNotifier for integrtest TODO: remove
-func (n *ServiceNetwork) RegisterConsensusFinishedNotifier(fn adapters.OnConsensusFinished) {
+func (n *ServiceNetwork) RegisterConsensusFinishedNotifier(fn network.OnConsensusFinished) {
 	n.consensusController.RegisterFinishedNotifier(fn)
 }
 

@@ -64,7 +64,6 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/network/consensus"
-	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/network/rules"
@@ -282,7 +281,7 @@ func (s *testSuite) StartNodesNetwork(nodes []*networkNode) {
 	results := make(chan error, len(nodes))
 	startNode := func(node *networkNode) {
 		err := node.componentManager.Start(node.ctx)
-		node.serviceNetwork.RegisterConsensusFinishedNotifier(func(report adapters.Report) {
+		node.serviceNetwork.RegisterConsensusFinishedNotifier(func(report network.Report) {
 			node.consensusResult <- report.PulseNumber
 		})
 		results <- err

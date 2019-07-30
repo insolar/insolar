@@ -62,7 +62,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 )
 
 type StateGetter interface {
@@ -77,22 +76,13 @@ type StateUpdater interface {
 	UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte)
 }
 
-type Report struct {
-	PulseNumber insolar.PulseNumber
-	MemberPower member.Power
-	MemberMode  member.OpMode
-	IsJoiner    bool
-}
-
-type OnConsensusFinished func(report Report)
-
 type UpstreamController struct {
 	stateGetter  StateGetter
 	pulseChanger PulseChanger
 	stateUpdater StateUpdater
 
 	mu         *sync.RWMutex
-	onFinished OnConsensusFinished
+	onFinished network.OnConsensusFinished
 }
 
 func NewUpstreamPulseController(stateGetter StateGetter, pulseChanger PulseChanger, stateUpdater StateUpdater) *UpstreamController {
@@ -102,7 +92,7 @@ func NewUpstreamPulseController(stateGetter StateGetter, pulseChanger PulseChang
 		stateUpdater: stateUpdater,
 
 		mu:         &sync.RWMutex{},
-		onFinished: func(report Report) {},
+		onFinished: func(report network.Report) {},
 	}
 }
 
@@ -138,11 +128,12 @@ func (u *UpstreamController) ConsensusFinished(report api.UpstreamReport, expect
 	u.mu.RLock()
 	defer u.mu.RUnlock()
 
-	u.onFinished(Report{
-		PulseNumber: insolar.PulseNumber(report.PulseNumber),
-		MemberPower: report.MemberPower,
-		MemberMode:  report.MemberMode,
-		IsJoiner:    report.IsJoiner,
+	u.onFinished(network.Report{
+		PulseNumber:     insolar.PulseNumber(report.PulseNumber),
+		MemberPower:     report.MemberPower,
+		MemberMode:      report.MemberMode,
+		IsJoiner:        report.IsJoiner,
+		PopulationValid: population.IsValid(),
 	})
 }
 
@@ -165,7 +156,7 @@ func (u *UpstreamController) CancelPulseChange() {
 	// TODO implement
 }
 
-func (u *UpstreamController) SetOnFinished(f OnConsensusFinished) {
+func (u *UpstreamController) SetOnFinished(f network.OnConsensusFinished) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 

@@ -53,6 +53,7 @@ package consensus
 import (
 	"sync"
 
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
@@ -73,7 +74,7 @@ type Controller interface {
 	PrepareLeave() <-chan struct{}
 	Leave(leaveReason uint32) <-chan struct{}
 
-	RegisterFinishedNotifier(fn adapters.OnConsensusFinished)
+	RegisterFinishedNotifier(fn network.OnConsensusFinished)
 }
 
 type controller struct {
@@ -82,7 +83,7 @@ type controller struct {
 	candidateController      candidateController
 
 	mu        *sync.RWMutex
-	notifiers []adapters.OnConsensusFinished
+	notifiers []network.OnConsensusFinished
 }
 
 func newController(
@@ -124,14 +125,14 @@ func (c *controller) Leave(leaveReason uint32) <-chan struct{} {
 	return c.controlFeederInterceptor.Leave(leaveReason)
 }
 
-func (c *controller) RegisterFinishedNotifier(fn adapters.OnConsensusFinished) {
+func (c *controller) RegisterFinishedNotifier(fn network.OnConsensusFinished) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	c.notifiers = append(c.notifiers, fn)
 }
 
-func (c *controller) onFinished(report adapters.Report) {
+func (c *controller) onFinished(report network.Report) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
