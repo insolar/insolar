@@ -102,6 +102,9 @@ type PrimingCensusTemplate struct {
 	CensusTemplate
 }
 
+func (c *PrimingCensusTemplate) onMadeActive() {
+}
+
 func (c *PrimingCensusTemplate) IsActive() bool {
 	return c.chronicles.GetActiveCensus() == c
 }
@@ -151,8 +154,7 @@ func (c *PrimingCensusTemplate) MakeExpected(pn pulse.Number, csh proofs.CloudSt
 		evicted:    c.evicted,
 	}
 
-	c.chronicles.makeExpected(r)
-	return r
+	return c.chronicles.makeExpected(r)
 }
 
 func (c *PrimingCensusTemplate) GetPulseNumber() pulse.Number {
@@ -235,8 +237,13 @@ var _ census.Active = &ActiveCensusTemplate{}
 
 type ActiveCensusTemplate struct {
 	CensusTemplate
-	gsh proofs.GlobulaStateHash
-	csh proofs.CloudStateHash
+	activeRef *ActiveCensusTemplate // hack for stringer
+	gsh       proofs.GlobulaStateHash
+	csh       proofs.CloudStateHash
+}
+
+func (c *ActiveCensusTemplate) onMadeActive() {
+	c.activeRef = c
 }
 
 func (c *ActiveCensusTemplate) IsActive() bool {
@@ -269,7 +276,7 @@ func (c *ActiveCensusTemplate) GetCloudStateHash() proofs.CloudStateHash {
 
 func (c ActiveCensusTemplate) String() string {
 	mode := "active"
-	if !c.IsActive() {
+	if c.activeRef != c.chronicles.GetActiveCensus() {
 		mode = "ex-active"
 	}
 	return fmt.Sprintf("%s %s gsh:%v csh:%v", mode, c.CensusTemplate.String(), c.gsh, c.csh)
@@ -285,6 +292,21 @@ type ExpectedCensusTemplate struct {
 	gsh        proofs.GlobulaStateHash
 	csh        proofs.CloudStateHash
 	pn         pulse.Number
+}
+
+func (c *ExpectedCensusTemplate) ConvertEphemeral(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) census.Expected {
+	pd := c.prev.GetPulseData()
+	if !pd.IsEmpty() && !pd.IsFromEphemeral() {
+		panic("illegal state")
+	}
+	if csh == nil || gsh == nil || !pn.IsUnknownOrTimePulse() {
+		panic("illegal value")
+	}
+	cp := *c
+	cp.pn = pn
+	cp.csh = csh
+	cp.gsh = gsh
+	return cp.chronicles.makeExpected(&cp)
 }
 
 func (c *ExpectedCensusTemplate) GetNearestPulseData() (bool, pulse.Data) {

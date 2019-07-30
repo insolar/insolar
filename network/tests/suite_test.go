@@ -56,8 +56,6 @@ import (
 	"context"
 	"crypto"
 	"fmt"
-	"github.com/insolar/insolar/network/consensus"
-	"github.com/stretchr/testify/require"
 	"strconv"
 	"strings"
 	"sync"
@@ -65,7 +63,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus"
+	"github.com/insolar/insolar/network/consensus/adapters"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/network/rules"
 
@@ -282,8 +282,8 @@ func (s *testSuite) StartNodesNetwork(nodes []*networkNode) {
 	results := make(chan error, len(nodes))
 	startNode := func(node *networkNode) {
 		err := node.componentManager.Start(node.ctx)
-		node.serviceNetwork.RegisterConsensusFinishedNotifier(func(_ member.OpMode, _ member.Power, number insolar.PulseNumber) {
-			node.consensusResult <- number
+		node.serviceNetwork.RegisterConsensusFinishedNotifier(func(report adapters.Report) {
+			node.consensusResult <- report.PulseNumber
 		})
 		results <- err
 	}

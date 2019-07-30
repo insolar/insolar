@@ -189,8 +189,7 @@ func (c *LocalCensusBuilder) makeExpected(pop copyToOnlinePopulation, evicts cen
 		evicted:    evicts,
 	}
 
-	c.chronicles.makeExpected(r)
-	return r
+	return c.chronicles.makeExpected(r)
 }
 
 var _ census.PopulationBuilder = &DynamicPopulationBuilder{}

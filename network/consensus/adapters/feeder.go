@@ -65,6 +65,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/network/utils"
 )
 
 const defaultEphemeralPulseDuration = 2 * time.Second
@@ -73,13 +74,8 @@ type EphemeralController interface {
 	EphemeralMode() bool
 }
 
-type (
-	OnFinished func(mode member.OpMode, pw member.Power, effectiveSince pulse.Number)
-)
-
 type ConsensusControlFeeder struct {
 	mu            *sync.RWMutex
-	onFinished    OnFinished
 	capacityLevel capacity.Level
 	leave         bool
 	leaveReason   uint32
@@ -89,7 +85,6 @@ func NewConsensusControlFeeder() *ConsensusControlFeeder {
 	return &ConsensusControlFeeder{
 		mu:            &sync.RWMutex{},
 		capacityLevel: capacity.LevelNormal,
-		onFinished:    func(mode member.OpMode, pw member.Power, effectiveSince pulse.Number) {},
 	}
 }
 
@@ -122,18 +117,7 @@ func (cf *ConsensusControlFeeder) GetRequiredPowerLevel() power.Request {
 	return power.NewRequestByLevel(capacity.LevelNormal)
 }
 
-func (cf *ConsensusControlFeeder) SetOnFinished(f OnFinished) {
-	cf.mu.Lock()
-	defer cf.mu.Unlock()
-
-	cf.onFinished = f
-}
-
 func (cf *ConsensusControlFeeder) OnAppliedMembershipProfile(mode member.OpMode, pw member.Power, effectiveSince pulse.Number) {
-	cf.mu.RLock()
-	defer cf.mu.RUnlock()
-
-	cf.onFinished(mode, pw, effectiveSince)
 }
 
 func (cf *ConsensusControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse.Number) {
@@ -282,33 +266,65 @@ func (cf *InternalControlFeederAdapter) setHasLeft() {
 	cf.hasLeft = true
 }
 
-type EphemeralControlFeeder struct {
-	ephemeralController EphemeralController
-	pulseDuration       time.Duration
-}
-
-func NewEphemeralControlFeeder(ephemeralController EphemeralController) *EphemeralControlFeeder {
+func NewEphemeralControlFeeder(pulseChanger PulseChanger, ephemeralController EphemeralController) *EphemeralControlFeeder {
 	return &EphemeralControlFeeder{
+		pulseChanger:        pulseChanger,
 		ephemeralController: ephemeralController,
 		pulseDuration:       defaultEphemeralPulseDuration,
 	}
 }
 
+type EphemeralControlFeeder struct {
+	pulseChanger        PulseChanger
+	ephemeralController EphemeralController
+	pulseDuration       time.Duration
+}
+
+func (f *EphemeralControlFeeder) GetMinDuration() time.Duration {
+	return f.pulseDuration
+}
+
+func (f *EphemeralControlFeeder) OnNonEphemeralPacket(ctx context.Context, parser transport.PacketParser, inbound endpoints.Inbound) error {
+	_, logger := inslogger.WithFields(ctx, map[string]interface{}{
+		"sender_address": inbound.GetNameAddress().String(),
+		"sender_id":      parser.GetSourceID(),
+		"packet_type":    parser.GetPacketType().String(),
+		"packet_pulse":   parser.GetPulseNumber(),
+	})
+
+	logger.Info("Incompatible consensus packet")
+	return nil
+}
+
+func (f *EphemeralControlFeeder) TryConvertFromEphemeral(expected census.Expected) (wasConverted bool, converted census.Expected) {
+	if f.ephemeralController.EphemeralMode() || expected == nil || !expected.GetOnlinePopulation().IsValid() {
+		return false, nil
+	}
+
+	// TODO provide a real pulse to attach to it
+	expectedRealPulse := pulse.Unknown
+	return true, expected.ConvertEphemeral(expectedRealPulse, expected.GetCloudStateHash(), expected.GetGlobulaStateHash())
+}
+
+func (f *EphemeralControlFeeder) EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time, expected census.Operational) {
+	pulseNumber := expected.GetPulseNumber()
+	_, pulseData := expected.GetNearestPulseData()
+	ctx := utils.NewPulseContext(context.Background(), uint32(pulseNumber))
+
+	f.pulseChanger.ChangePulse(ctx, NewPulse(pulseData))
+}
+
 func (f *EphemeralControlFeeder) GetEphemeralTimings(config api.LocalNodeConfiguration) api.RoundTimings {
-	delta := uint16(f.pulseDuration / time.Second)
-	if delta == 0 {
+	delta := f.pulseDuration / time.Second
+	if delta < 2 {
 		delta = 2
 	}
 
-	return config.GetConsensusTimings(delta)
-}
-
-func (f *EphemeralControlFeeder) CanBeEphemeral() (beEphemeral bool, minDuration time.Duration) {
-	return f.ephemeralController.EphemeralMode(), 0
+	return config.GetConsensusTimings(uint16(delta))
 }
 
 func (f *EphemeralControlFeeder) IsActive() bool {
-	return f.ephemeralController.EphemeralMode()
+	return true
 }
 
 func (f *EphemeralControlFeeder) CreateEphemeralPulsePacket(census census.Operational) proofs.OriginalPulsarPacket {
@@ -322,15 +338,6 @@ func (f *EphemeralControlFeeder) CreateEphemeralPulsePacket(census census.Operat
 	return NewPulsePacketParser(pd, data)
 }
 
-func (f *EphemeralControlFeeder) OnEphemeralIncompatiblePacket(ctx context.Context, parser transport.PacketParser, inbound endpoints.Inbound) error {
-	inslogger.FromContext(ctx).Warn("Got incompatible consensus packet")
-	return nil
-}
-
 func (f *EphemeralControlFeeder) CanStopOnHastyPulse(pn pulse.Number, expectedEndOfConsensus time.Time) bool {
 	return false
-}
-
-func (f *EphemeralControlFeeder) ConsensusFinished(report api.UpstreamReport, startedAt time.Time, expectedCensus census.Operational) {
-
 }

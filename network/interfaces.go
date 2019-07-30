@@ -56,6 +56,7 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
@@ -201,7 +202,7 @@ type Gateway interface {
 	GetState() insolar.NetworkState
 	OnPulseFromPulsar(context.Context, insolar.Pulse, ReceivedPacket)
 	OnPulseFromConsensus(context.Context, insolar.Pulse)
-	OnConsensusFinished(p insolar.PulseNumber)
+	OnConsensusFinished(report adapters.Report)
 	UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte)
 	NewGateway(context.Context, insolar.NetworkState) Gateway
 	Auther() Auther

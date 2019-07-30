@@ -52,9 +52,10 @@ package api
 
 import (
 	"context"
-	"time"
-
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
+	"time"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 
@@ -63,8 +64,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
@@ -110,15 +109,17 @@ type PulseControlFeeder interface {
 
 type EphemeralControlFeeder interface {
 	GetEphemeralTimings(LocalNodeConfiguration) RoundTimings
-	CanBeEphemeral() (beEphemeral bool, minDuration time.Duration) // TODO expected non-ephemeral pulse number
+	GetMinDuration() time.Duration
 
+	/* if true, then a new round can be triggered by a joiner candidate */
 	IsActive() bool
 	CreateEphemeralPulsePacket(census census.Operational) proofs.OriginalPulsarPacket
 
-	OnEphemeralIncompatiblePacket(ctx context.Context, parser transport.PacketParser, inbound endpoints.Inbound) error
-
+	OnNonEphemeralPacket(ctx context.Context, parser transport.PacketParser, inbound endpoints.Inbound) error
 	CanStopOnHastyPulse(pn pulse.Number, expectedEndOfConsensus time.Time) bool
-	ConsensusFinished(report UpstreamReport, startedAt time.Time, expectedCensus census.Operational)
+
+	TryConvertFromEphemeral(expected census.Expected) (wasConverted bool, converted census.Expected)
+	EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time, expected census.Operational)
 }
 
 type ConsensusControlFeeder interface {

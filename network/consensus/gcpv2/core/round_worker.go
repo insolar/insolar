@@ -337,10 +337,6 @@ func (p *RoundStateMachineWorker) GetState() RoundState {
 	return RoundState(atomic.LoadUint32(&p.roundState))
 }
 
-//func (p *RoundStateMachineWorker) forceState(newState RoundState) {
-//	p.applyState(newState)
-//}
-
 func (p *RoundStateMachineWorker) applyState(newState RoundState) {
 	for {
 		attention := false

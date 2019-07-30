@@ -77,6 +77,7 @@ type localActiveCensus interface {
 	census.Active
 	getVersionedRegistries() census.VersionedRegistries
 	setVersionedRegistries(vr census.VersionedRegistries)
+	onMadeActive()
 }
 
 type localChronicles struct {
@@ -157,9 +158,10 @@ func (c *localChronicles) makeActive(ce census.Expected, ca localActiveCensus) {
 
 	c.active = ca
 	c.expected = nil
+	ca.onMadeActive()
 }
 
-func (c *localChronicles) makeExpected(ce census.Expected) {
+func (c *localChronicles) makeExpected(ce census.Expected) census.Expected {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 
@@ -172,6 +174,7 @@ func (c *localChronicles) makeExpected(ce census.Expected) {
 	}
 
 	c.expected = ce
+	return ce
 }
 
 func (c *localChronicles) GetProfileFactory(factory cryptkit.KeyStoreFactory) profiles.Factory {
