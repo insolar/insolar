@@ -86,6 +86,53 @@ func TestNewManyNodePopulation(t *testing.T) {
 	require.NotNil(t, mnp.local)
 }
 
+func TestMNPString(t *testing.T) {
+	mnp := ManyNodePopulation{}
+	require.NotEmpty(t, mnp.String())
+
+	mnp.isInvalid = true
+	require.NotEmpty(t, mnp.String())
+
+	us := updatableSlot{}
+	mnp.local = &us
+	sp := profiles.NewStaticProfileMock(t)
+	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 1 })
+	us.StaticProfile = sp
+	require.NotEmpty(t, mnp.String())
+
+	mnp.suspendedCount = 1
+	require.NotEmpty(t, mnp.String())
+
+	mnp.mistrustedCount = 1
+	require.NotEmpty(t, mnp.String())
+
+	mnp.slots = make([]updatableSlot, 2)
+	require.NotEmpty(t, mnp.String())
+
+	mnp.slots[1].index = member.JoinerIndex
+	mnp.slots[1].StaticProfile = sp
+	require.NotEmpty(t, mnp.String())
+
+	mnp.slots[1].index = 2
+	mnp.slots[1].mode = member.ModeEvictedGracefully
+	require.NotEmpty(t, mnp.String())
+
+	mnp.slots[1].mode = member.ModeEvictedAsFraud
+	require.NotEmpty(t, mnp.String())
+
+	mnp.slots[1].mode = member.ModeFlagValidationWarning
+	require.NotEmpty(t, mnp.String())
+
+	mnp.slots[1].mode = member.ModeFlagSuspendedOps
+	require.NotEmpty(t, mnp.String())
+
+	mnp.slots[1].mode = member.ModeNormal
+	require.NotEmpty(t, mnp.String())
+
+	mnp.slots = make([]updatableSlot, 51)
+	require.NotEmpty(t, mnp.String())
+}
+
 func TestMNPGetSuspendedCount(t *testing.T) {
 	suspendedCount := uint16(1)
 	mnp := ManyNodePopulation{suspendedCount: suspendedCount}
@@ -496,7 +543,7 @@ func TestMakeCopyOf(t *testing.T) {
 	require.Equal(t, us, dp.slotByID[nodeID])
 }
 
-func TestFindProfile(t *testing.T) {
+func TestDPFindProfile(t *testing.T) {
 	dp := DynamicPopulation{}
 	dp.slotByID = make(map[insolar.ShortNodeID]*updatableSlot, 1)
 	nodeID := insolar.ShortNodeID(1)
@@ -660,8 +707,8 @@ func TestRemoveOthers(t *testing.T) {
 	sp2.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return nodeID2 })
 	dp.AddProfile(sp2)
 	dp.local = dp.slotByID[2]
-
 	require.Len(t, dp.slotByID, 2)
+
 	dp.RemoveOthers()
 	require.Len(t, dp.slotByID, 1)
 
@@ -706,4 +753,290 @@ func TestSwap(t *testing.T) {
 	require.Equal(t, ind2, ss.values[0].index)
 
 	require.Equal(t, ind1, ss.values[1].index)
+}
+
+func TestPrepare(t *testing.T) {
+	rr := roleRecord{}
+	require.Panics(t, func() { rr.prepare() })
+
+	rr.container = &ManyNodePopulation{}
+	rr.powerPositions = make([]unitizedPowerPosition, 1)
+	require.Panics(t, func() { rr.prepare() })
+
+	rr.powerPositions = nil
+	rr.rolePower = 0
+	rr.prepare()
+	require.Len(t, rr.powerPositions, 0)
+
+	rr.rolePower = 1
+	rr.container.slots = make([]updatableSlot, 3)
+	us1 := updatableSlot{}
+	us1.power = 1
+	us2 := updatableSlot{}
+	us2.power = 2
+	us3 := updatableSlot{}
+	us3.power = 3
+	rr.container.slots[0] = us1
+	rr.container.slots[1] = us2
+	rr.container.slots[2] = us3
+	rr.firstNode = 1
+	rr.roleCount = 2
+	require.Panics(t, func() { rr.prepare() })
+
+	rr = roleRecord{}
+	rr.container = &ManyNodePopulation{}
+	rr.rolePower = 1
+	rr.container.slots = make([]updatableSlot, 3)
+	rr.container.slots[0] = us3
+	rr.container.slots[1] = us2
+	rr.container.slots[2] = us1
+	rr.firstNode = 1
+	rr.roleCount = 2
+	require.Panics(t, func() { rr.prepare() })
+
+	rr = roleRecord{}
+	rr.container = &ManyNodePopulation{}
+	rr.rolePower = 79
+	size := uint16(24)
+	rr.container.slots = make([]updatableSlot, size)
+	us1 = updatableSlot{}
+	us1.power = 11
+	rr.container.slots[0] = us1
+	us2 = updatableSlot{}
+	us2.power = 10
+	rr.container.slots[1] = us2
+	us3 = updatableSlot{}
+	us3.power = 9
+	rr.container.slots[2] = us3
+	us4 := updatableSlot{}
+	us4.power = 8
+	rr.container.slots[3] = us4
+	us5 := updatableSlot{}
+	us5.power = 7
+	rr.container.slots[4] = us5
+	us6 := updatableSlot{}
+	us6.power = 6
+	rr.container.slots[5] = us6
+	us7 := updatableSlot{}
+	us7.power = 5
+	rr.container.slots[6] = us7
+	us8 := updatableSlot{}
+	us8.power = 4
+	rr.container.slots[7] = us8
+	us9 := updatableSlot{}
+	us9.power = 3
+	rr.container.slots[8] = us9
+	us10 := updatableSlot{}
+	us10.power = 2
+	rr.container.slots[9] = us10
+	us11 := updatableSlot{}
+	us11.power = 1
+	for i := 10; i < 24; i++ {
+		rr.container.slots[i] = us11
+	}
+	rr.firstNode = 0
+	rr.roleCount = size
+	rr.prepare()
+	require.Len(t, rr.powerPositions, 11)
+}
+
+func TestIsValid(t *testing.T) {
+	rr := roleRecord{}
+	require.False(t, rr.IsValid())
+
+	rr.container = &ManyNodePopulation{}
+	require.True(t, rr.IsValid())
+
+	rr.container.isInvalid = true
+	require.False(t, rr.IsValid())
+}
+
+func TestGetPrimaryRole(t *testing.T) {
+	rr := roleRecord{}
+	role := member.PrimaryRoleNeutral
+	rr.role = role
+	require.Equal(t, role, rr.GetPrimaryRole())
+}
+
+func TestGetWorkingPower(t *testing.T) {
+	rr := roleRecord{}
+	power := uint32(1)
+	rr.rolePower = power
+	require.Equal(t, power, rr.GetWorkingPower())
+}
+
+func TestGetWorkingCount(t *testing.T) {
+	rr := roleRecord{}
+	roleCount := uint16(1)
+	rr.roleCount = roleCount
+	require.Equal(t, int(roleCount), rr.GetWorkingCount())
+}
+
+func TestGetIdleCount(t *testing.T) {
+	rr := roleRecord{}
+	idleCount := uint16(1)
+	rr.idleCount = idleCount
+	require.Equal(t, int(idleCount), rr.GetIdleCount())
+}
+
+func TestRRGetProfiles(t *testing.T) {
+	rr := roleRecord{}
+	require.Panics(t, func() { rr.GetProfiles() })
+
+	rr.container = &ManyNodePopulation{}
+	require.Nil(t, rr.GetProfiles())
+
+	rr.container.isInvalid = true
+	require.Panics(t, func() { rr.GetProfiles() })
+
+	rr.container.isInvalid = false
+	rr.roleCount = 2
+	rr.container.slots = make([]updatableSlot, rr.roleCount)
+	rr.container.slots[0] = updatableSlot{}
+	rr.container.slots[1] = updatableSlot{}
+	require.Len(t, rr.GetProfiles(), 2)
+}
+
+func TestGetAssignmentByPower(t *testing.T) {
+	rr := roleRecord{}
+	metric := uint64(1)
+	excludeID := insolar.ShortNodeID(1)
+	assigned, excluded := rr.GetAssignmentByPower(metric, excludeID)
+	require.Nil(t, assigned)
+
+	require.Nil(t, excluded)
+
+	rr.roleCount = 1
+	assigned, excluded = rr.GetAssignmentByPower(metric, excludeID)
+	require.Nil(t, assigned)
+
+	require.Nil(t, excluded)
+
+	rr.rolePower = 1
+	assigned, excluded = rr.GetAssignmentByPower(metric, excludeID)
+	require.Nil(t, assigned)
+
+	require.Nil(t, excluded)
+
+	rr.container = &ManyNodePopulation{}
+	rr.container.slots = make([]updatableSlot, rr.roleCount)
+	us := updatableSlot{}
+	sp := profiles.NewStaticProfileMock(t)
+	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
+	us.StaticProfile = sp
+	rr.container.slots[0] = us
+
+	assigned, excluded = rr.GetAssignmentByPower(metric, excludeID)
+	require.NotNil(t, assigned)
+
+	require.Nil(t, excluded)
+
+	excludeID = 0
+	assigned, excluded = rr.GetAssignmentByPower(metric, excludeID)
+	require.NotNil(t, assigned)
+
+	require.NotNil(t, excluded)
+
+	rr.container.slots = append(rr.container.slots, updatableSlot{})
+	rr.roleCount = 2
+	rr.powerPositions = make([]unitizedPowerPosition, 3)
+	rr.powerPositions[0] = unitizedPowerPosition{powerUnit: 1}
+	rr.powerPositions[1] = unitizedPowerPosition{powerUnit: 2}
+	require.Panics(t, func() { rr.GetAssignmentByPower(metric, excludeID) })
+
+	excludeID = 1
+	assigned, excluded = rr.GetAssignmentByPower(metric, excludeID)
+	require.NotNil(t, assigned)
+
+	require.Nil(t, excluded)
+
+	metric = 9
+	rr.rolePower = 3
+	excludeID = 0
+	rr.powerPositions[2] = unitizedPowerPosition{powerUnit: 2, powerStartsAt: 1, indexStartsAt: 1, unitCount: 1}
+	sp2 := profiles.NewStaticProfileMock(t)
+	sp2.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 1 })
+	rr.container.slots[1].StaticProfile = sp2
+	assigned, excluded = rr.GetAssignmentByPower(metric, excludeID)
+	require.NotNil(t, assigned)
+
+	require.NotNil(t, excluded)
+}
+
+func TestGetAssignmentByCount(t *testing.T) {
+	rr := roleRecord{}
+	metric := uint64(1)
+	excludeID := insolar.ShortNodeID(1)
+	assigned, excluded := rr.GetAssignmentByCount(metric, excludeID)
+	require.Nil(t, assigned)
+
+	require.Nil(t, excluded)
+
+	rr.roleCount = 1
+	assigned, excluded = rr.GetAssignmentByCount(metric, excludeID)
+	require.Nil(t, assigned)
+
+	require.Nil(t, excluded)
+
+	rr.container = &ManyNodePopulation{}
+	rr.container.slots = make([]updatableSlot, rr.roleCount)
+	us := updatableSlot{}
+	sp := profiles.NewStaticProfileMock(t)
+	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
+	us.StaticProfile = sp
+	rr.container.slots[0] = us
+
+	assigned, excluded = rr.GetAssignmentByCount(metric, excludeID)
+	require.NotNil(t, assigned)
+
+	require.Nil(t, excluded)
+
+	excludeID = 0
+	assigned, excluded = rr.GetAssignmentByCount(metric, excludeID)
+	require.NotNil(t, assigned)
+
+	require.NotNil(t, excluded)
+
+	rr.container.slots = append(rr.container.slots, updatableSlot{})
+	sp2 := profiles.NewStaticProfileMock(t)
+	sp2.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 1 })
+	rr.container.slots[1].StaticProfile = sp2
+	rr.roleCount = 2
+	rr.powerPositions = make([]unitizedPowerPosition, 3)
+	rr.powerPositions[0] = unitizedPowerPosition{powerUnit: 1}
+	rr.powerPositions[1] = unitizedPowerPosition{powerUnit: 2}
+	assigned, excluded = rr.GetAssignmentByCount(metric, excludeID)
+	require.NotNil(t, assigned)
+
+	require.Nil(t, excluded)
+
+	excludeID = 1
+	assigned, excluded = rr.GetAssignmentByCount(metric, excludeID)
+	require.NotNil(t, assigned)
+
+	require.NotNil(t, excluded)
+
+	metric = 9
+	rr.powerPositions[2] = unitizedPowerPosition{}
+	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 1 })
+	require.Panics(t, func() { rr.GetAssignmentByCount(metric, excludeID) })
+}
+
+func TestGetByIndex(t *testing.T) {
+	rr := roleRecord{}
+	rr.container = &ManyNodePopulation{}
+	rr.container.slots = make([]updatableSlot, 2)
+	require.NotNil(t, rr.getByIndex(1))
+}
+
+func TestGetIndexByPower(t *testing.T) {
+	rr := roleRecord{}
+	rr.powerPositions = make([]unitizedPowerPosition, 3)
+	rr.powerPositions[0] = unitizedPowerPosition{powerUnit: 1, powerStartsAt: 1}
+	rr.powerPositions[1] = unitizedPowerPosition{powerUnit: 2, powerStartsAt: 2}
+	require.Equal(t, uint16(0), rr.getIndexByPower(1))
+
+	rr.powerPositions[0].unitCount = 1
+	rr.powerPositions[0].indexStartsAt = 2
+	require.Equal(t, uint16(2), rr.getIndexByPower(1))
 }

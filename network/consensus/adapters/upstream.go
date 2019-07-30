@@ -123,7 +123,7 @@ func (u *UpstreamPulseController) CommitPulseChange(report api.UpstreamReport, p
 }
 
 func (u *UpstreamPulseController) CancelPulseChange() {
-	//	panic("implement me")
+	// TODO implement
 }
 
 func awaitState(c chan<- api.UpstreamState, stater StateGetter) {

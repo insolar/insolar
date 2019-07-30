@@ -155,7 +155,7 @@ func TestCompactGlobulaNodeState_DeserializeFrom(t *testing.T) {
 	_, _ = rand.Read(b)
 
 	copy(s1.NodeStateHash[:], b)
-	copy(s1.GlobulaNodeStateSignature[:], b)
+	copy(s1.NodeStateHashSignature[:], b)
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
 	err := s1.SerializeTo(nil, buf)
