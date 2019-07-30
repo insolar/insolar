@@ -4,6 +4,7 @@ package packet;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "github.com/insolar/insolar/insolar/pulse/pulse.proto";
+import "github.com/insolar/insolar/network/consensus/adapters/candidate/profile.proto";
 
 option (gogoproto.goproto_getters_all) = false;
 option (gogoproto.populate_all) = false;
@@ -87,32 +88,8 @@ message ReconnectRequest {
     Permit Permit = 2;
 }
 
-enum PrimaryRole {
-	Inactive = 0;
-    Neutral = 1;
-    HeavyMaterial = 2;
-    LightMaterial = 3;
-    Virtual = 4;
-}
-
-enum SpecialRole {
-    None = 0;
-    Discovery = 1;
-}
-
-message CandidateProfile {
-    string Address = 1;
-    bytes Ref = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    uint32 ShortID = 3;
-    PrimaryRole PrimaryRole = 4;
-    SpecialRole SpecialRole = 5;
-    bytes Digest = 6;
-    bytes Signature = 7;
-    bytes PublicKey = 8;
-}
-
 message BootstrapRequest {
-    CandidateProfile CandidateProfile = 2 [(gogoproto.nullable) = false];
+    candidate.Profile CandidateProfile = 2 [(gogoproto.nullable) = false];
     pulse.PulseProto Pulse = 3 [(gogoproto.nullable) = false];
     Permit Permit = 4;
 }

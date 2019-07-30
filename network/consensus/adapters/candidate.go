@@ -50,27 +50,70 @@
 
 package adapters
 
-//func TestNewNewCandidateProfileFromJoinClaim(t *testing.T) {
-//	kp := platformpolicy.NewKeyProcessor()
-//	privKey, err := kp.GeneratePrivateKey()
-//	assert.NoError(t, err)
-//
-//	ref := testutils.RandomRef()
-//	n := node.NewNode(ref, insolar.StaticRoleVirtual, kp.ExtractPublicKey(privKey), "127.0.0.1:8080", "")
-//
-//	joinClaim, err := packets.NodeToClaim(n)
-//	assert.NoError(t, err)
-//
-//	var p profiles.CandidateProfile
-//	p = NewCandidateProfileFromJoinClaim(joinClaim, false)
-//	assert.NotNil(t, p)
-//
-//	assert.Equal(t, "127.0.0.1:8080", p.GetDefaultEndpoint().AsByteString())
-//	assert.Equal(t, ref, p.GetReference())
-//	assert.Equal(t, n.ShortID(), p.GetStaticNodeID())
-//
-//	assert.Equal(t, member.PrimaryRoleVirtual, p.GetPrimaryRole())
-//	assert.Equal(t, member.SpecialRoleNone, p.GetSpecialRoles())
-//
-//	//assert.NotNil(t, p.GetJoinerSignature())
-//}
+import (
+	"crypto/ecdsa"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/adapters/candidate"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/common/longbits"
+)
+
+type CandidateProfile candidate.Profile
+
+//noinspection GoReceiverNames
+func (cp CandidateProfile) StaticProfile(keyProcessor insolar.KeyProcessor) *StaticProfile {
+	publicKey, err := keyProcessor.ImportPublicKeyBinary(cp.PublicKey)
+	if err != nil {
+		panic("Failed to import public key")
+	}
+
+	signHolder := cryptkit.NewSignature(
+		longbits.NewBits512FromBytes(cp.Signature),
+		SHA3512Digest.SignedBy(SECP256r1Sign),
+	).AsSignatureHolder()
+
+	extension := newStaticProfileExtension(
+		cp.ShortID,
+		cp.Ref,
+		signHolder,
+	)
+
+	return newStaticProfile(
+		cp.ShortID,
+		cp.PrimaryRole,
+		cp.SpecialRole,
+		extension,
+		NewOutbound(cp.Address),
+		NewECDSAPublicKeyStore(publicKey.(*ecdsa.PublicKey)),
+		NewECDSASignatureKeyHolder(publicKey.(*ecdsa.PublicKey), keyProcessor),
+		cryptkit.NewSignedDigest(
+			cryptkit.NewDigest(longbits.NewBits512FromBytes(cp.Digest), SHA3512Digest),
+			cryptkit.NewSignature(longbits.NewBits512FromBytes(cp.Signature), SHA3512Digest.SignedBy(SECP256r1Sign)),
+		).AsSignedDigestHolder(),
+	)
+}
+
+func (cp CandidateProfile) Profile() candidate.Profile {
+	return candidate.Profile(cp)
+}
+
+func NewCandidateProfile(staticProfile *StaticProfile, keyProcessor insolar.KeyProcessor) *CandidateProfile {
+	pubKey, err := keyProcessor.ExportPublicKeyBinary(staticProfile.store.(*ECDSAPublicKeyStore).publicKey)
+	if err != nil {
+		panic("failed to export public key")
+	}
+
+	signedDigest := staticProfile.GetBriefIntroSignedDigest()
+
+	return &CandidateProfile{
+		Address:     staticProfile.GetDefaultEndpoint().GetIPAddress().String(),
+		Ref:         staticProfile.GetExtension().GetReference(),
+		ShortID:     staticProfile.GetStaticNodeID(),
+		PrimaryRole: staticProfile.GetPrimaryRole(),
+		SpecialRole: staticProfile.GetSpecialRoles(),
+		Digest:      signedDigest.GetDigestHolder().AsBytes(),
+		Signature:   signedDigest.GetSignatureHolder().AsBytes(),
+		PublicKey:   pubKey,
+	}
+}
