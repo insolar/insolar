@@ -53,12 +53,13 @@ package core
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
-	"sync"
-	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -292,7 +293,7 @@ func (r *coreRealm) VerifyPacketPulseNumber(ctx context.Context, packet transpor
 	filterPN, nextPN pulse.Number) (bool, error) {
 
 	if r.ephemeralFeeder != nil && !packet.GetPacketType().IsEphemeralPacket() {
-		return false, r.ephemeralFeeder.OnEphemeralIncompatiblePacket(packet, from)
+		return false, r.ephemeralFeeder.OnEphemeralIncompatiblePacket(ctx, packet, from)
 	}
 
 	pn := packet.GetPulseNumber()

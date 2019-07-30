@@ -209,19 +209,23 @@ func newInstaller(constructor *constructor, dep *Dep) Installer {
 
 func (c Installer) ControllerFor(mode Mode, setters ...packetProcessorSetter) Controller {
 	controlFeederInterceptor := adapters.InterceptConsensusControl(
-		adapters.NewConsensusControlFeeder(c.dep.EphemeralController),
+		adapters.NewConsensusControlFeeder(),
 	)
 	candidateFeeder := &coreapi.SequentialCandidateFeeder{}
+	ephemeralFeeder := adapters.NewEphemeralControlFeeder(c.dep.EphemeralController)
 
 	consensusChronicles := c.createConsensusChronicles(mode)
 	consensusController := c.createConsensusController(
 		consensusChronicles,
 		controlFeederInterceptor.Feeder(),
 		candidateFeeder,
+		ephemeralFeeder,
 	)
 	packetParserFactory := c.createPacketParserFactory()
 
 	c.bind(setters, consensusController, packetParserFactory)
+
+	consensusController.Prepare()
 
 	return newController(controlFeederInterceptor, candidateFeeder, consensusController)
 }
@@ -260,6 +264,7 @@ func (c *Installer) createConsensusController(
 	consensusChronicles censusimpl.LocalConsensusChronicles,
 	controlFeeder api.ConsensusControlFeeder,
 	candidateFeeder api.CandidateControlFeeder,
+	ephemeralFeeder api.EphemeralControlFeeder,
 ) api.ConsensusController {
 	return gcpv2.NewConsensusMemberController(
 		consensusChronicles,
@@ -271,7 +276,7 @@ func (c *Installer) createConsensusController(
 		),
 		candidateFeeder,
 		controlFeeder,
-		nil, // TODO ephemeralFeeder
+		ephemeralFeeder,
 	)
 }
 

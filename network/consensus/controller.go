@@ -74,8 +74,6 @@ type Controller interface {
 
 	Abort()
 
-	Prepare()
-
 	ChangePower(level capacity.Level)
 	PrepareLeave() <-chan struct{}
 	Leave(leaveReason uint32) <-chan struct{}
@@ -117,10 +115,6 @@ func (c *controller) AddJoinCandidate(candidate profiles.CandidateProfile) {
 
 func (c *controller) Abort() {
 	c.consensusController.Abort()
-}
-
-func (c *controller) Prepare() {
-	c.consensusController.Prepare()
 }
 
 func (c *controller) ChangePower(level capacity.Level) {
