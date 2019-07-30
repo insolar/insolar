@@ -195,7 +195,7 @@ func Test_JetSplitsWhenOverflows(t *testing.T) {
 		// Save code.
 		for i := 0; i < recordsOnPulse; i++ {
 			{
-				p, _ := callSetCode(ctx, s)
+				p, _ := CallSetCode(ctx, s)
 				requireNotError(t, p)
 				jetID, _ := jetTree.Find(p.(*payload.ID).ID)
 				splittingJets[jetID]++

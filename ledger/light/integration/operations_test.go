@@ -27,7 +27,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 )
 
-func callSetCode(ctx context.Context, s *Server) (payload.Payload, record.Virtual) {
+func CallSetCode(ctx context.Context, s *Server) (payload.Payload, record.Virtual) {
 	code := make([]byte, 100)
 	_, err := rand.Read(code)
 	panicIfErr(err)
@@ -54,7 +54,7 @@ func callSetCode(ctx context.Context, s *Server) (payload.Payload, record.Virtua
 	return nil, rec
 }
 
-func callGetCode(ctx context.Context, s *Server, id insolar.ID) payload.Payload {
+func CallGetCode(ctx context.Context, s *Server, id insolar.ID) payload.Payload {
 	reps, done := s.Send(ctx, &payload.GetCode{
 		CodeID: id,
 	})
@@ -74,9 +74,7 @@ func callGetCode(ctx context.Context, s *Server, id insolar.ID) payload.Payload 
 	return nil
 }
 
-func callSetIncomingRequest(
-	ctx context.Context, s *Server, objectID, reasonID insolar.ID, isCreation, isAPI bool,
-) (payload.Payload, record.Virtual) {
+func MakeSetIncomingRequest(objectID, reasonID insolar.ID, isCreation, isAPI bool) (payload.Payload, record.Virtual) {
 	args := make([]byte, 100)
 	_, err := rand.Read(args)
 	panicIfErr(err)
@@ -96,9 +94,14 @@ func callSetIncomingRequest(
 		req.Caller = gen.Reference()
 	}
 	rec := record.Wrap(&req)
-	reps, done := s.Send(ctx, &payload.SetIncomingRequest{
+	pl := &payload.SetIncomingRequest{
 		Request: rec,
-	})
+	}
+	return pl, rec
+}
+
+func SendSetIncomingRequest(ctx context.Context, s *Server, pl payload.Payload) payload.Payload {
+	reps, done := s.Send(ctx, pl)
 	defer done()
 
 	rep := <-reps
@@ -106,17 +109,17 @@ func callSetIncomingRequest(
 	panicIfErr(err)
 	switch pl.(type) {
 	case *payload.Error:
-		return pl, rec
+		return pl
 	case *payload.RequestInfo:
-		return pl, rec
+		return pl
 	default:
 		panic(fmt.Sprintf("received unexpected reply %T", pl))
 	}
 
-	return nil, record.Virtual{}
+	return nil
 }
 
-func callSetOutgoingRequest(
+func CallSetOutgoingRequest(
 	ctx context.Context, s *Server, objectID, reasonID insolar.ID, detached bool,
 ) (payload.Payload, record.Virtual) {
 	args := make([]byte, 100)
@@ -153,7 +156,7 @@ func callSetOutgoingRequest(
 	return nil, record.Virtual{}
 }
 
-func callSetResult(
+func CallSetResult(
 	ctx context.Context, s *Server, objectID, requestID insolar.ID,
 ) (payload.Payload, record.Virtual) {
 	data := make([]byte, 100)

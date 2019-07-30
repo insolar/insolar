@@ -42,7 +42,8 @@ func Test_IncomingRequests(t *testing.T) {
 	s.Pulse(ctx)
 
 	t.Run("registered API request appears in pendings", func(t *testing.T) {
-		p, _ := callSetIncomingRequest(ctx, s, gen.ID(), gen.ID(), true, true)
+		p, _ := MakeSetIncomingRequest(gen.ID(), gen.ID(), true, true)
+		p = SendSetIncomingRequest(ctx, s, p)
 		requireNotError(t, p)
 		reqInfo := p.(*payload.RequestInfo)
 		p = callGetPendings(ctx, s, reqInfo.RequestID)
@@ -54,13 +55,15 @@ func Test_IncomingRequests(t *testing.T) {
 	})
 
 	t.Run("registered request appears in pendings", func(t *testing.T) {
-		firstObjP, _ := callSetIncomingRequest(ctx, s, gen.ID(), gen.ID(), true, true)
+		p, _ := MakeSetIncomingRequest(gen.ID(), gen.ID(), true, true)
+		firstObjP := SendSetIncomingRequest(ctx, s, p)
 		requireNotError(t, firstObjP)
 		reqInfo := firstObjP.(*payload.RequestInfo)
 		firstObjP, _ = callActivateObject(ctx, s, reqInfo.RequestID)
 		requireNotError(t, firstObjP)
 
-		secondObjP, _ := callSetIncomingRequest(ctx, s, gen.ID(), reqInfo.RequestID, true, false)
+		p, _ = MakeSetIncomingRequest(gen.ID(), reqInfo.RequestID, true, false)
+		secondObjP := SendSetIncomingRequest(ctx, s, p)
 		requireNotError(t, secondObjP)
 		secondReqInfo := secondObjP.(*payload.RequestInfo)
 		secondPendings := callGetPendings(ctx, s, secondReqInfo.RequestID)
@@ -72,7 +75,8 @@ func Test_IncomingRequests(t *testing.T) {
 	})
 
 	t.Run("closed request does not appear in pendings", func(t *testing.T) {
-		p, _ := callSetIncomingRequest(ctx, s, gen.ID(), gen.ID(), true, true)
+		p, _ := MakeSetIncomingRequest(gen.ID(), gen.ID(), true, true)
+		p = SendSetIncomingRequest(ctx, s, p)
 		requireNotError(t, p)
 		reqInfo := p.(*payload.RequestInfo)
 
@@ -106,19 +110,21 @@ func Test_OutgoingRequests(t *testing.T) {
 	s.Pulse(ctx)
 
 	t.Run("detached notification sent on detached reason close", func(t *testing.T) {
-		p, _ := callSetIncomingRequest(ctx, s, gen.ID(), gen.ID(), true, true)
+		p, _ := MakeSetIncomingRequest(gen.ID(), gen.ID(), true, true)
+		p = SendSetIncomingRequest(ctx, s, p)
 		requireNotError(t, p)
 		objectID := p.(*payload.RequestInfo).ObjectID
 
-		p, _ = callSetIncomingRequest(ctx, s, objectID, gen.ID(), false, true)
+		p, _ = MakeSetIncomingRequest(objectID, gen.ID(), false, true)
+		p = SendSetIncomingRequest(ctx, s, p)
 		requireNotError(t, p)
 		reasonID := p.(*payload.RequestInfo).RequestID
 
-		p, detachedRec := callSetOutgoingRequest(ctx, s, objectID, reasonID, true)
+		p, detachedRec := CallSetOutgoingRequest(ctx, s, objectID, reasonID, true)
 		requireNotError(t, p)
 		detachedID := p.(*payload.RequestInfo).RequestID
 
-		p, _ = callSetResult(ctx, s, objectID, reasonID)
+		p, _ = CallSetResult(ctx, s, objectID, reasonID)
 		requireNotError(t, p)
 
 		notification := <-received
