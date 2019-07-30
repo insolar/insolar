@@ -214,25 +214,25 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 			},
 		})
 
-		coordinator.IsBeyondLimitFunc = func(_ context.Context, target insolar.PulseNumber) (bool, error) {
+		coordinator.IsBeyondLimitMock.Set(func(_ context.Context, target insolar.PulseNumber) (bool, error) {
 			require.Equal(t, missingRec.MetaID.Pulse(), target)
 			return false, nil
-		}
+		})
 
 		jetID := gen.JetID()
-		jetFetcher.FetchFunc = func(_ context.Context, targetID insolar.ID, pn insolar.PulseNumber) (*insolar.ID, error) {
+		jetFetcher.FetchMock.Set(func(_ context.Context, targetID insolar.ID, pn insolar.PulseNumber) (*insolar.ID, error) {
 			require.Equal(t, objectID, targetID)
 			require.Equal(t, missingRec.MetaID.Pulse(), pn)
 			id := insolar.ID(jetID)
 			return &id, nil
-		}
+		})
 
 		node := gen.Reference()
-		coordinator.NodeForJetFunc = func(_ context.Context, jet insolar.ID, target insolar.PulseNumber) (*insolar.Reference, error) {
+		coordinator.NodeForJetMock.Set(func(_ context.Context, jet insolar.ID, target insolar.PulseNumber) (*insolar.Reference, error) {
 			require.Equal(t, insolar.ID(jetID), jet)
 			require.Equal(t, missingRec.MetaID.Pulse(), target)
 			return &node, nil
-		}
+		})
 
 		coordinator.MeMock.Return(node)
 
@@ -241,7 +241,7 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 
 		coordinator.MeMock.Return(gen.Reference())
 
-		sender.SendTargetFunc = func(_ context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func()) {
+		sender.SendTargetMock.Set(func(_ context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func()) {
 			pl, err := payload.Unmarshal(msg.Payload)
 			require.NoError(t, err)
 
@@ -265,7 +265,7 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 			ch := make(chan *message.Message, 1)
 			ch <- respMsg
 			return ch, func() {}
-		}
+		})
 
 		recs, err = calculator.OpenedRequests(ctx, fromPulse, objectID, true)
 		require.NoError(t, err)
@@ -296,15 +296,15 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 			},
 		})
 
-		coordinator.IsBeyondLimitFunc = func(_ context.Context, target insolar.PulseNumber) (bool, error) {
+		coordinator.IsBeyondLimitMock.Set(func(_ context.Context, target insolar.PulseNumber) (bool, error) {
 			require.Equal(t, missingRec.MetaID.Pulse(), target)
 			return true, nil
-		}
+		})
 
 		node := gen.Reference()
-		coordinator.HeavyFunc = func(_ context.Context) (*insolar.Reference, error) {
+		coordinator.HeavyMock.Set(func(_ context.Context) (*insolar.Reference, error) {
 			return &node, nil
-		}
+		})
 		coordinator.MeMock.Return(node)
 
 		recs, err := calculator.OpenedRequests(ctx, fromPulse, objectID, true)
@@ -312,7 +312,7 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 
 		coordinator.MeMock.Return(gen.Reference())
 
-		sender.SendTargetFunc = func(_ context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func()) {
+		sender.SendTargetMock.Set(func(_ context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func()) {
 			pl, err := payload.Unmarshal(msg.Payload)
 			require.NoError(t, err)
 
@@ -336,7 +336,7 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 			ch := make(chan *message.Message, 1)
 			ch <- respMsg
 			return ch, func() {}
-		}
+		})
 
 		recs, err = calculator.OpenedRequests(ctx, fromPulse, objectID, true)
 		require.NoError(t, err)

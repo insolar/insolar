@@ -124,14 +124,14 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 
 	storage := pulsartestutils.NewPulsarStorageMock(t)
 	storage.GetLastPulseMock.Return(insolar.GenesisPulse, nil)
-	storage.SavePulseFunc = func(p *insolar.Pulse) (r error) { return nil }
-	storage.SetLastPulseFunc = func(p *insolar.Pulse) (r error) { return nil }
+	storage.SavePulseMock.Set(func(p *insolar.Pulse) (r error) { return nil })
+	storage.SetLastPulseMock.Set(func(p *insolar.Pulse) (r error) { return nil })
 	stateSwitcher := &StateSwitcherImpl{}
 
 	pulseDistributor := testutils.NewPulseDistributorMock(t)
-	pulseDistributor.DistributeFunc = func(p context.Context, p1 insolar.Pulse) {
+	pulseDistributor.DistributeMock.Set(func(p context.Context, p1 insolar.Pulse) {
 		require.Equal(t, insolar.FirstPulseNumber+1, int(p1.PulseNumber))
-	}
+	})
 
 	keyProcessor := platformpolicy.NewKeyProcessor()
 
@@ -168,7 +168,7 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 
 	// Assert
 	pulseDistributor.MinimockWait(1 * time.Minute)
-	require.Equal(t, 1, int(pulseDistributor.DistributeCounter))
+	require.Equal(t, 1, int(pulseDistributor.DistributeAfterCounter()))
 
 	defer newPulsar.StopServer(ctx)
 }
@@ -180,19 +180,19 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	// Arrange
 	storage := pulsartestutils.NewPulsarStorageMock(t)
 	storage.GetLastPulseMock.Return(insolar.GenesisPulse, nil)
-	storage.SavePulseFunc = func(p *insolar.Pulse) (r error) {
+	storage.SavePulseMock.Set(func(p *insolar.Pulse) (r error) {
 		require.Equal(t, insolar.FirstPulseNumber+1, int(p.PulseNumber))
 		return nil
-	}
-	storage.SetLastPulseFunc = func(p *insolar.Pulse) (r error) {
+	})
+	storage.SetLastPulseMock.Set(func(p *insolar.Pulse) (r error) {
 		require.Equal(t, insolar.FirstPulseNumber+1, int(p.PulseNumber))
 		return nil
-	}
+	})
 
 	pulseDistributor := testutils.NewPulseDistributorMock(t)
-	pulseDistributor.DistributeFunc = func(p context.Context, p1 insolar.Pulse) {
+	pulseDistributor.DistributeMock.Set(func(p context.Context, p1 insolar.Pulse) {
 		require.Equal(t, insolar.FirstPulseNumber+1, int(p1.PulseNumber))
-	}
+	})
 
 	keyProcessorFirst := platformpolicy.NewKeyProcessor()
 
@@ -285,7 +285,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 
 	// Assert
 	pulseDistributor.MinimockWait(100 * time.Millisecond)
-	require.Equal(t, uint64(1), pulseDistributor.DistributeCounter)
+	require.Equal(t, uint64(1), pulseDistributor.DistributeAfterCounter())
 
 	require.Equal(t, WaitingForStart, firstPulsar.StateSwitcher.GetState())
 	require.Equal(t, WaitingForStart, secondPulsar.StateSwitcher.GetState())
@@ -307,14 +307,14 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 
 	storage := pulsartestutils.NewPulsarStorageMock(t)
 	storage.GetLastPulseMock.Return(insolar.GenesisPulse, nil)
-	storage.SavePulseFunc = func(p *insolar.Pulse) (r error) {
+	storage.SavePulseMock.Set(func(p *insolar.Pulse) (r error) {
 		require.Equal(t, insolar.FirstPulseNumber+1, int(p.PulseNumber))
 		return nil
-	}
-	storage.SetLastPulseFunc = func(p *insolar.Pulse) (r error) {
+	})
+	storage.SetLastPulseMock.Set(func(p *insolar.Pulse) (r error) {
 		require.Equal(t, insolar.FirstPulseNumber+1, int(p.PulseNumber))
 		return nil
-	}
+	})
 
 	pulsars := [7]*Pulsar{}
 	mainAddresses := []string{
@@ -337,9 +337,9 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 	}
 
 	pulseDistributorMock := testutils.NewPulseDistributorMock(t)
-	pulseDistributorMock.DistributeFunc = func(p context.Context, p1 insolar.Pulse) {
+	pulseDistributorMock.DistributeMock.Set(func(p context.Context, p1 insolar.Pulse) {
 		require.Equal(t, insolar.FirstPulseNumber+1, int(p1.PulseNumber))
-	}
+	})
 
 	for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
 		conf := configuration.Configuration{
