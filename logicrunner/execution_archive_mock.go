@@ -18,8 +18,8 @@ import (
 type ExecutionArchiveMock struct {
 	t minimock.Tester
 
-	funcArchive          func(transcript *Transcript)
-	inspectFuncArchive   func(transcript *Transcript)
+	funcArchive          func(ctx context.Context, transcript *Transcript)
+	inspectFuncArchive   func(ctx context.Context, transcript *Transcript)
 	afterArchiveCounter  uint64
 	beforeArchiveCounter uint64
 	ArchiveMock          mExecutionArchiveMockArchive
@@ -101,11 +101,12 @@ type ExecutionArchiveMockArchiveExpectation struct {
 
 // ExecutionArchiveMockArchiveParams contains parameters of the ExecutionArchive.Archive
 type ExecutionArchiveMockArchiveParams struct {
+	ctx        context.Context
 	transcript *Transcript
 }
 
 // Expect sets up expected params for ExecutionArchive.Archive
-func (mmArchive *mExecutionArchiveMockArchive) Expect(transcript *Transcript) *mExecutionArchiveMockArchive {
+func (mmArchive *mExecutionArchiveMockArchive) Expect(ctx context.Context, transcript *Transcript) *mExecutionArchiveMockArchive {
 	if mmArchive.mock.funcArchive != nil {
 		mmArchive.mock.t.Fatalf("ExecutionArchiveMock.Archive mock is already set by Set")
 	}
@@ -114,7 +115,7 @@ func (mmArchive *mExecutionArchiveMockArchive) Expect(transcript *Transcript) *m
 		mmArchive.defaultExpectation = &ExecutionArchiveMockArchiveExpectation{}
 	}
 
-	mmArchive.defaultExpectation.params = &ExecutionArchiveMockArchiveParams{transcript}
+	mmArchive.defaultExpectation.params = &ExecutionArchiveMockArchiveParams{ctx, transcript}
 	for _, e := range mmArchive.expectations {
 		if minimock.Equal(e.params, mmArchive.defaultExpectation.params) {
 			mmArchive.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmArchive.defaultExpectation.params)
@@ -125,7 +126,7 @@ func (mmArchive *mExecutionArchiveMockArchive) Expect(transcript *Transcript) *m
 }
 
 // Inspect accepts an inspector function that has same arguments as the ExecutionArchive.Archive
-func (mmArchive *mExecutionArchiveMockArchive) Inspect(f func(transcript *Transcript)) *mExecutionArchiveMockArchive {
+func (mmArchive *mExecutionArchiveMockArchive) Inspect(f func(ctx context.Context, transcript *Transcript)) *mExecutionArchiveMockArchive {
 	if mmArchive.mock.inspectFuncArchive != nil {
 		mmArchive.mock.t.Fatalf("Inspect function is already set for ExecutionArchiveMock.Archive")
 	}
@@ -149,7 +150,7 @@ func (mmArchive *mExecutionArchiveMockArchive) Return() *ExecutionArchiveMock {
 }
 
 //Set uses given function f to mock the ExecutionArchive.Archive method
-func (mmArchive *mExecutionArchiveMockArchive) Set(f func(transcript *Transcript)) *ExecutionArchiveMock {
+func (mmArchive *mExecutionArchiveMockArchive) Set(f func(ctx context.Context, transcript *Transcript)) *ExecutionArchiveMock {
 	if mmArchive.defaultExpectation != nil {
 		mmArchive.mock.t.Fatalf("Default expectation is already set for the ExecutionArchive.Archive method")
 	}
@@ -163,15 +164,15 @@ func (mmArchive *mExecutionArchiveMockArchive) Set(f func(transcript *Transcript
 }
 
 // Archive implements ExecutionArchive
-func (mmArchive *ExecutionArchiveMock) Archive(transcript *Transcript) {
+func (mmArchive *ExecutionArchiveMock) Archive(ctx context.Context, transcript *Transcript) {
 	mm_atomic.AddUint64(&mmArchive.beforeArchiveCounter, 1)
 	defer mm_atomic.AddUint64(&mmArchive.afterArchiveCounter, 1)
 
 	if mmArchive.inspectFuncArchive != nil {
-		mmArchive.inspectFuncArchive(transcript)
+		mmArchive.inspectFuncArchive(ctx, transcript)
 	}
 
-	params := &ExecutionArchiveMockArchiveParams{transcript}
+	params := &ExecutionArchiveMockArchiveParams{ctx, transcript}
 
 	// Record call args
 	mmArchive.ArchiveMock.mutex.Lock()
@@ -188,7 +189,7 @@ func (mmArchive *ExecutionArchiveMock) Archive(transcript *Transcript) {
 	if mmArchive.ArchiveMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmArchive.ArchiveMock.defaultExpectation.Counter, 1)
 		want := mmArchive.ArchiveMock.defaultExpectation.params
-		got := ExecutionArchiveMockArchiveParams{transcript}
+		got := ExecutionArchiveMockArchiveParams{ctx, transcript}
 		if want != nil && !minimock.Equal(*want, got) {
 			mmArchive.t.Errorf("ExecutionArchiveMock.Archive got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
@@ -197,10 +198,10 @@ func (mmArchive *ExecutionArchiveMock) Archive(transcript *Transcript) {
 
 	}
 	if mmArchive.funcArchive != nil {
-		mmArchive.funcArchive(transcript)
+		mmArchive.funcArchive(ctx, transcript)
 		return
 	}
-	mmArchive.t.Fatalf("Unexpected call to ExecutionArchiveMock.Archive. %v", transcript)
+	mmArchive.t.Fatalf("Unexpected call to ExecutionArchiveMock.Archive. %v %v", ctx, transcript)
 
 }
 

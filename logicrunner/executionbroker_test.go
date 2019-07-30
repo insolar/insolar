@@ -54,7 +54,7 @@ func (p *publisherMock) Close() error {
 // wait is Exponential retries waiting function
 // example usage: require.True(wait(func))
 func wait(check func(...interface{}) bool, args ...interface{}) bool {
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 16; i++ {
 		time.Sleep(time.Millisecond * time.Duration(math.Pow(2, float64(i))))
 		if check(args...) {
 			return true
@@ -683,12 +683,12 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 			broker := test.mocks(ctx, mc)
 			messages := broker.OnPulse(ctx, test.meNext)
 
-			mc.Wait(2 * time.Second)
+			mc.Wait(1 * time.Minute)
 			mc.Finish()
 
 			require.Equal(t, test.pending, broker.pending)
 			require.Equal(t, test.pendingConfirmed, broker.PendingConfirmed)
-			require.Equal(t, test.end, !broker.IsActive())
+			require.Equal(t, test.end, !broker.isActive())
 			require.Equal(t, test.ledgerHasMore, broker.ledgerHasMoreRequests)
 			require.Len(t, messages, test.numberOfMessages)
 		})

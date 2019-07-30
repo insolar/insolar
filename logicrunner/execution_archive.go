@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type Archiver interface {
@@ -32,7 +33,7 @@ type Archiver interface {
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.ExecutionArchive -o ./ -s _mock.go
 type ExecutionArchive interface {
-	Archive(transcript *Transcript)
+	Archive(ctx context.Context, transcript *Transcript)
 	Done(transcript *Transcript) bool
 
 	IsEmpty() bool
@@ -65,69 +66,71 @@ func NewExecutionArchive(
 	}
 }
 
-func (sa *executionArchive) IsEmpty() bool {
-	sa.archiveLock.Lock()
-	defer sa.archiveLock.Unlock()
+func (ea *executionArchive) IsEmpty() bool {
+	ea.archiveLock.Lock()
+	defer ea.archiveLock.Unlock()
 
-	return len(sa.archive) == 0
+	return len(ea.archive) == 0
 }
 
-func (sa *executionArchive) Archive(transcript *Transcript) {
+func (ea *executionArchive) Archive(ctx context.Context, transcript *Transcript) {
 	requestRef := transcript.RequestRef
 
-	sa.archiveLock.Lock()
-	defer sa.archiveLock.Unlock()
+	ea.archiveLock.Lock()
+	defer ea.archiveLock.Unlock()
 
-	if _, ok := sa.archive[requestRef]; !ok {
-		sa.archive[requestRef] = transcript
+	if _, ok := ea.archive[requestRef]; !ok {
+		ea.archive[requestRef] = transcript
+	} else {
+		inslogger.FromContext(ctx).Error("Trying to archive task that is already archived")
 	}
 }
 
-func (sa *executionArchive) Done(transcript *Transcript) bool {
+func (ea *executionArchive) Done(transcript *Transcript) bool {
 	requestRef := transcript.RequestRef
 
-	sa.archiveLock.Lock()
-	defer sa.archiveLock.Unlock()
+	ea.archiveLock.Lock()
+	defer ea.archiveLock.Unlock()
 
-	if _, ok := sa.archive[requestRef]; !ok {
+	if _, ok := ea.archive[requestRef]; !ok {
 		return false
 	}
 
-	delete(sa.archive, requestRef)
+	delete(ea.archive, requestRef)
 	return true
 }
 
 // constructs all StillExecuting messages
-func (sa *executionArchive) OnPulse(_ context.Context) []insolar.Message {
-	if sa == nil {
+func (ea *executionArchive) OnPulse(_ context.Context) []insolar.Message {
+	if ea == nil {
 		return nil
 	}
 
-	sa.archiveLock.Lock()
-	defer sa.archiveLock.Unlock()
+	ea.archiveLock.Lock()
+	defer ea.archiveLock.Unlock()
 
 	// TODO: this should return delegation token to continue execution of the pending
 	messages := make([]insolar.Message, 0)
-	if len(sa.archive) != 0 {
-		requestRefs := make([]insolar.Reference, 0, len(sa.archive))
-		for requestRef := range sa.archive {
+	if len(ea.archive) != 0 {
+		requestRefs := make([]insolar.Reference, 0, len(ea.archive))
+		for requestRef := range ea.archive {
 			requestRefs = append(requestRefs, requestRef)
 		}
 
 		messages = append(messages, &message.StillExecuting{
-			Reference:   sa.objectRef,
-			Executor:    sa.jetCoordinator.Me(),
+			Reference:   ea.objectRef,
+			Executor:    ea.jetCoordinator.Me(),
 			RequestRefs: requestRefs,
 		})
 	}
 	return messages
 }
 
-func (sa *executionArchive) FindRequestLoop(ctx context.Context, apiRequestID string) bool {
-	sa.archiveLock.Lock()
-	defer sa.archiveLock.Unlock()
+func (ea *executionArchive) FindRequestLoop(ctx context.Context, apiRequestID string) bool {
+	ea.archiveLock.Lock()
+	defer ea.archiveLock.Unlock()
 
-	for _, transcript := range sa.archive {
+	for _, transcript := range ea.archive {
 		req := transcript.Request
 		if req.APIRequestID == apiRequestID && req.ReturnMode != record.ReturnNoWait {
 			return true
@@ -137,6 +140,6 @@ func (sa *executionArchive) FindRequestLoop(ctx context.Context, apiRequestID st
 	return false
 }
 
-func (sa *executionArchive) GetActiveTranscript(request insolar.Reference) *Transcript {
-	return sa.archive[request]
+func (ea *executionArchive) GetActiveTranscript(request insolar.Reference) *Transcript {
+	return ea.archive[request]
 }

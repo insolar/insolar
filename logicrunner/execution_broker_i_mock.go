@@ -58,12 +58,6 @@ type ExecutionBrokerIMock struct {
 	beforeGetActiveTranscriptCounter uint64
 	GetActiveTranscriptMock          mExecutionBrokerIMockGetActiveTranscript
 
-	funcIsActive          func() (b1 bool)
-	inspectFuncIsActive   func()
-	afterIsActiveCounter  uint64
-	beforeIsActiveCounter uint64
-	IsActiveMock          mExecutionBrokerIMockIsActive
-
 	funcIsKnownRequest          func(ctx context.Context, req insolar.Reference) (b1 bool)
 	inspectFuncIsKnownRequest   func(ctx context.Context, req insolar.Reference)
 	afterIsKnownRequestCounter  uint64
@@ -146,8 +140,6 @@ func NewExecutionBrokerIMock(t minimock.Tester) *ExecutionBrokerIMock {
 
 	m.GetActiveTranscriptMock = mExecutionBrokerIMockGetActiveTranscript{mock: m}
 	m.GetActiveTranscriptMock.callArgs = []*ExecutionBrokerIMockGetActiveTranscriptParams{}
-
-	m.IsActiveMock = mExecutionBrokerIMockIsActive{mock: m}
 
 	m.IsKnownRequestMock = mExecutionBrokerIMockIsKnownRequest{mock: m}
 	m.IsKnownRequestMock.callArgs = []*ExecutionBrokerIMockIsKnownRequestParams{}
@@ -1516,149 +1508,6 @@ func (m *ExecutionBrokerIMock) MinimockGetActiveTranscriptInspect() {
 	// if func was set then invocations count should be greater than zero
 	if m.funcGetActiveTranscript != nil && mm_atomic.LoadUint64(&m.afterGetActiveTranscriptCounter) < 1 {
 		m.t.Error("Expected call to ExecutionBrokerIMock.GetActiveTranscript")
-	}
-}
-
-type mExecutionBrokerIMockIsActive struct {
-	mock               *ExecutionBrokerIMock
-	defaultExpectation *ExecutionBrokerIMockIsActiveExpectation
-	expectations       []*ExecutionBrokerIMockIsActiveExpectation
-}
-
-// ExecutionBrokerIMockIsActiveExpectation specifies expectation struct of the ExecutionBrokerI.IsActive
-type ExecutionBrokerIMockIsActiveExpectation struct {
-	mock *ExecutionBrokerIMock
-
-	results *ExecutionBrokerIMockIsActiveResults
-	Counter uint64
-}
-
-// ExecutionBrokerIMockIsActiveResults contains results of the ExecutionBrokerI.IsActive
-type ExecutionBrokerIMockIsActiveResults struct {
-	b1 bool
-}
-
-// Expect sets up expected params for ExecutionBrokerI.IsActive
-func (mmIsActive *mExecutionBrokerIMockIsActive) Expect() *mExecutionBrokerIMockIsActive {
-	if mmIsActive.mock.funcIsActive != nil {
-		mmIsActive.mock.t.Fatalf("ExecutionBrokerIMock.IsActive mock is already set by Set")
-	}
-
-	if mmIsActive.defaultExpectation == nil {
-		mmIsActive.defaultExpectation = &ExecutionBrokerIMockIsActiveExpectation{}
-	}
-
-	return mmIsActive
-}
-
-// Inspect accepts an inspector function that has same arguments as the ExecutionBrokerI.IsActive
-func (mmIsActive *mExecutionBrokerIMockIsActive) Inspect(f func()) *mExecutionBrokerIMockIsActive {
-	if mmIsActive.mock.inspectFuncIsActive != nil {
-		mmIsActive.mock.t.Fatalf("Inspect function is already set for ExecutionBrokerIMock.IsActive")
-	}
-
-	mmIsActive.mock.inspectFuncIsActive = f
-
-	return mmIsActive
-}
-
-// Return sets up results that will be returned by ExecutionBrokerI.IsActive
-func (mmIsActive *mExecutionBrokerIMockIsActive) Return(b1 bool) *ExecutionBrokerIMock {
-	if mmIsActive.mock.funcIsActive != nil {
-		mmIsActive.mock.t.Fatalf("ExecutionBrokerIMock.IsActive mock is already set by Set")
-	}
-
-	if mmIsActive.defaultExpectation == nil {
-		mmIsActive.defaultExpectation = &ExecutionBrokerIMockIsActiveExpectation{mock: mmIsActive.mock}
-	}
-	mmIsActive.defaultExpectation.results = &ExecutionBrokerIMockIsActiveResults{b1}
-	return mmIsActive.mock
-}
-
-//Set uses given function f to mock the ExecutionBrokerI.IsActive method
-func (mmIsActive *mExecutionBrokerIMockIsActive) Set(f func() (b1 bool)) *ExecutionBrokerIMock {
-	if mmIsActive.defaultExpectation != nil {
-		mmIsActive.mock.t.Fatalf("Default expectation is already set for the ExecutionBrokerI.IsActive method")
-	}
-
-	if len(mmIsActive.expectations) > 0 {
-		mmIsActive.mock.t.Fatalf("Some expectations are already set for the ExecutionBrokerI.IsActive method")
-	}
-
-	mmIsActive.mock.funcIsActive = f
-	return mmIsActive.mock
-}
-
-// IsActive implements ExecutionBrokerI
-func (mmIsActive *ExecutionBrokerIMock) IsActive() (b1 bool) {
-	mm_atomic.AddUint64(&mmIsActive.beforeIsActiveCounter, 1)
-	defer mm_atomic.AddUint64(&mmIsActive.afterIsActiveCounter, 1)
-
-	if mmIsActive.inspectFuncIsActive != nil {
-		mmIsActive.inspectFuncIsActive()
-	}
-
-	if mmIsActive.IsActiveMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmIsActive.IsActiveMock.defaultExpectation.Counter, 1)
-
-		results := mmIsActive.IsActiveMock.defaultExpectation.results
-		if results == nil {
-			mmIsActive.t.Fatal("No results are set for the ExecutionBrokerIMock.IsActive")
-		}
-		return (*results).b1
-	}
-	if mmIsActive.funcIsActive != nil {
-		return mmIsActive.funcIsActive()
-	}
-	mmIsActive.t.Fatalf("Unexpected call to ExecutionBrokerIMock.IsActive.")
-	return
-}
-
-// IsActiveAfterCounter returns a count of finished ExecutionBrokerIMock.IsActive invocations
-func (mmIsActive *ExecutionBrokerIMock) IsActiveAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmIsActive.afterIsActiveCounter)
-}
-
-// IsActiveBeforeCounter returns a count of ExecutionBrokerIMock.IsActive invocations
-func (mmIsActive *ExecutionBrokerIMock) IsActiveBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmIsActive.beforeIsActiveCounter)
-}
-
-// MinimockIsActiveDone returns true if the count of the IsActive invocations corresponds
-// the number of defined expectations
-func (m *ExecutionBrokerIMock) MinimockIsActiveDone() bool {
-	for _, e := range m.IsActiveMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.IsActiveMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterIsActiveCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcIsActive != nil && mm_atomic.LoadUint64(&m.afterIsActiveCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockIsActiveInspect logs each unmet expectation
-func (m *ExecutionBrokerIMock) MinimockIsActiveInspect() {
-	for _, e := range m.IsActiveMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Error("Expected call to ExecutionBrokerIMock.IsActive")
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.IsActiveMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterIsActiveCounter) < 1 {
-		m.t.Error("Expected call to ExecutionBrokerIMock.IsActive")
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcIsActive != nil && mm_atomic.LoadUint64(&m.afterIsActiveCounter) < 1 {
-		m.t.Error("Expected call to ExecutionBrokerIMock.IsActive")
 	}
 }
 
@@ -3405,8 +3254,6 @@ func (m *ExecutionBrokerIMock) MinimockFinish() {
 
 		m.MinimockGetActiveTranscriptInspect()
 
-		m.MinimockIsActiveInspect()
-
 		m.MinimockIsKnownRequestInspect()
 
 		m.MinimockMoreRequestsOnLedgerInspect()
@@ -3454,7 +3301,6 @@ func (m *ExecutionBrokerIMock) minimockDone() bool {
 		m.MinimockAddRequestsFromPrevExecutorDone() &&
 		m.MinimockFetchMoreRequestsFromLedgerDone() &&
 		m.MinimockGetActiveTranscriptDone() &&
-		m.MinimockIsActiveDone() &&
 		m.MinimockIsKnownRequestDone() &&
 		m.MinimockMoreRequestsOnLedgerDone() &&
 		m.MinimockNoMoreRequestsOnLedgerDone() &&

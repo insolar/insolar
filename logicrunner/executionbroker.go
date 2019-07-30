@@ -55,8 +55,6 @@ type ExecutionBrokerI interface {
 	NoMoreRequestsOnLedger(ctx context.Context)
 	FetchMoreRequestsFromLedger(ctx context.Context)
 
-	IsActive() bool
-
 	OnPulse(ctx context.Context, meNext bool) []insolar.Message
 }
 
@@ -152,7 +150,7 @@ func (q *ExecutionBroker) getImmutableTask(ctx context.Context) *Transcript {
 		inslogger.FromContext(ctx).Error("couldn't get immutable task: ", err.Error())
 		return nil
 	}
-	q.executionArchive.Archive(transcript)
+	q.executionArchive.Archive(ctx, transcript)
 
 	return transcript
 }
@@ -171,7 +169,7 @@ func (q *ExecutionBroker) getMutableTask(ctx context.Context) *Transcript {
 		inslogger.FromContext(ctx).Error("couldn't get mutable task: ", err.Error())
 		return nil
 	}
-	q.executionArchive.Archive(transcript)
+	q.executionArchive.Archive(ctx, transcript)
 
 	return transcript
 }
@@ -181,7 +179,7 @@ func (q *ExecutionBroker) storeCurrent(ctx context.Context, transcript *Transcri
 	if err != nil {
 		inslogger.FromContext(ctx).Error("couldn't store task in current list: ", err.Error())
 	}
-	q.executionArchive.Archive(transcript)
+	q.executionArchive.Archive(ctx, transcript)
 }
 
 func (q *ExecutionBroker) releaseTask(_ context.Context, transcript *Transcript) {
@@ -478,7 +476,7 @@ func (q *ExecutionBroker) onPulseWeNotNext(ctx context.Context) []insolar.Messag
 	sendExecResults := false
 
 	switch {
-	case q.IsActive():
+	case q.isActive():
 		q.pending = insolar.InPending
 		sendExecResults = true
 	case q.notConfirmedPending():
@@ -514,7 +512,7 @@ func (q *ExecutionBroker) onPulseWeNext(ctx context.Context) []insolar.Message {
 	logger := inslogger.FromContext(ctx)
 
 	switch {
-	case q.IsActive():
+	case q.isActive():
 		// no pending should be as we are executing
 		logger.Info("continuing pending execution on pulse")
 		q.pending = insolar.InPending
@@ -582,7 +580,7 @@ func (q *ExecutionBroker) PrevExecutorPendingResult(ctx context.Context, prevExe
 
 	switch q.pending {
 	case insolar.InPending:
-		if q.IsActive() {
+		if q.isActive() {
 			logger.Debug("execution returned to node that is still executing pending")
 
 			q.pending = insolar.NotPending
@@ -624,7 +622,7 @@ func (q *ExecutionBroker) PrevExecutorFinishedPending(ctx context.Context) error
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
-	if q.IsActive() {
+	if q.isActive() {
 		return errors.New("already executing")
 	}
 
@@ -737,7 +735,7 @@ func (q *ExecutionBroker) AddAdditionalRequestFromPrevExecutor(
 	q.Put(ctx, true, tr)
 }
 
-func (q *ExecutionBroker) IsActive() bool {
+func (q *ExecutionBroker) isActive() bool {
 	return !q.currentList.Empty()
 }
 

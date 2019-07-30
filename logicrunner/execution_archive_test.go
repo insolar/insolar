@@ -40,6 +40,7 @@ func (s *ExecutionArchiveSuite) genTranscriptForObject() *Transcript {
 
 func (s *ExecutionArchiveSuite) TestArchive() {
 	mc := minimock.NewController(s.T())
+	ctx := inslogger.TestContext(s.T())
 
 	objectRef := gen.Reference()
 	jc := jet.NewCoordinatorMock(mc)
@@ -49,15 +50,15 @@ func (s *ExecutionArchiveSuite) TestArchive() {
 	firstTranscript := s.genTranscriptForObject()
 
 	// successful archiving
-	archiveI.Archive(firstTranscript)
+	archiveI.Archive(ctx, firstTranscript)
 	s.Len(archive.archive, 1)
 
 	// duplicate
-	archiveI.Archive(firstTranscript)
+	archiveI.Archive(ctx, firstTranscript)
 	s.Len(archive.archive, 1)
 
 	// successful archiving
-	archiveI.Archive(s.genTranscriptForObject())
+	archiveI.Archive(ctx, s.genTranscriptForObject())
 	s.Len(archive.archive, 2)
 
 	mc.Finish()
@@ -65,6 +66,7 @@ func (s *ExecutionArchiveSuite) TestArchive() {
 
 func (s *ExecutionArchiveSuite) TestDone() {
 	mc := minimock.NewController(s.T())
+	ctx := inslogger.TestContext(s.T())
 
 	objectRef := gen.Reference()
 	jc := jet.NewCoordinatorMock(mc)
@@ -73,8 +75,8 @@ func (s *ExecutionArchiveSuite) TestDone() {
 	archive := archiveI.(*executionArchive)
 	T1, T2, T3 := s.genTranscriptForObject(), s.genTranscriptForObject(), s.genTranscriptForObject()
 
-	archiveI.Archive(T1)
-	archiveI.Archive(T2)
+	archiveI.Archive(ctx, T1)
+	archiveI.Archive(ctx, T2)
 	s.Len(archive.archive, 2)
 
 	s.False(archiveI.Done(T3))
@@ -88,6 +90,7 @@ func (s *ExecutionArchiveSuite) TestDone() {
 
 func (s *ExecutionArchiveSuite) TestIsEmpty() {
 	mc := minimock.NewController(s.T())
+	ctx := inslogger.TestContext(s.T())
 
 	objectRef := gen.Reference()
 	jc := jet.NewCoordinatorMock(mc)
@@ -98,7 +101,7 @@ func (s *ExecutionArchiveSuite) TestIsEmpty() {
 	s.True(archiveI.IsEmpty())
 
 	T := s.genTranscriptForObject()
-	archiveI.Archive(T)
+	archiveI.Archive(ctx, T)
 	s.Len(archive.archive, 1)
 	s.False(archiveI.IsEmpty())
 
@@ -127,7 +130,7 @@ func (s *ExecutionArchiveSuite) TestOnPulse() {
 
 	T1 := s.genTranscriptForObject()
 	{
-		archiveI.Archive(T1)
+		archiveI.Archive(ctx, T1)
 		msgs := archiveI.OnPulse(ctx)
 		s.Len(msgs, 1)
 		msg, ok := msgs[0].(*message.StillExecuting)
@@ -139,7 +142,7 @@ func (s *ExecutionArchiveSuite) TestOnPulse() {
 
 	T2 := s.genTranscriptForObject()
 	{
-		archiveI.Archive(T2)
+		archiveI.Archive(ctx, T2)
 		msgs := archiveI.OnPulse(ctx)
 		s.Len(msgs, 1)
 		msg, ok := msgs[0].(*message.StillExecuting)

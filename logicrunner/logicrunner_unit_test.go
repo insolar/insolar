@@ -430,9 +430,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 	objectRef := testutils.RandomRef()
 	protoRef := testutils.RandomRef()
 
-	// meRef := testutils.RandomRef()
 	notMeRef := testutils.RandomRef()
-	// suite.jc.MeMock.Return(meRef)
 
 	// If you think you are smart enough to make this test 'more effective'
 	// by using atomic variables or goroutines or anything else, you are wrong.
