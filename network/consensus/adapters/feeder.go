@@ -313,7 +313,7 @@ func (f *EphemeralControlFeeder) TryConvertFromEphemeral(expected census.Expecte
 
 	// TODO provide a real pulse to attach to it
 	expectedRealPulse := pulse.Unknown
-	return true, expected.ConvertEphemeral(expectedRealPulse, expected.GetCloudStateHash(), expected.GetGlobulaStateHash())
+	return true, expected.ConvertEphemeralAndMakeExpected(expectedRealPulse, expected.GetCloudStateHash(), expected.GetGlobulaStateHash())
 }
 
 func (f *EphemeralControlFeeder) EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time, expected census.Operational) {

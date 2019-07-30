@@ -118,7 +118,11 @@ type EphemeralControlFeeder interface {
 	OnNonEphemeralPacket(ctx context.Context, parser transport.PacketParser, inbound endpoints.Inbound) error
 	CanStopOnHastyPulse(pn pulse.Number, expectedEndOfConsensus time.Time) bool
 
+	/* When a joiner gets a non-ephemeral pulse data from a member */
+	CanAcceptTimePulseToStopEphemeral(pd pulse.Data /*, sourceNode profiles.ActiveNode*/) bool
+
 	TryConvertFromEphemeral(expected census.Expected) (wasConverted bool, converted census.Expected)
+
 	EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time, expected census.Operational)
 }
 

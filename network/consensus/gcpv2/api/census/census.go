@@ -106,7 +106,7 @@ type Expected interface {
 	Operational
 	GetPrevious() Active
 	MakeActive(pd pulse.Data) Active
-	ConvertEphemeral(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) Expected
+	ConvertEphemeralAndMakeExpected(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) Expected
 }
 
 type Builder interface {

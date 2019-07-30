@@ -91,7 +91,7 @@ func newPrimingCensus(pop copyToOnlinePopulation, registries census.VersionedReg
 		registries: registries,
 		online:     pop,
 		evicted:    &evictedPopulation{},
-		pd:         registries.GetVersionPulseData(),
+		//pd:         registries.GetVersionPulseData(),
 	}}
 	return r
 }
@@ -294,7 +294,7 @@ type ExpectedCensusTemplate struct {
 	pn         pulse.Number
 }
 
-func (c *ExpectedCensusTemplate) ConvertEphemeral(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) census.Expected {
+func (c *ExpectedCensusTemplate) ConvertEphemeralAndMakeExpected(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) census.Expected {
 	pd := c.prev.GetPulseData()
 	if !pd.IsEmpty() && !pd.IsFromEphemeral() {
 		panic("illegal state")

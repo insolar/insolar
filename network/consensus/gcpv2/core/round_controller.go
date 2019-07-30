@@ -260,9 +260,11 @@ func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 		priming := lastCensus.GetMandateRegistry().GetPrimingCloudHash()
 		lastCensus.(census.Prime).MakeExpected(pd.PulseNumber, priming, priming).MakeActive(*pd)
 	} else {
+		// TODO PulseData conversion from ephemeral
 		if lastCensus.GetPulseNumber() != pd.PulseNumber {
 			// TODO inform control feeder when our pulse is less
-			panic(fmt.Sprintf("illegal state - pulse number of expected census (%v) and of the realm (%v) are mismatched for %v", lastCensus.GetPulseNumber(), pd.PulseNumber, r.realm.GetSelfNodeID()))
+			panic(fmt.Sprintf("illegal state - pulse number of expected census (%v) and of the realm (%v) are mismatched for %v",
+				lastCensus.GetPulseNumber(), pd.PulseNumber, r.realm.GetSelfNodeID()))
 		}
 		if !lastCensus.IsActive() {
 			/* Auto-activation of the prepared lastCensus */
