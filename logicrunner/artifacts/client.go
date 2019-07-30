@@ -704,11 +704,6 @@ func (m *client) RegisterResult(
 	case RequestSideEffectActivate:
 		parentRef, imageRef, memory := result.Activate()
 
-		_, err := m.GetObject(ctx, parentRef)
-		if err != nil {
-			return errors.Wrap(err, "wrong parent")
-		}
-
 		vResultRecord := record.Wrap(&resultRecord)
 		vActivateRecord := record.Wrap(&record.Activate{
 			Request:     request,
