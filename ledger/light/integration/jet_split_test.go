@@ -17,10 +17,12 @@
 package integration_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
@@ -29,75 +31,127 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-func TestJetSplit(t *testing.T) {
+type splitCase struct {
+	name               string
+	cfg                configuration.JetSplit
+	testPulsesQuantity int
+}
+
+var splitCases = []splitCase{
+	{
+		name: "splitEveryPulse",
+		cfg: configuration.JetSplit{
+			ThresholdRecordsCount:  0,
+			ThresholdOverflowCount: 0,
+			DepthLimit:             15,
+		},
+		testPulsesQuantity: 1,
+	},
+	{
+		name: "splitEveryPulseLimitedDepth",
+		cfg: configuration.JetSplit{
+			ThresholdRecordsCount:  0,
+			ThresholdOverflowCount: 0,
+			DepthLimit:             3,
+		},
+		testPulsesQuantity: 5,
+	},
+}
+
+func TestJetSplitEveryPulse(t *testing.T) {
 	t.Parallel()
 
-	var hotObjects = make(chan insolar.JetID)
-	var replication = make(chan insolar.JetID)
-	var hotObjectConfirm = make(chan insolar.JetID)
+	testCase := func(t *testing.T, sc splitCase) {
 
-	var testPulsesQuantity = 5
+		var hotObjects = make(chan insolar.JetID)
+		var replication = make(chan insolar.JetID)
+		var hotObjectConfirm = make(chan insolar.JetID)
 
-	ctx := inslogger.TestContext(t)
-	cfg := DefaultLightConfig()
-	cfg.Ledger.JetSplit.DepthLimit = 5
-	cfg.Ledger.JetSplit.ThresholdOverflowCount = 0
-	cfg.Ledger.JetSplit.ThresholdRecordsCount = 0
+		var testPulsesQuantity = sc.testPulsesQuantity
 
-	s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) {
-		switch p := pl.(type) {
-		case *payload.Replication:
-			replication <- p.JetID
+		ctx := inslogger.TestContext(t)
+		cfg := DefaultLightConfig()
+		cfg.Ledger.JetSplit.DepthLimit = sc.cfg.DepthLimit
+		cfg.Ledger.JetSplit.ThresholdOverflowCount = sc.cfg.ThresholdOverflowCount
+		cfg.Ledger.JetSplit.ThresholdRecordsCount = sc.cfg.ThresholdRecordsCount
 
-		case *payload.HotObjects:
-			hotObjects <- p.JetID
+		s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) {
 
-		case *payload.GotHotConfirmation:
-			hotObjectConfirm <- p.JetID
-		}
-	})
+			// fmt.Printf("type %T \n", pl)
 
-	require.NoError(t, err)
+			switch p := pl.(type) {
+			case *payload.Replication:
+				fmt.Printf("callback r jetNum %s %s \n", p.JetID.DebugString(), p.Pulse.String())
 
-	// First pulse goes in storage then interrupts.
-	s.Pulse(ctx)
+				replication <- p.JetID
 
-	{
-		expectedJets := []insolar.JetID{insolar.ZeroJetID}
+			case *payload.HotObjects:
+				fmt.Printf("hobj jetNum %s %s \n", p.JetID.DebugString(), p.Pulse.String())
+				hotObjects <- p.JetID
 
-		for i := 0; i < testPulsesQuantity; i++ {
-
-			s.Pulse(ctx)
-
-			previousPulseJets := expectedJets
-			expectedJets = calculateExpectedJets(expectedJets, cfg.Ledger.JetSplit.DepthLimit)
-
-			hotObjectsReceived := make(map[insolar.JetID]struct{})
-			hotObjectsConfirmReceived := make(map[insolar.JetID]struct{})
-
-			// collecting HO and HCO
-			for range expectedJets {
-				hotObjectsReceived[<-hotObjects] = struct{}{}
-				hotObjectsConfirmReceived[<-hotObjectConfirm] = struct{}{}
+			case *payload.GotHotConfirmation:
+				hotObjectConfirm <- p.JetID
 			}
+		})
 
-			for _, expectedJetId := range expectedJets {
-				_, ok := hotObjectsReceived[expectedJetId]
-				require.True(t, ok, "No expected jetId in hotObjectsReceived")
+		require.NoError(t, err)
 
-				_, ok = hotObjectsConfirmReceived[expectedJetId]
-				require.True(t, ok, "No expected jetId in hotObjectsConfirmReceived")
-			}
+		// First pulse goes in storage then interrupts.
+		s.Pulse(ctx)
 
-			// collecting Replication
-			replicationObjectsReceived := make(map[insolar.JetID]struct{})
-			for range previousPulseJets {
-				replicationObjectsReceived[<-replication] = struct{}{}
-			}
+		{
+			expectedJets := []insolar.JetID{insolar.ZeroJetID}
 
-			for _, expectedJetId := range previousPulseJets {
-				_, ok := replicationObjectsReceived[expectedJetId]
-				require.True(t, ok, "No expected jetId in replicationObjectsReceived")
+			for i := 0; i < testPulsesQuantity; i++ {
+
+				fmt.Printf("\n\npulse: %d\n", i)
+				s.Pulse(ctx)
+
+				previousPulseJets := expectedJets
+				expectedJets = calculateExpectedJets(expectedJets, cfg.Ledger.JetSplit.DepthLimit)
+
+				hotObjectsReceived := make(map[insolar.JetID]struct{})
+				hotObjectsConfirmReceived := make(map[insolar.JetID]struct{})
+
+				// collecting HO and HCO
+				for range expectedJets {
+					hotObjectsReceived[<-hotObjects] = struct{}{}
+					hotObjectsConfirmReceived[<-hotObjectConfirm] = struct{}{}
+				}
+
+				// for kk := range hotObjectsReceived {
+				// fmt.Println("HO jet id: ", kk.DebugString())
+				// }
+
+				for _, expectedJetId := range expectedJets {
+					// fmt.Println("exp jet id: ", expectedJetId.DebugString())
+
+					_, ok := hotObjectsReceived[expectedJetId]
+					require.True(t, ok, "No expected jetId in hotObjectsReceived")
+
+					_, ok = hotObjectsConfirmReceived[expectedJetId]
+					require.True(t, ok, "No expected jetId in hotObjectsConfirmReceived")
+				}
+
+				// collecting Replication
+				replicationObjectsReceived := make(map[insolar.JetID]struct{})
+				for range previousPulseJets {
+					replicationObjectsReceived[<-replication] = struct{}{}
+				}
+				fmt.Println("REPL len : ", len(replicationObjectsReceived))
+
+				for kk := range replicationObjectsReceived {
+					fmt.Println("REPL jet id: ", kk.DebugString())
+				}
+
+				for _, expectedJetId := range previousPulseJets {
+					fmt.Println("prev jet id: ", expectedJetId.DebugString())
+					_, ok := replicationObjectsReceived[expectedJetId]
+					require.True(t, ok, "No expected jetId in replicationObjectsReceived")
+				}
+
+				// check depthLimit works
+				require.Equal(t, len(hotObjectsReceived), len(expectedJets))
 			}
 		}
 	}
