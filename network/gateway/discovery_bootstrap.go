@@ -96,7 +96,7 @@ func (g *DiscoveryBootstrap) Run(ctx context.Context) {
 	//	g.PulseAppender.Append(ctx, *pulse)
 	//}
 
-	resp, err := g.BootstrapRequester.Bootstrap(ctx, authorizeRes.Permit, *g.originCandidateProfile, p)
+	resp, err := g.BootstrapRequester.Bootstrap(ctx, authorizeRes.Permit, *g.originCandidate, p)
 	if err != nil {
 		logger.Error(err.Error())
 		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState)
