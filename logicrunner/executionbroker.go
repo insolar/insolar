@@ -100,9 +100,10 @@ func NewExecutionBroker(
 	return &ExecutionBroker{
 		Ref: ref,
 
-		mutable:     NewTranscriptDequeue(),
-		immutable:   NewTranscriptDequeue(),
-		finished:    NewTranscriptDequeue(),
+		mutable:   NewTranscriptDequeue(),
+		immutable: NewTranscriptDequeue(),
+		finished:  NewTranscriptDequeue(),
+		// AALEKSEEV TODO FIXME add a queue of outgoing requests
 		currentList: NewCurrentExecutionList(),
 
 		publisher:        publisher,
@@ -741,6 +742,7 @@ func (q *ExecutionBroker) AddRequestsFromPrevExecutor(ctx context.Context, trans
 	q.Prepend(ctx, true, transcripts...)
 }
 
+// AALEKSEEV TODO FIXME write a similar method for outgoing requests
 func (q *ExecutionBroker) AddRequestsFromLedger(ctx context.Context, transcripts ...*Transcript) {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
