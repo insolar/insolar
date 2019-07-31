@@ -24,7 +24,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("111A62HrJvAimG7M1r8XdeBVMw4X6ge8hGzVStfnn4e.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("111A62HrJvAimG7M1r8XdeBVMw4X6ge8hGzVStfnn4e.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")
 
 // CostCenter holds proxy type
 type CostCenter struct {

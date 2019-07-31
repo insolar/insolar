@@ -61,15 +61,15 @@ func shouldLoadRef(strRef string) XXX_insolar.Reference {
 func InitializeCodeRefs() map[XXX_insolar.Reference]string {
 	rv := make(map[XXX_insolar.Reference]string, 0)
 
-	rv[shouldLoadRef("111A7tUo1FeZ5DSoroiinMCKwzLacaYBAAcwAaNj6bc.11111111111111111111111111111111")] = "costcenter"
-	rv[shouldLoadRef("111A79KGpeDUjYhRJP1n1AwYgwU9KEWmc2TNNc3KQjV.11111111111111111111111111111111")] = "deposit"
-	rv[shouldLoadRef("111A5w1GcnTsht82duVrnWdVHVNyrxCUVcSPLtgQCPR.11111111111111111111111111111111")] = "helloworld"
-	rv[shouldLoadRef("111A72gPKWyrF9c7yzDoccRoPQ62g1uQQDBecWJwAYr.11111111111111111111111111111111")] = "member"
-	rv[shouldLoadRef("111A7Q5FK2ebPG9WnSiUc4iqF45w9oYkJkRjEtBohGe.11111111111111111111111111111111")] = "nodedomain"
-	rv[shouldLoadRef("111A86xPKUQ1ZxSscgv5brbw93LkwiVhUWgGrYYsMar.11111111111111111111111111111111")] = "noderecord"
-	rv[shouldLoadRef("111A63R5cAgGHC5DJffqF16vUkCuSVj3GExbMLy56cS.11111111111111111111111111111111")] = "rootdomain"
-	rv[shouldLoadRef("111A6aqtkSk9PYtE8iZup6DoM1PazHtFqnjjbEyiZkd.11111111111111111111111111111111")] = "tariff"
-	rv[shouldLoadRef("111A5e49cJW6GKGegWBhtgrJs7nFh1kSWhBtT2VgK4t.11111111111111111111111111111111")] = "wallet"
+	rv[shouldLoadRef("111A7tUo1FeZ5DSoroiinMCKwzLacaYBAAcwAaNj6bc.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")] = "costcenter"
+	rv[shouldLoadRef("111A79KGpeDUjYhRJP1n1AwYgwU9KEWmc2TNNc3KQjV.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")] = "deposit"
+	rv[shouldLoadRef("111A5w1GcnTsht82duVrnWdVHVNyrxCUVcSPLtgQCPR.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")] = "helloworld"
+	rv[shouldLoadRef("111A72gPKWyrF9c7yzDoccRoPQ62g1uQQDBecWJwAYr.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")] = "member"
+	rv[shouldLoadRef("111A7Q5FK2ebPG9WnSiUc4iqF45w9oYkJkRjEtBohGe.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")] = "nodedomain"
+	rv[shouldLoadRef("111A86xPKUQ1ZxSscgv5brbw93LkwiVhUWgGrYYsMar.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")] = "noderecord"
+	rv[shouldLoadRef("111A63R5cAgGHC5DJffqF16vUkCuSVj3GExbMLy56cS.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")] = "rootdomain"
+	rv[shouldLoadRef("111A6aqtkSk9PYtE8iZup6DoM1PazHtFqnjjbEyiZkd.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")] = "tariff"
+	rv[shouldLoadRef("111A5e49cJW6GKGegWBhtgrJs7nFh1kSWhBtT2VgK4t.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")] = "wallet"
 
 	return rv
 }
@@ -81,55 +81,55 @@ func InitializeCodeDescriptors() []XXX_artifacts.CodeDescriptor {
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("111A7tUo1FeZ5DSoroiinMCKwzLacaYBAAcwAaNj6bc.11111111111111111111111111111111"),
+		/* ref:         */ shouldLoadRef("111A7tUo1FeZ5DSoroiinMCKwzLacaYBAAcwAaNj6bc.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8"),
 	))
 	// deposit
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("111A79KGpeDUjYhRJP1n1AwYgwU9KEWmc2TNNc3KQjV.11111111111111111111111111111111"),
+		/* ref:         */ shouldLoadRef("111A79KGpeDUjYhRJP1n1AwYgwU9KEWmc2TNNc3KQjV.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8"),
 	))
 	// helloworld
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("111A5w1GcnTsht82duVrnWdVHVNyrxCUVcSPLtgQCPR.11111111111111111111111111111111"),
+		/* ref:         */ shouldLoadRef("111A5w1GcnTsht82duVrnWdVHVNyrxCUVcSPLtgQCPR.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8"),
 	))
 	// member
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("111A72gPKWyrF9c7yzDoccRoPQ62g1uQQDBecWJwAYr.11111111111111111111111111111111"),
+		/* ref:         */ shouldLoadRef("111A72gPKWyrF9c7yzDoccRoPQ62g1uQQDBecWJwAYr.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8"),
 	))
 	// nodedomain
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("111A7Q5FK2ebPG9WnSiUc4iqF45w9oYkJkRjEtBohGe.11111111111111111111111111111111"),
+		/* ref:         */ shouldLoadRef("111A7Q5FK2ebPG9WnSiUc4iqF45w9oYkJkRjEtBohGe.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8"),
 	))
 	// noderecord
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("111A86xPKUQ1ZxSscgv5brbw93LkwiVhUWgGrYYsMar.11111111111111111111111111111111"),
+		/* ref:         */ shouldLoadRef("111A86xPKUQ1ZxSscgv5brbw93LkwiVhUWgGrYYsMar.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8"),
 	))
 	// rootdomain
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("111A63R5cAgGHC5DJffqF16vUkCuSVj3GExbMLy56cS.11111111111111111111111111111111"),
+		/* ref:         */ shouldLoadRef("111A63R5cAgGHC5DJffqF16vUkCuSVj3GExbMLy56cS.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8"),
 	))
 	// tariff
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("111A6aqtkSk9PYtE8iZup6DoM1PazHtFqnjjbEyiZkd.11111111111111111111111111111111"),
+		/* ref:         */ shouldLoadRef("111A6aqtkSk9PYtE8iZup6DoM1PazHtFqnjjbEyiZkd.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8"),
 	))
 	// wallet
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("111A5e49cJW6GKGegWBhtgrJs7nFh1kSWhBtT2VgK4t.11111111111111111111111111111111"),
+		/* ref:         */ shouldLoadRef("111A5e49cJW6GKGegWBhtgrJs7nFh1kSWhBtT2VgK4t.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8"),
 	))
 
 	return rv
@@ -139,8 +139,8 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 	rv := make([]XXX_artifacts.ObjectDescriptor, 0)
 
 	{ // costcenter
-		pRef := shouldLoadRef("111A62HrJvAimG7M1r8XdeBVMw4X6ge8hGzVStfnn4e.11111111111111111111111111111111")
-		cRef := shouldLoadRef("111A7tUo1FeZ5DSoroiinMCKwzLacaYBAAcwAaNj6bc.11111111111111111111111111111111")
+		pRef := shouldLoadRef("111A62HrJvAimG7M1r8XdeBVMw4X6ge8hGzVStfnn4e.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")
+		cRef := shouldLoadRef("111A7tUo1FeZ5DSoroiinMCKwzLacaYBAAcwAaNj6bc.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.Record(),
@@ -153,8 +153,8 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 	}
 
 	{ // deposit
-		pRef := shouldLoadRef("111A7ctasuNUug8BoK4VJNuAFJ73rnH8bH5zqd5HrDj.11111111111111111111111111111111")
-		cRef := shouldLoadRef("111A79KGpeDUjYhRJP1n1AwYgwU9KEWmc2TNNc3KQjV.11111111111111111111111111111111")
+		pRef := shouldLoadRef("111A7ctasuNUug8BoK4VJNuAFJ73rnH8bH5zqd5HrDj.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")
+		cRef := shouldLoadRef("111A79KGpeDUjYhRJP1n1AwYgwU9KEWmc2TNNc3KQjV.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.Record(),
@@ -167,8 +167,8 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 	}
 
 	{ // helloworld
-		pRef := shouldLoadRef("111A85JAZugtAkQErbDe3eAaTw56DPLku8QGymJUCt2.11111111111111111111111111111111")
-		cRef := shouldLoadRef("111A5w1GcnTsht82duVrnWdVHVNyrxCUVcSPLtgQCPR.11111111111111111111111111111111")
+		pRef := shouldLoadRef("111A85JAZugtAkQErbDe3eAaTw56DPLku8QGymJUCt2.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")
+		cRef := shouldLoadRef("111A5w1GcnTsht82duVrnWdVHVNyrxCUVcSPLtgQCPR.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.Record(),
@@ -181,8 +181,8 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 	}
 
 	{ // member
-		pRef := shouldLoadRef("111A7UqbgvFXj9vkCAaNYSAkWLapu62eU5AUSv3y4JY.11111111111111111111111111111111")
-		cRef := shouldLoadRef("111A72gPKWyrF9c7yzDoccRoPQ62g1uQQDBecWJwAYr.11111111111111111111111111111111")
+		pRef := shouldLoadRef("111A7UqbgvFXj9vkCAaNYSAkWLapu62eU5AUSv3y4JY.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")
+		cRef := shouldLoadRef("111A72gPKWyrF9c7yzDoccRoPQ62g1uQQDBecWJwAYr.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.Record(),
@@ -195,8 +195,8 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 	}
 
 	{ // nodedomain
-		pRef := shouldLoadRef("111A6NKbCjpzFr9MttfcWV8vX8eFjiyGPPfSH1AMtwN.11111111111111111111111111111111")
-		cRef := shouldLoadRef("111A7Q5FK2ebPG9WnSiUc4iqF45w9oYkJkRjEtBohGe.11111111111111111111111111111111")
+		pRef := shouldLoadRef("111A6NKbCjpzFr9MttfcWV8vX8eFjiyGPPfSH1AMtwN.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")
+		cRef := shouldLoadRef("111A7Q5FK2ebPG9WnSiUc4iqF45w9oYkJkRjEtBohGe.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.Record(),
@@ -209,8 +209,8 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 	}
 
 	{ // noderecord
-		pRef := shouldLoadRef("111A5fZeApbGhcsLrbfGy82kKLgapF93GhNPMLSYaPY.11111111111111111111111111111111")
-		cRef := shouldLoadRef("111A86xPKUQ1ZxSscgv5brbw93LkwiVhUWgGrYYsMar.11111111111111111111111111111111")
+		pRef := shouldLoadRef("111A5fZeApbGhcsLrbfGy82kKLgapF93GhNPMLSYaPY.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")
+		cRef := shouldLoadRef("111A86xPKUQ1ZxSscgv5brbw93LkwiVhUWgGrYYsMar.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.Record(),
@@ -223,8 +223,8 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 	}
 
 	{ // rootdomain
-		pRef := shouldLoadRef("111A84uiiTD1LXAHNP4GMA6YJFjbnCdkRia2pCqwBV5.11111111111111111111111111111111")
-		cRef := shouldLoadRef("111A63R5cAgGHC5DJffqF16vUkCuSVj3GExbMLy56cS.11111111111111111111111111111111")
+		pRef := shouldLoadRef("111A84uiiTD1LXAHNP4GMA6YJFjbnCdkRia2pCqwBV5.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")
+		cRef := shouldLoadRef("111A63R5cAgGHC5DJffqF16vUkCuSVj3GExbMLy56cS.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.Record(),
@@ -237,8 +237,8 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 	}
 
 	{ // tariff
-		pRef := shouldLoadRef("111A7sBiaB3WxTAEa6X8xLcNGetQUpf3BsYZenTuGUW.11111111111111111111111111111111")
-		cRef := shouldLoadRef("111A6aqtkSk9PYtE8iZup6DoM1PazHtFqnjjbEyiZkd.11111111111111111111111111111111")
+		pRef := shouldLoadRef("111A7sBiaB3WxTAEa6X8xLcNGetQUpf3BsYZenTuGUW.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")
+		cRef := shouldLoadRef("111A6aqtkSk9PYtE8iZup6DoM1PazHtFqnjjbEyiZkd.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.Record(),
@@ -251,8 +251,8 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 	}
 
 	{ // wallet
-		pRef := shouldLoadRef("111A5gmRD1ZbHjQh7DgH9SrCK4a1qfwEUP5xAir6i8L.11111111111111111111111111111111")
-		cRef := shouldLoadRef("111A5e49cJW6GKGegWBhtgrJs7nFh1kSWhBtT2VgK4t.11111111111111111111111111111111")
+		pRef := shouldLoadRef("111A5gmRD1ZbHjQh7DgH9SrCK4a1qfwEUP5xAir6i8L.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")
+		cRef := shouldLoadRef("111A5e49cJW6GKGegWBhtgrJs7nFh1kSWhBtT2VgK4t.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.Record(),

@@ -24,7 +24,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("111A6NKbCjpzFr9MttfcWV8vX8eFjiyGPPfSH1AMtwN.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("111A6NKbCjpzFr9MttfcWV8vX8eFjiyGPPfSH1AMtwN.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")
 
 // NodeDomain holds proxy type
 type NodeDomain struct {

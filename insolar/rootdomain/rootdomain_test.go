@@ -17,7 +17,6 @@
 package rootdomain
 
 import (
-	"encoding/hex"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
@@ -25,23 +24,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	idHex  = "0001000181ffacab3bf81a2188d02eb347ee091ffc56b0705d5bbfe574900dc5"
-	refHex = idHex + idHex
-)
-
 func TestID(t *testing.T) {
 	rootRecord := &Record{
 		PCS: initPCS(),
 	}
-	require.Equal(t, idHex, hex.EncodeToString(rootRecord.ID().Bytes()), "root domain ID should always be the same")
+	require.Equal(t, insolar.RootDomainID, rootRecord.ID(), "root domain ID should always be the same")
 }
 
 func TestReference(t *testing.T) {
 	rootRecord := &Record{
 		PCS: initPCS(),
 	}
-	require.Equal(t, refHex, hex.EncodeToString(rootRecord.Ref().Bytes()), "root domain Ref should always be the same")
+	require.Equal(t, *insolar.NewReferenceInDomain(insolar.RootDomainID, insolar.RootDomainID), rootRecord.Ref(), "root domain Ref should always be the same")
 
 }
 

@@ -17,7 +17,7 @@
 package gen
 
 import (
-	"github.com/google/gofuzz"
+	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bits"
 )
@@ -73,6 +73,5 @@ func UniqueJetIDs(jets ...*insolar.JetID) {
 // Reference generates random reference.
 func Reference() (ref insolar.Reference) {
 	id := ID()
-	copy(ref[:insolar.RecordIDSize], id[:])
-	return
+	return *insolar.NewReference(id)
 }
