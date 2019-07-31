@@ -52,12 +52,36 @@ package profiles
 
 import (
 	"fmt"
+
 	"github.com/insolar/insolar/network/consensus/common/args"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 )
 
-func EqualStaticProfiles(p BriefCandidateProfile, o BriefCandidateProfile) bool {
+func EqualStaticProfiles(p StaticProfile, o StaticProfile, extIsRequired bool) bool {
+	if args.IsNil(p) || args.IsNil(o) {
+		return false
+	}
+
+	if p == o {
+		return true
+	}
+
+	if !EqualBriefProfiles(p, o) {
+		return false
+	}
+
+	pExt := p.GetExtension()
+	oExt := o.GetExtension()
+
+	if !extIsRequired && (pExt == nil || oExt == nil) {
+		return true
+	}
+
+	return EqualProfileExtensions(pExt, oExt)
+}
+
+func EqualBriefProfiles(p BriefCandidateProfile, o BriefCandidateProfile) bool {
 	if args.IsNil(p) || args.IsNil(o) {
 		return false
 	}
@@ -114,7 +138,7 @@ func UpgradeStaticProfile(sp StaticProfile, brief BriefCandidateProfile, ext Can
 	}
 
 	if !args.IsNil(brief) {
-		if !EqualStaticProfiles(sp, brief) {
+		if !EqualBriefProfiles(sp, brief) {
 			return false, nil
 		}
 	}

@@ -63,7 +63,7 @@ type PulsarPacketBody struct {
 	PulsarConsensusProofs []byte        // variable lengths >=0
 }
 
-func (b *PulsarPacketBody) DebugString(ctx PacketContext) string {
+func (b *PulsarPacketBody) String(ctx PacketContext) string {
 	return "pulsar packet body"
 }
 

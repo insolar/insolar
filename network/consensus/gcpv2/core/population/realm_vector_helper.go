@@ -48,7 +48,7 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package core
+package population
 
 import (
 	"sort"
@@ -257,7 +257,7 @@ func (p *RealmVectorHelper) CreateUnsafeProjection() RealmVectorProjection {
 	return p.projection
 }
 
-func (p *RealmVectorHelper) setArrayNodes(nodeIndex []*NodeAppearance,
+func (p *RealmVectorHelper) setNodes(nodeIndex []*NodeAppearance,
 	dynamicNodes map[insolar.ShortNodeID]*NodeAppearance, populationVersion uint32) {
 
 	p.mutex.Lock()

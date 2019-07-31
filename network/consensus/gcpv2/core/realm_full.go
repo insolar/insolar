@@ -68,38 +68,42 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/insolar/insolar/network/consensus/gcpv2/censusimpl"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
+	pop "github.com/insolar/insolar/network/consensus/gcpv2/core/population"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/purgatory"
 )
+
+var _ pulse.DataHolder = &FullRealm{}
 
 type FullRealm struct {
 	coreRealm
-	nodeContext nodeContext
+	//nodeContext pop.Hook
 
 	/* Derived from the ones provided externally - set at init() or start(). Don't need mutex */
-	packetBuilder   transport.PacketBuilder
-	packetSender    transport.PacketSender
-	controlFeeder   api.ConsensusControlFeeder
-	candidateFeeder api.CandidateControlFeeder
-	profileFactory  profiles.Factory
+	packetBuilder  transport.PacketBuilder
+	packetSender   transport.PacketSender
+	profileFactory profiles.Factory
 
 	timings api.RoundTimings
 
-	census     census.Active
-	population RealmPopulation
-	purgatory  RealmPurgatory
+	census         census.Active
+	population     pop.RealmPopulation
+	populationHook *pop.Hook
+	purgatory      purgatory.RealmPurgatory
 
-	packetDispatchers []PacketDispatcher
+	packetDispatchers []pop.PacketDispatcher
 
 	/* Other fields - need mutex */
 	isFinished bool
 }
 
 func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
-	verifyFlags packetrecorder.PacketVerifyFlags) error {
+	verifyFlags coreapi.PacketVerifyFlags) error {
 
 	pt := packet.GetPacketType()
 
-	var sourceNode MemberPacketReceiver
+	var sourceNode packetdispatch.MemberPacketReceiver
 	var sourceID insolar.ShortNodeID
 
 	switch {
@@ -107,12 +111,12 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		return fmt.Errorf("packet type (%v) is unknown", pt)
 	case pt.IsMemberPacket():
 		selfID := r.GetSelfNodeID()
-		strict, err := VerifyPacketRoute(ctx, packet, selfID)
+		strict, err := coreapi.VerifyPacketRoute(ctx, packet, selfID, from)
 		if err != nil {
 			return err
 		}
 		if strict {
-			verifyFlags |= packetrecorder.RequireStrictVerify
+			verifyFlags |= coreapi.RequireStrictVerify
 		}
 
 		sourceID = packet.GetSourceID()
@@ -125,30 +129,23 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 
 	pd := r.packetDispatchers[pt] // was checked above for != nil
 
-	if verifyFlags&(packetrecorder.SkipVerify|packetrecorder.SuccesfullyVerified) == 0 {
-		var err error
-		strict := verifyFlags&packetrecorder.RequireStrictVerify != 0
-		switch {
-		case sourceNode != nil:
-			err = sourceNode.VerifyPacketAuthenticity(packet.GetPacketSignature(), from, strict)
-			if err != nil {
-				return err
-			}
-			verifyFlags |= packetrecorder.SuccesfullyVerified
-		case pd.HasCustomVerifyForHost(from, strict):
-			// skip default
-		default:
-			err = r.coreRealm.VerifyPacketAuthenticity(packet.GetPacketSignature(), sourceID, from, strict)
-			if err != nil {
-				return err
-			}
-			verifyFlags |= packetrecorder.SuccesfullyVerified
-		}
+	var err error
+	verifyFlags, err = r.coreRealm.VerifyPacketAuthenticity(ctx, packet, from, sourceNode, coreapi.SkipVerify,
+		pd, verifyFlags)
+
+	if err != nil {
+		return err
+	}
+
+	var canHandle bool
+	canHandle, err = r.coreRealm.VerifyPacketPulseNumber(ctx, packet, from, r.GetPulseNumber(), r.GetNextPulseNumber())
+
+	if !canHandle || err != nil {
+		return err
 	}
 
 	// this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
-	var err error
-	packet, err = LazyPacketParse(packet)
+	packet, err = coreapi.LazyPacketParse(packet)
 	if err != nil {
 		return err
 	}
@@ -191,46 +188,43 @@ func (r *FullRealm) start(census census.Active, population census.OnlinePopulati
 	r.initBasics(census)
 
 	isDynamic := bundle.IsDynamicPopulationRequired()
-	allControllers, perNodeControllers := r.initHandlers(isDynamic, population.GetIndexedCapacity(), bundle)
+	perNodeControllers, nodeCallback, startFn := r.initHandlers(isDynamic, population.GetIndexedCapacity(), bundle)
 
-	r.initPopulation(isDynamic, population, perNodeControllers)
-	r.initSelf()
-	r.startWorkers(allControllers)
+	r.initPopulation(isDynamic, population, perNodeControllers, nodeCallback)
+	startFn()
 }
 
-func (r *FullRealm) initBefore(transport transport.Factory, controlFeeder api.ConsensusControlFeeder,
-	candidateFeeder api.CandidateControlFeeder) transport.NeighbourhoodSizes {
+func (r *FullRealm) initBefore(transport transport.Factory) transport.NeighbourhoodSizes {
+
+	if r.ephemeralFeeder != nil {
+		r.timings = r.ephemeralFeeder.GetEphemeralTimings(r.config)
+		r.strategy.AdjustConsensusTimings(&r.timings)
+	}
+
 	r.packetSender = transport.GetPacketSender()
 	r.packetBuilder = transport.GetPacketBuilder(r.signer)
-	r.controlFeeder = controlFeeder
-	r.candidateFeeder = candidateFeeder
 	return r.packetBuilder.GetNeighbourhoodSize()
 }
 
 func (r *FullRealm) initBasics(census census.Active) {
 
 	r.census = census
-	r.profileFactory = census.GetProfileFactory(r.verifierFactory)
+	r.profileFactory = census.GetProfileFactory(r.assistant)
 
-	r.timings = r.config.GetConsensusTimings(r.pulseData.NextPulseDelta, r.IsJoiner())
-	r.strategy.AdjustConsensusTimings(&r.timings)
+	if r.ephemeralFeeder == nil { // ephemeral timings are initialized earlier, in initBefore()
+		r.timings = r.config.GetConsensusTimings(r.pulseData.NextPulseDelta)
+		r.strategy.AdjustConsensusTimings(&r.timings)
+	}
 
 	if r.expectedPopulationSize == 0 {
 		r.expectedPopulationSize = member.AsIndex(r.config.GetNodeCountHint())
 	}
-
-	r.nodeContext.initFull(r.GetSelfNodeID(), r.verifierFactory, uint8(r.nbhSizes.NeighbourhoodTrustThreshold),
-		func(report misbehavior.Report) interface{} {
-			inslogger.FromContext(r.roundContext).Warnf("Got Report: %+v", report)
-			r.census.GetMisbehaviorRegistry().AddReport(report)
-			return nil
-		})
 }
 
 func (r *FullRealm) initHandlers(needsDynamic bool, populationCount int,
-	bundle PhaseControllersBundle) ([]PhaseController, []PerNodePacketDispatcherFactory) {
+	bundle PhaseControllersBundle) ([]PerNodePacketDispatcherFactory, NodeUpdateCallback, func()) {
 
-	r.packetDispatchers = make([]PacketDispatcher, phases.PacketTypeCount)
+	r.packetDispatchers = make([]pop.PacketDispatcher, phases.PacketTypeCount)
 
 	nodeCount := populationCount
 	if needsDynamic && int(r.expectedPopulationSize) > nodeCount {
@@ -242,7 +236,6 @@ func (r *FullRealm) initHandlers(needsDynamic bool, populationCount int,
 	if len(controllers) == 0 {
 		panic("no phase controllers")
 	}
-	r.nodeContext.setNodeToPhaseCallback(nodeCallback)
 	individualHandlers := make([]PerNodePacketDispatcherFactory, 0, len(controllers))
 
 	for _, ctl := range controllers {
@@ -258,25 +251,41 @@ func (r *FullRealm) initHandlers(needsDynamic bool, populationCount int,
 		}
 	}
 
-	return controllers, individualHandlers
+	return individualHandlers, nodeCallback,
+		func() {
+			for _, ctl := range controllers {
+				ctl.BeforeStart(r.roundContext, r)
+			}
+			for _, ctl := range controllers {
+				ctl.StartWorker(r.roundContext, r)
+			}
+		}
 }
 
-func (r *FullRealm) initPopulation(needsDynamic bool, population census.OnlinePopulation, individualHandlers []PerNodePacketDispatcherFactory) {
+func (r *FullRealm) initPopulation(needsDynamic bool, population census.OnlinePopulation,
+	individualHandlers []PerNodePacketDispatcherFactory, nodeCallback NodeUpdateCallback) {
 
-	initNodeFn := func(ctx context.Context, n *NodeAppearance) {
-		n.callback = &r.nodeContext
-		for k, ctl := range individualHandlers {
-			var ph PhasePerNodePacketFunc
-			ctx, ph = ctl.CreatePerNodePacketHandler(ctx, n)
-			if ph == nil {
-				continue
-			}
-			if n.handlers == nil {
-				n.handlers = make([]PhasePerNodePacketFunc, len(individualHandlers))
-			}
-			n.handlers[k] = ph
+	initNodeFn := func(ctx context.Context, n *pop.NodeAppearance) []pop.DispatchMemberPacketFunc {
+		if len(individualHandlers) == 0 {
+			return nil
 		}
+		result := make([]pop.DispatchMemberPacketFunc, len(individualHandlers))
+		for k, ctl := range individualHandlers {
+			ctx, result[k] = ctl.CreatePerNodePacketHandler(ctx, n)
+		}
+		return result
 	}
+
+	var notifyAll func()
+
+	log := inslogger.FromContext(r.roundContext)
+
+	hookCfg := pop.NewSharedNodeContext(r.assistant, r, uint8(r.nbhSizes.NeighbourhoodTrustThreshold), r.getEphemeralMode(),
+		func(report misbehavior.Report) interface{} {
+			log.Warnf("Got Report: %+v", report)
+			r.census.GetMisbehaviorRegistry().AddReport(report)
+			return nil
+		})
 
 	if needsDynamic {
 		expectedSize := r.expectedPopulationSize.AsInt()
@@ -284,8 +293,13 @@ func (r *FullRealm) initPopulation(needsDynamic bool, population census.OnlinePo
 			expectedSize = population.GetIndexedCapacity()
 		}
 
-		r.population = NewDynamicRealmPopulation(r.strategy, population, expectedSize,
-			r.nbhSizes.ExtendingNeighbourhoodLimit, r.strategy.ShuffleNodeSequence, initNodeFn)
+		popStruct := pop.NewDynamicRealmPopulation(population, expectedSize, r.nbhSizes.ExtendingNeighbourhoodLimit,
+			r.strategy.ShuffleNodeSequence, r.strategy.GetBaselineWeightForNeighbours(), hookCfg, initNodeFn)
+
+		r.population = popStruct
+		popStruct.InitCallback(nodeCallback)
+		r.populationHook = popStruct.GetHook()
+		notifyAll = popStruct.NotifyAllOnAdded
 
 		// TODO probably should happen at later stages, closer to Phase3 analysis
 		r.population.SealIndexed(expectedSize)
@@ -294,11 +308,21 @@ func (r *FullRealm) initPopulation(needsDynamic bool, population census.OnlinePo
 			population.GetIndexedCount() != population.GetIndexedCapacity() {
 			panic("dynamic population is required for joiner or suspect")
 		}
-		r.population = NewFixedRealmPopulation(r.strategy, population,
-			r.nbhSizes.ExtendingNeighbourhoodLimit, initNodeFn)
+
+		popStruct := pop.NewFixedRealmPopulation(population, r.nbhSizes.ExtendingNeighbourhoodLimit,
+			r.strategy.ShuffleNodeSequence, r.strategy.GetBaselineWeightForNeighbours(), hookCfg, initNodeFn)
+
+		r.population = popStruct
+		popStruct.InitCallback(nodeCallback)
+		r.populationHook = popStruct.GetHook()
+		notifyAll = popStruct.NotifyAllOnAdded
 	}
 
-	r.purgatory = NewRealmPurgatory(r.population, r.profileFactory, r.verifierFactory, &r.nodeContext, r.postponedPacketFn)
+	r.initSelf() // should happen before notifications - just in case someone will access GetSelf
+	r.purgatory = purgatory.NewRealmPurgatory(r.population, r.profileFactory, r.assistant,
+		r.populationHook, r.postponedPacketFn)
+
+	notifyAll()
 }
 
 func (r *FullRealm) initSelf() {
@@ -309,27 +333,11 @@ func (r *FullRealm) initSelf() {
 		panic("inconsistent transition of self between realms")
 	}
 
-	prevSelf.copySelfTo(newSelf)
+	prevSelf.CopySelfTo(newSelf)
 	r.self = newSelf
-
-	if !newSelf.profile.IsJoiner() {
-		// joiners are not allowed to request leave or add joiners
-		newSelf.requestedLeave, newSelf.requestedLeaveReason = r.controlFeeder.GetRequiredGracefulLeave()
-
-		if !newSelf.requestedLeave {
-			// leaver is not allowed to add new nodes
-			jc, secret := r.registerNextJoinCandidate()
-			if jc != nil {
-				newSelf.requestedJoinerID = jc.GetNodeID()
-				jc.joinerSecret = secret
-			}
-		}
-	}
-
-	newSelf.callback.updatePopulationVersion()
 }
 
-func (r *FullRealm) registerNextJoinCandidate() (*NodeAppearance, cryptkit.DigestHolder) {
+func (r *FullRealm) registerNextJoinCandidate() (*pop.NodeAppearance, cryptkit.DigestHolder) {
 
 	if !r.GetSelf().CanIntroduceJoiner() {
 		return nil, nil
@@ -344,40 +352,32 @@ func (r *FullRealm) registerNextJoinCandidate() (*NodeAppearance, cryptkit.Diges
 			nip := r.profileFactory.CreateFullIntroProfile(cp)
 			sv := r.GetSignatureVerifier(nip.GetPublicKeyStore())
 			np := censusimpl.NewJoinerProfile(nip, sv)
-			na := r.population.CreateNodeAppearance(r.roundContext, &np)
-			nna, err := r.population.AddToDynamics(na)
+			na := pop.NewEmptyNodeAppearance(&np)
+
+			nna, err := r.population.AddToDynamics(r.roundContext, &na)
 			if err != nil {
 				inslogger.FromContext(r.roundContext).Error(err)
 			} else if nna != nil {
-				inslogger.FromContext(r.roundContext).Debugf("Candidate/joiner added as dynamic node: s=%d, t=%d, full=%v",
-					r.nodeContext.localNodeID, np.GetNodeID(), np.GetExtension() != nil)
+				inslogger.FromContext(r.roundContext).Debugf("Candidate/joiner added as a dynamic node: s=%d, t=%d, full=%v",
+					r.GetSelfNodeID(), np.GetNodeID(), np.GetExtension() != nil)
 
 				return nna, secret
 			}
 		}
 
 		inslogger.FromContext(r.roundContext).Debugf("Candidate/joiner was rejected due to duplicate id: s=%d, t=%d",
-			r.nodeContext.localNodeID, cp.GetStaticNodeID())
+			r.GetSelfNodeID(), cp.GetStaticNodeID())
 
 		r.candidateFeeder.RemoveJoinCandidate(false, cp.GetStaticNodeID())
 	}
 }
 
-func (r *FullRealm) startWorkers(controllers []PhaseController) {
-	for _, ctl := range controllers {
-		ctl.BeforeStart(r.roundContext, r)
-	}
-	for _, ctl := range controllers {
-		ctl.StartWorker(r.roundContext, r)
-	}
+func (r *FullRealm) Frauds() misbehavior.FraudFactory {
+	return r.populationHook.GetFraudFactory()
 }
 
-func (r *FullRealm) GetFraudFactory() misbehavior.FraudFactory {
-	return r.nodeContext.fraudFactory
-}
-
-func (r *FullRealm) GetBlameFactory() misbehavior.BlameFactory {
-	return r.nodeContext.blameFactory
+func (r *FullRealm) Blames() misbehavior.BlameFactory {
+	return r.populationHook.GetBlameFactory()
 }
 
 func (r *FullRealm) GetPacketSender() transport.PacketSender {
@@ -392,7 +392,7 @@ func (r *FullRealm) GetSigner() cryptkit.DigestSigner {
 	return r.signer
 }
 
-func (r *FullRealm) GetPopulation() RealmPopulation {
+func (r *FullRealm) GetPopulation() pop.RealmPopulation {
 	return r.population
 }
 
@@ -413,6 +413,10 @@ func (r *FullRealm) GetOriginalPulse() proofs.OriginalPulsarPacket {
 	return r.coreRealm.originalPulse
 }
 
+func (r *FullRealm) GetPulseDataDigest() cryptkit.DigestHolder {
+	return r.originalPulse.GetPulseDataDigest()
+}
+
 func (r *FullRealm) GetPulseData() pulse.Data {
 	return r.pulseData
 }
@@ -421,7 +425,7 @@ func (r *FullRealm) GetLastCloudStateHash() proofs.CloudStateHash {
 	return r.census.GetCloudStateHash()
 }
 
-func (r *coreRealm) PreparePulseChange() <-chan api.UpstreamState {
+func (r *FullRealm) CommitAndPreparePulseChange() (bool, <-chan api.UpstreamState) {
 	if !r.pulseData.PulseNumber.IsTimePulse() {
 		panic("pulse number was not set")
 	}
@@ -432,29 +436,18 @@ func (r *coreRealm) PreparePulseChange() <-chan api.UpstreamState {
 		MemberPower: sp.GetDeclaredPower(),
 		MemberMode:  sp.GetOpMode(),
 		IsJoiner:    sp.IsJoiner(),
-	}
-	ch := make(chan api.UpstreamState, 1)
-	r.stateMachine.PreparePulseChange(report, ch)
-	return ch
-}
-
-func (r *FullRealm) notifyCommitPulseChange() {
-	if !r.pulseData.PulseNumber.IsTimePulse() {
-		panic("pulse number was not set")
+		//IsEphemeral: false,
 	}
 
-	sp := r.GetSelf().GetProfile()
-	report := api.UpstreamReport{
-		PulseNumber: r.pulseData.PulseNumber,
-		MemberPower: sp.GetDeclaredPower(),
-		MemberMode:  sp.GetOpMode(),
-	}
-	if r.self.IsJoiner() {
-		r.stateMachine.CommitPulseChangeByJoiner(report, r.pulseData, r.census)
-	} else {
+	if r.IsLocalStateful() {
 		r.stateMachine.CommitPulseChange(report, r.pulseData, r.census)
+		ch := make(chan api.UpstreamState, 1)
+		r.stateMachine.PreparePulseChange(report, ch)
+		return true, ch
 	}
 
+	r.stateMachine.CommitPulseChangeByStateless(report, r.pulseData, r.census)
+	return false, nil
 }
 
 func (r *FullRealm) GetTimings() api.RoundTimings {
@@ -466,36 +459,72 @@ func (r *FullRealm) GetNeighbourhoodSizes() transport.NeighbourhoodSizes {
 }
 
 func (r *FullRealm) GetLocalProfile() profiles.LocalNode {
-	return r.self.profile.(profiles.LocalNode)
+	return r.self.GetProfile().(profiles.LocalNode)
 }
 
-func (r *FullRealm) PrepareAndSetLocalNodeStateHashEvidenceForJoiner() {
-
-	//nsh := r.self.profile.GetStatic().GetBriefIntroSignedDigest()
-	//r.self.setLocalNodeStateHashEvidence(nsh, nsh.GetSignatureHolder())
-	r.notifyCommitPulseChange()
+func (r *FullRealm) IsLocalStateful() bool {
+	return r.self.IsStateful()
 }
 
-func (r *FullRealm) PrepareAndSetLocalNodeStateHashEvidence(nsh proofs.NodeStateHash) {
+func (r *FullRealm) ApplyLocalState(nsh proofs.NodeStateHash) {
+
+	if (nsh == nil) == r.IsLocalStateful() {
+		panic("illegal value")
+	}
+
+	mp := r.self.GetNodeMembershipProfileOrEmpty()
+	ma := r.buildLocalMemberAnnouncementDraft(mp)
+
+	if nsh != nil {
+		v := nsh.SignWith(r.signer)
+		ma.Membership.StateEvidence = v
+		ma.Membership.AnnounceSignature = v.GetSignatureHolder()
+	} else {
+		v := r.self.GetStatelessAnnouncementEvidence()
+		//v := nsh.SignWith(r.signer)
+		ma.Membership.StateEvidence = v
+		ma.Membership.AnnounceSignature = v.GetSignatureHolder()
+	}
 
 	// TODO use r.GetLastCloudStateHash() + digest(PulseData) + r.digest.GetGshDigester() to build digest for signing
 
 	// TODO Hack! MUST provide announcement hash
-	nas := cryptkit.NewSignature(nsh, "stubSign")
 
-	v := nsh.SignWith(r.signer)
-	r.self.setLocalNodeStateHashEvidence(v, &nas)
-	r.notifyCommitPulseChange()
+	r.self.SetLocalNodeState(ma)
 }
 
-func (r *FullRealm) CreateAnnouncement(n *NodeAppearance) *transport.NodeAnnouncementProfile {
+func (r *FullRealm) buildLocalMemberAnnouncementDraft(mp profiles.MembershipProfile) profiles.MemberAnnouncement {
+
+	lp := r.self.GetProfile()
+
+	if lp.IsJoiner() {
+		return profiles.NewJoinerAnnouncement(lp.GetStatic(), insolar.AbsentShortNodeID)
+	}
+
+	localID := lp.GetNodeID()
+	if isLeave, leaveReason := r.controlFeeder.GetRequiredGracefulLeave(); isLeave {
+		return profiles.NewMemberAnnouncementWithLeave(localID, mp, leaveReason, insolar.AbsentShortNodeID)
+	}
+
+	r.self.CanIntroduceJoiner()
+	if lp.CanIntroduceJoiner() {
+		jc, secret := r.registerNextJoinCandidate()
+		if jc != nil {
+			return profiles.NewMemberAnnouncementWithJoinerID(localID, mp, jc.GetNodeID(), secret, localID)
+		}
+	}
+
+	return profiles.NewMemberAnnouncement(localID, mp, insolar.AbsentShortNodeID)
+}
+
+func (r *FullRealm) CreateAnnouncement(n *pop.NodeAppearance, isJoinerProfileRequired bool) *transport.NodeAnnouncementProfile {
 	ma := n.GetRequestedAnnouncement()
 	if ma.Membership.IsEmpty() {
 		panic("illegal state")
 	}
 
 	var joiner *transport.JoinerAnnouncement
-	if !ma.JoinerID.IsAbsent() {
+	if !ma.JoinerID.IsAbsent() && isJoinerProfileRequired {
 		jp := r.GetPurgatory().FindJoinerProfile(ma.JoinerID, n.GetNodeID())
 		switch {
 		case jp != nil:
@@ -503,7 +532,6 @@ func (r *FullRealm) CreateAnnouncement(n *NodeAppearance) *transport.NodeAnnounc
 		case n == r.self:
 			panic(fmt.Sprintf("illegal state - local joiner is missing: %d", ma.JoinerID))
 		default:
-			//r.GetPurgatory().FindJoinerProfile(ma.JoinerID, n.GetNodeID())
 			panic(fmt.Sprintf("illegal state - joiner is missing: s=%d n=%d j=%d",
 				r.self.GetNodeID(), n.GetNodeID(), ma.JoinerID))
 		}
@@ -511,14 +539,19 @@ func (r *FullRealm) CreateAnnouncement(n *NodeAppearance) *transport.NodeAnnounc
 		joiner = transport.NewAnyJoinerAnnouncement(n.GetStatic(), insolar.AbsentShortNodeID) // TODO provide an announcing node
 	}
 
-	return transport.NewNodeAnnouncement(n.profile, ma, r.GetNodeCount(), r.pulseData.PulseNumber, joiner)
+	return transport.NewNodeAnnouncement(n.GetProfile(), ma, r.GetNodeCount(), r.pulseData.PulseNumber, joiner)
 }
 
 func (r *FullRealm) CreateLocalAnnouncement() *transport.NodeAnnouncementProfile {
-	return r.CreateAnnouncement(r.self)
+	return r.CreateAnnouncement(r.self, true)
 }
 
-func (r *FullRealm) FinishRound(ctx context.Context, builder census.Builder, csh proofs.CloudStateHash) {
+func (r *FullRealm) CreateLocalPhase0Announcement() *transport.NodeAnnouncementProfile {
+	ma := r.self.GetRequestedAnnouncement()
+	return transport.NewNodeAnnouncement(r.self.GetProfile(), ma, r.GetNodeCount(), r.pulseData.PulseNumber, nil)
+}
+
+func (r *FullRealm) finishRound(ctx context.Context, builder census.Builder, csh proofs.CloudStateHash) {
 	r.Lock()
 	defer r.Unlock()
 
@@ -531,54 +564,64 @@ func (r *FullRealm) FinishRound(ctx context.Context, builder census.Builder, csh
 	local := pb.GetLocalProfile()
 
 	var expected census.Expected
-	mode := local.GetOpMode()
-	// ModeEvictedGracefully
-	if csh != nil && !mode.IsEvictedForcefully() {
-		expected = builder.BuildAndMakeExpected(csh)
+	if csh != nil {
+		expected = builder.Build(csh).MakeExpected()
 	} else {
-		expected = builder.BuildAndMakeBrokenExpected(csh)
+		expected = builder.BuildAsBroken(csh).MakeExpected()
 	}
 
-	r.notifyConsensusFinished(expected.GetOnlinePopulation().GetLocalProfile(), expected)
-
-	nextNP := expected.GetPulseNumber()
-	if expected.GetOnlinePopulation().IsValid() {
-		switch {
-		case r.self.requestedLeave:
-			r.controlFeeder.OnAppliedGracefulLeave(r.self.requestedLeaveReason, nextNP)
-		case !r.self.requestedJoinerID.IsAbsent():
-			r.candidateFeeder.RemoveJoinCandidate(true, r.self.requestedJoinerID)
+	isNextEphemeral := false
+	if r.ephemeralFeeder != nil {
+		wasConverted, convertedExpected := r.ephemeralFeeder.TryConvertFromEphemeral(expected)
+		if wasConverted {
+			expected = convertedExpected
+		} else {
+			isNextEphemeral = true
 		}
-		// if r.requestedPowerFlag {
-		// }
-	} else {
-		inslogger.FromContext(ctx).Debugf("got a broken population: s=%d %v", local.GetNodeID(), expected.GetOnlinePopulation())
 	}
-	pw := r.self.requestedPower
-	if mode.IsPowerless() {
-		pw = 0
-	}
-	r.controlFeeder.OnAppliedMembershipProfile(mode, pw, nextNP)
-}
 
-func (r *FullRealm) notifyConsensusFinished(newSelf profiles.ActiveNode, expectedCensus census.Operational) {
+	newSelf := expected.GetOnlinePopulation().GetLocalProfile()
 	report := api.UpstreamReport{
 		PulseNumber: r.pulseData.PulseNumber,
 		MemberPower: newSelf.GetDeclaredPower(),
 		MemberMode:  newSelf.GetOpMode(),
 	}
-	r.stateMachine.ConsensusFinished(report, expectedCensus)
+
+	// MUST happen before ephemeralFeeder to trigger proper worker stare
+	r.stateMachine.ConsensusFinished(report, expected)
+
+	if r.ephemeralFeeder != nil {
+		r.ephemeralFeeder.EphemeralConsensusFinished(isNextEphemeral, r.roundStartedAt, expected)
+	}
+
+	nextNP := expected.GetPulseNumber()
+	rs := r.self.GetRequestedState()
+	if expected.GetOnlinePopulation().IsValid() {
+		switch {
+		case rs.IsLeaving:
+			r.controlFeeder.OnAppliedGracefulLeave(rs.LeaveReason, nextNP)
+		case !rs.JoinerID.IsAbsent():
+			r.candidateFeeder.RemoveJoinCandidate(true, rs.JoinerID)
+		}
+	} else {
+		inslogger.FromContext(ctx).Debugf("got a broken population: s=%d %v", local.GetNodeID(), expected.GetOnlinePopulation())
+	}
+	pw := rs.RequestedPower
+	if !local.IsPowered() {
+		pw = 0
+	}
+	r.controlFeeder.OnAppliedMembershipProfile(local.GetOpMode(), pw, nextNP)
 }
 
 func (r *FullRealm) GetProfileFactory() profiles.Factory {
 	return r.profileFactory
 }
 
-func (r *FullRealm) GetPurgatory() *RealmPurgatory {
+func (r *FullRealm) GetPurgatory() *purgatory.RealmPurgatory {
 	return &r.purgatory
 }
 
-func (r *FullRealm) getMemberReceiver(id insolar.ShortNodeID) MemberPacketReceiver {
+func (r *FullRealm) getMemberReceiver(id insolar.ShortNodeID) packetdispatch.MemberPacketReceiver {
 	// Purgatory MUST be checked first to avoid "missing" a node during its transition from the purgatory to normal population
 	pn := r.GetPurgatory().GetPhantomNode(id)
 	if pn != nil {
@@ -631,7 +674,7 @@ func (r *FullRealm) BuildNextPopulation(ctx context.Context, ranks []profiles.Po
 			if nodeID != selfID {
 				na = r.population.GetNodeAppearance(nodeID)
 			}
-			leave, leaveReason := na.getRequestedLeave()
+			leave, leaveReason := na.GetRequestedLeave()
 			if !leave {
 				panic("illegal state")
 			}
@@ -645,11 +688,20 @@ func (r *FullRealm) BuildNextPopulation(ctx context.Context, ranks []profiles.Po
 	b.SetGlobulaStateHash(gsh)
 	b.SealCensus()
 
-	r.FinishRound(ctx, b, csh)
+	r.finishRound(ctx, b, csh)
 
 	if selfMode.IsEvicted() {
 		inslogger.FromContext(ctx).Info("Node has left")
 		return false
 	}
 	return true
+}
+
+func (r *FullRealm) MonitorOtherPulses(packet transport.PulsePacketReader, from endpoints.Inbound) error {
+
+	return r.Blames().NewMismatchedPulsarPacket(from, r.GetOriginalPulse(), packet.GetPulseDataEvidence())
+}
+
+func (r *FullRealm) NotifyRoundStopped(ctx context.Context) {
+	r.stateMachine.OnRoundStopped(ctx)
 }
