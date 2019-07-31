@@ -54,8 +54,12 @@ func (p *SendInitialState) Proceed(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	startPulse, err := p.dep.startPulse.PulseNumber()
 	if err != nil {
-
-		logger.Fatal("Couldn't get start pulse", err)
+		errStr := "Couldn't get start pulse"
+		msg, newErr := payload.NewMessage(&payload.Error{Text: errStr, Code: uint32(payload.CodeNoStartPulse)})
+		if newErr != nil {
+			logger.Fatal("failed to reply error", err)
+		}
+		p.dep.sender.Reply(ctx, p.meta, msg)
 	}
 	msg, err := payload.Unmarshal(p.meta.Payload)
 	if err != nil {
