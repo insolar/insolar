@@ -208,7 +208,7 @@ func (c Installer) ControllerFor(mode Mode, setters ...packetProcessorSetter) Co
 	candidateFeeder := &coreapi.SequentialCandidateFeeder{}
 
 	var ephemeralFeeder api.EphemeralControlFeeder
-	if c.dep.EphemeralController.EphemeralMode() {
+	if c.dep.EphemeralController.EphemeralMode(c.dep.NodeKeeper.GetAccessor().GetActiveNodes()) {
 		ephemeralFeeder = adapters.NewEphemeralControlFeeder(c.dep.EphemeralController)
 	}
 

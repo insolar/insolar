@@ -412,7 +412,7 @@ func (n *ServiceNetwork) GetCert(ctx context.Context, ref *insolar.Reference) (i
 	return n.Gatewayer.Gateway().Auther().GetCert(ctx, ref)
 }
 
-func (n *ServiceNetwork) EphemeralMode() bool {
-	return n.Gatewayer.Gateway().EphemeralMode()
+func (n *ServiceNetwork) EphemeralMode(nodes []insolar.NetworkNode) bool {
+	return n.Gatewayer.Gateway().EphemeralMode(nodes)
 	//return false
 }

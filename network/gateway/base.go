@@ -59,6 +59,7 @@ import (
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/rules"
 	"go.opencensus.io/trace"
 
 	"github.com/pkg/errors"
@@ -384,6 +385,6 @@ func (g *Base) createCandidateProfile() {
 	g.originCandidate = candidate
 }
 
-func (g *Base) EphemeralMode() bool {
-	return true
+func (g *Base) EphemeralMode(nodes []insolar.NetworkNode) bool {
+	return !rules.CheckMinRole(g.CertificateManager.GetCertificate(), nodes)
 }

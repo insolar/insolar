@@ -225,7 +225,7 @@ type Gateway interface {
 	Auther() Auther
 	NeedLockMessageBus() bool
 	Bootstrapper() Bootstrapper
-	EphemeralMode() bool
+	EphemeralMode(nodes []insolar.NetworkNode) bool
 }
 
 type Auther interface {
@@ -242,14 +242,4 @@ type Bootstrapper interface {
 	HandleNodeBootstrapRequest(context.Context, Packet) (Packet, error)
 	HandleUpdateSchedule(context.Context, Packet) (Packet, error)
 	HandleReconnect(context.Context, Packet) (Packet, error)
-}
-
-//go:generate minimock -i github.com/insolar/insolar/network.Rules -o ../testutils/network -s _mock.go -g
-
-// Rules are responsible for a majority and minimum roles checking
-type Rules interface {
-	// CheckMajorityRule returns true if MajorityRule check passed, also returns active discovery nodes count
-	CheckMajorityRule() (bool, int)
-	// CheckMinRole returns true if MinRole check passed
-	CheckMinRole() bool
 }

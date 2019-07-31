@@ -201,6 +201,6 @@ func (g *Complete) signCertHandler(ctx context.Context, request network.Received
 	return g.HostNetwork.BuildResponse(ctx, request, &packet.SignCertResponse{Sign: sign}), nil
 }
 
-func (g *Complete) EphemeralMode() bool {
+func (g *Complete) EphemeralMode(nodes []insolar.NetworkNode) bool {
 	return false
 }

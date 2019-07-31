@@ -52,11 +52,10 @@ package gateway
 
 import (
 	"context"
-	"github.com/insolar/insolar/network/rules"
-
-	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/rules"
 )
 
 func newWaitMinRoles(b *Base) *WaitMinRoles {
@@ -85,8 +84,4 @@ func (g *WaitMinRoles) OnConsensusFinished(p insolar.PulseNumber) {
 func (g *WaitMinRoles) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, originalPacket network.ReceivedPacket) {
 	// forward pulse to Consensus
 	g.ConsensusPulseHandler.HandlePulse(ctx, pu, originalPacket)
-}
-
-func (g *WaitMinRoles) EphemeralMode() bool {
-	return false
 }

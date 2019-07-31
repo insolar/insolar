@@ -460,6 +460,6 @@ type ephemeralController struct {
 	allowed bool
 }
 
-func (e *ephemeralController) EphemeralMode() bool {
+func (e *ephemeralController) EphemeralMode(nodes []insolar.NetworkNode) bool {
 	return e.allowed
 }
