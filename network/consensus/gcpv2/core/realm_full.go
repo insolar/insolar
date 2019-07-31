@@ -592,6 +592,9 @@ func (r *FullRealm) finishRound(ctx context.Context, builder census.Builder, csh
 
 	if r.ephemeralFeeder != nil {
 		r.ephemeralFeeder.EphemeralConsensusFinished(isNextEphemeral, r.roundStartedAt, expected)
+		if !isNextEphemeral {
+			r.ephemeralFeeder = nil
+		}
 	}
 
 	nextNP := expected.GetPulseNumber()

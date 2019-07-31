@@ -478,6 +478,7 @@ func (c *DynamicPopulation) GetCount() int {
 
 type LessFunc func(c profiles.ActiveNode, o profiles.ActiveNode) bool
 
+/* deprecated */
 func (c *DynamicPopulation) Sort(lessFn LessFunc) {
 	sorter := slotSorter{values: c.getUnorderedSlots(), lessFn: lessFn}
 	sort.Sort(&sorter)
