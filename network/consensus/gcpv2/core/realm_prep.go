@@ -288,12 +288,15 @@ func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bo
 	if pde.GetPulseData() != pd {
 		return fmt.Errorf("pulse data and pulse data evidence are mismatched: %v, %v", pd, pde)
 	}
+	if pd.IsEmpty() {
+		return fmt.Errorf("pulse data is empty: %v", pd)
+	}
 
 	p.Lock()
 	defer p.Unlock()
 
 	ok, epn := p._applyPulseData(pde, fromPulsar)
-	if ok || !epn.IsUnknown() && epn == pn {
+	if ok || epn == pn {
 		return nil
 	}
 
@@ -321,7 +324,7 @@ func (p *PrepRealm) _applyPulseData(pdp proofs.OriginalPulsarPacket, fromPulsar 
 	}
 
 	if !valid {
-		return false, pulse.Unknown
+		return false, pulse.Unknown // TODO improve logging on mismatch cases
 	}
 
 	switch {
