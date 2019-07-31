@@ -28,7 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_Pending_RequestRegistration_Incoming(t *testing.T) {
+func Test_IncomingRequests(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
@@ -41,11 +41,11 @@ func Test_Pending_RequestRegistration_Incoming(t *testing.T) {
 	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
 	s.Pulse(ctx)
 
-	t.Run("pending was added", func(t *testing.T) {
-		p, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
+	t.Run("registered API request appears in pendings", func(t *testing.T) {
+		p, _ := callSetIncomingRequest(ctx, s, gen.ID(), gen.ID(), true, true)
 		requireNotError(t, p)
 		reqInfo := p.(*payload.RequestInfo)
-		p = fetchPendings(ctx, t, s, reqInfo.RequestID)
+		p = callGetPendings(ctx, s, reqInfo.RequestID)
 		requireNotError(t, p)
 
 		ids := p.(*payload.IDs)
@@ -53,36 +53,82 @@ func Test_Pending_RequestRegistration_Incoming(t *testing.T) {
 		require.Equal(t, reqInfo.RequestID, ids.IDs[0])
 	})
 
-	t.Run("pending was added and closed", func(t *testing.T) {
-		p, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
-		requireNotError(t, p)
-		reqInfo := p.(*payload.RequestInfo)
-
-		p, _ = callActivateObject(ctx, t, s, reqInfo.RequestID)
-		requireNotError(t, p)
-
-		p = fetchPendings(ctx, t, s, reqInfo.RequestID)
-
-		err := p.(*payload.Error)
-		require.Equal(t, insolar.ErrNoPendingRequest.Error(), err.Text)
-	})
-
-	t.Run("reason on the another object", func(t *testing.T) {
-		firstObjP, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), gen.ID(), record.CTSaveAsChild)
+	t.Run("registered request appears in pendings", func(t *testing.T) {
+		firstObjP, _ := callSetIncomingRequest(ctx, s, gen.ID(), gen.ID(), true, true)
 		requireNotError(t, firstObjP)
 		reqInfo := firstObjP.(*payload.RequestInfo)
-		firstObjP, _ = callActivateObject(ctx, t, s, reqInfo.RequestID)
+		firstObjP, _ = callActivateObject(ctx, s, reqInfo.RequestID)
 		requireNotError(t, firstObjP)
 
-		secondObjP, _ := callSetIncomingRequest(ctx, t, s, gen.ID(), reqInfo.RequestID, record.CTSaveAsChild)
+		secondObjP, _ := callSetIncomingRequest(ctx, s, gen.ID(), reqInfo.RequestID, true, false)
 		requireNotError(t, secondObjP)
 		secondReqInfo := secondObjP.(*payload.RequestInfo)
-		secondPendings := fetchPendings(ctx, t, s, secondReqInfo.RequestID)
+		secondPendings := callGetPendings(ctx, s, secondReqInfo.RequestID)
 		requireNotError(t, secondPendings)
 
 		ids := secondPendings.(*payload.IDs)
 		require.Equal(t, 1, len(ids.IDs))
 		require.Equal(t, secondReqInfo.RequestID, ids.IDs[0])
+	})
+
+	t.Run("closed request does not appear in pendings", func(t *testing.T) {
+		p, _ := callSetIncomingRequest(ctx, s, gen.ID(), gen.ID(), true, true)
+		requireNotError(t, p)
+		reqInfo := p.(*payload.RequestInfo)
+
+		p, _ = callActivateObject(ctx, s, reqInfo.RequestID)
+		requireNotError(t, p)
+
+		p = callGetPendings(ctx, s, reqInfo.RequestID)
+
+		err := p.(*payload.Error)
+		require.Equal(t, insolar.ErrNoPendingRequest.Error(), err.Text)
+	})
+}
+
+func Test_OutgoingRequests(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	cfg := DefaultLightConfig()
+
+	received := make(chan payload.SagaCallAcceptNotification)
+	s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) {
+		if notification, ok := pl.(*payload.SagaCallAcceptNotification); ok {
+			received <- *notification
+		}
+	})
+	require.NoError(t, err)
+
+	// First pulse goes in storage then interrupts.
+	s.Pulse(ctx)
+	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
+	s.Pulse(ctx)
+
+	t.Run("detached notification sent on detached reason close", func(t *testing.T) {
+		p, _ := callSetIncomingRequest(ctx, s, gen.ID(), gen.ID(), true, true)
+		requireNotError(t, p)
+		objectID := p.(*payload.RequestInfo).ObjectID
+
+		p, _ = callSetIncomingRequest(ctx, s, objectID, gen.ID(), false, true)
+		requireNotError(t, p)
+		reasonID := p.(*payload.RequestInfo).RequestID
+
+		p, detachedRec := callSetOutgoingRequest(ctx, s, objectID, reasonID, true)
+		requireNotError(t, p)
+		detachedID := p.(*payload.RequestInfo).RequestID
+
+		p, _ = callSetResult(ctx, s, objectID, reasonID)
+		requireNotError(t, p)
+
+		notification := <-received
+		require.Equal(t, objectID, notification.ObjectID)
+		require.Equal(t, detachedID, notification.DetachedRequestID)
+
+		receivedRec := record.Virtual{}
+		err := receivedRec.Unmarshal(notification.Request)
+		require.NoError(t, err)
+		require.Equal(t, detachedRec, receivedRec)
 	})
 }
 
@@ -110,29 +156,28 @@ func Test_DuplicatedRequests(t *testing.T) {
 			APINode:   gen.Reference(),
 		}
 		initReqMsg := &payload.SetIncomingRequest{
-			Request: record.Wrap(initReq),
+			Request: record.Wrap(&initReq),
 		}
 
 		// Set first request
-		p := sendMessage(ctx, t, s, initReqMsg)
+		p := sendMessage(ctx, s, initReqMsg)
 		requireNotError(t, p)
 		reqInfo := p.(*payload.RequestInfo)
 		require.Nil(t, reqInfo.Request)
 		require.Nil(t, reqInfo.Result)
 
 		// Try to set it again
-		secondP := sendMessage(ctx, t, s, initReqMsg)
+		secondP := sendMessage(ctx, s, initReqMsg)
 		requireNotError(t, secondP)
 		reqInfo = secondP.(*payload.RequestInfo)
 		require.NotNil(t, reqInfo.Request)
 		require.Nil(t, reqInfo.Result)
 
 		// Check for the result
-		compositeRec := record.CompositeFilamentRecord{}
-		err = compositeRec.Unmarshal(reqInfo.Request)
+		receivedDuplicate := record.Material{}
+		err = receivedDuplicate.Unmarshal(reqInfo.Request)
 		require.NoError(t, err)
-		returnedReq := record.Unwrap(compositeRec.Record.Virtual)
-		require.Equal(t, &initReq, returnedReq)
+		require.Equal(t, &initReq, record.Unwrap(&receivedDuplicate.Virtual))
 	})
 
 	t.Run("try to register outgoing request twice. no result", func(t *testing.T) {
@@ -146,11 +191,11 @@ func Test_DuplicatedRequests(t *testing.T) {
 			APINode:   gen.Reference(),
 		}
 		initReqMsg := &payload.SetIncomingRequest{
-			Request: record.Wrap(initReq),
+			Request: record.Wrap(&initReq),
 		}
 
 		// Set first request
-		p := sendMessage(ctx, t, s, initReqMsg)
+		p := sendMessage(ctx, s, initReqMsg)
 		requireNotError(t, p)
 		reqInfo := p.(*payload.RequestInfo)
 		require.Nil(t, reqInfo.Request)
@@ -163,29 +208,28 @@ func Test_DuplicatedRequests(t *testing.T) {
 			Caller:   *insolar.NewReference(reqInfo.RequestID),
 		}
 		outgoingReqMsg := &payload.SetOutgoingRequest{
-			Request: record.Wrap(outgoingReq),
+			Request: record.Wrap(&outgoingReq),
 		}
 
 		// Set outgoing request
-		outP := sendMessage(ctx, t, s, outgoingReqMsg)
+		outP := sendMessage(ctx, s, outgoingReqMsg)
 		requireNotError(t, outP)
 		outReqInfo := p.(*payload.RequestInfo)
 		require.Nil(t, outReqInfo.Request)
 		require.Nil(t, outReqInfo.Result)
 
 		// Try to set an outgoing again
-		outSecondP := sendMessage(ctx, t, s, outgoingReqMsg)
+		outSecondP := sendMessage(ctx, s, outgoingReqMsg)
 		requireNotError(t, outSecondP)
 		outReqSecondInfo := outSecondP.(*payload.RequestInfo)
 		require.NotNil(t, outReqSecondInfo.Request)
 		require.Nil(t, outReqSecondInfo.Result)
 
 		// Check for the result
-		compositeRec := record.CompositeFilamentRecord{}
-		err = compositeRec.Unmarshal(outReqSecondInfo.Request)
+		receivedDuplicate := record.Material{}
+		err = receivedDuplicate.Unmarshal(outReqSecondInfo.Request)
 		require.NoError(t, err)
-		returnedReq := record.Unwrap(compositeRec.Record.Virtual)
-		require.Equal(t, &outgoingReq, returnedReq)
+		require.Equal(t, &outgoingReq, record.Unwrap(&receivedDuplicate.Virtual))
 	})
 
 	t.Run("try to register request twice. when there is result", func(t *testing.T) {
@@ -199,39 +243,38 @@ func Test_DuplicatedRequests(t *testing.T) {
 			APINode:   gen.Reference(),
 		}
 		initReqMsg := &payload.SetIncomingRequest{
-			Request: record.Wrap(initReq),
+			Request: record.Wrap(&initReq),
 		}
 
 		// Set first request
-		p := sendMessage(ctx, t, s, initReqMsg)
+		p := sendMessage(ctx, s, initReqMsg)
 		requireNotError(t, p)
 		reqInfo := p.(*payload.RequestInfo)
 
 		// Set result for the request
-		p, _ = callActivateObject(ctx, t, s, reqInfo.RequestID)
+		p, _ = callActivateObject(ctx, s, reqInfo.RequestID)
 		requireNotError(t, p)
 
 		// Try to set it again
-		secondP := sendMessage(ctx, t, s, initReqMsg)
+		secondP := sendMessage(ctx, s, initReqMsg)
 		requireNotError(t, secondP)
 		secondReqInfo := secondP.(*payload.RequestInfo)
 		require.NotNil(t, secondReqInfo.Request)
 		require.NotNil(t, secondReqInfo.Result)
 
 		// Check for the request
-		compositeReq := record.CompositeFilamentRecord{}
-		err = compositeReq.Unmarshal(secondReqInfo.Request)
+		receivedDuplicateReq := record.Material{}
+		err = receivedDuplicateReq.Unmarshal(secondReqInfo.Request)
 		require.NoError(t, err)
-		returnedReq := record.Unwrap(compositeReq.Record.Virtual)
-		require.Equal(t, &initReq, returnedReq)
+		require.Equal(t, &initReq, record.Unwrap(&receivedDuplicateReq.Virtual))
 
 		// Check for the result
-		compositeRes := record.CompositeFilamentRecord{}
-		err = compositeRes.Unmarshal(secondReqInfo.Result)
+		receivedDuplicateRes := record.Material{}
+		err = receivedDuplicateRes.Unmarshal(secondReqInfo.Result)
 		require.NoError(t, err)
-		returnedRes := record.Unwrap(compositeRes.Record.Virtual).(*record.Result)
-		require.Equal(t, *insolar.NewReference(reqInfo.RequestID), returnedRes.Request)
-		require.Equal(t, reqInfo.RequestID, returnedRes.Object)
+		resultRecord := record.Unwrap(&receivedDuplicateRes.Virtual).(*record.Result)
+		require.Equal(t, *insolar.NewReference(reqInfo.RequestID), resultRecord.Request)
+		require.Equal(t, reqInfo.RequestID, resultRecord.Object)
 	})
 
 	t.Run("try to register result twice", func(t *testing.T) {
@@ -245,11 +288,11 @@ func Test_DuplicatedRequests(t *testing.T) {
 			APINode:   gen.Reference(),
 		}
 		initReqMsg := &payload.SetIncomingRequest{
-			Request: record.Wrap(initReq),
+			Request: record.Wrap(&initReq),
 		}
 
 		// Set first request
-		p := sendMessage(ctx, t, s, initReqMsg)
+		p := sendMessage(ctx, s, initReqMsg)
 		requireNotError(t, p)
 		reqInfo := p.(*payload.RequestInfo)
 
@@ -257,7 +300,7 @@ func Test_DuplicatedRequests(t *testing.T) {
 		mem := make([]byte, 100)
 		_, err = rand.Read(mem)
 		require.NoError(t, err)
-		rec := record.Wrap(record.Activate{
+		rec := record.Wrap(&record.Activate{
 			Request: *insolar.NewReference(reqInfo.RequestID),
 			Memory:  mem,
 		})
@@ -266,7 +309,7 @@ func Test_DuplicatedRequests(t *testing.T) {
 		res := make([]byte, 100)
 		_, err = rand.Read(res)
 		require.NoError(t, err)
-		resultRecord := record.Wrap(record.Result{
+		resultRecord := record.Wrap(&record.Result{
 			Request: *insolar.NewReference(reqInfo.RequestID),
 			Object:  reqInfo.RequestID,
 			Payload: res,
@@ -274,14 +317,14 @@ func Test_DuplicatedRequests(t *testing.T) {
 		resBuf, err := resultRecord.Marshal()
 		require.NoError(t, err)
 
-		p = sendMessage(ctx, t, s, &payload.Activate{
+		p = sendMessage(ctx, s, &payload.Activate{
 			Record: buf,
 			Result: resBuf,
 		})
 		requireNotError(t, p)
 
 		// Try to set it again
-		secondResP := sendMessage(ctx, t, s, &payload.Activate{
+		secondResP := sendMessage(ctx, s, &payload.Activate{
 			Record: buf,
 			Result: resBuf,
 		})
@@ -290,16 +333,16 @@ func Test_DuplicatedRequests(t *testing.T) {
 		require.NotNil(t, secondReqInfo.Result)
 
 		// Check for the result
-		returnedResult := record.Virtual{}
+		returnedResult := record.Material{}
 		err = returnedResult.Unmarshal(secondReqInfo.Result)
 		require.NoError(t, err)
-		returnedRes := record.Unwrap(&returnedResult).(*record.Result)
+		returnedRes := record.Unwrap(&returnedResult.Virtual).(*record.Result)
 		require.Equal(t, *insolar.NewReference(reqInfo.RequestID), returnedRes.Request)
 		require.Equal(t, reqInfo.RequestID, returnedRes.Object)
 	})
 }
 
-func Test_Reason_Requests(t *testing.T) {
+func Test_CheckRequests(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
@@ -326,11 +369,11 @@ func Test_Reason_Requests(t *testing.T) {
 			ReturnMode: record.ReturnSaga,
 		}
 		initReqMsg := &payload.SetIncomingRequest{
-			Request: record.Wrap(initReq),
+			Request: record.Wrap(&initReq),
 		}
 
 		// Set first request
-		p := sendMessage(ctx, t, s, initReqMsg)
+		p := sendMessage(ctx, s, initReqMsg)
 		errP, ok := p.(*payload.Error)
 		require.Equal(t, true, ok)
 		require.NotNil(t, errP)

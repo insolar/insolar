@@ -21,6 +21,8 @@ import (
 	"math/big"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation/safemath"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
@@ -30,8 +32,10 @@ type status string
 const (
 	month = 30 * 24 * 60 * 60
 
-	confirms           uint                = 3
-	offsetDepositPulse insolar.PulseNumber = 6 * month
+	confirms uint = 3
+	// TODO: https://insolar.atlassian.net/browse/WLT-768
+	// offsetDepositPulse insolar.PulseNumber = 6 * month
+	offsetDepositPulse insolar.PulseNumber = 10
 
 	statusOpen    status = "Open"
 	statusHolding status = "Holding"
@@ -125,4 +129,69 @@ func (d *Deposit) Confirm(migrationDaemonIndex int, migrationDaemonRef string, t
 		}
 		return nil
 	}
+}
+
+func (d *Deposit) canTransfer() error {
+	c := 0
+	for _, r := range d.MigrationDaemonConfirms {
+		if r != "" {
+			c++
+		}
+	}
+	if c < 3 {
+		return fmt.Errorf("number of confirms is less then 3")
+	}
+
+	p, err := foundation.GetPulseNumber()
+	if err != nil {
+		return fmt.Errorf("failed to get pulse number: %s", err.Error())
+	}
+	if d.PulseDepositUnHold > p {
+		return fmt.Errorf("hold period didn't end")
+	}
+
+	return nil
+}
+
+// Transfer transfers money from deposit to wallet.It can be called only after deposit hold period.
+func (d *Deposit) Transfer(amountStr string, wallerRef insolar.Reference) (interface{}, error) {
+
+	amount, ok := new(big.Int).SetString(amountStr, 10)
+	if !ok {
+		return nil, fmt.Errorf("can't parse input amount")
+	}
+	zero, _ := new(big.Int).SetString("0", 10)
+	if amount.Cmp(zero) == -1 {
+		return nil, fmt.Errorf("amount must be larger then zero")
+	}
+
+	balance, ok := new(big.Int).SetString(d.Amount, 10)
+	if !ok {
+		return nil, fmt.Errorf("can't parse deposit balance")
+	}
+	newBalance, err := safemath.Sub(balance, amount)
+	if err != nil {
+		return nil, fmt.Errorf("not enough balance for transfer: %s", err.Error())
+	}
+
+	err = d.canTransfer()
+	if err != nil {
+		return nil, fmt.Errorf("can't start transfer: %s", err.Error())
+	}
+
+	d.Amount = newBalance.String()
+
+	w := wallet.GetObject(wallerRef)
+
+	acceptWalletErr := w.Accept(amountStr)
+	if acceptWalletErr == nil {
+		return nil, nil
+	}
+
+	newBalance, err = safemath.Add(balance, amount)
+	if err != nil {
+		return nil, fmt.Errorf("failed to add amount back to balance: %s", err.Error())
+	}
+	d.Amount = newBalance.String()
+	return nil, fmt.Errorf("failed to transfer amount: %s", acceptWalletErr.Error())
 }

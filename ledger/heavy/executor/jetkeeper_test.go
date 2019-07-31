@@ -22,7 +22,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/google/gofuzz"
+	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/ledger/heavy/executor"
@@ -267,9 +267,9 @@ func TestDbJetKeeper_AddDropConfirmation(t *testing.T) {
 	defer db.Stop(context.Background())
 	jets := jet.NewDBStore(db)
 	pulses := pulse.NewCalculatorMock(t)
-	pulses.BackwardsFunc = func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
+	pulses.BackwardsMock.Set(func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
 		return insolar.Pulse{PulseNumber: p1 - insolar.PulseNumber(p2)}, nil
-	}
+	})
 	jetKeeper := executor.NewJetKeeper(jets, db, pulses)
 
 	var (

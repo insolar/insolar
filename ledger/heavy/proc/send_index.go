@@ -20,49 +20,55 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
 
-type GetJet struct {
+type SendIndex struct {
 	meta payload.Meta
 
 	dep struct {
-		jets   jet.Accessor
-		sender bus.Sender
+		indices object.IndexAccessor
+		sender  bus.Sender
 	}
 }
 
-func (p *GetJet) Dep(
-	jets jet.Accessor,
+func (p *SendIndex) Dep(
+	indices object.IndexAccessor,
 	sender bus.Sender,
 ) {
-	p.dep.jets = jets
+	p.dep.indices = indices
 	p.dep.sender = sender
 }
 
-func NewGetJet(meta payload.Meta) *GetJet {
-	return &GetJet{
+func NewSendIndex(meta payload.Meta) *SendIndex {
+	return &SendIndex{
 		meta: meta,
 	}
 }
 
-func (p *GetJet) Proceed(ctx context.Context) error {
-	getJet := payload.GetJet{}
-	err := getJet.Unmarshal(p.meta.Payload)
+func (p *SendIndex) Proceed(ctx context.Context) error {
+	ensureIndex := payload.GetIndex{}
+	err := ensureIndex.Unmarshal(p.meta.Payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal GetJet message")
+		return errors.Wrap(err, "failed to unmarshal ensureIndex message")
 	}
 
-	jetID, actual := p.dep.jets.ForID(ctx, getJet.PulseNumber, getJet.ObjectID)
+	idx, err := p.dep.indices.ForID(ctx, p.meta.Pulse, ensureIndex.ObjectID)
+	if err != nil {
+		return errors.Wrapf(
+			err,
+			"failed to fetch object index for %v", ensureIndex.ObjectID.String(),
+		)
+	}
 
-	msg, err := payload.NewMessage(&payload.Jet{
-		JetID:  jetID,
-		Actual: actual,
+	buf := object.EncodeLifeline(idx.Lifeline)
+	msg, err := payload.NewMessage(&payload.Index{
+		Index: buf,
 	})
 	if err != nil {
-		return errors.Wrap(err, "GetJet: failed to create reply")
+		return errors.Wrap(err, "failed to create reply")
 	}
 
 	p.dep.sender.Reply(ctx, p.meta, msg)

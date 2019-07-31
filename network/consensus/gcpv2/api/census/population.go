@@ -51,14 +51,15 @@
 package census
 
 import (
+	"strings"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-	"strings"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.OfflinePopulation -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.OfflinePopulation -o . -s _mock.go -g
 
 type OfflinePopulation interface {
 	FindRegisteredProfile(identity endpoints.Inbound) profiles.Host
@@ -147,7 +148,7 @@ func appendByBit(b *strings.Builder, v *RecoverableErrorTypes, s string) {
 	*v >>= 1
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.EvictedPopulation -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.EvictedPopulation -o . -s _mock.go -g
 
 type EvictedPopulation interface {
 	/* when the relevant online population is !IsValid() then not all nodes can be accessed by nodeID */

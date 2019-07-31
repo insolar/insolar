@@ -18,8 +18,6 @@ package record
 
 import (
 	"hash"
-
-	"github.com/pkg/errors"
 )
 
 // HashVirtual returns hash for virtual record.
@@ -35,36 +33,4 @@ func HashVirtual(h hash.Hash, rec Virtual) []byte {
 		panic(err)
 	}
 	return h.Sum(nil)
-}
-
-// HashMaterial returns hash for material record.
-func HashMaterial(h hash.Hash, rec Material) ([]byte, error) {
-	if rec.Virtual == nil {
-		return nil, errors.New("virtual record is nil")
-	}
-	// Calculate virtual hash separately from the material
-	// because changing material record fields must not affects
-	// hash from virtual field.
-	virtHash := HashVirtual(h, *rec.Virtual)
-	rec.Virtual = nil
-
-	// Signature must not affects material record hash calculating.
-	rec.Signature = nil
-
-	buf, err := rec.Marshal()
-	if err != nil {
-		panic(err)
-	}
-
-	// Appends virtual hash with other material fields.
-	_, err = h.Write(virtHash)
-	if err != nil {
-		return nil, errors.Wrap(err, "can't write virtual-part record hash")
-	}
-	_, err = h.Write(buf)
-	if err != nil {
-		return nil, errors.Wrap(err, "can't write material-part record hash")
-	}
-
-	return h.Sum(nil), nil
 }

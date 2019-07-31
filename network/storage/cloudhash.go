@@ -57,7 +57,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/storage.CloudHashAccessor -o ../../testutils/network -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/storage.CloudHashAccessor -o ../../testutils/network -s _mock.go -g
 
 // CloudHashAccessor provides methods for accessing CloudHash.
 type CloudHashAccessor interface {
@@ -65,7 +65,7 @@ type CloudHashAccessor interface {
 	Latest(ctx context.Context) ([]byte, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/storage.CloudHashAppender -o ../../testutils/network -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/storage.CloudHashAppender -o ../../testutils/network -s _mock.go -g
 
 // CloudHashAppender provides method for appending CloudHash to storage.
 type CloudHashAppender interface {

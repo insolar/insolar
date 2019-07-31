@@ -64,7 +64,7 @@ func TestIntrospector_Server_FilterMessages(t *testing.T) {
 
 	mockState := map[string]struct{}{}
 	pubMock := NewPublisherServerMock(t)
-	pubMock.SetMessagesFilterFunc = func(_ context.Context, in *introproto.MessageFilterByType) (*introproto.MessageFilterByType, error) {
+	pubMock.SetMessagesFilterMock.Set(func(_ context.Context, in *introproto.MessageFilterByType) (*introproto.MessageFilterByType, error) {
 		name, enable := in.Name, in.Enable
 		if enable {
 			mockState[name] = struct{}{}
@@ -72,8 +72,8 @@ func TestIntrospector_Server_FilterMessages(t *testing.T) {
 			delete(mockState, name)
 		}
 		return in, nil
-	}
-	pubMock.GetMessagesFiltersFunc = func(_ context.Context, _ *introproto.EmptyArgs) (*introproto.AllMessageFilterStats, error) {
+	})
+	pubMock.GetMessagesFiltersMock.Set(func(_ context.Context, _ *introproto.EmptyArgs) (*introproto.AllMessageFilterStats, error) {
 		filters := map[string]*introproto.MessageFilterWithStat{}
 		// var out []*introproto.MessageFilterByType
 		for name := range mockState {
@@ -82,7 +82,7 @@ func TestIntrospector_Server_FilterMessages(t *testing.T) {
 			}
 		}
 		return &introproto.AllMessageFilterStats{Filters: filters}, nil
-	}
+	})
 
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err, "listener bind on random port without error")

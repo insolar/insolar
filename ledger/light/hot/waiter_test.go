@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package hot
+package hot_test
 
 import (
 	"sync"
@@ -22,58 +22,34 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewHotDataWaiterConcrete(t *testing.T) {
-	t.Parallel()
-	// Act
-	hdw := NewChannelWaiter()
-
-	// Assert
-	require.NotNil(t, hdw)
-	require.NotNil(t, hdw.waiters)
-}
-
-func TestHotDataWaiterConcrete_Get_CreateIfNil(t *testing.T) {
-	t.Parallel()
-	// Arrange
-	hdw := NewChannelWaiter()
-	jetID := testutils.RandomID()
-
-	// Act
-	waiter := hdw.waiterForJet(jetID)
-
-	// Assert
-	require.NotNil(t, waiter)
-	require.Equal(t, waiter, hdw.waiters[jetID])
-	require.Equal(t, 1, len(hdw.waiters))
-}
-
-func TestHotDataWaiterConcrete_Wait_UnlockHotData(t *testing.T) {
+func Test_HotDataWaiterConcrete_WaitUnlock(t *testing.T) {
 	t.Parallel()
 	// Arrange
 	waitingStarted := make(chan struct{}, 1)
 	waitingFinished := make(chan struct{})
 
-	hdw := NewChannelWaiter()
+	hdw := hot.NewChannelWaiter()
 	hdwLock := sync.Mutex{}
-	hdwGetter := func() *ChannelWaiter {
+	hdwGetter := func() *hot.ChannelWaiter {
 		hdwLock.Lock()
 		defer hdwLock.Unlock()
 
 		return hdw
 	}
-	jetID := testutils.RandomID()
-	_ = hdw.waiterForJet(jetID)
+	jetID := gen.JetID()
+	pulse := gen.PulseNumber()
 
 	// Act
 	go func() {
 		waitingStarted <- struct{}{}
-		err := hdwGetter().Wait(inslogger.TestContext(t), jetID, 124567)
+		err := hdwGetter().Wait(inslogger.TestContext(t), jetID, pulse)
 		require.Nil(t, err)
 		close(waitingFinished)
 	}()
@@ -82,43 +58,38 @@ func TestHotDataWaiterConcrete_Wait_UnlockHotData(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	// Closing waiter the first time, no error.
-	err := hdwGetter().Unlock(inslogger.TestContext(t), jetID)
+	err := hdwGetter().Unlock(inslogger.TestContext(t), pulse, jetID)
 	require.NoError(t, err)
 
 	<-waitingFinished
 
 	// Closing waiter the second time, error.
-	err = hdwGetter().Unlock(inslogger.TestContext(t), jetID)
+	err = hdwGetter().Unlock(inslogger.TestContext(t), pulse, jetID)
 	assert.Error(t, err)
 }
 
-func TestHotDataWaiterConcrete_Wait_ThrowTimeout(t *testing.T) {
+func Test_HotDataWaiterConcrete_Close(t *testing.T) {
 	t.Parallel()
 	// Arrange
 	waitingStarted := make(chan struct{}, 1)
 	waitingFinished := make(chan struct{})
 
-	hdw := NewChannelWaiter()
+	hdw := hot.NewChannelWaiter()
 	hdwLock := sync.Mutex{}
-	hdwGetter := func() *ChannelWaiter {
+	hdwGetter := func() *hot.ChannelWaiter {
 		hdwLock.Lock()
 		defer hdwLock.Unlock()
 
 		return hdw
 	}
-	hdwLengthGetter := func() int {
-		hdwLock.Lock()
-		defer hdwLock.Unlock()
 
-		return len(hdw.waiters)
-	}
-	jetID := testutils.RandomID()
-	_ = hdw.waiterForJet(jetID)
+	jetID := gen.JetID()
+	pulse := gen.PulseNumber()
 
 	// Act
 	go func() {
 		waitingStarted <- struct{}{}
-		err := hdwGetter().Wait(inslogger.TestContext(t), jetID, 124567)
+		err := hdwGetter().Wait(inslogger.TestContext(t), jetID, pulse)
 		require.NotNil(t, err)
 		require.Equal(t, insolar.ErrHotDataTimeout, err)
 		close(waitingFinished)
@@ -127,47 +98,44 @@ func TestHotDataWaiterConcrete_Wait_ThrowTimeout(t *testing.T) {
 	<-waitingStarted
 	time.Sleep(1 * time.Second)
 
-	hdwGetter().ThrowTimeout(inslogger.TestContext(t), 1245678)
+	hdwGetter().CloseAllUntil(inslogger.TestContext(t), pulse)
 
 	<-waitingFinished
-	require.Equal(t, 0, hdwLengthGetter())
+
+	err := hdwGetter().Wait(inslogger.TestContext(t), jetID, pulse)
+	require.Nil(t, err)
 }
 
-func TestHotDataWaiterConcrete_Wait_ThrowTimeout_MultipleMembers(t *testing.T) {
+func Test_HotDataWaiterConcrete_WaitClose_MultipleMembers(t *testing.T) {
 	t.Parallel()
 	// Arrange
 	waitingStarted := make(chan struct{}, 2)
 	waitingFinished := make(chan struct{})
 
-	hdw := NewChannelWaiter()
+	hdw := hot.NewChannelWaiter()
 	hdwLock := sync.Mutex{}
-	hdwGetter := func() *ChannelWaiter {
+	hdwGetter := func() *hot.ChannelWaiter {
 		hdwLock.Lock()
 		defer hdwLock.Unlock()
 
 		return hdw
 	}
-	hdwLengthGetter := func() int {
-		hdwLock.Lock()
-		defer hdwLock.Unlock()
 
-		return len(hdw.waiters)
-	}
-	jetID := testutils.RandomID()
-	secondJetID := testutils.RandomID()
-	_ = hdw.waiterForJet(jetID)
+	pulse := gen.PulseNumber()
+	jetID := gen.JetID()
+	secondJetID := gen.JetID()
 
 	// Act
 	go func() {
 		waitingStarted <- struct{}{}
-		err := hdwGetter().Wait(inslogger.TestContext(t), jetID, 124567)
+		err := hdwGetter().Wait(inslogger.TestContext(t), jetID, pulse)
 		require.NotNil(t, err)
 		require.Equal(t, insolar.ErrHotDataTimeout, err)
 		waitingFinished <- struct{}{}
 	}()
 	go func() {
 		waitingStarted <- struct{}{}
-		err := hdwGetter().Wait(inslogger.TestContext(t), secondJetID, 124567)
+		err := hdwGetter().Wait(inslogger.TestContext(t), secondJetID, pulse)
 		require.NotNil(t, err)
 		require.Equal(t, insolar.ErrHotDataTimeout, err)
 		waitingFinished <- struct{}{}
@@ -177,21 +145,8 @@ func TestHotDataWaiterConcrete_Wait_ThrowTimeout_MultipleMembers(t *testing.T) {
 	<-waitingStarted
 	time.Sleep(1 * time.Second)
 
-	hdwGetter().ThrowTimeout(inslogger.TestContext(t), 1245678)
+	hdwGetter().CloseAllUntil(inslogger.TestContext(t), pulse)
 
 	<-waitingFinished
 	<-waitingFinished
-
-	require.Equal(t, 0, hdwLengthGetter())
-}
-
-func TestHotDataWaiterConcrete_WaitOldPulse(t *testing.T) {
-	t.Parallel()
-
-	hdw := NewChannelWaiter()
-
-	jetID := testutils.RandomID()
-	hdw.ThrowTimeout(inslogger.TestContext(t), 1245678)
-	err := hdw.Wait(inslogger.TestContext(t), jetID, 124567)
-	require.NoError(t, err)
 }

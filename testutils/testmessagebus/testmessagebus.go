@@ -85,10 +85,10 @@ func (mb *TestMessageBus) NewRecorder(ctx context.Context, currentPulse insolar.
 
 func NewTestMessageBus(t *testing.T) *TestMessageBus {
 	cryptoServiceMock := testutils.NewCryptographyServiceMock(t)
-	cryptoServiceMock.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
+	cryptoServiceMock.SignMock.Set(func(p []byte) (r *insolar.Signature, r1 error) {
 		signature := insolar.SignatureFromBytes(nil)
 		return &signature, nil
-	}
+	})
 
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
 

@@ -346,7 +346,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 				GetExecutorMock.
 				Return(
 					testutils.NewMachineLogicExecutorMock(mc).
-						CallConstructorMock.Return([]byte{1, 2, 3}, nil),
+						CallConstructorMock.Return([]byte{1, 2, 3}, "", nil),
 					nil,
 				),
 			dc: artifacts.NewDescriptorsCacheMock(mc).
@@ -380,7 +380,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 				GetExecutorMock.
 				Return(
 					testutils.NewMachineLogicExecutorMock(mc).
-						CallConstructorMock.Return(nil, errors.New("some")),
+						CallConstructorMock.Return(nil, "", errors.New("some")),
 					nil,
 				),
 			dc: artifacts.NewDescriptorsCacheMock(mc).
@@ -442,15 +442,6 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 					CallType:  record.CTSaveAsChild,
 					Caller:    gen.Reference(),
 					Prototype: nil,
-				},
-			},
-			error: true,
-		},
-		{
-			name: "error, empty caller",
-			transcript: &Transcript{
-				Request: &record.IncomingRequest{
-					CallType: record.CTSaveAsChild,
 				},
 			},
 			error: true,
