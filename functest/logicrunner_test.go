@@ -21,6 +21,7 @@ package functest
 import (
 	"fmt"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -1368,4 +1369,84 @@ func (r *Two) DoNothing() (error) {
 	require.Empty(t, secondRresult.Error)
 
 	require.Equal(t, 0.0, secondRresult.ExtractedReply)
+}
+
+func TestMultiplyNoWaitCallsOnSomeObject(t *testing.T) {
+	var counter = strconv.Itoa(time.Now().Nanosecond())
+
+	var contractTwoCode = `
+package main
+
+import (
+	"github.com/insolar/insolar/insolar"
+	 "github.com/insolar/insolar/logicrunner/builtin/foundation"
+	one "github.com/insolar/insolar/application/proxy/first_contract` + counter + `"
+)
+
+type Two struct {
+	foundation.BaseContract
+}
+
+func New() (*Two, error) {
+	return &Two{}, nil
+}
+
+func NewWithOne() (*Two, error) {
+	return &Two{ }, nil
+}
+
+
+var INSATTR_Get_API = true
+func (r *Two) Get(OneRef insolar.Reference) (int, error) {
+	c  := one.GetObject(OneRef)
+
+	c.GetAndIncrementNoWait()
+    c.GetAndDecrementNoWait()
+	
+	return c.Get()
+}
+
+var INSATTR_DoNothing_API = true
+func (r *Two) DoNothing() (error) {
+	return nil
+}
+
+`
+	var n = 100
+	contractOneRef := uploadContract(t, "first_contract"+counter, contractOneCode)
+	firstObjRef := callConstructor(t, contractOneRef, "NewWithNumber", n)
+
+	contractTwoRef := uploadContract(t, "second_contract"+counter, contractTwoCode)
+	secondObjRef := callConstructor(t, contractTwoRef, "NewWithOne")
+	secondRresult := callMethod(t, secondObjRef, "Get", firstObjRef)
+	require.Empty(t, secondRresult.Error)
+	require.Equal(t, float64(n), secondRresult.ExtractedReply)
+
+	time.Sleep(300 * time.Millisecond)
+	firstResultAfterWait := callMethod(t, firstObjRef, "Get")
+	require.Equal(t, float64(n), firstResultAfterWait.ExtractedReply)
+
+	t.Run("one object, sequential calls", func(t *testing.T) {
+		syncT := &SyncT{T: t}
+		wg := sync.WaitGroup{}
+		wg.Add(10)
+
+		objectRef := callConstructor(syncT, contractTwoRef, "NewWithOne")
+
+		for i := 0; i < 10; i++ {
+			go func() {
+				defer wg.Done()
+				result := callMethod(syncT, objectRef, "Get", firstObjRef)
+				require.Empty(syncT, result.Error)
+			}()
+		}
+
+		wg.Wait()
+
+		time.Sleep(300 * time.Millisecond)
+
+		res := callMethod(syncT, firstObjRef, "Get")
+		require.Empty(syncT, res.Error)
+		require.Equal(syncT, float64(n), res.ExtractedReply)
+	})
 }
