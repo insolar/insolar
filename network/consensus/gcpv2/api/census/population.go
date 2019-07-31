@@ -51,6 +51,8 @@
 package census
 
 import (
+	"strings"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
@@ -120,6 +122,32 @@ const (
 	MissingSelf
 )
 
+func (v RecoverableErrorTypes) String() string {
+	b := strings.Builder{}
+	b.WriteRune('[')
+	appendByBit(&b, &v, "External")
+	appendByBit(&b, &v, "EmptySlot")
+	appendByBit(&b, &v, "IllegalRole")
+	appendByBit(&b, &v, "IllegalMode")
+	appendByBit(&b, &v, "IllegalIndex")
+	appendByBit(&b, &v, "DuplicateIndex")
+	appendByBit(&b, &v, "BriefProfile")
+	appendByBit(&b, &v, "DuplicateID")
+	appendByBit(&b, &v, "IllegalSorting")
+	appendByBit(&b, &v, "MissingSelf")
+	b.WriteRune(']')
+
+	return b.String()
+}
+
+func appendByBit(b *strings.Builder, v *RecoverableErrorTypes, s string) {
+	if *v&1 != 0 {
+		b.WriteString(s)
+		b.WriteByte(' ')
+	}
+	*v >>= 1
+}
+
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.EvictedPopulation -o . -s _mock.go -g
 
 type EvictedPopulation interface {
@@ -135,7 +163,7 @@ type EvictedPopulation interface {
 
 type PopulationBuilder interface {
 	GetCount() int
-	//SetCapacity
+	// SetCapacity
 	AddProfile(intro profiles.StaticProfile) profiles.Updatable
 	RemoveProfile(nodeID insolar.ShortNodeID)
 	GetUnorderedProfiles() []profiles.Updatable

@@ -48,59 +48,89 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package core
+package population
 
-import (
-	"testing"
+import "github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-
-	"github.com/stretchr/testify/require"
-)
-
-// TODO
-/*func TestPickNextJoinCandidate(t *testing.T) {
-	require.Equal(t, nil, (&SequentialCandidateFeeder{}).PickNextJoinCandidate())
-
-	s := &SequentialCandidateFeeder{buf: make([]profiles.CandidateProfile, 1)}
-	c := profiles.NewCandidateProfileMock(t)
-	s.buf[0] = c
-	require.Equal(t, c, s.PickNextJoinCandidate())
-}*/
-
-func TestRemoveJoinCandidate(t *testing.T) {
-	require.False(t, (&SequentialCandidateFeeder{}).RemoveJoinCandidate(false, insolar.ShortNodeID(0)))
-
-	s := &SequentialCandidateFeeder{buf: make([]profiles.CandidateProfile, 1)}
-	c := profiles.NewCandidateProfileMock(t)
-
-	s.buf[0] = c
-	c.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return insolar.ShortNodeID(1) })
-	require.False(t, s.RemoveJoinCandidate(false, insolar.ShortNodeID(2)))
-
-	c.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return insolar.ShortNodeID(1) })
-	require.True(t, s.RemoveJoinCandidate(false, insolar.ShortNodeID(1)))
-
-	require.Equal(t, []profiles.CandidateProfile(nil), s.buf)
-
-	s.buf = make([]profiles.CandidateProfile, 2)
-	s.buf[0] = c
-	c2 := profiles.NewCandidateProfileMock(t)
-	s.buf[1] = c2
-	require.True(t, s.RemoveJoinCandidate(false, insolar.ShortNodeID(1)))
-
-	require.Equal(t, 1, len(s.buf))
-
-	require.True(t, len(s.buf) > 0 && s.buf[0] == c2)
+func NewPanicDispatcher(panicMsg string) EventDispatcher {
+	return NewSinkDispatcher(func(EventClosureFunc) {
+		panic(panicMsg)
+	})
 }
 
-func TestAddJoinCandidate(t *testing.T) {
-	require.Panics(t, func() { (&SequentialCandidateFeeder{}).AddJoinCandidate(nil) })
+func NewSinkDispatcher(sink EventDispatchFunc) EventDispatcher {
+	return NewInterceptorAndSink(nil, sink)
+}
 
-	f := transport.NewFullIntroductionReaderMock(t)
-	s := &SequentialCandidateFeeder{}
-	s.AddJoinCandidate(f)
-	require.True(t, len(s.buf) == 1 && s.buf[0] == f)
+func NewIgnoringDispatcher() EventDispatcher {
+	return NewInterceptorAndSink(nil, nil)
+}
+
+func NewInterceptor(intercept EventDispatcher) EventDispatcher {
+	return NewInterceptorAndSink(intercept, nil)
+}
+
+func NewInterceptorAndSink(intercept EventDispatcher, sink EventDispatchFunc) EventDispatcher {
+	return &EventWrapper{GetEventDispatchFn(intercept, sink)}
+}
+
+func GetEventDispatchFn(intercept EventDispatcher, sink EventDispatchFunc) EventDispatchFunc {
+	if intercept == nil {
+		if sink == nil {
+			return func(fn EventClosureFunc) {}
+		}
+		return sink
+	}
+	if sink == nil {
+		return func(fn EventClosureFunc) {
+			fn(intercept)
+		}
+	}
+	return func(fn EventClosureFunc) {
+		fn(intercept)
+		sink(fn)
+	}
+}
+
+var _ EventDispatcher = &EventWrapper{}
+
+type EventWrapper struct {
+	sink EventDispatchFunc
+}
+
+func (p *EventWrapper) OnTrustUpdated(populationVersion uint32, n *NodeAppearance,
+	before member.TrustLevel, after member.TrustLevel, hasFullProfile bool) {
+	p.sink(func(d EventDispatcher) {
+		d.OnTrustUpdated(populationVersion, n, before, after, hasFullProfile)
+	})
+}
+
+func (p *EventWrapper) OnNodeStateAssigned(populationVersion uint32, n *NodeAppearance) {
+	p.sink(func(d EventDispatcher) {
+		d.OnNodeStateAssigned(populationVersion, n)
+	})
+}
+
+func (p *EventWrapper) OnDynamicNodeUpdate(populationVersion uint32, n *NodeAppearance, flags UpdateFlags) {
+	p.sink(func(d EventDispatcher) {
+		d.OnDynamicNodeUpdate(populationVersion, n, flags)
+	})
+}
+
+func (p *EventWrapper) OnPurgatoryNodeUpdate(populationVersion uint32, n MemberPacketSender, flags UpdateFlags) {
+	p.sink(func(d EventDispatcher) {
+		d.OnPurgatoryNodeUpdate(populationVersion, n, flags)
+	})
+}
+
+func (p *EventWrapper) OnCustomEvent(populationVersion uint32, n *NodeAppearance, event interface{}) {
+	p.sink(func(d EventDispatcher) {
+		d.OnCustomEvent(populationVersion, n, event)
+	})
+}
+
+func (p *EventWrapper) OnDynamicPopulationCompleted(populationVersion uint32, indexedCount int) {
+	p.sink(func(d EventDispatcher) {
+		d.OnDynamicPopulationCompleted(populationVersion, indexedCount)
+	})
 }

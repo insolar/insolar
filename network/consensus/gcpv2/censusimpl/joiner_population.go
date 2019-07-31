@@ -61,7 +61,7 @@ import (
 func NewJoinerPopulation(localNode profiles.StaticProfile, vf cryptkit.SignatureVerifierFactory) OneJoinerPopulation {
 	localNode.GetStaticNodeID()
 
-	verifier := vf.GetSignatureVerifierWithPKS(localNode.GetPublicKeyStore())
+	verifier := vf.CreateSignatureVerifierWithPKS(localNode.GetPublicKeyStore())
 	return OneJoinerPopulation{
 		localNode: updatableSlot{
 			NodeProfileSlot: NewJoinerProfile(localNode, verifier),

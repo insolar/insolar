@@ -51,6 +51,7 @@
 package adapters
 
 import (
+	"bytes"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
@@ -60,6 +61,8 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/pulsenetwork"
 )
 
 const nanosecondsInSecond = int64(time.Second / time.Nanosecond)
@@ -73,9 +76,9 @@ func NewPulse(pulseData pulse.Data) insolar.Pulse {
 	}
 
 	entropy := insolar.Entropy{}
-	bytes := pulseData.PulseEntropy.AsBytes()
-	copy(entropy[:], bytes)
-	copy(entropy[pulseData.PulseEntropy.FixedByteSize():], bytes)
+	bs := pulseData.PulseEntropy.AsBytes()
+	copy(entropy[:], bs)
+	copy(entropy[pulseData.PulseEntropy.FixedByteSize():], bs)
 
 	return insolar.Pulse{
 		PulseNumber:      insolar.PulseNumber(pulseData.PulseNumber),
@@ -95,45 +98,44 @@ func NewPulseData(p insolar.Pulse) pulse.Data {
 		longbits.NewBits512FromBytes(p.Entropy[:]).FoldToBits256(),
 	)
 	data.Timestamp = uint32(p.PulseTimestamp / nanosecondsInSecond)
-	return *data
+	return data
 }
 
-type PulsePacketReader struct {
-	longbits.FixedReader
-	data pulse.Data
+func NewPulseDigest(data pulse.Data) cryptkit.Digest {
+	entropySize := data.PulseEntropy.FixedByteSize()
+
+	bits := longbits.Bits512{}
+	copy(bits[:entropySize], data.PulseEntropy[:])
+	copy(bits[entropySize:], data.PulseEntropy[:])
+
+	// It's not digest actually :)
+	return cryptkit.NewDigest(&bits, SHA3512Digest)
 }
 
-func (p *PulsePacketReader) OriginalPulsarPacket() {}
-
-func (p *PulsePacketReader) GetPulseData() pulse.Data {
-	return p.data
-}
-
-func (p *PulsePacketReader) GetPulseDataEvidence() proofs.OriginalPulsarPacket {
-	return p
-}
-
-func NewPulsePacketReader(pulse insolar.Pulse, data []byte) *PulsePacketReader {
-	return &PulsePacketReader{
-		FixedReader: longbits.NewFixedReader(data),
-		data:        NewPulseData(pulse),
-	}
+func CreateEphemeralPulseData(data pulse.Data) []byte {
+	insolarPulse := NewPulse(data)
+	pulsePacket := pulsenetwork.NewPulsePacket(&insolarPulse, nil, nil, 0)
+	bs, _ := packet.SerializePacket(pulsePacket)
+	receivedPacket, _ := packet.DeserializePacketRaw(bytes.NewReader(bs))
+	return receivedPacket.Bytes()
 }
 
 type PulsePacketParser struct {
-	pulse       insolar.Pulse
-	pulsePacket *PulsePacketReader
+	longbits.FixedReader
+	digest cryptkit.DigestHolder
+	pulse  pulse.Data
+}
+
+func NewPulsePacketParser(pulse pulse.Data, data []byte) *PulsePacketParser {
+	return &PulsePacketParser{
+		FixedReader: longbits.NewFixedReader(data),
+		digest:      NewPulseDigest(pulse).AsDigestHolder(),
+		pulse:       pulse,
+	}
 }
 
 func (p *PulsePacketParser) ParsePacketBody() (transport.PacketParser, error) {
 	return nil, nil
-}
-
-func NewPulsePacketParser(pulse insolar.Pulse, data []byte) *PulsePacketParser {
-	return &PulsePacketParser{
-		pulse:       pulse,
-		pulsePacket: NewPulsePacketReader(pulse, data),
-	}
 }
 
 func (p *PulsePacketParser) IsRelayForbidden() bool {
@@ -153,15 +155,15 @@ func (p *PulsePacketParser) GetTargetID() insolar.ShortNodeID {
 }
 
 func (p *PulsePacketParser) GetPacketType() phases.PacketType {
-	return phases.PacketPulse
+	return phases.PacketPulsarPulse
 }
 
 func (p *PulsePacketParser) GetPulseNumber() pulse.Number {
-	return pulse.Number(p.pulse.PulseNumber)
+	return p.pulse.PulseNumber
 }
 
 func (p *PulsePacketParser) GetPulsePacket() transport.PulsePacketReader {
-	return p.pulsePacket
+	return p
 }
 
 func (p *PulsePacketParser) GetMemberPacket() transport.MemberPacketReader {
@@ -170,4 +172,18 @@ func (p *PulsePacketParser) GetMemberPacket() transport.MemberPacketReader {
 
 func (p *PulsePacketParser) GetPacketSignature() cryptkit.SignedDigest {
 	return cryptkit.SignedDigest{}
+}
+
+func (p *PulsePacketParser) GetPulseDataDigest() cryptkit.DigestHolder {
+	return p.digest
+}
+
+func (p *PulsePacketParser) OriginalPulsarPacket() {}
+
+func (p *PulsePacketParser) GetPulseData() pulse.Data {
+	return p.pulse
+}
+
+func (p *PulsePacketParser) GetPulseDataEvidence() proofs.OriginalPulsarPacket {
+	return p
 }

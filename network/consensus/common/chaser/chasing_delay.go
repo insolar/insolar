@@ -59,6 +59,7 @@ func NewChasingTimer(chasingDelay time.Duration) ChasingTimer {
 type ChasingTimer struct {
 	chasingDelay time.Duration
 	timer        *time.Timer
+	wasCleared   bool
 }
 
 func (c *ChasingTimer) IsEnabled() bool {
@@ -81,9 +82,10 @@ func (c *ChasingTimer) RestartChase() {
 	}
 
 	// Restart chasing timer from this moment
-	if !c.timer.Stop() {
+	if !c.wasCleared && !c.timer.Stop() {
 		<-c.timer.C
 	}
+	c.wasCleared = false
 	c.timer.Reset(c.chasingDelay)
 }
 
@@ -92,4 +94,8 @@ func (c *ChasingTimer) Channel() <-chan time.Time {
 		return nil // receiver will wait indefinitely
 	}
 	return c.timer.C
+}
+
+func (c *ChasingTimer) ClearExpired() {
+	c.wasCleared = true
 }

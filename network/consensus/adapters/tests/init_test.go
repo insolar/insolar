@@ -84,25 +84,89 @@ var (
 	scheme       = platformpolicy.NewPlatformCryptographyScheme()
 )
 
-func initNodes(
-	ctx context.Context,
-	mode consensus.Mode,
-	nodes []insolar.NetworkNode,
-	discoveryNodes []insolar.NetworkNode,
-	strategy NetStrategy,
-	nodeInfos []*nodeInfo,
-) ([]consensus.Controller, []network.PulseHandler, []transport.DatagramTransport, []context.Context, []profiles.StaticProfile, error) {
+var (
+	shortNodeIdOffset = 1000
+	portOffset        = 10000
+)
 
-	controllers := make([]consensus.Controller, len(nodes))
-	transports := make([]transport.DatagramTransport, len(nodes))
-	contexts := make([]context.Context, len(nodes))
-	pulseHandlers := make([]network.PulseHandler, 0, len(nodes))
-	staticProfiles := make([]profiles.StaticProfile, len(nodes))
+type candidate struct {
+	profiles.StaticProfile
+	profiles.StaticProfileExtension
+}
 
-	for i, n := range nodes {
+func testCase(stopAfter, startCaseAfter time.Duration, test func()) {
+	startedAt := time.Now()
+
+	ticker := time.NewTicker(time.Second)
+	stopTest := time.After(stopAfter)
+	startCase := time.After(startCaseAfter)
+	for {
+		select {
+		case <-ticker.C:
+			fmt.Println("===", time.Since(startedAt), "=================================================")
+		case <-stopTest:
+			return
+		case <-startCase:
+			test()
+		}
+	}
+}
+
+type InitializedNodes struct {
+	controllers    []consensus.Controller
+	nodeKeepers    []network.NodeKeeper
+	transports     []transport.DatagramTransport
+	contexts       []context.Context
+	pulseHandlers  []network.PulseHandler
+	staticProfiles []profiles.StaticProfile
+}
+
+type GeneratedNodes struct {
+	nodes          []insolar.NetworkNode
+	meta           []*nodeMeta
+	discoveryNodes []insolar.NetworkNode
+}
+
+func generateNodes(countNeutral, countHeavy, countLight, countVirtual int, discoveryNodes []insolar.NetworkNode) (*GeneratedNodes, error) {
+	nodeIdentities := generateNodeIdentities(countNeutral, countHeavy, countLight, countVirtual)
+	nodeInfos := generateNodeInfos(nodeIdentities)
+	nodes, dn, err := nodesFromInfo(nodeInfos)
+
+	if len(discoveryNodes) > 0 {
+		dn = discoveryNodes
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &GeneratedNodes{
+		nodes:          nodes,
+		meta:           nodeInfos,
+		discoveryNodes: dn,
+	}, nil
+}
+
+func newNodes(size int) InitializedNodes {
+	return InitializedNodes{
+		controllers:    make([]consensus.Controller, size),
+		transports:     make([]transport.DatagramTransport, size),
+		contexts:       make([]context.Context, size),
+		pulseHandlers:  make([]network.PulseHandler, 0, size),
+		staticProfiles: make([]profiles.StaticProfile, size),
+		nodeKeepers:    make([]network.NodeKeeper, size),
+	}
+}
+
+func initNodes(ctx context.Context, mode consensus.Mode, nodes GeneratedNodes, strategy NetStrategy) (*InitializedNodes, error) {
+	ns := newNodes(len(nodes.nodes))
+
+	for i, n := range nodes.nodes {
 		nodeKeeper := nodenetwork.NewNodeKeeper(n)
-		nodeKeeper.SetInitialSnapshot(nodes)
-		certificateManager := initCrypto(n, discoveryNodes)
+		nodeKeeper.SetInitialSnapshot(nodes.nodes)
+		ns.nodeKeepers[i] = nodeKeeper
+
+		certificateManager := initCrypto(n, nodes.discoveryNodes)
 		datagramHandler := adapters.NewDatagramHandler()
 
 		conf := configuration.NewHostNetwork().Transport
@@ -111,46 +175,60 @@ func initNodes(
 		transportFactory := transport.NewFactory(conf)
 		datagramTransport, err := transportFactory.CreateDatagramTransport(datagramHandler)
 		if err != nil {
-			return nil, nil, nil, nil, nil, err
+			return nil, err
 		}
 
 		pulseHandler := adapters.NewPulseHandler()
-		pulseHandlers = append(pulseHandlers, pulseHandler)
+		ns.pulseHandlers = append(ns.pulseHandlers, pulseHandler)
 
 		delayTransport := strategy.GetLink(datagramTransport)
-		transports[i] = delayTransport
+		ns.transports[i] = delayTransport
 
-		controllers[i] = consensus.New(ctx, consensus.Dep{
-			PrimingCloudStateHash: [64]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
-			KeyProcessor:          keyProcessor,
-			Scheme:                scheme,
-			CertificateManager:    certificateManager,
-			KeyStore:              keystore.NewInplaceKeyStore(nodeInfos[i].privateKey),
-			NodeKeeper:            nodeKeeper,
-			StateGetter:           &nshGen{nshDelay: defaultNshGenerationDelay},
+		controller := consensus.New(ctx, consensus.Dep{
+			KeyProcessor:       keyProcessor,
+			Scheme:             scheme,
+			CertificateManager: certificateManager,
+			KeyStore:           keystore.NewInplaceKeyStore(nodes.meta[i].privateKey),
+
+			NodeKeeper:        nodeKeeper,
+			DatagramTransport: delayTransport,
+
+			StateGetter: &nshGen{nshDelay: defaultNshGenerationDelay},
 			PulseChanger: &pulseChanger{
 				nodeKeeper: nodeKeeper,
 			},
 			StateUpdater: &stateUpdater{
 				nodeKeeper: nodeKeeper,
 			},
-			DatagramTransport: delayTransport,
+			EphemeralController: &ephemeralController{
+				allowed: true,
+			},
 		}).ControllerFor(mode, datagramHandler, pulseHandler)
 
+		ns.controllers[i] = controller
 		ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
 			"node_id":      n.ShortID(),
 			"node_address": n.Address(),
 		})
-		contexts[i] = ctx
+		ns.contexts[i] = ctx
 		err = delayTransport.Start(ctx)
 		if err != nil {
-			return nil, nil, nil, nil, nil, err
+			return nil, err
 		}
 
-		staticProfiles[i] = adapters.NewStaticProfile(n, certificateManager.GetCertificate(), keyProcessor)
+		ns.staticProfiles[i] = adapters.NewStaticProfile(n, certificateManager.GetCertificate(), keyProcessor)
 	}
 
-	return controllers, pulseHandlers, transports, contexts, staticProfiles, nil
+	return &ns, nil
+}
+
+func initPulsar(ctx context.Context, delta uint16, ns InitializedNodes) {
+	pulsar := NewPulsar(delta, ns.pulseHandlers)
+	go func() {
+		for {
+			pulsar.Pulse(ctx, 4+len(ns.staticProfiles)/10)
+		}
+	}()
 }
 
 func initLogger(level insolar.LogLevel) context.Context {
@@ -173,8 +251,6 @@ func generateNodeIdentities(countNeutral, countHeavy, countLight, countVirtual i
 	return r
 }
 
-var portOffset = 10000
-
 func _generateNodeIdentity(r []nodeIdentity, count int, role insolar.StaticRole) []nodeIdentity {
 	for i := 0; i < count; i++ {
 		port := portOffset
@@ -187,13 +263,13 @@ func _generateNodeIdentity(r []nodeIdentity, count int, role insolar.StaticRole)
 	return r
 }
 
-func generateNodeInfos(nodeIdentities []nodeIdentity) []*nodeInfo {
-	nodeInfos := make([]*nodeInfo, 0, len(nodeIdentities))
+func generateNodeInfos(nodeIdentities []nodeIdentity) []*nodeMeta {
+	nodeInfos := make([]*nodeMeta, 0, len(nodeIdentities))
 	for _, ni := range nodeIdentities {
 		privateKey, _ := keyProcessor.GeneratePrivateKey()
 		publicKey := keyProcessor.ExtractPublicKey(privateKey)
 
-		nodeInfos = append(nodeInfos, &nodeInfo{
+		nodeInfos = append(nodeInfos, &nodeMeta{
 			nodeIdentity: ni,
 			publicKey:    publicKey,
 			privateKey:   privateKey,
@@ -207,7 +283,7 @@ type nodeIdentity struct {
 	addr string
 }
 
-type nodeInfo struct {
+type nodeMeta struct {
 	nodeIdentity
 	privateKey crypto.PrivateKey
 	publicKey  crypto.PublicKey
@@ -219,7 +295,7 @@ func getAnnounceSignature(
 	kp insolar.KeyProcessor,
 	key *ecdsa.PrivateKey,
 	scheme insolar.PlatformCryptographyScheme,
-) ([]byte, insolar.Signature) {
+) ([]byte, *insolar.Signature, error) {
 
 	brief := serialization.NodeBriefIntro{}
 	brief.ShortID = node.ShortID()
@@ -231,13 +307,13 @@ func getAnnounceSignature(
 
 	addr, err := endpoints.NewIPAddress(node.Address())
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 	copy(brief.Endpoint[:], addr[:])
 
 	pk, err := kp.ExportPublicKeyBinary(node.PublicKey())
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 
 	copy(brief.NodePK[:], pk)
@@ -245,7 +321,7 @@ func getAnnounceSignature(
 	buf := &bytes.Buffer{}
 	err = brief.SerializeTo(nil, buf)
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 
 	data := buf.Bytes()
@@ -254,13 +330,13 @@ func getAnnounceSignature(
 	digest := scheme.IntegrityHasher().Hash(data)
 	sign, err := scheme.DigestSigner(key).Sign(digest)
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 
-	return digest, *sign
+	return digest, sign, nil
 }
 
-func nodesFromInfo(nodeInfos []*nodeInfo) ([]insolar.NetworkNode, []insolar.NetworkNode) {
+func nodesFromInfo(nodeInfos []*nodeMeta) ([]insolar.NetworkNode, []insolar.NetworkNode, error) {
 	nodes := make([]insolar.NetworkNode, len(nodeInfos))
 	discoveryNodes := make([]insolar.NetworkNode, 0)
 
@@ -276,20 +352,21 @@ func nodesFromInfo(nodeInfos []*nodeInfo) ([]insolar.NetworkNode, []insolar.Netw
 			discoveryNodes = append(discoveryNodes, nn)
 		}
 
-		d, s := getAnnounceSignature(
+		d, s, err := getAnnounceSignature(
 			nn,
 			isDiscovery,
 			keyProcessor,
 			info.privateKey.(*ecdsa.PrivateKey),
 			scheme,
 		)
-		nn.(node.MutableNode).SetSignature(d, s)
+		if err != nil {
+			return nil, nil, err
+		}
+		nn.(node.MutableNode).SetSignature(d, *s)
 	}
 
-	return nodes, discoveryNodes
+	return nodes, discoveryNodes, nil
 }
-
-var shortNodeIdOffset = 1000
 
 func newNetworkNode(addr string, role insolar.StaticRole, pk crypto.PublicKey) node.MutableNode {
 	n := node.NewNode(
@@ -382,4 +459,12 @@ func (su *stateUpdater) UpdateState(ctx context.Context, pulseNumber insolar.Pul
 		inslogger.FromContext(ctx).Error(err)
 	}
 	su.nodeKeeper.SetCloudHash(cloudStateHash)
+}
+
+type ephemeralController struct {
+	allowed bool
+}
+
+func (e *ephemeralController) EphemeralMode() bool {
+	return e.allowed
 }
