@@ -161,18 +161,6 @@ func TestRecordIterator_HasNext(t *testing.T) {
 func TestRecordIterator_Next(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	t.Run("returns err, if LastKnownPosition returns err", func(t *testing.T) {
-		pn := gen.PulseNumber()
-		positionAccessor := object.NewRecordPositionAccessorMock(t)
-		positionAccessor.LastKnownPositionMock.Expect(pn).Return(0, errors.New("some error"))
-
-		iter := newRecordIterator(pn, 0, 0, positionAccessor, nil, nil, nil)
-
-		_, err := iter.Next(ctx)
-
-		require.Error(t, err)
-	})
-
 	t.Run("returns err, if AtPosition returns err", func(t *testing.T) {
 		pn := gen.PulseNumber()
 		positionAccessor := object.NewRecordPositionAccessorMock(t)
@@ -251,12 +239,17 @@ func TestRecordIterator_Next(t *testing.T) {
 
 		t.Run("Changing pulse works successfully", func(t *testing.T) {
 			firstPN := gen.PulseNumber()
-			nextPN := gen.PulseNumber()
+			nextPN := insolar.PulseNumber(firstPN + 10)
 			id := gen.ID()
 			id.SetPulse(nextPN)
 
+			jetKeeper := executor.NewJetKeeperMock(t)
+			jetKeeper.TopSyncPulseMock.Return(nextPN)
+
 			positionAccessor := object.NewRecordPositionAccessorMock(t)
-			positionAccessor.LastKnownPositionMock.Expect(firstPN).Return(5, nil)
+			positionAccessor.LastKnownPositionMock.When(firstPN).Then(5, nil)
+			positionAccessor.LastKnownPositionMock.When(nextPN).Then(1, nil)
+
 			positionAccessor.AtPositionMock.Expect(nextPN, uint32(1)).Return(id, nil)
 
 			record := record.Material{
@@ -269,7 +262,7 @@ func TestRecordIterator_Next(t *testing.T) {
 			pulseCalculator := network.NewPulseCalculatorMock(t)
 			pulseCalculator.ForwardsMock.Expect(ctx, firstPN, 1).Return(insolar.Pulse{PulseNumber: nextPN}, nil)
 
-			iter := newRecordIterator(firstPN, 10, 0, positionAccessor, recordsAccessor, nil, pulseCalculator)
+			iter := newRecordIterator(firstPN, 10, 0, positionAccessor, recordsAccessor, jetKeeper, pulseCalculator)
 
 			next, err := iter.Next(ctx)
 
@@ -352,8 +345,9 @@ func TestRecordServer_Export(t *testing.T) {
 		defer db.Stop(context.Background())
 
 		recordPosition := object.NewRecordPositionDB(db)
+		pulses := pulse.NewDB(db)
 
-		recordServer := NewRecordServer(nil, recordPosition, nil, jetKeeper)
+		recordServer := NewRecordServer(pulses, recordPosition, nil, jetKeeper)
 
 		streamMock := &streamMock{checker: func(i *Record) error {
 			t.Error("it shouldn't be called")
@@ -404,8 +398,8 @@ func TestRecordServer_Export_Composite(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	// Pulses
-	firstPN := gen.PulseNumber()
-	secondPN := firstPN + 10
+	firstPN := insolar.PulseNumber(insolar.FirstPulseNumber + 100)
+	secondPN := insolar.PulseNumber(firstPN + 10)
 
 	// JetKeeper
 	jetKeeper := executor.NewJetKeeperMock(t)
@@ -457,6 +451,16 @@ func TestRecordServer_Export_Composite(t *testing.T) {
 	require.NoError(t, err)
 
 	// Pulses
+
+	// Trash pulses without data
+	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber})
+	require.NoError(t, err)
+	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 10})
+	require.NoError(t, err)
+	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 20})
+	require.NoError(t, err)
+
+	// LegalInfo
 	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: firstPN})
 	require.NoError(t, err)
 	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: secondPN})
@@ -517,6 +521,22 @@ func TestRecordServer_Export_Composite(t *testing.T) {
 
 		err := recordServer.Export(&GetRecords{
 			PulseNumber:  firstPN,
+			RecordNumber: 0,
+			Count:        5,
+		}, streamMock)
+		require.NoError(t, err)
+		require.Equal(t, 3, len(recs))
+	})
+
+	t.Run("export 3 of 3. zero pulse", func(t *testing.T) {
+		var recs []*Record
+		streamMock := &streamMock{checker: func(i *Record) error {
+			recs = append(recs, i)
+			return nil
+		}}
+
+		err := recordServer.Export(&GetRecords{
+			PulseNumber:  0,
 			RecordNumber: 0,
 			Count:        5,
 		}, streamMock)

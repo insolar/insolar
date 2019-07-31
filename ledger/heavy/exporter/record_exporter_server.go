@@ -57,6 +57,8 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 		if topPulse < getRecords.PulseNumber {
 			return errors.New("trying to get a non-finalized pulse data")
 		}
+	} else {
+		getRecords.PulseNumber = insolar.FirstPulseNumber
 	}
 
 	iter := newRecordIterator(
@@ -120,7 +122,7 @@ func newRecordIterator(
 func (r *recordIterator) HasNext(ctx context.Context) bool {
 	lastKnown, err := r.recordIndex.LastKnownPosition(r.currentPulse)
 	if err != nil {
-		return false
+		return r.read < r.needToRead && r.checkNextPulse(ctx)
 	}
 
 	if lastKnown < r.currentPosition+1 {
@@ -131,23 +133,31 @@ func (r *recordIterator) HasNext(ctx context.Context) bool {
 }
 
 func (r *recordIterator) checkNextPulse(ctx context.Context) bool {
-	nextPulse, err := r.pulseCalculator.Forwards(ctx, r.currentPulse, 1)
-	if err != nil {
-		return false
+	currentPulse := r.currentPulse
+
+	for {
+		nextPulse, err := r.pulseCalculator.Forwards(ctx, currentPulse, 1)
+		if err != nil {
+			return false
+		}
+		topPulse := r.jetKeeper.TopSyncPulse()
+		if topPulse < nextPulse.PulseNumber {
+			return false
+		}
+		_, err = r.recordIndex.LastKnownPosition(currentPulse)
+		if err != nil {
+			currentPulse = nextPulse.PulseNumber
+		} else {
+			return true
+		}
 	}
-	topPulse := r.jetKeeper.TopSyncPulse()
-	return topPulse >= nextPulse.PulseNumber
 }
 
 func (r *recordIterator) Next(ctx context.Context) (*Record, error) {
 	r.currentPosition++
 
 	lastKnown, err := r.recordIndex.LastKnownPosition(r.currentPulse)
-	if err != nil {
-		return nil, err
-	}
-
-	if lastKnown < r.currentPosition {
+	if err != nil || lastKnown < r.currentPosition {
 		err := r.setNextPulse(ctx)
 		if err != nil {
 			return nil, err
@@ -173,13 +183,24 @@ func (r *recordIterator) Next(ctx context.Context) (*Record, error) {
 }
 
 func (r *recordIterator) setNextPulse(ctx context.Context) error {
-	nextPulse, err := r.pulseCalculator.Forwards(ctx, r.currentPulse, 1)
-	if err != nil {
-		return err
+	currentPulse := r.currentPulse
+
+	for {
+		nextPulse, err := r.pulseCalculator.Forwards(ctx, currentPulse, 1)
+		if err != nil {
+			return err
+		}
+		topPulse := r.jetKeeper.TopSyncPulse()
+		if topPulse < nextPulse.PulseNumber {
+			return err
+		}
+		_, err = r.recordIndex.LastKnownPosition(nextPulse.PulseNumber)
+		if err != nil {
+			currentPulse = nextPulse.PulseNumber
+		} else {
+			r.currentPulse = nextPulse.PulseNumber
+			r.currentPosition = 1
+			return nil
+		}
 	}
-
-	r.currentPulse = nextPulse.PulseNumber
-	r.currentPosition = 1
-
-	return nil
 }
