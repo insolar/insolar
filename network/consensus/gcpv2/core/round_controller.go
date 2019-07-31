@@ -266,7 +266,7 @@ func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 		priming := lastCensus.GetMandateRegistry().GetPrimingCloudHash()
 		lastCensus.(census.Prime).BuildCopy(pd, priming, priming).MakeExpected().MakeActive(pd)
 	} else {
-		// TODO restring to exact equality!!!!!
+		// TODO restore to exact equality for expected population!!!!!
 		if !lastCensus.GetPulseNumber().IsUnknownOrEqualTo(pd.PulseNumber) {
 			// TODO inform control feeder when our pulse is less
 			panic(fmt.Sprintf("illegal state - pulse number of expected census (%v) and of the realm (%v) are mismatched for %v",
