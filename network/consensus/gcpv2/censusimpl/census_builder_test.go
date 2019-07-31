@@ -204,23 +204,25 @@ func TestBuildAndMakeBrokenExpected(t *testing.T) {
 }
 
 func TestLCBMakeExpected(t *testing.T) {
-	t.Skipped()
-	//chronicles := &localChronicles{}
-	//pn := pulse.Number(1)
-	//sp := profiles.NewStaticProfileMock(t)
-	//sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
-	//sp.GetPrimaryRoleMock.Set(func() member.PrimaryRole { return member.PrimaryRoleNeutral })
-	//spe := profiles.NewStaticProfileExtensionMock(t)
-	//sp.GetExtensionMock.Set(func() profiles.StaticProfileExtension { return spe })
-	//population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
-	//lcb := newLocalCensusBuilder(context.Background(), chronicles, pn, population)
-	//lcb.state = census.SealedCensus
-	//csh := proofs.NewCloudStateHashMock(t)
-	//pop, evicts := lcb.buildPopulation(true, csh)
-	//ce := lcb.makeExpected(pop, evicts)
-	//require.Equal(t, csh, lcb.csh)
+	t.Skip("merge")
+
+	// chronicles := &localChronicles{}
+	// pn := pulse.Number(1)
+	// sp := profiles.NewStaticProfileMock(t)
+	// sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
+	// sp.GetPrimaryRoleMock.Set(func() member.PrimaryRole { return member.PrimaryRoleNeutral })
+	// spe := profiles.NewStaticProfileExtensionMock(t)
+	// sp.GetExtensionMock.Set(func() profiles.StaticProfileExtension { return spe })
+	// population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
+	// lcb := newLocalCensusBuilder(context.Background(), chronicles, pn, population)
+	// lcb.state = census.SealedCensus
+	// csh := proofs.NewCloudStateHashMock(t)
+	// pop, evicts := lcb.buildPopulation(true, csh)
 	//
-	//require.Equal(t, pn, ce.GetPulseNumber())
+	// ce := lcb.makeExpected(pop, evicts)
+	// require.Equal(t, csh, lcb.csh)
+	//
+	// require.Equal(t, pn, ce.GetPulseNumber())
 }
 
 func TestDPBRemoveOthers(t *testing.T) {

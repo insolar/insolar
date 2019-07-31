@@ -53,9 +53,10 @@ package ph01ctl
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
-	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -184,7 +185,7 @@ func (*Phase01Controller) GetPacketType() []phases.PacketType {
 	return []phases.PacketType{phases.PacketPhase0, phases.PacketPhase1, phases.PacketReqPhase1}
 }
 
-func (c *Phase01Controller) sendReqReply(ctx context.Context, target *population.NodeAppearance) {
+func (c *Phase01Controller) sendReqReply(ctx context.Context, target *population.NodeAppearance) { // nolint:interfacer
 
 	p1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
 		c.R.GetOriginalPulse(), c.R.GetWelcomePackage(), transport.PrepareWithoutPulseData|c.packetPrepareOptions)
