@@ -55,9 +55,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
+	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/certificate"
 
@@ -198,4 +200,23 @@ func (g *Complete) signCertHandler(ctx context.Context, request network.Received
 
 func (g *Complete) EphemeralMode(nodes []insolar.NetworkNode) bool {
 	return false
+}
+
+func (g *Complete) OnPulseFromConsensus(ctx context.Context, pulse insolar.Pulse) {
+	g.Base.OnPulseFromConsensus(ctx, pulse)
+
+	logger := inslogger.FromContext(ctx)
+
+	logger.Infof("Got new pulse number: %d", pulse.PulseNumber)
+	ctx, span := instracer.StartSpan(ctx, "ServiceNetwork.Handlepulse")
+	span.AddAttributes(
+		trace.Int64Attribute("pulse.PulseNumber", int64(pulse.PulseNumber)),
+	)
+	defer span.End()
+
+	err := g.PulseManager.Set(ctx, pulse)
+	if err != nil {
+		logger.Fatalf("Failed to set new pulse: %s", err.Error())
+	}
+	logger.Infof("Set new current pulse number: %d", pulse.PulseNumber)
 }

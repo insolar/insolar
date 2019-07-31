@@ -137,9 +137,7 @@ message PermitPayload {
 message BootstrapResponse {
     BootstrapResponseCode Code = 1;
     uint32 ETA = 2;
-//    uint32 AssignShortID = 3;
     pulse.PulseProto Pulse = 3 [(gogoproto.nullable) = false];
-    bool isEphemeral = 4;
 }
 
 message BasicResponse {
@@ -161,7 +159,6 @@ message AuthorizeResponse {
     Permit Permit = 4;
     uint32 DiscoveryCount = 5;
     pulse.PulseProto Pulse = 6;
-//    uint32 NetworkState = 7;
 }
 
 message SignCertResponse {

@@ -55,7 +55,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
-
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -83,8 +82,6 @@ func (g *JoinerBootstrap) Run(ctx context.Context) {
 	pulse, err := g.PulseAccessor.Latest(ctx)
 	if err != nil {
 		logger.Error(err.Error())
-		//g.Gatewayer.SwitchState(insolar.NoNetworkState)
-		//return
 		pulse = *insolar.GenesisPulse
 	}
 
@@ -118,7 +115,11 @@ func (g *JoinerBootstrap) authorize(ctx context.Context) (*packet.Permit, error)
 			inslogger.FromContext(ctx).Errorf("Error authorizing to host %s: %s", h.String(), err.Error())
 			continue
 		}
-		// TODO: check majority and res.NetworkState
+		// Check majority rule
+		if int(res.DiscoveryCount) < cert.GetMajorityRule() {
+			inslogger.FromContext(ctx).Errorf("Check MajorityRule failed on authorize, expect %d, got %d", cert.GetMajorityRule(), res.DiscoveryCount)
+			continue
+		}
 
 		return res.Permit, nil
 	}
