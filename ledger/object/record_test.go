@@ -222,10 +222,12 @@ func TestRecordStorage_DB_Set(t *testing.T) {
 
 	ctx := inslogger.TestContext(t)
 
-	id := gen.ID()
-	rec := getMaterialRecord()
-
 	t.Run("saves correct record-value", func(t *testing.T) {
+		t.Parallel()
+
+		id := gen.ID()
+		rec := getMaterialRecord()
+
 		tmpdir, err := ioutil.TempDir("", "bdb-test-")
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
@@ -242,6 +244,11 @@ func TestRecordStorage_DB_Set(t *testing.T) {
 	})
 
 	t.Run("returns override error when saving with the same id", func(t *testing.T) {
+		t.Parallel()
+
+		id := gen.ID()
+		rec := getMaterialRecord()
+
 		tmpdir, err := ioutil.TempDir("", "bdb-test-")
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
