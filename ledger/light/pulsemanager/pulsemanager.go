@@ -163,29 +163,12 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		}
 	}()
 
-	m.JetReleaser.ThrowTimeout(ctx, newPulse.PulseNumber)
-
 	// FIXME: uncomment me in INS-3031.
 	// if err := m.StateIniter.PrepareState(ctx, newPulse.PulseNumber); err != nil {
 	// 	logger.Fatal(errors.Wrap(err, "failed to prepare light for start"))
 	// }
 
 	// FIXME: remove me in INS-3031.
-	// Updating jet tree if its network start. Remove when INS-3031 is ready.
-	{
-		_, err := m.PulseCalculator.Backwards(ctx, newPulse.PulseNumber, 1)
-		if err != nil {
-			if err == pulse.ErrNotFound {
-				err := m.JetModifier.Update(ctx, newPulse.PulseNumber, true, insolar.ZeroJetID)
-				if err != nil {
-					panic(errors.Wrap(err, "failed to update jets"))
-				}
-			} else {
-				panic(errors.Wrap(err, "failed to calculate previous pulse"))
-			}
-		}
-	}
-
 	endedPulse, err := m.PulseAccessor.Latest(ctx)
 	if err != nil {
 		if err == pulse.ErrNotFound {
@@ -193,10 +176,16 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 			if err != nil {
 				panic(errors.Wrap(err, "failed to update jets"))
 			}
+			err = m.JetReleaser.Unlock(ctx, newPulse.PulseNumber, insolar.ZeroJetID)
+			if err != nil {
+				panic(errors.Wrap(err, "failed to update jets"))
+			}
 			return nil, insolar.Pulse{}, errNoPulse
 		}
 		panic(errors.Wrap(err, "failed to calculate ended pulse"))
 	}
+
+	m.JetReleaser.CloseAllUntil(ctx, endedPulse.PulseNumber)
 
 	jets, err := m.JetSplitter.Do(ctx, endedPulse.PulseNumber, newPulse.PulseNumber)
 	if err != nil {

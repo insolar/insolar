@@ -48,73 +48,24 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package core
+package population
 
 import (
 	"context"
-	"time"
-
-	"github.com/insolar/insolar/network/consensus/common/chaser"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
 )
 
-type PollingWorker struct {
-	ctx context.Context
+type PacketDispatcher interface {
+	HasCustomVerifyForHost(from endpoints.Inbound, verifyFlags coreapi.PacketVerifyFlags) bool
 
-	polls   []api.MaintenancePollFunc
-	pollCmd chan api.MaintenancePollFunc
+	DispatchHostPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound, flags coreapi.PacketVerifyFlags) error
+
+	/* This method can validate and create a member, but MUST NOT apply any changes to members etc */
+	TriggerUnknownMember(ctx context.Context, memberID insolar.ShortNodeID, packet transport.MemberPacketReader, from endpoints.Inbound) (bool, error)
+	DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, source *NodeAppearance) error
 }
 
-func (p *PollingWorker) Start(ctx context.Context, pollingInterval time.Duration) {
-	if p.ctx != nil {
-		panic("illegal state")
-	}
-	p.ctx = ctx
-	p.pollCmd = make(chan api.MaintenancePollFunc, 10)
-
-	go p.pollingWorker(pollingInterval)
-}
-
-func (p *PollingWorker) AddPoll(fn api.MaintenancePollFunc) {
-	p.pollCmd <- fn
-}
-
-func (p *PollingWorker) pollingWorker(pollingInterval time.Duration) {
-	pollingTimer := chaser.NewChasingTimer(pollingInterval)
-
-	for {
-		select {
-		case <-p.ctx.Done():
-			return
-		case <-pollingTimer.Channel():
-			if p.scanPolls() {
-				pollingTimer.RestartChase()
-			}
-		case add := <-p.pollCmd:
-			if add == nil {
-				continue
-			}
-			p.polls = append(p.polls, add)
-			if len(p.polls) == 1 {
-				pollingTimer.RestartChase()
-			}
-		}
-	}
-}
-
-func (p *PollingWorker) scanPolls() bool {
-	j := 0
-	for i, poll := range p.polls {
-		if !poll(p.ctx) {
-			p.polls[i] = nil
-			continue
-		}
-		if i != j {
-			p.polls[i] = nil
-			p.polls[j] = poll
-		}
-		j++
-	}
-	p.polls = p.polls[:j]
-	return j > 0
-}
+type DispatchMemberPacketFunc func(ctx context.Context, packet transport.MemberPacketReader, from *NodeAppearance) error

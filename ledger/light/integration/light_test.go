@@ -229,8 +229,6 @@ func Test_BasicOperations(t *testing.T) {
 			})
 			RequireNotError(p)
 
-			reqID := p.(*payload.RequestInfo).RequestID
-			fmt.Println("asking for ", reqID.DebugString())
 			p = CallGetRequest(ctx, s, p.(*payload.RequestInfo).RequestID)
 			RequireNotError(p)
 			require.Equal(t, virtual, p.(*payload.Request).Request)

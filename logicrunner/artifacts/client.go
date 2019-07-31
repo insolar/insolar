@@ -497,7 +497,6 @@ func (m *client) DeployCode(
 
 	codeRec := record.Code{
 		Domain:      domain,
-		Request:     request,
 		Code:        code,
 		MachineType: machineType,
 	}
@@ -703,11 +702,6 @@ func (m *client) RegisterResult(
 	// Request reference will be this object's identifier and referred as "object head".
 	case RequestSideEffectActivate:
 		parentRef, imageRef, memory := result.Activate()
-
-		_, err := m.GetObject(ctx, parentRef)
-		if err != nil {
-			return errors.Wrap(err, "wrong parent")
-		}
 
 		vResultRecord := record.Wrap(&resultRecord)
 		vActivateRecord := record.Wrap(&record.Activate{

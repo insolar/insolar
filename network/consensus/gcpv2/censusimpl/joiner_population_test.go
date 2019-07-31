@@ -71,7 +71,7 @@ func TestNewJoinerPopulation(t *testing.T) {
 	sp.GetPublicKeyStoreMock.Set(func() cryptkit.PublicKeyStore { return pks })
 	vf := cryptkit.NewSignatureVerifierFactoryMock(t)
 	sv := cryptkit.NewSignatureVerifierMock(t)
-	vf.GetSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
+	vf.CreateSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
 	ojp := NewJoinerPopulation(sp, vf)
 	require.Zero(t, ojp.localNode.mode)
 }
@@ -134,7 +134,7 @@ func TestOJPCopyTo(t *testing.T) {
 	require.Zero(t, population.local.index)
 }
 
-func TestFindProfile(t *testing.T) {
+func TestOJPFindProfile(t *testing.T) {
 	sp := profiles.NewStaticProfileMock(t)
 	nodeID := insolar.ShortNodeID(0)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return nodeID })

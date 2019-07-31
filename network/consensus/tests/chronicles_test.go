@@ -55,8 +55,6 @@ import (
 	"math"
 	"time"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
@@ -83,12 +81,12 @@ func NewEmuChronicles(intros []profiles.StaticProfile, localNodeIndex int, asJoi
 		if len(intros) != 1 && localNodeIndex != 0 {
 			panic("illegal state")
 		}
-		localCensus = censusimpl.NewPrimingCensusForJoiner(intros[localNodeIndex], registries, EmuDefaultCryptography)
+		localCensus = censusimpl.NewPrimingCensusForJoiner(intros[localNodeIndex], registries, EmuDefaultCryptography, true)
 	} else {
-		localCensus = censusimpl.NewPrimingCensus(intros, intros[localNodeIndex], registries, EmuDefaultCryptography)
+		localCensus = censusimpl.NewPrimingCensus(intros, intros[localNodeIndex], registries, EmuDefaultCryptography, true)
 	}
 
-	chronicles := censusimpl.NewLocalChronicles(core.NewSimpleProfileIntroFactory(EmuDefaultCryptography))
+	chronicles := censusimpl.NewLocalChronicles(profiles.NewSimpleProfileIntroFactory(EmuDefaultCryptography))
 	localCensus.SetAsActiveTo(chronicles)
 	return chronicles
 }
