@@ -79,7 +79,7 @@ const (
 	// ScopeJetTree is the scope for a jet tree storage.
 	ScopeJetTree Scope = 7
 	// ScopeJetKeeper is the scope for a jet id storage.
-	ScopeJetKeeper               Scope = 8
-	ScopeRecordPosition          Scope = 9
-	ScopeLastKnownRecordPosition Scope = 10
+	ScopeJetKeeper Scope = 8
+	// ScopeRecordPosition is the scope for records' positions.
+	ScopeRecordPosition Scope = 9
 )

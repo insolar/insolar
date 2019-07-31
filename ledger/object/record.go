@@ -321,6 +321,11 @@ func NewRecordPositionDB(db store.DB) *RecordPositionDB {
 	return &RecordPositionDB{db: db}
 }
 
+const (
+	recordPositionKeyPrefix          = 0x01
+	lastKnownRecordPositionKeyPrefix = 0x02
+)
+
 type recordPositionKey struct {
 	pn     insolar.PulseNumber
 	number uint32
@@ -337,7 +342,7 @@ func (k recordPositionKey) Scope() store.Scope {
 func (k recordPositionKey) ID() []byte {
 	parsedNum := make([]byte, 4)
 	binary.BigEndian.PutUint32(parsedNum, k.number)
-	return bytes.Join([][]byte{k.pn.Bytes(), parsedNum}, nil)
+	return bytes.Join([][]byte{{recordPositionKeyPrefix}, k.pn.Bytes(), parsedNum}, nil)
 }
 
 type lastKnownRecordPositionKey struct {
@@ -345,11 +350,11 @@ type lastKnownRecordPositionKey struct {
 }
 
 func (k lastKnownRecordPositionKey) Scope() store.Scope {
-	return store.ScopeLastKnownRecordPosition
+	return store.ScopeRecordPosition
 }
 
 func (k lastKnownRecordPositionKey) ID() []byte {
-	return bytes.Join([][]byte{k.pn.Bytes()}, nil)
+	return bytes.Join([][]byte{{lastKnownRecordPositionKeyPrefix}, k.pn.Bytes()}, nil)
 }
 
 func (r *RecordPositionDB) LastKnownPosition(pn insolar.PulseNumber) (uint32, error) {
