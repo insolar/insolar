@@ -23,11 +23,7 @@ import (
 {{ if $.GenerateInitialize -}}
     XXX_insolar "github.com/insolar/insolar/insolar"
 {{- end }}
-// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-{{ if .Methods }}
-    "strings"
-{{ end }}
-// TODO: this is the end of a horrible hack, please remove it
+    XXX_insolar_errors "github.com/insolar/insolar/utils/errors"
 )
 
 type ExtendableError struct{
@@ -135,7 +131,6 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, e
 	self.{{ $method.Name }}( {{ $method.Arguments }} )
 {{ end }}
 
-// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
 	systemErr := ph.GetSystemError()
 
 {{ $errLastIndex := 0 }}
@@ -143,14 +138,13 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, e
     {{ $errLastIndex = $i }}
 {{ end }}
 
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+	if systemErr != nil && XXX_insolar_errors.IsNonRetryable(systemErr) {
 		ret{{ $errLastIndex }} = systemErr
 		systemErr = nil
 	}
-// TODO: this is the end of a horrible hack, please remove it
 
 	if systemErr != nil {
-		return nil, nil, ph.GetSystemError()
+		return nil, nil, systemErr
 	}
 
 	state := []byte{}

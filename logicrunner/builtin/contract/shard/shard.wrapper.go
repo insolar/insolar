@@ -19,10 +19,7 @@ package shard
 import (
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-
-	"strings"
-	// TODO: this is the end of a horrible hack, please remove it
+	XXX_insolar_errors "github.com/insolar/insolar/utils/errors"
 )
 
 type ExtendableError struct {
@@ -118,17 +115,15 @@ func INSMETHOD_GetRef(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.GetRef(args0)
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
 	systemErr := ph.GetSystemError()
 
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+	if systemErr != nil && XXX_insolar_errors.IsNonRetryable(systemErr) {
 		ret1 = systemErr
 		systemErr = nil
 	}
-	// TODO: this is the end of a horrible hack, please remove it
 
 	if systemErr != nil {
-		return nil, nil, ph.GetSystemError()
+		return nil, nil, systemErr
 	}
 
 	state := []byte{}
@@ -174,17 +169,15 @@ func INSMETHOD_SetRef(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0 := self.SetRef(args0, args1)
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
 	systemErr := ph.GetSystemError()
 
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+	if systemErr != nil && XXX_insolar_errors.IsNonRetryable(systemErr) {
 		ret0 = systemErr
 		systemErr = nil
 	}
-	// TODO: this is the end of a horrible hack, please remove it
 
 	if systemErr != nil {
-		return nil, nil, ph.GetSystemError()
+		return nil, nil, systemErr
 	}
 
 	state := []byte{}

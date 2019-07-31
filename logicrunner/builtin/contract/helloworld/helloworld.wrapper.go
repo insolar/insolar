@@ -19,10 +19,7 @@ package helloworld
 import (
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-
-	"strings"
-	// TODO: this is the end of a horrible hack, please remove it
+	XXX_insolar_errors "github.com/insolar/insolar/utils/errors"
 )
 
 type ExtendableError struct {
@@ -116,17 +113,15 @@ func INSMETHOD_ReturnObj(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.ReturnObj()
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
 	systemErr := ph.GetSystemError()
 
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+	if systemErr != nil && XXX_insolar_errors.IsNonRetryable(systemErr) {
 		ret1 = systemErr
 		systemErr = nil
 	}
-	// TODO: this is the end of a horrible hack, please remove it
 
 	if systemErr != nil {
-		return nil, nil, ph.GetSystemError()
+		return nil, nil, systemErr
 	}
 
 	state := []byte{}
@@ -170,17 +165,15 @@ func INSMETHOD_Greet(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.Greet(args0)
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
 	systemErr := ph.GetSystemError()
 
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+	if systemErr != nil && XXX_insolar_errors.IsNonRetryable(systemErr) {
 		ret1 = systemErr
 		systemErr = nil
 	}
-	// TODO: this is the end of a horrible hack, please remove it
 
 	if systemErr != nil {
-		return nil, nil, ph.GetSystemError()
+		return nil, nil, systemErr
 	}
 
 	state := []byte{}
@@ -222,17 +215,15 @@ func INSMETHOD_Count(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.Count()
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
 	systemErr := ph.GetSystemError()
 
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+	if systemErr != nil && XXX_insolar_errors.IsNonRetryable(systemErr) {
 		ret1 = systemErr
 		systemErr = nil
 	}
-	// TODO: this is the end of a horrible hack, please remove it
 
 	if systemErr != nil {
-		return nil, nil, ph.GetSystemError()
+		return nil, nil, systemErr
 	}
 
 	state := []byte{}
@@ -274,17 +265,15 @@ func INSMETHOD_Errored(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.Errored()
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
 	systemErr := ph.GetSystemError()
 
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+	if systemErr != nil && XXX_insolar_errors.IsNonRetryable(systemErr) {
 		ret1 = systemErr
 		systemErr = nil
 	}
-	// TODO: this is the end of a horrible hack, please remove it
 
 	if systemErr != nil {
-		return nil, nil, ph.GetSystemError()
+		return nil, nil, systemErr
 	}
 
 	state := []byte{}
@@ -326,17 +315,15 @@ func INSMETHOD_PulseNumber(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.PulseNumber()
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
 	systemErr := ph.GetSystemError()
 
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+	if systemErr != nil && XXX_insolar_errors.IsNonRetryable(systemErr) {
 		ret1 = systemErr
 		systemErr = nil
 	}
-	// TODO: this is the end of a horrible hack, please remove it
 
 	if systemErr != nil {
-		return nil, nil, ph.GetSystemError()
+		return nil, nil, systemErr
 	}
 
 	state := []byte{}
@@ -378,17 +365,15 @@ func INSMETHOD_CreateChild(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.CreateChild()
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
 	systemErr := ph.GetSystemError()
 
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+	if systemErr != nil && XXX_insolar_errors.IsNonRetryable(systemErr) {
 		ret1 = systemErr
 		systemErr = nil
 	}
-	// TODO: this is the end of a horrible hack, please remove it
 
 	if systemErr != nil {
-		return nil, nil, ph.GetSystemError()
+		return nil, nil, systemErr
 	}
 
 	state := []byte{}
@@ -432,17 +417,15 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.Call(args0)
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
 	systemErr := ph.GetSystemError()
 
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+	if systemErr != nil && XXX_insolar_errors.IsNonRetryable(systemErr) {
 		ret1 = systemErr
 		systemErr = nil
 	}
-	// TODO: this is the end of a horrible hack, please remove it
 
 	if systemErr != nil {
-		return nil, nil, ph.GetSystemError()
+		return nil, nil, systemErr
 	}
 
 	state := []byte{}

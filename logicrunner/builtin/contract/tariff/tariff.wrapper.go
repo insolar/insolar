@@ -14,10 +14,9 @@
 // limitations under the License.
 //
 
-package costcenter
+package tariff
 
 import (
-	"github.com/insolar/insolar/insolar"
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
 	XXX_insolar_errors "github.com/insolar/insolar/utils/errors"
@@ -39,7 +38,7 @@ func INS_META_INFO() []map[string]string {
 
 func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	self := new(CostCenter)
+	self := new(Tariff)
 
 	if len(object) == 0 {
 		return nil, nil, &ExtendableError{S: "[ Fake GetCode ] ( Generated Method ) Object is nil"}
@@ -65,7 +64,7 @@ func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	self := new(CostCenter)
+	self := new(Tariff)
 
 	if len(object) == 0 {
 		return nil, nil, &ExtendableError{S: "[ Fake GetPrototype ] ( Generated Method ) Object is nil"}
@@ -89,60 +88,10 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 	return state, ret, err
 }
 
-func INSMETHOD_GetFeeWalletRef(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
-	self := new(CostCenter)
-
-	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeGetFeeWalletRef ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-	}
-
-	err := ph.Deserialize(object, self)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetFeeWalletRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
-	}
-
-	args := []interface{}{}
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetFeeWalletRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
-	}
-
-	ret0, ret1 := self.GetFeeWalletRef()
-
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && XXX_insolar_errors.IsNonRetryable(systemErr) {
-		ret1 = systemErr
-		systemErr = nil
-	}
-
-	if systemErr != nil {
-		return nil, nil, systemErr
-	}
-
-	state := []byte{}
-	err = ph.Serialize(self, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret1 = ph.MakeErrorSerializable(ret1)
-
-	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
-
-	return state, ret, err
-}
-
 func INSMETHOD_CalcFee(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
-	self := new(CostCenter)
+	self := new(Tariff)
 
 	if len(object) == 0 {
 		return nil, nil, &ExtendableError{S: "[ FakeCalcFee ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
@@ -194,9 +143,7 @@ func INSMETHOD_CalcFee(object []byte, data []byte) ([]byte, []byte, error) {
 func INSCONSTRUCTOR_New(data []byte) ([]byte, error, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
-	args := [1]interface{}{}
-	var args0 insolar.Reference
-	args[0] = &args0
+	args := []interface{}{}
 
 	err := ph.Deserialize(data, &args)
 	if err != nil {
@@ -204,7 +151,7 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error, error) {
 		return nil, nil, e
 	}
 
-	ret0, ret1 := New(args0)
+	ret0, ret1 := New()
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
@@ -233,8 +180,7 @@ func Initialize() XXX_insolar.ContractWrapper {
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: XXX_insolar.ContractMethods{
-			"GetFeeWalletRef": INSMETHOD_GetFeeWalletRef,
-			"CalcFee":         INSMETHOD_CalcFee,
+			"CalcFee": INSMETHOD_CalcFee,
 		},
 		Constructors: XXX_insolar.ContractConstructors{
 			"New": INSCONSTRUCTOR_New,
