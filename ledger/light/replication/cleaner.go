@@ -38,12 +38,15 @@ import (
 type Cleaner interface {
 	// NotifyAboutPulse notifies a component about a pulse
 	NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber)
+
+	Stop()
 }
 
 // LightCleaner is an implementation of Cleaner interface
 type LightCleaner struct {
 	once          sync.Once
 	pulseForClean chan insolar.PulseNumber
+	done          chan struct{}
 
 	jetCleaner   jet.Cleaner
 	nodeModifier node.Modifier
@@ -86,6 +89,7 @@ func NewCleaner(
 		filamentCleaner: filamentCleaner,
 		indexAccessor:   indexAccessor,
 		pulseForClean:   make(chan insolar.PulseNumber),
+		done:            make(chan struct{}),
 	}
 }
 
@@ -100,8 +104,12 @@ func (c *LightCleaner) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNum
 	c.pulseForClean <- pn
 }
 
+func (c *LightCleaner) Stop() {
+	close(c.done)
+}
+
 func (c *LightCleaner) clean(ctx context.Context) {
-	for pn := range c.pulseForClean {
+	work := func(pn insolar.PulseNumber) {
 		ctx, logger := inslogger.WithTraceField(ctx, utils.RandTraceID())
 		logger.Debugf("[Cleaner][NotifyAboutPulse] start cleaning pulse - %v", pn)
 
@@ -115,12 +123,25 @@ func (c *LightCleaner) clean(ctx context.Context) {
 		if err == pulse.ErrNotFound {
 			logger.Warnf("[Cleaner][NotifyAboutPulse] expiredPn for pn - %v doesn't exist. limit - %v",
 				pn, c.lightChainLimit)
-			continue
+			return
 		}
 		if err != nil {
 			panic(err)
 		}
 		c.cleanPulse(ctx, expiredPn.PulseNumber)
+	}
+
+	for {
+		select {
+		case pn, ok := <-c.pulseForClean:
+			if !ok {
+				return
+			}
+			work(pn)
+		case <-c.done:
+			inslogger.FromContext(ctx).Info("light cleaner stopped")
+			return
+		}
 	}
 }
 
