@@ -19,7 +19,9 @@
 package functest
 
 import (
+	"errors"
 	"fmt"
+	"github.com/insolar/insolar/api"
 	"strconv"
 	"sync"
 	"testing"
@@ -1329,8 +1331,6 @@ func NewWithOne(oneNumber int) (*Two, error) {
 	return &Two{Number: oneNumber, OneRef: insolar.Reference{} }, nil
 }
 
-
-
 var INSATTR_Get_API = true
 func (r *Two) Get() (int, error) {
 
@@ -1391,13 +1391,8 @@ func New() (*Two, error) {
 	return &Two{}, nil
 }
 
-func NewWithOne() (*Two, error) {
-	return &Two{ }, nil
-}
-
-
-var INSATTR_Get_API = true
-func (r *Two) Get(OneRef insolar.Reference) (int, error) {
+var INSATTR_NoWaitGet_API = true
+func (r *Two) NoWaitGet(OneRef insolar.Reference) (int, error) {
 	c  := one.GetObject(OneRef)
 
 	c.GetAndIncrementNoWait()
@@ -1405,25 +1400,19 @@ func (r *Two) Get(OneRef insolar.Reference) (int, error) {
 	
 	return c.Get()
 }
-
-var INSATTR_DoNothing_API = true
-func (r *Two) DoNothing() (error) {
-	return nil
-}
-
 `
 	var n = 100
 	contractOneRef := uploadContract(t, "first_contract"+counter, contractOneCode)
 	firstObjRef := callConstructor(t, contractOneRef, "NewWithNumber", n)
 
 	contractTwoRef := uploadContract(t, "second_contract"+counter, contractTwoCode)
-	secondObjRef := callConstructor(t, contractTwoRef, "NewWithOne")
-	secondRresult := callMethod(t, secondObjRef, "Get", firstObjRef)
-	require.Empty(t, secondRresult.Error)
-	require.Equal(t, float64(n), secondRresult.ExtractedReply)
+	secondObjRef := callConstructor(t, contractTwoRef, "New")
+	secondResult := callMethod(t, secondObjRef, "NoWaitGet", firstObjRef)
+	require.Empty(t, secondResult.Error)
+	require.Equal(t, float64(n), secondResult.ExtractedReply)
 
-	time.Sleep(300 * time.Millisecond)
-	firstResultAfterWait := callMethod(t, firstObjRef, "Get")
+	anon := func() api.CallMethodReply { return callMethod(t, firstObjRef, "Get") }
+	firstResultAfterWait, _ := WaitUntilRequestProcessed(anon, time.Second+10, time.Millisecond+50, 10)
 	require.Equal(t, float64(n), firstResultAfterWait.ExtractedReply)
 
 	t.Run("one object, sequential calls", func(t *testing.T) {
@@ -1431,22 +1420,57 @@ func (r *Two) DoNothing() (error) {
 		wg := sync.WaitGroup{}
 		wg.Add(10)
 
-		objectRef := callConstructor(syncT, contractTwoRef, "NewWithOne")
+		objectRef := callConstructor(syncT, contractTwoRef, "New")
 
 		for i := 0; i < 10; i++ {
 			go func() {
 				defer wg.Done()
-				result := callMethod(syncT, objectRef, "Get", firstObjRef)
+				result := callMethod(syncT, objectRef, "NoWaitGet", firstObjRef)
 				require.Empty(syncT, result.Error)
 			}()
 		}
-
 		wg.Wait()
 
-		time.Sleep(300 * time.Millisecond)
-
-		res := callMethod(syncT, firstObjRef, "Get")
+		anon = func() api.CallMethodReply { return callMethod(syncT, firstObjRef, "Get") }
+		res, _ := WaitUntilRequestProcessed(anon, time.Second+10, time.Millisecond+50, 10)
+		require.NotNil(syncT, res)
 		require.Empty(syncT, res.Error)
 		require.Equal(syncT, float64(n), res.ExtractedReply)
 	})
+}
+
+func WaitUntilRequestProcessed(
+	customFunction func() api.CallMethodReply,
+	functionTimeout time.Duration,
+	timeoutBetweenAttempts time.Duration,
+	attempts int) (*api.CallMethodReply, error) {
+
+	var lastErr error
+	for i := 0; i < attempts; i++ {
+		reply, err := WaitForFunction(customFunction, functionTimeout)
+		if err == nil {
+			return reply, nil
+		}
+		lastErr = err
+		time.Sleep(timeoutBetweenAttempts)
+	}
+	return nil, errors.New("Timeout was exceeded. " + lastErr.Error())
+}
+
+func WaitForFunction(customFunction func() api.CallMethodReply, functionTimeout time.Duration) (*api.CallMethodReply, error) {
+	ch := make(chan api.CallMethodReply, 1)
+	defer close(ch)
+	go func() {
+		ch <- customFunction()
+	}()
+
+	timer := time.NewTimer(functionTimeout)
+	defer timer.Stop()
+
+	select {
+	case result := <-ch:
+		return &result, nil
+	case <-timer.C:
+		return nil, errors.New("timeout was exceeded")
+	}
 }
