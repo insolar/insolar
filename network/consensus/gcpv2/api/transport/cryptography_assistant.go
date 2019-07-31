@@ -48,52 +48,31 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package core
+package transport
 
 import (
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 )
 
-func NewSimpleProfileIntroFactory(pksFactory cryptkit.KeyStoreFactory) profiles.Factory {
-	return &SimpleProfileIntroFactory{pksFactory}
+type CryptographyAssistant interface {
+	cryptkit.SignatureVerifierFactory
+	cryptkit.KeyStoreFactory
+	GetDigestFactory() ConsensusDigestFactory
+	CreateNodeSigner(sks cryptkit.SecretKeyStore) cryptkit.DigestSigner
 }
 
-var _ profiles.Factory = &SimpleProfileIntroFactory{}
-
-type SimpleProfileIntroFactory struct {
-	pksFactory cryptkit.KeyStoreFactory
+type ConsensusDigestFactory interface {
+	cryptkit.DigestFactory
+	CreateAnnouncementDigester() cryptkit.SequenceDigester
+	CreateGlobulaStateDigester() StateDigester
 }
 
-func (p *SimpleProfileIntroFactory) TryConvertUpgradableIntroProfile(profile profiles.StaticProfile) (profiles.StaticProfile, bool) {
-	ext := profile.GetExtension()
-	if ext == nil {
-		return profile, false
-	}
-	if _, ok := profile.(profiles.Upgradable); !ok {
-		return profile, false
-	}
+type StateDigester interface {
+	AddNext(digest longbits.FoldableReader, fullRank member.FullRank)
+	GetDigestMethod() cryptkit.DigestMethod
+	ForkSequence() StateDigester
 
-	pks := profile.GetPublicKeyStore()
-	if pks == nil {
-		pks = p.pksFactory.GetPublicKeyStore(profile.GetNodePublicKey())
-	}
-	return profiles.NewStaticProfileByExt(profile, ext, pks), true
-}
-
-func (p *SimpleProfileIntroFactory) CreateUpgradableIntroProfile(candidate profiles.BriefCandidateProfile) profiles.StaticProfile {
-	pks := p.pksFactory.GetPublicKeyStore(candidate.GetNodePublicKey())
-	return profiles.NewUpgradableProfileByBrief(candidate, pks)
-}
-
-func (p *SimpleProfileIntroFactory) CreateBriefIntroProfile(candidate profiles.BriefCandidateProfile) profiles.StaticProfile {
-
-	pks := p.pksFactory.GetPublicKeyStore(candidate.GetNodePublicKey())
-	return profiles.NewStaticProfileByBrief(candidate, pks)
-}
-
-func (p *SimpleProfileIntroFactory) CreateFullIntroProfile(candidate profiles.CandidateProfile) profiles.StaticProfile {
-
-	pks := p.pksFactory.GetPublicKeyStore(candidate.GetNodePublicKey())
-	return profiles.NewStaticProfileByFull(candidate, pks)
+	FinishSequence() cryptkit.Digest
 }

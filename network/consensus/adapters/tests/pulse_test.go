@@ -68,8 +68,7 @@ import (
 )
 
 const (
-	initialPulse      = 100000
-	defaultPulseDelta = 10
+	initialPulse = 100000
 )
 
 type Pulsar struct {
@@ -100,13 +99,13 @@ func (p *Pulsar) Pulse(ctx context.Context, attempts int) {
 		prevDelta = 0
 	}
 
-	data := *pulse.NewPulsarData(p.pulseNumber, p.pulseDelta, prevDelta, randBits256())
+	data := pulse.NewPulsarData(p.pulseNumber, p.pulseDelta, prevDelta, randBits256())
 	p.pulseNumber += pulse.Number(p.pulseDelta)
 
 	pu := adapters.NewPulse(data)
 	ph, _ := host.NewHost("127.0.0.1:1")
 	th, _ := host.NewHost("127.0.0.1:2")
-	pp := pulsenetwork.NewPulsePacket(ctx, &pu, ph, th, 0)
+	pp := pulsenetwork.NewPulsePacketWithTrace(ctx, &pu, ph, th, 0)
 
 	bs, _ := packet.SerializePacket(pp)
 	rp, _ := packet.DeserializePacketRaw(bytes.NewReader(bs))

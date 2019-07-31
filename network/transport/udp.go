@@ -90,10 +90,9 @@ func (t *udpTransport) SendDatagram(ctx context.Context, address string, data []
 		return errors.New("failed to send datagram: transport is not started")
 	}
 
-	logger := inslogger.FromContext(ctx)
 	if len(data) > udpMaxPacketSize {
 		return fmt.Errorf(
-			"udpTransport.send: too big input data. Maximum: %d. Current: %d",
+			"failed to send datagram: too big input data. Maximum: %d. Current: %d",
 			udpMaxPacketSize,
 			len(data),
 		)
@@ -104,13 +103,11 @@ func (t *udpTransport) SendDatagram(ctx context.Context, address string, data []
 		return errors.Wrap(err, "failed to resolve UDP address")
 	}
 
-	logger.Debug("[ SendDatagram ] udpTransport.send: len = ", len(data))
-	n, err := t.conn.WriteTo(data, udpAddr)
+	_, err = t.conn.WriteTo(data, udpAddr)
 	if err != nil {
 		// TODO: may be try to send second time if error
 		return errors.Wrap(err, "failed to write data")
 	}
-	stats.Record(ctx, consensusv1.SentSize.M(int64(n)))
 	return nil
 }
 

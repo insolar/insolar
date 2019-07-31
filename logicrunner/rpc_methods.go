@@ -66,14 +66,14 @@ func (m *RPCMethods) getCurrent(
 ) {
 	switch mode {
 	case insolar.ExecuteCallMode:
-		broker := m.ss.GetExecutionState(obj)
-		if broker == nil {
-			return nil, nil, errors.New("No execution in the state")
+		archive := m.ss.GetExecutionArchive(obj)
+		if archive == nil {
+			return nil, nil, errors.New("No execution archive in the state")
 		}
 
-		transcript := broker.GetActiveTranscript(reqRef)
+		transcript := archive.GetActiveTranscript(reqRef)
 		if transcript == nil {
-			return nil, nil, errors.Errorf("No current execution in the state for request %s", reqRef.String())
+			return nil, nil, errors.New("No execution archive in the state")
 		}
 
 		return m.execution, transcript, nil

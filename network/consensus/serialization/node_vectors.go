@@ -51,6 +51,7 @@
 package serialization
 
 import (
+	"fmt"
 	"io"
 	"math"
 
@@ -90,6 +91,15 @@ type NodeVectors struct {
 	StateVectorMask        NodeAppearanceBitset // ByteSize=1..335
 	MainStateVector        GlobulaStateVector   // ByteSize=132
 	AdditionalStateVectors []GlobulaStateVector `insolar-transport:"count=PacketFlags[1:2]"` // ByteSize=count * 132
+}
+
+func (nv NodeVectors) String() string {
+	return fmt.Sprintf(
+		"<bitset=%v trusted=%s doubted=%s>",
+		nv.StateVectorMask.Bytes,
+		nv.MainStateVector,
+		nv.AdditionalStateVectors,
+	)
 }
 
 func (nv *NodeVectors) SerializeTo(ctx SerializeContext, writer io.Writer) error {
@@ -289,6 +299,10 @@ type GlobulaStateVector struct {
 	ExpectedRank           member.Rank      // ByteSize=4
 	VectorHash             longbits.Bits512 // ByteSize=64
 	SignedGlobulaStateHash longbits.Bits512 // ByteSize=64
+}
+
+func (gsv GlobulaStateVector) String() string {
+	return fmt.Sprintf("<rank=%s gsh=%s §gsh=%s>", gsv.ExpectedRank, gsv.VectorHash, gsv.SignedGlobulaStateHash)
 }
 
 func (gsv *GlobulaStateVector) SerializeTo(_ SerializeContext, writer io.Writer) error {

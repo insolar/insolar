@@ -114,6 +114,12 @@ type ActiveNode interface {
 	BaseNode
 	GetIndex() member.Index
 	IsJoiner() bool
+	IsPowered() bool
+	IsVoter() bool
+	IsStateful() bool
+	CanIntroduceJoiner() bool
+	HasFullProfile() bool
+
 	GetDeclaredPower() member.Power
 }
 
