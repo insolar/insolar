@@ -643,7 +643,7 @@ func (c *NodeAppearance) NotifyOnCustom(event interface{}) {
 func (c *NodeAppearance) GetPacketHandler(i int) DispatchMemberPacketFunc {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	if len(c.handlers) == 0 {
+	if i < 0 || i >= len(c.handlers) {
 		return nil
 	}
 	return c.handlers[i]
