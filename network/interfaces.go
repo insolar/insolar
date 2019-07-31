@@ -71,7 +71,7 @@ type Report struct {
 	PopulationValid bool
 }
 
-type OnConsensusFinished func(report Report)
+type OnConsensusFinished func(ctx context.Context, report Report)
 
 type BootstrapResult struct {
 	Host *host.Host
@@ -219,13 +219,13 @@ type Gateway interface {
 	GetState() insolar.NetworkState
 	OnPulseFromPulsar(context.Context, insolar.Pulse, ReceivedPacket)
 	OnPulseFromConsensus(context.Context, insolar.Pulse)
-	OnConsensusFinished(p insolar.PulseNumber)
+	OnConsensusFinished(ctx context.Context, report Report)
 	UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte)
 	NewGateway(context.Context, insolar.NetworkState) Gateway
 	Auther() Auther
 	NeedLockMessageBus() bool
 	Bootstrapper() Bootstrapper
-	EphemeralMode() bool
+	EphemeralMode(nodes []insolar.NetworkNode) bool
 }
 
 type Auther interface {
@@ -242,14 +242,4 @@ type Bootstrapper interface {
 	HandleNodeBootstrapRequest(context.Context, Packet) (Packet, error)
 	HandleUpdateSchedule(context.Context, Packet) (Packet, error)
 	HandleReconnect(context.Context, Packet) (Packet, error)
-}
-
-//go:generate minimock -i github.com/insolar/insolar/network.Rules -o ../testutils/network -s _mock.go -g
-
-// Rules are responsible for a majority and minimum roles checking
-type Rules interface {
-	// CheckMajorityRule returns true if MajorityRule check passed, also returns active discovery nodes count
-	CheckMajorityRule() (bool, int)
-	// CheckMinRole returns true if MinRole check passed
-	CheckMinRole() bool
 }

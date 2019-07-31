@@ -55,6 +55,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -70,7 +71,7 @@ import (
 const defaultEphemeralPulseDuration = 2 * time.Second
 
 type EphemeralController interface {
-	EphemeralMode() bool
+	EphemeralMode(nodes []insolar.NetworkNode) bool
 }
 
 type ConsensusControlFeeder struct {
@@ -302,10 +303,22 @@ func (f *EphemeralControlFeeder) OnNonEphemeralPacket(ctx context.Context, parse
 	return nil
 }
 
-func (f *EphemeralControlFeeder) TryConvertFromEphemeral(expected census.Expected) (wasConverted bool, converted census.Expected) {
-	if f.ephemeralController.EphemeralMode() || expected == nil || !expected.GetOnlinePopulation().IsValid() {
+func (f *EphemeralControlFeeder) TryConvertFromEphemeral(ctx context.Context, expected census.Expected) (wasConverted bool, converted census.Expected) {
+	if expected == nil {
 		return false, nil
 	}
+
+	population := expected.GetOnlinePopulation()
+	if !population.IsValid() {
+		return false, nil
+	}
+
+	networkNodes := NewNetworkNodeList(population.GetProfiles())
+	if f.ephemeralController.EphemeralMode(networkNodes) {
+		return false, nil
+	}
+
+	inslogger.FromContext(ctx).Infof("Converting to real pulses with population of %d nodes", len(networkNodes))
 
 	// TODO provide a real pulse to attach to it
 	expectedRealPulse := pulse.Unknown

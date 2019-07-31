@@ -67,8 +67,6 @@ import (
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/network/rules"
-
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/keystore"
 
@@ -282,7 +280,7 @@ func (s *testSuite) StartNodesNetwork(nodes []*networkNode) {
 	results := make(chan error, len(nodes))
 	startNode := func(node *networkNode) {
 		err := node.componentManager.Start(node.ctx)
-		node.serviceNetwork.RegisterConsensusFinishedNotifier(func(report network.Report) {
+		node.serviceNetwork.RegisterConsensusFinishedNotifier(func(ctx context.Context, report network.Report) {
 			node.consensusResult <- report.PulseNumber
 		})
 		results <- err
@@ -528,7 +526,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	cfg.Service.CacheDirectory = cacheDir + node.host
 
 	node.componentManager = &component.Manager{}
-	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme(), rules.NewRules())
+	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme())
 	serviceNetwork, err := servicenetwork.NewServiceNetwork(cfg, node.componentManager)
 	require.NoError(s.t, err)
 
@@ -571,6 +569,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	nodeContext, _ := inslogger.WithFields(s.fixture().ctx, map[string]interface{}{
 		"node_id":      realKeeper.GetOrigin().ShortID(),
 		"node_address": realKeeper.GetOrigin().Address(),
+		"node_role":    realKeeper.GetOrigin().Role().String(),
 	})
 
 	node.ctx = nodeContext

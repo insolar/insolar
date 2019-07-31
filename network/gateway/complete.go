@@ -88,11 +88,6 @@ func (g *Complete) GetState() insolar.NetworkState {
 	return insolar.CompleteNetworkState
 }
 
-func (g *Complete) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, originalPacket network.ReceivedPacket) {
-	// forward pulse to Consensus
-	g.ConsensusPulseHandler.HandlePulse(ctx, pu, originalPacket)
-}
-
 func (g *Complete) NeedLockMessageBus() bool {
 	return false
 }
@@ -201,6 +196,6 @@ func (g *Complete) signCertHandler(ctx context.Context, request network.Received
 	return g.HostNetwork.BuildResponse(ctx, request, &packet.SignCertResponse{Sign: sign}), nil
 }
 
-func (g *Complete) EphemeralMode() bool {
+func (g *Complete) EphemeralMode(nodes []insolar.NetworkNode) bool {
 	return false
 }

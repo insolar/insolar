@@ -55,10 +55,10 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/rules"
 	"go.opencensus.io/trace"
 
 	"github.com/pkg/errors"
@@ -93,7 +93,6 @@ type Base struct {
 	PulseAppender       pulse.Appender              `inject:""`
 	PulseManager        insolar.PulseManager        `inject:""`
 	BootstrapRequester  bootstrap.Requester         `inject:""`
-	Rules               network.Rules               `inject:""`
 	KeyProcessor        insolar.KeyProcessor        `inject:""`
 
 	ConsensusController   consensus.Controller
@@ -105,7 +104,7 @@ type Base struct {
 
 // NewGateway creates new gateway on top of existing
 func (g *Base) NewGateway(ctx context.Context, state insolar.NetworkState) network.Gateway {
-	inslogger.FromContext(ctx).Infof(" ======== =====   NewGateway %s", state.String())
+	inslogger.FromContext(ctx).Infof(" NewGateway %s", state.String())
 	switch state {
 	case insolar.NoNetworkState:
 		g.Self = newNoNetwork(g)
@@ -372,8 +371,8 @@ func (g *Base) HandleReconnect(ctx context.Context, request network.ReceivedPack
 	return g.HostNetwork.BuildResponse(ctx, request, &packet.ReconnectResponse{}), nil
 }
 
-func (g *Base) OnConsensusFinished(p insolar.PulseNumber) {
-	log.Infof("OnConsensusFinished for pulse %d", p)
+func (g *Base) OnConsensusFinished(ctx context.Context, report network.Report) {
+	inslogger.FromContext(ctx).Infof("OnConsensusFinished for pulse %d", report.PulseNumber)
 }
 
 func (g *Base) createCandidateProfile() {
@@ -385,6 +384,6 @@ func (g *Base) createCandidateProfile() {
 	g.originCandidate = candidate
 }
 
-func (g *Base) EphemeralMode() bool {
-	return true
+func (g *Base) EphemeralMode(nodes []insolar.NetworkNode) bool {
+	return !rules.CheckMinRole(g.CertificateManager.GetCertificate(), nodes)
 }

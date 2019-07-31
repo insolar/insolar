@@ -52,10 +52,11 @@ package api
 
 import (
 	"context"
+	"time"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
-	"time"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 
@@ -121,7 +122,7 @@ type EphemeralControlFeeder interface {
 	/* When a joiner gets a non-ephemeral pulse data from a member */
 	CanAcceptTimePulseToStopEphemeral(pd pulse.Data /*, sourceNode profiles.ActiveNode*/) bool
 
-	TryConvertFromEphemeral(expected census.Expected) (wasConverted bool, converted census.Expected)
+	TryConvertFromEphemeral(ctx context.Context, expected census.Expected) (wasConverted bool, converted census.Expected)
 
 	EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time, expected census.Operational)
 	/* is called:
