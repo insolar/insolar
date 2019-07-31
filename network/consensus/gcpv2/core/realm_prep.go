@@ -257,8 +257,11 @@ func (p *PrepRealm) pushEphemeralPulse(ctx context.Context) bool {
 
 func (p *PrepRealm) checkEphemeralStart(ctx context.Context) bool {
 	jc, _ := p.candidateFeeder.PickNextJoinCandidate()
-	//inslogger.FromContext(ctx).Debug("polling candidate: ", jc)
-	return jc != nil
+	if jc != nil {
+		inslogger.FromContext(ctx).Debug("ephemeral polling has found a candidate: ", jc)
+		return true
+	}
+	return false
 }
 
 func (p *PrepRealm) stop() {

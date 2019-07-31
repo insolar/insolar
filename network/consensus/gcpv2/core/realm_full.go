@@ -275,7 +275,7 @@ func (r *FullRealm) initPopulation(needsDynamic bool, population census.OnlinePo
 		return result
 	}
 
-	var notifyAll func(context.Context)
+	var notifyAll func()
 
 	log := inslogger.FromContext(r.roundContext)
 

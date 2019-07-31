@@ -156,6 +156,10 @@ func (p *RoundStateMachineWorker) OnRoundStopped(ctx context.Context) {
 	}
 }
 
+func (p *RoundStateMachineWorker) OnPrepRoundFailed() {
+	p.applyState(RoundAborted)
+}
+
 func (p *RoundStateMachineWorker) onUnexpectedPulse(pulse.Number) {
 
 }

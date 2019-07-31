@@ -202,7 +202,7 @@ func (p *RealmPurgatory) getMember(id insolar.ShortNodeID, introducedBy insolar.
 		return nil, nil
 	}
 	if np != nil {
-		// np.IntroducedBy(introducedBy) TODO do we need it?
+		np.IntroducedBy(introducedBy)
 		return np, nil
 	}
 
@@ -273,7 +273,7 @@ func (p *RealmPurgatory) FindJoinerProfile(nodeID insolar.ShortNodeID, introduce
 }
 
 func (p *RealmPurgatory) onNodeUpdated(n *NodePhantom, flags population.UpdateFlags) {
-	p.hook.OnPurgatoryNodeUpdate(p.hook.UpdatePopulationVersion(), n, flags)
+	p.hook.OnPurgatoryNodeUpdate(n.purgatory.hook.UpdatePopulationVersion(), n, flags)
 }
 
 // WARNING! Is called under NodeAppearance lock
@@ -317,7 +317,6 @@ func (p *RealmPurgatory) UnknownFromNeighbourhood(ctx context.Context, rank memb
 			panic("announcement.Joiner.JoinerProfile == nil") // it must be checked by caller
 		}
 		return m.DispatchAnnouncement(ctx, rank, announcement.Joiner.JoinerProfile, announcement)
-	} else {
-		return m.DispatchAnnouncement(ctx, rank, nil, announcement)
 	}
+	return m.DispatchAnnouncement(ctx, rank, nil, announcement)
 }

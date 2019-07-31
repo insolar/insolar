@@ -92,7 +92,6 @@ type PhasedRoundController struct {
 	// fullCancel     context.CancelFunc /* cancels prepareCancel as well */
 	prepareCancel  context.CancelFunc
 	prevPulseRound api.RoundController
-	minDuration    time.Duration
 
 	roundWorker RoundStateMachineWorker
 
@@ -248,6 +247,11 @@ RUNS under lock.
 Can be called from a polling function (for ephemeral), and happen BEFORE PrepRealm start
 */
 func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
+
+	if !prepWasSuccessful {
+		r.roundWorker.OnPrepRoundFailed()
+		return
+	}
 
 	r.roundWorker.OnFullRoundStarting()
 

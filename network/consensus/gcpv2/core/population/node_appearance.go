@@ -162,9 +162,9 @@ type NodeAppearance struct {
 	stateEvidence     proofs.NodeStateHashEvidence       // one-time set
 	requestedPower    member.Power                       // one-time set
 
-	statelessDigest cryptkit.DigestHolder
+	//statelessDigest cryptkit.DigestHolder
 
-	joinerSecret         cryptkit.Digest     // TODO implement
+	//joinerSecret         cryptkit.Digest     // TODO implement
 	requestedJoinerID    insolar.ShortNodeID // one-time set
 	requestedLeave       bool                // one-time set
 	requestedLeaveReason uint32              // one-time set
@@ -554,7 +554,7 @@ func (c *NodeAppearance) calcStatelessAnnouncementDigest() cryptkit.SignedDigest
 	return introDigest
 }
 
-func (c *NodeAppearance) onAddedToPopulation(ctx context.Context, fixedInit bool) {
+func (c *NodeAppearance) onAddedToPopulation(fixedInit bool) {
 
 	flags := FlagCreated
 	if fixedInit {
@@ -640,7 +640,7 @@ func (c *NodeAppearance) NotifyOnCustom(event interface{}) {
 	c.hook.OnCustomEvent(c.hook.GetPopulationVersion(), c, event)
 }
 
-func (c *NodeAppearance) getPacketHandler(i int) DispatchMemberPacketFunc {
+func (c *NodeAppearance) GetPacketHandler(i int) DispatchMemberPacketFunc {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if len(c.handlers) == 0 {
