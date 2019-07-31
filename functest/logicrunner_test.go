@@ -20,6 +20,7 @@ package functest
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
@@ -1252,4 +1253,119 @@ func (c *One) Get() (int, error) {
 	result = callMethod(t, objRef, "Get")
 	require.Empty(t, result.Error)
 	require.Equal(t, float64(12), result.ExtractedReply)
+}
+
+var contractOneCode = `
+package main
+
+import (
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"time"
+)
+
+type One struct {
+	foundation.BaseContract
+	Number int
+}
+
+func New() (*One, error) {
+	return &One{Number: 0}, nil
+}
+
+func NewWithNumber(num int) (*One, error) {
+	return &One{Number: num}, nil
+}
+
+var INSATTR_GetAndIncrement_API = true
+func (c *One) GetAndIncrement() (int, error) {
+	time.Sleep(200 * time.Millisecond)
+	c.Number++
+	return c.Number, nil
+}
+
+var INSATTR_GetAndDecrement_API = true
+func (c *One) GetAndDecrement() (int, error) {
+	time.Sleep(200 * time.Millisecond)
+	c.Number--
+	return c.Number, nil
+}
+
+var INSATTR_Get_API = true
+func (c *One) Get() (int, error) {
+	return c.Number, nil
+}
+
+var INSATTR_DoNothing_API = true
+func (r *One) DoNothing() (error) {
+	return nil
+}
+`
+
+func TestMultiplyNoWaitCall(t *testing.T) {
+	var counter = strconv.Itoa(time.Now().Nanosecond())
+
+	var contractTwoCode = `
+package main
+
+import (
+	"github.com/insolar/insolar/insolar"
+	 "github.com/insolar/insolar/logicrunner/builtin/foundation"
+	one "github.com/insolar/insolar/application/proxy/first_contract` + counter + `"
+)
+
+type Two struct {
+	foundation.BaseContract
+	Number int
+	OneRef insolar.Reference
+}
+
+
+func New() (*Two, error) {
+	return &Two{Number: 10, OneRef: insolar.Reference{}}, nil
+}
+
+func NewWithOne(oneNumber int) (*Two, error) {
+	return &Two{Number: oneNumber, OneRef: insolar.Reference{} }, nil
+}
+
+
+
+var INSATTR_Get_API = true
+func (r *Two) Get() (int, error) {
+
+    holder := one.New()
+
+	c, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return 0, err
+	}
+
+	r.OneRef = c.GetReference()
+
+    c.GetAndIncrementNoWait()
+	c.GetAndDecrement()
+	c.GetAndIncrement()
+    c.GetAndDecrementNoWait()
+
+	return c.Get()
+}
+
+var INSATTR_DoNothing_API = true
+func (r *Two) DoNothing() (error) {
+	return nil
+}
+
+`
+
+	contractOneRef := uploadContract(t, "first_contract"+counter, contractOneCode)
+	firstObjRef := callConstructor(t, contractOneRef, "NewWithNumber", 100)
+	firstResult := callMethod(t, firstObjRef, "GetAndIncrement")
+	require.Empty(t, firstResult.Error)
+
+	contractTwoRef := uploadContract(t, "second_contract"+counter, contractTwoCode)
+	secondObjRef := callConstructor(t, contractTwoRef, "NewWithOne", 100)
+	secondRresult := callMethod(t, secondObjRef, "Get")
+	require.Empty(t, secondRresult.Error)
+
+	require.Equal(t, 0.0, secondRresult.ExtractedReply)
 }
