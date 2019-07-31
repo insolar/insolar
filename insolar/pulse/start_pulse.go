@@ -8,7 +8,7 @@ import (
 )
 
 type StartPulse interface {
-	OnPulse(context.Context, insolar.Pulse)
+	SetStartPulse(context.Context, insolar.Pulse)
 	PulseNumber() (insolar.PulseNumber, error)
 }
 
@@ -20,7 +20,7 @@ func NewStartPulse() StartPulse {
 	return &startPulse{}
 }
 
-func (sp *startPulse) OnPulse(ctx context.Context, pulse insolar.Pulse) {
+func (sp *startPulse) SetStartPulse(ctx context.Context, pulse insolar.Pulse) {
 	if sp.pulse == nil {
 		sp.pulse = &pulse
 	}

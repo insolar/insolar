@@ -95,7 +95,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		return err
 	}
 
-	m.StartPulse.OnPulse(ctx, newPulse)
+	m.StartPulse.SetStartPulse(ctx, newPulse)
 
 	err = m.Bus.OnPulse(ctx, newPulse)
 	if err != nil {

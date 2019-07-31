@@ -110,6 +110,17 @@ func New(cfg configuration.Ledger) *Handler {
 				h.Sender,
 			)
 		},
+		SendInitialState: func(p *proc.SendInitialState) {
+			p.Dep(
+				h.StartPulse,
+				h.JetKeeper,
+				h.JetTree,
+				h.JetCoordinator,
+				h.DropDB,
+				h.PulseAccessor,
+				h.Sender,
+			)
+		},
 	}
 	h.dep = &dep
 	return h
@@ -196,7 +207,9 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 	case payload.TypeGotHotConfirmation:
 		h.handleGotHotConfirmation(ctx, meta)
 	case payload.TypeGetLightInitialState:
-		h.handleGetLightInitialState(ctx, meta)
+		p := proc.NewSendInitialState(meta)
+		h.dep.SendInitialState(p)
+		err = p.Proceed(ctx)
 	default:
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())
 	}
@@ -288,61 +301,5 @@ func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Met
 		logger.Error(errors.Wrapf(err, "failed to add hot confitmation to JetKeeper jet=%v", confirm.String()))
 	} else {
 		logger.Debug("got confirmation: ", confirm.String())
-	}
-}
-
-func (h *Handler) handleGetLightInitialState(ctx context.Context, meta payload.Meta) {
-	logger := inslogger.FromContext(ctx)
-	startPulse, err := h.StartPulse.PulseNumber()
-	if err != nil {
-		logger.Fatal("Couldn't get start pulse", err)
-	}
-	msg, err := payload.Unmarshal(meta.Payload)
-	if err != nil {
-		logger.Fatal("Couldn't unmarshall request", err)
-	}
-	req := msg.(*payload.GetLightInitialState)
-
-	if req.Pulse == startPulse {
-		topSyncPulse := h.JetKeeper.TopSyncPulse()
-		var IDs []insolar.JetID
-		var drops [][]byte
-		for _, id := range h.JetTree.All(ctx, topSyncPulse) {
-			light, err := h.JetCoordinator.LightExecutorForJet(ctx, insolar.ID(id), req.Pulse)
-			if err != nil {
-				logger.Fatal("Couldn't receive light executor for jet: ", id, " ", err)
-			}
-			if light.Equal(meta.Sender) {
-				IDs = append(IDs, id)
-				dr, err := h.DropDB.ForPulse(ctx, id, topSyncPulse)
-				if err != nil {
-					logger.Fatal("Couldn't get drops for jet: ", id, " ", err)
-				}
-				drops = append(drops, drop.MustEncode(&dr))
-			}
-		}
-
-
-		p, err := h.PulseAccessor.ForPulseNumber(ctx, topSyncPulse)
-		if err != nil {
-			logger.Fatal("Couldn't get pulse for topSyncPulse: ", topSyncPulse, " ", err)
-		}
-		msg, err := payload.NewMessage(&payload.LightInitialState{
-			JetIDs: IDs,
-			Drops: drops,
-			Pulse: pulse.ToProto(&p),
-		})
-		if err != nil {
-			logger.Fatal("Couldn't make message", err)
-		}
-		h.Sender.Reply(ctx, meta, msg)
-	} else if req.Pulse > startPulse {
-		msg, err := payload.NewMessage(&payload.LightInitialState{})
-		if err != nil {
-			logger.Fatal("Couldn't make message", err)
-		}
-		h.Sender.Reply(ctx, meta, msg)
-	} else {
-		logger.Fatal("impossible situation")
 	}
 }
