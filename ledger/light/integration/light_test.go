@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"sort"
 	"sync"
 	"testing"
 
@@ -93,12 +94,27 @@ func Test_LightReplication(t *testing.T) {
 	s.Pulse(ctx)
 
 	{
+		cryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
+		var reasonID, lastFilament insolar.ID
+
 		// Creating root reason request.
-		var reasonID insolar.ID
 		{
-			p, _ := callSetIncomingRequest(ctx, s, gen.ID(), gen.ID(), true, true)
-			requireNotError(t, p)
-			reasonID = p.(*payload.RequestInfo).RequestID
+			pl, _ := callSetIncomingRequest(ctx, s, gen.ID(), gen.ID(), true, true)
+			requireNotError(t, pl)
+			reasonID = pl.(*payload.RequestInfo).RequestID
+			expectedIds = append(expectedIds, reasonID)
+
+			// Creating filament hash.
+			{
+				virtual := record.Wrap(&record.PendingFilament{
+					RecordID:       reasonID,
+					PreviousRecord: nil,
+				})
+				hash := record.HashVirtual(cryptographyScheme.ReferenceHasher(), virtual)
+				id := *insolar.NewID(reasonID.Pulse(), hash)
+
+				expectedIds = append(expectedIds, id)
+			}
 		}
 
 		// Save and check code.
@@ -115,28 +131,98 @@ func Test_LightReplication(t *testing.T) {
 			requireNotError(t, p)
 			expectedObjectID = p.(*payload.RequestInfo).RequestID
 			expectedIds = append(expectedIds, expectedObjectID)
+
+			// Creating filament hash.
+			{
+				virtual := record.Wrap(&record.PendingFilament{
+					RecordID:       expectedObjectID,
+					PreviousRecord: nil, // payloadId??
+				})
+				hash := record.HashVirtual(cryptographyScheme.ReferenceHasher(), virtual)
+				lastFilament = *insolar.NewID(reasonID.Pulse(), hash)
+
+				expectedIds = append(expectedIds, lastFilament)
+			}
 		}
-		// Activate and check object.
+
+		// Activate object.
 		{
-			p, state := callActivateObject(ctx, s, expectedObjectID)
+			p, requestRec := callActivateObject(ctx, s, expectedObjectID)
 			requireNotError(t, p)
 
-			lifeline, material := requireGetObject(ctx, t, s, expectedObjectID)
-			expectedIds = append(expectedIds, *lifeline.LatestState)
-			require.Equal(t, state, material.Virtual)
+			payloadId := p.(*payload.ResultInfo).ResultID
+			expectedIds = append(expectedIds, payloadId)
+
+			// Creating filament hash.
+			{
+				virtual := record.Wrap(&record.PendingFilament{
+					RecordID:       payloadId,
+					PreviousRecord: &lastFilament,
+				})
+				hash := record.HashVirtual(cryptographyScheme.ReferenceHasher(), virtual)
+				lastFilament = *insolar.NewID(reasonID.Pulse(), hash)
+
+				expectedIds = append(expectedIds, lastFilament)
+			}
+
+			// Create side effect hash.
+			{
+				hash := record.HashVirtual(cryptographyScheme.ReferenceHasher(), requestRec)
+				id := *insolar.NewID(reasonID.Pulse(), hash)
+
+				expectedIds = append(expectedIds, id)
+			}
+
 		}
 		// Amend and check object.
 		{
 			p, _ := callSetIncomingRequest(ctx, s, expectedObjectID, reasonID, false, true)
 			requireNotError(t, p)
 
-			p, state := callAmendObject(ctx, s, expectedObjectID, p.(*payload.RequestInfo).RequestID)
+			reqId := p.(*payload.RequestInfo).RequestID
+			expectedIds = append(expectedIds, reqId)
+
+			// Create filament id.
+			{
+				virtual := record.Wrap(&record.PendingFilament{
+					RecordID:       reqId,
+					PreviousRecord: &lastFilament,
+				})
+				hash := record.HashVirtual(cryptographyScheme.ReferenceHasher(), virtual)
+				lastFilament = *insolar.NewID(reasonID.Pulse(), hash)
+
+				expectedIds = append(expectedIds, lastFilament)
+			}
+
+			p, amendRec := callAmendObject(ctx, s, expectedObjectID, reqId)
 			requireNotError(t, p)
-			lifeline, material := requireGetObject(ctx, t, s, expectedObjectID)
-			require.Equal(t, state, material.Virtual)
+
+			reqId = p.(*payload.ResultInfo).ResultID
+			expectedIds = append(expectedIds, reqId)
+
+			// Create filament id.
+			{
+				virtual := record.Wrap(&record.PendingFilament{
+					RecordID:       reqId,
+					PreviousRecord: &lastFilament,
+				})
+				hash := record.HashVirtual(cryptographyScheme.ReferenceHasher(), virtual)
+				id := *insolar.NewID(reasonID.Pulse(), hash)
+
+				expectedIds = append(expectedIds, id)
+			}
+
+			// Create side effect hash.
+			{
+				hash := record.HashVirtual(cryptographyScheme.ReferenceHasher(), amendRec)
+				id := *insolar.NewID(reasonID.Pulse(), hash)
+
+				expectedIds = append(expectedIds, id)
+			}
+
+			lifeline, _ := requireGetObject(ctx, t, s, expectedObjectID)
 
 			expectedLifeline = lifeline
-			expectedIds = append(expectedIds, *lifeline.LatestState)
 		}
 	}
 
@@ -156,7 +242,7 @@ func Test_LightReplication(t *testing.T) {
 
 		replicatedIds := make(map[insolar.ID]struct{})
 
-		require.Equal(t, 13, len(replicationPayload.Records))
+		require.Equal(t, len(expectedIds), len(replicationPayload.Records))
 		require.Equal(t, expectedLifeline, receivedLifeline)
 
 		// testing payload
@@ -166,9 +252,23 @@ func Test_LightReplication(t *testing.T) {
 			hash := record.HashVirtual(cryptographyScheme.ReferenceHasher(), rec.Virtual)
 			id := insolar.NewID(secondPulseNumber, hash)
 			replicatedIds[*id] = struct{}{}
+			fmt.Println("rep: ", id.DebugString())
 		}
 
+		//
+		var ei []string
 		for _, id := range expectedIds {
+			ei = append(ei, id.DebugString())
+		}
+		sort.Strings(ei)
+		for i, id := range ei {
+			fmt.Println("expe: ", i, id)
+		}
+		//
+
+		for _, id := range expectedIds {
+			fmt.Println("e: ", id.DebugString())
+
 			_, ok := replicatedIds[id]
 			require.True(t, ok, "No key in replicated data")
 		}
