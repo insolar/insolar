@@ -63,8 +63,6 @@ import (
 type components struct {
 	cmp               component.Manager
 	NodeRef, NodeRole string
-	inRouter          *watermillMsg.Router
-	outRouter         *watermillMsg.Router
 	replicator        replication.LightReplicator
 	cleaner           replication.Cleaner
 }
@@ -368,14 +366,6 @@ func (c *components) Start(ctx context.Context) error {
 }
 
 func (c *components) Stop(ctx context.Context) error {
-	err := c.inRouter.Close()
-	if err != nil {
-		inslogger.FromContext(ctx).Error("Error while closing router", err)
-	}
-	err = c.outRouter.Close()
-	if err != nil {
-		inslogger.FromContext(ctx).Error("Error while closing router", err)
-	}
 	c.replicator.Stop()
 	c.cleaner.Stop()
 	return c.cmp.Stop(ctx)
@@ -416,9 +406,7 @@ func (c *components) startWatermill(
 	)
 
 	startRouter(ctx, inRouter)
-	c.inRouter = inRouter
 	startRouter(ctx, outRouter)
-	c.outRouter = outRouter
 }
 
 func startRouter(ctx context.Context, router *watermillMsg.Router) {
