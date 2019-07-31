@@ -17,44 +17,65 @@
 package costcenter
 
 import (
-	"github.com/insolar/insolar/insolar"
+	"fmt"
+	"math/big"
+
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
-// CostCenter provides access to tariffs and wallet for commission.
 type CostCenter struct {
 	foundation.BaseContract
-	CommissionWallet insolar.Reference
-	CurrentTariff    insolar.Reference
-	Tariffs          []insolar.Reference
 }
 
-// New creates new cost center.
-func New(commissionWallet insolar.Reference, currentTariff insolar.Reference) (*CostCenter, error) {
-	return &CostCenter{
-		CommissionWallet: commissionWallet,
-		CurrentTariff:    currentTariff,
-	}, nil
+// New creates new CostCenter.
+func New() (*CostCenter, error) {
+	return &CostCenter{}, nil
 }
 
-// SetTariffs sets tariffs.
-func (cc CostCenter) SetTariffs(tariffs []insolar.Reference) error {
-	cc.Tariffs = tariffs
-	return nil
+func calcFeeRate(amountStr string) (string, error) {
+	amount, ok := new(big.Int).SetString(amountStr, 10)
+	if !ok {
+		return "", fmt.Errorf("can't parse amount")
+	}
+
+	if amount.Cmp(big.NewInt(1000*1000*1000)) >= 0 {
+		return "1000000000", nil // 1000 * 1000 * 1000 = 10%
+	}
+	if amount.Cmp(big.NewInt(1000*1000)) >= 0 {
+		return "2000000000", nil // 2 * 1000 * 1000 * 1000 = 20%
+	}
+	if amount.Cmp(big.NewInt(1000)) >= 0 {
+		return "3000000000", nil // 3 * 1000 * 1000 * 1000 = 30%
+	}
+	return "4000000000", nil // 4 * 1000 * 1000 * 1000 = 40%
 }
 
-// GetTariffs gets tariffs.
-func (cc CostCenter) GetTariffs() ([]insolar.Reference, error) {
-	return cc.Tariffs, nil
-}
+// CalcFee calculates fee for amount. Returns fee.
+func (t CostCenter) CalcFee(amountStr string) (string, error) {
+	amount, ok := new(big.Int).SetString(amountStr, 10)
+	if !ok {
+		return "", fmt.Errorf("can't parse amount")
+	}
 
-// SetCurrentTariff sets current tariff.
-func (cc CostCenter) SetCurrentTariff(currentTariff insolar.Reference) error {
-	cc.CurrentTariff = currentTariff
-	return nil
-}
+	commissionRateStr, err := calcFeeRate(amountStr)
+	if err != nil {
+		return "", fmt.Errorf("failed to calc fee rate")
+	}
 
-// GetCurrentTariff gets current tariff.
-func (cc CostCenter) GetCurrentTariff() (insolar.Reference, error) {
-	return cc.CurrentTariff, nil
+	commissionRate, ok := new(big.Int).SetString(commissionRateStr, 10)
+	if !ok {
+		return "", fmt.Errorf("can't parse commission rate")
+	}
+
+	preResult := new(big.Int).Mul(amount, commissionRate)
+
+	capacity := big.NewInt(10 * 1000 * 1000 * 1000)
+	result := new(big.Int).Div(preResult, capacity)
+
+	mod := new(big.Int).Mod(preResult, capacity)
+	if mod.Cmp(big.NewInt(0)) == 1 {
+		result = new(big.Int).Add(result, big.NewInt(1))
+	}
+
+	return result.String(), nil
 }

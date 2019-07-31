@@ -43,7 +43,6 @@ var (
 		insolar.GenesisNameMember,
 		insolar.GenesisNameWallet,
 		insolar.GenesisNameDeposit,
-		insolar.GenesisNameTariff,
 		insolar.GenesisNameCostCenter,
 		insolar.GenesisNameShard,
 	}
