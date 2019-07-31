@@ -52,7 +52,6 @@ package adapters
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -127,10 +126,14 @@ func (u *UpstreamController) ConsensusFinished(report api.UpstreamReport, expect
 		expectedCensus.GetCloudStateHash().AsBytes(),
 	)
 
+	if _, pd := expectedCensus.GetNearestPulseData(); pd.IsFromEphemeral() {
+		// Fix bootstrap. Commit active list right after consensus finished
+		u.pulseChanger.ChangePulse(ctx, NewPulse(pd))
+	}
+
 	u.mu.RLock()
 	defer u.mu.RUnlock()
 
-	fmt.Println("network nodes: ", networkNodes)
 	u.onFinished(network.Report{
 		PulseNumber:     insolar.PulseNumber(report.PulseNumber),
 		MemberPower:     report.MemberPower,

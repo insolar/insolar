@@ -153,9 +153,9 @@ type NodeKeeper interface {
 	// GetSnapshotCopy get copy of the current nodekeeper snapshot
 	GetSnapshotCopy() *node.Snapshot
 	// Sync move unsync -> sync
-	Sync(context.Context, []insolar.NetworkNode) error
+	Sync(context.Context, []insolar.NetworkNode)
 	// MoveSyncToActive merge sync list with active nodes
-	MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error
+	MoveSyncToActive(ctx context.Context, number insolar.PulseNumber)
 }
 
 // PartitionPolicy contains all rules how to initiate globule resharding.

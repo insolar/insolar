@@ -52,6 +52,7 @@ package gateway
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/insolar/insolar"
@@ -85,6 +86,6 @@ func (g *WaitMinRoles) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, 
 	g.ConsensusPulseHandler.HandlePulse(ctx, pu, originalPacket)
 }
 
-//func (g *WaitMinRoles) EphemeralMode() bool {
-//	return false
-//}
+func (g *WaitMinRoles) EphemeralMode() bool {
+	return false
+}

@@ -133,10 +133,9 @@ type nodekeeper struct {
 	cloudHashLock sync.RWMutex
 	cloudHash     []byte
 
-	activeLock  sync.RWMutex
-	snapshot    *node.Snapshot
-	accessor    *node.Accessor
-	pulseNumber insolar.PulseNumber
+	activeLock sync.RWMutex
+	snapshot   *node.Snapshot
+	accessor   *node.Accessor
 
 	syncLock  sync.Mutex
 	syncNodes []insolar.NetworkNode
@@ -205,26 +204,12 @@ func (nk *nodekeeper) GetWorkingNodes() []insolar.NetworkNode {
 	return nk.GetAccessor().GetWorkingNodes()
 }
 
-func (nk *nodekeeper) Sync(ctx context.Context, nodes []insolar.NetworkNode) error {
+func (nk *nodekeeper) Sync(ctx context.Context, nodes []insolar.NetworkNode) {
 	nk.syncLock.Lock()
 	defer nk.syncLock.Unlock()
 
 	inslogger.FromContext(ctx).Debugf("Sync, nodes: %d", len(nodes))
 	nk.syncNodes = nodes
-
-	foundOrigin := false
-	for _, n := range nodes {
-		if n.ID().Equal(nk.origin.ID()) {
-			foundOrigin = true
-			nk.syncOrigin(n)
-		}
-	}
-
-	if nk.shouldExit(foundOrigin) {
-		return errors.New("node leave acknowledged by network")
-	}
-
-	return nil
 }
 
 // syncOrigin synchronize data in origin node with node from active list in case when they are different objects
@@ -240,7 +225,7 @@ func (nk *nodekeeper) syncOrigin(n insolar.NetworkNode) {
 	mutableOrigin.SetShortID(n.ShortID())
 }
 
-func (nk *nodekeeper) MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error {
+func (nk *nodekeeper) MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) {
 	nk.activeLock.Lock()
 	nk.syncLock.Lock()
 	defer func() {
@@ -248,31 +233,20 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context, number insolar.Pulse
 		nk.activeLock.Unlock()
 	}()
 
-	if nk.pulseNumber == number {
-		return nil
+	if len(nk.syncNodes) == 0 {
+		inslogger.FromContext(ctx).Info("[ MoveSyncToActive ] New active list confirmed and unchanged")
+		return
 	}
-	nk.pulseNumber = number
 
-	mergeResult, err := GetMergedCopy(nk.syncNodes)
-	if err != nil {
-		return errors.Wrap(err, "[ MoveSyncToActive ] Failed to calculate new active list")
-	}
+	mergeResult, _ := GetMergedCopy(nk.syncNodes)
 	inslogger.FromContext(ctx).Infof("[ MoveSyncToActive ] New active list confirmed. Active list size: %d -> %d",
-		len(nk.accessor.GetActiveNodes()), len(mergeResult.ActiveList))
+		len(nk.accessor.GetActiveNodes()),
+		len(mergeResult.ActiveList),
+	)
 
 	nk.snapshot = node.NewSnapshot(number, mergeResult.ActiveList)
 	nk.accessor = node.NewAccessor(nk.snapshot)
 	stats.Record(ctx, network.ActiveNodes.M(int64(len(nk.accessor.GetActiveNodes()))))
-	nk.gracefulStopIfNeeded(ctx)
-	return nil
-}
 
-func (nk *nodekeeper) gracefulStopIfNeeded(ctx context.Context) {
-	if nk.origin.GetState() == insolar.NodeLeaving {
-		nk.TerminationHandler.OnLeaveApproved(ctx)
-	}
-}
-
-func (nk *nodekeeper) shouldExit(foundOrigin bool) bool {
-	return !foundOrigin && nk.origin.GetState() == insolar.NodeReady && len(nk.GetAccessor().GetActiveNodes()) != 0
+	nk.syncNodes = nil
 }

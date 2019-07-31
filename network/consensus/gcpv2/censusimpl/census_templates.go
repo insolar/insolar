@@ -313,7 +313,7 @@ type ExpectedCensusTemplate struct {
 
 func (c *ExpectedCensusTemplate) Rebuild(pn pulse.Number) census.Built {
 
-	if !pn.IsTimePulse() {
+	if !pn.IsUnknownOrTimePulse() {
 		panic("illegal value")
 	}
 

@@ -56,15 +56,16 @@ import (
 	"context"
 	"crypto"
 	"fmt"
-	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/consensus"
-	"github.com/stretchr/testify/require"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network/consensus"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/network/rules"
 
@@ -441,7 +442,7 @@ func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManag
 	cert.Role = node.role.String()
 	cert.BootstrapNodes = make([]certificate.BootstrapNode, 0)
 	cert.MinRoles.HeavyMaterial = 1
-	cert.MinRoles.HeavyMaterial = 4
+	cert.MinRoles.Virtual = 4
 
 	for _, b := range s.fixture().bootstrapNodes {
 		pubKey, _ := b.cryptographyService.GetPublicKey()

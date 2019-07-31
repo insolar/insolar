@@ -160,17 +160,11 @@ func (g *Base) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
 	}
 	logger.Infof("Set new current pulse number: %d", pu.PulseNumber)
 
-	if err := g.NodeKeeper.MoveSyncToActive(ctx, pu.PulseNumber); err != nil {
-		logger.Warn("MoveSyncToActive failed: ", err.Error())
-	}
-
+	g.NodeKeeper.MoveSyncToActive(ctx, pu.PulseNumber)
 }
 
 func (g *Base) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
-	err := g.NodeKeeper.Sync(ctx, nodes)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(err)
-	}
+	g.NodeKeeper.Sync(ctx, nodes)
 	g.NodeKeeper.SetCloudHash(cloudStateHash)
 }
 

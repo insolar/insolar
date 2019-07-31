@@ -52,7 +52,6 @@ package adapters
 
 import (
 	"context"
-	"github.com/insolar/insolar/network"
 	"sync"
 	"time"
 
@@ -266,9 +265,8 @@ func (cf *InternalControlFeederAdapter) setHasLeft() {
 	cf.hasLeft = true
 }
 
-func NewEphemeralControlFeeder(pulseChanger PulseChanger, ephemeralController EphemeralController) *EphemeralControlFeeder {
+func NewEphemeralControlFeeder(ephemeralController EphemeralController) *EphemeralControlFeeder {
 	return &EphemeralControlFeeder{
-		pulseChanger:        pulseChanger,
 		ephemeralController: ephemeralController,
 		pulseDuration:       defaultEphemeralPulseDuration,
 	}
@@ -311,11 +309,6 @@ func (f *EphemeralControlFeeder) TryConvertFromEphemeral(expected census.Expecte
 }
 
 func (f *EphemeralControlFeeder) EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time, expected census.Operational) {
-	pulseNumber := expected.GetPulseNumber()
-	_, pulseData := expected.GetNearestPulseData()
-	ctx := network.NewPulseContext(context.Background(), uint32(pulseNumber))
-
-	f.pulseChanger.ChangePulse(ctx, NewPulse(pulseData))
 }
 
 func (f *EphemeralControlFeeder) GetEphemeralTimings(config api.LocalNodeConfiguration) api.RoundTimings {

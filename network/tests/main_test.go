@@ -55,13 +55,14 @@ package tests
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/node"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 var (
@@ -107,13 +108,12 @@ func TestJoinerNodeConnect(t *testing.T) {
 	s.waitForConsensus(2)
 
 	s.AssertActiveNodesCountDelta(1)
-	//s.AssertWorkingNodesCountDelta(1)
+	// s.AssertWorkingNodesCountDelta(1)
 
+	// s.waitForConsensus(1)
 	//
-	//s.waitForConsensus(1)
-	//
-	//s.AssertActiveNodesCountDelta(1)
-	//s.AssertWorkingNodesCountDelta(1)
+	// s.AssertActiveNodesCountDelta(1)
+	// s.AssertWorkingNodesCountDelta(1)
 }
 
 func TestNodeConnectInvalidVersion(t *testing.T) {
