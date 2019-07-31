@@ -101,7 +101,7 @@ func (r *emuLocalConfig) AsPublicKeyStore() cryptkit.PublicKeyStore {
 func (r *emuLocalConfig) PrivateKeyStore() {
 }
 
-func (r *emuLocalConfig) GetConsensusTimings(nextPulseDelta uint16, isJoiner bool) api.RoundTimings {
+func (r *emuLocalConfig) GetConsensusTimings(nextPulseDelta uint16) api.RoundTimings {
 	if nextPulseDelta == 1 {
 		return r.timings
 	}

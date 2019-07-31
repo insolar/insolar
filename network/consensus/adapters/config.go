@@ -73,6 +73,8 @@ var defaultRoundTimings = api.RoundTimings{
 	BeforeInPhase3ChasingDelay: 0 * time.Millisecond,
 }
 
+//var _ api.LocalNodeConfiguration = &LocalNodeConfiguration{}
+
 type LocalNodeConfiguration struct {
 	ctx            context.Context
 	timings        api.RoundTimings
@@ -102,7 +104,7 @@ func (c *LocalNodeConfiguration) GetParentContext() context.Context {
 	return c.ctx
 }
 
-func (c *LocalNodeConfiguration) GetConsensusTimings(nextPulseDelta uint16, isJoiner bool) api.RoundTimings {
+func (c *LocalNodeConfiguration) GetConsensusTimings(nextPulseDelta uint16) api.RoundTimings {
 	if nextPulseDelta == 1 {
 		return c.timings
 	}

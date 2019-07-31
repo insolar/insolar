@@ -69,7 +69,7 @@ func Test_LightReplication(t *testing.T) {
 	var expectedIds []insolar.ID
 	var receivedMessage = make(chan payload.Replication, 10)
 
-	ctx := inslogger.WithLoggerLevel(inslogger.TestContext(t), insolar.InfoLevel)
+	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 
 	s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) {
@@ -228,8 +228,6 @@ func Test_BasicOperations(t *testing.T) {
 			})
 			requireNotError(t, p)
 
-			reqID := p.(*payload.RequestInfo).RequestID
-			fmt.Println("asking for ", reqID.DebugString())
 			p = callGetRequest(ctx, s, p.(*payload.RequestInfo).RequestID)
 			requireNotError(t, p)
 			require.Equal(t, sent, p.(*payload.Request).Request)

@@ -53,6 +53,8 @@ package censusimpl
 import (
 	"testing"
 
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -70,9 +72,49 @@ func TestNewEvictedPopulation(t *testing.T) {
 
 	sp := profiles.NewStaticProfileMock(t)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
-	evicts := []*updatableSlot{&updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
+	evicts := []*updatableSlot{{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
 	ep := newEvictedPopulation(evicts, 0)
 	require.Equal(t, 1, ep.GetCount())
+}
+
+func TestEPString(t *testing.T) {
+	ep := evictedPopulation{}
+	require.Equal(t, "[]", ep.String())
+
+	sp1 := profiles.NewStaticProfileMock(t)
+	nodeID := insolar.ShortNodeID(0)
+	sp1.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return nodeID })
+	sp2 := profiles.NewStaticProfileMock(t)
+	sp2.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 1 })
+	evicts := []*updatableSlot{{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp1}},
+		{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp2}}}
+	ep = newEvictedPopulation(evicts, 0)
+	require.NotEmpty(t, ep.String())
+
+	ep = newEvictedPopulation(evicts, 1)
+	require.NotEmpty(t, ep.String())
+
+	for i := insolar.ShortNodeID(10); i < 60; i++ {
+		ep.profiles[i] = &evictedSlot{}
+	}
+	require.NotEmpty(t, ep.String())
+}
+
+func TestEPIsValid(t *testing.T) {
+	ep := evictedPopulation{}
+	require.False(t, ep.IsValid())
+
+	ep.detectedErrors = 1
+	require.True(t, ep.IsValid())
+}
+
+func TestGetDetectedErrors(t *testing.T) {
+	ep := evictedPopulation{}
+	require.Zero(t, ep.GetDetectedErrors())
+
+	derr := census.RecoverableErrorTypes(1)
+	ep.detectedErrors = derr
+	require.Equal(t, derr, ep.detectedErrors)
 }
 
 func TestEPFindProfile(t *testing.T) {
@@ -81,8 +123,8 @@ func TestEPFindProfile(t *testing.T) {
 	sp1.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return nodeID })
 	sp2 := profiles.NewStaticProfileMock(t)
 	sp2.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 1 })
-	evicts := []*updatableSlot{&updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp1}},
-		&updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp2}}}
+	evicts := []*updatableSlot{{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp1}},
+		{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp2}}}
 	ep := newEvictedPopulation(evicts, 0)
 	en := ep.FindProfile(nodeID)
 	require.NotNil(t, en)
@@ -97,8 +139,8 @@ func TestEPGetCount(t *testing.T) {
 	sp2 := profiles.NewStaticProfileMock(t)
 	nodeID := insolar.ShortNodeID(0)
 	sp2.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return *(&nodeID) })
-	evicts := []*updatableSlot{&updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp1}},
-		&updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp2}}}
+	evicts := []*updatableSlot{{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp1}},
+		{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp2}}}
 	ep := newEvictedPopulation(evicts, 0)
 	require.Equal(t, 1, ep.GetCount())
 
@@ -113,8 +155,8 @@ func TestEPGetProfiles(t *testing.T) {
 	sp1.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return nodeID })
 	sp2 := profiles.NewStaticProfileMock(t)
 	sp2.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 1 })
-	evicts := []*updatableSlot{&updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp1}},
-		&updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp2}}}
+	evicts := []*updatableSlot{{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp1}},
+		{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp2}}}
 	ep := newEvictedPopulation(evicts, 0)
 	require.Len(t, ep.GetProfiles(), len(evicts))
 }

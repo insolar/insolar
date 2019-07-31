@@ -149,6 +149,9 @@ type Request interface {
 	// ReasonRef returns a reference of the Request that caused the creating
 	// of this Request.
 	ReasonRef() insolar.Reference
+	// ReasonAffinityRef returns a reference of an object reason request is
+	// affine to.
+	ReasonAffinityRef() insolar.Reference
 	// GetCallType returns call type.
 	GetCallType() CallType
 	// IsAPIRequest tells is it API-request or not.
@@ -177,12 +180,16 @@ func (r *IncomingRequest) ReasonRef() insolar.Reference {
 	return r.Reason
 }
 
+func (r *IncomingRequest) ReasonAffinityRef() insolar.Reference {
+	return r.Caller
+}
+
 func (r *IncomingRequest) IsAPIRequest() bool {
 	return !r.APINode.IsEmpty()
 }
 
 func (r *IncomingRequest) IsCreationRequest() bool {
-	return r.GetCallType() == CTSaveAsChild
+	return r.GetCallType() == CTSaveAsChild || r.GetCallType() == CTDeployPrototype
 }
 
 func (r *IncomingRequest) IsDetached() bool {
@@ -191,7 +198,7 @@ func (r *IncomingRequest) IsDetached() bool {
 }
 
 func (r *IncomingRequest) IsTemporaryUploadCode() bool {
-	return r.APINode.IsEmpty() && r.Caller.IsEmpty()
+	return r.GetCallType() == CTDeployPrototype
 }
 
 func (r *OutgoingRequest) AffinityRef() *insolar.Reference {
@@ -201,6 +208,10 @@ func (r *OutgoingRequest) AffinityRef() *insolar.Reference {
 
 func (r *OutgoingRequest) ReasonRef() insolar.Reference {
 	return r.Reason
+}
+
+func (r *OutgoingRequest) ReasonAffinityRef() insolar.Reference {
+	return r.Caller
 }
 
 func (r *OutgoingRequest) IsAPIRequest() bool {

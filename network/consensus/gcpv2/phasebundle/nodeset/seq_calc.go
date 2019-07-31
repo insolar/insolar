@@ -69,7 +69,7 @@ type AnnouncementSequenceCalc struct {
 
 func (p *AnnouncementSequenceCalc) AddNext(nodeData VectorEntryData, zeroPower bool) {
 	if p.digester == nil {
-		p.digester = p.digestFactory.GetAnnouncementDigester()
+		p.digester = p.digestFactory.CreateAnnouncementDigester()
 	}
 	p.digester.AddNext(nodeData.AnnounceSignature)
 }
@@ -180,7 +180,7 @@ func (p *StateAndRankSequenceCalc) AddNext(nodeData VectorEntryData, zeroPower b
 
 func (p *StateAndRankSequenceCalc) hashMemberEntry(v memberEntry, roleIndex member.Index) {
 	if p.digester == nil {
-		p.digester = p.digestFactory.GetGlobulaStateDigester()
+		p.digester = p.digestFactory.CreateGlobulaStateDigester()
 	}
 
 	fr := member.FullRank{

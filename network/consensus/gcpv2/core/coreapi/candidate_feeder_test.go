@@ -48,43 +48,59 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package core
+package coreapi
 
 import (
-	"context"
-
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
+	"testing"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+
+	"github.com/stretchr/testify/require"
 )
 
-type RealmPopulation interface {
-	GetIndexedCount() int
-	GetJoinersCount() int
+// TODO
+/*func TestPickNextJoinCandidate(t *testing.T) {
+	require.Equal(t, nil, (&SequentialCandidateFeeder{}).PickNextJoinCandidate())
 
-	GetSealedCapacity() (int, bool)
-	SealIndexed(indexedCapacity int) bool
+	s := &SequentialCandidateFeeder{buf: make([]profiles.CandidateProfile, 1)}
+	c := profiles.NewCandidateProfileMock(t)
+	s.buf[0] = c
+	require.Equal(t, c, s.PickNextJoinCandidate())
+}*/
 
-	GetNodeAppearance(id insolar.ShortNodeID) *NodeAppearance
-	GetActiveNodeAppearance(id insolar.ShortNodeID) *NodeAppearance
-	GetJoinerNodeAppearance(id insolar.ShortNodeID) *NodeAppearance
-	GetNodeAppearanceByIndex(idx int) *NodeAppearance
+func TestRemoveJoinCandidate(t *testing.T) {
+	require.False(t, (&SequentialCandidateFeeder{}).RemoveJoinCandidate(false, insolar.ShortNodeID(0)))
 
-	GetShuffledOtherNodes() []*NodeAppearance /* excludes joiners and self */
-	GetIndexedNodes() []*NodeAppearance       /* no joiners included */
-	GetIndexedNodesAndHasNil() ([]*NodeAppearance, bool)
-	GetCountAndCompleteness(includeJoiners bool) (int, bool)
+	s := &SequentialCandidateFeeder{buf: make([]profiles.CandidateProfile, 1)}
+	c := profiles.NewCandidateProfileMock(t)
 
-	GetSelf() *NodeAppearance
+	s.buf[0] = c
+	c.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return insolar.ShortNodeID(1) })
+	require.False(t, s.RemoveJoinCandidate(false, insolar.ShortNodeID(2)))
 
-	CreateNodeAppearance(ctx context.Context, inp profiles.ActiveNode) *NodeAppearance
+	c.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return insolar.ShortNodeID(1) })
+	require.True(t, s.RemoveJoinCandidate(false, insolar.ShortNodeID(1)))
 
-	AddToDynamics(n *NodeAppearance) (*NodeAppearance, error)
-	GetAnyNodes(includeIndexed bool, shuffle bool) []*NodeAppearance
+	require.Equal(t, []profiles.CandidateProfile(nil), s.buf)
 
-	CreateVectorHelper() *RealmVectorHelper
-	CreatePacketLimiter() phases.PacketLimiter
+	s.buf = make([]profiles.CandidateProfile, 2)
+	s.buf[0] = c
+	c2 := profiles.NewCandidateProfileMock(t)
+	s.buf[1] = c2
+	require.True(t, s.RemoveJoinCandidate(false, insolar.ShortNodeID(1)))
+
+	require.Equal(t, 1, len(s.buf))
+
+	require.True(t, len(s.buf) > 0 && s.buf[0] == c2)
 }
 
-type NodeInitFunc func(ctx context.Context, n *NodeAppearance)
+func TestAddJoinCandidate(t *testing.T) {
+	require.Panics(t, func() { (&SequentialCandidateFeeder{}).AddJoinCandidate(nil) })
+
+	f := transport.NewFullIntroductionReaderMock(t)
+	s := &SequentialCandidateFeeder{}
+	s.AddJoinCandidate(f)
+	require.True(t, len(s.buf) == 1 && s.buf[0] == f)
+}

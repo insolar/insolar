@@ -143,7 +143,7 @@ func (p *WaitHot) Dep(
 }
 
 func (p *WaitHot) Proceed(ctx context.Context) error {
-	return p.dep.waiter.Wait(ctx, insolar.ID(p.jetID), p.pulse)
+	return p.dep.waiter.Wait(ctx, p.jetID, p.pulse)
 }
 
 type CalculateID struct {
