@@ -116,18 +116,6 @@ func TestIsNeutral(t *testing.T) {
 	require.False(t, PrimaryRoleVirtual.IsNeutral())
 }
 
-func TestIsInactive(t *testing.T) {
-	require.True(t, PrimaryRoleInactive.IsInactive())
-
-	require.False(t, PrimaryRoleNeutral.IsInactive())
-
-	require.False(t, PrimaryRoleHeavyMaterial.IsInactive())
-
-	require.False(t, PrimaryRoleLightMaterial.IsInactive())
-
-	require.False(t, PrimaryRoleVirtual.IsInactive())
-}
-
 func TestIsDiscovery(t *testing.T) {
 	require.False(t, SpecialRoleNone.IsDiscovery())
 

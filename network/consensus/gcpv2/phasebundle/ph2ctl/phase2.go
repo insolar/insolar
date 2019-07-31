@@ -52,8 +52,12 @@ package ph2ctl
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 	"math"
 	"time"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/announce"
@@ -68,8 +72,8 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
-func NewPhase2Controller(loopingMinimalDelay time.Duration, packetPrepareOptions transport.PacketSendOptions,
-	queueNshReady <-chan *core.NodeAppearance) *Phase2Controller {
+func NewPhase2Controller(loopingMinimalDelay time.Duration, packetPrepareOptions transport.PacketPrepareOptions,
+	queueNshReady <-chan *population.NodeAppearance) *Phase2Controller {
 
 	return &Phase2Controller{
 		packetPrepareOptions: packetPrepareOptions,
@@ -83,8 +87,8 @@ var _ core.PhaseController = &Phase2Controller{}
 type Phase2Controller struct {
 	core.PhaseControllerTemplate
 	R                    *core.FullRealm
-	packetPrepareOptions transport.PacketSendOptions
-	queueNshReady        <-chan *core.NodeAppearance
+	packetPrepareOptions transport.PacketPrepareOptions
+	queueNshReady        <-chan *population.NodeAppearance
 	loopingMinimalDelay  time.Duration
 }
 
@@ -94,15 +98,28 @@ type Phase2PacketDispatcher struct {
 	isCapped bool
 }
 
-type TrustUpdateSignal struct {
+type UpdateSignal struct {
 	NewTrustLevel member.TrustLevel
-	UpdatedNode   *core.NodeAppearance
+	UpdatedNode   *population.NodeAppearance
+	DynNode       bool
 }
 
-var pingSignal = TrustUpdateSignal{}
+func NewTrustUpdateSignal(n *population.NodeAppearance, newLevel member.TrustLevel) UpdateSignal {
+	return UpdateSignal{UpdatedNode: n, NewTrustLevel: newLevel}
+}
 
-func (v *TrustUpdateSignal) IsPingSignal() bool {
-	return v.UpdatedNode == nil
+func NewDynamicNodeCreated(n *population.NodeAppearance) UpdateSignal {
+	return UpdateSignal{UpdatedNode: n, DynNode: true, NewTrustLevel: member.UnknownTrust}
+}
+
+func NewDynamicNodeReady(n *population.NodeAppearance) UpdateSignal {
+	return UpdateSignal{UpdatedNode: n, DynNode: true, NewTrustLevel: member.TrustBySome}
+}
+
+var pingSignal = UpdateSignal{}
+
+func (v *UpdateSignal) IsPingSignal() bool {
+	return v.UpdatedNode == nil && v.NewTrustLevel == 0 && !v.DynNode
 }
 
 func (c *Phase2Controller) GetPacketType() []phases.PacketType {
@@ -110,17 +127,17 @@ func (c *Phase2Controller) GetPacketType() []phases.PacketType {
 }
 
 func (c *Phase2Controller) CreatePacketDispatcher(pt phases.PacketType, ctlIndex int,
-	realm *core.FullRealm) (core.PacketDispatcher, core.PerNodePacketDispatcherFactory) {
+	realm *core.FullRealm) (population.PacketDispatcher, core.PerNodePacketDispatcherFactory) {
 
 	return &Phase2PacketDispatcher{ctl: c, isCapped: pt != phases.PacketPhase2}, nil
 }
 
-func (c *Phase2PacketDispatcher) DispatchMemberPacket(ctx context.Context, reader transport.MemberPacketReader, sender *core.NodeAppearance) error {
+func (c *Phase2PacketDispatcher) DispatchMemberPacket(ctx context.Context, reader transport.MemberPacketReader, sender *population.NodeAppearance) error {
 
 	p2 := reader.AsPhase2Packet()
 	realm := c.ctl.R
 
-	signalSent, announcedJoinerID, err := announce.ApplyMemberAnnouncement(ctx, p2,
+	signalSent, announcedJoiner, err := announce.ApplyMemberAnnouncement(ctx, p2,
 		p2.GetBriefIntroduction(), false, sender, realm)
 
 	if err != nil {
@@ -128,25 +145,37 @@ func (c *Phase2PacketDispatcher) DispatchMemberPacket(ctx context.Context, reade
 	}
 
 	neighbourhood := p2.GetNeighbourhood()
-	neighbours, err := announce.VerifyNeighbourhood(ctx, neighbourhood, sender, realm)
+	neighbours, err := announce.VerifyNeighbourhood(ctx, neighbourhood, sender, announcedJoiner, realm)
+
 	if err != nil {
-		rep := misbehavior.FraudOf(err)
+		rep := misbehavior.FraudOf(err) // TODO unify approach to fraud registration
 		if rep != nil {
 			return sender.RegisterFraud(*rep)
 		}
 		return err
 	}
 
-	for i, nb := range neighbours {
-		modified, err := nb.Neighbour.ApplyNeighbourEvidence(sender, nb.Announcement, c.isCapped)
-		if err == nil && modified {
-			signalSent = true
+	purgatory := realm.GetPurgatory()
+	// senderID := sender.GetNodeID()
 
-			err = announce.ApplyNeighbourJoinerAnnouncement(ctx, sender, announcedJoinerID, nb.Neighbour,
-				nb.Announcement.JoinerID, neighbourhood[i].GetJoinerAnnouncement(), realm)
+	for i, nb := range neighbours {
+		modified := false
+		if nb.Neighbour == nil {
+			rank := neighbourhood[i].GetNodeRank()
+			if rank.IsJoiner() && nb.Announcement.Joiner.JoinerProfile == nil {
+				if announcedJoiner == nil || announcedJoiner.GetStaticNodeID() != nb.Announcement.MemberID {
+					panic("unexpected")
+				}
+				continue
+			}
+			err = purgatory.UnknownFromNeighbourhood(ctx, rank, nb.Announcement, c.isCapped)
+		} else {
+			modified, err = nb.Neighbour.ApplyNeighbourEvidence(sender, nb.Announcement, c.isCapped, nil)
 		}
 		if err != nil {
 			inslogger.FromContext(ctx).Error(err)
+		} else if modified {
+			signalSent = true
 		}
 	}
 	if !signalSent {
@@ -156,6 +185,16 @@ func (c *Phase2PacketDispatcher) DispatchMemberPacket(ctx context.Context, reade
 	return nil
 }
 
+func (c *Phase2PacketDispatcher) TriggerUnknownMember(ctx context.Context, memberID insolar.ShortNodeID,
+	packet transport.MemberPacketReader, from endpoints.Inbound) (bool, error) {
+
+	p2 := packet.AsPhase2Packet()
+
+	// TODO check endpoint and PK
+
+	return announce.ApplyUnknownAnnouncement(ctx, memberID, p2, p2.GetBriefIntroduction(), false, c.ctl.R)
+}
+
 func (c *Phase2Controller) StartWorker(ctx context.Context, realm *core.FullRealm) {
 	c.R = realm
 	go c.workerPhase2(ctx)
@@ -163,10 +202,13 @@ func (c *Phase2Controller) StartWorker(ctx context.Context, realm *core.FullReal
 
 func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 
+	log := inslogger.FromContext(ctx)
+
 	// This duration is a soft timeout - the worker will attempt to send all data in the queue before stopping.
 	timings := c.R.GetTimings()
 	// endOfPhase := time.After(c.R.AdjustedAfter(timings.EndOfPhase2))
-	weightScaler := NewNeighbourWeightScalerInt64(timings.EndOfPhase1.Nanoseconds())
+	weightScaler := NewScalerInt64(timings.EndOfPhase1.Nanoseconds())
+	startedAt := c.R.GetStartedAt()
 
 	if timings.StartPhase1RetryAt > 0 {
 		timer := time.AfterFunc(c.R.AdjustedAfter(timings.StartPhase1RetryAt), func() {
@@ -196,8 +238,8 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 		Is is safe to use an unsafe core.LessByNeighbourWeightForNodeAppearance as all objects have passed
 		through a channel (sync) after neighbourWeight field was modified.
 	*/
-	nodeQueue := lazyhead.NewHeadedLazySortedList(neighbourSize-1, core.LessByNeighbourWeightForNodeAppearance, 1+c.R.GetPopulation().GetIndexedCount()>>1)
-	joinQueue := lazyhead.NewHeadedLazySortedList(neighbourJoiners+joinersBoost, core.LessByNeighbourWeightForNodeAppearance, 1+nodeQueue.Len()>>1)
+	nodeQueue := lazyhead.NewHeadedLazySortedList(neighbourSize-1, population.LessByNeighbourWeightForNodeAppearance, 1+c.R.GetPopulation().GetIndexedCount()>>1)
+	joinQueue := lazyhead.NewHeadedLazySortedList(neighbourJoiners+joinersBoost, population.LessByNeighbourWeightForNodeAppearance, 1+nodeQueue.Len()>>1)
 
 	idleLoop := false
 	softTimeout := false
@@ -210,10 +252,13 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 			np, done := readQueueOrDone(ctx, idleLoop, c.loopingMinimalDelay, c.queueNshReady)
 			switch {
 			case done:
+				log.Debug(">>>>workerPhase2: Done")
 				return
 			case np == nil:
 				switch {
+				// there is actually no need for early exit here
 				case softTimeout && idleLoop:
+					log.Debug(">>>>workerPhase2: timeout + idle")
 					return
 				case joinQueue.Len() > 0 || nodeQueue.Len() > 0 || !softTimeout:
 					break inner
@@ -229,27 +274,59 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 			}
 		}
 		idleLoop = true
-		if c.R.GetSelf().IsNshRequired() {
+		if c.R.GetSelf().IsNSHRequired() {
 			// we can't send anything yet - NSH wasn't provided yet
 			continue
 		}
 
-		maxWeight := weightScaler.ScaleInt64(time.Since(c.R.GetStartedAt()).Nanoseconds())
+		maxWeight := weightScaler.ScaleInt64(time.Since(startedAt).Nanoseconds())
+
+		pop := c.R.GetPopulation()
+		nodeCount, isComplete := pop.GetCountAndCompleteness(false)
+		nodeCapacity, _ := pop.GetSealedCapacity()
+		remainingNodes := nodeCount - processedNodes
+		// TODO there are may be a racing when joiners are added?
+		remainingJoiners := pop.GetJoinersCount() - processedJoiners
+
+		/*
+			Here we do scaling based on a number of nodes, to enable earlier processing for faster networks
+			We can allow either all nodes to be processed ahead of time or not more 3/4 of population to ensure that
+			there are enough members will be available to late members.
+		*/
+		available := nodeQueue.Len() + joinQueue.Len()
+		switch {
+		case isComplete && available >= remainingNodes+remainingJoiners:
+			maxWeight = math.MaxUint32
+		case nodeCapacity > neighbourSize<<2: // only works for large enough populations, > 4*neighbourhood size
+			coverage := processedNodes + processedJoiners + available
+
+			if coverage > nodeCapacity>>1 { // only if more half of members arrived
+				const zeroCorrection = math.MaxUint32 >> 2 // zero correction value - scale is limited by 3/4
+
+				k := uint64(math.MaxUint32) * uint64(coverage) / uint64(nodeCapacity)
+				newWeight := uint32(0)
+				switch {
+				case k >= math.MaxUint32:
+					newWeight = math.MaxUint32 - zeroCorrection
+				case k >= zeroCorrection:
+					newWeight = uint32(k) - zeroCorrection
+				}
+				if newWeight > maxWeight {
+					maxWeight = newWeight
+				}
+			}
+		}
+
 		if maxWeight == math.MaxUint32 { // time is up
 			softTimeout = true
 		}
 
-		pop := c.R.GetPopulation()
-		nodeCount, isComplete := pop.GetCountAndCompleteness(false)
-		remainingNodes := nodeCount - processedNodes
-		remainingJoiners := pop.GetJoinersCount() - processedJoiners
-
-		takeJoiners := availableInQueue(joinersBoost, joinQueue, remainingJoiners, maxWeight)
-		takeNodes := availableInQueue(takeJoiners, nodeQueue, remainingNodes, maxWeight)
+		takeJoiners := availableInQueue(joinersBoost, joinQueue, maxWeight)
+		takeNodes := availableInQueue(takeJoiners, nodeQueue, maxWeight)
 
 		if joinersBoost > 0 && takeNodes == 0 && joinQueue.Len() > takeJoiners {
 			// when no normal nodes are zero then Ph2 can carry more joiners, lets unblock the boost
-			takeJoiners = availableInQueue(0, joinQueue, remainingJoiners, maxWeight)
+			takeJoiners = availableInQueue(0, joinQueue, maxWeight)
 		}
 
 		// NB! There is no reason to send Ph2 packet to only 1 non-joining node - the data will be the same as for Phase1
@@ -263,56 +340,32 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 			remainingJoiners -= takeJoiners
 			remainingNodes -= takeNodes
 
-			nh := make([]*core.NodeAppearance, len(nhBuf))
+			nh := make([]*population.NodeAppearance, len(nhBuf))
 			for i, np := range nhBuf {
 				// don't create MembershipAnnouncementReader here to avoid hitting lock by this only process
-				nh[i] = np.(*core.NodeAppearance)
+				nh[i] = np.(*population.NodeAppearance)
 			}
 
 			go c.sendPhase2(ctx, nh)
 
 			idleLoop = false
 		}
-
-		if remainingNodes == 0 && remainingJoiners == 0 && isComplete {
-			return
-		}
 	}
 }
 
-func (c *Phase2Controller) sendPhase2(ctx context.Context, neighbourhood []*core.NodeAppearance) {
-
-	neighbourhoodAnnouncements := make([]transport.MembershipAnnouncementReader, len(neighbourhood))
-	for i, np := range neighbourhood {
-		neighbourhoodAnnouncements[i] = c.R.CreateAnnouncement(np)
-	}
-
-	p2 := c.R.GetPacketBuilder().PreparePhase2Packet(c.R.CreateLocalAnnouncement(), nil,
-		neighbourhoodAnnouncements, c.packetPrepareOptions)
-
-	p2.SendToMany(ctx, len(neighbourhood), c.R.GetPacketSender(),
-		func(ctx context.Context, targetIdx int) (transport.TargetProfile, transport.PacketSendOptions) {
-			np := neighbourhood[targetIdx]
-			np.SetPacketSent(phases.PacketPhase2)
-			return np, 0
-		})
-}
-
-func availableInQueue(captured int, queue lazyhead.HeadedLazySortedList, remains int, maxWeight uint32) int {
+func availableInQueue(captured int, queue lazyhead.HeadedLazySortedList, maxWeight uint32) int {
 	if maxWeight == math.MaxUint32 {
 		return queue.GetAvailableHeadLen(captured)
 	}
 
-	if queue.HasFullHead(captured) || (queue.Len() > 0 && queue.Len() >= remains) {
-		if queue.GetReversedHead(captured).(*core.NodeAppearance).GetNeighbourWeight() <= maxWeight {
-			return queue.GetAvailableHeadLen(captured)
-		}
+	if queue.HasFullHead(captured) && queue.GetReversedHead(captured).(*population.NodeAppearance).GetNeighbourWeight() <= maxWeight {
+		return queue.GetAvailableHeadLen(captured)
 	}
 	return 0
 }
 
 func readQueueOrDone(ctx context.Context, needsSleep bool, sleep time.Duration,
-	q <-chan *core.NodeAppearance) (np *core.NodeAppearance, done bool) {
+	q <-chan *population.NodeAppearance) (np *population.NodeAppearance, done bool) {
 
 	if needsSleep {
 		select {
@@ -335,19 +388,42 @@ func readQueueOrDone(ctx context.Context, needsSleep bool, sleep time.Duration,
 	}
 }
 
+func (c *Phase2Controller) sendPhase2(ctx context.Context, neighbourhood []*population.NodeAppearance) {
+
+	neighbourhoodAnnouncements := make([]transport.MembershipAnnouncementReader, len(neighbourhood))
+	for i, np := range neighbourhood {
+		neighbourhoodAnnouncements[i] = c.R.CreateAnnouncement(np, false)
+	}
+
+	p2 := c.R.GetPacketBuilder().PreparePhase2Packet(c.R.CreateLocalAnnouncement(), nil,
+		neighbourhoodAnnouncements, c.packetPrepareOptions)
+
+	sendOptions := c.packetPrepareOptions.AsSendOptions()
+
+	p2.SendToMany(ctx, len(neighbourhood), c.R.GetPacketSender(),
+		func(ctx context.Context, targetIdx int) (transport.TargetProfile, transport.PacketSendOptions) {
+			np := neighbourhood[targetIdx]
+			np.SetPacketSent(phases.PacketPhase2)
+			return np, sendOptions
+		})
+}
+
 func (c *Phase2Controller) workerRetryOnMissingNodes(ctx context.Context) {
 	log := inslogger.FromContext(ctx)
 
 	log.Info("Phase2 has started re-requesting Phase1")
 
 	s := c.R.GetSelf()
-	if s.IsNshRequired() {
+	if s.IsNSHRequired() {
 		// we are close to end of Phase2 have no NSH - so missing Phase1 packets is the lesser problem
 		return
 	}
 
 	pr1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
-		c.R.GetOriginalPulse(), c.R.GetWelcomePackage(), transport.AlternativePhasePacket|c.packetPrepareOptions)
+		c.R.GetOriginalPulse(), c.R.GetWelcomePackage(),
+		transport.AlternativePhasePacket|transport.PrepareWithoutPulseData|c.packetPrepareOptions)
+
+	sendOptions := c.packetPrepareOptions.AsSendOptions()
 
 	for _, v := range c.R.GetPopulation().GetShuffledOtherNodes() {
 		select {
@@ -355,20 +431,9 @@ func (c *Phase2Controller) workerRetryOnMissingNodes(ctx context.Context) {
 			return
 		default:
 		}
-		if !v.IsNshRequired() {
+		if !v.IsNSHRequired() {
 			continue
 		}
-		pr1.SendTo(ctx, v, 0, c.R.GetPacketSender())
+		pr1.SendTo(ctx, v, sendOptions, c.R.GetPacketSender())
 	}
 }
-
-// func (R *ConsensusRoundController) preparePhase1Packet(po gcpv2.PacketSendOptions) gcpv2.PreparedSendPacket {
-//
-// 	var selfIntro gcpv2.NodeIntroduction = nil
-// 	if c.R.joinersCount > 0 {
-// 		selfIntro = c.R.self.nodeProfile.GetLastPublishedIntroduction()
-// 	}
-//
-// 	return c.R.callback.PreparePhase1Packet(c.R.activePulse.originalPacket, selfIntro,
-// 		c.R.self.membership, c.R.strategy.GetPacketOptions(gcpv2.Phase1)|po)
-// }

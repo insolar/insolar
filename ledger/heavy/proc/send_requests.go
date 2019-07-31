@@ -85,7 +85,7 @@ func (p *SendRequests) Proceed(ctx context.Context) error {
 		composite.Meta = filamentRecord
 
 		// Fetching primary record.
-		virtual := record.Unwrap(filamentRecord.Virtual)
+		virtual := record.Unwrap(&filamentRecord.Virtual)
 		filament, ok := virtual.(*record.PendingFilament)
 		if !ok {
 			return errors.New("failed to convert filament record")
@@ -112,8 +112,8 @@ func (p *SendRequests) Proceed(ctx context.Context) error {
 		Records:  records,
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to create a PendingFilament message")
+		return errors.Wrap(err, "failed to create a FilamentSegment message")
 	}
-	go p.dep.sender.Reply(ctx, p.meta, rep)
+	p.dep.sender.Reply(ctx, p.meta, rep)
 	return nil
 }

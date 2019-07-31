@@ -56,11 +56,28 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/nodeset"
 )
 
-func NewSimpleSelectionStrategy() SelectionStrategy {
-	return &simpleSelectionStrategy{}
+func NewSimpleSelectionStrategyFactory() SelectionStrategyFactory {
+	return &simpleSelectionStrategyFactory{}
+}
+
+type simpleSelectionStrategyFactory struct{}
+
+func (*simpleSelectionStrategyFactory) CreateSelectionStrategy(aggressivePhasing bool) SelectionStrategy {
+	return &simpleSelectionStrategy{aggressivePhasing}
 }
 
 type simpleSelectionStrategy struct {
+	aggressivePhasing bool
+}
+
+func (p *simpleSelectionStrategy) CanStartVectorsEarly(consensusMembers int, countFraud int, countTrustBySome int, countTrustByNeighbors int) bool {
+	if countFraud != 0 {
+		return false
+	}
+	if p.aggressivePhasing {
+		return true
+	}
+	return countTrustBySome >= consensuskit.BftMajority(consensusMembers) || countTrustByNeighbors >= 1+consensusMembers>>1
 }
 
 func (*simpleSelectionStrategy) TrySelectOnAdded(globulaStats *nodeset.ConsensusStatTable, addedNode profiles.StaticProfile,
@@ -70,12 +87,12 @@ func (*simpleSelectionStrategy) TrySelectOnAdded(globulaStats *nodeset.Consensus
 
 func (*simpleSelectionStrategy) SelectOnStopped(globulaStats *nodeset.ConsensusStatTable, timeIsOut bool, bftMajorityArg int) Selection {
 
-	bftMajority := uint16(bftMajorityArg)
 	absMajority := true
 	if globulaStats.RowCount() < bftMajorityArg {
-		bftMajority = uint16(consensuskit.BftMajority(globulaStats.RowCount()))
+		//bftMajority = uint16(consensuskit.BftMajority(globulaStats.RowCount()))
 		absMajority = false
 	}
+	bftMajority := uint16(bftMajorityArg)
 
 	resultSet := nodeset.NewConsensusBitsetRow(globulaStats.ColumnCount())
 	for i := 0; i < resultSet.ColumnCount(); i++ {
@@ -92,11 +109,11 @@ func consensusDecisionOfNode(tc *nodeset.ConsensusStatColumn, absMajority bool, 
 	switch {
 	case tc.GetSummaryByValue(nodeset.ConsensusStatTrusted)+tc.GetSummaryByValue(nodeset.ConsensusStatDoubted) >= bftMajority:
 		return nodeset.CbsIncluded
-	case tc.GetSummaryByValue(nodeset.ConsensusStatFraud)+tc.GetSummaryByValue(nodeset.ConsensusStatMissingThere)+
+	case tc.GetSummaryByValue(nodeset.ConsensusStatFraud)+ //tc.GetSummaryByValue(nodeset.ConsensusStatMissingThere)+
 		tc.GetSummaryByValue(nodeset.ConsensusStatFraudSuspect) >= bftMajority:
-		if absMajority {
-			return nodeset.CbsExcluded
-		}
+		//if absMajority {
+		//	return nodeset.CbsExcluded
+		//}
 		return nodeset.CbsFraud
 	default:
 		return nodeset.CbsSuspected

@@ -86,6 +86,12 @@ func NewStaticProfileByFull(v CandidateProfile, pks cryptkit.PublicKeyStore) Sta
 	return &r
 }
 
+func NewStaticProfileByExt(v BriefCandidateProfile, ext CandidateProfileExtension, pks cryptkit.PublicKeyStore) StaticProfile {
+	r := newStaticProfile(v, pks, []endpoints.Outbound{v.GetDefaultEndpoint()})
+	r.setFull(ext)
+	return &r
+}
+
 type FixedStaticProfile struct {
 	endpoints        []endpoints.Outbound
 	nodeID           insolar.ShortNodeID

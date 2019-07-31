@@ -17,9 +17,9 @@
 package gen
 
 import (
-	fuzz "github.com/google/gofuzz"
-
+	"github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bits"
 )
 
 // ID generates random id.
@@ -45,8 +45,11 @@ func JetID() (jetID insolar.JetID) {
 		copy(jet[:insolar.PulseNumberSize], insolar.PulseNumberJet.Bytes())
 		// set depth
 		// adds 1 because Intn returns [0,n)
-		jet[insolar.PulseNumberSize] = byte(c.Intn(insolar.JetMaximumDepth + 1))
+		depth := byte(c.Intn(insolar.JetMaximumDepth + 1))
+		jet[insolar.PulseNumberSize] = depth
 
+		resetJet := bits.ResetBits(jet[:], depth+insolar.PulseNumberSize*8)
+		copy(jet[:], resetJet)
 	})
 	f.Fuzz(&jetID)
 	return

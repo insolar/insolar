@@ -53,299 +53,288 @@
 package tests
 
 import (
-	"context"
-	"crypto"
-	"fmt"
-	"math/rand"
-	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/certificate"
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/keystore"
-	network2 "github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
-	"github.com/insolar/insolar/network/consensus/adapters"
-	"github.com/insolar/insolar/network/node"
-	"github.com/insolar/insolar/network/nodenetwork"
-	transport2 "github.com/insolar/insolar/network/transport"
-	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-var (
-	keyProcessor = platformpolicy.NewKeyProcessor()
-	scheme       = platformpolicy.NewPlatformCryptographyScheme()
+const (
+	defaultLogLevel       = insolar.DebugLevel
+	defaultPulseDelta     = 2
+	defaultTestDuration   = defaultPulseDelta * time.Second * 10
+	defaultStartCaseAfter = 1 * time.Second
 )
 
-func TestConsensusMain(t *testing.T) {
-	startedAt := time.Now()
+var strategy = NewDelayNetStrategy(DelayStrategyConf{
+	MinDelay:         10 * time.Millisecond,
+	MaxDelay:         30 * time.Millisecond,
+	Variance:         0.2,
+	SpikeProbability: 0.1,
+})
 
-	ctx := initLogger()
+var ctx = initLogger(defaultLogLevel)
 
-	nodeIdentities := generateNodeIdentities(0, 1, 3, 5)
-	nodeInfos := generateNodeInfos(nodeIdentities)
-	nodes, discoveryNodes := nodesFromInfo(nodeInfos)
+func TestConsensusJoin(t *testing.T) {
+	nodes, err := generateNodes(0, 1, 3, 5, nil)
+	require.NoError(t, err)
 
-	pulseHandlers := make([]network2.PulseHandler, 0, len(nodes))
+	joiners, err := generateNodes(0, 0, 6, 1, nodes.discoveryNodes)
+	require.NoError(t, err)
 
-	strategy := NewDelayNetStrategy(DelayStrategyConf{
-		MinDelay:         10 * time.Millisecond,
-		MaxDelay:         30 * time.Millisecond,
-		Variance:         0.2,
-		SpikeProbability: 0.1,
-	})
+	ns, err := initNodes(ctx, consensus.ReadyNetwork, *nodes, strategy)
+	require.NoError(t, err)
 
-	controllers := make([]consensus.Controller, len(nodes))
-	for i, n := range nodes {
-		nodeKeeper := nodenetwork.NewNodeKeeper(n)
-		nodeKeeper.SetInitialSnapshot(nodes)
-		certificateManager := initCrypto(n, discoveryNodes)
-		datagramHandler := adapters.NewDatagramHandler()
+	js, err := initNodes(ctx, consensus.Joiner, *joiners, strategy)
+	require.NoError(t, err)
 
-		conf := configuration.NewHostNetwork().Transport
-		conf.Address = n.Address()
+	initPulsar(ctx, defaultPulseDelta, *ns)
 
-		transportFactory := transport2.NewFactory(conf)
-		transport, _ := transportFactory.CreateDatagramTransport(datagramHandler)
-
-		pulseHandler := adapters.NewPulseHandler()
-		pulseHandlers = append(pulseHandlers, pulseHandler)
-
-		delayTransport := strategy.GetLink(transport)
-
-		controllers[i] = consensus.New(ctx, consensus.Dep{
-			PrimingCloudStateHash: [64]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
-			KeyProcessor:          keyProcessor,
-			Scheme:                scheme,
-			CertificateManager:    certificateManager,
-			KeyStore:              keystore.NewInplaceKeyStore(nodeInfos[i].privateKey),
-			NodeKeeper:            nodeKeeper,
-			StateGetter:           &nshGen{nshDelay: defaultNshGenerationDelay},
-			PulseChanger: &pulseChanger{
-				nodeKeeper: nodeKeeper,
-			},
-			StateUpdater: &stateUpdater{
-				nodeKeeper: nodeKeeper,
-			},
-			DatagramTransport: delayTransport,
-		}).Install(datagramHandler, pulseHandler)
-
-		ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
-			"node_id":      n.ShortID(),
-			"node_address": n.Address(),
-		})
-		_ = delayTransport.Start(ctx)
-	}
-
-	fmt.Println("===", len(nodes), "=================================================")
-
-	pulsar := NewPulsar(1, pulseHandlers)
-	go func() {
-		for {
-			pulsar.Pulse(ctx, 4+len(nodes)/10)
-		}
-	}()
-
-	once := sync.Once{}
-
-	for {
-		fmt.Println("===", time.Since(startedAt), "=================================================")
-		time.Sleep(time.Second)
-		if time.Since(startedAt) > time.Minute {
-			return
-		}
-
-		if time.Since(startedAt) > 10*time.Second {
-			once.Do(func() {
-				controllers[0].Leave(0)
+	testCase(defaultTestDuration, defaultStartCaseAfter, func() {
+		for _, joiner := range js.staticProfiles {
+			ns.controllers[0].AddJoinCandidate(candidate{
+				joiner,
+				joiner.GetExtension(),
 			})
 		}
-	}
+	})
+
+	require.Len(t, ns.nodeKeepers[0].GetAccessor().GetActiveNodes(), len(nodes.nodes)+len(joiners.nodes))
 }
 
-func initLogger() context.Context {
-	ctx := context.Background()
-	logger := inslogger.FromContext(ctx).WithCaller(false)
-	logger, _ = logger.WithLevelNumber(insolar.DebugLevel)
-	logger, _ = logger.WithFormat(insolar.TextFormat)
-	ctx = inslogger.SetLogger(ctx, logger)
-	return ctx
+func TestConsensusLeave(t *testing.T) {
+	nodes, err := generateNodes(0, 1, 3, 5, nil)
+	require.NoError(t, err)
+
+	ns, err := initNodes(ctx, consensus.ReadyNetwork, *nodes, strategy)
+	require.NoError(t, err)
+
+	initPulsar(ctx, defaultPulseDelta, *ns)
+
+	testCase(defaultTestDuration, defaultStartCaseAfter, func() {
+		nodeIdx := 1
+
+		<-ns.controllers[nodeIdx].Leave(0)
+		err := ns.transports[nodeIdx].Stop(ns.contexts[nodeIdx])
+		require.NoError(t, err)
+		ns.controllers[nodeIdx].Abort()
+	})
+
+	require.Len(t, ns.nodeKeepers[0].GetAccessor().GetActiveNodes(), len(nodes.nodes)-1)
 }
 
-func generateNodeIdentities(countNeutral, countHeavy, countLight, countVirtual int) []nodeIdentity {
-	r := make([]nodeIdentity, 0, countNeutral+countHeavy+countLight+countVirtual)
+func TestConsensusDrop(t *testing.T) {
+	nodes, err := generateNodes(0, 1, 3, 5, nil)
+	require.NoError(t, err)
 
-	r = _generateNodeIdentity(r, countNeutral, insolar.StaticRoleUnknown)
-	r = _generateNodeIdentity(r, countHeavy, insolar.StaticRoleHeavyMaterial)
-	r = _generateNodeIdentity(r, countLight, insolar.StaticRoleLightMaterial)
-	r = _generateNodeIdentity(r, countVirtual, insolar.StaticRoleVirtual)
+	ns, err := initNodes(ctx, consensus.ReadyNetwork, *nodes, strategy)
+	require.NoError(t, err)
 
-	return r
+	initPulsar(ctx, defaultPulseDelta, *ns)
+
+	testCase(defaultTestDuration, defaultStartCaseAfter, func() {
+		nodeIdx := 1
+
+		err := ns.transports[nodeIdx].Stop(ns.contexts[nodeIdx])
+		require.NoError(t, err)
+	})
+
+	require.Len(t, ns.nodeKeepers[0].GetAccessor().GetActiveNodes(), len(nodes.nodes)-1)
 }
 
-const portOffset = 10000
+func TestConsensusJoinLeave(t *testing.T) {
+	t.Skip("Until phase 4 ready")
 
-func _generateNodeIdentity(r []nodeIdentity, count int, role insolar.StaticRole) []nodeIdentity {
-	for i := 0; i < count; i++ {
-		port := portOffset + len(r)
-		r = append(r, nodeIdentity{
-			role: role,
-			addr: fmt.Sprintf("127.0.0.1:%d", port),
-		})
-	}
-	return r
+	nodes, err := generateNodes(0, 1, 3, 5, nil)
+	require.NoError(t, err)
+
+	joiners, err := generateNodes(0, 0, 0, 1, nodes.discoveryNodes)
+	require.NoError(t, err)
+
+	ns, err := initNodes(ctx, consensus.ReadyNetwork, *nodes, strategy)
+	require.NoError(t, err)
+
+	js, err := initNodes(ctx, consensus.Joiner, *joiners, strategy)
+	require.NoError(t, err)
+
+	initPulsar(ctx, defaultPulseDelta, *ns)
+
+	testCase(defaultTestDuration, defaultStartCaseAfter, func() {
+		wg := &sync.WaitGroup{}
+		wg.Add(2)
+
+		go func() {
+			nodeIdx := len(joiners.nodes) + 1
+
+			<-ns.controllers[nodeIdx].Leave(0)
+			err := ns.transports[nodeIdx].Stop(ns.contexts[nodeIdx])
+			assert.NoError(t, err)
+			ns.controllers[nodeIdx].Abort()
+
+			wg.Done()
+		}()
+
+		go func() {
+			for i, joiner := range js.staticProfiles {
+				ns.controllers[i].AddJoinCandidate(candidate{
+					joiner,
+					joiner.GetExtension(),
+				})
+			}
+
+			wg.Done()
+		}()
+
+		wg.Wait()
+	})
+
+	require.Len(t, ns.nodeKeepers[0].GetAccessor().GetActiveNodes(), len(nodes.nodes)+len(joiners.nodes)-1)
 }
 
-func generateNodeInfos(nodeIdentities []nodeIdentity) []*nodeInfo {
-	nodeInfos := make([]*nodeInfo, 0, len(nodeIdentities))
-	for _, ni := range nodeIdentities {
-		privateKey, _ := keyProcessor.GeneratePrivateKey()
-		publicKey := keyProcessor.ExtractPublicKey(privateKey)
+func TestConsensusJoinDrop(t *testing.T) {
+	t.Skip("Until phase 4 ready")
 
-		nodeInfos = append(nodeInfos, &nodeInfo{
-			nodeIdentity: ni,
-			publicKey:    publicKey,
-			privateKey:   privateKey,
-		})
-	}
-	return nodeInfos
+	nodes, err := generateNodes(0, 1, 3, 5, nil)
+	require.NoError(t, err)
+
+	joiners, err := generateNodes(0, 0, 0, 1, nodes.discoveryNodes)
+	require.NoError(t, err)
+
+	ns, err := initNodes(ctx, consensus.ReadyNetwork, *nodes, strategy)
+	require.NoError(t, err)
+
+	js, err := initNodes(ctx, consensus.Joiner, *joiners, strategy)
+	require.NoError(t, err)
+
+	initPulsar(ctx, defaultPulseDelta, *ns)
+
+	testCase(defaultTestDuration, defaultStartCaseAfter, func() {
+		wg := &sync.WaitGroup{}
+		wg.Add(2)
+
+		go func() {
+			nodeIdx := len(joiners.nodes) + 1
+
+			err := ns.transports[nodeIdx].Stop(ns.contexts[nodeIdx])
+			assert.NoError(t, err)
+
+			wg.Done()
+		}()
+
+		go func() {
+			for i, joiner := range js.staticProfiles {
+				ns.controllers[i].AddJoinCandidate(candidate{
+					joiner,
+					joiner.GetExtension(),
+				})
+			}
+
+			wg.Done()
+		}()
+
+		wg.Wait()
+	})
+
+	require.Len(t, ns.nodeKeepers[0].GetAccessor().GetActiveNodes(), len(nodes.nodes)+len(joiners.nodes)-1)
 }
 
-type nodeIdentity struct {
-	role insolar.StaticRole
-	addr string
+func TestConsensusDropLeave(t *testing.T) {
+	nodes, err := generateNodes(0, 1, 3, 5, nil)
+	require.NoError(t, err)
+
+	ns, err := initNodes(ctx, consensus.ReadyNetwork, *nodes, strategy)
+	require.NoError(t, err)
+
+	initPulsar(ctx, defaultPulseDelta, *ns)
+
+	testCase(defaultTestDuration, defaultStartCaseAfter, func() {
+		wg := &sync.WaitGroup{}
+		wg.Add(2)
+
+		go func() {
+			nodeIdx := 6
+
+			<-ns.controllers[nodeIdx].Leave(0)
+			err := ns.transports[nodeIdx].Stop(ns.contexts[nodeIdx])
+			assert.NoError(t, err)
+			ns.controllers[nodeIdx].Abort()
+
+			wg.Done()
+		}()
+
+		go func() {
+			nodeIdx := 7
+
+			err := ns.transports[nodeIdx].Stop(ns.contexts[nodeIdx])
+			assert.NoError(t, err)
+
+			wg.Done()
+		}()
+
+		wg.Wait()
+	})
+
+	require.Len(t, ns.nodeKeepers[0].GetAccessor().GetActiveNodes(), len(nodes.nodes)-2)
 }
 
-type nodeInfo struct {
-	nodeIdentity
-	privateKey crypto.PrivateKey
-	publicKey  crypto.PublicKey
-}
+func TestConsensusAll(t *testing.T) {
+	t.Skip("Until phase 4 ready")
 
-func nodesFromInfo(nodeInfos []*nodeInfo) ([]insolar.NetworkNode, []insolar.NetworkNode) {
-	nodes := make([]insolar.NetworkNode, len(nodeInfos))
-	discoveryNodes := make([]insolar.NetworkNode, 0)
+	nodes, err := generateNodes(0, 1, 3, 5, nil)
+	require.NoError(t, err)
 
-	for i, info := range nodeInfos {
-		var isDiscovery bool
-		if info.role == insolar.StaticRoleHeavyMaterial || info.role == insolar.StaticRoleUnknown {
-			isDiscovery = true
-		}
+	joiners, err := generateNodes(0, 0, 1, 1, nodes.discoveryNodes)
+	require.NoError(t, err)
 
-		nn := newNetworkNode(i, info.addr, info.role, info.publicKey, info.privateKey)
-		nodes[i] = nn
-		if isDiscovery {
-			discoveryNodes = append(discoveryNodes, nn)
-		}
-	}
+	ns, err := initNodes(ctx, consensus.ReadyNetwork, *nodes, strategy)
+	require.NoError(t, err)
 
-	return nodes, discoveryNodes
-}
+	js, err := initNodes(ctx, consensus.Joiner, *joiners, strategy)
+	require.NoError(t, err)
 
-const shortNodeIdOffset = 1000
+	initPulsar(ctx, defaultPulseDelta, *ns)
 
-func newNetworkNode(id int, addr string, role insolar.StaticRole, pk crypto.PublicKey, sk crypto.PrivateKey) node.MutableNode {
-	n := node.NewNode(
-		testutils.RandomRef(),
-		role,
-		pk,
-		addr,
-		"",
-	)
-	mn := n.(node.MutableNode)
-	mn.SetShortID(insolar.ShortNodeID(shortNodeIdOffset + id))
+	testCase(defaultTestDuration, defaultStartCaseAfter, func() {
+		wg := &sync.WaitGroup{}
+		wg.Add(3)
 
-	hasher := scheme.IntegrityHasher()
-	signer := scheme.DigestSigner(sk)
+		go func() {
+			nodeIdx := len(joiners.nodes) + 1
 
-	data := []byte{1, 3, 3, 7}
-	digest := hasher.Hash(data)
-	signature, _ := signer.Sign(digest)
+			<-ns.controllers[nodeIdx].Leave(0)
+			err := ns.transports[nodeIdx].Stop(ns.contexts[nodeIdx])
+			assert.NoError(t, err)
+			ns.controllers[nodeIdx].Abort()
 
-	mn.SetSignature(digest, *signature)
+			wg.Done()
+		}()
 
-	return mn
-}
+		go func() {
+			nodeIdx := len(joiners.nodes) + 2
 
-func initCrypto(node insolar.NetworkNode, discoveryNodes []insolar.NetworkNode) *certificate.CertificateManager {
-	pubKey := node.PublicKey()
+			err := ns.transports[nodeIdx].Stop(ns.contexts[nodeIdx])
+			assert.NoError(t, err)
 
-	publicKey, _ := keyProcessor.ExportPublicKeyPEM(pubKey)
+			wg.Done()
+		}()
 
-	bootstrapNodes := make([]certificate.BootstrapNode, 0, len(discoveryNodes))
-	for _, dn := range discoveryNodes {
-		pubKey := dn.PublicKey()
-		pubKeyBuf, _ := keyProcessor.ExportPublicKeyPEM(pubKey)
+		go func() {
+			for i, joiner := range js.staticProfiles {
+				ns.controllers[i].AddJoinCandidate(candidate{
+					joiner,
+					joiner.GetExtension(),
+				})
+			}
 
-		bootstrapNode := certificate.NewBootstrapNode(
-			pubKey,
-			string(pubKeyBuf[:]),
-			dn.Address(),
-			dn.ID().String(),
-		)
-		bootstrapNodes = append(bootstrapNodes, *bootstrapNode)
-	}
+			wg.Done()
+		}()
 
-	cert := &certificate.Certificate{
-		AuthorizationCertificate: certificate.AuthorizationCertificate{
-			PublicKey: string(publicKey[:]),
-			Reference: node.ID().String(),
-			Role:      node.Role().String(),
-		},
-		BootstrapNodes: bootstrapNodes,
-	}
+		wg.Wait()
+	})
 
-	// dump cert and read it again from json for correct private files initialization
-	jsonCert, _ := cert.Dump()
-	cert, _ = certificate.ReadCertificateFromReader(pubKey, keyProcessor, strings.NewReader(jsonCert))
-	return certificate.NewCertificateManager(cert)
-}
-
-const defaultNshGenerationDelay = time.Millisecond * 0
-
-type nshGen struct {
-	nshDelay time.Duration
-}
-
-func (ng *nshGen) State() []byte {
-	delay := ng.nshDelay
-	if delay != 0 {
-		time.Sleep(delay)
-	}
-
-	nshBytes := make([]byte, 64)
-	rand.Read(nshBytes)
-
-	return nshBytes
-}
-
-type pulseChanger struct {
-	nodeKeeper network2.NodeKeeper
-}
-
-func (pc *pulseChanger) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
-	inslogger.FromContext(ctx).Info(">>>>>> Change pulse called")
-	err := pc.nodeKeeper.MoveSyncToActive(ctx, pulse.PulseNumber)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(err)
-	}
-}
-
-type stateUpdater struct {
-	nodeKeeper network2.NodeKeeper
-}
-
-func (su *stateUpdater) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
-	inslogger.FromContext(ctx).Info(">>>>>> Update state called")
-
-	err := su.nodeKeeper.Sync(ctx, nodes, nil)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(err)
-	}
-	su.nodeKeeper.SetCloudHash(cloudStateHash)
+	require.Len(t, ns.nodeKeepers[0].GetAccessor().GetActiveNodes(), len(nodes.nodes)+len(joiners.nodes)-2)
 }

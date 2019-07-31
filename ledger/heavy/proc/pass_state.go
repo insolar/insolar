@@ -61,7 +61,7 @@ func (p *PassState) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
-		go p.Dep.Sender.Reply(ctx, origin, msg)
+		p.Dep.Sender.Reply(ctx, origin, msg)
 		return nil
 	}
 	if err != nil {
@@ -69,7 +69,7 @@ func (p *PassState) Proceed(ctx context.Context) error {
 	}
 
 	virtual := rec.Virtual
-	concrete := record.Unwrap(virtual)
+	concrete := record.Unwrap(&virtual)
 	state, ok := concrete.(record.State)
 	if !ok {
 		return fmt.Errorf("invalid object record %#v", virtual)
@@ -81,7 +81,7 @@ func (p *PassState) Proceed(ctx context.Context) error {
 			return errors.Wrap(err, "failed to create reply")
 		}
 
-		go p.Dep.Sender.Reply(ctx, origin, msg)
+		p.Dep.Sender.Reply(ctx, origin, msg)
 		return nil
 	}
 
@@ -97,7 +97,7 @@ func (p *PassState) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to create message")
 	}
 
-	go p.Dep.Sender.Reply(ctx, origin, msg)
+	p.Dep.Sender.Reply(ctx, origin, msg)
 
 	return nil
 }

@@ -51,7 +51,10 @@
 package censusimpl
 
 import (
+	"context"
 	"sync"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
@@ -60,16 +63,11 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 )
 
-func newLocalCensusBuilder(chronicles *localChronicles, pn pulse.Number, population copyToPopulation,
-	fullCopy bool) *LocalCensusBuilder {
+func newLocalCensusBuilder(ctx context.Context, chronicles *localChronicles, pn pulse.Number,
+	population copyToPopulation) *LocalCensusBuilder {
 
-	r := &LocalCensusBuilder{chronicles: chronicles, pulseNumber: pn}
-	if fullCopy { // TODO remove fullCopy later
-		r.population = NewDynamicPopulation(population)
-	} else {
-		r.population = NewDynamicPopulationCopySelf(population)
-	}
-
+	r := &LocalCensusBuilder{chronicles: chronicles, pulseNumber: pn, ctx: ctx}
+	r.population = NewDynamicPopulationCopySelf(population)
 	r.populationBuilder.census = r
 	return r
 }
@@ -77,6 +75,7 @@ func newLocalCensusBuilder(chronicles *localChronicles, pn pulse.Number, populat
 var _ census.Builder = &LocalCensusBuilder{}
 
 type LocalCensusBuilder struct {
+	ctx               context.Context
 	mutex             sync.RWMutex
 	chronicles        *localChronicles
 	pulseNumber       pulse.Number
@@ -140,7 +139,7 @@ func (c *LocalCensusBuilder) GetPopulationBuilder() census.PopulationBuilder {
 	return &c.populationBuilder
 }
 
-func (c *LocalCensusBuilder) build(incomplete bool, csh proofs.CloudStateHash) (copyToOnlinePopulation, census.EvictedPopulation) {
+func (c *LocalCensusBuilder) buildPopulation(markBroken bool, csh proofs.CloudStateHash) (copyToOnlinePopulation, census.EvictedPopulation) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -148,7 +147,7 @@ func (c *LocalCensusBuilder) build(incomplete bool, csh proofs.CloudStateHash) (
 		panic("illegal state: was built")
 	}
 
-	if !incomplete {
+	if !markBroken {
 		if !c.state.IsSealed() {
 			panic("illegal state: not sealed")
 		}
@@ -159,36 +158,28 @@ func (c *LocalCensusBuilder) build(incomplete bool, csh proofs.CloudStateHash) (
 	}
 	c.csh = csh
 	c.state = census.CompleteCensus
-	return c.population.CopyAndSeparate(!incomplete)
+	log := inslogger.FromContext(c.ctx)
+	pop, evicts := c.population.CopyAndSeparate(markBroken, func(e census.RecoverableErrorTypes, msg string, args ...interface{}) {
+		log.Debugf(msg, args...)
+	})
+	return pop, evicts
 }
 
-func (c *LocalCensusBuilder) BuildAndMakeExpected(csh proofs.CloudStateHash) census.Expected {
-
-	pop, evicts := c.build(false, csh)
-	return c.makeExpected(false, pop, evicts)
+func (c *LocalCensusBuilder) Build(csh proofs.CloudStateHash) census.Built {
+	return c.buildCensus(csh, false)
 }
 
-func (c *LocalCensusBuilder) BuildAndMakeIncompleteExpected(csh proofs.CloudStateHash) census.Expected {
-
-	pop, evicts := c.build(true, csh)
-	return c.makeExpected(true, pop, evicts)
+func (c *LocalCensusBuilder) BuildAsBroken(csh proofs.CloudStateHash) census.Built {
+	return c.buildCensus(csh, true)
 }
 
-func (c *LocalCensusBuilder) makeExpected(isIncomplete bool, pop copyToOnlinePopulation, evicts census.EvictedPopulation) census.Expected {
+func (c *LocalCensusBuilder) buildCensus(csh proofs.CloudStateHash, markBroken bool) census.Built {
 
-	r := &ExpectedCensusTemplate{
-		chronicles:   c.chronicles,
-		prev:         c.chronicles.active,
-		csh:          c.csh,
-		gsh:          c.gsh,
-		pn:           c.pulseNumber,
-		online:       pop,
-		evicted:      evicts,
-		isIncomplete: isIncomplete,
-	}
-
-	c.chronicles.makeExpected(r)
-	return r
+	pop, evicts := c.buildPopulation(markBroken, csh)
+	return &BuiltCensusTemplate{ExpectedCensusTemplate{
+		c.chronicles, pop, evicts, c.chronicles.active, c.csh, c.gsh,
+		c.pulseNumber,
+	}}
 }
 
 var _ census.PopulationBuilder = &DynamicPopulationBuilder{}

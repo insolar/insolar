@@ -52,6 +52,7 @@ package serialization
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 
 	"github.com/insolar/insolar/insolar"
@@ -105,8 +106,34 @@ type GlobulaConsensusPacketBody struct {
 	Claims ClaimList `insolar-transport:"Packet=1,3"` // ByteSize= 1 + ...
 }
 
+func (b *GlobulaConsensusPacketBody) String(ctx PacketContext) string {
+	flags := ctx.GetFlagRangeInt(1, 2)
+	hasBrief := flags == 1
+	hasFull := flags == 2 || flags == 3
+	intro := "no"
+	if hasBrief {
+		intro = "brief"
+	}
+	if hasFull {
+		intro = "full"
+	}
+
+	switch ctx.GetPacketType().GetPayloadEquivalent() {
+	case phases.PacketPhase0:
+		return fmt.Sprintf("<current_rank=%s>", b.CurrentRank)
+	case phases.PacketPhase1:
+		return fmt.Sprintf("<membership=%s intro=%s>", b.Announcement, intro)
+	case phases.PacketPhase2:
+		return fmt.Sprintf("<membership=%s intro=%s neighbourhood=%s>", b.Announcement, intro, b.Neighbourhood)
+	case phases.PacketPhase3:
+		return fmt.Sprintf("<vectors=%s>", b.Vectors)
+	default:
+		return "unknown packet"
+	}
+}
+
 func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io.Writer) error {
-	packetType := ctx.GetPacketType()
+	packetType := ctx.GetPacketType().GetPayloadEquivalent()
 
 	if packetType == phases.PacketPhase0 {
 		if err := write(writer, b.CurrentRank); err != nil {
@@ -129,7 +156,7 @@ func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io
 	}
 
 	if packetType == phases.PacketPhase1 {
-		if ctx.HasFlag(3) {
+		if ctx.HasFlag(FlagHasJoinerExt) {
 			if err := b.JoinerExt.SerializeTo(ctx, writer); err != nil {
 				return errors.Wrap(err, "failed to serialize JoinerExt")
 			}
@@ -184,7 +211,7 @@ func (b *GlobulaConsensusPacketBody) SerializeTo(ctx SerializeContext, writer io
 }
 
 func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, reader io.Reader) error {
-	packetType := ctx.GetPacketType()
+	packetType := ctx.GetPacketType().GetPayloadEquivalent()
 
 	if packetType == phases.PacketPhase0 {
 		if err := read(reader, &b.CurrentRank); err != nil {
@@ -207,7 +234,7 @@ func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, rea
 	}
 
 	if packetType == phases.PacketPhase1 {
-		if ctx.HasFlag(3) {
+		if ctx.HasFlag(FlagHasJoinerExt) {
 			if err := b.JoinerExt.DeserializeFrom(ctx, reader); err != nil {
 				return errors.Wrap(err, "failed to deserialize JoinerExt")
 			}
@@ -215,7 +242,7 @@ func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, rea
 	}
 
 	if packetType == phases.PacketPhase2 {
-		if ctx.HasFlag(1) && !ctx.HasFlag(2) { // [1:2] == 1 - has brief intro (this option is only allowed Phase 2 only)
+		if ctx.GetFlagRangeInt(1, 2) == 1 { // [1:2] == 1 - has brief intro (this option is only allowed Phase 2 only)
 			if err := b.BriefSelfIntro.DeserializeFrom(ctx, reader); err != nil {
 				return errors.Wrap(err, "failed to deserialize BriefSelfIntro")
 			}
@@ -223,7 +250,7 @@ func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, rea
 	}
 
 	if packetType == phases.PacketPhase1 || packetType == phases.PacketPhase2 {
-		if ctx.HasFlag(2) { // [1:2] in (2, 3) - has full intro + cloud intro
+		if ctx.GetFlagRangeInt(1, 2) == 2 || ctx.GetFlagRangeInt(1, 2) == 3 { // [1:2] in (2, 3) - has full intro + cloud intro
 			if err := b.FullSelfIntro.DeserializeFrom(ctx, reader); err != nil {
 				return errors.Wrap(err, "failed to deserialize FullSelfIntro")
 			}
@@ -232,10 +259,11 @@ func (b *GlobulaConsensusPacketBody) DeserializeFrom(ctx DeserializeContext, rea
 				return errors.Wrap(err, "failed to deserialize CloudIntro")
 			}
 
-			if ctx.HasFlag(1) { // [1:2] == 3 - has joiner secret (only for member-to-joiner packet)
-				if err := read(reader, &b.JoinerSecret); err != nil {
-					return errors.Wrap(err, "failed to deserialize JoinerSecret")
-				}
+		}
+
+		if ctx.GetFlagRangeInt(1, 2) == 3 { // [1:2] == 3 - has joiner secret (only for member-to-joiner packet)
+			if err := read(reader, &b.JoinerSecret); err != nil {
+				return errors.Wrap(err, "failed to deserialize JoinerSecret")
 			}
 		}
 	}
@@ -355,7 +383,12 @@ func (ci *CloudIntro) DeserializeFrom(ctx DeserializeContext, reader io.Reader) 
 type Neighbourhood struct {
 	// ByteSize= 1 + N * (205 .. 220)
 	NeighbourCount uint8
+	FraudFlags     []uint8
 	Neighbours     []NeighbourAnnouncement
+}
+
+func (n Neighbourhood) String() string {
+	return fmt.Sprint(n.Neighbours)
 }
 
 func (n *Neighbourhood) SerializeTo(ctx SerializeContext, writer io.Writer) error {
@@ -414,6 +447,21 @@ type NeighbourAnnouncement struct {
 	AnnounceSignature longbits.Bits512 // ByteSize = 64
 }
 
+func (na NeighbourAnnouncement) String() string {
+	if !na.Member.AnnounceID.IsAbsent() {
+		return fmt.Sprintf(
+			"<node_id=%d current_rank=%s power=%d announce=%s §announce=%s>",
+			na.NeighbourNodeID,
+			na.CurrentRank,
+			na.RequestedPower,
+			na.Member,
+			na.AnnounceSignature,
+		)
+	}
+
+	return fmt.Sprintf("<node_id=%d current_rank=%s power=%d>", na.NeighbourNodeID, na.CurrentRank, na.RequestedPower)
+}
+
 func (na *NeighbourAnnouncement) SerializeTo(ctx SerializeContext, writer io.Writer) error {
 	if err := write(writer, na.NeighbourNodeID); err != nil {
 		return errors.Wrap(err, "failed to serialize NeighbourNodeID")
@@ -428,7 +476,8 @@ func (na *NeighbourAnnouncement) SerializeTo(ctx SerializeContext, writer io.Wri
 	}
 
 	if na.CurrentRank == 0 {
-		if na.NeighbourNodeID != ctx.GetAnnouncedJoinerNodeID() {
+		announcedJoinerNodeID := ctx.GetAnnouncedJoinerNodeID()
+		if announcedJoinerNodeID.IsAbsent() || na.NeighbourNodeID != announcedJoinerNodeID {
 			if err := na.Joiner.SerializeTo(ctx, writer); err != nil {
 				return errors.Wrap(err, "failed to serialize Joiner")
 			}
@@ -440,7 +489,7 @@ func (na *NeighbourAnnouncement) SerializeTo(ctx SerializeContext, writer io.Wri
 		ctx.SetInContext(ContextNeighbourAnnouncement)
 		ctx.SetNeighbourNodeID(na.NeighbourNodeID)
 		defer ctx.SetInContext(NoContext)
-		defer ctx.SetNeighbourNodeID(0)
+		defer ctx.SetNeighbourNodeID(insolar.AbsentShortNodeID)
 
 		if err := na.Member.SerializeTo(ctx, writer); err != nil {
 			return errors.Wrap(err, "failed to serialize Member")
@@ -468,7 +517,8 @@ func (na *NeighbourAnnouncement) DeserializeFrom(ctx DeserializeContext, reader 
 	}
 
 	if na.CurrentRank == 0 {
-		if na.NeighbourNodeID != ctx.GetAnnouncedJoinerNodeID() {
+		announcedJoinerNodeID := ctx.GetAnnouncedJoinerNodeID()
+		if announcedJoinerNodeID.IsAbsent() || na.NeighbourNodeID != announcedJoinerNodeID {
 			if err := na.Joiner.DeserializeFrom(ctx, reader); err != nil {
 				return errors.Wrap(err, "failed to deserialize Joiner")
 			}
@@ -480,7 +530,7 @@ func (na *NeighbourAnnouncement) DeserializeFrom(ctx DeserializeContext, reader 
 		ctx.SetInContext(ContextNeighbourAnnouncement)
 		ctx.SetNeighbourNodeID(na.NeighbourNodeID)
 		defer ctx.SetInContext(NoContext)
-		defer ctx.SetNeighbourNodeID(0)
+		defer ctx.SetNeighbourNodeID(insolar.AbsentShortNodeID)
 
 		if err := na.Member.DeserializeFrom(ctx, reader); err != nil {
 			return errors.Wrap(err, "failed to deserialize Member")
@@ -505,13 +555,29 @@ type MembershipAnnouncement struct {
 	*/
 	ShortID insolar.ShortNodeID `insolar-transport:"ignore=send"` // ByteSize = 0
 
-	CurrentRank member.Rank // ByteSize=4
+	CurrentRank    member.Rank  // ByteSize=4
+	RequestedPower member.Power // ByteSize=1
+
+	// NodeState CompactGlobulaNodeState `insolar-transport:"optional=CurrentRank==0" ` // ByteSize=128 TODO: serialize, fill
 
 	/* For non-joiner ONLY */
-	RequestedPower    member.Power     `insolar-transport:"optional=CurrentRank!=0"` // ByteSize=1
 	Member            NodeAnnouncement `insolar-transport:"optional=CurrentRank!=0"` // ByteSize = 132, 136, 267, 269, 279
 	AnnounceSignature longbits.Bits512 `insolar-transport:"optional=CurrentRank!=0"` // ByteSize = 64
 	// AnnounceSignature = sign(LastCloudHash + hash(NodeFullIntro) + CurrentRank + fields of MembershipAnnouncement, SK(sender))
+}
+
+func (ma MembershipAnnouncement) String() string {
+	if !ma.Member.AnnounceID.IsAbsent() {
+		return fmt.Sprintf(
+			"<current_rank=%s power=%d announce=%s §announce=%s>",
+			ma.CurrentRank,
+			ma.RequestedPower,
+			ma.Member,
+			ma.AnnounceSignature,
+		)
+	}
+
+	return fmt.Sprintf("<current_rank=%s power=%d>", ma.CurrentRank, ma.RequestedPower)
 }
 
 func (ma *MembershipAnnouncement) SerializeTo(ctx SerializeContext, writer io.Writer) error {
@@ -519,13 +585,13 @@ func (ma *MembershipAnnouncement) SerializeTo(ctx SerializeContext, writer io.Wr
 		return errors.Wrap(err, "failed to serialize CurrentRank")
 	}
 
+	if err := write(writer, ma.RequestedPower); err != nil {
+		return errors.Wrap(err, "failed to serialize RequestedPower")
+	}
+
 	if ma.CurrentRank != 0 {
 		ctx.SetInContext(ContextMembershipAnnouncement)
 		defer ctx.SetInContext(NoContext)
-
-		if err := write(writer, ma.RequestedPower); err != nil {
-			return errors.Wrap(err, "failed to serialize RequestedPower")
-		}
 
 		if err := ma.Member.SerializeTo(ctx, writer); err != nil {
 			return errors.Wrap(err, "failed to serialize Member")
@@ -544,13 +610,13 @@ func (ma *MembershipAnnouncement) DeserializeFrom(ctx DeserializeContext, reader
 		return errors.Wrap(err, "failed to deserialize CurrentRank")
 	}
 
+	if err := read(reader, &ma.RequestedPower); err != nil {
+		return errors.Wrap(err, "failed to deserialize RequestedPower")
+	}
+
 	if ma.CurrentRank != 0 {
 		ctx.SetInContext(ContextMembershipAnnouncement)
 		defer ctx.SetInContext(NoContext)
-
-		if err := read(reader, &ma.RequestedPower); err != nil {
-			return errors.Wrap(err, "failed to deserialize RequestedPower")
-		}
 
 		if err := ma.Member.DeserializeFrom(ctx, reader); err != nil {
 			return errors.Wrap(err, "failed to deserialize Member")
@@ -570,8 +636,8 @@ type CompactGlobulaNodeState struct {
 	// FoldedLastCloudStateHash common.Bits224 //available externally
 	// NodeRank                 Rank //available externally
 
-	NodeStateHash             longbits.Bits512 // ByteSize=64
-	GlobulaNodeStateSignature longbits.Bits512 // ByteSize=64, :=Sign(NodePK, Merkle512(NodeStateHash, (LastCloudStateHash.FoldTo224() << 32 | Rank)))
+	NodeStateHash          longbits.Bits512 // ByteSize=64
+	NodeStateHashSignature longbits.Bits512 // ByteSize=64, :=Sign(NodePK, Merkle512(NodeStateHash, (LastCloudStateHash.FoldTo224() << 32 | Rank)))
 }
 
 func (gns *CompactGlobulaNodeState) SerializeTo(_ SerializeContext, writer io.Writer) error {
@@ -602,6 +668,15 @@ type NodeAnnouncement struct {
 			b. "Joiner" is NEVER present when is in NeighbourAnnouncement
 	*/
 	Joiner JoinAnnouncement `insolar-transport:"optional"` // ByteSize = 135, 137, 147
+}
+
+func (na NodeAnnouncement) String() string {
+	return fmt.Sprintf(
+		"<announce_id=%d nsh=%s §nsh=%s>",
+		na.AnnounceID,
+		na.NodeState.NodeStateHash,
+		na.NodeState.NodeStateHashSignature,
+	)
 }
 
 func (na *NodeAnnouncement) SerializeTo(ctx SerializeContext, writer io.Writer) error {
@@ -655,7 +730,7 @@ func (na *NodeAnnouncement) DeserializeFrom(ctx DeserializeContext, reader io.Re
 			if err := na.Joiner.DeserializeFrom(ctx, reader); err != nil {
 				return errors.Wrap(err, "failed to deserialize Joiner")
 			}
-			ctx.SetAnnouncedJoinerNodeID(na.Joiner.ShortID)
+			ctx.SetAnnouncedJoinerNodeID(na.AnnounceID)
 		}
 	}
 

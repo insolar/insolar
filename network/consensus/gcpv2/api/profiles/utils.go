@@ -51,19 +51,44 @@
 package profiles
 
 import (
+	"fmt"
+
 	"github.com/insolar/insolar/network/consensus/common/args"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 )
 
-func EqualStaticProfiles(p BriefCandidateProfile, o BriefCandidateProfile) bool {
+func EqualStaticProfiles(p StaticProfile, o StaticProfile, extIsRequired bool) bool {
+	if args.IsNil(p) || args.IsNil(o) {
+		return false
+	}
+
+	if p == o {
+		return true
+	}
+
+	if !EqualBriefProfiles(p, o) {
+		return false
+	}
+
+	pExt := p.GetExtension()
+	oExt := o.GetExtension()
+
+	if !extIsRequired && (pExt == nil || oExt == nil) {
+		return true
+	}
+
+	return EqualProfileExtensions(pExt, oExt)
+}
+
+func EqualBriefProfiles(p BriefCandidateProfile, o BriefCandidateProfile) bool {
 	if args.IsNil(p) || args.IsNil(o) {
 		return false
 	}
 
 	return p == o ||
 		equalBriefIntro(p, o) &&
-			endpoints.EqualEndpoints(p.GetDefaultEndpoint(), o.GetDefaultEndpoint()) &&
+			endpoints.EqualOutboundEndpoints(p.GetDefaultEndpoint(), o.GetDefaultEndpoint()) &&
 			p.GetBriefIntroSignedDigest().Equals(o.GetBriefIntroSignedDigest())
 }
 
@@ -113,7 +138,7 @@ func UpgradeStaticProfile(sp StaticProfile, brief BriefCandidateProfile, ext Can
 	}
 
 	if !args.IsNil(brief) {
-		if !EqualStaticProfiles(sp, brief) {
+		if !EqualBriefProfiles(sp, brief) {
 			return false, nil
 		}
 	}
@@ -126,8 +151,13 @@ func UpgradeStaticProfile(sp StaticProfile, brief BriefCandidateProfile, ext Can
 		return EqualProfileExtensions(spe, ext), nil
 	}
 
-	if sp.(Upgradable).UpgradeProfile(ext) {
-		return true, sp.GetExtension()
+	if upg, ok := sp.(Upgradable); ok {
+		if upg.UpgradeProfile(ext) {
+			return true, sp.GetExtension()
+		}
+	} else {
+		panic(fmt.Sprintf("not upgradable: %+v", sp))
 	}
+
 	return EqualProfileExtensions(sp.GetExtension(), ext), nil
 }

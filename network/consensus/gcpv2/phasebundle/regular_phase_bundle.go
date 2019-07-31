@@ -51,25 +51,21 @@
 package phasebundle
 
 import (
-	"fmt"
-
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/ph01ctl"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/ph2ctl"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/ph3ctl"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/pulsectl"
-
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
 var _ core.PhaseControllersBundle = &RegularPhaseBundle{}
 
-func NewRegularPhaseBundle(pss pulsectl.PulseSelectionStrategy, config BundleConfig) core.PhaseControllersBundle {
-	return &RegularPhaseBundle{pss, config}
+func NewRegularPhaseBundle(factories BundleFactories, config BundleConfig) core.PhaseControllersBundle {
+	return &RegularPhaseBundle{factories, config}
 }
 
 type RegularPhaseBundle struct {
-	pss pulsectl.PulseSelectionStrategy
+	BundleFactories
 	BundleConfig
 }
 
@@ -81,10 +77,6 @@ func (r *RegularPhaseBundle) IsDynamicPopulationRequired() bool {
 	return false
 }
 
-func (r *RegularPhaseBundle) IsEphemeralPulseAllowed() bool {
-	return false
-}
-
 func (r *RegularPhaseBundle) CreatePrepPhaseControllers() []core.PrepPhaseController {
 
 	/*
@@ -92,75 +84,22 @@ func (r *RegularPhaseBundle) CreatePrepPhaseControllers() []core.PrepPhaseContro
 		even if packets arrived while PrepRealm was active.
 	*/
 	return []core.PrepPhaseController{
-		pulsectl.NewPulsePrepController(r.pss),
-		ph01ctl.NewPhase01PrepController(r.pss),
+		pulsectl.NewPulsePrepController(r.PulseSelectionStrategy, r.IgnoreHostVerificationForPulses),
+		ph01ctl.NewPhase01PrepController(r.PulseSelectionStrategy),
 	}
-}
-
-type regularCallback struct {
-	qNshReady    chan *core.NodeAppearance
-	qTrustLvlUpd chan ph2ctl.TrustUpdateSignal
-	qJoiners     chan core.MemberPacketSender
-}
-
-func (p *regularCallback) OnPurgatoryNodeAdded(populationVersion uint32, n *core.NodePhantom) {
-	p.qJoiners <- n
-}
-
-func (p *regularCallback) OnDynamicNodeAdded(populationVersion uint32, n *core.NodeAppearance, fullIntro bool) {
-	p.qJoiners <- n
-}
-
-func (p *regularCallback) OnDynamicPopulationCompleted(populationVersion uint32, indexedCount int) {
-}
-
-func (p *regularCallback) OnCustomEvent(populationVersion uint32, n *core.NodeAppearance, event interface{}) {
-	if te, ok := event.(ph2ctl.TrustUpdateSignal); ok && te.IsPingSignal() {
-		p.qTrustLvlUpd <- te
-		return
-	}
-	panic(fmt.Sprintf("unknown custom event: %v", event))
-}
-
-func (p *regularCallback) OnTrustUpdated(populationVersion uint32, n *core.NodeAppearance, trustBefore, trustAfter member.TrustLevel) {
-
-	switch {
-	case trustBefore < member.TrustByNeighbors && trustAfter >= member.TrustByNeighbors:
-		trustAfter = member.TrustByNeighbors
-	case trustBefore < member.TrustBySome && trustAfter >= member.TrustBySome:
-		trustAfter = member.TrustBySome
-	case !trustBefore.IsNegative() && trustAfter.IsNegative():
-	default:
-		return
-	}
-	p.qTrustLvlUpd <- ph2ctl.TrustUpdateSignal{NewTrustLevel: trustAfter, UpdatedNode: n}
-}
-
-func (p *regularCallback) OnNodeStateAssigned(populationVersion uint32, n *core.NodeAppearance) {
-	p.qNshReady <- n
-	p.qTrustLvlUpd <- ph2ctl.TrustUpdateSignal{NewTrustLevel: member.UnknownTrust, UpdatedNode: n}
 }
 
 func (r *RegularPhaseBundle) CreateFullPhaseControllers(nodeCount int) ([]core.PhaseController, core.NodeUpdateCallback) {
 
-	/* Ensure sufficient sizes of queues to avoid lockups */
-	if nodeCount == 0 {
-		panic("illegal value")
-	}
+	rcb := newPopulationEventHandler(nodeCount)
 
-	rcb := &regularCallback{
-		make(chan *core.NodeAppearance, nodeCount),
-		make(chan ph2ctl.TrustUpdateSignal, nodeCount*3), // up-to ~3 updates for every node
-		make(chan core.MemberPacketSender, nodeCount),
-	}
-
-	packetPrepareOptions := r.MemberOptions
+	packetPrepareOptions := r.MemberPacketOptions
 
 	return []core.PhaseController{
-		pulsectl.NewPulseController(),
-		ph01ctl.NewPhase01Controller(packetPrepareOptions, rcb.qJoiners),
-		ph2ctl.NewPhase2Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qNshReady),
-		ph3ctl.NewPhase3Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qTrustLvlUpd,
-			r.ConsensusStrategy, r.VectorInspectorFactory, r.EnableFastPhase3),
+		pulsectl.NewPulseController(r.IgnoreHostVerificationForPulses),
+		ph01ctl.NewPhase01Controller(packetPrepareOptions, rcb.qForPhase1),
+		ph2ctl.NewPhase2Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qForPhase2),
+		ph3ctl.NewPhase3Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qForPhase3,
+			r.ConsensusStrategy, r.VectorInspection, r.EnableFastPhase3),
 	}, rcb
 }

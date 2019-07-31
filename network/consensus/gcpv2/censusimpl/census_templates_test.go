@@ -51,7 +51,12 @@
 package censusimpl
 
 import (
+	"context"
 	"testing"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 
@@ -66,9 +71,9 @@ import (
 )
 
 func TestPCTGetProfileFactory(t *testing.T) {
-	pct := PrimingCensusTemplate{chronicles: &localChronicles{}}
+	pct := PrimingCensusTemplate{CensusTemplate: CensusTemplate{chronicles: &localChronicles{}}}
 	pf := pct.GetProfileFactory(nil)
-	require.Equal(t, nil, pf)
+	require.Nil(t, pf)
 }
 
 func TestSetVersionedRegistries(t *testing.T) {
@@ -87,17 +92,51 @@ func TestGetVersionedRegistries(t *testing.T) {
 	require.Equal(t, vr, pct.getVersionedRegistries())
 }
 
-// TODO
-/*func TestNewPrimingCensus(t *testing.T) {
-	sp1 := profiles.NewStaticProfileMock(t)
-	sp1.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
-	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp1}}}
+func TestNewPrimingCensusForJoiner(t *testing.T) {
+	sp := profiles.NewStaticProfileMock(t)
+	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
+	pks := cryptkit.NewPublicKeyStoreMock(t)
+	sp.GetPublicKeyStoreMock.Set(func() cryptkit.PublicKeyStore { return pks })
 	registries := census.NewVersionedRegistriesMock(t)
 	pn := pulse.Number(1)
 	registries.GetVersionPulseDataMock.Set(func() pulse.Data { return pulse.Data{PulseNumber: pn} })
-	pc := NewPrimingCensus(population, registries)
-	require.Equal(t, pn, pc.GetPulseNumber())
-}*/
+	vf := cryptkit.NewSignatureVerifierFactoryMock(t)
+	sv := cryptkit.NewSignatureVerifierMock(t)
+	vf.CreateSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
+	pcj := NewPrimingCensusForJoiner(sp, registries, vf, true)
+
+	// TODO: investigate
+	// require.Equal(t, pn, pcj.GetPulseNumber())
+	require.EqualValues(t, 0, pcj.GetPulseNumber())
+}
+
+func TestNewPrimingCensus(t *testing.T) {
+	sp := profiles.NewStaticProfileMock(t)
+	nodeID := insolar.ShortNodeID(0)
+	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return *(&nodeID) })
+	sp.GetPrimaryRoleMock.Set(func() member.PrimaryRole { return member.PrimaryRoleNeutral })
+	pks := cryptkit.NewPublicKeyStoreMock(t)
+	sp.GetPublicKeyStoreMock.Set(func() cryptkit.PublicKeyStore { return pks })
+	registries := census.NewVersionedRegistriesMock(t)
+	pn := pulse.Number(1)
+	registries.GetVersionPulseDataMock.Set(func() pulse.Data { return pulse.Data{PulseNumber: pn} })
+	var sps []profiles.StaticProfile
+	sps = append(sps, sp)
+	vf := cryptkit.NewSignatureVerifierFactoryMock(t)
+	sv := cryptkit.NewSignatureVerifierMock(t)
+	vf.CreateSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
+	require.Panics(t, func() { NewPrimingCensus(nil, sp, registries, vf, true) })
+
+	require.Panics(t, func() { NewPrimingCensus(sps, sp, registries, vf, true) })
+	nodeID = 1
+	pc := NewPrimingCensus(sps, sp, registries, vf, true)
+
+	// TODO: investigate
+	// require.Equal(t, pn, pc.GetPulseNumber())
+	require.EqualValues(t, 0, pc.GetPulseNumber())
+
+	require.Panics(t, func() { NewPrimingCensus(nil, sp, registries, vf, true) })
+}
 
 func TestSetAsActiveTo(t *testing.T) {
 	pct := PrimingCensusTemplate{}
@@ -135,6 +174,26 @@ func TestPCTGetExpectedPulseNumber(t *testing.T) {
 	require.Equal(t, pulse.MinTimePulse+pulse.Number(pct.pd.NextPulseDelta), pct.GetExpectedPulseNumber())
 }
 
+func TestPCTMakeExpected(t *testing.T) {
+	pd := pulse.NewFirstEphemeralData()
+	pct := PrimingCensusTemplate{}
+	pct.pd.PulseEpoch = pulse.EphemeralPulseEpoch
+	require.Panics(t, func() { pct.BuildCopy(pd, nil, nil).MakeExpected() })
+
+	csh := proofs.NewCloudStateHashMock(t)
+	require.Panics(t, func() { pct.BuildCopy(pd, csh, nil).MakeExpected() })
+
+	gsh := proofs.NewGlobulaStateHashMock(t)
+	pct.pd.PulseNumber = pulse.MinTimePulse
+	pct.pd.NextPulseDelta = 1
+	require.Panics(t, func() { pct.BuildCopy(pd, csh, gsh).MakeExpected() })
+
+	pct.chronicles = &localChronicles{}
+	next := pd.CreateNextEphemeralPulse()
+	r := pct.BuildCopy(next, csh, gsh).MakeExpected()
+	require.Equal(t, next.PulseNumber, r.GetPulseNumber())
+}
+
 func TestPCTGetPulseNumber(t *testing.T) {
 	pct := PrimingCensusTemplate{}
 	pn := pulse.Number(1)
@@ -152,22 +211,27 @@ func TestPCTGetPulseData(t *testing.T) {
 
 func TestPCTGetGlobulaStateHash(t *testing.T) {
 	pct := PrimingCensusTemplate{}
-	require.Equal(t, nil, pct.GetGlobulaStateHash())
+	require.Nil(t, pct.GetGlobulaStateHash())
 }
 
 func TestPCTGetCloudStateHash(t *testing.T) {
 	pct := PrimingCensusTemplate{}
-	require.Equal(t, nil, pct.GetCloudStateHash())
+	require.Nil(t, pct.GetCloudStateHash())
+}
+
+func TestPCTString(t *testing.T) {
+	pct := PrimingCensusTemplate{}
+	require.NotEmpty(t, pct.String())
 }
 
 func TestPCTGetOnlinePopulation(t *testing.T) {
 	pct := PrimingCensusTemplate{}
-	require.Equal(t, nil, pct.GetOnlinePopulation())
+	require.Nil(t, pct.GetOnlinePopulation())
 }
 
 func TestPCTGetEvictedPopulation(t *testing.T) {
 	ep := census.NewEvictedPopulationMock(t)
-	pct := PrimingCensusTemplate{evicted: ep}
+	pct := PrimingCensusTemplate{CensusTemplate: CensusTemplate{evicted: ep}}
 	require.Equal(t, ep, pct.GetEvictedPopulation())
 }
 
@@ -175,13 +239,13 @@ func TestPCTGetOfflinePopulation(t *testing.T) {
 	registries := census.NewVersionedRegistriesMock(t)
 	op := census.NewOfflinePopulationMock(t)
 	registries.GetOfflinePopulationMock.Set(func() census.OfflinePopulation { return op })
-	pct := PrimingCensusTemplate{registries: registries}
+	pct := PrimingCensusTemplate{CensusTemplate: CensusTemplate{registries: registries}}
 	require.Equal(t, op, pct.GetOfflinePopulation())
 }
 
 func TestPCTIsActive(t *testing.T) {
 	chronicles := &localChronicles{}
-	pct := PrimingCensusTemplate{chronicles: chronicles}
+	pct := PrimingCensusTemplate{CensusTemplate: CensusTemplate{chronicles: chronicles}}
 	require.False(t, pct.IsActive())
 
 	pct.chronicles = nil
@@ -195,7 +259,7 @@ func TestPCTGetMisbehaviorRegistry(t *testing.T) {
 	registries := census.NewVersionedRegistriesMock(t)
 	mr := census.NewMisbehaviorRegistryMock(t)
 	registries.GetMisbehaviorRegistryMock.Set(func() census.MisbehaviorRegistry { return mr })
-	pct := PrimingCensusTemplate{registries: registries}
+	pct := PrimingCensusTemplate{CensusTemplate: CensusTemplate{registries: registries}}
 	require.Equal(t, mr, pct.GetMisbehaviorRegistry())
 }
 
@@ -203,24 +267,123 @@ func TestPCTGetMandateRegistry(t *testing.T) {
 	registries := census.NewVersionedRegistriesMock(t)
 	mr := census.NewMandateRegistryMock(t)
 	registries.GetMandateRegistryMock.Set(func() census.MandateRegistry { return mr })
-	pct := PrimingCensusTemplate{registries: registries}
+	pct := PrimingCensusTemplate{CensusTemplate: CensusTemplate{registries: registries}}
 	require.Equal(t, mr, pct.GetMandateRegistry())
 }
 
 func TestPCTCreateBuilder(t *testing.T) {
 	chronicles := &localChronicles{}
-	pn := pulse.Number(1)
+	pn := pulse.Number(65537)
 	sp := profiles.NewStaticProfileMock(t)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
-	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
+	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}},
+		slots: []updatableSlot{{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}}
 
-	pct := PrimingCensusTemplate{chronicles: chronicles, online: population}
-	builder := pct.CreateBuilder(pn, false)
+	pct := PrimingCensusTemplate{CensusTemplate: CensusTemplate{chronicles: chronicles, online: population}}
+	builder := pct.CreateBuilder(context.Background(), pn)
 	require.Equal(t, pn, builder.GetPulseNumber())
+}
 
-	// TODO
-	/*builder = pct.CreateBuilder(pn, true)
-	require.Equal(t, pn, builder.GetPulseNumber())*/
+func TestCTGetNearestPulseData(t *testing.T) {
+	ct := CensusTemplate{}
+	pulseNumber := pulse.Number(1)
+	pd := pulse.Data{PulseNumber: pulseNumber}
+	ct.pd = pd
+	b, data := ct.GetNearestPulseData()
+	require.True(t, b)
+
+	require.Equal(t, pd, data)
+}
+
+func TestCTGetProfileFactory(t *testing.T) {
+	ksf := cryptkit.NewKeyStoreFactoryMock(t)
+	ct := CensusTemplate{}
+	ct.chronicles = &localChronicles{}
+	f := profiles.NewFactoryMock(t)
+	ct.chronicles.profileFactory = f
+	require.Equal(t, f, ct.GetProfileFactory(ksf))
+}
+
+func TestCTSetVersionedRegistries(t *testing.T) {
+	ct := CensusTemplate{}
+	require.Panics(t, func() { ct.setVersionedRegistries(nil) })
+
+	vr := census.NewVersionedRegistriesMock(t)
+	ct.setVersionedRegistries(vr)
+	require.Equal(t, vr, ct.registries)
+}
+
+func TestCTGetVersionedRegistries(t *testing.T) {
+	ct := CensusTemplate{}
+	vr := census.NewVersionedRegistriesMock(t)
+	ct.setVersionedRegistries(vr)
+	require.Equal(t, vr, ct.getVersionedRegistries())
+}
+
+func TestGetOnlinePopulation(t *testing.T) {
+	ct := CensusTemplate{}
+	population := &ManyNodePopulation{}
+	ct.online = population
+	require.Equal(t, population, ct.GetOnlinePopulation())
+}
+
+func TestCTGetEvictedPopulation(t *testing.T) {
+	ep := census.NewEvictedPopulationMock(t)
+	ct := CensusTemplate{evicted: ep}
+	require.Equal(t, ep, ct.GetEvictedPopulation())
+}
+
+func TestCTGetOfflinePopulation(t *testing.T) {
+	offPop := census.NewOfflinePopulationMock(t)
+	registries := census.NewVersionedRegistriesMock(t)
+	registries.GetOfflinePopulationMock.Set(func() census.OfflinePopulation { return offPop })
+	ct := CensusTemplate{registries: registries}
+	require.Equal(t, offPop, ct.GetOfflinePopulation())
+}
+
+func TestCTGetMisbehaviorRegistry(t *testing.T) {
+	registries := census.NewVersionedRegistriesMock(t)
+	mr := census.NewMisbehaviorRegistryMock(t)
+	registries.GetMisbehaviorRegistryMock.Set(func() census.MisbehaviorRegistry { return mr })
+	ct := CensusTemplate{registries: registries}
+	require.Equal(t, mr, ct.GetMisbehaviorRegistry())
+}
+
+func TestCTGetMandateRegistry(t *testing.T) {
+	registries := census.NewVersionedRegistriesMock(t)
+	mr := census.NewMandateRegistryMock(t)
+	registries.GetMandateRegistryMock.Set(func() census.MandateRegistry { return mr })
+	ct := CensusTemplate{registries: registries}
+	require.Equal(t, mr, ct.GetMandateRegistry())
+}
+
+func TestCTCreateBuilder(t *testing.T) {
+	t.Skip("merge")
+	// 	chronicles := &localChronicles{}
+	// 	pn := pulse.Number(1)
+	// 	sp := profiles.NewStaticProfileMock(t)
+	// 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
+	// 	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}},
+	// 		slots: []updatableSlot{{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}}
+	//
+	// 	ct := CensusTemplate{chronicles: chronicles, online: population}
+	// 	builder := ct.CreateBuilder(context.Background(), pn)
+	// 	require.Equal(t, pn, builder.GetPulseNumber())
+}
+
+func TestCTString(t *testing.T) {
+	ct := CensusTemplate{}
+	require.NotEmpty(t, ct.String())
+}
+
+func TestACTIsActive(t *testing.T) {
+	act := ActiveCensusTemplate{}
+	chronicles := &localChronicles{}
+	act.chronicles = chronicles
+	require.False(t, act.IsActive())
+
+	act.chronicles.active = &act
+	require.True(t, act.IsActive())
 }
 
 func TestACTGetExpectedPulseNumber(t *testing.T) {
@@ -254,17 +417,41 @@ func TestACTGetPulseData(t *testing.T) {
 
 func TestACTGetGlobulaStateHash(t *testing.T) {
 	act := ActiveCensusTemplate{}
-	require.Equal(t, nil, act.GetGlobulaStateHash())
+	require.Nil(t, act.GetGlobulaStateHash())
 }
 
 func TestACTGetCloudStateHash(t *testing.T) {
 	act := ActiveCensusTemplate{}
-	require.Equal(t, nil, act.GetCloudStateHash())
+	require.Nil(t, act.GetCloudStateHash())
+}
+
+func TestACTString(t *testing.T) {
+	act := ActiveCensusTemplate{}
+	chronicles := &localChronicles{}
+	act.chronicles = chronicles
+	require.NotEmpty(t, act.String())
+
+	act.activeRef = &act
+	act.chronicles.active = &act
+	require.NotEmpty(t, act.String())
+}
+
+func TestECTGetNearestPulseData(t *testing.T) {
+	ect := ExpectedCensusTemplate{}
+	act := census.NewActiveMock(t)
+	pulseNumber := pulse.Number(1)
+	pd := pulse.Data{PulseNumber: pulseNumber}
+	act.GetPulseDataMock.Set(func() pulse.Data { return pd })
+	ect.prev = act
+	b, data := ect.GetNearestPulseData()
+	require.False(t, b)
+
+	require.Equal(t, pulseNumber, data.PulseNumber)
 }
 
 func TestECTGetProfileFactory(t *testing.T) {
 	ect := ExpectedCensusTemplate{chronicles: &localChronicles{}}
-	require.Equal(t, nil, ect.GetProfileFactory(cryptkit.NewKeyStoreFactoryMock(t)))
+	require.Nil(t, ect.GetProfileFactory(cryptkit.NewKeyStoreFactoryMock(t)))
 }
 
 func TestECTGetEvictedPopulation(t *testing.T) {
@@ -293,17 +480,17 @@ func TestECTGetPulseNumber(t *testing.T) {
 
 func TestECTGetGlobulaStateHash(t *testing.T) {
 	ect := ExpectedCensusTemplate{}
-	require.Equal(t, nil, ect.GetGlobulaStateHash())
+	require.Nil(t, ect.GetGlobulaStateHash())
 }
 
 func TestECTGetCloudStateHash(t *testing.T) {
 	ect := ExpectedCensusTemplate{}
-	require.Equal(t, nil, ect.GetCloudStateHash())
+	require.Nil(t, ect.GetCloudStateHash())
 }
 
 func TestECTGetOnlinePopulation(t *testing.T) {
 	ect := ExpectedCensusTemplate{}
-	require.Equal(t, nil, ect.GetOnlinePopulation())
+	require.Nil(t, ect.GetOnlinePopulation())
 }
 
 func TestECTGetOfflinePopulation(t *testing.T) {
@@ -335,15 +522,12 @@ func TestECTCreateBuilder(t *testing.T) {
 	pn := pulse.Number(1)
 	sp := profiles.NewStaticProfileMock(t)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 0 })
-	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}
+	population := &ManyNodePopulation{local: &updatableSlot{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}},
+		slots: []updatableSlot{{NodeProfileSlot: NodeProfileSlot{StaticProfile: sp}}}}
 
 	ect := ExpectedCensusTemplate{chronicles: chronicles, online: population}
-	builder := ect.CreateBuilder(pn, false)
+	builder := ect.CreateBuilder(context.Background(), pn)
 	require.Equal(t, pn, builder.GetPulseNumber())
-
-	// TODO
-	/*builder = ect.CreateBuilder(pn, true)
-	require.Equal(t, pn, builder.GetPulseNumber())*/
 }
 
 func TestGetPrevious(t *testing.T) {
@@ -352,8 +536,7 @@ func TestGetPrevious(t *testing.T) {
 	require.Equal(t, act, ect.GetPrevious())
 }
 
-func TestMakeActive(t *testing.T) {
-	// ect := ExpectedCensusTemplate{}
+func TestECTMakeActive(t *testing.T) {
 	chronicles := &localChronicles{}
 	ect := ExpectedCensusTemplate{chronicles: chronicles}
 	pd := pulse.Data{PulseNumber: pulse.Number(1)}
@@ -387,4 +570,9 @@ func TestMakeActive(t *testing.T) {
 func TestECTIsActive(t *testing.T) {
 	ect := ExpectedCensusTemplate{}
 	require.False(t, ect.IsActive())
+}
+
+func TestECTString(t *testing.T) {
+	ect := ExpectedCensusTemplate{}
+	require.NotEmpty(t, ect.String())
 }

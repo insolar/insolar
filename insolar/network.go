@@ -33,7 +33,7 @@ type Cascade struct {
 // RemoteProcedure is remote procedure call function.
 type RemoteProcedure func(ctx context.Context, args []byte) ([]byte, error)
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.Network -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.Network -o ../testutils -s _mock.go -g
 
 // Network is interface for network modules facade.
 type Network interface {
@@ -51,7 +51,7 @@ type Network interface {
 	SetOperableFunc(f func(ctx context.Context, isNetworkOperable bool))
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.PulseDistributor -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.PulseDistributor -o ../testutils -s _mock.go -g
 
 // PulseDistributor is interface for pulse distribution.
 type PulseDistributor interface {

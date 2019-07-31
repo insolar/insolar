@@ -88,6 +88,20 @@ func NewMembershipProfile(mode member.OpMode, power member.Power, index member.I
 	}
 }
 
+func NewMembershipProfileForJoiner(brief BriefCandidateProfile) MembershipProfile {
+
+	return MembershipProfile{
+		Index:          member.JoinerIndex,
+		Power:          0,
+		Mode:           0,
+		RequestedPower: brief.GetStartPower(),
+		NodeAnnouncedState: proofs.NodeAnnouncedState{
+			StateEvidence:     brief.GetBriefIntroSignedDigest(),
+			AnnounceSignature: brief.GetBriefIntroSignedDigest().GetSignatureHolder(),
+		},
+	}
+}
+
 func NewMembershipProfileByNode(np ActiveNode, nsh cryptkit.SignedDigestHolder, nas proofs.MemberAnnouncementSignature,
 	ep member.Power) MembershipProfile {
 
@@ -149,11 +163,88 @@ func (p MembershipProfile) String() string {
 	return fmt.Sprintf("%s %s", index, p.StringParts())
 }
 
+type JoinerAnnouncement struct {
+	JoinerProfile  StaticProfile
+	IntroducedByID insolar.ShortNodeID
+	JoinerSecret   cryptkit.DigestHolder
+}
+
+func (v JoinerAnnouncement) IsEmpty() bool {
+	return v.JoinerProfile == nil
+}
+
 type MembershipAnnouncement struct {
-	Membership  MembershipProfile
-	IsLeaving   bool
-	LeaveReason uint32
-	JoinerID    insolar.ShortNodeID
+	Membership   MembershipProfile
+	IsLeaving    bool
+	LeaveReason  uint32
+	JoinerID     insolar.ShortNodeID
+	JoinerSecret cryptkit.DigestHolder
+}
+
+type MemberAnnouncement struct {
+	MemberID insolar.ShortNodeID
+	MembershipAnnouncement
+	Joiner        JoinerAnnouncement
+	AnnouncedByID insolar.ShortNodeID
+}
+
+func NewMemberAnnouncement(memberID insolar.ShortNodeID, mp MembershipProfile,
+	announcerID insolar.ShortNodeID) MemberAnnouncement {
+
+	return MemberAnnouncement{
+		MemberID:               memberID,
+		MembershipAnnouncement: NewMembershipAnnouncement(mp),
+		AnnouncedByID:          announcerID,
+	}
+}
+
+func NewJoinerAnnouncement(brief StaticProfile,
+	announcerID insolar.ShortNodeID) MemberAnnouncement {
+
+	// TODO joiner secret
+
+	return MemberAnnouncement{
+		MemberID:               brief.GetStaticNodeID(),
+		MembershipAnnouncement: NewMembershipAnnouncement(NewMembershipProfileForJoiner(brief)),
+		AnnouncedByID:          announcerID,
+		Joiner: JoinerAnnouncement{
+			JoinerProfile:  brief,
+			IntroducedByID: announcerID,
+		},
+	}
+}
+
+func NewMemberAnnouncementWithLeave(memberID insolar.ShortNodeID, mp MembershipProfile, leaveReason uint32,
+	announcerID insolar.ShortNodeID) MemberAnnouncement {
+
+	return MemberAnnouncement{
+		MemberID:               memberID,
+		MembershipAnnouncement: NewMembershipAnnouncementWithLeave(mp, leaveReason),
+		AnnouncedByID:          announcerID,
+	}
+}
+
+func NewMemberAnnouncementWithJoinerID(memberID insolar.ShortNodeID, mp MembershipProfile,
+	joinerID insolar.ShortNodeID, joinerSecret cryptkit.DigestHolder,
+	announcerID insolar.ShortNodeID) MemberAnnouncement {
+
+	return MemberAnnouncement{
+		MemberID:               memberID,
+		MembershipAnnouncement: NewMembershipAnnouncementWithJoinerID(mp, joinerID, joinerSecret),
+		AnnouncedByID:          announcerID,
+	}
+}
+
+func NewMemberAnnouncementWithJoiner(memberID insolar.ShortNodeID, mp MembershipProfile, joiner JoinerAnnouncement,
+	announcerID insolar.ShortNodeID) MemberAnnouncement {
+
+	return MemberAnnouncement{
+		MemberID: memberID,
+		MembershipAnnouncement: NewMembershipAnnouncementWithJoinerID(mp,
+			joiner.JoinerProfile.GetStaticNodeID(), joiner.JoinerSecret),
+		Joiner:        joiner,
+		AnnouncedByID: announcerID,
+	}
 }
 
 func NewMembershipAnnouncement(mp MembershipProfile) MembershipAnnouncement {
@@ -162,10 +253,13 @@ func NewMembershipAnnouncement(mp MembershipProfile) MembershipAnnouncement {
 	}
 }
 
-func NewMembershipAnnouncementWithJoinerID(mp MembershipProfile, joinerID insolar.ShortNodeID) MembershipAnnouncement {
+func NewMembershipAnnouncementWithJoinerID(mp MembershipProfile,
+	joinerID insolar.ShortNodeID, joinerSecret cryptkit.DigestHolder) MembershipAnnouncement {
+
 	return MembershipAnnouncement{
-		Membership: mp,
-		JoinerID:   joinerID,
+		Membership:   mp,
+		JoinerID:     joinerID,
+		JoinerSecret: joinerSecret,
 	}
 }
 

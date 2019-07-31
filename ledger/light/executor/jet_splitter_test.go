@@ -68,15 +68,15 @@ var (
 // children jets
 var (
 	// left and right children for jet10
-	jet10_left  = jet.NewIDFromString("100")
-	jet10_right = jet.NewIDFromString("101")
+	jet10Left  = jet.NewIDFromString("100")
+	jet10Right = jet.NewIDFromString("101")
 )
 
 var splitCases = []splitCase{
 	{
 		name: "no_split",
 		cfg: configuration.JetSplit{
-			ThresholdRecordsCount:  5,
+			ThresholdRecordsCount:  6,
 			ThresholdOverflowCount: 0,
 			DepthLimit:             defaultDepthLimit,
 		},
@@ -94,7 +94,7 @@ var splitCases = []splitCase{
 		},
 		pulses: []map[insolar.JetID]jetConfig{
 			{jet10: {5, 1, true}},
-			{jet10_left: {3, 0, false}},
+			{jet10Left: {3, 0, false}},
 		},
 	},
 	{
@@ -107,13 +107,13 @@ var splitCases = []splitCase{
 		pulses: []map[insolar.JetID]jetConfig{
 			{jet10: {5, 1, false}},
 			{jet10: {5, 2, true}},
-			{jet10_left: {5, 1, false}},
+			{jet10Left: {5, 1, false}},
 		},
 	},
 	{
 		name: "no_split_with_overflow",
 		cfg: configuration.JetSplit{
-			ThresholdRecordsCount:  4,
+			ThresholdRecordsCount:  5,
 			ThresholdOverflowCount: 1,
 			DepthLimit:             defaultDepthLimit,
 		},
@@ -133,7 +133,7 @@ var splitCases = []splitCase{
 		},
 		pulses: []map[insolar.JetID]jetConfig{
 			{jet10: {5, 1, true}},
-			{jet10_left: {5, 0, false}},
+			{jet10Left: {5, 0, false}},
 		},
 	},
 }
@@ -161,9 +161,9 @@ func TestJetSplitter(t *testing.T) {
 		)
 
 		// no filter for ID
-		jetCalc.MineForPulseFunc = func(ctx context.Context, pn insolar.PulseNumber) []insolar.JetID {
+		jetCalc.MineForPulseMock.Set(func(ctx context.Context, pn insolar.PulseNumber) []insolar.JetID {
 			return jetStore.All(ctx, pn)
-		}
+		})
 
 		var initialPulse insolar.PulseNumber = 60000
 		initialJets := []insolar.JetID{jet0, jet10, jet11}
@@ -181,13 +181,13 @@ func TestJetSplitter(t *testing.T) {
 			// jets state before possible split
 			pulseStartedWithJets := jetStore.All(ctx, ended)
 
-			collectionAccessor.ForPulseFunc = func(_ context.Context, jetID insolar.JetID, pn insolar.PulseNumber) []record.Material {
+			collectionAccessor.ForPulseMock.Set(func(_ context.Context, jetID insolar.JetID, pn insolar.PulseNumber) []record.Material {
 				jConf, ok := jetsConfig[jetID]
 				if !ok {
 					return nil
 				}
 				return make([]record.Material, jConf.records)
-			}
+			})
 
 			gotJets, err := splitter.Do(ctx, ended, newpulse)
 			require.NoError(t, err, "splitter.Do performed")

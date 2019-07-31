@@ -104,29 +104,29 @@ func TestIsFraud(t *testing.T) {
 }
 
 func TestFmtBitsetEntry(t *testing.T) {
-	require.True(t, FmtBitsetEntry(0) != "")
+	require.NotEmpty(t, FmtBitsetEntry(0))
 
-	require.True(t, FmtBitsetEntry(1) != "")
+	require.NotEmpty(t, FmtBitsetEntry(1))
 
-	require.True(t, FmtBitsetEntry(2) != "")
+	require.NotEmpty(t, FmtBitsetEntry(2))
 
-	require.True(t, FmtBitsetEntry(3) != "")
+	require.NotEmpty(t, FmtBitsetEntry(3))
 
-	require.True(t, FmtBitsetEntry(4) != "")
+	require.NotEmpty(t, FmtBitsetEntry(4))
 
-	require.True(t, FmtBitsetEntry(5) != "")
+	require.NotEmpty(t, FmtBitsetEntry(5))
 }
 
 func TestBitsetEntryString(t *testing.T) {
-	require.True(t, BeHighTrust.String() != "")
+	require.NotEmpty(t, BeHighTrust.String())
 
-	require.True(t, BeLimitedTrust.String() != "")
+	require.NotEmpty(t, BeLimitedTrust.String())
 
-	require.True(t, BeBaselineTrust.String() != "")
+	require.NotEmpty(t, BeBaselineTrust.String())
 
-	require.True(t, BeTimeout.String() != "")
+	require.NotEmpty(t, BeTimeout.String())
 
-	require.True(t, BeFraud.String() != "")
+	require.NotEmpty(t, BeFraud.String())
 
-	require.True(t, maxBitsetEntry.String() != "")
+	require.NotEmpty(t, maxBitsetEntry.String())
 }

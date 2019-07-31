@@ -60,13 +60,6 @@ func (s *UpdateObject) Present(ctx context.Context, f flow.Flow) error {
 		return fmt.Errorf("wrong update record type: %T", upd)
 	}
 
-	calcUpd := proc.NewCalculateID(msg.Record, flow.Pulse(ctx))
-	s.dep.CalculateID(calcUpd)
-	if err := f.Procedure(ctx, calcUpd, true); err != nil {
-		return err
-	}
-	updateID := calcUpd.Result.ID
-
 	resultVirt := record.Virtual{}
 	err = resultVirt.Unmarshal(msg.Result)
 	if err != nil {
@@ -84,16 +77,9 @@ func (s *UpdateObject) Present(ctx context.Context, f flow.Flow) error {
 		return errors.New("object is nil")
 	}
 
-	calcRes := proc.NewCalculateID(msg.Result, flow.Pulse(ctx))
-	s.dep.CalculateID(calcRes)
-	if err := f.Procedure(ctx, calcRes, true); err != nil {
-		return err
-	}
-	resultID := calcRes.Result.ID
-
 	passIfNotExecutor := !s.passed
-	jet := proc.NewCheckJet(obj, flow.Pulse(ctx), s.message, passIfNotExecutor)
-	s.dep.CheckJet(jet)
+	jet := proc.NewFetchJet(obj, flow.Pulse(ctx), s.message, passIfNotExecutor)
+	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
 		if err == proc.ErrNotExecutor && passIfNotExecutor {
 			return nil
@@ -103,21 +89,21 @@ func (s *UpdateObject) Present(ctx context.Context, f flow.Flow) error {
 
 	objJetID := jet.Result.Jet
 
-	hot := proc.NewWaitHotWM(objJetID, flow.Pulse(ctx), s.message)
-	s.dep.WaitHotWM(hot)
+	hot := proc.NewWaitHot(objJetID, flow.Pulse(ctx), s.message)
+	s.dep.WaitHot(hot)
 	if err := f.Procedure(ctx, hot, false); err != nil {
 		return err
 	}
 
 	// To ensure, that we have the index. Because index can be on a heavy node.
 	// If we don't have it and heavy does, UpdateObject fails because it should update light's index state
-	getIndex := proc.NewEnsureIndexWM(obj, objJetID, s.message)
+	getIndex := proc.NewEnsureIndex(obj, objJetID, s.message)
 	s.dep.EnsureIndex(getIndex)
 	if err := f.Procedure(ctx, getIndex, false); err != nil {
 		return err
 	}
 
-	updateObject := proc.NewUpdateObject(s.message, *update, updateID, *result, resultID, objJetID)
-	s.dep.UpdateObject(updateObject)
-	return f.Procedure(ctx, updateObject, false)
+	setResult := proc.NewSetResult(s.message, objJetID, *result, update)
+	s.dep.SetResult(setResult)
+	return f.Procedure(ctx, setResult, false)
 }

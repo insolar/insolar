@@ -55,6 +55,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/announce"
@@ -70,11 +73,11 @@ import (
 /*
 Does Phase0/Phase1/Phase1Rq processing
 */
-func NewPhase01Controller(packetPrepareOptions transport.PacketSendOptions, qJoiners <-chan core.MemberPacketSender) *Phase01Controller {
-	return &Phase01Controller{packetPrepareOptions: packetPrepareOptions, qJoiners: qJoiners}
+func NewPhase01Controller(packetPrepareOptions transport.PacketPrepareOptions, qIntro <-chan population.MemberPacketSender) *Phase01Controller {
+	return &Phase01Controller{packetPrepareOptions: packetPrepareOptions, qIntro: qIntro}
 }
 
-func (p *packetPhase0Dispatcher) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, n *core.NodeAppearance) error {
+func (p *packetPhase0Dispatcher) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, n *population.NodeAppearance) error {
 
 	p0 := packet.AsPhase0Packet()
 	nr := p0.GetNodeRank()
@@ -87,7 +90,7 @@ func (p *packetPhase0Dispatcher) DispatchMemberPacket(ctx context.Context, packe
 	return p.ctl.handlePulseData(ctx, pp, n)
 }
 
-func (c *packetPhase1Dispatcher) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, n *core.NodeAppearance) error {
+func (c *packetPhase1Dispatcher) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, n *population.NodeAppearance) error {
 
 	p1 := packet.AsPhase1Packet()
 	_, _, err := announce.ApplyMemberAnnouncement(ctx, p1, nil, true, n, c.ctl.R)
@@ -102,7 +105,7 @@ func (c *packetPhase1Dispatcher) DispatchMemberPacket(ctx context.Context, packe
 	return err
 }
 
-func (c *packetPhase1Dispatcher) DispatchUnknownMemberPacket(ctx context.Context, memberID insolar.ShortNodeID,
+func (c *packetPhase1Dispatcher) TriggerUnknownMember(ctx context.Context, memberID insolar.ShortNodeID,
 	packet transport.MemberPacketReader, from endpoints.Inbound) (bool, error) {
 
 	p1 := packet.AsPhase1Packet()
@@ -122,7 +125,7 @@ func (c *packetPhase1Dispatcher) DispatchUnknownMemberPacket(ctx context.Context
 	return announce.ApplyUnknownAnnouncement(ctx, memberID, p1, nil, true, c.ctl.R)
 }
 
-func (c *packetPhase1RqDispatcher) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, n *core.NodeAppearance) error {
+func (c *packetPhase1RqDispatcher) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, n *population.NodeAppearance) error {
 
 	p1 := packet.AsPhase1Packet()
 
@@ -135,7 +138,7 @@ func (c *packetPhase1RqDispatcher) DispatchMemberPacket(ctx context.Context, pac
 		return fmt.Errorf("pulse data is not expected") // TODO blame
 	}
 
-	if !c.ctl.R.GetSelf().IsNshRequired() {
+	if !c.ctl.R.GetSelf().IsNSHRequired() {
 		c.ctl.sendReqReply(ctx, n)
 	} else {
 		inslogger.FromContext(ctx).Warn("got Phase1Req, but NSH is still unavailable")
@@ -143,7 +146,7 @@ func (c *packetPhase1RqDispatcher) DispatchMemberPacket(ctx context.Context, pac
 	return nil
 }
 
-func (c *Phase01Controller) handlePulseData(ctx context.Context, pp transport.PulsePacketReader, n *core.NodeAppearance) error {
+func (c *Phase01Controller) handlePulseData(ctx context.Context, pp transport.PulsePacketReader, n *population.NodeAppearance) error {
 
 	// TODO when PulseDataExt is bigger than ~1.0KB - ignore it, as we will not be able to resend it within Ph0/Ph1 packets
 	// TODO validate pulse data
@@ -160,12 +163,12 @@ var _ core.PhaseController = &Phase01Controller{}
 
 type Phase01Controller struct {
 	core.PhaseControllerTemplate
-	packetPrepareOptions transport.PacketSendOptions
-	qJoiners             <-chan core.MemberPacketSender
+	packetPrepareOptions transport.PacketPrepareOptions
+	qIntro               <-chan population.MemberPacketSender
 	R                    *core.FullRealm
 }
 
-func (c *Phase01Controller) CreatePacketDispatcher(pt phases.PacketType, ctlIndex int, realm *core.FullRealm) (core.PacketDispatcher, core.PerNodePacketDispatcherFactory) {
+func (c *Phase01Controller) CreatePacketDispatcher(pt phases.PacketType, ctlIndex int, realm *core.FullRealm) (population.PacketDispatcher, core.PerNodePacketDispatcherFactory) {
 	switch pt {
 	case phases.PacketPhase0:
 		return &packetPhase0Dispatcher{packetPhase01Dispatcher{ctl: c}}, nil
@@ -182,10 +185,10 @@ func (*Phase01Controller) GetPacketType() []phases.PacketType {
 	return []phases.PacketType{phases.PacketPhase0, phases.PacketPhase1, phases.PacketReqPhase1}
 }
 
-func (c *Phase01Controller) sendReqReply(ctx context.Context, target *core.NodeAppearance) {
+func (c *Phase01Controller) sendReqReply(ctx context.Context, target *population.NodeAppearance) { // nolint:interfacer
 
 	p1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
-		c.R.GetOriginalPulse(), c.R.GetWelcomePackage(), transport.SendWithoutPulseData|c.packetPrepareOptions)
+		c.R.GetOriginalPulse(), c.R.GetWelcomePackage(), transport.PrepareWithoutPulseData|c.packetPrepareOptions)
 
 	p1.SendTo(ctx, target, 0, c.R.GetPacketSender())
 	target.SetPacketSent(phases.PacketPhase1)
@@ -193,32 +196,33 @@ func (c *Phase01Controller) sendReqReply(ctx context.Context, target *core.NodeA
 
 func (c *Phase01Controller) StartWorker(ctx context.Context, realm *core.FullRealm) {
 	c.R = realm
-	if c.R.IsJoiner() {
-		go c.workerPhase01Joiner(ctx)
-	} else {
-		go c.workerPhase01Member(ctx)
-	}
+	go c.workerPhase01(ctx)
 }
 
-func (c *Phase01Controller) workerPhase01Member(ctx context.Context) {
-	nsh, startIndex := c.workerSendPhase0(ctx)
-	if startIndex < 0 {
-		return
-	}
-	c.R.PrepareAndSetLocalNodeStateHashEvidence(nsh)
+func (c *Phase01Controller) workerPhase01(ctx context.Context) {
 
-	go c.workerSendPhase1(ctx, startIndex)
+	nodes := c.R.GetPopulation().GetShuffledOtherNodes()
+
+	var nsh proofs.NodeStateHash
+	startIndex := 0
+
+	if ok, nshChannel := c.R.CommitAndPreparePulseChange(); ok {
+		nsh, startIndex = c.workerSendPhase0(ctx, nodes, nshChannel)
+		if startIndex < 0 {
+			// stopped via context
+			return
+		}
+	}
+
+	c.R.ApplyLocalState(nsh)
+
+	go c.workerSendPhase1ToFixed(ctx, startIndex, nodes)
 	c.workerSendPhase1ToDynamics(ctx)
 }
 
-func (c *Phase01Controller) workerPhase01Joiner(ctx context.Context) {
-	c.R.PrepareAndSetLocalNodeStateHashEvidenceForJoiner()
-	c.workerSendPhase1ToDynamics(ctx)
-}
+func (c *Phase01Controller) workerSendPhase0(ctx context.Context, nodes []*population.NodeAppearance,
+	nshChannel <-chan api.UpstreamState) (proofs.NodeStateHash, int) {
 
-func (c *Phase01Controller) workerSendPhase0(ctx context.Context) (proofs.NodeStateHash, int) {
-
-	nshChannel := c.R.PreparePulseChange()
 	/*
 		TODO when PulseDataExt is bigger than ~0.7KB then it is too big for Ph1 and can only be distributed
 		with Ph0 packets, so Ph0 phase should continue to run
@@ -234,17 +238,19 @@ func (c *Phase01Controller) workerSendPhase0(ctx context.Context) (proofs.NodeSt
 		return nsh.NodeState, 0
 	}
 
-	p0 := c.R.GetPacketBuilder().PreparePhase0Packet(c.R.CreateLocalAnnouncement(), c.R.GetOriginalPulse(),
+	p0 := c.R.GetPacketBuilder().PreparePhase0Packet(c.R.CreateLocalPhase0Announcement(), c.R.GetOriginalPulse(),
 		c.packetPrepareOptions)
 
-	for lastIndex, target := range c.R.GetPopulation().GetShuffledOtherNodes() {
+	sendOptions := c.packetPrepareOptions.AsSendOptions() &^ transport.SendWithoutPulseData
+
+	for lastIndex, target := range nodes {
 		if target.HasAnyPacketReceived() {
 			continue
 		}
 
 		// DONT use SendToMany here, as this is "gossip" style and parallelism is provided by multiplicity of nodes
 		// Instead we have a chance to save some traffic.
-		p0.SendTo(ctx, target, 0, c.R.GetPacketSender())
+		p0.SendTo(ctx, target, sendOptions, c.R.GetPacketSender())
 		target.SetPacketSent(phases.PacketPhase0)
 
 		select {
@@ -264,53 +270,60 @@ func (c *Phase01Controller) workerSendPhase0(ctx context.Context) (proofs.NodeSt
 	}
 }
 
-func (c *Phase01Controller) workerSendPhase1(ctx context.Context, startIndex int) {
+func (c *Phase01Controller) workerSendPhase1ToFixed(ctx context.Context, startIndex int, otherNodes []*population.NodeAppearance) {
 
 	p1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
 		c.R.GetOriginalPulse(), c.R.GetWelcomePackage(), c.packetPrepareOptions)
 
-	otherNodes := c.R.GetPopulation().GetShuffledOtherNodes()
+	sendOptions := c.packetPrepareOptions.AsSendOptions()
 
 	// first, send to nodes not covered by Phase 0
 	p1.SendToMany(ctx, len(otherNodes)-startIndex, c.R.GetPacketSender(),
 		func(ctx context.Context, targetIdx int) (transport.TargetProfile, transport.PacketSendOptions) {
-			target := otherNodes[targetIdx+startIndex]
-			target.SetPacketSent(phases.PacketPhase1)
-
-			if target.HasAnyPacketReceived() {
-				return target, transport.SendWithoutPulseData
-			}
-			return target, 0
+			return prepareTarget(otherNodes[targetIdx+startIndex], sendOptions)
 		})
 
+	// then to the rest
 	p1.SendToMany(ctx, startIndex, c.R.GetPacketSender(),
 		func(ctx context.Context, targetIdx int) (transport.TargetProfile, transport.PacketSendOptions) {
-			target := otherNodes[targetIdx]
-			target.SetPacketSent(phases.PacketPhase1)
-
-			if target.HasAnyPacketReceived() {
-				return target, transport.SendWithoutPulseData
-			}
-			return target, 0
+			return prepareTarget(otherNodes[targetIdx], sendOptions)
 		})
+}
+
+func prepareTarget(target *population.NodeAppearance,
+	sendOptions transport.PacketSendOptions) (transport.TargetProfile, transport.PacketSendOptions) {
+
+	target.SetPacketSent(phases.PacketPhase1)
+	if !target.SetPacketSent(phases.PacketPhase1) {
+		return nil, 0
+	}
+	if target.HasAnyPacketReceived() {
+		sendOptions |= transport.SendWithoutPulseData
+	}
+	return target, sendOptions
 }
 
 func (c *Phase01Controller) workerSendPhase1ToDynamics(ctx context.Context) {
 
 	p1 := c.R.GetPacketBuilder().PreparePhase1Packet(c.R.CreateLocalAnnouncement(),
-		c.R.GetOriginalPulse(), c.R.GetWelcomePackage(), c.packetPrepareOptions)
+		c.R.GetOriginalPulse(), c.R.GetWelcomePackage(),
+		c.packetPrepareOptions)
 
+	// TODO check if Phase1 packet size is ok to send both intro and pulse data - then, as a backup - send Phase0
+
+	sendOptions := c.packetPrepareOptions.AsSendOptions() | transport.TargetNeedsIntro
+
+	selfID := c.R.GetSelfNodeID()
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case joiner := <-c.qJoiners:
-			if c.R.GetSelfNodeID() == joiner.GetNodeID() {
+		case introTo := <-c.qIntro:
+			if selfID == introTo.GetNodeID() {
 				continue
 			}
-			if joiner.SetPacketSent(phases.PacketPhase1) {
-				p1.SendTo(ctx, joiner, 0, c.R.GetPacketSender())
-			}
+			// || !introTo.SetPacketSent(phases.PacketPhase1)
+			p1.SendTo(ctx, introTo, sendOptions, c.R.GetPacketSender())
 		}
 	}
 }

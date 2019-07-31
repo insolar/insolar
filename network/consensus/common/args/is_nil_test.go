@@ -57,15 +57,30 @@ import (
 )
 
 func TestIsNil(t *testing.T) {
-	m := make(map[int]interface{})
-	require.True(t, IsNil(m[0]))
+	require.True(t, IsNil(nil))
+	require.False(t, IsNil("test"))
 
-	m[0] = nil
-	require.True(t, IsNil(m[0]))
+	var v testHolder
 
-	m[0] = 0
-	require.False(t, IsNil(m[0]))
+	require.False(t, v.Get() == nil)
+	require.True(t, IsNil(v.Get()))
 
-	delete(m, 0)
-	require.True(t, IsNil(m[0]))
+	d := 0
+	v.value = &d
+
+	require.False(t, v.Get() == nil)
+	require.False(t, IsNil(v.Get()))
+
+	v.value = nil
+
+	require.False(t, v.Get() == nil)
+	require.True(t, IsNil(v.Get()))
+}
+
+type testHolder struct {
+	value *int
+}
+
+func (v testHolder) Get() interface{} {
+	return v.value
 }

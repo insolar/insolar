@@ -66,7 +66,7 @@ func (p *GetRequest) Dep(
 
 func (p *GetRequest) Proceed(ctx context.Context) error {
 	sendRequest := func(rec record.Material) error {
-		concrete := record.Unwrap(rec.Virtual)
+		concrete := record.Unwrap(&rec.Virtual)
 		_, isIncoming := concrete.(*record.IncomingRequest)
 		_, isOutgoing := concrete.(*record.OutgoingRequest)
 		if !isIncoming && !isOutgoing {
@@ -75,7 +75,7 @@ func (p *GetRequest) Proceed(ctx context.Context) error {
 
 		msg, err := payload.NewMessage(&payload.Request{
 			RequestID: p.requestID,
-			Request:   *rec.Virtual,
+			Request:   rec.Virtual,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")

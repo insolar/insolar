@@ -88,9 +88,14 @@ func (dh *DatagramHandler) SetPacketParserFactory(packetParserFactory PacketPars
 }
 
 func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, buf []byte) {
-	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
 		"sender_address": address,
 	})
+
+	if dh.packetProcessor == nil || dh.packetParserFactory == nil {
+		logger.Error("Datagram handler not initialized")
+		return
+	}
 
 	packetParser, err := dh.packetParserFactory.ParsePacket(ctx, bytes.NewReader(buf))
 	if err != nil {
@@ -98,9 +103,10 @@ func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, b
 		return
 	}
 
-	logger = inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"sender_id":   packetParser.GetSourceID(),
-		"packet_type": packetParser.GetPacketType(),
+	ctx, logger = inslogger.WithFields(ctx, map[string]interface{}{
+		"sender_id":    packetParser.GetSourceID(),
+		"packet_type":  packetParser.GetPacketType().String(),
+		"packet_pulse": packetParser.GetPulseNumber(),
 	})
 
 	hostIdentity := endpoints.InboundConnection{
@@ -128,12 +134,20 @@ func (ph *PulseHandler) SetPacketProcessor(packetProcessor PacketProcessor) {
 func (ph *PulseHandler) SetPacketParserFactory(PacketParserFactory) {}
 
 func (ph *PulseHandler) HandlePulse(ctx context.Context, pulse insolar.Pulse, packet network.ReceivedPacket) {
-	pulsePayload := NewPulsePacketParser(pulse, packet.Bytes())
+	logger := inslogger.FromContext(ctx)
+
+	if ph.packetProcessor == nil {
+		logger.Error("Pulse handler not initialized")
+		return
+	}
+
+	pulseData := NewPulseData(pulse)
+	pulsePayload := NewPulsePacketParser(pulseData, packet.Bytes())
 
 	err := ph.packetProcessor.ProcessPacket(ctx, pulsePayload, &endpoints.InboundConnection{
 		Addr: "pulsar",
 	})
 	if err != nil {
-		inslogger.FromContext(ctx).Error(err)
+		logger.Error(err)
 	}
 }

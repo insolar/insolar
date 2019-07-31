@@ -17,16 +17,13 @@
 package pulse
 
 import (
-	"bytes"
 	"context"
 	"sync"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/pkg/errors"
-	"github.com/ugorji/go/codec"
-
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/pkg/errors"
 )
 
 // DB is a DB storage implementation. It saves pulses to disk and does not allow removal.
@@ -102,7 +99,7 @@ func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 		inslogger.FromContext(ctx).Debugf("Erased key with pulse number: %s", insolar.PulseNumber(key))
 	}
 	if !hasKeys {
-		return errors.New("No required pulse: " + from.String())
+		inslogger.FromContext(ctx).Debug("No records. Nothing done. Pulse number: " + from.String())
 	}
 
 	return nil
@@ -221,14 +218,10 @@ func (s *DB) head() (pn insolar.PulseNumber, err error) {
 }
 
 func serialize(nd dbNode) []byte {
-	buff := bytes.NewBuffer(nil)
-	enc := codec.NewEncoder(buff, &codec.CborHandle{})
-	enc.MustEncode(nd)
-	return buff.Bytes()
+	return insolar.MustSerialize(nd)
 }
 
 func deserialize(buf []byte) (nd dbNode) {
-	dec := codec.NewDecoderBytes(buf, &codec.CborHandle{})
-	dec.MustDecode(&nd)
+	insolar.MustDeserialize(buf, &nd)
 	return nd
 }

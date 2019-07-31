@@ -90,14 +90,3 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *Statu
 
 	return nil
 }
-
-func (s *NodeService) LogOff(r *http.Request, args *interface{}, reply *StatusReply) error {
-	g := s.runner.Gatewayer
-	g.SetGateway(g.Gateway().NewGateway(insolar.NoNetworkState))
-
-	err := s.GetStatus(r, args, reply)
-	if err != nil {
-		return err
-	}
-	return nil
-}

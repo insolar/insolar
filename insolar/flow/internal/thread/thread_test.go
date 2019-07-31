@@ -74,11 +74,11 @@ func TestThread_Procedure_CancelledWhenProcedureWorks(t *testing.T) {
 		procedures: map[flow.Procedure]*result{},
 	}
 	pm := flow.NewProcedureMock(t)
-	pm.ProceedFunc = func(ctx context.Context) error {
+	pm.ProceedMock.Set(func(ctx context.Context) error {
 		close(cancel)
 		<-finish
 		return nil
-	}
+	})
 	err := thread.Procedure(context.Background(), pm, true)
 	require.Error(t, err)
 	require.Equal(t, flow.ErrCancelled, err)
@@ -105,9 +105,9 @@ func TestThread_Procedure_ProceedReturnsError(t *testing.T) {
 		procedures: map[flow.Procedure]*result{},
 	}
 	pm := flow.NewProcedureMock(t)
-	pm.ProceedFunc = func(ctx context.Context) error {
+	pm.ProceedMock.Set(func(ctx context.Context) error {
 		return errors.New("proceed test error")
-	}
+	})
 	err := thread.Procedure(context.Background(), pm, true)
 	require.Error(t, err)
 	require.EqualError(t, err, "proceed test error")
@@ -119,9 +119,9 @@ func TestThread_Procedure(t *testing.T) {
 		procedures: map[flow.Procedure]*result{},
 	}
 	pm := flow.NewProcedureMock(t)
-	pm.ProceedFunc = func(ctx context.Context) error {
+	pm.ProceedMock.Set(func(ctx context.Context) error {
 		return nil
-	}
+	})
 	err := thread.Procedure(context.Background(), pm, true)
 	require.NoError(t, err)
 }
@@ -133,9 +133,9 @@ func TestThread_Procedure_Reattach(t *testing.T) {
 	}
 	procErr := errors.New("test error")
 	pm := flow.NewProcedureMock(t)
-	pm.ProceedFunc = func(ctx context.Context) error {
+	pm.ProceedMock.Set(func(ctx context.Context) error {
 		return procErr
-	}
+	})
 	err := thread.Procedure(context.Background(), pm, true)
 	require.Equal(t, procErr, err)
 	done := make(chan struct{})

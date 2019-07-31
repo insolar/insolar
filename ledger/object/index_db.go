@@ -190,7 +190,7 @@ func (i *IndexDB) filament(b *record.Index) ([]record.CompositeFilamentRecord, e
 		if err != nil {
 			return nil, err
 		}
-		pend := record.Unwrap(metaRec.Virtual).(*record.PendingFilament)
+		pend := record.Unwrap(&metaRec.Virtual).(*record.PendingFilament)
 		rec, err := i.recordStore.get(pend.RecordID)
 		if err != nil {
 			return nil, err
@@ -213,7 +213,7 @@ func (i *IndexDB) nextFilament(b *record.Index) (canContinue bool, nextPN insola
 	if err != nil {
 		return false, insolar.PulseNumber(0), err
 	}
-	pf := record.Unwrap(metaRec.Virtual).(*record.PendingFilament)
+	pf := record.Unwrap(&metaRec.Virtual).(*record.PendingFilament)
 	if pf.PreviousRecord != nil {
 		return true, pf.PreviousRecord.Pulse(), nil
 	}

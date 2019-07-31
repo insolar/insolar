@@ -47,7 +47,7 @@ import (
 	"fmt"
 	"errors"
 
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 type HelloWorlder struct {
@@ -465,7 +465,7 @@ func (s *PreprocessorSuite) TestImportsFromContract() {
 	err = goplugintestutils.WriteFile(tmpDir, testContract, `
 package main
 import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"some/test/import/path"
 	"some/test/import/pointerPath"
 )
@@ -513,7 +513,7 @@ func (s *PreprocessorSuite) TestAliasImportsFromContract() {
 	err = goplugintestutils.WriteFile(tmpDir, testContract, `
 package main
 import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	someAlias "some/test/import/path"
 )
 
@@ -555,7 +555,7 @@ func (s *PreprocessorSuite) TestImportsFromContractUseInsideFunc() {
 	err = goplugintestutils.WriteFile(tmpDir, testContract, `
 package main
 import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"some/test/import/path"
 )
 
@@ -596,7 +596,7 @@ func (s *PreprocessorSuite) TestImportsFromContractUseForReturnValue() {
 	err = goplugintestutils.WriteFile(tmpDir, testContract, `
 package main
 import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"some/test/import/path"
 )
 

@@ -52,10 +52,10 @@ package core
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
-
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
@@ -83,17 +83,17 @@ func (*PrepPhaseControllerTemplate) StartWorker(ctx context.Context, realm *Prep
 type HostPacketDispatcherTemplate struct {
 }
 
-func (*HostPacketDispatcherTemplate) DispatchUnknownMemberPacket(ctx context.Context, memberID insolar.ShortNodeID,
+func (*HostPacketDispatcherTemplate) TriggerUnknownMember(ctx context.Context, memberID insolar.ShortNodeID,
 	packet transport.MemberPacketReader, from endpoints.Inbound) (bool, error) {
 	return false, nil
 }
 
-func (*HostPacketDispatcherTemplate) HasCustomVerifyForHost(from endpoints.Inbound, strict bool) bool {
+func (*HostPacketDispatcherTemplate) HasCustomVerifyForHost(from endpoints.Inbound, verifyFlags coreapi.PacketVerifyFlags) bool {
 	return false
 }
 
 func (*HostPacketDispatcherTemplate) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader,
-	source *NodeAppearance) error {
+	source *population.NodeAppearance) error {
 	panic("illegal state")
 }
 
@@ -102,16 +102,16 @@ func (*HostPacketDispatcherTemplate) DispatchMemberPacket(ctx context.Context, p
 type MemberPacketDispatcherTemplate struct {
 }
 
-func (*MemberPacketDispatcherTemplate) DispatchUnknownMemberPacket(ctx context.Context, memberID insolar.ShortNodeID,
+func (*MemberPacketDispatcherTemplate) TriggerUnknownMember(ctx context.Context, memberID insolar.ShortNodeID,
 	packet transport.MemberPacketReader, from endpoints.Inbound) (bool, error) {
 	return false, nil
 }
 
-func (*MemberPacketDispatcherTemplate) HasCustomVerifyForHost(from endpoints.Inbound, strict bool) bool {
+func (*MemberPacketDispatcherTemplate) HasCustomVerifyForHost(from endpoints.Inbound, verifyFlags coreapi.PacketVerifyFlags) bool {
 	return false
 }
 
 func (*MemberPacketDispatcherTemplate) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
-	from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags) error {
+	from endpoints.Inbound, flags coreapi.PacketVerifyFlags) error {
 	panic("illegal state")
 }

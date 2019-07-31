@@ -31,7 +31,8 @@ func (r *CallMethod) Type() insolar.ReplyType {
 }
 
 type CallConstructor struct {
-	Object *insolar.Reference
+	Object           *insolar.Reference
+	ConstructorError string
 }
 
 // Type returns type of the reply

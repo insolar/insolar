@@ -264,7 +264,7 @@ func TestActivateObject_FlowWithPassedFlag(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return errors.New("something strange from checkjet")
 			default:
 				panic("unknown procedure")
@@ -283,7 +283,7 @@ func TestActivateObject_FlowWithPassedFlag(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return proc.ErrNotExecutor
 			default:
 				panic("unknown procedure")
@@ -302,9 +302,9 @@ func TestActivateObject_FlowWithPassedFlag(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return proc.ErrNotExecutor
-			case *proc.EnsureIndexWM:
+			case *proc.EnsureIndex:
 				return nil
 			default:
 				panic("unknown procedure")
@@ -334,9 +334,9 @@ func TestActivateObject_ErrorFromWaitHot(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return nil
-			case *proc.WaitHotWM:
+			case *proc.WaitHot:
 				return errors.New("error from waithot")
 			default:
 				panic("unknown procedure")
@@ -355,11 +355,11 @@ func TestActivateObject_ErrorFromWaitHot(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return nil
-			case *proc.WaitHotWM:
+			case *proc.WaitHot:
 				return nil
-			case *proc.ActivateObject:
+			case *proc.SetResult:
 				return nil
 			default:
 				panic("unknown procedure")
@@ -381,19 +381,19 @@ func TestActivateObject_ErrorFromActivateObject(t *testing.T) {
 
 	msg := metaActivateMsg(t)
 
-	t.Run("activateobject procedure returns err", func(t *testing.T) {
+	t.Run("SetResult procedure returns err", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return nil
-			case *proc.WaitHotWM:
+			case *proc.WaitHot:
 				return nil
-			case *proc.ActivateObject:
-				return errors.New("error from activateobject")
+			case *proc.SetResult:
+				return errors.New("error from SetResult")
 			default:
 				panic("unknown procedure")
 			}
@@ -401,21 +401,21 @@ func TestActivateObject_ErrorFromActivateObject(t *testing.T) {
 
 		handler := handle.NewActivateObject(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
-		assert.EqualError(t, err, "error from activateobject")
+		assert.EqualError(t, err, "error from SetResult")
 	})
 
-	t.Run("activateobject procedure returns nil err", func(t *testing.T) {
+	t.Run("SetResult procedure returns nil err", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return nil
-			case *proc.WaitHotWM:
+			case *proc.WaitHot:
 				return nil
-			case *proc.ActivateObject:
+			case *proc.SetResult:
 				return nil
 			default:
 				panic("unknown procedure")

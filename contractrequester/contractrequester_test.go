@@ -61,21 +61,21 @@ func TestNew(t *testing.T) {
 func mockPulseAccessor(t minimock.Tester) pulse.Accessor {
 	pulseAccessor := pulse.NewAccessorMock(t)
 	currentPulse := insolar.FirstPulseNumber
-	pulseAccessor.LatestFunc = func(p context.Context) (r insolar.Pulse, r1 error) {
+	pulseAccessor.LatestMock.Set(func(p context.Context) (r insolar.Pulse, r1 error) {
 		return insolar.Pulse{
 			PulseNumber:     insolar.PulseNumber(currentPulse),
 			NextPulseNumber: insolar.PulseNumber(currentPulse + 1),
 		}, nil
-	}
+	})
 
 	return pulseAccessor
 }
 
 func mockJetCoordinator(t minimock.Tester) jet.Coordinator {
 	coordinator := jet.NewCoordinatorMock(t)
-	coordinator.MeFunc = func() (r insolar.Reference) {
+	coordinator.MeMock.Set(func() (r insolar.Reference) {
 		return testutils.RandomRef()
-	}
+	})
 	return coordinator
 }
 
@@ -183,7 +183,7 @@ func TestContractRequester_CallMethod_Timeout(t *testing.T) {
 	method := testutils.RandomString()
 
 	mb := testutils.NewMessageBusMock(mc)
-	mb.SendFunc = func(ctx context.Context, m insolar.Message, opt *insolar.MessageSendOptions) (insolar.Reply, error) {
+	mb.SendMock.Set(func(ctx context.Context, m insolar.Message, opt *insolar.MessageSendOptions) (insolar.Reply, error) {
 		request := m.(*message.CallMethod).IncomingRequest
 
 		hash, err := cr.calcRequestHash(request)
@@ -191,11 +191,12 @@ func TestContractRequester_CallMethod_Timeout(t *testing.T) {
 		requestRef := insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, hash[:]))
 
 		return &reply.RegisterRequest{Request: *requestRef}, nil
-	}
+	})
 	cr.MessageBus = mb
 
 	msg := &message.CallMethod{
 		IncomingRequest: record.IncomingRequest{
+			Caller:    gen.Reference(),
 			Object:    &ref,
 			Prototype: &prototypeRef,
 			Method:    method,

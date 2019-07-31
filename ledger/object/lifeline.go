@@ -54,32 +54,14 @@ func CloneLifeline(idx record.Lifeline) record.Lifeline {
 		idx.LatestState = &tmp
 	}
 
-	if idx.LatestStateApproved != nil {
-		tmp := *idx.LatestStateApproved
-		idx.LatestStateApproved = &tmp
-	}
-
-	if idx.ChildPointer != nil {
-		tmp := *idx.ChildPointer
-		idx.ChildPointer = &tmp
-	}
-
-	if idx.Delegates != nil {
-		cp := make([]record.LifelineDelegate, len(idx.Delegates))
-		copy(cp, idx.Delegates)
-		idx.Delegates = cp
-	} else {
-		idx.Delegates = []record.LifelineDelegate{}
+	if idx.LatestRequest != nil {
+		r := *idx.LatestRequest
+		idx.LatestRequest = &r
 	}
 
 	if idx.EarliestOpenRequest != nil {
 		tmp := *idx.EarliestOpenRequest
 		idx.EarliestOpenRequest = &tmp
-	}
-
-	if idx.PendingPointer != nil {
-		tmp := *idx.PendingPointer
-		idx.PendingPointer = &tmp
 	}
 
 	return idx

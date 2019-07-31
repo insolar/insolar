@@ -19,6 +19,8 @@ package jet
 import (
 	"testing"
 
+	"github.com/insolar/insolar/insolar/bits"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
@@ -38,15 +40,25 @@ func TestJet_Parent(t *testing.T) {
 	require.Equal(t, emptyChild, emptyParent, "for empty jet ID, got the same parent")
 }
 
-func TestJet_ResetBits(t *testing.T) {
+func TestJet_ParsePrefixAndResetBits(t *testing.T) {
 	orig := []byte{0xFF}
-	got := resetBits(orig, 5)
+	got := bits.ResetBits(orig, 5)
 	require.Equal(t, parsePrefix("11111000"), got,
 		"bit reset sucessfully %b == %b", parsePrefix("11111000"), got)
 	require.NotEqual(t, &orig, &got, "without overflow returns a new slice")
+}
 
-	gotWithOverflow := resetBits(orig, 9)
-	require.Equal(t, []byte{0xFF}, gotWithOverflow, "returns equals slice on overflow")
-	require.Equal(t, &orig, &gotWithOverflow, "on overflow returns the same slice")
-	require.Equal(t, []byte{0xFF}, orig, "original unchanged after resetBits")
+func TestJet_SiblingParent(t *testing.T) {
+	jetID := gen.JetID()
+	left, right := Siblings(jetID)
+	require.True(t, jetID.Equal(Parent(left)))
+	require.True(t, jetID.Equal(Parent(right)))
+}
+
+func TestJet_NewJetIDSiblingParent(t *testing.T) {
+	jetID := *insolar.NewJetID(5, gen.ID().Bytes())
+
+	left, right := Siblings(jetID)
+	require.True(t, jetID.Equal(Parent(left)))
+	require.True(t, jetID.Equal(Parent(right)))
 }

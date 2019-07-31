@@ -114,7 +114,7 @@ func (pn PulseNumber) Size() int {
 	return len(pn.Bytes())
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.PulseManager -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.PulseManager -o ../testutils -s _mock.go -g
 
 // PulseManager provides Ledger's methods related to Pulse.
 type PulseManager interface {

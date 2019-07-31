@@ -75,6 +75,14 @@ func (v OpMode) IsEvicted() bool {
 	return v >= ModeEvictedGracefully
 }
 
+func (v OpMode) IsEvictedForcefully() bool {
+	return v > ModeEvictedGracefully
+}
+
+func (v OpMode) IsEvictedGracefully() bool {
+	return v == ModeEvictedGracefully
+}
+
 func (v OpMode) IsRestricted() bool {
 	return v&ModeFlagRestrictedBehavior != 0
 }
@@ -100,6 +108,14 @@ func (v OpMode) AsUnit32() uint32 {
 		panic("illegal value")
 	}
 	return uint32(v)
+}
+
+func (v OpMode) CanVote() bool {
+	return v == ModeNormal
+}
+
+func (v OpMode) CanHaveState() bool {
+	return !v.IsSuspended() && !v.IsEvicted()
 }
 
 func (v OpMode) String() string {

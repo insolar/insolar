@@ -111,14 +111,14 @@ func TestBlameType(t *testing.T) {
 
 func TestBlameError(t *testing.T) {
 	be := &BlameError{}
-	require.True(t, be.Error() != "")
+	require.NotEmpty(t, be.Error())
 
 	bn := profiles.NewBaseNodeMock(t)
 	be.violatorNode = bn
-	require.True(t, be.Error() != "")
+	require.NotEmpty(t, be.Error())
 
 	be.captureMark = 1
-	require.True(t, be.Error() != "")
+	require.NotEmpty(t, be.Error())
 }
 
 func reportFunc(_ Report) interface{} {

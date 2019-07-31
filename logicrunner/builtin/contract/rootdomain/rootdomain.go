@@ -21,22 +21,25 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/helloworld"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/shard"
 )
 
 // RootDomain is smart contract representing entrance point to system.
 type RootDomain struct {
 	foundation.BaseContract
 	RootMember             insolar.Reference
-	MigrationDaemonMembers []insolar.Reference
+	MigrationDaemonMembers [insolar.GenesisAmountActiveMigrationDaemonMembers]insolar.Reference
 	MigrationAdminMember   insolar.Reference
 	MigrationWallet        insolar.Reference
 	CostCenter             insolar.Reference
 	FeeWallet              insolar.Reference
-	BurnAddressMap         map[string]insolar.Reference
-	PublicKeyMap           map[string]insolar.Reference
+	MigrationAddressShards [insolar.GenesisAmountMigrationAddressShards]insolar.Reference
+	PublicKeyShards        [insolar.GenesisAmountPublicKeyShards]insolar.Reference
 	FreeBurnAddresses      []string
 	NodeDomain             insolar.Reference
 }
@@ -56,13 +59,13 @@ func (rd RootDomain) GetMigrationWalletRef() (insolar.Reference, error) {
 	return rd.MigrationWallet, nil
 }
 
-// GetMigrationDaemonMembers gets migration daemon members references.
+// GetMigrationAdminMember gets migration admin member reference.
 func (rd RootDomain) GetMigrationAdminMember() (insolar.Reference, error) {
 	return rd.MigrationAdminMember, nil
 }
 
-// GetMigrationDaemonMembers gets migration daemon members references.
-func (rd RootDomain) GetMigrationDaemonMembers() ([]insolar.Reference, error) {
+// GetActiveMigrationDaemonMembers gets migration daemon members references.
+func (rd RootDomain) GetActiveMigrationDaemonMembers() ([3]insolar.Reference, error) {
 	return rd.MigrationDaemonMembers, nil
 }
 
@@ -84,27 +87,43 @@ func (rd *RootDomain) GetBurnAddress() (string, error) {
 }
 
 // GetMemberByPublicKey gets member reference by public key.
-func (rd RootDomain) GetMemberByPublicKey(publicKey string) (insolar.Reference, error) {
-	var result insolar.Reference
-	var ok bool
-
-	if result, ok = rd.PublicKeyMap[trimPublicKey(publicKey)]; !ok {
-		return insolar.Reference{}, fmt.Errorf("member for this public key does not exist")
+func (rd RootDomain) GetMemberByPublicKey(publicKey string) (*insolar.Reference, error) {
+	trimmedPublicKey := trimPublicKey(publicKey)
+	i := foundation.GetShardIndex(trimmedPublicKey, insolar.GenesisAmountPublicKeyShards)
+	if i >= len(rd.PublicKeyShards) {
+		return nil, fmt.Errorf("incorect shard index")
+	}
+	s := shard.GetObject(rd.PublicKeyShards[i])
+	refStr, err := s.GetRef(trimmedPublicKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get reference in shard")
+	}
+	ref, err := insolar.NewReferenceFromBase58(refStr)
+	if err != nil {
+		return nil, errors.Wrap(err, "bad member reference for this public key")
 	}
 
-	return result, nil
+	return ref, nil
 }
 
-// GetMemberByBurnAddress gets member reference by burn address.
-func (rd RootDomain) GetMemberByBurnAddress(burnAddress string) (insolar.Reference, error) {
-	var result insolar.Reference
-	var ok bool
-
-	if result, ok = rd.BurnAddressMap[trimBurnAddress(burnAddress)]; !ok {
-		return insolar.Reference{}, fmt.Errorf("member for this migration address does not exist")
+// GetMemberByMigrationAddress gets member reference by burn address.
+func (rd RootDomain) GetMemberByMigrationAddress(migrationAddress string) (*insolar.Reference, error) {
+	trimmedMigrationAddress := trimMigrationAddress(migrationAddress)
+	i := foundation.GetShardIndex(trimmedMigrationAddress, insolar.GenesisAmountMigrationAddressShards)
+	if i >= len(rd.MigrationAddressShards) {
+		return nil, fmt.Errorf("incorect shard index")
+	}
+	s := shard.GetObject(rd.MigrationAddressShards[i])
+	refStr, err := s.GetRef(trimmedMigrationAddress)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get reference in shard")
+	}
+	ref, err := insolar.NewReferenceFromBase58(refStr)
+	if err != nil {
+		return nil, errors.Wrap(err, "bad member reference for this migration address")
 	}
 
-	return result, nil
+	return ref, nil
 }
 
 // GetCostCenter gets cost center reference.
@@ -154,30 +173,45 @@ func (rd *RootDomain) AddBurnAddress(burnAddress string) error {
 	return nil
 }
 
-// AddNewMemberToMaps adds new member to PublicKeyMap and BurnAddressMap.
-func (rd *RootDomain) AddNewMemberToMaps(publicKey string, burnAddress string, memberRef insolar.Reference) error {
-	trimPublicKey := trimPublicKey(publicKey)
-	if _, ok := rd.PublicKeyMap[trimPublicKey]; ok {
-		return fmt.Errorf("member for this publicKey already exist")
+// AddNewMemberToMaps adds new member to PublicKeyMap and MigrationAddressMap.
+func (rd *RootDomain) AddNewMemberToMaps(publicKey string, migrationAddress string, memberRef insolar.Reference) error {
+	trimmedPublicKey := trimPublicKey(publicKey)
+	i := foundation.GetShardIndex(trimmedPublicKey, insolar.GenesisAmountPublicKeyShards)
+	if i >= len(rd.PublicKeyShards) {
+		return fmt.Errorf("incorect public key shard index")
 	}
-	rd.PublicKeyMap[trimPublicKey] = memberRef
+	s := shard.GetObject(rd.PublicKeyShards[i])
+	err := s.SetRef(trimmedPublicKey, memberRef.String())
+	if err != nil {
+		return errors.Wrap(err, "failed to set reference in public key shard")
+	}
 
-	trimBurnAddress := trimBurnAddress(burnAddress)
-	if _, ok := rd.BurnAddressMap[trimBurnAddress]; ok {
-		return fmt.Errorf("member for this burnAddress already exist")
+	trimmedMigrationAddress := trimMigrationAddress(migrationAddress)
+	i = foundation.GetShardIndex(trimmedMigrationAddress, insolar.GenesisAmountMigrationAddressShards)
+	if i >= len(rd.MigrationAddressShards) {
+		return fmt.Errorf("incorect migration shard index")
 	}
-	rd.BurnAddressMap[trimBurnAddress] = memberRef
+	s = shard.GetObject(rd.MigrationAddressShards[i])
+	err = s.SetRef(trimmedMigrationAddress, memberRef.String())
+	if err != nil {
+		return errors.Wrap(err, "failed to set reference in migration address shard")
+	}
 
 	return nil
 }
 
 // AddNewMemberToPublicKeyMap adds new member to PublicKeyMap.
 func (rd *RootDomain) AddNewMemberToPublicKeyMap(publicKey string, memberRef insolar.Reference) error {
-	trimPublicKey := trimPublicKey(publicKey)
-	if _, ok := rd.PublicKeyMap[trimPublicKey]; ok {
-		return fmt.Errorf("member for this publicKey already exist")
+	trimmedPublicKey := trimPublicKey(publicKey)
+	i := foundation.GetShardIndex(trimmedPublicKey, insolar.GenesisAmountPublicKeyShards)
+	if i >= len(rd.PublicKeyShards) {
+		return fmt.Errorf("incorect public key shard index")
 	}
-	rd.PublicKeyMap[trimPublicKey] = memberRef
+	s := shard.GetObject(rd.PublicKeyShards[i])
+	err := s.SetRef(trimmedPublicKey, memberRef.String())
+	if err != nil {
+		return errors.Wrap(err, "failed to set reference in public key shard")
+	}
 
 	return nil
 }
@@ -197,10 +231,10 @@ func (rd *RootDomain) GetShardAddressCounts() ([]int, error) {
 }
 
 func trimPublicKey(publicKey string) string {
-	return trimBurnAddress(between(publicKey, "KEY-----", "-----END"))
+	return trimMigrationAddress(between(publicKey, "KEY-----", "-----END"))
 }
 
-func trimBurnAddress(burnAddress string) string {
+func trimMigrationAddress(burnAddress string) string {
 	return strings.ToLower(strings.Join(strings.Split(strings.TrimSpace(burnAddress), "\n"), ""))
 }
 

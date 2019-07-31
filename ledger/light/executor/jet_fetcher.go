@@ -32,7 +32,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.JetFetcher -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.JetFetcher -o ./ -s _mock.go -g
 
 // JetFetcher can be used to get actual jets. It involves fetching jet from other nodes via network and updating local
 // jet tree.
@@ -324,7 +324,7 @@ func (tu *fetcher) nodesForPulse(ctx context.Context, pulse insolar.PulseNumber)
 
 	res, err := tu.Nodes.InRole(pulse, insolar.StaticRoleLightMaterial)
 	if err != nil {
-		return nil, fmt.Errorf("can't get node of 'light' role for pulse %s", pulse)
+		return nil, errors.Wrapf(err, "can't get node of 'light' role for pulse %s", pulse)
 	}
 
 	me := tu.coordinator.Me()

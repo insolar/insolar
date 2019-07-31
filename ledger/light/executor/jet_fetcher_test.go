@@ -51,7 +51,7 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 	}
 
 	t.Run("active light nodes storage returns error", func(t *testing.T) {
-		ans.InRoleMock.ExpectOnce(
+		ans.InRoleMock.Expect(
 			100, insolar.StaticRoleLightMaterial,
 		).Return(
 			nil, errors.New("some"),
@@ -66,7 +66,7 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 	jc.MeMock.Return(meRef)
 
 	t.Run("no active nodes at all", func(t *testing.T) {
-		ans.InRoleMock.ExpectOnce(
+		ans.InRoleMock.Expect(
 			100, insolar.StaticRoleLightMaterial,
 		).Return(
 			[]insolar.Node{}, nil,
@@ -86,7 +86,7 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 	}
 
 	t.Run("one active node, it's me", func(t *testing.T) {
-		ans.InRoleMock.ExpectOnce(
+		ans.InRoleMock.Expect(
 			100, insolar.StaticRoleLightMaterial,
 		).Return(
 			getNodes(meRef), nil,
@@ -99,7 +99,7 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 
 	t.Run("active node", func(t *testing.T) {
 		someNode := insolar.Node{ID: gen.Reference()}
-		ans.InRoleMock.ExpectOnce(
+		ans.InRoleMock.Expect(
 			100, insolar.StaticRoleLightMaterial,
 		).Return(
 			getNodes(someNode.ID), nil,
@@ -114,7 +114,7 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 		meNode := insolar.Node{ID: meRef}
 		someNode := insolar.Node{ID: gen.Reference()}
 
-		ans.InRoleMock.ExpectOnce(
+		ans.InRoleMock.Expect(
 			100, insolar.StaticRoleLightMaterial,
 		).Return(
 			getNodes(meNode.ID, someNode.ID), nil,
@@ -142,7 +142,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 
 	initNodes := func(mc *minimock.Controller) node.Accessor {
 		ans := node.NewAccessorMock(mc)
-		ans.InRoleMock.ExpectOnce(
+		ans.InRoleMock.Expect(
 			100, insolar.StaticRoleLightMaterial,
 		).Return(
 			[]insolar.Node{
@@ -163,11 +163,11 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 			sender:      bm,
 		}
 
-		bm.SendTargetFunc = func(_ context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func()) {
+		bm.SendTargetMock.Set(func(_ context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func()) {
 			res := make(chan *message.Message)
 			close(res)
 			return res, func() {}
-		}
+		})
 
 		jetID, err := jtu.fetch(ctx, target, insolar.PulseNumber(100))
 		require.Error(t, err)
@@ -183,7 +183,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 			sender:      bm,
 		}
 
-		bm.SendTargetFunc = func(_ context.Context, msg *message.Message, node insolar.Reference) (<-chan *message.Message, func()) {
+		bm.SendTargetMock.Set(func(_ context.Context, msg *message.Message, node insolar.Reference) (<-chan *message.Message, func()) {
 			getJet := payload.GetJet{}
 			err := getJet.Unmarshal(msg.Payload)
 			require.NoError(t, err)
@@ -203,7 +203,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 			ch := make(chan *message.Message, 1)
 			ch <- reqMsg
 			return ch, func() {}
-		}
+		})
 
 		jetID, err := jtu.fetch(ctx, objectID, insolar.PulseNumber(100))
 		require.Error(t, err)
@@ -221,7 +221,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 
 		expectedJetID := insolar.NewJetID(0, nil)
 
-		bm.SendTargetFunc = func(_ context.Context, msg *message.Message, node insolar.Reference) (<-chan *message.Message, func()) {
+		bm.SendTargetMock.Set(func(_ context.Context, msg *message.Message, node insolar.Reference) (<-chan *message.Message, func()) {
 			getJet := payload.GetJet{}
 			err := getJet.Unmarshal(msg.Payload)
 			require.NoError(t, err)
@@ -241,7 +241,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 			ch := make(chan *message.Message, 1)
 			ch <- reqMsg
 			return ch, func() {}
-		}
+		})
 
 		jetID, err := jtu.fetch(ctx, objectID, insolar.PulseNumber(100))
 		require.NoError(t, err)
@@ -252,7 +252,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 		ans := node.NewAccessorMock(mc)
 		objectID := testutils.RandomID()
 		target := insolar.NewReference(objectID)
-		ans.InRoleMock.ExpectOnce(
+		ans.InRoleMock.Expect(
 			100, insolar.StaticRoleLightMaterial,
 		).Return(
 			[]insolar.Node{
@@ -269,7 +269,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 
 		expectedJetID := insolar.NewJetID(0, nil)
 
-		bm.SendTargetFunc = func(_ context.Context, msg *message.Message, node insolar.Reference) (<-chan *message.Message, func()) {
+		bm.SendTargetMock.Set(func(_ context.Context, msg *message.Message, node insolar.Reference) (<-chan *message.Message, func()) {
 			getJet := payload.GetJet{}
 			err := getJet.Unmarshal(msg.Payload)
 			require.NoError(t, err)
@@ -290,7 +290,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 			ch := make(chan *message.Message, 1)
 			ch <- reqMsg
 			return ch, func() {}
-		}
+		})
 
 		jetID, err := jtu.fetch(ctx, objectID, insolar.PulseNumber(100))
 		require.NoError(t, err)
@@ -336,7 +336,7 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 			return []insolar.Node{{ID: gen.Reference()}}
 		}
 
-		ans.InRoleMock.ExpectOnce(
+		ans.InRoleMock.Expect(
 			insolar.FirstPulseNumber+100, insolar.StaticRoleLightMaterial,
 		).Return(
 			getNodes(), nil,
@@ -344,7 +344,7 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 
 		expectedJetID := insolar.NewJetID(0, nil)
 
-		bm.SendTargetFunc = func(_ context.Context, msg *message.Message, node insolar.Reference) (<-chan *message.Message, func()) {
+		bm.SendTargetMock.Set(func(_ context.Context, msg *message.Message, node insolar.Reference) (<-chan *message.Message, func()) {
 			getJet := payload.GetJet{}
 			err := getJet.Unmarshal(msg.Payload)
 			require.NoError(t, err)
@@ -362,16 +362,16 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 			ch := make(chan *message.Message, 1)
 			ch <- reqMsg
 			return ch, func() {}
-		}
+		})
 
 		fjm := *insolar.NewJetID(0, nil)
 		js.ForIDMock.Return(fjm, false)
-		js.UpdateFunc = func(ctx context.Context, pn insolar.PulseNumber, actual bool, jets ...insolar.JetID) error {
+		js.UpdateMock.Set(func(ctx context.Context, pn insolar.PulseNumber, actual bool, jets ...insolar.JetID) error {
 			require.Equal(t, insolar.FirstPulseNumber+insolar.PulseNumber(100), pn)
 			require.True(t, actual)
 			require.Equal(t, []insolar.JetID{*insolar.NewJetID(0, nil)}, jets)
 			return nil
-		}
+		})
 
 		jetID, err := jtu.Fetch(ctx, target, insolar.FirstPulseNumber+insolar.PulseNumber(100))
 		require.NoError(t, err)
@@ -418,7 +418,7 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 		192: &fourth, // 11
 	}
 
-	bm.SendTargetFunc = func(_ context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func()) {
+	bm.SendTargetMock.Set(func(_ context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func()) {
 		dataMu.Lock()
 		defer dataMu.Unlock()
 
@@ -442,7 +442,7 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 		ch := make(chan *message.Message, 1)
 		ch <- reqMsg
 		return ch, func() {}
-	}
+	})
 
 	i := 100
 	for i > 0 {
@@ -451,7 +451,7 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 		treeMu := sync.Mutex{}
 		tree := jet.NewTree(false)
 
-		js.UpdateFunc = func(ctx context.Context, pn insolar.PulseNumber, actual bool, jets ...insolar.JetID) error {
+		js.UpdateMock.Set(func(ctx context.Context, pn insolar.PulseNumber, actual bool, jets ...insolar.JetID) error {
 			treeMu.Lock()
 			defer treeMu.Unlock()
 
@@ -459,13 +459,13 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 				tree.Update(id, actual)
 			}
 			return nil
-		}
-		js.ForIDFunc = func(ctx context.Context, pulse insolar.PulseNumber, id insolar.ID) (insolar.JetID, bool) {
+		})
+		js.ForIDMock.Set(func(ctx context.Context, pulse insolar.PulseNumber, id insolar.ID) (insolar.JetID, bool) {
 			treeMu.Lock()
 			defer treeMu.Unlock()
 
 			return tree.Find(id)
-		}
+		})
 
 		wg := sync.WaitGroup{}
 		wg.Add(4)

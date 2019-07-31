@@ -119,7 +119,7 @@ func (gdp *GenesisDataProvider) GetMigrationDaemonMembers(ctx context.Context) (
 	if gdp.migrationDaemonMembersRefs == nil {
 		err := gdp.setInfo(ctx)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ GenesisDataProvider::GetMigrationDaemonMembers ] Can't get info")
+			return nil, errors.Wrap(err, "[ GenesisDataProvider::GetActiveMigrationDaemonMembers ] Can't get info")
 		}
 	}
 	return gdp.migrationDaemonMembersRefs, nil

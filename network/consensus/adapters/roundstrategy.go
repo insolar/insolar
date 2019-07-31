@@ -66,6 +66,10 @@ type RoundStrategy struct {
 	localConfig api.LocalNodeConfiguration
 }
 
+func (rs *RoundStrategy) IsEphemeralPulseAllowed() bool {
+	return false
+}
+
 func NewRoundStrategy(
 	chronicle api.ConsensusChronicles,
 	localConfig api.LocalNodeConfiguration,
@@ -78,9 +82,8 @@ func NewRoundStrategy(
 
 func (rs *RoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse pulse.Number, self profiles.LocalNode) context.Context {
 	ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
-		"node_id": self.GetNodeID(),
-		"pulse":   expectedPulse,
-		// "is_joiner": self.IsRecentlyJoiner(),
+		"is_joiner":   self.IsJoiner(),
+		"round_pulse": expectedPulse,
 	})
 	return ctx
 }

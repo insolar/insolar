@@ -61,7 +61,7 @@ import (
 )
 
 func TestFoldUint64(t *testing.T) {
-	require.Equal(t, uint32(0), FoldUint64(0))
+	require.Zero(t, FoldUint64(0))
 
 	require.Equal(t, uint32(2), FoldUint64(2))
 
@@ -69,7 +69,7 @@ func TestFoldUint64(t *testing.T) {
 
 	require.Equal(t, uint32(1), FoldUint64(math.MaxUint32+1))
 
-	require.Equal(t, uint32(0), FoldUint64(math.MaxUint64))
+	require.Zero(t, FoldUint64(math.MaxUint64))
 }
 
 func TestEqualFixedLenWriterTo(t *testing.T) {
@@ -114,17 +114,17 @@ func TestWrite(t *testing.T) {
 	n, err := (&writerToComparer{other: fr}).Write(bits.AsBytes())
 	require.NotEqual(t, nil, err)
 
-	require.Equal(t, 0, n)
+	require.Zero(t, n)
 
 	n, err = (&writerToComparer{other: &bits}).Write(bits.AsBytes())
-	require.Equal(t, nil, err)
+	require.Nil(t, err)
 
 	require.Equal(t, 8, n)
 }
 
 func TestAsByteString(t *testing.T) {
 	fs := &fixedSize{}
-	require.Equal(t, "", fs.AsByteString())
+	require.Empty(t, fs.AsByteString())
 
 	fs = &fixedSize{data: []byte{'a', 'b', 'c'}}
 	require.Equal(t, "abc", fs.AsByteString())
@@ -134,7 +134,7 @@ func TestWriteTo(t *testing.T) {
 	fs := &fixedSize{data: []byte{0}}
 	buf := &bytes.Buffer{}
 	n, err := fs.WriteTo(buf)
-	require.True(t, err == nil)
+	require.Nil(t, err)
 
 	require.Equal(t, int64(1), n)
 }
@@ -146,7 +146,7 @@ func TestRead(t *testing.T) {
 	n, err := fs.Read(buf)
 	require.Equal(t, 1, n)
 
-	require.Equal(t, nil, err)
+	require.Nil(t, err)
 
 	require.Equal(t, item, buf[0])
 }

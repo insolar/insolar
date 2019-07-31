@@ -36,10 +36,10 @@ import (
 func accessorMock(t *testing.T) pulse.Accessor {
 	p := pulse.NewAccessorMock(t)
 	pulseNumber := 10
-	p.LatestFunc = func(p context.Context) (r insolar.Pulse, r1 error) {
+	p.LatestMock.Set(func(p context.Context) (r insolar.Pulse, r1 error) {
 		pulseNumber = pulseNumber + 10
 		return insolar.Pulse{PulseNumber: insolar.PulseNumber(pulseNumber)}, nil
-	}
+	})
 
 	return p
 }
@@ -56,11 +56,11 @@ func waitForChannelClosed(ch chan *message.Message) bool {
 // Send msg, bus.Sender gets error and closes resp chan
 func TestRetryerSend_SendErrored(t *testing.T) {
 	sender := NewSenderMock(t)
-	sender.SendRoleFunc = func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
+	sender.SendRoleMock.Set(func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
 		res := make(chan *message.Message)
 		close(res)
 		return res, func() {}
-	}
+	})
 
 	sender.LatestPulseMock.Set(accessorMock(t).Latest)
 
@@ -73,7 +73,7 @@ func TestRetryerSend_SendErrored(t *testing.T) {
 		require.Fail(t, "we are not expect any replays")
 	}
 
-	require.Equal(t, uint64(1), sender.LatestPulseCounter)
+	require.Equal(t, uint64(1), sender.LatestPulseAfterCounter())
 }
 
 // Send msg, close reply channel by timeout
@@ -84,7 +84,7 @@ func TestRetryerSend_Send_Timeout(t *testing.T) {
 	ch := make(chan struct{})
 
 	innerReps := make(chan *message.Message)
-	sender.SendRoleFunc = func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
+	sender.SendRoleMock.Set(func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
 		done := func() {
 			once.Do(func() { close(innerReps) })
 		}
@@ -93,7 +93,7 @@ func TestRetryerSend_Send_Timeout(t *testing.T) {
 			done()
 		}()
 		return innerReps, done
-	}
+	})
 
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
@@ -122,9 +122,9 @@ func TestRetryerSend(t *testing.T) {
 	sender := NewSenderMock(t)
 	sender.LatestPulseMock.Set(accessorMock(t).Latest)
 	innerReps := make(chan *message.Message)
-	sender.SendRoleFunc = func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
+	sender.SendRoleMock.Set(func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
 		return innerReps, func() { close(innerReps) }
-	}
+	})
 
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
@@ -162,15 +162,15 @@ func TestRetryerSend_FlowCancelled_Once(t *testing.T) {
 	sender.LatestPulseMock.Set(accessorMock(t).Latest)
 
 	innerReps := make(chan *message.Message)
-	sender.SendRoleFunc = func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
+	sender.SendRoleMock.Set(func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
 		innerReps = make(chan *message.Message)
-		if sender.SendRoleCounter == 0 {
+		if sender.SendRoleAfterCounter() == 0 {
 			go sendTestReply(&payload.Error{Text: "test error", Code: payload.CodeFlowCanceled}, innerReps, make(chan<- interface{}))
 		} else {
 			go sendTestReply(&payload.State{}, innerReps, make(chan<- interface{}))
 		}
 		return innerReps, func() { close(innerReps) }
-	}
+	})
 
 	var success bool
 	msg, err := payload.NewMessage(&payload.State{})
@@ -201,16 +201,16 @@ func TestRetryerSend_FlowCancelled_Once_SeveralReply(t *testing.T) {
 	sender.LatestPulseMock.Set(accessorMock(t).Latest)
 
 	innerReps := make(chan *message.Message)
-	sender.SendRoleFunc = func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
+	sender.SendRoleMock.Set(func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
 		innerReps = make(chan *message.Message)
-		if sender.SendRoleCounter == 0 {
+		if sender.SendRoleAfterCounter() == 0 {
 			go sendTestReply(&payload.Error{Text: "test error", Code: payload.CodeFlowCanceled}, innerReps, make(chan<- interface{}))
 		} else {
 			go sendTestReply(&payload.State{}, innerReps, make(chan<- interface{}))
 			go sendTestReply(&payload.State{}, innerReps, make(chan<- interface{}))
 		}
 		return innerReps, func() { close(innerReps) }
-	}
+	})
 
 	var success int
 	msg, err := payload.NewMessage(&payload.State{})
@@ -240,11 +240,11 @@ func TestRetryerSend_FlowCancelled_RetryExceeded(t *testing.T) {
 	sender.LatestPulseMock.Set(accessorMock(t).Latest)
 
 	innerReps := make(chan *message.Message)
-	sender.SendRoleFunc = func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
+	sender.SendRoleMock.Set(func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
 		innerReps = make(chan *message.Message)
 		go sendTestReply(&payload.Error{Text: "test error", Code: payload.CodeFlowCanceled}, innerReps, make(chan<- interface{}))
 		return innerReps, func() { close(innerReps) }
-	}
+	})
 
 	var success bool
 	msg, err := payload.NewMessage(&payload.State{})
@@ -268,9 +268,9 @@ func TestRetryerSend_FlowCancelled_Between(t *testing.T) {
 	sender.LatestPulseMock.Set(accessorMock(t).Latest)
 
 	innerReps := make(chan *message.Message)
-	sender.SendRoleFunc = func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
+	sender.SendRoleMock.Set(func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
 		innerReps = make(chan *message.Message)
-		if sender.SendRoleCounter == 0 {
+		if sender.SendRoleAfterCounter() == 0 {
 			go func() {
 				isDone := make(chan interface{})
 				go sendTestReply(&payload.State{}, innerReps, isDone)
@@ -286,7 +286,7 @@ func TestRetryerSend_FlowCancelled_Between(t *testing.T) {
 			}()
 		}
 		return innerReps, func() { close(innerReps) }
-	}
+	})
 
 	var success int
 	msg, err := payload.NewMessage(&payload.State{})

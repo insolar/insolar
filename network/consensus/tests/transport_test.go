@@ -65,7 +65,7 @@ import (
 
 var EmuDefaultPacketBuilder transport.PacketBuilder = &emuPacketBuilder{}
 var EmuPrimingHash = cryptkit.NewDigest(NewEmuNodeStateHash(1234567890), "stubHash").AsDigestHolder()
-var EmuDefaultCryptography transport.CryptographyFactory = &emuTransportCryptography{EmuPrimingHash}
+var EmuDefaultCryptography transport.CryptographyAssistant = &emuTransportCryptography{EmuPrimingHash}
 
 func NewEmuTransport(sender transport.PacketSender) transport.Factory {
 	return &emuTransport{sender}
@@ -83,7 +83,7 @@ func (r *emuTransport) GetPacketBuilder(signer cryptkit.DigestSigner) transport.
 	return EmuDefaultPacketBuilder
 }
 
-func (r *emuTransport) GetCryptographyFactory() transport.CryptographyFactory {
+func (r *emuTransport) GetCryptographyFactory() transport.CryptographyAssistant {
 	return EmuDefaultCryptography
 }
 
@@ -100,8 +100,7 @@ func (r *emuPacketSender) SendTo(ctx context.Context, t transport.TargetProfile,
 	s.SendPacketToTransport(ctx, t, sendOptions, c)
 }
 
-func (r *emuPacketSender) SendToMany(ctx context.Context, targetCount int, s transport.PacketSender,
-	filter func(ctx context.Context, targetIndex int) (transport.TargetProfile, transport.PacketSendOptions)) {
+func (r *emuPacketSender) SendToMany(ctx context.Context, targetCount int, s transport.PacketSender, filter transport.ProfileFilter) {
 
 	for i := 0; i < targetCount; i++ {
 		sendTo, sendOptions := filter(ctx, i)
@@ -126,7 +125,7 @@ func (r *emuPacketBuilder) GetNeighbourhoodSize() transport.NeighbourhoodSizes {
 }
 
 func (r *emuPacketBuilder) PreparePhase0Packet(sender *transport.NodeAnnouncementProfile, pulsarPacket proofs.OriginalPulsarPacket,
-	options transport.PacketSendOptions) transport.PreparedPacketSender {
+	options transport.PacketPrepareOptions) transport.PreparedPacketSender {
 	v := EmuPhase0NetPacket{
 		basePacket: basePacket{
 			src:       sender.GetNodeID(),
@@ -149,7 +148,7 @@ func (r *EmuPhase0NetPacket) clonePacketFor(t transport.TargetProfile, sendOptio
 }
 
 func (r *emuPacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncementProfile, pulsarPacket proofs.OriginalPulsarPacket,
-	welcome *proofs.NodeWelcomePackage, options transport.PacketSendOptions) transport.PreparedPacketSender {
+	welcome *proofs.NodeWelcomePackage, options transport.PacketPrepareOptions) transport.PreparedPacketSender {
 
 	pp := pulsarPacket.(*EmuPulsarNetPacket)
 	if pp == nil || !pp.pulseData.IsValidPulseData() {
@@ -171,10 +170,12 @@ func (r *emuPacketBuilder) PreparePhase1Packet(sender *transport.NodeAnnouncemen
 			},
 			pulsePacket: pp},
 	}
+	v.basePacket.adjustBySender(sender)
+
 	v.pn = pp.pulseData.PulseNumber
 	v.isAlternative = options&transport.AlternativePhasePacket != 0
 
-	if v.isAlternative || options&transport.SendWithoutPulseData != 0 {
+	if v.isAlternative || options&transport.PrepareWithoutPulseData != 0 {
 		v.pulsePacket = nil
 	}
 
@@ -211,7 +212,7 @@ func (r *EmuPhase1NetPacket) clonePacketFor(t transport.TargetProfile, sendOptio
 
 func (r *emuPacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncementProfile,
 	welcome *proofs.NodeWelcomePackage, neighbourhood []transport.MembershipAnnouncementReader,
-	options transport.PacketSendOptions) transport.PreparedPacketSender {
+	options transport.PacketPrepareOptions) transport.PreparedPacketSender {
 
 	v := EmuPhase2NetPacket{
 		basePacket: basePacket{
@@ -228,6 +229,8 @@ func (r *emuPacketBuilder) PreparePhase2Packet(sender *transport.NodeAnnouncemen
 		pulseNumber:   sender.GetPulseNumber(),
 		neighbourhood: neighbourhood,
 	}
+	v.basePacket.adjustBySender(sender)
+
 	v.isAlternative = options&transport.AlternativePhasePacket != 0
 
 	if v.joiner != nil && v.joiner.HasFullIntro() && options&transport.OnlyBriefIntroAboutJoiner != 0 {
@@ -258,7 +261,7 @@ func (r *EmuPhase2NetPacket) clonePacketFor(t transport.TargetProfile, sendOptio
 }
 
 func (r *emuPacketBuilder) PreparePhase3Packet(sender *transport.NodeAnnouncementProfile, vectors statevector.Vector,
-	options transport.PacketSendOptions) transport.PreparedPacketSender {
+	options transport.PacketPrepareOptions) transport.PreparedPacketSender {
 
 	v := EmuPhase3NetPacket{
 		basePacket: basePacket{
@@ -269,6 +272,8 @@ func (r *emuPacketBuilder) PreparePhase3Packet(sender *transport.NodeAnnouncemen
 		pulseNumber: sender.GetPulseNumber(),
 		vectors:     vectors,
 	}
+	v.basePacket.adjustBySender(sender)
+
 	v.isAlternative = options&transport.AlternativePhasePacket != 0
 
 	return &emuPacketSender{&v}
@@ -284,23 +289,23 @@ type emuTransportCryptography struct {
 	defaultDigest cryptkit.DigestHolder
 }
 
-func (r *emuTransportCryptography) GetSequenceDigester() cryptkit.SequenceDigester {
+func (r *emuTransportCryptography) CreateSequenceDigester() cryptkit.SequenceDigester {
 	return &seqDigester{}
 }
 
-func (r *emuTransportCryptography) GetGlobulaStateDigester() transport.StateDigester {
+func (r *emuTransportCryptography) CreateGlobulaStateDigester() transport.StateDigester {
 	return &gshDigester{&seqDigester{}, r.defaultDigest}
 }
 
-func (r *emuTransportCryptography) GetPublicKeyStore(skh cryptkit.SignatureKeyHolder) cryptkit.PublicKeyStore {
+func (r *emuTransportCryptography) CreatePublicKeyStore(skh cryptkit.SignatureKeyHolder) cryptkit.PublicKeyStore {
 	return nil
 }
 
-func (r *emuTransportCryptography) GetPacketDigester() cryptkit.DataDigester {
+func (r *emuTransportCryptography) CreatePacketDigester() cryptkit.DataDigester {
 	panic("not implemented")
 }
 
-func (r *emuTransportCryptography) GetAnnouncementDigester() cryptkit.SequenceDigester {
+func (r *emuTransportCryptography) CreateAnnouncementDigester() cryptkit.SequenceDigester {
 	return &seqDigester{}
 }
 
@@ -336,7 +341,7 @@ func (r *emuTransportCryptography) GetSignMethod() cryptkit.SignMethod {
 	return "emuSing"
 }
 
-func (r *emuTransportCryptography) GetSignatureVerifierWithPKS(pks cryptkit.PublicKeyStore) cryptkit.SignatureVerifier {
+func (r *emuTransportCryptography) CreateSignatureVerifierWithPKS(pks cryptkit.PublicKeyStore) cryptkit.SignatureVerifier {
 	return r
 }
 
@@ -344,7 +349,7 @@ func (r *emuTransportCryptography) GetDigestFactory() transport.ConsensusDigestF
 	return r
 }
 
-func (r *emuTransportCryptography) GetNodeSigner(sks cryptkit.SecretKeyStore) cryptkit.DigestSigner {
+func (r *emuTransportCryptography) CreateNodeSigner(sks cryptkit.SecretKeyStore) cryptkit.DigestSigner {
 	return r
 }
 

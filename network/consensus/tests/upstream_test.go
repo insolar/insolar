@@ -74,6 +74,9 @@ type EmuUpstreamPulseController struct {
 	nshDelay time.Duration
 }
 
+func (*EmuUpstreamPulseController) ConsensusAborted() {
+}
+
 func (r *EmuUpstreamPulseController) PreparePulseChange(report api.UpstreamReport, c chan<- api.UpstreamState) {
 	fn := func() {
 		nsh := NewEmuNodeStateHash(rand.Uint64())

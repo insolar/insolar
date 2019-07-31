@@ -63,13 +63,13 @@ func TestGetPower(t *testing.T) {
 func TestGetIndex(t *testing.T) {
 	require.Equal(t, JoinerIndex, JoinerRank.GetIndex())
 
-	require.Equal(t, Index(0), Rank((1<<8)-1).GetIndex())
+	require.Zero(t, Rank((1<<8)-1).GetIndex())
 
 	require.Equal(t, Index(1), Rank(1<<8).GetIndex())
 }
 
 func TestGetTotalCount(t *testing.T) {
-	require.Equal(t, uint16(0), Rank((1<<18)-1).GetTotalCount())
+	require.Zero(t, Rank((1<<18)-1).GetTotalCount())
 
 	require.Equal(t, uint16(1), Rank(1<<18).GetTotalCount())
 }

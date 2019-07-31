@@ -59,7 +59,7 @@ import (
 func TestBftMajority(t *testing.T) {
 	require.Equal(t, 4, BftMajority(5))
 
-	require.Equal(t, 0, BftMajority(0))
+	require.Zero(t, BftMajority(0))
 
 	require.Equal(t, -3, BftMajority(-5))
 }
@@ -67,7 +67,7 @@ func TestBftMajority(t *testing.T) {
 func TestBftMinority(t *testing.T) {
 	require.Equal(t, 1, BftMinority(5))
 
-	require.Equal(t, 0, BftMinority(0))
+	require.Zero(t, BftMinority(0))
 
 	require.Equal(t, -2, BftMinority(-5))
 }

@@ -55,6 +55,8 @@ import (
 	"fmt"
 	"math/rand"
 
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
@@ -115,22 +117,26 @@ func (p *emuNetworkBuilder) connectEmuNode(nodes []profiles.StaticProfile, selfI
 func (p *emuNetworkBuilder) _connectEmuNode(nodes []profiles.StaticProfile, selfIndex int, asJoiner bool) {
 
 	controlFeeder := &EmuControlFeeder{}
-	candidateFeeder := &core.SequentialCandidateFeeder{}
-	switch {
-	case !asJoiner && selfIndex%3 == 1:
-		introID := 8000 + selfIndex
-		intro := NewEmuNodeIntroByName(introID, fmt.Sprintf(fmtNodeName, "v", introID))
-		candidateFeeder.AddJoinCandidate(intro)
+	candidateFeeder := &coreapi.SequentialCandidateFeeder{}
+	ephemeralFeeder := &EmuEphemeralFeeder{}
 
-		p._connectEmuNode([]profiles.StaticProfile{intro}, 0, true)
-	case selfIndex%5 == 2:
-		controlFeeder.leaveReason = uint32(selfIndex) // simulate leave
+	switch {
+	case !asJoiner && selfIndex == 1:
+		for i := 5000; i < 8000; i += 1000 {
+			introID := i + selfIndex
+			intro := NewEmuNodeIntroByName(introID, fmt.Sprintf(fmtNodeName, "V", introID))
+			candidateFeeder.AddJoinCandidate(intro)
+			p._connectEmuNode([]profiles.StaticProfile{intro}, 0, true)
+		}
+
+		// case selfIndex%5 == 2:
+		//	controlFeeder.leaveReason = uint32(selfIndex) // simulate leave
 	}
 
 	chronicles := NewEmuChronicles(nodes, selfIndex, asJoiner, p.primingCloudStateHash)
 	self := nodes[selfIndex]
 	node := NewConsensusHost(self.GetDefaultEndpoint().GetNameAddress())
-	node.ConnectTo(chronicles, p.network, p.strategyFactory, candidateFeeder, controlFeeder, p.config)
+	node.ConnectTo(chronicles, p.network, p.strategyFactory, candidateFeeder, controlFeeder, ephemeralFeeder, p.config)
 }
 
 func generateNameList(countNeutral, countHeavy, countLight, countVirtual int) []string {

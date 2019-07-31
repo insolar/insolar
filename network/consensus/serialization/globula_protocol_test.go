@@ -79,14 +79,14 @@ func TestEmbeddedPulsarData_SerializeTo(t *testing.T) {
 }
 
 func TestEmbeddedPulsarData_DeserializeFrom(t *testing.T) {
-	data := *pulse.NewPulsarData(100000, 10, 10, *longbits.NewBits256FromBytes(make([]byte, 32)))
+	data := pulse.NewPulsarData(100000, 10, 10, *longbits.NewBits256FromBytes(make([]byte, 32)))
 
 	pu := adapters.NewPulse(data)
 	ph, err := host.NewHost("127.0.0.1:1")
 	require.NoError(t, err)
 	th, err := host.NewHost("127.0.0.1:2")
 	require.NoError(t, err)
-	pp := pulsenetwork.NewPulsePacket(context.Background(), &pu, ph, th, 0)
+	pp := pulsenetwork.NewPulsePacketWithTrace(context.Background(), &pu, ph, th, 0)
 
 	bs, err := packet.SerializePacket(pp)
 	require.NoError(t, err)
@@ -155,7 +155,7 @@ func TestCompactGlobulaNodeState_DeserializeFrom(t *testing.T) {
 	_, _ = rand.Read(b)
 
 	copy(s1.NodeStateHash[:], b)
-	copy(s1.GlobulaNodeStateSignature[:], b)
+	copy(s1.NodeStateHashSignature[:], b)
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
 	err := s1.SerializeTo(nil, buf)
@@ -253,12 +253,12 @@ func TestGlobulaConsensusPacketBody_Phases(t *testing.T) {
 		{
 			"phase1",
 			phases.PacketPhase1,
-			90,
+			91,
 		},
 		{
 			"phase2",
 			phases.PacketPhase2,
-			89,
+			90,
 		},
 		{
 			"phase3",
@@ -298,14 +298,14 @@ func TestGlobulaConsensusPacketBody_Phases(t *testing.T) {
 }
 
 func TestGlobulaConsensusPacketBody_Phases_Flag0(t *testing.T) {
-	data := *pulse.NewPulsarData(100000, 10, 10, *longbits.NewBits256FromBytes(make([]byte, 32)))
+	data := pulse.NewPulsarData(100000, 10, 10, *longbits.NewBits256FromBytes(make([]byte, 32)))
 
 	pu := adapters.NewPulse(data)
 	ph, err := host.NewHost("127.0.0.1:1")
 	require.NoError(t, err)
 	th, err := host.NewHost("127.0.0.1:2")
 	require.NoError(t, err)
-	pp := pulsenetwork.NewPulsePacket(context.Background(), &pu, ph, th, 0)
+	pp := pulsenetwork.NewPulsePacketWithTrace(context.Background(), &pu, ph, th, 0)
 
 	bs, err := packet.SerializePacket(pp)
 	require.NoError(t, err)
@@ -341,13 +341,13 @@ func TestGlobulaConsensusPacketBody_Phases_Flag0(t *testing.T) {
 		{
 			"phase1",
 			phases.PacketPhase1,
-			434,
+			435,
 			phase1p,
 		},
 		{
 			"phase2",
 			phases.PacketPhase2,
-			89,
+			90,
 			p,
 		},
 		{
@@ -380,14 +380,14 @@ func TestGlobulaConsensusPacketBody_Phases_Flag0(t *testing.T) {
 }
 
 func TestGlobulaConsensusPacketBody_Phases_Flag0Reset(t *testing.T) {
-	data := *pulse.NewPulsarData(100000, 10, 10, *longbits.NewBits256FromBytes(make([]byte, 32)))
+	data := pulse.NewPulsarData(100000, 10, 10, *longbits.NewBits256FromBytes(make([]byte, 32)))
 
 	pu := adapters.NewPulse(data)
 	ph, err := host.NewHost("127.0.0.1:1")
 	require.NoError(t, err)
 	th, err := host.NewHost("127.0.0.1:2")
 	require.NoError(t, err)
-	pp := pulsenetwork.NewPulsePacket(context.Background(), &pu, ph, th, 0)
+	pp := pulsenetwork.NewPulsePacketWithTrace(context.Background(), &pu, ph, th, 0)
 
 	bs, err := packet.SerializePacket(pp)
 	require.NoError(t, err)
@@ -426,13 +426,13 @@ func TestGlobulaConsensusPacketBody_Phases_Flag0Reset(t *testing.T) {
 		{
 			"phase1",
 			phases.PacketPhase1,
-			90,
+			91,
 			phase1p,
 		},
 		{
 			"phase2",
 			phases.PacketPhase2,
-			89,
+			90,
 			p,
 		},
 		{
@@ -497,13 +497,13 @@ func TestGlobulaConsensusPacketBody_Phases_Flag1(t *testing.T) {
 		{
 			"phase1",
 			phases.PacketPhase1,
-			90,
+			91,
 			p,
 		},
 		{
 			"phase2",
 			phases.PacketPhase2,
-			238,
+			239,
 			p,
 		},
 		{
@@ -574,13 +574,13 @@ func TestGlobulaConsensusPacketBody_Phases_Flag2(t *testing.T) {
 		{
 			"phase1",
 			phases.PacketPhase1,
-			453,
+			454,
 			p,
 		},
 		{
 			"phase2",
 			phases.PacketPhase2,
-			452,
+			453,
 			p,
 		},
 		{
@@ -651,13 +651,13 @@ func TestGlobulaConsensusPacketBody_Phases_Flag12(t *testing.T) {
 		{
 			"phase1",
 			phases.PacketPhase1,
-			517,
+			518,
 			p,
 		},
 		{
 			"phase2",
 			phases.PacketPhase2,
-			516,
+			517,
 			p,
 		},
 		{

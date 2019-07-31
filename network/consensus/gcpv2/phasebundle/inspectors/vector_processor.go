@@ -52,6 +52,7 @@ package inspectors
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 	"strings"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -64,10 +65,13 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/statevector"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 )
 
-type VectorInspectorFactory interface {
+type VectorInspectionFactory interface {
+	CreateVectorInspection(inlineLimit int) VectorInspection
+}
+
+type VectorInspection interface {
 	CreateInspector(scanner nodeset.VectorEntryScanner, digestFactory transport.ConsensusDigestFactory,
 		nodeID insolar.ShortNodeID) VectorInspector
 }
@@ -75,9 +79,9 @@ type VectorInspectorFactory interface {
 type VectorInspector interface {
 	GetBitset() member.StateBitset
 	/* Must be called before any CreateVector or InspectVector, and before any parallel access */
-	PrepareForInspection(ctx context.Context)
+	PrepareForInspection(ctx context.Context) bool
 	CreateVector(cryptkit.DigestSigner) statevector.Vector
-	InspectVector(ctx context.Context, sender *core.NodeAppearance, customOptions uint32, otherData statevector.Vector) InspectedVector
+	InspectVector(ctx context.Context, sender *population.NodeAppearance, customOptions uint32, otherData statevector.Vector) InspectedVector
 	CreateNextPopulation(nodeset.ConsensusBitsetRow) ([]profiles.PopulationRank, proofs.CloudStateHash, proofs.GlobulaStateHash)
 }
 
@@ -91,39 +95,53 @@ type InspectedVector interface {
 	GetInspectionResults() (*nodeset.ConsensusStatRow, nodeset.NodeVerificationResult)
 
 	GetBitset() member.StateBitset
-	GetNode() *core.NodeAppearance
+	GetNode() *population.NodeAppearance
 	GetCustomOptions() uint32
 }
 
-func NewVectorInspectionFactory(maxPopulationForInlineHashing int) VectorInspectorFactory {
-	return &vectorInspectionFactory{maxPopulationForInlineHashing}
-}
-
-func NewIgnorantVectorInspectionFactory() VectorInspectorFactory {
-	return &IgnorantVectorInspectionFactory{}
+func NewVectorInspectionFactory() VectorInspectionFactory {
+	return &vectorInspectionFactory{}
 }
 
 type vectorInspectionFactory struct {
-	maxPopulationForInlineHashing int
 }
 
-func (p *vectorInspectionFactory) CreateInspector(scanner nodeset.VectorEntryScanner, digestFactory transport.ConsensusDigestFactory,
+func (v vectorInspectionFactory) CreateVectorInspection(inlineLimit int) VectorInspection {
+	return NewVectorInspection(inlineLimit, false) // TODO pull up to bundle configuration
+}
+
+func NewVectorInspection(maxPopulationForInlineHashing int, disableRanksAndGSH bool) VectorInspection {
+	return &vectorInspection{maxPopulationForInlineHashing, disableRanksAndGSH}
+}
+
+func NewIgnorantVectorInspection() VectorInspection {
+	return &ignorantVectorInspection{}
+}
+
+type vectorInspection struct {
+	maxPopulationForInlineHashing int
+	disableRanksAndGSH            bool
+}
+
+func (p vectorInspection) CreateInspector(scanner nodeset.VectorEntryScanner, digestFactory transport.ConsensusDigestFactory,
 	nodeID insolar.ShortNodeID) VectorInspector {
 
 	r := &vectorInspectorImpl{VectorBuilder: nodeset.NewVectorBuilder(digestFactory, scanner,
 		make(member.StateBitset, scanner.GetIndexedCount())),
 
 		maxPopulationForInlineHashing: p.maxPopulationForInlineHashing,
-		nodeID:                        nodeID}
+		nodeID:                        nodeID,
+		disableRanksAndGSH:            p.disableRanksAndGSH,
+	}
 
 	r.FillBitset()
 	return r
 }
 
-type IgnorantVectorInspectionFactory struct {
+type ignorantVectorInspection struct {
 }
 
-func (p *IgnorantVectorInspectionFactory) CreateInspector(scanner nodeset.VectorEntryScanner, digestFactory transport.ConsensusDigestFactory,
+func (p ignorantVectorInspection) CreateInspector(scanner nodeset.VectorEntryScanner, digestFactory transport.ConsensusDigestFactory,
 	nodeID insolar.ShortNodeID) VectorInspector {
 
 	r := &vectorIgnorantInspectorImpl{VectorBuilder: nodeset.NewVectorBuilder(digestFactory, scanner,
@@ -144,14 +162,15 @@ func (p *vectorIgnorantInspectorImpl) CreateNextPopulation(selectionSet nodeset.
 	return createNextPopulation(&p.VectorBuilder, selectionSet)
 }
 
-func (p *vectorIgnorantInspectorImpl) PrepareForInspection(ctx context.Context) {
+func (p *vectorIgnorantInspectorImpl) PrepareForInspection(ctx context.Context) bool {
+	return true
 }
 
 func (p *vectorIgnorantInspectorImpl) CreateVector(signer cryptkit.DigestSigner) statevector.Vector {
 	panic("illegal state")
 }
 
-func (p *vectorIgnorantInspectorImpl) InspectVector(ctx context.Context, sender *core.NodeAppearance, customOptions uint32,
+func (p *vectorIgnorantInspectorImpl) InspectVector(ctx context.Context, sender *population.NodeAppearance, customOptions uint32,
 	otherVector statevector.Vector) InspectedVector {
 
 	if p.GetBitset().Len() != otherVector.Bitset.Len() {
@@ -182,7 +201,7 @@ func (p *vectorIgnorantInspectorImpl) InspectVector(ctx context.Context, sender 
 
 type ignoredVector struct {
 	parent        *vectorIgnorantInspectorImpl
-	node          *core.NodeAppearance
+	node          *population.NodeAppearance
 	customOptions uint32
 	otherData     statevector.Vector
 	verifyResult  nodeset.NodeVerificationResult
@@ -194,7 +213,7 @@ func (p *ignoredVector) GetCustomOptions() uint32 {
 	return p.customOptions
 }
 
-func (p *ignoredVector) GetNode() *core.NodeAppearance {
+func (p *ignoredVector) GetNode() *population.NodeAppearance {
 	return p.node
 }
 
@@ -246,6 +265,7 @@ func (p *ignoredVector) Inspect(ctx context.Context) {
 
 type vectorInspectorImpl struct {
 	nodeID                        insolar.ShortNodeID
+	disableRanksAndGSH            bool
 	maxPopulationForInlineHashing int
 	Trusted                       statevector.CalcSubVector
 	Doubted                       statevector.CalcSubVector
@@ -263,16 +283,22 @@ func (p *vectorInspectorImpl) ensureHashes() {
 	}
 }
 
-func (p *vectorInspectorImpl) PrepareForInspection(ctx context.Context) {
+func (p *vectorInspectorImpl) PrepareForInspection(ctx context.Context) bool {
 	if p.Trusted.AnnouncementHash != nil {
 		panic("illegal state")
 	}
 
 	p.Trusted.AnnouncementHash, p.Doubted.AnnouncementHash = p.BuildAllGlobulaAnnouncementHashes()
 
+	if p.Trusted.AnnouncementHash == nil {
+		return false
+	}
+
 	p.Trusted.CalcStateWithRank, p.Doubted.CalcStateWithRank =
 		p.BuildGlobulaStateHashesAndRanks(true, p.Doubted.AnnouncementHash != nil, p.nodeID,
 			statevector.CalcStateWithRank{}, statevector.CalcStateWithRank{})
+
+	return true
 }
 
 func (p *vectorInspectorImpl) CreateVector(signer cryptkit.DigestSigner) statevector.Vector {
@@ -280,25 +306,28 @@ func (p *vectorInspectorImpl) CreateVector(signer cryptkit.DigestSigner) stateve
 	return statevector.NewVector(p.GetBitset(), p.Trusted.Sign(signer), p.Doubted.Sign(signer))
 }
 
-func (p *vectorInspectorImpl) InspectVector(ctx context.Context, sender *core.NodeAppearance, customOptions uint32,
+func (p *vectorInspectorImpl) InspectVector(ctx context.Context, sender *population.NodeAppearance, customOptions uint32,
 	otherVector statevector.Vector) InspectedVector {
 
-	if p.GetBitset().Len() != otherVector.Bitset.Len() {
-		panic("illegal state - StateBitset length mismatch")
-	}
 	p.ensureHashes()
 
 	r := newInspectedVectorAndPreInspect(ctx, p, sender, customOptions, otherVector)
 	return &r
 }
 
-func newInspectedVectorAndPreInspect(ctx context.Context, p *vectorInspectorImpl, sender *core.NodeAppearance,
+func newInspectedVectorAndPreInspect(ctx context.Context, p *vectorInspectorImpl, sender *population.NodeAppearance,
 	customOptions uint32, otherVector statevector.Vector) inspectedVector {
 
-	r := inspectedVector{parent: p, node: sender, otherData: otherVector, customOptions: customOptions}
-	r.comparedStats = nodeset.CompareToStatRow(p.GetBitset(), otherVector.Bitset)
-
+	r := inspectedVector{parent: p, node: sender, otherData: otherVector, customOptions: customOptions,
+		disableRanksAndGSH: p.disableRanksAndGSH}
 	r.verifyResult = nodeset.NvrNotVerified
+
+	if p.GetBitset().Len() != otherVector.Bitset.Len() {
+		r.verifyResult |= nodeset.NvrSenderFault
+		return r
+	}
+
+	r.comparedStats = nodeset.CompareToStatRow(p.GetBitset(), otherVector.Bitset)
 
 	if otherVector.Trusted.AnnouncementHash == nil && otherVector.Doubted.AnnouncementHash == nil {
 		r.verifyResult |= nodeset.NvrSenderFault
@@ -323,20 +352,21 @@ func newInspectedVectorAndPreInspect(ctx context.Context, p *vectorInspectorImpl
 
 type inspectedVector struct {
 	parent                   *vectorInspectorImpl
-	node                     *core.NodeAppearance
+	node                     *population.NodeAppearance
 	otherData                statevector.Vector
 	customOptions            uint32
 	trustedPart, doubtedPart nodeset.SubVectorCompared
 	verifyResult             nodeset.NodeVerificationResult
 	comparedStats            nodeset.ComparedBitsetRow
 	nodeStats                *nodeset.ConsensusStatRow
+	disableRanksAndGSH       bool
 }
 
 func (p *inspectedVector) GetCustomOptions() uint32 {
 	return p.customOptions
 }
 
-func (p *inspectedVector) GetNode() *core.NodeAppearance {
+func (p *inspectedVector) GetNode() *population.NodeAppearance {
 	return p.node
 }
 
@@ -440,7 +470,7 @@ func (p *inspectedVector) doVerifyVectorHashes(ctx context.Context) nodeset.Node
 
 	if log.Is(insolar.DebugLevel) {
 		if validTrusted != p.trustedPart.IsNeeded() || validDoubted != p.doubtedPart.IsNeeded() {
-			log.Debugf("mismatched AnnouncementHash:\n Here: %v %v\nThere: %v %v",
+			log.Errorf("mismatched AnnouncementHash:\n Here: %v %v\nThere: %v %v",
 				gahTrusted, gahDoubted, p.otherData.Trusted.AnnouncementHash, p.otherData.Doubted.AnnouncementHash)
 		}
 	}
@@ -455,42 +485,44 @@ func (p *inspectedVector) doVerifyVectorHashes(ctx context.Context) nodeset.Node
 		p.trustedPart = nodeset.SvcIgnore
 	}
 
-	if validTrusted || validDoubted {
-		recalcTrusted := p.trustedPart.IsRecalc() && validTrusted
-		recalcDoubted := p.doubtedPart.IsRecalc() && validDoubted
+	if !p.disableRanksAndGSH {
+		if validTrusted || validDoubted {
+			recalcTrusted := p.trustedPart.IsRecalc() && validTrusted
+			recalcDoubted := p.doubtedPart.IsRecalc() && validDoubted
 
-		gshTrusted, gshDoubted := selfData.Trusted.CalcStateWithRank, selfData.Doubted.CalcStateWithRank
-		if recalcTrusted || recalcDoubted {
-			gshTrusted, gshDoubted = vectorBuilder.BuildGlobulaStateHashesAndRanks(recalcTrusted, recalcDoubted,
-				p.node.GetNodeID(), gshTrusted, gshDoubted)
+			gshTrusted, gshDoubted := selfData.Trusted.CalcStateWithRank, selfData.Doubted.CalcStateWithRank
+			if recalcTrusted || recalcDoubted {
+				gshTrusted, gshDoubted = vectorBuilder.BuildGlobulaStateHashesAndRanks(recalcTrusted, recalcDoubted,
+					p.node.GetNodeID(), gshTrusted, gshDoubted)
 
-			if recalcTrusted {
-				validTrusted = gshTrusted.ExpectedRank == p.otherData.Trusted.ExpectedRank
-			}
-			if recalcDoubted {
-				validDoubted = gshDoubted.ExpectedRank == p.otherData.Doubted.ExpectedRank
-			}
+				if recalcTrusted {
+					validTrusted = gshTrusted.ExpectedRank == p.otherData.Trusted.ExpectedRank
+				}
+				if recalcDoubted {
+					validDoubted = gshDoubted.ExpectedRank == p.otherData.Doubted.ExpectedRank
+				}
 
-			if log.Is(insolar.DebugLevel) {
-				if recalcTrusted && !validTrusted || recalcDoubted && !validDoubted {
-					log.Debugf("mismatched ExpectedRank:\n Here: %v %v\nThere: %v %v",
-						gshTrusted.ExpectedRank, gshDoubted.ExpectedRank,
-						p.otherData.Trusted.ExpectedRank, p.otherData.Doubted.ExpectedRank)
+				if log.Is(insolar.DebugLevel) {
+					if recalcTrusted && !validTrusted || recalcDoubted && !validDoubted {
+						log.Errorf("mismatched ExpectedRank:\n Here: %v %v\nThere: %v %v",
+							gshTrusted.ExpectedRank, gshDoubted.ExpectedRank,
+							p.otherData.Trusted.ExpectedRank, p.otherData.Doubted.ExpectedRank)
+					}
 				}
 			}
-		}
 
-		prevValidTrusted := validTrusted
-		prevValidDoubted := validDoubted
+			prevValidTrusted := validTrusted
+			prevValidDoubted := validDoubted
 
-		validTrusted = validTrusted && p.verifySignature(gshTrusted.StateHash, p.otherData.Trusted.StateSignature)
-		validDoubted = validDoubted && p.verifySignature(gshDoubted.StateHash, p.otherData.Doubted.StateSignature)
+			validTrusted = validTrusted && p.verifySignature(gshTrusted.StateHash, p.otherData.Trusted.StateSignature)
+			validDoubted = validDoubted && p.verifySignature(gshDoubted.StateHash, p.otherData.Doubted.StateSignature)
 
-		if log.Is(insolar.DebugLevel) {
-			if validTrusted != prevValidTrusted || validDoubted != prevValidDoubted {
-				log.Debugf("mismatched signature of StateHash:\n Here: %v %v\nThere: %v %v",
-					gshTrusted.StateHash, gshDoubted.StateHash,
-					p.otherData.Trusted.StateSignature, p.otherData.Doubted.StateSignature)
+			if log.Is(insolar.DebugLevel) {
+				if validTrusted != prevValidTrusted || validDoubted != prevValidDoubted {
+					log.Errorf("mismatched signature of StateHash:\n Here: %v %v\nThere: %v %v",
+						gshTrusted.StateHash, gshDoubted.StateHash,
+						p.otherData.Trusted.StateSignature, p.otherData.Doubted.StateSignature)
+				}
 			}
 		}
 	}
@@ -513,7 +545,7 @@ func createNextPopulation(p *nodeset.VectorBuilder, selectionSet nodeset.Consens
 		func(nodeData nodeset.VectorEntryData, postponed bool, filter uint32) {
 
 			mode := member.OpMode(filter)
-			if postponed != mode.IsPowerless() {
+			if mode.IsPowerless() && !postponed {
 				panic("illegal state")
 			}
 

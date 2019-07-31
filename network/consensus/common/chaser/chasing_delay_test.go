@@ -85,25 +85,25 @@ func TestWasStarted(t *testing.T) {
 func TestRestartChase(t *testing.T) {
 	ct := NewChasingTimer(-time.Second)
 	ct.RestartChase()
-	require.True(t, ct.timer == nil)
+	require.Nil(t, ct.timer)
 
 	ct = NewChasingTimer(0)
 	ct.RestartChase()
-	require.True(t, ct.timer == nil)
+	require.Nil(t, ct.timer)
 
 	ct = NewChasingTimer(time.Microsecond)
 	ct.RestartChase()
-	require.True(t, ct.timer != nil)
+	require.NotNil(t, ct.timer)
 
 	ct.RestartChase()
-	require.True(t, ct.timer != nil)
+	require.NotNil(t, ct.timer)
 }
 
 func TestChannel(t *testing.T) {
 	ct := NewChasingTimer(0)
-	require.True(t, ct.Channel() == nil)
+	require.Nil(t, ct.Channel())
 
 	ct = NewChasingTimer(time.Microsecond)
 	ct.RestartChase()
-	require.True(t, ct.Channel() != nil)
+	require.NotNil(t, ct.Channel())
 }

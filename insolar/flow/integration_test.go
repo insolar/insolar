@@ -171,9 +171,9 @@ func TestChangePulse(t *testing.T) {
 	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
 
 	a := pulse.NewAccessorMock(t)
-	a.LatestFunc = func(ctx context.Context) (insolar.Pulse, error) {
+	a.LatestMock.Set(func(ctx context.Context) (insolar.Pulse, error) {
 		return currentPulse, nil
-	}
+	})
 	disp.PulseAccessor = a
 
 	go func() {

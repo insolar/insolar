@@ -36,7 +36,7 @@ func (m MachineType) Equal(other MachineType) bool {
 	return m == other
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.MachineLogicExecutor -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.MachineLogicExecutor -o ../testutils -s _mock.go -g
 
 // MachineLogicExecutor is an interface for implementers of one particular machine type
 type MachineLogicExecutor interface {
@@ -51,11 +51,11 @@ type MachineLogicExecutor interface {
 		ctx context.Context, callContext *LogicCallContext,
 		code Reference, name string, args Arguments,
 	) (
-		objectState []byte, err error,
+		objectState []byte, ctorErr string, sysErr error,
 	)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.LogicRunner -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.LogicRunner -o ../testutils -s _mock.go -g
 
 // LogicRunner is an interface that should satisfy logic executor
 type LogicRunner interface {
@@ -109,7 +109,7 @@ type ContractMethod func([]byte, []byte) ([]byte, []byte, error)
 type ContractMethods map[string]ContractMethod
 
 // ContractConstructor is a typedef of typical contract constructor
-type ContractConstructor func([]byte) ([]byte, error)
+type ContractConstructor func([]byte) (state []byte, ctorErr error, sysErr error)
 
 // ContractConstructors maps name to contract constructor
 type ContractConstructors map[string]ContractConstructor

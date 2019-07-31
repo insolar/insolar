@@ -55,6 +55,9 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/gcpv2"
@@ -62,12 +65,10 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	transport2 "github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"github.com/insolar/insolar/network/consensus/serialization"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus/adapters"
+	"github.com/insolar/insolar/network/consensus/gcpv2/censusimpl"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
+	"github.com/insolar/insolar/network/consensus/serialization"
 	"github.com/insolar/insolar/network/transport"
 )
 
@@ -75,6 +76,13 @@ type packetProcessorSetter interface {
 	SetPacketProcessor(adapters.PacketProcessor)
 	SetPacketParserFactory(factory adapters.PacketParserFactory)
 }
+
+type Mode uint
+
+const (
+	ReadyNetwork = Mode(iota)
+	Joiner
+)
 
 func New(ctx context.Context, dep Dep) Installer {
 	dep.verify()
@@ -99,18 +107,18 @@ func verify(s interface{}) {
 }
 
 type Dep struct {
-	PrimingCloudStateHash [64]byte
-
 	KeyProcessor       insolar.KeyProcessor
 	Scheme             insolar.PlatformCryptographyScheme
 	CertificateManager insolar.CertificateManager
 	KeyStore           insolar.KeyStore
-	NodeKeeper         network.NodeKeeper
-	DatagramTransport  transport.DatagramTransport
 
-	StateGetter  adapters.StateGetter
-	PulseChanger adapters.PulseChanger
-	StateUpdater adapters.StateUpdater
+	NodeKeeper        network.NodeKeeper
+	DatagramTransport transport.DatagramTransport
+
+	StateGetter         adapters.StateGetter
+	PulseChanger        adapters.PulseChanger
+	StateUpdater        adapters.StateUpdater
+	EphemeralController adapters.EphemeralController
 }
 
 func (cd *Dep) verify() {
@@ -125,9 +133,8 @@ type constructor struct {
 	versionedRegistries          census.VersionedRegistries
 	nodeProfileFactory           profiles.Factory
 	localNodeConfiguration       api.LocalNodeConfiguration
-	upstreamPulseController      api.UpstreamController
 	roundStrategyFactory         core.RoundStrategyFactory
-	transportCryptographyFactory transport2.CryptographyFactory
+	transportCryptographyFactory transport2.CryptographyAssistant
 	packetBuilder                transport2.PacketBuilder
 	packetSender                 transport2.PacketSender
 	transportFactory             transport2.Factory
@@ -140,7 +147,7 @@ func newConstructor(ctx context.Context, dep *Dep) *constructor {
 	c.mandateRegistry = adapters.NewMandateRegistry(
 		cryptkit.NewDigest(
 			longbits.NewBits512FromBytes(
-				dep.PrimingCloudStateHash[:],
+				dep.NodeKeeper.GetCloudHash(),
 			),
 			adapters.SHA3512Digest,
 		).AsDigestHolder(),
@@ -161,11 +168,6 @@ func newConstructor(ctx context.Context, dep *Dep) *constructor {
 	c.localNodeConfiguration = adapters.NewLocalNodeConfiguration(
 		ctx,
 		dep.KeyStore,
-	)
-	c.upstreamPulseController = adapters.NewUpstreamPulseController(
-		dep.StateGetter,
-		dep.PulseChanger,
-		dep.StateUpdater,
 	)
 	c.roundStrategyFactory = adapters.NewRoundStrategyFactory()
 	c.transportCryptographyFactory = adapters.NewTransportCryptographyFactory(dep.Scheme)
@@ -199,34 +201,80 @@ func newInstaller(constructor *constructor, dep *Dep) Installer {
 	}
 }
 
-func (c Installer) Install(setters ...packetProcessorSetter) Controller {
-	controlFeederInterceptor := adapters.InterceptConsensusControl(adapters.NewConsensusControlFeeder())
-	candidateFeeder := &core.SequentialCandidateFeeder{}
+func (c Installer) ControllerFor(mode Mode, setters ...packetProcessorSetter) Controller {
+	controlFeederInterceptor := adapters.InterceptConsensusControl(
+		adapters.NewConsensusControlFeeder(),
+	)
+	candidateFeeder := &coreapi.SequentialCandidateFeeder{}
 
-	consensusController := c.createConsensusController(controlFeederInterceptor.Feeder(), candidateFeeder)
+	var ephemeralFeeder api.EphemeralControlFeeder
+	if c.dep.EphemeralController.EphemeralMode() {
+		ephemeralFeeder = adapters.NewEphemeralControlFeeder(c.dep.PulseChanger, c.dep.EphemeralController)
+	}
+
+	upstreamController := adapters.NewUpstreamPulseController(
+		c.dep.StateGetter,
+		c.dep.PulseChanger,
+		c.dep.StateUpdater,
+	)
+
+	consensusChronicles := c.createConsensusChronicles(mode)
+	consensusController := c.createConsensusController(
+		consensusChronicles,
+		controlFeederInterceptor.Feeder(),
+		candidateFeeder,
+		ephemeralFeeder,
+		upstreamController,
+	)
 	packetParserFactory := c.createPacketParserFactory()
 
-	c.install(setters, consensusController, packetParserFactory)
+	c.bind(setters, consensusController, packetParserFactory)
 
-	return newController(controlFeederInterceptor, candidateFeeder, consensusController)
+	consensusController.Prepare()
+
+	return newController(controlFeederInterceptor, candidateFeeder, consensusController, upstreamController)
 }
 
-func (c *Installer) createConsensusController(controlFeeder api.ConsensusControlFeeder, candidateFeeder api.CandidateControlFeeder) api.ConsensusController {
+func (c *Installer) createCensus(mode Mode) *censusimpl.PrimingCensusTemplate {
 	certificate := c.dep.CertificateManager.GetCertificate()
 	origin := c.dep.NodeKeeper.GetOrigin()
 	knownNodes := c.dep.NodeKeeper.GetAccessor().GetActiveNodes()
 
-	consensusChronicles := adapters.NewChronicles(c.consensus.nodeProfileFactory)
-	adapters.NewCensus(
-		adapters.NewStaticProfile(origin, certificate, c.dep.KeyProcessor),
-		adapters.NewStaticProfileList(knownNodes, certificate, c.dep.KeyProcessor),
+	node := adapters.NewStaticProfile(origin, certificate, c.dep.KeyProcessor)
+	nodes := adapters.NewStaticProfileList(knownNodes, certificate, c.dep.KeyProcessor)
+
+	if mode == Joiner {
+		return adapters.NewCensusForJoiner(
+			node,
+			c.consensus.versionedRegistries,
+			c.consensus.transportCryptographyFactory,
+		)
+	}
+
+	return adapters.NewCensus(
+		node,
+		nodes,
 		c.consensus.versionedRegistries,
 		c.consensus.transportCryptographyFactory,
-	).SetAsActiveTo(consensusChronicles)
+	)
+}
 
+func (c *Installer) createConsensusChronicles(mode Mode) censusimpl.LocalConsensusChronicles {
+	consensusChronicles := adapters.NewChronicles(c.consensus.nodeProfileFactory)
+	c.createCensus(mode).SetAsActiveTo(consensusChronicles)
+	return consensusChronicles
+}
+
+func (c *Installer) createConsensusController(
+	consensusChronicles censusimpl.LocalConsensusChronicles,
+	controlFeeder api.ConsensusControlFeeder,
+	candidateFeeder api.CandidateControlFeeder,
+	ephemeralFeeder api.EphemeralControlFeeder,
+	upstreamController api.UpstreamController,
+) api.ConsensusController {
 	return gcpv2.NewConsensusMemberController(
 		consensusChronicles,
-		c.consensus.upstreamPulseController,
+		upstreamController,
 		core.NewPhasedRoundControllerFactory(
 			c.consensus.localNodeConfiguration,
 			c.consensus.transportFactory,
@@ -234,18 +282,19 @@ func (c *Installer) createConsensusController(controlFeeder api.ConsensusControl
 		),
 		candidateFeeder,
 		controlFeeder,
+		ephemeralFeeder,
 	)
 }
 
 func (c *Installer) createPacketParserFactory() adapters.PacketParserFactory {
 	return serialization.NewPacketParserFactory(
-		c.consensus.transportCryptographyFactory.GetDigestFactory().GetPacketDigester(),
-		c.consensus.transportCryptographyFactory.GetNodeSigner(c.consensus.localNodeConfiguration.GetSecretKeyStore()).GetSignMethod(),
+		c.consensus.transportCryptographyFactory.GetDigestFactory().CreatePacketDigester(),
+		c.consensus.transportCryptographyFactory.CreateNodeSigner(c.consensus.localNodeConfiguration.GetSecretKeyStore()).GetSignMethod(),
 		c.dep.KeyProcessor,
 	)
 }
 
-func (c *Installer) install(
+func (c *Installer) bind(
 	setters []packetProcessorSetter,
 	packetProcessor adapters.PacketProcessor,
 	packetParserFactory adapters.PacketParserFactory,

@@ -104,10 +104,10 @@ func (c *NodeAnnouncementProfile) GetJoinerAnnouncement() JoinerAnnouncementRead
 		return nil
 	}
 
-	if c.joiner.GetBriefIntroduction().GetStaticNodeID() == c.ma.JoinerID {
-		return c.joiner
+	if !c.ma.JoinerID.IsAbsent() && c.joiner.GetBriefIntroduction().GetStaticNodeID() != c.ma.JoinerID {
+		panic("illegal state")
 	}
-	panic("illegal state")
+	return c.joiner
 }
 
 func (c *NodeAnnouncementProfile) GetNodeRank() member.Rank {

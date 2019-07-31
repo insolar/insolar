@@ -29,7 +29,7 @@ func TestPressureOnSystem(t *testing.T) {
 	var contractCode = `
 package main
 
-import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import "github.com/insolar/insolar/logicrunner/builtin/foundation"
 
 type One struct {
 	foundation.BaseContract
@@ -40,15 +40,18 @@ func New() (*One, error) {
 	return &One{}, nil
 }
 
+var INSATTR_Inc_API = true
 func (c *One) Inc() (int, error) {
 	c.Number++
 	return c.Number, nil
 }
 
+var INSATTR_Get_API = true
 func (c *One) Get() (int, error) {
 	return c.Number, nil
 }
 
+var INSATTR_Dec_API = true
 func (c *One) Dec() (int, error) {
 	c.Number--
 	return c.Number, nil
@@ -57,45 +60,51 @@ func (c *One) Dec() (int, error) {
 	protoRef := uploadContractOnce(t, "testPressure", contractCode)
 
 	t.Run("one object, sequential calls", func(t *testing.T) {
-		objectRef := callConstructor(t, protoRef, "New")
+		syncT := &SyncT{T: t}
+
+		objectRef := callConstructor(syncT, protoRef, "New")
 
 		for i := 0; i < 100; i++ {
-			result := callMethod(t, objectRef, "Inc")
-			require.Empty(t, result.Error)
-			result = callMethod(t, objectRef, "Dec")
-			require.Empty(t, result.Error)
+			result := callMethod(syncT, objectRef, "Inc")
+			require.Empty(syncT, result.Error)
+			result = callMethod(syncT, objectRef, "Dec")
+			require.Empty(syncT, result.Error)
 		}
 	})
 
 	t.Run("one object, parallel calls", func(t *testing.T) {
-		objectRef := callConstructor(t, protoRef, "New")
+		syncT := &SyncT{T: t}
+
+		objectRef := callConstructor(syncT, protoRef, "New")
 
 		wg := sync.WaitGroup{}
 		wg.Add(10)
 		for g := 0; g < 10; g++ {
 			go func() {
 				defer wg.Done()
-				result := callMethod(t, objectRef, "Inc")
-				require.Empty(t, result.Error)
-				result = callMethod(t, objectRef, "Dec")
-				require.Empty(t, result.Error)
+				result := callMethod(syncT, objectRef, "Inc")
+				require.Empty(syncT, result.Error)
+				result = callMethod(syncT, objectRef, "Dec")
+				require.Empty(syncT, result.Error)
 			}()
 		}
 		wg.Wait()
 	})
 
 	t.Run("ten objects, sequential calls", func(t *testing.T) {
+		syncT := &SyncT{T: t}
+
 		wg := sync.WaitGroup{}
 		wg.Add(10)
 		for g := 0; g < 10; g++ {
-			objectRef := callConstructor(t, protoRef, "New")
+			objectRef := callConstructor(syncT, protoRef, "New")
 			go func() {
 				defer wg.Done()
 				for i := 0; i < 10; i++ {
-					result := callMethod(t, objectRef, "Inc")
-					require.Empty(t, result.Error)
-					result = callMethod(t, objectRef, "Dec")
-					require.Empty(t, result.Error)
+					result := callMethod(syncT, objectRef, "Inc")
+					require.Empty(syncT, result.Error)
+					result = callMethod(syncT, objectRef, "Dec")
+					require.Empty(syncT, result.Error)
 				}
 			}()
 		}
@@ -103,18 +112,20 @@ func (c *One) Dec() (int, error) {
 	})
 
 	t.Run("ten objects, parallel calls", func(t *testing.T) {
+		syncT := &SyncT{T: t}
+
 		wg := sync.WaitGroup{}
 		wg.Add(100)
 		for g := 0; g < 10; g++ {
-			objectRef := callConstructor(t, protoRef, "New")
+			objectRef := callConstructor(syncT, protoRef, "New")
 			for c := 0; c < 10; c++ {
 				go func() {
 					defer wg.Done()
 					for i := 0; i < 2; i++ {
-						result := callMethod(t, objectRef, "Inc")
-						require.Empty(t, result.Error)
-						result = callMethod(t, objectRef, "Dec")
-						require.Empty(t, result.Error)
+						result := callMethod(syncT, objectRef, "Inc")
+						require.Empty(syncT, result.Error)
+						result = callMethod(syncT, objectRef, "Dec")
+						require.Empty(syncT, result.Error)
 					}
 				}()
 			}
