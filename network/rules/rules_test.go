@@ -20,67 +20,34 @@ package rules
 import (
 	"testing"
 
-	network2 "github.com/insolar/insolar/network"
-
-	node2 "github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/network/node"
 
 	"github.com/insolar/insolar/certificate"
-	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/testutils"
-	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
 )
 
-var nilref = insolar.Reference{}
-
 func TestRules_CheckMinRole(t *testing.T) {
-	cm := component.Manager{}
-	r := NewRules()
-	certManager := testutils.NewCertificateManagerMock(t)
 	cert := testutils.NewCertificateMock(t)
-	nodeKeeper := network.NewNodeKeeperMock(t)
-	accessor := network.NewAccessorMock(t)
-	nodeKeeper.GetAccessorMock.Set(func() (r network2.Accessor) { return accessor })
-	accessor.GetActiveNodesMock.Set(func() []insolar.NetworkNode {
-		return []insolar.NetworkNode{
-			node2.NewNode(nilref, insolar.StaticRoleHeavyMaterial, nil, "", ""),
-			node2.NewNode(nilref, insolar.StaticRoleLightMaterial, nil, "", ""),
-			node2.NewNode(nilref, insolar.StaticRoleLightMaterial, nil, "", ""),
-			node2.NewNode(nilref, insolar.StaticRoleVirtual, nil, "", ""),
-			node2.NewNode(nilref, insolar.StaticRoleVirtual, nil, "", ""),
-		}
-	})
-	cm.Inject(r, certManager, nodeKeeper)
-
-	certManager.GetCertificateMock.Set(func() (r insolar.Certificate) {
-		return cert
-	})
+	nodes := []insolar.NetworkNode{
+		node.NewNode(testutils.RandomRef(), insolar.StaticRoleHeavyMaterial, nil, "", ""),
+		node.NewNode(testutils.RandomRef(), insolar.StaticRoleLightMaterial, nil, "", ""),
+		node.NewNode(testutils.RandomRef(), insolar.StaticRoleLightMaterial, nil, "", ""),
+		node.NewNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "", ""),
+		node.NewNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "", ""),
+	}
 
 	cert.GetMinRolesMock.Set(func() (r uint, r1 uint, r2 uint) {
 		return 1, 0, 0
 	})
 
-	nodeKeeper.GetWorkingNodesMock.Set(func() (r []insolar.NetworkNode) {
-		nodes, _ := getDiscoveryNodes(5)
-		nodes = append(nodes, newNode(250))
-		return nodes
-	})
-
-	result := r.CheckMinRole()
+	result := CheckMinRole(cert, nodes)
 	assert.True(t, result)
 }
 
 func TestRules_CheckMajorityRule(t *testing.T) {
-	cm := component.Manager{}
-	r := NewRules()
-	certManager := testutils.NewCertificateManagerMock(t)
 	cert := testutils.NewCertificateMock(t)
-
-	certManager.GetCertificateMock.Set(func() (r insolar.Certificate) {
-		return cert
-	})
-
 	cert.GetDiscoveryNodesMock.Set(func() (r []insolar.DiscoveryNode) {
 		_, nodes := getDiscoveryNodes(5)
 		return nodes
@@ -90,19 +57,10 @@ func TestRules_CheckMajorityRule(t *testing.T) {
 		return 4
 	})
 
-	a := network.NewAccessorMock(t)
+	nodes, _ := getDiscoveryNodes(5)
+	nodes = append(nodes, newNode(250))
 
-	nodeKeeper := network.NewNodeKeeperMock(t)
-	nodeKeeper.GetAccessorMock.Set(func() (r network2.Accessor) { return a })
-	a.GetActiveNodesMock.Set(func() (r []insolar.NetworkNode) {
-		nodes, _ := getDiscoveryNodes(5)
-		nodes = append(nodes, newNode(250))
-		return nodes
-	})
-
-	cm.Inject(r, certManager, nodeKeeper)
-
-	result, count := r.CheckMajorityRule()
+	result, count := CheckMajorityRule(cert, nodes)
 	assert.True(t, result)
 	assert.Equal(t, 5, count)
 }
@@ -123,6 +81,6 @@ func getDiscoveryNodes(count int) ([]insolar.NetworkNode, []insolar.DiscoveryNod
 
 func newNode(id int) insolar.NetworkNode {
 	recordRef := insolar.Reference{byte(id)}
-	node := node2.NewNode(recordRef, insolar.StaticRoleVirtual, nil, "127.0.0.1:3000", "")
-	return node
+	n := node.NewNode(recordRef, insolar.StaticRoleVirtual, nil, "127.0.0.1:3000", "")
+	return n
 }
