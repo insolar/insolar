@@ -19,11 +19,12 @@
 package functest
 
 import (
-	"github.com/insolar/insolar/insolar/utils"
 	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/insolar/utils"
 )
 
 func TestPressureOnSystem(t *testing.T) {
