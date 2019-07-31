@@ -140,7 +140,8 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 	}
 
 	inslogger.FromContext(r.realm.roundContext).Debugf(
-		"Starting consensus round: self={%v}, bundle=%v, census=%+v", r.realm.GetLocalProfile(), r.bundle, r.realm.initialCensus)
+		"Starting consensus round: self={%v}, ephemeral=%v, bundle=%v, census=%+v", r.realm.GetLocalProfile(),
+		r.realm.ephemeralFeeder != nil, r.bundle, r.realm.initialCensus)
 
 	preps := r.bundle.CreatePrepPhaseControllers()
 	if len(preps) == 0 {
@@ -187,7 +188,8 @@ func (r *PhasedRoundController) onConsensusStopper() {
 	latest := r.chronicle.GetLatestCensus()
 
 	inslogger.FromContext(r.realm.roundContext).Debugf(
-		"Stopping consensus round: self={%v}, bundle=%v, census=%+v", r.realm.GetLocalProfile(), r.bundle, latest)
+		"Stopping consensus round: self={%v}, ephemeral=%v, bundle=%v, census=%+v", r.realm.GetLocalProfile(),
+		r.realm.ephemeralFeeder != nil, r.bundle, latest)
 
 	if latest.GetOnlinePopulation().GetLocalProfile().IsJoiner() {
 		panic("DEBUG FAIL-FAST: local remains as joiner")
@@ -278,6 +280,11 @@ func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 	}
 
 	active := chronicle.GetActiveCensus()
+	if r.realm.ephemeralFeeder != nil && !active.GetPulseData().IsFromEphemeral() {
+		r.realm.ephemeralFeeder.OnEphemeralCancelled() // can't be called inline due to lock
+		r.realm.ephemeralFeeder = nil
+	}
+
 	r.realm.start(active, active.GetOnlinePopulation(), r.bundle)
 	r.roundWorker.SetTimeout(r.realm.roundStartedAt.Add(r.realm.timings.EndOfConsensus))
 }
@@ -339,21 +346,26 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 		err = r.realm.dispatchPacket(ctx, packet, from, verifyFlags|defaultOptions)
 	}
 
-	isNextPulse, nextPN := errors2.IsNextPulseArrivedError(err)
-	if !isNextPulse {
-		if errors2.IsNextPulseError(err) {
-			r.roundWorker.onUnexpectedPulse(pn)
-		}
+	isPulse := false
+	isPulse, pn = errors2.IsMismatchPulseError(err)
+	if !isPulse {
+		return api.KeepRound, err
+	}
+
+	if !r.chronicle.GetLatestCensus().GetPulseNumber().IsUnknownOrEqualTo(pn) {
+		r.roundWorker.onUnexpectedPulse(pn)
 		return api.KeepRound, err
 	}
 
 	if r.roundWorker.IsRunning() {
-		canStop := false
+		canStop := true
 		endOfConsensus := r.realm.GetStartedAt().Add(r.realm.timings.EndOfConsensus)
-		if r.realm.ephemeralFeeder != nil {
-			canStop = r.realm.ephemeralFeeder.CanStopOnHastyPulse(nextPN, endOfConsensus)
-		} else {
-			canStop = r.realm.controlFeeder.CanStopOnHastyPulse(nextPN, endOfConsensus)
+		if time.Now().Before(endOfConsensus) {
+			if r.realm.ephemeralFeeder != nil {
+				canStop = r.realm.ephemeralFeeder.CanStopOnHastyPulse(pn, endOfConsensus)
+			} else {
+				canStop = r.realm.controlFeeder.CanStopOnHastyPulse(pn, endOfConsensus)
+			}
 		}
 
 		if !canStop {

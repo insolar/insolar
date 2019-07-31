@@ -54,12 +54,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/rules"
-	"go.opencensus.io/trace"
 
 	"github.com/pkg/errors"
 
@@ -141,21 +139,6 @@ func (g *Base) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, original
 }
 
 func (g *Base) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
-	logger := inslogger.FromContext(ctx)
-
-	logger.Infof("Got new pulse number: %d", pu.PulseNumber)
-	ctx, span := instracer.StartSpan(ctx, "ServiceNetwork.Handlepulse")
-	span.AddAttributes(
-		trace.Int64Attribute("pulse.PulseNumber", int64(pu.PulseNumber)),
-	)
-	defer span.End()
-
-	err := g.PulseManager.Set(ctx, pu)
-	if err != nil {
-		logger.Fatalf("Failed to set new pulse: %s", err.Error())
-	}
-	logger.Infof("Set new current pulse number: %d", pu.PulseNumber)
-
 	g.NodeKeeper.MoveSyncToActive(ctx, pu.PulseNumber)
 }
 

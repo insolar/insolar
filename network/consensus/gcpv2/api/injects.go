@@ -125,6 +125,11 @@ type EphemeralControlFeeder interface {
 	TryConvertFromEphemeral(ctx context.Context, expected census.Expected) (wasConverted bool, converted census.Expected)
 
 	EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time, expected census.Operational)
+	/* is called:
+		(1) immediately after TryConvertFromEphemeral returned true
+	    (2) at start of full realm, when ephemeral mode was cancelled by Phase0/Phase1 packets
+	*/
+	OnEphemeralCancelled()
 }
 
 type ConsensusControlFeeder interface {

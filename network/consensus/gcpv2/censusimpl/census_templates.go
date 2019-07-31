@@ -138,10 +138,7 @@ func (c *PrimingCensusTemplate) GetExpectedPulseNumber() pulse.Number {
 
 func (c *PrimingCensusTemplate) CreateBuilder(ctx context.Context, pn pulse.Number) census.Builder {
 
-	if !pn.IsTimePulse() {
-		panic("illegal value")
-	}
-	if !c.GetExpectedPulseNumber().IsUnknownOrEqualTo(pn) {
+	if !pn.IsUnknown() && (!pn.IsTimePulse() || !c.GetExpectedPulseNumber().IsUnknownOrEqualTo(pn)) {
 		panic("illegal value")
 	}
 
@@ -264,7 +261,7 @@ func (c *ActiveCensusTemplate) GetExpectedPulseNumber() pulse.Number {
 
 func (c *ActiveCensusTemplate) CreateBuilder(ctx context.Context, pn pulse.Number) census.Builder {
 
-	if !pn.IsTimePulse() {
+	if !pn.IsUnknown() && (!pn.IsTimePulse() || !c.GetExpectedPulseNumber().IsUnknownOrEqualTo(pn)) {
 		panic("illegal value")
 	}
 
@@ -313,15 +310,10 @@ type ExpectedCensusTemplate struct {
 
 func (c *ExpectedCensusTemplate) Rebuild(pn pulse.Number) census.Built {
 
-	if !pn.IsUnknownOrTimePulse() {
+	if !pn.IsUnknown() && (!pn.IsTimePulse() || !c.GetExpectedPulseNumber().IsUnknownOrEqualTo(pn)) {
 		panic("illegal value")
 	}
 
-	//epn := c.prev.GetExpectedPulseNumber()
-	//if !epn.IsUnknown() && epn != pn {
-	//	panic("illegal value")
-	//}
-	//
 	cp := BuiltCensusTemplate{*c}
 	cp.expected.pn = pn
 	return &cp

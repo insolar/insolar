@@ -219,6 +219,22 @@ type ephemeralInterceptor struct {
 	round      api.RoundController
 }
 
+func (p *ephemeralInterceptor) OnEphemeralCancelled() {
+	feeder := p._cancelled()
+	if feeder != nil {
+		feeder.OnEphemeralCancelled()
+	}
+}
+
+func (p *ephemeralInterceptor) _cancelled() api.EphemeralControlFeeder {
+	p.controller.mutex.Lock()
+	defer p.controller.mutex.Unlock()
+
+	feeder := p.EphemeralControlFeeder
+	p.EphemeralControlFeeder = nil
+	return feeder
+}
+
 func (p *ephemeralInterceptor) EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time,
 	expected census.Operational) {
 
@@ -228,7 +244,6 @@ func (p *ephemeralInterceptor) EphemeralConsensusFinished(isNextEphemeral bool, 
 	defer p.controller.mutex.Unlock()
 
 	if !isNextEphemeral {
-		p.EphemeralControlFeeder = nil
 		return
 	}
 

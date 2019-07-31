@@ -132,6 +132,10 @@ type VersionedRegistries struct {
 	pulseData pulse.Data
 }
 
+func (c *VersionedRegistries) GetNearestValidPulseData() pulse.Data {
+	return pulse.Data{}
+}
+
 func NewVersionedRegistries(
 	mandateRegistry census.MandateRegistry,
 	misbehaviorRegistry census.MisbehaviorRegistry,

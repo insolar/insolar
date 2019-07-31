@@ -293,10 +293,6 @@ func (r *coreRealm) VerifyPacketAuthenticity(ctx context.Context, packet transpo
 func (r *coreRealm) VerifyPacketPulseNumber(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
 	filterPN, nextPN pulse.Number) (bool, error) {
 
-	//if r.ephemeralFeeder != nil && !packet.GetPacketType().IsEphemeralPacket() {
-	//	return false, r.ephemeralFeeder.OnNonEphemeralPacket(ctx, packet, from)
-	//}
-
 	pn := packet.GetPulseNumber()
 	if filterPN == pn || filterPN.IsUnknown() || pn.IsUnknown() {
 		return true, nil
@@ -304,12 +300,8 @@ func (r *coreRealm) VerifyPacketPulseNumber(ctx context.Context, packet transpor
 
 	sourceID := packet.GetSourceID()
 	localID := r.self.GetNodeID()
-	msg := fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v, source=%v, local=%d", filterPN, pn, sourceID, localID)
 
-	if !nextPN.IsUnknown() && nextPN == pn {
-		// TODO verify new pulse data to match prevDelta
-		// is it time for the next round?
-		return false, errors.NewNextPulseArrivedError(pn, msg)
-	}
-	return false, errors.NewPulseRoundMismatchError(pn, msg)
+	return false, errors.NewPulseRoundMismatchError(pn,
+		fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v, source=%v, local=%d",
+			filterPN, pn, sourceID, localID))
 }
