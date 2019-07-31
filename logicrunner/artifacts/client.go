@@ -497,7 +497,6 @@ func (m *client) DeployCode(
 
 	codeRec := record.Code{
 		Domain:      domain,
-		Request:     request,
 		Code:        code,
 		MachineType: machineType,
 	}

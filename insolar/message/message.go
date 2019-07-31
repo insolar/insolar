@@ -48,9 +48,6 @@ func getEmptyMessage(mt insolar.MessageType) (insolar.Message, error) {
 	case insolar.TypeStillExecuting:
 		return &StillExecuting{}, nil
 
-	// heavy sync
-	case insolar.TypeHeavyPayload:
-		return &HeavyPayload{}, nil
 	// Genesis
 	case insolar.TypeGenesisRequest:
 		return &GenesisRequest{}, nil
@@ -120,9 +117,6 @@ func init() {
 	gob.Register(&ValidationResults{})
 	gob.Register(&PendingFinished{})
 	gob.Register(&StillExecuting{})
-
-	// heavy
-	gob.Register(&HeavyPayload{})
 
 	// Bootstrap
 	gob.Register(&GenesisRequest{})
