@@ -276,7 +276,7 @@ func retryableCreateMember(user *user, method string, updatePublicKey bool) (int
 	currentIterNum := 1
 	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
 		result, err = signedRequest(user, method, nil)
-		if err == nil || !strings.Contains(err.Error(), "member for this publicKey already exist") {
+		if err == nil || !strings.Contains(err.Error(), "failed to set reference in public key shard: can't set reference because this key already exists") {
 			if err == nil {
 				user.ref = result.(map[string]interface{})["reference"].(string)
 			}

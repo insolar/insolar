@@ -25,9 +25,9 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/nodedomain"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/rootdomain"
+	"github.com/insolar/insolar/logicrunner/builtin/contract/shard"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/tariff"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/wallet"
-	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 func RootDomain() insolar.GenesisContractState {
@@ -48,8 +48,8 @@ func RootDomain() insolar.GenesisContractState {
 			MigrationWallet:        genesisrefs.ContractMigrationWallet,
 			CostCenter:             genesisrefs.ContractCostCenter,
 			FeeWallet:              genesisrefs.ContractFeeWallet,
-			BurnAddressMap:         make(foundation.StableMap),
-			PublicKeyMap:           make(foundation.StableMap),
+			MigrationAddressShards: genesisrefs.ContractMigrationAddressShards,
+			PublicKeyShards:        genesisrefs.ContractPublicKeyShards,
 			FreeBurnAddresses:      []string{},
 			NodeDomain:             genesisrefs.ContractNodeDomain,
 		}),
@@ -124,6 +124,20 @@ func GetTariffGenesisContractState() insolar.GenesisContractState {
 		ParentName: insolar.GenesisNameCostCenter,
 		Delegate:   true,
 		Memory:     mustGenMemory(t),
+	}
+}
+
+func GetShardGenesisContractState(name string) insolar.GenesisContractState {
+	s, err := shard.New()
+	if err != nil {
+		panic(fmt.Sprintf("'%s' shard constructor failed", name))
+	}
+
+	return insolar.GenesisContractState{
+		Name:       name,
+		Prototype:  insolar.GenesisNameShard,
+		ParentName: insolar.GenesisNameRootDomain,
+		Memory:     mustGenMemory(s),
 	}
 }
 

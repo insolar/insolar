@@ -21,6 +21,8 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"hash/fnv"
+	"math"
 	"math/big"
 
 	"github.com/insolar/x-crypto/ecdsa"
@@ -73,4 +75,17 @@ func VerifySignature(rawRequest []byte, signature string, key string, rawpublicp
 	}
 
 	return nil
+}
+
+// GetShardIndex calculates hash from string and gets it by mod
+func GetShardIndex(s string, mod int) int {
+	x := hash(s)
+	return int(math.Mod(float64(x), float64(mod)))
+}
+
+// Calc hash
+func hash(s string) uint32 {
+	h := fnv.New32a()
+	h.Write([]byte(s))
+	return h.Sum32()
 }

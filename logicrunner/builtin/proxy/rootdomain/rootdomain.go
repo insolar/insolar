@@ -718,14 +718,14 @@ func (r *RootDomain) GetBurnAddressAsImmutable() (string, error) {
 }
 
 // GetMemberByPublicKey is proxy generated method
-func (r *RootDomain) GetMemberByPublicKey(publicKey string) (insolar.Reference, error) {
+func (r *RootDomain) GetMemberByPublicKey(publicKey string) (*insolar.Reference, error) {
 	var args [1]interface{}
 	args[0] = publicKey
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 insolar.Reference
+	var ret0 *insolar.Reference
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -772,14 +772,14 @@ func (r *RootDomain) GetMemberByPublicKeyNoWait(publicKey string) error {
 }
 
 // GetMemberByPublicKeyAsImmutable is proxy generated method
-func (r *RootDomain) GetMemberByPublicKeyAsImmutable(publicKey string) (insolar.Reference, error) {
+func (r *RootDomain) GetMemberByPublicKeyAsImmutable(publicKey string) (*insolar.Reference, error) {
 	var args [1]interface{}
 	args[0] = publicKey
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 insolar.Reference
+	var ret0 *insolar.Reference
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -805,15 +805,15 @@ func (r *RootDomain) GetMemberByPublicKeyAsImmutable(publicKey string) (insolar.
 	return ret0, nil
 }
 
-// GetMemberByBurnAddress is proxy generated method
-func (r *RootDomain) GetMemberByBurnAddress(burnAddress string) (insolar.Reference, error) {
+// GetMemberByMigrationAddress is proxy generated method
+func (r *RootDomain) GetMemberByMigrationAddress(migrationAddress string) (*insolar.Reference, error) {
 	var args [1]interface{}
-	args[0] = burnAddress
+	args[0] = migrationAddress
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 insolar.Reference
+	var ret0 *insolar.Reference
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -823,7 +823,7 @@ func (r *RootDomain) GetMemberByBurnAddress(burnAddress string) (insolar.Referen
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetMemberByBurnAddress", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetMemberByMigrationAddress", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -839,10 +839,10 @@ func (r *RootDomain) GetMemberByBurnAddress(burnAddress string) (insolar.Referen
 	return ret0, nil
 }
 
-// GetMemberByBurnAddressNoWait is proxy generated method
-func (r *RootDomain) GetMemberByBurnAddressNoWait(burnAddress string) error {
+// GetMemberByMigrationAddressNoWait is proxy generated method
+func (r *RootDomain) GetMemberByMigrationAddressNoWait(migrationAddress string) error {
 	var args [1]interface{}
-	args[0] = burnAddress
+	args[0] = migrationAddress
 
 	var argsSerialized []byte
 
@@ -851,7 +851,7 @@ func (r *RootDomain) GetMemberByBurnAddressNoWait(burnAddress string) error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetMemberByBurnAddress", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetMemberByMigrationAddress", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -859,15 +859,15 @@ func (r *RootDomain) GetMemberByBurnAddressNoWait(burnAddress string) error {
 	return nil
 }
 
-// GetMemberByBurnAddressAsImmutable is proxy generated method
-func (r *RootDomain) GetMemberByBurnAddressAsImmutable(burnAddress string) (insolar.Reference, error) {
+// GetMemberByMigrationAddressAsImmutable is proxy generated method
+func (r *RootDomain) GetMemberByMigrationAddressAsImmutable(migrationAddress string) (*insolar.Reference, error) {
 	var args [1]interface{}
-	args[0] = burnAddress
+	args[0] = migrationAddress
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 insolar.Reference
+	var ret0 *insolar.Reference
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -877,7 +877,7 @@ func (r *RootDomain) GetMemberByBurnAddressAsImmutable(burnAddress string) (inso
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetMemberByBurnAddress", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetMemberByMigrationAddress", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -1317,10 +1317,10 @@ func (r *RootDomain) AddBurnAddressAsImmutable(burnAddress string) error {
 }
 
 // AddNewMemberToMaps is proxy generated method
-func (r *RootDomain) AddNewMemberToMaps(publicKey string, burnAddress string, memberRef insolar.Reference) error {
+func (r *RootDomain) AddNewMemberToMaps(publicKey string, migrationAddress string, memberRef insolar.Reference) error {
 	var args [3]interface{}
 	args[0] = publicKey
-	args[1] = burnAddress
+	args[1] = migrationAddress
 	args[2] = memberRef
 
 	var argsSerialized []byte
@@ -1351,10 +1351,10 @@ func (r *RootDomain) AddNewMemberToMaps(publicKey string, burnAddress string, me
 }
 
 // AddNewMemberToMapsNoWait is proxy generated method
-func (r *RootDomain) AddNewMemberToMapsNoWait(publicKey string, burnAddress string, memberRef insolar.Reference) error {
+func (r *RootDomain) AddNewMemberToMapsNoWait(publicKey string, migrationAddress string, memberRef insolar.Reference) error {
 	var args [3]interface{}
 	args[0] = publicKey
-	args[1] = burnAddress
+	args[1] = migrationAddress
 	args[2] = memberRef
 
 	var argsSerialized []byte
@@ -1373,10 +1373,10 @@ func (r *RootDomain) AddNewMemberToMapsNoWait(publicKey string, burnAddress stri
 }
 
 // AddNewMemberToMapsAsImmutable is proxy generated method
-func (r *RootDomain) AddNewMemberToMapsAsImmutable(publicKey string, burnAddress string, memberRef insolar.Reference) error {
+func (r *RootDomain) AddNewMemberToMapsAsImmutable(publicKey string, migrationAddress string, memberRef insolar.Reference) error {
 	var args [3]interface{}
 	args[0] = publicKey
-	args[1] = burnAddress
+	args[1] = migrationAddress
 	args[2] = memberRef
 
 	var argsSerialized []byte
