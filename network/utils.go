@@ -53,7 +53,6 @@ package network
 import (
 	"bytes"
 	"context"
-	"github.com/insolar/insolar/network/node"
 	"io"
 	"math"
 	"sort"
@@ -65,6 +64,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network/node"
 	"github.com/pkg/errors"
 )
 
