@@ -237,9 +237,10 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		hash := record.HashVirtual(p.dep.pcs.ReferenceHasher(), virtual)
 		id := *insolar.NewID(p.requestID.Pulse(), hash)
 		material := record.Material{
-			Virtual: virtual,
-			ID:      id,
-			JetID:   p.jetID,
+			Virtual:  virtual,
+			ID:       id,
+			ObjectID: objectID,
+			JetID:    p.jetID,
 		}
 		Filament = material
 	}
