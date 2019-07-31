@@ -16,23 +16,25 @@
 
 package errors
 
-// nonRepeatableError is error that will not be retried
-type nonRetryableError struct {
+// NonRetryableError is error that will not be retried
+type NonRetryableError struct {
 	reason string
 }
 
 // NewNonRetryable creates new nonRepeatableError that will not be retried
-func NewNonRetryable(reason string) *nonRetryableError {
-	return &nonRetryableError{
+func NewNonRetryable(reason string) *NonRetryableError {
+	return &NonRetryableError{
 		reason: reason,
 	}
 }
 
-func (err *nonRetryableError) Error() string {
+// NonRetryableError is an error
+func (err *NonRetryableError) Error() string {
 	return err.reason
 }
 
-func (*nonRetryableError) DoNotRepeat() {}
+// NonRetryableError is nonRepeater
+func (*NonRetryableError) DoNotRepeat() {}
 
 // IsNonRetryable checks if error is non retryable
 func IsNonRetryable(err error) bool {

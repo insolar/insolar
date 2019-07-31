@@ -23,7 +23,9 @@ import (
 {{ if $.GenerateInitialize -}}
     XXX_insolar "github.com/insolar/insolar/insolar"
 {{- end }}
+{{ if .Methods -}}
     XXX_insolar_errors "github.com/insolar/insolar/utils/errors"
+{{- end }}
 )
 
 type ExtendableError struct{
