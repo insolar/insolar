@@ -53,6 +53,7 @@ package core
 import (
 	"context"
 	"fmt"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -321,7 +322,7 @@ func (r *FullRealm) initPopulation(needsDynamic bool, population census.OnlinePo
 	r.purgatory = purgatory.NewRealmPurgatory(r.population, r.profileFactory, r.assistant,
 		r.populationHook, r.postponedPacketFn)
 
-	notifyAll(r.roundContext)
+	notifyAll()
 }
 
 func (r *FullRealm) initSelf() {
