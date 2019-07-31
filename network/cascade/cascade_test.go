@@ -61,7 +61,7 @@ import (
 )
 
 const (
-	domainStr = ".11111111111111111111111111111111"
+	domainStr = ".1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8"
 	id1Str    = "4K2V1kpVycZ6qSFsNdz2FtpNxnJs17eBNzf9rdCMcKoe"
 	id2Str    = "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M"
 	id3Str    = "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4"
@@ -140,7 +140,7 @@ func Test_geometricProgressionSum(t *testing.T) {
 func Test_calcHash(t *testing.T) {
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 
-	ref, err := insolar.NewReferenceFromBase58("4SxZ6BSx6qBP41nqQgtsFW5EF3JLDxYscZeVQnviPUGZ.11111111111111111111111111111111")
+	ref, err := insolar.NewReferenceFromBase58("4SxZ6BSx6qBP41nqQgtsFW5EF3JLDxYscZeVQnviPUGZ.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8")
 	require.NoError(t, err)
 	c := []byte{0x5d, 0x1b, 0x31, 0x34, 0x2e, 0xf0, 0x55, 0xb5, 0x37, 0x91, 0xb3, 0x12, 0x46, 0x84, 0xd9, 0x47, 0x3,
 		0x27, 0xf3, 0x89, 0x90, 0xe4, 0x26, 0xd7, 0xff, 0xc0, 0x2e, 0x1a, 0x68, 0x55, 0x46, 0x7, 0xae, 0xd6, 0x82,

@@ -372,7 +372,7 @@ func startRouter(ctx context.Context, router *message.Router) {
 	<-router.Running()
 }
 
-func (s *Server) Pulse(ctx context.Context) {
+func (s *Server) SetPulse(ctx context.Context) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -383,6 +383,13 @@ func (s *Server) Pulse(ctx context.Context) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (s *Server) Pulse() insolar.PulseNumber {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	return s.pulse.PulseNumber
 }
 
 func (s *Server) Send(ctx context.Context, pl payload.Payload) (<-chan *message.Message, func()) {

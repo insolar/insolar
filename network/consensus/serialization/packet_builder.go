@@ -77,11 +77,11 @@ type fullReader struct {
 }
 
 type PacketBuilder struct {
-	crypto      transport.CryptographyFactory
+	crypto      transport.CryptographyAssistant
 	localConfig api.LocalNodeConfiguration
 }
 
-func NewPacketBuilder(crypto transport.CryptographyFactory, localConfig api.LocalNodeConfiguration) *PacketBuilder {
+func NewPacketBuilder(crypto transport.CryptographyAssistant, localConfig api.LocalNodeConfiguration) *PacketBuilder {
 	return &PacketBuilder{
 		crypto:      crypto,
 		localConfig: localConfig,
@@ -113,8 +113,8 @@ func (pb *PacketBuilder) preparePacket(sender *transport.NodeAnnouncementProfile
 func (pb *PacketBuilder) preparePacketSender(packet *Packet) *PreparedPacketSender {
 	return &PreparedPacketSender{
 		packet:   packet,
-		digester: pb.crypto.GetDigestFactory().GetPacketDigester(),
-		signer:   pb.crypto.GetNodeSigner(pb.localConfig.GetSecretKeyStore()),
+		digester: pb.crypto.GetDigestFactory().CreatePacketDigester(),
+		signer:   pb.crypto.CreateNodeSigner(pb.localConfig.GetSecretKeyStore()),
 	}
 }
 

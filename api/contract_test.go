@@ -18,8 +18,9 @@ package api
 
 import (
 	"encoding/json"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestUnmarshalUpload(t *testing.T) {
@@ -28,7 +29,7 @@ func TestUnmarshalUpload(t *testing.T) {
     "jsonrpc": "2.0",
     "result": {
         "Test": "Test",
-        "PrototypeRef": "6R46iNSizv7pzHrLiR8m1qtEPC9FvLtsdKoFV9w2r6V.11111111111111111111111111111111"
+        "PrototypeRef": "6R46iNSizv7pzHrLiR8m1qtEPC9FvLtsdKoFV9w2r6V.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8"
     },
     "id": ""
 }`

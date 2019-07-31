@@ -214,13 +214,13 @@ func TestForLevel(t *testing.T) {
 	ps := PowerSet([...]Power{10, 20, 30, 40})
 	require.Zero(t, ps.ForLevel(capacity.LevelZero))
 
-	require.Equal(t, Power(ps[0]), ps.ForLevel(capacity.LevelMinimal))
+	require.Equal(t, ps[0], ps.ForLevel(capacity.LevelMinimal))
 
-	require.Equal(t, Power(ps[1]), ps.ForLevel(capacity.LevelReduced))
+	require.Equal(t, ps[1], ps.ForLevel(capacity.LevelReduced))
 
-	require.Equal(t, Power(ps[2]), ps.ForLevel(capacity.LevelNormal))
+	require.Equal(t, ps[2], ps.ForLevel(capacity.LevelNormal))
 
-	require.Equal(t, Power(ps[3]), ps.ForLevel(capacity.LevelMax))
+	require.Equal(t, ps[3], ps.ForLevel(capacity.LevelMax))
 
 	require.Panics(t, func() { ps.ForLevel(capacity.LevelMax + 1) })
 }

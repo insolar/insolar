@@ -63,11 +63,26 @@ type PacketLimiter struct {
 }
 
 func NewPacketLimiter(maxExtPhase2 uint8) PacketLimiter {
-	return PacketLimiter{counters: CreateLimitCounters(maxExtPhase2)}
+	limits, _ := CreateLimitCounters(maxExtPhase2)
+	return PacketLimiter{counters: limits}
 }
 
 func NewLocalPacketLimiter() PacketLimiter {
 	return PacketLimiter{received: math.MaxUint16}
+}
+
+func NewPacketWithOptions(isJoiner bool, maxExtPhase2 uint8) PacketLimiter {
+	limits, joinerInits := CreateLimitCounters(maxExtPhase2)
+	if !isJoiner {
+		joinerInits = 0
+	}
+	return PacketLimiter{counters: limits, received: joinerInits} //, sent: joinerInits}
+}
+
+func (p PacketLimiter) ForJoiner() PacketLimiter {
+	_, joinerInits := CreateLimitCounters(0)
+	p.received |= joinerInits
+	return p
 }
 
 func (p PacketLimiter) HasAnyPacketSent() bool {

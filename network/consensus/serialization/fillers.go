@@ -69,7 +69,7 @@ func fillNodeState(s *CompactGlobulaNodeState, nodeStateHash proofs.NodeStateHas
 		signedDigest.GetDigest().AsBytes(),
 	)
 	copy(
-		s.GlobulaNodeStateSignature[:],
+		s.NodeStateHashSignature[:],
 		signedDigest.GetSignature().AsBytes(),
 	)
 }

@@ -570,7 +570,7 @@ func TestCopyToFixedBits(t *testing.T) {
 }
 
 func TestNewBits64FromBytes(t *testing.T) {
-	bytes := []byte{}
+	var bytes []byte
 	for i := 0; i < 8; i++ {
 		bytes = append(bytes, byte(i%8))
 	}
@@ -581,7 +581,7 @@ func TestNewBits64FromBytes(t *testing.T) {
 }
 
 func TestNewBits128FromBytes(t *testing.T) {
-	bytes := []byte{}
+	var bytes []byte
 	for i := 0; i < 16; i++ {
 		bytes = append(bytes, byte(i%8))
 	}
@@ -592,7 +592,7 @@ func TestNewBits128FromBytes(t *testing.T) {
 }
 
 func TestNewBits224FromBytes(t *testing.T) {
-	bytes := []byte{}
+	var bytes []byte
 	for i := 0; i < 24; i++ {
 		bytes = append(bytes, byte(i%8))
 	}
@@ -603,7 +603,7 @@ func TestNewBits224FromBytes(t *testing.T) {
 }
 
 func TestNewBits256FromBytes(t *testing.T) {
-	bytes := []byte{}
+	var bytes []byte
 	for i := 0; i < 32; i++ {
 		bytes = append(bytes, byte(i%8))
 	}
@@ -614,7 +614,7 @@ func TestNewBits256FromBytes(t *testing.T) {
 }
 
 func TestNewBits512FromBytes(t *testing.T) {
-	bytes := []byte{}
+	var bytes []byte
 	for i := 0; i < 64; i++ {
 		bytes = append(bytes, byte(i%8))
 	}

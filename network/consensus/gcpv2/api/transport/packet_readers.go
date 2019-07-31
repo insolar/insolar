@@ -187,7 +187,7 @@ type JoinerAnnouncementReader interface {
 
 type CloudIntroductionReader interface {
 	GetLastCloudStateHash() cryptkit.DigestHolder
-	//GetAnnouncedJoinerSecret() cryptkit.DigestHolder
+	// GetAnnouncedJoinerSecret() cryptkit.DigestHolder
 	GetCloudIdentity() cryptkit.DigestHolder
 }
 

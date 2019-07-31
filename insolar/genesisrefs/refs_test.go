@@ -61,6 +61,10 @@ func TestReferences(t *testing.T) {
 			got:    ContractCostCenter,
 			expect: "1tJDyWCLK4y4JLw7dsCaD9KzEqYTgyGXN5Zp4HuteA.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8",
 		},
+		insolar.GenesisNameShard: {
+			got:    ContractPublicKeyShards[0],
+			expect: "1tJDWrAvLEyH7ij782qCRdNNvmReGi7S2TqQQM92iM.1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8",
+		},
 	}
 
 	for n, p := range pairs {

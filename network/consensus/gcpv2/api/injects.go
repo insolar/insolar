@@ -52,6 +52,9 @@ package api
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"time"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
@@ -61,22 +64,16 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
 
 type ConsensusController interface {
+	Prepare()
 	ProcessPacket(ctx context.Context, payload transport.PacketParser, from endpoints.Inbound) error
 
 	/* Ungraceful stop */
 	Abort()
-	/* Graceful exit, actual moment of leave will be indicated via Upstream */
-	// RequestLeave()
-
-	/* This node power in the active population, and pulse number of such. Without active population returns (0,0) */
-	GetActivePowerLimit() (member.Power, pulse.Number)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api.CandidateControlFeeder -o . -s _mock.go -g
@@ -95,8 +92,43 @@ type TrafficControlFeeder interface {
 	ResumeTraffic()
 }
 
+type EphemeralMode uint8
+
+const (
+	EphemeralNotAllowed EphemeralMode = iota
+	EphemeralAllowed                  // can generate ephemeral pulses
+)
+
+func (mode EphemeralMode) IsEnabled() bool {
+	return mode != EphemeralNotAllowed
+}
+
+type PulseControlFeeder interface {
+	CanStopOnHastyPulse(pn pulse.Number, expectedEndOfConsensus time.Time) bool
+}
+
+type EphemeralControlFeeder interface {
+	GetEphemeralTimings(LocalNodeConfiguration) RoundTimings
+	GetMinDuration() time.Duration
+
+	/* if true, then a new round can be triggered by a joiner candidate */
+	IsActive() bool
+	CreateEphemeralPulsePacket(census census.Operational) proofs.OriginalPulsarPacket
+
+	OnNonEphemeralPacket(ctx context.Context, parser transport.PacketParser, inbound endpoints.Inbound) error
+	CanStopOnHastyPulse(pn pulse.Number, expectedEndOfConsensus time.Time) bool
+
+	/* When a joiner gets a non-ephemeral pulse data from a member */
+	CanAcceptTimePulseToStopEphemeral(pd pulse.Data /*, sourceNode profiles.ActiveNode*/) bool
+
+	TryConvertFromEphemeral(expected census.Expected) (wasConverted bool, converted census.Expected)
+
+	EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time, expected census.Operational)
+}
+
 type ConsensusControlFeeder interface {
 	TrafficControlFeeder
+	PulseControlFeeder
 
 	GetRequiredPowerLevel() power.Request
 	OnAppliedMembershipProfile(mode member.OpMode, pw member.Power, effectiveSince pulse.Number)
@@ -115,30 +147,37 @@ type RoundStateCallback interface {
 	OnPulseDetected()
 
 	OnFullRoundStarting()
-	// TODO pulse committed
 
-	// A special case for joiner, as it doesnt request NSG with PreparePulseChange
-	CommitPulseChangeByJoiner(report UpstreamReport, pd pulse.Data, activeCensus census.Operational)
+	// A special case for a stateless, as it doesnt request NSG with PreparePulseChange
+	CommitPulseChangeByStateless(report UpstreamReport, pd pulse.Data, activeCensus census.Operational)
 
-	// /* Consensus has stopped abnormally	*/
-	// ConsensusFailed(report UpstreamReport)
+	/* Called by the longest phase worker on termination */
+	OnRoundStopped(ctx context.Context)
 }
+
+type RoundControlCode uint8
+
+const (
+	KeepRound RoundControlCode = iota
+	StartNextRound
+	//	NextRoundPrepare
+	NextRoundTerminate
+)
 
 type RoundController interface {
 	PrepareConsensusRound(upstream UpstreamController)
-	StartConsensusRound()
 	StopConsensusRound()
-	HandlePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound) (bool, error)
+	HandlePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound) (RoundControlCode, error)
 }
 
 type RoundControllerFactory interface {
-	CreateConsensusRound(chronicle ConsensusChronicles, controlFeeder ConsensusControlFeeder,
-		candidateFeeder CandidateControlFeeder, prevPulseRound RoundController) RoundController
+	CreateConsensusRound(chronicle ConsensusChronicles, controlFeeder ConsensusControlFeeder, candidateFeeder CandidateControlFeeder,
+		ephemeralFeeder EphemeralControlFeeder, prevPulseRound RoundController) RoundController
 	GetLocalConfiguration() LocalNodeConfiguration
 }
 
 type LocalNodeConfiguration interface {
-	GetConsensusTimings(nextPulseDelta uint16, isJoiner bool) RoundTimings
+	GetConsensusTimings(nextPulseDelta uint16) RoundTimings
 	GetSecretKeyStore() cryptkit.SecretKeyStore
 	GetParentContext() context.Context
 	GetNodeCountHint() int

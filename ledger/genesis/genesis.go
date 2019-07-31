@@ -247,6 +247,12 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 			),
 		)
 	}
+	for _, name := range insolar.GenesisNamePublicKeyShards {
+		states = append(states, contracts.GetShardGenesisContractState(name))
+	}
+	for _, name := range insolar.GenesisNameMigrationAddressShards {
+		states = append(states, contracts.GetShardGenesisContractState(name))
+	}
 	for _, conf := range states {
 		_, err := g.activateContract(ctx, conf)
 		if err != nil {
