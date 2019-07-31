@@ -19,6 +19,7 @@ package proc
 import (
 	"context"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -79,6 +80,7 @@ func (p *FetchJet) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to calculate executor for jet")
 	}
 	if *worker != p.dep.coordinator.Me() {
+		inslogger.FromContext(ctx).Warn("virtual node missed jet")
 		if !p.pass {
 			return ErrNotExecutor
 		}
@@ -93,10 +95,19 @@ func (p *FetchJet) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
-		go func() {
-			_, done := p.dep.sender.SendTarget(ctx, msg, *worker)
-			done()
-		}()
+		_, done := p.dep.sender.SendTarget(ctx, msg, *worker)
+		done()
+
+		// Send calculated jet to virtual node.
+		msg, err = payload.NewMessage(&payload.UpdateJet{
+			Pulse: p.pulse,
+			JetID: insolar.JetID(*jetID),
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to create jet message")
+		}
+		_, done = p.dep.sender.SendTarget(ctx, msg, p.message.Sender)
+		done()
 		return ErrNotExecutor
 	}
 
@@ -132,7 +143,7 @@ func (p *WaitHot) Dep(
 }
 
 func (p *WaitHot) Proceed(ctx context.Context) error {
-	return p.dep.waiter.Wait(ctx, insolar.ID(p.jetID), p.pulse)
+	return p.dep.waiter.Wait(ctx, p.jetID, p.pulse)
 }
 
 type CalculateID struct {

@@ -26,7 +26,7 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/internal/ledger/artifact.Manager -o ./ -s _gen_mock.go
+//go:generate minimock -i github.com/insolar/insolar/internal/ledger/artifact.Manager -o ./ -s _gen_mock.go -g
 
 // Manager implements methods required for direct ledger access.
 type Manager interface {
@@ -245,8 +245,9 @@ func (m *Scope) setRecord(ctx context.Context, rec record.Virtual) (*insolar.ID,
 	matRec := record.Material{
 		Virtual: rec,
 		JetID:   insolar.ZeroJetID,
+		ID:      *id,
 	}
-	return id, m.RecordModifier.Set(ctx, *id, matRec)
+	return id, m.RecordModifier.Set(ctx, matRec)
 }
 
 func (m *Scope) updateStateObject(

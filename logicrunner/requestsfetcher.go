@@ -25,7 +25,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/artifacts"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner.RequestsFetcher -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/logicrunner.RequestsFetcher -o ./ -s _mock.go -g
 
 type RequestsFetcher interface {
 	FetchPendings(ctx context.Context)

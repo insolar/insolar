@@ -137,7 +137,7 @@ func (Genesis) GetIsPrototype() bool {
 	return false
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/record.Request -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar/record.Request -o ./ -s _mock.go -g
 
 // Request is a common request interface.
 type Request interface {
@@ -149,6 +149,9 @@ type Request interface {
 	// ReasonRef returns a reference of the Request that caused the creating
 	// of this Request.
 	ReasonRef() insolar.Reference
+	// ReasonAffinityRef returns a reference of an object reason request is
+	// affine to.
+	ReasonAffinityRef() insolar.Reference
 	// GetCallType returns call type.
 	GetCallType() CallType
 	// IsAPIRequest tells is it API-request or not.
@@ -177,6 +180,10 @@ func (r *IncomingRequest) ReasonRef() insolar.Reference {
 	return r.Reason
 }
 
+func (r *IncomingRequest) ReasonAffinityRef() insolar.Reference {
+	return r.Caller
+}
+
 func (r *IncomingRequest) IsAPIRequest() bool {
 	return !r.APINode.IsEmpty()
 }
@@ -201,6 +208,10 @@ func (r *OutgoingRequest) AffinityRef() *insolar.Reference {
 
 func (r *OutgoingRequest) ReasonRef() insolar.Reference {
 	return r.Reason
+}
+
+func (r *OutgoingRequest) ReasonAffinityRef() insolar.Reference {
+	return r.Caller
 }
 
 func (r *OutgoingRequest) IsAPIRequest() bool {

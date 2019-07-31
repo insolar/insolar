@@ -82,9 +82,12 @@ func (h *ProxyHelper) RouteCall(ref insolar.Reference, wait bool, immutable bool
 }
 
 func (h *ProxyHelper) SaveAsChild(parentRef, classRef insolar.Reference, constructorName string,
-	argsSerialized []byte) (insolar.Reference, error) {
+	argsSerialized []byte) (objRef insolar.Reference, err error) {
 
 	if h.GetSystemError() != nil {
+		// There was a system error during execution of the contract.
+		// Immediately return this error to the calling contract - any
+		// results will not be registered on LME anyway.
 		return insolar.Reference{}, h.GetSystemError()
 	}
 
@@ -99,14 +102,25 @@ func (h *ProxyHelper) SaveAsChild(parentRef, classRef insolar.Reference, constru
 	}
 
 	if err := h.methods.SaveAsChild(req, &res); err != nil {
+		// A new system error occurred.
+		// Register it and immediately return to the calling contract.
 		h.SetSystemError(err)
 		return insolar.Reference{}, err
 	}
+
+	// return logical error to the calling contract, don't register a system error
+	if res.ConstructorError != "" {
+		return insolar.Reference{}, errors.New("[Constructor failed] " + res.ConstructorError)
+	}
+
 	if res.Reference == nil {
-		err := errors.New("Unexpected result, empty reference")
+		// this should never happen, but if it will it's better to return a readable
+		// error than dereference a nil pointer
+		err = errors.New("[ SaveAsChild ] system error - res.Reference is nil")
 		h.SetSystemError(err)
 		return insolar.Reference{}, err
 	}
+
 	return *res.Reference, nil
 }
 

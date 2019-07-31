@@ -49,7 +49,7 @@ type HotObjects struct {
 
 	dep struct {
 		drops       drop.Modifier
-		indices     object.IndexModifier
+		indices     object.MemoryIndexModifier
 		jetStorage  jet.Storage
 		jetFetcher  executor.JetFetcher
 		jetReleaser hot.JetReleaser
@@ -77,7 +77,7 @@ func NewHotObjects(
 
 func (p *HotObjects) Dep(
 	drops drop.Modifier,
-	indices object.IndexModifier,
+	indices object.MemoryIndexModifier,
 	jStore jet.Storage,
 	jFetcher executor.JetFetcher,
 	jReleaser hot.JetReleaser,
@@ -134,7 +134,7 @@ func (p *HotObjects) Proceed(ctx context.Context) error {
 			continue
 		}
 
-		err = p.dep.indices.SetIndex(
+		p.dep.indices.Set(
 			ctx,
 			p.pulse,
 			record.Index{
@@ -144,17 +144,13 @@ func (p *HotObjects) Proceed(ctx context.Context) error {
 				PendingRecords:   []insolar.ID{},
 			},
 		)
-		if err != nil {
-			logger.Error(errors.Wrapf(err, "[handleHotRecords] failed to save index - %v", idx.ObjID.DebugString()))
-			continue
-		}
 		logger.Debugf("[handleHotRecords] lifeline with id - %v saved", idx.ObjID.DebugString())
 
 		go p.notifyPending(ctx, idx.ObjID, idx.Lifeline, pendingNotifyPulse.PulseNumber)
 	}
 
 	p.dep.jetFetcher.Release(ctx, p.jetID, p.pulse)
-	err = p.dep.jetReleaser.Unlock(ctx, insolar.ID(p.jetID))
+	err = p.dep.jetReleaser.Unlock(ctx, p.pulse, p.jetID)
 	if err != nil {
 		return errors.Wrap(err, "failed to release jets")
 	}

@@ -66,7 +66,7 @@ const (
 	TypeReply = "reply"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/bus.Sender -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar/bus.Sender -o ./ -s _mock.go -g
 
 // Sender interface sends messages by watermill.
 type Sender interface {

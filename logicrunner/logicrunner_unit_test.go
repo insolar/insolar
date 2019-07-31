@@ -166,9 +166,9 @@ func prepareWatermill(suite *LogicRunnerTestSuite) (flow.Flow, message2.PubSub) 
 
 func mockSender(suite *LogicRunnerTestSuite) chan *message2.Message {
 	replyChan := make(chan *message2.Message, 1)
-	suite.sender.ReplyFunc = func(p context.Context, p1 payload.Meta, p2 *message2.Message) {
+	suite.sender.ReplyMock.Set(func(p context.Context, p1 payload.Meta, p2 *message2.Message) {
 		replyChan <- p2
-	}
+	})
 	return replyChan
 }
 
@@ -230,7 +230,7 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 	var usedReturnMode record.ReturnMode
 
 	cr := testutils.NewContractRequesterMock(suite.T())
-	cr.CallMethodFunc = func(ctx context.Context, msg insolar.Message) (insolar.Reply, error) {
+	cr.CallMethodMock.Set(func(ctx context.Context, msg insolar.Message) (insolar.Reply, error) {
 		suite.Require().Equal(insolar.TypeCallMethod, msg.Type())
 		cm := msg.(*message.CallMethod)
 		usedCaller = cm.Caller
@@ -242,7 +242,7 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 		}
 		callMethodChan <- struct{}{}
 		return result, nil
-	}
+	})
 	suite.lr.ContractRequester = cr
 
 	registerResultChan := make(chan struct{})
@@ -339,18 +339,13 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	protoRef := testutils.RandomRef()
 	codeRef := testutils.RandomRef()
 
-	meRef := testutils.RandomRef()
 	notMeRef := testutils.RandomRef()
-	suite.jc.MeMock.Return(meRef)
 
 	pulseNum := insolar.PulseNumber(insolar.FirstPulseNumber)
 
-	suite.jc.IsAuthorizedFunc = func(
-		ctx context.Context, role insolar.DynamicRole, id insolar.ID, pn insolar.PulseNumber, obj insolar.Reference,
-	) (bool, error) {
-		return true, nil
-	}
+	suite.jc.IsMeAuthorizedNowMock.Return(true, nil)
 
+	meRef := testutils.RandomRef()
 	nodeMock := network.NewNetworkNodeMock(suite.T())
 	nodeMock.IDMock.Return(meRef)
 
@@ -382,13 +377,13 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	wg := sync.WaitGroup{}
 	wg.Add(num)
 
-	suite.sender.ReplyFunc = func(p context.Context, p1 payload.Meta, p2 *message2.Message) {
+	suite.sender.ReplyMock.Set(func(p context.Context, p1 payload.Meta, p2 *message2.Message) {
 		wg.Done()
-	}
+	})
 
-	suite.ps.LatestFunc = func(p context.Context) (r insolar.Pulse, r1 error) {
+	suite.ps.LatestMock.Set(func(p context.Context) (r insolar.Pulse, r1 error) {
 		return insolar.Pulse{PulseNumber: pulseNum}, nil
-	}
+	})
 	for i := 0; i < num; i++ {
 		go func(i int) {
 			msg := &message.CallMethod{
@@ -435,9 +430,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 	objectRef := testutils.RandomRef()
 	protoRef := testutils.RandomRef()
 
-	meRef := testutils.RandomRef()
 	notMeRef := testutils.RandomRef()
-	suite.jc.MeMock.Return(meRef)
 
 	// If you think you are smart enough to make this test 'more effective'
 	// by using atomic variables or goroutines or anything else, you are wrong.
@@ -447,11 +440,11 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 	var pn insolar.PulseNumber = insolar.FirstPulseNumber
 	var lck sync.Mutex
 
-	suite.ps.LatestFunc = func(ctx context.Context) (insolar.Pulse, error) {
+	suite.ps.LatestMock.Set(func(ctx context.Context) (insolar.Pulse, error) {
 		lck.Lock()
 		defer lck.Unlock()
 		return insolar.Pulse{PulseNumber: pn}, nil
-	}
+	})
 
 	type whenType int
 	const (
@@ -521,12 +514,12 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				return
 			}
 
-			suite.jc.IsAuthorizedFunc = func(
-				ctx context.Context, role insolar.DynamicRole, id insolar.ID, pnArg insolar.PulseNumber, obj insolar.Reference,
+			suite.jc.IsMeAuthorizedNowMock.Set(func(
+				ctx context.Context, role insolar.DynamicRole, id insolar.ID,
 			) (bool, error) {
-				if pnArg == insolar.FirstPulseNumber+1 {
-					return false, nil
-				}
+				// if pnArg == insolar.FirstPulseNumber+1 {
+				// 	return false, nil
+				// }
 
 				if test.when == whenIsAuthorized {
 					// Please note that changePulse calls LogicRunner.ChangePulse which calls IsAuthorized.
@@ -538,10 +531,10 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				defer lck.Unlock()
 
 				return pn == insolar.FirstPulseNumber, nil
-			}
+			})
 
 			if test.when > whenIsAuthorized {
-				suite.am.RegisterIncomingRequestFunc = func(ctx context.Context, req *record.IncomingRequest) (*insolar.ID, error) {
+				suite.am.RegisterIncomingRequestMock.Set(func(ctx context.Context, req *record.IncomingRequest) (*insolar.ID, error) {
 					if test.when == whenRegisterRequest {
 						changePulse()
 						// Due to specific implementation of HandleCall.handleActual
@@ -553,11 +546,11 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 
 					reqId := testutils.RandomID()
 					return &reqId, nil
-				}
+				})
 			}
 
 			if test.when > whenRegisterRequest {
-				suite.am.HasPendingsFunc = func(ctx context.Context, r insolar.Reference) (bool, error) {
+				suite.am.HasPendingsMock.Set(func(ctx context.Context, r insolar.Reference) (bool, error) {
 					if test.when == whenHasPendings {
 						changePulse()
 
@@ -568,11 +561,11 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 					}
 
 					return false, nil
-				}
+				})
 			}
 
 			if test.when > whenHasPendings {
-				suite.re.ExecuteAndSaveFunc = func(
+				suite.re.ExecuteAndSaveMock.Set(func(
 					ctx context.Context, transcript *Transcript,
 				) (insolar.Reply, error) {
 					if test.when == whenCallMethod {
@@ -580,7 +573,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 					}
 
 					return &reply.CallMethod{Result: []byte{3, 2, 1}}, nil
-				}
+				})
 
 				suite.re.SendReplyMock.Return()
 			}
@@ -589,7 +582,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			wg.Add(len(test.messagesExpected))
 
 			if len(test.messagesExpected) > 0 {
-				suite.mb.SendFunc = func(
+				suite.mb.SendMock.Set(func(
 					ctx context.Context, msg insolar.Message, opts *insolar.MessageSendOptions,
 				) (insolar.Reply, error) {
 					// AdditionalCallFromPreviousExecutor is not deterministic
@@ -613,7 +606,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 					default:
 						panic("no idea how to handle " + msg.Type().String())
 					}
-				}
+				})
 			}
 
 			msg := &message.CallMethod{
@@ -699,27 +692,14 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 
 				lr.initHandlers()
 
-				lr.JetCoordinator = jet.NewCoordinatorMock(mc).
-					MeMock.Return(gen.Reference()).
-					IsAuthorizedMock.Return(true, nil)
-
 				lr.MessageBus = testutils.NewMessageBusMock(mc).
 					SendMock.Return(&reply.OK{}, nil)
 
-				broker := NewExecutionBrokerIMock(mc).
-					OnPulseMock.Return(
-					false,
-					[]insolar.Message{&message.ExecutorResults{}},
-				)
-				stateMap := map[insolar.Reference]*ObjectState{
-					gen.Reference(): {
-						ExecutionBroker: broker,
-					},
-				}
 				lr.StateStorage = NewStateStorageMock(mc).
 					LockMock.Return().
 					UnlockMock.Return().
-					StateMapMock.Return(&stateMap)
+					IsEmptyMock.Return(false).
+					OnPulseMock.Return([]insolar.Message{&message.ExecutorResults{}})
 
 				return lr
 			},
@@ -732,62 +712,11 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 
 				lr.initHandlers()
 
-				lr.JetCoordinator = jet.NewCoordinatorMock(mc).
-					MeMock.Return(gen.Reference()).
-					IsAuthorizedMock.Return(true, nil)
-
-				stateMap := map[insolar.Reference]*ObjectState{
-					gen.Reference(): {
-						ExecutionBroker: NewExecutionBrokerIMock(mc).
-							OnPulseMock.Return(true, []insolar.Message{}),
-					},
-				}
 				lr.StateStorage = NewStateStorageMock(mc).
 					LockMock.Return().
 					UnlockMock.Return().
-					StateMapMock.Return(&stateMap).
-					DeleteObjectStateMock.Return()
-
-				return lr
-			},
-		},
-		{
-			name: "one empty object state record",
-			mocks: func(ctx context.Context, mc minimock.Tester) *LogicRunner {
-				lr, err := NewLogicRunner(&configuration.LogicRunner{}, nil, nil)
-				require.NoError(t, err)
-
-				lr.initHandlers()
-
-				lr.JetCoordinator = jet.NewCoordinatorMock(mc).
-					MeMock.Return(gen.Reference()).
-					IsAuthorizedMock.Return(true, nil)
-
-				stateMap := map[insolar.Reference]*ObjectState{
-					gen.Reference(): {},
-				}
-				lr.StateStorage = NewStateStorageMock(mc).
-					LockMock.Return().
-					UnlockMock.Return().
-					StateMapMock.Return(&stateMap).
-					DeleteObjectStateMock.Return()
-
-				return lr
-			},
-		},
-		{
-			name: "empty state map",
-			mocks: func(ctx context.Context, mc minimock.Tester) *LogicRunner {
-				lr, err := NewLogicRunner(&configuration.LogicRunner{}, nil, nil)
-				require.NoError(t, err)
-
-				lr.initHandlers()
-
-				stateMap := map[insolar.Reference]*ObjectState{}
-				lr.StateStorage = NewStateStorageMock(mc).
-					LockMock.Return().
-					UnlockMock.Return().
-					StateMapMock.Return(&stateMap)
+					IsEmptyMock.Return(true).
+					OnPulseMock.Return([]insolar.Message{})
 
 				return lr
 			},
