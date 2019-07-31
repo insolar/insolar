@@ -18,6 +18,8 @@ package object
 
 import (
 	"github.com/pkg/errors"
+
+	insolarErrors "github.com/insolar/insolar/utils/errors"
 )
 
 var (
@@ -27,5 +29,5 @@ var (
 	ErrOverride = errors.New("record override is forbidden")
 
 	// ErrIndexNotFound is returned when an index not found.
-	ErrIndexNotFound = errors.New("index not found")
+	ErrIndexNotFound = insolarErrors.NewNonRetryable("index not found")
 )

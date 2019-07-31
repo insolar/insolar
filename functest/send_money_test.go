@@ -23,8 +23,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/testutils"
 )
 
 const times = 5
@@ -69,7 +70,7 @@ func TestTransferMoneyFromNotExist(t *testing.T) {
 	amount := "10"
 
 	_, err := signedRequest(firstMember, "member.transfer", map[string]interface{}{"amount": amount, "toMemberReference": secondMember.ref})
-	require.NotNil(t, err)
+	require.Error(t, err)
 	require.Contains(t, err.Error(), "index not found")
 
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
@@ -83,7 +84,7 @@ func TestTransferMoneyToNotExist(t *testing.T) {
 	amount := "10"
 
 	_, err := signedRequest(firstMember, "member.transfer", map[string]interface{}{"amount": amount, "toMemberReference": testutils.RandomRef().String()})
-	require.NotNil(t, err)
+	require.Error(t, err)
 	require.Contains(t, err.Error(), "index not found")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)

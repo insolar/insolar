@@ -22,9 +22,9 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/insolar/insolar/testutils"
-
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/testutils"
 )
 
 func TestGetBalance(t *testing.T) {

@@ -18,7 +18,6 @@ package logicrunner
 
 import (
 	"context"
-	"strings"
 
 	"github.com/pkg/errors"
 
@@ -30,6 +29,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
+	errors2 "github.com/insolar/insolar/utils/errors"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.ProxyImplementation -o ./ -s _mock.go -g
@@ -193,8 +193,7 @@ func (m *executionProxyImplementation) RouteCall(
 		rep.Result = res.(*reply.CallMethod).Result
 	}
 	current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	if err != nil && !strings.Contains(err.Error(), "index not found") {
+	if err != nil && !errors2.IsNonRetryable(err) {
 		return err
 	}
 
@@ -202,8 +201,7 @@ func (m *executionProxyImplementation) RouteCall(
 	outgoingReqRef := insolar.NewReference(*outgoingReqID)
 	reqResult := newRequestResult(rep.Result, req.Callee)
 	registerResultErr := m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	if err != nil && strings.Contains(err.Error(), "index not found") {
+	if err != nil && errors2.IsNonRetryable(err) {
 		if registerResultErr != nil {
 			inslogger.FromContext(ctx).Errorf("Failed to register result for request %s, error: %s", outgoingReqRef.String(), registerResultErr.Error())
 		}
