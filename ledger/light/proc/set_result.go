@@ -167,9 +167,10 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 
 		// Create result record
 		Result := record.Material{
-			Virtual: record.Wrap(&p.result),
-			ID:      resultID,
-			JetID:   p.jetID,
+			Virtual:  record.Wrap(&p.result),
+			ID:       resultID,
+			ObjectID: objectID,
+			JetID:    p.jetID,
 		}
 
 		// Create filament record.
@@ -182,9 +183,10 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 			hash := record.HashVirtual(p.dep.pcs.ReferenceHasher(), virtual)
 			id := *insolar.NewID(resultID.Pulse(), hash)
 			material := record.Material{
-				Virtual: virtual,
-				ID:      id,
-				JetID:   p.jetID,
+				Virtual:  virtual,
+				ID:       id,
+				ObjectID: objectID,
+				JetID:    p.jetID,
 			}
 			Filament = material
 		}
@@ -197,9 +199,10 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 				hash := record.HashVirtual(p.dep.pcs.ReferenceHasher(), virtual)
 				id := *insolar.NewID(resultID.Pulse(), hash)
 				material := record.Material{
-					Virtual: virtual,
-					ID:      id,
-					JetID:   p.jetID,
+					Virtual:  virtual,
+					ID:       id,
+					ObjectID: objectID,
+					JetID:    p.jetID,
 				}
 
 				toSave = append(toSave, material)
