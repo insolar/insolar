@@ -108,6 +108,7 @@ func TestJoinerNodeConnect(t *testing.T) {
 
 	s.AssertActiveNodesCountDelta(1)
 	//s.AssertWorkingNodesCountDelta(1)
+
 	//
 	//s.waitForConsensus(1)
 	//

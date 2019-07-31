@@ -128,7 +128,7 @@ func testBootstrap(t *testing.T) *bootstrapSuite {
 	return s
 }
 
-func TestExample(t *testing.T) {
+func TestBootstrap(t *testing.T) {
 	//t.Skip("FIXME")
 	s := testBootstrap(t)
 	defer s.TearDownTest()

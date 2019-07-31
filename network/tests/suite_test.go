@@ -313,7 +313,12 @@ func (s *consensusSuite) TearDownTest() {
 func (s *consensusSuite) waitForConsensus(consensusCount int) {
 	for i := 0; i < consensusCount; i++ {
 		for _, n := range s.fixture().bootstrapNodes {
-			<-n.consensusResult
+			select {
+			case <-n.consensusResult:
+				continue
+			case <-time.After(time.Second * 10):
+				panic("waitForConsensus timeout")
+			}
 		}
 
 		for _, n := range s.fixture().networkNodes {
