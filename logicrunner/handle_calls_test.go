@@ -43,10 +43,10 @@ func TestHandleCall_CheckExecutionLoop(t *testing.T) {
 				h := &HandleCall{
 					dep: &Dependencies{
 						StateStorage: NewStateStorageMock(t).
-							GetExecutionStateMock.Expect(obj).
+							GetExecutionArchiveMock.Expect(obj).
 							Return(
-								NewExecutionBrokerIMock(t).
-									CheckExecutionLoopMock.Return(true),
+								NewExecutionArchiveMock(t).
+									FindRequestLoopMock.Return(true),
 							),
 					},
 				}
@@ -62,10 +62,10 @@ func TestHandleCall_CheckExecutionLoop(t *testing.T) {
 				h := &HandleCall{
 					dep: &Dependencies{
 						StateStorage: NewStateStorageMock(t).
-							GetExecutionStateMock.Expect(obj).
+							GetExecutionArchiveMock.Expect(obj).
 							Return(
-								NewExecutionBrokerIMock(t).
-									CheckExecutionLoopMock.Return(false),
+								NewExecutionArchiveMock(t).
+									FindRequestLoopMock.Return(false),
 							),
 					},
 				}
@@ -81,8 +81,8 @@ func TestHandleCall_CheckExecutionLoop(t *testing.T) {
 				h := &HandleCall{
 					dep: &Dependencies{
 						StateStorage: NewStateStorageMock(t).
-							GetExecutionStateMock.Expect(obj).
-							Return( nil ),
+							GetExecutionArchiveMock.Expect(obj).
+							Return(nil),
 					},
 				}
 				req := &record.IncomingRequest{
@@ -125,7 +125,6 @@ func TestHandleCall_CheckExecutionLoop(t *testing.T) {
 				return h, req
 			},
 		},
-
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
