@@ -138,15 +138,17 @@ func (h *HandleCall) handleActual(
 	}
 
 	procRegisterRequest := NewRegisterIncomingRequest(request, h.dep)
-
 	if err := f.Procedure(ctx, procRegisterRequest, true); err != nil {
 		if err == flow.ErrCancelled {
+			inslogger.FromContext(ctx).Info("pulse change during registration, asking caller for retry")
 			// Requests need to be deduplicated. For now in case of ErrCancelled we may have 2 registered requests
 			return nil, err // message bus will retry on the calling side in ContractRequester
 		}
 		return nil, errors.Wrap(err, "[ HandleCall.handleActual ] can't create request")
 	}
-	requestRef := procRegisterRequest.getResult()
+
+	reqInfo := procRegisterRequest.getResult()
+	requestRef := insolar.NewReference(reqInfo.RequestID)
 
 	ctx, logger := inslogger.WithField(ctx, "request", requestRef.String())
 	logger.Debug("registered request")

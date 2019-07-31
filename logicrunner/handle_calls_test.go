@@ -159,15 +159,15 @@ func TestHandleCall_Present(t *testing.T) {
 		mc := minimock.NewController(t)
 		defer mc.Wait(time.Second)
 
-		fm := flow.NewFlowMock(mc)
+		objRef := gen.Reference()
 
+		fm := flow.NewFlowMock(mc)
 		fm.ProcedureMock.Set(func(ctx context.Context, proc flow.Procedure, cancelable bool) (err error) {
 			switch p := proc.(type) {
 			case *CheckOurRole:
 				return nil
 			case *RegisterIncomingRequest:
-				requestID := gen.Reference()
-				p.result <- &requestID
+				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.Record()}
 				return nil
 			case *AddFreshRequest:
 				return nil
@@ -177,7 +177,6 @@ func TestHandleCall_Present(t *testing.T) {
 			return nil
 		})
 
-		objRef := gen.Reference()
 		handler := HandleCall{
 			dep: &Dependencies{
 				Publisher: nil,
@@ -217,15 +216,15 @@ func TestHandleCall_Present(t *testing.T) {
 		mc := minimock.NewController(t)
 		defer mc.Wait(time.Second)
 
-		fm := flow.NewFlowMock(mc)
+		objRef := gen.Reference()
 
+		fm := flow.NewFlowMock(mc)
 		fm.ProcedureMock.Set(func(ctx context.Context, proc flow.Procedure, cancelable bool) (err error) {
 			switch p := proc.(type) {
 			case *CheckOurRole:
 				return nil
 			case *RegisterIncomingRequest:
-				requestID := gen.Reference()
-				p.result <- &requestID
+				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.Record()}
 				return nil
 			case *AddFreshRequest:
 				return nil
@@ -235,7 +234,6 @@ func TestHandleCall_Present(t *testing.T) {
 			return nil
 		})
 
-		objRef := gen.Reference()
 		handler := HandleCall{
 			dep: &Dependencies{
 				Publisher: nil,
@@ -441,15 +439,15 @@ func TestHandleCall_Present(t *testing.T) {
 		mc := minimock.NewController(t)
 		defer mc.Wait(time.Second)
 
-		fm := flow.NewFlowMock(mc)
+		objRef := gen.Reference()
 
+		fm := flow.NewFlowMock(mc)
 		fm.ProcedureMock.Set(func(ctx context.Context, proc flow.Procedure, cancelable bool) (err error) {
 			switch p := proc.(type) {
 			case *CheckOurRole:
 				return nil
 			case *RegisterIncomingRequest:
-				requestID := gen.Reference()
-				p.result <- &requestID
+				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.Record()}
 				return nil
 			case *AddFreshRequest:
 				return nil
@@ -459,7 +457,6 @@ func TestHandleCall_Present(t *testing.T) {
 			return nil
 		})
 
-		objRef := gen.Reference()
 		handler := HandleCall{
 			dep: &Dependencies{
 				Publisher: nil,
