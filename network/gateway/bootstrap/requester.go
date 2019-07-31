@@ -181,8 +181,7 @@ func (ac *requester) Bootstrap(ctx context.Context, permit *packet.Permit, candi
 	respData := resp.GetResponse().GetBootstrap()
 	switch respData.Code {
 	case packet.UpdateShortID:
-	// make claim with new  shortID
-	// bootstrap again
+		return respData, errors.New("Bootstrap got UpdateShortID")
 	case packet.UpdateSchedule:
 		//ac.UpdateSchedule(ctx, permit, p.PulseNumber)
 		//panic("call bootstrap again")

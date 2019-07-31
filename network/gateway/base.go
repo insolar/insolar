@@ -104,7 +104,7 @@ type Base struct {
 
 // NewGateway creates new gateway on top of existing
 func (g *Base) NewGateway(ctx context.Context, state insolar.NetworkState) network.Gateway {
-	inslogger.FromContext(ctx).Infof(" ======== =====   NewGateway %s", state.String())
+	inslogger.FromContext(ctx).Infof("NewGateway %s", state.String())
 	switch state {
 	case insolar.NoNetworkState:
 		g.Self = newNoNetwork(g)
@@ -112,8 +112,6 @@ func (g *Base) NewGateway(ctx context.Context, state insolar.NetworkState) netwo
 		g.Self = newComplete(g)
 	case insolar.JoinerBootstrap:
 		g.Self = newJoinerBootstrap(g)
-	case insolar.DiscoveryBootstrap:
-		g.Self = newDiscoveryBootstrap(g)
 	case insolar.WaitConsensus:
 		g.Self = newWaitConsensus(g)
 	case insolar.WaitMinRoles:
@@ -139,7 +137,6 @@ func (g *Base) Init(ctx context.Context) error {
 }
 
 func (g *Base) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, originalPacket network.ReceivedPacket) {
-	//inslogger.FromContext(ctx).Infof("Skip pulse from pulsar: %d", pu.PulseNumber)
 	g.ConsensusPulseHandler.HandlePulse(ctx, pu, originalPacket)
 }
 
@@ -205,23 +202,16 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 	}
 
 	data := request.GetRequest().GetBootstrap()
-	//candidate := data.Candidate
 
 	if network.CheckShortIDCollision(g.NodeKeeper.GetAccessor().GetActiveNodes(), insolar.ShortNodeID(data.CandidateProfile.ShortID)) {
 		return g.HostNetwork.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.UpdateShortID}), nil
 	}
 
-	// shortID := network.GenerateUniqueShortID(g.NodeKeeper.GetAccessor().GetActiveNodes(), data.JoinClaim.GetNodeID())
-	// } else {
-	// 	shortID = data.JoinClaim.ShortNodeID
-	// }
-
-	// data.LastNodePulse
-
 	lastPulse, err := g.PulseAccessor.Latest(ctx)
 	if err != nil {
 		lastPulse = *insolar.GenesisPulse
 	}
+
 	//if lastPulse.PulseNumber > data.Pulse.PulseNumber {
 	//	return g.HostNetwork.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.UpdateSchedule}), nil
 	//}
@@ -232,39 +222,20 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 		return g.HostNetwork.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.Reject}), nil
 	}
 
-	//TODO: how to ignore claim if node already bootstrap to other??
-
-	// TODO: check JoinClaim is from Discovery node
 	type candidate struct {
 		profiles.StaticProfile
 		profiles.StaticProfileExtension
 	}
 
 	profile := adapters.Candidate(data.CandidateProfile).StaticProfile(g.KeyProcessor)
-
 	g.ConsensusController.AddJoinCandidate(candidate{profile, profile.GetExtension()})
 	inslogger.FromContext(ctx).Infof("=== AddJoinCandidate id = %d, address = %s ", data.CandidateProfile.ShortID, data.CandidateProfile.Address)
 
-	//go func() {
-	//	// TODO:
-	//	//pulseStartTime := time.Unix(0, data.Pulse.PulseTimestamp)
-	//
-	//	//pulseStartTime := time.Now()
-	//	//g.PulseAppender.Append(ctx, lastPulse)
-	//	//if err = g.PhaseManager.OnPulseFromPulsar(ctx, &lastPulse, pulseStartTime); err != nil {
-	//	//	inslogger.FromContext(ctx).Error("Failed to pass consensus: ", err.Error())
-	//	//}
-	//	//if err = g.NodeKeeper.MoveSyncToActive(ctx, lastPulse.PulseNumber); err != nil {
-	//	//	inslogger.FromContext(ctx).Error("Failed to MoveSyncToActive: ", err.Error())
-	//	//}
-	//}()
-
-	// networkSize := uint32(len(g.NodeKeeper.GetAccessor().GetActiveNodes()))
 	return g.HostNetwork.BuildResponse(ctx, request,
 		&packet.BootstrapResponse{
 			Code:  packet.Accepted,
 			Pulse: *pulse.ToProto(&lastPulse),
-			ETA:   uint32(lastPulse.PulseNumber) + 50, // TODO: calculate ETA
+			ETA:   uint32(lastPulse.PulseNumber) + 10, // TODO: move ETA to config
 		}), nil
 }
 
@@ -303,8 +274,7 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.R
 		}
 
 		inslogger.FromContext(ctx).Warn(err.Error())
-		// FIXME
-		//panic(err.Error())
+		// FIXME integr tests certs signs
 		//return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{Code: packet.WrongMandate, Error: err.Error()}), nil
 	}
 
@@ -349,7 +319,6 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.R
 		Permit:         permit,
 		DiscoveryCount: uint32(discoveryCount),
 		Pulse:          pulse.ToProto(&p),
-		//NetworkState:   uint32(g.Gatewayer.Gateway().GetState()),
 	}), nil
 }
 
