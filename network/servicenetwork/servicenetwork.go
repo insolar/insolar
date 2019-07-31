@@ -120,12 +120,9 @@ type ServiceNetwork struct {
 	ConsensusMode consensus.Mode
 }
 
-//var PULSETIMEOUT time.Duration
-
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manager) (*ServiceNetwork, error) {
 	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, ConsensusMode: consensus.Joiner}
-	//PULSETIMEOUT = time.Millisecond * time.Duration(conf.Pulsar.PulseTime)
 	return serviceNetwork, nil
 }
 
@@ -314,22 +311,6 @@ func (n *ServiceNetwork) SetOperableFunc(f insolar.NetworkOperableCallback) {
 
 // HandlePulse process pulse from PulseController
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse insolar.Pulse, originalPacket network.ReceivedPacket) {
-
-	//pulseTime := time.Unix(0, newPulse.PulseTimestamp)
-	//logger := inslogger.FromContext(ctx)
-	//
-	//n.lock.Lock()
-	//defer n.lock.Unlock()
-	//done := make(chan struct{})
-	//defer close(done)
-	//go func() {
-	//	select {
-	//	case <-time.After(n.pulseTimeout):
-	//		log.Error("Node stopped due to long pulse processing")
-	//	case <-done:
-	//	}
-	//}()
-
 	n.Gatewayer.Gateway().OnPulseFromPulsar(ctx, pulse, originalPacket)
 }
 

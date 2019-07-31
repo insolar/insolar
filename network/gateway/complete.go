@@ -59,6 +59,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
+	"github.com/insolar/insolar/network/rules"
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/certificate"
@@ -74,7 +75,9 @@ import (
 )
 
 func newComplete(b *Base) *Complete {
-	return &Complete{Base: b}
+	return &Complete{
+		Base: b,
+	}
 }
 
 type Complete struct {
@@ -202,8 +205,26 @@ func (g *Complete) EphemeralMode(nodes []insolar.NetworkNode) bool {
 	return false
 }
 
+func (g *Complete) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
+	logger := inslogger.FromContext(ctx)
+
+	if ok, _ := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), nodes); !ok {
+		logger.Fatal("CheckMajorityRule() failed")
+	}
+
+	if !rules.CheckMinRole(g.CertificateManager.GetCertificate(), nodes) {
+		logger.Fatal("CheckMinRole() failed")
+	}
+
+	g.Base.UpdateState(ctx, pulseNumber, nodes, cloudStateHash)
+}
+
 func (g *Complete) OnPulseFromConsensus(ctx context.Context, pulse insolar.Pulse) {
 	g.Base.OnPulseFromConsensus(ctx, pulse)
+
+	done := make(chan struct{})
+	defer close(done)
+	pulseProcessingWatchdog(ctx, pulse, done)
 
 	logger := inslogger.FromContext(ctx)
 
@@ -219,4 +240,16 @@ func (g *Complete) OnPulseFromConsensus(ctx context.Context, pulse insolar.Pulse
 		logger.Fatalf("Failed to set new pulse: %s", err.Error())
 	}
 	logger.Infof("Set new current pulse number: %d", pulse.PulseNumber)
+}
+
+func pulseProcessingWatchdog(ctx context.Context, pulse insolar.Pulse, done chan struct{}) {
+	logger := inslogger.FromContext(ctx)
+
+	go func() {
+		select {
+		case <-time.After(time.Second * time.Duration(pulse.NextPulseNumber-pulse.PulseNumber)):
+			logger.Error("Node stopped due to long pulse processing")
+		case <-done:
+		}
+	}()
 }
