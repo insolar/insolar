@@ -409,7 +409,7 @@ func (m *Member) memberMigrationCreate(key string) (*MigrationCreateResponse, er
 	}
 
 	if err = rootDomain.AddNewMemberToMaps(key, burnAddress, created.Reference); err != nil {
-		if strings.Contains(err.Error(), "member for this burnAddress already exist") {
+		if strings.Contains(err.Error(), "can't set reference because this key already exists") {
 			return nil, fmt.Errorf("failed to create member: %s", err.Error())
 		} else {
 			return rollBack(err)
