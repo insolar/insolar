@@ -18,6 +18,7 @@ package logicrunner
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -160,6 +161,26 @@ func (h *HandleCall) handleActual(
 	if objRef == nil {
 		return nil, errors.New("can't get object reference")
 	}
+	if !objRef.Record().Equal(reqInfo.ObjectID) {
+		return nil, errors.New("object id we calculated doesn't match ledger")
+	}
+
+	registeredRequestReply := &reply.RegisterRequest{Request: *requestRef}
+
+	if len(reqInfo.Request) != 0 {
+		logger.Debug("duplicated request")
+	}
+
+	if len(reqInfo.Result) != 0 {
+		logger.Debug("request has result already")
+		go func() {
+			err := h.sendRequestResult(ctx, *objRef, *requestRef, request, *reqInfo)
+			if err != nil {
+				logger.Error("couldn't send request result: ", err.Error())
+			}
+		}()
+		return registeredRequestReply, nil
+	}
 
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
 	defer done()
@@ -181,9 +202,7 @@ func (h *HandleCall) handleActual(
 		h.sendToNextExecutor(ctx, *objRef, *requestRef, request, pendingState)
 	}
 
-	return &reply.RegisterRequest{
-		Request: *requestRef,
-	}, nil
+	return registeredRequestReply, nil
 }
 
 func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
@@ -207,5 +226,33 @@ func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
 		return sendErrorMessage(ctx, h.dep.Sender, h.Message, err)
 	}
 	go h.dep.Sender.Reply(ctx, h.Message, bus.ReplyAsMessage(ctx, rep))
+	return nil
+}
+
+func (h *HandleCall) sendRequestResult(
+	ctx context.Context,
+	objRef insolar.Reference,
+	reqRef insolar.Reference,
+	request record.IncomingRequest,
+	reqInfo payload.RequestInfo,
+) error {
+	logger := inslogger.FromContext(ctx)
+	logger.Debug("sending earlier")
+
+	rec := record.Material{}
+	err := rec.Unmarshal(reqInfo.Result)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal record")
+	}
+	virtual := record.Unwrap(&rec.Virtual)
+	resultRecord, ok := virtual.(*record.Result)
+	if !ok {
+		return fmt.Errorf("unexpected record %T", virtual)
+	}
+
+	repl := &reply.CallMethod{Result: resultRecord.Payload, Object: &objRef}
+	tr := NewTranscript(ctx, reqRef, request)
+	h.dep.RequestsExecutor.SendReply(ctx, tr, repl, nil)
+
 	return nil
 }
