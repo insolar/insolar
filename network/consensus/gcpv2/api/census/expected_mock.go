@@ -19,12 +19,6 @@ import (
 type ExpectedMock struct {
 	t minimock.Tester
 
-	funcConvertEphemeralAndMakeExpected          func(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) (e1 Expected)
-	inspectFuncConvertEphemeralAndMakeExpected   func(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash)
-	afterConvertEphemeralAndMakeExpectedCounter  uint64
-	beforeConvertEphemeralAndMakeExpectedCounter uint64
-	ConvertEphemeralAndMakeExpectedMock          mExpectedMockConvertEphemeralAndMakeExpected
-
 	funcCreateBuilder          func(ctx context.Context, pn pulse.Number) (b1 Builder)
 	inspectFuncCreateBuilder   func(ctx context.Context, pn pulse.Number)
 	afterCreateBuilderCounter  uint64
@@ -120,6 +114,12 @@ type ExpectedMock struct {
 	afterMakeActiveCounter  uint64
 	beforeMakeActiveCounter uint64
 	MakeActiveMock          mExpectedMockMakeActive
+
+	funcRebuild          func(pn pulse.Number) (b1 Built)
+	inspectFuncRebuild   func(pn pulse.Number)
+	afterRebuildCounter  uint64
+	beforeRebuildCounter uint64
+	RebuildMock          mExpectedMockRebuild
 }
 
 // NewExpectedMock returns a mock for Expected
@@ -128,9 +128,6 @@ func NewExpectedMock(t minimock.Tester) *ExpectedMock {
 	if controller, ok := t.(minimock.MockController); ok {
 		controller.RegisterMocker(m)
 	}
-
-	m.ConvertEphemeralAndMakeExpectedMock = mExpectedMockConvertEphemeralAndMakeExpected{mock: m}
-	m.ConvertEphemeralAndMakeExpectedMock.callArgs = []*ExpectedMockConvertEphemeralAndMakeExpectedParams{}
 
 	m.CreateBuilderMock = mExpectedMockCreateBuilder{mock: m}
 	m.CreateBuilderMock.callArgs = []*ExpectedMockCreateBuilderParams{}
@@ -167,224 +164,10 @@ func NewExpectedMock(t minimock.Tester) *ExpectedMock {
 	m.MakeActiveMock = mExpectedMockMakeActive{mock: m}
 	m.MakeActiveMock.callArgs = []*ExpectedMockMakeActiveParams{}
 
+	m.RebuildMock = mExpectedMockRebuild{mock: m}
+	m.RebuildMock.callArgs = []*ExpectedMockRebuildParams{}
+
 	return m
-}
-
-type mExpectedMockConvertEphemeralAndMakeExpected struct {
-	mock               *ExpectedMock
-	defaultExpectation *ExpectedMockConvertEphemeralAndMakeExpectedExpectation
-	expectations       []*ExpectedMockConvertEphemeralAndMakeExpectedExpectation
-
-	callArgs []*ExpectedMockConvertEphemeralAndMakeExpectedParams
-	mutex    sync.RWMutex
-}
-
-// ExpectedMockConvertEphemeralAndMakeExpectedExpectation specifies expectation struct of the Expected.ConvertEphemeralAndMakeExpected
-type ExpectedMockConvertEphemeralAndMakeExpectedExpectation struct {
-	mock    *ExpectedMock
-	params  *ExpectedMockConvertEphemeralAndMakeExpectedParams
-	results *ExpectedMockConvertEphemeralAndMakeExpectedResults
-	Counter uint64
-}
-
-// ExpectedMockConvertEphemeralAndMakeExpectedParams contains parameters of the Expected.ConvertEphemeralAndMakeExpected
-type ExpectedMockConvertEphemeralAndMakeExpectedParams struct {
-	pn  pulse.Number
-	csh proofs.CloudStateHash
-	gsh proofs.GlobulaStateHash
-}
-
-// ExpectedMockConvertEphemeralAndMakeExpectedResults contains results of the Expected.ConvertEphemeralAndMakeExpected
-type ExpectedMockConvertEphemeralAndMakeExpectedResults struct {
-	e1 Expected
-}
-
-// Expect sets up expected params for Expected.ConvertEphemeralAndMakeExpected
-func (mmConvertEphemeralAndMakeExpected *mExpectedMockConvertEphemeralAndMakeExpected) Expect(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) *mExpectedMockConvertEphemeralAndMakeExpected {
-	if mmConvertEphemeralAndMakeExpected.mock.funcConvertEphemeralAndMakeExpected != nil {
-		mmConvertEphemeralAndMakeExpected.mock.t.Fatalf("ExpectedMock.ConvertEphemeralAndMakeExpected mock is already set by Set")
-	}
-
-	if mmConvertEphemeralAndMakeExpected.defaultExpectation == nil {
-		mmConvertEphemeralAndMakeExpected.defaultExpectation = &ExpectedMockConvertEphemeralAndMakeExpectedExpectation{}
-	}
-
-	mmConvertEphemeralAndMakeExpected.defaultExpectation.params = &ExpectedMockConvertEphemeralAndMakeExpectedParams{pn, csh, gsh}
-	for _, e := range mmConvertEphemeralAndMakeExpected.expectations {
-		if minimock.Equal(e.params, mmConvertEphemeralAndMakeExpected.defaultExpectation.params) {
-			mmConvertEphemeralAndMakeExpected.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmConvertEphemeralAndMakeExpected.defaultExpectation.params)
-		}
-	}
-
-	return mmConvertEphemeralAndMakeExpected
-}
-
-// Inspect accepts an inspector function that has same arguments as the Expected.ConvertEphemeralAndMakeExpected
-func (mmConvertEphemeralAndMakeExpected *mExpectedMockConvertEphemeralAndMakeExpected) Inspect(f func(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash)) *mExpectedMockConvertEphemeralAndMakeExpected {
-	if mmConvertEphemeralAndMakeExpected.mock.inspectFuncConvertEphemeralAndMakeExpected != nil {
-		mmConvertEphemeralAndMakeExpected.mock.t.Fatalf("Inspect function is already set for ExpectedMock.ConvertEphemeralAndMakeExpected")
-	}
-
-	mmConvertEphemeralAndMakeExpected.mock.inspectFuncConvertEphemeralAndMakeExpected = f
-
-	return mmConvertEphemeralAndMakeExpected
-}
-
-// Return sets up results that will be returned by Expected.ConvertEphemeralAndMakeExpected
-func (mmConvertEphemeralAndMakeExpected *mExpectedMockConvertEphemeralAndMakeExpected) Return(e1 Expected) *ExpectedMock {
-	if mmConvertEphemeralAndMakeExpected.mock.funcConvertEphemeralAndMakeExpected != nil {
-		mmConvertEphemeralAndMakeExpected.mock.t.Fatalf("ExpectedMock.ConvertEphemeralAndMakeExpected mock is already set by Set")
-	}
-
-	if mmConvertEphemeralAndMakeExpected.defaultExpectation == nil {
-		mmConvertEphemeralAndMakeExpected.defaultExpectation = &ExpectedMockConvertEphemeralAndMakeExpectedExpectation{mock: mmConvertEphemeralAndMakeExpected.mock}
-	}
-	mmConvertEphemeralAndMakeExpected.defaultExpectation.results = &ExpectedMockConvertEphemeralAndMakeExpectedResults{e1}
-	return mmConvertEphemeralAndMakeExpected.mock
-}
-
-//Set uses given function f to mock the Expected.ConvertEphemeralAndMakeExpected method
-func (mmConvertEphemeralAndMakeExpected *mExpectedMockConvertEphemeralAndMakeExpected) Set(f func(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) (e1 Expected)) *ExpectedMock {
-	if mmConvertEphemeralAndMakeExpected.defaultExpectation != nil {
-		mmConvertEphemeralAndMakeExpected.mock.t.Fatalf("Default expectation is already set for the Expected.ConvertEphemeralAndMakeExpected method")
-	}
-
-	if len(mmConvertEphemeralAndMakeExpected.expectations) > 0 {
-		mmConvertEphemeralAndMakeExpected.mock.t.Fatalf("Some expectations are already set for the Expected.ConvertEphemeralAndMakeExpected method")
-	}
-
-	mmConvertEphemeralAndMakeExpected.mock.funcConvertEphemeralAndMakeExpected = f
-	return mmConvertEphemeralAndMakeExpected.mock
-}
-
-// When sets expectation for the Expected.ConvertEphemeralAndMakeExpected which will trigger the result defined by the following
-// Then helper
-func (mmConvertEphemeralAndMakeExpected *mExpectedMockConvertEphemeralAndMakeExpected) When(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) *ExpectedMockConvertEphemeralAndMakeExpectedExpectation {
-	if mmConvertEphemeralAndMakeExpected.mock.funcConvertEphemeralAndMakeExpected != nil {
-		mmConvertEphemeralAndMakeExpected.mock.t.Fatalf("ExpectedMock.ConvertEphemeralAndMakeExpected mock is already set by Set")
-	}
-
-	expectation := &ExpectedMockConvertEphemeralAndMakeExpectedExpectation{
-		mock:   mmConvertEphemeralAndMakeExpected.mock,
-		params: &ExpectedMockConvertEphemeralAndMakeExpectedParams{pn, csh, gsh},
-	}
-	mmConvertEphemeralAndMakeExpected.expectations = append(mmConvertEphemeralAndMakeExpected.expectations, expectation)
-	return expectation
-}
-
-// Then sets up Expected.ConvertEphemeralAndMakeExpected return parameters for the expectation previously defined by the When method
-func (e *ExpectedMockConvertEphemeralAndMakeExpectedExpectation) Then(e1 Expected) *ExpectedMock {
-	e.results = &ExpectedMockConvertEphemeralAndMakeExpectedResults{e1}
-	return e.mock
-}
-
-// ConvertEphemeralAndMakeExpected implements Expected
-func (mmConvertEphemeralAndMakeExpected *ExpectedMock) ConvertEphemeralAndMakeExpected(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) (e1 Expected) {
-	mm_atomic.AddUint64(&mmConvertEphemeralAndMakeExpected.beforeConvertEphemeralAndMakeExpectedCounter, 1)
-	defer mm_atomic.AddUint64(&mmConvertEphemeralAndMakeExpected.afterConvertEphemeralAndMakeExpectedCounter, 1)
-
-	if mmConvertEphemeralAndMakeExpected.inspectFuncConvertEphemeralAndMakeExpected != nil {
-		mmConvertEphemeralAndMakeExpected.inspectFuncConvertEphemeralAndMakeExpected(pn, csh, gsh)
-	}
-
-	params := &ExpectedMockConvertEphemeralAndMakeExpectedParams{pn, csh, gsh}
-
-	// Record call args
-	mmConvertEphemeralAndMakeExpected.ConvertEphemeralAndMakeExpectedMock.mutex.Lock()
-	mmConvertEphemeralAndMakeExpected.ConvertEphemeralAndMakeExpectedMock.callArgs = append(mmConvertEphemeralAndMakeExpected.ConvertEphemeralAndMakeExpectedMock.callArgs, params)
-	mmConvertEphemeralAndMakeExpected.ConvertEphemeralAndMakeExpectedMock.mutex.Unlock()
-
-	for _, e := range mmConvertEphemeralAndMakeExpected.ConvertEphemeralAndMakeExpectedMock.expectations {
-		if minimock.Equal(e.params, params) {
-			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.e1
-		}
-	}
-
-	if mmConvertEphemeralAndMakeExpected.ConvertEphemeralAndMakeExpectedMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmConvertEphemeralAndMakeExpected.ConvertEphemeralAndMakeExpectedMock.defaultExpectation.Counter, 1)
-		want := mmConvertEphemeralAndMakeExpected.ConvertEphemeralAndMakeExpectedMock.defaultExpectation.params
-		got := ExpectedMockConvertEphemeralAndMakeExpectedParams{pn, csh, gsh}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmConvertEphemeralAndMakeExpected.t.Errorf("ExpectedMock.ConvertEphemeralAndMakeExpected got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
-		}
-
-		results := mmConvertEphemeralAndMakeExpected.ConvertEphemeralAndMakeExpectedMock.defaultExpectation.results
-		if results == nil {
-			mmConvertEphemeralAndMakeExpected.t.Fatal("No results are set for the ExpectedMock.ConvertEphemeralAndMakeExpected")
-		}
-		return (*results).e1
-	}
-	if mmConvertEphemeralAndMakeExpected.funcConvertEphemeralAndMakeExpected != nil {
-		return mmConvertEphemeralAndMakeExpected.funcConvertEphemeralAndMakeExpected(pn, csh, gsh)
-	}
-	mmConvertEphemeralAndMakeExpected.t.Fatalf("Unexpected call to ExpectedMock.ConvertEphemeralAndMakeExpected. %v %v %v", pn, csh, gsh)
-	return
-}
-
-// ConvertEphemeralAndMakeExpectedAfterCounter returns a count of finished ExpectedMock.ConvertEphemeralAndMakeExpected invocations
-func (mmConvertEphemeralAndMakeExpected *ExpectedMock) ConvertEphemeralAndMakeExpectedAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmConvertEphemeralAndMakeExpected.afterConvertEphemeralAndMakeExpectedCounter)
-}
-
-// ConvertEphemeralAndMakeExpectedBeforeCounter returns a count of ExpectedMock.ConvertEphemeralAndMakeExpected invocations
-func (mmConvertEphemeralAndMakeExpected *ExpectedMock) ConvertEphemeralAndMakeExpectedBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmConvertEphemeralAndMakeExpected.beforeConvertEphemeralAndMakeExpectedCounter)
-}
-
-// Calls returns a list of arguments used in each call to ExpectedMock.ConvertEphemeralAndMakeExpected.
-// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmConvertEphemeralAndMakeExpected *mExpectedMockConvertEphemeralAndMakeExpected) Calls() []*ExpectedMockConvertEphemeralAndMakeExpectedParams {
-	mmConvertEphemeralAndMakeExpected.mutex.RLock()
-
-	argCopy := make([]*ExpectedMockConvertEphemeralAndMakeExpectedParams, len(mmConvertEphemeralAndMakeExpected.callArgs))
-	copy(argCopy, mmConvertEphemeralAndMakeExpected.callArgs)
-
-	mmConvertEphemeralAndMakeExpected.mutex.RUnlock()
-
-	return argCopy
-}
-
-// MinimockConvertEphemeralAndMakeExpectedDone returns true if the count of the ConvertEphemeralAndMakeExpected invocations corresponds
-// the number of defined expectations
-func (m *ExpectedMock) MinimockConvertEphemeralAndMakeExpectedDone() bool {
-	for _, e := range m.ConvertEphemeralAndMakeExpectedMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.ConvertEphemeralAndMakeExpectedMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterConvertEphemeralAndMakeExpectedCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcConvertEphemeralAndMakeExpected != nil && mm_atomic.LoadUint64(&m.afterConvertEphemeralAndMakeExpectedCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockConvertEphemeralAndMakeExpectedInspect logs each unmet expectation
-func (m *ExpectedMock) MinimockConvertEphemeralAndMakeExpectedInspect() {
-	for _, e := range m.ConvertEphemeralAndMakeExpectedMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to ExpectedMock.ConvertEphemeralAndMakeExpected with params: %#v", *e.params)
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.ConvertEphemeralAndMakeExpectedMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterConvertEphemeralAndMakeExpectedCounter) < 1 {
-		if m.ConvertEphemeralAndMakeExpectedMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to ExpectedMock.ConvertEphemeralAndMakeExpected")
-		} else {
-			m.t.Errorf("Expected call to ExpectedMock.ConvertEphemeralAndMakeExpected with params: %#v", *m.ConvertEphemeralAndMakeExpectedMock.defaultExpectation.params)
-		}
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcConvertEphemeralAndMakeExpected != nil && mm_atomic.LoadUint64(&m.afterConvertEphemeralAndMakeExpectedCounter) < 1 {
-		m.t.Error("Expected call to ExpectedMock.ConvertEphemeralAndMakeExpected")
-	}
 }
 
 type mExpectedMockCreateBuilder struct {
@@ -2893,11 +2676,224 @@ func (m *ExpectedMock) MinimockMakeActiveInspect() {
 	}
 }
 
+type mExpectedMockRebuild struct {
+	mock               *ExpectedMock
+	defaultExpectation *ExpectedMockRebuildExpectation
+	expectations       []*ExpectedMockRebuildExpectation
+
+	callArgs []*ExpectedMockRebuildParams
+	mutex    sync.RWMutex
+}
+
+// ExpectedMockRebuildExpectation specifies expectation struct of the Expected.Rebuild
+type ExpectedMockRebuildExpectation struct {
+	mock    *ExpectedMock
+	params  *ExpectedMockRebuildParams
+	results *ExpectedMockRebuildResults
+	Counter uint64
+}
+
+// ExpectedMockRebuildParams contains parameters of the Expected.Rebuild
+type ExpectedMockRebuildParams struct {
+	pn pulse.Number
+}
+
+// ExpectedMockRebuildResults contains results of the Expected.Rebuild
+type ExpectedMockRebuildResults struct {
+	b1 Built
+}
+
+// Expect sets up expected params for Expected.Rebuild
+func (mmRebuild *mExpectedMockRebuild) Expect(pn pulse.Number) *mExpectedMockRebuild {
+	if mmRebuild.mock.funcRebuild != nil {
+		mmRebuild.mock.t.Fatalf("ExpectedMock.Rebuild mock is already set by Set")
+	}
+
+	if mmRebuild.defaultExpectation == nil {
+		mmRebuild.defaultExpectation = &ExpectedMockRebuildExpectation{}
+	}
+
+	mmRebuild.defaultExpectation.params = &ExpectedMockRebuildParams{pn}
+	for _, e := range mmRebuild.expectations {
+		if minimock.Equal(e.params, mmRebuild.defaultExpectation.params) {
+			mmRebuild.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmRebuild.defaultExpectation.params)
+		}
+	}
+
+	return mmRebuild
+}
+
+// Inspect accepts an inspector function that has same arguments as the Expected.Rebuild
+func (mmRebuild *mExpectedMockRebuild) Inspect(f func(pn pulse.Number)) *mExpectedMockRebuild {
+	if mmRebuild.mock.inspectFuncRebuild != nil {
+		mmRebuild.mock.t.Fatalf("Inspect function is already set for ExpectedMock.Rebuild")
+	}
+
+	mmRebuild.mock.inspectFuncRebuild = f
+
+	return mmRebuild
+}
+
+// Return sets up results that will be returned by Expected.Rebuild
+func (mmRebuild *mExpectedMockRebuild) Return(b1 Built) *ExpectedMock {
+	if mmRebuild.mock.funcRebuild != nil {
+		mmRebuild.mock.t.Fatalf("ExpectedMock.Rebuild mock is already set by Set")
+	}
+
+	if mmRebuild.defaultExpectation == nil {
+		mmRebuild.defaultExpectation = &ExpectedMockRebuildExpectation{mock: mmRebuild.mock}
+	}
+	mmRebuild.defaultExpectation.results = &ExpectedMockRebuildResults{b1}
+	return mmRebuild.mock
+}
+
+//Set uses given function f to mock the Expected.Rebuild method
+func (mmRebuild *mExpectedMockRebuild) Set(f func(pn pulse.Number) (b1 Built)) *ExpectedMock {
+	if mmRebuild.defaultExpectation != nil {
+		mmRebuild.mock.t.Fatalf("Default expectation is already set for the Expected.Rebuild method")
+	}
+
+	if len(mmRebuild.expectations) > 0 {
+		mmRebuild.mock.t.Fatalf("Some expectations are already set for the Expected.Rebuild method")
+	}
+
+	mmRebuild.mock.funcRebuild = f
+	return mmRebuild.mock
+}
+
+// When sets expectation for the Expected.Rebuild which will trigger the result defined by the following
+// Then helper
+func (mmRebuild *mExpectedMockRebuild) When(pn pulse.Number) *ExpectedMockRebuildExpectation {
+	if mmRebuild.mock.funcRebuild != nil {
+		mmRebuild.mock.t.Fatalf("ExpectedMock.Rebuild mock is already set by Set")
+	}
+
+	expectation := &ExpectedMockRebuildExpectation{
+		mock:   mmRebuild.mock,
+		params: &ExpectedMockRebuildParams{pn},
+	}
+	mmRebuild.expectations = append(mmRebuild.expectations, expectation)
+	return expectation
+}
+
+// Then sets up Expected.Rebuild return parameters for the expectation previously defined by the When method
+func (e *ExpectedMockRebuildExpectation) Then(b1 Built) *ExpectedMock {
+	e.results = &ExpectedMockRebuildResults{b1}
+	return e.mock
+}
+
+// Rebuild implements Expected
+func (mmRebuild *ExpectedMock) Rebuild(pn pulse.Number) (b1 Built) {
+	mm_atomic.AddUint64(&mmRebuild.beforeRebuildCounter, 1)
+	defer mm_atomic.AddUint64(&mmRebuild.afterRebuildCounter, 1)
+
+	if mmRebuild.inspectFuncRebuild != nil {
+		mmRebuild.inspectFuncRebuild(pn)
+	}
+
+	params := &ExpectedMockRebuildParams{pn}
+
+	// Record call args
+	mmRebuild.RebuildMock.mutex.Lock()
+	mmRebuild.RebuildMock.callArgs = append(mmRebuild.RebuildMock.callArgs, params)
+	mmRebuild.RebuildMock.mutex.Unlock()
+
+	for _, e := range mmRebuild.RebuildMock.expectations {
+		if minimock.Equal(e.params, params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.b1
+		}
+	}
+
+	if mmRebuild.RebuildMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmRebuild.RebuildMock.defaultExpectation.Counter, 1)
+		want := mmRebuild.RebuildMock.defaultExpectation.params
+		got := ExpectedMockRebuildParams{pn}
+		if want != nil && !minimock.Equal(*want, got) {
+			mmRebuild.t.Errorf("ExpectedMock.Rebuild got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		}
+
+		results := mmRebuild.RebuildMock.defaultExpectation.results
+		if results == nil {
+			mmRebuild.t.Fatal("No results are set for the ExpectedMock.Rebuild")
+		}
+		return (*results).b1
+	}
+	if mmRebuild.funcRebuild != nil {
+		return mmRebuild.funcRebuild(pn)
+	}
+	mmRebuild.t.Fatalf("Unexpected call to ExpectedMock.Rebuild. %v", pn)
+	return
+}
+
+// RebuildAfterCounter returns a count of finished ExpectedMock.Rebuild invocations
+func (mmRebuild *ExpectedMock) RebuildAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmRebuild.afterRebuildCounter)
+}
+
+// RebuildBeforeCounter returns a count of ExpectedMock.Rebuild invocations
+func (mmRebuild *ExpectedMock) RebuildBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmRebuild.beforeRebuildCounter)
+}
+
+// Calls returns a list of arguments used in each call to ExpectedMock.Rebuild.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmRebuild *mExpectedMockRebuild) Calls() []*ExpectedMockRebuildParams {
+	mmRebuild.mutex.RLock()
+
+	argCopy := make([]*ExpectedMockRebuildParams, len(mmRebuild.callArgs))
+	copy(argCopy, mmRebuild.callArgs)
+
+	mmRebuild.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockRebuildDone returns true if the count of the Rebuild invocations corresponds
+// the number of defined expectations
+func (m *ExpectedMock) MinimockRebuildDone() bool {
+	for _, e := range m.RebuildMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.RebuildMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterRebuildCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcRebuild != nil && mm_atomic.LoadUint64(&m.afterRebuildCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockRebuildInspect logs each unmet expectation
+func (m *ExpectedMock) MinimockRebuildInspect() {
+	for _, e := range m.RebuildMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to ExpectedMock.Rebuild with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.RebuildMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterRebuildCounter) < 1 {
+		if m.RebuildMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to ExpectedMock.Rebuild")
+		} else {
+			m.t.Errorf("Expected call to ExpectedMock.Rebuild with params: %#v", *m.RebuildMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcRebuild != nil && mm_atomic.LoadUint64(&m.afterRebuildCounter) < 1 {
+		m.t.Error("Expected call to ExpectedMock.Rebuild")
+	}
+}
+
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *ExpectedMock) MinimockFinish() {
 	if !m.minimockDone() {
-		m.MinimockConvertEphemeralAndMakeExpectedInspect()
-
 		m.MinimockCreateBuilderInspect()
 
 		m.MinimockGetCensusStateInspect()
@@ -2929,6 +2925,8 @@ func (m *ExpectedMock) MinimockFinish() {
 		m.MinimockIsActiveInspect()
 
 		m.MinimockMakeActiveInspect()
+
+		m.MinimockRebuildInspect()
 		m.t.FailNow()
 	}
 }
@@ -2952,7 +2950,6 @@ func (m *ExpectedMock) MinimockWait(timeout mm_time.Duration) {
 func (m *ExpectedMock) minimockDone() bool {
 	done := true
 	return done &&
-		m.MinimockConvertEphemeralAndMakeExpectedDone() &&
 		m.MinimockCreateBuilderDone() &&
 		m.MinimockGetCensusStateDone() &&
 		m.MinimockGetCloudStateHashDone() &&
@@ -2968,5 +2965,6 @@ func (m *ExpectedMock) minimockDone() bool {
 		m.MinimockGetProfileFactoryDone() &&
 		m.MinimockGetPulseNumberDone() &&
 		m.MinimockIsActiveDone() &&
-		m.MinimockMakeActiveDone()
+		m.MinimockMakeActiveDone() &&
+		m.MinimockRebuildDone()
 }
