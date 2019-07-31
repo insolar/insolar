@@ -48,10 +48,13 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package core
+package purgatory
 
 import (
 	"context"
+	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -61,16 +64,15 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/censusimpl"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
 )
 
-func NewRealmPurgatory(population RealmPopulation, _ profiles.Factory, svf cryptkit.SignatureVerifierFactory,
-	callback *nodeContext, postponedPacketFn packetrecorder.PostponedPacketFunc) RealmPurgatory {
+func NewRealmPurgatory(population population.RealmPopulation, _ profiles.Factory, svf cryptkit.SignatureVerifierFactory,
+	hook *population.Hook, postponedPacketFn packetdispatch.PostponedPacketFunc) RealmPurgatory {
 	return RealmPurgatory{
 		population: population,
 		// profileFactory:    pf,
 		svFactory:         svf,
-		callback:          callback,
+		hook:              hook,
 		postponedPacketFn: postponedPacketFn,
 	}
 }
@@ -81,20 +83,23 @@ type AnnouncingMember interface {
 	Blames() misbehavior.BlameFactory
 	Frauds() misbehavior.FraudFactory
 	GetReportProfile() profiles.BaseNode
-	DispatchAnnouncement(ctx context.Context, rank member.Rank, profile profiles.StaticProfile,
-		announcement *profiles.MembershipAnnouncement, introducedByID insolar.ShortNodeID) error
 
-	ApplyNeighbourEvidence(n *NodeAppearance, an profiles.MembershipAnnouncement, cappedTrust bool) (bool, error)
+	DispatchAnnouncement(ctx context.Context, rank member.Rank, profile profiles.StaticProfile,
+		announcement profiles.MemberAnnouncement) error
+
+	ApplyNeighbourEvidence(n *population.NodeAppearance, an profiles.MemberAnnouncement,
+		cappedTrust bool, applyAfterChecks population.MembershipApplyFunc) (bool, error)
+
 	GetStatic() profiles.StaticProfile
 }
 
 type RealmPurgatory struct {
-	population RealmPopulation
+	population population.RealmPopulation
 	svFactory  cryptkit.SignatureVerifierFactory
 	// profileFactory    profiles.Factory
-	postponedPacketFn packetrecorder.PostponedPacketFunc
+	postponedPacketFn packetdispatch.PostponedPacketFunc
 
-	callback *nodeContext
+	hook *population.Hook
 
 	/* LOCK WARNING!
 	This lock is engaged inside NodePhantom's lock.
@@ -148,7 +153,7 @@ func (p *RealmPurgatory) getOrCreatePhantom(id insolar.ShortNodeID) AnnouncingMe
 	if p.phantomByID == nil {
 		p.phantomByID = make(map[insolar.ShortNodeID]*NodePhantom)
 	}
-	limiter := p.population.CreatePacketLimiter()
+	limiter := p.population.CreatePacketLimiter(false /* doesnt matter here */)
 	np = NewNodePhantom(p, id, limiter)
 	p.phantomByID[id] = np
 	return np
@@ -180,20 +185,25 @@ func (p *RealmPurgatory) getOrCreateMember(id insolar.ShortNodeID) AnnouncingMem
 	return na
 }
 
-func (p *RealmPurgatory) getMember(id insolar.ShortNodeID, introducedBy insolar.ShortNodeID) AnnouncingMember {
+func (p *RealmPurgatory) FindMember(id insolar.ShortNodeID, introducedBy insolar.ShortNodeID) AnnouncingMember {
+	am, _ := p.getMember(id, introducedBy)
+	return am
+}
+
+func (p *RealmPurgatory) getMember(id insolar.ShortNodeID, introducedBy insolar.ShortNodeID) (AnnouncingMember, *population.NodeAppearance) {
 
 	na := p.population.GetNodeAppearance(id)
 	if na != nil { // main path
-		return na
+		return na, na
 	}
 
 	np, ok := p.getPhantomNode(id) // read lock
 	if !ok {
-		return nil
+		return nil, nil
 	}
 	if np != nil {
-		// np.IntroducedBy(introducedBy) TODO do we need it?
-		return np
+		np.IntroducedBy(introducedBy)
+		return np, nil
 	}
 
 	na = p.population.GetNodeAppearance(id)
@@ -201,31 +211,36 @@ func (p *RealmPurgatory) getMember(id insolar.ShortNodeID, introducedBy insolar.
 		// nil entry in the purgatory means that there MUST have be a relevant NodeAppearance
 		panic("illegal state")
 	}
-	return na
+	return na, na
 }
 
 func (p *RealmPurgatory) ascendFromPurgatory(ctx context.Context, id insolar.ShortNodeID, nsp profiles.StaticProfile,
 	rank member.Rank, sv cryptkit.SignatureVerifier) {
 
 	if sv == nil {
-		sv = p.svFactory.GetSignatureVerifierWithPKS(nsp.GetPublicKeyStore())
+		sv = p.svFactory.CreateSignatureVerifierWithPKS(nsp.GetPublicKeyStore())
 	}
+
 	var np censusimpl.NodeProfileSlot
 	if rank.IsJoiner() {
 		np = censusimpl.NewJoinerProfile(nsp, sv)
 	} else {
 		np = censusimpl.NewNodeProfileExt(rank.GetIndex(), nsp, sv, rank.GetPower(), rank.GetMode())
 	}
-	na := p.population.CreateNodeAppearance(ctx, &np)
+
+	nav := population.NewEmptyNodeAppearance(&np)
+	na := &nav
 
 	p.rw.Lock()
 	defer p.rw.Unlock()
 	p.phantomByID[id] = nil // leave marker
 	// delete(p.phantomByEP, ...)
-	na, _ = p.population.AddToDynamics(na)
+	na, _ = p.population.AddToDynamics(ctx, na)
 
 	inslogger.FromContext(ctx).Debugf("Candidate/joiner has ascended as dynamic node: s=%d, t=%d, full=%v",
-		p.callback.localNodeID, np.GetNodeID(), np.GetStatic().GetExtension() != nil)
+		p.hook.GetLocalNodeID(), np.GetNodeID(), np.GetStatic().GetExtension() != nil)
+
+	p.hook.OnPurgatoryNodeUpdate(p.hook.GetPopulationVersion(), na, population.FlagAscent)
 }
 
 func (p *RealmPurgatory) IsBriefAscensionAllowed() bool {
@@ -234,40 +249,74 @@ func (p *RealmPurgatory) IsBriefAscensionAllowed() bool {
 	return false
 }
 
-func (p *RealmPurgatory) SelfFromMemberAnnouncement(ctx context.Context, id insolar.ShortNodeID, profile profiles.StaticProfile,
-	rank member.Rank, announcement profiles.MembershipAnnouncement) (bool, error) {
+func (p *RealmPurgatory) UnknownAsSelfFromMemberAnnouncement(ctx context.Context, id insolar.ShortNodeID,
+	profile profiles.StaticProfile, rank member.Rank, announcement profiles.MemberAnnouncement) (bool, error) {
 
-	err := p.getOrCreateMember(id).DispatchAnnouncement(ctx, rank, profile, &announcement, id)
+	err := p.getOrCreateMember(id).DispatchAnnouncement(ctx, rank, profile, announcement)
 	return err == nil, err
-}
-
-func (p *RealmPurgatory) JoinerFromMemberAnnouncement(ctx context.Context, id insolar.ShortNodeID, profile profiles.StaticProfile,
-	introducedByID insolar.ShortNodeID) error {
-
-	return p.getOrCreateMember(id).DispatchAnnouncement(ctx, member.JoinerRank, profile, nil, introducedByID)
 }
 
 func (p *RealmPurgatory) JoinerFromNeighbourhood(ctx context.Context, id insolar.ShortNodeID, profile profiles.StaticProfile,
 	introducedByID insolar.ShortNodeID) error {
 
-	return p.getOrCreateMember(id).DispatchAnnouncement(ctx, member.JoinerRank, profile, nil, introducedByID)
-}
-
-func (p *RealmPurgatory) MemberFromNeighbourhood(ctx context.Context, id insolar.ShortNodeID, rank member.Rank,
-	announcement profiles.MembershipAnnouncement, introducedByID insolar.ShortNodeID) (AnnouncingMember, error) {
-
-	am := p.getOrCreateMember(id)
-	return am, am.DispatchAnnouncement(ctx, rank, nil, &announcement, introducedByID)
+	ma := profiles.MemberAnnouncement{MemberID: id}
+	ma.Joiner.IntroducedByID = introducedByID
+	return p.getOrCreateMember(id).DispatchAnnouncement(ctx, member.JoinerRank, profile, ma)
 }
 
 func (p *RealmPurgatory) FindJoinerProfile(nodeID insolar.ShortNodeID, introducedBy insolar.ShortNodeID) profiles.StaticProfile {
-	am := p.getMember(nodeID, introducedBy)
+	am, _ := p.getMember(nodeID, introducedBy)
 	if am != nil && am.IsJoiner() {
 		return am.GetStatic()
 	}
 	return nil
 }
 
-func (p *RealmPurgatory) onNodeUpdated(n *NodePhantom, flags UpdateFlags) {
-	p.callback.onPurgatoryNodeUpdate(p.callback.updatePopulationVersion(), n, flags)
+func (p *RealmPurgatory) onNodeUpdated(n *NodePhantom, flags population.UpdateFlags) {
+	p.hook.OnPurgatoryNodeUpdate(n.purgatory.hook.UpdatePopulationVersion(), n, flags)
+}
+
+// WARNING! Is called under NodeAppearance lock
+func (p *RealmPurgatory) AddJoinerAndEnsureAscendancy(
+	announcement profiles.JoinerAnnouncement, announcedByID insolar.ShortNodeID) error {
+
+	jp := announcement.JoinerProfile
+	joinerID := jp.GetStaticNodeID()
+
+	if announcedByID == joinerID {
+		panic("illegal value - cant add itself")
+	}
+
+	err := p.getOrCreateMember(joinerID).DispatchAnnouncement(context.TODO(), // TODO context
+		member.JoinerRank, jp,
+		profiles.NewJoinerAnnouncement(jp, announcedByID))
+
+	sp := p.FindJoinerProfile(joinerID, announcedByID)
+	if sp == nil {
+		panic(fmt.Sprintf("failed addition of a joiner: id=%d announcedByID=%d", joinerID, announcedByID))
+	}
+	return err
+}
+
+func (p *RealmPurgatory) VerifyNeighbour(announcement profiles.MemberAnnouncement, n *population.NodeAppearance) (AnnouncingMember, bool) {
+
+	am, na := p.getMember(announcement.MemberID, announcement.AnnouncedByID)
+	if na == nil {
+		return am, false
+	}
+
+	return am, profiles.EqualStaticProfiles(na.GetStatic(), announcement.Joiner.JoinerProfile, false)
+}
+
+func (p *RealmPurgatory) UnknownFromNeighbourhood(ctx context.Context, rank member.Rank, announcement profiles.MemberAnnouncement,
+	cappedTrust bool) error {
+
+	m := p.getOrCreateMember(announcement.MemberID)
+	if announcement.Membership.IsJoiner() {
+		if announcement.Joiner.JoinerProfile == nil {
+			panic("announcement.Joiner.JoinerProfile == nil") // it must be checked by caller
+		}
+		return m.DispatchAnnouncement(ctx, rank, announcement.Joiner.JoinerProfile, announcement)
+	}
+	return m.DispatchAnnouncement(ctx, rank, nil, announcement)
 }

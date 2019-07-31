@@ -83,7 +83,7 @@ type PacketBody interface {
 	ContextSerializerTo
 	ContextDeserializerFrom
 
-	DebugString(ctx PacketContext) string
+	String(ctx PacketContext) string
 }
 
 type FieldContext uint

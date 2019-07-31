@@ -57,10 +57,10 @@ func Test_LightReplication(t *testing.T) {
 	require.NoError(t, err)
 
 	// First pulse goes in storage then interrupts.
-	s.Pulse(ctx)
+	s.SetPulse(ctx)
 
 	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
-	s.Pulse(ctx)
+	s.SetPulse(ctx)
 
 	cryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
 
@@ -69,9 +69,10 @@ func Test_LightReplication(t *testing.T) {
 
 		// Creating root reason request.
 		{
-			pl, _ := callSetIncomingRequest(ctx, s, gen.ID(), gen.ID(), true, true)
-			requireNotError(t, pl)
-			reasonID = pl.(*payload.RequestInfo).RequestID
+			msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), true, true)
+			rep := SendMessage(ctx, s, &msg)
+			RequireNotError(rep)
+			reasonID = rep.(*payload.RequestInfo).RequestID
 			expectedIds = append(expectedIds, reasonID)
 
 			// Creating filament hash.
@@ -197,7 +198,7 @@ func Test_LightReplication(t *testing.T) {
 	}
 
 	// Third pulse activate replication of second's pulse records
-	s.Pulse(ctx)
+	s.SetPulse(ctx)
 
 	{
 		replicationPayload := <-receivedMessage

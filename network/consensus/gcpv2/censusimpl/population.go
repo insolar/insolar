@@ -54,6 +54,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 
@@ -92,6 +93,57 @@ type ManyNodePopulation struct {
 	isInvalid         bool
 	suspendedCount    uint16
 	mistrustedCount   uint16
+}
+
+func (c ManyNodePopulation) String() string {
+	b := strings.Builder{}
+	if c.isInvalid {
+		b.WriteString("invalid ")
+	}
+	if c.local == nil {
+		b.WriteString("local:<nil> ")
+	} else {
+		b.WriteString(fmt.Sprintf("local:%d ", c.local.GetNodeID()))
+	}
+	if c.suspendedCount > 0 {
+		b.WriteString(fmt.Sprintf("susp:%d ", c.suspendedCount))
+	}
+	if c.mistrustedCount > 0 {
+		b.WriteString(fmt.Sprintf("mistr:%d ", c.mistrustedCount))
+	}
+	if len(c.slots) == len(c.slotByID) && len(c.slots) == int(c.assignedSlotCount) {
+		b.WriteString(fmt.Sprintf("profiles:%d[", c.assignedSlotCount))
+	} else {
+		b.WriteString(fmt.Sprintf("profiles:%d/%d/%d[", c.assignedSlotCount, len(c.slots), len(c.slotByID)))
+	}
+	if len(c.slots) < 50 {
+		for _, slot := range c.slots {
+			if slot.IsEmpty() {
+				b.WriteString(" ____ ")
+				continue
+			}
+
+			id := slot.GetNodeID()
+			switch {
+			case slot.IsJoiner():
+				b.WriteString(fmt.Sprintf("+%04d ", id))
+			case slot.mode.IsEvictedGracefully():
+				b.WriteString(fmt.Sprintf("-%04d ", id))
+			case slot.mode.IsEvicted():
+				b.WriteString(fmt.Sprintf("!%04d ", id))
+			case slot.mode.IsMistrustful():
+				b.WriteString(fmt.Sprintf("?%04d ", id))
+			case slot.mode.IsSuspended():
+				b.WriteString(fmt.Sprintf("s%04d ", id))
+			default:
+				b.WriteString(fmt.Sprintf(" %04d ", id))
+			}
+		}
+	} else {
+		b.WriteString("too many")
+	}
+	b.WriteRune(']')
+	return b.String()
 }
 
 func (c *ManyNodePopulation) GetSuspendedCount() int {
@@ -187,7 +239,7 @@ func (c *ManyNodePopulation) _filterAndFillInSlots(slots map[insolar.ShortNodeID
 
 	slotCount := 0
 	for id, vv := range slots {
-		if vv == nil || vv.StaticProfile == nil || id == insolar.AbsentShortNodeID {
+		if vv == nil || vv.IsEmpty() || id == insolar.AbsentShortNodeID {
 			c.isInvalid = true
 			fail(census.EmptySlot, "invalid slot: id:%d", id)
 			continue
@@ -243,7 +295,7 @@ func (c *ManyNodePopulation) _fillInRoleStatsAndMap(localID insolar.ShortNodeID,
 			break
 		}
 
-		if c.slots[i].StaticProfile == nil {
+		if c.slots[i].IsEmpty() {
 			if !compactIndex {
 				j++
 			}
@@ -322,7 +374,7 @@ func (c *ManyNodePopulation) _fillInRoleStatsAndMap(localID insolar.ShortNodeID,
 
 func (c *ManyNodePopulation) _adjustSlotsAndCopyEvicts(localID insolar.ShortNodeID, evicts []*updatableSlot) []*updatableSlot {
 
-	evictCopies := c.slots[c.assignedSlotCount:] //reuse remaining capacity for copies of evicts
+	evictCopies := c.slots[c.assignedSlotCount:] // reuse remaining capacity for copies of evicts
 	if c.assignedSlotCount == 0 {
 		c.slots = nil
 	} else {
@@ -362,7 +414,7 @@ func (c *ManyNodePopulation) makeOfProfiles(nodes []profiles.StaticProfile, loca
 		if n.GetStaticNodeID().IsAbsent() {
 			panic("illegal value")
 		}
-		verifier := vf.GetSignatureVerifierWithPKS(n.GetPublicKeyStore())
+		verifier := vf.CreateSignatureVerifierWithPKS(n.GetPublicKeyStore())
 		buf[i].NodeProfileSlot = NewNodeProfile(member.Index(i), n, verifier, 0) // Power MUST BE zero, index will be assigned later
 	}
 	c.slots = buf

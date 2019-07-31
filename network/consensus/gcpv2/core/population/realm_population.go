@@ -48,55 +48,46 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package core
+package population
 
 import (
-	"sync"
-
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"context"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
 
-type SequentialCandidateFeeder struct {
-	mx  sync.Mutex
-	buf []profiles.CandidateProfile
-}
+type RealmPopulation interface {
+	GetIndexedCount() int
+	GetJoinersCount() int
+	//GetVotersCount() int
 
-func (p *SequentialCandidateFeeder) PickNextJoinCandidate() (profiles.CandidateProfile, cryptkit.DigestHolder) {
-	p.mx.Lock()
-	defer p.mx.Unlock()
+	GetSealedCapacity() (int, bool)
+	SealIndexed(indexedCapacity int) bool
 
-	if len(p.buf) == 0 {
-		return nil, nil
-	}
-	return p.buf[0], nil
-}
+	GetNodeAppearance(id insolar.ShortNodeID) *NodeAppearance
+	GetActiveNodeAppearance(id insolar.ShortNodeID) *NodeAppearance
+	GetJoinerNodeAppearance(id insolar.ShortNodeID) *NodeAppearance
+	GetNodeAppearanceByIndex(idx int) *NodeAppearance
 
-func (p *SequentialCandidateFeeder) RemoveJoinCandidate(candidateAdded bool, nodeID insolar.ShortNodeID) bool {
-	p.mx.Lock()
-	defer p.mx.Unlock()
+	GetShuffledOtherNodes() []*NodeAppearance /* excludes joiners and self */
+	GetIndexedNodes() []*NodeAppearance       /* no joiners included */
+	GetIndexedNodesAndHasNil() ([]*NodeAppearance, bool)
+	GetCountAndCompleteness(includeJoiners bool) (int, bool)
 
-	if len(p.buf) == 0 || p.buf[0].GetStaticNodeID() != nodeID {
-		return false
-	}
-	if len(p.buf) == 1 {
-		p.buf = nil
-	} else {
-		p.buf[0] = nil
-		p.buf = p.buf[1:]
-	}
-	return true
-}
+	GetSelf() *NodeAppearance
 
-func (p *SequentialCandidateFeeder) AddJoinCandidate(candidate transport.FullIntroductionReader) {
-	if candidate == nil {
-		panic("illegal value")
-	}
-	p.mx.Lock()
-	defer p.mx.Unlock()
+	//CreateNodeAppearance(ctx context.Context, inp profiles.ActiveNode) *NodeAppearance
+	AddReservation(id insolar.ShortNodeID) (bool, *NodeAppearance)
+	FindReservation(id insolar.ShortNodeID) (bool, *NodeAppearance)
 
-	p.buf = append(p.buf, candidate)
+	AddToDynamics(ctx context.Context, n *NodeAppearance) (*NodeAppearance, error)
+	GetAnyNodes(includeIndexed bool, shuffle bool) []*NodeAppearance
+
+	CreateVectorHelper() *RealmVectorHelper
+	CreatePacketLimiter(isJoiner bool) phases.PacketLimiter
+
+	GetTrustCounts() (fraudCount, bySelfCount, bySomeCount, byNeighborsCount uint16)
+	GetDynamicCounts() (briefCount, fullCount uint16)
+	GetPurgatoryCounts() (addedCount, ascentCount uint16)
 }

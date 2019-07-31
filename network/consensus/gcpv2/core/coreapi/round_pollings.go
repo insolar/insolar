@@ -48,16 +48,75 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package core
+package coreapi
 
-// TODO pulse projections to fight possible fakes?
-type PulseProjection struct {
-	// mutex sync.Mutex
-	// id    int
-	//
-	// // countFromPulsars	high32
-	// // countFromNodes	low32
-	// // counters       uint64 // atomic
-	// pulseData      common.PulseData
-	// originalPacket common2.OriginalPulsarPacket
+import (
+	"context"
+	"time"
+
+	"github.com/insolar/insolar/network/consensus/common/chaser"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+)
+
+type PollingWorker struct {
+	ctx context.Context
+
+	polls   []api.MaintenancePollFunc
+	pollCmd chan api.MaintenancePollFunc
+}
+
+func (p *PollingWorker) Start(ctx context.Context, pollingInterval time.Duration) {
+	if p.ctx != nil {
+		panic("illegal state")
+	}
+	p.ctx = ctx
+	p.pollCmd = make(chan api.MaintenancePollFunc, 10)
+
+	go p.pollingWorker(pollingInterval)
+}
+
+func (p *PollingWorker) AddPoll(fn api.MaintenancePollFunc) {
+	p.pollCmd <- fn
+}
+
+func (p *PollingWorker) pollingWorker(pollingInterval time.Duration) {
+	pollingTimer := chaser.NewChasingTimer(pollingInterval)
+
+	for {
+		select {
+		case <-p.ctx.Done():
+			return
+		case <-pollingTimer.Channel():
+			pollingTimer.ClearExpired()
+
+			if p.scanPolls() {
+				pollingTimer.RestartChase()
+			}
+		case add := <-p.pollCmd:
+			if add == nil {
+				continue
+			}
+			p.polls = append(p.polls, add)
+			if len(p.polls) == 1 {
+				pollingTimer.RestartChase()
+			}
+		}
+	}
+}
+
+func (p *PollingWorker) scanPolls() bool {
+	j := 0
+	for i, poll := range p.polls {
+		if !poll(p.ctx) {
+			p.polls[i] = nil
+			continue
+		}
+		if i != j {
+			p.polls[i] = nil
+			p.polls[j] = poll
+		}
+		j++
+	}
+	p.polls = p.polls[:j]
+	return j > 0
 }
