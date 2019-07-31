@@ -67,47 +67,59 @@ func (p *SendInitialState) Proceed(ctx context.Context) error {
 	}
 	req := msg.(*payload.GetLightInitialState)
 
-	if req.Pulse == startPulse {
-		topSyncPulseNumber := p.dep.jetKeeper.TopSyncPulse()
-		var IDs []insolar.JetID
-		var drops [][]byte
-		for _, id := range p.dep.jetTree.All(ctx, topSyncPulseNumber) {
-			light, err := p.dep.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(id), req.Pulse)
-			if err != nil {
-				logger.Fatal("Couldn't receive light executor for jet: ", id, " ", err)
-			}
-			if light.Equal(p.meta.Sender) {
-				IDs = append(IDs, id)
-				dr, err := p.dep.dropDB.ForPulse(ctx, id, topSyncPulseNumber)
-				if err != nil {
-					logger.Fatal("Couldn't get drops for jet: ", id, " ", err)
-				}
-				drops = append(drops, drop.MustEncode(&dr))
-			}
-		}
 
-
-		topSyncPulse, err := p.dep.pulseAccessor.ForPulseNumber(ctx, topSyncPulseNumber)
-		if err != nil {
-			logger.Fatal("Couldn't get pulse for topSyncPulse: ", topSyncPulseNumber, " ", err)
-		}
-		msg, err := payload.NewMessage(&payload.LightInitialState{
-			JetIDs: IDs,
-			Drops: drops,
-			Pulse: pulse.ToProto(&topSyncPulse),
-		})
-		if err != nil {
-			logger.Fatal("Couldn't make message", err)
-		}
-		p.dep.sender.Reply(ctx, p.meta, msg)
-	} else if req.Pulse > startPulse {
-		msg, err := payload.NewMessage(&payload.LightInitialState{})
-		if err != nil {
-			logger.Fatal("Couldn't make message", err)
-		}
-		p.dep.sender.Reply(ctx, p.meta, msg)
-	} else {
+	switch {
+	case req.Pulse == startPulse:
+		p.sendDrops(ctx, req)
+	case req.Pulse > startPulse:
+		p.sendEmpty(ctx)
+	default:
 		logger.Fatal("impossible situation")
 	}
+
 	return nil
+}
+
+func (p *SendInitialState) sendDrops(ctx context.Context, req *payload.GetLightInitialState) {
+	logger := inslogger.FromContext(ctx)
+	topSyncPulseNumber := p.dep.jetKeeper.TopSyncPulse()
+	var IDs []insolar.JetID
+	var drops [][]byte
+	for _, id := range p.dep.jetTree.All(ctx, topSyncPulseNumber) {
+		light, err := p.dep.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(id), req.Pulse)
+		if err != nil {
+			logger.Fatal("Couldn't receive light executor for jet: ", id, " ", err)
+		}
+		if light.Equal(p.meta.Sender) {
+			IDs = append(IDs, id)
+			dr, err := p.dep.dropDB.ForPulse(ctx, id, topSyncPulseNumber)
+			if err != nil {
+				logger.Fatal("Couldn't get drops for jet: ", id, " ", err)
+			}
+			drops = append(drops, drop.MustEncode(&dr))
+		}
+	}
+
+	topSyncPulse, err := p.dep.pulseAccessor.ForPulseNumber(ctx, topSyncPulseNumber)
+	if err != nil {
+		logger.Fatal("Couldn't get pulse for topSyncPulse: ", topSyncPulseNumber, " ", err)
+	}
+	msg, err := payload.NewMessage(&payload.LightInitialState{
+		JetIDs: IDs,
+		Drops: drops,
+		Pulse: pulse.ToProto(&topSyncPulse),
+	})
+	if err != nil {
+		logger.Fatal("Couldn't make message", err)
+	}
+	p.dep.sender.Reply(ctx, p.meta, msg)
+}
+
+func (p *SendInitialState) sendEmpty(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+	msg, err := payload.NewMessage(&payload.LightInitialState{})
+	if err != nil {
+		logger.Fatal("Couldn't make message", err)
+	}
+	p.dep.sender.Reply(ctx, p.meta, msg)
 }
