@@ -18,12 +18,12 @@ package exporter
 
 import (
 	"context"
-	"errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/pkg/errors"
 )
 
 type RecordServer struct {
@@ -164,18 +164,18 @@ func (r *recordIterator) Next(ctx context.Context) (*Record, error) {
 	if err != nil || lastKnown < r.currentPosition {
 		err := r.setNextPulse(ctx)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "iterator failed to change pulse")
 		}
 	}
 
 	id, err := r.recordIndex.AtPosition(r.currentPulse, r.currentPosition)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "iterator failed to find record's position")
 	}
 
 	rec, err := r.recordAccessor.ForID(ctx, id)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "iterator failed to find record")
 	}
 
 	r.read++

@@ -181,7 +181,7 @@ func TestRecordIterator_Next(t *testing.T) {
 		_, err := iter.Next(ctx)
 
 		require.Error(t, err)
-		require.Equal(t, err.Error(), store.ErrNotFound.Error())
+		require.Contains(t, err.Error(), store.ErrNotFound.Error())
 	})
 
 	t.Run("returns err, if ForID returns err", func(t *testing.T) {
@@ -199,7 +199,7 @@ func TestRecordIterator_Next(t *testing.T) {
 		_, err := iter.Next(ctx)
 
 		require.Error(t, err)
-		require.Equal(t, err.Error(), store.ErrNotFound.Error())
+		require.Contains(t, err.Error(), store.ErrNotFound.Error())
 	})
 
 	t.Run("reading data works", func(t *testing.T) {
@@ -243,7 +243,7 @@ func TestRecordIterator_Next(t *testing.T) {
 			_, err := iter.Next(ctx)
 
 			require.Error(t, err)
-			require.Equal(t, err.Error(), store.ErrNotFound.Error())
+			require.Contains(t, err.Error(), store.ErrNotFound.Error())
 		})
 
 		t.Run("Changing pulse works successfully", func(t *testing.T) {
