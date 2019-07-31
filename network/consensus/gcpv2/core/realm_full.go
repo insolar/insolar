@@ -563,12 +563,10 @@ func (r *FullRealm) finishRound(ctx context.Context, builder census.Builder, csh
 	local := pb.GetLocalProfile()
 
 	var expected census.Expected
-	mode := local.GetOpMode()
-	// ModeEvictedGracefully
-	if csh != nil && !mode.IsEvictedForcefully() {
-		expected = builder.BuildAndMakeExpected(csh)
+	if csh != nil {
+		expected = builder.Build(csh).MakeExpected()
 	} else {
-		expected = builder.BuildAndMakeBrokenExpected(csh)
+		expected = builder.BuildAsBroken(csh).MakeExpected()
 	}
 
 	isNextEphemeral := false
@@ -608,10 +606,10 @@ func (r *FullRealm) finishRound(ctx context.Context, builder census.Builder, csh
 		inslogger.FromContext(ctx).Debugf("got a broken population: s=%d %v", local.GetNodeID(), expected.GetOnlinePopulation())
 	}
 	pw := rs.RequestedPower
-	if mode.IsPowerless() {
+	if !local.IsPowered() {
 		pw = 0
 	}
-	r.controlFeeder.OnAppliedMembershipProfile(mode, pw, nextNP)
+	r.controlFeeder.OnAppliedMembershipProfile(local.GetOpMode(), pw, nextNP)
 }
 
 func (r *FullRealm) GetProfileFactory() profiles.Factory {

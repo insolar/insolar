@@ -253,12 +253,12 @@ func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 
 	chronicle := r.chronicle
 	lastCensus := chronicle.GetLatestCensus()
-	pd := &r.realm.pulseData
+	pd := r.realm.pulseData
 
 	if lastCensus.GetCensusState() == census.PrimingCensus {
 		/* This is the priming census */
 		priming := lastCensus.GetMandateRegistry().GetPrimingCloudHash()
-		lastCensus.(census.Prime).MakeExpected(pd.PulseNumber, priming, priming).MakeActive(*pd)
+		lastCensus.(census.Prime).BuildCopy(pd, priming, priming).MakeExpected().MakeActive(pd)
 	} else {
 		// TODO PulseData conversion from ephemeral
 		if lastCensus.GetPulseNumber() != pd.PulseNumber {
@@ -269,7 +269,7 @@ func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 		if !lastCensus.IsActive() {
 			/* Auto-activation of the prepared lastCensus */
 			expCensus := chronicle.GetExpectedCensus()
-			lastCensus = expCensus.MakeActive(*pd)
+			lastCensus = expCensus.MakeActive(pd)
 		}
 	}
 

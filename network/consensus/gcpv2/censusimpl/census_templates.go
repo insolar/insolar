@@ -69,31 +69,35 @@ type copyToOnlinePopulation interface {
 }
 
 func NewPrimingCensusForJoiner(localProfile profiles.StaticProfile, registries census.VersionedRegistries,
-	vf cryptkit.SignatureVerifierFactory) *PrimingCensusTemplate {
+	vf cryptkit.SignatureVerifierFactory, allowEphemeral bool) *PrimingCensusTemplate {
 
 	pop := NewJoinerPopulation(localProfile, vf)
-	return newPrimingCensus(&pop, registries)
+	return newPrimingCensus(&pop, registries, allowEphemeral)
 }
 
 func NewPrimingCensus(intros []profiles.StaticProfile, localProfile profiles.StaticProfile, registries census.VersionedRegistries,
-	vf cryptkit.SignatureVerifierFactory) *PrimingCensusTemplate {
+	vf cryptkit.SignatureVerifierFactory, allowEphemeral bool) *PrimingCensusTemplate {
 
 	if len(intros) == 0 {
 		panic("illegal state")
 	}
 	localID := localProfile.GetStaticNodeID()
 	pop := NewManyNodePopulation(intros, localID, vf)
-	return newPrimingCensus(&pop, registries)
+	return newPrimingCensus(&pop, registries, allowEphemeral)
 }
 
-func newPrimingCensus(pop copyToOnlinePopulation, registries census.VersionedRegistries) *PrimingCensusTemplate {
-	r := &PrimingCensusTemplate{CensusTemplate{
-		registries: registries,
-		online:     pop,
-		evicted:    &evictedPopulation{},
-		//pd:         registries.GetVersionPulseData(),
+func newPrimingCensus(pop copyToOnlinePopulation, registries census.VersionedRegistries, allowEphemeral bool) *PrimingCensusTemplate {
+
+	var pd pulse.Data
+	if allowEphemeral {
+		pd.PulseEpoch = pulse.EphemeralPulseEpoch
+	} else {
+		pd = registries.GetVersionPulseData()
+	}
+
+	return &PrimingCensusTemplate{CensusTemplate{nil,
+		pop, &evictedPopulation{}, pd, registries,
 	}}
-	return r
 }
 
 var _ census.Prime = &PrimingCensusTemplate{}
@@ -118,6 +122,10 @@ func (c *PrimingCensusTemplate) SetAsActiveTo(chronicles LocalConsensusChronicle
 	lc.makeActive(nil, c)
 }
 
+func (*PrimingCensusTemplate) GetCensusState() census.State {
+	return census.PrimingCensus
+}
+
 func (c *PrimingCensusTemplate) GetExpectedPulseNumber() pulse.Number {
 	switch {
 	case c.pd.IsEmpty():
@@ -128,33 +136,37 @@ func (c *PrimingCensusTemplate) GetExpectedPulseNumber() pulse.Number {
 	return c.pd.GetNextPulseNumber()
 }
 
-func (*PrimingCensusTemplate) GetCensusState() census.State {
-	return census.PrimingCensus
+func (c *PrimingCensusTemplate) CreateBuilder(ctx context.Context, pn pulse.Number) census.Builder {
+
+	if !pn.IsTimePulse() {
+		panic("illegal value")
+	}
+	if !c.GetExpectedPulseNumber().IsUnknownOrEqualTo(pn) {
+		panic("illegal value")
+	}
+
+	return newLocalCensusBuilder(ctx, c.chronicles, pn, c.online)
 }
 
-func (c *PrimingCensusTemplate) MakeExpected(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) census.Expected {
+func (c *PrimingCensusTemplate) BuildCopy(pd pulse.Data, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) census.Built {
 	if csh == nil {
 		panic("illegal value: CSH is nil")
 	}
 	if gsh == nil {
 		panic("illegal value: GSH is nil")
 	}
-	epn := c.GetExpectedPulseNumber()
-	if !epn.IsUnknown() && pn != epn {
+
+	if c.pd.PulseEpoch != pulse.EphemeralPulseEpoch && pd.IsFromEphemeral() {
+		panic("illegal value")
+	}
+	if !c.GetExpectedPulseNumber().IsUnknownOrEqualTo(pd.PulseNumber) {
 		panic("illegal value")
 	}
 
-	r := &ExpectedCensusTemplate{
-		chronicles: c.chronicles,
-		prev:       c.chronicles.active,
-		csh:        csh,
-		gsh:        gsh,
-		pn:         pn,
-		online:     c.online,
-		evicted:    c.evicted,
-	}
-
-	return c.chronicles.makeExpected(r)
+	return &BuiltCensusTemplate{ExpectedCensusTemplate{
+		c.chronicles, c.online, c.evicted, c.chronicles.active,
+		csh, gsh, pd.PulseNumber,
+	}}
 }
 
 func (c *PrimingCensusTemplate) GetPulseNumber() pulse.Number {
@@ -225,10 +237,6 @@ func (c *CensusTemplate) GetMandateRegistry() census.MandateRegistry {
 	return c.registries.GetMandateRegistry()
 }
 
-func (c *CensusTemplate) CreateBuilder(ctx context.Context, pn pulse.Number) census.Builder {
-	return newLocalCensusBuilder(ctx, c.chronicles, pn, c.online)
-}
-
 func (c CensusTemplate) String() string {
 	return fmt.Sprintf("pd:%v evicted:%v online:[%v]", c.pd, c.evicted, c.online)
 }
@@ -252,6 +260,15 @@ func (c *ActiveCensusTemplate) IsActive() bool {
 
 func (c *ActiveCensusTemplate) GetExpectedPulseNumber() pulse.Number {
 	return c.pd.GetNextPulseNumber()
+}
+
+func (c *ActiveCensusTemplate) CreateBuilder(ctx context.Context, pn pulse.Number) census.Builder {
+
+	if !pn.IsTimePulse() {
+		panic("illegal value")
+	}
+
+	return newLocalCensusBuilder(ctx, c.chronicles, pn, c.online)
 }
 
 func (*ActiveCensusTemplate) GetCensusState() census.State {
@@ -294,16 +311,20 @@ type ExpectedCensusTemplate struct {
 	pn         pulse.Number
 }
 
-func (c *ExpectedCensusTemplate) ConvertEphemeralAndMakeExpected(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) census.Expected {
+func (c *ExpectedCensusTemplate) Rebuild(pn pulse.Number) census.Built {
 
-	if csh == nil || gsh == nil || !pn.IsUnknownOrTimePulse() {
+	if !pn.IsTimePulse() {
 		panic("illegal value")
 	}
-	cp := *c
-	cp.pn = pn
-	cp.csh = csh
-	cp.gsh = gsh
-	return cp.chronicles.replaceExpected(c, &cp)
+
+	//epn := c.prev.GetExpectedPulseNumber()
+	//if !epn.IsUnknown() && epn != pn {
+	//	panic("illegal value")
+	//}
+	//
+	cp := BuiltCensusTemplate{*c}
+	cp.expected.pn = pn
+	return &cp
 }
 
 func (c *ExpectedCensusTemplate) GetNearestPulseData() (bool, pulse.Data) {
@@ -368,15 +389,12 @@ func (c *ExpectedCensusTemplate) GetPrevious() census.Active {
 func (c *ExpectedCensusTemplate) MakeActive(pd pulse.Data) census.Active {
 
 	a := ActiveCensusTemplate{
-		CensusTemplate: CensusTemplate{
-			chronicles: c.chronicles,
-			online:     c.online,
-			evicted:    c.evicted,
-			pd:         pd,
-		},
-		gsh: c.gsh,
-		csh: c.csh,
-	} // make copy for thread-safe access
+		CensusTemplate{
+			c.chronicles, c.online, c.evicted, pd, nil,
+		}, nil,
+		c.gsh,
+		c.csh,
+	}
 
 	c.chronicles.makeActive(c, &a)
 	return &a
@@ -388,4 +406,51 @@ func (c *ExpectedCensusTemplate) IsActive() bool {
 
 func (c ExpectedCensusTemplate) String() string {
 	return fmt.Sprintf("expected pn:%v evicted:%v online:[%v] gsh:%v csh:%v", c.pn, c.evicted, c.online, c.gsh, c.csh)
+}
+
+var _ census.Built = &BuiltCensusTemplate{}
+
+type BuiltCensusTemplate struct {
+	expected ExpectedCensusTemplate
+}
+
+func (b *BuiltCensusTemplate) Update(csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) census.Built {
+	if b.expected.gsh != nil && gsh == nil {
+		panic("illegal value")
+	}
+	if b.expected.csh != nil && csh == nil {
+		panic("illegal value")
+	}
+	cp := *b
+	cp.expected.gsh = gsh
+	cp.expected.csh = csh
+	return &cp
+}
+
+func (b *BuiltCensusTemplate) GetOnlinePopulation() census.OnlinePopulation {
+	return b.expected.GetOnlinePopulation()
+}
+
+func (b *BuiltCensusTemplate) GetEvictedPopulation() census.EvictedPopulation {
+	return b.expected.GetEvictedPopulation()
+}
+
+func (b *BuiltCensusTemplate) GetGlobulaStateHash() proofs.GlobulaStateHash {
+	return b.expected.GetGlobulaStateHash()
+}
+
+func (b *BuiltCensusTemplate) GetCloudStateHash() proofs.CloudStateHash {
+	return b.expected.GetCloudStateHash()
+}
+
+func (b *BuiltCensusTemplate) GetNearestPulseData() (bool, pulse.Data) {
+	return b.expected.GetNearestPulseData()
+}
+
+func (b *BuiltCensusTemplate) MakeExpected() census.Expected {
+	return b.expected.chronicles.makeExpected(&b.expected)
+}
+
+func (b BuiltCensusTemplate) String() string {
+	return fmt.Sprintf("built-%s", b.expected.String())
 }

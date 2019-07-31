@@ -207,7 +207,7 @@ const (
 )
 
 type internalPopulationEventDispatcher interface {
-	OnTrustUpdated(populationVersion uint32, n *NodeAppearance, before member.TrustLevel, after member.TrustLevel)
+	OnTrustUpdated(populationVersion uint32, n *NodeAppearance, before member.TrustLevel, after member.TrustLevel, fullProfile bool)
 	OnNodeStateAssigned(populationVersion uint32, n *NodeAppearance)
 	OnDynamicNodeUpdate(populationVersion uint32, n *NodeAppearance, flags UpdateFlags)
 	OnPurgatoryNodeUpdate(populationVersion uint32, n MemberPacketSender, flags UpdateFlags)

@@ -81,11 +81,10 @@ type localActiveCensus interface {
 }
 
 type localChronicles struct {
-	rw                  sync.RWMutex
-	active              localActiveCensus
-	expected            census.Expected
-	expectedPulseNumber pulse.Number
-	profileFactory      profiles.Factory
+	rw             sync.RWMutex
+	active         localActiveCensus
+	expected       census.Expected
+	profileFactory profiles.Factory
 }
 
 func (c *localChronicles) GetLatestCensus() census.Operational {
@@ -133,27 +132,34 @@ func (c *localChronicles) makeActive(ce census.Expected, ca localActiveCensus) {
 	if c.expected != ce {
 		panic("illegal state")
 	}
-	if !c.expectedPulseNumber.IsUnknown() && c.expectedPulseNumber != ca.GetPulseNumber() {
-		panic("unexpected pulse number")
-	}
+
 	pd := ca.GetPulseData()
+	if ce != nil && !ce.GetExpectedPulseNumber().IsUnknownOrEqualTo(pd.PulseNumber) {
+		panic("illegal value")
+	}
 
 	if c.active != nil {
-		pd.EnsurePulseData()
+		pda := c.active.GetPulseData()
+		if pda.IsEmpty() {
+			if pda.PulseEpoch == pulse.EphemeralPulseEpoch {
+				pd.EnsurePulseData()
+			} else {
+				pd.EnsurePulsarData()
+			}
+		} else {
+			if !pda.IsValidNext(pd) {
+				panic("illegal value - not a next pulse")
+			}
+		}
+		//pd.GetNextPulseNumber() // ensure that it cshould go before any updates as it may panic
+
 		registries := c.active.getVersionedRegistries().CommitNextPulse(pd, ca.GetOnlinePopulation())
-		c.expectedPulseNumber = pd.GetNextPulseNumber() // should go before any updates as it may panic
 		ca.setVersionedRegistries(registries)
 	} else {
-		switch {
-		case ca.getVersionedRegistries() == nil:
+		if ca.getVersionedRegistries() == nil {
 			panic("versioned registries are nil")
-		case pd.IsExpectedPulse():
-			c.expectedPulseNumber = pd.GetPulseNumber()
-		case pd.IsValidPulseData():
-			c.expectedPulseNumber = pd.GetNextPulseNumber()
-		default:
-			c.expectedPulseNumber = pulse.Unknown
 		}
+		//c.expectedPulseNumber = ca.GetExpectedPulseNumber()
 	}
 
 	c.active = ca
@@ -161,39 +167,16 @@ func (c *localChronicles) makeActive(ce census.Expected, ca localActiveCensus) {
 	ca.onMadeActive()
 }
 
-func (c *localChronicles) replaceExpected(ce census.Expected, ce2 census.Expected) census.Expected {
-	c.rw.Lock()
-	defer c.rw.Unlock()
-
-	if c.expected != nil && c.expected != ce {
-		panic("illegal state")
-	}
-
-	if !c.expectedPulseNumber.IsUnknown() && c.expectedPulseNumber != ce.GetPulseNumber() {
-		if c.active != nil {
-			pd := c.active.GetPulseData()
-
-			if !pd.IsEmpty() && !pd.IsFromEphemeral() {
-				panic("illegal state")
-			}
-		}
-		c.expectedPulseNumber = ce2.GetPulseNumber()
-	}
-
-	c.expected = ce2
-	return ce2
-}
-
 func (c *localChronicles) makeExpected(ce census.Expected) census.Expected {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 
-	if c.expected != nil {
+	if c.active != ce.GetPrevious() {
 		panic("illegal state")
 	}
 
-	if !c.expectedPulseNumber.IsUnknown() && c.expectedPulseNumber != ce.GetPulseNumber() {
-		panic("unexpected pulse number")
+	if c.expected != nil && c.expected.GetOnlinePopulation() != ce.GetOnlinePopulation() {
+		panic("illegal state")
 	}
 
 	c.expected = ce

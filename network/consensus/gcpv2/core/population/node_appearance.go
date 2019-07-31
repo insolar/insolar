@@ -326,7 +326,7 @@ func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp prof
 	}
 
 	if trustBefore != c.trust {
-		c.hook.OnTrustUpdated(updVersion, c, trustBefore, c.trust)
+		c.hook.OnTrustUpdated(updVersion, c, trustBefore, c.trust, c.profile.HasFullProfile())
 	}
 
 	return modified, err
@@ -366,7 +366,7 @@ func (c *NodeAppearance) updateNodeTrustLevel(trustBefore, trust member.TrustLev
 		updVersion = c.hook.UpdatePopulationVersion()
 	}
 	if trustBefore != c.trust {
-		c.hook.OnTrustUpdated(updVersion, c, trustBefore, c.trust)
+		c.hook.OnTrustUpdated(updVersion, c, trustBefore, c.trust, c.profile.HasFullProfile())
 	}
 	return modified
 }
@@ -503,7 +503,7 @@ func (c *NodeAppearance) SetLocalNodeState(ma profiles.MemberAnnouncement) {
 
 	c.trust.Update(member.LocalSelfTrust)
 	if trustBefore != c.trust {
-		c.hook.OnTrustUpdated(c.hook.UpdatePopulationVersion(), c, trustBefore, c.trust)
+		c.hook.OnTrustUpdated(c.hook.UpdatePopulationVersion(), c, trustBefore, c.trust, c.profile.HasFullProfile())
 	}
 }
 
@@ -561,7 +561,8 @@ func (c *NodeAppearance) onAddedToPopulation(ctx context.Context, fixedInit bool
 		flags |= FlagFixedInit
 	}
 
-	if c.profile.HasFullProfile() {
+	full := c.profile.HasFullProfile()
+	if full {
 		flags |= FlagUpdatedProfile
 	}
 	pv := c.hook.GetPopulationVersion()
@@ -569,7 +570,7 @@ func (c *NodeAppearance) onAddedToPopulation(ctx context.Context, fixedInit bool
 
 	trust := c.trust // this is safe as this method is called before any concurrent access
 	if trust != member.UnknownTrust {
-		c.hook.OnTrustUpdated(pv, c, member.UnknownTrust, trust)
+		c.hook.OnTrustUpdated(pv, c, member.UnknownTrust, trust, full)
 	}
 }
 
@@ -603,7 +604,7 @@ func (c *NodeAppearance) registerFraud(fraud misbehavior.FraudError) (bool, erro
 	if c.trust.Update(member.FraudByThisNode) {
 		updVersion := c.hook.UpdatePopulationVersion()
 		c.firstFraudDetails = &fraud
-		c.hook.OnTrustUpdated(updVersion, c, prevTrust, c.trust)
+		c.hook.OnTrustUpdated(updVersion, c, prevTrust, c.trust, c.profile.HasFullProfile())
 		return true, fraud
 	}
 	return false, fraud
@@ -700,14 +701,18 @@ func (c *NodeAppearance) GetRequestedAnnouncement() profiles.MembershipAnnouncem
 	return c.getMembershipAnnouncement()
 }
 
+/* deprecated */ //replace with DispatchAnnouncement
 func (c *NodeAppearance) UpgradeDynamicNodeProfile(ctx context.Context, full transport.FullIntroductionReader) bool {
 	return c.upgradeDynamicNodeProfile(ctx, full, full)
 }
 
 func (c *NodeAppearance) upgradeDynamicNodeProfile(ctx context.Context, brief profiles.BriefCandidateProfile, ext profiles.CandidateProfileExtension) bool {
 
-	match, create := profiles.UpgradeStaticProfile(c.profile.GetStatic(), brief, ext)
-	if match && create != nil {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	match, created := profiles.UpgradeStaticProfile(c.profile.GetStatic(), brief, ext)
+	if match && created != nil {
 		// here we should check/apply all related attributes
 		// TODO handle possible mismatch
 		// c.requestedPower = c.profile.GetStatic().GetExtension().GetPowerLevels().FindNearestValid(c.requestedPower)
@@ -715,7 +720,9 @@ func (c *NodeAppearance) upgradeDynamicNodeProfile(ctx context.Context, brief pr
 		inslogger.FromContext(ctx).Debugf("Node profile was upgraded: s=%d, t=%d",
 			c.hook.GetLocalNodeID(), c.GetNodeID())
 
-		c.hook.OnDynamicNodeUpdate(c.hook.UpdatePopulationVersion(), c, FlagUpdatedProfile)
+		v := c.hook.UpdatePopulationVersion()
+		c.hook.OnDynamicNodeUpdate(v, c, FlagUpdatedProfile)
+		c.hook.OnTrustUpdated(v, c, c.trust, c.trust, true)
 	}
 	return match
 }

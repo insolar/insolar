@@ -63,7 +63,9 @@ type AtomicEventStats struct {
 	trustLevelCounts uint64
 }
 
-func (p *AtomicEventStats) OnTrustUpdated(populationVersion uint32, n *NodeAppearance, trustBefore member.TrustLevel, trustAfter member.TrustLevel) {
+func (p *AtomicEventStats) OnTrustUpdated(populationVersion uint32, n *NodeAppearance,
+	trustBefore member.TrustLevel, trustAfter member.TrustLevel, hasFullProfile bool) {
+
 	delta := uint64(0)
 
 	switch {

@@ -91,8 +91,9 @@ type PrepRealm struct {
 
 	/* Other fields - need mutex */
 
-	limiters           sync.Map
-	lastCloudStateHash cryptkit.DigestHolder
+	limiters            sync.Map
+	lastCloudStateHash  cryptkit.DigestHolder
+	deactivateEphemeral bool
 }
 
 func (p *PrepRealm) init(completeFn func(successful bool)) {
@@ -242,7 +243,7 @@ func (p *PrepRealm) pushEphemeralPulse(ctx context.Context) bool {
 	p.Lock()
 	defer p.Unlock()
 
-	if p.ephemeralFeeder == nil {
+	if p.deactivateEphemeral {
 		return false // ephemeral mode was deactivated
 	}
 
@@ -326,9 +327,8 @@ func (p *PrepRealm) _applyPulseData(pdp proofs.OriginalPulsarPacket, fromPulsar 
 			panic("illegal state")
 		}
 		if p.ephemeralFeeder.CanAcceptTimePulseToStopEphemeral(pd) {
+			p.deactivateEphemeral = true
 			panic("not implemented")
-			//p.isPulseConvertedFromEphemeral = true
-			//p.ephemeralFeeder = nil
 		}
 		fallthrough
 	default:

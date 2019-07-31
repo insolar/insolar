@@ -282,6 +282,11 @@ func (p *RealmPurgatory) AddJoinerAndEnsureAscendancy(
 
 	jp := announcement.JoinerProfile
 	joinerID := jp.GetStaticNodeID()
+
+	if announcedByID == joinerID {
+		panic("illegal value - cant add itself")
+	}
+
 	err := p.getOrCreateMember(joinerID).DispatchAnnouncement(context.TODO(), // TODO context
 		member.JoinerRank, jp,
 		profiles.NewJoinerAnnouncement(jp, announcedByID))
