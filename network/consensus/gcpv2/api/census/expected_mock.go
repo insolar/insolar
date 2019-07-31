@@ -19,6 +19,12 @@ import (
 type ExpectedMock struct {
 	t minimock.Tester
 
+	funcConvertEphemeralAndMakeExpected          func(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) (e1 Expected)
+	inspectFuncConvertEphemeralAndMakeExpected   func(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash)
+	afterConvertEphemeralAndMakeExpectedCounter  uint64
+	beforeConvertEphemeralAndMakeExpectedCounter uint64
+	ConvertEphemeralAndMakeExpectedMock          mExpectedMockConvertEphemeralAndMakeExpected
+
 	funcCreateBuilder          func(ctx context.Context, pn pulse.Number) (b1 Builder)
 	inspectFuncCreateBuilder   func(ctx context.Context, pn pulse.Number)
 	afterCreateBuilderCounter  uint64
@@ -66,6 +72,12 @@ type ExpectedMock struct {
 	afterGetMisbehaviorRegistryCounter  uint64
 	beforeGetMisbehaviorRegistryCounter uint64
 	GetMisbehaviorRegistryMock          mExpectedMockGetMisbehaviorRegistry
+
+	funcGetNearestPulseData          func() (b1 bool, d1 pulse.Data)
+	inspectFuncGetNearestPulseData   func()
+	afterGetNearestPulseDataCounter  uint64
+	beforeGetNearestPulseDataCounter uint64
+	GetNearestPulseDataMock          mExpectedMockGetNearestPulseData
 
 	funcGetOfflinePopulation          func() (o1 OfflinePopulation)
 	inspectFuncGetOfflinePopulation   func()
@@ -117,6 +129,9 @@ func NewExpectedMock(t minimock.Tester) *ExpectedMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.ConvertEphemeralAndMakeExpectedMock = mExpectedMockConvertEphemeralAndMakeExpected{mock: m}
+	m.ConvertEphemeralAndMakeExpectedMock.callArgs = []*ExpectedMockConvertEphemeralAndMakeExpectedParams{}
+
 	m.CreateBuilderMock = mExpectedMockCreateBuilder{mock: m}
 	m.CreateBuilderMock.callArgs = []*ExpectedMockCreateBuilderParams{}
 
@@ -133,6 +148,8 @@ func NewExpectedMock(t minimock.Tester) *ExpectedMock {
 	m.GetMandateRegistryMock = mExpectedMockGetMandateRegistry{mock: m}
 
 	m.GetMisbehaviorRegistryMock = mExpectedMockGetMisbehaviorRegistry{mock: m}
+
+	m.GetNearestPulseDataMock = mExpectedMockGetNearestPulseData{mock: m}
 
 	m.GetOfflinePopulationMock = mExpectedMockGetOfflinePopulation{mock: m}
 
@@ -151,6 +168,223 @@ func NewExpectedMock(t minimock.Tester) *ExpectedMock {
 	m.MakeActiveMock.callArgs = []*ExpectedMockMakeActiveParams{}
 
 	return m
+}
+
+type mExpectedMockConvertEphemeralAndMakeExpected struct {
+	mock               *ExpectedMock
+	defaultExpectation *ExpectedMockConvertEphemeralAndMakeExpectedExpectation
+	expectations       []*ExpectedMockConvertEphemeralAndMakeExpectedExpectation
+
+	callArgs []*ExpectedMockConvertEphemeralAndMakeExpectedParams
+	mutex    sync.RWMutex
+}
+
+// ExpectedMockConvertEphemeralAndMakeExpectedExpectation specifies expectation struct of the Expected.ConvertEphemeralAndMakeExpected
+type ExpectedMockConvertEphemeralAndMakeExpectedExpectation struct {
+	mock    *ExpectedMock
+	params  *ExpectedMockConvertEphemeralAndMakeExpectedParams
+	results *ExpectedMockConvertEphemeralAndMakeExpectedResults
+	Counter uint64
+}
+
+// ExpectedMockConvertEphemeralAndMakeExpectedParams contains parameters of the Expected.ConvertEphemeralAndMakeExpected
+type ExpectedMockConvertEphemeralAndMakeExpectedParams struct {
+	pn  pulse.Number
+	csh proofs.CloudStateHash
+	gsh proofs.GlobulaStateHash
+}
+
+// ExpectedMockConvertEphemeralAndMakeExpectedResults contains results of the Expected.ConvertEphemeralAndMakeExpected
+type ExpectedMockConvertEphemeralAndMakeExpectedResults struct {
+	e1 Expected
+}
+
+// Expect sets up expected params for Expected.ConvertEphemeralAndMakeExpected
+func (mmConvertEphemeralAndMakeExpected *mExpectedMockConvertEphemeralAndMakeExpected) Expect(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) *mExpectedMockConvertEphemeralAndMakeExpected {
+	if mmConvertEphemeralAndMakeExpected.mock.funcConvertEphemeralAndMakeExpected != nil {
+		mmConvertEphemeralAndMakeExpected.mock.t.Fatalf("ExpectedMock.ConvertEphemeralAndMakeExpected mock is already set by Set")
+	}
+
+	if mmConvertEphemeralAndMakeExpected.defaultExpectation == nil {
+		mmConvertEphemeralAndMakeExpected.defaultExpectation = &ExpectedMockConvertEphemeralAndMakeExpectedExpectation{}
+	}
+
+	mmConvertEphemeralAndMakeExpected.defaultExpectation.params = &ExpectedMockConvertEphemeralAndMakeExpectedParams{pn, csh, gsh}
+	for _, e := range mmConvertEphemeralAndMakeExpected.expectations {
+		if minimock.Equal(e.params, mmConvertEphemeralAndMakeExpected.defaultExpectation.params) {
+			mmConvertEphemeralAndMakeExpected.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmConvertEphemeralAndMakeExpected.defaultExpectation.params)
+		}
+	}
+
+	return mmConvertEphemeralAndMakeExpected
+}
+
+// Inspect accepts an inspector function that has same arguments as the Expected.ConvertEphemeralAndMakeExpected
+func (mmConvertEphemeralAndMakeExpected *mExpectedMockConvertEphemeralAndMakeExpected) Inspect(f func(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash)) *mExpectedMockConvertEphemeralAndMakeExpected {
+	if mmConvertEphemeralAndMakeExpected.mock.inspectFuncConvertEphemeralAndMakeExpected != nil {
+		mmConvertEphemeralAndMakeExpected.mock.t.Fatalf("Inspect function is already set for ExpectedMock.ConvertEphemeralAndMakeExpected")
+	}
+
+	mmConvertEphemeralAndMakeExpected.mock.inspectFuncConvertEphemeralAndMakeExpected = f
+
+	return mmConvertEphemeralAndMakeExpected
+}
+
+// Return sets up results that will be returned by Expected.ConvertEphemeralAndMakeExpected
+func (mmConvertEphemeralAndMakeExpected *mExpectedMockConvertEphemeralAndMakeExpected) Return(e1 Expected) *ExpectedMock {
+	if mmConvertEphemeralAndMakeExpected.mock.funcConvertEphemeralAndMakeExpected != nil {
+		mmConvertEphemeralAndMakeExpected.mock.t.Fatalf("ExpectedMock.ConvertEphemeralAndMakeExpected mock is already set by Set")
+	}
+
+	if mmConvertEphemeralAndMakeExpected.defaultExpectation == nil {
+		mmConvertEphemeralAndMakeExpected.defaultExpectation = &ExpectedMockConvertEphemeralAndMakeExpectedExpectation{mock: mmConvertEphemeralAndMakeExpected.mock}
+	}
+	mmConvertEphemeralAndMakeExpected.defaultExpectation.results = &ExpectedMockConvertEphemeralAndMakeExpectedResults{e1}
+	return mmConvertEphemeralAndMakeExpected.mock
+}
+
+//Set uses given function f to mock the Expected.ConvertEphemeralAndMakeExpected method
+func (mmConvertEphemeralAndMakeExpected *mExpectedMockConvertEphemeralAndMakeExpected) Set(f func(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) (e1 Expected)) *ExpectedMock {
+	if mmConvertEphemeralAndMakeExpected.defaultExpectation != nil {
+		mmConvertEphemeralAndMakeExpected.mock.t.Fatalf("Default expectation is already set for the Expected.ConvertEphemeralAndMakeExpected method")
+	}
+
+	if len(mmConvertEphemeralAndMakeExpected.expectations) > 0 {
+		mmConvertEphemeralAndMakeExpected.mock.t.Fatalf("Some expectations are already set for the Expected.ConvertEphemeralAndMakeExpected method")
+	}
+
+	mmConvertEphemeralAndMakeExpected.mock.funcConvertEphemeralAndMakeExpected = f
+	return mmConvertEphemeralAndMakeExpected.mock
+}
+
+// When sets expectation for the Expected.ConvertEphemeralAndMakeExpected which will trigger the result defined by the following
+// Then helper
+func (mmConvertEphemeralAndMakeExpected *mExpectedMockConvertEphemeralAndMakeExpected) When(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) *ExpectedMockConvertEphemeralAndMakeExpectedExpectation {
+	if mmConvertEphemeralAndMakeExpected.mock.funcConvertEphemeralAndMakeExpected != nil {
+		mmConvertEphemeralAndMakeExpected.mock.t.Fatalf("ExpectedMock.ConvertEphemeralAndMakeExpected mock is already set by Set")
+	}
+
+	expectation := &ExpectedMockConvertEphemeralAndMakeExpectedExpectation{
+		mock:   mmConvertEphemeralAndMakeExpected.mock,
+		params: &ExpectedMockConvertEphemeralAndMakeExpectedParams{pn, csh, gsh},
+	}
+	mmConvertEphemeralAndMakeExpected.expectations = append(mmConvertEphemeralAndMakeExpected.expectations, expectation)
+	return expectation
+}
+
+// Then sets up Expected.ConvertEphemeralAndMakeExpected return parameters for the expectation previously defined by the When method
+func (e *ExpectedMockConvertEphemeralAndMakeExpectedExpectation) Then(e1 Expected) *ExpectedMock {
+	e.results = &ExpectedMockConvertEphemeralAndMakeExpectedResults{e1}
+	return e.mock
+}
+
+// ConvertEphemeralAndMakeExpected implements Expected
+func (mmConvertEphemeralAndMakeExpected *ExpectedMock) ConvertEphemeralAndMakeExpected(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) (e1 Expected) {
+	mm_atomic.AddUint64(&mmConvertEphemeralAndMakeExpected.beforeConvertEphemeralAndMakeExpectedCounter, 1)
+	defer mm_atomic.AddUint64(&mmConvertEphemeralAndMakeExpected.afterConvertEphemeralAndMakeExpectedCounter, 1)
+
+	if mmConvertEphemeralAndMakeExpected.inspectFuncConvertEphemeralAndMakeExpected != nil {
+		mmConvertEphemeralAndMakeExpected.inspectFuncConvertEphemeralAndMakeExpected(pn, csh, gsh)
+	}
+
+	params := &ExpectedMockConvertEphemeralAndMakeExpectedParams{pn, csh, gsh}
+
+	// Record call args
+	mmConvertEphemeralAndMakeExpected.ConvertEphemeralAndMakeExpectedMock.mutex.Lock()
+	mmConvertEphemeralAndMakeExpected.ConvertEphemeralAndMakeExpectedMock.callArgs = append(mmConvertEphemeralAndMakeExpected.ConvertEphemeralAndMakeExpectedMock.callArgs, params)
+	mmConvertEphemeralAndMakeExpected.ConvertEphemeralAndMakeExpectedMock.mutex.Unlock()
+
+	for _, e := range mmConvertEphemeralAndMakeExpected.ConvertEphemeralAndMakeExpectedMock.expectations {
+		if minimock.Equal(e.params, params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.e1
+		}
+	}
+
+	if mmConvertEphemeralAndMakeExpected.ConvertEphemeralAndMakeExpectedMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmConvertEphemeralAndMakeExpected.ConvertEphemeralAndMakeExpectedMock.defaultExpectation.Counter, 1)
+		want := mmConvertEphemeralAndMakeExpected.ConvertEphemeralAndMakeExpectedMock.defaultExpectation.params
+		got := ExpectedMockConvertEphemeralAndMakeExpectedParams{pn, csh, gsh}
+		if want != nil && !minimock.Equal(*want, got) {
+			mmConvertEphemeralAndMakeExpected.t.Errorf("ExpectedMock.ConvertEphemeralAndMakeExpected got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		}
+
+		results := mmConvertEphemeralAndMakeExpected.ConvertEphemeralAndMakeExpectedMock.defaultExpectation.results
+		if results == nil {
+			mmConvertEphemeralAndMakeExpected.t.Fatal("No results are set for the ExpectedMock.ConvertEphemeralAndMakeExpected")
+		}
+		return (*results).e1
+	}
+	if mmConvertEphemeralAndMakeExpected.funcConvertEphemeralAndMakeExpected != nil {
+		return mmConvertEphemeralAndMakeExpected.funcConvertEphemeralAndMakeExpected(pn, csh, gsh)
+	}
+	mmConvertEphemeralAndMakeExpected.t.Fatalf("Unexpected call to ExpectedMock.ConvertEphemeralAndMakeExpected. %v %v %v", pn, csh, gsh)
+	return
+}
+
+// ConvertEphemeralAndMakeExpectedAfterCounter returns a count of finished ExpectedMock.ConvertEphemeralAndMakeExpected invocations
+func (mmConvertEphemeralAndMakeExpected *ExpectedMock) ConvertEphemeralAndMakeExpectedAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmConvertEphemeralAndMakeExpected.afterConvertEphemeralAndMakeExpectedCounter)
+}
+
+// ConvertEphemeralAndMakeExpectedBeforeCounter returns a count of ExpectedMock.ConvertEphemeralAndMakeExpected invocations
+func (mmConvertEphemeralAndMakeExpected *ExpectedMock) ConvertEphemeralAndMakeExpectedBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmConvertEphemeralAndMakeExpected.beforeConvertEphemeralAndMakeExpectedCounter)
+}
+
+// Calls returns a list of arguments used in each call to ExpectedMock.ConvertEphemeralAndMakeExpected.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmConvertEphemeralAndMakeExpected *mExpectedMockConvertEphemeralAndMakeExpected) Calls() []*ExpectedMockConvertEphemeralAndMakeExpectedParams {
+	mmConvertEphemeralAndMakeExpected.mutex.RLock()
+
+	argCopy := make([]*ExpectedMockConvertEphemeralAndMakeExpectedParams, len(mmConvertEphemeralAndMakeExpected.callArgs))
+	copy(argCopy, mmConvertEphemeralAndMakeExpected.callArgs)
+
+	mmConvertEphemeralAndMakeExpected.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockConvertEphemeralAndMakeExpectedDone returns true if the count of the ConvertEphemeralAndMakeExpected invocations corresponds
+// the number of defined expectations
+func (m *ExpectedMock) MinimockConvertEphemeralAndMakeExpectedDone() bool {
+	for _, e := range m.ConvertEphemeralAndMakeExpectedMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.ConvertEphemeralAndMakeExpectedMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterConvertEphemeralAndMakeExpectedCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcConvertEphemeralAndMakeExpected != nil && mm_atomic.LoadUint64(&m.afterConvertEphemeralAndMakeExpectedCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockConvertEphemeralAndMakeExpectedInspect logs each unmet expectation
+func (m *ExpectedMock) MinimockConvertEphemeralAndMakeExpectedInspect() {
+	for _, e := range m.ConvertEphemeralAndMakeExpectedMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to ExpectedMock.ConvertEphemeralAndMakeExpected with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.ConvertEphemeralAndMakeExpectedMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterConvertEphemeralAndMakeExpectedCounter) < 1 {
+		if m.ConvertEphemeralAndMakeExpectedMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to ExpectedMock.ConvertEphemeralAndMakeExpected")
+		} else {
+			m.t.Errorf("Expected call to ExpectedMock.ConvertEphemeralAndMakeExpected with params: %#v", *m.ConvertEphemeralAndMakeExpectedMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcConvertEphemeralAndMakeExpected != nil && mm_atomic.LoadUint64(&m.afterConvertEphemeralAndMakeExpectedCounter) < 1 {
+		m.t.Error("Expected call to ExpectedMock.ConvertEphemeralAndMakeExpected")
+	}
 }
 
 type mExpectedMockCreateBuilder struct {
@@ -1370,6 +1604,150 @@ func (m *ExpectedMock) MinimockGetMisbehaviorRegistryInspect() {
 	}
 }
 
+type mExpectedMockGetNearestPulseData struct {
+	mock               *ExpectedMock
+	defaultExpectation *ExpectedMockGetNearestPulseDataExpectation
+	expectations       []*ExpectedMockGetNearestPulseDataExpectation
+}
+
+// ExpectedMockGetNearestPulseDataExpectation specifies expectation struct of the Expected.GetNearestPulseData
+type ExpectedMockGetNearestPulseDataExpectation struct {
+	mock *ExpectedMock
+
+	results *ExpectedMockGetNearestPulseDataResults
+	Counter uint64
+}
+
+// ExpectedMockGetNearestPulseDataResults contains results of the Expected.GetNearestPulseData
+type ExpectedMockGetNearestPulseDataResults struct {
+	b1 bool
+	d1 pulse.Data
+}
+
+// Expect sets up expected params for Expected.GetNearestPulseData
+func (mmGetNearestPulseData *mExpectedMockGetNearestPulseData) Expect() *mExpectedMockGetNearestPulseData {
+	if mmGetNearestPulseData.mock.funcGetNearestPulseData != nil {
+		mmGetNearestPulseData.mock.t.Fatalf("ExpectedMock.GetNearestPulseData mock is already set by Set")
+	}
+
+	if mmGetNearestPulseData.defaultExpectation == nil {
+		mmGetNearestPulseData.defaultExpectation = &ExpectedMockGetNearestPulseDataExpectation{}
+	}
+
+	return mmGetNearestPulseData
+}
+
+// Inspect accepts an inspector function that has same arguments as the Expected.GetNearestPulseData
+func (mmGetNearestPulseData *mExpectedMockGetNearestPulseData) Inspect(f func()) *mExpectedMockGetNearestPulseData {
+	if mmGetNearestPulseData.mock.inspectFuncGetNearestPulseData != nil {
+		mmGetNearestPulseData.mock.t.Fatalf("Inspect function is already set for ExpectedMock.GetNearestPulseData")
+	}
+
+	mmGetNearestPulseData.mock.inspectFuncGetNearestPulseData = f
+
+	return mmGetNearestPulseData
+}
+
+// Return sets up results that will be returned by Expected.GetNearestPulseData
+func (mmGetNearestPulseData *mExpectedMockGetNearestPulseData) Return(b1 bool, d1 pulse.Data) *ExpectedMock {
+	if mmGetNearestPulseData.mock.funcGetNearestPulseData != nil {
+		mmGetNearestPulseData.mock.t.Fatalf("ExpectedMock.GetNearestPulseData mock is already set by Set")
+	}
+
+	if mmGetNearestPulseData.defaultExpectation == nil {
+		mmGetNearestPulseData.defaultExpectation = &ExpectedMockGetNearestPulseDataExpectation{mock: mmGetNearestPulseData.mock}
+	}
+	mmGetNearestPulseData.defaultExpectation.results = &ExpectedMockGetNearestPulseDataResults{b1, d1}
+	return mmGetNearestPulseData.mock
+}
+
+//Set uses given function f to mock the Expected.GetNearestPulseData method
+func (mmGetNearestPulseData *mExpectedMockGetNearestPulseData) Set(f func() (b1 bool, d1 pulse.Data)) *ExpectedMock {
+	if mmGetNearestPulseData.defaultExpectation != nil {
+		mmGetNearestPulseData.mock.t.Fatalf("Default expectation is already set for the Expected.GetNearestPulseData method")
+	}
+
+	if len(mmGetNearestPulseData.expectations) > 0 {
+		mmGetNearestPulseData.mock.t.Fatalf("Some expectations are already set for the Expected.GetNearestPulseData method")
+	}
+
+	mmGetNearestPulseData.mock.funcGetNearestPulseData = f
+	return mmGetNearestPulseData.mock
+}
+
+// GetNearestPulseData implements Expected
+func (mmGetNearestPulseData *ExpectedMock) GetNearestPulseData() (b1 bool, d1 pulse.Data) {
+	mm_atomic.AddUint64(&mmGetNearestPulseData.beforeGetNearestPulseDataCounter, 1)
+	defer mm_atomic.AddUint64(&mmGetNearestPulseData.afterGetNearestPulseDataCounter, 1)
+
+	if mmGetNearestPulseData.inspectFuncGetNearestPulseData != nil {
+		mmGetNearestPulseData.inspectFuncGetNearestPulseData()
+	}
+
+	if mmGetNearestPulseData.GetNearestPulseDataMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmGetNearestPulseData.GetNearestPulseDataMock.defaultExpectation.Counter, 1)
+
+		results := mmGetNearestPulseData.GetNearestPulseDataMock.defaultExpectation.results
+		if results == nil {
+			mmGetNearestPulseData.t.Fatal("No results are set for the ExpectedMock.GetNearestPulseData")
+		}
+		return (*results).b1, (*results).d1
+	}
+	if mmGetNearestPulseData.funcGetNearestPulseData != nil {
+		return mmGetNearestPulseData.funcGetNearestPulseData()
+	}
+	mmGetNearestPulseData.t.Fatalf("Unexpected call to ExpectedMock.GetNearestPulseData.")
+	return
+}
+
+// GetNearestPulseDataAfterCounter returns a count of finished ExpectedMock.GetNearestPulseData invocations
+func (mmGetNearestPulseData *ExpectedMock) GetNearestPulseDataAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmGetNearestPulseData.afterGetNearestPulseDataCounter)
+}
+
+// GetNearestPulseDataBeforeCounter returns a count of ExpectedMock.GetNearestPulseData invocations
+func (mmGetNearestPulseData *ExpectedMock) GetNearestPulseDataBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmGetNearestPulseData.beforeGetNearestPulseDataCounter)
+}
+
+// MinimockGetNearestPulseDataDone returns true if the count of the GetNearestPulseData invocations corresponds
+// the number of defined expectations
+func (m *ExpectedMock) MinimockGetNearestPulseDataDone() bool {
+	for _, e := range m.GetNearestPulseDataMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.GetNearestPulseDataMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetNearestPulseDataCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcGetNearestPulseData != nil && mm_atomic.LoadUint64(&m.afterGetNearestPulseDataCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockGetNearestPulseDataInspect logs each unmet expectation
+func (m *ExpectedMock) MinimockGetNearestPulseDataInspect() {
+	for _, e := range m.GetNearestPulseDataMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Error("Expected call to ExpectedMock.GetNearestPulseData")
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.GetNearestPulseDataMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetNearestPulseDataCounter) < 1 {
+		m.t.Error("Expected call to ExpectedMock.GetNearestPulseData")
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcGetNearestPulseData != nil && mm_atomic.LoadUint64(&m.afterGetNearestPulseDataCounter) < 1 {
+		m.t.Error("Expected call to ExpectedMock.GetNearestPulseData")
+	}
+}
+
 type mExpectedMockGetOfflinePopulation struct {
 	mock               *ExpectedMock
 	defaultExpectation *ExpectedMockGetOfflinePopulationExpectation
@@ -2518,6 +2896,8 @@ func (m *ExpectedMock) MinimockMakeActiveInspect() {
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *ExpectedMock) MinimockFinish() {
 	if !m.minimockDone() {
+		m.MinimockConvertEphemeralAndMakeExpectedInspect()
+
 		m.MinimockCreateBuilderInspect()
 
 		m.MinimockGetCensusStateInspect()
@@ -2533,6 +2913,8 @@ func (m *ExpectedMock) MinimockFinish() {
 		m.MinimockGetMandateRegistryInspect()
 
 		m.MinimockGetMisbehaviorRegistryInspect()
+
+		m.MinimockGetNearestPulseDataInspect()
 
 		m.MinimockGetOfflinePopulationInspect()
 
@@ -2570,6 +2952,7 @@ func (m *ExpectedMock) MinimockWait(timeout mm_time.Duration) {
 func (m *ExpectedMock) minimockDone() bool {
 	done := true
 	return done &&
+		m.MinimockConvertEphemeralAndMakeExpectedDone() &&
 		m.MinimockCreateBuilderDone() &&
 		m.MinimockGetCensusStateDone() &&
 		m.MinimockGetCloudStateHashDone() &&
@@ -2578,6 +2961,7 @@ func (m *ExpectedMock) minimockDone() bool {
 		m.MinimockGetGlobulaStateHashDone() &&
 		m.MinimockGetMandateRegistryDone() &&
 		m.MinimockGetMisbehaviorRegistryDone() &&
+		m.MinimockGetNearestPulseDataDone() &&
 		m.MinimockGetOfflinePopulationDone() &&
 		m.MinimockGetOnlinePopulationDone() &&
 		m.MinimockGetPreviousDone() &&
