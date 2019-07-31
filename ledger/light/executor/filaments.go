@@ -298,7 +298,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	})
 
 	logger.Debug("started to search for duplicated requests")
-	defer logger.Debug("finished to search for duplicated requests")
+	defer logger.Debug("finished searching for duplicated requests")
 
 	reasonRef := request.ReasonRef()
 	reasonID := *reasonRef.Record()
