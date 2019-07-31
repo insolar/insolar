@@ -278,6 +278,10 @@ type EphemeralControlFeeder struct {
 	pulseDuration       time.Duration
 }
 
+func (f *EphemeralControlFeeder) OnEphemeralCancelled() {
+	// TODO is called on cancellation by both Ph1 packets and TryConvertFromEphemeral
+}
+
 func (f *EphemeralControlFeeder) CanAcceptTimePulseToStopEphemeral(pd pulse.Data /*, sourceNode profiles.ActiveNode*/) bool {
 	return false
 }

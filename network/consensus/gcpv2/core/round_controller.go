@@ -278,6 +278,11 @@ func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 	}
 
 	active := chronicle.GetActiveCensus()
+	if r.realm.ephemeralFeeder != nil && !active.GetPulseData().IsFromEphemeral() {
+		r.realm.ephemeralFeeder.OnEphemeralCancelled() // can't be called inline due to lock
+		r.realm.ephemeralFeeder = nil
+	}
+
 	r.realm.start(active, active.GetOnlinePopulation(), r.bundle)
 	r.roundWorker.SetTimeout(r.realm.roundStartedAt.Add(r.realm.timings.EndOfConsensus))
 }
