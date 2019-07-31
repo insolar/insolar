@@ -880,7 +880,7 @@ func (r *One) AddChildAndReturnMyselfAsParent() (string, error) {
 	holder := two.New()
 	friend, err := holder.AsChild(r.GetReference())
 	if err != nil {
-		return insolar.Reference{}.String(), err
+		return "", err
 	}
 
  	return friend.GetParent()
@@ -943,7 +943,7 @@ func (r *One) GetChildPrototype() (string, error) {
 	holder := two.New()
 	child, err := holder.AsChild(r.GetReference())
 	if err != nil {
-		return insolar.Reference{}.String(), err
+		return "", err
 	}
 
 	ref, err := child.GetPrototype()

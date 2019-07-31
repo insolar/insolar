@@ -91,7 +91,7 @@ func TestSessionManager_CleanupSimple(t *testing.T) {
 	err := sm.Start(context.Background())
 	require.NoError(t, err)
 
-	sm.NewSession(insolar.Reference{}, nil, time.Second)
+	sm.NewSession(insolar.NewEmptyReference(), nil, time.Second)
 	require.Equal(t, sessionMapLen(sm), 1)
 
 	time.Sleep(1500 * time.Millisecond)
@@ -107,7 +107,7 @@ func TestSessionManager_CleanupConcurrent(t *testing.T) {
 	err := sm.Start(context.Background())
 	require.NoError(t, err)
 
-	id := sm.NewSession(insolar.Reference{}, nil, time.Second)
+	id := sm.NewSession(insolar.NewEmptyReference(), nil, time.Second)
 	require.Equal(t, sessionMapLen(sm), 1)
 
 	// delete session here and check nothing happened
@@ -126,9 +126,9 @@ func TestSessionManager_CleanupOrder(t *testing.T) {
 	err := sm.Start(context.Background())
 	require.NoError(t, err)
 
-	sm.NewSession(insolar.Reference{}, nil, 2*time.Second)
-	sm.NewSession(insolar.Reference{}, nil, 2*time.Second)
-	sm.NewSession(insolar.Reference{}, nil, time.Second)
+	sm.NewSession(insolar.NewEmptyReference(), nil, 2*time.Second)
+	sm.NewSession(insolar.NewEmptyReference(), nil, 2*time.Second)
+	sm.NewSession(insolar.NewEmptyReference(), nil, time.Second)
 	require.Equal(t, sessionMapLen(sm), 3)
 
 	time.Sleep(1500 * time.Millisecond)

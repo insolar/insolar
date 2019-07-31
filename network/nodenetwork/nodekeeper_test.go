@@ -69,11 +69,12 @@ import (
 )
 
 func TestNewNodeNetwork(t *testing.T) {
+	emptyRef := insolar.NewEmptyReference()
 	cfg := configuration.Transport{Address: "invalid"}
 	certMock := testutils.NewCertificateMock(t)
 	certMock.GetRoleMock.Set(func() insolar.StaticRole { return insolar.StaticRoleUnknown })
 	certMock.GetPublicKeyMock.Set(func() crypto.PublicKey { return nil })
-	certMock.GetNodeRefMock.Set(func() *insolar.Reference { return &insolar.Reference{0} })
+	certMock.GetNodeRefMock.Set(func() *insolar.Reference { return &emptyRef })
 	certMock.GetDiscoveryNodesMock.Set(func() []insolar.DiscoveryNode { return nil })
 	_, err := NewNodeNetwork(cfg, certMock)
 	assert.Error(t, err)

@@ -273,7 +273,7 @@ func (s *stater) State() []byte {
 
 func TestServiceNetwork_StartStop(t *testing.T) {
 	cm := &component.Manager{}
-	origin := insolar.Reference{}
+	origin := testutils.RandomRef()
 	nk := nodenetwork.NewNodeKeeper(node.NewNode(origin, insolar.StaticRoleUnknown, nil, "127.0.0.1:0", ""))
 	cert := &certificate.Certificate{}
 	cert.Reference = origin.String()

@@ -18,6 +18,7 @@
 package rules
 
 import (
+	"encoding/binary"
 	"testing"
 
 	network2 "github.com/insolar/insolar/network"
@@ -32,7 +33,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var nilref = insolar.Reference{}
+var nilref = insolar.NewEmptyReference()
 
 func TestRules_CheckMinRole(t *testing.T) {
 	cm := component.Manager{}
@@ -122,7 +123,10 @@ func getDiscoveryNodes(count int) ([]insolar.NetworkNode, []insolar.DiscoveryNod
 }
 
 func newNode(id int) insolar.NetworkNode {
-	recordRef := insolar.Reference{byte(id)}
-	node := node2.NewNode(recordRef, insolar.StaticRoleVirtual, nil, "127.0.0.1:3000", "")
+	bs := make([]byte, 4)
+	binary.LittleEndian.PutUint32(bs, uint32(id))
+	nodeId := insolar.NewIDFromBytes(bs)
+	recordRef := insolar.NewReference(*nodeId)
+	node := node2.NewNode(*recordRef, insolar.StaticRoleVirtual, nil, "127.0.0.1:3000", "")
 	return node
 }

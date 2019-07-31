@@ -63,7 +63,7 @@ func (gdp *GenesisDataProvider) setInfo(ctx context.Context) error {
 		return errors.Wrap(err, "[ setInfo ] Failed to parse info.MigrationAdminMember")
 	}
 	gdp.migrationAdminMemberRef = migrationAdminMemberRef
-	migrationDaemonsMembers := []*insolar.Reference{}
+	migrationDaemonsMembers := make([]*insolar.Reference, 0, len(info.MigrationDaemonsMembers))
 	for _, refStr := range info.MigrationDaemonsMembers {
 		ref, err := insolar.NewReferenceFromBase58(refStr)
 		if err != nil {

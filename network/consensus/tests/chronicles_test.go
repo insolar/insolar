@@ -266,7 +266,7 @@ func (c *EmuNodeIntro) GetStartPower() member.Power {
 }
 
 func (c *EmuNodeIntro) GetReference() insolar.Reference {
-	return insolar.Reference{}
+	return insolar.NewEmptyReference()
 }
 
 func (c *EmuNodeIntro) ConvertPowerRequest(request power.Request) member.Power {

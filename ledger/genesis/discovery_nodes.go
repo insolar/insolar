@@ -143,7 +143,7 @@ func (nm *DiscoveryNodeManager) activateNodeRecord(
 	contract := insolar.NewReference(*nodeID)
 	err = nm.artifactManager.ActivateObject(
 		ctx,
-		insolar.Reference{},
+		rootdomain.RootDomain.Ref(),
 		*contract,
 		genesisrefs.ContractNodeDomain,
 		rootdomain.GenesisRef(insolar.GenesisNameNodeRecord+"_proto"),

@@ -88,7 +88,7 @@ func (h *ProxyHelper) SaveAsChild(parentRef, classRef insolar.Reference, constru
 		// There was a system error during execution of the contract.
 		// Immediately return this error to the calling contract - any
 		// results will not be registered on LME anyway.
-		return insolar.Reference{}, h.GetSystemError()
+		return insolar.NewEmptyReference(), h.GetSystemError()
 	}
 
 	res := rpctypes.UpSaveAsChildResp{}
@@ -105,12 +105,12 @@ func (h *ProxyHelper) SaveAsChild(parentRef, classRef insolar.Reference, constru
 		// A new system error occurred.
 		// Register it and immediately return to the calling contract.
 		h.SetSystemError(err)
-		return insolar.Reference{}, err
+		return insolar.NewEmptyReference(), err
 	}
 
 	// return logical error to the calling contract, don't register a system error
 	if res.ConstructorError != "" {
-		return insolar.Reference{}, errors.New("[Constructor failed] " + res.ConstructorError)
+		return insolar.NewEmptyReference(), errors.New("[Constructor failed] " + res.ConstructorError)
 	}
 
 	if res.Reference == nil {
@@ -118,7 +118,7 @@ func (h *ProxyHelper) SaveAsChild(parentRef, classRef insolar.Reference, constru
 		// error than dereference a nil pointer
 		err = errors.New("[ SaveAsChild ] system error - res.Reference is nil")
 		h.SetSystemError(err)
-		return insolar.Reference{}, err
+		return insolar.NewEmptyReference(), err
 	}
 
 	return *res.Reference, nil

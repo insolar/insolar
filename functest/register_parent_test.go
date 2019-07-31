@@ -73,7 +73,7 @@ type Two struct {
 
 
 func New() (*Two, error) {
-	return &Two{Number: 10, OneRef: insolar.Reference{}}, nil
+	return &Two{Number: 10, OneRef: insolar.NewEmptyReference}, nil
 }
 
 func NewWithOne(oneNumber int) (*Two, error) {

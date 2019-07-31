@@ -70,7 +70,7 @@ import (
 func TestFirstPhase_HandlePulse(t *testing.T) {
 	firstPhase := &FirstPhaseImpl{}
 
-	n := node.NewNode(insolar.Reference{}, insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
+	n := node.NewNode(insolar.NewEmptyReference(), insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
 	nodeKeeper := nodenetwork.NewNodeKeeper(n)
 	nodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{n})
 

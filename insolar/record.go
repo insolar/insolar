@@ -143,6 +143,21 @@ func NewReferenceInDomain(record ID, domain ID) *Reference {
 	return &ref
 }
 
+// NewEmptyReference return empty Reference
+func NewEmptyReference() Reference {
+	return Reference{}
+}
+
+// NewReferenceFromBytes creates new reference from byte slice.
+// After CBOR Marshal/Unmarshal Ref can be converted to byte slice, this converts it back.
+func NewReferenceFromBytes(from []byte) Reference {
+	ref := Reference{}
+	for i := 0; i < len(ref); i++ {
+		ref[i] = from[i]
+	}
+	return ref
+}
+
 // SetRecord sets record's ID.
 func (ref *Reference) SetRecord(recID ID) {
 	copy(ref[:RecordIDSize], recID[:])
@@ -173,14 +188,6 @@ func (ref Reference) Domain() *ID {
 // String outputs base58 Reference representation.
 func (ref Reference) String() string {
 	return ref.Record().String() + RecordRefIDSeparator + ref.Domain().String()
-}
-
-// FromSlice : After CBOR Marshal/Unmarshal Ref can be converted to byte slice, this converts it back
-func (ref Reference) FromSlice(from []byte) Reference {
-	for i := 0; i < RecordRefSize; i++ {
-		ref[i] = from[i]
-	}
-	return ref
 }
 
 // Bytes returns byte slice of Reference.

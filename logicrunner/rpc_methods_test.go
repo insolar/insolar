@@ -147,6 +147,8 @@ func TestProxyImplementation_GetCode(t *testing.T) {
 	defer mc.Finish()
 	defer mc.Wait(time.Minute)
 
+	codeRef := gen.Reference()
+
 	table := []struct {
 		name       string
 		transcript *Transcript
@@ -158,7 +160,7 @@ func TestProxyImplementation_GetCode(t *testing.T) {
 		{
 			name:       "success",
 			transcript: &Transcript{},
-			req:        rpctypes.UpGetCodeReq{Code: insolar.Reference{1, 2, 3}},
+			req:        rpctypes.UpGetCodeReq{Code: codeRef},
 			dc: artifacts.NewDescriptorsCacheMock(mc).
 				GetCodeMock.
 				Return(
@@ -171,7 +173,7 @@ func TestProxyImplementation_GetCode(t *testing.T) {
 		{
 			name:       "no code descriptor",
 			transcript: &Transcript{},
-			req:        rpctypes.UpGetCodeReq{Code: insolar.Reference{1, 2, 3}},
+			req:        rpctypes.UpGetCodeReq{Code: codeRef},
 			dc: artifacts.NewDescriptorsCacheMock(mc).
 				GetCodeMock.Return(nil, errors.New("some")),
 			error: true,
@@ -179,7 +181,7 @@ func TestProxyImplementation_GetCode(t *testing.T) {
 		{
 			name:       "no code",
 			transcript: &Transcript{},
-			req:        rpctypes.UpGetCodeReq{Code: insolar.Reference{1, 2, 3}},
+			req:        rpctypes.UpGetCodeReq{Code: codeRef},
 			dc: artifacts.NewDescriptorsCacheMock(mc).
 				GetCodeMock.Return(
 				artifacts.NewCodeDescriptorMock(mc).

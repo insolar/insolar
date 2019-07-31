@@ -75,7 +75,7 @@ import (
 func TestPing_Errors(t *testing.T) {
 	cm := component.NewManager(nil)
 	f := transport.NewFactory(configuration.NewHostNetwork().Transport)
-	n, err := hostnetwork.NewHostNetwork(insolar.Reference{}.String())
+	n, err := hostnetwork.NewHostNetwork(insolar.NewEmptyReference().String())
 	require.NoError(t, err)
 	cm.Inject(f, n, testutils.NewRoutingTableMock(t))
 

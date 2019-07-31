@@ -185,7 +185,8 @@ func (mb *MessageBus) getReceiverNodes(ctx context.Context, parcel insolar.Parce
 		target := parcel.DefaultTarget()
 		// FIXME: @andreyromancev. 21.12.18. Temp hack. All messages should have a default target.
 		if target == nil {
-			target = &insolar.Reference{}
+			tgt := insolar.NewEmptyReference()
+			target = &tgt
 		}
 		nodes, err = mb.JetCoordinator.QueryRole(ctx, parcel.DefaultRole(), *target.Record(), currentPulse.PulseNumber)
 		if err != nil {

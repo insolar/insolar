@@ -81,6 +81,6 @@ func TestConsensusInfo(t *testing.T) {
 
 func TestConsensusInfo_AddTemporaryMapping(t *testing.T) {
 	ci := NewConsensusInfo()
-	err := ci.AddTemporaryMapping(insolar.Reference{0}, 0, "invalid")
+	err := ci.AddTemporaryMapping(insolar.NewEmptyReference(), 0, "invalid")
 	assert.Error(t, err)
 }

@@ -54,6 +54,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 	objRecordID := gen.ID()
 	protoRef := gen.Reference()
 	codeRef := gen.Reference()
+	emptyRef := insolar.NewEmptyReference()
 
 	tests := []struct {
 		name       string
@@ -213,7 +214,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 			transcript: &Transcript{
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc),
 				Request: &record.IncomingRequest{
-					Prototype: &insolar.Reference{},
+					Prototype: &emptyRef,
 				},
 			},
 			mm: NewMachinesManagerMock(mc),

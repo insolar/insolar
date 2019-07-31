@@ -121,7 +121,7 @@ func TestHost_String(t *testing.T) {
 func TestHost_Equal(t *testing.T) {
 	id1 := testutils.RandomRef()
 	id2 := testutils.RandomRef()
-	idNil := insolar.Reference{}
+	idNil := insolar.NewEmptyReference()
 	addr1, _ := NewAddress("127.0.0.1:31337")
 	addr2, _ := NewAddress("10.10.11.11:12345")
 

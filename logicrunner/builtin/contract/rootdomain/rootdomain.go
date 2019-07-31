@@ -88,11 +88,11 @@ func (rd *RootDomain) GetBurnAddress() (string, error) {
 func (rd RootDomain) GetMemberByPublicKey(publicKey string) (insolar.Reference, error) {
 	result, ok := rd.PublicKeyMap[trimPublicKey(publicKey)]
 	if !ok {
-		return insolar.Reference{}, fmt.Errorf("member for this public key does not exist")
+		return insolar.NewEmptyReference(), fmt.Errorf("member for this public key does not exist")
 	}
 	ref, err := insolar.NewReferenceFromBase58(result)
 	if err != nil {
-		return insolar.Reference{}, errors.Wrap(err, "bad member reference for this public key")
+		return insolar.NewEmptyReference(), errors.Wrap(err, "bad member reference for this public key")
 	}
 
 	return *ref, nil
@@ -102,11 +102,11 @@ func (rd RootDomain) GetMemberByPublicKey(publicKey string) (insolar.Reference, 
 func (rd RootDomain) GetMemberByBurnAddress(burnAddress string) (insolar.Reference, error) {
 	result, ok := rd.BurnAddressMap[trimBurnAddress(burnAddress)]
 	if !ok {
-		return insolar.Reference{}, fmt.Errorf("member for this migration address does not exist")
+		return insolar.NewEmptyReference(), fmt.Errorf("member for this migration address does not exist")
 	}
 	ref, err := insolar.NewReferenceFromBase58(result)
 	if err != nil {
-		return insolar.Reference{}, errors.Wrap(err, "bad member reference for this migration address")
+		return insolar.NewEmptyReference(), errors.Wrap(err, "bad member reference for this migration address")
 	}
 
 	return *ref, nil

@@ -42,7 +42,8 @@ func (*HeavyPayload) DefaultRole() insolar.DynamicRole {
 
 // DefaultTarget returns of target of this event.
 func (hp *HeavyPayload) DefaultTarget() *insolar.Reference {
-	return &insolar.Reference{}
+	ref := insolar.NewEmptyReference()
+	return &ref
 }
 
 // GetCaller implementation of Message interface.

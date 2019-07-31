@@ -57,6 +57,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -104,7 +105,7 @@ func (n *testnode) start() error {
 	if err != nil {
 		return errors.Wrap(err, "[ NewDistributor ] failed to create pulsar host")
 	}
-	h.NodeID = insolar.Reference{}
+	h.NodeID = testutils.RandomRef()
 
 	n.host = h
 	return nil

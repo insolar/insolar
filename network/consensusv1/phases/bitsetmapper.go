@@ -92,11 +92,11 @@ func (bm *BitsetMapper) AddNode(node insolar.NetworkNode, bitsetIndex uint16) {
 
 func (bm *BitsetMapper) IndexToRef(index int) (insolar.Reference, error) {
 	if index < 0 || index >= bm.length {
-		return insolar.Reference{}, packets.ErrBitSetOutOfRange
+		return insolar.NewEmptyReference(), packets.ErrBitSetOutOfRange
 	}
 	result, ok := bm.indexToRef[index]
 	if !ok {
-		return insolar.Reference{}, packets.ErrBitSetNodeIsMissing
+		return insolar.NewEmptyReference(), packets.ErrBitSetNodeIsMissing
 	}
 	return result, nil
 }

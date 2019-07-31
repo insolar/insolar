@@ -338,10 +338,10 @@ func (gi *GoInsider) RouteCall(ref insolar.Reference, wait bool, immutable bool,
 func (gi *GoInsider) SaveAsChild(parentRef, classRef insolar.Reference, constructorName string, argsSerialized []byte) (insolar.Reference, error) {
 	client, err := gi.Upstream()
 	if err != nil {
-		return insolar.Reference{}, err
+		return insolar.NewEmptyReference(), err
 	}
 	if gi.GetSystemError() != nil {
-		return insolar.Reference{}, gi.GetSystemError()
+		return insolar.NewEmptyReference(), gi.GetSystemError()
 	}
 
 	req := rpctypes.UpSaveAsChildReq{
@@ -360,12 +360,12 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef insolar.Reference, construc
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return insolar.Reference{}, errors.Wrap(err, "[ SaveAsChild ] on calling main API")
+		return insolar.NewEmptyReference(), errors.Wrap(err, "[ SaveAsChild ] on calling main API")
 	}
 
 	// return logical error to the calling contract, don't register system error
 	if res.ConstructorError != "" {
-		return insolar.Reference{}, errors.New("[Constructor failed] " + res.ConstructorError)
+		return insolar.NewEmptyReference(), errors.New("[Constructor failed] " + res.ConstructorError)
 	}
 
 	if res.Reference == nil {
@@ -373,7 +373,7 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef insolar.Reference, construc
 		// error than dereference a nil pointer
 		err = errors.New("[ SaveAsChild ] system error - res.Reference is nil")
 		gi.SetSystemError(err)
-		return insolar.Reference{}, err
+		return insolar.NewEmptyReference(), err
 	}
 
 	return *res.Reference, nil

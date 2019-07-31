@@ -51,6 +51,7 @@
 package routing
 
 import (
+	"encoding/binary"
 	"strconv"
 	"testing"
 
@@ -64,9 +65,12 @@ import (
 )
 
 func newNode(id int) insolar.NetworkNode {
-	ref := insolar.Reference{byte(id)}
+	bs := make([]byte, 4)
+	binary.LittleEndian.PutUint32(bs, uint32(id))
+	nodeId := insolar.NewIDFromBytes(bs)
+	ref := insolar.NewReference(*nodeId)
 	address := "127.0.0.1:" + strconv.Itoa(id)
-	result := node.NewNode(ref, insolar.StaticRoleUnknown, nil, address, "")
+	result := node.NewNode(*ref, insolar.StaticRoleUnknown, nil, address, "")
 	result.(node.MutableNode).SetShortID(insolar.ShortNodeID(id))
 	return result
 }
