@@ -52,6 +52,8 @@ var predefinedPrototypes = map[string]insolar.Reference{
 }
 
 func init() {
+	insolar.RootDomainID = RootDomain.ID()
+
 	for _, el := range insolar.GenesisNameMigrationDaemonMembers {
 		predefinedPrototypes[el+GenesisPrototypeSuffix] = *member.PrototypeReference
 	}

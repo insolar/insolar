@@ -54,12 +54,7 @@ func RandStringBytes(n int) string {
 
 // RandomRef generates random object reference
 func RandomRef() insolar.Reference {
-	ref := [insolar.RecordRefSize]byte{}
-	_, err := rand.Read(ref[:insolar.RecordIDSize])
-	if err != nil {
-		panic(err)
-	}
-	return ref
+	return *insolar.NewReferenceInDomain(RandomID(), RandomID())
 }
 
 // RandomID generates random object ID

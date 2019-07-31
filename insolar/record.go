@@ -127,23 +127,30 @@ func (id *ID) MarshalJSON() ([]byte, error) {
 // Reference is a unified record reference.
 type Reference [RecordRefSize]byte
 
-// NewReference returns Reference composed from domain and record
+// NewReference returns Reference composed from record and root domain IDs.
 func NewReference(record ID) *Reference {
 	var ref Reference
 	ref.SetRecord(record)
+	ref.SetDomain(RootDomainID)
 	return &ref
 }
 
-// SetRecord set record's ID.
+// NewReferenceInDomain returns Reference composed from record and domain IDs.
+func NewReferenceInDomain(record ID, domain ID) *Reference {
+	var ref Reference
+	ref.SetRecord(record)
+	ref.SetDomain(domain)
+	return &ref
+}
+
+// SetRecord sets record's ID.
 func (ref *Reference) SetRecord(recID ID) {
 	copy(ref[:RecordIDSize], recID[:])
 }
 
-// domain returns domain ID part of reference.
-func (ref Reference) domain() *ID {
-	var id ID
-	copy(id[:], ref[RecordIDSize:])
-	return &id
+// SetDomain sets domain's ID.
+func (ref *Reference) SetDomain(domainID ID) {
+	copy(ref[RecordIDSize:], domainID[:])
 }
 
 // Record returns record's ID.
@@ -156,9 +163,16 @@ func (ref *Reference) Record() *ID {
 	return &id
 }
 
+// Domain returns domain ID part of reference.
+func (ref Reference) Domain() *ID {
+	var id ID
+	copy(id[:], ref[RecordIDSize:])
+	return &id
+}
+
 // String outputs base58 Reference representation.
 func (ref Reference) String() string {
-	return ref.Record().String() + RecordRefIDSeparator + ref.domain().String()
+	return ref.Record().String() + RecordRefIDSeparator + ref.Domain().String()
 }
 
 // FromSlice : After CBOR Marshal/Unmarshal Ref can be converted to byte slice, this converts it back
@@ -199,11 +213,11 @@ func NewReferenceFromBase58(str string) (*Reference, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "bad record part")
 	}
-	_, err = NewIDFromBase58(parts[1])
+	domainID, err := NewIDFromBase58(parts[1])
 	if err != nil {
 		return nil, errors.Wrap(err, "bad domain part")
 	}
-	return NewReference(*recordID), nil
+	return NewReferenceInDomain(*recordID, *domainID), nil
 }
 
 // MarshalJSON serializes reference into JSONFormat.
@@ -236,6 +250,7 @@ func (ref *Reference) UnmarshalJSON(data []byte) error {
 func (ref *Reference) Size() int { return RecordRefSize }
 
 func (id ID) Marshal() ([]byte, error) { return id[:], nil }
+
 func (id *ID) MarshalTo(data []byte) (int, error) {
 	copy(data, id[:])
 	return RecordIDSize, nil
@@ -251,6 +266,7 @@ func (id *ID) UnmarshalJSON(data []byte) error {
 	return json.Unmarshal(data, id)
 }
 func (id *ID) Size() int { return RecordIDSize }
+
 func (id ID) Compare(other ID) int {
 	return bytes.Compare(id.Bytes(), other.Bytes())
 }
@@ -298,5 +314,6 @@ func (id *ID) DebugString() string {
 }
 
 var (
-	DomainID = *NewID(0, nil)
+	// RootDomainID is initialised in insolar/rootdomain package.
+	RootDomainID ID
 )

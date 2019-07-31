@@ -22,7 +22,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/testutils"
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -53,21 +53,26 @@ func TestRecordID_String(t *testing.T) {
 	assert.Equal(t, idStr, id.String())
 }
 
-func TestNewRefFromBase58(t *testing.T) {
+func TestNewReferenceFromBase58(t *testing.T) {
 	recordID := testutils.RandomID()
 	domainID := testutils.RandomID()
 	refStr := recordID.String() + insolar.RecordRefIDSeparator + domainID.String()
 
-	expectedRef := insolar.NewReference(recordID)
+	expectedRef := insolar.NewReferenceInDomain(recordID, domainID)
 	actualRef, err := insolar.NewReferenceFromBase58(refStr)
 	require.NoError(t, err)
 
 	assert.Equal(t, expectedRef, actualRef)
+
+	origin := gen.Reference()
+	decoded, err := insolar.NewReferenceFromBase58(origin.String())
+	require.NoError(t, err)
+	assert.Equal(t, origin, *decoded)
 }
 
 func TestRecordRef_String(t *testing.T) {
 	ref := testutils.RandomRef()
-	expectedRefStr := ref.Record().String() + insolar.RecordRefIDSeparator + "11111111111111111111111111111111"
+	expectedRefStr := ref.Record().String() + insolar.RecordRefIDSeparator + ref.Domain().String()
 
 	assert.Equal(t, expectedRefStr, ref.String())
 }
@@ -106,11 +111,4 @@ func BenchmarkRecordID_DebugString_Depth5(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		jet.DebugString()
 	}
-}
-
-func TestNewReferenceFromBase58(t *testing.T) {
-	origin := gen.Reference()
-	decoded, err := insolar.NewReferenceFromBase58(origin.String())
-	require.NoError(t, err)
-	assert.Equal(t, origin, *decoded)
 }
