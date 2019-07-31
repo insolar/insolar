@@ -40,14 +40,15 @@ type Config struct {
 	BackupInfoFile        string
 	BackupConfirmFile     string
 	BackupDirNameTemplate string
+	BackupWaitPeriod      uint
 }
 
 type BackupMaker struct {
-	lock                  sync.Mutex
-	lastBackupedTimestamp uint64
-	lastBackupedPulse     insolar.PulseNumber
-	backuper              store.Backuper
-	config                Config
+	lock                sync.Mutex
+	lastBackupedVersion uint64
+	lastBackupedPulse   insolar.PulseNumber
+	backuper            store.Backuper
+	config              Config
 }
 
 func isPathExists(dirName string) error {
@@ -77,6 +78,9 @@ func checkConfig(config Config) error {
 	if len(config.BackupDirNameTemplate) == 0 {
 		return errors.New("BackupDirNameTemplate can't be empty")
 	}
+	if config.BackupWaitPeriod == 0 {
+		return errors.New("BackupWaitPeriod can't be 0")
+	}
 
 	return nil
 }
@@ -93,8 +97,8 @@ func NewBackupMaker(backuper store.Backuper, config Config, lastBackupedPulse in
 	}, nil
 }
 
-func move(what string, toDirectory string) error {
-	fmt.Println("move: ", what, " -> ", toDirectory)
+func move(ctx context.Context, what string, toDirectory string) error {
+	inslogger.FromContext(ctx).Debugf("backuper. move %s -> %s", what, toDirectory)
 	err := os.Rename(what, toDirectory)
 	if err != nil {
 		return errors.Wrapf(err, "can't move %s to %s", what, toDirectory)
@@ -104,10 +108,10 @@ func move(what string, toDirectory string) error {
 }
 
 // waitForBackup waits for file filePath appearance
-func waitForBackup(ctx context.Context, filePath string, numIterations int) error {
+func waitForBackup(ctx context.Context, filePath string, numIterations uint) error {
 	fmt.Println("waiting for ", filePath)
 	inslogger.FromContext(ctx).Debug("waiting for ", filePath)
-	for i := 0; i < numIterations; i++ {
+	for i := uint(0); i < numIterations; i++ {
 		fmt.Println("WAITING: iteration: ", i)
 		if err := isPathExists(filePath); err != nil {
 			if os.IsNotExist(err) {
@@ -123,14 +127,15 @@ func waitForBackup(ctx context.Context, filePath string, numIterations int) erro
 	return errors.New("no backup confirmation for pulse")
 }
 
-func writeBackupInfoFile(hash string, pulse insolar.PulseNumber, currentBT uint64, to string) error {
+func writeBackupInfoFile(hash string, pulse insolar.PulseNumber, since uint64, upto uint64, to string) error {
 	type backupInfo struct {
 		MD5                   string
 		Pulse                 insolar.PulseNumber
 		LastBackupedTimestamp uint64
+		Since                 uint64
 	}
 
-	bi := backupInfo{MD5: hash, Pulse: pulse, LastBackupedTimestamp: currentBT}
+	bi := backupInfo{MD5: hash, Pulse: pulse, LastBackupedTimestamp: upto, Since: since}
 
 	rawInfo, err := json.MarshalIndent(bi, "", "    ")
 	if err != nil {
@@ -141,27 +146,32 @@ func writeBackupInfoFile(hash string, pulse insolar.PulseNumber, currentBT uint6
 	return errors.Wrapf(err, "can't write file %s", to)
 }
 
+func calculateFileHash(f *os.File) (string, error) {
+	hasher := md5.New()
+	if _, err := io.Copy(hasher, f); err != nil {
+		return "", errors.Wrap(err, "io.Copy return error")
+	}
+	return fmt.Sprintf("%x", hasher.Sum(nil)), nil
+}
+
 // prepareBackup make incremental backup and write auxiliary file with meta info
 func (b *BackupMaker) prepareBackup(ctx context.Context, dirHolder *tmpDirHolder, pulse insolar.PulseNumber) (uint64, error) {
-	currentBT, err := b.backuper.Backup(dirHolder.tmpFile, b.lastBackupedTimestamp)
+	currentBT, err := b.backuper.Backup(dirHolder.tmpFile, b.lastBackupedVersion)
 	if err != nil {
 		return 0, errors.Wrap(err, "Backup return error")
 	}
-
-	fmt.Println(">>>>>>>>>>>>>>>>>>: ", currentBT)
 
 	if err := dirHolder.reopenFile(ctx); err != nil {
 		return 0, errors.Wrap(err, "reopenFile return error")
 	}
 
-	hasher := md5.New()
-	if _, err := io.Copy(hasher, dirHolder.tmpFile); err != nil {
-		return 0, errors.Wrap(err, "io.Copy return error")
+	md5sum, err := calculateFileHash(dirHolder.tmpFile)
+	if err != nil {
+		return 0, errors.Wrap(err, "calculateFileHash return error")
 	}
-	md5sum := fmt.Sprintf("%x", hasher.Sum(nil))
 
 	metaInfoFile := filepath.Join(dirHolder.tmpDir, b.config.BackupInfoFile)
-	err = writeBackupInfoFile(md5sum, pulse, currentBT, metaInfoFile)
+	err = writeBackupInfoFile(md5sum, pulse, b.lastBackupedVersion, currentBT, metaInfoFile)
 	if err != nil {
 		return 0, errors.Wrap(err, "writeBackupInfoFile return error")
 	}
@@ -175,8 +185,7 @@ type tmpDirHolder struct {
 	fileClosed bool
 }
 
-func (t *tmpDirHolder) closeAll(ctx context.Context) {
-
+func (t *tmpDirHolder) release(ctx context.Context) {
 	err := t.tmpFile.Close()
 	if err != nil {
 		inslogger.FromContext(ctx).Error("can't close backup file: ", t.tmpFile, err)
@@ -216,7 +225,7 @@ func (t *tmpDirHolder) create(where string, pulse insolar.PulseNumber) (func(con
 	t.tmpDir = tmpDir
 	t.tmpFile = file
 
-	return t.closeAll, nil
+	return t.release, nil
 }
 
 func (b *BackupMaker) doBackup(ctx context.Context, lastFinalizedPulse insolar.PulseNumber) (uint64, error) {
@@ -232,14 +241,14 @@ func (b *BackupMaker) doBackup(ctx context.Context, lastFinalizedPulse insolar.P
 
 	currentBkpDirName := fmt.Sprintf(b.config.BackupDirNameTemplate, lastFinalizedPulse)
 	currentBkpDirPath := filepath.Join(b.config.TargetDirectory, currentBkpDirName)
-	err = move(dirHolder.tmpDir, currentBkpDirPath)
+	err = move(ctx, dirHolder.tmpDir, currentBkpDirPath)
 	if err != nil {
 		return 0, errors.Wrap(err, "move returns error")
 	}
 
-	err = waitForBackup(ctx, filepath.Join(currentBkpDirPath, b.config.BackupConfirmFile), 60)
+	err = waitForBackup(ctx, filepath.Join(currentBkpDirPath, b.config.BackupConfirmFile), b.config.BackupWaitPeriod)
 	if err != nil {
-		return 0, errors.Wrap(err, "waitForBackup returns error")
+		return 0, errors.Wrapf(err, "waitForBackup returns error. pulse: %d", lastFinalizedPulse)
 	}
 
 	return currentBkpTs, nil
@@ -259,6 +268,13 @@ func (b *BackupMaker) Start(ctx context.Context, lastFinalizedPulse insolar.Puls
 	}
 
 	b.lastBackupedPulse = lastFinalizedPulse
-	b.lastBackupedTimestamp = currentBkpTs
+	b.lastBackupedVersion = currentBkpTs
 	return nil
+}
+
+func (b *BackupMaker) GetLastBackupedVersion() uint64 {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	return b.lastBackupedVersion
 }
