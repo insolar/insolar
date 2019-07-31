@@ -58,7 +58,7 @@ import (
 
 type OriginHash []byte
 
-//go:generate minimock -i github.com/insolar/insolar/network/merkle.Calculator -o ../../testutils/merkle -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/merkle.Calculator -o ../../testutils/merkle -s _mock.go -g
 type Calculator interface {
 	GetPulseProof(*PulseEntry) (OriginHash, *PulseProof, error)
 	GetGlobuleProof(*GlobuleEntry) (OriginHash, *GlobuleProof, error)

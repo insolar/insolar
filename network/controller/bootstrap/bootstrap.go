@@ -193,9 +193,7 @@ func (bc *Bootstrap) forceSetLastPulse(number insolar.PulseNumber) {
 }
 
 func (bc *Bootstrap) GetLastPulse() insolar.PulseNumber {
-	_, span := instracer.StartSpan(context.Background(), "Bootstrapper.GetLastPulse wait lastPulseLock")
 	bc.lastPulseLock.RLock()
-	span.End()
 	defer bc.lastPulseLock.RUnlock()
 
 	return bc.lastPulse

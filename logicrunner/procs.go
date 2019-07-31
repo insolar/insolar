@@ -45,9 +45,7 @@ func (ch *CheckOurRole) Proceed(ctx context.Context) error {
 
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
 	target := ch.msg.DefaultTarget()
-	isAuthorized, err := ch.lr.JetCoordinator.IsAuthorized(
-		ctx, ch.role, *target.Record(), ch.pulseNumber, ch.lr.JetCoordinator.Me(),
-	)
+	isAuthorized, err := ch.lr.JetCoordinator.IsMeAuthorizedNow(ctx, ch.role, *target.Record())
 	if err != nil {
 		return errors.Wrap(err, "authorization failed with error")
 	}
@@ -97,62 +95,15 @@ func (r *RegisterIncomingRequest) Proceed(ctx context.Context) error {
 	return nil
 }
 
-// ------------- ClarifyPendingState
-
-type ClarifyPendingState struct {
-	broker  *ExecutionBroker
-	request *record.IncomingRequest
-
-	ArtifactManager artifacts.Client
+type AddFreshRequest struct {
+	broker     ExecutionBrokerI
+	requestRef insolar.Reference
+	request    record.IncomingRequest
 }
 
-func (c *ClarifyPendingState) Proceed(ctx context.Context) error {
-	ctx, span := instracer.StartSpan(ctx, "ClarifyPendingState")
-	defer span.End()
-
-	es := &c.broker.executionState
-
-	es.Lock()
-	if es.pending != insolar.PendingUnknown {
-		es.Unlock()
-		return nil
-	}
-
-	if c.request != nil {
-		if c.request.CallType != record.CTMethod {
-			// It's considered that we are not pending except someone calls a method.
-			es.pending = insolar.NotPending
-			es.Unlock()
-			return nil
-		}
-	}
-
-	es.Unlock()
-
-	es.HasPendingCheckMutex.Lock()
-	defer es.HasPendingCheckMutex.Unlock()
-
-	es.Lock()
-	if es.pending != insolar.PendingUnknown {
-		es.Unlock()
-		return nil
-	}
-	es.Unlock()
-
-	has, err := c.ArtifactManager.HasPendings(ctx, c.broker.Ref)
-	if err != nil {
-		return err
-	}
-
-	es.Lock()
-	if es.pending == insolar.PendingUnknown {
-		if has {
-			es.pending = insolar.InPending
-		} else {
-			es.pending = insolar.NotPending
-		}
-	}
-	es.Unlock()
-
+func (c *AddFreshRequest) Proceed(ctx context.Context) error {
+	requestCtx := freshContextFromContext(ctx)
+	tr := NewTranscript(requestCtx, c.requestRef, c.request)
+	c.broker.AddFreshRequest(ctx, tr)
 	return nil
 }

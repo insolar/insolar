@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 // RecordInfo holds record info.

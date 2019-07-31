@@ -29,11 +29,13 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
+	"go.opencensus.io/trace"
 )
 
 // LightReplicator is a base interface for a sync component
@@ -114,13 +116,20 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 		ctx, logger := inslogger.WithTraceField(ctx, utils.RandTraceID())
 		logger.Debugf("[Replicator][sync] pn received - %v", pn)
 
+		ctx, span := instracer.StartSpan(ctx, "LightReplicatorDefault.sync")
+		span.AddAttributes(
+			trace.Int64Attribute("pulse", int64(pn)),
+		)
+
 		allIndexes := lr.filterAndGroupIndexes(ctx, pn)
 		jets := lr.jetCalculator.MineForPulse(ctx, pn)
-		logger.Debugf("[Replicator][sync] founds %v jets", len(jets))
+		logger.Debugf("[Replicator][sync] founds %d jets", len(jets), ". Jets: ", insolar.JetIDCollection(jets).DebugString())
 
 		for _, jetID := range jets {
 			msg, err := lr.heavyPayload(ctx, pn, jetID, allIndexes[jetID])
 			if err != nil {
+				span.AddAttributes(trace.BoolAttribute("error", true))
+				span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
 				panic(
 					fmt.Sprintf(
 						"[Replicator][sync] Problems with gather data for a pulse - %v and jet - %v. err - %v",
@@ -132,6 +141,9 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 			}
 			err = lr.sendToHeavy(ctx, msg)
 			if err != nil {
+				span.AddAttributes(trace.BoolAttribute("error", true))
+				span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
+
 				logger.Errorf("[Replicator][sync]  Problems with sending msg to a heavy node", err)
 			} else {
 				logger.Debugf("[Replicator][sync]  Data has been sent to a heavy. pn - %v, jetID - %v", msg.Pulse, msg.JetID.DebugString())
@@ -139,6 +151,7 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 		}
 
 		lr.cleaner.NotifyAboutPulse(ctx, pn)
+		span.End()
 	}
 }
 
@@ -150,6 +163,8 @@ func (lr *LightReplicatorDefault) sendToHeavy(ctx context.Context, pl payload.Re
 		)
 		return err
 	}
+
+	inslogger.FromContext(ctx).Debug("send drop to heavy. pulse: ", pl.Pulse, ". jet: ", pl.JetID.DebugString())
 
 	_, done := lr.sender.SendRole(ctx, msg, insolar.DynamicRoleHeavyExecutor, *insolar.NewReference(insolar.ID(pl.JetID)))
 	done()

@@ -167,8 +167,14 @@ func (c *NodeAppearance) copySelfTo(target *NodeAppearance) {
 	/* Ensure that the target is LocalNode */
 	target.profile.(profiles.LocalNode).LocalNodeProfile()
 
-	target.stateEvidence = c.stateEvidence
-	target.announceSignature = c.announceSignature
+	if c.stateEvidence != nil || c.announceSignature != nil {
+		panic("prep realm self can't have NSH")
+	}
+
+	//target.stateEvidence = c.stateEvidence
+	//target.announceSignature = c.announceSignature
+	//target.trust = c.trust
+
 	target.requestedPower = c.requestedPower
 	target.requestedJoinerID = c.requestedJoinerID
 	target.requestedLeave = c.requestedLeave
@@ -176,7 +182,6 @@ func (c *NodeAppearance) copySelfTo(target *NodeAppearance) {
 	target.firstFraudDetails = c.firstFraudDetails
 
 	target.limiter = c.limiter
-	target.trust = c.trust
 	target.callback.updatePopulationVersion()
 }
 
@@ -420,14 +425,19 @@ func (c *NodeAppearance) GetNodeMembershipProfileOrEmpty() profiles.MembershipPr
 	return c.getMembership()
 }
 
-func (c *NodeAppearance) ApplyNodeStateHashEvidenceForJoiner() (bool, error) {
-	nsh := c.profile.GetStatic().GetBriefIntroSignedDigest()
+func (c *NodeAppearance) onNodeAdded(ctx context.Context) {
 
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	mp := profiles.NewMembershipProfileByNode(c.profile, nsh, nsh.GetSignatureHolder(), c.requestedPower)
-	ma := profiles.NewMembershipAnnouncement(mp)
-	return c._applyNodeMembership(ma)
+	if c.IsJoiner() {
+		sp := c.profile.GetStatic()
+		nsh := sp.GetBriefIntroSignedDigest()
+		mp := profiles.NewMembershipProfileByNode(c.profile, nsh, nsh.GetSignatureHolder(), sp.GetStartPower())
+		ma := profiles.NewMembershipAnnouncement(mp)
+		_, err := c._applyNodeMembership(ma)
+		if err != nil {
+			inslogger.FromContext(ctx).Error("error was unexpected", err)
+		}
+		c.UpdateNodeTrustLevel(member.SelfTrust)
+	}
 }
 
 func (c *NodeAppearance) setLocalNodeStateHashEvidence(evidence proofs.NodeStateHashEvidence,
@@ -625,7 +635,7 @@ func (c *NodeAppearance) upgradeDynamicNodeProfile(ctx context.Context, brief pr
 		inslogger.FromContext(ctx).Debugf("Node profile was upgraded: s=%d, t=%d",
 			c.callback.localNodeID, c.GetNodeID())
 
-		c.callback.onDynamicNodeAdded(c.callback.updatePopulationVersion(), c, true)
+		c.callback.onDynamicNodeUpdate(c.callback.updatePopulationVersion(), c, FlagProfileUpdated)
 	}
 	return match
 }

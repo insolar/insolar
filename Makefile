@@ -4,6 +4,7 @@ INSOLAR = insolar
 INSOLARD = insolard
 INSGOCC = insgocc
 PULSARD = pulsard
+TESTPULSARD = testpulsard
 INSGORUND = insgorund
 BENCHMARK = benchmark
 PULSEWATCHER = pulsewatcher
@@ -68,7 +69,7 @@ install-godep: ## install dep tool
 install-build-tools: ## install tools for codegen
 	go clean -modcache
 	./scripts/build/fetchdeps golang.org/x/tools/cmd/stringer 63e6ed9258fa6cbc90aab9b1eef3e0866e89b874
-	./scripts/build/fetchdeps github.com/gojuno/minimock/cmd/minimock 890c67cef23dd06d694294d4f7b1026ed7bac8e6
+	./scripts/build/fetchdeps github.com/gojuno/minimock/cmd/minimock v2.1.8
 	./scripts/build/fetchdeps github.com/gogo/protobuf/protoc-gen-gogoslick v1.2.1
 
 .PHONY: install-deps
@@ -90,7 +91,7 @@ ensure: ## install all dependencies
 	dep ensure
 
 .PHONY: build
-build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(APIREQUESTER) $(PULSEWATCHER) ## build all binaries
+build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(APIREQUESTER) $(PULSEWATCHER) ## build all binaries
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
@@ -112,6 +113,10 @@ $(BININSGOCC): $(INSGOCC)
 .PHONY: $(PULSARD)
 $(PULSARD):
 	$(GOBUILD) -o $(BIN_DIR)/$(PULSARD) -ldflags "${LDFLAGS}" cmd/pulsard/*.go
+
+.PHONY: $(TESTPULSARD)
+$(TESTPULSARD):
+	$(GOBUILD) -o $(BIN_DIR)/$(TESTPULSARD) -ldflags "${LDFLAGS}" cmd/testpulsard/*.go
 
 .PHONY: $(INSGORUND)
 $(INSGORUND):

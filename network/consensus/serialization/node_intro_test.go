@@ -65,52 +65,52 @@ import (
 func TestNodeBriefIntro_getPrimaryRole(t *testing.T) {
 	ni := NodeBriefIntro{}
 
-	require.Equal(t, member.PrimaryRoleInactive, ni.getPrimaryRole())
+	require.Equal(t, member.PrimaryRoleInactive, ni.GetPrimaryRole())
 
 	ni.PrimaryRoleAndFlags = 1
-	require.Equal(t, member.PrimaryRoleNeutral, ni.getPrimaryRole())
+	require.Equal(t, member.PrimaryRoleNeutral, ni.GetPrimaryRole())
 
 	ni.PrimaryRoleAndFlags = 2
-	require.Equal(t, member.PrimaryRoleHeavyMaterial, ni.getPrimaryRole())
+	require.Equal(t, member.PrimaryRoleHeavyMaterial, ni.GetPrimaryRole())
 }
 
 func TestNodeBriefIntro_setPrimaryRole(t *testing.T) {
 	ni := NodeBriefIntro{}
 
-	require.Equal(t, member.PrimaryRoleInactive, ni.getPrimaryRole())
+	require.Equal(t, member.PrimaryRoleInactive, ni.GetPrimaryRole())
 
-	ni.setPrimaryRole(member.PrimaryRoleVirtual)
-	require.Equal(t, member.PrimaryRoleVirtual, ni.getPrimaryRole())
+	ni.SetPrimaryRole(member.PrimaryRoleVirtual)
+	require.Equal(t, member.PrimaryRoleVirtual, ni.GetPrimaryRole())
 }
 
 func TestNodeBriefIntro_setPrimaryRole_Panic(t *testing.T) {
 	ni := NodeBriefIntro{}
 
-	require.Panics(t, func() { ni.setPrimaryRole(primaryRoleMax + 1) })
+	require.Panics(t, func() { ni.SetPrimaryRole(primaryRoleMax + 1) })
 }
 
 func TestNodeBriefIntro_getAddrMode(t *testing.T) {
 	ni := NodeBriefIntro{}
 
-	require.Equal(t, endpoints.IPEndpoint, ni.getAddrMode())
+	require.Equal(t, endpoints.IPEndpoint, ni.GetAddrMode())
 
 	ni.PrimaryRoleAndFlags = 64 // 0b01000000
-	require.Equal(t, endpoints.NameEndpoint, ni.getAddrMode())
+	require.Equal(t, endpoints.NameEndpoint, ni.GetAddrMode())
 }
 
 func TestNodeBriefIntro_setAddrMode(t *testing.T) {
 	ni := NodeBriefIntro{}
 
-	require.Equal(t, endpoints.IPEndpoint, ni.getAddrMode())
+	require.Equal(t, endpoints.IPEndpoint, ni.GetAddrMode())
 
-	ni.setAddrMode(endpoints.RelayEndpoint)
-	require.Equal(t, endpoints.RelayEndpoint, ni.getAddrMode())
+	ni.SetAddrMode(endpoints.RelayEndpoint)
+	require.Equal(t, endpoints.RelayEndpoint, ni.GetAddrMode())
 }
 
 func TestNodeBriefIntro_setAddrMode_Panic(t *testing.T) {
 	ni := NodeBriefIntro{}
 
-	require.Panics(t, func() { ni.setAddrMode(addrModeMax + 1) })
+	require.Panics(t, func() { ni.SetAddrMode(addrModeMax + 1) })
 }
 
 func TestNodeBriefIntro_SerializeTo(t *testing.T) {

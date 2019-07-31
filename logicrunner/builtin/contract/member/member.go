@@ -20,34 +20,37 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/logicrunner/builtin/contract/member/helper"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member/signer"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/deposit"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/nodedomain"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 // Member - basic member contract.
 type Member struct {
 	foundation.BaseContract
 	RootDomain  insolar.Reference
-	Deposit     insolar.Reference
+	Deposits    map[string]insolar.Reference
 	Name        string
 	PublicKey   string
 	BurnAddress string
+	Wallet      insolar.Reference
 }
 
 // GetName gets name.
 func (m *Member) GetName() (string, error) {
 	return m.Name, nil
+}
+
+// GetWallet gets wallet.
+func (m *Member) GetWallet() (insolar.Reference, error) {
+	return m.Wallet, nil
 }
 
 var INSATTR_GetPublicKey_API = true
@@ -58,12 +61,14 @@ func (m *Member) GetPublicKey() (string, error) {
 }
 
 // New creates new member.
-func New(rootDomain insolar.Reference, name string, key string, burnAddress string) (*Member, error) {
+func New(rootDomain insolar.Reference, name string, key string, burnAddress string, walletRef insolar.Reference) (*Member, error) {
 	return &Member{
 		RootDomain:  rootDomain,
+		Deposits:    map[string]insolar.Reference{},
 		Name:        name,
 		PublicKey:   key,
 		BurnAddress: burnAddress,
+		Wallet:      walletRef,
 	}, nil
 }
 
@@ -137,7 +142,11 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 		return m.memberGet(request.Params.PublicKey)
 	}
 
-	params := request.Params.CallParams.(map[string]interface{})
+	var params map[string]interface{}
+	var ok bool
+	if params, ok = request.Params.CallParams.(map[string]interface{}); !ok {
+		return nil, fmt.Errorf("failed to cast request.Params.CallParams: expected map[string]interface{}, got %T", request.Params.CallParams)
+	}
 
 	switch request.Params.CallSite {
 	case "contract.registerNode":
@@ -147,11 +156,13 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 	case "migration.addBurnAddresses":
 		return m.addBurnAddressesCall(params)
 	case "wallet.getBalance":
-		return getBalanceCall(params)
+		return m.getBalanceCall(params)
 	case "member.transfer":
 		return m.transferCall(params)
 	case "deposit.migration":
-		return m.migrationCall(params)
+		return nil, m.depositMigrationCall(params)
+	case "deposit.transfer":
+		return m.depositTransferCall(params)
 	}
 	return nil, fmt.Errorf("unknown method: '%s'", request.Params.CallSite)
 }
@@ -208,8 +219,13 @@ func (m *Member) addBurnAddressesCall(params map[string]interface{}) (interface{
 
 	return nil, nil
 }
-func getBalanceCall(params map[string]interface{}) (interface{}, error) {
 
+type GetBalanceResponse struct {
+	Balance  string                 `json:"balance"`
+	Deposits map[string]interface{} `json:"deposits"`
+}
+
+func (m *Member) getBalanceCall(params map[string]interface{}) (interface{}, error) {
 	referenceStr, ok := params["reference"].(string)
 	if !ok {
 		return nil, fmt.Errorf("incorect input: failed to get 'reference' param")
@@ -219,18 +235,38 @@ func getBalanceCall(params map[string]interface{}) (interface{}, error) {
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse 'reference': %s", err.Error())
 	}
-	m := member.GetObject(*reference)
 
-	w, err := wallet.GetImplementationFrom(m.GetReference())
-	if err != nil {
-		return nil, fmt.Errorf("failed to get implementation: %s", err.Error())
+	var walletRef insolar.Reference
+
+	if *reference == m.GetReference() {
+		walletRef = m.Wallet
+	} else {
+		m2 := member.GetObject(*reference)
+		walletRef, err = m2.GetWallet()
+		if err != nil {
+			return 0, fmt.Errorf("can't get members wallet: %s", err.Error())
+		}
 	}
-	b, err := w.GetBalance()
+
+	b, err := wallet.GetObject(walletRef).GetBalance()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get balance: %s", err.Error())
 	}
 
-	return b, nil
+	var d map[string]interface{}
+	if referenceStr == m.GetReference().String() {
+		d, err = m.getDeposits()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get deposits: %s", err.Error())
+		}
+	} else {
+		d, err = member.GetObject(*reference).GetDeposits()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get deposits for user: %s", err.Error())
+		}
+	}
+
+	return GetBalanceResponse{Balance: b, Deposits: d}, nil
 }
 
 type TransferResponse struct {
@@ -238,7 +274,6 @@ type TransferResponse struct {
 }
 
 func (m *Member) transferCall(params map[string]interface{}) (interface{}, error) {
-
 	recipientReferenceStr, ok := params["toMemberReference"].(string)
 	if !ok {
 		return nil, fmt.Errorf("incorect input: failed to get 'toMemberReference' param")
@@ -257,47 +292,59 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 		return nil, fmt.Errorf("recipient must be different from the sender")
 	}
 
-	w, err := wallet.GetImplementationFrom(m.GetReference())
-	if err != nil {
-		return nil, fmt.Errorf("failed to get wallet implementation of sender: %s", err.Error())
+	return wallet.GetObject(m.Wallet).Transfer(m.RootDomain, amount, recipientReference)
+}
+
+func (m *Member) depositTransferCall(params map[string]interface{}) (interface{}, error) {
+
+	ethTxHash, ok := params["ethTxHash"].(string)
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'ethTxHash' param")
 	}
 
-	return w.Transfer(m.RootDomain, amount, recipientReference)
+	amount, ok := params["amount"].(string)
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'amount' param")
+	}
+
+	find, dRef, err := m.FindDeposit(ethTxHash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find deposit: %s", err.Error())
+	}
+	if !find {
+		return nil, fmt.Errorf("can't find deposit")
+	}
+	d := deposit.GetObject(dRef)
+
+	return d.Transfer(amount, m.Wallet)
 }
-func (m *Member) migrationCall(params map[string]interface{}) (interface{}, error) {
+
+func (m *Member) depositMigrationCall(params map[string]interface{}) error {
 
 	amountStr, ok := params["amount"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'amount' param")
+		return fmt.Errorf("incorect input: failed to get 'amount' param")
 	}
 
 	amount := new(big.Int)
 	amount, ok = amount.SetString(amountStr, 10)
 	if !ok {
-		return nil, fmt.Errorf("failed to parse amount")
+		return fmt.Errorf("failed to parse amount")
 	}
-
-	currentDateStr, ok := params["currentDate"].(string)
+	if amount.Cmp(big.NewInt(0)) != 1 {
+		return fmt.Errorf("amount must be greater than zero")
+	}
+	txId, ok := params["ethTxHash"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'currentDate' param")
+		return fmt.Errorf("incorect input: failed to get 'ethTxHash' param")
 	}
 
-	currentDate, err := helper.ParseTimestamp(currentDateStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse 'currentDate': %s", err.Error())
-	}
-
-	txId, ok := params["txId"].(string)
+	burnAddress, ok := params["migrationAddress"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'txId' param")
+		return fmt.Errorf("incorect input: failed to get 'migrationAddress' param")
 	}
 
-	burnAddress, ok := params["burnAddress"].(string)
-	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'burnAddress' param")
-	}
-
-	return m.migration(txId, burnAddress, *amount, currentDate)
+	return m.depositMigration(txId, burnAddress, amount)
 }
 
 // Platform methods.
@@ -391,122 +438,117 @@ func (m *Member) createMember(name string, key string, burnAddress string) (*mem
 		return nil, fmt.Errorf("key is not valid")
 	}
 
-	memberHolder := member.New(m.RootDomain, name, key, burnAddress)
+	wHolder := wallet.New(big.NewInt(1000000000).String())
+	walletRef, err := wHolder.AsChild(m.RootDomain)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create wallet for  member: %s", err.Error())
+	}
+
+	memberHolder := member.New(m.RootDomain, name, key, burnAddress, walletRef.Reference)
 	created, err := memberHolder.AsChild(m.RootDomain)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save as child: %s", err.Error())
-	}
-
-	wHolder := wallet.New(big.NewInt(1000000000).String())
-	_, err = wHolder.AsDelegate(created.Reference)
-	if err != nil {
-		return nil, fmt.Errorf("failed to save as delegate: %s", err.Error())
 	}
 
 	return created, nil
 }
 
 // Migration methods.
-func (m *Member) migration(txHash string, burnAddress string, amount big.Int, unHoldDate time.Time) (string, error) {
+func (m *Member) depositMigration(txHash string, burnAddress string, amount *big.Int) error {
 	rd := rootdomain.GetObject(m.RootDomain)
 
 	// Get migration daemon members
-	migrationDaemonMembers, err := rd.GetMigrationDaemonMembers()
+	migrationDaemonMembers, err := rd.GetActiveMigrationDaemonMembers()
 	if err != nil {
-		return "", fmt.Errorf("failed to get migraion daemons map: %s", err.Error())
+		return fmt.Errorf("failed to get migraion daemons: %s", err.Error())
 	}
-	if len(migrationDaemonMembers) == 0 {
-		return "", fmt.Errorf("there is no active migraion daemon")
-	}
+
 	// Check that caller is migration daemon
-	if helper.Contains(migrationDaemonMembers, m.GetReference()) {
-		return "", fmt.Errorf("this migraion daemon is not in the list")
+	mdIndex := -1
+	for i, mdRef := range migrationDaemonMembers {
+		if mdRef == m.GetReference() {
+			mdIndex = i
+
+		}
+	}
+	if mdIndex == -1 {
+		return fmt.Errorf("this migration daemon is not in the list of active daemons")
 	}
 
 	// Get member by burn address
 	tokenHolderRef, err := rd.GetMemberByBurnAddress(burnAddress)
 	if err != nil {
-		return "", fmt.Errorf("failed to get member by burn address")
+		return fmt.Errorf("failed to get member by burn address")
 	}
 	tokenHolder := member.GetObject(tokenHolderRef)
 
 	// Find deposit for txHash
-	found, txDeposit, err := tokenHolder.FindDeposit(txHash, amount.String())
+	found, txDepositRef, err := tokenHolder.FindDeposit(txHash)
 	if err != nil {
-		return "", fmt.Errorf("failed to get deposit: %s", err.Error())
+		return fmt.Errorf("failed to get deposit: %s", err.Error())
 	}
 
 	// If deposit doesn't exist - create new deposit
 	if !found {
-		migrationDaemonConfirms := map[insolar.Reference]bool{}
-		for _, ref := range migrationDaemonMembers {
-			migrationDaemonConfirms[ref] = false
-		}
-		dHolder := deposit.New(migrationDaemonConfirms, txHash, amount.String(), unHoldDate)
-		txDeposit, err := dHolder.AsDelegate(tokenHolderRef)
+		migrationDaemonConfirms := [3]string{}
+		migrationDaemonConfirms[mdIndex] = m.GetReference().String()
+		dHolder := deposit.New(migrationDaemonConfirms, txHash, amount.String())
+		txDeposit, err := dHolder.AsChild(tokenHolderRef)
 		if err != nil {
-			return "", fmt.Errorf("failed to save as delegate: %s", err.Error())
+			return fmt.Errorf("failed to save as delegate: %s", err.Error())
 		}
 
-		err = tokenHolder.SetDeposit(txDeposit.GetReference())
+		err = tokenHolder.AddDeposit(txHash, txDeposit.GetReference())
 		if err != nil {
-			return "", fmt.Errorf("failed to set deposit: %s", err.Error())
+			return fmt.Errorf("failed to set deposit: %s", err.Error())
 		}
+		return nil
 	}
-
 	// Confirm transaction by migration daemon
-	confirms, err := txDeposit.Confirm(m.GetReference(), txHash, amount.String())
+	txDeposit := deposit.GetObject(txDepositRef)
+	err = txDeposit.Confirm(mdIndex, m.GetReference().String(), txHash, amount.String())
 	if err != nil {
-		return "", fmt.Errorf("confirmed failed: %s", err.Error())
+		return fmt.Errorf("confirmed failed: %s", err.Error())
 	}
-
-	return strconv.Itoa(int(confirms)), nil
+	return nil
 }
 
-// FindDeposit finds deposits for this member with this transaction hash.
-func (m *Member) FindDeposit(txHash string, inputAmountStr string) (bool, deposit.Deposit, error) {
+// GetDeposits get all deposits for this member
+func (m *Member) GetDeposits() (map[string]interface{}, error) {
+	return m.getDeposits()
+}
+func (m *Member) getDeposits() (map[string]interface{}, error) {
+	result := map[string]interface{}{}
+	for tx, dRef := range m.Deposits {
 
-	inputAmount := new(big.Int)
-	inputAmount, ok := inputAmount.SetString(inputAmountStr, 10)
-	if !ok {
-		return false, deposit.Deposit{}, fmt.Errorf("can't parse input amount")
-	}
+		d := deposit.GetObject(dRef)
 
-	if m.Deposit.IsEmpty() {
-		return false, deposit.Deposit{}, fmt.Errorf("no deposit provided")
-	}
-
-	d := deposit.GetObject(m.Deposit)
-	th, err := d.GetTxHash()
-	if err != nil {
-		return false, deposit.Deposit{}, fmt.Errorf("failed to get transaction hash: %s", err.Error())
-	}
-
-	depositAmountStr, err := d.GetAmount()
-	if err != nil {
-		return false, deposit.Deposit{}, fmt.Errorf("failed to get amount: %s", err.Error())
-	}
-
-	depositAmountInt := new(big.Int)
-	depositAmountInt, ok = depositAmountInt.SetString(depositAmountStr, 10)
-	if !ok {
-		return false, deposit.Deposit{}, fmt.Errorf("can't parse input amount")
-	}
-
-	if txHash == th {
-		if (inputAmount).Cmp(depositAmountInt) == 0 {
-			return true, *d, nil
-		} else {
-			return false, deposit.Deposit{}, fmt.Errorf("deposit with this transaction hash has different amount")
+		depositInfo, err := d.Itself()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get deposit itself: %s", err.Error())
 		}
+
+		result[tx] = depositInfo
+	}
+	return result, nil
+}
+
+// FindDeposit finds deposit for this member with this transaction hash.
+func (m *Member) FindDeposit(transactionsHash string) (bool, insolar.Reference, error) {
+
+	if dRef, ok := m.Deposits[transactionsHash]; ok {
+		return true, dRef, nil
 	}
 
-	return false, deposit.Deposit{}, nil
+	return false, insolar.Reference{}, nil
 }
 
 // SetDeposit method stores deposit reference in member it belongs to
-func (m *Member) SetDeposit(reference insolar.Reference) error {
-	m.Deposit = reference
+func (m *Member) AddDeposit(txId string, deposit insolar.Reference) error {
+	if _, ok := m.Deposits[txId]; ok {
+		return fmt.Errorf("deposit for this transaction already exist")
+	}
+	m.Deposits[txId] = deposit
 	return nil
 }
 
@@ -524,6 +566,10 @@ func (m *Member) memberGet(publicKey string) (interface{}, error) {
 	ref, err := rootDomain.GetMemberByPublicKey(publicKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get reference by public key: %s", err.Error())
+	}
+
+	if m.GetReference() == ref {
+		return GetResponse{Reference: ref.String(), BurnAddress: m.BurnAddress}, nil
 	}
 
 	user := member.GetObject(ref)

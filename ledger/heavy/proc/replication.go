@@ -89,26 +89,13 @@ func (p *Replication) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to store indexes")
 	}
 
-	latest, err := p.dep.pulses.Latest(ctx)
-	if err != nil {
-		return errors.Wrap(err, "failed to fetch pulse")
-	}
-	futurePulse := latest.PulseNumber
 	dr, err := storeDrop(ctx, p.dep.drops, msg.Drop)
 	if err != nil {
 		return errors.Wrap(err, "failed to store drop")
 	}
-	if dr.Split {
-		_, _, err = p.dep.jets.Split(ctx, futurePulse, dr.JetID)
-	} else {
-		err = p.dep.jets.Update(ctx, futurePulse, false, dr.JetID)
-	}
-	if err != nil {
-		return errors.Wrapf(err, "failed to split/update jet=%v pulse=%v", dr.JetID.DebugString(), futurePulse)
-	}
 
-	if err := p.dep.keeper.Add(ctx, dr.Pulse, dr.JetID); err != nil {
-		return errors.Wrapf(err, "failed to add jet to JetKeeper jet=%v", msg.JetID.DebugString())
+	if err := p.dep.keeper.AddDropConfirmation(ctx, dr.Pulse, dr.JetID, dr.Split); err != nil {
+		return errors.Wrapf(err, "failed to add jet to JetKeeper jet=%v", dr.JetID.DebugString())
 	}
 
 	stats.Record(ctx,
@@ -162,10 +149,18 @@ func storeRecords(
 	inslog := inslogger.FromContext(ctx)
 
 	for _, rec := range records {
-		virtRec := *rec.Virtual
-		hash := record.HashVirtual(pcs.ReferenceHasher(), virtRec)
-		id := insolar.NewID(pn, hash)
-		err := mod.Set(ctx, *id, rec)
+		hash := record.HashVirtual(pcs.ReferenceHasher(), rec.Virtual)
+		id := *insolar.NewID(pn, hash)
+		// FIXME: skipping errors will lead to inconsistent state.
+		if rec.ID != id {
+			inslog.Error(fmt.Errorf(
+				"record id does not match (calculated: %s, received: %s)",
+				id.DebugString(),
+				rec.ID.DebugString(),
+			))
+			continue
+		}
+		err := mod.Set(ctx, rec)
 		if err != nil {
 			inslog.Error(err, "heavyserver: store record failed")
 			continue

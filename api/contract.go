@@ -33,7 +33,7 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/insolar/insolar/testutils"
 )
@@ -82,7 +82,9 @@ func (s *ContractService) Upload(r *http.Request, args *UploadArgs, reply *Uploa
 			inslog.Infof("[ ContractService.Upload ] can't build preprocessor %#v", err)
 			return errors.Wrap(err, "can't build preprocessor")
 		}
-		s.cb = goplugintestutils.NewContractBuilder(s.runner.ArtifactManager, insgocc, s.runner.PulseAccessor)
+		s.cb = goplugintestutils.NewContractBuilder(
+			insgocc, s.runner.ArtifactManager, s.runner.PulseAccessor, s.runner.JetCoordinator,
+		)
 	}
 
 	contractMap := make(map[string]string)
@@ -106,8 +108,9 @@ type CallConstructorArgs struct {
 
 // CallConstructorReply is reply that Contract.CallConstructor returns
 type CallConstructorReply struct {
-	ObjectRef string `json:"ObjectRef"`
-	TraceID   string `json:"TraceID"`
+	ObjectRef        string `json:"ObjectRef"`
+	ConstructorError string `json:"ConstructorError"`
+	TraceID          string `json:"TraceID"`
 }
 
 // CallConstructor make an object from its prototype
@@ -137,7 +140,6 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 			Method:          args.Method,
 			Arguments:       args.MethodArgs,
 			Base:            &base,
-			Caller:          testutils.RandomRef(),
 			CallerPrototype: testutils.RandomRef(),
 			Prototype:       protoRef,
 			CallType:        record.CTSaveAsChild,
@@ -147,12 +149,15 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 		},
 	}
 
-	callConstructorReply, err := s.runner.ContractRequester.CallConstructor(ctx, msg)
+	objectRef, ctorErr, err := s.runner.ContractRequester.CallConstructor(ctx, msg)
 	if err != nil {
 		return errors.Wrap(err, "CallConstructor error")
 	}
 
-	reply.ObjectRef = callConstructorReply.String()
+	if objectRef != nil {
+		reply.ObjectRef = objectRef.String()
+	}
+	reply.ConstructorError = ctorErr
 
 	return nil
 }
@@ -193,9 +198,9 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 	if err != nil {
 		return errors.Wrap(err, "can't get current pulse")
 	}
+
 	msg := &message.CallMethod{
 		IncomingRequest: record.IncomingRequest{
-			Caller:       testutils.RandomRef(),
 			Object:       objectRef,
 			Method:       args.Method,
 			Arguments:    args.MethodArgs,
@@ -207,7 +212,7 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 
 	callMethodReply, err := s.runner.ContractRequester.Call(ctx, msg)
 	if err != nil {
-		inslogger.FromContext(ctx).Error("failed to call: ", err.Error())
+		inslog.Error("failed to call: ", err.Error())
 		return errors.Wrap(err, "CallMethod failed with error")
 	}
 

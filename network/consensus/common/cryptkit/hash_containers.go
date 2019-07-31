@@ -80,7 +80,7 @@ type DigestFactory interface {
 	GetSequenceDigester() SequenceDigester
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.DigestHolder -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.DigestHolder -o . -s _mock.go -g
 
 type DigestHolder interface {
 	longbits.FoldableReader
@@ -90,7 +90,7 @@ type DigestHolder interface {
 	Equals(other DigestHolder) bool
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureHolder -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureHolder -o . -s _mock.go -g
 
 type SignatureHolder interface {
 	longbits.FoldableReader
@@ -99,7 +99,7 @@ type SignatureHolder interface {
 	Equals(other SignatureHolder) bool
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureKeyHolder -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureKeyHolder -o . -s _mock.go -g
 
 type SignatureKeyHolder interface {
 	longbits.FoldableReader
@@ -127,19 +127,21 @@ const (
 	PublicAsymmetricKey
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.CertificateHolder -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.CertificateHolder -o . -s _mock.go -g
 
 type CertificateHolder interface {
 	GetPublicKey() SignatureKeyHolder
 	IsValidForHostAddress(HostAddress string) bool
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.DigestSigner -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.DigestSigner -o . -s _mock.go -g
 
 type DigestSigner interface {
 	SignDigest(digest Digest) Signature
 	GetSignMethod() SignMethod
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.PublicKeyStore -o . -s _mock.go -g
 
 type PublicKeyStore interface {
 	PublicKeyStore()
@@ -150,7 +152,7 @@ type SecretKeyStore interface {
 	AsPublicKeyStore() PublicKeyStore
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureVerifier -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureVerifier -o . -s _mock.go -g
 
 type SignatureVerifier interface {
 	IsDigestMethodSupported(m DigestMethod) bool
@@ -161,19 +163,19 @@ type SignatureVerifier interface {
 	IsValidDataSignature(data io.Reader, signature SignatureHolder) bool
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureVerifierFactory -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.SignatureVerifierFactory -o . -s _mock.go -g
 
 type SignatureVerifierFactory interface {
 	GetSignatureVerifierWithPKS(pks PublicKeyStore) SignatureVerifier
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.KeyStoreFactory -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.KeyStoreFactory -o . -s _mock.go -g
 
 type KeyStoreFactory interface {
 	GetPublicKeyStore(skh SignatureKeyHolder) PublicKeyStore
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.DataSigner -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/cryptkit.DataSigner -o . -s _mock.go -g
 
 type DataSigner interface {
 	DigestSigner

@@ -28,15 +28,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/api"
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/testutils"
@@ -73,30 +74,36 @@ func CBORMarshal(t testing.TB, o interface{}) []byte {
 
 // ContractsBuilder for tests
 type ContractsBuilder struct {
-	root          string
-	pulseAccessor pulse.Accessor
+	root    string
+	IccPath string
 
-	ArtifactManager artifacts.Client
-	IccPath         string
-	Prototypes      map[string]*insolar.Reference
-	Codes           map[string]*insolar.Reference
+	pulseAccessor   pulse.Accessor
+	artifactManager artifacts.Client
+	jetCoordinator  jet.Coordinator
+
+	Prototypes map[string]*insolar.Reference
+	Codes      map[string]*insolar.Reference
 }
 
 // NewContractBuilder returns a new `ContractsBuilder`, takes in: path to tmp directory,
 // artifact manager, ...
-func NewContractBuilder(am artifacts.Client, icc string, accessor pulse.Accessor) *ContractsBuilder {
+func NewContractBuilder(icc string, am artifacts.Client, pa pulse.Accessor, jc jet.Coordinator) *ContractsBuilder {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	if err != nil {
 		return nil
 	}
 
 	cb := &ContractsBuilder{
-		root:            tmpDir,
-		pulseAccessor:   accessor,
-		Prototypes:      make(map[string]*insolar.Reference),
-		Codes:           make(map[string]*insolar.Reference),
-		ArtifactManager: am,
-		IccPath:         icc}
+		root:    tmpDir,
+		IccPath: icc,
+
+		pulseAccessor:   pa,
+		artifactManager: am,
+		jetCoordinator:  jc,
+
+		Prototypes: make(map[string]*insolar.Reference),
+		Codes:      make(map[string]*insolar.Reference),
+	}
 	return cb
 }
 
@@ -121,6 +128,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 			CallType:  record.CTSaveAsChild,
 			Prototype: &nonce,
 			Reason:    api.MakeReason(pulse.PulseNumber, []byte(name)),
+			APINode:   cb.jetCoordinator.Me(),
 		}
 		protoID, err := cb.registerRequest(ctx, &request)
 
@@ -174,6 +182,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 			CallType:  record.CTSaveAsChild,
 			Prototype: &nonce,
 			Reason:    api.MakeReason(pulse.PulseNumber, []byte(name)),
+			APINode:   cb.jetCoordinator.Me(),
 		}
 
 		codeReq, err := cb.registerRequest(ctx, &req)
@@ -182,13 +191,19 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		}
 
 		log.Debugf("Deploying code for contract %q", name)
-		codeID, err := cb.ArtifactManager.DeployCode(
+		codeID, err := cb.artifactManager.DeployCode(
 			ctx,
 			insolar.Reference{}, *insolar.NewReference(*codeReq),
 			pluginBinary, insolar.MachineTypeGoPlugin,
 		)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] DeployCode returns error")
+		}
+
+		res := newRequestResult(nil, *insolar.NewReference(*codeReq))
+		err = cb.artifactManager.RegisterResult(ctx, *insolar.NewReference(*codeReq), res)
+		if err != nil {
+			return errors.Wrap(err, "[ Build ] RegisterResult for code returns error")
 		}
 
 		codeRef := &insolar.Reference{}
@@ -198,7 +213,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		cb.Codes[name] = codeRef
 
 		// FIXME: It's a temporary fix and should not be here. Ii will NOT work properly on production. Remove it ASAP!
-		err = cb.ArtifactManager.ActivatePrototype(
+		err = cb.artifactManager.ActivatePrototype(
 			ctx,
 			*cb.Prototypes[name],
 			insolar.GenesisRecord.Ref(), // FIXME: Only bootstrap can do this!
@@ -224,7 +239,7 @@ func (cb *ContractsBuilder) registerRequest(ctx context.Context, request *record
 
 	if cb.pulseAccessor == nil {
 		logger.Warnf("[ registerRequest ] No pulse accessor passed: no retries for register request")
-		return cb.ArtifactManager.RegisterIncomingRequest(ctx, request)
+		return cb.artifactManager.RegisterIncomingRequest(ctx, request)
 	}
 
 	for current := 1; current <= retries; current++ {
@@ -240,7 +255,7 @@ func (cb *ContractsBuilder) registerRequest(ctx context.Context, request *record
 		}
 		lastPulse = currentPulse.PulseNumber
 
-		contractID, err := cb.ArtifactManager.RegisterIncomingRequest(ctx, request)
+		contractID, err := cb.artifactManager.RegisterIncomingRequest(ctx, request)
 		if err == nil || !strings.Contains(err.Error(), flow.ErrCancelled.Error()) {
 			return contractID, err
 		}
@@ -304,4 +319,46 @@ func (cb *ContractsBuilder) plugin(name string) error {
 		return errors.Wrap(err, "can't build contract: "+string(out))
 	}
 	return nil
+}
+
+type requestResult struct {
+	sideEffectType  artifacts.RequestResultType
+	result          []byte
+	objectReference insolar.Reference
+}
+
+func newRequestResult(result []byte, objectRef insolar.Reference) *requestResult {
+	return &requestResult{
+		sideEffectType:  artifacts.RequestSideEffectNone,
+		result:          result,
+		objectReference: objectRef,
+	}
+}
+
+func (s requestResult) Type() artifacts.RequestResultType {
+	return s.sideEffectType
+}
+
+func (s *requestResult) Result() []byte {
+	return s.result
+}
+
+func (s *requestResult) ObjectReference() insolar.Reference {
+	return s.objectReference
+}
+
+func (s *requestResult) Activate() (insolar.Reference, insolar.Reference, []byte) {
+	panic("not implemented")
+}
+
+func (s *requestResult) Amend() (insolar.ID, insolar.Reference, []byte) {
+	panic("not implemented")
+}
+
+func (s *requestResult) Deactivate() insolar.ID {
+	panic("not implemented")
+}
+
+func (s *requestResult) ConstructorError() string {
+	panic("not implemented")
 }

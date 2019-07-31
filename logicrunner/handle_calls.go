@@ -43,14 +43,16 @@ type HandleCall struct {
 
 func (h *HandleCall) sendToNextExecutor(
 	ctx context.Context,
-	broker *ExecutionBroker,
-	requestRef *Ref,
+	objectRef insolar.Reference,
+	requestRef insolar.Reference,
+	request record.IncomingRequest,
+	ps insolar.PendingState,
 ) {
 	// If the flow has canceled during ClarifyPendingState there are two possibilities.
-	// 1. It's possible that we started to execute ClarifyPendingState, the pulse has
-	// changed and the execution queue was sent to the next executor in OnPulse method.
-	// This means that the next executor already has the last queue element, it's OK.
-	// 2. It's also possible that the pulse has changed after RegisterIncomingRequest but
+	// 1. It's possible that we were addding request to broker, the pulse has
+	// changed and the execution queue was sent to the next executor.
+	// This means that the next executor already queue element, it's OK.
+	// 2. It's also possible that the pulse has changed after registration, but
 	// before adding an item to the execution queue. In this case the queue was sent to the
 	// next executor without the last item. We could just return ErrCanceled to make the
 	// caller to resend the request. However this will cause a slow request deduplication
@@ -63,29 +65,23 @@ func (h *HandleCall) sendToNextExecutor(
 
 	logger := inslogger.FromContext(ctx)
 
-	broker.executionState.Lock()
-	// We want to remove element we have just added to es.Queue to eliminate doubling
-	transcript := broker.GetByReference(ctx, requestRef)
-	broker.executionState.Unlock()
+	logger.Debug("Sending additional request to next executor")
+	additionalCallMsg := message.AdditionalCallFromPreviousExecutor{
+		ObjectReference: objectRef,
+		RequestRef:      requestRef,
+		Request:         request,
+		ServiceData:     serviceDataFromContext(ctx),
+	}
 
-	// it might be already collected in OnPulse, that is why it already might not be in es.Queue
-	if transcript != nil {
-		logger.Debug("Sending additional request to next executor")
-		additionalCallMsg := message.AdditionalCallFromPreviousExecutor{
-			ObjectReference: broker.Ref,
-			RequestRef:      *requestRef,
-			Request:         *transcript.Request,
-			ServiceData:     serviceDataFromContext(transcript.Context),
-		}
-		if broker.executionState.pending == insolar.PendingUnknown {
-			additionalCallMsg.Pending = insolar.NotPending
-		} else {
-			additionalCallMsg.Pending = broker.executionState.pending
-		}
+	if ps == insolar.PendingUnknown {
+		additionalCallMsg.Pending = insolar.NotPending
+	} else {
+		additionalCallMsg.Pending = ps
+	}
 
-		if _, err := h.dep.lr.MessageBus.Send(ctx, &additionalCallMsg, nil); err != nil {
-			logger.Error("[ HandleCall.handleActual.sendToNextExecutor ] mb.Send failed to send AdditionalCallFromPreviousExecutor, ", err)
-		}
+	_, err := h.dep.lr.MessageBus.Send(ctx, &additionalCallMsg, nil)
+	if err != nil {
+		logger.Error("[ HandleCall.handleActual.sendToNextExecutor ] mb.Send failed to send AdditionalCallFromPreviousExecutor, ", err)
 	}
 }
 
@@ -115,7 +111,7 @@ func (h *HandleCall) handleActual(
 
 	request := msg.IncomingRequest
 
-	if lr.CheckExecutionLoop(ctx, request) {
+	if h.checkExecutionLoop(ctx, request) {
 		return nil, errors.New("loop detected")
 	}
 
@@ -143,26 +139,13 @@ func (h *HandleCall) handleActual(
 
 	broker := lr.StateStorage.UpsertExecutionState(*objRef)
 
-	broker.executionState.Lock()
-	broker.Put(ctx, false, NewTranscript(ctx, *requestRef, request))
-	broker.executionState.Unlock()
-
-	procClarifyPendingState := ClarifyPendingState{
-		broker:          broker,
-		request:         &request,
-		ArtifactManager: lr.ArtifactManager,
-	}
-
-	if err := f.Procedure(ctx, &procClarifyPendingState, true); err != nil {
+	proc := AddFreshRequest{broker: broker, requestRef: *requestRef, request: request}
+	err := f.Procedure(ctx, &proc, true)
+	if err != nil {
 		if err == flow.ErrCancelled {
-			h.sendToNextExecutor(ctx, broker, requestRef)
-		} else {
-			logger.Error(" HandleCall.handleActual ] ClarifyPendingState returns error: ", err)
+			h.sendToNextExecutor(ctx, *objRef, *requestRef, request, broker.PendingState())
 		}
-		// and return the reply as usual
-	} else {
-		// it's 'fast' operation, so we don't need to check that pulse ends
-		broker.StartProcessorIfNeeded(ctx)
+		return nil, errors.Wrap(err, "couldn't pass request to broker")
 	}
 
 	return &reply.RegisterRequest{
@@ -202,75 +185,30 @@ func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
 	return nil
 }
 
-type HandleAdditionalCallFromPreviousExecutor struct {
-	dep *Dependencies
+func (h *HandleCall) checkExecutionLoop(
+	ctx context.Context, request record.IncomingRequest,
+) bool {
 
-	Message payload.Meta
-	Parcel  insolar.Parcel
-}
-
-// This is basically a simplified version of HandleCall.handleActual().
-// Please note that currently we lack any fraud detection here.
-// Ideally we should check that the previous executor was really an executor
-// during previous pulse, that the request was really registered, etc.
-// Also we don't handle case when pulse changes during execution of this handle.
-// In this scenario user is in a bad luck. The request will be lost and user will have
-// to re-send it after some timeout.
-func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
-	ctx context.Context,
-	msg *message.AdditionalCallFromPreviousExecutor,
-	f flow.Flow,
-) {
-	lr := h.dep.lr
-	broker := lr.StateStorage.UpsertExecutionState(msg.ObjectReference)
-
-	broker.executionState.Lock()
-	if msg.Pending == insolar.NotPending {
-		broker.executionState.pending = insolar.NotPending
+	if request.ReturnMode == record.ReturnNoWait {
+		return false
+	}
+	if request.CallType != record.CTMethod {
+		return false
+	}
+	if request.Object == nil {
+		// should be catched by other code
+		return false
 	}
 
-	broker.Put(ctx, false, NewTranscript(ctx, msg.RequestRef, msg.Request))
-	broker.executionState.Unlock()
-
-	procClarifyPendingState := ClarifyPendingState{
-		broker:          broker,
-		request:         &msg.Request,
-		ArtifactManager: lr.ArtifactManager,
+	archive := h.dep.StateStorage.GetExecutionArchive(*request.Object)
+	if archive == nil {
+		return false
 	}
 
-	if err := f.Procedure(ctx, &procClarifyPendingState, true); err != nil {
-		inslogger.FromContext(ctx).Warn("[ HandleAdditionalCallFromPreviousExecutor.handleActual ] ClarifyPendingState returns error: ", err)
-		// We intentionally report OK to the previous executor here. There is no point
-		// in resending the message or anything.
-		return
+	if !archive.FindRequestLoop(ctx, request.APIRequestID) {
+		return false
 	}
 
-	// it's 'fast' operation, so we don't need to check that pulse ends
-	broker.StartProcessorIfNeeded(ctx)
-}
-
-func (h *HandleAdditionalCallFromPreviousExecutor) Present(ctx context.Context, f flow.Flow) error {
-	parcel := h.Parcel
-	inslogger.FromContext(ctx).Debug("HandleAdditionalCallFromPreviousExecutor.Present starts ...")
-
-	msg, ok := parcel.Message().(*message.AdditionalCallFromPreviousExecutor)
-	if !ok {
-		return errors.New("is not AdditionalCallFromPreviousExecutor message")
-	}
-
-	ctx = contextFromServiceData(msg.ServiceData)
-
-	ctx, span := instracer.StartSpan(ctx, "HandleAdditionalCallFromPreviousExecutor.Present")
-	span.AddAttributes(
-		trace.StringAttribute("msg.Type", msg.Type().String()),
-	)
-	defer span.End()
-
-	h.handleActual(ctx, msg, f)
-
-	// we never return any other replies
-	repMsg := bus.ReplyAsMessage(ctx, &reply.OK{})
-	h.dep.Sender.Reply(ctx, h.Message, repMsg)
-
-	return nil
+	inslogger.FromContext(ctx).Error("loop detected")
+	return true
 }

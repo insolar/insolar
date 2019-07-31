@@ -18,6 +18,7 @@ package logicrunner
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"sync"
 
@@ -98,16 +99,16 @@ func (ces *CurrentExecutionList) Get(requestRef insolar.Reference) *Transcript {
 	return rv
 }
 
-func (ces *CurrentExecutionList) Set(requestRef insolar.Reference, ce *Transcript) {
+func (ces *CurrentExecutionList) SetOnce(t *Transcript) error {
 	ces.lock.Lock()
-	ces.executions[requestRef] = ce
-	ces.lock.Unlock()
-}
+	defer ces.lock.Unlock()
 
-func (ces *CurrentExecutionList) SetTranscript(t *Transcript) {
-	ces.lock.Lock()
+	if _, has := ces.executions[t.RequestRef]; has {
+		return errors.New("not setting, already in the set")
+	}
+
 	ces.executions[t.RequestRef] = t
-	ces.lock.Unlock()
+	return nil
 }
 
 func (ces *CurrentExecutionList) Delete(requestRef insolar.Reference) {
@@ -175,19 +176,13 @@ func (ces *CurrentExecutionList) GetAllRequestRefs() []insolar.Reference {
 	return out
 }
 
-type CurrentExecutionPredicate func(*Transcript, interface{}) bool
-
-func (ces *CurrentExecutionList) Check(predicate CurrentExecutionPredicate, args interface{}) bool {
-	rv := true
+func (ces *CurrentExecutionList) Archive(archiver Archiver) {
 	ces.lock.RLock()
+	defer ces.lock.RUnlock()
+
 	for _, current := range ces.executions {
-		if !predicate(current, args) {
-			rv = false
-			break
-		}
+		archiver.Archive(current)
 	}
-	ces.lock.RUnlock()
-	return rv
 }
 
 func NewCurrentExecutionList() *CurrentExecutionList {

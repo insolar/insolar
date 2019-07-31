@@ -73,7 +73,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	}
 
 	ctx, span := instracer.StartSpan(
-		ctx, "pulse.process", trace.WithSampler(trace.AlwaysSample()),
+		ctx, "PulseManager.Set", trace.WithSampler(trace.AlwaysSample()),
 	)
 	span.AddAttributes(
 		trace.Int64Attribute("pulse.PulseNumber", int64(newPulse.PulseNumber)),
@@ -136,7 +136,7 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		return errors.Wrap(err, "call of SetActiveNodes failed")
 	}
 
-	err = m.JetModifier.Clone(ctx, storagePulse.PulseNumber, newPulse.PulseNumber)
+	err = m.JetModifier.Clone(ctx, storagePulse.PulseNumber, newPulse.PulseNumber, false)
 	if err != nil {
 		return errors.Wrapf(err, "failed to clone jet.Tree fromPulse=%v toPulse=%v", storagePulse.PulseNumber, newPulse.PulseNumber)
 	}

@@ -36,7 +36,6 @@ func TestInMemoryIndex_SetIndex(t *testing.T) {
 		ObjID: objID,
 		Lifeline: record.Lifeline{
 			LatestState: &lflID,
-			Delegates:   []record.LifelineDelegate{},
 		},
 	}
 
@@ -44,8 +43,7 @@ func TestInMemoryIndex_SetIndex(t *testing.T) {
 		pn := gen.PulseNumber()
 		index := NewIndexStorageMemory()
 
-		err := index.SetIndex(ctx, pn, buck)
-		require.NoError(t, err)
+		index.Set(ctx, pn, buck)
 
 		savedBuck := index.buckets[pn][objID]
 		require.NotNil(t, savedBuck)
@@ -60,20 +58,17 @@ func TestInMemoryIndex_SetIndex(t *testing.T) {
 		pn := gen.PulseNumber()
 		index := NewIndexStorageMemory()
 
-		err := index.SetIndex(ctx, pn, buck)
-		require.NoError(t, err)
+		index.Set(ctx, pn, buck)
 
 		sLlflID := gen.ID()
 		sBuck := record.Index{
 			ObjID: objID,
 			Lifeline: record.Lifeline{
 				LatestState: &sLlflID,
-				Delegates:   []record.LifelineDelegate{},
 			},
 		}
 
-		err = index.SetIndex(ctx, pn, sBuck)
-		require.NoError(t, err)
+		index.Set(ctx, pn, sBuck)
 
 		savedBuck := index.buckets[pn][objID]
 		require.NotNil(t, savedBuck)

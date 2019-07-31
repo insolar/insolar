@@ -22,9 +22,10 @@ import (
 	"strings"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bits"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Accessor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Accessor -o ./ -s _mock.go -g
 
 // Accessor provides an interface for accessing jet IDs.
 type Accessor interface {
@@ -35,7 +36,7 @@ type Accessor interface {
 	ForID(ctx context.Context, pulse insolar.PulseNumber, recordID insolar.ID) (insolar.JetID, bool)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Modifier -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Modifier -o ./ -s _mock.go -g
 
 // Modifier provides an interface for modifying jet IDs.
 type Modifier interface {
@@ -44,7 +45,7 @@ type Modifier interface {
 	// Split performs jet split and returns resulting jet ids. Always set Active flag to true for leafs.
 	Split(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID) (insolar.JetID, insolar.JetID, error)
 	// Clone copies tree from one pulse to another. Use it to copy the past tree into new pulse.
-	Clone(ctx context.Context, from, to insolar.PulseNumber) error
+	Clone(ctx context.Context, from, to insolar.PulseNumber, keepActual bool) error
 }
 
 // Cleaner provides an interface for removing jet.Tree from a storage.
@@ -53,7 +54,7 @@ type Cleaner interface {
 	DeleteForPN(ctx context.Context, pulse insolar.PulseNumber)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Storage -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Storage -o ./ -s _mock.go -g
 
 // Storage composes Accessor and Modifier interfaces.
 type Storage interface {
@@ -61,7 +62,7 @@ type Storage interface {
 	Modifier
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Coordinator -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Coordinator -o ./ -s _mock.go -g
 
 // Coordinator provides methods for calculating Jet affinity
 // (e.g. to which Jet a message should be sent).
@@ -71,6 +72,9 @@ type Coordinator interface {
 
 	// IsAuthorized checks for role on concrete pulse for the address.
 	IsAuthorized(ctx context.Context, role insolar.DynamicRole, obj insolar.ID, pulse insolar.PulseNumber, node insolar.Reference) (bool, error)
+
+	// IsMeAuthorizedNow checks role of the current node in the current pulse for the address. Sugar for IsAuthorized.
+	IsMeAuthorizedNow(ctx context.Context, role insolar.DynamicRole, obj insolar.ID) (bool, error)
 
 	// QueryRole returns node refs responsible for role bound operations for given object and pulse.
 	QueryRole(ctx context.Context, role insolar.DynamicRole, obj insolar.ID, pulse insolar.PulseNumber) ([]insolar.Reference, error)
@@ -100,30 +104,7 @@ func Parent(id insolar.JetID) insolar.JetID {
 		return id
 	}
 
-	return *insolar.NewJetID(depth-1, resetBits(prefix, depth-1))
-}
-
-// resetBits returns a new byte slice with all bits in 'value' reset,
-// starting from 'start' number of bit.
-//
-// If 'start' is bigger than len(value), the original slice will be returned.
-func resetBits(value []byte, start uint8) []byte {
-	if int(start) >= len(value)*8 {
-		return value
-	}
-
-	startByte := start / 8
-	startBit := start % 8
-
-	result := make([]byte, len(value))
-	copy(result, value[:startByte])
-
-	// Reset bits in starting byte.
-	mask := byte(0xFF)
-	mask <<= 8 - startBit
-	result[startByte] = value[startByte] & mask
-
-	return result
+	return *insolar.NewJetID(depth-1, bits.ResetBits(prefix, depth-1))
 }
 
 // NewIDFromString creates new JetID from string represents binary prefix.
@@ -158,10 +139,10 @@ func parsePrefix(s string) []byte {
 func Siblings(id insolar.JetID) (insolar.JetID, insolar.JetID) {
 	depth, prefix := id.Depth(), id.Prefix()
 
-	leftPrefix := resetBits(prefix, depth)
+	leftPrefix := bits.ResetBits(prefix, depth)
 	left := insolar.NewJetID(depth+1, leftPrefix)
 
-	rightPrefix := resetBits(prefix, depth)
+	rightPrefix := bits.ResetBits(prefix, depth)
 	setBit(rightPrefix, depth)
 	right := insolar.NewJetID(depth+1, rightPrefix)
 

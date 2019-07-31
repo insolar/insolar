@@ -23,7 +23,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.Client -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.Client -o ./ -s _mock.go -g
 
 // Client is a high level storage interface.
 type Client interface {
@@ -55,17 +55,6 @@ type Client interface {
 	// provide methods for fetching all related data.
 	GetObject(ctx context.Context, head insolar.Reference) (ObjectDescriptor, error)
 
-	// GetDelegate returns provided object's delegate reference for provided type.
-	//
-	// Object delegate should be previously created for this object. If object delegate does not exist, an error will
-	// be returned.
-	GetDelegate(ctx context.Context, head, asType insolar.Reference) (*insolar.Reference, error)
-
-	// GetChildren returns children iterator.
-	//
-	// During iteration children refs will be fetched from remote source (parent object).
-	GetChildren(ctx context.Context, parent insolar.Reference, pulse *insolar.PulseNumber) (RefIterator, error)
-
 	// DeployCode creates new code record in storage.
 	//
 	// Code records are used to activate prototype.
@@ -92,7 +81,7 @@ type Client interface {
 	InjectFinish()
 }
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.CodeDescriptor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.CodeDescriptor -o ./ -s _mock.go -g
 
 // CodeDescriptor represents meta info required to fetch all code data.
 type CodeDescriptor interface {
@@ -106,7 +95,7 @@ type CodeDescriptor interface {
 	Code() ([]byte, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.ObjectDescriptor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.ObjectDescriptor -o ./ -s _mock.go -g
 
 // ObjectDescriptor represents meta info required to fetch all object data.
 type ObjectDescriptor interface {
@@ -141,7 +130,7 @@ type RefIterator interface {
 	HasNext() bool
 }
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.DescriptorsCache -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.DescriptorsCache -o ./ -s _mock.go -g
 
 // DescriptorsCache provides convenient way to get prototype and code descriptors
 // of objects without fetching them twice
@@ -179,10 +168,11 @@ func (t RequestResultType) String() string {
 type RequestResult interface {
 	Type() RequestResultType
 
-	Activate() (insolar.Reference, insolar.Reference, bool, []byte)
+	Activate() (insolar.Reference, insolar.Reference, []byte)
 	Amend() (insolar.ID, insolar.Reference, []byte)
 	Deactivate() insolar.ID
 
 	Result() []byte
 	ObjectReference() insolar.Reference
+	ConstructorError() string
 }

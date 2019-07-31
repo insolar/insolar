@@ -25,26 +25,22 @@ import (
 
 	wmMessage "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils"
 )
 
 func TestClientImplements(t *testing.T) {
@@ -165,38 +161,6 @@ func genRandomRef(pulse insolar.PulseNumber) *insolar.Reference {
 	return genRefWithID(genRandomID(pulse))
 }
 
-func (s *amSuite) TestLedgerArtifactManager_GetChildren_FollowsRedirect() {
-	mc := minimock.NewController(s.T())
-	am := NewClient(nil)
-	mb := testutils.NewMessageBusMock(mc)
-
-	objRef := genRandomRef(0)
-	nodeRef := genRandomRef(0)
-	mb.SendFunc = func(c context.Context, m insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
-		o = o.Safe()
-		if o.Receiver == nil {
-			return &reply.GetChildrenRedirectReply{
-				Receiver: nodeRef,
-				Token:    &delegationtoken.GetChildrenRedirectToken{Signature: []byte{1, 2, 3}},
-			}, nil
-		}
-
-		token, ok := o.Token.(*delegationtoken.GetChildrenRedirectToken)
-		assert.True(s.T(), ok)
-		assert.Equal(s.T(), []byte{1, 2, 3}, token.Signature)
-		assert.Equal(s.T(), nodeRef, o.Receiver)
-		return &reply.Children{}, nil
-	}
-	am.DefaultBus = mb
-
-	pa := pulse.NewAccessorMock(s.T())
-	pa.LatestMock.Return(*insolar.GenesisPulse, nil)
-	am.PulseAccessor = pa
-
-	_, err := am.GetChildren(s.ctx, *objRef, nil)
-	require.NoError(s.T(), err)
-}
-
 func (s *amSuite) TestLedgerArtifactManager_GetIncomingRequest_Success() {
 	// Arrange
 	mc := minimock.NewController(s.T())
@@ -215,13 +179,13 @@ func (s *amSuite) TestLedgerArtifactManager_GetIncomingRequest_Success() {
 
 	finalResponse := &payload.Request{
 		RequestID: *requestRef.Record(),
-		Request:   record.Wrap(req),
+		Request:   record.Wrap(&req),
 	}
 	reqMsg, err := payload.NewMessage(finalResponse)
 	require.NoError(s.T(), err)
 
 	sender := bus.NewSenderMock(s.T())
-	sender.SendRoleFunc = func(_ context.Context, msg *wmMessage.Message, role insolar.DynamicRole, n insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
+	sender.SendRoleMock.Set(func(_ context.Context, msg *wmMessage.Message, role insolar.DynamicRole, n insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
 		require.Equal(s.T(), insolar.DynamicRoleLightExecutor, role)
 
 		getReq := payload.GetRequest{}
@@ -238,7 +202,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetIncomingRequest_Success() {
 		ch := make(chan *wmMessage.Message, 1)
 		ch <- reqMsg
 		return ch, func() {}
-	}
+	})
 
 	am := NewClient(nil)
 	am.JetCoordinator = jc
@@ -272,7 +236,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetPendings_Success() {
 	require.NoError(s.T(), err)
 
 	sender := bus.NewSenderMock(s.T())
-	sender.SendRoleFunc = func(p context.Context, msg *wmMessage.Message, role insolar.DynamicRole, ref insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
+	sender.SendRoleMock.Set(func(p context.Context, msg *wmMessage.Message, role insolar.DynamicRole, ref insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
 		getPendings := payload.GetPendings{}
 		err := getPendings.Unmarshal(msg.Payload)
 		require.NoError(s.T(), err)
@@ -286,7 +250,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetPendings_Success() {
 		ch := make(chan *wmMessage.Message, 1)
 		ch <- resMsg
 		return ch, func() {}
-	}
+	})
 
 	am := NewClient(nil)
 	am.JetCoordinator = jc
@@ -314,7 +278,7 @@ func (s *amSuite) TestLedgerArtifactManager_HasPendings_Success() {
 	require.NoError(s.T(), err)
 
 	sender := bus.NewSenderMock(s.T())
-	sender.SendRoleFunc = func(p context.Context, msg *wmMessage.Message, role insolar.DynamicRole, ref insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
+	sender.SendRoleMock.Set(func(p context.Context, msg *wmMessage.Message, role insolar.DynamicRole, ref insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
 		hasPendings := payload.HasPendings{}
 		err := hasPendings.Unmarshal(msg.Payload)
 		require.NoError(s.T(), err)
@@ -328,7 +292,7 @@ func (s *amSuite) TestLedgerArtifactManager_HasPendings_Success() {
 		ch := make(chan *wmMessage.Message, 1)
 		ch <- resMsg
 		return ch, func() {}
-	}
+	})
 
 	am := NewClient(sender)
 
