@@ -218,6 +218,7 @@ func TestRecordStorage_Set(t *testing.T) {
 }
 
 func TestRecordStorage_DB_Set(t *testing.T) {
+	t.Skip()
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
