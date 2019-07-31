@@ -52,6 +52,7 @@ package gateway
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/rules"
 
 	"github.com/insolar/insolar/network"
 
@@ -76,7 +77,7 @@ func (g *WaitMinRoles) GetState() insolar.NetworkState {
 func (g *WaitMinRoles) OnConsensusFinished(p insolar.PulseNumber) {
 	// TODO: check min roles and switch state
 
-	if g.Rules.CheckMinRole() {
+	if rules.CheckMinRole(g.CertificateManager.GetCertificate(), g.NodeKeeper.GetAccessor().GetActiveNodes()) {
 		g.Gatewayer.SwitchState(context.Background(), insolar.CompleteNetworkState)
 	}
 }

@@ -67,8 +67,6 @@ import (
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/network/rules"
-
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/keystore"
 
@@ -528,7 +526,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	cfg.Service.CacheDirectory = cacheDir + node.host
 
 	node.componentManager = &component.Manager{}
-	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme(), rules.NewRules())
+	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme())
 	serviceNetwork, err := servicenetwork.NewServiceNetwork(cfg, node.componentManager)
 	require.NoError(s.t, err)
 

@@ -57,12 +57,6 @@ import (
 
 	"github.com/insolar/insolar/cryptography"
 
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/serialization"
-	"github.com/insolar/insolar/network/node"
-	"github.com/insolar/insolar/network/rules"
-
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -72,11 +66,15 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/adapters"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/serialization"
 	"github.com/insolar/insolar/network/controller"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/gateway"
 	"github.com/insolar/insolar/network/gateway/bootstrap"
 	"github.com/insolar/insolar/network/hostnetwork"
+	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/routing"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/pkg/errors"
@@ -104,7 +102,6 @@ type ServiceNetwork struct {
 
 	// subcomponents
 	RPC              controller.RPCController `inject:"subcomponent"`
-	Rules            network.Rules            `inject:"subcomponent"`
 	TransportFactory transport.Factory        `inject:"subcomponent"`
 
 	HostNetwork network.HostNetwork
@@ -176,7 +173,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		bootstrap.NewRequester(options),
 		n.BaseGateway,
 		n.Gatewayer,
-		rules.NewRules(),
 	)
 
 	n.datagramHandler = adapters.NewDatagramHandler()

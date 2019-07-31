@@ -93,7 +93,6 @@ type Base struct {
 	PulseAppender       pulse.Appender              `inject:""`
 	PulseManager        insolar.PulseManager        `inject:""`
 	BootstrapRequester  bootstrap.Requester         `inject:""`
-	Rules               network.Rules               `inject:""`
 	KeyProcessor        insolar.KeyProcessor        `inject:""`
 
 	ConsensusController   consensus.Controller
