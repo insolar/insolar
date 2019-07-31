@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 
 	"github.com/pkg/errors"
-	"github.com/ugorji/go/codec"
 )
 
 // Arguments is a dedicated type for arguments, that represented as binary cbored blob
@@ -41,7 +40,7 @@ func (args *Arguments) MarshalJSON() ([]byte, error) {
 
 func convertArgs(args []byte, result *[]interface{}) error {
 	var value interface{}
-	err := codec.NewDecoderBytes(args, &codec.CborHandle{}).Decode(&value)
+	err := Deserialize(args, &value)
 	if err != nil {
 		return errors.Wrap(err, "Can't deserialize record")
 	}
@@ -104,7 +103,7 @@ type MessageSignature interface {
 	SetSender(Reference)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.Parcel -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.Parcel -o ../testutils -s _mock.go -g
 
 // Parcel by senders private key.
 type Parcel interface {
@@ -149,7 +148,7 @@ func (o *MessageSendOptions) Safe() *MessageSendOptions {
 	return o
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.MessageBus -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.MessageBus -o ../testutils -s _mock.go -g
 
 // MessageBus interface
 type MessageBus interface {
@@ -164,7 +163,7 @@ type MessageBus interface {
 	OnPulse(context.Context, Pulse) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.GlobalInsolarLock -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.GlobalInsolarLock -o ../testutils -s _mock.go -g
 
 // GlobalInsolarLock is lock of all incoming and outcoming network calls.
 // It's not intended to be used in multiple threads. And main use of it is `Set` method of `PulseManager`.
@@ -197,15 +196,6 @@ const (
 	// to the current executor
 	TypeStillExecuting
 
-	// Ledger
-
-	// TypeGetChildren retrieves object's children.
-	TypeGetChildren
-	// TypeRegisterChild registers child on the parent object.
-	TypeRegisterChild
-	// TypeGetObjectIndex fetches object index from storage.
-	TypeGetObjectIndex
-
 	// Heavy replication
 
 	// TypeHeavyStartStop carries start/stop signal for heavy replication.
@@ -227,6 +217,5 @@ const (
 	// DTTypePendingExecution allows to continue method calls
 	DTTypePendingExecution DelegationTokenType = iota + 1
 	DTTypeGetObjectRedirect
-	DTTypeGetChildrenRedirect
 	DTTypeGetCodeRedirect
 )

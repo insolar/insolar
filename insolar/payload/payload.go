@@ -37,8 +37,6 @@ const (
 	TypeState
 	TypeGetObject
 	TypePassState
-	TypeObjIndex
-	TypeObjState
 	TypeIndex
 	TypePass
 	TypeGetCode
@@ -67,6 +65,8 @@ const (
 	TypeAbandonedRequestsNotification
 	TypeGetLightInitialState
 	TypeLightInitialState
+	TypeGetIndex
+	TypeUpdateJet
 
 	TypeReturnResults
 	TypeCallMethod
@@ -154,6 +154,20 @@ func UnmarshalType(data []byte) (Type, error) {
 		return TypeUnknown, errors.Wrap(err, "failed to decode polymorph")
 	}
 	return Type(morph), nil
+}
+
+// MarshalType encodes payload type into binary.
+func MarshalType(t Type) ([]byte, error) {
+	buf := proto.NewBuffer(nil)
+	err := buf.EncodeVarint(MorphFieldNum<<3 | MorpyFieldType)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to encode polymorph")
+	}
+	err = buf.EncodeVarint(uint64(t))
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to encode polymorph")
+	}
+	return buf.Bytes(), nil
 }
 
 func Marshal(payload Payload) ([]byte, error) {
@@ -283,6 +297,12 @@ func Marshal(payload Payload) ([]byte, error) {
 		return pl.Marshal()
 	case *LightInitialState:
 		pl.Polymorph = uint32(TypeLightInitialState)
+		return pl.Marshal()
+	case *GetIndex:
+		pl.Polymorph = uint32(TypeGetIndex)
+		return pl.Marshal()
+	case *UpdateJet:
+		pl.Polymorph = uint32(TypeUpdateJet)
 		return pl.Marshal()
 	}
 
@@ -461,6 +481,14 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeLightInitialState:
 		pl := LightInitialState{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeGetIndex:
+		pl := GetIndex{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeUpdateJet:
+		pl := UpdateJet{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}

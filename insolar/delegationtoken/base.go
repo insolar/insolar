@@ -59,21 +59,6 @@ func (t *GetObjectRedirectToken) Verify(parcel insolar.Parcel) (bool, error) {
 	panic("implement me")
 }
 
-// GetChildrenRedirectToken is a redirect token for the GetObject method
-type GetChildrenRedirectToken struct {
-	Signature []byte
-}
-
-// Type implementation of Token interface.
-func (t *GetChildrenRedirectToken) Type() insolar.DelegationTokenType {
-	return insolar.DTTypeGetChildrenRedirect
-}
-
-// Verify implementation of Token interface.
-func (t *GetChildrenRedirectToken) Verify(parcel insolar.Parcel) (bool, error) {
-	panic("implement me")
-}
-
 // GetCodeRedirectToken is a redirect token for the GetObject method
 type GetCodeRedirectToken struct {
 	Signature []byte
@@ -92,6 +77,5 @@ func (t *GetCodeRedirectToken) Verify(parcel insolar.Parcel) (bool, error) {
 func init() {
 	gob.Register(&PendingExecutionToken{})
 	gob.Register(&GetObjectRedirectToken{})
-	gob.Register(&GetChildrenRedirectToken{})
 	gob.Register(&GetCodeRedirectToken{})
 }

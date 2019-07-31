@@ -19,7 +19,6 @@ package proc
 import (
 	"context"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -40,7 +39,7 @@ type SetCode struct {
 
 	dep struct {
 		writer  hot.WriteAccessor
-		records object.RecordModifier
+		records object.AtomicRecordModifier
 		pcs     insolar.PlatformCryptographyScheme
 		sender  bus.Sender
 	}
@@ -57,7 +56,7 @@ func NewSetCode(msg payload.Meta, rec record.Virtual, recID insolar.ID, jetID in
 
 func (p *SetCode) Dep(
 	w hot.WriteAccessor,
-	r object.RecordModifier,
+	r object.AtomicRecordModifier,
 	pcs insolar.PlatformCryptographyScheme,
 	s bus.Sender,
 ) {
@@ -78,19 +77,13 @@ func (p *SetCode) Proceed(ctx context.Context) error {
 	defer done()
 
 	material := record.Material{
-		Virtual: &p.record,
+		Virtual: p.record,
 		JetID:   p.jetID,
+		ID:      p.recordID,
 	}
 
-	err = p.dep.records.Set(ctx, p.recordID, material)
-	if err == object.ErrOverride {
-		inslogger.FromContext(ctx).Errorf("can't save record into storage: %s", err)
-		// Since there is no deduplication yet it's quite possible that there will be
-		// two writes by the same key. For this reason currently instead of reporting
-		// an error we return OK (nil error). When deduplication will be implemented
-		// we should change `nil` to `ErrOverride` here.
-		return nil
-	} else if err != nil {
+	err = p.dep.records.SetAtomic(ctx, material)
+	if err != nil {
 		return errors.Wrap(err, "failed to store record")
 	}
 
@@ -99,7 +92,7 @@ func (p *SetCode) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to create reply")
 	}
 
-	go p.dep.sender.Reply(ctx, p.message, msg)
+	p.dep.sender.Reply(ctx, p.message, msg)
 
 	return nil
 }

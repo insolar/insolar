@@ -20,7 +20,9 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-type Record interface{}
+type Record interface {
+	Marshal() (dAtA []byte, err error)
+}
 
 // StateID is a state of lifeline records.
 type StateID int
@@ -42,6 +44,7 @@ func (s *StateID) Equal(other StateID) bool {
 
 // State is common object state record.
 type State interface {
+	Record
 	// ID returns state id.
 	ID() StateID
 	// GetImage returns state code.
@@ -134,10 +137,11 @@ func (Genesis) GetIsPrototype() bool {
 	return false
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/record.Request -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar/record.Request -o ./ -s _mock.go -g
 
 // Request is a common request interface.
 type Request interface {
+	Record
 	// AffinityRef returns a pointer to the reference of the object the
 	// Request is affine to. The result can be nil, e.g. in case of creating
 	// a new object.
@@ -145,6 +149,9 @@ type Request interface {
 	// ReasonRef returns a reference of the Request that caused the creating
 	// of this Request.
 	ReasonRef() insolar.Reference
+	// ReasonAffinityRef returns a reference of an object reason request is
+	// affine to.
+	ReasonAffinityRef() insolar.Reference
 	// GetCallType returns call type.
 	GetCallType() CallType
 	// IsAPIRequest tells is it API-request or not.
@@ -173,6 +180,10 @@ func (r *IncomingRequest) ReasonRef() insolar.Reference {
 	return r.Reason
 }
 
+func (r *IncomingRequest) ReasonAffinityRef() insolar.Reference {
+	return r.Caller
+}
+
 func (r *IncomingRequest) IsAPIRequest() bool {
 	return !r.APINode.IsEmpty()
 }
@@ -199,6 +210,10 @@ func (r *OutgoingRequest) ReasonRef() insolar.Reference {
 	return r.Reason
 }
 
+func (r *OutgoingRequest) ReasonAffinityRef() insolar.Reference {
+	return r.Caller
+}
+
 func (r *OutgoingRequest) IsAPIRequest() bool {
 	return false
 }
@@ -217,25 +232,6 @@ func (r *OutgoingRequest) IsTemporaryUploadCode() bool {
 
 func isDetached(rm ReturnMode) bool {
 	return rm == ReturnSaga
-}
-
-func (m *Lifeline) SetDelegate(key insolar.Reference, value insolar.Reference) {
-	for _, d := range m.Delegates {
-		if d.Key == key {
-			d.Value = value
-			return
-		}
-	}
-	m.Delegates = append(m.Delegates, LifelineDelegate{Key: key, Value: value})
-}
-
-func (m *Lifeline) DelegateByKey(key insolar.Reference) (insolar.Reference, bool) {
-	for _, d := range m.Delegates {
-		if d.Key == key {
-			return d.Value, true
-		}
-	}
-	return [64]byte{}, false
 }
 
 func CalculateRequestAffinityRef(

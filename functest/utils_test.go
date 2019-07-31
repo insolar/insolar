@@ -240,6 +240,27 @@ func migrate(t *testing.T, memberRef string, amount string, tx string, ma string
 	return deposit
 }
 
+func generateMigrationAddress() string {
+	return testutils.RandomString()
+}
+
+func fullMigration(t *testing.T, txHash string) *user {
+
+	member, err := newUserWithKeys()
+	require.NoError(t, err)
+	migrationAddress := generateMigrationAddress()
+	_, err = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
+	require.NoError(t, err)
+	_, err = retryableMemberMigrationCreate(member, true)
+	require.NoError(t, err)
+
+	migrate(t, member.ref, "1000", txHash, migrationAddress, 0)
+	migrate(t, member.ref, "1000", txHash, migrationAddress, 2)
+	migrate(t, member.ref, "1000", txHash, migrationAddress, 1)
+
+	return member
+}
+
 func retryableMemberCreate(user *user, updatePublicKey bool) (interface{}, error) {
 	return retryableCreateMember(user, "member.create", updatePublicKey)
 }
@@ -465,7 +486,7 @@ func callMethodNoChecks(t testing.TB, objectRef *insolar.Reference, method strin
 	argsSerialized, err := insolar.Serialize(args)
 	require.NoError(t, err)
 
-	callMethodBody := getRPSResponseBody(t, postParams{
+	respBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
 		"method":  "contract.callMethod",
 		"id":      "",
@@ -475,7 +496,7 @@ func callMethodNoChecks(t testing.TB, objectRef *insolar.Reference, method strin
 			"MethodArgs":      argsSerialized,
 		},
 	})
-	require.NotEmpty(t, callMethodBody)
+	require.NotEmpty(t, respBody)
 
 	callRes := struct {
 		Version string              `json:"jsonrpc"`
@@ -484,7 +505,7 @@ func callMethodNoChecks(t testing.TB, objectRef *insolar.Reference, method strin
 		Error   json2.Error         `json:"error"`
 	}{}
 
-	err = json.Unmarshal(callMethodBody, &callRes)
+	err = json.Unmarshal(respBody, &callRes)
 	require.NoError(t, err)
 
 	return callRes

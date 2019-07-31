@@ -18,7 +18,6 @@ package payload_test
 
 import (
 	"math/rand"
-	"reflect"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -43,54 +42,30 @@ func TestPolymorphProducesExpectedBinary(t *testing.T) {
 	require.Equal(t, morph, uint32(morph64))
 }
 
-func TestMarshalUnmarshal(t *testing.T) {
-	type data struct {
-		tp payload.Type
-		pl payload.Payload
-	}
-	table := []data{
-		{tp: payload.TypeMeta, pl: &payload.Meta{}},
-		{tp: payload.TypeError, pl: &payload.Error{}},
-		{tp: payload.TypeID, pl: &payload.ID{}},
-		{tp: payload.TypeIDs, pl: &payload.IDs{}},
-		{tp: payload.TypeJet, pl: &payload.Jet{}},
-		{tp: payload.TypeState, pl: &payload.State{}},
-		{tp: payload.TypeGetObject, pl: &payload.GetObject{}},
-		{tp: payload.TypePassState, pl: &payload.PassState{}},
-		{tp: payload.TypeIndex, pl: &payload.Index{}},
-		{tp: payload.TypePass, pl: &payload.Pass{}},
-		{tp: payload.TypeCode, pl: &payload.Code{}},
-		{tp: payload.TypeGetCode, pl: &payload.GetCode{}},
-		{tp: payload.TypeSetCode, pl: &payload.SetCode{}},
-		{tp: payload.TypeGetFilament, pl: &payload.GetFilament{}},
-		{tp: payload.TypeFilamentSegment, pl: &payload.FilamentSegment{}},
-		{tp: payload.TypeSetIncomingRequest, pl: &payload.SetIncomingRequest{}},
-		{tp: payload.TypeRequest, pl: &payload.Request{}},
-		{tp: payload.TypeReplication, pl: &payload.Replication{}},
-		{tp: payload.TypeSetResult, pl: &payload.SetResult{}},
-		{tp: payload.TypeActivate, pl: &payload.Activate{}},
-		{tp: payload.TypeRequestInfo, pl: &payload.RequestInfo{}},
-		{tp: payload.TypeGotHotConfirmation, pl: &payload.GotHotConfirmation{}},
-		{tp: payload.TypeDeactivate, pl: &payload.Deactivate{}},
-		{tp: payload.TypeUpdate, pl: &payload.Update{}},
-		{tp: payload.TypeHotObjects, pl: &payload.HotObjects{}},
-		{tp: payload.TypeGetRequest, pl: &payload.GetRequest{}},
-		{tp: payload.TypeGetPendings, pl: &payload.GetPendings{}},
-		{tp: payload.TypeHasPendings, pl: &payload.HasPendings{}},
-		{tp: payload.TypePendingsInfo, pl: &payload.PendingsInfo{}},
-		{tp: payload.TypeGetJet, pl: &payload.GetJet{}},
-		{tp: payload.TypeAbandonedRequestsNotification, pl: &payload.AbandonedRequestsNotification{}},
-		{tp: payload.TypeGetLightInitialState, pl: &payload.GetLightInitialState{}},
-		{tp: payload.TypeLightInitialState, pl: &payload.LightInitialState{}},
-	}
+func TestMarshalUnmarshalType(t *testing.T) {
+	for _, expectedType := range payload.TypesMap {
+		buf, err := payload.MarshalType(expectedType)
+		require.NoError(t, err)
 
-	for _, d := range table {
-		t.Run(d.tp.String(), func(t *testing.T) {
-			_, err := payload.Marshal(d.pl)
-			require.NoError(t, err)
-			r := reflect.ValueOf(d.pl)
-			f := reflect.Indirect(r).FieldByName("Polymorph")
-			require.Equal(t, int(d.tp), int(f.Uint()))
-		})
+		tp, err := payload.UnmarshalType(buf)
+		require.NoError(t, err)
+		require.Equal(t, expectedType, tp)
+	}
+}
+
+func TestMarshalUnmarshal(t *testing.T) {
+	for _, expectedType := range payload.TypesMap {
+		if expectedType == payload.TypeUnknown {
+			continue
+		}
+		typeBuf, err := payload.MarshalType(expectedType)
+		require.NoError(t, err)
+		pl, err := payload.Unmarshal(typeBuf)
+		require.NoError(t, err, "Unmarshal() unknown type %s", expectedType.String())
+		buf, err := payload.Marshal(pl)
+		require.NoError(t, err, "Marshal() unknown type %s", expectedType.String())
+		tp, err := payload.UnmarshalType(buf)
+		require.NoError(t, err)
+		require.Equal(t, expectedType, tp, "type mismatch between Marshal() and Unmarshal()")
 	}
 }

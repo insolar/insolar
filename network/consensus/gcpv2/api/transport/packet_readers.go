@@ -60,7 +60,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/transport.PacketParser -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/transport.PacketParser -o . -s _mock.go -g
 
 type PacketParser interface {
 	GetPacketType() phases.PacketType
@@ -195,7 +195,7 @@ type BriefIntroductionReader interface {
 	profiles.BriefCandidateProfile
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/transport.FullIntroductionReader -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/transport.FullIntroductionReader -o . -s _mock.go -g
 type FullIntroductionReader interface {
 	profiles.CandidateProfile
 }

@@ -267,12 +267,12 @@ func TestJetCoordinator_NodeForJet_GoToHeavy(t *testing.T) {
 
 	expectedID := insolar.NewReference(testutils.RandomID())
 	activeNodesStorageMock := node.NewAccessorMock(t)
-	activeNodesStorageMock.InRoleFunc = func(p insolar.PulseNumber, p1 insolar.StaticRole) (r []insolar.Node, r1 error) {
+	activeNodesStorageMock.InRoleMock.Set(func(p insolar.PulseNumber, p1 insolar.StaticRole) (r []insolar.Node, r1 error) {
 		require.Equal(t, insolar.FirstPulseNumber, int(p))
 		require.Equal(t, insolar.StaticRoleHeavyMaterial, p1)
 
 		return []insolar.Node{{ID: *expectedID}}, nil
-	}
+	})
 
 	coord := NewJetCoordinator(25)
 	coord.PulseCalculator = pulseCalculator
@@ -301,12 +301,12 @@ func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
 
 	expectedID := insolar.NewReference(testutils.RandomID())
 	activeNodesStorageMock := node.NewAccessorMock(t)
-	activeNodesStorageMock.InRoleFunc = func(p insolar.PulseNumber, p1 insolar.StaticRole) (r []insolar.Node, r1 error) {
+	activeNodesStorageMock.InRoleMock.Set(func(p insolar.PulseNumber, p1 insolar.StaticRole) (r []insolar.Node, r1 error) {
 		require.Equal(t, insolar.FirstPulseNumber+1, int(p))
 		require.Equal(t, insolar.StaticRoleLightMaterial, p1)
 
 		return []insolar.Node{{ID: *expectedID}}, nil
-	}
+	})
 
 	coord := NewJetCoordinator(25)
 	coord.PulseAccessor = pulseAccessor
