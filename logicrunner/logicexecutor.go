@@ -51,6 +51,8 @@ func (le *logicExecutor) Execute(ctx context.Context, transcript *Transcript) (a
 		return le.ExecuteMethod(ctx, transcript)
 	case record.CTSaveAsChild:
 		return le.ExecuteConstructor(ctx, transcript)
+	case record.CTDeployCode:
+		panic("CTDeploy code shouldn't be executed")
 	default:
 		return nil, errors.New("Unknown request call type")
 	}

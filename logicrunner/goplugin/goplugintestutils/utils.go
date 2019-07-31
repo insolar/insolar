@@ -125,7 +125,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 			return errors.Wrap(err, "can't get current pulse")
 		}
 		request := record.IncomingRequest{
-			CallType:  record.CTSaveAsChild,
+			CallType:  record.CTDeployCode,
 			Prototype: &nonce,
 			Reason:    api.MakeReason(pulse.PulseNumber, []byte(name)),
 			APINode:   cb.jetCoordinator.Me(),
@@ -135,7 +135,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterIncomingRequest")
 		}
-
+		ledger/light/proc/set_request.go
 		protoRef := insolar.Reference{}
 		protoRef.SetRecord(*protoID)
 		log.Debugf("Registered prototype %q for contract %q in %q", protoRef.String(), name, cb.root)
@@ -179,7 +179,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		}
 
 		req := record.IncomingRequest{
-			CallType:  record.CTSaveAsChild,
+			CallType:  record.CTDeployCode,
 			Prototype: &nonce,
 			Reason:    api.MakeReason(pulse.PulseNumber, []byte(name)),
 			APINode:   cb.jetCoordinator.Me(),

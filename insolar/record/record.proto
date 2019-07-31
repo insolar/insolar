@@ -35,6 +35,9 @@ enum CallType {
     CTSaveAsChild = 1;
 
     CTGenesis = 2;
+
+    CTDeployCode = 3;
+
 }
 
 enum ReturnMode {

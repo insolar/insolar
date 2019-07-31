@@ -121,9 +121,9 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	// - Outgoing request is registered during Incoming request execution in the past, so can be received not from
 	//   current executor.
 	if _, ok := p.request.(*record.IncomingRequest); ok && !p.request.IsTemporaryUploadCode() {
+		logger.Errorf("%v", p.request)
 		if p.message.Sender != *virtualExecutor {
-			// FIXME: virtuals don't pass this test.
-			logger.Errorf("sender isn't the executor. sender - %v, executor - %v", p.message.Sender, *virtualExecutor)
+			return errors.Errorf("sender isn't the executor. sender - %s, executor - %s", p.message.Sender, *virtualExecutor)
 		}
 	}
 

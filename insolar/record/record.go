@@ -189,7 +189,7 @@ func (r *IncomingRequest) IsAPIRequest() bool {
 }
 
 func (r *IncomingRequest) IsCreationRequest() bool {
-	return r.GetCallType() == CTSaveAsChild
+	return r.GetCallType() == CTSaveAsChild || r.GetCallType() == CTDeployCode
 }
 
 func (r *IncomingRequest) IsDetached() bool {
@@ -198,7 +198,7 @@ func (r *IncomingRequest) IsDetached() bool {
 }
 
 func (r *IncomingRequest) IsTemporaryUploadCode() bool {
-	return r.APINode.IsEmpty() && r.Caller.IsEmpty()
+	return r.GetCallType() == CTDeployCode
 }
 
 func (r *OutgoingRequest) AffinityRef() *insolar.Reference {
