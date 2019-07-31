@@ -174,7 +174,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		controller.NewRPCController(options),
 		controller.NewPulseController(),
 		bootstrap.NewRequester(options),
-		network.NewRules(),
 		n.BaseGateway,
 		n.Gatewayer,
 		rules.NewRules(),
