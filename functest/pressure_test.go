@@ -19,6 +19,7 @@
 package functest
 
 import (
+	"github.com/insolar/insolar/insolar/utils"
 	"sync"
 	"testing"
 
@@ -60,7 +61,7 @@ func (c *One) Dec() (int, error) {
 	protoRef := uploadContractOnce(t, "testPressure", contractCode)
 
 	t.Run("one object, sequential calls", func(t *testing.T) {
-		syncT := &SyncT{T: t}
+		syncT := &utils.SyncT{T: t}
 
 		objectRef := callConstructor(syncT, protoRef, "New")
 
@@ -73,7 +74,7 @@ func (c *One) Dec() (int, error) {
 	})
 
 	t.Run("one object, parallel calls", func(t *testing.T) {
-		syncT := &SyncT{T: t}
+		syncT := &utils.SyncT{T: t}
 
 		objectRef := callConstructor(syncT, protoRef, "New")
 
@@ -92,7 +93,7 @@ func (c *One) Dec() (int, error) {
 	})
 
 	t.Run("ten objects, sequential calls", func(t *testing.T) {
-		syncT := &SyncT{T: t}
+		syncT := &utils.SyncT{T: t}
 
 		wg := sync.WaitGroup{}
 		wg.Add(10)
@@ -112,7 +113,7 @@ func (c *One) Dec() (int, error) {
 	})
 
 	t.Run("ten objects, parallel calls", func(t *testing.T) {
-		syncT := &SyncT{T: t}
+		syncT := &utils.SyncT{T: t}
 
 		wg := sync.WaitGroup{}
 		wg.Add(100)

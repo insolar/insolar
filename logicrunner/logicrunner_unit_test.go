@@ -345,21 +345,22 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 
 	suite.jc.IsMeAuthorizedNowMock.Return(true, nil)
 
+	syncT := utils.SyncT{T: suite.T()}
 	meRef := testutils.RandomRef()
-	nodeMock := network.NewNetworkNodeMock(suite.T())
+	nodeMock := network.NewNetworkNodeMock(syncT)
 	nodeMock.IDMock.Return(meRef)
 
-	od := artifacts.NewObjectDescriptorMock(suite.T())
+	od := artifacts.NewObjectDescriptorMock(syncT)
 	od.PrototypeMock.Return(&protoRef, nil)
 	od.MemoryMock.Return([]byte{1, 2, 3})
 	od.ParentMock.Return(&parentRef)
 	od.HeadRefMock.Return(&objectRef)
 
-	pd := artifacts.NewObjectDescriptorMock(suite.T())
+	pd := artifacts.NewObjectDescriptorMock(syncT)
 	pd.CodeMock.Return(&codeRef, nil)
 	pd.HeadRefMock.Return(&protoRef)
 
-	cd := artifacts.NewCodeDescriptorMock(suite.T())
+	cd := artifacts.NewCodeDescriptorMock(syncT)
 	cd.MachineTypeMock.Return(insolar.MachineTypeBuiltin)
 	cd.RefMock.Return(&codeRef)
 
