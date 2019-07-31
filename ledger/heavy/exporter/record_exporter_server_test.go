@@ -59,9 +59,18 @@ func TestRecordIterator_HasNext(t *testing.T) {
 		positionAccessor.LastKnownPositionMock.Expect(pn).Return(156, nil)
 
 		iter := newRecordIterator(pn, 0, 10, positionAccessor, nil, nil, nil)
+		// bigger case
 		iter.read = 11
 
 		hasNext := iter.HasNext(ctx)
+
+		require.False(t, hasNext)
+
+		iter = newRecordIterator(pn, 0, 10, positionAccessor, nil, nil, nil)
+		// equal case
+		iter.read = 10
+
+		hasNext = iter.HasNext(ctx)
 
 		require.False(t, hasNext)
 	})

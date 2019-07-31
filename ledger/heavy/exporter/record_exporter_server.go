@@ -120,16 +120,20 @@ func newRecordIterator(
 }
 
 func (r *recordIterator) HasNext(ctx context.Context) bool {
+	if r.read >= r.needToRead {
+		return false
+	}
+
 	lastKnown, err := r.recordIndex.LastKnownPosition(r.currentPulse)
 	if err != nil {
-		return r.read < r.needToRead && r.checkNextPulse(ctx)
+		return r.checkNextPulse(ctx)
 	}
 
 	if lastKnown < r.currentPosition+1 {
-		return r.read < r.needToRead && r.checkNextPulse(ctx)
+		return r.checkNextPulse(ctx)
 	}
 
-	return r.read < r.needToRead
+	return true
 }
 
 func (r *recordIterator) checkNextPulse(ctx context.Context) bool {
