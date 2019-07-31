@@ -98,9 +98,10 @@ type EventWrapper struct {
 	sink EventDispatchFunc
 }
 
-func (p *EventWrapper) OnTrustUpdated(populationVersion uint32, n *NodeAppearance, before member.TrustLevel, after member.TrustLevel) {
+func (p *EventWrapper) OnTrustUpdated(populationVersion uint32, n *NodeAppearance,
+	before member.TrustLevel, after member.TrustLevel, hasFullProfile bool) {
 	p.sink(func(d EventDispatcher) {
-		d.OnTrustUpdated(populationVersion, n, before, after)
+		d.OnTrustUpdated(populationVersion, n, before, after, hasFullProfile)
 	})
 }
 

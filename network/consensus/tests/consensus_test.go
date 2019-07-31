@@ -257,6 +257,10 @@ func (*EmuControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince 
 
 type EmuEphemeralFeeder struct{}
 
+func (e EmuEphemeralFeeder) CanAcceptTimePulseToStopEphemeral(pd pulse.Data /*, sourceNode profiles.ActiveNode*/) bool {
+	return false
+}
+
 func (e EmuEphemeralFeeder) GetMinDuration() time.Duration {
 	return 2 * time.Second
 }

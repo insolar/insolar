@@ -67,21 +67,21 @@ import (
 
 func TestNewNodeNetwork(t *testing.T) {
 	cfg := configuration.Transport{Address: "invalid"}
-	certMock := testutils.CertificateMock{}
-	certMock.GetRoleFunc = func() insolar.StaticRole { return insolar.StaticRoleUnknown }
-	certMock.GetPublicKeyFunc = func() crypto.PublicKey { return nil }
-	certMock.GetNodeRefFunc = func() *insolar.Reference { return &insolar.Reference{0} }
-	certMock.GetDiscoveryNodesFunc = func() []insolar.DiscoveryNode { return nil }
-	_, err := NewNodeNetwork(cfg, &certMock)
+	certMock := testutils.NewCertificateMock(t)
+	certMock.GetRoleMock.Set(func() insolar.StaticRole { return insolar.StaticRoleUnknown })
+	certMock.GetPublicKeyMock.Set(func() crypto.PublicKey { return nil })
+	certMock.GetNodeRefMock.Set(func() *insolar.Reference { return &insolar.Reference{0} })
+	certMock.GetDiscoveryNodesMock.Set(func() []insolar.DiscoveryNode { return nil })
+	_, err := NewNodeNetwork(cfg, certMock)
 	assert.Error(t, err)
 	cfg.Address = "127.0.0.1:3355"
-	_, err = NewNodeNetwork(cfg, &certMock)
+	_, err = NewNodeNetwork(cfg, certMock)
 	assert.NoError(t, err)
 }
 
 func newNodeKeeper(t *testing.T, service insolar.CryptographyService) network.NodeKeeper {
 	cfg := configuration.Transport{Address: "127.0.0.1:3355"}
-	certMock := &testutils.CertificateMock{}
+	certMock := testutils.NewCertificateMock(t)
 	keyProcessor := platformpolicy.NewKeyProcessor()
 	secret, err := keyProcessor.GeneratePrivateKey()
 	require.NoError(t, err)
@@ -90,10 +90,10 @@ func newNodeKeeper(t *testing.T, service insolar.CryptographyService) network.No
 		service = cryptography.NewKeyBoundCryptographyService(secret)
 	}
 	require.NoError(t, err)
-	certMock.GetRoleFunc = func() insolar.StaticRole { return insolar.StaticRoleUnknown }
-	certMock.GetPublicKeyFunc = func() crypto.PublicKey { return pk }
-	certMock.GetNodeRefFunc = func() *insolar.Reference { return &insolar.Reference{137} }
-	certMock.GetDiscoveryNodesFunc = func() []insolar.DiscoveryNode { return nil }
+	certMock.GetRoleMock.Set(func() insolar.StaticRole { return insolar.StaticRoleUnknown })
+	certMock.GetPublicKeyMock.Set(func() crypto.PublicKey { return pk })
+	certMock.GetNodeRefMock.Set(func() *insolar.Reference { return &insolar.Reference{137} })
+	certMock.GetDiscoveryNodesMock.Set(func() []insolar.DiscoveryNode { return nil })
 	nw, err := NewNodeNetwork(cfg, certMock)
 	require.NoError(t, err)
 	return nw.(network.NodeKeeper)
@@ -137,7 +137,7 @@ func TestNodekeeper_GetCloudHash(t *testing.T) {
 //	assert.NotNil(t, nk.GetAccessor().GetActiveNode(node4.ID()))
 //
 //	nodes := []insolar.NetworkNode{origin, node1, node2, node3}
-//	claims := []packets.ReferendumClaim{}
+//	claims := []packets.ReferendumClaim{newTestJoinClaim(insolar.Reference{5})}
 //	err := nk.Sync(context.Background(), nodes, claims)
 //	assert.NoError(t, err)
 //	err = nk.MoveSyncToActive(context.Background(), 0)

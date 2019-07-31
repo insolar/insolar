@@ -27,7 +27,6 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
-	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
@@ -56,7 +55,6 @@ var transferredToWatermill = map[insolar.MessageType]struct{}{
 	insolar.TypeExecutorResults:                    {},
 	insolar.TypeAdditionalCallFromPreviousExecutor: {},
 	insolar.TypeHeavyPayload:                       {},
-	insolar.TypeGetObjectIndex:                     {},
 }
 
 // MessageBus is component that routes application logic requests,
@@ -76,7 +74,6 @@ type MessageBus struct {
 	signmessages bool
 
 	counter int64
-	span    *trace.Span
 
 	globalLock                  sync.RWMutex
 	NextPulseMessagePoolChan    chan interface{}
@@ -96,12 +93,16 @@ func (mb *MessageBus) Init(ctx context.Context) error {
 }
 
 func (mb *MessageBus) Acquire(ctx context.Context) {
+	parentCtx := ctx
 	counter := atomic.AddInt64(&mb.counter, 1)
 	inslogger.FromContext(ctx).Info("Call Acquire in MessageBus: ", counter)
 	if counter == 1 {
 		inslogger.FromContext(ctx).Info("Lock MB")
-		ctx, mb.span = instracer.StartSpan(context.Background(), "GIL Lock (Lock MB)")
+		ctx, span := instracer.StartSpan(parentCtx, "before GIL Lock (Lock MB)")
+		span.End()
 		mb.Lock(ctx)
+		_, span = instracer.StartSpan(parentCtx, "after GIL Lock (Lock MB)")
+		span.End()
 	}
 }
 
@@ -114,7 +115,8 @@ func (mb *MessageBus) Release(ctx context.Context) {
 	if counter == 0 {
 		inslogger.FromContext(ctx).Info("Unlock MB")
 		mb.Unlock(ctx)
-		mb.span.End()
+		_, span := instracer.StartSpan(ctx, "GIL Unlock (Unlock MB)")
+		span.End()
 	}
 }
 

@@ -199,12 +199,12 @@ func (p *DynamicRealmPopulation) GetHook() *Hook {
 	return &p.hook
 }
 
-func (p *DynamicRealmPopulation) NotifyAllOnAdded(ctx context.Context) {
+func (p *DynamicRealmPopulation) NotifyAllOnAdded() {
 	p.rw.RLock()
 	defer p.rw.RUnlock()
 
 	for _, n := range p.dynamicNodes {
-		n.onAddedToPopulation(ctx, false)
+		n.onAddedToPopulation(false)
 	}
 }
 
@@ -344,7 +344,7 @@ func (p *DynamicRealmPopulation) AddToDynamics(ctx context.Context, na *NodeAppe
 	added, nna := p.silentAddToDynamics(ctx, na)
 
 	if added {
-		nna.onAddedToPopulation(ctx, false)
+		nna.onAddedToPopulation(false)
 	} else if !profiles.EqualBriefProfiles(nna.GetStatic(), na.GetStatic()) {
 		return nil, fmt.Errorf("multiple joiners on same id(%v): %v", na.GetNodeID(), []*NodeAppearance{na, nna})
 	}

@@ -79,7 +79,7 @@ func TestEmbeddedPulsarData_SerializeTo(t *testing.T) {
 }
 
 func TestEmbeddedPulsarData_DeserializeFrom(t *testing.T) {
-	data := *pulse.NewPulsarData(100000, 10, 10, *longbits.NewBits256FromBytes(make([]byte, 32)))
+	data := pulse.NewPulsarData(100000, 10, 10, *longbits.NewBits256FromBytes(make([]byte, 32)))
 
 	pu := adapters.NewPulse(data)
 	ph, err := host.NewHost("127.0.0.1:1")
@@ -298,7 +298,7 @@ func TestGlobulaConsensusPacketBody_Phases(t *testing.T) {
 }
 
 func TestGlobulaConsensusPacketBody_Phases_Flag0(t *testing.T) {
-	data := *pulse.NewPulsarData(100000, 10, 10, *longbits.NewBits256FromBytes(make([]byte, 32)))
+	data := pulse.NewPulsarData(100000, 10, 10, *longbits.NewBits256FromBytes(make([]byte, 32)))
 
 	pu := adapters.NewPulse(data)
 	ph, err := host.NewHost("127.0.0.1:1")
@@ -380,7 +380,7 @@ func TestGlobulaConsensusPacketBody_Phases_Flag0(t *testing.T) {
 }
 
 func TestGlobulaConsensusPacketBody_Phases_Flag0Reset(t *testing.T) {
-	data := *pulse.NewPulsarData(100000, 10, 10, *longbits.NewBits256FromBytes(make([]byte, 32)))
+	data := pulse.NewPulsarData(100000, 10, 10, *longbits.NewBits256FromBytes(make([]byte, 32)))
 
 	pu := adapters.NewPulse(data)
 	ph, err := host.NewHost("127.0.0.1:1")

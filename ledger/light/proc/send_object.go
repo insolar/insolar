@@ -42,7 +42,6 @@ type SendObject struct {
 		jetFetcher  executor.JetFetcher
 		records     object.RecordAccessor
 		indices     object.IndexAccessor
-		bus         insolar.MessageBus
 		sender      bus.Sender
 	}
 }
@@ -63,7 +62,6 @@ func (p *SendObject) Dep(
 	jetFetcher executor.JetFetcher,
 	records object.RecordAccessor,
 	indices object.IndexAccessor,
-	bus insolar.MessageBus,
 	sender bus.Sender,
 ) {
 	p.dep.coordinator = coordinator
@@ -71,14 +69,13 @@ func (p *SendObject) Dep(
 	p.dep.jetFetcher = jetFetcher
 	p.dep.records = records
 	p.dep.indices = indices
-	p.dep.bus = bus
 	p.dep.sender = sender
 }
 
 func (p *SendObject) Proceed(ctx context.Context) error {
 	sendState := func(rec record.Material) error {
 		virtual := rec.Virtual
-		concrete := record.Unwrap(virtual)
+		concrete := record.Unwrap(&virtual)
 		state, ok := concrete.(record.State)
 		if !ok {
 			return fmt.Errorf("invalid object record %#v", virtual)
@@ -89,7 +86,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 			if err != nil {
 				return errors.Wrap(err, "failed to create reply")
 			}
-			go p.dep.sender.Reply(ctx, p.message, msg)
+			p.dep.sender.Reply(ctx, p.message, msg)
 			return nil
 		}
 
@@ -104,7 +101,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create message")
 		}
-		go p.dep.sender.Reply(ctx, p.message, msg)
+		p.dep.sender.Reply(ctx, p.message, msg)
 
 		return nil
 	}

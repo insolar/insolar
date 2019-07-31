@@ -267,7 +267,7 @@ func TestUpdateObject_FlowWithPassedFlag(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return errors.New("something strange from checkjet")
 			default:
 				panic("unknown procedure")
@@ -286,7 +286,7 @@ func TestUpdateObject_FlowWithPassedFlag(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return proc.ErrNotExecutor
 			default:
 				panic("unknown procedure")
@@ -305,7 +305,7 @@ func TestUpdateObject_FlowWithPassedFlag(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return proc.ErrNotExecutor
 			default:
 				panic("unknown procedure")
@@ -335,9 +335,9 @@ func TestUpdateObject_ErrorFromWaitHot(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return nil
-			case *proc.WaitHotWM:
+			case *proc.WaitHot:
 				return errors.New("error from waithot")
 			default:
 				panic("unknown procedure")
@@ -356,11 +356,11 @@ func TestUpdateObject_ErrorFromWaitHot(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return nil
-			case *proc.WaitHotWM:
+			case *proc.WaitHot:
 				return nil
-			case *proc.EnsureIndexWM:
+			case *proc.EnsureIndex:
 				return nil
 			case *proc.SetResult:
 				return nil
@@ -391,11 +391,11 @@ func TestUpdateObject_ErrorFromEnsureIndex(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return nil
-			case *proc.WaitHotWM:
+			case *proc.WaitHot:
 				return nil
-			case *proc.EnsureIndexWM:
+			case *proc.EnsureIndex:
 				return errors.New("error from ensureindex")
 
 			default:
@@ -415,11 +415,11 @@ func TestUpdateObject_ErrorFromEnsureIndex(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return nil
-			case *proc.WaitHotWM:
+			case *proc.WaitHot:
 				return nil
-			case *proc.EnsureIndexWM:
+			case *proc.EnsureIndex:
 				return nil
 			case *proc.SetResult:
 				return nil
@@ -450,11 +450,11 @@ func TestUpdateObject_ErrorFromUpdateObject(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return nil
-			case *proc.WaitHotWM:
+			case *proc.WaitHot:
 				return nil
-			case *proc.EnsureIndexWM:
+			case *proc.EnsureIndex:
 				return nil
 			case *proc.SetResult:
 				return errors.New("error from SetResult")
@@ -475,11 +475,11 @@ func TestUpdateObject_ErrorFromUpdateObject(t *testing.T) {
 			switch p.(type) {
 			case *proc.CalculateID:
 				return nil
-			case *proc.CheckJet:
+			case *proc.FetchJet:
 				return nil
-			case *proc.WaitHotWM:
+			case *proc.WaitHot:
 				return nil
-			case *proc.EnsureIndexWM:
+			case *proc.EnsureIndex:
 				return nil
 			case *proc.SetResult:
 				return nil

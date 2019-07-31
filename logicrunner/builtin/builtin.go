@@ -21,11 +21,10 @@ import (
 	"context"
 	"errors"
 
-	"github.com/tylerb/gls"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
@@ -68,26 +67,31 @@ func NewBuiltIn(am artifacts.Client, stub LogicRunnerRPCStub) *BuiltIn {
 }
 
 func (b *BuiltIn) CallConstructor(ctx context.Context, callCtx *insolar.LogicCallContext, codeRef insolar.Reference,
-	name string, args insolar.Arguments) ([]byte, error) {
+	name string, args insolar.Arguments) (objectState []byte, ctorErr string, sysErr error) {
 
 	ctx, span := instracer.StartSpan(ctx, "builtin.CallConstructor")
 	defer span.End()
 
-	gls.Set("callCtx", callCtx)
-	defer gls.Cleanup()
+	foundation.SetLogicalContext(callCtx)
+	defer foundation.ClearContext()
 
 	contractName, ok := b.CodeRefRegistry[codeRef]
 	if !ok {
-		return nil, errors.New("failed to find contract with reference")
+		return nil, "", errors.New("failed to find contract with reference")
 	}
 	contract := b.CodeRegistry[contractName]
 
 	constructorFunc, ok := contract.Constructors[name]
 	if !ok {
-		return nil, errors.New("failed to find contracts method")
+		return nil, "", errors.New("failed to find contracts method")
 	}
 
-	return constructorFunc(args)
+	obj, cerr, serr := constructorFunc(args)
+	ctorErr = ""
+	if cerr != nil {
+		ctorErr = cerr.Error()
+	}
+	return obj, ctorErr, serr
 }
 
 func (b *BuiltIn) CallMethod(ctx context.Context, callCtx *insolar.LogicCallContext, codeRef insolar.Reference,
@@ -96,8 +100,8 @@ func (b *BuiltIn) CallMethod(ctx context.Context, callCtx *insolar.LogicCallCont
 	ctx, span := instracer.StartSpan(ctx, "builtin.CallMethod")
 	defer span.End()
 
-	gls.Set("callCtx", callCtx)
-	defer gls.Cleanup()
+	foundation.SetLogicalContext(callCtx)
+	defer foundation.ClearContext()
 
 	contractName, ok := b.CodeRefRegistry[codeRef]
 	if !ok {

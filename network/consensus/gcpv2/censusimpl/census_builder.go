@@ -139,7 +139,7 @@ func (c *LocalCensusBuilder) GetPopulationBuilder() census.PopulationBuilder {
 	return &c.populationBuilder
 }
 
-func (c *LocalCensusBuilder) build(markBroken bool, csh proofs.CloudStateHash) (copyToOnlinePopulation, census.EvictedPopulation) {
+func (c *LocalCensusBuilder) buildPopulation(markBroken bool, csh proofs.CloudStateHash) (copyToOnlinePopulation, census.EvictedPopulation) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -165,31 +165,21 @@ func (c *LocalCensusBuilder) build(markBroken bool, csh proofs.CloudStateHash) (
 	return pop, evicts
 }
 
-func (c *LocalCensusBuilder) BuildAndMakeExpected(csh proofs.CloudStateHash) census.Expected {
-
-	pop, evicts := c.build(false, csh)
-	return c.makeExpected(pop, evicts)
+func (c *LocalCensusBuilder) Build(csh proofs.CloudStateHash) census.Built {
+	return c.buildCensus(csh, false)
 }
 
-func (c *LocalCensusBuilder) BuildAndMakeBrokenExpected(csh proofs.CloudStateHash) census.Expected {
-
-	pop, evicts := c.build(true, csh)
-	return c.makeExpected(pop, evicts)
+func (c *LocalCensusBuilder) BuildAsBroken(csh proofs.CloudStateHash) census.Built {
+	return c.buildCensus(csh, true)
 }
 
-func (c *LocalCensusBuilder) makeExpected(pop copyToOnlinePopulation, evicts census.EvictedPopulation) census.Expected {
+func (c *LocalCensusBuilder) buildCensus(csh proofs.CloudStateHash, markBroken bool) census.Built {
 
-	r := &ExpectedCensusTemplate{
-		chronicles: c.chronicles,
-		prev:       c.chronicles.active,
-		csh:        c.csh,
-		gsh:        c.gsh,
-		pn:         c.pulseNumber,
-		online:     pop,
-		evicted:    evicts,
-	}
-
-	return c.chronicles.makeExpected(r)
+	pop, evicts := c.buildPopulation(markBroken, csh)
+	return &BuiltCensusTemplate{ExpectedCensusTemplate{
+		c.chronicles, pop, evicts, c.chronicles.active, c.csh, c.gsh,
+		c.pulseNumber,
+	}}
 }
 
 var _ census.PopulationBuilder = &DynamicPopulationBuilder{}

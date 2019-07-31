@@ -145,7 +145,7 @@ func (r *FixedRealmPopulation) initPopulation() {
 	r.initHook()
 }
 
-func (r *FixedRealmPopulation) NotifyAllOnAdded(ctx context.Context) {
+func (r *FixedRealmPopulation) NotifyAllOnAdded() {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 
@@ -153,11 +153,11 @@ func (r *FixedRealmPopulation) NotifyAllOnAdded(ctx context.Context) {
 		if n == nil {
 			continue
 		}
-		n.onAddedToPopulation(ctx, true)
+		n.onAddedToPopulation(true)
 	}
 
 	for _, n := range r.dynamicNodes {
-		n.onAddedToPopulation(ctx, false)
+		n.onAddedToPopulation(false)
 	}
 }
 

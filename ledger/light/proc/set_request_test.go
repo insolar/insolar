@@ -53,8 +53,8 @@ func TestSetRequest_Proceed(t *testing.T) {
 		writeAccessor *hot.WriteAccessorMock
 		sender        *bus.SenderMock
 		filaments     *executor.FilamentCalculatorMock
-		idxStorage    *object.IndexStorageMock
-		records       *object.RecordModifierMock
+		idxStorage    *object.MemoryIndexStorageMock
+		records       *object.AtomicRecordModifierMock
 		checker       *executor.RequestCheckerMock
 		coordinator   *jet.CoordinatorMock
 	)
@@ -63,8 +63,8 @@ func TestSetRequest_Proceed(t *testing.T) {
 		writeAccessor = hot.NewWriteAccessorMock(mc)
 		sender = bus.NewSenderMock(mc)
 		filaments = executor.NewFilamentCalculatorMock(mc)
-		idxStorage = object.NewIndexStorageMock(mc)
-		records = object.NewRecordModifierMock(mc)
+		idxStorage = object.NewMemoryIndexStorageMock(mc)
+		records = object.NewAtomicRecordModifierMock(mc)
 		checker = executor.NewRequestCheckerMock(mc)
 		coordinator = jet.NewCoordinatorMock(t)
 	}
@@ -103,7 +103,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 				StateID: record.StateActivation,
 			},
 		}, nil)
-		idxStorage.SetIndexFunc = func(_ context.Context, pn insolar.PulseNumber, idx record.Index) (r error) {
+		idxStorage.SetMock.Set(func(_ context.Context, pn insolar.PulseNumber, idx record.Index) {
 			require.Equal(t, requestID.Pulse(), pn)
 
 			virtual = record.Wrap(&record.PendingFilament{
@@ -117,41 +117,38 @@ func TestSetRequest_Proceed(t *testing.T) {
 				Lifeline: record.Lifeline{
 					StateID:             record.StateActivation,
 					EarliestOpenRequest: &pn,
-					PendingPointer:      pendingID,
+					LatestRequest:       pendingID,
 				},
 			}
 			require.Equal(t, expectedIndex, idx)
-			return nil
-		}
+		})
 
 		writeAccessor.BeginMock.Return(func() {}, nil)
 		filaments.RequestDuplicateMock.Return(nil, nil, nil)
 		sender.ReplyMock.Return()
-		coordinator.VirtualExecutorForObjectFunc = func(_ context.Context, objID insolar.ID, pn insolar.PulseNumber) (r *insolar.Reference, r1 error) {
+		coordinator.VirtualExecutorForObjectMock.Set(func(_ context.Context, objID insolar.ID, pn insolar.PulseNumber) (r *insolar.Reference, r1 error) {
 			require.Equal(t, flowPN, pn)
 			require.Equal(t, *ref.Record(), objID)
 
 			return &virtualRef, nil
-		}
-		records.SetFunc = func(_ context.Context, id insolar.ID, rec record.Material) (r error) {
-			switch record.Unwrap(rec.Virtual).(type) {
-			case *record.IncomingRequest:
-				require.Equal(t, requestID, id)
-			case *record.PendingFilament:
-				hash := record.HashVirtual(pcs.ReferenceHasher(), *rec.Virtual)
-				calcID := *insolar.NewID(requestID.Pulse(), hash)
-				require.Equal(t, calcID, id)
-			default:
-				t.Fatal("unknown record saved")
-			}
+		})
+		records.SetAtomicMock.Set(func(_ context.Context, recs ...record.Material) (r error) {
+			require.Equal(t, len(recs), 2)
+			req := recs[0]
+			filament := recs[1]
 
+			require.Equal(t, requestID, req.ID)
+			require.Equal(t, record.Unwrap(&req.Virtual), &request)
+			hash := record.HashVirtual(pcs.ReferenceHasher(), filament.Virtual)
+			calcID := *insolar.NewID(requestID.Pulse(), hash)
+			require.Equal(t, calcID, filament.ID)
 			return nil
-		}
-		checker.CheckRequestFunc = func(_ context.Context, id insolar.ID, req record.Request) (r error) {
+		})
+		checker.CheckRequestMock.Set(func(_ context.Context, id insolar.ID, req record.Request) (r error) {
 			require.Equal(t, requestID, id)
 			require.Equal(t, &request, req)
 			return nil
-		}
+		})
 
 		p := proc.NewSetRequest(msg, &request, requestID, jetID)
 		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker(), idxStorage, records, pcs, checker, coordinator)
@@ -177,19 +174,19 @@ func TestSetRequest_Proceed(t *testing.T) {
 			nil,
 		)
 
-		sender.ReplyFunc = func(_ context.Context, meta payload.Meta, msg *message.Message) {
+		sender.ReplyMock.Set(func(_ context.Context, meta payload.Meta, msg *message.Message) {
 			pl, err := payload.Unmarshal(msg.Payload)
 			require.NoError(t, err)
 			rep, ok := pl.(*payload.RequestInfo)
 			require.True(t, ok)
 			require.Equal(t, reqID, rep.RequestID)
-		}
-		coordinator.VirtualExecutorForObjectFunc = func(_ context.Context, objID insolar.ID, pn insolar.PulseNumber) (r *insolar.Reference, r1 error) {
+		})
+		coordinator.VirtualExecutorForObjectMock.Set(func(_ context.Context, objID insolar.ID, pn insolar.PulseNumber) (r *insolar.Reference, r1 error) {
 			require.Equal(t, flowPN, pn)
 			require.Equal(t, *ref.Record(), objID)
 
 			return &virtualRef, nil
-		}
+		})
 
 		p := proc.NewSetRequest(msg, &request, requestID, jetID)
 		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker(), idxStorage, records, pcs, checker, coordinator)
@@ -203,13 +200,13 @@ func TestSetRequest_Proceed(t *testing.T) {
 	resetComponents()
 	t.Run("wrong sender", func(t *testing.T) {
 		t.Skip("virtual doesn't pass this check")
-		coordinator.VirtualExecutorForObjectFunc = func(_ context.Context, objID insolar.ID, pn insolar.PulseNumber) (r *insolar.Reference, r1 error) {
+		coordinator.VirtualExecutorForObjectMock.Set(func(_ context.Context, objID insolar.ID, pn insolar.PulseNumber) (r *insolar.Reference, r1 error) {
 			require.Equal(t, flowPN, pn)
 			require.Equal(t, *ref.Record(), objID)
 
 			virtualRef := gen.Reference()
 			return &virtualRef, nil
-		}
+		})
 
 		p := proc.NewSetRequest(msg, &request, requestID, jetID)
 		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker(), idxStorage, records, pcs, checker, coordinator)

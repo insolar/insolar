@@ -200,17 +200,15 @@ func (h *HandleCall) checkExecutionLoop(
 		return false
 	}
 
-	broker := h.dep.StateStorage.GetExecutionState(*request.Object)
-	if broker == nil {
+	archive := h.dep.StateStorage.GetExecutionArchive(*request.Object)
+	if archive == nil {
 		return false
 	}
 
-	if !broker.CheckExecutionLoop(ctx, request.APIRequestID) {
+	if !archive.FindRequestLoop(ctx, request.APIRequestID) {
 		return false
 	}
 
 	inslogger.FromContext(ctx).Error("loop detected")
 	return true
 }
-
-

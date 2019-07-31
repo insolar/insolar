@@ -78,7 +78,7 @@ func TestSwitch(t *testing.T) {
 
 	// nodekeeper := testnet.NewNodeKeeperMock(t)
 	nodekeeper := testnet.NewNodeKeeperMock(t)
-	nodekeeper.MoveSyncToActiveFunc = func(p context.Context, p1 insolar.PulseNumber) (r error) { return nil }
+	nodekeeper.MoveSyncToActiveMock.Set(func(p context.Context, p1 insolar.PulseNumber) (r error) { return nil })
 	gatewayer := testnet.NewGatewayerMock(t)
 	//pm := mockPulseManager(t)
 
@@ -89,8 +89,12 @@ func TestSwitch(t *testing.T) {
 
 	ge.Run(ctx)
 
-	gatewayer.GatewayFunc = func() (r network.Gateway) { return ge }
-	gatewayer.SwitchStateFunc = func(ctx context.Context, s insolar.NetworkState) { ge = ge.NewGateway(ctx, s) }
+	gatewayer.GatewayMock.Set(func() (g1 network.Gateway) {
+		return ge
+	})
+	gatewayer.SwitchStateMock.Set(func(ctx context.Context, state insolar.NetworkState) {
+		ge = ge.NewGateway(ctx, state)
+	})
 	gilreleased := false
 
 	ge.OnPulseFromPulsar(ctx, insolar.Pulse{}, nil)
@@ -124,7 +128,7 @@ func TestDumbComplete_GetCert(t *testing.T) {
 
 	// nodekeeper := testnet.NewNodeKeeperMock(t)
 	nodekeeper := testnet.NewNodeKeeperMock(t)
-	nodekeeper.MoveSyncToActiveFunc = func(p context.Context, p1 insolar.PulseNumber) (r error) { return nil }
+	nodekeeper.MoveSyncToActiveMock.Set(func(p context.Context, p1 insolar.PulseNumber) (r error) { return nil })
 
 	gatewayer := testnet.NewGatewayerMock(t)
 
@@ -144,8 +148,10 @@ func TestDumbComplete_GetCert(t *testing.T) {
 
 	ge.Run(ctx)
 
-	gatewayer.GatewayFunc = func() (r network.Gateway) { return ge }
-	gatewayer.SwitchStateFunc = func(ctx context.Context, s insolar.NetworkState) { ge = ge.NewGateway(ctx, s) }
+	gatewayer.GatewayMock.Set(func() (r network.Gateway) { return ge })
+	gatewayer.SwitchStateMock.Set(func(ctx context.Context, state insolar.NetworkState) {
+		ge = ge.NewGateway(ctx, state)
+	})
 	gilreleased := false
 
 	ge.OnPulseFromPulsar(ctx, insolar.Pulse{}, nil)
@@ -155,7 +161,7 @@ func TestDumbComplete_GetCert(t *testing.T) {
 
 	cref := testutils.RandomRef()
 
-	CR.SendRequestFunc = func(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{},
+	CR.SendRequestMock.Set(func(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{},
 	) (r insolar.Reply, r1 error) {
 		require.Equal(t, &cref, ref)
 		require.Equal(t, "GetNodeInfo", method)
@@ -166,12 +172,12 @@ func TestDumbComplete_GetCert(t *testing.T) {
 		return &reply.CallMethod{
 			Result: repl,
 		}, nil
-	}
+	})
 
-	CM.GetCertificateFunc = func() (r insolar.Certificate) { return &certificate.Certificate{} }
-	CM.NewUnsignedCertificateFunc = func(p string, p1 string, p2 string) (r insolar.Certificate, r1 error) {
+	CM.GetCertificateMock.Set(func() (r insolar.Certificate) { return &certificate.Certificate{} })
+	CM.NewUnsignedCertificateMock.Set(func(p string, p1 string, p2 string) (r insolar.Certificate, r1 error) {
 		return &certificate.Certificate{}, nil
-	}
+	})
 	cert, err := ge.Auther().GetCert(ctx, &cref)
 
 	require.NoError(t, err)

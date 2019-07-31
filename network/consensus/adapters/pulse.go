@@ -98,7 +98,7 @@ func NewPulseData(p insolar.Pulse) pulse.Data {
 		longbits.NewBits512FromBytes(p.Entropy[:]).FoldToBits256(),
 	)
 	data.Timestamp = uint32(p.PulseTimestamp / nanosecondsInSecond)
-	return *data
+	return data
 }
 
 func NewPulseDigest(data pulse.Data) cryptkit.Digest {

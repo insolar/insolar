@@ -99,7 +99,7 @@ func (p *Pulsar) Pulse(ctx context.Context, attempts int) {
 		prevDelta = 0
 	}
 
-	data := *pulse.NewPulsarData(p.pulseNumber, p.pulseDelta, prevDelta, randBits256())
+	data := pulse.NewPulsarData(p.pulseNumber, p.pulseDelta, prevDelta, randBits256())
 	p.pulseNumber += pulse.Number(p.pulseDelta)
 
 	pu := adapters.NewPulse(data)

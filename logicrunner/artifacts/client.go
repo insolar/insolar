@@ -122,7 +122,8 @@ func (m *client) registerRequest(
 	instrumenter := instrument(ctx, "registerRequest").err(&err)
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+			span.AddAttributes(trace.BoolAttribute("error", true))
+			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
 		}
 		span.End()
 		instrumenter.end()
@@ -200,7 +201,8 @@ func (m *client) GetCode(
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetCode")
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+			span.AddAttributes(trace.StringAttribute("error", "true"))
+			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
 		}
 		span.End()
 		instrumenter.end()
@@ -222,7 +224,7 @@ func (m *client) GetCode(
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to unmarshal record")
 		}
-		virtual := record.Unwrap(rec.Virtual)
+		virtual := record.Unwrap(&rec.Virtual)
 		codeRecord, ok := virtual.(*record.Code)
 		if !ok {
 			return nil, errors.Wrapf(err, "unexpected record %T", virtual)
@@ -260,7 +262,8 @@ func (m *client) GetObject(
 	instrumenter := instrument(ctx, "GetObject").err(&err)
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+			span.AddAttributes(trace.BoolAttribute("error", true))
+			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
 		}
 		span.End()
 		if err != nil && err == ErrObjectDeactivated {
@@ -333,7 +336,7 @@ func (m *client) GetObject(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal state")
 	}
-	virtual := record.Unwrap(rec.Virtual)
+	virtual := record.Unwrap(&rec.Virtual)
 	s, ok := virtual.(record.State)
 	if !ok {
 		return nil, errors.New("wrong state record")
@@ -341,13 +344,12 @@ func (m *client) GetObject(
 	state := s
 
 	desc := &objectDescriptor{
-		head:         head,
-		state:        *index.LatestState,
-		prototype:    state.GetImage(),
-		isPrototype:  state.GetIsPrototype(),
-		childPointer: index.ChildPointer,
-		memory:       statePayload.Memory,
-		parent:       index.Parent,
+		head:        head,
+		state:       *index.LatestState,
+		prototype:   state.GetImage(),
+		isPrototype: state.GetIsPrototype(),
+		memory:      statePayload.Memory,
+		parent:      index.Parent,
 	}
 	return desc, err
 }
@@ -360,7 +362,8 @@ func (m *client) GetIncomingRequest(
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetRequest")
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+			span.AddAttributes(trace.BoolAttribute("error", true))
+			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
 		}
 		span.End()
 		instrumenter.end()
@@ -396,7 +399,8 @@ func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]i
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetPendings")
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+			span.AddAttributes(trace.BoolAttribute("error", true))
+			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
 		}
 		span.End()
 		instrumenter.end()
@@ -438,7 +442,8 @@ func (m *client) HasPendings(
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.HasPendings")
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+			span.AddAttributes(trace.BoolAttribute("error", true))
+			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
 		}
 		span.End()
 		instrumenter.end()
@@ -478,7 +483,8 @@ func (m *client) DeployCode(
 	instrumenter := instrument(ctx, "DeployCode").err(&err)
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+			span.AddAttributes(trace.BoolAttribute("error", true))
+			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
 		}
 		span.End()
 		instrumenter.end()
@@ -544,7 +550,8 @@ func (m *client) ActivatePrototype(
 	instrumenter := instrument(ctx, "ActivatePrototype").err(&err)
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+			span.AddAttributes(trace.BoolAttribute("error", true))
+			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
 		}
 		span.End()
 		instrumenter.end()
@@ -674,7 +681,8 @@ func (m *client) RegisterResult(
 	instrumenter := instrument(ctx, "RegisterResult").err(&err)
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+			span.AddAttributes(trace.BoolAttribute("error", true))
+			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
 		}
 		span.End()
 		instrumenter.end()
@@ -695,11 +703,6 @@ func (m *client) RegisterResult(
 	// Request reference will be this object's identifier and referred as "object head".
 	case RequestSideEffectActivate:
 		parentRef, imageRef, memory := result.Activate()
-
-		_, err := m.GetObject(ctx, parentRef)
-		if err != nil {
-			return errors.Wrap(err, "wrong parent")
-		}
 
 		vResultRecord := record.Wrap(&resultRecord)
 		vActivateRecord := record.Wrap(&record.Activate{

@@ -77,7 +77,7 @@ func getController(t *testing.T) *pulseController {
 	require.NoError(t, err)
 
 	pulseHandler := network.NewPulseHandlerMock(t)
-	pulseHandler.HandlePulseFunc = func(context.Context, insolar.Pulse, network2.ReceivedPacket) {}
+	pulseHandler.HandlePulseMock.Set(func(context.Context, insolar.Pulse, network2.ReceivedPacket) {})
 	net := network.NewHostNetworkMock(t)
 	net.BuildResponseMock.Return(packet.NewPacket(nil, nil, types.Pulse, 1))
 

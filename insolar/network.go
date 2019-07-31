@@ -36,7 +36,7 @@ type RemoteProcedure func(ctx context.Context, args []byte) ([]byte, error)
 // NetworkOperableCallback is callback for notifying is network is operable or not
 type NetworkOperableCallback func(ctx context.Context, isNetworkOperable bool)
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.Network -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.Network -o ../testutils -s _mock.go -g
 
 // Network is interface for network modules facade.
 type Network interface {
@@ -55,7 +55,7 @@ type Network interface {
 	GetCert(context.Context, *Reference) (Certificate, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.PulseDistributor -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.PulseDistributor -o ../testutils -s _mock.go -g
 
 // PulseDistributor is interface for pulse distribution.
 type PulseDistributor interface {

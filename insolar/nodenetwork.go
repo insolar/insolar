@@ -51,7 +51,7 @@ const (
 	NodeLeaving
 )
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.NetworkNode -o ../testutils/network -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.NetworkNode -o ../testutils/network -s _mock.go -g
 
 type NetworkNode interface {
 	// ID is the unique identifier of the node
@@ -74,14 +74,14 @@ type NetworkNode interface {
 	GetState() NodeState
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.OriginProvider -o ../testutils/network -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.OriginProvider -o ../testutils/network -s _mock.go -g
 
 type OriginProvider interface {
 	// GetOrigin get origin node for the current insolard. Returns nil if the current insolard is not a working node.
 	GetOrigin() NetworkNode
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.NodeNetwork -o ../testutils/network -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.NodeNetwork -o ../testutils/network -s _mock.go -g
 
 type NodeNetwork interface {
 	OriginProvider

@@ -41,8 +41,8 @@ func TestRules_CheckMinRole(t *testing.T) {
 	cert := testutils.NewCertificateMock(t)
 	nodeKeeper := network.NewNodeKeeperMock(t)
 	accessor := network.NewAccessorMock(t)
-	nodeKeeper.GetAccessorFunc = func() (r network2.Accessor) { return accessor }
-	accessor.GetActiveNodesFunc = func() []insolar.NetworkNode {
+	nodeKeeper.GetAccessorMock.Set(func() (r network2.Accessor) { return accessor })
+	accessor.GetActiveNodesMock.Set(func() []insolar.NetworkNode {
 		return []insolar.NetworkNode{
 			node2.NewNode(nilref, insolar.StaticRoleHeavyMaterial, nil, "", ""),
 			node2.NewNode(nilref, insolar.StaticRoleLightMaterial, nil, "", ""),
@@ -50,7 +50,7 @@ func TestRules_CheckMinRole(t *testing.T) {
 			node2.NewNode(nilref, insolar.StaticRoleVirtual, nil, "", ""),
 			node2.NewNode(nilref, insolar.StaticRoleVirtual, nil, "", ""),
 		}
-	}
+	})
 	cm.Inject(r, certManager, nodeKeeper)
 
 	certManager.GetCertificateMock.Set(func() (r insolar.Certificate) {
@@ -93,12 +93,12 @@ func TestRules_CheckMajorityRule(t *testing.T) {
 	a := network.NewAccessorMock(t)
 
 	nodeKeeper := network.NewNodeKeeperMock(t)
-	nodeKeeper.GetAccessorFunc = func() (r network2.Accessor) { return a }
-	a.GetActiveNodesFunc = func() (r []insolar.NetworkNode) {
+	nodeKeeper.GetAccessorMock.Set(func() (r network2.Accessor) { return a })
+	a.GetActiveNodesMock.Set(func() (r []insolar.NetworkNode) {
 		nodes, _ := getDiscoveryNodes(5)
 		nodes = append(nodes, newNode(250))
 		return nodes
-	}
+	})
 
 	cm.Inject(r, certManager, nodeKeeper)
 

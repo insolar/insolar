@@ -72,19 +72,19 @@ import (
 
 func mockCryptographyService(t *testing.T, ok bool) insolar.CryptographyService {
 	cs := testutils.NewCryptographyServiceMock(t)
-	cs.SignFunc = func(data []byte) (*insolar.Signature, error) {
+	cs.SignMock.Set(func(data []byte) (*insolar.Signature, error) {
 		if ok {
 			sig := insolar.SignatureFromBytes([]byte("test_sig"))
 			return &sig, nil
 		}
 		return nil, errors.New("test_error")
-	}
+	})
 	return cs
 }
 
 func mockCertificateManager(t *testing.T, certNodeRef *insolar.Reference, discoveryNodeRef *insolar.Reference, unsignCertOk bool) *testutils.CertificateManagerMock {
 	cm := testutils.NewCertificateManagerMock(t)
-	cm.GetCertificateFunc = func() insolar.Certificate {
+	cm.GetCertificateMock.Set(func() insolar.Certificate {
 		return &certificate.Certificate{
 			AuthorizationCertificate: certificate.AuthorizationCertificate{
 				PublicKey: "test_public_key",
@@ -101,8 +101,8 @@ func mockCertificateManager(t *testing.T, certNodeRef *insolar.Reference, discov
 				},
 			},
 		}
-	}
-	cm.NewUnsignedCertificateFunc = func(key string, role string, nodeRef string) (insolar.Certificate, error) {
+	})
+	cm.NewUnsignedCertificateMock.Set(func(key string, role string, nodeRef string) (insolar.Certificate, error) {
 		require.Equal(t, "test_node_public_key", key)
 		require.Equal(t, "virtual", role)
 
@@ -127,7 +127,7 @@ func mockCertificateManager(t *testing.T, certNodeRef *insolar.Reference, discov
 			}, nil
 		}
 		return nil, errors.New("test_error")
-	}
+	})
 	return cm
 }
 
@@ -145,17 +145,17 @@ func mockReply(t *testing.T) []byte {
 
 func mockContractRequester(t *testing.T, nodeRef insolar.Reference, ok bool, r []byte) insolar.ContractRequester {
 	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestFunc = func(ctx context.Context, ref *insolar.Reference, method string, args []interface{}) (insolar.Reply, error) {
+	cr.SendRequestMock.Set(func(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{}) (r1 insolar.Reply, err error) {
 		require.Equal(t, nodeRef, *ref)
 		require.Equal(t, "GetNodeInfo", method)
-		require.Equal(t, 0, len(args))
+		require.Equal(t, 0, len(argsIn))
 		if ok {
 			return &reply.CallMethod{
 				Result: r,
 			}, nil
 		}
 		return nil, errors.New("test_error")
-	}
+	})
 	return cr
 }
 
@@ -240,11 +240,11 @@ func TestComplete_handler(t *testing.T) {
 	p := packet.NewReceivedPacket(packet.NewPacket(nil, nil, types.SignCert, 1), nil)
 	p.SetRequest(&packet.SignCertRequest{NodeRef: nodeRef})
 
-	hn.BuildResponseFunc = func(p context.Context, p1 network.Packet, p2 interface{}) network.Packet {
+	hn.BuildResponseMock.Set(func(ctx context.Context, request network.Packet, responseData interface{}) (p1 network.Packet) {
 		r := packet.NewPacket(nil, nil, types.SignCert, 1)
 		r.SetResponse(&packet.SignCertResponse{Sign: []byte("test_sig")})
 		return r
-	}
+	})
 	result, err := ge.(*Complete).signCertHandler(ctx, p)
 
 	require.NoError(t, err)

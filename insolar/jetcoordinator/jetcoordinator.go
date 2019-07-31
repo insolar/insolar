@@ -84,6 +84,21 @@ func (jc *Coordinator) IsAuthorized(
 	return false, nil
 }
 
+// IsMeAuthorizedNow checks role of the current node in the current pulse for the address.
+// Wrapper around IsAuthorized.
+func (jc *Coordinator) IsMeAuthorizedNow(
+	ctx context.Context,
+	role insolar.DynamicRole,
+	obj insolar.ID,
+) (bool, error) {
+	p, err := jc.PulseAccessor.Latest(ctx)
+	if err != nil {
+		return false, errors.Wrap(err, "couldn't get pulse")
+	}
+	return jc.IsAuthorized(ctx, role, obj, p.PulseNumber, jc.Me())
+}
+
+
 // QueryRole returns node refs responsible for role bound operations for given object and pulse.
 func (jc *Coordinator) QueryRole(
 	ctx context.Context,

@@ -53,6 +53,7 @@ package core
 import (
 	"context"
 	"fmt"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -275,7 +276,7 @@ func (r *FullRealm) initPopulation(needsDynamic bool, population census.OnlinePo
 		return result
 	}
 
-	var notifyAll func(context.Context)
+	var notifyAll func()
 
 	log := inslogger.FromContext(r.roundContext)
 
@@ -321,7 +322,7 @@ func (r *FullRealm) initPopulation(needsDynamic bool, population census.OnlinePo
 	r.purgatory = purgatory.NewRealmPurgatory(r.population, r.profileFactory, r.assistant,
 		r.populationHook, r.postponedPacketFn)
 
-	notifyAll(r.roundContext)
+	notifyAll()
 }
 
 func (r *FullRealm) initSelf() {
@@ -563,12 +564,10 @@ func (r *FullRealm) finishRound(ctx context.Context, builder census.Builder, csh
 	local := pb.GetLocalProfile()
 
 	var expected census.Expected
-	mode := local.GetOpMode()
-	// ModeEvictedGracefully
-	if csh != nil && !mode.IsEvictedForcefully() {
-		expected = builder.BuildAndMakeExpected(csh)
+	if csh != nil {
+		expected = builder.Build(csh).MakeExpected()
 	} else {
-		expected = builder.BuildAndMakeBrokenExpected(csh)
+		expected = builder.BuildAsBroken(csh).MakeExpected()
 	}
 
 	isNextEphemeral := false
@@ -608,10 +607,10 @@ func (r *FullRealm) finishRound(ctx context.Context, builder census.Builder, csh
 		inslogger.FromContext(ctx).Debugf("got a broken population: s=%d %v", local.GetNodeID(), expected.GetOnlinePopulation())
 	}
 	pw := rs.RequestedPower
-	if mode.IsPowerless() {
+	if !local.IsPowered() {
 		pw = 0
 	}
-	r.controlFeeder.OnAppliedMembershipProfile(mode, pw, nextNP)
+	r.controlFeeder.OnAppliedMembershipProfile(local.GetOpMode(), pw, nextNP)
 }
 
 func (r *FullRealm) GetProfileFactory() profiles.Factory {

@@ -209,6 +209,10 @@ func (p *NodePhantom) ascend(ctx context.Context, nsp profiles.StaticProfile, ra
 	return true
 }
 
+func (p *NodePhantom) IntroducedBy( /*id */ insolar.ShortNodeID) {
+
+}
+
 // func (p *NodePhantom) IntroducedBy( /* introducedBy */ insolar.ShortNodeID) {
 //
 //	// TODO do we need it?

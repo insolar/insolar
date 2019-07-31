@@ -48,10 +48,6 @@ func getEmptyMessage(mt insolar.MessageType) (insolar.Message, error) {
 	case insolar.TypeStillExecuting:
 		return &StillExecuting{}, nil
 
-	// Ledger
-	case insolar.TypeGetObjectIndex:
-		return &GetObjectIndex{}, nil
-
 	// heavy sync
 	case insolar.TypeHeavyPayload:
 		return &HeavyPayload{}, nil
@@ -124,9 +120,6 @@ func init() {
 	gob.Register(&ValidationResults{})
 	gob.Register(&PendingFinished{})
 	gob.Register(&StillExecuting{})
-
-	// Ledger
-	gob.Register(&GetObjectIndex{})
 
 	// heavy
 	gob.Register(&HeavyPayload{})

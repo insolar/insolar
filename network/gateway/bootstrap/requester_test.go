@@ -54,6 +54,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/insolar/insolar/network/consensus/adapters"
 	"testing"
 
 	"github.com/insolar/insolar/testutils"
@@ -105,7 +106,7 @@ func TestRequester_Bootstrap(t *testing.T) {
 	})
 
 	p := &packet.Permit{}
-	candidateProfile := packet.CandidateProfile{}
+	candidateProfile := adapters.Candidate{}
 	r := NewRequester(options)
 	// inject HostNetwork
 	r.(*requester).HostNetwork = hn

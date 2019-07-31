@@ -114,9 +114,8 @@ type coreRealm struct {
 		Other fields - need mutex during PrepRealm, unless accessed by start() of PrepRealm
 		FullRealm doesnt need a lock to read them
 	*/
-	pulseData                     pulse.Data
-	originalPulse                 proofs.OriginalPulsarPacket
-	isPulseConvertedFromEphemeral bool
+	pulseData     pulse.Data
+	originalPulse proofs.OriginalPulsarPacket
 }
 
 func (r *coreRealm) initBefore(hLocker hLocker, strategy RoundStrategy, transport transport.Factory,

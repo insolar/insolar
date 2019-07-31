@@ -149,10 +149,18 @@ func storeRecords(
 	inslog := inslogger.FromContext(ctx)
 
 	for _, rec := range records {
-		virtRec := *rec.Virtual
-		hash := record.HashVirtual(pcs.ReferenceHasher(), virtRec)
-		id := insolar.NewID(pn, hash)
-		err := mod.Set(ctx, *id, rec)
+		hash := record.HashVirtual(pcs.ReferenceHasher(), rec.Virtual)
+		id := *insolar.NewID(pn, hash)
+		// FIXME: skipping errors will lead to inconsistent state.
+		if rec.ID != id {
+			inslog.Error(fmt.Errorf(
+				"record id does not match (calculated: %s, received: %s)",
+				id.DebugString(),
+				rec.ID.DebugString(),
+			))
+			continue
+		}
+		err := mod.Set(ctx, rec)
 		if err != nil {
 			inslog.Error(err, "heavyserver: store record failed")
 			continue

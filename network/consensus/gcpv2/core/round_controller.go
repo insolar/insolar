@@ -92,7 +92,6 @@ type PhasedRoundController struct {
 	// fullCancel     context.CancelFunc /* cancels prepareCancel as well */
 	prepareCancel  context.CancelFunc
 	prevPulseRound api.RoundController
-	minDuration    time.Duration
 
 	roundWorker RoundStateMachineWorker
 
@@ -249,16 +248,21 @@ Can be called from a polling function (for ephemeral), and happen BEFORE PrepRea
 */
 func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 
+	if !prepWasSuccessful {
+		r.roundWorker.OnPrepRoundFailed()
+		return
+	}
+
 	r.roundWorker.OnFullRoundStarting()
 
 	chronicle := r.chronicle
 	lastCensus := chronicle.GetLatestCensus()
-	pd := &r.realm.pulseData
+	pd := r.realm.pulseData
 
 	if lastCensus.GetCensusState() == census.PrimingCensus {
 		/* This is the priming census */
 		priming := lastCensus.GetMandateRegistry().GetPrimingCloudHash()
-		lastCensus.(census.Prime).MakeExpected(pd.PulseNumber, priming, priming).MakeActive(*pd)
+		lastCensus.(census.Prime).BuildCopy(pd, priming, priming).MakeExpected().MakeActive(pd)
 	} else {
 		// TODO PulseData conversion from ephemeral
 		if lastCensus.GetPulseNumber() != pd.PulseNumber {
@@ -269,7 +273,7 @@ func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 		if !lastCensus.IsActive() {
 			/* Auto-activation of the prepared lastCensus */
 			expCensus := chronicle.GetExpectedCensus()
-			lastCensus = expCensus.MakeActive(*pd)
+			lastCensus = expCensus.MakeActive(pd)
 		}
 	}
 

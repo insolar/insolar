@@ -115,7 +115,10 @@ func (p *populationEventHandler) OnCustomEvent(populationVersion uint32, n *popu
 	panic(fmt.Sprintf("unknown custom event: %v", event))
 }
 
-func (p *populationEventHandler) OnTrustUpdated(populationVersion uint32, n *population.NodeAppearance, trustBefore, trustAfter member.TrustLevel) {
+func (p *populationEventHandler) OnTrustUpdated(populationVersion uint32, n *population.NodeAppearance,
+	trustBefore, trustAfter member.TrustLevel, hasFullProfile bool) {
+
+	// TODO ignore positive trust above member.TrustBySelf while hasFullProfile == false
 
 	switch {
 	case trustBefore == trustAfter:

@@ -83,7 +83,7 @@ type BootstrapResult struct {
 // RequestHandler handler function to process incoming requests from network and return responses to these requests.
 type RequestHandler func(ctx context.Context, request ReceivedPacket) (response Packet, err error)
 
-//go:generate minimock -i github.com/insolar/insolar/network.HostNetwork -o ../testutils/network -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network.HostNetwork -o ../testutils/network -s _mock.go -g
 
 // HostNetwork simple interface to send network requests and process network responses.
 type HostNetwork interface {
@@ -128,14 +128,14 @@ type Future interface {
 	Cancel()
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network.PulseHandler -o ../testutils/network -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network.PulseHandler -o ../testutils/network -s _mock.go -g
 
 // PulseHandler interface to process new pulse.
 type PulseHandler interface {
 	HandlePulse(ctx context.Context, pulse insolar.Pulse, originalPacket ReceivedPacket)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network.NodeKeeper -o ../testutils/network -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network.NodeKeeper -o ../testutils/network -s _mock.go -g
 
 // NodeKeeper manages unsync, sync and active lists.
 type NodeKeeper interface {
@@ -163,7 +163,7 @@ type PartitionPolicy interface {
 	ShardsCount() int
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network.RoutingTable -o ../testutils/network -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network.RoutingTable -o ../testutils/network -s _mock.go -g
 
 // RoutingTable contains all routing information of the network.
 type RoutingTable interface {
@@ -175,7 +175,7 @@ type RoutingTable interface {
 	Rebalance(PartitionPolicy)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network.Accessor -o ../testutils/network -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network.Accessor -o ../testutils/network -s _mock.go -g
 
 // Accessor is interface that provides read access to nodekeeper internal snapshot
 type Accessor interface {
@@ -205,7 +205,7 @@ type Mutator interface {
 	AddWorkingNode(n insolar.NetworkNode)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network.Gatewayer -o ../testutils/network -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network.Gatewayer -o ../testutils/network -s _mock.go -g
 
 // Gatewayer is a network which can change it's Gateway
 type Gatewayer interface {
@@ -244,7 +244,7 @@ type Bootstrapper interface {
 	HandleReconnect(context.Context, Packet) (Packet, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network.Rules -o ../testutils/network -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network.Rules -o ../testutils/network -s _mock.go -g
 
 // Rules are responsible for a majority and minimum roles checking
 type Rules interface {

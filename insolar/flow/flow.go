@@ -31,7 +31,7 @@ type Handle func(context.Context, Flow) error
 // MakeHandle is a function that constructs new Handle.
 type MakeHandle func(*message.Message) Handle
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/flow.Procedure -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar/flow.Procedure -o . -s _mock.go -g
 
 // Procedure is a task that can execute itself.
 // Please note that the Procedure is marked as canceled if a pulse happens during it's execution. This means that it
@@ -44,7 +44,7 @@ type Procedure interface {
 	Proceed(context.Context) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/flow.Flow -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar/flow.Flow -o . -s _mock.go -g
 
 // Flow will be pasted to all Handles to control execution.
 // This is very important not to blow this interface. Keep it minimal.

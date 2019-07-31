@@ -81,9 +81,9 @@ func NewEmuChronicles(intros []profiles.StaticProfile, localNodeIndex int, asJoi
 		if len(intros) != 1 && localNodeIndex != 0 {
 			panic("illegal state")
 		}
-		localCensus = censusimpl.NewPrimingCensusForJoiner(intros[localNodeIndex], registries, EmuDefaultCryptography)
+		localCensus = censusimpl.NewPrimingCensusForJoiner(intros[localNodeIndex], registries, EmuDefaultCryptography, true)
 	} else {
-		localCensus = censusimpl.NewPrimingCensus(intros, intros[localNodeIndex], registries, EmuDefaultCryptography)
+		localCensus = censusimpl.NewPrimingCensus(intros, intros[localNodeIndex], registries, EmuDefaultCryptography, true)
 	}
 
 	chronicles := censusimpl.NewLocalChronicles(profiles.NewSimpleProfileIntroFactory(EmuDefaultCryptography))

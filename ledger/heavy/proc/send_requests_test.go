@@ -67,11 +67,11 @@ func TestSendRequests_Proceed(t *testing.T) {
 		receivedMeta := payload.Meta{Payload: buf}
 		p = newProc(receivedMeta)
 
-		indexes.ForIDFunc = func(_ context.Context, pn insolar.PulseNumber, id insolar.ID) (record.Index, error) {
+		indexes.ForIDMock.Set(func(_ context.Context, pn insolar.PulseNumber, id insolar.ID) (record.Index, error) {
 			require.Equal(t, msg.StartFrom.Pulse(), pn)
 			require.Equal(t, msg.ObjectID, id)
 			return record.Index{}, nil
-		}
+		})
 
 		err = p.Proceed(ctx)
 		assert.Error(t, err)
@@ -96,13 +96,13 @@ func TestSendRequests_Proceed(t *testing.T) {
 		receivedMeta := payload.Meta{Payload: buf}
 		p = newProc(receivedMeta)
 
-		indexes.ForIDFunc = func(_ context.Context, pn insolar.PulseNumber, id insolar.ID) (record.Index, error) {
+		indexes.ForIDMock.Set(func(_ context.Context, pn insolar.PulseNumber, id insolar.ID) (record.Index, error) {
 			require.Equal(t, msg.StartFrom.Pulse(), pn)
 			require.Equal(t, msg.ObjectID, id)
 			return record.Index{}, nil
-		}
+		})
 
-		sender.ReplyFunc = func(_ context.Context, origin payload.Meta, rep *message.Message) {
+		sender.ReplyMock.Set(func(_ context.Context, origin payload.Meta, rep *message.Message) {
 			require.Equal(t, receivedMeta, origin)
 
 			resp, err := payload.Unmarshal(rep.Payload)
@@ -112,7 +112,7 @@ func TestSendRequests_Proceed(t *testing.T) {
 			require.True(t, ok)
 			assert.Equal(t, msg.ObjectID, filaments.ObjectID)
 			assert.Equal(t, []record.CompositeFilamentRecord{rec3, rec2, rec1}, filaments.Records)
-		}
+		})
 
 		err = p.Proceed(ctx)
 		assert.NoError(t, err)
@@ -123,7 +123,7 @@ func TestSendRequests_Proceed(t *testing.T) {
 }
 
 type filamentBuilder struct {
-	records   object.RecordModifier
+	records   object.AtomicRecordModifier
 	currentID insolar.ID
 	ctx       context.Context
 	pcs       insolar.PlatformCryptographyScheme
@@ -132,7 +132,7 @@ type filamentBuilder struct {
 func newFilamentBuilder(
 	ctx context.Context,
 	pcs insolar.PlatformCryptographyScheme,
-	records object.RecordModifier,
+	records object.AtomicRecordModifier,
 ) *filamentBuilder {
 	return &filamentBuilder{
 		ctx:     ctx,
@@ -155,9 +155,13 @@ func (b *filamentBuilder) append(pn insolar.PulseNumber, rec record.Record, pers
 		virtual := record.Wrap(rec)
 		hash := record.HashVirtual(b.pcs.ReferenceHasher(), virtual)
 		id := *insolar.NewID(pn, hash)
-		material := record.Material{Virtual: &virtual, JetID: insolar.ZeroJetID}
+		material := record.Material{
+			Virtual: virtual,
+			ID:      id,
+			JetID:   insolar.ZeroJetID,
+		}
 		if persist {
-			err := b.records.Set(b.ctx, id, material)
+			err := b.records.SetAtomic(b.ctx, material)
 			if err != nil {
 				panic(err)
 			}
@@ -175,9 +179,13 @@ func (b *filamentBuilder) append(pn insolar.PulseNumber, rec record.Record, pers
 		virtual := record.Wrap(&rec)
 		hash := record.HashVirtual(b.pcs.ReferenceHasher(), virtual)
 		id := *insolar.NewID(pn, hash)
-		material := record.Material{Virtual: &virtual, JetID: insolar.ZeroJetID}
+		material := record.Material{
+			Virtual: virtual,
+			ID:      id,
+			JetID:   insolar.ZeroJetID,
+		}
 		if persist {
-			err := b.records.Set(b.ctx, id, material)
+			err := b.records.SetAtomic(b.ctx, material)
 			if err != nil {
 				panic(err)
 			}

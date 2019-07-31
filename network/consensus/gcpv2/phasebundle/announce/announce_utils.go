@@ -156,6 +156,7 @@ func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementP
 	var profile profiles.StaticProfile
 	if reader.HasFullIntro() {
 		full := reader.GetFullIntroduction()
+		// TODO change to use DispatchAnnouncement
 		matches = n.UpgradeDynamicNodeProfile(ctx, full)
 		profile = n.GetStatic()
 	} else if brief != nil {
@@ -186,12 +187,20 @@ func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementP
 		return false, nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "node is not allowed to add a joiner")
 	}
 
-	modified, err := n.ApplyNodeMembership(ma, func(ma profiles.MemberAnnouncement) error {
-		if !ma.Joiner.IsEmpty() { // by it can be EMPTY when !ma.JoinerID.IsAbsent() - it is normal
-			return realm.GetPurgatory().AddJoinerAndEnsureAscendancy(ma.Joiner, ma.AnnouncedByID)
-		}
-		return nil
-	})
+	if ma.JoinerID == announcerID {
+		panic("illegal value")
+	}
+
+	addJoiner := func(ma profiles.MemberAnnouncement) error {
+		return realm.GetPurgatory().AddJoinerAndEnsureAscendancy(ma.Joiner, ma.AnnouncedByID)
+	}
+
+	if ma.Joiner.IsEmpty() || // it can be EMPTY when !ma.JoinerID.IsAbsent() - it is normal
+		ma.Joiner.JoinerProfile.GetStaticNodeID() == announcerID { // avoid circular, don't need to add ourselves
+		addJoiner = nil
+	}
+
+	modified, err := n.ApplyNodeMembership(ma, addJoiner)
 
 	return modified, ma.Joiner.JoinerProfile, err
 }

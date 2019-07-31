@@ -29,7 +29,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner.ResultMatcher -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/logicrunner.ResultMatcher -o ./ -s _mock.go -g
 
 type ResultMatcher interface {
 	AddStillExecution(ctx context.Context, msg *message.StillExecuting)

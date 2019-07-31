@@ -31,7 +31,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner.ProxyImplementation -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/logicrunner.ProxyImplementation -o ./ -s _mock.go -g
 
 type ProxyImplementation interface {
 	GetCode(context.Context, *Transcript, rpctypes.UpGetCodeReq, *rpctypes.UpGetCodeResp) error
@@ -66,14 +66,14 @@ func (m *RPCMethods) getCurrent(
 ) {
 	switch mode {
 	case insolar.ExecuteCallMode:
-		broker := m.ss.GetExecutionState(obj)
-		if broker == nil {
-			return nil, nil, errors.New("No execution in the state")
+		archive := m.ss.GetExecutionArchive(obj)
+		if archive == nil {
+			return nil, nil, errors.New("No execution archive in the state")
 		}
 
-		transcript := broker.GetActiveTranscript(reqRef)
+		transcript := archive.GetActiveTranscript(reqRef)
 		if transcript == nil {
-			return nil, nil, errors.Errorf("No current execution in the state for request %s", reqRef.String())
+			return nil, nil, errors.New("No execution archive in the state")
 		}
 
 		return m.execution, transcript, nil
@@ -220,16 +220,23 @@ func (m *executionProxyImplementation) SaveAsChild(
 
 	// Send the request
 	msg := &message.CallMethod{IncomingRequest: *incoming}
-	ref, err := m.cr.CallConstructor(ctx, msg)
-	current.AddOutgoingRequest(ctx, *incoming, nil, ref, err)
+	objectRef, ctorErr, err := m.cr.CallConstructor(ctx, msg)
+	current.AddOutgoingRequest(ctx, *incoming, nil, objectRef, err)
 	if err != nil {
 		return err
 	}
-	rep.Reference = ref
+	rep.Reference = objectRef
+	rep.ConstructorError = ctorErr
 
 	// Register result of the outgoing method
 	outgoingReqRef := insolar.NewReference(*outgoingReqID)
-	reqResult := newRequestResult(rep.Reference.Bytes(), req.Callee)
+
+	var refBytes []byte
+	if objectRef != nil {
+		// constructor succeeded
+		refBytes = objectRef.Bytes()
+	}
+	reqResult := newRequestResult(refBytes, req.Callee)
 	return m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
 }
 

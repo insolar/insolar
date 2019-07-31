@@ -56,6 +56,7 @@ import (
 	"context"
 	"crypto"
 	"fmt"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/stretchr/testify/require"
 	"strconv"
@@ -94,7 +95,7 @@ var (
 )
 
 const (
-	UseFakeTransport = false
+	UseFakeTransport = true
 	UseFakeBootstrap = true
 
 	reqTimeoutMs int32 = 2000
@@ -535,9 +536,9 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	realKeeper, err := nodenetwork.NewNodeNetwork(cfg.Host.Transport, certManager.GetCertificate())
 	require.NoError(s.t, err)
 	terminationHandler := testutils.NewTerminationHandlerMock(s.t)
-	terminationHandler.LeaveFunc = func(p context.Context, p1 insolar.PulseNumber) {}
-	terminationHandler.OnLeaveApprovedFunc = func(p context.Context) {}
-	terminationHandler.AbortFunc = func(reason string) { suiteLogger.Error(reason) }
+	terminationHandler.LeaveMock.Set(func(p context.Context, p1 insolar.PulseNumber) {})
+	terminationHandler.OnLeaveApprovedMock.Set(func(p context.Context) {})
+	terminationHandler.AbortMock.Set(func(reason string) { log.Error(reason) })
 
 	keyProc := platformpolicy.NewKeyProcessor()
 	pubMock := &PublisherMock{}
