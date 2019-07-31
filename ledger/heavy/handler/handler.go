@@ -292,30 +292,57 @@ func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Met
 }
 
 func (h *Handler) handleGetLightInitialState(ctx context.Context, meta payload.Meta) {
+	logger := inslogger.FromContext(ctx)
 	startPulse, err := h.StartPulse.PulseNumber()
 	if err != nil {
-		return
+		logger.Fatal("Couldn't get start pulse", err)
 	}
-	if meta.Pulse == startPulse {
+	msg, err := payload.Unmarshal(meta.Payload)
+	if err != nil {
+		logger.Fatal("Couldn't unmarshall request", err)
+	}
+	req := msg.(*payload.GetLightInitialState)
+
+	if req.Pulse == startPulse {
 		topSyncPulse := h.JetKeeper.TopSyncPulse()
 		var IDs []insolar.JetID
 		var drops [][]byte
 		for _, id := range h.JetTree.All(ctx, topSyncPulse) {
-			light, _ := h.JetCoordinator.LightExecutorForJet(ctx, insolar.ID(id), topSyncPulse)
+			light, err := h.JetCoordinator.LightExecutorForJet(ctx, insolar.ID(id), req.Pulse)
+			if err != nil {
+				logger.Fatal("Couldn't receive light executor for jet: ", id, " ", err)
+			}
 			if light.Equal(meta.Sender) {
 				IDs = append(IDs, id)
-				drop, _ := h.DropDB.ForPulse(ctx, id, startPulse)
-				drops = append(drops, drop.Hash)
+				dr, err := h.DropDB.ForPulse(ctx, id, topSyncPulse)
+				if err != nil {
+					logger.Fatal("Couldn't get drops for jet: ", id, " ", err)
+				}
+				drops = append(drops, drop.MustEncode(&dr))
 			}
 		}
 
 
-		p, _ := h.PulseAccessor.ForPulseNumber(ctx, topSyncPulse)
-		msg, _ := payload.NewMessage(&payload.LightInitialState{
+		p, err := h.PulseAccessor.ForPulseNumber(ctx, topSyncPulse)
+		if err != nil {
+			logger.Fatal("Couldn't get pulse for topSyncPulse: ", topSyncPulse, " ", err)
+		}
+		msg, err := payload.NewMessage(&payload.LightInitialState{
 			JetIDs: IDs,
 			Drops: drops,
 			Pulse: pulse.ToProto(&p),
 		})
-		_, _ = h.Sender.SendTarget(ctx, msg, meta.Sender)
+		if err != nil {
+			logger.Fatal("Couldn't make message", err)
+		}
+		h.Sender.Reply(ctx, meta, msg)
+	} else if req.Pulse > startPulse {
+		msg, err := payload.NewMessage(&payload.LightInitialState{})
+		if err != nil {
+			logger.Fatal("Couldn't make message", err)
+		}
+		h.Sender.Reply(ctx, meta, msg)
+	} else {
+		logger.Fatal("impossible situation")
 	}
 }
