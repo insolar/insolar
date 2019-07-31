@@ -135,10 +135,9 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterIncomingRequest")
 		}
-		protoRef := insolar.Reference{}
-		protoRef.SetRecord(*protoID)
+		protoRef := insolar.NewReference(*protoID)
 		log.Debugf("Registered prototype %q for contract %q in %q", protoRef.String(), name, cb.root)
-		cb.Prototypes[name] = &protoRef
+		cb.Prototypes[name] = protoRef
 	}
 
 	re := regexp.MustCompile(`package\s+\S+`)
@@ -181,8 +180,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 			return errors.Wrap(err, "[ Build ] DeployCode returns error")
 		}
 
-		codeRef := &insolar.Reference{}
-		codeRef.SetRecord(*codeID)
+		codeRef := insolar.NewReference(*codeID)
 
 		log.Debugf("Deployed code %q for contract %q in %q", codeRef.String(), name, cb.root)
 		cb.Codes[name] = codeRef
