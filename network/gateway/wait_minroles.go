@@ -67,21 +67,15 @@ type WaitMinRoles struct {
 }
 
 func (g *WaitMinRoles) Run(ctx context.Context) {
+	if rules.CheckMinRole(g.CertificateManager.GetCertificate(), g.NodeKeeper.GetAccessor().GetWorkingNodes()) {
+		g.Gatewayer.SwitchState(ctx, insolar.CompleteNetworkState)
+	}
 }
 
 func (g *WaitMinRoles) GetState() insolar.NetworkState {
 	return insolar.WaitMinRoles
 }
 
-func (g *WaitMinRoles) OnConsensusFinished(p insolar.PulseNumber) {
-	// TODO: check min roles and switch state
-
-	if rules.CheckMinRole(g.CertificateManager.GetCertificate(), g.NodeKeeper.GetAccessor().GetActiveNodes()) {
-		g.Gatewayer.SwitchState(context.Background(), insolar.CompleteNetworkState)
-	}
-}
-
-func (g *WaitMinRoles) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, originalPacket network.ReceivedPacket) {
-	// forward pulse to Consensus
-	g.ConsensusPulseHandler.HandlePulse(ctx, pu, originalPacket)
+func (g *WaitMinRoles) OnConsensusFinished(ctx context.Context, report network.Report) {
+	g.Run(ctx)
 }

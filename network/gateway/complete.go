@@ -88,11 +88,6 @@ func (g *Complete) GetState() insolar.NetworkState {
 	return insolar.CompleteNetworkState
 }
 
-func (g *Complete) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, originalPacket network.ReceivedPacket) {
-	// forward pulse to Consensus
-	g.ConsensusPulseHandler.HandlePulse(ctx, pu, originalPacket)
-}
-
 func (g *Complete) NeedLockMessageBus() bool {
 	return false
 }

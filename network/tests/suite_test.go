@@ -280,7 +280,7 @@ func (s *testSuite) StartNodesNetwork(nodes []*networkNode) {
 	results := make(chan error, len(nodes))
 	startNode := func(node *networkNode) {
 		err := node.componentManager.Start(node.ctx)
-		node.serviceNetwork.RegisterConsensusFinishedNotifier(func(report network.Report) {
+		node.serviceNetwork.RegisterConsensusFinishedNotifier(func(ctx context.Context, report network.Report) {
 			node.consensusResult <- report.PulseNumber
 		})
 		results <- err

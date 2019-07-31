@@ -231,8 +231,8 @@ func (n *ServiceNetwork) initConsensus() {
 
 	pulseHandler := adapters.NewPulseHandler()
 	n.consensusController = n.consensusInstaller.ControllerFor(n.ConsensusMode, pulseHandler, n.datagramHandler)
-	n.consensusController.RegisterFinishedNotifier(func(report network.Report) {
-		n.Gatewayer.Gateway().OnConsensusFinished(report.PulseNumber)
+	n.consensusController.RegisterFinishedNotifier(func(ctx context.Context, report network.Report) {
+		n.Gatewayer.Gateway().OnConsensusFinished(ctx, report)
 	})
 	n.BaseGateway.ConsensusController = n.consensusController
 	n.BaseGateway.ConsensusPulseHandler = pulseHandler

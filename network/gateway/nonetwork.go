@@ -54,6 +54,7 @@ package gateway
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
@@ -69,12 +70,10 @@ type NoNetwork struct {
 }
 
 func (g *NoNetwork) Run(ctx context.Context) {
-
 	cert := g.CertificateManager.GetCertificate()
 	origin := g.NodeKeeper.GetOrigin()
 	discoveryNodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), origin.ID())
 
-	// TODO: clear NodeKeeper state
 	g.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{origin})
 
 	if len(discoveryNodes) == 0 {

@@ -55,7 +55,6 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
@@ -372,8 +371,8 @@ func (g *Base) HandleReconnect(ctx context.Context, request network.ReceivedPack
 	return g.HostNetwork.BuildResponse(ctx, request, &packet.ReconnectResponse{}), nil
 }
 
-func (g *Base) OnConsensusFinished(p insolar.PulseNumber) {
-	log.Infof("OnConsensusFinished for pulse %d", p)
+func (g *Base) OnConsensusFinished(ctx context.Context, report network.Report) {
+	inslogger.FromContext(ctx).Infof("OnConsensusFinished for pulse %d", report.PulseNumber)
 }
 
 func (g *Base) createCandidateProfile() {

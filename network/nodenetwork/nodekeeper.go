@@ -233,11 +233,6 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context, number insolar.Pulse
 		nk.activeLock.Unlock()
 	}()
 
-	if len(nk.syncNodes) == 0 {
-		inslogger.FromContext(ctx).Info("[ MoveSyncToActive ] New active list confirmed and unchanged")
-		return
-	}
-
 	mergeResult, _ := GetMergedCopy(nk.syncNodes)
 	inslogger.FromContext(ctx).Infof("[ MoveSyncToActive ] New active list confirmed. Active list size: %d -> %d",
 		len(nk.accessor.GetActiveNodes()),
@@ -247,6 +242,4 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context, number insolar.Pulse
 	nk.snapshot = node.NewSnapshot(number, mergeResult.ActiveList)
 	nk.accessor = node.NewAccessor(nk.snapshot)
 	stats.Record(ctx, network.ActiveNodes.M(int64(len(nk.accessor.GetActiveNodes()))))
-
-	nk.syncNodes = nil
 }

@@ -60,8 +60,10 @@ import (
 )
 
 func NewGatewayer(g network.Gateway, f insolar.NetworkOperableCallback) network.Gatewayer {
-	result := &gatewayer{operableFunc: f, gateway: g}
-	return result
+	return &gatewayer{
+		operableFunc: f,
+		gateway:      g,
+	}
 }
 
 type gatewayer struct {
@@ -73,24 +75,21 @@ type gatewayer struct {
 func (n *gatewayer) Gateway() network.Gateway {
 	n.gatewayMu.RLock()
 	defer n.gatewayMu.RUnlock()
+
 	return n.gateway
 }
 
 func (n *gatewayer) SwitchState(ctx context.Context, state insolar.NetworkState) {
 	n.gatewayMu.Lock()
+	defer n.gatewayMu.Unlock()
 
-	// todo: check transition rules here
 	if n.gateway.GetState() == state {
 		inslogger.FromContext(ctx).Warn("Trying to set gateway to the same state")
-		n.gatewayMu.Unlock()
 		return
 	}
 
-	// todo: old gateway stop if needed
-
 	n.gateway = n.gateway.NewGateway(ctx, state)
 	n.operableFunc(context.Background(), !n.gateway.NeedLockMessageBus())
-	n.gatewayMu.Unlock()
 
 	go n.gateway.Run(ctx)
 }

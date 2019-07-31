@@ -52,10 +52,9 @@ package gateway
 
 import (
 	"context"
-	"github.com/insolar/insolar/log"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
 )
 
 func newWaitConsensus(b *Base) *WaitConsensus {
@@ -73,16 +72,6 @@ func (g *WaitConsensus) GetState() insolar.NetworkState {
 	return insolar.WaitConsensus
 }
 
-func (g *WaitConsensus) OnConsensusFinished(p insolar.PulseNumber) {
-	log.Infof("================== WaitConsensus gateway. OnConsensusFinished for pulse %d", p)
-
-	nodes := g.NodeKeeper.GetAccessor().GetActiveNodes()
-	wnodes := g.NodeKeeper.GetAccessor().GetWorkingNodes()
-	inslogger.FromContext(context.Background()).Infof("-=-=-=-= NodeKeeper active %d, working, %d", len(nodes), len(wnodes))
-
-	n := g.NodeKeeper.GetAccessor().GetActiveNode(g.NodeKeeper.GetOrigin().ID())
-	if n != nil {
-		// todo: check majority
-		g.Gatewayer.SwitchState(context.Background(), insolar.WaitMinRoles)
-	}
+func (g *WaitConsensus) OnConsensusFinished(ctx context.Context, report network.Report) {
+	g.Gatewayer.SwitchState(ctx, insolar.WaitMinRoles)
 }

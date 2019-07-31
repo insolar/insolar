@@ -71,7 +71,7 @@ type Report struct {
 	PopulationValid bool
 }
 
-type OnConsensusFinished func(report Report)
+type OnConsensusFinished func(ctx context.Context, report Report)
 
 type BootstrapResult struct {
 	Host *host.Host
@@ -219,7 +219,7 @@ type Gateway interface {
 	GetState() insolar.NetworkState
 	OnPulseFromPulsar(context.Context, insolar.Pulse, ReceivedPacket)
 	OnPulseFromConsensus(context.Context, insolar.Pulse)
-	OnConsensusFinished(p insolar.PulseNumber)
+	OnConsensusFinished(ctx context.Context, report Report)
 	UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte)
 	NewGateway(context.Context, insolar.NetworkState) Gateway
 	Auther() Auther

@@ -93,7 +93,7 @@ func NewUpstreamPulseController(stateGetter StateGetter, pulseChanger PulseChang
 		stateUpdater: stateUpdater,
 
 		mu:         &sync.RWMutex{},
-		onFinished: func(report network.Report) {},
+		onFinished: func(ctx context.Context, report network.Report) {},
 	}
 }
 
@@ -134,7 +134,7 @@ func (u *UpstreamController) ConsensusFinished(report api.UpstreamReport, expect
 	u.mu.RLock()
 	defer u.mu.RUnlock()
 
-	u.onFinished(network.Report{
+	u.onFinished(ctx, network.Report{
 		PulseNumber:     insolar.PulseNumber(report.PulseNumber),
 		MemberPower:     report.MemberPower,
 		MemberMode:      report.MemberMode,
