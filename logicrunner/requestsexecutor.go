@@ -43,7 +43,6 @@ type RequestsExecutor interface {
 
 type requestsExecutor struct {
 	MessageBus      insolar.MessageBus  `inject:""`
-	NodeNetwork     insolar.NodeNetwork `inject:""`
 	LogicExecutor   LogicExecutor       `inject:""`
 	ArtifactManager artifacts.Client    `inject:""`
 	PulseAccessor   pulse.Accessor      `inject:""`
