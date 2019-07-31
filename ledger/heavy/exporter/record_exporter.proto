@@ -22,6 +22,6 @@ message GetRecords {
 message Record {
     uint32 Polymorph = 16;
 
-    uint32 RecordNumber = 21;
-    record.Material Record = 23 [(gogoproto.nullable) = false];
+    uint32 RecordNumber = 20;
+    record.Material Record = 21 [(gogoproto.nullable) = false];
 }
