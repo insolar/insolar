@@ -227,7 +227,7 @@ func (m *client) GetCode(
 		virtual := record.Unwrap(&rec.Virtual)
 		codeRecord, ok := virtual.(*record.Code)
 		if !ok {
-			return nil, errors.Wrapf(err, "unexpected record %T", virtual)
+			return nil, fmt.Errorf("unexpected record %T", virtual)
 		}
 		desc = &codeDescriptor{
 			ref:         code,
