@@ -62,6 +62,12 @@ func Test_LightReplication(t *testing.T) {
 	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
 	s.SetPulse(ctx)
 
+	t.Run("messages after two pulses return result", func(t *testing.T) {
+		p, _ := CallSetCode(ctx, s)
+		RequireNotError(p)
+		expectedIds = append(expectedIds, p.(*payload.ID).ID)
+	})
+
 	cryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
 
 	{
@@ -90,17 +96,18 @@ func Test_LightReplication(t *testing.T) {
 
 		// Save and check code.
 		{
-			p, _ := callSetCode(ctx, s)
-			requireNotError(t, p)
+			p, _ := CallSetCode(ctx, s)
+			RequireNotError(p)
 			payloadId := p.(*payload.ID).ID
 			expectedIds = append(expectedIds, payloadId)
 		}
 
 		// Set, get request.
 		{
-			p, _ := callSetIncomingRequest(ctx, s, gen.ID(), reasonID, true, true)
-			requireNotError(t, p)
-			expectedObjectID = p.(*payload.RequestInfo).RequestID
+			msg, _ := MakeSetIncomingRequest(gen.ID(), reasonID, true, true)
+			rep := SendMessage(ctx, s, &msg)
+			RequireNotError(rep)
+			expectedObjectID = rep.(*payload.RequestInfo).RequestID
 			expectedIds = append(expectedIds, expectedObjectID)
 
 			// Creating filament hash.
@@ -118,8 +125,8 @@ func Test_LightReplication(t *testing.T) {
 
 		// Activate object.
 		{
-			p, requestRec := callActivateObject(ctx, s, expectedObjectID)
-			requireNotError(t, p)
+			p, requestRec := CallActivateObject(ctx, s, expectedObjectID)
+			RequireNotError(p)
 
 			payloadId := p.(*payload.ResultInfo).ResultID
 			expectedIds = append(expectedIds, payloadId)
@@ -147,10 +154,11 @@ func Test_LightReplication(t *testing.T) {
 		}
 		// Amend and check object.
 		{
-			p, _ := callSetIncomingRequest(ctx, s, expectedObjectID, reasonID, false, true)
-			requireNotError(t, p)
+			msg, _ := MakeSetIncomingRequest(expectedObjectID, reasonID, false, true)
+			rep := SendMessage(ctx, s, &msg)
+			RequireNotError(rep)
 
-			reqId := p.(*payload.RequestInfo).RequestID
+			reqId := rep.(*payload.RequestInfo).RequestID
 			expectedIds = append(expectedIds, reqId)
 
 			// Create filament id.
@@ -165,8 +173,8 @@ func Test_LightReplication(t *testing.T) {
 				expectedIds = append(expectedIds, lastFilament)
 			}
 
-			p, amendRec := callAmendObject(ctx, s, expectedObjectID, reqId)
-			requireNotError(t, p)
+			p, amendRec := CallAmendObject(ctx, s, expectedObjectID, reqId)
+			RequireNotError(p)
 
 			reqId = p.(*payload.ResultInfo).ResultID
 			expectedIds = append(expectedIds, reqId)
