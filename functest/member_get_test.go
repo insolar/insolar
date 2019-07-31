@@ -63,5 +63,5 @@ func TestMemberGetWrongPublicKey(t *testing.T) {
 	member1, _ := newUserWithKeys()
 	_, err := signedRequest(member1, "member.get", nil)
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "member for this public key does not exist")
+	require.Contains(t, err.Error(), "failed to set reference in public key shard: can't set reference because this key already exists")
 }

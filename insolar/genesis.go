@@ -35,6 +35,8 @@ const (
 	GenesisNameTariff = "tariff"
 	// GenesisNameCostCenter is the name of cost center contract for genesis record.
 	GenesisNameCostCenter = "costcenter"
+	// GenesisNameShard is the name of shard contract for genesis record.
+	GenesisNameShard = "shard"
 
 	GenesisNameRootMember           = "root" + GenesisNameMember
 	GenesisNameRootWallet           = "root" + GenesisNameWallet
@@ -46,11 +48,27 @@ const (
 
 	GenesisAmountMigrationDaemonMembers       = 10
 	GenesisAmountActiveMigrationDaemonMembers = 3
+
+	GenesisAmountPublicKeyShards        = 1000
+	GenesisAmountMigrationAddressShards = 1000
 )
 
 var GenesisNameMigrationDaemonMembers = func() (result [GenesisAmountMigrationDaemonMembers]string) {
 	for i := 0; i < GenesisAmountMigrationDaemonMembers; i++ {
-		result[i] = "migration_daemon_" + strconv.Itoa(i) + GenesisNameMember
+		result[i] = "migration_daemon_" + strconv.Itoa(i) + "_" + GenesisNameMember
+	}
+	return
+}()
+
+var GenesisNameMigrationAddressShards = func() (result [GenesisAmountMigrationAddressShards]string) {
+	for i := 0; i < GenesisAmountMigrationAddressShards; i++ {
+		result[i] = "migration_address_" + strconv.Itoa(i) + "_" + GenesisNameShard
+	}
+	return
+}()
+var GenesisNamePublicKeyShards = func() (result [GenesisAmountPublicKeyShards]string) {
+	for i := 0; i < GenesisAmountPublicKeyShards; i++ {
+		result[i] = "public_key_" + strconv.Itoa(i) + "_" + GenesisNameShard
 	}
 	return
 }()

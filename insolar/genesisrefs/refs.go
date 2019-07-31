@@ -52,4 +52,19 @@ var (
 		}
 		return
 	}()
+
+	// ContractPublicKeyShards is the public key shards contracts references.
+	ContractPublicKeyShards = func() (result [insolar.GenesisAmountPublicKeyShards]insolar.Reference) {
+		for i, name := range insolar.GenesisNamePublicKeyShards {
+			result[i] = rootdomain.GenesisRef(name)
+		}
+		return
+	}()
+	// ContractMigrationAddressShards is the migration address shards contracts references.
+	ContractMigrationAddressShards = func() (result [insolar.GenesisAmountMigrationAddressShards]insolar.Reference) {
+		for i, name := range insolar.GenesisNameMigrationAddressShards {
+			result[i] = rootdomain.GenesisRef(name)
+		}
+		return
+	}()
 )
