@@ -409,7 +409,7 @@ func (m *Member) memberMigrationCreate(key string) (*MigrationCreateResponse, er
 	}
 
 	if err = rootDomain.AddNewMemberToMaps(key, burnAddress, created.Reference); err != nil {
-		if strings.Contains(err.Error(), "member for this burnAddress already exist") {
+		if strings.Contains(err.Error(), "can't set reference because this key already exists") {
 			return nil, fmt.Errorf("failed to create member: %s", err.Error())
 		} else {
 			return rollBack(err)
@@ -476,11 +476,11 @@ func (m *Member) depositMigration(txHash string, burnAddress string, amount *big
 	}
 
 	// Get member by burn address
-	tokenHolderRef, err := rd.GetMemberByBurnAddress(burnAddress)
+	tokenHolderRef, err := rd.GetMemberByMigrationAddress(burnAddress)
 	if err != nil {
 		return fmt.Errorf("failed to get member by burn address")
 	}
-	tokenHolder := member.GetObject(tokenHolderRef)
+	tokenHolder := member.GetObject(*tokenHolderRef)
 
 	// Find deposit for txHash
 	found, txDepositRef, err := tokenHolder.FindDeposit(txHash)
@@ -493,7 +493,7 @@ func (m *Member) depositMigration(txHash string, burnAddress string, amount *big
 		migrationDaemonConfirms := [3]string{}
 		migrationDaemonConfirms[mdIndex] = m.GetReference().String()
 		dHolder := deposit.New(migrationDaemonConfirms, txHash, amount.String())
-		txDeposit, err := dHolder.AsChild(tokenHolderRef)
+		txDeposit, err := dHolder.AsChild(*tokenHolderRef)
 		if err != nil {
 			return fmt.Errorf("failed to save as delegate: %s", err.Error())
 		}
@@ -568,11 +568,11 @@ func (m *Member) memberGet(publicKey string) (interface{}, error) {
 		return nil, fmt.Errorf("failed to get reference by public key: %s", err.Error())
 	}
 
-	if m.GetReference() == ref {
+	if m.GetReference() == *ref {
 		return GetResponse{Reference: ref.String(), BurnAddress: m.BurnAddress}, nil
 	}
 
-	user := member.GetObject(ref)
+	user := member.GetObject(*ref)
 	ba, err := user.GetBurnAddress()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get burn address: %s", err.Error())

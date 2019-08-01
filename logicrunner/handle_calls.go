@@ -144,8 +144,9 @@ func (h *HandleCall) handleActual(
 	if err != nil {
 		if err == flow.ErrCancelled {
 			h.sendToNextExecutor(ctx, *objRef, *requestRef, request, broker.PendingState())
+		} else {
+			return nil, errors.Wrap(err, "couldn't pass request to broker")
 		}
-		return nil, errors.Wrap(err, "couldn't pass request to broker")
 	}
 
 	return &reply.RegisterRequest{
