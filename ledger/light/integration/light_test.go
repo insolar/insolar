@@ -40,6 +40,7 @@ func Test_BootstrapCalls(t *testing.T) {
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg, nil)
 	require.NoError(t, err)
+	defer s.Stop()
 
 	t.Run("message before pulse received returns error", func(t *testing.T) {
 		p, _ := CallSetCode(ctx, s)
@@ -65,6 +66,7 @@ func Test_BasicOperations(t *testing.T) {
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg, nil)
 	require.NoError(t, err)
+	defer s.Stop()
 
 	// First pulse goes in storage then interrupts.
 	s.SetPulse(ctx)
