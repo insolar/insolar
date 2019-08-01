@@ -137,7 +137,6 @@ message Activate {
     bytes Image = 23 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bool IsPrototype = 24;
     bytes Parent = 25 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    bool IsDelegate = 26;
 }
 
 message Amend {

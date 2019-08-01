@@ -27,7 +27,6 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	message2 "github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/gojuno/minimock"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -47,7 +46,6 @@ import (
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
@@ -138,30 +136,6 @@ func (suite *LogicRunnerTestSuite) SetupLogicRunner() {
 
 func (suite *LogicRunnerTestSuite) AfterTest(suiteName, testName string) {
 	suite.LogicRunnerCommonTestSuite.AfterTest(suiteName, testName)
-}
-
-func prepareParcel(t minimock.Tester, msg insolar.Message, needType bool, needSender bool) insolar.Parcel {
-	parcel := testutils.NewParcelMock(t)
-	parcel.MessageMock.Return(msg)
-	if needType {
-		parcel.TypeMock.Return(msg.Type())
-	}
-	if needSender {
-		parcel.GetSenderMock.Return(gen.Reference())
-	}
-	return parcel
-}
-
-func prepareWatermill(suite *LogicRunnerTestSuite) (flow.Flow, message2.PubSub) {
-	flowMock := flow.NewFlowMock(suite.mc)
-	flowMock.ProcedureMock.Set(func(p context.Context, p1 flow.Procedure, p2 bool) (r error) {
-		return p1.Proceed(p)
-	})
-
-	wmLogger := log.NewWatermillLogAdapter(inslogger.FromContext(suite.ctx))
-	pubSub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
-
-	return flowMock, pubSub
 }
 
 func mockSender(suite *LogicRunnerTestSuite) chan *message2.Message {
