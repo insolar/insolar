@@ -326,7 +326,6 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 	defer mc.Wait(time.Minute)
 
 	requestRef := gen.Reference()
-	nodeRef := gen.Reference()
 
 	reqRef := testutils.RandomRef()
 
@@ -340,7 +339,6 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 		{
 			name: "success",
 			transcript: &Transcript{
-				RequesterNode: &nodeRef,
 				RequestRef: reqRef,
 				Request:    &record.IncomingRequest{},
 			},
@@ -356,7 +354,6 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 		{
 			name: "error",
 			transcript: &Transcript{
-				RequesterNode: &nodeRef,
 				RequestRef: reqRef,
 				Request:    &record.IncomingRequest{},
 			},
