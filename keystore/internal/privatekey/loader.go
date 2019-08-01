@@ -19,11 +19,11 @@ package privatekey
 import (
 	"crypto"
 	"crypto/x509"
-	"encoding/json"
 	"encoding/pem"
 	"io/ioutil"
 	"path/filepath"
 
+	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
 )
 
@@ -57,7 +57,7 @@ func readJSON(path string) ([]byte, error) {
 		return nil, errors.Wrap(err, "[ read ] couldn't read keys from: "+path)
 	}
 	var keys map[string]string
-	err = json.Unmarshal(data, &keys)
+	err = jsoniter.ConfigCompatibleWithStandardLibrary.Unmarshal(data, &keys)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ read ] failed to parse json.")
 	}

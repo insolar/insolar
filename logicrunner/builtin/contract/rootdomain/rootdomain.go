@@ -17,10 +17,10 @@
 package rootdomain
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
+	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -152,7 +152,7 @@ func (rd RootDomain) Info() (interface{}, error) {
 		"migrationAdminMember":   rd.MigrationAdminMember.String(),
 		"nodeDomain":             rd.NodeDomain.String(),
 	}
-	resJSON, err := json.Marshal(res)
+	resJSON, err := jsoniter.ConfigCompatibleWithStandardLibrary.Marshal(res)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal result: %s", err.Error())
 	}

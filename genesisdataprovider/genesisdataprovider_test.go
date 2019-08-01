@@ -18,9 +18,9 @@ package genesisdataprovider
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 
+	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
@@ -76,7 +76,7 @@ func mockInfoResult(
 		"migrationDaemonMembers": migrationDaemonMembersStrs,
 		"nodeDomain":             nodeDomainRef.String(),
 	}
-	resJSON, _ := json.Marshal(result)
+	resJSON, _ := jsoniter.ConfigCompatibleWithStandardLibrary.Marshal(result)
 	resSer, _ := insolar.MarshalArgs(resJSON, nil)
 	return &reply.CallMethod{Result: resSer}
 }

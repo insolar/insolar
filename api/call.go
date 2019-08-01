@@ -20,30 +20,30 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
 
+	jsoniter "github.com/json-iterator/go"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/insolar/insolar/insolar/genesisrefs"
-	"github.com/insolar/insolar/metrics"
-
-	"github.com/insolar/insolar/api/requester"
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/metrics"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 const (
 	TimeoutError = 215

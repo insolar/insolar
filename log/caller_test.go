@@ -18,12 +18,12 @@ package log
 
 import (
 	"bytes"
-	"encoding/json"
 	"runtime"
 	"strconv"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -37,7 +37,7 @@ type loggerField struct {
 
 func logFields(t *testing.T, b []byte) loggerField {
 	var lf loggerField
-	err := json.Unmarshal(b, &lf)
+	err := jsoniter.ConfigCompatibleWithStandardLibrary.Unmarshal(b, &lf)
 	require.NoErrorf(t, err, "failed decode: '%v'", string(b))
 	return lf
 }

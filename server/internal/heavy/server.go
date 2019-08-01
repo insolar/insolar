@@ -18,12 +18,13 @@ package heavy
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/signal"
 	"syscall"
+
+	jsoniter "github.com/json-iterator/go"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -65,7 +66,7 @@ func (s *Server) Serve() {
 		log.Fatalf("failed to load genesis configuration from file: %v", s.genesisCfgPath)
 	}
 	var genesisCfg insolar.GenesisHeavyConfig
-	err = json.Unmarshal(b, &genesisCfg)
+	err = jsoniter.ConfigCompatibleWithStandardLibrary.Unmarshal(b, &genesisCfg)
 	if err != nil {
 		log.Fatalf("failed to pares genesis configuration from file: %v", s.genesisCfgPath)
 	}

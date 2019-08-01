@@ -21,7 +21,6 @@ package functest
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"math/big"

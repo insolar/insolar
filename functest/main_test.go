@@ -20,7 +20,6 @@ package functest
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"go/build"
 	"io"

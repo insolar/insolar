@@ -23,7 +23,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -31,6 +30,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	jsoniter "github.com/json-iterator/go"
 
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 
@@ -46,6 +47,8 @@ const TESTSEED = "VGVzdA=="
 var testSeedResponse = seedResponse{Seed: "Test", TraceID: "testTraceID"}
 var testInfoResponse = InfoResponse{RootMember: "root_member_ref", RootDomain: "root_domain_ref", NodeDomain: "node_domain_ref"}
 var testStatusResponse = StatusResponse{NetworkState: "OK"}
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 type rpcRequest struct {
 	RPCVersion string `json:"jsonrpc"`

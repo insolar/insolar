@@ -19,17 +19,18 @@ package inslogger_test
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"runtime"
 	"strconv"
 	"testing"
+
+	jsoniter "github.com/json-iterator/go"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // Beware, test results there depends on test file and package names!
@@ -47,7 +48,7 @@ type loggerField struct {
 
 func logFields(t *testing.T, b []byte) loggerField {
 	var lf loggerField
-	err := json.Unmarshal(b, &lf)
+	err := jsoniter.ConfigCompatibleWithStandardLibrary.Unmarshal(b, &lf)
 	require.NoErrorf(t, err, "failed decode: '%v'", string(b))
 	return lf
 }
@@ -58,7 +59,6 @@ func logFromContextWithSkip(ctx context.Context) insolar.Logger {
 }
 
 func TestExt_Global(t *testing.T) {
-
 	l := logFromContextWithSkip(context.Background())
 	l, _ = l.WithLevel("info")
 	var b bytes.Buffer

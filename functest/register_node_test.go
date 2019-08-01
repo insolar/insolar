@@ -19,7 +19,6 @@
 package functest
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/insolar/insolar/certificate"

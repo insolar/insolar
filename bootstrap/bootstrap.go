@@ -19,12 +19,12 @@ package bootstrap
 import (
 	"context"
 	"crypto"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"path"
 	"strconv"
 
+	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/certificate"
@@ -181,7 +181,7 @@ func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeI
 		}
 
 		// save cert to disk
-		cert, err := json.MarshalIndent(certs[i], "", "  ")
+		cert, err := jsoniter.MarshalIndent(certs[i], "", "  ")
 		if err != nil {
 			return errors.Wrapf(err, "can't MarshalIndent")
 		}
@@ -216,7 +216,7 @@ func (g *Generator) makeHeavyGenesisConfig(
 		DiscoveryNodes:  items,
 		ContractsConfig: contractsConfig,
 	}
-	b, err := json.MarshalIndent(cfg, "", "    ")
+	b, err := jsoniter.MarshalIndent(cfg, "", "    ")
 	if err != nil {
 		return errors.Wrapf(err, "failed to decode heavy config to json")
 	}
@@ -227,7 +227,7 @@ func (g *Generator) makeHeavyGenesisConfig(
 }
 
 func dumpAsJSON(data interface{}) string {
-	b, err := json.MarshalIndent(data, "", "    ")
+	b, err := jsoniter.MarshalIndent(data, "", "    ")
 	if err != nil {
 		panic(err)
 	}

@@ -18,8 +18,8 @@ package insolar
 
 import (
 	"context"
-	"encoding/json"
 
+	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
 )
 
@@ -35,7 +35,7 @@ func (args *Arguments) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	return json.Marshal(&result)
+	return jsoniter.ConfigCompatibleWithStandardLibrary.Marshal(&result)
 }
 
 func convertArgs(args []byte, result *[]interface{}) error {

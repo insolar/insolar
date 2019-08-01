@@ -18,7 +18,6 @@ package certificate
 
 import (
 	"crypto"
-	"encoding/json"
 	"io"
 	"io/ioutil"
 	"path/filepath"
@@ -26,12 +25,16 @@ import (
 	"strconv"
 	"strings"
 
+	jsoniter "github.com/json-iterator/go"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/pkg/errors"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // BootstrapNode holds info about bootstrap nodes
 type BootstrapNode struct {

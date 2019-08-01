@@ -17,13 +17,16 @@
 package extractor
 
 import (
-	"encoding/json"
 	"testing"
+
+	jsoniter "github.com/json-iterator/go"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	"github.com/stretchr/testify/require"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 func TestInfoResponse(t *testing.T) {
 	testValue, _ := json.Marshal(map[string]interface{}{
@@ -31,7 +34,7 @@ func TestInfoResponse(t *testing.T) {
 		"node_domain": "test_node_domain",
 	})
 	expectedValue := Info{}
-	_ = json.Unmarshal(testValue, &expectedValue)
+	require.NoError(t, json.Unmarshal(testValue, &expectedValue), "unmarshal")
 
 	data, err := insolar.Serialize([]interface{}{testValue, nil})
 	require.NoError(t, err)
@@ -43,10 +46,11 @@ func TestInfoResponse(t *testing.T) {
 }
 
 func TestInfoResponse_ErrorResponse(t *testing.T) {
-	testValue, _ := json.Marshal(map[string]interface{}{
+	testValue, err := json.Marshal(map[string]interface{}{
 		"root_member": "test_root_member",
 		"node_domain": "test_node_domain",
 	})
+	require.NoError(t, err, "Marshal")
 	contractErr := &foundation.Error{S: "Custom test error"}
 
 	data, err := insolar.Serialize([]interface{}{testValue, contractErr})

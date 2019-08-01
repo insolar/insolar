@@ -18,15 +18,18 @@ package requester
 
 import (
 	"crypto"
-	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	jsoniter "github.com/json-iterator/go"
 
 	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/pkg/errors"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // Request is a representation of request struct to api
 type Request struct {

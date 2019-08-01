@@ -19,22 +19,26 @@ package main
 import (
 	"context"
 	"crypto"
-	"encoding/json"
+	stdjson "encoding/json"
 	"fmt"
 	"io"
 	"os"
+
+	jsoniter "github.com/json-iterator/go"
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/pkg/errors"
 )
 
 const (
 	JSONRPCVersion = "2.0"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 func (g *certGen) generateKeys() {
 	privKey, err := g.keyProcessor.GeneratePrivateKey()
@@ -97,7 +101,7 @@ func (g *certGen) registerNode() insolar.Reference {
 }
 
 type GetCertificateResult struct {
-	Cert json.RawMessage `json:"cert"`
+	Cert stdjson.RawMessage `json:"cert"`
 }
 
 type ErrorData struct {

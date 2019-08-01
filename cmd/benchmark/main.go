@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -33,13 +32,15 @@ import (
 	"syscall"
 	"time"
 
+	jsoniter "github.com/json-iterator/go"
+	"github.com/pkg/errors"
+	"github.com/spf13/pflag"
+
 	"github.com/insolar/insolar/api/sdk"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/defaults"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/utils/backoff"
-	"github.com/pkg/errors"
-	"github.com/spf13/pflag"
 )
 
 const defaultStdoutPath = "-"
@@ -291,7 +292,7 @@ func saveMembers(members []*sdk.Member) error {
 	}
 	defer file.Close() //nolint: errcheck
 
-	result, err := json.MarshalIndent(members, "", "    ")
+	result, err := jsoniter.ConfigCompatibleWithStandardLibrary.MarshalIndent(members, "", "    ")
 	if err != nil {
 		return errors.Wrap(err, "couldn't marshal members in json")
 	}
@@ -307,7 +308,7 @@ func loadMembers(count int) ([]*sdk.Member, error) {
 		return nil, errors.Wrap(err, "can't read members from file")
 	}
 
-	err = json.Unmarshal(rawMembers, &members)
+	err = jsoniter.ConfigCompatibleWithStandardLibrary.Unmarshal(rawMembers, &members)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't unmarshal members from file")
 	}

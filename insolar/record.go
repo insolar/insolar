@@ -19,14 +19,16 @@ package insolar
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
 
 	base58 "github.com/jbenet/go-base58"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 const (
 	// RecordHashSize is a record hash size. We use 224-bit SHA-3 hash (28 bytes).

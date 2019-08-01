@@ -19,7 +19,6 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -30,11 +29,13 @@ import (
 	"sync"
 	"time"
 
-	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
-	"github.com/insolar/insolar/insolar"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
+
+	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
+	"github.com/insolar/insolar/insolar"
 )
 
 var client http.Client
@@ -148,7 +149,7 @@ func displayResultsJSON(results [][]string, _ bool, _ *bytes.Buffer) {
 		doc[i].Error = res[7]
 	}
 
-	jsonDoc, err := json.MarshalIndent(doc, "", "    ")
+	jsonDoc, err := jsoniter.ConfigCompatibleWithStandardLibrary.MarshalIndent(doc, "", "    ")
 	if err != nil {
 		panic(err) // should never happen
 	}
@@ -193,7 +194,7 @@ func collectNodesStatuses(conf *pulsewatcher.Config) ([][]string, bool) {
 					WorkingListSize int
 				}
 			}
-			err = json.Unmarshal(data, &out)
+			err = jsoniter.ConfigCompatibleWithStandardLibrary.Unmarshal(data, &out)
 			if err != nil {
 				fmt.Println(string(data))
 				log.Fatal(err)

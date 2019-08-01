@@ -18,23 +18,26 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
+
+	jsoniter "github.com/json-iterator/go"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/version"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
 
 var (
 	verbose bool
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 func main() {
 	var sendURL string

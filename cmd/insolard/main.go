@@ -17,18 +17,19 @@
 package main
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
+
+	jsoniter "github.com/json-iterator/go"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+	jww "github.com/spf13/jwalterweatherman"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/server"
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
-	jww "github.com/spf13/jwalterweatherman"
 )
 
 type inputParams struct {
@@ -94,7 +95,7 @@ func readRole(path string) (insolar.StaticRole, error) {
 		)
 	}
 	cert := certificate.AuthorizationCertificate{}
-	err = json.Unmarshal(data, &cert)
+	err = jsoniter.ConfigCompatibleWithStandardLibrary.Unmarshal(data, &cert)
 	if err != nil {
 		return insolar.StaticRoleUnknown, errors.Wrap(err, "failed to parse certificate json")
 	}

@@ -18,16 +18,17 @@ package bootstrap
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
+	jsoniter "github.com/json-iterator/go"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/pkg/errors"
 )
 
 func keysToNodeInfo(kp *secrets.KeyPair) nodeInfo {
@@ -92,7 +93,7 @@ func createKeysInDir(
 			return nil, errors.Wrap(err, "[ createKeysInDir ] couldn't export public key")
 		}
 
-		result, err := json.MarshalIndent(map[string]interface{}{
+		result, err := jsoniter.MarshalIndent(map[string]interface{}{
 			"private_key": string(privKeyStr),
 			"public_key":  string(pubKeyStr),
 		}, "", "    ")

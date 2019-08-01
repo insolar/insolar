@@ -17,13 +17,16 @@
 package foundation
 
 import (
-	"encoding/json"
 	"errors"
 	"sort"
 	"strings"
 
+	jsoniter "github.com/json-iterator/go"
+
 	"github.com/insolar/insolar/insolar"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // StableMap is a `map[string]string` that can be deterministically serialized.
 type StableMap map[string]string

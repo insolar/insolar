@@ -17,9 +17,9 @@
 package helloworld
 
 import (
-	"encoding/json"
 	"fmt"
 
+	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -104,7 +104,7 @@ func (hw *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
 	}
 
 	request := Request{}
-	err = json.Unmarshal(rawRequest, &request)
+	err = jsoniter.ConfigCompatibleWithStandardLibrary.Unmarshal(rawRequest, &request)
 	if err != nil {
 		return nil, fmt.Errorf(" Failed to unmarshal: %s", err.Error())
 	}

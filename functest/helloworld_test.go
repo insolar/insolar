@@ -20,17 +20,19 @@ package functest
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 
-	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 type HelloWorldInstance struct {
 	Ref *insolar.Reference

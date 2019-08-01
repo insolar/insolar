@@ -19,13 +19,14 @@ package secrets
 import (
 	"bytes"
 	"crypto"
-	"encoding/json"
 	"io"
 	"io/ioutil"
 	"path/filepath"
 
-	"github.com/insolar/insolar/platformpolicy"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/platformpolicy"
 )
 
 // KeyPair holds private/public keys pair.
@@ -68,7 +69,7 @@ func ReadKeysFile(file string) (*KeyPair, error) {
 // ReadKeysFile reads and parses json from reader, returns parsed private/public keys pair.
 func ReadKeys(r io.Reader) (*KeyPair, error) {
 	var keys map[string]string
-	err := json.NewDecoder(r).Decode(&keys)
+	err := jsoniter.NewDecoder(r).Decode(&keys)
 	if err != nil {
 		return nil, errors.Wrapf(err, "fail unmarshal keys data")
 	}

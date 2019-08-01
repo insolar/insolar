@@ -19,10 +19,11 @@ package genesis
 import (
 	"context"
 	"crypto"
-	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
+
+	jsoniter "github.com/json-iterator/go"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
@@ -175,7 +176,7 @@ func publicKeysFromDir(dir string, keysMetaFile string) ([]nodeInfoRaw, error) {
 		File string
 	}
 	var metaInfo []info
-	if err := json.Unmarshal(b, &metaInfo); err != nil {
+	if err := jsoniter.ConfigCompatibleWithStandardLibrary.Unmarshal(b, &metaInfo); err != nil {
 		return nil, errors.Wrapf(err, "can't decode json from file %v", keysMetaFile)
 	}
 

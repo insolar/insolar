@@ -18,12 +18,12 @@ package sdk
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"math/big"
 	"sync"
 
+	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api/requester"
@@ -32,6 +32,8 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 type ringBuffer struct {
 	sync.Mutex

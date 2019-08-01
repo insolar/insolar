@@ -17,10 +17,11 @@
 package member
 
 import (
-	"encoding/json"
 	"fmt"
 	"math/big"
 	"strings"
+
+	jsoniter "github.com/json-iterator/go"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member/signer"
@@ -112,7 +113,7 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 	}
 
 	request := Request{}
-	err = json.Unmarshal(rawRequest, &request)
+	err = jsoniter.ConfigCompatibleWithStandardLibrary.Unmarshal(rawRequest, &request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal: %s", err.Error())
 	}

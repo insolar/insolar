@@ -17,11 +17,11 @@
 package extractor
 
 import (
-	"encoding/json"
+	jsoniter "github.com/json-iterator/go"
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	"github.com/pkg/errors"
 )
 
 // InfoResponse represents response from Info() method of RootDomain contract
@@ -47,7 +47,7 @@ func InfoResponse(data []byte) (*Info, error) {
 
 	var info Info
 	data = infoMap.([]byte)
-	err = json.Unmarshal(data, &info)
+	err = jsoniter.ConfigCompatibleWithStandardLibrary.Unmarshal(data, &info)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ InfoResponse ] Can't unmarshal response ")
 	}
