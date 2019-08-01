@@ -64,6 +64,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func newNodeRef(id int) insolar.Reference {
+	bs := make([]byte, 4)
+	binary.LittleEndian.PutUint32(bs, uint32(id))
+	nodeId := insolar.NewIDFromBytes(bs)
+	return *insolar.NewReference(*nodeId)
+}
+
 func newNode(id int) insolar.NetworkNode {
 	bs := make([]byte, 4)
 	binary.LittleEndian.PutUint32(bs, uint32(id))
@@ -84,12 +91,12 @@ func TestTable_Resolve(t *testing.T) {
 	table.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{
 		newNode(2),
 	})
-	host, err := table.Resolve(insolar.Reference{2})
+	host, err := table.Resolve(newNodeRef(2))
 	require.NoError(t, err)
 	assert.EqualValues(t, 2, host.ShortID)
 	assert.Equal(t, "127.0.0.1:2", host.Address.String())
 
-	_, err = table.Resolve(insolar.Reference{4})
+	_, err = table.Resolve(newNodeRef(4))
 	assert.Error(t, err)
 }
 
@@ -105,9 +112,9 @@ func TestTable_ResolveConsensus_equal(t *testing.T) {
 	table.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{
 		newNode(2),
 	})
-	h, err := table.ResolveConsensusRef(insolar.Reference{2})
+	h, err := table.ResolveConsensusRef(newNodeRef(2))
 	require.NoError(t, err)
-	h2, err := table.Resolve(insolar.Reference{2})
+	h2, err := table.Resolve(newNodeRef(2))
 	require.NoError(t, err)
 	assert.True(t, h.Equal(*h2))
 }
@@ -117,7 +124,7 @@ func TestTable_ResolveConsensus_equal2(t *testing.T) {
 	table.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{
 		newNode(2),
 	})
-	h, err := table.ResolveConsensusRef(insolar.Reference{2})
+	h, err := table.ResolveConsensusRef(newNodeRef(2))
 	require.NoError(t, err)
 	h2, err := table.ResolveConsensus(2)
 	require.NoError(t, err)
@@ -129,8 +136,8 @@ func TestTable_ResolveConsensus(t *testing.T) {
 	table.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{
 		newNode(2),
 	})
-	table.NodeKeeper.GetConsensusInfo().AddTemporaryMapping(insolar.Reference{3}, 3, "127.0.0.1:3")
-	h, err := table.ResolveConsensusRef(insolar.Reference{2})
+	table.NodeKeeper.GetConsensusInfo().AddTemporaryMapping(newNodeRef(3), 3, "127.0.0.1:3")
+	h, err := table.ResolveConsensusRef(newNodeRef(2))
 	require.NoError(t, err)
 	h2, err := table.ResolveConsensus(2)
 	require.NoError(t, err)
@@ -138,7 +145,7 @@ func TestTable_ResolveConsensus(t *testing.T) {
 	assert.EqualValues(t, 2, h.ShortID)
 	assert.Equal(t, "127.0.0.1:2", h.Address.String())
 
-	h, err = table.ResolveConsensusRef(insolar.Reference{3})
+	h, err = table.ResolveConsensusRef(newNodeRef(3))
 	require.NoError(t, err)
 	h2, err = table.ResolveConsensus(3)
 	require.NoError(t, err)
@@ -146,7 +153,7 @@ func TestTable_ResolveConsensus(t *testing.T) {
 	assert.EqualValues(t, 3, h.ShortID)
 	assert.Equal(t, "127.0.0.1:3", h.Address.String())
 
-	_, err = table.ResolveConsensusRef(insolar.Reference{4})
+	_, err = table.ResolveConsensusRef(newNodeRef(4))
 	assert.Error(t, err)
 	_, err = table.ResolveConsensus(4)
 	assert.Error(t, err)
