@@ -31,7 +31,6 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/platformpolicy"
 )
 
 func Test_BootstrapCalls(t *testing.T) {
@@ -58,126 +57,6 @@ func Test_BootstrapCalls(t *testing.T) {
 		p, _ := CallSetCode(ctx, s)
 		RequireNotError(p)
 	})
-}
-
-func Test_LightReplication(t *testing.T) {
-	t.Parallel()
-
-	var secondPulseNumber = insolar.FirstPulseNumber + (PulseStep * 2)
-	var expectedLifeline record.Lifeline
-	var expectedObjectID insolar.ID
-
-	var expectedIds []insolar.ID
-	var receivedMessage = make(chan payload.Replication, 10)
-
-	ctx := inslogger.TestContext(t)
-	cfg := DefaultLightConfig()
-
-	s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) {
-		switch p := pl.(type) {
-		case *payload.Replication:
-			if p.Pulse == secondPulseNumber {
-				go func() {
-					receivedMessage <- *p
-				}()
-			}
-
-		}
-	})
-	require.NoError(t, err)
-	defer s.Stop()
-
-	// First pulse goes in storage then interrupts.
-	s.SetPulse(ctx)
-
-	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
-	s.SetPulse(ctx)
-
-	{
-		// Creating root reason request.
-		var reasonID insolar.ID
-		{
-			msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), true, true)
-			rep := SendMessage(ctx, s, &msg)
-			RequireNotError(rep)
-			reasonID = rep.(*payload.RequestInfo).RequestID
-		}
-
-		// Save and check code.
-		{
-			p, _ := CallSetCode(ctx, s)
-			RequireNotError(p)
-			payloadId := p.(*payload.ID).ID
-			expectedIds = append(expectedIds, payloadId)
-		}
-
-		// Set, get request.
-		{
-			msg, _ := MakeSetIncomingRequest(gen.ID(), reasonID, true, true)
-			rep := SendMessage(ctx, s, &msg)
-			RequireNotError(rep)
-			expectedObjectID = rep.(*payload.RequestInfo).RequestID
-			expectedIds = append(expectedIds, expectedObjectID)
-		}
-		// Activate and check object.
-		{
-			p, state := CallActivateObject(ctx, s, expectedObjectID)
-			RequireNotError(p)
-
-			lifeline, material := requireGetObject(ctx, t, s, expectedObjectID)
-			expectedIds = append(expectedIds, *lifeline.LatestState)
-			require.Equal(t, state, material.Virtual)
-		}
-		// Amend and check object.
-		{
-			msg, _ := MakeSetIncomingRequest(expectedObjectID, reasonID, false, true)
-			rep := SendMessage(ctx, s, &msg)
-			RequireNotError(rep)
-
-			p, state := CallAmendObject(ctx, s, expectedObjectID, rep.(*payload.RequestInfo).RequestID)
-			RequireNotError(p)
-			lifeline, material := requireGetObject(ctx, t, s, expectedObjectID)
-			require.Equal(t, state, material.Virtual)
-
-			expectedLifeline = lifeline
-			expectedIds = append(expectedIds, *lifeline.LatestState)
-		}
-	}
-
-	// Third pulse activate replication of second's pulse records
-	s.SetPulse(ctx)
-
-	{
-		replicationPayload := <-receivedMessage
-
-		var receivedLifeline record.Lifeline
-
-		for _, recordIndex := range replicationPayload.Indexes {
-			if recordIndex.ObjID == expectedObjectID {
-				receivedLifeline = recordIndex.Lifeline
-			}
-		}
-
-		replicatedIds := make(map[insolar.ID]struct{})
-
-		require.Equal(t, 13, len(replicationPayload.Records))
-		require.Equal(t, expectedLifeline, receivedLifeline)
-
-		// testing payload
-		cryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
-
-		for _, rec := range replicationPayload.Records {
-			hash := record.HashVirtual(cryptographyScheme.ReferenceHasher(), rec.Virtual)
-			id := insolar.NewID(secondPulseNumber, hash)
-			replicatedIds[*id] = struct{}{}
-		}
-
-		for _, id := range expectedIds {
-			_, ok := replicatedIds[id]
-			require.True(t, ok, "No key in replicated data")
-		}
-	}
-
 }
 
 func Test_BasicOperations(t *testing.T) {
