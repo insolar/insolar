@@ -55,6 +55,7 @@ func Test_LightReplication(t *testing.T) {
 	})
 
 	require.NoError(t, err)
+	defer s.Stop()
 
 	// First pulse goes in storage then interrupts.
 	s.SetPulse(ctx)
