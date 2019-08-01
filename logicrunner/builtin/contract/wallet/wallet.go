@@ -62,7 +62,11 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toM
 	}
 
 	cc := costcenter.GetObject(ccRef)
-	feeStr, err := cc.CalcFee(amountStr)
+	feeRate, err := cc.FeeRate(amountStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get fee rate: %s", err.Error())
+	}
+	feeStr, err := calcFee(feeRate, amountStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to calculate fee for amount: %s", err.Error())
 	}
@@ -86,7 +90,7 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toM
 	}
 	w.Balance = newBalance.String()
 
-	fwRef, err := rd.GetFeeWalletRef()
+	fwRef, err := cc.GetFeeWalletRef()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get fee wallet reference: %s", err.Error())
 	}
@@ -174,4 +178,29 @@ func (w *Wallet) RollBack(amountStr string) (err error) {
 // GetBalance gets total balance.
 func (w *Wallet) GetBalance() (string, error) {
 	return w.Balance, nil
+}
+
+// CalcFee calculates fee for amount. Returns fee.
+func calcFee(feeRate string, amountStr string) (string, error) {
+	amount, ok := new(big.Int).SetString(amountStr, 10)
+	if !ok {
+		return "", fmt.Errorf("can't parse amount")
+	}
+
+	commissionRate, ok := new(big.Int).SetString(feeRate, 10)
+	if !ok {
+		return "", fmt.Errorf("can't parse commission rate")
+	}
+
+	preResult := new(big.Int).Mul(amount, commissionRate)
+
+	capacity := big.NewInt(10 * 1000 * 1000 * 1000)
+	result := new(big.Int).Div(preResult, capacity)
+
+	mod := new(big.Int).Mod(preResult, capacity)
+	if mod.Cmp(big.NewInt(0)) == 1 {
+		result = new(big.Int).Add(result, big.NewInt(1))
+	}
+
+	return result.String(), nil
 }

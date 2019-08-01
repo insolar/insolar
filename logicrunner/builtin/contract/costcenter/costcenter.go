@@ -20,19 +20,30 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/insolar/insolar/insolar"
+
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 type CostCenter struct {
 	foundation.BaseContract
+	FeeWallet insolar.Reference
 }
 
 // New creates new CostCenter.
-func New() (*CostCenter, error) {
-	return &CostCenter{}, nil
+func New(feeWallet insolar.Reference) (*CostCenter, error) {
+	return &CostCenter{
+		FeeWallet: feeWallet,
+	}, nil
 }
 
-func calcFeeRate(amountStr string) (string, error) {
+// GetFeeWalletRef gets fee wallet reference.
+func (cc CostCenter) GetFeeWalletRef() (insolar.Reference, error) {
+	return cc.FeeWallet, nil
+}
+
+// FeeRate returns fee rate for amount.
+func (cc CostCenter) FeeRate(amountStr string) (string, error) {
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {
 		return "", fmt.Errorf("can't parse amount")
@@ -48,34 +59,4 @@ func calcFeeRate(amountStr string) (string, error) {
 		return "3000000000", nil // 3 * 1000 * 1000 * 1000 = 30%
 	}
 	return "4000000000", nil // 4 * 1000 * 1000 * 1000 = 40%
-}
-
-// CalcFee calculates fee for amount. Returns fee.
-func (t CostCenter) CalcFee(amountStr string) (string, error) {
-	amount, ok := new(big.Int).SetString(amountStr, 10)
-	if !ok {
-		return "", fmt.Errorf("can't parse amount")
-	}
-
-	commissionRateStr, err := calcFeeRate(amountStr)
-	if err != nil {
-		return "", fmt.Errorf("failed to calc fee rate")
-	}
-
-	commissionRate, ok := new(big.Int).SetString(commissionRateStr, 10)
-	if !ok {
-		return "", fmt.Errorf("can't parse commission rate")
-	}
-
-	preResult := new(big.Int).Mul(amount, commissionRate)
-
-	capacity := big.NewInt(10 * 1000 * 1000 * 1000)
-	result := new(big.Int).Div(preResult, capacity)
-
-	mod := new(big.Int).Mod(preResult, capacity)
-	if mod.Cmp(big.NewInt(0)) == 1 {
-		result = new(big.Int).Add(result, big.NewInt(1))
-	}
-
-	return result.String(), nil
 }

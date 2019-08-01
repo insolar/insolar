@@ -17,6 +17,7 @@
 package costcenter
 
 import (
+	"github.com/insolar/insolar/insolar"
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
 	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
@@ -91,18 +92,70 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 	return state, ret, err
 }
 
-func INSMETHOD_CalcFee(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_GetFeeWalletRef(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
 	self := new(CostCenter)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeCalcFee ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &ExtendableError{S: "[ FakeGetFeeWalletRef ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeCalcFee ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeGetFeeWalletRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := []interface{}{}
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeGetFeeWalletRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0, ret1 := self.GetFeeWalletRef()
+
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		ret1 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret1 = ph.MakeErrorSerializable(ret1)
+
+	ret := []byte{}
+	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+
+	return state, ret, err
+}
+
+func INSMETHOD_FeeRate(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
+	self := new(CostCenter)
+
+	if len(object) == 0 {
+		return nil, nil, &ExtendableError{S: "[ FakeFeeRate ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeFeeRate ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -112,11 +165,11 @@ func INSMETHOD_CalcFee(object []byte, data []byte) ([]byte, []byte, error) {
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeCalcFee ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeFeeRate ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.CalcFee(args0)
+	ret0, ret1 := self.FeeRate(args0)
 
 	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
 	systemErr := ph.GetSystemError()
@@ -148,7 +201,9 @@ func INSMETHOD_CalcFee(object []byte, data []byte) ([]byte, []byte, error) {
 func INSCONSTRUCTOR_New(data []byte) ([]byte, error, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
-	args := []interface{}{}
+	args := [1]interface{}{}
+	var args0 insolar.Reference
+	args[0] = &args0
 
 	err := ph.Deserialize(data, &args)
 	if err != nil {
@@ -156,7 +211,7 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error, error) {
 		return nil, nil, e
 	}
 
-	ret0, ret1 := New()
+	ret0, ret1 := New(args0)
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
@@ -185,7 +240,8 @@ func Initialize() XXX_insolar.ContractWrapper {
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: XXX_insolar.ContractMethods{
-			"CalcFee": INSMETHOD_CalcFee,
+			"GetFeeWalletRef": INSMETHOD_GetFeeWalletRef,
+			"FeeRate":         INSMETHOD_FeeRate,
 		},
 		Constructors: XXX_insolar.ContractConstructors{
 			"New": INSCONSTRUCTOR_New,

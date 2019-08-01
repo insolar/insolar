@@ -46,7 +46,6 @@ func RootDomain() insolar.GenesisContractState {
 			MigrationAdminMember:   genesisrefs.ContractMigrationAdminMember,
 			MigrationWallet:        genesisrefs.ContractMigrationWallet,
 			CostCenter:             genesisrefs.ContractCostCenter,
-			FeeWallet:              genesisrefs.ContractFeeWallet,
 			MigrationAddressShards: genesisrefs.ContractMigrationAddressShards,
 			PublicKeyShards:        genesisrefs.ContractPublicKeyShards,
 			FreeBurnAddresses:      []string{},
@@ -97,7 +96,7 @@ func GetWalletGenesisContractState(balance string, name string, parent string) i
 }
 
 func GetCostCenterGenesisContractState() insolar.GenesisContractState {
-	cc, err := costcenter.New()
+	cc, err := costcenter.New(genesisrefs.ContractFeeWallet)
 	if err != nil {
 		panic("failed to create cost center instance")
 	}
