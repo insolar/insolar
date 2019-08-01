@@ -572,7 +572,7 @@ func (r *FullRealm) finishRound(ctx context.Context, builder census.Builder, csh
 
 	isNextEphemeral := false
 	if r.ephemeralFeeder != nil {
-		wasConverted, convertedExpected := r.ephemeralFeeder.TryConvertFromEphemeral(expected)
+		wasConverted, convertedExpected := r.ephemeralFeeder.TryConvertFromEphemeral(ctx, expected)
 		if wasConverted {
 			expected = convertedExpected
 		} else {
@@ -592,6 +592,10 @@ func (r *FullRealm) finishRound(ctx context.Context, builder census.Builder, csh
 
 	if r.ephemeralFeeder != nil {
 		r.ephemeralFeeder.EphemeralConsensusFinished(isNextEphemeral, r.roundStartedAt, expected)
+		if !isNextEphemeral {
+			r.ephemeralFeeder.OnEphemeralCancelled()
+			r.ephemeralFeeder = nil
+		}
 	}
 
 	nextNP := expected.GetPulseNumber()

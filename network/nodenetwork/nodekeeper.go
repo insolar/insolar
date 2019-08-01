@@ -54,9 +54,7 @@ import (
 	"context"
 	"net"
 	"sync"
-	"sync/atomic"
 
-	"github.com/insolar/insolar/network/consensusv1"
 	"github.com/insolar/insolar/network/hostnetwork/resolver"
 	"github.com/insolar/insolar/network/node"
 
@@ -69,8 +67,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensusv1/packets"
-	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/version"
 )
 
@@ -81,7 +77,7 @@ func NewNodeNetwork(configuration configuration.Transport, certificate insolar.C
 		return nil, errors.Wrap(err, "Failed to create origin node")
 	}
 	nodeKeeper := NewNodeKeeper(origin)
-	if !utils.OriginIsDiscovery(certificate) {
+	if !network.OriginIsDiscovery(certificate) {
 		origin.(node.MutableNode).SetState(insolar.NodePending)
 	}
 	return nodeKeeper, nil
@@ -123,21 +119,16 @@ func resolveAddress(configuration configuration.Transport) (string, error) {
 // NewNodeKeeper create new NodeKeeper
 func NewNodeKeeper(origin insolar.NetworkNode) network.NodeKeeper {
 	nk := &nodekeeper{
-		cloudHash:     make([]byte, 64),
-		origin:        origin,
-		claimQueue:    newClaimQueue(),
-		consensusInfo: NewConsensusInfo(),
-		syncNodes:     make([]insolar.NetworkNode, 0),
-		syncClaims:    make([]packets.ReferendumClaim, 0),
+		cloudHash: make([]byte, 64),
+		origin:    origin,
+		syncNodes: make([]insolar.NetworkNode, 0),
 	}
 	nk.SetInitialSnapshot([]insolar.NetworkNode{})
 	return nk
 }
 
 type nodekeeper struct {
-	origin        insolar.NetworkNode
-	claimQueue    *claimQueue
-	consensusInfo *ConsensusInfo
+	origin insolar.NetworkNode
 
 	cloudHashLock sync.RWMutex
 	cloudHash     []byte
@@ -146,14 +137,11 @@ type nodekeeper struct {
 	snapshot   *node.Snapshot
 	accessor   *node.Accessor
 
-	syncLock   sync.Mutex
-	syncNodes  []insolar.NetworkNode
-	syncClaims []packets.ReferendumClaim
+	syncLock  sync.Mutex
+	syncNodes []insolar.NetworkNode
 
-	bootstrapped uint32
-
-	Cryptography       insolar.CryptographyService `inject:""`
-	TerminationHandler insolar.TerminationHandler  `inject:""`
+	TerminationHandler insolar.TerminationHandler `inject:""`
+	//CryptographyService insolar.CryptographyService `inject:""`
 }
 
 func (nk *nodekeeper) GetSnapshotCopy() *node.Snapshot {
@@ -168,15 +156,14 @@ func (nk *nodekeeper) SetInitialSnapshot(nodes []insolar.NetworkNode) {
 	defer nk.activeLock.Unlock()
 
 	nodesMap := make(map[insolar.Reference]insolar.NetworkNode)
-	for _, node := range nodes {
-		nodesMap[node.ID()] = node
+	for _, n := range nodes {
+		nodesMap[n.ID()] = n
 	}
 	nk.snapshot = node.NewSnapshot(insolar.FirstPulseNumber, nodesMap)
 	nk.accessor = node.NewAccessor(nk.snapshot)
 
 	nk.syncLock.Lock()
 	nk.syncNodes = nk.accessor.GetActiveNodes()
-	nk.syncClaims = make([]packets.ReferendumClaim, 0)
 	nk.syncLock.Unlock()
 }
 
@@ -187,32 +174,12 @@ func (nk *nodekeeper) GetAccessor() network.Accessor {
 	return nk.accessor
 }
 
-func (nk *nodekeeper) GetConsensusInfo() network.ConsensusInfo {
-	return nk.consensusInfo
-}
-
 func (nk *nodekeeper) GetWorkingNode(ref insolar.Reference) insolar.NetworkNode {
 	return nk.GetAccessor().GetWorkingNode(ref)
 }
 
 func (nk *nodekeeper) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference {
 	return nk.GetAccessor().GetWorkingNodesByRole(role)
-}
-
-// TODO: remove this method when bootstrap mechanism completed
-// IsBootstrapped method returns true when bootstrapNodes are connected to each other
-func (nk *nodekeeper) IsBootstrapped() bool {
-	return atomic.LoadUint32(&nk.bootstrapped) == 1
-}
-
-// TODO: remove this method when bootstrap mechanism completed
-// SetIsBootstrapped method set is bootstrap completed
-func (nk *nodekeeper) SetIsBootstrapped(isBootstrap bool) {
-	if isBootstrap {
-		atomic.StoreUint32(&nk.bootstrapped, 1)
-	} else {
-		atomic.StoreUint32(&nk.bootstrapped, 0)
-	}
 }
 
 func (nk *nodekeeper) GetOrigin() insolar.NetworkNode {
@@ -237,40 +204,12 @@ func (nk *nodekeeper) GetWorkingNodes() []insolar.NetworkNode {
 	return nk.GetAccessor().GetWorkingNodes()
 }
 
-func (nk *nodekeeper) GetOriginJoinClaim() (*packets.NodeJoinClaim, error) {
-	return nk.nodeToSignedClaim()
-}
-
-func (nk *nodekeeper) GetOriginAnnounceClaim(mapper packets.BitSetMapper) (*packets.NodeAnnounceClaim, error) {
-	return nk.nodeToAnnounceClaim(mapper)
-}
-
-func (nk *nodekeeper) GetClaimQueue() network.ClaimQueue {
-	return nk.claimQueue
-}
-
-func (nk *nodekeeper) Sync(ctx context.Context, nodes []insolar.NetworkNode, claims []packets.ReferendumClaim) error {
+func (nk *nodekeeper) Sync(ctx context.Context, nodes []insolar.NetworkNode) {
 	nk.syncLock.Lock()
 	defer nk.syncLock.Unlock()
 
-	inslogger.FromContext(ctx).Debugf("Sync, nodes: %d, claims: %d", len(nodes), len(claims))
+	inslogger.FromContext(ctx).Debugf("Sync, nodes: %d", len(nodes))
 	nk.syncNodes = nodes
-	nk.syncClaims = claims
-
-	foundOrigin := false
-	for _, node := range nodes {
-		if node.ID().Equal(nk.origin.ID()) {
-			foundOrigin = true
-			nk.syncOrigin(node)
-			nk.consensusInfo.SetIsJoiner(false)
-		}
-	}
-
-	if nk.shouldExit(foundOrigin) {
-		return errors.New("node leave acknowledged by network")
-	}
-
-	return nil
 }
 
 // syncOrigin synchronize data in origin node with node from active list in case when they are different objects
@@ -286,7 +225,7 @@ func (nk *nodekeeper) syncOrigin(n insolar.NetworkNode) {
 	mutableOrigin.SetShortID(n.ShortID())
 }
 
-func (nk *nodekeeper) MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error {
+func (nk *nodekeeper) MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) {
 	nk.activeLock.Lock()
 	nk.syncLock.Lock()
 	defer func() {
@@ -294,76 +233,13 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context, number insolar.Pulse
 		nk.activeLock.Unlock()
 	}()
 
-	mergeResult, err := GetMergedCopy(nk.syncNodes, nk.syncClaims)
-	if err != nil {
-		return errors.Wrap(err, "[ MoveSyncToActive ] Failed to calculate new active list")
-	}
+	mergeResult := GetMergedCopy(nk.syncNodes)
 	inslogger.FromContext(ctx).Infof("[ MoveSyncToActive ] New active list confirmed. Active list size: %d -> %d",
-		len(nk.accessor.GetActiveNodes()), len(mergeResult.ActiveList))
+		len(nk.accessor.GetActiveNodes()),
+		len(mergeResult.ActiveList),
+	)
 
 	nk.snapshot = node.NewSnapshot(number, mergeResult.ActiveList)
 	nk.accessor = node.NewAccessor(nk.snapshot)
-	stats.Record(ctx, consensusv1.ActiveNodes.M(int64(len(nk.accessor.GetActiveNodes()))))
-	nk.consensusInfo.Flush(mergeResult.NodesJoinedDuringPrevPulse)
-	nk.gracefulStopIfNeeded(ctx)
-	return nil
-}
-
-func (nk *nodekeeper) gracefulStopIfNeeded(ctx context.Context) {
-	if nk.origin.GetState() == insolar.NodeLeaving {
-		nk.TerminationHandler.OnLeaveApproved(ctx)
-	}
-}
-
-func (nk *nodekeeper) shouldExit(foundOrigin bool) bool {
-	return !foundOrigin && nk.origin.GetState() == insolar.NodeReady && len(nk.GetAccessor().GetActiveNodes()) != 0
-}
-
-func (nk *nodekeeper) nodeToSignedClaim() (*packets.NodeJoinClaim, error) {
-	claim, err := packets.NodeToClaim(nk.origin)
-	if err != nil {
-		return nil, err
-	}
-	dataToSign, err := claim.SerializeRaw()
-	log.Debugf("dataToSign len: %d", len(dataToSign))
-	if err != nil {
-		return nil, errors.Wrap(err, "[ nodeToSignedClaim ] failed to serialize a claim")
-	}
-	sign, err := nk.sign(dataToSign)
-	log.Debugf("sign len: %d", len(sign))
-	if err != nil {
-		return nil, errors.Wrap(err, "[ nodeToSignedClaim ] failed to sign a claim")
-	}
-	copy(claim.Signature[:], sign[:packets.SignatureLength])
-	return claim, nil
-}
-
-func (nk *nodekeeper) nodeToAnnounceClaim(mapper packets.BitSetMapper) (*packets.NodeAnnounceClaim, error) {
-	claim := packets.NodeAnnounceClaim{}
-	joinClaim, err := packets.NodeToClaim(nk.origin)
-	if err != nil {
-		return nil, err
-	}
-	claim.NodeJoinClaim = *joinClaim
-	claim.NodeCount = uint16(mapper.Length())
-	announcerIndex, err := mapper.RefToIndex(nk.origin.ID())
-	if err != nil {
-		return nil, errors.Wrap(err, "[ nodeToAnnounceClaim ] failed to map origin node ID to bitset index")
-	}
-	claim.NodeAnnouncerIndex = uint16(announcerIndex)
-	claim.BitSetMapper = mapper
-	hash := nk.GetCloudHash()
-	if hash == nil {
-		hash = make([]byte, packets.HashLength)
-	}
-	claim.SetCloudHash(hash)
-	return &claim, nil
-}
-
-func (nk *nodekeeper) sign(data []byte) ([]byte, error) {
-	sign, err := nk.Cryptography.Sign(data)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ sign ] failed to sign a claim")
-	}
-	return sign.Bytes(), nil
+	stats.Record(ctx, network.ActiveNodes.M(int64(len(nk.accessor.GetActiveNodes()))))
 }

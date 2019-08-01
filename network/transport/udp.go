@@ -61,13 +61,12 @@ import (
 	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/consensusv1"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/resolver"
-	"github.com/insolar/insolar/network/utils"
 )
 
 const (
-	udpMaxPacketSize = 1400
+	udpMaxPacketSize = 2000
 )
 
 type udpTransport struct {
@@ -103,11 +102,12 @@ func (t *udpTransport) SendDatagram(ctx context.Context, address string, data []
 		return errors.Wrap(err, "failed to resolve UDP address")
 	}
 
-	_, err = t.conn.WriteTo(data, udpAddr)
+	n, err := t.conn.WriteTo(data, udpAddr)
 	if err != nil {
 		// TODO: may be try to send second time if error
 		return errors.Wrap(err, "failed to write data")
 	}
+	stats.Record(ctx, network.SentSize.M(int64(n)))
 	return nil
 }
 
@@ -160,7 +160,7 @@ func (t *udpTransport) loop(ctx context.Context) {
 		n, addr, err := t.conn.ReadFrom(buf)
 
 		if err != nil {
-			if utils.IsConnectionClosed(err) {
+			if network.IsConnectionClosed(err) {
 				logger.Info("[ loop ] Connection closed, quiting ReadFrom loop")
 				return
 			}
@@ -169,7 +169,7 @@ func (t *udpTransport) loop(ctx context.Context) {
 			continue
 		}
 
-		stats.Record(ctx, consensusv1.RecvSize.M(int64(n)))
+		stats.Record(ctx, network.RecvSize.M(int64(n)))
 		go t.handler.HandleDatagram(ctx, addr.String(), buf[:n])
 	}
 }
@@ -184,7 +184,7 @@ func (t *udpTransport) Stop(ctx context.Context) error {
 		t.cancel()
 		err := t.conn.Close()
 		if err != nil {
-			if !utils.IsConnectionClosed(err) {
+			if !network.IsConnectionClosed(err) {
 				return err
 			}
 			logger.Error("[ Stop ] Connection already closed")

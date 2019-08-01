@@ -63,7 +63,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/utils"
 )
 
 type StateGetter interface {
@@ -94,7 +93,7 @@ func NewUpstreamPulseController(stateGetter StateGetter, pulseChanger PulseChang
 		stateUpdater: stateUpdater,
 
 		mu:         &sync.RWMutex{},
-		onFinished: func(report network.Report) {},
+		onFinished: func(ctx context.Context, report network.Report) {},
 	}
 }
 
@@ -127,10 +126,15 @@ func (u *UpstreamController) ConsensusFinished(report api.UpstreamReport, expect
 		expectedCensus.GetCloudStateHash().AsBytes(),
 	)
 
+	if _, pd := expectedCensus.GetNearestPulseData(); pd.IsFromEphemeral() {
+		// Fix bootstrap. Commit active list right after consensus finished
+		u.pulseChanger.ChangePulse(ctx, NewPulse(pd))
+	}
+
 	u.mu.RLock()
 	defer u.mu.RUnlock()
 
-	u.onFinished(network.Report{
+	u.onFinished(ctx, network.Report{
 		PulseNumber:     insolar.PulseNumber(report.PulseNumber),
 		MemberPower:     report.MemberPower,
 		MemberMode:      report.MemberMode,
@@ -172,5 +176,5 @@ func awaitState(c chan<- api.UpstreamState, stater StateGetter) {
 }
 
 func contextFromReport(report api.UpstreamReport) context.Context {
-	return utils.NewPulseContext(context.Background(), uint32(report.PulseNumber))
+	return network.NewPulseContext(context.Background(), uint32(report.PulseNumber))
 }

@@ -269,7 +269,7 @@ func (e EmuEphemeralFeeder) OnNonEphemeralPacket(ctx context.Context, parser tra
 	return nil
 }
 
-func (e EmuEphemeralFeeder) TryConvertFromEphemeral(expected census.Expected) (wasConverted bool, converted census.Expected) {
+func (e EmuEphemeralFeeder) TryConvertFromEphemeral(ctx context.Context, expected census.Expected) (wasConverted bool, converted census.Expected) {
 	return false, nil
 }
 

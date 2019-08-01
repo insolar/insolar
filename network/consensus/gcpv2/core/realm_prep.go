@@ -91,9 +91,9 @@ type PrepRealm struct {
 
 	/* Other fields - need mutex */
 
-	limiters            sync.Map
-	lastCloudStateHash  cryptkit.DigestHolder
-	deactivateEphemeral bool
+	limiters                sync.Map
+	lastCloudStateHash      cryptkit.DigestHolder
+	disableEphemeralPolling bool //blocks polling
 }
 
 func (p *PrepRealm) init(completeFn func(successful bool)) {
@@ -243,7 +243,7 @@ func (p *PrepRealm) pushEphemeralPulse(ctx context.Context) bool {
 	p.Lock()
 	defer p.Unlock()
 
-	if p.deactivateEphemeral {
+	if p.disableEphemeralPolling {
 		return false // ephemeral mode was deactivated
 	}
 
@@ -288,12 +288,15 @@ func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bo
 	if pde.GetPulseData() != pd {
 		return fmt.Errorf("pulse data and pulse data evidence are mismatched: %v, %v", pd, pde)
 	}
+	if pd.IsEmpty() {
+		return fmt.Errorf("pulse data is empty: %v", pd)
+	}
 
 	p.Lock()
 	defer p.Unlock()
 
 	ok, epn := p._applyPulseData(pde, fromPulsar)
-	if ok || !epn.IsUnknown() && epn == pn {
+	if ok || epn == pn {
 		return nil
 	}
 
@@ -321,7 +324,7 @@ func (p *PrepRealm) _applyPulseData(pdp proofs.OriginalPulsarPacket, fromPulsar 
 	}
 
 	if !valid {
-		return false, pulse.Unknown
+		return false, pulse.Unknown // TODO improve logging on mismatch cases
 	}
 
 	switch {
@@ -329,21 +332,20 @@ func (p *PrepRealm) _applyPulseData(pdp proofs.OriginalPulsarPacket, fromPulsar 
 		if fromPulsar { // we cant receive pulsar packets directly from pulsars when ephemeral
 			panic("illegal state")
 		}
-		if p.ephemeralFeeder.CanAcceptTimePulseToStopEphemeral(pd) {
-			p.deactivateEphemeral = true
-			panic("not implemented")
+		if !p.ephemeralFeeder.CanAcceptTimePulseToStopEphemeral(pd) {
+			return false, pulse.Unknown
 		}
-		fallthrough
+		p.disableEphemeralPolling = true
+		// real pulse can't be validated vs ephemeral pulse
 	default:
 		epn := pulse.Unknown
-		if p.initialCensus.GetCensusState() == census.PrimingCensus || p.initialCensus.IsActive() {
+		if p.initialCensus.IsActive() {
 			epn = p.initialCensus.GetExpectedPulseNumber()
 		} else {
 			epn = p.initialCensus.GetPulseNumber()
 		}
 
-		pn := pd.PulseNumber // it can't be zero as pulseData was validated above
-		if !epn.IsUnknown() && epn != pn {
+		if !epn.IsUnknownOrEqualTo(pd.PulseNumber) {
 			return false, epn
 		}
 	}

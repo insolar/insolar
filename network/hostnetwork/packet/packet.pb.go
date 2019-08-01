@@ -10,7 +10,7 @@ import (
 	proto "github.com/gogo/protobuf/proto"
 	github_com_insolar_insolar_insolar "github.com/insolar/insolar/insolar"
 	pulse "github.com/insolar/insolar/insolar/pulse"
-	github_com_insolar_insolar_network_consensusv1_packets "github.com/insolar/insolar/network/consensusv1/packets"
+	candidate "github.com/insolar/insolar/network/consensus/adapters/candidate"
 	github_com_insolar_insolar_network_hostnetwork_host "github.com/insolar/insolar/network/hostnetwork/host"
 	io "io"
 	math "math"
@@ -30,57 +30,57 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
-type ResponseCode int32
+type BootstrapResponseCode int32
 
 const (
-	Accepted          ResponseCode = 0
-	Rejected          ResponseCode = 1
-	Redirected        ResponseCode = 2
-	ReconnectRequired ResponseCode = 3
-	UpdateSchedule    ResponseCode = 4
+	Accepted       BootstrapResponseCode = 0
+	UpdateSchedule BootstrapResponseCode = 1
+	UpdateShortID  BootstrapResponseCode = 2
+	Reject         BootstrapResponseCode = 3
 )
 
-var ResponseCode_name = map[int32]string{
+var BootstrapResponseCode_name = map[int32]string{
 	0: "Accepted",
-	1: "Rejected",
-	2: "Redirected",
-	3: "ReconnectRequired",
-	4: "UpdateSchedule",
+	1: "UpdateSchedule",
+	2: "UpdateShortID",
+	3: "Reject",
 }
 
-var ResponseCode_value = map[string]int32{
-	"Accepted":          0,
-	"Rejected":          1,
-	"Redirected":        2,
-	"ReconnectRequired": 3,
-	"UpdateSchedule":    4,
+var BootstrapResponseCode_value = map[string]int32{
+	"Accepted":       0,
+	"UpdateSchedule": 1,
+	"UpdateShortID":  2,
+	"Reject":         3,
 }
 
-func (ResponseCode) EnumDescriptor() ([]byte, []int) {
+func (BootstrapResponseCode) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_c3f826366adfd81c, []int{0}
 }
 
-type BasicResponseCode int32
+type AuthorizeResponseCode int32
 
 const (
-	Confirmed BasicResponseCode = 0
-	Denied    BasicResponseCode = 1
-	Retry     BasicResponseCode = 2
+	Success        AuthorizeResponseCode = 0
+	WrongTimestamp AuthorizeResponseCode = 2
+	WrongMandate   AuthorizeResponseCode = 3
+	WrongVersion   AuthorizeResponseCode = 4
 )
 
-var BasicResponseCode_name = map[int32]string{
-	0: "Confirmed",
-	1: "Denied",
-	2: "Retry",
+var AuthorizeResponseCode_name = map[int32]string{
+	0: "Success",
+	2: "WrongTimestamp",
+	3: "WrongMandate",
+	4: "WrongVersion",
 }
 
-var BasicResponseCode_value = map[string]int32{
-	"Confirmed": 0,
-	"Denied":    1,
-	"Retry":     2,
+var AuthorizeResponseCode_value = map[string]int32{
+	"Success":        0,
+	"WrongTimestamp": 2,
+	"WrongMandate":   3,
+	"WrongVersion":   4,
 }
 
-func (BasicResponseCode) EnumDescriptor() ([]byte, []int) {
+func (AuthorizeResponseCode) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_c3f826366adfd81c, []int{1}
 }
 
@@ -249,9 +249,9 @@ type Request struct {
 	//	*Request_Pulse
 	//	*Request_Bootstrap
 	//	*Request_Authorize
-	//	*Request_Register
-	//	*Request_Genesis
 	//	*Request_SignCert
+	//	*Request_UpdateSchedule
+	//	*Request_Reconnect
 	Request isRequest_Request `protobuf_oneof:"Request"`
 }
 
@@ -312,25 +312,25 @@ type Request_Bootstrap struct {
 type Request_Authorize struct {
 	Authorize *AuthorizeRequest `protobuf:"bytes,6,opt,name=Authorize,proto3,oneof"`
 }
-type Request_Register struct {
-	Register *RegisterRequest `protobuf:"bytes,7,opt,name=Register,proto3,oneof"`
-}
-type Request_Genesis struct {
-	Genesis *GenesisRequest `protobuf:"bytes,8,opt,name=Genesis,proto3,oneof"`
-}
 type Request_SignCert struct {
-	SignCert *SignCertRequest `protobuf:"bytes,9,opt,name=SignCert,proto3,oneof"`
+	SignCert *SignCertRequest `protobuf:"bytes,7,opt,name=SignCert,proto3,oneof"`
+}
+type Request_UpdateSchedule struct {
+	UpdateSchedule *UpdateScheduleRequest `protobuf:"bytes,8,opt,name=UpdateSchedule,proto3,oneof"`
+}
+type Request_Reconnect struct {
+	Reconnect *ReconnectRequest `protobuf:"bytes,9,opt,name=Reconnect,proto3,oneof"`
 }
 
-func (*Request_Ping) isRequest_Request()      {}
-func (*Request_RPC) isRequest_Request()       {}
-func (*Request_Cascade) isRequest_Request()   {}
-func (*Request_Pulse) isRequest_Request()     {}
-func (*Request_Bootstrap) isRequest_Request() {}
-func (*Request_Authorize) isRequest_Request() {}
-func (*Request_Register) isRequest_Request()  {}
-func (*Request_Genesis) isRequest_Request()   {}
-func (*Request_SignCert) isRequest_Request()  {}
+func (*Request_Ping) isRequest_Request()           {}
+func (*Request_RPC) isRequest_Request()            {}
+func (*Request_Cascade) isRequest_Request()        {}
+func (*Request_Pulse) isRequest_Request()          {}
+func (*Request_Bootstrap) isRequest_Request()      {}
+func (*Request_Authorize) isRequest_Request()      {}
+func (*Request_SignCert) isRequest_Request()       {}
+func (*Request_UpdateSchedule) isRequest_Request() {}
+func (*Request_Reconnect) isRequest_Request()      {}
 
 func (m *Request) GetRequest() isRequest_Request {
 	if m != nil {
@@ -381,23 +381,23 @@ func (m *Request) GetAuthorize() *AuthorizeRequest {
 	return nil
 }
 
-func (m *Request) GetRegister() *RegisterRequest {
-	if x, ok := m.GetRequest().(*Request_Register); ok {
-		return x.Register
-	}
-	return nil
-}
-
-func (m *Request) GetGenesis() *GenesisRequest {
-	if x, ok := m.GetRequest().(*Request_Genesis); ok {
-		return x.Genesis
-	}
-	return nil
-}
-
 func (m *Request) GetSignCert() *SignCertRequest {
 	if x, ok := m.GetRequest().(*Request_SignCert); ok {
 		return x.SignCert
+	}
+	return nil
+}
+
+func (m *Request) GetUpdateSchedule() *UpdateScheduleRequest {
+	if x, ok := m.GetRequest().(*Request_UpdateSchedule); ok {
+		return x.UpdateSchedule
+	}
+	return nil
+}
+
+func (m *Request) GetReconnect() *ReconnectRequest {
+	if x, ok := m.GetRequest().(*Request_Reconnect); ok {
+		return x.Reconnect
 	}
 	return nil
 }
@@ -411,9 +411,9 @@ func (*Request) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error
 		(*Request_Pulse)(nil),
 		(*Request_Bootstrap)(nil),
 		(*Request_Authorize)(nil),
-		(*Request_Register)(nil),
-		(*Request_Genesis)(nil),
 		(*Request_SignCert)(nil),
+		(*Request_UpdateSchedule)(nil),
+		(*Request_Reconnect)(nil),
 	}
 }
 
@@ -451,19 +451,19 @@ func _Request_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 		if err := b.EncodeMessage(x.Authorize); err != nil {
 			return err
 		}
-	case *Request_Register:
-		_ = b.EncodeVarint(7<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Register); err != nil {
-			return err
-		}
-	case *Request_Genesis:
-		_ = b.EncodeVarint(8<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Genesis); err != nil {
-			return err
-		}
 	case *Request_SignCert:
-		_ = b.EncodeVarint(9<<3 | proto.WireBytes)
+		_ = b.EncodeVarint(7<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.SignCert); err != nil {
+			return err
+		}
+	case *Request_UpdateSchedule:
+		_ = b.EncodeVarint(8<<3 | proto.WireBytes)
+		if err := b.EncodeMessage(x.UpdateSchedule); err != nil {
+			return err
+		}
+	case *Request_Reconnect:
+		_ = b.EncodeVarint(9<<3 | proto.WireBytes)
+		if err := b.EncodeMessage(x.Reconnect); err != nil {
 			return err
 		}
 	case nil:
@@ -524,29 +524,29 @@ func _Request_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer
 		err := b.DecodeMessage(msg)
 		m.Request = &Request_Authorize{msg}
 		return true, err
-	case 7: // Request.Register
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(RegisterRequest)
-		err := b.DecodeMessage(msg)
-		m.Request = &Request_Register{msg}
-		return true, err
-	case 8: // Request.Genesis
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(GenesisRequest)
-		err := b.DecodeMessage(msg)
-		m.Request = &Request_Genesis{msg}
-		return true, err
-	case 9: // Request.SignCert
+	case 7: // Request.SignCert
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
 		msg := new(SignCertRequest)
 		err := b.DecodeMessage(msg)
 		m.Request = &Request_SignCert{msg}
+		return true, err
+	case 8: // Request.UpdateSchedule
+		if wire != proto.WireBytes {
+			return true, proto.ErrInternalBadWireType
+		}
+		msg := new(UpdateScheduleRequest)
+		err := b.DecodeMessage(msg)
+		m.Request = &Request_UpdateSchedule{msg}
+		return true, err
+	case 9: // Request.Reconnect
+		if wire != proto.WireBytes {
+			return true, proto.ErrInternalBadWireType
+		}
+		msg := new(ReconnectRequest)
+		err := b.DecodeMessage(msg)
+		m.Request = &Request_Reconnect{msg}
 		return true, err
 	default:
 		return false, nil
@@ -587,18 +587,18 @@ func _Request_OneofSizer(msg proto.Message) (n int) {
 		n += 1 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
-	case *Request_Register:
-		s := proto.Size(x.Register)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *Request_Genesis:
-		s := proto.Size(x.Genesis)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
 	case *Request_SignCert:
 		s := proto.Size(x.SignCert)
+		n += 1 // tag and wire
+		n += proto.SizeVarint(uint64(s))
+		n += s
+	case *Request_UpdateSchedule:
+		s := proto.Size(x.UpdateSchedule)
+		n += 1 // tag and wire
+		n += proto.SizeVarint(uint64(s))
+		n += s
+	case *Request_Reconnect:
+		s := proto.Size(x.Reconnect)
 		n += 1 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
@@ -616,10 +616,10 @@ type Response struct {
 	//	*Response_Basic
 	//	*Response_Bootstrap
 	//	*Response_Authorize
-	//	*Response_Register
-	//	*Response_Genesis
 	//	*Response_SignCert
 	//	*Response_Error
+	//	*Response_UpdateSchedule
+	//	*Response_Reconnect
 	Response isResponse_Response `protobuf_oneof:"Response"`
 }
 
@@ -677,28 +677,28 @@ type Response_Bootstrap struct {
 type Response_Authorize struct {
 	Authorize *AuthorizeResponse `protobuf:"bytes,5,opt,name=Authorize,proto3,oneof"`
 }
-type Response_Register struct {
-	Register *RegisterResponse `protobuf:"bytes,6,opt,name=Register,proto3,oneof"`
-}
-type Response_Genesis struct {
-	Genesis *GenesisResponse `protobuf:"bytes,7,opt,name=Genesis,proto3,oneof"`
-}
 type Response_SignCert struct {
-	SignCert *SignCertResponse `protobuf:"bytes,8,opt,name=SignCert,proto3,oneof"`
+	SignCert *SignCertResponse `protobuf:"bytes,6,opt,name=SignCert,proto3,oneof"`
 }
 type Response_Error struct {
-	Error *ErrorResponse `protobuf:"bytes,9,opt,name=Error,proto3,oneof"`
+	Error *ErrorResponse `protobuf:"bytes,7,opt,name=Error,proto3,oneof"`
+}
+type Response_UpdateSchedule struct {
+	UpdateSchedule *UpdateScheduleResponse `protobuf:"bytes,8,opt,name=UpdateSchedule,proto3,oneof"`
+}
+type Response_Reconnect struct {
+	Reconnect *ReconnectResponse `protobuf:"bytes,9,opt,name=Reconnect,proto3,oneof"`
 }
 
-func (*Response_Ping) isResponse_Response()      {}
-func (*Response_RPC) isResponse_Response()       {}
-func (*Response_Basic) isResponse_Response()     {}
-func (*Response_Bootstrap) isResponse_Response() {}
-func (*Response_Authorize) isResponse_Response() {}
-func (*Response_Register) isResponse_Response()  {}
-func (*Response_Genesis) isResponse_Response()   {}
-func (*Response_SignCert) isResponse_Response()  {}
-func (*Response_Error) isResponse_Response()     {}
+func (*Response_Ping) isResponse_Response()           {}
+func (*Response_RPC) isResponse_Response()            {}
+func (*Response_Basic) isResponse_Response()          {}
+func (*Response_Bootstrap) isResponse_Response()      {}
+func (*Response_Authorize) isResponse_Response()      {}
+func (*Response_SignCert) isResponse_Response()       {}
+func (*Response_Error) isResponse_Response()          {}
+func (*Response_UpdateSchedule) isResponse_Response() {}
+func (*Response_Reconnect) isResponse_Response()      {}
 
 func (m *Response) GetResponse() isResponse_Response {
 	if m != nil {
@@ -742,20 +742,6 @@ func (m *Response) GetAuthorize() *AuthorizeResponse {
 	return nil
 }
 
-func (m *Response) GetRegister() *RegisterResponse {
-	if x, ok := m.GetResponse().(*Response_Register); ok {
-		return x.Register
-	}
-	return nil
-}
-
-func (m *Response) GetGenesis() *GenesisResponse {
-	if x, ok := m.GetResponse().(*Response_Genesis); ok {
-		return x.Genesis
-	}
-	return nil
-}
-
 func (m *Response) GetSignCert() *SignCertResponse {
 	if x, ok := m.GetResponse().(*Response_SignCert); ok {
 		return x.SignCert
@@ -770,6 +756,20 @@ func (m *Response) GetError() *ErrorResponse {
 	return nil
 }
 
+func (m *Response) GetUpdateSchedule() *UpdateScheduleResponse {
+	if x, ok := m.GetResponse().(*Response_UpdateSchedule); ok {
+		return x.UpdateSchedule
+	}
+	return nil
+}
+
+func (m *Response) GetReconnect() *ReconnectResponse {
+	if x, ok := m.GetResponse().(*Response_Reconnect); ok {
+		return x.Reconnect
+	}
+	return nil
+}
+
 // XXX_OneofFuncs is for the internal use of the proto package.
 func (*Response) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
 	return _Response_OneofMarshaler, _Response_OneofUnmarshaler, _Response_OneofSizer, []interface{}{
@@ -778,10 +778,10 @@ func (*Response) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) erro
 		(*Response_Basic)(nil),
 		(*Response_Bootstrap)(nil),
 		(*Response_Authorize)(nil),
-		(*Response_Register)(nil),
-		(*Response_Genesis)(nil),
 		(*Response_SignCert)(nil),
 		(*Response_Error)(nil),
+		(*Response_UpdateSchedule)(nil),
+		(*Response_Reconnect)(nil),
 	}
 }
 
@@ -814,24 +814,24 @@ func _Response_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 		if err := b.EncodeMessage(x.Authorize); err != nil {
 			return err
 		}
-	case *Response_Register:
-		_ = b.EncodeVarint(6<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Register); err != nil {
-			return err
-		}
-	case *Response_Genesis:
-		_ = b.EncodeVarint(7<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Genesis); err != nil {
-			return err
-		}
 	case *Response_SignCert:
-		_ = b.EncodeVarint(8<<3 | proto.WireBytes)
+		_ = b.EncodeVarint(6<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.SignCert); err != nil {
 			return err
 		}
 	case *Response_Error:
-		_ = b.EncodeVarint(9<<3 | proto.WireBytes)
+		_ = b.EncodeVarint(7<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Error); err != nil {
+			return err
+		}
+	case *Response_UpdateSchedule:
+		_ = b.EncodeVarint(8<<3 | proto.WireBytes)
+		if err := b.EncodeMessage(x.UpdateSchedule); err != nil {
+			return err
+		}
+	case *Response_Reconnect:
+		_ = b.EncodeVarint(9<<3 | proto.WireBytes)
+		if err := b.EncodeMessage(x.Reconnect); err != nil {
 			return err
 		}
 	case nil:
@@ -884,23 +884,7 @@ func _Response_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffe
 		err := b.DecodeMessage(msg)
 		m.Response = &Response_Authorize{msg}
 		return true, err
-	case 6: // Response.Register
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(RegisterResponse)
-		err := b.DecodeMessage(msg)
-		m.Response = &Response_Register{msg}
-		return true, err
-	case 7: // Response.Genesis
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(GenesisResponse)
-		err := b.DecodeMessage(msg)
-		m.Response = &Response_Genesis{msg}
-		return true, err
-	case 8: // Response.SignCert
+	case 6: // Response.SignCert
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
@@ -908,13 +892,29 @@ func _Response_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffe
 		err := b.DecodeMessage(msg)
 		m.Response = &Response_SignCert{msg}
 		return true, err
-	case 9: // Response.Error
+	case 7: // Response.Error
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
 		msg := new(ErrorResponse)
 		err := b.DecodeMessage(msg)
 		m.Response = &Response_Error{msg}
+		return true, err
+	case 8: // Response.UpdateSchedule
+		if wire != proto.WireBytes {
+			return true, proto.ErrInternalBadWireType
+		}
+		msg := new(UpdateScheduleResponse)
+		err := b.DecodeMessage(msg)
+		m.Response = &Response_UpdateSchedule{msg}
+		return true, err
+	case 9: // Response.Reconnect
+		if wire != proto.WireBytes {
+			return true, proto.ErrInternalBadWireType
+		}
+		msg := new(ReconnectResponse)
+		err := b.DecodeMessage(msg)
+		m.Response = &Response_Reconnect{msg}
 		return true, err
 	default:
 		return false, nil
@@ -950,16 +950,6 @@ func _Response_OneofSizer(msg proto.Message) (n int) {
 		n += 1 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
-	case *Response_Register:
-		s := proto.Size(x.Register)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *Response_Genesis:
-		s := proto.Size(x.Genesis)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
 	case *Response_SignCert:
 		s := proto.Size(x.SignCert)
 		n += 1 // tag and wire
@@ -967,6 +957,16 @@ func _Response_OneofSizer(msg proto.Message) (n int) {
 		n += s
 	case *Response_Error:
 		s := proto.Size(x.Error)
+		n += 1 // tag and wire
+		n += proto.SizeVarint(uint64(s))
+		n += s
+	case *Response_UpdateSchedule:
+		s := proto.Size(x.UpdateSchedule)
+		n += 1 // tag and wire
+		n += proto.SizeVarint(uint64(s))
+		n += s
+	case *Response_Reconnect:
+		s := proto.Size(x.Reconnect)
 		n += 1 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
@@ -1162,16 +1162,90 @@ func (m *PulseRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_PulseRequest proto.InternalMessageInfo
 
+type UpdateScheduleRequest struct {
+	LastNodePulse github_com_insolar_insolar_insolar.PulseNumber `protobuf:"varint,1,opt,name=LastNodePulse,proto3,customtype=github.com/insolar/insolar/insolar.PulseNumber" json:"LastNodePulse"`
+	Permit        *Permit                                        `protobuf:"bytes,2,opt,name=Permit,proto3" json:"Permit,omitempty"`
+}
+
+func (m *UpdateScheduleRequest) Reset()      { *m = UpdateScheduleRequest{} }
+func (*UpdateScheduleRequest) ProtoMessage() {}
+func (*UpdateScheduleRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c3f826366adfd81c, []int{8}
+}
+func (m *UpdateScheduleRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *UpdateScheduleRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_UpdateScheduleRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *UpdateScheduleRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_UpdateScheduleRequest.Merge(m, src)
+}
+func (m *UpdateScheduleRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *UpdateScheduleRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_UpdateScheduleRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_UpdateScheduleRequest proto.InternalMessageInfo
+
+type ReconnectRequest struct {
+	ReconnectTo github_com_insolar_insolar_network_hostnetwork_host.Host `protobuf:"bytes,1,opt,name=ReconnectTo,proto3,customtype=github.com/insolar/insolar/network/hostnetwork/host.Host" json:"ReconnectTo"`
+	Permit      *Permit                                                  `protobuf:"bytes,2,opt,name=Permit,proto3" json:"Permit,omitempty"`
+}
+
+func (m *ReconnectRequest) Reset()      { *m = ReconnectRequest{} }
+func (*ReconnectRequest) ProtoMessage() {}
+func (*ReconnectRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c3f826366adfd81c, []int{9}
+}
+func (m *ReconnectRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ReconnectRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ReconnectRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ReconnectRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ReconnectRequest.Merge(m, src)
+}
+func (m *ReconnectRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *ReconnectRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ReconnectRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ReconnectRequest proto.InternalMessageInfo
+
 type BootstrapRequest struct {
-	JoinClaim     *github_com_insolar_insolar_network_consensusv1_packets.NodeJoinClaim `protobuf:"bytes,1,opt,name=JoinClaim,proto3,customtype=github.com/insolar/insolar/network/consensusv1/packets.NodeJoinClaim" json:"JoinClaim,omitempty"`
-	LastNodePulse github_com_insolar_insolar_insolar.PulseNumber                        `protobuf:"varint,2,opt,name=LastNodePulse,proto3,customtype=github.com/insolar/insolar/insolar.PulseNumber" json:"LastNodePulse"`
-	Permission    *Permission                                                           `protobuf:"bytes,3,opt,name=Permission,proto3" json:"Permission,omitempty"`
+	CandidateProfile candidate.Profile `protobuf:"bytes,2,opt,name=CandidateProfile,proto3" json:"CandidateProfile"`
+	Pulse            pulse.PulseProto  `protobuf:"bytes,3,opt,name=Pulse,proto3" json:"Pulse"`
+	Permit           *Permit           `protobuf:"bytes,4,opt,name=Permit,proto3" json:"Permit,omitempty"`
 }
 
 func (m *BootstrapRequest) Reset()      { *m = BootstrapRequest{} }
 func (*BootstrapRequest) ProtoMessage() {}
 func (*BootstrapRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c3f826366adfd81c, []int{8}
+	return fileDescriptor_c3f826366adfd81c, []int{10}
 }
 func (m *BootstrapRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1200,14 +1274,53 @@ func (m *BootstrapRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_BootstrapRequest proto.InternalMessageInfo
 
-type AuthorizeRequest struct {
+type AuthorizeData struct {
 	Certificate []byte `protobuf:"bytes,1,opt,name=Certificate,proto3" json:"Certificate,omitempty"`
+	Timestamp   int64  `protobuf:"varint,2,opt,name=Timestamp,proto3" json:"Timestamp,omitempty"`
+	Version     string `protobuf:"bytes,3,opt,name=Version,proto3" json:"Version,omitempty"`
+}
+
+func (m *AuthorizeData) Reset()      { *m = AuthorizeData{} }
+func (*AuthorizeData) ProtoMessage() {}
+func (*AuthorizeData) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c3f826366adfd81c, []int{11}
+}
+func (m *AuthorizeData) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *AuthorizeData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_AuthorizeData.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *AuthorizeData) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AuthorizeData.Merge(m, src)
+}
+func (m *AuthorizeData) XXX_Size() int {
+	return m.Size()
+}
+func (m *AuthorizeData) XXX_DiscardUnknown() {
+	xxx_messageInfo_AuthorizeData.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AuthorizeData proto.InternalMessageInfo
+
+type AuthorizeRequest struct {
+	AuthorizeData *AuthorizeData `protobuf:"bytes,1,opt,name=AuthorizeData,proto3" json:"AuthorizeData,omitempty"`
+	Signature     []byte         `protobuf:"bytes,2,opt,name=Signature,proto3" json:"Signature,omitempty"`
 }
 
 func (m *AuthorizeRequest) Reset()      { *m = AuthorizeRequest{} }
 func (*AuthorizeRequest) ProtoMessage() {}
 func (*AuthorizeRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c3f826366adfd81c, []int{9}
+	return fileDescriptor_c3f826366adfd81c, []int{12}
 }
 func (m *AuthorizeRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1236,81 +1349,6 @@ func (m *AuthorizeRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_AuthorizeRequest proto.InternalMessageInfo
 
-type RegisterRequest struct {
-	SessionID uint64                                                                `protobuf:"varint,1,opt,name=SessionID,proto3" json:"SessionID,omitempty"`
-	Version   string                                                                `protobuf:"bytes,2,opt,name=Version,proto3" json:"Version,omitempty"`
-	JoinClaim *github_com_insolar_insolar_network_consensusv1_packets.NodeJoinClaim `protobuf:"bytes,3,opt,name=JoinClaim,proto3,customtype=github.com/insolar/insolar/network/consensusv1/packets.NodeJoinClaim" json:"JoinClaim,omitempty"`
-}
-
-func (m *RegisterRequest) Reset()      { *m = RegisterRequest{} }
-func (*RegisterRequest) ProtoMessage() {}
-func (*RegisterRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c3f826366adfd81c, []int{10}
-}
-func (m *RegisterRequest) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *RegisterRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_RegisterRequest.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *RegisterRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_RegisterRequest.Merge(m, src)
-}
-func (m *RegisterRequest) XXX_Size() int {
-	return m.Size()
-}
-func (m *RegisterRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_RegisterRequest.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_RegisterRequest proto.InternalMessageInfo
-
-type GenesisRequest struct {
-	LastPulse github_com_insolar_insolar_insolar.PulseNumber                        `protobuf:"varint,1,opt,name=LastPulse,proto3,customtype=github.com/insolar/insolar/insolar.PulseNumber" json:"LastPulse"`
-	Discovery *github_com_insolar_insolar_network_consensusv1_packets.NodeJoinClaim `protobuf:"bytes,2,opt,name=Discovery,proto3,customtype=github.com/insolar/insolar/network/consensusv1/packets.NodeJoinClaim" json:"Discovery,omitempty"`
-}
-
-func (m *GenesisRequest) Reset()      { *m = GenesisRequest{} }
-func (*GenesisRequest) ProtoMessage() {}
-func (*GenesisRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c3f826366adfd81c, []int{11}
-}
-func (m *GenesisRequest) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *GenesisRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_GenesisRequest.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *GenesisRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GenesisRequest.Merge(m, src)
-}
-func (m *GenesisRequest) XXX_Size() int {
-	return m.Size()
-}
-func (m *GenesisRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_GenesisRequest.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_GenesisRequest proto.InternalMessageInfo
-
 type SignCertRequest struct {
 	NodeRef github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,1,opt,name=NodeRef,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"NodeRef"`
 }
@@ -1318,7 +1356,7 @@ type SignCertRequest struct {
 func (m *SignCertRequest) Reset()      { *m = SignCertRequest{} }
 func (*SignCertRequest) ProtoMessage() {}
 func (*SignCertRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c3f826366adfd81c, []int{12}
+	return fileDescriptor_c3f826366adfd81c, []int{13}
 }
 func (m *SignCertRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1355,7 +1393,7 @@ type RPCResponse struct {
 func (m *RPCResponse) Reset()      { *m = RPCResponse{} }
 func (*RPCResponse) ProtoMessage() {}
 func (*RPCResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c3f826366adfd81c, []int{13}
+	return fileDescriptor_c3f826366adfd81c, []int{14}
 }
 func (m *RPCResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1384,61 +1422,22 @@ func (m *RPCResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_RPCResponse proto.InternalMessageInfo
 
-type Permission struct {
-	Payload   PermissionPayload `protobuf:"bytes,1,opt,name=Payload,proto3" json:"Payload"`
-	Signature []byte            `protobuf:"bytes,2,opt,name=Signature,proto3" json:"Signature,omitempty"`
+type Permit struct {
+	Payload   PermitPayload `protobuf:"bytes,1,opt,name=Payload,proto3" json:"Payload"`
+	Signature []byte        `protobuf:"bytes,2,opt,name=Signature,proto3" json:"Signature,omitempty"`
 }
 
-func (m *Permission) Reset()      { *m = Permission{} }
-func (*Permission) ProtoMessage() {}
-func (*Permission) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c3f826366adfd81c, []int{14}
-}
-func (m *Permission) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *Permission) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_Permission.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *Permission) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Permission.Merge(m, src)
-}
-func (m *Permission) XXX_Size() int {
-	return m.Size()
-}
-func (m *Permission) XXX_DiscardUnknown() {
-	xxx_messageInfo_Permission.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_Permission proto.InternalMessageInfo
-
-type PermissionPayload struct {
-	JoinerPublicKey []byte                                       `protobuf:"bytes,1,opt,name=JoinerPublicKey,proto3" json:"JoinerPublicKey,omitempty"`
-	UTC             int64                                        `protobuf:"varint,2,opt,name=UTC,proto3" json:"UTC,omitempty"`
-	ReconnectTo     string                                       `protobuf:"bytes,3,opt,name=ReconnectTo,proto3" json:"ReconnectTo,omitempty"`
-	DiscoveryRef    github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,4,opt,name=DiscoveryRef,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"DiscoveryRef"`
-}
-
-func (m *PermissionPayload) Reset()      { *m = PermissionPayload{} }
-func (*PermissionPayload) ProtoMessage() {}
-func (*PermissionPayload) Descriptor() ([]byte, []int) {
+func (m *Permit) Reset()      { *m = Permit{} }
+func (*Permit) ProtoMessage() {}
+func (*Permit) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c3f826366adfd81c, []int{15}
 }
-func (m *PermissionPayload) XXX_Unmarshal(b []byte) error {
+func (m *Permit) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *PermissionPayload) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *Permit) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_PermissionPayload.Marshal(b, m, deterministic)
+		return xxx_messageInfo_Permit.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalTo(b)
@@ -1448,33 +1447,67 @@ func (m *PermissionPayload) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		return b[:n], nil
 	}
 }
-func (m *PermissionPayload) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PermissionPayload.Merge(m, src)
+func (m *Permit) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Permit.Merge(m, src)
 }
-func (m *PermissionPayload) XXX_Size() int {
+func (m *Permit) XXX_Size() int {
 	return m.Size()
 }
-func (m *PermissionPayload) XXX_DiscardUnknown() {
-	xxx_messageInfo_PermissionPayload.DiscardUnknown(m)
+func (m *Permit) XXX_DiscardUnknown() {
+	xxx_messageInfo_Permit.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_PermissionPayload proto.InternalMessageInfo
+var xxx_messageInfo_Permit proto.InternalMessageInfo
+
+type PermitPayload struct {
+	JoinerPublicKey  []byte                                                    `protobuf:"bytes,1,opt,name=JoinerPublicKey,proto3" json:"JoinerPublicKey,omitempty"`
+	ExpireTimestamp  int64                                                     `protobuf:"varint,2,opt,name=ExpireTimestamp,proto3" json:"ExpireTimestamp,omitempty"`
+	ReconnectTo      *github_com_insolar_insolar_network_hostnetwork_host.Host `protobuf:"bytes,3,opt,name=ReconnectTo,proto3,customtype=github.com/insolar/insolar/network/hostnetwork/host.Host" json:"ReconnectTo,omitempty"`
+	AuthorityNodeRef github_com_insolar_insolar_insolar.Reference              `protobuf:"bytes,4,opt,name=AuthorityNodeRef,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"AuthorityNodeRef"`
+}
+
+func (m *PermitPayload) Reset()      { *m = PermitPayload{} }
+func (*PermitPayload) ProtoMessage() {}
+func (*PermitPayload) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c3f826366adfd81c, []int{16}
+}
+func (m *PermitPayload) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *PermitPayload) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_PermitPayload.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *PermitPayload) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PermitPayload.Merge(m, src)
+}
+func (m *PermitPayload) XXX_Size() int {
+	return m.Size()
+}
+func (m *PermitPayload) XXX_DiscardUnknown() {
+	xxx_messageInfo_PermitPayload.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PermitPayload proto.InternalMessageInfo
 
 type BootstrapResponse struct {
-	Code             ResponseCode                                   `protobuf:"varint,1,opt,name=Code,proto3,enum=packet.ResponseCode" json:"Code,omitempty"`
-	RejectReason     string                                         `protobuf:"bytes,2,opt,name=RejectReason,proto3" json:"RejectReason,omitempty"`
-	ETA              uint32                                         `protobuf:"varint,3,opt,name=ETA,proto3" json:"ETA,omitempty"`
-	AssignShortID    uint32                                         `protobuf:"varint,4,opt,name=AssignShortID,proto3" json:"AssignShortID,omitempty"`
-	UpdateSincePulse github_com_insolar_insolar_insolar.PulseNumber `protobuf:"varint,5,opt,name=UpdateSincePulse,proto3,customtype=github.com/insolar/insolar/insolar.PulseNumber" json:"UpdateSincePulse"`
-	RedirectHost     string                                         `protobuf:"bytes,6,opt,name=RedirectHost,proto3" json:"RedirectHost,omitempty"`
-	NetworkSize      uint32                                         `protobuf:"varint,7,opt,name=NetworkSize,proto3" json:"NetworkSize,omitempty"`
-	Permission       *Permission                                    `protobuf:"bytes,8,opt,name=Permission,proto3" json:"Permission,omitempty"`
+	Code  BootstrapResponseCode `protobuf:"varint,1,opt,name=Code,proto3,enum=packet.BootstrapResponseCode" json:"Code,omitempty"`
+	ETA   uint32                `protobuf:"varint,2,opt,name=ETA,proto3" json:"ETA,omitempty"`
+	Pulse pulse.PulseProto      `protobuf:"bytes,3,opt,name=Pulse,proto3" json:"Pulse"`
 }
 
 func (m *BootstrapResponse) Reset()      { *m = BootstrapResponse{} }
 func (*BootstrapResponse) ProtoMessage() {}
 func (*BootstrapResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c3f826366adfd81c, []int{16}
+	return fileDescriptor_c3f826366adfd81c, []int{17}
 }
 func (m *BootstrapResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1511,7 +1544,7 @@ type BasicResponse struct {
 func (m *BasicResponse) Reset()      { *m = BasicResponse{} }
 func (*BasicResponse) ProtoMessage() {}
 func (*BasicResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c3f826366adfd81c, []int{17}
+	return fileDescriptor_c3f826366adfd81c, []int{18}
 }
 func (m *BasicResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1541,15 +1574,18 @@ func (m *BasicResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_BasicResponse proto.InternalMessageInfo
 
 type AuthorizeResponse struct {
-	Code  BasicResponseCode  `protobuf:"varint,1,opt,name=Code,proto3,enum=packet.BasicResponseCode" json:"Code,omitempty"`
-	Error string             `protobuf:"bytes,2,opt,name=Error,proto3" json:"Error,omitempty"`
-	Data  *AuthorizationData `protobuf:"bytes,3,opt,name=Data,proto3" json:"Data,omitempty"`
+	Code           AuthorizeResponseCode `protobuf:"varint,1,opt,name=Code,proto3,enum=packet.AuthorizeResponseCode" json:"Code,omitempty"`
+	Timestamp      int64                 `protobuf:"varint,2,opt,name=Timestamp,proto3" json:"Timestamp,omitempty"`
+	Error          string                `protobuf:"bytes,3,opt,name=Error,proto3" json:"Error,omitempty"`
+	Permit         *Permit               `protobuf:"bytes,4,opt,name=Permit,proto3" json:"Permit,omitempty"`
+	DiscoveryCount uint32                `protobuf:"varint,5,opt,name=DiscoveryCount,proto3" json:"DiscoveryCount,omitempty"`
+	Pulse          *pulse.PulseProto     `protobuf:"bytes,6,opt,name=Pulse,proto3" json:"Pulse,omitempty"`
 }
 
 func (m *AuthorizeResponse) Reset()      { *m = AuthorizeResponse{} }
 func (*AuthorizeResponse) ProtoMessage() {}
 func (*AuthorizeResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c3f826366adfd81c, []int{18}
+	return fileDescriptor_c3f826366adfd81c, []int{19}
 }
 func (m *AuthorizeResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1578,118 +1614,6 @@ func (m *AuthorizeResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_AuthorizeResponse proto.InternalMessageInfo
 
-type AuthorizationData struct {
-	SessionID     uint64 `protobuf:"varint,1,opt,name=SessionID,proto3" json:"SessionID,omitempty"`
-	AssignShortID uint32 `protobuf:"varint,2,opt,name=AssignShortID,proto3" json:"AssignShortID,omitempty"`
-}
-
-func (m *AuthorizationData) Reset()      { *m = AuthorizationData{} }
-func (*AuthorizationData) ProtoMessage() {}
-func (*AuthorizationData) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c3f826366adfd81c, []int{19}
-}
-func (m *AuthorizationData) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *AuthorizationData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_AuthorizationData.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *AuthorizationData) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_AuthorizationData.Merge(m, src)
-}
-func (m *AuthorizationData) XXX_Size() int {
-	return m.Size()
-}
-func (m *AuthorizationData) XXX_DiscardUnknown() {
-	xxx_messageInfo_AuthorizationData.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_AuthorizationData proto.InternalMessageInfo
-
-type RegisterResponse struct {
-	Code    BasicResponseCode `protobuf:"varint,1,opt,name=Code,proto3,enum=packet.BasicResponseCode" json:"Code,omitempty"`
-	RetryIn int64             `protobuf:"varint,2,opt,name=RetryIn,proto3" json:"RetryIn,omitempty"`
-	Error   string            `protobuf:"bytes,3,opt,name=Error,proto3" json:"Error,omitempty"`
-}
-
-func (m *RegisterResponse) Reset()      { *m = RegisterResponse{} }
-func (*RegisterResponse) ProtoMessage() {}
-func (*RegisterResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c3f826366adfd81c, []int{20}
-}
-func (m *RegisterResponse) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *RegisterResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_RegisterResponse.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *RegisterResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_RegisterResponse.Merge(m, src)
-}
-func (m *RegisterResponse) XXX_Size() int {
-	return m.Size()
-}
-func (m *RegisterResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_RegisterResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_RegisterResponse proto.InternalMessageInfo
-
-type GenesisResponse struct {
-	Response *GenesisRequest `protobuf:"bytes,1,opt,name=Response,proto3" json:"Response,omitempty"`
-	Error    string          `protobuf:"bytes,2,opt,name=Error,proto3" json:"Error,omitempty"`
-}
-
-func (m *GenesisResponse) Reset()      { *m = GenesisResponse{} }
-func (*GenesisResponse) ProtoMessage() {}
-func (*GenesisResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c3f826366adfd81c, []int{21}
-}
-func (m *GenesisResponse) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *GenesisResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_GenesisResponse.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *GenesisResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GenesisResponse.Merge(m, src)
-}
-func (m *GenesisResponse) XXX_Size() int {
-	return m.Size()
-}
-func (m *GenesisResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_GenesisResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_GenesisResponse proto.InternalMessageInfo
-
 type SignCertResponse struct {
 	Sign []byte `protobuf:"bytes,1,opt,name=Sign,proto3" json:"Sign,omitempty"`
 }
@@ -1697,7 +1621,7 @@ type SignCertResponse struct {
 func (m *SignCertResponse) Reset()      { *m = SignCertResponse{} }
 func (*SignCertResponse) ProtoMessage() {}
 func (*SignCertResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c3f826366adfd81c, []int{22}
+	return fileDescriptor_c3f826366adfd81c, []int{20}
 }
 func (m *SignCertResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1733,7 +1657,7 @@ type ErrorResponse struct {
 func (m *ErrorResponse) Reset()      { *m = ErrorResponse{} }
 func (*ErrorResponse) ProtoMessage() {}
 func (*ErrorResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c3f826366adfd81c, []int{23}
+	return fileDescriptor_c3f826366adfd81c, []int{21}
 }
 func (m *ErrorResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1762,9 +1686,79 @@ func (m *ErrorResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ErrorResponse proto.InternalMessageInfo
 
+type UpdateScheduleResponse struct {
+}
+
+func (m *UpdateScheduleResponse) Reset()      { *m = UpdateScheduleResponse{} }
+func (*UpdateScheduleResponse) ProtoMessage() {}
+func (*UpdateScheduleResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c3f826366adfd81c, []int{22}
+}
+func (m *UpdateScheduleResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *UpdateScheduleResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_UpdateScheduleResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *UpdateScheduleResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_UpdateScheduleResponse.Merge(m, src)
+}
+func (m *UpdateScheduleResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *UpdateScheduleResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_UpdateScheduleResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_UpdateScheduleResponse proto.InternalMessageInfo
+
+type ReconnectResponse struct {
+}
+
+func (m *ReconnectResponse) Reset()      { *m = ReconnectResponse{} }
+func (*ReconnectResponse) ProtoMessage() {}
+func (*ReconnectResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c3f826366adfd81c, []int{23}
+}
+func (m *ReconnectResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ReconnectResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ReconnectResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ReconnectResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ReconnectResponse.Merge(m, src)
+}
+func (m *ReconnectResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *ReconnectResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ReconnectResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ReconnectResponse proto.InternalMessageInfo
+
 func init() {
-	proto.RegisterEnum("packet.ResponseCode", ResponseCode_name, ResponseCode_value)
-	proto.RegisterEnum("packet.BasicResponseCode", BasicResponseCode_name, BasicResponseCode_value)
+	proto.RegisterEnum("packet.BootstrapResponseCode", BootstrapResponseCode_name, BootstrapResponseCode_value)
+	proto.RegisterEnum("packet.AuthorizeResponseCode", AuthorizeResponseCode_name, AuthorizeResponseCode_value)
 	proto.RegisterType((*Packet)(nil), "packet.Packet")
 	proto.RegisterType((*Request)(nil), "packet.Request")
 	proto.RegisterType((*Response)(nil), "packet.Response")
@@ -1773,22 +1767,22 @@ func init() {
 	proto.RegisterType((*Cascade)(nil), "packet.Cascade")
 	proto.RegisterType((*CascadeRequest)(nil), "packet.CascadeRequest")
 	proto.RegisterType((*PulseRequest)(nil), "packet.PulseRequest")
+	proto.RegisterType((*UpdateScheduleRequest)(nil), "packet.UpdateScheduleRequest")
+	proto.RegisterType((*ReconnectRequest)(nil), "packet.ReconnectRequest")
 	proto.RegisterType((*BootstrapRequest)(nil), "packet.BootstrapRequest")
+	proto.RegisterType((*AuthorizeData)(nil), "packet.AuthorizeData")
 	proto.RegisterType((*AuthorizeRequest)(nil), "packet.AuthorizeRequest")
-	proto.RegisterType((*RegisterRequest)(nil), "packet.RegisterRequest")
-	proto.RegisterType((*GenesisRequest)(nil), "packet.GenesisRequest")
 	proto.RegisterType((*SignCertRequest)(nil), "packet.SignCertRequest")
 	proto.RegisterType((*RPCResponse)(nil), "packet.RPCResponse")
-	proto.RegisterType((*Permission)(nil), "packet.Permission")
-	proto.RegisterType((*PermissionPayload)(nil), "packet.PermissionPayload")
+	proto.RegisterType((*Permit)(nil), "packet.Permit")
+	proto.RegisterType((*PermitPayload)(nil), "packet.PermitPayload")
 	proto.RegisterType((*BootstrapResponse)(nil), "packet.BootstrapResponse")
 	proto.RegisterType((*BasicResponse)(nil), "packet.BasicResponse")
 	proto.RegisterType((*AuthorizeResponse)(nil), "packet.AuthorizeResponse")
-	proto.RegisterType((*AuthorizationData)(nil), "packet.AuthorizationData")
-	proto.RegisterType((*RegisterResponse)(nil), "packet.RegisterResponse")
-	proto.RegisterType((*GenesisResponse)(nil), "packet.GenesisResponse")
 	proto.RegisterType((*SignCertResponse)(nil), "packet.SignCertResponse")
 	proto.RegisterType((*ErrorResponse)(nil), "packet.ErrorResponse")
+	proto.RegisterType((*UpdateScheduleResponse)(nil), "packet.UpdateScheduleResponse")
+	proto.RegisterType((*ReconnectResponse)(nil), "packet.ReconnectResponse")
 }
 
 func init() {
@@ -1796,116 +1790,111 @@ func init() {
 }
 
 var fileDescriptor_c3f826366adfd81c = []byte{
-	// 1557 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x58, 0x4f, 0x6f, 0xdb, 0xc6,
-	0x12, 0x17, 0x2d, 0x59, 0xb2, 0x26, 0x92, 0x4d, 0xef, 0xcb, 0x1f, 0x3a, 0x78, 0xa0, 0x05, 0x22,
-	0x2f, 0xd1, 0xcb, 0x4b, 0x94, 0x57, 0x27, 0x0d, 0x62, 0x34, 0x40, 0x61, 0xd9, 0x69, 0xed, 0x34,
-	0x35, 0x84, 0x95, 0xd3, 0x06, 0x68, 0x7b, 0xa0, 0xc9, 0xb5, 0xcc, 0x46, 0xe6, 0x2a, 0x4b, 0x2a,
-	0x85, 0xdb, 0x4b, 0x6f, 0x05, 0x8a, 0x1e, 0xfa, 0x31, 0x7a, 0xed, 0xb7, 0x08, 0x50, 0xa0, 0x48,
-	0x6f, 0x81, 0x51, 0x18, 0xb5, 0x73, 0xe9, 0x31, 0xb7, 0xf6, 0x58, 0xec, 0x72, 0xc9, 0x5d, 0x4a,
-	0x4e, 0xe2, 0x26, 0xe9, 0xc5, 0xda, 0xfd, 0xed, 0xcc, 0xec, 0xee, 0xfc, 0x66, 0x66, 0x87, 0x86,
-	0x0b, 0x21, 0x89, 0xbf, 0xa0, 0xec, 0xfe, 0x95, 0x6d, 0x1a, 0xc5, 0xe9, 0x78, 0xe0, 0x7a, 0xf7,
-	0x49, 0x2c, 0x7f, 0x5a, 0x03, 0x46, 0x63, 0x8a, 0xca, 0xc9, 0xec, 0xec, 0xe5, 0x5e, 0x10, 0x6f,
-	0x0f, 0x37, 0x5b, 0x1e, 0xdd, 0xb9, 0xd2, 0xa3, 0x3d, 0x7a, 0x45, 0x2c, 0x6f, 0x0e, 0xb7, 0xc4,
-	0x4c, 0x4c, 0xc4, 0x28, 0x51, 0x3b, 0x7b, 0x4d, 0x13, 0x0f, 0xc2, 0x88, 0xf6, 0x5d, 0x36, 0xf6,
-	0x3b, 0x18, 0xf6, 0x23, 0x92, 0xfc, 0x4d, 0xb4, 0x9c, 0x6f, 0x8b, 0x50, 0xee, 0x88, 0xfd, 0xd0,
-	0xbf, 0xa1, 0x3a, 0xa0, 0xfd, 0xdd, 0x1d, 0xca, 0x06, 0xdb, 0x96, 0xd9, 0x30, 0x9a, 0x93, 0x58,
-	0x01, 0x68, 0x03, 0xca, 0x5d, 0x12, 0xfa, 0x84, 0x59, 0x27, 0x1b, 0x46, 0xb3, 0xd6, 0xbe, 0xb9,
-	0xb7, 0x3f, 0x7f, 0xe3, 0x05, 0x5b, 0x1e, 0x75, 0x5b, 0x3e, 0x6e, 0xad, 0xd2, 0x28, 0xc6, 0xd2,
-	0x16, 0xba, 0x07, 0x53, 0x98, 0x78, 0x24, 0x78, 0x48, 0x98, 0x75, 0xea, 0x0d, 0xd8, 0xcd, 0xac,
-	0xf1, 0xdb, 0x60, 0xf2, 0x60, 0x48, 0xa2, 0x78, 0x6d, 0xc5, 0x3a, 0xdd, 0x30, 0x9a, 0x25, 0xac,
-	0x00, 0x64, 0x41, 0x65, 0x83, 0xb9, 0x1e, 0x59, 0x5b, 0xb1, 0xce, 0x34, 0x8c, 0x66, 0x15, 0xa7,
-	0x53, 0x84, 0xa0, 0xb4, 0xb1, 0x3b, 0x20, 0x96, 0xd5, 0x30, 0x9a, 0x75, 0x2c, 0xc6, 0xe8, 0x7f,
-	0x50, 0x91, 0xaa, 0xd6, 0x5c, 0xc3, 0x68, 0x9e, 0x58, 0x98, 0x69, 0x49, 0xc6, 0x24, 0xbc, 0x5a,
-	0xc0, 0xa9, 0x04, 0x6a, 0xf1, 0x2b, 0x45, 0x03, 0x1a, 0x46, 0xc4, 0x3a, 0x2b, 0xa4, 0x4d, 0x25,
-	0x9d, 0xe0, 0xab, 0x05, 0x9c, 0xc9, 0xb4, 0xab, 0x50, 0xe9, 0xb8, 0xbb, 0x7d, 0xea, 0xfa, 0xce,
-	0x93, 0x62, 0xb6, 0x11, 0x72, 0xa0, 0xd4, 0x09, 0xc2, 0x9e, 0x65, 0x08, 0x13, 0xb5, 0xd4, 0x04,
-	0xc7, 0x56, 0x0b, 0x58, 0xac, 0xa1, 0xf3, 0x50, 0xc4, 0x9d, 0x65, 0x6b, 0x42, 0x88, 0xa0, 0x6c,
-	0x97, 0xce, 0xb2, 0x3a, 0x16, 0x17, 0x40, 0x0b, 0x50, 0x59, 0x76, 0x23, 0xcf, 0xf5, 0x89, 0x55,
-	0x14, 0xb2, 0xa7, 0x53, 0x59, 0x09, 0x6b, 0xd7, 0x90, 0x08, 0xba, 0x04, 0x93, 0x1d, 0x1e, 0x27,
-	0x56, 0x49, 0x68, 0x9c, 0xcc, 0x0e, 0xc0, 0x41, 0x25, 0x9f, 0x08, 0xa1, 0x1b, 0x50, 0x6d, 0x53,
-	0x1a, 0x47, 0x31, 0x73, 0x07, 0xd6, 0xa4, 0xd0, 0xb0, 0x52, 0x8d, 0x6c, 0x41, 0x69, 0x29, 0x61,
-	0xae, 0xb9, 0x34, 0x8c, 0xb7, 0x29, 0x0b, 0xbe, 0x24, 0x56, 0x39, 0xaf, 0x99, 0x2d, 0x68, 0x9a,
-	0x19, 0x86, 0xde, 0xe6, 0x8e, 0xee, 0x05, 0x51, 0x4c, 0x98, 0x55, 0x11, 0x8a, 0x67, 0x94, 0xa3,
-	0x13, 0x5c, 0xe9, 0x65, 0xa2, 0xdc, 0x19, 0xef, 0x93, 0x90, 0x44, 0x41, 0x64, 0x4d, 0xe5, 0x9d,
-	0x21, 0x61, 0xcd, 0x19, 0x12, 0xe1, 0x5b, 0x75, 0x83, 0x5e, 0xb8, 0x4c, 0x58, 0x6c, 0x55, 0xf3,
-	0x5b, 0xa5, 0xb8, 0xb6, 0x55, 0x0a, 0x71, 0x6a, 0x25, 0xec, 0xfc, 0x5a, 0x54, 0x61, 0x71, 0x2c,
-	0x6e, 0x2f, 0xe8, 0xdc, 0xfe, 0x2b, 0xc7, 0x6d, 0x16, 0x44, 0x82, 0xdc, 0xcb, 0x30, 0xd9, 0x76,
-	0xa3, 0xc0, 0x93, 0xd4, 0x9e, 0xca, 0xdc, 0xce, 0x41, 0x4d, 0x38, 0x91, 0x42, 0x8b, 0x3a, 0x53,
-	0x09, 0xb7, 0x73, 0x47, 0x30, 0x95, 0xa9, 0x69, 0x54, 0x2d, 0xea, 0x54, 0x4d, 0xe6, 0x55, 0x35,
-	0xaa, 0x94, 0xaa, 0xe2, 0xea, 0xba, 0xc6, 0xd5, 0x08, 0xc9, 0x8a, 0x2b, 0x3d, 0x39, 0x24, 0x59,
-	0x57, 0x15, 0x59, 0x23, 0x14, 0x67, 0x64, 0x65, 0x5a, 0x19, 0x5b, 0xd7, 0x35, 0xb6, 0xa6, 0xf2,
-	0x9b, 0x29, 0xb6, 0xd4, 0x66, 0x29, 0xc6, 0x3d, 0x79, 0x8b, 0x31, 0xca, 0x24, 0xc5, 0x99, 0x27,
-	0x05, 0xa8, 0x7b, 0x52, 0x00, 0x6d, 0x50, 0x8c, 0x3a, 0xe5, 0x84, 0x51, 0xe7, 0x06, 0x80, 0x4a,
-	0x3f, 0x74, 0x1a, 0xca, 0x1f, 0x92, 0x78, 0x9b, 0xfa, 0x82, 0xe9, 0x2a, 0x96, 0x33, 0x5e, 0x63,
-	0x56, 0xdc, 0xd8, 0x15, 0xe4, 0xd6, 0xb0, 0x18, 0x3b, 0xbf, 0x18, 0x59, 0x92, 0xa2, 0xdb, 0x50,
-	0x59, 0xa7, 0x3e, 0x59, 0xf3, 0x23, 0xcb, 0x68, 0x14, 0x9b, 0xb5, 0xf6, 0xff, 0xf7, 0xf6, 0xe7,
-	0x2f, 0xbd, 0xbc, 0xbe, 0xb7, 0x30, 0xd9, 0x22, 0x8c, 0x84, 0x1e, 0xc1, 0xa9, 0x01, 0x74, 0x07,
-	0x2a, 0xb7, 0xc2, 0x98, 0xd1, 0xc1, 0x6e, 0xb2, 0x5d, 0x7b, 0xe1, 0xd1, 0xfe, 0x7c, 0x61, 0x6f,
-	0x7f, 0xfe, 0xe2, 0x31, 0xec, 0x49, 0x4d, 0x9c, 0x9a, 0x40, 0x97, 0x60, 0x16, 0x93, 0x41, 0x3f,
-	0xf0, 0xdc, 0x38, 0xa0, 0xe1, 0x7b, 0xae, 0x17, 0x53, 0x26, 0x02, 0xaf, 0x8e, 0xc7, 0x17, 0x9c,
-	0xaf, 0x60, 0x3a, 0x5f, 0x60, 0xf4, 0xba, 0x6b, 0xe4, 0xeb, 0xee, 0xb9, 0x97, 0xd4, 0xb2, 0x24,
-	0xd8, 0xff, 0x3b, 0x5a, 0xc9, 0x66, 0x46, 0x2b, 0x59, 0xba, 0xee, 0x7c, 0x06, 0x35, 0xbd, 0x56,
-	0xa1, 0x0b, 0x69, 0x41, 0x4b, 0xb2, 0x6e, 0xb6, 0x95, 0x3c, 0x83, 0x02, 0xeb, 0xf0, 0xb7, 0x30,
-	0xad, 0x65, 0xe7, 0xa0, 0x2e, 0x0e, 0xd5, 0x1d, 0xb8, 0xa1, 0x46, 0x53, 0x1e, 0x74, 0xbe, 0x9b,
-	0x00, 0x73, 0xb4, 0xb2, 0xa1, 0x2d, 0xa8, 0xde, 0xa6, 0x41, 0xb8, 0xdc, 0x77, 0x83, 0x1d, 0xb1,
-	0x4f, 0xad, 0xbd, 0xba, 0xb7, 0x3f, 0xbf, 0x72, 0x8c, 0xf7, 0xcc, 0xe3, 0x71, 0x14, 0x46, 0xc3,
-	0xe8, 0xe1, 0x5b, 0xb2, 0x1d, 0x88, 0x5a, 0x9c, 0xc3, 0xcc, 0x1e, 0x56, 0xa6, 0xd1, 0xa7, 0x50,
-	0xbf, 0xe3, 0x46, 0x31, 0x5f, 0x4f, 0xee, 0xc4, 0x8f, 0x58, 0x6f, 0x5f, 0x97, 0xd4, 0xb6, 0x8e,
-	0x41, 0xad, 0xd0, 0x5b, 0x1f, 0xee, 0x6c, 0x12, 0x86, 0xf3, 0xc6, 0xd0, 0x02, 0x40, 0x87, 0xb0,
-	0x9d, 0x20, 0x8a, 0x02, 0x1a, 0x4a, 0x3f, 0x67, 0x8c, 0xa8, 0x15, 0xac, 0x49, 0x39, 0xd7, 0xc0,
-	0x1c, 0xad, 0xd6, 0xa8, 0x01, 0x27, 0x78, 0x5e, 0x05, 0x5b, 0x3c, 0x2a, 0x12, 0xbf, 0xd7, 0xb0,
-	0x0e, 0x39, 0x3f, 0x1a, 0x30, 0x33, 0x52, 0xab, 0xf9, 0xc3, 0xdd, 0x25, 0xc2, 0xa8, 0x0c, 0x92,
-	0x12, 0x56, 0x00, 0x0f, 0xa0, 0x8f, 0x08, 0x13, 0x07, 0x9b, 0x48, 0x02, 0x48, 0x4e, 0xf3, 0xbe,
-	0x2f, 0xfe, 0x63, 0xbe, 0x77, 0x7e, 0x36, 0x60, 0x3a, 0xff, 0x52, 0xa0, 0x0d, 0xa8, 0x72, 0x0f,
-	0xaa, 0xf0, 0x7a, 0x75, 0x2a, 0x94, 0x21, 0x7e, 0xa1, 0x95, 0x20, 0xf2, 0xe8, 0x43, 0xc2, 0xd2,
-	0xdc, 0x7d, 0x83, 0x17, 0xca, 0x4c, 0x3b, 0x2e, 0xcc, 0x8c, 0x3c, 0x62, 0x68, 0x3d, 0x29, 0x40,
-	0x98, 0x6c, 0xc9, 0x28, 0xbe, 0x26, 0xaf, 0xf3, 0x0a, 0x45, 0x08, 0x93, 0x2d, 0xe7, 0x1d, 0x38,
-	0xa1, 0xbd, 0x5c, 0xbc, 0x2e, 0x62, 0x12, 0x0d, 0xfb, 0xb1, 0x8c, 0x09, 0x39, 0x43, 0x27, 0xd3,
-	0x02, 0x9c, 0x50, 0x9b, 0x4c, 0x1c, 0xa2, 0x87, 0x23, 0x5a, 0xcc, 0xda, 0x25, 0x99, 0xc8, 0x73,
-	0xe3, 0x91, 0x29, 0x05, 0xda, 0x25, 0x7e, 0x6a, 0x9c, 0xca, 0x8b, 0xc8, 0x0a, 0x7a, 0xa1, 0x1b,
-	0x0f, 0x19, 0x91, 0x49, 0xad, 0x00, 0xe7, 0x27, 0x03, 0x66, 0xc7, 0x4c, 0xa0, 0x26, 0xcc, 0x70,
-	0xa7, 0x11, 0xd6, 0x19, 0x6e, 0xf6, 0x03, 0xef, 0x03, 0xb2, 0x2b, 0xcf, 0x3c, 0x0a, 0x23, 0x13,
-	0x8a, 0x77, 0x37, 0x92, 0x02, 0x56, 0xc4, 0x7c, 0xc8, 0xe3, 0x1f, 0x13, 0x8f, 0x86, 0x21, 0xf1,
-	0xe2, 0x0d, 0x2a, 0x62, 0xb2, 0x8a, 0x75, 0x08, 0xdd, 0x83, 0x5a, 0xc6, 0x03, 0x77, 0x76, 0xe9,
-	0x35, 0x9c, 0x9d, 0xb3, 0xe4, 0xfc, 0x31, 0x01, 0xb3, 0x63, 0xcf, 0x39, 0x6a, 0x42, 0x69, 0x99,
-	0xfa, 0x49, 0x8c, 0x4e, 0xab, 0x9e, 0x2e, 0x5d, 0xe7, 0x6b, 0x58, 0x48, 0x20, 0x07, 0x6a, 0x98,
-	0x7c, 0x4e, 0xbc, 0x18, 0x13, 0x37, 0xca, 0x92, 0x2d, 0x87, 0xf1, 0x1b, 0xdf, 0xda, 0x58, 0x92,
-	0xe5, 0x9f, 0x0f, 0x79, 0xe9, 0x5c, 0x8a, 0xa2, 0xa0, 0x17, 0x76, 0xb7, 0x29, 0xe3, 0x8d, 0x77,
-	0x49, 0xac, 0xe5, 0x41, 0xb4, 0x09, 0xe6, 0xdd, 0x81, 0xef, 0xc6, 0xa4, 0x1b, 0x84, 0x9e, 0x2c,
-	0x60, 0x93, 0xaf, 0x95, 0x35, 0x63, 0xf6, 0x92, 0xf3, 0xfb, 0x01, 0x23, 0x5e, 0xcc, 0x3f, 0x0c,
-	0x44, 0xd3, 0x21, 0xce, 0xaf, 0x30, 0xce, 0xcf, 0x7a, 0x92, 0x30, 0x5d, 0xde, 0xd1, 0x54, 0xc4,
-	0x59, 0x75, 0x68, 0xa4, 0x12, 0x4e, 0x1d, 0xab, 0x12, 0xbe, 0x0b, 0xf5, 0x5c, 0xeb, 0xc5, 0x4b,
-	0x56, 0x77, 0xe8, 0x79, 0x24, 0x8a, 0x84, 0xdf, 0xa7, 0x70, 0x3a, 0x7d, 0x4e, 0xbc, 0x7f, 0x63,
-	0xc0, 0xec, 0x58, 0x3b, 0x85, 0x2e, 0xe7, 0xa8, 0x9b, 0x3b, 0xb2, 0xcb, 0xd3, 0xf8, 0x3b, 0xd2,
-	0x34, 0x37, 0x22, 0x5e, 0xb4, 0xe2, 0xd1, 0xcd, 0x9b, 0x78, 0xbb, 0xb9, 0x80, 0xec, 0x49, 0x3e,
-	0x56, 0x07, 0xc9, 0x96, 0x5e, 0x52, 0x9f, 0xc7, 0x22, 0x60, 0xe2, 0x88, 0x08, 0x70, 0x1e, 0x80,
-	0x39, 0xda, 0xf6, 0xfd, 0xdd, 0x0b, 0x5a, 0xbc, 0xb7, 0x8e, 0xd9, 0xee, 0x5a, 0x28, 0x53, 0x2e,
-	0x9d, 0xaa, 0xab, 0x17, 0x75, 0xaf, 0x7e, 0x02, 0x33, 0x23, 0x2d, 0x23, 0x5a, 0xd0, 0xbe, 0xd4,
-	0x8c, 0x17, 0x7d, 0x0a, 0xa8, 0xaf, 0xb5, 0xe7, 0x50, 0x76, 0x1e, 0xcc, 0xd1, 0xce, 0x92, 0x37,
-	0x79, 0x1c, 0x93, 0xe5, 0x42, 0x8c, 0x9d, 0xff, 0x40, 0x3d, 0xd7, 0x4c, 0x2a, 0x73, 0x86, 0x66,
-	0xee, 0x22, 0xe1, 0xc1, 0xab, 0x6e, 0x8c, 0x6a, 0x30, 0xb5, 0xe4, 0x79, 0x64, 0x10, 0x13, 0xdf,
-	0x2c, 0xf0, 0x59, 0x92, 0x86, 0xc4, 0x37, 0x0d, 0x34, 0x0d, 0x90, 0x06, 0x35, 0xf1, 0xcd, 0x09,
-	0x74, 0x8a, 0x77, 0x68, 0xb2, 0xc2, 0xf0, 0xe3, 0x07, 0x8c, 0xf8, 0x66, 0x11, 0x21, 0x98, 0x96,
-	0x39, 0xe2, 0x6d, 0x13, 0x7f, 0xd8, 0x27, 0x66, 0xe9, 0xe2, 0x22, 0xcc, 0x8e, 0x79, 0x17, 0xd5,
-	0xa1, 0xba, 0x4c, 0xc3, 0xad, 0x80, 0xed, 0x88, 0xcd, 0x00, 0xca, 0x2b, 0x24, 0x0c, 0xc4, 0x56,
-	0x55, 0x98, 0x14, 0x3e, 0x36, 0x27, 0xda, 0x37, 0x1f, 0x1d, 0xd8, 0x85, 0xc7, 0x07, 0x76, 0xe1,
-	0xc9, 0x81, 0x5d, 0x78, 0x76, 0x60, 0x1b, 0x7f, 0x1e, 0xd8, 0x85, 0xaf, 0x0f, 0x6d, 0xe3, 0x87,
-	0x43, 0xdb, 0x78, 0x74, 0x68, 0x1b, 0x8f, 0x0f, 0x6d, 0xe3, 0xb7, 0x43, 0xdb, 0xf8, 0xfd, 0xd0,
-	0x2e, 0x3c, 0x3b, 0xb4, 0x8d, 0xef, 0x9f, 0xda, 0x85, 0xc7, 0x4f, 0xed, 0xc2, 0x93, 0xa7, 0x76,
-	0x61, 0xb3, 0x2c, 0xfe, 0xf7, 0x70, 0xf5, 0xaf, 0x00, 0x00, 0x00, 0xff, 0xff, 0x1d, 0x65, 0x2c,
-	0xb7, 0x13, 0x11, 0x00, 0x00,
+	// 1487 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x57, 0xcf, 0x73, 0x14, 0xc5,
+	0x17, 0xdf, 0xc9, 0x6e, 0x36, 0xd9, 0x97, 0xdd, 0x64, 0xd2, 0x90, 0x30, 0x50, 0x7c, 0x27, 0x5b,
+	0x53, 0x7c, 0xc3, 0x8a, 0xb0, 0x51, 0x04, 0x0a, 0x0a, 0xaa, 0x94, 0x4d, 0xa2, 0x09, 0x02, 0xb5,
+	0xd5, 0x89, 0xca, 0x01, 0x2c, 0x27, 0xb3, 0x9d, 0x64, 0x64, 0x33, 0x3d, 0xce, 0xf4, 0xa2, 0xab,
+	0x17, 0x6f, 0x56, 0x79, 0xf2, 0x1f, 0xd0, 0x9b, 0x55, 0xde, 0xfc, 0x37, 0x38, 0xe2, 0x8d, 0xe2,
+	0x90, 0x32, 0xcb, 0xc5, 0x23, 0x55, 0x7a, 0xf0, 0x68, 0x75, 0x4f, 0x4f, 0xcf, 0x8f, 0x4d, 0x42,
+	0x44, 0x2e, 0xd9, 0xe9, 0x4f, 0xbf, 0xcf, 0xeb, 0xd7, 0xfd, 0x79, 0xfd, 0xfa, 0x05, 0xce, 0x7a,
+	0x84, 0x7d, 0x49, 0x83, 0x87, 0x0b, 0xdb, 0x34, 0x64, 0xf1, 0xb7, 0x6f, 0x3b, 0x0f, 0x09, 0x93,
+	0x3f, 0x4d, 0x3f, 0xa0, 0x8c, 0xa2, 0x72, 0x34, 0x3a, 0x75, 0x61, 0xcb, 0x65, 0xdb, 0xbd, 0x8d,
+	0xa6, 0x43, 0x77, 0x16, 0xb6, 0xe8, 0x16, 0x5d, 0x10, 0xd3, 0x1b, 0xbd, 0x4d, 0x31, 0x12, 0x03,
+	0xf1, 0x15, 0xd1, 0x4e, 0x5d, 0x4a, 0x99, 0xbb, 0x5e, 0x48, 0xbb, 0x76, 0x30, 0xf4, 0xeb, 0xf7,
+	0xba, 0x21, 0x89, 0xfe, 0x4a, 0xd6, 0x9d, 0x43, 0x58, 0x71, 0x90, 0x0e, 0xf5, 0x42, 0xe2, 0x85,
+	0xbd, 0x70, 0xc1, 0xee, 0xd8, 0x3e, 0x23, 0x41, 0xb8, 0xe0, 0xd8, 0x5e, 0xc7, 0xed, 0xd8, 0x8c,
+	0xf0, 0xa0, 0x36, 0xdd, 0xae, 0x74, 0x67, 0x7d, 0x5f, 0x84, 0x72, 0x5b, 0x84, 0x8f, 0x4e, 0x43,
+	0xc5, 0xa7, 0xdd, 0xfe, 0x0e, 0x0d, 0xfc, 0x6d, 0x43, 0xaf, 0x6b, 0x8d, 0x51, 0x9c, 0x00, 0x68,
+	0x1d, 0xca, 0x6b, 0xc4, 0xeb, 0x90, 0xc0, 0x38, 0x5e, 0xd7, 0x1a, 0xd5, 0xd6, 0x8d, 0x67, 0xbb,
+	0x73, 0x57, 0x8f, 0x10, 0x4b, 0xfa, 0xf0, 0xf8, 0x77, 0x73, 0x85, 0x86, 0x0c, 0x4b, 0x5f, 0xe8,
+	0x1e, 0x8c, 0x63, 0xe2, 0x10, 0xf7, 0x11, 0x09, 0x8c, 0x99, 0xd7, 0xe0, 0x57, 0x79, 0xe3, 0xbb,
+	0xc1, 0xe4, 0x8b, 0x1e, 0x09, 0xd9, 0xea, 0x92, 0x31, 0x5b, 0xd7, 0x1a, 0x25, 0x9c, 0x00, 0xc8,
+	0x80, 0xb1, 0xf5, 0xc0, 0x76, 0xc8, 0xea, 0x92, 0x71, 0xa2, 0xae, 0x35, 0x2a, 0x38, 0x1e, 0x22,
+	0x04, 0xa5, 0xf5, 0xbe, 0x4f, 0x0c, 0xa3, 0xae, 0x35, 0x6a, 0x58, 0x7c, 0xa3, 0x37, 0x61, 0x4c,
+	0x52, 0x8d, 0x93, 0x75, 0xad, 0x31, 0x71, 0x71, 0xaa, 0x29, 0x13, 0x40, 0xc2, 0x2b, 0x05, 0x1c,
+	0x5b, 0xa0, 0x26, 0xdf, 0x52, 0xe8, 0x73, 0x09, 0x8c, 0x53, 0xc2, 0x5a, 0x4f, 0xac, 0x23, 0x7c,
+	0xa5, 0x80, 0x95, 0x4d, 0xab, 0x02, 0x63, 0x6d, 0xbb, 0xdf, 0xa5, 0x76, 0xc7, 0x7a, 0x51, 0x54,
+	0x0b, 0x21, 0x0b, 0x4a, 0x6d, 0xd7, 0xdb, 0x32, 0x34, 0xe1, 0xa2, 0x1a, 0xbb, 0xe0, 0xd8, 0x4a,
+	0x01, 0x8b, 0x39, 0x34, 0x0f, 0x45, 0xdc, 0x5e, 0x34, 0x46, 0x84, 0x09, 0x52, 0xab, 0xb4, 0x17,
+	0x93, 0xb0, 0xb8, 0x01, 0xba, 0x08, 0x63, 0x8b, 0x76, 0xe8, 0xd8, 0x1d, 0x62, 0x14, 0x85, 0xed,
+	0x6c, 0x6c, 0x2b, 0xe1, 0xd4, 0x36, 0x24, 0x82, 0xce, 0xc3, 0x68, 0x9b, 0xa7, 0x9d, 0x51, 0x12,
+	0x8c, 0xe3, 0x2a, 0x00, 0x0e, 0x26, 0xf6, 0x91, 0x11, 0xba, 0x0a, 0x95, 0x16, 0xa5, 0x2c, 0x64,
+	0x81, 0xed, 0x1b, 0xa3, 0x82, 0x61, 0xc4, 0x0c, 0x35, 0x91, 0xb0, 0x12, 0x63, 0xce, 0xbc, 0xd9,
+	0x63, 0xdb, 0x34, 0x70, 0xbf, 0x26, 0x46, 0x39, 0xcb, 0x54, 0x13, 0x29, 0xa6, 0xc2, 0xd0, 0x65,
+	0x18, 0x5f, 0x73, 0xb7, 0xbc, 0x45, 0x12, 0x30, 0x63, 0x4c, 0x10, 0x4f, 0xc4, 0xc4, 0x18, 0x4f,
+	0x78, 0xca, 0x14, 0x7d, 0x00, 0x93, 0x1f, 0xf9, 0xfc, 0x26, 0xac, 0x39, 0xdb, 0xa4, 0xd3, 0xeb,
+	0x12, 0x63, 0x5c, 0x90, 0xff, 0x17, 0x93, 0xb3, 0xb3, 0x89, 0x8b, 0x1c, 0x8d, 0x47, 0x8e, 0x89,
+	0x43, 0x3d, 0x8f, 0x38, 0xcc, 0xa8, 0x64, 0x23, 0x57, 0x13, 0xa9, 0xc8, 0x15, 0xc6, 0x25, 0x97,
+	0xb8, 0xf5, 0x57, 0x31, 0x49, 0x97, 0x23, 0x69, 0x7e, 0x36, 0xad, 0xf9, 0xb1, 0x8c, 0xe6, 0x2a,
+	0xb9, 0x84, 0xe8, 0x17, 0x60, 0xb4, 0x65, 0x87, 0xae, 0x23, 0x25, 0x9f, 0x51, 0x72, 0x70, 0x30,
+	0x65, 0x1c, 0x59, 0xa1, 0x6b, 0x69, 0x05, 0x23, 0xcd, 0x4f, 0xee, 0xa3, 0xa0, 0xa2, 0xa5, 0x24,
+	0xbc, 0x96, 0x96, 0x70, 0x34, 0x4b, 0x4d, 0x49, 0x98, 0x50, 0x13, 0x0d, 0xaf, 0xa4, 0x34, 0xcc,
+	0x89, 0x9f, 0x68, 0x98, 0x5c, 0x1a, 0x25, 0xe2, 0x05, 0x18, 0x5d, 0x0e, 0x02, 0x1a, 0x48, 0xe1,
+	0xd5, 0xe6, 0x04, 0x98, 0xde, 0x9c, 0x00, 0xd0, 0xca, 0x01, 0x9a, 0x9b, 0x07, 0x69, 0xae, 0x1c,
+	0xe4, 0x45, 0xbf, 0x36, 0x2c, 0xfa, 0xc9, 0x7d, 0x44, 0x4f, 0xf6, 0x9a, 0xa8, 0x0e, 0x89, 0xd2,
+	0x56, 0x39, 0x52, 0xda, 0xba, 0x0a, 0x90, 0x5c, 0x57, 0x34, 0x0b, 0xe5, 0x3b, 0x84, 0x6d, 0xd3,
+	0x8e, 0xc8, 0x80, 0x0a, 0x96, 0x23, 0x5e, 0x93, 0x96, 0x6c, 0x66, 0x0b, 0xd1, 0xab, 0x58, 0x7c,
+	0x5b, 0xbf, 0x69, 0xea, 0x52, 0xa3, 0x5b, 0x30, 0x76, 0x97, 0x76, 0xc8, 0x6a, 0x27, 0x34, 0xb4,
+	0x7a, 0xb1, 0x51, 0x6d, 0xbd, 0xf5, 0x6c, 0x77, 0xee, 0xfc, 0xcb, 0x9f, 0x97, 0x26, 0x26, 0x9b,
+	0x24, 0x20, 0x9e, 0x43, 0x70, 0xec, 0x00, 0xdd, 0x86, 0xb1, 0x65, 0x8f, 0x05, 0xd4, 0xef, 0x47,
+	0xcb, 0xb5, 0x2e, 0x3e, 0xde, 0x9d, 0x2b, 0x3c, 0xdb, 0x9d, 0x3b, 0x77, 0x04, 0x7f, 0x92, 0x89,
+	0x63, 0x17, 0xe8, 0x3c, 0x4c, 0x63, 0xe2, 0x77, 0x5d, 0xc7, 0x66, 0x2e, 0xf5, 0xde, 0xb7, 0x1d,
+	0x46, 0x03, 0x91, 0x90, 0x35, 0x3c, 0x3c, 0x61, 0x7d, 0x03, 0x93, 0xd9, 0x82, 0x94, 0xae, 0xd3,
+	0x5a, 0xb6, 0x4e, 0x9f, 0x79, 0x49, 0xed, 0x8b, 0x2e, 0xc1, 0x1b, 0xf9, 0xca, 0x37, 0x95, 0xaf,
+	0x7c, 0xf1, 0xbc, 0xf5, 0x00, 0xaa, 0xe9, 0xda, 0x86, 0xce, 0xc6, 0x05, 0x30, 0xba, 0x8d, 0xd3,
+	0xcd, 0xe8, 0x15, 0x16, 0x58, 0x9b, 0xbf, 0x9d, 0x71, 0xed, 0x3b, 0x03, 0x35, 0x11, 0xd4, 0x9a,
+	0x6f, 0x7b, 0x29, 0x99, 0xb2, 0xa0, 0xf5, 0xa3, 0x06, 0x33, 0xfb, 0x56, 0x16, 0x74, 0x1f, 0x6a,
+	0xb7, 0xed, 0x90, 0x71, 0x01, 0x92, 0x05, 0x6b, 0xad, 0x2b, 0xf2, 0xdc, 0x9b, 0x47, 0x38, 0x77,
+	0xc1, 0xbb, 0xdb, 0xdb, 0xd9, 0x20, 0x01, 0xce, 0x3a, 0x43, 0xf3, 0x50, 0x6e, 0x93, 0x60, 0xc7,
+	0x65, 0xf2, 0xa8, 0x26, 0x55, 0x55, 0x11, 0x28, 0x96, 0xb3, 0xd6, 0x4f, 0x1a, 0xe8, 0xf9, 0xaa,
+	0x85, 0x36, 0x60, 0x42, 0x61, 0xeb, 0x54, 0x04, 0x56, 0x6d, 0xbd, 0x27, 0x03, 0x7b, 0xf5, 0x57,
+	0x3a, 0xed, 0xf4, 0xc8, 0x01, 0xfe, 0xaa, 0x81, 0x9e, 0x7f, 0x4a, 0xd0, 0x12, 0xe8, 0x8b, 0x71,
+	0x67, 0xd3, 0x8e, 0x1a, 0x1b, 0x95, 0x12, 0xaa, 0xe5, 0x69, 0xca, 0x99, 0x56, 0x89, 0x47, 0x8e,
+	0x87, 0x18, 0xbc, 0x9a, 0x44, 0x27, 0x5f, 0x3c, 0x40, 0x6a, 0xc9, 0x1c, 0xcd, 0x1f, 0x69, 0xe9,
+	0xd0, 0x88, 0x5d, 0xa8, 0xa9, 0x4a, 0xc7, 0x73, 0x00, 0xd5, 0x61, 0x82, 0x57, 0x2f, 0x77, 0x93,
+	0xa7, 0x7d, 0xa4, 0x73, 0x15, 0xa7, 0x21, 0xde, 0xb5, 0xac, 0xbb, 0x3b, 0x24, 0x64, 0xf6, 0x8e,
+	0x2f, 0x36, 0x52, 0xc4, 0x09, 0xc0, 0x6f, 0xc3, 0xc7, 0x24, 0x08, 0x5d, 0xea, 0x89, 0x48, 0x2b,
+	0x38, 0x1e, 0x5a, 0x3b, 0xa0, 0xe7, 0x1f, 0x4b, 0x74, 0x3d, 0xb7, 0xbc, 0x4c, 0xe4, 0x99, 0xa1,
+	0xd2, 0xcc, 0x27, 0x71, 0x2e, 0xd4, 0xd3, 0x50, 0xe1, 0xc5, 0xd6, 0x66, 0xbd, 0x80, 0xc8, 0x84,
+	0x4e, 0x00, 0xcb, 0x86, 0xa9, 0xdc, 0x13, 0x8b, 0xee, 0x46, 0x35, 0x08, 0x93, 0x4d, 0x99, 0x26,
+	0x97, 0x64, 0x9a, 0xbc, 0x42, 0x1d, 0xc2, 0x64, 0xd3, 0xba, 0x0e, 0x13, 0xa9, 0x47, 0x8d, 0x97,
+	0x46, 0x4c, 0xc2, 0x5e, 0x97, 0xc9, 0x53, 0x93, 0x23, 0x74, 0x3c, 0x7e, 0x08, 0x46, 0xc4, 0x81,
+	0x44, 0x03, 0xeb, 0x41, 0xac, 0x10, 0xba, 0xac, 0xba, 0xab, 0xfc, 0xf6, 0x23, 0x03, 0x39, 0x29,
+	0x05, 0x8e, 0x6d, 0x5f, 0xb2, 0xfd, 0x9f, 0x47, 0xa0, 0x96, 0xa1, 0xa3, 0x06, 0x4c, 0xdd, 0xa2,
+	0xae, 0x47, 0x82, 0x76, 0x6f, 0xa3, 0xeb, 0x3a, 0x1f, 0x92, 0xbe, 0x8c, 0x33, 0x0f, 0x73, 0xcb,
+	0xe5, 0xaf, 0x7c, 0x37, 0x20, 0x79, 0x9d, 0xf3, 0x30, 0xfa, 0x34, 0x7b, 0xf9, 0x8a, 0xaf, 0xa1,
+	0x3d, 0xce, 0x5c, 0xbc, 0xcf, 0x54, 0xce, 0xb0, 0x7e, 0x2c, 0x5d, 0xe9, 0x3f, 0x48, 0x37, 0xe4,
+	0xcd, 0xfa, 0x4e, 0x83, 0xe9, 0xa1, 0xde, 0x01, 0xbd, 0x0d, 0xa5, 0x45, 0xda, 0x89, 0xd2, 0x7f,
+	0x32, 0x69, 0xbb, 0x86, 0x0c, 0xb9, 0x11, 0x16, 0xa6, 0x48, 0x87, 0xe2, 0xf2, 0xfa, 0x4d, 0x71,
+	0x50, 0x35, 0xcc, 0x3f, 0xff, 0xe5, 0x95, 0xb5, 0xde, 0x85, 0x5a, 0xa6, 0xef, 0xe1, 0x57, 0x69,
+	0xad, 0xe7, 0x38, 0x24, 0x0c, 0x45, 0x1c, 0xe3, 0x38, 0x1e, 0x1e, 0x90, 0x51, 0x7f, 0x6a, 0x30,
+	0x3d, 0xd4, 0xcb, 0x1c, 0xb4, 0x95, 0x21, 0xc3, 0xd4, 0x56, 0x0e, 0xbf, 0xe1, 0x6a, 0xf1, 0x62,
+	0x6a, 0xf1, 0xa3, 0x16, 0x1c, 0x34, 0x0f, 0x93, 0x4b, 0x6e, 0xe8, 0xd0, 0x47, 0x24, 0xe8, 0x2f,
+	0xd2, 0x9e, 0xc7, 0x44, 0x37, 0x56, 0xc3, 0x39, 0x34, 0x79, 0xda, 0xca, 0x87, 0x3f, 0x6d, 0xd6,
+	0x3c, 0xe8, 0xf9, 0x36, 0x8c, 0x37, 0x23, 0x1c, 0x93, 0xf9, 0x2d, 0xbe, 0xad, 0xff, 0x43, 0x2d,
+	0xd3, 0x79, 0x25, 0xfb, 0xd0, 0xd2, 0x87, 0x68, 0xc0, 0xec, 0xfe, 0x8d, 0x96, 0x75, 0x8c, 0xf7,
+	0x09, 0xb9, 0xee, 0xe9, 0xdc, 0x3d, 0x98, 0xd9, 0x37, 0x29, 0x50, 0x15, 0xc6, 0x6f, 0x3a, 0x0e,
+	0xf1, 0x19, 0xe9, 0xe8, 0x05, 0x84, 0xf2, 0xcd, 0x9d, 0xae, 0xa1, 0x69, 0xa8, 0x49, 0x6c, 0x9b,
+	0x06, 0x6c, 0x75, 0x49, 0x1f, 0x41, 0xc0, 0x2b, 0xc8, 0xe7, 0xc4, 0x61, 0x7a, 0xf1, 0xdc, 0x7d,
+	0x98, 0xd9, 0x57, 0x23, 0x34, 0xa1, 0xd2, 0x22, 0x72, 0xfc, 0x49, 0x40, 0xbd, 0x2d, 0x25, 0x8f,
+	0x3e, 0x82, 0x74, 0xa8, 0x0a, 0xec, 0x8e, 0xed, 0x71, 0xf7, 0x7a, 0x51, 0x21, 0xb2, 0x14, 0xeb,
+	0xa5, 0xd6, 0x8d, 0xc7, 0x7b, 0x66, 0xe1, 0xc9, 0x9e, 0x59, 0x78, 0xba, 0x67, 0x16, 0x5e, 0xec,
+	0x99, 0xda, 0xdf, 0x7b, 0x66, 0xe1, 0xdb, 0x81, 0xa9, 0xfd, 0x32, 0x30, 0xb5, 0xc7, 0x03, 0x53,
+	0x7b, 0x32, 0x30, 0xb5, 0xdf, 0x07, 0xa6, 0xf6, 0xc7, 0xc0, 0x2c, 0xbc, 0x18, 0x98, 0xda, 0x0f,
+	0xcf, 0xcd, 0xc2, 0x93, 0xe7, 0x66, 0xe1, 0xe9, 0x73, 0xb3, 0xb0, 0x51, 0x16, 0xff, 0x98, 0xbf,
+	0xf3, 0x4f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x02, 0xc9, 0x53, 0x2b, 0x7f, 0x10, 0x00, 0x00,
 }
 
-func (x ResponseCode) String() string {
-	s, ok := ResponseCode_name[int32(x)]
+func (x BootstrapResponseCode) String() string {
+	s, ok := BootstrapResponseCode_name[int32(x)]
 	if ok {
 		return s
 	}
 	return strconv.Itoa(int(x))
 }
-func (x BasicResponseCode) String() string {
-	s, ok := BasicResponseCode_name[int32(x)]
+func (x AuthorizeResponseCode) String() string {
+	s, ok := AuthorizeResponseCode_name[int32(x)]
 	if ok {
 		return s
 	}
@@ -2189,54 +2178,6 @@ func (this *Request_Authorize) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Request_Register) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Request_Register)
-	if !ok {
-		that2, ok := that.(Request_Register)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.Register.Equal(that1.Register) {
-		return false
-	}
-	return true
-}
-func (this *Request_Genesis) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Request_Genesis)
-	if !ok {
-		that2, ok := that.(Request_Genesis)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.Genesis.Equal(that1.Genesis) {
-		return false
-	}
-	return true
-}
 func (this *Request_SignCert) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
@@ -2257,6 +2198,54 @@ func (this *Request_SignCert) Equal(that interface{}) bool {
 		return false
 	}
 	if !this.SignCert.Equal(that1.SignCert) {
+		return false
+	}
+	return true
+}
+func (this *Request_UpdateSchedule) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*Request_UpdateSchedule)
+	if !ok {
+		that2, ok := that.(Request_UpdateSchedule)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if !this.UpdateSchedule.Equal(that1.UpdateSchedule) {
+		return false
+	}
+	return true
+}
+func (this *Request_Reconnect) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*Request_Reconnect)
+	if !ok {
+		that2, ok := that.(Request_Reconnect)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if !this.Reconnect.Equal(that1.Reconnect) {
 		return false
 	}
 	return true
@@ -2411,54 +2400,6 @@ func (this *Response_Authorize) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Response_Register) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Response_Register)
-	if !ok {
-		that2, ok := that.(Response_Register)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.Register.Equal(that1.Register) {
-		return false
-	}
-	return true
-}
-func (this *Response_Genesis) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Response_Genesis)
-	if !ok {
-		that2, ok := that.(Response_Genesis)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.Genesis.Equal(that1.Genesis) {
-		return false
-	}
-	return true
-}
 func (this *Response_SignCert) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
@@ -2503,6 +2444,54 @@ func (this *Response_Error) Equal(that interface{}) bool {
 		return false
 	}
 	if !this.Error.Equal(that1.Error) {
+		return false
+	}
+	return true
+}
+func (this *Response_UpdateSchedule) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*Response_UpdateSchedule)
+	if !ok {
+		that2, ok := that.(Response_UpdateSchedule)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if !this.UpdateSchedule.Equal(that1.UpdateSchedule) {
+		return false
+	}
+	return true
+}
+func (this *Response_Reconnect) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*Response_Reconnect)
+	if !ok {
+		that2, ok := that.(Response_Reconnect)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if !this.Reconnect.Equal(that1.Reconnect) {
 		return false
 	}
 	return true
@@ -2647,6 +2636,60 @@ func (this *PulseRequest) Equal(that interface{}) bool {
 	}
 	return true
 }
+func (this *UpdateScheduleRequest) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*UpdateScheduleRequest)
+	if !ok {
+		that2, ok := that.(UpdateScheduleRequest)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if !this.LastNodePulse.Equal(that1.LastNodePulse) {
+		return false
+	}
+	if !this.Permit.Equal(that1.Permit) {
+		return false
+	}
+	return true
+}
+func (this *ReconnectRequest) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*ReconnectRequest)
+	if !ok {
+		that2, ok := that.(ReconnectRequest)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if !this.ReconnectTo.Equal(that1.ReconnectTo) {
+		return false
+	}
+	if !this.Permit.Equal(that1.Permit) {
+		return false
+	}
+	return true
+}
 func (this *BootstrapRequest) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
@@ -2666,17 +2709,43 @@ func (this *BootstrapRequest) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if that1.JoinClaim == nil {
-		if this.JoinClaim != nil {
+	if !this.CandidateProfile.Equal(&that1.CandidateProfile) {
+		return false
+	}
+	if !this.Pulse.Equal(&that1.Pulse) {
+		return false
+	}
+	if !this.Permit.Equal(that1.Permit) {
+		return false
+	}
+	return true
+}
+func (this *AuthorizeData) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*AuthorizeData)
+	if !ok {
+		that2, ok := that.(AuthorizeData)
+		if ok {
+			that1 = &that2
+		} else {
 			return false
 		}
-	} else if !this.JoinClaim.Equal(*that1.JoinClaim) {
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
 		return false
 	}
-	if !this.LastNodePulse.Equal(that1.LastNodePulse) {
+	if !bytes.Equal(this.Certificate, that1.Certificate) {
 		return false
 	}
-	if !this.Permission.Equal(that1.Permission) {
+	if this.Timestamp != that1.Timestamp {
+		return false
+	}
+	if this.Version != that1.Version {
 		return false
 	}
 	return true
@@ -2700,72 +2769,10 @@ func (this *AuthorizeRequest) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if !bytes.Equal(this.Certificate, that1.Certificate) {
+	if !this.AuthorizeData.Equal(that1.AuthorizeData) {
 		return false
 	}
-	return true
-}
-func (this *RegisterRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RegisterRequest)
-	if !ok {
-		that2, ok := that.(RegisterRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.SessionID != that1.SessionID {
-		return false
-	}
-	if this.Version != that1.Version {
-		return false
-	}
-	if that1.JoinClaim == nil {
-		if this.JoinClaim != nil {
-			return false
-		}
-	} else if !this.JoinClaim.Equal(*that1.JoinClaim) {
-		return false
-	}
-	return true
-}
-func (this *GenesisRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*GenesisRequest)
-	if !ok {
-		that2, ok := that.(GenesisRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.LastPulse.Equal(that1.LastPulse) {
-		return false
-	}
-	if that1.Discovery == nil {
-		if this.Discovery != nil {
-			return false
-		}
-	} else if !this.Discovery.Equal(*that1.Discovery) {
+	if !bytes.Equal(this.Signature, that1.Signature) {
 		return false
 	}
 	return true
@@ -2821,14 +2828,14 @@ func (this *RPCResponse) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Permission) Equal(that interface{}) bool {
+func (this *Permit) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*Permission)
+	that1, ok := that.(*Permit)
 	if !ok {
-		that2, ok := that.(Permission)
+		that2, ok := that.(Permit)
 		if ok {
 			that1 = &that2
 		} else {
@@ -2848,14 +2855,14 @@ func (this *Permission) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *PermissionPayload) Equal(that interface{}) bool {
+func (this *PermitPayload) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*PermissionPayload)
+	that1, ok := that.(*PermitPayload)
 	if !ok {
-		that2, ok := that.(PermissionPayload)
+		that2, ok := that.(PermitPayload)
 		if ok {
 			that1 = &that2
 		} else {
@@ -2870,13 +2877,17 @@ func (this *PermissionPayload) Equal(that interface{}) bool {
 	if !bytes.Equal(this.JoinerPublicKey, that1.JoinerPublicKey) {
 		return false
 	}
-	if this.UTC != that1.UTC {
+	if this.ExpireTimestamp != that1.ExpireTimestamp {
 		return false
 	}
-	if this.ReconnectTo != that1.ReconnectTo {
+	if that1.ReconnectTo == nil {
+		if this.ReconnectTo != nil {
+			return false
+		}
+	} else if !this.ReconnectTo.Equal(*that1.ReconnectTo) {
 		return false
 	}
-	if !this.DiscoveryRef.Equal(that1.DiscoveryRef) {
+	if !this.AuthorityNodeRef.Equal(that1.AuthorityNodeRef) {
 		return false
 	}
 	return true
@@ -2903,25 +2914,10 @@ func (this *BootstrapResponse) Equal(that interface{}) bool {
 	if this.Code != that1.Code {
 		return false
 	}
-	if this.RejectReason != that1.RejectReason {
-		return false
-	}
 	if this.ETA != that1.ETA {
 		return false
 	}
-	if this.AssignShortID != that1.AssignShortID {
-		return false
-	}
-	if !this.UpdateSincePulse.Equal(that1.UpdateSincePulse) {
-		return false
-	}
-	if this.RedirectHost != that1.RedirectHost {
-		return false
-	}
-	if this.NetworkSize != that1.NetworkSize {
-		return false
-	}
-	if !this.Permission.Equal(that1.Permission) {
+	if !this.Pulse.Equal(&that1.Pulse) {
 		return false
 	}
 	return true
@@ -2975,94 +2971,19 @@ func (this *AuthorizeResponse) Equal(that interface{}) bool {
 	if this.Code != that1.Code {
 		return false
 	}
-	if this.Error != that1.Error {
-		return false
-	}
-	if !this.Data.Equal(that1.Data) {
-		return false
-	}
-	return true
-}
-func (this *AuthorizationData) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*AuthorizationData)
-	if !ok {
-		that2, ok := that.(AuthorizationData)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.SessionID != that1.SessionID {
-		return false
-	}
-	if this.AssignShortID != that1.AssignShortID {
-		return false
-	}
-	return true
-}
-func (this *RegisterResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RegisterResponse)
-	if !ok {
-		that2, ok := that.(RegisterResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Code != that1.Code {
-		return false
-	}
-	if this.RetryIn != that1.RetryIn {
+	if this.Timestamp != that1.Timestamp {
 		return false
 	}
 	if this.Error != that1.Error {
 		return false
 	}
-	return true
-}
-func (this *GenesisResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*GenesisResponse)
-	if !ok {
-		that2, ok := that.(GenesisResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
+	if !this.Permit.Equal(that1.Permit) {
 		return false
 	}
-	if !this.Response.Equal(that1.Response) {
+	if this.DiscoveryCount != that1.DiscoveryCount {
 		return false
 	}
-	if this.Error != that1.Error {
+	if !this.Pulse.Equal(that1.Pulse) {
 		return false
 	}
 	return true
@@ -3111,6 +3032,48 @@ func (this *ErrorResponse) Equal(that interface{}) bool {
 		return false
 	}
 	if this.Error != that1.Error {
+		return false
+	}
+	return true
+}
+func (this *UpdateScheduleResponse) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*UpdateScheduleResponse)
+	if !ok {
+		that2, ok := that.(UpdateScheduleResponse)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	return true
+}
+func (this *ReconnectResponse) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*ReconnectResponse)
+	if !ok {
+		that2, ok := that.(ReconnectResponse)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
 		return false
 	}
 	return true
@@ -3209,28 +3172,28 @@ func (this *Request_Authorize) GoString() string {
 		`Authorize:` + fmt.Sprintf("%#v", this.Authorize) + `}`}, ", ")
 	return s
 }
-func (this *Request_Register) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&packet.Request_Register{` +
-		`Register:` + fmt.Sprintf("%#v", this.Register) + `}`}, ", ")
-	return s
-}
-func (this *Request_Genesis) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&packet.Request_Genesis{` +
-		`Genesis:` + fmt.Sprintf("%#v", this.Genesis) + `}`}, ", ")
-	return s
-}
 func (this *Request_SignCert) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := strings.Join([]string{`&packet.Request_SignCert{` +
 		`SignCert:` + fmt.Sprintf("%#v", this.SignCert) + `}`}, ", ")
+	return s
+}
+func (this *Request_UpdateSchedule) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&packet.Request_UpdateSchedule{` +
+		`UpdateSchedule:` + fmt.Sprintf("%#v", this.UpdateSchedule) + `}`}, ", ")
+	return s
+}
+func (this *Request_Reconnect) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&packet.Request_Reconnect{` +
+		`Reconnect:` + fmt.Sprintf("%#v", this.Reconnect) + `}`}, ", ")
 	return s
 }
 func (this *Response) GoString() string {
@@ -3285,22 +3248,6 @@ func (this *Response_Authorize) GoString() string {
 		`Authorize:` + fmt.Sprintf("%#v", this.Authorize) + `}`}, ", ")
 	return s
 }
-func (this *Response_Register) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&packet.Response_Register{` +
-		`Register:` + fmt.Sprintf("%#v", this.Register) + `}`}, ", ")
-	return s
-}
-func (this *Response_Genesis) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&packet.Response_Genesis{` +
-		`Genesis:` + fmt.Sprintf("%#v", this.Genesis) + `}`}, ", ")
-	return s
-}
 func (this *Response_SignCert) GoString() string {
 	if this == nil {
 		return "nil"
@@ -3315,6 +3262,22 @@ func (this *Response_Error) GoString() string {
 	}
 	s := strings.Join([]string{`&packet.Response_Error{` +
 		`Error:` + fmt.Sprintf("%#v", this.Error) + `}`}, ", ")
+	return s
+}
+func (this *Response_UpdateSchedule) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&packet.Response_UpdateSchedule{` +
+		`UpdateSchedule:` + fmt.Sprintf("%#v", this.UpdateSchedule) + `}`}, ", ")
+	return s
+}
+func (this *Response_Reconnect) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&packet.Response_Reconnect{` +
+		`Reconnect:` + fmt.Sprintf("%#v", this.Reconnect) + `}`}, ", ")
 	return s
 }
 func (this *Ping) GoString() string {
@@ -3378,17 +3341,55 @@ func (this *PulseRequest) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
+func (this *UpdateScheduleRequest) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 6)
+	s = append(s, "&packet.UpdateScheduleRequest{")
+	s = append(s, "LastNodePulse: "+fmt.Sprintf("%#v", this.LastNodePulse)+",\n")
+	if this.Permit != nil {
+		s = append(s, "Permit: "+fmt.Sprintf("%#v", this.Permit)+",\n")
+	}
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *ReconnectRequest) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 6)
+	s = append(s, "&packet.ReconnectRequest{")
+	s = append(s, "ReconnectTo: "+fmt.Sprintf("%#v", this.ReconnectTo)+",\n")
+	if this.Permit != nil {
+		s = append(s, "Permit: "+fmt.Sprintf("%#v", this.Permit)+",\n")
+	}
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
 func (this *BootstrapRequest) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 7)
 	s = append(s, "&packet.BootstrapRequest{")
-	s = append(s, "JoinClaim: "+fmt.Sprintf("%#v", this.JoinClaim)+",\n")
-	s = append(s, "LastNodePulse: "+fmt.Sprintf("%#v", this.LastNodePulse)+",\n")
-	if this.Permission != nil {
-		s = append(s, "Permission: "+fmt.Sprintf("%#v", this.Permission)+",\n")
+	s = append(s, "CandidateProfile: "+strings.Replace(this.CandidateProfile.GoString(), `&`, ``, 1)+",\n")
+	s = append(s, "Pulse: "+strings.Replace(this.Pulse.GoString(), `&`, ``, 1)+",\n")
+	if this.Permit != nil {
+		s = append(s, "Permit: "+fmt.Sprintf("%#v", this.Permit)+",\n")
 	}
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *AuthorizeData) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 7)
+	s = append(s, "&packet.AuthorizeData{")
+	s = append(s, "Certificate: "+fmt.Sprintf("%#v", this.Certificate)+",\n")
+	s = append(s, "Timestamp: "+fmt.Sprintf("%#v", this.Timestamp)+",\n")
+	s = append(s, "Version: "+fmt.Sprintf("%#v", this.Version)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -3396,32 +3397,12 @@ func (this *AuthorizeRequest) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 5)
-	s = append(s, "&packet.AuthorizeRequest{")
-	s = append(s, "Certificate: "+fmt.Sprintf("%#v", this.Certificate)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RegisterRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&packet.RegisterRequest{")
-	s = append(s, "SessionID: "+fmt.Sprintf("%#v", this.SessionID)+",\n")
-	s = append(s, "Version: "+fmt.Sprintf("%#v", this.Version)+",\n")
-	s = append(s, "JoinClaim: "+fmt.Sprintf("%#v", this.JoinClaim)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *GenesisRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
 	s := make([]string, 0, 6)
-	s = append(s, "&packet.GenesisRequest{")
-	s = append(s, "LastPulse: "+fmt.Sprintf("%#v", this.LastPulse)+",\n")
-	s = append(s, "Discovery: "+fmt.Sprintf("%#v", this.Discovery)+",\n")
+	s = append(s, "&packet.AuthorizeRequest{")
+	if this.AuthorizeData != nil {
+		s = append(s, "AuthorizeData: "+fmt.Sprintf("%#v", this.AuthorizeData)+",\n")
+	}
+	s = append(s, "Signature: "+fmt.Sprintf("%#v", this.Signature)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -3446,27 +3427,27 @@ func (this *RPCResponse) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *Permission) GoString() string {
+func (this *Permit) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 6)
-	s = append(s, "&packet.Permission{")
+	s = append(s, "&packet.Permit{")
 	s = append(s, "Payload: "+strings.Replace(this.Payload.GoString(), `&`, ``, 1)+",\n")
 	s = append(s, "Signature: "+fmt.Sprintf("%#v", this.Signature)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *PermissionPayload) GoString() string {
+func (this *PermitPayload) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 8)
-	s = append(s, "&packet.PermissionPayload{")
+	s = append(s, "&packet.PermitPayload{")
 	s = append(s, "JoinerPublicKey: "+fmt.Sprintf("%#v", this.JoinerPublicKey)+",\n")
-	s = append(s, "UTC: "+fmt.Sprintf("%#v", this.UTC)+",\n")
+	s = append(s, "ExpireTimestamp: "+fmt.Sprintf("%#v", this.ExpireTimestamp)+",\n")
 	s = append(s, "ReconnectTo: "+fmt.Sprintf("%#v", this.ReconnectTo)+",\n")
-	s = append(s, "DiscoveryRef: "+fmt.Sprintf("%#v", this.DiscoveryRef)+",\n")
+	s = append(s, "AuthorityNodeRef: "+fmt.Sprintf("%#v", this.AuthorityNodeRef)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -3474,18 +3455,11 @@ func (this *BootstrapResponse) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 12)
+	s := make([]string, 0, 7)
 	s = append(s, "&packet.BootstrapResponse{")
 	s = append(s, "Code: "+fmt.Sprintf("%#v", this.Code)+",\n")
-	s = append(s, "RejectReason: "+fmt.Sprintf("%#v", this.RejectReason)+",\n")
 	s = append(s, "ETA: "+fmt.Sprintf("%#v", this.ETA)+",\n")
-	s = append(s, "AssignShortID: "+fmt.Sprintf("%#v", this.AssignShortID)+",\n")
-	s = append(s, "UpdateSincePulse: "+fmt.Sprintf("%#v", this.UpdateSincePulse)+",\n")
-	s = append(s, "RedirectHost: "+fmt.Sprintf("%#v", this.RedirectHost)+",\n")
-	s = append(s, "NetworkSize: "+fmt.Sprintf("%#v", this.NetworkSize)+",\n")
-	if this.Permission != nil {
-		s = append(s, "Permission: "+fmt.Sprintf("%#v", this.Permission)+",\n")
-	}
+	s = append(s, "Pulse: "+strings.Replace(this.Pulse.GoString(), `&`, ``, 1)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -3504,49 +3478,18 @@ func (this *AuthorizeResponse) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 7)
+	s := make([]string, 0, 10)
 	s = append(s, "&packet.AuthorizeResponse{")
 	s = append(s, "Code: "+fmt.Sprintf("%#v", this.Code)+",\n")
+	s = append(s, "Timestamp: "+fmt.Sprintf("%#v", this.Timestamp)+",\n")
 	s = append(s, "Error: "+fmt.Sprintf("%#v", this.Error)+",\n")
-	if this.Data != nil {
-		s = append(s, "Data: "+fmt.Sprintf("%#v", this.Data)+",\n")
+	if this.Permit != nil {
+		s = append(s, "Permit: "+fmt.Sprintf("%#v", this.Permit)+",\n")
 	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *AuthorizationData) GoString() string {
-	if this == nil {
-		return "nil"
+	s = append(s, "DiscoveryCount: "+fmt.Sprintf("%#v", this.DiscoveryCount)+",\n")
+	if this.Pulse != nil {
+		s = append(s, "Pulse: "+fmt.Sprintf("%#v", this.Pulse)+",\n")
 	}
-	s := make([]string, 0, 6)
-	s = append(s, "&packet.AuthorizationData{")
-	s = append(s, "SessionID: "+fmt.Sprintf("%#v", this.SessionID)+",\n")
-	s = append(s, "AssignShortID: "+fmt.Sprintf("%#v", this.AssignShortID)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RegisterResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&packet.RegisterResponse{")
-	s = append(s, "Code: "+fmt.Sprintf("%#v", this.Code)+",\n")
-	s = append(s, "RetryIn: "+fmt.Sprintf("%#v", this.RetryIn)+",\n")
-	s = append(s, "Error: "+fmt.Sprintf("%#v", this.Error)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *GenesisResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&packet.GenesisResponse{")
-	if this.Response != nil {
-		s = append(s, "Response: "+fmt.Sprintf("%#v", this.Response)+",\n")
-	}
-	s = append(s, "Error: "+fmt.Sprintf("%#v", this.Error)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -3567,6 +3510,24 @@ func (this *ErrorResponse) GoString() string {
 	s := make([]string, 0, 5)
 	s = append(s, "&packet.ErrorResponse{")
 	s = append(s, "Error: "+fmt.Sprintf("%#v", this.Error)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *UpdateScheduleResponse) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 4)
+	s = append(s, "&packet.UpdateScheduleResponse{")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *ReconnectResponse) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 4)
+	s = append(s, "&packet.ReconnectResponse{")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -3797,13 +3758,13 @@ func (m *Request_Authorize) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Request_Register) MarshalTo(dAtA []byte) (int, error) {
+func (m *Request_SignCert) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
-	if m.Register != nil {
+	if m.SignCert != nil {
 		dAtA[i] = 0x3a
 		i++
-		i = encodeVarintPacket(dAtA, i, uint64(m.Register.Size()))
-		n13, err := m.Register.MarshalTo(dAtA[i:])
+		i = encodeVarintPacket(dAtA, i, uint64(m.SignCert.Size()))
+		n13, err := m.SignCert.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -3811,13 +3772,13 @@ func (m *Request_Register) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Request_Genesis) MarshalTo(dAtA []byte) (int, error) {
+func (m *Request_UpdateSchedule) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
-	if m.Genesis != nil {
+	if m.UpdateSchedule != nil {
 		dAtA[i] = 0x42
 		i++
-		i = encodeVarintPacket(dAtA, i, uint64(m.Genesis.Size()))
-		n14, err := m.Genesis.MarshalTo(dAtA[i:])
+		i = encodeVarintPacket(dAtA, i, uint64(m.UpdateSchedule.Size()))
+		n14, err := m.UpdateSchedule.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -3825,13 +3786,13 @@ func (m *Request_Genesis) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Request_SignCert) MarshalTo(dAtA []byte) (int, error) {
+func (m *Request_Reconnect) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
-	if m.SignCert != nil {
+	if m.Reconnect != nil {
 		dAtA[i] = 0x4a
 		i++
-		i = encodeVarintPacket(dAtA, i, uint64(m.SignCert.Size()))
-		n15, err := m.SignCert.MarshalTo(dAtA[i:])
+		i = encodeVarintPacket(dAtA, i, uint64(m.Reconnect.Size()))
+		n15, err := m.Reconnect.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -3934,13 +3895,13 @@ func (m *Response_Authorize) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Response_Register) MarshalTo(dAtA []byte) (int, error) {
+func (m *Response_SignCert) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
-	if m.Register != nil {
+	if m.SignCert != nil {
 		dAtA[i] = 0x32
 		i++
-		i = encodeVarintPacket(dAtA, i, uint64(m.Register.Size()))
-		n22, err := m.Register.MarshalTo(dAtA[i:])
+		i = encodeVarintPacket(dAtA, i, uint64(m.SignCert.Size()))
+		n22, err := m.SignCert.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -3948,13 +3909,13 @@ func (m *Response_Register) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Response_Genesis) MarshalTo(dAtA []byte) (int, error) {
+func (m *Response_Error) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
-	if m.Genesis != nil {
+	if m.Error != nil {
 		dAtA[i] = 0x3a
 		i++
-		i = encodeVarintPacket(dAtA, i, uint64(m.Genesis.Size()))
-		n23, err := m.Genesis.MarshalTo(dAtA[i:])
+		i = encodeVarintPacket(dAtA, i, uint64(m.Error.Size()))
+		n23, err := m.Error.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -3962,13 +3923,13 @@ func (m *Response_Genesis) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Response_SignCert) MarshalTo(dAtA []byte) (int, error) {
+func (m *Response_UpdateSchedule) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
-	if m.SignCert != nil {
+	if m.UpdateSchedule != nil {
 		dAtA[i] = 0x42
 		i++
-		i = encodeVarintPacket(dAtA, i, uint64(m.SignCert.Size()))
-		n24, err := m.SignCert.MarshalTo(dAtA[i:])
+		i = encodeVarintPacket(dAtA, i, uint64(m.UpdateSchedule.Size()))
+		n24, err := m.UpdateSchedule.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -3976,13 +3937,13 @@ func (m *Response_SignCert) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Response_Error) MarshalTo(dAtA []byte) (int, error) {
+func (m *Response_Reconnect) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
-	if m.Error != nil {
+	if m.Reconnect != nil {
 		dAtA[i] = 0x4a
 		i++
-		i = encodeVarintPacket(dAtA, i, uint64(m.Error.Size()))
-		n25, err := m.Error.MarshalTo(dAtA[i:])
+		i = encodeVarintPacket(dAtA, i, uint64(m.Reconnect.Size()))
+		n25, err := m.Reconnect.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -4159,6 +4120,75 @@ func (m *PulseRequest) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
+func (m *UpdateScheduleRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *UpdateScheduleRequest) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.LastNodePulse != 0 {
+		dAtA[i] = 0x8
+		i++
+		i = encodeVarintPacket(dAtA, i, uint64(m.LastNodePulse))
+	}
+	if m.Permit != nil {
+		dAtA[i] = 0x12
+		i++
+		i = encodeVarintPacket(dAtA, i, uint64(m.Permit.Size()))
+		n30, err := m.Permit.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n30
+	}
+	return i, nil
+}
+
+func (m *ReconnectRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ReconnectRequest) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	dAtA[i] = 0xa
+	i++
+	i = encodeVarintPacket(dAtA, i, uint64(m.ReconnectTo.Size()))
+	n31, err := m.ReconnectTo.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n31
+	if m.Permit != nil {
+		dAtA[i] = 0x12
+		i++
+		i = encodeVarintPacket(dAtA, i, uint64(m.Permit.Size()))
+		n32, err := m.Permit.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n32
+	}
+	return i, nil
+}
+
 func (m *BootstrapRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -4174,30 +4204,66 @@ func (m *BootstrapRequest) MarshalTo(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if m.JoinClaim != nil {
+	dAtA[i] = 0x12
+	i++
+	i = encodeVarintPacket(dAtA, i, uint64(m.CandidateProfile.Size()))
+	n33, err := m.CandidateProfile.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n33
+	dAtA[i] = 0x1a
+	i++
+	i = encodeVarintPacket(dAtA, i, uint64(m.Pulse.Size()))
+	n34, err := m.Pulse.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n34
+	if m.Permit != nil {
+		dAtA[i] = 0x22
+		i++
+		i = encodeVarintPacket(dAtA, i, uint64(m.Permit.Size()))
+		n35, err := m.Permit.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n35
+	}
+	return i, nil
+}
+
+func (m *AuthorizeData) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *AuthorizeData) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if len(m.Certificate) > 0 {
 		dAtA[i] = 0xa
 		i++
-		i = encodeVarintPacket(dAtA, i, uint64(m.JoinClaim.Size()))
-		n30, err := m.JoinClaim.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n30
+		i = encodeVarintPacket(dAtA, i, uint64(len(m.Certificate)))
+		i += copy(dAtA[i:], m.Certificate)
 	}
-	if m.LastNodePulse != 0 {
+	if m.Timestamp != 0 {
 		dAtA[i] = 0x10
 		i++
-		i = encodeVarintPacket(dAtA, i, uint64(m.LastNodePulse))
+		i = encodeVarintPacket(dAtA, i, uint64(m.Timestamp))
 	}
-	if m.Permission != nil {
+	if len(m.Version) > 0 {
 		dAtA[i] = 0x1a
 		i++
-		i = encodeVarintPacket(dAtA, i, uint64(m.Permission.Size()))
-		n31, err := m.Permission.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n31
+		i = encodeVarintPacket(dAtA, i, uint64(len(m.Version)))
+		i += copy(dAtA[i:], m.Version)
 	}
 	return i, nil
 }
@@ -4217,83 +4283,21 @@ func (m *AuthorizeRequest) MarshalTo(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if len(m.Certificate) > 0 {
+	if m.AuthorizeData != nil {
 		dAtA[i] = 0xa
 		i++
-		i = encodeVarintPacket(dAtA, i, uint64(len(m.Certificate)))
-		i += copy(dAtA[i:], m.Certificate)
-	}
-	return i, nil
-}
-
-func (m *RegisterRequest) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *RegisterRequest) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	if m.SessionID != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintPacket(dAtA, i, uint64(m.SessionID))
-	}
-	if len(m.Version) > 0 {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintPacket(dAtA, i, uint64(len(m.Version)))
-		i += copy(dAtA[i:], m.Version)
-	}
-	if m.JoinClaim != nil {
-		dAtA[i] = 0x1a
-		i++
-		i = encodeVarintPacket(dAtA, i, uint64(m.JoinClaim.Size()))
-		n32, err := m.JoinClaim.MarshalTo(dAtA[i:])
+		i = encodeVarintPacket(dAtA, i, uint64(m.AuthorizeData.Size()))
+		n36, err := m.AuthorizeData.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n32
+		i += n36
 	}
-	return i, nil
-}
-
-func (m *GenesisRequest) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *GenesisRequest) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	if m.LastPulse != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintPacket(dAtA, i, uint64(m.LastPulse))
-	}
-	if m.Discovery != nil {
+	if len(m.Signature) > 0 {
 		dAtA[i] = 0x12
 		i++
-		i = encodeVarintPacket(dAtA, i, uint64(m.Discovery.Size()))
-		n33, err := m.Discovery.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n33
+		i = encodeVarintPacket(dAtA, i, uint64(len(m.Signature)))
+		i += copy(dAtA[i:], m.Signature)
 	}
 	return i, nil
 }
@@ -4316,11 +4320,11 @@ func (m *SignCertRequest) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0xa
 	i++
 	i = encodeVarintPacket(dAtA, i, uint64(m.NodeRef.Size()))
-	n34, err := m.NodeRef.MarshalTo(dAtA[i:])
+	n37, err := m.NodeRef.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n34
+	i += n37
 	return i, nil
 }
 
@@ -4354,7 +4358,7 @@ func (m *RPCResponse) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *Permission) Marshal() (dAtA []byte, err error) {
+func (m *Permit) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -4364,7 +4368,7 @@ func (m *Permission) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Permission) MarshalTo(dAtA []byte) (int, error) {
+func (m *Permit) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -4372,11 +4376,11 @@ func (m *Permission) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0xa
 	i++
 	i = encodeVarintPacket(dAtA, i, uint64(m.Payload.Size()))
-	n35, err := m.Payload.MarshalTo(dAtA[i:])
+	n38, err := m.Payload.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n35
+	i += n38
 	if len(m.Signature) > 0 {
 		dAtA[i] = 0x12
 		i++
@@ -4386,7 +4390,7 @@ func (m *Permission) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *PermissionPayload) Marshal() (dAtA []byte, err error) {
+func (m *PermitPayload) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -4396,7 +4400,7 @@ func (m *PermissionPayload) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *PermissionPayload) MarshalTo(dAtA []byte) (int, error) {
+func (m *PermitPayload) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -4407,25 +4411,29 @@ func (m *PermissionPayload) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintPacket(dAtA, i, uint64(len(m.JoinerPublicKey)))
 		i += copy(dAtA[i:], m.JoinerPublicKey)
 	}
-	if m.UTC != 0 {
+	if m.ExpireTimestamp != 0 {
 		dAtA[i] = 0x10
 		i++
-		i = encodeVarintPacket(dAtA, i, uint64(m.UTC))
+		i = encodeVarintPacket(dAtA, i, uint64(m.ExpireTimestamp))
 	}
-	if len(m.ReconnectTo) > 0 {
+	if m.ReconnectTo != nil {
 		dAtA[i] = 0x1a
 		i++
-		i = encodeVarintPacket(dAtA, i, uint64(len(m.ReconnectTo)))
-		i += copy(dAtA[i:], m.ReconnectTo)
+		i = encodeVarintPacket(dAtA, i, uint64(m.ReconnectTo.Size()))
+		n39, err := m.ReconnectTo.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n39
 	}
 	dAtA[i] = 0x22
 	i++
-	i = encodeVarintPacket(dAtA, i, uint64(m.DiscoveryRef.Size()))
-	n36, err := m.DiscoveryRef.MarshalTo(dAtA[i:])
+	i = encodeVarintPacket(dAtA, i, uint64(m.AuthorityNodeRef.Size()))
+	n40, err := m.AuthorityNodeRef.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n36
+	i += n40
 	return i, nil
 }
 
@@ -4449,48 +4457,19 @@ func (m *BootstrapResponse) MarshalTo(dAtA []byte) (int, error) {
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(m.Code))
 	}
-	if len(m.RejectReason) > 0 {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintPacket(dAtA, i, uint64(len(m.RejectReason)))
-		i += copy(dAtA[i:], m.RejectReason)
-	}
 	if m.ETA != 0 {
-		dAtA[i] = 0x18
+		dAtA[i] = 0x10
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(m.ETA))
 	}
-	if m.AssignShortID != 0 {
-		dAtA[i] = 0x20
-		i++
-		i = encodeVarintPacket(dAtA, i, uint64(m.AssignShortID))
+	dAtA[i] = 0x1a
+	i++
+	i = encodeVarintPacket(dAtA, i, uint64(m.Pulse.Size()))
+	n41, err := m.Pulse.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
-	if m.UpdateSincePulse != 0 {
-		dAtA[i] = 0x28
-		i++
-		i = encodeVarintPacket(dAtA, i, uint64(m.UpdateSincePulse))
-	}
-	if len(m.RedirectHost) > 0 {
-		dAtA[i] = 0x32
-		i++
-		i = encodeVarintPacket(dAtA, i, uint64(len(m.RedirectHost)))
-		i += copy(dAtA[i:], m.RedirectHost)
-	}
-	if m.NetworkSize != 0 {
-		dAtA[i] = 0x38
-		i++
-		i = encodeVarintPacket(dAtA, i, uint64(m.NetworkSize))
-	}
-	if m.Permission != nil {
-		dAtA[i] = 0x42
-		i++
-		i = encodeVarintPacket(dAtA, i, uint64(m.Permission.Size()))
-		n37, err := m.Permission.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n37
-	}
+	i += n41
 	return i, nil
 }
 
@@ -4548,77 +4527,10 @@ func (m *AuthorizeResponse) MarshalTo(dAtA []byte) (int, error) {
 		i++
 		i = encodeVarintPacket(dAtA, i, uint64(m.Code))
 	}
-	if len(m.Error) > 0 {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintPacket(dAtA, i, uint64(len(m.Error)))
-		i += copy(dAtA[i:], m.Error)
-	}
-	if m.Data != nil {
-		dAtA[i] = 0x1a
-		i++
-		i = encodeVarintPacket(dAtA, i, uint64(m.Data.Size()))
-		n38, err := m.Data.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n38
-	}
-	return i, nil
-}
-
-func (m *AuthorizationData) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *AuthorizationData) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	if m.SessionID != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintPacket(dAtA, i, uint64(m.SessionID))
-	}
-	if m.AssignShortID != 0 {
+	if m.Timestamp != 0 {
 		dAtA[i] = 0x10
 		i++
-		i = encodeVarintPacket(dAtA, i, uint64(m.AssignShortID))
-	}
-	return i, nil
-}
-
-func (m *RegisterResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *RegisterResponse) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	if m.Code != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintPacket(dAtA, i, uint64(m.Code))
-	}
-	if m.RetryIn != 0 {
-		dAtA[i] = 0x10
-		i++
-		i = encodeVarintPacket(dAtA, i, uint64(m.RetryIn))
+		i = encodeVarintPacket(dAtA, i, uint64(m.Timestamp))
 	}
 	if len(m.Error) > 0 {
 		dAtA[i] = 0x1a
@@ -4626,39 +4538,30 @@ func (m *RegisterResponse) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintPacket(dAtA, i, uint64(len(m.Error)))
 		i += copy(dAtA[i:], m.Error)
 	}
-	return i, nil
-}
-
-func (m *GenesisResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *GenesisResponse) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	if m.Response != nil {
-		dAtA[i] = 0xa
+	if m.Permit != nil {
+		dAtA[i] = 0x22
 		i++
-		i = encodeVarintPacket(dAtA, i, uint64(m.Response.Size()))
-		n39, err := m.Response.MarshalTo(dAtA[i:])
+		i = encodeVarintPacket(dAtA, i, uint64(m.Permit.Size()))
+		n42, err := m.Permit.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n39
+		i += n42
 	}
-	if len(m.Error) > 0 {
-		dAtA[i] = 0x12
+	if m.DiscoveryCount != 0 {
+		dAtA[i] = 0x28
 		i++
-		i = encodeVarintPacket(dAtA, i, uint64(len(m.Error)))
-		i += copy(dAtA[i:], m.Error)
+		i = encodeVarintPacket(dAtA, i, uint64(m.DiscoveryCount))
+	}
+	if m.Pulse != nil {
+		dAtA[i] = 0x32
+		i++
+		i = encodeVarintPacket(dAtA, i, uint64(m.Pulse.Size()))
+		n43, err := m.Pulse.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n43
 	}
 	return i, nil
 }
@@ -4708,6 +4611,42 @@ func (m *ErrorResponse) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintPacket(dAtA, i, uint64(len(m.Error)))
 		i += copy(dAtA[i:], m.Error)
 	}
+	return i, nil
+}
+
+func (m *UpdateScheduleResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *UpdateScheduleResponse) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	return i, nil
+}
+
+func (m *ReconnectResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ReconnectResponse) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
 	return i, nil
 }
 
@@ -4861,30 +4800,6 @@ func (m *Request_Authorize) Size() (n int) {
 	}
 	return n
 }
-func (m *Request_Register) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Register != nil {
-		l = m.Register.Size()
-		n += 1 + l + sovPacket(uint64(l))
-	}
-	return n
-}
-func (m *Request_Genesis) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Genesis != nil {
-		l = m.Genesis.Size()
-		n += 1 + l + sovPacket(uint64(l))
-	}
-	return n
-}
 func (m *Request_SignCert) Size() (n int) {
 	if m == nil {
 		return 0
@@ -4893,6 +4808,30 @@ func (m *Request_SignCert) Size() (n int) {
 	_ = l
 	if m.SignCert != nil {
 		l = m.SignCert.Size()
+		n += 1 + l + sovPacket(uint64(l))
+	}
+	return n
+}
+func (m *Request_UpdateSchedule) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.UpdateSchedule != nil {
+		l = m.UpdateSchedule.Size()
+		n += 1 + l + sovPacket(uint64(l))
+	}
+	return n
+}
+func (m *Request_Reconnect) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Reconnect != nil {
+		l = m.Reconnect.Size()
 		n += 1 + l + sovPacket(uint64(l))
 	}
 	return n
@@ -4969,30 +4908,6 @@ func (m *Response_Authorize) Size() (n int) {
 	}
 	return n
 }
-func (m *Response_Register) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Register != nil {
-		l = m.Register.Size()
-		n += 1 + l + sovPacket(uint64(l))
-	}
-	return n
-}
-func (m *Response_Genesis) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Genesis != nil {
-		l = m.Genesis.Size()
-		n += 1 + l + sovPacket(uint64(l))
-	}
-	return n
-}
 func (m *Response_SignCert) Size() (n int) {
 	if m == nil {
 		return 0
@@ -5013,6 +4928,30 @@ func (m *Response_Error) Size() (n int) {
 	_ = l
 	if m.Error != nil {
 		l = m.Error.Size()
+		n += 1 + l + sovPacket(uint64(l))
+	}
+	return n
+}
+func (m *Response_UpdateSchedule) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.UpdateSchedule != nil {
+		l = m.UpdateSchedule.Size()
+		n += 1 + l + sovPacket(uint64(l))
+	}
+	return n
+}
+func (m *Response_Reconnect) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Reconnect != nil {
+		l = m.Reconnect.Size()
 		n += 1 + l + sovPacket(uint64(l))
 	}
 	return n
@@ -5101,21 +5040,69 @@ func (m *PulseRequest) Size() (n int) {
 	return n
 }
 
+func (m *UpdateScheduleRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.LastNodePulse != 0 {
+		n += 1 + sovPacket(uint64(m.LastNodePulse))
+	}
+	if m.Permit != nil {
+		l = m.Permit.Size()
+		n += 1 + l + sovPacket(uint64(l))
+	}
+	return n
+}
+
+func (m *ReconnectRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = m.ReconnectTo.Size()
+	n += 1 + l + sovPacket(uint64(l))
+	if m.Permit != nil {
+		l = m.Permit.Size()
+		n += 1 + l + sovPacket(uint64(l))
+	}
+	return n
+}
+
 func (m *BootstrapRequest) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	if m.JoinClaim != nil {
-		l = m.JoinClaim.Size()
+	l = m.CandidateProfile.Size()
+	n += 1 + l + sovPacket(uint64(l))
+	l = m.Pulse.Size()
+	n += 1 + l + sovPacket(uint64(l))
+	if m.Permit != nil {
+		l = m.Permit.Size()
 		n += 1 + l + sovPacket(uint64(l))
 	}
-	if m.LastNodePulse != 0 {
-		n += 1 + sovPacket(uint64(m.LastNodePulse))
+	return n
+}
+
+func (m *AuthorizeData) Size() (n int) {
+	if m == nil {
+		return 0
 	}
-	if m.Permission != nil {
-		l = m.Permission.Size()
+	var l int
+	_ = l
+	l = len(m.Certificate)
+	if l > 0 {
+		n += 1 + l + sovPacket(uint64(l))
+	}
+	if m.Timestamp != 0 {
+		n += 1 + sovPacket(uint64(m.Timestamp))
+	}
+	l = len(m.Version)
+	if l > 0 {
 		n += 1 + l + sovPacket(uint64(l))
 	}
 	return n
@@ -5127,44 +5114,12 @@ func (m *AuthorizeRequest) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.Certificate)
+	if m.AuthorizeData != nil {
+		l = m.AuthorizeData.Size()
+		n += 1 + l + sovPacket(uint64(l))
+	}
+	l = len(m.Signature)
 	if l > 0 {
-		n += 1 + l + sovPacket(uint64(l))
-	}
-	return n
-}
-
-func (m *RegisterRequest) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.SessionID != 0 {
-		n += 1 + sovPacket(uint64(m.SessionID))
-	}
-	l = len(m.Version)
-	if l > 0 {
-		n += 1 + l + sovPacket(uint64(l))
-	}
-	if m.JoinClaim != nil {
-		l = m.JoinClaim.Size()
-		n += 1 + l + sovPacket(uint64(l))
-	}
-	return n
-}
-
-func (m *GenesisRequest) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.LastPulse != 0 {
-		n += 1 + sovPacket(uint64(m.LastPulse))
-	}
-	if m.Discovery != nil {
-		l = m.Discovery.Size()
 		n += 1 + l + sovPacket(uint64(l))
 	}
 	return n
@@ -5198,7 +5153,7 @@ func (m *RPCResponse) Size() (n int) {
 	return n
 }
 
-func (m *Permission) Size() (n int) {
+func (m *Permit) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -5213,7 +5168,7 @@ func (m *Permission) Size() (n int) {
 	return n
 }
 
-func (m *PermissionPayload) Size() (n int) {
+func (m *PermitPayload) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -5223,14 +5178,14 @@ func (m *PermissionPayload) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovPacket(uint64(l))
 	}
-	if m.UTC != 0 {
-		n += 1 + sovPacket(uint64(m.UTC))
+	if m.ExpireTimestamp != 0 {
+		n += 1 + sovPacket(uint64(m.ExpireTimestamp))
 	}
-	l = len(m.ReconnectTo)
-	if l > 0 {
+	if m.ReconnectTo != nil {
+		l = m.ReconnectTo.Size()
 		n += 1 + l + sovPacket(uint64(l))
 	}
-	l = m.DiscoveryRef.Size()
+	l = m.AuthorityNodeRef.Size()
 	n += 1 + l + sovPacket(uint64(l))
 	return n
 }
@@ -5244,30 +5199,11 @@ func (m *BootstrapResponse) Size() (n int) {
 	if m.Code != 0 {
 		n += 1 + sovPacket(uint64(m.Code))
 	}
-	l = len(m.RejectReason)
-	if l > 0 {
-		n += 1 + l + sovPacket(uint64(l))
-	}
 	if m.ETA != 0 {
 		n += 1 + sovPacket(uint64(m.ETA))
 	}
-	if m.AssignShortID != 0 {
-		n += 1 + sovPacket(uint64(m.AssignShortID))
-	}
-	if m.UpdateSincePulse != 0 {
-		n += 1 + sovPacket(uint64(m.UpdateSincePulse))
-	}
-	l = len(m.RedirectHost)
-	if l > 0 {
-		n += 1 + l + sovPacket(uint64(l))
-	}
-	if m.NetworkSize != 0 {
-		n += 1 + sovPacket(uint64(m.NetworkSize))
-	}
-	if m.Permission != nil {
-		l = m.Permission.Size()
-		n += 1 + l + sovPacket(uint64(l))
-	}
+	l = m.Pulse.Size()
+	n += 1 + l + sovPacket(uint64(l))
 	return n
 }
 
@@ -5296,63 +5232,22 @@ func (m *AuthorizeResponse) Size() (n int) {
 	if m.Code != 0 {
 		n += 1 + sovPacket(uint64(m.Code))
 	}
-	l = len(m.Error)
-	if l > 0 {
-		n += 1 + l + sovPacket(uint64(l))
-	}
-	if m.Data != nil {
-		l = m.Data.Size()
-		n += 1 + l + sovPacket(uint64(l))
-	}
-	return n
-}
-
-func (m *AuthorizationData) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.SessionID != 0 {
-		n += 1 + sovPacket(uint64(m.SessionID))
-	}
-	if m.AssignShortID != 0 {
-		n += 1 + sovPacket(uint64(m.AssignShortID))
-	}
-	return n
-}
-
-func (m *RegisterResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Code != 0 {
-		n += 1 + sovPacket(uint64(m.Code))
-	}
-	if m.RetryIn != 0 {
-		n += 1 + sovPacket(uint64(m.RetryIn))
+	if m.Timestamp != 0 {
+		n += 1 + sovPacket(uint64(m.Timestamp))
 	}
 	l = len(m.Error)
 	if l > 0 {
 		n += 1 + l + sovPacket(uint64(l))
 	}
-	return n
-}
-
-func (m *GenesisResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Response != nil {
-		l = m.Response.Size()
+	if m.Permit != nil {
+		l = m.Permit.Size()
 		n += 1 + l + sovPacket(uint64(l))
 	}
-	l = len(m.Error)
-	if l > 0 {
+	if m.DiscoveryCount != 0 {
+		n += 1 + sovPacket(uint64(m.DiscoveryCount))
+	}
+	if m.Pulse != nil {
+		l = m.Pulse.Size()
 		n += 1 + l + sovPacket(uint64(l))
 	}
 	return n
@@ -5381,6 +5276,24 @@ func (m *ErrorResponse) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovPacket(uint64(l))
 	}
+	return n
+}
+
+func (m *UpdateScheduleResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	return n
+}
+
+func (m *ReconnectResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
 	return n
 }
 
@@ -5503,32 +5416,32 @@ func (this *Request_Authorize) String() string {
 	}, "")
 	return s
 }
-func (this *Request_Register) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Request_Register{`,
-		`Register:` + strings.Replace(fmt.Sprintf("%v", this.Register), "RegisterRequest", "RegisterRequest", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Request_Genesis) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Request_Genesis{`,
-		`Genesis:` + strings.Replace(fmt.Sprintf("%v", this.Genesis), "GenesisRequest", "GenesisRequest", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
 func (this *Request_SignCert) String() string {
 	if this == nil {
 		return "nil"
 	}
 	s := strings.Join([]string{`&Request_SignCert{`,
 		`SignCert:` + strings.Replace(fmt.Sprintf("%v", this.SignCert), "SignCertRequest", "SignCertRequest", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *Request_UpdateSchedule) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&Request_UpdateSchedule{`,
+		`UpdateSchedule:` + strings.Replace(fmt.Sprintf("%v", this.UpdateSchedule), "UpdateScheduleRequest", "UpdateScheduleRequest", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *Request_Reconnect) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&Request_Reconnect{`,
+		`Reconnect:` + strings.Replace(fmt.Sprintf("%v", this.Reconnect), "ReconnectRequest", "ReconnectRequest", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -5593,26 +5506,6 @@ func (this *Response_Authorize) String() string {
 	}, "")
 	return s
 }
-func (this *Response_Register) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Response_Register{`,
-		`Register:` + strings.Replace(fmt.Sprintf("%v", this.Register), "RegisterResponse", "RegisterResponse", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Response_Genesis) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Response_Genesis{`,
-		`Genesis:` + strings.Replace(fmt.Sprintf("%v", this.Genesis), "GenesisResponse", "GenesisResponse", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
 func (this *Response_SignCert) String() string {
 	if this == nil {
 		return "nil"
@@ -5629,6 +5522,26 @@ func (this *Response_Error) String() string {
 	}
 	s := strings.Join([]string{`&Response_Error{`,
 		`Error:` + strings.Replace(fmt.Sprintf("%v", this.Error), "ErrorResponse", "ErrorResponse", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *Response_UpdateSchedule) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&Response_UpdateSchedule{`,
+		`UpdateSchedule:` + strings.Replace(fmt.Sprintf("%v", this.UpdateSchedule), "UpdateScheduleResponse", "UpdateScheduleResponse", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *Response_Reconnect) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&Response_Reconnect{`,
+		`Reconnect:` + strings.Replace(fmt.Sprintf("%v", this.Reconnect), "ReconnectResponse", "ReconnectResponse", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -5688,14 +5601,48 @@ func (this *PulseRequest) String() string {
 	}, "")
 	return s
 }
+func (this *UpdateScheduleRequest) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&UpdateScheduleRequest{`,
+		`LastNodePulse:` + fmt.Sprintf("%v", this.LastNodePulse) + `,`,
+		`Permit:` + strings.Replace(fmt.Sprintf("%v", this.Permit), "Permit", "Permit", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *ReconnectRequest) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&ReconnectRequest{`,
+		`ReconnectTo:` + fmt.Sprintf("%v", this.ReconnectTo) + `,`,
+		`Permit:` + strings.Replace(fmt.Sprintf("%v", this.Permit), "Permit", "Permit", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
 func (this *BootstrapRequest) String() string {
 	if this == nil {
 		return "nil"
 	}
 	s := strings.Join([]string{`&BootstrapRequest{`,
-		`JoinClaim:` + fmt.Sprintf("%v", this.JoinClaim) + `,`,
-		`LastNodePulse:` + fmt.Sprintf("%v", this.LastNodePulse) + `,`,
-		`Permission:` + strings.Replace(fmt.Sprintf("%v", this.Permission), "Permission", "Permission", 1) + `,`,
+		`CandidateProfile:` + strings.Replace(strings.Replace(this.CandidateProfile.String(), "Profile", "candidate.Profile", 1), `&`, ``, 1) + `,`,
+		`Pulse:` + strings.Replace(strings.Replace(this.Pulse.String(), "PulseProto", "pulse.PulseProto", 1), `&`, ``, 1) + `,`,
+		`Permit:` + strings.Replace(fmt.Sprintf("%v", this.Permit), "Permit", "Permit", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *AuthorizeData) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&AuthorizeData{`,
+		`Certificate:` + fmt.Sprintf("%v", this.Certificate) + `,`,
+		`Timestamp:` + fmt.Sprintf("%v", this.Timestamp) + `,`,
+		`Version:` + fmt.Sprintf("%v", this.Version) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -5705,30 +5652,8 @@ func (this *AuthorizeRequest) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&AuthorizeRequest{`,
-		`Certificate:` + fmt.Sprintf("%v", this.Certificate) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RegisterRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RegisterRequest{`,
-		`SessionID:` + fmt.Sprintf("%v", this.SessionID) + `,`,
-		`Version:` + fmt.Sprintf("%v", this.Version) + `,`,
-		`JoinClaim:` + fmt.Sprintf("%v", this.JoinClaim) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *GenesisRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&GenesisRequest{`,
-		`LastPulse:` + fmt.Sprintf("%v", this.LastPulse) + `,`,
-		`Discovery:` + fmt.Sprintf("%v", this.Discovery) + `,`,
+		`AuthorizeData:` + strings.Replace(fmt.Sprintf("%v", this.AuthorizeData), "AuthorizeData", "AuthorizeData", 1) + `,`,
+		`Signature:` + fmt.Sprintf("%v", this.Signature) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -5754,26 +5679,26 @@ func (this *RPCResponse) String() string {
 	}, "")
 	return s
 }
-func (this *Permission) String() string {
+func (this *Permit) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&Permission{`,
-		`Payload:` + strings.Replace(strings.Replace(this.Payload.String(), "PermissionPayload", "PermissionPayload", 1), `&`, ``, 1) + `,`,
+	s := strings.Join([]string{`&Permit{`,
+		`Payload:` + strings.Replace(strings.Replace(this.Payload.String(), "PermitPayload", "PermitPayload", 1), `&`, ``, 1) + `,`,
 		`Signature:` + fmt.Sprintf("%v", this.Signature) + `,`,
 		`}`,
 	}, "")
 	return s
 }
-func (this *PermissionPayload) String() string {
+func (this *PermitPayload) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&PermissionPayload{`,
+	s := strings.Join([]string{`&PermitPayload{`,
 		`JoinerPublicKey:` + fmt.Sprintf("%v", this.JoinerPublicKey) + `,`,
-		`UTC:` + fmt.Sprintf("%v", this.UTC) + `,`,
+		`ExpireTimestamp:` + fmt.Sprintf("%v", this.ExpireTimestamp) + `,`,
 		`ReconnectTo:` + fmt.Sprintf("%v", this.ReconnectTo) + `,`,
-		`DiscoveryRef:` + fmt.Sprintf("%v", this.DiscoveryRef) + `,`,
+		`AuthorityNodeRef:` + fmt.Sprintf("%v", this.AuthorityNodeRef) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -5784,13 +5709,8 @@ func (this *BootstrapResponse) String() string {
 	}
 	s := strings.Join([]string{`&BootstrapResponse{`,
 		`Code:` + fmt.Sprintf("%v", this.Code) + `,`,
-		`RejectReason:` + fmt.Sprintf("%v", this.RejectReason) + `,`,
 		`ETA:` + fmt.Sprintf("%v", this.ETA) + `,`,
-		`AssignShortID:` + fmt.Sprintf("%v", this.AssignShortID) + `,`,
-		`UpdateSincePulse:` + fmt.Sprintf("%v", this.UpdateSincePulse) + `,`,
-		`RedirectHost:` + fmt.Sprintf("%v", this.RedirectHost) + `,`,
-		`NetworkSize:` + fmt.Sprintf("%v", this.NetworkSize) + `,`,
-		`Permission:` + strings.Replace(fmt.Sprintf("%v", this.Permission), "Permission", "Permission", 1) + `,`,
+		`Pulse:` + strings.Replace(strings.Replace(this.Pulse.String(), "PulseProto", "pulse.PulseProto", 1), `&`, ``, 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -5812,42 +5732,11 @@ func (this *AuthorizeResponse) String() string {
 	}
 	s := strings.Join([]string{`&AuthorizeResponse{`,
 		`Code:` + fmt.Sprintf("%v", this.Code) + `,`,
+		`Timestamp:` + fmt.Sprintf("%v", this.Timestamp) + `,`,
 		`Error:` + fmt.Sprintf("%v", this.Error) + `,`,
-		`Data:` + strings.Replace(fmt.Sprintf("%v", this.Data), "AuthorizationData", "AuthorizationData", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *AuthorizationData) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&AuthorizationData{`,
-		`SessionID:` + fmt.Sprintf("%v", this.SessionID) + `,`,
-		`AssignShortID:` + fmt.Sprintf("%v", this.AssignShortID) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RegisterResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RegisterResponse{`,
-		`Code:` + fmt.Sprintf("%v", this.Code) + `,`,
-		`RetryIn:` + fmt.Sprintf("%v", this.RetryIn) + `,`,
-		`Error:` + fmt.Sprintf("%v", this.Error) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *GenesisResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&GenesisResponse{`,
-		`Response:` + strings.Replace(fmt.Sprintf("%v", this.Response), "GenesisRequest", "GenesisRequest", 1) + `,`,
-		`Error:` + fmt.Sprintf("%v", this.Error) + `,`,
+		`Permit:` + strings.Replace(fmt.Sprintf("%v", this.Permit), "Permit", "Permit", 1) + `,`,
+		`DiscoveryCount:` + fmt.Sprintf("%v", this.DiscoveryCount) + `,`,
+		`Pulse:` + strings.Replace(fmt.Sprintf("%v", this.Pulse), "PulseProto", "pulse.PulseProto", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -5868,6 +5757,24 @@ func (this *ErrorResponse) String() string {
 	}
 	s := strings.Join([]string{`&ErrorResponse{`,
 		`Error:` + fmt.Sprintf("%v", this.Error) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *UpdateScheduleResponse) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&UpdateScheduleResponse{`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *ReconnectResponse) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&ReconnectResponse{`,
 		`}`,
 	}, "")
 	return s
@@ -6403,76 +6310,6 @@ func (m *Request) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 7:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Register", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacket
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthPacket
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthPacket
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &RegisterRequest{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.Request = &Request_Register{v}
-			iNdEx = postIndex
-		case 8:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Genesis", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacket
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthPacket
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthPacket
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &GenesisRequest{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.Request = &Request_Genesis{v}
-			iNdEx = postIndex
-		case 9:
-			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field SignCert", wireType)
 			}
 			var msglen int
@@ -6505,6 +6342,76 @@ func (m *Request) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			m.Request = &Request_SignCert{v}
+			iNdEx = postIndex
+		case 8:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field UpdateSchedule", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPacket
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthPacket
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &UpdateScheduleRequest{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Request = &Request_UpdateSchedule{v}
+			iNdEx = postIndex
+		case 9:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Reconnect", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPacket
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthPacket
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &ReconnectRequest{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Request = &Request_Reconnect{v}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -6736,76 +6643,6 @@ func (m *Response) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 6:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Register", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacket
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthPacket
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthPacket
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &RegisterResponse{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.Response = &Response_Register{v}
-			iNdEx = postIndex
-		case 7:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Genesis", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacket
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthPacket
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthPacket
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &GenesisResponse{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.Response = &Response_Genesis{v}
-			iNdEx = postIndex
-		case 8:
-			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field SignCert", wireType)
 			}
 			var msglen int
@@ -6839,7 +6676,7 @@ func (m *Response) Unmarshal(dAtA []byte) error {
 			}
 			m.Response = &Response_SignCert{v}
 			iNdEx = postIndex
-		case 9:
+		case 7:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Error", wireType)
 			}
@@ -6873,6 +6710,76 @@ func (m *Response) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			m.Response = &Response_Error{v}
+			iNdEx = postIndex
+		case 8:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field UpdateSchedule", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPacket
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthPacket
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &UpdateScheduleResponse{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Response = &Response_UpdateSchedule{v}
+			iNdEx = postIndex
+		case 9:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Reconnect", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPacket
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthPacket
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &ReconnectResponse{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Response = &Response_Reconnect{v}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -7490,6 +7397,236 @@ func (m *PulseRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *UpdateScheduleRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPacket
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: UpdateScheduleRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: UpdateScheduleRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field LastNodePulse", wireType)
+			}
+			m.LastNodePulse = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPacket
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.LastNodePulse |= github_com_insolar_insolar_insolar.PulseNumber(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Permit", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPacket
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthPacket
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Permit == nil {
+				m.Permit = &Permit{}
+			}
+			if err := m.Permit.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPacket(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ReconnectRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPacket
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ReconnectRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ReconnectRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ReconnectTo", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPacket
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPacket
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.ReconnectTo.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Permit", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPacket
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthPacket
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Permit == nil {
+				m.Permit = &Permit{}
+			}
+			if err := m.Permit.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPacket(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func (m *BootstrapRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -7519,63 +7656,9 @@ func (m *BootstrapRequest) Unmarshal(dAtA []byte) error {
 			return fmt.Errorf("proto: BootstrapRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field JoinClaim", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacket
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthPacket
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthPacket
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			var v github_com_insolar_insolar_network_consensusv1_packets.NodeJoinClaim
-			m.JoinClaim = &v
-			if err := m.JoinClaim.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
 		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field LastNodePulse", wireType)
-			}
-			m.LastNodePulse = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacket
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.LastNodePulse |= github_com_insolar_insolar_insolar.PulseNumber(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 3:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Permission", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field CandidateProfile", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -7602,12 +7685,216 @@ func (m *BootstrapRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.Permission == nil {
-				m.Permission = &Permission{}
-			}
-			if err := m.Permission.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.CandidateProfile.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Pulse", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPacket
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthPacket
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Pulse.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Permit", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPacket
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthPacket
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Permit == nil {
+				m.Permit = &Permit{}
+			}
+			if err := m.Permit.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPacket(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *AuthorizeData) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPacket
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: AuthorizeData: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: AuthorizeData: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Certificate", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPacket
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPacket
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Certificate = append(m.Certificate[:0], dAtA[iNdEx:postIndex]...)
+			if m.Certificate == nil {
+				m.Certificate = []byte{}
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Timestamp", wireType)
+			}
+			m.Timestamp = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPacket
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Timestamp |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Version", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPacket
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPacket
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Version = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -7664,9 +7951,9 @@ func (m *AuthorizeRequest) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Certificate", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field AuthorizeData", wireType)
 			}
-			var byteLen int
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowPacket
@@ -7676,133 +7963,31 @@ func (m *AuthorizeRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			if msglen < 0 {
 				return ErrInvalidLengthPacket
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + msglen
 			if postIndex < 0 {
 				return ErrInvalidLengthPacket
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Certificate = append(m.Certificate[:0], dAtA[iNdEx:postIndex]...)
-			if m.Certificate == nil {
-				m.Certificate = []byte{}
+			if m.AuthorizeData == nil {
+				m.AuthorizeData = &AuthorizeData{}
 			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipPacket(dAtA[iNdEx:])
-			if err != nil {
+			if err := m.AuthorizeData.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthPacket
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthPacket
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *RegisterRequest) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowPacket
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: RegisterRequest: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: RegisterRequest: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field SessionID", wireType)
-			}
-			m.SessionID = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacket
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.SessionID |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
+			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Version", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacket
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthPacket
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthPacket
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Version = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field JoinClaim", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Signature", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
@@ -7829,117 +8014,9 @@ func (m *RegisterRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			var v github_com_insolar_insolar_network_consensusv1_packets.NodeJoinClaim
-			m.JoinClaim = &v
-			if err := m.JoinClaim.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipPacket(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthPacket
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthPacket
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *GenesisRequest) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowPacket
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: GenesisRequest: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: GenesisRequest: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field LastPulse", wireType)
-			}
-			m.LastPulse = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacket
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.LastPulse |= github_com_insolar_insolar_insolar.PulseNumber(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Discovery", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacket
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthPacket
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthPacket
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			var v github_com_insolar_insolar_network_consensusv1_packets.NodeJoinClaim
-			m.Discovery = &v
-			if err := m.Discovery.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
+			m.Signature = append(m.Signature[:0], dAtA[iNdEx:postIndex]...)
+			if m.Signature == nil {
+				m.Signature = []byte{}
 			}
 			iNdEx = postIndex
 		default:
@@ -8171,7 +8248,7 @@ func (m *RPCResponse) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Permission) Unmarshal(dAtA []byte) error {
+func (m *Permit) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -8194,10 +8271,10 @@ func (m *Permission) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Permission: wiretype end group for non-group")
+			return fmt.Errorf("proto: Permit: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Permission: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: Permit: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -8291,7 +8368,7 @@ func (m *Permission) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *PermissionPayload) Unmarshal(dAtA []byte) error {
+func (m *PermitPayload) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -8314,10 +8391,10 @@ func (m *PermissionPayload) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: PermissionPayload: wiretype end group for non-group")
+			return fmt.Errorf("proto: PermitPayload: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: PermissionPayload: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: PermitPayload: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -8356,9 +8433,9 @@ func (m *PermissionPayload) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 2:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field UTC", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field ExpireTimestamp", wireType)
 			}
-			m.UTC = 0
+			m.ExpireTimestamp = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowPacket
@@ -8368,7 +8445,7 @@ func (m *PermissionPayload) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.UTC |= int64(b&0x7F) << shift
+				m.ExpireTimestamp |= int64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -8376,38 +8453,6 @@ func (m *PermissionPayload) Unmarshal(dAtA []byte) error {
 		case 3:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ReconnectTo", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacket
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthPacket
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthPacket
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ReconnectTo = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field DiscoveryRef", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
@@ -8434,7 +8479,42 @@ func (m *PermissionPayload) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if err := m.DiscoveryRef.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			var v github_com_insolar_insolar_network_hostnetwork_host.Host
+			m.ReconnectTo = &v
+			if err := m.ReconnectTo.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AuthorityNodeRef", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPacket
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPacket
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.AuthorityNodeRef.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -8505,44 +8585,12 @@ func (m *BootstrapResponse) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Code |= ResponseCode(b&0x7F) << shift
+				m.Code |= BootstrapResponseCode(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
 		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field RejectReason", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacket
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthPacket
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthPacket
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.RejectReason = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ETA", wireType)
 			}
@@ -8561,98 +8609,9 @@ func (m *BootstrapResponse) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 4:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field AssignShortID", wireType)
-			}
-			m.AssignShortID = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacket
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.AssignShortID |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 5:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field UpdateSincePulse", wireType)
-			}
-			m.UpdateSincePulse = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacket
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.UpdateSincePulse |= github_com_insolar_insolar_insolar.PulseNumber(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 6:
+		case 3:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field RedirectHost", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacket
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthPacket
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthPacket
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.RedirectHost = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 7:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field NetworkSize", wireType)
-			}
-			m.NetworkSize = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacket
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.NetworkSize |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 8:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Permission", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Pulse", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -8679,10 +8638,7 @@ func (m *BootstrapResponse) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.Permission == nil {
-				m.Permission = &Permission{}
-			}
-			if err := m.Permission.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.Pulse.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -8858,156 +8814,16 @@ func (m *AuthorizeResponse) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Code |= BasicResponseCode(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Error", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacket
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthPacket
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthPacket
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Error = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Data", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacket
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthPacket
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthPacket
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Data == nil {
-				m.Data = &AuthorizationData{}
-			}
-			if err := m.Data.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipPacket(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthPacket
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthPacket
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *AuthorizationData) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowPacket
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: AuthorizationData: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: AuthorizationData: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field SessionID", wireType)
-			}
-			m.SessionID = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacket
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.SessionID |= uint64(b&0x7F) << shift
+				m.Code |= AuthorizeResponseCode(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
 		case 2:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field AssignShortID", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Timestamp", wireType)
 			}
-			m.AssignShortID = 0
+			m.Timestamp = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowPacket
@@ -9017,98 +8833,7 @@ func (m *AuthorizationData) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.AssignShortID |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		default:
-			iNdEx = preIndex
-			skippy, err := skipPacket(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthPacket
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthPacket
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *RegisterResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowPacket
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: RegisterResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: RegisterResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Code", wireType)
-			}
-			m.Code = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacket
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Code |= BasicResponseCode(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field RetryIn", wireType)
-			}
-			m.RetryIn = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacket
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.RetryIn |= int64(b&0x7F) << shift
+				m.Timestamp |= int64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -9145,62 +8870,9 @@ func (m *RegisterResponse) Unmarshal(dAtA []byte) error {
 			}
 			m.Error = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipPacket(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthPacket
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthPacket
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *GenesisResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowPacket
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: GenesisResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: GenesisResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
+		case 4:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Response", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Permit", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -9227,18 +8899,18 @@ func (m *GenesisResponse) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.Response == nil {
-				m.Response = &GenesisRequest{}
+			if m.Permit == nil {
+				m.Permit = &Permit{}
 			}
-			if err := m.Response.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.Permit.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Error", wireType)
+		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DiscoveryCount", wireType)
 			}
-			var stringLen uint64
+			m.DiscoveryCount = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowPacket
@@ -9248,23 +8920,46 @@ func (m *GenesisResponse) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
+				m.DiscoveryCount |= uint32(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Pulse", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPacket
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
 				return ErrInvalidLengthPacket
 			}
-			postIndex := iNdEx + intStringLen
+			postIndex := iNdEx + msglen
 			if postIndex < 0 {
 				return ErrInvalidLengthPacket
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Error = string(dAtA[iNdEx:postIndex])
+			if m.Pulse == nil {
+				m.Pulse = &pulse.PulseProto{}
+			}
+			if err := m.Pulse.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -9438,6 +9133,112 @@ func (m *ErrorResponse) Unmarshal(dAtA []byte) error {
 			}
 			m.Error = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPacket(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *UpdateScheduleResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPacket
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: UpdateScheduleResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: UpdateScheduleResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPacket(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPacket
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ReconnectResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPacket
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ReconnectResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ReconnectResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
 		default:
 			iNdEx = preIndex
 			skippy, err := skipPacket(dAtA[iNdEx:])

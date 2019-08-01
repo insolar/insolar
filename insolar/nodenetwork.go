@@ -31,6 +31,8 @@ const AbsentShortNodeID ShortNodeID = 0
 
 func (v ShortNodeID) IsAbsent() bool { return v == AbsentShortNodeID }
 
+func (v ShortNodeID) Equal(other ShortNodeID) bool { return v == other }
+
 // GlobuleID is the ID of the globe
 type GlobuleID uint32
 
@@ -72,11 +74,18 @@ type NetworkNode interface {
 	GetState() NodeState
 }
 
+//go:generate minimock -i github.com/insolar/insolar/insolar.OriginProvider -o ../testutils/network -s _mock.go -g
+
+type OriginProvider interface {
+	// GetOrigin get origin node for the current insolard. Returns nil if the current insolard is not a working node.
+	GetOrigin() NetworkNode
+}
+
 //go:generate minimock -i github.com/insolar/insolar/insolar.NodeNetwork -o ../testutils/network -s _mock.go -g
 
 type NodeNetwork interface {
-	// GetOrigin get origin node for the current insolard. Returns nil if the current insolard is not a working node.
-	GetOrigin() NetworkNode
+	OriginProvider
+
 	// GetWorkingNode get working node by its reference. Returns nil if node is not found or is not working.
 	GetWorkingNode(ref Reference) NetworkNode
 	// GetWorkingNodes returns sorted list of all working nodes.

@@ -16,6 +16,12 @@ import (
 type NetworkMock struct {
 	t minimock.Tester
 
+	funcGetCert          func(ctx context.Context, rp1 *mm_insolar.Reference) (c2 mm_insolar.Certificate, err error)
+	inspectFuncGetCert   func(ctx context.Context, rp1 *mm_insolar.Reference)
+	afterGetCertCounter  uint64
+	beforeGetCertCounter uint64
+	GetCertMock          mNetworkMockGetCert
+
 	funcGetState          func() (n1 mm_insolar.NetworkState)
 	inspectFuncGetState   func()
 	afterGetStateCounter  uint64
@@ -46,8 +52,8 @@ type NetworkMock struct {
 	beforeSendMessageCounter uint64
 	SendMessageMock          mNetworkMockSendMessage
 
-	funcSetOperableFunc          func(f func(ctx context.Context, isNetworkOperable bool))
-	inspectFuncSetOperableFunc   func(f func(ctx context.Context, isNetworkOperable bool))
+	funcSetOperableFunc          func(n1 mm_insolar.NetworkOperableCallback)
+	inspectFuncSetOperableFunc   func(n1 mm_insolar.NetworkOperableCallback)
 	afterSetOperableFuncCounter  uint64
 	beforeSetOperableFuncCounter uint64
 	SetOperableFuncMock          mNetworkMockSetOperableFunc
@@ -59,6 +65,9 @@ func NewNetworkMock(t minimock.Tester) *NetworkMock {
 	if controller, ok := t.(minimock.MockController); ok {
 		controller.RegisterMocker(m)
 	}
+
+	m.GetCertMock = mNetworkMockGetCert{mock: m}
+	m.GetCertMock.callArgs = []*NetworkMockGetCertParams{}
 
 	m.GetStateMock = mNetworkMockGetState{mock: m}
 
@@ -78,6 +87,223 @@ func NewNetworkMock(t minimock.Tester) *NetworkMock {
 	m.SetOperableFuncMock.callArgs = []*NetworkMockSetOperableFuncParams{}
 
 	return m
+}
+
+type mNetworkMockGetCert struct {
+	mock               *NetworkMock
+	defaultExpectation *NetworkMockGetCertExpectation
+	expectations       []*NetworkMockGetCertExpectation
+
+	callArgs []*NetworkMockGetCertParams
+	mutex    sync.RWMutex
+}
+
+// NetworkMockGetCertExpectation specifies expectation struct of the Network.GetCert
+type NetworkMockGetCertExpectation struct {
+	mock    *NetworkMock
+	params  *NetworkMockGetCertParams
+	results *NetworkMockGetCertResults
+	Counter uint64
+}
+
+// NetworkMockGetCertParams contains parameters of the Network.GetCert
+type NetworkMockGetCertParams struct {
+	ctx context.Context
+	rp1 *mm_insolar.Reference
+}
+
+// NetworkMockGetCertResults contains results of the Network.GetCert
+type NetworkMockGetCertResults struct {
+	c2  mm_insolar.Certificate
+	err error
+}
+
+// Expect sets up expected params for Network.GetCert
+func (mmGetCert *mNetworkMockGetCert) Expect(ctx context.Context, rp1 *mm_insolar.Reference) *mNetworkMockGetCert {
+	if mmGetCert.mock.funcGetCert != nil {
+		mmGetCert.mock.t.Fatalf("NetworkMock.GetCert mock is already set by Set")
+	}
+
+	if mmGetCert.defaultExpectation == nil {
+		mmGetCert.defaultExpectation = &NetworkMockGetCertExpectation{}
+	}
+
+	mmGetCert.defaultExpectation.params = &NetworkMockGetCertParams{ctx, rp1}
+	for _, e := range mmGetCert.expectations {
+		if minimock.Equal(e.params, mmGetCert.defaultExpectation.params) {
+			mmGetCert.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmGetCert.defaultExpectation.params)
+		}
+	}
+
+	return mmGetCert
+}
+
+// Inspect accepts an inspector function that has same arguments as the Network.GetCert
+func (mmGetCert *mNetworkMockGetCert) Inspect(f func(ctx context.Context, rp1 *mm_insolar.Reference)) *mNetworkMockGetCert {
+	if mmGetCert.mock.inspectFuncGetCert != nil {
+		mmGetCert.mock.t.Fatalf("Inspect function is already set for NetworkMock.GetCert")
+	}
+
+	mmGetCert.mock.inspectFuncGetCert = f
+
+	return mmGetCert
+}
+
+// Return sets up results that will be returned by Network.GetCert
+func (mmGetCert *mNetworkMockGetCert) Return(c2 mm_insolar.Certificate, err error) *NetworkMock {
+	if mmGetCert.mock.funcGetCert != nil {
+		mmGetCert.mock.t.Fatalf("NetworkMock.GetCert mock is already set by Set")
+	}
+
+	if mmGetCert.defaultExpectation == nil {
+		mmGetCert.defaultExpectation = &NetworkMockGetCertExpectation{mock: mmGetCert.mock}
+	}
+	mmGetCert.defaultExpectation.results = &NetworkMockGetCertResults{c2, err}
+	return mmGetCert.mock
+}
+
+//Set uses given function f to mock the Network.GetCert method
+func (mmGetCert *mNetworkMockGetCert) Set(f func(ctx context.Context, rp1 *mm_insolar.Reference) (c2 mm_insolar.Certificate, err error)) *NetworkMock {
+	if mmGetCert.defaultExpectation != nil {
+		mmGetCert.mock.t.Fatalf("Default expectation is already set for the Network.GetCert method")
+	}
+
+	if len(mmGetCert.expectations) > 0 {
+		mmGetCert.mock.t.Fatalf("Some expectations are already set for the Network.GetCert method")
+	}
+
+	mmGetCert.mock.funcGetCert = f
+	return mmGetCert.mock
+}
+
+// When sets expectation for the Network.GetCert which will trigger the result defined by the following
+// Then helper
+func (mmGetCert *mNetworkMockGetCert) When(ctx context.Context, rp1 *mm_insolar.Reference) *NetworkMockGetCertExpectation {
+	if mmGetCert.mock.funcGetCert != nil {
+		mmGetCert.mock.t.Fatalf("NetworkMock.GetCert mock is already set by Set")
+	}
+
+	expectation := &NetworkMockGetCertExpectation{
+		mock:   mmGetCert.mock,
+		params: &NetworkMockGetCertParams{ctx, rp1},
+	}
+	mmGetCert.expectations = append(mmGetCert.expectations, expectation)
+	return expectation
+}
+
+// Then sets up Network.GetCert return parameters for the expectation previously defined by the When method
+func (e *NetworkMockGetCertExpectation) Then(c2 mm_insolar.Certificate, err error) *NetworkMock {
+	e.results = &NetworkMockGetCertResults{c2, err}
+	return e.mock
+}
+
+// GetCert implements insolar.Network
+func (mmGetCert *NetworkMock) GetCert(ctx context.Context, rp1 *mm_insolar.Reference) (c2 mm_insolar.Certificate, err error) {
+	mm_atomic.AddUint64(&mmGetCert.beforeGetCertCounter, 1)
+	defer mm_atomic.AddUint64(&mmGetCert.afterGetCertCounter, 1)
+
+	if mmGetCert.inspectFuncGetCert != nil {
+		mmGetCert.inspectFuncGetCert(ctx, rp1)
+	}
+
+	params := &NetworkMockGetCertParams{ctx, rp1}
+
+	// Record call args
+	mmGetCert.GetCertMock.mutex.Lock()
+	mmGetCert.GetCertMock.callArgs = append(mmGetCert.GetCertMock.callArgs, params)
+	mmGetCert.GetCertMock.mutex.Unlock()
+
+	for _, e := range mmGetCert.GetCertMock.expectations {
+		if minimock.Equal(e.params, params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.c2, e.results.err
+		}
+	}
+
+	if mmGetCert.GetCertMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmGetCert.GetCertMock.defaultExpectation.Counter, 1)
+		want := mmGetCert.GetCertMock.defaultExpectation.params
+		got := NetworkMockGetCertParams{ctx, rp1}
+		if want != nil && !minimock.Equal(*want, got) {
+			mmGetCert.t.Errorf("NetworkMock.GetCert got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		}
+
+		results := mmGetCert.GetCertMock.defaultExpectation.results
+		if results == nil {
+			mmGetCert.t.Fatal("No results are set for the NetworkMock.GetCert")
+		}
+		return (*results).c2, (*results).err
+	}
+	if mmGetCert.funcGetCert != nil {
+		return mmGetCert.funcGetCert(ctx, rp1)
+	}
+	mmGetCert.t.Fatalf("Unexpected call to NetworkMock.GetCert. %v %v", ctx, rp1)
+	return
+}
+
+// GetCertAfterCounter returns a count of finished NetworkMock.GetCert invocations
+func (mmGetCert *NetworkMock) GetCertAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmGetCert.afterGetCertCounter)
+}
+
+// GetCertBeforeCounter returns a count of NetworkMock.GetCert invocations
+func (mmGetCert *NetworkMock) GetCertBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmGetCert.beforeGetCertCounter)
+}
+
+// Calls returns a list of arguments used in each call to NetworkMock.GetCert.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmGetCert *mNetworkMockGetCert) Calls() []*NetworkMockGetCertParams {
+	mmGetCert.mutex.RLock()
+
+	argCopy := make([]*NetworkMockGetCertParams, len(mmGetCert.callArgs))
+	copy(argCopy, mmGetCert.callArgs)
+
+	mmGetCert.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockGetCertDone returns true if the count of the GetCert invocations corresponds
+// the number of defined expectations
+func (m *NetworkMock) MinimockGetCertDone() bool {
+	for _, e := range m.GetCertMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.GetCertMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetCertCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcGetCert != nil && mm_atomic.LoadUint64(&m.afterGetCertCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockGetCertInspect logs each unmet expectation
+func (m *NetworkMock) MinimockGetCertInspect() {
+	for _, e := range m.GetCertMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to NetworkMock.GetCert with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.GetCertMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetCertCounter) < 1 {
+		if m.GetCertMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to NetworkMock.GetCert")
+		} else {
+			m.t.Errorf("Expected call to NetworkMock.GetCert with params: %#v", *m.GetCertMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcGetCert != nil && mm_atomic.LoadUint64(&m.afterGetCertCounter) < 1 {
+		m.t.Error("Expected call to NetworkMock.GetCert")
+	}
 }
 
 type mNetworkMockGetState struct {
@@ -1053,11 +1279,11 @@ type NetworkMockSetOperableFuncExpectation struct {
 
 // NetworkMockSetOperableFuncParams contains parameters of the Network.SetOperableFunc
 type NetworkMockSetOperableFuncParams struct {
-	f func(ctx context.Context, isNetworkOperable bool)
+	n1 mm_insolar.NetworkOperableCallback
 }
 
 // Expect sets up expected params for Network.SetOperableFunc
-func (mmSetOperableFunc *mNetworkMockSetOperableFunc) Expect(f func(ctx context.Context, isNetworkOperable bool)) *mNetworkMockSetOperableFunc {
+func (mmSetOperableFunc *mNetworkMockSetOperableFunc) Expect(n1 mm_insolar.NetworkOperableCallback) *mNetworkMockSetOperableFunc {
 	if mmSetOperableFunc.mock.funcSetOperableFunc != nil {
 		mmSetOperableFunc.mock.t.Fatalf("NetworkMock.SetOperableFunc mock is already set by Set")
 	}
@@ -1066,7 +1292,7 @@ func (mmSetOperableFunc *mNetworkMockSetOperableFunc) Expect(f func(ctx context.
 		mmSetOperableFunc.defaultExpectation = &NetworkMockSetOperableFuncExpectation{}
 	}
 
-	mmSetOperableFunc.defaultExpectation.params = &NetworkMockSetOperableFuncParams{f}
+	mmSetOperableFunc.defaultExpectation.params = &NetworkMockSetOperableFuncParams{n1}
 	for _, e := range mmSetOperableFunc.expectations {
 		if minimock.Equal(e.params, mmSetOperableFunc.defaultExpectation.params) {
 			mmSetOperableFunc.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmSetOperableFunc.defaultExpectation.params)
@@ -1077,7 +1303,7 @@ func (mmSetOperableFunc *mNetworkMockSetOperableFunc) Expect(f func(ctx context.
 }
 
 // Inspect accepts an inspector function that has same arguments as the Network.SetOperableFunc
-func (mmSetOperableFunc *mNetworkMockSetOperableFunc) Inspect(f func(f func(ctx context.Context, isNetworkOperable bool))) *mNetworkMockSetOperableFunc {
+func (mmSetOperableFunc *mNetworkMockSetOperableFunc) Inspect(f func(n1 mm_insolar.NetworkOperableCallback)) *mNetworkMockSetOperableFunc {
 	if mmSetOperableFunc.mock.inspectFuncSetOperableFunc != nil {
 		mmSetOperableFunc.mock.t.Fatalf("Inspect function is already set for NetworkMock.SetOperableFunc")
 	}
@@ -1101,7 +1327,7 @@ func (mmSetOperableFunc *mNetworkMockSetOperableFunc) Return() *NetworkMock {
 }
 
 //Set uses given function f to mock the Network.SetOperableFunc method
-func (mmSetOperableFunc *mNetworkMockSetOperableFunc) Set(f func(f func(ctx context.Context, isNetworkOperable bool))) *NetworkMock {
+func (mmSetOperableFunc *mNetworkMockSetOperableFunc) Set(f func(n1 mm_insolar.NetworkOperableCallback)) *NetworkMock {
 	if mmSetOperableFunc.defaultExpectation != nil {
 		mmSetOperableFunc.mock.t.Fatalf("Default expectation is already set for the Network.SetOperableFunc method")
 	}
@@ -1115,15 +1341,15 @@ func (mmSetOperableFunc *mNetworkMockSetOperableFunc) Set(f func(f func(ctx cont
 }
 
 // SetOperableFunc implements insolar.Network
-func (mmSetOperableFunc *NetworkMock) SetOperableFunc(f func(ctx context.Context, isNetworkOperable bool)) {
+func (mmSetOperableFunc *NetworkMock) SetOperableFunc(n1 mm_insolar.NetworkOperableCallback) {
 	mm_atomic.AddUint64(&mmSetOperableFunc.beforeSetOperableFuncCounter, 1)
 	defer mm_atomic.AddUint64(&mmSetOperableFunc.afterSetOperableFuncCounter, 1)
 
 	if mmSetOperableFunc.inspectFuncSetOperableFunc != nil {
-		mmSetOperableFunc.inspectFuncSetOperableFunc(f)
+		mmSetOperableFunc.inspectFuncSetOperableFunc(n1)
 	}
 
-	params := &NetworkMockSetOperableFuncParams{f}
+	params := &NetworkMockSetOperableFuncParams{n1}
 
 	// Record call args
 	mmSetOperableFunc.SetOperableFuncMock.mutex.Lock()
@@ -1140,7 +1366,7 @@ func (mmSetOperableFunc *NetworkMock) SetOperableFunc(f func(ctx context.Context
 	if mmSetOperableFunc.SetOperableFuncMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSetOperableFunc.SetOperableFuncMock.defaultExpectation.Counter, 1)
 		want := mmSetOperableFunc.SetOperableFuncMock.defaultExpectation.params
-		got := NetworkMockSetOperableFuncParams{f}
+		got := NetworkMockSetOperableFuncParams{n1}
 		if want != nil && !minimock.Equal(*want, got) {
 			mmSetOperableFunc.t.Errorf("NetworkMock.SetOperableFunc got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
@@ -1149,10 +1375,10 @@ func (mmSetOperableFunc *NetworkMock) SetOperableFunc(f func(ctx context.Context
 
 	}
 	if mmSetOperableFunc.funcSetOperableFunc != nil {
-		mmSetOperableFunc.funcSetOperableFunc(f)
+		mmSetOperableFunc.funcSetOperableFunc(n1)
 		return
 	}
-	mmSetOperableFunc.t.Fatalf("Unexpected call to NetworkMock.SetOperableFunc. %v", f)
+	mmSetOperableFunc.t.Fatalf("Unexpected call to NetworkMock.SetOperableFunc. %v", n1)
 
 }
 
@@ -1224,6 +1450,8 @@ func (m *NetworkMock) MinimockSetOperableFuncInspect() {
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *NetworkMock) MinimockFinish() {
 	if !m.minimockDone() {
+		m.MinimockGetCertInspect()
+
 		m.MinimockGetStateInspect()
 
 		m.MinimockLeaveInspect()
@@ -1258,6 +1486,7 @@ func (m *NetworkMock) MinimockWait(timeout mm_time.Duration) {
 func (m *NetworkMock) minimockDone() bool {
 	done := true
 	return done &&
+		m.MinimockGetCertDone() &&
 		m.MinimockGetStateDone() &&
 		m.MinimockLeaveDone() &&
 		m.MinimockRemoteProcedureRegisterDone() &&

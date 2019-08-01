@@ -52,8 +52,6 @@ package controller
 
 import (
 	"context"
-	"sync/atomic"
-
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -66,24 +64,16 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	skippedPulsesLimit = 15
-)
-
 type PulseController interface {
 	component.Initer
 }
 
 type pulseController struct {
 	PulseHandler        network.PulseHandler               `inject:""`
-	NodeKeeper          network.NodeKeeper                 `inject:""`
 	CryptographyScheme  insolar.PlatformCryptographyScheme `inject:""`
 	KeyProcessor        insolar.KeyProcessor               `inject:""`
 	CryptographyService insolar.CryptographyService        `inject:""`
 	Network             network.HostNetwork                `inject:""`
-	TerminationHandler  insolar.TerminationHandler         `inject:""`
-
-	skippedPulses uint32
 }
 
 func (pc *pulseController) Init(ctx context.Context) error {
@@ -96,34 +86,27 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Rec
 		return nil, errors.Errorf("process pulse: got invalid protobuf request message: %s", request)
 	}
 
+	logger := inslogger.FromContext(ctx)
+
 	data := request.GetRequest().GetPulse()
-	pulse := *pulse.FromProto(data.Pulse)
-	err := pc.verifyPulseSign(pulse)
+	p := *pulse.FromProto(data.Pulse)
+	err := pc.verifyPulseSign(p)
 	if err != nil {
+		logger.Error("[ pulseController ] processPulse: failed to verify p: ", err.Error())
 		return nil, errors.Wrap(err, "[ pulseController ] processPulse: failed to verify pulse")
 	}
 
-	inslog := inslogger.FromContext(ctx)
-	// if we are a joiner node, we should receive pulse from phase1 packet and ignore pulse from pulsar
-	if !pc.NodeKeeper.GetConsensusInfo().IsJoiner() {
-		// Because we want to save our trace-context from a pulsar node
-		// We fetch TraceSpanData from msg and set a trace id and other stuff to current context
-		newCtx := context.Background()
-		parent, err := instracer.Deserialize(data.TraceSpanData)
-		if err != nil {
-			inslog.Errorf("failed to deserialize trace spans data on pulse process: %v", err)
-		} else {
-			newCtx = instracer.WithParentSpan(newCtx, parent)
-		}
-		go pc.PulseHandler.HandlePulse(newCtx, pulse, request)
+	// Because we want to save our trace-context from a pulsar node
+	// We fetch TraceSpanData from msg and set a trace id and other stuff to current context
+	newCtx := context.Background()
+	parent, err := instracer.Deserialize(data.TraceSpanData)
+	if err != nil {
+		logger.Errorf("failed to deserialize trace spans data on pulse process: %v", err)
 	} else {
-		inslog.Debugf("Ignore pulse %v from pulsar, waiting for consensus phase1 packet", data.Pulse)
-		skipped := atomic.AddUint32(&pc.skippedPulses, 1)
-		if skipped >= skippedPulsesLimit {
-			// we definitely failed to receive pulse via phase1 packet and should exit
-			pc.TerminationHandler.Abort("Failed to receive phase1 packet with pulse during bootstrap")
-		}
+		newCtx = instracer.WithParentSpan(newCtx, parent)
 	}
+	go pc.PulseHandler.HandlePulse(newCtx, p, request)
+
 	return pc.Network.BuildResponse(ctx, request, &packet.BasicResponse{Success: true, Error: ""}), nil
 }
 

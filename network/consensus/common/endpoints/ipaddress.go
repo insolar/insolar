@@ -102,7 +102,7 @@ func newIPAddress(ip net.IP, portNumber int, addr *IPAddress) error {
 		panic("not implemented")
 	}
 
-	if portNumber > int(maxPortNumber) || portNumber <= 0 {
+	if portNumber > int(maxPortNumber) || portNumber < 0 {
 		return errors.Errorf("invalid port number: %d", portNumber)
 	}
 

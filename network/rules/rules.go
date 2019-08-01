@@ -21,35 +21,17 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/utils"
 )
 
-// NewRules creates network Rules component
-func NewRules() network.Rules {
-	return &rules{}
-}
-
-type rules struct {
-	CertificateManager insolar.CertificateManager `inject:""`
-	NodeKeeper         network.NodeKeeper         `inject:""`
-}
-
 // CheckMajorityRule returns true id MajorityRule check passed, also returns active discovery nodes count
-func (r *rules) CheckMajorityRule() (bool, int) {
-	// activeNodes []core.Node
-	cert := r.CertificateManager.GetCertificate()
+func CheckMajorityRule(cert insolar.Certificate, nodes []insolar.NetworkNode) (bool, int) {
 	majorityRule := cert.GetMajorityRule()
-	activeDiscoveryNodesLen := len(
-		utils.FindDiscoveriesInNodeList(r.NodeKeeper.GetAccessor().GetActiveNodes(), cert))
+	activeDiscoveryNodesLen := len(network.FindDiscoveriesInNodeList(nodes, cert))
 	return activeDiscoveryNodesLen >= majorityRule, activeDiscoveryNodesLen
 }
 
 // CheckMinRole returns true if MinRole check passed
-func (r *rules) CheckMinRole() bool {
-	cert := r.CertificateManager.GetCertificate()
-
-	nodes := r.NodeKeeper.GetAccessor().GetActiveNodes()
-
+func CheckMinRole(cert insolar.Certificate, nodes []insolar.NetworkNode) bool {
 	var virtualCount, heavyCount, lightCount uint
 	for _, n := range nodes {
 		switch n.Role() {

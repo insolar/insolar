@@ -356,7 +356,11 @@ func (p *RoundStateMachineWorker) applyState(newState RoundState) {
 		case curState == RoundPulsePreparing && newState == RoundPulseAccepted:
 			break // prepare was cancelled by caller
 		case curState > RoundConsensusFinished && newState > RoundConsensusFinished:
-			// first state is correct
+			// the first state is correct, don't change
+			return
+		case curState > RoundConsensusFinished:
+			// attempt to restart from a final state
+			inslogger.FromContext(p.ctx).Errorf("reset transition attempt: current=%v new=%v", curState, newState)
 			return
 		//case curState < RoundConsensusFinished && newState == RoundConsensusFinished:
 		//	break // early finish
@@ -372,9 +376,9 @@ func (p *RoundStateMachineWorker) applyState(newState RoundState) {
 		if atomic.CompareAndSwapUint32(&p.roundState, uint32(curState), uint32(newState)) {
 			if attention {
 				if newState < curState {
-					inslogger.FromContext(p.ctx).Errorf("backward state transition: current=%v new=%v", curState, newState)
+					inslogger.FromContext(p.ctx).Warnf("backward state transition: current=%v new=%v", curState, newState)
 				} else {
-					inslogger.FromContext(p.ctx).Warnf("fast-forward state transition: current=%v new=%v", curState, newState)
+					inslogger.FromContext(p.ctx).Infof("fast-forward state transition: current=%v new=%v", curState, newState)
 				}
 			}
 			return

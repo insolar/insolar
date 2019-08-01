@@ -11,7 +11,6 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
 	mm_network "github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/node"
 )
 
@@ -25,41 +24,17 @@ type NodeKeeperMock struct {
 	beforeGetAccessorCounter uint64
 	GetAccessorMock          mNodeKeeperMockGetAccessor
 
-	funcGetClaimQueue          func() (c1 mm_network.ClaimQueue)
-	inspectFuncGetClaimQueue   func()
-	afterGetClaimQueueCounter  uint64
-	beforeGetClaimQueueCounter uint64
-	GetClaimQueueMock          mNodeKeeperMockGetClaimQueue
-
 	funcGetCloudHash          func() (ba1 []byte)
 	inspectFuncGetCloudHash   func()
 	afterGetCloudHashCounter  uint64
 	beforeGetCloudHashCounter uint64
 	GetCloudHashMock          mNodeKeeperMockGetCloudHash
 
-	funcGetConsensusInfo          func() (c1 mm_network.ConsensusInfo)
-	inspectFuncGetConsensusInfo   func()
-	afterGetConsensusInfoCounter  uint64
-	beforeGetConsensusInfoCounter uint64
-	GetConsensusInfoMock          mNodeKeeperMockGetConsensusInfo
-
 	funcGetOrigin          func() (n1 insolar.NetworkNode)
 	inspectFuncGetOrigin   func()
 	afterGetOriginCounter  uint64
 	beforeGetOriginCounter uint64
 	GetOriginMock          mNodeKeeperMockGetOrigin
-
-	funcGetOriginAnnounceClaim          func(mapper packets.BitSetMapper) (np1 *packets.NodeAnnounceClaim, err error)
-	inspectFuncGetOriginAnnounceClaim   func(mapper packets.BitSetMapper)
-	afterGetOriginAnnounceClaimCounter  uint64
-	beforeGetOriginAnnounceClaimCounter uint64
-	GetOriginAnnounceClaimMock          mNodeKeeperMockGetOriginAnnounceClaim
-
-	funcGetOriginJoinClaim          func() (np1 *packets.NodeJoinClaim, err error)
-	inspectFuncGetOriginJoinClaim   func()
-	afterGetOriginJoinClaimCounter  uint64
-	beforeGetOriginJoinClaimCounter uint64
-	GetOriginJoinClaimMock          mNodeKeeperMockGetOriginJoinClaim
 
 	funcGetSnapshotCopy          func() (sp1 *node.Snapshot)
 	inspectFuncGetSnapshotCopy   func()
@@ -85,12 +60,6 @@ type NodeKeeperMock struct {
 	beforeGetWorkingNodesByRoleCounter uint64
 	GetWorkingNodesByRoleMock          mNodeKeeperMockGetWorkingNodesByRole
 
-	funcIsBootstrapped          func() (b1 bool)
-	inspectFuncIsBootstrapped   func()
-	afterIsBootstrappedCounter  uint64
-	beforeIsBootstrappedCounter uint64
-	IsBootstrappedMock          mNodeKeeperMockIsBootstrapped
-
 	funcMoveSyncToActive          func(ctx context.Context, number insolar.PulseNumber) (err error)
 	inspectFuncMoveSyncToActive   func(ctx context.Context, number insolar.PulseNumber)
 	afterMoveSyncToActiveCounter  uint64
@@ -109,14 +78,8 @@ type NodeKeeperMock struct {
 	beforeSetInitialSnapshotCounter uint64
 	SetInitialSnapshotMock          mNodeKeeperMockSetInitialSnapshot
 
-	funcSetIsBootstrapped          func(isBootstrap bool)
-	inspectFuncSetIsBootstrapped   func(isBootstrap bool)
-	afterSetIsBootstrappedCounter  uint64
-	beforeSetIsBootstrappedCounter uint64
-	SetIsBootstrappedMock          mNodeKeeperMockSetIsBootstrapped
-
-	funcSync          func(ctx context.Context, na1 []insolar.NetworkNode, ra1 []packets.ReferendumClaim) (err error)
-	inspectFuncSync   func(ctx context.Context, na1 []insolar.NetworkNode, ra1 []packets.ReferendumClaim)
+	funcSync          func(ctx context.Context, na1 []insolar.NetworkNode) (err error)
+	inspectFuncSync   func(ctx context.Context, na1 []insolar.NetworkNode)
 	afterSyncCounter  uint64
 	beforeSyncCounter uint64
 	SyncMock          mNodeKeeperMockSync
@@ -131,18 +94,9 @@ func NewNodeKeeperMock(t minimock.Tester) *NodeKeeperMock {
 
 	m.GetAccessorMock = mNodeKeeperMockGetAccessor{mock: m}
 
-	m.GetClaimQueueMock = mNodeKeeperMockGetClaimQueue{mock: m}
-
 	m.GetCloudHashMock = mNodeKeeperMockGetCloudHash{mock: m}
 
-	m.GetConsensusInfoMock = mNodeKeeperMockGetConsensusInfo{mock: m}
-
 	m.GetOriginMock = mNodeKeeperMockGetOrigin{mock: m}
-
-	m.GetOriginAnnounceClaimMock = mNodeKeeperMockGetOriginAnnounceClaim{mock: m}
-	m.GetOriginAnnounceClaimMock.callArgs = []*NodeKeeperMockGetOriginAnnounceClaimParams{}
-
-	m.GetOriginJoinClaimMock = mNodeKeeperMockGetOriginJoinClaim{mock: m}
 
 	m.GetSnapshotCopyMock = mNodeKeeperMockGetSnapshotCopy{mock: m}
 
@@ -154,8 +108,6 @@ func NewNodeKeeperMock(t minimock.Tester) *NodeKeeperMock {
 	m.GetWorkingNodesByRoleMock = mNodeKeeperMockGetWorkingNodesByRole{mock: m}
 	m.GetWorkingNodesByRoleMock.callArgs = []*NodeKeeperMockGetWorkingNodesByRoleParams{}
 
-	m.IsBootstrappedMock = mNodeKeeperMockIsBootstrapped{mock: m}
-
 	m.MoveSyncToActiveMock = mNodeKeeperMockMoveSyncToActive{mock: m}
 	m.MoveSyncToActiveMock.callArgs = []*NodeKeeperMockMoveSyncToActiveParams{}
 
@@ -164,9 +116,6 @@ func NewNodeKeeperMock(t minimock.Tester) *NodeKeeperMock {
 
 	m.SetInitialSnapshotMock = mNodeKeeperMockSetInitialSnapshot{mock: m}
 	m.SetInitialSnapshotMock.callArgs = []*NodeKeeperMockSetInitialSnapshotParams{}
-
-	m.SetIsBootstrappedMock = mNodeKeeperMockSetIsBootstrapped{mock: m}
-	m.SetIsBootstrappedMock.callArgs = []*NodeKeeperMockSetIsBootstrappedParams{}
 
 	m.SyncMock = mNodeKeeperMockSync{mock: m}
 	m.SyncMock.callArgs = []*NodeKeeperMockSyncParams{}
@@ -317,149 +266,6 @@ func (m *NodeKeeperMock) MinimockGetAccessorInspect() {
 	}
 }
 
-type mNodeKeeperMockGetClaimQueue struct {
-	mock               *NodeKeeperMock
-	defaultExpectation *NodeKeeperMockGetClaimQueueExpectation
-	expectations       []*NodeKeeperMockGetClaimQueueExpectation
-}
-
-// NodeKeeperMockGetClaimQueueExpectation specifies expectation struct of the NodeKeeper.GetClaimQueue
-type NodeKeeperMockGetClaimQueueExpectation struct {
-	mock *NodeKeeperMock
-
-	results *NodeKeeperMockGetClaimQueueResults
-	Counter uint64
-}
-
-// NodeKeeperMockGetClaimQueueResults contains results of the NodeKeeper.GetClaimQueue
-type NodeKeeperMockGetClaimQueueResults struct {
-	c1 mm_network.ClaimQueue
-}
-
-// Expect sets up expected params for NodeKeeper.GetClaimQueue
-func (mmGetClaimQueue *mNodeKeeperMockGetClaimQueue) Expect() *mNodeKeeperMockGetClaimQueue {
-	if mmGetClaimQueue.mock.funcGetClaimQueue != nil {
-		mmGetClaimQueue.mock.t.Fatalf("NodeKeeperMock.GetClaimQueue mock is already set by Set")
-	}
-
-	if mmGetClaimQueue.defaultExpectation == nil {
-		mmGetClaimQueue.defaultExpectation = &NodeKeeperMockGetClaimQueueExpectation{}
-	}
-
-	return mmGetClaimQueue
-}
-
-// Inspect accepts an inspector function that has same arguments as the NodeKeeper.GetClaimQueue
-func (mmGetClaimQueue *mNodeKeeperMockGetClaimQueue) Inspect(f func()) *mNodeKeeperMockGetClaimQueue {
-	if mmGetClaimQueue.mock.inspectFuncGetClaimQueue != nil {
-		mmGetClaimQueue.mock.t.Fatalf("Inspect function is already set for NodeKeeperMock.GetClaimQueue")
-	}
-
-	mmGetClaimQueue.mock.inspectFuncGetClaimQueue = f
-
-	return mmGetClaimQueue
-}
-
-// Return sets up results that will be returned by NodeKeeper.GetClaimQueue
-func (mmGetClaimQueue *mNodeKeeperMockGetClaimQueue) Return(c1 mm_network.ClaimQueue) *NodeKeeperMock {
-	if mmGetClaimQueue.mock.funcGetClaimQueue != nil {
-		mmGetClaimQueue.mock.t.Fatalf("NodeKeeperMock.GetClaimQueue mock is already set by Set")
-	}
-
-	if mmGetClaimQueue.defaultExpectation == nil {
-		mmGetClaimQueue.defaultExpectation = &NodeKeeperMockGetClaimQueueExpectation{mock: mmGetClaimQueue.mock}
-	}
-	mmGetClaimQueue.defaultExpectation.results = &NodeKeeperMockGetClaimQueueResults{c1}
-	return mmGetClaimQueue.mock
-}
-
-//Set uses given function f to mock the NodeKeeper.GetClaimQueue method
-func (mmGetClaimQueue *mNodeKeeperMockGetClaimQueue) Set(f func() (c1 mm_network.ClaimQueue)) *NodeKeeperMock {
-	if mmGetClaimQueue.defaultExpectation != nil {
-		mmGetClaimQueue.mock.t.Fatalf("Default expectation is already set for the NodeKeeper.GetClaimQueue method")
-	}
-
-	if len(mmGetClaimQueue.expectations) > 0 {
-		mmGetClaimQueue.mock.t.Fatalf("Some expectations are already set for the NodeKeeper.GetClaimQueue method")
-	}
-
-	mmGetClaimQueue.mock.funcGetClaimQueue = f
-	return mmGetClaimQueue.mock
-}
-
-// GetClaimQueue implements network.NodeKeeper
-func (mmGetClaimQueue *NodeKeeperMock) GetClaimQueue() (c1 mm_network.ClaimQueue) {
-	mm_atomic.AddUint64(&mmGetClaimQueue.beforeGetClaimQueueCounter, 1)
-	defer mm_atomic.AddUint64(&mmGetClaimQueue.afterGetClaimQueueCounter, 1)
-
-	if mmGetClaimQueue.inspectFuncGetClaimQueue != nil {
-		mmGetClaimQueue.inspectFuncGetClaimQueue()
-	}
-
-	if mmGetClaimQueue.GetClaimQueueMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmGetClaimQueue.GetClaimQueueMock.defaultExpectation.Counter, 1)
-
-		results := mmGetClaimQueue.GetClaimQueueMock.defaultExpectation.results
-		if results == nil {
-			mmGetClaimQueue.t.Fatal("No results are set for the NodeKeeperMock.GetClaimQueue")
-		}
-		return (*results).c1
-	}
-	if mmGetClaimQueue.funcGetClaimQueue != nil {
-		return mmGetClaimQueue.funcGetClaimQueue()
-	}
-	mmGetClaimQueue.t.Fatalf("Unexpected call to NodeKeeperMock.GetClaimQueue.")
-	return
-}
-
-// GetClaimQueueAfterCounter returns a count of finished NodeKeeperMock.GetClaimQueue invocations
-func (mmGetClaimQueue *NodeKeeperMock) GetClaimQueueAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetClaimQueue.afterGetClaimQueueCounter)
-}
-
-// GetClaimQueueBeforeCounter returns a count of NodeKeeperMock.GetClaimQueue invocations
-func (mmGetClaimQueue *NodeKeeperMock) GetClaimQueueBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetClaimQueue.beforeGetClaimQueueCounter)
-}
-
-// MinimockGetClaimQueueDone returns true if the count of the GetClaimQueue invocations corresponds
-// the number of defined expectations
-func (m *NodeKeeperMock) MinimockGetClaimQueueDone() bool {
-	for _, e := range m.GetClaimQueueMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.GetClaimQueueMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetClaimQueueCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcGetClaimQueue != nil && mm_atomic.LoadUint64(&m.afterGetClaimQueueCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockGetClaimQueueInspect logs each unmet expectation
-func (m *NodeKeeperMock) MinimockGetClaimQueueInspect() {
-	for _, e := range m.GetClaimQueueMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Error("Expected call to NodeKeeperMock.GetClaimQueue")
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.GetClaimQueueMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetClaimQueueCounter) < 1 {
-		m.t.Error("Expected call to NodeKeeperMock.GetClaimQueue")
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcGetClaimQueue != nil && mm_atomic.LoadUint64(&m.afterGetClaimQueueCounter) < 1 {
-		m.t.Error("Expected call to NodeKeeperMock.GetClaimQueue")
-	}
-}
-
 type mNodeKeeperMockGetCloudHash struct {
 	mock               *NodeKeeperMock
 	defaultExpectation *NodeKeeperMockGetCloudHashExpectation
@@ -603,149 +409,6 @@ func (m *NodeKeeperMock) MinimockGetCloudHashInspect() {
 	}
 }
 
-type mNodeKeeperMockGetConsensusInfo struct {
-	mock               *NodeKeeperMock
-	defaultExpectation *NodeKeeperMockGetConsensusInfoExpectation
-	expectations       []*NodeKeeperMockGetConsensusInfoExpectation
-}
-
-// NodeKeeperMockGetConsensusInfoExpectation specifies expectation struct of the NodeKeeper.GetConsensusInfo
-type NodeKeeperMockGetConsensusInfoExpectation struct {
-	mock *NodeKeeperMock
-
-	results *NodeKeeperMockGetConsensusInfoResults
-	Counter uint64
-}
-
-// NodeKeeperMockGetConsensusInfoResults contains results of the NodeKeeper.GetConsensusInfo
-type NodeKeeperMockGetConsensusInfoResults struct {
-	c1 mm_network.ConsensusInfo
-}
-
-// Expect sets up expected params for NodeKeeper.GetConsensusInfo
-func (mmGetConsensusInfo *mNodeKeeperMockGetConsensusInfo) Expect() *mNodeKeeperMockGetConsensusInfo {
-	if mmGetConsensusInfo.mock.funcGetConsensusInfo != nil {
-		mmGetConsensusInfo.mock.t.Fatalf("NodeKeeperMock.GetConsensusInfo mock is already set by Set")
-	}
-
-	if mmGetConsensusInfo.defaultExpectation == nil {
-		mmGetConsensusInfo.defaultExpectation = &NodeKeeperMockGetConsensusInfoExpectation{}
-	}
-
-	return mmGetConsensusInfo
-}
-
-// Inspect accepts an inspector function that has same arguments as the NodeKeeper.GetConsensusInfo
-func (mmGetConsensusInfo *mNodeKeeperMockGetConsensusInfo) Inspect(f func()) *mNodeKeeperMockGetConsensusInfo {
-	if mmGetConsensusInfo.mock.inspectFuncGetConsensusInfo != nil {
-		mmGetConsensusInfo.mock.t.Fatalf("Inspect function is already set for NodeKeeperMock.GetConsensusInfo")
-	}
-
-	mmGetConsensusInfo.mock.inspectFuncGetConsensusInfo = f
-
-	return mmGetConsensusInfo
-}
-
-// Return sets up results that will be returned by NodeKeeper.GetConsensusInfo
-func (mmGetConsensusInfo *mNodeKeeperMockGetConsensusInfo) Return(c1 mm_network.ConsensusInfo) *NodeKeeperMock {
-	if mmGetConsensusInfo.mock.funcGetConsensusInfo != nil {
-		mmGetConsensusInfo.mock.t.Fatalf("NodeKeeperMock.GetConsensusInfo mock is already set by Set")
-	}
-
-	if mmGetConsensusInfo.defaultExpectation == nil {
-		mmGetConsensusInfo.defaultExpectation = &NodeKeeperMockGetConsensusInfoExpectation{mock: mmGetConsensusInfo.mock}
-	}
-	mmGetConsensusInfo.defaultExpectation.results = &NodeKeeperMockGetConsensusInfoResults{c1}
-	return mmGetConsensusInfo.mock
-}
-
-//Set uses given function f to mock the NodeKeeper.GetConsensusInfo method
-func (mmGetConsensusInfo *mNodeKeeperMockGetConsensusInfo) Set(f func() (c1 mm_network.ConsensusInfo)) *NodeKeeperMock {
-	if mmGetConsensusInfo.defaultExpectation != nil {
-		mmGetConsensusInfo.mock.t.Fatalf("Default expectation is already set for the NodeKeeper.GetConsensusInfo method")
-	}
-
-	if len(mmGetConsensusInfo.expectations) > 0 {
-		mmGetConsensusInfo.mock.t.Fatalf("Some expectations are already set for the NodeKeeper.GetConsensusInfo method")
-	}
-
-	mmGetConsensusInfo.mock.funcGetConsensusInfo = f
-	return mmGetConsensusInfo.mock
-}
-
-// GetConsensusInfo implements network.NodeKeeper
-func (mmGetConsensusInfo *NodeKeeperMock) GetConsensusInfo() (c1 mm_network.ConsensusInfo) {
-	mm_atomic.AddUint64(&mmGetConsensusInfo.beforeGetConsensusInfoCounter, 1)
-	defer mm_atomic.AddUint64(&mmGetConsensusInfo.afterGetConsensusInfoCounter, 1)
-
-	if mmGetConsensusInfo.inspectFuncGetConsensusInfo != nil {
-		mmGetConsensusInfo.inspectFuncGetConsensusInfo()
-	}
-
-	if mmGetConsensusInfo.GetConsensusInfoMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmGetConsensusInfo.GetConsensusInfoMock.defaultExpectation.Counter, 1)
-
-		results := mmGetConsensusInfo.GetConsensusInfoMock.defaultExpectation.results
-		if results == nil {
-			mmGetConsensusInfo.t.Fatal("No results are set for the NodeKeeperMock.GetConsensusInfo")
-		}
-		return (*results).c1
-	}
-	if mmGetConsensusInfo.funcGetConsensusInfo != nil {
-		return mmGetConsensusInfo.funcGetConsensusInfo()
-	}
-	mmGetConsensusInfo.t.Fatalf("Unexpected call to NodeKeeperMock.GetConsensusInfo.")
-	return
-}
-
-// GetConsensusInfoAfterCounter returns a count of finished NodeKeeperMock.GetConsensusInfo invocations
-func (mmGetConsensusInfo *NodeKeeperMock) GetConsensusInfoAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetConsensusInfo.afterGetConsensusInfoCounter)
-}
-
-// GetConsensusInfoBeforeCounter returns a count of NodeKeeperMock.GetConsensusInfo invocations
-func (mmGetConsensusInfo *NodeKeeperMock) GetConsensusInfoBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetConsensusInfo.beforeGetConsensusInfoCounter)
-}
-
-// MinimockGetConsensusInfoDone returns true if the count of the GetConsensusInfo invocations corresponds
-// the number of defined expectations
-func (m *NodeKeeperMock) MinimockGetConsensusInfoDone() bool {
-	for _, e := range m.GetConsensusInfoMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.GetConsensusInfoMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetConsensusInfoCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcGetConsensusInfo != nil && mm_atomic.LoadUint64(&m.afterGetConsensusInfoCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockGetConsensusInfoInspect logs each unmet expectation
-func (m *NodeKeeperMock) MinimockGetConsensusInfoInspect() {
-	for _, e := range m.GetConsensusInfoMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Error("Expected call to NodeKeeperMock.GetConsensusInfo")
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.GetConsensusInfoMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetConsensusInfoCounter) < 1 {
-		m.t.Error("Expected call to NodeKeeperMock.GetConsensusInfo")
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcGetConsensusInfo != nil && mm_atomic.LoadUint64(&m.afterGetConsensusInfoCounter) < 1 {
-		m.t.Error("Expected call to NodeKeeperMock.GetConsensusInfo")
-	}
-}
-
 type mNodeKeeperMockGetOrigin struct {
 	mock               *NodeKeeperMock
 	defaultExpectation *NodeKeeperMockGetOriginExpectation
@@ -886,366 +549,6 @@ func (m *NodeKeeperMock) MinimockGetOriginInspect() {
 	// if func was set then invocations count should be greater than zero
 	if m.funcGetOrigin != nil && mm_atomic.LoadUint64(&m.afterGetOriginCounter) < 1 {
 		m.t.Error("Expected call to NodeKeeperMock.GetOrigin")
-	}
-}
-
-type mNodeKeeperMockGetOriginAnnounceClaim struct {
-	mock               *NodeKeeperMock
-	defaultExpectation *NodeKeeperMockGetOriginAnnounceClaimExpectation
-	expectations       []*NodeKeeperMockGetOriginAnnounceClaimExpectation
-
-	callArgs []*NodeKeeperMockGetOriginAnnounceClaimParams
-	mutex    sync.RWMutex
-}
-
-// NodeKeeperMockGetOriginAnnounceClaimExpectation specifies expectation struct of the NodeKeeper.GetOriginAnnounceClaim
-type NodeKeeperMockGetOriginAnnounceClaimExpectation struct {
-	mock    *NodeKeeperMock
-	params  *NodeKeeperMockGetOriginAnnounceClaimParams
-	results *NodeKeeperMockGetOriginAnnounceClaimResults
-	Counter uint64
-}
-
-// NodeKeeperMockGetOriginAnnounceClaimParams contains parameters of the NodeKeeper.GetOriginAnnounceClaim
-type NodeKeeperMockGetOriginAnnounceClaimParams struct {
-	mapper packets.BitSetMapper
-}
-
-// NodeKeeperMockGetOriginAnnounceClaimResults contains results of the NodeKeeper.GetOriginAnnounceClaim
-type NodeKeeperMockGetOriginAnnounceClaimResults struct {
-	np1 *packets.NodeAnnounceClaim
-	err error
-}
-
-// Expect sets up expected params for NodeKeeper.GetOriginAnnounceClaim
-func (mmGetOriginAnnounceClaim *mNodeKeeperMockGetOriginAnnounceClaim) Expect(mapper packets.BitSetMapper) *mNodeKeeperMockGetOriginAnnounceClaim {
-	if mmGetOriginAnnounceClaim.mock.funcGetOriginAnnounceClaim != nil {
-		mmGetOriginAnnounceClaim.mock.t.Fatalf("NodeKeeperMock.GetOriginAnnounceClaim mock is already set by Set")
-	}
-
-	if mmGetOriginAnnounceClaim.defaultExpectation == nil {
-		mmGetOriginAnnounceClaim.defaultExpectation = &NodeKeeperMockGetOriginAnnounceClaimExpectation{}
-	}
-
-	mmGetOriginAnnounceClaim.defaultExpectation.params = &NodeKeeperMockGetOriginAnnounceClaimParams{mapper}
-	for _, e := range mmGetOriginAnnounceClaim.expectations {
-		if minimock.Equal(e.params, mmGetOriginAnnounceClaim.defaultExpectation.params) {
-			mmGetOriginAnnounceClaim.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmGetOriginAnnounceClaim.defaultExpectation.params)
-		}
-	}
-
-	return mmGetOriginAnnounceClaim
-}
-
-// Inspect accepts an inspector function that has same arguments as the NodeKeeper.GetOriginAnnounceClaim
-func (mmGetOriginAnnounceClaim *mNodeKeeperMockGetOriginAnnounceClaim) Inspect(f func(mapper packets.BitSetMapper)) *mNodeKeeperMockGetOriginAnnounceClaim {
-	if mmGetOriginAnnounceClaim.mock.inspectFuncGetOriginAnnounceClaim != nil {
-		mmGetOriginAnnounceClaim.mock.t.Fatalf("Inspect function is already set for NodeKeeperMock.GetOriginAnnounceClaim")
-	}
-
-	mmGetOriginAnnounceClaim.mock.inspectFuncGetOriginAnnounceClaim = f
-
-	return mmGetOriginAnnounceClaim
-}
-
-// Return sets up results that will be returned by NodeKeeper.GetOriginAnnounceClaim
-func (mmGetOriginAnnounceClaim *mNodeKeeperMockGetOriginAnnounceClaim) Return(np1 *packets.NodeAnnounceClaim, err error) *NodeKeeperMock {
-	if mmGetOriginAnnounceClaim.mock.funcGetOriginAnnounceClaim != nil {
-		mmGetOriginAnnounceClaim.mock.t.Fatalf("NodeKeeperMock.GetOriginAnnounceClaim mock is already set by Set")
-	}
-
-	if mmGetOriginAnnounceClaim.defaultExpectation == nil {
-		mmGetOriginAnnounceClaim.defaultExpectation = &NodeKeeperMockGetOriginAnnounceClaimExpectation{mock: mmGetOriginAnnounceClaim.mock}
-	}
-	mmGetOriginAnnounceClaim.defaultExpectation.results = &NodeKeeperMockGetOriginAnnounceClaimResults{np1, err}
-	return mmGetOriginAnnounceClaim.mock
-}
-
-//Set uses given function f to mock the NodeKeeper.GetOriginAnnounceClaim method
-func (mmGetOriginAnnounceClaim *mNodeKeeperMockGetOriginAnnounceClaim) Set(f func(mapper packets.BitSetMapper) (np1 *packets.NodeAnnounceClaim, err error)) *NodeKeeperMock {
-	if mmGetOriginAnnounceClaim.defaultExpectation != nil {
-		mmGetOriginAnnounceClaim.mock.t.Fatalf("Default expectation is already set for the NodeKeeper.GetOriginAnnounceClaim method")
-	}
-
-	if len(mmGetOriginAnnounceClaim.expectations) > 0 {
-		mmGetOriginAnnounceClaim.mock.t.Fatalf("Some expectations are already set for the NodeKeeper.GetOriginAnnounceClaim method")
-	}
-
-	mmGetOriginAnnounceClaim.mock.funcGetOriginAnnounceClaim = f
-	return mmGetOriginAnnounceClaim.mock
-}
-
-// When sets expectation for the NodeKeeper.GetOriginAnnounceClaim which will trigger the result defined by the following
-// Then helper
-func (mmGetOriginAnnounceClaim *mNodeKeeperMockGetOriginAnnounceClaim) When(mapper packets.BitSetMapper) *NodeKeeperMockGetOriginAnnounceClaimExpectation {
-	if mmGetOriginAnnounceClaim.mock.funcGetOriginAnnounceClaim != nil {
-		mmGetOriginAnnounceClaim.mock.t.Fatalf("NodeKeeperMock.GetOriginAnnounceClaim mock is already set by Set")
-	}
-
-	expectation := &NodeKeeperMockGetOriginAnnounceClaimExpectation{
-		mock:   mmGetOriginAnnounceClaim.mock,
-		params: &NodeKeeperMockGetOriginAnnounceClaimParams{mapper},
-	}
-	mmGetOriginAnnounceClaim.expectations = append(mmGetOriginAnnounceClaim.expectations, expectation)
-	return expectation
-}
-
-// Then sets up NodeKeeper.GetOriginAnnounceClaim return parameters for the expectation previously defined by the When method
-func (e *NodeKeeperMockGetOriginAnnounceClaimExpectation) Then(np1 *packets.NodeAnnounceClaim, err error) *NodeKeeperMock {
-	e.results = &NodeKeeperMockGetOriginAnnounceClaimResults{np1, err}
-	return e.mock
-}
-
-// GetOriginAnnounceClaim implements network.NodeKeeper
-func (mmGetOriginAnnounceClaim *NodeKeeperMock) GetOriginAnnounceClaim(mapper packets.BitSetMapper) (np1 *packets.NodeAnnounceClaim, err error) {
-	mm_atomic.AddUint64(&mmGetOriginAnnounceClaim.beforeGetOriginAnnounceClaimCounter, 1)
-	defer mm_atomic.AddUint64(&mmGetOriginAnnounceClaim.afterGetOriginAnnounceClaimCounter, 1)
-
-	if mmGetOriginAnnounceClaim.inspectFuncGetOriginAnnounceClaim != nil {
-		mmGetOriginAnnounceClaim.inspectFuncGetOriginAnnounceClaim(mapper)
-	}
-
-	params := &NodeKeeperMockGetOriginAnnounceClaimParams{mapper}
-
-	// Record call args
-	mmGetOriginAnnounceClaim.GetOriginAnnounceClaimMock.mutex.Lock()
-	mmGetOriginAnnounceClaim.GetOriginAnnounceClaimMock.callArgs = append(mmGetOriginAnnounceClaim.GetOriginAnnounceClaimMock.callArgs, params)
-	mmGetOriginAnnounceClaim.GetOriginAnnounceClaimMock.mutex.Unlock()
-
-	for _, e := range mmGetOriginAnnounceClaim.GetOriginAnnounceClaimMock.expectations {
-		if minimock.Equal(e.params, params) {
-			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.np1, e.results.err
-		}
-	}
-
-	if mmGetOriginAnnounceClaim.GetOriginAnnounceClaimMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmGetOriginAnnounceClaim.GetOriginAnnounceClaimMock.defaultExpectation.Counter, 1)
-		want := mmGetOriginAnnounceClaim.GetOriginAnnounceClaimMock.defaultExpectation.params
-		got := NodeKeeperMockGetOriginAnnounceClaimParams{mapper}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetOriginAnnounceClaim.t.Errorf("NodeKeeperMock.GetOriginAnnounceClaim got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
-		}
-
-		results := mmGetOriginAnnounceClaim.GetOriginAnnounceClaimMock.defaultExpectation.results
-		if results == nil {
-			mmGetOriginAnnounceClaim.t.Fatal("No results are set for the NodeKeeperMock.GetOriginAnnounceClaim")
-		}
-		return (*results).np1, (*results).err
-	}
-	if mmGetOriginAnnounceClaim.funcGetOriginAnnounceClaim != nil {
-		return mmGetOriginAnnounceClaim.funcGetOriginAnnounceClaim(mapper)
-	}
-	mmGetOriginAnnounceClaim.t.Fatalf("Unexpected call to NodeKeeperMock.GetOriginAnnounceClaim. %v", mapper)
-	return
-}
-
-// GetOriginAnnounceClaimAfterCounter returns a count of finished NodeKeeperMock.GetOriginAnnounceClaim invocations
-func (mmGetOriginAnnounceClaim *NodeKeeperMock) GetOriginAnnounceClaimAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetOriginAnnounceClaim.afterGetOriginAnnounceClaimCounter)
-}
-
-// GetOriginAnnounceClaimBeforeCounter returns a count of NodeKeeperMock.GetOriginAnnounceClaim invocations
-func (mmGetOriginAnnounceClaim *NodeKeeperMock) GetOriginAnnounceClaimBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetOriginAnnounceClaim.beforeGetOriginAnnounceClaimCounter)
-}
-
-// Calls returns a list of arguments used in each call to NodeKeeperMock.GetOriginAnnounceClaim.
-// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmGetOriginAnnounceClaim *mNodeKeeperMockGetOriginAnnounceClaim) Calls() []*NodeKeeperMockGetOriginAnnounceClaimParams {
-	mmGetOriginAnnounceClaim.mutex.RLock()
-
-	argCopy := make([]*NodeKeeperMockGetOriginAnnounceClaimParams, len(mmGetOriginAnnounceClaim.callArgs))
-	copy(argCopy, mmGetOriginAnnounceClaim.callArgs)
-
-	mmGetOriginAnnounceClaim.mutex.RUnlock()
-
-	return argCopy
-}
-
-// MinimockGetOriginAnnounceClaimDone returns true if the count of the GetOriginAnnounceClaim invocations corresponds
-// the number of defined expectations
-func (m *NodeKeeperMock) MinimockGetOriginAnnounceClaimDone() bool {
-	for _, e := range m.GetOriginAnnounceClaimMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.GetOriginAnnounceClaimMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetOriginAnnounceClaimCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcGetOriginAnnounceClaim != nil && mm_atomic.LoadUint64(&m.afterGetOriginAnnounceClaimCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockGetOriginAnnounceClaimInspect logs each unmet expectation
-func (m *NodeKeeperMock) MinimockGetOriginAnnounceClaimInspect() {
-	for _, e := range m.GetOriginAnnounceClaimMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to NodeKeeperMock.GetOriginAnnounceClaim with params: %#v", *e.params)
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.GetOriginAnnounceClaimMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetOriginAnnounceClaimCounter) < 1 {
-		if m.GetOriginAnnounceClaimMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to NodeKeeperMock.GetOriginAnnounceClaim")
-		} else {
-			m.t.Errorf("Expected call to NodeKeeperMock.GetOriginAnnounceClaim with params: %#v", *m.GetOriginAnnounceClaimMock.defaultExpectation.params)
-		}
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcGetOriginAnnounceClaim != nil && mm_atomic.LoadUint64(&m.afterGetOriginAnnounceClaimCounter) < 1 {
-		m.t.Error("Expected call to NodeKeeperMock.GetOriginAnnounceClaim")
-	}
-}
-
-type mNodeKeeperMockGetOriginJoinClaim struct {
-	mock               *NodeKeeperMock
-	defaultExpectation *NodeKeeperMockGetOriginJoinClaimExpectation
-	expectations       []*NodeKeeperMockGetOriginJoinClaimExpectation
-}
-
-// NodeKeeperMockGetOriginJoinClaimExpectation specifies expectation struct of the NodeKeeper.GetOriginJoinClaim
-type NodeKeeperMockGetOriginJoinClaimExpectation struct {
-	mock *NodeKeeperMock
-
-	results *NodeKeeperMockGetOriginJoinClaimResults
-	Counter uint64
-}
-
-// NodeKeeperMockGetOriginJoinClaimResults contains results of the NodeKeeper.GetOriginJoinClaim
-type NodeKeeperMockGetOriginJoinClaimResults struct {
-	np1 *packets.NodeJoinClaim
-	err error
-}
-
-// Expect sets up expected params for NodeKeeper.GetOriginJoinClaim
-func (mmGetOriginJoinClaim *mNodeKeeperMockGetOriginJoinClaim) Expect() *mNodeKeeperMockGetOriginJoinClaim {
-	if mmGetOriginJoinClaim.mock.funcGetOriginJoinClaim != nil {
-		mmGetOriginJoinClaim.mock.t.Fatalf("NodeKeeperMock.GetOriginJoinClaim mock is already set by Set")
-	}
-
-	if mmGetOriginJoinClaim.defaultExpectation == nil {
-		mmGetOriginJoinClaim.defaultExpectation = &NodeKeeperMockGetOriginJoinClaimExpectation{}
-	}
-
-	return mmGetOriginJoinClaim
-}
-
-// Inspect accepts an inspector function that has same arguments as the NodeKeeper.GetOriginJoinClaim
-func (mmGetOriginJoinClaim *mNodeKeeperMockGetOriginJoinClaim) Inspect(f func()) *mNodeKeeperMockGetOriginJoinClaim {
-	if mmGetOriginJoinClaim.mock.inspectFuncGetOriginJoinClaim != nil {
-		mmGetOriginJoinClaim.mock.t.Fatalf("Inspect function is already set for NodeKeeperMock.GetOriginJoinClaim")
-	}
-
-	mmGetOriginJoinClaim.mock.inspectFuncGetOriginJoinClaim = f
-
-	return mmGetOriginJoinClaim
-}
-
-// Return sets up results that will be returned by NodeKeeper.GetOriginJoinClaim
-func (mmGetOriginJoinClaim *mNodeKeeperMockGetOriginJoinClaim) Return(np1 *packets.NodeJoinClaim, err error) *NodeKeeperMock {
-	if mmGetOriginJoinClaim.mock.funcGetOriginJoinClaim != nil {
-		mmGetOriginJoinClaim.mock.t.Fatalf("NodeKeeperMock.GetOriginJoinClaim mock is already set by Set")
-	}
-
-	if mmGetOriginJoinClaim.defaultExpectation == nil {
-		mmGetOriginJoinClaim.defaultExpectation = &NodeKeeperMockGetOriginJoinClaimExpectation{mock: mmGetOriginJoinClaim.mock}
-	}
-	mmGetOriginJoinClaim.defaultExpectation.results = &NodeKeeperMockGetOriginJoinClaimResults{np1, err}
-	return mmGetOriginJoinClaim.mock
-}
-
-//Set uses given function f to mock the NodeKeeper.GetOriginJoinClaim method
-func (mmGetOriginJoinClaim *mNodeKeeperMockGetOriginJoinClaim) Set(f func() (np1 *packets.NodeJoinClaim, err error)) *NodeKeeperMock {
-	if mmGetOriginJoinClaim.defaultExpectation != nil {
-		mmGetOriginJoinClaim.mock.t.Fatalf("Default expectation is already set for the NodeKeeper.GetOriginJoinClaim method")
-	}
-
-	if len(mmGetOriginJoinClaim.expectations) > 0 {
-		mmGetOriginJoinClaim.mock.t.Fatalf("Some expectations are already set for the NodeKeeper.GetOriginJoinClaim method")
-	}
-
-	mmGetOriginJoinClaim.mock.funcGetOriginJoinClaim = f
-	return mmGetOriginJoinClaim.mock
-}
-
-// GetOriginJoinClaim implements network.NodeKeeper
-func (mmGetOriginJoinClaim *NodeKeeperMock) GetOriginJoinClaim() (np1 *packets.NodeJoinClaim, err error) {
-	mm_atomic.AddUint64(&mmGetOriginJoinClaim.beforeGetOriginJoinClaimCounter, 1)
-	defer mm_atomic.AddUint64(&mmGetOriginJoinClaim.afterGetOriginJoinClaimCounter, 1)
-
-	if mmGetOriginJoinClaim.inspectFuncGetOriginJoinClaim != nil {
-		mmGetOriginJoinClaim.inspectFuncGetOriginJoinClaim()
-	}
-
-	if mmGetOriginJoinClaim.GetOriginJoinClaimMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmGetOriginJoinClaim.GetOriginJoinClaimMock.defaultExpectation.Counter, 1)
-
-		results := mmGetOriginJoinClaim.GetOriginJoinClaimMock.defaultExpectation.results
-		if results == nil {
-			mmGetOriginJoinClaim.t.Fatal("No results are set for the NodeKeeperMock.GetOriginJoinClaim")
-		}
-		return (*results).np1, (*results).err
-	}
-	if mmGetOriginJoinClaim.funcGetOriginJoinClaim != nil {
-		return mmGetOriginJoinClaim.funcGetOriginJoinClaim()
-	}
-	mmGetOriginJoinClaim.t.Fatalf("Unexpected call to NodeKeeperMock.GetOriginJoinClaim.")
-	return
-}
-
-// GetOriginJoinClaimAfterCounter returns a count of finished NodeKeeperMock.GetOriginJoinClaim invocations
-func (mmGetOriginJoinClaim *NodeKeeperMock) GetOriginJoinClaimAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetOriginJoinClaim.afterGetOriginJoinClaimCounter)
-}
-
-// GetOriginJoinClaimBeforeCounter returns a count of NodeKeeperMock.GetOriginJoinClaim invocations
-func (mmGetOriginJoinClaim *NodeKeeperMock) GetOriginJoinClaimBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetOriginJoinClaim.beforeGetOriginJoinClaimCounter)
-}
-
-// MinimockGetOriginJoinClaimDone returns true if the count of the GetOriginJoinClaim invocations corresponds
-// the number of defined expectations
-func (m *NodeKeeperMock) MinimockGetOriginJoinClaimDone() bool {
-	for _, e := range m.GetOriginJoinClaimMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.GetOriginJoinClaimMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetOriginJoinClaimCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcGetOriginJoinClaim != nil && mm_atomic.LoadUint64(&m.afterGetOriginJoinClaimCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockGetOriginJoinClaimInspect logs each unmet expectation
-func (m *NodeKeeperMock) MinimockGetOriginJoinClaimInspect() {
-	for _, e := range m.GetOriginJoinClaimMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Error("Expected call to NodeKeeperMock.GetOriginJoinClaim")
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.GetOriginJoinClaimMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetOriginJoinClaimCounter) < 1 {
-		m.t.Error("Expected call to NodeKeeperMock.GetOriginJoinClaim")
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcGetOriginJoinClaim != nil && mm_atomic.LoadUint64(&m.afterGetOriginJoinClaimCounter) < 1 {
-		m.t.Error("Expected call to NodeKeeperMock.GetOriginJoinClaim")
 	}
 }
 
@@ -1965,149 +1268,6 @@ func (m *NodeKeeperMock) MinimockGetWorkingNodesByRoleInspect() {
 	}
 }
 
-type mNodeKeeperMockIsBootstrapped struct {
-	mock               *NodeKeeperMock
-	defaultExpectation *NodeKeeperMockIsBootstrappedExpectation
-	expectations       []*NodeKeeperMockIsBootstrappedExpectation
-}
-
-// NodeKeeperMockIsBootstrappedExpectation specifies expectation struct of the NodeKeeper.IsBootstrapped
-type NodeKeeperMockIsBootstrappedExpectation struct {
-	mock *NodeKeeperMock
-
-	results *NodeKeeperMockIsBootstrappedResults
-	Counter uint64
-}
-
-// NodeKeeperMockIsBootstrappedResults contains results of the NodeKeeper.IsBootstrapped
-type NodeKeeperMockIsBootstrappedResults struct {
-	b1 bool
-}
-
-// Expect sets up expected params for NodeKeeper.IsBootstrapped
-func (mmIsBootstrapped *mNodeKeeperMockIsBootstrapped) Expect() *mNodeKeeperMockIsBootstrapped {
-	if mmIsBootstrapped.mock.funcIsBootstrapped != nil {
-		mmIsBootstrapped.mock.t.Fatalf("NodeKeeperMock.IsBootstrapped mock is already set by Set")
-	}
-
-	if mmIsBootstrapped.defaultExpectation == nil {
-		mmIsBootstrapped.defaultExpectation = &NodeKeeperMockIsBootstrappedExpectation{}
-	}
-
-	return mmIsBootstrapped
-}
-
-// Inspect accepts an inspector function that has same arguments as the NodeKeeper.IsBootstrapped
-func (mmIsBootstrapped *mNodeKeeperMockIsBootstrapped) Inspect(f func()) *mNodeKeeperMockIsBootstrapped {
-	if mmIsBootstrapped.mock.inspectFuncIsBootstrapped != nil {
-		mmIsBootstrapped.mock.t.Fatalf("Inspect function is already set for NodeKeeperMock.IsBootstrapped")
-	}
-
-	mmIsBootstrapped.mock.inspectFuncIsBootstrapped = f
-
-	return mmIsBootstrapped
-}
-
-// Return sets up results that will be returned by NodeKeeper.IsBootstrapped
-func (mmIsBootstrapped *mNodeKeeperMockIsBootstrapped) Return(b1 bool) *NodeKeeperMock {
-	if mmIsBootstrapped.mock.funcIsBootstrapped != nil {
-		mmIsBootstrapped.mock.t.Fatalf("NodeKeeperMock.IsBootstrapped mock is already set by Set")
-	}
-
-	if mmIsBootstrapped.defaultExpectation == nil {
-		mmIsBootstrapped.defaultExpectation = &NodeKeeperMockIsBootstrappedExpectation{mock: mmIsBootstrapped.mock}
-	}
-	mmIsBootstrapped.defaultExpectation.results = &NodeKeeperMockIsBootstrappedResults{b1}
-	return mmIsBootstrapped.mock
-}
-
-//Set uses given function f to mock the NodeKeeper.IsBootstrapped method
-func (mmIsBootstrapped *mNodeKeeperMockIsBootstrapped) Set(f func() (b1 bool)) *NodeKeeperMock {
-	if mmIsBootstrapped.defaultExpectation != nil {
-		mmIsBootstrapped.mock.t.Fatalf("Default expectation is already set for the NodeKeeper.IsBootstrapped method")
-	}
-
-	if len(mmIsBootstrapped.expectations) > 0 {
-		mmIsBootstrapped.mock.t.Fatalf("Some expectations are already set for the NodeKeeper.IsBootstrapped method")
-	}
-
-	mmIsBootstrapped.mock.funcIsBootstrapped = f
-	return mmIsBootstrapped.mock
-}
-
-// IsBootstrapped implements network.NodeKeeper
-func (mmIsBootstrapped *NodeKeeperMock) IsBootstrapped() (b1 bool) {
-	mm_atomic.AddUint64(&mmIsBootstrapped.beforeIsBootstrappedCounter, 1)
-	defer mm_atomic.AddUint64(&mmIsBootstrapped.afterIsBootstrappedCounter, 1)
-
-	if mmIsBootstrapped.inspectFuncIsBootstrapped != nil {
-		mmIsBootstrapped.inspectFuncIsBootstrapped()
-	}
-
-	if mmIsBootstrapped.IsBootstrappedMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmIsBootstrapped.IsBootstrappedMock.defaultExpectation.Counter, 1)
-
-		results := mmIsBootstrapped.IsBootstrappedMock.defaultExpectation.results
-		if results == nil {
-			mmIsBootstrapped.t.Fatal("No results are set for the NodeKeeperMock.IsBootstrapped")
-		}
-		return (*results).b1
-	}
-	if mmIsBootstrapped.funcIsBootstrapped != nil {
-		return mmIsBootstrapped.funcIsBootstrapped()
-	}
-	mmIsBootstrapped.t.Fatalf("Unexpected call to NodeKeeperMock.IsBootstrapped.")
-	return
-}
-
-// IsBootstrappedAfterCounter returns a count of finished NodeKeeperMock.IsBootstrapped invocations
-func (mmIsBootstrapped *NodeKeeperMock) IsBootstrappedAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmIsBootstrapped.afterIsBootstrappedCounter)
-}
-
-// IsBootstrappedBeforeCounter returns a count of NodeKeeperMock.IsBootstrapped invocations
-func (mmIsBootstrapped *NodeKeeperMock) IsBootstrappedBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmIsBootstrapped.beforeIsBootstrappedCounter)
-}
-
-// MinimockIsBootstrappedDone returns true if the count of the IsBootstrapped invocations corresponds
-// the number of defined expectations
-func (m *NodeKeeperMock) MinimockIsBootstrappedDone() bool {
-	for _, e := range m.IsBootstrappedMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.IsBootstrappedMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterIsBootstrappedCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcIsBootstrapped != nil && mm_atomic.LoadUint64(&m.afterIsBootstrappedCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockIsBootstrappedInspect logs each unmet expectation
-func (m *NodeKeeperMock) MinimockIsBootstrappedInspect() {
-	for _, e := range m.IsBootstrappedMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Error("Expected call to NodeKeeperMock.IsBootstrapped")
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.IsBootstrappedMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterIsBootstrappedCounter) < 1 {
-		m.t.Error("Expected call to NodeKeeperMock.IsBootstrapped")
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcIsBootstrapped != nil && mm_atomic.LoadUint64(&m.afterIsBootstrappedCounter) < 1 {
-		m.t.Error("Expected call to NodeKeeperMock.IsBootstrapped")
-	}
-}
-
 type mNodeKeeperMockMoveSyncToActive struct {
 	mock               *NodeKeeperMock
 	defaultExpectation *NodeKeeperMockMoveSyncToActiveExpectation
@@ -2698,193 +1858,6 @@ func (m *NodeKeeperMock) MinimockSetInitialSnapshotInspect() {
 	}
 }
 
-type mNodeKeeperMockSetIsBootstrapped struct {
-	mock               *NodeKeeperMock
-	defaultExpectation *NodeKeeperMockSetIsBootstrappedExpectation
-	expectations       []*NodeKeeperMockSetIsBootstrappedExpectation
-
-	callArgs []*NodeKeeperMockSetIsBootstrappedParams
-	mutex    sync.RWMutex
-}
-
-// NodeKeeperMockSetIsBootstrappedExpectation specifies expectation struct of the NodeKeeper.SetIsBootstrapped
-type NodeKeeperMockSetIsBootstrappedExpectation struct {
-	mock   *NodeKeeperMock
-	params *NodeKeeperMockSetIsBootstrappedParams
-
-	Counter uint64
-}
-
-// NodeKeeperMockSetIsBootstrappedParams contains parameters of the NodeKeeper.SetIsBootstrapped
-type NodeKeeperMockSetIsBootstrappedParams struct {
-	isBootstrap bool
-}
-
-// Expect sets up expected params for NodeKeeper.SetIsBootstrapped
-func (mmSetIsBootstrapped *mNodeKeeperMockSetIsBootstrapped) Expect(isBootstrap bool) *mNodeKeeperMockSetIsBootstrapped {
-	if mmSetIsBootstrapped.mock.funcSetIsBootstrapped != nil {
-		mmSetIsBootstrapped.mock.t.Fatalf("NodeKeeperMock.SetIsBootstrapped mock is already set by Set")
-	}
-
-	if mmSetIsBootstrapped.defaultExpectation == nil {
-		mmSetIsBootstrapped.defaultExpectation = &NodeKeeperMockSetIsBootstrappedExpectation{}
-	}
-
-	mmSetIsBootstrapped.defaultExpectation.params = &NodeKeeperMockSetIsBootstrappedParams{isBootstrap}
-	for _, e := range mmSetIsBootstrapped.expectations {
-		if minimock.Equal(e.params, mmSetIsBootstrapped.defaultExpectation.params) {
-			mmSetIsBootstrapped.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmSetIsBootstrapped.defaultExpectation.params)
-		}
-	}
-
-	return mmSetIsBootstrapped
-}
-
-// Inspect accepts an inspector function that has same arguments as the NodeKeeper.SetIsBootstrapped
-func (mmSetIsBootstrapped *mNodeKeeperMockSetIsBootstrapped) Inspect(f func(isBootstrap bool)) *mNodeKeeperMockSetIsBootstrapped {
-	if mmSetIsBootstrapped.mock.inspectFuncSetIsBootstrapped != nil {
-		mmSetIsBootstrapped.mock.t.Fatalf("Inspect function is already set for NodeKeeperMock.SetIsBootstrapped")
-	}
-
-	mmSetIsBootstrapped.mock.inspectFuncSetIsBootstrapped = f
-
-	return mmSetIsBootstrapped
-}
-
-// Return sets up results that will be returned by NodeKeeper.SetIsBootstrapped
-func (mmSetIsBootstrapped *mNodeKeeperMockSetIsBootstrapped) Return() *NodeKeeperMock {
-	if mmSetIsBootstrapped.mock.funcSetIsBootstrapped != nil {
-		mmSetIsBootstrapped.mock.t.Fatalf("NodeKeeperMock.SetIsBootstrapped mock is already set by Set")
-	}
-
-	if mmSetIsBootstrapped.defaultExpectation == nil {
-		mmSetIsBootstrapped.defaultExpectation = &NodeKeeperMockSetIsBootstrappedExpectation{mock: mmSetIsBootstrapped.mock}
-	}
-
-	return mmSetIsBootstrapped.mock
-}
-
-//Set uses given function f to mock the NodeKeeper.SetIsBootstrapped method
-func (mmSetIsBootstrapped *mNodeKeeperMockSetIsBootstrapped) Set(f func(isBootstrap bool)) *NodeKeeperMock {
-	if mmSetIsBootstrapped.defaultExpectation != nil {
-		mmSetIsBootstrapped.mock.t.Fatalf("Default expectation is already set for the NodeKeeper.SetIsBootstrapped method")
-	}
-
-	if len(mmSetIsBootstrapped.expectations) > 0 {
-		mmSetIsBootstrapped.mock.t.Fatalf("Some expectations are already set for the NodeKeeper.SetIsBootstrapped method")
-	}
-
-	mmSetIsBootstrapped.mock.funcSetIsBootstrapped = f
-	return mmSetIsBootstrapped.mock
-}
-
-// SetIsBootstrapped implements network.NodeKeeper
-func (mmSetIsBootstrapped *NodeKeeperMock) SetIsBootstrapped(isBootstrap bool) {
-	mm_atomic.AddUint64(&mmSetIsBootstrapped.beforeSetIsBootstrappedCounter, 1)
-	defer mm_atomic.AddUint64(&mmSetIsBootstrapped.afterSetIsBootstrappedCounter, 1)
-
-	if mmSetIsBootstrapped.inspectFuncSetIsBootstrapped != nil {
-		mmSetIsBootstrapped.inspectFuncSetIsBootstrapped(isBootstrap)
-	}
-
-	params := &NodeKeeperMockSetIsBootstrappedParams{isBootstrap}
-
-	// Record call args
-	mmSetIsBootstrapped.SetIsBootstrappedMock.mutex.Lock()
-	mmSetIsBootstrapped.SetIsBootstrappedMock.callArgs = append(mmSetIsBootstrapped.SetIsBootstrappedMock.callArgs, params)
-	mmSetIsBootstrapped.SetIsBootstrappedMock.mutex.Unlock()
-
-	for _, e := range mmSetIsBootstrapped.SetIsBootstrappedMock.expectations {
-		if minimock.Equal(e.params, params) {
-			mm_atomic.AddUint64(&e.Counter, 1)
-			return
-		}
-	}
-
-	if mmSetIsBootstrapped.SetIsBootstrappedMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmSetIsBootstrapped.SetIsBootstrappedMock.defaultExpectation.Counter, 1)
-		want := mmSetIsBootstrapped.SetIsBootstrappedMock.defaultExpectation.params
-		got := NodeKeeperMockSetIsBootstrappedParams{isBootstrap}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSetIsBootstrapped.t.Errorf("NodeKeeperMock.SetIsBootstrapped got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
-		}
-
-		return
-
-	}
-	if mmSetIsBootstrapped.funcSetIsBootstrapped != nil {
-		mmSetIsBootstrapped.funcSetIsBootstrapped(isBootstrap)
-		return
-	}
-	mmSetIsBootstrapped.t.Fatalf("Unexpected call to NodeKeeperMock.SetIsBootstrapped. %v", isBootstrap)
-
-}
-
-// SetIsBootstrappedAfterCounter returns a count of finished NodeKeeperMock.SetIsBootstrapped invocations
-func (mmSetIsBootstrapped *NodeKeeperMock) SetIsBootstrappedAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmSetIsBootstrapped.afterSetIsBootstrappedCounter)
-}
-
-// SetIsBootstrappedBeforeCounter returns a count of NodeKeeperMock.SetIsBootstrapped invocations
-func (mmSetIsBootstrapped *NodeKeeperMock) SetIsBootstrappedBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmSetIsBootstrapped.beforeSetIsBootstrappedCounter)
-}
-
-// Calls returns a list of arguments used in each call to NodeKeeperMock.SetIsBootstrapped.
-// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmSetIsBootstrapped *mNodeKeeperMockSetIsBootstrapped) Calls() []*NodeKeeperMockSetIsBootstrappedParams {
-	mmSetIsBootstrapped.mutex.RLock()
-
-	argCopy := make([]*NodeKeeperMockSetIsBootstrappedParams, len(mmSetIsBootstrapped.callArgs))
-	copy(argCopy, mmSetIsBootstrapped.callArgs)
-
-	mmSetIsBootstrapped.mutex.RUnlock()
-
-	return argCopy
-}
-
-// MinimockSetIsBootstrappedDone returns true if the count of the SetIsBootstrapped invocations corresponds
-// the number of defined expectations
-func (m *NodeKeeperMock) MinimockSetIsBootstrappedDone() bool {
-	for _, e := range m.SetIsBootstrappedMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.SetIsBootstrappedMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterSetIsBootstrappedCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcSetIsBootstrapped != nil && mm_atomic.LoadUint64(&m.afterSetIsBootstrappedCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockSetIsBootstrappedInspect logs each unmet expectation
-func (m *NodeKeeperMock) MinimockSetIsBootstrappedInspect() {
-	for _, e := range m.SetIsBootstrappedMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to NodeKeeperMock.SetIsBootstrapped with params: %#v", *e.params)
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.SetIsBootstrappedMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterSetIsBootstrappedCounter) < 1 {
-		if m.SetIsBootstrappedMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to NodeKeeperMock.SetIsBootstrapped")
-		} else {
-			m.t.Errorf("Expected call to NodeKeeperMock.SetIsBootstrapped with params: %#v", *m.SetIsBootstrappedMock.defaultExpectation.params)
-		}
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcSetIsBootstrapped != nil && mm_atomic.LoadUint64(&m.afterSetIsBootstrappedCounter) < 1 {
-		m.t.Error("Expected call to NodeKeeperMock.SetIsBootstrapped")
-	}
-}
-
 type mNodeKeeperMockSync struct {
 	mock               *NodeKeeperMock
 	defaultExpectation *NodeKeeperMockSyncExpectation
@@ -2906,7 +1879,6 @@ type NodeKeeperMockSyncExpectation struct {
 type NodeKeeperMockSyncParams struct {
 	ctx context.Context
 	na1 []insolar.NetworkNode
-	ra1 []packets.ReferendumClaim
 }
 
 // NodeKeeperMockSyncResults contains results of the NodeKeeper.Sync
@@ -2915,7 +1887,7 @@ type NodeKeeperMockSyncResults struct {
 }
 
 // Expect sets up expected params for NodeKeeper.Sync
-func (mmSync *mNodeKeeperMockSync) Expect(ctx context.Context, na1 []insolar.NetworkNode, ra1 []packets.ReferendumClaim) *mNodeKeeperMockSync {
+func (mmSync *mNodeKeeperMockSync) Expect(ctx context.Context, na1 []insolar.NetworkNode) *mNodeKeeperMockSync {
 	if mmSync.mock.funcSync != nil {
 		mmSync.mock.t.Fatalf("NodeKeeperMock.Sync mock is already set by Set")
 	}
@@ -2924,7 +1896,7 @@ func (mmSync *mNodeKeeperMockSync) Expect(ctx context.Context, na1 []insolar.Net
 		mmSync.defaultExpectation = &NodeKeeperMockSyncExpectation{}
 	}
 
-	mmSync.defaultExpectation.params = &NodeKeeperMockSyncParams{ctx, na1, ra1}
+	mmSync.defaultExpectation.params = &NodeKeeperMockSyncParams{ctx, na1}
 	for _, e := range mmSync.expectations {
 		if minimock.Equal(e.params, mmSync.defaultExpectation.params) {
 			mmSync.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmSync.defaultExpectation.params)
@@ -2935,7 +1907,7 @@ func (mmSync *mNodeKeeperMockSync) Expect(ctx context.Context, na1 []insolar.Net
 }
 
 // Inspect accepts an inspector function that has same arguments as the NodeKeeper.Sync
-func (mmSync *mNodeKeeperMockSync) Inspect(f func(ctx context.Context, na1 []insolar.NetworkNode, ra1 []packets.ReferendumClaim)) *mNodeKeeperMockSync {
+func (mmSync *mNodeKeeperMockSync) Inspect(f func(ctx context.Context, na1 []insolar.NetworkNode)) *mNodeKeeperMockSync {
 	if mmSync.mock.inspectFuncSync != nil {
 		mmSync.mock.t.Fatalf("Inspect function is already set for NodeKeeperMock.Sync")
 	}
@@ -2959,7 +1931,7 @@ func (mmSync *mNodeKeeperMockSync) Return(err error) *NodeKeeperMock {
 }
 
 //Set uses given function f to mock the NodeKeeper.Sync method
-func (mmSync *mNodeKeeperMockSync) Set(f func(ctx context.Context, na1 []insolar.NetworkNode, ra1 []packets.ReferendumClaim) (err error)) *NodeKeeperMock {
+func (mmSync *mNodeKeeperMockSync) Set(f func(ctx context.Context, na1 []insolar.NetworkNode) (err error)) *NodeKeeperMock {
 	if mmSync.defaultExpectation != nil {
 		mmSync.mock.t.Fatalf("Default expectation is already set for the NodeKeeper.Sync method")
 	}
@@ -2974,14 +1946,14 @@ func (mmSync *mNodeKeeperMockSync) Set(f func(ctx context.Context, na1 []insolar
 
 // When sets expectation for the NodeKeeper.Sync which will trigger the result defined by the following
 // Then helper
-func (mmSync *mNodeKeeperMockSync) When(ctx context.Context, na1 []insolar.NetworkNode, ra1 []packets.ReferendumClaim) *NodeKeeperMockSyncExpectation {
+func (mmSync *mNodeKeeperMockSync) When(ctx context.Context, na1 []insolar.NetworkNode) *NodeKeeperMockSyncExpectation {
 	if mmSync.mock.funcSync != nil {
 		mmSync.mock.t.Fatalf("NodeKeeperMock.Sync mock is already set by Set")
 	}
 
 	expectation := &NodeKeeperMockSyncExpectation{
 		mock:   mmSync.mock,
-		params: &NodeKeeperMockSyncParams{ctx, na1, ra1},
+		params: &NodeKeeperMockSyncParams{ctx, na1},
 	}
 	mmSync.expectations = append(mmSync.expectations, expectation)
 	return expectation
@@ -2994,15 +1966,15 @@ func (e *NodeKeeperMockSyncExpectation) Then(err error) *NodeKeeperMock {
 }
 
 // Sync implements network.NodeKeeper
-func (mmSync *NodeKeeperMock) Sync(ctx context.Context, na1 []insolar.NetworkNode, ra1 []packets.ReferendumClaim) (err error) {
+func (mmSync *NodeKeeperMock) Sync(ctx context.Context, na1 []insolar.NetworkNode) (err error) {
 	mm_atomic.AddUint64(&mmSync.beforeSyncCounter, 1)
 	defer mm_atomic.AddUint64(&mmSync.afterSyncCounter, 1)
 
 	if mmSync.inspectFuncSync != nil {
-		mmSync.inspectFuncSync(ctx, na1, ra1)
+		mmSync.inspectFuncSync(ctx, na1)
 	}
 
-	params := &NodeKeeperMockSyncParams{ctx, na1, ra1}
+	params := &NodeKeeperMockSyncParams{ctx, na1}
 
 	// Record call args
 	mmSync.SyncMock.mutex.Lock()
@@ -3019,7 +1991,7 @@ func (mmSync *NodeKeeperMock) Sync(ctx context.Context, na1 []insolar.NetworkNod
 	if mmSync.SyncMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSync.SyncMock.defaultExpectation.Counter, 1)
 		want := mmSync.SyncMock.defaultExpectation.params
-		got := NodeKeeperMockSyncParams{ctx, na1, ra1}
+		got := NodeKeeperMockSyncParams{ctx, na1}
 		if want != nil && !minimock.Equal(*want, got) {
 			mmSync.t.Errorf("NodeKeeperMock.Sync got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
@@ -3031,9 +2003,9 @@ func (mmSync *NodeKeeperMock) Sync(ctx context.Context, na1 []insolar.NetworkNod
 		return (*results).err
 	}
 	if mmSync.funcSync != nil {
-		return mmSync.funcSync(ctx, na1, ra1)
+		return mmSync.funcSync(ctx, na1)
 	}
-	mmSync.t.Fatalf("Unexpected call to NodeKeeperMock.Sync. %v %v %v", ctx, na1, ra1)
+	mmSync.t.Fatalf("Unexpected call to NodeKeeperMock.Sync. %v %v", ctx, na1)
 	return
 }
 
@@ -3107,17 +2079,9 @@ func (m *NodeKeeperMock) MinimockFinish() {
 	if !m.minimockDone() {
 		m.MinimockGetAccessorInspect()
 
-		m.MinimockGetClaimQueueInspect()
-
 		m.MinimockGetCloudHashInspect()
 
-		m.MinimockGetConsensusInfoInspect()
-
 		m.MinimockGetOriginInspect()
-
-		m.MinimockGetOriginAnnounceClaimInspect()
-
-		m.MinimockGetOriginJoinClaimInspect()
 
 		m.MinimockGetSnapshotCopyInspect()
 
@@ -3127,15 +2091,11 @@ func (m *NodeKeeperMock) MinimockFinish() {
 
 		m.MinimockGetWorkingNodesByRoleInspect()
 
-		m.MinimockIsBootstrappedInspect()
-
 		m.MinimockMoveSyncToActiveInspect()
 
 		m.MinimockSetCloudHashInspect()
 
 		m.MinimockSetInitialSnapshotInspect()
-
-		m.MinimockSetIsBootstrappedInspect()
 
 		m.MinimockSyncInspect()
 		m.t.FailNow()
@@ -3162,20 +2122,14 @@ func (m *NodeKeeperMock) minimockDone() bool {
 	done := true
 	return done &&
 		m.MinimockGetAccessorDone() &&
-		m.MinimockGetClaimQueueDone() &&
 		m.MinimockGetCloudHashDone() &&
-		m.MinimockGetConsensusInfoDone() &&
 		m.MinimockGetOriginDone() &&
-		m.MinimockGetOriginAnnounceClaimDone() &&
-		m.MinimockGetOriginJoinClaimDone() &&
 		m.MinimockGetSnapshotCopyDone() &&
 		m.MinimockGetWorkingNodeDone() &&
 		m.MinimockGetWorkingNodesDone() &&
 		m.MinimockGetWorkingNodesByRoleDone() &&
-		m.MinimockIsBootstrappedDone() &&
 		m.MinimockMoveSyncToActiveDone() &&
 		m.MinimockSetCloudHashDone() &&
 		m.MinimockSetInitialSnapshotDone() &&
-		m.MinimockSetIsBootstrappedDone() &&
 		m.MinimockSyncDone()
 }

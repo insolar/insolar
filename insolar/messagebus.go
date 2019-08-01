@@ -163,6 +163,7 @@ type MessageBus interface {
 	OnPulse(context.Context, Pulse) error
 }
 
+// TODO This Interface seems to duplicate MBLocker
 //go:generate minimock -i github.com/insolar/insolar/insolar.GlobalInsolarLock -o ../testutils -s _mock.go -g
 
 // GlobalInsolarLock is lock of all incoming and outcoming network calls.

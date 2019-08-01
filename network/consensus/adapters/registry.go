@@ -121,7 +121,6 @@ func (op *OfflinePopulation) FindRegisteredProfile(identity endpoints.Inbound) p
 		return nil
 	}
 	cert := op.manager.GetCertificate()
-
 	return NewStaticProfile(node, cert, op.keyProcessor)
 }
 
@@ -131,6 +130,10 @@ type VersionedRegistries struct {
 	offlinePopulation   census.OfflinePopulation
 
 	pulseData pulse.Data
+}
+
+func (c *VersionedRegistries) GetNearestValidPulseData() pulse.Data {
+	return pulse.Data{}
 }
 
 func NewVersionedRegistries(

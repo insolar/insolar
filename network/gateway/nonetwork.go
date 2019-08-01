@@ -56,22 +56,12 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 )
 
-// TODO Slightly ugly, decide how to inject anything without exporting Base
-// TODO Remove message bus here and switch communication to network.rpc
-// NewNoNetwork this initial constructor have special signature to be called outside
-func NewNoNetwork(n network.Gatewayer, pm insolar.PulseManager,
-	nk network.NodeKeeper, cr insolar.ContractRequester,
-	cs insolar.CryptographyService, hn network.HostNetwork,
-	cm insolar.CertificateManager) network.Gateway {
-	return (&Base{
-		Network: n, PulseManager: pm,
-		Nodekeeper: nk, ContractRequester: cr,
-		CryptographyService: cs, HostNetwork: hn,
-		CertificateManager: cm,
-	}).NewGateway(insolar.NoNetworkState)
+func newNoNetwork(b *Base) *NoNetwork {
+	return &NoNetwork{Base: b}
 }
 
 // NoNetwork initial state
@@ -80,12 +70,32 @@ type NoNetwork struct {
 }
 
 func (g *NoNetwork) Run(ctx context.Context) {
+	cert := g.CertificateManager.GetCertificate()
+	origin := g.NodeKeeper.GetOrigin()
+	discoveryNodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), origin.ID())
+
+	g.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{origin})
+
+	if len(discoveryNodes) == 0 {
+		inslogger.FromContext(ctx).Warn("[ Bootstrap ] No discovery nodes found in certificate")
+		return
+	}
+
+	// run bootstrap
+	if !network.OriginIsDiscovery(cert) {
+		g.Gatewayer.SwitchState(ctx, insolar.JoinerBootstrap)
+		return
+	}
+
+	// Simplified bootstrap
+	if origin.Role() != insolar.StaticRoleHeavyMaterial {
+		g.Gatewayer.SwitchState(ctx, insolar.JoinerBootstrap)
+		return
+	}
+
+	g.Gatewayer.SwitchState(ctx, insolar.WaitMinRoles)
 }
 
 func (g *NoNetwork) GetState() insolar.NetworkState {
 	return insolar.NoNetworkState
-}
-
-func (g *NoNetwork) OnPulse(ctx context.Context, pu insolar.Pulse) error {
-	return g.Base.OnPulse(ctx, pu)
 }

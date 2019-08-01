@@ -54,7 +54,6 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/node"
 	"github.com/stretchr/testify/assert"
 )
@@ -67,14 +66,6 @@ func newTestNodeWithRole(reference insolar.Reference, state insolar.NodeState, r
 	result := node.NewNode(reference, role, nil, "127.0.0.1:5432", "")
 	result.(node.MutableNode).SetState(state)
 	return result
-}
-
-func newTestJoinClaim(reference insolar.Reference) packets.ReferendumClaim {
-	return &packets.NodeJoinClaim{NodeRef: reference}
-}
-
-func newTestLeaveClaim(reference insolar.Reference, ETA insolar.PulseNumber) packets.ReferendumClaim {
-	return &packets.NodeLeaveClaim{NodeID: reference, ETA: ETA}
 }
 
 func Test_copyActiveNodes(t *testing.T) {
@@ -99,72 +90,4 @@ func Test_copyActiveNodes(t *testing.T) {
 	// state is not changed if node state is NodeReady or above
 	assert.Equal(t, insolar.NodeLeaving, copy[insolar.Reference{3}].GetState())
 	assert.Nil(t, copy[insolar.Reference{4}])
-}
-
-func TestGetMergedCopy_NilClaims(t *testing.T) {
-	nodes := []insolar.NetworkNode{
-		newTestNode(insolar.Reference{1}, insolar.NodePending),
-		newTestNode(insolar.Reference{2}, insolar.NodeReady),
-		newTestNode(insolar.Reference{3}, insolar.NodeLeaving),
-	}
-
-	result, err := GetMergedCopy(nodes, nil)
-	assert.NoError(t, err)
-	assert.False(t, result.NodesJoinedDuringPrevPulse)
-	assert.Equal(t, 3, len(result.ActiveList))
-}
-
-func TestGetMergedCopy_JoinClaims(t *testing.T) {
-	nodes := []insolar.NetworkNode{
-		newTestNode(insolar.Reference{1}, insolar.NodePending),
-		newTestNode(insolar.Reference{2}, insolar.NodeReady),
-		newTestNode(insolar.Reference{3}, insolar.NodeLeaving),
-	}
-	claims := []packets.ReferendumClaim{
-		newTestJoinClaim(insolar.Reference{4}),
-		newTestJoinClaim(insolar.Reference{5}),
-	}
-	result, err := GetMergedCopy(nodes, claims)
-	assert.NoError(t, err)
-	assert.True(t, result.NodesJoinedDuringPrevPulse)
-	assert.Equal(t, 5, len(result.ActiveList))
-	assert.Equal(t, insolar.NodePending, result.ActiveList[insolar.Reference{4}].GetState())
-	assert.Equal(t, insolar.NodePending, result.ActiveList[insolar.Reference{5}].GetState())
-	assert.Equal(t, insolar.NodeReady, result.ActiveList[insolar.Reference{1}].GetState())
-	assert.Equal(t, insolar.NodeReady, result.ActiveList[insolar.Reference{2}].GetState())
-	assert.Equal(t, insolar.NodeLeaving, result.ActiveList[insolar.Reference{3}].GetState())
-}
-
-func TestGetMergedCopy_LeaveClaims(t *testing.T) {
-	nodes := []insolar.NetworkNode{
-		newTestNode(insolar.Reference{1}, insolar.NodePending),
-		newTestNode(insolar.Reference{2}, insolar.NodeReady),
-		newTestNode(insolar.Reference{3}, insolar.NodeLeaving),
-	}
-	claims := []packets.ReferendumClaim{
-		newTestJoinClaim(insolar.Reference{4}),
-		newTestLeaveClaim(insolar.Reference{2}, insolar.PulseNumber(50)),
-	}
-	result, err := GetMergedCopy(nodes, claims)
-	assert.NoError(t, err)
-	assert.Equal(t, 4, len(result.ActiveList))
-	assert.Equal(t, insolar.NodePending, result.ActiveList[insolar.Reference{4}].GetState())
-	assert.Equal(t, insolar.NodeReady, result.ActiveList[insolar.Reference{1}].GetState())
-	assert.Equal(t, insolar.NodeLeaving, result.ActiveList[insolar.Reference{2}].GetState())
-	assert.Equal(t, insolar.PulseNumber(50), result.ActiveList[insolar.Reference{2}].LeavingETA())
-	assert.Equal(t, insolar.NodeLeaving, result.ActiveList[insolar.Reference{3}].GetState())
-}
-
-func TestGetMergedCopy_InvalidLeaveClaim(t *testing.T) {
-	nodes := []insolar.NetworkNode{
-		newTestNode(insolar.Reference{1}, insolar.NodePending),
-		newTestNode(insolar.Reference{2}, insolar.NodeReady),
-		newTestNode(insolar.Reference{3}, insolar.NodeLeaving),
-	}
-	claims := []packets.ReferendumClaim{
-		newTestLeaveClaim(insolar.Reference{5}, insolar.PulseNumber(50)),
-	}
-	result, err := GetMergedCopy(nodes, claims)
-	assert.NoError(t, err)
-	assert.Equal(t, 3, len(result.ActiveList))
 }

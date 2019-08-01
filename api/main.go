@@ -25,8 +25,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/network"
-
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -50,7 +48,6 @@ type Runner struct {
 	ContractRequester   insolar.ContractRequester   `inject:""`
 	GenesisDataProvider insolar.GenesisDataProvider `inject:""`
 	NodeNetwork         insolar.NodeNetwork         `inject:""`
-	Gatewayer           network.Gatewayer           `inject:""`
 	ServiceNetwork      insolar.Network             `inject:""`
 	PulseAccessor       pulse.Accessor              `inject:""`
 	ArtifactManager     artifacts.Client            `inject:""`

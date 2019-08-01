@@ -53,6 +53,7 @@ package serialization
 import (
 	"bytes"
 	"context"
+	"github.com/insolar/insolar/network"
 	"io"
 	"time"
 
@@ -66,7 +67,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"github.com/insolar/insolar/network/utils"
 )
 
 type packetData struct {
@@ -97,7 +97,7 @@ func newPacketParser(
 	keyProcessor insolar.KeyProcessor,
 ) (*PacketParser, error) {
 
-	capture := utils.NewCapturingReader(reader)
+	capture := network.NewCapturingReader(reader)
 	parser := &PacketParser{
 		packetData: packetData{
 			packet: new(Packet),

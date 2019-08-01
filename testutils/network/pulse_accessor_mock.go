@@ -16,7 +16,7 @@ import (
 type PulseAccessorMock struct {
 	t minimock.Tester
 
-	funcForPulseNumber          func(ctx context.Context, p1 insolar.PulseNumber) (p2 insolar.PulseNumber, err error)
+	funcForPulseNumber          func(ctx context.Context, p1 insolar.PulseNumber) (p2 insolar.Pulse, err error)
 	inspectFuncForPulseNumber   func(ctx context.Context, p1 insolar.PulseNumber)
 	afterForPulseNumberCounter  uint64
 	beforeForPulseNumberCounter uint64
@@ -70,7 +70,7 @@ type PulseAccessorMockForPulseNumberParams struct {
 
 // PulseAccessorMockForPulseNumberResults contains results of the PulseAccessor.ForPulseNumber
 type PulseAccessorMockForPulseNumberResults struct {
-	p2  insolar.PulseNumber
+	p2  insolar.Pulse
 	err error
 }
 
@@ -106,7 +106,7 @@ func (mmForPulseNumber *mPulseAccessorMockForPulseNumber) Inspect(f func(ctx con
 }
 
 // Return sets up results that will be returned by PulseAccessor.ForPulseNumber
-func (mmForPulseNumber *mPulseAccessorMockForPulseNumber) Return(p2 insolar.PulseNumber, err error) *PulseAccessorMock {
+func (mmForPulseNumber *mPulseAccessorMockForPulseNumber) Return(p2 insolar.Pulse, err error) *PulseAccessorMock {
 	if mmForPulseNumber.mock.funcForPulseNumber != nil {
 		mmForPulseNumber.mock.t.Fatalf("PulseAccessorMock.ForPulseNumber mock is already set by Set")
 	}
@@ -119,7 +119,7 @@ func (mmForPulseNumber *mPulseAccessorMockForPulseNumber) Return(p2 insolar.Puls
 }
 
 //Set uses given function f to mock the PulseAccessor.ForPulseNumber method
-func (mmForPulseNumber *mPulseAccessorMockForPulseNumber) Set(f func(ctx context.Context, p1 insolar.PulseNumber) (p2 insolar.PulseNumber, err error)) *PulseAccessorMock {
+func (mmForPulseNumber *mPulseAccessorMockForPulseNumber) Set(f func(ctx context.Context, p1 insolar.PulseNumber) (p2 insolar.Pulse, err error)) *PulseAccessorMock {
 	if mmForPulseNumber.defaultExpectation != nil {
 		mmForPulseNumber.mock.t.Fatalf("Default expectation is already set for the PulseAccessor.ForPulseNumber method")
 	}
@@ -148,13 +148,13 @@ func (mmForPulseNumber *mPulseAccessorMockForPulseNumber) When(ctx context.Conte
 }
 
 // Then sets up PulseAccessor.ForPulseNumber return parameters for the expectation previously defined by the When method
-func (e *PulseAccessorMockForPulseNumberExpectation) Then(p2 insolar.PulseNumber, err error) *PulseAccessorMock {
+func (e *PulseAccessorMockForPulseNumberExpectation) Then(p2 insolar.Pulse, err error) *PulseAccessorMock {
 	e.results = &PulseAccessorMockForPulseNumberResults{p2, err}
 	return e.mock
 }
 
 // ForPulseNumber implements storage.PulseAccessor
-func (mmForPulseNumber *PulseAccessorMock) ForPulseNumber(ctx context.Context, p1 insolar.PulseNumber) (p2 insolar.PulseNumber, err error) {
+func (mmForPulseNumber *PulseAccessorMock) ForPulseNumber(ctx context.Context, p1 insolar.PulseNumber) (p2 insolar.Pulse, err error) {
 	mm_atomic.AddUint64(&mmForPulseNumber.beforeForPulseNumberCounter, 1)
 	defer mm_atomic.AddUint64(&mmForPulseNumber.afterForPulseNumberCounter, 1)
 

@@ -51,8 +51,6 @@
 package routing
 
 import (
-	"strconv"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
@@ -62,30 +60,6 @@ import (
 
 type Table struct {
 	NodeKeeper network.NodeKeeper `inject:""`
-}
-
-func (t *Table) ResolveConsensus(id insolar.ShortNodeID) (*host.Host, error) {
-	node := t.NodeKeeper.GetAccessor().GetActiveNodeByShortID(id)
-	if node != nil {
-		return host.NewHostNS(node.Address(), node.ID(), node.ShortID())
-	}
-	h := t.NodeKeeper.GetConsensusInfo().ResolveConsensus(id)
-	if h == nil {
-		return nil, errors.New("no such local node with ShortID: " + strconv.FormatUint(uint64(id), 10))
-	}
-	return h, nil
-}
-
-func (t *Table) ResolveConsensusRef(ref insolar.Reference) (*host.Host, error) {
-	node := t.NodeKeeper.GetAccessor().GetActiveNode(ref)
-	if node != nil {
-		return host.NewHostNS(node.Address(), node.ID(), node.ShortID())
-	}
-	h := t.NodeKeeper.GetConsensusInfo().ResolveConsensusRef(ref)
-	if h == nil {
-		return nil, errors.New("no such local node with node ID: " + ref.String())
-	}
-	return h, nil
 }
 
 func (t *Table) isLocalNode(insolar.Reference) bool {
