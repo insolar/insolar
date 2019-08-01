@@ -45,7 +45,8 @@ var (
 		insolar.GenesisNameDeposit,
 		insolar.GenesisNameTariff,
 		insolar.GenesisNameCostCenter,
-		insolar.GenesisNameShard,
+		insolar.GenesisNamePKShard,
+		insolar.GenesisNameMAShard,
 	}
 )
 

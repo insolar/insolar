@@ -34,8 +34,8 @@ type GetResponse struct {
 	BurnAddress string `json:"migrationAddress,omitempty"`
 }
 type MigrationCreateResponse struct {
-	Reference   string `json:"reference"`
-	BurnAddress string `json:"migrationAddress"`
+	Reference        string `json:"reference"`
+	MigrationAddress string `json:"migrationAddress"`
 }
 type Params struct {
 	Seed       string      `json:"seed"`

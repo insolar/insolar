@@ -24,11 +24,12 @@ import (
 	costcenter "github.com/insolar/insolar/logicrunner/builtin/contract/costcenter"
 	deposit "github.com/insolar/insolar/logicrunner/builtin/contract/deposit"
 	helloworld "github.com/insolar/insolar/logicrunner/builtin/contract/helloworld"
+	mashard "github.com/insolar/insolar/logicrunner/builtin/contract/mashard"
 	member "github.com/insolar/insolar/logicrunner/builtin/contract/member"
 	nodedomain "github.com/insolar/insolar/logicrunner/builtin/contract/nodedomain"
 	noderecord "github.com/insolar/insolar/logicrunner/builtin/contract/noderecord"
+	pkshard "github.com/insolar/insolar/logicrunner/builtin/contract/pkshard"
 	rootdomain "github.com/insolar/insolar/logicrunner/builtin/contract/rootdomain"
-	shard "github.com/insolar/insolar/logicrunner/builtin/contract/shard"
 	tariff "github.com/insolar/insolar/logicrunner/builtin/contract/tariff"
 	wallet "github.com/insolar/insolar/logicrunner/builtin/contract/wallet"
 
@@ -42,11 +43,12 @@ func InitializeContractMethods() map[string]XXX_insolar.ContractWrapper {
 		"costcenter": costcenter.Initialize(),
 		"deposit":    deposit.Initialize(),
 		"helloworld": helloworld.Initialize(),
+		"mashard":    mashard.Initialize(),
 		"member":     member.Initialize(),
 		"nodedomain": nodedomain.Initialize(),
 		"noderecord": noderecord.Initialize(),
+		"pkshard":    pkshard.Initialize(),
 		"rootdomain": rootdomain.Initialize(),
-		"shard":      shard.Initialize(),
 		"tariff":     tariff.Initialize(),
 		"wallet":     wallet.Initialize(),
 	}
@@ -66,11 +68,12 @@ func InitializeCodeRefs() map[XXX_insolar.Reference]string {
 	rv[shouldLoadRef("111A7tUo1FeZ5DSoroiinMCKwzLacaYBAAcwAaNj6bc.11111111111111111111111111111111")] = "costcenter"
 	rv[shouldLoadRef("111A79KGpeDUjYhRJP1n1AwYgwU9KEWmc2TNNc3KQjV.11111111111111111111111111111111")] = "deposit"
 	rv[shouldLoadRef("111A5w1GcnTsht82duVrnWdVHVNyrxCUVcSPLtgQCPR.11111111111111111111111111111111")] = "helloworld"
+	rv[shouldLoadRef("111A7t1HyXTZx55DW6R7cKqSbtrHXMiqzR3HcxotsTi.11111111111111111111111111111111")] = "mashard"
 	rv[shouldLoadRef("111A72gPKWyrF9c7yzDoccRoPQ62g1uQQDBecWJwAYr.11111111111111111111111111111111")] = "member"
 	rv[shouldLoadRef("111A7Q5FK2ebPG9WnSiUc4iqF45w9oYkJkRjEtBohGe.11111111111111111111111111111111")] = "nodedomain"
 	rv[shouldLoadRef("111A86xPKUQ1ZxSscgv5brbw93LkwiVhUWgGrYYsMar.11111111111111111111111111111111")] = "noderecord"
+	rv[shouldLoadRef("111A5tzn16hnKGCZCyYA8Dv9FALvPYYQu4VA41SVx6s.11111111111111111111111111111111")] = "pkshard"
 	rv[shouldLoadRef("111A63R5cAgGHC5DJffqF16vUkCuSVj3GExbMLy56cS.11111111111111111111111111111111")] = "rootdomain"
-	rv[shouldLoadRef("111A7748JQuyE1ARrnWpTdY44pe5k1jss62udfTGk8v.11111111111111111111111111111111")] = "shard"
 	rv[shouldLoadRef("111A6aqtkSk9PYtE8iZup6DoM1PazHtFqnjjbEyiZkd.11111111111111111111111111111111")] = "tariff"
 	rv[shouldLoadRef("111A5e49cJW6GKGegWBhtgrJs7nFh1kSWhBtT2VgK4t.11111111111111111111111111111111")] = "wallet"
 
@@ -98,6 +101,12 @@ func InitializeCodeDescriptors() []XXX_artifacts.CodeDescriptor {
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
 		/* ref:         */ shouldLoadRef("111A5w1GcnTsht82duVrnWdVHVNyrxCUVcSPLtgQCPR.11111111111111111111111111111111"),
 	))
+	// mashard
+	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
+		/* code:        */ nil,
+		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
+		/* ref:         */ shouldLoadRef("111A7t1HyXTZx55DW6R7cKqSbtrHXMiqzR3HcxotsTi.11111111111111111111111111111111"),
+	))
 	// member
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
@@ -116,17 +125,17 @@ func InitializeCodeDescriptors() []XXX_artifacts.CodeDescriptor {
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
 		/* ref:         */ shouldLoadRef("111A86xPKUQ1ZxSscgv5brbw93LkwiVhUWgGrYYsMar.11111111111111111111111111111111"),
 	))
+	// pkshard
+	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
+		/* code:        */ nil,
+		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
+		/* ref:         */ shouldLoadRef("111A5tzn16hnKGCZCyYA8Dv9FALvPYYQu4VA41SVx6s.11111111111111111111111111111111"),
+	))
 	// rootdomain
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
 		/* ref:         */ shouldLoadRef("111A63R5cAgGHC5DJffqF16vUkCuSVj3GExbMLy56cS.11111111111111111111111111111111"),
-	))
-	// shard
-	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
-		/* code:        */ nil,
-		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("111A7748JQuyE1ARrnWpTdY44pe5k1jss62udfTGk8v.11111111111111111111111111111111"),
 	))
 	// tariff
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
@@ -189,6 +198,20 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 		))
 	}
 
+	{ // mashard
+		pRef := shouldLoadRef("111A68zxeRYc9n6PGRjfwoDGTX2LskYAZqjpoGp11Nx.11111111111111111111111111111111")
+		cRef := shouldLoadRef("111A7t1HyXTZx55DW6R7cKqSbtrHXMiqzR3HcxotsTi.11111111111111111111111111111111")
+		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
+			/* head:         */ pRef,
+			/* state:        */ *pRef.Record(),
+			/* prototype:    */ &cRef,
+			/* isPrototype:  */ true,
+			/* childPointer: */ nil,
+			/* memory:       */ nil,
+			/* parent:       */ XXX_rootdomain.RootDomain.Ref(),
+		))
+	}
+
 	{ // member
 		pRef := shouldLoadRef("111A7UqbgvFXj9vkCAaNYSAkWLapu62eU5AUSv3y4JY.11111111111111111111111111111111")
 		cRef := shouldLoadRef("111A72gPKWyrF9c7yzDoccRoPQ62g1uQQDBecWJwAYr.11111111111111111111111111111111")
@@ -231,9 +254,9 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 		))
 	}
 
-	{ // rootdomain
-		pRef := shouldLoadRef("111A84uiiTD1LXAHNP4GMA6YJFjbnCdkRia2pCqwBV5.11111111111111111111111111111111")
-		cRef := shouldLoadRef("111A63R5cAgGHC5DJffqF16vUkCuSVj3GExbMLy56cS.11111111111111111111111111111111")
+	{ // pkshard
+		pRef := shouldLoadRef("111A5x8N1VJTm7BKYgzSe6TWHcFi98QZgw3AnkYiKML.11111111111111111111111111111111")
+		cRef := shouldLoadRef("111A5tzn16hnKGCZCyYA8Dv9FALvPYYQu4VA41SVx6s.11111111111111111111111111111111")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.Record(),
@@ -245,9 +268,9 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 		))
 	}
 
-	{ // shard
-		pRef := shouldLoadRef("111A66c9Fu7cGTMe12tgh2ij3EEayHz1Db7Kkq5U9T7.11111111111111111111111111111111")
-		cRef := shouldLoadRef("111A7748JQuyE1ARrnWpTdY44pe5k1jss62udfTGk8v.11111111111111111111111111111111")
+	{ // rootdomain
+		pRef := shouldLoadRef("111A84uiiTD1LXAHNP4GMA6YJFjbnCdkRia2pCqwBV5.11111111111111111111111111111111")
+		cRef := shouldLoadRef("111A63R5cAgGHC5DJffqF16vUkCuSVj3GExbMLy56cS.11111111111111111111111111111111")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.Record(),

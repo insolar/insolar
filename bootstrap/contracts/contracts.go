@@ -22,10 +22,11 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/costcenter"
+	"github.com/insolar/insolar/logicrunner/builtin/contract/mashard"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/nodedomain"
+	"github.com/insolar/insolar/logicrunner/builtin/contract/pkshard"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/rootdomain"
-	"github.com/insolar/insolar/logicrunner/builtin/contract/shard"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/tariff"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/wallet"
 )
@@ -50,7 +51,6 @@ func RootDomain() insolar.GenesisContractState {
 			FeeWallet:              genesisrefs.ContractFeeWallet,
 			MigrationAddressShards: genesisrefs.ContractMigrationAddressShards,
 			PublicKeyShards:        genesisrefs.ContractPublicKeyShards,
-			FreeBurnAddresses:      []string{},
 			NodeDomain:             genesisrefs.ContractNodeDomain,
 		}),
 	}
@@ -127,15 +127,29 @@ func GetTariffGenesisContractState() insolar.GenesisContractState {
 	}
 }
 
-func GetShardGenesisContractState(name string) insolar.GenesisContractState {
-	s, err := shard.New()
+func GetPKShardGenesisContractState(name string) insolar.GenesisContractState {
+	s, err := pkshard.New()
 	if err != nil {
 		panic(fmt.Sprintf("'%s' shard constructor failed", name))
 	}
 
 	return insolar.GenesisContractState{
 		Name:       name,
-		Prototype:  insolar.GenesisNameShard,
+		Prototype:  insolar.GenesisNamePKShard,
+		ParentName: insolar.GenesisNameRootDomain,
+		Memory:     mustGenMemory(s),
+	}
+}
+
+func GetMAShardGenesisContractState(name string) insolar.GenesisContractState {
+	s, err := mashard.New()
+	if err != nil {
+		panic(fmt.Sprintf("'%s' shard constructor failed", name))
+	}
+
+	return insolar.GenesisContractState{
+		Name:       name,
+		Prototype:  insolar.GenesisNameMAShard,
 		ParentName: insolar.GenesisNameRootDomain,
 		Memory:     mustGenMemory(s),
 	}
