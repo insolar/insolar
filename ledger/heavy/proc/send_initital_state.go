@@ -10,6 +10,7 @@ import (
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/ledger/heavy/executor"
+	"fmt"
 )
 
 type SendInitialState struct {
@@ -60,12 +61,16 @@ func (p *SendInitialState) Proceed(ctx context.Context) error {
 			logger.Fatal("failed to reply error", err)
 		}
 		p.dep.sender.Reply(ctx, p.meta, msg)
+		return nil
 	}
 	msg, err := payload.Unmarshal(p.meta.Payload)
 	if err != nil {
 		logger.Fatal("Couldn't unmarshall request", err)
 	}
-	req := msg.(*payload.GetLightInitialState)
+	req, ok := msg.(*payload.GetLightInitialState)
+	if !ok {
+		return fmt.Errorf("unexpected payload type %T", msg)
+	}
 
 
 	switch {
@@ -74,7 +79,7 @@ func (p *SendInitialState) Proceed(ctx context.Context) error {
 	case req.Pulse > startPulse:
 		p.sendEmpty(ctx)
 	default:
-		logger.Fatal("impossible situation")
+		logger.Fatal("received initial state request from the past")
 	}
 
 	return nil
