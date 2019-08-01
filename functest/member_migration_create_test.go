@@ -52,7 +52,7 @@ func TestMemberMigrationCreateWhenNoBurnAddressesLeft(t *testing.T) {
 
 	_, err = retryableMemberMigrationCreate(member2, true)
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "no more burn addresses left")
+	require.Contains(t, err.Error(), "no more migration addresses left in any shard")
 }
 
 func TestMemberMigrationCreateWithBadKey(t *testing.T) {

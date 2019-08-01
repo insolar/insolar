@@ -203,12 +203,12 @@ func (rd *RootDomain) GetFreeMigrationAddress(publicKey string) (string, error) 
 			return "", errors.Wrap(err, "failed to set reference in migration address shard")
 		}
 	}
-	for i := shardIndex + 1; i != shardIndex; i++ {
+	for i := shardIndex + 1; i != shardIndex; {
+		i++
 		if i >= len(rd.MigrationAddressShards) {
 			i = 0
 		}
-
-		mas := mashard.GetObject(rd.MigrationAddressShards[shardIndex])
+		mas := mashard.GetObject(rd.MigrationAddressShards[i])
 		ma, err := mas.GetFreeMigrationAddress()
 
 		if err == nil {
