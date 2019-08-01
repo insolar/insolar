@@ -67,7 +67,7 @@ type FixedReader interface {
 	io.WriterTo
 	io.Reader
 	AsBytes() []byte
-	AsByteString() string
+	AsByteString() ByteString
 
 	FixedByteSize() int
 }
@@ -83,7 +83,6 @@ func FoldUint64(v uint64) uint32 {
 	return uint32(v) ^ uint32(v>>32)
 }
 
-// TODO ?NeedFix - current implementation can only work for limited cases
 func EqualFixedLenWriterTo(t, o FixedReader) bool {
 	if args.IsNil(t) || args.IsNil(o) {
 		return false
@@ -128,8 +127,8 @@ type fixedSize struct {
 	data []byte
 }
 
-func (c *fixedSize) AsByteString() string {
-	return string(c.data)
+func (c *fixedSize) AsByteString() ByteString {
+	return ByteString(c.data)
 }
 
 func (c *fixedSize) WriteTo(w io.Writer) (n int64, err error) {
@@ -153,19 +152,30 @@ func (c *fixedSize) AsBytes() []byte {
 	return c.data
 }
 
-func NewFixedReader(data []byte) FixedReader {
-	return &fixedSize{data: data}
-}
-
-func CopyFixedSize(v FoldableReader) FoldableReader {
-	r := fixedSize{}
-	r.data = make([]byte, v.FixedByteSize())
-	n, err := v.Read(r.data)
+func ReadFixedSize(v FoldableReader) []byte {
+	data := make([]byte, v.FixedByteSize())
+	n, err := v.Read(data)
 	if err != nil {
 		panic(err)
 	}
-	if n != len(r.data) {
+	if n != len(data) {
 		panic("unexpected")
 	}
-	return &r
+	return data
+}
+
+func NewMutableFixedSize(data []byte) FixedReader {
+	return &fixedSize{data}
+}
+
+func CopyToMutable(v FoldableReader) FoldableReader {
+	return &fixedSize{ReadFixedSize(v)}
+}
+
+func NewImmutableFixedSize(data []byte) FixedReader {
+	return NewByteString(data).AsReader()
+}
+
+func CopyToImmutable(v FoldableReader) FoldableReader {
+	return NewByteString(ReadFixedSize(v)).AsReader()
 }

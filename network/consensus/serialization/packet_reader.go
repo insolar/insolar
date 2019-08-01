@@ -186,7 +186,7 @@ func (p *PacketParser) GetPacketSignature() cryptkit.SignedDigest {
 	payloadReader := bytes.NewReader(p.data[:len(p.data)-signatureSize])
 
 	signature := cryptkit.NewSignature(&p.packet.PacketSignature, p.digester.GetDigestMethod().SignedBy(p.signMethod))
-	digest := p.digester.GetDigestOf(payloadReader)
+	digest := p.digester.DigestData(payloadReader)
 	return cryptkit.NewSignedDigest(digest, signature)
 }
 
@@ -443,7 +443,7 @@ type FullIntroductionReader struct {
 
 func (r *FullIntroductionReader) GetBriefIntroSignedDigest() cryptkit.SignedDigestHolder {
 	return cryptkit.NewSignedDigest(
-		r.digester.GetDigestOf(bytes.NewReader(r.intro.JoinerData)),
+		r.digester.DigestData(bytes.NewReader(r.intro.JoinerData)),
 		cryptkit.NewSignature(&r.intro.JoinerSignature, r.digester.GetDigestMethod().SignedBy(r.signMethod)),
 	).AsSignedDigestHolder()
 }

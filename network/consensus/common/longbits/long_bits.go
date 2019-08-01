@@ -88,8 +88,8 @@ func (v *Bits64) FixedByteSize() int {
 	return len(*v)
 }
 
-func (v *Bits64) AsByteString() string {
-	return string(v[:])
+func (v *Bits64) AsByteString() ByteString {
+	return ByteString(v[:])
 }
 
 func (v Bits64) String() string {
@@ -100,10 +100,17 @@ func (v *Bits64) AsBytes() []byte {
 	return v[:]
 }
 
-/* Array size must be aligned to 8 bytes */
+/* Array size doesnt need to be aligned */
 func FoldToBits64(v []byte) Bits64 {
 	var folded Bits64
-	for i := 0; i < len(v); i += len(folded) {
+	if len(v) == 0 {
+		return folded
+	}
+
+	alignedLen := len(v) & (len(folded) - 1)
+	copy(folded[alignedLen:], v)
+
+	for i := 0; i < alignedLen; i += len(folded) {
 		folded[0] ^= v[i+0]
 		folded[1] ^= v[i+1]
 		folded[2] ^= v[i+2]
@@ -146,8 +153,8 @@ func (v Bits128) String() string {
 	return bitsToStringDefault(&v)
 }
 
-func (v *Bits128) AsByteString() string {
-	return string(v[:])
+func (v *Bits128) AsByteString() ByteString {
+	return ByteString(v[:])
 }
 
 func (v *Bits128) AsBytes() []byte {
@@ -183,8 +190,8 @@ func (v *Bits224) AsBytes() []byte {
 	return v[:]
 }
 
-func (v *Bits224) AsByteString() string {
-	return string(v[:])
+func (v *Bits224) AsByteString() ByteString {
+	return ByteString(v[:])
 }
 
 type Bits256 [32]byte
@@ -230,8 +237,8 @@ func (v *Bits256) AsBytes() []byte {
 	return v[:]
 }
 
-func (v *Bits256) AsByteString() string {
-	return string(v[:])
+func (v *Bits256) AsByteString() ByteString {
+	return ByteString(v[:])
 }
 
 type Bits512 [64]byte
@@ -277,8 +284,8 @@ func (v *Bits512) AsBytes() []byte {
 	return v[:]
 }
 
-func (v *Bits512) AsByteString() string {
-	return string(v[:])
+func (v *Bits512) AsByteString() ByteString {
+	return ByteString(v[:])
 }
 
 /* Array size must be aligned to 8 bytes */

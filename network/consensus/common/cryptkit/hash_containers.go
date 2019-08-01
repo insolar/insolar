@@ -60,23 +60,35 @@ import (
 
 type DigestMethod string
 type SignMethod string
-type SignatureMethod string /* Digest + Sing methods */
+type SignatureMethod string /* Digest + Sign methods */
+
+type BasicDigester interface {
+	GetDigestMethod() DigestMethod
+	GetDigestSize() int
+}
 
 type DataDigester interface {
-	GetDigestOf(reader io.Reader) Digest
-	GetDigestMethod() DigestMethod
+	BasicDigester
+	DigestData(reader io.Reader) Digest
+}
+
+type PairDigester interface {
+	DataDigester
+	DigestPair(digest0 longbits.FoldableReader, digest1 longbits.FoldableReader) Digest
 }
 
 type SequenceDigester interface {
+	BasicDigester
 	AddNext(digest longbits.FoldableReader)
-	GetDigestMethod() DigestMethod
+	/* deprecated */
 	ForkSequence() SequenceDigester
 
 	FinishSequence() Digest
 }
 
 type DigestFactory interface {
-	CreatePacketDigester() DataDigester
+	CreatePairDigester() PairDigester
+	CreateDataDigester() DataDigester
 	CreateSequenceDigester() SequenceDigester
 }
 
@@ -248,7 +260,7 @@ func (d Digest) IsEmpty() bool {
 }
 
 func (d *Digest) CopyOfDigest() Digest {
-	return Digest{hFoldReader: longbits.CopyFixedSize(d.hFoldReader), digestMethod: d.digestMethod}
+	return Digest{hFoldReader: longbits.CopyToMutable(d.hFoldReader), digestMethod: d.digestMethod}
 }
 
 func (d *Digest) Equals(o DigestHolder) bool {
@@ -291,7 +303,7 @@ func (p Signature) IsEmpty() bool {
 }
 
 func (p *Signature) CopyOfSignature() Signature {
-	return Signature{hFoldReader: longbits.CopyFixedSize(p.hFoldReader), signatureMethod: p.signatureMethod}
+	return Signature{hFoldReader: longbits.CopyToMutable(p.hFoldReader), signatureMethod: p.signatureMethod}
 }
 
 func NewSignature(data longbits.FoldableReader, method SignatureMethod) Signature {

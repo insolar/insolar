@@ -173,7 +173,7 @@ func TestAsBytes(t *testing.T) {
 
 func TestNewFixedReader(t *testing.T) {
 	data := []byte{1, 2, 3}
-	fr := NewFixedReader(data)
+	fr := NewMutableFixedSize(data)
 	require.Len(t, fr.AsBytes(), len(data))
 
 	require.Equal(t, data[1], fr.AsBytes()[1])
@@ -182,7 +182,7 @@ func TestNewFixedReader(t *testing.T) {
 func TestCopyFixedSize(t *testing.T) {
 	item := 0x7777
 	bits := NewBits64(uint64(item))
-	fr := CopyFixedSize(&bits)
+	fr := CopyToMutable(&bits)
 
 	require.Len(t, fr.AsBytes(), len(bits))
 

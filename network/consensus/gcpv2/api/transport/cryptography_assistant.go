@@ -72,6 +72,7 @@ type ConsensusDigestFactory interface {
 type StateDigester interface {
 	AddNext(digest longbits.FoldableReader, fullRank member.FullRank)
 	GetDigestMethod() cryptkit.DigestMethod
+	/* deprecated */
 	ForkSequence() StateDigester
 
 	FinishSequence() cryptkit.Digest

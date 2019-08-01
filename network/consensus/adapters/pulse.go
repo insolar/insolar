@@ -128,7 +128,7 @@ type PulsePacketParser struct {
 
 func NewPulsePacketParser(pulse pulse.Data, data []byte) *PulsePacketParser {
 	return &PulsePacketParser{
-		FixedReader: longbits.NewFixedReader(data),
+		FixedReader: longbits.NewMutableFixedSize(data),
 		digest:      NewPulseDigest(pulse).AsDigestHolder(),
 		pulse:       pulse,
 	}
