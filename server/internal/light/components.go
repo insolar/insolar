@@ -273,6 +273,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			indexes,
 			filamentCalculator,
 			conf.LightChainLimit,
+			conf.CleanerDelay,
 		)
 		comps.cleaner = lightCleaner
 
