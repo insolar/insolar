@@ -20,6 +20,10 @@ package functest
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/insolar/utils"
+	"io/ioutil"
+	"sync"
 	"testing"
 	"time"
 
@@ -1252,4 +1256,142 @@ func (c *One) Get() (int, error) {
 	result = callMethod(t, objRef, "Get")
 	require.Empty(t, result.Error)
 	require.Equal(t, float64(12), result.ExtractedReply)
+}
+
+func TestMultiplyNoWaitCall(t *testing.T) {
+	var contractTwoCode = `
+package main
+
+import (
+	"github.com/insolar/insolar/insolar"
+	 "github.com/insolar/insolar/logicrunner/builtin/foundation"
+	one "github.com/insolar/insolar/application/proxy/first_contract"
+)
+
+type Two struct {
+	foundation.BaseContract
+	Number int
+	OneRef insolar.Reference
+}
+
+
+func New() (*Two, error) {
+	return &Two{Number: 10, OneRef: insolar.Reference{}}, nil
+}
+
+func NewWithOne(oneNumber int) (*Two, error) {
+	return &Two{Number: oneNumber, OneRef: insolar.Reference{} }, nil
+}
+
+var INSATTR_Get_API = true
+func (r *Two) Get() (int, error) {
+
+    holder := one.New()
+
+	c, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return 0, err
+	}
+
+	r.OneRef = c.GetReference()
+
+    c.GetAndIncrementNoWait()
+	c.GetAndDecrement()
+	c.GetAndIncrement()
+    c.GetAndDecrementNoWait()
+
+	return c.Get()
+}
+
+var INSATTR_DoNothing_API = true
+func (r *Two) DoNothing() (error) {
+	return nil
+}
+
+`
+	data, err := ioutil.ReadFile("test-data/simple_contract_with_sleep.txt")
+	require.Nil(t, err)
+	var contractOneCode = string(data)
+
+	contractOneRef := uploadContractOnce(t, "first_contract", contractOneCode)
+	firstObjRef := callConstructor(t, contractOneRef, "NewWithNumber", 100)
+	firstResult := callMethod(t, firstObjRef, "GetAndIncrement")
+	require.Empty(t, firstResult.Error)
+
+	contractTwoRef := uploadContractOnce(t, "second_contract", contractTwoCode)
+	secondObjRef := callConstructor(t, contractTwoRef, "NewWithOne", 100)
+	secondRresult := callMethod(t, secondObjRef, "Get")
+	require.Empty(t, secondRresult.Error)
+
+	require.Equal(t, 0.0, secondRresult.ExtractedReply)
+}
+
+func TestMultiplyNoWaitCallsOnSomeObject(t *testing.T) {
+	var contractTwoCode = `
+package main
+
+import (
+	"github.com/insolar/insolar/insolar"
+	 "github.com/insolar/insolar/logicrunner/builtin/foundation"
+	one "github.com/insolar/insolar/application/proxy/first_contract"
+)
+
+type Two struct {
+	foundation.BaseContract
+}
+
+func New() (*Two, error) {
+	return &Two{}, nil
+}
+
+var INSATTR_NoWaitGet_API = true
+func (r *Two) NoWaitGet(OneRef insolar.Reference) (int, error) {
+	c  := one.GetObject(OneRef)
+
+	c.GetAndIncrementNoWait()
+    c.GetAndDecrementNoWait()
+	
+	return c.Get()
+}
+`
+	data, err := ioutil.ReadFile("test-data/simple_contract_with_sleep.txt")
+	require.Nil(t, err)
+	var contractOneCode = string(data)
+	var n = 100
+
+	contractOneRef := uploadContractOnce(t, "first_contract", contractOneCode)
+	firstObjRef := callConstructor(t, contractOneRef, "NewWithNumber", n)
+
+	contractTwoRef := uploadContractOnce(t, "second_contract", contractTwoCode)
+	secondObjRef := callConstructor(t, contractTwoRef, "New")
+	secondResult := callMethod(t, secondObjRef, "NoWaitGet", firstObjRef)
+	require.Empty(t, secondResult.Error)
+	require.Equal(t, float64(n), secondResult.ExtractedReply)
+
+	anon := func() api.CallMethodReply { return callMethod(t, firstObjRef, "Get") }
+	firstResultAfterWait, _ := waitUntilRequestProcessed(anon, time.Second+10, time.Millisecond+50, 10)
+	require.Equal(t, float64(n), firstResultAfterWait.ExtractedReply)
+
+	t.Run("one object, sequential calls", func(t *testing.T) {
+		syncT := &utils.SyncT{T: t}
+		wg := sync.WaitGroup{}
+		wg.Add(10)
+
+		objectRef := callConstructor(syncT, contractTwoRef, "New")
+
+		for i := 0; i < 10; i++ {
+			go func() {
+				defer wg.Done()
+				result := callMethod(syncT, objectRef, "NoWaitGet", firstObjRef)
+				require.Empty(syncT, result.Error)
+			}()
+		}
+		wg.Wait()
+
+		anon = func() api.CallMethodReply { return callMethod(syncT, firstObjRef, "Get") }
+		res, _ := waitUntilRequestProcessed(anon, time.Second+10, time.Millisecond+50, 10)
+		require.NotNil(syncT, res)
+		require.Empty(syncT, res.Error)
+		require.Equal(syncT, float64(n), res.ExtractedReply)
+	})
 }
