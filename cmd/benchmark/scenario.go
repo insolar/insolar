@@ -29,7 +29,7 @@ import (
 
 	"github.com/insolar/insolar/api/sdk"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/utils/backoff"
+	"github.com/insolar/insolar/insolar/backoff"
 	"github.com/pkg/errors"
 )
 

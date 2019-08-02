@@ -34,7 +34,12 @@ import (
 // JetSplitter provides method for processing and splitting jets.
 type JetSplitter interface {
 	// Do performs jets processing, it decides which jets to split and returns list of resulting jets).
-	Do(ctx context.Context, ended, new insolar.PulseNumber) ([]insolar.JetID, error)
+	Do(
+		ctx context.Context,
+		ended, new insolar.PulseNumber,
+		jets []insolar.JetID,
+		createDrops bool,
+	) ([]insolar.JetID, error)
 }
 
 // JetInfo holds info about jet.
@@ -87,6 +92,8 @@ func NewJetSplitter(
 func (js *JetSplitterDefault) Do(
 	ctx context.Context,
 	endedPulse, newPulse insolar.PulseNumber,
+	jets []insolar.JetID,
+	createDrops bool,
 ) ([]insolar.JetID, error) {
 	ctx, span := instracer.StartSpan(ctx, "jets.split")
 	defer span.End()
@@ -96,21 +103,29 @@ func (js *JetSplitterDefault) Do(
 	// copy current jet tree for new pulse, for further modification of jets owned in ended pulse.
 	err := js.jetModifier.Clone(ctx, endedPulse, newPulse, false)
 	if err != nil {
-		panic("Failed to clone jets")
+		return nil, errors.Wrap(err, "failed to clone jets")
 	}
 
-	all := js.jetCalculator.MineForPulse(ctx, endedPulse)
-	inslog.Debugf("my jets: %s", insolar.JetIDCollection(all).DebugString())
-	result := make([]insolar.JetID, 0, len(all)*2)
-	for _, jetID := range all {
-		exceed, err := js.createDrop(ctx, jetID, endedPulse)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed create drop for pulse=%v, jet=%v",
-				endedPulse, jetID.DebugString())
+	inslog.Debugf("my jets: %s", insolar.JetIDCollection(jets).DebugString())
+	result := make([]insolar.JetID, 0, len(jets)*2)
+	for _, jetID := range jets {
+		var endedDrop drop.Drop
+		if createDrops {
+			endedDrop = js.createDrop(ctx, jetID, endedPulse)
+			err := js.dropModifier.Set(ctx, endedDrop)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to create drop")
+			}
+			inslog.Debugf("created drop for pulse %s jet %s", endedPulse.String(), jetID.DebugString())
+		} else {
+			dr, err := js.dropAccessor.ForPulse(ctx, jetID, endedPulse)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to fetch drop for split")
+			}
+			endedDrop = dr
 		}
-		inslog.Debugf("created drop for pulse %s jet %s", endedPulse.String(), jetID.DebugString())
 
-		if !exceed {
+		if !endedDrop.Split {
 			// no split, just mark jet as actual for new pulse
 			if err := js.jetModifier.Update(ctx, newPulse, true, jetID); err != nil {
 				panic("failed to update jets on LM-node: " + err.Error())
@@ -139,7 +154,7 @@ func (js *JetSplitterDefault) createDrop(
 	ctx context.Context,
 	jetID insolar.JetID,
 	pn insolar.PulseNumber,
-) (bool, error) {
+) drop.Drop {
 	block := drop.Drop{
 		Pulse: pn,
 		JetID: jetID,
@@ -147,7 +162,7 @@ func (js *JetSplitterDefault) createDrop(
 
 	// skip any thresholds calculation for split if jet depth for jetID reached limit.
 	if jetID.Depth() >= js.cfg.DepthLimit {
-		return false, js.dropModifier.Set(ctx, block)
+		return block
 	}
 
 	threshold := js.getPreviousDropThreshold(ctx, jetID, pn)
@@ -165,7 +180,7 @@ func (js *JetSplitterDefault) createDrop(
 	if block.SplitThresholdExceeded > js.cfg.ThresholdOverflowCount {
 		block.Split = true
 	}
-	return block.Split, js.dropModifier.Set(ctx, block)
+	return block
 }
 
 func (js *JetSplitterDefault) getPreviousDropThreshold(

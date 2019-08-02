@@ -14,19 +14,20 @@
  *    limitations under the License.
  */
 
- package proc
+package proc
 
 import (
-	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/bus"
 	"context"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/ledger/heavy/executor"
 	"fmt"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/ledger/heavy/executor"
 )
 
 type SendInitialState struct {
@@ -38,17 +39,17 @@ type SendInitialState struct {
 		jetTree        jet.Storage
 		jetCoordinator jet.Coordinator
 		dropDB         *drop.DB
-		pulseAccessor pulse.Accessor
-		sender bus.Sender
+		pulseAccessor  pulse.Accessor
+		sender         bus.Sender
 	}
 }
 
 func (p *SendInitialState) Dep(
 	startPulse pulse.StartPulse,
-	jetKeeper  executor.JetKeeper,
-	jetTree    jet.Storage,
+	jetKeeper executor.JetKeeper,
+	jetTree jet.Storage,
 	jetCoordinator jet.Coordinator,
-	dropDB          *drop.DB,
+	dropDB *drop.DB,
 	pulseAccessor pulse.Accessor,
 	sender bus.Sender,
 ) {
@@ -88,12 +89,17 @@ func (p *SendInitialState) Proceed(ctx context.Context) error {
 		return fmt.Errorf("unexpected payload type %T", msg)
 	}
 
+	topSyncPulseNumber := p.dep.jetKeeper.TopSyncPulse()
+	topSyncPulse, err := p.dep.pulseAccessor.ForPulseNumber(ctx, topSyncPulseNumber)
+	if err != nil {
+		logger.Fatal("Couldn't get pulse for topSyncPulse: ", topSyncPulseNumber, " ", err)
+	}
 
 	switch {
 	case req.Pulse == startPulse:
-		p.sendDrops(ctx, req)
+		p.sendForNetworkStart(ctx, req, topSyncPulse)
 	case req.Pulse > startPulse:
-		p.sendEmpty(ctx)
+		p.sendForJoiner(ctx, topSyncPulse)
 	default:
 		logger.Fatal("received initial state request from the past")
 	}
@@ -101,34 +107,33 @@ func (p *SendInitialState) Proceed(ctx context.Context) error {
 	return nil
 }
 
-func (p *SendInitialState) sendDrops(ctx context.Context, req *payload.GetLightInitialState) {
+func (p *SendInitialState) sendForNetworkStart(
+	ctx context.Context,
+	req *payload.GetLightInitialState,
+	topSyncPulse insolar.Pulse,
+) {
 	logger := inslogger.FromContext(ctx)
-	topSyncPulseNumber := p.dep.jetKeeper.TopSyncPulse()
 	var IDs []insolar.JetID
 	var drops [][]byte
-	for _, id := range p.dep.jetTree.All(ctx, topSyncPulseNumber) {
+	for _, id := range p.dep.jetTree.All(ctx, topSyncPulse.PulseNumber) {
 		light, err := p.dep.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(id), req.Pulse)
 		if err != nil {
 			logger.Fatal("Couldn't receive light executor for jet: ", id, " ", err)
 		}
 		if light.Equal(p.meta.Sender) {
 			IDs = append(IDs, id)
-			dr, err := p.dep.dropDB.ForPulse(ctx, id, topSyncPulseNumber)
+			dr, err := p.dep.dropDB.ForPulse(ctx, id, topSyncPulse.PulseNumber)
 			if err != nil {
 				logger.Fatal("Couldn't get drops for jet: ", id, " ", err)
 			}
 			drops = append(drops, drop.MustEncode(&dr))
 		}
 	}
-
-	topSyncPulse, err := p.dep.pulseAccessor.ForPulseNumber(ctx, topSyncPulseNumber)
-	if err != nil {
-		logger.Fatal("Couldn't get pulse for topSyncPulse: ", topSyncPulseNumber, " ", err)
-	}
 	msg, err := payload.NewMessage(&payload.LightInitialState{
-		JetIDs: IDs,
-		Drops: drops,
-		Pulse: pulse.ToProto(&topSyncPulse),
+		NetworkStart: true,
+		JetIDs:       IDs,
+		Drops:        drops,
+		Pulse:        pulse.ToProto(&topSyncPulse),
 	})
 	if err != nil {
 		logger.Fatal("Couldn't make message", err)
@@ -136,9 +141,13 @@ func (p *SendInitialState) sendDrops(ctx context.Context, req *payload.GetLightI
 	p.dep.sender.Reply(ctx, p.meta, msg)
 }
 
-func (p *SendInitialState) sendEmpty(ctx context.Context) {
+func (p *SendInitialState) sendForJoiner(ctx context.Context, topSyncPulse insolar.Pulse) {
 	logger := inslogger.FromContext(ctx)
-	msg, err := payload.NewMessage(&payload.LightInitialState{})
+
+	msg, err := payload.NewMessage(&payload.LightInitialState{
+		NetworkStart: false,
+		Pulse:        pulse.ToProto(&topSyncPulse),
+	})
 	if err != nil {
 		logger.Fatal("Couldn't make message", err)
 	}
