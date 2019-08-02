@@ -144,58 +144,6 @@ func INSMETHOD_GetCostCenterRef(object []byte, data []byte) ([]byte, []byte, err
 	return state, ret, err
 }
 
-func INSMETHOD_GetFeeWalletRef(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
-	self := new(RootDomain)
-
-	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeGetFeeWalletRef ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-	}
-
-	err := ph.Deserialize(object, self)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetFeeWalletRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
-	}
-
-	args := []interface{}{}
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetFeeWalletRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
-	}
-
-	ret0, ret1 := self.GetFeeWalletRef()
-
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
-	state := []byte{}
-	err = ph.Serialize(self, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret1 = ph.MakeErrorSerializable(ret1)
-
-	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
-
-	return state, ret, err
-}
-
 func INSMETHOD_GetMigrationWalletRef(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
@@ -1000,7 +948,6 @@ func Initialize() XXX_insolar.ContractWrapper {
 		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: XXX_insolar.ContractMethods{
 			"GetCostCenterRef":                INSMETHOD_GetCostCenterRef,
-			"GetFeeWalletRef":                 INSMETHOD_GetFeeWalletRef,
 			"GetMigrationWalletRef":           INSMETHOD_GetMigrationWalletRef,
 			"GetMigrationAdminMember":         INSMETHOD_GetMigrationAdminMember,
 			"GetActiveMigrationDaemonMembers": INSMETHOD_GetActiveMigrationDaemonMembers,
