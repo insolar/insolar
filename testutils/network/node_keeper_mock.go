@@ -60,7 +60,7 @@ type NodeKeeperMock struct {
 	beforeGetWorkingNodesByRoleCounter uint64
 	GetWorkingNodesByRoleMock          mNodeKeeperMockGetWorkingNodesByRole
 
-	funcMoveSyncToActive          func(ctx context.Context, number insolar.PulseNumber) (err error)
+	funcMoveSyncToActive          func(ctx context.Context, number insolar.PulseNumber)
 	inspectFuncMoveSyncToActive   func(ctx context.Context, number insolar.PulseNumber)
 	afterMoveSyncToActiveCounter  uint64
 	beforeMoveSyncToActiveCounter uint64
@@ -78,7 +78,7 @@ type NodeKeeperMock struct {
 	beforeSetInitialSnapshotCounter uint64
 	SetInitialSnapshotMock          mNodeKeeperMockSetInitialSnapshot
 
-	funcSync          func(ctx context.Context, na1 []insolar.NetworkNode) (err error)
+	funcSync          func(ctx context.Context, na1 []insolar.NetworkNode)
 	inspectFuncSync   func(ctx context.Context, na1 []insolar.NetworkNode)
 	afterSyncCounter  uint64
 	beforeSyncCounter uint64
@@ -1279,9 +1279,9 @@ type mNodeKeeperMockMoveSyncToActive struct {
 
 // NodeKeeperMockMoveSyncToActiveExpectation specifies expectation struct of the NodeKeeper.MoveSyncToActive
 type NodeKeeperMockMoveSyncToActiveExpectation struct {
-	mock    *NodeKeeperMock
-	params  *NodeKeeperMockMoveSyncToActiveParams
-	results *NodeKeeperMockMoveSyncToActiveResults
+	mock   *NodeKeeperMock
+	params *NodeKeeperMockMoveSyncToActiveParams
+
 	Counter uint64
 }
 
@@ -1289,11 +1289,6 @@ type NodeKeeperMockMoveSyncToActiveExpectation struct {
 type NodeKeeperMockMoveSyncToActiveParams struct {
 	ctx    context.Context
 	number insolar.PulseNumber
-}
-
-// NodeKeeperMockMoveSyncToActiveResults contains results of the NodeKeeper.MoveSyncToActive
-type NodeKeeperMockMoveSyncToActiveResults struct {
-	err error
 }
 
 // Expect sets up expected params for NodeKeeper.MoveSyncToActive
@@ -1328,7 +1323,7 @@ func (mmMoveSyncToActive *mNodeKeeperMockMoveSyncToActive) Inspect(f func(ctx co
 }
 
 // Return sets up results that will be returned by NodeKeeper.MoveSyncToActive
-func (mmMoveSyncToActive *mNodeKeeperMockMoveSyncToActive) Return(err error) *NodeKeeperMock {
+func (mmMoveSyncToActive *mNodeKeeperMockMoveSyncToActive) Return() *NodeKeeperMock {
 	if mmMoveSyncToActive.mock.funcMoveSyncToActive != nil {
 		mmMoveSyncToActive.mock.t.Fatalf("NodeKeeperMock.MoveSyncToActive mock is already set by Set")
 	}
@@ -1336,12 +1331,12 @@ func (mmMoveSyncToActive *mNodeKeeperMockMoveSyncToActive) Return(err error) *No
 	if mmMoveSyncToActive.defaultExpectation == nil {
 		mmMoveSyncToActive.defaultExpectation = &NodeKeeperMockMoveSyncToActiveExpectation{mock: mmMoveSyncToActive.mock}
 	}
-	mmMoveSyncToActive.defaultExpectation.results = &NodeKeeperMockMoveSyncToActiveResults{err}
+
 	return mmMoveSyncToActive.mock
 }
 
 //Set uses given function f to mock the NodeKeeper.MoveSyncToActive method
-func (mmMoveSyncToActive *mNodeKeeperMockMoveSyncToActive) Set(f func(ctx context.Context, number insolar.PulseNumber) (err error)) *NodeKeeperMock {
+func (mmMoveSyncToActive *mNodeKeeperMockMoveSyncToActive) Set(f func(ctx context.Context, number insolar.PulseNumber)) *NodeKeeperMock {
 	if mmMoveSyncToActive.defaultExpectation != nil {
 		mmMoveSyncToActive.mock.t.Fatalf("Default expectation is already set for the NodeKeeper.MoveSyncToActive method")
 	}
@@ -1354,29 +1349,8 @@ func (mmMoveSyncToActive *mNodeKeeperMockMoveSyncToActive) Set(f func(ctx contex
 	return mmMoveSyncToActive.mock
 }
 
-// When sets expectation for the NodeKeeper.MoveSyncToActive which will trigger the result defined by the following
-// Then helper
-func (mmMoveSyncToActive *mNodeKeeperMockMoveSyncToActive) When(ctx context.Context, number insolar.PulseNumber) *NodeKeeperMockMoveSyncToActiveExpectation {
-	if mmMoveSyncToActive.mock.funcMoveSyncToActive != nil {
-		mmMoveSyncToActive.mock.t.Fatalf("NodeKeeperMock.MoveSyncToActive mock is already set by Set")
-	}
-
-	expectation := &NodeKeeperMockMoveSyncToActiveExpectation{
-		mock:   mmMoveSyncToActive.mock,
-		params: &NodeKeeperMockMoveSyncToActiveParams{ctx, number},
-	}
-	mmMoveSyncToActive.expectations = append(mmMoveSyncToActive.expectations, expectation)
-	return expectation
-}
-
-// Then sets up NodeKeeper.MoveSyncToActive return parameters for the expectation previously defined by the When method
-func (e *NodeKeeperMockMoveSyncToActiveExpectation) Then(err error) *NodeKeeperMock {
-	e.results = &NodeKeeperMockMoveSyncToActiveResults{err}
-	return e.mock
-}
-
 // MoveSyncToActive implements network.NodeKeeper
-func (mmMoveSyncToActive *NodeKeeperMock) MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) (err error) {
+func (mmMoveSyncToActive *NodeKeeperMock) MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) {
 	mm_atomic.AddUint64(&mmMoveSyncToActive.beforeMoveSyncToActiveCounter, 1)
 	defer mm_atomic.AddUint64(&mmMoveSyncToActive.afterMoveSyncToActiveCounter, 1)
 
@@ -1394,7 +1368,7 @@ func (mmMoveSyncToActive *NodeKeeperMock) MoveSyncToActive(ctx context.Context, 
 	for _, e := range mmMoveSyncToActive.MoveSyncToActiveMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.err
+			return
 		}
 	}
 
@@ -1406,17 +1380,15 @@ func (mmMoveSyncToActive *NodeKeeperMock) MoveSyncToActive(ctx context.Context, 
 			mmMoveSyncToActive.t.Errorf("NodeKeeperMock.MoveSyncToActive got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
 
-		results := mmMoveSyncToActive.MoveSyncToActiveMock.defaultExpectation.results
-		if results == nil {
-			mmMoveSyncToActive.t.Fatal("No results are set for the NodeKeeperMock.MoveSyncToActive")
-		}
-		return (*results).err
+		return
+
 	}
 	if mmMoveSyncToActive.funcMoveSyncToActive != nil {
-		return mmMoveSyncToActive.funcMoveSyncToActive(ctx, number)
+		mmMoveSyncToActive.funcMoveSyncToActive(ctx, number)
+		return
 	}
 	mmMoveSyncToActive.t.Fatalf("Unexpected call to NodeKeeperMock.MoveSyncToActive. %v %v", ctx, number)
-	return
+
 }
 
 // MoveSyncToActiveAfterCounter returns a count of finished NodeKeeperMock.MoveSyncToActive invocations
@@ -1869,9 +1841,9 @@ type mNodeKeeperMockSync struct {
 
 // NodeKeeperMockSyncExpectation specifies expectation struct of the NodeKeeper.Sync
 type NodeKeeperMockSyncExpectation struct {
-	mock    *NodeKeeperMock
-	params  *NodeKeeperMockSyncParams
-	results *NodeKeeperMockSyncResults
+	mock   *NodeKeeperMock
+	params *NodeKeeperMockSyncParams
+
 	Counter uint64
 }
 
@@ -1879,11 +1851,6 @@ type NodeKeeperMockSyncExpectation struct {
 type NodeKeeperMockSyncParams struct {
 	ctx context.Context
 	na1 []insolar.NetworkNode
-}
-
-// NodeKeeperMockSyncResults contains results of the NodeKeeper.Sync
-type NodeKeeperMockSyncResults struct {
-	err error
 }
 
 // Expect sets up expected params for NodeKeeper.Sync
@@ -1918,7 +1885,7 @@ func (mmSync *mNodeKeeperMockSync) Inspect(f func(ctx context.Context, na1 []ins
 }
 
 // Return sets up results that will be returned by NodeKeeper.Sync
-func (mmSync *mNodeKeeperMockSync) Return(err error) *NodeKeeperMock {
+func (mmSync *mNodeKeeperMockSync) Return() *NodeKeeperMock {
 	if mmSync.mock.funcSync != nil {
 		mmSync.mock.t.Fatalf("NodeKeeperMock.Sync mock is already set by Set")
 	}
@@ -1926,12 +1893,12 @@ func (mmSync *mNodeKeeperMockSync) Return(err error) *NodeKeeperMock {
 	if mmSync.defaultExpectation == nil {
 		mmSync.defaultExpectation = &NodeKeeperMockSyncExpectation{mock: mmSync.mock}
 	}
-	mmSync.defaultExpectation.results = &NodeKeeperMockSyncResults{err}
+
 	return mmSync.mock
 }
 
 //Set uses given function f to mock the NodeKeeper.Sync method
-func (mmSync *mNodeKeeperMockSync) Set(f func(ctx context.Context, na1 []insolar.NetworkNode) (err error)) *NodeKeeperMock {
+func (mmSync *mNodeKeeperMockSync) Set(f func(ctx context.Context, na1 []insolar.NetworkNode)) *NodeKeeperMock {
 	if mmSync.defaultExpectation != nil {
 		mmSync.mock.t.Fatalf("Default expectation is already set for the NodeKeeper.Sync method")
 	}
@@ -1944,29 +1911,8 @@ func (mmSync *mNodeKeeperMockSync) Set(f func(ctx context.Context, na1 []insolar
 	return mmSync.mock
 }
 
-// When sets expectation for the NodeKeeper.Sync which will trigger the result defined by the following
-// Then helper
-func (mmSync *mNodeKeeperMockSync) When(ctx context.Context, na1 []insolar.NetworkNode) *NodeKeeperMockSyncExpectation {
-	if mmSync.mock.funcSync != nil {
-		mmSync.mock.t.Fatalf("NodeKeeperMock.Sync mock is already set by Set")
-	}
-
-	expectation := &NodeKeeperMockSyncExpectation{
-		mock:   mmSync.mock,
-		params: &NodeKeeperMockSyncParams{ctx, na1},
-	}
-	mmSync.expectations = append(mmSync.expectations, expectation)
-	return expectation
-}
-
-// Then sets up NodeKeeper.Sync return parameters for the expectation previously defined by the When method
-func (e *NodeKeeperMockSyncExpectation) Then(err error) *NodeKeeperMock {
-	e.results = &NodeKeeperMockSyncResults{err}
-	return e.mock
-}
-
 // Sync implements network.NodeKeeper
-func (mmSync *NodeKeeperMock) Sync(ctx context.Context, na1 []insolar.NetworkNode) (err error) {
+func (mmSync *NodeKeeperMock) Sync(ctx context.Context, na1 []insolar.NetworkNode) {
 	mm_atomic.AddUint64(&mmSync.beforeSyncCounter, 1)
 	defer mm_atomic.AddUint64(&mmSync.afterSyncCounter, 1)
 
@@ -1984,7 +1930,7 @@ func (mmSync *NodeKeeperMock) Sync(ctx context.Context, na1 []insolar.NetworkNod
 	for _, e := range mmSync.SyncMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.err
+			return
 		}
 	}
 
@@ -1996,17 +1942,15 @@ func (mmSync *NodeKeeperMock) Sync(ctx context.Context, na1 []insolar.NetworkNod
 			mmSync.t.Errorf("NodeKeeperMock.Sync got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
 
-		results := mmSync.SyncMock.defaultExpectation.results
-		if results == nil {
-			mmSync.t.Fatal("No results are set for the NodeKeeperMock.Sync")
-		}
-		return (*results).err
+		return
+
 	}
 	if mmSync.funcSync != nil {
-		return mmSync.funcSync(ctx, na1)
+		mmSync.funcSync(ctx, na1)
+		return
 	}
 	mmSync.t.Fatalf("Unexpected call to NodeKeeperMock.Sync. %v %v", ctx, na1)
-	return
+
 }
 
 // SyncAfterCounter returns a count of finished NodeKeeperMock.Sync invocations

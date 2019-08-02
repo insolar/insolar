@@ -33,6 +33,12 @@ type VersionedRegistriesMock struct {
 	beforeGetMisbehaviorRegistryCounter uint64
 	GetMisbehaviorRegistryMock          mVersionedRegistriesMockGetMisbehaviorRegistry
 
+	funcGetNearestValidPulseData          func() (d1 pulse.Data)
+	inspectFuncGetNearestValidPulseData   func()
+	afterGetNearestValidPulseDataCounter  uint64
+	beforeGetNearestValidPulseDataCounter uint64
+	GetNearestValidPulseDataMock          mVersionedRegistriesMockGetNearestValidPulseData
+
 	funcGetOfflinePopulation          func() (o1 OfflinePopulation)
 	inspectFuncGetOfflinePopulation   func()
 	afterGetOfflinePopulationCounter  uint64
@@ -59,6 +65,8 @@ func NewVersionedRegistriesMock(t minimock.Tester) *VersionedRegistriesMock {
 	m.GetMandateRegistryMock = mVersionedRegistriesMockGetMandateRegistry{mock: m}
 
 	m.GetMisbehaviorRegistryMock = mVersionedRegistriesMockGetMisbehaviorRegistry{mock: m}
+
+	m.GetNearestValidPulseDataMock = mVersionedRegistriesMockGetNearestValidPulseData{mock: m}
 
 	m.GetOfflinePopulationMock = mVersionedRegistriesMockGetOfflinePopulation{mock: m}
 
@@ -569,6 +577,149 @@ func (m *VersionedRegistriesMock) MinimockGetMisbehaviorRegistryInspect() {
 	}
 }
 
+type mVersionedRegistriesMockGetNearestValidPulseData struct {
+	mock               *VersionedRegistriesMock
+	defaultExpectation *VersionedRegistriesMockGetNearestValidPulseDataExpectation
+	expectations       []*VersionedRegistriesMockGetNearestValidPulseDataExpectation
+}
+
+// VersionedRegistriesMockGetNearestValidPulseDataExpectation specifies expectation struct of the VersionedRegistries.GetNearestValidPulseData
+type VersionedRegistriesMockGetNearestValidPulseDataExpectation struct {
+	mock *VersionedRegistriesMock
+
+	results *VersionedRegistriesMockGetNearestValidPulseDataResults
+	Counter uint64
+}
+
+// VersionedRegistriesMockGetNearestValidPulseDataResults contains results of the VersionedRegistries.GetNearestValidPulseData
+type VersionedRegistriesMockGetNearestValidPulseDataResults struct {
+	d1 pulse.Data
+}
+
+// Expect sets up expected params for VersionedRegistries.GetNearestValidPulseData
+func (mmGetNearestValidPulseData *mVersionedRegistriesMockGetNearestValidPulseData) Expect() *mVersionedRegistriesMockGetNearestValidPulseData {
+	if mmGetNearestValidPulseData.mock.funcGetNearestValidPulseData != nil {
+		mmGetNearestValidPulseData.mock.t.Fatalf("VersionedRegistriesMock.GetNearestValidPulseData mock is already set by Set")
+	}
+
+	if mmGetNearestValidPulseData.defaultExpectation == nil {
+		mmGetNearestValidPulseData.defaultExpectation = &VersionedRegistriesMockGetNearestValidPulseDataExpectation{}
+	}
+
+	return mmGetNearestValidPulseData
+}
+
+// Inspect accepts an inspector function that has same arguments as the VersionedRegistries.GetNearestValidPulseData
+func (mmGetNearestValidPulseData *mVersionedRegistriesMockGetNearestValidPulseData) Inspect(f func()) *mVersionedRegistriesMockGetNearestValidPulseData {
+	if mmGetNearestValidPulseData.mock.inspectFuncGetNearestValidPulseData != nil {
+		mmGetNearestValidPulseData.mock.t.Fatalf("Inspect function is already set for VersionedRegistriesMock.GetNearestValidPulseData")
+	}
+
+	mmGetNearestValidPulseData.mock.inspectFuncGetNearestValidPulseData = f
+
+	return mmGetNearestValidPulseData
+}
+
+// Return sets up results that will be returned by VersionedRegistries.GetNearestValidPulseData
+func (mmGetNearestValidPulseData *mVersionedRegistriesMockGetNearestValidPulseData) Return(d1 pulse.Data) *VersionedRegistriesMock {
+	if mmGetNearestValidPulseData.mock.funcGetNearestValidPulseData != nil {
+		mmGetNearestValidPulseData.mock.t.Fatalf("VersionedRegistriesMock.GetNearestValidPulseData mock is already set by Set")
+	}
+
+	if mmGetNearestValidPulseData.defaultExpectation == nil {
+		mmGetNearestValidPulseData.defaultExpectation = &VersionedRegistriesMockGetNearestValidPulseDataExpectation{mock: mmGetNearestValidPulseData.mock}
+	}
+	mmGetNearestValidPulseData.defaultExpectation.results = &VersionedRegistriesMockGetNearestValidPulseDataResults{d1}
+	return mmGetNearestValidPulseData.mock
+}
+
+//Set uses given function f to mock the VersionedRegistries.GetNearestValidPulseData method
+func (mmGetNearestValidPulseData *mVersionedRegistriesMockGetNearestValidPulseData) Set(f func() (d1 pulse.Data)) *VersionedRegistriesMock {
+	if mmGetNearestValidPulseData.defaultExpectation != nil {
+		mmGetNearestValidPulseData.mock.t.Fatalf("Default expectation is already set for the VersionedRegistries.GetNearestValidPulseData method")
+	}
+
+	if len(mmGetNearestValidPulseData.expectations) > 0 {
+		mmGetNearestValidPulseData.mock.t.Fatalf("Some expectations are already set for the VersionedRegistries.GetNearestValidPulseData method")
+	}
+
+	mmGetNearestValidPulseData.mock.funcGetNearestValidPulseData = f
+	return mmGetNearestValidPulseData.mock
+}
+
+// GetNearestValidPulseData implements VersionedRegistries
+func (mmGetNearestValidPulseData *VersionedRegistriesMock) GetNearestValidPulseData() (d1 pulse.Data) {
+	mm_atomic.AddUint64(&mmGetNearestValidPulseData.beforeGetNearestValidPulseDataCounter, 1)
+	defer mm_atomic.AddUint64(&mmGetNearestValidPulseData.afterGetNearestValidPulseDataCounter, 1)
+
+	if mmGetNearestValidPulseData.inspectFuncGetNearestValidPulseData != nil {
+		mmGetNearestValidPulseData.inspectFuncGetNearestValidPulseData()
+	}
+
+	if mmGetNearestValidPulseData.GetNearestValidPulseDataMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmGetNearestValidPulseData.GetNearestValidPulseDataMock.defaultExpectation.Counter, 1)
+
+		results := mmGetNearestValidPulseData.GetNearestValidPulseDataMock.defaultExpectation.results
+		if results == nil {
+			mmGetNearestValidPulseData.t.Fatal("No results are set for the VersionedRegistriesMock.GetNearestValidPulseData")
+		}
+		return (*results).d1
+	}
+	if mmGetNearestValidPulseData.funcGetNearestValidPulseData != nil {
+		return mmGetNearestValidPulseData.funcGetNearestValidPulseData()
+	}
+	mmGetNearestValidPulseData.t.Fatalf("Unexpected call to VersionedRegistriesMock.GetNearestValidPulseData.")
+	return
+}
+
+// GetNearestValidPulseDataAfterCounter returns a count of finished VersionedRegistriesMock.GetNearestValidPulseData invocations
+func (mmGetNearestValidPulseData *VersionedRegistriesMock) GetNearestValidPulseDataAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmGetNearestValidPulseData.afterGetNearestValidPulseDataCounter)
+}
+
+// GetNearestValidPulseDataBeforeCounter returns a count of VersionedRegistriesMock.GetNearestValidPulseData invocations
+func (mmGetNearestValidPulseData *VersionedRegistriesMock) GetNearestValidPulseDataBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmGetNearestValidPulseData.beforeGetNearestValidPulseDataCounter)
+}
+
+// MinimockGetNearestValidPulseDataDone returns true if the count of the GetNearestValidPulseData invocations corresponds
+// the number of defined expectations
+func (m *VersionedRegistriesMock) MinimockGetNearestValidPulseDataDone() bool {
+	for _, e := range m.GetNearestValidPulseDataMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.GetNearestValidPulseDataMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetNearestValidPulseDataCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcGetNearestValidPulseData != nil && mm_atomic.LoadUint64(&m.afterGetNearestValidPulseDataCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockGetNearestValidPulseDataInspect logs each unmet expectation
+func (m *VersionedRegistriesMock) MinimockGetNearestValidPulseDataInspect() {
+	for _, e := range m.GetNearestValidPulseDataMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Error("Expected call to VersionedRegistriesMock.GetNearestValidPulseData")
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.GetNearestValidPulseDataMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetNearestValidPulseDataCounter) < 1 {
+		m.t.Error("Expected call to VersionedRegistriesMock.GetNearestValidPulseData")
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcGetNearestValidPulseData != nil && mm_atomic.LoadUint64(&m.afterGetNearestValidPulseDataCounter) < 1 {
+		m.t.Error("Expected call to VersionedRegistriesMock.GetNearestValidPulseData")
+	}
+}
+
 type mVersionedRegistriesMockGetOfflinePopulation struct {
 	mock               *VersionedRegistriesMock
 	defaultExpectation *VersionedRegistriesMockGetOfflinePopulationExpectation
@@ -864,6 +1015,8 @@ func (m *VersionedRegistriesMock) MinimockFinish() {
 
 		m.MinimockGetMisbehaviorRegistryInspect()
 
+		m.MinimockGetNearestValidPulseDataInspect()
+
 		m.MinimockGetOfflinePopulationInspect()
 
 		m.MinimockGetVersionPulseDataInspect()
@@ -893,6 +1046,7 @@ func (m *VersionedRegistriesMock) minimockDone() bool {
 		m.MinimockCommitNextPulseDone() &&
 		m.MinimockGetMandateRegistryDone() &&
 		m.MinimockGetMisbehaviorRegistryDone() &&
+		m.MinimockGetNearestValidPulseDataDone() &&
 		m.MinimockGetOfflinePopulationDone() &&
 		m.MinimockGetVersionPulseDataDone()
 }

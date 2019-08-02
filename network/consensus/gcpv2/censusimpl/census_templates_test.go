@@ -560,6 +560,7 @@ func TestECTMakeActive(t *testing.T) {
 	pd.NextPulseDelta = 1
 	registries := census.NewVersionedRegistriesMock(t)
 	registries.CommitNextPulseMock.Set(func(pulse.Data, census.OnlinePopulation) census.VersionedRegistries { return registries })
+	registries.GetNearestValidPulseDataMock.Set(func() (d1 pulse.Data) { return pd })
 	act := &ActiveCensusTemplate{}
 	act.setVersionedRegistries(registries)
 	ect.chronicles.active = act

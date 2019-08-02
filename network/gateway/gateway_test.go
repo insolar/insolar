@@ -78,7 +78,7 @@ func TestSwitch(t *testing.T) {
 
 	// nodekeeper := testnet.NewNodeKeeperMock(t)
 	nodekeeper := testnet.NewNodeKeeperMock(t)
-	nodekeeper.MoveSyncToActiveMock.Set(func(p context.Context, p1 insolar.PulseNumber) (r error) { return nil })
+	nodekeeper.MoveSyncToActiveMock.Set(func(ctx context.Context, number insolar.PulseNumber) {})
 	gatewayer := testnet.NewGatewayerMock(t)
 	//pm := mockPulseManager(t)
 
@@ -128,7 +128,7 @@ func TestDumbComplete_GetCert(t *testing.T) {
 
 	// nodekeeper := testnet.NewNodeKeeperMock(t)
 	nodekeeper := testnet.NewNodeKeeperMock(t)
-	nodekeeper.MoveSyncToActiveMock.Set(func(p context.Context, p1 insolar.PulseNumber) (r error) { return nil })
+	nodekeeper.MoveSyncToActiveMock.Set(func(ctx context.Context, number insolar.PulseNumber) {})
 
 	gatewayer := testnet.NewGatewayerMock(t)
 
@@ -184,13 +184,3 @@ func TestDumbComplete_GetCert(t *testing.T) {
 	require.NotNil(t, cert)
 	require.Equal(t, cert, &certificate.Certificate{})
 }
-
-//func TestSwitchWaitMinRoles(t *testing.T) {
-//	ctx := context.Background()
-//	b := &Base{}
-//	gatewayer := NewGatewayer(b.NewGateway(ctx, insolar.NoNetworkState), func(ctx context.Context, isNetworkOperable bool) {})
-//	gatewayer.Gateway().OnPulseFromPulsar(ctx, insolar.Pulse{}, nil)
-//
-//	gatewayer.SwitchState(ctx, insolar.WaitMinRoles)
-//	gatewayer.Gateway().OnPulseFromPulsar(ctx, insolar.Pulse{}, nil)
-//}
