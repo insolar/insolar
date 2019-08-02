@@ -75,6 +75,11 @@ func TestJetInfoIsConfirmed_OneDropOneHot(t *testing.T) {
 
 	err = ji.AddDropConfirmation(ctx, testPulse, testJet, false)
 	require.NoError(t, err)
+
+	require.Equal(t, insolar.GenesisPulse.PulseNumber, ji.TopSyncPulse())
+
+	err = ji.AddBackupConfirmation(ctx, testPulse)
+	require.NoError(t, err)
 	require.Equal(t, testPulse, ji.TopSyncPulse())
 }
 
@@ -102,6 +107,10 @@ func TestJetInfoIsConfirmed_Split(t *testing.T) {
 	require.Equal(t, insolar.GenesisPulse.PulseNumber, ji.TopSyncPulse())
 
 	err = ji.AddDropConfirmation(ctx, testPulse, testJet, true)
+	require.NoError(t, err)
+	require.Equal(t, insolar.GenesisPulse.PulseNumber, ji.TopSyncPulse())
+
+	err = ji.AddBackupConfirmation(ctx, testPulse)
 	require.NoError(t, err)
 	require.Equal(t, testPulse, ji.TopSyncPulse())
 }
@@ -131,7 +140,24 @@ func TestJetInfoIsConfirmed_Split_And_DifferentOrderOfComingConfirmations(t *tes
 
 	err = ji.AddHotConfirmation(ctx, testPulse, right, true)
 	require.NoError(t, err)
+	require.Equal(t, insolar.GenesisPulse.PulseNumber, ji.TopSyncPulse())
+
+	err = ji.AddBackupConfirmation(ctx, testPulse)
+	require.NoError(t, err)
 	require.Equal(t, testPulse, ji.TopSyncPulse())
+}
+
+func TestJetInfo_BackupConfirmComesFirst(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	jetKeeper, tmpDir, db, _ := initDB(t, testPulse)
+	defer os.RemoveAll(tmpDir)
+	defer db.Stop(context.Background())
+
+	err := jetKeeper.AddBackupConfirmation(ctx, testPulse)
+	require.Contains(t, err.Error(), "backup confirmation comes first. It's impossible")
 }
 
 func TestJetInfo_ExistingDrop(t *testing.T) {
@@ -326,6 +352,10 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 
 	err = jetKeeper.AddHotConfirmation(ctx, currentPulse, jet, false)
 	require.NoError(t, err)
+	require.Equal(t, insolar.GenesisPulse.PulseNumber, jetKeeper.TopSyncPulse())
+
+	err = jetKeeper.AddBackupConfirmation(ctx, currentPulse)
+	require.NoError(t, err)
 	require.Equal(t, currentPulse, jetKeeper.TopSyncPulse())
 
 	err = jets.Clone(ctx, currentPulse, nextPulse, true)
@@ -340,6 +370,10 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, currentPulse, jetKeeper.TopSyncPulse())
 	err = jetKeeper.AddHotConfirmation(ctx, nextPulse, left, true)
+	require.NoError(t, err)
+	require.Equal(t, currentPulse, jetKeeper.TopSyncPulse())
+
+	err = jetKeeper.AddBackupConfirmation(ctx, nextPulse)
 	require.NoError(t, err)
 	require.Equal(t, nextPulse, jetKeeper.TopSyncPulse())
 }
@@ -391,6 +425,8 @@ func TestDbJetKeeper_TopSyncPulse_FinalizeMultiple(t *testing.T) {
 		require.Equal(t, insolar.GenesisPulse.PulseNumber, jetKeeper.TopSyncPulse())
 		err = jetKeeper.AddDropConfirmation(ctx, currentPulse, jet, false)
 		require.NoError(t, err)
+		err = jetKeeper.AddBackupConfirmation(ctx, currentPulse)
+		require.NoError(t, err)
 		require.Equal(t, currentPulse, jetKeeper.TopSyncPulse())
 	}
 
@@ -424,6 +460,9 @@ func TestDbJetKeeper_TopSyncPulse_FinalizeMultiple(t *testing.T) {
 		err = jetKeeper.AddHotConfirmation(ctx, futurePulse, right, false)
 		require.NoError(t, err)
 		require.Equal(t, currentPulse, jetKeeper.TopSyncPulse())
+		err = jetKeeper.AddBackupConfirmation(ctx, futurePulse)
+		require.NoError(t, err)
+		require.Equal(t, currentPulse, jetKeeper.TopSyncPulse())
 	}
 
 	// complete next pulse
@@ -436,6 +475,9 @@ func TestDbJetKeeper_TopSyncPulse_FinalizeMultiple(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, currentPulse, jetKeeper.TopSyncPulse())
 		err = jetKeeper.AddHotConfirmation(ctx, nextPulse, right, true)
+		require.NoError(t, err)
+		require.Equal(t, currentPulse, jetKeeper.TopSyncPulse())
+		err = jetKeeper.AddBackupConfirmation(ctx, nextPulse)
 		require.NoError(t, err)
 	}
 
