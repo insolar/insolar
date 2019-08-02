@@ -81,7 +81,7 @@ func (h *HandleCall) sendToNextExecutor(
 }
 
 func (h *HandleCall) checkExecutionLoop(
-	ctx context.Context, request record.IncomingRequest,
+	ctx context.Context, reqRef insolar.Reference, request record.IncomingRequest,
 ) bool {
 
 	if request.ReturnMode == record.ReturnNoWait {
@@ -100,7 +100,7 @@ func (h *HandleCall) checkExecutionLoop(
 		return false
 	}
 
-	if !archive.FindRequestLoop(ctx, request.APIRequestID) {
+	if !archive.FindRequestLoop(ctx, reqRef, request.APIRequestID) {
 		return false
 	}
 
@@ -133,10 +133,6 @@ func (h *HandleCall) handleActual(
 	}
 
 	request := msg.IncomingRequest
-
-	if h.checkExecutionLoop(ctx, request) {
-		return nil, errors.New("loop detected")
-	}
 
 	procRegisterRequest := NewRegisterIncomingRequest(request, h.dep)
 	if err := f.Procedure(ctx, procRegisterRequest, true); err != nil {
@@ -180,6 +176,10 @@ func (h *HandleCall) handleActual(
 			}
 		}()
 		return registeredRequestReply, nil
+	}
+
+	if h.checkExecutionLoop(ctx, *requestRef, request) {
+		return nil, errors.New("loop detected")
 	}
 
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))

@@ -141,7 +141,7 @@ func TestHandleCall_CheckExecutionLoop(t *testing.T) {
 			mc := minimock.NewController(t)
 
 			h, req := test.mocks(mc)
-			loop := h.checkExecutionLoop(ctx, *req)
+			loop := h.checkExecutionLoop(ctx, gen.Reference(), *req)
 			require.Equal(t, test.loop, loop)
 
 			mc.Wait(1 * time.Minute)
@@ -351,10 +351,6 @@ func TestHandleCall_Present(t *testing.T) {
 		handler := HandleCall{
 			dep: &Dependencies{
 				Publisher: nil,
-				StateStorage: NewStateStorageMock(mc).
-					GetExecutionArchiveMock.Expect(objRef).Return(
-					NewExecutionArchiveMock(mc).FindRequestLoopMock.Return(false),
-				),
 				ResultsMatcher: nil,
 				lr: &LogicRunner{
 					ArtifactManager: artifacts.NewClientMock(mc),
