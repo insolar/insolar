@@ -91,7 +91,7 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 
 		reasonInPendings := contains(requests, reasonID)
 		if !reasonInPendings {
-			return errors.New("request reason should be open")
+			return errors.New("request reason not found in opened requests")
 		}
 	}
 

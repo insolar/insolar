@@ -219,7 +219,7 @@ func (r *OutgoingRequest) IsAPIRequest() bool {
 }
 
 func (r *OutgoingRequest) IsCreationRequest() bool {
-	return false
+	return r.GetCallType() == CTSaveAsChild || r.GetCallType() == CTDeployPrototype
 }
 
 func (r *OutgoingRequest) IsDetached() bool {
