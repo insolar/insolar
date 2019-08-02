@@ -68,10 +68,10 @@ func copyActiveNodes(nodes []insolar.NetworkNode) map[insolar.Reference]insolar.
 	return result
 }
 
-func GetMergedCopy(nodes []insolar.NetworkNode) (*MergedListCopy, error) {
+func GetMergedCopy(nodes []insolar.NetworkNode) *MergedListCopy {
 	nodesMap := copyActiveNodes(nodes)
 
 	return &MergedListCopy{
 		ActiveList: nodesMap,
-	}, nil
+	}
 }

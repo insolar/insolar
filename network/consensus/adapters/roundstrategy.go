@@ -66,10 +66,6 @@ type RoundStrategy struct {
 	localConfig api.LocalNodeConfiguration
 }
 
-func (rs *RoundStrategy) IsEphemeralPulseAllowed() bool {
-	return true
-}
-
 func NewRoundStrategy(
 	chronicle api.ConsensusChronicles,
 	localConfig api.LocalNodeConfiguration,
