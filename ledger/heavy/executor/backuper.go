@@ -43,8 +43,15 @@ type Config struct {
 	BackupWaitPeriod      uint
 }
 
+type BackupInfo struct {
+	MD5                 string
+	Pulse               insolar.PulseNumber
+	LastBackupedVersion uint64
+	Since               uint64
+}
+
 type BackupMaker struct {
-	lock                sync.Mutex
+	lock                sync.RWMutex
 	lastBackupedVersion uint64
 	lastBackupedPulse   insolar.PulseNumber
 	backuper            store.Backuper
@@ -109,10 +116,8 @@ func move(ctx context.Context, what string, toDirectory string) error {
 
 // waitForBackup waits for file filePath appearance
 func waitForBackup(ctx context.Context, filePath string, numIterations uint) error {
-	fmt.Println("waiting for ", filePath)
 	inslogger.FromContext(ctx).Debug("waiting for ", filePath)
 	for i := uint(0); i < numIterations; i++ {
-		fmt.Println("WAITING: iteration: ", i)
 		if err := isPathExists(filePath); err != nil {
 			if os.IsNotExist(err) {
 				inslogger.FromContext(ctx).Debugf("backup confirmation ( %s ) still doesn't exists. Sleep second.", filePath)
@@ -128,14 +133,7 @@ func waitForBackup(ctx context.Context, filePath string, numIterations uint) err
 }
 
 func writeBackupInfoFile(hash string, pulse insolar.PulseNumber, since uint64, upto uint64, to string) error {
-	type backupInfo struct {
-		MD5                   string
-		Pulse                 insolar.PulseNumber
-		LastBackupedTimestamp uint64
-		Since                 uint64
-	}
-
-	bi := backupInfo{MD5: hash, Pulse: pulse, LastBackupedTimestamp: upto, Since: since}
+	bi := BackupInfo{MD5: hash, Pulse: pulse, LastBackupedVersion: upto, Since: since}
 
 	rawInfo, err := json.MarshalIndent(bi, "", "    ")
 	if err != nil {
@@ -188,12 +186,12 @@ type tmpDirHolder struct {
 func (t *tmpDirHolder) release(ctx context.Context) {
 	err := t.tmpFile.Close()
 	if err != nil {
-		inslogger.FromContext(ctx).Error("can't close backup file: ", t.tmpFile, err)
+		inslogger.FromContext(ctx).Fatal("can't close backup file: ", t.tmpFile, err)
 	}
 
 	err = os.RemoveAll(t.tmpDir)
 	if err != nil {
-		inslogger.FromContext(ctx).Error("can't remove backup file: ", t.tmpDir, err)
+		inslogger.FromContext(ctx).Fatal("can't remove backup file: ", t.tmpDir, err)
 	}
 }
 
@@ -202,7 +200,7 @@ func (t *tmpDirHolder) reopenFile(ctx context.Context) error {
 		return errors.Wrapf(err, "can't close file %s", t.tmpFile.Name())
 	}
 
-	reopenedFile, err := os.OpenFile(t.tmpFile.Name(), os.O_RDONLY, 0600)
+	reopenedFile, err := os.OpenFile(t.tmpFile.Name(), os.O_RDONLY, 0)
 	if err != nil {
 		return errors.Wrapf(err, "can't open file %s", t.tmpFile.Name())
 	}
@@ -217,9 +215,9 @@ func (t *tmpDirHolder) create(where string, pulse insolar.PulseNumber) (func(con
 		return nil, errors.Wrapf(err, "can't create tmp dir: %s", where)
 	}
 
-	file, err := ioutil.TempFile(tmpDir, pulse.String())
+	file, err := os.OpenFile(tmpDir+"/incr.bkp", os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0600)
 	if err != nil {
-		return nil, errors.Wrapf(err, "can't create tmp file. dir: %s, pattern: %s", tmpDir, pulse.String())
+		return nil, errors.Wrapf(err, "can't create tmp file. dir: %s", tmpDir)
 	}
 
 	t.tmpDir = tmpDir
@@ -232,6 +230,9 @@ func (b *BackupMaker) doBackup(ctx context.Context, lastFinalizedPulse insolar.P
 
 	dirHolder := &tmpDirHolder{}
 	closer, err := dirHolder.create(b.config.TmpDirectory, lastFinalizedPulse)
+	if err != nil {
+		return 0, errors.Wrap(err, "can't create tmp dir")
+	}
 	defer closer(ctx)
 
 	currentBkpTs, err := b.prepareBackup(ctx, dirHolder, lastFinalizedPulse)
@@ -270,11 +271,4 @@ func (b *BackupMaker) Start(ctx context.Context, lastFinalizedPulse insolar.Puls
 	b.lastBackupedPulse = lastFinalizedPulse
 	b.lastBackupedVersion = currentBkpTs
 	return nil
-}
-
-func (b *BackupMaker) GetLastBackupedVersion() uint64 {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
-	return b.lastBackupedVersion
 }
