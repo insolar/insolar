@@ -1308,7 +1308,7 @@ func (r *Two) DoNothing() (error) {
 }
 
 `
-	data, err := ioutil.ReadFile("test-data/simple_contract_with_sleep.go")
+	data, err := ioutil.ReadFile("test-data/simple_contract_with_sleep.txt")
 	require.Nil(t, err)
 	var contractOneCode = string(data)
 
@@ -1353,7 +1353,7 @@ func (r *Two) NoWaitGet(OneRef insolar.Reference) (int, error) {
 	return c.Get()
 }
 `
-	data, err := ioutil.ReadFile("test-data/simple_contract_with_sleep.go")
+	data, err := ioutil.ReadFile("test-data/simple_contract_with_sleep.txt")
 	require.Nil(t, err)
 	var contractOneCode = string(data)
 	var n = 100
