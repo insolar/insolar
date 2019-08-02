@@ -17,7 +17,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 )
 
-// AALEKSEEV TODO use a pull here
+// AALEKSEEV TODO use a dynamic pool here
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.OutgoingRequestSender -o ./ -s _mock.go -g
 

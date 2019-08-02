@@ -195,13 +195,13 @@ func (m *executionProxyImplementation) RouteCall(
 
 	outgoingReqRef := insolar.NewReference(*outgoingReqID)
 
-	// TODO AALEKSEEV uncomment this code
-	//	var incoming *record.IncomingRequest
-	//	rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
-	//	if incoming != nil {
-	//		current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
-	//	}
-	// 	return err
+	//TODO AALEKSEEV uncomment this code, after making a pool
+	//var incoming *record.IncomingRequest
+	//rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
+	//if incoming != nil {
+	//	current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
+	//}
+	//return err
 
 	// Step 2. Actually make a call.
 	incoming := buildIncomingRequestFromOutgoing(outgoing)
