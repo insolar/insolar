@@ -184,7 +184,7 @@ func (s *StateIniterDefault) loadStateRetry(
 		return nil, fmt.Errorf("unexpected reply %T", pl)
 	}
 
-	prevPulse := pulse.FromProto(state.Pulse)
+	prevPulse := pulse.FromProto(&state.Pulse)
 	err = s.pulseAppender.Append(ctx, *prevPulse)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to append pulse")

@@ -133,7 +133,7 @@ func (p *SendInitialState) sendForNetworkStart(
 		NetworkStart: true,
 		JetIDs:       IDs,
 		Drops:        drops,
-		Pulse:        pulse.ToProto(&topSyncPulse),
+		Pulse:        *pulse.ToProto(&topSyncPulse),
 	})
 	if err != nil {
 		logger.Fatal("Couldn't make message", err)
@@ -146,7 +146,7 @@ func (p *SendInitialState) sendForJoiner(ctx context.Context, topSyncPulse insol
 
 	msg, err := payload.NewMessage(&payload.LightInitialState{
 		NetworkStart: false,
-		Pulse:        pulse.ToProto(&topSyncPulse),
+		Pulse:        *pulse.ToProto(&topSyncPulse),
 	})
 	if err != nil {
 		logger.Fatal("Couldn't make message", err)

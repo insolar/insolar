@@ -161,9 +161,9 @@ func TestJetSplitter(t *testing.T) {
 		)
 
 		// no filter for ID
-		jetCalc.MineForPulseMock.Set(func(ctx context.Context, pn insolar.PulseNumber) []insolar.JetID {
-			return jetStore.All(ctx, pn)
-		})
+		// jetCalc.MineForPulseMock.Set(func(ctx context.Context, pn insolar.PulseNumber) ([]insolar.JetID, error) {
+		// 	return jetStore.All(ctx, pn), nil
+		// })
 
 		var initialPulse insolar.PulseNumber = 60000
 		initialJets := []insolar.JetID{jet0, jet10, jet11}
@@ -189,7 +189,7 @@ func TestJetSplitter(t *testing.T) {
 				return make([]record.Material, jConf.records)
 			})
 
-			gotJets, err := splitter.Do(ctx, ended, newpulse)
+			gotJets, err := splitter.Do(ctx, ended, newpulse, jetStore.All(ctx, ended), true)
 			require.NoError(t, err, "splitter.Do performed")
 
 			for jetID, jConf := range jetsConfig {
