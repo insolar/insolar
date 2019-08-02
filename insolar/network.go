@@ -71,7 +71,6 @@ const (
 	// NoNetworkState state means that nodes doesn`t match majority_rule
 	NoNetworkState NetworkState = iota
 	JoinerBootstrap
-	DiscoveryBootstrap
 	WaitConsensus
 	WaitMinRoles
 	CompleteNetworkState

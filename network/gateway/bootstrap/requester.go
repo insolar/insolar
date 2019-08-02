@@ -179,6 +179,10 @@ func (ac *requester) Bootstrap(ctx context.Context, permit *packet.Permit, candi
 	}
 
 	respData := resp.GetResponse().GetBootstrap()
+	if respData == nil {
+		return nil, errors.New("bad response for bootstrap")
+	}
+
 	switch respData.Code {
 	case packet.UpdateShortID:
 		return respData, errors.New("Bootstrap got UpdateShortID")

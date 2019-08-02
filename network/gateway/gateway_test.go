@@ -104,7 +104,7 @@ func TestSwitch(t *testing.T) {
 	cref := testutils.RandomRef()
 
 	for _, state := range []insolar.NetworkState{insolar.NoNetworkState,
-		insolar.JoinerBootstrap, insolar.DiscoveryBootstrap, insolar.CompleteNetworkState} {
+		insolar.JoinerBootstrap, insolar.CompleteNetworkState} {
 		ge = ge.NewGateway(ctx, state)
 		require.Equal(t, state, ge.GetState())
 		ge.Run(ctx)

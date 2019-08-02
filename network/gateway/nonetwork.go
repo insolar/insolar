@@ -54,6 +54,7 @@ package gateway
 
 import (
 	"context"
+	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -75,6 +76,11 @@ func (g *NoNetwork) Run(ctx context.Context) {
 	discoveryNodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), origin.ID())
 
 	g.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{origin})
+
+	if origin.Role() != insolar.StaticRoleHeavyMaterial {
+		t := time.Second //time.Duration(rand.Intn(10))
+		<-time.After(t)
+	}
 
 	if len(discoveryNodes) == 0 {
 		inslogger.FromContext(ctx).Warn("[ Bootstrap ] No discovery nodes found in certificate")

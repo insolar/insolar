@@ -180,6 +180,11 @@ func (g *Base) ValidateCert(ctx context.Context, certificate insolar.Authorizati
 // ============= Bootstrap =======
 
 func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
+	//if g.Gatewayer.Gateway().GetState() < insolar.WaitMinRoles {
+	if g.NodeKeeper.GetOrigin().Role() != insolar.StaticRoleHeavyMaterial {
+		return nil, errors.Errorf("can't handle bootstrap in state: %s", g.Gatewayer.Gateway().GetState().String())
+	}
+
 	if request.GetRequest() == nil || request.GetRequest().GetBootstrap() == nil {
 		return nil, errors.Errorf("process bootstrap: got invalid protobuf request message: %s", request)
 	}
