@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -309,11 +310,18 @@ func main() {
 
 	var cmdGenerateBuiltins = &cobra.Command{
 		Use:   "regen-builtin [flags] <dir path to builtin contracts>",
-		Short: "Build builtin proxy, wrappers and initializator",
+		Short: "Build builtin proxy, wrappers and initializer",
 		Args:  cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
 			contractPath, err := getBuiltinContractDir("contract")
 			checkError(err)
+
+			oldWrappers, err := filepath.Glob(fmt.Sprintf("%s/*/*.wrapper.go", contractPath))
+			checkError(err)
+
+			for _, wrapper := range oldWrappers {
+				checkError(os.Remove(wrapper))
+			}
 
 			fileList, err := ioutil.ReadDir(contractPath)
 			checkError(err)
