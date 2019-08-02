@@ -73,6 +73,20 @@ type Ledger struct {
 
 	// Exporter holds configuration of Exporter
 	Exporter Exporter
+
+	// Backup holds configuration of BackupMaker
+	Backup Backup
+}
+
+// Backup holds configuration for backuping.
+type Backup struct {
+	Enabled               bool
+	TmpDirectory          string
+	TargetDirectory       string
+	BackupInfoFile        string
+	BackupConfirmFile     string
+	BackupDirNameTemplate string
+	BackupWaitPeriod      uint
 }
 
 // NewLedger creates new default Ledger configuration.
@@ -93,6 +107,10 @@ func NewLedger() Ledger {
 
 		Exporter: Exporter{
 			ExportLag: 40, // 40 seconds
+		},
+
+		Backup: Backup{
+			Enabled: false,
 		},
 	}
 }
