@@ -189,7 +189,7 @@ func TestLightCleaner_NotifyAboutPulse(t *testing.T) {
 	fc := executor.NewFilamentCleanerMock(ctrl)
 	fc.ClearMock.Expect(objID)
 
-	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, pc, ia, fc, limit, 0)
+	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, pc, ia, fc, limit, 1)
 	defer close(cleaner.pulseForClean)
 
 	go cleaner.NotifyAboutPulse(ctx, inputPulse.PulseNumber)
