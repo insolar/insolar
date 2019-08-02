@@ -451,7 +451,98 @@ func Test_OutgoingRequest_ClosedReason(t *testing.T) {
 	}
 
 	{
-		pl, _ := MakeSetOutgoingRequest(ctx, s, reasonID, reasonID, true)
+		pl, _ := MakeSetOutgoingRequest(reasonID, reasonID, false)
+		rep := SendMessage(ctx, s, &pl)
+		RequireError(rep)
+	}
+}
+
+func Test_Requests_OutgoingReason(t *testing.T) {
+	// todo uncomment after fix logic
+	t.Skip()
+
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	cfg := DefaultLightConfig()
+	s, err := NewServer(ctx, cfg, nil)
+	require.NoError(t, err)
+	defer s.Stop()
+
+	// First pulse goes in storage then interrupts.
+	s.SetPulse(ctx)
+	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
+	s.SetPulse(ctx)
+
+	var rootID, reasonID insolar.ID
+
+	// Creating root reason request.
+	{
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), true, true)
+		rep := SendMessage(ctx, s, &msg)
+		RequireNotError(rep)
+		rootID = rep.(*payload.RequestInfo).RequestID
+	}
+
+	// Creating outgoing
+	{
+		pl, _ := MakeSetOutgoingRequest(rootID, rootID, false)
+		rep := SendMessage(ctx, s, &pl)
+		RequireNotError(rep)
+		reasonID = rep.(*payload.RequestInfo).RequestID
+	}
+
+	// Creating wrong incoming
+	{
+		msg, _ := MakeSetIncomingRequest(rootID, reasonID, true, true)
+		rep := SendMessage(ctx, s, &msg)
+		RequireNotError(rep)
+	}
+
+	// Creating wrong outgoing
+	{
+		msg, _ := MakeSetOutgoingRequest(rootID, reasonID, false)
+		rep := SendMessage(ctx, s, &msg)
+		RequireError(rep)
+	}
+}
+
+func Test_OutgoingRequests_DifferentObjects(t *testing.T) {
+	// todo uncomment after fix
+	t.Skip()
+
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	cfg := DefaultLightConfig()
+	s, err := NewServer(ctx, cfg, nil)
+	require.NoError(t, err)
+	defer s.Stop()
+
+	// First pulse goes in storage then interrupts.
+	s.SetPulse(ctx)
+	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
+	s.SetPulse(ctx)
+
+	var rootID, rootID2 insolar.ID
+
+	// Creating root reason request.
+	{
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), true, true)
+		rep := SendMessage(ctx, s, &msg)
+		RequireNotError(rep)
+		rootID = rep.(*payload.RequestInfo).RequestID
+	}
+	{
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), true, true)
+		rep := SendMessage(ctx, s, &msg)
+		RequireNotError(rep)
+		rootID2 = rep.(*payload.RequestInfo).RequestID
+	}
+
+	// Creating outgoing
+	{
+		pl, _ := MakeSetOutgoingRequest(rootID, rootID2, false)
 		rep := SendMessage(ctx, s, &pl)
 		RequireError(rep)
 	}

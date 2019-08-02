@@ -101,7 +101,7 @@ func MakeSetIncomingRequest(objectID, reasonID insolar.ID, isCreation, isAPI boo
 }
 
 func MakeSetOutgoingRequest(
-	ctx context.Context, s *Server, objectID, reasonID insolar.ID, detached bool,
+	objectID, reasonID insolar.ID, detached bool,
 ) (payload.SetOutgoingRequest, record.Virtual) {
 	args := make([]byte, 100)
 	_, err := rand.Read(args)
