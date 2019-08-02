@@ -51,11 +51,28 @@
 package errors
 
 import (
+	"fmt"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"strings"
 )
 
 func NewPulseRoundMismatchError(pn pulse.Number, msg string) error {
 	return &nextPulseRoundError{pn: pn, s: msg}
+}
+
+func NewPulseRoundMismatchErrorDef(pn pulse.Number, filterPN pulse.Number, localID insolar.ShortNodeID, from interface{}) error {
+	msg := fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v, local=%d, from=%v",
+		filterPN, pn, localID, from)
+	return NewPulseRoundMismatchError(pn, msg)
+}
+
+func PulseRoundErrorMessageToWarn(msg string) string {
+	pos := strings.IndexRune(msg, ':')
+	if pos < 0 {
+		return msg
+	}
+	return "pulse number change detected" + msg[pos:]
 }
 
 func IsMismatchPulseError(err error) (bool, pulse.Number) {

@@ -296,16 +296,14 @@ func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bo
 	defer p.Unlock()
 
 	ok, epn := p._applyPulseData(pde, fromPulsar)
-	if ok || epn == pn {
+	if ok || !epn.IsUnknown() && epn == pn {
 		return nil
 	}
 
 	// TODO blame pulsar and/or node
 	localID := p.self.GetNodeID()
 
-	return errors.NewPulseRoundMismatchError(pn,
-		fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v, local=%d, from=%v",
-			epn, pn, localID, from))
+	return errors.NewPulseRoundMismatchErrorDef(pn, epn, localID, from)
 }
 
 func (p *PrepRealm) _applyPulseData(pdp proofs.OriginalPulsarPacket, fromPulsar bool) (bool, pulse.Number) {

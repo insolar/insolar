@@ -337,7 +337,7 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 		// NB! Round may NOT be running yet here - ensure it is working before calling the state machine
 		r.ensureStarted()
 
-		if !pn.IsUnknown() && (filterPN.IsUnknown() || filterPN == pn) {
+		if !pn.IsUnknown() && (filterPN.IsUnknown() || filterPN == pn) && r.roundWorker.IsRunning() /* can be already stopped */ {
 			r.roundWorker.OnPulseDetected()
 		}
 
@@ -382,5 +382,8 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 		}
 	}
 	r.roundWorker.onNextPulse(pn)
-	return api.StartNextRound, err
+	warnMsg := errors2.PulseRoundErrorMessageToWarn(err.Error())
+	inslogger.FromContext(ctx).Debug(warnMsg)
+
+	return api.StartNextRound, nil
 }
