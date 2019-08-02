@@ -241,6 +241,11 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		jetKeeper := executor.NewJetKeeper(jets, DB, Pulses)
 		c.rollback = executor.NewDBRollback(jetKeeper, Pulses, drops, records, indexes, jets, Pulses)
 
+		backupMaker, err := executor.NewBackupMaker(ctx, DB, cfg.Ledger.Backup, jetKeeper.TopSyncPulse())
+		if err != nil {
+			return nil, errors.Wrap(err, "failed create backuper")
+		}
+
 		pm := pulsemanager.NewPulseManager()
 		pm.Bus = Bus
 		pm.NodeNet = NodeNetwork
@@ -264,6 +269,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		h.JetModifier = jets
 		h.JetAccessor = jets
 		h.JetKeeper = jetKeeper
+		h.BackupMaker = backupMaker
 		h.Sender = WmBus
 
 		PulseManager = pm
