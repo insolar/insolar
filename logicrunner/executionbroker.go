@@ -68,7 +68,7 @@ type ExecutionBroker struct {
 	immutable *TranscriptDequeue
 	finished  *TranscriptDequeue
 
-	abandonedOutgoingRequestSender OutgoingRequestSender
+	outgoingSender OutgoingRequestSender
 
 	currentList *CurrentExecutionList
 
@@ -111,7 +111,7 @@ func NewExecutionBroker(
 		finished:    NewTranscriptDequeue(),
 		currentList: NewCurrentExecutionList(),
 
-		abandonedOutgoingRequestSender: outgoingSender,
+		outgoingSender: outgoingSender,
 
 		publisher:        publisher,
 		requestsExecutor: requestsExecutor,
@@ -728,7 +728,7 @@ func (q *ExecutionBroker) AddRequestsFromLedger(ctx context.Context, transcripts
 }
 
 func (eb *ExecutionBroker) EnqueueAbandonedOutgoingRequest(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest) {
-	eb.abandonedOutgoingRequestSender.EnqueueAbandonedOutgoingRequest(ctx, reqRef, req)
+	eb.outgoingSender.SendAbandonedOutgoingRequest(ctx, reqRef, req)
 }
 
 func (q *ExecutionBroker) AddAdditionalRequestFromPrevExecutor(

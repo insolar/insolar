@@ -67,6 +67,7 @@ type LogicRunner struct {
 	SenderWithRetry            *bus.WaitOKSender
 	StateStorage               StateStorage
 	ResultsMatcher             ResultMatcher
+	OutgoingSender             OutgoingRequestSender
 
 	Cfg *configuration.LogicRunner
 
@@ -101,7 +102,8 @@ func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publi
 func (lr *LogicRunner) LRI() {}
 
 func (lr *LogicRunner) Init(ctx context.Context) error {
-	outgoingSender := NewOutgoingRequestSender()
+	// AALEKSEEV TODO move elsewhere?
+	lr.OutgoingSender = NewOutgoingRequestSender()
 
 	lr.StateStorage = NewStateStorage(
 		lr.Publisher,
@@ -110,11 +112,11 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 		lr.JetCoordinator,
 		lr.PulseAccessor,
 		lr.ArtifactManager,
-		outgoingSender,
+		lr.OutgoingSender,
 	)
 
 	lr.rpc = lrCommon.NewRPC(
-		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage, outgoingSender),
+		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage, lr.OutgoingSender),
 		lr.Cfg,
 	)
 
@@ -170,7 +172,7 @@ func (lr *LogicRunner) initHandlers() {
 func (lr *LogicRunner) initializeBuiltin(_ context.Context) error {
 	bi := builtin.NewBuiltIn(
 		lr.ArtifactManager,
-		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage),
+		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage, lr.OutgoingSender),
 	)
 	if err := lr.MachinesManager.RegisterExecutor(insolar.MachineTypeBuiltin, bi); err != nil {
 		return err
