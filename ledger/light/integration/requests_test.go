@@ -546,9 +546,6 @@ func Test_OutgoingRequests_DifferentObjects(t *testing.T) {
 }
 
 func Test_OutgoingDetached_InPendings(t *testing.T) {
-	// todo uncomment after fix
-	t.Skip()
-
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
@@ -562,7 +559,7 @@ func Test_OutgoingDetached_InPendings(t *testing.T) {
 	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
 	s.SetPulse(ctx)
 
-	var rootID insolar.ID
+	var rootID, secondReqId insolar.ID
 
 	// Creating root reason request.
 	{
@@ -572,17 +569,38 @@ func Test_OutgoingDetached_InPendings(t *testing.T) {
 		rootID = rep.(*payload.RequestInfo).RequestID
 	}
 
-	// Creating outgoing
-	{
-		pl, _ := MakeSetOutgoingRequest(rootID, rootID, false)
-		rep := SendMessage(ctx, s, &pl)
-		RequireError(rep)
-	}
+	t.Run("detached request not appears in pendings", func(t *testing.T) {
 
-	// Close outgoing
-	{
-		// todo check in pendings
-	}
+		// Creating outgoing
+		pl, _ := MakeSetOutgoingRequest(rootID, rootID, true)
+		rep := SendMessage(ctx, s, &pl)
+		RequireNotError(rep)
+		secondReqId = rep.(*payload.RequestInfo).RequestID
+
+		firstPendings := CallGetPendings(ctx, s, rootID)
+		RequireNotError(firstPendings)
+
+		ids := firstPendings.(*payload.IDs)
+		require.Equal(t, 1, len(ids.IDs))
+		require.NotEqual(t, secondReqId, ids.IDs[0])
+	})
+
+	t.Run("detached request appears in pendings after closing root request", func(t *testing.T) {
+
+		// Closing reason request
+		{
+			resMsg, _ := MakeSetResult(rootID, rootID)
+			rep := SendMessage(ctx, s, &resMsg)
+			RequireNotError(rep)
+		}
+
+		secondPendings := CallGetPendings(ctx, s, rootID)
+		RequireNotError(secondPendings)
+
+		ids := secondPendings.(*payload.IDs)
+		require.Equal(t, 1, len(ids.IDs))
+		require.Equal(t, secondReqId, ids.IDs[0])
+	})
 }
 
 func Test_OutgoingRequest_Creation(t *testing.T) {
