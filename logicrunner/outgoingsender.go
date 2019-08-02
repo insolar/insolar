@@ -141,7 +141,7 @@ func (a *outgoingSenderActorState) sendOutgoingRequest(ctx context.Context, outg
 	}
 
 	//  Register result of the outgoing method
-	reqResult := newRequestResult(result, *incoming.AffinityRef())
+	reqResult := newRequestResult(result, outgoing.Caller)
 	registerResultErr := a.am.RegisterResult(ctx, outgoingReqRef, reqResult)
 
 	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099

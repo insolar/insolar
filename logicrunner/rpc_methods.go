@@ -195,6 +195,7 @@ func (m *executionProxyImplementation) RouteCall(
 
 	outgoingReqRef := insolar.NewReference(*outgoingReqID)
 
+	// TODO AALEKSEEV uncomment this code
 	//	var incoming *record.IncomingRequest
 	//	rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
 	//	if incoming != nil {
@@ -216,7 +217,7 @@ func (m *executionProxyImplementation) RouteCall(
 	}
 
 	// Step 3. Register result of the outgoing method
-	reqResult := newRequestResult(rep.Result, req.Callee)
+	reqResult := newRequestResult(rep.Result, outgoing.Caller)
 	registerResultErr := m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
 	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
 	if err != nil && strings.Contains(err.Error(), "index not found") {
