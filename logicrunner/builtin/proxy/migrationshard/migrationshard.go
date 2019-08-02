@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package mashard
+package migrationshard
 
 import (
 	"github.com/insolar/insolar/insolar"
@@ -24,10 +24,10 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("111A68zxeRYc9n6PGRjfwoDGTX2LskYAZqjpoGp11Nx.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("111A7FNYLZLYXYWZPbkMhCAPwV9nYrWWE7L57CtdJCj.11111111111111111111111111111111")
 
-// MAShard holds proxy type
-type MAShard struct {
+// MigrationShard holds proxy type
+type MigrationShard struct {
 	Reference insolar.Reference
 	Prototype insolar.Reference
 	Code      insolar.Reference
@@ -40,17 +40,17 @@ type ContractConstructorHolder struct {
 }
 
 // AsChild saves object as child
-func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*MAShard, error) {
+func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*MigrationShard, error) {
 	ref, err := common.CurrentProxyCtx.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
-	return &MAShard{Reference: ref}, nil
+	return &MigrationShard{Reference: ref}, nil
 }
 
 // GetObject returns proxy object
-func GetObject(ref insolar.Reference) (r *MAShard) {
-	return &MAShard{Reference: ref}
+func GetObject(ref insolar.Reference) (r *MigrationShard) {
+	return &MigrationShard{Reference: ref}
 }
 
 // GetPrototype returns reference to the prototype
@@ -72,12 +72,12 @@ func New() *ContractConstructorHolder {
 }
 
 // GetReference returns reference of the object
-func (r *MAShard) GetReference() insolar.Reference {
+func (r *MigrationShard) GetReference() insolar.Reference {
 	return r.Reference
 }
 
 // GetPrototype returns reference to the code
-func (r *MAShard) GetPrototype() (insolar.Reference, error) {
+func (r *MigrationShard) GetPrototype() (insolar.Reference, error) {
 	if r.Prototype.IsEmpty() {
 		ret := [2]interface{}{}
 		var ret0 insolar.Reference
@@ -107,7 +107,7 @@ func (r *MAShard) GetPrototype() (insolar.Reference, error) {
 }
 
 // GetCode returns reference to the code
-func (r *MAShard) GetCode() (insolar.Reference, error) {
+func (r *MigrationShard) GetCode() (insolar.Reference, error) {
 	if r.Code.IsEmpty() {
 		ret := [2]interface{}{}
 		var ret0 insolar.Reference
@@ -136,7 +136,7 @@ func (r *MAShard) GetCode() (insolar.Reference, error) {
 }
 
 // GetMigrationAddressesAmount is proxy generated method
-func (r *MAShard) GetMigrationAddressesAmount(migrationAddresses []string) (int, error) {
+func (r *MigrationShard) GetMigrationAddressesAmount(migrationAddresses []string) (int, error) {
 	var args [1]interface{}
 	args[0] = migrationAddresses
 
@@ -170,7 +170,7 @@ func (r *MAShard) GetMigrationAddressesAmount(migrationAddresses []string) (int,
 }
 
 // GetMigrationAddressesAmountNoWait is proxy generated method
-func (r *MAShard) GetMigrationAddressesAmountNoWait(migrationAddresses []string) error {
+func (r *MigrationShard) GetMigrationAddressesAmountNoWait(migrationAddresses []string) error {
 	var args [1]interface{}
 	args[0] = migrationAddresses
 
@@ -190,7 +190,7 @@ func (r *MAShard) GetMigrationAddressesAmountNoWait(migrationAddresses []string)
 }
 
 // GetMigrationAddressesAmountAsImmutable is proxy generated method
-func (r *MAShard) GetMigrationAddressesAmountAsImmutable(migrationAddresses []string) (int, error) {
+func (r *MigrationShard) GetMigrationAddressesAmountAsImmutable(migrationAddresses []string) (int, error) {
 	var args [1]interface{}
 	args[0] = migrationAddresses
 
@@ -224,7 +224,7 @@ func (r *MAShard) GetMigrationAddressesAmountAsImmutable(migrationAddresses []st
 }
 
 // AddFreeMigrationAddresses is proxy generated method
-func (r *MAShard) AddFreeMigrationAddresses(migrationAddresses []string) error {
+func (r *MigrationShard) AddFreeMigrationAddresses(migrationAddresses []string) error {
 	var args [1]interface{}
 	args[0] = migrationAddresses
 
@@ -256,7 +256,7 @@ func (r *MAShard) AddFreeMigrationAddresses(migrationAddresses []string) error {
 }
 
 // AddFreeMigrationAddressesNoWait is proxy generated method
-func (r *MAShard) AddFreeMigrationAddressesNoWait(migrationAddresses []string) error {
+func (r *MigrationShard) AddFreeMigrationAddressesNoWait(migrationAddresses []string) error {
 	var args [1]interface{}
 	args[0] = migrationAddresses
 
@@ -276,7 +276,7 @@ func (r *MAShard) AddFreeMigrationAddressesNoWait(migrationAddresses []string) e
 }
 
 // AddFreeMigrationAddressesAsImmutable is proxy generated method
-func (r *MAShard) AddFreeMigrationAddressesAsImmutable(migrationAddresses []string) error {
+func (r *MigrationShard) AddFreeMigrationAddressesAsImmutable(migrationAddresses []string) error {
 	var args [1]interface{}
 	args[0] = migrationAddresses
 
@@ -308,7 +308,7 @@ func (r *MAShard) AddFreeMigrationAddressesAsImmutable(migrationAddresses []stri
 }
 
 // GetFreeMigrationAddress is proxy generated method
-func (r *MAShard) GetFreeMigrationAddress() (string, error) {
+func (r *MigrationShard) GetFreeMigrationAddress() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -341,7 +341,7 @@ func (r *MAShard) GetFreeMigrationAddress() (string, error) {
 }
 
 // GetFreeMigrationAddressNoWait is proxy generated method
-func (r *MAShard) GetFreeMigrationAddressNoWait() error {
+func (r *MigrationShard) GetFreeMigrationAddressNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -360,7 +360,7 @@ func (r *MAShard) GetFreeMigrationAddressNoWait() error {
 }
 
 // GetFreeMigrationAddressAsImmutable is proxy generated method
-func (r *MAShard) GetFreeMigrationAddressAsImmutable() (string, error) {
+func (r *MigrationShard) GetFreeMigrationAddressAsImmutable() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -393,7 +393,7 @@ func (r *MAShard) GetFreeMigrationAddressAsImmutable() (string, error) {
 }
 
 // GetRef is proxy generated method
-func (r *MAShard) GetRef(key string) (string, error) {
+func (r *MigrationShard) GetRef(key string) (string, error) {
 	var args [1]interface{}
 	args[0] = key
 
@@ -427,7 +427,7 @@ func (r *MAShard) GetRef(key string) (string, error) {
 }
 
 // GetRefNoWait is proxy generated method
-func (r *MAShard) GetRefNoWait(key string) error {
+func (r *MigrationShard) GetRefNoWait(key string) error {
 	var args [1]interface{}
 	args[0] = key
 
@@ -447,7 +447,7 @@ func (r *MAShard) GetRefNoWait(key string) error {
 }
 
 // GetRefAsImmutable is proxy generated method
-func (r *MAShard) GetRefAsImmutable(key string) (string, error) {
+func (r *MigrationShard) GetRefAsImmutable(key string) (string, error) {
 	var args [1]interface{}
 	args[0] = key
 
@@ -481,7 +481,7 @@ func (r *MAShard) GetRefAsImmutable(key string) (string, error) {
 }
 
 // SetRef is proxy generated method
-func (r *MAShard) SetRef(ma string, ref string) error {
+func (r *MigrationShard) SetRef(ma string, ref string) error {
 	var args [2]interface{}
 	args[0] = ma
 	args[1] = ref
@@ -514,7 +514,7 @@ func (r *MAShard) SetRef(ma string, ref string) error {
 }
 
 // SetRefNoWait is proxy generated method
-func (r *MAShard) SetRefNoWait(ma string, ref string) error {
+func (r *MigrationShard) SetRefNoWait(ma string, ref string) error {
 	var args [2]interface{}
 	args[0] = ma
 	args[1] = ref
@@ -535,7 +535,7 @@ func (r *MAShard) SetRefNoWait(ma string, ref string) error {
 }
 
 // SetRefAsImmutable is proxy generated method
-func (r *MAShard) SetRefAsImmutable(ma string, ref string) error {
+func (r *MigrationShard) SetRefAsImmutable(ma string, ref string) error {
 	var args [2]interface{}
 	args[0] = ma
 	args[1] = ref

@@ -38,7 +38,7 @@ const (
 	// GenesisNamePKShard is the name of public key shard contract for genesis record.
 	GenesisNamePKShard = "pkshard"
 	// GenesisNameMAShard is the name of migration address shard contract for genesis record.
-	GenesisNameMAShard = "mashard"
+	GenesisNameMAShard = "migrationshard"
 
 	GenesisNameRootMember           = "root" + GenesisNameMember
 	GenesisNameRootWallet           = "root" + GenesisNameWallet
@@ -51,8 +51,8 @@ const (
 	GenesisAmountMigrationDaemonMembers       = 10
 	GenesisAmountActiveMigrationDaemonMembers = 3
 
-	GenesisAmountPublicKeyShards        = 1
-	GenesisAmountMigrationAddressShards = 1
+	GenesisAmountPublicKeyShards        = 1000
+	GenesisAmountMigrationAddressShards = 1000
 )
 
 var GenesisNameMigrationDaemonMembers = func() (result [GenesisAmountMigrationDaemonMembers]string) {

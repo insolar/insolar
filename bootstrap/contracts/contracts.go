@@ -22,8 +22,8 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/costcenter"
-	"github.com/insolar/insolar/logicrunner/builtin/contract/mashard"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member"
+	"github.com/insolar/insolar/logicrunner/builtin/contract/migrationshard"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/nodedomain"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/pkshard"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/rootdomain"
@@ -142,7 +142,7 @@ func GetPKShardGenesisContractState(name string) insolar.GenesisContractState {
 }
 
 func GetMAShardGenesisContractState(name string) insolar.GenesisContractState {
-	s, err := mashard.New()
+	s, err := migrationshard.New()
 	if err != nil {
 		panic(fmt.Sprintf("'%s' shard constructor failed", name))
 	}

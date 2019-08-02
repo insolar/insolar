@@ -14,7 +14,7 @@
 // limitations under the License.
 ///
 
-package mashard
+package migrationshard
 
 import (
 	"github.com/pkg/errors"
@@ -22,34 +22,34 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
-// MAShard - shard contract for migration addresses.
-type MAShard struct {
+// MigrationShard - shard contract for migration addresses.
+type MigrationShard struct {
 	foundation.BaseContract
 	Map    foundation.StableMap
 	FreeMA []string
 }
 
 // New creates new member.
-func New() (*MAShard, error) {
-	return &MAShard{
+func New() (*MigrationShard, error) {
+	return &MigrationShard{
 		Map:    map[string]string{},
 		FreeMA: []string{},
 	}, nil
 }
 
 // GetMigrationAddressesAmount gets amount of free migration addresses
-func (s MAShard) GetMigrationAddressesAmount(migrationAddresses []string) (int, error) {
+func (s MigrationShard) GetMigrationAddressesAmount(migrationAddresses []string) (int, error) {
 	return len(s.FreeMA), nil
 }
 
 // AddFreeMigrationAddresses add new addresses to the array of free migration addresses
-func (s *MAShard) AddFreeMigrationAddresses(migrationAddresses []string) error {
+func (s *MigrationShard) AddFreeMigrationAddresses(migrationAddresses []string) error {
 	s.FreeMA = append(s.FreeMA, migrationAddresses...)
 	return nil
 }
 
 // GetFreeMigrationAddress gets free migration address from list
-func (s *MAShard) GetFreeMigrationAddress() (string, error) {
+func (s *MigrationShard) GetFreeMigrationAddress() (string, error) {
 	if len(s.FreeMA) <= 0 {
 		return "", errors.New("no more migration address left")
 	}
@@ -60,7 +60,7 @@ func (s *MAShard) GetFreeMigrationAddress() (string, error) {
 }
 
 // GetRef gets ref by key.
-func (s MAShard) GetRef(key string) (string, error) {
+func (s MigrationShard) GetRef(key string) (string, error) {
 	if ref, ok := s.Map[key]; !ok {
 		return "", errors.New("failed to find reference by key")
 	} else {
@@ -69,7 +69,7 @@ func (s MAShard) GetRef(key string) (string, error) {
 }
 
 // SetRef sets ref with migration address as a key.
-func (s *MAShard) SetRef(ma string, ref string) error {
+func (s *MigrationShard) SetRef(ma string, ref string) error {
 	if _, ok := s.Map[ma]; ok {
 		return errors.New("can't set reference because this key already exists")
 	}

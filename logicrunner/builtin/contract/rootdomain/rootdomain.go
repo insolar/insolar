@@ -26,7 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/helloworld"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/mashard"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationshard"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/pkshard"
 )
 
@@ -101,7 +101,7 @@ func (rd RootDomain) GetMemberByMigrationAddress(migrationAddress string) (*inso
 	if i >= len(rd.MigrationAddressShards) {
 		return nil, fmt.Errorf("incorect shard index")
 	}
-	s := mashard.GetObject(rd.MigrationAddressShards[i])
+	s := migrationshard.GetObject(rd.MigrationAddressShards[i])
 	refStr, err := s.GetRef(trimmedMigrationAddress)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get reference in shard")
@@ -160,7 +160,7 @@ func (rd *RootDomain) AddMigrationAddresses(migrationAddresses []string) error {
 	}
 
 	for i, ma := range newMA {
-		s := mashard.GetObject(rd.MigrationAddressShards[i])
+		s := migrationshard.GetObject(rd.MigrationAddressShards[i])
 		err := s.AddFreeMigrationAddresses(ma)
 		if err != nil {
 			return errors.New("failed to add migration addresses to shard")
@@ -177,7 +177,7 @@ func (rd *RootDomain) AddMigrationAddress(migrationAddress string) error {
 	if i >= len(rd.MigrationAddressShards) {
 		return fmt.Errorf("incorect migration shard index")
 	}
-	s := mashard.GetObject(rd.MigrationAddressShards[i])
+	s := migrationshard.GetObject(rd.MigrationAddressShards[i])
 	err := s.AddFreeMigrationAddresses([]string{trimmedMigrationAddress})
 	if err != nil {
 		return errors.New("failed to add migration address to shard")
@@ -193,7 +193,7 @@ func (rd *RootDomain) GetFreeMigrationAddress(publicKey string) (string, error) 
 		return "", fmt.Errorf("incorect migration address shard index")
 	}
 
-	mas := mashard.GetObject(rd.MigrationAddressShards[shardIndex])
+	mas := migrationshard.GetObject(rd.MigrationAddressShards[shardIndex])
 	ma, err := mas.GetFreeMigrationAddress()
 	if err == nil {
 		return ma, nil
@@ -208,7 +208,7 @@ func (rd *RootDomain) GetFreeMigrationAddress(publicKey string) (string, error) 
 		if i >= len(rd.MigrationAddressShards) {
 			i = 0
 		}
-		mas := mashard.GetObject(rd.MigrationAddressShards[i])
+		mas := migrationshard.GetObject(rd.MigrationAddressShards[i])
 		ma, err := mas.GetFreeMigrationAddress()
 
 		if err == nil {
@@ -243,7 +243,7 @@ func (rd *RootDomain) AddNewMemberToMaps(publicKey string, migrationAddress stri
 	if shardIndex >= len(rd.MigrationAddressShards) {
 		return fmt.Errorf("incorect migration address shard index")
 	}
-	mas := mashard.GetObject(rd.MigrationAddressShards[shardIndex])
+	mas := migrationshard.GetObject(rd.MigrationAddressShards[shardIndex])
 	err = mas.SetRef(migrationAddress, memberRef.String())
 	if err != nil {
 		return errors.Wrap(err, "failed to set reference in migration address shard")
