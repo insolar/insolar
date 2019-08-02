@@ -118,7 +118,7 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 	lr.WriteController = lrCommon.NewWriteController()
 	err := lr.WriteController.Open(ctx, insolar.FirstPulseNumber)
 	if err != nil {
-		panic(err)
+		return errors.Wrap(err, "failed to initialize write controller")
 	}
 
 	lr.initHandlers()
@@ -262,7 +262,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newP
 
 	err := lr.WriteController.CloseAndWait(ctx, oldPulse.PulseNumber)
 	if err != nil {
-		panic(err)
+		return errors.Wrap(err, "failed to close pulse on write controller")
 	}
 
 	lr.ResultsMatcher.Clear()
@@ -274,7 +274,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newP
 
 	err = lr.WriteController.Open(ctx, newPulse.PulseNumber)
 	if err != nil {
-		panic(err)
+		return errors.Wrap(err, "failed to start new pulse on write controller")
 	}
 
 	if len(messages) > 0 {
