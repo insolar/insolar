@@ -35,6 +35,19 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:f3a247d6b71a77ad272967648f8ed747169a740631fa100e8e4f56fd0a2c5789"
+  name = "github.com/afiskon/go-actors"
+  packages = [
+    "actor",
+    "actor/errors",
+    "actor/mailbox",
+    "actor/system",
+  ]
+  pruneopts = "UT"
+  revision = "15b1bfc060b38352024d4f0a38df8894a9734ea9"
+
+[[projects]]
+  branch = "master"
   digest = "1:d6afaeed1502aa28e80a4ed0981d570ad91b2579193404256ce672ed0a609e0d"
   name = "github.com/beorn7/perks"
   packages = ["quantile"]
@@ -700,6 +713,8 @@
     "github.com/ThreeDotsLabs/watermill/message",
     "github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel",
     "github.com/ThreeDotsLabs/watermill/message/router/middleware",
+    "github.com/afiskon/go-actors/actor",
+    "github.com/afiskon/go-actors/actor/system",
     "github.com/blang/semver",
     "github.com/dgraph-io/badger",
     "github.com/fortytw2/leaktest",
