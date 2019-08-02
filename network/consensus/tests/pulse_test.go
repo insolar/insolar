@@ -72,7 +72,7 @@ func CreateGenerator(pulseCount int, pulseDelta uint16, output chan<- interface{
 			prevDelta = 0
 		}
 		output <- WrapPacketParser(&EmuPulsarNetPacket{
-			pulseData: *pulse.NewPulsarData(pulseNum, pulseDelta, prevDelta, randBits256()),
+			pulseData: pulse.NewPulsarData(pulseNum, pulseDelta, prevDelta, randBits256()),
 		})
 
 		pulseNum += pulse.Number(pulseDelta)

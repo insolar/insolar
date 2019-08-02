@@ -143,3 +143,10 @@ func TestIncorrectMethodName(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualError(t, contractError(res), "rpc method does not exist")
 }
+
+func TestIncorrectParams(t *testing.T) {
+	firstMember := createMember(t)
+
+	_, err := signedRequest(firstMember, "member.transfer", firstMember.ref)
+	require.Contains(t, err.Error(), "failed to cast request.Params.CallParams: expected map[string]interface{}, got string")
+}

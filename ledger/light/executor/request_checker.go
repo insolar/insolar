@@ -46,9 +46,9 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 	}
 	reasonRef := request.ReasonRef()
 	reasonID := *reasonRef.Record()
-	objectID := requestID
-	if !request.IsCreationRequest() {
-		objectID = *request.AffinityRef().Record()
+
+	if reasonID.Pulse() > requestID.Pulse() {
+		return errors.New("request is older than its reason")
 	}
 
 	switch r := request.(type) {
@@ -61,9 +61,14 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 		// Reason should exist.
 		// FIXME: replace with remote request check.
 		if !request.IsAPIRequest() {
-			err := c.checkIncomingReason(ctx, objectID, reasonID)
+			reasonObject := r.ReasonAffinityRef()
+			if reasonObject.IsEmpty() {
+				return errors.New("reason affinity is not set on incoming request")
+			}
+
+			err := c.checkIncomingReason(ctx, *reasonObject.Record(), reasonID)
 			if err != nil {
-				return errors.Wrap(err, "reason for found")
+				return errors.Wrap(err, "reason not found")
 			}
 		}
 
@@ -106,7 +111,7 @@ func (c *RequestCheckerDefault) checkIncomingReason(
 			return errors.Wrap(err, "failed to calculate node")
 		}
 	} else {
-		jetID, err := c.fetcher.Fetch(ctx, reasonID, reasonID.Pulse())
+		jetID, err := c.fetcher.Fetch(ctx, objectID, reasonID.Pulse())
 		if err != nil {
 			return errors.Wrap(err, "failed to fetch jet")
 		}
@@ -115,7 +120,7 @@ func (c *RequestCheckerDefault) checkIncomingReason(
 			return errors.Wrap(err, "failed to calculate node")
 		}
 	}
-	inslogger.FromContext(ctx).Debugf("check reason. request: %s")
+	inslogger.FromContext(ctx).Debug("check reason. request: ", reasonID.DebugString())
 	msg, err := payload.NewMessage(&payload.GetRequest{
 		ObjectID:  objectID,
 		RequestID: reasonID,
@@ -140,11 +145,6 @@ func (c *RequestCheckerDefault) checkIncomingReason(
 	case *payload.Request:
 		return nil
 	case *payload.Error:
-		if concrete.Code == payload.CodeNotFound {
-			// FIXME: virtual doesnt pass this check.
-			inslogger.FromContext(ctx).Errorf("reason is wrong. %v", concrete.Text)
-			return nil
-		}
 		return errors.New(concrete.Text)
 	default:
 		return fmt.Errorf("unexpected reply %T", pl)

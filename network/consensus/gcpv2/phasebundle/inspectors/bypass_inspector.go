@@ -52,13 +52,13 @@ package inspectors
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/statevector"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/nodeset"
 )
 
@@ -73,7 +73,7 @@ func (*bypassVectorInspector) CreateNextPopulation(nodeset.ConsensusBitsetRow) (
 	panic("illegal state")
 }
 
-func (*bypassVectorInspector) PrepareForInspection(ctx context.Context) {
+func (*bypassVectorInspector) PrepareForInspection(ctx context.Context) bool {
 	panic("illegal state")
 }
 
@@ -81,7 +81,7 @@ func (*bypassVectorInspector) CreateVector(cryptkit.DigestSigner) statevector.Ve
 	panic("illegal state")
 }
 
-func (*bypassVectorInspector) InspectVector(ctx context.Context, sender *core.NodeAppearance, customOptions uint32,
+func (*bypassVectorInspector) InspectVector(ctx context.Context, sender *population.NodeAppearance, customOptions uint32,
 	otherData statevector.Vector) InspectedVector {
 
 	return &bypassVector{sender, customOptions, otherData}
@@ -92,7 +92,7 @@ func (*bypassVectorInspector) GetBitset() member.StateBitset {
 }
 
 type bypassVector struct {
-	n             *core.NodeAppearance
+	n             *population.NodeAppearance
 	customOptions uint32
 	otherData     statevector.Vector
 }
@@ -113,7 +113,7 @@ func (p *bypassVector) GetBitset() member.StateBitset {
 	return p.otherData.Bitset
 }
 
-func (p *bypassVector) GetNode() *core.NodeAppearance {
+func (p *bypassVector) GetNode() *population.NodeAppearance {
 	return p.n
 }
 

@@ -29,7 +29,6 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/insolar/insolar/api"
@@ -240,6 +239,27 @@ func migrate(t *testing.T, memberRef string, amount string, tx string, ma string
 	return deposit
 }
 
+func generateMigrationAddress() string {
+	return testutils.RandomString()
+}
+
+func fullMigration(t *testing.T, txHash string) *user {
+
+	member, err := newUserWithKeys()
+	require.NoError(t, err)
+	migrationAddress := generateMigrationAddress()
+	_, err = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
+	require.NoError(t, err)
+	_, err = retryableMemberMigrationCreate(member, true)
+	require.NoError(t, err)
+
+	migrate(t, member.ref, "1000", txHash, migrationAddress, 0)
+	migrate(t, member.ref, "1000", txHash, migrationAddress, 2)
+	migrate(t, member.ref, "1000", txHash, migrationAddress, 1)
+
+	return member
+}
+
 func retryableMemberCreate(user *user, updatePublicKey bool) (interface{}, error) {
 	return retryableCreateMember(user, "member.create", updatePublicKey)
 }
@@ -255,7 +275,7 @@ func retryableCreateMember(user *user, method string, updatePublicKey bool) (int
 	currentIterNum := 1
 	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
 		result, err = signedRequest(user, method, nil)
-		if err == nil || !strings.Contains(err.Error(), "member for this publicKey already exist") {
+		if err == nil || !strings.Contains(err.Error(), "failed to set reference in public key shard: can't set reference because this key already exists") {
 			if err == nil {
 				user.ref = result.(map[string]interface{})["reference"].(string)
 			}
@@ -489,97 +509,3 @@ func callMethodNoChecks(t testing.TB, objectRef *insolar.Reference, method strin
 
 	return callRes
 }
-
-type SyncT struct {
-	*testing.T
-
-	mu sync.Mutex
-}
-
-var _ testing.TB = (*SyncT)(nil)
-
-func (t SyncT) Error(args ...interface{}) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	t.T.Error(args...)
-}
-func (t SyncT) Errorf(format string, args ...interface{}) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	t.T.Errorf(format, args...)
-}
-func (t SyncT) Fail() {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	t.T.Fail()
-}
-func (t SyncT) FailNow() {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	t.T.FailNow()
-}
-func (t SyncT) Failed() bool {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	return t.T.Failed()
-}
-func (t SyncT) Fatal(args ...interface{}) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	t.T.Fatal(args...)
-}
-func (t SyncT) Fatalf(format string, args ...interface{}) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	t.T.Fatalf(format, args...)
-}
-func (t SyncT) Log(args ...interface{}) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	t.T.Log(args...)
-}
-func (t SyncT) Logf(format string, args ...interface{}) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	t.T.Logf(format, args...)
-}
-func (t SyncT) Name() string {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	return t.T.Name()
-}
-func (t SyncT) Skip(args ...interface{}) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	t.T.Skip(args...)
-}
-func (t SyncT) SkipNow() {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	t.T.SkipNow()
-}
-func (t SyncT) Skipf(format string, args ...interface{}) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	t.T.Skipf(format, args...)
-}
-func (t SyncT) Skipped() bool {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	return t.T.Skipped()
-}
-func (t SyncT) Helper() {}

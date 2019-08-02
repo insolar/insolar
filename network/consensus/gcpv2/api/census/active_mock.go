@@ -67,6 +67,12 @@ type ActiveMock struct {
 	beforeGetMisbehaviorRegistryCounter uint64
 	GetMisbehaviorRegistryMock          mActiveMockGetMisbehaviorRegistry
 
+	funcGetNearestPulseData          func() (b1 bool, d1 pulse.Data)
+	inspectFuncGetNearestPulseData   func()
+	afterGetNearestPulseDataCounter  uint64
+	beforeGetNearestPulseDataCounter uint64
+	GetNearestPulseDataMock          mActiveMockGetNearestPulseData
+
 	funcGetOfflinePopulation          func() (o1 OfflinePopulation)
 	inspectFuncGetOfflinePopulation   func()
 	afterGetOfflinePopulationCounter  uint64
@@ -127,6 +133,8 @@ func NewActiveMock(t minimock.Tester) *ActiveMock {
 	m.GetMandateRegistryMock = mActiveMockGetMandateRegistry{mock: m}
 
 	m.GetMisbehaviorRegistryMock = mActiveMockGetMisbehaviorRegistry{mock: m}
+
+	m.GetNearestPulseDataMock = mActiveMockGetNearestPulseData{mock: m}
 
 	m.GetOfflinePopulationMock = mActiveMockGetOfflinePopulation{mock: m}
 
@@ -1361,6 +1369,150 @@ func (m *ActiveMock) MinimockGetMisbehaviorRegistryInspect() {
 	}
 }
 
+type mActiveMockGetNearestPulseData struct {
+	mock               *ActiveMock
+	defaultExpectation *ActiveMockGetNearestPulseDataExpectation
+	expectations       []*ActiveMockGetNearestPulseDataExpectation
+}
+
+// ActiveMockGetNearestPulseDataExpectation specifies expectation struct of the Active.GetNearestPulseData
+type ActiveMockGetNearestPulseDataExpectation struct {
+	mock *ActiveMock
+
+	results *ActiveMockGetNearestPulseDataResults
+	Counter uint64
+}
+
+// ActiveMockGetNearestPulseDataResults contains results of the Active.GetNearestPulseData
+type ActiveMockGetNearestPulseDataResults struct {
+	b1 bool
+	d1 pulse.Data
+}
+
+// Expect sets up expected params for Active.GetNearestPulseData
+func (mmGetNearestPulseData *mActiveMockGetNearestPulseData) Expect() *mActiveMockGetNearestPulseData {
+	if mmGetNearestPulseData.mock.funcGetNearestPulseData != nil {
+		mmGetNearestPulseData.mock.t.Fatalf("ActiveMock.GetNearestPulseData mock is already set by Set")
+	}
+
+	if mmGetNearestPulseData.defaultExpectation == nil {
+		mmGetNearestPulseData.defaultExpectation = &ActiveMockGetNearestPulseDataExpectation{}
+	}
+
+	return mmGetNearestPulseData
+}
+
+// Inspect accepts an inspector function that has same arguments as the Active.GetNearestPulseData
+func (mmGetNearestPulseData *mActiveMockGetNearestPulseData) Inspect(f func()) *mActiveMockGetNearestPulseData {
+	if mmGetNearestPulseData.mock.inspectFuncGetNearestPulseData != nil {
+		mmGetNearestPulseData.mock.t.Fatalf("Inspect function is already set for ActiveMock.GetNearestPulseData")
+	}
+
+	mmGetNearestPulseData.mock.inspectFuncGetNearestPulseData = f
+
+	return mmGetNearestPulseData
+}
+
+// Return sets up results that will be returned by Active.GetNearestPulseData
+func (mmGetNearestPulseData *mActiveMockGetNearestPulseData) Return(b1 bool, d1 pulse.Data) *ActiveMock {
+	if mmGetNearestPulseData.mock.funcGetNearestPulseData != nil {
+		mmGetNearestPulseData.mock.t.Fatalf("ActiveMock.GetNearestPulseData mock is already set by Set")
+	}
+
+	if mmGetNearestPulseData.defaultExpectation == nil {
+		mmGetNearestPulseData.defaultExpectation = &ActiveMockGetNearestPulseDataExpectation{mock: mmGetNearestPulseData.mock}
+	}
+	mmGetNearestPulseData.defaultExpectation.results = &ActiveMockGetNearestPulseDataResults{b1, d1}
+	return mmGetNearestPulseData.mock
+}
+
+//Set uses given function f to mock the Active.GetNearestPulseData method
+func (mmGetNearestPulseData *mActiveMockGetNearestPulseData) Set(f func() (b1 bool, d1 pulse.Data)) *ActiveMock {
+	if mmGetNearestPulseData.defaultExpectation != nil {
+		mmGetNearestPulseData.mock.t.Fatalf("Default expectation is already set for the Active.GetNearestPulseData method")
+	}
+
+	if len(mmGetNearestPulseData.expectations) > 0 {
+		mmGetNearestPulseData.mock.t.Fatalf("Some expectations are already set for the Active.GetNearestPulseData method")
+	}
+
+	mmGetNearestPulseData.mock.funcGetNearestPulseData = f
+	return mmGetNearestPulseData.mock
+}
+
+// GetNearestPulseData implements Active
+func (mmGetNearestPulseData *ActiveMock) GetNearestPulseData() (b1 bool, d1 pulse.Data) {
+	mm_atomic.AddUint64(&mmGetNearestPulseData.beforeGetNearestPulseDataCounter, 1)
+	defer mm_atomic.AddUint64(&mmGetNearestPulseData.afterGetNearestPulseDataCounter, 1)
+
+	if mmGetNearestPulseData.inspectFuncGetNearestPulseData != nil {
+		mmGetNearestPulseData.inspectFuncGetNearestPulseData()
+	}
+
+	if mmGetNearestPulseData.GetNearestPulseDataMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmGetNearestPulseData.GetNearestPulseDataMock.defaultExpectation.Counter, 1)
+
+		results := mmGetNearestPulseData.GetNearestPulseDataMock.defaultExpectation.results
+		if results == nil {
+			mmGetNearestPulseData.t.Fatal("No results are set for the ActiveMock.GetNearestPulseData")
+		}
+		return (*results).b1, (*results).d1
+	}
+	if mmGetNearestPulseData.funcGetNearestPulseData != nil {
+		return mmGetNearestPulseData.funcGetNearestPulseData()
+	}
+	mmGetNearestPulseData.t.Fatalf("Unexpected call to ActiveMock.GetNearestPulseData.")
+	return
+}
+
+// GetNearestPulseDataAfterCounter returns a count of finished ActiveMock.GetNearestPulseData invocations
+func (mmGetNearestPulseData *ActiveMock) GetNearestPulseDataAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmGetNearestPulseData.afterGetNearestPulseDataCounter)
+}
+
+// GetNearestPulseDataBeforeCounter returns a count of ActiveMock.GetNearestPulseData invocations
+func (mmGetNearestPulseData *ActiveMock) GetNearestPulseDataBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmGetNearestPulseData.beforeGetNearestPulseDataCounter)
+}
+
+// MinimockGetNearestPulseDataDone returns true if the count of the GetNearestPulseData invocations corresponds
+// the number of defined expectations
+func (m *ActiveMock) MinimockGetNearestPulseDataDone() bool {
+	for _, e := range m.GetNearestPulseDataMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.GetNearestPulseDataMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetNearestPulseDataCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcGetNearestPulseData != nil && mm_atomic.LoadUint64(&m.afterGetNearestPulseDataCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockGetNearestPulseDataInspect logs each unmet expectation
+func (m *ActiveMock) MinimockGetNearestPulseDataInspect() {
+	for _, e := range m.GetNearestPulseDataMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Error("Expected call to ActiveMock.GetNearestPulseData")
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.GetNearestPulseDataMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetNearestPulseDataCounter) < 1 {
+		m.t.Error("Expected call to ActiveMock.GetNearestPulseData")
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcGetNearestPulseData != nil && mm_atomic.LoadUint64(&m.afterGetNearestPulseDataCounter) < 1 {
+		m.t.Error("Expected call to ActiveMock.GetNearestPulseData")
+	}
+}
+
 type mActiveMockGetOfflinePopulation struct {
 	mock               *ActiveMock
 	defaultExpectation *ActiveMockGetOfflinePopulationExpectation
@@ -2310,6 +2462,8 @@ func (m *ActiveMock) MinimockFinish() {
 
 		m.MinimockGetMisbehaviorRegistryInspect()
 
+		m.MinimockGetNearestPulseDataInspect()
+
 		m.MinimockGetOfflinePopulationInspect()
 
 		m.MinimockGetOnlinePopulationInspect()
@@ -2352,6 +2506,7 @@ func (m *ActiveMock) minimockDone() bool {
 		m.MinimockGetGlobulaStateHashDone() &&
 		m.MinimockGetMandateRegistryDone() &&
 		m.MinimockGetMisbehaviorRegistryDone() &&
+		m.MinimockGetNearestPulseDataDone() &&
 		m.MinimockGetOfflinePopulationDone() &&
 		m.MinimockGetOnlinePopulationDone() &&
 		m.MinimockGetProfileFactoryDone() &&

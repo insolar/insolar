@@ -52,7 +52,6 @@ package errors
 
 import (
 	"fmt"
-
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 )
 
@@ -60,8 +59,11 @@ func NewPulseRoundMismatchError(pn pulse.Number, msg string) error {
 	return &nextPulseRoundError{pn: pn, s: msg}
 }
 
-func NewNextPulseArrivedError(pn pulse.Number) error {
-	return &nextPulseRoundError{pn: pn, nextPulse: true, s: fmt.Sprintf("possible next pulse: %v", pn)}
+func NewNextPulseArrivedError(pn pulse.Number, msg string) error {
+	if msg == "" {
+		msg = fmt.Sprintf("possible next pulse: %v", pn)
+	}
+	return &nextPulseRoundError{pn: pn, nextPulse: true, s: msg}
 }
 
 func IsNextPulseArrivedError(err error) (bool, pulse.Number) {

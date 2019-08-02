@@ -56,6 +56,12 @@ type RequestMock struct {
 	beforeMarshalCounter uint64
 	MarshalMock          mRequestMockMarshal
 
+	funcReasonAffinityRef          func() (r1 insolar.Reference)
+	inspectFuncReasonAffinityRef   func()
+	afterReasonAffinityRefCounter  uint64
+	beforeReasonAffinityRefCounter uint64
+	ReasonAffinityRefMock          mRequestMockReasonAffinityRef
+
 	funcReasonRef          func() (r1 insolar.Reference)
 	inspectFuncReasonRef   func()
 	afterReasonRefCounter  uint64
@@ -83,6 +89,8 @@ func NewRequestMock(t minimock.Tester) *RequestMock {
 	m.IsTemporaryUploadCodeMock = mRequestMockIsTemporaryUploadCode{mock: m}
 
 	m.MarshalMock = mRequestMockMarshal{mock: m}
+
+	m.ReasonAffinityRefMock = mRequestMockReasonAffinityRef{mock: m}
 
 	m.ReasonRefMock = mRequestMockReasonRef{mock: m}
 
@@ -1091,6 +1099,149 @@ func (m *RequestMock) MinimockMarshalInspect() {
 	}
 }
 
+type mRequestMockReasonAffinityRef struct {
+	mock               *RequestMock
+	defaultExpectation *RequestMockReasonAffinityRefExpectation
+	expectations       []*RequestMockReasonAffinityRefExpectation
+}
+
+// RequestMockReasonAffinityRefExpectation specifies expectation struct of the Request.ReasonAffinityRef
+type RequestMockReasonAffinityRefExpectation struct {
+	mock *RequestMock
+
+	results *RequestMockReasonAffinityRefResults
+	Counter uint64
+}
+
+// RequestMockReasonAffinityRefResults contains results of the Request.ReasonAffinityRef
+type RequestMockReasonAffinityRefResults struct {
+	r1 insolar.Reference
+}
+
+// Expect sets up expected params for Request.ReasonAffinityRef
+func (mmReasonAffinityRef *mRequestMockReasonAffinityRef) Expect() *mRequestMockReasonAffinityRef {
+	if mmReasonAffinityRef.mock.funcReasonAffinityRef != nil {
+		mmReasonAffinityRef.mock.t.Fatalf("RequestMock.ReasonAffinityRef mock is already set by Set")
+	}
+
+	if mmReasonAffinityRef.defaultExpectation == nil {
+		mmReasonAffinityRef.defaultExpectation = &RequestMockReasonAffinityRefExpectation{}
+	}
+
+	return mmReasonAffinityRef
+}
+
+// Inspect accepts an inspector function that has same arguments as the Request.ReasonAffinityRef
+func (mmReasonAffinityRef *mRequestMockReasonAffinityRef) Inspect(f func()) *mRequestMockReasonAffinityRef {
+	if mmReasonAffinityRef.mock.inspectFuncReasonAffinityRef != nil {
+		mmReasonAffinityRef.mock.t.Fatalf("Inspect function is already set for RequestMock.ReasonAffinityRef")
+	}
+
+	mmReasonAffinityRef.mock.inspectFuncReasonAffinityRef = f
+
+	return mmReasonAffinityRef
+}
+
+// Return sets up results that will be returned by Request.ReasonAffinityRef
+func (mmReasonAffinityRef *mRequestMockReasonAffinityRef) Return(r1 insolar.Reference) *RequestMock {
+	if mmReasonAffinityRef.mock.funcReasonAffinityRef != nil {
+		mmReasonAffinityRef.mock.t.Fatalf("RequestMock.ReasonAffinityRef mock is already set by Set")
+	}
+
+	if mmReasonAffinityRef.defaultExpectation == nil {
+		mmReasonAffinityRef.defaultExpectation = &RequestMockReasonAffinityRefExpectation{mock: mmReasonAffinityRef.mock}
+	}
+	mmReasonAffinityRef.defaultExpectation.results = &RequestMockReasonAffinityRefResults{r1}
+	return mmReasonAffinityRef.mock
+}
+
+//Set uses given function f to mock the Request.ReasonAffinityRef method
+func (mmReasonAffinityRef *mRequestMockReasonAffinityRef) Set(f func() (r1 insolar.Reference)) *RequestMock {
+	if mmReasonAffinityRef.defaultExpectation != nil {
+		mmReasonAffinityRef.mock.t.Fatalf("Default expectation is already set for the Request.ReasonAffinityRef method")
+	}
+
+	if len(mmReasonAffinityRef.expectations) > 0 {
+		mmReasonAffinityRef.mock.t.Fatalf("Some expectations are already set for the Request.ReasonAffinityRef method")
+	}
+
+	mmReasonAffinityRef.mock.funcReasonAffinityRef = f
+	return mmReasonAffinityRef.mock
+}
+
+// ReasonAffinityRef implements Request
+func (mmReasonAffinityRef *RequestMock) ReasonAffinityRef() (r1 insolar.Reference) {
+	mm_atomic.AddUint64(&mmReasonAffinityRef.beforeReasonAffinityRefCounter, 1)
+	defer mm_atomic.AddUint64(&mmReasonAffinityRef.afterReasonAffinityRefCounter, 1)
+
+	if mmReasonAffinityRef.inspectFuncReasonAffinityRef != nil {
+		mmReasonAffinityRef.inspectFuncReasonAffinityRef()
+	}
+
+	if mmReasonAffinityRef.ReasonAffinityRefMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmReasonAffinityRef.ReasonAffinityRefMock.defaultExpectation.Counter, 1)
+
+		results := mmReasonAffinityRef.ReasonAffinityRefMock.defaultExpectation.results
+		if results == nil {
+			mmReasonAffinityRef.t.Fatal("No results are set for the RequestMock.ReasonAffinityRef")
+		}
+		return (*results).r1
+	}
+	if mmReasonAffinityRef.funcReasonAffinityRef != nil {
+		return mmReasonAffinityRef.funcReasonAffinityRef()
+	}
+	mmReasonAffinityRef.t.Fatalf("Unexpected call to RequestMock.ReasonAffinityRef.")
+	return
+}
+
+// ReasonAffinityRefAfterCounter returns a count of finished RequestMock.ReasonAffinityRef invocations
+func (mmReasonAffinityRef *RequestMock) ReasonAffinityRefAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmReasonAffinityRef.afterReasonAffinityRefCounter)
+}
+
+// ReasonAffinityRefBeforeCounter returns a count of RequestMock.ReasonAffinityRef invocations
+func (mmReasonAffinityRef *RequestMock) ReasonAffinityRefBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmReasonAffinityRef.beforeReasonAffinityRefCounter)
+}
+
+// MinimockReasonAffinityRefDone returns true if the count of the ReasonAffinityRef invocations corresponds
+// the number of defined expectations
+func (m *RequestMock) MinimockReasonAffinityRefDone() bool {
+	for _, e := range m.ReasonAffinityRefMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.ReasonAffinityRefMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterReasonAffinityRefCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcReasonAffinityRef != nil && mm_atomic.LoadUint64(&m.afterReasonAffinityRefCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockReasonAffinityRefInspect logs each unmet expectation
+func (m *RequestMock) MinimockReasonAffinityRefInspect() {
+	for _, e := range m.ReasonAffinityRefMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Error("Expected call to RequestMock.ReasonAffinityRef")
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.ReasonAffinityRefMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterReasonAffinityRefCounter) < 1 {
+		m.t.Error("Expected call to RequestMock.ReasonAffinityRef")
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcReasonAffinityRef != nil && mm_atomic.LoadUint64(&m.afterReasonAffinityRefCounter) < 1 {
+		m.t.Error("Expected call to RequestMock.ReasonAffinityRef")
+	}
+}
+
 type mRequestMockReasonRef struct {
 	mock               *RequestMock
 	defaultExpectation *RequestMockReasonRefExpectation
@@ -1251,6 +1402,8 @@ func (m *RequestMock) MinimockFinish() {
 
 		m.MinimockMarshalInspect()
 
+		m.MinimockReasonAffinityRefInspect()
+
 		m.MinimockReasonRefInspect()
 		m.t.FailNow()
 	}
@@ -1282,5 +1435,6 @@ func (m *RequestMock) minimockDone() bool {
 		m.MinimockIsDetachedDone() &&
 		m.MinimockIsTemporaryUploadCodeDone() &&
 		m.MinimockMarshalDone() &&
+		m.MinimockReasonAffinityRefDone() &&
 		m.MinimockReasonRefDone()
 }

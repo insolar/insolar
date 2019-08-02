@@ -19,6 +19,8 @@ package executor
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
@@ -27,7 +29,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/pkg/errors"
 )
 
 // JetSplitter provides method for processing and splitting jets.
@@ -156,7 +157,7 @@ func (js *JetSplitterDefault) createDrop(
 	}
 	// if records count reached threshold increase counter (instead it reset)
 	recordsCount := len(js.recordsAccessor.ForPulse(ctx, jetID, pn))
-	if recordsCount > js.cfg.ThresholdRecordsCount {
+	if recordsCount >= js.cfg.ThresholdRecordsCount {
 		block.SplitThresholdExceeded = threshold + 1
 	}
 

@@ -150,7 +150,7 @@ func (p *HotObjects) Proceed(ctx context.Context) error {
 	}
 
 	p.dep.jetFetcher.Release(ctx, p.jetID, p.pulse)
-	err = p.dep.jetReleaser.Unlock(ctx, insolar.ID(p.jetID))
+	err = p.dep.jetReleaser.Unlock(ctx, p.pulse, p.jetID)
 	if err != nil {
 		return errors.Wrap(err, "failed to release jets")
 	}

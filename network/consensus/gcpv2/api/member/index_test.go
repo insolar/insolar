@@ -83,7 +83,7 @@ func TestAsUint16(t *testing.T) {
 }
 
 func TestAsInt(t *testing.T) {
-	require.Equal(t, int(1), Index(1).AsInt())
+	require.Equal(t, 1, Index(1).AsInt())
 
 	require.Panics(t, func() { Index(MaxNodeIndex + 1).AsInt() })
 }

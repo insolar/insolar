@@ -298,7 +298,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	})
 
 	logger.Debug("started to search for duplicated requests")
-	defer logger.Debug("finished to search for duplicated requests")
+	defer logger.Debug("finished searching for duplicated requests")
 
 	reasonRef := request.ReasonRef()
 	reasonID := *reasonRef.Record()
@@ -398,8 +398,8 @@ type fetchingIterator struct {
 	iter  filamentIterator
 	cache *filamentCache
 
-	objectID             insolar.ID
-	readUntil, calcPulse insolar.PulseNumber
+	objectID  insolar.ID
+	readUntil insolar.PulseNumber
 
 	jetFetcher  JetFetcher
 	coordinator jet.Coordinator

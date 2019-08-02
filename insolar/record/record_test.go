@@ -306,6 +306,7 @@ func TestRequestInterface_IncomingRequest(t *testing.T) {
 	require.Equal(t, false, iface.IsCreationRequest())
 	require.Equal(t, req.Object, iface.AffinityRef())
 	require.Equal(t, req.Reason, iface.ReasonRef())
+	require.Equal(t, req.Caller, iface.ReasonAffinityRef())
 }
 
 func TestRequestInterface_OutgoingRequest(t *testing.T) {
@@ -321,6 +322,7 @@ func TestRequestInterface_OutgoingRequest(t *testing.T) {
 	require.Equal(t, false, iface.IsCreationRequest())
 	require.Equal(t, &req.Caller, iface.AffinityRef())
 	require.Equal(t, req.Reason, iface.ReasonRef())
+	require.Equal(t, req.Caller, iface.ReasonAffinityRef())
 }
 
 func TestRequestInterface_IncomingRequestSaveAsChild(t *testing.T) {
@@ -339,11 +341,11 @@ func TestRequestInterface_IncomingRequestSaveAsChild(t *testing.T) {
 	require.Equal(t, true, iface.IsCreationRequest())
 	require.Equal(t, (*insolar.Reference)(nil), iface.AffinityRef())
 	require.Equal(t, req.Reason, iface.ReasonRef())
+	require.True(t, iface.ReasonAffinityRef().IsEmpty())
 
 	pn := insolar.PulseNumber(256)
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 
 	realAffinityRef := CalculateRequestAffinityRef(iface, pn, pcs)
 	assert.NotNil(t, realAffinityRef)
-
 }

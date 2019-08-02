@@ -110,6 +110,14 @@ func (v OpMode) AsUnit32() uint32 {
 	return uint32(v)
 }
 
+func (v OpMode) CanVote() bool {
+	return v == ModeNormal
+}
+
+func (v OpMode) CanHaveState() bool {
+	return !v.IsSuspended() && !v.IsEvicted()
+}
+
 func (v OpMode) String() string {
 	switch v {
 	case ModeNormal:

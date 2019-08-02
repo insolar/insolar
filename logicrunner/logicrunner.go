@@ -22,7 +22,6 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -48,21 +47,6 @@ import (
 const maxQueueLength = 10
 
 type Ref = insolar.Reference
-
-func makeWMMessage(ctx context.Context, payLoad watermillMsg.Payload, msgType string) *watermillMsg.Message {
-	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payLoad)
-	wmMsg.Metadata.Set(bus.MetaTraceID, inslogger.TraceID(ctx))
-
-	sp, err := instracer.Serialize(ctx)
-	if err == nil {
-		wmMsg.Metadata.Set(bus.MetaSpanData, string(sp))
-	} else {
-		inslogger.FromContext(ctx).Error(err)
-	}
-
-	wmMsg.Metadata.Set(bus.MetaType, msgType)
-	return wmMsg
-}
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
@@ -265,44 +249,15 @@ func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context
 }
 
 func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
-	lr.ResultsMatcher.Clear()
-
-	lr.StateStorage.Lock()
-
-	lr.FlowDispatcher.ChangePulse(ctx, pulse)
-	lr.InnerFlowDispatcher.ChangePulse(ctx, pulse)
-
 	ctx, span := instracer.StartSpan(ctx, "pulse.logicrunner")
 	defer span.End()
 
-	messages := make([]insolar.Message, 0)
+	lr.ResultsMatcher.Clear()
 
-	objects := lr.StateStorage.StateMap()
-	inslogger.FromContext(ctx).Debug("Processing ", len(*objects), " on pulse change")
-	for ref, state := range *objects {
-		meNext, _ := lr.JetCoordinator.IsMeAuthorizedNow(
-			ctx, insolar.DynamicRoleVirtualExecutor, *ref.Record(),
-		)
-		state.Lock()
+	messages := lr.StateStorage.OnPulse(ctx, pulse)
 
-		if broker := state.ExecutionBroker; broker != nil {
-			end, toSend := broker.OnPulse(ctx, meNext)
-			if end {
-				// we're not executing and we have nothing to process
-				state.ExecutionBroker = nil
-			}
-
-			messages = append(messages, toSend...)
-		}
-
-		if state.ExecutionBroker == nil {
-			lr.StateStorage.DeleteObjectState(ref)
-		}
-
-		state.Unlock()
-	}
-
-	lr.StateStorage.Unlock()
+	lr.FlowDispatcher.ChangePulse(ctx, pulse)
+	lr.InnerFlowDispatcher.ChangePulse(ctx, pulse)
 
 	if len(messages) > 0 {
 		go lr.sendOnPulseMessagesAsync(ctx, messages)
@@ -318,7 +273,7 @@ func (lr *LogicRunner) stopIfNeeded(ctx context.Context) {
 	lr.StateStorage.Lock()
 	defer lr.StateStorage.Unlock()
 
-	if len(*lr.StateStorage.StateMap()) == 0 {
+	if lr.StateStorage.IsEmpty() {
 		lr.stopLock.Lock()
 		if lr.isStopping {
 			inslogger.FromContext(ctx).Debug("LogicRunner ready to stop")
