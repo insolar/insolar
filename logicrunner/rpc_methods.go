@@ -337,28 +337,7 @@ func (m *validationProxyImplementation) DeactivateObject(
 	return nil
 }
 
-func buildIncomingAndOutgoingCallRequests(
-	_ context.Context, current *Transcript, req rpctypes.UpRouteReq,
-) (*record.IncomingRequest, *record.OutgoingRequest) {
-
-	current.Nonce++
-
-	incoming := record.IncomingRequest{
-		Caller:          req.Callee,
-		CallerPrototype: req.CalleePrototype,
-		Nonce:           current.Nonce,
-
-		Immutable: req.Immutable,
-
-		Object:    &req.Object,
-		Prototype: &req.Prototype,
-		Method:    req.Method,
-		Arguments: req.Arguments,
-
-		APIRequestID: current.Request.APIRequestID,
-		Reason:       current.RequestRef,
-	}
-
+func buildIncomingRequestFromOutgoing(outgoing *record.OutgoingRequest) *record.IncomingRequest {
 	// Currently IncomingRequest and OutgoingRequest are almost exact copies of each other
 	// thus the following code is a bit ugly. However this will change when we'll
 	// figure out which fields are actually needed in OutgoingRequest and which are
@@ -366,8 +345,36 @@ func buildIncomingAndOutgoingCallRequests(
 	// CommonRequestData structures or something like this.
 	// This being said the implementation of Request interface differs for Incoming and
 	// OutgoingRequest. See corresponding implementation of the interface methods.
+	incoming := record.IncomingRequest{
+		Caller:          outgoing.Caller,
+		CallerPrototype: outgoing.CallerPrototype,
+		Nonce:           outgoing.Nonce,
 
-	outgoing := record.OutgoingRequest{
+		Immutable: outgoing.Immutable,
+
+		Object:    outgoing.Object,
+		Prototype: outgoing.Prototype,
+		Method:    outgoing.Method,
+		Arguments: outgoing.Arguments,
+
+		APIRequestID: outgoing.APIRequestID,
+		Reason:       outgoing.Reason,
+	}
+
+	if outgoing.ReturnMode != record.ReturnSaga {
+		incoming.ReturnMode = outgoing.ReturnMode
+	}
+
+	return &incoming
+}
+
+func buildIncomingAndOutgoingCallRequests(
+	_ context.Context, current *Transcript, req rpctypes.UpRouteReq,
+) (*record.IncomingRequest, *record.OutgoingRequest) {
+
+	current.Nonce++
+
+	outgoing := &record.OutgoingRequest{
 		Caller:          req.Callee,
 		CallerPrototype: req.CalleePrototype,
 		Nonce:           current.Nonce,
@@ -388,11 +395,12 @@ func buildIncomingAndOutgoingCallRequests(
 		// when current object finishes the execution and validation.
 		outgoing.ReturnMode = record.ReturnSaga
 	} else if !req.Wait {
-		incoming.ReturnMode = record.ReturnNoWait
 		outgoing.ReturnMode = record.ReturnNoWait
 	}
 
-	return &incoming, &outgoing
+	incoming := buildIncomingRequestFromOutgoing(outgoing)
+
+	return incoming, outgoing
 }
 
 func buildIncomingAndOutgoingSaveAsChildRequests(
