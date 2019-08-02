@@ -35,6 +35,16 @@ import (
 	"github.com/pkg/errors"
 )
 
+type BackupMaker interface {
+	Do(ctx context.Context, lastFinalizedPulse insolar.PulseNumber) error
+}
+
+var (
+	// ErrAlreadyDone is returned when you try to do backup for pulse less then lastBackupedPulse
+	ErrAlreadyDone = errors.New("backup already done for this pulse")
+)
+
+// BackupInfo contains meta information about current incremental backup
 type BackupInfo struct {
 	MD5                 string
 	Pulse               insolar.PulseNumber
@@ -42,7 +52,8 @@ type BackupInfo struct {
 	Since               uint64
 }
 
-type BackupMaker struct {
+// BackupMakerDefault is component which does incremental backups by consequent invoke Do()
+type BackupMakerDefault struct {
 	lock                sync.RWMutex
 	lastBackupedVersion uint64
 	lastBackupedPulse   insolar.PulseNumber
@@ -84,7 +95,7 @@ func checkConfig(config configuration.Backup) error {
 	return nil
 }
 
-func NewBackupMaker(ctx context.Context, backuper store.Backuper, config configuration.Backup, lastBackupedPulse insolar.PulseNumber) (*BackupMaker, error) {
+func NewBackupMaker(ctx context.Context, backuper store.Backuper, config configuration.Backup, lastBackupedPulse insolar.PulseNumber) (*BackupMakerDefault, error) {
 	if config.Enabled {
 		if err := checkConfig(config); err != nil {
 			return nil, errors.Wrap(err, "bad config")
@@ -93,7 +104,7 @@ func NewBackupMaker(ctx context.Context, backuper store.Backuper, config configu
 		inslogger.FromContext(ctx).Info("Backup is disabled")
 	}
 
-	return &BackupMaker{
+	return &BackupMakerDefault{
 		backuper:          backuper,
 		config:            config,
 		lastBackupedPulse: lastBackupedPulse,
@@ -149,7 +160,7 @@ func calculateFileHash(f *os.File) (string, error) {
 }
 
 // prepareBackup make incremental backup and write auxiliary file with meta info
-func (b *BackupMaker) prepareBackup(ctx context.Context, dirHolder *tmpDirHolder, pulse insolar.PulseNumber) (uint64, error) {
+func (b *BackupMakerDefault) prepareBackup(ctx context.Context, dirHolder *tmpDirHolder, pulse insolar.PulseNumber) (uint64, error) {
 	currentBT, err := b.backuper.Backup(dirHolder.tmpFile, b.lastBackupedVersion)
 	if err != nil {
 		return 0, errors.Wrap(err, "Backup return error")
@@ -222,7 +233,7 @@ func (t *tmpDirHolder) create(where string, pulse insolar.PulseNumber) (func(con
 	return t.release, nil
 }
 
-func (b *BackupMaker) doBackup(ctx context.Context, lastFinalizedPulse insolar.PulseNumber) (uint64, error) {
+func (b *BackupMakerDefault) doBackup(ctx context.Context, lastFinalizedPulse insolar.PulseNumber) (uint64, error) {
 
 	dirHolder := &tmpDirHolder{}
 	closer, err := dirHolder.create(b.config.TmpDirectory, lastFinalizedPulse)
@@ -231,7 +242,7 @@ func (b *BackupMaker) doBackup(ctx context.Context, lastFinalizedPulse insolar.P
 	}
 	defer closer(ctx)
 
-	currentBkpTs, err := b.prepareBackup(ctx, dirHolder, lastFinalizedPulse)
+	currentBkpVersion, err := b.prepareBackup(ctx, dirHolder, lastFinalizedPulse)
 	if err != nil {
 		return 0, errors.Wrap(err, "prepareBackup returns error")
 	}
@@ -248,27 +259,29 @@ func (b *BackupMaker) doBackup(ctx context.Context, lastFinalizedPulse insolar.P
 		return 0, errors.Wrapf(err, "waitForBackup returns error. pulse: %d", lastFinalizedPulse)
 	}
 
-	return currentBkpTs, nil
+	return currentBkpVersion, nil
 }
 
-func (b *BackupMaker) Start(ctx context.Context, lastFinalizedPulse insolar.PulseNumber) error {
+func (b *BackupMakerDefault) Do(ctx context.Context, lastFinalizedPulse insolar.PulseNumber) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	if !b.config.Enabled {
-		return errors.New("backup is disabled")
+		inslogger.FromContext(ctx).Info("Trying to do backup, but it's disabled. Do nothing")
+		return ErrAlreadyDone
 	}
 
 	if lastFinalizedPulse <= b.lastBackupedPulse {
-		return errors.Errorf("given pulse %d must more then last backuped %d", lastFinalizedPulse, b.lastBackupedPulse)
+		return ErrAlreadyDone
 	}
 
-	currentBkpTs, err := b.doBackup(ctx, lastFinalizedPulse)
+	currentBkpVersion, err := b.doBackup(ctx, lastFinalizedPulse)
 	if err != nil {
 		return errors.Wrap(err, "doBackup return error")
 	}
 
 	b.lastBackupedPulse = lastFinalizedPulse
-	b.lastBackupedVersion = currentBkpTs
+	b.lastBackupedVersion = currentBkpVersion
+	inslogger.FromContext(ctx).Infof("Pulse %d successfully backuped", lastFinalizedPulse)
 	return nil
 }

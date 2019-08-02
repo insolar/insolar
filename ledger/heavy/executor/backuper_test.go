@@ -123,8 +123,8 @@ func TestBackuper_Disabled(t *testing.T) {
 	bm, err := executor.NewBackupMaker(context.Background(), nil, cfg, 0)
 	require.NoError(t, err)
 
-	err = bm.Start(context.Background(), 1)
-	require.Contains(t, err.Error(), "backup is disabled")
+	err = bm.Do(context.Background(), 1)
+	require.Equal(t, err, executor.ErrAlreadyDone)
 }
 
 func TestBackuper_BackupWaitPeriodExpired(t *testing.T) {
@@ -143,7 +143,7 @@ func TestBackuper_BackupWaitPeriodExpired(t *testing.T) {
 	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, testPulse)
 	require.NoError(t, err)
 
-	err = bm.Start(context.Background(), testPulse+1)
+	err = bm.Do(context.Background(), testPulse+1)
 	require.Contains(t, err.Error(), "no backup confirmation")
 }
 
@@ -165,7 +165,7 @@ func TestBackuper_CantMoveToTargetDir(t *testing.T) {
 	_, err = os.Create(filepath.Join(cfg.TargetDirectory, fmt.Sprintf(cfg.BackupDirNameTemplate, testPulse)))
 	require.NoError(t, err)
 
-	err = bm.Start(context.Background(), testPulse)
+	err = bm.Do(context.Background(), testPulse)
 	require.Contains(t, err.Error(), "can't move")
 }
 
@@ -177,11 +177,11 @@ func TestBackuper_Backup_OldPulse(t *testing.T) {
 	bm, err := executor.NewBackupMaker(context.Background(), nil, cfg, testPulse)
 	require.NoError(t, err)
 
-	err = bm.Start(context.Background(), testPulse)
-	require.Contains(t, err.Error(), "given pulse 65537 must more then last backuped 65537")
+	err = bm.Do(context.Background(), testPulse)
+	require.Equal(t, err, executor.ErrAlreadyDone)
 
-	err = bm.Start(context.Background(), testPulse-1)
-	require.Contains(t, err.Error(), "given pulse 65536 must more then last backuped 65537")
+	err = bm.Do(context.Background(), testPulse-1)
+	require.Equal(t, err, executor.ErrAlreadyDone)
 }
 
 func makeCurrentBkpDir(cfg configuration.Backup, pulse insolar.PulseNumber) string {
@@ -268,7 +268,7 @@ func TestBackuperM(t *testing.T) {
 	// doing backups
 	go func() {
 		for i := 0; i < numIterations; i++ {
-			err := bm.Start(context.Background(), testPulse+insolar.PulseNumber(i))
+			err := bm.Do(context.Background(), testPulse+insolar.PulseNumber(i))
 			require.NoError(t, err)
 			wgBackup.Done()
 			time.Sleep(time.Duration(rand.Int()%1000) * time.Millisecond)
@@ -303,7 +303,7 @@ func TestBackuperM(t *testing.T) {
 	sgWriteStopped.Wait()
 
 	// final backup to collect all rest records
-	err = bm.Start(context.Background(), testPulse+insolar.PulseNumber(numIterations))
+	err = bm.Do(context.Background(), testPulse+insolar.PulseNumber(numIterations))
 	require.NoError(t, err)
 
 	// check backup hashes
