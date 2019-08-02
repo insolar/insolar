@@ -34,6 +34,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/heavy/executor"
@@ -62,45 +63,46 @@ func TestBackuper_BadConfig(t *testing.T) {
 
 	testPulse := insolar.GenesisPulse.PulseNumber
 
-	cfg := executor.Config{TmpDirectory: "-----"}
-	_, err = executor.NewBackupMaker(nil, cfg, testPulse)
+	cfg := configuration.Backup{TmpDirectory: "-----", Enabled: true}
+	_, err = executor.NewBackupMaker(context.Background(), nil, cfg, testPulse)
 	require.Contains(t, err.Error(), "checkDirectory returns error: stat -----: no such file or directory")
 
-	cfg = executor.Config{TmpDirectory: existingDir, TargetDirectory: "+_+_+_+"}
-	_, err = executor.NewBackupMaker(nil, cfg, testPulse)
+	cfg = configuration.Backup{TmpDirectory: existingDir, TargetDirectory: "+_+_+_+", Enabled: true}
+	_, err = executor.NewBackupMaker(context.Background(), nil, cfg, testPulse)
 	require.Contains(t, err.Error(), "checkDirectory returns error: stat +_+_+_+: no such file or directory")
 
 	cfg.TargetDirectory = existingDir
-	_, err = executor.NewBackupMaker(nil, cfg, testPulse)
+	_, err = executor.NewBackupMaker(context.Background(), nil, cfg, testPulse)
 	require.Contains(t, err.Error(), "BackupConfirmFile can't be empty")
 
 	cfg.BackupConfirmFile = "Test"
-	_, err = executor.NewBackupMaker(nil, cfg, testPulse)
+	_, err = executor.NewBackupMaker(context.Background(), nil, cfg, testPulse)
 	require.Contains(t, err.Error(), "BackupInfoFile can't be empty")
 
 	cfg.BackupInfoFile = "Test2"
-	_, err = executor.NewBackupMaker(nil, cfg, testPulse)
+	_, err = executor.NewBackupMaker(context.Background(), nil, cfg, testPulse)
 	require.Contains(t, err.Error(), "BackupDirNameTemplate can't be empty")
 
 	cfg.BackupDirNameTemplate = "Test3"
-	_, err = executor.NewBackupMaker(nil, cfg, testPulse)
+	_, err = executor.NewBackupMaker(context.Background(), nil, cfg, testPulse)
 	require.Contains(t, err.Error(), "BackupWaitPeriod can't be 0")
 
 	cfg.BackupWaitPeriod = 20
-	_, err = executor.NewBackupMaker(nil, cfg, testPulse)
+	_, err = executor.NewBackupMaker(context.Background(), nil, cfg, testPulse)
 	require.NoError(t, err)
 
 }
 
-func makeBackuperConfig(t *testing.T, prefix string) executor.Config {
+func makeBackuperConfig(t *testing.T, prefix string) configuration.Backup {
 
-	cfg := executor.Config{
+	cfg := configuration.Backup{
 		BackupConfirmFile:     "BACKUPED",
 		BackupInfoFile:        "META.json",
 		TargetDirectory:       "/tmp/BKP/TARGET/" + prefix,
 		TmpDirectory:          "/tmp/BKP/TMP",
 		BackupDirNameTemplate: "pulse-%d",
 		BackupWaitPeriod:      60,
+		Enabled:               true,
 	}
 
 	err := os.MkdirAll(cfg.TargetDirectory, 0777)
@@ -111,9 +113,18 @@ func makeBackuperConfig(t *testing.T, prefix string) executor.Config {
 	return cfg
 }
 
-func clearData(t *testing.T, cfg executor.Config) {
+func clearData(t *testing.T, cfg configuration.Backup) {
 	err := os.RemoveAll(cfg.TargetDirectory)
 	require.NoError(t, err)
+}
+
+func TestBackuper_Disabled(t *testing.T) {
+	cfg := configuration.Backup{Enabled: false}
+	bm, err := executor.NewBackupMaker(context.Background(), nil, cfg, 0)
+	require.NoError(t, err)
+
+	err = bm.Start(context.Background(), 1)
+	require.Contains(t, err.Error(), "backup is disabled")
 }
 
 func TestBackuper_BackupWaitPeriodExpired(t *testing.T) {
@@ -129,7 +140,7 @@ func TestBackuper_BackupWaitPeriodExpired(t *testing.T) {
 
 	db, err := store.NewBadgerDB(tmpdir)
 	require.NoError(t, err)
-	bm, err := executor.NewBackupMaker(db, cfg, testPulse)
+	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, testPulse)
 	require.NoError(t, err)
 
 	err = bm.Start(context.Background(), testPulse+1)
@@ -148,7 +159,7 @@ func TestBackuper_CantMoveToTargetDir(t *testing.T) {
 
 	db, err := store.NewBadgerDB(tmpdir)
 	require.NoError(t, err)
-	bm, err := executor.NewBackupMaker(db, cfg, 0)
+	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, 0)
 	require.NoError(t, err)
 	// Create dir to fail move operation
 	_, err = os.Create(filepath.Join(cfg.TargetDirectory, fmt.Sprintf(cfg.BackupDirNameTemplate, testPulse)))
@@ -163,7 +174,7 @@ func TestBackuper_Backup_OldPulse(t *testing.T) {
 	defer clearData(t, cfg)
 
 	testPulse := insolar.GenesisPulse.PulseNumber
-	bm, err := executor.NewBackupMaker(nil, cfg, testPulse)
+	bm, err := executor.NewBackupMaker(context.Background(), nil, cfg, testPulse)
 	require.NoError(t, err)
 
 	err = bm.Start(context.Background(), testPulse)
@@ -173,7 +184,7 @@ func TestBackuper_Backup_OldPulse(t *testing.T) {
 	require.Contains(t, err.Error(), "given pulse 65536 must more then last backuped 65537")
 }
 
-func makeCurrentBkpDir(cfg executor.Config, pulse insolar.PulseNumber) string {
+func makeCurrentBkpDir(cfg configuration.Backup, pulse insolar.PulseNumber) string {
 	return filepath.Join(cfg.TargetDirectory, fmt.Sprintf(cfg.BackupDirNameTemplate, pulse))
 }
 
@@ -190,7 +201,7 @@ func calculateFileHash(t *testing.T, fileName string) string {
 
 const backupFileName = "incr.bkp"
 
-func checkBackupMetaInfo(t *testing.T, cfg executor.Config, numIterations int, testPulse insolar.PulseNumber) {
+func checkBackupMetaInfo(t *testing.T, cfg configuration.Backup, numIterations int, testPulse insolar.PulseNumber) {
 	for i := 0; i < numIterations+1; i++ {
 		currentPulse := testPulse + insolar.PulseNumber(i)
 		currentBkpDir := makeCurrentBkpDir(cfg, currentPulse)
@@ -223,7 +234,7 @@ func TestBackuperM(t *testing.T) {
 	db, err := store.NewBadgerDB(tmpdir)
 	require.NoError(t, err)
 
-	bm, err := executor.NewBackupMaker(db, cfg, insolar.GenesisPulse.PulseNumber)
+	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, insolar.GenesisPulse.PulseNumber)
 	require.NoError(t, err)
 
 	savedKeys := make(map[store.Key]insolar.PulseNumber, 0)
