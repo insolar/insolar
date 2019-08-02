@@ -30,9 +30,9 @@ var (
 	ErrWriteClosed = errors.New("requested pulse is closed for writing")
 )
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner/writecontroller.WriteAccessor -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/writecontroller.Accessor -o ./ -s _mock.go -g
 
-type WriteAccessor interface {
+type Accessor interface {
 	// Begin requests writing access for pulse number. If requested pulse is closed, ErrWriteClosed will be returned.
 	// The caller must call returned "done" function when finished writing.
 	Begin(context.Context, insolar.PulseNumber) (done func(), err error)
@@ -41,9 +41,9 @@ type WriteAccessor interface {
 	WaitOpened(ctx context.Context)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner/writecontroller.WriteManager -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/writecontroller.Manager -o ./ -s _mock.go -g
 
-type WriteManager interface {
+type Manager interface {
 	// Open marks pulse number as opened for writing. It can be used later by Begin from accessor.
 	Open(context.Context, insolar.PulseNumber) error
 	// CloseAndWait immediately marks pulse number as closed for writing and blocks until all writes are done.

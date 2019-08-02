@@ -63,7 +63,7 @@ func TestHandleAdditionalCallFromPreviousExecutor_Present(t *testing.T) {
 				h := &HandleAdditionalCallFromPreviousExecutor{
 					dep: &Dependencies{
 						Sender: bus.NewSenderMock(t).ReplyMock.Return(),
-						WriteAccessor: writecontroller.NewWriteAccessorMock(t).
+						WriteAccessor: writecontroller.NewAccessorMock(t).
 							BeginMock.Return(func() {}, nil),
 					},
 					Parcel: parcel,

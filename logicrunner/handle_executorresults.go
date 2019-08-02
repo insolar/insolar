@@ -19,7 +19,6 @@ package logicrunner
 import (
 	"context"
 
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -104,16 +103,9 @@ func (h *HandleExecutorResults) Present(ctx context.Context, f flow.Flow) error 
 
 	err := h.realHandleExecutorState(ctx, f)
 
-	var repMsg *watermillMsg.Message
 	if err != nil {
-		repMsg, err = ErrorAsMessage(err)
-	} else {
-		repMsg = bus.ReplyAsMessage(ctx, &reply.OK{})
+		return sendErrorMessage(ctx, h.dep.Sender, h.Message, err)
 	}
-
-	if err != nil {
-		return err
-	}
-	go h.dep.Sender.Reply(ctx, h.Message, repMsg)
+	go h.dep.Sender.Reply(ctx, h.Message, bus.ReplyAsMessage(ctx, &reply.OK{}))
 	return nil
 }
