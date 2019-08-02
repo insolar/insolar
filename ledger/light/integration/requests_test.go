@@ -259,7 +259,7 @@ func Test_OutgoingRequest_Duplicate(t *testing.T) {
 		// Set outgoing request
 		outP := SendMessage(ctx, s, outgoingReqMsg)
 		RequireNotError(outP)
-		outReqInfo := p.(*payload.RequestInfo)
+		outReqInfo := outP.(*payload.RequestInfo)
 		require.Nil(t, outReqInfo.Request)
 		require.Nil(t, outReqInfo.Result)
 
@@ -369,4 +369,90 @@ func Test_Result_Duplicate(t *testing.T) {
 	err = receivedResult.Unmarshal(resultInfo.Result)
 	require.NoError(t, err)
 	require.Equal(t, resultVirtual, receivedResult.Virtual)
+}
+
+func Test_IncomingRequest_ClosedReason(t *testing.T) {
+	// todo uncomment after fix
+	t.Skip()
+
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	cfg := DefaultLightConfig()
+	s, err := NewServer(ctx, cfg, nil)
+	require.NoError(t, err)
+	defer s.Stop()
+
+	// First pulse goes in storage then interrupts.
+	s.SetPulse(ctx)
+	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
+	s.SetPulse(ctx)
+
+	var reasonID insolar.ID
+
+	// Creating root reason request.
+	{
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), true, true)
+		rep := SendMessage(ctx, s, &msg)
+		RequireNotError(rep)
+		reasonID = rep.(*payload.RequestInfo).RequestID
+	}
+
+	// Closing request
+	{
+		objectID := reasonID
+
+		resMsg, _ := MakeSetResult(objectID, reasonID)
+		// Set result.
+		rep := SendMessage(ctx, s, &resMsg)
+		RequireNotError(rep)
+	}
+
+	// Creating incoming w closed reason request.
+	{
+		msg, _ := MakeSetIncomingRequest(gen.ID(), reasonID, true, false)
+		rep := SendMessage(ctx, s, &msg)
+		RequireError(rep)
+	}
+}
+
+func Test_OutgoingRequest_ClosedReason(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	cfg := DefaultLightConfig()
+	s, err := NewServer(ctx, cfg, nil)
+	require.NoError(t, err)
+	defer s.Stop()
+
+	// First pulse goes in storage then interrupts.
+	s.SetPulse(ctx)
+	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
+	s.SetPulse(ctx)
+
+	var reasonID insolar.ID
+
+	// Creating root reason request.
+	{
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), true, true)
+		rep := SendMessage(ctx, s, &msg)
+		RequireNotError(rep)
+		reasonID = rep.(*payload.RequestInfo).RequestID
+	}
+
+	// Closing request
+	{
+		objectID := reasonID
+
+		resMsg, _ := MakeSetResult(objectID, reasonID)
+		// Set result.
+		rep := SendMessage(ctx, s, &resMsg)
+		RequireNotError(rep)
+	}
+
+	{
+		pl, _ := MakeSetOutgoingRequest(ctx, s, reasonID, reasonID, true)
+		rep := SendMessage(ctx, s, &pl)
+		RequireError(rep)
+	}
 }
