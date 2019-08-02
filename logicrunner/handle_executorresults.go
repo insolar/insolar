@@ -104,17 +104,16 @@ func (h *HandleExecutorResults) Present(ctx context.Context, f flow.Flow) error 
 
 	err := h.realHandleExecutorState(ctx, f)
 
-	var rep *watermillMsg.Message
+	var repMsg *watermillMsg.Message
 	if err != nil {
-		var newErr error
-		rep, newErr = payload.NewMessage(&payload.Error{Text: err.Error()})
-		if newErr != nil {
-			return newErr
-		}
+		repMsg, err = ErrorAsMessage(err)
 	} else {
-		rep = bus.ReplyAsMessage(ctx, &reply.OK{})
+		repMsg = bus.ReplyAsMessage(ctx, &reply.OK{})
 	}
-	h.dep.Sender.Reply(ctx, h.Message, rep)
 
-	return err
+	if err != nil {
+		return err
+	}
+	go h.dep.Sender.Reply(ctx, h.Message, repMsg)
+	return nil
 }

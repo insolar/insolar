@@ -19,6 +19,7 @@ package logicrunner
 import (
 	"context"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -71,16 +72,19 @@ func (h *HandleAbandonedRequestsNotification) Present(ctx context.Context, f flo
 		dep: h.dep,
 		msg: abandoned,
 	}
-	if err := f.Procedure(ctx, &procInitializeExecutionState, false); err != nil {
+	err = f.Procedure(ctx, &procInitializeExecutionState, false)
+
+	var repMsg *watermillMsg.Message
+	if err != nil {
 		err := errors.Wrap(err, "[ HandleExecutorResults ] Failed to initialize execution state")
-		rep, newErr := payload.NewMessage(&payload.Error{Text: err.Error()})
-		if newErr != nil {
-			return newErr
-		}
-		go h.dep.Sender.Reply(ctx, h.meta, rep)
+		repMsg, err = ErrorAsMessage(err)
+	} else {
+		repMsg = bus.ReplyAsMessage(ctx, &reply.OK{})
+	}
+
+	if err != nil {
 		return err
 	}
-	replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})
-	go h.dep.Sender.Reply(ctx, h.meta, replyOk)
+	go h.dep.Sender.Reply(ctx, h.meta, repMsg)
 	return nil
 }
