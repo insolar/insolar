@@ -126,7 +126,7 @@ func (rf *requestsFetcher) fetch(ctx context.Context) error {
 			tr := NewTranscript(requestCtx, reqRef, *incoming)
 			rf.broker.AddRequestsFromLedger(ctx, tr)
 		case outgoing != nil:
-			rf.broker.EnqueueAbandonedOutgoingRequest(ctx, outgoing)
+			rf.broker.EnqueueAbandonedOutgoingRequest(ctx, reqRef, outgoing)
 		default:
 			logger.Error("requestsFetcher.fetch: both `incoming` and `outgoing` are nils")
 		}

@@ -3,6 +3,8 @@ package logicrunner
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/afiskon/go-actors/actor"
@@ -11,7 +13,7 @@ import (
 
 // AbandonedOutgoingRequestSender is a type-safe wrapper for an actor implementation.
 type AbandonedOutgoingRequestSender interface {
-	EnqueueAbandonedOutgoingRequest(ctx context.Context, req *record.OutgoingRequest)
+	EnqueueAbandonedOutgoingRequest(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest)
 }
 
 type abandonedOutgoingRequestSender struct {
@@ -23,7 +25,8 @@ type abandonedOutgoingRequestActorState struct{}
 
 // When actor receives this message it builds and sends a corresponding request.
 type sendAbandonedOutgoingRequestMessage struct {
-	req *record.OutgoingRequest
+	requestReference insolar.Reference       // registered request id
+	outgoingRequest  *record.OutgoingRequest // outgoing request body
 }
 
 func NewAbandonedOutgoingRequestSender() AbandonedOutgoingRequestSender {
@@ -36,8 +39,12 @@ func NewAbandonedOutgoingRequestSender() AbandonedOutgoingRequestSender {
 	}
 }
 
-func (rs *abandonedOutgoingRequestSender) EnqueueAbandonedOutgoingRequest(ctx context.Context, req *record.OutgoingRequest) {
-	err := GlobalActorSystem.Send(rs.senderPid, sendAbandonedOutgoingRequestMessage{req})
+func (rs *abandonedOutgoingRequestSender) EnqueueAbandonedOutgoingRequest(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest) {
+	msg := sendAbandonedOutgoingRequestMessage{
+		requestReference: reqRef,
+		outgoingRequest:  req,
+	}
+	err := GlobalActorSystem.Send(rs.senderPid, msg)
 	if err != nil {
 		// Actor's mailbox is most likely full. This is OK to lost an abandoned OutgoingRequest
 		// in this case, LME will  re-send a corresponding notification anyway.
