@@ -56,18 +56,17 @@ type Handler struct {
 	JetModifier   jet.Modifier
 	JetAccessor   jet.Accessor
 	JetKeeper     executor.JetKeeper
+	BackupMaker   executor.BackupMaker
 
 	Sender bus.Sender
 
-	jetID insolar.JetID
-	dep   *proc.Dependencies
+	dep *proc.Dependencies
 }
 
 // New creates a new handler.
 func New(cfg configuration.Ledger) *Handler {
 	h := &Handler{
-		cfg:   cfg,
-		jetID: insolar.ZeroJetID,
+		cfg: cfg,
 	}
 	dep := proc.Dependencies{
 		PassState: func(p *proc.PassState) {
@@ -93,6 +92,7 @@ func New(cfg configuration.Ledger) *Handler {
 				h.DropModifier,
 				h.JetModifier,
 				h.JetKeeper,
+				h.BackupMaker,
 			)
 		},
 		SendJet: func(p *proc.SendJet) {
@@ -277,10 +277,20 @@ func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Met
 		return
 	}
 
+	topSyncPulse := h.JetKeeper.TopSyncPulse()
 	err = h.JetKeeper.AddHotConfirmation(ctx, confirm.Pulse, confirm.JetID, confirm.Split)
 	if err != nil {
 		logger.Error(errors.Wrapf(err, "failed to add hot confitmation to JetKeeper jet=%v", confirm.String()))
 	} else {
 		logger.Debug("got confirmation: ", confirm.String())
+	}
+
+	if !h.cfg.Backup.Enabled {
+		if err := h.JetKeeper.AddBackupConfirmation(ctx, confirm.Pulse); err != nil {
+			inslogger.FromContext(ctx).Fatal("AddBackupConfirmation return error: ", err)
+		}
+	}
+	if topSyncPulse != h.JetKeeper.TopSyncPulse() {
+		proc.FinalizePulse(ctx, h.BackupMaker, h.JetKeeper, confirm.Pulse)
 	}
 }

@@ -39,13 +39,14 @@ type Replication struct {
 	cfg     configuration.Ledger
 
 	dep struct {
-		records object.RecordModifier
-		indexes object.IndexModifier
-		pcs     insolar.PlatformCryptographyScheme
-		pulses  pulse.Accessor
-		drops   drop.Modifier
-		jets    jet.Modifier
-		keeper  executor.JetKeeper
+		records  object.RecordModifier
+		indexes  object.IndexModifier
+		pcs      insolar.PlatformCryptographyScheme
+		pulses   pulse.Accessor
+		drops    drop.Modifier
+		jets     jet.Modifier
+		keeper   executor.JetKeeper
+		backuper executor.BackupMaker
 	}
 }
 
@@ -64,6 +65,7 @@ func (p *Replication) Dep(
 	drops drop.Modifier,
 	jets jet.Modifier,
 	keeper executor.JetKeeper,
+	backuper executor.BackupMaker,
 ) {
 	p.dep.records = records
 	p.dep.indexes = indexes
@@ -72,6 +74,7 @@ func (p *Replication) Dep(
 	p.dep.drops = drops
 	p.dep.jets = jets
 	p.dep.keeper = keeper
+	p.dep.backuper = backuper
 }
 
 func (p *Replication) Proceed(ctx context.Context) error {
@@ -94,8 +97,19 @@ func (p *Replication) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to store drop")
 	}
 
-	if err := p.dep.keeper.AddDropConfirmation(ctx, dr.Pulse, dr.JetID, dr.Split); err != nil {
+	jetKeeper := p.dep.keeper
+	topSyncPulse := jetKeeper.TopSyncPulse()
+	if err := jetKeeper.AddDropConfirmation(ctx, dr.Pulse, dr.JetID, dr.Split); err != nil {
 		return errors.Wrapf(err, "failed to add jet to JetKeeper jet=%v", dr.JetID.DebugString())
+	}
+
+	if !p.cfg.Backup.Enabled {
+		if err := jetKeeper.AddBackupConfirmation(ctx, dr.Pulse); err != nil {
+			inslogger.FromContext(ctx).Fatal("AddBackupConfirmation return error: ", err)
+		}
+	}
+	if topSyncPulse != jetKeeper.TopSyncPulse() {
+		FinalizePulse(ctx, p.dep.backuper, jetKeeper, dr.Pulse)
 	}
 
 	stats.Record(ctx,
@@ -157,4 +171,23 @@ func storeRecords(
 			continue
 		}
 	}
+}
+
+func FinalizePulse(ctx context.Context, backuper executor.BackupMaker, jetKeeper executor.JetKeeper, pulse insolar.PulseNumber) {
+	go func() {
+		logger := inslogger.FromContext(ctx)
+		err := backuper.Do(ctx, pulse)
+		if err != nil {
+			if err == executor.ErrAlreadyDone {
+				logger.Warn("BackupMaker says, that work already done")
+				return
+			}
+			logger.Fatalf("Can't do backup: ", err)
+		}
+		err = jetKeeper.AddBackupConfirmation(ctx, pulse)
+		if err != nil {
+			logger.Fatalf("Can't add backup confirmation: ", err)
+		}
+		inslogger.FromContext(ctx).Infof("Pulse %d completely finalized ( drops + hots + backup )", pulse)
+	}()
 }
