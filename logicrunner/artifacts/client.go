@@ -227,7 +227,7 @@ func (m *client) GetCode(
 		virtual := record.Unwrap(&rec.Virtual)
 		codeRecord, ok := virtual.(*record.Code)
 		if !ok {
-			return nil, errors.Wrapf(err, "unexpected record %T", virtual)
+			return nil, fmt.Errorf("unexpected record %T", virtual)
 		}
 		desc = &codeDescriptor{
 			ref:         code,
@@ -555,7 +555,7 @@ func (m *client) ActivatePrototype(
 		span.End()
 		instrumenter.end()
 	}()
-	err = m.activateObject(ctx, object, code, true, parent, false, memory)
+	err = m.activateObject(ctx, object, code, true, parent, memory)
 	return err
 }
 
@@ -576,7 +576,6 @@ func (m *client) activateObject(
 	prototype insolar.Reference,
 	isPrototype bool,
 	parent insolar.Reference,
-	asDelegate bool,
 	memory []byte,
 ) error {
 	_, err := m.GetObject(ctx, parent)
@@ -590,7 +589,6 @@ func (m *client) activateObject(
 		Image:       prototype,
 		IsPrototype: isPrototype,
 		Parent:      parent,
-		IsDelegate:  asDelegate,
 	}
 
 	result := record.Result{

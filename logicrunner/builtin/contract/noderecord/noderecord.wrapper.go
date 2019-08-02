@@ -120,7 +120,6 @@ func INSMETHOD_GetNodeInfo(object []byte, data []byte) ([]byte, []byte, error) {
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -172,7 +171,6 @@ func INSMETHOD_GetPublicKey(object []byte, data []byte) ([]byte, []byte, error) 
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -224,7 +222,6 @@ func INSMETHOD_GetRole(object []byte, data []byte) ([]byte, []byte, error) {
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -276,7 +273,6 @@ func INSMETHOD_Destroy(object []byte, data []byte) ([]byte, []byte, error) {
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret0 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it

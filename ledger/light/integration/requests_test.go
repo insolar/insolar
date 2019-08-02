@@ -35,6 +35,7 @@ func Test_IncomingRequest_Check(t *testing.T) {
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg, nil)
 	require.NoError(t, err)
+	defer s.Stop()
 
 	// First pulse goes in storage then interrupts.
 	s.SetPulse(ctx)
@@ -111,6 +112,7 @@ func Test_IncomingRequest_Duplicate(t *testing.T) {
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg, nil)
 	require.NoError(t, err)
+	defer s.Stop()
 
 	// First pulse goes in storage then interrupts.
 	s.SetPulse(ctx)
@@ -216,6 +218,7 @@ func Test_OutgoingRequest_Duplicate(t *testing.T) {
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg, nil)
 	require.NoError(t, err)
+	defer s.Stop()
 
 	// First pulse goes in storage then interrupts.
 	s.SetPulse(ctx)
@@ -288,6 +291,7 @@ func Test_DetachedRequest_notification(t *testing.T) {
 		}
 	})
 	require.NoError(t, err)
+	defer s.Stop()
 
 	// First pulse goes in storage then interrupts.
 	s.SetPulse(ctx)
@@ -331,6 +335,7 @@ func Test_Result_Duplicate(t *testing.T) {
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg, nil)
 	require.NoError(t, err)
+	defer s.Stop()
 
 	// First pulse goes in storage then interrupts.
 	s.SetPulse(ctx)

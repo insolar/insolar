@@ -74,6 +74,8 @@ type Server struct {
 	pulse        insolar.Pulse
 	lock         sync.RWMutex
 	clientSender bus.Sender
+	replicator   replication.LightReplicator
+	cleaner      replication.Cleaner
 }
 
 func DefaultLightConfig() configuration.Configuration {
@@ -171,6 +173,8 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 	var (
 		PulseManager insolar.PulseManager
 		Handler      *artifactmanager.MessageHandler
+		Replicator   replication.LightReplicator
+		Cleaner      replication.Cleaner
 	)
 	{
 		conf := cfg.Ledger
@@ -213,7 +217,7 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 		handler.RequestChecker = requestChecker
 
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
-		var lightCleaner = replication.NewCleaner(
+		lightCleaner := replication.NewCleaner(
 			Jets.(jet.Cleaner),
 			Nodes,
 			drops,
@@ -224,7 +228,9 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 			indexes,
 			handler.FilamentCalculator,
 			conf.LightChainLimit,
+			conf.CleanerDelay,
 		)
+		Cleaner = lightCleaner
 
 		lthSyncer := replication.NewReplicatorDefault(
 			jetCalculator,
@@ -236,6 +242,7 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 			indexes,
 			Jets,
 		)
+		Replicator = lthSyncer
 
 		jetSplitter := executor.NewJetSplitter(cfg.Ledger.JetSplit, jetCalculator, Jets, Jets, drops, drops, Pulses, records)
 
@@ -359,6 +366,8 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 		pm:           PulseManager,
 		pulse:        *insolar.GenesisPulse,
 		clientSender: ClientBus,
+		replicator:   Replicator,
+		cleaner:      Cleaner,
 	}
 	return s, nil
 }
@@ -398,6 +407,11 @@ func (s *Server) Send(ctx context.Context, pl payload.Payload) (<-chan *message.
 		panic(err)
 	}
 	return s.clientSender.SendTarget(ctx, msg, insolar.Reference{})
+}
+
+func (s *Server) Stop() {
+	s.replicator.Stop()
+	s.cleaner.Stop()
 }
 
 type nodeMock struct {

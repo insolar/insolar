@@ -86,8 +86,8 @@ func Test_JetSplitEveryPulse(t *testing.T) {
 				hotObjectConfirm <- p.JetID
 			}
 		})
-
 		require.NoError(t, err)
+		defer s.Stop()
 
 		calculateExpectedJets := func(jets []insolar.JetID, depthLimit uint8) []insolar.JetID {
 
@@ -187,8 +187,8 @@ func Test_JetSplitsWhenOverflows(t *testing.T) {
 			hotObjectConfirm <- p.JetID
 		}
 	})
-
 	require.NoError(t, err)
+	defer s.Stop()
 
 	sendMessages := func(jetTree *jet.Tree) map[insolar.JetID]int {
 		splittingJets := make(map[insolar.JetID]int)

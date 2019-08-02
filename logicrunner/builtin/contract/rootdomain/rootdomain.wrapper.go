@@ -121,59 +121,6 @@ func INSMETHOD_GetCostCenterRef(object []byte, data []byte) ([]byte, []byte, err
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
-	state := []byte{}
-	err = ph.Serialize(self, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret1 = ph.MakeErrorSerializable(ret1)
-
-	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
-
-	return state, ret, err
-}
-
-func INSMETHOD_GetFeeWalletRef(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
-	self := new(RootDomain)
-
-	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeGetFeeWalletRef ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-	}
-
-	err := ph.Deserialize(object, self)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetFeeWalletRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
-	}
-
-	args := []interface{}{}
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetFeeWalletRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
-	}
-
-	ret0, ret1 := self.GetFeeWalletRef()
-
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -225,7 +172,6 @@ func INSMETHOD_GetMigrationWalletRef(object []byte, data []byte) ([]byte, []byte
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -277,7 +223,6 @@ func INSMETHOD_GetMigrationAdminMember(object []byte, data []byte) ([]byte, []by
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -329,7 +274,6 @@ func INSMETHOD_GetActiveMigrationDaemonMembers(object []byte, data []byte) ([]by
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -381,7 +325,57 @@ func INSMETHOD_GetRootMemberRef(object []byte, data []byte) ([]byte, []byte, err
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret1 = ph.MakeErrorSerializable(ret1)
+
+	ret := []byte{}
+	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+
+	return state, ret, err
+}
+
+func INSMETHOD_GetBurnAddress(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
+	self := new(RootDomain)
+
+	if len(object) == 0 {
+		return nil, nil, &ExtendableError{S: "[ FakeGetBurnAddress ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeGetBurnAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := []interface{}{}
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeGetBurnAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0, ret1 := self.GetBurnAddress()
+
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -435,7 +429,6 @@ func INSMETHOD_GetMemberByPublicKey(object []byte, data []byte) ([]byte, []byte,
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -489,7 +482,6 @@ func INSMETHOD_GetMemberByMigrationAddress(object []byte, data []byte) ([]byte, 
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -541,7 +533,6 @@ func INSMETHOD_GetCostCenter(object []byte, data []byte) ([]byte, []byte, error)
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -593,7 +584,6 @@ func INSMETHOD_GetNodeDomainRef(object []byte, data []byte) ([]byte, []byte, err
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -645,7 +635,6 @@ func INSMETHOD_Info(object []byte, data []byte) ([]byte, []byte, error) {
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -668,18 +657,18 @@ func INSMETHOD_Info(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
-func INSMETHOD_AddMigrationAddresses(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_AddBurnAddresses(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
 	self := new(RootDomain)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeAddMigrationAddresses ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &ExtendableError{S: "[ FakeAddBurnAddresses ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeAddMigrationAddresses ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeAddBurnAddresses ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -689,17 +678,16 @@ func INSMETHOD_AddMigrationAddresses(object []byte, data []byte) ([]byte, []byte
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeAddMigrationAddresses ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeAddBurnAddresses ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
-	ret0 := self.AddMigrationAddresses(args0)
+	ret0 := self.AddBurnAddresses(args0)
 
 	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret0 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -722,18 +710,18 @@ func INSMETHOD_AddMigrationAddresses(object []byte, data []byte) ([]byte, []byte
 	return state, ret, err
 }
 
-func INSMETHOD_AddMigrationAddress(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_AddBurnAddress(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
 	self := new(RootDomain)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeAddMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &ExtendableError{S: "[ FakeAddBurnAddress ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeAddMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeAddBurnAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -743,17 +731,16 @@ func INSMETHOD_AddMigrationAddress(object []byte, data []byte) ([]byte, []byte, 
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeAddMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeAddBurnAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
-	ret0 := self.AddMigrationAddress(args0)
+	ret0 := self.AddBurnAddress(args0)
 
 	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret0 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -772,60 +759,6 @@ func INSMETHOD_AddMigrationAddress(object []byte, data []byte) ([]byte, []byte, 
 
 	ret := []byte{}
 	err = ph.Serialize([]interface{}{ret0}, &ret)
-
-	return state, ret, err
-}
-
-func INSMETHOD_GetFreeMigrationAddress(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
-	self := new(RootDomain)
-
-	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeGetFreeMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-	}
-
-	err := ph.Deserialize(object, self)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetFreeMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
-	}
-
-	args := [1]interface{}{}
-	var args0 string
-	args[0] = &args0
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetFreeMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
-	}
-
-	ret0, ret1 := self.GetFreeMigrationAddress(args0)
-
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
-	state := []byte{}
-	err = ph.Serialize(self, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret1 = ph.MakeErrorSerializable(ret1)
-
-	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
 
 	return state, ret, err
 }
@@ -865,7 +798,6 @@ func INSMETHOD_AddNewMemberToMaps(object []byte, data []byte) ([]byte, []byte, e
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret0 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -921,7 +853,6 @@ func INSMETHOD_AddNewMemberToPublicKeyMap(object []byte, data []byte) ([]byte, [
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret0 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -973,7 +904,6 @@ func INSMETHOD_CreateHelloWorld(object []byte, data []byte) ([]byte, []byte, err
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -1002,19 +932,18 @@ func Initialize() XXX_insolar.ContractWrapper {
 		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: XXX_insolar.ContractMethods{
 			"GetCostCenterRef":                INSMETHOD_GetCostCenterRef,
-			"GetFeeWalletRef":                 INSMETHOD_GetFeeWalletRef,
 			"GetMigrationWalletRef":           INSMETHOD_GetMigrationWalletRef,
 			"GetMigrationAdminMember":         INSMETHOD_GetMigrationAdminMember,
 			"GetActiveMigrationDaemonMembers": INSMETHOD_GetActiveMigrationDaemonMembers,
 			"GetRootMemberRef":                INSMETHOD_GetRootMemberRef,
+			"GetBurnAddress":                  INSMETHOD_GetBurnAddress,
 			"GetMemberByPublicKey":            INSMETHOD_GetMemberByPublicKey,
 			"GetMemberByMigrationAddress":     INSMETHOD_GetMemberByMigrationAddress,
 			"GetCostCenter":                   INSMETHOD_GetCostCenter,
 			"GetNodeDomainRef":                INSMETHOD_GetNodeDomainRef,
 			"Info":                            INSMETHOD_Info,
-			"AddMigrationAddresses":           INSMETHOD_AddMigrationAddresses,
-			"AddMigrationAddress":             INSMETHOD_AddMigrationAddress,
-			"GetFreeMigrationAddress":         INSMETHOD_GetFreeMigrationAddress,
+			"AddBurnAddresses":                INSMETHOD_AddBurnAddresses,
+			"AddBurnAddress":                  INSMETHOD_AddBurnAddress,
 			"AddNewMemberToMaps":              INSMETHOD_AddNewMemberToMaps,
 			"AddNewMemberToPublicKeyMap":      INSMETHOD_AddNewMemberToPublicKeyMap,
 			"CreateHelloWorld":                INSMETHOD_CreateHelloWorld,

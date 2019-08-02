@@ -88,7 +88,10 @@ func (br *BaseRecord) Create(ctx context.Context) error {
 		return errors.Wrap(err, "fail to set genesis pulse")
 	}
 	// Add initial drop
-	err = br.DropModifier.Set(ctx, drop.Drop{JetID: insolar.ZeroJetID})
+	err = br.DropModifier.Set(ctx, drop.Drop{
+		Pulse: insolar.GenesisPulse.PulseNumber,
+		JetID: insolar.ZeroJetID,
+	})
 	if err != nil {
 		return errors.Wrap(err, "fail to set initial drop")
 	}
@@ -233,7 +236,6 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		contracts.GetMemberGenesisContractState(g.ContractsConfig.MigrationAdminPublicKey, insolar.GenesisNameMigrationAdminMember, insolar.GenesisNameRootDomain, *mawRef),
 		contracts.GetWalletGenesisContractState("0", insolar.GenesisNameFeeWallet, insolar.GenesisNameRootDomain),
 		contracts.GetCostCenterGenesisContractState(),
-		contracts.GetTariffGenesisContractState(),
 	}
 
 	for i, key := range g.ContractsConfig.MigrationDaemonPublicKeys {

@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/noderecord"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/pkshard"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/shard"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/tariff"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 	"github.com/insolar/insolar/platformpolicy"
@@ -50,8 +51,6 @@ var predefinedPrototypes = map[string]insolar.Reference{
 	insolar.GenesisNameMember + GenesisPrototypeSuffix:               *member.PrototypeReference,
 	insolar.GenesisNameMigrationAdminMember + GenesisPrototypeSuffix: *member.PrototypeReference,
 	insolar.GenesisNameMigrationWallet + GenesisPrototypeSuffix:      *wallet.PrototypeReference,
-	insolar.GenesisNameStandardTariff + GenesisPrototypeSuffix:       *tariff.PrototypeReference,
-	insolar.GenesisNameTariff + GenesisPrototypeSuffix:               *tariff.PrototypeReference,
 	insolar.GenesisNameWallet + GenesisPrototypeSuffix:               *wallet.PrototypeReference,
 }
 

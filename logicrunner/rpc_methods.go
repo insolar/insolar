@@ -19,7 +19,8 @@ package logicrunner
 import (
 	"context"
 	"strings"
-	"sync"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
@@ -29,7 +30,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
-	"github.com/pkg/errors"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.ProxyImplementation -o ./ -s _mock.go -g
@@ -249,10 +249,6 @@ func (m *executionProxyImplementation) SaveAsChild(
 	reqResult := newRequestResult(refBytes, req.Callee)
 	return m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
 }
-
-var iteratorBuffSize = 1000
-var iteratorMap = make(map[string]artifacts.RefIterator)
-var iteratorMapLock = sync.RWMutex{}
 
 func (m *executionProxyImplementation) DeactivateObject(
 	ctx context.Context, current *Transcript, req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp,
