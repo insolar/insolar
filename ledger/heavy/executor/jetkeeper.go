@@ -38,6 +38,8 @@ type JetKeeper interface {
 	AddDropConfirmation(ctx context.Context, pn insolar.PulseNumber, jet insolar.JetID, split bool) error
 	// AddHotConfirmation performs adding hot confirmation to storage and checks pulse completion.
 	AddHotConfirmation(ctx context.Context, pn insolar.PulseNumber, jet insolar.JetID, split bool) error
+	// AddBackupConfirmation performs adding backup confirmation to storage and checks pulse completion.
+	AddBackupConfirmation(ctx context.Context, pn insolar.PulseNumber) error
 	// TopSyncPulse provides access to highest synced (replicated) pulse.
 	TopSyncPulse() insolar.PulseNumber
 }
@@ -60,10 +62,11 @@ type dbJetKeeper struct {
 }
 
 type jetInfo struct {
-	JetID         insolar.JetID
-	HotConfirmed  []insolar.JetID
-	DropConfirmed bool
-	Split         bool
+	JetID           insolar.JetID
+	HotConfirmed    []insolar.JetID
+	DropConfirmed   bool
+	BackupConfirmed bool
+	Split           bool
 }
 
 func (j *jetInfo) addDrop(newJetID insolar.JetID, split bool) error {
@@ -91,6 +94,10 @@ func (j *jetInfo) checkIncomingHot(incomingJetID insolar.JetID) error {
 	return nil
 }
 
+func (j *jetInfo) addBackup() {
+	j.BackupConfirmed = true
+}
+
 func (j *jetInfo) addHot(newJetID insolar.JetID, parentID insolar.JetID) error {
 	err := j.checkIncomingHot(newJetID)
 	if err != nil {
@@ -104,6 +111,10 @@ func (j *jetInfo) addHot(newJetID insolar.JetID, parentID insolar.JetID) error {
 }
 
 func (j *jetInfo) isConfirmed() bool {
+	if !j.BackupConfirmed {
+		return false
+	}
+
 	if !j.DropConfirmed {
 		return false
 	}
@@ -136,7 +147,7 @@ func (jk *dbJetKeeper) AddHotConfirmation(ctx context.Context, pn insolar.PulseN
 		return errors.Wrapf(err, "failed to save updated jets")
 	}
 
-	err := jk.updateTopSyncPulse(ctx, pn, id)
+	err := jk.updateTopSyncPulse(ctx, pn)
 	return errors.Wrapf(err, "AddHotConfirmation. propagateConsistency returns error")
 }
 
@@ -150,12 +161,46 @@ func (jk *dbJetKeeper) AddDropConfirmation(ctx context.Context, pn insolar.Pulse
 		return errors.Wrapf(err, "AddDropConfirmation. failed to save updated jets")
 	}
 
-	err := jk.updateTopSyncPulse(ctx, pn, id)
+	err := jk.updateTopSyncPulse(ctx, pn)
 
 	return errors.Wrap(err, "propagateConsistency returns error")
 }
 
-func (jk *dbJetKeeper) updateTopSyncPulse(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) error {
+func (jk *dbJetKeeper) AddBackupConfirmation(ctx context.Context, pn insolar.PulseNumber) error {
+	jk.Lock()
+	defer jk.Unlock()
+
+	inslogger.FromContext(ctx).Debug("AddBackupConfirmation. pulse: ", pn)
+
+	if err := jk.updateBackup(ctx, pn); err != nil {
+		return errors.Wrapf(err, "AddDropConfirmation. failed to save updated jets")
+	}
+
+	err := jk.updateTopSyncPulse(ctx, pn)
+
+	return errors.Wrap(err, "propagateConsistency returns error")
+
+	return nil
+}
+
+func (jk *dbJetKeeper) updateBackup(ctx context.Context, pulse insolar.PulseNumber) error {
+	jets, err := jk.get(pulse)
+	if err != nil && err != store.ErrNotFound {
+		return errors.Wrapf(err, "updateBackup. can't get pulse: %d", pulse)
+	}
+
+	if len(jets) == 0 {
+		return errors.New("backup confirmation comes first. It's impossible")
+	}
+
+	for i := range jets {
+		jets[i].addBackup()
+	}
+
+	return jk.set(pulse, jets)
+}
+
+func (jk *dbJetKeeper) updateTopSyncPulse(ctx context.Context, pn insolar.PulseNumber) error {
 	logger := inslogger.FromContext(ctx)
 
 	prev, err := jk.pulses.Backwards(ctx, pn, 1)
@@ -165,8 +210,7 @@ func (jk *dbJetKeeper) updateTopSyncPulse(ctx context.Context, pn insolar.PulseN
 
 	top := jk.topSyncPulse()
 
-	logger.Debug("propagateConsistency. pulse: ", pn, ". ID: ", jetID.DebugString(),
-		". top: ", top, ". prev.PulseNumber: ", prev.PulseNumber)
+	logger.Debug("propagateConsistency. pulse: ", pn, ". top: ", top, ". prev.PulseNumber: ", prev.PulseNumber)
 
 	if prev.PulseNumber != top {
 		// We should sync pulses sequentially. We can't skip.
