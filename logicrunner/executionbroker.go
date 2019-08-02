@@ -39,6 +39,7 @@ type ExecutionBrokerI interface {
 	AddFreshRequest(ctx context.Context, transcript *Transcript)
 	AddRequestsFromPrevExecutor(ctx context.Context, transcripts ...*Transcript)
 	AddRequestsFromLedger(ctx context.Context, transcripts ...*Transcript)
+	EnqueueAbandonedOutgoingRequest(req *record.OutgoingRequest)
 	AddAdditionalRequestFromPrevExecutor(ctx context.Context, transcript *Transcript)
 
 	PendingState() insolar.PendingState
@@ -63,10 +64,15 @@ type ExecutionBroker struct {
 
 	stateLock sync.Mutex
 
-	mutable          *TranscriptDequeue
-	immutable        *TranscriptDequeue
-	finished         *TranscriptDequeue
-	currentList      *CurrentExecutionList
+	mutable   *TranscriptDequeue
+	immutable *TranscriptDequeue
+	finished  *TranscriptDequeue
+
+	outgoingQueue     GenericQueue
+	outgoingQueueLock sync.Mutex
+
+	currentList *CurrentExecutionList
+
 	executionArchive ExecutionArchive
 
 	publisher        watermillMsg.Publisher
@@ -100,11 +106,11 @@ func NewExecutionBroker(
 	return &ExecutionBroker{
 		Ref: ref,
 
-		mutable:   NewTranscriptDequeue(),
-		immutable: NewTranscriptDequeue(),
-		finished:  NewTranscriptDequeue(),
-		// AALEKSEEV TODO FIXME add a queue of outgoing requests
-		currentList: NewCurrentExecutionList(),
+		mutable:       NewTranscriptDequeue(),
+		immutable:     NewTranscriptDequeue(),
+		finished:      NewTranscriptDequeue(),
+		outgoingQueue: NewGenericQueue(),
+		currentList:   NewCurrentExecutionList(),
 
 		publisher:        publisher,
 		requestsExecutor: requestsExecutor,
@@ -713,12 +719,18 @@ func (q *ExecutionBroker) AddRequestsFromPrevExecutor(ctx context.Context, trans
 	q.Prepend(ctx, true, transcripts...)
 }
 
-// AALEKSEEV TODO FIXME write a similar method for outgoing requests
 func (q *ExecutionBroker) AddRequestsFromLedger(ctx context.Context, transcripts ...*Transcript) {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
 	q.Prepend(ctx, true, transcripts...)
+}
+
+func (eb *ExecutionBroker) EnqueueAbandonedOutgoingRequest(req *record.OutgoingRequest) {
+	eb.outgoingQueueLock.Lock()
+	defer eb.outgoingQueueLock.Unlock()
+
+	eb.outgoingQueue.Enqueue(req)
 }
 
 func (q *ExecutionBroker) AddAdditionalRequestFromPrevExecutor(

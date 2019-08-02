@@ -126,8 +126,7 @@ func (rf *requestsFetcher) fetch(ctx context.Context) error {
 			tr := NewTranscript(requestCtx, reqRef, *incoming)
 			rf.broker.AddRequestsFromLedger(ctx, tr)
 		case outgoing != nil:
-			// AALEKSEEV TODO FIXME
-			logger.Error("AALEKSEEV TODO FIXME add support of handling OutgoingRequests notifications")
+			rf.broker.EnqueueAbandonedOutgoingRequest(outgoing)
 		default:
 			logger.Error("requestsFetcher.fetch: both `incoming` and `outgoing` are nils")
 		}
