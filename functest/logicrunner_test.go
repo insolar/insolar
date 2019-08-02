@@ -1333,7 +1333,7 @@ package main
 import (
 	"github.com/insolar/insolar/insolar"
 	 "github.com/insolar/insolar/logicrunner/builtin/foundation"
-	one "github.com/insolar/insolar/application/proxy/first_contract"
+	one "github.com/insolar/insolar/application/proxy/simple_contract_with_sleep"
 )
 
 type Two struct {
@@ -1359,7 +1359,7 @@ func (r *Two) NoWaitGet(OneRef insolar.Reference) (int, error) {
 	var contractOneCode = string(data)
 	var n = 100
 
-	contractOneRef := uploadContractOnce(t, "first_contract", contractOneCode)
+	contractOneRef := uploadContractOnce(t, "simple_contract_with_sleep", contractOneCode)
 	firstObjRef := callConstructor(t, contractOneRef, "NewWithNumber", n)
 
 	contractTwoRef := uploadContractOnce(t, "second_contract", contractTwoCode)
