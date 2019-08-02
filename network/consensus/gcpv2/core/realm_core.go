@@ -301,7 +301,5 @@ func (r *coreRealm) VerifyPacketPulseNumber(ctx context.Context, packet transpor
 	sourceID := packet.GetSourceID()
 	localID := r.self.GetNodeID()
 
-	return false, errors.NewPulseRoundMismatchError(pn,
-		fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v, source=%v, local=%d",
-			filterPN, pn, sourceID, localID))
+	return false, errors.NewPulseRoundMismatchErrorDef(pn, filterPN, localID, sourceID)
 }
