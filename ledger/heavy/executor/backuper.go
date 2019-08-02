@@ -28,20 +28,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/pkg/errors"
 )
-
-type Config struct {
-	TmpDirectory          string
-	TargetDirectory       string
-	BackupInfoFile        string
-	BackupConfirmFile     string
-	BackupDirNameTemplate string
-	BackupWaitPeriod      uint
-}
 
 type BackupInfo struct {
 	MD5                 string
@@ -55,7 +47,7 @@ type BackupMaker struct {
 	lastBackupedVersion uint64
 	lastBackupedPulse   insolar.PulseNumber
 	backuper            store.Backuper
-	config              Config
+	config              configuration.Backup
 }
 
 func isPathExists(dirName string) error {
@@ -69,7 +61,7 @@ func isPathExists(dirName string) error {
 	return nil
 }
 
-func checkConfig(config Config) error {
+func checkConfig(config configuration.Backup) error {
 	if err := isPathExists(config.TmpDirectory); err != nil {
 		return errors.Wrap(err, "checkDirectory returns error")
 	}
@@ -92,9 +84,13 @@ func checkConfig(config Config) error {
 	return nil
 }
 
-func NewBackupMaker(backuper store.Backuper, config Config, lastBackupedPulse insolar.PulseNumber) (*BackupMaker, error) {
-	if err := checkConfig(config); err != nil {
-		return nil, errors.Wrap(err, "bad config")
+func NewBackupMaker(ctx context.Context, backuper store.Backuper, config configuration.Backup, lastBackupedPulse insolar.PulseNumber) (*BackupMaker, error) {
+	if config.Enabled {
+		if err := checkConfig(config); err != nil {
+			return nil, errors.Wrap(err, "bad config")
+		}
+	} else {
+		inslogger.FromContext(ctx).Info("Backup is disabled")
 	}
 
 	return &BackupMaker{
@@ -258,6 +254,10 @@ func (b *BackupMaker) doBackup(ctx context.Context, lastFinalizedPulse insolar.P
 func (b *BackupMaker) Start(ctx context.Context, lastFinalizedPulse insolar.PulseNumber) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
+
+	if !b.config.Enabled {
+		return errors.New("backup is disabled")
+	}
 
 	if lastFinalizedPulse <= b.lastBackupedPulse {
 		return errors.Errorf("given pulse %d must more then last backuped %d", lastFinalizedPulse, b.lastBackupedPulse)
