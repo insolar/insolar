@@ -1,5 +1,7 @@
 package logicrunner
 
+// AALEKSEEV TODO delete this
+
 type GenericQueue interface {
 	Empty() bool
 	Enqueue(payload interface{})

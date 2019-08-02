@@ -39,7 +39,7 @@ type ExecutionBrokerI interface {
 	AddFreshRequest(ctx context.Context, transcript *Transcript)
 	AddRequestsFromPrevExecutor(ctx context.Context, transcripts ...*Transcript)
 	AddRequestsFromLedger(ctx context.Context, transcripts ...*Transcript)
-	EnqueueAbandonedOutgoingRequest(req *record.OutgoingRequest)
+	EnqueueAbandonedOutgoingRequest(ctx context.Context, req *record.OutgoingRequest)
 	AddAdditionalRequestFromPrevExecutor(ctx context.Context, transcript *Transcript)
 
 	PendingState() insolar.PendingState
@@ -68,8 +68,7 @@ type ExecutionBroker struct {
 	immutable *TranscriptDequeue
 	finished  *TranscriptDequeue
 
-	outgoingQueue     GenericQueue
-	outgoingQueueLock sync.Mutex
+	abandonedOutgoingRequestSender AbandonedOutgoingRequestSender
 
 	currentList *CurrentExecutionList
 
@@ -106,11 +105,12 @@ func NewExecutionBroker(
 	return &ExecutionBroker{
 		Ref: ref,
 
-		mutable:       NewTranscriptDequeue(),
-		immutable:     NewTranscriptDequeue(),
-		finished:      NewTranscriptDequeue(),
-		outgoingQueue: NewGenericQueue(),
-		currentList:   NewCurrentExecutionList(),
+		mutable:     NewTranscriptDequeue(),
+		immutable:   NewTranscriptDequeue(),
+		finished:    NewTranscriptDequeue(),
+		currentList: NewCurrentExecutionList(),
+
+		abandonedOutgoingRequestSender: NewAbandonedOutgoingRequestSender(),
 
 		publisher:        publisher,
 		requestsExecutor: requestsExecutor,
@@ -726,11 +726,8 @@ func (q *ExecutionBroker) AddRequestsFromLedger(ctx context.Context, transcripts
 	q.Prepend(ctx, true, transcripts...)
 }
 
-func (eb *ExecutionBroker) EnqueueAbandonedOutgoingRequest(req *record.OutgoingRequest) {
-	eb.outgoingQueueLock.Lock()
-	defer eb.outgoingQueueLock.Unlock()
-
-	eb.outgoingQueue.Enqueue(req)
+func (eb *ExecutionBroker) EnqueueAbandonedOutgoingRequest(ctx context.Context, req *record.OutgoingRequest) {
+	eb.abandonedOutgoingRequestSender.EnqueueAbandonedOutgoingRequest(ctx, req)
 }
 
 func (q *ExecutionBroker) AddAdditionalRequestFromPrevExecutor(

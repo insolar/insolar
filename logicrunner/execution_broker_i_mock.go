@@ -47,8 +47,8 @@ type ExecutionBrokerIMock struct {
 	beforeAddRequestsFromPrevExecutorCounter uint64
 	AddRequestsFromPrevExecutorMock          mExecutionBrokerIMockAddRequestsFromPrevExecutor
 
-	funcEnqueueAbandonedOutgoingRequest          func(req *record.OutgoingRequest)
-	inspectFuncEnqueueAbandonedOutgoingRequest   func(req *record.OutgoingRequest)
+	funcEnqueueAbandonedOutgoingRequest          func(ctx context.Context, req *record.OutgoingRequest)
+	inspectFuncEnqueueAbandonedOutgoingRequest   func(ctx context.Context, req *record.OutgoingRequest)
 	afterEnqueueAbandonedOutgoingRequestCounter  uint64
 	beforeEnqueueAbandonedOutgoingRequestCounter uint64
 	EnqueueAbandonedOutgoingRequestMock          mExecutionBrokerIMockEnqueueAbandonedOutgoingRequest
@@ -1138,11 +1138,12 @@ type ExecutionBrokerIMockEnqueueAbandonedOutgoingRequestExpectation struct {
 
 // ExecutionBrokerIMockEnqueueAbandonedOutgoingRequestParams contains parameters of the ExecutionBrokerI.EnqueueAbandonedOutgoingRequest
 type ExecutionBrokerIMockEnqueueAbandonedOutgoingRequestParams struct {
+	ctx context.Context
 	req *record.OutgoingRequest
 }
 
 // Expect sets up expected params for ExecutionBrokerI.EnqueueAbandonedOutgoingRequest
-func (mmEnqueueAbandonedOutgoingRequest *mExecutionBrokerIMockEnqueueAbandonedOutgoingRequest) Expect(req *record.OutgoingRequest) *mExecutionBrokerIMockEnqueueAbandonedOutgoingRequest {
+func (mmEnqueueAbandonedOutgoingRequest *mExecutionBrokerIMockEnqueueAbandonedOutgoingRequest) Expect(ctx context.Context, req *record.OutgoingRequest) *mExecutionBrokerIMockEnqueueAbandonedOutgoingRequest {
 	if mmEnqueueAbandonedOutgoingRequest.mock.funcEnqueueAbandonedOutgoingRequest != nil {
 		mmEnqueueAbandonedOutgoingRequest.mock.t.Fatalf("ExecutionBrokerIMock.EnqueueAbandonedOutgoingRequest mock is already set by Set")
 	}
@@ -1151,7 +1152,7 @@ func (mmEnqueueAbandonedOutgoingRequest *mExecutionBrokerIMockEnqueueAbandonedOu
 		mmEnqueueAbandonedOutgoingRequest.defaultExpectation = &ExecutionBrokerIMockEnqueueAbandonedOutgoingRequestExpectation{}
 	}
 
-	mmEnqueueAbandonedOutgoingRequest.defaultExpectation.params = &ExecutionBrokerIMockEnqueueAbandonedOutgoingRequestParams{req}
+	mmEnqueueAbandonedOutgoingRequest.defaultExpectation.params = &ExecutionBrokerIMockEnqueueAbandonedOutgoingRequestParams{ctx, req}
 	for _, e := range mmEnqueueAbandonedOutgoingRequest.expectations {
 		if minimock.Equal(e.params, mmEnqueueAbandonedOutgoingRequest.defaultExpectation.params) {
 			mmEnqueueAbandonedOutgoingRequest.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmEnqueueAbandonedOutgoingRequest.defaultExpectation.params)
@@ -1162,7 +1163,7 @@ func (mmEnqueueAbandonedOutgoingRequest *mExecutionBrokerIMockEnqueueAbandonedOu
 }
 
 // Inspect accepts an inspector function that has same arguments as the ExecutionBrokerI.EnqueueAbandonedOutgoingRequest
-func (mmEnqueueAbandonedOutgoingRequest *mExecutionBrokerIMockEnqueueAbandonedOutgoingRequest) Inspect(f func(req *record.OutgoingRequest)) *mExecutionBrokerIMockEnqueueAbandonedOutgoingRequest {
+func (mmEnqueueAbandonedOutgoingRequest *mExecutionBrokerIMockEnqueueAbandonedOutgoingRequest) Inspect(f func(ctx context.Context, req *record.OutgoingRequest)) *mExecutionBrokerIMockEnqueueAbandonedOutgoingRequest {
 	if mmEnqueueAbandonedOutgoingRequest.mock.inspectFuncEnqueueAbandonedOutgoingRequest != nil {
 		mmEnqueueAbandonedOutgoingRequest.mock.t.Fatalf("Inspect function is already set for ExecutionBrokerIMock.EnqueueAbandonedOutgoingRequest")
 	}
@@ -1186,7 +1187,7 @@ func (mmEnqueueAbandonedOutgoingRequest *mExecutionBrokerIMockEnqueueAbandonedOu
 }
 
 //Set uses given function f to mock the ExecutionBrokerI.EnqueueAbandonedOutgoingRequest method
-func (mmEnqueueAbandonedOutgoingRequest *mExecutionBrokerIMockEnqueueAbandonedOutgoingRequest) Set(f func(req *record.OutgoingRequest)) *ExecutionBrokerIMock {
+func (mmEnqueueAbandonedOutgoingRequest *mExecutionBrokerIMockEnqueueAbandonedOutgoingRequest) Set(f func(ctx context.Context, req *record.OutgoingRequest)) *ExecutionBrokerIMock {
 	if mmEnqueueAbandonedOutgoingRequest.defaultExpectation != nil {
 		mmEnqueueAbandonedOutgoingRequest.mock.t.Fatalf("Default expectation is already set for the ExecutionBrokerI.EnqueueAbandonedOutgoingRequest method")
 	}
@@ -1200,15 +1201,15 @@ func (mmEnqueueAbandonedOutgoingRequest *mExecutionBrokerIMockEnqueueAbandonedOu
 }
 
 // EnqueueAbandonedOutgoingRequest implements ExecutionBrokerI
-func (mmEnqueueAbandonedOutgoingRequest *ExecutionBrokerIMock) EnqueueAbandonedOutgoingRequest(req *record.OutgoingRequest) {
+func (mmEnqueueAbandonedOutgoingRequest *ExecutionBrokerIMock) EnqueueAbandonedOutgoingRequest(ctx context.Context, req *record.OutgoingRequest) {
 	mm_atomic.AddUint64(&mmEnqueueAbandonedOutgoingRequest.beforeEnqueueAbandonedOutgoingRequestCounter, 1)
 	defer mm_atomic.AddUint64(&mmEnqueueAbandonedOutgoingRequest.afterEnqueueAbandonedOutgoingRequestCounter, 1)
 
 	if mmEnqueueAbandonedOutgoingRequest.inspectFuncEnqueueAbandonedOutgoingRequest != nil {
-		mmEnqueueAbandonedOutgoingRequest.inspectFuncEnqueueAbandonedOutgoingRequest(req)
+		mmEnqueueAbandonedOutgoingRequest.inspectFuncEnqueueAbandonedOutgoingRequest(ctx, req)
 	}
 
-	params := &ExecutionBrokerIMockEnqueueAbandonedOutgoingRequestParams{req}
+	params := &ExecutionBrokerIMockEnqueueAbandonedOutgoingRequestParams{ctx, req}
 
 	// Record call args
 	mmEnqueueAbandonedOutgoingRequest.EnqueueAbandonedOutgoingRequestMock.mutex.Lock()
@@ -1225,7 +1226,7 @@ func (mmEnqueueAbandonedOutgoingRequest *ExecutionBrokerIMock) EnqueueAbandonedO
 	if mmEnqueueAbandonedOutgoingRequest.EnqueueAbandonedOutgoingRequestMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmEnqueueAbandonedOutgoingRequest.EnqueueAbandonedOutgoingRequestMock.defaultExpectation.Counter, 1)
 		want := mmEnqueueAbandonedOutgoingRequest.EnqueueAbandonedOutgoingRequestMock.defaultExpectation.params
-		got := ExecutionBrokerIMockEnqueueAbandonedOutgoingRequestParams{req}
+		got := ExecutionBrokerIMockEnqueueAbandonedOutgoingRequestParams{ctx, req}
 		if want != nil && !minimock.Equal(*want, got) {
 			mmEnqueueAbandonedOutgoingRequest.t.Errorf("ExecutionBrokerIMock.EnqueueAbandonedOutgoingRequest got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
@@ -1234,10 +1235,10 @@ func (mmEnqueueAbandonedOutgoingRequest *ExecutionBrokerIMock) EnqueueAbandonedO
 
 	}
 	if mmEnqueueAbandonedOutgoingRequest.funcEnqueueAbandonedOutgoingRequest != nil {
-		mmEnqueueAbandonedOutgoingRequest.funcEnqueueAbandonedOutgoingRequest(req)
+		mmEnqueueAbandonedOutgoingRequest.funcEnqueueAbandonedOutgoingRequest(ctx, req)
 		return
 	}
-	mmEnqueueAbandonedOutgoingRequest.t.Fatalf("Unexpected call to ExecutionBrokerIMock.EnqueueAbandonedOutgoingRequest. %v", req)
+	mmEnqueueAbandonedOutgoingRequest.t.Fatalf("Unexpected call to ExecutionBrokerIMock.EnqueueAbandonedOutgoingRequest. %v %v", ctx, req)
 
 }
 

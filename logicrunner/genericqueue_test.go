@@ -1,5 +1,7 @@
 package logicrunner
 
+// AALEKSEEV TODO delete this
+
 import (
 	"testing"
 
