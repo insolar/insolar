@@ -23,8 +23,9 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/logicrunner/writecontroller"
 
 	"github.com/pkg/errors"
 
@@ -46,7 +47,7 @@ type Dependencies struct {
 	lr             *LogicRunner
 	Sender         bus.Sender
 	JetStorage     jet.Storage
-	WriteAccessor  common.WriteAccessor
+	WriteAccessor  writecontroller.WriteAccessor
 }
 
 type Init struct {

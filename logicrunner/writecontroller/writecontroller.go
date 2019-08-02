@@ -14,7 +14,7 @@
 // limitations under the License.
 ///
 
-package common
+package writecontroller
 
 import (
 	"context"
@@ -30,7 +30,7 @@ var (
 	ErrWriteClosed = errors.New("requested pulse is closed for writing")
 )
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner/common.WriteAccessor -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/writecontroller.WriteAccessor -o ./ -s _mock.go -g
 
 type WriteAccessor interface {
 	// Begin requests writing access for pulse number. If requested pulse is closed, ErrWriteClosed will be returned.
@@ -41,7 +41,7 @@ type WriteAccessor interface {
 	WaitOpened(ctx context.Context)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner/common.WriteManager -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/writecontroller.WriteManager -o ./ -s _mock.go -g
 
 type WriteManager interface {
 	// Open marks pulse number as opened for writing. It can be used later by Begin from accessor.

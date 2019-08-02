@@ -42,6 +42,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin"
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin"
+	"github.com/insolar/insolar/logicrunner/writecontroller"
 )
 
 const maxQueueLength = 10
@@ -67,7 +68,7 @@ type LogicRunner struct {
 	SenderWithRetry            *bus.WaitOKSender
 	StateStorage               StateStorage
 	ResultsMatcher             ResultMatcher
-	WriteController            *lrCommon.WriteController
+	WriteController            *writecontroller.WriteController
 
 	Cfg *configuration.LogicRunner
 
@@ -115,7 +116,7 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 		lr.Cfg,
 	)
 
-	lr.WriteController = lrCommon.NewWriteController()
+	lr.WriteController = writecontroller.NewWriteController()
 	err := lr.WriteController.Open(ctx, insolar.FirstPulseNumber)
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize write controller")

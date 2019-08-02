@@ -30,7 +30,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -63,7 +63,7 @@ func TestHandleAdditionalCallFromPreviousExecutor_Present(t *testing.T) {
 				h := &HandleAdditionalCallFromPreviousExecutor{
 					dep: &Dependencies{
 						Sender: bus.NewSenderMock(t).ReplyMock.Return(),
-						WriteAccessor: common.NewWriteAccessorMock(t).
+						WriteAccessor: writecontroller.NewWriteAccessorMock(t).
 							BeginMock.Return(func() {}, nil),
 					},
 					Parcel: parcel,

@@ -47,7 +47,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/testutils"
@@ -678,7 +678,7 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 					IsEmptyMock.Return(false).
 					OnPulseMock.Return([]insolar.Message{&message.ExecutorResults{}})
 
-				lr.WriteController = common.NewWriteController()
+				lr.WriteController = writecontroller.NewWriteController()
 				_ = lr.WriteController.Open(ctx, insolar.FirstPulseNumber)
 
 				return lr
@@ -698,7 +698,7 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 					IsEmptyMock.Return(true).
 					OnPulseMock.Return([]insolar.Message{})
 
-				lr.WriteController = common.NewWriteController()
+				lr.WriteController = writecontroller.NewWriteController()
 				_ = lr.WriteController.Open(ctx, insolar.FirstPulseNumber)
 
 				return lr

@@ -33,7 +33,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -192,7 +192,7 @@ func TestHandleCall_Present(t *testing.T) {
 				},
 				Sender:        nil,
 				JetStorage:    nil,
-				WriteAccessor: common.NewWriteAccessorMock(mc).BeginMock.Return(func() {}, nil),
+				WriteAccessor: writecontroller.NewWriteAccessorMock(mc).BeginMock.Return(func() {}, nil),
 			},
 			Message: payload.Meta{},
 			Parcel:  nil,
@@ -254,8 +254,8 @@ func TestHandleCall_Present(t *testing.T) {
 				},
 				Sender:     nil,
 				JetStorage: nil,
-				WriteAccessor: common.NewWriteAccessorMock(mc).
-					BeginMock.Return(func() {}, common.ErrWriteClosed),
+				WriteAccessor: writecontroller.NewWriteAccessorMock(mc).
+					BeginMock.Return(func() {}, writecontroller.ErrWriteClosed),
 			},
 			Message: payload.Meta{},
 			Parcel:  nil,
@@ -308,7 +308,7 @@ func TestHandleCall_Present(t *testing.T) {
 				},
 				Sender:        nil,
 				JetStorage:    nil,
-				WriteAccessor: common.NewWriteAccessorMock(mc),
+				WriteAccessor: writecontroller.NewWriteAccessorMock(mc),
 			},
 			Message: payload.Meta{},
 			Parcel:  nil,
@@ -364,7 +364,7 @@ func TestHandleCall_Present(t *testing.T) {
 				},
 				Sender:        nil,
 				JetStorage:    nil,
-				WriteAccessor: common.NewWriteAccessorMock(mc),
+				WriteAccessor: writecontroller.NewWriteAccessorMock(mc),
 			},
 			Message: payload.Meta{},
 			Parcel:  nil,
@@ -416,7 +416,7 @@ func TestHandleCall_Present(t *testing.T) {
 				},
 				Sender:        nil,
 				JetStorage:    nil,
-				WriteAccessor: common.NewWriteAccessorMock(mc),
+				WriteAccessor: writecontroller.NewWriteAccessorMock(mc),
 			},
 			Message: payload.Meta{},
 			Parcel:  nil,
