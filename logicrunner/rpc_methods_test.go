@@ -309,7 +309,7 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	am := artifacts.NewClientMock(t)
 	dc := artifacts.NewDescriptorsCacheMock(t)
 	cr := testutils.NewContractRequesterMock(t)
-	os := NewOutgoingRequestSenderMock(t)
+	os := NewOutgoingRequestSender(cr, am)
 
 	requestRef := gen.Reference()
 

@@ -20,12 +20,13 @@ import (
 	"context"
 	"strings"
 
+	"github.com/insolar/insolar/insolar/reply"
+
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -171,7 +172,7 @@ func (m *executionProxyImplementation) RouteCall(
 		return errors.New("Try to call route from immutable method")
 	}
 
-	incoming, outgoing := buildIncomingAndOutgoingCallRequests(ctx, current, req)
+	outgoing := buildOutgoingRequest(ctx, current, req)
 
 	// Step 1. Register outgoing request.
 
@@ -190,12 +191,19 @@ func (m *executionProxyImplementation) RouteCall(
 		return nil
 	}
 
+	// Step 2. Send the request and register the result (both is done by outgoingSender)
+
 	outgoingReqRef := insolar.NewReference(*outgoingReqID)
 
-	// AALEKSEEV TODO move the logic to outgoingSender
-	//return m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
+	//	var incoming *record.IncomingRequest
+	//	rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
+	//	if incoming != nil {
+	//		current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
+	//	}
+	// 	return err
 
 	// Step 2. Actually make a call.
+	incoming := buildIncomingRequestFromOutgoing(outgoing)
 	callMsg := &message.CallMethod{IncomingRequest: *incoming} // AALEKSEEV TODO FIXME copy-paste from here
 	res, err := m.cr.CallMethod(ctx, callMsg)
 	if err == nil && req.Wait {
@@ -218,6 +226,7 @@ func (m *executionProxyImplementation) RouteCall(
 		return err
 	}
 	return registerResultErr
+
 }
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
@@ -235,6 +244,8 @@ func (m *executionProxyImplementation) SaveAsChild(
 	if err != nil {
 		return err
 	}
+
+	// AALEKSEEV TODO REFACTOR move to OutgoingSender
 
 	// Send the request
 	msg := &message.CallMethod{IncomingRequest: *incoming}
@@ -301,7 +312,8 @@ func (m *validationProxyImplementation) RouteCall(
 		return errors.New("immutable method can't make calls")
 	}
 
-	incoming, _ := buildIncomingAndOutgoingCallRequests(ctx, current, req)
+	outgoing := buildOutgoingRequest(ctx, current, req)
+	incoming := buildIncomingRequestFromOutgoing(outgoing)
 
 	reqRes := current.HasOutgoingRequest(ctx, *incoming)
 	if reqRes == nil {
@@ -376,9 +388,9 @@ func buildIncomingRequestFromOutgoing(outgoing *record.OutgoingRequest) *record.
 	return &incoming
 }
 
-func buildIncomingAndOutgoingCallRequests(
+func buildOutgoingRequest(
 	_ context.Context, current *Transcript, req rpctypes.UpRouteReq,
-) (*record.IncomingRequest, *record.OutgoingRequest) {
+) *record.OutgoingRequest {
 
 	current.Nonce++
 
@@ -406,12 +418,10 @@ func buildIncomingAndOutgoingCallRequests(
 		outgoing.ReturnMode = record.ReturnNoWait
 	}
 
-	incoming := buildIncomingRequestFromOutgoing(outgoing)
-
-	return incoming, outgoing
+	return outgoing
 }
 
-func buildIncomingAndOutgoingSaveAsChildRequests(
+func buildIncomingAndOutgoingSaveAsChildRequests( // AALEKSEEV TODO REFACTOR
 	_ context.Context, current *Transcript, req rpctypes.UpSaveAsChildReq,
 ) (*record.IncomingRequest, *record.OutgoingRequest) {
 

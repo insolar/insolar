@@ -102,8 +102,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publi
 func (lr *LogicRunner) LRI() {}
 
 func (lr *LogicRunner) Init(ctx context.Context) error {
-	// AALEKSEEV TODO move elsewhere?
-	lr.OutgoingSender = NewOutgoingRequestSender()
+	lr.OutgoingSender = NewOutgoingRequestSender(lr.ContractRequester, lr.ArtifactManager)
 
 	lr.StateStorage = NewStateStorage(
 		lr.Publisher,
