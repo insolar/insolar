@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"github.com/insolar/insolar/api"
 	"io/ioutil"
-	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -1259,15 +1258,13 @@ func (c *One) Get() (int, error) {
 }
 
 func TestMultiplyNoWaitCall(t *testing.T) {
-	var counter = strconv.Itoa(time.Now().Nanosecond())
-
 	var contractTwoCode = `
 package main
 
 import (
 	"github.com/insolar/insolar/insolar"
 	 "github.com/insolar/insolar/logicrunner/builtin/foundation"
-	one "github.com/insolar/insolar/application/proxy/first_contract` + counter + `"
+	one "github.com/insolar/insolar/application/proxy/first_contract"
 )
 
 type Two struct {
@@ -1315,12 +1312,12 @@ func (r *Two) DoNothing() (error) {
 	require.Nil(t, err)
 	var contractOneCode = string(data)
 
-	contractOneRef := uploadContract(t, "first_contract"+counter, contractOneCode)
+	contractOneRef := uploadContractOnce(t, "first_contract", contractOneCode)
 	firstObjRef := callConstructor(t, contractOneRef, "NewWithNumber", 100)
 	firstResult := callMethod(t, firstObjRef, "GetAndIncrement")
 	require.Empty(t, firstResult.Error)
 
-	contractTwoRef := uploadContract(t, "second_contract"+counter, contractTwoCode)
+	contractTwoRef := uploadContractOnce(t, "second_contract", contractTwoCode)
 	secondObjRef := callConstructor(t, contractTwoRef, "NewWithOne", 100)
 	secondRresult := callMethod(t, secondObjRef, "Get")
 	require.Empty(t, secondRresult.Error)
@@ -1329,15 +1326,13 @@ func (r *Two) DoNothing() (error) {
 }
 
 func TestMultiplyNoWaitCallsOnSomeObject(t *testing.T) {
-	var counter = strconv.Itoa(time.Now().Nanosecond())
-
 	var contractTwoCode = `
 package main
 
 import (
 	"github.com/insolar/insolar/insolar"
 	 "github.com/insolar/insolar/logicrunner/builtin/foundation"
-	one "github.com/insolar/insolar/application/proxy/first_contract` + counter + `"
+	one "github.com/insolar/insolar/application/proxy/first_contract"
 )
 
 type Two struct {
@@ -1363,10 +1358,10 @@ func (r *Two) NoWaitGet(OneRef insolar.Reference) (int, error) {
 	var contractOneCode = string(data)
 	var n = 100
 
-	contractOneRef := uploadContract(t, "first_contract"+counter, contractOneCode)
+	contractOneRef := uploadContractOnce(t, "first_contract", contractOneCode)
 	firstObjRef := callConstructor(t, contractOneRef, "NewWithNumber", n)
 
-	contractTwoRef := uploadContract(t, "second_contract"+counter, contractTwoCode)
+	contractTwoRef := uploadContractOnce(t, "second_contract", contractTwoCode)
 	secondObjRef := callConstructor(t, contractTwoRef, "New")
 	secondResult := callMethod(t, secondObjRef, "NoWaitGet", firstObjRef)
 	require.Empty(t, secondResult.Error)
