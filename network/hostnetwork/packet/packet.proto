@@ -136,7 +136,7 @@ message PermitPayload {
 
 message BootstrapResponse {
     BootstrapResponseCode Code = 1;
-    uint32 ETA = 2;
+    uint32 ETASeconds = 2;
     pulse.PulseProto Pulse = 3 [(gogoproto.nullable) = false];
 }
 

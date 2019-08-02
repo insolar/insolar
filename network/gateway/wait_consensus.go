@@ -52,20 +52,28 @@ package gateway
 
 import (
 	"context"
+	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 )
 
 func newWaitConsensus(b *Base) *WaitConsensus {
-	return &WaitConsensus{b}
+	return &WaitConsensus{b, make(chan struct{})}
 }
 
 type WaitConsensus struct {
 	*Base
+	consensusFinished chan struct{}
 }
 
 func (g *WaitConsensus) Run(ctx context.Context) {
+	select {
+	case <-time.After(g.bootstrapETA):
+		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState)
+	case <-g.consensusFinished:
+		g.Gatewayer.SwitchState(ctx, insolar.WaitMinRoles)
+	}
 }
 
 func (g *WaitConsensus) GetState() insolar.NetworkState {
@@ -73,5 +81,5 @@ func (g *WaitConsensus) GetState() insolar.NetworkState {
 }
 
 func (g *WaitConsensus) OnConsensusFinished(ctx context.Context, report network.Report) {
-	g.Gatewayer.SwitchState(ctx, insolar.WaitMinRoles)
+	close(g.consensusFinished)
 }

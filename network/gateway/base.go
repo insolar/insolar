@@ -96,7 +96,7 @@ type Base struct {
 	ConsensusController   consensus.Controller
 	ConsensusPulseHandler network.PulseHandler
 
-	bootstrapETA    insolar.PulseNumber
+	bootstrapETA    time.Duration
 	originCandidate *adapters.Candidate
 }
 
@@ -221,9 +221,9 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 
 	return g.HostNetwork.BuildResponse(ctx, request,
 		&packet.BootstrapResponse{
-			Code:  packet.Accepted,
-			Pulse: *pulse.ToProto(&lastPulse),
-			ETA:   uint32(lastPulse.PulseNumber) + 10, // TODO: move ETA to config
+			Code:       packet.Accepted,
+			Pulse:      *pulse.ToProto(&lastPulse),
+			ETASeconds: uint32(30), // TODO: move ETA to config
 		}), nil
 }
 

@@ -52,75 +52,37 @@ package gateway
 
 import (
 	"context"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/hostnetwork/host"
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network"
+	mock "github.com/insolar/insolar/testutils/network"
+	"github.com/stretchr/testify/assert"
+	"testing"
+	"time"
 )
 
-func newJoinerBootstrap(b *Base) *JoinerBootstrap {
-	return &JoinerBootstrap{b}
+func TestWaitConsensus_ConsensusNotHappenedInETA(t *testing.T) {
+	gatewayer := mock.NewGatewayerMock(t)
+	gatewayer.SwitchStateMock.Set(func(ctx context.Context, state insolar.NetworkState) {
+		assert.Equal(t, insolar.NoNetworkState, state)
+	})
+
+	waitConsensus := newWaitConsensus(&Base{})
+	waitConsensus.Gatewayer = gatewayer
+	waitConsensus.bootstrapETA = time.Millisecond
+
+	waitConsensus.Run(context.Background())
 }
 
-// JoinerBootstrap void network state
-type JoinerBootstrap struct {
-	*Base
-}
+func TestWaitConsensus_ConsensusHappenedInETA(t *testing.T) {
+	gatewayer := mock.NewGatewayerMock(t)
+	gatewayer.SwitchStateMock.Set(func(ctx context.Context, state insolar.NetworkState) {
+		assert.Equal(t, insolar.WaitMinRoles, state)
+	})
 
-func (g *JoinerBootstrap) Run(ctx context.Context) {
-	logger := inslogger.FromContext(ctx)
-	permit, err := g.authorize(ctx)
-	if err != nil {
-		logger.Error(err.Error())
-		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState)
-		return
-	}
+	waitConsensus := newWaitConsensus(&Base{})
+	waitConsensus.Gatewayer = gatewayer
+	waitConsensus.bootstrapETA = time.Second
+	waitConsensus.OnConsensusFinished(context.Background(), network.Report{})
 
-	pulse, err := g.PulseAccessor.Latest(ctx)
-	if err != nil {
-		logger.Error(err.Error())
-		pulse = *insolar.GenesisPulse
-	}
-
-	resp, err := g.BootstrapRequester.Bootstrap(ctx, permit, *g.originCandidate, &pulse)
-	if err != nil {
-		logger.Error(err.Error())
-		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState)
-		return
-	}
-
-	g.bootstrapETA = time.Second * time.Duration(resp.ETASeconds)
-	g.Gatewayer.SwitchState(ctx, insolar.WaitConsensus)
-}
-
-func (g *JoinerBootstrap) GetState() insolar.NetworkState {
-	return insolar.JoinerBootstrap
-}
-
-func (g *JoinerBootstrap) authorize(ctx context.Context) (*packet.Permit, error) {
-	cert := g.CertificateManager.GetCertificate()
-	discoveryNodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), g.NodeKeeper.GetOrigin().ID())
-	// todo: shuffle discoveryNodes
-
-	for _, n := range discoveryNodes {
-		h, _ := host.NewHostN(n.GetHost(), *n.GetNodeRef())
-
-		res, err := g.BootstrapRequester.Authorize(ctx, h, cert)
-		if err != nil {
-			inslogger.FromContext(ctx).Errorf("Error authorizing to host %s: %s", h.String(), err.Error())
-			continue
-		}
-		// Check majority rule
-		if int(res.DiscoveryCount) < cert.GetMajorityRule() {
-			inslogger.FromContext(ctx).Errorf("Check MajorityRule failed on authorize, expect %d, got %d", cert.GetMajorityRule(), res.DiscoveryCount)
-			continue
-		}
-
-		return res.Permit, nil
-	}
-
-	return nil, errors.New("failed to authorize to any discovery node")
+	waitConsensus.Run(context.Background())
 }

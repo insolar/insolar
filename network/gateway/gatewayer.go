@@ -89,7 +89,7 @@ func (n *gatewayer) SwitchState(ctx context.Context, state insolar.NetworkState)
 	}
 
 	n.gateway = n.gateway.NewGateway(ctx, state)
-	n.operableFunc(context.Background(), !n.gateway.NeedLockMessageBus())
+	n.operableFunc(ctx, !n.gateway.NeedLockMessageBus())
 
 	go n.gateway.Run(ctx)
 }

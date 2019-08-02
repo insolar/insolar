@@ -213,6 +213,8 @@ type Gatewayer interface {
 	SwitchState(ctx context.Context, state insolar.NetworkState)
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network.Gateway -o ../testutils/network -s _mock.go -g
+
 // Gateway responds for whole network state
 type Gateway interface {
 	Run(context.Context)
