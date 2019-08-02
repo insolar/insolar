@@ -207,7 +207,7 @@ func (m *executionProxyImplementation) RouteCall(
 	incoming := buildIncomingRequestFromOutgoing(outgoing)
 	callMsg := &message.CallMethod{IncomingRequest: *incoming} // AALEKSEEV TODO FIXME copy-paste from here
 	res, err := m.cr.CallMethod(ctx, callMsg)
-	if err == nil && req.Wait {
+	if err == nil && (outgoing.ReturnMode == record.ReturnResult) {
 		rep.Result = res.(*reply.CallMethod).Result
 	}
 	current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
