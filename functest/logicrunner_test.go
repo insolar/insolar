@@ -19,7 +19,6 @@
 package functest
 
 import (
-	"errors"
 	"fmt"
 	"github.com/insolar/insolar/api"
 	"strconv"
@@ -1412,7 +1411,7 @@ func (r *Two) NoWaitGet(OneRef insolar.Reference) (int, error) {
 	require.Equal(t, float64(n), secondResult.ExtractedReply)
 
 	anon := func() api.CallMethodReply { return callMethod(t, firstObjRef, "Get") }
-	firstResultAfterWait, _ := WaitUntilRequestProcessed(anon, time.Second+10, time.Millisecond+50, 10)
+	firstResultAfterWait, _ := waitUntilRequestProcessed(anon, time.Second+10, time.Millisecond+50, 10)
 	require.Equal(t, float64(n), firstResultAfterWait.ExtractedReply)
 
 	t.Run("one object, sequential calls", func(t *testing.T) {
@@ -1432,45 +1431,9 @@ func (r *Two) NoWaitGet(OneRef insolar.Reference) (int, error) {
 		wg.Wait()
 
 		anon = func() api.CallMethodReply { return callMethod(syncT, firstObjRef, "Get") }
-		res, _ := WaitUntilRequestProcessed(anon, time.Second+10, time.Millisecond+50, 10)
+		res, _ := waitUntilRequestProcessed(anon, time.Second+10, time.Millisecond+50, 10)
 		require.NotNil(syncT, res)
 		require.Empty(syncT, res.Error)
 		require.Equal(syncT, float64(n), res.ExtractedReply)
 	})
-}
-
-func WaitUntilRequestProcessed(
-	customFunction func() api.CallMethodReply,
-	functionTimeout time.Duration,
-	timeoutBetweenAttempts time.Duration,
-	attempts int) (*api.CallMethodReply, error) {
-
-	var lastErr error
-	for i := 0; i < attempts; i++ {
-		reply, err := WaitForFunction(customFunction, functionTimeout)
-		if err == nil {
-			return reply, nil
-		}
-		lastErr = err
-		time.Sleep(timeoutBetweenAttempts)
-	}
-	return nil, errors.New("Timeout was exceeded. " + lastErr.Error())
-}
-
-func WaitForFunction(customFunction func() api.CallMethodReply, functionTimeout time.Duration) (*api.CallMethodReply, error) {
-	ch := make(chan api.CallMethodReply, 1)
-	defer close(ch)
-	go func() {
-		ch <- customFunction()
-	}()
-
-	timer := time.NewTimer(functionTimeout)
-	defer timer.Stop()
-
-	select {
-	case result := <-ch:
-		return &result, nil
-	case <-timer.C:
-		return nil, errors.New("timeout was exceeded")
-	}
 }
