@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/logicrunner/common"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -49,7 +48,6 @@ type PulseManager struct {
 	PulseAccessor     pulse.Accessor            `inject:""`
 	PulseAppender     pulse.Appender            `inject:""`
 	JetModifier       jet.Modifier              `inject:""`
-	writeManager      common.WriteManager
 
 	currentPulse insolar.Pulse
 

@@ -37,6 +37,7 @@ type WriteAccessor interface {
 	// The caller must call returned "done" function when finished writing.
 	Begin(context.Context, insolar.PulseNumber) (done func(), err error)
 
+	// Wait for Open to be called after CloseAndWait
 	WaitOpened(ctx context.Context)
 }
 
@@ -54,14 +55,17 @@ type WriteController struct {
 	current insolar.PulseNumber
 	closed  bool
 
-	cond sync.Cond
-	wg   *sync.WaitGroup
+	wg *sync.WaitGroup
 }
 
 func NewWriteController() *WriteController {
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
 	return &WriteController{
 		current: 0,
 		closed:  true,
+		wg:      wg,
 	}
 }
 
@@ -70,10 +74,10 @@ func (m *WriteController) Begin(ctx context.Context, pulse insolar.PulseNumber) 
 	defer m.lock.RUnlock()
 
 	if pulse != m.current {
-		return nil, ErrWriteClosed
+		return func() {}, ErrWriteClosed
 	}
 	if m.closed {
-		return nil, ErrWriteClosed
+		return func() {}, ErrWriteClosed
 	}
 	m.wg.Add(1)
 
@@ -118,7 +122,6 @@ func (m *WriteController) WaitOpened(ctx context.Context) {
 	// we won't have race condition here, since every new Open we'll have new WaitGroup
 	// we're assured that we have old WaitGroup, when we copy pointer to 'wg' var
 	wg.Wait()
-	return
 }
 
 func (m *WriteController) CloseAndWait(ctx context.Context, pulse insolar.PulseNumber) error {

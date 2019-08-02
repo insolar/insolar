@@ -76,7 +76,7 @@ func (h *HandleAbandonedRequestsNotification) Present(ctx context.Context, f flo
 
 	var repMsg *watermillMsg.Message
 	if err != nil {
-		err := errors.Wrap(err, "[ HandleExecutorResults ] Failed to initialize execution state")
+		err = errors.Wrap(err, "[ HandleExecutorResults ] Failed to initialize execution state")
 		repMsg, err = ErrorAsMessage(err)
 	} else {
 		repMsg = bus.ReplyAsMessage(ctx, &reply.OK{})

@@ -164,23 +164,17 @@ func (h *HandleCall) handleActual(
 	defer done()
 
 	if err == nil {
-		broker := lr.StateStorage.UpsertExecutionState(*objRef)
+		broker := h.dep.StateStorage.UpsertExecutionState(*objRef)
 
 		proc := AddFreshRequest{broker: broker, requestRef: *requestRef, request: request}
 		if err := f.Procedure(ctx, &proc, true); err != nil {
 			return nil, errors.Wrap(err, "couldn't pass request to broker")
 		}
 	} else {
-		h.dep.WriteAccessor.WaitOpened(ctx)
-
 		pendingState := insolar.PendingUnknown
-		broker := lr.StateStorage.GetExecutionState(*objRef)
-		if broker != nil {
-			pendingState = broker.PendingState()
-
-			if pendingState == insolar.PendingUnknown {
-				pendingState = insolar.NotPending
-			}
+		archive := h.dep.StateStorage.GetExecutionArchive(*objRef)
+		if !archive.IsEmpty() {
+			pendingState = insolar.InPending
 		}
 
 		h.sendToNextExecutor(ctx, *objRef, *requestRef, request, pendingState)
