@@ -496,7 +496,7 @@ func Test_Requests_OutgoingReason(t *testing.T) {
 	{
 		msg, _ := MakeSetIncomingRequest(rootID, reasonID, true, true)
 		rep := SendMessage(ctx, s, &msg)
-		RequireNotError(rep)
+		RequireError(rep)
 	}
 
 	// Creating wrong outgoing
@@ -508,9 +508,6 @@ func Test_Requests_OutgoingReason(t *testing.T) {
 }
 
 func Test_OutgoingRequests_DifferentObjects(t *testing.T) {
-	// todo uncomment after fix
-	t.Skip()
-
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
@@ -584,7 +581,7 @@ func Test_OutgoingDetached_InPendings(t *testing.T) {
 
 	// Close outgoing
 	{
-		// todo !
+		// todo check in pendings
 	}
 }
 
@@ -635,6 +632,44 @@ func Test_OutgoingRequest_Creation(t *testing.T) {
 			Request: rec,
 		}
 		rep := SendMessage(ctx, s, &pl)
+		RequireError(rep)
+	}
+}
+
+func Test_IncomingRequest_DifferentResults(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	cfg := DefaultLightConfig()
+	s, err := NewServer(ctx, cfg, nil)
+	require.NoError(t, err)
+	defer s.Stop()
+
+	// First pulse goes in storage then interrupts.
+	s.SetPulse(ctx)
+	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
+	s.SetPulse(ctx)
+
+	var reasonID insolar.ID
+
+	// Creating root reason request.
+	{
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), true, true)
+		rep := SendMessage(ctx, s, &msg)
+		RequireNotError(rep)
+		reasonID = rep.(*payload.RequestInfo).RequestID
+	}
+
+	// Closing request
+	{
+		resMsg, _ := MakeSetResult(reasonID, reasonID)
+		rep := SendMessage(ctx, s, &resMsg)
+		RequireNotError(rep)
+	}
+
+	{
+		resMsg, _ := MakeSetResult(reasonID, reasonID)
+		rep := SendMessage(ctx, s, &resMsg)
 		RequireError(rep)
 	}
 }
