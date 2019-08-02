@@ -38,8 +38,6 @@ var (
 	ContractMigrationWallet = rootdomain.GenesisRef(insolar.GenesisNameMigrationWallet)
 	// ContractDeposit is the deposit contract reference.
 	ContractDeposit = rootdomain.GenesisRef(insolar.GenesisNameDeposit)
-	// ContractStandardTariff is the tariff contract reference.
-	ContractStandardTariff = rootdomain.GenesisRef(insolar.GenesisNameStandardTariff)
 	// ContractCostCenter is the cost center contract reference.
 	ContractCostCenter = rootdomain.GenesisRef(insolar.GenesisNameCostCenter)
 	// ContractFeeWallet is the commission wallet contract reference.

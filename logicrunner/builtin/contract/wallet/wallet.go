@@ -27,7 +27,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/costcenter"
 	proxyMember "github.com/insolar/insolar/logicrunner/builtin/proxy/member"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/tariff"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 )
 
@@ -63,13 +62,7 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toM
 	}
 
 	cc := costcenter.GetObject(ccRef)
-	tRef, err := cc.GetCurrentTariff()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get tariff reference: %s", err.Error())
-	}
-
-	t := tariff.GetObject(tRef)
-	feeStr, err := t.CalcFee(amountStr)
+	feeStr, err := cc.CalcFee(amountStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to calculate fee for amount: %s", err.Error())
 	}
@@ -93,7 +86,7 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toM
 	}
 	w.Balance = newBalance.String()
 
-	fwRef, err := rd.GetFeeWalletRef()
+	fwRef, err := cc.GetFeeWalletRef()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get fee wallet reference: %s", err.Error())
 	}

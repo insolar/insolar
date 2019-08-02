@@ -62,6 +62,7 @@ type LightCleaner struct {
 	filamentCleaner executor.FilamentCleaner
 
 	lightChainLimit int
+	cleanerDelay    int
 }
 
 // NewCleaner creates a new instance of LightCleaner
@@ -76,6 +77,7 @@ func NewCleaner(
 	indexAccessor object.IndexAccessor,
 	filamentCleaner executor.FilamentCleaner,
 	lightChainLimit int,
+	cleanerDelay int,
 ) *LightCleaner {
 	return &LightCleaner{
 		jetCleaner:      jetCleaner,
@@ -86,6 +88,7 @@ func NewCleaner(
 		pulseShifter:    pulseShifter,
 		pulseCalculator: pulseCalculator,
 		lightChainLimit: lightChainLimit,
+		cleanerDelay:    cleanerDelay,
 		filamentCleaner: filamentCleaner,
 		indexAccessor:   indexAccessor,
 		pulseForClean:   make(chan insolar.PulseNumber),
@@ -113,12 +116,12 @@ func (c *LightCleaner) clean(ctx context.Context) {
 		ctx, logger := inslogger.WithTraceField(ctx, utils.RandTraceID())
 		logger.Debugf("[Cleaner][NotifyAboutPulse] start cleaning pulse - %v", pn)
 
-		// One more step back to eliminate race conditions on pulse change.
+		// A few steps back to eliminate race conditions on pulse change.
 		// Message handlers don't hold locks on data. A particular case is when we check if data is beyond limit
 		// and then access nodes. Between message receive and data access cleaner can remove data for the
 		// pulse on lightChainLimit. This will lead to data fetch failure. We need to give handlers time to
 		// finish before removing data.
-		cleanFrom := c.lightChainLimit + 1
+		cleanFrom := c.lightChainLimit + c.cleanerDelay
 		expiredPn, err := c.pulseCalculator.Backwards(ctx, pn, cleanFrom)
 		if err == pulse.ErrNotFound {
 			logger.Warnf("[Cleaner][NotifyAboutPulse] expiredPn for pn - %v doesn't exist. limit - %v",
