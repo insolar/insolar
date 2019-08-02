@@ -20,6 +20,11 @@ import (
 type JetKeeperMock struct {
 	t minimock.Tester
 
+	AddBackupConfirmationFunc       func(p context.Context, p1 insolar.PulseNumber) (r error)
+	AddBackupConfirmationCounter    uint64
+	AddBackupConfirmationPreCounter uint64
+	AddBackupConfirmationMock       mJetKeeperMockAddBackupConfirmation
+
 	AddDropConfirmationFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID, p3 bool) (r error)
 	AddDropConfirmationCounter    uint64
 	AddDropConfirmationPreCounter uint64
@@ -44,11 +49,160 @@ func NewJetKeeperMock(t minimock.Tester) *JetKeeperMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.AddBackupConfirmationMock = mJetKeeperMockAddBackupConfirmation{mock: m}
 	m.AddDropConfirmationMock = mJetKeeperMockAddDropConfirmation{mock: m}
 	m.AddHotConfirmationMock = mJetKeeperMockAddHotConfirmation{mock: m}
 	m.TopSyncPulseMock = mJetKeeperMockTopSyncPulse{mock: m}
 
 	return m
+}
+
+type mJetKeeperMockAddBackupConfirmation struct {
+	mock              *JetKeeperMock
+	mainExpectation   *JetKeeperMockAddBackupConfirmationExpectation
+	expectationSeries []*JetKeeperMockAddBackupConfirmationExpectation
+}
+
+type JetKeeperMockAddBackupConfirmationExpectation struct {
+	input  *JetKeeperMockAddBackupConfirmationInput
+	result *JetKeeperMockAddBackupConfirmationResult
+}
+
+type JetKeeperMockAddBackupConfirmationInput struct {
+	p  context.Context
+	p1 insolar.PulseNumber
+}
+
+type JetKeeperMockAddBackupConfirmationResult struct {
+	r error
+}
+
+//Expect specifies that invocation of JetKeeper.AddBackupConfirmation is expected from 1 to Infinity times
+func (m *mJetKeeperMockAddBackupConfirmation) Expect(p context.Context, p1 insolar.PulseNumber) *mJetKeeperMockAddBackupConfirmation {
+	m.mock.AddBackupConfirmationFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &JetKeeperMockAddBackupConfirmationExpectation{}
+	}
+	m.mainExpectation.input = &JetKeeperMockAddBackupConfirmationInput{p, p1}
+	return m
+}
+
+//Return specifies results of invocation of JetKeeper.AddBackupConfirmation
+func (m *mJetKeeperMockAddBackupConfirmation) Return(r error) *JetKeeperMock {
+	m.mock.AddBackupConfirmationFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &JetKeeperMockAddBackupConfirmationExpectation{}
+	}
+	m.mainExpectation.result = &JetKeeperMockAddBackupConfirmationResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of JetKeeper.AddBackupConfirmation is expected once
+func (m *mJetKeeperMockAddBackupConfirmation) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *JetKeeperMockAddBackupConfirmationExpectation {
+	m.mock.AddBackupConfirmationFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &JetKeeperMockAddBackupConfirmationExpectation{}
+	expectation.input = &JetKeeperMockAddBackupConfirmationInput{p, p1}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *JetKeeperMockAddBackupConfirmationExpectation) Return(r error) {
+	e.result = &JetKeeperMockAddBackupConfirmationResult{r}
+}
+
+//Set uses given function f as a mock of JetKeeper.AddBackupConfirmation method
+func (m *mJetKeeperMockAddBackupConfirmation) Set(f func(p context.Context, p1 insolar.PulseNumber) (r error)) *JetKeeperMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.AddBackupConfirmationFunc = f
+	return m.mock
+}
+
+//AddBackupConfirmation implements github.com/insolar/insolar/ledger/heavy/executor.JetKeeper interface
+func (m *JetKeeperMock) AddBackupConfirmation(p context.Context, p1 insolar.PulseNumber) (r error) {
+	counter := atomic.AddUint64(&m.AddBackupConfirmationPreCounter, 1)
+	defer atomic.AddUint64(&m.AddBackupConfirmationCounter, 1)
+
+	if len(m.AddBackupConfirmationMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.AddBackupConfirmationMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to JetKeeperMock.AddBackupConfirmation. %v %v", p, p1)
+			return
+		}
+
+		input := m.AddBackupConfirmationMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, JetKeeperMockAddBackupConfirmationInput{p, p1}, "JetKeeper.AddBackupConfirmation got unexpected parameters")
+
+		result := m.AddBackupConfirmationMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the JetKeeperMock.AddBackupConfirmation")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.AddBackupConfirmationMock.mainExpectation != nil {
+
+		input := m.AddBackupConfirmationMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, JetKeeperMockAddBackupConfirmationInput{p, p1}, "JetKeeper.AddBackupConfirmation got unexpected parameters")
+		}
+
+		result := m.AddBackupConfirmationMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the JetKeeperMock.AddBackupConfirmation")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.AddBackupConfirmationFunc == nil {
+		m.t.Fatalf("Unexpected call to JetKeeperMock.AddBackupConfirmation. %v %v", p, p1)
+		return
+	}
+
+	return m.AddBackupConfirmationFunc(p, p1)
+}
+
+//AddBackupConfirmationMinimockCounter returns a count of JetKeeperMock.AddBackupConfirmationFunc invocations
+func (m *JetKeeperMock) AddBackupConfirmationMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.AddBackupConfirmationCounter)
+}
+
+//AddBackupConfirmationMinimockPreCounter returns the value of JetKeeperMock.AddBackupConfirmation invocations
+func (m *JetKeeperMock) AddBackupConfirmationMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.AddBackupConfirmationPreCounter)
+}
+
+//AddBackupConfirmationFinished returns true if mock invocations count is ok
+func (m *JetKeeperMock) AddBackupConfirmationFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.AddBackupConfirmationMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.AddBackupConfirmationCounter) == uint64(len(m.AddBackupConfirmationMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.AddBackupConfirmationMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.AddBackupConfirmationCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.AddBackupConfirmationFunc != nil {
+		return atomic.LoadUint64(&m.AddBackupConfirmationCounter) > 0
+	}
+
+	return true
 }
 
 type mJetKeeperMockAddDropConfirmation struct {
@@ -489,6 +643,10 @@ func (m *JetKeeperMock) TopSyncPulseFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *JetKeeperMock) ValidateCallCounters() {
 
+	if !m.AddBackupConfirmationFinished() {
+		m.t.Fatal("Expected call to JetKeeperMock.AddBackupConfirmation")
+	}
+
 	if !m.AddDropConfirmationFinished() {
 		m.t.Fatal("Expected call to JetKeeperMock.AddDropConfirmation")
 	}
@@ -518,6 +676,10 @@ func (m *JetKeeperMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *JetKeeperMock) MinimockFinish() {
 
+	if !m.AddBackupConfirmationFinished() {
+		m.t.Fatal("Expected call to JetKeeperMock.AddBackupConfirmation")
+	}
+
 	if !m.AddDropConfirmationFinished() {
 		m.t.Fatal("Expected call to JetKeeperMock.AddDropConfirmation")
 	}
@@ -544,6 +706,7 @@ func (m *JetKeeperMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
+		ok = ok && m.AddBackupConfirmationFinished()
 		ok = ok && m.AddDropConfirmationFinished()
 		ok = ok && m.AddHotConfirmationFinished()
 		ok = ok && m.TopSyncPulseFinished()
@@ -554,6 +717,10 @@ func (m *JetKeeperMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
+
+			if !m.AddBackupConfirmationFinished() {
+				m.t.Error("Expected call to JetKeeperMock.AddBackupConfirmation")
+			}
 
 			if !m.AddDropConfirmationFinished() {
 				m.t.Error("Expected call to JetKeeperMock.AddDropConfirmation")
@@ -578,6 +745,10 @@ func (m *JetKeeperMock) MinimockWait(timeout time.Duration) {
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *JetKeeperMock) AllMocksCalled() bool {
+
+	if !m.AddBackupConfirmationFinished() {
+		return false
+	}
 
 	if !m.AddDropConfirmationFinished() {
 		return false
