@@ -101,6 +101,8 @@ func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publi
 func (lr *LogicRunner) LRI() {}
 
 func (lr *LogicRunner) Init(ctx context.Context) error {
+	outgoingSender := NewOutgoingRequestSender()
+
 	lr.StateStorage = NewStateStorage(
 		lr.Publisher,
 		lr.RequestsExecutor,
@@ -108,9 +110,11 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 		lr.JetCoordinator,
 		lr.PulseAccessor,
 		lr.ArtifactManager,
+		outgoingSender,
 	)
+
 	lr.rpc = lrCommon.NewRPC(
-		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage),
+		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage, outgoingSender),
 		lr.Cfg,
 	)
 

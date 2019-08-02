@@ -52,10 +52,11 @@ func NewRPCMethods(
 	dc artifacts.DescriptorsCache,
 	cr insolar.ContractRequester,
 	ss StateStorage,
+	outgoingSender OutgoingRequestSender,
 ) *RPCMethods {
 	return &RPCMethods{
 		ss:         ss,
-		execution:  NewExecutionProxyImplementation(dc, cr, am),
+		execution:  NewExecutionProxyImplementation(dc, cr, am, outgoingSender),
 		validation: NewValidationProxyImplementation(dc),
 	}
 }
@@ -124,20 +125,23 @@ func (m *RPCMethods) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *r
 }
 
 type executionProxyImplementation struct {
-	dc artifacts.DescriptorsCache
-	cr insolar.ContractRequester
-	am artifacts.Client
+	dc             artifacts.DescriptorsCache
+	cr             insolar.ContractRequester
+	am             artifacts.Client
+	outgoingSender OutgoingRequestSender
 }
 
 func NewExecutionProxyImplementation(
 	dc artifacts.DescriptorsCache,
 	cr insolar.ContractRequester,
 	am artifacts.Client,
+	outgoingSender OutgoingRequestSender,
 ) ProxyImplementation {
 	return &executionProxyImplementation{
-		dc: dc,
-		cr: cr,
-		am: am,
+		dc:             dc,
+		cr:             cr,
+		am:             am,
+		outgoingSender: outgoingSender,
 	}
 }
 
@@ -186,6 +190,11 @@ func (m *executionProxyImplementation) RouteCall(
 		return nil
 	}
 
+	outgoingReqRef := insolar.NewReference(*outgoingReqID)
+
+	// AALEKSEEV TODO move the logic to outgoingSender
+	//return m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
+
 	// Step 2. Actually make a call.
 	callMsg := &message.CallMethod{IncomingRequest: *incoming} // AALEKSEEV TODO FIXME copy-paste from here
 	res, err := m.cr.CallMethod(ctx, callMsg)
@@ -199,7 +208,6 @@ func (m *executionProxyImplementation) RouteCall(
 	}
 
 	// Step 3. Register result of the outgoing method
-	outgoingReqRef := insolar.NewReference(*outgoingReqID)
 	reqResult := newRequestResult(rep.Result, req.Callee)
 	registerResultErr := m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
 	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099

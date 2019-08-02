@@ -68,7 +68,7 @@ type ExecutionBroker struct {
 	immutable *TranscriptDequeue
 	finished  *TranscriptDequeue
 
-	abandonedOutgoingRequestSender AbandonedOutgoingRequestSender
+	abandonedOutgoingRequestSender OutgoingRequestSender
 
 	currentList *CurrentExecutionList
 
@@ -101,6 +101,7 @@ func NewExecutionBroker(
 	_ pulse.Accessor,
 	artifactsManager artifacts.Client,
 	executionArchive ExecutionArchive,
+	outgoingSender OutgoingRequestSender,
 ) *ExecutionBroker {
 	return &ExecutionBroker{
 		Ref: ref,
@@ -110,7 +111,7 @@ func NewExecutionBroker(
 		finished:    NewTranscriptDequeue(),
 		currentList: NewCurrentExecutionList(),
 
-		abandonedOutgoingRequestSender: NewAbandonedOutgoingRequestSender(),
+		abandonedOutgoingRequestSender: outgoingSender,
 
 		publisher:        publisher,
 		requestsExecutor: requestsExecutor,
