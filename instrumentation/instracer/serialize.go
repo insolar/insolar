@@ -19,7 +19,7 @@ package instracer
 import (
 	"context"
 
-	"github.com/ugorji/go/codec"
+	"github.com/insolar/insolar/insolar"
 	"go.opencensus.io/trace"
 )
 
@@ -58,14 +58,11 @@ func MustDeserialize(b []byte) TraceSpan {
 // Deserialize decode baggage entries from bytes.
 func Deserialize(b []byte) (TraceSpan, error) {
 	var ts TraceSpan
-	ch := new(codec.CborHandle)
-	err := codec.NewDecoderBytes(b, ch).Decode(&ts)
+	err := insolar.Deserialize(b, &ts)
 	return ts, err
 }
 
 // Serialize method encodes TraceSpan to bytes.
-func (ts TraceSpan) Serialize() (b []byte, err error) {
-	ch := new(codec.CborHandle)
-	err = codec.NewEncoderBytes(&b, ch).Encode(ts)
-	return
+func (ts TraceSpan) Serialize() ([]byte, error) {
+	return insolar.Serialize(ts)
 }

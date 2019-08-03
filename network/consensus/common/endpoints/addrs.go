@@ -78,7 +78,7 @@ func (addr Name) String() string {
 	return string(addr)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/endpoints.Outbound -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/endpoints.Outbound -o . -s _mock.go -g
 
 type Outbound interface {
 	GetEndpointType() NodeEndpointType
@@ -131,7 +131,7 @@ const (
 	RelayEndpoint
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/endpoints.Inbound -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/endpoints.Inbound -o . -s _mock.go -g
 
 type Inbound interface {
 	GetNameAddress() Name

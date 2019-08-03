@@ -32,7 +32,7 @@ import (
 	"github.com/insolar/insolar/messagebus"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner.RequestsExecutor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/logicrunner.RequestsExecutor -o ./ -s _mock.go -g
 
 type RequestsExecutor interface {
 	ExecuteAndSave(ctx context.Context, current *Transcript) (insolar.Reply, error)
@@ -42,11 +42,10 @@ type RequestsExecutor interface {
 }
 
 type requestsExecutor struct {
-	MessageBus      insolar.MessageBus  `inject:""`
-	NodeNetwork     insolar.NodeNetwork `inject:""`
-	LogicExecutor   LogicExecutor       `inject:""`
-	ArtifactManager artifacts.Client    `inject:""`
-	PulseAccessor   pulse.Accessor      `inject:""`
+	MessageBus      insolar.MessageBus `inject:""`
+	LogicExecutor   LogicExecutor      `inject:""`
+	ArtifactManager artifacts.Client   `inject:""`
+	PulseAccessor   pulse.Accessor     `inject:""`
 }
 
 func NewRequestsExecutor() RequestsExecutor {
@@ -113,9 +112,13 @@ func (e *requestsExecutor) Save(
 		return nil, errors.Wrapf(err, "couldn't save result with %s side effect", res.Type().String())
 	}
 
-	switch res.Type() {
-	case artifacts.RequestSideEffectActivate:
+	switch {
+	case res.Type() == artifacts.RequestSideEffectActivate:
+		// Constructor called successfully
 		return &reply.CallConstructor{Object: &transcript.RequestRef}, nil
+	case res.Type() == artifacts.RequestSideEffectNone && res.ConstructorError() != "":
+		// Constructor returned an error
+		return &reply.CallConstructor{ConstructorError: res.ConstructorError()}, nil
 	default:
 		return &reply.CallMethod{Result: res.Result()}, nil
 	}

@@ -31,19 +31,22 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/replication.Cleaner -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/replication.Cleaner -o ./ -s _mock.go -g
 
 // Cleaner is an interface that represents a cleaner-component
 // It's supposed, that all the process of cleaning data from LME will be doing by it
 type Cleaner interface {
 	// NotifyAboutPulse notifies a component about a pulse
 	NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber)
+
+	Stop()
 }
 
 // LightCleaner is an implementation of Cleaner interface
 type LightCleaner struct {
 	once          sync.Once
 	pulseForClean chan insolar.PulseNumber
+	done          chan struct{}
 
 	jetCleaner   jet.Cleaner
 	nodeModifier node.Modifier
@@ -59,6 +62,7 @@ type LightCleaner struct {
 	filamentCleaner executor.FilamentCleaner
 
 	lightChainLimit int
+	cleanerDelay    int
 }
 
 // NewCleaner creates a new instance of LightCleaner
@@ -73,6 +77,7 @@ func NewCleaner(
 	indexAccessor object.IndexAccessor,
 	filamentCleaner executor.FilamentCleaner,
 	lightChainLimit int,
+	cleanerDelay int,
 ) *LightCleaner {
 	return &LightCleaner{
 		jetCleaner:      jetCleaner,
@@ -83,9 +88,11 @@ func NewCleaner(
 		pulseShifter:    pulseShifter,
 		pulseCalculator: pulseCalculator,
 		lightChainLimit: lightChainLimit,
+		cleanerDelay:    cleanerDelay,
 		filamentCleaner: filamentCleaner,
 		indexAccessor:   indexAccessor,
 		pulseForClean:   make(chan insolar.PulseNumber),
+		done:            make(chan struct{}),
 	}
 }
 
@@ -100,27 +107,44 @@ func (c *LightCleaner) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNum
 	c.pulseForClean <- pn
 }
 
+func (c *LightCleaner) Stop() {
+	close(c.done)
+}
+
 func (c *LightCleaner) clean(ctx context.Context) {
-	for pn := range c.pulseForClean {
+	work := func(pn insolar.PulseNumber) {
 		ctx, logger := inslogger.WithTraceField(ctx, utils.RandTraceID())
 		logger.Debugf("[Cleaner][NotifyAboutPulse] start cleaning pulse - %v", pn)
 
-		// One more step back to eliminate race conditions on pulse change.
+		// A few steps back to eliminate race conditions on pulse change.
 		// Message handlers don't hold locks on data. A particular case is when we check if data is beyond limit
 		// and then access nodes. Between message receive and data access cleaner can remove data for the
 		// pulse on lightChainLimit. This will lead to data fetch failure. We need to give handlers time to
 		// finish before removing data.
-		cleanFrom := c.lightChainLimit + 1
+		cleanFrom := c.lightChainLimit + c.cleanerDelay
 		expiredPn, err := c.pulseCalculator.Backwards(ctx, pn, cleanFrom)
 		if err == pulse.ErrNotFound {
 			logger.Warnf("[Cleaner][NotifyAboutPulse] expiredPn for pn - %v doesn't exist. limit - %v",
 				pn, c.lightChainLimit)
-			continue
+			return
 		}
 		if err != nil {
 			panic(err)
 		}
 		c.cleanPulse(ctx, expiredPn.PulseNumber)
+	}
+
+	for {
+		select {
+		case pn, ok := <-c.pulseForClean:
+			if !ok {
+				return
+			}
+			work(pn)
+		case <-c.done:
+			inslogger.FromContext(ctx).Info("light cleaner stopped")
+			return
+		}
 	}
 }
 

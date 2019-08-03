@@ -21,11 +21,9 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestHashVirtual(t *testing.T) {
@@ -86,80 +84,6 @@ func TestHashVirtual(t *testing.T) {
 	})
 }
 
-func TestHashMaterial(t *testing.T) {
-	t.Parallel()
-
-	t.Run("check error for nil virtual record in material record", func(t *testing.T) {
-		t.Parallel()
-
-		rec := getMaterialRecord()
-		h := sha256.New()
-		rec.Virtual = nil
-		_, err := record.HashMaterial(h, rec)
-		require.Error(t, err)
-	})
-
-	t.Run("correct consistent hash for material record", func(t *testing.T) {
-		t.Parallel()
-
-		rec := getMaterialRecord()
-		h := sha256.New()
-		hash1, err := record.HashMaterial(h, rec)
-		require.NoError(t, err)
-
-		h = sha256.New()
-		hash2, err := record.HashMaterial(h, rec)
-		require.NoError(t, err)
-		assert.Equal(t, hash1, hash2)
-	})
-
-	t.Run("same hash for material record with and without signature", func(t *testing.T) {
-		t.Parallel()
-
-		rec := getMaterialRecord()
-		h := sha256.New()
-		hash1, err := record.HashMaterial(h, rec)
-		require.NoError(t, err)
-
-		h = sha256.New()
-		rec.Signature = slice()
-		hash2, err := record.HashMaterial(h, rec)
-		require.NoError(t, err)
-		assert.Equal(t, hash1, hash2)
-	})
-
-	t.Run("different hash for changed material record", func(t *testing.T) {
-		t.Parallel()
-
-		rec := getMaterialRecord()
-		h := sha256.New()
-		hashBefore, err := record.HashMaterial(h, rec)
-		require.NoError(t, err)
-
-		rec.JetID = *insolar.NewJetID(uint8(rand.Int()), gen.ID().Bytes())
-		h = sha256.New()
-		hashAfter, err := record.HashMaterial(h, rec)
-		require.NoError(t, err)
-		assert.NotEqual(t, hashBefore, hashAfter)
-	})
-
-	t.Run("different hashes for different material records", func(t *testing.T) {
-		t.Parallel()
-
-		recFoo := getMaterialRecord()
-		h := sha256.New()
-		hashFoo, err := record.HashMaterial(h, recFoo)
-		require.NoError(t, err)
-
-		recBar := getMaterialRecord()
-		h = sha256.New()
-		hashBar, err := record.HashMaterial(h, recBar)
-		require.NoError(t, err)
-
-		assert.NotEqual(t, hashFoo, hashBar)
-	})
-}
-
 // getVirtualRecord generates random Virtual record
 func getVirtualRecord() record.Virtual {
 	var requestRecord record.IncomingRequest
@@ -174,18 +98,6 @@ func getVirtualRecord() record.Virtual {
 	}
 
 	return virtualRecord
-}
-
-// getMaterialRecord generates random Material record
-func getMaterialRecord() record.Material {
-	virtRec := getVirtualRecord()
-
-	materialRecord := record.Material{
-		Virtual: &virtRec,
-		JetID:   *insolar.NewJetID(uint8(rand.Int()), gen.ID().Bytes()),
-	}
-
-	return materialRecord
 }
 
 // sizedSlice generates random byte slice fixed size.

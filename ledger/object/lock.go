@@ -28,7 +28,7 @@ type mucount struct {
 	count int32
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexLocker -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexLocker -o ./ -s _mock.go -g
 
 // IndexLocker provides Lock/Unlock methods per record ID.
 type IndexLocker interface {

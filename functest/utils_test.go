@@ -104,7 +104,7 @@ type rpcStatusResponse struct {
 	Result statusResponse `json:"result"`
 }
 
-func createMember(t *testing.T) *user {
+func createMember(t testing.TB) *user {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.ref = root.ref
@@ -117,13 +117,13 @@ func createMember(t *testing.T) *user {
 	return member
 }
 
-func addBurnAddress(t *testing.T) {
+func addBurnAddress(t testing.TB) {
 	ba := testutils.RandomString()
 	_, err := signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
 	require.NoError(t, err)
 }
 
-func getBalanceNoErr(t *testing.T, caller *user, reference string) *big.Int {
+func getBalanceNoErr(t testing.TB, caller *user, reference string) *big.Int {
 	balance, err := getBalance(caller, reference)
 	require.NoError(t, err)
 	return balance
@@ -141,7 +141,7 @@ func getBalance(caller *user, reference string) (*big.Int, error) {
 	return amount, nil
 }
 
-func getRPSResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
+func getRPSResponseBody(t testing.TB, postParams map[string]interface{}) []byte {
 	jsonValue, _ := json.Marshal(postParams)
 	postResp, err := http.Post(TestRPCUrl, "application/json", bytes.NewBuffer(jsonValue))
 	require.NoError(t, err)
@@ -151,7 +151,7 @@ func getRPSResponseBody(t *testing.T, postParams map[string]interface{}) []byte 
 	return body
 }
 
-func getSeed(t *testing.T) string {
+func getSeed(t testing.TB) string {
 	body := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
 		"method":  "node.getSeed",
@@ -163,7 +163,7 @@ func getSeed(t *testing.T) string {
 	return getSeedResponse.Result.Seed
 }
 
-func getInfo(t *testing.T) infoResponse {
+func getInfo(t testing.TB) infoResponse {
 	pp := postParams{
 		"jsonrpc": "2.0",
 		"method":  "network.getInfo",
@@ -176,7 +176,7 @@ func getInfo(t *testing.T) infoResponse {
 	return rpcInfoResponse.Result
 }
 
-func getStatus(t *testing.T) statusResponse {
+func getStatus(t testing.TB) statusResponse {
 	body := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
 		"method":  "node.getStatus",
@@ -188,14 +188,14 @@ func getStatus(t *testing.T) statusResponse {
 	return rpcStatusResponse.Result
 }
 
-func unmarshalRPCResponse(t *testing.T, body []byte, response RPCResponseInterface) {
+func unmarshalRPCResponse(t testing.TB, body []byte, response RPCResponseInterface) {
 	err := json.Unmarshal(body, &response)
 	require.NoError(t, err)
 	require.Equal(t, "2.0", response.getRPCVersion())
 	require.Nil(t, response.getError())
 }
 
-func unmarshalCallResponse(t *testing.T, body []byte, response *requester.ContractAnswer) {
+func unmarshalCallResponse(t testing.TB, body []byte, response *requester.ContractAnswer) {
 	err := json.Unmarshal(body, &response)
 	require.NoError(t, err)
 }
@@ -239,6 +239,27 @@ func migrate(t *testing.T, memberRef string, amount string, tx string, ma string
 	return deposit
 }
 
+func generateMigrationAddress() string {
+	return testutils.RandomString()
+}
+
+func fullMigration(t *testing.T, txHash string) *user {
+
+	member, err := newUserWithKeys()
+	require.NoError(t, err)
+	migrationAddress := generateMigrationAddress()
+	_, err = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
+	require.NoError(t, err)
+	_, err = retryableMemberMigrationCreate(member, true)
+	require.NoError(t, err)
+
+	migrate(t, member.ref, "1000", txHash, migrationAddress, 0)
+	migrate(t, member.ref, "1000", txHash, migrationAddress, 2)
+	migrate(t, member.ref, "1000", txHash, migrationAddress, 1)
+
+	return member
+}
+
 func retryableMemberCreate(user *user, updatePublicKey bool) (interface{}, error) {
 	return retryableCreateMember(user, "member.create", updatePublicKey)
 }
@@ -254,7 +275,7 @@ func retryableCreateMember(user *user, method string, updatePublicKey bool) (int
 	currentIterNum := 1
 	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
 		result, err = signedRequest(user, method, nil)
-		if err == nil || !strings.Contains(err.Error(), "member for this publicKey already exist") {
+		if err == nil || !strings.Contains(err.Error(), "failed to set reference in public key shard: can't set reference because this key already exists") {
 			if err == nil {
 				user.ref = result.(map[string]interface{})["reference"].(string)
 			}
@@ -357,7 +378,7 @@ func newUserWithKeys() (*user, error) {
 
 // uploadContractOnce is needed for running tests with count
 // use unique names when uploading contracts otherwise your contract won't be uploaded
-func uploadContractOnce(t *testing.T, name string, code string) *insolar.Reference {
+func uploadContractOnce(t testing.TB, name string, code string) *insolar.Reference {
 	if _, ok := contracts[name]; !ok {
 		ref := uploadContract(t, name, code)
 		contracts[name] = &contractInfo{
@@ -372,7 +393,7 @@ func uploadContractOnce(t *testing.T, name string, code string) *insolar.Referen
 	return contracts[name].reference
 }
 
-func uploadContract(t *testing.T, contractName string, contractCode string) *insolar.Reference {
+func uploadContract(t testing.TB, contractName string, contractCode string) *insolar.Reference {
 	uploadBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
 		"method":  "contract.upload",
@@ -404,7 +425,7 @@ func uploadContract(t *testing.T, contractName string, contractCode string) *ins
 	return prototypeRef
 }
 
-func callConstructor(t *testing.T, prototypeRef *insolar.Reference, method string, args ...interface{}) *insolar.Reference {
+func callConstructor(t testing.TB, prototypeRef *insolar.Reference, method string, args ...interface{}) *insolar.Reference {
 	argsSerialized, err := insolar.Serialize(args)
 	require.NoError(t, err)
 
@@ -446,25 +467,25 @@ type callRes struct {
 	Error   json2.Error         `json:"error"`
 }
 
-func callMethod(t *testing.T, objectRef *insolar.Reference, method string, args ...interface{}) api.CallMethodReply {
+func callMethod(t testing.TB, objectRef *insolar.Reference, method string, args ...interface{}) api.CallMethodReply {
 	callRes := callMethodNoChecks(t, objectRef, method, args...)
 	require.Empty(t, callRes.Error)
 
 	return callRes.Result
 }
 
-func callMethodExpectError(t *testing.T, objectRef *insolar.Reference, method string, args ...interface{}) api.CallMethodReply {
+func callMethodExpectError(t testing.TB, objectRef *insolar.Reference, method string, args ...interface{}) api.CallMethodReply {
 	callRes := callMethodNoChecks(t, objectRef, method, args...)
 	require.NotEmpty(t, callRes.Error)
 
 	return callRes.Result
 }
 
-func callMethodNoChecks(t *testing.T, objectRef *insolar.Reference, method string, args ...interface{}) callRes {
+func callMethodNoChecks(t testing.TB, objectRef *insolar.Reference, method string, args ...interface{}) callRes {
 	argsSerialized, err := insolar.Serialize(args)
 	require.NoError(t, err)
 
-	callMethodBody := getRPSResponseBody(t, postParams{
+	respBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
 		"method":  "contract.callMethod",
 		"id":      "",
@@ -474,7 +495,7 @@ func callMethodNoChecks(t *testing.T, objectRef *insolar.Reference, method strin
 			"MethodArgs":      argsSerialized,
 		},
 	})
-	require.NotEmpty(t, callMethodBody)
+	require.NotEmpty(t, respBody)
 
 	callRes := struct {
 		Version string              `json:"jsonrpc"`
@@ -483,7 +504,7 @@ func callMethodNoChecks(t *testing.T, objectRef *insolar.Reference, method strin
 		Error   json2.Error         `json:"error"`
 	}{}
 
-	err = json.Unmarshal(callMethodBody, &callRes)
+	err = json.Unmarshal(respBody, &callRes)
 	require.NoError(t, err)
 
 	return callRes

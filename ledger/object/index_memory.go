@@ -70,8 +70,7 @@ func (i *IndexStorageMemory) ForPulse(ctx context.Context, pn insolar.PulseNumbe
 	return res
 }
 
-// SetIndex adds a bucket with provided pulseNumber and ID
-func (i *IndexStorageMemory) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket record.Index) error {
+func (i *IndexStorageMemory) Set(ctx context.Context, pn insolar.PulseNumber, bucket record.Index) {
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
 
@@ -85,8 +84,6 @@ func (i *IndexStorageMemory) SetIndex(ctx context.Context, pn insolar.PulseNumbe
 	stats.Record(ctx,
 		statBucketAddedCount.M(1),
 	)
-
-	return nil
 }
 
 // DeleteForPN deletes all buckets for a provided pulse number

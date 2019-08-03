@@ -123,6 +123,7 @@ func resolveAddress(configuration configuration.Transport) (string, error) {
 // NewNodeKeeper create new NodeKeeper
 func NewNodeKeeper(origin insolar.NetworkNode) network.NodeKeeper {
 	nk := &nodekeeper{
+		cloudHash:     make([]byte, 64),
 		origin:        origin,
 		claimQueue:    newClaimQueue(),
 		consensusInfo: NewConsensusInfo(),

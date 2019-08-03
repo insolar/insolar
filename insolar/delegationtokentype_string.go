@@ -10,13 +10,12 @@ func _() {
 	var x [1]struct{}
 	_ = x[DTTypePendingExecution-1]
 	_ = x[DTTypeGetObjectRedirect-2]
-	_ = x[DTTypeGetChildrenRedirect-3]
-	_ = x[DTTypeGetCodeRedirect-4]
+	_ = x[DTTypeGetCodeRedirect-3]
 }
 
-const _DelegationTokenType_name = "DTTypePendingExecutionDTTypeGetObjectRedirectDTTypeGetChildrenRedirectDTTypeGetCodeRedirect"
+const _DelegationTokenType_name = "DTTypePendingExecutionDTTypeGetObjectRedirectDTTypeGetCodeRedirect"
 
-var _DelegationTokenType_index = [...]uint8{0, 22, 45, 70, 91}
+var _DelegationTokenType_index = [...]uint8{0, 22, 45, 66}
 
 func (i DelegationTokenType) String() string {
 	i -= 1

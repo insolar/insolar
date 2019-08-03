@@ -18,8 +18,12 @@ package heavy
 
 import (
 	"context"
+	"fmt"
+	"net"
 
+	"github.com/insolar/insolar/ledger/heavy/exporter"
 	"github.com/insolar/insolar/network/rules"
+	"google.golang.org/grpc"
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
@@ -234,16 +238,22 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		PulseManager    insolar.PulseManager
 		Handler         *handler.Handler
 		Genesis         *genesis.Genesis
+		RecordPosition  *object.RecordPositionDB
+		Records         *object.RecordDB
+		JetKeeper       executor.JetKeeper
 		RecordSequencer sequence.Sequencer
 		Replicator      *replica.Replicator
 	)
 	{
-		records := object.NewRecordDB(DB)
+		Records = object.NewRecordDB(DB)
+		RecordPosition = object.NewRecordPositionDB(DB)
 		indexes := object.NewIndexDB(DB)
 		drops := drop.NewDB(DB)
 		jets := jet.NewDBStore(DB)
-		jetKeeper := executor.NewJetKeeper(jets, DB, Pulses)
-		c.rollback = executor.NewDBRollback(jetKeeper, Pulses, drops, records, indexes, jets, Pulses)
+		JetKeeper = executor.NewJetKeeper(jets, DB, Pulses)
+		c.rollback = executor.NewDBRollback(JetKeeper, Pulses, drops, Records, indexes, jets, Pulses)
+
+		sp := pulse.NewStartPulse()
 
 		pm := pulsemanager.NewPulseManager()
 		pm.Bus = Bus
@@ -253,11 +263,13 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		pm.PulseAppender = Pulses
 		pm.PulseAccessor = Pulses
 		pm.JetModifier = jets
-		pm.FinalizationKeeper = executor.NewFinalizationKeeperDefault(jetKeeper, Termination, Pulses, cfg.Ledger.LightChainLimit)
+		pm.StartPulse = sp
+		pm.FinalizationKeeper = executor.NewFinalizationKeeperDefault(JetKeeper, Termination, Pulses, cfg.Ledger.LightChainLimit)
 
 		h := handler.New(cfg.Ledger)
-		h.RecordAccessor = records
-		h.RecordModifier = records
+		h.RecordAccessor = Records
+		h.RecordPositions = RecordPosition
+		h.RecordModifier = Records
 		h.JetCoordinator = Coordinator
 		h.IndexAccessor = indexes
 		h.IndexModifier = indexes
@@ -265,23 +277,27 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		h.DropModifier = drops
 		h.PCS = CryptoScheme
 		h.PulseAccessor = Pulses
+		h.PulseCalculator = Pulses
+		h.StartPulse = sp
 		h.JetModifier = jets
 		h.JetAccessor = jets
-		h.JetKeeper = jetKeeper
+		h.JetTree = jets
+		h.DropDB = drops
+		h.JetKeeper = JetKeeper
 		h.Sender = WmBus
 
 		PulseManager = pm
 		Handler = h
 
 		RecordSequencer = sequence.NewSequencer(DB)
-		r := replica.NewReplicator(cfg, jetKeeper)
+		r := replica.NewReplicator(cfg, JetKeeper)
 		Replicator = r
 
 		artifactManager := &artifact.Scope{
 			PulseNumber:    insolar.FirstPulseNumber,
 			PCS:            CryptoScheme,
-			RecordAccessor: records,
-			RecordModifier: records,
+			RecordAccessor: Records,
+			RecordModifier: Records,
 			IndexModifier:  indexes,
 			IndexAccessor:  indexes,
 		}
@@ -292,13 +308,32 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 				DropModifier:   drops,
 				PulseAppender:  Pulses,
 				PulseAccessor:  Pulses,
-				RecordModifier: records,
+				RecordModifier: Records,
 				IndexModifier:  indexes,
 			},
 
 			DiscoveryNodes:  genesisCfg.DiscoveryNodes,
 			ContractsConfig: genesisCfg.ContractsConfig,
 		}
+	}
+
+	// Exporter
+	var (
+		recordExporter *exporter.RecordServer
+	)
+	{
+		recordExporter = exporter.NewRecordServer(Pulses, RecordPosition, Records, JetKeeper)
+		lis, err := net.Listen("tcp", cfg.Exporter.Addr)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to open port for Exporter")
+		}
+		grpcServer := grpc.NewServer()
+		exporter.RegisterRecordExporterServer(grpcServer, recordExporter)
+		go func() {
+			if err := grpcServer.Serve(lis); err != nil {
+				panic(fmt.Errorf("exporter failed to serve: %s", err))
+			}
+		}()
 	}
 
 	c.cmp.Inject(

@@ -19,7 +19,6 @@ package logicrunner
 import (
 	"context"
 
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -50,14 +49,14 @@ func (h *HandleCall) sendToNextExecutor(
 ) {
 	// If the flow has canceled during ClarifyPendingState there are two possibilities.
 	// 1. It's possible that we were addding request to broker, the pulse has
-	// changed and the execution queue was sent to the next executor.
-	// This means that the next executor already queue element, it's OK.
+	//    changed and the execution queue was sent to the next executor.
+	//    This means that the next executor already queue element, it's OK.
 	// 2. It's also possible that the pulse has changed after registration, but
-	// before adding an item to the execution queue. In this case the queue was sent to the
-	// next executor without the last item. We could just return ErrCanceled to make the
-	// caller to resend the request. However this will cause a slow request deduplication
-	// process on the LME side (it will be caused anyway by another modifying request if
-	// the object is used a lot, but many requests are read-only and don't cause deduplication).
+	//    before adding an item to the execution queue. In this case the queue was sent to the
+	//    next executor without the last item. We could just return ErrCanceled to make the
+	//    caller to resend the request. However this will cause a slow request deduplication
+	//    process on the LME side (it will be caused anyway by another modifying request if
+	//    the object is used a lot, but many requests are read-only and don't cause deduplication).
 	// As an optimization we decided to send a special message type to the next executor.
 	// It's possible that while we send the message the pulse will change once again and
 	// the receiver will be not an executor of the object anymore. However in this case
@@ -71,18 +70,41 @@ func (h *HandleCall) sendToNextExecutor(
 		RequestRef:      requestRef,
 		Request:         request,
 		ServiceData:     serviceDataFromContext(ctx),
-	}
-
-	if ps == insolar.PendingUnknown {
-		additionalCallMsg.Pending = insolar.NotPending
-	} else {
-		additionalCallMsg.Pending = ps
+		Pending:         ps,
 	}
 
 	_, err := h.dep.lr.MessageBus.Send(ctx, &additionalCallMsg, nil)
 	if err != nil {
 		logger.Error("[ HandleCall.handleActual.sendToNextExecutor ] mb.Send failed to send AdditionalCallFromPreviousExecutor, ", err)
 	}
+}
+
+func (h *HandleCall) checkExecutionLoop(
+	ctx context.Context, request record.IncomingRequest,
+) bool {
+
+	if request.ReturnMode == record.ReturnNoWait {
+		return false
+	}
+	if request.CallType != record.CTMethod {
+		return false
+	}
+	if request.Object == nil {
+		// should be catched by other code
+		return false
+	}
+
+	archive := h.dep.StateStorage.GetExecutionArchive(*request.Object)
+	if archive == nil {
+		return false
+	}
+
+	if !archive.FindRequestLoop(ctx, request.APIRequestID) {
+		return false
+	}
+
+	inslogger.FromContext(ctx).Error("loop detected")
+	return true
 }
 
 func (h *HandleCall) handleActual(
@@ -127,7 +149,7 @@ func (h *HandleCall) handleActual(
 	requestRef := procRegisterRequest.getResult()
 
 	ctx, logger := inslogger.WithField(ctx, "request", requestRef.String())
-	logger.Debug("Registered request")
+	logger.Debug("registered request")
 
 	objRef := request.Object
 	if request.CallType != record.CTMethod {
@@ -137,15 +159,24 @@ func (h *HandleCall) handleActual(
 		return nil, errors.New("can't get object reference")
 	}
 
-	broker := lr.StateStorage.UpsertExecutionState(*objRef)
+	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
+	defer done()
 
-	proc := AddFreshRequest{broker: broker, requestRef: *requestRef, request: request}
-	err := f.Procedure(ctx, &proc, true)
-	if err != nil {
-		if err == flow.ErrCancelled {
-			h.sendToNextExecutor(ctx, *objRef, *requestRef, request, broker.PendingState())
+	if err == nil {
+		broker := h.dep.StateStorage.UpsertExecutionState(*objRef)
+
+		proc := AddFreshRequest{broker: broker, requestRef: *requestRef, request: request}
+		if err := f.Procedure(ctx, &proc, true); err != nil {
+			return nil, errors.Wrap(err, "couldn't pass request to broker")
 		}
-		return nil, errors.Wrap(err, "couldn't pass request to broker")
+	} else {
+		pendingState := insolar.PendingUnknown
+		archive := h.dep.StateStorage.GetExecutionArchive(*objRef)
+		if !archive.IsEmpty() {
+			pendingState = insolar.InPending
+		}
+
+		h.sendToNextExecutor(ctx, *objRef, *requestRef, request, pendingState)
 	}
 
 	return &reply.RegisterRequest{
@@ -170,47 +201,9 @@ func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
 
 	rep, err := h.handleActual(ctx, msg, f)
 
-	var repMsg *watermillMsg.Message
 	if err != nil {
-		var newErr error
-		repMsg, newErr = payload.NewMessage(&payload.Error{Text: err.Error()})
-		if newErr != nil {
-			return newErr
-		}
-	} else {
-		repMsg = bus.ReplyAsMessage(ctx, rep)
+		return sendErrorMessage(ctx, h.dep.Sender, h.Message, err)
 	}
-	go h.dep.Sender.Reply(ctx, h.Message, repMsg)
-
+	go h.dep.Sender.Reply(ctx, h.Message, bus.ReplyAsMessage(ctx, rep))
 	return nil
 }
-
-func (h *HandleCall) checkExecutionLoop(
-	ctx context.Context, request record.IncomingRequest,
-) bool {
-
-	if request.ReturnMode == record.ReturnNoWait {
-		return false
-	}
-	if request.CallType != record.CTMethod {
-		return false
-	}
-	if request.Object == nil {
-		// should be catched by other code
-		return false
-	}
-
-	broker := h.dep.StateStorage.GetExecutionState(*request.Object)
-	if broker == nil {
-		return false
-	}
-
-	if !broker.CheckExecutionLoop(ctx, request.APIRequestID) {
-		return false
-	}
-
-	inslogger.FromContext(ctx).Error("loop detected")
-	return true
-}
-
-

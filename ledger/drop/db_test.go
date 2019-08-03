@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/gofuzz"
+	fuzz "github.com/google/gofuzz"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -78,7 +78,7 @@ func TestDropStorageDB_TruncateHead_NoSuchPulse(t *testing.T) {
 	dropStore := NewDB(dbMock)
 
 	err = dropStore.TruncateHead(ctx, insolar.GenesisPulse.PulseNumber)
-	require.Contains(t, err.Error(), "No required pulse")
+	require.NoError(t, err)
 }
 
 func TestDropStorageDB_TruncateHead(t *testing.T) {
@@ -163,11 +163,11 @@ func TestDropStorageDB_Set(t *testing.T) {
 	f.Fuzz(&inputs)
 
 	dbMock := store.NewDBMock(t)
-	dbMock.SetFunc = func(p store.Key, p1 []byte) (r error) {
+	dbMock.SetMock.Set(func(p store.Key, p1 []byte) (r error) {
 		_, ok := encodedDrops[string(p1)]
 		require.Equal(t, true, ok)
 		return nil
-	}
+	})
 	dbMock.GetMock.Return(nil, ErrNotFound)
 
 	dropStore := NewDB(dbMock)

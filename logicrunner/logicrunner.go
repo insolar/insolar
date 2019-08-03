@@ -22,7 +22,6 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -43,26 +42,12 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin"
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin"
+	"github.com/insolar/insolar/logicrunner/writecontroller"
 )
 
 const maxQueueLength = 10
 
 type Ref = insolar.Reference
-
-func makeWMMessage(ctx context.Context, payLoad watermillMsg.Payload, msgType string) *watermillMsg.Message {
-	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payLoad)
-	wmMsg.Metadata.Set(bus.MetaTraceID, inslogger.TraceID(ctx))
-
-	sp, err := instracer.Serialize(ctx)
-	if err == nil {
-		wmMsg.Metadata.Set(bus.MetaSpanData, string(sp))
-	} else {
-		inslogger.FromContext(ctx).Error(err)
-	}
-
-	wmMsg.Metadata.Set(bus.MetaType, msgType)
-	return wmMsg
-}
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
@@ -77,11 +62,13 @@ type LogicRunner struct {
 	JetCoordinator             jet.Coordinator                    `inject:""`
 	RequestsExecutor           RequestsExecutor                   `inject:""`
 	MachinesManager            MachinesManager                    `inject:""`
+	JetStorage                 jet.Storage                        `inject:""`
 	Publisher                  watermillMsg.Publisher
 	Sender                     bus.Sender
 	SenderWithRetry            *bus.WaitOKSender
 	StateStorage               StateStorage
 	ResultsMatcher             ResultMatcher
+	WriteController            *writecontroller.WriteController
 
 	Cfg *configuration.LogicRunner
 
@@ -129,6 +116,12 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 		lr.Cfg,
 	)
 
+	lr.WriteController = writecontroller.NewWriteController()
+	err := lr.WriteController.Open(ctx, insolar.FirstPulseNumber)
+	if err != nil {
+		return errors.Wrap(err, "failed to initialize write controller")
+	}
+
 	lr.initHandlers()
 
 	return nil
@@ -141,6 +134,8 @@ func (lr *LogicRunner) initHandlers() {
 		ResultsMatcher: lr.ResultsMatcher,
 		lr:             lr,
 		Sender:         lr.Sender,
+		JetStorage:     lr.JetStorage,
+		WriteAccessor:  lr.WriteController,
 	}
 
 	initHandle := func(msg *watermillMsg.Message) *Init {
@@ -257,65 +252,31 @@ func (lr *LogicRunner) GracefulStop(ctx context.Context) error {
 	return nil
 }
 
-func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg insolar.Message, role insolar.DynamicRole) error {
-	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
-	target := msg.DefaultTarget()
-	isAuthorized, err := lr.JetCoordinator.IsAuthorized(
-		ctx, role, *target.Record(), lr.pulse(ctx).PulseNumber, lr.JetCoordinator.Me(),
-	)
-	if err != nil {
-		return errors.Wrap(err, "authorization failed with error")
-	}
-	if !isAuthorized {
-		return errors.New("can't executeAndReply this object")
-	}
-	return nil
-}
-
 func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context {
 	ctx, _ = inslogger.WithField(ctx, "targetid", msg.DefaultTarget().String())
 	return ctx
 }
 
-func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
-	lr.ResultsMatcher.Clear()
-
-	lr.StateStorage.Lock()
-
-	lr.FlowDispatcher.ChangePulse(ctx, pulse)
-	lr.InnerFlowDispatcher.ChangePulse(ctx, pulse)
-
+func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newPulse insolar.Pulse) error {
 	ctx, span := instracer.StartSpan(ctx, "pulse.logicrunner")
 	defer span.End()
 
-	messages := make([]insolar.Message, 0)
-
-	objects := lr.StateStorage.StateMap()
-	inslogger.FromContext(ctx).Debug("Processing ", len(*objects), " on pulse change")
-	for ref, state := range *objects {
-		meNext, _ := lr.JetCoordinator.IsAuthorized(
-			ctx, insolar.DynamicRoleVirtualExecutor, *ref.Record(), pulse.PulseNumber, lr.JetCoordinator.Me(),
-		)
-		state.Lock()
-
-		if broker := state.ExecutionBroker; broker != nil {
-			end, toSend := broker.OnPulse(ctx, meNext)
-			if end {
-				// we're not executing and we have nothing to process
-				state.ExecutionBroker = nil
-			}
-
-			messages = append(messages, toSend...)
-		}
-
-		if state.ExecutionBroker == nil {
-			lr.StateStorage.DeleteObjectState(ref)
-		}
-
-		state.Unlock()
+	err := lr.WriteController.CloseAndWait(ctx, oldPulse.PulseNumber)
+	if err != nil {
+		return errors.Wrap(err, "failed to close pulse on write controller")
 	}
 
-	lr.StateStorage.Unlock()
+	lr.ResultsMatcher.Clear()
+
+	messages := lr.StateStorage.OnPulse(ctx, newPulse)
+
+	lr.FlowDispatcher.ChangePulse(ctx, newPulse)
+	lr.InnerFlowDispatcher.ChangePulse(ctx, newPulse)
+
+	err = lr.WriteController.Open(ctx, newPulse.PulseNumber)
+	if err != nil {
+		return errors.Wrap(err, "failed to start new pulse on write controller")
+	}
 
 	if len(messages) > 0 {
 		go lr.sendOnPulseMessagesAsync(ctx, messages)
@@ -331,7 +292,7 @@ func (lr *LogicRunner) stopIfNeeded(ctx context.Context) {
 	lr.StateStorage.Lock()
 	defer lr.StateStorage.Unlock()
 
-	if len(*lr.StateStorage.StateMap()) == 0 {
+	if lr.StateStorage.IsEmpty() {
 		lr.stopLock.Lock()
 		if lr.isStopping {
 			inslogger.FromContext(ctx).Debug("LogicRunner ready to stop")
@@ -393,6 +354,17 @@ func (lr *LogicRunner) pulse(ctx context.Context) *insolar.Pulse {
 		panic(err)
 	}
 	return &p
+}
+
+func contextWithServiceData(ctx context.Context, data message.ServiceData) context.Context {
+	// ctx := inslogger.ContextWithTrace(context.Background(), data.LogTraceID)
+	ctx = inslogger.ContextWithTrace(ctx, data.LogTraceID)
+	ctx = inslogger.WithLoggerLevel(ctx, data.LogLevel)
+	if data.TraceSpanData != nil {
+		parentSpan := instracer.MustDeserialize(data.TraceSpanData)
+		return instracer.WithParentSpan(ctx, parentSpan)
+	}
+	return ctx
 }
 
 func contextFromServiceData(data message.ServiceData) context.Context {

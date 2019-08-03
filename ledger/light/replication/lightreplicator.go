@@ -29,22 +29,27 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
+	"go.opencensus.io/trace"
 )
 
 // LightReplicator is a base interface for a sync component
 type LightReplicator interface {
 	// NotifyAboutPulse is method for notifying a sync component about new pulse
 	NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber)
+
+	Stop()
 }
 
 // LightReplicatorDefault is a base impl of LightReplicator
 type LightReplicatorDefault struct {
 	once sync.Once
+	done chan struct{}
 
 	jetCalculator   executor.JetCalculator
 	cleaner         Cleaner
@@ -82,6 +87,7 @@ func NewReplicatorDefault(
 		jetAccessor:  jetAccessor,
 
 		syncWaitingPulses: make(chan insolar.PulseNumber),
+		done:              make(chan struct{}),
 	}
 }
 
@@ -109,10 +115,19 @@ func (lr *LightReplicatorDefault) NotifyAboutPulse(ctx context.Context, pn insol
 	lr.syncWaitingPulses <- prevPN.PulseNumber
 }
 
+func (lr *LightReplicatorDefault) Stop() {
+	close(lr.done)
+}
+
 func (lr *LightReplicatorDefault) sync(ctx context.Context) {
-	for pn := range lr.syncWaitingPulses {
+	work := func(pn insolar.PulseNumber) {
 		ctx, logger := inslogger.WithTraceField(ctx, utils.RandTraceID())
 		logger.Debugf("[Replicator][sync] pn received - %v", pn)
+
+		ctx, span := instracer.StartSpan(ctx, "LightReplicatorDefault.sync")
+		span.AddAttributes(
+			trace.Int64Attribute("pulse", int64(pn)),
+		)
 
 		allIndexes := lr.filterAndGroupIndexes(ctx, pn)
 		jets := lr.jetCalculator.MineForPulse(ctx, pn)
@@ -121,6 +136,8 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 		for _, jetID := range jets {
 			msg, err := lr.heavyPayload(ctx, pn, jetID, allIndexes[jetID])
 			if err != nil {
+				span.AddAttributes(trace.BoolAttribute("error", true))
+				span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
 				panic(
 					fmt.Sprintf(
 						"[Replicator][sync] Problems with gather data for a pulse - %v and jet - %v. err - %v",
@@ -132,6 +149,9 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 			}
 			err = lr.sendToHeavy(ctx, msg)
 			if err != nil {
+				span.AddAttributes(trace.BoolAttribute("error", true))
+				span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
+
 				logger.Errorf("[Replicator][sync]  Problems with sending msg to a heavy node", err)
 			} else {
 				logger.Debugf("[Replicator][sync]  Data has been sent to a heavy. pn - %v, jetID - %v", msg.Pulse, msg.JetID.DebugString())
@@ -139,6 +159,20 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 		}
 
 		lr.cleaner.NotifyAboutPulse(ctx, pn)
+		span.End()
+	}
+
+	for {
+		select {
+		case pn, ok := <-lr.syncWaitingPulses:
+			if !ok {
+				return
+			}
+			work(pn)
+		case <-lr.done:
+			inslogger.FromContext(ctx).Info("light replicator stopped")
+			return
+		}
 	}
 }
 

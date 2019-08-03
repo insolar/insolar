@@ -123,14 +123,14 @@ type ServiceNetwork struct {
 
 	gateway   network.Gateway
 	gatewayMu sync.RWMutex
-}
 
-var PULSETIMEOUT time.Duration
+	pulseTimeout time.Duration
+}
 
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manager) (*ServiceNetwork, error) {
 	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, skip: conf.Service.Skip}
-	PULSETIMEOUT = time.Millisecond * time.Duration(conf.Pulsar.PulseTime)
+	serviceNetwork.pulseTimeout = time.Millisecond * time.Duration(conf.Pulsar.PulseTime)
 	return serviceNetwork, nil
 }
 
@@ -296,7 +296,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	defer close(done)
 	go func() {
 		select {
-		case <-time.After(PULSETIMEOUT):
+		case <-time.After(n.pulseTimeout):
 			log.Error("Node stopped due to long pulse processing")
 		case <-done:
 		}

@@ -28,15 +28,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/api"
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/testutils"
@@ -73,30 +74,36 @@ func CBORMarshal(t testing.TB, o interface{}) []byte {
 
 // ContractsBuilder for tests
 type ContractsBuilder struct {
-	root          string
-	pulseAccessor pulse.Accessor
+	root    string
+	IccPath string
 
-	ArtifactManager artifacts.Client
-	IccPath         string
-	Prototypes      map[string]*insolar.Reference
-	Codes           map[string]*insolar.Reference
+	pulseAccessor   pulse.Accessor
+	artifactManager artifacts.Client
+	jetCoordinator  jet.Coordinator
+
+	Prototypes map[string]*insolar.Reference
+	Codes      map[string]*insolar.Reference
 }
 
 // NewContractBuilder returns a new `ContractsBuilder`, takes in: path to tmp directory,
 // artifact manager, ...
-func NewContractBuilder(am artifacts.Client, icc string, accessor pulse.Accessor) *ContractsBuilder {
+func NewContractBuilder(icc string, am artifacts.Client, pa pulse.Accessor, jc jet.Coordinator) *ContractsBuilder {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	if err != nil {
 		return nil
 	}
 
 	cb := &ContractsBuilder{
-		root:            tmpDir,
-		pulseAccessor:   accessor,
-		Prototypes:      make(map[string]*insolar.Reference),
-		Codes:           make(map[string]*insolar.Reference),
-		ArtifactManager: am,
-		IccPath:         icc}
+		root:    tmpDir,
+		IccPath: icc,
+
+		pulseAccessor:   pa,
+		artifactManager: am,
+		jetCoordinator:  jc,
+
+		Prototypes: make(map[string]*insolar.Reference),
+		Codes:      make(map[string]*insolar.Reference),
+	}
 	return cb
 }
 
@@ -111,6 +118,8 @@ func (cb *ContractsBuilder) Clean() {
 
 // Build ...
 func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]string) error {
+	logger := inslogger.FromContext(ctx)
+
 	for name := range contracts {
 		nonce := testutils.RandomRef()
 		pulse, err := cb.pulseAccessor.Latest(ctx)
@@ -118,20 +127,19 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 			return errors.Wrap(err, "can't get current pulse")
 		}
 		request := record.IncomingRequest{
-			CallType:  record.CTSaveAsChild,
+			CallType:  record.CTDeployPrototype,
 			Prototype: &nonce,
 			Reason:    api.MakeReason(pulse.PulseNumber, []byte(name)),
+			APINode:   cb.jetCoordinator.Me(),
 		}
 		protoID, err := cb.registerRequest(ctx, &request)
 
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterIncomingRequest")
 		}
-
-		protoRef := insolar.Reference{}
-		protoRef.SetRecord(*protoID)
-		log.Debugf("Registered prototype %q for contract %q in %q", protoRef.String(), name, cb.root)
-		cb.Prototypes[name] = &protoRef
+		protoRef := insolar.NewReference(*protoID)
+		logger.Debugf("Registered prototype %q for contract %q in %q", protoRef.String(), name, cb.root)
+		cb.Prototypes[name] = protoRef
 	}
 
 	re := regexp.MustCompile(`package\s+\S+`)
@@ -152,53 +160,36 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 	}
 
 	for name := range contracts {
-		log.Debugf("Building plugin for contract %q in %q", name, cb.root)
+		logger.Debug("Building plugin for contract ", name, " in ", cb.root)
+
 		err := cb.plugin(name)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't call plugin")
 		}
-		log.Debugf("Built plugin for contract %q", name)
+		logger.Debug("Built plugin for contract ", name)
 
 		pluginBinary, err := ioutil.ReadFile(filepath.Join(cb.root, "plugins", name+".so"))
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't ReadFile")
 		}
 
-		nonce := testutils.RandomRef()
-		pulse, err := cb.pulseAccessor.Latest(ctx)
-		if err != nil {
-			return errors.Wrap(err, "can't get current pulse")
-		}
-
-		req := record.IncomingRequest{
-			CallType:  record.CTSaveAsChild,
-			Prototype: &nonce,
-			Reason:    api.MakeReason(pulse.PulseNumber, []byte(name)),
-		}
-
-		codeReq, err := cb.registerRequest(ctx, &req)
-		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't register request")
-		}
-
-		log.Debugf("Deploying code for contract %q", name)
-		codeID, err := cb.ArtifactManager.DeployCode(
+		logger.Debug("Deploying code for contract ", name)
+		codeID, err := cb.artifactManager.DeployCode(
 			ctx,
-			insolar.Reference{}, *insolar.NewReference(*codeReq),
+			insolar.Reference{}, insolar.Reference{},
 			pluginBinary, insolar.MachineTypeGoPlugin,
 		)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] DeployCode returns error")
 		}
 
-		codeRef := &insolar.Reference{}
-		codeRef.SetRecord(*codeID)
+		codeRef := insolar.NewReference(*codeID)
 
-		log.Debugf("Deployed code %q for contract %q in %q", codeRef.String(), name, cb.root)
+		logger.Debugf("Deployed code %q for contract %q in %q", codeRef.String(), name, cb.root)
 		cb.Codes[name] = codeRef
 
 		// FIXME: It's a temporary fix and should not be here. Ii will NOT work properly on production. Remove it ASAP!
-		err = cb.ArtifactManager.ActivatePrototype(
+		err = cb.artifactManager.ActivatePrototype(
 			ctx,
 			*cb.Prototypes[name],
 			insolar.GenesisRecord.Ref(), // FIXME: Only bootstrap can do this!
@@ -224,7 +215,7 @@ func (cb *ContractsBuilder) registerRequest(ctx context.Context, request *record
 
 	if cb.pulseAccessor == nil {
 		logger.Warnf("[ registerRequest ] No pulse accessor passed: no retries for register request")
-		return cb.ArtifactManager.RegisterIncomingRequest(ctx, request)
+		return cb.artifactManager.RegisterIncomingRequest(ctx, request)
 	}
 
 	for current := 1; current <= retries; current++ {
@@ -240,7 +231,7 @@ func (cb *ContractsBuilder) registerRequest(ctx context.Context, request *record
 		}
 		lastPulse = currentPulse.PulseNumber
 
-		contractID, err := cb.ArtifactManager.RegisterIncomingRequest(ctx, request)
+		contractID, err := cb.artifactManager.RegisterIncomingRequest(ctx, request)
 		if err == nil || !strings.Contains(err.Error(), flow.ErrCancelled.Error()) {
 			return contractID, err
 		}

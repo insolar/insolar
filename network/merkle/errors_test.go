@@ -170,12 +170,12 @@ func TestCalculatorError(t *testing.T) {
 	require.NotNil(t, key)
 
 	service := testutils.NewCryptographyServiceMock(t)
-	service.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
+	service.SignMock.Set(func(p []byte) (r *insolar.Signature, r1 error) {
 		return nil, errors.New("Sign error")
-	}
-	service.GetPublicKeyFunc = func() (r crypto.PublicKey, r1 error) {
+	})
+	service.GetPublicKeyMock.Set(func() (r crypto.PublicKey, r1 error) {
 		return "key", nil
-	}
+	})
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
 	ps := pulse2.NewStorageMem()

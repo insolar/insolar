@@ -31,14 +31,14 @@ import (
 func TestFinalizationKeeper_WeAreTooYoung(t *testing.T) {
 	testPulse := insolar.GenesisPulse.PulseNumber
 	jkMock := NewJetKeeperMock(t)
-	jkMock.TopSyncPulseMock.ExpectOnce().Return(testPulse + 1)
+	jkMock.TopSyncPulseMock.Expect().Return(testPulse + 1)
 
 	calcMock := network.NewPulseCalculatorMock(t)
-	calcMock.BackwardsFunc = func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
+	calcMock.BackwardsMock.Set(func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
 		require.Equal(t, testPulse, p1)
 
 		return insolar.Pulse{}, pulse.ErrNotFound
-	}
+	})
 
 	fk := NewFinalizationKeeperDefault(jkMock, nil, calcMock, 100)
 	err := fk.OnPulse(context.Background(), testPulse)
@@ -48,16 +48,16 @@ func TestFinalizationKeeper_WeAreTooYoung(t *testing.T) {
 func TestFinalizationKeeper_CalculatorReturnError(t *testing.T) {
 	testPulse := insolar.GenesisPulse.PulseNumber
 	jkMock := NewJetKeeperMock(t)
-	jkMock.TopSyncPulseMock.ExpectOnce().Return(testPulse + 1)
+	jkMock.TopSyncPulseMock.Expect().Return(testPulse + 1)
 
 	testError := errors.New("Test_CalculatorReturnError")
 
 	calcMock := network.NewPulseCalculatorMock(t)
-	calcMock.BackwardsFunc = func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
+	calcMock.BackwardsMock.Set(func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
 		require.Equal(t, testPulse, p1)
 
 		return insolar.Pulse{}, testError
-	}
+	})
 
 	fk := NewFinalizationKeeperDefault(jkMock, nil, calcMock, 100)
 	err := fk.OnPulse(context.Background(), testPulse)
@@ -67,7 +67,7 @@ func TestFinalizationKeeper_CalculatorReturnError(t *testing.T) {
 func TestFinalizationKeeper_OldCurrentPulse(t *testing.T) {
 	testPulse := insolar.GenesisPulse.PulseNumber
 	jkMock := NewJetKeeperMock(t)
-	jkMock.TopSyncPulseMock.ExpectOnce().Return(testPulse + 1)
+	jkMock.TopSyncPulseMock.Expect().Return(testPulse + 1)
 
 	limit := 100
 
@@ -83,15 +83,15 @@ func TestFinalizationKeeper_LimitExceeded(t *testing.T) {
 	testPulse := insolar.GenesisPulse.PulseNumber
 	limit := 10
 	jkMock := NewJetKeeperMock(t)
-	jkMock.TopSyncPulseMock.ExpectOnce().Return(testPulse)
+	jkMock.TopSyncPulseMock.Expect().Return(testPulse)
 
 	networkMock := testutils.NewTerminationHandlerMock(t)
 	networkMock.LeaveMock.Return()
 
 	calcMock := network.NewPulseCalculatorMock(t)
-	calcMock.BackwardsFunc = func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
+	calcMock.BackwardsMock.Set(func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
 		return insolar.Pulse{PulseNumber: p1 - insolar.PulseNumber(p2)}, nil
-	}
+	})
 
 	fk := NewFinalizationKeeperDefault(jkMock, networkMock, calcMock, limit)
 	err := fk.OnPulse(context.Background(), testPulse+insolar.PulseNumber(limit*10))
@@ -102,7 +102,7 @@ func TestFinalizationKeeper_HappyPath(t *testing.T) {
 	testPulse := insolar.GenesisPulse.PulseNumber
 	limit := 10
 	jkMock := NewJetKeeperMock(t)
-	jkMock.TopSyncPulseMock.ExpectOnce().Return(testPulse)
+	jkMock.TopSyncPulseMock.Expect().Return(testPulse)
 
 	networkMock := testutils.NewTerminationHandlerMock(t)
 	networkMock.LeaveMock.Return()

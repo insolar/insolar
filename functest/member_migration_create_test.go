@@ -77,7 +77,7 @@ func TestMemberMigrationCreateWithSamePublicKey(t *testing.T) {
 
 	_, err = signedRequest(member, "member.migrationCreate", map[string]interface{}{})
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "member for this publicKey already exist")
+	require.Contains(t, err.Error(), "failed to set reference in public key shard: can't set reference because this key already exists")
 
 	memberForBurn, err := newUserWithKeys()
 	require.NoError(t, err)
@@ -100,5 +100,5 @@ func TestMemberMigrationCreateWithSameBurnAddress(t *testing.T) {
 
 	_, err = retryableMemberMigrationCreate(member2, true)
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "member for this burnAddress already exist")
+	require.Contains(t, err.Error(), "failed to set reference in migration address shard: can't set reference because this key already exists")
 }

@@ -79,7 +79,7 @@ func getController(t *testing.T) *pulseController {
 	require.NoError(t, err)
 
 	pulseHandler := network.NewPulseHandlerMock(t)
-	pulseHandler.HandlePulseFunc = func(context.Context, insolar.Pulse, network2.ReceivedPacket) {}
+	pulseHandler.HandlePulseMock.Set(func(context.Context, insolar.Pulse, network2.ReceivedPacket) {})
 	net := network.NewHostNetworkMock(t)
 	net.BuildResponseMock.Return(packet.NewPacket(nil, nil, types.Pulse, 1))
 
@@ -256,13 +256,13 @@ func TestProcessPulseIgnoreCase(t *testing.T) {
 
 	aborted := false
 	th := testutils.NewTerminationHandlerMock(t)
-	th.AbortFunc = func(string) {
+	th.AbortMock.Set(func(string) {
 		aborted = true
-	}
+	})
 	controller.TerminationHandler = th
 
 	pulseHandler := network.NewPulseHandlerMock(t)
-	pulseHandler.HandlePulseFunc = func(context.Context, insolar.Pulse, network2.ReceivedPacket) {}
+	pulseHandler.HandlePulseMock.Set(func(context.Context, insolar.Pulse, network2.ReceivedPacket) {})
 	controller.PulseHandler = pulseHandler
 
 	request := newPulsePacket(t)
@@ -279,5 +279,5 @@ func TestProcessPulseIgnoreCase(t *testing.T) {
 	_, err := controller.processPulse(context.Background(), request)
 	assert.NoError(t, err)
 	assert.True(t, aborted)
-	assert.EqualValues(t, 0, pulseHandler.HandlePulseCounter)
+	assert.EqualValues(t, 0, pulseHandler.HandlePulseAfterCounter())
 }

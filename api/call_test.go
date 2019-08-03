@@ -34,7 +34,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 )
@@ -133,7 +133,7 @@ func TestTimeoutSuite(t *testing.T) {
 	timeoutSuite.api.timeout = 1 * time.Second
 
 	cr := testutils.NewContractRequesterMock(timeoutSuite.mc)
-	cr.SendRequestWithPulseFunc = func(p context.Context, p1 *insolar.Reference, method string, p3 []interface{}, p4 insolar.PulseNumber) (insolar.Reply, error) {
+	cr.SendRequestWithPulseMock.Set(func(p context.Context, p1 *insolar.Reference, method string, p3 []interface{}, p4 insolar.PulseNumber) (insolar.Reply, error) {
 		switch method {
 		case "GetPublicKey":
 			var result = string(pKeyString)
@@ -151,7 +151,7 @@ func TestTimeoutSuite(t *testing.T) {
 				Result: data,
 			}, nil
 		}
-	}
+	})
 
 	timeoutSuite.api.ContractRequester = cr
 	timeoutSuite.api.Start(timeoutSuite.ctx)

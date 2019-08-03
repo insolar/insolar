@@ -25,7 +25,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/heavy/executor.headTruncater -o ./ -s _gen_mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/heavy/executor.headTruncater -o ./ -s _gen_mock.go -g
 type headTruncater interface {
 	TruncateHead(ctx context.Context, from insolar.PulseNumber) error
 }

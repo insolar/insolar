@@ -26,11 +26,11 @@ type requestResult struct {
 	result          []byte                      // every
 	objectReference insolar.Reference           // every
 
-	asDelegate      bool              // activate
-	parentReference insolar.Reference // activate
-	objectImage     insolar.Reference // amend + activate
-	objectStateID   insolar.ID        // amend + deactivate
-	memory          []byte            // amend + activate
+	parentReference  insolar.Reference // activate
+	objectImage      insolar.Reference // amend + activate
+	objectStateID    insolar.ID        // amend + deactivate
+	memory           []byte            // amend + activate
+	constructorError string            // gob can't serialize `error` thus we are using string here
 }
 
 func newRequestResult(result []byte, objectRef insolar.Reference) *requestResult {
@@ -45,8 +45,8 @@ func (s *requestResult) Result() []byte {
 	return s.result
 }
 
-func (s *requestResult) Activate() (insolar.Reference, insolar.Reference, bool, []byte) {
-	return s.parentReference, s.objectImage, s.asDelegate, s.memory
+func (s *requestResult) Activate() (insolar.Reference, insolar.Reference, []byte) {
+	return s.parentReference, s.objectImage, s.memory
 }
 
 func (s *requestResult) Amend() (insolar.ID, insolar.Reference, []byte) {
@@ -57,14 +57,22 @@ func (s *requestResult) Deactivate() insolar.ID {
 	return s.objectStateID
 }
 
-func (s *requestResult) SetActivate(parent, image insolar.Reference, asDelegate bool, memory []byte) {
+func (s *requestResult) ConstructorError() string {
+	return s.constructorError
+}
+
+func (s *requestResult) SetConstructorError(err string) {
+	s.sideEffectType = artifacts.RequestSideEffectNone
+
+	s.constructorError = err
+}
+
+func (s *requestResult) SetActivate(parent, image insolar.Reference, memory []byte) {
 	s.sideEffectType = artifacts.RequestSideEffectActivate
 
-	s.asDelegate = asDelegate
 	s.parentReference = parent
 	s.objectImage = image
 	s.memory = memory
-
 }
 
 func (s *requestResult) SetAmend(object artifacts.ObjectDescriptor, memory []byte) {

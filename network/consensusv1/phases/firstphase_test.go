@@ -81,13 +81,13 @@ func TestFirstPhase_HandlePulse(t *testing.T) {
 	CertificateManager := testutils.NewCertificateManagerMock(t)
 	Gatewayer := network.NewGatewayerMock(t)
 	cryptoServ := testutils.NewCryptographyServiceMock(t)
-	cryptoServ.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
+	cryptoServ.SignMock.Set(func(p []byte) (r *insolar.Signature, r1 error) {
 		signature := insolar.SignatureFromBytes(nil)
 		return &signature, nil
-	}
-	cryptoServ.VerifyFunc = func(p crypto.PublicKey, p1 insolar.Signature, p2 []byte) (r bool) {
+	})
+	cryptoServ.VerifyMock.Set(func(p crypto.PublicKey, p1 insolar.Signature, p2 []byte) (r bool) {
 		return true
-	}
+	})
 
 	cm := component.Manager{}
 	cm.Inject(cryptoServ, nodeKeeper, firstPhase, pulseCalculatorMock, communicatorMock,

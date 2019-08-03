@@ -123,13 +123,13 @@ func TestSendMessageHandler_SameNode(t *testing.T) {
 	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{})
 	nodeRef := testutils.RandomRef()
 	nodeN := networkUtils.NewNodeKeeperMock(t)
-	nodeN.GetOriginFunc = func() (r insolar.NetworkNode) {
+	nodeN.GetOriginMock.Set(func() (r insolar.NetworkNode) {
 		n := networkUtils.NewNetworkNodeMock(t)
-		n.IDFunc = func() (r insolar.Reference) {
+		n.IDMock.Set(func() (r insolar.Reference) {
 			return nodeRef
-		}
+		})
 		return n
-	}
+	})
 	pubMock := &PublisherMock{}
 	pulseMock := pulse.NewAccessorMock(t)
 	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
@@ -159,17 +159,17 @@ func TestSendMessageHandler_SendError(t *testing.T) {
 	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{})
 	serviceNetwork.Pub = pubMock
 	nodeN := networkUtils.NewNodeKeeperMock(t)
-	nodeN.GetOriginFunc = func() (r insolar.NetworkNode) {
+	nodeN.GetOriginMock.Set(func() (r insolar.NetworkNode) {
 		n := networkUtils.NewNetworkNodeMock(t)
-		n.IDFunc = func() (r insolar.Reference) {
+		n.IDMock.Set(func() (r insolar.Reference) {
 			return testutils.RandomRef()
-		}
+		})
 		return n
-	}
+	})
 	rpc := networkUtils.NewRPCControllerMock(t)
-	rpc.SendBytesFunc = func(p context.Context, p1 insolar.Reference, p2 string, p3 []byte) (r []byte, r1 error) {
+	rpc.SendBytesMock.Set(func(p context.Context, p1 insolar.Reference, p2 string, p3 []byte) (r []byte, r1 error) {
 		return nil, errors.New("test error")
-	}
+	})
 	pulseMock := pulse.NewAccessorMock(t)
 	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
 	serviceNetwork.PulseAccessor = pulseMock
@@ -197,17 +197,17 @@ func TestSendMessageHandler_WrongReply(t *testing.T) {
 	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{})
 	serviceNetwork.Pub = pubMock
 	nodeN := networkUtils.NewNodeKeeperMock(t)
-	nodeN.GetOriginFunc = func() (r insolar.NetworkNode) {
+	nodeN.GetOriginMock.Set(func() (r insolar.NetworkNode) {
 		n := networkUtils.NewNetworkNodeMock(t)
-		n.IDFunc = func() (r insolar.Reference) {
+		n.IDMock.Set(func() (r insolar.Reference) {
 			return testutils.RandomRef()
-		}
+		})
 		return n
-	}
+	})
 	rpc := networkUtils.NewRPCControllerMock(t)
-	rpc.SendBytesFunc = func(p context.Context, p1 insolar.Reference, p2 string, p3 []byte) (r []byte, r1 error) {
+	rpc.SendBytesMock.Set(func(p context.Context, p1 insolar.Reference, p2 string, p3 []byte) (r []byte, r1 error) {
 		return nil, nil
-	}
+	})
 	pulseMock := pulse.NewAccessorMock(t)
 	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
 	serviceNetwork.PulseAccessor = pulseMock
@@ -233,17 +233,17 @@ func TestSendMessageHandler(t *testing.T) {
 	cfg.Service.Skip = 5
 	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{})
 	nodeN := networkUtils.NewNodeKeeperMock(t)
-	nodeN.GetOriginFunc = func() (r insolar.NetworkNode) {
+	nodeN.GetOriginMock.Set(func() (r insolar.NetworkNode) {
 		n := networkUtils.NewNetworkNodeMock(t)
-		n.IDFunc = func() (r insolar.Reference) {
+		n.IDMock.Set(func() (r insolar.Reference) {
 			return testutils.RandomRef()
-		}
+		})
 		return n
-	}
+	})
 	rpc := networkUtils.NewRPCControllerMock(t)
-	rpc.SendBytesFunc = func(p context.Context, p1 insolar.Reference, p2 string, p3 []byte) (r []byte, r1 error) {
+	rpc.SendBytesMock.Set(func(p context.Context, p1 insolar.Reference, p2 string, p3 []byte) (r []byte, r1 error) {
 		return ack, nil
-	}
+	})
 	pulseMock := pulse.NewAccessorMock(t)
 	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
 	serviceNetwork.PulseAccessor = pulseMock

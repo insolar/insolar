@@ -69,7 +69,7 @@ func TestCleaner_cleanPulse(t *testing.T) {
 	fc := executor.NewFilamentCleanerMock(ctrl)
 	fc.ClearMock.Expect(objID)
 
-	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, nil, ia, fc, 0)
+	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, nil, ia, fc, 0, 0)
 
 	cleaner.cleanPulse(ctx, inputPulse.PulseNumber)
 
@@ -98,40 +98,40 @@ func TestCleaner_clean(t *testing.T) {
 	nm.DeleteForPNMock.Expect(calculatedPulse.PulseNumber)
 
 	dc := drop.NewCleanerMock(ctrl)
-	dc.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
+	dc.DeleteForPNMock.Set(DeleteForPNMock(t, calculatedPulse.PulseNumber))
 
 	rc := object.NewRecordCleanerMock(ctrl)
-	rc.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
+	rc.DeleteForPNMock.Set(DeleteForPNMock(t, calculatedPulse.PulseNumber))
 
 	ic := object.NewIndexCleanerMock(ctrl)
-	ic.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
+	ic.DeleteForPNMock.Set(DeleteForPNMock(t, calculatedPulse.PulseNumber))
 
 	ps := pulse.NewShifterMock(ctrl)
-	ps.ShiftFunc = func(p context.Context, pn insolar.PulseNumber) error {
+	ps.ShiftMock.Set(func(p context.Context, pn insolar.PulseNumber) error {
 		require.Equal(t, calculatedPulse.PulseNumber, pn)
 		return nil
-	}
+	})
 
 	pc := pulse.NewCalculatorMock(ctrl)
-	pc.BackwardsFunc = func(p context.Context, pn insolar.PulseNumber, l int) (r insolar.Pulse, r1 error) {
+	pc.BackwardsMock.Set(func(p context.Context, pn insolar.PulseNumber, l int) (r insolar.Pulse, r1 error) {
 		require.Equal(t, inputPulse.PulseNumber, pn)
 		require.Equal(t, limit+1, l)
 		return calculatedPulse, nil
-	}
+	})
 
 	objID := gen.ID()
 	ia := object.NewIndexAccessorMock(ctrl)
-	ia.ForPulseFunc = func(p context.Context, p1 insolar.PulseNumber) (r []record.Index) {
+	ia.ForPulseMock.Set(func(p context.Context, p1 insolar.PulseNumber) (r []record.Index) {
 		require.Equal(t, calculatedPulse.PulseNumber, p1)
 
 		return []record.Index{
 			{ObjID: objID, LifelineLastUsed: insolar.PulseNumber(110)},
 		}
-	}
+	})
 	fc := executor.NewFilamentCleanerMock(ctrl)
 	fc.ClearMock.Expect(objID)
 
-	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, pc, ia, fc, limit)
+	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, pc, ia, fc, limit, 1)
 	defer close(cleaner.pulseForClean)
 
 	go cleaner.clean(ctx)
@@ -156,40 +156,40 @@ func TestLightCleaner_NotifyAboutPulse(t *testing.T) {
 	nm.DeleteForPNMock.Expect(calculatedPulse.PulseNumber)
 
 	dc := drop.NewCleanerMock(ctrl)
-	dc.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
+	dc.DeleteForPNMock.Set(DeleteForPNMock(t, calculatedPulse.PulseNumber))
 
 	rc := object.NewRecordCleanerMock(ctrl)
-	rc.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
+	rc.DeleteForPNMock.Set(DeleteForPNMock(t, calculatedPulse.PulseNumber))
 
 	ic := object.NewIndexCleanerMock(ctrl)
-	ic.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
+	ic.DeleteForPNMock.Set(DeleteForPNMock(t, calculatedPulse.PulseNumber))
 
 	ps := pulse.NewShifterMock(ctrl)
-	ps.ShiftFunc = func(p context.Context, pn insolar.PulseNumber) error {
+	ps.ShiftMock.Set(func(p context.Context, pn insolar.PulseNumber) error {
 		require.Equal(t, calculatedPulse.PulseNumber, pn)
 		return nil
-	}
+	})
 
 	pc := pulse.NewCalculatorMock(ctrl)
-	pc.BackwardsFunc = func(p context.Context, pn insolar.PulseNumber, l int) (r insolar.Pulse, r1 error) {
+	pc.BackwardsMock.Set(func(p context.Context, pn insolar.PulseNumber, l int) (r insolar.Pulse, r1 error) {
 		require.Equal(t, inputPulse.PulseNumber, pn)
 		require.Equal(t, limit+1, l)
 		return calculatedPulse, nil
-	}
+	})
 
 	objID := gen.ID()
 	ia := object.NewIndexAccessorMock(ctrl)
-	ia.ForPulseFunc = func(p context.Context, p1 insolar.PulseNumber) (r []record.Index) {
+	ia.ForPulseMock.Set(func(p context.Context, p1 insolar.PulseNumber) (r []record.Index) {
 		require.Equal(t, calculatedPulse.PulseNumber, p1)
 
 		return []record.Index{
 			{ObjID: objID, LifelineLastUsed: insolar.PulseNumber(110)},
 		}
-	}
+	})
 	fc := executor.NewFilamentCleanerMock(ctrl)
 	fc.ClearMock.Expect(objID)
 
-	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, pc, ia, fc, limit)
+	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, pc, ia, fc, limit, 1)
 	defer close(cleaner.pulseForClean)
 
 	go cleaner.NotifyAboutPulse(ctx, inputPulse.PulseNumber)

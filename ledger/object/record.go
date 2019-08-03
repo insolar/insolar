@@ -19,6 +19,7 @@ package object
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"sync"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -36,7 +37,7 @@ type TypeID uint32
 // TypeIDSize is a size of TypeID type.
 const TypeIDSize = 4
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordStorage -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordStorage -o ./ -s _mock.go -g
 
 // RecordStorage is an union of RecordAccessor and RecordModifier
 type RecordStorage interface {
@@ -44,7 +45,15 @@ type RecordStorage interface {
 	RecordModifier
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordAccessor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.AtomicRecordStorage -o ./ -s _mock.go -g
+
+// AtomicRecordStorage is an union of RecordAccessor and AtomicRecordModifier
+type AtomicRecordStorage interface {
+	RecordAccessor
+	AtomicRecordModifier
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordAccessor -o ./ -s _mock.go -g
 
 // RecordAccessor provides info about record-values from storage.
 type RecordAccessor interface {
@@ -52,7 +61,7 @@ type RecordAccessor interface {
 	ForID(ctx context.Context, id insolar.ID) (record.Material, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordCollectionAccessor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordCollectionAccessor -o ./ -s _mock.go -g
 
 // RecordCollectionAccessor provides methods for querying records with specific search conditions.
 type RecordCollectionAccessor interface {
@@ -60,20 +69,41 @@ type RecordCollectionAccessor interface {
 	ForPulse(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) []record.Material
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordModifier -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordModifier -o ./ -s _mock.go -g
 
 // RecordModifier provides methods for setting record-values to storage.
 type RecordModifier interface {
 	// Set saves new record-value in storage.
-	Set(ctx context.Context, id insolar.ID, rec record.Material) error
+	Set(ctx context.Context, rec record.Material) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordCleaner -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.AtomicRecordModifier -o ./ -s _mock.go
+
+// AtomicRecordModifier allows to modify multiple record atomically.
+type AtomicRecordModifier interface {
+	// SetAtomic atomically stores records to storage. Guarantees to either store all records or none.
+	SetAtomic(ctx context.Context, records ...record.Material) error
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordCleaner -o ./ -s _mock.go -g
 
 // RecordCleaner provides an interface for removing records from a storage.
 type RecordCleaner interface {
 	// DeleteForPN method removes records from a storage for a pulse
 	DeleteForPN(ctx context.Context, pulse insolar.PulseNumber)
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordPositionModifier -o ./ -s _mock.go
+
+type RecordPositionModifier interface {
+	IncrementPosition(recID insolar.ID) error
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordPositionAccessor -o ./ -s _mock.go
+
+type RecordPositionAccessor interface {
+	LastKnownPosition(pn insolar.PulseNumber) (uint32, error)
+	AtPosition(pn insolar.PulseNumber, position uint32) (insolar.ID, error)
 }
 
 // RecordMemory is an in-indexStorage struct for record-storage.
@@ -95,23 +125,29 @@ func NewRecordMemory() *RecordMemory {
 	}
 }
 
-// Set saves new record-value in storage.
-func (m *RecordMemory) Set(ctx context.Context, id insolar.ID, rec record.Material) error {
+// SetAtomic atomically stores records to storage. Guarantees to either store all records or none.
+func (m *RecordMemory) SetAtomic(ctx context.Context, recs ...record.Material) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	_, ok := m.recsStor[id]
-	if ok {
-		return ErrOverride
+	for _, r := range recs {
+		if r.ID.IsEmpty() {
+			return errors.New("id is empty")
+		}
+		_, ok := m.recsStor[r.ID]
+		if ok {
+			return ErrOverride
+		}
 	}
 
-	m.recsStor[id] = rec
-	m.jetIndex.Add(id, rec.JetID)
+	for _, r := range recs {
+		m.recsStor[r.ID] = r
+		m.jetIndex.Add(r.ID, r.JetID)
+	}
 
 	stats.Record(ctx,
-		statRecordInMemoryAddedCount.M(1),
+		statRecordInMemoryAddedCount.M(int64(len(recs))),
 	)
-
 	return nil
 }
 
@@ -197,11 +233,14 @@ func NewRecordDB(db store.DB) *RecordDB {
 }
 
 // Set saves new record-value in storage.
-func (r *RecordDB) Set(ctx context.Context, id insolar.ID, rec record.Material) error {
+func (r *RecordDB) Set(ctx context.Context, rec record.Material) error {
+	if rec.ID.IsEmpty() {
+		return errors.New("id is empty")
+	}
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	return r.set(id, rec)
+	return r.set(rec)
 }
 
 // TruncateHead remove all records after lastPulse
@@ -240,8 +279,8 @@ func (r *RecordDB) ForID(ctx context.Context, id insolar.ID) (record.Material, e
 	return r.get(id)
 }
 
-func (r *RecordDB) set(id insolar.ID, rec record.Material) error {
-	key := recordKey(id)
+func (r *RecordDB) set(rec record.Material) error {
+	key := recordKey(rec.ID)
 
 	_, err := r.db.Get(key)
 	if err == nil {
@@ -270,4 +309,120 @@ func (r *RecordDB) get(id insolar.ID) (record.Material, error) {
 	err = rec.Unmarshal(buff)
 
 	return rec, err
+}
+
+// RecordPositionDB is a DB storage implementation. It saves records position to DB.
+type RecordPositionDB struct {
+	lock sync.RWMutex
+	db   store.DB
+}
+
+func NewRecordPositionDB(db store.DB) *RecordPositionDB {
+	return &RecordPositionDB{db: db}
+}
+
+const (
+	recordPositionKeyPrefix          = 0x01
+	lastKnownRecordPositionKeyPrefix = 0x02
+)
+
+type recordPositionKey struct {
+	pn     insolar.PulseNumber
+	number uint32
+}
+
+func newRecordPositionKey(pn insolar.PulseNumber, number uint32) recordPositionKey {
+	return recordPositionKey{pn: pn, number: number}
+}
+
+func (k recordPositionKey) Scope() store.Scope {
+	return store.ScopeRecordPosition
+}
+
+func (k recordPositionKey) ID() []byte {
+	parsedNum := make([]byte, 4)
+	binary.BigEndian.PutUint32(parsedNum, k.number)
+	return bytes.Join([][]byte{{recordPositionKeyPrefix}, k.pn.Bytes(), parsedNum}, nil)
+}
+
+type lastKnownRecordPositionKey struct {
+	pn insolar.PulseNumber
+}
+
+func (k lastKnownRecordPositionKey) Scope() store.Scope {
+	return store.ScopeRecordPosition
+}
+
+func (k lastKnownRecordPositionKey) ID() []byte {
+	return bytes.Join([][]byte{{lastKnownRecordPositionKeyPrefix}, k.pn.Bytes()}, nil)
+}
+
+func (r *RecordPositionDB) LastKnownPosition(pn insolar.PulseNumber) (uint32, error) {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+
+	return r.lastKnownPosition(pn)
+}
+
+func (r *RecordPositionDB) lastKnownPosition(pn insolar.PulseNumber) (uint32, error) {
+	buff, err := r.db.Get(lastKnownRecordPositionKey{pn: pn})
+	if err != nil {
+		return 0, err
+	}
+	return binary.BigEndian.Uint32(buff), nil
+}
+
+func (r *RecordPositionDB) AtPosition(pn insolar.PulseNumber, position uint32) (insolar.ID, error) {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+
+	lastKnownPosition, err := r.LastKnownPosition(pn)
+	if err != nil {
+		return insolar.ID{}, err
+	}
+	if position > lastKnownPosition {
+		return insolar.ID{}, store.ErrNotFound
+	}
+
+	positionKey := newRecordPositionKey(pn, position)
+	rawID, err := r.db.Get(positionKey)
+	if err != nil {
+		return insolar.ID{}, err
+	}
+
+	return *insolar.NewIDFromBytes(rawID), nil
+}
+
+func (r *RecordPositionDB) setLastKnownPosition(pn insolar.PulseNumber, order uint32) error {
+	lastOrderKey := lastKnownRecordPositionKey{pn: pn}
+	parsedOrder := make([]byte, 4)
+	binary.BigEndian.PutUint32(parsedOrder, order)
+	return r.db.Set(lastOrderKey, parsedOrder)
+}
+
+func (r *RecordPositionDB) IncrementPosition(recID insolar.ID) error {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
+	currentPosition, err := r.lastKnownPosition(recID.Pulse())
+	if err != nil && err != store.ErrNotFound {
+		return err
+	}
+
+	nextPosition := currentPosition
+	nextPosition++
+
+	orderKey := newRecordPositionKey(recID.Pulse(), nextPosition)
+
+	_, err = r.db.Get(orderKey)
+	if err == nil {
+		return ErrOverride
+	}
+
+	err = r.db.Set(orderKey, recID.Bytes())
+	if err != nil {
+		return err
+	}
+
+	return r.setLastKnownPosition(recID.Pulse(), nextPosition)
 }

@@ -67,44 +67,44 @@ func Test_NotifyAboutPulse(t *testing.T) {
 	}
 
 	sender := bus.NewSenderMock(mc)
-	sender.SendRoleFunc = func(_ context.Context, msg *message2.Message, role insolar.DynamicRole, _ insolar.Reference) (r <-chan *message2.Message, r1 func()) {
+	sender.SendRoleMock.Set(func(_ context.Context, msg *message2.Message, role insolar.DynamicRole, _ insolar.Reference) (r <-chan *message2.Message, r1 func()) {
 		pl, err := payload.Unmarshal(msg.Payload)
 		require.NoError(t, err)
 		require.Equal(t, &expectPL, pl, "heavy message payload")
 		return nil, func() {}
-	}
+	})
 
 	jetCalc := executor.NewJetCalculatorMock(mc)
-	jetCalc.MineForPulseFunc = func(_ context.Context, _ insolar.PulseNumber) []insolar.JetID {
+	jetCalc.MineForPulseMock.Set(func(_ context.Context, _ insolar.PulseNumber) []insolar.JetID {
 		return []insolar.JetID{jetID}
-	}
+	})
 
 	cleaner := NewCleanerMock(mc)
-	cleaner.NotifyAboutPulseFunc = func(_ context.Context, _ insolar.PulseNumber) {}
+	cleaner.NotifyAboutPulseMock.Set(func(_ context.Context, _ insolar.PulseNumber) {})
 
 	pulseCalc := pulse.NewCalculatorMock(mc)
 	pulseCalc.BackwardsMock.Expect(ctx, expectPN+1, 1).Return(
 		insolar.Pulse{PulseNumber: expectPN}, nil)
 
 	dropAccessor := drop.NewAccessorMock(mc)
-	dropAccessor.ForPulseFunc = func(_ context.Context, _ insolar.JetID, _ insolar.PulseNumber) (r drop.Drop, r1 error) {
+	dropAccessor.ForPulseMock.Set(func(_ context.Context, _ insolar.JetID, _ insolar.PulseNumber) (r drop.Drop, r1 error) {
 		return expectDrop, nil
-	}
+	})
 
 	recordAccessor := object.NewRecordCollectionAccessorMock(mc)
-	recordAccessor.ForPulseFunc = func(_ context.Context, _ insolar.JetID, _ insolar.PulseNumber) (r []record.Material) {
+	recordAccessor.ForPulseMock.Set(func(_ context.Context, _ insolar.JetID, _ insolar.PulseNumber) (r []record.Material) {
 		return expectRecords
-	}
+	})
 
 	indexAccessor := object.NewIndexAccessorMock(mc)
-	indexAccessor.ForPulseFunc = func(_ context.Context, _ insolar.PulseNumber) []record.Index {
+	indexAccessor.ForPulseMock.Set(func(_ context.Context, _ insolar.PulseNumber) []record.Index {
 		return expectIndexes
-	}
+	})
 
 	jetAccessor := jet.NewAccessorMock(mc)
-	jetAccessor.ForIDFunc = func(_ context.Context, _ insolar.PulseNumber, _ insolar.ID) (insolar.JetID, bool) {
+	jetAccessor.ForIDMock.Set(func(_ context.Context, _ insolar.PulseNumber, _ insolar.ID) (insolar.JetID, bool) {
 		return jetID, false
-	}
+	})
 
 	r := NewReplicatorDefault(
 		jetCalc,

@@ -50,12 +50,6 @@ type Backoff struct {
 	MaxAttempts int
 }
 
-// Exporter holds configuration of Exporter
-type Exporter struct {
-	// ExportLag is lag in second before we start to export pulse
-	ExportLag uint32
-}
-
 // Replica holds configuration for Replicator.
 type Replica struct {
 	// Role defines that should do replicator (subscribe on replica parent or send notifications to replica targets).
@@ -91,8 +85,9 @@ type Ledger struct {
 	// IMPORTANT: It should be the same on ALL nodes.
 	LightChainLimit int
 
-	// Exporter holds configuration of Exporter
-	Exporter Exporter
+	// CleanerDelay holds value of pulses, that should happen before end of LightChainLimit and start
+	// of LME's data cleaning
+	CleanerDelay int
 
 	// Replica holds configuration for Replicator.
 	Replica Replica
@@ -113,10 +108,7 @@ func NewLedger() Ledger {
 			DepthLimit:             10, // limit to 1024 jets
 		},
 		LightChainLimit: 5, // 5 pulses
-
-		Exporter: Exporter{
-			ExportLag: 40, // 40 seconds
-		},
+		CleanerDelay:    3, // 3 pulses
 
 		Replica: Replica{
 			Role:              "root",

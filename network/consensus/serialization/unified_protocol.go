@@ -269,9 +269,16 @@ type Packet struct {
 	PacketSignature longbits.Bits512 `insolar-transport:"generate=signature"` // ByteSize=64
 }
 
-func (p *Packet) String() string {
+func (p Packet) String() string {
 	packetCtx := newPacketContext(context.Background(), &p.Header)
-	return fmt.Sprintf("h:%v b:{%v}", p.Header, p.EncryptableBody.DebugString(&packetCtx))
+	return fmt.Sprintf(
+		"<s=%d t=%d pt=%s f=%s body=%s>",
+		p.Header.SourceID,
+		p.Header.TargetID,
+		p.Header.GetPacketType(),
+		fmt.Sprintf("%08b", p.Header.PacketFlags),
+		p.EncryptableBody.String(&packetCtx),
+	)
 }
 
 func (p *Packet) setSignature(signature cryptkit.SignatureHolder) {

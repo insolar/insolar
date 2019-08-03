@@ -343,11 +343,11 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
 			pa := pulse.NewAccessorMock(t)
-			pa.LatestFunc = func(p context.Context) (insolar.Pulse, error) {
+			pa.LatestMock.Set(func(p context.Context) (insolar.Pulse, error) {
 				return insolar.Pulse{
 					PulseNumber: 1000,
 				}, nil
-			}
+			})
 			re := &requestsExecutor{MessageBus: test.mb, PulseAccessor: pa}
 			re.SendReply(ctx, test.transcript, test.reply, test.err)
 		})

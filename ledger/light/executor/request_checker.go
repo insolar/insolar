@@ -1,3 +1,19 @@
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
 package executor
 
 import (
@@ -13,7 +29,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.RequestChecker -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.RequestChecker -o ./ -s _mock.go -g
 
 type RequestChecker interface {
 	CheckRequest(ctx context.Context, requestID insolar.ID, request record.Request) error
@@ -46,9 +62,9 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 	}
 	reasonRef := request.ReasonRef()
 	reasonID := *reasonRef.Record()
-	objectID := requestID
-	if !request.IsCreationRequest() {
-		objectID = *request.AffinityRef().Record()
+
+	if reasonID.Pulse() > requestID.Pulse() {
+		return errors.New("request is older than its reason")
 	}
 
 	switch r := request.(type) {
@@ -61,21 +77,34 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 		// Reason should exist.
 		// FIXME: replace with remote request check.
 		if !request.IsAPIRequest() {
-			err := c.checkIncomingReason(ctx, objectID, reasonID)
+			reasonObject := r.ReasonAffinityRef()
+			if reasonObject.IsEmpty() {
+				return errors.New("reason affinity is not set on incoming request")
+			}
+
+			err := c.checkIncomingReason(ctx, *reasonObject.Record(), reasonID)
 			if err != nil {
-				return errors.Wrap(err, "reason for found")
+				return errors.Wrap(err, "reason not found")
 			}
 		}
 
 	case *record.OutgoingRequest:
+		if request.IsCreationRequest() {
+			return errors.New("outgoing cannot be creating request")
+		}
+
 		// FIXME: replace with "FindRequest" calculator method.
-		pendings, err := c.filaments.PendingRequests(ctx, requestID.Pulse(), *request.AffinityRef().Record())
+		requests, err := c.filaments.OpenedRequests(
+			ctx,
+			requestID.Pulse(),
+			*request.AffinityRef().Record(),
+			false,
+		)
 		if err != nil {
 			return errors.Wrap(err, "failed fetch pending requests")
 		}
-		reasonInPendings := inFilament(pendings, reasonID)
 
-		// Reason should be open.
+		reasonInPendings := contains(requests, reasonID)
 		if !reasonInPendings {
 			return errors.New("request reason should be open")
 		}
@@ -98,7 +127,7 @@ func (c *RequestCheckerDefault) checkIncomingReason(
 			return errors.Wrap(err, "failed to calculate node")
 		}
 	} else {
-		jetID, err := c.fetcher.Fetch(ctx, reasonID, reasonID.Pulse())
+		jetID, err := c.fetcher.Fetch(ctx, objectID, reasonID.Pulse())
 		if err != nil {
 			return errors.Wrap(err, "failed to fetch jet")
 		}
@@ -107,7 +136,7 @@ func (c *RequestCheckerDefault) checkIncomingReason(
 			return errors.Wrap(err, "failed to calculate node")
 		}
 	}
-	inslogger.FromContext(ctx).Debugf("check reason. request: %s")
+	inslogger.FromContext(ctx).Debug("check reason. request: ", reasonID.DebugString())
 	msg, err := payload.NewMessage(&payload.GetRequest{
 		ObjectID:  objectID,
 		RequestID: reasonID,
@@ -132,23 +161,17 @@ func (c *RequestCheckerDefault) checkIncomingReason(
 	case *payload.Request:
 		return nil
 	case *payload.Error:
-		if concrete.Code == payload.CodeNotFound {
-			// FIXME: virtual doesnt pass this check.
-			inslogger.FromContext(ctx).Errorf("reason is wrong. %v", concrete.Text)
-			return nil
-		}
 		return errors.New(concrete.Text)
 	default:
 		return fmt.Errorf("unexpected reply %T", pl)
 	}
 }
 
-func inFilament(pendings []record.CompositeFilamentRecord, requestID insolar.ID) bool {
+func contains(pendings []record.CompositeFilamentRecord, requestID insolar.ID) bool {
 	for _, p := range pendings {
 		if p.RecordID == requestID {
 			return true
 		}
 	}
-
 	return false
 }

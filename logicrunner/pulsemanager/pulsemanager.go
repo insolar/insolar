@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 )
@@ -73,14 +74,14 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	}
 
 	ctx, span := instracer.StartSpan(
-		ctx, "pulse.process", trace.WithSampler(trace.AlwaysSample()),
+		ctx, "PulseManager.Set", trace.WithSampler(trace.AlwaysSample()),
 	)
 	span.AddAttributes(
 		trace.Int64Attribute("pulse.PulseNumber", int64(newPulse.PulseNumber)),
 	)
 	defer span.End()
 
-	err := m.setUnderGilSection(ctx, newPulse)
+	oldPulse, err := m.setUnderGilSection(ctx, newPulse)
 	if err != nil {
 		return err
 	}
@@ -90,7 +91,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
 	}
 
-	err = m.LR.OnPulse(ctx, newPulse)
+	err = m.LR.OnPulse(ctx, *oldPulse, newPulse)
 	if err != nil {
 		return err
 	}
@@ -98,7 +99,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	return nil
 }
 
-func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.Pulse) error {
+func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.Pulse) (*insolar.Pulse, error) {
 	m.GIL.Acquire(ctx)
 	ctx, span := instracer.StartSpan(ctx, "pulse.gil_locked")
 
@@ -106,7 +107,7 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	if err == pulse.ErrNotFound {
 		storagePulse = *insolar.GenesisPulse
 	} else if err != nil {
-		return errors.Wrap(err, "call of GetLatestPulseNumber failed")
+		return nil, errors.Wrap(err, "call of GetLatestPulseNumber failed")
 	}
 
 	defer span.End()
@@ -115,7 +116,7 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	logger := inslogger.FromContext(ctx)
 	logger.WithFields(map[string]interface{}{
 		"new_pulse": newPulse.PulseNumber,
-	}).Debugf("received pulse")
+	}).Debug("received pulse")
 
 	// swap pulse
 	m.currentPulse = newPulse
@@ -123,7 +124,7 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	// swap active nodes
 	err = m.ActiveListSwapper.MoveSyncToActive(ctx, newPulse.PulseNumber)
 	if err != nil {
-		return errors.Wrap(err, "failed to apply new active node list")
+		return nil, errors.Wrap(err, "failed to apply new active node list")
 	}
 
 	fromNetwork := m.NodeNet.GetWorkingNodes()
@@ -133,19 +134,19 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	}
 	err = m.NodeSetter.Set(newPulse.PulseNumber, toSet)
 	if err != nil {
-		return errors.Wrap(err, "call of SetActiveNodes failed")
+		return nil, errors.Wrap(err, "call of SetActiveNodes failed")
 	}
 
 	err = m.JetModifier.Clone(ctx, storagePulse.PulseNumber, newPulse.PulseNumber, false)
 	if err != nil {
-		return errors.Wrapf(err, "failed to clone jet.Tree fromPulse=%v toPulse=%v", storagePulse.PulseNumber, newPulse.PulseNumber)
+		return nil, errors.Wrapf(err, "failed to clone jet.Tree fromPulse=%v toPulse=%v", storagePulse.PulseNumber, newPulse.PulseNumber)
 	}
 
 	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
-		return errors.Wrap(err, "call of AddPulse failed")
+		return nil, errors.Wrap(err, "call of AddPulse failed")
 	}
 
-	return nil
+	return &storagePulse, nil
 }
 
 // Start starts pulse manager.

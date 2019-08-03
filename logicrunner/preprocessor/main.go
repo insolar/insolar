@@ -44,7 +44,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var foundationPath = "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+var foundationPath = "github.com/insolar/insolar/logicrunner/builtin/foundation"
 var proxyctxPath = "github.com/insolar/insolar/logicrunner/common"
 var corePath = "github.com/insolar/insolar/insolar"
 

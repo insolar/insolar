@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
+	"fmt"
 	"sync"
 	"time"
 
@@ -120,7 +121,7 @@ func (cr *ContractRequester) SendRequestWithPulse(ctx context.Context, ref *inso
 func (cr *ContractRequester) calcRequestHash(request record.IncomingRequest) ([insolar.RecordHashSize]byte, error) {
 	var hash [insolar.RecordHashSize]byte
 
-	virtRec := record.Wrap(request)
+	virtRec := record.Wrap(&request)
 	buf, err := virtRec.Marshal()
 	if err != nil {
 		return hash, errors.Wrap(err, "[ ContractRequester::calcRequestHash ] Failed to marshal record")
@@ -129,6 +130,17 @@ func (cr *ContractRequester) calcRequestHash(request record.IncomingRequest) ([i
 	hasher := cr.PlatformCryptographyScheme.ReferenceHasher()
 	copy(hash[:], hasher.Hash(buf)[0:insolar.RecordHashSize])
 	return hash, nil
+}
+
+func (cr *ContractRequester) checkCall(_ context.Context, msg *message.CallMethod) error {
+	switch {
+	case msg.Caller.IsEmpty() && msg.APINode.IsEmpty():
+		return errors.New("either Caller or APINode should be set, both empty")
+	case !msg.Caller.IsEmpty() && !msg.APINode.IsEmpty():
+		return errors.New("either Caller or APINode should be set, both set")
+	}
+
+	return nil
 }
 
 func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (insolar.Reply, error) {
@@ -141,6 +153,11 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 
 	if msg.Nonce == 0 {
 		msg.Nonce = randomUint64()
+	}
+
+	err := cr.checkCall(ctx, msg)
+	if err != nil {
+		return nil, errors.Wrap(err, "incorrect request")
 	}
 
 	var ch chan *message.ReturnResults
@@ -211,17 +228,17 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, inMsg insolar.Messa
 	return cr.Call(ctx, inMsg)
 }
 
-func (cr *ContractRequester) CallConstructor(ctx context.Context, inMsg insolar.Message) (*insolar.Reference, error) {
+func (cr *ContractRequester) CallConstructor(ctx context.Context, inMsg insolar.Message) (ref *insolar.Reference, ctorErr string, sysErr error) {
 	res, err := cr.Call(ctx, inMsg)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	rep, ok := res.(*reply.CallConstructor)
 	if !ok {
-		return nil, errors.New("Reply is not CallConstructor")
+		return nil, "", errors.New(fmt.Sprintf("Reply is not CallConstructor: %+v", res))
 	}
-	return rep.Object, nil
+	return rep.Object, rep.ConstructorError, nil
 }
 
 func (cr *ContractRequester) result(ctx context.Context, msg *message.ReturnResults) error {

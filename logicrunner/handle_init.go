@@ -22,6 +22,10 @@ import (
 	"fmt"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/logicrunner/writecontroller"
+
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar/payload"
@@ -35,16 +39,14 @@ import (
 
 const InnerMsgTopic = "InnerMsg"
 
-const (
-	getLedgerPendingRequestMsg = "GetLedgerPendingRequest"
-)
-
 type Dependencies struct {
 	Publisher      message.Publisher
 	StateStorage   StateStorage
 	ResultsMatcher ResultMatcher
 	lr             *LogicRunner
 	Sender         bus.Sender
+	JetStorage     jet.Storage
+	WriteAccessor  writecontroller.Accessor
 }
 
 type Init struct {
@@ -55,6 +57,16 @@ type Init struct {
 
 func (s *Init) Future(ctx context.Context, f flow.Flow) error {
 	return f.Migrate(ctx, s.Present)
+}
+
+func sendErrorMessage(ctx context.Context, sender bus.Sender, meta payload.Meta, err error) error {
+	repMsg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
+	if err != nil {
+		return err
+	}
+
+	go sender.Reply(ctx, meta, repMsg)
+	return nil
 }
 
 func (s *Init) Present(ctx context.Context, f flow.Flow) error {
@@ -86,6 +98,12 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		return f.Handle(ctx, h.Present)
 	case payload.TypeAbandonedRequestsNotification:
 		h := &HandleAbandonedRequestsNotification{
+			dep:  s.dep,
+			meta: meta,
+		}
+		return f.Handle(ctx, h.Present)
+	case payload.TypeUpdateJet:
+		h := &HandleUpdateJet{
 			dep:  s.dep,
 			meta: meta,
 		}
@@ -182,8 +200,5 @@ type InnerInit struct {
 }
 
 func (s *InnerInit) Present(ctx context.Context, f flow.Flow) error {
-	switch s.Message.Metadata.Get(bus.MetaType) {
-	default:
-		return fmt.Errorf("[ InnerInit.Present ] no handler for message type %s", s.Message.Metadata.Get("Type"))
-	}
+	return fmt.Errorf("[ InnerInit.Present ] no handler for message type %s", s.Message.Metadata.Get("Type"))
 }

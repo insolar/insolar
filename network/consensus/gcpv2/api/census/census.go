@@ -52,6 +52,7 @@ package census
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
@@ -59,12 +60,13 @@ import (
 )
 
 type Pulse interface {
-	// GetCensusType() CensusType
 	GetCensusState() State
 	GetPulseNumber() pulse.Number
 	GetExpectedPulseNumber() pulse.Number
 	GetGlobulaStateHash() proofs.GlobulaStateHash
 	GetCloudStateHash() proofs.CloudStateHash
+	// returns true, when PulseData belongs to this census, PulseData can be empty for PrimingCensus
+	GetNearestPulseData() (bool, pulse.Data)
 }
 
 type Archived interface {
@@ -85,7 +87,7 @@ type Operational interface {
 	GetProfileFactory(ksf cryptkit.KeyStoreFactory) profiles.Factory
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.Active -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.Active -o . -s _mock.go -g
 
 type Active interface {
 	Operational
@@ -94,22 +96,37 @@ type Active interface {
 
 type Prime interface {
 	Active
-	MakeExpected(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) Expected
+	BuildCopy(pd pulse.Data, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) Built
+	//MakeExpected(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) Expected
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.Expected -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.Expected -o . -s _mock.go -g
 
 type Expected interface {
 	Operational
 	GetPrevious() Active
 	MakeActive(pd pulse.Data) Active
+	Rebuild(pn pulse.Number) Built
+}
+
+type Built interface {
+	GetOnlinePopulation() OnlinePopulation
+	GetEvictedPopulation() EvictedPopulation
+	GetGlobulaStateHash() proofs.GlobulaStateHash
+	GetCloudStateHash() proofs.CloudStateHash
+	GetNearestPulseData() (bool, pulse.Data)
+
+	Update(csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) Built
+
+	MakeExpected() Expected
 }
 
 type Builder interface {
 	GetPopulationBuilder() PopulationBuilder
 
-	GetCensusState() State
+	//GetCensusState() State
 	GetPulseNumber() pulse.Number
+	//IsEphemeralAllowed() bool
 
 	GetGlobulaStateHash() proofs.GlobulaStateHash
 	SetGlobulaStateHash(gsh proofs.GlobulaStateHash)
@@ -117,8 +134,10 @@ type Builder interface {
 	SealCensus()
 	IsSealed() bool
 
-	BuildAndMakeExpected(csh proofs.CloudStateHash) Expected
-	BuildAndMakeBrokenExpected(csh proofs.CloudStateHash) Expected
+	Build(csh proofs.CloudStateHash) Built
+	BuildAsBroken(csh proofs.CloudStateHash) Built
+	//BuildAndMakeExpected(csh proofs.CloudStateHash) Expected
+	//BuildAndMakeBrokenExpected(csh proofs.CloudStateHash) Expected
 }
 
 type State uint8

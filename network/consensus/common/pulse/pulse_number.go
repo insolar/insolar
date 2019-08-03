@@ -96,8 +96,16 @@ func (n Number) IsSpecialOrTimePulse() bool {
 	return n > Unknown && n <= MaxTimePulse
 }
 
+func (n Number) IsSpecial() bool {
+	return n > Unknown && n < MinTimePulse
+}
+
 func (n Number) IsUnknown() bool {
 	return n == Unknown
+}
+
+func (n Number) IsUnknownOrTimePulse() bool {
+	return n == Unknown || n >= MinTimePulse && n <= MaxTimePulse
 }
 
 func (n Number) IsUnknownOrEqualTo(o Number) bool {
