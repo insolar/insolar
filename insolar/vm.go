@@ -60,7 +60,7 @@ type MachineLogicExecutor interface {
 // LogicRunner is an interface that should satisfy logic executor
 type LogicRunner interface {
 	LRI()
-	OnPulse(context.Context, Pulse) error
+	OnPulse(context.Context, Pulse, Pulse) error
 	AddUnwantedResponse(ctx context.Context, msg Message) error
 }
 
