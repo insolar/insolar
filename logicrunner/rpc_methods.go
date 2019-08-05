@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -218,23 +219,20 @@ func (m *executionProxyImplementation) SaveAsChild(
 
 	// Send the request
 	msg := &message.CallMethod{IncomingRequest: *incoming}
-	objectRef, ctorErr, err := m.cr.CallConstructor(ctx, msg)
-	current.AddOutgoingRequest(ctx, *incoming, nil, objectRef, err)
+	res, err := m.cr.Call(ctx, msg)
 	if err != nil {
 		return err
 	}
-	rep.Reference = objectRef
-	rep.ConstructorError = ctorErr
+
+	callReply := res.(*reply.CallMethod)
+	current.AddOutgoingRequest(ctx, *incoming, callReply.Result, callReply.Object, err)
+
+	rep.Reference = callReply.Object
+	rep.Result = callReply.Result
 
 	// Register result of the outgoing method
 	outgoingReqRef := insolar.NewReference(*outgoingReqID)
-
-	var refBytes []byte
-	if objectRef != nil {
-		// constructor succeeded
-		refBytes = objectRef.Bytes()
-	}
-	reqResult := newRequestResult(refBytes, req.Callee)
+	reqResult := newRequestResult(rep.Result, req.Callee)
 	return m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
 }
 

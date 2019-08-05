@@ -334,7 +334,7 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 		return &id, nil
 	})
 
-	cr.CallMethodMock.Return(&reply.CallMethod{}, nil)
+	cr.CallMock.Return(&reply.CallMethod{}, nil)
 	// Make sure the result of the outgoing request is registered as well
 	am.RegisterResultMock.Set(func(ctx context.Context, reqref insolar.Reference, result artifacts.RequestResult) (r error) {
 		require.Equal(t, outgoingReqRef, &reqref)
@@ -410,12 +410,12 @@ func TestSaveAsChildRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	})
 
 	newObjRef := gen.Reference()
-	cr.CallConstructorMock.Return(&newObjRef, "", nil)
+	cr.CallMock.Return(&reply.CallMethod{Object:&newObjRef, Result: []byte{3,2,1}}, nil)
 
 	// Make sure the result of the outgoing request is registered as well
 	am.RegisterResultMock.Set(func(ctx context.Context, reqref insolar.Reference, result artifacts.RequestResult) (r error) {
 		require.Equal(t, outgoingReqRef, &reqref)
-		require.Equal(t, newObjRef.Bytes(), result.Result())
+		require.Equal(t, []byte{3,2,1}, result.Result())
 		return nil
 	})
 

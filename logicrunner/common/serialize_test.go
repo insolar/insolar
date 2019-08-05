@@ -14,17 +14,18 @@
 // limitations under the License.
 //
 
-package insolar
+package common
 
 import (
-	"context"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.ContractRequester -o ../testutils -s _mock.go -g
-
-// ContractRequester is the global contract requester handler. Other system parts communicate with contract requester through it.
-type ContractRequester interface {
-	Call(ctx context.Context, msg Message) (Reply, error)
-	SendRequest(ctx context.Context, ref *Reference, method string, argsIn []interface{}) (Reply, error)
-	SendRequestWithPulse(ctx context.Context, ref *Reference, method string, argsIn []interface{}, pulse PulseNumber) (Reply, error)
+func TestCBORSerializer_Serialize(t *testing.T) {
+	ser := NewCBORSerializer()
+	buf := []byte{}
+	err := ser.Serialize([]interface{}{nil}, &buf)
+	require.NoError(t, err)
+	require.Equal(t, []byte{0x81, 0xf6}, buf)
 }

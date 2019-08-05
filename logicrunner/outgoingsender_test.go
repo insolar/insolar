@@ -32,7 +32,7 @@ func TestOutgoingSenderSendRegularOutgoing(t *testing.T) {
 		resultChan:       resultChan,
 	}
 
-	cr.CallMethodMock.Return(&reply.CallMethod{}, nil)
+	cr.CallMock.Return(&reply.CallMethod{}, nil)
 	am.RegisterResultMock.Return(nil)
 
 	_, err := sender.Receive(msg)
@@ -59,7 +59,7 @@ func TestOutgoingSenderSendAbandonedOutgoing(t *testing.T) {
 		outgoingRequest:  req,
 	}
 
-	cr.CallMethodMock.Return(&reply.CallMethod{}, nil)
+	cr.CallMock.Return(&reply.CallMethod{}, nil)
 	am.RegisterResultMock.Return(nil)
 
 	_, err := sender.Receive(msg)
