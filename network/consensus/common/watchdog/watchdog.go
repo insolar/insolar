@@ -48,77 +48,125 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package coreapi
+package watchdog
 
 import (
 	"context"
-	"github.com/insolar/insolar/network/consensus/common/watchdog"
+	"math"
+	"sync"
+	"sync/atomic"
 	"time"
-
-	"github.com/insolar/insolar/network/consensus/common/chaser"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 )
 
-type PollingWorker struct {
-	//ctx context.Context
-	pollingInterval time.Duration
-
-	polls   []api.MaintenancePollFunc
-	pollCmd chan api.MaintenancePollFunc
+func NewPassiveOverseer(name string) *Overseer {
+	return &Overseer{name: name}
 }
 
-func (p *PollingWorker) Start(ctx context.Context, pollingInterval time.Duration) {
-	if p.pollCmd != nil {
+func NewActiveOverseer(name string, heartbeatPeriod time.Duration, workersHint int) *Overseer {
+
+	if heartbeatPeriod <= 0 {
+		panic("illegal value")
+	}
+
+	if workersHint <= 0 {
+		workersHint = 10
+	}
+
+	chanLimit := uint64(1+time.Second/heartbeatPeriod) * uint64(workersHint)
+	if chanLimit > 10000 {
+		chanLimit = 10000 // keep it reasonable
+	}
+
+	return &Overseer{name: name, heartbeatPeriod: heartbeatPeriod,
+		beatChannel: make(chan Heartbeat, chanLimit)}
+}
+
+type Overseer struct {
+	name            string
+	beaters         sync.Map
+	atomicIDCounter uint32
+	heartbeatPeriod time.Duration
+	beatChannel     chan Heartbeat
+}
+
+func (seer *Overseer) StartActive(ctx context.Context) {
+	if seer.beatChannel == nil {
 		panic("illegal state")
 	}
-	p.pollCmd = make(chan api.MaintenancePollFunc, 10)
-	p.pollingInterval = pollingInterval
 
-	watchdog.Go(ctx, "PollingWorker", p.pollingWorker)
+	m := activeMonitor{seer, &seer.beaters, seer.beatChannel}
+	go m.worker(ctx)
 }
 
-func (p *PollingWorker) AddPoll(fn api.MaintenancePollFunc) {
-	p.pollCmd <- fn
+func (seer *Overseer) AttachContext(ctx context.Context) context.Context {
+	ok, factory := FromContext(ctx)
+	if ok {
+		if factory == seer {
+			return ctx
+		}
+		panic("context is under supervision")
+	}
+	seer.ensure()
+	return WithFactory(ctx, "", seer)
 }
 
-func (p *PollingWorker) pollingWorker(ctx context.Context) {
-	pollingTimer := chaser.NewChasingTimer(p.pollingInterval)
+func (seer *Overseer) ensure() {
+}
+
+func (seer *Overseer) GetNewID() uint32 {
+	for {
+		v := atomic.LoadUint32(&seer.atomicIDCounter)
+		if atomic.CompareAndSwapUint32(&seer.atomicIDCounter, v, v+1) {
+			return v + 1
+		}
+	}
+}
+
+func (seer *Overseer) CreateGenerator(name string) *HeartbeatGenerator {
+	id := seer.GetNewID()
+
+	period := seer.heartbeatPeriod
+	if period == 0 && seer.beatChannel == nil {
+		period = math.MaxInt64 //zero state should not cause excessive attempts
+	}
+
+	entryI, loaded := seer.beaters.LoadOrStore(id, &monitoringEntry{name: name})
+
+	entry := entryI.(*monitoringEntry)
+	if !loaded {
+		newGen := NewHeartbeatGenerator(id, period, seer.beatChannel)
+		entry.generator = &newGen
+	}
+	return entry.generator
+}
+
+type monitoringEntry struct {
+	name      string
+	generator *HeartbeatGenerator
+}
+
+type activeMonitor struct {
+	seer        *Overseer
+	beaters     *sync.Map
+	beatChannel chan Heartbeat
+}
+
+func (m *activeMonitor) worker(ctx context.Context) {
+	defer close(m.beatChannel)
 
 	for {
 		select {
-		case <-watchdog.DoneOf(ctx):
+		case <-ctx.Done():
 			return
-		case <-pollingTimer.Channel():
-			pollingTimer.ClearExpired()
-
-			if p.scanPolls(ctx) {
-				pollingTimer.RestartChase()
-			}
-		case add := <-p.pollCmd:
-			if add == nil {
-				continue
-			}
-			p.polls = append(p.polls, add)
-			if len(p.polls) == 1 {
-				pollingTimer.RestartChase()
-			}
+		case beat := <-m.beatChannel:
+			storedGen, _ := m.beaters.Load(beat.From)
+			m.applyHeartbeat(beat, storedGen.(*monitoringEntry))
 		}
 	}
 }
 
-func (p *PollingWorker) scanPolls(ctx context.Context) bool {
-	j := 0
-	for i, poll := range p.polls {
-		if !poll(ctx) {
-			p.polls[i] = nil
-			continue
-		}
-		if i != j {
-			p.polls[i] = nil
-			p.polls[j] = poll
-		}
-		j++
+func (m *activeMonitor) applyHeartbeat(heartbeat Heartbeat, entry *monitoringEntry) {
+	if heartbeat.IsCancelled() {
+		m.beaters.Delete(heartbeat.From)
 	}
-	p.polls = p.polls[:j]
-	return j > 0
 }

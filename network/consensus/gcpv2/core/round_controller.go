@@ -78,6 +78,7 @@ type RoundStrategy interface {
 
 	ConfigureRoundContext(ctx context.Context, expectedPulse pulse.Number, self profiles.LocalNode) context.Context
 	AdjustConsensusTimings(timings *api.RoundTimings)
+	//IsWatchdogEnabled() bool
 }
 
 var _ api.RoundController = &PhasedRoundController{}
@@ -162,7 +163,7 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 		})
 
 	var prepCtx context.Context
-	// r.prepareCancel will be cancelled through r.fullCancel()
+	// r.prepareCancel will be cancelled through full cancel
 	prepCtx, r.prepareCancel = context.WithCancel(r.realm.roundContext)
 
 	r.prepR = &prep

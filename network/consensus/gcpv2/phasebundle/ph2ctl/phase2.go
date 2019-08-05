@@ -52,6 +52,8 @@ package ph2ctl
 
 import (
 	"context"
+	"fmt"
+	"github.com/insolar/insolar/network/consensus/common/watchdog"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 	"math"
 	"time"
@@ -197,7 +199,7 @@ func (c *Phase2PacketDispatcher) TriggerUnknownMember(ctx context.Context, membe
 
 func (c *Phase2Controller) StartWorker(ctx context.Context, realm *core.FullRealm) {
 	c.R = realm
-	go c.workerPhase2(ctx)
+	watchdog.Go(ctx, "workerPhase2", c.workerPhase2)
 }
 
 func (c *Phase2Controller) workerPhase2(ctx context.Context) {
@@ -243,6 +245,8 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 
 	idleLoop := false
 	softTimeout := false
+
+	neighbourhoodID := 0
 	for {
 	inner:
 		for {
@@ -340,13 +344,16 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 			remainingJoiners -= takeJoiners
 			remainingNodes -= takeNodes
 
+			neighbourhoodID++
 			nh := make([]*population.NodeAppearance, len(nhBuf))
 			for i, np := range nhBuf {
 				// don't create MembershipAnnouncementReader here to avoid hitting lock by this only process
 				nh[i] = np.(*population.NodeAppearance)
 			}
 
-			go c.sendPhase2(ctx, nh)
+			watchdog.Go(ctx, fmt.Sprintf("sendPhase2(nbh=%d)", neighbourhoodID), func(ctx context.Context) {
+				c.sendPhase2(ctx, nh)
+			})
 
 			idleLoop = false
 		}

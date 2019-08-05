@@ -52,6 +52,7 @@ package core
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/common/watchdog"
 	"sync/atomic"
 	"time"
 
@@ -215,13 +216,13 @@ func (p *RoundStateMachineWorker) startAndGetIsRunning(safe bool) bool {
 		p.starterFn()
 	}
 	atomic.CompareAndSwapUint32(&p.roundState, uint32(RoundInactive), uint32(RoundAwaitingPulse))
-	go p.stateWorker()
+	watchdog.Go(p.ctx, "RoundStateMachine", p.stateWorker)
 	return true
 }
 
-func (p *RoundStateMachineWorker) stateWorker() {
+func (p *RoundStateMachineWorker) stateWorker(ctx context.Context) {
 
-	exitState := p.runToLastState()
+	exitState := p.runToLastState(ctx)
 
 	switch {
 	case exitState == RoundStopped:
@@ -237,7 +238,7 @@ func (p *RoundStateMachineWorker) stateWorker() {
 	atomic.StoreInt32(&p.runStatus, runStatusStopped)
 }
 
-func (p *RoundStateMachineWorker) runToLastState() (exitState RoundState) {
+func (p *RoundStateMachineWorker) runToLastState(ctx context.Context) (exitState RoundState) {
 	defer func() {
 		p.cancelFn()
 		recovered := recover()
@@ -253,7 +254,7 @@ func (p *RoundStateMachineWorker) runToLastState() (exitState RoundState) {
 	exitState = RoundAborted
 	for {
 		select {
-		case <-p.ctx.Done():
+		case <-watchdog.DoneOf(ctx):
 			close(p.asyncCmd)
 			close(p.syncCmd)
 		case <-p.timeout:

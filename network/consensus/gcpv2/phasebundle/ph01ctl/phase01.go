@@ -53,6 +53,7 @@ package ph01ctl
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/common/watchdog"
 	"time"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
@@ -196,7 +197,7 @@ func (c *Phase01Controller) sendReqReply(ctx context.Context, target *population
 
 func (c *Phase01Controller) StartWorker(ctx context.Context, realm *core.FullRealm) {
 	c.R = realm
-	go c.workerPhase01(ctx)
+	watchdog.Go(ctx, "workerPhase01", c.workerPhase01)
 }
 
 func (c *Phase01Controller) workerPhase01(ctx context.Context) {
@@ -216,7 +217,10 @@ func (c *Phase01Controller) workerPhase01(ctx context.Context) {
 
 	c.R.ApplyLocalState(nsh)
 
-	go c.workerSendPhase1ToFixed(ctx, startIndex, nodes)
+	watchdog.Go(ctx, "workerSendPhase1ToFixed", func(ctx context.Context) {
+		c.workerSendPhase1ToFixed(ctx, startIndex, nodes)
+	})
+
 	c.workerSendPhase1ToDynamics(ctx)
 }
 

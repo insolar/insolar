@@ -54,6 +54,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/consensus/common/watchdog"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
@@ -231,20 +232,20 @@ func (p *PrepRealm) prepareEphemeralPolling(ctxPrep context.Context) {
 			if !p.checkEphemeralStart(ctxPrep) {
 				return true // stay in polling
 			}
-			go p.pushEphemeralPulse(ctxPrep)
+			watchdog.Go(ctxPrep, "pushEphemeralPulse", p.pushEphemeralPulse)
 			// stop polling anyway - repeating of unsuccessful is bad
 		}
 		return false
 	})
 }
 
-func (p *PrepRealm) pushEphemeralPulse(ctx context.Context) bool {
+func (p *PrepRealm) pushEphemeralPulse(ctx context.Context) {
 
 	p.Lock()
 	defer p.Unlock()
 
 	if p.disableEphemeralPolling {
-		return false // ephemeral mode was deactivated
+		return // ephemeral mode was deactivated
 	}
 
 	pde := p.ephemeralFeeder.CreateEphemeralPulsePacket(p.initialCensus)
@@ -252,7 +253,6 @@ func (p *PrepRealm) pushEphemeralPulse(ctx context.Context) bool {
 	if !ok && pn != pde.GetPulseNumber() {
 		inslogger.FromContext(ctx).Error("active ephemeral start has failed, going to passive")
 	}
-	return ok
 }
 
 func (p *PrepRealm) checkEphemeralStart(ctx context.Context) bool {

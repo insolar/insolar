@@ -48,77 +48,22 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package coreapi
+package watchdog
 
-import (
-	"context"
-	"github.com/insolar/insolar/network/consensus/common/watchdog"
-	"time"
+import "math"
 
-	"github.com/insolar/insolar/network/consensus/common/chaser"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-)
+const DisabledHeartbeat = math.MinInt64
 
-type PollingWorker struct {
-	//ctx context.Context
-	pollingInterval time.Duration
-
-	polls   []api.MaintenancePollFunc
-	pollCmd chan api.MaintenancePollFunc
+type Heartbeat struct {
+	From             uint32
+	PreviousUnixTime int64
+	UpdateUnixTime   int64
 }
 
-func (p *PollingWorker) Start(ctx context.Context, pollingInterval time.Duration) {
-	if p.pollCmd != nil {
-		panic("illegal state")
-	}
-	p.pollCmd = make(chan api.MaintenancePollFunc, 10)
-	p.pollingInterval = pollingInterval
-
-	watchdog.Go(ctx, "PollingWorker", p.pollingWorker)
+func (h Heartbeat) IsCancelled() bool {
+	return h.UpdateUnixTime == DisabledHeartbeat
 }
 
-func (p *PollingWorker) AddPoll(fn api.MaintenancePollFunc) {
-	p.pollCmd <- fn
-}
-
-func (p *PollingWorker) pollingWorker(ctx context.Context) {
-	pollingTimer := chaser.NewChasingTimer(p.pollingInterval)
-
-	for {
-		select {
-		case <-watchdog.DoneOf(ctx):
-			return
-		case <-pollingTimer.Channel():
-			pollingTimer.ClearExpired()
-
-			if p.scanPolls(ctx) {
-				pollingTimer.RestartChase()
-			}
-		case add := <-p.pollCmd:
-			if add == nil {
-				continue
-			}
-			p.polls = append(p.polls, add)
-			if len(p.polls) == 1 {
-				pollingTimer.RestartChase()
-			}
-		}
-	}
-}
-
-func (p *PollingWorker) scanPolls(ctx context.Context) bool {
-	j := 0
-	for i, poll := range p.polls {
-		if !poll(ctx) {
-			p.polls[i] = nil
-			continue
-		}
-		if i != j {
-			p.polls[i] = nil
-			p.polls[j] = poll
-		}
-		j++
-	}
-	p.polls = p.polls[:j]
-	return j > 0
+func (h Heartbeat) IsFirst() bool {
+	return h.PreviousUnixTime == 0
 }

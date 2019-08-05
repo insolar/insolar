@@ -54,6 +54,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/insolar/insolar/network/consensus/common/args"
+	"github.com/insolar/insolar/network/consensus/common/watchdog"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 	"sync"
 	"time"
@@ -165,7 +166,7 @@ func (c *Phase3Controller) StartWorker(ctx context.Context, realm *core.FullReal
 	c.queuePh3Recv = make(chan inspectors.InspectedVector, c.R.GetNodeCount())
 	c.inspector = inspectors.NewBypassInspector()
 
-	go c.workerPhase3(ctx)
+	watchdog.Go(ctx, "workerPhase3", c.workerPhase3)
 }
 
 func (c *Phase3Controller) workerPhase3(ctx context.Context) {
@@ -186,7 +187,9 @@ func (c *Phase3Controller) workerPhase3(ctx context.Context) {
 	if !c.R.IsJoiner() {
 		// joiner has no vote in consensus, hence there is no reason to send Phase3 from it
 		localHashedVector := localInspector.CreateVector(c.R.GetSigner())
-		go c.workerSendPhase3(ctx, localHashedVector)
+		watchdog.Go(ctx, "workerSendPhase3", func(ctx context.Context) {
+			c.workerSendPhase3(ctx, localHashedVector)
+		})
 	}
 
 	if !c.workerRecvPhase3(ctx, localInspector) {
@@ -315,7 +318,7 @@ outer:
 
 				didFastPhase3 = true
 				log.Debugf(">>>>workerPrePhase3: try FastPhase3: %d", c.R.GetSelfNodeID())
-				go c.workerSendFastPhase3(ctx)
+				watchdog.Go(ctx, "workerSendFastPhase3", c.workerSendFastPhase3)
 			}
 
 			if chasingDelayTimer.IsEnabled() {
