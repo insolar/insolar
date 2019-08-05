@@ -18,14 +18,12 @@ package logicrunner
 
 import (
 	"context"
-	"strings"
 
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -52,10 +50,11 @@ func NewRPCMethods(
 	dc artifacts.DescriptorsCache,
 	cr insolar.ContractRequester,
 	ss StateStorage,
+	outgoingSender OutgoingRequestSender,
 ) *RPCMethods {
 	return &RPCMethods{
 		ss:         ss,
-		execution:  NewExecutionProxyImplementation(dc, cr, am),
+		execution:  NewExecutionProxyImplementation(dc, cr, am, outgoingSender),
 		validation: NewValidationProxyImplementation(dc),
 	}
 }
@@ -124,20 +123,23 @@ func (m *RPCMethods) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *r
 }
 
 type executionProxyImplementation struct {
-	dc artifacts.DescriptorsCache
-	cr insolar.ContractRequester
-	am artifacts.Client
+	dc             artifacts.DescriptorsCache
+	cr             insolar.ContractRequester
+	am             artifacts.Client
+	outgoingSender OutgoingRequestSender
 }
 
 func NewExecutionProxyImplementation(
 	dc artifacts.DescriptorsCache,
 	cr insolar.ContractRequester,
 	am artifacts.Client,
+	outgoingSender OutgoingRequestSender,
 ) ProxyImplementation {
 	return &executionProxyImplementation{
-		dc: dc,
-		cr: cr,
-		am: am,
+		dc:             dc,
+		cr:             cr,
+		am:             am,
+		outgoingSender: outgoingSender,
 	}
 }
 
@@ -167,7 +169,7 @@ func (m *executionProxyImplementation) RouteCall(
 		return errors.New("Try to call route from immutable method")
 	}
 
-	incoming, outgoing := buildIncomingAndOutgoingCallRequests(ctx, current, req)
+	outgoing := buildOutgoingRequest(ctx, current, req)
 
 	// Step 1. Register outgoing request.
 
@@ -186,30 +188,16 @@ func (m *executionProxyImplementation) RouteCall(
 		return nil
 	}
 
-	// Step 2. Actually make a call.
-	callMsg := &message.CallMethod{IncomingRequest: *incoming}
-	res, err := m.cr.CallMethod(ctx, callMsg)
-	if err == nil && req.Wait {
-		rep.Result = res.(*reply.CallMethod).Result
-	}
-	current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	if err != nil && !strings.Contains(err.Error(), "index not found") {
-		return err
-	}
+	// Step 2. Send the request and register the result (both is done by outgoingSender)
 
-	// Step 3. Register result of the outgoing method
 	outgoingReqRef := insolar.NewReference(*outgoingReqID)
-	reqResult := newRequestResult(rep.Result, req.Callee)
-	registerResultErr := m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	if err != nil && strings.Contains(err.Error(), "index not found") {
-		if registerResultErr != nil {
-			inslogger.FromContext(ctx).Errorf("Failed to register result for request %s, error: %s", outgoingReqRef.String(), registerResultErr.Error())
-		}
-		return err
+
+	var incoming *record.IncomingRequest
+	rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
+	if incoming != nil {
+		current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
 	}
-	return registerResultErr
+	return err
 }
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
@@ -293,7 +281,8 @@ func (m *validationProxyImplementation) RouteCall(
 		return errors.New("immutable method can't make calls")
 	}
 
-	incoming, _ := buildIncomingAndOutgoingCallRequests(ctx, current, req)
+	outgoing := buildOutgoingRequest(ctx, current, req)
+	incoming := buildIncomingRequestFromOutgoing(outgoing)
 
 	reqRes := current.HasOutgoingRequest(ctx, *incoming)
 	if reqRes == nil {
@@ -337,28 +326,7 @@ func (m *validationProxyImplementation) DeactivateObject(
 	return nil
 }
 
-func buildIncomingAndOutgoingCallRequests(
-	_ context.Context, current *Transcript, req rpctypes.UpRouteReq,
-) (*record.IncomingRequest, *record.OutgoingRequest) {
-
-	current.Nonce++
-
-	incoming := record.IncomingRequest{
-		Caller:          req.Callee,
-		CallerPrototype: req.CalleePrototype,
-		Nonce:           current.Nonce,
-
-		Immutable: req.Immutable,
-
-		Object:    &req.Object,
-		Prototype: &req.Prototype,
-		Method:    req.Method,
-		Arguments: req.Arguments,
-
-		APIRequestID: current.Request.APIRequestID,
-		Reason:       current.RequestRef,
-	}
-
+func buildIncomingRequestFromOutgoing(outgoing *record.OutgoingRequest) *record.IncomingRequest {
 	// Currently IncomingRequest and OutgoingRequest are almost exact copies of each other
 	// thus the following code is a bit ugly. However this will change when we'll
 	// figure out which fields are actually needed in OutgoingRequest and which are
@@ -366,8 +334,36 @@ func buildIncomingAndOutgoingCallRequests(
 	// CommonRequestData structures or something like this.
 	// This being said the implementation of Request interface differs for Incoming and
 	// OutgoingRequest. See corresponding implementation of the interface methods.
+	incoming := record.IncomingRequest{
+		Caller:          outgoing.Caller,
+		CallerPrototype: outgoing.CallerPrototype,
+		Nonce:           outgoing.Nonce,
 
-	outgoing := record.OutgoingRequest{
+		Immutable: outgoing.Immutable,
+
+		Object:    outgoing.Object,
+		Prototype: outgoing.Prototype,
+		Method:    outgoing.Method,
+		Arguments: outgoing.Arguments,
+
+		APIRequestID: outgoing.APIRequestID,
+		Reason:       outgoing.Reason,
+	}
+
+	if outgoing.ReturnMode != record.ReturnSaga {
+		incoming.ReturnMode = outgoing.ReturnMode
+	}
+
+	return &incoming
+}
+
+func buildOutgoingRequest(
+	_ context.Context, current *Transcript, req rpctypes.UpRouteReq,
+) *record.OutgoingRequest {
+
+	current.Nonce++
+
+	outgoing := &record.OutgoingRequest{
 		Caller:          req.Callee,
 		CallerPrototype: req.CalleePrototype,
 		Nonce:           current.Nonce,
@@ -388,11 +384,10 @@ func buildIncomingAndOutgoingCallRequests(
 		// when current object finishes the execution and validation.
 		outgoing.ReturnMode = record.ReturnSaga
 	} else if !req.Wait {
-		incoming.ReturnMode = record.ReturnNoWait
 		outgoing.ReturnMode = record.ReturnNoWait
 	}
 
-	return &incoming, &outgoing
+	return outgoing
 }
 
 func buildIncomingAndOutgoingSaveAsChildRequests(
