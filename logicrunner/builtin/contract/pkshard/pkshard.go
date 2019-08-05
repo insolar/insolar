@@ -31,7 +31,7 @@ type PKShard struct {
 // New creates new member.
 func New() (*PKShard, error) {
 	return &PKShard{
-		Map: map[string]string{},
+		Map: make(foundation.StableMap),
 	}, nil
 }
 
