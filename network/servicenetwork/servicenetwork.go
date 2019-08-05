@@ -54,6 +54,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"time"
 
 	"github.com/insolar/insolar/cryptography"
 
@@ -250,7 +251,13 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	n.initConsensus()
 	n.Gatewayer.Gateway().Run(ctx)
 
+	for n.Gatewayer.Gateway().GetState() < insolar.WaitMinRoles {
+		inslogger.FromContext(ctx).Info("-=-=-= Waiting for network stats..")
+		<-time.After(time.Millisecond * 500)
+	}
+
 	n.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
+	inslogger.FromContext(ctx).Info("-=-=-= Network stated.")
 
 	return nil
 }
