@@ -51,7 +51,6 @@
 package node
 
 import (
-	"math/rand"
 	"sort"
 
 	"github.com/insolar/insolar/insolar"
@@ -101,15 +100,6 @@ func (a *Accessor) GetWorkingNodes() []insolar.NetworkNode {
 		return result[i].ID().Compare(result[j].ID()) < 0
 	})
 	return result
-}
-
-func (a *Accessor) GetRandomWorkingNode() insolar.NetworkNode {
-	workingList := a.snapshot.nodeList[ListWorking]
-	l := len(workingList)
-	if l == 0 {
-		return nil
-	}
-	return workingList[rand.Intn(l)]
 }
 
 func GetSnapshotActiveNodes(snapshot *Snapshot) []insolar.NetworkNode {

@@ -479,10 +479,6 @@ func (n *nodeNetMock) GetWorkingNodes() []insolar.NetworkNode {
 	}
 }
 
-func (n *nodeNetMock) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference {
-	panic("implement me")
-}
-
 type stub struct{}
 
 func (*stub) Send(context.Context, insolar.Message, *insolar.MessageSendOptions) (insolar.Reply, error) {

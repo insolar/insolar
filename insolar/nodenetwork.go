@@ -90,6 +90,4 @@ type NodeNetwork interface {
 	GetWorkingNode(ref Reference) NetworkNode
 	// GetWorkingNodes returns sorted list of all working nodes.
 	GetWorkingNodes() []NetworkNode
-	// GetWorkingNodesByRole get working nodes by role.
-	GetWorkingNodesByRole(role DynamicRole) []Reference
 }

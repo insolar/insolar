@@ -39,12 +39,6 @@ type AccessorMock struct {
 	beforeGetActiveNodesCounter uint64
 	GetActiveNodesMock          mAccessorMockGetActiveNodes
 
-	funcGetRandomWorkingNode          func() (n1 insolar.NetworkNode)
-	inspectFuncGetRandomWorkingNode   func()
-	afterGetRandomWorkingNodeCounter  uint64
-	beforeGetRandomWorkingNodeCounter uint64
-	GetRandomWorkingNodeMock          mAccessorMockGetRandomWorkingNode
-
 	funcGetWorkingNode          func(ref insolar.Reference) (n1 insolar.NetworkNode)
 	inspectFuncGetWorkingNode   func(ref insolar.Reference)
 	afterGetWorkingNodeCounter  uint64
@@ -75,8 +69,6 @@ func NewAccessorMock(t minimock.Tester) *AccessorMock {
 	m.GetActiveNodeByShortIDMock.callArgs = []*AccessorMockGetActiveNodeByShortIDParams{}
 
 	m.GetActiveNodesMock = mAccessorMockGetActiveNodes{mock: m}
-
-	m.GetRandomWorkingNodeMock = mAccessorMockGetRandomWorkingNode{mock: m}
 
 	m.GetWorkingNodeMock = mAccessorMockGetWorkingNode{mock: m}
 	m.GetWorkingNodeMock.callArgs = []*AccessorMockGetWorkingNodeParams{}
@@ -874,149 +866,6 @@ func (m *AccessorMock) MinimockGetActiveNodesInspect() {
 	}
 }
 
-type mAccessorMockGetRandomWorkingNode struct {
-	mock               *AccessorMock
-	defaultExpectation *AccessorMockGetRandomWorkingNodeExpectation
-	expectations       []*AccessorMockGetRandomWorkingNodeExpectation
-}
-
-// AccessorMockGetRandomWorkingNodeExpectation specifies expectation struct of the Accessor.GetRandomWorkingNode
-type AccessorMockGetRandomWorkingNodeExpectation struct {
-	mock *AccessorMock
-
-	results *AccessorMockGetRandomWorkingNodeResults
-	Counter uint64
-}
-
-// AccessorMockGetRandomWorkingNodeResults contains results of the Accessor.GetRandomWorkingNode
-type AccessorMockGetRandomWorkingNodeResults struct {
-	n1 insolar.NetworkNode
-}
-
-// Expect sets up expected params for Accessor.GetRandomWorkingNode
-func (mmGetRandomWorkingNode *mAccessorMockGetRandomWorkingNode) Expect() *mAccessorMockGetRandomWorkingNode {
-	if mmGetRandomWorkingNode.mock.funcGetRandomWorkingNode != nil {
-		mmGetRandomWorkingNode.mock.t.Fatalf("AccessorMock.GetRandomWorkingNode mock is already set by Set")
-	}
-
-	if mmGetRandomWorkingNode.defaultExpectation == nil {
-		mmGetRandomWorkingNode.defaultExpectation = &AccessorMockGetRandomWorkingNodeExpectation{}
-	}
-
-	return mmGetRandomWorkingNode
-}
-
-// Inspect accepts an inspector function that has same arguments as the Accessor.GetRandomWorkingNode
-func (mmGetRandomWorkingNode *mAccessorMockGetRandomWorkingNode) Inspect(f func()) *mAccessorMockGetRandomWorkingNode {
-	if mmGetRandomWorkingNode.mock.inspectFuncGetRandomWorkingNode != nil {
-		mmGetRandomWorkingNode.mock.t.Fatalf("Inspect function is already set for AccessorMock.GetRandomWorkingNode")
-	}
-
-	mmGetRandomWorkingNode.mock.inspectFuncGetRandomWorkingNode = f
-
-	return mmGetRandomWorkingNode
-}
-
-// Return sets up results that will be returned by Accessor.GetRandomWorkingNode
-func (mmGetRandomWorkingNode *mAccessorMockGetRandomWorkingNode) Return(n1 insolar.NetworkNode) *AccessorMock {
-	if mmGetRandomWorkingNode.mock.funcGetRandomWorkingNode != nil {
-		mmGetRandomWorkingNode.mock.t.Fatalf("AccessorMock.GetRandomWorkingNode mock is already set by Set")
-	}
-
-	if mmGetRandomWorkingNode.defaultExpectation == nil {
-		mmGetRandomWorkingNode.defaultExpectation = &AccessorMockGetRandomWorkingNodeExpectation{mock: mmGetRandomWorkingNode.mock}
-	}
-	mmGetRandomWorkingNode.defaultExpectation.results = &AccessorMockGetRandomWorkingNodeResults{n1}
-	return mmGetRandomWorkingNode.mock
-}
-
-//Set uses given function f to mock the Accessor.GetRandomWorkingNode method
-func (mmGetRandomWorkingNode *mAccessorMockGetRandomWorkingNode) Set(f func() (n1 insolar.NetworkNode)) *AccessorMock {
-	if mmGetRandomWorkingNode.defaultExpectation != nil {
-		mmGetRandomWorkingNode.mock.t.Fatalf("Default expectation is already set for the Accessor.GetRandomWorkingNode method")
-	}
-
-	if len(mmGetRandomWorkingNode.expectations) > 0 {
-		mmGetRandomWorkingNode.mock.t.Fatalf("Some expectations are already set for the Accessor.GetRandomWorkingNode method")
-	}
-
-	mmGetRandomWorkingNode.mock.funcGetRandomWorkingNode = f
-	return mmGetRandomWorkingNode.mock
-}
-
-// GetRandomWorkingNode implements network.Accessor
-func (mmGetRandomWorkingNode *AccessorMock) GetRandomWorkingNode() (n1 insolar.NetworkNode) {
-	mm_atomic.AddUint64(&mmGetRandomWorkingNode.beforeGetRandomWorkingNodeCounter, 1)
-	defer mm_atomic.AddUint64(&mmGetRandomWorkingNode.afterGetRandomWorkingNodeCounter, 1)
-
-	if mmGetRandomWorkingNode.inspectFuncGetRandomWorkingNode != nil {
-		mmGetRandomWorkingNode.inspectFuncGetRandomWorkingNode()
-	}
-
-	if mmGetRandomWorkingNode.GetRandomWorkingNodeMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmGetRandomWorkingNode.GetRandomWorkingNodeMock.defaultExpectation.Counter, 1)
-
-		results := mmGetRandomWorkingNode.GetRandomWorkingNodeMock.defaultExpectation.results
-		if results == nil {
-			mmGetRandomWorkingNode.t.Fatal("No results are set for the AccessorMock.GetRandomWorkingNode")
-		}
-		return (*results).n1
-	}
-	if mmGetRandomWorkingNode.funcGetRandomWorkingNode != nil {
-		return mmGetRandomWorkingNode.funcGetRandomWorkingNode()
-	}
-	mmGetRandomWorkingNode.t.Fatalf("Unexpected call to AccessorMock.GetRandomWorkingNode.")
-	return
-}
-
-// GetRandomWorkingNodeAfterCounter returns a count of finished AccessorMock.GetRandomWorkingNode invocations
-func (mmGetRandomWorkingNode *AccessorMock) GetRandomWorkingNodeAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetRandomWorkingNode.afterGetRandomWorkingNodeCounter)
-}
-
-// GetRandomWorkingNodeBeforeCounter returns a count of AccessorMock.GetRandomWorkingNode invocations
-func (mmGetRandomWorkingNode *AccessorMock) GetRandomWorkingNodeBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetRandomWorkingNode.beforeGetRandomWorkingNodeCounter)
-}
-
-// MinimockGetRandomWorkingNodeDone returns true if the count of the GetRandomWorkingNode invocations corresponds
-// the number of defined expectations
-func (m *AccessorMock) MinimockGetRandomWorkingNodeDone() bool {
-	for _, e := range m.GetRandomWorkingNodeMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.GetRandomWorkingNodeMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetRandomWorkingNodeCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcGetRandomWorkingNode != nil && mm_atomic.LoadUint64(&m.afterGetRandomWorkingNodeCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockGetRandomWorkingNodeInspect logs each unmet expectation
-func (m *AccessorMock) MinimockGetRandomWorkingNodeInspect() {
-	for _, e := range m.GetRandomWorkingNodeMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Error("Expected call to AccessorMock.GetRandomWorkingNode")
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.GetRandomWorkingNodeMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetRandomWorkingNodeCounter) < 1 {
-		m.t.Error("Expected call to AccessorMock.GetRandomWorkingNode")
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcGetRandomWorkingNode != nil && mm_atomic.LoadUint64(&m.afterGetRandomWorkingNodeCounter) < 1 {
-		m.t.Error("Expected call to AccessorMock.GetRandomWorkingNode")
-	}
-}
-
 type mAccessorMockGetWorkingNode struct {
 	mock               *AccessorMock
 	defaultExpectation *AccessorMockGetWorkingNodeExpectation
@@ -1386,8 +1235,6 @@ func (m *AccessorMock) MinimockFinish() {
 
 		m.MinimockGetActiveNodesInspect()
 
-		m.MinimockGetRandomWorkingNodeInspect()
-
 		m.MinimockGetWorkingNodeInspect()
 
 		m.MinimockGetWorkingNodesInspect()
@@ -1418,7 +1265,6 @@ func (m *AccessorMock) minimockDone() bool {
 		m.MinimockGetActiveNodeByAddrDone() &&
 		m.MinimockGetActiveNodeByShortIDDone() &&
 		m.MinimockGetActiveNodesDone() &&
-		m.MinimockGetRandomWorkingNodeDone() &&
 		m.MinimockGetWorkingNodeDone() &&
 		m.MinimockGetWorkingNodesDone()
 }
