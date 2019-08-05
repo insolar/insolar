@@ -316,6 +316,7 @@ func (m *client) GetObject(
 			case payload.CodeDeactivated:
 				return nil, insolar.ErrDeactivated
 			default:
+				logger.Errorf("reply error: %v, objectID: %v", p.Text, head.Record().DebugString())
 				return nil, errors.New(p.Text)
 			}
 		default:
@@ -351,7 +352,7 @@ func (m *client) GetObject(
 		memory:      statePayload.Memory,
 		parent:      index.Parent,
 	}
-	return desc, err
+	return desc, nil
 }
 
 func (m *client) GetAbandonedRequest(
