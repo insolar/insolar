@@ -59,7 +59,7 @@ type sendAbandonedOutgoingRequestMessage struct {
 
 func NewOutgoingRequestSender(as actor.System, cr insolar.ContractRequester, am artifacts.Client) OutgoingRequestSender {
 	pid := as.Spawn(func(system actor.System, pid actor.Pid) (actor.Actor, int) {
-		state := &outgoingSenderActorState{cr: cr, am: am}
+		state := newOutgoingSenderActorState(cr, am)
 		queueLimit := OutgoingRequestSenderDefaultQueueLimit
 		return state, queueLimit
 	})
@@ -100,6 +100,10 @@ func (rs *outgoingRequestSender) SendAbandonedOutgoingRequest(ctx context.Contex
 		// in this case, LME will  re-send a corresponding notification anyway.
 		inslogger.FromContext(ctx).Errorf("EnqueueAbandonedOutgoingRequest failed: %v", err)
 	}
+}
+
+func newOutgoingSenderActorState(cr insolar.ContractRequester, am artifacts.Client) actor.Actor {
+	return &outgoingSenderActorState{cr: cr, am: am}
 }
 
 func (a *outgoingSenderActorState) Receive(message actor.Message) (actor.Actor, error) {
