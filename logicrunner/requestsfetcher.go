@@ -107,7 +107,7 @@ func (rf *requestsFetcher) fetch(ctx context.Context) error {
 			continue
 		}
 
-		incoming, outgoing, err := rf.am.GetIncomingOrOutgoingRequest(ctx, rf.object, reqRef)
+		incoming, outgoing, err := rf.am.GetAbandonedRequest(ctx, rf.object, reqRef)
 		if err != nil {
 			logger.Error("couldn't get request: ", err.Error())
 			continue

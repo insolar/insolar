@@ -210,7 +210,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetIncomingRequest_Success() {
 	am.sender = sender
 
 	// Act
-	incoming, outgoing, err := am.GetIncomingOrOutgoingRequest(inslogger.TestContext(s.T()), objectRef, requestRef)
+	incoming, outgoing, err := am.GetAbandonedRequest(inslogger.TestContext(s.T()), objectRef, requestRef)
 
 	// Assert
 	require.NoError(s.T(), err)

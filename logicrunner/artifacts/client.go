@@ -354,12 +354,12 @@ func (m *client) GetObject(
 	return desc, err
 }
 
-func (m *client) GetIncomingOrOutgoingRequest(
+func (m *client) GetAbandonedRequest(
 	ctx context.Context, object, reqRef insolar.Reference,
 ) (*record.IncomingRequest, *record.OutgoingRequest, error) {
 	var err error
-	instrumenter := instrument(ctx, "GetIncomingOrOutgoingRequest").err(&err)
-	ctx, span := instracer.StartSpan(ctx, "artifacts.GetIncomingOrOutgoingRequest")
+	instrumenter := instrument(ctx, "GetAbandonedRequest").err(&err)
+	ctx, span := instracer.StartSpan(ctx, "artifacts.GetAbandonedRequest")
 	defer func() {
 		if err != nil {
 			span.AddAttributes(trace.BoolAttribute("error", true))
@@ -388,7 +388,7 @@ func (m *client) GetIncomingOrOutgoingRequest(
 	if !ok {
 		outgoingRequest, ok := concrete.(*record.OutgoingRequest)
 		if !ok {
-			return nil, nil, fmt.Errorf("GetIncomingOrOutgoingRequest: unexpected message: %#v", concrete)
+			return nil, nil, fmt.Errorf("GetAbandonedRequest: unexpected message: %#v", concrete)
 		}
 		return nil, outgoingRequest, nil
 	}
