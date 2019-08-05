@@ -307,6 +307,8 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 				return nil, nil
 			}
 
+			// todo Add check that heavy is not available in test
+
 			clientHandler := func(msg *message.Message) (messages []*message.Message, e error) {
 				return nil, nil
 			}

@@ -102,8 +102,8 @@
       "type": "object",
       "properties": {
         "Filters": {
-          "type": "object",
-          "additionalProperties": {
+          "type": "array",
+          "items": {
             "$ref": "#/definitions/introprotoMessageFilterWithStat"
           }
         }
@@ -142,6 +142,9 @@
     "introprotoMessageFilterWithStat": {
       "type": "object",
       "properties": {
+        "Name": {
+          "type": "string"
+        },
         "Enable": {
           "type": "boolean",
           "format": "boolean"

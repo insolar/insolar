@@ -31,8 +31,6 @@ const (
 	GenesisNameWallet = "wallet"
 	// GenesisNameDeposit is the name of deposit contract for genesis record.
 	GenesisNameDeposit = "deposit"
-	// GenesisNameTariff is the name of tariff contract for genesis record.
-	GenesisNameTariff = "tariff"
 	// GenesisNameCostCenter is the name of cost center contract for genesis record.
 	GenesisNameCostCenter = "costcenter"
 	// GenesisNameShard is the name of shard contract for genesis record.
@@ -43,8 +41,6 @@ const (
 	GenesisNameMigrationAdminMember = "migrationadmin" + GenesisNameMember
 	GenesisNameMigrationWallet      = "migration" + GenesisNameWallet
 	GenesisNameFeeWallet            = "fee" + GenesisNameWallet
-
-	GenesisNameStandardTariff = "standard" + GenesisNameTariff
 
 	GenesisAmountMigrationDaemonMembers       = 10
 	GenesisAmountActiveMigrationDaemonMembers = 3
