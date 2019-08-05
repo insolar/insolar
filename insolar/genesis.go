@@ -47,8 +47,8 @@ const (
 	GenesisAmountMigrationDaemonMembers       = 10
 	GenesisAmountActiveMigrationDaemonMembers = 3
 
-	GenesisAmountPublicKeyShards        = 500
-	GenesisAmountMigrationAddressShards = 500
+	GenesisAmountPublicKeyShards        = 10
+	GenesisAmountMigrationAddressShards = 10
 )
 
 var GenesisNameMigrationDaemonMembers = func() (result [GenesisAmountMigrationDaemonMembers]string) {
