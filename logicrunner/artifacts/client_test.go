@@ -161,7 +161,6 @@ func genRandomRef(pulse insolar.PulseNumber) *insolar.Reference {
 	return genRefWithID(genRandomID(pulse))
 }
 
-// AALEKSEEV TODO write a similar GetOutgoingRequest_Success
 func (s *amSuite) TestLedgerArtifactManager_GetIncomingRequest_Success() {
 	// Arrange
 	mc := minimock.NewController(s.T())
