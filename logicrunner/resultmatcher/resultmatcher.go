@@ -44,7 +44,7 @@ type resultWithTraceID struct {
 	result  message.ReturnResults
 }
 
-type resultsMatcher struct {
+type ResultsMatcher struct {
 	messageBus insolar.MessageBus
 
 	pulseAccessor     pulse.Accessor
@@ -54,8 +54,8 @@ type resultsMatcher struct {
 	unwantedResponses map[insolar.Reference]resultWithTraceID
 }
 
-func NewResultsMatcher(mb insolar.MessageBus, pa pulse.Accessor, jc jet.Coordinator) *resultsMatcher {
-	return &resultsMatcher{
+func NewResultsMatcher(mb insolar.MessageBus, pa pulse.Accessor, jc jet.Coordinator) *ResultsMatcher {
+	return &ResultsMatcher{
 		messageBus:        mb,
 		pulseAccessor:     pa,
 		jetCoordinator:    jc,
@@ -65,7 +65,7 @@ func NewResultsMatcher(mb insolar.MessageBus, pa pulse.Accessor, jc jet.Coordina
 	}
 }
 
-func (rm *resultsMatcher) send(ctx context.Context, msg insolar.Message, receiver *insolar.Reference) {
+func (rm *ResultsMatcher) send(ctx context.Context, msg insolar.Message, receiver *insolar.Reference) {
 	sender := messagebus.BuildSender(
 		rm.messageBus.Send,
 		messagebus.RetryIncorrectPulse(rm.pulseAccessor),
@@ -75,25 +75,25 @@ func (rm *resultsMatcher) send(ctx context.Context, msg insolar.Message, receive
 		Receiver: receiver,
 	})
 	if err != nil {
-		inslogger.FromContext(ctx).Warn(errors.Wrap(err, "[ resultsMatcher::send ] Couldn't resend response"))
+		inslogger.FromContext(ctx).Warn(errors.Wrap(err, "[ ResultsMatcher::send ] Couldn't resend response"))
 	}
 }
 
-func (rm *resultsMatcher) AddStillExecution(ctx context.Context, msg *message.StillExecuting) {
+func (rm *ResultsMatcher) AddStillExecution(ctx context.Context, msg *message.StillExecuting) {
 	rm.lock.Lock()
 	defer rm.lock.Unlock()
 
 	for _, reqRef := range msg.RequestRefs {
 		if response, ok := rm.unwantedResponses[reqRef]; ok {
 			ctx = inslogger.ContextWithTrace(ctx, response.traceID)
-			inslogger.FromContext(ctx).Debug("[ resultsMatcher::AddStillExecution ] resend unwanted response ", reqRef)
+			inslogger.FromContext(ctx).Debug("[ ResultsMatcher::AddStillExecution ] resend unwanted response ", reqRef)
 			go rm.send(ctx, &response.result, &msg.Executor)
 		}
 		rm.executionNodes[reqRef] = msg.Executor
 	}
 }
 
-func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg *message.ReturnResults) error {
+func (rm *ResultsMatcher) AddUnwantedResponse(ctx context.Context, msg *message.ReturnResults) error {
 	rm.lock.Lock()
 	defer rm.lock.Unlock()
 	object := *msg.Target.Record()
@@ -104,7 +104,7 @@ func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg *message.
 	}
 
 	if node, ok := rm.executionNodes[msg.Reason]; ok {
-		inslogger.FromContext(ctx).Debug("[ resultsMatcher::AddUnwantedResponse ] resend unwanted response ", msg.Reason)
+		inslogger.FromContext(ctx).Debug("[ ResultsMatcher::AddUnwantedResponse ] resend unwanted response ", msg.Reason)
 		go rm.send(ctx, msg, &node)
 		delete(rm.unwantedResponses, msg.Reason)
 		return nil
@@ -115,7 +115,7 @@ func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg *message.
 }
 
 // isStillExecutor is tmp solution. Needs to be moved on flow
-func (rm *resultsMatcher) isStillExecutor(ctx context.Context, object insolar.ID) error {
+func (rm *ResultsMatcher) isStillExecutor(ctx context.Context, object insolar.ID) error {
 	pulse, err := rm.pulseAccessor.Latest(ctx)
 	if err != nil {
 		return flow.ErrCancelled
@@ -130,7 +130,7 @@ func (rm *resultsMatcher) isStillExecutor(ctx context.Context, object insolar.ID
 	return nil
 }
 
-func (rm *resultsMatcher) Clear() {
+func (rm *ResultsMatcher) Clear() {
 	rm.lock.Lock()
 	defer rm.lock.Unlock()
 	rm.executionNodes = make(map[insolar.Reference]insolar.Reference)
