@@ -100,6 +100,33 @@ func MakeSetIncomingRequest(objectID, reasonID insolar.ID, isCreation, isAPI boo
 	return pl, rec
 }
 
+func MakeSetOutgoingRequest(
+	objectID, reasonID insolar.ID, detached bool,
+) (payload.SetOutgoingRequest, record.Virtual) {
+	args := make([]byte, 100)
+	_, err := rand.Read(args)
+	panicIfErr(err)
+
+	rm := record.ReturnResult
+	if detached {
+		rm = record.ReturnSaga
+	}
+	req := record.OutgoingRequest{
+		Caller:     *insolar.NewReference(objectID),
+		Arguments:  args,
+		ReturnMode: rm,
+		Reason:     *insolar.NewReference(reasonID),
+		APINode:    gen.Reference(),
+	}
+
+	rec := record.Wrap(&req)
+
+	pl := payload.SetOutgoingRequest{
+		Request: rec,
+	}
+	return pl, rec
+}
+
 func CallSetOutgoingRequest(
 	ctx context.Context, s *Server, objectID, reasonID insolar.ID, detached bool,
 ) (payload.Payload, record.Virtual) {

@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package tariff
+package pkshard
 
 import (
 	"github.com/insolar/insolar/insolar"
@@ -24,10 +24,10 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("111A7sBiaB3WxTAEa6X8xLcNGetQUpf3BsYZenTuGUW.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("111A5x8N1VJTm7BKYgzSe6TWHcFi98QZgw3AnkYiKML.11111111111111111111111111111111")
 
-// Tariff holds proxy type
-type Tariff struct {
+// PKShard holds proxy type
+type PKShard struct {
 	Reference insolar.Reference
 	Prototype insolar.Reference
 	Code      insolar.Reference
@@ -40,17 +40,28 @@ type ContractConstructorHolder struct {
 }
 
 // AsChild saves object as child
-func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*Tariff, error) {
-	ref, err := common.CurrentProxyCtx.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
+func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*PKShard, error) {
+	ref, ret, err := common.CurrentProxyCtx.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
-	return &Tariff{Reference: ref}, nil
+
+	var constructorError *foundation.Error
+	err = common.CurrentProxyCtx.Deserialize(ret, []interface{}{&constructorError})
+	if err != nil {
+		return nil, err
+	}
+
+	if constructorError != nil {
+		return nil, constructorError
+	}
+
+	return &PKShard{Reference: *ref}, nil
 }
 
 // GetObject returns proxy object
-func GetObject(ref insolar.Reference) (r *Tariff) {
-	return &Tariff{Reference: ref}
+func GetObject(ref insolar.Reference) (r *PKShard) {
+	return &PKShard{Reference: ref}
 }
 
 // GetPrototype returns reference to the prototype
@@ -72,12 +83,12 @@ func New() *ContractConstructorHolder {
 }
 
 // GetReference returns reference of the object
-func (r *Tariff) GetReference() insolar.Reference {
+func (r *PKShard) GetReference() insolar.Reference {
 	return r.Reference
 }
 
 // GetPrototype returns reference to the code
-func (r *Tariff) GetPrototype() (insolar.Reference, error) {
+func (r *PKShard) GetPrototype() (insolar.Reference, error) {
 	if r.Prototype.IsEmpty() {
 		ret := [2]interface{}{}
 		var ret0 insolar.Reference
@@ -107,7 +118,7 @@ func (r *Tariff) GetPrototype() (insolar.Reference, error) {
 }
 
 // GetCode returns reference to the code
-func (r *Tariff) GetCode() (insolar.Reference, error) {
+func (r *PKShard) GetCode() (insolar.Reference, error) {
 	if r.Code.IsEmpty() {
 		ret := [2]interface{}{}
 		var ret0 insolar.Reference
@@ -135,10 +146,10 @@ func (r *Tariff) GetCode() (insolar.Reference, error) {
 	return r.Code, nil
 }
 
-// CalcFee is proxy generated method
-func (r *Tariff) CalcFee(amountStr string) (string, error) {
+// GetRef is proxy generated method
+func (r *PKShard) GetRef(key string) (string, error) {
 	var args [1]interface{}
-	args[0] = amountStr
+	args[0] = key
 
 	var argsSerialized []byte
 
@@ -153,7 +164,7 @@ func (r *Tariff) CalcFee(amountStr string) (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "CalcFee", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetRef", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -169,10 +180,10 @@ func (r *Tariff) CalcFee(amountStr string) (string, error) {
 	return ret0, nil
 }
 
-// CalcFeeNoWait is proxy generated method
-func (r *Tariff) CalcFeeNoWait(amountStr string) error {
+// GetRefNoWait is proxy generated method
+func (r *PKShard) GetRefNoWait(key string) error {
 	var args [1]interface{}
-	args[0] = amountStr
+	args[0] = key
 
 	var argsSerialized []byte
 
@@ -181,7 +192,7 @@ func (r *Tariff) CalcFeeNoWait(amountStr string) error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "CalcFee", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetRef", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -189,10 +200,10 @@ func (r *Tariff) CalcFeeNoWait(amountStr string) error {
 	return nil
 }
 
-// CalcFeeAsImmutable is proxy generated method
-func (r *Tariff) CalcFeeAsImmutable(amountStr string) (string, error) {
+// GetRefAsImmutable is proxy generated method
+func (r *PKShard) GetRefAsImmutable(key string) (string, error) {
 	var args [1]interface{}
-	args[0] = amountStr
+	args[0] = key
 
 	var argsSerialized []byte
 
@@ -207,7 +218,7 @@ func (r *Tariff) CalcFeeAsImmutable(amountStr string) (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "CalcFee", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetRef", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -221,4 +232,91 @@ func (r *Tariff) CalcFeeAsImmutable(amountStr string) (string, error) {
 		return ret0, ret1
 	}
 	return ret0, nil
+}
+
+// SetRef is proxy generated method
+func (r *PKShard) SetRef(key string, ref string) error {
+	var args [2]interface{}
+	args[0] = key
+	args[1] = ref
+
+	var argsSerialized []byte
+
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "SetRef", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	if err != nil {
+		return err
+	}
+
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
+}
+
+// SetRefNoWait is proxy generated method
+func (r *PKShard) SetRefNoWait(key string, ref string) error {
+	var args [2]interface{}
+	args[0] = key
+	args[1] = ref
+
+	var argsSerialized []byte
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "SetRef", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// SetRefAsImmutable is proxy generated method
+func (r *PKShard) SetRefAsImmutable(key string, ref string) error {
+	var args [2]interface{}
+	args[0] = key
+	args[1] = ref
+
+	var argsSerialized []byte
+
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "SetRef", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	if err != nil {
+		return err
+	}
+
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
 }

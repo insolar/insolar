@@ -163,7 +163,7 @@ func TestContractRequester_SendRequest(t *testing.T) {
 	}
 }
 
-func TestContractRequester_CallMethod_Timeout(t *testing.T) {
+func TestContractRequester_Call_Timeout(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	defer mc.Finish()
@@ -204,7 +204,7 @@ func TestContractRequester_CallMethod_Timeout(t *testing.T) {
 		},
 	}
 
-	_, err = cr.CallMethod(ctx, msg)
+	_, err = cr.Call(ctx, msg)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "canceled")
 	require.Contains(t, err.Error(), "timeout")

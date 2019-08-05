@@ -138,13 +138,7 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, e
 // TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
 	systemErr := ph.GetSystemError()
 
-{{ $errLastIndex := 0 }}
-{{ range $i := $method.ErrorInterfaceInRes }}
-    {{ $errLastIndex = $i }}
-{{ end }}
-
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret{{ $errLastIndex }} = systemErr
 		systemErr = nil
 	}
 // TODO: this is the end of a horrible hack, please remove it
@@ -172,7 +166,7 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, e
 
 
 {{ range $f := .Functions }}
-func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, error, error) {
+func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
 	{{ $f.ArgumentsZeroList }}
@@ -183,27 +177,29 @@ func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, error, error) {
 	}
 
 	{{ $f.Results }} := {{ $f.Name }}( {{ $f.Arguments }} )
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-	if ret1 != nil {
-		// logical error, the result should be registered with type RequestSideEffectNone
-		return nil, ret1, nil
+	ret1 = ph.MakeErrorSerializable(ret1)
+	if ret0 == nil && ret1 == nil {
+		ret1 = &ExtendableError{ S: "constructor returned nil" }
 	}
 
-	if ret0 == nil {
-		// logical error, the result should be registered with type RequestSideEffectNone
-		e := &ExtendableError{ S: "[ Fake{{ $f.Name }} ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil" }
-		return nil, e, nil
-	}
-
-	ret := []byte{}
-	err = ph.Serialize(ret0, &ret)
+	result := []byte{}
+	err = ph.Serialize([]interface{} { ret1 }, &result)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return ret, nil, err
+	if ret1 != nil {
+		// logical error, the result should be registered with type RequestSideEffectNone
+		return nil, result, nil
+	}
+
+	state := []byte{}
+	err = ph.Serialize(ret0, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return state, result, nil
 }
 {{ end }}
 
