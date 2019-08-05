@@ -433,4 +433,65 @@ func TestHandleCall_Present(t *testing.T) {
 		assert.Nil(t, reply)
 		assert.Error(t, err)
 	})
+
+	t.Run("write accessor failed to fetch lock AND archive is empty after on pulse", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
+		mc := minimock.NewController(t)
+		defer mc.Wait(time.Second)
+
+		fm := flow.NewFlowMock(mc)
+
+		fm.ProcedureMock.Set(func(ctx context.Context, proc flow.Procedure, cancelable bool) (err error) {
+			switch p := proc.(type) {
+			case *CheckOurRole:
+				return nil
+			case *RegisterIncomingRequest:
+				requestID := gen.Reference()
+				p.result <- &requestID
+				return nil
+			case *AddFreshRequest:
+				return nil
+			default:
+				t.Fatalf("Unknown procedure: %T", proc)
+			}
+			return nil
+		})
+
+		objRef := gen.Reference()
+		handler := HandleCall{
+			dep: &Dependencies{
+				Publisher: nil,
+				StateStorage: NewStateStorageMock(mc).
+					GetExecutionArchiveMock.Expect(objRef).Return(nil),
+				ResultsMatcher: nil,
+				lr: &LogicRunner{
+					ArtifactManager: artifacts.NewClientMock(mc),
+					MessageBus: testutils.NewMessageBusMock(mc).SendMock.Set(
+						func(_ context.Context, m1 insolar.Message, _ *insolar.MessageSendOptions) (insolar.Reply, error) {
+							assert.IsType(t, &message.AdditionalCallFromPreviousExecutor{}, m1)
+							return nil, nil
+						}),
+				},
+				Sender:        nil,
+				JetStorage:    nil,
+				WriteAccessor: writecontroller.NewAccessorMock(mc).BeginMock.Return(func() {}, writecontroller.ErrWriteClosed),
+			},
+			Message: payload.Meta{},
+			Parcel:  nil,
+		}
+
+		msg := message.CallMethod{
+			IncomingRequest: record.IncomingRequest{
+				CallType: record.CTMethod,
+				Object:   &objRef,
+			},
+		}
+
+		reply, err := handler.handleActual(ctx, &msg, fm)
+		assert.NotNil(t, reply)
+		assert.NoError(t, err)
+	})
+
 }
