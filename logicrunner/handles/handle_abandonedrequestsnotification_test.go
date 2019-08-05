@@ -1,4 +1,20 @@
-package logicrunner
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+package handles
 
 import (
 	"testing"
@@ -20,7 +36,7 @@ func TestHandleAbandonedRequestsNotification_Present(t *testing.T) {
 	//replyChan := mockSender(suite)
 	//
 	//h := HandleAbandonedRequestsNotification{
-	//	dep:    &Dependencies{lr: suite.lr, Sender: suite.sender},
+	//	Dep:    &Dependencies{lr: suite.lr, Sender: suite.sender},
 	//	Parcel: parcel,
 	//}
 	//
@@ -40,7 +56,7 @@ func TestHandleAbandonedRequestsNotification_Present(t *testing.T) {
 	//broker.ledgerHasMoreRequests = false
 	//
 	//h = HandleAbandonedRequestsNotification{
-	//	dep:    &Dependencies{lr: suite.lr, Sender: suite.sender},
+	//	Dep:    &Dependencies{lr: suite.lr, Sender: suite.sender},
 	//	Parcel: parcel,
 	//}
 	//
@@ -59,7 +75,7 @@ func TestHandleAbandonedRequestsNotification_Present(t *testing.T) {
 	//broker.ledgerHasMoreRequests = true
 	//
 	//h = HandleAbandonedRequestsNotification{
-	//	dep:    &Dependencies{lr: suite.lr, Sender: suite.sender},
+	//	Dep:    &Dependencies{lr: suite.lr, Sender: suite.sender},
 	//	Parcel: parcel,
 	//}
 	//
@@ -72,4 +88,3 @@ func TestHandleAbandonedRequestsNotification_Present(t *testing.T) {
 	//suite.Equal(true, broker.ledgerHasMoreRequests)
 	//_ = suite.lr.Stop(suite.ctx)
 }
-

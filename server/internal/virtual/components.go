@@ -20,6 +20,7 @@ import (
 	"context"
 	"io"
 
+	"github.com/insolar/insolar/logicrunner/handles"
 	"github.com/insolar/insolar/logicrunner/logicexecutor"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/requestsexecutor"
@@ -259,7 +260,7 @@ func startWatermill(
 
 	lrRouter.AddNoPublisherHandler(
 		"InnerMsgHandler",
-		logicrunner.InnerMsgTopic,
+		handles.InnerMsgTopic,
 		pubSub,
 		lrHandler,
 	)

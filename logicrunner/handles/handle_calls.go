@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package logicrunner
+package handles
 
 import (
 	"context"
@@ -32,6 +32,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/logicrunner/procs"
 )
 
 type HandleCall struct {
@@ -74,7 +75,7 @@ func (h *HandleCall) sendToNextExecutor(
 		Pending:         ps,
 	}
 
-	_, err := h.dep.lr.MessageBus.Send(ctx, &additionalCallMsg, nil)
+	_, err := h.dep.MessageBus.Send(ctx, &additionalCallMsg, nil)
 	if err != nil {
 		logger.Error("[ HandleCall.handleActual.sendToNextExecutor ] mb.Send failed to send AdditionalCallFromPreviousExecutor, ", err)
 	}
@@ -114,19 +115,18 @@ func (h *HandleCall) handleActual(
 	f flow.Flow,
 ) (insolar.Reply, error) {
 
-	lr := h.dep.lr
+	procCheckRole := procs.CheckOurRole{
+		Msg:            msg,
+		Role:           insolar.DynamicRoleVirtualExecutor,
+		JetCoordinator: h.dep.JetCoordinator,
 
-	procCheckRole := CheckOurRole{
-		msg:         msg,
-		role:        insolar.DynamicRoleVirtualExecutor,
-		lr:          lr,
-		pulseNumber: flow.Pulse(ctx),
+		PulseNumber: flow.Pulse(ctx),
 	}
 
 	if err := f.Procedure(ctx, &procCheckRole, true); err != nil {
 		// rewrite "can't execute this object" to "flow cancelled" for force retry message
 		// just temporary fix till mb moved to watermill
-		if err == flow.ErrCancelled || err == ErrCantExecute {
+		if err == flow.ErrCancelled || err == procs.ErrCantExecute {
 			return nil, flow.ErrCancelled
 		}
 		return nil, errors.Wrap(err, "[ HandleCall.handleActual ] can't play role")
@@ -138,7 +138,7 @@ func (h *HandleCall) handleActual(
 		return nil, errors.New("loop detected")
 	}
 
-	procRegisterRequest := NewRegisterIncomingRequest(request, h.dep)
+	procRegisterRequest := procs.NewRegisterIncomingRequest(request, h.dep.ArtifactManager)
 
 	if err := f.Procedure(ctx, procRegisterRequest, true); err != nil {
 		if err == flow.ErrCancelled {
@@ -147,7 +147,7 @@ func (h *HandleCall) handleActual(
 		}
 		return nil, errors.Wrap(err, "[ HandleCall.handleActual ] can't create request")
 	}
-	requestRef := procRegisterRequest.getResult()
+	requestRef := procRegisterRequest.Result()
 
 	ctx, logger := inslogger.WithField(ctx, "request", requestRef.String())
 	logger.Debug("registered request")
@@ -166,7 +166,7 @@ func (h *HandleCall) handleActual(
 	if err == nil {
 		broker := h.dep.StateStorage.UpsertExecutionState(*objRef)
 
-		proc := AddFreshRequest{broker: broker, requestRef: *requestRef, request: request}
+		proc := procs.AddFreshRequest{Broker: broker, RequestRef: *requestRef, Request: request}
 		if err := f.Procedure(ctx, &proc, true); err != nil {
 			return nil, errors.Wrap(err, "couldn't pass request to broker")
 		}
@@ -186,7 +186,7 @@ func (h *HandleCall) handleActual(
 }
 
 func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
-	ctx = loggerWithTargetID(ctx, h.Parcel)
+	ctx = common.LoggerWithTargetID(ctx, h.Parcel)
 	inslogger.FromContext(ctx).Debug("HandleCall.Present starts ...")
 
 	msg, ok := h.Parcel.Message().(*message.CallMethod)

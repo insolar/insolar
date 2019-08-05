@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package logicrunner
+package procs
 
 import (
 	"context"
@@ -22,9 +22,11 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/executionbroker"
 	"github.com/insolar/insolar/logicrunner/transcript"
 )
@@ -32,11 +34,11 @@ import (
 // ------------- CheckOurRole
 
 type CheckOurRole struct {
-	msg         insolar.Message
-	role        insolar.DynamicRole
-	pulseNumber insolar.PulseNumber
+	Msg         insolar.Message
+	Role        insolar.DynamicRole
+	PulseNumber insolar.PulseNumber
 
-	lr *LogicRunner
+	JetCoordinator jet.Coordinator
 }
 
 var ErrCantExecute = errors.New("can't executeAndReply this object")
@@ -46,8 +48,8 @@ func (ch *CheckOurRole) Proceed(ctx context.Context) error {
 	defer span.End()
 
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
-	target := ch.msg.DefaultTarget()
-	isAuthorized, err := ch.lr.JetCoordinator.IsMeAuthorizedNow(ctx, ch.role, *target.Record())
+	target := ch.Msg.DefaultTarget()
+	isAuthorized, err := ch.JetCoordinator.IsMeAuthorizedNow(ctx, ch.Role, *target.Record())
 	if err != nil {
 		return errors.Wrap(err, "authorization failed with error")
 	}
@@ -62,25 +64,25 @@ func (ch *CheckOurRole) Proceed(ctx context.Context) error {
 type RegisterIncomingRequest struct {
 	request record.IncomingRequest
 
-	result chan *Ref
+	result chan *insolar.Reference
 
 	ArtifactManager artifacts.Client
 }
 
-func NewRegisterIncomingRequest(request record.IncomingRequest, dep *Dependencies) *RegisterIncomingRequest {
+func NewRegisterIncomingRequest(request record.IncomingRequest, artifactClient artifacts.Client) *RegisterIncomingRequest {
 	return &RegisterIncomingRequest{
 		request:         request,
-		ArtifactManager: dep.lr.ArtifactManager,
-		result:          make(chan *Ref, 1),
+		ArtifactManager: artifactClient,
+		result:          make(chan *insolar.Reference, 1),
 	}
 }
 
-func (r *RegisterIncomingRequest) setResult(result *Ref) { // nolint
+func (r *RegisterIncomingRequest) SetResult(result *insolar.Reference) { // nolint
 	r.result <- result
 }
 
 // getResult is blocking
-func (r *RegisterIncomingRequest) getResult() *Ref { // nolint
+func (r *RegisterIncomingRequest) Result() *insolar.Reference { // nolint
 	return <-r.result
 }
 
@@ -93,19 +95,19 @@ func (r *RegisterIncomingRequest) Proceed(ctx context.Context) error {
 		return err
 	}
 
-	r.setResult(insolar.NewReference(*id))
+	r.SetResult(insolar.NewReference(*id))
 	return nil
 }
 
 type AddFreshRequest struct {
-	broker     executionbroker.BrokerI
-	requestRef insolar.Reference
-	request    record.IncomingRequest
+	Broker     executionbroker.BrokerI
+	RequestRef insolar.Reference
+	Request    record.IncomingRequest
 }
 
 func (c *AddFreshRequest) Proceed(ctx context.Context) error {
-	requestCtx := freshContextFromContext(ctx)
-	tr := transcript.NewTranscript(requestCtx, c.requestRef, c.request)
-	c.broker.AddFreshRequest(ctx, tr)
+	requestCtx := common.FreshContextFromContext(ctx)
+	tr := transcript.NewTranscript(requestCtx, c.RequestRef, c.Request)
+	c.Broker.AddFreshRequest(ctx, tr)
 	return nil
 }

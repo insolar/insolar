@@ -42,14 +42,14 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin"
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin"
+	"github.com/insolar/insolar/logicrunner/handles"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/outgoingsender"
 	"github.com/insolar/insolar/logicrunner/requestsexecutor"
+	"github.com/insolar/insolar/logicrunner/resultmatcher"
 	"github.com/insolar/insolar/logicrunner/statestorage"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 )
-
-type Ref = insolar.Reference
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
@@ -69,7 +69,7 @@ type LogicRunner struct {
 	Sender                     bus.Sender
 	SenderWithRetry            *bus.WaitOKSender
 	StateStorage               statestorage.StateStorage
-	ResultsMatcher             ResultMatcher
+	ResultsMatcher             resultmatcher.ResultMatcher
 	OutgoingSender             outgoingsender.OutgoingRequestSender
 	WriteController            *writecontroller.WriteController
 
@@ -99,13 +99,14 @@ func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publi
 		SenderWithRetry: bus.NewWaitOKWithRetrySender(sender, 3),
 	}
 
-	res.ResultsMatcher = newResultsMatcher(&res)
 	return &res, nil
 }
 
 func (lr *LogicRunner) LRI() {}
 
 func (lr *LogicRunner) Init(ctx context.Context) error {
+	lr.ResultsMatcher = resultmatcher.NewResultsMatcher(lr.MessageBus, lr.PulseAccessor, lr.JetCoordinator)
+
 	as := system.New()
 	lr.OutgoingSender = outgoingsender.NewOutgoingRequestSender(as, lr.ContractRequester, lr.ArtifactManager)
 
@@ -136,19 +137,22 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 }
 
 func (lr *LogicRunner) initHandlers() {
-	dep := &Dependencies{
-		Publisher:      lr.Publisher,
-		StateStorage:   lr.StateStorage,
-		ResultsMatcher: lr.ResultsMatcher,
-		lr:             lr,
-		Sender:         lr.Sender,
-		JetStorage:     lr.JetStorage,
-		WriteAccessor:  lr.WriteController,
+	dep := &handles.Dependencies{
+		Publisher:         lr.Publisher,
+		StateStorage:      lr.StateStorage,
+		ResultsMatcher:    lr.ResultsMatcher,
+		JetCoordinator:    lr.JetCoordinator,
+		ArtifactManager:   lr.ArtifactManager,
+		ContractRequester: lr.ContractRequester,
+		MessageBus:        lr.MessageBus,
+		Sender:            lr.Sender,
+		JetStorage:        lr.JetStorage,
+		WriteAccessor:     lr.WriteController,
 	}
 
-	initHandle := func(msg *watermillMsg.Message) *Init {
-		return &Init{
-			dep:     dep,
+	initHandle := func(msg *watermillMsg.Message) *handles.Init {
+		return &handles.Init{
+			Dep:     dep,
 			Message: msg,
 		}
 	}
@@ -164,9 +168,9 @@ func (lr *LogicRunner) initHandlers() {
 		},
 	)
 
-	innerInitHandle := func(msg *watermillMsg.Message) *InnerInit {
-		return &InnerInit{
-			dep:     dep,
+	innerInitHandle := func(msg *watermillMsg.Message) *handles.InnerInit {
+		return &handles.InnerInit{
+			Dep:     dep,
 			Message: msg,
 		}
 	}
@@ -260,11 +264,6 @@ func (lr *LogicRunner) GracefulStop(ctx context.Context) error {
 	return nil
 }
 
-func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context {
-	ctx, _ = inslogger.WithField(ctx, "targetid", msg.DefaultTarget().String())
-	return ctx
-}
-
 func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newPulse insolar.Pulse) error {
 	ctx, span := instracer.StartSpan(ctx, "pulse.logicrunner")
 	defer span.End()
@@ -344,29 +343,4 @@ func (lr *LogicRunner) pulse(ctx context.Context) *insolar.Pulse {
 		panic(err)
 	}
 	return &p
-}
-
-func contextWithServiceData(ctx context.Context, data message.ServiceData) context.Context {
-	// ctx := inslogger.ContextWithTrace(context.Background(), data.LogTraceID)
-	ctx = inslogger.ContextWithTrace(ctx, data.LogTraceID)
-	ctx = inslogger.WithLoggerLevel(ctx, data.LogLevel)
-	if data.TraceSpanData != nil {
-		parentSpan := instracer.MustDeserialize(data.TraceSpanData)
-		return instracer.WithParentSpan(ctx, parentSpan)
-	}
-	return ctx
-}
-
-func freshContextFromContext(ctx context.Context) context.Context {
-	res := inslogger.ContextWithTrace(
-		context.Background(),
-		inslogger.TraceID(ctx),
-	)
-	//FIXME: need way to get level out of context
-	//res = inslogger.WithLoggerLevel(res, data.LogLevel)
-	parentSpan, ok := instracer.ParentSpan(ctx)
-	if ok {
-		res = instracer.WithParentSpan(res, parentSpan)
-	}
-	return res
 }

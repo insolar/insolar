@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package logicrunner
+package handles
 
 import (
 	"testing"
@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/executionbroker"
+	"github.com/insolar/insolar/logicrunner/resultmatcher"
 	"github.com/insolar/insolar/logicrunner/statestorage"
 	"github.com/insolar/insolar/testutils"
 )
@@ -55,7 +56,7 @@ func TestHandleStillExecuting_Present(t *testing.T) {
 								executionbroker.NewBrokerIMock(t).
 									PrevExecutorStillExecutingMock.Return(),
 							),
-						ResultsMatcher: NewResultMatcherMock(t).
+						ResultsMatcher: resultmatcher.NewResultMatcherMock(t).
 							AddStillExecutionMock.Return(),
 					},
 					Parcel: parcel,

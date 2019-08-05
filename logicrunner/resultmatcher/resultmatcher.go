@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package logicrunner
+package resultmatcher
 
 import (
 	"context"
@@ -22,14 +22,16 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/pkg/errors"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner.ResultMatcher -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/resultmatcher.ResultMatcher -o ./ -s _mock.go -g
 
 type ResultMatcher interface {
 	AddStillExecution(ctx context.Context, msg *message.StillExecuting)
@@ -43,15 +45,20 @@ type resultWithTraceID struct {
 }
 
 type resultsMatcher struct {
-	lr                *LogicRunner
+	messageBus insolar.MessageBus
+
+	pulseAccessor     pulse.Accessor
+	jetCoordinator    jet.Coordinator
 	lock              sync.RWMutex
 	executionNodes    map[insolar.Reference]insolar.Reference
 	unwantedResponses map[insolar.Reference]resultWithTraceID
 }
 
-func newResultsMatcher(lr *LogicRunner) *resultsMatcher {
+func NewResultsMatcher(mb insolar.MessageBus, pa pulse.Accessor, jc jet.Coordinator) *resultsMatcher {
 	return &resultsMatcher{
-		lr:                lr,
+		messageBus:        mb,
+		pulseAccessor:     pa,
+		jetCoordinator:    jc,
 		lock:              sync.RWMutex{},
 		executionNodes:    make(map[insolar.Reference]insolar.Reference),
 		unwantedResponses: make(map[insolar.Reference]resultWithTraceID),
@@ -60,9 +67,9 @@ func newResultsMatcher(lr *LogicRunner) *resultsMatcher {
 
 func (rm *resultsMatcher) send(ctx context.Context, msg insolar.Message, receiver *insolar.Reference) {
 	sender := messagebus.BuildSender(
-		rm.lr.MessageBus.Send,
-		messagebus.RetryIncorrectPulse(rm.lr.PulseAccessor),
-		messagebus.RetryFlowCancelled(rm.lr.PulseAccessor),
+		rm.messageBus.Send,
+		messagebus.RetryIncorrectPulse(rm.pulseAccessor),
+		messagebus.RetryFlowCancelled(rm.pulseAccessor),
 	)
 	_, err := sender(ctx, msg, &insolar.MessageSendOptions{
 		Receiver: receiver,
@@ -109,15 +116,15 @@ func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg *message.
 
 // isStillExecutor is tmp solution. Needs to be moved on flow
 func (rm *resultsMatcher) isStillExecutor(ctx context.Context, object insolar.ID) error {
-	pulse, err := rm.lr.PulseAccessor.Latest(ctx)
+	pulse, err := rm.pulseAccessor.Latest(ctx)
 	if err != nil {
 		return flow.ErrCancelled
 	}
-	node, err := rm.lr.JetCoordinator.VirtualExecutorForObject(ctx, object, pulse.PulseNumber)
+	node, err := rm.jetCoordinator.VirtualExecutorForObject(ctx, object, pulse.PulseNumber)
 	if err != nil {
 		return flow.ErrCancelled
 	}
-	if *node != rm.lr.JetCoordinator.Me() {
+	if *node != rm.jetCoordinator.Me() {
 		return flow.ErrCancelled
 	}
 	return nil

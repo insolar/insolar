@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package logicrunner
+package handles
 
 import (
 	"context"
@@ -34,6 +34,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/executionarchive"
+	"github.com/insolar/insolar/logicrunner/procs"
 	"github.com/insolar/insolar/logicrunner/statestorage"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/testutils"
@@ -165,13 +166,13 @@ func TestHandleCall_Present(t *testing.T) {
 
 		fm.ProcedureMock.Set(func(ctx context.Context, proc flow.Procedure, cancelable bool) (err error) {
 			switch p := proc.(type) {
-			case *CheckOurRole:
+			case *procs.CheckOurRole:
 				return nil
-			case *RegisterIncomingRequest:
+			case *procs.RegisterIncomingRequest:
 				requestID := gen.Reference()
-				p.result <- &requestID
+				p.SetResult(&requestID)
 				return nil
-			case *AddFreshRequest:
+			case *procs.AddFreshRequest:
 				return nil
 			default:
 				t.Fatalf("Unknown procedure: %T", proc)
@@ -188,13 +189,11 @@ func TestHandleCall_Present(t *testing.T) {
 					executionarchive.NewExecutionArchiveMock(mc).FindRequestLoopMock.Return(false),
 				).
 					UpsertExecutionStateMock.Expect(objRef).Return(nil),
-				ResultsMatcher: nil,
-				lr: &LogicRunner{
-					ArtifactManager: artifacts.NewClientMock(mc),
-				},
-				Sender:        nil,
-				JetStorage:    nil,
-				WriteAccessor: writecontroller.NewAccessorMock(mc).BeginMock.Return(func() {}, nil),
+				ResultsMatcher:  nil,
+				ArtifactManager: artifacts.NewClientMock(mc),
+				Sender:          nil,
+				JetStorage:      nil,
+				WriteAccessor:   writecontroller.NewAccessorMock(mc).BeginMock.Return(func() {}, nil),
 			},
 			Message: payload.Meta{},
 			Parcel:  nil,
@@ -223,13 +222,13 @@ func TestHandleCall_Present(t *testing.T) {
 
 		fm.ProcedureMock.Set(func(ctx context.Context, proc flow.Procedure, cancelable bool) (err error) {
 			switch p := proc.(type) {
-			case *CheckOurRole:
+			case *procs.CheckOurRole:
 				return nil
-			case *RegisterIncomingRequest:
+			case *procs.RegisterIncomingRequest:
 				requestID := gen.Reference()
-				p.result <- &requestID
+				p.SetResult(&requestID)
 				return nil
-			case *AddFreshRequest:
+			case *procs.AddFreshRequest:
 				return nil
 			default:
 				t.Fatalf("Unknown procedure: %T", proc)
@@ -245,15 +244,13 @@ func TestHandleCall_Present(t *testing.T) {
 					GetExecutionArchiveMock.Expect(objRef).Return(
 					executionarchive.NewExecutionArchiveMock(mc).FindRequestLoopMock.Return(false).IsEmptyMock.Return(true),
 				),
-				ResultsMatcher: nil,
-				lr: &LogicRunner{
-					ArtifactManager: artifacts.NewClientMock(mc),
-					MessageBus: testutils.NewMessageBusMock(mc).SendMock.Set(
-						func(_ context.Context, m1 insolar.Message, _ *insolar.MessageSendOptions) (insolar.Reply, error) {
-							assert.IsType(t, &message.AdditionalCallFromPreviousExecutor{}, m1)
-							return nil, nil
-						}),
-				},
+				ResultsMatcher:  nil,
+				ArtifactManager: artifacts.NewClientMock(mc),
+				MessageBus: testutils.NewMessageBusMock(mc).SendMock.Set(
+					func(_ context.Context, m1 insolar.Message, _ *insolar.MessageSendOptions) (insolar.Reply, error) {
+						assert.IsType(t, &message.AdditionalCallFromPreviousExecutor{}, m1)
+						return nil, nil
+					}),
 				Sender:     nil,
 				JetStorage: nil,
 				WriteAccessor: writecontroller.NewAccessorMock(mc).
@@ -286,11 +283,11 @@ func TestHandleCall_Present(t *testing.T) {
 
 		fm.ProcedureMock.Set(func(ctx context.Context, proc flow.Procedure, cancelable bool) (err error) {
 			switch proc.(type) {
-			case *CheckOurRole:
-				return ErrCantExecute
-			case *RegisterIncomingRequest:
+			case *procs.CheckOurRole:
+				return procs.ErrCantExecute
+			case *procs.RegisterIncomingRequest:
 				t.Fatalf("Shouldn't be called: %T", proc)
-			case *AddFreshRequest:
+			case *procs.AddFreshRequest:
 				t.Fatalf("Shouldn't be called: %T", proc)
 			default:
 				t.Fatalf("Unknown procedure: %T", proc)
@@ -301,16 +298,14 @@ func TestHandleCall_Present(t *testing.T) {
 		objRef := gen.Reference()
 		handler := HandleCall{
 			dep: &Dependencies{
-				Publisher:      nil,
-				StateStorage:   statestorage.NewStateStorageMock(mc),
-				ResultsMatcher: nil,
-				lr: &LogicRunner{
-					ArtifactManager: artifacts.NewClientMock(mc),
-					MessageBus:      testutils.NewMessageBusMock(mc),
-				},
-				Sender:        nil,
-				JetStorage:    nil,
-				WriteAccessor: writecontroller.NewAccessorMock(mc),
+				Publisher:       nil,
+				StateStorage:    statestorage.NewStateStorageMock(mc),
+				ResultsMatcher:  nil,
+				ArtifactManager: artifacts.NewClientMock(mc),
+				MessageBus:      testutils.NewMessageBusMock(mc),
+				Sender:          nil,
+				JetStorage:      nil,
+				WriteAccessor:   writecontroller.NewAccessorMock(mc),
 			},
 			Message: payload.Meta{},
 			Parcel:  nil,
@@ -339,11 +334,11 @@ func TestHandleCall_Present(t *testing.T) {
 
 		fm.ProcedureMock.Set(func(ctx context.Context, proc flow.Procedure, cancelable bool) (err error) {
 			switch proc.(type) {
-			case *CheckOurRole:
+			case *procs.CheckOurRole:
 				return nil
-			case *RegisterIncomingRequest:
+			case *procs.RegisterIncomingRequest:
 				return flow.ErrCancelled
-			case *AddFreshRequest:
+			case *procs.AddFreshRequest:
 				t.Fatalf("Shouldn't be called: %T", proc)
 			default:
 				t.Fatalf("Unknown procedure: %T", proc)
@@ -359,14 +354,12 @@ func TestHandleCall_Present(t *testing.T) {
 					GetExecutionArchiveMock.Expect(objRef).Return(
 					executionarchive.NewExecutionArchiveMock(mc).FindRequestLoopMock.Return(false),
 				),
-				ResultsMatcher: nil,
-				lr: &LogicRunner{
-					ArtifactManager: artifacts.NewClientMock(mc),
-					MessageBus:      testutils.NewMessageBusMock(mc),
-				},
-				Sender:        nil,
-				JetStorage:    nil,
-				WriteAccessor: writecontroller.NewAccessorMock(mc),
+				ResultsMatcher:  nil,
+				ArtifactManager: artifacts.NewClientMock(mc),
+				MessageBus:      testutils.NewMessageBusMock(mc),
+				Sender:          nil,
+				JetStorage:      nil,
+				WriteAccessor:   writecontroller.NewAccessorMock(mc),
 			},
 			Message: payload.Meta{},
 			Parcel:  nil,
@@ -395,11 +388,11 @@ func TestHandleCall_Present(t *testing.T) {
 
 		fm.ProcedureMock.Set(func(ctx context.Context, proc flow.Procedure, cancelable bool) (err error) {
 			switch proc.(type) {
-			case *CheckOurRole:
+			case *procs.CheckOurRole:
 				return nil
-			case *RegisterIncomingRequest:
+			case *procs.RegisterIncomingRequest:
 				return flow.ErrCancelled
-			case *AddFreshRequest:
+			case *procs.AddFreshRequest:
 				t.Fatalf("Shouldn't be called: %T", proc)
 			default:
 				t.Fatalf("Unknown procedure: %T", proc)
@@ -409,16 +402,14 @@ func TestHandleCall_Present(t *testing.T) {
 
 		handler := HandleCall{
 			dep: &Dependencies{
-				Publisher:      nil,
-				StateStorage:   statestorage.NewStateStorageMock(mc),
-				ResultsMatcher: nil,
-				lr: &LogicRunner{
-					ArtifactManager: artifacts.NewClientMock(mc),
-					MessageBus:      testutils.NewMessageBusMock(mc),
-				},
-				Sender:        nil,
-				JetStorage:    nil,
-				WriteAccessor: writecontroller.NewAccessorMock(mc),
+				Publisher:       nil,
+				StateStorage:    statestorage.NewStateStorageMock(mc),
+				ResultsMatcher:  nil,
+				ArtifactManager: artifacts.NewClientMock(mc),
+				MessageBus:      testutils.NewMessageBusMock(mc),
+				Sender:          nil,
+				JetStorage:      nil,
+				WriteAccessor:   writecontroller.NewAccessorMock(mc),
 			},
 			Message: payload.Meta{},
 			Parcel:  nil,
@@ -447,13 +438,13 @@ func TestHandleCall_Present(t *testing.T) {
 
 		fm.ProcedureMock.Set(func(ctx context.Context, proc flow.Procedure, cancelable bool) (err error) {
 			switch p := proc.(type) {
-			case *CheckOurRole:
+			case *procs.CheckOurRole:
 				return nil
-			case *RegisterIncomingRequest:
+			case *procs.RegisterIncomingRequest:
 				requestID := gen.Reference()
-				p.result <- &requestID
+				p.SetResult(&requestID)
 				return nil
-			case *AddFreshRequest:
+			case *procs.AddFreshRequest:
 				return nil
 			default:
 				t.Fatalf("Unknown procedure: %T", proc)
@@ -467,15 +458,13 @@ func TestHandleCall_Present(t *testing.T) {
 				Publisher: nil,
 				StateStorage: statestorage.NewStateStorageMock(mc).
 					GetExecutionArchiveMock.Expect(objRef).Return(nil),
-				ResultsMatcher: nil,
-				lr: &LogicRunner{
-					ArtifactManager: artifacts.NewClientMock(mc),
-					MessageBus: testutils.NewMessageBusMock(mc).SendMock.Set(
-						func(_ context.Context, m1 insolar.Message, _ *insolar.MessageSendOptions) (insolar.Reply, error) {
-							assert.IsType(t, &message.AdditionalCallFromPreviousExecutor{}, m1)
-							return nil, nil
-						}),
-				},
+				ResultsMatcher:  nil,
+				ArtifactManager: artifacts.NewClientMock(mc),
+				MessageBus: testutils.NewMessageBusMock(mc).SendMock.Set(
+					func(_ context.Context, m1 insolar.Message, _ *insolar.MessageSendOptions) (insolar.Reply, error) {
+						assert.IsType(t, &message.AdditionalCallFromPreviousExecutor{}, m1)
+						return nil, nil
+					}),
 				Sender:        nil,
 				JetStorage:    nil,
 				WriteAccessor: writecontroller.NewAccessorMock(mc).BeginMock.Return(func() {}, writecontroller.ErrWriteClosed),

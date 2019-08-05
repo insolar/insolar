@@ -14,77 +14,61 @@
 // limitations under the License.
 //
 
-package logicrunner
+package handles
 
 import (
 	"testing"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/logicrunner/executionbroker"
-	"github.com/insolar/insolar/logicrunner/statestorage"
 	"github.com/insolar/insolar/testutils"
 )
 
-func TestHandlePendingFinished_Present(t *testing.T) {
+func TestHandleExecutorResults_Present(t *testing.T) {
 	tests := []struct {
 		name  string
-		mocks func(t minimock.Tester) (*HandlePendingFinished, flow.Flow)
+		mocks func(t minimock.Tester) (*HandleExecutorResults, flow.Flow)
 		error bool
 	}{
 		{
 			name: "success",
-			mocks: func(t minimock.Tester) (*HandlePendingFinished, flow.Flow) {
+			mocks: func(t minimock.Tester) (*HandleExecutorResults, flow.Flow) {
 				obj := gen.Reference()
 				parcel := testutils.NewParcelMock(t).
 					DefaultTargetMock.Return(&obj).
-					MessageMock.Return(&message.PendingFinished{Reference: obj})
+					MessageMock.Return(
+					&message.ExecutorResults{
+						RecordRef:             obj,
+						Pending:               insolar.NotPending,
+						LedgerHasMoreRequests: true,
+						Queue: []message.ExecutionQueueElement{
+							{
+								RequestRef: gen.Reference(),
+							},
+							{
+								RequestRef: gen.Reference(),
+							},
+						},
+					},
+				)
 
-				h := &HandlePendingFinished{
+				h := &HandleExecutorResults{
 					dep: &Dependencies{
 						Sender: bus.NewSenderMock(t).ReplyMock.Return(),
-						StateStorage: statestorage.NewStateStorageMock(t).
-							UpsertExecutionStateMock.Expect(obj).
-							Return(
-								executionbroker.NewBrokerIMock(t).
-									PrevExecutorFinishedPendingMock.Return(nil),
-							),
 					},
 					Parcel: parcel,
 				}
-				return h, flow.NewFlowMock(t)
+				f := flow.NewFlowMock(t).ProcedureMock.Return(nil)
+				return h, f
 			},
-		},
-		{
-			name: "error",
-			mocks: func(t minimock.Tester) (*HandlePendingFinished, flow.Flow) {
-				obj := gen.Reference()
-				parcel := testutils.NewParcelMock(t).
-					DefaultTargetMock.Return(&obj).
-					MessageMock.Return(&message.PendingFinished{Reference: obj})
-
-				h := &HandlePendingFinished{
-					dep: &Dependencies{
-						StateStorage: statestorage.NewStateStorageMock(t).
-							UpsertExecutionStateMock.Expect(obj).
-							Return(
-								executionbroker.NewBrokerIMock(t).
-									PrevExecutorFinishedPendingMock.Return(errors.New("some")),
-							),
-					},
-					Parcel: parcel,
-				}
-				return h, flow.NewFlowMock(t)
-			},
-			error: true,
 		},
 	}
 	for _, test := range tests {

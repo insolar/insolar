@@ -224,7 +224,7 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 	suite.lr.Publisher = suite.pub
 	suite.lr.RequestsExecutor = suite.re
 
-	_ = suite.lr.Init(suite.ctx)
+	require.NoError(suite.T(), suite.lr.Init(suite.ctx))
 
 	suite.lr.FlowDispatcher.PulseAccessor = suite.ps
 }
@@ -349,6 +349,10 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 		return nil
 	})
 	suite.lr.ArtifactManager = am
+
+	suite.lr.initHandlers()
+
+	suite.lr.FlowDispatcher.PulseAccessor = suite.ps
 
 	_, err = suite.lr.FlowDispatcher.Process(msg)
 	suite.Require().NoError(err)

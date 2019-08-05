@@ -1,4 +1,20 @@
-package logicrunner
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+package handles
 
 import (
 	"context"
@@ -60,7 +76,7 @@ func (h *HandleSagaCallAcceptNotification) Present(ctx context.Context, f flow.F
 
 	// Make a call to the second VE.
 	callMsg := &message.CallMethod{IncomingRequest: incoming}
-	cr := h.dep.lr.ContractRequester
+	cr := h.dep.ContractRequester
 	res, err := cr.Call(ctx, callMsg)
 	if err != nil {
 		return err
@@ -70,6 +86,6 @@ func (h *HandleSagaCallAcceptNotification) Present(ctx context.Context, f flow.F
 	outgoingReqRef := insolar.NewReference(msg.DetachedRequestID)
 	reqResult := logicexecutor.NewRequestResult(res.(*reply.RegisterRequest).Request.Bytes(), outgoing.Caller)
 
-	am := h.dep.lr.ArtifactManager
+	am := h.dep.ArtifactManager
 	return am.RegisterResult(ctx, *outgoingReqRef, reqResult)
 }

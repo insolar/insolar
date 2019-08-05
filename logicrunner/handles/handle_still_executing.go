@@ -14,35 +14,36 @@
 // limitations under the License.
 //
 
-package logicrunner
+package handles
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/logicrunner/common"
 )
 
-type HandleUpdateJet struct {
+type HandleStillExecuting struct {
 	dep *Dependencies
 
-	meta payload.Meta
+	Message payload.Meta
+	Parcel  insolar.Parcel
 }
 
-func (h *HandleUpdateJet) Present(ctx context.Context, _ flow.Flow) error {
-	pl, err := payload.Unmarshal(h.meta.Payload)
-	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal payload")
-	}
-	jet, ok := pl.(*payload.UpdateJet)
-	if !ok {
-		return fmt.Errorf("unexpected payload type %T", pl)
-	}
-	err = h.dep.JetStorage.Update(ctx, jet.Pulse, true, jet.JetID)
-	if err != nil {
-		return errors.Wrap(err, "failed to update jets")
-	}
+func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
+	ctx = common.LoggerWithTargetID(ctx, h.Parcel)
+	msg := h.Parcel.Message().(*message.StillExecuting)
+	h.dep.ResultsMatcher.AddStillExecution(ctx, msg)
+
+	broker := h.dep.StateStorage.UpsertExecutionState(msg.Reference)
+	broker.PrevExecutorStillExecuting(ctx)
+
+	replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})
+	h.dep.Sender.Reply(ctx, h.Message, replyOk)
 	return nil
 }

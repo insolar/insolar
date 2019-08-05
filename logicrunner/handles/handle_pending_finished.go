@@ -14,10 +14,12 @@
 // limitations under the License.
 //
 
-package logicrunner
+package handles
 
 import (
 	"context"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -25,22 +27,31 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/common"
 )
 
-type HandleStillExecuting struct {
+type HandlePendingFinished struct {
 	dep *Dependencies
 
 	Message payload.Meta
 	Parcel  insolar.Parcel
 }
 
-func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
-	ctx = loggerWithTargetID(ctx, h.Parcel)
-	msg := h.Parcel.Message().(*message.StillExecuting)
-	h.dep.ResultsMatcher.AddStillExecution(ctx, msg)
+func (h *HandlePendingFinished) Present(ctx context.Context, _ flow.Flow) error {
+	ctx = common.LoggerWithTargetID(ctx, h.Parcel)
+	inslogger.FromContext(ctx).Debug("HandlePendingFinished.Present starts ...")
+
+	msg := h.Parcel.Message().(*message.PendingFinished)
 
 	broker := h.dep.StateStorage.UpsertExecutionState(msg.Reference)
-	broker.PrevExecutorStillExecuting(ctx)
+
+	err := broker.PrevExecutorFinishedPending(ctx)
+	if err != nil {
+		err = errors.Wrap(err, "can not finish pending")
+		inslogger.FromContext(ctx).Error(err.Error())
+		return err
+	}
 
 	replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})
 	h.dep.Sender.Reply(ctx, h.Message, replyOk)

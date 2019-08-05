@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package logicrunner
+package handles
 
 import (
 	"context"
@@ -89,7 +89,7 @@ func (h *HandleExecutorResults) realHandleExecutorState(ctx context.Context, f f
 }
 
 func (h *HandleExecutorResults) Present(ctx context.Context, f flow.Flow) error {
-	ctx = loggerWithTargetID(ctx, h.Parcel)
+	ctx = common.LoggerWithTargetID(ctx, h.Parcel)
 	logger := inslogger.FromContext(ctx)
 
 	logger.Debug("HandleExecutorResults.Present starts ...")

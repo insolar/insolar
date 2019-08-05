@@ -30,3 +30,13 @@ func ContextFromServiceData(data message.ServiceData) context.Context {
 	}
 	return ctx
 }
+
+func ContextWithServiceData(ctx context.Context, data message.ServiceData) context.Context {
+	ctx = inslogger.ContextWithTrace(ctx, data.LogTraceID)
+	ctx = inslogger.WithLoggerLevel(ctx, data.LogLevel)
+	if data.TraceSpanData != nil {
+		parentSpan := instracer.MustDeserialize(data.TraceSpanData)
+		return instracer.WithParentSpan(ctx, parentSpan)
+	}
+	return ctx
+}

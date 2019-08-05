@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package logicrunner
+package handles
 
 import (
 	"context"
@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/statestorage"
 	"github.com/insolar/insolar/logicrunner/transcript"
 )
@@ -46,7 +47,7 @@ func (p *AdditionalCallFromPreviousExecutor) Proceed(ctx context.Context) error 
 		broker.SetNotPending(ctx)
 	}
 
-	tr := transcript.NewTranscript(freshContextFromContext(ctx), p.message.RequestRef, p.message.Request)
+	tr := transcript.NewTranscript(common.FreshContextFromContext(ctx), p.message.RequestRef, p.message.Request)
 	broker.AddAdditionalRequestFromPrevExecutor(ctx, tr)
 	return nil
 }
@@ -64,13 +65,13 @@ type HandleAdditionalCallFromPreviousExecutor struct {
 // execution of this handle. In this scenario user is in a bad luck. The request will be lost and
 // user will have to re-send it after some timeout.
 func (h *HandleAdditionalCallFromPreviousExecutor) Present(ctx context.Context, f flow.Flow) error {
-	ctx = loggerWithTargetID(ctx, h.Parcel)
+	ctx = common.LoggerWithTargetID(ctx, h.Parcel)
 
 	logger := inslogger.FromContext(ctx).WithField("handler", "HandleAdditionalCallFromPreviousExecutor")
 	logger.Debug("Handler.Present starts")
 
 	msg := h.Parcel.Message().(*message.AdditionalCallFromPreviousExecutor)
-	ctx = contextWithServiceData(ctx, msg.ServiceData)
+	ctx = common.ContextWithServiceData(ctx, msg.ServiceData)
 
 	ctx, span := instracer.StartSpan(ctx, "HandleAdditionalCallFromPreviousExecutor.Present")
 	span.AddAttributes(
@@ -80,7 +81,7 @@ func (h *HandleAdditionalCallFromPreviousExecutor) Present(ctx context.Context, 
 
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
 	if err != nil { // pulse changed, send that message to next executor
-		_, err := h.dep.lr.MessageBus.Send(ctx, msg, nil)
+		_, err := h.dep.MessageBus.Send(ctx, msg, nil)
 		if err != nil {
 			logger.Error("MessageBus.Send failed: ", err)
 		}

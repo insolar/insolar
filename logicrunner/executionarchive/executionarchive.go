@@ -32,7 +32,7 @@ type Archiver interface {
 	Archive(transcript *transcript.Transcript)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner/executionArchive.ExecutionArchive -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/executionarchive.ExecutionArchive -o ./ -s _mock.go
 type ExecutionArchive interface {
 	Archive(ctx context.Context, transcript *transcript.Transcript)
 	Done(transcript *transcript.Transcript) bool

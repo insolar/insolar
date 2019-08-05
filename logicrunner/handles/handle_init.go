@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package logicrunner
+package handles
 
 import (
 	"bytes"
@@ -24,6 +24,8 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/resultmatcher"
 	"github.com/insolar/insolar/logicrunner/statestorage"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 
@@ -41,17 +43,20 @@ import (
 const InnerMsgTopic = "InnerMsg"
 
 type Dependencies struct {
-	Publisher      message.Publisher
-	StateStorage   statestorage.StateStorage
-	ResultsMatcher ResultMatcher
-	lr             *LogicRunner
-	Sender         bus.Sender
-	JetStorage     jet.Storage
-	WriteAccessor  writecontroller.Accessor
+	Publisher         message.Publisher
+	StateStorage      statestorage.StateStorage
+	ResultsMatcher    resultmatcher.ResultMatcher
+	ContractRequester insolar.ContractRequester
+	MessageBus        insolar.MessageBus
+	Sender            bus.Sender
+	JetStorage        jet.Storage
+	ArtifactManager   artifacts.Client
+	JetCoordinator    jet.Coordinator
+	WriteAccessor     writecontroller.Accessor
 }
 
 type Init struct {
-	dep *Dependencies
+	Dep *Dependencies
 
 	Message *message.Message
 }
@@ -93,19 +98,19 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	switch payloadType {
 	case payload.TypeSagaCallAcceptNotification:
 		h := &HandleSagaCallAcceptNotification{
-			dep:  s.dep,
+			dep:  s.Dep,
 			meta: meta,
 		}
 		return f.Handle(ctx, h.Present)
 	case payload.TypeAbandonedRequestsNotification:
 		h := &HandleAbandonedRequestsNotification{
-			dep:  s.dep,
+			dep:  s.Dep,
 			meta: meta,
 		}
 		return f.Handle(ctx, h.Present)
 	case payload.TypeUpdateJet:
 		h := &HandleUpdateJet{
-			dep:  s.dep,
+			dep:  s.Dep,
 			meta: meta,
 		}
 		return f.Handle(ctx, h.Present)
@@ -133,35 +138,35 @@ func (s *Init) handleParcel(ctx context.Context, f flow.Flow) error {
 	switch msgType {
 	case insolar.TypeCallMethod.String():
 		h := &HandleCall{
-			dep:     s.dep,
+			dep:     s.Dep,
 			Message: meta,
 			Parcel:  parcel,
 		}
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeAdditionalCallFromPreviousExecutor.String():
 		h := &HandleAdditionalCallFromPreviousExecutor{
-			dep:     s.dep,
+			dep:     s.Dep,
 			Message: meta,
 			Parcel:  parcel,
 		}
 		return f.Handle(ctx, h.Present)
 	case insolar.TypePendingFinished.String():
 		h := &HandlePendingFinished{
-			dep:     s.dep,
+			dep:     s.Dep,
 			Message: meta,
 			Parcel:  parcel,
 		}
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeStillExecuting.String():
 		h := &HandleStillExecuting{
-			dep:     s.dep,
+			dep:     s.Dep,
 			Message: meta,
 			Parcel:  parcel,
 		}
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeExecutorResults.String():
 		h := &HandleExecutorResults{
-			dep:     s.dep,
+			dep:     s.Dep,
 			Message: meta,
 			Parcel:  parcel,
 		}
@@ -186,7 +191,7 @@ func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 			inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
 		}
 
-		go s.dep.Sender.Reply(ctx, meta, errMsg)
+		go s.Dep.Sender.Reply(ctx, meta, errMsg)
 
 		return nil
 	}
@@ -195,7 +200,7 @@ func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 }
 
 type InnerInit struct {
-	dep *Dependencies
+	Dep *Dependencies
 
 	Message *message.Message
 }
