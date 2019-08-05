@@ -19,11 +19,20 @@ package exporter
 import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/pkg/errors"
 )
 
 type PulseServer struct {
-	pulses pulse.Calculator
+	pulses    pulse.Calculator
+	jetKeeper executor.JetKeeper
+}
+
+func NewPulseServer(pulses pulse.Calculator, jetKeeper executor.JetKeeper) *PulseServer {
+	return &PulseServer{
+		pulses:    pulses,
+		jetKeeper: jetKeeper,
+	}
 }
 
 func (p *PulseServer) Export(getPulses *GetPulses, stream PulseExporter_ExportServer) error {
@@ -40,17 +49,32 @@ func (p *PulseServer) Export(getPulses *GetPulses, stream PulseExporter_ExportSe
 			return err
 		}
 	}
-
 	currentPN := getPulses.PulseNumber
 	read := uint32(0)
-	for pn, err := p.pulses.Forwards(stream.Context(), currentPN, 1); err == nil && read <= getPulses.Count; {
-		err := stream.Send(&Pulse{
-			PulseNumber: pn.PulseNumber,
+	canReadNext := true
+
+	for canReadNext {
+		pulse, err := p.pulses.Forwards(stream.Context(), currentPN, 1)
+		if err != nil {
+			return err
+		}
+
+		topPulse := p.jetKeeper.TopSyncPulse()
+		if pulse.PulseNumber == topPulse {
+			canReadNext = false
+		}
+
+		read++
+		if read == getPulses.Count {
+			canReadNext = false
+		}
+
+		err = stream.Send(&Pulse{
+			PulseNumber: pulse.PulseNumber,
 		})
 		if err != nil {
 			return err
 		}
-		read++
 	}
 
 	return nil
