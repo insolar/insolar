@@ -77,8 +77,6 @@ func (rs *outgoingRequestSender) SendOutgoingRequest(ctx context.Context, reqRef
 	}
 	err := GlobalActorSystem.Send(rs.senderPid, msg)
 	if err != nil {
-		// Actor's mailbox is most likely full. This is OK to lost an abandoned OutgoingRequest
-		// in this case, LME will  re-send a corresponding notification anyway.
 		inslogger.FromContext(ctx).Errorf("SendOutgoingRequest failed: %v", err)
 		return insolar.Arguments{}, nil, err
 	}
