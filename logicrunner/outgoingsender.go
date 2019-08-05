@@ -17,8 +17,6 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 )
 
-// AALEKSEEV TODO use a dynamic pool here
-
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.OutgoingRequestSender -o ./ -s _mock.go -g
 
 // OutgoingRequestSender is a type-safe wrapper for an actor implementation.
@@ -106,9 +104,16 @@ func (rs *outgoingRequestSender) SendAbandonedOutgoingRequest(ctx context.Contex
 func (a *outgoingSenderActorState) Receive(message actor.Message) (actor.Actor, error) {
 	switch v := message.(type) {
 	case sendOutgoingRequestMessage:
-		var res sendOutgoingResult
-		res.result, res.incoming, res.err = a.sendOutgoingRequest(v.ctx, v.requestReference, v.outgoingRequest)
-		v.resultChan <- res
+		// Currently it's possible to create an infinite number of goroutines here.
+		// This number can be somehow limited in the future. The reason why a goroutine is
+		// needed here is that an outgoing request can result in creating a new outgoing request
+		// that can be directed to the same VE which would be waiting for a reply for a first
+		// request, i.e. a deadlock situation.
+		go func() {
+			var res sendOutgoingResult
+			res.result, res.incoming, res.err = a.sendOutgoingRequest(v.ctx, v.requestReference, v.outgoingRequest)
+			v.resultChan <- res
+		}()
 		return a, nil
 	case sendAbandonedOutgoingRequestMessage:
 		_, _, err := a.sendOutgoingRequest(v.ctx, v.requestReference, v.outgoingRequest)

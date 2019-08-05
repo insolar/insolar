@@ -18,9 +18,6 @@ package logicrunner
 
 import (
 	"context"
-	"strings"
-
-	"github.com/insolar/insolar/insolar/reply"
 
 	"github.com/pkg/errors"
 
@@ -195,39 +192,12 @@ func (m *executionProxyImplementation) RouteCall(
 
 	outgoingReqRef := insolar.NewReference(*outgoingReqID)
 
-	//TODO AALEKSEEV uncomment this code, after making a pool
-	//var incoming *record.IncomingRequest
-	//rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
-	//if incoming != nil {
-	//	current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
-	//}
-	//return err
-
-	// Step 2. Actually make a call.
-	incoming := buildIncomingRequestFromOutgoing(outgoing)
-	callMsg := &message.CallMethod{IncomingRequest: *incoming} // AALEKSEEV TODO FIXME copy-paste from here
-	res, err := m.cr.CallMethod(ctx, callMsg)
-	if err == nil && (outgoing.ReturnMode == record.ReturnResult) {
-		rep.Result = res.(*reply.CallMethod).Result
+	var incoming *record.IncomingRequest
+	rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
+	if incoming != nil {
+		current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
 	}
-	current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	if err != nil && !strings.Contains(err.Error(), "index not found") {
-		return err
-	}
-
-	// Step 3. Register result of the outgoing method
-	reqResult := newRequestResult(rep.Result, outgoing.Caller)
-	registerResultErr := m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	if err != nil && strings.Contains(err.Error(), "index not found") {
-		if registerResultErr != nil {
-			inslogger.FromContext(ctx).Errorf("Failed to register result for request %s, error: %s", outgoingReqRef.String(), registerResultErr.Error())
-		}
-		return err
-	}
-	return registerResultErr
-
+	return err
 }
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
