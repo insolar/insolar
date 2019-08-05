@@ -21,6 +21,7 @@ import (
 	"net/http"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
@@ -79,13 +80,17 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *Statu
 		IsWorking: origin.GetState() == insolar.NodeReady,
 	}
 
-	pulse, err := s.runner.PulseAccessor.Latest(ctx)
+	p, err := s.runner.PulseAccessor.Latest(ctx)
 	if err != nil {
-		return err
+		if err != pulse.ErrNotFound {
+			return err
+		}
+
+		reply.PulseNumber = uint32(0)
 	}
 
-	reply.PulseNumber = uint32(pulse.PulseNumber)
-	reply.Entropy = pulse.Entropy[:]
+	reply.PulseNumber = uint32(p.PulseNumber)
+	reply.Entropy = p.Entropy[:]
 	reply.Version = version.Version
 
 	return nil
