@@ -340,14 +340,6 @@ func convertQueueToMessageQueue(ctx context.Context, queue []*Transcript) []mess
 	return mq
 }
 
-func (lr *LogicRunner) pulse(ctx context.Context) *insolar.Pulse {
-	p, err := lr.PulseAccessor.Latest(ctx)
-	if err != nil {
-		panic(err)
-	}
-	return &p
-}
-
 func contextWithServiceData(ctx context.Context, data message.ServiceData) context.Context {
 	// ctx := inslogger.ContextWithTrace(context.Background(), data.LogTraceID)
 	ctx = inslogger.ContextWithTrace(ctx, data.LogTraceID)
