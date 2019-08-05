@@ -187,20 +187,7 @@ func (rd *RootDomain) GetFreeMigrationAddress(publicKey string) (string, error) 
 		return "", fmt.Errorf("incorect migration address shard index")
 	}
 
-	mas := migrationshard.GetObject(rd.MigrationAddressShards[shardIndex])
-	ma, err := mas.GetFreeMigrationAddress()
-	if err == nil {
-		return ma, nil
-	}
-	if err != nil {
-		if !strings.Contains(err.Error(), "no more migration address left") {
-			return "", errors.Wrap(err, "failed to set reference in migration address shard")
-		}
-	}
-	for i := shardIndex + 1; i != shardIndex; {
-		if i >= len(rd.MigrationAddressShards) {
-			i = 0
-		}
+	for i := shardIndex; i < len(rd.MigrationAddressShards); i++ {
 		mas := migrationshard.GetObject(rd.MigrationAddressShards[i])
 		ma, err := mas.GetFreeMigrationAddress()
 
@@ -213,7 +200,21 @@ func (rd *RootDomain) GetFreeMigrationAddress(publicKey string) (string, error) 
 				return "", errors.Wrap(err, "failed to set reference in migration address shard")
 			}
 		}
-		i++
+	}
+
+	for i := 0; i < shardIndex; i++ {
+		mas := migrationshard.GetObject(rd.MigrationAddressShards[i])
+		ma, err := mas.GetFreeMigrationAddress()
+
+		if err == nil {
+			return ma, nil
+		}
+
+		if err != nil {
+			if !strings.Contains(err.Error(), "no more migration address left") {
+				return "", errors.Wrap(err, "failed to set reference in migration address shard")
+			}
+		}
 	}
 
 	return "", errors.New("no more migration addresses left in any shard")
