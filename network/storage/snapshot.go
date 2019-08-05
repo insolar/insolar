@@ -51,8 +51,6 @@
 package storage
 
 import (
-	"context"
-
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -60,58 +58,77 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/storage.SnapshotAccessor -o ../../testutils/network -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/network/storage.SnapshotStorage -o ../../testutils/network -s _mock.go -g
 
-// SnapshotAccessor provides methods for accessing Snapshot.
-type SnapshotAccessor interface {
-	ForPulseNumber(context.Context, insolar.PulseNumber) (*node.Snapshot, error)
-	Latest(ctx context.Context) (node.Snapshot, error)
-}
-
-//go:generate minimock -i github.com/insolar/insolar/network/storage.SnapshotAppender -o ../../testutils/network -s _mock.go -g
-
-// SnapshotAppender provides method for appending Snapshot to storage.
-type SnapshotAppender interface {
-	Append(ctx context.Context, pulse insolar.PulseNumber, snapshot *node.Snapshot) error
+// SnapshotStorage provides methods for accessing Snapshot.
+type SnapshotStorage interface {
+	ForPulseNumber(insolar.PulseNumber) (*node.Snapshot, error)
+	Append(pulse insolar.PulseNumber, snapshot *node.Snapshot) error
 }
 
 // NewSnapshotStorage constructor creates PulseStorage
-func NewSnapshotStorage() *SnapshotStorage {
-	return &SnapshotStorage{}
+func NewSnapshotStorage() *snapshotStorage {
+	return &snapshotStorage{}
 }
 
-type SnapshotStorage struct {
+// NewMemorySnapshotStorage constructor creates PulseStorage
+func NewMemorySnapshotStorage() *memorySnapshotStorage {
+	return &memorySnapshotStorage{
+		entries: make(map[insolar.PulseNumber]*node.Snapshot),
+	}
+}
+
+type snapshotStorage struct {
 	DB   DB `inject:""`
 	lock sync.RWMutex
 }
 
-func (s *SnapshotStorage) Append(ctx context.Context, pulse insolar.PulseNumber, snapshot *node.Snapshot) error {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
+func (s *snapshotStorage) Append(pulse insolar.PulseNumber, snapshot *node.Snapshot) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 
 	buff, err := snapshot.Encode()
 	if err != nil {
-		return errors.Wrap(err, "[SnapshotStorage] Failed to append snapshot")
+		return errors.Wrap(err, "[snapshotStorage] Failed to append snapshot")
 	}
 	return s.DB.Set(pulseKey(pulse), buff)
 }
 
-func (s *SnapshotStorage) ForPulseNumber(ctx context.Context, pulse insolar.PulseNumber) (*node.Snapshot, error) {
+func (s *snapshotStorage) ForPulseNumber(pulse insolar.PulseNumber) (*node.Snapshot, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
 	buf, err := s.DB.Get(pulseKey(pulse))
 	if err != nil {
-		return nil, errors.Wrap(err, "[SnapshotStorage] Failed to get snapshot from DB")
+		return nil, errors.Wrap(err, "[snapshotStorage] Failed to get snapshot from DB")
 	}
 	result := &node.Snapshot{}
 	err = result.Decode(buf)
 	if err != nil {
-		return nil, errors.Wrap(err, "[SnapshotStorage] Failed to decode snapshot")
+		return nil, errors.Wrap(err, "[snapshotStorage] Failed to decode snapshot")
 	}
 	return result, nil
 }
 
-func (s *SnapshotStorage) Latest(ctx context.Context) (*node.Snapshot, error) {
-	panic("implement me")
+type memorySnapshotStorage struct {
+	lock    sync.RWMutex
+	entries map[insolar.PulseNumber]*node.Snapshot
+}
+
+func (m *memorySnapshotStorage) Append(pulse insolar.PulseNumber, snapshot *node.Snapshot) error {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	m.entries[pulse] = snapshot
+	return nil
+}
+
+func (m *memorySnapshotStorage) ForPulseNumber(pulse insolar.PulseNumber) (*node.Snapshot, error) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	if s, ok := m.entries[pulse]; ok {
+		return s, nil
+	}
+	return nil, ErrNotFound
 }

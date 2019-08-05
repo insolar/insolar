@@ -64,7 +64,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCloudHashtStorage(t *testing.T) {
+func TestCloudHashStorage(t *testing.T) {
 
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
@@ -82,10 +82,10 @@ func TestCloudHashtStorage(t *testing.T) {
 	pulse := insolar.Pulse{PulseNumber: 15}
 	cloudHash := []byte{1, 2, 3, 4, 5}
 
-	err = cs.Append(ctx, pulse.PulseNumber, cloudHash)
+	err = cs.Append(pulse.PulseNumber, cloudHash)
 	assert.NoError(t, err)
 
-	cloudHash2, err := cs.ForPulseNumber(ctx, pulse.PulseNumber)
+	cloudHash2, err := cs.ForPulseNumber(pulse.PulseNumber)
 	assert.NoError(t, err)
 
 	assert.Equal(t, cloudHash, cloudHash2)
