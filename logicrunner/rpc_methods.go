@@ -216,6 +216,7 @@ func (m *executionProxyImplementation) SaveAsChild(
 		return err
 	}
 
+	// AALEKSEEV TODO move CallConstructor to OutgoingRequestSender
 	// Send the request
 	msg := &message.CallMethod{IncomingRequest: *incoming}
 	objectRef, ctorErr, err := m.cr.CallConstructor(ctx, msg)
@@ -390,7 +391,7 @@ func buildOutgoingRequest(
 	return outgoing
 }
 
-func buildIncomingAndOutgoingSaveAsChildRequests(
+func buildIncomingAndOutgoingSaveAsChildRequests( // AALEKSEEV TODO refactor
 	_ context.Context, current *Transcript, req rpctypes.UpSaveAsChildReq,
 ) (*record.IncomingRequest, *record.OutgoingRequest) {
 
