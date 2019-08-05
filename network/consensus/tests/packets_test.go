@@ -105,7 +105,7 @@ func (r *EmuPulsarNetPacket) IsRelayForbidden() bool {
 	return false
 }
 
-func (r *EmuPulsarNetPacket) AsByteString() string {
+func (r *EmuPulsarNetPacket) AsByteString() longbits.ByteString {
 	panic("implement me")
 }
 

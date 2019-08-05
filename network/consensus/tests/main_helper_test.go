@@ -118,7 +118,7 @@ func (p *emuNetworkBuilder) _connectEmuNode(nodes []profiles.StaticProfile, self
 
 	controlFeeder := &EmuControlFeeder{}
 	candidateFeeder := &coreapi.SequentialCandidateFeeder{}
-	ephemeralFeeder := &EmuEphemeralFeeder{}
+	//ephemeralFeeder := &EmuEphemeralFeeder{}
 
 	switch {
 	case !asJoiner && selfIndex == 1:
@@ -136,7 +136,7 @@ func (p *emuNetworkBuilder) _connectEmuNode(nodes []profiles.StaticProfile, self
 	chronicles := NewEmuChronicles(nodes, selfIndex, asJoiner, p.primingCloudStateHash)
 	self := nodes[selfIndex]
 	node := NewConsensusHost(self.GetDefaultEndpoint().GetNameAddress())
-	node.ConnectTo(chronicles, p.network, p.strategyFactory, candidateFeeder, controlFeeder, ephemeralFeeder, p.config)
+	node.ConnectTo(chronicles, p.network, p.strategyFactory, candidateFeeder, controlFeeder, nil, p.config)
 }
 
 func generateNameList(countNeutral, countHeavy, countLight, countVirtual int) []string {
