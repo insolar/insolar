@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"time"
 
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
@@ -69,7 +68,7 @@ func (entropy Entropy) Equal(other Entropy) bool {
 // Upper 2 bits are reserved for use in references (scope), must be zero otherwise.
 // Valid Absolute PulseNumber must be >65536.
 // If PulseNumber <65536 it is a relative PulseNumber
-type PulseNumber uint32
+type PulseNumber pulse.Number
 
 // NewPulseNumber creates pulse number from bytes.
 func NewPulseNumber(buf []byte) PulseNumber {
@@ -175,9 +174,4 @@ var GenesisPulse = &Pulse{
 	Entropy:          [EntropySize]byte{},
 	EpochPulseNumber: 1,
 	PulseTimestamp:   pulse.UnixTimeOfMinTimePulse,
-}
-
-// CalculatePulseNumber is helper for calculating next pulse number, when a network is being started
-func CalculatePulseNumber(now time.Time) PulseNumber {
-	return PulseNumber(pulse.OfNow())
 }
