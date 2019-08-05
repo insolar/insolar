@@ -612,56 +612,6 @@ func Test_OutgoingDetached_InPendings(t *testing.T) {
 	})
 }
 
-func Test_OutgoingRequest_TypeCreation(t *testing.T) {
-	t.Parallel()
-
-	ctx := inslogger.TestContext(t)
-	cfg := DefaultLightConfig()
-	s, err := NewServer(ctx, cfg, nil)
-	require.NoError(t, err)
-	defer s.Stop()
-
-	// First pulse goes in storage then interrupts.
-	s.SetPulse(ctx)
-	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
-	s.SetPulse(ctx)
-
-	var rootID insolar.ID
-
-	t.Run("Outgoing request can't be created w creating CallType", func(t *testing.T) {
-		// Creating root reason request.
-		{
-			msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), true, true)
-			rep := SendMessage(ctx, s, &msg)
-			RequireNotError(rep)
-			rootID = rep.(*payload.RequestInfo).RequestID
-		}
-
-		// Creating outgoing w CallType:	CTSaveAsChild
-		{
-			args := make([]byte, 100)
-			_, err := rand.Read(args)
-			panicIfErr(err)
-			req := record.OutgoingRequest{
-				Caller:     *insolar.NewReference(rootID),
-				Arguments:  args,
-				ReturnMode: record.ReturnResult,
-				Reason:     *insolar.NewReference(rootID),
-				APINode:    gen.Reference(),
-				CallType:   record.CTSaveAsChild,
-			}
-
-			rec := record.Wrap(&req)
-
-			pl := payload.SetOutgoingRequest{
-				Request: rec,
-			}
-			rep := SendMessage(ctx, s, &pl)
-			RequireError(rep)
-		}
-	})
-}
-
 func Test_IncomingRequest_DifferentResults(t *testing.T) {
 	t.Parallel()
 

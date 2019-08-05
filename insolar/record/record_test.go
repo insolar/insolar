@@ -349,3 +349,16 @@ func TestRequestInterface_IncomingRequestSaveAsChild(t *testing.T) {
 	realAffinityRef := CalculateRequestAffinityRef(iface, pn, pcs)
 	assert.NotNil(t, realAffinityRef)
 }
+
+func TestRequestInterface_OutgoingRequestSaveAsChild(t *testing.T) {
+	t.Parallel()
+	objref := gen.Reference()
+	req := &OutgoingRequest{
+		Caller:   gen.Reference(),
+		Object:   &objref,
+		Reason:   gen.Reference(),
+		CallType: CTSaveAsChild,
+	}
+	iface := Request(req)
+	require.False(t, iface.IsCreationRequest())
+}
