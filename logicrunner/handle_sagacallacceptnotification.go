@@ -10,6 +10,7 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/logicrunner/logicexecutor"
 )
 
 type HandleSagaCallAcceptNotification struct {
@@ -67,7 +68,7 @@ func (h *HandleSagaCallAcceptNotification) Present(ctx context.Context, f flow.F
 
 	// Register result of the outgoing method.
 	outgoingReqRef := insolar.NewReference(msg.DetachedRequestID)
-	reqResult := newRequestResult(res.(*reply.RegisterRequest).Request.Bytes(), outgoing.Caller)
+	reqResult := logicexecutor.NewRequestResult(res.(*reply.RegisterRequest).Request.Bytes(), outgoing.Caller)
 
 	am := h.dep.lr.ArtifactManager
 	return am.RegisterResult(ctx, *outgoingReqRef, reqResult)

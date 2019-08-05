@@ -20,6 +20,9 @@ import (
 	"context"
 	"io"
 
+	"github.com/insolar/insolar/logicrunner/logicexecutor"
+	"github.com/insolar/insolar/logicrunner/machinesmanager"
+	"github.com/insolar/insolar/logicrunner/requestsexecutor"
 	"github.com/insolar/insolar/network/rules"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -169,9 +172,9 @@ func initComponents(
 		keyProcessor,
 		certManager,
 		logicRunner,
-		logicrunner.NewLogicExecutor(),
-		logicrunner.NewRequestsExecutor(),
-		logicrunner.NewMachinesManager(),
+		logicexecutor.NewLogicExecutor(),
+		requestsexecutor.NewRequestsExecutor(),
+		machinesmanager.NewMachinesManager(),
 		nodeNetwork,
 		nw,
 		pulsemanager.NewPulseManager(),

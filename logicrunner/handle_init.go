@@ -24,6 +24,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/logicrunner/statestorage"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 
 	"github.com/pkg/errors"
@@ -41,7 +42,7 @@ const InnerMsgTopic = "InnerMsg"
 
 type Dependencies struct {
 	Publisher      message.Publisher
-	StateStorage   StateStorage
+	StateStorage   statestorage.StateStorage
 	ResultsMatcher ResultMatcher
 	lr             *LogicRunner
 	Sender         bus.Sender

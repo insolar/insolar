@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/logicrunner/common"
 )
 
 type HandleCall struct {
@@ -69,7 +70,7 @@ func (h *HandleCall) sendToNextExecutor(
 		ObjectReference: objectRef,
 		RequestRef:      requestRef,
 		Request:         request,
-		ServiceData:     serviceDataFromContext(ctx),
+		ServiceData:     common.ServiceDataFromContext(ctx),
 		Pending:         ps,
 	}
 

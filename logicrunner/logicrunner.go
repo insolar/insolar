@@ -36,18 +36,18 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin"
+	"github.com/insolar/insolar/logicrunner/machinesmanager"
+	"github.com/insolar/insolar/logicrunner/outgoingsender"
+	"github.com/insolar/insolar/logicrunner/requestsexecutor"
+	"github.com/insolar/insolar/logicrunner/statestorage"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 )
-
-const maxQueueLength = 10
 
 type Ref = insolar.Reference
 
@@ -62,15 +62,15 @@ type LogicRunner struct {
 	ArtifactManager            artifacts.Client                   `inject:""`
 	DescriptorsCache           artifacts.DescriptorsCache         `inject:""`
 	JetCoordinator             jet.Coordinator                    `inject:""`
-	RequestsExecutor           RequestsExecutor                   `inject:""`
-	MachinesManager            MachinesManager                    `inject:""`
+	RequestsExecutor           requestsexecutor.RequestsExecutor  `inject:""`
+	MachinesManager            machinesmanager.MachinesManager    `inject:""`
 	JetStorage                 jet.Storage                        `inject:""`
 	Publisher                  watermillMsg.Publisher
 	Sender                     bus.Sender
 	SenderWithRetry            *bus.WaitOKSender
-	StateStorage               StateStorage
+	StateStorage               statestorage.StateStorage
 	ResultsMatcher             ResultMatcher
-	OutgoingSender             OutgoingRequestSender
+	OutgoingSender             outgoingsender.OutgoingRequestSender
 	WriteController            *writecontroller.WriteController
 
 	Cfg *configuration.LogicRunner
@@ -107,9 +107,9 @@ func (lr *LogicRunner) LRI() {}
 
 func (lr *LogicRunner) Init(ctx context.Context) error {
 	as := system.New()
-	lr.OutgoingSender = NewOutgoingRequestSender(as, lr.ContractRequester, lr.ArtifactManager)
+	lr.OutgoingSender = outgoingsender.NewOutgoingRequestSender(as, lr.ContractRequester, lr.ArtifactManager)
 
-	lr.StateStorage = NewStateStorage(
+	lr.StateStorage = statestorage.NewStateStorage(
 		lr.Publisher,
 		lr.RequestsExecutor,
 		lr.MessageBus,
@@ -338,24 +338,6 @@ func (lr *LogicRunner) AddUnwantedResponse(ctx context.Context, msg insolar.Mess
 	return lr.ResultsMatcher.AddUnwantedResponse(ctx, m)
 }
 
-func convertQueueToMessageQueue(ctx context.Context, queue []*Transcript) []message.ExecutionQueueElement {
-	mq := make([]message.ExecutionQueueElement, 0)
-	var traces string
-	for _, elem := range queue {
-		mq = append(mq, message.ExecutionQueueElement{
-			RequestRef:  elem.RequestRef,
-			Request:     *elem.Request,
-			ServiceData: serviceDataFromContext(elem.Context),
-		})
-
-		traces += inslogger.TraceID(elem.Context) + ", "
-	}
-
-	inslogger.FromContext(ctx).Debug("convertQueueToMessageQueue: ", traces)
-
-	return mq
-}
-
 func (lr *LogicRunner) pulse(ctx context.Context) *insolar.Pulse {
 	p, err := lr.PulseAccessor.Latest(ctx)
 	if err != nil {
@@ -397,30 +379,4 @@ func freshContextFromContext(ctx context.Context) context.Context {
 		res = instracer.WithParentSpan(res, parentSpan)
 	}
 	return res
-}
-
-func freshContextFromContextAndRequest(ctx context.Context, req record.IncomingRequest) context.Context {
-	res := inslogger.ContextWithTrace(
-		context.Background(),
-		req.APIRequestID, // this is HACK based on awareness, we just know how trace id is formed
-	)
-	//FIXME: need way to get level out of context
-	//res = inslogger.WithLoggerLevel(res, data.LogLevel)
-	parentSpan, ok := instracer.ParentSpan(ctx)
-	if ok {
-		res = instracer.WithParentSpan(res, parentSpan)
-	}
-	return res
-}
-
-func serviceDataFromContext(ctx context.Context) message.ServiceData {
-	if ctx == nil {
-		log.Error("nil context, can't create correct ServiceData")
-		return message.ServiceData{}
-	}
-	return message.ServiceData{
-		LogTraceID:    inslogger.TraceID(ctx),
-		LogLevel:      inslogger.GetLoggerLevel(ctx),
-		TraceSpanData: instracer.MustSerialize(ctx),
-	}
 }

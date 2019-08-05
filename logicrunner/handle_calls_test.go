@@ -33,6 +33,8 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/executionarchive"
+	"github.com/insolar/insolar/logicrunner/statestorage"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/testutils"
 )
@@ -51,10 +53,10 @@ func TestHandleCall_CheckExecutionLoop(t *testing.T) {
 			mocks: func(t minimock.Tester) (*HandleCall, *record.IncomingRequest) {
 				h := &HandleCall{
 					dep: &Dependencies{
-						StateStorage: NewStateStorageMock(t).
+						StateStorage: statestorage.NewStateStorageMock(t).
 							GetExecutionArchiveMock.Expect(obj).
 							Return(
-								NewExecutionArchiveMock(t).
+								executionarchive.NewExecutionArchiveMock(t).
 									FindRequestLoopMock.Return(true),
 							),
 					},
@@ -70,10 +72,10 @@ func TestHandleCall_CheckExecutionLoop(t *testing.T) {
 			mocks: func(t minimock.Tester) (*HandleCall, *record.IncomingRequest) {
 				h := &HandleCall{
 					dep: &Dependencies{
-						StateStorage: NewStateStorageMock(t).
+						StateStorage: statestorage.NewStateStorageMock(t).
 							GetExecutionArchiveMock.Expect(obj).
 							Return(
-								NewExecutionArchiveMock(t).
+								executionarchive.NewExecutionArchiveMock(t).
 									FindRequestLoopMock.Return(false),
 							),
 					},
@@ -89,7 +91,7 @@ func TestHandleCall_CheckExecutionLoop(t *testing.T) {
 			mocks: func(t minimock.Tester) (*HandleCall, *record.IncomingRequest) {
 				h := &HandleCall{
 					dep: &Dependencies{
-						StateStorage: NewStateStorageMock(t).
+						StateStorage: statestorage.NewStateStorageMock(t).
 							GetExecutionArchiveMock.Expect(obj).
 							Return(nil),
 					},
@@ -181,9 +183,9 @@ func TestHandleCall_Present(t *testing.T) {
 		handler := HandleCall{
 			dep: &Dependencies{
 				Publisher: nil,
-				StateStorage: NewStateStorageMock(mc).
+				StateStorage: statestorage.NewStateStorageMock(mc).
 					GetExecutionArchiveMock.Expect(objRef).Return(
-					NewExecutionArchiveMock(mc).FindRequestLoopMock.Return(false),
+					executionarchive.NewExecutionArchiveMock(mc).FindRequestLoopMock.Return(false),
 				).
 					UpsertExecutionStateMock.Expect(objRef).Return(nil),
 				ResultsMatcher: nil,
@@ -239,9 +241,9 @@ func TestHandleCall_Present(t *testing.T) {
 		handler := HandleCall{
 			dep: &Dependencies{
 				Publisher: nil,
-				StateStorage: NewStateStorageMock(mc).
+				StateStorage: statestorage.NewStateStorageMock(mc).
 					GetExecutionArchiveMock.Expect(objRef).Return(
-					NewExecutionArchiveMock(mc).FindRequestLoopMock.Return(false).IsEmptyMock.Return(true),
+					executionarchive.NewExecutionArchiveMock(mc).FindRequestLoopMock.Return(false).IsEmptyMock.Return(true),
 				),
 				ResultsMatcher: nil,
 				lr: &LogicRunner{
@@ -300,7 +302,7 @@ func TestHandleCall_Present(t *testing.T) {
 		handler := HandleCall{
 			dep: &Dependencies{
 				Publisher:      nil,
-				StateStorage:   NewStateStorageMock(mc),
+				StateStorage:   statestorage.NewStateStorageMock(mc),
 				ResultsMatcher: nil,
 				lr: &LogicRunner{
 					ArtifactManager: artifacts.NewClientMock(mc),
@@ -353,9 +355,9 @@ func TestHandleCall_Present(t *testing.T) {
 		handler := HandleCall{
 			dep: &Dependencies{
 				Publisher: nil,
-				StateStorage: NewStateStorageMock(mc).
+				StateStorage: statestorage.NewStateStorageMock(mc).
 					GetExecutionArchiveMock.Expect(objRef).Return(
-					NewExecutionArchiveMock(mc).FindRequestLoopMock.Return(false),
+					executionarchive.NewExecutionArchiveMock(mc).FindRequestLoopMock.Return(false),
 				),
 				ResultsMatcher: nil,
 				lr: &LogicRunner{
@@ -408,7 +410,7 @@ func TestHandleCall_Present(t *testing.T) {
 		handler := HandleCall{
 			dep: &Dependencies{
 				Publisher:      nil,
-				StateStorage:   NewStateStorageMock(mc),
+				StateStorage:   statestorage.NewStateStorageMock(mc),
 				ResultsMatcher: nil,
 				lr: &LogicRunner{
 					ArtifactManager: artifacts.NewClientMock(mc),
@@ -463,7 +465,7 @@ func TestHandleCall_Present(t *testing.T) {
 		handler := HandleCall{
 			dep: &Dependencies{
 				Publisher: nil,
-				StateStorage: NewStateStorageMock(mc).
+				StateStorage: statestorage.NewStateStorageMock(mc).
 					GetExecutionArchiveMock.Expect(objRef).Return(nil),
 				ResultsMatcher: nil,
 				lr: &LogicRunner{

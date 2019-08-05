@@ -29,10 +29,12 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/logicrunner/statestorage"
+	"github.com/insolar/insolar/logicrunner/transcript"
 )
 
 type AdditionalCallFromPreviousExecutor struct {
-	stateStorage StateStorage
+	stateStorage statestorage.StateStorage
 
 	message *message.AdditionalCallFromPreviousExecutor
 }
@@ -44,7 +46,7 @@ func (p *AdditionalCallFromPreviousExecutor) Proceed(ctx context.Context) error 
 		broker.SetNotPending(ctx)
 	}
 
-	tr := NewTranscript(freshContextFromContext(ctx), p.message.RequestRef, p.message.Request)
+	tr := transcript.NewTranscript(freshContextFromContext(ctx), p.message.RequestRef, p.message.Request)
 	broker.AddAdditionalRequestFromPrevExecutor(ctx, tr)
 	return nil
 }

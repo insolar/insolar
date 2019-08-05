@@ -29,6 +29,8 @@ import (
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/executionbroker"
+	"github.com/insolar/insolar/logicrunner/statestorage"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -49,10 +51,10 @@ func TestHandlePendingFinished_Present(t *testing.T) {
 				h := &HandlePendingFinished{
 					dep: &Dependencies{
 						Sender: bus.NewSenderMock(t).ReplyMock.Return(),
-						StateStorage: NewStateStorageMock(t).
+						StateStorage: statestorage.NewStateStorageMock(t).
 							UpsertExecutionStateMock.Expect(obj).
 							Return(
-								NewExecutionBrokerIMock(t).
+								executionbroker.NewBrokerIMock(t).
 									PrevExecutorFinishedPendingMock.Return(nil),
 							),
 					},
@@ -71,10 +73,10 @@ func TestHandlePendingFinished_Present(t *testing.T) {
 
 				h := &HandlePendingFinished{
 					dep: &Dependencies{
-						StateStorage: NewStateStorageMock(t).
+						StateStorage: statestorage.NewStateStorageMock(t).
 							UpsertExecutionStateMock.Expect(obj).
 							Return(
-								NewExecutionBrokerIMock(t).
+								executionbroker.NewBrokerIMock(t).
 									PrevExecutorFinishedPendingMock.Return(errors.New("some")),
 							),
 					},

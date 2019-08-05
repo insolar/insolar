@@ -25,6 +25,8 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/executionbroker"
+	"github.com/insolar/insolar/logicrunner/transcript"
 )
 
 // ------------- CheckOurRole
@@ -96,14 +98,14 @@ func (r *RegisterIncomingRequest) Proceed(ctx context.Context) error {
 }
 
 type AddFreshRequest struct {
-	broker     ExecutionBrokerI
+	broker     executionbroker.BrokerI
 	requestRef insolar.Reference
 	request    record.IncomingRequest
 }
 
 func (c *AddFreshRequest) Proceed(ctx context.Context) error {
 	requestCtx := freshContextFromContext(ctx)
-	tr := NewTranscript(requestCtx, c.requestRef, c.request)
+	tr := transcript.NewTranscript(requestCtx, c.requestRef, c.request)
 	c.broker.AddFreshRequest(ctx, tr)
 	return nil
 }

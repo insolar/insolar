@@ -30,6 +30,8 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/executionbroker"
+	"github.com/insolar/insolar/logicrunner/statestorage"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/testutils"
 )
@@ -112,9 +114,9 @@ func TestAdditionalCallFromPreviousExecutor_Proceed(t *testing.T) {
 			Pending:         insolar.NotPending,
 		}
 
-		stateStorage := NewStateStorageMock(t).
+		stateStorage := statestorage.NewStateStorageMock(t).
 			UpsertExecutionStateMock.Expect(obj).Return(
-			NewExecutionBrokerIMock(t).
+			executionbroker.NewBrokerIMock(t).
 				AddAdditionalRequestFromPrevExecutorMock.Return().
 				SetNotPendingMock.Return(),
 		)
@@ -144,9 +146,9 @@ func TestAdditionalCallFromPreviousExecutor_Proceed(t *testing.T) {
 			Pending:         insolar.InPending,
 		}
 
-		stateStorage := NewStateStorageMock(t).
+		stateStorage := statestorage.NewStateStorageMock(t).
 			UpsertExecutionStateMock.Expect(obj).Return(
-			NewExecutionBrokerIMock(t).
+			executionbroker.NewBrokerIMock(t).
 				AddAdditionalRequestFromPrevExecutorMock.Return(),
 		)
 

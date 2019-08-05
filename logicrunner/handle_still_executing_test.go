@@ -28,6 +28,8 @@ import (
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/executionbroker"
+	"github.com/insolar/insolar/logicrunner/statestorage"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -47,10 +49,10 @@ func TestHandleStillExecuting_Present(t *testing.T) {
 				h := &HandleStillExecuting{
 					dep: &Dependencies{
 						Sender: bus.NewSenderMock(t).ReplyMock.Return(),
-						StateStorage: NewStateStorageMock(t).
+						StateStorage: statestorage.NewStateStorageMock(t).
 							UpsertExecutionStateMock.Expect(obj).
 							Return(
-								NewExecutionBrokerIMock(t).
+								executionbroker.NewBrokerIMock(t).
 									PrevExecutorStillExecutingMock.Return(),
 							),
 						ResultsMatcher: NewResultMatcherMock(t).
