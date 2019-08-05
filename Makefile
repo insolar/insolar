@@ -248,5 +248,10 @@ generate-introspector-proto: ## generate grpc api code and mocks for introspecto
 		instrumentation/introspector/introproto/*.proto
 	GOPATH=`go env GOPATH` go generate -x ./instrumentation/introspector
 
+prepare-inrospector-proto:
+	go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
+	go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
+	go get -u github.com/golang/protobuf/protoc-gen-go
+
 help: ## Display this help screen
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
