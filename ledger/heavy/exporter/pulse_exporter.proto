@@ -3,27 +3,23 @@ syntax = "proto3";
 package exporter;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
-import "github.com/insolar/insolar/insolar/record/record.proto";
 
-
-service RecordExporter {
-    rpc Export (GetRecords) returns (stream Record) {
+service PulseExporter {
+    rpc Export (GetPulses) returns (stream Pulse) {
     }
 }
 
-message GetRecords {
+message GetPulses {
     uint32 Polymorph = 16;
 
     bytes PulseNumber = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
-    uint32 RecordNumber = 21;
     uint32 Count = 22;
 }
 
-message Record {
+message Pulse {
     uint32 Polymorph = 16;
 
-    uint32 RecordNumber = 20;
-    record.Material Record = 21 [(gogoproto.nullable) = false];
+    bytes PulseNumber = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
 }
 
 
