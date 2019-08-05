@@ -7,21 +7,21 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
-	mm_insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
 )
 
-// OriginProviderMock implements insolar.OriginProvider
+// OriginProviderMock implements network.OriginProvider
 type OriginProviderMock struct {
 	t minimock.Tester
 
-	funcGetOrigin          func() (n1 mm_insolar.NetworkNode)
+	funcGetOrigin          func() (n1 insolar.NetworkNode)
 	inspectFuncGetOrigin   func()
 	afterGetOriginCounter  uint64
 	beforeGetOriginCounter uint64
 	GetOriginMock          mOriginProviderMockGetOrigin
 }
 
-// NewOriginProviderMock returns a mock for insolar.OriginProvider
+// NewOriginProviderMock returns a mock for network.OriginProvider
 func NewOriginProviderMock(t minimock.Tester) *OriginProviderMock {
 	m := &OriginProviderMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -49,7 +49,7 @@ type OriginProviderMockGetOriginExpectation struct {
 
 // OriginProviderMockGetOriginResults contains results of the OriginProvider.GetOrigin
 type OriginProviderMockGetOriginResults struct {
-	n1 mm_insolar.NetworkNode
+	n1 insolar.NetworkNode
 }
 
 // Expect sets up expected params for OriginProvider.GetOrigin
@@ -77,7 +77,7 @@ func (mmGetOrigin *mOriginProviderMockGetOrigin) Inspect(f func()) *mOriginProvi
 }
 
 // Return sets up results that will be returned by OriginProvider.GetOrigin
-func (mmGetOrigin *mOriginProviderMockGetOrigin) Return(n1 mm_insolar.NetworkNode) *OriginProviderMock {
+func (mmGetOrigin *mOriginProviderMockGetOrigin) Return(n1 insolar.NetworkNode) *OriginProviderMock {
 	if mmGetOrigin.mock.funcGetOrigin != nil {
 		mmGetOrigin.mock.t.Fatalf("OriginProviderMock.GetOrigin mock is already set by Set")
 	}
@@ -90,7 +90,7 @@ func (mmGetOrigin *mOriginProviderMockGetOrigin) Return(n1 mm_insolar.NetworkNod
 }
 
 //Set uses given function f to mock the OriginProvider.GetOrigin method
-func (mmGetOrigin *mOriginProviderMockGetOrigin) Set(f func() (n1 mm_insolar.NetworkNode)) *OriginProviderMock {
+func (mmGetOrigin *mOriginProviderMockGetOrigin) Set(f func() (n1 insolar.NetworkNode)) *OriginProviderMock {
 	if mmGetOrigin.defaultExpectation != nil {
 		mmGetOrigin.mock.t.Fatalf("Default expectation is already set for the OriginProvider.GetOrigin method")
 	}
@@ -103,8 +103,8 @@ func (mmGetOrigin *mOriginProviderMockGetOrigin) Set(f func() (n1 mm_insolar.Net
 	return mmGetOrigin.mock
 }
 
-// GetOrigin implements insolar.OriginProvider
-func (mmGetOrigin *OriginProviderMock) GetOrigin() (n1 mm_insolar.NetworkNode) {
+// GetOrigin implements network.OriginProvider
+func (mmGetOrigin *OriginProviderMock) GetOrigin() (n1 insolar.NetworkNode) {
 	mm_atomic.AddUint64(&mmGetOrigin.beforeGetOriginCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetOrigin.afterGetOriginCounter, 1)
 

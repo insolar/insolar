@@ -60,7 +60,6 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
-	"github.com/insolar/insolar/network/node"
 )
 
 type Report struct {
@@ -135,27 +134,38 @@ type PulseHandler interface {
 	HandlePulse(ctx context.Context, pulse insolar.Pulse, originalPacket ReceivedPacket)
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network.OriginProvider -o ../testutils/network -s _mock.go -g
+
+type OriginProvider interface {
+	// GetOrigin get origin node for the current insolard. Returns nil if the current insolard is not a working node.
+	GetOrigin() insolar.NetworkNode
+}
+
+//go:generate minimock -i github.com/insolar/insolar/network.NodeNetwork -o ../testutils/network -s _mock.go -g
+
+type NodeNetwork interface {
+	OriginProvider
+
+	// GetAccessor get accessor to the internal snapshot for the current pulse
+	GetAccessor(insolar.PulseNumber) Accessor
+}
+
 //go:generate minimock -i github.com/insolar/insolar/network.NodeKeeper -o ../testutils/network -s _mock.go -g
 
 // NodeKeeper manages unsync, sync and active lists.
 type NodeKeeper interface {
-	insolar.NodeNetwork
+	NodeNetwork
 
 	// GetCloudHash returns current cloud hash
-	GetCloudHash() []byte
+	GetCloudHash(insolar.PulseNumber) []byte
 	// SetCloudHash set new cloud hash
-	SetCloudHash([]byte)
+	SetCloudHash(insolar.PulseNumber, []byte)
 	// SetInitialSnapshot set initial snapshot for nodekeeper
 	SetInitialSnapshot(nodes []insolar.NetworkNode)
-	// GetAccessor get accessor to the internal snapshot for the current pulse
-	// TODO: add pulse to the function signature to get data of various pulses
-	GetAccessor() Accessor
-	// GetSnapshotCopy get copy of the current nodekeeper snapshot
-	GetSnapshotCopy() *node.Snapshot
 	// Sync move unsync -> sync
-	Sync(context.Context, []insolar.NetworkNode)
+	Sync(context.Context, insolar.PulseNumber, []insolar.NetworkNode)
 	// MoveSyncToActive merge sync list with active nodes
-	MoveSyncToActive(ctx context.Context, number insolar.PulseNumber)
+	MoveSyncToActive(context.Context, insolar.PulseNumber)
 }
 
 // PartitionPolicy contains all rules how to initiate globule resharding.

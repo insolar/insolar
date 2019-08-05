@@ -102,16 +102,15 @@ func newNodeKeeper(t *testing.T, service insolar.CryptographyService) network.No
 func TestNewNodeKeeper(t *testing.T) {
 	nk := newNodeKeeper(t, nil)
 	assert.NotNil(t, nk.GetOrigin())
-	assert.NotNil(t, nk.GetAccessor())
-	assert.NotNil(t, nk.GetSnapshotCopy())
+	assert.NotNil(t, nk.GetAccessor(0))
 }
 
 func TestNodekeeper_GetCloudHash(t *testing.T) {
 	nk := newNodeKeeper(t, nil)
 	cloudHash := make([]byte, 64)
 	rand.Read(cloudHash)
-	nk.SetCloudHash(cloudHash)
-	assert.Equal(t, cloudHash, nk.GetCloudHash())
+	nk.SetCloudHash(0, cloudHash)
+	assert.Equal(t, cloudHash, nk.GetCloudHash(0))
 }
 
 //func TestNodekeeper_GetWorkingNodes(t *testing.T) {
