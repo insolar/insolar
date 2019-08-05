@@ -318,7 +318,7 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 	// TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
 	defaultOptions := coreapi.SkipVerify // coreapi.DefaultVerify
 
-	if prev != nil && filterPN > pn {
+	if prev != nil && filterPN > pn { // TODO fix as filterPN can be zero during ephemeral transition
 		// something from a previous round?
 		_, err := prev.HandlePacket(ctx, packet, from)
 		return api.KeepRound, err
