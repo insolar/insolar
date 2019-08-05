@@ -47,6 +47,10 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 	reasonRef := request.ReasonRef()
 	reasonID := *reasonRef.Record()
 
+	if reasonID.Pulse() > requestID.Pulse() {
+		return errors.New("request is older than its reason")
+	}
+
 	switch r := request.(type) {
 	case *record.IncomingRequest:
 		// Cannot be detached.

@@ -42,6 +42,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin"
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin"
+	"github.com/insolar/insolar/logicrunner/writecontroller"
 )
 
 const maxQueueLength = 10
@@ -67,6 +68,7 @@ type LogicRunner struct {
 	SenderWithRetry            *bus.WaitOKSender
 	StateStorage               StateStorage
 	ResultsMatcher             ResultMatcher
+	WriteController            *writecontroller.WriteController
 
 	Cfg *configuration.LogicRunner
 
@@ -114,6 +116,12 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 		lr.Cfg,
 	)
 
+	lr.WriteController = writecontroller.NewWriteController()
+	err := lr.WriteController.Open(ctx, insolar.FirstPulseNumber)
+	if err != nil {
+		return errors.Wrap(err, "failed to initialize write controller")
+	}
+
 	lr.initHandlers()
 
 	return nil
@@ -127,6 +135,7 @@ func (lr *LogicRunner) initHandlers() {
 		lr:             lr,
 		Sender:         lr.Sender,
 		JetStorage:     lr.JetStorage,
+		WriteAccessor:  lr.WriteController,
 	}
 
 	initHandle := func(msg *watermillMsg.Message) *Init {
@@ -248,16 +257,26 @@ func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context
 	return ctx
 }
 
-func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
+func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newPulse insolar.Pulse) error {
 	ctx, span := instracer.StartSpan(ctx, "pulse.logicrunner")
 	defer span.End()
 
+	err := lr.WriteController.CloseAndWait(ctx, oldPulse.PulseNumber)
+	if err != nil {
+		return errors.Wrap(err, "failed to close pulse on write controller")
+	}
+
 	lr.ResultsMatcher.Clear()
 
-	messages := lr.StateStorage.OnPulse(ctx, pulse)
+	messages := lr.StateStorage.OnPulse(ctx, newPulse)
 
-	lr.FlowDispatcher.ChangePulse(ctx, pulse)
-	lr.InnerFlowDispatcher.ChangePulse(ctx, pulse)
+	lr.FlowDispatcher.ChangePulse(ctx, newPulse)
+	lr.InnerFlowDispatcher.ChangePulse(ctx, newPulse)
+
+	err = lr.WriteController.Open(ctx, newPulse.PulseNumber)
+	if err != nil {
+		return errors.Wrap(err, "failed to start new pulse on write controller")
+	}
 
 	if len(messages) > 0 {
 		go lr.sendOnPulseMessagesAsync(ctx, messages)
@@ -335,6 +354,17 @@ func (lr *LogicRunner) pulse(ctx context.Context) *insolar.Pulse {
 		panic(err)
 	}
 	return &p
+}
+
+func contextWithServiceData(ctx context.Context, data message.ServiceData) context.Context {
+	// ctx := inslogger.ContextWithTrace(context.Background(), data.LogTraceID)
+	ctx = inslogger.ContextWithTrace(ctx, data.LogTraceID)
+	ctx = inslogger.WithLoggerLevel(ctx, data.LogLevel)
+	if data.TraceSpanData != nil {
+		parentSpan := instracer.MustDeserialize(data.TraceSpanData)
+		return instracer.WithParentSpan(ctx, parentSpan)
+	}
+	return ctx
 }
 
 func contextFromServiceData(data message.ServiceData) context.Context {

@@ -221,9 +221,10 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 
 	// Create request record.
 	Request := record.Material{
-		Virtual: record.Wrap(p.request),
-		ID:      p.requestID,
-		JetID:   p.jetID,
+		Virtual:  record.Wrap(p.request),
+		ID:       p.requestID,
+		ObjectID: objectID,
+		JetID:    p.jetID,
 	}
 
 	// Create filament record.
@@ -236,9 +237,10 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		hash := record.HashVirtual(p.dep.pcs.ReferenceHasher(), virtual)
 		id := *insolar.NewID(p.requestID.Pulse(), hash)
 		material := record.Material{
-			Virtual: virtual,
-			ID:      id,
-			JetID:   p.jetID,
+			Virtual:  virtual,
+			ID:       id,
+			ObjectID: objectID,
+			JetID:    p.jetID,
 		}
 		Filament = material
 	}

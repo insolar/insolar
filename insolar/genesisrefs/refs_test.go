@@ -53,13 +53,13 @@ func TestReferences(t *testing.T) {
 			got:    ContractDeposit,
 			expect: "1tJCUhUMyeumaDA9wPksSjugbQ5uFJ5iYfpsX9yZ7j.11111111111111111111111111111111",
 		},
-		insolar.GenesisNameTariff: {
-			got:    ContractStandardTariff,
-			expect: "1tJBhczj15YCWdz4AqT2cS2JRs7tYKby8fVogP3GcE.11111111111111111111111111111111",
-		},
 		insolar.GenesisNameCostCenter: {
 			got:    ContractCostCenter,
 			expect: "1tJDyWCLK4y4JLw7dsCaD9KzEqYTgyGXN5Zp4HuteA.11111111111111111111111111111111",
+		},
+		insolar.GenesisNameShard: {
+			got:    ContractPublicKeyShards[0],
+			expect: "1tJDWrAvLEyH7ij782qCRdNNvmReGi7S2TqQQM92iM.11111111111111111111111111111111",
 		},
 	}
 
