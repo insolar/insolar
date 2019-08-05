@@ -93,9 +93,9 @@ func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publi
 		return nil, errors.New("LogicRunner have nil configuration")
 	}
 	res := LogicRunner{
-		Cfg:             cfg,
-		Publisher:       publisher,
-		Sender:          sender,
+		Cfg:       cfg,
+		Publisher: publisher,
+		Sender:    sender,
 	}
 
 	res.ResultsMatcher = newResultsMatcher(&res)
@@ -165,21 +165,6 @@ func (lr *LogicRunner) initHandlers() {
 			return initHandle(msg).Past
 		},
 	)
-
-	innerInitHandle := func(msg *watermillMsg.Message) *InnerInit {
-		return &InnerInit{
-			dep:     dep,
-			Message: msg,
-		}
-	}
-
-	lr.InnerFlowDispatcher = dispatcher.NewDispatcher(func(msg *watermillMsg.Message) flow.Handle {
-		return innerInitHandle(msg).Present
-	}, func(msg *watermillMsg.Message) flow.Handle {
-		return innerInitHandle(msg).Present
-	}, func(msg *watermillMsg.Message) flow.Handle {
-		return innerInitHandle(msg).Present
-	})
 }
 
 func (lr *LogicRunner) initializeBuiltin(_ context.Context) error {
