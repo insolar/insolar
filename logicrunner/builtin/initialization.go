@@ -30,8 +30,6 @@ import (
 	noderecord "github.com/insolar/insolar/logicrunner/builtin/contract/noderecord"
 	pkshard "github.com/insolar/insolar/logicrunner/builtin/contract/pkshard"
 	rootdomain "github.com/insolar/insolar/logicrunner/builtin/contract/rootdomain"
-	tariff "github.com/insolar/insolar/logicrunner/builtin/contract/tariff"
-	shard "github.com/insolar/insolar/logicrunner/builtin/contract/shard"
 	wallet "github.com/insolar/insolar/logicrunner/builtin/contract/wallet"
 
 	XXX_insolar "github.com/insolar/insolar/insolar"
@@ -41,16 +39,16 @@ import (
 
 func InitializeContractMethods() map[string]XXX_insolar.ContractWrapper {
 	return map[string]XXX_insolar.ContractWrapper{
-		"costcenter": costcenter.Initialize(),
-		"deposit":    deposit.Initialize(),
-		"helloworld": helloworld.Initialize(),
-		"member":     member.Initialize(),
-		"nodedomain": nodedomain.Initialize(),
-		"noderecord": noderecord.Initialize(),
-		"rootdomain": rootdomain.Initialize(),
+		"costcenter":     costcenter.Initialize(),
+		"deposit":        deposit.Initialize(),
+		"helloworld":     helloworld.Initialize(),
+		"member":         member.Initialize(),
 		"migrationshard": migrationshard.Initialize(),
+		"nodedomain":     nodedomain.Initialize(),
+		"noderecord":     noderecord.Initialize(),
 		"pkshard":        pkshard.Initialize(),
-		"wallet":     wallet.Initialize(),
+		"rootdomain":     rootdomain.Initialize(),
+		"wallet":         wallet.Initialize(),
 	}
 }
 
@@ -74,8 +72,6 @@ func InitializeCodeRefs() map[XXX_insolar.Reference]string {
 	rv[shouldLoadRef("111A86xPKUQ1ZxSscgv5brbw93LkwiVhUWgGrYYsMar.11111111111111111111111111111111")] = "noderecord"
 	rv[shouldLoadRef("111A5tzn16hnKGCZCyYA8Dv9FALvPYYQu4VA41SVx6s.11111111111111111111111111111111")] = "pkshard"
 	rv[shouldLoadRef("111A63R5cAgGHC5DJffqF16vUkCuSVj3GExbMLy56cS.11111111111111111111111111111111")] = "rootdomain"
-	rv[shouldLoadRef("111A7748JQuyE1ARrnWpTdY44pe5k1jss62udfTGk8v.11111111111111111111111111111111")] = "shard"
-	rv[shouldLoadRef("111A6aqtkSk9PYtE8iZup6DoM1PazHtFqnjjbEyiZkd.11111111111111111111111111111111")] = "tariff"
 	rv[shouldLoadRef("111A5e49cJW6GKGegWBhtgrJs7nFh1kSWhBtT2VgK4t.11111111111111111111111111111111")] = "wallet"
 
 	return rv

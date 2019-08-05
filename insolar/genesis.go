@@ -35,8 +35,8 @@ const (
 	GenesisNameCostCenter = "costcenter"
 	// GenesisNamePKShard is the name of public key shard contract for genesis record.
 	GenesisNamePKShard = "pkshard"
-	// GenesisNameMAShard is the name of migration address shard contract for genesis record.
-	GenesisNameMAShard = "migrationshard"
+	// GenesisNameMigrationShard is the name of migration address shard contract for genesis record.
+	GenesisNameMigrationShard = "migrationshard"
 
 	GenesisNameRootMember           = "root" + GenesisNameMember
 	GenesisNameRootWallet           = "root" + GenesisNameWallet
@@ -47,8 +47,8 @@ const (
 	GenesisAmountMigrationDaemonMembers       = 10
 	GenesisAmountActiveMigrationDaemonMembers = 3
 
-	GenesisAmountPublicKeyShards        = 1000
-	GenesisAmountMigrationAddressShards = 1000
+	GenesisAmountPublicKeyShards        = 500
+	GenesisAmountMigrationAddressShards = 500
 )
 
 var GenesisNameMigrationDaemonMembers = func() (result [GenesisAmountMigrationDaemonMembers]string) {
@@ -60,7 +60,7 @@ var GenesisNameMigrationDaemonMembers = func() (result [GenesisAmountMigrationDa
 
 var GenesisNameMigrationAddressShards = func() (result [GenesisAmountMigrationAddressShards]string) {
 	for i := 0; i < GenesisAmountMigrationAddressShards; i++ {
-		result[i] = GenesisNameMAShard + "_" + strconv.Itoa(i)
+		result[i] = GenesisNameMigrationShard + "_" + strconv.Itoa(i)
 	}
 	return
 }()

@@ -25,36 +25,36 @@ import (
 // MigrationShard - shard contract for migration addresses.
 type MigrationShard struct {
 	foundation.BaseContract
-	Map    foundation.StableMap
-	FreeMA []string
+	Map                    foundation.StableMap
+	FreeMigrationAddresses []string
 }
 
 // New creates new member.
 func New() (*MigrationShard, error) {
 	return &MigrationShard{
-		Map:    map[string]string{},
-		FreeMA: []string{},
+		Map:                    map[string]string{},
+		FreeMigrationAddresses: []string{},
 	}, nil
 }
 
 // GetMigrationAddressesAmount gets amount of free migration addresses
 func (s MigrationShard) GetMigrationAddressesAmount(migrationAddresses []string) (int, error) {
-	return len(s.FreeMA), nil
+	return len(s.FreeMigrationAddresses), nil
 }
 
 // AddFreeMigrationAddresses add new addresses to the array of free migration addresses
 func (s *MigrationShard) AddFreeMigrationAddresses(migrationAddresses []string) error {
-	s.FreeMA = append(s.FreeMA, migrationAddresses...)
+	s.FreeMigrationAddresses = append(s.FreeMigrationAddresses, migrationAddresses...)
 	return nil
 }
 
 // GetFreeMigrationAddress gets free migration address from list
 func (s *MigrationShard) GetFreeMigrationAddress() (string, error) {
-	if len(s.FreeMA) <= 0 {
+	if len(s.FreeMigrationAddresses) <= 0 {
 		return "", errors.New("no more migration address left")
 	}
-	ma := s.FreeMA[0]
-	s.FreeMA = s.FreeMA[1:]
+	ma := s.FreeMigrationAddresses[0]
+	s.FreeMigrationAddresses = s.FreeMigrationAddresses[1:]
 
 	return ma, nil
 }

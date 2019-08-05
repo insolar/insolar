@@ -27,8 +27,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/contract/nodedomain"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/pkshard"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/rootdomain"
-	"github.com/insolar/insolar/logicrunner/builtin/contract/tariff"
-	"github.com/insolar/insolar/logicrunner/builtin/contract/shard"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/wallet"
 )
 
@@ -126,7 +124,7 @@ func GetPKShardGenesisContractState(name string) insolar.GenesisContractState {
 	}
 }
 
-func GetMAShardGenesisContractState(name string) insolar.GenesisContractState {
+func GetMigrationShardGenesisContractState(name string) insolar.GenesisContractState {
 	s, err := migrationshard.New()
 	if err != nil {
 		panic(fmt.Sprintf("'%s' shard constructor failed", name))
@@ -134,7 +132,7 @@ func GetMAShardGenesisContractState(name string) insolar.GenesisContractState {
 
 	return insolar.GenesisContractState{
 		Name:       name,
-		Prototype:  insolar.GenesisNameMAShard,
+		Prototype:  insolar.GenesisNameMigrationShard,
 		ParentName: insolar.GenesisNameRootDomain,
 		Memory:     mustGenMemory(s),
 	}

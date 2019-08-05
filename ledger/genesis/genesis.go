@@ -245,7 +245,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetPKShardGenesisContractState(name))
 	}
 	for _, name := range insolar.GenesisNameMigrationAddressShards {
-		states = append(states, contracts.GetMAShardGenesisContractState(name))
+		states = append(states, contracts.GetMigrationShardGenesisContractState(name))
 	}
 	for _, conf := range states {
 		_, err := g.activateContract(ctx, conf)

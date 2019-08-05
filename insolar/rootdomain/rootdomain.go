@@ -27,8 +27,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/noderecord"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/pkshard"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/shard"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/tariff"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 	"github.com/insolar/insolar/platformpolicy"
 )
@@ -45,7 +43,7 @@ var predefinedPrototypes = map[string]insolar.Reference{
 	insolar.GenesisNameRootWallet + GenesisPrototypeSuffix:           *wallet.PrototypeReference,
 	insolar.GenesisNameCostCenter + GenesisPrototypeSuffix:           *costcenter.PrototypeReference,
 	insolar.GenesisNamePKShard + GenesisPrototypeSuffix:              *pkshard.PrototypeReference,
-	insolar.GenesisNameMAShard + GenesisPrototypeSuffix:              *migrationshard.PrototypeReference,
+	insolar.GenesisNameMigrationShard + GenesisPrototypeSuffix:       *migrationshard.PrototypeReference,
 	insolar.GenesisNameFeeWallet + GenesisPrototypeSuffix:            *wallet.PrototypeReference,
 	insolar.GenesisNameDeposit + GenesisPrototypeSuffix:              *deposit.PrototypeReference,
 	insolar.GenesisNameMember + GenesisPrototypeSuffix:               *member.PrototypeReference,

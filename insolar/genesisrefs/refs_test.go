@@ -61,7 +61,7 @@ func TestReferences(t *testing.T) {
 			got:    ContractPublicKeyShards[0],
 			expect: "1tJCPZRjHWbFXQT5xNMzhm33ZWMQMSw2f5s39hYkNM.11111111111111111111111111111111",
 		},
-		insolar.GenesisNameMAShard: {
+		insolar.GenesisNameMigrationShard: {
 			got:    ContractMigrationAddressShards[0],
 			expect: "1tJBpDiHL87u8hyjwbyrsMR8sLrBsSCGqmK3jAwDJZ.11111111111111111111111111111111",
 		},

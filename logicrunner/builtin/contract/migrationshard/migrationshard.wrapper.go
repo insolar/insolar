@@ -122,7 +122,6 @@ func INSMETHOD_GetMigrationAddressesAmount(object []byte, data []byte) ([]byte, 
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -176,7 +175,6 @@ func INSMETHOD_AddFreeMigrationAddresses(object []byte, data []byte) ([]byte, []
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret0 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -228,7 +226,6 @@ func INSMETHOD_GetFreeMigrationAddress(object []byte, data []byte) ([]byte, []by
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -282,7 +279,6 @@ func INSMETHOD_GetRef(object []byte, data []byte) ([]byte, []byte, error) {
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -338,7 +334,6 @@ func INSMETHOD_SetRef(object []byte, data []byte) ([]byte, []byte, error) {
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret0 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
