@@ -81,9 +81,11 @@ func NewActiveOverseer(name string, heartbeatPeriod time.Duration, workersHint i
 		beatChannel: make(chan Heartbeat, chanLimit)}
 }
 
+type monitoringMap map[HeartbeatID]*monitoringEntry
+
 type Overseer struct {
 	name            string
-	beaters         sync.Map
+	beaters         monitoringMap
 	atomicIDCounter uint32
 	heartbeatPeriod time.Duration
 	beatChannel     chan Heartbeat
@@ -140,26 +142,51 @@ func (seer *Overseer) CreateGenerator(name string) *HeartbeatGenerator {
 	return entry.generator
 }
 
+func (seer *Overseer) cleanup() *HeartbeatGenerator {
+
+}
+
 type monitoringEntry struct {
 	name      string
 	generator *HeartbeatGenerator
 }
 
 type activeMonitor struct {
-	seer        *Overseer
-	beaters     *sync.Map
+	seer    *Overseer
+	beaters *sync.Map
+
 	beatChannel chan Heartbeat
 }
 
 func (m *activeMonitor) worker(ctx context.Context) {
 	defer close(m.beatChannel)
 
+	var prevRecent map[HeartbeatID]*monitoringEntry
+
+	// tick-tack model to detect stuck items
+	for {
+		recent := make(map[HeartbeatID]*monitoringEntry, len(prevRecent)+1)
+		if !m.workOnMap(ctx, recent, nil) {
+			return
+		}
+		prevRecent = recent
+	}
+}
+
+func (m *activeMonitor) workOnMap(ctx context.Context, recent map[HeartbeatID]*monitoringEntry, expire <-chan time.Time) bool {
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			return false
+		case <-expire:
+			return true
 		case beat := <-m.beatChannel:
-			storedGen, _ := m.beaters.Load(beat.From)
+			storedGen, ok := m.beaters.Load(beat.From)
+			if !ok {
+				m.missingEntryHeartbeat(beat)
+			}
+			me := storedGen.(*monitoringEntry)
+			recent[beat.From] = me
 			m.applyHeartbeat(beat, storedGen.(*monitoringEntry))
 		}
 	}
@@ -169,4 +196,7 @@ func (m *activeMonitor) applyHeartbeat(heartbeat Heartbeat, entry *monitoringEnt
 	if heartbeat.IsCancelled() {
 		m.beaters.Delete(heartbeat.From)
 	}
+}
+
+func (m *activeMonitor) missingEntryHeartbeat(heartbeat Heartbeat) {
 }

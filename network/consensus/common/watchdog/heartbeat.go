@@ -54,8 +54,10 @@ import "math"
 
 const DisabledHeartbeat = math.MinInt64
 
+type HeartbeatID uint32
+
 type Heartbeat struct {
-	From             uint32
+	From             HeartbeatID
 	PreviousUnixTime int64
 	UpdateUnixTime   int64
 }
