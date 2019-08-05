@@ -20,6 +20,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/ledger/heavy/executor"
+	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
 )
@@ -45,7 +48,7 @@ func (p *pulseStreamMock) SetTrailer(metadata.MD) {
 }
 
 func (p *pulseStreamMock) Context() context.Context {
-	panic("implement me")
+	return context.TODO()
 }
 
 func (p *pulseStreamMock) SendMsg(m interface{}) error {
@@ -62,6 +65,99 @@ func TestPulseServer_Export(t *testing.T) {
 
 		err := server.Export(&GetPulses{Count: 0}, nil)
 
+		require.Error(t, err)
+	})
+
+	t.Run("exporter works well. passed pulse is 0.", func(t *testing.T) {
+		var pulses []insolar.PulseNumber
+		pulseGatherer := func(p *Pulse) error {
+			pulses = append(pulses, p.PulseNumber)
+			return nil
+		}
+		stream := pulseStreamMock{checker: pulseGatherer}
+
+		pulseCalculator := network.NewPulseCalculatorMock(t)
+		pulseCalculator.ForwardsMock.When(context.TODO(), insolar.FirstPulseNumber, 1).Then(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 1}, nil)
+		pulseCalculator.ForwardsMock.When(context.TODO(), insolar.FirstPulseNumber+1, 1).Then(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 2}, nil)
+
+		jetKeeper := executor.NewJetKeeperMock(t)
+		jetKeeper.TopSyncPulseMock.Return(insolar.FirstPulseNumber + 2)
+
+		server := NewPulseServer(pulseCalculator, jetKeeper)
+
+		err := server.Export(&GetPulses{PulseNumber: 0, Count: 10}, &stream)
 		require.NoError(t, err)
+
+		require.Equal(t, 3, len(pulses))
+		require.Equal(t, insolar.FirstPulseNumber, int(pulses[0]))
+		require.Equal(t, insolar.FirstPulseNumber+1, int(pulses[1]))
+		require.Equal(t, insolar.FirstPulseNumber+2, int(pulses[2]))
+	})
+
+	t.Run("exporter works well. passed pulse is 0. read until top-sync", func(t *testing.T) {
+		var pulses []insolar.PulseNumber
+		pulseGatherer := func(p *Pulse) error {
+			pulses = append(pulses, p.PulseNumber)
+			return nil
+		}
+		stream := pulseStreamMock{checker: pulseGatherer}
+
+		pulseCalculator := network.NewPulseCalculatorMock(t)
+		pulseCalculator.ForwardsMock.When(context.TODO(), insolar.FirstPulseNumber, 1).Then(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 1}, nil)
+
+		jetKeeper := executor.NewJetKeeperMock(t)
+		jetKeeper.TopSyncPulseMock.Return(insolar.FirstPulseNumber + 1)
+
+		server := NewPulseServer(pulseCalculator, jetKeeper)
+
+		err := server.Export(&GetPulses{PulseNumber: 0, Count: 10}, &stream)
+		require.NoError(t, err)
+
+		require.Equal(t, 2, len(pulses))
+		require.Equal(t, insolar.FirstPulseNumber, int(pulses[0]))
+		require.Equal(t, insolar.FirstPulseNumber+1, int(pulses[1]))
+	})
+
+	t.Run("exporter works well. passed pulse is firstPulseNumber. read until top-sync", func(t *testing.T) {
+		var pulses []insolar.PulseNumber
+		pulseGatherer := func(p *Pulse) error {
+			pulses = append(pulses, p.PulseNumber)
+			return nil
+		}
+		stream := pulseStreamMock{checker: pulseGatherer}
+
+		pulseCalculator := network.NewPulseCalculatorMock(t)
+		pulseCalculator.ForwardsMock.When(context.TODO(), insolar.FirstPulseNumber, 1).Then(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 1}, nil)
+
+		jetKeeper := executor.NewJetKeeperMock(t)
+		jetKeeper.TopSyncPulseMock.Return(insolar.FirstPulseNumber + 1)
+
+		server := NewPulseServer(pulseCalculator, jetKeeper)
+
+		err := server.Export(&GetPulses{PulseNumber: insolar.FirstPulseNumber, Count: 10}, &stream)
+		require.NoError(t, err)
+
+		require.Equal(t, 1, len(pulses))
+		require.Equal(t, insolar.FirstPulseNumber+1, int(pulses[0]))
+	})
+
+	t.Run("exporter works well. passed pulse is 0. read only 1", func(t *testing.T) {
+		var pulses []insolar.PulseNumber
+		pulseGatherer := func(p *Pulse) error {
+			pulses = append(pulses, p.PulseNumber)
+			return nil
+		}
+		stream := pulseStreamMock{checker: pulseGatherer}
+
+		jetKeeper := executor.NewJetKeeperMock(t)
+		jetKeeper.TopSyncPulseMock.Return(insolar.FirstPulseNumber + 2)
+
+		server := NewPulseServer(nil, jetKeeper)
+
+		err := server.Export(&GetPulses{PulseNumber: 0, Count: 1}, &stream)
+		require.NoError(t, err)
+
+		require.Equal(t, 1, len(pulses))
+		require.Equal(t, insolar.FirstPulseNumber, int(pulses[0]))
 	})
 }

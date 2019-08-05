@@ -40,6 +40,7 @@ func (p *PulseServer) Export(getPulses *GetPulses, stream PulseExporter_ExportSe
 		return errors.New("count can't be 0")
 	}
 
+	read := uint32(0)
 	if getPulses.PulseNumber == 0 {
 		getPulses.PulseNumber = insolar.FirstPulseNumber
 		err := stream.Send(&Pulse{
@@ -48,10 +49,10 @@ func (p *PulseServer) Export(getPulses *GetPulses, stream PulseExporter_ExportSe
 		if err != nil {
 			return err
 		}
+		read++
 	}
 	currentPN := getPulses.PulseNumber
-	read := uint32(0)
-	canReadNext := true
+	canReadNext := read < getPulses.Count
 
 	for canReadNext {
 		pulse, err := p.pulses.Forwards(stream.Context(), currentPN, 1)
@@ -75,6 +76,8 @@ func (p *PulseServer) Export(getPulses *GetPulses, stream PulseExporter_ExportSe
 		if err != nil {
 			return err
 		}
+
+		currentPN = pulse.PulseNumber
 	}
 
 	return nil
