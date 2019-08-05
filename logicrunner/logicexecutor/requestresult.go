@@ -29,11 +29,10 @@ type RequestResult struct {
 	ResultData         []byte                      // every
 	ObjectReferenceRef insolar.Reference           // every
 
-	parentReference  insolar.Reference // activate
-	objectImage      insolar.Reference // amend + activate
-	objectStateID    insolar.ID        // amend + deactivate
-	Memory           []byte            // amend + activate
-	constructorError string            // gob can't serialize `error` thus we are using string here
+	parentReference insolar.Reference // activate
+	objectImage     insolar.Reference // amend + activate
+	objectStateID   insolar.ID        // amend + deactivate
+	Memory          []byte            // amend + activate
 }
 
 func NewRequestResult(result []byte, objectRef insolar.Reference) *RequestResult {

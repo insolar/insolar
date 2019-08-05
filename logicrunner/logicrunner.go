@@ -336,11 +336,3 @@ func (lr *LogicRunner) AddUnwantedResponse(ctx context.Context, msg insolar.Mess
 	m := msg.(*message.ReturnResults)
 	return lr.ResultsMatcher.AddUnwantedResponse(ctx, m)
 }
-
-func (lr *LogicRunner) pulse(ctx context.Context) *insolar.Pulse {
-	p, err := lr.PulseAccessor.Latest(ctx)
-	if err != nil {
-		panic(err)
-	}
-	return &p
-}

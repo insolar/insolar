@@ -147,7 +147,7 @@ func (q *ExecutionBroker) isActiveProcessor() bool { //nolint: unused
 	return atomic.LoadUint32(&q.processorActive) == 1
 }
 
-type ExecutionBrokerRotationResult struct {
+type RotationResult struct {
 	Requests              []*transcript.Transcript
 	Finished              []*transcript.Transcript
 	LedgerHasMoreRequests bool
@@ -411,8 +411,8 @@ func (q *ExecutionBroker) fetchMoreFromLedgerIfNeeded(ctx context.Context) {
 }
 
 // TODO: probably rotation should wait till processActive == false (??)
-func (q *ExecutionBroker) rotate(count int) *ExecutionBrokerRotationResult {
-	rv := &ExecutionBrokerRotationResult{
+func (q *ExecutionBroker) rotate(count int) *RotationResult {
+	rv := &RotationResult{
 		Requests:              q.mutable.Take(count),
 		Finished:              q.finished.Rotate(),
 		LedgerHasMoreRequests: false,

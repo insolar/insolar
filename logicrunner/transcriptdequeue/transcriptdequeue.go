@@ -23,17 +23,17 @@ import (
 	"github.com/insolar/insolar/logicrunner/transcript"
 )
 
-type TranscriptDequeueElement struct {
-	prev  *TranscriptDequeueElement
-	next  *TranscriptDequeueElement
+type Element struct {
+	prev  *Element
+	next  *Element
 	value *transcript.Transcript
 }
 
 // TODO: probably it's better to rewrite it using linked list
 type TranscriptDequeue struct {
 	lock   sync.Locker
-	first  *TranscriptDequeueElement
-	last   *TranscriptDequeueElement
+	first  *Element
+	last   *Element
 	length int
 }
 
@@ -47,7 +47,7 @@ func NewTranscriptDequeue() *TranscriptDequeue {
 }
 
 func (d *TranscriptDequeue) pushOne(el *transcript.Transcript) {
-	newElement := &TranscriptDequeueElement{value: el}
+	newElement := &Element{value: el}
 	lastElement := d.last
 
 	if lastElement != nil {
@@ -71,7 +71,7 @@ func (d *TranscriptDequeue) Push(els ...*transcript.Transcript) {
 }
 
 func (d *TranscriptDequeue) prependOne(el *transcript.Transcript) {
-	newElement := &TranscriptDequeueElement{value: el}
+	newElement := &Element{value: el}
 	firstElement := d.first
 
 	if firstElement != nil {
@@ -152,14 +152,14 @@ func (d *TranscriptDequeue) HasFromLedger() *transcript.Transcript {
 	return nil
 }
 
-func (d *TranscriptDequeue) commonPeek(count int) (*TranscriptDequeueElement, []*transcript.Transcript) {
+func (d *TranscriptDequeue) commonPeek(count int) (*Element, []*transcript.Transcript) {
 	if d.length < count {
 		count = d.length
 	}
 
 	rv := make([]*transcript.Transcript, count)
 
-	var lastElement *TranscriptDequeueElement
+	var lastElement *Element
 	for i := 0; i < count; i++ {
 		if lastElement == nil {
 			lastElement = d.first
