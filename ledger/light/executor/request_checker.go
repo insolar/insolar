@@ -83,14 +83,14 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 			ctx,
 			requestID.Pulse(),
 			*request.AffinityRef().Record(),
-			false,
+			true,
 		)
 		if err != nil {
 			return errors.Wrap(err, "failed fetch pending requests")
 		}
 
-		reasonInPendings := contains(requests, reasonID)
-		if !reasonInPendings {
+		_, ok := findRecord(requests, reasonID)
+		if !ok {
 			return errors.New("request reason not found in opened requests")
 		}
 	}
@@ -144,6 +144,9 @@ func (c *RequestCheckerDefault) checkReasonExists(
 
 	switch concrete := pl.(type) {
 	case *payload.Request:
+		if !isIncomingRequest(concrete.Request) {
+			return fmt.Errorf("reason request must be Incoming, %T received", pl)
+		}
 		return nil
 	case *payload.Error:
 		return errors.New(concrete.Text)
@@ -152,11 +155,16 @@ func (c *RequestCheckerDefault) checkReasonExists(
 	}
 }
 
-func contains(pendings []record.CompositeFilamentRecord, requestID insolar.ID) bool {
-	for _, p := range pendings {
+func findRecord(filamentRecords []record.CompositeFilamentRecord, requestID insolar.ID) (record.CompositeFilamentRecord, bool) {
+	for _, p := range filamentRecords {
 		if p.RecordID == requestID {
-			return true
+			return p, true
 		}
 	}
-	return false
+	return record.CompositeFilamentRecord{}, false
+}
+
+func isIncomingRequest(rec record.Virtual) bool {
+	_, ok := rec.Union.(*record.Virtual_IncomingRequest)
+	return ok
 }

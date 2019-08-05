@@ -461,9 +461,6 @@ func Test_OutgoingRequest_ClosedReason(t *testing.T) {
 }
 
 func Test_Requests_OutgoingReason(t *testing.T) {
-	// todo uncomment after fix logic
-	t.Skip()
-
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
@@ -499,7 +496,7 @@ func Test_Requests_OutgoingReason(t *testing.T) {
 
 		// Creating wrong incoming
 		{
-			msg, _ := MakeSetIncomingRequest(rootID, reasonID, true, true)
+			msg, _ := MakeSetIncomingRequest(rootID, reasonID, true, false)
 			rep := SendMessage(ctx, s, &msg)
 			RequireError(rep)
 		}
