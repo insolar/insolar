@@ -200,17 +200,17 @@ func TestThread_Migrate(t *testing.T) {
 }
 
 func TestThread_Continue(t *testing.T) {
-	controllerCancel := make(chan struct{})
-	threadCancel := make(chan struct{})
+	controllerBegin := make(chan struct{})
+	threadBegin := make(chan struct{})
 	thread := Thread{
 		controller: &Controller{
-			begin: controllerCancel,
+			begin: controllerBegin,
 		},
-		begin: threadCancel,
+		begin: threadBegin,
 	}
-	close(threadCancel)
+	close(threadBegin)
 	thread.Continue(context.Background())
-	var expected <-chan struct{} = controllerCancel
+	var expected <-chan struct{} = controllerBegin
 	require.Equal(t, expected, thread.begin)
 }
 
