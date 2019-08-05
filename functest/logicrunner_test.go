@@ -257,7 +257,7 @@ func (r *Two) GetPayloadString() (string, error) {
 	require.Equal(
 		t,
 		goplugintestutils.CBORMarshal(t, expected),
-		resp.Reply.Result,
+		resp.Result,
 	)
 
 	resp = callMethod(t, objectRef, "ManyTimes")
@@ -786,7 +786,7 @@ func New() (*Two, error) {
 	resp := callMethodNoChecks(t, obj, "Hello")
 	require.Empty(t, resp.Error)
 	require.NotNil(t, resp.Result.Error)
-	require.Contains(t, resp.Result.Error.Error(), "( Generated Method ) Constructor returns nil")
+	require.Contains(t, resp.Result.Error.Error(), "constructor returned nil")
 }
 
 // If a contract constructor fails it's considered a logical error,

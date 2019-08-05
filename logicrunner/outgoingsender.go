@@ -140,7 +140,7 @@ func (a *outgoingSenderActorState) sendOutgoingRequest(ctx context.Context, outg
 
 	// Actually make a call.
 	callMsg := &message.CallMethod{IncomingRequest: *incoming}
-	res, err := a.cr.CallMethod(ctx, callMsg)
+	res, err := a.cr.Call(ctx, callMsg)
 	if err == nil && (outgoing.ReturnMode == record.ReturnResult) {
 		result = res.(*reply.CallMethod).Result
 	}
