@@ -29,7 +29,7 @@ type ClientMock struct {
 	beforeDeployCodeCounter uint64
 	DeployCodeMock          mClientMockDeployCode
 
-	funcGetAbandonedRequest          func(ctx context.Context, objectRef insolar.Reference, reqRef insolar.Reference) (ip1 *record.IncomingRequest, op1 *record.OutgoingRequest, err error)
+	funcGetAbandonedRequest          func(ctx context.Context, objectRef insolar.Reference, reqRef insolar.Reference) (r1 record.Request, err error)
 	inspectFuncGetAbandonedRequest   func(ctx context.Context, objectRef insolar.Reference, reqRef insolar.Reference)
 	afterGetAbandonedRequestCounter  uint64
 	beforeGetAbandonedRequestCounter uint64
@@ -617,8 +617,7 @@ type ClientMockGetAbandonedRequestParams struct {
 
 // ClientMockGetAbandonedRequestResults contains results of the Client.GetAbandonedRequest
 type ClientMockGetAbandonedRequestResults struct {
-	ip1 *record.IncomingRequest
-	op1 *record.OutgoingRequest
+	r1  record.Request
 	err error
 }
 
@@ -654,7 +653,7 @@ func (mmGetAbandonedRequest *mClientMockGetAbandonedRequest) Inspect(f func(ctx 
 }
 
 // Return sets up results that will be returned by Client.GetAbandonedRequest
-func (mmGetAbandonedRequest *mClientMockGetAbandonedRequest) Return(ip1 *record.IncomingRequest, op1 *record.OutgoingRequest, err error) *ClientMock {
+func (mmGetAbandonedRequest *mClientMockGetAbandonedRequest) Return(r1 record.Request, err error) *ClientMock {
 	if mmGetAbandonedRequest.mock.funcGetAbandonedRequest != nil {
 		mmGetAbandonedRequest.mock.t.Fatalf("ClientMock.GetAbandonedRequest mock is already set by Set")
 	}
@@ -662,12 +661,12 @@ func (mmGetAbandonedRequest *mClientMockGetAbandonedRequest) Return(ip1 *record.
 	if mmGetAbandonedRequest.defaultExpectation == nil {
 		mmGetAbandonedRequest.defaultExpectation = &ClientMockGetAbandonedRequestExpectation{mock: mmGetAbandonedRequest.mock}
 	}
-	mmGetAbandonedRequest.defaultExpectation.results = &ClientMockGetAbandonedRequestResults{ip1, op1, err}
+	mmGetAbandonedRequest.defaultExpectation.results = &ClientMockGetAbandonedRequestResults{r1, err}
 	return mmGetAbandonedRequest.mock
 }
 
 //Set uses given function f to mock the Client.GetAbandonedRequest method
-func (mmGetAbandonedRequest *mClientMockGetAbandonedRequest) Set(f func(ctx context.Context, objectRef insolar.Reference, reqRef insolar.Reference) (ip1 *record.IncomingRequest, op1 *record.OutgoingRequest, err error)) *ClientMock {
+func (mmGetAbandonedRequest *mClientMockGetAbandonedRequest) Set(f func(ctx context.Context, objectRef insolar.Reference, reqRef insolar.Reference) (r1 record.Request, err error)) *ClientMock {
 	if mmGetAbandonedRequest.defaultExpectation != nil {
 		mmGetAbandonedRequest.mock.t.Fatalf("Default expectation is already set for the Client.GetAbandonedRequest method")
 	}
@@ -696,13 +695,13 @@ func (mmGetAbandonedRequest *mClientMockGetAbandonedRequest) When(ctx context.Co
 }
 
 // Then sets up Client.GetAbandonedRequest return parameters for the expectation previously defined by the When method
-func (e *ClientMockGetAbandonedRequestExpectation) Then(ip1 *record.IncomingRequest, op1 *record.OutgoingRequest, err error) *ClientMock {
-	e.results = &ClientMockGetAbandonedRequestResults{ip1, op1, err}
+func (e *ClientMockGetAbandonedRequestExpectation) Then(r1 record.Request, err error) *ClientMock {
+	e.results = &ClientMockGetAbandonedRequestResults{r1, err}
 	return e.mock
 }
 
 // GetAbandonedRequest implements Client
-func (mmGetAbandonedRequest *ClientMock) GetAbandonedRequest(ctx context.Context, objectRef insolar.Reference, reqRef insolar.Reference) (ip1 *record.IncomingRequest, op1 *record.OutgoingRequest, err error) {
+func (mmGetAbandonedRequest *ClientMock) GetAbandonedRequest(ctx context.Context, objectRef insolar.Reference, reqRef insolar.Reference) (r1 record.Request, err error) {
 	mm_atomic.AddUint64(&mmGetAbandonedRequest.beforeGetAbandonedRequestCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetAbandonedRequest.afterGetAbandonedRequestCounter, 1)
 
@@ -720,7 +719,7 @@ func (mmGetAbandonedRequest *ClientMock) GetAbandonedRequest(ctx context.Context
 	for _, e := range mmGetAbandonedRequest.GetAbandonedRequestMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.ip1, e.results.op1, e.results.err
+			return e.results.r1, e.results.err
 		}
 	}
 
@@ -736,7 +735,7 @@ func (mmGetAbandonedRequest *ClientMock) GetAbandonedRequest(ctx context.Context
 		if results == nil {
 			mmGetAbandonedRequest.t.Fatal("No results are set for the ClientMock.GetAbandonedRequest")
 		}
-		return (*results).ip1, (*results).op1, (*results).err
+		return (*results).r1, (*results).err
 	}
 	if mmGetAbandonedRequest.funcGetAbandonedRequest != nil {
 		return mmGetAbandonedRequest.funcGetAbandonedRequest(ctx, objectRef, reqRef)

@@ -36,7 +36,7 @@ type Client interface {
 	RegisterResult(ctx context.Context, request insolar.Reference, result RequestResult) error
 
 	// GetAbandonedRequest returns an incoming or outgoing request for an object.
-	GetAbandonedRequest(ctx context.Context, objectRef, reqRef insolar.Reference) (*record.IncomingRequest, *record.OutgoingRequest, error)
+	GetAbandonedRequest(ctx context.Context, objectRef, reqRef insolar.Reference) (record.Request, error)
 
 	// GetPendings returns pending request IDs of an object.
 	GetPendings(ctx context.Context, objectRef insolar.Reference) ([]insolar.Reference, error)

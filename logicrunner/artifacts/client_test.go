@@ -210,12 +210,11 @@ func (s *amSuite) TestLedgerArtifactManager_GetIncomingRequest_Success() {
 	am.sender = sender
 
 	// Act
-	incoming, outgoing, err := am.GetAbandonedRequest(inslogger.TestContext(s.T()), objectRef, requestRef)
+	request, err := am.GetAbandonedRequest(inslogger.TestContext(s.T()), objectRef, requestRef)
 
 	// Assert
 	require.NoError(s.T(), err)
-	require.Nil(s.T(), outgoing)
-	require.Equal(s.T(), "test", incoming.Method)
+	require.Equal(s.T(), "test", request.(*record.IncomingRequest).Method)
 }
 
 func (s *amSuite) TestLedgerArtifactManager_GetPendings_Success() {

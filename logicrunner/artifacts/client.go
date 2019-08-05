@@ -356,7 +356,7 @@ func (m *client) GetObject(
 
 func (m *client) GetAbandonedRequest(
 	ctx context.Context, object, reqRef insolar.Reference,
-) (*record.IncomingRequest, *record.OutgoingRequest, error) {
+) (record.Request, error) {
 	var err error
 	instrumenter := instrument(ctx, "GetAbandonedRequest").err(&err)
 	ctx, span := instracer.StartSpan(ctx, "artifacts.GetAbandonedRequest")
@@ -376,24 +376,26 @@ func (m *client) GetAbandonedRequest(
 
 	pl, err := m.sendToLight(ctx, m.sender, getRequestPl, object)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to send GetRequest")
+		return nil, errors.Wrap(err, "failed to send GetRequest")
 	}
 	req, ok := pl.(*payload.Request)
 	if !ok {
-		return nil, nil, fmt.Errorf("unexpected reply %T", pl)
+		return nil, fmt.Errorf("unexpected reply %T", pl)
 	}
 
 	concrete := record.Unwrap(&req.Request)
-	incomingRequest, ok := concrete.(*record.IncomingRequest)
-	if !ok {
-		outgoingRequest, ok := concrete.(*record.OutgoingRequest)
-		if !ok {
-			return nil, nil, fmt.Errorf("GetAbandonedRequest: unexpected message: %#v", concrete)
-		}
-		return nil, outgoingRequest, nil
+	var result record.Request
+
+	switch v := concrete.(type) {
+	case *record.IncomingRequest:
+		result = v
+	case *record.OutgoingRequest:
+		result = v
+	default:
+		return nil, fmt.Errorf("GetAbandonedRequest: unexpected message: %#v", concrete)
 	}
 
-	return incomingRequest, nil, nil
+	return result, nil
 }
 
 // GetPendings returns a list of pending requests

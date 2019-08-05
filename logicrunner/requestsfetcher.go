@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 )
@@ -107,7 +108,7 @@ func (rf *requestsFetcher) fetch(ctx context.Context) error {
 			continue
 		}
 
-		incoming, outgoing, err := rf.am.GetAbandonedRequest(ctx, rf.object, reqRef)
+		request, err := rf.am.GetAbandonedRequest(ctx, rf.object, reqRef)
 		if err != nil {
 			logger.Error("couldn't get request: ", err.Error())
 			continue
@@ -120,15 +121,15 @@ func (rf *requestsFetcher) fetch(ctx context.Context) error {
 		default:
 		}
 
-		switch {
-		case incoming != nil:
-			requestCtx := freshContextFromContextAndRequest(ctx, *incoming)
-			tr := NewTranscript(requestCtx, reqRef, *incoming)
+		switch v := request.(type) {
+		case *record.IncomingRequest:
+			requestCtx := freshContextFromContextAndRequest(ctx, *v)
+			tr := NewTranscript(requestCtx, reqRef, *v)
 			rf.broker.AddRequestsFromLedger(ctx, tr)
-		case outgoing != nil:
-			rf.broker.EnqueueAbandonedOutgoingRequest(ctx, reqRef, outgoing)
+		case *record.OutgoingRequest:
+			rf.broker.EnqueueAbandonedOutgoingRequest(ctx, reqRef, v)
 		default:
-			logger.Error("requestsFetcher.fetch: both `incoming` and `outgoing` are nils")
+			logger.Error("requestsFetcher.fetch: request is nor IncomingRequest or OutgoingRequest")
 		}
 	}
 
