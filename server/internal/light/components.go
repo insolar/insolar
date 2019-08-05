@@ -61,8 +61,8 @@ import (
 type components struct {
 	cmp               component.Manager
 	NodeRef, NodeRole string
-	inRouter          *watermillMsg.Router
-	outRouter         *watermillMsg.Router
+	replicator        replication.LightReplicator
+	cleaner           replication.Cleaner
 }
 
 func newComponents(ctx context.Context, cfg configuration.Configuration) (*components, error) {
@@ -102,14 +102,14 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		}
 	}
 
-	c := &components{}
-	c.cmp = component.Manager{}
-	c.NodeRef = CertManager.GetCertificate().GetNodeRef().String()
-	c.NodeRole = CertManager.GetCertificate().GetRole().String()
+	comps := &components{}
+	comps.cmp = component.Manager{}
+	comps.NodeRef = CertManager.GetCertificate().GetNodeRef().String()
+	comps.NodeRole = CertManager.GetCertificate().GetRole().String()
 
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubSub := gochannel.NewGoChannel(gochannel.Config{}, logger)
-	pubSub = internal.PubSubWrapper(ctx, &c.cmp, cfg.Introspection, pubSub)
+	pubSub = internal.PubSubWrapper(ctx, &comps.cmp, cfg.Introspection, pubSub)
 
 	// Network.
 	var (
@@ -120,7 +120,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	{
 		var err error
 		// External communication.
-		NetworkService, err = servicenetwork.NewServiceNetwork(cfg, &c.cmp)
+		NetworkService, err = servicenetwork.NewServiceNetwork(cfg, &comps.cmp)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start Network")
 		}
@@ -203,8 +203,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	metricsHandler, err := metrics.NewMetrics(
 		ctx,
 		cfg.Metrics,
-		metrics.GetInsolarRegistry(c.NodeRole),
-		c.NodeRole,
+		metrics.GetInsolarRegistry(comps.NodeRole),
+		comps.NodeRole,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to start Metrics")
@@ -260,7 +260,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.RequestChecker = requestChecker
 
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
-		var lightCleaner = replication.NewCleaner(
+		lightCleaner := replication.NewCleaner(
 			Jets.(jet.Cleaner),
 			Nodes,
 			drops,
@@ -271,7 +271,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			indexes,
 			filamentCalculator,
 			conf.LightChainLimit,
+			conf.CleanerDelay,
 		)
+		comps.cleaner = lightCleaner
 
 		lthSyncer := replication.NewReplicatorDefault(
 			jetCalculator,
@@ -283,6 +285,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			indexes,
 			Jets,
 		)
+		comps.replicator = lthSyncer
 
 		jetSplitter := executor.NewJetSplitter(
 			conf.JetSplit, jetCalculator, Jets, Jets, drops, drops, Pulses, records,
@@ -321,7 +324,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Handler = handler
 	}
 
-	c.cmp.Inject(
+	comps.cmp.Inject(
 		WmBus,
 		Handler,
 		Jets,
@@ -346,14 +349,14 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		pubSub,
 	)
 
-	err = c.cmp.Init(ctx)
+	err = comps.cmp.Init(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init components")
 	}
 
-	c.startWatermill(ctx, logger, pubSub, WmBus, NetworkService.SendMessageHandler, Handler.FlowDispatcher.Process)
+	comps.startWatermill(ctx, logger, pubSub, WmBus, NetworkService.SendMessageHandler, Handler.FlowDispatcher.Process)
 
-	return c, nil
+	return comps, nil
 }
 
 func (c *components) Start(ctx context.Context) error {
@@ -361,14 +364,8 @@ func (c *components) Start(ctx context.Context) error {
 }
 
 func (c *components) Stop(ctx context.Context) error {
-	err := c.inRouter.Close()
-	if err != nil {
-		inslogger.FromContext(ctx).Error("Error while closing router", err)
-	}
-	err = c.outRouter.Close()
-	if err != nil {
-		inslogger.FromContext(ctx).Error("Error while closing router", err)
-	}
+	c.replicator.Stop()
+	c.cleaner.Stop()
 	return c.cmp.Stop(ctx)
 }
 
@@ -407,9 +404,7 @@ func (c *components) startWatermill(
 	)
 
 	startRouter(ctx, inRouter)
-	c.inRouter = inRouter
 	startRouter(ctx, outRouter)
-	c.outRouter = outRouter
 }
 
 func startRouter(ctx context.Context, router *watermillMsg.Router) {

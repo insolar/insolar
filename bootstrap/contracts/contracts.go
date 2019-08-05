@@ -25,9 +25,8 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/nodedomain"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/rootdomain"
-	"github.com/insolar/insolar/logicrunner/builtin/contract/tariff"
+	"github.com/insolar/insolar/logicrunner/builtin/contract/shard"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/wallet"
-	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 func RootDomain() insolar.GenesisContractState {
@@ -47,9 +46,8 @@ func RootDomain() insolar.GenesisContractState {
 			MigrationAdminMember:   genesisrefs.ContractMigrationAdminMember,
 			MigrationWallet:        genesisrefs.ContractMigrationWallet,
 			CostCenter:             genesisrefs.ContractCostCenter,
-			FeeWallet:              genesisrefs.ContractFeeWallet,
-			BurnAddressMap:         make(foundation.StableMap),
-			PublicKeyMap:           make(foundation.StableMap),
+			MigrationAddressShards: genesisrefs.ContractMigrationAddressShards,
+			PublicKeyShards:        genesisrefs.ContractPublicKeyShards,
 			FreeBurnAddresses:      []string{},
 			NodeDomain:             genesisrefs.ContractNodeDomain,
 		}),
@@ -98,7 +96,7 @@ func GetWalletGenesisContractState(balance string, name string, parent string) i
 }
 
 func GetCostCenterGenesisContractState() insolar.GenesisContractState {
-	cc, err := costcenter.New(genesisrefs.ContractFeeWallet, genesisrefs.ContractStandardTariff)
+	cc, err := costcenter.New(genesisrefs.ContractFeeWallet)
 	if err != nil {
 		panic("failed to create cost center instance")
 	}
@@ -112,18 +110,17 @@ func GetCostCenterGenesisContractState() insolar.GenesisContractState {
 	}
 }
 
-func GetTariffGenesisContractState() insolar.GenesisContractState {
-	t, err := tariff.New()
+func GetShardGenesisContractState(name string) insolar.GenesisContractState {
+	s, err := shard.New()
 	if err != nil {
-		panic("failed to create tariff instance")
+		panic(fmt.Sprintf("'%s' shard constructor failed", name))
 	}
 
 	return insolar.GenesisContractState{
-		Name:       insolar.GenesisNameStandardTariff,
-		Prototype:  insolar.GenesisNameTariff,
-		ParentName: insolar.GenesisNameCostCenter,
-		Delegate:   true,
-		Memory:     mustGenMemory(t),
+		Name:       name,
+		Prototype:  insolar.GenesisNameShard,
+		ParentName: insolar.GenesisNameRootDomain,
+		Memory:     mustGenMemory(s),
 	}
 }
 

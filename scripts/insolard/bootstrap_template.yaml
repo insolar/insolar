@@ -9,7 +9,7 @@ contracts:
   outdir: "{{ .BaseDir }}/plugins/"
 root_balance: "100000000000000000000"
 md_balance: "100000000000000000000"
-majority_rule: 3
+majority_rule: 6
 min_roles:
   virtual:  1
   heavy_material: 2
@@ -50,18 +50,18 @@ discovery_nodes:
     host: "127.0.0.1:53888"
     role: "virtual"
     cert_name: "discovery_cert_8.json"
-#  -
-#    host: "127.0.0.1:53899"
-#    role: "light_material"
-#    cert_name: "discovery_cert_9.json"
-#  -
-#    host: "127.0.0.1:53100"
-#    role: "virtual"
-#    cert_name: "discovery_cert_10.json"
-#  -
-#    host: "127.0.0.1:51101"
-#    role: "light_material"
-#    cert_name: "discovery_cert_11.json"
+  -
+    host: "127.0.0.1:53899"
+    role: "light_material"
+    cert_name: "discovery_cert_9.json"
+  -
+    host: "127.0.0.1:53100"
+    role: "virtual"
+    cert_name: "discovery_cert_10.json"
+  -
+    host: "127.0.0.1:51101"
+    role: "light_material"
+    cert_name: "discovery_cert_11.json"
 #  -
 #    host: "127.0.0.1:53202"
 #    role: "virtual"

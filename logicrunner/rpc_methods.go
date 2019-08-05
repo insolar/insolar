@@ -18,7 +18,9 @@ package logicrunner
 
 import (
 	"context"
-	"sync"
+	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
@@ -28,7 +30,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
-	"github.com/pkg/errors"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.ProxyImplementation -o ./ -s _mock.go -g
@@ -192,14 +193,23 @@ func (m *executionProxyImplementation) RouteCall(
 		rep.Result = res.(*reply.CallMethod).Result
 	}
 	current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
-	if err != nil {
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	if err != nil && !strings.Contains(err.Error(), "index not found") {
 		return err
 	}
 
 	// Step 3. Register result of the outgoing method
 	outgoingReqRef := insolar.NewReference(*outgoingReqID)
 	reqResult := newRequestResult(rep.Result, req.Callee)
-	return m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
+	registerResultErr := m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	if err != nil && strings.Contains(err.Error(), "index not found") {
+		if registerResultErr != nil {
+			inslogger.FromContext(ctx).Errorf("Failed to register result for request %s, error: %s", outgoingReqRef.String(), registerResultErr.Error())
+		}
+		return err
+	}
+	return registerResultErr
 }
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
@@ -239,10 +249,6 @@ func (m *executionProxyImplementation) SaveAsChild(
 	reqResult := newRequestResult(refBytes, req.Callee)
 	return m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
 }
-
-var iteratorBuffSize = 1000
-var iteratorMap = make(map[string]artifacts.RefIterator)
-var iteratorMapLock = sync.RWMutex{}
 
 func (m *executionProxyImplementation) DeactivateObject(
 	ctx context.Context, current *Transcript, req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp,
