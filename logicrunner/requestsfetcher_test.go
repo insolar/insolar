@@ -47,7 +47,7 @@ func TestRequestsFetcher_FetchPendings(t *testing.T) {
 				reqRef := gen.Reference()
 				am := artifacts.NewClientMock(t).
 					GetPendingsMock.Return([]insolar.Reference{reqRef}, nil).
-					GetIncomingOrOutgoingRequestMock.Return(&record.IncomingRequest{}, nil, nil)
+					GetAbandonedRequestMock.Return(&record.IncomingRequest{}, nil, nil)
 				broker := NewExecutionBrokerIMock(t).
 					IsKnownRequestMock.Return(false).
 					AddRequestsFromLedgerMock.Return()

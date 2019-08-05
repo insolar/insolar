@@ -21,6 +21,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/go-actors/actor/system"
+
 	"github.com/gojuno/minimock"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -309,7 +311,8 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	am := artifacts.NewClientMock(t)
 	dc := artifacts.NewDescriptorsCacheMock(t)
 	cr := testutils.NewContractRequesterMock(t)
-	os := NewOutgoingRequestSender(cr, am)
+	as := system.New()
+	os := NewOutgoingRequestSender(as, cr, am)
 
 	requestRef := gen.Reference()
 

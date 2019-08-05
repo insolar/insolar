@@ -28,6 +28,7 @@ type OutgoingRequestSender interface {
 }
 
 type outgoingRequestSender struct {
+	as        actor.System
 	senderPid actor.Pid
 }
 
@@ -56,14 +57,15 @@ type sendAbandonedOutgoingRequestMessage struct {
 	outgoingRequest  *record.OutgoingRequest // outgoing request body
 }
 
-func NewOutgoingRequestSender(cr insolar.ContractRequester, am artifacts.Client) OutgoingRequestSender {
-	pid := GlobalActorSystem.Spawn(func(system actor.System, pid actor.Pid) (actor.Actor, int) {
+func NewOutgoingRequestSender(as actor.System, cr insolar.ContractRequester, am artifacts.Client) OutgoingRequestSender {
+	pid := as.Spawn(func(system actor.System, pid actor.Pid) (actor.Actor, int) {
 		state := &outgoingSenderActorState{cr: cr, am: am}
 		queueLimit := OutgoingRequestSenderDefaultQueueLimit
 		return state, queueLimit
 	})
 
 	return &outgoingRequestSender{
+		as:        as,
 		senderPid: pid,
 	}
 }
@@ -76,7 +78,7 @@ func (rs *outgoingRequestSender) SendOutgoingRequest(ctx context.Context, reqRef
 		outgoingRequest:  req,
 		resultChan:       resultChan,
 	}
-	err := GlobalActorSystem.Send(rs.senderPid, msg)
+	err := rs.as.Send(rs.senderPid, msg)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("SendOutgoingRequest failed: %v", err)
 		return insolar.Arguments{}, nil, err
@@ -92,7 +94,7 @@ func (rs *outgoingRequestSender) SendAbandonedOutgoingRequest(ctx context.Contex
 		requestReference: reqRef,
 		outgoingRequest:  req,
 	}
-	err := GlobalActorSystem.Send(rs.senderPid, msg)
+	err := rs.as.Send(rs.senderPid, msg)
 	if err != nil {
 		// Actor's mailbox is most likely full. This is OK to lost an abandoned OutgoingRequest
 		// in this case, LME will  re-send a corresponding notification anyway.

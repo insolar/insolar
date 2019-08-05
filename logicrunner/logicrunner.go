@@ -22,6 +22,8 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/insolar/go-actors/actor/system"
+
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -104,7 +106,8 @@ func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publi
 func (lr *LogicRunner) LRI() {}
 
 func (lr *LogicRunner) Init(ctx context.Context) error {
-	lr.OutgoingSender = NewOutgoingRequestSender(lr.ContractRequester, lr.ArtifactManager)
+	as := system.New()
+	lr.OutgoingSender = NewOutgoingRequestSender(as, lr.ContractRequester, lr.ArtifactManager)
 
 	lr.StateStorage = NewStateStorage(
 		lr.Publisher,
