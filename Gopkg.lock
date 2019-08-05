@@ -35,13 +35,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f3a247d6b71a77ad272967648f8ed747169a740631fa100e8e4f56fd0a2c5789"
+  digest = "1:1fec829fffa7d47a501b5f47cdb755aeabbd924eccefcb8e034fd58d77af988f"
   name = "github.com/afiskon/go-actors"
   packages = [
     "actor",
     "actor/errors",
     "actor/mailbox",
-    "actor/system",
   ]
   pruneopts = "UT"
   revision = "15b1bfc060b38352024d4f0a38df8894a9734ea9"
@@ -252,6 +251,17 @@
   pruneopts = "UT"
   revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
   version = "v1.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:feb9b10aa262f6437c8b51b85a02ad08f12d0ad80c800de32e4f491198a18da0"
+  name = "github.com/insolar/go-actors"
+  packages = [
+    "actor",
+    "actor/system",
+  ]
+  pruneopts = "UT"
+  revision = "15b1bfc060b38352024d4f0a38df8894a9734ea9"
 
 [[projects]]
   digest = "1:d585d1cae389b646325b7ef48032cdc9b58e68cd88c1fdc5da795eabb2114455"
@@ -713,8 +723,6 @@
     "github.com/ThreeDotsLabs/watermill/message",
     "github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel",
     "github.com/ThreeDotsLabs/watermill/message/router/middleware",
-    "github.com/afiskon/go-actors/actor",
-    "github.com/afiskon/go-actors/actor/system",
     "github.com/blang/semver",
     "github.com/dgraph-io/badger",
     "github.com/fortytw2/leaktest",
@@ -727,6 +735,8 @@
     "github.com/google/gofuzz",
     "github.com/grpc-ecosystem/grpc-gateway/runtime",
     "github.com/grpc-ecosystem/grpc-gateway/utilities",
+    "github.com/insolar/go-actors/actor",
+    "github.com/insolar/go-actors/actor/system",
     "github.com/insolar/rpc/v2",
     "github.com/insolar/rpc/v2/json2",
     "github.com/insolar/x-crypto/ecdsa",

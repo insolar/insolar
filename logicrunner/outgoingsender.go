@@ -13,7 +13,7 @@ import (
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
-	"github.com/afiskon/go-actors/actor"
+	"github.com/insolar/go-actors/actor"
 	"github.com/insolar/insolar/insolar/record"
 )
 
