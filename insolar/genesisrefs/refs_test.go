@@ -63,7 +63,7 @@ func TestReferences(t *testing.T) {
 		},
 		insolar.GenesisNameMigrationShard: {
 			got:    ContractMigrationAddressShards[0],
-			expect: "1tJBpDiHL87u8hyjwbyrsMR8sLrBsSCGqmK3jAwDJZ.11111111111111111111111111111111",
+			expect: "1tJDMfQ7GmZ2AU4efkVyPYjQ9ExkpN9uMqpqBieYwA.11111111111111111111111111111111",
 		},
 	}
 
