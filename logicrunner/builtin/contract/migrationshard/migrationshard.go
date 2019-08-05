@@ -32,7 +32,7 @@ type MigrationShard struct {
 // New creates new member.
 func New() (*MigrationShard, error) {
 	return &MigrationShard{
-		Map:                    map[string]string{},
+		Map:                    make(foundation.StableMap),
 		FreeMigrationAddresses: []string{},
 	}, nil
 }
