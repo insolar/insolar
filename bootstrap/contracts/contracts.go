@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/contract/nodedomain"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/rootdomain"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/shard"
-	"github.com/insolar/insolar/logicrunner/builtin/contract/tariff"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/wallet"
 )
 
@@ -47,7 +46,6 @@ func RootDomain() insolar.GenesisContractState {
 			MigrationAdminMember:   genesisrefs.ContractMigrationAdminMember,
 			MigrationWallet:        genesisrefs.ContractMigrationWallet,
 			CostCenter:             genesisrefs.ContractCostCenter,
-			FeeWallet:              genesisrefs.ContractFeeWallet,
 			MigrationAddressShards: genesisrefs.ContractMigrationAddressShards,
 			PublicKeyShards:        genesisrefs.ContractPublicKeyShards,
 			FreeBurnAddresses:      []string{},
@@ -98,7 +96,7 @@ func GetWalletGenesisContractState(balance string, name string, parent string) i
 }
 
 func GetCostCenterGenesisContractState() insolar.GenesisContractState {
-	cc, err := costcenter.New(genesisrefs.ContractFeeWallet, genesisrefs.ContractStandardTariff)
+	cc, err := costcenter.New(genesisrefs.ContractFeeWallet)
 	if err != nil {
 		panic("failed to create cost center instance")
 	}
@@ -109,21 +107,6 @@ func GetCostCenterGenesisContractState() insolar.GenesisContractState {
 		ParentName: insolar.GenesisNameRootDomain,
 		Delegate:   true,
 		Memory:     mustGenMemory(cc),
-	}
-}
-
-func GetTariffGenesisContractState() insolar.GenesisContractState {
-	t, err := tariff.New()
-	if err != nil {
-		panic("failed to create tariff instance")
-	}
-
-	return insolar.GenesisContractState{
-		Name:       insolar.GenesisNameStandardTariff,
-		Prototype:  insolar.GenesisNameTariff,
-		ParentName: insolar.GenesisNameCostCenter,
-		Delegate:   true,
-		Memory:     mustGenMemory(t),
 	}
 }
 

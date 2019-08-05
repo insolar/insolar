@@ -228,6 +228,7 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 			indexes,
 			handler.FilamentCalculator,
 			conf.LightChainLimit,
+			conf.CleanerDelay,
 		)
 		Cleaner = lightCleaner
 

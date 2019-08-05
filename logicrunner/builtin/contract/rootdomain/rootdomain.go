@@ -37,7 +37,6 @@ type RootDomain struct {
 	MigrationAdminMember   insolar.Reference
 	MigrationWallet        insolar.Reference
 	CostCenter             insolar.Reference
-	FeeWallet              insolar.Reference
 	MigrationAddressShards [insolar.GenesisAmountMigrationAddressShards]insolar.Reference
 	PublicKeyShards        [insolar.GenesisAmountPublicKeyShards]insolar.Reference
 	FreeBurnAddresses      []string
@@ -47,11 +46,6 @@ type RootDomain struct {
 // GetMigrationAdminMemberRef gets migration admin member reference.
 func (rd RootDomain) GetCostCenterRef() (insolar.Reference, error) {
 	return rd.MigrationAdminMember, nil
-}
-
-// GetFeeWalletRef gets fee wallet reference.
-func (rd RootDomain) GetFeeWalletRef() (insolar.Reference, error) {
-	return rd.FeeWallet, nil
 }
 
 // GetMigrationWalletRef gets migration wallet reference.

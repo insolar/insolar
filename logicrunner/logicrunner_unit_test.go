@@ -47,6 +47,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/testutils"
@@ -402,6 +403,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 }
 
 func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
+	suite.T().Skip()
 	objectRef := testutils.RandomRef()
 	protoRef := testutils.RandomRef()
 
@@ -484,7 +486,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 
 				pulseNum := insolar.Pulse{PulseNumber: pn}
 				ctx := inslogger.ContextWithTrace(suite.ctx, "pulse-"+strconv.Itoa(int(pn)))
-				err := suite.lr.OnPulse(ctx, pulseNum)
+				err := suite.lr.OnPulse(ctx, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}, pulseNum)
 				require.NoError(t, err)
 				return
 			}
@@ -601,7 +603,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			ctx := inslogger.ContextWithTrace(suite.ctx, "req")
 
 			pulseNum := pulsar.NewPulse(1, parcel.Pulse()-1, &entropygenerator.StandardEntropyGenerator{})
-			err := suite.lr.OnPulse(ctx, *pulseNum)
+			err := suite.lr.OnPulse(ctx, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}, *pulseNum)
 			require.NoError(t, err)
 
 			wrapper := payload.Meta{
@@ -676,6 +678,9 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 					IsEmptyMock.Return(false).
 					OnPulseMock.Return([]insolar.Message{&message.ExecutorResults{}})
 
+				lr.WriteController = writecontroller.NewWriteController()
+				_ = lr.WriteController.Open(ctx, insolar.FirstPulseNumber)
+
 				return lr
 			},
 		},
@@ -693,6 +698,9 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 					IsEmptyMock.Return(true).
 					OnPulseMock.Return([]insolar.Message{})
 
+				lr.WriteController = writecontroller.NewWriteController()
+				_ = lr.WriteController.Open(ctx, insolar.FirstPulseNumber)
+
 				return lr
 			},
 		},
@@ -704,7 +712,7 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 			mc := minimock.NewController(t)
 
 			lr := test.mocks(ctx, mc)
-			err := lr.OnPulse(ctx, insolar.Pulse{})
+			err := lr.OnPulse(ctx, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 1})
 			require.NoError(t, err)
 
 			mc.Wait(3 * time.Second)
