@@ -17,6 +17,8 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 )
 
+var OutgoingRequestSenderDefaultQueueLimit = 1000
+
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.OutgoingRequestSender -o ./ -s _mock.go -g
 
 // OutgoingRequestSender is a type-safe wrapper for an actor implementation.
@@ -57,7 +59,7 @@ type sendAbandonedOutgoingRequestMessage struct {
 func NewOutgoingRequestSender(cr insolar.ContractRequester, am artifacts.Client) OutgoingRequestSender {
 	pid := GlobalActorSystem.Spawn(func(system actor.System, pid actor.Pid) (actor.Actor, int) {
 		state := &outgoingSenderActorState{cr: cr, am: am}
-		queueLimit := 1000
+		queueLimit := OutgoingRequestSenderDefaultQueueLimit
 		return state, queueLimit
 	})
 

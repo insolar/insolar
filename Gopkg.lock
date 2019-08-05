@@ -35,18 +35,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:1fec829fffa7d47a501b5f47cdb755aeabbd924eccefcb8e034fd58d77af988f"
-  name = "github.com/afiskon/go-actors"
-  packages = [
-    "actor",
-    "actor/errors",
-    "actor/mailbox",
-  ]
-  pruneopts = "UT"
-  revision = "15b1bfc060b38352024d4f0a38df8894a9734ea9"
-
-[[projects]]
-  branch = "master"
   digest = "1:d6afaeed1502aa28e80a4ed0981d570ad91b2579193404256ce672ed0a609e0d"
   name = "github.com/beorn7/perks"
   packages = ["quantile"]
@@ -254,14 +242,16 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:feb9b10aa262f6437c8b51b85a02ad08f12d0ad80c800de32e4f491198a18da0"
+  digest = "1:e6beb78102531da84cbede570f85b40384faaca998cc35d0e1ada10404af0ac6"
   name = "github.com/insolar/go-actors"
   packages = [
     "actor",
+    "actor/errors",
+    "actor/mailbox",
     "actor/system",
   ]
   pruneopts = "UT"
-  revision = "15b1bfc060b38352024d4f0a38df8894a9734ea9"
+  revision = "b533cc9d1db0c7d8d7f07842e3052b81539b3b07"
 
 [[projects]]
   digest = "1:d585d1cae389b646325b7ef48032cdc9b58e68cd88c1fdc5da795eabb2114455"
