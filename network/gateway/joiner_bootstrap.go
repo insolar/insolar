@@ -52,13 +52,13 @@ package gateway
 
 import (
 	"context"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
-	"github.com/pkg/errors"
-
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/pkg/errors"
+	"time"
 )
 
 func newJoinerBootstrap(b *Base) *JoinerBootstrap {
@@ -114,13 +114,14 @@ func (g *JoinerBootstrap) authorize(ctx context.Context) (*packet.Permit, error)
 			continue
 		}
 		// Check majority rule
-		if int(res.DiscoveryCount) < cert.GetMajorityRule() {
-			inslogger.FromContext(ctx).Errorf("Check MajorityRule failed on authorize, expect %d, got %d", cert.GetMajorityRule(), res.DiscoveryCount)
-			continue
-		}
+		//if int(res.DiscoveryCount) < cert.GetMajorityRule() {
+		//	inslogger.FromContext(ctx).Errorf("Check MajorityRule failed on authorize, expect %d, got %d", cert.GetMajorityRule(), res.DiscoveryCount)
+		//	continue
+		//}
 
 		return res.Permit, nil
 	}
 
+	// shaffle best res
 	return nil, errors.New("failed to authorize to any discovery node")
 }
