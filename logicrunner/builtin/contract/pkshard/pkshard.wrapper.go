@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package shard
+package pkshard
 
 import (
 	XXX_insolar "github.com/insolar/insolar/insolar"
@@ -41,7 +41,7 @@ func INS_META_INFO() []map[string]string {
 
 func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	self := new(Shard)
+	self := new(PKShard)
 
 	if len(object) == 0 {
 		return nil, nil, &ExtendableError{S: "[ Fake GetCode ] ( Generated Method ) Object is nil"}
@@ -67,7 +67,7 @@ func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	self := new(Shard)
+	self := new(PKShard)
 
 	if len(object) == 0 {
 		return nil, nil, &ExtendableError{S: "[ Fake GetPrototype ] ( Generated Method ) Object is nil"}
@@ -94,7 +94,7 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 func INSMETHOD_GetRef(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
-	self := new(Shard)
+	self := new(PKShard)
 
 	if len(object) == 0 {
 		return nil, nil, &ExtendableError{S: "[ FakeGetRef ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
@@ -147,7 +147,7 @@ func INSMETHOD_GetRef(object []byte, data []byte) ([]byte, []byte, error) {
 func INSMETHOD_SetRef(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
-	self := new(Shard)
+	self := new(PKShard)
 
 	if len(object) == 0 {
 		return nil, nil, &ExtendableError{S: "[ FakeSetRef ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
