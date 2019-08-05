@@ -198,7 +198,6 @@ func (rd *RootDomain) GetFreeMigrationAddress(publicKey string) (string, error) 
 		}
 	}
 	for i := shardIndex + 1; i != shardIndex; {
-		i++
 		if i >= len(rd.MigrationAddressShards) {
 			i = 0
 		}
@@ -214,6 +213,7 @@ func (rd *RootDomain) GetFreeMigrationAddress(publicKey string) (string, error) 
 				return "", errors.Wrap(err, "failed to set reference in migration address shard")
 			}
 		}
+		i++
 	}
 
 	return "", errors.New("no more migration addresses left in any shard")
