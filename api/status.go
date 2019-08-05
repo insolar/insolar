@@ -86,7 +86,7 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *Statu
 			return err
 		}
 
-		reply.PulseNumber = uint32(0)
+		p = *insolar.GenesisPulse
 	}
 
 	reply.PulseNumber = uint32(p.PulseNumber)
