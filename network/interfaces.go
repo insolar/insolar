@@ -183,8 +183,6 @@ type Accessor interface {
 	GetWorkingNode(ref insolar.Reference) insolar.NetworkNode
 	// GetWorkingNodes returns sorted list of all working nodes.
 	GetWorkingNodes() []insolar.NetworkNode
-	// GetRandomWorkingNode returns random node to bootstrap on it
-	GetRandomWorkingNode() insolar.NetworkNode
 
 	// GetActiveNode returns active node.
 	GetActiveNode(ref insolar.Reference) insolar.NetworkNode
@@ -194,13 +192,6 @@ type Accessor interface {
 	GetActiveNodeByShortID(shortID insolar.ShortNodeID) insolar.NetworkNode
 	// GetActiveNodeByAddr get active node by addr. Returns nil if node is not found.
 	GetActiveNodeByAddr(address string) insolar.NetworkNode
-}
-
-// Mutator is interface that provides read and write access to a snapshot
-type Mutator interface {
-	Accessor
-	// AddWorkingNode adds active node to index and underlying snapshot so it is accessible via GetActiveNode(s).
-	AddWorkingNode(n insolar.NetworkNode)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network.Gatewayer -o ../testutils/network -s _mock.go -g

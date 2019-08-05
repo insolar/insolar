@@ -56,7 +56,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestAccessor(t *testing.T) {
@@ -97,25 +96,4 @@ func Test_dynamicToStaticRole(t *testing.T) {
 	assert.Equal(t, insolar.StaticRoleLightMaterial, dynamicToStaticRole(insolar.DynamicRoleLightExecutor))
 	assert.Equal(t, insolar.StaticRoleHeavyMaterial, dynamicToStaticRole(insolar.DynamicRoleHeavyExecutor))
 	assert.Equal(t, insolar.StaticRoleUnknown, dynamicToStaticRole(150))
-}
-
-func TestMutator(t *testing.T) {
-	t.Skip("FIXME")
-	snapshot := NewSnapshot(insolar.FirstPulseNumber, nil)
-	mutator := NewMutator(snapshot)
-	node1 := newMutableNode(insolar.Reference{22}, insolar.StaticRoleVirtual, nil, insolar.NodeReady, "127.0.0.1:0", "")
-	mutator.AddWorkingNode(node1)
-	node2 := newMutableNode(insolar.Reference{11}, insolar.StaticRoleLightMaterial, nil, insolar.NodeReady, "127.0.0.1:0", "")
-	mutator.AddWorkingNode(node2)
-
-	assert.Equal(t, 2, len(mutator.GetActiveNodes()))
-	// duplicating key
-	node3 := newMutableNode(insolar.Reference{11}, insolar.StaticRoleHeavyMaterial, nil, insolar.NodeReady, "127.0.0.1:0", "")
-	mutator.AddWorkingNode(node3)
-	assert.Equal(t, 2, len(mutator.GetActiveNodes()))
-
-	nodes := mutator.GetWorkingNodes()
-	require.Equal(t, 2, len(mutator.GetWorkingNodes()))
-	assert.Equal(t, insolar.Reference{11}, nodes[0].ID())
-	assert.Equal(t, insolar.Reference{22}, nodes[1].ID())
 }
