@@ -31,7 +31,7 @@ import (
 )
 
 func TestRequestsFetcher_New(t *testing.T) {
-	rf := NewRequestsFetcher(gen.Reference(), nil, nil)
+	rf := NewRequestsFetcher(gen.Reference(), nil, nil, nil)
 	require.NotNil(t, rf)
 }
 
@@ -64,7 +64,7 @@ func TestRequestsFetcher_FetchPendings(t *testing.T) {
 			defer mc.Wait(1 * time.Minute)
 
 			obj, am, br := test.mocks(mc)
-			rf := NewRequestsFetcher(obj, am, br)
+			rf := NewRequestsFetcher(obj, am, br, nil)
 			rf.FetchPendings(ctx)
 		})
 	}

@@ -10,7 +10,6 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/record"
 )
 
 // ExecutionBrokerIMock implements ExecutionBrokerI
@@ -46,12 +45,6 @@ type ExecutionBrokerIMock struct {
 	afterAddRequestsFromPrevExecutorCounter  uint64
 	beforeAddRequestsFromPrevExecutorCounter uint64
 	AddRequestsFromPrevExecutorMock          mExecutionBrokerIMockAddRequestsFromPrevExecutor
-
-	funcEnqueueAbandonedOutgoingRequest          func(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest)
-	inspectFuncEnqueueAbandonedOutgoingRequest   func(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest)
-	afterEnqueueAbandonedOutgoingRequestCounter  uint64
-	beforeEnqueueAbandonedOutgoingRequestCounter uint64
-	EnqueueAbandonedOutgoingRequestMock          mExecutionBrokerIMockEnqueueAbandonedOutgoingRequest
 
 	funcFetchMoreRequestsFromLedger          func(ctx context.Context)
 	inspectFuncFetchMoreRequestsFromLedger   func(ctx context.Context)
@@ -141,9 +134,6 @@ func NewExecutionBrokerIMock(t minimock.Tester) *ExecutionBrokerIMock {
 
 	m.AddRequestsFromPrevExecutorMock = mExecutionBrokerIMockAddRequestsFromPrevExecutor{mock: m}
 	m.AddRequestsFromPrevExecutorMock.callArgs = []*ExecutionBrokerIMockAddRequestsFromPrevExecutorParams{}
-
-	m.EnqueueAbandonedOutgoingRequestMock = mExecutionBrokerIMockEnqueueAbandonedOutgoingRequest{mock: m}
-	m.EnqueueAbandonedOutgoingRequestMock.callArgs = []*ExecutionBrokerIMockEnqueueAbandonedOutgoingRequestParams{}
 
 	m.FetchMoreRequestsFromLedgerMock = mExecutionBrokerIMockFetchMoreRequestsFromLedger{mock: m}
 	m.FetchMoreRequestsFromLedgerMock.callArgs = []*ExecutionBrokerIMockFetchMoreRequestsFromLedgerParams{}
@@ -1116,195 +1106,6 @@ func (m *ExecutionBrokerIMock) MinimockAddRequestsFromPrevExecutorInspect() {
 	// if func was set then invocations count should be greater than zero
 	if m.funcAddRequestsFromPrevExecutor != nil && mm_atomic.LoadUint64(&m.afterAddRequestsFromPrevExecutorCounter) < 1 {
 		m.t.Error("Expected call to ExecutionBrokerIMock.AddRequestsFromPrevExecutor")
-	}
-}
-
-type mExecutionBrokerIMockEnqueueAbandonedOutgoingRequest struct {
-	mock               *ExecutionBrokerIMock
-	defaultExpectation *ExecutionBrokerIMockEnqueueAbandonedOutgoingRequestExpectation
-	expectations       []*ExecutionBrokerIMockEnqueueAbandonedOutgoingRequestExpectation
-
-	callArgs []*ExecutionBrokerIMockEnqueueAbandonedOutgoingRequestParams
-	mutex    sync.RWMutex
-}
-
-// ExecutionBrokerIMockEnqueueAbandonedOutgoingRequestExpectation specifies expectation struct of the ExecutionBrokerI.EnqueueAbandonedOutgoingRequest
-type ExecutionBrokerIMockEnqueueAbandonedOutgoingRequestExpectation struct {
-	mock   *ExecutionBrokerIMock
-	params *ExecutionBrokerIMockEnqueueAbandonedOutgoingRequestParams
-
-	Counter uint64
-}
-
-// ExecutionBrokerIMockEnqueueAbandonedOutgoingRequestParams contains parameters of the ExecutionBrokerI.EnqueueAbandonedOutgoingRequest
-type ExecutionBrokerIMockEnqueueAbandonedOutgoingRequestParams struct {
-	ctx    context.Context
-	reqRef insolar.Reference
-	req    *record.OutgoingRequest
-}
-
-// Expect sets up expected params for ExecutionBrokerI.EnqueueAbandonedOutgoingRequest
-func (mmEnqueueAbandonedOutgoingRequest *mExecutionBrokerIMockEnqueueAbandonedOutgoingRequest) Expect(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest) *mExecutionBrokerIMockEnqueueAbandonedOutgoingRequest {
-	if mmEnqueueAbandonedOutgoingRequest.mock.funcEnqueueAbandonedOutgoingRequest != nil {
-		mmEnqueueAbandonedOutgoingRequest.mock.t.Fatalf("ExecutionBrokerIMock.EnqueueAbandonedOutgoingRequest mock is already set by Set")
-	}
-
-	if mmEnqueueAbandonedOutgoingRequest.defaultExpectation == nil {
-		mmEnqueueAbandonedOutgoingRequest.defaultExpectation = &ExecutionBrokerIMockEnqueueAbandonedOutgoingRequestExpectation{}
-	}
-
-	mmEnqueueAbandonedOutgoingRequest.defaultExpectation.params = &ExecutionBrokerIMockEnqueueAbandonedOutgoingRequestParams{ctx, reqRef, req}
-	for _, e := range mmEnqueueAbandonedOutgoingRequest.expectations {
-		if minimock.Equal(e.params, mmEnqueueAbandonedOutgoingRequest.defaultExpectation.params) {
-			mmEnqueueAbandonedOutgoingRequest.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmEnqueueAbandonedOutgoingRequest.defaultExpectation.params)
-		}
-	}
-
-	return mmEnqueueAbandonedOutgoingRequest
-}
-
-// Inspect accepts an inspector function that has same arguments as the ExecutionBrokerI.EnqueueAbandonedOutgoingRequest
-func (mmEnqueueAbandonedOutgoingRequest *mExecutionBrokerIMockEnqueueAbandonedOutgoingRequest) Inspect(f func(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest)) *mExecutionBrokerIMockEnqueueAbandonedOutgoingRequest {
-	if mmEnqueueAbandonedOutgoingRequest.mock.inspectFuncEnqueueAbandonedOutgoingRequest != nil {
-		mmEnqueueAbandonedOutgoingRequest.mock.t.Fatalf("Inspect function is already set for ExecutionBrokerIMock.EnqueueAbandonedOutgoingRequest")
-	}
-
-	mmEnqueueAbandonedOutgoingRequest.mock.inspectFuncEnqueueAbandonedOutgoingRequest = f
-
-	return mmEnqueueAbandonedOutgoingRequest
-}
-
-// Return sets up results that will be returned by ExecutionBrokerI.EnqueueAbandonedOutgoingRequest
-func (mmEnqueueAbandonedOutgoingRequest *mExecutionBrokerIMockEnqueueAbandonedOutgoingRequest) Return() *ExecutionBrokerIMock {
-	if mmEnqueueAbandonedOutgoingRequest.mock.funcEnqueueAbandonedOutgoingRequest != nil {
-		mmEnqueueAbandonedOutgoingRequest.mock.t.Fatalf("ExecutionBrokerIMock.EnqueueAbandonedOutgoingRequest mock is already set by Set")
-	}
-
-	if mmEnqueueAbandonedOutgoingRequest.defaultExpectation == nil {
-		mmEnqueueAbandonedOutgoingRequest.defaultExpectation = &ExecutionBrokerIMockEnqueueAbandonedOutgoingRequestExpectation{mock: mmEnqueueAbandonedOutgoingRequest.mock}
-	}
-
-	return mmEnqueueAbandonedOutgoingRequest.mock
-}
-
-//Set uses given function f to mock the ExecutionBrokerI.EnqueueAbandonedOutgoingRequest method
-func (mmEnqueueAbandonedOutgoingRequest *mExecutionBrokerIMockEnqueueAbandonedOutgoingRequest) Set(f func(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest)) *ExecutionBrokerIMock {
-	if mmEnqueueAbandonedOutgoingRequest.defaultExpectation != nil {
-		mmEnqueueAbandonedOutgoingRequest.mock.t.Fatalf("Default expectation is already set for the ExecutionBrokerI.EnqueueAbandonedOutgoingRequest method")
-	}
-
-	if len(mmEnqueueAbandonedOutgoingRequest.expectations) > 0 {
-		mmEnqueueAbandonedOutgoingRequest.mock.t.Fatalf("Some expectations are already set for the ExecutionBrokerI.EnqueueAbandonedOutgoingRequest method")
-	}
-
-	mmEnqueueAbandonedOutgoingRequest.mock.funcEnqueueAbandonedOutgoingRequest = f
-	return mmEnqueueAbandonedOutgoingRequest.mock
-}
-
-// EnqueueAbandonedOutgoingRequest implements ExecutionBrokerI
-func (mmEnqueueAbandonedOutgoingRequest *ExecutionBrokerIMock) EnqueueAbandonedOutgoingRequest(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest) {
-	mm_atomic.AddUint64(&mmEnqueueAbandonedOutgoingRequest.beforeEnqueueAbandonedOutgoingRequestCounter, 1)
-	defer mm_atomic.AddUint64(&mmEnqueueAbandonedOutgoingRequest.afterEnqueueAbandonedOutgoingRequestCounter, 1)
-
-	if mmEnqueueAbandonedOutgoingRequest.inspectFuncEnqueueAbandonedOutgoingRequest != nil {
-		mmEnqueueAbandonedOutgoingRequest.inspectFuncEnqueueAbandonedOutgoingRequest(ctx, reqRef, req)
-	}
-
-	params := &ExecutionBrokerIMockEnqueueAbandonedOutgoingRequestParams{ctx, reqRef, req}
-
-	// Record call args
-	mmEnqueueAbandonedOutgoingRequest.EnqueueAbandonedOutgoingRequestMock.mutex.Lock()
-	mmEnqueueAbandonedOutgoingRequest.EnqueueAbandonedOutgoingRequestMock.callArgs = append(mmEnqueueAbandonedOutgoingRequest.EnqueueAbandonedOutgoingRequestMock.callArgs, params)
-	mmEnqueueAbandonedOutgoingRequest.EnqueueAbandonedOutgoingRequestMock.mutex.Unlock()
-
-	for _, e := range mmEnqueueAbandonedOutgoingRequest.EnqueueAbandonedOutgoingRequestMock.expectations {
-		if minimock.Equal(e.params, params) {
-			mm_atomic.AddUint64(&e.Counter, 1)
-			return
-		}
-	}
-
-	if mmEnqueueAbandonedOutgoingRequest.EnqueueAbandonedOutgoingRequestMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmEnqueueAbandonedOutgoingRequest.EnqueueAbandonedOutgoingRequestMock.defaultExpectation.Counter, 1)
-		want := mmEnqueueAbandonedOutgoingRequest.EnqueueAbandonedOutgoingRequestMock.defaultExpectation.params
-		got := ExecutionBrokerIMockEnqueueAbandonedOutgoingRequestParams{ctx, reqRef, req}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmEnqueueAbandonedOutgoingRequest.t.Errorf("ExecutionBrokerIMock.EnqueueAbandonedOutgoingRequest got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
-		}
-
-		return
-
-	}
-	if mmEnqueueAbandonedOutgoingRequest.funcEnqueueAbandonedOutgoingRequest != nil {
-		mmEnqueueAbandonedOutgoingRequest.funcEnqueueAbandonedOutgoingRequest(ctx, reqRef, req)
-		return
-	}
-	mmEnqueueAbandonedOutgoingRequest.t.Fatalf("Unexpected call to ExecutionBrokerIMock.EnqueueAbandonedOutgoingRequest. %v %v %v", ctx, reqRef, req)
-
-}
-
-// EnqueueAbandonedOutgoingRequestAfterCounter returns a count of finished ExecutionBrokerIMock.EnqueueAbandonedOutgoingRequest invocations
-func (mmEnqueueAbandonedOutgoingRequest *ExecutionBrokerIMock) EnqueueAbandonedOutgoingRequestAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmEnqueueAbandonedOutgoingRequest.afterEnqueueAbandonedOutgoingRequestCounter)
-}
-
-// EnqueueAbandonedOutgoingRequestBeforeCounter returns a count of ExecutionBrokerIMock.EnqueueAbandonedOutgoingRequest invocations
-func (mmEnqueueAbandonedOutgoingRequest *ExecutionBrokerIMock) EnqueueAbandonedOutgoingRequestBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmEnqueueAbandonedOutgoingRequest.beforeEnqueueAbandonedOutgoingRequestCounter)
-}
-
-// Calls returns a list of arguments used in each call to ExecutionBrokerIMock.EnqueueAbandonedOutgoingRequest.
-// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmEnqueueAbandonedOutgoingRequest *mExecutionBrokerIMockEnqueueAbandonedOutgoingRequest) Calls() []*ExecutionBrokerIMockEnqueueAbandonedOutgoingRequestParams {
-	mmEnqueueAbandonedOutgoingRequest.mutex.RLock()
-
-	argCopy := make([]*ExecutionBrokerIMockEnqueueAbandonedOutgoingRequestParams, len(mmEnqueueAbandonedOutgoingRequest.callArgs))
-	copy(argCopy, mmEnqueueAbandonedOutgoingRequest.callArgs)
-
-	mmEnqueueAbandonedOutgoingRequest.mutex.RUnlock()
-
-	return argCopy
-}
-
-// MinimockEnqueueAbandonedOutgoingRequestDone returns true if the count of the EnqueueAbandonedOutgoingRequest invocations corresponds
-// the number of defined expectations
-func (m *ExecutionBrokerIMock) MinimockEnqueueAbandonedOutgoingRequestDone() bool {
-	for _, e := range m.EnqueueAbandonedOutgoingRequestMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.EnqueueAbandonedOutgoingRequestMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterEnqueueAbandonedOutgoingRequestCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcEnqueueAbandonedOutgoingRequest != nil && mm_atomic.LoadUint64(&m.afterEnqueueAbandonedOutgoingRequestCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockEnqueueAbandonedOutgoingRequestInspect logs each unmet expectation
-func (m *ExecutionBrokerIMock) MinimockEnqueueAbandonedOutgoingRequestInspect() {
-	for _, e := range m.EnqueueAbandonedOutgoingRequestMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to ExecutionBrokerIMock.EnqueueAbandonedOutgoingRequest with params: %#v", *e.params)
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.EnqueueAbandonedOutgoingRequestMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterEnqueueAbandonedOutgoingRequestCounter) < 1 {
-		if m.EnqueueAbandonedOutgoingRequestMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to ExecutionBrokerIMock.EnqueueAbandonedOutgoingRequest")
-		} else {
-			m.t.Errorf("Expected call to ExecutionBrokerIMock.EnqueueAbandonedOutgoingRequest with params: %#v", *m.EnqueueAbandonedOutgoingRequestMock.defaultExpectation.params)
-		}
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcEnqueueAbandonedOutgoingRequest != nil && mm_atomic.LoadUint64(&m.afterEnqueueAbandonedOutgoingRequestCounter) < 1 {
-		m.t.Error("Expected call to ExecutionBrokerIMock.EnqueueAbandonedOutgoingRequest")
 	}
 }
 
@@ -3449,8 +3250,6 @@ func (m *ExecutionBrokerIMock) MinimockFinish() {
 
 		m.MinimockAddRequestsFromPrevExecutorInspect()
 
-		m.MinimockEnqueueAbandonedOutgoingRequestInspect()
-
 		m.MinimockFetchMoreRequestsFromLedgerInspect()
 
 		m.MinimockGetActiveTranscriptInspect()
@@ -3500,7 +3299,6 @@ func (m *ExecutionBrokerIMock) minimockDone() bool {
 		m.MinimockAddFreshRequestDone() &&
 		m.MinimockAddRequestsFromLedgerDone() &&
 		m.MinimockAddRequestsFromPrevExecutorDone() &&
-		m.MinimockEnqueueAbandonedOutgoingRequestDone() &&
 		m.MinimockFetchMoreRequestsFromLedgerDone() &&
 		m.MinimockGetActiveTranscriptDone() &&
 		m.MinimockIsKnownRequestDone() &&

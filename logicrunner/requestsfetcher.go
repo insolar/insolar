@@ -42,15 +42,17 @@ type requestsFetcher struct {
 
 	broker ExecutionBrokerI
 	am     artifacts.Client
+	os     OutgoingRequestSender
 }
 
 func NewRequestsFetcher(
-	obj insolar.Reference, am artifacts.Client, br ExecutionBrokerI,
+	obj insolar.Reference, am artifacts.Client, br ExecutionBrokerI, os OutgoingRequestSender,
 ) RequestsFetcher {
 	return &requestsFetcher{
 		object: obj,
 		broker: br,
 		am:     am,
+		os:     os,
 	}
 }
 
@@ -127,7 +129,7 @@ func (rf *requestsFetcher) fetch(ctx context.Context) error {
 			tr := NewTranscript(requestCtx, reqRef, *v)
 			rf.broker.AddRequestsFromLedger(ctx, tr)
 		case *record.OutgoingRequest:
-			rf.broker.EnqueueAbandonedOutgoingRequest(ctx, reqRef, v)
+			rf.os.SendAbandonedOutgoingRequest(ctx, reqRef, v)
 		default:
 			logger.Error("requestsFetcher.fetch: request is nor IncomingRequest or OutgoingRequest")
 		}

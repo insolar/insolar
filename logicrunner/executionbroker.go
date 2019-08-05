@@ -39,7 +39,6 @@ type ExecutionBrokerI interface {
 	AddFreshRequest(ctx context.Context, transcript *Transcript)
 	AddRequestsFromPrevExecutor(ctx context.Context, transcripts ...*Transcript)
 	AddRequestsFromLedger(ctx context.Context, transcripts ...*Transcript)
-	EnqueueAbandonedOutgoingRequest(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest)
 	AddAdditionalRequestFromPrevExecutor(ctx context.Context, transcript *Transcript)
 
 	PendingState() insolar.PendingState
@@ -680,7 +679,7 @@ func (q *ExecutionBroker) FetchMoreRequestsFromLedger(ctx context.Context) {
 
 func (q *ExecutionBroker) startRequestsFetcher(ctx context.Context) {
 	if q.requestsFetcher == nil {
-		q.requestsFetcher = NewRequestsFetcher(q.Ref, q.artifactsManager, q)
+		q.requestsFetcher = NewRequestsFetcher(q.Ref, q.artifactsManager, q, q.outgoingSender)
 	}
 	q.requestsFetcher.FetchPendings(ctx)
 }
@@ -725,10 +724,6 @@ func (q *ExecutionBroker) AddRequestsFromLedger(ctx context.Context, transcripts
 	defer q.stateLock.Unlock()
 
 	q.Prepend(ctx, true, transcripts...)
-}
-
-func (q *ExecutionBroker) EnqueueAbandonedOutgoingRequest(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest) {
-	q.outgoingSender.SendAbandonedOutgoingRequest(ctx, reqRef, req)
 }
 
 func (q *ExecutionBroker) AddAdditionalRequestFromPrevExecutor(
