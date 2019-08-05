@@ -127,9 +127,6 @@ func TestNodekeeper_GetCloudHash(t *testing.T) {
 //	nk.SetInitialSnapshot([]insolar.NetworkNode{origin, node1, node2, node3, node4})
 //	assert.Equal(t, 5, len(nk.GetAccessor().GetActiveNodes()))
 //	assert.Equal(t, 3, len(nk.GetWorkingNodes()))
-//	assert.Equal(t, node2.ID(), nk.GetWorkingNodesByRole(insolar.DynamicRoleLightValidator)[0])
-//	assert.Equal(t, node3.ID(), nk.GetWorkingNodesByRole(insolar.DynamicRoleVirtualExecutor)[0])
-//	assert.Empty(t, nk.GetWorkingNodesByRole(insolar.DynamicRoleHeavyExecutor))
 //	assert.NotNil(t, nk.GetWorkingNode(node2.ID()))
 //	assert.Nil(t, nk.GetWorkingNode(node1.ID()))
 //

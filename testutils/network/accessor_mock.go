@@ -56,12 +56,6 @@ type AccessorMock struct {
 	afterGetWorkingNodesCounter  uint64
 	beforeGetWorkingNodesCounter uint64
 	GetWorkingNodesMock          mAccessorMockGetWorkingNodes
-
-	funcGetWorkingNodesByRole          func(role insolar.DynamicRole) (ra1 []insolar.Reference)
-	inspectFuncGetWorkingNodesByRole   func(role insolar.DynamicRole)
-	afterGetWorkingNodesByRoleCounter  uint64
-	beforeGetWorkingNodesByRoleCounter uint64
-	GetWorkingNodesByRoleMock          mAccessorMockGetWorkingNodesByRole
 }
 
 // NewAccessorMock returns a mock for network.Accessor
@@ -88,9 +82,6 @@ func NewAccessorMock(t minimock.Tester) *AccessorMock {
 	m.GetWorkingNodeMock.callArgs = []*AccessorMockGetWorkingNodeParams{}
 
 	m.GetWorkingNodesMock = mAccessorMockGetWorkingNodes{mock: m}
-
-	m.GetWorkingNodesByRoleMock = mAccessorMockGetWorkingNodesByRole{mock: m}
-	m.GetWorkingNodesByRoleMock.callArgs = []*AccessorMockGetWorkingNodesByRoleParams{}
 
 	return m
 }
@@ -1384,221 +1375,6 @@ func (m *AccessorMock) MinimockGetWorkingNodesInspect() {
 	}
 }
 
-type mAccessorMockGetWorkingNodesByRole struct {
-	mock               *AccessorMock
-	defaultExpectation *AccessorMockGetWorkingNodesByRoleExpectation
-	expectations       []*AccessorMockGetWorkingNodesByRoleExpectation
-
-	callArgs []*AccessorMockGetWorkingNodesByRoleParams
-	mutex    sync.RWMutex
-}
-
-// AccessorMockGetWorkingNodesByRoleExpectation specifies expectation struct of the Accessor.GetWorkingNodesByRole
-type AccessorMockGetWorkingNodesByRoleExpectation struct {
-	mock    *AccessorMock
-	params  *AccessorMockGetWorkingNodesByRoleParams
-	results *AccessorMockGetWorkingNodesByRoleResults
-	Counter uint64
-}
-
-// AccessorMockGetWorkingNodesByRoleParams contains parameters of the Accessor.GetWorkingNodesByRole
-type AccessorMockGetWorkingNodesByRoleParams struct {
-	role insolar.DynamicRole
-}
-
-// AccessorMockGetWorkingNodesByRoleResults contains results of the Accessor.GetWorkingNodesByRole
-type AccessorMockGetWorkingNodesByRoleResults struct {
-	ra1 []insolar.Reference
-}
-
-// Expect sets up expected params for Accessor.GetWorkingNodesByRole
-func (mmGetWorkingNodesByRole *mAccessorMockGetWorkingNodesByRole) Expect(role insolar.DynamicRole) *mAccessorMockGetWorkingNodesByRole {
-	if mmGetWorkingNodesByRole.mock.funcGetWorkingNodesByRole != nil {
-		mmGetWorkingNodesByRole.mock.t.Fatalf("AccessorMock.GetWorkingNodesByRole mock is already set by Set")
-	}
-
-	if mmGetWorkingNodesByRole.defaultExpectation == nil {
-		mmGetWorkingNodesByRole.defaultExpectation = &AccessorMockGetWorkingNodesByRoleExpectation{}
-	}
-
-	mmGetWorkingNodesByRole.defaultExpectation.params = &AccessorMockGetWorkingNodesByRoleParams{role}
-	for _, e := range mmGetWorkingNodesByRole.expectations {
-		if minimock.Equal(e.params, mmGetWorkingNodesByRole.defaultExpectation.params) {
-			mmGetWorkingNodesByRole.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmGetWorkingNodesByRole.defaultExpectation.params)
-		}
-	}
-
-	return mmGetWorkingNodesByRole
-}
-
-// Inspect accepts an inspector function that has same arguments as the Accessor.GetWorkingNodesByRole
-func (mmGetWorkingNodesByRole *mAccessorMockGetWorkingNodesByRole) Inspect(f func(role insolar.DynamicRole)) *mAccessorMockGetWorkingNodesByRole {
-	if mmGetWorkingNodesByRole.mock.inspectFuncGetWorkingNodesByRole != nil {
-		mmGetWorkingNodesByRole.mock.t.Fatalf("Inspect function is already set for AccessorMock.GetWorkingNodesByRole")
-	}
-
-	mmGetWorkingNodesByRole.mock.inspectFuncGetWorkingNodesByRole = f
-
-	return mmGetWorkingNodesByRole
-}
-
-// Return sets up results that will be returned by Accessor.GetWorkingNodesByRole
-func (mmGetWorkingNodesByRole *mAccessorMockGetWorkingNodesByRole) Return(ra1 []insolar.Reference) *AccessorMock {
-	if mmGetWorkingNodesByRole.mock.funcGetWorkingNodesByRole != nil {
-		mmGetWorkingNodesByRole.mock.t.Fatalf("AccessorMock.GetWorkingNodesByRole mock is already set by Set")
-	}
-
-	if mmGetWorkingNodesByRole.defaultExpectation == nil {
-		mmGetWorkingNodesByRole.defaultExpectation = &AccessorMockGetWorkingNodesByRoleExpectation{mock: mmGetWorkingNodesByRole.mock}
-	}
-	mmGetWorkingNodesByRole.defaultExpectation.results = &AccessorMockGetWorkingNodesByRoleResults{ra1}
-	return mmGetWorkingNodesByRole.mock
-}
-
-//Set uses given function f to mock the Accessor.GetWorkingNodesByRole method
-func (mmGetWorkingNodesByRole *mAccessorMockGetWorkingNodesByRole) Set(f func(role insolar.DynamicRole) (ra1 []insolar.Reference)) *AccessorMock {
-	if mmGetWorkingNodesByRole.defaultExpectation != nil {
-		mmGetWorkingNodesByRole.mock.t.Fatalf("Default expectation is already set for the Accessor.GetWorkingNodesByRole method")
-	}
-
-	if len(mmGetWorkingNodesByRole.expectations) > 0 {
-		mmGetWorkingNodesByRole.mock.t.Fatalf("Some expectations are already set for the Accessor.GetWorkingNodesByRole method")
-	}
-
-	mmGetWorkingNodesByRole.mock.funcGetWorkingNodesByRole = f
-	return mmGetWorkingNodesByRole.mock
-}
-
-// When sets expectation for the Accessor.GetWorkingNodesByRole which will trigger the result defined by the following
-// Then helper
-func (mmGetWorkingNodesByRole *mAccessorMockGetWorkingNodesByRole) When(role insolar.DynamicRole) *AccessorMockGetWorkingNodesByRoleExpectation {
-	if mmGetWorkingNodesByRole.mock.funcGetWorkingNodesByRole != nil {
-		mmGetWorkingNodesByRole.mock.t.Fatalf("AccessorMock.GetWorkingNodesByRole mock is already set by Set")
-	}
-
-	expectation := &AccessorMockGetWorkingNodesByRoleExpectation{
-		mock:   mmGetWorkingNodesByRole.mock,
-		params: &AccessorMockGetWorkingNodesByRoleParams{role},
-	}
-	mmGetWorkingNodesByRole.expectations = append(mmGetWorkingNodesByRole.expectations, expectation)
-	return expectation
-}
-
-// Then sets up Accessor.GetWorkingNodesByRole return parameters for the expectation previously defined by the When method
-func (e *AccessorMockGetWorkingNodesByRoleExpectation) Then(ra1 []insolar.Reference) *AccessorMock {
-	e.results = &AccessorMockGetWorkingNodesByRoleResults{ra1}
-	return e.mock
-}
-
-// GetWorkingNodesByRole implements network.Accessor
-func (mmGetWorkingNodesByRole *AccessorMock) GetWorkingNodesByRole(role insolar.DynamicRole) (ra1 []insolar.Reference) {
-	mm_atomic.AddUint64(&mmGetWorkingNodesByRole.beforeGetWorkingNodesByRoleCounter, 1)
-	defer mm_atomic.AddUint64(&mmGetWorkingNodesByRole.afterGetWorkingNodesByRoleCounter, 1)
-
-	if mmGetWorkingNodesByRole.inspectFuncGetWorkingNodesByRole != nil {
-		mmGetWorkingNodesByRole.inspectFuncGetWorkingNodesByRole(role)
-	}
-
-	params := &AccessorMockGetWorkingNodesByRoleParams{role}
-
-	// Record call args
-	mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.mutex.Lock()
-	mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.callArgs = append(mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.callArgs, params)
-	mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.mutex.Unlock()
-
-	for _, e := range mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.expectations {
-		if minimock.Equal(e.params, params) {
-			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.ra1
-		}
-	}
-
-	if mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.defaultExpectation.Counter, 1)
-		want := mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.defaultExpectation.params
-		got := AccessorMockGetWorkingNodesByRoleParams{role}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetWorkingNodesByRole.t.Errorf("AccessorMock.GetWorkingNodesByRole got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
-		}
-
-		results := mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.defaultExpectation.results
-		if results == nil {
-			mmGetWorkingNodesByRole.t.Fatal("No results are set for the AccessorMock.GetWorkingNodesByRole")
-		}
-		return (*results).ra1
-	}
-	if mmGetWorkingNodesByRole.funcGetWorkingNodesByRole != nil {
-		return mmGetWorkingNodesByRole.funcGetWorkingNodesByRole(role)
-	}
-	mmGetWorkingNodesByRole.t.Fatalf("Unexpected call to AccessorMock.GetWorkingNodesByRole. %v", role)
-	return
-}
-
-// GetWorkingNodesByRoleAfterCounter returns a count of finished AccessorMock.GetWorkingNodesByRole invocations
-func (mmGetWorkingNodesByRole *AccessorMock) GetWorkingNodesByRoleAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetWorkingNodesByRole.afterGetWorkingNodesByRoleCounter)
-}
-
-// GetWorkingNodesByRoleBeforeCounter returns a count of AccessorMock.GetWorkingNodesByRole invocations
-func (mmGetWorkingNodesByRole *AccessorMock) GetWorkingNodesByRoleBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetWorkingNodesByRole.beforeGetWorkingNodesByRoleCounter)
-}
-
-// Calls returns a list of arguments used in each call to AccessorMock.GetWorkingNodesByRole.
-// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmGetWorkingNodesByRole *mAccessorMockGetWorkingNodesByRole) Calls() []*AccessorMockGetWorkingNodesByRoleParams {
-	mmGetWorkingNodesByRole.mutex.RLock()
-
-	argCopy := make([]*AccessorMockGetWorkingNodesByRoleParams, len(mmGetWorkingNodesByRole.callArgs))
-	copy(argCopy, mmGetWorkingNodesByRole.callArgs)
-
-	mmGetWorkingNodesByRole.mutex.RUnlock()
-
-	return argCopy
-}
-
-// MinimockGetWorkingNodesByRoleDone returns true if the count of the GetWorkingNodesByRole invocations corresponds
-// the number of defined expectations
-func (m *AccessorMock) MinimockGetWorkingNodesByRoleDone() bool {
-	for _, e := range m.GetWorkingNodesByRoleMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.GetWorkingNodesByRoleMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetWorkingNodesByRoleCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcGetWorkingNodesByRole != nil && mm_atomic.LoadUint64(&m.afterGetWorkingNodesByRoleCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockGetWorkingNodesByRoleInspect logs each unmet expectation
-func (m *AccessorMock) MinimockGetWorkingNodesByRoleInspect() {
-	for _, e := range m.GetWorkingNodesByRoleMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to AccessorMock.GetWorkingNodesByRole with params: %#v", *e.params)
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.GetWorkingNodesByRoleMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetWorkingNodesByRoleCounter) < 1 {
-		if m.GetWorkingNodesByRoleMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to AccessorMock.GetWorkingNodesByRole")
-		} else {
-			m.t.Errorf("Expected call to AccessorMock.GetWorkingNodesByRole with params: %#v", *m.GetWorkingNodesByRoleMock.defaultExpectation.params)
-		}
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcGetWorkingNodesByRole != nil && mm_atomic.LoadUint64(&m.afterGetWorkingNodesByRoleCounter) < 1 {
-		m.t.Error("Expected call to AccessorMock.GetWorkingNodesByRole")
-	}
-}
-
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *AccessorMock) MinimockFinish() {
 	if !m.minimockDone() {
@@ -1615,8 +1391,6 @@ func (m *AccessorMock) MinimockFinish() {
 		m.MinimockGetWorkingNodeInspect()
 
 		m.MinimockGetWorkingNodesInspect()
-
-		m.MinimockGetWorkingNodesByRoleInspect()
 		m.t.FailNow()
 	}
 }
@@ -1646,6 +1420,5 @@ func (m *AccessorMock) minimockDone() bool {
 		m.MinimockGetActiveNodesDone() &&
 		m.MinimockGetRandomWorkingNodeDone() &&
 		m.MinimockGetWorkingNodeDone() &&
-		m.MinimockGetWorkingNodesDone() &&
-		m.MinimockGetWorkingNodesByRoleDone()
+		m.MinimockGetWorkingNodesDone()
 }

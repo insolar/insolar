@@ -87,9 +87,6 @@ func TestAccessor(t *testing.T) {
 	assert.NotNil(t, accessor.GetActiveNode(node3.ID()))
 	assert.NotNil(t, accessor.GetActiveNode(node4.ID()))
 
-	assert.Empty(t, accessor.GetWorkingNodesByRole(insolar.DynamicRoleLightValidator))
-	assert.Equal(t, 1, len(accessor.GetWorkingNodesByRole(insolar.DynamicRoleVirtualValidator)))
-
 	assert.NotNil(t, accessor.GetActiveNodeByShortID(10))
 	assert.NotNil(t, accessor.GetActiveNodeByShortID(11))
 	assert.Nil(t, accessor.GetActiveNodeByShortID(12))

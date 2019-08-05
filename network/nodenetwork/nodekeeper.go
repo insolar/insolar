@@ -178,10 +178,6 @@ func (nk *nodekeeper) GetWorkingNode(ref insolar.Reference) insolar.NetworkNode 
 	return nk.GetAccessor().GetWorkingNode(ref)
 }
 
-func (nk *nodekeeper) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference {
-	return nk.GetAccessor().GetWorkingNodesByRole(role)
-}
-
 func (nk *nodekeeper) GetOrigin() insolar.NetworkNode {
 	return nk.origin
 }
