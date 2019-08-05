@@ -43,7 +43,6 @@ type sendOutgoingResult struct {
 
 type sendOutgoingRequestMessage struct {
 	ctx              context.Context
-	wait             bool
 	requestReference insolar.Reference       // registered request id
 	outgoingRequest  *record.OutgoingRequest // outgoing request body
 	resultChan       chan sendOutgoingResult // result that will be returned to the contract proxy
