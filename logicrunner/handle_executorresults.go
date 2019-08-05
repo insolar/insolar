@@ -24,6 +24,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/transcript"
 
 	"github.com/insolar/insolar/insolar/bus"
@@ -52,7 +53,7 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 	if len(p.msg.Queue) > 0 {
 		transcripts := make([]*transcript.Transcript, len(p.msg.Queue))
 		for i, qe := range p.msg.Queue {
-			requestCtx := contextFromServiceData(qe.ServiceData)
+			requestCtx := common.ContextFromServiceData(qe.ServiceData)
 			transcripts[i] = transcript.NewTranscript(requestCtx, qe.RequestRef, qe.Request)
 		}
 		broker.AddRequestsFromPrevExecutor(ctx, transcripts...)

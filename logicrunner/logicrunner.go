@@ -357,16 +357,6 @@ func contextWithServiceData(ctx context.Context, data message.ServiceData) conte
 	return ctx
 }
 
-func contextFromServiceData(data message.ServiceData) context.Context {
-	ctx := inslogger.ContextWithTrace(context.Background(), data.LogTraceID)
-	ctx = inslogger.WithLoggerLevel(ctx, data.LogLevel)
-	if data.TraceSpanData != nil {
-		parentSpan := instracer.MustDeserialize(data.TraceSpanData)
-		return instracer.WithParentSpan(ctx, parentSpan)
-	}
-	return ctx
-}
-
 func freshContextFromContext(ctx context.Context) context.Context {
 	res := inslogger.ContextWithTrace(
 		context.Background(),

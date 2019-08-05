@@ -20,3 +20,13 @@ func ServiceDataFromContext(ctx context.Context) message.ServiceData {
 		TraceSpanData: instracer.MustSerialize(ctx),
 	}
 }
+
+func ContextFromServiceData(data message.ServiceData) context.Context {
+	ctx := inslogger.ContextWithTrace(context.Background(), data.LogTraceID)
+	ctx = inslogger.WithLoggerLevel(ctx, data.LogLevel)
+	if data.TraceSpanData != nil {
+		parentSpan := instracer.MustDeserialize(data.TraceSpanData)
+		return instracer.WithParentSpan(ctx, parentSpan)
+	}
+	return ctx
+}
