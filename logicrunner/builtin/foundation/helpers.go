@@ -18,6 +18,7 @@ package foundation
 
 import (
 	"errors"
+	"github.com/insolar/insolar/insolar/genesisrefs"
 
 	"github.com/insolar/insolar/insolar"
 )
@@ -44,4 +45,10 @@ func GetRequestReference() insolar.Reference {
 // unimplemented
 func GetObject(ref insolar.Reference) ProxyInterface {
 	panic("not implemented")
+}
+
+//// Get reference CostCenter contract.
+func GetCostCenter() insolar.Reference {
+	return genesisrefs.GenesisRef(insolar.GenesisNameCostCenter)
+
 }

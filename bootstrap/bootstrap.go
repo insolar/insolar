@@ -30,7 +30,6 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
-	"github.com/insolar/insolar/insolar/rootdomain"
 	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
@@ -129,7 +128,7 @@ type nodeInfo struct {
 }
 
 func (ni nodeInfo) reference() insolar.Reference {
-	return rootdomain.GenesisRef(ni.publicKey)
+	return genesisrefs.GenesisRef(ni.publicKey)
 }
 
 func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeInfo) error {

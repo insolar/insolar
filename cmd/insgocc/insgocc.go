@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/insolar/genesisrefs"
 	"go/build"
 	"io"
 	"io/ioutil"
@@ -349,8 +350,7 @@ func main() {
 				output := newOutputFlag("")
 				err := openDefaultProxyPath(output, insolar.MachineTypeBuiltin, contract.Parsed)
 				checkError(err)
-
-				reference := contract.GenerateReference(preprocessor.PrototypeType)
+				reference := genesisrefs.GenerateReference(preprocessor.PrototypeType, contract.Name, contract.Version)
 				err = contract.Parsed.WriteProxy(reference.String(), output.writer)
 				checkError(err)
 

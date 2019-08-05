@@ -27,7 +27,6 @@ import (
 	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/rootdomain"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/artifact"
 	"github.com/insolar/insolar/internal/ledger/store"
@@ -259,10 +258,10 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 
 func (g *Genesis) activateContract(ctx context.Context, state insolar.GenesisContractState) (*insolar.Reference, error) {
 	name := state.Name
-	objRef := rootdomain.GenesisRef(name)
+	objRef := genesisrefs.GenesisRef(name)
 
-	protoName := name + rootdomain.GenesisPrototypeSuffix
-	protoRef := rootdomain.GenesisRef(protoName)
+	protoName := name + genesisrefs.GenesisPrototypeSuffix
+	protoRef := genesisrefs.GenesisRef(protoName)
 
 	reqID, err := g.ArtifactManager.RegisterRequest(
 		ctx,
@@ -277,7 +276,7 @@ func (g *Genesis) activateContract(ctx context.Context, state insolar.GenesisCon
 
 	parentRef := insolar.GenesisRecord.Ref()
 	if state.ParentName != "" {
-		parentRef = rootdomain.GenesisRef(state.ParentName)
+		parentRef = genesisrefs.GenesisRef(state.ParentName)
 	}
 
 	err = g.ArtifactManager.ActivateObject(
