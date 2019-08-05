@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/insolar/utils"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/pkg/errors"
 )
 
@@ -157,12 +158,9 @@ type PulseSenderConfirmation struct {
 	Signature       []byte
 }
 
-// FirstPulseDate is the hardcoded date of the first pulse
-const firstPulseDate = 1535760000 //09/01/2018 @ 12:00am (UTC)
-
 const (
 	// FirstPulseNumber is the hardcoded first pulse number. Because first 65536 numbers are saved for the system's needs
-	FirstPulseNumber = 65537
+	FirstPulseNumber = pulse.MinTimePulse
 	// PulseNumberJet is a special pulse number value that signifies jet ID.
 	PulseNumberJet = PulseNumber(1)
 	// BuiltinContractPulseNumber declares special pulse number that creates namespace for builtin contracts
@@ -176,10 +174,10 @@ var GenesisPulse = &Pulse{
 	PulseNumber:      FirstPulseNumber,
 	Entropy:          [EntropySize]byte{},
 	EpochPulseNumber: 1,
-	PulseTimestamp:   firstPulseDate,
+	PulseTimestamp:   pulse.UnixTimeOfMinTimePulse,
 }
 
 // CalculatePulseNumber is helper for calculating next pulse number, when a network is being started
 func CalculatePulseNumber(now time.Time) PulseNumber {
-	return PulseNumber(now.Unix() - firstPulseDate + FirstPulseNumber)
+	return PulseNumber(pulse.OfNow())
 }
