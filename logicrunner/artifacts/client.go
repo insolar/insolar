@@ -354,12 +354,12 @@ func (m *client) GetObject(
 	return desc, err
 }
 
-func (m *client) GetIncomingRequest(
+func (m *client) GetAbandonedRequest(
 	ctx context.Context, object, reqRef insolar.Reference,
-) (*record.IncomingRequest, error) {
+) (record.Request, error) {
 	var err error
-	instrumenter := instrument(ctx, "GetRequest").err(&err)
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetRequest")
+	instrumenter := instrument(ctx, "GetAbandonedRequest").err(&err)
+	ctx, span := instracer.StartSpan(ctx, "artifacts.GetAbandonedRequest")
 	defer func() {
 		if err != nil {
 			span.AddAttributes(trace.BoolAttribute("error", true))
@@ -384,12 +384,18 @@ func (m *client) GetIncomingRequest(
 	}
 
 	concrete := record.Unwrap(&req.Request)
-	castedRecord, ok := concrete.(*record.IncomingRequest)
-	if !ok {
-		return nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", concrete)
+	var result record.Request
+
+	switch v := concrete.(type) {
+	case *record.IncomingRequest:
+		result = v
+	case *record.OutgoingRequest:
+		result = v
+	default:
+		return nil, fmt.Errorf("GetAbandonedRequest: unexpected message: %#v", concrete)
 	}
 
-	return castedRecord, nil
+	return result, nil
 }
 
 // GetPendings returns a list of pending requests

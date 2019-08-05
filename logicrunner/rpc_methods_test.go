@@ -21,6 +21,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/go-actors/actor/system"
+
 	"github.com/gojuno/minimock"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -41,6 +43,7 @@ func TestRPCMethods_New(t *testing.T) {
 		artifacts.NewDescriptorsCacheMock(t),
 		testutils.NewContractRequesterMock(t),
 		NewStateStorageMock(t),
+		NewOutgoingRequestSenderMock(t),
 	)
 	require.NotNil(t, m)
 }
@@ -308,10 +311,12 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	am := artifacts.NewClientMock(t)
 	dc := artifacts.NewDescriptorsCacheMock(t)
 	cr := testutils.NewContractRequesterMock(t)
+	as := system.New()
+	os := NewOutgoingRequestSender(as, cr, am)
 
 	requestRef := gen.Reference()
 
-	rpcm := NewExecutionProxyImplementation(dc, cr, am)
+	rpcm := NewExecutionProxyImplementation(dc, cr, am, os)
 	ctx := context.Background()
 	transcript := NewTranscript(ctx, requestRef, record.IncomingRequest{})
 	req := rpctypes.UpRouteReq{Wait: true}
@@ -348,10 +353,11 @@ func TestRouteCallRegistersSaga(t *testing.T) {
 	am := artifacts.NewClientMock(t)
 	dc := artifacts.NewDescriptorsCacheMock(t)
 	cr := testutils.NewContractRequesterMock(t)
+	os := NewOutgoingRequestSenderMock(t)
 
 	requestRef := gen.Reference()
 
-	rpcm := NewExecutionProxyImplementation(dc, cr, am)
+	rpcm := NewExecutionProxyImplementation(dc, cr, am, os)
 	ctx := context.Background()
 	transcript := NewTranscript(ctx, requestRef, record.IncomingRequest{})
 	req := rpctypes.UpRouteReq{Saga: true}
@@ -382,10 +388,11 @@ func TestSaveAsChildRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	am := artifacts.NewClientMock(t)
 	dc := artifacts.NewDescriptorsCacheMock(t)
 	cr := testutils.NewContractRequesterMock(t)
+	os := NewOutgoingRequestSenderMock(t)
 
 	requestRef := gen.Reference()
 
-	rpcm := NewExecutionProxyImplementation(dc, cr, am)
+	rpcm := NewExecutionProxyImplementation(dc, cr, am, os)
 	ctx := context.Background()
 	transcript := NewTranscript(ctx, requestRef, record.IncomingRequest{})
 	req := rpctypes.UpSaveAsChildReq{}
