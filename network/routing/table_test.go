@@ -51,14 +51,15 @@
 package routing
 
 import (
+	"context"
+	"github.com/insolar/insolar/network"
+	mock "github.com/insolar/insolar/testutils/network"
 	"strconv"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/nodenetwork"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -76,10 +77,23 @@ func newTable() *Table {
 }
 
 func TestTable_Resolve(t *testing.T) {
-	table := newTable()
-	table.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{
-		newNode(2),
+	table := Table{}
+
+	pulse := insolar.GenesisPulse
+	nodeKeeperMock := mock.NewNodeKeeperMock(t)
+	nodeKeeperMock.GetAccessorMock.Set(func(p1 insolar.PulseNumber) network.Accessor {
+		n := newNode(2)
+		return node.NewAccessor(node.NewSnapshot(pulse.PulseNumber, []insolar.NetworkNode{n}))
 	})
+
+	pulseAccessorMock := mock.NewPulseAccessorMock(t)
+	pulseAccessorMock.LatestMock.Set(func(ctx context.Context) (p1 insolar.Pulse, err error) {
+		return *pulse, nil
+	})
+
+	table.PulseAccessor = pulseAccessorMock
+	table.NodeKeeper = nodeKeeperMock
+
 	h, err := table.Resolve(insolar.Reference{2})
 	require.NoError(t, err)
 	assert.EqualValues(t, 2, h.ShortID)
@@ -87,11 +101,4 @@ func TestTable_Resolve(t *testing.T) {
 
 	_, err = table.Resolve(insolar.Reference{4})
 	assert.Error(t, err)
-}
-
-func TestTable_AddToKnownHosts(t *testing.T) {
-	table := newTable()
-	h, err := host.NewHostN("127.0.0.1:234", testutils.RandomRef())
-	require.NoError(t, err)
-	table.AddToKnownHosts(h)
 }

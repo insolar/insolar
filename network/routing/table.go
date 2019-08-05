@@ -51,15 +51,17 @@
 package routing
 
 import (
+	"context"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/pkg/errors"
 )
 
 type Table struct {
-	NodeKeeper network.NodeKeeper `inject:""`
+	NodeKeeper    network.NodeKeeper `inject:""`
+	PulseAccessor pulse.Accessor     `inject:""`
 }
 
 func (t *Table) isLocalNode(insolar.Reference) bool {
@@ -70,32 +72,19 @@ func (t *Table) resolveRemoteNode(insolar.Reference) (*host.Host, error) {
 	return nil, errors.New("not implemented")
 }
 
-func (t *Table) addRemoteHost(*host.Host) {
-	log.Warn("not implemented")
-}
-
 // Resolve NodeID -> ShortID, Address. Can initiate network requests.
 func (t *Table) Resolve(ref insolar.Reference) (*host.Host, error) {
 	if t.isLocalNode(ref) {
-		node := t.NodeKeeper.GetAccessor().GetActiveNode(ref)
+		p, err := t.PulseAccessor.Latest(context.Background())
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get latest pulse")
+		}
+
+		node := t.NodeKeeper.GetAccessor(p.PulseNumber).GetActiveNode(ref)
 		if node == nil {
 			return nil, errors.New("no such local node with NodeID: " + ref.String())
 		}
 		return host.NewHostNS(node.Address(), node.ID(), node.ShortID())
 	}
 	return t.resolveRemoteNode(ref)
-}
-
-// AddToKnownHosts add host to routing table.
-func (t *Table) AddToKnownHosts(h *host.Host) {
-	if t.isLocalNode(h.NodeID) {
-		// we should already have this node in NodeNetwork active list, do nothing
-		return
-	}
-	t.addRemoteHost(h)
-}
-
-// Rebalance recreate shards of routing table with known hosts according to new partition policy.
-func (t *Table) Rebalance(network.PartitionPolicy) {
-	log.Warn("not implemented")
 }
