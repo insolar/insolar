@@ -149,7 +149,7 @@ func (p *LongProcedure) Proceed(context.Context) error {
 	return nil
 }
 
-func TestChangePulse(t *testing.T) {
+func TestClosePulse(t *testing.T) {
 	testReply := &mockReply{}
 
 	procedureStarted := make(chan struct{})
@@ -190,7 +190,7 @@ func TestChangePulse(t *testing.T) {
 
 	<-procedureStarted
 	p := pulsar.NewPulse(22, 33, &entropygenerator.StandardEntropyGenerator{})
-	disp.ChangePulse(context.Background(), *p)
+	disp.ClosePulse(context.Background(), *p)
 	<-handleProcessed
 }
 
@@ -245,9 +245,11 @@ func TestChangePulseAndMigrate(t *testing.T) {
 
 	<-firstProcedureStarted
 	pulse := pulsar.NewPulse(22, 33, &entropygenerator.StandardEntropyGenerator{})
-	disp.ChangePulse(context.Background(), *pulse)
+	disp.ClosePulse(context.Background(), *pulse)
+	disp.BeginPulse(context.Background(), *pulse)
 	<-migrateStarted
 	<-secondProcedureStarted
-	disp.ChangePulse(context.Background(), *pulse)
+	disp.ClosePulse(context.Background(), *pulse)
+	disp.BeginPulse(context.Background(), *pulse)
 	<-handleProcessed
 }
