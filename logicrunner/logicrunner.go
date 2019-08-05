@@ -270,8 +270,8 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newP
 
 	messages := lr.StateStorage.OnPulse(ctx, newPulse)
 
-	lr.FlowDispatcher.ChangePulse(ctx, newPulse)
-	lr.InnerFlowDispatcher.ChangePulse(ctx, newPulse)
+	lr.FlowDispatcher.BeginPulse(ctx, newPulse)
+	lr.InnerFlowDispatcher.BeginPulse(ctx, newPulse)
 
 	err = lr.WriteController.Open(ctx, newPulse.PulseNumber)
 	if err != nil {

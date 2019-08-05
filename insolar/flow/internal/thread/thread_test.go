@@ -163,13 +163,13 @@ func TestThread_Migrate_MigratedError(t *testing.T) {
 func TestThread_Migrate_HandleReturnsError(t *testing.T) {
 	t.Parallel()
 	controller := &Controller{
-		cancel: make(chan struct{}),
+		begin: make(chan struct{}),
 	}
 	thread := Thread{
 		controller: controller,
-		cancel:     controller.cancel,
+		begin:      controller.begin,
 	}
-	close(controller.cancel)
+	close(controller.begin)
 
 	handle := func(ctx context.Context, f flow.Flow) error {
 		require.NotEqual(t, &thread, f)
@@ -182,13 +182,13 @@ func TestThread_Migrate_HandleReturnsError(t *testing.T) {
 func TestThread_Migrate(t *testing.T) {
 	t.Parallel()
 	controller := &Controller{
-		cancel: make(chan struct{}),
+		begin: make(chan struct{}),
 	}
 	thread := Thread{
 		controller: controller,
-		cancel:     controller.cancel,
+		begin:      controller.begin,
 	}
-	close(controller.cancel)
+	close(controller.begin)
 
 	handle := func(ctx context.Context, f flow.Flow) error {
 		require.NotEqual(t, &thread, f)
@@ -204,14 +204,14 @@ func TestThread_Continue(t *testing.T) {
 	threadCancel := make(chan struct{})
 	thread := Thread{
 		controller: &Controller{
-			cancel: controllerCancel,
+			begin: controllerCancel,
 		},
-		cancel: threadCancel,
+		begin: threadCancel,
 	}
 	close(threadCancel)
 	thread.Continue(context.Background())
 	var expected <-chan struct{} = controllerCancel
-	require.Equal(t, expected, thread.cancel)
+	require.Equal(t, expected, thread.begin)
 }
 
 func TestThread_Run_Error(t *testing.T) {

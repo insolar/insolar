@@ -161,6 +161,8 @@ func initComponents(
 	contractRequester, err := contractrequester.New(logicRunner)
 	checkError(ctx, err, "failed to start ContractRequester")
 
+	pm := pulsemanager.NewPulseManager()
+
 	cm.Register(
 		terminationHandler,
 		pcs,
@@ -174,7 +176,7 @@ func initComponents(
 		logicrunner.NewMachinesManager(),
 		nodeNetwork,
 		nw,
-		pulsemanager.NewPulseManager(),
+		pm,
 		rules.NewRules(),
 	)
 
@@ -204,6 +206,9 @@ func initComponents(
 
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
+
+	pm.InnerFlowDispatcher = logicRunner.InnerFlowDispatcher
+	pm.FlowDispatcher = logicRunner.FlowDispatcher
 
 	stopper := startWatermill(
 		ctx, logger, pubSub, b,

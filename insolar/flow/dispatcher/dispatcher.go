@@ -56,10 +56,16 @@ func NewDispatcher(present flow.MakeHandle, future flow.MakeHandle, past flow.Ma
 	return d
 }
 
-// ChangePulse is a handle for pulse change vent.
-func (d *Dispatcher) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
-	d.controller.Pulse()
-	inslogger.FromContext(ctx).Debugf("Pulse was changed to %s", pulse.PulseNumber)
+// BeginPulse is a handle for pulse begin event.
+func (d *Dispatcher) BeginPulse(ctx context.Context, pulse insolar.Pulse) {
+	d.controller.BeginPulse()
+	inslogger.FromContext(ctx).Debugf("Pulse was changed to %s in dispatcher", pulse.PulseNumber)
+}
+
+// ClosePulse is a handle for pulse close event.
+func (d *Dispatcher) ClosePulse(ctx context.Context, pulse insolar.Pulse) {
+	d.controller.ClosePulse()
+	inslogger.FromContext(ctx).Debugf("Pulse %s was closed in dispatcher", pulse.PulseNumber)
 }
 
 func (d *Dispatcher) getHandleByPulse(ctx context.Context, msgPulseNumber insolar.PulseNumber) flow.MakeHandle {
