@@ -727,8 +727,8 @@ func (q *ExecutionBroker) AddRequestsFromLedger(ctx context.Context, transcripts
 	q.Prepend(ctx, true, transcripts...)
 }
 
-func (eb *ExecutionBroker) EnqueueAbandonedOutgoingRequest(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest) {
-	eb.outgoingSender.SendAbandonedOutgoingRequest(ctx, reqRef, req)
+func (q *ExecutionBroker) EnqueueAbandonedOutgoingRequest(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest) {
+	q.outgoingSender.SendAbandonedOutgoingRequest(ctx, reqRef, req)
 }
 
 func (q *ExecutionBroker) AddAdditionalRequestFromPrevExecutor(
