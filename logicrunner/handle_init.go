@@ -22,7 +22,10 @@ import (
 	"fmt"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/logicrunner/writecontroller"
+
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar/payload"
@@ -43,6 +46,7 @@ type Dependencies struct {
 	lr             *LogicRunner
 	Sender         bus.Sender
 	JetStorage     jet.Storage
+	WriteAccessor  writecontroller.Accessor
 }
 
 type Init struct {
@@ -53,6 +57,16 @@ type Init struct {
 
 func (s *Init) Future(ctx context.Context, f flow.Flow) error {
 	return f.Migrate(ctx, s.Present)
+}
+
+func sendErrorMessage(ctx context.Context, sender bus.Sender, meta payload.Meta, err error) error {
+	repMsg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
+	if err != nil {
+		return err
+	}
+
+	go sender.Reply(ctx, meta, repMsg)
+	return nil
 }
 
 func (s *Init) Present(ctx context.Context, f flow.Flow) error {

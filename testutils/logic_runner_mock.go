@@ -28,8 +28,8 @@ type LogicRunnerMock struct {
 	beforeLRICounter uint64
 	LRIMock          mLogicRunnerMockLRI
 
-	funcOnPulse          func(ctx context.Context, p1 mm_insolar.Pulse) (err error)
-	inspectFuncOnPulse   func(ctx context.Context, p1 mm_insolar.Pulse)
+	funcOnPulse          func(ctx context.Context, p1 mm_insolar.Pulse, p2 mm_insolar.Pulse) (err error)
+	inspectFuncOnPulse   func(ctx context.Context, p1 mm_insolar.Pulse, p2 mm_insolar.Pulse)
 	afterOnPulseCounter  uint64
 	beforeOnPulseCounter uint64
 	OnPulseMock          mLogicRunnerMockOnPulse
@@ -425,6 +425,7 @@ type LogicRunnerMockOnPulseExpectation struct {
 type LogicRunnerMockOnPulseParams struct {
 	ctx context.Context
 	p1  mm_insolar.Pulse
+	p2  mm_insolar.Pulse
 }
 
 // LogicRunnerMockOnPulseResults contains results of the LogicRunner.OnPulse
@@ -433,7 +434,7 @@ type LogicRunnerMockOnPulseResults struct {
 }
 
 // Expect sets up expected params for LogicRunner.OnPulse
-func (mmOnPulse *mLogicRunnerMockOnPulse) Expect(ctx context.Context, p1 mm_insolar.Pulse) *mLogicRunnerMockOnPulse {
+func (mmOnPulse *mLogicRunnerMockOnPulse) Expect(ctx context.Context, p1 mm_insolar.Pulse, p2 mm_insolar.Pulse) *mLogicRunnerMockOnPulse {
 	if mmOnPulse.mock.funcOnPulse != nil {
 		mmOnPulse.mock.t.Fatalf("LogicRunnerMock.OnPulse mock is already set by Set")
 	}
@@ -442,7 +443,7 @@ func (mmOnPulse *mLogicRunnerMockOnPulse) Expect(ctx context.Context, p1 mm_inso
 		mmOnPulse.defaultExpectation = &LogicRunnerMockOnPulseExpectation{}
 	}
 
-	mmOnPulse.defaultExpectation.params = &LogicRunnerMockOnPulseParams{ctx, p1}
+	mmOnPulse.defaultExpectation.params = &LogicRunnerMockOnPulseParams{ctx, p1, p2}
 	for _, e := range mmOnPulse.expectations {
 		if minimock.Equal(e.params, mmOnPulse.defaultExpectation.params) {
 			mmOnPulse.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmOnPulse.defaultExpectation.params)
@@ -453,7 +454,7 @@ func (mmOnPulse *mLogicRunnerMockOnPulse) Expect(ctx context.Context, p1 mm_inso
 }
 
 // Inspect accepts an inspector function that has same arguments as the LogicRunner.OnPulse
-func (mmOnPulse *mLogicRunnerMockOnPulse) Inspect(f func(ctx context.Context, p1 mm_insolar.Pulse)) *mLogicRunnerMockOnPulse {
+func (mmOnPulse *mLogicRunnerMockOnPulse) Inspect(f func(ctx context.Context, p1 mm_insolar.Pulse, p2 mm_insolar.Pulse)) *mLogicRunnerMockOnPulse {
 	if mmOnPulse.mock.inspectFuncOnPulse != nil {
 		mmOnPulse.mock.t.Fatalf("Inspect function is already set for LogicRunnerMock.OnPulse")
 	}
@@ -477,7 +478,7 @@ func (mmOnPulse *mLogicRunnerMockOnPulse) Return(err error) *LogicRunnerMock {
 }
 
 //Set uses given function f to mock the LogicRunner.OnPulse method
-func (mmOnPulse *mLogicRunnerMockOnPulse) Set(f func(ctx context.Context, p1 mm_insolar.Pulse) (err error)) *LogicRunnerMock {
+func (mmOnPulse *mLogicRunnerMockOnPulse) Set(f func(ctx context.Context, p1 mm_insolar.Pulse, p2 mm_insolar.Pulse) (err error)) *LogicRunnerMock {
 	if mmOnPulse.defaultExpectation != nil {
 		mmOnPulse.mock.t.Fatalf("Default expectation is already set for the LogicRunner.OnPulse method")
 	}
@@ -492,14 +493,14 @@ func (mmOnPulse *mLogicRunnerMockOnPulse) Set(f func(ctx context.Context, p1 mm_
 
 // When sets expectation for the LogicRunner.OnPulse which will trigger the result defined by the following
 // Then helper
-func (mmOnPulse *mLogicRunnerMockOnPulse) When(ctx context.Context, p1 mm_insolar.Pulse) *LogicRunnerMockOnPulseExpectation {
+func (mmOnPulse *mLogicRunnerMockOnPulse) When(ctx context.Context, p1 mm_insolar.Pulse, p2 mm_insolar.Pulse) *LogicRunnerMockOnPulseExpectation {
 	if mmOnPulse.mock.funcOnPulse != nil {
 		mmOnPulse.mock.t.Fatalf("LogicRunnerMock.OnPulse mock is already set by Set")
 	}
 
 	expectation := &LogicRunnerMockOnPulseExpectation{
 		mock:   mmOnPulse.mock,
-		params: &LogicRunnerMockOnPulseParams{ctx, p1},
+		params: &LogicRunnerMockOnPulseParams{ctx, p1, p2},
 	}
 	mmOnPulse.expectations = append(mmOnPulse.expectations, expectation)
 	return expectation
@@ -512,15 +513,15 @@ func (e *LogicRunnerMockOnPulseExpectation) Then(err error) *LogicRunnerMock {
 }
 
 // OnPulse implements insolar.LogicRunner
-func (mmOnPulse *LogicRunnerMock) OnPulse(ctx context.Context, p1 mm_insolar.Pulse) (err error) {
+func (mmOnPulse *LogicRunnerMock) OnPulse(ctx context.Context, p1 mm_insolar.Pulse, p2 mm_insolar.Pulse) (err error) {
 	mm_atomic.AddUint64(&mmOnPulse.beforeOnPulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmOnPulse.afterOnPulseCounter, 1)
 
 	if mmOnPulse.inspectFuncOnPulse != nil {
-		mmOnPulse.inspectFuncOnPulse(ctx, p1)
+		mmOnPulse.inspectFuncOnPulse(ctx, p1, p2)
 	}
 
-	params := &LogicRunnerMockOnPulseParams{ctx, p1}
+	params := &LogicRunnerMockOnPulseParams{ctx, p1, p2}
 
 	// Record call args
 	mmOnPulse.OnPulseMock.mutex.Lock()
@@ -537,7 +538,7 @@ func (mmOnPulse *LogicRunnerMock) OnPulse(ctx context.Context, p1 mm_insolar.Pul
 	if mmOnPulse.OnPulseMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmOnPulse.OnPulseMock.defaultExpectation.Counter, 1)
 		want := mmOnPulse.OnPulseMock.defaultExpectation.params
-		got := LogicRunnerMockOnPulseParams{ctx, p1}
+		got := LogicRunnerMockOnPulseParams{ctx, p1, p2}
 		if want != nil && !minimock.Equal(*want, got) {
 			mmOnPulse.t.Errorf("LogicRunnerMock.OnPulse got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
@@ -549,9 +550,9 @@ func (mmOnPulse *LogicRunnerMock) OnPulse(ctx context.Context, p1 mm_insolar.Pul
 		return (*results).err
 	}
 	if mmOnPulse.funcOnPulse != nil {
-		return mmOnPulse.funcOnPulse(ctx, p1)
+		return mmOnPulse.funcOnPulse(ctx, p1, p2)
 	}
-	mmOnPulse.t.Fatalf("Unexpected call to LogicRunnerMock.OnPulse. %v %v", ctx, p1)
+	mmOnPulse.t.Fatalf("Unexpected call to LogicRunnerMock.OnPulse. %v %v %v", ctx, p1, p2)
 	return
 }
 
