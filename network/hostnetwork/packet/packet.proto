@@ -77,7 +77,6 @@ message CascadeRequest {
 
 message PulseRequest {
     pulse.PulseProto Pulse = 1;
-    bytes TraceSpanData = 2;
 }
 
 message BootstrapRequest {

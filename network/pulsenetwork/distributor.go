@@ -277,6 +277,6 @@ func NewPulsePacket(p *insolar.Pulse, pulsarHost, to *host.Host, id uint64) *pac
 
 func NewPulsePacketWithTrace(ctx context.Context, p *insolar.Pulse, pulsarHost, to *host.Host, id uint64) *packet.Packet {
 	pulsePacket := NewPulsePacket(p, pulsarHost, to, id)
-	pulsePacket.GetRequest().GetPulse().TraceSpanData = instracer.MustSerialize(ctx)
+	pulsePacket.TraceSpanData = instracer.MustSerialize(ctx)
 	return pulsePacket
 }

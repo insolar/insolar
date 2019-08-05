@@ -119,7 +119,7 @@ func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader
 			if err == nil {
 				packetCtx = instracer.WithParentSpan(packetCtx, span)
 			} else {
-				inslogger.FromContext(ctx).Warn("Incoming packet without span")
+				inslogger.FromContext(packetCtx).Warn("Incoming packet without span")
 			}
 			logger.Debugf("[ HandleStream ] Handling packet RequestID = %d", p.RequestID)
 
