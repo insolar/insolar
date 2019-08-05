@@ -53,6 +53,7 @@ package merkle
 import (
 	"context"
 	"crypto"
+	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
@@ -64,7 +65,7 @@ type stater interface {
 
 type calculator struct {
 	Stater                     stater                             `inject:""`
-	NodeNetwork                insolar.NodeNetwork                `inject:""`
+	OriginProvider             network.OriginProvider             `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 	CryptographyService        insolar.CryptographyService        `inject:""`
 
@@ -86,7 +87,7 @@ func (c *calculator) getStateHash(_ insolar.StaticRole) OriginHash {
 }
 
 func (c *calculator) GetPulseProof(entry *PulseEntry) (OriginHash, *PulseProof, error) {
-	role := c.NodeNetwork.GetOrigin().Role()
+	role := c.OriginProvider.GetOrigin().Role()
 	stateHash := c.getStateHash(role)
 
 	pulseHash := entry.hash(c.merkleHelper)

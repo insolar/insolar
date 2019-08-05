@@ -53,6 +53,9 @@ package merkle
 import (
 	"context"
 	"encoding/hex"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/node"
+	network2 "github.com/insolar/insolar/testutils/network"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -64,15 +67,19 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils"
-	"github.com/insolar/insolar/testutils/nodekeeper"
 )
+
+func createOrigin() insolar.NetworkNode {
+	ref, _ := insolar.NewReferenceFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
+	return node.NewNode(*ref, insolar.StaticRoleVirtual, nil, "127.0.0.1:5432", "")
+}
 
 type calculatorSuite struct {
 	suite.Suite
 
-	pulse       *insolar.Pulse
-	nodeNetwork insolar.NodeNetwork
-	service     insolar.CryptographyService
+	pulse          *insolar.Pulse
+	originProvider network.OriginProvider
+	service        insolar.CryptographyService
 
 	calculator Calculator
 }
@@ -102,7 +109,7 @@ func (t *calculatorSuite) TestGetGlobuleProof() {
 		PulseEntry: pulseEntry,
 		PulseHash:  ph,
 		ProofSet: map[insolar.NetworkNode]*PulseProof{
-			t.nodeNetwork.GetOrigin(): pp,
+			t.originProvider.GetOrigin(): pp,
 		},
 		PrevCloudHash: prevCloudHash,
 		GlobuleID:     0,
@@ -132,7 +139,7 @@ func (t *calculatorSuite) TestGetCloudProof() {
 		PulseEntry: pulseEntry,
 		PulseHash:  ph,
 		ProofSet: map[insolar.NetworkNode]*PulseProof{
-			t.nodeNetwork.GetOrigin(): pp,
+			t.originProvider.GetOrigin(): pp,
 		},
 		PrevCloudHash: prevCloudHash,
 		GlobuleID:     0,
@@ -167,7 +174,11 @@ func TestCalculator(t *testing.T) {
 
 	service := cryptography.NewKeyBoundCryptographyService(key)
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
-	nk := nodekeeper.GetTestNodekeeper(service)
+	op := network2.NewOriginProviderMock(t)
+	op.GetOriginMock.Set(func() insolar.NetworkNode {
+		return createOrigin()
+	})
+
 	th := testutils.NewTerminationHandlerMock(t)
 	am := staterMock{
 		stateFunc: func() []byte {
@@ -176,10 +187,10 @@ func TestCalculator(t *testing.T) {
 	}
 
 	cm := component.Manager{}
-	cm.Inject(th, nk, &am, calculator, service, scheme)
+	cm.Inject(th, op, &am, calculator, service, scheme)
 
 	require.NotNil(t, calculator.Stater)
-	require.NotNil(t, calculator.NodeNetwork)
+	require.NotNil(t, calculator.OriginProvider)
 	require.NotNil(t, calculator.CryptographyService)
 	require.NotNil(t, calculator.PlatformCryptographyScheme)
 
@@ -193,11 +204,11 @@ func TestCalculator(t *testing.T) {
 	}
 
 	s := &calculatorSuite{
-		Suite:       suite.Suite{},
-		calculator:  calculator,
-		pulse:       pulse,
-		nodeNetwork: nk,
-		service:     service,
+		Suite:          suite.Suite{},
+		calculator:     calculator,
+		pulse:          pulse,
+		originProvider: op,
+		service:        service,
 	}
 	suite.Run(t, s)
 }

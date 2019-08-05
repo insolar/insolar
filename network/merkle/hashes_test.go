@@ -55,6 +55,8 @@ import (
 	"crypto"
 	"encoding/hex"
 	"fmt"
+	"github.com/insolar/insolar/network"
+	network2 "github.com/insolar/insolar/testutils/network"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -65,7 +67,6 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils"
-	"github.com/insolar/insolar/testutils/nodekeeper"
 )
 
 func (t *calculatorHashesSuite) TestGetPulseHash() {
@@ -93,7 +94,7 @@ func (t *calculatorHashesSuite) TestGetGlobuleHash() {
 		PulseEntry: pulseEntry,
 		PulseHash:  ph,
 		ProofSet: map[insolar.NetworkNode]*PulseProof{
-			t.nodeNetwork.GetOrigin(): pp,
+			t.originProvider.GetOrigin(): pp,
 		},
 		PrevCloudHash: prevCloudHash,
 		GlobuleID:     0,
@@ -121,7 +122,7 @@ func (t *calculatorHashesSuite) TestGetCloudHash() {
 		PulseEntry: pulseEntry,
 		PulseHash:  ph,
 		ProofSet: map[insolar.NetworkNode]*PulseProof{
-			t.nodeNetwork.GetOrigin(): pp,
+			t.originProvider.GetOrigin(): pp,
 		},
 		PrevCloudHash: prevCloudHash,
 		GlobuleID:     0,
@@ -147,9 +148,9 @@ func (t *calculatorHashesSuite) TestGetCloudHash() {
 type calculatorHashesSuite struct {
 	suite.Suite
 
-	pulse       *insolar.Pulse
-	nodeNetwork insolar.NodeNetwork
-	service     insolar.CryptographyService
+	pulse          *insolar.Pulse
+	originProvider network.OriginProvider
+	service        insolar.CryptographyService
 
 	calculator Calculator
 }
@@ -175,14 +176,18 @@ func TestCalculatorHashes(t *testing.T) {
 		},
 	}
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
-	nk := nodekeeper.GetTestNodekeeper(service)
+	op := network2.NewOriginProviderMock(t)
+	op.GetOriginMock.Set(func() insolar.NetworkNode {
+		return createOrigin()
+	})
+
 	th := testutils.NewTerminationHandlerMock(t)
 
 	cm := component.Manager{}
-	cm.Inject(th, nk, &stater, calculator, service, scheme)
+	cm.Inject(th, op, &stater, calculator, service, scheme)
 
 	require.NotNil(t, calculator.Stater)
-	require.NotNil(t, calculator.NodeNetwork)
+	require.NotNil(t, calculator.OriginProvider)
 	require.NotNil(t, calculator.CryptographyService)
 	require.NotNil(t, calculator.PlatformCryptographyScheme)
 
@@ -196,11 +201,11 @@ func TestCalculatorHashes(t *testing.T) {
 	}
 
 	s := &calculatorHashesSuite{
-		Suite:       suite.Suite{},
-		calculator:  calculator,
-		pulse:       pulse,
-		nodeNetwork: nk,
-		service:     service,
+		Suite:          suite.Suite{},
+		calculator:     calculator,
+		pulse:          pulse,
+		originProvider: op,
+		service:        service,
 	}
 	suite.Run(t, s)
 }

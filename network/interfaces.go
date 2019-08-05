@@ -179,10 +179,6 @@ type PartitionPolicy interface {
 type RoutingTable interface {
 	// Resolve NodeID -> ShortID, Address. Can initiate network requests.
 	Resolve(insolar.Reference) (*host.Host, error)
-	// AddToKnownHosts add host to routing table.
-	AddToKnownHosts(*host.Host)
-	// Rebalance recreate shards of routing table with known hosts according to new partition policy.
-	Rebalance(PartitionPolicy)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network.Accessor -o ../testutils/network -s _mock.go -g

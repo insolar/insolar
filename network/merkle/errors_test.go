@@ -54,6 +54,8 @@ import (
 	"context"
 	"crypto"
 	"encoding/hex"
+	"github.com/insolar/insolar/network"
+	network2 "github.com/insolar/insolar/testutils/network"
 	"testing"
 
 	"github.com/insolar/insolar/insolar/jet"
@@ -67,15 +69,14 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils"
-	"github.com/insolar/insolar/testutils/nodekeeper"
 )
 
 type calculatorErrorSuite struct {
 	suite.Suite
 
-	pulse       *insolar.Pulse
-	nodeNetwork insolar.NodeNetwork
-	service     insolar.CryptographyService
+	pulse          *insolar.Pulse
+	originProvider network.OriginProvider
+	service        insolar.CryptographyService
 
 	calculator Calculator
 }
@@ -122,7 +123,7 @@ func (t *calculatorErrorSuite) TestGetGlobuleProofSignError() {
 		PulseEntry: pulseEntry,
 		PulseHash:  nil,
 		ProofSet: map[insolar.NetworkNode]*PulseProof{
-			t.nodeNetwork.GetOrigin(): {},
+			t.originProvider.GetOrigin(): {},
 		},
 		PrevCloudHash: prevCloudHash,
 		GlobuleID:     0,
@@ -180,7 +181,11 @@ func TestCalculatorError(t *testing.T) {
 
 	ps := pulse2.NewStorageMem()
 
-	nk := nodekeeper.GetTestNodekeeper(service)
+	op := network2.NewOriginProviderMock(t)
+	op.GetOriginMock.Set(func() insolar.NetworkNode {
+		return createOrigin()
+	})
+
 	th := testutils.NewTerminationHandlerMock(t)
 
 	am := staterMock{
@@ -190,10 +195,10 @@ func TestCalculatorError(t *testing.T) {
 	}
 	jc := jet.NewCoordinatorMock(t)
 
-	cm.Inject(th, nk, jc, &am, calculator, service, scheme, ps)
+	cm.Inject(th, op, jc, &am, calculator, service, scheme, ps)
 
 	require.NotNil(t, calculator.Stater)
-	require.NotNil(t, calculator.NodeNetwork)
+	require.NotNil(t, calculator.OriginProvider)
 	require.NotNil(t, calculator.CryptographyService)
 	require.NotNil(t, calculator.PlatformCryptographyScheme)
 
@@ -207,11 +212,11 @@ func TestCalculatorError(t *testing.T) {
 	}
 
 	s := &calculatorErrorSuite{
-		Suite:       suite.Suite{},
-		calculator:  calculator,
-		pulse:       pulse,
-		nodeNetwork: nk,
-		service:     service,
+		Suite:          suite.Suite{},
+		calculator:     calculator,
+		pulse:          pulse,
+		originProvider: op,
+		service:        service,
 	}
 	suite.Run(t, s)
 }
