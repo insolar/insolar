@@ -101,5 +101,5 @@ func TestMemberMigrationCreateWithSameBurnAddress(t *testing.T) {
 
 	_, err = retryableMemberMigrationCreate(member2, true)
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "failed to set reference in migration address shard: can't set reference because this key already exists")
+	require.Contains(t, err.Error(), "failed to set reference in migration address shard: can't set reference because this migration address already exists")
 }

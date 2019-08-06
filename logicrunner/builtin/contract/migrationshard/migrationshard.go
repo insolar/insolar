@@ -71,7 +71,7 @@ func (s MigrationShard) GetRef(key string) (string, error) {
 // SetRef sets ref with migration address as a key.
 func (s *MigrationShard) SetRef(ma string, ref string) error {
 	if _, ok := s.Map[ma]; ok {
-		return errors.New("can't set reference because this key already exists")
+		return errors.New("can't set reference because this migration address already exists")
 	}
 	s.Map[ma] = ref
 	return nil

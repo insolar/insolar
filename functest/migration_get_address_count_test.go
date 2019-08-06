@@ -29,35 +29,6 @@ import (
 )
 
 func TestMigrationGetAddressCount(t *testing.T) {
-	ma := "1"
-	_, err := signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ma}})
-	require.NoError(t, err)
-
-	member := createMember(t)
-
-	result, err := signedRequest(member, "migration.getAddressCount", nil)
-	require.NoError(t, err)
-	output, ok := result.(map[string]interface{})
-	require.True(t, ok)
-	shardCounts, ok := output["shardCounts"].([]interface{})
-	require.True(t, ok)
-	require.Equal(t, float64(1), shardCounts[4])
-
-	m1, err := newUserWithKeys()
-	require.NoError(t, err)
-	_, err = retryableMemberMigrationCreate(m1, true)
-	require.NoError(t, err)
-
-	result, err = signedRequest(member, "migration.getAddressCount", nil)
-	require.NoError(t, err)
-	output, ok = result.(map[string]interface{})
-	require.True(t, ok)
-	shardCounts, ok = output["shardCounts"].([]interface{})
-	require.True(t, ok)
-	require.Equal(t, float64(0), shardCounts[4])
-}
-
-func TestMigrationGetAddressCountWithManyAddresses(t *testing.T) {
 	const maCount = 10
 	maList := [maCount]string{}
 	maAmountList := [insolar.GenesisAmountMigrationAddressShards]int{}
