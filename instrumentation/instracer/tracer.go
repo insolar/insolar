@@ -198,5 +198,5 @@ func ShouldRegisterJaeger(
 // AddError add error info to span and mark span as errored
 func AddError(s *trace.Span, err error) {
 	s.AddAttributes(trace.BoolAttribute("error", true))
-	s.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
+	s.Annotate(nil, err.Error())
 }

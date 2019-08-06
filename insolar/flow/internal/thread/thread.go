@@ -19,9 +19,6 @@ package thread
 import (
 	"context"
 	"fmt"
-	"reflect"
-	"runtime"
-	"strings"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -55,19 +52,7 @@ func NewThread(msg *message.Message, controller *Controller) *Thread {
 }
 
 func (f *Thread) Handle(ctx context.Context, handle flow.Handle) error {
-	handleName := runtime.FuncForPC(reflect.ValueOf(handle).Pointer()).Name()
-	handleName = strings.Replace(handleName, "github.com/insolar/insolar/", "", 1)
-	ctx, span := instracer.StartSpan(ctx, handleName)
-	span.AddAttributes(
-		trace.StringAttribute("type", "flow_handler"),
-	)
-	defer span.End()
-
-	err := handle(ctx, f)
-	if err != nil {
-		instracer.AddError(span, err)
-	}
-	return err
+	return handle(ctx, f)
 }
 
 func (f *Thread) Procedure(ctx context.Context, proc flow.Procedure, cancel bool) error {
@@ -75,7 +60,15 @@ func (f *Thread) Procedure(ctx context.Context, proc flow.Procedure, cancel bool
 		panic("procedure called with nil procedure")
 	}
 
-	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("%T", proc))
+	var spanName string
+	procStringer, ok := proc.(fmt.Stringer)
+	if ok {
+		spanName = procStringer.String()
+	} else {
+		spanName = fmt.Sprintf("%T", proc)
+	}
+
+	ctx, span := instracer.StartSpan(ctx, spanName)
 	span.AddAttributes(
 		trace.StringAttribute("type", "flow_proc"),
 	)
