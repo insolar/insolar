@@ -147,6 +147,10 @@ func (d *distributor) Start(ctx context.Context) error {
 	return nil
 }
 
+func (d *distributor) Stop(ctx context.Context) error {
+	return d.transport.Stop(ctx)
+}
+
 // Distribute starts a fire-and-forget process of pulse distribution to bootstrap hosts
 func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 	logger := inslogger.FromContext(ctx)

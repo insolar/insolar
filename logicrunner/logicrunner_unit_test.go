@@ -113,8 +113,8 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 }
 
 func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
-	suite.mc.Wait(2 * time.Second)
-	//suite.mc.Finish()
+	suite.mc.Wait(2 * time.Minute)
+	suite.mc.Finish()
 
 	// LogicRunner created a number of goroutines (in watermill, for example)
 	// that weren't shut down in case no Stop was called
@@ -204,7 +204,8 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 	var usedReturnMode record.ReturnMode
 
 	cr := testutils.NewContractRequesterMock(suite.T())
-	cr.CallMethodMock.Set(func(ctx context.Context, msg insolar.Message) (insolar.Reply, error) {
+
+	cr.CallMock.Set(func(ctx context.Context, msg insolar.Message) (insolar.Reply, error) {
 		suite.Require().Equal(insolar.TypeCallMethod, msg.Type())
 		cm := msg.(*message.CallMethod)
 		usedCaller = cm.Caller
@@ -474,7 +475,7 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 			err := lr.OnPulse(ctx, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 1})
 			require.NoError(t, err)
 
-			mc.Wait(3 * time.Second)
+			mc.Wait(3 * time.Minute)
 			mc.Finish()
 		})
 	}

@@ -16,7 +16,7 @@ import (
 type MachineLogicExecutorMock struct {
 	t minimock.Tester
 
-	funcCallConstructor          func(ctx context.Context, callContext *mm_insolar.LogicCallContext, code mm_insolar.Reference, name string, args mm_insolar.Arguments) (objectState []byte, ctorErr string, err error)
+	funcCallConstructor          func(ctx context.Context, callContext *mm_insolar.LogicCallContext, code mm_insolar.Reference, name string, args mm_insolar.Arguments) (objectState []byte, result mm_insolar.Arguments, err error)
 	inspectFuncCallConstructor   func(ctx context.Context, callContext *mm_insolar.LogicCallContext, code mm_insolar.Reference, name string, args mm_insolar.Arguments)
 	afterCallConstructorCounter  uint64
 	beforeCallConstructorCounter uint64
@@ -74,7 +74,7 @@ type MachineLogicExecutorMockCallConstructorParams struct {
 // MachineLogicExecutorMockCallConstructorResults contains results of the MachineLogicExecutor.CallConstructor
 type MachineLogicExecutorMockCallConstructorResults struct {
 	objectState []byte
-	ctorErr     string
+	result      mm_insolar.Arguments
 	err         error
 }
 
@@ -110,7 +110,7 @@ func (mmCallConstructor *mMachineLogicExecutorMockCallConstructor) Inspect(f fun
 }
 
 // Return sets up results that will be returned by MachineLogicExecutor.CallConstructor
-func (mmCallConstructor *mMachineLogicExecutorMockCallConstructor) Return(objectState []byte, ctorErr string, err error) *MachineLogicExecutorMock {
+func (mmCallConstructor *mMachineLogicExecutorMockCallConstructor) Return(objectState []byte, result mm_insolar.Arguments, err error) *MachineLogicExecutorMock {
 	if mmCallConstructor.mock.funcCallConstructor != nil {
 		mmCallConstructor.mock.t.Fatalf("MachineLogicExecutorMock.CallConstructor mock is already set by Set")
 	}
@@ -118,12 +118,12 @@ func (mmCallConstructor *mMachineLogicExecutorMockCallConstructor) Return(object
 	if mmCallConstructor.defaultExpectation == nil {
 		mmCallConstructor.defaultExpectation = &MachineLogicExecutorMockCallConstructorExpectation{mock: mmCallConstructor.mock}
 	}
-	mmCallConstructor.defaultExpectation.results = &MachineLogicExecutorMockCallConstructorResults{objectState, ctorErr, err}
+	mmCallConstructor.defaultExpectation.results = &MachineLogicExecutorMockCallConstructorResults{objectState, result, err}
 	return mmCallConstructor.mock
 }
 
 //Set uses given function f to mock the MachineLogicExecutor.CallConstructor method
-func (mmCallConstructor *mMachineLogicExecutorMockCallConstructor) Set(f func(ctx context.Context, callContext *mm_insolar.LogicCallContext, code mm_insolar.Reference, name string, args mm_insolar.Arguments) (objectState []byte, ctorErr string, err error)) *MachineLogicExecutorMock {
+func (mmCallConstructor *mMachineLogicExecutorMockCallConstructor) Set(f func(ctx context.Context, callContext *mm_insolar.LogicCallContext, code mm_insolar.Reference, name string, args mm_insolar.Arguments) (objectState []byte, result mm_insolar.Arguments, err error)) *MachineLogicExecutorMock {
 	if mmCallConstructor.defaultExpectation != nil {
 		mmCallConstructor.mock.t.Fatalf("Default expectation is already set for the MachineLogicExecutor.CallConstructor method")
 	}
@@ -152,13 +152,13 @@ func (mmCallConstructor *mMachineLogicExecutorMockCallConstructor) When(ctx cont
 }
 
 // Then sets up MachineLogicExecutor.CallConstructor return parameters for the expectation previously defined by the When method
-func (e *MachineLogicExecutorMockCallConstructorExpectation) Then(objectState []byte, ctorErr string, err error) *MachineLogicExecutorMock {
-	e.results = &MachineLogicExecutorMockCallConstructorResults{objectState, ctorErr, err}
+func (e *MachineLogicExecutorMockCallConstructorExpectation) Then(objectState []byte, result mm_insolar.Arguments, err error) *MachineLogicExecutorMock {
+	e.results = &MachineLogicExecutorMockCallConstructorResults{objectState, result, err}
 	return e.mock
 }
 
 // CallConstructor implements insolar.MachineLogicExecutor
-func (mmCallConstructor *MachineLogicExecutorMock) CallConstructor(ctx context.Context, callContext *mm_insolar.LogicCallContext, code mm_insolar.Reference, name string, args mm_insolar.Arguments) (objectState []byte, ctorErr string, err error) {
+func (mmCallConstructor *MachineLogicExecutorMock) CallConstructor(ctx context.Context, callContext *mm_insolar.LogicCallContext, code mm_insolar.Reference, name string, args mm_insolar.Arguments) (objectState []byte, result mm_insolar.Arguments, err error) {
 	mm_atomic.AddUint64(&mmCallConstructor.beforeCallConstructorCounter, 1)
 	defer mm_atomic.AddUint64(&mmCallConstructor.afterCallConstructorCounter, 1)
 
@@ -176,7 +176,7 @@ func (mmCallConstructor *MachineLogicExecutorMock) CallConstructor(ctx context.C
 	for _, e := range mmCallConstructor.CallConstructorMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.objectState, e.results.ctorErr, e.results.err
+			return e.results.objectState, e.results.result, e.results.err
 		}
 	}
 
@@ -192,7 +192,7 @@ func (mmCallConstructor *MachineLogicExecutorMock) CallConstructor(ctx context.C
 		if results == nil {
 			mmCallConstructor.t.Fatal("No results are set for the MachineLogicExecutorMock.CallConstructor")
 		}
-		return (*results).objectState, (*results).ctorErr, (*results).err
+		return (*results).objectState, (*results).result, (*results).err
 	}
 	if mmCallConstructor.funcCallConstructor != nil {
 		return mmCallConstructor.funcCallConstructor(ctx, callContext, code, name, args)

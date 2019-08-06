@@ -14,7 +14,7 @@
 // limitations under the License.
 ///
 
-package shard
+package pkshard
 
 import (
 	"github.com/pkg/errors"
@@ -22,21 +22,21 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
-// Shard - basic shard contract.
-type Shard struct {
+// PKShard - shard contract for public keys.
+type PKShard struct {
 	foundation.BaseContract
 	Map foundation.StableMap
 }
 
 // New creates new member.
-func New() (*Shard, error) {
-	return &Shard{
-		Map: map[string]string{},
+func New() (*PKShard, error) {
+	return &PKShard{
+		Map: make(foundation.StableMap),
 	}, nil
 }
 
 // GetRef gets ref by key.
-func (s *Shard) GetRef(key string) (string, error) {
+func (s PKShard) GetRef(key string) (string, error) {
 	if ref, ok := s.Map[key]; !ok {
 		return "", errors.New("failed to find reference by key")
 	} else {
@@ -44,8 +44,8 @@ func (s *Shard) GetRef(key string) (string, error) {
 	}
 }
 
-// SetRef sets ref by key.
-func (s *Shard) SetRef(key string, ref string) error {
+// SetRef sets reference with public key as a key.
+func (s *PKShard) SetRef(key string, ref string) error {
 	if _, ok := s.Map[key]; ok {
 		return errors.New("can't set reference because this key already exists")
 	}

@@ -20,21 +20,49 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/costcenter"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/deposit"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/shard"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationshard"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/nodedomain"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/noderecord"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/pkshard"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 	"github.com/insolar/insolar/platformpolicy"
 )
 
+const (
+	GenesisPrototypeSuffix = "_proto"
+)
+
+var predefinedPrototypes = map[string]insolar.Reference{
+	insolar.GenesisNameRootDomain + GenesisPrototypeSuffix:           *rootdomain.PrototypeReference,
+	insolar.GenesisNameNodeDomain + GenesisPrototypeSuffix:           *nodedomain.PrototypeReference,
+	insolar.GenesisNameNodeRecord + GenesisPrototypeSuffix:           *noderecord.PrototypeReference,
+	insolar.GenesisNameRootMember + GenesisPrototypeSuffix:           *member.PrototypeReference,
+	insolar.GenesisNameRootWallet + GenesisPrototypeSuffix:           *wallet.PrototypeReference,
+	insolar.GenesisNameCostCenter + GenesisPrototypeSuffix:           *costcenter.PrototypeReference,
+	insolar.GenesisNamePKShard + GenesisPrototypeSuffix:              *pkshard.PrototypeReference,
+	insolar.GenesisNameMigrationShard + GenesisPrototypeSuffix:       *migrationshard.PrototypeReference,
+	insolar.GenesisNameFeeWallet + GenesisPrototypeSuffix:            *wallet.PrototypeReference,
+	insolar.GenesisNameDeposit + GenesisPrototypeSuffix:              *deposit.PrototypeReference,
+	insolar.GenesisNameMember + GenesisPrototypeSuffix:               *member.PrototypeReference,
+	insolar.GenesisNameMigrationAdminMember + GenesisPrototypeSuffix: *member.PrototypeReference,
+	insolar.GenesisNameMigrationWallet + GenesisPrototypeSuffix:      *wallet.PrototypeReference,
+	insolar.GenesisNameWallet + GenesisPrototypeSuffix:               *wallet.PrototypeReference,
+}
+
 func init() {
 	for _, el := range insolar.GenesisNameMigrationDaemonMembers {
-		genesisrefs.PredefinedPrototypes[el+genesisrefs.GenesisPrototypeSuffix] = *member.PrototypeReference
+		predefinedPrototypes[el+GenesisPrototypeSuffix] = *member.PrototypeReference
 	}
 
 	for _, el := range insolar.GenesisNamePublicKeyShards {
-		genesisrefs.PredefinedPrototypes[el+genesisrefs.GenesisPrototypeSuffix] = *shard.PrototypeReference
+		predefinedPrototypes[el+GenesisPrototypeSuffix] = *pkshard.PrototypeReference
 	}
 	for _, el := range insolar.GenesisNameMigrationAddressShards {
-		genesisrefs.PredefinedPrototypes[el+genesisrefs.GenesisPrototypeSuffix] = *shard.PrototypeReference
+		predefinedPrototypes[el+GenesisPrototypeSuffix] = *migrationshard.PrototypeReference
 	}
 }
 
@@ -64,4 +92,20 @@ func (r Record) ID() insolar.ID {
 	virtRec := record.Wrap(&req)
 	hash := record.HashVirtual(r.PCS.ReferenceHasher(), virtRec)
 	return *insolar.NewID(genesisPulse, hash)
+}
+
+// GenesisRef returns reference to any genesis records based on the root domain.
+func GenesisRef(name string) insolar.Reference {
+	if ref, ok := predefinedPrototypes[name]; ok {
+		return ref
+	}
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
+	req := record.IncomingRequest{
+		CallType: record.CTGenesis,
+		Method:   name,
+	}
+	virtRec := record.Wrap(&req)
+	hash := record.HashVirtual(pcs.ReferenceHasher(), virtRec)
+	id := insolar.NewID(insolar.FirstPulseNumber, hash)
+	return *insolar.NewReference(*id)
 }

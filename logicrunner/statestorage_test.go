@@ -54,7 +54,7 @@ func (s *StateStorageSuite) TestOnPulse() {
 	jc := jet.NewCoordinatorMock(mc).
 		IsMeAuthorizedNowMock.Return(false, nil)
 
-	ss := NewStateStorage(nil, nil, nil, jc, nil, nil)
+	ss := NewStateStorage(nil, nil, nil, jc, nil, nil, nil)
 	rawStateStorage := ss.(*stateStorage)
 
 	{ // empty state storage

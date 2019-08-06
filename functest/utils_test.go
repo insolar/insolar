@@ -30,6 +30,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar"
@@ -442,17 +443,19 @@ func callConstructor(t testing.TB, prototypeRef *insolar.Reference, method strin
 	require.NotEmpty(t, objectBody)
 
 	callConstructorRes := struct {
-		Version string                   `json:"jsonrpc"`
-		ID      string                   `json:"id"`
-		Result  api.CallConstructorReply `json:"result"`
-		Error   json2.Error              `json:"error"`
+		Version string              `json:"jsonrpc"`
+		ID      string              `json:"id"`
+		Result  api.CallMethodReply `json:"result"`
+		Error   json2.Error         `json:"error"`
 	}{}
 
 	err = json.Unmarshal(objectBody, &callConstructorRes)
 	require.NoError(t, err)
 	require.Empty(t, callConstructorRes.Error)
 
-	objectRef, err := insolar.NewReferenceFromBase58(callConstructorRes.Result.ObjectRef)
+	require.NotEmpty(t, callConstructorRes.Result.Object)
+
+	objectRef, err := insolar.NewReferenceFromBase58(callConstructorRes.Result.Object)
 	require.NoError(t, err)
 
 	require.NotEqual(t, insolar.Reference{}.FromSlice(make([]byte, insolar.RecordRefSize)), objectRef)
@@ -508,4 +511,40 @@ func callMethodNoChecks(t testing.TB, objectRef *insolar.Reference, method strin
 	require.NoError(t, err)
 
 	return callRes
+}
+
+func waitUntilRequestProcessed(
+	customFunction func() api.CallMethodReply,
+	functionTimeout time.Duration,
+	timeoutBetweenAttempts time.Duration,
+	attempts int) (*api.CallMethodReply, error) {
+
+	var lastErr error
+	for i := 0; i < attempts; i++ {
+		reply, err := waitForFunction(customFunction, functionTimeout)
+		if err == nil {
+			return reply, nil
+		}
+		lastErr = err
+		time.Sleep(timeoutBetweenAttempts)
+	}
+	return nil, errors.New("Timeout was exceeded. " + lastErr.Error())
+}
+
+func waitForFunction(customFunction func() api.CallMethodReply, functionTimeout time.Duration) (*api.CallMethodReply, error) {
+	ch := make(chan api.CallMethodReply, 1)
+	defer close(ch)
+	go func() {
+		ch <- customFunction()
+	}()
+
+	timer := time.NewTimer(functionTimeout)
+	defer timer.Stop()
+
+	select {
+	case result := <-ch:
+		return &result, nil
+	case <-timer.C:
+		return nil, errors.New("timeout was exceeded")
+	}
 }
