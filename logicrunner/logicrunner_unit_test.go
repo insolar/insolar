@@ -168,8 +168,9 @@ func getReply(suite *LogicRunnerTestSuite, replyChan chan *message2.Message) (in
 
 func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 	outgoing := record.OutgoingRequest{
-		Caller: gen.Reference(),
-		Reason: gen.Reference(),
+		Caller:     gen.Reference(),
+		Reason:     gen.Reference(),
+		ReturnMode: record.ReturnSaga,
 	}
 	virtual := record.Wrap(&outgoing)
 	outgoingBytes, err := virtual.Marshal()
