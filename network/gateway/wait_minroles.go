@@ -52,7 +52,6 @@ package gateway
 
 import (
 	"context"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
@@ -78,6 +77,5 @@ func (g *WaitMinRoles) GetState() insolar.NetworkState {
 }
 
 func (g *WaitMinRoles) OnConsensusFinished(ctx context.Context, report network.Report) {
-	inslogger.FromContext(ctx).Infof("--- Check minroles for pulse %d", report.PulseNumber)
 	g.Run(ctx)
 }

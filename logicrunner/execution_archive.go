@@ -102,10 +102,6 @@ func (ea *executionArchive) Done(transcript *Transcript) bool {
 
 // constructs all StillExecuting messages
 func (ea *executionArchive) OnPulse(_ context.Context) []insolar.Message {
-	if ea == nil {
-		return nil
-	}
-
 	ea.archiveLock.Lock()
 	defer ea.archiveLock.Unlock()
 

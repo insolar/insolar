@@ -42,10 +42,10 @@ type RequestsExecutor interface {
 }
 
 type requestsExecutor struct {
-	MessageBus      insolar.MessageBus  `inject:""`
-	LogicExecutor   LogicExecutor       `inject:""`
-	ArtifactManager artifacts.Client    `inject:""`
-	PulseAccessor   pulse.Accessor      `inject:""`
+	MessageBus      insolar.MessageBus `inject:""`
+	LogicExecutor   LogicExecutor      `inject:""`
+	ArtifactManager artifacts.Client   `inject:""`
+	PulseAccessor   pulse.Accessor     `inject:""`
 }
 
 func NewRequestsExecutor() RequestsExecutor {
@@ -108,20 +108,13 @@ func (e *requestsExecutor) Save(
 ) {
 	inslogger.FromContext(ctx).Debug("Saving result")
 
-	if err := e.ArtifactManager.RegisterResult(ctx, transcript.RequestRef, res); err != nil {
+	err := e.ArtifactManager.RegisterResult(ctx, transcript.RequestRef, res)
+	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't save result with %s side effect", res.Type().String())
 	}
 
-	switch {
-	case res.Type() == artifacts.RequestSideEffectActivate:
-		// Constructor called successfully
-		return &reply.CallConstructor{Object: &transcript.RequestRef}, nil
-	case res.Type() == artifacts.RequestSideEffectNone && res.ConstructorError() != "":
-		// Constructor returned an error
-		return &reply.CallConstructor{ConstructorError: res.ConstructorError()}, nil
-	default:
-		return &reply.CallMethod{Result: res.Result()}, nil
-	}
+	objRef := res.ObjectReference()
+	return &reply.CallMethod{Result: res.Result(), Object: &objRef}, nil
 }
 
 func (e *requestsExecutor) SendReply(

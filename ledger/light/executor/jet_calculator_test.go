@@ -56,7 +56,8 @@ func TestJetCalculator_New(t *testing.T) {
 	})
 
 	t.Run("empty_case", func(t *testing.T) {
-		jets := jetCalculator.MineForPulse(ctx, pn)
+		jets, err := jetCalculator.MineForPulse(ctx, pn)
+		require.NoError(t, err)
 		require.Nil(t, jets, "MineForPulse returns empty set of jets")
 	})
 
@@ -64,7 +65,8 @@ func TestJetCalculator_New(t *testing.T) {
 		allJets = []insolar.JetID{
 			gen.JetID(),
 		}
-		jets := jetCalculator.MineForPulse(ctx, pn)
+		jets, err := jetCalculator.MineForPulse(ctx, pn)
+		require.NoError(t, err)
 		require.NotNil(t, jets, "MineForPulse returns not empty set of jets")
 		require.Equal(t, len(allJets), len(jets), "MineForPulse compare return values count")
 		require.Equal(t, allJets, jets, "MineForPulse compare return values")
@@ -76,19 +78,19 @@ func TestJetCalculator_New(t *testing.T) {
 			jet.NewIDFromString("01"),
 			jet.NewIDFromString("011"),
 		}
-		jets := jetCalculator.MineForPulse(ctx, pn)
+		jets, err := jetCalculator.MineForPulse(ctx, pn)
+		require.NoError(t, err)
 		require.NotNil(t, jets, "MineForPulse returns not empty set of jets")
 		require.Equal(t, len(allJets), len(jets), "MineForPulse compare return values count")
 		require.Equal(t, allJets, jets, "MineForPulse compare return values")
 	})
 
-	t.Run("multiple_skip_one", func(t *testing.T) {
+	t.Run("no nodes returns error", func(t *testing.T) {
 		allJets = []insolar.JetID{
 			jet.NewIDFromString("0"),
 			jet.NewIDFromString("01"),
 			jet.NewIDFromString("011"),
 		}
-		expectJets := []insolar.JetID{allJets[0], allJets[2]}
 
 		jc.LightExecutorForJetMock.Set(func(_ context.Context, jetID insolar.ID, p insolar.PulseNumber) (r *insolar.Reference, r1 error) {
 			if p != pn {
@@ -99,11 +101,7 @@ func TestJetCalculator_New(t *testing.T) {
 			}
 			return &me, nil
 		})
-		jets := jetCalculator.MineForPulse(ctx, pn)
-
-		require.NotNil(t, jets, "MineForPulse returns not empty set of jets")
-		require.Equal(t, len(expectJets), len(jets), "MineForPulse compare return values count")
-		require.Equal(t, expectJets, jets, "MineForPulse compare return values")
+		_, err := jetCalculator.MineForPulse(ctx, pn)
+		require.Error(t, err)
 	})
-
 }

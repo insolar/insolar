@@ -439,6 +439,8 @@ func (r *FullRealm) CommitAndPreparePulseChange() (bool, <-chan api.UpstreamStat
 		//IsEphemeral: false,
 	}
 
+	inslogger.FromContext(r.roundContext).Warnf("CommitAndPreparePulseChange: self=%s", r.self)
+
 	if r.IsLocalStateful() {
 		r.stateMachine.CommitPulseChange(report, r.pulseData, r.census)
 		ch := make(chan api.UpstreamState, 1)

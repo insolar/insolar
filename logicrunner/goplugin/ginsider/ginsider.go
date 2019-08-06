@@ -29,6 +29,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
@@ -36,7 +38,6 @@ import (
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/insolar/insolar/metrics"
-	"github.com/pkg/errors"
 )
 
 type pluginRec struct {
@@ -137,10 +138,10 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 	}
 
 	state, result, err := wrapper(args.Data, args.Arguments) // may be entire args???
-
 	if err != nil {
 		return errors.Wrapf(err, "Method call returned error")
 	}
+
 	reply.Data = state
 	reply.Ret = result
 
@@ -151,39 +152,37 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 
 // CallConstructor is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
-func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpctypes.DownCallConstructorResp) (sysErr error) {
+func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpctypes.DownCallConstructorResp) (err error) {
 	metrics.InsgorundCallsTotal.Inc()
 	ctx := inslogger.ContextWithTrace(context.Background(), args.Context.TraceID)
 	inslogger.FromContext(ctx).Debugf("Calling constructor %q in code %q", args.Name, args.Code)
-	defer recoverRPC(ctx, &sysErr)
+	defer recoverRPC(ctx, &err)
 
 	foundation.SetLogicalContext(args.Context)
 	defer foundation.ClearContext()
 
-	p, sysErr := t.GI.Plugin(ctx, args.Code)
-	if sysErr != nil {
-		return sysErr
+	p, err := t.GI.Plugin(ctx, args.Code)
+	if err != nil {
+		return err
 	}
 
-	symbol, sysErr := p.Lookup("INSCONSTRUCTOR_" + args.Name)
-	if sysErr != nil {
-		return errors.Wrapf(sysErr, "Can't find wrapper for %s", args.Name)
+	symbol, err := p.Lookup("INSCONSTRUCTOR_" + args.Name)
+	if err != nil {
+		return errors.Wrapf(err, "Can't find wrapper for %s", args.Name)
 	}
 
-	f, ok := symbol.(func(data []byte) ([]byte, error, error))
+	f, ok := symbol.(func(data []byte) ([]byte, []byte, error))
 	if !ok {
 		return errors.New("Wrapper with wrong signature")
 	}
 
-	resValues, ctorErr, sysErr := f(args.Arguments)
-	if sysErr != nil {
-		return errors.Wrapf(sysErr, "Can't call constructor %s", args.Name)
+	state, result, err := f(args.Arguments)
+	if err != nil {
+		return errors.Wrapf(err, "Can't call constructor %s", args.Name)
 	}
 
-	reply.Ret = resValues
-	if ctorErr != nil {
-		reply.ConstructorError = ctorErr.Error()
-	}
+	reply.Data = state
+	reply.Ret = result
 
 	return nil
 }
@@ -335,13 +334,17 @@ func (gi *GoInsider) RouteCall(ref insolar.Reference, wait bool, immutable bool,
 }
 
 // SaveAsChild ...
-func (gi *GoInsider) SaveAsChild(parentRef, classRef insolar.Reference, constructorName string, argsSerialized []byte) (insolar.Reference, error) {
+func (gi *GoInsider) SaveAsChild(
+	parentRef, classRef insolar.Reference, constructorName string, argsSerialized []byte,
+) (
+	*insolar.Reference, []byte, error,
+) {
 	client, err := gi.Upstream()
 	if err != nil {
-		return insolar.Reference{}, err
+		return nil, nil, err
 	}
 	if gi.GetSystemError() != nil {
-		return insolar.Reference{}, gi.GetSystemError()
+		return nil, nil, gi.GetSystemError()
 	}
 
 	req := rpctypes.UpSaveAsChildReq{
@@ -360,23 +363,10 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef insolar.Reference, construc
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return insolar.Reference{}, errors.Wrap(err, "[ SaveAsChild ] on calling main API")
+		return nil, nil, errors.Wrap(err, "[ SaveAsChild ] on calling main API")
 	}
 
-	// return logical error to the calling contract, don't register system error
-	if res.ConstructorError != "" {
-		return insolar.Reference{}, errors.New("[Constructor failed] " + res.ConstructorError)
-	}
-
-	if res.Reference == nil {
-		// this should never happen, but if it will it's better to return a readable
-		// error than dereference a nil pointer
-		err = errors.New("[ SaveAsChild ] system error - res.Reference is nil")
-		gi.SetSystemError(err)
-		return insolar.Reference{}, err
-	}
-
-	return *res.Reference, nil
+	return res.Reference, res.Result, nil
 }
 
 // DeactivateObject ...

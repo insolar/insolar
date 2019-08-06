@@ -53,11 +53,12 @@ package core
 import (
 	"context"
 	"fmt"
+	"sync"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
-	"sync"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
@@ -248,7 +249,7 @@ func (p *PrepRealm) pushEphemeralPulse(ctx context.Context) bool {
 	}
 
 	pde := p.ephemeralFeeder.CreateEphemeralPulsePacket(p.initialCensus)
-	ok, pn := p._applyPulseData(pde, false)
+	ok, pn := p._applyPulseData(ctx, pde, false)
 	if !ok && pn != pde.GetPulseNumber() {
 		inslogger.FromContext(ctx).Error("active ephemeral start has failed, going to passive")
 	}
@@ -280,7 +281,7 @@ func (p *PrepRealm) GetMandateRegistry() census.MandateRegistry {
 	return p.initialCensus.GetMandateRegistry()
 }
 
-func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bool, from endpoints.Inbound) error {
+func (p *PrepRealm) ApplyPulseData(ctx context.Context, pp transport.PulsePacketReader, fromPulsar bool, from endpoints.Inbound) error {
 
 	pde := pp.GetPulseDataEvidence()
 	pd := pp.GetPulseData()
@@ -295,7 +296,7 @@ func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bo
 	p.Lock()
 	defer p.Unlock()
 
-	ok, epn := p._applyPulseData(pde, fromPulsar)
+	ok, epn := p._applyPulseData(ctx, pde, fromPulsar)
 	if ok || !epn.IsUnknown() && epn == pn {
 		return nil
 	}
@@ -306,7 +307,7 @@ func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bo
 	return errors.NewPulseRoundMismatchErrorDef(pn, epn, localID, from)
 }
 
-func (p *PrepRealm) _applyPulseData(pdp proofs.OriginalPulsarPacket, fromPulsar bool) (bool, pulse.Number) {
+func (p *PrepRealm) _applyPulseData(ctx context.Context, pdp proofs.OriginalPulsarPacket, fromPulsar bool) (bool, pulse.Number) {
 
 	pd := pdp.GetPulseData()
 

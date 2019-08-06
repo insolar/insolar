@@ -57,6 +57,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/pkg/errors"
 
@@ -146,9 +147,9 @@ func (tp *testPulsar) Continue() {
 
 func (tp *testPulsar) distribute(ctx context.Context) {
 	timeNow := time.Now()
-	pulseNumber := insolar.CalculatePulseNumber(timeNow)
+	pulseNumber := insolar.PulseNumber(pulse.OfTime(timeNow))
 
-	pulse := insolar.Pulse{
+	pls := insolar.Pulse{
 		PulseNumber:      pulseNumber,
 		Entropy:          tp.generator.GenerateEntropy(),
 		NextPulseNumber:  pulseNumber + insolar.PulseNumber(tp.pulseDelta),
@@ -158,7 +159,7 @@ func (tp *testPulsar) distribute(ctx context.Context) {
 	}
 
 	var err error
-	pulse.Signs, err = getPSC(pulse)
+	pls.Signs, err = getPSC(pls)
 	if err != nil {
 		log.Errorf("[ distribute ]", err)
 	}
@@ -173,9 +174,9 @@ func (tp *testPulsar) distribute(ctx context.Context) {
 				pulse.PulseTimestamp = time.Now().UnixNano()
 
 				tp.distributor.Distribute(ctx, pulse)
-			}(pulse)
+			}(pls)
 
-			pulse = tp.incrementPulse(pulse)
+			pls = tp.incrementPulse(pls)
 		case <-tp.cancellationToken:
 			return
 		}

@@ -209,11 +209,11 @@ func (g *Complete) UpdateState(ctx context.Context, pulseNumber insolar.PulseNum
 	logger := inslogger.FromContext(ctx)
 
 	if ok, _ := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), nodes); !ok {
-		logger.Fatal("CheckMajorityRule() failed")
+		logger.Fatal("MajorityRule failed")
 	}
 
 	if !rules.CheckMinRole(g.CertificateManager.GetCertificate(), nodes) {
-		logger.Fatal("CheckMinRole() failed")
+		logger.Fatal("MinRole failed")
 	}
 
 	g.Base.UpdateState(ctx, pulseNumber, nodes, cloudStateHash)

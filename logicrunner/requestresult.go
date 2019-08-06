@@ -57,16 +57,6 @@ func (s *requestResult) Deactivate() insolar.ID {
 	return s.objectStateID
 }
 
-func (s *requestResult) ConstructorError() string {
-	return s.constructorError
-}
-
-func (s *requestResult) SetConstructorError(err string) {
-	s.sideEffectType = artifacts.RequestSideEffectNone
-
-	s.constructorError = err
-}
-
 func (s *requestResult) SetActivate(parent, image insolar.Reference, memory []byte) {
 	s.sideEffectType = artifacts.RequestSideEffectActivate
 

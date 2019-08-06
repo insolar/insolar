@@ -284,7 +284,7 @@ func (f *EphemeralControlFeeder) OnEphemeralCancelled() {
 }
 
 func (f *EphemeralControlFeeder) CanAcceptTimePulseToStopEphemeral(pd pulse.Data /*, sourceNode profiles.ActiveNode*/) bool {
-	return false
+	return true
 }
 
 func (f *EphemeralControlFeeder) GetMinDuration() time.Duration {

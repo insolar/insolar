@@ -103,14 +103,8 @@ func (u *UpstreamController) ConsensusFinished(report api.UpstreamReport, expect
 	population := expectedCensus.GetOnlinePopulation()
 
 	var networkNodes []insolar.NetworkNode
-	if report.MemberMode.IsEvicted() || !population.IsValid() {
-		if report.MemberMode.IsEvictedForcefully() {
-			logger.Warn("Node is evicted by network")
-		}
-
-		if !population.IsValid() {
-			logger.Warn("Consensus finished with invalid population")
-		}
+	if report.MemberMode.IsEvicted() || report.MemberMode.IsSuspended() || !population.IsValid() {
+		logger.Warnf("Consensus finished unexpectedly mode: %s, population: %v", report.MemberMode, expectedCensus)
 
 		networkNodes = []insolar.NetworkNode{
 			NewNetworkNode(expectedCensus.GetOnlinePopulation().GetLocalProfile()),

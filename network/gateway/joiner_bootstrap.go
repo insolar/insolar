@@ -51,14 +51,19 @@
 package gateway
 
 import (
+	"bytes"
 	"context"
+	"crypto/rand"
+	"sort"
+	"time"
+
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
-	"github.com/pkg/errors"
-	"time"
 )
 
 func newJoinerBootstrap(b *Base) *JoinerBootstrap {
@@ -103,25 +108,56 @@ func (g *JoinerBootstrap) GetState() insolar.NetworkState {
 func (g *JoinerBootstrap) authorize(ctx context.Context) (*packet.Permit, error) {
 	cert := g.CertificateManager.GetCertificate()
 	discoveryNodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), g.NodeKeeper.GetOrigin().ID())
-	// todo: shuffle discoveryNodes
+
+	entropy := make([]byte, insolar.RecordRefSize)
+	if _, err := rand.Read(entropy); err != nil {
+		panic("Failed to get bootstrap entropy")
+	}
+
+	sort.Slice(discoveryNodes, func(i, j int) bool {
+		return bytes.Compare(
+			xor(*discoveryNodes[i].GetNodeRef(), entropy),
+			xor(*discoveryNodes[j].GetNodeRef(), entropy)) < 0
+	})
+
+	bestResult := &packet.AuthorizeResponse{}
 
 	for _, n := range discoveryNodes {
 		h, _ := host.NewHostN(n.GetHost(), *n.GetNodeRef())
 
 		res, err := g.BootstrapRequester.Authorize(ctx, h, cert)
 		if err != nil {
-			inslogger.FromContext(ctx).Errorf("Error authorizing to host %s: %s", h.String(), err.Error())
+			inslogger.FromContext(ctx).Warnf("Error authorizing to host %s: %s", h.String(), err.Error())
 			continue
 		}
-		// Check majority rule
-		//if int(res.DiscoveryCount) < cert.GetMajorityRule() {
-		//	inslogger.FromContext(ctx).Errorf("Check MajorityRule failed on authorize, expect %d, got %d", cert.GetMajorityRule(), res.DiscoveryCount)
-		//	continue
-		//}
+
+		if int(res.DiscoveryCount) < cert.GetMajorityRule() {
+			inslogger.FromContext(ctx).Infof(
+				"Check MajorityRule failed on authorize, expect %d, got %d",
+				cert.GetMajorityRule(),
+				res.DiscoveryCount,
+			)
+
+			if res.DiscoveryCount > bestResult.DiscoveryCount {
+				bestResult = res
+			}
+
+			continue
+		}
 
 		return res.Permit, nil
 	}
 
-	// shaffle best res
+	if network.OriginIsDiscovery(cert) {
+		return bestResult.Permit, nil
+	}
+
 	return nil, errors.New("failed to authorize to any discovery node")
+}
+
+func xor(ref insolar.Reference, entropy []byte) []byte {
+	for i, d := range ref {
+		ref[i] = entropy[i] ^ d
+	}
+	return ref[:]
 }
