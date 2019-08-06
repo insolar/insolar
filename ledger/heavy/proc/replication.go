@@ -98,19 +98,11 @@ func (p *Replication) Proceed(ctx context.Context) error {
 	}
 
 	jetKeeper := p.dep.keeper
-	topSyncPulse := jetKeeper.TopSyncPulse()
 	if err := jetKeeper.AddDropConfirmation(ctx, dr.Pulse, dr.JetID, dr.Split); err != nil {
 		return errors.Wrapf(err, "failed to add jet to JetKeeper jet=%v", dr.JetID.DebugString())
 	}
 
-	if !p.cfg.Backup.Enabled {
-		if err := jetKeeper.AddBackupConfirmation(ctx, dr.Pulse); err != nil {
-			inslogger.FromContext(ctx).Fatal("AddBackupConfirmation return error: ", err)
-		}
-	}
-	if topSyncPulse != jetKeeper.TopSyncPulse() {
-		FinalizePulse(ctx, p.dep.backuper, jetKeeper, dr.Pulse)
-	}
+	FinalizePulse(ctx, p.dep.backuper, jetKeeper, dr.Pulse)
 
 	stats.Record(ctx,
 		statReceivedHeavyPayloadCount.M(1),
@@ -174,20 +166,32 @@ func storeRecords(
 }
 
 func FinalizePulse(ctx context.Context, backuper executor.BackupMaker, jetKeeper executor.JetKeeper, pulse insolar.PulseNumber) {
+	logger := inslogger.FromContext(ctx)
+	if jetKeeper.HasAllJetConfirms(ctx, pulse) {
+		logger.Debug("not all jets confirmed. Do nothing")
+		return
+	}
 	go func() {
-		logger := inslogger.FromContext(ctx)
-		err := backuper.Do(ctx, pulse)
-		if err != nil {
-			if err == executor.ErrAlreadyDone {
-				logger.Warn("BackupMaker says, that work already done")
-				return
-			}
-			logger.Fatalf("Can't do backup: ", err)
+		logger.Debug("FinalizePulse starts")
+		bkpError := backuper.Do(ctx, pulse)
+		if bkpError != nil && bkpError != executor.ErrAlreadyDone && bkpError != executor.ErrBackupDisabled {
+			logger.Fatalf("Can't do backup: ", bkpError)
 		}
-		err = jetKeeper.AddBackupConfirmation(ctx, pulse)
+
+		if bkpError == executor.ErrAlreadyDone {
+			logger.Info("Pulse already backuped: ", pulse, bkpError)
+			return
+		}
+
+		err := jetKeeper.AddBackupConfirmation(ctx, pulse)
 		if err != nil {
 			logger.Fatalf("Can't add backup confirmation: ", err)
 		}
+
+		if bkpError == executor.ErrBackupDisabled {
+			return
+		}
+
 		inslogger.FromContext(ctx).Infof("Pulse %d completely finalized ( drops + hots + backup )", pulse)
 	}()
 }
