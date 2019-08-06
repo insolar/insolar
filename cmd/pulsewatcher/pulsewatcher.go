@@ -109,6 +109,17 @@ func displayResultsTable(results [][]string, ready bool, buffer *bytes.Buffer) {
 		tablewriter.Colors{},
 		tablewriter.Colors{},
 	)
+	table.SetColumnColor(
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+		tablewriter.Colors{tablewriter.FgHiRedColor},
+	)
 
 	table.AppendBulk(results)
 	table.Render()
@@ -156,7 +167,7 @@ func displayResultsJSON(results [][]string, _ bool, _ *bytes.Buffer) {
 	fmt.Print("\n\n")
 }
 
-func collectNodesStatuses(conf *pulsewatcher.Config) ([][]string, bool) {
+func collectNodesStatuses(conf *pulsewatcher.Config, lastResults [][]string) ([][]string, bool) {
 	state := true
 	errored := 0
 	results := make([][]string, len(conf.Nodes))
@@ -170,11 +181,22 @@ func collectNodesStatuses(conf *pulsewatcher.Config) ([][]string, bool) {
 				strings.NewReader(`{"jsonrpc": "2.0", "method": "node.getStatus", "id": 0}`))
 			if err != nil {
 				errStr := err.Error()
-				if strings.Contains(errStr, "connect: connection refused") {
-					errStr = "Node is down"
+				if strings.Contains(errStr, "connection refused") {
+					// Print compact error string when node is down.
+					// This prevents table distortion on small screens.
+					errStr = "NODE IS DOWN"
 				}
 				lock.Lock()
-				results[i] = []string{url, "", "", "", "", "", "", errStr}
+				// If an error have occurred print this error but preserve other data
+				// from the last successful status request.
+				if len(lastResults) > i && len(lastResults[i]) > 0 {
+					results[i] = make([]string, len(lastResults[i]))
+					copy(results[i], lastResults[i])
+					results[i][0] = url
+					results[i][len(results[i])-1] = errStr
+				} else {
+					results[i] = []string{url, "", "", "", "", "", "", errStr}
+				}
 				errored++
 				lock.Unlock()
 				wg.Done()
@@ -253,8 +275,10 @@ func main() {
 		Timeout:   conf.Timeout,
 	}
 
+	lastResults := make([][]string, len(conf.Nodes))
 	for {
-		results, ready := collectNodesStatuses(conf)
+		results, ready := collectNodesStatuses(conf, lastResults)
+		copy(lastResults, results)
 		if useJSONFormat {
 			displayResultsJSON(results, ready, buffer)
 		} else {
