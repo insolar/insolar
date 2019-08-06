@@ -108,6 +108,7 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 	suite.lr.Publisher = suite.pub
 	suite.lr.RequestsExecutor = suite.re
 	suite.lr.ContractRequester = suite.cr
+	suite.lr.PulseAccessor = suite.ps
 
 	_ = suite.lr.Init(suite.ctx)
 }
@@ -484,8 +485,8 @@ const (
 	OrderWriteControllerClose
 	OrderResultsMatcherClear
 	OrderStateStorageOnPulse
-	OrderFlowDispatcherChangePulse
 	OrderWriteControllerOpen
+	OrderMAX
 )
 
 func TestLogicRunner_OnPulse_Order(t *testing.T) {
@@ -523,17 +524,11 @@ func TestLogicRunner_OnPulse_Order(t *testing.T) {
 		LockMock.Return().
 		UnlockMock.Return().
 		IsEmptyMock.Return(true)
-	lr.FlowDispatcher = NewFlowDispatcherMock(mc).
-		ChangePulseMock.Set(
-		func(_ context.Context, _ insolar.Pulse) {
-			orderChan <- OrderFlowDispatcherChangePulse
-			return
-		})
 
 	oldPulse := insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}
 	newPulse := insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 1}
 	require.NoError(t, lr.OnPulse(ctx, oldPulse, newPulse))
-	require.Len(t, orderChan, 5)
+	require.Len(t, orderChan, int(OrderMAX-1))
 
 	previousOrderElement := OrderInitial
 	for {
