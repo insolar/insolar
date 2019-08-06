@@ -23,9 +23,10 @@ import (
 	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/costcenter"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member"
+	"github.com/insolar/insolar/logicrunner/builtin/contract/migrationshard"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/nodedomain"
+	"github.com/insolar/insolar/logicrunner/builtin/contract/pkshard"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/rootdomain"
-	"github.com/insolar/insolar/logicrunner/builtin/contract/shard"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/wallet"
 )
 
@@ -48,7 +49,6 @@ func RootDomain() insolar.GenesisContractState {
 			CostCenter:             genesisrefs.ContractCostCenter,
 			MigrationAddressShards: genesisrefs.ContractMigrationAddressShards,
 			PublicKeyShards:        genesisrefs.ContractPublicKeyShards,
-			FreeBurnAddresses:      []string{},
 			NodeDomain:             genesisrefs.ContractNodeDomain,
 		}),
 	}
@@ -110,15 +110,29 @@ func GetCostCenterGenesisContractState() insolar.GenesisContractState {
 	}
 }
 
-func GetShardGenesisContractState(name string) insolar.GenesisContractState {
-	s, err := shard.New()
+func GetPKShardGenesisContractState(name string) insolar.GenesisContractState {
+	s, err := pkshard.New()
 	if err != nil {
 		panic(fmt.Sprintf("'%s' shard constructor failed", name))
 	}
 
 	return insolar.GenesisContractState{
 		Name:       name,
-		Prototype:  insolar.GenesisNameShard,
+		Prototype:  insolar.GenesisNamePKShard,
+		ParentName: insolar.GenesisNameRootDomain,
+		Memory:     mustGenMemory(s),
+	}
+}
+
+func GetMigrationShardGenesisContractState(name string) insolar.GenesisContractState {
+	s, err := migrationshard.New()
+	if err != nil {
+		panic(fmt.Sprintf("'%s' shard constructor failed", name))
+	}
+
+	return insolar.GenesisContractState{
+		Name:       name,
+		Prototype:  insolar.GenesisNameMigrationShard,
 		ParentName: insolar.GenesisNameRootDomain,
 		Memory:     mustGenMemory(s),
 	}

@@ -57,6 +57,7 @@ type stateStorage struct {
 	jetCoordinator   jet.Coordinator
 	pulseAccessor    pulse.Accessor
 	artifactsManager artifacts.Client
+	outgoingSender   OutgoingRequestSender
 
 	state map[insolar.Reference]*ObjectState // if object exists, we are validating or executing it right now
 }
@@ -68,6 +69,7 @@ func NewStateStorage(
 	jetCoordinator jet.Coordinator,
 	pulseAccessor pulse.Accessor,
 	artifactsManager artifacts.Client,
+	outgoingSender OutgoingRequestSender,
 
 ) StateStorage {
 	ss := &stateStorage{
@@ -79,6 +81,7 @@ func NewStateStorage(
 		jetCoordinator:   jetCoordinator,
 		pulseAccessor:    pulseAccessor,
 		artifactsManager: artifactsManager,
+		outgoingSender:   outgoingSender,
 	}
 	return ss
 }
@@ -102,6 +105,7 @@ func (ss *stateStorage) UpsertExecutionState(ref insolar.Reference) ExecutionBro
 			ss.pulseAccessor,
 			ss.artifactsManager,
 			os.ExecutionArchive,
+			ss.outgoingSender,
 		)
 	}
 	return os.ExecutionBroker

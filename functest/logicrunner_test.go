@@ -153,9 +153,25 @@ func (r *One) TestPayload() (two.Payload, error) {
 	if p.Str != str { return two.Payload{}, errors.New("Oops") }
 
 	return p, nil
-
 }
 
+var INSATTR_ManyTimes_API = true
+func (r *One) ManyTimes() (error) {
+	holder := two.New()
+	friend, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < 100; i++ {
+		_, err := friend.Hello("some")
+		if err != nil {
+			return err
+		}
+	}
+
+    return nil
+}
 `
 
 	var contractTwoCode = `
@@ -241,8 +257,12 @@ func (r *Two) GetPayloadString() (string, error) {
 	require.Equal(
 		t,
 		goplugintestutils.CBORMarshal(t, expected),
-		resp.Reply.Result,
+		resp.Result,
 	)
+
+	resp = callMethod(t, objectRef, "ManyTimes")
+	require.Empty(t, resp.Error)
+	require.Empty(t, resp.ExtractedError)
 }
 
 // Make sure a contract can make a saga call to another contract
@@ -766,7 +786,7 @@ func New() (*Two, error) {
 	resp := callMethodNoChecks(t, obj, "Hello")
 	require.Empty(t, resp.Error)
 	require.NotNil(t, resp.Result.Error)
-	require.Contains(t, resp.Result.Error.Error(), "( Generated Method ) Constructor returns nil")
+	require.Contains(t, resp.Result.Error.Error(), "constructor returned nil")
 }
 
 // If a contract constructor fails it's considered a logical error,

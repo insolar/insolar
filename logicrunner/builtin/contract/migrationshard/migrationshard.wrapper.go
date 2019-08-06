@@ -14,10 +14,9 @@
 // limitations under the License.
 //
 
-package wallet
+package migrationshard
 
 import (
-	"github.com/insolar/insolar/insolar"
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
 	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
@@ -42,7 +41,7 @@ func INS_META_INFO() []map[string]string {
 
 func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	self := new(Wallet)
+	self := new(MigrationShard)
 
 	if len(object) == 0 {
 		return nil, nil, &ExtendableError{S: "[ Fake GetCode ] ( Generated Method ) Object is nil"}
@@ -68,7 +67,7 @@ func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 
 func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
-	self := new(Wallet)
+	self := new(MigrationShard)
 
 	if len(object) == 0 {
 		return nil, nil, &ExtendableError{S: "[ Fake GetPrototype ] ( Generated Method ) Object is nil"}
@@ -92,36 +91,32 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 	return state, ret, err
 }
 
-func INSMETHOD_Transfer(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_GetMigrationAddressesAmount(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
-	self := new(Wallet)
+	self := new(MigrationShard)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeTransfer ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &ExtendableError{S: "[ FakeGetMigrationAddressesAmount ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeTransfer ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeGetMigrationAddressesAmount ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
-	args := [3]interface{}{}
-	var args0 insolar.Reference
+	args := [1]interface{}{}
+	var args0 []string
 	args[0] = &args0
-	var args1 string
-	args[1] = &args1
-	var args2 *insolar.Reference
-	args[2] = &args2
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeTransfer ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeGetMigrationAddressesAmount ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.Transfer(args0, args1, args2)
+	ret0, ret1 := self.GetMigrationAddressesAmount(args0)
 
 	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
 	systemErr := ph.GetSystemError()
@@ -149,32 +144,32 @@ func INSMETHOD_Transfer(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
-func INSMETHOD_Accept(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_AddFreeMigrationAddresses(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
-	self := new(Wallet)
+	self := new(MigrationShard)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeAccept ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &ExtendableError{S: "[ FakeAddFreeMigrationAddresses ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeAccept ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeAddFreeMigrationAddresses ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
 	args := [1]interface{}{}
-	var args0 string
+	var args0 []string
 	args[0] = &args0
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeAccept ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeAddFreeMigrationAddresses ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
-	ret0 := self.Accept(args0)
+	ret0 := self.AddFreeMigrationAddresses(args0)
 
 	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
 	systemErr := ph.GetSystemError()
@@ -202,71 +197,18 @@ func INSMETHOD_Accept(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
-func INSMETHOD_RollBack(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_GetFreeMigrationAddress(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
-	self := new(Wallet)
+	self := new(MigrationShard)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeRollBack ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &ExtendableError{S: "[ FakeGetFreeMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeRollBack ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
-	}
-
-	args := [1]interface{}{}
-	var args0 string
-	args[0] = &args0
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeRollBack ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
-	}
-
-	ret0 := self.RollBack(args0)
-
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
-	state := []byte{}
-	err = ph.Serialize(self, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret0 = ph.MakeErrorSerializable(ret0)
-
-	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0}, &ret)
-
-	return state, ret, err
-}
-
-func INSMETHOD_GetBalance(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
-	self := new(Wallet)
-
-	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeGetBalance ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-	}
-
-	err := ph.Deserialize(object, self)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetBalance ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeGetFreeMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -274,11 +216,11 @@ func INSMETHOD_GetBalance(object []byte, data []byte) ([]byte, []byte, error) {
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetBalance ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeGetFreeMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.GetBalance()
+	ret0, ret1 := self.GetFreeMigrationAddress()
 
 	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
 	systemErr := ph.GetSystemError()
@@ -306,12 +248,118 @@ func INSMETHOD_GetBalance(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
-func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
+func INSMETHOD_GetRef(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
+	self := new(MigrationShard)
+
+	if len(object) == 0 {
+		return nil, nil, &ExtendableError{S: "[ FakeGetRef ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeGetRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
 	args := [1]interface{}{}
 	var args0 string
 	args[0] = &args0
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeGetRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0, ret1 := self.GetRef(args0)
+
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret1 = ph.MakeErrorSerializable(ret1)
+
+	ret := []byte{}
+	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+
+	return state, ret, err
+}
+
+func INSMETHOD_SetRef(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
+	self := new(MigrationShard)
+
+	if len(object) == 0 {
+		return nil, nil, &ExtendableError{S: "[ FakeSetRef ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeSetRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := [2]interface{}{}
+	var args0 string
+	args[0] = &args0
+	var args1 string
+	args[1] = &args1
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeSetRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0 := self.SetRef(args0, args1)
+
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret0 = ph.MakeErrorSerializable(ret0)
+
+	ret := []byte{}
+	err = ph.Serialize([]interface{}{ret0}, &ret)
+
+	return state, ret, err
+}
+
+func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
+	args := []interface{}{}
 
 	err := ph.Deserialize(data, &args)
 	if err != nil {
@@ -319,7 +367,7 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	ret0, ret1 := New(args0)
+	ret0, ret1 := New()
 	ret1 = ph.MakeErrorSerializable(ret1)
 	if ret0 == nil && ret1 == nil {
 		ret1 = &ExtendableError{S: "constructor returned nil"}
@@ -350,10 +398,11 @@ func Initialize() XXX_insolar.ContractWrapper {
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: XXX_insolar.ContractMethods{
-			"Transfer":   INSMETHOD_Transfer,
-			"Accept":     INSMETHOD_Accept,
-			"RollBack":   INSMETHOD_RollBack,
-			"GetBalance": INSMETHOD_GetBalance,
+			"GetMigrationAddressesAmount": INSMETHOD_GetMigrationAddressesAmount,
+			"AddFreeMigrationAddresses":   INSMETHOD_AddFreeMigrationAddresses,
+			"GetFreeMigrationAddress":     INSMETHOD_GetFreeMigrationAddress,
+			"GetRef":                      INSMETHOD_GetRef,
+			"SetRef":                      INSMETHOD_SetRef,
 		},
 		Constructors: XXX_insolar.ContractConstructors{
 			"New": INSCONSTRUCTOR_New,
