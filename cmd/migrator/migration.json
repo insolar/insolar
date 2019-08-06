@@ -1,0 +1,9 @@
+{
+  "callSite":"deposit.migration",
+  "params": {
+    "amount": "1000000000",
+    "ethTxHash": "394578234932493486739856jfgd48756348563495846djf",
+    "migrationAddress": ""
+  }
+}
+

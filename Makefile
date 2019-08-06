@@ -10,6 +10,7 @@ BENCHMARK = benchmark
 PULSEWATCHER = pulsewatcher
 APIREQUESTER = apirequester
 SIMPLEREQUESTER = simplerequester
+MIGRATOR = migrator
 HEALTHCHECK = healthcheck
 
 ALL_PACKAGES = ./...
@@ -137,7 +138,11 @@ $(APIREQUESTER):
 
 .PHONY: $(SIMPLEREQUESTER)
 $(SIMPLEREQUESTER):
-	go build -o $(BIN_DIR)/$(APIREQUESTER) -ldflags "${LDFLAGS}" cmd/simplerequester/*.go
+	go build -o $(BIN_DIR)/$(SIMPLEREQUESTER) -ldflags "${LDFLAGS}" cmd/simplerequester/*.go
+
+.PHONY: $(MIGRATOR)
+$(MIGRATOR):
+	go build -o $(BIN_DIR)/$(MIGRATOR) -ldflags "${LDFLAGS}" cmd/migrator/*.go
 
 .PHONY: $(HEALTHCHECK)
 $(HEALTHCHECK):
