@@ -481,7 +481,7 @@ func (c *NodeAppearance) _applyState(ma profiles.MemberAnnouncement,
 	return true, nil
 }
 
-func (c *NodeAppearance) SetLocalNodeState(ma profiles.MemberAnnouncement) {
+func (c *NodeAppearance) SetLocalNodeState(ma profiles.MemberAnnouncement) bool {
 
 	if !c.IsLocal() {
 		panic(fmt.Sprintf("illegal state - not local: %v", c.GetNodeID()))
@@ -496,7 +496,7 @@ func (c *NodeAppearance) SetLocalNodeState(ma profiles.MemberAnnouncement) {
 
 	trustBefore := c.trust
 
-	_, err := c._applyState(ma, nil)
+	updated, err := c._applyState(ma, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -505,6 +505,8 @@ func (c *NodeAppearance) SetLocalNodeState(ma profiles.MemberAnnouncement) {
 	if trustBefore != c.trust {
 		c.hook.OnTrustUpdated(c.hook.UpdatePopulationVersion(), c, trustBefore, c.trust, c.profile.HasFullProfile())
 	}
+
+	return updated
 }
 
 func (c *NodeAppearance) GetNodeMembershipProfile() profiles.MembershipProfile {

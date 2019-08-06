@@ -479,7 +479,7 @@ func (r *FullRealm) IsLocalStateful() bool {
 	return r.self.IsStateful()
 }
 
-func (r *FullRealm) ApplyLocalState(nsh proofs.NodeStateHash) {
+func (r *FullRealm) ApplyLocalState(nsh proofs.NodeStateHash) bool {
 
 	if (nsh == nil) == r.IsLocalStateful() {
 		panic("illegal value")
@@ -503,7 +503,7 @@ func (r *FullRealm) ApplyLocalState(nsh proofs.NodeStateHash) {
 
 	// TODO Hack! MUST provide announcement hash
 
-	r.self.SetLocalNodeState(ma)
+	return r.self.SetLocalNodeState(ma)
 }
 
 func (r *FullRealm) buildLocalMemberAnnouncementDraft(mp profiles.MembershipProfile) profiles.MemberAnnouncement {

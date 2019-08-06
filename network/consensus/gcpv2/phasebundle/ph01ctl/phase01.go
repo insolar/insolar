@@ -223,7 +223,9 @@ func (c *Phase01Controller) workerPhase01(ctx context.Context) {
 	if nsh == nil {
 		inslogger.FromContext(ctx).Debugf(">>>>>>workerPhase01: NSH is empty: stateful=%v", c.R.IsLocalStateful())
 	}
-	c.R.ApplyLocalState(nsh)
+	if !c.R.ApplyLocalState(nsh) {
+		inslogger.FromContext(ctx).Errorf(">>>>>>workerPhase01: NSH was not updated: nsh=%v, self=%+v", nsh, c.R.GetSelf())
+	}
 
 	go c.workerSendPhase1ToFixed(ctx, startIndex, nodes)
 	c.workerSendPhase1ToDynamics(ctx)
