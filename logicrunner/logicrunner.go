@@ -280,9 +280,6 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newP
 
 	messages := lr.StateStorage.OnPulse(ctx, newPulse)
 
-	lr.FlowDispatcher.ChangePulse(ctx, newPulse)
-	lr.InnerFlowDispatcher.ChangePulse(ctx, newPulse)
-
 	err = lr.WriteController.Open(ctx, newPulse.PulseNumber)
 	if err != nil {
 		return errors.Wrap(err, "failed to start new pulse on write controller")
