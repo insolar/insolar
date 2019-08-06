@@ -1,4 +1,4 @@
-//
+///
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,9 +12,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+///
 
-package replication
+package executor
 
 import (
 	"context"
@@ -31,7 +31,6 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/stretchr/testify/require"
 )
@@ -74,7 +73,7 @@ func Test_NotifyAboutPulse(t *testing.T) {
 		return nil, func() {}
 	})
 
-	jetCalc := executor.NewJetCalculatorMock(mc)
+	jetCalc := NewJetCalculatorMock(mc)
 	jetCalc.MineForPulseMock.Set(func(_ context.Context, _ insolar.PulseNumber) ([]insolar.JetID, error) {
 		return []insolar.JetID{jetID}, nil
 	})

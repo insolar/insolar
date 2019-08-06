@@ -46,7 +46,6 @@ import (
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/light/pulsemanager"
-	"github.com/insolar/insolar/ledger/light/replication"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -63,8 +62,8 @@ import (
 type components struct {
 	cmp               component.Manager
 	NodeRef, NodeRole string
-	replicator        replication.LightReplicator
-	cleaner           replication.Cleaner
+	replicator        executor.LightReplicator
+	cleaner           executor.Cleaner
 }
 
 func newComponents(ctx context.Context, cfg configuration.Configuration) (*components, error) {
@@ -262,7 +261,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.RequestChecker = requestChecker
 
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
-		lightCleaner := replication.NewCleaner(
+		lightCleaner := executor.NewCleaner(
 			Jets.(jet.Cleaner),
 			Nodes,
 			drops,
@@ -277,7 +276,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		)
 		comps.cleaner = lightCleaner
 
-		lthSyncer := replication.NewReplicatorDefault(
+		lthSyncer := executor.NewReplicatorDefault(
 			jetCalculator,
 			lightCleaner,
 			WmBus,

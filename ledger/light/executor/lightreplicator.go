@@ -1,4 +1,4 @@
-//
+///
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,9 +12,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+///
 
-package replication
+package executor
 
 import (
 	"context"
@@ -31,7 +31,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -51,7 +50,7 @@ type LightReplicatorDefault struct {
 	once sync.Once
 	done chan struct{}
 
-	jetCalculator   executor.JetCalculator
+	jetCalculator   JetCalculator
 	cleaner         Cleaner
 	sender          bus.Sender
 	pulseCalculator pulse.Calculator
@@ -66,7 +65,7 @@ type LightReplicatorDefault struct {
 
 // NewReplicatorDefault creates new instance of LightReplicator
 func NewReplicatorDefault(
-	jetCalculator executor.JetCalculator,
+	jetCalculator JetCalculator,
 	cleaner Cleaner,
 	sender bus.Sender,
 	calculator pulse.Calculator,

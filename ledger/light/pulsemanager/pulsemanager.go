@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/ledger/light/artifactmanager"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/hot"
-	"github.com/insolar/insolar/ledger/light/replication"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 )
@@ -57,7 +56,7 @@ type PulseManager struct {
 	PulseCalculator pulse.Calculator `inject:""`
 	PulseAppender   pulse.Appender   `inject:""`
 
-	LightReplicator replication.LightReplicator
+	LightReplicator executor.LightReplicator
 	HotSender       executor.HotSender
 
 	WriteManager hot.WriteManager
@@ -70,7 +69,7 @@ type PulseManager struct {
 // NewPulseManager creates PulseManager instance.
 func NewPulseManager(
 	jetSplitter executor.JetSplitter,
-	lightToHeavySyncer replication.LightReplicator,
+	lightToHeavySyncer executor.LightReplicator,
 	writeManager hot.WriteManager,
 	hotSender executor.HotSender,
 	stateIniter executor.StateIniter,

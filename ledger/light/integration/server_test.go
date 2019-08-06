@@ -46,7 +46,6 @@ import (
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/light/pulsemanager"
-	"github.com/insolar/insolar/ledger/light/replication"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/platformpolicy"
@@ -79,8 +78,8 @@ type Server struct {
 	pulse        insolar.Pulse
 	lock         sync.RWMutex
 	clientSender bus.Sender
-	replicator   replication.LightReplicator
-	cleaner      replication.Cleaner
+	replicator   executor.LightReplicator
+	cleaner      executor.Cleaner
 }
 
 func DefaultLightConfig() configuration.Configuration {
@@ -209,8 +208,8 @@ func NewServer(
 	var (
 		PulseManager insolar.PulseManager
 		Handler      *artifactmanager.MessageHandler
-		Replicator   replication.LightReplicator
-		Cleaner      replication.Cleaner
+		Replicator   executor.LightReplicator
+		Cleaner      executor.Cleaner
 	)
 	{
 		conf := cfg.Ledger
@@ -253,7 +252,7 @@ func NewServer(
 		handler.RequestChecker = requestChecker
 
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
-		lightCleaner := replication.NewCleaner(
+		lightCleaner := executor.NewCleaner(
 			Jets.(jet.Cleaner),
 			Nodes,
 			drops,
@@ -268,7 +267,7 @@ func NewServer(
 		)
 		Cleaner = lightCleaner
 
-		lthSyncer := replication.NewReplicatorDefault(
+		lthSyncer := executor.NewReplicatorDefault(
 			jetCalculator,
 			lightCleaner,
 			ServerBus,
