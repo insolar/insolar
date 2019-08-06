@@ -299,3 +299,46 @@ func deserialize(buf []byte) (nd dbNode) {
 	insolar.MustDeserialize(buf, &nd)
 	return nd
 }
+
+// NewMemoryPulseStorage constructor creates MemoryPulseStorage
+func NewMemoryPulseStorage() *MemoryPulseStorage {
+	return &MemoryPulseStorage{
+		entries: make([]insolar.Pulse, 0),
+	}
+}
+
+type MemoryPulseStorage struct {
+	lock    sync.RWMutex
+	entries []insolar.Pulse
+}
+
+func (m *MemoryPulseStorage) Append(ctx context.Context, pulse insolar.Pulse) error {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	m.entries = append(m.entries, pulse)
+	return nil
+}
+
+func (m *MemoryPulseStorage) ForPulseNumber(ctx context.Context, number insolar.PulseNumber) (insolar.Pulse, error) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	for _, p := range m.entries {
+		if p.PulseNumber == number {
+			return p, nil
+		}
+	}
+
+	return *insolar.GenesisPulse, ErrNotFound
+}
+
+func (m *MemoryPulseStorage) Latest(ctx context.Context) (insolar.Pulse, error) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	if len(m.entries) == 0 {
+		return *insolar.GenesisPulse, ErrNotFound
+	}
+	return m.entries[len(m.entries)-1], nil
+}
