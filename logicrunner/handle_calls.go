@@ -183,15 +183,16 @@ func (h *HandleCall) handleActual(
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
 	defer done()
 
-	if err == nil {
-		broker := h.dep.StateStorage.UpsertExecutionState(*objRef)
+	if err != nil {
+		go h.sendToNextExecutor(ctx, *objRef, *requestRef, request)
+		return registeredRequestReply, nil
+	}
 
-		proc := AddFreshRequest{broker: broker, requestRef: *requestRef, request: request}
-		if err := f.Procedure(ctx, &proc, true); err != nil {
-			return nil, errors.Wrap(err, "couldn't pass request to broker")
-		}
-	} else {
-		h.sendToNextExecutor(ctx, *objRef, *requestRef, request)
+	broker := h.dep.StateStorage.UpsertExecutionState(*objRef)
+
+	proc := AddFreshRequest{broker: broker, requestRef: *requestRef, request: request}
+	if err := f.Procedure(ctx, &proc, true); err != nil {
+		return nil, errors.Wrap(err, "couldn't pass request to broker")
 	}
 
 	return registeredRequestReply, nil
