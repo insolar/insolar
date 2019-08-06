@@ -53,10 +53,10 @@ package gateway
 import (
 	"context"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/rules"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/rules"
 )
 
 func newWaitMinRoles(b *Base) *WaitMinRoles {
@@ -68,9 +68,11 @@ type WaitMinRoles struct {
 }
 
 func (g *WaitMinRoles) Run(ctx context.Context) {
-	if rules.CheckMinRole(g.CertificateManager.GetCertificate(), g.NodeKeeper.GetAccessor().GetWorkingNodes()) {
-		g.Gatewayer.SwitchState(ctx, insolar.CompleteNetworkState)
+	p, err := g.PulseAccessor.Latest(ctx)
+	if err != nil {
+		inslogger.FromContext(ctx).Errorf("failed to get latest pulse", err)
 	}
+	g.checkMinRoles(ctx, p.PulseNumber)
 }
 
 func (g *WaitMinRoles) GetState() insolar.NetworkState {
@@ -79,5 +81,11 @@ func (g *WaitMinRoles) GetState() insolar.NetworkState {
 
 func (g *WaitMinRoles) OnConsensusFinished(ctx context.Context, report network.Report) {
 	inslogger.FromContext(ctx).Infof("--- Check minroles for pulse %d", report.PulseNumber)
-	g.Run(ctx)
+	g.checkMinRoles(ctx, report.PulseNumber)
+}
+
+func (g *WaitMinRoles) checkMinRoles(ctx context.Context, number insolar.PulseNumber) {
+	if rules.CheckMinRole(g.CertificateManager.GetCertificate(), g.NodeKeeper.GetAccessor(number).GetWorkingNodes()) {
+		g.Gatewayer.SwitchState(ctx, insolar.CompleteNetworkState)
+	}
 }

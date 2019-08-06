@@ -54,6 +54,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"github.com/insolar/insolar/network/storage"
 	"time"
 
 	"github.com/insolar/insolar/cryptography"
@@ -62,7 +63,6 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
@@ -89,8 +89,6 @@ type ServiceNetwork struct {
 	// dependencies
 	CertificateManager  insolar.CertificateManager         `inject:""`
 	PulseManager        insolar.PulseManager               `inject:""`
-	PulseAccessor       pulse.Accessor                     `inject:""`
-	PulseAppender       pulse.Appender                     `inject:""`
 	CryptographyService insolar.CryptographyService        `inject:""`
 	CryptographyScheme  insolar.PlatformCryptographyScheme `inject:""`
 	KeyProcessor        insolar.KeyProcessor               `inject:""`
@@ -104,6 +102,9 @@ type ServiceNetwork struct {
 	// subcomponents
 	RPC              controller.RPCController `inject:"subcomponent"`
 	TransportFactory transport.Factory        `inject:"subcomponent"`
+	PulseAccessor    storage.PulseAccessor    `inject:"subcomponent"`
+	//PulseAppender    storage.PulseAppender    `inject:"subcomponent"`
+	//DB               storage.DB               `inject:"subcomponent"`
 
 	HostNetwork network.HostNetwork
 
@@ -161,6 +162,11 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		}
 	})
 
+	//db, err := storage.NewBadgerDB(n.cfg.Service)
+	//if err != nil {
+	//	return errors.Wrap(err, "failed to create BadgerDB")
+	//}
+
 	n.cm.Inject(n,
 		&routing.Table{},
 		cert,
@@ -169,6 +175,10 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		controller.NewRPCController(options),
 		controller.NewPulseController(),
 		bootstrap.NewRequester(options),
+		//db,
+		//storage.NewPulseStorage(),
+		storage.NewMemoryCloudHashStorage(),
+		storage.NewMemorySnapshotStorage(),
 		n.BaseGateway,
 		n.Gatewayer,
 	)

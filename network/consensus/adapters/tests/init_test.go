@@ -452,8 +452,8 @@ type stateUpdater struct {
 func (su *stateUpdater) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
 	inslogger.FromContext(ctx).Info(">>>>>> Update state called")
 
-	su.nodeKeeper.Sync(ctx, nodes)
-	su.nodeKeeper.SetCloudHash(cloudStateHash)
+	su.nodeKeeper.Sync(ctx, pulseNumber, nodes)
+	su.nodeKeeper.SetCloudHash(pulseNumber, cloudStateHash)
 }
 
 type ephemeralController struct {

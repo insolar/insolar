@@ -88,10 +88,10 @@ type Base struct {
 	CertificateManager  insolar.CertificateManager  `inject:""`
 	HostNetwork         network.HostNetwork         `inject:""`
 	PulseAccessor       pulse.Accessor              `inject:""`
-	PulseAppender       pulse.Appender              `inject:""`
-	PulseManager        insolar.PulseManager        `inject:""`
-	BootstrapRequester  bootstrap.Requester         `inject:""`
-	KeyProcessor        insolar.KeyProcessor        `inject:""`
+	//PulseAppender       pulse.Appender              `inject:""`
+	PulseManager       insolar.PulseManager `inject:""`
+	BootstrapRequester bootstrap.Requester  `inject:""`
+	KeyProcessor       insolar.KeyProcessor `inject:""`
 
 	ConsensusController   consensus.Controller
 	ConsensusPulseHandler network.PulseHandler
@@ -142,9 +142,10 @@ func (g *Base) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
 	g.NodeKeeper.MoveSyncToActive(ctx, pu.PulseNumber)
 }
 
+// UpdateState called then Consensus done
 func (g *Base) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
-	g.NodeKeeper.Sync(ctx, nodes)
-	g.NodeKeeper.SetCloudHash(cloudStateHash)
+	g.NodeKeeper.Sync(ctx, pulseNumber, nodes)
+	g.NodeKeeper.SetCloudHash(pulseNumber, cloudStateHash)
 }
 
 func (g *Base) NeedLockMessageBus() bool {
@@ -191,13 +192,13 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 
 	data := request.GetRequest().GetBootstrap()
 
-	if network.CheckShortIDCollision(g.NodeKeeper.GetAccessor().GetActiveNodes(), data.CandidateProfile.ShortID) {
-		return g.HostNetwork.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.UpdateShortID}), nil
-	}
-
 	lastPulse, err := g.PulseAccessor.Latest(ctx)
 	if err != nil {
 		lastPulse = *insolar.GenesisPulse
+	}
+
+	if network.CheckShortIDCollision(g.NodeKeeper.GetAccessor(lastPulse.PulseNumber).GetActiveNodes(), data.CandidateProfile.ShortID) {
+		return g.HostNetwork.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.UpdateShortID}), nil
 	}
 
 	//if lastPulse.PulseNumber > data.Pulse.PulseNumber {
@@ -300,7 +301,7 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.R
 		p = *insolar.EphemeralPulse
 	}
 
-	discoveryCount := len(network.FindDiscoveriesInNodeList(g.NodeKeeper.GetAccessor().GetActiveNodes(), g.CertificateManager.GetCertificate()))
+	discoveryCount := len(network.FindDiscoveriesInNodeList(g.NodeKeeper.GetAccessor(p.PulseNumber).GetActiveNodes(), g.CertificateManager.GetCertificate()))
 	return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{
 		Code:           packet.Success,
 		Timestamp:      time.Now().UTC().Unix(),

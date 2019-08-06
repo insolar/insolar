@@ -101,8 +101,10 @@ func newNodeKeeper(t *testing.T, service insolar.CryptographyService) network.No
 
 func TestNewNodeKeeper(t *testing.T) {
 	nk := newNodeKeeper(t, nil)
-	assert.NotNil(t, nk.GetOrigin())
-	assert.NotNil(t, nk.GetAccessor(0))
+	origin := nk.GetOrigin()
+	assert.NotNil(t, origin)
+	nk.SetInitialSnapshot([]insolar.NetworkNode{origin})
+	assert.NotNil(t, nk.GetAccessor(insolar.GenesisPulse.PulseNumber))
 }
 
 func TestNodekeeper_GetCloudHash(t *testing.T) {

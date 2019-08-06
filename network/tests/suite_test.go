@@ -212,7 +212,7 @@ func (s *consensusSuite) SetupTest() {
 	expectedBootstrapsCount := len(s.fixture().bootstrapNodes)
 	retries := 10
 	for {
-		activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+		activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor(0).GetActiveNodes()
 		if expectedBootstrapsCount == len(activeNodes) {
 			break
 		}
@@ -225,7 +225,7 @@ func (s *consensusSuite) SetupTest() {
 		time.Sleep(2 * time.Second)
 	}
 
-	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor(0).GetActiveNodes()
 	require.Equal(s.t, len(s.fixture().bootstrapNodes), len(activeNodes))
 
 	if len(s.fixture().networkNodes) > 0 {
@@ -236,8 +236,8 @@ func (s *consensusSuite) SetupTest() {
 		s.waitForConsensus(2)
 
 		// active nodes count verification
-		activeNodes1 := s.fixture().networkNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
-		activeNodes2 := s.fixture().networkNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+		activeNodes1 := s.fixture().networkNodes[0].serviceNetwork.NodeKeeper.GetAccessor(0).GetActiveNodes()
+		activeNodes2 := s.fixture().networkNodes[0].serviceNetwork.NodeKeeper.GetAccessor(0).GetActiveNodes()
 
 		require.Equal(s.t, s.getNodesCount(), len(activeNodes1))
 		require.Equal(s.t, s.getNodesCount(), len(activeNodes2))
@@ -616,11 +616,11 @@ func (s *testSuite) preInitNode(node *networkNode) {
 //}
 
 func (s *testSuite) AssertActiveNodesCountDelta(delta int) {
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetAccessor(0).GetActiveNodes()
 	require.Equal(s.t, s.getNodesCount()+delta, len(activeNodes))
 }
 
 func (s *testSuite) AssertWorkingNodesCountDelta(delta int) {
-	workingNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetWorkingNodes()
+	workingNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor(0).GetWorkingNodes()
 	require.Equal(s.t, s.getNodesCount()+delta, len(workingNodes))
 }
