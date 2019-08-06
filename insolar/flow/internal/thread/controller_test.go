@@ -44,8 +44,9 @@ func TestController_BeginPulse(t *testing.T) {
 	chCancel := make(chan struct{})
 	chBegin := make(chan struct{})
 	controller := Controller{
-		cancel: chCancel,
-		begin:  chBegin,
+		cancel:  chCancel,
+		begin:   chBegin,
+		process: make(chan struct{}),
 	}
 
 	controller.BeginPulse()
@@ -56,6 +57,11 @@ func TestController_BeginPulse(t *testing.T) {
 	default:
 		t.Fatal("begin channel should be closed")
 	}
+	select {
+	case <-controller.process:
+	default:
+		t.Fatal("process channel should be closed")
+	}
 }
 
 func TestController_ClosePulse(t *testing.T) {
@@ -63,8 +69,9 @@ func TestController_ClosePulse(t *testing.T) {
 	chCancel := make(chan struct{})
 	chBegin := make(chan struct{})
 	controller := Controller{
-		cancel: chCancel,
-		begin:  chBegin,
+		cancel:  chCancel,
+		begin:   chBegin,
+		process: make(chan struct{}),
 	}
 
 	controller.ClosePulse()
@@ -74,5 +81,10 @@ func TestController_ClosePulse(t *testing.T) {
 	case <-chCancel:
 	default:
 		t.Fatal("close channel should be closed")
+	}
+	select {
+	case <-controller.process:
+		t.Fatal("close channel should be closed")
+	default:
 	}
 }

@@ -24,10 +24,11 @@ type Controller struct {
 	controllerMu sync.Mutex
 	cancel       chan struct{}
 	begin        chan struct{}
+	process      chan struct{}
 }
 
 func NewController() *Controller {
-	return &Controller{cancel: make(chan struct{}), begin: make(chan struct{})}
+	return &Controller{cancel: make(chan struct{}), begin: make(chan struct{}), process: make(chan struct{})}
 }
 
 func (c *Controller) Cancel() <-chan struct{} {
@@ -44,6 +45,13 @@ func (c *Controller) Begin() <-chan struct{} {
 	return c.begin
 }
 
+func (c *Controller) Process() <-chan struct{} {
+	c.controllerMu.Lock()
+	defer c.controllerMu.Unlock()
+
+	return c.process
+}
+
 func (c *Controller) BeginPulse() {
 	c.controllerMu.Lock()
 	defer c.controllerMu.Unlock()
@@ -53,6 +61,7 @@ func (c *Controller) BeginPulse() {
 	close(toBegin)
 
 	c.cancel = make(chan struct{})
+	close(c.process)
 }
 
 func (c *Controller) ClosePulse() {
@@ -60,4 +69,5 @@ func (c *Controller) ClosePulse() {
 	defer c.controllerMu.Unlock()
 
 	close(c.cancel)
+	c.process = make(chan struct{})
 }

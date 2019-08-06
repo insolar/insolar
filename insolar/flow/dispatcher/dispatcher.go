@@ -130,6 +130,7 @@ func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 	ctx = instracer.WithParentSpan(ctx, parentSpan)
 	go func() {
 		f := thread.NewThread(msg, d.controller)
+		<-d.controller.Process()
 		handle := d.getHandleByPulse(ctx, pn)
 		err := f.Run(ctx, handle(msg))
 		if err != nil {
