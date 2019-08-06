@@ -124,7 +124,7 @@ func TestBackuper_Disabled(t *testing.T) {
 	require.NoError(t, err)
 
 	err = bm.Do(context.Background(), 1)
-	require.Equal(t, err, executor.ErrAlreadyDone)
+	require.Equal(t, err, executor.ErrBackupDisabled)
 }
 
 func TestBackuper_BackupWaitPeriodExpired(t *testing.T) {
@@ -233,6 +233,7 @@ func TestBackuperM(t *testing.T) {
 
 	db, err := store.NewBadgerDB(tmpdir)
 	require.NoError(t, err)
+	defer db.Stop(context.Background())
 
 	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, insolar.GenesisPulse.PulseNumber)
 	require.NoError(t, err)
@@ -316,6 +317,7 @@ func TestBackuperM(t *testing.T) {
 		require.NoError(t, err)
 		recoveredDB, err := makeRawBadger(recovTmpDir)
 		require.NoError(t, err)
+		defer recoveredDB.Close()
 
 		for i := 0; i < numIterations+1; i++ {
 			bkpFileName := filepath.Join(
