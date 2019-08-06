@@ -100,8 +100,8 @@ func GenerateFromCode(pulse insolar.PulseNumber, code []byte) *insolar.Reference
 }
 
 // Generate reference from contract id.
-func GenerateFromContractID(typeContractId string, name string, version int) *insolar.Reference {
-	contractID := fmt.Sprintf("%s::%s::v%02d", typeContractId, name, version)
+func GenerateFromContractID(typeContractID string, name string, version int) *insolar.Reference {
+	contractID := fmt.Sprintf("%s::%s::v%02d", typeContractID, name, version)
 	return GenerateFromCode(insolar.BuiltinContractPulseNumber, []byte(contractID))
 }
 
