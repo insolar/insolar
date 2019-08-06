@@ -191,18 +191,16 @@ func (jk *dbJetKeeper) AddBackupConfirmation(ctx context.Context, pn insolar.Pul
 
 	inslogger.FromContext(ctx).Debug("AddBackupConfirmation. pulse: ", pn)
 
-	if err := jk.updateBackup(ctx, pn); err != nil {
+	if err := jk.updateBackup(pn); err != nil {
 		return errors.Wrapf(err, "AddDropConfirmation. failed to save updated jets")
 	}
 
 	err := jk.updateTopSyncPulse(ctx, pn)
 
 	return errors.Wrap(err, "propagateConsistency returns error")
-
-	return nil
 }
 
-func (jk *dbJetKeeper) updateBackup(ctx context.Context, pulse insolar.PulseNumber) error {
+func (jk *dbJetKeeper) updateBackup(pulse insolar.PulseNumber) error {
 	jets, err := jk.get(pulse)
 	if err != nil && err != store.ErrNotFound {
 		return errors.Wrapf(err, "updateBackup. can't get pulse: %d", pulse)

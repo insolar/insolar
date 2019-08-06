@@ -156,7 +156,7 @@ func writeBackupInfoFile(hash string, pulse insolar.PulseNumber, since uint64, u
 }
 
 func calculateFileHash(f *os.File) (string, error) {
-	hasher := md5.New()
+	hasher := md5.New() //nolint: gosec
 	if _, err := io.Copy(hasher, f); err != nil {
 		return "", errors.Wrap(err, "io.Copy return error")
 	}
@@ -170,7 +170,7 @@ func (b *BackupMakerDefault) prepareBackup(ctx context.Context, dirHolder *tmpDi
 		return 0, errors.Wrap(err, "Backup return error")
 	}
 
-	if err := dirHolder.reopenFile(ctx); err != nil {
+	if err := dirHolder.reopenFile(); err != nil {
 		return 0, errors.Wrap(err, "reopenFile return error")
 	}
 
@@ -189,9 +189,8 @@ func (b *BackupMakerDefault) prepareBackup(ctx context.Context, dirHolder *tmpDi
 }
 
 type tmpDirHolder struct {
-	tmpDir     string
-	tmpFile    *os.File
-	fileClosed bool
+	tmpDir  string
+	tmpFile *os.File
 }
 
 func (t *tmpDirHolder) release(ctx context.Context) {
@@ -206,7 +205,7 @@ func (t *tmpDirHolder) release(ctx context.Context) {
 	}
 }
 
-func (t *tmpDirHolder) reopenFile(ctx context.Context) error {
+func (t *tmpDirHolder) reopenFile() error {
 	if err := t.tmpFile.Close(); err != nil {
 		return errors.Wrapf(err, "can't close file %s", t.tmpFile.Name())
 	}
