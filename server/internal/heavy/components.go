@@ -36,7 +36,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/internal/ledger/artifact"
+	"github.com/insolar/insolar/ledger/artifact"
 	"github.com/insolar/insolar/ledger/genesis"
 
 	"github.com/pkg/errors"
