@@ -55,16 +55,17 @@ func makeMessage(t *testing.T, ctx context.Context, pn insolar.PulseNumber) *mes
 func TestEmptyHandle(t *testing.T) {
 	testReply := &mockReply{}
 	replyChan := make(chan *mockReply, 1)
+	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+	ctx := context.Background()
+
 	disp := dispatcher.NewDispatcher(
+		pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil),
 		func(message *message.Message) flow.Handle {
 			return func(context context.Context, f flow.Flow) error {
 				replyChan <- testReply
 				return nil
 			}
 		}, nil, nil)
-	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
-	disp.PulseAccessor = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
-	ctx := context.Background()
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
@@ -82,9 +83,12 @@ func (p *EmptyProcedure) Proceed(context.Context) error {
 
 func TestCallEmptyProcedure(t *testing.T) {
 	testReply := &mockReply{}
+	ctx := context.Background()
+	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
 
 	replyChan := make(chan *mockReply, 1)
 	disp := dispatcher.NewDispatcher(
+		pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil),
 		func(message *message.Message) flow.Handle {
 			return func(context context.Context, f flow.Flow) error {
 				err := f.Procedure(context, &EmptyProcedure{}, true)
@@ -93,10 +97,6 @@ func TestCallEmptyProcedure(t *testing.T) {
 				return nil
 			}
 		}, nil, nil)
-
-	ctx := context.Background()
-	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
-	disp.PulseAccessor = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
@@ -116,8 +116,12 @@ func (p *ErrorProcedure) Proceed(context.Context) error {
 func TestProcedureReturnError(t *testing.T) {
 	testReply := &mockReply{}
 
+	ctx := context.Background()
+	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+
 	replyChan := make(chan *mockReply, 1)
 	disp := dispatcher.NewDispatcher(
+		pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil),
 		func(message *message.Message) flow.Handle {
 			return func(context context.Context, f flow.Flow) error {
 				err := f.Procedure(context, &ErrorProcedure{}, true)
@@ -126,10 +130,6 @@ func TestProcedureReturnError(t *testing.T) {
 				return nil
 			}
 		}, nil, nil)
-
-	ctx := context.Background()
-	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
-	disp.PulseAccessor = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
@@ -153,9 +153,14 @@ func TestChangePulse(t *testing.T) {
 	testReply := &mockReply{}
 
 	procedureStarted := make(chan struct{})
-
+	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
 	replyChan := make(chan *mockReply, 1)
+	a := pulse.NewAccessorMock(t)
+	a.LatestMock.Set(func(ctx context.Context) (insolar.Pulse, error) {
+		return currentPulse, nil
+	})
 	disp := dispatcher.NewDispatcher(
+		a,
 		func(message *message.Message) flow.Handle {
 			return func(context context.Context, f flow.Flow) error {
 				longProcedure := LongProcedure{}
@@ -168,13 +173,6 @@ func TestChangePulse(t *testing.T) {
 		}, nil, nil)
 
 	handleProcessed := make(chan struct{})
-	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
-
-	a := pulse.NewAccessorMock(t)
-	a.LatestMock.Set(func(ctx context.Context) (insolar.Pulse, error) {
-		return currentPulse, nil
-	})
-	disp.PulseAccessor = a
 
 	go func() {
 		ctx := context.Background()
@@ -201,9 +199,11 @@ func TestChangePulseAndMigrate(t *testing.T) {
 	secondProcedureStarted := make(chan struct{})
 
 	migrateStarted := make(chan struct{})
+	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
 
 	replyChan := make(chan *mockReply, 1)
 	disp := dispatcher.NewDispatcher(
+		pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil),
 		func(message *message.Message) flow.Handle {
 			return func(ctx context.Context, f1 flow.Flow) error {
 				longProcedure := LongProcedure{}
@@ -227,9 +227,6 @@ func TestChangePulseAndMigrate(t *testing.T) {
 		}, nil, nil)
 
 	handleProcessed := make(chan struct{})
-
-	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
-	disp.PulseAccessor = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
 
 	go func() {
 		ctx := context.Background()

@@ -1,4 +1,4 @@
-//
+///
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,22 +12,21 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+///
 
-package pulsemanager
+package executor
 
 import (
 	"context"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/ledger/light/artifactmanager"
-	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 )
@@ -38,15 +37,15 @@ var (
 
 // PulseManager implements insolar.PulseManager.
 type PulseManager struct {
-	Bus            insolar.MessageBus        `inject:""`
-	NodeNet        insolar.NodeNetwork       `inject:""`
-	GIL            insolar.GlobalInsolarLock `inject:""`
-	MessageHandler *artifactmanager.MessageHandler
+	Bus        insolar.MessageBus        `inject:""`
+	NodeNet    insolar.NodeNetwork       `inject:""`
+	GIL        insolar.GlobalInsolarLock `inject:""`
+	Dispatcher *dispatcher.Dispatcher
 
-	JetReleaser executor.JetReleaser `inject:""`
+	JetReleaser JetReleaser `inject:""`
 
 	JetModifier jet.Modifier `inject:""`
-	JetSplitter executor.JetSplitter
+	JetSplitter JetSplitter
 
 	NodeSetter node.Modifier `inject:""`
 	Nodes      node.Accessor `inject:""`
@@ -55,11 +54,11 @@ type PulseManager struct {
 	PulseCalculator pulse.Calculator `inject:""`
 	PulseAppender   pulse.Appender   `inject:""`
 
-	LightReplicator executor.LightReplicator
-	HotSender       executor.HotSender
+	LightReplicator LightReplicator
+	HotSender       HotSender
 
-	WriteManager executor.WriteManager
-	StateIniter  executor.StateIniter
+	WriteManager WriteManager
+	StateIniter  StateIniter
 
 	// setLock locks Set method call.
 	setLock sync.RWMutex
@@ -67,11 +66,11 @@ type PulseManager struct {
 
 // NewPulseManager creates PulseManager instance.
 func NewPulseManager(
-	jetSplitter executor.JetSplitter,
-	lightToHeavySyncer executor.LightReplicator,
-	writeManager executor.WriteManager,
-	hotSender executor.HotSender,
-	stateIniter executor.StateIniter,
+	jetSplitter JetSplitter,
+	lightToHeavySyncer LightReplicator,
+	writeManager WriteManager,
+	hotSender HotSender,
+	stateIniter StateIniter,
 ) *PulseManager {
 	pm := &PulseManager{
 		JetSplitter:     jetSplitter,
@@ -122,7 +121,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		go m.LightReplicator.NotifyAboutPulse(ctx, newPulse.PulseNumber)
 	}
 
-	m.MessageHandler.OnPulse(ctx, newPulse)
+	m.Dispatcher.ChangePulse(ctx, newPulse)
 	return nil
 }
 

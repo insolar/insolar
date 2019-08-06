@@ -153,6 +153,7 @@ func (lr *LogicRunner) initHandlers() {
 		}
 	}
 	lr.FlowDispatcher = dispatcher.NewDispatcher(
+		lr.PulseAccessor,
 		func(msg *watermillMsg.Message) flow.Handle {
 			return initHandle(msg).Present
 		},
@@ -171,13 +172,16 @@ func (lr *LogicRunner) initHandlers() {
 		}
 	}
 
-	lr.InnerFlowDispatcher = dispatcher.NewDispatcher(func(msg *watermillMsg.Message) flow.Handle {
-		return innerInitHandle(msg).Present
-	}, func(msg *watermillMsg.Message) flow.Handle {
-		return innerInitHandle(msg).Present
-	}, func(msg *watermillMsg.Message) flow.Handle {
-		return innerInitHandle(msg).Present
-	})
+	lr.InnerFlowDispatcher = dispatcher.NewDispatcher(
+		lr.PulseAccessor,
+		func(msg *watermillMsg.Message) flow.Handle {
+			return innerInitHandle(msg).Present
+		}, func(msg *watermillMsg.Message) flow.Handle {
+			return innerInitHandle(msg).Present
+		}, func(msg *watermillMsg.Message) flow.Handle {
+			return innerInitHandle(msg).Present
+		},
+	)
 }
 
 func (lr *LogicRunner) initializeBuiltin(_ context.Context) error {
@@ -229,7 +233,6 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 	}
 
 	lr.ArtifactManager.InjectFinish()
-	lr.FlowDispatcher.PulseAccessor = lr.PulseAccessor
 
 	return nil
 }

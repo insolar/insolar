@@ -32,6 +32,8 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/jetcoordinator"
@@ -42,9 +44,9 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/light/artifactmanager"
 	"github.com/insolar/insolar/ledger/light/executor"
-	"github.com/insolar/insolar/ledger/light/pulsemanager"
+	"github.com/insolar/insolar/ledger/light/handle"
+	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/platformpolicy"
@@ -205,10 +207,10 @@ func NewServer(
 
 	// Light components.
 	var (
-		PulseManager insolar.PulseManager
-		Handler      *artifactmanager.MessageHandler
-		Replicator   executor.LightReplicator
-		Cleaner      executor.Cleaner
+		PulseManager   insolar.PulseManager
+		Replicator     executor.LightReplicator
+		Cleaner        executor.Cleaner
+		FlowDispatcher *dispatcher.Dispatcher
 	)
 	{
 		conf := cfg.Ledger
@@ -217,38 +219,18 @@ func NewServer(
 		records := object.NewRecordMemory()
 		indexes := object.NewIndexStorageMemory()
 		writeController := executor.NewWriteController()
-		waiter := executor.NewChannelWaiter()
+		hotWaitReleaser := executor.NewChannelWaiter()
 
-		handler := artifactmanager.NewMessageHandler(&conf)
-		handler.PulseCalculator = Pulses
-		handler.FlowDispatcher.PulseAccessor = Pulses
-
-		handler.PCS = CryptoScheme
-		handler.JetCoordinator = Coordinator
-		handler.JetStorage = Jets
-		handler.DropModifier = drops
-		handler.IndexLocker = idLocker
-		handler.Records = records
-		handler.HotDataWaiter = waiter
-		handler.JetReleaser = waiter
-		handler.WriteAccessor = writeController
-		handler.Sender = ServerBus
-		handler.IndexStorage = indexes
-
-		jetTreeUpdater := executor.NewFetcher(Nodes, Jets, ServerBus, Coordinator)
+		jetFetcher := executor.NewFetcher(Nodes, Jets, ServerBus, Coordinator)
 		filamentCalculator := executor.NewFilamentCalculator(
 			indexes,
 			records,
 			Coordinator,
-			jetTreeUpdater,
+			jetFetcher,
 			ServerBus,
 			Pulses,
 		)
-		requestChecker := executor.NewRequestChecker(filamentCalculator, Coordinator, jetTreeUpdater, ServerBus)
-
-		handler.JetTreeUpdater = jetTreeUpdater
-		handler.FilamentCalculator = filamentCalculator
-		handler.RequestChecker = requestChecker
+		requestChecker := executor.NewRequestChecker(filamentCalculator, Coordinator, jetFetcher, ServerBus)
 
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
 		lightCleaner := executor.NewCleaner(
@@ -260,7 +242,7 @@ func NewServer(
 			Pulses,
 			Pulses,
 			indexes,
-			handler.FilamentCalculator,
+			filamentCalculator,
 			conf.LightChainLimit,
 			conf.CleanerDelay,
 		)
@@ -289,19 +271,51 @@ func NewServer(
 			ServerBus,
 		)
 
-		stateIniter := executor.NewStateIniter(Jets, waiter, drops, Nodes, ServerBus, Pulses, Pulses, jetCalculator)
+		stateIniter := executor.NewStateIniter(Jets, hotWaitReleaser, drops, Nodes, ServerBus, Pulses, Pulses, jetCalculator)
 
-		pm := pulsemanager.NewPulseManager(
+		dep := proc.NewDependencies(
+			CryptoScheme,
+			Coordinator,
+			Jets,
+			Pulses,
+			ServerBus,
+			drops,
+			idLocker,
+			records,
+			indexes,
+			hotWaitReleaser,
+			hotWaitReleaser,
+			writeController,
+			jetFetcher,
+			filamentCalculator,
+			requestChecker,
+		)
+
+		initHandle := func(msg *message.Message) *handle.Init {
+			return handle.NewInit(dep, ServerBus, msg)
+		}
+
+		FlowDispatcher = dispatcher.NewDispatcher(
+			Pulses,
+			func(msg *message.Message) flow.Handle {
+				return initHandle(msg).Present
+			}, func(msg *message.Message) flow.Handle {
+				return initHandle(msg).Future
+			}, func(msg *message.Message) flow.Handle {
+				return initHandle(msg).Past
+			},
+		)
+
+		pm := executor.NewPulseManager(
 			jetSplitter,
 			lthSyncer,
 			writeController,
 			hotSender,
 			stateIniter,
 		)
-		pm.MessageHandler = handler
 		pm.Bus = Bus
 		pm.NodeNet = NodeNetwork
-		pm.JetReleaser = waiter
+		pm.JetReleaser = hotWaitReleaser
 		pm.JetModifier = Jets
 		pm.NodeSetter = Nodes
 		pm.Nodes = Nodes
@@ -310,9 +324,9 @@ func NewServer(
 		pm.PulseAppender = Pulses
 		pm.GIL = &stub{}
 		pm.NodeNet = NodeNetwork
+		pm.Dispatcher = FlowDispatcher
 
 		PulseManager = pm
-		Handler = handler
 	}
 
 	// Start routers with handlers.
@@ -392,13 +406,13 @@ func NewServer(
 			"Incoming",
 			bus.TopicIncoming,
 			ServerPubSub,
-			Handler.FlowDispatcher.Process,
+			FlowDispatcher.Process,
 		)
 		inRouter.AddNoPublisherHandler(
 			"OutgoingFromClient",
 			bus.TopicOutgoing,
 			ClientPubSub,
-			Handler.FlowDispatcher.Process,
+			FlowDispatcher.Process,
 		)
 
 		startRouter(ctx, inRouter)
