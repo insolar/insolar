@@ -35,7 +35,7 @@ func TestGetBalance(t *testing.T) {
 }
 
 func TestGetBalanceWrongRef(t *testing.T) {
-	_, err := getBalance(&root, testutils.RandomRef().String())
+	_, err := signedRequestWithEmptyRequestRef(t, &root, "wallet.getBalance", map[string]interface{}{"reference": testutils.RandomRef().String()})
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "index not found")
 }

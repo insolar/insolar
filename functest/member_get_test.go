@@ -32,7 +32,7 @@ func TestMemberGet(t *testing.T) {
 	member2, _ := newUserWithKeys()
 	member2.pubKey = member1.pubKey
 	member2.privKey = member1.privKey
-	res, err := signedRequest(member2, "member.get", nil)
+	res, err := signedRequest(t, member2, "member.get", nil)
 	require.Nil(t, err)
 	require.Equal(t, member1.ref, res.(map[string]interface{})["reference"].(string))
 }
@@ -41,15 +41,15 @@ func TestMigrationMemberGet(t *testing.T) {
 	member1, _ := newUserWithKeys()
 
 	ba := testutils.RandomString()
-	_, _ = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
+	_, _ = signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
 
-	res1, err := retryableMemberMigrationCreate(member1, true)
+	res1, err := retryableMemberMigrationCreate(t, member1, true)
 	require.Nil(t, err)
 
 	decodedRes1, ok := res1.(map[string]interface{})
 	require.True(t, ok, fmt.Sprintf("failed to decode: expected map[string]interface{}, got %T", res1))
 
-	res2, err := signedRequest(member1, "member.get", nil)
+	res2, err := signedRequest(t, member1, "member.get", nil)
 	require.Nil(t, err)
 
 	decodedRes2, ok := res2.(map[string]interface{})
@@ -61,7 +61,7 @@ func TestMigrationMemberGet(t *testing.T) {
 
 func TestMemberGetWrongPublicKey(t *testing.T) {
 	member1, _ := newUserWithKeys()
-	_, err := signedRequest(member1, "member.get", nil)
+	_, err := signedRequestWithEmptyRequestRef(t, member1, "member.get", nil)
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "failed to get reference by public key: failed to get reference in shard: failed to find reference by key")
 }
