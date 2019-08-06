@@ -166,9 +166,6 @@ func (h *HandleCall) handleActual(
 	if err == nil {
 		broker := h.dep.StateStorage.UpsertExecutionState(*objRef)
 
-		if trace.FromContext(ctx) == nil {
-			panic("PPP3")
-		}
 		proc := AddFreshRequest{broker: broker, requestRef: *requestRef, request: request}
 		if err := f.Procedure(ctx, &proc, true); err != nil {
 			return nil, errors.Wrap(err, "couldn't pass request to broker")
@@ -202,10 +199,6 @@ func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
 		trace.StringAttribute("msg.Type", msg.Type().String()),
 	)
 	defer span.End()
-
-	if trace.FromContext(ctx) == nil {
-		panic("PPP1")
-	}
 
 	rep, err := h.handleActual(ctx, msg, f)
 

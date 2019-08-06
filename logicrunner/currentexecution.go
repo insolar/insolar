@@ -22,8 +22,6 @@ import (
 	"reflect"
 	"sync"
 
-	"go.opencensus.io/trace"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -54,10 +52,6 @@ func NewTranscript(
 	requestRef insolar.Reference,
 	request record.IncomingRequest,
 ) *Transcript {
-
-	if trace.FromContext(ctx) == nil {
-		panic("PPP2")
-	}
 
 	return &Transcript{
 		Context:    ctx,
