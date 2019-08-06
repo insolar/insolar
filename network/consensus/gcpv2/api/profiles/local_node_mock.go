@@ -16,6 +16,12 @@ import (
 type LocalNodeMock struct {
 	t minimock.Tester
 
+	funcCanIntroduceJoiner          func() (b1 bool)
+	inspectFuncCanIntroduceJoiner   func()
+	afterCanIntroduceJoinerCounter  uint64
+	beforeCanIntroduceJoinerCounter uint64
+	CanIntroduceJoinerMock          mLocalNodeMockCanIntroduceJoiner
+
 	funcGetDeclaredPower          func() (p1 member.Power)
 	inspectFuncGetDeclaredPower   func()
 	afterGetDeclaredPowerCounter  uint64
@@ -52,11 +58,35 @@ type LocalNodeMock struct {
 	beforeGetStaticCounter uint64
 	GetStaticMock          mLocalNodeMockGetStatic
 
+	funcHasFullProfile          func() (b1 bool)
+	inspectFuncHasFullProfile   func()
+	afterHasFullProfileCounter  uint64
+	beforeHasFullProfileCounter uint64
+	HasFullProfileMock          mLocalNodeMockHasFullProfile
+
 	funcIsJoiner          func() (b1 bool)
 	inspectFuncIsJoiner   func()
 	afterIsJoinerCounter  uint64
 	beforeIsJoinerCounter uint64
 	IsJoinerMock          mLocalNodeMockIsJoiner
+
+	funcIsPowered          func() (b1 bool)
+	inspectFuncIsPowered   func()
+	afterIsPoweredCounter  uint64
+	beforeIsPoweredCounter uint64
+	IsPoweredMock          mLocalNodeMockIsPowered
+
+	funcIsStateful          func() (b1 bool)
+	inspectFuncIsStateful   func()
+	afterIsStatefulCounter  uint64
+	beforeIsStatefulCounter uint64
+	IsStatefulMock          mLocalNodeMockIsStateful
+
+	funcIsVoter          func() (b1 bool)
+	inspectFuncIsVoter   func()
+	afterIsVoterCounter  uint64
+	beforeIsVoterCounter uint64
+	IsVoterMock          mLocalNodeMockIsVoter
 
 	funcLocalNodeProfile          func()
 	inspectFuncLocalNodeProfile   func()
@@ -72,6 +102,8 @@ func NewLocalNodeMock(t minimock.Tester) *LocalNodeMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.CanIntroduceJoinerMock = mLocalNodeMockCanIntroduceJoiner{mock: m}
+
 	m.GetDeclaredPowerMock = mLocalNodeMockGetDeclaredPower{mock: m}
 
 	m.GetIndexMock = mLocalNodeMockGetIndex{mock: m}
@@ -84,11 +116,162 @@ func NewLocalNodeMock(t minimock.Tester) *LocalNodeMock {
 
 	m.GetStaticMock = mLocalNodeMockGetStatic{mock: m}
 
+	m.HasFullProfileMock = mLocalNodeMockHasFullProfile{mock: m}
+
 	m.IsJoinerMock = mLocalNodeMockIsJoiner{mock: m}
+
+	m.IsPoweredMock = mLocalNodeMockIsPowered{mock: m}
+
+	m.IsStatefulMock = mLocalNodeMockIsStateful{mock: m}
+
+	m.IsVoterMock = mLocalNodeMockIsVoter{mock: m}
 
 	m.LocalNodeProfileMock = mLocalNodeMockLocalNodeProfile{mock: m}
 
 	return m
+}
+
+type mLocalNodeMockCanIntroduceJoiner struct {
+	mock               *LocalNodeMock
+	defaultExpectation *LocalNodeMockCanIntroduceJoinerExpectation
+	expectations       []*LocalNodeMockCanIntroduceJoinerExpectation
+}
+
+// LocalNodeMockCanIntroduceJoinerExpectation specifies expectation struct of the LocalNode.CanIntroduceJoiner
+type LocalNodeMockCanIntroduceJoinerExpectation struct {
+	mock *LocalNodeMock
+
+	results *LocalNodeMockCanIntroduceJoinerResults
+	Counter uint64
+}
+
+// LocalNodeMockCanIntroduceJoinerResults contains results of the LocalNode.CanIntroduceJoiner
+type LocalNodeMockCanIntroduceJoinerResults struct {
+	b1 bool
+}
+
+// Expect sets up expected params for LocalNode.CanIntroduceJoiner
+func (mmCanIntroduceJoiner *mLocalNodeMockCanIntroduceJoiner) Expect() *mLocalNodeMockCanIntroduceJoiner {
+	if mmCanIntroduceJoiner.mock.funcCanIntroduceJoiner != nil {
+		mmCanIntroduceJoiner.mock.t.Fatalf("LocalNodeMock.CanIntroduceJoiner mock is already set by Set")
+	}
+
+	if mmCanIntroduceJoiner.defaultExpectation == nil {
+		mmCanIntroduceJoiner.defaultExpectation = &LocalNodeMockCanIntroduceJoinerExpectation{}
+	}
+
+	return mmCanIntroduceJoiner
+}
+
+// Inspect accepts an inspector function that has same arguments as the LocalNode.CanIntroduceJoiner
+func (mmCanIntroduceJoiner *mLocalNodeMockCanIntroduceJoiner) Inspect(f func()) *mLocalNodeMockCanIntroduceJoiner {
+	if mmCanIntroduceJoiner.mock.inspectFuncCanIntroduceJoiner != nil {
+		mmCanIntroduceJoiner.mock.t.Fatalf("Inspect function is already set for LocalNodeMock.CanIntroduceJoiner")
+	}
+
+	mmCanIntroduceJoiner.mock.inspectFuncCanIntroduceJoiner = f
+
+	return mmCanIntroduceJoiner
+}
+
+// Return sets up results that will be returned by LocalNode.CanIntroduceJoiner
+func (mmCanIntroduceJoiner *mLocalNodeMockCanIntroduceJoiner) Return(b1 bool) *LocalNodeMock {
+	if mmCanIntroduceJoiner.mock.funcCanIntroduceJoiner != nil {
+		mmCanIntroduceJoiner.mock.t.Fatalf("LocalNodeMock.CanIntroduceJoiner mock is already set by Set")
+	}
+
+	if mmCanIntroduceJoiner.defaultExpectation == nil {
+		mmCanIntroduceJoiner.defaultExpectation = &LocalNodeMockCanIntroduceJoinerExpectation{mock: mmCanIntroduceJoiner.mock}
+	}
+	mmCanIntroduceJoiner.defaultExpectation.results = &LocalNodeMockCanIntroduceJoinerResults{b1}
+	return mmCanIntroduceJoiner.mock
+}
+
+//Set uses given function f to mock the LocalNode.CanIntroduceJoiner method
+func (mmCanIntroduceJoiner *mLocalNodeMockCanIntroduceJoiner) Set(f func() (b1 bool)) *LocalNodeMock {
+	if mmCanIntroduceJoiner.defaultExpectation != nil {
+		mmCanIntroduceJoiner.mock.t.Fatalf("Default expectation is already set for the LocalNode.CanIntroduceJoiner method")
+	}
+
+	if len(mmCanIntroduceJoiner.expectations) > 0 {
+		mmCanIntroduceJoiner.mock.t.Fatalf("Some expectations are already set for the LocalNode.CanIntroduceJoiner method")
+	}
+
+	mmCanIntroduceJoiner.mock.funcCanIntroduceJoiner = f
+	return mmCanIntroduceJoiner.mock
+}
+
+// CanIntroduceJoiner implements LocalNode
+func (mmCanIntroduceJoiner *LocalNodeMock) CanIntroduceJoiner() (b1 bool) {
+	mm_atomic.AddUint64(&mmCanIntroduceJoiner.beforeCanIntroduceJoinerCounter, 1)
+	defer mm_atomic.AddUint64(&mmCanIntroduceJoiner.afterCanIntroduceJoinerCounter, 1)
+
+	if mmCanIntroduceJoiner.inspectFuncCanIntroduceJoiner != nil {
+		mmCanIntroduceJoiner.inspectFuncCanIntroduceJoiner()
+	}
+
+	if mmCanIntroduceJoiner.CanIntroduceJoinerMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmCanIntroduceJoiner.CanIntroduceJoinerMock.defaultExpectation.Counter, 1)
+
+		results := mmCanIntroduceJoiner.CanIntroduceJoinerMock.defaultExpectation.results
+		if results == nil {
+			mmCanIntroduceJoiner.t.Fatal("No results are set for the LocalNodeMock.CanIntroduceJoiner")
+		}
+		return (*results).b1
+	}
+	if mmCanIntroduceJoiner.funcCanIntroduceJoiner != nil {
+		return mmCanIntroduceJoiner.funcCanIntroduceJoiner()
+	}
+	mmCanIntroduceJoiner.t.Fatalf("Unexpected call to LocalNodeMock.CanIntroduceJoiner.")
+	return
+}
+
+// CanIntroduceJoinerAfterCounter returns a count of finished LocalNodeMock.CanIntroduceJoiner invocations
+func (mmCanIntroduceJoiner *LocalNodeMock) CanIntroduceJoinerAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmCanIntroduceJoiner.afterCanIntroduceJoinerCounter)
+}
+
+// CanIntroduceJoinerBeforeCounter returns a count of LocalNodeMock.CanIntroduceJoiner invocations
+func (mmCanIntroduceJoiner *LocalNodeMock) CanIntroduceJoinerBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmCanIntroduceJoiner.beforeCanIntroduceJoinerCounter)
+}
+
+// MinimockCanIntroduceJoinerDone returns true if the count of the CanIntroduceJoiner invocations corresponds
+// the number of defined expectations
+func (m *LocalNodeMock) MinimockCanIntroduceJoinerDone() bool {
+	for _, e := range m.CanIntroduceJoinerMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.CanIntroduceJoinerMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterCanIntroduceJoinerCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcCanIntroduceJoiner != nil && mm_atomic.LoadUint64(&m.afterCanIntroduceJoinerCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockCanIntroduceJoinerInspect logs each unmet expectation
+func (m *LocalNodeMock) MinimockCanIntroduceJoinerInspect() {
+	for _, e := range m.CanIntroduceJoinerMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Error("Expected call to LocalNodeMock.CanIntroduceJoiner")
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.CanIntroduceJoinerMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterCanIntroduceJoinerCounter) < 1 {
+		m.t.Error("Expected call to LocalNodeMock.CanIntroduceJoiner")
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcCanIntroduceJoiner != nil && mm_atomic.LoadUint64(&m.afterCanIntroduceJoinerCounter) < 1 {
+		m.t.Error("Expected call to LocalNodeMock.CanIntroduceJoiner")
+	}
 }
 
 type mLocalNodeMockGetDeclaredPower struct {
@@ -949,6 +1132,149 @@ func (m *LocalNodeMock) MinimockGetStaticInspect() {
 	}
 }
 
+type mLocalNodeMockHasFullProfile struct {
+	mock               *LocalNodeMock
+	defaultExpectation *LocalNodeMockHasFullProfileExpectation
+	expectations       []*LocalNodeMockHasFullProfileExpectation
+}
+
+// LocalNodeMockHasFullProfileExpectation specifies expectation struct of the LocalNode.HasFullProfile
+type LocalNodeMockHasFullProfileExpectation struct {
+	mock *LocalNodeMock
+
+	results *LocalNodeMockHasFullProfileResults
+	Counter uint64
+}
+
+// LocalNodeMockHasFullProfileResults contains results of the LocalNode.HasFullProfile
+type LocalNodeMockHasFullProfileResults struct {
+	b1 bool
+}
+
+// Expect sets up expected params for LocalNode.HasFullProfile
+func (mmHasFullProfile *mLocalNodeMockHasFullProfile) Expect() *mLocalNodeMockHasFullProfile {
+	if mmHasFullProfile.mock.funcHasFullProfile != nil {
+		mmHasFullProfile.mock.t.Fatalf("LocalNodeMock.HasFullProfile mock is already set by Set")
+	}
+
+	if mmHasFullProfile.defaultExpectation == nil {
+		mmHasFullProfile.defaultExpectation = &LocalNodeMockHasFullProfileExpectation{}
+	}
+
+	return mmHasFullProfile
+}
+
+// Inspect accepts an inspector function that has same arguments as the LocalNode.HasFullProfile
+func (mmHasFullProfile *mLocalNodeMockHasFullProfile) Inspect(f func()) *mLocalNodeMockHasFullProfile {
+	if mmHasFullProfile.mock.inspectFuncHasFullProfile != nil {
+		mmHasFullProfile.mock.t.Fatalf("Inspect function is already set for LocalNodeMock.HasFullProfile")
+	}
+
+	mmHasFullProfile.mock.inspectFuncHasFullProfile = f
+
+	return mmHasFullProfile
+}
+
+// Return sets up results that will be returned by LocalNode.HasFullProfile
+func (mmHasFullProfile *mLocalNodeMockHasFullProfile) Return(b1 bool) *LocalNodeMock {
+	if mmHasFullProfile.mock.funcHasFullProfile != nil {
+		mmHasFullProfile.mock.t.Fatalf("LocalNodeMock.HasFullProfile mock is already set by Set")
+	}
+
+	if mmHasFullProfile.defaultExpectation == nil {
+		mmHasFullProfile.defaultExpectation = &LocalNodeMockHasFullProfileExpectation{mock: mmHasFullProfile.mock}
+	}
+	mmHasFullProfile.defaultExpectation.results = &LocalNodeMockHasFullProfileResults{b1}
+	return mmHasFullProfile.mock
+}
+
+//Set uses given function f to mock the LocalNode.HasFullProfile method
+func (mmHasFullProfile *mLocalNodeMockHasFullProfile) Set(f func() (b1 bool)) *LocalNodeMock {
+	if mmHasFullProfile.defaultExpectation != nil {
+		mmHasFullProfile.mock.t.Fatalf("Default expectation is already set for the LocalNode.HasFullProfile method")
+	}
+
+	if len(mmHasFullProfile.expectations) > 0 {
+		mmHasFullProfile.mock.t.Fatalf("Some expectations are already set for the LocalNode.HasFullProfile method")
+	}
+
+	mmHasFullProfile.mock.funcHasFullProfile = f
+	return mmHasFullProfile.mock
+}
+
+// HasFullProfile implements LocalNode
+func (mmHasFullProfile *LocalNodeMock) HasFullProfile() (b1 bool) {
+	mm_atomic.AddUint64(&mmHasFullProfile.beforeHasFullProfileCounter, 1)
+	defer mm_atomic.AddUint64(&mmHasFullProfile.afterHasFullProfileCounter, 1)
+
+	if mmHasFullProfile.inspectFuncHasFullProfile != nil {
+		mmHasFullProfile.inspectFuncHasFullProfile()
+	}
+
+	if mmHasFullProfile.HasFullProfileMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmHasFullProfile.HasFullProfileMock.defaultExpectation.Counter, 1)
+
+		results := mmHasFullProfile.HasFullProfileMock.defaultExpectation.results
+		if results == nil {
+			mmHasFullProfile.t.Fatal("No results are set for the LocalNodeMock.HasFullProfile")
+		}
+		return (*results).b1
+	}
+	if mmHasFullProfile.funcHasFullProfile != nil {
+		return mmHasFullProfile.funcHasFullProfile()
+	}
+	mmHasFullProfile.t.Fatalf("Unexpected call to LocalNodeMock.HasFullProfile.")
+	return
+}
+
+// HasFullProfileAfterCounter returns a count of finished LocalNodeMock.HasFullProfile invocations
+func (mmHasFullProfile *LocalNodeMock) HasFullProfileAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmHasFullProfile.afterHasFullProfileCounter)
+}
+
+// HasFullProfileBeforeCounter returns a count of LocalNodeMock.HasFullProfile invocations
+func (mmHasFullProfile *LocalNodeMock) HasFullProfileBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmHasFullProfile.beforeHasFullProfileCounter)
+}
+
+// MinimockHasFullProfileDone returns true if the count of the HasFullProfile invocations corresponds
+// the number of defined expectations
+func (m *LocalNodeMock) MinimockHasFullProfileDone() bool {
+	for _, e := range m.HasFullProfileMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.HasFullProfileMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterHasFullProfileCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcHasFullProfile != nil && mm_atomic.LoadUint64(&m.afterHasFullProfileCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockHasFullProfileInspect logs each unmet expectation
+func (m *LocalNodeMock) MinimockHasFullProfileInspect() {
+	for _, e := range m.HasFullProfileMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Error("Expected call to LocalNodeMock.HasFullProfile")
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.HasFullProfileMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterHasFullProfileCounter) < 1 {
+		m.t.Error("Expected call to LocalNodeMock.HasFullProfile")
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcHasFullProfile != nil && mm_atomic.LoadUint64(&m.afterHasFullProfileCounter) < 1 {
+		m.t.Error("Expected call to LocalNodeMock.HasFullProfile")
+	}
+}
+
 type mLocalNodeMockIsJoiner struct {
 	mock               *LocalNodeMock
 	defaultExpectation *LocalNodeMockIsJoinerExpectation
@@ -1092,6 +1418,435 @@ func (m *LocalNodeMock) MinimockIsJoinerInspect() {
 	}
 }
 
+type mLocalNodeMockIsPowered struct {
+	mock               *LocalNodeMock
+	defaultExpectation *LocalNodeMockIsPoweredExpectation
+	expectations       []*LocalNodeMockIsPoweredExpectation
+}
+
+// LocalNodeMockIsPoweredExpectation specifies expectation struct of the LocalNode.IsPowered
+type LocalNodeMockIsPoweredExpectation struct {
+	mock *LocalNodeMock
+
+	results *LocalNodeMockIsPoweredResults
+	Counter uint64
+}
+
+// LocalNodeMockIsPoweredResults contains results of the LocalNode.IsPowered
+type LocalNodeMockIsPoweredResults struct {
+	b1 bool
+}
+
+// Expect sets up expected params for LocalNode.IsPowered
+func (mmIsPowered *mLocalNodeMockIsPowered) Expect() *mLocalNodeMockIsPowered {
+	if mmIsPowered.mock.funcIsPowered != nil {
+		mmIsPowered.mock.t.Fatalf("LocalNodeMock.IsPowered mock is already set by Set")
+	}
+
+	if mmIsPowered.defaultExpectation == nil {
+		mmIsPowered.defaultExpectation = &LocalNodeMockIsPoweredExpectation{}
+	}
+
+	return mmIsPowered
+}
+
+// Inspect accepts an inspector function that has same arguments as the LocalNode.IsPowered
+func (mmIsPowered *mLocalNodeMockIsPowered) Inspect(f func()) *mLocalNodeMockIsPowered {
+	if mmIsPowered.mock.inspectFuncIsPowered != nil {
+		mmIsPowered.mock.t.Fatalf("Inspect function is already set for LocalNodeMock.IsPowered")
+	}
+
+	mmIsPowered.mock.inspectFuncIsPowered = f
+
+	return mmIsPowered
+}
+
+// Return sets up results that will be returned by LocalNode.IsPowered
+func (mmIsPowered *mLocalNodeMockIsPowered) Return(b1 bool) *LocalNodeMock {
+	if mmIsPowered.mock.funcIsPowered != nil {
+		mmIsPowered.mock.t.Fatalf("LocalNodeMock.IsPowered mock is already set by Set")
+	}
+
+	if mmIsPowered.defaultExpectation == nil {
+		mmIsPowered.defaultExpectation = &LocalNodeMockIsPoweredExpectation{mock: mmIsPowered.mock}
+	}
+	mmIsPowered.defaultExpectation.results = &LocalNodeMockIsPoweredResults{b1}
+	return mmIsPowered.mock
+}
+
+//Set uses given function f to mock the LocalNode.IsPowered method
+func (mmIsPowered *mLocalNodeMockIsPowered) Set(f func() (b1 bool)) *LocalNodeMock {
+	if mmIsPowered.defaultExpectation != nil {
+		mmIsPowered.mock.t.Fatalf("Default expectation is already set for the LocalNode.IsPowered method")
+	}
+
+	if len(mmIsPowered.expectations) > 0 {
+		mmIsPowered.mock.t.Fatalf("Some expectations are already set for the LocalNode.IsPowered method")
+	}
+
+	mmIsPowered.mock.funcIsPowered = f
+	return mmIsPowered.mock
+}
+
+// IsPowered implements LocalNode
+func (mmIsPowered *LocalNodeMock) IsPowered() (b1 bool) {
+	mm_atomic.AddUint64(&mmIsPowered.beforeIsPoweredCounter, 1)
+	defer mm_atomic.AddUint64(&mmIsPowered.afterIsPoweredCounter, 1)
+
+	if mmIsPowered.inspectFuncIsPowered != nil {
+		mmIsPowered.inspectFuncIsPowered()
+	}
+
+	if mmIsPowered.IsPoweredMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmIsPowered.IsPoweredMock.defaultExpectation.Counter, 1)
+
+		results := mmIsPowered.IsPoweredMock.defaultExpectation.results
+		if results == nil {
+			mmIsPowered.t.Fatal("No results are set for the LocalNodeMock.IsPowered")
+		}
+		return (*results).b1
+	}
+	if mmIsPowered.funcIsPowered != nil {
+		return mmIsPowered.funcIsPowered()
+	}
+	mmIsPowered.t.Fatalf("Unexpected call to LocalNodeMock.IsPowered.")
+	return
+}
+
+// IsPoweredAfterCounter returns a count of finished LocalNodeMock.IsPowered invocations
+func (mmIsPowered *LocalNodeMock) IsPoweredAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmIsPowered.afterIsPoweredCounter)
+}
+
+// IsPoweredBeforeCounter returns a count of LocalNodeMock.IsPowered invocations
+func (mmIsPowered *LocalNodeMock) IsPoweredBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmIsPowered.beforeIsPoweredCounter)
+}
+
+// MinimockIsPoweredDone returns true if the count of the IsPowered invocations corresponds
+// the number of defined expectations
+func (m *LocalNodeMock) MinimockIsPoweredDone() bool {
+	for _, e := range m.IsPoweredMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.IsPoweredMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterIsPoweredCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcIsPowered != nil && mm_atomic.LoadUint64(&m.afterIsPoweredCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockIsPoweredInspect logs each unmet expectation
+func (m *LocalNodeMock) MinimockIsPoweredInspect() {
+	for _, e := range m.IsPoweredMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Error("Expected call to LocalNodeMock.IsPowered")
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.IsPoweredMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterIsPoweredCounter) < 1 {
+		m.t.Error("Expected call to LocalNodeMock.IsPowered")
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcIsPowered != nil && mm_atomic.LoadUint64(&m.afterIsPoweredCounter) < 1 {
+		m.t.Error("Expected call to LocalNodeMock.IsPowered")
+	}
+}
+
+type mLocalNodeMockIsStateful struct {
+	mock               *LocalNodeMock
+	defaultExpectation *LocalNodeMockIsStatefulExpectation
+	expectations       []*LocalNodeMockIsStatefulExpectation
+}
+
+// LocalNodeMockIsStatefulExpectation specifies expectation struct of the LocalNode.IsStateful
+type LocalNodeMockIsStatefulExpectation struct {
+	mock *LocalNodeMock
+
+	results *LocalNodeMockIsStatefulResults
+	Counter uint64
+}
+
+// LocalNodeMockIsStatefulResults contains results of the LocalNode.IsStateful
+type LocalNodeMockIsStatefulResults struct {
+	b1 bool
+}
+
+// Expect sets up expected params for LocalNode.IsStateful
+func (mmIsStateful *mLocalNodeMockIsStateful) Expect() *mLocalNodeMockIsStateful {
+	if mmIsStateful.mock.funcIsStateful != nil {
+		mmIsStateful.mock.t.Fatalf("LocalNodeMock.IsStateful mock is already set by Set")
+	}
+
+	if mmIsStateful.defaultExpectation == nil {
+		mmIsStateful.defaultExpectation = &LocalNodeMockIsStatefulExpectation{}
+	}
+
+	return mmIsStateful
+}
+
+// Inspect accepts an inspector function that has same arguments as the LocalNode.IsStateful
+func (mmIsStateful *mLocalNodeMockIsStateful) Inspect(f func()) *mLocalNodeMockIsStateful {
+	if mmIsStateful.mock.inspectFuncIsStateful != nil {
+		mmIsStateful.mock.t.Fatalf("Inspect function is already set for LocalNodeMock.IsStateful")
+	}
+
+	mmIsStateful.mock.inspectFuncIsStateful = f
+
+	return mmIsStateful
+}
+
+// Return sets up results that will be returned by LocalNode.IsStateful
+func (mmIsStateful *mLocalNodeMockIsStateful) Return(b1 bool) *LocalNodeMock {
+	if mmIsStateful.mock.funcIsStateful != nil {
+		mmIsStateful.mock.t.Fatalf("LocalNodeMock.IsStateful mock is already set by Set")
+	}
+
+	if mmIsStateful.defaultExpectation == nil {
+		mmIsStateful.defaultExpectation = &LocalNodeMockIsStatefulExpectation{mock: mmIsStateful.mock}
+	}
+	mmIsStateful.defaultExpectation.results = &LocalNodeMockIsStatefulResults{b1}
+	return mmIsStateful.mock
+}
+
+//Set uses given function f to mock the LocalNode.IsStateful method
+func (mmIsStateful *mLocalNodeMockIsStateful) Set(f func() (b1 bool)) *LocalNodeMock {
+	if mmIsStateful.defaultExpectation != nil {
+		mmIsStateful.mock.t.Fatalf("Default expectation is already set for the LocalNode.IsStateful method")
+	}
+
+	if len(mmIsStateful.expectations) > 0 {
+		mmIsStateful.mock.t.Fatalf("Some expectations are already set for the LocalNode.IsStateful method")
+	}
+
+	mmIsStateful.mock.funcIsStateful = f
+	return mmIsStateful.mock
+}
+
+// IsStateful implements LocalNode
+func (mmIsStateful *LocalNodeMock) IsStateful() (b1 bool) {
+	mm_atomic.AddUint64(&mmIsStateful.beforeIsStatefulCounter, 1)
+	defer mm_atomic.AddUint64(&mmIsStateful.afterIsStatefulCounter, 1)
+
+	if mmIsStateful.inspectFuncIsStateful != nil {
+		mmIsStateful.inspectFuncIsStateful()
+	}
+
+	if mmIsStateful.IsStatefulMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmIsStateful.IsStatefulMock.defaultExpectation.Counter, 1)
+
+		results := mmIsStateful.IsStatefulMock.defaultExpectation.results
+		if results == nil {
+			mmIsStateful.t.Fatal("No results are set for the LocalNodeMock.IsStateful")
+		}
+		return (*results).b1
+	}
+	if mmIsStateful.funcIsStateful != nil {
+		return mmIsStateful.funcIsStateful()
+	}
+	mmIsStateful.t.Fatalf("Unexpected call to LocalNodeMock.IsStateful.")
+	return
+}
+
+// IsStatefulAfterCounter returns a count of finished LocalNodeMock.IsStateful invocations
+func (mmIsStateful *LocalNodeMock) IsStatefulAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmIsStateful.afterIsStatefulCounter)
+}
+
+// IsStatefulBeforeCounter returns a count of LocalNodeMock.IsStateful invocations
+func (mmIsStateful *LocalNodeMock) IsStatefulBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmIsStateful.beforeIsStatefulCounter)
+}
+
+// MinimockIsStatefulDone returns true if the count of the IsStateful invocations corresponds
+// the number of defined expectations
+func (m *LocalNodeMock) MinimockIsStatefulDone() bool {
+	for _, e := range m.IsStatefulMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.IsStatefulMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterIsStatefulCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcIsStateful != nil && mm_atomic.LoadUint64(&m.afterIsStatefulCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockIsStatefulInspect logs each unmet expectation
+func (m *LocalNodeMock) MinimockIsStatefulInspect() {
+	for _, e := range m.IsStatefulMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Error("Expected call to LocalNodeMock.IsStateful")
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.IsStatefulMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterIsStatefulCounter) < 1 {
+		m.t.Error("Expected call to LocalNodeMock.IsStateful")
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcIsStateful != nil && mm_atomic.LoadUint64(&m.afterIsStatefulCounter) < 1 {
+		m.t.Error("Expected call to LocalNodeMock.IsStateful")
+	}
+}
+
+type mLocalNodeMockIsVoter struct {
+	mock               *LocalNodeMock
+	defaultExpectation *LocalNodeMockIsVoterExpectation
+	expectations       []*LocalNodeMockIsVoterExpectation
+}
+
+// LocalNodeMockIsVoterExpectation specifies expectation struct of the LocalNode.IsVoter
+type LocalNodeMockIsVoterExpectation struct {
+	mock *LocalNodeMock
+
+	results *LocalNodeMockIsVoterResults
+	Counter uint64
+}
+
+// LocalNodeMockIsVoterResults contains results of the LocalNode.IsVoter
+type LocalNodeMockIsVoterResults struct {
+	b1 bool
+}
+
+// Expect sets up expected params for LocalNode.IsVoter
+func (mmIsVoter *mLocalNodeMockIsVoter) Expect() *mLocalNodeMockIsVoter {
+	if mmIsVoter.mock.funcIsVoter != nil {
+		mmIsVoter.mock.t.Fatalf("LocalNodeMock.IsVoter mock is already set by Set")
+	}
+
+	if mmIsVoter.defaultExpectation == nil {
+		mmIsVoter.defaultExpectation = &LocalNodeMockIsVoterExpectation{}
+	}
+
+	return mmIsVoter
+}
+
+// Inspect accepts an inspector function that has same arguments as the LocalNode.IsVoter
+func (mmIsVoter *mLocalNodeMockIsVoter) Inspect(f func()) *mLocalNodeMockIsVoter {
+	if mmIsVoter.mock.inspectFuncIsVoter != nil {
+		mmIsVoter.mock.t.Fatalf("Inspect function is already set for LocalNodeMock.IsVoter")
+	}
+
+	mmIsVoter.mock.inspectFuncIsVoter = f
+
+	return mmIsVoter
+}
+
+// Return sets up results that will be returned by LocalNode.IsVoter
+func (mmIsVoter *mLocalNodeMockIsVoter) Return(b1 bool) *LocalNodeMock {
+	if mmIsVoter.mock.funcIsVoter != nil {
+		mmIsVoter.mock.t.Fatalf("LocalNodeMock.IsVoter mock is already set by Set")
+	}
+
+	if mmIsVoter.defaultExpectation == nil {
+		mmIsVoter.defaultExpectation = &LocalNodeMockIsVoterExpectation{mock: mmIsVoter.mock}
+	}
+	mmIsVoter.defaultExpectation.results = &LocalNodeMockIsVoterResults{b1}
+	return mmIsVoter.mock
+}
+
+//Set uses given function f to mock the LocalNode.IsVoter method
+func (mmIsVoter *mLocalNodeMockIsVoter) Set(f func() (b1 bool)) *LocalNodeMock {
+	if mmIsVoter.defaultExpectation != nil {
+		mmIsVoter.mock.t.Fatalf("Default expectation is already set for the LocalNode.IsVoter method")
+	}
+
+	if len(mmIsVoter.expectations) > 0 {
+		mmIsVoter.mock.t.Fatalf("Some expectations are already set for the LocalNode.IsVoter method")
+	}
+
+	mmIsVoter.mock.funcIsVoter = f
+	return mmIsVoter.mock
+}
+
+// IsVoter implements LocalNode
+func (mmIsVoter *LocalNodeMock) IsVoter() (b1 bool) {
+	mm_atomic.AddUint64(&mmIsVoter.beforeIsVoterCounter, 1)
+	defer mm_atomic.AddUint64(&mmIsVoter.afterIsVoterCounter, 1)
+
+	if mmIsVoter.inspectFuncIsVoter != nil {
+		mmIsVoter.inspectFuncIsVoter()
+	}
+
+	if mmIsVoter.IsVoterMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmIsVoter.IsVoterMock.defaultExpectation.Counter, 1)
+
+		results := mmIsVoter.IsVoterMock.defaultExpectation.results
+		if results == nil {
+			mmIsVoter.t.Fatal("No results are set for the LocalNodeMock.IsVoter")
+		}
+		return (*results).b1
+	}
+	if mmIsVoter.funcIsVoter != nil {
+		return mmIsVoter.funcIsVoter()
+	}
+	mmIsVoter.t.Fatalf("Unexpected call to LocalNodeMock.IsVoter.")
+	return
+}
+
+// IsVoterAfterCounter returns a count of finished LocalNodeMock.IsVoter invocations
+func (mmIsVoter *LocalNodeMock) IsVoterAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmIsVoter.afterIsVoterCounter)
+}
+
+// IsVoterBeforeCounter returns a count of LocalNodeMock.IsVoter invocations
+func (mmIsVoter *LocalNodeMock) IsVoterBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmIsVoter.beforeIsVoterCounter)
+}
+
+// MinimockIsVoterDone returns true if the count of the IsVoter invocations corresponds
+// the number of defined expectations
+func (m *LocalNodeMock) MinimockIsVoterDone() bool {
+	for _, e := range m.IsVoterMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.IsVoterMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterIsVoterCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcIsVoter != nil && mm_atomic.LoadUint64(&m.afterIsVoterCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockIsVoterInspect logs each unmet expectation
+func (m *LocalNodeMock) MinimockIsVoterInspect() {
+	for _, e := range m.IsVoterMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Error("Expected call to LocalNodeMock.IsVoter")
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.IsVoterMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterIsVoterCounter) < 1 {
+		m.t.Error("Expected call to LocalNodeMock.IsVoter")
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcIsVoter != nil && mm_atomic.LoadUint64(&m.afterIsVoterCounter) < 1 {
+		m.t.Error("Expected call to LocalNodeMock.IsVoter")
+	}
+}
+
 type mLocalNodeMockLocalNodeProfile struct {
 	mock               *LocalNodeMock
 	defaultExpectation *LocalNodeMockLocalNodeProfileExpectation
@@ -1230,6 +1985,8 @@ func (m *LocalNodeMock) MinimockLocalNodeProfileInspect() {
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *LocalNodeMock) MinimockFinish() {
 	if !m.minimockDone() {
+		m.MinimockCanIntroduceJoinerInspect()
+
 		m.MinimockGetDeclaredPowerInspect()
 
 		m.MinimockGetIndexInspect()
@@ -1242,7 +1999,15 @@ func (m *LocalNodeMock) MinimockFinish() {
 
 		m.MinimockGetStaticInspect()
 
+		m.MinimockHasFullProfileInspect()
+
 		m.MinimockIsJoinerInspect()
+
+		m.MinimockIsPoweredInspect()
+
+		m.MinimockIsStatefulInspect()
+
+		m.MinimockIsVoterInspect()
 
 		m.MinimockLocalNodeProfileInspect()
 		m.t.FailNow()
@@ -1268,12 +2033,17 @@ func (m *LocalNodeMock) MinimockWait(timeout mm_time.Duration) {
 func (m *LocalNodeMock) minimockDone() bool {
 	done := true
 	return done &&
+		m.MinimockCanIntroduceJoinerDone() &&
 		m.MinimockGetDeclaredPowerDone() &&
 		m.MinimockGetIndexDone() &&
 		m.MinimockGetNodeIDDone() &&
 		m.MinimockGetOpModeDone() &&
 		m.MinimockGetSignatureVerifierDone() &&
 		m.MinimockGetStaticDone() &&
+		m.MinimockHasFullProfileDone() &&
 		m.MinimockIsJoinerDone() &&
+		m.MinimockIsPoweredDone() &&
+		m.MinimockIsStatefulDone() &&
+		m.MinimockIsVoterDone() &&
 		m.MinimockLocalNodeProfileDone()
 }

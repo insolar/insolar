@@ -21,6 +21,12 @@ type CleanerMock struct {
 	afterNotifyAboutPulseCounter  uint64
 	beforeNotifyAboutPulseCounter uint64
 	NotifyAboutPulseMock          mCleanerMockNotifyAboutPulse
+
+	funcStop          func()
+	inspectFuncStop   func()
+	afterStopCounter  uint64
+	beforeStopCounter uint64
+	StopMock          mCleanerMockStop
 }
 
 // NewCleanerMock returns a mock for Cleaner
@@ -32,6 +38,8 @@ func NewCleanerMock(t minimock.Tester) *CleanerMock {
 
 	m.NotifyAboutPulseMock = mCleanerMockNotifyAboutPulse{mock: m}
 	m.NotifyAboutPulseMock.callArgs = []*CleanerMockNotifyAboutPulseParams{}
+
+	m.StopMock = mCleanerMockStop{mock: m}
 
 	return m
 }
@@ -224,10 +232,147 @@ func (m *CleanerMock) MinimockNotifyAboutPulseInspect() {
 	}
 }
 
+type mCleanerMockStop struct {
+	mock               *CleanerMock
+	defaultExpectation *CleanerMockStopExpectation
+	expectations       []*CleanerMockStopExpectation
+}
+
+// CleanerMockStopExpectation specifies expectation struct of the Cleaner.Stop
+type CleanerMockStopExpectation struct {
+	mock *CleanerMock
+
+	Counter uint64
+}
+
+// Expect sets up expected params for Cleaner.Stop
+func (mmStop *mCleanerMockStop) Expect() *mCleanerMockStop {
+	if mmStop.mock.funcStop != nil {
+		mmStop.mock.t.Fatalf("CleanerMock.Stop mock is already set by Set")
+	}
+
+	if mmStop.defaultExpectation == nil {
+		mmStop.defaultExpectation = &CleanerMockStopExpectation{}
+	}
+
+	return mmStop
+}
+
+// Inspect accepts an inspector function that has same arguments as the Cleaner.Stop
+func (mmStop *mCleanerMockStop) Inspect(f func()) *mCleanerMockStop {
+	if mmStop.mock.inspectFuncStop != nil {
+		mmStop.mock.t.Fatalf("Inspect function is already set for CleanerMock.Stop")
+	}
+
+	mmStop.mock.inspectFuncStop = f
+
+	return mmStop
+}
+
+// Return sets up results that will be returned by Cleaner.Stop
+func (mmStop *mCleanerMockStop) Return() *CleanerMock {
+	if mmStop.mock.funcStop != nil {
+		mmStop.mock.t.Fatalf("CleanerMock.Stop mock is already set by Set")
+	}
+
+	if mmStop.defaultExpectation == nil {
+		mmStop.defaultExpectation = &CleanerMockStopExpectation{mock: mmStop.mock}
+	}
+
+	return mmStop.mock
+}
+
+//Set uses given function f to mock the Cleaner.Stop method
+func (mmStop *mCleanerMockStop) Set(f func()) *CleanerMock {
+	if mmStop.defaultExpectation != nil {
+		mmStop.mock.t.Fatalf("Default expectation is already set for the Cleaner.Stop method")
+	}
+
+	if len(mmStop.expectations) > 0 {
+		mmStop.mock.t.Fatalf("Some expectations are already set for the Cleaner.Stop method")
+	}
+
+	mmStop.mock.funcStop = f
+	return mmStop.mock
+}
+
+// Stop implements Cleaner
+func (mmStop *CleanerMock) Stop() {
+	mm_atomic.AddUint64(&mmStop.beforeStopCounter, 1)
+	defer mm_atomic.AddUint64(&mmStop.afterStopCounter, 1)
+
+	if mmStop.inspectFuncStop != nil {
+		mmStop.inspectFuncStop()
+	}
+
+	if mmStop.StopMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmStop.StopMock.defaultExpectation.Counter, 1)
+
+		return
+
+	}
+	if mmStop.funcStop != nil {
+		mmStop.funcStop()
+		return
+	}
+	mmStop.t.Fatalf("Unexpected call to CleanerMock.Stop.")
+
+}
+
+// StopAfterCounter returns a count of finished CleanerMock.Stop invocations
+func (mmStop *CleanerMock) StopAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmStop.afterStopCounter)
+}
+
+// StopBeforeCounter returns a count of CleanerMock.Stop invocations
+func (mmStop *CleanerMock) StopBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmStop.beforeStopCounter)
+}
+
+// MinimockStopDone returns true if the count of the Stop invocations corresponds
+// the number of defined expectations
+func (m *CleanerMock) MinimockStopDone() bool {
+	for _, e := range m.StopMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.StopMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterStopCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcStop != nil && mm_atomic.LoadUint64(&m.afterStopCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockStopInspect logs each unmet expectation
+func (m *CleanerMock) MinimockStopInspect() {
+	for _, e := range m.StopMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Error("Expected call to CleanerMock.Stop")
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.StopMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterStopCounter) < 1 {
+		m.t.Error("Expected call to CleanerMock.Stop")
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcStop != nil && mm_atomic.LoadUint64(&m.afterStopCounter) < 1 {
+		m.t.Error("Expected call to CleanerMock.Stop")
+	}
+}
+
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *CleanerMock) MinimockFinish() {
 	if !m.minimockDone() {
 		m.MinimockNotifyAboutPulseInspect()
+
+		m.MinimockStopInspect()
 		m.t.FailNow()
 	}
 }
@@ -251,5 +396,6 @@ func (m *CleanerMock) MinimockWait(timeout mm_time.Duration) {
 func (m *CleanerMock) minimockDone() bool {
 	done := true
 	return done &&
-		m.MinimockNotifyAboutPulseDone()
+		m.MinimockNotifyAboutPulseDone() &&
+		m.MinimockStopDone()
 }

@@ -160,13 +160,77 @@ func TestIsJoiner(t *testing.T) {
 	require.True(t, nps.IsJoiner())
 }
 
+func TestIsPowered(t *testing.T) {
+	index := member.JoinerIndex
+	nps := NodeProfileSlot{index: index}
+	require.False(t, nps.IsPowered())
+
+	nps.index = 1
+	nps.power = 1
+	require.True(t, nps.IsPowered())
+
+	nps.mode = member.ModeFlagSuspendedOps
+	require.False(t, nps.IsPowered())
+}
+
+func TestIsVoter(t *testing.T) {
+	index := member.JoinerIndex
+	nps := NodeProfileSlot{index: index}
+	require.False(t, nps.IsVoter())
+
+	nps.index = 1
+	nps.mode = member.ModeNormal
+	require.True(t, nps.IsVoter())
+
+	nps.mode = member.ModeFlagSuspendedOps
+	require.False(t, nps.IsVoter())
+}
+
+func TestIsStateful(t *testing.T) {
+	index := member.JoinerIndex
+	nps := NodeProfileSlot{index: index}
+	require.False(t, nps.IsStateful())
+
+	nps.index = 1
+	nps.mode = member.ModeNormal
+	require.True(t, nps.IsStateful())
+
+	nps.mode = member.ModeFlagSuspendedOps
+	require.False(t, nps.IsStateful())
+}
+
+func TestCanIntroduceJoiner(t *testing.T) {
+	index := member.JoinerIndex
+	nps := NodeProfileSlot{index: index}
+	require.False(t, nps.CanIntroduceJoiner())
+
+	nps.index = 1
+	nps.mode = member.ModeNormal
+	require.True(t, nps.CanIntroduceJoiner())
+
+	nps.mode = member.ModeFlagSuspendedOps
+	require.False(t, nps.CanIntroduceJoiner())
+}
+
 func TestNPGetSignatureVerifier(t *testing.T) {
 	sv := cryptkit.NewSignatureVerifierMock(t)
 	nps := NodeProfileSlot{verifier: sv}
 	require.Equal(t, sv, nps.GetSignatureVerifier())
 }
 
-func TestString(t *testing.T) {
+func TestHasFullProfile(t *testing.T) {
+	nps := NodeProfileSlot{}
+	sp := profiles.NewStaticProfileMock(t)
+	sp.GetExtensionMock.Set(func() profiles.StaticProfileExtension { return nil })
+	nps.StaticProfile = sp
+	require.False(t, nps.HasFullProfile())
+
+	spe := profiles.NewStaticProfileExtensionMock(t)
+	sp.GetExtensionMock.Set(func() profiles.StaticProfileExtension { return spe })
+	require.True(t, nps.HasFullProfile())
+}
+
+func TestNPSString(t *testing.T) {
 	sp := profiles.NewStaticProfileMock(t)
 	sp.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return 1 })
 	nps := NodeProfileSlot{StaticProfile: sp, index: 1}

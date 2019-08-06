@@ -50,9 +50,13 @@
 
 package proofs
 
-import "github.com/insolar/insolar/network/consensus/common/longbits"
+import (
+	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
+)
 
 type OriginalPulsarPacket interface {
 	longbits.FixedReader
+	pulse.DataHolder
 	OriginalPulsarPacket()
 }

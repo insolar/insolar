@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/pkg/errors"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.RequestChecker -o ./ -s _mock.go -g
@@ -47,6 +48,10 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 	reasonRef := request.ReasonRef()
 	reasonID := *reasonRef.Record()
 
+	if reasonID.Pulse() > requestID.Pulse() {
+		return errors.New("request is older than its reason")
+	}
+
 	switch r := request.(type) {
 	case *record.IncomingRequest:
 		// Cannot be detached.
@@ -62,7 +67,7 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 				return errors.New("reason affinity is not set on incoming request")
 			}
 
-			err := c.checkIncomingReason(ctx, *reasonObject.Record(), reasonID)
+			err := c.checkReasonExists(ctx, *reasonObject.Record(), reasonID)
 			if err != nil {
 				return errors.Wrap(err, "reason not found")
 			}
@@ -86,14 +91,14 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 
 		reasonInPendings := contains(requests, reasonID)
 		if !reasonInPendings {
-			return errors.New("request reason should be open")
+			return errors.New("request reason not found in opened requests")
 		}
 	}
 
 	return nil
 }
 
-func (c *RequestCheckerDefault) checkIncomingReason(
+func (c *RequestCheckerDefault) checkReasonExists(
 	ctx context.Context, objectID insolar.ID, reasonID insolar.ID,
 ) error {
 	isBeyond, err := c.coordinator.IsBeyondLimit(ctx, reasonID.Pulse())

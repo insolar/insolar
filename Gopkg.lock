@@ -241,6 +241,19 @@
   version = "v1.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:b7acd202bd075b40ba983f7b481258a622ab9a736399c05c5837830f6356937d"
+  name = "github.com/insolar/go-actors"
+  packages = [
+    "actor",
+    "actor/errors",
+    "actor/mailbox",
+    "actor/system",
+  ]
+  pruneopts = "UT"
+  revision = "2fcc7bfc8ff98e6900dacde00aadb2a77d547a9e"
+
+[[projects]]
   digest = "1:d585d1cae389b646325b7ef48032cdc9b58e68cd88c1fdc5da795eabb2114455"
   name = "github.com/insolar/rpc"
   packages = [
@@ -712,6 +725,8 @@
     "github.com/google/gofuzz",
     "github.com/grpc-ecosystem/grpc-gateway/runtime",
     "github.com/grpc-ecosystem/grpc-gateway/utilities",
+    "github.com/insolar/go-actors/actor",
+    "github.com/insolar/go-actors/actor/system",
     "github.com/insolar/rpc/v2",
     "github.com/insolar/rpc/v2/json2",
     "github.com/insolar/x-crypto/ecdsa",
@@ -750,6 +765,7 @@
     "google.golang.org/grpc",
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/grpclog",
+    "google.golang.org/grpc/metadata",
     "google.golang.org/grpc/reflection",
     "google.golang.org/grpc/status",
     "gopkg.in/yaml.v2",

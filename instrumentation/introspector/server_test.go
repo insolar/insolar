@@ -74,12 +74,12 @@ func TestIntrospector_Server_FilterMessages(t *testing.T) {
 		return in, nil
 	})
 	pubMock.GetMessagesFiltersMock.Set(func(_ context.Context, _ *introproto.EmptyArgs) (*introproto.AllMessageFilterStats, error) {
-		filters := map[string]*introproto.MessageFilterWithStat{}
-		// var out []*introproto.MessageFilterByType
+		filters := []*introproto.MessageFilterWithStat{}
 		for name := range mockState {
-			filters[name] = &introproto.MessageFilterWithStat{
+			filters = append(filters, &introproto.MessageFilterWithStat{
 				Enable: true,
-			}
+				Name:   name,
+			})
 		}
 		return &introproto.AllMessageFilterStats{Filters: filters}, nil
 	})
@@ -105,7 +105,7 @@ func TestIntrospector_Server_FilterMessages(t *testing.T) {
 
 	getEmptyResult := fetcher.Url(getUrl).Do()
 	if assert.Equalf(t, 200, getEmptyResult.Code(), "code of %v is fine", getUrl) {
-		assert.Equalf(t, `{"Filters":{}}`, getEmptyResult.Body(), "body of %v is fine", getUrl)
+		assert.Equalf(t, `{"Filters":[]}`, getEmptyResult.Body(), "body of %v is fine", getUrl)
 	}
 
 	enableJSON := fmt.Sprintf(`{"Name":"%v","Enable":true}`, name)
@@ -122,7 +122,7 @@ func TestIntrospector_Server_FilterMessages(t *testing.T) {
 	getResult := fetcher.Url(getUrl).Do()
 	if assert.Equalf(t, 200, getResult.Code(), "code of %v is fine", getUrl) {
 		expectGetResultJSON := fmt.Sprintf(
-			`{"Filters":{"%v":{"Enable":true,"Filtered":"0"}}}`, name)
+			`{"Filters":[{"Name":"%v","Enable":true,"Filtered":"0"}]}`, name)
 		assert.Equalf(t, expectGetResultJSON, getResult.Body(), "body of %v is fine", getUrl)
 	}
 }

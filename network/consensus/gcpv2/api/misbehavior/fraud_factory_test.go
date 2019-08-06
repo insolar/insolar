@@ -169,7 +169,6 @@ func TestNewFraud(t *testing.T) {
 
 	bf = NewFraudFactory(nil)
 	be = bf.NewFraud(fraudType, msg, nil, violatorNode, details...)
-
 	require.Nil(t, be.captureMark)
 }
 

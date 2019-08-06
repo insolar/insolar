@@ -53,16 +53,19 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
+	"sync"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
-	"sync"
-
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
 
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
@@ -76,30 +79,29 @@ import (
 */
 type PrepRealm struct {
 	/* Provided externally. Don't need mutex */
-	*coreRealm                                    // points the core part realms, it is shared between of all Realms of a Round
-	completeFn              func(successful bool) //
-	isEphemeralPulseAllowed bool
+	*coreRealm // points the core part realms, it is shared between of all Realms of a Round
+
+	completeFn func(successful bool) // MUST be called under lock, consequent calls are ignored
 
 	/* Derived from the provided externally - set at init() or start(). Don't need mutex */
-	packetDispatchers []PacketDispatcher
-	packetRecorder    packetrecorder.PacketRecorder
+	packetDispatchers []population.PacketDispatcher
+	packetRecorder    packetdispatch.PacketRecorder
 	// queueToFull       chan packetrecorder.PostponedPacket
 	// phase2ExtLimit    uint8
 
-	limiters           sync.Map
-	lastCloudStateHash cryptkit.DigestHolder
-
 	/* Other fields - need mutex */
-	// 	censusBuilder census.Builder
+
+	limiters            sync.Map
+	lastCloudStateHash  cryptkit.DigestHolder
+	deactivateEphemeral bool
 }
 
-func (p *PrepRealm) init(isEphemeralPulseAllowed bool, completeFn func(successful bool)) {
-	p.isEphemeralPulseAllowed = isEphemeralPulseAllowed
+func (p *PrepRealm) init(completeFn func(successful bool)) {
 	p.completeFn = completeFn
 }
 
 func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
-	verifyFlags packetrecorder.PacketVerifyFlags) error {
+	verifyFlags coreapi.PacketVerifyFlags) error {
 
 	pt := packet.GetPacketType()
 	selfID := p.GetSelfNodeID()
@@ -109,19 +111,16 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 	case pt.GetLimitPerSender() == 0:
 		return fmt.Errorf("packet type (%v) is unknown", pt)
 	case pt.IsMemberPacket():
-		strict, err := VerifyPacketRoute(ctx, packet, selfID)
+		strict, err := coreapi.VerifyPacketRoute(ctx, packet, selfID, from)
 		if err != nil {
 			return err
 		}
 		if strict {
-			verifyFlags = packetrecorder.RequireStrictVerify
+			verifyFlags |= coreapi.RequireStrictVerify
 		}
 		limiterKey = endpoints.ShortNodeIDAsByteString(packet.GetSourceID())
 	default:
 		limiterKey = from.AsByteString()
-
-		// TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
-		verifyFlags = packetrecorder.SkipVerify
 	}
 
 	/*
@@ -137,25 +136,25 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		return fmt.Errorf("packet type (%v) limit exceeded: from=%v", pt, from)
 	}
 
-	var pd PacketDispatcher
+	var pd population.PacketDispatcher
 
 	if int(pt) < len(p.packetDispatchers) {
 		pd = p.packetDispatchers[pt]
 	}
 
-	if verifyFlags&(packetrecorder.SkipVerify|packetrecorder.SuccesfullyVerified) == 0 {
-		strict := verifyFlags&packetrecorder.RequireStrictVerify != 0
+	var err error
+	verifyFlags, err = p.coreRealm.VerifyPacketAuthenticity(ctx, packet, from, nil, coreapi.DefaultVerify,
+		pd, verifyFlags)
 
-		if pd == nil || !pd.HasCustomVerifyForHost(from, strict) {
-			sourceID := packet.GetSourceID()
+	if err != nil {
+		return err
+	}
 
-			err := p.coreRealm.VerifyPacketAuthenticity(packet.GetPacketSignature(), sourceID, from, strict)
+	var canHandle bool
+	canHandle, err = p.coreRealm.VerifyPacketPulseNumber(ctx, packet, from, p.initialCensus.GetExpectedPulseNumber(), 0)
 
-			if err != nil {
-				return err
-			}
-			verifyFlags |= packetrecorder.SuccesfullyVerified
-		}
+	if !canHandle || err != nil {
+		return err
 	}
 
 	if !limiter.SetPacketReceived(pt) {
@@ -164,8 +163,7 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 
 	if pd != nil {
 		// this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
-		var err error
-		packet, err = LazyPacketParse(packet)
+		packet, err = coreapi.LazyPacketParse(packet)
 		if err != nil {
 			return err
 		}
@@ -189,9 +187,9 @@ func (p *PrepRealm) beforeStart(ctx context.Context, controllers []PrepPhaseCont
 	}
 	limiter := phases.NewPacketLimiter(p.nbhSizes.ExtendingNeighbourhoodLimit)
 	packetsPerSender := limiter.GetRemainingPacketCountDefault()
-	p.packetRecorder = packetrecorder.NewPacketRecorder(int(packetsPerSender) * 100)
+	p.packetRecorder = packetdispatch.NewPacketRecorder(int(packetsPerSender) * 100)
 
-	p.packetDispatchers = make([]PacketDispatcher, phases.PacketTypeCount)
+	p.packetDispatchers = make([]population.PacketDispatcher, phases.PacketTypeCount)
 	for _, ctl := range controllers {
 		for _, pt := range ctl.GetPacketType() {
 			if p.packetDispatchers[pt] != nil {
@@ -206,10 +204,64 @@ func (p *PrepRealm) beforeStart(ctx context.Context, controllers []PrepPhaseCont
 	}
 }
 
-func (p *PrepRealm) startWorkers(ctx context.Context, controllers []PrepPhaseController) {
+// runs under lock
+func (p *PrepRealm) _startWorkers(ctx context.Context, controllers []PrepPhaseController) {
+
+	if p.originalPulse != nil {
+		// we were set for FullRealm, so skip prep workers
+		return
+	}
+
 	for _, ctl := range controllers {
 		ctl.StartWorker(ctx, p)
 	}
+}
+
+func (p *PrepRealm) prepareEphemeralPolling(ctxPrep context.Context) {
+	if p.ephemeralFeeder == nil || !p.ephemeralFeeder.IsActive() {
+		return
+	}
+
+	p.AddPoll(func(ctxOfPolling context.Context) bool {
+		select {
+		case <-ctxOfPolling.Done():
+		case <-ctxPrep.Done():
+			// stop polling when prep is finished
+		default:
+			if !p.checkEphemeralStart(ctxPrep) {
+				return true // stay in polling
+			}
+			go p.pushEphemeralPulse(ctxPrep)
+			// stop polling anyway - repeating of unsuccessful is bad
+		}
+		return false
+	})
+}
+
+func (p *PrepRealm) pushEphemeralPulse(ctx context.Context) bool {
+
+	p.Lock()
+	defer p.Unlock()
+
+	if p.deactivateEphemeral {
+		return false // ephemeral mode was deactivated
+	}
+
+	pde := p.ephemeralFeeder.CreateEphemeralPulsePacket(p.initialCensus)
+	ok, pn := p._applyPulseData(pde, false)
+	if !ok && pn != pde.GetPulseNumber() {
+		inslogger.FromContext(ctx).Error("active ephemeral start has failed, going to passive")
+	}
+	return ok
+}
+
+func (p *PrepRealm) checkEphemeralStart(ctx context.Context) bool {
+	jc, _ := p.candidateFeeder.PickNextJoinCandidate()
+	if jc != nil {
+		inslogger.FromContext(ctx).Debug("ephemeral polling has found a candidate: ", jc)
+		return true
+	}
+	return false
 }
 
 func (p *PrepRealm) stop() {
@@ -229,56 +281,79 @@ func (p *PrepRealm) GetMandateRegistry() census.MandateRegistry {
 }
 
 func (p *PrepRealm) ApplyPulseData(pp transport.PulsePacketReader, fromPulsar bool, from endpoints.Inbound) error {
+
+	pde := pp.GetPulseDataEvidence()
 	pd := pp.GetPulseData()
+	pn := pd.PulseNumber
+	if pde.GetPulseData() != pd {
+		return fmt.Errorf("pulse data and pulse data evidence are mismatched: %v, %v", pd, pde)
+	}
 
 	p.Lock()
 	defer p.Unlock()
 
+	ok, epn := p._applyPulseData(pde, fromPulsar)
+	if ok || !epn.IsUnknown() && epn == pn {
+		return nil
+	}
+
+	// TODO blame pulsar and/or node
+	localID := p.self.GetNodeID()
+
+	return errors.NewPulseRoundMismatchError(pn,
+		fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v, local=%d, from=%v",
+			epn, pn, localID, from))
+}
+
+func (p *PrepRealm) _applyPulseData(pdp proofs.OriginalPulsarPacket, fromPulsar bool) (bool, pulse.Number) {
+
+	pd := pdp.GetPulseData()
+
 	valid := false
 	switch {
 	case p.originalPulse != nil:
-		if pd == p.pulseData {
-			return nil // got it already
-		}
-	case fromPulsar || !p.isEphemeralPulseAllowed:
+		return false, p.pulseData.PulseNumber // got something already
+	case fromPulsar || p.ephemeralFeeder == nil:
 		// Pulsars are NEVER ALLOWED to send ephemeral pulses
 		valid = pd.IsValidPulsarData()
 	default:
 		valid = pd.IsValidPulseData()
 	}
+
 	if !valid {
-		// if fromPulsar
-		// TODO blame pulsar and/or node
-		return fmt.Errorf("invalid pulse data")
+		return false, pulse.Unknown
 	}
 
-	epn := pulse.Unknown
-	if p.initialCensus.GetCensusState() == census.PrimingCensus || p.initialCensus.IsActive() {
-		epn = p.initialCensus.GetExpectedPulseNumber()
-	} else {
-		epn = p.initialCensus.GetPulseNumber()
+	switch {
+	case p.ephemeralFeeder != nil && pd.IsFromPulsar():
+		if fromPulsar { // we cant receive pulsar packets directly from pulsars when ephemeral
+			panic("illegal state")
+		}
+		if p.ephemeralFeeder.CanAcceptTimePulseToStopEphemeral(pd) {
+			p.deactivateEphemeral = true
+			panic("not implemented")
+		}
+		fallthrough
+	default:
+		epn := pulse.Unknown
+		if p.initialCensus.GetCensusState() == census.PrimingCensus || p.initialCensus.IsActive() {
+			epn = p.initialCensus.GetExpectedPulseNumber()
+		} else {
+			epn = p.initialCensus.GetPulseNumber()
+		}
+
+		pn := pd.PulseNumber // it can't be zero as pulseData was validated above
+		if !epn.IsUnknown() && epn != pn {
+			return false, epn
+		}
 	}
 
-	//	sourceID := packet.GetSourceID()
-	localID := p.self.GetNodeID()
-
-	pn := pd.PulseNumber
-	if !epn.IsUnknown() && epn != pn {
-		return errors.NewPulseRoundMismatchError(pn,
-			fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v, local=%d, from=%v",
-				epn, pn, localID, from))
-	}
-
-	//if p.IsJoiner() && p.lastCloudStateHash {
-	//
-	//}
-
-	p.originalPulse = pp.GetPulseDataEvidence()
+	p.originalPulse = pdp
 	p.pulseData = pd
 
 	p.completeFn(true)
 
-	return nil
+	return true, pd.PulseNumber
 }
 
 func (p *PrepRealm) ApplyCloudIntro(lastCloudStateHash cryptkit.DigestHolder, populationCount int, from endpoints.Inbound) {

@@ -42,11 +42,14 @@ import (
 type LightReplicator interface {
 	// NotifyAboutPulse is method for notifying a sync component about new pulse
 	NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber)
+
+	Stop()
 }
 
 // LightReplicatorDefault is a base impl of LightReplicator
 type LightReplicatorDefault struct {
 	once sync.Once
+	done chan struct{}
 
 	jetCalculator   executor.JetCalculator
 	cleaner         Cleaner
@@ -84,6 +87,7 @@ func NewReplicatorDefault(
 		jetAccessor:  jetAccessor,
 
 		syncWaitingPulses: make(chan insolar.PulseNumber),
+		done:              make(chan struct{}),
 	}
 }
 
@@ -111,8 +115,12 @@ func (lr *LightReplicatorDefault) NotifyAboutPulse(ctx context.Context, pn insol
 	lr.syncWaitingPulses <- prevPN.PulseNumber
 }
 
+func (lr *LightReplicatorDefault) Stop() {
+	close(lr.done)
+}
+
 func (lr *LightReplicatorDefault) sync(ctx context.Context) {
-	for pn := range lr.syncWaitingPulses {
+	work := func(pn insolar.PulseNumber) {
 		ctx, logger := inslogger.WithTraceField(ctx, utils.RandTraceID())
 		logger.Debugf("[Replicator][sync] pn received - %v", pn)
 
@@ -122,7 +130,10 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 		)
 
 		allIndexes := lr.filterAndGroupIndexes(ctx, pn)
-		jets := lr.jetCalculator.MineForPulse(ctx, pn)
+		jets, err := lr.jetCalculator.MineForPulse(ctx, pn)
+		if err != nil {
+			panic(errors.Wrap(err, "failed to calculate jets to sync"))
+		}
 		logger.Debugf("[Replicator][sync] founds %d jets", len(jets), ". Jets: ", insolar.JetIDCollection(jets).DebugString())
 
 		for _, jetID := range jets {
@@ -152,6 +163,19 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 
 		lr.cleaner.NotifyAboutPulse(ctx, pn)
 		span.End()
+	}
+
+	for {
+		select {
+		case pn, ok := <-lr.syncWaitingPulses:
+			if !ok {
+				return
+			}
+			work(pn)
+		case <-lr.done:
+			inslogger.FromContext(ctx).Info("light replicator stopped")
+			return
+		}
 	}
 }
 

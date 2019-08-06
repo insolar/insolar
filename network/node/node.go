@@ -56,6 +56,7 @@ import (
 	"sync/atomic"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/platformpolicy"
@@ -72,6 +73,8 @@ type MutableNode interface {
 	ChangeState()
 	SetLeavingETA(number insolar.PulseNumber)
 	SetVersion(version string)
+	GetPower() member.Power
+	SetPower(power member.Power)
 }
 
 type Evidence struct {
@@ -85,6 +88,7 @@ type node struct {
 	NodeShortID   uint32
 	NodeRole      insolar.StaticRole
 	NodePublicKey crypto.PublicKey
+	NodePower     uint32
 
 	NodeAddress string
 
@@ -168,6 +172,14 @@ func (n *node) Address() string {
 
 func (n *node) GetGlobuleID() insolar.GlobuleID {
 	return 0
+}
+
+func (n *node) GetPower() member.Power {
+	return member.Power(atomic.LoadUint32(&n.NodePower))
+}
+
+func (n *node) SetPower(power member.Power) {
+	atomic.StoreUint32(&n.NodePower, uint32(power))
 }
 
 func (n *node) Version() string {

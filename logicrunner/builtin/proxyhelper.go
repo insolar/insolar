@@ -19,8 +19,6 @@ package builtin
 import (
 	"reflect"
 
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
@@ -73,22 +71,26 @@ func (h *ProxyHelper) RouteCall(ref insolar.Reference, wait bool, immutable bool
 	}
 
 	err := h.methods.RouteCall(req, &res)
-
 	if err != nil {
 		h.SetSystemError(err)
 		return nil, err
 	}
+
 	return res.Result, nil
 }
 
-func (h *ProxyHelper) SaveAsChild(parentRef, classRef insolar.Reference, constructorName string,
-	argsSerialized []byte) (objRef insolar.Reference, err error) {
+func (h *ProxyHelper) SaveAsChild(
+	parentRef, classRef insolar.Reference,
+	constructorName string, argsSerialized []byte,
+) (
+	*insolar.Reference, []byte, error,
+) {
 
 	if h.GetSystemError() != nil {
 		// There was a system error during execution of the contract.
 		// Immediately return this error to the calling contract - any
 		// results will not be registered on LME anyway.
-		return insolar.Reference{}, h.GetSystemError()
+		return nil, nil, h.GetSystemError()
 	}
 
 	res := rpctypes.UpSaveAsChildResp{}
@@ -101,27 +103,13 @@ func (h *ProxyHelper) SaveAsChild(parentRef, classRef insolar.Reference, constru
 		ArgsSerialized:  argsSerialized,
 	}
 
-	if err := h.methods.SaveAsChild(req, &res); err != nil {
-		// A new system error occurred.
-		// Register it and immediately return to the calling contract.
+	err := h.methods.SaveAsChild(req, &res)
+	if err != nil {
 		h.SetSystemError(err)
-		return insolar.Reference{}, err
+		return nil, nil, err
 	}
 
-	// return logical error to the calling contract, don't register a system error
-	if res.ConstructorError != "" {
-		return insolar.Reference{}, errors.New("[Constructor failed] " + res.ConstructorError)
-	}
-
-	if res.Reference == nil {
-		// this should never happen, but if it will it's better to return a readable
-		// error than dereference a nil pointer
-		err = errors.New("[ SaveAsChild ] system error - res.Reference is nil")
-		h.SetSystemError(err)
-		return insolar.Reference{}, err
-	}
-
-	return *res.Reference, nil
+	return res.Reference, res.Result, nil
 }
 
 func (h *ProxyHelper) DeactivateObject(object insolar.Reference) error {

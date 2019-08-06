@@ -227,7 +227,7 @@ func (m *client) GetCode(
 		virtual := record.Unwrap(&rec.Virtual)
 		codeRecord, ok := virtual.(*record.Code)
 		if !ok {
-			return nil, errors.Wrapf(err, "unexpected record %T", virtual)
+			return nil, fmt.Errorf("unexpected record %T", virtual)
 		}
 		desc = &codeDescriptor{
 			ref:         code,
@@ -316,6 +316,7 @@ func (m *client) GetObject(
 			case payload.CodeDeactivated:
 				return nil, insolar.ErrDeactivated
 			default:
+				logger.Errorf("reply error: %v, objectID: %v", p.Text, head.Record().DebugString())
 				return nil, errors.New(p.Text)
 			}
 		default:
@@ -351,15 +352,15 @@ func (m *client) GetObject(
 		memory:      statePayload.Memory,
 		parent:      index.Parent,
 	}
-	return desc, err
+	return desc, nil
 }
 
-func (m *client) GetIncomingRequest(
+func (m *client) GetAbandonedRequest(
 	ctx context.Context, object, reqRef insolar.Reference,
-) (*record.IncomingRequest, error) {
+) (record.Request, error) {
 	var err error
-	instrumenter := instrument(ctx, "GetRequest").err(&err)
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetRequest")
+	instrumenter := instrument(ctx, "GetAbandonedRequest").err(&err)
+	ctx, span := instracer.StartSpan(ctx, "artifacts.GetAbandonedRequest")
 	defer func() {
 		if err != nil {
 			span.AddAttributes(trace.BoolAttribute("error", true))
@@ -384,12 +385,18 @@ func (m *client) GetIncomingRequest(
 	}
 
 	concrete := record.Unwrap(&req.Request)
-	castedRecord, ok := concrete.(*record.IncomingRequest)
-	if !ok {
-		return nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", concrete)
+	var result record.Request
+
+	switch v := concrete.(type) {
+	case *record.IncomingRequest:
+		result = v
+	case *record.OutgoingRequest:
+		result = v
+	default:
+		return nil, fmt.Errorf("GetAbandonedRequest: unexpected message: %#v", concrete)
 	}
 
-	return castedRecord, nil
+	return result, nil
 }
 
 // GetPendings returns a list of pending requests
@@ -497,7 +504,6 @@ func (m *client) DeployCode(
 
 	codeRec := record.Code{
 		Domain:      domain,
-		Request:     request,
 		Code:        code,
 		MachineType: machineType,
 	}
@@ -556,7 +562,7 @@ func (m *client) ActivatePrototype(
 		span.End()
 		instrumenter.end()
 	}()
-	err = m.activateObject(ctx, object, code, true, parent, false, memory)
+	err = m.activateObject(ctx, object, code, true, parent, memory)
 	return err
 }
 
@@ -577,7 +583,6 @@ func (m *client) activateObject(
 	prototype insolar.Reference,
 	isPrototype bool,
 	parent insolar.Reference,
-	asDelegate bool,
 	memory []byte,
 ) error {
 	_, err := m.GetObject(ctx, parent)
@@ -591,7 +596,6 @@ func (m *client) activateObject(
 		Image:       prototype,
 		IsPrototype: isPrototype,
 		Parent:      parent,
-		IsDelegate:  asDelegate,
 	}
 
 	result := record.Result{
@@ -703,11 +707,6 @@ func (m *client) RegisterResult(
 	// Request reference will be this object's identifier and referred as "object head".
 	case RequestSideEffectActivate:
 		parentRef, imageRef, memory := result.Activate()
-
-		_, err := m.GetObject(ctx, parentRef)
-		if err != nil {
-			return errors.Wrap(err, "wrong parent")
-		}
 
 		vResultRecord := record.Wrap(&resultRecord)
 		vActivateRecord := record.Wrap(&record.Activate{

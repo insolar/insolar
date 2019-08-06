@@ -90,11 +90,11 @@ func TestConsensusMain(t *testing.T) {
 
 	netBuilder.StartNetwork(ctx)
 
-	netBuilder.StartPulsar(20, 2, "pulsar0", nodes)
+	netBuilder.StartPulsar(10, 2, "pulsar0", nodes)
 
-	//time.AfterFunc(time.Second, func() {
+	// time.AfterFunc(time.Second, func() {
 	//	netBuilder.network.DropHost("V0007")
-	//})
+	// })
 
 	for {
 		fmt.Println("===", time.Since(startedAt), "=================================================")

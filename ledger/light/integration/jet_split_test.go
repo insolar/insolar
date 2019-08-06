@@ -73,7 +73,7 @@ func Test_JetSplitEveryPulse(t *testing.T) {
 		cfg.Ledger.JetSplit.ThresholdOverflowCount = sc.cfg.ThresholdOverflowCount
 		cfg.Ledger.JetSplit.ThresholdRecordsCount = sc.cfg.ThresholdRecordsCount
 
-		s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) {
+		s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) []payload.Payload {
 
 			switch p := pl.(type) {
 			case *payload.Replication:
@@ -85,9 +85,13 @@ func Test_JetSplitEveryPulse(t *testing.T) {
 			case *payload.GotHotConfirmation:
 				hotObjectConfirm <- p.JetID
 			}
+			if meta.Receiver == NodeHeavy() {
+				return DefaultHeavyResponse(pl)
+			}
+			return nil
 		})
-
 		require.NoError(t, err)
+		defer s.Stop()
 
 		calculateExpectedJets := func(jets []insolar.JetID, depthLimit uint8) []insolar.JetID {
 
@@ -105,14 +109,14 @@ func Test_JetSplitEveryPulse(t *testing.T) {
 		}
 
 		// First pulse goes in storage then interrupts.
-		s.Pulse(ctx)
+		s.SetPulse(ctx)
 
 		{
 			expectedJets := []insolar.JetID{insolar.ZeroJetID}
 
 			for i := 0; i < testPulsesQuantity; i++ {
 
-				s.Pulse(ctx)
+				s.SetPulse(ctx)
 
 				previousPulseJets := expectedJets
 				expectedJets = calculateExpectedJets(expectedJets, cfg.Ledger.JetSplit.DepthLimit)
@@ -175,7 +179,7 @@ func Test_JetSplitsWhenOverflows(t *testing.T) {
 	cfg.Ledger.JetSplit.ThresholdOverflowCount = 0
 	cfg.Ledger.JetSplit.ThresholdRecordsCount = 2
 
-	s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) {
+	s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) []payload.Payload {
 		switch p := pl.(type) {
 		case *payload.Replication:
 			replication <- p.JetID
@@ -186,17 +190,21 @@ func Test_JetSplitsWhenOverflows(t *testing.T) {
 		case *payload.GotHotConfirmation:
 			hotObjectConfirm <- p.JetID
 		}
+		if meta.Receiver == NodeHeavy() {
+			return DefaultHeavyResponse(pl)
+		}
+		return nil
 	})
-
 	require.NoError(t, err)
+	defer s.Stop()
 
 	sendMessages := func(jetTree *jet.Tree) map[insolar.JetID]int {
 		splittingJets := make(map[insolar.JetID]int)
 		// Save code.
 		for i := 0; i < recordsOnPulse; i++ {
 			{
-				p, _ := callSetCode(ctx, s)
-				requireNotError(t, p)
+				p, _ := CallSetCode(ctx, s)
+				RequireNotError(p)
 				jetID, _ := jetTree.Find(p.(*payload.ID).ID)
 				splittingJets[jetID]++
 			}
@@ -214,7 +222,7 @@ func Test_JetSplitsWhenOverflows(t *testing.T) {
 		return jetTree.LeafIDs()
 	}
 	// First pulse goes in storage then interrupts.
-	s.Pulse(ctx)
+	s.SetPulse(ctx)
 
 	{
 		expectedJets := []insolar.JetID{insolar.ZeroJetID}
@@ -222,7 +230,7 @@ func Test_JetSplitsWhenOverflows(t *testing.T) {
 
 		for i := 0; i < pulsesQuantity; i++ {
 
-			s.Pulse(ctx)
+			s.SetPulse(ctx)
 
 			// Saving previous for Replication check
 			previousPulseJets := expectedJets
