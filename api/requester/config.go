@@ -23,7 +23,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/pkg/errors"
@@ -65,9 +64,9 @@ type Data struct {
 }
 
 type Result struct {
-	ContractResult   interface{}       `json:"callResult,omitempty"`
-	RequestReference insolar.Reference `json:"requestReference,omitempty"`
-	TraceID          string            `json:"traceID,omitempty"`
+	ContractResult   interface{} `json:"callResult,omitempty"`
+	RequestReference string      `json:"requestReference,omitempty"`
+	TraceID          string      `json:"traceID,omitempty"`
 }
 
 // UserConfigJSON holds info about user

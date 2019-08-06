@@ -354,7 +354,11 @@ func signedRequestFull(user *user, method string, params interface{}) (interface
 		if resp.Result == nil {
 			return nil, nil, errors.New("Error and result are nil")
 		} else {
-			return resp.Result.ContractResult, &resp.Result.RequestReference, nil
+			requestReference, err := insolar.NewReferenceFromBase58(resp.Result.RequestReference)
+			if err != nil {
+				return nil, nil, errors.New("failed to parse resp.Result.RequestReference")
+			}
+			return resp.Result.ContractResult, requestReference, nil
 		}
 	}
 }
