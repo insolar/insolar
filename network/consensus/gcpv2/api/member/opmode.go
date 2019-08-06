@@ -75,6 +75,10 @@ func (v OpMode) IsEvicted() bool {
 	return v >= ModeEvictedGracefully
 }
 
+func (v OpMode) IsJustJoined() bool {
+	return v == ModeRestrictedAnnouncement
+}
+
 func (v OpMode) IsEvictedForcefully() bool {
 	return v > ModeEvictedGracefully
 }
