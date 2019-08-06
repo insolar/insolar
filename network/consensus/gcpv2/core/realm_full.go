@@ -425,31 +425,42 @@ func (r *FullRealm) GetLastCloudStateHash() proofs.CloudStateHash {
 	return r.census.GetCloudStateHash()
 }
 
-func (r *FullRealm) CommitAndPreparePulseChange() (bool, <-chan api.UpstreamState) {
+func (r *FullRealm) getUpstreamReport() api.UpstreamReport {
 	if !r.pulseData.PulseNumber.IsTimePulse() {
 		panic("pulse number was not set")
 	}
 
 	sp := r.GetSelf().GetProfile()
-	report := api.UpstreamReport{
+	return api.UpstreamReport{
 		PulseNumber: r.pulseData.PulseNumber,
 		MemberPower: sp.GetDeclaredPower(),
 		MemberMode:  sp.GetOpMode(),
 		IsJoiner:    sp.IsJoiner(),
 		//IsEphemeral: false,
 	}
+}
 
-	inslogger.FromContext(r.roundContext).Warnf("CommitAndPreparePulseChange: self=%s", r.self)
+func (r *FullRealm) PreparePulseChange() (bool, <-chan api.UpstreamState) {
+
+	report := r.getUpstreamReport()
 
 	if r.IsLocalStateful() {
-		r.stateMachine.CommitPulseChange(report, r.pulseData, r.census)
+		inslogger.FromContext(r.roundContext).Warnf("PreparePulseChange: self=%s", r.self)
 		ch := make(chan api.UpstreamState, 1)
 		r.stateMachine.PreparePulseChange(report, ch)
 		return true, ch
 	}
 
+	inslogger.FromContext(r.roundContext).Warnf("PrepareAndCommitStatelessPulseChange: self=%s", r.self)
 	r.stateMachine.CommitPulseChangeByStateless(report, r.pulseData, r.census)
 	return false, nil
+}
+
+func (r *FullRealm) CommitPulseChange() {
+	report := r.getUpstreamReport()
+	inslogger.FromContext(r.roundContext).Warnf("CommitPulseChange: self=%s", r.self)
+
+	r.stateMachine.CommitPulseChange(report, r.pulseData, r.census)
 }
 
 func (r *FullRealm) GetTimings() api.RoundTimings {
