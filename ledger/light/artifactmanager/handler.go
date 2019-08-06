@@ -213,6 +213,10 @@ func NewMessageHandler(
 	return h
 }
 
-func (h *MessageHandler) OnPulse(ctx context.Context, pn insolar.Pulse) {
-	h.FlowDispatcher.ChangePulse(ctx, pn)
+func (h *MessageHandler) BeginPulse(ctx context.Context, pn insolar.Pulse) {
+	h.FlowDispatcher.BeginPulse(ctx, pn)
+}
+
+func (h *MessageHandler) ClosePulse(ctx context.Context, pn insolar.Pulse) {
+	h.FlowDispatcher.ClosePulse(ctx, pn)
 }
