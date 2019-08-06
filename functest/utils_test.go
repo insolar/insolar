@@ -296,10 +296,15 @@ func retryableCreateMember(user *user, method string, updatePublicKey bool) (int
 }
 
 func signedRequest(user *user, method string, params interface{}) (interface{}, error) {
+	res, _, err := signedRequestFull(user, method, params)
+	return res, err
+}
+
+func signedRequestFull(user *user, method string, params interface{}) (interface{}, *insolar.Reference, error) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(user.ref, user.privKey, user.pubKey)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	var caller string
@@ -327,13 +332,13 @@ func signedRequest(user *user, method string, params interface{}) (interface{}, 
 		})
 
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		resp = requester.ContractAnswer{}
 		err = json.Unmarshal(res, &resp)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		break
@@ -341,15 +346,15 @@ func signedRequest(user *user, method string, params interface{}) (interface{}, 
 
 	if resp.Error != nil {
 		if currentIterNum > sendRetryCount {
-			return nil, errors.New("Number of retries exceeded. " + resp.Error.Message)
+			return nil, nil, errors.New("Number of retries exceeded. " + resp.Error.Message)
 		}
 
-		return nil, errors.New(resp.Error.Message)
+		return nil, nil, errors.New(resp.Error.Message)
 	} else {
 		if resp.Result == nil {
-			return nil, errors.New("Error and result are nil")
+			return nil, nil, errors.New("Error and result are nil")
 		} else {
-			return resp.Result.ContractResult, nil
+			return resp.Result.ContractResult, &resp.Result.RequestReference, nil
 		}
 	}
 }

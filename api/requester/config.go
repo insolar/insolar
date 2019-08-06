@@ -65,9 +65,9 @@ type Data struct {
 }
 
 type Result struct {
-	ContractResult   interface{}        `json:"callResult,omitempty"`
-	RequestReference *insolar.Reference `json:"requestReference,omitempty"`
-	TraceID          string             `json:"traceID,omitempty"`
+	ContractResult   interface{}       `json:"callResult,omitempty"`
+	RequestReference insolar.Reference `json:"requestReference,omitempty"`
+	TraceID          string            `json:"traceID,omitempty"`
 }
 
 // UserConfigJSON holds info about user

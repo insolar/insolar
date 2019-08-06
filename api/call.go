@@ -256,7 +256,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 				processError(err, err.Error(), contractAnswer, insLog, traceID)
 				return
 			}
-			contractResult := &requester.Result{ContractResult: result, RequestReference: ref, TraceID: traceID}
+			contractResult := &requester.Result{ContractResult: result, RequestReference: *ref, TraceID: traceID}
 			contractAnswer.Result = contractResult
 			return
 

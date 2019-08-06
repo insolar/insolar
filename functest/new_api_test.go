@@ -153,7 +153,10 @@ func TestIncorrectParams(t *testing.T) {
 
 func TestRequestReference(t *testing.T) {
 	firstMember := createMember(t)
+	secondMember := createMember(t)
+	amount := "10"
 
-	_, err := signedRequest(firstMember, "member.transfer", firstMember.ref)
-	require.Contains(t, err.Error(), "failed to cast request.Params.CallParams: expected map[string]interface{}, got string")
+	_, ref, _ := signedRequestFull(firstMember, "member.transfer", map[string]interface{}{"amount": amount, "toMemberReference": secondMember.ref})
+	require.Equal(t, "", ref)
+	require.NotEqual(t, "", ref)
 }
