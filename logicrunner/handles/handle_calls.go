@@ -127,6 +127,7 @@ func (h *HandleCall) handleActual(
 		// rewrite "can't execute this object" to "flow cancelled" for force retry message
 		// just temporary fix till mb moved to watermill
 		if err == flow.ErrCancelled || err == procs.ErrCantExecute {
+			inslogger.FromContext(ctx).Debugf("handleActual, procCheckRole return err: %s", err.Error())
 			return nil, flow.ErrCancelled
 		}
 		return nil, errors.Wrap(err, "[ HandleCall.handleActual ] can't play role")

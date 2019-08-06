@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
@@ -58,9 +59,13 @@ func (hp *HasPendings) Proceed(ctx context.Context) error {
 		return err
 	}
 
+	hasPendings := idx.Lifeline.EarliestOpenRequest != nil && *idx.Lifeline.EarliestOpenRequest < flow.Pulse(ctx)
 	msg, err := payload.NewMessage(&payload.PendingsInfo{
-		HasPendings: idx.Lifeline.EarliestOpenRequest != nil && *idx.Lifeline.EarliestOpenRequest < flow.Pulse(ctx),
+		HasPendings: hasPendings,
 	})
+	if idx.Lifeline.EarliestOpenRequest != nil {
+		inslogger.FromContext(ctx).Errorf("is pending for %s in %s (actual %s)? %t", hp.objectID.String(), flow.Pulse(ctx).String(), idx.Lifeline.EarliestOpenRequest.String(), hasPendings)
+	}
 	if err != nil {
 		return errors.Wrap(err, "failed to create reply")
 	}

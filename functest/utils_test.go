@@ -488,6 +488,19 @@ func callMethodNoChecks(t testing.TB, objectRef *insolar.Reference, method strin
 	argsSerialized, err := insolar.Serialize(args)
 	require.NoError(t, err)
 
+	var caller string
+	fpcs := make([]uintptr, 1)
+	for i := 2; i < 10; i++ {
+		if n := runtime.Callers(i, fpcs); n == 0 {
+			break
+		}
+		caller = runtime.FuncForPC(fpcs[0] - 1).Name()
+		if ok, _ := regexp.MatchString(`\.Test`, caller); ok {
+			break
+		}
+		caller = ""
+	}
+
 	respBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
 		"method":  "contract.callMethod",
@@ -496,6 +509,7 @@ func callMethodNoChecks(t testing.TB, objectRef *insolar.Reference, method strin
 			"ObjectRefString": objectRef.String(),
 			"Method":          method,
 			"MethodArgs":      argsSerialized,
+			"Test":            caller,
 		},
 	})
 	require.NotEmpty(t, respBody)

@@ -89,6 +89,7 @@ func (rm *ResultsMatcher) AddStillExecution(ctx context.Context, msg *message.St
 			inslogger.FromContext(ctx).Debug("[ ResultsMatcher::AddStillExecution ] resend unwanted response ", reqRef)
 			go rm.send(ctx, &response.result, &msg.Executor)
 		}
+		inslogger.FromContext(ctx).Debugf("[ resultsMatcher::AddStillExecution ] add executor %s for %s", msg.Executor, reqRef)
 		rm.executionNodes[reqRef] = msg.Executor
 	}
 }
@@ -104,11 +105,12 @@ func (rm *ResultsMatcher) AddUnwantedResponse(ctx context.Context, msg *message.
 	}
 
 	if node, ok := rm.executionNodes[msg.Reason]; ok {
-		inslogger.FromContext(ctx).Debug("[ ResultsMatcher::AddUnwantedResponse ] resend unwanted response ", msg.Reason)
+		inslogger.FromContext(ctx).Debugf("[ resultsMatcher::AddUnwantedResponse ] resend unwanted response ", msg.Reason)
 		go rm.send(ctx, msg, &node)
 		delete(rm.unwantedResponses, msg.Reason)
 		return nil
 	}
+	inslogger.FromContext(ctx).Debugf("[ resultsMatcher::AddUnwantedResponse ] add response %s", msg.Reason)
 	rm.unwantedResponses[msg.Reason] = resultWithTraceID{utils.TraceID(ctx), *msg}
 
 	return rm.isStillExecutor(ctx, object)

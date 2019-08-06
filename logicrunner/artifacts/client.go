@@ -301,14 +301,15 @@ func (m *client) GetObject(
 
 		switch p := replyPayload.(type) {
 		case *payload.Index:
-			logger.Debug("reply index")
+			// logger.Debug("reply index")
 			index = &record.Lifeline{}
 			err := index.Unmarshal(p.Index)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to unmarshal index")
 			}
+			logger.Debugf("reply index (%s)", index)
 		case *payload.State:
-			logger.Debug("reply state")
+			logger.Debugf("reply state")
 			statePayload = p
 		case *payload.Error:
 			logger.Debug("reply error: ", p.Text)
@@ -324,6 +325,7 @@ func (m *client) GetObject(
 		}
 
 		if success() {
+			logger.Debug("success!")
 			break
 		}
 	}

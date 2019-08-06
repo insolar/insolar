@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/utils"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/utils/entropy"
 	"github.com/pkg/errors"
 )
@@ -250,6 +251,7 @@ func (jc *Coordinator) Heavy(ctx context.Context) (*insolar.Reference, error) {
 // or if currentPN|targetPN didn't found in in-memory pulse-storage.
 func (jc *Coordinator) IsBeyondLimit(ctx context.Context, targetPN insolar.PulseNumber) (bool, error) {
 	// Genesis case. When there is no any data on a lme
+	inslogger.FromContext(ctx).Debugf("IsBeyondLimit was called: targetPN=%s, genesis=%s", targetPN.String(), insolar.GenesisPulse.PulseNumber.String())
 	if targetPN <= insolar.GenesisPulse.PulseNumber {
 		return true, nil
 	}

@@ -206,6 +206,7 @@ func retryer(accessor pulse.Accessor, retriesCount int, errSubstr string, debugS
 				}
 				lastPulse = currentPulse.PulseNumber
 
+				inslogger.FromContext(ctx).Debugf("trying to send msg (%s) with pulse %s, retries left %d", msg.Type().String(), lastPulse.String(), retries)
 				rep, err := sender(ctx, msg, options)
 				if err == nil || !strings.Contains(err.Error(), errSubstr) {
 					return rep, err

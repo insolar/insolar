@@ -205,11 +205,11 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 	ctx, _ = inslogger.WithField(ctx, "request", r.Request.String())
 	ctx, logger := inslogger.WithField(ctx, "method", msg.Method)
 
-	logger.Debug("Waiting results of request")
+	logger.Debugf("Waiting results of request with req %s", r.Request.String(), r.Request.Record().Hash())
 
 	select {
 	case ret := <-ch:
-		logger.Debug("Got results of request")
+		logger.Debug("Got results of request", r.Request.String())
 		if ret.Error != "" {
 			return nil, errors.Wrap(errors.New(ret.Error), "CallMethod returns error")
 		}
@@ -219,7 +219,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 		delete(cr.ResultMap, reqHash)
 		cr.ResultMutex.Unlock()
 		logger.Error("Request timeout")
-		return nil, errors.Errorf("request to contract was canceled: timeout of %s was exceeded", cr.callTimeout)
+		return nil, errors.Errorf("request to contract was canceled: timeout of %s was exceeded (req is %b)", cr.callTimeout, r.Request.String())
 	}
 }
 
@@ -249,6 +249,7 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel insolar.P
 	if !ok {
 		return nil, errors.New("ReceiveResult() accepts only message.ReturnResults")
 	}
+	inslogger.FromContext(ctx).Debugf("ReceiveResult for req %s", msg.RequestRef.String())
 
 	ctx, span := instracer.StartSpan(ctx, "ContractRequester.ReceiveResult")
 	defer span.End()

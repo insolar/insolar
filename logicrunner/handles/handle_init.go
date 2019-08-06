@@ -62,6 +62,7 @@ type Init struct {
 }
 
 func (s *Init) Future(ctx context.Context, f flow.Flow) error {
+	inslogger.FromContext(ctx).Debug("Got message from Future")
 	return f.Migrate(ctx, s.Present)
 }
 
@@ -94,6 +95,8 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
+
+	inslogger.FromContext(ctx).Debug("Start to handle new message")
 
 	switch payloadType {
 	case payload.TypeSagaCallAcceptNotification:
@@ -134,6 +137,8 @@ func (s *Init) handleParcel(ctx context.Context, f flow.Flow) error {
 	}
 
 	msgType := s.Message.Metadata.Get(bus.MetaType)
+
+	inslogger.FromContext(ctx).Debug("Start to handle new message (from parcel)")
 
 	switch msgType {
 	case insolar.TypeCallMethod.String():
@@ -177,6 +182,8 @@ func (s *Init) handleParcel(ctx context.Context, f flow.Flow) error {
 }
 
 func (s *Init) Past(ctx context.Context, f flow.Flow) error {
+	inslogger.FromContext(ctx).Debug("Got message from Past")
+
 	msgType := s.Message.Metadata.Get(bus.MetaType)
 
 	if msgType == insolar.TypeCallMethod.String() {

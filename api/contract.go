@@ -154,6 +154,7 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 type CallMethodArgs struct {
 	ObjectRefString string
 	Method          string
+	Test            string
 	MethodArgs      []byte
 }
 
@@ -173,7 +174,9 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 	re.TraceID = utils.TraceID(ctx)
 
 	inslog.Infof("[ ContractService.CallMethod ] Incoming request: %s", r.RequestURI)
-
+	if args.Test != "" {
+		inslog.Infof("Request related to %s", args.Test)
+	}
 	if len(args.ObjectRefString) == 0 {
 		return errors.New("params.ObjectRefString is missing")
 	}

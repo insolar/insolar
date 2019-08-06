@@ -135,12 +135,17 @@ func NewExecutionBroker(
 	}
 }
 
-func (q *ExecutionBroker) tryTakeProcessor(_ context.Context) bool {
-	return atomic.CompareAndSwapUint32(&q.processorActive, 0, 1)
+func (q *ExecutionBroker) tryTakeProcessor(ctx context.Context) bool {
+	a := atomic.CompareAndSwapUint32(&q.processorActive, 0, 1)
+	if a {
+		inslogger.FromContext(ctx).Errorf("tryTakeProcessor ok love=%s", q.Ref.String())
+	}
+	return a
 }
 
-func (q *ExecutionBroker) releaseProcessor(_ context.Context) {
+func (q *ExecutionBroker) releaseProcessor(ctx context.Context) {
 	atomic.SwapUint32(&q.processorActive, 0)
+	inslogger.FromContext(ctx).Errorf("releaseProcessor done love=%s", q.Ref.String())
 }
 
 func (q *ExecutionBroker) isActiveProcessor() bool { //nolint: unused
@@ -271,10 +276,11 @@ func (q *ExecutionBroker) storeWithoutDuplication(ctx context.Context, transcrip
 	if _, ok := q.deduplicationTable[transcript.RequestRef]; ok {
 		logger := inslogger.FromContext(ctx)
 		logger.Infof("Already know about request %s, skipping", transcript.RequestRef.String())
-
+		inslogger.FromContext(context.Background()).Debugf("already in deduplicationTable: %s", transcript.RequestRef.String())
 		return true
 	}
 	q.deduplicationTable[transcript.RequestRef] = true
+	inslogger.FromContext(context.Background()).Debugf("add to deduplicationTable: %s", transcript.RequestRef.String())
 	return false
 }
 
@@ -286,6 +292,7 @@ func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts .
 
 		if transcript.Request.Immutable {
 			q.storeCurrent(ctx, transcript)
+			inslogger.FromContext(ctx).Info("processTranscript Prepend", transcript.RequestRef.String())
 			go q.processTranscript(ctx, transcript)
 		} else {
 			q.mutable.Prepend(transcript)
@@ -305,9 +312,12 @@ func (q *ExecutionBroker) Put(ctx context.Context, start bool, transcripts ...*t
 
 		if transcript.Request.Immutable {
 			q.storeCurrent(ctx, transcript)
+			inslogger.FromContext(ctx).Info("processTranscript put", transcript.RequestRef.String())
 			go q.processTranscript(ctx, transcript)
 		} else {
+			inslogger.FromContext(ctx).Info("Push request, try", transcript.RequestRef.String())
 			q.mutable.Push(transcript)
+			inslogger.FromContext(ctx).Info("Push request was done", transcript.RequestRef.String())
 		}
 	}
 	if start {
@@ -353,6 +363,7 @@ func (q *ExecutionBroker) GetByReference(_ context.Context, r *insolar.Reference
 }
 
 func (q *ExecutionBroker) startProcessor(ctx context.Context) {
+	inslogger.FromContext(ctx).Errorf("startProcessor called %s", q.Ref.String())
 	defer q.releaseProcessor(ctx)
 
 	q.clarifyPendingStateFromLedger(ctx)
@@ -367,17 +378,22 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 	// processing immutable queue (it can appear if we were in pending state)
 	// run simultaneously all immutable transcripts and forget about them
 	for elem := q.getImmutableTask(ctx); elem != nil; elem = q.getImmutableTask(ctx) {
+		inslogger.FromContext(ctx).Errorf("getImmutableTask, processTranscript, element data: reason %s, request %s", elem.Request.Reason, elem.RequestRef)
 		go q.processTranscript(ctx, elem)
 	}
 
 	// processing mutable queue
 	for transcript := q.getMutableTask(ctx); transcript != nil; transcript = q.getMutableTask(ctx) {
 		q.fetchMoreFromLedgerIfNeeded(ctx)
+		inslogger.FromContext(ctx).Errorf("getMutableTask, processTranscript, element data: reason %s, request %s, broker ref %s", transcript.Request.Reason, transcript.RequestRef, q.Ref.String())
 
 		if !q.processTranscript(ctx, transcript) {
+			inslogger.FromContext(ctx).Errorf("getMutableTask not ok, processTranscript, element data: reason %s, request %s", transcript.Request.Reason, transcript.RequestRef)
 			break
 		}
+		inslogger.FromContext(ctx).Errorf("getMutableTask ok, processTranscript, element data: reason %s, request %s", transcript.Request.Reason, transcript.RequestRef)
 	}
+	inslogger.FromContext(ctx).Errorf("startProcessor done %s", q.Ref.String())
 }
 
 // StartProcessorIfNeeded processes queue messages in strict order
@@ -390,8 +406,10 @@ func (q *ExecutionBroker) StartProcessorIfNeeded(ctx context.Context) {
 	// unneeded optimisation
 	if q.tryTakeProcessor(ctx) {
 		logger := inslogger.FromContext(ctx)
-		logger.Info("[ StartProcessorIfNeeded ] Starting a new queue processor")
+		logger.Infof("[ StartProcessorIfNeeded ] Starting a new queue processor %s", q.Ref.String())
 		go q.startProcessor(ctx)
+	} else {
+		inslogger.FromContext(ctx).Debugf("[ StartProcessorIfNeeded ] tryTakeProcessor failed for %s", q.Ref.String())
 	}
 }
 
@@ -497,7 +515,8 @@ func (q *ExecutionBroker) onPulseWeNotNext(ctx context.Context) []insolar.Messag
 		q.pending = insolar.InPending
 		sendExecResults = true
 	case q.notConfirmedPending():
-		logger.Warn("looks like pending executor died, continuing execution on next executor")
+		logger.Warn("looks like pending executor died, continuing execution on next executor", q.Ref.String())
+		// panic("1_lol")
 		q.pending = insolar.NotPending
 		sendExecResults = true
 		q.ledgerHasMoreRequests = true
@@ -536,7 +555,8 @@ func (q *ExecutionBroker) onPulseWeNext(ctx context.Context) []insolar.Message {
 		q.PendingConfirmed = true
 
 	case q.notConfirmedPending():
-		logger.Warn("looks like pending executor died, re-starting execution")
+		logger.Warn("looks like pending executor died, re-starting execution", q.Ref.String())
+		// panic("lol")
 		q.pending = insolar.NotPending
 		q.ledgerHasMoreRequests = true
 		q.PendingConfirmed = false
@@ -620,7 +640,7 @@ func (q *ExecutionBroker) PrevExecutorStillExecuting(ctx context.Context) {
 	defer q.stateLock.Unlock()
 
 	logger := inslogger.FromContext(ctx)
-	logger.Debugf("got StillExecuting from previous executor")
+	logger.Debugf("got StillExecuting from previous executor %s, %s", q.Ref.String(), q.pending)
 
 	switch q.pending {
 	case insolar.NotPending:
@@ -768,6 +788,8 @@ func (q *ExecutionBroker) clarifyPendingStateFromLedger(ctx context.Context) {
 		return
 	}
 
+	// HERE!
+	inslogger.FromContext(ctx).Error("checking pending state: %s", q.Ref.String())
 	has, err := q.artifactsManager.HasPendings(ctx, q.Ref)
 	if err != nil {
 		inslogger.FromContext(ctx).Error("couldn't check pending state: ", err.Error())
@@ -777,6 +799,7 @@ func (q *ExecutionBroker) clarifyPendingStateFromLedger(ctx context.Context) {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
+	inslogger.FromContext(ctx).Error("clarify pending state: %s, %s, %t", q.Ref.String(), q.pending, has)
 	if q.pending == insolar.PendingUnknown {
 		if has {
 			q.pending = insolar.InPending
