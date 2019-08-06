@@ -80,13 +80,36 @@ type Ledger struct {
 
 // Backup holds configuration for backuping.
 type Backup struct {
-	Enabled               bool
-	TmpDirectory          string
-	TargetDirectory       string
-	BackupInfoFile        string
-	BackupConfirmFile     string
-	BackupDirNameTemplate string
-	BackupWaitPeriod      uint
+	// Enabled switches on backuping
+	Enabled bool
+
+	// TmpDirectory is directory for tmp storage of backup data. Must be created
+	TmpDirectory string
+
+	// TargetDirectory is directory where backups will be moved to
+	TargetDirectory string
+
+	// MetaInfoFile contains meta info about backup
+	MetaInfoFile string
+
+	// ConfirmFile: we wait this file being created when backup was saved on remote host
+	ConfirmFile string
+
+	// BackupFile is file with incremental backup data
+	BackupFile string
+
+	// DirNameTemplate is template for saving current incremental backup. Should be like "pulse-%d"
+	DirNameTemplate string
+
+	// BackupWaitPeriod - how much time we will wait for appearing of file ConfirmFile
+	BackupWaitPeriod uint
+
+	// Paths:
+	// Every incremental backup live in  TargetDirectory/"DirNameTemplate"%<pulse_number>
+	// and it contains:
+	// incr.bkp - backup file
+	// MetaInfoFile - meta info about current backup
+	// ConfirmFile - must be set from inside. When it appear it means that we successfully saved the backup
 }
 
 // NewLedger creates new default Ledger configuration.

@@ -73,21 +73,25 @@ func TestBackuper_BadConfig(t *testing.T) {
 
 	cfg.TargetDirectory = existingDir
 	_, err = executor.NewBackupMaker(context.Background(), nil, cfg, testPulse)
-	require.Contains(t, err.Error(), "BackupConfirmFile can't be empty")
+	require.Contains(t, err.Error(), "ConfirmFile can't be empty")
 
-	cfg.BackupConfirmFile = "Test"
+	cfg.ConfirmFile = "Test"
 	_, err = executor.NewBackupMaker(context.Background(), nil, cfg, testPulse)
-	require.Contains(t, err.Error(), "BackupInfoFile can't be empty")
+	require.Contains(t, err.Error(), "MetaInfoFile can't be empty")
 
-	cfg.BackupInfoFile = "Test2"
+	cfg.MetaInfoFile = "Test2"
 	_, err = executor.NewBackupMaker(context.Background(), nil, cfg, testPulse)
-	require.Contains(t, err.Error(), "BackupDirNameTemplate can't be empty")
+	require.Contains(t, err.Error(), "DirNameTemplate can't be empty")
 
-	cfg.BackupDirNameTemplate = "Test3"
+	cfg.DirNameTemplate = "Test3"
 	_, err = executor.NewBackupMaker(context.Background(), nil, cfg, testPulse)
 	require.Contains(t, err.Error(), "BackupWaitPeriod can't be 0")
 
 	cfg.BackupWaitPeriod = 20
+	_, err = executor.NewBackupMaker(context.Background(), nil, cfg, testPulse)
+	require.Contains(t, err.Error(), "BackupFile can't be empty")
+
+	cfg.BackupFile = "Test"
 	_, err = executor.NewBackupMaker(context.Background(), nil, cfg, testPulse)
 	require.NoError(t, err)
 
@@ -96,13 +100,14 @@ func TestBackuper_BadConfig(t *testing.T) {
 func makeBackuperConfig(t *testing.T, prefix string) configuration.Backup {
 
 	cfg := configuration.Backup{
-		BackupConfirmFile:     "BACKUPED",
-		BackupInfoFile:        "META.json",
-		TargetDirectory:       "/tmp/BKP/TARGET/" + prefix,
-		TmpDirectory:          "/tmp/BKP/TMP",
-		BackupDirNameTemplate: "pulse-%d",
-		BackupWaitPeriod:      60,
-		Enabled:               true,
+		ConfirmFile:      "BACKUPED",
+		MetaInfoFile:     "META.json",
+		TargetDirectory:  "/tmp/BKP/TARGET/" + prefix,
+		TmpDirectory:     "/tmp/BKP/TMP",
+		DirNameTemplate:  "pulse-%d",
+		BackupWaitPeriod: 60,
+		BackupFile:       "incr.bkp",
+		Enabled:          true,
 	}
 
 	err := os.MkdirAll(cfg.TargetDirectory, 0777)
@@ -162,7 +167,7 @@ func TestBackuper_CantMoveToTargetDir(t *testing.T) {
 	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, 0)
 	require.NoError(t, err)
 	// Create dir to fail move operation
-	_, err = os.Create(filepath.Join(cfg.TargetDirectory, fmt.Sprintf(cfg.BackupDirNameTemplate, testPulse)))
+	_, err = os.Create(filepath.Join(cfg.TargetDirectory, fmt.Sprintf(cfg.DirNameTemplate, testPulse)))
 	require.NoError(t, err)
 
 	err = bm.Do(context.Background(), testPulse)
@@ -185,7 +190,7 @@ func TestBackuper_Backup_OldPulse(t *testing.T) {
 }
 
 func makeCurrentBkpDir(cfg configuration.Backup, pulse insolar.PulseNumber) string {
-	return filepath.Join(cfg.TargetDirectory, fmt.Sprintf(cfg.BackupDirNameTemplate, pulse))
+	return filepath.Join(cfg.TargetDirectory, fmt.Sprintf(cfg.DirNameTemplate, pulse))
 }
 
 func calculateFileHash(t *testing.T, fileName string) string {
@@ -199,13 +204,11 @@ func calculateFileHash(t *testing.T, fileName string) string {
 	return fmt.Sprintf("%x", hasher.Sum(nil))
 }
 
-const backupFileName = "incr.bkp"
-
 func checkBackupMetaInfo(t *testing.T, cfg configuration.Backup, numIterations int, testPulse insolar.PulseNumber) {
 	for i := 0; i < numIterations+1; i++ {
 		currentPulse := testPulse + insolar.PulseNumber(i)
 		currentBkpDir := makeCurrentBkpDir(cfg, currentPulse)
-		metaInfo := filepath.Join(currentBkpDir, cfg.BackupInfoFile)
+		metaInfo := filepath.Join(currentBkpDir, cfg.MetaInfoFile)
 		raw, err := ioutil.ReadFile(metaInfo)
 		require.NoError(t, err)
 
@@ -214,7 +217,7 @@ func checkBackupMetaInfo(t *testing.T, cfg configuration.Backup, numIterations i
 		require.NoError(t, err)
 
 		// check file hash
-		bkpFile := filepath.Join(currentBkpDir, backupFileName)
+		bkpFile := filepath.Join(currentBkpDir, cfg.BackupFile)
 		md5sum := calculateFileHash(t, bkpFile)
 		require.Equal(t, md5sum, bi.MD5)
 
@@ -281,7 +284,7 @@ func TestBackuperM(t *testing.T) {
 		for i := 0; i < numIterations+1; i++ {
 			time.Sleep(2 * time.Second)
 
-			backupConfirmFile := filepath.Join(makeCurrentBkpDir(cfg, testPulse+insolar.PulseNumber(i)), cfg.BackupConfirmFile)
+			backupConfirmFile := filepath.Join(makeCurrentBkpDir(cfg, testPulse+insolar.PulseNumber(i)), cfg.ConfirmFile)
 			for true {
 				fff, err := os.Create(backupConfirmFile)
 				if err != nil && strings.Contains(err.Error(), "no such file or directory") {
@@ -322,8 +325,8 @@ func TestBackuperM(t *testing.T) {
 		for i := 0; i < numIterations+1; i++ {
 			bkpFileName := filepath.Join(
 				cfg.TargetDirectory,
-				fmt.Sprintf(cfg.BackupDirNameTemplate, testPulse+insolar.PulseNumber(i)),
-				backupFileName,
+				fmt.Sprintf(cfg.DirNameTemplate, testPulse+insolar.PulseNumber(i)),
+				cfg.BackupFile,
 			)
 			bkpFile, err := os.Open(bkpFileName)
 			require.NoError(t, err)

@@ -80,17 +80,20 @@ func checkConfig(config configuration.Backup) error {
 	if err := isPathExists(config.TargetDirectory); err != nil {
 		return errors.Wrap(err, "checkDirectory returns error")
 	}
-	if len(config.BackupConfirmFile) == 0 {
-		return errors.New("BackupConfirmFile can't be empty")
+	if len(config.ConfirmFile) == 0 {
+		return errors.New("ConfirmFile can't be empty")
 	}
-	if len(config.BackupInfoFile) == 0 {
-		return errors.New("BackupInfoFile can't be empty")
+	if len(config.MetaInfoFile) == 0 {
+		return errors.New("MetaInfoFile can't be empty")
 	}
-	if len(config.BackupDirNameTemplate) == 0 {
-		return errors.New("BackupDirNameTemplate can't be empty")
+	if len(config.DirNameTemplate) == 0 {
+		return errors.New("DirNameTemplate can't be empty")
 	}
 	if config.BackupWaitPeriod == 0 {
 		return errors.New("BackupWaitPeriod can't be 0")
+	}
+	if len(config.BackupFile) == 0 {
+		return errors.New("BackupFile can't be empty")
 	}
 
 	return nil
@@ -176,7 +179,7 @@ func (b *BackupMakerDefault) prepareBackup(ctx context.Context, dirHolder *tmpDi
 		return 0, errors.Wrap(err, "calculateFileHash return error")
 	}
 
-	metaInfoFile := filepath.Join(dirHolder.tmpDir, b.config.BackupInfoFile)
+	metaInfoFile := filepath.Join(dirHolder.tmpDir, b.config.MetaInfoFile)
 	err = writeBackupInfoFile(md5sum, pulse, b.lastBackupedVersion, currentBT, metaInfoFile)
 	if err != nil {
 		return 0, errors.Wrap(err, "writeBackupInfoFile return error")
@@ -248,14 +251,14 @@ func (b *BackupMakerDefault) doBackup(ctx context.Context, lastFinalizedPulse in
 		return 0, errors.Wrap(err, "prepareBackup returns error")
 	}
 
-	currentBkpDirName := fmt.Sprintf(b.config.BackupDirNameTemplate, lastFinalizedPulse)
+	currentBkpDirName := fmt.Sprintf(b.config.DirNameTemplate, lastFinalizedPulse)
 	currentBkpDirPath := filepath.Join(b.config.TargetDirectory, currentBkpDirName)
 	err = move(ctx, dirHolder.tmpDir, currentBkpDirPath)
 	if err != nil {
 		return 0, errors.Wrap(err, "move returns error")
 	}
 
-	err = waitForBackup(ctx, filepath.Join(currentBkpDirPath, b.config.BackupConfirmFile), b.config.BackupWaitPeriod)
+	err = waitForBackup(ctx, filepath.Join(currentBkpDirPath, b.config.ConfirmFile), b.config.BackupWaitPeriod)
 	if err != nil {
 		return 0, errors.Wrapf(err, "waitForBackup returns error. pulse: %d", lastFinalizedPulse)
 	}
