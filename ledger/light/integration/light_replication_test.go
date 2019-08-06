@@ -42,7 +42,7 @@ func Test_LightReplication(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 
-	s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) {
+	s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) []payload.Payload {
 		switch p := pl.(type) {
 		case *payload.Replication:
 			if p.Pulse == secondPulseNumber {
@@ -52,6 +52,10 @@ func Test_LightReplication(t *testing.T) {
 			}
 
 		}
+		if meta.Receiver == NodeHeavy() {
+			return DefaultHeavyResponse(pl)
+		}
+		return nil
 	})
 
 	require.NoError(t, err)

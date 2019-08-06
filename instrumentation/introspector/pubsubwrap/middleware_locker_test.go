@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/introspector/introproto"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -80,6 +79,10 @@ func TestMiddlewareLocker(t *testing.T) {
 
 	for _, ex := range expected {
 		typeName := ex.payloadType.String()
-		assert.Equalf(t, int64(ex.locks), stats.Filters[typeName].Filtered, "check %v stat", typeName)
+		for _, filter := range stats.Filters {
+			if filter.Name == typeName {
+				require.Equalf(t, int64(ex.locks), filter.Filtered, "check %v stat", typeName)
+			}
+		}
 	}
 }

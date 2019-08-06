@@ -130,7 +130,10 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 		)
 
 		allIndexes := lr.filterAndGroupIndexes(ctx, pn)
-		jets := lr.jetCalculator.MineForPulse(ctx, pn)
+		jets, err := lr.jetCalculator.MineForPulse(ctx, pn)
+		if err != nil {
+			panic(errors.Wrap(err, "failed to calculate jets to sync"))
+		}
 		logger.Debugf("[Replicator][sync] founds %d jets", len(jets), ". Jets: ", insolar.JetIDCollection(jets).DebugString())
 
 		for _, jetID := range jets {

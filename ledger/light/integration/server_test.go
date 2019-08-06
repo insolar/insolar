@@ -19,6 +19,7 @@ package integration_test
 import (
 	"context"
 	"crypto"
+	"fmt"
 	"math"
 	"sync"
 	"time"
@@ -67,6 +68,10 @@ var (
 	}
 )
 
+func NodeHeavy() insolar.Reference {
+	return heavy.ref
+}
+
 const PulseStep insolar.PulseNumber = 10
 
 type Server struct {
@@ -89,7 +94,38 @@ func DefaultLightConfig() configuration.Configuration {
 	return cfg
 }
 
-func NewServer(ctx context.Context, cfg configuration.Configuration, receive func(meta payload.Meta, pl payload.Payload)) (*Server, error) {
+func DefaultHeavyResponse(pl payload.Payload) []payload.Payload {
+	switch pl.(type) {
+	case *payload.Replication, *payload.GotHotConfirmation:
+		return nil
+	case *payload.GetLightInitialState:
+		return []payload.Payload{&payload.LightInitialState{
+			NetworkStart: true,
+			JetIDs:       []insolar.JetID{insolar.ZeroJetID},
+			Pulse: pulse.PulseProto{
+				PulseNumber: insolar.FirstPulseNumber,
+			},
+			Drops: [][]byte{
+				drop.MustEncode(&drop.Drop{JetID: insolar.ZeroJetID, Pulse: insolar.FirstPulseNumber}),
+			},
+		}}
+	}
+
+	panic(fmt.Sprintf("unexpected message to heavy %T", pl))
+}
+
+func defaultReceiveCallback(meta payload.Meta, pl payload.Payload) []payload.Payload {
+	if meta.Receiver == NodeHeavy() {
+		return DefaultHeavyResponse(pl)
+	}
+	return nil
+}
+
+func NewServer(
+	ctx context.Context,
+	cfg configuration.Configuration,
+	receiveCallback func(meta payload.Meta, pl payload.Payload) []payload.Payload,
+) (*Server, error) {
 	// Cryptography.
 	var (
 		KeyProcessor  insolar.KeyProcessor
@@ -255,7 +291,7 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 			ServerBus,
 		)
 
-		stateIniter := executor.NewStateIniter(Jets, waiter, drops, Nodes, ServerBus)
+		stateIniter := executor.NewStateIniter(Jets, waiter, drops, Nodes, ServerBus, Pulses, Pulses, jetCalculator)
 
 		pm := pulsemanager.NewPulseManager(
 			jetSplitter,
@@ -290,13 +326,26 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 				panic(errors.Wrap(err, "failed to unmarshal meta"))
 			}
 
-			if receive != nil {
-				pl, err := payload.Unmarshal(meta.Payload)
-				if err != nil {
-					panic(nil)
-				}
-				go receive(meta, pl)
+			pl, err := payload.Unmarshal(meta.Payload)
+			if err != nil {
+				panic(nil)
 			}
+			go func() {
+				var replies []payload.Payload
+				if receiveCallback != nil {
+					replies = receiveCallback(meta, pl)
+				} else {
+					replies = defaultReceiveCallback(meta, pl)
+				}
+
+				for _, rep := range replies {
+					msg, err := payload.NewMessage(rep)
+					if err != nil {
+						panic(err)
+					}
+					ClientBus.Reply(context.Background(), meta, msg)
+				}
+			}()
 
 			// Republish as incoming to self.
 			if meta.Receiver == light.ID() {
@@ -306,6 +355,8 @@ func NewServer(ctx context.Context, cfg configuration.Configuration, receive fun
 				}
 				return nil, nil
 			}
+
+			// todo Add check that heavy is not available in test
 
 			clientHandler := func(msg *message.Message) (messages []*message.Message, e error) {
 				return nil, nil

@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package shard
+package pkshard
 
 import (
 	"github.com/insolar/insolar/insolar"
@@ -24,10 +24,10 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("111A66c9Fu7cGTMe12tgh2ij3EEayHz1Db7Kkq5U9T7.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("111A5x8N1VJTm7BKYgzSe6TWHcFi98QZgw3AnkYiKML.11111111111111111111111111111111")
 
-// Shard holds proxy type
-type Shard struct {
+// PKShard holds proxy type
+type PKShard struct {
 	Reference insolar.Reference
 	Prototype insolar.Reference
 	Code      insolar.Reference
@@ -40,17 +40,28 @@ type ContractConstructorHolder struct {
 }
 
 // AsChild saves object as child
-func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*Shard, error) {
-	ref, err := common.CurrentProxyCtx.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
+func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*PKShard, error) {
+	ref, ret, err := common.CurrentProxyCtx.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
-	return &Shard{Reference: ref}, nil
+
+	var constructorError *foundation.Error
+	err = common.CurrentProxyCtx.Deserialize(ret, []interface{}{&constructorError})
+	if err != nil {
+		return nil, err
+	}
+
+	if constructorError != nil {
+		return nil, constructorError
+	}
+
+	return &PKShard{Reference: *ref}, nil
 }
 
 // GetObject returns proxy object
-func GetObject(ref insolar.Reference) (r *Shard) {
-	return &Shard{Reference: ref}
+func GetObject(ref insolar.Reference) (r *PKShard) {
+	return &PKShard{Reference: ref}
 }
 
 // GetPrototype returns reference to the prototype
@@ -72,12 +83,12 @@ func New() *ContractConstructorHolder {
 }
 
 // GetReference returns reference of the object
-func (r *Shard) GetReference() insolar.Reference {
+func (r *PKShard) GetReference() insolar.Reference {
 	return r.Reference
 }
 
 // GetPrototype returns reference to the code
-func (r *Shard) GetPrototype() (insolar.Reference, error) {
+func (r *PKShard) GetPrototype() (insolar.Reference, error) {
 	if r.Prototype.IsEmpty() {
 		ret := [2]interface{}{}
 		var ret0 insolar.Reference
@@ -107,7 +118,7 @@ func (r *Shard) GetPrototype() (insolar.Reference, error) {
 }
 
 // GetCode returns reference to the code
-func (r *Shard) GetCode() (insolar.Reference, error) {
+func (r *PKShard) GetCode() (insolar.Reference, error) {
 	if r.Code.IsEmpty() {
 		ret := [2]interface{}{}
 		var ret0 insolar.Reference
@@ -136,7 +147,7 @@ func (r *Shard) GetCode() (insolar.Reference, error) {
 }
 
 // GetRef is proxy generated method
-func (r *Shard) GetRef(key string) (string, error) {
+func (r *PKShard) GetRef(key string) (string, error) {
 	var args [1]interface{}
 	args[0] = key
 
@@ -170,7 +181,7 @@ func (r *Shard) GetRef(key string) (string, error) {
 }
 
 // GetRefNoWait is proxy generated method
-func (r *Shard) GetRefNoWait(key string) error {
+func (r *PKShard) GetRefNoWait(key string) error {
 	var args [1]interface{}
 	args[0] = key
 
@@ -190,7 +201,7 @@ func (r *Shard) GetRefNoWait(key string) error {
 }
 
 // GetRefAsImmutable is proxy generated method
-func (r *Shard) GetRefAsImmutable(key string) (string, error) {
+func (r *PKShard) GetRefAsImmutable(key string) (string, error) {
 	var args [1]interface{}
 	args[0] = key
 
@@ -224,7 +235,7 @@ func (r *Shard) GetRefAsImmutable(key string) (string, error) {
 }
 
 // SetRef is proxy generated method
-func (r *Shard) SetRef(key string, ref string) error {
+func (r *PKShard) SetRef(key string, ref string) error {
 	var args [2]interface{}
 	args[0] = key
 	args[1] = ref
@@ -257,7 +268,7 @@ func (r *Shard) SetRef(key string, ref string) error {
 }
 
 // SetRefNoWait is proxy generated method
-func (r *Shard) SetRefNoWait(key string, ref string) error {
+func (r *PKShard) SetRefNoWait(key string, ref string) error {
 	var args [2]interface{}
 	args[0] = key
 	args[1] = ref
@@ -278,7 +289,7 @@ func (r *Shard) SetRefNoWait(key string, ref string) error {
 }
 
 // SetRefAsImmutable is proxy generated method
-func (r *Shard) SetRefAsImmutable(key string, ref string) error {
+func (r *PKShard) SetRefAsImmutable(key string, ref string) error {
 	var args [2]interface{}
 	args[0] = key
 	args[1] = ref

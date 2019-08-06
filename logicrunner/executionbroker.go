@@ -63,10 +63,14 @@ type ExecutionBroker struct {
 
 	stateLock sync.Mutex
 
-	mutable          *TranscriptDequeue
-	immutable        *TranscriptDequeue
-	finished         *TranscriptDequeue
-	currentList      *CurrentExecutionList
+	mutable   *TranscriptDequeue
+	immutable *TranscriptDequeue
+	finished  *TranscriptDequeue
+
+	outgoingSender OutgoingRequestSender
+
+	currentList *CurrentExecutionList
+
 	executionArchive ExecutionArchive
 
 	publisher        watermillMsg.Publisher
@@ -96,6 +100,7 @@ func NewExecutionBroker(
 	_ pulse.Accessor,
 	artifactsManager artifacts.Client,
 	executionArchive ExecutionArchive,
+	outgoingSender OutgoingRequestSender,
 ) *ExecutionBroker {
 	return &ExecutionBroker{
 		Ref: ref,
@@ -104,6 +109,8 @@ func NewExecutionBroker(
 		immutable:   NewTranscriptDequeue(),
 		finished:    NewTranscriptDequeue(),
 		currentList: NewCurrentExecutionList(),
+
+		outgoingSender: outgoingSender,
 
 		publisher:        publisher,
 		requestsExecutor: requestsExecutor,
@@ -672,7 +679,7 @@ func (q *ExecutionBroker) FetchMoreRequestsFromLedger(ctx context.Context) {
 
 func (q *ExecutionBroker) startRequestsFetcher(ctx context.Context) {
 	if q.requestsFetcher == nil {
-		q.requestsFetcher = NewRequestsFetcher(q.Ref, q.artifactsManager, q)
+		q.requestsFetcher = NewRequestsFetcher(q.Ref, q.artifactsManager, q, q.outgoingSender)
 	}
 	q.requestsFetcher.FetchPendings(ctx)
 }
