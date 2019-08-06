@@ -51,6 +51,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/executionbroker"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/requestsexecutor"
+	"github.com/insolar/insolar/logicrunner/resultmatcher"
 	"github.com/insolar/insolar/logicrunner/statestorage"
 	testutils2 "github.com/insolar/insolar/logicrunner/testutils"
 	"github.com/insolar/insolar/logicrunner/transcript"
@@ -548,6 +549,8 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 				lr, err := NewLogicRunner(&configuration.LogicRunner{}, nil, nil)
 				require.NoError(t, err)
 
+				lr.ResultsMatcher = resultmatcher.NewResultsMatcher(lr.MessageBus, lr.PulseAccessor, lr.JetCoordinator)
+
 				lr.initHandlers()
 
 				lr.MessageBus = testutils.NewMessageBusMock(mc).
@@ -570,6 +573,8 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 			mocks: func(ctx context.Context, mc minimock.Tester) *LogicRunner {
 				lr, err := NewLogicRunner(&configuration.LogicRunner{}, nil, nil)
 				require.NoError(t, err)
+
+				lr.ResultsMatcher = resultmatcher.NewResultsMatcher(lr.MessageBus, lr.PulseAccessor, lr.JetCoordinator)
 
 				lr.initHandlers()
 
