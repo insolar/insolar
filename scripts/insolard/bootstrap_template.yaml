@@ -9,11 +9,11 @@ contracts:
   outdir: "{{ .BaseDir }}/plugins/"
 root_balance: "100000000000000000000"
 md_balance: "100000000000000000000"
-majority_rule: 6
+majority_rule: 11
 min_roles:
   heavy_material: 1
-  virtual:  2
-  light_material: 2
+  virtual:  5
+  light_material: 5
 # TODO: check pulsar_public_keys usage
 pulsar_public_keys:
   - "pulsar_public_key"
