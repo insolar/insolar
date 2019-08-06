@@ -88,7 +88,7 @@ func (d *Dispatcher) InnerSubscriber(msg *message.Message) ([]*message.Message, 
 	if err == nil {
 		ctx = instracer.WithParentSpan(ctx, parentSpan)
 	} else {
-		inslogger.FromContext(ctx).Error(err)
+		inslogger.FromContext(ctx).Error("InnerSubscriber without parent span", err)
 	}
 	logger := inslogger.FromContext(ctx)
 	go func() {
@@ -123,6 +123,10 @@ func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 	parentSpan := instracer.MustDeserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
 	ctx = instracer.WithParentSpan(ctx, parentSpan)
 	go func() {
+		//ctx := ctx
+		//d := d
+		//msg := msg
+		//pn := pn
 		f := thread.NewThread(msg, d.controller)
 		handle := d.getHandleByPulse(ctx, pn)
 		err := f.Run(ctx, handle(msg))
