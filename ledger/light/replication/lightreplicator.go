@@ -139,8 +139,7 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 		for _, jetID := range jets {
 			msg, err := lr.heavyPayload(ctx, pn, jetID, allIndexes[jetID])
 			if err != nil {
-				span.AddAttributes(trace.BoolAttribute("error", true))
-				span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
+				instracer.AddError(span, err)
 				panic(
 					fmt.Sprintf(
 						"[Replicator][sync] Problems with gather data for a pulse - %v and jet - %v. err - %v",
