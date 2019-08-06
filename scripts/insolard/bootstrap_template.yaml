@@ -42,26 +42,26 @@ discovery_nodes:
     host: "127.0.0.1:53866"
     role: "virtual"
     cert_name: "discovery_cert_6.json"
-#  -
-#    host: "127.0.0.1:53877"
-#    role: "light_material"
-#    cert_name: "discovery_cert_7.json"
-#  -
-#    host: "127.0.0.1:53888"
-#    role: "virtual"
-#    cert_name: "discovery_cert_8.json"
-#  -
-#    host: "127.0.0.1:53899"
-#    role: "light_material"
-#    cert_name: "discovery_cert_9.json"
-#  -
-#    host: "127.0.0.1:53100"
-#    role: "virtual"
-#    cert_name: "discovery_cert_10.json"
-#  -
-#    host: "127.0.0.1:51101"
-#    role: "light_material"
-#    cert_name: "discovery_cert_11.json"
+  -
+    host: "127.0.0.1:53877"
+    role: "light_material"
+    cert_name: "discovery_cert_7.json"
+  -
+    host: "127.0.0.1:53888"
+    role: "virtual"
+    cert_name: "discovery_cert_8.json"
+  -
+    host: "127.0.0.1:53899"
+    role: "light_material"
+    cert_name: "discovery_cert_9.json"
+  -
+    host: "127.0.0.1:53100"
+    role: "virtual"
+    cert_name: "discovery_cert_10.json"
+  -
+    host: "127.0.0.1:51101"
+    role: "light_material"
+    cert_name: "discovery_cert_11.json"
 #  -
 #    host: "127.0.0.1:53202"
 #    role: "virtual"
@@ -112,11 +112,11 @@ discovery_nodes:
 #    cert_name: "discovery_cert_23.json"
 
 nodes:
-#  -
-#    host: "127.0.0.1:63836"
-#    role: "virtual"
-#    keys_file: "{{ .BaseDir }}/nodes/1/keys.json"
-#    cert_name: "node_cert_1.json"
+  -
+    host: "127.0.0.1:63836"
+    role: "virtual"
+    keys_file: "{{ .BaseDir }}/nodes/1/keys.json"
+    cert_name: "node_cert_1.json"
 #  -
 #    host: "127.0.0.1:63846"
 #    role: "virtual"
