@@ -212,7 +212,7 @@ func (s *consensusSuite) SetupTest() {
 	expectedBootstrapsCount := len(s.fixture().bootstrapNodes)
 	retries := 10
 	for {
-		activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor(0).GetActiveNodes()
+		activeNodes := s.fixture().bootstrapNodes[0].GetActiveNodes()
 		if expectedBootstrapsCount == len(activeNodes) {
 			break
 		}
@@ -225,7 +225,7 @@ func (s *consensusSuite) SetupTest() {
 		time.Sleep(2 * time.Second)
 	}
 
-	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor(0).GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[0].GetActiveNodes()
 	require.Equal(s.t, len(s.fixture().bootstrapNodes), len(activeNodes))
 
 	if len(s.fixture().networkNodes) > 0 {
@@ -236,8 +236,8 @@ func (s *consensusSuite) SetupTest() {
 		s.waitForConsensus(2)
 
 		// active nodes count verification
-		activeNodes1 := s.fixture().networkNodes[0].serviceNetwork.NodeKeeper.GetAccessor(0).GetActiveNodes()
-		activeNodes2 := s.fixture().networkNodes[0].serviceNetwork.NodeKeeper.GetAccessor(0).GetActiveNodes()
+		activeNodes1 := s.fixture().networkNodes[0].GetActiveNodes()
+		activeNodes2 := s.fixture().networkNodes[0].GetActiveNodes()
 
 		require.Equal(s.t, s.getNodesCount(), len(activeNodes1))
 		require.Equal(s.t, s.getNodesCount(), len(activeNodes2))
@@ -422,6 +422,22 @@ func (n *networkNode) init() error {
 	err := n.componentManager.Init(n.ctx)
 	//n.serviceNetwork.PhaseManager = &phaseManagerWrapper{original: n.serviceNetwork.PhaseManager, result: n.consensusResult}
 	return err
+}
+
+func (n *networkNode) GetActiveNodes() []insolar.NetworkNode {
+	p, err := n.serviceNetwork.PulseAccessor.Latest(n.ctx)
+	if err != nil {
+		panic(err)
+	}
+	return n.serviceNetwork.NodeKeeper.GetAccessor(p.PulseNumber).GetActiveNodes()
+}
+
+func (n *networkNode) GetWorkingNodes() []insolar.NetworkNode {
+	p, err := n.serviceNetwork.PulseAccessor.Latest(n.ctx)
+	if err != nil {
+		panic(err)
+	}
+	return n.serviceNetwork.NodeKeeper.GetAccessor(p.PulseNumber).GetWorkingNodes()
 }
 
 func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManager, insolar.CryptographyService) {
@@ -616,11 +632,11 @@ func (s *testSuite) preInitNode(node *networkNode) {
 //}
 
 func (s *testSuite) AssertActiveNodesCountDelta(delta int) {
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetAccessor(0).GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[1].GetActiveNodes()
 	require.Equal(s.t, s.getNodesCount()+delta, len(activeNodes))
 }
 
 func (s *testSuite) AssertWorkingNodesCountDelta(delta int) {
-	workingNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor(0).GetWorkingNodes()
+	workingNodes := s.fixture().bootstrapNodes[0].GetWorkingNodes()
 	require.Equal(s.t, s.getNodesCount()+delta, len(workingNodes))
 }

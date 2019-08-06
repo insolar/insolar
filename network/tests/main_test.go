@@ -263,9 +263,9 @@ func TestNodeComeAfterAnotherNodeSendLeaveETA(t *testing.T) {
 	s.waitForConsensus(2)
 
 	// newNode doesn't have workingNodes
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor(0).GetActiveNodes()
-	workingNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor(0).GetWorkingNodes()
-	newNodeWorkingNodes := newNode.serviceNetwork.NodeKeeper.GetAccessor(0).GetWorkingNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].GetActiveNodes()
+	workingNodes := s.fixture().bootstrapNodes[0].GetWorkingNodes()
+	newNodeWorkingNodes := newNode.GetWorkingNodes()
 
 	require.Equal(t, s.getNodesCount()+2, len(activeNodes))
 	require.Equal(t, s.getNodesCount()+1, len(workingNodes))
@@ -273,9 +273,9 @@ func TestNodeComeAfterAnotherNodeSendLeaveETA(t *testing.T) {
 
 	// newNode have to have same working node list as other nodes, but it doesn't because it miss leaving claim
 	s.waitForConsensus(1)
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor(0).GetActiveNodes()
-	workingNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor(0).GetWorkingNodes()
-	newNodeWorkingNodes = newNode.serviceNetwork.NodeKeeper.GetAccessor(0).GetWorkingNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].GetActiveNodes()
+	workingNodes = s.fixture().bootstrapNodes[0].GetWorkingNodes()
+	newNodeWorkingNodes = newNode.GetWorkingNodes()
 
 	require.Equal(t, s.getNodesCount()+2, len(activeNodes))
 	require.Equal(t, s.getNodesCount()+1, len(workingNodes))
@@ -284,9 +284,9 @@ func TestNodeComeAfterAnotherNodeSendLeaveETA(t *testing.T) {
 
 	// leaveNode leaving, newNode still ok
 	s.waitForConsensus(1)
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor(0).GetActiveNodes()
-	workingNodes = newNode.serviceNetwork.NodeKeeper.GetAccessor(0).GetWorkingNodes()
-	newNodeWorkingNodes = newNode.serviceNetwork.NodeKeeper.GetAccessor(0).GetWorkingNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].GetActiveNodes()
+	workingNodes = newNode.GetWorkingNodes()
+	newNodeWorkingNodes = newNode.GetWorkingNodes()
 
 	require.Equal(t, s.getNodesCount()+1, len(activeNodes))
 	require.Equal(t, s.getNodesCount()+1, len(workingNodes))
@@ -302,7 +302,7 @@ func TestDiscoveryDown(t *testing.T) {
 	s.StopNode(s.fixture().bootstrapNodes[0])
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
 	for i := 1; i < s.getNodesCount(); i++ {
-		activeNodes := s.fixture().bootstrapNodes[i].serviceNetwork.NodeKeeper.GetAccessor(0).GetWorkingNodes()
+		activeNodes := s.fixture().bootstrapNodes[i].GetWorkingNodes()
 		require.Equal(t, s.getNodesCount()-1, len(activeNodes))
 	}
 }
@@ -330,7 +330,7 @@ func TestDiscoveryRestart(t *testing.T) {
 	require.NoError(t, err)
 
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetAccessor(0).GetWorkingNodes()
+	activeNodes := s.fixture().bootstrapNodes[1].GetWorkingNodes()
 	require.Equal(t, s.getNodesCount()-1, len(activeNodes))
 
 	log.Info("Discovery node starting...")
@@ -339,9 +339,9 @@ func TestDiscoveryRestart(t *testing.T) {
 	require.NoError(t, err)
 
 	s.waitForConsensusExcept(3, s.fixture().bootstrapNodes[0].id)
-	activeNodes = s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetAccessor(0).GetWorkingNodes()
+	activeNodes = s.fixture().bootstrapNodes[1].GetWorkingNodes()
 	require.Equal(t, s.getNodesCount(), len(activeNodes))
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor(0).GetWorkingNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].GetWorkingNodes()
 	require.Equal(t, s.getNodesCount(), len(activeNodes))
 }
 
@@ -368,12 +368,12 @@ func TestDiscoveryRestartNoWait(t *testing.T) {
 	}(s)
 
 	s.waitForConsensusExcept(4, s.fixture().bootstrapNodes[0].id)
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetAccessor(0).GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[1].GetActiveNodes()
 	require.Equal(t, s.getNodesCount(), len(activeNodes))
 	s.waitForConsensusExcept(1, s.fixture().bootstrapNodes[0].id)
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor(0).GetWorkingNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].GetWorkingNodes()
 	require.Equal(t, s.getNodesCount(), len(activeNodes))
-	activeNodes = s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetAccessor(0).GetWorkingNodes()
+	activeNodes = s.fixture().bootstrapNodes[1].GetWorkingNodes()
 	require.Equal(t, s.getNodesCount(), len(activeNodes))
 }
 
