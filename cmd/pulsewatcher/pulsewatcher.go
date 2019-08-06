@@ -190,8 +190,7 @@ func collectNodesStatuses(conf *pulsewatcher.Config, lastResults [][]string) ([]
 				// If an error have occurred print this error but preserve other data
 				// from the last successful status request.
 				if len(lastResults) > i && len(lastResults[i]) > 0 {
-					results[i] = make([]string, len(lastResults[i]))
-					copy(results[i], lastResults[i])
+					results[i] = lastResults[i]
 					results[i][0] = url
 					results[i][len(results[i])-1] = errStr
 				} else {
@@ -275,10 +274,10 @@ func main() {
 		Timeout:   conf.Timeout,
 	}
 
-	lastResults := make([][]string, len(conf.Nodes))
+	var results [][]string
+	var ready bool
 	for {
-		results, ready := collectNodesStatuses(conf, lastResults)
-		copy(lastResults, results)
+		results, ready = collectNodesStatuses(conf, results)
 		if useJSONFormat {
 			displayResultsJSON(results, ready, buffer)
 		} else {
