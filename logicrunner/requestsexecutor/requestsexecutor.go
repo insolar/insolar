@@ -64,12 +64,6 @@ func (e *requestsExecutor) ExecuteAndSave(
 
 	result, err := e.Execute(ctx, transcript)
 	if err != nil {
-		// if strings.Contains(err.Error(), "index not found") {
-		// 	_, err := e.Save(ctx, transcript, result)
-		// 	if err != nil {
-		// 		return nil, errors.Wrap(err, "couldn't save request result after error")
-		// 	}
-		// }
 		return nil, errors.Wrap(err, "couldn't execute request")
 	}
 
@@ -135,7 +129,7 @@ func (e *requestsExecutor) SendReply(
 		return
 	}
 
-	inslogger.FromContext(ctx).Debug("Returning result for %s", transcript.RequestRef.String())
+	inslogger.FromContext(ctx).Debug("Returning result")
 
 	errstr := ""
 	if err != nil {
@@ -148,7 +142,6 @@ func (e *requestsExecutor) SendReply(
 	)
 
 	if transcript.Request.APINode.IsEmpty() {
-		inslogger.FromContext(ctx).Debugf("Returning result with reason %s, res - %v", transcript.Request.Reason, re)
 		_, err = sender(
 			ctx,
 			&message.ReturnResults{
@@ -161,12 +154,10 @@ func (e *requestsExecutor) SendReply(
 			&insolar.MessageSendOptions{},
 		)
 	} else {
-		inslogger.FromContext(ctx).Debugf("Returning result to APINode with reason %s, res - %v", transcript.Request.Reason, re)
 		_, err = sender(
 			ctx,
 			&message.ReturnResults{
 				RequestRef: transcript.RequestRef,
-				Reason:     transcript.Request.Reason,
 				Reply:      re,
 				Error:      errstr,
 			},

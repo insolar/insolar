@@ -147,7 +147,6 @@ func (rf *requestsFetcher) fetch(ctx context.Context) error {
 		}
 	}
 
-	logger.Errorf("fetch req from ledger was done")
 	return nil
 }
 

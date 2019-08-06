@@ -149,8 +149,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to find request being closed")
 	}
-	earliestPending, err := calcPending(ctx, opened, closedRequest.RecordID)
-	inslogger.FromContext(ctx).Errorf("calcPending, result id - %s (obj %s)", p.result.Request.Record(), objectID.String())
+	earliestPending, err := calcPending(opened, closedRequest.RecordID)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate earliest pending")
 	}
@@ -160,7 +159,6 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		done, err := p.dep.writer.Begin(ctx, flow.Pulse(ctx))
 		if err != nil {
 			if err == hot.ErrWriteClosed {
-				inslogger.FromContext(ctx).Errorf("ErrWriteClosed happened")
 				return flow.ErrCancelled
 			}
 			return err
@@ -227,7 +225,6 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		index.Lifeline.LatestRequest = &Filament.ID
 		index.Lifeline.EarliestOpenRequest = earliestPending
 		p.dep.indexes.Set(ctx, resultID.Pulse(), index)
-		logger.Errorf("try to set result, EarliestOpenRequest - %s, new earliestPending - %s", index.Lifeline.EarliestOpenRequest, earliestPending, objectID.String())
 		return nil
 	}()
 	if err != nil {
@@ -253,14 +250,10 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 
 // EarliestPending checks if received result closes earliest request. If so, it should return new earliest request or
 // nil if the last request was closed.
-func calcPending(ctx context.Context, opened []record.CompositeFilamentRecord, closedRequestID insolar.ID) (*insolar.PulseNumber, error) {
+func calcPending(opened []record.CompositeFilamentRecord, closedRequestID insolar.ID) (*insolar.PulseNumber, error) {
 	// If we don't have pending requests BEFORE we try to save result, something went wrong.
 	if len(opened) == 0 {
 		return nil, errors.New("no requests in pending before result")
-	}
-
-	for i, o := range opened {
-		inslogger.FromContext(ctx).Errorf("calcPending, opened %d - %s", i, o.RecordID.String())
 	}
 
 	currentEarliest := opened[0]
@@ -271,7 +264,6 @@ func calcPending(ctx context.Context, opened []record.CompositeFilamentRecord, c
 			return nil, errors.New("result doesn't match with any pending requests")
 		}
 		p := currentEarliest.RecordID.Pulse()
-		inslogger.FromContext(ctx).Errorf("calcPending, currentEarliest.RecordID - %s, closedRequestID - %s", currentEarliest.RecordID.String(), closedRequestID.String())
 		return &p, nil
 	}
 
@@ -283,7 +275,6 @@ func calcPending(ctx context.Context, opened []record.CompositeFilamentRecord, c
 	// Returning next earliest request.
 	newEarliest := opened[1]
 	p := newEarliest.RecordID.Pulse()
-	inslogger.FromContext(ctx).Errorf("calcPending, newEarliest.RecordID - %s, closedRequestID - %s", newEarliest.RecordID.String(), closedRequestID.String())
 	return &p, nil
 }
 

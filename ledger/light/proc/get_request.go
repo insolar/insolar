@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
@@ -87,7 +86,6 @@ func (p *GetRequest) Proceed(ctx context.Context) error {
 	}
 
 	sendPassRequest := func() error {
-		inslogger.FromContext(ctx).Debugf("msg type inside Pass msg: %s", p.message.String())
 		buf, err := p.message.Marshal()
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal origin meta message")
@@ -105,14 +103,12 @@ func (p *GetRequest) Proceed(ctx context.Context) error {
 		}
 		var node insolar.Reference
 		if onHeavy {
-			inslogger.FromContext(ctx).Debugf("send pass (%s type) to heavy: %s", p.message.String())
 			h, err := p.dep.coordinator.Heavy(ctx)
 			if err != nil {
 				return errors.Wrap(err, "failed to calculate heavy")
 			}
 			node = *h
 		} else {
-			inslogger.FromContext(ctx).Debugf("send pass (%s type) to light: %s", p.message.String())
 			jetID, err := p.dep.fetcher.Fetch(ctx, p.objectID, p.requestID.Pulse())
 			if err != nil {
 				return errors.Wrap(err, "failed to fetch jet")

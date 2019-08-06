@@ -136,13 +136,11 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 			ObjID:            objectID,
 			LifelineLastUsed: p.requestID.Pulse(),
 		}
-		logger.Debugf("IsCreationRequest, objectID is %s", objectID.String())
 	} else {
 		idx, err := p.dep.indexes.ForID(ctx, flow.Pulse(ctx), objectID)
 		if err != nil {
-			return errors.Wrapf(err, "failed to check an object state, objectID is %s", objectID.String())
+			return errors.Wrap(err, "failed to check an object state")
 		}
-		logger.Debugf("not IsCreationRequest, objectID is %s", objectID.String())
 		if index.Lifeline.StateID == record.StateDeactivation {
 			msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeDeactivated})
 			if err != nil {
@@ -256,7 +254,6 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	// Save updated index.
 	index.LifelineLastUsed = p.requestID.Pulse()
 	index.Lifeline.LatestRequest = &Filament.ID
-	logger.Errorf("try to set request, EarliestOpenRequest - %s, req pulse - %s", index.Lifeline.EarliestOpenRequest, p.requestID.Pulse().String(), objectID.String())
 	if index.Lifeline.EarliestOpenRequest == nil {
 		pn := p.requestID.Pulse()
 		index.Lifeline.EarliestOpenRequest = &pn

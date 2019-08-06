@@ -43,33 +43,6 @@ func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 	broker := h.dep.StateStorage.UpsertExecutionState(msg.Reference)
 	broker.PrevExecutorStillExecuting(ctx)
 
-	// logger := inslogger.FromContext(ctx)
-	// for _, reqRef := range msg.RequestRefs {
-	// 	if broker.IsKnownRequest(ctx, reqRef) {
-	// 		logger.Debug("skipping known request ", reqRef.String())
-	// 		continue
-	// 	}
-	//
-	// 	request, err := broker.Req.am.GetIncomingRequest(ctx, rf.object, reqRef)
-	// 	if err != nil {
-	// 		logger.Error("couldn't get request: ", err.Error())
-	// 		continue
-	// 	}
-	//
-	// 	select {
-	// 	case <-ctx.Done():
-	// 		logger.Debug("quiting fetching requests, was stopped")
-	// 		return nil
-	// 	default:
-	// 	}
-	//
-	// 	logger.Errorf("fetch req from ledger: %s, %s", reqRef.String(), request.String())
-	// 	requestCtx := freshContextFromContextAndRequest(ctx, *request)
-	// 	tr := NewTranscript(requestCtx, reqRef, *request)
-	// 	rf.broker.AddRequestsFromLedger(ctx, tr)
-	// 	tr := NewTranscript(ctx, msg.Reference, reqRef)
-	// 	broker.AddAdditionalRequestFromPrevExecutor(ctx, reqRef)
-	// }
 	replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})
 	h.dep.Sender.Reply(ctx, h.Message, replyOk)
 	return nil
