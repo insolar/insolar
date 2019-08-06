@@ -160,11 +160,6 @@ func TestJetSplitter(t *testing.T) {
 			pulseCalc, collectionAccessor,
 		)
 
-		// no filter for ID
-		// jetCalc.MineForPulseMock.Set(func(ctx context.Context, pn insolar.PulseNumber) ([]insolar.JetID, error) {
-		// 	return jetStore.All(ctx, pn), nil
-		// })
-
 		var initialPulse insolar.PulseNumber = 60000
 		initialJets := []insolar.JetID{jet0, jet10, jet11}
 		// initialize jet tree
