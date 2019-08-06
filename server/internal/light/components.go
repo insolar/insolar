@@ -383,7 +383,7 @@ func (c *components) Stop(ctx context.Context) error {
 func (c *components) startWatermill(
 	ctx context.Context,
 	logger watermill.LoggerAdapter,
-	pubSub message.PubSub,
+	pubSub message.Subscriber,
 	b *bus.Bus,
 	outHandler, inHandler message.HandlerFunc,
 ) {
