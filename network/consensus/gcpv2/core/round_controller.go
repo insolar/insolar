@@ -324,7 +324,8 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 		//defaultOptions = coreapi.SkipVerify // validation was done by the prev controller
 	}
 
-	if r.realm.ephemeralFeeder != nil && !packet.GetPacketType().IsEphemeralPacket() {
+	if r.realm.ephemeralFeeder != nil && !packet.GetPacketType().IsEphemeralPacket() && (prep == nil || !prep.disableEphemeral) { // TODO need fix, too ugly
+
 		_, err := r.realm.VerifyPacketAuthenticity(ctx, packet, from, nil, coreapi.DefaultVerify, nil, defaultOptions)
 		if err == nil {
 			err = r.realm.ephemeralFeeder.OnNonEphemeralPacket(ctx, packet, from)
