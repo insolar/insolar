@@ -157,6 +157,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	n.BaseGateway = &gateway.Base{}
 	n.Gatewayer = gateway.NewGatewayer(n.BaseGateway.NewGateway(ctx, insolar.NoNetworkState), func(ctx context.Context, isNetworkOperable bool) {
 		if n.operableFunc != nil {
+			inslogger.FromContext(ctx).Infof("===== Network operable: %t", isNetworkOperable)
 			n.operableFunc(ctx, isNetworkOperable)
 		}
 	})
