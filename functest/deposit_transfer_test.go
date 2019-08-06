@@ -35,7 +35,7 @@ func TestDepositTransferToken(t *testing.T) {
 
 	for i := 0; i <= 10; i++ {
 		time.Sleep(time.Second)
-		_, err := signedRequest(t, member, "deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
+		_, _, err := makeSignedRequest(member, "deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
 		if err != nil {
 			require.Contains(t, err.Error(), "hold period didn't end")
 		} else {
