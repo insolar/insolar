@@ -18,12 +18,6 @@ import (
 type SenderMock struct {
 	t minimock.Tester
 
-	funcLatestPulse          func(ctx context.Context) (p1 insolar.Pulse, err error)
-	inspectFuncLatestPulse   func(ctx context.Context)
-	afterLatestPulseCounter  uint64
-	beforeLatestPulseCounter uint64
-	LatestPulseMock          mSenderMockLatestPulse
-
 	funcReply          func(ctx context.Context, origin payload.Meta, reply *message.Message)
 	inspectFuncReply   func(ctx context.Context, origin payload.Meta, reply *message.Message)
 	afterReplyCounter  uint64
@@ -50,9 +44,6 @@ func NewSenderMock(t minimock.Tester) *SenderMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.LatestPulseMock = mSenderMockLatestPulse{mock: m}
-	m.LatestPulseMock.callArgs = []*SenderMockLatestPulseParams{}
-
 	m.ReplyMock = mSenderMockReply{mock: m}
 	m.ReplyMock.callArgs = []*SenderMockReplyParams{}
 
@@ -63,222 +54,6 @@ func NewSenderMock(t minimock.Tester) *SenderMock {
 	m.SendTargetMock.callArgs = []*SenderMockSendTargetParams{}
 
 	return m
-}
-
-type mSenderMockLatestPulse struct {
-	mock               *SenderMock
-	defaultExpectation *SenderMockLatestPulseExpectation
-	expectations       []*SenderMockLatestPulseExpectation
-
-	callArgs []*SenderMockLatestPulseParams
-	mutex    sync.RWMutex
-}
-
-// SenderMockLatestPulseExpectation specifies expectation struct of the Sender.LatestPulse
-type SenderMockLatestPulseExpectation struct {
-	mock    *SenderMock
-	params  *SenderMockLatestPulseParams
-	results *SenderMockLatestPulseResults
-	Counter uint64
-}
-
-// SenderMockLatestPulseParams contains parameters of the Sender.LatestPulse
-type SenderMockLatestPulseParams struct {
-	ctx context.Context
-}
-
-// SenderMockLatestPulseResults contains results of the Sender.LatestPulse
-type SenderMockLatestPulseResults struct {
-	p1  insolar.Pulse
-	err error
-}
-
-// Expect sets up expected params for Sender.LatestPulse
-func (mmLatestPulse *mSenderMockLatestPulse) Expect(ctx context.Context) *mSenderMockLatestPulse {
-	if mmLatestPulse.mock.funcLatestPulse != nil {
-		mmLatestPulse.mock.t.Fatalf("SenderMock.LatestPulse mock is already set by Set")
-	}
-
-	if mmLatestPulse.defaultExpectation == nil {
-		mmLatestPulse.defaultExpectation = &SenderMockLatestPulseExpectation{}
-	}
-
-	mmLatestPulse.defaultExpectation.params = &SenderMockLatestPulseParams{ctx}
-	for _, e := range mmLatestPulse.expectations {
-		if minimock.Equal(e.params, mmLatestPulse.defaultExpectation.params) {
-			mmLatestPulse.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmLatestPulse.defaultExpectation.params)
-		}
-	}
-
-	return mmLatestPulse
-}
-
-// Inspect accepts an inspector function that has same arguments as the Sender.LatestPulse
-func (mmLatestPulse *mSenderMockLatestPulse) Inspect(f func(ctx context.Context)) *mSenderMockLatestPulse {
-	if mmLatestPulse.mock.inspectFuncLatestPulse != nil {
-		mmLatestPulse.mock.t.Fatalf("Inspect function is already set for SenderMock.LatestPulse")
-	}
-
-	mmLatestPulse.mock.inspectFuncLatestPulse = f
-
-	return mmLatestPulse
-}
-
-// Return sets up results that will be returned by Sender.LatestPulse
-func (mmLatestPulse *mSenderMockLatestPulse) Return(p1 insolar.Pulse, err error) *SenderMock {
-	if mmLatestPulse.mock.funcLatestPulse != nil {
-		mmLatestPulse.mock.t.Fatalf("SenderMock.LatestPulse mock is already set by Set")
-	}
-
-	if mmLatestPulse.defaultExpectation == nil {
-		mmLatestPulse.defaultExpectation = &SenderMockLatestPulseExpectation{mock: mmLatestPulse.mock}
-	}
-	mmLatestPulse.defaultExpectation.results = &SenderMockLatestPulseResults{p1, err}
-	return mmLatestPulse.mock
-}
-
-//Set uses given function f to mock the Sender.LatestPulse method
-func (mmLatestPulse *mSenderMockLatestPulse) Set(f func(ctx context.Context) (p1 insolar.Pulse, err error)) *SenderMock {
-	if mmLatestPulse.defaultExpectation != nil {
-		mmLatestPulse.mock.t.Fatalf("Default expectation is already set for the Sender.LatestPulse method")
-	}
-
-	if len(mmLatestPulse.expectations) > 0 {
-		mmLatestPulse.mock.t.Fatalf("Some expectations are already set for the Sender.LatestPulse method")
-	}
-
-	mmLatestPulse.mock.funcLatestPulse = f
-	return mmLatestPulse.mock
-}
-
-// When sets expectation for the Sender.LatestPulse which will trigger the result defined by the following
-// Then helper
-func (mmLatestPulse *mSenderMockLatestPulse) When(ctx context.Context) *SenderMockLatestPulseExpectation {
-	if mmLatestPulse.mock.funcLatestPulse != nil {
-		mmLatestPulse.mock.t.Fatalf("SenderMock.LatestPulse mock is already set by Set")
-	}
-
-	expectation := &SenderMockLatestPulseExpectation{
-		mock:   mmLatestPulse.mock,
-		params: &SenderMockLatestPulseParams{ctx},
-	}
-	mmLatestPulse.expectations = append(mmLatestPulse.expectations, expectation)
-	return expectation
-}
-
-// Then sets up Sender.LatestPulse return parameters for the expectation previously defined by the When method
-func (e *SenderMockLatestPulseExpectation) Then(p1 insolar.Pulse, err error) *SenderMock {
-	e.results = &SenderMockLatestPulseResults{p1, err}
-	return e.mock
-}
-
-// LatestPulse implements Sender
-func (mmLatestPulse *SenderMock) LatestPulse(ctx context.Context) (p1 insolar.Pulse, err error) {
-	mm_atomic.AddUint64(&mmLatestPulse.beforeLatestPulseCounter, 1)
-	defer mm_atomic.AddUint64(&mmLatestPulse.afterLatestPulseCounter, 1)
-
-	if mmLatestPulse.inspectFuncLatestPulse != nil {
-		mmLatestPulse.inspectFuncLatestPulse(ctx)
-	}
-
-	params := &SenderMockLatestPulseParams{ctx}
-
-	// Record call args
-	mmLatestPulse.LatestPulseMock.mutex.Lock()
-	mmLatestPulse.LatestPulseMock.callArgs = append(mmLatestPulse.LatestPulseMock.callArgs, params)
-	mmLatestPulse.LatestPulseMock.mutex.Unlock()
-
-	for _, e := range mmLatestPulse.LatestPulseMock.expectations {
-		if minimock.Equal(e.params, params) {
-			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.p1, e.results.err
-		}
-	}
-
-	if mmLatestPulse.LatestPulseMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmLatestPulse.LatestPulseMock.defaultExpectation.Counter, 1)
-		want := mmLatestPulse.LatestPulseMock.defaultExpectation.params
-		got := SenderMockLatestPulseParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmLatestPulse.t.Errorf("SenderMock.LatestPulse got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
-		}
-
-		results := mmLatestPulse.LatestPulseMock.defaultExpectation.results
-		if results == nil {
-			mmLatestPulse.t.Fatal("No results are set for the SenderMock.LatestPulse")
-		}
-		return (*results).p1, (*results).err
-	}
-	if mmLatestPulse.funcLatestPulse != nil {
-		return mmLatestPulse.funcLatestPulse(ctx)
-	}
-	mmLatestPulse.t.Fatalf("Unexpected call to SenderMock.LatestPulse. %v", ctx)
-	return
-}
-
-// LatestPulseAfterCounter returns a count of finished SenderMock.LatestPulse invocations
-func (mmLatestPulse *SenderMock) LatestPulseAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmLatestPulse.afterLatestPulseCounter)
-}
-
-// LatestPulseBeforeCounter returns a count of SenderMock.LatestPulse invocations
-func (mmLatestPulse *SenderMock) LatestPulseBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmLatestPulse.beforeLatestPulseCounter)
-}
-
-// Calls returns a list of arguments used in each call to SenderMock.LatestPulse.
-// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmLatestPulse *mSenderMockLatestPulse) Calls() []*SenderMockLatestPulseParams {
-	mmLatestPulse.mutex.RLock()
-
-	argCopy := make([]*SenderMockLatestPulseParams, len(mmLatestPulse.callArgs))
-	copy(argCopy, mmLatestPulse.callArgs)
-
-	mmLatestPulse.mutex.RUnlock()
-
-	return argCopy
-}
-
-// MinimockLatestPulseDone returns true if the count of the LatestPulse invocations corresponds
-// the number of defined expectations
-func (m *SenderMock) MinimockLatestPulseDone() bool {
-	for _, e := range m.LatestPulseMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.LatestPulseMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterLatestPulseCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcLatestPulse != nil && mm_atomic.LoadUint64(&m.afterLatestPulseCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockLatestPulseInspect logs each unmet expectation
-func (m *SenderMock) MinimockLatestPulseInspect() {
-	for _, e := range m.LatestPulseMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to SenderMock.LatestPulse with params: %#v", *e.params)
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.LatestPulseMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterLatestPulseCounter) < 1 {
-		if m.LatestPulseMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to SenderMock.LatestPulse")
-		} else {
-			m.t.Errorf("Expected call to SenderMock.LatestPulse with params: %#v", *m.LatestPulseMock.defaultExpectation.params)
-		}
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcLatestPulse != nil && mm_atomic.LoadUint64(&m.afterLatestPulseCounter) < 1 {
-		m.t.Error("Expected call to SenderMock.LatestPulse")
-	}
 }
 
 type mSenderMockReply struct {
@@ -910,8 +685,6 @@ func (m *SenderMock) MinimockSendTargetInspect() {
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *SenderMock) MinimockFinish() {
 	if !m.minimockDone() {
-		m.MinimockLatestPulseInspect()
-
 		m.MinimockReplyInspect()
 
 		m.MinimockSendRoleInspect()
@@ -940,7 +713,6 @@ func (m *SenderMock) MinimockWait(timeout mm_time.Duration) {
 func (m *SenderMock) minimockDone() bool {
 	done := true
 	return done &&
-		m.MinimockLatestPulseDone() &&
 		m.MinimockReplyDone() &&
 		m.MinimockSendRoleDone() &&
 		m.MinimockSendTargetDone()
