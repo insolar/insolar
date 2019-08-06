@@ -268,13 +268,13 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func validateRequestHeaders(digest string, richSignature string, body []byte) (string, error) {
+func validateRequestHeaders(digest string, signature string, body []byte) (string, error) {
 	// Digest = "SHA-256=<hashString>"
 	// Signature = "keyId="member-pub-key", algorithm="ecdsa", headers="digest", signature=<signatureString>"
-	if len(digest) < 15 || strings.Count(digest, "=") < 2 || len(richSignature) == 15 ||
-		strings.Count(richSignature, "=") < 4 || len(body) == 0 {
+	if len(digest) < 15 || strings.Count(digest, "=") < 2 || len(signature) == 15 ||
+		strings.Count(signature, "=") < 4 || len(body) == 0 {
 		return "", errors.Errorf("invalid input data length digest: %d, signature: %d, body: %d", len(digest),
-			len(richSignature), len(body))
+			len(signature), len(body))
 	}
 	h := sha256.New()
 	_, err := h.Write(body)
@@ -282,17 +282,40 @@ func validateRequestHeaders(digest string, richSignature string, body []byte) (s
 		return "", errors.Wrap(err, "cant calculate hash")
 	}
 	calculatedHash := h.Sum(nil)
-	incomingHash, err := base64.StdEncoding.DecodeString(digest[strings.IndexByte(digest, '=')+1:])
+	digest, err = parseDigest(digest)
+	if err != nil {
+		return "", err
+	}
+	incomingHash, err := base64.StdEncoding.DecodeString(digest)
 	if err != nil {
 		return "", errors.Wrap(err, "cant decode digest")
 	}
-	if bytes.Equal(calculatedHash, incomingHash) {
-		sig := richSignature[strings.Index(richSignature, "signature=")+10:]
-		if len(sig) == 0 {
-			return "", errors.New("empty signature")
-		}
-		return sig, nil
 
+	if !bytes.Equal(calculatedHash, incomingHash) {
+		return "", errors.New("incorrect digest")
 	}
-	return "", errors.New("cant get signature from header")
+
+	signature, err = parseSignature(signature)
+	if err != nil {
+		return "", err
+	}
+	return signature, nil
+}
+
+func parseDigest(digest string) (string, error) {
+	index := strings.IndexByte(digest, '=')
+	if index < 1 || (index+1) >= len(digest) {
+		return "", errors.New("invalid digest")
+	}
+
+	return digest[index+1:], nil
+}
+
+func parseSignature(signature string) (string, error) {
+	index := strings.Index(signature, "signature=")
+	if index < 1 || (index+10) >= len(signature) {
+		return "", errors.New("invalid signature")
+	}
+
+	return signature[index+10:], nil
 }
