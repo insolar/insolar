@@ -18,32 +18,34 @@ package genesisrefs
 
 import (
 	"fmt"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/platformpolicy"
 )
 
 const (
-	GenesisPrototypeSuffix = "_proto"
+	PrototypeType   = "prototype"
+	PrototypeSuffix = "_proto"
 )
 
 var PredefinedPrototypes = map[string]insolar.Reference{
-	insolar.GenesisNameRootDomain + GenesisPrototypeSuffix: *GenerateReference("prototype", insolar.GenesisNameRootDomain, 0),
-	insolar.GenesisNameNodeDomain + GenesisPrototypeSuffix: *GenerateReference("prototype", insolar.GenesisNameNodeDomain, 0),
-	insolar.GenesisNameNodeRecord + GenesisPrototypeSuffix: *GenerateReference("prototype", insolar.GenesisNameNodeRecord, 0),
-	insolar.GenesisNameRootMember + GenesisPrototypeSuffix: *GenerateReference("prototype", insolar.GenesisNameMember, 0),
-	insolar.GenesisNameRootWallet + GenesisPrototypeSuffix: *GenerateReference("prototype", insolar.GenesisNameWallet, 0),
-	insolar.GenesisNameCostCenter + GenesisPrototypeSuffix: *GenerateReference("prototype", insolar.GenesisNameCostCenter, 0),
-	insolar.GenesisNameFeeWallet + GenesisPrototypeSuffix:  *GenerateReference("prototype", insolar.GenesisNameWallet, 0),
-	insolar.GenesisNameDeposit + GenesisPrototypeSuffix:    *GenerateReference("prototype", insolar.GenesisNameDeposit, 0),
-
-	insolar.GenesisNameMember + GenesisPrototypeSuffix:               *GenerateReference("prototype", insolar.GenesisNameMember, 0),
-	insolar.GenesisNameMigrationAdminMember + GenesisPrototypeSuffix: *GenerateReference("prototype", insolar.GenesisNameMember, 0),
-	insolar.GenesisNameMigrationWallet + GenesisPrototypeSuffix:      *GenerateReference("prototype", insolar.GenesisNameWallet, 0),
-	insolar.GenesisNameStandardTariff + GenesisPrototypeSuffix:       *GenerateReference("prototype", insolar.GenesisNameTariff, 0),
-	insolar.GenesisNameTariff + GenesisPrototypeSuffix:               *GenerateReference("prototype", insolar.GenesisNameTariff, 0),
-	insolar.GenesisNameWallet + GenesisPrototypeSuffix:               *GenerateReference("prototype", insolar.GenesisNameWallet, 0),
+	insolar.GenesisNameRootDomain + PrototypeSuffix:           *GenerateFromContractID(PrototypeType, insolar.GenesisNameRootDomain, 0),
+	insolar.GenesisNameNodeDomain + PrototypeSuffix:           *GenerateFromContractID(PrototypeType, insolar.GenesisNameNodeDomain, 0),
+	insolar.GenesisNameNodeRecord + PrototypeSuffix:           *GenerateFromContractID(PrototypeType, insolar.GenesisNameNodeRecord, 0),
+	insolar.GenesisNameRootMember + PrototypeSuffix:           *GenerateFromContractID(PrototypeType, insolar.GenesisNameMember, 0),
+	insolar.GenesisNameRootWallet + PrototypeSuffix:           *GenerateFromContractID(PrototypeType, insolar.GenesisNameWallet, 0),
+	insolar.GenesisNameCostCenter + PrototypeSuffix:           *GenerateFromContractID(PrototypeType, insolar.GenesisNameCostCenter, 0),
+	insolar.GenesisNameFeeWallet + PrototypeSuffix:            *GenerateFromContractID(PrototypeType, insolar.GenesisNameWallet, 0),
+	insolar.GenesisNameDeposit + PrototypeSuffix:              *GenerateFromContractID(PrototypeType, insolar.GenesisNameDeposit, 0),
+	insolar.GenesisNameMember + PrototypeSuffix:               *GenerateFromContractID(PrototypeType, insolar.GenesisNameMember, 0),
+	insolar.GenesisNameMigrationAdminMember + PrototypeSuffix: *GenerateFromContractID(PrototypeType, insolar.GenesisNameMember, 0),
+	insolar.GenesisNameMigrationWallet + PrototypeSuffix:      *GenerateFromContractID(PrototypeType, insolar.GenesisNameWallet, 0),
+	insolar.GenesisNameStandardTariff + PrototypeSuffix:       *GenerateFromContractID(PrototypeType, insolar.GenesisNameTariff, 0),
+	insolar.GenesisNameTariff + PrototypeSuffix:               *GenerateFromContractID(PrototypeType, insolar.GenesisNameTariff, 0),
+	insolar.GenesisNameWallet + PrototypeSuffix:               *GenerateFromContractID(PrototypeType, insolar.GenesisNameWallet, 0),
 }
+
 var (
 	// ContractRootDomain is the root domain contract reference.
 	ContractRootDomain = GenesisRef(insolar.GenesisNameRootDomain)
@@ -61,8 +63,6 @@ var (
 	ContractMigrationWallet = GenesisRef(insolar.GenesisNameMigrationWallet)
 	// ContractDeposit is the deposit contract reference.
 	ContractDeposit = GenesisRef(insolar.GenesisNameDeposit)
-	// ContractStandardTariff is the tariff contract reference.
-	ContractStandardTariff = GenesisRef(insolar.GenesisNameStandardTariff)
 	// ContractCostCenter is the cost center contract reference.
 	ContractCostCenter = GenesisRef(insolar.GenesisNameCostCenter)
 	// ContractFeeWallet is the commission wallet contract reference.
@@ -92,17 +92,20 @@ var (
 	}()
 )
 
-func GenerateTextReference(pulse insolar.PulseNumber, code []byte) *insolar.Reference {
+// Generate reference from hash code.
+func GenerateFromCode(pulse insolar.PulseNumber, code []byte) *insolar.Reference {
 	hasher := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher()
 	codeHash := hasher.Hash(code)
 	return insolar.NewReference(*insolar.NewID(pulse, codeHash))
 }
-func GenerateReference(tp string, name string, version int) *insolar.Reference {
-	contractID := fmt.Sprintf("%s::%s::v%02d", tp, name, version)
-	return GenerateTextReference(insolar.BuiltinContractPulseNumber, []byte(contractID))
+
+// Generate reference from contract id.
+func GenerateFromContractID(typeContractId string, name string, version int) *insolar.Reference {
+	contractID := fmt.Sprintf("%s::%s::v%02d", typeContractId, name, version)
+	return GenerateFromCode(insolar.BuiltinContractPulseNumber, []byte(contractID))
 }
 
-// GenesisRef returns reference to any genesis records based on the root domain.
+// GenesisRef returns reference to any genesis records.
 func GenesisRef(name string) insolar.Reference {
 	if ref, ok := PredefinedPrototypes[name]; ok {
 		return ref

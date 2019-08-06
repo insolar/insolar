@@ -47,8 +47,17 @@ func GetObject(ref insolar.Reference) ProxyInterface {
 	panic("not implemented")
 }
 
-//// Get reference CostCenter contract.
+// Get reference CostCenter contract.
 func GetCostCenter() insolar.Reference {
-	return genesisrefs.GenesisRef(insolar.GenesisNameCostCenter)
+	return genesisrefs.ContractCostCenter
+}
 
+// Get reference MigrationAdminMember contract.
+func GetMigrationAdminMember() insolar.Reference {
+	return genesisrefs.ContractMigrationAdminMember
+}
+
+// Get reference RootMember contract.
+func GetRootMember() insolar.Reference {
+	return genesisrefs.ContractRootMember
 }

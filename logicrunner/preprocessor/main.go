@@ -19,7 +19,6 @@ package preprocessor
 import (
 	"bytes"
 	"fmt"
-	"github.com/insolar/insolar/insolar/genesisrefs"
 	"go/ast"
 	"go/build"
 	"go/format"
@@ -37,6 +36,8 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
+
+	"github.com/insolar/insolar/insolar/genesisrefs"
 
 	"github.com/insolar/insolar/insolar"
 
@@ -386,7 +387,7 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	}
 
 	if classReference == "" {
-		classReference = genesisrefs.GenerateTextReference(0, pf.code).String()
+		classReference = genesisrefs.GenerateFromCode(0, pf.code).String()
 	}
 
 	_, err = insolar.NewReferenceFromBase58(classReference)
@@ -812,8 +813,8 @@ func generateContractList(contracts ContractList) interface{} {
 			"Name":               contract.Name,
 			"ImportName":         contract.Name,
 			"ImportPath":         contract.ImportPath,
-			"CodeReference":      genesisrefs.GenerateReference(CodeType, contract.Name, contract.Version).String(),
-			"PrototypeReference": genesisrefs.GenerateReference(PrototypeType, contract.Name, contract.Version).String(),
+			"CodeReference":      genesisrefs.GenerateFromContractID(CodeType, contract.Name, contract.Version).String(),
+			"PrototypeReference": genesisrefs.GenerateFromContractID(PrototypeType, contract.Name, contract.Version).String(),
 		}
 		importList = append(importList, data)
 	}

@@ -63,12 +63,12 @@ func (hw *HelloWorld) Errored() (interface{}, error) {
 	return nil, errors.New("TestError")
 }
 
-//Get number pulse from foundation
+// Get number pulse from foundation.
 func (hw *HelloWorld) PulseNumber() (insolar.PulseNumber, error) {
 	return foundation.GetPulseNumber()
 }
 
-//Get cost center reference
+// Get cost center reference from foundation.
 func (hw *HelloWorld) CostCenterRef() (insolar.Reference, error) {
 	ref := foundation.GetCostCenter()
 	if ref.IsEmpty() {

@@ -260,7 +260,7 @@ func (g *Genesis) activateContract(ctx context.Context, state insolar.GenesisCon
 	name := state.Name
 	objRef := genesisrefs.GenesisRef(name)
 
-	protoName := name + genesisrefs.GenesisPrototypeSuffix
+	protoName := name + genesisrefs.PrototypeSuffix
 	protoRef := genesisrefs.GenesisRef(protoName)
 
 	reqID, err := g.ArtifactManager.RegisterRequest(
