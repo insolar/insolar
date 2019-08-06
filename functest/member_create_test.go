@@ -39,8 +39,8 @@ func TestMemberCreateWithBadKey(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.pubKey = "fake"
-	_, err = retryableMemberCreate(t, member, false)
-	require.NotNil(t, err)
+	_, err = retryableMemberCreateExpectError(t, member, false)
+	require.Error(t, err)
 	require.Contains(t, err.Error(), fmt.Sprintf("problems with decoding. Key - %s", member.pubKey))
 }
 
