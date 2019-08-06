@@ -129,7 +129,7 @@ func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 	parentSpan := instracer.MustDeserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
 	ctx = instracer.WithParentSpan(ctx, parentSpan)
 	go func() {
-		<-d.controller.Process()
+		<-d.controller.CanProcess()
 		f := thread.NewThread(msg, d.controller)
 		handle := d.getHandleByPulse(ctx, pn)
 		err := f.Run(ctx, handle(msg))

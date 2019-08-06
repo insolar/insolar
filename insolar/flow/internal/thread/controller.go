@@ -21,16 +21,19 @@ import (
 )
 
 type Controller struct {
-	lock    sync.Mutex
-	cancel  chan struct{}
-	begin   chan struct{}
-	process chan struct{}
+	lock sync.Mutex
+	// cancel will be closed on ClosePulse()
+	cancel chan struct{}
+	// canBegin will be closed on BeginPulse()
+	canBegin chan struct{}
+	// canProcess will be closed on BeginPulse() and new instance will be opened again on ClosePulse()
+	canProcess chan struct{}
 }
 
 func NewController() *Controller {
 	process := make(chan struct{})
 	close(process)
-	return &Controller{cancel: make(chan struct{}), begin: make(chan struct{}), process: process}
+	return &Controller{cancel: make(chan struct{}), canBegin: make(chan struct{}), canProcess: process}
 }
 
 func (c *Controller) Cancel() <-chan struct{} {
@@ -40,30 +43,30 @@ func (c *Controller) Cancel() <-chan struct{} {
 	return c.cancel
 }
 
-func (c *Controller) Begin() <-chan struct{} {
+func (c *Controller) CanBegin() <-chan struct{} {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	return c.begin
+	return c.canBegin
 }
 
-func (c *Controller) Process() <-chan struct{} {
+func (c *Controller) CanProcess() <-chan struct{} {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	return c.process
+	return c.canProcess
 }
 
 func (c *Controller) BeginPulse() {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	toBegin := c.begin
-	c.begin = make(chan struct{})
+	toBegin := c.canBegin
+	c.canBegin = make(chan struct{})
 	close(toBegin)
 
 	c.cancel = make(chan struct{})
-	close(c.process)
+	close(c.canProcess)
 }
 
 func (c *Controller) ClosePulse() {
@@ -71,5 +74,5 @@ func (c *Controller) ClosePulse() {
 	defer c.lock.Unlock()
 
 	close(c.cancel)
-	c.process = make(chan struct{})
+	c.canProcess = make(chan struct{})
 }
