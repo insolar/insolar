@@ -28,7 +28,9 @@ type Controller struct {
 }
 
 func NewController() *Controller {
-	return &Controller{cancel: make(chan struct{}), begin: make(chan struct{}), process: make(chan struct{})}
+	process := make(chan struct{})
+	close(process)
+	return &Controller{cancel: make(chan struct{}), begin: make(chan struct{}), process: process}
 }
 
 func (c *Controller) Cancel() <-chan struct{} {
