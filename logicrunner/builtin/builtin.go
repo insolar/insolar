@@ -66,8 +66,10 @@ func NewBuiltIn(am artifacts.Client, stub LogicRunnerRPCStub) *BuiltIn {
 	}
 }
 
-func (b *BuiltIn) CallConstructor(ctx context.Context, callCtx *insolar.LogicCallContext, codeRef insolar.Reference,
-	name string, args insolar.Arguments) ([]byte, error) {
+func (b *BuiltIn) CallConstructor(
+	ctx context.Context, callCtx *insolar.LogicCallContext, codeRef insolar.Reference,
+	name string, args insolar.Arguments,
+) ([]byte, insolar.Arguments, error) {
 
 	ctx, span := instracer.StartSpan(ctx, "builtin.CallConstructor")
 	defer span.End()
@@ -77,13 +79,13 @@ func (b *BuiltIn) CallConstructor(ctx context.Context, callCtx *insolar.LogicCal
 
 	contractName, ok := b.CodeRefRegistry[codeRef]
 	if !ok {
-		return nil, errors.New("failed to find contract with reference")
+		return nil, nil, errors.New("failed to find contract with reference")
 	}
 	contract := b.CodeRegistry[contractName]
 
 	constructorFunc, ok := contract.Constructors[name]
 	if !ok {
-		return nil, errors.New("failed to find contracts method")
+		return nil, nil, errors.New("failed to find contracts method")
 	}
 
 	return constructorFunc(args)

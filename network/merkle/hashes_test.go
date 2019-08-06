@@ -161,13 +161,13 @@ func TestCalculatorHashes(t *testing.T) {
 	require.NotNil(t, key)
 
 	service := testutils.NewCryptographyServiceMock(t)
-	service.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
+	service.SignMock.Set(func(p []byte) (r *insolar.Signature, r1 error) {
 		signature := insolar.SignatureFromBytes([]byte("signature"))
 		return &signature, nil
-	}
-	service.GetPublicKeyFunc = func() (r crypto.PublicKey, r1 error) {
+	})
+	service.GetPublicKeyMock.Set(func() (r crypto.PublicKey, r1 error) {
 		return "key", nil
-	}
+	})
 
 	stater := staterMock{
 		stateFunc: func() []byte {

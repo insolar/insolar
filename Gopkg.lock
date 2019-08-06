@@ -141,12 +141,12 @@
   version = "v1.2.1"
 
 [[projects]]
-  branch = "master"
-  digest = "1:e9c0ca7abaa1fdcf8dab7c5bc100c2ff1ecc1dabf46861d78159c6e8951af970"
+  digest = "1:1e03a48a110b7c5a26bc26c31431efdcc93c6e8d6b35d6ae31e15d2b5beabd96"
   name = "github.com/gojuno/minimock"
   packages = ["."]
   pruneopts = "UT"
-  revision = "2692d7ec07f98b20146c0b6afa17c5dcbf8acb56"
+  revision = "49d47c6ba53c89ce3171ee2c50763b410a394a36"
+  version = "v2.1.8"
 
 [[projects]]
   digest = "1:489a99067cd08971bd9c1ee0055119ba8febc1429f9200ab0bec68d35e8c4833"
@@ -239,6 +239,19 @@
   pruneopts = "UT"
   revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
   version = "v1.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:b7acd202bd075b40ba983f7b481258a622ab9a736399c05c5837830f6356937d"
+  name = "github.com/insolar/go-actors"
+  packages = [
+    "actor",
+    "actor/errors",
+    "actor/mailbox",
+    "actor/system",
+  ]
+  pruneopts = "UT"
+  revision = "2fcc7bfc8ff98e6900dacde00aadb2a77d547a9e"
 
 [[projects]]
   digest = "1:d585d1cae389b646325b7ef48032cdc9b58e68cd88c1fdc5da795eabb2114455"
@@ -712,6 +725,8 @@
     "github.com/google/gofuzz",
     "github.com/grpc-ecosystem/grpc-gateway/runtime",
     "github.com/grpc-ecosystem/grpc-gateway/utilities",
+    "github.com/insolar/go-actors/actor",
+    "github.com/insolar/go-actors/actor/system",
     "github.com/insolar/rpc/v2",
     "github.com/insolar/rpc/v2/json2",
     "github.com/insolar/x-crypto/ecdsa",
@@ -750,6 +765,7 @@
     "google.golang.org/grpc",
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/grpclog",
+    "google.golang.org/grpc/metadata",
     "google.golang.org/grpc/reflection",
     "google.golang.org/grpc/status",
     "gopkg.in/yaml.v2",

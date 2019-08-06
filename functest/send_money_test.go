@@ -60,8 +60,6 @@ func TestTransferMoney(t *testing.T) {
 }
 
 func TestTransferMoneyFromNotExist(t *testing.T) {
-	t.Skip("skipping until we fix a few bugs (INS-3096)")
-
 	firstMember := createMember(t)
 	firstMember.ref = testutils.RandomRef().String()
 
@@ -79,8 +77,6 @@ func TestTransferMoneyFromNotExist(t *testing.T) {
 }
 
 func TestTransferMoneyToNotExist(t *testing.T) {
-	t.Skip("skipping until we fix a few bugs (INS-3096)")
-
 	firstMember := createMember(t)
 	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 

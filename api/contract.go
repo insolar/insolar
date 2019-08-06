@@ -106,14 +106,8 @@ type CallConstructorArgs struct {
 	MethodArgs         []byte
 }
 
-// CallConstructorReply is reply that Contract.CallConstructor returns
-type CallConstructorReply struct {
-	ObjectRef string `json:"ObjectRef"`
-	TraceID   string `json:"TraceID"`
-}
-
 // CallConstructor make an object from its prototype
-func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructorArgs, reply *CallConstructorReply) error {
+func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructorArgs, reply *CallMethodReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 	reply.TraceID = utils.TraceID(ctx)
 
@@ -148,12 +142,10 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 		},
 	}
 
-	callConstructorReply, err := s.runner.ContractRequester.CallConstructor(ctx, msg)
+	err = s.call(ctx, msg, reply)
 	if err != nil {
-		return errors.Wrap(err, "CallConstructor error")
+		return err
 	}
-
-	reply.ObjectRef = callConstructorReply.String()
 
 	return nil
 }
@@ -167,7 +159,8 @@ type CallMethodArgs struct {
 
 // CallMethodReply is reply that Contract.CallMethod returns
 type CallMethodReply struct {
-	Reply          reply.CallMethod  `json:"Reply"`
+	Object         string            `json:"ObjectRef"`
+	Result         []byte            `json:"Result"`
 	ExtractedReply interface{}       `json:"ExtractedReply"`
 	ExtractedError string            `json:"ExtractedError"`
 	Error          *foundation.Error `json:"FoundationError"`
@@ -194,6 +187,7 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 	if err != nil {
 		return errors.Wrap(err, "can't get current pulse")
 	}
+
 	msg := &message.CallMethod{
 		IncomingRequest: record.IncomingRequest{
 			Object:       objectRef,
@@ -205,15 +199,31 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 		},
 	}
 
-	callMethodReply, err := s.runner.ContractRequester.Call(ctx, msg)
+	err = s.call(ctx, msg, re)
 	if err != nil {
-		inslogger.FromContext(ctx).Error("failed to call: ", err.Error())
+		return err
+	}
+
+	return nil
+}
+
+// CallConstructor make an object from its prototype
+func (s *ContractService) call(ctx context.Context, msg insolar.Message, re *CallMethodReply) error {
+	inslog := inslogger.FromContext(ctx)
+
+	callReply, err := s.runner.ContractRequester.Call(ctx, msg)
+	if err != nil {
+		inslog.Error("failed to call: ", err.Error())
 		return errors.Wrap(err, "CallMethod failed with error")
 	}
 
-	re.Reply = *callMethodReply.(*reply.CallMethod)
+	typedReply := callReply.(*reply.CallMethod)
+	if typedReply.Object != nil {
+		re.Object = typedReply.Object.String()
+	}
+	re.Result = typedReply.Result
 
-	extractedReply, foundationError, err := extractor.CallResponse(re.Reply.Result)
+	extractedReply, foundationError, err := extractor.CallResponse(re.Result)
 	if err != nil {
 		return errors.Wrap(err, "Can't extract response")
 	}

@@ -19,22 +19,21 @@ package integration_test
 import (
 	"context"
 	"crypto/rand"
-	"testing"
+	"fmt"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/stretchr/testify/require"
 )
 
-func callSetCode(ctx context.Context, t *testing.T, s *Server) (payload.Payload, record.Virtual) {
+func CallSetCode(ctx context.Context, s *Server) (payload.Payload, record.Virtual) {
 	code := make([]byte, 100)
 	_, err := rand.Read(code)
-	require.NoError(t, err)
+	panicIfErr(err)
 	rec := record.Wrap(&record.Code{Code: code})
 	buf, err := rec.Marshal()
-	require.NoError(t, err)
+	panicIfErr(err)
 	reps, done := s.Send(ctx, &payload.SetCode{
 		Record: buf,
 	})
@@ -42,20 +41,20 @@ func callSetCode(ctx context.Context, t *testing.T, s *Server) (payload.Payload,
 
 	rep := <-reps
 	pl, err := payload.UnmarshalFromMeta(rep.Payload)
-	require.NoError(t, err)
+	panicIfErr(err)
 	switch pl.(type) {
 	case *payload.Error:
 		return pl, rec
 	case *payload.ID:
 		return pl, rec
 	default:
-		t.Fatalf("received unexpected reply %T", pl)
+		panic(fmt.Sprintf("received unexpected reply %T", pl))
 	}
 
 	return nil, rec
 }
 
-func callGetCode(ctx context.Context, t *testing.T, s *Server, id insolar.ID) payload.Payload {
+func CallGetCode(ctx context.Context, s *Server, id insolar.ID) payload.Payload {
 	reps, done := s.Send(ctx, &payload.GetCode{
 		CodeID: id,
 	})
@@ -63,61 +62,77 @@ func callGetCode(ctx context.Context, t *testing.T, s *Server, id insolar.ID) pa
 
 	rep := <-reps
 	pl, err := payload.UnmarshalFromMeta(rep.Payload)
-	require.NoError(t, err)
+	panicIfErr(err)
 	switch pl.(type) {
 	case *payload.Error:
 		return pl
 	case *payload.Code:
 		return pl
 	default:
-		t.Fatalf("received unexpected reply %T", pl)
+		panic(fmt.Sprintf("received unexpected reply %T", pl))
 	}
 	return nil
 }
 
-func callSetIncomingRequest(
-	ctx context.Context, t *testing.T, s *Server, objectID, reasonID insolar.ID, ct record.CallType,
-) (payload.Payload, record.Virtual) {
+func MakeSetIncomingRequest(objectID, reasonID insolar.ID, isCreation, isAPI bool) (payload.SetIncomingRequest, record.Virtual) {
 	args := make([]byte, 100)
 	_, err := rand.Read(args)
-	require.NoError(t, err)
-	var object *insolar.Reference
-	if ct != record.CTSaveAsChild {
-		object = insolar.NewReference(objectID)
-	}
-	rec := record.Wrap(&record.IncomingRequest{
-		Object:    object,
+	panicIfErr(err)
+
+	req := record.IncomingRequest{
 		Arguments: args,
-		CallType:  ct,
 		Reason:    *insolar.NewReference(reasonID),
-		APINode:   gen.Reference(),
-	})
-	reps, done := s.Send(ctx, &payload.SetIncomingRequest{
-		Request: rec,
-	})
-	defer done()
-
-	rep := <-reps
-	pl, err := payload.UnmarshalFromMeta(rep.Payload)
-	require.NoError(t, err)
-	switch pl.(type) {
-	case *payload.Error:
-		return pl, rec
-	case *payload.RequestInfo:
-		return pl, rec
-	default:
-		t.Fatalf("received unexpected reply %T", pl)
 	}
-
-	return nil, record.Virtual{}
+	if isCreation {
+		req.CallType = record.CTSaveAsChild
+	} else {
+		req.Object = insolar.NewReference(objectID)
+	}
+	if isAPI {
+		req.APINode = gen.Reference()
+	} else {
+		req.Caller = gen.Reference()
+	}
+	rec := record.Wrap(&req)
+	pl := payload.SetIncomingRequest{
+		Request: rec,
+	}
+	return pl, rec
 }
 
-func callSetOutgoingRequest(
-	ctx context.Context, t *testing.T, s *Server, objectID, reasonID insolar.ID, detached bool,
+func MakeSetOutgoingRequest(
+	objectID, reasonID insolar.ID, detached bool,
+) (payload.SetOutgoingRequest, record.Virtual) {
+	args := make([]byte, 100)
+	_, err := rand.Read(args)
+	panicIfErr(err)
+
+	rm := record.ReturnResult
+	if detached {
+		rm = record.ReturnSaga
+	}
+	req := record.OutgoingRequest{
+		Caller:     *insolar.NewReference(objectID),
+		Arguments:  args,
+		ReturnMode: rm,
+		Reason:     *insolar.NewReference(reasonID),
+		APINode:    gen.Reference(),
+	}
+
+	rec := record.Wrap(&req)
+
+	pl := payload.SetOutgoingRequest{
+		Request: rec,
+	}
+	return pl, rec
+}
+
+func CallSetOutgoingRequest(
+	ctx context.Context, s *Server, objectID, reasonID insolar.ID, detached bool,
 ) (payload.Payload, record.Virtual) {
 	args := make([]byte, 100)
 	_, err := rand.Read(args)
-	require.NoError(t, err)
+	panicIfErr(err)
 	rm := record.ReturnResult
 	if detached {
 		rm = record.ReturnSaga
@@ -136,65 +151,52 @@ func callSetOutgoingRequest(
 
 	rep := <-reps
 	pl, err := payload.UnmarshalFromMeta(rep.Payload)
-	require.NoError(t, err)
+	panicIfErr(err)
 	switch pl.(type) {
 	case *payload.Error:
 		return pl, rec
 	case *payload.RequestInfo:
 		return pl, rec
 	default:
-		t.Fatalf("received unexpected reply %T", pl)
+		panic(fmt.Sprintf("received unexpected reply %T", pl))
 	}
 
 	return nil, record.Virtual{}
 }
 
-func callSetResult(
-	ctx context.Context, t *testing.T, s *Server, objectID, requestID insolar.ID,
-) (payload.Payload, record.Virtual) {
+func MakeSetResult(objectID, requestID insolar.ID) (payload.SetResult, record.Virtual) {
 	data := make([]byte, 100)
 	_, err := rand.Read(data)
-	require.NoError(t, err)
+	panicIfErr(err)
 	rec := record.Wrap(&record.Result{
 		Object:  objectID,
 		Request: *insolar.NewReference(requestID),
 		Payload: data,
 	})
 	buf, err := rec.Marshal()
-	require.NoError(t, err)
-	reps, done := s.Send(ctx, &payload.SetResult{
+	panicIfErr(err)
+	pl := payload.SetResult{
 		Result: buf,
-	})
-	defer done()
-
-	rep := <-reps
-	pl, err := payload.UnmarshalFromMeta(rep.Payload)
-	require.NoError(t, err)
-	switch pl.(type) {
-	case *payload.Error:
-		return pl, rec
-	case *payload.ResultInfo:
-		return pl, rec
-	default:
-		t.Fatalf("received unexpected reply %T", pl)
 	}
-
-	return nil, record.Virtual{}
+	return pl, rec
 }
 
-func sendMessage(
-	ctx context.Context, t *testing.T, s *Server, msg payload.Payload,
+func SendMessage(
+	ctx context.Context, s *Server, msg payload.Payload,
 ) payload.Payload {
 	reps, done := s.Send(ctx, msg)
 	defer done()
 
-	rep := <-reps
+	rep, ok := <-reps
+	if !ok {
+		panic("no reply")
+	}
 	pl, err := payload.UnmarshalFromMeta(rep.Payload)
-	require.NoError(t, err)
-
+	panicIfErr(err)
 	return pl
 }
-func callGetRequest(ctx context.Context, t *testing.T, s *Server, requestID insolar.ID) payload.Payload {
+
+func CallGetRequest(ctx context.Context, s *Server, requestID insolar.ID) payload.Payload {
 	reps, done := s.Send(ctx, &payload.GetRequest{
 		RequestID: requestID,
 	})
@@ -202,39 +204,39 @@ func callGetRequest(ctx context.Context, t *testing.T, s *Server, requestID inso
 
 	rep := <-reps
 	pl, err := payload.UnmarshalFromMeta(rep.Payload)
-	require.NoError(t, err)
+	panicIfErr(err)
 	switch pl.(type) {
 	case *payload.Error:
 		return pl
 	case *payload.Request:
 		return pl
 	default:
-		t.Fatalf("received unexpected reply %T", pl)
+		panic(fmt.Sprintf("received unexpected reply %T", pl))
 	}
 
 	return nil
 }
 
-func callActivateObject(ctx context.Context, t *testing.T, s *Server, objectID insolar.ID) (payload.Payload, record.Virtual) {
+func CallActivateObject(ctx context.Context, s *Server, objectID insolar.ID) (payload.Payload, record.Virtual) {
 	mem := make([]byte, 100)
 	_, err := rand.Read(mem)
-	require.NoError(t, err)
+	panicIfErr(err)
 	rec := record.Wrap(&record.Activate{
 		Request: *insolar.NewReference(objectID),
 		Memory:  mem,
 	})
 	buf, err := rec.Marshal()
-	require.NoError(t, err)
+	panicIfErr(err)
 	res := make([]byte, 100)
 	_, err = rand.Read(res)
-	require.NoError(t, err)
+	panicIfErr(err)
 	resultRecord := record.Wrap(&record.Result{
 		Request: *insolar.NewReference(objectID),
 		Object:  objectID,
 		Payload: res,
 	})
 	resBuf, err := resultRecord.Marshal()
-	require.NoError(t, err)
+	panicIfErr(err)
 
 	reps, done := s.Send(ctx, &payload.Activate{
 		Record: buf,
@@ -244,37 +246,37 @@ func callActivateObject(ctx context.Context, t *testing.T, s *Server, objectID i
 
 	rep := <-reps
 	pl, err := payload.UnmarshalFromMeta(rep.Payload)
-	require.NoError(t, err)
+	panicIfErr(err)
 	switch pl.(type) {
 	case *payload.Error:
 		return pl, rec
 	case *payload.ResultInfo:
 		return pl, rec
 	default:
-		t.Fatalf("received unexpected reply %T", pl)
+		panic(fmt.Sprintf("received unexpected reply %T", pl))
 	}
 	return nil, rec
 }
 
-func callAmendObject(ctx context.Context, t *testing.T, s *Server, objectID, requestID insolar.ID) (payload.Payload, record.Virtual) {
+func CallAmendObject(ctx context.Context, s *Server, objectID, requestID insolar.ID) (payload.Payload, record.Virtual) {
 	mem := make([]byte, 100)
 	_, err := rand.Read(mem)
-	require.NoError(t, err)
+	panicIfErr(err)
 	rec := record.Wrap(&record.Amend{
 		Memory: mem,
 	})
 	buf, err := rec.Marshal()
-	require.NoError(t, err)
+	panicIfErr(err)
 	res := make([]byte, 100)
 	_, err = rand.Read(res)
-	require.NoError(t, err)
+	panicIfErr(err)
 	resultRecord := record.Wrap(&record.Result{
 		Request: *insolar.NewReference(requestID),
 		Object:  objectID,
 		Payload: res,
 	})
 	resBuf, err := resultRecord.Marshal()
-	require.NoError(t, err)
+	panicIfErr(err)
 
 	reps, done := s.Send(ctx, &payload.Update{
 		Record: buf,
@@ -284,37 +286,37 @@ func callAmendObject(ctx context.Context, t *testing.T, s *Server, objectID, req
 
 	rep := <-reps
 	pl, err := payload.UnmarshalFromMeta(rep.Payload)
-	require.NoError(t, err)
+	panicIfErr(err)
 	switch pl.(type) {
 	case *payload.ResultInfo:
 		return pl, rec
 	case *payload.Error:
 		return pl, rec
 	default:
-		t.Fatalf("received unexpected reply %T", pl)
+		panic(fmt.Sprintf("received unexpected reply %T", pl))
 	}
 	return nil, rec
 }
 
-func callDeactivateObject(ctx context.Context, t *testing.T, s *Server, objectID, requestID insolar.ID) (payload.Payload, record.Virtual) {
+func CallDeactivateObject(ctx context.Context, s *Server, objectID, requestID insolar.ID) (payload.Payload, record.Virtual) {
 	mem := make([]byte, 100)
 	_, err := rand.Read(mem)
-	require.NoError(t, err)
+	panicIfErr(err)
 	rec := record.Wrap(&record.Deactivate{
 		Request: *insolar.NewReference(objectID),
 	})
 	buf, err := rec.Marshal()
-	require.NoError(t, err)
+	panicIfErr(err)
 	res := make([]byte, 100)
 	_, err = rand.Read(res)
-	require.NoError(t, err)
+	panicIfErr(err)
 	resultRecord := record.Wrap(&record.Result{
 		Request: *insolar.NewReference(requestID),
 		Object:  objectID,
 		Payload: res,
 	})
 	resBuf, err := resultRecord.Marshal()
-	require.NoError(t, err)
+	panicIfErr(err)
 
 	reps, done := s.Send(ctx, &payload.Deactivate{
 		Record: buf,
@@ -324,19 +326,19 @@ func callDeactivateObject(ctx context.Context, t *testing.T, s *Server, objectID
 
 	rep := <-reps
 	pl, err := payload.UnmarshalFromMeta(rep.Payload)
-	require.NoError(t, err)
+	panicIfErr(err)
 	switch pl.(type) {
 	case *payload.ResultInfo:
 		return pl, rec
 	case *payload.Error:
 		return pl, rec
 	default:
-		t.Fatalf("received unexpected reply %T", pl)
+		panic(fmt.Sprintf("received unexpected reply %T", pl))
 	}
 	return pl, rec
 }
 
-func callGetObject(ctx context.Context, t *testing.T, s *Server, objectID insolar.ID) (payload.Payload, payload.Payload) {
+func CallGetObject(ctx context.Context, s *Server, objectID insolar.ID) (payload.Payload, payload.Payload) {
 	reps, d := s.Send(ctx, &payload.GetObject{
 		ObjectID: objectID,
 	})
@@ -350,7 +352,7 @@ func callGetObject(ctx context.Context, t *testing.T, s *Server, objectID insola
 	}
 	for rep := range reps {
 		pl, err := payload.UnmarshalFromMeta(rep.Payload)
-		require.NoError(t, err)
+		panicIfErr(err)
 		switch pl.(type) {
 		case *payload.Index:
 			lifeline = pl
@@ -359,18 +361,20 @@ func callGetObject(ctx context.Context, t *testing.T, s *Server, objectID insola
 		case *payload.Error:
 			return pl, nil
 		default:
-			t.Fatalf("received unexpected reply %T", pl)
+			panic(fmt.Sprintf("received unexpected reply %T", pl))
 		}
 
 		if done() {
 			break
 		}
 	}
-	require.True(t, done())
+	if !done() {
+		panic("no reply from GetObject")
+	}
 	return lifeline, state
 }
 
-func fetchPendings(ctx context.Context, t *testing.T, s *Server, objectID insolar.ID) payload.Payload {
+func CallGetPendings(ctx context.Context, s *Server, objectID insolar.ID) payload.Payload {
 	reps, done := s.Send(ctx, &payload.GetPendings{
 		ObjectID: objectID,
 	})
@@ -378,15 +382,33 @@ func fetchPendings(ctx context.Context, t *testing.T, s *Server, objectID insola
 
 	rep := <-reps
 	pl, err := payload.UnmarshalFromMeta(rep.Payload)
-	require.NoError(t, err)
+	panicIfErr(err)
 	switch pl.(type) {
 	case *payload.Error:
 		return pl
 	case *payload.IDs:
 		return pl
 	default:
-		t.Fatalf("received unexpected reply %T", pl)
+		panic(fmt.Sprintf("received unexpected reply %T", pl))
 	}
 
 	return nil
+}
+
+func panicIfErr(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
+func RequireNotError(pl payload.Payload) {
+	if err, ok := pl.(*payload.Error); ok {
+		panic(err.Text)
+	}
+}
+
+func RequireError(pl payload.Payload) {
+	if _, ok := pl.(*payload.Error); !ok {
+		panic("expected error")
+	}
 }

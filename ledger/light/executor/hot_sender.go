@@ -85,7 +85,7 @@ func (m *HotSenderDefault) filterAndGroupIndexes(
 	// filtering in-place (optimization to avoid double allocation)
 	filtered := indexes[:0]
 	for _, idx := range indexes {
-		if idx.LifelineLastUsed < limitPN.PulseNumber {
+		if idx.LifelineLastUsed < limitPN.PulseNumber && idx.Lifeline.EarliestOpenRequest == nil {
 			continue
 		}
 		filtered = append(filtered, record.Index{

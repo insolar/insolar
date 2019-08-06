@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/pkg/errors"
 )
 
@@ -51,6 +52,10 @@ func (p *PubSubWrapper) Middleware(fm ...FilterMiddleware) {
 
 // Publish wraps message.Publish method, i.e. applies all middleware filters for every message.
 func (p *PubSubWrapper) Publish(topic string, messages ...*message.Message) error {
+	if topic == bus.TopicOutgoing {
+		return p.pub.Publish(topic, messages...)
+	}
+
 	out := make([]*message.Message, 0, len(messages))
 	for _, m := range messages {
 	FiltersLoop:

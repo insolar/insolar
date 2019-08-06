@@ -88,7 +88,10 @@ func (br *BaseRecord) Create(ctx context.Context) error {
 		return errors.Wrap(err, "fail to set genesis pulse")
 	}
 	// Add initial drop
-	err = br.DropModifier.Set(ctx, drop.Drop{JetID: insolar.ZeroJetID})
+	err = br.DropModifier.Set(ctx, drop.Drop{
+		Pulse: insolar.GenesisPulse.PulseNumber,
+		JetID: insolar.ZeroJetID,
+	})
 	if err != nil {
 		return errors.Wrap(err, "fail to set initial drop")
 	}
@@ -110,9 +113,10 @@ func (br *BaseRecord) Create(ctx context.Context) error {
 	virtRec := record.Wrap(&genesisRecord)
 	rec := record.Material{
 		Virtual: virtRec,
+		ID:      genesisID,
 		JetID:   insolar.ZeroJetID,
 	}
-	err = br.RecordModifier.Set(ctx, genesisID, rec)
+	err = br.RecordModifier.Set(ctx, rec)
 	if err != nil {
 		return errors.Wrap(err, "can't save genesis record into storage")
 	}
@@ -232,11 +236,16 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		contracts.GetMemberGenesisContractState(g.ContractsConfig.MigrationAdminPublicKey, insolar.GenesisNameMigrationAdminMember, insolar.GenesisNameRootDomain, *mawRef),
 		contracts.GetWalletGenesisContractState("0", insolar.GenesisNameFeeWallet, insolar.GenesisNameRootDomain),
 		contracts.GetCostCenterGenesisContractState(),
-		contracts.GetTariffGenesisContractState(),
 	}
 
 	for i, key := range g.ContractsConfig.MigrationDaemonPublicKeys {
 		states = append(states, contracts.GetMemberGenesisContractState(key, insolar.GenesisNameMigrationDaemonMembers[i], insolar.GenesisNameRootDomain, insolar.Reference{}))
+	}
+	for _, name := range insolar.GenesisNamePublicKeyShards {
+		states = append(states, contracts.GetPKShardGenesisContractState(name))
+	}
+	for _, name := range insolar.GenesisNameMigrationAddressShards {
+		states = append(states, contracts.GetMigrationShardGenesisContractState(name))
 	}
 	for _, conf := range states {
 		_, err := g.activateContract(ctx, conf)

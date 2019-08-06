@@ -70,7 +70,7 @@ const (
 	_ // 6
 	_ // 7
 
-	PacketPulse // PacketPhase0 | PacketOffPhase /* Triggers Phase0-1 */
+	PacketPulsarPulse // PacketPhase0 | PacketOffPhase /* Triggers Phase0-1 */
 
 	PacketReqPhase1 // PacketPhase1 | PacketOffPhase
 	/*  Request to resend own NSH - will be replied with PacketPhase1 without PulseData.
@@ -106,7 +106,7 @@ func (p PacketType) GetLimitPerSender() uint8 {
 	switch p {
 	case PacketPhase0, PacketPhase1, PacketPhase2, PacketPhase3, PacketPhase4:
 		return 1
-	case PacketPulse:
+	case PacketPulsarPulse:
 		return 1
 	case PacketReqPhase1:
 		return 2
@@ -128,6 +128,15 @@ func (p PacketType) GetLimitCounterIndex() int {
 		return 1
 	default:
 		return -1
+	}
+}
+
+func (p PacketType) IsAllowedForJoiner() bool {
+	switch p {
+	case PacketPulsarPulse, PacketPhase0:
+		return false
+	default:
+		return true
 	}
 }
 
@@ -184,28 +193,40 @@ func (v LimitCounters) String() string {
 }
 
 var limitCounters LimitCounters
+var joinerInits uint16
 
-func CreateLimitCounters(maxExtPhase2 uint8) LimitCounters {
+func fillLimitCounters() (LimitCounters, uint16) {
+	var limits LimitCounters
+	var inits = uint16(0)
+	idx := 0
+	for i := PacketType(0); i < maxPacketType; i++ {
+		limit := i.GetLimitPerSender()
+		if limit <= 1 {
+			continue
+		}
+		if idx != i.GetLimitCounterIndex() {
+			panic("illegal state")
+		}
+		limits[idx] = limit
+		idx++
+
+		if !i.IsAllowedForJoiner() {
+			inits |= 1 << i
+		}
+	}
+	return limits, inits
+}
+
+func CreateLimitCounters(maxExtPhase2 uint8) (LimitCounters, uint16) {
 	if limitCounters[0] == 0 {
 		/* we don't need mutex here as parallel initialization will lead to identical results,
 		hence there will be no effect of a possible racing
 		*/
-		idx := 0
-		for i := PacketType(0); i < maxPacketType; i++ {
-			limit := i.GetLimitPerSender()
-			if limit <= 1 {
-				continue
-			}
-			if idx != i.GetLimitCounterIndex() {
-				panic("illegal state")
-			}
-			limitCounters[idx] = limit
-			idx++
-		}
+		limitCounters, joinerInits = fillLimitCounters()
 	}
 	r := limitCounters
 	r[PacketExtPhase2.GetLimitCounterIndex()] = maxExtPhase2
-	return r
+	return r, joinerInits
 }
 
 func (p PacketType) IsPhasedPacket() bool {
@@ -213,7 +234,11 @@ func (p PacketType) IsPhasedPacket() bool {
 }
 
 func (p PacketType) IsMemberPacket() bool {
-	return p < maxPacketType && p != PacketPulse
+	return p < maxPacketType && p != PacketPulsarPulse
+}
+
+func (p PacketType) IsEphemeralPacket() bool {
+	return p != PacketPulsarPulse
 }
 
 func (p PacketType) GetPayloadEquivalent() PacketType {
@@ -258,7 +283,7 @@ func (p PacketType) String() string {
 		return "ph3"
 	case PacketPhase4:
 		return "ph4"
-	case PacketPulse:
+	case PacketPulsarPulse:
 		return "pulse"
 	case PacketReqPhase1:
 		return "ph1rq"

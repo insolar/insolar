@@ -57,7 +57,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/storage.PulseAccessor -o ../../testutils/network -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/storage.PulseAccessor -o ../../testutils/network -s _mock.go -g
 
 // PulseAccessor provides methods for accessing pulses.
 type PulseAccessor interface {
@@ -65,14 +65,14 @@ type PulseAccessor interface {
 	Latest(ctx context.Context) (insolar.Pulse, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/storage.PulseAppender -o ../../testutils/network -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/storage.PulseAppender -o ../../testutils/network -s _mock.go -g
 
 // PulseAppender provides method for appending pulses to storage.
 type PulseAppender interface {
 	Append(ctx context.Context, pulse insolar.Pulse) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/storage.PulseCalculator -o ../../testutils/network -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/storage.PulseCalculator -o ../../testutils/network -s _mock.go -g
 
 // PulseCalculator performs calculations for pulses.
 type PulseCalculator interface {
@@ -80,7 +80,7 @@ type PulseCalculator interface {
 	Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/storage.PulseRangeHasher -o ../../testutils/network -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/storage.PulseRangeHasher -o ../../testutils/network -s _mock.go -g
 
 // PulseRangeHasher provides methods for hashing and validate Pulse chain
 type PulseRangeHasher interface {

@@ -4,16 +4,17 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/pkg/errors"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.RequestChecker -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.RequestChecker -o ./ -s _mock.go -g
 
 type RequestChecker interface {
 	CheckRequest(ctx context.Context, requestID insolar.ID, request record.Request) error
@@ -46,9 +47,9 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 	}
 	reasonRef := request.ReasonRef()
 	reasonID := *reasonRef.Record()
-	objectID := requestID
-	if !request.IsCreationRequest() {
-		objectID = *request.AffinityRef().Record()
+
+	if reasonID.Pulse() > requestID.Pulse() {
+		return errors.New("request is older than its reason")
 	}
 
 	switch r := request.(type) {
@@ -61,9 +62,14 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 		// Reason should exist.
 		// FIXME: replace with remote request check.
 		if !request.IsAPIRequest() {
-			err := c.checkIncomingReason(ctx, objectID, reasonID)
+			reasonObject := r.ReasonAffinityRef()
+			if reasonObject.IsEmpty() {
+				return errors.New("reason affinity is not set on incoming request")
+			}
+
+			err := c.checkReasonExists(ctx, *reasonObject.Record(), reasonID)
 			if err != nil {
-				return errors.Wrap(err, "reason for found")
+				return errors.Wrap(err, "reason not found")
 			}
 		}
 
@@ -85,14 +91,14 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 
 		reasonInPendings := contains(requests, reasonID)
 		if !reasonInPendings {
-			return errors.New("request reason should be open")
+			return errors.New("request reason not found in opened requests")
 		}
 	}
 
 	return nil
 }
 
-func (c *RequestCheckerDefault) checkIncomingReason(
+func (c *RequestCheckerDefault) checkReasonExists(
 	ctx context.Context, objectID insolar.ID, reasonID insolar.ID,
 ) error {
 	isBeyond, err := c.coordinator.IsBeyondLimit(ctx, reasonID.Pulse())
@@ -106,7 +112,7 @@ func (c *RequestCheckerDefault) checkIncomingReason(
 			return errors.Wrap(err, "failed to calculate node")
 		}
 	} else {
-		jetID, err := c.fetcher.Fetch(ctx, reasonID, reasonID.Pulse())
+		jetID, err := c.fetcher.Fetch(ctx, objectID, reasonID.Pulse())
 		if err != nil {
 			return errors.Wrap(err, "failed to fetch jet")
 		}
@@ -115,7 +121,7 @@ func (c *RequestCheckerDefault) checkIncomingReason(
 			return errors.Wrap(err, "failed to calculate node")
 		}
 	}
-	inslogger.FromContext(ctx).Debugf("check reason. request: %s")
+	inslogger.FromContext(ctx).Debug("check reason. request: ", reasonID.DebugString())
 	msg, err := payload.NewMessage(&payload.GetRequest{
 		ObjectID:  objectID,
 		RequestID: reasonID,
@@ -140,11 +146,6 @@ func (c *RequestCheckerDefault) checkIncomingReason(
 	case *payload.Request:
 		return nil
 	case *payload.Error:
-		if concrete.Code == payload.CodeNotFound {
-			// FIXME: virtual doesnt pass this check.
-			inslogger.FromContext(ctx).Errorf("reason is wrong. %v", concrete.Text)
-			return nil
-		}
 		return errors.New(concrete.Text)
 	default:
 		return fmt.Errorf("unexpected reply %T", pl)

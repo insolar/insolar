@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 )
@@ -48,9 +49,9 @@ func NewTestPulsar(
 
 func (p *TestPulsar) SendPulse(ctx context.Context) error {
 	timeNow := time.Now()
-	pulseNumber := insolar.CalculatePulseNumber(timeNow)
+	pulseNumber := insolar.PulseNumber(pulse.OfTime(timeNow))
 
-	pulse := insolar.Pulse{
+	pls := insolar.Pulse{
 		PulseNumber:      pulseNumber,
 		Entropy:          p.generator.GenerateEntropy(),
 		NextPulseNumber:  pulseNumber + insolar.PulseNumber(p.configuration.NumberDelta),
@@ -60,15 +61,15 @@ func (p *TestPulsar) SendPulse(ctx context.Context) error {
 	}
 
 	var err error
-	pulse.Signs, err = getPSC(pulse)
+	pls.Signs, err = getPSC(pls)
 	if err != nil {
 		log.Errorf("[ distribute ]", err)
 		return err
 	}
 
-	pulse.PulseTimestamp = time.Now().UnixNano()
+	pls.PulseTimestamp = time.Now().UnixNano()
 
-	p.distributor.Distribute(ctx, pulse)
+	p.distributor.Distribute(ctx, pls)
 
 	return nil
 }

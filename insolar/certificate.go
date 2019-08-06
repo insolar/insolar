@@ -25,7 +25,7 @@ type NodeMeta interface {
 	GetPublicKey() crypto.PublicKey
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.Certificate -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.Certificate -o ../testutils -s _mock.go -g
 
 // Certificate interface provides methods to manage keys
 type Certificate interface {
@@ -38,7 +38,7 @@ type Certificate interface {
 	GetMinRoles() (virtual uint, heavyMaterial uint, lightMaterial uint)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.DiscoveryNode -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.DiscoveryNode -o ../testutils -s _mock.go -g
 
 type DiscoveryNode interface {
 	NodeMeta
@@ -55,7 +55,7 @@ type AuthorizationCertificate interface {
 	GetDiscoverySigns() map[Reference][]byte
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.CertificateManager -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.CertificateManager -o ../testutils -s _mock.go -g
 
 // CertificateManager interface provides methods to manage nodes certificate
 type CertificateManager interface {

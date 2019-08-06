@@ -16,11 +16,9 @@
 
 package store
 
-import (
-	"io"
-)
+import "io"
 
-//go:generate minimock -i github.com/insolar/insolar/internal/ledger/store.DB -o ./ -s _gen_mock.go
+//go:generate minimock -i github.com/insolar/insolar/internal/ledger/store.DB -o ./ -s _gen_mock.go -g
 
 // DB provides a simple key-value store interface for persisting data.
 // But it is internally ordered ( lexicographically by key bytes )
@@ -37,7 +35,7 @@ type Backuper interface {
 	Backup(to io.Writer, since uint64) (uint64, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/internal/ledger/store.Iterator -o ./ -s _gen_mock.go
+//go:generate minimock -i github.com/insolar/insolar/internal/ledger/store.Iterator -o ./ -s _gen_mock.go -g
 
 // Iterator provides an interface for walking through the storage record sequence (where records are sorted lexicographically).
 type Iterator interface {
@@ -83,16 +81,12 @@ const (
 	ScopeIndex Scope = 4
 	// ScopeLastKnownIndexPN is the scope for a last known pulse number of the index bucket
 	ScopeLastKnownIndexPN Scope = 5
-
-	// ScopeBlob is the scope for a blobs records.
-	ScopeBlob Scope = 7
-
 	// ScopeGenesis is the scope for a genesis records.
-	ScopeGenesis Scope = 8
-
+	ScopeGenesis Scope = 6
 	// ScopeJetTree is the scope for a jet tree storage.
-	ScopeJetTree Scope = 9
-
+	ScopeJetTree Scope = 7
 	// ScopeJetKeeper is the scope for a jet id storage.
-	ScopeJetKeeper Scope = 10
+	ScopeJetKeeper Scope = 8
+	// ScopeRecordPosition is the scope for records' positions.
+	ScopeRecordPosition Scope = 9
 )

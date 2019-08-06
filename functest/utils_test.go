@@ -29,8 +29,8 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
-	"sync"
 	"testing"
+	"time"
 
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar"
@@ -240,6 +240,27 @@ func migrate(t *testing.T, memberRef string, amount string, tx string, ma string
 	return deposit
 }
 
+func generateMigrationAddress() string {
+	return testutils.RandomString()
+}
+
+func fullMigration(t *testing.T, txHash string) *user {
+
+	member, err := newUserWithKeys()
+	require.NoError(t, err)
+	migrationAddress := generateMigrationAddress()
+	_, err = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
+	require.NoError(t, err)
+	_, err = retryableMemberMigrationCreate(member, true)
+	require.NoError(t, err)
+
+	migrate(t, member.ref, "1000", txHash, migrationAddress, 0)
+	migrate(t, member.ref, "1000", txHash, migrationAddress, 2)
+	migrate(t, member.ref, "1000", txHash, migrationAddress, 1)
+
+	return member
+}
+
 func retryableMemberCreate(user *user, updatePublicKey bool) (interface{}, error) {
 	return retryableCreateMember(user, "member.create", updatePublicKey)
 }
@@ -255,7 +276,7 @@ func retryableCreateMember(user *user, method string, updatePublicKey bool) (int
 	currentIterNum := 1
 	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
 		result, err = signedRequest(user, method, nil)
-		if err == nil || !strings.Contains(err.Error(), "member for this publicKey already exist") {
+		if err == nil || !strings.Contains(err.Error(), "failed to set reference in public key shard: can't set reference because this key already exists") {
 			if err == nil {
 				user.ref = result.(map[string]interface{})["reference"].(string)
 			}
@@ -422,17 +443,19 @@ func callConstructor(t testing.TB, prototypeRef *insolar.Reference, method strin
 	require.NotEmpty(t, objectBody)
 
 	callConstructorRes := struct {
-		Version string                   `json:"jsonrpc"`
-		ID      string                   `json:"id"`
-		Result  api.CallConstructorReply `json:"result"`
-		Error   json2.Error              `json:"error"`
+		Version string              `json:"jsonrpc"`
+		ID      string              `json:"id"`
+		Result  api.CallMethodReply `json:"result"`
+		Error   json2.Error         `json:"error"`
 	}{}
 
 	err = json.Unmarshal(objectBody, &callConstructorRes)
 	require.NoError(t, err)
 	require.Empty(t, callConstructorRes.Error)
 
-	objectRef, err := insolar.NewReferenceFromBase58(callConstructorRes.Result.ObjectRef)
+	require.NotEmpty(t, callConstructorRes.Result.Object)
+
+	objectRef, err := insolar.NewReferenceFromBase58(callConstructorRes.Result.Object)
 	require.NoError(t, err)
 
 	require.NotEqual(t, insolar.Reference{}.FromSlice(make([]byte, insolar.RecordRefSize)), objectRef)
@@ -465,7 +488,7 @@ func callMethodNoChecks(t testing.TB, objectRef *insolar.Reference, method strin
 	argsSerialized, err := insolar.Serialize(args)
 	require.NoError(t, err)
 
-	callMethodBody := getRPSResponseBody(t, postParams{
+	respBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
 		"method":  "contract.callMethod",
 		"id":      "",
@@ -475,7 +498,7 @@ func callMethodNoChecks(t testing.TB, objectRef *insolar.Reference, method strin
 			"MethodArgs":      argsSerialized,
 		},
 	})
-	require.NotEmpty(t, callMethodBody)
+	require.NotEmpty(t, respBody)
 
 	callRes := struct {
 		Version string              `json:"jsonrpc"`
@@ -484,102 +507,44 @@ func callMethodNoChecks(t testing.TB, objectRef *insolar.Reference, method strin
 		Error   json2.Error         `json:"error"`
 	}{}
 
-	err = json.Unmarshal(callMethodBody, &callRes)
+	err = json.Unmarshal(respBody, &callRes)
 	require.NoError(t, err)
 
 	return callRes
 }
 
-type SyncT struct {
-	*testing.T
+func waitUntilRequestProcessed(
+	customFunction func() api.CallMethodReply,
+	functionTimeout time.Duration,
+	timeoutBetweenAttempts time.Duration,
+	attempts int) (*api.CallMethodReply, error) {
 
-	mu sync.Mutex
+	var lastErr error
+	for i := 0; i < attempts; i++ {
+		reply, err := waitForFunction(customFunction, functionTimeout)
+		if err == nil {
+			return reply, nil
+		}
+		lastErr = err
+		time.Sleep(timeoutBetweenAttempts)
+	}
+	return nil, errors.New("Timeout was exceeded. " + lastErr.Error())
 }
 
-var _ testing.TB = (*SyncT)(nil)
+func waitForFunction(customFunction func() api.CallMethodReply, functionTimeout time.Duration) (*api.CallMethodReply, error) {
+	ch := make(chan api.CallMethodReply, 1)
+	defer close(ch)
+	go func() {
+		ch <- customFunction()
+	}()
 
-func (t SyncT) Error(args ...interface{}) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
+	timer := time.NewTimer(functionTimeout)
+	defer timer.Stop()
 
-	t.T.Error(args...)
+	select {
+	case result := <-ch:
+		return &result, nil
+	case <-timer.C:
+		return nil, errors.New("timeout was exceeded")
+	}
 }
-func (t SyncT) Errorf(format string, args ...interface{}) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	t.T.Errorf(format, args...)
-}
-func (t SyncT) Fail() {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	t.T.Fail()
-}
-func (t SyncT) FailNow() {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	t.T.FailNow()
-}
-func (t SyncT) Failed() bool {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	return t.T.Failed()
-}
-func (t SyncT) Fatal(args ...interface{}) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	t.T.Fatal(args...)
-}
-func (t SyncT) Fatalf(format string, args ...interface{}) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	t.T.Fatalf(format, args...)
-}
-func (t SyncT) Log(args ...interface{}) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	t.T.Log(args...)
-}
-func (t SyncT) Logf(format string, args ...interface{}) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	t.T.Logf(format, args...)
-}
-func (t SyncT) Name() string {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	return t.T.Name()
-}
-func (t SyncT) Skip(args ...interface{}) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	t.T.Skip(args...)
-}
-func (t SyncT) SkipNow() {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	t.T.SkipNow()
-}
-func (t SyncT) Skipf(format string, args ...interface{}) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	t.T.Skipf(format, args...)
-}
-func (t SyncT) Skipped() bool {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	return t.T.Skipped()
-}
-func (t SyncT) Helper() {}

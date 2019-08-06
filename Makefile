@@ -69,7 +69,7 @@ install-godep: ## install dep tool
 install-build-tools: ## install tools for codegen
 	go clean -modcache
 	./scripts/build/fetchdeps golang.org/x/tools/cmd/stringer 63e6ed9258fa6cbc90aab9b1eef3e0866e89b874
-	./scripts/build/fetchdeps github.com/gojuno/minimock/cmd/minimock 890c67cef23dd06d694294d4f7b1026ed7bac8e6
+	./scripts/build/fetchdeps github.com/gojuno/minimock/cmd/minimock v2.1.8
 	./scripts/build/fetchdeps github.com/gogo/protobuf/protoc-gen-gogoslick v1.2.1
 
 .PHONY: install-deps
@@ -220,19 +220,28 @@ docker-insgorund: ## build insgorund docker image
 .PHONY: docker
 docker: docker-insolard docker-insgorund ## build insolard and insgorund docker images
 
+.PHONY: generate-protobuf
 generate-protobuf: ## generate protobuf structs
 	protoc -I./vendor -I./ --gogoslick_out=./ network/node/internal/node/node.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/record/record.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src insolar/payload/payload.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/pulse/pulse.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src network/hostnetwork/packet/packet.proto
+		protoc -I/usr/local/include -I./ \
+    		-I$(GOPATH)/src \
+    		--gogoslick_out=plugins=grpc:./  \
+    		ledger/heavy/exporter/record_exporter.proto
 
+
+.PHONY: regen-builtin
 regen-builtin: $(BININSGOCC) ## regenerate builtin contracts code
 	$(BININSGOCC) regen-builtin
 
+.PHONY: build-track
 build-track: ## build logs event tracker tool
 	$(GOBUILD) -o $(BIN_DIR)/track ./scripts/cmd/track/track.go
 
+.PHONY: generate-introspector-proto
 generate-introspector-proto: ## generate grpc api code and mocks for introspector
 	protoc -I/usr/local/include -I./ \
 		-I$(GOPATH)/src \
@@ -243,5 +252,12 @@ generate-introspector-proto: ## generate grpc api code and mocks for introspecto
 		instrumentation/introspector/introproto/*.proto
 	GOPATH=`go env GOPATH` go generate -x ./instrumentation/introspector
 
+.PHONY: prepare-inrospector-proto
+prepare-inrospector-proto: ## install tools required for grpc development
+	go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
+	go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
+	go get -u github.com/golang/protobuf/protoc-gen-go
+
+.PHONY: help
 help: ## Display this help screen
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'

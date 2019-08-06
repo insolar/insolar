@@ -52,8 +52,8 @@ package pulsectl
 
 import (
 	"context"
-
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
@@ -62,18 +62,17 @@ import (
 )
 
 // TODO HACK - network doesnt have information about pulsars to validate packets, the next line must be removed when fixed
-const ignoreHostVerificationForPulses = true
 
-func NewPulsePrepController(s PulseSelectionStrategy) *PulsePrepController {
-	return &PulsePrepController{pulseStrategy: s}
+func NewPulsePrepController(s PulseSelectionStrategy, ignoreHostVerificationForPulses bool) *PulsePrepController {
+	return &PulsePrepController{pulseStrategy: s, ignoreHostVerificationForPulses: ignoreHostVerificationForPulses}
 }
 
-func NewPulseController() *PulseController {
-	return &PulseController{}
+func NewPulseController(ignoreHostVerificationForPulses bool) *PulseController {
+	return &PulseController{ignoreHostVerificationForPulses: ignoreHostVerificationForPulses}
 }
 
-func (p *pulsePacketPrepDispatcher) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
-	from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags) error {
+func (p *PulsePrepController) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
+	from endpoints.Inbound, flags coreapi.PacketVerifyFlags) error {
 
 	pp := packet.GetPulsePacket()
 	ok, err := p.pulseStrategy.HandlePulsarPacket(ctx, pp, from, true)
@@ -83,8 +82,8 @@ func (p *pulsePacketPrepDispatcher) DispatchHostPacket(ctx context.Context, pack
 	return p.R.ApplyPulseData(pp, true, from)
 }
 
-func (p *pulsePacketDispatcher) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
-	from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags) error {
+func (p *PulseController) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
+	from endpoints.Inbound, flags coreapi.PacketVerifyFlags) error {
 
 	pp := packet.GetPulsePacket()
 	// FullRealm already has a pulse data, so should only check it
@@ -92,55 +91,50 @@ func (p *pulsePacketDispatcher) DispatchHostPacket(ctx context.Context, packet t
 	if p.R.GetPulseData() == pd {
 		return nil
 	}
-	return p.R.GetBlameFactory().NewMismatchedPulsarPacket(from, p.R.GetOriginalPulse(), pp.GetPulseDataEvidence())
+	return p.R.MonitorOtherPulses(pp, from)
 }
 
-func (*pulsePacketPrepDispatcher) HasCustomVerifyForHost(from endpoints.Inbound, strict bool) bool {
-	//noinspection GoBoolExpressions
-	return ignoreHostVerificationForPulses
+func (p *PulsePrepController) HasCustomVerifyForHost(from endpoints.Inbound, verifyFlags coreapi.PacketVerifyFlags) bool {
+	return p.ignoreHostVerificationForPulses
 }
 
-func (*pulsePacketDispatcher) HasCustomVerifyForHost(from endpoints.Inbound, strict bool) bool {
-	//noinspection GoBoolExpressions
-	return ignoreHostVerificationForPulses
+func (p *PulseController) HasCustomVerifyForHost(from endpoints.Inbound, verifyFlags coreapi.PacketVerifyFlags) bool {
+	return p.ignoreHostVerificationForPulses
 }
 
 var _ core.PrepPhaseController = &PulsePrepController{}
 
 type PulsePrepController struct {
 	core.PrepPhaseControllerTemplate
-	pulseStrategy PulseSelectionStrategy
+	core.HostPacketDispatcherTemplate
+	R                               *core.PrepRealm
+	pulseStrategy                   PulseSelectionStrategy
+	ignoreHostVerificationForPulses bool
 }
 
-func (r *PulsePrepController) CreatePacketDispatcher(pt phases.PacketType, realm *core.PrepRealm) core.PacketDispatcher {
-	return &pulsePacketPrepDispatcher{pulseStrategy: r.pulseStrategy, R: realm}
+func (p *PulsePrepController) CreatePacketDispatcher(pt phases.PacketType, realm *core.PrepRealm) population.PacketDispatcher {
+	p.R = realm
+	return p
 }
 
 func (*PulsePrepController) GetPacketType() []phases.PacketType {
-	return []phases.PacketType{phases.PacketPulse}
-}
-
-type pulsePacketPrepDispatcher struct {
-	core.HostPacketDispatcherTemplate
-	pulseStrategy PulseSelectionStrategy
-	R             *core.PrepRealm
+	return []phases.PacketType{phases.PacketPulsarPulse}
 }
 
 var _ core.PhaseController = &PulseController{}
 
 type PulseController struct {
 	core.PhaseControllerTemplate
+	core.HostPacketDispatcherTemplate
+	R                               *core.FullRealm
+	ignoreHostVerificationForPulses bool
 }
 
-func (c *PulseController) CreatePacketDispatcher(pt phases.PacketType, ctlIndex int, realm *core.FullRealm) (core.PacketDispatcher, core.PerNodePacketDispatcherFactory) {
-	return &pulsePacketDispatcher{R: realm}, nil
+func (p *PulseController) CreatePacketDispatcher(pt phases.PacketType, ctlIndex int, realm *core.FullRealm) (population.PacketDispatcher, core.PerNodePacketDispatcherFactory) {
+	p.R = realm
+	return p, nil
 }
 
 func (*PulseController) GetPacketType() []phases.PacketType {
-	return []phases.PacketType{phases.PacketPulse}
-}
-
-type pulsePacketDispatcher struct {
-	core.HostPacketDispatcherTemplate
-	R *core.FullRealm
+	return []phases.PacketType{phases.PacketPulsarPulse}
 }

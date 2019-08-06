@@ -87,12 +87,12 @@ func (*simpleSelectionStrategy) TrySelectOnAdded(globulaStats *nodeset.Consensus
 
 func (*simpleSelectionStrategy) SelectOnStopped(globulaStats *nodeset.ConsensusStatTable, timeIsOut bool, bftMajorityArg int) Selection {
 
-	bftMajority := uint16(bftMajorityArg)
 	absMajority := true
 	if globulaStats.RowCount() < bftMajorityArg {
-		bftMajority = uint16(consensuskit.BftMajority(globulaStats.RowCount()))
+		//bftMajority = uint16(consensuskit.BftMajority(globulaStats.RowCount()))
 		absMajority = false
 	}
+	bftMajority := uint16(bftMajorityArg)
 
 	resultSet := nodeset.NewConsensusBitsetRow(globulaStats.ColumnCount())
 	for i := 0; i < resultSet.ColumnCount(); i++ {
@@ -109,11 +109,11 @@ func consensusDecisionOfNode(tc *nodeset.ConsensusStatColumn, absMajority bool, 
 	switch {
 	case tc.GetSummaryByValue(nodeset.ConsensusStatTrusted)+tc.GetSummaryByValue(nodeset.ConsensusStatDoubted) >= bftMajority:
 		return nodeset.CbsIncluded
-	case tc.GetSummaryByValue(nodeset.ConsensusStatFraud)+tc.GetSummaryByValue(nodeset.ConsensusStatMissingThere)+
+	case tc.GetSummaryByValue(nodeset.ConsensusStatFraud)+ //tc.GetSummaryByValue(nodeset.ConsensusStatMissingThere)+
 		tc.GetSummaryByValue(nodeset.ConsensusStatFraudSuspect) >= bftMajority:
-		if absMajority {
-			return nodeset.CbsExcluded
-		}
+		//if absMajority {
+		//	return nodeset.CbsExcluded
+		//}
 		return nodeset.CbsFraud
 	default:
 		return nodeset.CbsSuspected

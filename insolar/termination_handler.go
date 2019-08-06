@@ -22,7 +22,7 @@ import (
 
 type LeaveApproved struct{}
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.TerminationHandler -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.TerminationHandler -o ../testutils -s _mock.go -g
 
 // TerminationHandler handles such node events as graceful stop, abort, etc.
 type TerminationHandler interface {

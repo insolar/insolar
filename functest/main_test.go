@@ -27,6 +27,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -34,13 +35,14 @@ import (
 	"testing"
 	"time"
 
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/defaults"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
-	"github.com/pkg/errors"
 )
 
 const HOST = "http://localhost:19102"
@@ -259,7 +261,8 @@ func stopAllInsgorunds() error {
 
 func waitForNet() error {
 	numAttempts := 90
-	ports := []string{"19101", "19102", "19103", "19104", "19105"}
+	// TODO: read ports from bootstrap config
+	ports := []string{"19101", "19102", "19103", "19104", "19105", "19106", "19107", "19108", "19109", "19110", "19111"}
 	numNodes := len(ports)
 	currentOk := 0
 	for i := 0; i < numAttempts; i++ {
@@ -305,7 +308,11 @@ func startNet() error {
 		return errors.Wrap(err, "[ startNet  ] Can't change dir")
 	}
 
-	cmd = exec.Command("./scripts/insolard/launchnet.sh", "-ngw")
+	// If you want to add -n flag here please make sure that insgorund will
+	// be eventually started with --log-level=debug. Otherwise someone will spent
+	// a lot of time trying to figure out why insgorund debug logs are missing
+	// during execution of functests.
+	cmd = exec.Command("./scripts/insolard/launchnet.sh", "-gw")
 	stdout, _ = cmd.StdoutPipe()
 	if err != nil {
 		return errors.Wrap(err, "[ startNet ] could't set stdout: ")
@@ -411,7 +418,7 @@ func setup() error {
 	fmt.Println("[ setup ] references successfully received")
 	root.ref = info.RootMember
 	migrationAdmin.ref = info.MigrationAdminMember
-	for i, _ := range migrationDaemons {
+	for i := range migrationDaemons {
 		migrationDaemons[i].ref = info.MigrationDaemonMembers[i]
 	}
 
@@ -455,6 +462,17 @@ func testMainWrapper(m *testing.M) int {
 		fmt.Println("error while setup, skip tests: ", err)
 		return 1
 	}
+
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt)
+
+	go func() {
+		select {
+		case sig := <-c:
+			fmt.Printf("Got %s signal. Aborting...\n", sig)
+			teardown()
+		}
+	}()
 
 	pulseWatcher, config, err := pulseWatcherPath()
 	if err != nil {

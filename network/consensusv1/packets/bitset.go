@@ -85,7 +85,7 @@ var (
 	ErrBitSetIncorrectNode = errors.New("incorrect node ID")
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensusv1/packets.BitSetMapper -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensusv1/packets.BitSetMapper -o . -s _mock.go -g
 
 // BitSetMapper contains the mapping from bitset index to node ID (and vice versa)
 type BitSetMapper interface {

@@ -64,7 +64,7 @@ func TestIntrospector_Server_FilterMessages(t *testing.T) {
 
 	mockState := map[string]struct{}{}
 	pubMock := NewPublisherServerMock(t)
-	pubMock.SetMessagesFilterFunc = func(_ context.Context, in *introproto.MessageFilterByType) (*introproto.MessageFilterByType, error) {
+	pubMock.SetMessagesFilterMock.Set(func(_ context.Context, in *introproto.MessageFilterByType) (*introproto.MessageFilterByType, error) {
 		name, enable := in.Name, in.Enable
 		if enable {
 			mockState[name] = struct{}{}
@@ -72,17 +72,17 @@ func TestIntrospector_Server_FilterMessages(t *testing.T) {
 			delete(mockState, name)
 		}
 		return in, nil
-	}
-	pubMock.GetMessagesFiltersFunc = func(_ context.Context, _ *introproto.EmptyArgs) (*introproto.AllMessageFilterStats, error) {
-		filters := map[string]*introproto.MessageFilterWithStat{}
-		// var out []*introproto.MessageFilterByType
+	})
+	pubMock.GetMessagesFiltersMock.Set(func(_ context.Context, _ *introproto.EmptyArgs) (*introproto.AllMessageFilterStats, error) {
+		filters := []*introproto.MessageFilterWithStat{}
 		for name := range mockState {
-			filters[name] = &introproto.MessageFilterWithStat{
+			filters = append(filters, &introproto.MessageFilterWithStat{
 				Enable: true,
-			}
+				Name:   name,
+			})
 		}
 		return &introproto.AllMessageFilterStats{Filters: filters}, nil
-	}
+	})
 
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err, "listener bind on random port without error")
@@ -105,7 +105,7 @@ func TestIntrospector_Server_FilterMessages(t *testing.T) {
 
 	getEmptyResult := fetcher.Url(getUrl).Do()
 	if assert.Equalf(t, 200, getEmptyResult.Code(), "code of %v is fine", getUrl) {
-		assert.Equalf(t, `{"Filters":{}}`, getEmptyResult.Body(), "body of %v is fine", getUrl)
+		assert.Equalf(t, `{"Filters":[]}`, getEmptyResult.Body(), "body of %v is fine", getUrl)
 	}
 
 	enableJSON := fmt.Sprintf(`{"Name":"%v","Enable":true}`, name)
@@ -122,7 +122,7 @@ func TestIntrospector_Server_FilterMessages(t *testing.T) {
 	getResult := fetcher.Url(getUrl).Do()
 	if assert.Equalf(t, 200, getResult.Code(), "code of %v is fine", getUrl) {
 		expectGetResultJSON := fmt.Sprintf(
-			`{"Filters":{"%v":{"Enable":true,"Filtered":"0"}}}`, name)
+			`{"Filters":[{"Name":"%v","Enable":true,"Filtered":"0"}]}`, name)
 		assert.Equalf(t, expectGetResultJSON, getResult.Body(), "body of %v is fine", getUrl)
 	}
 }

@@ -39,14 +39,15 @@ type Replication struct {
 	cfg     configuration.Ledger
 
 	dep struct {
-		records  object.RecordModifier
-		indexes  object.IndexModifier
-		pcs      insolar.PlatformCryptographyScheme
-		pulses   pulse.Accessor
-		drops    drop.Modifier
-		jets     jet.Modifier
-		keeper   executor.JetKeeper
-		backuper executor.BackupMaker
+		records          object.RecordModifier
+		recordsPositions object.RecordPositionModifier
+		indexes          object.IndexModifier
+		pcs              insolar.PlatformCryptographyScheme
+		pulses           pulse.Accessor
+		drops            drop.Modifier
+		jets             jet.Modifier
+		keeper           executor.JetKeeper
+		backuper         executor.BackupMaker
 	}
 }
 
@@ -60,6 +61,7 @@ func NewReplication(msg payload.Meta, cfg configuration.Ledger) *Replication {
 func (p *Replication) Dep(
 	records object.RecordModifier,
 	indexes object.IndexModifier,
+	recordsPositions object.RecordPositionModifier,
 	pcs insolar.PlatformCryptographyScheme,
 	pulses pulse.Accessor,
 	drops drop.Modifier,
@@ -69,6 +71,7 @@ func (p *Replication) Dep(
 ) {
 	p.dep.records = records
 	p.dep.indexes = indexes
+	p.dep.recordsPositions = recordsPositions
 	p.dep.pcs = pcs
 	p.dep.pulses = pulses
 	p.dep.drops = drops
@@ -87,7 +90,7 @@ func (p *Replication) Proceed(ctx context.Context) error {
 		return fmt.Errorf("unexpected payload %T", pl)
 	}
 
-	storeRecords(ctx, p.dep.records, p.dep.pcs, msg.Pulse, msg.Records)
+	storeRecords(ctx, p.dep.records, p.dep.recordsPositions, p.dep.pcs, msg.Pulse, msg.Records)
 	if err := storeIndexes(ctx, p.dep.indexes, msg.Indexes, msg.Pulse); err != nil {
 		return errors.Wrap(err, "failed to store indexes")
 	}
@@ -147,7 +150,8 @@ func storeDrop(
 
 func storeRecords(
 	ctx context.Context,
-	mod object.RecordModifier,
+	recordStorage object.RecordModifier,
+	recordIndex object.RecordPositionModifier,
 	pcs insolar.PlatformCryptographyScheme,
 	pn insolar.PulseNumber,
 	records []record.Material,
@@ -156,10 +160,24 @@ func storeRecords(
 
 	for _, rec := range records {
 		hash := record.HashVirtual(pcs.ReferenceHasher(), rec.Virtual)
-		id := insolar.NewID(pn, hash)
-		err := mod.Set(ctx, *id, rec)
+		id := *insolar.NewID(pn, hash)
+		// FIXME: skipping errors will lead to inconsistent state.
+		if rec.ID != id {
+			inslog.Error(fmt.Errorf(
+				"record id does not match (calculated: %s, received: %s)",
+				id.DebugString(),
+				rec.ID.DebugString(),
+			))
+			continue
+		}
+		err := recordStorage.Set(ctx, rec)
 		if err != nil {
 			inslog.Error(err, "heavyserver: store record failed")
+			continue
+		}
+		err = recordIndex.IncrementPosition(id)
+		if err != nil {
+			inslog.Error(err, "heavyserver: fail to store record position")
 			continue
 		}
 	}

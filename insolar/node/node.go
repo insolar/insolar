@@ -22,7 +22,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/node.Accessor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar/node.Accessor -o ./ -s _mock.go -g
 
 // Accessor provides info about active nodes.
 type Accessor interface {
@@ -30,7 +30,7 @@ type Accessor interface {
 	InRole(pulse insolar.PulseNumber, role insolar.StaticRole) ([]insolar.Node, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/node.Modifier -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar/node.Modifier -o ./ -s _mock.go -g
 
 // Modifier provides methods for setting active nodes.
 type Modifier interface {

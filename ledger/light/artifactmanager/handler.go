@@ -45,11 +45,11 @@ type MessageHandler struct {
 	JetReleaser    hot.JetReleaser                    `inject:""`
 	DropModifier   drop.Modifier                      `inject:""`
 	IndexLocker    object.IndexLocker                 `inject:""`
-	Records        object.RecordStorage               `inject:""`
+	Records        object.AtomicRecordStorage         `inject:""`
 	HotDataWaiter  hot.JetWaiter                      `inject:""`
 
 	WriteAccessor      hot.WriteAccessor
-	IndexStorage       object.IndexStorage
+	IndexStorage       object.MemoryIndexStorage
 	PulseCalculator    storage.PulseCalculator
 	JetTreeUpdater     executor.JetFetcher
 	Sender             bus.Sender

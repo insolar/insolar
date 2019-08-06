@@ -109,7 +109,7 @@ func (cr *ContractRequester) SendRequestWithPulse(ctx context.Context, ref *inso
 		},
 	}
 
-	routResult, err := cr.CallMethod(ctx, msg)
+	routResult, err := cr.Call(ctx, msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't route call")
 	}
@@ -223,23 +223,6 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 	}
 }
 
-func (cr *ContractRequester) CallMethod(ctx context.Context, inMsg insolar.Message) (insolar.Reply, error) {
-	return cr.Call(ctx, inMsg)
-}
-
-func (cr *ContractRequester) CallConstructor(ctx context.Context, inMsg insolar.Message) (*insolar.Reference, error) {
-	res, err := cr.Call(ctx, inMsg)
-	if err != nil {
-		return nil, err
-	}
-
-	rep, ok := res.(*reply.CallConstructor)
-	if !ok {
-		return nil, errors.New("Reply is not CallConstructor")
-	}
-	return rep.Object, nil
-}
-
 func (cr *ContractRequester) result(ctx context.Context, msg *message.ReturnResults) error {
 	cr.ResultMutex.Lock()
 	defer cr.ResultMutex.Unlock()
@@ -248,7 +231,7 @@ func (cr *ContractRequester) result(ctx context.Context, msg *message.ReturnResu
 	copy(reqHash[:], msg.RequestRef.Record().Hash())
 	c, ok := cr.ResultMap[reqHash]
 	if !ok {
-		inslogger.FromContext(ctx).Info("unwaited results of request ", msg.RequestRef.String())
+		inslogger.FromContext(ctx).Info("unwanted results of request ", msg.RequestRef.String())
 		if cr.lr != nil {
 			return cr.lr.AddUnwantedResponse(ctx, msg)
 		}

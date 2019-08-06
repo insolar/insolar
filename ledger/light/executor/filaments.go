@@ -36,7 +36,7 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCalculator -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCalculator -o ./ -s _mock.go -g
 
 type FilamentCalculator interface {
 	// Requests returns request records for objectID's chain, starts from provided id until provided pulse.
@@ -79,7 +79,7 @@ type FilamentCalculator interface {
 	)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCleaner -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCleaner -o ./ -s _mock.go -g
 
 type FilamentCleaner interface {
 	Clear(objID insolar.ID)
@@ -298,7 +298,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	})
 
 	logger.Debug("started to search for duplicated requests")
-	defer logger.Debug("finished to search for duplicated requests")
+	defer logger.Debug("finished searching for duplicated requests")
 
 	reasonRef := request.ReasonRef()
 	reasonID := *reasonRef.Record()
@@ -398,8 +398,8 @@ type fetchingIterator struct {
 	iter  filamentIterator
 	cache *filamentCache
 
-	objectID             insolar.ID
-	readUntil, calcPulse insolar.PulseNumber
+	objectID  insolar.ID
+	readUntil insolar.PulseNumber
 
 	jetFetcher  JetFetcher
 	coordinator jet.Coordinator

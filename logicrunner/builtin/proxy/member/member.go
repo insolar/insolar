@@ -34,8 +34,8 @@ type GetResponse struct {
 	BurnAddress string `json:"migrationAddress,omitempty"`
 }
 type MigrationCreateResponse struct {
-	Reference   string `json:"reference"`
-	BurnAddress string `json:"migrationAddress"`
+	Reference        string `json:"reference"`
+	MigrationAddress string `json:"migrationAddress"`
 }
 type Params struct {
 	Seed       string      `json:"seed"`
@@ -74,11 +74,22 @@ type ContractConstructorHolder struct {
 
 // AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*Member, error) {
-	ref, err := common.CurrentProxyCtx.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
+	ref, ret, err := common.CurrentProxyCtx.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
-	return &Member{Reference: ref}, nil
+
+	var constructorError *foundation.Error
+	err = common.CurrentProxyCtx.Deserialize(ret, []interface{}{&constructorError})
+	if err != nil {
+		return nil, err
+	}
+
+	if constructorError != nil {
+		return nil, constructorError
+	}
+
+	return &Member{Reference: *ref}, nil
 }
 
 // GetObject returns proxy object

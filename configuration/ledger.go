@@ -16,10 +16,6 @@
 
 package configuration
 
-import (
-	"time"
-)
-
 // Storage configures Ledger's storage.
 type Storage struct {
 	// DataDirectory is a directory where database's files live.
@@ -39,23 +35,6 @@ type JetSplit struct {
 	DepthLimit uint8
 }
 
-// Backoff configures retry backoff algorithm
-type Backoff struct {
-	Factor float64
-	// Jitter eases contention by randomizing backoff steps
-	Jitter bool
-	// Min and Max are the minimum and maximum values of the counter
-	Min, Max time.Duration
-	// MaxAttempts holds max count of attempts for a instance of Backoff
-	MaxAttempts int
-}
-
-// Exporter holds configuration of Exporter
-type Exporter struct {
-	// ExportLag is lag in second before we start to export pulse
-	ExportLag uint32
-}
-
 // Ledger holds configuration for ledger.
 type Ledger struct {
 	// Storage defines storage configuration.
@@ -71,11 +50,12 @@ type Ledger struct {
 	// IMPORTANT: It should be the same on ALL nodes.
 	LightChainLimit int
 
-	// Exporter holds configuration of Exporter
-	Exporter Exporter
-
 	// Backup holds configuration of BackupMaker
 	Backup Backup
+
+	// CleanerDelay holds value of pulses, that should happen before end of LightChainLimit and start
+	// of LME's data cleaning
+	CleanerDelay int
 }
 
 // Backup holds configuration for backuping.
@@ -128,12 +108,10 @@ func NewLedger() Ledger {
 		},
 		LightChainLimit: 5, // 5 pulses
 
-		Exporter: Exporter{
-			ExportLag: 40, // 40 seconds
-		},
-
 		Backup: Backup{
 			Enabled: false,
 		},
+
+		CleanerDelay: 3, // 3 pulses
 	}
 }

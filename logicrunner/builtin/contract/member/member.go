@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"strings"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member/signer"
@@ -35,12 +34,17 @@ import (
 // Member - basic member contract.
 type Member struct {
 	foundation.BaseContract
-	RootDomain  insolar.Reference
-	Deposits    map[string]insolar.Reference
-	Name        string
-	PublicKey   string
-	BurnAddress string
-	Wallet      insolar.Reference
+	RootDomain       insolar.Reference
+	Deposits         map[string]insolar.Reference
+	Name             string
+	PublicKey        string
+	MigrationAddress string
+	Wallet           insolar.Reference
+}
+
+func (m *Member) setMigrationAddress(migrationAddress string) error {
+	m.MigrationAddress = migrationAddress
+	return nil
 }
 
 // GetName gets name.
@@ -63,12 +67,12 @@ func (m *Member) GetPublicKey() (string, error) {
 // New creates new member.
 func New(rootDomain insolar.Reference, name string, key string, burnAddress string, walletRef insolar.Reference) (*Member, error) {
 	return &Member{
-		RootDomain:  rootDomain,
-		Deposits:    map[string]insolar.Reference{},
-		Name:        name,
-		PublicKey:   key,
-		BurnAddress: burnAddress,
-		Wallet:      walletRef,
+		RootDomain:       rootDomain,
+		Deposits:         map[string]insolar.Reference{},
+		Name:             name,
+		PublicKey:        key,
+		MigrationAddress: burnAddress,
+		Wallet:           walletRef,
 	}, nil
 }
 
@@ -142,7 +146,11 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 		return m.memberGet(request.Params.PublicKey)
 	}
 
-	params := request.Params.CallParams.(map[string]interface{})
+	var params map[string]interface{}
+	var ok bool
+	if params, ok = request.Params.CallParams.(map[string]interface{}); !ok {
+		return nil, fmt.Errorf("failed to cast request.Params.CallParams: expected map[string]interface{}, got %T", request.Params.CallParams)
+	}
 
 	switch request.Params.CallSite {
 	case "contract.registerNode":
@@ -157,6 +165,8 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 		return m.transferCall(params)
 	case "deposit.migration":
 		return nil, m.depositMigrationCall(params)
+	case "deposit.transfer":
+		return m.depositTransferCall(params)
 	}
 	return nil, fmt.Errorf("unknown method: '%s'", request.Params.CallSite)
 }
@@ -206,7 +216,7 @@ func (m *Member) addBurnAddressesCall(params map[string]interface{}) (interface{
 		burnAddressesStr[i] = ba.(string)
 	}
 
-	err = rootDomain.AddBurnAddresses(burnAddressesStr)
+	err = rootDomain.AddMigrationAddresses(burnAddressesStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to add burn address: %s", err.Error())
 	}
@@ -288,6 +298,31 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 
 	return wallet.GetObject(m.Wallet).Transfer(m.RootDomain, amount, recipientReference)
 }
+
+func (m *Member) depositTransferCall(params map[string]interface{}) (interface{}, error) {
+
+	ethTxHash, ok := params["ethTxHash"].(string)
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'ethTxHash' param")
+	}
+
+	amount, ok := params["amount"].(string)
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'amount' param")
+	}
+
+	find, dRef, err := m.FindDeposit(ethTxHash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find deposit: %s", err.Error())
+	}
+	if !find {
+		return nil, fmt.Errorf("can't find deposit")
+	}
+	d := deposit.GetObject(dRef)
+
+	return d.Transfer(amount, m.Wallet)
+}
+
 func (m *Member) depositMigrationCall(params map[string]interface{}) error {
 
 	amountStr, ok := params["amount"].(string)
@@ -353,39 +388,29 @@ type CreateResponse struct {
 	Reference string `json:"reference"`
 }
 type MigrationCreateResponse struct {
-	Reference   string `json:"reference"`
-	BurnAddress string `json:"migrationAddress"`
+	Reference        string `json:"reference"`
+	MigrationAddress string `json:"migrationAddress"`
 }
 
 func (m *Member) memberMigrationCreate(key string) (*MigrationCreateResponse, error) {
 
 	rootDomain := rootdomain.GetObject(m.RootDomain)
-	burnAddress, err := rootDomain.GetBurnAddress()
+	migrationAddress, err := rootDomain.GetFreeMigrationAddress(key)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get burn address: %s", err.Error())
+		return nil, fmt.Errorf("failed to get migration address: %s", err.Error())
 	}
 
-	rollBack := func(e error) (*MigrationCreateResponse, error) {
-		if err := rootDomain.AddBurnAddress(burnAddress); err != nil {
-			return nil, fmt.Errorf("failed to add burn address back: %s; after error: %s", err.Error(), e.Error())
-		}
-		return nil, fmt.Errorf("failed to create member: %s", e.Error())
-	}
-
-	created, err := m.createMember("", key, burnAddress)
+	created, err := m.createMember("", key, migrationAddress)
 	if err != nil {
-		return rollBack(err)
+		return nil, fmt.Errorf("failed to create member: %s", err.Error())
 	}
 
-	if err = rootDomain.AddNewMemberToMaps(key, burnAddress, created.Reference); err != nil {
-		if strings.Contains(err.Error(), "member for this burnAddress already exist") {
-			return nil, fmt.Errorf("failed to create member: %s", err.Error())
-		} else {
-			return rollBack(err)
-		}
+	err = rootDomain.AddNewMemberToMaps(key, migrationAddress, created.Reference)
+	if err != nil {
+		return nil, fmt.Errorf("failed to add new member to maps: %s", err.Error())
 	}
 
-	return &MigrationCreateResponse{Reference: created.Reference.String(), BurnAddress: burnAddress}, nil
+	return &MigrationCreateResponse{Reference: created.Reference.String(), MigrationAddress: migrationAddress}, nil
 }
 func (m *Member) contractCreateMember(key string) (*CreateResponse, error) {
 
@@ -402,7 +427,7 @@ func (m *Member) contractCreateMember(key string) (*CreateResponse, error) {
 
 	return &CreateResponse{Reference: created.Reference.String()}, nil
 }
-func (m *Member) createMember(name string, key string, burnAddress string) (*member.Member, error) {
+func (m *Member) createMember(name string, key string, migrationAddress string) (*member.Member, error) {
 	if key == "" {
 		return nil, fmt.Errorf("key is not valid")
 	}
@@ -413,7 +438,7 @@ func (m *Member) createMember(name string, key string, burnAddress string) (*mem
 		return nil, fmt.Errorf("failed to create wallet for  member: %s", err.Error())
 	}
 
-	memberHolder := member.New(m.RootDomain, name, key, burnAddress, walletRef.Reference)
+	memberHolder := member.New(m.RootDomain, name, key, migrationAddress, walletRef.Reference)
 	created, err := memberHolder.AsChild(m.RootDomain)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save as child: %s", err.Error())
@@ -445,11 +470,11 @@ func (m *Member) depositMigration(txHash string, burnAddress string, amount *big
 	}
 
 	// Get member by burn address
-	tokenHolderRef, err := rd.GetMemberByBurnAddress(burnAddress)
+	tokenHolderRef, err := rd.GetMemberByMigrationAddress(burnAddress)
 	if err != nil {
 		return fmt.Errorf("failed to get member by burn address")
 	}
-	tokenHolder := member.GetObject(tokenHolderRef)
+	tokenHolder := member.GetObject(*tokenHolderRef)
 
 	// Find deposit for txHash
 	found, txDepositRef, err := tokenHolder.FindDeposit(txHash)
@@ -462,7 +487,7 @@ func (m *Member) depositMigration(txHash string, burnAddress string, amount *big
 		migrationDaemonConfirms := [3]string{}
 		migrationDaemonConfirms[mdIndex] = m.GetReference().String()
 		dHolder := deposit.New(migrationDaemonConfirms, txHash, amount.String())
-		txDeposit, err := dHolder.AsChild(tokenHolderRef)
+		txDeposit, err := dHolder.AsChild(*tokenHolderRef)
 		if err != nil {
 			return fmt.Errorf("failed to save as delegate: %s", err.Error())
 		}
@@ -522,7 +547,7 @@ func (m *Member) AddDeposit(txId string, deposit insolar.Reference) error {
 }
 
 func (m *Member) GetBurnAddress() (string, error) {
-	return m.BurnAddress, nil
+	return m.MigrationAddress, nil
 }
 
 type GetResponse struct {
@@ -537,11 +562,11 @@ func (m *Member) memberGet(publicKey string) (interface{}, error) {
 		return nil, fmt.Errorf("failed to get reference by public key: %s", err.Error())
 	}
 
-	if m.GetReference() == ref {
-		return GetResponse{Reference: ref.String(), BurnAddress: m.BurnAddress}, nil
+	if m.GetReference() == *ref {
+		return GetResponse{Reference: ref.String(), BurnAddress: m.MigrationAddress}, nil
 	}
 
-	user := member.GetObject(ref)
+	user := member.GetObject(*ref)
 	ba, err := user.GetBurnAddress()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get burn address: %s", err.Error())

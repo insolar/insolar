@@ -4,6 +4,7 @@ package payload;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "github.com/insolar/insolar/insolar/record/record.proto";
+import "github.com/insolar/insolar/insolar/pulse/pulse.proto";
 
 
 message Meta {
@@ -198,7 +199,7 @@ message HotObjects {
 message GetRequest {
     uint32 Polymorph = 16;
 
-    bytes ObjectID  = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
     bytes RequestID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
 }
 
@@ -323,12 +324,21 @@ message GetLightInitialState {
 message LightInitialState {
     uint32 Polymorph = 16;
 
-    repeated bytes JetIDs = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
-    repeated bytes Drops = 21;
+    bool NetworkStart = 20;
+    repeated bytes JetIDs = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
+    repeated bytes Drops = 22;
+    pulse.PulseProto Pulse = 23 [ (gogoproto.nullable) = false];
 }
 
 message GetIndex {
     uint32 Polymorph = 16;
 
     bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+}
+
+message UpdateJet {
+    uint32 Polymorph = 16;
+
+    bytes Pulse = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    bytes JetID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
 }

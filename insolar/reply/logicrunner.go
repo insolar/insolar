@@ -22,21 +22,13 @@ import (
 
 // CallMethod - the most common reply
 type CallMethod struct {
+	Object *insolar.Reference
 	Result []byte
 }
 
 // Type returns type of the reply
 func (r *CallMethod) Type() insolar.ReplyType {
 	return TypeCallMethod
-}
-
-type CallConstructor struct {
-	Object *insolar.Reference
-}
-
-// Type returns type of the reply
-func (r *CallConstructor) Type() insolar.ReplyType {
-	return TypeCallConstructor
 }
 
 type RegisterRequest struct {

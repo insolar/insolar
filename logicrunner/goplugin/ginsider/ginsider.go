@@ -29,6 +29,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
@@ -36,7 +38,6 @@ import (
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/insolar/insolar/metrics"
-	"github.com/pkg/errors"
 )
 
 type pluginRec struct {
@@ -137,10 +138,10 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 	}
 
 	state, result, err := wrapper(args.Data, args.Arguments) // may be entire args???
-
 	if err != nil {
 		return errors.Wrapf(err, "Method call returned error")
 	}
+
 	reply.Data = state
 	reply.Ret = result
 
@@ -170,17 +171,18 @@ func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpcty
 		return errors.Wrapf(err, "Can't find wrapper for %s", args.Name)
 	}
 
-	f, ok := symbol.(func(data []byte) ([]byte, error))
+	f, ok := symbol.(func(data []byte) ([]byte, []byte, error))
 	if !ok {
 		return errors.New("Wrapper with wrong signature")
 	}
 
-	resValues, err := f(args.Arguments)
+	state, result, err := f(args.Arguments)
 	if err != nil {
 		return errors.Wrapf(err, "Can't call constructor %s", args.Name)
 	}
 
-	reply.Ret = resValues
+	reply.Data = state
+	reply.Ret = result
 
 	return nil
 }
@@ -332,13 +334,17 @@ func (gi *GoInsider) RouteCall(ref insolar.Reference, wait bool, immutable bool,
 }
 
 // SaveAsChild ...
-func (gi *GoInsider) SaveAsChild(parentRef, classRef insolar.Reference, constructorName string, argsSerialized []byte) (insolar.Reference, error) {
+func (gi *GoInsider) SaveAsChild(
+	parentRef, classRef insolar.Reference, constructorName string, argsSerialized []byte,
+) (
+	*insolar.Reference, []byte, error,
+) {
 	client, err := gi.Upstream()
 	if err != nil {
-		return insolar.Reference{}, err
+		return nil, nil, err
 	}
 	if gi.GetSystemError() != nil {
-		return insolar.Reference{}, gi.GetSystemError()
+		return nil, nil, gi.GetSystemError()
 	}
 
 	req := rpctypes.UpSaveAsChildReq{
@@ -357,10 +363,10 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef insolar.Reference, construc
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return insolar.Reference{}, errors.Wrap(err, "[ SaveAsChild ] on calling main API")
+		return nil, nil, errors.Wrap(err, "[ SaveAsChild ] on calling main API")
 	}
 
-	return *res.Reference, nil
+	return res.Reference, res.Result, nil
 }
 
 // DeactivateObject ...

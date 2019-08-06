@@ -60,7 +60,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/storage.SnapshotAccessor -o ../../testutils/network -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/storage.SnapshotAccessor -o ../../testutils/network -s _mock.go -g
 
 // SnapshotAccessor provides methods for accessing Snapshot.
 type SnapshotAccessor interface {
@@ -68,7 +68,7 @@ type SnapshotAccessor interface {
 	Latest(ctx context.Context) (node.Snapshot, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/storage.SnapshotAppender -o ../../testutils/network -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/storage.SnapshotAppender -o ../../testutils/network -s _mock.go -g
 
 // SnapshotAppender provides method for appending Snapshot to storage.
 type SnapshotAppender interface {
