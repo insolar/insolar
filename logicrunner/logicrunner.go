@@ -51,7 +51,8 @@ const maxQueueLength = 10
 
 type Ref = insolar.Reference
 
-type Dispatcher interface {
+//go:generate minimock -i github.com/insolar/insolar/logicrunner.FlowDispatcher -o ./ -s _mock.go -g
+type FlowDispatcher interface {
 	ChangePulse(ctx context.Context, pulse insolar.Pulse)
 	Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, error)
 }
@@ -76,8 +77,8 @@ type LogicRunner struct {
 	StateStorage               StateStorage
 	ResultsMatcher             ResultMatcher
 	OutgoingSender             OutgoingRequestSender
-	WriteController            *writecontroller.WriteController
-	FlowDispatcher             Dispatcher
+	WriteController            writecontroller.WriteController
+	FlowDispatcher             FlowDispatcher
 
 	Cfg *configuration.LogicRunner
 

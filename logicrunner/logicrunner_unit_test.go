@@ -476,3 +476,76 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 		})
 	}
 }
+
+type OnPulseCallOrderEnum int
+
+const (
+	OrderInitial OnPulseCallOrderEnum = iota
+	OrderWriteControllerClose
+	OrderResultsMatcherClear
+	OrderStateStorageOnPulse
+	OrderFlowDispatcherChangePulse
+	OrderWriteControllerOpen
+)
+
+func TestLogicRunner_OnPulse_Order(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	lr, err := NewLogicRunner(&configuration.LogicRunner{}, nil, nil)
+	require.NoError(t, err)
+
+	mc := minimock.NewController(t)
+	defer mc.Wait(time.Second)
+
+	orderChan := make(chan OnPulseCallOrderEnum, 6)
+
+	lr.WriteController = writecontroller.NewWriteControllerMock(mc).
+		CloseAndWaitMock.Set(
+		func(_ context.Context, _ insolar.PulseNumber) error {
+			orderChan <- OrderWriteControllerClose
+			return nil
+		}).
+		OpenMock.Set(
+		func(_ context.Context, _ insolar.PulseNumber) error {
+			orderChan <- OrderWriteControllerOpen
+			return nil
+		})
+	lr.ResultsMatcher = NewResultMatcherMock(mc).
+		ClearMock.Set(
+		func() {
+			orderChan <- OrderResultsMatcherClear
+		})
+	lr.StateStorage = NewStateStorageMock(mc).
+		OnPulseMock.Set(
+		func(_ context.Context, _ insolar.Pulse) []insolar.Message {
+			orderChan <- OrderStateStorageOnPulse
+			return []insolar.Message{}
+		}).
+		LockMock.Return().
+		UnlockMock.Return().
+		IsEmptyMock.Return(true)
+	lr.FlowDispatcher = NewFlowDispatcherMock(mc).
+		ChangePulseMock.Set(
+		func(_ context.Context, _ insolar.Pulse) {
+			orderChan <- OrderFlowDispatcherChangePulse
+			return
+		})
+
+	oldPulse := insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}
+	newPulse := insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 1}
+	require.NoError(t, lr.OnPulse(ctx, oldPulse, newPulse))
+	require.Len(t, orderChan, 5)
+
+	previousOrderElement := OrderInitial
+	for {
+		var orderElement OnPulseCallOrderEnum
+		select {
+		case orderElement = <-orderChan:
+			if orderElement <= previousOrderElement {
+				t.Fatalf("Wrong execution order of OnPulse")
+			}
+			previousOrderElement = orderElement
+		default:
+			return
+		}
+	}
+}
