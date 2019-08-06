@@ -24,7 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/stretchr/testify/require"
