@@ -252,7 +252,7 @@ func (m *Member) getBalanceCall(params map[string]interface{}) (interface{}, err
 		}
 	}
 
-	b, err := wallet.GetObject(walletRef).GetBalance()
+	b, err := wallet.GetObject(walletRef).GetBalance("XNS")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get balance: %s", err.Error())
 	}
@@ -287,6 +287,10 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 	if !ok {
 		return nil, fmt.Errorf("incorect input: failed to get 'amount' param")
 	}
+	//asset, ok := params["asset"].(string)
+	//if !ok {
+	//	return nil, fmt.Errorf("incorect input: failed to get 'amount' param")
+	//}
 
 	recipientReference, err := insolar.NewReferenceFromBase58(recipientReferenceStr)
 	if err != nil {
@@ -296,7 +300,7 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 		return nil, fmt.Errorf("recipient must be different from the sender")
 	}
 
-	return wallet.GetObject(m.Wallet).Transfer(m.RootDomain, amount, recipientReference)
+	return wallet.GetObject(m.Wallet).Transfer(m.RootDomain, "XNS", amount, recipientReference)
 }
 
 func (m *Member) depositTransferCall(params map[string]interface{}) (interface{}, error) {
@@ -432,7 +436,7 @@ func (m *Member) createMember(name string, key string, migrationAddress string) 
 		return nil, fmt.Errorf("key is not valid")
 	}
 
-	wHolder := wallet.New(big.NewInt(1000000000).String())
+	wHolder := wallet.New(m.RootDomain)
 	walletRef, err := wHolder.AsChild(m.RootDomain)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create wallet for  member: %s", err.Error())
