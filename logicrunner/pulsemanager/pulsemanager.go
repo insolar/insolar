@@ -100,6 +100,9 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		return err
 	}
 
+	m.FlowDispatcher.BeginPulse(ctx, newPulse)
+	m.InnerFlowDispatcher.BeginPulse(ctx, newPulse)
+
 	return nil
 }
 
