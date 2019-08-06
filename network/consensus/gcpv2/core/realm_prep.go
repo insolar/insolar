@@ -307,7 +307,7 @@ func (p *PrepRealm) ApplyPulseData(ctx context.Context, pp transport.PulsePacket
 	return errors.NewPulseRoundMismatchErrorDef(pn, epn, localID, from)
 }
 
-func (p *PrepRealm) _applyPulseData(ctx context.Context, pdp proofs.OriginalPulsarPacket, fromPulsar bool) (bool, pulse.Number) {
+func (p *PrepRealm) _applyPulseData(_ context.Context, pdp proofs.OriginalPulsarPacket, fromPulsar bool) (bool, pulse.Number) {
 
 	pd := pdp.GetPulseData()
 
