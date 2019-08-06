@@ -17,6 +17,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
@@ -278,10 +279,14 @@ func validateRequestHeaders(digest string, richSignature string, body []byte) (s
 	h := sha256.New()
 	_, err := h.Write(body)
 	if err != nil {
-		return "", errors.Wrap(err, "Cant get hash")
+		return "", errors.Wrap(err, "cant calculate hash")
 	}
-	sha := base64.StdEncoding.EncodeToString(h.Sum(nil))
-	if sha == digest[strings.IndexByte(digest, '=')+1:] {
+	calculatedHash := h.Sum(nil)
+	incomingHash, err := base64.StdEncoding.DecodeString(digest[strings.IndexByte(digest, '=')+1:])
+	if err != nil {
+		return "", errors.Wrap(err, "cant decode digest")
+	}
+	if bytes.Equal(calculatedHash, incomingHash) {
 		sig := richSignature[strings.Index(richSignature, "signature=")+10:]
 		if len(sig) == 0 {
 			return "", errors.New("empty signature")
