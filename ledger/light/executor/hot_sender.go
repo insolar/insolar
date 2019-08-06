@@ -113,7 +113,9 @@ func (m *HotSenderDefault) SendHot(
 
 	idxByJet, err := m.filterAndGroupIndexes(ctx, currentPulse, newPulse)
 	if err != nil {
-		return errors.Wrapf(err, "failed to get filament indexes for %v pulse", newPulse)
+		err = errors.Wrapf(err, "failed to get filament indexes for %v pulse", newPulse)
+		instracer.AddError(span, err)
+		return err
 	}
 
 	for _, id := range jets {
@@ -122,7 +124,9 @@ func (m *HotSenderDefault) SendHot(
 
 		block, err := m.findDrop(ctx, currentPulse, jetID)
 		if err != nil {
-			return errors.Wrapf(err, "get drop for pulse %v and jet %v failed", currentPulse, jetID.DebugString())
+			err = errors.Wrapf(err, "get drop for pulse %v and jet %v failed", currentPulse, jetID.DebugString())
+			instracer.AddError(span, err)
+			return err
 		}
 		logger.Infof("save drop for pulse %v", currentPulse)
 
