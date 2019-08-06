@@ -39,10 +39,9 @@ type FinalizationKeeperDefault struct {
 	pulseCalculator pulse.Calculator
 }
 
-func NewFinalizationKeeperDefault(jk JetKeeper, ns insolar.TerminationHandler, pc pulse.Calculator, limit int) *FinalizationKeeperDefault {
+func NewFinalizationKeeperDefault(jk JetKeeper, pc pulse.Calculator, limit int) *FinalizationKeeperDefault {
 	return &FinalizationKeeperDefault{
 		jetKeeper:       jk,
-		networkStopper:  ns,
 		limit:           limit,
 		pulseCalculator: pc,
 	}
@@ -65,8 +64,7 @@ func (f *FinalizationKeeperDefault) OnPulse(ctx context.Context, current insolar
 	}
 
 	if lastConfirmedPulse <= bottomLevel.PulseNumber {
-		f.networkStopper.Leave(ctx, 0)
-		return errors.New(fmt.Sprintf("last finalized pulse falls behind too much. Stop node. bottomLevel.PulseNumber: %d, last confirmed: %d", bottomLevel.PulseNumber, lastConfirmedPulse))
+		logger.Fatal(fmt.Sprintf("last finalized pulse falls behind too much. Stop node. bottomLevel.PulseNumber: %d, last confirmed: %d", bottomLevel.PulseNumber, lastConfirmedPulse))
 	}
 
 	logger.Debugf("FinalizationKeeper: everything is ok. Current pulse: %d, last confirmed: %d, limit: %d", current, lastConfirmedPulse, f.limit)

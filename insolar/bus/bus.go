@@ -400,7 +400,7 @@ func (b *Bus) wrapMeta(
 	if err == nil {
 		pn = latestPulse.PulseNumber
 	} else {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to fetch pulse"))
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "wrapMeta. failed to fetch pulse"))
 	}
 
 	meta := payload.Meta{
@@ -414,7 +414,7 @@ func (b *Bus) wrapMeta(
 
 	buf, err := meta.Marshal()
 	if err != nil {
-		return payload.Meta{}, nil, errors.Wrap(err, "failed to wrap message")
+		return payload.Meta{}, nil, errors.Wrap(err, "wrapMeta. failed to wrap message")
 	}
 	msg.Payload = buf
 
