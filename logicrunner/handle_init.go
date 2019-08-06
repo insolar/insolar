@@ -47,6 +47,7 @@ type Dependencies struct {
 	Sender         bus.Sender
 	JetStorage     jet.Storage
 	WriteAccessor  writecontroller.Accessor
+	OutgoingSender OutgoingRequestSender
 }
 
 type Init struct {

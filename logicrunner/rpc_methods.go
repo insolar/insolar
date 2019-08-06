@@ -348,7 +348,11 @@ func buildIncomingRequestFromOutgoing(outgoing *record.OutgoingRequest) *record.
 		Reason:       outgoing.Reason,
 	}
 
-	if outgoing.ReturnMode != record.ReturnSaga {
+	if outgoing.ReturnMode == record.ReturnSaga {
+		// We never wait for a result of saga call
+		incoming.ReturnMode = record.ReturnNoWait
+	} else {
+		// If this is not a saga call just copy the ReturnMode
 		incoming.ReturnMode = outgoing.ReturnMode
 	}
 
