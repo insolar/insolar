@@ -262,7 +262,6 @@ func (hn *hostNetwork) SendRequest(ctx context.Context, packetType types.PacketT
 // RegisterRequestHandler register a handler function to process incoming requests of a specific type.
 func (hn *hostNetwork) RegisterRequestHandler(t types.PacketType, handler network.RequestHandler) {
 	f := func(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
-		hn.Resolver.AddToKnownHosts(request.GetSenderHost())
 		return handler(ctx, request)
 	}
 	hn.RegisterPacketHandler(t, f)
