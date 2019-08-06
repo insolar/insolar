@@ -69,6 +69,7 @@ type LogicRunnerCommonTestSuite struct {
 	mle    *testutils.MachineLogicExecutorMock
 	nn     *network.NodeNetworkMock
 	sender *bus.SenderMock
+	cr     *testutils.ContractRequesterMock
 	pub    message2.Publisher
 }
 
@@ -87,6 +88,7 @@ func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) 
 	suite.ps = pulse.NewAccessorMock(suite.mc)
 	suite.nn = network.NewNodeNetworkMock(suite.mc)
 	suite.sender = bus.NewSenderMock(suite.mc)
+	suite.cr = testutils.NewContractRequesterMock(suite.mc)
 	suite.pub = &publisherMock{}
 
 	suite.SetupLogicRunner()
@@ -106,6 +108,7 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 	suite.lr.Sender = suite.sender
 	suite.lr.Publisher = suite.pub
 	suite.lr.RequestsExecutor = suite.re
+	suite.lr.ContractRequester = suite.cr
 
 	_ = suite.lr.Init(suite.ctx)
 }
@@ -163,8 +166,9 @@ func getReply(suite *LogicRunnerTestSuite, replyChan chan *message2.Message) (in
 
 func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 	outgoing := record.OutgoingRequest{
-		Caller: gen.Reference(),
-		Reason: gen.Reference(),
+		Caller:     gen.Reference(),
+		Reason:     gen.Reference(),
+		ReturnMode: record.ReturnSaga,
 	}
 	virtual := record.Wrap(&outgoing)
 	outgoingBytes, err := virtual.Marshal()
@@ -201,9 +205,7 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 	var usedReason insolar.Reference
 	var usedReturnMode record.ReturnMode
 
-	cr := testutils.NewContractRequesterMock(suite.T())
-
-	cr.CallMock.Set(func(ctx context.Context, msg insolar.Message) (insolar.Reply, error) {
+	suite.cr.CallMock.Set(func(ctx context.Context, msg insolar.Message) (insolar.Reply, error) {
 		suite.Require().Equal(insolar.TypeCallMethod, msg.Type())
 		cm := msg.(*message.CallMethod)
 		usedCaller = cm.Caller
@@ -216,20 +218,17 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 		callMethodChan <- struct{}{}
 		return result, nil
 	})
-	suite.lr.ContractRequester = cr
 
 	registerResultChan := make(chan struct{})
 	var usedRequestRef insolar.Reference
 	var usedResult []byte
 
-	am := artifacts.NewClientMock(suite.T())
-	am.RegisterResultMock.Set(func(ctx context.Context, reqRef insolar.Reference, reqResults artifacts.RequestResult) (r error) {
+	suite.am.RegisterResultMock.Set(func(ctx context.Context, reqRef insolar.Reference, reqResults artifacts.RequestResult) (r error) {
 		usedRequestRef = reqRef
 		usedResult = reqResults.Result()
 		registerResultChan <- struct{}{}
 		return nil
 	})
-	suite.lr.ArtifactManager = am
 
 	_, err = suite.lr.FlowDispatcher.Process(msg)
 	suite.Require().NoError(err)

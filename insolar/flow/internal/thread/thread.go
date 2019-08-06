@@ -28,6 +28,7 @@ import (
 type Thread struct {
 	controller *Controller
 	cancel     <-chan struct{}
+	canBegin   <-chan struct{}
 	procedures map[flow.Procedure]*result
 	message    *message.Message
 	migrated   bool
@@ -43,6 +44,7 @@ func NewThread(msg *message.Message, controller *Controller) *Thread {
 	return &Thread{
 		controller: controller,
 		cancel:     controller.Cancel(),
+		canBegin:   controller.CanBegin(),
 		procedures: map[flow.Procedure]*result{},
 		message:    msg,
 	}
@@ -84,15 +86,15 @@ func (f *Thread) Migrate(ctx context.Context, to flow.Handle) error {
 		return errors.New("migrate called on migrated flow")
 	}
 
-	<-f.cancel
+	<-f.canBegin
 	f.migrated = true
 	subFlow := NewThread(f.message, f.controller)
 	return to(ctx, subFlow)
 }
 
 func (f *Thread) Continue(context.Context) {
-	<-f.cancel
-	f.cancel = f.controller.Cancel()
+	<-f.canBegin
+	f.canBegin = f.controller.CanBegin()
 }
 
 func (f *Thread) Run(ctx context.Context, h flow.Handle) error {

@@ -121,7 +121,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		go m.LightReplicator.NotifyAboutPulse(ctx, newPulse.PulseNumber)
 	}
 
-	m.Dispatcher.ChangePulse(ctx, newPulse)
+	m.Dispatcher.BeginPulse(ctx, newPulse)
 	return nil
 }
 
@@ -187,6 +187,8 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	if err != nil {
 		panic(errors.Wrap(err, "failed to open pulse for writing"))
 	}
+
+	m.Dispatcher.ClosePulse(ctx, newPulse)
 
 	return jets, endedPulse.PulseNumber, justJoined, nil
 }
