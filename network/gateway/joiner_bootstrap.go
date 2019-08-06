@@ -148,7 +148,7 @@ func (g *JoinerBootstrap) authorize(ctx context.Context) (*packet.Permit, error)
 		return res.Permit, nil
 	}
 
-	if network.OriginIsDiscovery(cert) {
+	if network.OriginIsDiscovery(cert) && bestResult.Permit != nil {
 		return bestResult.Permit, nil
 	}
 
