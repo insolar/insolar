@@ -84,18 +84,18 @@ func (ar *Runner) checkSeed(paramsSeed string) (insolar.PulseNumber, error) {
 	return 0, errors.New("[ checkSeed ] Incorrect seed")
 }
 
-func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBody []byte, signature string, pulseTimeStamp int64, seedPulse insolar.PulseNumber) (interface{}, error) {
+func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBody []byte, signature string, pulseTimeStamp int64, seedPulse insolar.PulseNumber) (interface{}, *insolar.Reference, error) {
 	ctx, span := instracer.StartSpan(ctx, "SendRequest "+request.Method)
 	defer span.End()
 
 	reference, err := insolar.NewReferenceFromBase58(request.Params.Reference)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ makeCall ] failed to parse params.Reference")
+		return nil, nil, errors.Wrap(err, "[ makeCall ] failed to parse params.Reference")
 	}
 
 	requestArgs, err := insolar.MarshalArgs(rawBody, signature, pulseTimeStamp)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ makeCall ] failed to marshal arguments")
+		return nil, nil, errors.Wrap(err, "[ makeCall ] failed to marshal arguments")
 	}
 
 	res, err := ar.ContractRequester.SendRequestWithPulse(
@@ -107,20 +107,20 @@ func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBo
 	)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "[ makeCall ] Can't send request")
+		return nil, nil, errors.Wrap(err, "[ makeCall ] Can't send request")
 	}
 
-	result, contractErr, err := extractor.CallResponse(res.(*reply.CallMethod).Result)
+	result, contractErr, err := extractor.CallResponse(res.Reply.(*reply.CallMethod).Result)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "[ makeCall ] Can't extract response")
+		return nil, nil, errors.Wrap(err, "[ makeCall ] Can't extract response")
 	}
 
 	if contractErr != nil {
-		return nil, errors.Wrap(errors.New(contractErr.S), "[ makeCall ] Error in called method")
+		return nil, nil, errors.Wrap(errors.New(contractErr.S), "[ makeCall ] Error in called method")
 	}
 
-	return result, nil
+	return result, &res.RequestReference, nil
 }
 
 func processError(err error, extraMsg string, resp *requester.ContractAnswer, insLog insolar.Logger, traceID string) {
@@ -243,9 +243,10 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		setRootReferenceIfNeeded(contractRequest)
 
 		var result interface{}
+		var ref *insolar.Reference
 		ch := make(chan interface{}, 1)
 		go func() {
-			result, err = ar.makeCall(ctx, *contractRequest, rawBody, signature, 0, seedPulse)
+			result, ref, err = ar.makeCall(ctx, *contractRequest, rawBody, signature, 0, seedPulse)
 			ch <- nil
 		}()
 		select {
@@ -255,7 +256,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 				processError(err, err.Error(), contractAnswer, insLog, traceID)
 				return
 			}
-			contractResult := &requester.Result{ContractResult: result, TraceID: traceID}
+			contractResult := &requester.Result{ContractResult: result, RequestReference: ref, TraceID: traceID}
 			contractAnswer.Result = contractResult
 			return
 

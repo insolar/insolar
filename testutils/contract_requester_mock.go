@@ -163,7 +163,7 @@ func (e *ContractRequesterMockCallExpectation) Then(r1 mm_insolar.Reply, err err
 }
 
 // Call implements insolar.ContractRequester
-func (mmCall *ContractRequesterMock) Call(ctx context.Context, msg mm_insolar.Message) (r1 mm_insolar.Reply, err error) {
+func (mmCall *ContractRequesterMock) Call(ctx context.Context, msg mm_insolar.Message) (r1 *mm_insolar.ReplyWithReference, err error) {
 	mm_atomic.AddUint64(&mmCall.beforeCallCounter, 1)
 	defer mm_atomic.AddUint64(&mmCall.afterCallCounter, 1)
 
@@ -181,7 +181,7 @@ func (mmCall *ContractRequesterMock) Call(ctx context.Context, msg mm_insolar.Me
 	for _, e := range mmCall.CallMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.r1, e.results.err
+			return &mm_insolar.ReplyWithReference{Reply: e.results.r1}, e.results.err
 		}
 	}
 
@@ -197,10 +197,11 @@ func (mmCall *ContractRequesterMock) Call(ctx context.Context, msg mm_insolar.Me
 		if results == nil {
 			mmCall.t.Fatal("No results are set for the ContractRequesterMock.Call")
 		}
-		return (*results).r1, (*results).err
+		return &mm_insolar.ReplyWithReference{Reply: (*results).r1}, (*results).err
 	}
 	if mmCall.funcCall != nil {
-		return mmCall.funcCall(ctx, msg)
+		r, err := mmCall.funcCall(ctx, msg)
+		return &mm_insolar.ReplyWithReference{Reply: r}, err
 	}
 	mmCall.t.Fatalf("Unexpected call to ContractRequesterMock.Call. %v %v", ctx, msg)
 	return
@@ -602,7 +603,7 @@ func (e *ContractRequesterMockSendRequestWithPulseExpectation) Then(r1 mm_insola
 }
 
 // SendRequestWithPulse implements insolar.ContractRequester
-func (mmSendRequestWithPulse *ContractRequesterMock) SendRequestWithPulse(ctx context.Context, ref *mm_insolar.Reference, method string, argsIn []interface{}, pulse mm_insolar.PulseNumber) (r1 mm_insolar.Reply, err error) {
+func (mmSendRequestWithPulse *ContractRequesterMock) SendRequestWithPulse(ctx context.Context, ref *mm_insolar.Reference, method string, argsIn []interface{}, pulse mm_insolar.PulseNumber) (r1 *mm_insolar.ReplyWithReference, err error) {
 	mm_atomic.AddUint64(&mmSendRequestWithPulse.beforeSendRequestWithPulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmSendRequestWithPulse.afterSendRequestWithPulseCounter, 1)
 
@@ -620,7 +621,7 @@ func (mmSendRequestWithPulse *ContractRequesterMock) SendRequestWithPulse(ctx co
 	for _, e := range mmSendRequestWithPulse.SendRequestWithPulseMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.r1, e.results.err
+			return &mm_insolar.ReplyWithReference{Reply: e.results.r1}, e.results.err
 		}
 	}
 
@@ -636,10 +637,11 @@ func (mmSendRequestWithPulse *ContractRequesterMock) SendRequestWithPulse(ctx co
 		if results == nil {
 			mmSendRequestWithPulse.t.Fatal("No results are set for the ContractRequesterMock.SendRequestWithPulse")
 		}
-		return (*results).r1, (*results).err
+		return &mm_insolar.ReplyWithReference{Reply: (*results).r1}, (*results).err
 	}
 	if mmSendRequestWithPulse.funcSendRequestWithPulse != nil {
-		return mmSendRequestWithPulse.funcSendRequestWithPulse(ctx, ref, method, argsIn, pulse)
+		r, err := mmSendRequestWithPulse.funcSendRequestWithPulse(ctx, ref, method, argsIn, pulse)
+		return &mm_insolar.ReplyWithReference{Reply: r}, err
 	}
 	mmSendRequestWithPulse.t.Fatalf("Unexpected call to ContractRequesterMock.SendRequestWithPulse. %v %v %v %v %v", ctx, ref, method, argsIn, pulse)
 	return

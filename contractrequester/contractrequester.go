@@ -86,10 +86,12 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Refer
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Couldn't fetch current pulse")
 	}
-	return cr.SendRequestWithPulse(ctx, ref, method, argsIn, pulse.PulseNumber)
+
+	r, err := cr.SendRequestWithPulse(ctx, ref, method, argsIn, pulse.PulseNumber)
+	return r.Reply, err
 }
 
-func (cr *ContractRequester) SendRequestWithPulse(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{}, pulse insolar.PulseNumber) (insolar.Reply, error) {
+func (cr *ContractRequester) SendRequestWithPulse(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{}, pulse insolar.PulseNumber) (*insolar.ReplyWithReference, error) {
 	ctx, span := instracer.StartSpan(ctx, "SendRequest "+method)
 	defer span.End()
 
@@ -142,7 +144,7 @@ func (cr *ContractRequester) checkCall(_ context.Context, msg *message.CallMetho
 	return nil
 }
 
-func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (insolar.Reply, error) {
+func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (*insolar.ReplyWithReference, error) {
 	ctx, span := instracer.StartSpan(ctx, "ContractRequester.Call")
 	defer span.End()
 
@@ -192,7 +194,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 	}
 
 	if async {
-		return res, nil
+		return &insolar.ReplyWithReference{Reply: res, RequestReference: r.Request}, nil
 	}
 
 	if !bytes.Equal(r.Request.Record().Hash(), reqHash[:]) {
@@ -213,7 +215,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 		if ret.Error != "" {
 			return nil, errors.Wrap(errors.New(ret.Error), "CallMethod returns error")
 		}
-		return ret.Reply, nil
+		return &insolar.ReplyWithReference{Reply: ret.Reply, RequestReference: r.Request}, nil
 	case <-ctx.Done():
 		cr.ResultMutex.Lock()
 		delete(cr.ResultMap, reqHash)

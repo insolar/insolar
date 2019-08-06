@@ -150,3 +150,10 @@ func TestIncorrectParams(t *testing.T) {
 	_, err := signedRequest(firstMember, "member.transfer", firstMember.ref)
 	require.Contains(t, err.Error(), "failed to cast request.Params.CallParams: expected map[string]interface{}, got string")
 }
+
+func TestRequestReference(t *testing.T) {
+	firstMember := createMember(t)
+
+	_, err := signedRequest(firstMember, "member.transfer", firstMember.ref)
+	require.Contains(t, err.Error(), "failed to cast request.Params.CallParams: expected map[string]interface{}, got string")
+}

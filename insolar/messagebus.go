@@ -124,6 +124,12 @@ type Reply interface {
 	Type() ReplyType
 }
 
+// ReplyWithReference include reply and request reference
+type ReplyWithReference struct {
+	Reply            Reply
+	RequestReference Reference
+}
+
 // RedirectReply is used to create redirected messages.
 type RedirectReply interface {
 	// Redirected creates redirected message from redirect data.

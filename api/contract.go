@@ -217,7 +217,7 @@ func (s *ContractService) call(ctx context.Context, msg insolar.Message, re *Cal
 		return errors.Wrap(err, "CallMethod failed with error")
 	}
 
-	typedReply := callReply.(*reply.CallMethod)
+	typedReply := callReply.Reply.(*reply.CallMethod)
 	if typedReply.Object != nil {
 		re.Object = typedReply.Object.String()
 	}

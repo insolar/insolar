@@ -224,7 +224,7 @@ func (m *executionProxyImplementation) SaveAsChild(
 		return err
 	}
 
-	callReply := res.(*reply.CallMethod)
+	callReply := res.Reply.(*reply.CallMethod)
 	current.AddOutgoingRequest(ctx, *incoming, callReply.Result, callReply.Object, err)
 
 	rep.Reference = callReply.Object

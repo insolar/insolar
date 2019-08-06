@@ -142,7 +142,7 @@ func (a *outgoingSenderActorState) sendOutgoingRequest(ctx context.Context, outg
 	callMsg := &message.CallMethod{IncomingRequest: *incoming}
 	res, err := a.cr.Call(ctx, callMsg)
 	if err == nil && (outgoing.ReturnMode == record.ReturnResult) {
-		result = res.(*reply.CallMethod).Result
+		result = res.Reply.(*reply.CallMethod).Result
 	}
 
 	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
