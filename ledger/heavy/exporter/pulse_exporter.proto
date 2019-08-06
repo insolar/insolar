@@ -20,6 +20,8 @@ message Pulse {
     uint32 Polymorph = 16;
 
     bytes PulseNumber = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    bytes Entropy = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Entropy", (gogoproto.nullable) = false];
+    int64 PulseTimestamp = 22;
 }
 
 

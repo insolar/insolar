@@ -44,7 +44,9 @@ func (p *PulseServer) Export(getPulses *GetPulses, stream PulseExporter_ExportSe
 	if getPulses.PulseNumber == 0 {
 		getPulses.PulseNumber = insolar.FirstPulseNumber
 		err := stream.Send(&Pulse{
-			PulseNumber: insolar.FirstPulseNumber,
+			PulseNumber:    insolar.FirstPulseNumber,
+			Entropy:        insolar.GenesisPulse.Entropy,
+			PulseTimestamp: insolar.GenesisPulse.PulseTimestamp,
 		})
 		if err != nil {
 			return err
@@ -63,7 +65,9 @@ func (p *PulseServer) Export(getPulses *GetPulses, stream PulseExporter_ExportSe
 			return err
 		}
 		err = stream.Send(&Pulse{
-			PulseNumber: pulse.PulseNumber,
+			PulseNumber:    pulse.PulseNumber,
+			Entropy:        pulse.Entropy,
+			PulseTimestamp: pulse.PulseTimestamp,
 		})
 		if err != nil {
 			return err
