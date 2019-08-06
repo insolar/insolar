@@ -114,10 +114,10 @@ func (g *JoinerBootstrap) authorize(ctx context.Context) (*packet.Permit, error)
 		panic("Failed to get bootstrap entropy")
 	}
 
-	sort.SliceStable(discoveryNodes, func(i, j int) bool {
+	sort.Slice(discoveryNodes, func(i, j int) bool {
 		return bytes.Compare(
-			sortEntry(discoveryNodes[i].GetNodeRef(), entropy),
-			sortEntry(discoveryNodes[j].GetNodeRef(), entropy)) < 0
+			xor(*discoveryNodes[i].GetNodeRef(), entropy),
+			xor(*discoveryNodes[j].GetNodeRef(), entropy)) < 0
 	})
 
 	bestResult := &packet.AuthorizeResponse{}
@@ -155,11 +155,9 @@ func (g *JoinerBootstrap) authorize(ctx context.Context) (*packet.Permit, error)
 	return nil, errors.New("failed to authorize to any discovery node")
 }
 
-func sortEntry(ref *insolar.Reference, entropy []byte) []byte {
-	data := make([]byte, insolar.RecordRefSize)
-	copy(data, ref[:])
-	for i, d := range data {
-		data[i] = entropy[i%insolar.EntropySize] ^ d
+func xor(ref insolar.Reference, entropy []byte) []byte {
+	for i, d := range ref {
+		ref[i] = entropy[i] ^ d
 	}
-	return data
+	return ref[:]
 }
