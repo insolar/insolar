@@ -22,6 +22,8 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/insolar/go-actors/actor/system"
+
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -68,6 +70,7 @@ type LogicRunner struct {
 	SenderWithRetry            *bus.WaitOKSender
 	StateStorage               StateStorage
 	ResultsMatcher             ResultMatcher
+	OutgoingSender             OutgoingRequestSender
 	WriteController            *writecontroller.WriteController
 
 	Cfg *configuration.LogicRunner
@@ -103,6 +106,9 @@ func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publi
 func (lr *LogicRunner) LRI() {}
 
 func (lr *LogicRunner) Init(ctx context.Context) error {
+	as := system.New()
+	lr.OutgoingSender = NewOutgoingRequestSender(as, lr.ContractRequester, lr.ArtifactManager)
+
 	lr.StateStorage = NewStateStorage(
 		lr.Publisher,
 		lr.RequestsExecutor,
@@ -110,9 +116,11 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 		lr.JetCoordinator,
 		lr.PulseAccessor,
 		lr.ArtifactManager,
+		lr.OutgoingSender,
 	)
+
 	lr.rpc = lrCommon.NewRPC(
-		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage),
+		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage, lr.OutgoingSender),
 		lr.Cfg,
 	)
 
@@ -175,7 +183,7 @@ func (lr *LogicRunner) initHandlers() {
 func (lr *LogicRunner) initializeBuiltin(_ context.Context) error {
 	bi := builtin.NewBuiltIn(
 		lr.ArtifactManager,
-		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage),
+		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage, lr.OutgoingSender),
 	)
 	if err := lr.MachinesManager.RegisterExecutor(insolar.MachineTypeBuiltin, bi); err != nil {
 		return err

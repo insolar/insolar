@@ -60,7 +60,7 @@ func (h *HandleSagaCallAcceptNotification) Present(ctx context.Context, f flow.F
 	// Make a call to the second VE.
 	callMsg := &message.CallMethod{IncomingRequest: incoming}
 	cr := h.dep.lr.ContractRequester
-	res, err := cr.CallMethod(ctx, callMsg)
+	res, err := cr.Call(ctx, callMsg)
 	if err != nil {
 		return err
 	}

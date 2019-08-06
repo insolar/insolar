@@ -40,7 +40,6 @@ type Transcript struct {
 	LogicContext     *insolar.LogicCallContext
 	Request          *record.IncomingRequest
 	RequestRef       insolar.Reference
-	RequesterNode    *insolar.Reference
 	Nonce            uint64
 	Deactivate       bool
 	OutgoingRequests []OutgoingRequest
