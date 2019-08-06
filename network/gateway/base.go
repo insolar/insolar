@@ -112,6 +112,8 @@ func (g *Base) NewGateway(ctx context.Context, state insolar.NetworkState) netwo
 		g.Self = newJoinerBootstrap(g)
 	case insolar.WaitConsensus:
 		g.Self = newWaitConsensus(g)
+	case insolar.WaitMajority:
+		g.Self = newWaitMajority(g)
 	case insolar.WaitMinRoles:
 		g.Self = newWaitMinRoles(g)
 	default:
@@ -180,9 +182,9 @@ func (g *Base) ValidateCert(ctx context.Context, certificate insolar.Authorizati
 // ============= Bootstrap =======
 
 func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
-	//if g.Gatewayer.Gateway().GetState() < insolar.WaitMinRoles {
-	if g.NodeKeeper.GetOrigin().Role() != insolar.StaticRoleHeavyMaterial {
-		return nil, errors.Errorf("can't handle bootstrap in state: %s", g.Gatewayer.Gateway().GetState().String())
+	state := g.Gatewayer.Gateway().GetState()
+	if g.NodeKeeper.GetOrigin().Role() != insolar.StaticRoleHeavyMaterial && state <= insolar.WaitConsensus {
+		return nil, errors.Errorf("can't handle bootstrap in state: %s", state.String())
 	}
 
 	if request.GetRequest() == nil || request.GetRequest().GetBootstrap() == nil {
@@ -342,5 +344,8 @@ func (g *Base) createCandidateProfile() {
 }
 
 func (g *Base) EphemeralMode(nodes []insolar.NetworkNode) bool {
-	return !rules.CheckMinRole(g.CertificateManager.GetCertificate(), nodes)
+	majority, _ := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), nodes)
+	minRole := rules.CheckMinRole(g.CertificateManager.GetCertificate(), nodes)
+
+	return !majority || !minRole
 }

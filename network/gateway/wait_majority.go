@@ -52,34 +52,30 @@ package gateway
 
 import (
 	"context"
-	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/rules"
 )
 
-func newWaitConsensus(b *Base) *WaitConsensus {
-	return &WaitConsensus{b, make(chan struct{})}
+func newWaitMajority(b *Base) *WaitMajority {
+	return &WaitMajority{b}
 }
 
-type WaitConsensus struct {
+type WaitMajority struct {
 	*Base
-	consensusFinished chan struct{}
 }
 
-func (g *WaitConsensus) Run(ctx context.Context) {
-	select {
-	case <-time.After(g.bootstrapETA):
-		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState)
-	case <-g.consensusFinished:
-		g.Gatewayer.SwitchState(ctx, insolar.WaitMajority)
+func (g *WaitMajority) Run(ctx context.Context) {
+	if ok, _ := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), g.NodeKeeper.GetAccessor().GetWorkingNodes()); ok {
+		g.Gatewayer.SwitchState(ctx, insolar.WaitMinRoles)
 	}
 }
 
-func (g *WaitConsensus) GetState() insolar.NetworkState {
-	return insolar.WaitConsensus
+func (g *WaitMajority) GetState() insolar.NetworkState {
+	return insolar.WaitMajority
 }
 
-func (g *WaitConsensus) OnConsensusFinished(ctx context.Context, report network.Report) {
-	close(g.consensusFinished)
+func (g *WaitMajority) OnConsensusFinished(ctx context.Context, report network.Report) {
+	g.Run(ctx)
 }
