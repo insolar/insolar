@@ -44,7 +44,6 @@ import (
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/artifactmanager"
 	"github.com/insolar/insolar/ledger/light/executor"
-	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/light/pulsemanager"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/log"
@@ -217,8 +216,8 @@ func NewServer(
 		drops := drop.NewStorageMemory()
 		records := object.NewRecordMemory()
 		indexes := object.NewIndexStorageMemory()
-		writeController := hot.NewWriteController()
-		waiter := hot.NewChannelWaiter()
+		writeController := executor.NewWriteController()
+		waiter := executor.NewChannelWaiter()
 
 		handler := artifactmanager.NewMessageHandler(&conf)
 		handler.PulseCalculator = Pulses

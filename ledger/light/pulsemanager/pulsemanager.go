@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/light/artifactmanager"
 	"github.com/insolar/insolar/ledger/light/executor"
-	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 )
@@ -44,7 +43,7 @@ type PulseManager struct {
 	GIL            insolar.GlobalInsolarLock `inject:""`
 	MessageHandler *artifactmanager.MessageHandler
 
-	JetReleaser hot.JetReleaser `inject:""`
+	JetReleaser executor.JetReleaser `inject:""`
 
 	JetModifier jet.Modifier `inject:""`
 	JetSplitter executor.JetSplitter
@@ -59,7 +58,7 @@ type PulseManager struct {
 	LightReplicator executor.LightReplicator
 	HotSender       executor.HotSender
 
-	WriteManager hot.WriteManager
+	WriteManager executor.WriteManager
 	StateIniter  executor.StateIniter
 
 	// setLock locks Set method call.
@@ -70,7 +69,7 @@ type PulseManager struct {
 func NewPulseManager(
 	jetSplitter executor.JetSplitter,
 	lightToHeavySyncer executor.LightReplicator,
-	writeManager hot.WriteManager,
+	writeManager executor.WriteManager,
 	hotSender executor.HotSender,
 	stateIniter executor.StateIniter,
 ) *PulseManager {

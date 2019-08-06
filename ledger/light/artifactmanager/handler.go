@@ -31,7 +31,6 @@ import (
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/handle"
-	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/network/storage"
@@ -42,13 +41,13 @@ type MessageHandler struct {
 	PCS            insolar.PlatformCryptographyScheme `inject:""`
 	JetCoordinator jet.Coordinator                    `inject:""`
 	JetStorage     jet.Storage                        `inject:""`
-	JetReleaser    hot.JetReleaser                    `inject:""`
+	JetReleaser    executor.JetReleaser               `inject:""`
 	DropModifier   drop.Modifier                      `inject:""`
 	IndexLocker    object.IndexLocker                 `inject:""`
 	Records        object.AtomicRecordStorage         `inject:""`
-	HotDataWaiter  hot.JetWaiter                      `inject:""`
+	HotDataWaiter  executor.JetWaiter                 `inject:""`
 
-	WriteAccessor      hot.WriteAccessor
+	WriteAccessor      executor.WriteAccessor
 	IndexStorage       object.MemoryIndexStorage
 	PulseCalculator    storage.PulseCalculator
 	JetTreeUpdater     executor.JetFetcher
