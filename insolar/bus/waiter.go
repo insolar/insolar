@@ -19,6 +19,7 @@ package bus
 import (
 	"bytes"
 	"context"
+	"github.com/insolar/insolar/insolar/pulse"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
@@ -34,8 +35,8 @@ type WaitOKSender struct {
 }
 
 // NewWaitOKWithRetrySender creates WaitOKSender instance with RetrySender as Sender.
-func NewWaitOKWithRetrySender(sender Sender, tries uint) *WaitOKSender {
-	r := NewRetrySender(sender, tries)
+func NewWaitOKWithRetrySender(sender Sender, pulseAccessor pulse.Accessor, tries uint) *WaitOKSender {
+	r := NewRetrySender(sender, pulseAccessor, tries)
 	c := NewWaitOKSender(r)
 	return c
 }
