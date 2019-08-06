@@ -36,5 +36,5 @@ type ProxyHelper interface {
 	MakeErrorSerializable(error) error
 }
 
-// CurrentProxyCtx - hackish way to give proxies access to the current environment
+// Current - hackish way to give proxies access to the current environment
 var CurrentProxyCtx ProxyHelper
