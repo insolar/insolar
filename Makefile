@@ -232,6 +232,10 @@ generate-protobuf: ## generate protobuf structs
     		-I$(GOPATH)/src \
     		--gogoslick_out=plugins=grpc:./  \
     		ledger/heavy/exporter/record_exporter.proto
+		protoc -I/usr/local/include -I./ \
+    		-I$(GOPATH)/src \
+    		--gogoslick_out=plugins=grpc:./  \
+    		ledger/heavy/exporter/pulse_exporter.proto
 
 
 .PHONY: regen-builtin

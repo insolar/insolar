@@ -83,8 +83,6 @@ type Sender interface {
 	SendTarget(ctx context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func())
 	// Reply sends message in response to another message.
 	Reply(ctx context.Context, origin payload.Meta, reply *message.Message)
-	// Getter for latest pulse
-	LatestPulse(ctx context.Context) (insolar.Pulse, error)
 }
 
 type lockedReply struct {
@@ -419,8 +417,4 @@ func (b *Bus) wrapMeta(
 	msg.Payload = buf
 
 	return meta, msg, nil
-}
-
-func (b *Bus) LatestPulse(ctx context.Context) (insolar.Pulse, error) {
-	return b.pulses.Latest(ctx)
 }

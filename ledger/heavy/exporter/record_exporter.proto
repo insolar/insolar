@@ -25,3 +25,5 @@ message Record {
     uint32 RecordNumber = 20;
     record.Material Record = 21 [(gogoproto.nullable) = false];
 }
+
+
