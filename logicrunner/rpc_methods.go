@@ -26,20 +26,24 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
+	"github.com/insolar/insolar/logicrunner/outgoingsender"
+	"github.com/insolar/insolar/logicrunner/statestorage"
+	"github.com/insolar/insolar/logicrunner/transcript"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.ProxyImplementation -o ./ -s _mock.go -g
 
 type ProxyImplementation interface {
-	GetCode(context.Context, *Transcript, rpctypes.UpGetCodeReq, *rpctypes.UpGetCodeResp) error
-	RouteCall(context.Context, *Transcript, rpctypes.UpRouteReq, *rpctypes.UpRouteResp) error
-	SaveAsChild(context.Context, *Transcript, rpctypes.UpSaveAsChildReq, *rpctypes.UpSaveAsChildResp) error
-	DeactivateObject(context.Context, *Transcript, rpctypes.UpDeactivateObjectReq, *rpctypes.UpDeactivateObjectResp) error
+	GetCode(context.Context, *transcript.Transcript, rpctypes.UpGetCodeReq, *rpctypes.UpGetCodeResp) error
+	RouteCall(context.Context, *transcript.Transcript, rpctypes.UpRouteReq, *rpctypes.UpRouteResp) error
+	SaveAsChild(context.Context, *transcript.Transcript, rpctypes.UpSaveAsChildReq, *rpctypes.UpSaveAsChildResp) error
+	DeactivateObject(context.Context, *transcript.Transcript, rpctypes.UpDeactivateObjectReq, *rpctypes.UpDeactivateObjectResp) error
 }
 
 type RPCMethods struct {
-	ss         StateStorage
+	ss         statestorage.StateStorage
 	execution  ProxyImplementation
 	validation ProxyImplementation
 }
@@ -48,8 +52,8 @@ func NewRPCMethods(
 	am artifacts.Client,
 	dc artifacts.DescriptorsCache,
 	cr insolar.ContractRequester,
-	ss StateStorage,
-	outgoingSender OutgoingRequestSender,
+	ss statestorage.StateStorage,
+	outgoingSender outgoingsender.OutgoingRequestSender,
 ) *RPCMethods {
 	return &RPCMethods{
 		ss:         ss,
@@ -61,7 +65,7 @@ func NewRPCMethods(
 func (m *RPCMethods) getCurrent(
 	obj insolar.Reference, mode insolar.CallMode, reqRef insolar.Reference,
 ) (
-	ProxyImplementation, *Transcript, error,
+	ProxyImplementation, *transcript.Transcript, error,
 ) {
 	switch mode {
 	case insolar.ExecuteCallMode:
@@ -125,14 +129,14 @@ type executionProxyImplementation struct {
 	dc             artifacts.DescriptorsCache
 	cr             insolar.ContractRequester
 	am             artifacts.Client
-	outgoingSender OutgoingRequestSender
+	outgoingSender outgoingsender.OutgoingRequestSender
 }
 
 func NewExecutionProxyImplementation(
 	dc artifacts.DescriptorsCache,
 	cr insolar.ContractRequester,
 	am artifacts.Client,
-	outgoingSender OutgoingRequestSender,
+	outgoingSender outgoingsender.OutgoingRequestSender,
 ) ProxyImplementation {
 	return &executionProxyImplementation{
 		dc:             dc,
@@ -143,7 +147,7 @@ func NewExecutionProxyImplementation(
 }
 
 func (m *executionProxyImplementation) GetCode(
-	ctx context.Context, current *Transcript, req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp,
+	ctx context.Context, current *transcript.Transcript, req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp,
 ) error {
 	ctx, span := instracer.StartSpan(ctx, "service.GetCode")
 	defer span.End()
@@ -160,11 +164,11 @@ func (m *executionProxyImplementation) GetCode(
 }
 
 func (m *executionProxyImplementation) RouteCall(
-	ctx context.Context, current *Transcript, req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp,
+	ctx context.Context, current *transcript.Transcript, req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp,
 ) error {
 	inslogger.FromContext(ctx).Debug("RPC.RouteCall")
 
-	outgoing := buildOutgoingRequest(ctx, current, req)
+	outgoing := common.BuildOutgoingRequest(ctx, current, req)
 
 	// Step 1. Register outgoing request.
 
@@ -197,13 +201,13 @@ func (m *executionProxyImplementation) RouteCall(
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
 func (m *executionProxyImplementation) SaveAsChild(
-	ctx context.Context, current *Transcript, req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp,
+	ctx context.Context, current *transcript.Transcript, req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp,
 ) error {
 	inslogger.FromContext(ctx).Debug("RPC.SaveAsChild")
 	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsChild")
 	defer span.End()
 
-	outgoing := buildOutgoingSaveAsChildRequest(ctx, current, req)
+	outgoing := common.BuildOutgoingSaveAsChildRequest(ctx, current, req)
 
 	// Register outgoing request
 	outReqInfo, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
@@ -221,7 +225,7 @@ func (m *executionProxyImplementation) SaveAsChild(
 }
 
 func (m *executionProxyImplementation) DeactivateObject(
-	ctx context.Context, current *Transcript, req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp,
+	ctx context.Context, current *transcript.Transcript, req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp,
 ) error {
 
 	current.Deactivate = true
@@ -242,7 +246,7 @@ func NewValidationProxyImplementation(
 }
 
 func (m *validationProxyImplementation) GetCode(
-	ctx context.Context, current *Transcript, req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp,
+	ctx context.Context, current *transcript.Transcript, req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp,
 ) error {
 	codeDescriptor, err := m.dc.GetCode(ctx, req.Code)
 	if err != nil {
@@ -257,14 +261,14 @@ func (m *validationProxyImplementation) GetCode(
 }
 
 func (m *validationProxyImplementation) RouteCall(
-	ctx context.Context, current *Transcript, req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp,
+	ctx context.Context, current *transcript.Transcript, req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp,
 ) error {
 	if current.Request.Immutable {
 		return errors.New("immutable method can't make calls")
 	}
 
-	outgoing := buildOutgoingRequest(ctx, current, req)
-	incoming := buildIncomingRequestFromOutgoing(outgoing)
+	outgoing := common.BuildOutgoingRequest(ctx, current, req)
+	incoming := common.BuildIncomingRequestFromOutgoing(outgoing)
 
 	reqRes := current.HasOutgoingRequest(ctx, *incoming)
 	if reqRes == nil {
@@ -282,10 +286,10 @@ func (m *validationProxyImplementation) RouteCall(
 }
 
 func (m *validationProxyImplementation) SaveAsChild(
-	ctx context.Context, current *Transcript, req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp,
+	ctx context.Context, current *transcript.Transcript, req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp,
 ) error {
-	outgoing := buildOutgoingSaveAsChildRequest(ctx, current, req)
-	incoming := buildIncomingRequestFromOutgoing(outgoing)
+	outgoing := common.BuildOutgoingSaveAsChildRequest(ctx, current, req)
+	incoming := common.BuildIncomingRequestFromOutgoing(outgoing)
 
 	reqRes := current.HasOutgoingRequest(ctx, *incoming)
 	if reqRes == nil {
@@ -301,104 +305,10 @@ func (m *validationProxyImplementation) SaveAsChild(
 }
 
 func (m *validationProxyImplementation) DeactivateObject(
-	ctx context.Context, current *Transcript, req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp,
+	ctx context.Context, current *transcript.Transcript, req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp,
 ) error {
 
 	current.Deactivate = true
 
 	return nil
-}
-
-func buildIncomingRequestFromOutgoing(outgoing *record.OutgoingRequest) *record.IncomingRequest {
-	// Currently IncomingRequest and OutgoingRequest are almost exact copies of each other
-	// thus the following code is a bit ugly. However this will change when we'll
-	// figure out which fields are actually needed in OutgoingRequest and which are
-	// not. Thus please keep the code the way it is for now, dont't introduce any
-	// CommonRequestData structures or something like this.
-	// This being said the implementation of Request interface differs for Incoming and
-	// OutgoingRequest. See corresponding implementation of the interface methods.
-	incoming := record.IncomingRequest{
-		Caller:          outgoing.Caller,
-		CallerPrototype: outgoing.CallerPrototype,
-		Nonce:           outgoing.Nonce,
-
-		Immutable: outgoing.Immutable,
-
-		CallType:  outgoing.CallType, // used only for CTSaveAsChild
-		Base:      outgoing.Base,     // used only for CTSaveAsChild
-		Object:    outgoing.Object,
-		Prototype: outgoing.Prototype,
-		Method:    outgoing.Method,
-		Arguments: outgoing.Arguments,
-
-		APIRequestID: outgoing.APIRequestID,
-		Reason:       outgoing.Reason,
-	}
-
-	if outgoing.ReturnMode == record.ReturnSaga {
-		// We never wait for a result of saga call
-		incoming.ReturnMode = record.ReturnNoWait
-	} else {
-		// If this is not a saga call just copy the ReturnMode
-		incoming.ReturnMode = outgoing.ReturnMode
-	}
-
-	return &incoming
-}
-
-func buildOutgoingRequest(
-	_ context.Context, current *Transcript, req rpctypes.UpRouteReq,
-) *record.OutgoingRequest {
-
-	current.Nonce++
-
-	outgoing := &record.OutgoingRequest{
-		Caller:          req.Callee,
-		CallerPrototype: req.CalleePrototype,
-		Nonce:           current.Nonce,
-
-		Immutable: req.Immutable,
-
-		Object:    &req.Object,
-		Prototype: &req.Prototype,
-		Method:    req.Method,
-		Arguments: req.Arguments,
-
-		APIRequestID: current.Request.APIRequestID,
-		Reason:       current.RequestRef,
-	}
-
-	if req.Saga {
-		// OutgoingRequest with ReturnMode = ReturnSaga will be called by LME
-		// when current object finishes the execution and validation.
-		outgoing.ReturnMode = record.ReturnSaga
-	} else if !req.Wait {
-		outgoing.ReturnMode = record.ReturnNoWait
-	}
-
-	return outgoing
-}
-
-func buildOutgoingSaveAsChildRequest(
-	_ context.Context, current *Transcript, req rpctypes.UpSaveAsChildReq,
-) *record.OutgoingRequest {
-
-	current.Nonce++
-
-	outgoing := record.OutgoingRequest{
-		Caller:          req.Callee,
-		CallerPrototype: req.CalleePrototype,
-		Nonce:           current.Nonce,
-
-		CallType:  record.CTSaveAsChild,
-		Base:      &req.Parent,
-		Prototype: &req.Prototype,
-		Method:    req.ConstructorName,
-		Arguments: req.ArgsSerialized,
-
-		APIRequestID: current.Request.APIRequestID,
-		Reason:       current.RequestRef,
-	}
-
-	return &outgoing
 }
