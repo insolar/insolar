@@ -16,7 +16,7 @@ import (
 type JetCalculatorMock struct {
 	t minimock.Tester
 
-	funcMineForPulse          func(ctx context.Context, pn insolar.PulseNumber) (ja1 []insolar.JetID)
+	funcMineForPulse          func(ctx context.Context, pn insolar.PulseNumber) (ja1 []insolar.JetID, err error)
 	inspectFuncMineForPulse   func(ctx context.Context, pn insolar.PulseNumber)
 	afterMineForPulseCounter  uint64
 	beforeMineForPulseCounter uint64
@@ -62,6 +62,7 @@ type JetCalculatorMockMineForPulseParams struct {
 // JetCalculatorMockMineForPulseResults contains results of the JetCalculator.MineForPulse
 type JetCalculatorMockMineForPulseResults struct {
 	ja1 []insolar.JetID
+	err error
 }
 
 // Expect sets up expected params for JetCalculator.MineForPulse
@@ -96,7 +97,7 @@ func (mmMineForPulse *mJetCalculatorMockMineForPulse) Inspect(f func(ctx context
 }
 
 // Return sets up results that will be returned by JetCalculator.MineForPulse
-func (mmMineForPulse *mJetCalculatorMockMineForPulse) Return(ja1 []insolar.JetID) *JetCalculatorMock {
+func (mmMineForPulse *mJetCalculatorMockMineForPulse) Return(ja1 []insolar.JetID, err error) *JetCalculatorMock {
 	if mmMineForPulse.mock.funcMineForPulse != nil {
 		mmMineForPulse.mock.t.Fatalf("JetCalculatorMock.MineForPulse mock is already set by Set")
 	}
@@ -104,12 +105,12 @@ func (mmMineForPulse *mJetCalculatorMockMineForPulse) Return(ja1 []insolar.JetID
 	if mmMineForPulse.defaultExpectation == nil {
 		mmMineForPulse.defaultExpectation = &JetCalculatorMockMineForPulseExpectation{mock: mmMineForPulse.mock}
 	}
-	mmMineForPulse.defaultExpectation.results = &JetCalculatorMockMineForPulseResults{ja1}
+	mmMineForPulse.defaultExpectation.results = &JetCalculatorMockMineForPulseResults{ja1, err}
 	return mmMineForPulse.mock
 }
 
 //Set uses given function f to mock the JetCalculator.MineForPulse method
-func (mmMineForPulse *mJetCalculatorMockMineForPulse) Set(f func(ctx context.Context, pn insolar.PulseNumber) (ja1 []insolar.JetID)) *JetCalculatorMock {
+func (mmMineForPulse *mJetCalculatorMockMineForPulse) Set(f func(ctx context.Context, pn insolar.PulseNumber) (ja1 []insolar.JetID, err error)) *JetCalculatorMock {
 	if mmMineForPulse.defaultExpectation != nil {
 		mmMineForPulse.mock.t.Fatalf("Default expectation is already set for the JetCalculator.MineForPulse method")
 	}
@@ -138,13 +139,13 @@ func (mmMineForPulse *mJetCalculatorMockMineForPulse) When(ctx context.Context, 
 }
 
 // Then sets up JetCalculator.MineForPulse return parameters for the expectation previously defined by the When method
-func (e *JetCalculatorMockMineForPulseExpectation) Then(ja1 []insolar.JetID) *JetCalculatorMock {
-	e.results = &JetCalculatorMockMineForPulseResults{ja1}
+func (e *JetCalculatorMockMineForPulseExpectation) Then(ja1 []insolar.JetID, err error) *JetCalculatorMock {
+	e.results = &JetCalculatorMockMineForPulseResults{ja1, err}
 	return e.mock
 }
 
 // MineForPulse implements JetCalculator
-func (mmMineForPulse *JetCalculatorMock) MineForPulse(ctx context.Context, pn insolar.PulseNumber) (ja1 []insolar.JetID) {
+func (mmMineForPulse *JetCalculatorMock) MineForPulse(ctx context.Context, pn insolar.PulseNumber) (ja1 []insolar.JetID, err error) {
 	mm_atomic.AddUint64(&mmMineForPulse.beforeMineForPulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmMineForPulse.afterMineForPulseCounter, 1)
 
@@ -162,7 +163,7 @@ func (mmMineForPulse *JetCalculatorMock) MineForPulse(ctx context.Context, pn in
 	for _, e := range mmMineForPulse.MineForPulseMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.ja1
+			return e.results.ja1, e.results.err
 		}
 	}
 
@@ -178,7 +179,7 @@ func (mmMineForPulse *JetCalculatorMock) MineForPulse(ctx context.Context, pn in
 		if results == nil {
 			mmMineForPulse.t.Fatal("No results are set for the JetCalculatorMock.MineForPulse")
 		}
-		return (*results).ja1
+		return (*results).ja1, (*results).err
 	}
 	if mmMineForPulse.funcMineForPulse != nil {
 		return mmMineForPulse.funcMineForPulse(ctx, pn)

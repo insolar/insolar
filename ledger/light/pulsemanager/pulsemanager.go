@@ -36,7 +36,6 @@ import (
 
 var (
 	errZeroNodes = errors.New("zero nodes from network")
-	errNoPulse   = errors.New("no previous pulses")
 )
 
 // PulseManager implements insolar.PulseManager.
@@ -108,27 +107,29 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	)
 	defer span.End()
 
-	jets, endedPulse, err := m.setUnderGilSection(ctx, newPulse)
+	jets, endedPulse, justJoined, err := m.setUnderGilSection(ctx, newPulse)
 	if err != nil {
-		if err == errZeroNodes || err == errNoPulse {
+		if err == errZeroNodes {
 			logger.Debug("setUnderGilSection return error: ", err)
 			return nil
 		}
 		panic(errors.Wrap(err, "under gil error"))
 	}
 
-	err = m.HotSender.SendHot(ctx, endedPulse.PulseNumber, newPulse.PulseNumber, jets)
-	if err != nil {
-		logger.Error("send Hot failed: ", err)
+	if !justJoined {
+		err = m.HotSender.SendHot(ctx, endedPulse, newPulse.PulseNumber, jets)
+		if err != nil {
+			logger.Error("send Hot failed: ", err)
+		}
+		go m.LightReplicator.NotifyAboutPulse(ctx, newPulse.PulseNumber)
 	}
-	go m.LightReplicator.NotifyAboutPulse(ctx, newPulse.PulseNumber)
 
 	m.MessageHandler.BeginPulse(ctx, newPulse)
 	return nil
 }
 
 func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.Pulse) (
-	[]insolar.JetID, insolar.Pulse, error,
+	[]insolar.JetID, insolar.PulseNumber, bool, error,
 ) {
 	m.GIL.Acquire(ctx)
 	ctx, span := instracer.StartSpan(ctx, "PulseManager.setUnderGilSection")
@@ -145,7 +146,7 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		fromNetwork := m.NodeNet.GetWorkingNodes()
 		if len(fromNetwork) == 0 {
 			logger.Errorf("received zero nodes for pulse %d", newPulse.PulseNumber)
-			return nil, insolar.Pulse{}, errZeroNodes
+			return nil, 0, false, errZeroNodes
 		}
 		toSet := make([]insolar.Node, 0, len(fromNetwork))
 		for _, n := range fromNetwork {
@@ -163,34 +164,22 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		}
 	}()
 
-	// FIXME: uncomment me in INS-3031.
-	// if err := m.StateIniter.PrepareState(ctx, newPulse.PulseNumber); err != nil {
-	// 	logger.Fatal(errors.Wrap(err, "failed to prepare light for start"))
-	// }
-
-	// FIXME: remove me in INS-3031.
+	justJoined, jets, err := m.StateIniter.PrepareState(ctx, newPulse.PulseNumber)
+	if err != nil {
+		panic(errors.Wrap(err, "failed to prepare light for start"))
+	}
 	endedPulse, err := m.PulseAccessor.Latest(ctx)
 	if err != nil {
-		if err == pulse.ErrNotFound {
-			err := m.JetModifier.Update(ctx, newPulse.PulseNumber, true, insolar.ZeroJetID)
-			if err != nil {
-				panic(errors.Wrap(err, "failed to update jets"))
-			}
-			err = m.JetReleaser.Unlock(ctx, newPulse.PulseNumber, insolar.ZeroJetID)
-			if err != nil {
-				panic(errors.Wrap(err, "failed to update jets"))
-			}
-			return nil, insolar.Pulse{}, errNoPulse
-		}
-		panic(errors.Wrap(err, "failed to calculate ended pulse"))
+		panic(errors.Wrap(err, "failed to fetch ended pulse"))
 	}
 
-	m.JetReleaser.CloseAllUntil(ctx, endedPulse.PulseNumber)
-
-	jets, err := m.JetSplitter.Do(ctx, endedPulse.PulseNumber, newPulse.PulseNumber)
+	createDrops := !justJoined
+	jets, err = m.JetSplitter.Do(ctx, endedPulse.PulseNumber, newPulse.PulseNumber, jets, createDrops)
 	if err != nil {
 		panic(errors.Wrap(err, "failed to split jets"))
 	}
+
+	m.JetReleaser.CloseAllUntil(ctx, endedPulse.PulseNumber)
 
 	err = m.WriteManager.CloseAndWait(ctx, endedPulse.PulseNumber)
 	if err != nil {
@@ -204,5 +193,5 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 
 	m.MessageHandler.ClosePulse(ctx, endedPulse)
 
-	return jets, endedPulse, nil
+	return jets, endedPulse.PulseNumber, justJoined, nil
 }

@@ -285,10 +285,14 @@ func Test_DetachedRequest_notification(t *testing.T) {
 	cfg := DefaultLightConfig()
 
 	received := make(chan payload.SagaCallAcceptNotification)
-	s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) {
+	s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) []payload.Payload {
 		if notification, ok := pl.(*payload.SagaCallAcceptNotification); ok {
 			received <- *notification
 		}
+		if meta.Receiver == NodeHeavy() {
+			return DefaultHeavyResponse(pl)
+		}
+		return nil
 	})
 	require.NoError(t, err)
 	defer s.Stop()

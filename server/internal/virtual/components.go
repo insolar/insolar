@@ -20,8 +20,6 @@ import (
 	"context"
 	"io"
 
-	"github.com/insolar/insolar/network/rules"
-
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
@@ -45,10 +43,15 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/handles"
+	"github.com/insolar/insolar/logicrunner/logicexecutor"
+	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
+	"github.com/insolar/insolar/logicrunner/requestsexecutor"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/network/rules"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/platformpolicy"
@@ -171,9 +174,9 @@ func initComponents(
 		keyProcessor,
 		certManager,
 		logicRunner,
-		logicrunner.NewLogicExecutor(),
-		logicrunner.NewRequestsExecutor(),
-		logicrunner.NewMachinesManager(),
+		logicexecutor.NewLogicExecutor(),
+		requestsexecutor.NewRequestsExecutor(),
+		machinesmanager.NewMachinesManager(),
 		nodeNetwork,
 		nw,
 		pm,
@@ -261,7 +264,7 @@ func startWatermill(
 
 	lrRouter.AddNoPublisherHandler(
 		"InnerMsgHandler",
-		logicrunner.InnerMsgTopic,
+		handles.InnerMsgTopic,
 		pubSub,
 		lrHandler,
 	)
