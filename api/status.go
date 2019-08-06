@@ -18,17 +18,19 @@ package api
 
 import (
 	"context"
+	"github.com/pkg/errors"
 	"net/http"
+	"strconv"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/version"
 )
 
 type Node struct {
 	Reference string
+	ShortID   string
 	Role      string
 	IsWorking bool
 }
@@ -56,8 +58,15 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *Statu
 	reply.NetworkState = s.runner.ServiceNetwork.GetState().String()
 	reply.NodeState = s.runner.NodeNetwork.GetOrigin().GetState().String()
 
-	activeNodes := s.runner.NodeNetwork.(network.NodeKeeper).GetAccessor().GetActiveNodes()
-	workingNodes := s.runner.NodeNetwork.GetWorkingNodes()
+	p, err := s.runner.PulseAccessor.Latest(ctx)
+	if err != nil {
+		err := errors.Wrap(err, "failed to get latest pulse")
+		inslog.Errorf("[ NodeService.GetStatus ] %s", err.Error())
+		return err
+	}
+
+	activeNodes := s.runner.NodeNetwork.GetAccessor(p.PulseNumber).GetActiveNodes()
+	workingNodes := s.runner.NodeNetwork.GetAccessor(p.PulseNumber).GetWorkingNodes()
 
 	reply.ActiveListSize = len(activeNodes)
 	reply.WorkingListSize = len(workingNodes)
@@ -66,6 +75,7 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *Statu
 	for i, node := range activeNodes {
 		nodes[i] = Node{
 			Reference: node.ID().String(),
+			ShortID:   strconv.Itoa(int(node.ShortID())),
 			Role:      node.Role().String(),
 			IsWorking: node.GetState() == insolar.NodeReady,
 		}
@@ -75,6 +85,7 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *Statu
 	origin := s.runner.NodeNetwork.GetOrigin()
 	reply.Origin = Node{
 		Reference: origin.ID().String(),
+		ShortID:   strconv.Itoa(int(origin.ShortID())),
 		Role:      origin.Role().String(),
 		IsWorking: origin.GetState() == insolar.NodeReady,
 	}

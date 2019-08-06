@@ -17,13 +17,17 @@
 package api
 
 import (
+	"context"
+	"github.com/insolar/insolar/insolar/pulse"
 	"net/http"
 	"strconv"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
+	network2 "github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -83,13 +87,28 @@ func mockNodeNetwork(t *testing.T, nodeList []insolar.DiscoveryNode) *network.No
 	for _, node := range nodeList {
 		nodeMap[*node.GetNodeRef()] = node
 	}
-	nn.GetWorkingNodeMock.Set(func(ref insolar.Reference) insolar.NetworkNode {
+
+	accessorMock := network.NewAccessorMock(t)
+	accessorMock.GetWorkingNodeMock.Set(func(ref insolar.Reference) insolar.NetworkNode {
 		if _, ok := nodeMap[ref]; ok {
 			return network.NewNetworkNodeMock(t)
 		}
 		return nil
 	})
+
+	nn.GetAccessorMock.Set(func(p1 insolar.PulseNumber) network2.Accessor {
+		return accessorMock
+	})
+
 	return nn
+}
+
+func mockPulseAccessor(t *testing.T) *pulse.AccessorMock {
+	pa := pulse.NewAccessorMock(t)
+	pa.LatestMock.Set(func(context.Context) (insolar.Pulse, error) {
+		return *insolar.GenesisPulse, nil
+	})
+	return pa
 }
 
 func TestHealthChecker_CheckHandler(t *testing.T) {
@@ -109,6 +128,7 @@ func TestHealthChecker_CheckHandler(t *testing.T) {
 			hc := NewHealthChecker(
 				mockCertManager(t, nodes[:20]),
 				mockNodeNetwork(t, nodes[test.from:test.to]),
+				mockPulseAccessor(t),
 			)
 			w := newMockResponseWriter()
 			hc.CheckHandler(w, new(http.Request))

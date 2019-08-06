@@ -138,7 +138,7 @@ func (ar *Runner) IsAPIRunner() bool {
 
 // Start runs api server
 func (ar *Runner) Start(ctx context.Context) error {
-	hc := NewHealthChecker(ar.CertificateManager, ar.NodeNetwork)
+	hc := NewHealthChecker(ar.CertificateManager, ar.NodeNetwork, ar.PulseAccessor)
 
 	router := http.NewServeMux()
 	ar.server.Handler = router
