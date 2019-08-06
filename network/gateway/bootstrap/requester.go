@@ -84,7 +84,7 @@ func NewRequester(options *common.Options) Requester {
 
 type requester struct {
 	HostNetwork         network.HostNetwork         `inject:""`
-	OriginProvider      insolar.OriginProvider      `inject:""`
+	OriginProvider      network.OriginProvider      `inject:""`
 	CryptographyService insolar.CryptographyService `inject:""`
 
 	options *common.Options

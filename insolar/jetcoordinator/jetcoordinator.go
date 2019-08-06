@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network"
 	"sort"
 
 	"github.com/insolar/insolar/insolar"
@@ -33,7 +34,7 @@ import (
 
 // Coordinator is responsible for all jet interactions
 type Coordinator struct {
-	NodeNet                    insolar.NodeNetwork                `inject:""`
+	OriginProvider             network.OriginProvider             `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 
 	PulseAccessor   pulse.Accessor   `inject:""`
@@ -61,7 +62,7 @@ const (
 
 // Me returns current node.
 func (jc *Coordinator) Me() insolar.Reference {
-	return jc.NodeNet.GetOrigin().ID()
+	return jc.OriginProvider.GetOrigin().ID()
 }
 
 // IsAuthorized checks for role on concrete pulse for the address.
@@ -97,7 +98,6 @@ func (jc *Coordinator) IsMeAuthorizedNow(
 	}
 	return jc.IsAuthorized(ctx, role, obj, p.PulseNumber, jc.Me())
 }
-
 
 // QueryRole returns node refs responsible for role bound operations for given object and pulse.
 func (jc *Coordinator) QueryRole(

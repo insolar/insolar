@@ -18,6 +18,7 @@ package pulsemanager
 
 import (
 	"context"
+	"github.com/insolar/insolar/network"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -35,7 +36,7 @@ import (
 type PulseManager struct {
 	LR            insolar.LogicRunner       `inject:""`
 	Bus           insolar.MessageBus        `inject:""`
-	NodeNet       insolar.NodeNetwork       `inject:""`
+	NodeNet       network.NodeNetwork       `inject:""`
 	GIL           insolar.GlobalInsolarLock `inject:""`
 	NodeSetter    node.Modifier             `inject:""`
 	Nodes         node.Accessor             `inject:""`
@@ -115,7 +116,7 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	// swap pulse
 	m.currentPulse = newPulse
 
-	fromNetwork := m.NodeNet.GetWorkingNodes()
+	fromNetwork := m.NodeNet.GetAccessor(m.currentPulse.PulseNumber).GetWorkingNodes()
 	toSet := make([]insolar.Node, 0, len(fromNetwork))
 	for _, n := range fromNetwork {
 		toSet = append(toSet, insolar.Node{ID: n.ID(), Role: n.Role()})

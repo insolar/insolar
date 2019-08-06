@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
+	"github.com/insolar/insolar/network"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -61,7 +62,7 @@ var transferredToWatermill = map[insolar.MessageType]struct{}{
 type MessageBus struct {
 	Network                    insolar.Network                    `inject:""`
 	JetCoordinator             jet.Coordinator                    `inject:""`
-	NodeNetwork                insolar.NodeNetwork                `inject:""`
+	NodeNetwork                network.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 	CryptographyService        insolar.CryptographyService        `inject:""`
 	DelegationTokenFactory     insolar.DelegationTokenFactory     `inject:""`
@@ -99,7 +100,7 @@ func (mb *MessageBus) Acquire(ctx context.Context) {
 		inslogger.FromContext(ctx).Info("Lock MB")
 		ctx, span := instracer.StartSpan(parentCtx, "before GIL Lock (Lock MB)")
 		span.End()
-		mb.Lock(ctx)
+		mb.lock(ctx)
 		_, span = instracer.StartSpan(parentCtx, "after GIL Lock (Lock MB)")
 		span.End()
 	}
@@ -113,7 +114,7 @@ func (mb *MessageBus) Release(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("Call Release in MessageBus: ", counter)
 	if counter == 0 {
 		inslogger.FromContext(ctx).Info("Unlock MB")
-		mb.Unlock(ctx)
+		mb.unlock(ctx)
 		_, span := instracer.StartSpan(ctx, "GIL Unlock (Unlock MB)")
 		span.End()
 	}
@@ -139,12 +140,12 @@ func (mb *MessageBus) Start(ctx context.Context) error {
 // Stop releases resources and stops the bus
 func (mb *MessageBus) Stop(ctx context.Context) error { return nil }
 
-func (mb *MessageBus) Lock(ctx context.Context) {
+func (mb *MessageBus) lock(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("Acquire GIL")
 	mb.globalLock.Lock()
 }
 
-func (mb *MessageBus) Unlock(ctx context.Context) {
+func (mb *MessageBus) unlock(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("Release GIL")
 	mb.globalLock.Unlock()
 }
@@ -498,11 +499,16 @@ func (mb *MessageBus) deliver(ctx context.Context, args []byte) (result []byte, 
 	return buf.Bytes(), nil
 }
 
-func (mb *MessageBus) checkParcel(_ context.Context, parcel insolar.Parcel) error {
+func (mb *MessageBus) checkParcel(ctx context.Context, parcel insolar.Parcel) error {
 	sender := parcel.GetSender()
 
 	if mb.signmessages {
-		senderKey := mb.NodeNetwork.GetWorkingNode(sender).PublicKey()
+		p, err := mb.PulseAccessor.Latest(ctx)
+		if err != nil {
+			return errors.Wrap(err, "failed to get latest pulse")
+		}
+
+		senderKey := mb.NodeNetwork.GetAccessor(p.PulseNumber).GetWorkingNode(sender).PublicKey()
 		if err := mb.ParcelFactory.Validate(senderKey, parcel); err != nil {
 			return errors.Wrap(err, "failed to check a message sign")
 		}

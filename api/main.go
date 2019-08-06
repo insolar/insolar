@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto"
 	"fmt"
+	"github.com/insolar/insolar/network"
 	"net"
 	"net/http"
 	"sync"
@@ -47,7 +48,7 @@ type Runner struct {
 	CertificateManager  insolar.CertificateManager  `inject:""`
 	ContractRequester   insolar.ContractRequester   `inject:""`
 	GenesisDataProvider insolar.GenesisDataProvider `inject:""`
-	NodeNetwork         insolar.NodeNetwork         `inject:""`
+	NodeNetwork         network.NodeNetwork         `inject:""`
 	ServiceNetwork      insolar.Network             `inject:""`
 	PulseAccessor       pulse.Accessor              `inject:""`
 	ArtifactManager     artifacts.Client            `inject:""`

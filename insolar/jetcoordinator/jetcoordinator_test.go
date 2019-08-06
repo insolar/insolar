@@ -72,7 +72,7 @@ func (s *jetCoordinatorSuite) BeforeTest(suiteName, testName string) {
 	s.jetStorage = storage
 	s.nodeStorage = node.NewAccessorMock(s.T())
 	s.coordinator = NewJetCoordinator(5)
-	s.coordinator.NodeNet = network.NewNodeNetworkMock(s.T())
+	s.coordinator.OriginProvider = network.NewOriginProviderMock(s.T())
 
 	s.cm.Inject(
 		testutils.NewPlatformCryptographyScheme(),
@@ -134,7 +134,7 @@ func TestJetCoordinator_Me(t *testing.T) {
 	nodeNet.GetOriginMock.Return(node)
 	node.IDMock.Return(expectedID)
 	jc := NewJetCoordinator(1)
-	jc.NodeNet = nodeNet
+	jc.OriginProvider = nodeNet
 
 	// Act
 	resultID := jc.Me()

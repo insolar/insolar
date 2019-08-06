@@ -18,6 +18,7 @@ package pulsemanager
 
 import (
 	"context"
+	"github.com/insolar/insolar/network"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -42,7 +43,7 @@ var (
 // PulseManager implements insolar.PulseManager.
 type PulseManager struct {
 	Bus            insolar.MessageBus        `inject:""`
-	NodeNet        insolar.NodeNetwork       `inject:""`
+	NodeNet        network.NodeNetwork       `inject:""`
 	GIL            insolar.GlobalInsolarLock `inject:""`
 	MessageHandler *artifactmanager.MessageHandler
 
@@ -142,7 +143,7 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 
 	// Dealing with node lists.
 	{
-		fromNetwork := m.NodeNet.GetWorkingNodes()
+		fromNetwork := m.NodeNet.GetAccessor(newPulse.PulseNumber).GetWorkingNodes()
 		if len(fromNetwork) == 0 {
 			logger.Errorf("received zero nodes for pulse %d", newPulse.PulseNumber)
 			return nil, insolar.Pulse{}, errZeroNodes

@@ -19,6 +19,7 @@ package heavy
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network"
 	"net"
 
 	"github.com/insolar/insolar/ledger/heavy/exporter"
@@ -129,7 +130,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	// Network.
 	var (
 		NetworkService *servicenetwork.ServiceNetwork
-		NodeNetwork    insolar.NodeNetwork
+		NodeNetwork    network.NodeNetwork
 		Termination    insolar.TerminationHandler
 	)
 	{
@@ -196,7 +197,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
-		c.NodeNet = NodeNetwork
+		c.OriginProvider = NodeNetwork
 		c.PlatformCryptographyScheme = CryptoScheme
 		c.Nodes = Nodes
 
