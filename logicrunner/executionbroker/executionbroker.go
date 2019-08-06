@@ -135,7 +135,7 @@ func NewExecutionBroker(
 	}
 }
 
-func (q *ExecutionBroker) tryTakeProcessor(ctx context.Context) bool {
+func (q *ExecutionBroker) tryTakeProcessor(_ context.Context) bool {
 	return atomic.CompareAndSwapUint32(&q.processorActive, 0, 1)
 }
 

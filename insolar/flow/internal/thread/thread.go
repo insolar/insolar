@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar/flow"
@@ -67,7 +66,6 @@ func (f *Thread) Procedure(ctx context.Context, proc flow.Procedure, cancel bool
 	}
 
 	if f.cancelled() {
-		inslogger.FromContext(ctx).Errorf("f.cancelled() is true in Procedure")
 		return flow.ErrCancelled
 	}
 
@@ -121,7 +119,6 @@ func (f *Thread) procedure(ctx context.Context, proc flow.Procedure) *result {
 }
 
 func (f *Thread) cancelled() bool {
-	inslogger.FromContext(context.Background()).Errorf("cancel is %s", &f.cancel)
 	select {
 	case <-f.cancel:
 		return true

@@ -308,7 +308,7 @@ func (m *client) GetObject(
 				return nil, errors.Wrap(err, "failed to unmarshal index")
 			}
 		case *payload.State:
-			logger.Debugf("reply state")
+			logger.Debug("reply state")
 			statePayload = p
 		case *payload.Error:
 			logger.Debug("reply error: ", p.Text)
