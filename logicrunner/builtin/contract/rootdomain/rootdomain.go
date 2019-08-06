@@ -273,8 +273,16 @@ func (rd *RootDomain) CreateHelloWorld() (string, error) {
 	return m.GetReference().String(), nil
 }
 
-func (rd *RootDomain) GetShardAddressCounts() ([]int, error) {
-	return []int{len(rd.BurnAddressMap)}, nil
+func (rd *RootDomain) GetShardAddressCounts() ([insolar.GenesisAmountMigrationAddressShards]int, error) {
+	r := [insolar.GenesisAmountMigrationAddressShards]int{}
+	for i, s := range rd.MigrationAddressShards {
+		amount, err := migrationshard.GetObject(s).GetMigrationAddressesAmount()
+		if err != nil {
+			return r, fmt.Errorf("failed to get migration address amount: %s", err.Error())
+		}
+		r[i] = amount
+	}
+	return r, nil
 }
 
 func trimPublicKey(publicKey string) string {

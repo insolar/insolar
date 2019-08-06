@@ -928,6 +928,57 @@ func INSMETHOD_CreateHelloWorld(object []byte, data []byte) ([]byte, []byte, err
 	return state, ret, err
 }
 
+func INSMETHOD_GetShardAddressCounts(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
+	self := new(RootDomain)
+
+	if len(object) == 0 {
+		return nil, nil, &ExtendableError{S: "[ FakeGetShardAddressCounts ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeGetShardAddressCounts ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := []interface{}{}
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &ExtendableError{S: "[ FakeGetShardAddressCounts ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0, ret1 := self.GetShardAddressCounts()
+
+	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
+	systemErr := ph.GetSystemError()
+
+	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
+		systemErr = nil
+	}
+	// TODO: this is the end of a horrible hack, please remove it
+
+	if systemErr != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret1 = ph.MakeErrorSerializable(ret1)
+
+	ret := []byte{}
+	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+
+	return state, ret, err
+}
+
 func Initialize() XXX_insolar.ContractWrapper {
 	return XXX_insolar.ContractWrapper{
 		GetCode:      INSMETHOD_GetCode,
@@ -949,6 +1000,7 @@ func Initialize() XXX_insolar.ContractWrapper {
 			"AddNewMemberToMaps":              INSMETHOD_AddNewMemberToMaps,
 			"AddNewMemberToPublicKeyMap":      INSMETHOD_AddNewMemberToPublicKeyMap,
 			"CreateHelloWorld":                INSMETHOD_CreateHelloWorld,
+			"GetShardAddressCounts":           INSMETHOD_GetShardAddressCounts,
 		},
 		Constructors: XXX_insolar.ContractConstructors{},
 	}

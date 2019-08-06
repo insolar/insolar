@@ -1508,13 +1508,13 @@ func (r *RootDomain) CreateHelloWorldAsImmutable() (string, error) {
 }
 
 // GetShardAddressCounts is proxy generated method
-func (r *RootDomain) GetShardAddressCounts() ([]int, error) {
+func (r *RootDomain) GetShardAddressCounts() ([insolar.GenesisAmountMigrationAddressShards]int, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 []int
+	var ret0 [insolar.GenesisAmountMigrationAddressShards]int
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -1560,13 +1560,13 @@ func (r *RootDomain) GetShardAddressCountsNoWait() error {
 }
 
 // GetShardAddressCountsAsImmutable is proxy generated method
-func (r *RootDomain) GetShardAddressCountsAsImmutable() ([]int, error) {
+func (r *RootDomain) GetShardAddressCountsAsImmutable() ([insolar.GenesisAmountMigrationAddressShards]int, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 []int
+	var ret0 [insolar.GenesisAmountMigrationAddressShards]int
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1

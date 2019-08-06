@@ -106,9 +106,7 @@ func INSMETHOD_GetMigrationAddressesAmount(object []byte, data []byte) ([]byte, 
 		return nil, nil, e
 	}
 
-	args := [1]interface{}{}
-	var args0 []string
-	args[0] = &args0
+	args := []interface{}{}
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
@@ -116,7 +114,7 @@ func INSMETHOD_GetMigrationAddressesAmount(object []byte, data []byte) ([]byte, 
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.GetMigrationAddressesAmount(args0)
+	ret0, ret1 := self.GetMigrationAddressesAmount()
 
 	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
 	systemErr := ph.GetSystemError()

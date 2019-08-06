@@ -144,6 +144,8 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 		return m.memberMigrationCreate(request.Params.PublicKey)
 	case "member.get":
 		return m.memberGet(request.Params.PublicKey)
+	case "migration.getAddressCount":
+		return m.getAddressCountCall()
 	}
 
 	var params map[string]interface{}
@@ -167,8 +169,6 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 		return nil, m.depositMigrationCall(params)
 	case "deposit.transfer":
 		return m.depositTransferCall(params)
-	case "migration.getAddressCount":
-		return m.getAddressCountCall()
 	}
 	return nil, fmt.Errorf("unknown method: '%s'", request.Params.CallSite)
 }
@@ -354,7 +354,7 @@ func (m *Member) depositMigrationCall(params map[string]interface{}) error {
 }
 
 type GetAddressCountResponse struct {
-	ShardCounts []int `json:"shardCounts"`
+	ShardCounts [insolar.GenesisAmountMigrationAddressShards]int `json:"shardCounts"`
 }
 
 func (m *Member) getAddressCountCall() (*GetAddressCountResponse, error) {
@@ -362,7 +362,7 @@ func (m *Member) getAddressCountCall() (*GetAddressCountResponse, error) {
 
 	c, err := rd.GetShardAddressCounts()
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse 'currentDate': %s", err.Error())
+		return nil, fmt.Errorf("failed to get shard address count: %s", err.Error())
 	}
 
 	return &GetAddressCountResponse{ShardCounts: c}, nil

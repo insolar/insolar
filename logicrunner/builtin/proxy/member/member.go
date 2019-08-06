@@ -25,6 +25,9 @@ import (
 type CreateResponse struct {
 	Reference string `json:"reference"`
 }
+type GetAddressCountResponse struct {
+	ShardCounts [insolar.GenesisAmountMigrationAddressShards]int `json:"shardCounts"`
+}
 type GetBalanceResponse struct {
 	Balance  string                 `json:"balance"`
 	Deposits map[string]interface{} `json:"deposits"`

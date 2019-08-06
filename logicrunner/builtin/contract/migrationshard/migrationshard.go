@@ -38,7 +38,7 @@ func New() (*MigrationShard, error) {
 }
 
 // GetMigrationAddressesAmount gets amount of free migration addresses
-func (s MigrationShard) GetMigrationAddressesAmount(migrationAddresses []string) (int, error) {
+func (s MigrationShard) GetMigrationAddressesAmount() (int, error) {
 	return len(s.FreeMigrationAddresses), nil
 }
 
