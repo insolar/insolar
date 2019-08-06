@@ -95,7 +95,7 @@ func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) 
 func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 	suite.sender = bus.NewSenderMock(suite.mc)
 	suite.pub = &publisherMock{}
-	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{}, suite.ps, suite.pub, suite.sender)
+	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{}, suite.pub, suite.sender)
 	suite.lr.ArtifactManager = suite.am
 	suite.lr.DescriptorsCache = suite.dc
 	suite.lr.MessageBus = suite.mb
@@ -255,11 +255,11 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 }
 
 func (suite *LogicRunnerTestSuite) TestNewLogicRunner() {
-	lr, err := NewLogicRunner(nil, suite.ps, suite.pub, suite.sender)
+	lr, err := NewLogicRunner(nil, suite.pub, suite.sender)
 	suite.Require().Error(err)
 	suite.Require().Nil(lr)
 
-	lr, err = NewLogicRunner(&configuration.LogicRunner{}, suite.ps, suite.pub, suite.sender)
+	lr, err = NewLogicRunner(&configuration.LogicRunner{}, suite.pub, suite.sender)
 	suite.Require().NoError(err)
 	suite.Require().NotNil(lr)
 	_ = lr.Stop(context.Background())
@@ -268,7 +268,7 @@ func (suite *LogicRunnerTestSuite) TestNewLogicRunner() {
 func (suite *LogicRunnerTestSuite) TestStartStop() {
 	lr, err := NewLogicRunner(&configuration.LogicRunner{
 		BuiltIn: &configuration.BuiltIn{},
-	}, suite.ps, suite.pub, suite.sender)
+	}, suite.pub, suite.sender)
 	suite.Require().NoError(err)
 	suite.Require().NotNil(lr)
 
@@ -423,7 +423,7 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 		{
 			name: "broker that stays and sends messages",
 			mocks: func(ctx context.Context, mc minimock.Tester) *LogicRunner {
-				lr, err := NewLogicRunner(&configuration.LogicRunner{}, nil, nil, nil)
+				lr, err := NewLogicRunner(&configuration.LogicRunner{}, nil, nil)
 				require.NoError(t, err)
 
 				lr.initHandlers()
@@ -446,7 +446,7 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 		{
 			name: "broker that goes way",
 			mocks: func(ctx context.Context, mc minimock.Tester) *LogicRunner {
-				lr, err := NewLogicRunner(&configuration.LogicRunner{}, nil, nil, nil)
+				lr, err := NewLogicRunner(&configuration.LogicRunner{}, nil, nil)
 				require.NoError(t, err)
 
 				lr.initHandlers()

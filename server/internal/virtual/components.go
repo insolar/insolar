@@ -155,8 +155,7 @@ func initComponents(
 	pulses := pulse.NewStorageMem()
 	b := bus.NewBus(cfg.Bus, pubSub, pulses, jc, pcs)
 
-	pm := pulsemanager.NewPulseManager()
-	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, pm.PulseAccessor, pubSub, b)
+	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, pubSub, b)
 	checkError(ctx, err, "failed to start LogicRunner")
 
 	contractRequester, err := contractrequester.New(logicRunner)
@@ -175,7 +174,7 @@ func initComponents(
 		logicrunner.NewMachinesManager(),
 		nodeNetwork,
 		nw,
-		pm,
+		pulsemanager.NewPulseManager(),
 		rules.NewRules(),
 	)
 
