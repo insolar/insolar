@@ -31,12 +31,12 @@ const (
 	GenesisNameWallet = "wallet"
 	// GenesisNameDeposit is the name of deposit contract for genesis record.
 	GenesisNameDeposit = "deposit"
-	// GenesisNameTariff is the name of tariff contract for genesis record.
-	GenesisNameTariff = "tariff"
 	// GenesisNameCostCenter is the name of cost center contract for genesis record.
 	GenesisNameCostCenter = "costcenter"
-	// GenesisNameShard is the name of shard contract for genesis record.
-	GenesisNameShard = "shard"
+	// GenesisNamePKShard is the name of public key shard contract for genesis record.
+	GenesisNamePKShard = "pkshard"
+	// GenesisNameMigrationShard is the name of migration address shard contract for genesis record.
+	GenesisNameMigrationShard = "migrationshard"
 
 	GenesisNameRootMember           = "root" + GenesisNameMember
 	GenesisNameRootWallet           = "root" + GenesisNameWallet
@@ -44,13 +44,11 @@ const (
 	GenesisNameMigrationWallet      = "migration" + GenesisNameWallet
 	GenesisNameFeeWallet            = "fee" + GenesisNameWallet
 
-	GenesisNameStandardTariff = "standard" + GenesisNameTariff
-
 	GenesisAmountMigrationDaemonMembers       = 10
 	GenesisAmountActiveMigrationDaemonMembers = 3
 
-	GenesisAmountPublicKeyShards        = 1000
-	GenesisAmountMigrationAddressShards = 1000
+	GenesisAmountPublicKeyShards        = 10
+	GenesisAmountMigrationAddressShards = 10
 )
 
 var GenesisNameMigrationDaemonMembers = func() (result [GenesisAmountMigrationDaemonMembers]string) {
@@ -62,13 +60,13 @@ var GenesisNameMigrationDaemonMembers = func() (result [GenesisAmountMigrationDa
 
 var GenesisNameMigrationAddressShards = func() (result [GenesisAmountMigrationAddressShards]string) {
 	for i := 0; i < GenesisAmountMigrationAddressShards; i++ {
-		result[i] = "migration_address_" + strconv.Itoa(i) + "_" + GenesisNameShard
+		result[i] = GenesisNameMigrationShard + "_" + strconv.Itoa(i)
 	}
 	return
 }()
 var GenesisNamePublicKeyShards = func() (result [GenesisAmountPublicKeyShards]string) {
 	for i := 0; i < GenesisAmountPublicKeyShards; i++ {
-		result[i] = "public_key_" + strconv.Itoa(i) + "_" + GenesisNameShard
+		result[i] = GenesisNamePKShard + "_" + strconv.Itoa(i)
 	}
 	return
 }()

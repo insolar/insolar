@@ -120,7 +120,6 @@ func INSMETHOD_ReturnObj(object []byte, data []byte) ([]byte, []byte, error) {
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -174,7 +173,6 @@ func INSMETHOD_Greet(object []byte, data []byte) ([]byte, []byte, error) {
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -226,7 +224,6 @@ func INSMETHOD_Count(object []byte, data []byte) ([]byte, []byte, error) {
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -278,7 +275,6 @@ func INSMETHOD_Errored(object []byte, data []byte) ([]byte, []byte, error) {
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -330,7 +326,6 @@ func INSMETHOD_PulseNumber(object []byte, data []byte) ([]byte, []byte, error) {
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -382,7 +377,6 @@ func INSMETHOD_CreateChild(object []byte, data []byte) ([]byte, []byte, error) {
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -436,7 +430,6 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -459,7 +452,7 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
-func INSCONSTRUCTOR_New(data []byte) ([]byte, error, error) {
+func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
 	args := []interface{}{}
@@ -471,27 +464,29 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error, error) {
 	}
 
 	ret0, ret1 := New()
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-	if ret1 != nil {
-		// logical error, the result should be registered with type RequestSideEffectNone
-		return nil, ret1, nil
+	ret1 = ph.MakeErrorSerializable(ret1)
+	if ret0 == nil && ret1 == nil {
+		ret1 = &ExtendableError{S: "constructor returned nil"}
 	}
 
-	if ret0 == nil {
-		// logical error, the result should be registered with type RequestSideEffectNone
-		e := &ExtendableError{S: "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil"}
-		return nil, e, nil
-	}
-
-	ret := []byte{}
-	err = ph.Serialize(ret0, &ret)
+	result := []byte{}
+	err = ph.Serialize([]interface{}{ret1}, &result)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return ret, nil, err
+	if ret1 != nil {
+		// logical error, the result should be registered with type RequestSideEffectNone
+		return nil, result, nil
+	}
+
+	state := []byte{}
+	err = ph.Serialize(ret0, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return state, result, nil
 }
 
 func Initialize() XXX_insolar.ContractWrapper {

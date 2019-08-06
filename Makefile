@@ -220,6 +220,7 @@ docker-insgorund: ## build insgorund docker image
 .PHONY: docker
 docker: docker-insolard docker-insgorund ## build insolard and insgorund docker images
 
+.PHONY: generate-protobuf
 generate-protobuf: ## generate protobuf structs
 	protoc -I./vendor -I./ --gogoslick_out=./ network/node/internal/node/node.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/record/record.proto
@@ -232,12 +233,15 @@ generate-protobuf: ## generate protobuf structs
     		ledger/heavy/exporter/record_exporter.proto
 
 
+.PHONY: regen-builtin
 regen-builtin: $(BININSGOCC) ## regenerate builtin contracts code
 	$(BININSGOCC) regen-builtin
 
+.PHONY: build-track
 build-track: ## build logs event tracker tool
 	$(GOBUILD) -o $(BIN_DIR)/track ./scripts/cmd/track/track.go
 
+.PHONY: generate-introspector-proto
 generate-introspector-proto: ## generate grpc api code and mocks for introspector
 	protoc -I/usr/local/include -I./ \
 		-I$(GOPATH)/src \
@@ -248,5 +252,12 @@ generate-introspector-proto: ## generate grpc api code and mocks for introspecto
 		instrumentation/introspector/introproto/*.proto
 	GOPATH=`go env GOPATH` go generate -x ./instrumentation/introspector
 
+.PHONY: prepare-inrospector-proto
+prepare-inrospector-proto: ## install tools required for grpc development
+	go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
+	go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
+	go get -u github.com/golang/protobuf/protoc-gen-go
+
+.PHONY: help
 help: ## Display this help screen
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'

@@ -21,8 +21,10 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
@@ -57,6 +59,7 @@ func (p *PassState) Proceed(ctx context.Context) error {
 
 	rec, err := p.Dep.Records.ForID(ctx, pass.StateID)
 	if err == object.ErrNotFound {
+		inslogger.FromContext(ctx).Errorf("state not found. StateID: %v, currentPN: %v", pass.StateID.DebugString(), flow.Pulse(ctx))
 		msg, err := payload.NewMessage(&payload.Error{Text: "state not found"})
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")

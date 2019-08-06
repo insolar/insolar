@@ -49,6 +49,10 @@ type Ledger struct {
 	//
 	// IMPORTANT: It should be the same on ALL nodes.
 	LightChainLimit int
+
+	// CleanerDelay holds value of pulses, that should happen before end of LightChainLimit and start
+	// of LME's data cleaning
+	CleanerDelay int
 }
 
 // NewLedger creates new default Ledger configuration.
@@ -66,5 +70,6 @@ func NewLedger() Ledger {
 			DepthLimit:             10, // limit to 1024 jets
 		},
 		LightChainLimit: 5, // 5 pulses
+		CleanerDelay:    3, // 3 pulses
 	}
 }

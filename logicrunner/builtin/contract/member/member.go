@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"strings"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member/signer"
@@ -35,12 +34,17 @@ import (
 // Member - basic member contract.
 type Member struct {
 	foundation.BaseContract
-	RootDomain  insolar.Reference
-	Deposits    map[string]insolar.Reference
-	Name        string
-	PublicKey   string
-	BurnAddress string
-	Wallet      insolar.Reference
+	RootDomain       insolar.Reference
+	Deposits         map[string]insolar.Reference
+	Name             string
+	PublicKey        string
+	MigrationAddress string
+	Wallet           insolar.Reference
+}
+
+func (m *Member) setMigrationAddress(migrationAddress string) error {
+	m.MigrationAddress = migrationAddress
+	return nil
 }
 
 // GetName gets name.
@@ -63,12 +67,12 @@ func (m *Member) GetPublicKey() (string, error) {
 // New creates new member.
 func New(rootDomain insolar.Reference, name string, key string, burnAddress string, walletRef insolar.Reference) (*Member, error) {
 	return &Member{
-		RootDomain:  rootDomain,
-		Deposits:    map[string]insolar.Reference{},
-		Name:        name,
-		PublicKey:   key,
-		BurnAddress: burnAddress,
-		Wallet:      walletRef,
+		RootDomain:       rootDomain,
+		Deposits:         map[string]insolar.Reference{},
+		Name:             name,
+		PublicKey:        key,
+		MigrationAddress: burnAddress,
+		Wallet:           walletRef,
 	}, nil
 }
 
@@ -214,7 +218,7 @@ func (m *Member) addBurnAddressesCall(params map[string]interface{}) (interface{
 		burnAddressesStr[i] = ba.(string)
 	}
 
-	err = rootDomain.AddBurnAddresses(burnAddressesStr)
+	err = rootDomain.AddMigrationAddresses(burnAddressesStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to add burn address: %s", err.Error())
 	}
@@ -401,39 +405,29 @@ type CreateResponse struct {
 	Reference string `json:"reference"`
 }
 type MigrationCreateResponse struct {
-	Reference   string `json:"reference"`
-	BurnAddress string `json:"migrationAddress"`
+	Reference        string `json:"reference"`
+	MigrationAddress string `json:"migrationAddress"`
 }
 
 func (m *Member) memberMigrationCreate(key string) (*MigrationCreateResponse, error) {
 
 	rootDomain := rootdomain.GetObject(m.RootDomain)
-	burnAddress, err := rootDomain.GetBurnAddress()
+	migrationAddress, err := rootDomain.GetFreeMigrationAddress(key)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get burn address: %s", err.Error())
+		return nil, fmt.Errorf("failed to get migration address: %s", err.Error())
 	}
 
-	rollBack := func(e error) (*MigrationCreateResponse, error) {
-		if err := rootDomain.AddBurnAddress(burnAddress); err != nil {
-			return nil, fmt.Errorf("failed to add burn address back: %s; after error: %s", err.Error(), e.Error())
-		}
-		return nil, fmt.Errorf("failed to create member: %s", e.Error())
-	}
-
-	created, err := m.createMember("", key, burnAddress)
+	created, err := m.createMember("", key, migrationAddress)
 	if err != nil {
-		return rollBack(err)
+		return nil, fmt.Errorf("failed to create member: %s", err.Error())
 	}
 
-	if err = rootDomain.AddNewMemberToMaps(key, burnAddress, created.Reference); err != nil {
-		if strings.Contains(err.Error(), "can't set reference because this key already exists") {
-			return nil, fmt.Errorf("failed to create member: %s", err.Error())
-		} else {
-			return rollBack(err)
-		}
+	err = rootDomain.AddNewMemberToMaps(key, migrationAddress, created.Reference)
+	if err != nil {
+		return nil, fmt.Errorf("failed to add new member to maps: %s", err.Error())
 	}
 
-	return &MigrationCreateResponse{Reference: created.Reference.String(), BurnAddress: burnAddress}, nil
+	return &MigrationCreateResponse{Reference: created.Reference.String(), MigrationAddress: migrationAddress}, nil
 }
 func (m *Member) contractCreateMember(key string) (*CreateResponse, error) {
 
@@ -450,7 +444,7 @@ func (m *Member) contractCreateMember(key string) (*CreateResponse, error) {
 
 	return &CreateResponse{Reference: created.Reference.String()}, nil
 }
-func (m *Member) createMember(name string, key string, burnAddress string) (*member.Member, error) {
+func (m *Member) createMember(name string, key string, migrationAddress string) (*member.Member, error) {
 	if key == "" {
 		return nil, fmt.Errorf("key is not valid")
 	}
@@ -461,7 +455,7 @@ func (m *Member) createMember(name string, key string, burnAddress string) (*mem
 		return nil, fmt.Errorf("failed to create wallet for  member: %s", err.Error())
 	}
 
-	memberHolder := member.New(m.RootDomain, name, key, burnAddress, walletRef.Reference)
+	memberHolder := member.New(m.RootDomain, name, key, migrationAddress, walletRef.Reference)
 	created, err := memberHolder.AsChild(m.RootDomain)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save as child: %s", err.Error())
@@ -570,7 +564,7 @@ func (m *Member) AddDeposit(txId string, deposit insolar.Reference) error {
 }
 
 func (m *Member) GetBurnAddress() (string, error) {
-	return m.BurnAddress, nil
+	return m.MigrationAddress, nil
 }
 
 type GetResponse struct {
@@ -586,7 +580,7 @@ func (m *Member) memberGet(publicKey string) (interface{}, error) {
 	}
 
 	if m.GetReference() == *ref {
-		return GetResponse{Reference: ref.String(), BurnAddress: m.BurnAddress}, nil
+		return GetResponse{Reference: ref.String(), BurnAddress: m.MigrationAddress}, nil
 	}
 
 	user := member.GetObject(*ref)

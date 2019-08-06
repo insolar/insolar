@@ -121,7 +121,6 @@ func INSMETHOD_GetName(object []byte, data []byte) ([]byte, []byte, error) {
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -173,7 +172,6 @@ func INSMETHOD_GetWallet(object []byte, data []byte) ([]byte, []byte, error) {
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -225,7 +223,6 @@ func INSMETHOD_GetPublicKey(object []byte, data []byte) ([]byte, []byte, error) 
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -279,7 +276,6 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -331,7 +327,6 @@ func INSMETHOD_GetDeposits(object []byte, data []byte) ([]byte, []byte, error) {
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -385,7 +380,6 @@ func INSMETHOD_FindDeposit(object []byte, data []byte) ([]byte, []byte, error) {
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret2 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -441,7 +435,6 @@ func INSMETHOD_AddDeposit(object []byte, data []byte) ([]byte, []byte, error) {
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret0 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -493,7 +486,6 @@ func INSMETHOD_GetBurnAddress(object []byte, data []byte) ([]byte, []byte, error
 	systemErr := ph.GetSystemError()
 
 	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
 		systemErr = nil
 	}
 	// TODO: this is the end of a horrible hack, please remove it
@@ -516,7 +508,7 @@ func INSMETHOD_GetBurnAddress(object []byte, data []byte) ([]byte, []byte, error
 	return state, ret, err
 }
 
-func INSCONSTRUCTOR_New(data []byte) ([]byte, error, error) {
+func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
 	args := [5]interface{}{}
@@ -538,27 +530,29 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error, error) {
 	}
 
 	ret0, ret1 := New(args0, args1, args2, args3, args4)
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-	if ret1 != nil {
-		// logical error, the result should be registered with type RequestSideEffectNone
-		return nil, ret1, nil
+	ret1 = ph.MakeErrorSerializable(ret1)
+	if ret0 == nil && ret1 == nil {
+		ret1 = &ExtendableError{S: "constructor returned nil"}
 	}
 
-	if ret0 == nil {
-		// logical error, the result should be registered with type RequestSideEffectNone
-		e := &ExtendableError{S: "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil"}
-		return nil, e, nil
-	}
-
-	ret := []byte{}
-	err = ph.Serialize(ret0, &ret)
+	result := []byte{}
+	err = ph.Serialize([]interface{}{ret1}, &result)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return ret, nil, err
+	if ret1 != nil {
+		// logical error, the result should be registered with type RequestSideEffectNone
+		return nil, result, nil
+	}
+
+	state := []byte{}
+	err = ph.Serialize(ret0, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return state, result, nil
 }
 
 func Initialize() XXX_insolar.ContractWrapper {

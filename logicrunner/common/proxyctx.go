@@ -24,11 +24,17 @@ import (
 type ProxyHelper interface {
 	SystemError
 	Serializer
-	RouteCall(ref insolar.Reference, wait bool, immutable bool, saga bool, method string, args []byte, proxyPrototype insolar.Reference) ([]byte, error)
-	SaveAsChild(parentRef, classRef insolar.Reference, constructorName string, argsSerialized []byte) (objRef insolar.Reference, err error)
+	RouteCall(
+		ref insolar.Reference,
+		wait bool, immutable bool, saga bool,
+		method string, args []byte, proxyPrototype insolar.Reference,
+	) (result []byte, err error)
+	SaveAsChild(
+		parentRef, classRef insolar.Reference, constructorName string, argsSerialized []byte,
+	) (objRef *insolar.Reference, result []byte, err error)
 	DeactivateObject(object insolar.Reference) error
 	MakeErrorSerializable(error) error
 }
 
-// Current - hackish way to give proxies access to the current environment
+// CurrentProxyCtx - hackish way to give proxies access to the current environment
 var CurrentProxyCtx ProxyHelper

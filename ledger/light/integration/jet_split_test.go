@@ -73,7 +73,7 @@ func Test_JetSplitEveryPulse(t *testing.T) {
 		cfg.Ledger.JetSplit.ThresholdOverflowCount = sc.cfg.ThresholdOverflowCount
 		cfg.Ledger.JetSplit.ThresholdRecordsCount = sc.cfg.ThresholdRecordsCount
 
-		s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) {
+		s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) []payload.Payload {
 
 			switch p := pl.(type) {
 			case *payload.Replication:
@@ -85,9 +85,13 @@ func Test_JetSplitEveryPulse(t *testing.T) {
 			case *payload.GotHotConfirmation:
 				hotObjectConfirm <- p.JetID
 			}
+			if meta.Receiver == NodeHeavy() {
+				return DefaultHeavyResponse(pl)
+			}
+			return nil
 		})
-
 		require.NoError(t, err)
+		defer s.Stop()
 
 		calculateExpectedJets := func(jets []insolar.JetID, depthLimit uint8) []insolar.JetID {
 
@@ -175,7 +179,7 @@ func Test_JetSplitsWhenOverflows(t *testing.T) {
 	cfg.Ledger.JetSplit.ThresholdOverflowCount = 0
 	cfg.Ledger.JetSplit.ThresholdRecordsCount = 2
 
-	s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) {
+	s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) []payload.Payload {
 		switch p := pl.(type) {
 		case *payload.Replication:
 			replication <- p.JetID
@@ -186,9 +190,13 @@ func Test_JetSplitsWhenOverflows(t *testing.T) {
 		case *payload.GotHotConfirmation:
 			hotObjectConfirm <- p.JetID
 		}
+		if meta.Receiver == NodeHeavy() {
+			return DefaultHeavyResponse(pl)
+		}
+		return nil
 	})
-
 	require.NoError(t, err)
+	defer s.Stop()
 
 	sendMessages := func(jetTree *jet.Tree) map[insolar.JetID]int {
 		splittingJets := make(map[insolar.JetID]int)
