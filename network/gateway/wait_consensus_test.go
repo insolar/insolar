@@ -52,12 +52,13 @@ package gateway
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 	mock "github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 func TestWaitConsensus_ConsensusNotHappenedInETA(t *testing.T) {
@@ -76,7 +77,7 @@ func TestWaitConsensus_ConsensusNotHappenedInETA(t *testing.T) {
 func TestWaitConsensus_ConsensusHappenedInETA(t *testing.T) {
 	gatewayer := mock.NewGatewayerMock(t)
 	gatewayer.SwitchStateMock.Set(func(ctx context.Context, state insolar.NetworkState) {
-		assert.Equal(t, insolar.WaitMinRoles, state)
+		assert.Equal(t, insolar.WaitMajority, state)
 	})
 
 	waitConsensus := newWaitConsensus(&Base{})
