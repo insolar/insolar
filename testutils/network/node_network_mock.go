@@ -32,12 +32,6 @@ type NodeNetworkMock struct {
 	afterGetWorkingNodesCounter  uint64
 	beforeGetWorkingNodesCounter uint64
 	GetWorkingNodesMock          mNodeNetworkMockGetWorkingNodes
-
-	funcGetWorkingNodesByRole          func(role mm_insolar.DynamicRole) (ra1 []mm_insolar.Reference)
-	inspectFuncGetWorkingNodesByRole   func(role mm_insolar.DynamicRole)
-	afterGetWorkingNodesByRoleCounter  uint64
-	beforeGetWorkingNodesByRoleCounter uint64
-	GetWorkingNodesByRoleMock          mNodeNetworkMockGetWorkingNodesByRole
 }
 
 // NewNodeNetworkMock returns a mock for insolar.NodeNetwork
@@ -53,9 +47,6 @@ func NewNodeNetworkMock(t minimock.Tester) *NodeNetworkMock {
 	m.GetWorkingNodeMock.callArgs = []*NodeNetworkMockGetWorkingNodeParams{}
 
 	m.GetWorkingNodesMock = mNodeNetworkMockGetWorkingNodes{mock: m}
-
-	m.GetWorkingNodesByRoleMock = mNodeNetworkMockGetWorkingNodesByRole{mock: m}
-	m.GetWorkingNodesByRoleMock.callArgs = []*NodeNetworkMockGetWorkingNodesByRoleParams{}
 
 	return m
 }
@@ -561,221 +552,6 @@ func (m *NodeNetworkMock) MinimockGetWorkingNodesInspect() {
 	}
 }
 
-type mNodeNetworkMockGetWorkingNodesByRole struct {
-	mock               *NodeNetworkMock
-	defaultExpectation *NodeNetworkMockGetWorkingNodesByRoleExpectation
-	expectations       []*NodeNetworkMockGetWorkingNodesByRoleExpectation
-
-	callArgs []*NodeNetworkMockGetWorkingNodesByRoleParams
-	mutex    sync.RWMutex
-}
-
-// NodeNetworkMockGetWorkingNodesByRoleExpectation specifies expectation struct of the NodeNetwork.GetWorkingNodesByRole
-type NodeNetworkMockGetWorkingNodesByRoleExpectation struct {
-	mock    *NodeNetworkMock
-	params  *NodeNetworkMockGetWorkingNodesByRoleParams
-	results *NodeNetworkMockGetWorkingNodesByRoleResults
-	Counter uint64
-}
-
-// NodeNetworkMockGetWorkingNodesByRoleParams contains parameters of the NodeNetwork.GetWorkingNodesByRole
-type NodeNetworkMockGetWorkingNodesByRoleParams struct {
-	role mm_insolar.DynamicRole
-}
-
-// NodeNetworkMockGetWorkingNodesByRoleResults contains results of the NodeNetwork.GetWorkingNodesByRole
-type NodeNetworkMockGetWorkingNodesByRoleResults struct {
-	ra1 []mm_insolar.Reference
-}
-
-// Expect sets up expected params for NodeNetwork.GetWorkingNodesByRole
-func (mmGetWorkingNodesByRole *mNodeNetworkMockGetWorkingNodesByRole) Expect(role mm_insolar.DynamicRole) *mNodeNetworkMockGetWorkingNodesByRole {
-	if mmGetWorkingNodesByRole.mock.funcGetWorkingNodesByRole != nil {
-		mmGetWorkingNodesByRole.mock.t.Fatalf("NodeNetworkMock.GetWorkingNodesByRole mock is already set by Set")
-	}
-
-	if mmGetWorkingNodesByRole.defaultExpectation == nil {
-		mmGetWorkingNodesByRole.defaultExpectation = &NodeNetworkMockGetWorkingNodesByRoleExpectation{}
-	}
-
-	mmGetWorkingNodesByRole.defaultExpectation.params = &NodeNetworkMockGetWorkingNodesByRoleParams{role}
-	for _, e := range mmGetWorkingNodesByRole.expectations {
-		if minimock.Equal(e.params, mmGetWorkingNodesByRole.defaultExpectation.params) {
-			mmGetWorkingNodesByRole.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmGetWorkingNodesByRole.defaultExpectation.params)
-		}
-	}
-
-	return mmGetWorkingNodesByRole
-}
-
-// Inspect accepts an inspector function that has same arguments as the NodeNetwork.GetWorkingNodesByRole
-func (mmGetWorkingNodesByRole *mNodeNetworkMockGetWorkingNodesByRole) Inspect(f func(role mm_insolar.DynamicRole)) *mNodeNetworkMockGetWorkingNodesByRole {
-	if mmGetWorkingNodesByRole.mock.inspectFuncGetWorkingNodesByRole != nil {
-		mmGetWorkingNodesByRole.mock.t.Fatalf("Inspect function is already set for NodeNetworkMock.GetWorkingNodesByRole")
-	}
-
-	mmGetWorkingNodesByRole.mock.inspectFuncGetWorkingNodesByRole = f
-
-	return mmGetWorkingNodesByRole
-}
-
-// Return sets up results that will be returned by NodeNetwork.GetWorkingNodesByRole
-func (mmGetWorkingNodesByRole *mNodeNetworkMockGetWorkingNodesByRole) Return(ra1 []mm_insolar.Reference) *NodeNetworkMock {
-	if mmGetWorkingNodesByRole.mock.funcGetWorkingNodesByRole != nil {
-		mmGetWorkingNodesByRole.mock.t.Fatalf("NodeNetworkMock.GetWorkingNodesByRole mock is already set by Set")
-	}
-
-	if mmGetWorkingNodesByRole.defaultExpectation == nil {
-		mmGetWorkingNodesByRole.defaultExpectation = &NodeNetworkMockGetWorkingNodesByRoleExpectation{mock: mmGetWorkingNodesByRole.mock}
-	}
-	mmGetWorkingNodesByRole.defaultExpectation.results = &NodeNetworkMockGetWorkingNodesByRoleResults{ra1}
-	return mmGetWorkingNodesByRole.mock
-}
-
-//Set uses given function f to mock the NodeNetwork.GetWorkingNodesByRole method
-func (mmGetWorkingNodesByRole *mNodeNetworkMockGetWorkingNodesByRole) Set(f func(role mm_insolar.DynamicRole) (ra1 []mm_insolar.Reference)) *NodeNetworkMock {
-	if mmGetWorkingNodesByRole.defaultExpectation != nil {
-		mmGetWorkingNodesByRole.mock.t.Fatalf("Default expectation is already set for the NodeNetwork.GetWorkingNodesByRole method")
-	}
-
-	if len(mmGetWorkingNodesByRole.expectations) > 0 {
-		mmGetWorkingNodesByRole.mock.t.Fatalf("Some expectations are already set for the NodeNetwork.GetWorkingNodesByRole method")
-	}
-
-	mmGetWorkingNodesByRole.mock.funcGetWorkingNodesByRole = f
-	return mmGetWorkingNodesByRole.mock
-}
-
-// When sets expectation for the NodeNetwork.GetWorkingNodesByRole which will trigger the result defined by the following
-// Then helper
-func (mmGetWorkingNodesByRole *mNodeNetworkMockGetWorkingNodesByRole) When(role mm_insolar.DynamicRole) *NodeNetworkMockGetWorkingNodesByRoleExpectation {
-	if mmGetWorkingNodesByRole.mock.funcGetWorkingNodesByRole != nil {
-		mmGetWorkingNodesByRole.mock.t.Fatalf("NodeNetworkMock.GetWorkingNodesByRole mock is already set by Set")
-	}
-
-	expectation := &NodeNetworkMockGetWorkingNodesByRoleExpectation{
-		mock:   mmGetWorkingNodesByRole.mock,
-		params: &NodeNetworkMockGetWorkingNodesByRoleParams{role},
-	}
-	mmGetWorkingNodesByRole.expectations = append(mmGetWorkingNodesByRole.expectations, expectation)
-	return expectation
-}
-
-// Then sets up NodeNetwork.GetWorkingNodesByRole return parameters for the expectation previously defined by the When method
-func (e *NodeNetworkMockGetWorkingNodesByRoleExpectation) Then(ra1 []mm_insolar.Reference) *NodeNetworkMock {
-	e.results = &NodeNetworkMockGetWorkingNodesByRoleResults{ra1}
-	return e.mock
-}
-
-// GetWorkingNodesByRole implements insolar.NodeNetwork
-func (mmGetWorkingNodesByRole *NodeNetworkMock) GetWorkingNodesByRole(role mm_insolar.DynamicRole) (ra1 []mm_insolar.Reference) {
-	mm_atomic.AddUint64(&mmGetWorkingNodesByRole.beforeGetWorkingNodesByRoleCounter, 1)
-	defer mm_atomic.AddUint64(&mmGetWorkingNodesByRole.afterGetWorkingNodesByRoleCounter, 1)
-
-	if mmGetWorkingNodesByRole.inspectFuncGetWorkingNodesByRole != nil {
-		mmGetWorkingNodesByRole.inspectFuncGetWorkingNodesByRole(role)
-	}
-
-	params := &NodeNetworkMockGetWorkingNodesByRoleParams{role}
-
-	// Record call args
-	mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.mutex.Lock()
-	mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.callArgs = append(mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.callArgs, params)
-	mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.mutex.Unlock()
-
-	for _, e := range mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.expectations {
-		if minimock.Equal(e.params, params) {
-			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.ra1
-		}
-	}
-
-	if mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.defaultExpectation.Counter, 1)
-		want := mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.defaultExpectation.params
-		got := NodeNetworkMockGetWorkingNodesByRoleParams{role}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetWorkingNodesByRole.t.Errorf("NodeNetworkMock.GetWorkingNodesByRole got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
-		}
-
-		results := mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.defaultExpectation.results
-		if results == nil {
-			mmGetWorkingNodesByRole.t.Fatal("No results are set for the NodeNetworkMock.GetWorkingNodesByRole")
-		}
-		return (*results).ra1
-	}
-	if mmGetWorkingNodesByRole.funcGetWorkingNodesByRole != nil {
-		return mmGetWorkingNodesByRole.funcGetWorkingNodesByRole(role)
-	}
-	mmGetWorkingNodesByRole.t.Fatalf("Unexpected call to NodeNetworkMock.GetWorkingNodesByRole. %v", role)
-	return
-}
-
-// GetWorkingNodesByRoleAfterCounter returns a count of finished NodeNetworkMock.GetWorkingNodesByRole invocations
-func (mmGetWorkingNodesByRole *NodeNetworkMock) GetWorkingNodesByRoleAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetWorkingNodesByRole.afterGetWorkingNodesByRoleCounter)
-}
-
-// GetWorkingNodesByRoleBeforeCounter returns a count of NodeNetworkMock.GetWorkingNodesByRole invocations
-func (mmGetWorkingNodesByRole *NodeNetworkMock) GetWorkingNodesByRoleBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetWorkingNodesByRole.beforeGetWorkingNodesByRoleCounter)
-}
-
-// Calls returns a list of arguments used in each call to NodeNetworkMock.GetWorkingNodesByRole.
-// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmGetWorkingNodesByRole *mNodeNetworkMockGetWorkingNodesByRole) Calls() []*NodeNetworkMockGetWorkingNodesByRoleParams {
-	mmGetWorkingNodesByRole.mutex.RLock()
-
-	argCopy := make([]*NodeNetworkMockGetWorkingNodesByRoleParams, len(mmGetWorkingNodesByRole.callArgs))
-	copy(argCopy, mmGetWorkingNodesByRole.callArgs)
-
-	mmGetWorkingNodesByRole.mutex.RUnlock()
-
-	return argCopy
-}
-
-// MinimockGetWorkingNodesByRoleDone returns true if the count of the GetWorkingNodesByRole invocations corresponds
-// the number of defined expectations
-func (m *NodeNetworkMock) MinimockGetWorkingNodesByRoleDone() bool {
-	for _, e := range m.GetWorkingNodesByRoleMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.GetWorkingNodesByRoleMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetWorkingNodesByRoleCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcGetWorkingNodesByRole != nil && mm_atomic.LoadUint64(&m.afterGetWorkingNodesByRoleCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockGetWorkingNodesByRoleInspect logs each unmet expectation
-func (m *NodeNetworkMock) MinimockGetWorkingNodesByRoleInspect() {
-	for _, e := range m.GetWorkingNodesByRoleMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to NodeNetworkMock.GetWorkingNodesByRole with params: %#v", *e.params)
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.GetWorkingNodesByRoleMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetWorkingNodesByRoleCounter) < 1 {
-		if m.GetWorkingNodesByRoleMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to NodeNetworkMock.GetWorkingNodesByRole")
-		} else {
-			m.t.Errorf("Expected call to NodeNetworkMock.GetWorkingNodesByRole with params: %#v", *m.GetWorkingNodesByRoleMock.defaultExpectation.params)
-		}
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcGetWorkingNodesByRole != nil && mm_atomic.LoadUint64(&m.afterGetWorkingNodesByRoleCounter) < 1 {
-		m.t.Error("Expected call to NodeNetworkMock.GetWorkingNodesByRole")
-	}
-}
-
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *NodeNetworkMock) MinimockFinish() {
 	if !m.minimockDone() {
@@ -784,8 +560,6 @@ func (m *NodeNetworkMock) MinimockFinish() {
 		m.MinimockGetWorkingNodeInspect()
 
 		m.MinimockGetWorkingNodesInspect()
-
-		m.MinimockGetWorkingNodesByRoleInspect()
 		m.t.FailNow()
 	}
 }
@@ -811,6 +585,5 @@ func (m *NodeNetworkMock) minimockDone() bool {
 	return done &&
 		m.MinimockGetOriginDone() &&
 		m.MinimockGetWorkingNodeDone() &&
-		m.MinimockGetWorkingNodesDone() &&
-		m.MinimockGetWorkingNodesByRoleDone()
+		m.MinimockGetWorkingNodesDone()
 }
