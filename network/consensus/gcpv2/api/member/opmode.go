@@ -115,7 +115,8 @@ func (v OpMode) CanVote() bool {
 }
 
 func (v OpMode) CanHaveState() bool {
-	return !v.IsSuspended() && !v.IsEvicted()
+	// TODO: verify
+	return /*!v.IsSuspended() && */ !v.IsEvicted()
 }
 
 func (v OpMode) String() string {
