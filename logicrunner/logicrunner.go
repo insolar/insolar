@@ -51,6 +51,11 @@ const maxQueueLength = 10
 
 type Ref = insolar.Reference
 
+type Dispatcher interface {
+	ChangePulse(ctx context.Context, pulse insolar.Pulse)
+	Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, error)
+}
+
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	MessageBus                 insolar.MessageBus                 `inject:""`
@@ -72,6 +77,7 @@ type LogicRunner struct {
 	ResultsMatcher             ResultMatcher
 	OutgoingSender             OutgoingRequestSender
 	WriteController            *writecontroller.WriteController
+	FlowDispatcher             Dispatcher
 
 	Cfg *configuration.LogicRunner
 
@@ -80,11 +86,6 @@ type LogicRunner struct {
 	stopLock   sync.Mutex
 	isStopping bool
 	stopChan   chan struct{}
-
-	// Inner dispatcher will be merged with FlowDispatcher after
-	// complete migration to watermill.
-	FlowDispatcher      *dispatcher.Dispatcher
-	InnerFlowDispatcher *dispatcher.Dispatcher
 }
 
 // NewLogicRunner is constructor for LogicRunner
@@ -154,17 +155,14 @@ func (lr *LogicRunner) initHandlers() {
 			Message: msg,
 		}
 	}
-	lr.FlowDispatcher = dispatcher.NewDispatcher(
+	lr.FlowDispatcher = dispatcher.NewDispatcher(lr.PulseAccessor,
 		func(msg *watermillMsg.Message) flow.Handle {
 			return initHandle(msg).Present
-		},
-		func(msg *watermillMsg.Message) flow.Handle {
+		}, func(msg *watermillMsg.Message) flow.Handle {
 			return initHandle(msg).Future
-		},
-		func(msg *watermillMsg.Message) flow.Handle {
+		}, func(msg *watermillMsg.Message) flow.Handle {
 			return initHandle(msg).Past
-		},
-	)
+		})
 }
 
 func (lr *LogicRunner) initializeBuiltin(_ context.Context) error {
@@ -216,7 +214,6 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 	}
 
 	lr.ArtifactManager.InjectFinish()
-	lr.FlowDispatcher.PulseAccessor = lr.PulseAccessor
 
 	return nil
 }

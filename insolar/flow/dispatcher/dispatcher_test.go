@@ -54,7 +54,7 @@ func TestNewDispatcher(t *testing.T) {
 	}
 	require.False(t, ok)
 
-	d := NewDispatcher(f, f, f)
+	d := NewDispatcher(nil, f, f, f)
 	require.NotNil(t, d.controller)
 
 	ctx := context.Background()

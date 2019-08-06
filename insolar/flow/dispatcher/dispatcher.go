@@ -46,13 +46,15 @@ type Dispatcher struct {
 	PulseAccessor insPulse.Accessor
 }
 
-func NewDispatcher(present flow.MakeHandle, future flow.MakeHandle, past flow.MakeHandle) *Dispatcher {
+func NewDispatcher(pulseAccessor insPulse.Accessor, present flow.MakeHandle, future flow.MakeHandle, past flow.MakeHandle) *Dispatcher {
 	d := &Dispatcher{
 		controller: thread.NewController(),
 	}
 	d.handles.present = present
 	d.handles.future = future
 	d.handles.past = past
+
+	d.PulseAccessor = pulseAccessor
 	return d
 }
 

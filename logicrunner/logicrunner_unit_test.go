@@ -110,8 +110,6 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 	suite.lr.ContractRequester = suite.cr
 
 	_ = suite.lr.Init(suite.ctx)
-
-	suite.lr.FlowDispatcher.PulseAccessor = suite.ps
 }
 
 func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {

@@ -20,10 +20,10 @@ import (
 	"context"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/insolar/flow/dispatcher"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/flow/dispatcher"
 
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
@@ -203,13 +203,14 @@ func NewMessageHandler(
 		return handle.NewInit(dep, h.Sender, msg)
 	}
 
-	h.FlowDispatcher = dispatcher.NewDispatcher(func(msg *message.Message) flow.Handle {
-		return initHandle(msg).Present
-	}, func(msg *message.Message) flow.Handle {
-		return initHandle(msg).Future
-	}, func(msg *message.Message) flow.Handle {
-		return initHandle(msg).Past
-	})
+	h.FlowDispatcher = dispatcher.NewDispatcher(nil,
+		func(msg *message.Message) flow.Handle {
+			return initHandle(msg).Present
+		}, func(msg *message.Message) flow.Handle {
+			return initHandle(msg).Future
+		}, func(msg *message.Message) flow.Handle {
+			return initHandle(msg).Past
+		})
 	return h
 }
 
