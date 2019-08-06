@@ -426,7 +426,7 @@ func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, localInspector 
 		processedNodesFlawlessly++
 	}
 
-	population := c.R.GetPopulation()
+	pop := c.R.GetPopulation()
 
 	// TODO detect nodes produced similar bitmaps, but different GSH
 	// even if we wont have all NSH, we can let to know these nodes on such collision
@@ -439,7 +439,7 @@ func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, localInspector 
 
 outer:
 	for {
-		popCount, popCompleteness := population.GetCountAndCompleteness(false)
+		popCount, popCompleteness := pop.GetCountAndCompleteness(false)
 		/* if popCount > processedNodesFlawlessly // try to improve something */
 
 		if popCompleteness && popCount <= verifiedStatTbl.RowCount() {
@@ -504,7 +504,7 @@ outer:
 
 				nodeStats, vr := d.GetInspectionResults()
 				if log.Is(insolar.DebugLevel) {
-					popLimit, popSealed := population.GetSealedCapacity()
+					popLimit, popSealed := pop.GetSealedCapacity()
 					remains := popLimit - originalStatTbl.RowCount() - 1
 
 					logMsg := "validated"
@@ -584,7 +584,7 @@ outer:
 
 	if log.Is(insolar.DebugLevel) {
 
-		limit, sealed := population.GetSealedCapacity()
+		limit, sealed := pop.GetSealedCapacity()
 		limitStr := ""
 		if sealed {
 			limitStr = fmt.Sprintf("%d", limit)
@@ -592,7 +592,7 @@ outer:
 			limitStr = fmt.Sprintf("%d+", limit)
 		}
 		tblHeader := fmt.Sprintf("%%sConsensus Node View (%%s): ID=%v Members=%d/%s Joiners=%d",
-			c.R.GetSelfNodeID(), population.GetIndexedCount(), limitStr, population.GetJoinersCount())
+			c.R.GetSelfNodeID(), pop.GetIndexedCount(), limitStr, pop.GetJoinersCount())
 		typeHeader := "Original, Verified"
 		prev := ""
 		if !originalStatTbl.EqualsTyped(&verifiedStatTbl) {
