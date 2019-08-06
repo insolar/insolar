@@ -144,6 +144,7 @@ func (lr *LogicRunner) initHandlers() {
 		Sender:         lr.Sender,
 		JetStorage:     lr.JetStorage,
 		WriteAccessor:  lr.WriteController,
+		OutgoingSender: lr.OutgoingSender,
 	}
 
 	initHandle := func(msg *watermillMsg.Message) *Init {

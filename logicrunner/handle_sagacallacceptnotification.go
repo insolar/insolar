@@ -35,6 +35,12 @@ func (h *HandleSagaCallAcceptNotification) Present(ctx context.Context, f flow.F
 		return fmt.Errorf("unexpected request received %T", rec)
 	}
 
+	outgoingReqRef := insolar.NewReference(msg.DetachedRequestID)
+
+	// AALEKSEEV TODO make it work
+	//_, _, err = h.dep.OutgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
+	//return err
+
 	// restore IncomingRequest by OutgoingRequest fields
 	incoming := record.IncomingRequest{
 		Caller:          outgoing.Caller,
@@ -66,7 +72,7 @@ func (h *HandleSagaCallAcceptNotification) Present(ctx context.Context, f flow.F
 	}
 
 	// Register result of the outgoing method.
-	outgoingReqRef := insolar.NewReference(msg.DetachedRequestID)
+
 	reqResult := newRequestResult(res.(*reply.RegisterRequest).Request.Bytes(), outgoing.Caller)
 
 	am := h.dep.lr.ArtifactManager
