@@ -54,12 +54,6 @@ type NodeKeeperMock struct {
 	beforeGetWorkingNodesCounter uint64
 	GetWorkingNodesMock          mNodeKeeperMockGetWorkingNodes
 
-	funcGetWorkingNodesByRole          func(role insolar.DynamicRole) (ra1 []insolar.Reference)
-	inspectFuncGetWorkingNodesByRole   func(role insolar.DynamicRole)
-	afterGetWorkingNodesByRoleCounter  uint64
-	beforeGetWorkingNodesByRoleCounter uint64
-	GetWorkingNodesByRoleMock          mNodeKeeperMockGetWorkingNodesByRole
-
 	funcMoveSyncToActive          func(ctx context.Context, number insolar.PulseNumber)
 	inspectFuncMoveSyncToActive   func(ctx context.Context, number insolar.PulseNumber)
 	afterMoveSyncToActiveCounter  uint64
@@ -104,9 +98,6 @@ func NewNodeKeeperMock(t minimock.Tester) *NodeKeeperMock {
 	m.GetWorkingNodeMock.callArgs = []*NodeKeeperMockGetWorkingNodeParams{}
 
 	m.GetWorkingNodesMock = mNodeKeeperMockGetWorkingNodes{mock: m}
-
-	m.GetWorkingNodesByRoleMock = mNodeKeeperMockGetWorkingNodesByRole{mock: m}
-	m.GetWorkingNodesByRoleMock.callArgs = []*NodeKeeperMockGetWorkingNodesByRoleParams{}
 
 	m.MoveSyncToActiveMock = mNodeKeeperMockMoveSyncToActive{mock: m}
 	m.MoveSyncToActiveMock.callArgs = []*NodeKeeperMockMoveSyncToActiveParams{}
@@ -1053,221 +1044,6 @@ func (m *NodeKeeperMock) MinimockGetWorkingNodesInspect() {
 	}
 }
 
-type mNodeKeeperMockGetWorkingNodesByRole struct {
-	mock               *NodeKeeperMock
-	defaultExpectation *NodeKeeperMockGetWorkingNodesByRoleExpectation
-	expectations       []*NodeKeeperMockGetWorkingNodesByRoleExpectation
-
-	callArgs []*NodeKeeperMockGetWorkingNodesByRoleParams
-	mutex    sync.RWMutex
-}
-
-// NodeKeeperMockGetWorkingNodesByRoleExpectation specifies expectation struct of the NodeKeeper.GetWorkingNodesByRole
-type NodeKeeperMockGetWorkingNodesByRoleExpectation struct {
-	mock    *NodeKeeperMock
-	params  *NodeKeeperMockGetWorkingNodesByRoleParams
-	results *NodeKeeperMockGetWorkingNodesByRoleResults
-	Counter uint64
-}
-
-// NodeKeeperMockGetWorkingNodesByRoleParams contains parameters of the NodeKeeper.GetWorkingNodesByRole
-type NodeKeeperMockGetWorkingNodesByRoleParams struct {
-	role insolar.DynamicRole
-}
-
-// NodeKeeperMockGetWorkingNodesByRoleResults contains results of the NodeKeeper.GetWorkingNodesByRole
-type NodeKeeperMockGetWorkingNodesByRoleResults struct {
-	ra1 []insolar.Reference
-}
-
-// Expect sets up expected params for NodeKeeper.GetWorkingNodesByRole
-func (mmGetWorkingNodesByRole *mNodeKeeperMockGetWorkingNodesByRole) Expect(role insolar.DynamicRole) *mNodeKeeperMockGetWorkingNodesByRole {
-	if mmGetWorkingNodesByRole.mock.funcGetWorkingNodesByRole != nil {
-		mmGetWorkingNodesByRole.mock.t.Fatalf("NodeKeeperMock.GetWorkingNodesByRole mock is already set by Set")
-	}
-
-	if mmGetWorkingNodesByRole.defaultExpectation == nil {
-		mmGetWorkingNodesByRole.defaultExpectation = &NodeKeeperMockGetWorkingNodesByRoleExpectation{}
-	}
-
-	mmGetWorkingNodesByRole.defaultExpectation.params = &NodeKeeperMockGetWorkingNodesByRoleParams{role}
-	for _, e := range mmGetWorkingNodesByRole.expectations {
-		if minimock.Equal(e.params, mmGetWorkingNodesByRole.defaultExpectation.params) {
-			mmGetWorkingNodesByRole.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmGetWorkingNodesByRole.defaultExpectation.params)
-		}
-	}
-
-	return mmGetWorkingNodesByRole
-}
-
-// Inspect accepts an inspector function that has same arguments as the NodeKeeper.GetWorkingNodesByRole
-func (mmGetWorkingNodesByRole *mNodeKeeperMockGetWorkingNodesByRole) Inspect(f func(role insolar.DynamicRole)) *mNodeKeeperMockGetWorkingNodesByRole {
-	if mmGetWorkingNodesByRole.mock.inspectFuncGetWorkingNodesByRole != nil {
-		mmGetWorkingNodesByRole.mock.t.Fatalf("Inspect function is already set for NodeKeeperMock.GetWorkingNodesByRole")
-	}
-
-	mmGetWorkingNodesByRole.mock.inspectFuncGetWorkingNodesByRole = f
-
-	return mmGetWorkingNodesByRole
-}
-
-// Return sets up results that will be returned by NodeKeeper.GetWorkingNodesByRole
-func (mmGetWorkingNodesByRole *mNodeKeeperMockGetWorkingNodesByRole) Return(ra1 []insolar.Reference) *NodeKeeperMock {
-	if mmGetWorkingNodesByRole.mock.funcGetWorkingNodesByRole != nil {
-		mmGetWorkingNodesByRole.mock.t.Fatalf("NodeKeeperMock.GetWorkingNodesByRole mock is already set by Set")
-	}
-
-	if mmGetWorkingNodesByRole.defaultExpectation == nil {
-		mmGetWorkingNodesByRole.defaultExpectation = &NodeKeeperMockGetWorkingNodesByRoleExpectation{mock: mmGetWorkingNodesByRole.mock}
-	}
-	mmGetWorkingNodesByRole.defaultExpectation.results = &NodeKeeperMockGetWorkingNodesByRoleResults{ra1}
-	return mmGetWorkingNodesByRole.mock
-}
-
-//Set uses given function f to mock the NodeKeeper.GetWorkingNodesByRole method
-func (mmGetWorkingNodesByRole *mNodeKeeperMockGetWorkingNodesByRole) Set(f func(role insolar.DynamicRole) (ra1 []insolar.Reference)) *NodeKeeperMock {
-	if mmGetWorkingNodesByRole.defaultExpectation != nil {
-		mmGetWorkingNodesByRole.mock.t.Fatalf("Default expectation is already set for the NodeKeeper.GetWorkingNodesByRole method")
-	}
-
-	if len(mmGetWorkingNodesByRole.expectations) > 0 {
-		mmGetWorkingNodesByRole.mock.t.Fatalf("Some expectations are already set for the NodeKeeper.GetWorkingNodesByRole method")
-	}
-
-	mmGetWorkingNodesByRole.mock.funcGetWorkingNodesByRole = f
-	return mmGetWorkingNodesByRole.mock
-}
-
-// When sets expectation for the NodeKeeper.GetWorkingNodesByRole which will trigger the result defined by the following
-// Then helper
-func (mmGetWorkingNodesByRole *mNodeKeeperMockGetWorkingNodesByRole) When(role insolar.DynamicRole) *NodeKeeperMockGetWorkingNodesByRoleExpectation {
-	if mmGetWorkingNodesByRole.mock.funcGetWorkingNodesByRole != nil {
-		mmGetWorkingNodesByRole.mock.t.Fatalf("NodeKeeperMock.GetWorkingNodesByRole mock is already set by Set")
-	}
-
-	expectation := &NodeKeeperMockGetWorkingNodesByRoleExpectation{
-		mock:   mmGetWorkingNodesByRole.mock,
-		params: &NodeKeeperMockGetWorkingNodesByRoleParams{role},
-	}
-	mmGetWorkingNodesByRole.expectations = append(mmGetWorkingNodesByRole.expectations, expectation)
-	return expectation
-}
-
-// Then sets up NodeKeeper.GetWorkingNodesByRole return parameters for the expectation previously defined by the When method
-func (e *NodeKeeperMockGetWorkingNodesByRoleExpectation) Then(ra1 []insolar.Reference) *NodeKeeperMock {
-	e.results = &NodeKeeperMockGetWorkingNodesByRoleResults{ra1}
-	return e.mock
-}
-
-// GetWorkingNodesByRole implements network.NodeKeeper
-func (mmGetWorkingNodesByRole *NodeKeeperMock) GetWorkingNodesByRole(role insolar.DynamicRole) (ra1 []insolar.Reference) {
-	mm_atomic.AddUint64(&mmGetWorkingNodesByRole.beforeGetWorkingNodesByRoleCounter, 1)
-	defer mm_atomic.AddUint64(&mmGetWorkingNodesByRole.afterGetWorkingNodesByRoleCounter, 1)
-
-	if mmGetWorkingNodesByRole.inspectFuncGetWorkingNodesByRole != nil {
-		mmGetWorkingNodesByRole.inspectFuncGetWorkingNodesByRole(role)
-	}
-
-	params := &NodeKeeperMockGetWorkingNodesByRoleParams{role}
-
-	// Record call args
-	mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.mutex.Lock()
-	mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.callArgs = append(mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.callArgs, params)
-	mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.mutex.Unlock()
-
-	for _, e := range mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.expectations {
-		if minimock.Equal(e.params, params) {
-			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.ra1
-		}
-	}
-
-	if mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.defaultExpectation.Counter, 1)
-		want := mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.defaultExpectation.params
-		got := NodeKeeperMockGetWorkingNodesByRoleParams{role}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetWorkingNodesByRole.t.Errorf("NodeKeeperMock.GetWorkingNodesByRole got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
-		}
-
-		results := mmGetWorkingNodesByRole.GetWorkingNodesByRoleMock.defaultExpectation.results
-		if results == nil {
-			mmGetWorkingNodesByRole.t.Fatal("No results are set for the NodeKeeperMock.GetWorkingNodesByRole")
-		}
-		return (*results).ra1
-	}
-	if mmGetWorkingNodesByRole.funcGetWorkingNodesByRole != nil {
-		return mmGetWorkingNodesByRole.funcGetWorkingNodesByRole(role)
-	}
-	mmGetWorkingNodesByRole.t.Fatalf("Unexpected call to NodeKeeperMock.GetWorkingNodesByRole. %v", role)
-	return
-}
-
-// GetWorkingNodesByRoleAfterCounter returns a count of finished NodeKeeperMock.GetWorkingNodesByRole invocations
-func (mmGetWorkingNodesByRole *NodeKeeperMock) GetWorkingNodesByRoleAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetWorkingNodesByRole.afterGetWorkingNodesByRoleCounter)
-}
-
-// GetWorkingNodesByRoleBeforeCounter returns a count of NodeKeeperMock.GetWorkingNodesByRole invocations
-func (mmGetWorkingNodesByRole *NodeKeeperMock) GetWorkingNodesByRoleBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetWorkingNodesByRole.beforeGetWorkingNodesByRoleCounter)
-}
-
-// Calls returns a list of arguments used in each call to NodeKeeperMock.GetWorkingNodesByRole.
-// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmGetWorkingNodesByRole *mNodeKeeperMockGetWorkingNodesByRole) Calls() []*NodeKeeperMockGetWorkingNodesByRoleParams {
-	mmGetWorkingNodesByRole.mutex.RLock()
-
-	argCopy := make([]*NodeKeeperMockGetWorkingNodesByRoleParams, len(mmGetWorkingNodesByRole.callArgs))
-	copy(argCopy, mmGetWorkingNodesByRole.callArgs)
-
-	mmGetWorkingNodesByRole.mutex.RUnlock()
-
-	return argCopy
-}
-
-// MinimockGetWorkingNodesByRoleDone returns true if the count of the GetWorkingNodesByRole invocations corresponds
-// the number of defined expectations
-func (m *NodeKeeperMock) MinimockGetWorkingNodesByRoleDone() bool {
-	for _, e := range m.GetWorkingNodesByRoleMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.GetWorkingNodesByRoleMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetWorkingNodesByRoleCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcGetWorkingNodesByRole != nil && mm_atomic.LoadUint64(&m.afterGetWorkingNodesByRoleCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockGetWorkingNodesByRoleInspect logs each unmet expectation
-func (m *NodeKeeperMock) MinimockGetWorkingNodesByRoleInspect() {
-	for _, e := range m.GetWorkingNodesByRoleMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to NodeKeeperMock.GetWorkingNodesByRole with params: %#v", *e.params)
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.GetWorkingNodesByRoleMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetWorkingNodesByRoleCounter) < 1 {
-		if m.GetWorkingNodesByRoleMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to NodeKeeperMock.GetWorkingNodesByRole")
-		} else {
-			m.t.Errorf("Expected call to NodeKeeperMock.GetWorkingNodesByRole with params: %#v", *m.GetWorkingNodesByRoleMock.defaultExpectation.params)
-		}
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcGetWorkingNodesByRole != nil && mm_atomic.LoadUint64(&m.afterGetWorkingNodesByRoleCounter) < 1 {
-		m.t.Error("Expected call to NodeKeeperMock.GetWorkingNodesByRole")
-	}
-}
-
 type mNodeKeeperMockMoveSyncToActive struct {
 	mock               *NodeKeeperMock
 	defaultExpectation *NodeKeeperMockMoveSyncToActiveExpectation
@@ -2033,8 +1809,6 @@ func (m *NodeKeeperMock) MinimockFinish() {
 
 		m.MinimockGetWorkingNodesInspect()
 
-		m.MinimockGetWorkingNodesByRoleInspect()
-
 		m.MinimockMoveSyncToActiveInspect()
 
 		m.MinimockSetCloudHashInspect()
@@ -2071,7 +1845,6 @@ func (m *NodeKeeperMock) minimockDone() bool {
 		m.MinimockGetSnapshotCopyDone() &&
 		m.MinimockGetWorkingNodeDone() &&
 		m.MinimockGetWorkingNodesDone() &&
-		m.MinimockGetWorkingNodesByRoleDone() &&
 		m.MinimockMoveSyncToActiveDone() &&
 		m.MinimockSetCloudHashDone() &&
 		m.MinimockSetInitialSnapshotDone() &&

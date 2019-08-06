@@ -441,17 +441,16 @@ func (r *FullRealm) getUpstreamReport() api.UpstreamReport {
 }
 
 func (r *FullRealm) PreparePulseChange() (bool, <-chan api.UpstreamState) {
-
 	report := r.getUpstreamReport()
 
 	if r.IsLocalStateful() {
-		inslogger.FromContext(r.roundContext).Warnf("PreparePulseChange: self=%s", r.self)
+		inslogger.FromContext(r.roundContext).Warnf("PreparePulseChange: self=%s, eph=%v", r.self, r.populationHook.GetEphemeralMode())
 		ch := make(chan api.UpstreamState, 1)
 		r.stateMachine.PreparePulseChange(report, ch)
 		return true, ch
 	}
 
-	inslogger.FromContext(r.roundContext).Warnf("PrepareAndCommitStatelessPulseChange: self=%s", r.self)
+	inslogger.FromContext(r.roundContext).Warnf("PrepareAndCommitStatelessPulseChange: self=%s, eph=%v", r.self, r.populationHook.GetEphemeralMode())
 	r.stateMachine.CommitPulseChangeByStateless(report, r.pulseData, r.census)
 	return false, nil
 }
