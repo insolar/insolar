@@ -20,6 +20,8 @@ import (
 	"context"
 	"io"
 
+	"github.com/insolar/insolar/network/rules"
+
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
@@ -43,15 +45,10 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/logicrunner/handles"
-	"github.com/insolar/insolar/logicrunner/logicexecutor"
-	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
-	"github.com/insolar/insolar/logicrunner/requestsexecutor"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/nodenetwork"
-	"github.com/insolar/insolar/network/rules"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/platformpolicy"
@@ -158,7 +155,8 @@ func initComponents(
 	pulses := pulse.NewStorageMem()
 	b := bus.NewBus(cfg.Bus, pubSub, pulses, jc, pcs)
 
-	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, pubSub, b)
+	pm := pulsemanager.NewPulseManager()
+	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, pm.PulseAccessor, pubSub, b)
 	checkError(ctx, err, "failed to start LogicRunner")
 
 	contractRequester, err := contractrequester.New(logicRunner)
@@ -174,9 +172,9 @@ func initComponents(
 		keyProcessor,
 		certManager,
 		logicRunner,
-		logicexecutor.NewLogicExecutor(),
-		requestsexecutor.NewRequestsExecutor(),
-		machinesmanager.NewMachinesManager(),
+		logicrunner.NewLogicExecutor(),
+		logicrunner.NewRequestsExecutor(),
+		logicrunner.NewMachinesManager(),
 		nodeNetwork,
 		nw,
 		pm,
@@ -264,7 +262,7 @@ func startWatermill(
 
 	lrRouter.AddNoPublisherHandler(
 		"InnerMsgHandler",
-		handles.InnerMsgTopic,
+		logicrunner.InnerMsgTopic,
 		pubSub,
 		lrHandler,
 	)
