@@ -41,7 +41,8 @@ type BackupMaker interface {
 
 var (
 	// ErrAlreadyDone is returned when you try to do backup for pulse less then lastBackupedPulse
-	ErrAlreadyDone = errors.New("backup already done for this pulse")
+	ErrAlreadyDone    = errors.New("backup already done for this pulse")
+	ErrBackupDisabled = errors.New("backup disabled")
 )
 
 // BackupInfo contains meta information about current incremental backup
@@ -268,7 +269,7 @@ func (b *BackupMakerDefault) Do(ctx context.Context, lastFinalizedPulse insolar.
 
 	if !b.config.Enabled {
 		inslogger.FromContext(ctx).Info("Trying to do backup, but it's disabled. Do nothing")
-		return ErrAlreadyDone
+		return ErrBackupDisabled
 	}
 
 	if lastFinalizedPulse <= b.lastBackupedPulse {
