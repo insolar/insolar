@@ -103,8 +103,8 @@ type ServiceNetwork struct {
 	RPC              controller.RPCController `inject:"subcomponent"`
 	TransportFactory transport.Factory        `inject:"subcomponent"`
 	PulseAccessor    storage.PulseAccessor    `inject:"subcomponent"`
-	//PulseAppender    storage.PulseAppender    `inject:"subcomponent"`
-	//DB               storage.DB               `inject:"subcomponent"`
+	PulseAppender    storage.PulseAppender    `inject:"subcomponent"`
+	// DB               storage.DB               `inject:"subcomponent"`
 
 	HostNetwork network.HostNetwork
 
@@ -163,10 +163,12 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		}
 	})
 
-	//db, err := storage.NewBadgerDB(n.cfg.Service)
-	//if err != nil {
-	//	return errors.Wrap(err, "failed to create BadgerDB")
-	//}
+	// db, err := storage.NewBadgerDB(n.cfg.Service)
+	// if err != nil {
+	// 	return errors.Wrap(err, "failed to create BadgerDB")
+	// }
+
+	pulseStorage := storage.NewMemoryPulseStorage()
 
 	n.cm.Inject(n,
 		&routing.Table{},
@@ -176,13 +178,16 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		controller.NewRPCController(options),
 		controller.NewPulseController(),
 		bootstrap.NewRequester(options),
-		//db,
-		//storage.NewPulseStorage(),
+		// db,
+		pulseStorage,
 		storage.NewMemoryCloudHashStorage(),
 		storage.NewMemorySnapshotStorage(),
 		n.BaseGateway,
 		n.Gatewayer,
 	)
+
+	n.BaseGateway.PulseAppender = pulseStorage
+	n.BaseGateway.PulseAccessor = pulseStorage
 
 	n.datagramHandler = adapters.NewDatagramHandler()
 	datagramTransport, err := n.TransportFactory.CreateDatagramTransport(n.datagramHandler)
@@ -263,7 +268,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	n.Gatewayer.Gateway().Run(ctx)
 
 	for n.Gatewayer.Gateway().GetState() < insolar.WaitMinRoles {
-		inslogger.FromContext(ctx).Info("-=-=-= Waiting for network stats..")
+		inslogger.FromContext(ctx).Info("-=-=-= Waiting for network starts..")
 		<-time.After(time.Millisecond * 500)
 	}
 

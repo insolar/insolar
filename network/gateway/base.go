@@ -58,6 +58,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/rules"
+	"github.com/insolar/insolar/network/storage"
 
 	"github.com/pkg/errors"
 
@@ -87,11 +88,11 @@ type Base struct {
 	CryptographyService insolar.CryptographyService `inject:""`
 	CertificateManager  insolar.CertificateManager  `inject:""`
 	HostNetwork         network.HostNetwork         `inject:""`
-	PulseAccessor       pulse.Accessor              `inject:""`
-	//PulseAppender       pulse.Appender              `inject:""`
-	PulseManager       insolar.PulseManager `inject:""`
-	BootstrapRequester bootstrap.Requester  `inject:""`
-	KeyProcessor       insolar.KeyProcessor `inject:""`
+	PulseAccessor       storage.PulseAccessor       //`inject:""`
+	PulseAppender       storage.PulseAppender       //`inject:""`
+	PulseManager        insolar.PulseManager        `inject:""`
+	BootstrapRequester  bootstrap.Requester         `inject:""`
+	KeyProcessor        insolar.KeyProcessor        `inject:""`
 
 	ConsensusController   consensus.Controller
 	ConsensusPulseHandler network.PulseHandler
@@ -140,6 +141,10 @@ func (g *Base) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, original
 
 func (g *Base) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
 	g.NodeKeeper.MoveSyncToActive(ctx, pu.PulseNumber)
+	err := g.PulseAppender.(*storage.MemoryPulseStorage).Append(ctx, pu)
+	if err != nil {
+		panic("failed to append pulse:" + err.Error())
+	}
 }
 
 // UpdateState called then Consensus done
