@@ -456,7 +456,7 @@ func (c *NodeAppearance) _applyState(ma profiles.MemberAnnouncement,
 	case c.profile.GetStatic().GetExtension() == nil:
 		if ma.Membership.RequestedPower != c.profile.GetStatic().GetStartPower() {
 			c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "unable to verify power"))
-			return false, nil // let the node to be "unset"
+			//return false, nil // let the node to be "unset" // TODO handle properly
 		}
 	case !c.profile.GetStatic().GetExtension().GetPowerLevels().IsAllowed(ma.Membership.RequestedPower):
 		return false, c.RegisterFraud(c.Frauds().NewInvalidPowerLevel(c.profile))
