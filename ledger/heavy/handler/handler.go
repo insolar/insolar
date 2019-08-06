@@ -51,12 +51,13 @@ type Handler struct {
 	IndexAccessor object.IndexAccessor
 	IndexModifier object.IndexModifier
 
-	DropModifier  drop.Modifier
-	PulseAccessor pulse.Accessor
-	JetModifier   jet.Modifier
-	JetAccessor   jet.Accessor
-	JetKeeper     executor.JetKeeper
-	BackupMaker   executor.BackupMaker
+	DropModifier    drop.Modifier
+	PulseAccessor   pulse.Accessor
+	PulseCalculator pulse.Calculator
+	JetModifier     jet.Modifier
+	JetAccessor     jet.Accessor
+	JetKeeper       executor.JetKeeper
+	BackupMaker     executor.BackupMaker
 
 	Sender bus.Sender
 
@@ -269,28 +270,24 @@ func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Met
 		return
 	}
 
-	logger.Debug("handleGotHotConfirmation. pulse: ", confirm.Pulse, ". jet: ", confirm.JetID.DebugString())
+	logger.Debug("handleGotHotConfirmation. pulse: ", confirm.Pulse, ". jet: ", confirm.JetID.DebugString(), ". Split: ", confirm.Split)
 
-	err = h.JetModifier.Update(ctx, confirm.Pulse, true, confirm.JetID)
+	next, err := h.PulseCalculator.Forwards(ctx, confirm.Pulse, 1)
+	if err != nil {
+		logger.Error("failed to get next pulse for ", confirm.Pulse, err)
+		return
+	}
+
+	err = h.JetModifier.Update(ctx, next.PulseNumber, true, confirm.JetID)
 	if err != nil {
 		logger.Error(errors.Wrapf(err, "failed to update jet %s", confirm.JetID.DebugString()))
 		return
 	}
 
-	topSyncPulse := h.JetKeeper.TopSyncPulse()
 	err = h.JetKeeper.AddHotConfirmation(ctx, confirm.Pulse, confirm.JetID, confirm.Split)
 	if err != nil {
 		logger.Error(errors.Wrapf(err, "failed to add hot confitmation to JetKeeper jet=%v", confirm.String()))
-	} else {
-		logger.Debug("got confirmation: ", confirm.String())
 	}
 
-	if !h.cfg.Backup.Enabled {
-		if err := h.JetKeeper.AddBackupConfirmation(ctx, confirm.Pulse); err != nil {
-			inslogger.FromContext(ctx).Fatal("AddBackupConfirmation return error: ", err)
-		}
-	}
-	if topSyncPulse != h.JetKeeper.TopSyncPulse() {
-		proc.FinalizePulse(ctx, h.BackupMaker, h.JetKeeper, confirm.Pulse)
-	}
+	proc.FinalizePulse(ctx, h.BackupMaker, h.JetKeeper, confirm.Pulse)
 }
