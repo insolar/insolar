@@ -71,6 +71,7 @@ func (g *WaitMinRoles) Run(ctx context.Context) {
 	p, err := g.PulseAccessor.Latest(ctx)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("failed to get latest pulse", err)
+		return
 	}
 	g.checkMinRoles(ctx, p.PulseNumber)
 }

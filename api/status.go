@@ -18,7 +18,6 @@ package api
 
 import (
 	"context"
-	"github.com/pkg/errors"
 	"net/http"
 	"strconv"
 
@@ -60,9 +59,7 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *Statu
 
 	p, err := s.runner.PulseAccessor.Latest(ctx)
 	if err != nil {
-		err := errors.Wrap(err, "failed to get latest pulse")
-		inslog.Errorf("[ NodeService.GetStatus ] %s", err.Error())
-		return err
+		p = *insolar.GenesisPulse
 	}
 
 	activeNodes := s.runner.NodeNetwork.GetAccessor(p.PulseNumber).GetActiveNodes()
@@ -90,13 +87,8 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *Statu
 		IsWorking: origin.GetState() == insolar.NodeReady,
 	}
 
-	pulse, err := s.runner.PulseAccessor.Latest(ctx)
-	if err != nil {
-		return err
-	}
-
-	reply.PulseNumber = uint32(pulse.PulseNumber)
-	reply.Entropy = pulse.Entropy[:]
+	reply.PulseNumber = uint32(p.PulseNumber)
+	reply.Entropy = p.Entropy[:]
 	reply.Version = version.Version
 
 	return nil
