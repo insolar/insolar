@@ -152,8 +152,7 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 			}
 			err = lr.sendToHeavy(ctx, msg)
 			if err != nil {
-				span.AddAttributes(trace.BoolAttribute("error", true))
-				span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
+				instracer.AddError(span, err)
 
 				logger.Errorf("[Replicator][sync]  Problems with sending msg to a heavy node", err)
 			} else {

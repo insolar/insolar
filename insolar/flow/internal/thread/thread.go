@@ -18,9 +18,15 @@ package thread
 
 import (
 	"context"
+	"fmt"
+	"reflect"
+	"runtime"
+	"strings"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar/flow"
 )
@@ -49,7 +55,19 @@ func NewThread(msg *message.Message, controller *Controller) *Thread {
 }
 
 func (f *Thread) Handle(ctx context.Context, handle flow.Handle) error {
-	return handle(ctx, f)
+	handleName := runtime.FuncForPC(reflect.ValueOf(handle).Pointer()).Name()
+	handleName = strings.Replace(handleName, "github.com/insolar/insolar/", "", 1)
+	ctx, span := instracer.StartSpan(ctx, handleName)
+	span.AddAttributes(
+		trace.StringAttribute("type", "flow_handler"),
+	)
+	defer span.End()
+
+	err := handle(ctx, f)
+	if err != nil {
+		instracer.AddError(span, err)
+	}
+	return err
 }
 
 func (f *Thread) Procedure(ctx context.Context, proc flow.Procedure, cancel bool) error {
@@ -57,9 +75,20 @@ func (f *Thread) Procedure(ctx context.Context, proc flow.Procedure, cancel bool
 		panic("procedure called with nil procedure")
 	}
 
+	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("%T", proc))
+	span.AddAttributes(
+		trace.StringAttribute("type", "flow_proc"),
+	)
+	defer span.End()
+
 	if !cancel {
 		res := f.procedure(ctx, proc)
 		<-res.done
+
+		if res.err != nil {
+			instracer.AddError(span, res.err)
+		}
+
 		return res.err
 	}
 
@@ -72,9 +101,15 @@ func (f *Thread) Procedure(ctx context.Context, proc flow.Procedure, cancel bool
 	select {
 	case <-f.cancel:
 		cl()
+		instracer.AddError(span, flow.ErrCancelled)
 		return flow.ErrCancelled
 	case <-res.done:
 		cl()
+
+		if res.err != nil {
+			instracer.AddError(span, res.err)
+		}
+
 		return res.err
 	}
 }

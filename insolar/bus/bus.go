@@ -272,7 +272,7 @@ func (b *Bus) SendTarget(
 func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Message) {
 	logger := inslogger.FromContext(ctx)
 
-	ctx, span := instracer.StartSpan(ctx, "Bus.Reply starts")
+	ctx, span := instracer.StartSpan(ctx, "Bus.Reply")
 	span.AddAttributes(
 		trace.StringAttribute("type", "bus"),
 		trace.StringAttribute("sender", origin.Sender.String()),
