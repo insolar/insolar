@@ -88,15 +88,16 @@ type LogicRunner struct {
 }
 
 // NewLogicRunner is constructor for LogicRunner
-func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publisher, sender bus.Sender) (*LogicRunner, error) {
+func NewLogicRunner(cfg *configuration.LogicRunner, pulseAccessor pulse.Accessor, publisher watermillMsg.Publisher, sender bus.Sender) (*LogicRunner, error) {
 	if cfg == nil {
 		return nil, errors.New("LogicRunner have nil configuration")
 	}
 	res := LogicRunner{
 		Cfg:             cfg,
 		Publisher:       publisher,
+		PulseAccessor:   pulseAccessor,
 		Sender:          sender,
-		SenderWithRetry: bus.NewWaitOKWithRetrySender(sender, 3),
+		SenderWithRetry: bus.NewWaitOKWithRetrySender(sender, pulseAccessor, 3),
 	}
 
 	return &res, nil
