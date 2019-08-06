@@ -63,6 +63,7 @@ func NewGatewayer(g network.Gateway, f insolar.NetworkOperableCallback) network.
 	return &gatewayer{
 		operableFunc: f,
 		gateway:      g,
+		isOperable:   true,
 	}
 }
 
@@ -70,6 +71,7 @@ type gatewayer struct {
 	operableFunc insolar.NetworkOperableCallback
 	gateway      network.Gateway
 	gatewayMu    sync.RWMutex
+	isOperable   bool
 }
 
 func (n *gatewayer) Gateway() network.Gateway {
@@ -89,7 +91,11 @@ func (n *gatewayer) SwitchState(ctx context.Context, state insolar.NetworkState)
 	}
 
 	n.gateway = n.gateway.NewGateway(ctx, state)
-	n.operableFunc(ctx, !n.gateway.NeedLockMessageBus())
+
+	if n.isOperable != !n.gateway.NeedLockMessageBus() {
+		n.isOperable = !n.gateway.NeedLockMessageBus()
+		n.operableFunc(ctx, n.isOperable)
+	}
 
 	go n.gateway.Run(ctx)
 }
