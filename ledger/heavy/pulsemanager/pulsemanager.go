@@ -111,9 +111,10 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	)
 
 	m.GIL.Acquire(ctx)
-	ctx, span := instracer.StartSpan(ctx, "pulse.gil_locked")
 
+	ctx, span := instracer.StartSpan(ctx, "PulseManager.setUnderGilSection")
 	defer span.End()
+
 	defer m.GIL.Release(ctx)
 
 	storagePulse, err := m.PulseAccessor.Latest(ctx)

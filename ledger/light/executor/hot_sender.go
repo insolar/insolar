@@ -107,7 +107,7 @@ func (m *HotSenderDefault) filterAndGroupIndexes(
 func (m *HotSenderDefault) SendHot(
 	ctx context.Context, currentPulse, newPulse insolar.PulseNumber, jets []insolar.JetID,
 ) error {
-	ctx, span := instracer.StartSpan(ctx, "hot_sender.start")
+	ctx, span := instracer.StartSpan(ctx, "HotSenderDefault.SendHot")
 	defer span.End()
 	logger := inslogger.FromContext(ctx)
 
