@@ -52,24 +52,16 @@ func (p *PulseServer) Export(getPulses *GetPulses, stream PulseExporter_ExportSe
 		read++
 	}
 	currentPN := getPulses.PulseNumber
-	canReadNext := read < getPulses.Count
+	for read < getPulses.Count {
+		topPulse := p.jetKeeper.TopSyncPulse()
+		if currentPN >= topPulse {
+			return nil
+		}
 
-	for canReadNext {
 		pulse, err := p.pulses.Forwards(stream.Context(), currentPN, 1)
 		if err != nil {
 			return err
 		}
-
-		topPulse := p.jetKeeper.TopSyncPulse()
-		if pulse.PulseNumber == topPulse {
-			canReadNext = false
-		}
-
-		read++
-		if read == getPulses.Count {
-			canReadNext = false
-		}
-
 		err = stream.Send(&Pulse{
 			PulseNumber: pulse.PulseNumber,
 		})
@@ -77,6 +69,7 @@ func (p *PulseServer) Export(getPulses *GetPulses, stream PulseExporter_ExportSe
 			return err
 		}
 
+		read++
 		currentPN = pulse.PulseNumber
 	}
 
