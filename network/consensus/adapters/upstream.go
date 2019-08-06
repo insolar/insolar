@@ -122,7 +122,7 @@ func (u *UpstreamController) ConsensusFinished(report api.UpstreamReport, expect
 
 	if _, pd := expectedCensus.GetNearestPulseData(); pd.IsFromEphemeral() {
 		// Fix bootstrap. Commit active list right after consensus finished
-		u.pulseChanger.ChangePulse(ctx, NewPulse(pd))
+		u.CommitPulseChange(report, pd, expectedCensus)
 	}
 
 	u.mu.RLock()
@@ -149,7 +149,7 @@ func (u *UpstreamController) CommitPulseChange(report api.UpstreamReport, pulseD
 	ctx := contextFromReport(report)
 	p := NewPulse(pulseData)
 
-	u.pulseChanger.ChangePulse(ctx, p)
+	go u.pulseChanger.ChangePulse(ctx, p)
 }
 
 func (u *UpstreamController) CancelPulseChange() {
