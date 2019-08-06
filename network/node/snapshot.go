@@ -131,7 +131,7 @@ func splitNodes(nodes []insolar.NetworkNode) [ListLength][]insolar.NetworkNode {
 		result[i] = make([]insolar.NetworkNode, 0)
 	}
 	for _, node := range nodes {
-		listType := nodeStateToListType(node.(MutableNode))
+		listType := nodeStateToListType(node)
 		if listType == ListLength {
 			continue
 		}
@@ -140,7 +140,7 @@ func splitNodes(nodes []insolar.NetworkNode) [ListLength][]insolar.NetworkNode {
 	return result
 }
 
-func nodeStateToListType(node MutableNode) ListType {
+func nodeStateToListType(node insolar.NetworkNode) ListType {
 	switch node.GetState() {
 	case insolar.NodeReady:
 		if node.GetPower() > 0 {

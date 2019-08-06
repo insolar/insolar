@@ -39,6 +39,9 @@ type GlobuleID uint32
 // NodeState is the state of the node
 type NodeState uint8
 
+// Power is node power
+type Power uint8
+
 //go:generate stringer -type=NodeState
 const (
 	// NodeUndefined node started but is not connected to network yet
@@ -72,4 +75,6 @@ type NetworkNode interface {
 	LeavingETA() PulseNumber
 	// GetState get state of the node
 	GetState() NodeState
+	// GetPower get power of node
+	GetPower() Power
 }

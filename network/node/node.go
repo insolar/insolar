@@ -57,7 +57,6 @@ import (
 	"sync/atomic"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 )
 
 type MutableNode interface {
@@ -70,8 +69,7 @@ type MutableNode interface {
 	ChangeState()
 	SetLeavingETA(number insolar.PulseNumber)
 	SetVersion(version string)
-	GetPower() member.Power
-	SetPower(power member.Power)
+	SetPower(power insolar.Power)
 }
 
 // GenerateUintShortID generate short ID for node without checking collisions
@@ -170,11 +168,11 @@ func (n *node) GetGlobuleID() insolar.GlobuleID {
 	return 0
 }
 
-func (n *node) GetPower() member.Power {
-	return member.Power(atomic.LoadUint32(&n.NodePower))
+func (n *node) GetPower() insolar.Power {
+	return insolar.Power(atomic.LoadUint32(&n.NodePower))
 }
 
-func (n *node) SetPower(power member.Power) {
+func (n *node) SetPower(power insolar.Power) {
 	atomic.StoreUint32(&n.NodePower, uint32(power))
 }
 

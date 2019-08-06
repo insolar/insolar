@@ -301,7 +301,7 @@ func NewNetworkNode(profile profiles.ActiveNode) insolar.NetworkNode {
 
 	mutableNode.SetShortID(profile.GetNodeID())
 	mutableNode.SetState(insolar.NodeReady)
-	mutableNode.SetPower(profile.GetDeclaredPower())
+	mutableNode.SetPower(insolar.Power(profile.GetDeclaredPower()))
 
 	sd := nip.GetBriefIntroSignedDigest()
 	mutableNode.SetSignature(

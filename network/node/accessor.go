@@ -123,7 +123,7 @@ func GetSnapshotActiveNodes(snapshot *Snapshot) []insolar.NetworkNode {
 	return result
 }
 
-func (a *Accessor) addToIndex(node MutableNode) {
+func (a *Accessor) addToIndex(node insolar.NetworkNode) {
 	a.refIndex[node.ID()] = node
 	a.sidIndex[node.ShortID()] = node
 	a.addrIndex[node.Address()] = node
@@ -151,7 +151,7 @@ func NewAccessor(snapshot *Snapshot) *Accessor {
 	}
 	result.active = GetSnapshotActiveNodes(snapshot)
 	for _, node := range result.active {
-		result.addToIndex(node.(MutableNode))
+		result.addToIndex(node)
 	}
 	return result
 }

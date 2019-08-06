@@ -60,23 +60,18 @@ import (
 
 func TestAccessor(t *testing.T) {
 	t.Skip("FIXME")
-	m := make(map[insolar.Reference]insolar.NetworkNode)
 
 	node := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, insolar.NodeReady, "127.0.0.1:0", "")
-	m[node.ID()] = node
 
 	node2 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, insolar.NodePending, "127.0.0.1:0", "")
 	node2.SetShortID(11)
-	m[node2.ID()] = node2
 
 	node3 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, insolar.NodeLeaving, "127.0.0.1:0", "")
 	node3.SetShortID(10)
-	m[node3.ID()] = node3
 
 	node4 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, insolar.NodeUndefined, "127.0.0.1:0", "")
-	m[node4.ID()] = node4
 
-	snapshot := NewSnapshot(insolar.FirstPulseNumber, m)
+	snapshot := NewSnapshot(insolar.FirstPulseNumber, []insolar.NetworkNode{node, node2, node3, node4})
 	accessor := NewAccessor(snapshot)
 	assert.Equal(t, 4, len(accessor.GetActiveNodes()))
 	assert.Equal(t, 1, len(accessor.GetWorkingNodes()))
