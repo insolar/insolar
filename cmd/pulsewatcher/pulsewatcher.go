@@ -169,8 +169,12 @@ func collectNodesStatuses(conf *pulsewatcher.Config) ([][]string, bool) {
 			res, err := client.Post("http://"+url+"/api/rpc", "application/json",
 				strings.NewReader(`{"jsonrpc": "2.0", "method": "node.getStatus", "id": 0}`))
 			if err != nil {
+				errStr := err.Error()
+				if strings.Contains(errStr, "connect: connection refused") {
+					errStr = "Node is down"
+				}
 				lock.Lock()
-				results[i] = []string{url, "", "", "", "", "", "", err.Error()}
+				results[i] = []string{url, "", "", "", "", "", "", errStr}
 				errored++
 				lock.Unlock()
 				wg.Done()
