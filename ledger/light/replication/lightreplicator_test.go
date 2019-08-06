@@ -75,8 +75,8 @@ func Test_NotifyAboutPulse(t *testing.T) {
 	})
 
 	jetCalc := executor.NewJetCalculatorMock(mc)
-	jetCalc.MineForPulseMock.Set(func(_ context.Context, _ insolar.PulseNumber) []insolar.JetID {
-		return []insolar.JetID{jetID}
+	jetCalc.MineForPulseMock.Set(func(_ context.Context, _ insolar.PulseNumber) ([]insolar.JetID, error) {
+		return []insolar.JetID{jetID}, nil
 	})
 
 	cleaner := NewCleanerMock(mc)

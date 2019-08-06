@@ -87,6 +87,9 @@ func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *Transcri
 	if err != nil {
 		return nil, errors.Wrap(err, "executor error")
 	}
+	if result == nil {
+		return nil, errors.New("result is NIL")
+	}
 
 	res := newRequestResult(result, *objDesc.HeadRef())
 
@@ -118,29 +121,29 @@ func (le *logicExecutor) ExecuteConstructor(
 		return nil, errors.New("prototype reference is required")
 	}
 
-	protoDesc, codeDesc, sysErr := le.DescriptorsCache.ByPrototypeRef(ctx, *request.Prototype)
-	if sysErr != nil {
-		return nil, errors.Wrap(sysErr, "couldn't get descriptors")
+	protoDesc, codeDesc, err := le.DescriptorsCache.ByPrototypeRef(ctx, *request.Prototype)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get descriptors")
 	}
 
-	executor, sysErr := le.MachinesManager.GetExecutor(codeDesc.MachineType())
-	if sysErr != nil {
-		return nil, errors.Wrap(sysErr, "couldn't get executor")
+	executor, err := le.MachinesManager.GetExecutor(codeDesc.MachineType())
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get executor")
 	}
 
 	transcript.LogicContext = le.genLogicCallContext(ctx, transcript, protoDesc, codeDesc)
 
-	newData, ctorErr, sysErr := executor.CallConstructor(ctx, transcript.LogicContext, *codeDesc.Ref(), request.Method, request.Arguments)
-	if sysErr != nil {
-		return nil, errors.Wrap(sysErr, "executor error")
+	newData, result, err := executor.CallConstructor(ctx, transcript.LogicContext, *codeDesc.Ref(), request.Method, request.Arguments)
+	if err != nil {
+		return nil, errors.Wrap(err, "executor error")
+	}
+	if result == nil {
+		return nil, errors.New("result is NIL")
 	}
 
-	res := newRequestResult(nil, transcript.RequestRef)
-	if ctorErr == "" {
+	res := newRequestResult(result, transcript.RequestRef)
+	if newData != nil {
 		res.SetActivate(*request.Base, *request.Prototype, newData)
-	} else {
-		// constructor returned an error
-		res.SetConstructorError(ctorErr)
 	}
 	return res, nil
 }

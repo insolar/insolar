@@ -99,8 +99,6 @@ func getEmptyReply(t insolar.ReplyType) (insolar.Reply, error) {
 	switch t {
 	case TypeCallMethod:
 		return &CallMethod{}, nil
-	case TypeCallConstructor:
-		return &CallConstructor{}, nil
 	case TypeRegisterRequest:
 		return &RegisterRequest{}, nil
 	case TypeCode:
@@ -178,7 +176,6 @@ func ToBytes(rep insolar.Reply) []byte {
 
 func init() {
 	gob.Register(&CallMethod{})
-	gob.Register(&CallConstructor{})
 	gob.Register(&RegisterRequest{})
 	gob.Register(&Code{})
 	gob.Register(&Object{})
