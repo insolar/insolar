@@ -92,7 +92,8 @@ func NewJetSplitter(
 // Do performs jets processing, it decides which jets to split and returns list of resulting jets.
 func (js *JetSplitterDefault) Do(
 	ctx context.Context,
-	endedPulse, newPulse insolar.PulseNumber,
+	endedPulse insolar.PulseNumber,
+	newPulse insolar.PulseNumber,
 	jets []insolar.JetID,
 	createDrops bool,
 ) ([]insolar.JetID, error) {
