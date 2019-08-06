@@ -36,7 +36,8 @@ type JetSplitter interface {
 	// Do performs jets processing, it decides which jets to split and returns list of resulting jets).
 	Do(
 		ctx context.Context,
-		ended, new insolar.PulseNumber,
+		ended insolar.PulseNumber,
+		new insolar.PulseNumber,
 		jets []insolar.JetID,
 		createDrops bool,
 	) ([]insolar.JetID, error)
