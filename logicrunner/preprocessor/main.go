@@ -428,7 +428,7 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 		currentMethodName := methodInfo["Name"].(string)
 		_, isRollback := sagaRollbackMethods[currentMethodName]
 		if isRollback {
-			break
+			continue
 		}
 		filteredMethodsProxies = append(filteredMethodsProxies, methodInfo)
 	}
