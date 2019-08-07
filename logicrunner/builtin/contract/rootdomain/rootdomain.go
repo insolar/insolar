@@ -154,6 +154,9 @@ func (rd *RootDomain) AddMigrationAddresses(migrationAddresses []string) error {
 	}
 
 	for i, ma := range newMA {
+		if len(ma) == 0 {
+			continue
+		}
 		s := migrationshard.GetObject(rd.MigrationAddressShards[i])
 		err := s.AddFreeMigrationAddresses(ma)
 		if err != nil {
