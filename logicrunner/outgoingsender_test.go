@@ -82,7 +82,7 @@ func TestOutgoingSenderSendRegularOutgoing(t *testing.T) {
 
 // Special case: outgoing request is marked with ReturnMode = ReturnSaga.
 // A corresponding incoming request is not an exact copy of the outgoing request,
-// it has ReturnMode = ReturnResult.
+// it has ReturnMode = ReturnNoWait.
 func TestOutgoingSenderSendSagaOutgoing(t *testing.T) {
 	t.Parallel()
 
@@ -110,7 +110,7 @@ func TestOutgoingSenderSendSagaOutgoing(t *testing.T) {
 	res := <-resultChan
 	require.NoError(t, res.err)
 	checkIncomingAndOutgoingMatch(t, res.incoming, outgoing)
-	require.Equal(t, record.ReturnResult, res.incoming.ReturnMode)
+	require.Equal(t, record.ReturnNoWait, res.incoming.ReturnMode)
 }
 
 func TestOutgoingSenderSendAbandonedOutgoing(t *testing.T) {
