@@ -65,7 +65,7 @@ type CloudHashStorage interface {
 }
 
 // newCloudHashStorage constructor creates cloudHashStorage
-func newCloudHashStorage() *cloudHashStorage {
+func newCloudHashStorage() *cloudHashStorage { // nolint: deadcode
 	return &cloudHashStorage{}
 }
 
@@ -76,7 +76,7 @@ func NewMemoryCloudHashStorage() *MemoryCloudHashStorage {
 	}
 }
 
-type cloudHashStorage struct {
+type cloudHashStorage struct { // nolint: deadcode
 	DB   DB `inject:""`
 	lock sync.RWMutex
 }

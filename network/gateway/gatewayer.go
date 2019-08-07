@@ -55,7 +55,6 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 )
@@ -73,7 +72,6 @@ type gatewayer struct {
 	gateway      network.Gateway
 	gatewayMu    sync.RWMutex
 	isOperable   bool
-	appender     pulse.Appender
 }
 
 func (n *gatewayer) Gateway() network.Gateway {
