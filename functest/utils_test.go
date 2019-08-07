@@ -248,14 +248,8 @@ func generateMigrationAddress() string {
 }
 
 func fullMigration(t *testing.T, txHash string) *user {
-
-	member, err := newUserWithKeys()
-	require.NoError(t, err)
-	migrationAddress := generateMigrationAddress()
-	_, err = signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
-	require.NoError(t, err)
-	_, err = signedRequest(t, member, "member.migrationCreate", nil)
-	require.NoError(t, err)
+	migrationAddress := testutils.RandomString()
+	member := createMigrationMemberForMA(t, migrationAddress)
 
 	migrate(t, member.ref, "1000", txHash, migrationAddress, 0)
 	migrate(t, member.ref, "1000", txHash, migrationAddress, 2)
