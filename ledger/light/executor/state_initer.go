@@ -19,14 +19,18 @@ package executor
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/backoff"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/pkg/errors"
 )
 
@@ -35,95 +39,191 @@ import (
 type StateIniter interface {
 	// PrepareState prepares actual data to get the light started.
 	// Fetch necessary jets and drops from heavy.
-	PrepareState(ctx context.Context, pulse insolar.PulseNumber) error
+	PrepareState(ctx context.Context, pulse insolar.PulseNumber) (justJoined bool, jets []insolar.JetID, err error)
 }
+
+const timeout = 10 * time.Second
 
 // NewStateIniter creates StateIniterDefault with all required components.
 func NewStateIniter(
 	jetModifier jet.Modifier,
-	jetReleaser hot.JetReleaser,
+	jetReleaser JetReleaser,
 	drops drop.Modifier,
 	nodes node.Accessor,
 	sender bus.Sender,
+	pulseAppender pulse.Appender,
+	pulseAccessor pulse.Accessor,
+	calc JetCalculator,
 ) *StateIniterDefault {
 	return &StateIniterDefault{
-		jetModifier: jetModifier,
-		jetReleaser: jetReleaser,
-		drops:       drops,
-		nodes:       nodes,
-		sender:      sender,
+		jetModifier:   jetModifier,
+		jetReleaser:   jetReleaser,
+		drops:         drops,
+		nodes:         nodes,
+		sender:        sender,
+		pulseAppender: pulseAppender,
+		pulseAccessor: pulseAccessor,
+		jetCalculator: calc,
+		backoff: backoff.Backoff{
+			Factor: 2,
+			Jitter: true,
+			Min:    50 * time.Millisecond,
+			Max:    time.Second,
+		},
 	}
 }
 
 // StateIniterDefault implements StateIniter.
 type StateIniterDefault struct {
-	jetModifier jet.Modifier
-	jetReleaser hot.JetReleaser
-	drops       drop.Modifier
-	nodes       node.Accessor
-	sender      bus.Sender
+	jetModifier   jet.Modifier
+	jetReleaser   JetReleaser
+	drops         drop.Modifier
+	nodes         node.Accessor
+	sender        bus.Sender
+	pulseAppender pulse.Appender
+	pulseAccessor pulse.Accessor
+	jetCalculator JetCalculator
+	backoff       backoff.Backoff
 }
 
-func (s *StateIniterDefault) PrepareState(ctx context.Context, pulse insolar.PulseNumber) error {
-	if pulse < insolar.FirstPulseNumber {
-		return errors.Errorf("invalid pulse %s for light state initialization ", pulse)
+func (s *StateIniterDefault) PrepareState(
+	ctx context.Context,
+	forPulse insolar.PulseNumber,
+) (bool, []insolar.JetID, error) {
+	if forPulse < insolar.FirstPulseNumber {
+		return false, nil, errors.Errorf("invalid pulse %s for light state initialization ", forPulse)
 	}
 
-	candidates, err := s.nodes.InRole(pulse, insolar.StaticRoleHeavyMaterial)
+	// If we have any pulse, it means we already working. No need to fetch any initial data.
+	latestPulse, err := s.pulseAccessor.Latest(ctx)
+	if err == nil {
+		myJets, err := s.jetCalculator.MineForPulse(ctx, latestPulse.PulseNumber)
+		if err != nil {
+			return false, nil, errors.Wrap(err, "failed to calculate my jets")
+		}
+		return false, myJets, nil
+	}
+	if err != pulse.ErrNotFound {
+		return false, nil, errors.Wrap(err, "failed to fetch latest pulse")
+	}
+
+	heavy, err := s.heavy(forPulse)
 	if err != nil {
-		return errors.Wrap(err, "failed to calculate heavy node for pulse")
+		return false, nil, err
 	}
-	if len(candidates) == 0 {
-		return errors.Wrap(err, "failed to calculate heavy node for pulse")
-	}
-	heavy := candidates[0].ID
 	msg, err := payload.NewMessage(&payload.GetLightInitialState{
-		Pulse: pulse,
+		Pulse: forPulse,
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to create GetInitialState message")
+		return false, nil, errors.Wrap(err, "failed to create GetInitialState message")
 	}
 
+	ctx, cancel := context.WithCancel(ctx)
+	go func() {
+		select {
+		case <-ctx.Done():
+		case <-time.After(timeout):
+			cancel()
+		}
+	}()
+
+	jets, err := s.loadStateRetry(ctx, msg, heavy, forPulse)
+	if err != nil {
+		return false, nil, err
+	}
+	cancel()
+
+	return true, jets, nil
+}
+
+func (s *StateIniterDefault) heavy(pn insolar.PulseNumber) (insolar.Reference, error) {
+	candidates, err := s.nodes.InRole(pn, insolar.StaticRoleHeavyMaterial)
+	if err != nil {
+		return insolar.Reference{}, errors.Wrap(err, "failed to calculate heavy node for pulse")
+	}
+	if len(candidates) == 0 {
+		return insolar.Reference{}, errors.Wrap(err, "failed to calculate heavy node for pulse")
+	}
+	return candidates[0].ID, nil
+}
+
+func (s *StateIniterDefault) loadStateRetry(
+	ctx context.Context,
+	msg *message.Message,
+	heavy insolar.Reference,
+	pn insolar.PulseNumber,
+) ([]insolar.JetID, error) {
 	reps, done := s.sender.SendTarget(ctx, msg, heavy)
 	defer done()
 
 	res, ok := <-reps
 	if !ok {
-		return errors.New("no reply for light state initialization")
+		return nil, errors.New("no reply for light state initialization")
 	}
 
 	pl, err := payload.UnmarshalFromMeta(res.Payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal reply")
-	}
-	initialState, ok := pl.(*payload.LightInitialState)
-	if !ok {
-		return fmt.Errorf("unexpected reply %T", pl)
+		return nil, errors.Wrap(err, "failed to unmarshal reply")
 	}
 
-	jets := initialState.JetIDs
-	err = s.jetModifier.Update(ctx, pulse, true, jets...)
-	if err != nil {
-		return errors.Wrap(err, "failed to update jets")
-	}
-
-	for _, jetID := range jets {
-		err = s.jetReleaser.Unlock(ctx, pulse, jetID)
-		if err != nil {
-			return errors.Wrap(err, "failed to unlock jet")
+	if errPayload, ok := pl.(*payload.Error); ok {
+		if errPayload.Code != payload.CodeNoStartPulse {
+			return nil, errors.Wrap(errors.New(errPayload.Text), "failed to fetch state from heavy")
+		}
+		select {
+		case <-ctx.Done():
+			return nil, errors.New("retry timeout")
+		case <-time.After(s.backoff.Duration()):
+			return s.loadStateRetry(ctx, msg, heavy, pn)
 		}
 	}
 
-	for _, buf := range initialState.Drops {
+	state, ok := pl.(*payload.LightInitialState)
+	if !ok {
+		return nil, fmt.Errorf("unexpected reply %T", pl)
+	}
+
+	prevPulse := pulse.FromProto(&state.Pulse)
+	err = s.pulseAppender.Append(ctx, *prevPulse)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to append pulse")
+	}
+
+	// If not network start, we should wait for other lights to give us data.
+	if !state.NetworkStart {
+		return nil, nil
+	}
+
+	inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"jets":       insolar.JetIDCollection(state.JetIDs).DebugString(),
+		"prev_pulse": prevPulse.PulseNumber,
+	}).Debug("received initial state from heavy")
+
+	err = s.jetModifier.Update(ctx, prevPulse.PulseNumber, true, state.JetIDs...)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to update jets")
+	}
+
+	for _, jetID := range state.JetIDs {
+		err = s.jetReleaser.Unlock(ctx, pn, jetID)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to unlock jet")
+		}
+	}
+
+	for _, buf := range state.Drops {
 		d, err := drop.Decode(buf)
 		if err != nil {
-			return errors.Wrap(err, "failed to decode drop")
+			return nil, errors.Wrap(err, "failed to decode drop")
+		}
+		if d.Pulse != prevPulse.PulseNumber {
+			return nil, errors.New("received drop with wrong pulse")
 		}
 		err = s.drops.Set(ctx, *d)
 		if err != nil {
-			return errors.Wrap(err, "failed to set drop")
+			return nil, errors.Wrap(err, "failed to set drop")
 		}
 	}
 
-	return nil
+	return state.JetIDs, nil
 }

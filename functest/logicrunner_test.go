@@ -20,11 +20,13 @@ package functest
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/insolar/utils"
+	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/insolar/utils"
 
 	"github.com/stretchr/testify/require"
 
@@ -153,9 +155,25 @@ func (r *One) TestPayload() (two.Payload, error) {
 	if p.Str != str { return two.Payload{}, errors.New("Oops") }
 
 	return p, nil
-
 }
 
+var INSATTR_ManyTimes_API = true
+func (r *One) ManyTimes() (error) {
+	holder := two.New()
+	friend, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < 100; i++ {
+		_, err := friend.Hello("some")
+		if err != nil {
+			return err
+		}
+	}
+
+    return nil
+}
 `
 
 	var contractTwoCode = `
@@ -241,8 +259,12 @@ func (r *Two) GetPayloadString() (string, error) {
 	require.Equal(
 		t,
 		goplugintestutils.CBORMarshal(t, expected),
-		resp.Reply.Result,
+		resp.Result,
 	)
+
+	resp = callMethod(t, objectRef, "ManyTimes")
+	require.Empty(t, resp.Error)
+	require.Empty(t, resp.ExtractedError)
 }
 
 // Make sure a contract can make a saga call to another contract
@@ -766,7 +788,7 @@ func New() (*Two, error) {
 	resp := callMethodNoChecks(t, obj, "Hello")
 	require.Empty(t, resp.Error)
 	require.NotNil(t, resp.Result.Error)
-	require.Contains(t, resp.Result.Error.Error(), "( Generated Method ) Constructor returns nil")
+	require.Contains(t, resp.Result.Error.Error(), "constructor returned nil")
 }
 
 // If a contract constructor fails it's considered a logical error,
@@ -850,13 +872,20 @@ func (r *One) Recursive() (error) {
 `
 	protoRef := uploadContractOnce(t, "recursive_call_one", contractOneCode)
 
-	obj := callConstructor(t, protoRef, "New")
-	resp := callMethodNoChecks(t, obj, "Recursive")
+	// for now Recursive calls may cause timeouts. Dont remove retries until we make new loop detection algorithm
+	var err string
+	for i := 0; i <= 5; i++ {
+		obj := callConstructor(t, protoRef, "New")
+		resp := callMethodNoChecks(t, obj, "Recursive")
 
-	errstr := resp.Error.Error()
-	require.NotEmpty(t, errstr)
-	// if you get a timeout here add a retry loop to the test as it was before
-	require.Contains(t, errstr, "loop detected")
+		err = resp.Error.Error()
+		if !strings.Contains(err, "timeout") {
+			break
+		}
+	}
+
+	require.NotEmpty(t, err)
+	require.Contains(t, err, "loop detected")
 }
 
 func TestGetParent(t *testing.T) {

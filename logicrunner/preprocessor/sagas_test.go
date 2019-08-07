@@ -58,6 +58,10 @@ func (w *SagaTestWallet) TheAcceptMethod(amount int) error {
 func (w *SagaTestWallet) TheRollbackMethod(amount int) error {
 	w.Amount -= amount
 }
+
+func (w *SagaTestWallet) RegularMethodAfterRollback(amount int) error {
+	w.Amount *= 2; // lol
+}
 `
 
 // Make sure proxy doesn't contain:
@@ -86,6 +90,11 @@ func (s *SagasSuite) TestSagaAdditionalMethodsAreMissingInProxy() {
 	s.NotContains(proxyCode, "TheRollbackMethodNoWait")
 	s.NotContains(proxyCode, "TheAcceptMethodAsImmutable")
 	s.NotContains(proxyCode, "TheRollbackMethodAsImmutable")
+
+	// Make sure that a regular method after the rollback method was processes as usual
+	s.Contains(proxyCode, "RegularMethodAfterRollback")
+	s.Contains(proxyCode, "RegularMethodAfterRollbackNoWait")
+	s.Contains(proxyCode, "RegularMethodAfterRollbackAsImmutable")
 }
 
 // Make sure wrapper contains meta information about saga
@@ -287,6 +296,12 @@ func (s *SagasSuite) TestExtractSagaInfoFromComment() {
 	s.Require().False(info.IsSaga)
 
 	res = extractSagaInfoFromComment("//ins:saga(SomeRollbackMethodName) ", info)
+	s.Require().True(res)
+	s.Require().True(info.IsSaga)
+	s.Require().Equal(info.RollbackMethodName, "SomeRollbackMethodName")
+
+	// Spaces after '//' - IDE of a contractor author may force this formatting
+	res = extractSagaInfoFromComment("// ins:saga(SomeRollbackMethodName) ", info)
 	s.Require().True(res)
 	s.Require().True(info.IsSaga)
 	s.Require().Equal(info.RollbackMethodName, "SomeRollbackMethodName")

@@ -83,8 +83,6 @@ type Sender interface {
 	SendTarget(ctx context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func())
 	// Reply sends message in response to another message.
 	Reply(ctx context.Context, origin payload.Meta, reply *message.Message)
-	// Getter for latest pulse
-	LatestPulse(ctx context.Context) (insolar.Pulse, error)
 }
 
 type lockedReply struct {
@@ -169,10 +167,12 @@ func (b *Bus) SendRole(
 	}
 	latestPulse, err := b.pulses.Latest(ctx)
 	if err != nil {
+		instracer.AddError(span, err)
 		return handleError(errors.Wrap(err, "failed to fetch pulse"))
 	}
 	nodes, err := b.coordinator.QueryRole(ctx, role, *object.Record(), latestPulse.PulseNumber)
 	if err != nil {
+		instracer.AddError(span, err)
 		return handleError(errors.Wrap(err, "failed to calculate role"))
 	}
 
@@ -185,12 +185,12 @@ func (b *Bus) SendRole(
 func (b *Bus) SendTarget(
 	ctx context.Context, msg *message.Message, target insolar.Reference,
 ) (<-chan *message.Message, func()) {
-	ctx, startSpan := instracer.StartSpan(ctx, "Bus.SendTarget")
-	startSpan.AddAttributes(
+	ctx, span := instracer.StartSpan(ctx, "Bus.SendTarget")
+	span.AddAttributes(
 		trace.StringAttribute("type", "bus"),
 		trace.StringAttribute("target", target.String()),
 	)
-	defer startSpan.End()
+	defer span.End()
 
 	handleError := func(err error) (<-chan *message.Message, func()) {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to send message"))
@@ -204,7 +204,7 @@ func (b *Bus) SendTarget(
 		ctx, _ = inslogger.WithField(ctx, "sending_type", payloadType.String())
 	}
 	logger := inslogger.FromContext(ctx)
-	startSpan.AddAttributes(
+	span.AddAttributes(
 		trace.StringAttribute("sending_type", msg.Metadata.Get(MetaType)),
 	)
 
@@ -214,17 +214,20 @@ func (b *Bus) SendTarget(
 	if err == nil {
 		msg.Metadata.Set(MetaSpanData, string(sp))
 	} else {
+		instracer.AddError(span, err)
 		logger.Error(err)
 	}
 
 	msg.SetContext(ctx)
 	wrapped, msg, err := b.wrapMeta(ctx, msg, target, payload.MessageHash{})
 	if err != nil {
+		instracer.AddError(span, err)
 		return handleError(errors.Wrap(err, "can't wrap meta message"))
 	}
 	msgHash := payload.MessageHash{}
 	err = msgHash.Unmarshal(wrapped.ID)
 	if err != nil {
+		instracer.AddError(span, err)
 		return handleError(errors.Wrap(err, "failed to unmarshal hash"))
 	}
 
@@ -245,6 +248,7 @@ func (b *Bus) SendTarget(
 	err = b.pub.Publish(TopicOutgoing, msg)
 	if err != nil {
 		done()
+		instracer.AddError(span, err)
 		return handleError(errors.Wrapf(err, "can't publish message to %s topic", TopicOutgoing))
 	}
 
@@ -272,7 +276,7 @@ func (b *Bus) SendTarget(
 func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Message) {
 	logger := inslogger.FromContext(ctx)
 
-	ctx, span := instracer.StartSpan(ctx, "Bus.Reply starts")
+	ctx, span := instracer.StartSpan(ctx, "Bus.Reply")
 	span.AddAttributes(
 		trace.StringAttribute("type", "bus"),
 		trace.StringAttribute("sender", origin.Sender.String()),
@@ -282,12 +286,14 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 	originHash := payload.MessageHash{}
 	err := originHash.Unmarshal(origin.ID)
 	if err != nil {
+		instracer.AddError(span, err)
 		logger.Error(errors.Wrap(err, "failed to unmarshal hash"))
 		return
 	}
 
 	wrapped, reply, err := b.wrapMeta(ctx, reply, origin.Sender, originHash)
 	if err != nil {
+		instracer.AddError(span, err)
 		logger.Error("can't wrap meta message ", err.Error())
 		return
 	}
@@ -300,6 +306,7 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 	if err == nil {
 		reply.Metadata.Set(MetaSpanData, string(sp))
 	} else {
+		instracer.AddError(span, err)
 		logger.Error(err)
 	}
 
@@ -308,6 +315,7 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 	logger.Debugf("sending reply %s", base58.Encode(replyHash))
 	err = b.pub.Publish(TopicOutgoing, reply)
 	if err != nil {
+		instracer.AddError(span, err)
 		logger.Errorf("can't publish message to %s topic: %s", TopicOutgoing, err.Error())
 	}
 }
@@ -332,6 +340,7 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 		meta := payload.Meta{}
 		err = meta.Unmarshal(msg.Payload)
 		if err != nil {
+			instracer.AddError(span, err)
 			logger.Error(errors.Wrap(err, "failed to receive message"))
 			return nil, nil
 		}
@@ -419,8 +428,4 @@ func (b *Bus) wrapMeta(
 	msg.Payload = buf
 
 	return meta, msg, nil
-}
-
-func (b *Bus) LatestPulse(ctx context.Context) (insolar.Pulse, error) {
-	return b.pulses.Latest(ctx)
 }

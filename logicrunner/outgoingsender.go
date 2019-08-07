@@ -2,6 +2,7 @@ package logicrunner
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -140,9 +141,17 @@ func (a *outgoingSenderActorState) sendOutgoingRequest(ctx context.Context, outg
 
 	// Actually make a call.
 	callMsg := &message.CallMethod{IncomingRequest: *incoming}
-	res, err := a.cr.CallMethod(ctx, callMsg)
-	if err == nil && (outgoing.ReturnMode == record.ReturnResult) {
-		result = res.(*reply.CallMethod).Result
+	res, err := a.cr.Call(ctx, callMsg)
+	if err == nil {
+		switch v := res.(type) {
+		case *reply.CallMethod: // regular call
+			result = v.Result
+		case *reply.RegisterRequest: // no-wait call
+			result = v.Request.Bytes()
+		default:
+			err = fmt.Errorf("sendOutgoingRequest: cr.Call returned unexpected type %T", v)
+			return result, nil, err
+		}
 	}
 
 	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099

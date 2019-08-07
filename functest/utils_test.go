@@ -443,17 +443,19 @@ func callConstructor(t testing.TB, prototypeRef *insolar.Reference, method strin
 	require.NotEmpty(t, objectBody)
 
 	callConstructorRes := struct {
-		Version string                   `json:"jsonrpc"`
-		ID      string                   `json:"id"`
-		Result  api.CallConstructorReply `json:"result"`
-		Error   json2.Error              `json:"error"`
+		Version string              `json:"jsonrpc"`
+		ID      string              `json:"id"`
+		Result  api.CallMethodReply `json:"result"`
+		Error   json2.Error         `json:"error"`
 	}{}
 
 	err = json.Unmarshal(objectBody, &callConstructorRes)
 	require.NoError(t, err)
 	require.Empty(t, callConstructorRes.Error)
 
-	objectRef, err := insolar.NewReferenceFromBase58(callConstructorRes.Result.ObjectRef)
+	require.NotEmpty(t, callConstructorRes.Result.Object)
+
+	objectRef, err := insolar.NewReferenceFromBase58(callConstructorRes.Result.Object)
 	require.NoError(t, err)
 
 	require.NotEqual(t, insolar.Reference{}.FromSlice(make([]byte, insolar.RecordRefSize)), objectRef)

@@ -16,7 +16,7 @@ import (
 type StateIniterMock struct {
 	t minimock.Tester
 
-	funcPrepareState          func(ctx context.Context, pulse insolar.PulseNumber) (err error)
+	funcPrepareState          func(ctx context.Context, pulse insolar.PulseNumber) (justJoined bool, jets []insolar.JetID, err error)
 	inspectFuncPrepareState   func(ctx context.Context, pulse insolar.PulseNumber)
 	afterPrepareStateCounter  uint64
 	beforePrepareStateCounter uint64
@@ -61,7 +61,9 @@ type StateIniterMockPrepareStateParams struct {
 
 // StateIniterMockPrepareStateResults contains results of the StateIniter.PrepareState
 type StateIniterMockPrepareStateResults struct {
-	err error
+	justJoined bool
+	jets       []insolar.JetID
+	err        error
 }
 
 // Expect sets up expected params for StateIniter.PrepareState
@@ -96,7 +98,7 @@ func (mmPrepareState *mStateIniterMockPrepareState) Inspect(f func(ctx context.C
 }
 
 // Return sets up results that will be returned by StateIniter.PrepareState
-func (mmPrepareState *mStateIniterMockPrepareState) Return(err error) *StateIniterMock {
+func (mmPrepareState *mStateIniterMockPrepareState) Return(justJoined bool, jets []insolar.JetID, err error) *StateIniterMock {
 	if mmPrepareState.mock.funcPrepareState != nil {
 		mmPrepareState.mock.t.Fatalf("StateIniterMock.PrepareState mock is already set by Set")
 	}
@@ -104,12 +106,12 @@ func (mmPrepareState *mStateIniterMockPrepareState) Return(err error) *StateInit
 	if mmPrepareState.defaultExpectation == nil {
 		mmPrepareState.defaultExpectation = &StateIniterMockPrepareStateExpectation{mock: mmPrepareState.mock}
 	}
-	mmPrepareState.defaultExpectation.results = &StateIniterMockPrepareStateResults{err}
+	mmPrepareState.defaultExpectation.results = &StateIniterMockPrepareStateResults{justJoined, jets, err}
 	return mmPrepareState.mock
 }
 
 //Set uses given function f to mock the StateIniter.PrepareState method
-func (mmPrepareState *mStateIniterMockPrepareState) Set(f func(ctx context.Context, pulse insolar.PulseNumber) (err error)) *StateIniterMock {
+func (mmPrepareState *mStateIniterMockPrepareState) Set(f func(ctx context.Context, pulse insolar.PulseNumber) (justJoined bool, jets []insolar.JetID, err error)) *StateIniterMock {
 	if mmPrepareState.defaultExpectation != nil {
 		mmPrepareState.mock.t.Fatalf("Default expectation is already set for the StateIniter.PrepareState method")
 	}
@@ -138,13 +140,13 @@ func (mmPrepareState *mStateIniterMockPrepareState) When(ctx context.Context, pu
 }
 
 // Then sets up StateIniter.PrepareState return parameters for the expectation previously defined by the When method
-func (e *StateIniterMockPrepareStateExpectation) Then(err error) *StateIniterMock {
-	e.results = &StateIniterMockPrepareStateResults{err}
+func (e *StateIniterMockPrepareStateExpectation) Then(justJoined bool, jets []insolar.JetID, err error) *StateIniterMock {
+	e.results = &StateIniterMockPrepareStateResults{justJoined, jets, err}
 	return e.mock
 }
 
 // PrepareState implements StateIniter
-func (mmPrepareState *StateIniterMock) PrepareState(ctx context.Context, pulse insolar.PulseNumber) (err error) {
+func (mmPrepareState *StateIniterMock) PrepareState(ctx context.Context, pulse insolar.PulseNumber) (justJoined bool, jets []insolar.JetID, err error) {
 	mm_atomic.AddUint64(&mmPrepareState.beforePrepareStateCounter, 1)
 	defer mm_atomic.AddUint64(&mmPrepareState.afterPrepareStateCounter, 1)
 
@@ -162,7 +164,7 @@ func (mmPrepareState *StateIniterMock) PrepareState(ctx context.Context, pulse i
 	for _, e := range mmPrepareState.PrepareStateMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.err
+			return e.results.justJoined, e.results.jets, e.results.err
 		}
 	}
 
@@ -178,7 +180,7 @@ func (mmPrepareState *StateIniterMock) PrepareState(ctx context.Context, pulse i
 		if results == nil {
 			mmPrepareState.t.Fatal("No results are set for the StateIniterMock.PrepareState")
 		}
-		return (*results).err
+		return (*results).justJoined, (*results).jets, (*results).err
 	}
 	if mmPrepareState.funcPrepareState != nil {
 		return mmPrepareState.funcPrepareState(ctx, pulse)

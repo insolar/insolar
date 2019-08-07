@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -177,7 +178,7 @@ func (m *executionProxyImplementation) RouteCall(
 	// we _already_ are processing the request. We should continue to execute and
 	// the next executor will wait for us in pending state. For this reason Flow is not
 	// used for registering the outgoing request.
-	outgoingReqID, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
+	outReqInfo, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
 	if err != nil {
 		return err
 	}
@@ -190,7 +191,7 @@ func (m *executionProxyImplementation) RouteCall(
 
 	// Step 2. Send the request and register the result (both is done by outgoingSender)
 
-	outgoingReqRef := insolar.NewReference(*outgoingReqID)
+	outgoingReqRef := insolar.NewReference(outReqInfo.RequestID)
 
 	var incoming *record.IncomingRequest
 	rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
@@ -211,7 +212,7 @@ func (m *executionProxyImplementation) SaveAsChild(
 	incoming, outgoing := buildIncomingAndOutgoingSaveAsChildRequests(ctx, current, req)
 
 	// Register outgoing request
-	outgoingReqID, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
+	outReqInfo, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
 	if err != nil {
 		return err
 	}
@@ -219,23 +220,20 @@ func (m *executionProxyImplementation) SaveAsChild(
 	// AALEKSEEV TODO move CallConstructor to OutgoingRequestSender
 	// Send the request
 	msg := &message.CallMethod{IncomingRequest: *incoming}
-	objectRef, ctorErr, err := m.cr.CallConstructor(ctx, msg)
-	current.AddOutgoingRequest(ctx, *incoming, nil, objectRef, err)
+	res, err := m.cr.Call(ctx, msg)
 	if err != nil {
 		return err
 	}
-	rep.Reference = objectRef
-	rep.ConstructorError = ctorErr
+
+	callReply := res.(*reply.CallMethod)
+	current.AddOutgoingRequest(ctx, *incoming, callReply.Result, callReply.Object, err)
+
+	rep.Reference = callReply.Object
+	rep.Result = callReply.Result
 
 	// Register result of the outgoing method
-	outgoingReqRef := insolar.NewReference(*outgoingReqID)
-
-	var refBytes []byte
-	if objectRef != nil {
-		// constructor succeeded
-		refBytes = objectRef.Bytes()
-	}
-	reqResult := newRequestResult(refBytes, req.Callee)
+	outgoingReqRef := insolar.NewReference(outReqInfo.RequestID)
+	reqResult := newRequestResult(rep.Result, req.Callee)
 	return m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
 }
 
@@ -351,7 +349,11 @@ func buildIncomingRequestFromOutgoing(outgoing *record.OutgoingRequest) *record.
 		Reason:       outgoing.Reason,
 	}
 
-	if outgoing.ReturnMode != record.ReturnSaga {
+	if outgoing.ReturnMode == record.ReturnSaga {
+		// We never wait for a result of saga call
+		incoming.ReturnMode = record.ReturnNoWait
+	} else {
+		// If this is not a saga call just copy the ReturnMode
 		incoming.ReturnMode = outgoing.ReturnMode
 	}
 

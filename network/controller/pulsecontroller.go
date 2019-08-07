@@ -58,7 +58,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
@@ -106,16 +105,7 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Rec
 	inslog := inslogger.FromContext(ctx)
 	// if we are a joiner node, we should receive pulse from phase1 packet and ignore pulse from pulsar
 	if !pc.NodeKeeper.GetConsensusInfo().IsJoiner() {
-		// Because we want to save our trace-context from a pulsar node
-		// We fetch TraceSpanData from msg and set a trace id and other stuff to current context
-		newCtx := context.Background()
-		parent, err := instracer.Deserialize(data.TraceSpanData)
-		if err != nil {
-			inslog.Errorf("failed to deserialize trace spans data on pulse process: %v", err)
-		} else {
-			newCtx = instracer.WithParentSpan(newCtx, parent)
-		}
-		go pc.PulseHandler.HandlePulse(newCtx, pulse, request)
+		go pc.PulseHandler.HandlePulse(ctx, pulse, request)
 	} else {
 		inslog.Debugf("Ignore pulse %v from pulsar, waiting for consensus phase1 packet", data.Pulse)
 		skipped := atomic.AddUint32(&pc.skippedPulses, 1)

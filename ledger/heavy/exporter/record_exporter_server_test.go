@@ -18,7 +18,6 @@ package exporter
 
 import (
 	"context"
-	"errors"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -27,11 +26,12 @@ import (
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/testutils/network"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
 )
@@ -124,16 +124,18 @@ func TestRecordIterator_HasNext(t *testing.T) {
 			require.False(t, hasNext)
 		})
 
-		t.Run("no data in the current. has more synce pulses. returns true", func(t *testing.T) {
-			pn := gen.PulseNumber()
-			positionAccessor := object.NewRecordPositionAccessorMock(t)
-			positionAccessor.LastKnownPositionMock.Expect(pn).Return(1, nil)
+		t.Run("no data in the current. has more synced pulses. returns true", func(t *testing.T) {
+			pn := insolar.PulseNumber(99)
 
 			pulseCalculator := network.NewPulseCalculatorMock(t)
 			pulseCalculator.ForwardsMock.Expect(ctx, pn, 1).Return(insolar.Pulse{PulseNumber: 100}, nil)
 
 			jetKeeper := executor.NewJetKeeperMock(t)
 			jetKeeper.TopSyncPulseMock.Return(101)
+
+			positionAccessor := object.NewRecordPositionAccessorMock(t)
+			positionAccessor.LastKnownPositionMock.When(99).Then(2, nil)
+			positionAccessor.LastKnownPositionMock.Expect(100).Return(1, nil)
 
 			iter := newRecordIterator(pn, 2, 0, positionAccessor, nil, jetKeeper, pulseCalculator)
 			iter.read = 10

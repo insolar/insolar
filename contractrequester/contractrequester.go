@@ -21,7 +21,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
-	"fmt"
 	"sync"
 	"time"
 
@@ -110,7 +109,7 @@ func (cr *ContractRequester) SendRequestWithPulse(ctx context.Context, ref *inso
 		},
 	}
 
-	routResult, err := cr.CallMethod(ctx, msg)
+	routResult, err := cr.Call(ctx, msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't route call")
 	}
@@ -222,23 +221,6 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 		logger.Error("Request timeout")
 		return nil, errors.Errorf("request to contract was canceled: timeout of %s was exceeded", cr.callTimeout)
 	}
-}
-
-func (cr *ContractRequester) CallMethod(ctx context.Context, inMsg insolar.Message) (insolar.Reply, error) {
-	return cr.Call(ctx, inMsg)
-}
-
-func (cr *ContractRequester) CallConstructor(ctx context.Context, inMsg insolar.Message) (ref *insolar.Reference, ctorErr string, sysErr error) {
-	res, err := cr.Call(ctx, inMsg)
-	if err != nil {
-		return nil, "", err
-	}
-
-	rep, ok := res.(*reply.CallConstructor)
-	if !ok {
-		return nil, "", errors.New(fmt.Sprintf("Reply is not CallConstructor: %+v", res))
-	}
-	return rep.Object, rep.ConstructorError, nil
 }
 
 func (cr *ContractRequester) result(ctx context.Context, msg *message.ReturnResults) error {
