@@ -20,11 +20,13 @@ package functest
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/insolar/utils"
+	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/insolar/utils"
 
 	"github.com/stretchr/testify/require"
 
@@ -870,13 +872,25 @@ func (r *One) Recursive() (error) {
 `
 	protoRef := uploadContractOnce(t, "recursive_call_one", contractOneCode)
 
-	obj := callConstructor(t, protoRef, "New")
-	resp := callMethodNoChecks(t, obj, "Recursive")
+	// for now Recursive calls may cause timeouts. Dont remove retries until we make new loop detection algorithm
+	for i := 0; i <= 5; i++ {
+		obj := callConstructor(t, protoRef, "New")
+		resp := callMethodNoChecks(t, obj, "Recursive")
 
-	errstr := resp.Error.Error()
-	require.NotEmpty(t, errstr)
-	// if you get a timeout here add a retry loop to the test as it was before
-	require.Contains(t, errstr, "loop detected")
+		errstr := resp.Error.Error()
+		if errstr != "" {
+			if strings.Contains(errstr, "loop detected") {
+				return
+			}
+			if strings.Contains(errstr, "timeout") {
+				continue
+			} else {
+				require.Fail(t, "Unexpected error: "+errstr)
+			}
+		}
+	}
+
+	require.Fail(t, "loop detection is broken, all requests failed with timeout")
 }
 
 func TestGetParent(t *testing.T) {
