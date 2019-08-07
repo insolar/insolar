@@ -155,20 +155,3 @@ func NewAccessor(snapshot *Snapshot) *Accessor {
 	}
 	return result
 }
-
-func dynamicToStaticRole(role insolar.DynamicRole) insolar.StaticRole {
-	switch role {
-	case insolar.DynamicRoleVirtualExecutor:
-		return insolar.StaticRoleVirtual
-	case insolar.DynamicRoleVirtualValidator:
-		return insolar.StaticRoleVirtual
-	case insolar.DynamicRoleLightExecutor:
-		return insolar.StaticRoleLightMaterial
-	case insolar.DynamicRoleLightValidator:
-		return insolar.StaticRoleLightMaterial
-	case insolar.DynamicRoleHeavyExecutor:
-		return insolar.StaticRoleHeavyMaterial
-	default:
-		return insolar.StaticRoleUnknown
-	}
-}

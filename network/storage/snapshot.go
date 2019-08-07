@@ -67,7 +67,7 @@ type SnapshotStorage interface {
 }
 
 // newSnapshotStorage constructor creates PulseStorage
-func newSnapshotStorage() *snapshotStorage { // nolint: deadcode
+func newSnapshotStorage() *snapshotStorage { // nolint
 	return &snapshotStorage{}
 }
 
@@ -78,7 +78,7 @@ func NewMemorySnapshotStorage() *MemorySnapshotStorage {
 	}
 }
 
-type snapshotStorage struct { // nolint: deadcode
+type snapshotStorage struct { // nolint
 	DB   DB `inject:""`
 	lock sync.RWMutex
 }
