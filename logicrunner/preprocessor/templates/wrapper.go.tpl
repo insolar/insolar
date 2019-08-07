@@ -150,7 +150,13 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, e
 {{ end }}
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{} { {{ $method.Results }} }, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns:[]interface{}{ {{ $method.Results }} }},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -175,7 +181,10 @@ func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, []byte, error) {
 	}
 
 	result := []byte{}
-	err = ph.Serialize([]interface{} { ret1 }, &result)
+	err = ph.Serialize(
+		foundation.Result{Returns:[]interface{}{ ret1 }},
+		&result,
+	)
 	if err != nil {
 		return nil, nil, err
 	}

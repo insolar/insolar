@@ -93,7 +93,7 @@ func (cr *ContractRequester) SendRequestWithPulse(ctx context.Context, ref *inso
 	ctx, span := instracer.StartSpan(ctx, "SendRequest "+method)
 	defer span.End()
 
-	args, err := insolar.MarshalArgs(argsIn...)
+	args, err := insolar.Serialize(argsIn)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't marshal")
 	}

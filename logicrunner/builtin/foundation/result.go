@@ -14,29 +14,34 @@
 // limitations under the License.
 //
 
-package extractor
+package foundation
 
 import (
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/insolar"
 )
 
-// NodeInfoResponse extracts response of GetNodeInfo
-func NodeInfoResponse(data []byte) (string, string, error) {
-	res := struct {
-		PublicKey string
-		Role      insolar.StaticRole
-	}{}
-	var contractErr *foundation.Error
-	err := Generic(data, &res, &contractErr)
+type Result struct {
+	Error *Error
+	Returns []interface{}
+}
+
+
+func MarshalMethodResult(returns ...interface{}) ([]byte, error) {
+	result, err := insolar.Serialize(Result{Returns: returns})
 	if err != nil {
-		return "", "", errors.Wrap(err, "[ NodeInfoResponse ] Can't unmarshal response")
-	}
-	if contractErr != nil {
-		return "", "", errors.Wrap(contractErr, "[ NodeInfoResponse ] Has error in response")
+		return nil, errors.Wrap(err, "couldn't serialize method returns")
 	}
 
-	return res.PublicKey, res.Role.String(), nil
+	return result, nil
+}
+
+func MarshalMethodErrorResult(err error) ([]byte, error) {
+	result, err := insolar.Serialize(Result{Error: &Error{S: err.Error()}})
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't serialize method returns")
+	}
+
+	return result, nil
 }

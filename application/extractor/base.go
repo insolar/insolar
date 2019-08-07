@@ -19,18 +19,49 @@ package extractor
 import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+
 	"github.com/pkg/errors"
 )
+
+func Generic(data []byte, returns ...interface{}) error {
+	res := foundation.Result{
+		Returns: returns,
+	}
+	err := insolar.Deserialize(data, &res)
+	if err != nil {
+		return errors.Wrap(err, "[ StringResponse ] Can't unmarshal response")
+	}
+
+	// this magic helper that injects logic error into one of returns, just sugar
+	if res.Error != nil {
+		found := false
+		for i := 0; i < len(returns); i++ {
+			if e, ok := returns[i].(**foundation.Error); ok {
+				if e == nil {
+					return errors.New("nil pointer in unmarshal")
+				}
+				*e = res.Error
+				found = true
+			}
+		}
+		if !found {
+			return errors.New("no place for error in returns")
+		}
+	}
+
+	return nil
+}
 
 func stringResponse(data []byte) (string, error) {
 	var result string
 	var contractErr *foundation.Error
-	_, err := insolar.UnMarshalResponse(data, []interface{}{&result, &contractErr})
+	err := Generic(data, &result, &contractErr)
 	if err != nil {
 		return "", errors.Wrap(err, "[ StringResponse ] Can't unmarshal response ")
 	}
 	if contractErr != nil {
 		return "", errors.Wrap(contractErr, "[ StringResponse ] Has error in response")
 	}
+
 	return result, nil
 }

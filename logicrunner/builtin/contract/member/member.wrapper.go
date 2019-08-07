@@ -131,7 +131,13 @@ func INSMETHOD_GetName(object []byte, data []byte) ([]byte, []byte, error) {
 	ret1 = ph.MakeErrorSerializable(ret1)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -182,7 +188,13 @@ func INSMETHOD_GetWallet(object []byte, data []byte) ([]byte, []byte, error) {
 	ret1 = ph.MakeErrorSerializable(ret1)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -233,7 +245,13 @@ func INSMETHOD_GetPublicKey(object []byte, data []byte) ([]byte, []byte, error) 
 	ret1 = ph.MakeErrorSerializable(ret1)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -253,7 +271,7 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	args := [1]interface{}{}
+	args := make([]interface{}, 1)
 	var args0 []byte
 	args[0] = &args0
 
@@ -286,7 +304,13 @@ func INSMETHOD_Call(object []byte, data []byte) ([]byte, []byte, error) {
 	ret1 = ph.MakeErrorSerializable(ret1)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -337,7 +361,13 @@ func INSMETHOD_GetDeposits(object []byte, data []byte) ([]byte, []byte, error) {
 	ret1 = ph.MakeErrorSerializable(ret1)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -357,7 +387,7 @@ func INSMETHOD_FindDeposit(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	args := [1]interface{}{}
+	args := make([]interface{}, 1)
 	var args0 string
 	args[0] = &args0
 
@@ -390,7 +420,13 @@ func INSMETHOD_FindDeposit(object []byte, data []byte) ([]byte, []byte, error) {
 	ret2 = ph.MakeErrorSerializable(ret2)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1, ret2}, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1, ret2}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -410,7 +446,7 @@ func INSMETHOD_AddDeposit(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	args := [2]interface{}{}
+	args := make([]interface{}, 2)
 	var args0 string
 	args[0] = &args0
 	var args1 insolar.Reference
@@ -445,7 +481,13 @@ func INSMETHOD_AddDeposit(object []byte, data []byte) ([]byte, []byte, error) {
 	ret0 = ph.MakeErrorSerializable(ret0)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0}, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -496,7 +538,13 @@ func INSMETHOD_GetBurnAddress(object []byte, data []byte) ([]byte, []byte, error
 	ret1 = ph.MakeErrorSerializable(ret1)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -504,7 +552,7 @@ func INSMETHOD_GetBurnAddress(object []byte, data []byte) ([]byte, []byte, error
 func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
-	args := [5]interface{}{}
+	args := make([]interface{}, 5)
 	var args0 insolar.Reference
 	args[0] = &args0
 	var args1 string
@@ -529,7 +577,10 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
 	}
 
 	result := []byte{}
-	err = ph.Serialize([]interface{}{ret1}, &result)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret1}},
+		&result,
+	)
 	if err != nil {
 		return nil, nil, err
 	}

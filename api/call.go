@@ -94,7 +94,7 @@ func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBo
 		return nil, errors.Wrap(err, "[ makeCall ] failed to parse params.Reference")
 	}
 
-	requestArgs, err := insolar.MarshalArgs(rawBody, signature, pulseTimeStamp)
+	requestArgs, err := insolar.Serialize([]interface{}{rawBody, signature, pulseTimeStamp})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] failed to marshal arguments")
 	}

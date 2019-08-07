@@ -511,10 +511,8 @@ func (pf *ParsedFile) typeName(t ast.Expr) string {
 func (pf *ParsedFile) generateImports(wrapper bool) map[string]bool {
 	imports := make(map[string]bool)
 	imports[fmt.Sprintf(`"%s"`, proxyctxPath)] = true
-	if wrapper {
-		// for errors
-		imports[fmt.Sprintf(`"%s"`, foundationPath)] = true
-	} else {
+	imports[fmt.Sprintf(`"%s"`, foundationPath)] = true
+	if !wrapper {
 		imports[fmt.Sprintf(`"%s"`, corePath)] = true
 	}
 	for _, method := range pf.methods[pf.contract] {
@@ -672,7 +670,7 @@ func generateZeroListOfTypes(parsed *ParsedFile, name string, list *ast.FieldLis
 		return fmt.Sprintf("%s := []interface{}{}\n", name)
 	}
 
-	text := fmt.Sprintf("%s := [%d]interface{}{}\n", name, list.NumFields())
+	text := fmt.Sprintf("%s := make([]interface{}, %d)\n", name, list.NumFields())
 
 	for i, arg := range list.List {
 		tname := parsed.codeOfNode(arg.Type)

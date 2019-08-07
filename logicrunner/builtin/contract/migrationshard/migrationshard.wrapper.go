@@ -99,7 +99,7 @@ func INSMETHOD_GetMigrationAddressesAmount(object []byte, data []byte) ([]byte, 
 		return nil, nil, e
 	}
 
-	args := [1]interface{}{}
+	args := make([]interface{}, 1)
 	var args0 []string
 	args[0] = &args0
 
@@ -132,7 +132,13 @@ func INSMETHOD_GetMigrationAddressesAmount(object []byte, data []byte) ([]byte, 
 	ret1 = ph.MakeErrorSerializable(ret1)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -152,7 +158,7 @@ func INSMETHOD_AddFreeMigrationAddresses(object []byte, data []byte) ([]byte, []
 		return nil, nil, e
 	}
 
-	args := [1]interface{}{}
+	args := make([]interface{}, 1)
 	var args0 []string
 	args[0] = &args0
 
@@ -185,7 +191,13 @@ func INSMETHOD_AddFreeMigrationAddresses(object []byte, data []byte) ([]byte, []
 	ret0 = ph.MakeErrorSerializable(ret0)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0}, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -236,7 +248,13 @@ func INSMETHOD_GetFreeMigrationAddress(object []byte, data []byte) ([]byte, []by
 	ret1 = ph.MakeErrorSerializable(ret1)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -256,7 +274,7 @@ func INSMETHOD_GetRef(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	args := [1]interface{}{}
+	args := make([]interface{}, 1)
 	var args0 string
 	args[0] = &args0
 
@@ -289,7 +307,13 @@ func INSMETHOD_GetRef(object []byte, data []byte) ([]byte, []byte, error) {
 	ret1 = ph.MakeErrorSerializable(ret1)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -309,7 +333,7 @@ func INSMETHOD_SetRef(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	args := [2]interface{}{}
+	args := make([]interface{}, 2)
 	var args0 string
 	args[0] = &args0
 	var args1 string
@@ -344,7 +368,13 @@ func INSMETHOD_SetRef(object []byte, data []byte) ([]byte, []byte, error) {
 	ret0 = ph.MakeErrorSerializable(ret0)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0}, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -367,7 +397,10 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
 	}
 
 	result := []byte{}
-	err = ph.Serialize([]interface{}{ret1}, &result)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret1}},
+		&result,
+	)
 	if err != nil {
 		return nil, nil, err
 	}
