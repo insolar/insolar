@@ -182,9 +182,6 @@ func TestSignatureParser(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func (suite *TimeoutSuite) TestSignatureParser(suiteName, testName string) {
-}
-
 func (suite *TimeoutSuite) BeforeTest(suiteName, testName string) {
 	suite.delay = make(chan struct{}, 0)
 }
