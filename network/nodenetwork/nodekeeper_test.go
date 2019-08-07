@@ -110,7 +110,7 @@ func TestNewNodeKeeper(t *testing.T) {
 func TestNodekeeper_GetCloudHash(t *testing.T) {
 	nk := newNodeKeeper(t, nil)
 	cloudHash := make([]byte, 64)
-	rand.Read(cloudHash)
+	_, _ = rand.Read(cloudHash)
 	nk.SetCloudHash(0, cloudHash)
 	assert.Equal(t, cloudHash, nk.GetCloudHash(0))
 }

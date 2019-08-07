@@ -309,7 +309,8 @@ func (s *consensusSuite) TearDownTest() {
 		require.NoError(s.t, err)
 	}
 	suiteLogger.Info("Stop test pulsar")
-	s.fixture().pulsar.Stop(s.fixture().ctx)
+	err := s.fixture().pulsar.Stop(s.fixture().ctx)
+	require.NoError(s.t, err)
 }
 
 func (s *consensusSuite) waitForConsensus(consensusCount int) {
