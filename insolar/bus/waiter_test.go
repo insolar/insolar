@@ -18,6 +18,7 @@ package bus
 
 import (
 	"context"
+	"github.com/insolar/insolar/insolar/pulse"
 	"testing"
 
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -31,7 +32,6 @@ import (
 // Send msg, bus.Sender gets error and closes resp chan
 func TestWaitOKSender_SendRole_RetryExceeded(t *testing.T) {
 	sender := NewSenderMock(t)
-	sender.LatestPulseMock.Set(accessorMock(t).Latest)
 
 	innerReps := make(chan *message.Message)
 	sender.SendRoleMock.Set(func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
@@ -43,7 +43,10 @@ func TestWaitOKSender_SendRole_RetryExceeded(t *testing.T) {
 	require.NoError(t, err)
 
 	tries := 3
-	c := NewWaitOKWithRetrySender(sender, uint(tries))
+
+	pa := pulse.NewAccessorMock(t)
+	pa.LatestMock.Set(accessorMock(t).Latest)
+	c := NewWaitOKWithRetrySender(sender, pa, uint(tries))
 
 	c.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
 
@@ -62,7 +65,6 @@ func sendOK(ch chan<- *message.Message) {
 
 func TestWaitOKSender_SendRole_RetryOnce(t *testing.T) {
 	sender := NewSenderMock(t)
-	sender.LatestPulseMock.Set(accessorMock(t).Latest)
 
 	innerReps := make(chan *message.Message)
 	sender.SendRoleMock.Set(func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
@@ -76,7 +78,10 @@ func TestWaitOKSender_SendRole_RetryOnce(t *testing.T) {
 	})
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
-	c := NewWaitOKWithRetrySender(sender, 3)
+
+	pa := pulse.NewAccessorMock(t)
+	pa.LatestMock.Set(accessorMock(t).Latest)
+	c := NewWaitOKWithRetrySender(sender, pa, 3)
 
 	c.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
 
@@ -85,7 +90,6 @@ func TestWaitOKSender_SendRole_RetryOnce(t *testing.T) {
 
 func TestWaitOKSender_SendRole_OK(t *testing.T) {
 	sender := NewSenderMock(t)
-	sender.LatestPulseMock.Set(accessorMock(t).Latest)
 
 	innerReps := make(chan *message.Message)
 	sender.SendRoleMock.Set(func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
@@ -96,7 +100,9 @@ func TestWaitOKSender_SendRole_OK(t *testing.T) {
 
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
-	c := NewWaitOKWithRetrySender(sender, 3)
+	pa := pulse.NewAccessorMock(t)
+	pa.LatestMock.Set(accessorMock(t).Latest)
+	c := NewWaitOKWithRetrySender(sender, pa, 3)
 
 	c.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
 
@@ -105,7 +111,6 @@ func TestWaitOKSender_SendRole_OK(t *testing.T) {
 
 func TestWaitOKSender_SendRole_NotOK(t *testing.T) {
 	sender := NewSenderMock(t)
-	sender.LatestPulseMock.Set(accessorMock(t).Latest)
 
 	innerReps := make(chan *message.Message)
 	sender.SendRoleMock.Set(func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
@@ -116,7 +121,9 @@ func TestWaitOKSender_SendRole_NotOK(t *testing.T) {
 
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
-	c := NewWaitOKWithRetrySender(sender, 3)
+	pa := pulse.NewAccessorMock(t)
+	pa.LatestMock.Set(accessorMock(t).Latest)
+	c := NewWaitOKWithRetrySender(sender, pa, 3)
 
 	c.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
 

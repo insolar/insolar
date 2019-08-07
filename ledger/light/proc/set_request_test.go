@@ -31,7 +31,6 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
-	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/testutils"
@@ -50,7 +49,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 	pcs := testutils.NewPlatformCryptographyScheme()
 
 	var (
-		writeAccessor *hot.WriteAccessorMock
+		writeAccessor *executor.WriteAccessorMock
 		sender        *bus.SenderMock
 		filaments     *executor.FilamentCalculatorMock
 		idxStorage    *object.MemoryIndexStorageMock
@@ -60,7 +59,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 	)
 
 	resetComponents := func() {
-		writeAccessor = hot.NewWriteAccessorMock(mc)
+		writeAccessor = executor.NewWriteAccessorMock(mc)
 		sender = bus.NewSenderMock(mc)
 		filaments = executor.NewFilamentCalculatorMock(mc)
 		idxStorage = object.NewMemoryIndexStorageMock(mc)

@@ -52,10 +52,11 @@ package hostnetwork
 
 import (
 	"context"
-	"github.com/fortytw2/leaktest"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/fortytw2/leaktest"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -323,16 +324,13 @@ func TestHostNetwork_SendRequestPacket3(t *testing.T) {
 
 	handler := func(ctx context.Context, r network.ReceivedPacket) (network.Packet, error) {
 		inslogger.FromContext(ctx).Info("handler triggered")
-		data := r.GetRequest().GetPulse()
-		err := string(data.TraceSpanData) + string(data.TraceSpanData)
-		return s.n2.BuildResponse(ctx, r, &packet.BasicResponse{Error: err}), nil
+		return s.n2.BuildResponse(ctx, r, &packet.BasicResponse{Error: "Error"}), nil
 	}
 	s.n2.RegisterRequestHandler(types.Pulse, handler)
 
 	s.Start()
 
-	data := []byte("123")
-	request := &packet.PulseRequest{TraceSpanData: data}
+	request := &packet.PulseRequest{}
 	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
 	f, err := s.n1.SendRequest(s.ctx1, types.Pulse, request, *ref)
@@ -342,17 +340,16 @@ func TestHostNetwork_SendRequestPacket3(t *testing.T) {
 	require.NoError(t, err)
 
 	d := r.GetResponse().GetBasic().Error
-	require.Equal(t, "123123", d)
+	require.Equal(t, "Error", d)
 
-	data = []byte("666")
-	request = &packet.PulseRequest{TraceSpanData: data}
+	request = &packet.PulseRequest{}
 	f, err = s.n1.SendRequest(s.ctx1, types.Pulse, request, *ref)
 	require.NoError(t, err)
 
 	r, err = f.WaitResponse(time.Second)
 	assert.NoError(t, err)
 	d = r.GetResponse().GetBasic().Error
-	require.Equal(t, d, "666666")
+	require.Equal(t, d, "Error")
 }
 
 func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {

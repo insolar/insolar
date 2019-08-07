@@ -290,6 +290,12 @@ func (s *SagasSuite) TestExtractSagaInfoFromComment() {
 	s.Require().True(res)
 	s.Require().True(info.IsSaga)
 	s.Require().Equal(info.RollbackMethodName, "SomeRollbackMethodName")
+
+	// Spaces after '//' - IDE of a contractor author may force this formatting
+	res = extractSagaInfoFromComment("// ins:saga(SomeRollbackMethodName) ", info)
+	s.Require().True(res)
+	s.Require().True(info.IsSaga)
+	s.Require().Equal(info.RollbackMethodName, "SomeRollbackMethodName")
 }
 
 func TestSagas(t *testing.T) {

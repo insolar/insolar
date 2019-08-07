@@ -36,7 +36,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/internal/ledger/artifact"
+	"github.com/insolar/insolar/ledger/artifact"
 	"github.com/insolar/insolar/ledger/genesis"
 
 	"github.com/pkg/errors"
@@ -56,7 +56,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/heavy/handler"
@@ -318,15 +318,21 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	// Exporter
 	var (
 		recordExporter *exporter.RecordServer
+		pulseExporter  *exporter.PulseServer
 	)
 	{
 		recordExporter = exporter.NewRecordServer(Pulses, RecordPosition, Records, JetKeeper)
+		pulseExporter = exporter.NewPulseServer(Pulses, JetKeeper)
+
+		grpcServer := grpc.NewServer()
+		exporter.RegisterRecordExporterServer(grpcServer, recordExporter)
+		exporter.RegisterPulseExporterServer(grpcServer, pulseExporter)
+
 		lis, err := net.Listen("tcp", cfg.Exporter.Addr)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to open port for Exporter")
 		}
-		grpcServer := grpc.NewServer()
-		exporter.RegisterRecordExporterServer(grpcServer, recordExporter)
+
 		go func() {
 			if err := grpcServer.Serve(lis); err != nil {
 				panic(fmt.Errorf("exporter failed to serve: %s", err))

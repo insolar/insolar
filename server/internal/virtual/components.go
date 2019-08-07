@@ -20,6 +20,8 @@ import (
 	"context"
 	"io"
 
+	"github.com/insolar/insolar/network/rules"
+
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
@@ -43,15 +45,10 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/logicrunner/handles"
-	"github.com/insolar/insolar/logicrunner/logicexecutor"
-	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
-	"github.com/insolar/insolar/logicrunner/requestsexecutor"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/nodenetwork"
-	"github.com/insolar/insolar/network/rules"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/platformpolicy"
@@ -164,6 +161,8 @@ func initComponents(
 	contractRequester, err := contractrequester.New(logicRunner)
 	checkError(ctx, err, "failed to start ContractRequester")
 
+	pm := pulsemanager.NewPulseManager()
+
 	cm.Register(
 		terminationHandler,
 		pcs,
@@ -172,12 +171,12 @@ func initComponents(
 		keyProcessor,
 		certManager,
 		logicRunner,
-		logicexecutor.NewLogicExecutor(),
-		requestsexecutor.NewRequestsExecutor(),
-		machinesmanager.NewMachinesManager(),
+		logicrunner.NewLogicExecutor(),
+		logicrunner.NewRequestsExecutor(),
+		logicrunner.NewMachinesManager(),
 		nodeNetwork,
 		nw,
-		pulsemanager.NewPulseManager(),
+		pm,
 		rules.NewRules(),
 	)
 
@@ -208,11 +207,12 @@ func initComponents(
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
 
+	pm.FlowDispatcher = logicRunner.FlowDispatcher
+
 	stopper := startWatermill(
 		ctx, logger, pubSub, b,
 		nw.SendMessageHandler,
 		logicRunner.FlowDispatcher.Process,
-		logicRunner.InnerFlowDispatcher.InnerSubscriber,
 	)
 
 	return &cm, terminationHandler, stopper
@@ -223,7 +223,7 @@ func startWatermill(
 	logger watermill.LoggerAdapter,
 	pubSub message.Subscriber,
 	b *bus.Bus,
-	outHandler, inHandler, lrHandler message.HandlerFunc,
+	outHandler, inHandler message.HandlerFunc,
 ) func() {
 	inRouter, err := message.NewRouter(message.RouterConfig{}, logger)
 	if err != nil {
@@ -233,12 +233,6 @@ func startWatermill(
 	if err != nil {
 		panic(err)
 	}
-
-	lrRouter, err := message.NewRouter(message.RouterConfig{}, logger)
-	if err != nil {
-		panic(err)
-	}
-
 	outRouter.AddNoPublisherHandler(
 		"OutgoingHandler",
 		bus.TopicOutgoing,
@@ -257,18 +251,10 @@ func startWatermill(
 		inHandler,
 	)
 
-	lrRouter.AddNoPublisherHandler(
-		"InnerMsgHandler",
-		handles.InnerMsgTopic,
-		pubSub,
-		lrHandler,
-	)
-
 	startRouter(ctx, inRouter)
 	startRouter(ctx, outRouter)
-	startRouter(ctx, lrRouter)
 
-	return stopWatermill(ctx, inRouter, outRouter, lrRouter)
+	return stopWatermill(ctx, inRouter, outRouter)
 }
 
 func startRouter(ctx context.Context, router *message.Router) {

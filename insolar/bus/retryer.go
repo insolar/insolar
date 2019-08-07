@@ -18,6 +18,7 @@ package bus
 
 import (
 	"context"
+	"github.com/insolar/insolar/insolar/pulse"
 	"sync"
 	"time"
 
@@ -30,15 +31,17 @@ import (
 
 // RetrySender allows to send messaged via provided Sender with retries.
 type RetrySender struct {
-	sender Sender
-	tries  uint
+	sender        Sender
+	pulseAccessor pulse.Accessor
+	tries         uint
 }
 
 // NewRetrySender creates RetrySender instance with provided values.
-func NewRetrySender(sender Sender, tries uint) *RetrySender {
+func NewRetrySender(sender Sender, pulseAccessor pulse.Accessor, tries uint) *RetrySender {
 	r := &RetrySender{
-		sender: sender,
-		tries:  tries,
+		sender:        sender,
+		pulseAccessor: pulseAccessor,
+		tries:         tries,
 	}
 	return r
 }
@@ -49,10 +52,6 @@ func (r *RetrySender) SendTarget(ctx context.Context, msg *message.Message, targ
 
 func (r *RetrySender) Reply(ctx context.Context, origin payload.Meta, reply *message.Message) {
 	panic("not implemented")
-}
-
-func (r *RetrySender) LatestPulse(ctx context.Context) (insolar.Pulse, error) {
-	return r.sender.LatestPulse(ctx)
 }
 
 // SendRole sends message to specified role, using provided Sender.SendRole. If error with CodeFlowCanceled
@@ -109,7 +108,7 @@ func (r *RetrySender) SendRole(
 func (r *RetrySender) waitForPulseChange(ctx context.Context, lastPulse insolar.PulseNumber) (insolar.PulseNumber, error) {
 	logger := inslogger.FromContext(ctx)
 	for {
-		currentPulse, err := r.sender.LatestPulse(ctx)
+		currentPulse, err := r.pulseAccessor.Latest(ctx)
 		if err != nil {
 			return lastPulse, errors.Wrap(err, "can't get latest pulse")
 		}

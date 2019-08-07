@@ -18,9 +18,7 @@ package artifacts
 
 import (
 	"context"
-	"io/ioutil"
 	"math/rand"
-	"os"
 	"testing"
 
 	wmMessage "github.com/ThreeDotsLabs/watermill/message"
@@ -33,13 +31,10 @@ import (
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/internal/ledger/store"
-	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/platformpolicy"
 )
 
@@ -54,17 +49,6 @@ type amSuite struct {
 	ctx context.Context
 
 	scheme insolar.PlatformCryptographyScheme
-
-	nodeStorage  node.Accessor
-	jetStorage   jet.Storage
-	dropModifier drop.Modifier
-	dropAccessor drop.Accessor
-
-	tmpDir1 string
-	tmpDir2 string
-
-	badgerDB1 *store.BadgerDB
-	badgerDB2 *store.BadgerDB
 }
 
 func NewAmSuite() *amSuite {
@@ -83,45 +67,8 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	s.ctx = inslogger.TestContext(s.T())
 
 	s.scheme = platformpolicy.NewPlatformCryptographyScheme()
-	s.jetStorage = jet.NewStore()
-	s.nodeStorage = node.NewStorage()
 
-	var err error
-	s.tmpDir1, err = ioutil.TempDir("", "bdb-test-")
-	if err != nil {
-		s.T().Error("Can't create TempDir", err)
-	}
-
-	s.badgerDB1, err = store.NewBadgerDB(s.tmpDir1)
-	if err != nil {
-		s.T().Error("Can't NewBadgerDB", err)
-	}
-
-	dropStorage := drop.NewDB(s.badgerDB1)
-	s.dropAccessor = dropStorage
-	s.dropModifier = dropStorage
-
-	s.tmpDir2, err = ioutil.TempDir("", "bdb-test-")
-	if err != nil {
-		s.T().Error("Can't create TempDir", err)
-	}
-
-	s.badgerDB2, err = store.NewBadgerDB(s.tmpDir2)
-	if err != nil {
-		s.T().Error("Can't create NewBadgerDB", err)
-	}
-
-	s.cm.Inject(
-		s.scheme,
-		s.badgerDB2,
-		s.jetStorage,
-		s.nodeStorage,
-		pulse.NewStorageMem(),
-		s.dropAccessor,
-		s.dropModifier,
-	)
-
-	err = s.cm.Init(s.ctx)
+	err := s.cm.Init(s.ctx)
 	if err != nil {
 		s.T().Error("ComponentManager init failed", err)
 	}
@@ -136,12 +83,6 @@ func (s *amSuite) AfterTest(suiteName, testName string) {
 	if err != nil {
 		s.T().Error("ComponentManager stop failed", err)
 	}
-
-	os.RemoveAll(s.tmpDir1)
-	os.RemoveAll(s.tmpDir2)
-	s.badgerDB1.Stop(s.ctx)
-	// We don't call it explicitly since it's called by component manager
-	// s.badgerDB2.Stop(s.ctx)
 }
 
 func genRandomID(pulse insolar.PulseNumber) *insolar.ID {
