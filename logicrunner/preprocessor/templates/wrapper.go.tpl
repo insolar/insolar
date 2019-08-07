@@ -30,14 +30,6 @@ import (
 // TODO: this is the end of a horrible hack, please remove it
 )
 
-type ExtendableError struct{
-	S string
-}
-
-func ( e *ExtendableError ) Error() string{
-	return e.S
-}
-
 func INS_META_INFO() ([] map[string]string) {
 	result := make([]map[string] string, 0)
 	{{ range $method := .Methods }}
@@ -59,12 +51,12 @@ func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 	self := new({{ $.ContractType }})
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{ S: "[ Fake GetCode ] ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{S: "[ Fake GetCode ] ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{ S: "[ Fake GetCode ] ( Generated Method ) Can't deserialize args.Data: " + err.Error() }
+		e := &foundation.Error{ S: "[ Fake GetCode ] ( Generated Method ) Can't deserialize args.Data: " + err.Error() }
 		return nil, nil, e
 	}
 
@@ -85,12 +77,12 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 	self := new({{ $.ContractType }})
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{ S: "[ Fake GetPrototype ] ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{ S: "[ Fake GetPrototype ] ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{ S: "[ Fake GetPrototype ] ( Generated Method ) Can't deserialize args.Data: " + err.Error() }
+		e := &foundation.Error{ S: "[ Fake GetPrototype ] ( Generated Method ) Can't deserialize args.Data: " + err.Error() }
 		return nil, nil, e
 	}
 
@@ -113,19 +105,19 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, e
 	self := new({{ $.ContractType }})
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{ S: "[ Fake{{ $method.Name }} ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{ S: "[ Fake{{ $method.Name }} ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{ S: "[ Fake{{ $method.Name }} ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error() }
+		e := &foundation.Error{ S: "[ Fake{{ $method.Name }} ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error() }
 		return nil, nil, e
 	}
 
 	{{ $method.ArgumentsZeroList }}
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{ S: "[ Fake{{ $method.Name }} ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error() }
+		e := &foundation.Error{ S: "[ Fake{{ $method.Name }} ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error() }
 		return nil, nil, e
 	}
 
@@ -172,14 +164,14 @@ func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, []byte, error) {
 	{{ $f.ArgumentsZeroList }}
 	err := ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{ S: "[ Fake{{ $f.Name }} ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error() }
+		e := &foundation.Error{ S: "[ Fake{{ $f.Name }} ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error() }
 		return nil, nil, e
 	}
 
 	{{ $f.Results }} := {{ $f.Name }}( {{ $f.Arguments }} )
 	ret1 = ph.MakeErrorSerializable(ret1)
 	if ret0 == nil && ret1 == nil {
-		ret1 = &ExtendableError{ S: "constructor returned nil" }
+		ret1 = &foundation.Error{ S: "constructor returned nil" }
 	}
 
 	result := []byte{}

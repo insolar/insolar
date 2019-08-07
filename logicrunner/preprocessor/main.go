@@ -511,7 +511,10 @@ func (pf *ParsedFile) typeName(t ast.Expr) string {
 func (pf *ParsedFile) generateImports(wrapper bool) map[string]bool {
 	imports := make(map[string]bool)
 	imports[fmt.Sprintf(`"%s"`, proxyctxPath)] = true
-	if !wrapper {
+	if wrapper {
+		// for errors
+		imports[fmt.Sprintf(`"%s"`, foundationPath)] = true
+	} else {
 		imports[fmt.Sprintf(`"%s"`, corePath)] = true
 	}
 	for _, method := range pf.methods[pf.contract] {
