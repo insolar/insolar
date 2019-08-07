@@ -140,7 +140,7 @@ func mockReply(t *testing.T) []byte {
 		Role:      insolar.StaticRoleVirtual,
 	}, nil)
 	require.NoError(t, err)
-	return []byte(node)
+	return node
 }
 
 func mockContractRequester(t *testing.T, nodeRef insolar.Reference, ok bool, r []byte) insolar.ContractRequester {
