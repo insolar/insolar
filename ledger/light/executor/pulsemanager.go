@@ -40,7 +40,7 @@ type PulseManager struct {
 	Bus        insolar.MessageBus        `inject:""`
 	NodeNet    insolar.NodeNetwork       `inject:""`
 	GIL        insolar.GlobalInsolarLock `inject:""`
-	Dispatcher *dispatcher.Dispatcher
+	Dispatcher dispatcher.Dispatcher
 
 	JetReleaser JetReleaser `inject:""`
 

@@ -193,13 +193,3 @@ func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 
 	return s.Present(ctx, f)
 }
-
-type InnerInit struct {
-	dep *Dependencies
-
-	Message *message.Message
-}
-
-func (s *InnerInit) Present(ctx context.Context, f flow.Flow) error {
-	return fmt.Errorf("[ InnerInit.Present ] no handler for message type %s", s.Message.Metadata.Get("Type"))
-}

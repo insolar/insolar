@@ -210,7 +210,7 @@ func NewServer(
 		PulseManager   insolar.PulseManager
 		Replicator     executor.LightReplicator
 		Cleaner        executor.Cleaner
-		FlowDispatcher *dispatcher.Dispatcher
+		FlowDispatcher dispatcher.Dispatcher
 	)
 	{
 		conf := cfg.Ledger

@@ -56,16 +56,14 @@ func TestEmptyHandle(t *testing.T) {
 	testReply := &mockReply{}
 	replyChan := make(chan *mockReply, 1)
 	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+	pulseAccessorMock := pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
+	disp := dispatcher.NewDispatcher(pulseAccessorMock, func(message *message.Message) flow.Handle {
+		return func(context context.Context, f flow.Flow) error {
+			replyChan <- testReply
+			return nil
+		}
+	}, nil, nil)
 	ctx := context.Background()
-
-	disp := dispatcher.NewDispatcher(
-		pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil),
-		func(message *message.Message) flow.Handle {
-			return func(context context.Context, f flow.Flow) error {
-				replyChan <- testReply
-				return nil
-			}
-		}, nil, nil)
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
@@ -83,20 +81,20 @@ func (p *EmptyProcedure) Proceed(context.Context) error {
 
 func TestCallEmptyProcedure(t *testing.T) {
 	testReply := &mockReply{}
-	ctx := context.Background()
-	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
 
 	replyChan := make(chan *mockReply, 1)
-	disp := dispatcher.NewDispatcher(
-		pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil),
-		func(message *message.Message) flow.Handle {
-			return func(context context.Context, f flow.Flow) error {
-				err := f.Procedure(context, &EmptyProcedure{}, true)
-				require.NoError(t, err)
-				replyChan <- testReply
-				return nil
-			}
-		}, nil, nil)
+	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+	pulseAccessorMock := pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
+	disp := dispatcher.NewDispatcher(pulseAccessorMock, func(message *message.Message) flow.Handle {
+		return func(context context.Context, f flow.Flow) error {
+			err := f.Procedure(context, &EmptyProcedure{}, true)
+			require.NoError(t, err)
+			replyChan <- testReply
+			return nil
+		}
+	}, nil, nil)
+
+	ctx := context.Background()
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
@@ -116,20 +114,19 @@ func (p *ErrorProcedure) Proceed(context.Context) error {
 func TestProcedureReturnError(t *testing.T) {
 	testReply := &mockReply{}
 
-	ctx := context.Background()
-	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
-
 	replyChan := make(chan *mockReply, 1)
-	disp := dispatcher.NewDispatcher(
-		pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil),
-		func(message *message.Message) flow.Handle {
-			return func(context context.Context, f flow.Flow) error {
-				err := f.Procedure(context, &ErrorProcedure{}, true)
-				require.Error(t, err)
-				replyChan <- testReply
-				return nil
-			}
-		}, nil, nil)
+	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+	pulseAccessorMock := pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
+	disp := dispatcher.NewDispatcher(pulseAccessorMock, func(message *message.Message) flow.Handle {
+		return func(context context.Context, f flow.Flow) error {
+			err := f.Procedure(context, &ErrorProcedure{}, true)
+			require.Error(t, err)
+			replyChan <- testReply
+			return nil
+		}
+	}, nil, nil)
+
+	ctx := context.Background()
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
@@ -153,24 +150,20 @@ func TestClosePulse(t *testing.T) {
 	testReply := &mockReply{}
 
 	procedureStarted := make(chan struct{})
-	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+
 	replyChan := make(chan *mockReply, 1)
-	a := pulse.NewAccessorMock(t)
-	a.LatestMock.Set(func(ctx context.Context) (insolar.Pulse, error) {
-		return currentPulse, nil
-	})
-	disp := dispatcher.NewDispatcher(
-		a,
-		func(message *message.Message) flow.Handle {
-			return func(context context.Context, f flow.Flow) error {
-				longProcedure := LongProcedure{}
-				longProcedure.started = procedureStarted
-				err := f.Procedure(context, &longProcedure, true)
-				require.Equal(t, flow.ErrCancelled, err)
-				replyChan <- testReply
-				return nil
-			}
-		}, nil, nil)
+	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+	pulseAccessorMock := pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
+	disp := dispatcher.NewDispatcher(pulseAccessorMock, func(message *message.Message) flow.Handle {
+		return func(context context.Context, f flow.Flow) error {
+			longProcedure := LongProcedure{}
+			longProcedure.started = procedureStarted
+			err := f.Procedure(context, &longProcedure, true)
+			require.Equal(t, flow.ErrCancelled, err)
+			replyChan <- testReply
+			return nil
+		}
+	}, nil, nil)
 
 	handleProcessed := make(chan struct{})
 
@@ -199,32 +192,31 @@ func TestChangePulseAndMigrate(t *testing.T) {
 	secondProcedureStarted := make(chan struct{})
 
 	migrateStarted := make(chan struct{})
-	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
 
 	replyChan := make(chan *mockReply, 1)
-	disp := dispatcher.NewDispatcher(
-		pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil),
-		func(message *message.Message) flow.Handle {
-			return func(ctx context.Context, f1 flow.Flow) error {
+	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+	pulseAccessorMock := pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
+	disp := dispatcher.NewDispatcher(pulseAccessorMock, func(message *message.Message) flow.Handle {
+		return func(ctx context.Context, f1 flow.Flow) error {
+			longProcedure := LongProcedure{}
+			longProcedure.started = firstProcedureStarted
+			err := f1.Procedure(ctx, &longProcedure, true)
+			require.Equal(t, flow.ErrCancelled, err)
+
+			f1.Migrate(ctx, func(c context.Context, f2 flow.Flow) error {
+				migrateStarted <- struct{}{}
 				longProcedure := LongProcedure{}
-				longProcedure.started = firstProcedureStarted
-				err := f1.Procedure(ctx, &longProcedure, true)
+				longProcedure.started = secondProcedureStarted
+				err := f2.Procedure(ctx, &longProcedure, true)
 				require.Equal(t, flow.ErrCancelled, err)
 
-				f1.Migrate(ctx, func(c context.Context, f2 flow.Flow) error {
-					migrateStarted <- struct{}{}
-					longProcedure := LongProcedure{}
-					longProcedure.started = secondProcedureStarted
-					err := f2.Procedure(ctx, &longProcedure, true)
-					require.Equal(t, flow.ErrCancelled, err)
+				replyChan <- testReply
 
-					replyChan <- testReply
-
-					return nil
-				})
 				return nil
-			}
-		}, nil, nil)
+			})
+			return nil
+		}
+	}, nil, nil)
 
 	handleProcessed := make(chan struct{})
 

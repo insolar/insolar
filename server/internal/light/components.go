@@ -212,7 +212,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	// Light components.
 	var (
 		PulseManager   insolar.PulseManager
-		FlowDispatcher *dispatcher.Dispatcher
+		FlowDispatcher dispatcher.Dispatcher
 	)
 	{
 		conf := cfg.Ledger

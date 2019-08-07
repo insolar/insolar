@@ -109,6 +109,17 @@ func displayResultsTable(results [][]string, ready bool, buffer *bytes.Buffer) {
 		tablewriter.Colors{},
 		tablewriter.Colors{},
 	)
+	table.SetColumnColor(
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+		tablewriter.Colors{tablewriter.FgHiRedColor},
+	)
 
 	table.AppendBulk(results)
 	table.Render()
@@ -156,7 +167,7 @@ func displayResultsJSON(results [][]string, _ bool, _ *bytes.Buffer) {
 	fmt.Print("\n\n")
 }
 
-func collectNodesStatuses(conf *pulsewatcher.Config) ([][]string, bool) {
+func collectNodesStatuses(conf *pulsewatcher.Config, lastResults [][]string) ([][]string, bool) {
 	state := true
 	errored := 0
 	results := make([][]string, len(conf.Nodes))
@@ -169,8 +180,22 @@ func collectNodesStatuses(conf *pulsewatcher.Config) ([][]string, bool) {
 			res, err := client.Post("http://"+url+"/api/rpc", "application/json",
 				strings.NewReader(`{"jsonrpc": "2.0", "method": "node.getStatus", "id": 0}`))
 			if err != nil {
+				errStr := err.Error()
+				if strings.Contains(errStr, "connection refused") {
+					// Print compact error string when node is down.
+					// This prevents table distortion on small screens.
+					errStr = "NODE IS DOWN"
+				}
 				lock.Lock()
-				results[i] = []string{url, "", "", "", "", "", "", err.Error()}
+				// If an error have occurred print this error but preserve other data
+				// from the last successful status request.
+				if len(lastResults) > i && len(lastResults[i]) > 0 {
+					results[i] = lastResults[i]
+					results[i][0] = url
+					results[i][len(results[i])-1] = errStr
+				} else {
+					results[i] = []string{url, "", "", "", "", "", "", errStr}
+				}
 				errored++
 				lock.Unlock()
 				wg.Done()
@@ -249,8 +274,10 @@ func main() {
 		Timeout:   conf.Timeout,
 	}
 
+	var results [][]string
+	var ready bool
 	for {
-		results, ready := collectNodesStatuses(conf)
+		results, ready = collectNodesStatuses(conf, results)
 		if useJSONFormat {
 			displayResultsJSON(results, ready, buffer)
 		} else {
