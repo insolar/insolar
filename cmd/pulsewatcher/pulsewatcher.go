@@ -71,6 +71,7 @@ func displayResultsTable(results [][]string, ready bool, buffer *bytes.Buffer) {
 		"URL",
 		"Network State",
 		"NetworkNode State",
+		"ID",
 		"Pulse Number",
 		"Active List Size",
 		"Working List Size",
@@ -93,11 +94,12 @@ func displayResultsTable(results [][]string, ready bool, buffer *bytes.Buffer) {
 	}
 
 	table.SetFooter([]string{
-		"", "", "", "",
+		"", "", "", "", "",
 		"Insolar State", stateString,
 		"Time", time.Now().Format(time.RFC3339),
 	})
 	table.SetFooterColor(
+		tablewriter.Colors{},
 		tablewriter.Colors{},
 		tablewriter.Colors{},
 		tablewriter.Colors{},
@@ -110,6 +112,7 @@ func displayResultsTable(results [][]string, ready bool, buffer *bytes.Buffer) {
 		tablewriter.Colors{},
 	)
 	table.SetColumnColor(
+		tablewriter.Colors{},
 		tablewriter.Colors{},
 		tablewriter.Colors{},
 		tablewriter.Colors{},
@@ -214,6 +217,7 @@ func collectNodesStatuses(conf *pulsewatcher.Config, lastResults [][]string) ([]
 					NodeState    string
 					Origin       struct {
 						Role string
+						ID   uint32
 					}
 					ActiveListSize  int
 					WorkingListSize int
@@ -229,6 +233,7 @@ func collectNodesStatuses(conf *pulsewatcher.Config, lastResults [][]string) ([]
 				url,
 				out.Result.NetworkState,
 				out.Result.NodeState,
+				strconv.Itoa(int(out.Result.Origin.ID)),
 				strconv.Itoa(int(out.Result.PulseNumber)),
 				strconv.Itoa(out.Result.ActiveListSize),
 				strconv.Itoa(out.Result.WorkingListSize),

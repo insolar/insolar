@@ -32,6 +32,7 @@ type Node struct {
 	Reference string
 	Role      string
 	IsWorking bool
+	ID        uint32
 }
 
 // StatusReply is reply for Status service requests.
@@ -74,6 +75,7 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *Statu
 			Reference: node.ID().String(),
 			Role:      node.Role().String(),
 			IsWorking: node.GetState() == insolar.NodeReady,
+			ID:        uint32(node.ShortID()),
 		}
 	}
 
@@ -83,6 +85,7 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *Statu
 		Reference: origin.ID().String(),
 		Role:      origin.Role().String(),
 		IsWorking: origin.GetState() == insolar.NodeReady,
+		ID:        uint32(origin.ShortID()),
 	}
 
 	reply.PulseNumber = uint32(p.PulseNumber)
