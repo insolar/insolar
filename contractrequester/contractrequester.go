@@ -245,7 +245,6 @@ func (cr *ContractRequester) result(ctx context.Context, msg *message.ReturnResu
 }
 
 func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	ctx = parcel.Context(ctx)
 	msg, ok := parcel.Message().(*message.ReturnResults)
 	if !ok {
 		return nil, errors.New("ReceiveResult() accepts only message.ReturnResults")
