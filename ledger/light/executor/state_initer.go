@@ -189,15 +189,16 @@ func (s *StateIniterDefault) loadStateRetry(
 		return nil, errors.Wrap(err, "failed to append pulse")
 	}
 
+	inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"jets":          insolar.JetIDCollection(state.JetIDs).DebugString(),
+		"prev_pulse":    prevPulse.PulseNumber,
+		"network_start": state.NetworkStart,
+	}).Debug("received initial state from heavy")
+
 	// If not network start, we should wait for other lights to give us data.
 	if !state.NetworkStart {
 		return nil, nil
 	}
-
-	inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"jets":       insolar.JetIDCollection(state.JetIDs).DebugString(),
-		"prev_pulse": prevPulse.PulseNumber,
-	}).Debug("received initial state from heavy")
 
 	err = s.jetModifier.Update(ctx, prevPulse.PulseNumber, true, state.JetIDs...)
 	if err != nil {
