@@ -164,6 +164,41 @@ func getBalance(t *testing.T, caller *user, reference string) (*big.Int, error) 
 	return amount, nil
 }
 
+func migrate(t *testing.T, memberRef string, amount string, tx string, ma string, mdNum int) map[string]interface{} {
+	anotherMember := createMember(t)
+
+	_, err := signedRequest(t,
+		&migrationDaemons[mdNum],
+		"deposit.migration",
+		map[string]interface{}{"amount": amount, "ethTxHash": tx, "migrationAddress": ma})
+	require.NoError(t, err)
+	res, err := signedRequest(t, anotherMember, "wallet.getBalance", map[string]interface{}{"reference": memberRef})
+	require.NoError(t, err)
+	deposits, ok := res.(map[string]interface{})["deposits"].(map[string]interface{})
+	require.True(t, ok)
+	deposit, ok := deposits[tx].(map[string]interface{})
+	require.True(t, ok)
+	require.Equal(t, deposit["amount"], amount)
+	require.Equal(t, deposit["ethTxHash"], tx)
+
+	return deposit
+}
+
+func generateMigrationAddress() string {
+	return testutils.RandomString()
+}
+
+func fullMigration(t *testing.T, txHash string) *user {
+	migrationAddress := testutils.RandomString()
+	member := createMigrationMemberForMA(t, migrationAddress)
+
+	migrate(t, member.ref, "1000", txHash, migrationAddress, 0)
+	migrate(t, member.ref, "1000", txHash, migrationAddress, 2)
+	migrate(t, member.ref, "1000", txHash, migrationAddress, 1)
+
+	return member
+}
+
 func getRPSResponseBody(t testing.TB, postParams map[string]interface{}) []byte {
 	jsonValue, _ := json.Marshal(postParams)
 	postResp, err := http.Post(TestRPCUrl, "application/json", bytes.NewBuffer(jsonValue))
@@ -221,41 +256,6 @@ func unmarshalRPCResponse(t testing.TB, body []byte, response RPCResponseInterfa
 func unmarshalCallResponse(t testing.TB, body []byte, response *requester.ContractAnswer) {
 	err := json.Unmarshal(body, &response)
 	require.NoError(t, err)
-}
-
-func migrate(t *testing.T, memberRef string, amount string, tx string, ma string, mdNum int) map[string]interface{} {
-	anotherMember := createMember(t)
-
-	_, err := signedRequest(t,
-		&migrationDaemons[mdNum],
-		"deposit.migration",
-		map[string]interface{}{"amount": amount, "ethTxHash": tx, "migrationAddress": ma})
-	require.NoError(t, err)
-	res, err := signedRequest(t, anotherMember, "wallet.getBalance", map[string]interface{}{"reference": memberRef})
-	require.NoError(t, err)
-	deposits, ok := res.(map[string]interface{})["deposits"].(map[string]interface{})
-	require.True(t, ok)
-	deposit, ok := deposits[tx].(map[string]interface{})
-	require.True(t, ok)
-	require.Equal(t, deposit["amount"], amount)
-	require.Equal(t, deposit["ethTxHash"], tx)
-
-	return deposit
-}
-
-func generateMigrationAddress() string {
-	return testutils.RandomString()
-}
-
-func fullMigration(t *testing.T, txHash string) *user {
-	migrationAddress := testutils.RandomString()
-	member := createMigrationMemberForMA(t, migrationAddress)
-
-	migrate(t, member.ref, "1000", txHash, migrationAddress, 0)
-	migrate(t, member.ref, "1000", txHash, migrationAddress, 2)
-	migrate(t, member.ref, "1000", txHash, migrationAddress, 1)
-
-	return member
 }
 
 // func retryableMemberCreate(t *testing.T, user *user, updatePublicKey bool) (interface{}, error) {

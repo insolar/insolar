@@ -24,6 +24,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/testutils"
 )
 
 // TODO: https://insolar.atlassian.net/browse/WLT-768
@@ -77,17 +79,12 @@ func TestDepositTransferWrongValueAmount(t *testing.T) {
 }
 
 func TestDepositTransferNotEnoughConfirms(t *testing.T) {
-	member, err := newUserWithKeys()
-	require.NoError(t, err)
-	migrationAddress := generateMigrationAddress()
-	_, err = signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
-	require.NoError(t, err)
-	_, err = signedRequest(t, member, "member.migrationCreate", nil)
-	require.NoError(t, err)
+	migrationAddress := testutils.RandomString()
+	member := createMigrationMemberForMA(t, migrationAddress)
 
 	migrate(t, member.ref, "1000", "Eth_TxHash_test", migrationAddress, 2)
 	migrate(t, member.ref, "1000", "Eth_TxHash_test", migrationAddress, 0)
 
-	_, err = signedRequestWithEmptyRequestRef(t, member, "deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
+	_, err := signedRequestWithEmptyRequestRef(t, member, "deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
 	require.Contains(t, err.Error(), "number of confirms is less then 3")
 }
