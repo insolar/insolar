@@ -43,7 +43,7 @@ func TestMigrationMemberGet(t *testing.T) {
 	ba := testutils.RandomString()
 	_, _ = signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
 
-	res1, err := retryableMemberMigrationCreate(t, member1, true)
+	res1, err := signedRequest(t, member1, "member.migrationCreate", nil)
 	require.Nil(t, err)
 
 	decodedRes1, ok := res1.(map[string]interface{})

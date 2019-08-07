@@ -82,7 +82,7 @@ func TestDepositTransferNotEnoughConfirms(t *testing.T) {
 	migrationAddress := generateMigrationAddress()
 	_, err = signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
 	require.NoError(t, err)
-	_, err = retryableMemberMigrationCreate(t, member, true)
+	_, err = signedRequest(t, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
 
 	migrate(t, member.ref, "1000", "Eth_TxHash_test", migrationAddress, 2)

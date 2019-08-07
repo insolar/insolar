@@ -33,7 +33,7 @@ func TestMigrationToken(t *testing.T) {
 	migrationAddress := testutils.RandomString()
 	_, err = signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
 	require.NoError(t, err)
-	_, err = retryableMemberMigrationCreate(t, member, true)
+	_, err = signedRequest(t, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
 
 	deposit := migrate(t, member.ref, "1000", "Test_TxHash", migrationAddress, 0)
@@ -64,7 +64,7 @@ func TestMigrationTokenOnDifferentDeposits(t *testing.T) {
 	migrationAddress := generateMigrationAddress()
 	_, err = signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
 	require.NoError(t, err)
-	_, err = retryableMemberMigrationCreate(t, member, true)
+	_, err = signedRequest(t, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
 
 	deposit := migrate(t, member.ref, "1000", "Test_TxHash1", migrationAddress, 1)

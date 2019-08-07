@@ -28,7 +28,6 @@ import (
 	"net/http"
 	"regexp"
 	"runtime"
-	"strings"
 	"testing"
 	"time"
 
@@ -110,7 +109,7 @@ func createMember(t *testing.T) *user {
 	require.NoError(t, err)
 	member.ref = root.ref
 
-	result, err := retryableCreateMember(t, member, "member.create", true, false)
+	result, err := signedRequest(t, member, "member.create", nil)
 	require.NoError(t, err)
 	ref, ok := result.(map[string]interface{})["reference"].(string)
 	require.True(t, ok)
@@ -212,7 +211,7 @@ func createMemberWithMigrationAddress(t *testing.T, migrationAddress string) err
 		return err
 	}
 
-	_, err = retryableMemberMigrationCreate(t, member, true)
+	_, err = signedRequest(t, member, "member.migrationCreate", nil)
 	if err != nil {
 		return err
 	}
@@ -251,7 +250,7 @@ func fullMigration(t *testing.T, txHash string) *user {
 	migrationAddress := generateMigrationAddress()
 	_, err = signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
 	require.NoError(t, err)
-	_, err = retryableMemberMigrationCreate(t, member, true)
+	_, err = signedRequest(t, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
 
 	migrate(t, member.ref, "1000", txHash, migrationAddress, 0)
@@ -261,51 +260,51 @@ func fullMigration(t *testing.T, txHash string) *user {
 	return member
 }
 
-func retryableMemberCreate(t *testing.T, user *user, updatePublicKey bool) (interface{}, error) {
-	return retryableCreateMember(t, user, "member.create", updatePublicKey, false)
-}
-
-func retryableMemberCreateExpectError(t *testing.T, user *user, updatePublicKey bool) (interface{}, error) {
-	return retryableCreateMember(t, user, "member.create", updatePublicKey, true)
-}
-
-func retryableMemberMigrationCreate(t *testing.T, user *user, updatePublicKey bool) (interface{}, error) {
-	return retryableCreateMember(t, user, "member.migrationCreate", updatePublicKey, false)
-}
-
-func retryableMemberMigrationCreateExpectError(t *testing.T, user *user, updatePublicKey bool) (interface{}, error) {
-	return retryableCreateMember(t, user, "member.migrationCreate", updatePublicKey, true)
-}
-
-func retryableCreateMember(t *testing.T, user *user, method string, updatePublicKey bool, expectError bool) (interface{}, error) {
-	// TODO: delete this after deduplication (INS-2778)
-	var result interface{}
-	var err error
-	currentIterNum := 1
-	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
-		if expectError {
-			result, err = signedRequestWithEmptyRequestRef(t, user, method, nil)
-		} else {
-			result, err = signedRequest(t, user, method, nil)
-		}
-		if err == nil || !strings.Contains(err.Error(), "failed to set reference in public key shard: can't set reference because this key already exists") {
-			if err == nil {
-				user.ref = result.(map[string]interface{})["reference"].(string)
-			}
-			return result, err
-		}
-		fmt.Printf("CreateMember request was duplicated, retry. Attempt for duplicated: %d/%d\n", currentIterNum, sendRetryCount)
-		newUser, nErr := newUserWithKeys()
-		if nErr != nil {
-			return nil, nErr
-		}
-		user.privKey = newUser.privKey
-		if updatePublicKey {
-			user.pubKey = newUser.pubKey
-		}
-	}
-	return result, err
-}
+// func retryableMemberCreate(t *testing.T, user *user, updatePublicKey bool) (interface{}, error) {
+// 	return retryableCreateMember(t, user, "member.create", updatePublicKey, false)
+// }
+//
+// func retryableMemberCreateExpectError(t *testing.T, user *user, updatePublicKey bool) (interface{}, error) {
+// 	return retryableCreateMember(t, user, "member.create", updatePublicKey, true)
+// }
+//
+// func retryableMemberMigrationCreate(t *testing.T, user *user, updatePublicKey bool) (interface{}, error) {
+// 	return retryableCreateMember(t, user, "member.migrationCreate", updatePublicKey, false)
+// }
+//
+// func retryableMemberMigrationCreateExpectError(t *testing.T, user *user, updatePublicKey bool) (interface{}, error) {
+// 	return retryableCreateMember(t, user, "member.migrationCreate", updatePublicKey, true)
+// }
+//
+// func retryableCreateMember(t *testing.T, user *user, method string, updatePublicKey bool, expectError bool) (interface{}, error) {
+// 	// TODO: delete this after deduplication (INS-2778)
+// 	var result interface{}
+// 	var err error
+// 	currentIterNum := 1
+// 	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
+// 		if expectError {
+// 			result, err = signedRequestWithEmptyRequestRef(t, user, method, nil)
+// 		} else {
+// 			result, err = signedRequest(t, user, method, nil)
+// 		}
+// 		if err == nil || !strings.Contains(err.Error(), "failed to set reference in public key shard: can't set reference because this key already exists") {
+// 			if err == nil {
+// 				user.ref = result.(map[string]interface{})["reference"].(string)
+// 			}
+// 			return result, err
+// 		}
+// 		fmt.Printf("CreateMember request was duplicated, retry. Attempt for duplicated: %d/%d\n", currentIterNum, sendRetryCount)
+// 		newUser, nErr := newUserWithKeys()
+// 		if nErr != nil {
+// 			return nil, nErr
+// 		}
+// 		user.privKey = newUser.privKey
+// 		if updatePublicKey {
+// 			user.pubKey = newUser.pubKey
+// 		}
+// 	}
+// 	return result, err
+// }
 
 func signedRequest(t *testing.T, user *user, method string, params interface{}) (interface{}, error) {
 	res, refStr, err := makeSignedRequest(user, method, params)
