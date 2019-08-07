@@ -10,6 +10,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 )
 
@@ -77,13 +78,13 @@ type ClientMock struct {
 	beforeInjectObjectDescriptorCounter uint64
 	InjectObjectDescriptorMock          mClientMockInjectObjectDescriptor
 
-	funcRegisterIncomingRequest          func(ctx context.Context, request *record.IncomingRequest) (ip1 *insolar.ID, err error)
+	funcRegisterIncomingRequest          func(ctx context.Context, request *record.IncomingRequest) (rp1 *payload.RequestInfo, err error)
 	inspectFuncRegisterIncomingRequest   func(ctx context.Context, request *record.IncomingRequest)
 	afterRegisterIncomingRequestCounter  uint64
 	beforeRegisterIncomingRequestCounter uint64
 	RegisterIncomingRequestMock          mClientMockRegisterIncomingRequest
 
-	funcRegisterOutgoingRequest          func(ctx context.Context, request *record.OutgoingRequest) (ip1 *insolar.ID, err error)
+	funcRegisterOutgoingRequest          func(ctx context.Context, request *record.OutgoingRequest) (rp1 *payload.RequestInfo, err error)
 	inspectFuncRegisterOutgoingRequest   func(ctx context.Context, request *record.OutgoingRequest)
 	afterRegisterOutgoingRequestCounter  uint64
 	beforeRegisterOutgoingRequestCounter uint64
@@ -2213,7 +2214,7 @@ type ClientMockRegisterIncomingRequestParams struct {
 
 // ClientMockRegisterIncomingRequestResults contains results of the Client.RegisterIncomingRequest
 type ClientMockRegisterIncomingRequestResults struct {
-	ip1 *insolar.ID
+	rp1 *payload.RequestInfo
 	err error
 }
 
@@ -2249,7 +2250,7 @@ func (mmRegisterIncomingRequest *mClientMockRegisterIncomingRequest) Inspect(f f
 }
 
 // Return sets up results that will be returned by Client.RegisterIncomingRequest
-func (mmRegisterIncomingRequest *mClientMockRegisterIncomingRequest) Return(ip1 *insolar.ID, err error) *ClientMock {
+func (mmRegisterIncomingRequest *mClientMockRegisterIncomingRequest) Return(rp1 *payload.RequestInfo, err error) *ClientMock {
 	if mmRegisterIncomingRequest.mock.funcRegisterIncomingRequest != nil {
 		mmRegisterIncomingRequest.mock.t.Fatalf("ClientMock.RegisterIncomingRequest mock is already set by Set")
 	}
@@ -2257,12 +2258,12 @@ func (mmRegisterIncomingRequest *mClientMockRegisterIncomingRequest) Return(ip1 
 	if mmRegisterIncomingRequest.defaultExpectation == nil {
 		mmRegisterIncomingRequest.defaultExpectation = &ClientMockRegisterIncomingRequestExpectation{mock: mmRegisterIncomingRequest.mock}
 	}
-	mmRegisterIncomingRequest.defaultExpectation.results = &ClientMockRegisterIncomingRequestResults{ip1, err}
+	mmRegisterIncomingRequest.defaultExpectation.results = &ClientMockRegisterIncomingRequestResults{rp1, err}
 	return mmRegisterIncomingRequest.mock
 }
 
 //Set uses given function f to mock the Client.RegisterIncomingRequest method
-func (mmRegisterIncomingRequest *mClientMockRegisterIncomingRequest) Set(f func(ctx context.Context, request *record.IncomingRequest) (ip1 *insolar.ID, err error)) *ClientMock {
+func (mmRegisterIncomingRequest *mClientMockRegisterIncomingRequest) Set(f func(ctx context.Context, request *record.IncomingRequest) (rp1 *payload.RequestInfo, err error)) *ClientMock {
 	if mmRegisterIncomingRequest.defaultExpectation != nil {
 		mmRegisterIncomingRequest.mock.t.Fatalf("Default expectation is already set for the Client.RegisterIncomingRequest method")
 	}
@@ -2291,13 +2292,13 @@ func (mmRegisterIncomingRequest *mClientMockRegisterIncomingRequest) When(ctx co
 }
 
 // Then sets up Client.RegisterIncomingRequest return parameters for the expectation previously defined by the When method
-func (e *ClientMockRegisterIncomingRequestExpectation) Then(ip1 *insolar.ID, err error) *ClientMock {
-	e.results = &ClientMockRegisterIncomingRequestResults{ip1, err}
+func (e *ClientMockRegisterIncomingRequestExpectation) Then(rp1 *payload.RequestInfo, err error) *ClientMock {
+	e.results = &ClientMockRegisterIncomingRequestResults{rp1, err}
 	return e.mock
 }
 
 // RegisterIncomingRequest implements Client
-func (mmRegisterIncomingRequest *ClientMock) RegisterIncomingRequest(ctx context.Context, request *record.IncomingRequest) (ip1 *insolar.ID, err error) {
+func (mmRegisterIncomingRequest *ClientMock) RegisterIncomingRequest(ctx context.Context, request *record.IncomingRequest) (rp1 *payload.RequestInfo, err error) {
 	mm_atomic.AddUint64(&mmRegisterIncomingRequest.beforeRegisterIncomingRequestCounter, 1)
 	defer mm_atomic.AddUint64(&mmRegisterIncomingRequest.afterRegisterIncomingRequestCounter, 1)
 
@@ -2315,7 +2316,7 @@ func (mmRegisterIncomingRequest *ClientMock) RegisterIncomingRequest(ctx context
 	for _, e := range mmRegisterIncomingRequest.RegisterIncomingRequestMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.ip1, e.results.err
+			return e.results.rp1, e.results.err
 		}
 	}
 
@@ -2331,7 +2332,7 @@ func (mmRegisterIncomingRequest *ClientMock) RegisterIncomingRequest(ctx context
 		if results == nil {
 			mmRegisterIncomingRequest.t.Fatal("No results are set for the ClientMock.RegisterIncomingRequest")
 		}
-		return (*results).ip1, (*results).err
+		return (*results).rp1, (*results).err
 	}
 	if mmRegisterIncomingRequest.funcRegisterIncomingRequest != nil {
 		return mmRegisterIncomingRequest.funcRegisterIncomingRequest(ctx, request)
@@ -2430,7 +2431,7 @@ type ClientMockRegisterOutgoingRequestParams struct {
 
 // ClientMockRegisterOutgoingRequestResults contains results of the Client.RegisterOutgoingRequest
 type ClientMockRegisterOutgoingRequestResults struct {
-	ip1 *insolar.ID
+	rp1 *payload.RequestInfo
 	err error
 }
 
@@ -2466,7 +2467,7 @@ func (mmRegisterOutgoingRequest *mClientMockRegisterOutgoingRequest) Inspect(f f
 }
 
 // Return sets up results that will be returned by Client.RegisterOutgoingRequest
-func (mmRegisterOutgoingRequest *mClientMockRegisterOutgoingRequest) Return(ip1 *insolar.ID, err error) *ClientMock {
+func (mmRegisterOutgoingRequest *mClientMockRegisterOutgoingRequest) Return(rp1 *payload.RequestInfo, err error) *ClientMock {
 	if mmRegisterOutgoingRequest.mock.funcRegisterOutgoingRequest != nil {
 		mmRegisterOutgoingRequest.mock.t.Fatalf("ClientMock.RegisterOutgoingRequest mock is already set by Set")
 	}
@@ -2474,12 +2475,12 @@ func (mmRegisterOutgoingRequest *mClientMockRegisterOutgoingRequest) Return(ip1 
 	if mmRegisterOutgoingRequest.defaultExpectation == nil {
 		mmRegisterOutgoingRequest.defaultExpectation = &ClientMockRegisterOutgoingRequestExpectation{mock: mmRegisterOutgoingRequest.mock}
 	}
-	mmRegisterOutgoingRequest.defaultExpectation.results = &ClientMockRegisterOutgoingRequestResults{ip1, err}
+	mmRegisterOutgoingRequest.defaultExpectation.results = &ClientMockRegisterOutgoingRequestResults{rp1, err}
 	return mmRegisterOutgoingRequest.mock
 }
 
 //Set uses given function f to mock the Client.RegisterOutgoingRequest method
-func (mmRegisterOutgoingRequest *mClientMockRegisterOutgoingRequest) Set(f func(ctx context.Context, request *record.OutgoingRequest) (ip1 *insolar.ID, err error)) *ClientMock {
+func (mmRegisterOutgoingRequest *mClientMockRegisterOutgoingRequest) Set(f func(ctx context.Context, request *record.OutgoingRequest) (rp1 *payload.RequestInfo, err error)) *ClientMock {
 	if mmRegisterOutgoingRequest.defaultExpectation != nil {
 		mmRegisterOutgoingRequest.mock.t.Fatalf("Default expectation is already set for the Client.RegisterOutgoingRequest method")
 	}
@@ -2508,13 +2509,13 @@ func (mmRegisterOutgoingRequest *mClientMockRegisterOutgoingRequest) When(ctx co
 }
 
 // Then sets up Client.RegisterOutgoingRequest return parameters for the expectation previously defined by the When method
-func (e *ClientMockRegisterOutgoingRequestExpectation) Then(ip1 *insolar.ID, err error) *ClientMock {
-	e.results = &ClientMockRegisterOutgoingRequestResults{ip1, err}
+func (e *ClientMockRegisterOutgoingRequestExpectation) Then(rp1 *payload.RequestInfo, err error) *ClientMock {
+	e.results = &ClientMockRegisterOutgoingRequestResults{rp1, err}
 	return e.mock
 }
 
 // RegisterOutgoingRequest implements Client
-func (mmRegisterOutgoingRequest *ClientMock) RegisterOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) (ip1 *insolar.ID, err error) {
+func (mmRegisterOutgoingRequest *ClientMock) RegisterOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) (rp1 *payload.RequestInfo, err error) {
 	mm_atomic.AddUint64(&mmRegisterOutgoingRequest.beforeRegisterOutgoingRequestCounter, 1)
 	defer mm_atomic.AddUint64(&mmRegisterOutgoingRequest.afterRegisterOutgoingRequestCounter, 1)
 
@@ -2532,7 +2533,7 @@ func (mmRegisterOutgoingRequest *ClientMock) RegisterOutgoingRequest(ctx context
 	for _, e := range mmRegisterOutgoingRequest.RegisterOutgoingRequestMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.ip1, e.results.err
+			return e.results.rp1, e.results.err
 		}
 	}
 
@@ -2548,7 +2549,7 @@ func (mmRegisterOutgoingRequest *ClientMock) RegisterOutgoingRequest(ctx context
 		if results == nil {
 			mmRegisterOutgoingRequest.t.Fatal("No results are set for the ClientMock.RegisterOutgoingRequest")
 		}
-		return (*results).ip1, (*results).err
+		return (*results).rp1, (*results).err
 	}
 	if mmRegisterOutgoingRequest.funcRegisterOutgoingRequest != nil {
 		return mmRegisterOutgoingRequest.funcRegisterOutgoingRequest(ctx, request)

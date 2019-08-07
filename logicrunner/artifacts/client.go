@@ -112,7 +112,7 @@ func NewClient(sender bus.Sender) *client { // nolint
 // registerRequest registers incoming or outgoing request.
 func (m *client) registerRequest(
 	ctx context.Context, req record.Request, msgPayload payload.Payload, sender bus.Sender,
-) (*insolar.ID, error) {
+) (*payload.RequestInfo, error) {
 	affinityRef, err := m.calculateAffinityReference(ctx, req)
 	if err != nil {
 		return nil, errors.Wrap(err, "registerRequest: failed to calculate affinity reference")
@@ -135,7 +135,7 @@ func (m *client) registerRequest(
 
 	switch p := pl.(type) {
 	case *payload.RequestInfo:
-		return &p.RequestID, nil
+		return p, nil
 	case *payload.Error:
 		return nil, errors.New(p.Text)
 	default:
@@ -155,29 +155,29 @@ func (m *client) calculateAffinityReference(ctx context.Context, requestRecord r
 
 // RegisterIncomingRequest sends message for incoming request registration,
 // returns request record Ref if request successfully created or already exists.
-func (m *client) RegisterIncomingRequest(ctx context.Context, request *record.IncomingRequest) (*insolar.ID, error) {
+func (m *client) RegisterIncomingRequest(ctx context.Context, request *record.IncomingRequest) (*payload.RequestInfo, error) {
 	incomingRequest := &payload.SetIncomingRequest{Request: record.Wrap(request)}
 
 	// retriesNumber is zero, because we don't retry registering of incoming requests - the caller should
 	// re-send the request instead.
-	id, err := m.registerRequest(ctx, request, incomingRequest, m.sender)
+	res, err := m.registerRequest(ctx, request, incomingRequest, m.sender)
 	if err != nil {
-		return id, errors.Wrap(err, "RegisterIncomingRequest")
+		return nil, errors.Wrap(err, "RegisterIncomingRequest")
 	}
-	return id, err
+	return res, err
 }
 
 // RegisterOutgoingRequest sends message for outgoing request registration,
 // returns request record Ref if request successfully created or already exists.
-func (m *client) RegisterOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) (*insolar.ID, error) {
+func (m *client) RegisterOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) (*payload.RequestInfo, error) {
 	outgoingRequest := &payload.SetOutgoingRequest{Request: record.Wrap(request)}
-	id, err := m.registerRequest(
+	res, err := m.registerRequest(
 		ctx, request, outgoingRequest, bus.NewRetrySender(m.sender, m.PulseAccessor, 3),
 	)
 	if err != nil {
-		return id, errors.Wrap(err, "RegisterOutgoingRequest")
+		return nil, errors.Wrap(err, "RegisterOutgoingRequest")
 	}
-	return id, err
+	return res, err
 }
 
 // GetCode returns code from code record by provided reference according to provided machine preference.

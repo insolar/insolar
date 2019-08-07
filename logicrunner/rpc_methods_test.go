@@ -29,6 +29,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -326,12 +327,12 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	outgoingReqID := gen.ID()
 	outgoingReqRef := insolar.NewReference(outgoingReqID)
 	// Make sure an outgoing request is registered
-	am.RegisterOutgoingRequestMock.Set(func(ctx context.Context, r *record.OutgoingRequest) (*insolar.ID, error) {
+	am.RegisterOutgoingRequestMock.Set(func(ctx context.Context, r *record.OutgoingRequest) (*payload.RequestInfo, error) {
 		require.Nil(t, outreq)
 		require.Equal(t, record.ReturnResult, r.ReturnMode)
 		outreq = r
 		id := outgoingReqID
-		return &id, nil
+		return &payload.RequestInfo{RequestID: id}, nil
 	})
 
 	cr.CallMock.Return(&reply.CallMethod{}, nil)
@@ -366,12 +367,12 @@ func TestRouteCallRegistersSaga(t *testing.T) {
 	var outreq *record.OutgoingRequest
 	outgoingReqID := gen.ID()
 	// Make sure an outgoing request is registered
-	am.RegisterOutgoingRequestMock.Set(func(ctx context.Context, r *record.OutgoingRequest) (*insolar.ID, error) {
+	am.RegisterOutgoingRequestMock.Set(func(ctx context.Context, r *record.OutgoingRequest) (*payload.RequestInfo, error) {
 		require.Nil(t, outreq)
 		require.Equal(t, record.ReturnSaga, r.ReturnMode)
 		outreq = r
 		id := outgoingReqID
-		return &id, nil
+		return &payload.RequestInfo{RequestID: id}, nil
 	})
 
 	// cr.CallMethod and am.RegisterResults are NOT called
@@ -402,11 +403,11 @@ func TestSaveAsChildRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	outgoingReqID := gen.ID()
 	outgoingReqRef := insolar.NewReference(outgoingReqID)
 	// Make sure an outgoing request is registered
-	am.RegisterOutgoingRequestMock.Set(func(ctx context.Context, r *record.OutgoingRequest) (*insolar.ID, error) {
+	am.RegisterOutgoingRequestMock.Set(func(ctx context.Context, r *record.OutgoingRequest) (*payload.RequestInfo, error) {
 		require.Nil(t, outreq)
 		outreq = r
 		id := outgoingReqID
-		return &id, nil
+		return &payload.RequestInfo{RequestID: id}, nil
 	})
 
 	newObjRef := gen.Reference()
