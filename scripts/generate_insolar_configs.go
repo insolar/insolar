@@ -150,19 +150,19 @@ func main() {
 			conf.Ledger.JetSplit.DepthLimit = 4
 		}
 
-		// If you want to switch on backups uncomment it
-		// if node.Role == "heavy_material" {
-		// 	conf.Ledger.Backup = configuration.Backup{
-		// 		ConfirmFile:      "BACKUPED",
-		// 		MetaInfoFile:     "META.json",
-		// 		TargetDirectory:  "/tmp/BKP/TARGET/PREVED", // must be created
-		// 		TmpDirectory:     "/tmp/BKP/TMP",           // must be created
-		// 		DirNameTemplate:  "pulse-%d",
-		// 		BackupFile:       "incr.bkp",
-		// 		BackupWaitPeriod: 60,
-		// 		Enabled:          true,
-		// 	}
-		// }
+		//If you want to switch on backups uncomment it
+		if node.Role == "heavy_material" {
+			conf.Ledger.Backup = configuration.Backup{
+				ConfirmFile:      "BACKUPED",
+				MetaInfoFile:     "META.json",
+				TargetDirectory:  "/tmp/BKP/TARGET/PREVED", // must be created
+				TmpDirectory:     "/tmp/BKP/TMP",           // must be created
+				DirNameTemplate:  "pulse-%d",
+				BackupFile:       "incr.bkp",
+				BackupWaitPeriod: 60,
+				Enabled:          true,
+			}
+		}
 
 		conf.APIRunner.Address = fmt.Sprintf(defaultHost+":191%02d", nodeIndex)
 		conf.Metrics.ListenAddress = fmt.Sprintf(defaultHost+":80%02d", nodeIndex)

@@ -64,7 +64,7 @@ func (f *FinalizationKeeperDefault) OnPulse(ctx context.Context, current insolar
 	}
 
 	if lastConfirmedPulse <= bottomLevel.PulseNumber {
-		logger.Fatal(fmt.Sprintf("last finalized pulse falls behind too much. Stop node. bottomLevel.PulseNumber: %d, last confirmed: %d", bottomLevel.PulseNumber, lastConfirmedPulse))
+		panic(fmt.Sprintf("last finalized pulse falls behind too much. Stop node. bottomLevel.PulseNumber: %d, last confirmed: %d", bottomLevel.PulseNumber, lastConfirmedPulse))
 	}
 
 	logger.Debugf("FinalizationKeeper: everything is ok. Current pulse: %d, last confirmed: %d, limit: %d", current, lastConfirmedPulse, f.limit)
