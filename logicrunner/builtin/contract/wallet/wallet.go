@@ -109,21 +109,16 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toM
 		return member.TransferResponse{Fee: feeStr}, nil
 	}
 
-	newBalance, err = safemath.Add(balance, amountWithFee)
-	if err != nil {
-		return nil, fmt.Errorf("failed to add amount back to balance: %s", err.Error())
-	}
-	w.Balance = newBalance.String()
-
-	err = feeWallet.RollBack(feeStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to roll back fee: %s", err.Error())
-	}
-
 	return nil, fmt.Errorf("failed to accept balance to wallet: %s", acceptErr.Error())
 }
 
+// GetBalance gets total balance.
+func (w *Wallet) GetBalance() (string, error) {
+	return w.Balance, nil
+}
+
 // Accept accepts transfer to balance.
+//ins:saga(Rollback)
 func (w *Wallet) Accept(amountStr string) (err error) {
 
 	amount := new(big.Int)
@@ -147,8 +142,8 @@ func (w *Wallet) Accept(amountStr string) (err error) {
 	return nil
 }
 
-// RollBack rolls back transfer to balance.
-func (w *Wallet) RollBack(amountStr string) (err error) {
+// Rollback rolls back transfer to balance.
+func (w *Wallet) Rollback(amountStr string) (err error) {
 
 	amount := new(big.Int)
 	amount, ok := amount.SetString(amountStr, 10)
@@ -169,9 +164,4 @@ func (w *Wallet) RollBack(amountStr string) (err error) {
 	w.Balance = b.String()
 
 	return nil
-}
-
-// GetBalance gets total balance.
-func (w *Wallet) GetBalance() (string, error) {
-	return w.Balance, nil
 }
