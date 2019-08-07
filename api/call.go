@@ -200,7 +200,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		traceID := utils.RandTraceID()
 		ctx, insLog := inslogger.WithTraceField(context.Background(), traceID)
 
-		ctx, span := instracer.StartSpan(ctx, "callHandler")
+		ctx, span := instracer.StartSpan(ctx, "ApiCallHandler.callHandler")
 		defer span.End()
 
 		contractRequest := &requester.Request{}
@@ -214,6 +214,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 		ctx, rawBody, err := processRequest(ctx, req, contractRequest, contractAnswer)
 		if err != nil {
+			instracer.AddError(span, err)
 			processError(err, err.Error(), contractAnswer, insLog, traceID)
 			return
 		}
@@ -224,18 +225,21 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 		if contractRequest.Method != "api.call" {
 			err := errors.New("rpc method does not exist")
+			instracer.AddError(span, err)
 			processError(err, err.Error(), contractAnswer, insLog, traceID)
 			return
 		}
 
 		signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), rawBody)
 		if err != nil {
+			instracer.AddError(span, err)
 			processError(err, err.Error(), contractAnswer, insLog, traceID)
 			return
 		}
 
 		seedPulse, err := ar.checkSeed(contractRequest.Params.Seed)
 		if err != nil {
+			instracer.AddError(span, err)
 			processError(err, err.Error(), contractAnswer, insLog, traceID)
 			return
 		}
@@ -252,6 +256,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 		case <-ch:
 			if err != nil {
+				instracer.AddError(span, err)
 				processError(err, err.Error(), contractAnswer, insLog, traceID)
 				return
 			}
@@ -260,6 +265,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 
 		case <-time.After(ar.timeout):
+			instracer.AddError(span, errors.New("API timeout exceeded"))
 			errResponse := &requester.Error{Message: "API timeout exceeded", Code: TimeoutError, Data: requester.Data{TraceID: traceID}}
 			contractAnswer.Error = errResponse
 			return
