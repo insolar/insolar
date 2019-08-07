@@ -96,7 +96,6 @@ func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publi
 		Cfg:             cfg,
 		Publisher:       publisher,
 		Sender:          sender,
-		SenderWithRetry: bus.NewWaitOKWithRetrySender(sender, 3),
 	}
 
 	res.ResultsMatcher = newResultsMatcher(&res)
@@ -118,6 +117,8 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 		lr.ArtifactManager,
 		lr.OutgoingSender,
 	)
+
+	lr.SenderWithRetry = bus.NewWaitOKWithRetrySender(lr.Sender, lr.PulseAccessor, 3)
 
 	lr.rpc = lrCommon.NewRPC(
 		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage, lr.OutgoingSender),
@@ -144,6 +145,7 @@ func (lr *LogicRunner) initHandlers() {
 		Sender:         lr.Sender,
 		JetStorage:     lr.JetStorage,
 		WriteAccessor:  lr.WriteController,
+		OutgoingSender: lr.OutgoingSender,
 	}
 
 	initHandle := func(msg *watermillMsg.Message) *Init {
@@ -277,9 +279,6 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newP
 	lr.ResultsMatcher.Clear()
 
 	messages := lr.StateStorage.OnPulse(ctx, newPulse)
-
-	lr.FlowDispatcher.ChangePulse(ctx, newPulse)
-	lr.InnerFlowDispatcher.ChangePulse(ctx, newPulse)
 
 	err = lr.WriteController.Open(ctx, newPulse.PulseNumber)
 	if err != nil {

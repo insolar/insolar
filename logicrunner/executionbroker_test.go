@@ -775,7 +775,7 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 			reqRef := gen.Reference()
 			broker.AddFreshRequest(ctx, NewTranscript(ctx, reqRef, record.IncomingRequest{}))
 
-			mc.Wait(1 * time.Second)
+			mc.Wait(1 * time.Minute)
 			mc.Finish()
 
 			test.checks(ctx, t, *msgs)
