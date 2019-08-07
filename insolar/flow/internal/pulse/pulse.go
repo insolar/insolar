@@ -28,7 +28,7 @@ func FromContext(ctx context.Context) insolar.PulseNumber {
 	val := ctx.Value(contextKey{})
 	pn, ok := val.(insolar.PulseNumber)
 	if !ok {
-		panic("accessing pulse outside of flow")
+		panic("pulse not found in context (probable reason: accessing pulse outside of flow)")
 	}
 	return pn
 }
