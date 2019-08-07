@@ -172,6 +172,7 @@ func initComponents(
 		logicrunner.NewLogicExecutor(),
 		logicrunner.NewRequestsExecutor(),
 		logicrunner.NewMachinesManager(),
+		apiRunner,
 		nodeNetwork,
 		nw,
 		pm,
@@ -193,7 +194,6 @@ func initComponents(
 	}
 	components = append(components, []interface{}{
 		genesisDataProvider,
-		apiRunner,
 		metricsHandler,
 		cryptographyService,
 		keyProcessor,
