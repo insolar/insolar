@@ -18,7 +18,7 @@ package executor
 
 import (
 	"context"
-	"crypto/md5"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -50,7 +50,7 @@ var (
 
 // BackupInfo contains meta information about current incremental backup
 type BackupInfo struct {
-	MD5                 string
+	SHA256              string
 	Pulse               insolar.PulseNumber
 	LastBackupedVersion uint64
 	Since               uint64
@@ -147,7 +147,7 @@ func waitForBackup(ctx context.Context, filePath string, numIterations uint) err
 }
 
 func writeBackupInfoFile(hash string, pulse insolar.PulseNumber, since uint64, upto uint64, to string) error {
-	bi := BackupInfo{MD5: hash, Pulse: pulse, LastBackupedVersion: upto, Since: since}
+	bi := BackupInfo{SHA256: hash, Pulse: pulse, LastBackupedVersion: upto, Since: since}
 
 	rawInfo, err := json.MarshalIndent(bi, "", "    ")
 	if err != nil {
@@ -159,7 +159,7 @@ func writeBackupInfoFile(hash string, pulse insolar.PulseNumber, since uint64, u
 }
 
 func calculateFileHash(f *os.File) (string, error) {
-	hasher := md5.New() //nolint: gosec
+	hasher := sha256.New()
 	if _, err := io.Copy(hasher, f); err != nil {
 		return "", errors.Wrap(err, "io.Copy return error")
 	}
@@ -248,7 +248,7 @@ func (b *BackupMakerDefault) doBackup(ctx context.Context, lastFinalizedPulse in
 	}
 	defer closer(ctx)
 
-	currentBkpVersion, err := b.prepareBackup(ctx, dirHolder, lastFinalizedPulse)
+	currentBkpVersion, err := b.prepareBackup(dirHolder, lastFinalizedPulse)
 	if err != nil {
 		return 0, errors.Wrap(err, "prepareBackup returns error")
 	}

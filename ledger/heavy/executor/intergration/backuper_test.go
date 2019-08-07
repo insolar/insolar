@@ -19,12 +19,13 @@ package intergration
 
 import (
 	"context"
-	"crypto/md5"
+	"crypto/sha256"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,8 +33,6 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
-
-	"math/rand"
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/configuration"
@@ -250,7 +249,7 @@ func calculateFileHash(t *testing.T, fileName string) string {
 	f, err := os.Open(fileName)
 	require.NoError(t, err)
 	defer f.Close()
-	hasher := md5.New()
+	hasher := sha256.New()
 	_, err = io.Copy(hasher, f)
 	require.NoError(t, err)
 
@@ -272,7 +271,7 @@ func checkBackupMetaInfo(t *testing.T, cfg configuration.Backup, numIterations i
 		// check file hash
 		bkpFile := filepath.Join(currentBkpDir, cfg.BackupFile)
 		md5sum := calculateFileHash(t, bkpFile)
-		require.Equal(t, md5sum, bi.MD5)
+		require.Equal(t, md5sum, bi.SHA256)
 
 		// check pulse
 		require.Equal(t, currentPulse, bi.Pulse)
