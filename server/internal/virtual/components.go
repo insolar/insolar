@@ -85,7 +85,6 @@ func initBootstrapComponents(ctx context.Context, cfg configuration.Configuratio
 func initCertificateManager(
 	ctx context.Context,
 	cfg configuration.Configuration,
-	isBootstrap bool,
 	cryptographyService insolar.CryptographyService,
 	keyProcessor insolar.KeyProcessor,
 ) *certificate.CertificateManager {
@@ -95,13 +94,8 @@ func initCertificateManager(
 	publicKey, err := cryptographyService.GetPublicKey()
 	checkError(ctx, err, "failed to retrieve node public key")
 
-	if isBootstrap {
-		certManager, err = certificate.NewManagerCertificateWithKeys(publicKey, keyProcessor)
-		checkError(ctx, err, "failed to start Certificate (bootstrap mode)")
-	} else {
-		certManager, err = certificate.NewManagerReadCertificate(publicKey, keyProcessor, cfg.CertificatePath)
-		checkError(ctx, err, "failed to start Certificate")
-	}
+	certManager, err = certificate.NewManagerReadCertificate(publicKey, keyProcessor, cfg.CertificatePath)
+	checkError(ctx, err, "failed to start Certificate")
 
 	return certManager
 }
