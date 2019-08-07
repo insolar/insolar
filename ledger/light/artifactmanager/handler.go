@@ -20,10 +20,11 @@ import (
 	"context"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/insolar/flow/dispatcher"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/flow/dispatcher"
+	"github.com/insolar/insolar/insolar/pulse"
 
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
@@ -53,7 +54,7 @@ type MessageHandler struct {
 	PulseCalculator    storage.PulseCalculator
 	JetTreeUpdater     executor.JetFetcher
 	Sender             bus.Sender
-	FlowDispatcher     *dispatcher.Dispatcher
+	FlowDispatcher     dispatcher.Dispatcher
 	FilamentCalculator *executor.FilamentCalculatorDefault
 	RequestChecker     *executor.RequestCheckerDefault
 
@@ -64,6 +65,7 @@ type MessageHandler struct {
 // NewMessageHandler creates new handler.
 func NewMessageHandler(
 	conf *configuration.Ledger,
+	accessor pulse.Accessor,
 ) *MessageHandler {
 
 	h := &MessageHandler{
@@ -203,13 +205,14 @@ func NewMessageHandler(
 		return handle.NewInit(dep, h.Sender, msg)
 	}
 
-	h.FlowDispatcher = dispatcher.NewDispatcher(func(msg *message.Message) flow.Handle {
-		return initHandle(msg).Present
-	}, func(msg *message.Message) flow.Handle {
-		return initHandle(msg).Future
-	}, func(msg *message.Message) flow.Handle {
-		return initHandle(msg).Past
-	})
+	h.FlowDispatcher = dispatcher.NewDispatcher(accessor,
+		func(msg *message.Message) flow.Handle {
+			return initHandle(msg).Present
+		}, func(msg *message.Message) flow.Handle {
+			return initHandle(msg).Future
+		}, func(msg *message.Message) flow.Handle {
+			return initHandle(msg).Past
+		})
 	return h
 }
 

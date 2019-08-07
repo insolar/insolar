@@ -228,9 +228,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		c := component.Manager{}
 		c.Inject(CryptoScheme)
 
-		handler := artifactmanager.NewMessageHandler(&conf)
+		handler := artifactmanager.NewMessageHandler(&conf, Pulses)
 		handler.PulseCalculator = Pulses
-		handler.FlowDispatcher.PulseAccessor = Pulses
 
 		handler.PCS = CryptoScheme
 		handler.JetCoordinator = Coordinator

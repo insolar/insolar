@@ -72,7 +72,8 @@ type LogicRunner struct {
 	StateStorage               StateStorage
 	ResultsMatcher             ResultMatcher
 	OutgoingSender             OutgoingRequestSender
-	WriteController            *writecontroller.WriteController
+	WriteController            writecontroller.WriteController
+	FlowDispatcher             dispatcher.Dispatcher
 
 	Cfg *configuration.LogicRunner
 
@@ -81,11 +82,6 @@ type LogicRunner struct {
 	stopLock   sync.Mutex
 	isStopping bool
 	stopChan   chan struct{}
-
-	// Inner dispatcher will be merged with FlowDispatcher after
-	// complete migration to watermill.
-	FlowDispatcher      *dispatcher.Dispatcher
-	InnerFlowDispatcher *dispatcher.Dispatcher
 }
 
 // NewLogicRunner is constructor for LogicRunner
@@ -94,9 +90,9 @@ func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publi
 		return nil, errors.New("LogicRunner have nil configuration")
 	}
 	res := LogicRunner{
-		Cfg:             cfg,
-		Publisher:       publisher,
-		Sender:          sender,
+		Cfg:       cfg,
+		Publisher: publisher,
+		Sender:    sender,
 	}
 
 	res.ResultsMatcher = newResultsMatcher(&res)
@@ -155,32 +151,14 @@ func (lr *LogicRunner) initHandlers() {
 			Message: msg,
 		}
 	}
-	lr.FlowDispatcher = dispatcher.NewDispatcher(
+	lr.FlowDispatcher = dispatcher.NewDispatcher(lr.PulseAccessor,
 		func(msg *watermillMsg.Message) flow.Handle {
 			return initHandle(msg).Present
-		},
-		func(msg *watermillMsg.Message) flow.Handle {
+		}, func(msg *watermillMsg.Message) flow.Handle {
 			return initHandle(msg).Future
-		},
-		func(msg *watermillMsg.Message) flow.Handle {
+		}, func(msg *watermillMsg.Message) flow.Handle {
 			return initHandle(msg).Past
-		},
-	)
-
-	innerInitHandle := func(msg *watermillMsg.Message) *InnerInit {
-		return &InnerInit{
-			dep:     dep,
-			Message: msg,
-		}
-	}
-
-	lr.InnerFlowDispatcher = dispatcher.NewDispatcher(func(msg *watermillMsg.Message) flow.Handle {
-		return innerInitHandle(msg).Present
-	}, func(msg *watermillMsg.Message) flow.Handle {
-		return innerInitHandle(msg).Present
-	}, func(msg *watermillMsg.Message) flow.Handle {
-		return innerInitHandle(msg).Present
-	})
+		})
 }
 
 func (lr *LogicRunner) initializeBuiltin(_ context.Context) error {
@@ -232,7 +210,6 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 	}
 
 	lr.ArtifactManager.InjectFinish()
-	lr.FlowDispatcher.PulseAccessor = lr.PulseAccessor
 
 	return nil
 }
@@ -354,14 +331,6 @@ func convertQueueToMessageQueue(ctx context.Context, queue []*Transcript) []mess
 	inslogger.FromContext(ctx).Debug("convertQueueToMessageQueue: ", traces)
 
 	return mq
-}
-
-func (lr *LogicRunner) pulse(ctx context.Context) *insolar.Pulse {
-	p, err := lr.PulseAccessor.Latest(ctx)
-	if err != nil {
-		panic(err)
-	}
-	return &p
 }
 
 func contextWithServiceData(ctx context.Context, data message.ServiceData) context.Context {

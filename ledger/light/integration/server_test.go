@@ -227,9 +227,8 @@ func NewServer(
 		writeController := hot.NewWriteController()
 		waiter := hot.NewChannelWaiter()
 
-		handler := artifactmanager.NewMessageHandler(&conf)
+		handler := artifactmanager.NewMessageHandler(&conf, Pulses)
 		handler.PulseCalculator = Pulses
-		handler.FlowDispatcher.PulseAccessor = Pulses
 
 		handler.PCS = CryptoScheme
 		handler.JetCoordinator = Coordinator

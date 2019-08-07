@@ -84,11 +84,13 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 
 	err := m.FinalizationKeeper.OnPulse(ctx, newPulse.PulseNumber)
 	if err != nil {
+		instracer.AddError(span, err)
 		return errors.Wrap(err, "got error calling FinalizationKeeper.OnPulse")
 	}
 
 	err = m.setUnderGilSection(ctx, newPulse)
 	if err != nil {
+		instracer.AddError(span, err)
 		if err == errZeroNodes {
 			inslogger.FromContext(ctx).Info("setUnderGilSection return error: ", err)
 			return nil
@@ -100,6 +102,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 
 	err = m.Bus.OnPulse(ctx, newPulse)
 	if err != nil {
+		instracer.AddError(span, err)
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
 	}
 
@@ -112,13 +115,15 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	)
 
 	m.GIL.Acquire(ctx)
-	ctx, span := instracer.StartSpan(ctx, "pulse.gil_locked")
 
+	ctx, span := instracer.StartSpan(ctx, "PulseManager.setUnderGilSection")
 	defer span.End()
+
 	defer m.GIL.Release(ctx)
 
 	storagePulse, err := m.PulseAccessor.Latest(ctx)
 	if err != nil && err != pulse.ErrNotFound {
+		instracer.AddError(span, err)
 		return errors.Wrap(err, "call of m.PulseAccessor.Latest failed")
 	}
 
@@ -145,11 +150,13 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	}
 	err = m.NodeSetter.Set(newPulse.PulseNumber, toSet)
 	if err != nil {
+		instracer.AddError(span, err)
 		return errors.Wrap(err, "call of SetActiveNodes failed")
 	}
 
 	err = m.JetModifier.Clone(ctx, storagePulse.PulseNumber, newPulse.PulseNumber, true)
 	if err != nil {
+		instracer.AddError(span, err)
 		return errors.Wrapf(err, "failed to clone jet.Tree fromPulse=%v toPulse=%v", storagePulse.PulseNumber, newPulse.PulseNumber)
 	}
 
@@ -173,6 +180,7 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	}
 
 	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
+		instracer.AddError(span, err)
 		return errors.Wrap(err, "call of AddPulse failed")
 	}
 	return nil

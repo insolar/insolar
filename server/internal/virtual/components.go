@@ -204,14 +204,12 @@ func initComponents(
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
 
-	pm.InnerFlowDispatcher = logicRunner.InnerFlowDispatcher
 	pm.FlowDispatcher = logicRunner.FlowDispatcher
 
 	stopper := startWatermill(
 		ctx, logger, pubSub, b,
 		nw.SendMessageHandler,
 		logicRunner.FlowDispatcher.Process,
-		logicRunner.InnerFlowDispatcher.InnerSubscriber,
 	)
 
 	return &cm, terminationHandler, stopper
@@ -222,7 +220,7 @@ func startWatermill(
 	logger watermill.LoggerAdapter,
 	pubSub message.Subscriber,
 	b *bus.Bus,
-	outHandler, inHandler, lrHandler message.HandlerFunc,
+	outHandler, inHandler message.HandlerFunc,
 ) func() {
 	inRouter, err := message.NewRouter(message.RouterConfig{}, logger)
 	if err != nil {
@@ -232,12 +230,6 @@ func startWatermill(
 	if err != nil {
 		panic(err)
 	}
-
-	lrRouter, err := message.NewRouter(message.RouterConfig{}, logger)
-	if err != nil {
-		panic(err)
-	}
-
 	outRouter.AddNoPublisherHandler(
 		"OutgoingHandler",
 		bus.TopicOutgoing,
@@ -256,18 +248,10 @@ func startWatermill(
 		inHandler,
 	)
 
-	lrRouter.AddNoPublisherHandler(
-		"InnerMsgHandler",
-		logicrunner.InnerMsgTopic,
-		pubSub,
-		lrHandler,
-	)
-
 	startRouter(ctx, inRouter)
 	startRouter(ctx, outRouter)
-	startRouter(ctx, lrRouter)
 
-	return stopWatermill(ctx, inRouter, outRouter, lrRouter)
+	return stopWatermill(ctx, inRouter, outRouter)
 }
 
 func startRouter(ctx context.Context, router *message.Router) {

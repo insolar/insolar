@@ -98,11 +98,11 @@ func (mb *MessageBus) Acquire(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("Call Acquire in MessageBus: ", counter)
 	if counter == 1 {
 		inslogger.FromContext(ctx).Info("Lock MB")
-		ctx, span := instracer.StartSpan(parentCtx, "before GIL Lock (Lock MB)")
-		span.End()
-		mb.lock(ctx)
-		_, span = instracer.StartSpan(parentCtx, "after GIL Lock (Lock MB)")
-		span.End()
+
+		ctx, span := instracer.StartSpan(parentCtx, "GIL Lock (Lock MB)")
+		defer span.End()
+
+		mb.Lock(ctx)
 	}
 }
 
@@ -114,9 +114,12 @@ func (mb *MessageBus) Release(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("Call Release in MessageBus: ", counter)
 	if counter == 0 {
 		inslogger.FromContext(ctx).Info("Unlock MB")
-		mb.unlock(ctx)
+
 		_, span := instracer.StartSpan(ctx, "GIL Unlock (Unlock MB)")
-		span.End()
+		defer span.End()
+
+		mb.Unlock(ctx)
+
 	}
 }
 
@@ -140,12 +143,12 @@ func (mb *MessageBus) Start(ctx context.Context) error {
 // Stop releases resources and stops the bus
 func (mb *MessageBus) Stop(ctx context.Context) error { return nil }
 
-func (mb *MessageBus) lock(ctx context.Context) {
+func (mb *MessageBus) Lock(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("Acquire GIL")
 	mb.globalLock.Lock()
 }
 
-func (mb *MessageBus) unlock(ctx context.Context) {
+func (mb *MessageBus) Unlock(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("Release GIL")
 	mb.globalLock.Unlock()
 }
