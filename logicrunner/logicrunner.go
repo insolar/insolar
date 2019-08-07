@@ -364,6 +364,11 @@ func freshContextFromContext(ctx context.Context) context.Context {
 	if ok {
 		res = instracer.WithParentSpan(res, parentSpan)
 	}
+
+	if pctx := trace.FromContext(ctx); pctx != nil {
+		res = trace.NewContext(res, pctx)
+	}
+
 	return res
 }
 
@@ -377,6 +382,9 @@ func freshContextFromContextAndRequest(ctx context.Context, req record.IncomingR
 	parentSpan, ok := instracer.ParentSpan(ctx)
 	if ok {
 		res = instracer.WithParentSpan(res, parentSpan)
+	}
+	if pctx := trace.FromContext(ctx); pctx != nil {
+		res = trace.NewContext(res, pctx)
 	}
 	return res
 }

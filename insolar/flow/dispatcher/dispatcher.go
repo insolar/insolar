@@ -104,7 +104,7 @@ func (d *dispatcher) InnerSubscriber(msg *message.Message) ([]*message.Message, 
 	if err == nil {
 		ctx = instracer.WithParentSpan(ctx, parentSpan)
 	} else {
-		inslogger.FromContext(ctx).Error(err)
+		inslogger.FromContext(ctx).Error("InnerSubscriber without parent span", err)
 	}
 	logger := inslogger.FromContext(ctx)
 	go func() {
