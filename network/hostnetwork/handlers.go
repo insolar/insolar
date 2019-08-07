@@ -124,7 +124,10 @@ func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader
 			logger.Debugf("[ HandleStream ] Handling packet RequestID = %d", p.RequestID)
 
 			if p.IsResponse() {
-				go s.responseHandler.Handle(packetCtx, p)
+				go func() {
+					s.responseHandler.Handle(packetCtx, p)
+
+				}()
 			} else {
 				go s.requestHandler(packetCtx, p)
 			}

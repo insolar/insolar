@@ -80,8 +80,6 @@ func GetBaggage(ctx context.Context) []Entry {
 // StartSpan starts span with stored baggage and with parent span if find in context.
 func StartSpan(ctx context.Context, name string, o ...trace.StartOption) (context.Context, *trace.Span) {
 
-	flag := name == "NO PANIC"
-
 	parentSpan, haveParent := ParentSpan(ctx)
 	var (
 		spanctx context.Context
@@ -90,16 +88,7 @@ func StartSpan(ctx context.Context, name string, o ...trace.StartOption) (contex
 	if haveParent {
 		spanctx, span = trace.StartSpanWithRemoteParent(
 			ctx, name, parentSpan.spanContext(), o...)
-		if _, ok := ParentSpan(spanctx); flag && !ok {
-			panic("PPP13")
-		}
-
 		spanctx = context.WithValue(spanctx, parentSpanKey{}, nil)
-
-		if _, ok := ParentSpan(spanctx); flag && !ok {
-			panic("PPP14")
-		}
-
 	} else {
 		spanctx, span = trace.StartSpan(ctx, name, o...)
 	}
@@ -113,10 +102,6 @@ func StartSpan(ctx context.Context, name string, o ...trace.StartOption) (contex
 		trace.StringAttribute("insTraceId", inslogger.TraceID(ctx)),
 	)
 	setSpanEntries(span, GetBaggage(spanctx)...)
-	if _, ok := ParentSpan(spanctx); flag && !ok {
-		panic("PPP15")
-	}
-
 	return spanctx, span
 }
 
