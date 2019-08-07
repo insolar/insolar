@@ -54,12 +54,13 @@ func TestNewDispatcher(t *testing.T) {
 	}
 	require.False(t, ok)
 
-	d := NewDispatcher(f, f, f)
+	dInterface := NewDispatcher(nil, f, f, f)
+	d := dInterface.(*dispatcher)
 	require.NotNil(t, d.controller)
 
 	ctx := context.Background()
 	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
-	d.PulseAccessor = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
+	d.pulses = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
@@ -77,7 +78,7 @@ func (replyMock) Type() insolar.ReplyType {
 func TestDispatcher_Process(t *testing.T) {
 	t.Parallel()
 
-	d := &Dispatcher{
+	d := &dispatcher{
 		controller: thread.NewController(),
 	}
 	reply := replyMock(42)
@@ -91,7 +92,7 @@ func TestDispatcher_Process(t *testing.T) {
 
 	ctx := context.Background()
 	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
-	d.PulseAccessor = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
+	d.pulses = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
@@ -104,7 +105,7 @@ func TestDispatcher_Process(t *testing.T) {
 func TestDispatcher_Process_ReplyError(t *testing.T) {
 	t.Parallel()
 
-	d := &Dispatcher{
+	d := &dispatcher{
 		controller: thread.NewController(),
 	}
 	replyChan := make(chan error, 1)
@@ -117,7 +118,7 @@ func TestDispatcher_Process_ReplyError(t *testing.T) {
 
 	ctx := context.Background()
 	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
-	d.PulseAccessor = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
+	d.pulses = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
@@ -130,7 +131,7 @@ func TestDispatcher_Process_ReplyError(t *testing.T) {
 
 func TestDispatcher_Process_CallFutureDispatcher(t *testing.T) {
 	t.Parallel()
-	d := &Dispatcher{
+	d := &dispatcher{
 		controller: thread.NewController(),
 	}
 
@@ -145,7 +146,7 @@ func TestDispatcher_Process_CallFutureDispatcher(t *testing.T) {
 
 	ctx := context.Background()
 	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
-	d.PulseAccessor = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
+	d.pulses = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber+1)
 
@@ -164,7 +165,7 @@ func makeWMMessage(ctx context.Context, payLoad message.Payload) *message.Messag
 
 func TestDispatcher_InnerSubscriber(t *testing.T) {
 	t.Parallel()
-	d := &Dispatcher{
+	d := &dispatcher{
 		controller: thread.NewController(),
 	}
 
@@ -185,7 +186,7 @@ func TestDispatcher_InnerSubscriber(t *testing.T) {
 
 func TestDispatcher_InnerSubscriber_Error(t *testing.T) {
 	t.Parallel()
-	d := &Dispatcher{
+	d := &dispatcher{
 		controller: thread.NewController(),
 	}
 	testResult := 77

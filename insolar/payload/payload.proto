@@ -199,7 +199,7 @@ message HotObjects {
 message GetRequest {
     uint32 Polymorph = 16;
 
-    bytes ObjectID  = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
     bytes RequestID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
 }
 
@@ -324,9 +324,10 @@ message GetLightInitialState {
 message LightInitialState {
     uint32 Polymorph = 16;
 
-    repeated bytes JetIDs = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
-    repeated bytes Drops = 21;
-    pulse.PulseProto Pulse = 22;
+    bool NetworkStart = 20;
+    repeated bytes JetIDs = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
+    repeated bytes Drops = 22;
+    pulse.PulseProto Pulse = 23 [ (gogoproto.nullable) = false];
 }
 
 message GetIndex {

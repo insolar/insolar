@@ -147,6 +147,10 @@ func (d *distributor) Start(ctx context.Context) error {
 	return nil
 }
 
+func (d *distributor) Stop(ctx context.Context) error {
+	return d.transport.Stop(ctx)
+}
+
 // Distribute starts a fire-and-forget process of pulse distribution to bootstrap hosts
 func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 	logger := inslogger.FromContext(ctx)
@@ -277,6 +281,6 @@ func NewPulsePacket(p *insolar.Pulse, pulsarHost, to *host.Host, id uint64) *pac
 
 func NewPulsePacketWithTrace(ctx context.Context, p *insolar.Pulse, pulsarHost, to *host.Host, id uint64) *packet.Packet {
 	pulsePacket := NewPulsePacket(p, pulsarHost, to, id)
-	pulsePacket.GetRequest().GetPulse().TraceSpanData = instracer.MustSerialize(ctx)
+	pulsePacket.TraceSpanData = instracer.MustSerialize(ctx)
 	return pulsePacket
 }

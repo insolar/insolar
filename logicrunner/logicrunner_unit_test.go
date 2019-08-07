@@ -69,6 +69,7 @@ type LogicRunnerCommonTestSuite struct {
 	mle    *testutils.MachineLogicExecutorMock
 	nn     *network.NodeNetworkMock
 	sender *bus.SenderMock
+	cr     *testutils.ContractRequesterMock
 	pub    message2.Publisher
 }
 
@@ -87,6 +88,7 @@ func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) 
 	suite.ps = pulse.NewAccessorMock(suite.mc)
 	suite.nn = network.NewNodeNetworkMock(suite.mc)
 	suite.sender = bus.NewSenderMock(suite.mc)
+	suite.cr = testutils.NewContractRequesterMock(suite.mc)
 	suite.pub = &publisherMock{}
 
 	suite.SetupLogicRunner()
@@ -106,15 +108,15 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 	suite.lr.Sender = suite.sender
 	suite.lr.Publisher = suite.pub
 	suite.lr.RequestsExecutor = suite.re
+	suite.lr.ContractRequester = suite.cr
+	suite.lr.PulseAccessor = suite.ps
 
 	_ = suite.lr.Init(suite.ctx)
-
-	suite.lr.FlowDispatcher.PulseAccessor = suite.ps
 }
 
 func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
-	suite.mc.Wait(2 * time.Second)
-	//suite.mc.Finish()
+	suite.mc.Wait(2 * time.Minute)
+	suite.mc.Finish()
 
 	// LogicRunner created a number of goroutines (in watermill, for example)
 	// that weren't shut down in case no Stop was called
@@ -165,8 +167,9 @@ func getReply(suite *LogicRunnerTestSuite, replyChan chan *message2.Message) (in
 
 func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 	outgoing := record.OutgoingRequest{
-		Caller: gen.Reference(),
-		Reason: gen.Reference(),
+		Caller:     gen.Reference(),
+		Reason:     gen.Reference(),
+		ReturnMode: record.ReturnSaga,
 	}
 	virtual := record.Wrap(&outgoing)
 	outgoingBytes, err := virtual.Marshal()
@@ -203,8 +206,7 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 	var usedReason insolar.Reference
 	var usedReturnMode record.ReturnMode
 
-	cr := testutils.NewContractRequesterMock(suite.T())
-	cr.CallMethodMock.Set(func(ctx context.Context, msg insolar.Message) (insolar.Reply, error) {
+	suite.cr.CallMock.Set(func(ctx context.Context, msg insolar.Message) (insolar.Reply, error) {
 		suite.Require().Equal(insolar.TypeCallMethod, msg.Type())
 		cm := msg.(*message.CallMethod)
 		usedCaller = cm.Caller
@@ -217,20 +219,17 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 		callMethodChan <- struct{}{}
 		return result, nil
 	})
-	suite.lr.ContractRequester = cr
 
 	registerResultChan := make(chan struct{})
 	var usedRequestRef insolar.Reference
 	var usedResult []byte
 
-	am := artifacts.NewClientMock(suite.T())
-	am.RegisterResultMock.Set(func(ctx context.Context, reqRef insolar.Reference, reqResults artifacts.RequestResult) (r error) {
+	suite.am.RegisterResultMock.Set(func(ctx context.Context, reqRef insolar.Reference, reqResults artifacts.RequestResult) (r error) {
 		usedRequestRef = reqRef
 		usedResult = reqResults.Result()
 		registerResultChan <- struct{}{}
 		return nil
 	})
-	suite.lr.ArtifactManager = am
 
 	_, err = suite.lr.FlowDispatcher.Process(msg)
 	suite.Require().NoError(err)
@@ -340,9 +339,9 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 
 	suite.am.HasPendingsMock.Return(false, nil)
 
-	suite.am.RegisterIncomingRequestMock.Set(func(ctx context.Context, r *record.IncomingRequest) (*insolar.ID, error) {
+	suite.am.RegisterIncomingRequestMock.Set(func(ctx context.Context, r *record.IncomingRequest) (*payload.RequestInfo, error) {
 		reqId := testutils.RandomID()
-		return &reqId, nil
+		return &payload.RequestInfo{RequestID: reqId, ObjectID: *objectRef.Record()}, nil
 	})
 
 	suite.re.ExecuteAndSaveMock.Return(nil, nil)
@@ -474,8 +473,75 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 			err := lr.OnPulse(ctx, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 1})
 			require.NoError(t, err)
 
-			mc.Wait(3 * time.Second)
+			mc.Wait(3 * time.Minute)
 			mc.Finish()
 		})
+	}
+}
+
+type OnPulseCallOrderEnum int
+
+const (
+	OrderInitial OnPulseCallOrderEnum = iota
+	OrderWriteControllerClose
+	OrderResultsMatcherClear
+	OrderStateStorageOnPulse
+	OrderWriteControllerOpen
+	OrderMAX
+)
+
+func TestLogicRunner_OnPulse_Order(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	lr, err := NewLogicRunner(&configuration.LogicRunner{}, nil, nil)
+	require.NoError(t, err)
+
+	mc := minimock.NewController(t)
+	defer mc.Wait(time.Second)
+
+	orderChan := make(chan OnPulseCallOrderEnum, 6)
+
+	lr.WriteController = writecontroller.NewWriteControllerMock(mc).
+		CloseAndWaitMock.Set(
+		func(_ context.Context, _ insolar.PulseNumber) error {
+			orderChan <- OrderWriteControllerClose
+			return nil
+		}).
+		OpenMock.Set(
+		func(_ context.Context, _ insolar.PulseNumber) error {
+			orderChan <- OrderWriteControllerOpen
+			return nil
+		})
+	lr.ResultsMatcher = NewResultMatcherMock(mc).
+		ClearMock.Set(
+		func() {
+			orderChan <- OrderResultsMatcherClear
+		})
+	lr.StateStorage = NewStateStorageMock(mc).
+		OnPulseMock.Set(
+		func(_ context.Context, _ insolar.Pulse) []insolar.Message {
+			orderChan <- OrderStateStorageOnPulse
+			return []insolar.Message{}
+		}).
+		LockMock.Return().
+		UnlockMock.Return().
+		IsEmptyMock.Return(true)
+
+	oldPulse := insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}
+	newPulse := insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 1}
+	require.NoError(t, lr.OnPulse(ctx, oldPulse, newPulse))
+	require.Len(t, orderChan, int(OrderMAX-1))
+
+	previousOrderElement := OrderInitial
+	for {
+		var orderElement OnPulseCallOrderEnum
+		select {
+		case orderElement = <-orderChan:
+			if orderElement <= previousOrderElement {
+				t.Fatalf("Wrong execution order of OnPulse")
+			}
+			previousOrderElement = orderElement
+		default:
+			return
+		}
 	}
 }
