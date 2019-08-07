@@ -115,7 +115,7 @@ func TestNodekeeper_GetCloudHash(t *testing.T) {
 	assert.Equal(t, cloudHash, nk.GetCloudHash(0))
 }
 
-//func TestNodekeeper_GetWorkingNodes(t *testing.T) {
+// func TestNodekeeper_GetWorkingNodes(t *testing.T) {
 //	nk := newNodeKeeper(t, nil)
 //	assert.Empty(t, nk.GetAccessor().GetActiveNodes())
 //	assert.Empty(t, nk.GetWorkingNodes())
@@ -158,9 +158,9 @@ func TestNodekeeper_GetCloudHash(t *testing.T) {
 //	nodes = []insolar.NetworkNode{node1, node2, node3, node5}
 //	err = nk.Sync(context.Background(), nodes, nil)
 //	assert.Error(t, err)
-//}
+// }
 
-//func TestNodekeeper_GracefulStop(t *testing.T) {
+// func TestNodekeeper_GracefulStop(t *testing.T) {
 //	nk := newNodeKeeper(t, nil)
 //	nodeLeaveTriggered := false
 //	handler := testutils.NewTerminationHandlerMock(t)
@@ -182,4 +182,4 @@ func TestNodekeeper_GetCloudHash(t *testing.T) {
 //	assert.NoError(t, err)
 //
 //	assert.True(t, nodeLeaveTriggered)
-//}
+// }

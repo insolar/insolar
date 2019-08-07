@@ -215,7 +215,7 @@ func (c *Phase01Controller) workerPhase01(ctx context.Context) {
 		}
 		if nsh == nil {
 			panic(">>>>>>workerPhase01: empty NSH")
-			//return
+			// return
 		}
 		c.R.CommitPulseChange()
 	}

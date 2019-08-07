@@ -177,7 +177,7 @@ func (h *ConsensusMemberController) processPacket(ctx context.Context, round api
 	case api.KeepRound:
 		return false, err
 	case api.StartNextRound:
-		//return true, err
+		// return true, err
 	case api.NextRoundTerminate:
 		h.terminate()
 	default:

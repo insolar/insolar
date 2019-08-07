@@ -422,7 +422,7 @@ func incrementTestPort() int {
 // init calls Init for node component manager and wraps PhaseManager
 func (n *networkNode) init() error {
 	err := n.componentManager.Init(n.ctx)
-	//n.serviceNetwork.PhaseManager = &phaseManagerWrapper{original: n.serviceNetwork.PhaseManager, result: n.consensusResult}
+	// n.serviceNetwork.PhaseManager = &phaseManagerWrapper{original: n.serviceNetwork.PhaseManager, result: n.consensusResult}
 	return err
 }
 
@@ -578,9 +578,9 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		keyProc,
 		terminationHandler,
 		testutils.NewContractRequesterMock(s.t),
-		//pulse.NewStorageMem(),
+		// pulse.NewStorageMem(),
 	)
-	//serviceNetwork.SetOperableFunc(func(ctx context.Context, operable bool) {})
+	// serviceNetwork.SetOperableFunc(func(ctx context.Context, operable bool) {})
 	node.serviceNetwork = serviceNetwork
 	node.terminationHandler = terminationHandler
 
@@ -593,7 +593,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	node.ctx = nodeContext
 }
 
-//func (s *testSuite) SetCommunicationPolicy(policy CommunicationPolicy) {
+// func (s *testSuite) SetCommunicationPolicy(policy CommunicationPolicy) {
 //	if policy == FullTimeout {
 //		s.fixture().pulsar.Pause()
 //		defer s.fixture().pulsar.Continue()
@@ -606,9 +606,9 @@ func (s *testSuite) preInitNode(node *networkNode) {
 //
 //	ref := s.fixture().bootstrapNodes[0].id // TODO: should we declare argument to select this node?
 //	s.SetCommunicationPolicyForNode(ref, policy)
-//}
+// }
 
-//func (s *testSuite) SetCommunicationPolicyForNode(nodeID insolar.Reference, policy CommunicationPolicy) {
+// func (s *testSuite) SetCommunicationPolicyForNode(nodeID insolar.Reference, policy CommunicationPolicy) {
 //	nodes := s.fixture().bootstrapNodes
 //	timedOutNodesCount := 0
 //	switch policy {
@@ -631,7 +631,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 //		phasemanager.SecondPhase.(*phases.SecondPhaseImpl).Communicator = wrapper
 //		phasemanager.ThirdPhase.(*phases.ThirdPhaseImpl).Communicator = wrapper
 //	}
-//}
+// }
 
 func (s *testSuite) AssertActiveNodesCountDelta(delta int) {
 	activeNodes := s.fixture().bootstrapNodes[1].GetActiveNodes()

@@ -94,7 +94,7 @@ type PrepRealm struct {
 
 	limiters           sync.Map
 	lastCloudStateHash cryptkit.DigestHolder
-	disableEphemeral   bool //blocks polling
+	disableEphemeral   bool // blocks polling
 }
 
 func (p *PrepRealm) init(completeFn func(successful bool)) {

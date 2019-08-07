@@ -322,7 +322,7 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 		// something from a previous round?
 		_, err := prev.HandlePacket(ctx, packet, from)
 		return api.KeepRound, err
-		//defaultOptions = coreapi.SkipVerify // validation was done by the prev controller
+		// defaultOptions = coreapi.SkipVerify // validation was done by the prev controller
 	}
 
 	if r.realm.ephemeralFeeder != nil && !packet.GetPacketType().IsEphemeralPacket() && (prep == nil || !prep.disableEphemeral) { // TODO need fix, too ugly

@@ -113,7 +113,7 @@ type DynamicRealmPopulation struct {
 	nodeShuffle  []*NodeAppearance // excluding self
 	dynamicNodes map[insolar.ShortNodeID]*NodeAppearance
 	reservations int
-	//voters int
+	// voters int
 }
 
 func (p *DynamicRealmPopulation) SealIndexed(indexedCountLimit int) bool {
@@ -138,9 +138,9 @@ func (p *DynamicRealmPopulation) SealIndexed(indexedCountLimit int) bool {
 	}
 
 	p.indexedLenSet = true
-	//if r.indexedCount == indexedCountLimit {
+	// if r.indexedCount == indexedCountLimit {
 	//	r.onDynamicPopulationCompleted()
-	//}
+	// }
 	return true
 }
 
@@ -420,9 +420,9 @@ func (p *DynamicRealmPopulation) silentAddToDynamics(ctx context.Context, n *Nod
 	}
 	p.dynamicNodes[id] = n
 
-	//if r.indexedLenSet && r.indexedCount == len(r.nodeIndex) {
+	// if r.indexedLenSet && r.indexedCount == len(r.nodeIndex) {
 	//	r.onDynamicPopulationCompleted()
-	//}
+	// }
 
 	return true, n
 }

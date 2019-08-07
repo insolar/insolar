@@ -499,7 +499,7 @@ outer:
 				if inspectedNode.IsJoiner() {
 					panic("not implemented")
 				} else {
-					//inspectedNode.GetJoinerID()
+					// inspectedNode.GetJoinerID()
 					nodeIndex = inspectedNode.GetIndex().AsInt()
 				}
 

@@ -362,7 +362,7 @@ func (p *RoundStateMachineWorker) applyState(newState RoundState) {
 			// attempt to restart from a final state
 			inslogger.FromContext(p.ctx).Errorf("reset transition attempt: current=%v new=%v", curState, newState)
 			return
-		//case curState < RoundConsensusFinished && newState == RoundConsensusFinished:
+		// case curState < RoundConsensusFinished && newState == RoundConsensusFinished:
 		//	break // early finish
 		default:
 			attention = true

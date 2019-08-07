@@ -117,8 +117,8 @@ func (c *NodeAppearance) CopySelfTo(target *NodeAppearance) {
 	target.firstFraudDetails = c.firstFraudDetails
 	target.trust = c.trust
 
-	//target.limiter = c.limiter
-	//target.hook.UpdatePopulationVersion()
+	// target.limiter = c.limiter
+	// target.hook.UpdatePopulationVersion()
 }
 
 func NewEmptyNodeAppearance(np profiles.ActiveNode) NodeAppearance {
@@ -144,7 +144,7 @@ func NewNodeAppearance(np profiles.ActiveNode, baselineWeight uint32,
 		hook:            hook,
 		neighbourWeight: baselineWeight,
 		handlers:        handlers,
-		//requestedPower:  np.GetDeclaredPower(),
+		// requestedPower:  np.GetDeclaredPower(),
 	}
 }
 
@@ -163,9 +163,9 @@ type NodeAppearance struct {
 	stateEvidence     proofs.NodeStateHashEvidence       // one-time set
 	requestedPower    member.Power                       // one-time set
 
-	//statelessDigest cryptkit.DigestHolder
+	// statelessDigest cryptkit.DigestHolder
 
-	//joinerSecret         cryptkit.Digest     // TODO implement
+	// joinerSecret         cryptkit.Digest     // TODO implement
 	requestedJoinerID    insolar.ShortNodeID // one-time set
 	requestedLeave       bool                // one-time set
 	requestedLeaveReason uint32              // one-time set
@@ -435,7 +435,7 @@ func (c *NodeAppearance) _applyState(ma profiles.MemberAnnouncement,
 	case ma.JoinerID.IsAbsent() != ma.Joiner.IsEmpty():
 		if ma.JoinerID.IsAbsent() && !c.IsJoiner() {
 			c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "joiner announcement was provided but a joiner was not declared"))
-			//} else {
+			// } else {
 			//	c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "joiner was declared but an announcement was not provided"))
 		}
 	case c.CanIntroduceJoiner() || ma.JoinerID.IsAbsent():
@@ -457,7 +457,7 @@ func (c *NodeAppearance) _applyState(ma profiles.MemberAnnouncement,
 	case c.profile.GetStatic().GetExtension() == nil:
 		if ma.Membership.RequestedPower != c.profile.GetStatic().GetStartPower() {
 			c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "unable to verify power"))
-			//return false, nil // let the node to be "unset" // TODO handle properly
+			// return false, nil // let the node to be "unset" // TODO handle properly
 		}
 	case !c.profile.GetStatic().GetExtension().GetPowerLevels().IsAllowed(ma.Membership.RequestedPower):
 		return false, c.RegisterFraud(c.Frauds().NewInvalidPowerLevel(c.profile))
@@ -550,10 +550,10 @@ func (c *NodeAppearance) calcStatelessAnnouncementDigest() cryptkit.SignedDigest
 	sp := c.profile.GetStatic()
 	introDigest := sp.GetBriefIntroSignedDigest()
 
-	//d := c.hook.GetCryptographyAssistant().GetDigestFactory().CreateAnnouncementDigester()
-	//d.AddNext(c.hook.GetPulseData().GetPulseDataDigest())
-	//d.AddNext(introDigest.GetDigestHolder())
-	//return d.FinishSequence().AsDigestHolder()
+	// d := c.hook.GetCryptographyAssistant().GetDigestFactory().CreateAnnouncementDigester()
+	// d.AddNext(c.hook.GetPulseData().GetPulseDataDigest())
+	// d.AddNext(introDigest.GetDigestHolder())
+	// return d.FinishSequence().AsDigestHolder()
 	return introDigest
 }
 
@@ -704,7 +704,7 @@ func (c *NodeAppearance) GetRequestedAnnouncement() profiles.MembershipAnnouncem
 	return c.getMembershipAnnouncement()
 }
 
-/* deprecated */ //replace with DispatchAnnouncement
+/* deprecated */ // replace with DispatchAnnouncement
 func (c *NodeAppearance) UpgradeDynamicNodeProfile(ctx context.Context, full transport.FullIntroductionReader) bool {
 	return c.upgradeDynamicNodeProfile(ctx, full, full)
 }

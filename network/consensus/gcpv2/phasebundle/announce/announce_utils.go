@@ -319,7 +319,7 @@ func VerifyNeighbourhood(ctx context.Context, neighbourhood []transport.Membersh
 				if jar != nil {
 					// TODO fraud
 					log.Error("joiner profile is duplicated in neighbourhood")
-					//return nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner profile is duplicated in neighbourhood")
+					// return nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner profile is duplicated in neighbourhood")
 				}
 				joinerProfile = announcedJoiner
 			} else {

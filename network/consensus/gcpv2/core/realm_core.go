@@ -207,8 +207,8 @@ func (r *coreRealm) GetSignatureVerifier(pks cryptkit.PublicKeyStore) cryptkit.S
 }
 
 func (r *coreRealm) GetStartedAt() time.Time {
-	//r.Lock()
-	//defer r.Unlock()
+	// r.Lock()
+	// defer r.Unlock()
 
 	if r.roundStartedAt.IsZero() {
 		panic("illegal state")

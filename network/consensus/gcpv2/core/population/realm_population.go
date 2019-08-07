@@ -61,7 +61,7 @@ import (
 type RealmPopulation interface {
 	GetIndexedCount() int
 	GetJoinersCount() int
-	//GetVotersCount() int
+	// GetVotersCount() int
 
 	GetSealedCapacity() (int, bool)
 	SealIndexed(indexedCapacity int) bool
@@ -78,7 +78,7 @@ type RealmPopulation interface {
 
 	GetSelf() *NodeAppearance
 
-	//CreateNodeAppearance(ctx context.Context, inp profiles.ActiveNode) *NodeAppearance
+	// CreateNodeAppearance(ctx context.Context, inp profiles.ActiveNode) *NodeAppearance
 	AddReservation(id insolar.ShortNodeID) (bool, *NodeAppearance)
 	FindReservation(id insolar.ShortNodeID) (bool, *NodeAppearance)
 

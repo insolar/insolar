@@ -204,7 +204,7 @@ const (
 	FlagCreated   UpdateFlags = 1 << iota
 	FlagFixedInit             // for indexed members of a fixed population
 	FlagUpdatedProfile
-	FlagAscent //for purgatory nodes
+	FlagAscent // for purgatory nodes
 )
 
 type internalPopulationEventDispatcher interface {

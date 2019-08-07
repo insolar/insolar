@@ -80,7 +80,7 @@ func TestSwitch(t *testing.T) {
 	nodekeeper := testnet.NewNodeKeeperMock(t)
 	nodekeeper.MoveSyncToActiveMock.Set(func(ctx context.Context, number insolar.PulseNumber) {})
 	gatewayer := testnet.NewGatewayerMock(t)
-	//pm := mockPulseManager(t)
+	// pm := mockPulseManager(t)
 
 	ge := emtygateway(t)
 
@@ -135,9 +135,9 @@ func TestDumbComplete_GetCert(t *testing.T) {
 	CR := testutils.NewContractRequesterMock(t)
 	CM := testutils.NewCertificateManagerMock(t)
 	ge := emtygateway(t)
-	//pm := mockPulseManager(t)
+	// pm := mockPulseManager(t)
 
-	//ge := newNoNetwork(gatewayer, pm,
+	// ge := newNoNetwork(gatewayer, pm,
 	//	nodekeeper, CR,
 	//	testutils.NewCryptographyServiceMock(t),
 	//	testnet.NewHostNetworkMock(t),

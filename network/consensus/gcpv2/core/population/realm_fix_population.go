@@ -203,9 +203,9 @@ func (r *FixedRealmPopulation) SealIndexed(indexedCountLimit int) bool {
 }
 
 func (r *FixedRealmPopulation) AddToDynamics(ctx context.Context, n *NodeAppearance) (*NodeAppearance, error) {
-	//if !n.profile.IsJoiner() {
+	// if !n.profile.IsJoiner() {
 	//	panic("illegal value")
-	//}
+	// }
 	return r.dynPop.AddToDynamics(ctx, n)
 }
 

@@ -106,9 +106,9 @@ func (p *populationEventHandler) queueToPhase3(v ph2ctl.UpdateSignal) {
 
 func (p *populationEventHandler) OnPurgatoryNodeUpdate(populationVersion uint32, n population.MemberPacketSender, flags population.UpdateFlags) {
 
-	//if flags&population.FlagCreated != 0 {
+	// if flags&population.FlagCreated != 0 {
 	//	p.qForPhase1 <- n
-	//}
+	// }
 
 	if flags&population.FlagUpdatedProfile != 0 {
 		p.queueToPhase1(n)
@@ -124,9 +124,9 @@ func (p *populationEventHandler) OnDynamicNodeUpdate(populationVersion uint32, n
 	if flags&population.FlagUpdatedProfile != 0 {
 		p.queueToPhase1(n)
 	}
-	//if flags&population.FlagUpdatedProfile != 0 {
+	// if flags&population.FlagUpdatedProfile != 0 {
 	//	p.qForPhase3 <- ph2ctl.NewDynamicNodeReady(n)
-	//}
+	// }
 }
 
 func (p *populationEventHandler) OnDynamicPopulationCompleted(populationVersion uint32, indexedCount int) {

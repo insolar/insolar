@@ -63,7 +63,7 @@ import (
 func TestNewGatewayer(t *testing.T) {
 	t.Skip("fixme")
 	gw := mock.NewGatewayMock(t)
-	//gw.NeedLockMessageBusMock.Inspect() Expect().Return(false)
+	// gw.NeedLockMessageBusMock.Inspect() Expect().Return(false)
 
 	gw.GetStateMock.Set(func() (n1 insolar.NetworkState) {
 		return insolar.NoNetworkState

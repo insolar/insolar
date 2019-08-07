@@ -187,8 +187,8 @@ func (ac *requester) Bootstrap(ctx context.Context, permit *packet.Permit, candi
 	case packet.UpdateShortID:
 		return respData, errors.New("Bootstrap got UpdateShortID")
 	case packet.UpdateSchedule:
-		//ac.UpdateSchedule(ctx, permit, p.PulseNumber)
-		//panic("call bootstrap again")
+		// ac.UpdateSchedule(ctx, permit, p.PulseNumber)
+		// panic("call bootstrap again")
 		return respData, errors.New("Bootstrap got UpdateSchedule")
 	case packet.Reject:
 		return respData, errors.New("Bootstrap request rejected")

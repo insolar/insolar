@@ -84,10 +84,10 @@ func (s *bootstrapSuite) SetupTest() {
 	}
 
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
-	//for _, n := range s.fixture().bootstrapNodes {
+	// for _, n := range s.fixture().bootstrapNodes {
 	//	n.serviceNetwork.PhaseManager.(*phaseManagerWrapper).original = &fakeConsensus{n, s}
 	//
-	//}
+	// }
 
 	pulseReceivers := make([]string, 0)
 	for _, node := range s.fixture().bootstrapNodes {
@@ -130,7 +130,7 @@ func testBootstrap(t *testing.T) *bootstrapSuite {
 }
 
 func TestBootstrap(t *testing.T) {
-	//t.Skip("FIXME")
+	// t.Skip("FIXME")
 	s := testBootstrap(t)
 	defer s.TearDownTest()
 

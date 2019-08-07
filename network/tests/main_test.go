@@ -88,7 +88,7 @@ func TestNetworkConsensusManyTimes(t *testing.T) {
 }
 
 func TestJoinerNodeConnect(t *testing.T) {
-	//t.Skip("FIXME")
+	// t.Skip("FIXME")
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
@@ -309,7 +309,7 @@ func TestDiscoveryDown(t *testing.T) {
 
 func flushNodeKeeper(keeper network.NodeKeeper) {
 	// keeper.SetIsBootstrapped(false)
-	//keeper.SetCloudHash(nil)
+	// keeper.SetCloudHash(nil)
 	keeper.SetInitialSnapshot([]insolar.NetworkNode{})
 	keeper.GetOrigin().(node.MutableNode).SetState(insolar.NodeReady)
 }
@@ -377,7 +377,7 @@ func TestDiscoveryRestartNoWait(t *testing.T) {
 	require.Equal(t, s.getNodesCount(), len(activeNodes))
 }
 
-//func (s *consensusSuite) TestJoinerSplitPackets() {
+// func (s *consensusSuite) TestJoinerSplitPackets() {
 //	s.CheckBootstrapCount()
 //
 //	testNode := s.newNetworkNode("testNode")
@@ -403,4 +403,4 @@ func TestDiscoveryRestartNoWait(t *testing.T) {
 //
 //	s.AssertActiveNodesCountDelta(1)
 //	s.AssertWorkingNodesCountDelta(1)
-//}
+// }

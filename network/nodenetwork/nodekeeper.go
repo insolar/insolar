@@ -135,8 +135,8 @@ type nodekeeper struct {
 	syncLock  sync.Mutex
 	syncNodes []insolar.NetworkNode
 
-	SnapshotStorage  storage.SnapshotStorage  //`inject:""`
-	CloudHashStorage storage.CloudHashStorage //`inject:""`
+	SnapshotStorage  storage.SnapshotStorage  // `inject:""`
+	CloudHashStorage storage.CloudHashStorage // `inject:""`
 }
 
 func (nk *nodekeeper) SetInitialSnapshot(nodes []insolar.NetworkNode) {

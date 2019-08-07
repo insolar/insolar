@@ -78,7 +78,7 @@ var _ pulse.DataHolder = &FullRealm{}
 
 type FullRealm struct {
 	coreRealm
-	//nodeContext pop.Hook
+	// nodeContext pop.Hook
 
 	/* Derived from the ones provided externally - set at init() or start(). Don't need mutex */
 	packetBuilder  transport.PacketBuilder
@@ -436,7 +436,7 @@ func (r *FullRealm) getUpstreamReport() api.UpstreamReport {
 		MemberPower: sp.GetDeclaredPower(),
 		MemberMode:  sp.GetOpMode(),
 		IsJoiner:    sp.IsJoiner(),
-		//IsEphemeral: false,
+		// IsEphemeral: false,
 	}
 }
 
@@ -493,7 +493,7 @@ func (r *FullRealm) ApplyLocalState(nsh proofs.NodeStateHash) bool {
 		ma.Membership.AnnounceSignature = v.GetSignatureHolder()
 	} else {
 		v := r.self.GetStatelessAnnouncementEvidence()
-		//v := nsh.SignWith(r.signer)
+		// v := nsh.SignWith(r.signer)
 		ma.Membership.StateEvidence = v
 		ma.Membership.AnnounceSignature = v.GetSignatureHolder()
 	}
