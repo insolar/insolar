@@ -20,18 +20,20 @@ import (
 	"context"
 	"crypto"
 	"fmt"
-	"github.com/insolar/insolar/network"
 	"net"
 	"net/http"
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/application/extractor"
-	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/rpc/v2"
 	jsonrpc "github.com/insolar/rpc/v2/json2"
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/network"
+
+	"github.com/insolar/insolar/application/extractor"
+	"github.com/insolar/insolar/insolar/jet"
 
 	"github.com/insolar/insolar/api/seedmanager"
 

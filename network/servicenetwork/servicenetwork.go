@@ -102,8 +102,8 @@ type ServiceNetwork struct {
 	// subcomponents
 	RPC              controller.RPCController `inject:"subcomponent"`
 	TransportFactory transport.Factory        `inject:"subcomponent"`
-	PulseAccessor    storage.PulseAccessor    `inject:"subcomponent"`
-	PulseAppender    storage.PulseAppender    `inject:"subcomponent"`
+	PulseAccessor    storage.PulseAccessor    //`inject:"subcomponent"`
+	PulseAppender    storage.PulseAppender    //`inject:"subcomponent"`
 	// DB               storage.DB               `inject:"subcomponent"`
 
 	HostNetwork network.HostNetwork
@@ -179,12 +179,15 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		controller.NewPulseController(),
 		bootstrap.NewRequester(options),
 		// db,
-		pulseStorage,
+		// pulseStorage,
 		storage.NewMemoryCloudHashStorage(),
 		storage.NewMemorySnapshotStorage(),
 		n.BaseGateway,
 		n.Gatewayer,
 	)
+
+	n.PulseAccessor = pulseStorage
+	n.PulseAppender = pulseStorage
 
 	n.BaseGateway.PulseAppender = pulseStorage
 	n.BaseGateway.PulseAccessor = pulseStorage
