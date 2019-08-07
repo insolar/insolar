@@ -147,7 +147,7 @@ func newConstructor(ctx context.Context, dep *Dep) *constructor {
 	c.mandateRegistry = adapters.NewMandateRegistry(
 		cryptkit.NewDigest(
 			longbits.NewBits512FromBytes(
-				make([]byte, 64), //dep.NodeKeeper.GetCloudHash(0),
+				make([]byte, 64),
 			),
 			adapters.SHA3512Digest,
 		).AsDigestHolder(),

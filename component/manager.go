@@ -56,7 +56,6 @@ func (m *Manager) Inject(components ...interface{}) {
 	for _, componentMeta := range m.components {
 		component := reflect.ValueOf(componentMeta).Elem()
 		componentType := component.Type()
-		//glog().Debugf("ComponentManager: Inject component: %s", componentType.String())
 
 		for i := 0; i < componentType.NumField(); i++ {
 			fieldMeta := componentType.Field(i)
@@ -64,7 +63,6 @@ func (m *Manager) Inject(components ...interface{}) {
 				if value == "subcomponent" && m.parent == nil {
 					continue
 				}
-				//glog().Debugf("ComponentManager: Component %s need inject: %s", componentType.String(), fieldMeta.Name)
 				m.mustInject(component, fieldMeta)
 			}
 		}
@@ -97,11 +95,6 @@ func injectDependency(component reflect.Value, dependencyMeta reflect.StructFiel
 			field := component.FieldByName(dependencyMeta.Name)
 			field.Set(reflect.ValueOf(componentMeta))
 
-			//glog().Debugf(
-			//	"ComponentManager: Inject interface %s with %s: ",
-			//	field.Type().String(),
-			//	componentType.String(),
-			//)
 			return true
 		}
 	}
