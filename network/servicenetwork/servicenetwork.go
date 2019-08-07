@@ -60,6 +60,8 @@ import (
 	"github.com/insolar/insolar/cryptography"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -78,7 +80,6 @@ import (
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/routing"
 	"github.com/insolar/insolar/network/transport"
-	"github.com/pkg/errors"
 )
 
 // ServiceNetwork is facade for network.
@@ -102,8 +103,8 @@ type ServiceNetwork struct {
 	// subcomponents
 	RPC              controller.RPCController `inject:"subcomponent"`
 	TransportFactory transport.Factory        `inject:"subcomponent"`
-	PulseAccessor    storage.PulseAccessor    //`inject:"subcomponent"`
-	PulseAppender    storage.PulseAppender    //`inject:"subcomponent"`
+	PulseAccessor    storage.PulseAccessor    `inject:"subcomponent"`
+	PulseAppender    storage.PulseAppender    `inject:"subcomponent"`
 	// DB               storage.DB               `inject:"subcomponent"`
 
 	HostNetwork network.HostNetwork
@@ -168,9 +169,10 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	// }
 
 	pulseStorage := storage.NewMemoryPulseStorage()
+	table := &routing.Table{}
 
 	n.cm.Inject(n,
-		&routing.Table{},
+		table,
 		cert,
 		transport.NewFactory(n.cfg.Host.Transport),
 		hostNetwork,
@@ -178,18 +180,19 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		controller.NewPulseController(),
 		bootstrap.NewRequester(options),
 		// db,
-		// pulseStorage,
+		pulseStorage,
 		storage.NewMemoryCloudHashStorage(),
 		storage.NewMemorySnapshotStorage(),
 		n.BaseGateway,
 		n.Gatewayer,
 	)
 
-	n.PulseAccessor = pulseStorage
-	n.PulseAppender = pulseStorage
-
-	n.BaseGateway.PulseAppender = pulseStorage
-	n.BaseGateway.PulseAccessor = pulseStorage
+	// n.PulseAccessor = pulseStorage
+	// n.PulseAppender = pulseStorage
+	//
+	// n.BaseGateway.PulseAppender = pulseStorage
+	// n.BaseGateway.PulseAccessor = pulseStorage
+	// table.PulseAccessor = pulseStorage
 
 	n.datagramHandler = adapters.NewDatagramHandler()
 	datagramTransport, err := n.TransportFactory.CreateDatagramTransport(n.datagramHandler)

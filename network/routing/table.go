@@ -53,15 +53,16 @@ package routing
 import (
 	"context"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/storage"
+
 	"github.com/pkg/errors"
 )
 
 type Table struct {
-	NodeKeeper    network.NodeKeeper `inject:""`
-	PulseAccessor pulse.Accessor     `inject:""`
+	NodeKeeper    network.NodeKeeper    `inject:""`
+	PulseAccessor storage.PulseAccessor `inject:""`
 }
 
 func (t *Table) isLocalNode(insolar.Reference) bool {
@@ -75,9 +76,9 @@ func (t *Table) resolveRemoteNode(insolar.Reference) (*host.Host, error) {
 // Resolve NodeID -> ShortID, Address. Can initiate network requests.
 func (t *Table) Resolve(ref insolar.Reference) (*host.Host, error) {
 	if t.isLocalNode(ref) {
-		p, err := t.PulseAccessor.Latest(context.Background())
+		p, err := t.PulseAccessor.GetLatestPulse(context.Background())
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to get latest pulse")
+			return nil, errors.Wrap(err, "failed to get latest pulse --==-- ")
 		}
 
 		node := t.NodeKeeper.GetAccessor(p.PulseNumber).GetActiveNode(ref)

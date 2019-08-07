@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/servicenetwork"
-	"github.com/insolar/insolar/network/storage"
 	"github.com/insolar/insolar/version"
 )
 
@@ -58,7 +57,7 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *Statu
 	reply.NetworkState = s.runner.ServiceNetwork.GetState().String()
 	reply.NodeState = s.runner.NodeNetwork.GetOrigin().GetState().String()
 
-	p, err := s.runner.ServiceNetwork.(*servicenetwork.ServiceNetwork).PulseAccessor.(*storage.MemoryPulseStorage).Latest(ctx)
+	p, err := s.runner.ServiceNetwork.(*servicenetwork.ServiceNetwork).PulseAccessor.GetLatestPulse(ctx)
 	if err != nil {
 		p = *insolar.GenesisPulse
 	}

@@ -59,7 +59,7 @@ import (
 )
 
 func GetBootstrapPulse(ctx context.Context, accessor storage.PulseAccessor) insolar.Pulse {
-	pulse, err := accessor.Latest(ctx)
+	pulse, err := accessor.GetLatestPulse(ctx)
 	if err != nil {
 		pulse = *insolar.EphemeralPulse
 	}
@@ -68,7 +68,7 @@ func GetBootstrapPulse(ctx context.Context, accessor storage.PulseAccessor) inso
 }
 
 func EnsureGetPulse(ctx context.Context, accessor storage.PulseAccessor, pulseNumber insolar.PulseNumber) insolar.Pulse {
-	pulse, err := accessor.ForPulseNumber(ctx, pulseNumber)
+	pulse, err := accessor.GetPulse(ctx, pulseNumber)
 	if err != nil {
 		inslogger.FromContext(ctx).Panicf("Failed to fetch pulse: %d", pulseNumber)
 	}

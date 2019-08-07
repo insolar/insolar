@@ -83,7 +83,7 @@ func TestWaitConsensus_ConsensusHappenedInETA(t *testing.T) {
 	waitConsensus := newWaitConsensus(&Base{})
 	waitConsensus.Gatewayer = gatewayer
 	accessorMock := mock.NewPulseAccessorMock(t)
-	accessorMock.ForPulseNumberMock.Set(func(ctx context.Context, p1 insolar.PulseNumber) (p2 insolar.Pulse, err error) {
+	accessorMock.GetPulseMock.Set(func(ctx context.Context, p1 insolar.PulseNumber) (p2 insolar.Pulse, err error) {
 		return *insolar.EphemeralPulse, nil
 	})
 	waitConsensus.PulseAccessor = accessorMock

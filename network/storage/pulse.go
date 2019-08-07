@@ -61,24 +61,24 @@ import (
 
 // PulseAccessor provides methods for accessing pulses.
 type PulseAccessor interface {
-	ForPulseNumber(context.Context, insolar.PulseNumber) (insolar.Pulse, error)
-	Latest(ctx context.Context) (insolar.Pulse, error)
+	GetPulse(context.Context, insolar.PulseNumber) (insolar.Pulse, error)
+	GetLatestPulse(ctx context.Context) (insolar.Pulse, error)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network/storage.PulseAppender -o ../../testutils/network -s _mock.go -g
 
 // PulseAppender provides method for appending pulses to storage.
 type PulseAppender interface {
-	Append(ctx context.Context, pulse insolar.Pulse) error
+	AppendPulse(ctx context.Context, pulse insolar.Pulse) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/storage.PulseCalculator -o ../../testutils/network -s _mock.go -g
-
-// PulseCalculator performs calculations for pulses.
-type PulseCalculator interface {
-	Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error)
-	Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error)
-}
+// //go:generate minimock -i github.com/insolar/insolar/network/storage.PulseCalculator -o ../../testutils/network -s _mock.go -g
+//
+// // PulseCalculator performs calculations for pulses.
+// type PulseCalculator interface {
+// 	Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error)
+// 	Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error)
+// }
 
 //go:generate minimock -i github.com/insolar/insolar/network/storage.PulseRangeHasher -o ../../testutils/network -s _mock.go -g
 
@@ -158,9 +158,9 @@ func (p *PulseStorage) Backwards(ctx context.Context, pn insolar.PulseNumber, st
 	return iterator.Pulse, nil
 }
 
-// Append appends provided Pulse to current storage. Pulse number should be greater than currently saved for preserving
+// AppendPulse appends provided Pulse to current storage. Pulse number should be greater than currently saved for preserving
 // Pulse consistency. If provided Pulse does not meet the requirements, ErrBadPulse will be returned.
-func (p *PulseStorage) Append(ctx context.Context, pulse insolar.Pulse) error {
+func (p *PulseStorage) AppendPulse(ctx context.Context, pulse insolar.Pulse) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -210,7 +210,7 @@ func (p *PulseStorage) Append(ctx context.Context, pulse insolar.Pulse) error {
 	return insertWithHead(head)
 }
 
-func (p *PulseStorage) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (pulse insolar.Pulse, err error) {
+func (p *PulseStorage) GetPulse(ctx context.Context, pn insolar.PulseNumber) (pulse insolar.Pulse, err error) {
 	nd, err := p.get(pn)
 	if err != nil {
 		return
@@ -218,7 +218,7 @@ func (p *PulseStorage) ForPulseNumber(ctx context.Context, pn insolar.PulseNumbe
 	return nd.Pulse, nil
 }
 
-func (p *PulseStorage) Latest(ctx context.Context) (insolar.Pulse, error) {
+func (p *PulseStorage) GetLatestPulse(ctx context.Context) (insolar.Pulse, error) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -312,7 +312,7 @@ type MemoryPulseStorage struct {
 	entries []insolar.Pulse
 }
 
-func (m *MemoryPulseStorage) Append(ctx context.Context, pulse insolar.Pulse) error {
+func (m *MemoryPulseStorage) AppendPulse(ctx context.Context, pulse insolar.Pulse) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -320,7 +320,7 @@ func (m *MemoryPulseStorage) Append(ctx context.Context, pulse insolar.Pulse) er
 	return nil
 }
 
-func (m *MemoryPulseStorage) ForPulseNumber(ctx context.Context, number insolar.PulseNumber) (insolar.Pulse, error) {
+func (m *MemoryPulseStorage) GetPulse(ctx context.Context, number insolar.PulseNumber) (insolar.Pulse, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
@@ -333,7 +333,7 @@ func (m *MemoryPulseStorage) ForPulseNumber(ctx context.Context, number insolar.
 	return *insolar.GenesisPulse, ErrNotFound
 }
 
-func (m *MemoryPulseStorage) Latest(ctx context.Context) (insolar.Pulse, error) {
+func (m *MemoryPulseStorage) GetLatestPulse(ctx context.Context) (insolar.Pulse, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 

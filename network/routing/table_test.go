@@ -87,7 +87,7 @@ func TestTable_Resolve(t *testing.T) {
 	})
 
 	pulseAccessorMock := mock.NewPulseAccessorMock(t)
-	pulseAccessorMock.LatestMock.Set(func(ctx context.Context) (p1 insolar.Pulse, err error) {
+	pulseAccessorMock.GetLatestPulseMock.Set(func(ctx context.Context) (p1 insolar.Pulse, err error) {
 		return *pulse, nil
 	})
 
