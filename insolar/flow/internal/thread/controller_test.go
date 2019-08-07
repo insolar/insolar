@@ -39,18 +39,52 @@ func TestController_Cancel(t *testing.T) {
 	require.Equal(t, expected, controller.Cancel())
 }
 
-func TestController_Pulse(t *testing.T) {
+func TestController_BeginPulse(t *testing.T) {
 	t.Parallel()
-	ch := make(chan struct{})
+	chCancel := make(chan struct{})
+	chBegin := make(chan struct{})
 	controller := Controller{
-		cancel: ch,
+		cancel:     chCancel,
+		canBegin:   chBegin,
+		canProcess: make(chan struct{}),
 	}
-	var unexpected <-chan struct{} = ch
-	controller.Pulse()
-	require.NotEqual(t, unexpected, controller.cancel)
+
+	controller.BeginPulse()
+	require.NotEqual(t, chBegin, controller.canBegin)
+	require.NotEqual(t, chCancel, controller.cancel)
 	select {
-	case <-ch:
+	case <-chBegin:
 	default:
-		t.Fatal("cancel channel should be closed")
+		t.Fatal("canBegin channel should be closed")
+	}
+	select {
+	case <-controller.canProcess:
+	default:
+		t.Fatal("canProcess channel should be closed")
+	}
+}
+
+func TestController_ClosePulse(t *testing.T) {
+	t.Parallel()
+	chCancel := make(chan struct{})
+	chBegin := make(chan struct{})
+	controller := Controller{
+		cancel:     chCancel,
+		canBegin:   chBegin,
+		canProcess: make(chan struct{}),
+	}
+
+	controller.ClosePulse()
+	require.Equal(t, chBegin, controller.canBegin)
+	require.Equal(t, chCancel, controller.cancel)
+	select {
+	case <-chCancel:
+	default:
+		t.Fatal("close channel should be closed")
+	}
+	select {
+	case <-controller.canProcess:
+		t.Fatal("close channel should be closed")
+	default:
 	}
 }
