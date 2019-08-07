@@ -183,6 +183,7 @@ func storeRecords(
 	}
 }
 
+// FinalizePulse starts backup process if needed
 func FinalizePulse(ctx context.Context, backuper executor.BackupMaker, jetKeeper executor.JetKeeper, pulse insolar.PulseNumber) {
 	logger := inslogger.FromContext(ctx)
 	if !jetKeeper.HasAllJetConfirms(ctx, pulse) {

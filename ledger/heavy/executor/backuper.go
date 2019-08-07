@@ -35,13 +35,16 @@ import (
 	"github.com/pkg/errors"
 )
 
+// BackupMaker is interface for doing backups
 type BackupMaker interface {
+	// Do starts process of incremental backups
 	Do(ctx context.Context, lastFinalizedPulse insolar.PulseNumber) error
 }
 
 var (
 	// ErrAlreadyDone is returned when you try to do backup for pulse less then lastBackupedPulse
-	ErrAlreadyDone    = errors.New("backup already done for this pulse")
+	ErrAlreadyDone = errors.New("backup already done for this pulse")
+	// ErrBackupDisabled is returned when backups are disabled
 	ErrBackupDisabled = errors.New("backup disabled")
 )
 
@@ -164,7 +167,7 @@ func calculateFileHash(f *os.File) (string, error) {
 }
 
 // prepareBackup make incremental backup and write auxiliary file with meta info
-func (b *BackupMakerDefault) prepareBackup(ctx context.Context, dirHolder *tmpDirHolder, pulse insolar.PulseNumber) (uint64, error) {
+func (b *BackupMakerDefault) prepareBackup(dirHolder *tmpDirHolder, pulse insolar.PulseNumber) (uint64, error) {
 	currentBT, err := b.backuper.Backup(dirHolder.tmpFile, b.lastBackupedVersion)
 	if err != nil {
 		return 0, errors.Wrap(err, "Backup return error")

@@ -150,6 +150,7 @@ func main() {
 			conf.Ledger.JetSplit.DepthLimit = 4
 		}
 
+		// If you want to switch on backups uncomment it
 		// if node.Role == "heavy_material" {
 		// 	conf.Ledger.Backup = configuration.Backup{
 		// 		ConfirmFile:      "BACKUPED",
