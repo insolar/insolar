@@ -2,11 +2,12 @@ package gateway
 
 import (
 	"context"
+	"testing"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 	mock "github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestNewGatewayer(t *testing.T) {
@@ -27,5 +28,5 @@ func TestNewGatewayer(t *testing.T) {
 	assert.Equal(t, gw, gatewayer.Gateway())
 	assert.Equal(t, insolar.NoNetworkState, gatewayer.Gateway().GetState())
 
-	gatewayer.SwitchState(context.Background(), insolar.WaitConsensus)
+	gatewayer.SwitchState(context.Background(), insolar.WaitConsensus, *insolar.GenesisPulse)
 }

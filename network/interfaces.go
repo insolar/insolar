@@ -205,23 +205,27 @@ type Accessor interface {
 // Gatewayer is a network which can change it's Gateway
 type Gatewayer interface {
 	Gateway() Gateway
-	SwitchState(ctx context.Context, state insolar.NetworkState)
+	SwitchState(ctx context.Context, state insolar.NetworkState, pulse insolar.Pulse)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network.Gateway -o ../testutils/network -s _mock.go -g
 
 // Gateway responds for whole network state
 type Gateway interface {
-	Run(context.Context)
+	Run(ctx context.Context, pulse insolar.Pulse)
 	GetState() insolar.NetworkState
+	NewGateway(context.Context, insolar.NetworkState) Gateway
+
 	OnPulseFromPulsar(context.Context, insolar.Pulse, ReceivedPacket)
 	OnPulseFromConsensus(context.Context, insolar.Pulse)
 	OnConsensusFinished(ctx context.Context, report Report)
+
 	UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte)
-	NewGateway(context.Context, insolar.NetworkState) Gateway
+
 	Auther() Auther
-	NeedLockMessageBus() bool
 	Bootstrapper() Bootstrapper
+
+	NetworkOperable() bool
 	EphemeralMode(nodes []insolar.NetworkNode) bool
 }
 

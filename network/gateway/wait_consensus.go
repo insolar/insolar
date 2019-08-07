@@ -59,20 +59,21 @@ import (
 )
 
 func newWaitConsensus(b *Base) *WaitConsensus {
-	return &WaitConsensus{b, make(chan struct{})}
+	return &WaitConsensus{b, make(chan insolar.Pulse, 1)}
 }
 
 type WaitConsensus struct {
 	*Base
-	consensusFinished chan struct{}
+
+	consensusFinished chan insolar.Pulse
 }
 
-func (g *WaitConsensus) Run(ctx context.Context) {
+func (g *WaitConsensus) Run(ctx context.Context, pulse insolar.Pulse) {
 	select {
 	case <-time.After(g.bootstrapETA):
-		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState)
-	case <-g.consensusFinished:
-		g.Gatewayer.SwitchState(ctx, insolar.WaitMajority)
+		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState, pulse)
+	case newPulse := <-g.consensusFinished:
+		g.Gatewayer.SwitchState(ctx, insolar.WaitMajority, newPulse)
 	}
 }
 
@@ -81,5 +82,6 @@ func (g *WaitConsensus) GetState() insolar.NetworkState {
 }
 
 func (g *WaitConsensus) OnConsensusFinished(ctx context.Context, report network.Report) {
+	g.consensusFinished <- EnsureGetPulse(ctx, g.PulseAccessor, report.PulseNumber)
 	close(g.consensusFinished)
 }

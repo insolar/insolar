@@ -202,7 +202,9 @@ func (s *consensusSuite) SetupTest() {
 		for _, n := range s.fixture().bootstrapNodes {
 			n.serviceNetwork.ConsensusMode = consensus.ReadyNetwork
 			n.serviceNetwork.NodeKeeper.SetInitialSnapshot(bnodes)
-			n.serviceNetwork.Gatewayer.SwitchState(s.fixture().ctx, insolar.CompleteNetworkState)
+			err := n.serviceNetwork.PulseAppender.Append(s.fixture().ctx, *insolar.GenesisPulse)
+			require.NoError(s.t, err)
+			n.serviceNetwork.Gatewayer.SwitchState(s.fixture().ctx, insolar.CompleteNetworkState, *insolar.GenesisPulse)
 			pulseReceivers = append(pulseReceivers, n.host)
 		}
 	}

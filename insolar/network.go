@@ -74,6 +74,5 @@ const (
 	WaitConsensus
 	WaitMajority
 	WaitMinRoles
-	WaitInitialPulse
 	CompleteNetworkState
 )

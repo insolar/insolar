@@ -54,7 +54,6 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/rules"
 )
@@ -67,13 +66,8 @@ type WaitMajority struct {
 	*Base
 }
 
-func (g *WaitMajority) Run(ctx context.Context) {
-	p, err := g.PulseAccessor.Latest(ctx)
-	if err != nil {
-		inslogger.FromContext(ctx).Errorf("failed to get latest pulse", err)
-		return
-	}
-	g.checkMajorityRule(ctx, p.PulseNumber)
+func (g *WaitMajority) Run(ctx context.Context, pulse insolar.Pulse) {
+	g.switchOnMajorityRule(ctx, pulse)
 }
 
 func (g *WaitMajority) GetState() insolar.NetworkState {
@@ -81,11 +75,16 @@ func (g *WaitMajority) GetState() insolar.NetworkState {
 }
 
 func (g *WaitMajority) OnConsensusFinished(ctx context.Context, report network.Report) {
-	g.checkMajorityRule(ctx, report.PulseNumber)
+	g.switchOnMajorityRule(ctx, EnsureGetPulse(ctx, g.PulseAccessor, report.PulseNumber))
 }
 
-func (g *WaitMajority) checkMajorityRule(ctx context.Context, number insolar.PulseNumber) {
-	if ok, _ := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), g.NodeKeeper.GetAccessor(number).GetWorkingNodes()); ok {
-		g.Gatewayer.SwitchState(ctx, insolar.WaitMinRoles)
+func (g *WaitMajority) switchOnMajorityRule(ctx context.Context, pulse insolar.Pulse) {
+	majorityRule, _ := rules.CheckMajorityRule(
+		g.CertificateManager.GetCertificate(),
+		g.NodeKeeper.GetAccessor(pulse.PulseNumber).GetWorkingNodes(),
+	)
+
+	if majorityRule {
+		g.Gatewayer.SwitchState(ctx, insolar.WaitMinRoles, pulse)
 	}
 }

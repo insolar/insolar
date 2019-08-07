@@ -117,8 +117,6 @@ func (g *Base) NewGateway(ctx context.Context, state insolar.NetworkState) netwo
 		g.Self = newWaitMajority(g)
 	case insolar.WaitMinRoles:
 		g.Self = newWaitMinRoles(g)
-	case insolar.WaitInitialPulse:
-		g.Self = newWaitInitialPulse(g)
 	default:
 		panic("Try to switch network to unknown state. Memory of process is inconsistent.")
 	}
@@ -160,8 +158,8 @@ func (g *Base) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber,
 	g.NodeKeeper.SetCloudHash(pulseNumber, cloudStateHash)
 }
 
-func (g *Base) NeedLockMessageBus() bool {
-	return true
+func (g *Base) NetworkOperable() bool {
+	return false
 }
 
 // Auther casts us to Auther or obtain it in another way
@@ -204,20 +202,13 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 
 	data := request.GetRequest().GetBootstrap()
 
-	lastPulse, err := g.PulseAccessor.Latest(ctx)
-	if err != nil {
-		lastPulse = *insolar.GenesisPulse
-	}
+	bootstrapPulse := GetBootstrapPulse(ctx, g.PulseAccessor)
 
-	if network.CheckShortIDCollision(g.NodeKeeper.GetAccessor(lastPulse.PulseNumber).GetActiveNodes(), data.CandidateProfile.ShortID) {
+	if network.CheckShortIDCollision(g.NodeKeeper.GetAccessor(bootstrapPulse.PulseNumber).GetActiveNodes(), data.CandidateProfile.ShortID) {
 		return g.HostNetwork.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.UpdateShortID}), nil
 	}
 
-	//if lastPulse.PulseNumber > data.Pulse.PulseNumber {
-	//	return g.HostNetwork.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.UpdateSchedule}), nil
-	//}
-
-	err = bootstrap.ValidatePermit(data.Permit, g.CertificateManager.GetCertificate(), g.CryptographyService)
+	err := bootstrap.ValidatePermit(data.Permit, g.CertificateManager.GetCertificate(), g.CryptographyService)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("Rejected bootstrap request from node %s: %s", request.GetSender(), err.Error())
 		return g.HostNetwork.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.Reject}), nil
@@ -235,7 +226,7 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 	return g.HostNetwork.BuildResponse(ctx, request,
 		&packet.BootstrapResponse{
 			Code:       packet.Accepted,
-			Pulse:      *pulse.ToProto(&lastPulse),
+			Pulse:      *pulse.ToProto(&bootstrapPulse),
 			ETASeconds: uint32(30), // TODO: move ETA to config
 		}), nil
 }
@@ -307,19 +298,18 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.R
 		return nil, err
 	}
 
-	p, err := g.PulseAccessor.Latest(ctx)
-	if err != nil {
-		inslogger.FromContext(ctx).Warn("Ephemeral pulse")
-		p = *insolar.EphemeralPulse
-	}
+	bootstrapPulse := GetBootstrapPulse(ctx, g.PulseAccessor)
+	discoveryCount := len(network.FindDiscoveriesInNodeList(
+		g.NodeKeeper.GetAccessor(bootstrapPulse.PulseNumber).GetActiveNodes(),
+		g.CertificateManager.GetCertificate(),
+	))
 
-	discoveryCount := len(network.FindDiscoveriesInNodeList(g.NodeKeeper.GetAccessor(p.PulseNumber).GetActiveNodes(), g.CertificateManager.GetCertificate()))
 	return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{
 		Code:           packet.Success,
 		Timestamp:      time.Now().UTC().Unix(),
 		Permit:         permit,
 		DiscoveryCount: uint32(discoveryCount),
-		Pulse:          pulse.ToProto(&p),
+		Pulse:          pulse.ToProto(&bootstrapPulse),
 	}), nil
 }
 

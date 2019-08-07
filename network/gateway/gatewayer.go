@@ -55,6 +55,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 )
@@ -72,6 +73,7 @@ type gatewayer struct {
 	gateway      network.Gateway
 	gatewayMu    sync.RWMutex
 	isOperable   bool
+	appender     pulse.Appender
 }
 
 func (n *gatewayer) Gateway() network.Gateway {
@@ -81,9 +83,11 @@ func (n *gatewayer) Gateway() network.Gateway {
 	return n.gateway
 }
 
-func (n *gatewayer) SwitchState(ctx context.Context, state insolar.NetworkState) {
+func (n *gatewayer) SwitchState(ctx context.Context, state insolar.NetworkState, pulse insolar.Pulse) {
 	n.gatewayMu.Lock()
 	defer n.gatewayMu.Unlock()
+
+	inslogger.FromContext(ctx).Infof("Gateway switch %s->%s, pulse: %d", n.gateway.GetState(), state, pulse.PulseNumber)
 
 	if n.gateway.GetState() == state {
 		inslogger.FromContext(ctx).Warn("Trying to set gateway to the same state")
@@ -92,12 +96,16 @@ func (n *gatewayer) SwitchState(ctx context.Context, state insolar.NetworkState)
 
 	n.gateway = n.gateway.NewGateway(ctx, state)
 
-	if n.isOperable != !n.gateway.NeedLockMessageBus() {
-		n.isOperable = !n.gateway.NeedLockMessageBus()
-		n.operableFunc(ctx, n.isOperable)
-	}
+	operable := n.gateway.NetworkOperable()
 
-	go n.gateway.Run(ctx)
+	go func() {
+		n.gateway.Run(ctx, pulse)
+
+		if n.isOperable != operable {
+			n.isOperable = operable
+			n.operableFunc(ctx, n.isOperable)
+		}
+	}()
 }
 
 func (n *gatewayer) GetState() insolar.NetworkState {

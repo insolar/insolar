@@ -54,8 +54,8 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+
 	"github.com/insolar/insolar/network/storage"
-	"time"
 
 	"github.com/insolar/insolar/cryptography"
 
@@ -158,7 +158,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	n.BaseGateway = &gateway.Base{}
 	n.Gatewayer = gateway.NewGatewayer(n.BaseGateway.NewGateway(ctx, insolar.NoNetworkState), func(ctx context.Context, isNetworkOperable bool) {
 		if n.operableFunc != nil {
-			inslogger.FromContext(ctx).Infof("===== Network operable: %t", isNetworkOperable)
 			n.operableFunc(ctx, isNetworkOperable)
 		}
 	})
@@ -267,16 +266,12 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 		return errors.Wrap(err, "failed to start component manager")
 	}
 
-	n.initConsensus()
-	n.Gatewayer.Gateway().Run(ctx)
+	bootstrapPulse := gateway.GetBootstrapPulse(ctx, n.PulseAccessor)
 
-	for n.Gatewayer.Gateway().GetState() < insolar.CompleteNetworkState {
-		inslogger.FromContext(ctx).Info("-=-=-= Waiting for network starts..")
-		<-time.After(time.Millisecond * 500)
-	}
+	n.initConsensus()
+	n.Gatewayer.Gateway().Run(ctx, bootstrapPulse)
 
 	n.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
-	inslogger.FromContext(ctx).Info("-=-=-= Network stated.")
 
 	return nil
 }

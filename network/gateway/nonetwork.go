@@ -70,7 +70,7 @@ type NoNetwork struct {
 	*Base
 }
 
-func (g *NoNetwork) Run(ctx context.Context) {
+func (g *NoNetwork) Run(ctx context.Context, pulse insolar.Pulse) {
 	cert := g.CertificateManager.GetCertificate()
 	origin := g.NodeKeeper.GetOrigin()
 	discoveryNodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), origin.ID())
@@ -84,18 +84,18 @@ func (g *NoNetwork) Run(ctx context.Context) {
 
 	// run bootstrap
 	if !network.OriginIsDiscovery(cert) {
-		g.Gatewayer.SwitchState(ctx, insolar.JoinerBootstrap)
+		g.Gatewayer.SwitchState(ctx, insolar.JoinerBootstrap, pulse)
 		return
 	}
 
 	// Simplified bootstrap
 	if origin.Role() != insolar.StaticRoleHeavyMaterial {
-		g.Gatewayer.SwitchState(ctx, insolar.JoinerBootstrap)
+		g.Gatewayer.SwitchState(ctx, insolar.JoinerBootstrap, pulse)
 		return
 	}
 
 	g.bootstrapETA = time.Minute // TODO: move to config
-	g.Gatewayer.SwitchState(ctx, insolar.WaitConsensus)
+	g.Gatewayer.SwitchState(ctx, insolar.WaitConsensus, pulse)
 }
 
 func (g *NoNetwork) GetState() insolar.NetworkState {

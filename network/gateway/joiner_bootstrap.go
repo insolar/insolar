@@ -75,30 +75,24 @@ type JoinerBootstrap struct {
 	*Base
 }
 
-func (g *JoinerBootstrap) Run(ctx context.Context) {
+func (g *JoinerBootstrap) Run(ctx context.Context, pulse insolar.Pulse) {
 	logger := inslogger.FromContext(ctx)
 	permit, err := g.authorize(ctx)
 	if err != nil {
 		logger.Error(err.Error())
-		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState)
+		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState, pulse)
 		return
-	}
-
-	pulse, err := g.PulseAccessor.Latest(ctx)
-	if err != nil {
-		logger.Error(err.Error())
-		pulse = *insolar.GenesisPulse
 	}
 
 	resp, err := g.BootstrapRequester.Bootstrap(ctx, permit, *g.originCandidate, &pulse)
 	if err != nil {
 		logger.Error(err.Error())
-		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState)
+		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState, pulse)
 		return
 	}
 
 	g.bootstrapETA = time.Second * time.Duration(resp.ETASeconds)
-	g.Gatewayer.SwitchState(ctx, insolar.WaitConsensus)
+	g.Gatewayer.SwitchState(ctx, insolar.WaitConsensus, pulse)
 }
 
 func (g *JoinerBootstrap) GetState() insolar.NetworkState {

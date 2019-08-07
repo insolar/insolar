@@ -52,46 +52,26 @@ package gateway
 
 import (
 	"context"
-	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/storage"
 )
 
-func newWaitInitialPulse(b *Base) *WaitInitialPulse {
-	return &WaitInitialPulse{b, make(chan struct{})}
-}
-
-type WaitInitialPulse struct {
-	*Base
-	initialPulseArrived chan struct{}
-}
-
-func (g *WaitInitialPulse) Run(ctx context.Context) {
-	select {
-	case <-time.After(g.bootstrapETA):
-		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState)
-	case <-g.initialPulseArrived:
+func GetBootstrapPulse(ctx context.Context, accessor storage.PulseAccessor) insolar.Pulse {
+	pulse, err := accessor.Latest(ctx)
+	if err != nil {
+		pulse = *insolar.EphemeralPulse
 	}
+
+	return pulse
 }
 
-func (g *WaitInitialPulse) GetState() insolar.NetworkState {
-	return insolar.WaitInitialPulse
-}
-
-func (g *WaitInitialPulse) OnPulseFromConsensus(ctx context.Context, pulse insolar.Pulse) {
-	g.Base.OnPulseFromConsensus(ctx, pulse)
-
-	if pulse.EpochPulseNumber != insolar.EphemeralPulseEpoch {
-		close(g.initialPulseArrived)
-
-		logger := inslogger.FromContext(ctx)
-
-		err := g.PulseManager.Set(ctx, pulse)
-		if err != nil {
-			logger.Fatalf("Failed to set new pulse: %s", err.Error())
-		}
-		logger.Infof("Set new current pulse number: %d", pulse.PulseNumber)
-		g.Gatewayer.SwitchState(ctx, insolar.CompleteNetworkState)
+func EnsureGetPulse(ctx context.Context, accessor storage.PulseAccessor, pulseNumber insolar.PulseNumber) insolar.Pulse {
+	pulse, err := accessor.ForPulseNumber(ctx, pulseNumber)
+	if err != nil {
+		inslogger.FromContext(ctx).Panicf("Failed to fetch pulse: %d", pulseNumber)
 	}
+
+	return pulse
 }
