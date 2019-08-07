@@ -81,7 +81,7 @@ func GetMemberGenesisContractState(publicKey string, name string, parent string,
 }
 
 func GetWalletGenesisContractState(balance string, name string, parent string) insolar.GenesisContractState {
-	w, err := wallet.New(balance)
+	w, err := wallet.New(genesisrefs.ContractRootDomain)
 	if err != nil {
 		panic("failed to create ` " + name + "` wallet instance")
 	}

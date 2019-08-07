@@ -287,10 +287,11 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 	if !ok {
 		return nil, fmt.Errorf("incorect input: failed to get 'amount' param")
 	}
-	//asset, ok := params["asset"].(string)
-	//if !ok {
-	//	return nil, fmt.Errorf("incorect input: failed to get 'amount' param")
-	//}
+
+	asset, ok := params["asset"].(string)
+	if !ok {
+		asset = "XNS" // set to default asset
+	}
 
 	recipientReference, err := insolar.NewReferenceFromBase58(recipientReferenceStr)
 	if err != nil {
@@ -300,7 +301,7 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 		return nil, fmt.Errorf("recipient must be different from the sender")
 	}
 
-	return wallet.GetObject(m.Wallet).Transfer(m.RootDomain, "XNS", amount, recipientReference)
+	return wallet.GetObject(m.Wallet).Transfer(m.RootDomain, asset, amount, recipientReference)
 }
 
 func (m *Member) depositTransferCall(params map[string]interface{}) (interface{}, error) {

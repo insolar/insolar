@@ -307,9 +307,11 @@ func INSMETHOD_GetBalance(object []byte, data []byte) ([]byte, []byte, error) {
 func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
-	args := [1]interface{}{}
+	args := [2]interface{}{}
 	var args0 string
 	args[0] = &args0
+	var args1 string
+	args[1] = &args1
 
 	err := ph.Deserialize(data, &args)
 	if err != nil {
@@ -317,7 +319,7 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	ret0, ret1 := New(args0)
+	ret0, ret1 := New(args0, args1)
 	ret1 = ph.MakeErrorSerializable(ret1)
 	if ret0 == nil && ret1 == nil {
 		ret1 = &ExtendableError{S: "constructor returned nil"}

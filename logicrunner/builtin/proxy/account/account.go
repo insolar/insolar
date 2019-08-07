@@ -70,9 +70,10 @@ func GetPrototype() insolar.Reference {
 }
 
 // New is constructor
-func New(balance string) *ContractConstructorHolder {
-	var args [1]interface{}
-	args[0] = balance
+func New(name string, balance string) *ContractConstructorHolder {
+	var args [2]interface{}
+	args[0] = name
+	args[1] = balance
 
 	var argsSerialized []byte
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)

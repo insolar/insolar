@@ -2,22 +2,25 @@ package account
 
 import (
 	"fmt"
+	"math/big"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation/safemath"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
-	"math/big"
 )
 
 type Account struct {
 	foundation.BaseContract
 	Balance string
+	Name    string
 }
 
-func New(balance string) (*Account, error) {
-	return &Account{Balance: balance}, nil
+func New(name string, balance string) (*Account, error) {
+	return &Account{Name: name, Balance: balance}, nil
 }
 
+// Transfer transfers funds to giver reference.
 func (a *Account) Transfer(amountStr string, toWallet *insolar.Reference) (err error) {
 	amount, _ := new(big.Int).SetString(amountStr, 10)
 	balance, ok := new(big.Int).SetString(a.Balance, 10)
@@ -31,7 +34,7 @@ func (a *Account) Transfer(amountStr string, toWallet *insolar.Reference) (err e
 	}
 	a.Balance = newBalance.String()
 	destWallet := wallet.GetObject(*toWallet)
-	return destWallet.Accept(amountStr, "XNS")
+	return destWallet.Accept(amountStr, a.Name)
 }
 
 // Accept accepts transfer to balance.

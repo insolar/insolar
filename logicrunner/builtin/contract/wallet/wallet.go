@@ -18,6 +18,8 @@ package wallet
 
 import (
 	"fmt"
+	"math/big"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation/safemath"
@@ -25,7 +27,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/costcenter"
 	proxyMember "github.com/insolar/insolar/logicrunner/builtin/proxy/member"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
-	"math/big"
 )
 
 // Wallet - basic wallet contract.
@@ -37,7 +38,8 @@ type Wallet struct {
 // New creates new wallet.
 func New(rootDomain insolar.Reference) (*Wallet, error) {
 	accs := make(foundation.StableMap)
-	newAccount, _ := account.New("0").AsChild(rootDomain)
+	// TODO: Think about creating of new types of assets and initial balance
+	newAccount, _ := account.New("XNS", "0").AsChild(rootDomain)
 
 	accs["XNS"] = newAccount.GetReference().String()
 
@@ -76,9 +78,15 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, assetName string, amo
 	amount, _ = new(big.Int).SetString(amountStr, 10)
 	fee, _ := new(big.Int).SetString(feeStr, 10)
 	totalSum, err := safemath.Add(fee, amount)
-	currentBalanceStr, err := w.GetBalance("XNS")
+	if err != nil {
+		return nil, fmt.Errorf("failed to calculate totalSum for amount: %s", err.Error())
+	}
+	currentBalanceStr, err := w.GetBalance(assetName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get balance for asset: %s", err.Error())
+	}
 	currentBalance, _ := new(big.Int).SetString(currentBalanceStr, 10)
-	if totalSum.Cmp(currentBalance) > 0  {
+	if totalSum.Cmp(currentBalance) > 0 {
 		return nil, fmt.Errorf("balance is too low: %s", currentBalanceStr)
 	}
 
@@ -86,25 +94,40 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, assetName string, amo
 	if err != nil {
 		return nil, fmt.Errorf("failed to get destination member wallet: %s", err.Error())
 	}
-	accRef, _ := w.GetAccount(assetName)
+
+	accRef, err := w.GetAccount(assetName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get account by asset name: %s", err.Error())
+	}
 	acc := account.GetObject(*accRef)
 	err = acc.Transfer(amountStr, &toWallet)
 
+	feeWalletRef, err := cc.GetFeeWalletRef()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get wallet ref: %s", err.Error())
+	}
 
-	feeWalletRef,_ := cc.GetFeeWalletRef()
 	err = acc.Transfer(feeStr, &feeWalletRef)
 
 	return nil, fmt.Errorf("failed to accept balance to wallet: %s", err)
 }
 
+// GetBalance gets balance by asset name.
 func (w *Wallet) GetBalance(assetName string) (string, error) {
-	accRef, _ := w.GetAccount(assetName)
+	accRef, err := w.GetAccount(assetName)
+	if err != nil {
+		return "", fmt.Errorf("failed to get account by asset: %s", err.Error())
+	}
 	acc := account.GetObject(*accRef)
 	return acc.GetBalance()
 }
 
-func(w *Wallet) Accept(amountStr string, assetName string) error {
-	accRef, _ := w.GetAccount(assetName)
+// Accept accepts transfer.
+func (w *Wallet) Accept(amountStr string, assetName string) error {
+	accRef, err := w.GetAccount(assetName)
+	if err != nil {
+		return fmt.Errorf("failed to get account by asset: %s", err.Error())
+	}
 	acc := account.GetObject(*accRef)
 	return acc.Accept(amountStr)
 }
