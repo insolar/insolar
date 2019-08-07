@@ -31,7 +31,6 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/pkg/errors"
 )
 
@@ -48,7 +47,7 @@ const timeout = 10 * time.Second
 // NewStateIniter creates StateIniterDefault with all required components.
 func NewStateIniter(
 	jetModifier jet.Modifier,
-	jetReleaser hot.JetReleaser,
+	jetReleaser JetReleaser,
 	drops drop.Modifier,
 	nodes node.Accessor,
 	sender bus.Sender,
@@ -77,7 +76,7 @@ func NewStateIniter(
 // StateIniterDefault implements StateIniter.
 type StateIniterDefault struct {
 	jetModifier   jet.Modifier
-	jetReleaser   hot.JetReleaser
+	jetReleaser   JetReleaser
 	drops         drop.Modifier
 	nodes         node.Accessor
 	sender        bus.Sender

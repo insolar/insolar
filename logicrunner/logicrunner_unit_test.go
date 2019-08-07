@@ -103,6 +103,7 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 	suite.lr.MessageBus = suite.mb
 	suite.lr.MachinesManager = suite.mm
 	suite.lr.JetCoordinator = suite.jc
+	suite.lr.PulseAccessor = suite.ps
 	suite.lr.NodeNetwork = suite.nn
 	suite.lr.Sender = suite.sender
 	suite.lr.Publisher = suite.pub
