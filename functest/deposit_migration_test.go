@@ -30,11 +30,16 @@ import (
 func TestMigrationToken(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
+	member.ref = root.ref
+
 	migrationAddress := testutils.RandomString()
 	_, err = signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
+
+	result, err := signedRequest(t, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
-	_, err = signedRequest(t, member, "member.migrationCreate", nil)
-	require.NoError(t, err)
+	ref, ok := result.(map[string]interface{})["reference"].(string)
+	require.True(t, ok)
+	member.ref = ref
 
 	deposit := migrate(t, member.ref, "1000", "Test_TxHash", migrationAddress, 0)
 

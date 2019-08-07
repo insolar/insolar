@@ -117,6 +117,22 @@ func createMember(t *testing.T) *user {
 	return member
 }
 
+func createMigrationMember(t *testing.T) *user {
+	member, err := newUserWithKeys()
+	require.NoError(t, err)
+	member.ref = root.ref
+
+	migrationAddress := testutils.RandomString()
+	_, err = signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
+
+	result, err := signedRequest(t, member, "member.migrationCreate", nil)
+	require.NoError(t, err)
+	ref, ok := result.(map[string]interface{})["reference"].(string)
+	require.True(t, ok)
+	member.ref = ref
+	return member
+}
+
 func addBurnAddress(t *testing.T) {
 	ba := testutils.RandomString()
 	_, err := signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
@@ -309,8 +325,12 @@ func fullMigration(t *testing.T, txHash string) *user {
 func signedRequest(t *testing.T, user *user, method string, params interface{}) (interface{}, error) {
 	res, refStr, err := makeSignedRequest(user, method, params)
 
-	require.NotEqual(t, "", refStr)
-	require.NotEqual(t, "11111111111111111111111111111111.11111111111111111111111111111111", refStr)
+	msg := "Ref is empty"
+	if err != nil {
+		msg = msg + " because: " + err.Error()
+	}
+	require.NotEqual(t, "", refStr, msg)
+	require.NotEqual(t, "11111111111111111111111111111111.11111111111111111111111111111111", refStr, msg)
 
 	_, err = insolar.NewReferenceFromBase58(refStr)
 	require.Nil(t, err)
