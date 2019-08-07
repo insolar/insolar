@@ -56,7 +56,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
@@ -96,17 +95,7 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Rec
 		return nil, errors.Wrap(err, "[ pulseController ] processPulse: failed to verify pulse")
 	}
 
-	// Because we want to save our trace-context from a pulsar node
-	// We fetch TraceSpanData from msg and set a trace id and other stuff to current context
-	newCtx := context.Background()
-	parent, err := instracer.Deserialize(data.TraceSpanData)
-	if err != nil {
-		logger.Errorf("failed to deserialize trace spans data on pulse process: %v", err)
-	} else {
-		newCtx = instracer.WithParentSpan(newCtx, parent)
-	}
-	go pc.PulseHandler.HandlePulse(newCtx, p, request)
-
+	go pc.PulseHandler.HandlePulse(ctx, p, request)
 	return pc.Network.BuildResponse(ctx, request, &packet.BasicResponse{Success: true, Error: ""}), nil
 }
 

@@ -23,31 +23,31 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 
-	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/jet"
 	insolarMsg "github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 const InnerMsgTopic = "InnerMsg"
 
 type Dependencies struct {
-	Publisher      message.Publisher
-	StateStorage   StateStorage
-	ResultsMatcher ResultMatcher
-	lr             *LogicRunner
-	Sender         bus.Sender
-	JetStorage     jet.Storage
-	WriteAccessor  writecontroller.Accessor
-	OutgoingSender OutgoingRequestSender
+	Publisher        message.Publisher
+	StateStorage     StateStorage
+	ResultsMatcher   ResultMatcher
+	lr               *LogicRunner
+	Sender           bus.Sender
+	JetStorage       jet.Storage
+	WriteAccessor    writecontroller.Accessor
+	OutgoingSender   OutgoingRequestSender
+	RequestsExecutor RequestsExecutor
 }
 
 type Init struct {

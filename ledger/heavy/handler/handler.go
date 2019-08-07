@@ -58,8 +58,8 @@ type Handler struct {
 	JetAccessor   jet.Accessor
 	JetKeeper     executor.JetKeeper
 
-	Sender bus.Sender
-	StartPulse   pulse.StartPulse
+	Sender          bus.Sender
+	StartPulse      pulse.StartPulse
 	PulseCalculator pulse.Calculator
 	JetTree         jet.Storage
 	DropDB          *drop.DB
@@ -78,6 +78,7 @@ func New(cfg configuration.Ledger) *Handler {
 		PassState: func(p *proc.PassState) {
 			p.Dep.Records = h.RecordAccessor
 			p.Dep.Sender = h.Sender
+			p.Dep.Pulses = h.PulseAccessor
 		},
 		SendCode: func(p *proc.SendCode) {
 			p.Dep.Sender = h.Sender

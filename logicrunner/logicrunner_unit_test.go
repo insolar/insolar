@@ -103,6 +103,7 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 	suite.lr.MessageBus = suite.mb
 	suite.lr.MachinesManager = suite.mm
 	suite.lr.JetCoordinator = suite.jc
+	suite.lr.PulseAccessor = suite.ps
 	suite.lr.NodeNetwork = suite.nn
 	suite.lr.Sender = suite.sender
 	suite.lr.Publisher = suite.pub
@@ -338,9 +339,9 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 
 	suite.am.HasPendingsMock.Return(false, nil)
 
-	suite.am.RegisterIncomingRequestMock.Set(func(ctx context.Context, r *record.IncomingRequest) (*insolar.ID, error) {
+	suite.am.RegisterIncomingRequestMock.Set(func(ctx context.Context, r *record.IncomingRequest) (*payload.RequestInfo, error) {
 		reqId := testutils.RandomID()
-		return &reqId, nil
+		return &payload.RequestInfo{RequestID: reqId, ObjectID: *objectRef.Record()}, nil
 	})
 
 	suite.re.ExecuteAndSaveMock.Return(nil, nil)

@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package replication
+package executor
 
 import (
 	"context"
@@ -27,11 +27,10 @@ import (
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/replication.Cleaner -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.Cleaner -o ./ -s _mock.go -g
 
 // Cleaner is an interface that represents a cleaner-component
 // It's supposed, that all the process of cleaning data from LME will be doing by it
@@ -59,7 +58,7 @@ type LightCleaner struct {
 	pulseShifter    pulse.Shifter
 	pulseCalculator pulse.Calculator
 
-	filamentCleaner executor.FilamentCleaner
+	filamentCleaner FilamentCleaner
 
 	lightChainLimit int
 	cleanerDelay    int
@@ -75,7 +74,7 @@ func NewCleaner(
 	pulseShifter pulse.Shifter,
 	pulseCalculator pulse.Calculator,
 	indexAccessor object.IndexAccessor,
-	filamentCleaner executor.FilamentCleaner,
+	filamentCleaner FilamentCleaner,
 	lightChainLimit int,
 	cleanerDelay int,
 ) *LightCleaner {

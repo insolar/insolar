@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package hot_test
+package executor_test
 
 import (
 	"math/rand"
@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/light/hot"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,7 +33,7 @@ func TestWriteController_Open(t *testing.T) {
 		t.Parallel()
 		ctx := inslogger.TestContext(t)
 
-		m := hot.NewWriteController()
+		m := executor.NewWriteController()
 		err := m.Open(ctx, 1)
 		require.NoError(t, err)
 	})
@@ -42,7 +42,7 @@ func TestWriteController_Open(t *testing.T) {
 		t.Parallel()
 		ctx := inslogger.TestContext(t)
 
-		m := hot.NewWriteController()
+		m := executor.NewWriteController()
 		err := m.Open(ctx, 1)
 		require.NoError(t, err)
 
@@ -54,7 +54,7 @@ func TestWriteController_Open(t *testing.T) {
 		t.Parallel()
 		ctx := inslogger.TestContext(t)
 
-		m := hot.NewWriteController()
+		m := executor.NewWriteController()
 		err := m.Open(ctx, 2)
 		require.NoError(t, err)
 
@@ -70,7 +70,7 @@ func TestWriteController_CloseAndWait(t *testing.T) {
 		t.Parallel()
 		ctx := inslogger.TestContext(t)
 
-		m := hot.NewWriteController()
+		m := executor.NewWriteController()
 		_ = m.Open(ctx, 1)
 		err := m.CloseAndWait(ctx, 1)
 		require.NoError(t, err)
@@ -80,7 +80,7 @@ func TestWriteController_CloseAndWait(t *testing.T) {
 		t.Parallel()
 		ctx := inslogger.TestContext(t)
 
-		m := hot.NewWriteController()
+		m := executor.NewWriteController()
 		_ = m.Open(ctx, 1)
 		err := m.CloseAndWait(ctx, 1)
 		require.NoError(t, err)
@@ -93,7 +93,7 @@ func TestWriteController_CloseAndWait(t *testing.T) {
 		t.Parallel()
 		ctx := inslogger.TestContext(t)
 
-		m := hot.NewWriteController()
+		m := executor.NewWriteController()
 		err := m.Open(ctx, 2)
 		require.NoError(t, err)
 
@@ -112,7 +112,7 @@ func TestWriteController_Begin(t *testing.T) {
 		t.Parallel()
 		ctx := inslogger.TestContext(t)
 
-		m := hot.NewWriteController()
+		m := executor.NewWriteController()
 		_, err := m.Begin(ctx, 1)
 		require.Error(t, err)
 	})
@@ -121,7 +121,7 @@ func TestWriteController_Begin(t *testing.T) {
 		t.Parallel()
 		ctx := inslogger.TestContext(t)
 
-		m := hot.NewWriteController()
+		m := executor.NewWriteController()
 		err := m.Open(ctx, 1)
 		require.NoError(t, err)
 		err = m.CloseAndWait(ctx, 1)
@@ -135,7 +135,7 @@ func TestWriteController_Begin(t *testing.T) {
 		t.Parallel()
 		ctx := inslogger.TestContext(t)
 
-		m := hot.NewWriteController()
+		m := executor.NewWriteController()
 		err := m.Open(ctx, 1)
 		require.NoError(t, err)
 
@@ -154,7 +154,7 @@ func TestWriteController_Begin(t *testing.T) {
 		t.Parallel()
 		ctx := inslogger.TestContext(t)
 
-		m := hot.NewWriteController()
+		m := executor.NewWriteController()
 		err := m.Open(ctx, 1)
 		require.NoError(t, err)
 

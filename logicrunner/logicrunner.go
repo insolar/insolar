@@ -135,14 +135,15 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 
 func (lr *LogicRunner) initHandlers() {
 	dep := &Dependencies{
-		Publisher:      lr.Publisher,
-		StateStorage:   lr.StateStorage,
-		ResultsMatcher: lr.ResultsMatcher,
-		lr:             lr,
-		Sender:         lr.Sender,
-		JetStorage:     lr.JetStorage,
-		WriteAccessor:  lr.WriteController,
-		OutgoingSender: lr.OutgoingSender,
+		Publisher:        lr.Publisher,
+		StateStorage:     lr.StateStorage,
+		ResultsMatcher:   lr.ResultsMatcher,
+		lr:               lr,
+		Sender:           lr.Sender,
+		JetStorage:       lr.JetStorage,
+		WriteAccessor:    lr.WriteController,
+		OutgoingSender:   lr.OutgoingSender,
+		RequestsExecutor: lr.RequestsExecutor,
 	}
 
 	initHandle := func(msg *watermillMsg.Message) *Init {
@@ -365,6 +366,11 @@ func freshContextFromContext(ctx context.Context) context.Context {
 	if ok {
 		res = instracer.WithParentSpan(res, parentSpan)
 	}
+
+	if pctx := trace.FromContext(ctx); pctx != nil {
+		res = trace.NewContext(res, pctx)
+	}
+
 	return res
 }
 
@@ -378,6 +384,9 @@ func freshContextFromContextAndRequest(ctx context.Context, req record.IncomingR
 	parentSpan, ok := instracer.ParentSpan(ctx)
 	if ok {
 		res = instracer.WithParentSpan(res, parentSpan)
+	}
+	if pctx := trace.FromContext(ctx); pctx != nil {
+		res = trace.NewContext(res, pctx)
 	}
 	return res
 }
