@@ -53,10 +53,11 @@ package merkle
 import (
 	"context"
 	"encoding/hex"
+	"testing"
+
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/node"
 	network2 "github.com/insolar/insolar/testutils/network"
-	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"

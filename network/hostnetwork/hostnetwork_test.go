@@ -52,11 +52,12 @@ package hostnetwork
 
 import (
 	"context"
-	"github.com/fortytw2/leaktest"
-	"github.com/insolar/insolar/network"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/fortytw2/leaktest"
+	"github.com/insolar/insolar/network"
 
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"

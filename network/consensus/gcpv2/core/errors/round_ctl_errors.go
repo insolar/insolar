@@ -52,9 +52,10 @@ package errors
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
-	"strings"
 )
 
 func NewPulseRoundMismatchError(pn pulse.Number, msg string) error {

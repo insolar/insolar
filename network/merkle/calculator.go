@@ -53,6 +53,7 @@ package merkle
 import (
 	"context"
 	"crypto"
+
 	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/insolar/insolar"

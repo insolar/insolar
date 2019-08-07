@@ -55,9 +55,10 @@ import (
 	"crypto"
 	"encoding/hex"
 	"fmt"
+	"testing"
+
 	"github.com/insolar/insolar/network"
 	network2 "github.com/insolar/insolar/testutils/network"
-	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"

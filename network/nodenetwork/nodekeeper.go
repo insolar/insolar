@@ -52,9 +52,10 @@ package nodenetwork
 
 import (
 	"context"
-	"github.com/insolar/insolar/network/storage"
 	"net"
 	"sync"
+
+	"github.com/insolar/insolar/network/storage"
 
 	"github.com/insolar/insolar/network/hostnetwork/resolver"
 	"github.com/insolar/insolar/network/node"

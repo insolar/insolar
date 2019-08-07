@@ -53,8 +53,9 @@ package population
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"sync"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 
 	"github.com/insolar/insolar/network/consensus/common/args"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"

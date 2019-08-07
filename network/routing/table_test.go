@@ -52,10 +52,11 @@ package routing
 
 import (
 	"context"
-	"github.com/insolar/insolar/network"
-	mock "github.com/insolar/insolar/testutils/network"
 	"strconv"
 	"testing"
+
+	"github.com/insolar/insolar/network"
+	mock "github.com/insolar/insolar/testutils/network"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/node"

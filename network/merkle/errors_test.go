@@ -54,9 +54,10 @@ import (
 	"context"
 	"crypto"
 	"encoding/hex"
+	"testing"
+
 	"github.com/insolar/insolar/network"
 	network2 "github.com/insolar/insolar/testutils/network"
-	"testing"
 
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/pkg/errors"
