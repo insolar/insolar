@@ -80,14 +80,14 @@ func (g *JoinerBootstrap) Run(ctx context.Context, p insolar.Pulse) {
 	logger := inslogger.FromContext(ctx)
 	permit, err := g.authorize(ctx)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Warn("Failed to authorize: ", err.Error())
 		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState, p)
 		return
 	}
 
 	resp, err := g.BootstrapRequester.Bootstrap(ctx, permit, *g.originCandidate, &p)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Warn("Failed to bootstrap: ", err.Error())
 		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState, p)
 		return
 	}

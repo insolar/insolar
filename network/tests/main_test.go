@@ -192,7 +192,7 @@ func TestNodeLeaveAtETA(t *testing.T) {
 	s.AssertActiveNodesCountDelta(1)
 	s.AssertWorkingNodesCountDelta(1)
 
-	pulse, err := s.fixture().bootstrapNodes[0].serviceNetwork.PulseAccessor.Latest(s.fixture().ctx)
+	pulse, err := s.fixture().bootstrapNodes[0].serviceNetwork.PulseAccessor.GetLatestPulse(s.fixture().ctx)
 	require.NoError(t, err)
 
 	// next pulse will be last for this node
@@ -240,7 +240,7 @@ func TestNodeComeAfterAnotherNodeSendLeaveETA(t *testing.T) {
 	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor(0).GetActiveNodes()
 	require.Equal(t, s.getNodesCount()+1, len(activeNodes))
 
-	pulse, err := s.fixture().bootstrapNodes[0].serviceNetwork.PulseAccessor.Latest(s.fixture().ctx)
+	pulse, err := s.fixture().bootstrapNodes[0].serviceNetwork.PulseAccessor.GetLatestPulse(s.fixture().ctx)
 	require.NoError(t, err)
 
 	// leaving in 3 pulses
