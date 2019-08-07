@@ -36,7 +36,14 @@ import (
 	"github.com/insolar/insolar/insolar/flow/internal/thread"
 )
 
-type Dispatcher struct {
+//go:generate minimock -i github.com/insolar/insolar/insolar/flow/dispatcher.Dispatcher -o ./ -s _mock.go -g
+type Dispatcher interface {
+	BeginPulse(ctx context.Context, pulse insolar.Pulse)
+	ClosePulse(ctx context.Context, pulse insolar.Pulse)
+	Process(msg *message.Message) ([]*message.Message, error)
+}
+
+type dispatcher struct {
 	handles struct {
 		present flow.MakeHandle
 		future  flow.MakeHandle
@@ -46,29 +53,32 @@ type Dispatcher struct {
 	PulseAccessor insPulse.Accessor
 }
 
-func NewDispatcher(present flow.MakeHandle, future flow.MakeHandle, past flow.MakeHandle) *Dispatcher {
-	d := &Dispatcher{
-		controller: thread.NewController(),
+func NewDispatcher(pulseAccessor insPulse.Accessor, present flow.MakeHandle, future flow.MakeHandle, past flow.MakeHandle) Dispatcher {
+	d := &dispatcher{
+		controller:    thread.NewController(),
+		PulseAccessor: pulseAccessor,
 	}
+
 	d.handles.present = present
 	d.handles.future = future
 	d.handles.past = past
+
 	return d
 }
 
 // BeginPulse is a handle for pulse begin event.
-func (d *Dispatcher) BeginPulse(ctx context.Context, pulse insolar.Pulse) {
+func (d *dispatcher) BeginPulse(ctx context.Context, pulse insolar.Pulse) {
 	d.controller.BeginPulse()
 	inslogger.FromContext(ctx).Debugf("Pulse was changed to %s in dispatcher", pulse.PulseNumber)
 }
 
 // ClosePulse is a handle for pulse close event.
-func (d *Dispatcher) ClosePulse(ctx context.Context, pulse insolar.Pulse) {
+func (d *dispatcher) ClosePulse(ctx context.Context, pulse insolar.Pulse) {
 	d.controller.ClosePulse()
 	inslogger.FromContext(ctx).Debugf("Pulse %s was closed in dispatcher", pulse.PulseNumber)
 }
 
-func (d *Dispatcher) getHandleByPulse(ctx context.Context, msgPulseNumber insolar.PulseNumber) flow.MakeHandle {
+func (d *dispatcher) getHandleByPulse(ctx context.Context, msgPulseNumber insolar.PulseNumber) flow.MakeHandle {
 	currentPulseNumber := insolar.PulseNumber(insolar.FirstPulseNumber)
 	p, err := d.PulseAccessor.Latest(ctx)
 	if err == nil {
@@ -87,7 +97,7 @@ func (d *Dispatcher) getHandleByPulse(ctx context.Context, msgPulseNumber insola
 	return d.handles.present
 }
 
-func (d *Dispatcher) InnerSubscriber(msg *message.Message) ([]*message.Message, error) {
+func (d *dispatcher) InnerSubscriber(msg *message.Message) ([]*message.Message, error) {
 	ctx := context.Background()
 	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(bus.MetaTraceID))
 	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
@@ -108,7 +118,7 @@ func (d *Dispatcher) InnerSubscriber(msg *message.Message) ([]*message.Message, 
 }
 
 // Process handles incoming message.
-func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
+func (d *dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 	ctx := context.Background()
 	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(bus.MetaTraceID))
 

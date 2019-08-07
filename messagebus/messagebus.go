@@ -97,11 +97,11 @@ func (mb *MessageBus) Acquire(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("Call Acquire in MessageBus: ", counter)
 	if counter == 1 {
 		inslogger.FromContext(ctx).Info("Lock MB")
-		ctx, span := instracer.StartSpan(parentCtx, "before GIL Lock (Lock MB)")
-		span.End()
+
+		ctx, span := instracer.StartSpan(parentCtx, "GIL Lock (Lock MB)")
+		defer span.End()
+
 		mb.Lock(ctx)
-		_, span = instracer.StartSpan(parentCtx, "after GIL Lock (Lock MB)")
-		span.End()
 	}
 }
 
@@ -113,9 +113,12 @@ func (mb *MessageBus) Release(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("Call Release in MessageBus: ", counter)
 	if counter == 0 {
 		inslogger.FromContext(ctx).Info("Unlock MB")
-		mb.Unlock(ctx)
+
 		_, span := instracer.StartSpan(ctx, "GIL Unlock (Unlock MB)")
-		span.End()
+		defer span.End()
+
+		mb.Unlock(ctx)
+
 	}
 }
 
