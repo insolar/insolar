@@ -210,7 +210,9 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		startTime := time.Now()
 		defer observeResultStatus(contractRequest.Method, contractAnswer, startTime)
 
-		insLog.Infof("[ callHandler ] Incoming contractRequest: %s", req.RequestURI)
+		info := fmt.Sprintf("[ callHandler ] Incoming contractRequest: %s", req.RequestURI)
+		insLog.Infof(info)
+		span.Annotate(nil, info)
 
 		ctx, rawBody, err := processRequest(ctx, req, contractRequest, contractAnswer)
 		if err != nil {
