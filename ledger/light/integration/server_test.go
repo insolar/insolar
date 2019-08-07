@@ -19,8 +19,8 @@ package integration_test
 import (
 	"context"
 	"crypto"
-	"github.com/insolar/insolar/network"
 	"fmt"
+	"github.com/insolar/insolar/network"
 	"math"
 	"sync"
 	"time"
@@ -297,7 +297,7 @@ func NewServer(
 			ServerBus,
 		)
 
-		stateIniter := executor.NewStateIniter(Jets, waiter, drops, Nodes, ServerBus)
+		stateIniter := executor.NewStateIniter(Jets, waiter, drops, Nodes, ServerBus, Pulses, Pulses, jetCalculator)
 
 		pm := pulsemanager.NewPulseManager(
 			jetSplitter,
