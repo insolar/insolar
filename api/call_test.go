@@ -163,6 +163,28 @@ func TestTimeoutSuite(t *testing.T) {
 	timeoutSuite.api.Stop(timeoutSuite.ctx)
 }
 
+func TestDigestParser(t *testing.T) {
+	invalidDigest := ""
+	_, err := parseDigest(invalidDigest)
+	require.Error(t, err)
+
+	validDigest := "SHA-256=foo"
+	_, err = parseDigest(validDigest)
+	require.NoError(t, err)
+}
+
+func TestSignatureParser(t *testing.T) {
+	invalidSignature := ""
+	_, err := parseSignature(invalidSignature)
+
+	validSignature := `keyId="member-pub-key", algorithm="ecdsa", headers="digest", signature=bar`
+	_, err = parseSignature(validSignature)
+	require.NoError(t, err)
+}
+
+func (suite *TimeoutSuite) TestSignatureParser(suiteName, testName string) {
+}
+
 func (suite *TimeoutSuite) BeforeTest(suiteName, testName string) {
 	suite.delay = make(chan struct{}, 0)
 }
