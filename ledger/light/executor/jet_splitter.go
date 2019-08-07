@@ -97,7 +97,7 @@ func (js *JetSplitterDefault) Do(
 	jets []insolar.JetID,
 	createDrops bool,
 ) ([]insolar.JetID, error) {
-	ctx, span := instracer.StartSpan(ctx, "jets.split")
+	ctx, span := instracer.StartSpan(ctx, "JetSplitterDefault.Do")
 	defer span.End()
 	ctx, _ = inslogger.WithField(ctx, "ended_pulse", endedPulse.String())
 	inslog := inslogger.FromContext(ctx).WithField("new_pulse", newPulse.String())

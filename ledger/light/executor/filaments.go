@@ -600,25 +600,30 @@ func (i *fetchingIterator) fetchFromNetwork(
 
 	isBeyond, err := i.coordinator.IsBeyondLimit(ctx, forID.Pulse())
 	if err != nil {
+		instracer.AddError(span, err)
 		return nil, errors.Wrap(err, "failed to calculate limit")
 	}
 	var node *insolar.Reference
 	if isBeyond {
 		node, err = i.coordinator.Heavy(ctx)
 		if err != nil {
+			instracer.AddError(span, err)
 			return nil, errors.Wrap(err, "failed to calculate node")
 		}
 	} else {
 		jetID, err := i.jetFetcher.Fetch(ctx, i.objectID, forID.Pulse())
 		if err != nil {
+			instracer.AddError(span, err)
 			return nil, errors.Wrap(err, "failed to fetch jet")
 		}
 		node, err = i.coordinator.NodeForJet(ctx, *jetID, forID.Pulse())
 		if err != nil {
+			instracer.AddError(span, err)
 			return nil, errors.Wrap(err, "failed to calculate node")
 		}
 	}
 	if *node == i.coordinator.Me() {
+		instracer.AddError(span, errors.New("tried to send message to self"))
 		return nil, errors.New("tried to send message to self")
 	}
 
@@ -634,21 +639,25 @@ func (i *fetchingIterator) fetchFromNetwork(
 		ReadUntil: i.readUntil,
 	})
 	if err != nil {
+		instracer.AddError(span, err)
 		return nil, errors.Wrap(err, "failed to create fetching message")
 	}
 	reps, done := i.sender.SendTarget(ctx, msg, *node)
 	defer done()
 	res, ok := <-reps
 	if !ok {
+		instracer.AddError(span, errors.New("no reply for filament fetch"))
 		return nil, errors.New("no reply for filament fetch")
 	}
 
 	pl, err := payload.UnmarshalFromMeta(res.Payload)
 	if err != nil {
+		instracer.AddError(span, err)
 		return nil, errors.Wrap(err, "failed to unmarshal reply")
 	}
 	filaments, ok := pl.(*payload.FilamentSegment)
 	if !ok {
+		instracer.AddError(span, fmt.Errorf("unexpected reply %T", pl))
 		return nil, fmt.Errorf("unexpected reply %T", pl)
 	}
 	return filaments.Records, nil
