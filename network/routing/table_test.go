@@ -60,7 +60,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/node"
-	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -71,10 +70,6 @@ func newNode(id int) insolar.NetworkNode {
 	result := node.NewNode(ref, insolar.StaticRoleUnknown, nil, address, "")
 	result.(node.MutableNode).SetShortID(insolar.ShortNodeID(id))
 	return result
-}
-
-func newTable() *Table {
-	return &Table{NodeKeeper: nodenetwork.NewNodeKeeper(newNode(1))}
 }
 
 func TestTable_Resolve(t *testing.T) {

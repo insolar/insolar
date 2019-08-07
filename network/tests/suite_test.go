@@ -518,14 +518,6 @@ func (p *pulseManagerMock) Set(ctx context.Context, pulse insolar.Pulse) error {
 	return nil
 }
 
-type staterMock struct {
-	stateFunc func() []byte
-}
-
-func (m staterMock) State() []byte {
-	return m.stateFunc()
-}
-
 type PublisherMock struct{}
 
 func (p *PublisherMock) Publish(topic string, messages ...*message.Message) error {
