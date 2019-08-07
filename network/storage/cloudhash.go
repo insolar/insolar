@@ -64,14 +64,14 @@ type CloudHashStorage interface {
 	Append(pulse insolar.PulseNumber, cloudHash []byte) error
 }
 
-// NewCloudHashStorage constructor creates cloudHashStorage
-func NewCloudHashStorage() *cloudHashStorage {
+// newCloudHashStorage constructor creates cloudHashStorage
+func newCloudHashStorage() *cloudHashStorage {
 	return &cloudHashStorage{}
 }
 
 // NewMemoryCloudHashStorage constructor creates cloudHashStorage
-func NewMemoryCloudHashStorage() *memoryCloudHashStorage {
-	return &memoryCloudHashStorage{
+func NewMemoryCloudHashStorage() *MemoryCloudHashStorage {
+	return &MemoryCloudHashStorage{
 		entries: make(map[insolar.PulseNumber][]byte),
 	}
 }
@@ -99,12 +99,12 @@ func (c *cloudHashStorage) Append(pulse insolar.PulseNumber, cloudHash []byte) e
 	return c.DB.Set(pulseKey(pulse), cloudHash)
 }
 
-type memoryCloudHashStorage struct {
+type MemoryCloudHashStorage struct {
 	lock    sync.RWMutex
 	entries map[insolar.PulseNumber][]byte
 }
 
-func (m *memoryCloudHashStorage) ForPulseNumber(pulse insolar.PulseNumber) ([]byte, error) {
+func (m *MemoryCloudHashStorage) ForPulseNumber(pulse insolar.PulseNumber) ([]byte, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
@@ -114,7 +114,7 @@ func (m *memoryCloudHashStorage) ForPulseNumber(pulse insolar.PulseNumber) ([]by
 	return nil, ErrNotFound
 }
 
-func (m *memoryCloudHashStorage) Append(pulse insolar.PulseNumber, cloudHash []byte) error {
+func (m *MemoryCloudHashStorage) Append(pulse insolar.PulseNumber, cloudHash []byte) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 

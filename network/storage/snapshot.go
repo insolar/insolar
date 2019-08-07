@@ -66,14 +66,14 @@ type SnapshotStorage interface {
 	Append(pulse insolar.PulseNumber, snapshot *node.Snapshot) error
 }
 
-// NewSnapshotStorage constructor creates PulseStorage
-func NewSnapshotStorage() *snapshotStorage {
+// newSnapshotStorage constructor creates PulseStorage
+func newSnapshotStorage() *snapshotStorage {
 	return &snapshotStorage{}
 }
 
 // NewMemorySnapshotStorage constructor creates PulseStorage
-func NewMemorySnapshotStorage() *memorySnapshotStorage {
-	return &memorySnapshotStorage{
+func NewMemorySnapshotStorage() *MemorySnapshotStorage {
+	return &MemorySnapshotStorage{
 		entries: make(map[insolar.PulseNumber]*node.Snapshot),
 	}
 }
@@ -110,12 +110,12 @@ func (s *snapshotStorage) ForPulseNumber(pulse insolar.PulseNumber) (*node.Snaps
 	return result, nil
 }
 
-type memorySnapshotStorage struct {
+type MemorySnapshotStorage struct {
 	lock    sync.RWMutex
 	entries map[insolar.PulseNumber]*node.Snapshot
 }
 
-func (m *memorySnapshotStorage) Append(pulse insolar.PulseNumber, snapshot *node.Snapshot) error {
+func (m *MemorySnapshotStorage) Append(pulse insolar.PulseNumber, snapshot *node.Snapshot) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -123,7 +123,7 @@ func (m *memorySnapshotStorage) Append(pulse insolar.PulseNumber, snapshot *node
 	return nil
 }
 
-func (m *memorySnapshotStorage) ForPulseNumber(pulse insolar.PulseNumber) (*node.Snapshot, error) {
+func (m *MemorySnapshotStorage) ForPulseNumber(pulse insolar.PulseNumber) (*node.Snapshot, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
