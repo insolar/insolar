@@ -145,6 +145,9 @@ func (g *Base) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
 	if err != nil {
 		panic("failed to append pulse:" + err.Error())
 	}
+
+	nodes := g.NodeKeeper.GetAccessor(pu.PulseNumber).GetActiveNodes()
+	inslogger.FromContext(ctx).Infof("--- OnPulseFromConsensus: %d : epoch %d : nodes %d", pu.PulseNumber, pu.EpochPulseNumber, len(nodes))
 }
 
 // UpdateState called then Consensus done
