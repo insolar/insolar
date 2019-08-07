@@ -321,11 +321,11 @@ func (w *TestSagaSimpleCallContract) GetBalance() (int, error) {
 	var bufProxy bytes.Buffer
 	err = parsed.WriteWrapper(&bufProxy, parsed.ContractName())
 	s.Error(err)
-	s.Equal("Semantic error: 'New' can't be a saga because it's a constructor.", err.Error())
+	s.Equal("semantic error: 'New' can't be a saga because it's a constructor", err.Error())
 
 	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
 	s.Error(err)
-	s.Equal("Semantic error: 'New' can't be a saga because it's a constructor.", err.Error())
+	s.Equal("semantic error: 'New' can't be a saga because it's a constructor", err.Error())
 }
 
 // Low-level tests for extractSagaInfoFromComment procedure

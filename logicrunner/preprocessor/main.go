@@ -300,7 +300,7 @@ func (pf *ParsedFile) WriteWrapper(out io.Writer, packageName string) error {
 	functionsInfo := pf.functionInfoForWrapper(pf.constructors[pf.contract])
 	for _, fi := range functionsInfo {
 		if fi["SagaInfo"].(*SagaInfo).IsSaga {
-			return fmt.Errorf("Semantic error: '%s' can't be a saga because it's a constructor.", fi["Name"].(string))
+			return fmt.Errorf("semantic error: '%s' can't be a saga because it's a constructor", fi["Name"].(string))
 		}
 	}
 
@@ -422,7 +422,7 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	constructorProxies := pf.functionInfoForProxy(pf.constructors[pf.contract])
 	for _, fi := range constructorProxies {
 		if fi["SagaInfo"].(*SagaInfo).IsSaga {
-			return fmt.Errorf("Semantic error: '%s' can't be a saga because it's a constructor.", fi["Name"].(string))
+			return fmt.Errorf("semantic error: '%s' can't be a saga because it's a constructor", fi["Name"].(string))
 		}
 	}
 
