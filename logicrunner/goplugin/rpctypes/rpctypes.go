@@ -51,8 +51,8 @@ type DownCallConstructorReq struct {
 
 // DownCallConstructorResp is response from CallConstructor RPC in the runner
 type DownCallConstructorResp struct {
-	Ret              insolar.Arguments
-	ConstructorError string // gob can't serialize `error` thus we are using string here
+	Data []byte
+	Ret  insolar.Arguments
 }
 
 // UpBaseReq  is a base type for all insgorund -> logicrunner requests
@@ -106,8 +106,8 @@ type UpSaveAsChildReq struct {
 
 // UpSaveAsChildResp is a set of arguments for SaveAsChild RPC in goplugin
 type UpSaveAsChildResp struct {
-	Reference        *insolar.Reference
-	ConstructorError string
+	Reference *insolar.Reference
+	Result    insolar.Arguments
 }
 
 // UpDeactivateObjectReq is a set of arguments for DeactivateObject RPC in goplugin

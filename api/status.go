@@ -19,7 +19,6 @@ package api
 import (
 	"context"
 	"net/http"
-	"strconv"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/utils"
@@ -29,7 +28,6 @@ import (
 
 type Node struct {
 	Reference string
-	ShortID   string
 	Role      string
 	IsWorking bool
 }
@@ -72,7 +70,6 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *Statu
 	for i, node := range activeNodes {
 		nodes[i] = Node{
 			Reference: node.ID().String(),
-			ShortID:   strconv.Itoa(int(node.ShortID())),
 			Role:      node.Role().String(),
 			IsWorking: node.GetState() == insolar.NodeReady,
 		}
@@ -82,7 +79,6 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *Statu
 	origin := s.runner.NodeNetwork.GetOrigin()
 	reply.Origin = Node{
 		Reference: origin.ID().String(),
-		ShortID:   strconv.Itoa(int(origin.ShortID())),
 		Role:      origin.Role().String(),
 		IsWorking: origin.GetState() == insolar.NodeReady,
 	}

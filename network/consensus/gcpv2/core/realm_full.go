@@ -425,29 +425,41 @@ func (r *FullRealm) GetLastCloudStateHash() proofs.CloudStateHash {
 	return r.census.GetCloudStateHash()
 }
 
-func (r *FullRealm) CommitAndPreparePulseChange() (bool, <-chan api.UpstreamState) {
+func (r *FullRealm) getUpstreamReport() api.UpstreamReport {
 	if !r.pulseData.PulseNumber.IsTimePulse() {
 		panic("pulse number was not set")
 	}
 
 	sp := r.GetSelf().GetProfile()
-	report := api.UpstreamReport{
+	return api.UpstreamReport{
 		PulseNumber: r.pulseData.PulseNumber,
 		MemberPower: sp.GetDeclaredPower(),
 		MemberMode:  sp.GetOpMode(),
 		IsJoiner:    sp.IsJoiner(),
 		//IsEphemeral: false,
 	}
+}
+
+func (r *FullRealm) PreparePulseChange() (bool, <-chan api.UpstreamState) {
+	report := r.getUpstreamReport()
 
 	if r.IsLocalStateful() {
-		r.stateMachine.CommitPulseChange(report, r.pulseData, r.census)
+		inslogger.FromContext(r.roundContext).Warnf("PreparePulseChange: self=%s, eph=%v", r.self, r.populationHook.GetEphemeralMode())
 		ch := make(chan api.UpstreamState, 1)
 		r.stateMachine.PreparePulseChange(report, ch)
 		return true, ch
 	}
 
+	inslogger.FromContext(r.roundContext).Warnf("PrepareAndCommitStatelessPulseChange: self=%s, eph=%v", r.self, r.populationHook.GetEphemeralMode())
 	r.stateMachine.CommitPulseChangeByStateless(report, r.pulseData, r.census)
 	return false, nil
+}
+
+func (r *FullRealm) CommitPulseChange() {
+	report := r.getUpstreamReport()
+	inslogger.FromContext(r.roundContext).Warnf("CommitPulseChange: self=%s", r.self)
+
+	r.stateMachine.CommitPulseChange(report, r.pulseData, r.census)
 }
 
 func (r *FullRealm) GetTimings() api.RoundTimings {
@@ -466,7 +478,7 @@ func (r *FullRealm) IsLocalStateful() bool {
 	return r.self.IsStateful()
 }
 
-func (r *FullRealm) ApplyLocalState(nsh proofs.NodeStateHash) {
+func (r *FullRealm) ApplyLocalState(nsh proofs.NodeStateHash) bool {
 
 	if (nsh == nil) == r.IsLocalStateful() {
 		panic("illegal value")
@@ -490,7 +502,7 @@ func (r *FullRealm) ApplyLocalState(nsh proofs.NodeStateHash) {
 
 	// TODO Hack! MUST provide announcement hash
 
-	r.self.SetLocalNodeState(ma)
+	return r.self.SetLocalNodeState(ma)
 }
 
 func (r *FullRealm) buildLocalMemberAnnouncementDraft(mp profiles.MembershipProfile) profiles.MemberAnnouncement {

@@ -11,13 +11,15 @@ func _() {
 	_ = x[NoNetworkState-0]
 	_ = x[JoinerBootstrap-1]
 	_ = x[WaitConsensus-2]
-	_ = x[WaitMinRoles-3]
-	_ = x[CompleteNetworkState-4]
+	_ = x[WaitMajority-3]
+	_ = x[WaitMinRoles-4]
+	_ = x[WaitInitialPulse-5]
+	_ = x[CompleteNetworkState-6]
 }
 
-const _NetworkState_name = "NoNetworkStateJoinerBootstrapWaitConsensusWaitMinRolesCompleteNetworkState"
+const _NetworkState_name = "NoNetworkStateJoinerBootstrapWaitConsensusWaitMajorityWaitMinRolesWaitInitialPulseCompleteNetworkState"
 
-var _NetworkState_index = [...]uint8{0, 14, 29, 42, 54, 74}
+var _NetworkState_index = [...]uint8{0, 14, 29, 42, 54, 66, 82, 102}
 
 func (i NetworkState) String() string {
 	if i < 0 || i >= NetworkState(len(_NetworkState_index)-1) {

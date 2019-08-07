@@ -72,7 +72,7 @@ func (g *WaitConsensus) Run(ctx context.Context) {
 	case <-time.After(g.bootstrapETA):
 		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState)
 	case <-g.consensusFinished:
-		g.Gatewayer.SwitchState(ctx, insolar.WaitMinRoles)
+		g.Gatewayer.SwitchState(ctx, insolar.WaitMajority)
 	}
 }
 

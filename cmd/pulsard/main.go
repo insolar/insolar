@@ -25,6 +25,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
@@ -185,7 +186,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*componen
 func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pulsar) (pulseTicker *time.Ticker, refreshTicker *time.Ticker) {
 	server.CheckConnectionsToPulsars(ctx)
 
-	nextPulseNumber := insolar.CalculatePulseNumber(time.Now())
+	nextPulseNumber := insolar.PulseNumber(pulse.OfNow())
 
 	err := server.StartConsensusProcess(ctx, nextPulseNumber)
 	if err != nil {

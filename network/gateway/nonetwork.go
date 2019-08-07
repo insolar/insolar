@@ -77,13 +77,8 @@ func (g *NoNetwork) Run(ctx context.Context) {
 
 	g.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{origin})
 
-	if origin.Role() != insolar.StaticRoleHeavyMaterial {
-		t := time.Second //time.Duration(rand.Intn(10))
-		<-time.After(t)
-	}
-
 	if len(discoveryNodes) == 0 {
-		inslogger.FromContext(ctx).Warn("[ Bootstrap ] No discovery nodes found in certificate")
+		inslogger.FromContext(ctx).Warn("No discovery nodes found in certificate")
 		return
 	}
 
@@ -99,7 +94,8 @@ func (g *NoNetwork) Run(ctx context.Context) {
 		return
 	}
 
-	g.Gatewayer.SwitchState(ctx, insolar.WaitMinRoles)
+	g.bootstrapETA = time.Minute // TODO: move to config
+	g.Gatewayer.SwitchState(ctx, insolar.WaitConsensus)
 }
 
 func (g *NoNetwork) GetState() insolar.NetworkState {

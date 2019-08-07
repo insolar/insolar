@@ -23,6 +23,8 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/insolar/go-actors/actor/system"
+
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -69,6 +71,7 @@ type LogicRunner struct {
 	SenderWithRetry            *bus.WaitOKSender
 	StateStorage               StateStorage
 	ResultsMatcher             ResultMatcher
+	OutgoingSender             OutgoingRequestSender
 	WriteController            *writecontroller.WriteController
 
 	Cfg *configuration.LogicRunner
@@ -94,7 +97,6 @@ func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publi
 		Cfg:             cfg,
 		Publisher:       publisher,
 		Sender:          sender,
-		SenderWithRetry: bus.NewWaitOKWithRetrySender(sender, 3),
 	}
 
 	res.ResultsMatcher = newResultsMatcher(&res)
@@ -104,6 +106,9 @@ func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publi
 func (lr *LogicRunner) LRI() {}
 
 func (lr *LogicRunner) Init(ctx context.Context) error {
+	as := system.New()
+	lr.OutgoingSender = NewOutgoingRequestSender(as, lr.ContractRequester, lr.ArtifactManager)
+
 	lr.StateStorage = NewStateStorage(
 		lr.Publisher,
 		lr.RequestsExecutor,
@@ -111,9 +116,13 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 		lr.JetCoordinator,
 		lr.PulseAccessor,
 		lr.ArtifactManager,
+		lr.OutgoingSender,
 	)
+
+	lr.SenderWithRetry = bus.NewWaitOKWithRetrySender(lr.Sender, lr.PulseAccessor, 3)
+
 	lr.rpc = lrCommon.NewRPC(
-		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage),
+		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage, lr.OutgoingSender),
 		lr.Cfg,
 	)
 
@@ -137,6 +146,7 @@ func (lr *LogicRunner) initHandlers() {
 		Sender:         lr.Sender,
 		JetStorage:     lr.JetStorage,
 		WriteAccessor:  lr.WriteController,
+		OutgoingSender: lr.OutgoingSender,
 	}
 
 	initHandle := func(msg *watermillMsg.Message) *Init {
@@ -176,7 +186,7 @@ func (lr *LogicRunner) initHandlers() {
 func (lr *LogicRunner) initializeBuiltin(_ context.Context) error {
 	bi := builtin.NewBuiltIn(
 		lr.ArtifactManager,
-		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage),
+		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage, lr.OutgoingSender),
 	)
 	if err := lr.MachinesManager.RegisterExecutor(insolar.MachineTypeBuiltin, bi); err != nil {
 		return err
@@ -270,9 +280,6 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newP
 	lr.ResultsMatcher.Clear()
 
 	messages := lr.StateStorage.OnPulse(ctx, newPulse)
-
-	lr.FlowDispatcher.ChangePulse(ctx, newPulse)
-	lr.InnerFlowDispatcher.ChangePulse(ctx, newPulse)
 
 	err = lr.WriteController.Open(ctx, newPulse.PulseNumber)
 	if err != nil {

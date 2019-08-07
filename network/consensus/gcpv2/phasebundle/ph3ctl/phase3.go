@@ -137,8 +137,8 @@ func (c *Phase3PacketDispatcher) DispatchMemberPacket(ctx context.Context, reade
 	// TODO validations
 
 	iv := c.ctl.getInspector().InspectVector(ctx, n, c.customOptions, statevector.NewVector(p3.GetBitset(),
-		statevector.NewSubVector(p3.GetTrustedGlobulaAnnouncementHash(), p3.GetTrustedGlobulaStateSignature(), p3.GetTrustedExpectedRank()),
-		statevector.NewSubVector(p3.GetDoubtedGlobulaAnnouncementHash(), p3.GetDoubtedGlobulaStateSignature(), p3.GetDoubtedExpectedRank())))
+		statevector.NewSubVector(p3.GetTrustedGlobulaAnnouncementHash(), p3.GetTrustedGlobulaStateSignature(), nil, p3.GetTrustedExpectedRank()),
+		statevector.NewSubVector(p3.GetDoubtedGlobulaAnnouncementHash(), p3.GetDoubtedGlobulaStateSignature(), nil, p3.GetDoubtedExpectedRank())))
 
 	if iv == nil || iv.HasSenderFault() {
 		return n.RegisterFraud(n.Frauds().NewMismatchedMembershipRank(n.GetProfile(), n.GetNodeMembershipProfileOrEmpty()))
@@ -186,6 +186,7 @@ func (c *Phase3Controller) workerPhase3(ctx context.Context) {
 	if !c.R.IsJoiner() {
 		// joiner has no vote in consensus, hence there is no reason to send Phase3 from it
 		localHashedVector := localInspector.CreateVector(c.R.GetSigner())
+		inslogger.FromContext(ctx).Debugf(">>>>workerPhase3: calculated local vectors: %+v", localHashedVector)
 		go c.workerSendPhase3(ctx, localHashedVector)
 	}
 
@@ -425,7 +426,7 @@ func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, localInspector 
 		processedNodesFlawlessly++
 	}
 
-	population := c.R.GetPopulation()
+	pop := c.R.GetPopulation()
 
 	// TODO detect nodes produced similar bitmaps, but different GSH
 	// even if we wont have all NSH, we can let to know these nodes on such collision
@@ -438,7 +439,7 @@ func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, localInspector 
 
 outer:
 	for {
-		popCount, popCompleteness := population.GetCountAndCompleteness(false)
+		popCount, popCompleteness := pop.GetCountAndCompleteness(false)
 		/* if popCount > processedNodesFlawlessly // try to improve something */
 
 		if popCompleteness && popCount <= verifiedStatTbl.RowCount() {
@@ -503,7 +504,7 @@ outer:
 
 				nodeStats, vr := d.GetInspectionResults()
 				if log.Is(insolar.DebugLevel) {
-					popLimit, popSealed := population.GetSealedCapacity()
+					popLimit, popSealed := pop.GetSealedCapacity()
 					remains := popLimit - originalStatTbl.RowCount() - 1
 
 					logMsg := "validated"
@@ -583,7 +584,7 @@ outer:
 
 	if log.Is(insolar.DebugLevel) {
 
-		limit, sealed := population.GetSealedCapacity()
+		limit, sealed := pop.GetSealedCapacity()
 		limitStr := ""
 		if sealed {
 			limitStr = fmt.Sprintf("%d", limit)
@@ -591,7 +592,7 @@ outer:
 			limitStr = fmt.Sprintf("%d+", limit)
 		}
 		tblHeader := fmt.Sprintf("%%sConsensus Node View (%%s): ID=%v Members=%d/%s Joiners=%d",
-			c.R.GetSelfNodeID(), population.GetIndexedCount(), limitStr, population.GetJoinersCount())
+			c.R.GetSelfNodeID(), pop.GetIndexedCount(), limitStr, pop.GetJoinersCount())
 		typeHeader := "Original, Verified"
 		prev := ""
 		if !originalStatTbl.EqualsTyped(&verifiedStatTbl) {

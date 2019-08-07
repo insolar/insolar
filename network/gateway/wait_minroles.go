@@ -53,10 +53,10 @@ package gateway
 import (
 	"context"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/rules"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/rules"
 )
 
 func newWaitMinRoles(b *Base) *WaitMinRoles {
@@ -87,6 +87,6 @@ func (g *WaitMinRoles) OnConsensusFinished(ctx context.Context, report network.R
 
 func (g *WaitMinRoles) checkMinRoles(ctx context.Context, number insolar.PulseNumber) {
 	if rules.CheckMinRole(g.CertificateManager.GetCertificate(), g.NodeKeeper.GetAccessor(number).GetWorkingNodes()) {
-		g.Gatewayer.SwitchState(ctx, insolar.CompleteNetworkState)
+		g.Gatewayer.SwitchState(ctx, insolar.WaitInitialPulse)
 	}
 }

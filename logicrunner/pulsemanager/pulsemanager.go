@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -43,6 +44,9 @@ type PulseManager struct {
 	PulseAccessor pulse.Accessor            `inject:""`
 	PulseAppender pulse.Appender            `inject:""`
 	JetModifier   jet.Modifier              `inject:""`
+
+	FlowDispatcher      *dispatcher.Dispatcher
+	InnerFlowDispatcher *dispatcher.Dispatcher
 
 	currentPulse insolar.Pulse
 
@@ -91,6 +95,9 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		return err
 	}
 
+	m.FlowDispatcher.BeginPulse(ctx, newPulse)
+	m.InnerFlowDispatcher.BeginPulse(ctx, newPulse)
+
 	return nil
 }
 
@@ -130,6 +137,9 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to clone jet.Tree fromPulse=%v toPulse=%v", storagePulse.PulseNumber, newPulse.PulseNumber)
 	}
+
+	m.InnerFlowDispatcher.ClosePulse(ctx, storagePulse)
+	m.FlowDispatcher.ClosePulse(ctx, storagePulse)
 
 	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
 		return nil, errors.Wrap(err, "call of AddPulse failed")

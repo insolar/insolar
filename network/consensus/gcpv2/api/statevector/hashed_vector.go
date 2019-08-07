@@ -71,6 +71,7 @@ type StateWithRank struct {
 type SubVector struct {
 	AnnouncementHash proofs.GlobulaAnnouncementHash
 	StateWithRank
+	DebugHash cryptkit.DigestHolder // TODO remove
 }
 
 func NewVector(bitset member.StateBitset, trusted SubVector, doubted SubVector) Vector {
@@ -78,10 +79,15 @@ func NewVector(bitset member.StateBitset, trusted SubVector, doubted SubVector) 
 	return Vector{bitset, trusted, doubted}
 }
 
-func NewSubVector(announcementHash proofs.GlobulaAnnouncementHash, stateSignature proofs.GlobulaStateSignature,
+func NewSubVector(announcementHash proofs.GlobulaAnnouncementHash,
+	stateVectorSignature proofs.GlobulaStateSignature, stateVectorHash cryptkit.DigestHolder,
 	expectedRank member.Rank) SubVector {
 
-	return SubVector{announcementHash, StateWithRank{stateSignature, expectedRank}}
+	return SubVector{
+		announcementHash,
+		StateWithRank{stateVectorSignature, expectedRank},
+		stateVectorHash,
+	}
 }
 
 type CalcVector struct {
@@ -97,7 +103,10 @@ type CalcSubVector struct {
 }
 
 func (v *CalcSubVector) Sign(signer cryptkit.DigestSigner) SubVector {
-	return SubVector{v.AnnouncementHash, v.CalcStateWithRank.Sign(signer)}
+	return SubVector{v.AnnouncementHash,
+		v.CalcStateWithRank.Sign(signer),
+		v.StateHash,
+	}
 }
 
 type CalcStateWithRank struct {

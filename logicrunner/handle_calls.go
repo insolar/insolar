@@ -172,7 +172,7 @@ func (h *HandleCall) handleActual(
 	} else {
 		pendingState := insolar.PendingUnknown
 		archive := h.dep.StateStorage.GetExecutionArchive(*objRef)
-		if !archive.IsEmpty() {
+		if archive != nil && !archive.IsEmpty() {
 			pendingState = insolar.InPending
 		}
 

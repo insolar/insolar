@@ -267,7 +267,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	n.initConsensus()
 	n.Gatewayer.Gateway().Run(ctx)
 
-	for n.Gatewayer.Gateway().GetState() < insolar.WaitMinRoles {
+	for n.Gatewayer.Gateway().GetState() < insolar.CompleteNetworkState {
 		inslogger.FromContext(ctx).Info("-=-=-= Waiting for network starts..")
 		<-time.After(time.Millisecond * 500)
 	}
