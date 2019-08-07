@@ -240,7 +240,7 @@ func TestHandleCall_Present(t *testing.T) {
 				Publisher: nil,
 				StateStorage: NewStateStorageMock(mc).
 					GetExecutionArchiveMock.Expect(objRef).Return(
-					NewExecutionArchiveMock(mc).FindRequestLoopMock.Return(false).IsEmptyMock.Return(true),
+					NewExecutionArchiveMock(mc).FindRequestLoopMock.Return(false),
 				),
 				ResultsMatcher: nil,
 				lr: &LogicRunner{

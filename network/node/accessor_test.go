@@ -85,10 +85,3 @@ func TestAccessor(t *testing.T) {
 	assert.NotNil(t, accessor.GetActiveNodeByShortID(11))
 	assert.Nil(t, accessor.GetActiveNodeByShortID(12))
 }
-
-func Test_dynamicToStaticRole(t *testing.T) {
-	assert.Equal(t, insolar.StaticRoleVirtual, dynamicToStaticRole(insolar.DynamicRoleVirtualExecutor))
-	assert.Equal(t, insolar.StaticRoleLightMaterial, dynamicToStaticRole(insolar.DynamicRoleLightExecutor))
-	assert.Equal(t, insolar.StaticRoleHeavyMaterial, dynamicToStaticRole(insolar.DynamicRoleHeavyExecutor))
-	assert.Equal(t, insolar.StaticRoleUnknown, dynamicToStaticRole(150))
-}
