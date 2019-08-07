@@ -18,6 +18,7 @@ package api
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
@@ -180,6 +181,20 @@ func TestSignatureParser(t *testing.T) {
 	validSignature := `keyId="member-pub-key", algorithm="ecdsa", headers="digest", signature=bar`
 	_, err = parseSignature(validSignature)
 	require.NoError(t, err)
+}
+
+func TestValidateRequestHeaders(t *testing.T) {
+	body := []byte("foobar")
+	h := sha256.New()
+	_, err := h.Write(body)
+	require.NoError(t, err)
+
+	digest := h.Sum(nil)
+	calculatedDigest := `SHA-256=` + base64.URLEncoding.EncodeToString(digest)
+	signature := `keyId="member-pub-key", algorithm="ecdsa", headers="digest", signature=bar`
+	sig, err := validateRequestHeaders(calculatedDigest, signature, body)
+	require.NoError(t, err)
+	require.Equal(t, "bar", sig)
 }
 
 func (suite *TimeoutSuite) BeforeTest(suiteName, testName string) {
