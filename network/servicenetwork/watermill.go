@@ -3,6 +3,7 @@ package servicenetwork
 import (
 	"bytes"
 	"context"
+
 	"github.com/insolar/insolar/instrumentation/instracer"
 
 	"github.com/ThreeDotsLabs/watermill/message"

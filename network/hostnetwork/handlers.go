@@ -52,8 +52,9 @@ package hostnetwork
 
 import (
 	"context"
-	"github.com/insolar/insolar/network"
 	"io"
+
+	"github.com/insolar/insolar/network"
 
 	"github.com/pkg/errors"
 
@@ -110,7 +111,7 @@ func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader
 				return
 			}
 
-			mainLogger.Error("[ HandleStream ] Failed to deserialize packet: ", err.Error())
+			mainLogger.Warnf("[ HandleStream ] Failed to deserialize packet: ", err.Error())
 		} else {
 			packetCtx, logger := inslogger.WithTraceField(packetCtx, p.TraceID)
 			span, err := instracer.Deserialize(p.TraceSpanData)

@@ -52,6 +52,7 @@ package controller
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -91,7 +92,7 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Rec
 	p := *pulse.FromProto(data.Pulse)
 	err := pc.verifyPulseSign(p)
 	if err != nil {
-		logger.Error("[ pulseController ] processPulse: failed to verify p: ", err.Error())
+		logger.Error("processPulse: failed to verify p: ", err.Error())
 		return nil, errors.Wrap(err, "[ pulseController ] processPulse: failed to verify pulse")
 	}
 

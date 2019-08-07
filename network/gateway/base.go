@@ -65,7 +65,7 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/instrumentation/inslogger" // TODO remove before merge
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/gateway/bootstrap"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
@@ -149,7 +149,7 @@ func (g *Base) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
 	}
 
 	nodes := g.NodeKeeper.GetAccessor(pu.PulseNumber).GetActiveNodes()
-	inslogger.FromContext(ctx).Infof("--- OnPulseFromConsensus: %d : epoch %d : nodes %d", pu.PulseNumber, pu.EpochPulseNumber, len(nodes))
+	inslogger.FromContext(ctx).Debugf("OnPulseFromConsensus: %d : epoch %d : nodes %d", pu.PulseNumber, pu.EpochPulseNumber, len(nodes))
 }
 
 // UpdateState called then Consensus done
@@ -210,7 +210,7 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 
 	err := bootstrap.ValidatePermit(data.Permit, g.CertificateManager.GetCertificate(), g.CryptographyService)
 	if err != nil {
-		inslogger.FromContext(ctx).Errorf("Rejected bootstrap request from node %s: %s", request.GetSender(), err.Error())
+		inslogger.FromContext(ctx).Warnf("Rejected bootstrap request from node %s: %s", request.GetSender(), err.Error())
 		return g.HostNetwork.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.Reject}), nil
 	}
 
@@ -278,14 +278,14 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.R
 	reconnectHost, err := host.NewHostNS(o.Address(), o.ID(), o.ShortID())
 	if err != nil {
 		err = errors.Wrap(err, "Failed to get reconnectHost")
-		inslogger.FromContext(ctx).Error(err.Error())
+		inslogger.FromContext(ctx).Warn(err.Error())
 		return nil, err
 	}
 
 	pubKey, err := g.KeyProcessor.ExportPublicKeyPEM(o.PublicKey())
 	if err != nil {
 		err = errors.Wrap(err, "Failed to export public key")
-		inslogger.FromContext(ctx).Error(err.Error())
+		inslogger.FromContext(ctx).Warn(err.Error())
 		return nil, err
 	}
 
@@ -314,7 +314,6 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.R
 }
 
 func (g *Base) HandleUpdateSchedule(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
-	//storage.NewSnapshotStorage()
 	// TODO:
 	return g.HostNetwork.BuildResponse(ctx, request, &packet.UpdateScheduleResponse{}), nil
 }

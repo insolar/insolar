@@ -169,7 +169,7 @@ func IsDiscovery(nodeID insolar.Reference, cert insolar.Certificate) bool {
 func CloseVerbose(closer io.Closer) {
 	err := closer.Close()
 	if err != nil {
-		log.Errorf("[ CloseVerbose ] Failed to close: %s", err.Error())
+		log.Warnf("[ CloseVerbose ] Failed to close: %s", err.Error())
 	}
 }
 
