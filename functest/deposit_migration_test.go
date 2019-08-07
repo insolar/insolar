@@ -28,18 +28,8 @@ import (
 )
 
 func TestMigrationToken(t *testing.T) {
-	member, err := newUserWithKeys()
-	require.NoError(t, err)
-	member.ref = root.ref
-
 	migrationAddress := testutils.RandomString()
-	_, err = signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
-
-	result, err := signedRequest(t, member, "member.migrationCreate", nil)
-	require.NoError(t, err)
-	ref, ok := result.(map[string]interface{})["reference"].(string)
-	require.True(t, ok)
-	member.ref = ref
+	member := createMigrationMemberForMA(t, migrationAddress)
 
 	deposit := migrate(t, member.ref, "1000", "Test_TxHash", migrationAddress, 0)
 
@@ -64,13 +54,8 @@ func TestMigrationToken(t *testing.T) {
 }
 
 func TestMigrationTokenOnDifferentDeposits(t *testing.T) {
-	member, err := newUserWithKeys()
-	require.NoError(t, err)
-	migrationAddress := generateMigrationAddress()
-	_, err = signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
-	require.NoError(t, err)
-	_, err = signedRequest(t, member, "member.migrationCreate", nil)
-	require.NoError(t, err)
+	migrationAddress := testutils.RandomString()
+	member := createMigrationMemberForMA(t, migrationAddress)
 
 	deposit := migrate(t, member.ref, "1000", "Test_TxHash1", migrationAddress, 1)
 
@@ -95,8 +80,7 @@ func TestMigrationTokenNotInTheList(t *testing.T) {
 
 func TestMigrationTokenZeroAmount(t *testing.T) {
 	migrationAddress := generateMigrationAddress()
-	err := createMemberWithMigrationAddress(t, migrationAddress)
-	require.NoError(t, err)
+	_ = createMigrationMemberForMA(t, migrationAddress)
 
 	result, err := signedRequestWithEmptyRequestRef(t,
 		&migrationDaemons[0],
@@ -110,8 +94,7 @@ func TestMigrationTokenZeroAmount(t *testing.T) {
 
 func TestMigrationTokenMistakeField(t *testing.T) {
 	migrationAddress := generateMigrationAddress()
-	err := createMemberWithMigrationAddress(t, migrationAddress)
-	require.NoError(t, err)
+	_ = createMigrationMemberForMA(t, migrationAddress)
 
 	result, err := signedRequestWithEmptyRequestRef(t,
 		&migrationDaemons[0],
@@ -123,8 +106,7 @@ func TestMigrationTokenMistakeField(t *testing.T) {
 
 func TestMigrationTokenNilValue(t *testing.T) {
 	migrationAddress := generateMigrationAddress()
-	err := createMemberWithMigrationAddress(t, migrationAddress)
-	require.NoError(t, err)
+	_ = createMigrationMemberForMA(t, migrationAddress)
 
 	result, err := signedRequestWithEmptyRequestRef(t, &migrationDaemons[0], "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": nil, "migrationAddress": migrationAddress})
 	require.Contains(t, err.Error(), "failed to get 'ethTxHash' param")
@@ -134,8 +116,7 @@ func TestMigrationTokenNilValue(t *testing.T) {
 
 func TestMigrationTokenMaxAmount(t *testing.T) {
 	migrationAddress := generateMigrationAddress()
-	err := createMemberWithMigrationAddress(t, migrationAddress)
-	require.NoError(t, err)
+	_ = createMigrationMemberForMA(t, migrationAddress)
 
 	result, err := signedRequest(t,
 		&migrationDaemons[0],
@@ -147,8 +128,7 @@ func TestMigrationTokenMaxAmount(t *testing.T) {
 
 func TestMigrationDoubleMigrationFromSameDaemon(t *testing.T) {
 	migrationAddress := generateMigrationAddress()
-	err := createMemberWithMigrationAddress(t, migrationAddress)
-	require.NoError(t, err)
+	_ = createMigrationMemberForMA(t, migrationAddress)
 
 	resultMigr1, err := signedRequest(t,
 		&migrationDaemons[0], "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
@@ -164,8 +144,7 @@ func TestMigrationDoubleMigrationFromSameDaemon(t *testing.T) {
 
 func TestMigrationAnotherAmountSameTx(t *testing.T) {
 	migrationAddress := generateMigrationAddress()
-	err := createMemberWithMigrationAddress(t, migrationAddress)
-	require.NoError(t, err)
+	_ = createMigrationMemberForMA(t, migrationAddress)
 
 	resultMigr1, err := signedRequest(t,
 		&migrationDaemons[0], "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})

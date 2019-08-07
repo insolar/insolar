@@ -118,12 +118,18 @@ func createMember(t *testing.T) *user {
 }
 
 func createMigrationMember(t *testing.T) *user {
+	migrationAddress := testutils.RandomString()
+
+	return createMigrationMemberForMA(t, migrationAddress)
+}
+
+func createMigrationMemberForMA(t *testing.T, ma string) *user {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.ref = root.ref
 
-	migrationAddress := testutils.RandomString()
-	_, err = signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
+	_, err = signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ma}})
+	require.NoError(t, err)
 
 	result, err := signedRequest(t, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
@@ -131,6 +137,7 @@ func createMigrationMember(t *testing.T) *user {
 	require.True(t, ok)
 	member.ref = ref
 	return member
+
 }
 
 func addBurnAddress(t *testing.T) {
@@ -214,25 +221,6 @@ func unmarshalRPCResponse(t testing.TB, body []byte, response RPCResponseInterfa
 func unmarshalCallResponse(t testing.TB, body []byte, response *requester.ContractAnswer) {
 	err := json.Unmarshal(body, &response)
 	require.NoError(t, err)
-}
-
-func createMemberWithMigrationAddress(t *testing.T, migrationAddress string) error {
-	member, err := newUserWithKeys()
-	if err != nil {
-		return err
-	}
-
-	_, err = signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
-	if err != nil {
-		return err
-	}
-
-	_, err = signedRequest(t, member, "member.migrationCreate", nil)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func migrate(t *testing.T, memberRef string, amount string, tx string, ma string, mdNum int) map[string]interface{} {
