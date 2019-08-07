@@ -873,24 +873,19 @@ func (r *One) Recursive() (error) {
 	protoRef := uploadContractOnce(t, "recursive_call_one", contractOneCode)
 
 	// for now Recursive calls may cause timeouts. Dont remove retries until we make new loop detection algorithm
+	var err string
 	for i := 0; i <= 5; i++ {
 		obj := callConstructor(t, protoRef, "New")
 		resp := callMethodNoChecks(t, obj, "Recursive")
 
-		errstr := resp.Error.Error()
-		if errstr != "" {
-			if strings.Contains(errstr, "loop detected") {
-				return
-			}
-			if strings.Contains(errstr, "timeout") {
-				continue
-			} else {
-				require.Fail(t, "Unexpected error: "+errstr)
-			}
+		err = resp.Error.Error()
+		if !strings.Contains(err, "timeout") {
+			break
 		}
 	}
 
-	require.Fail(t, "loop detection is broken, all requests failed with timeout")
+	require.NotEmpty(t, err)
+	require.Contains(t, err, "loop detected")
 }
 
 func TestGetParent(t *testing.T) {
