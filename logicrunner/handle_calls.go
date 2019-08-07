@@ -19,6 +19,7 @@ package logicrunner
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar"
@@ -30,7 +31,6 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/pkg/errors"
 )
 
 type HandleCall struct {
@@ -149,7 +149,6 @@ func (h *HandleCall) handleActual(
 	requestRef := procRegisterRequest.getResult()
 
 	ctx, logger := inslogger.WithField(ctx, "request", requestRef.String())
-
 	logger.Debug("registered request")
 
 	objRef := request.Object

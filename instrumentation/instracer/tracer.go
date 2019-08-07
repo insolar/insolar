@@ -79,7 +79,6 @@ func GetBaggage(ctx context.Context) []Entry {
 
 // StartSpan starts span with stored baggage and with parent span if find in context.
 func StartSpan(ctx context.Context, name string, o ...trace.StartOption) (context.Context, *trace.Span) {
-
 	parentSpan, haveParent := ParentSpan(ctx)
 	var (
 		spanctx context.Context

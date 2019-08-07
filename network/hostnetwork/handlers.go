@@ -54,17 +54,15 @@ import (
 	"context"
 	"io"
 
-	"github.com/insolar/insolar/network/utils"
-
-	"github.com/insolar/insolar/instrumentation/instracer"
-
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/hostnetwork/future"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/pool"
+	"github.com/insolar/insolar/network/utils"
 )
 
 // RequestHandler is callback function for request handling

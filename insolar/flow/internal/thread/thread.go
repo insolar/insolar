@@ -68,7 +68,6 @@ func (f *Thread) Procedure(ctx context.Context, proc flow.Procedure, cancel bool
 	}
 
 	ctx, cl := context.WithCancel(ctx)
-
 	res := f.procedure(ctx, proc)
 	select {
 	case <-f.cancel:

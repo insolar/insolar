@@ -55,12 +55,11 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/insolar/insolar/instrumentation/instracer"
-
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
