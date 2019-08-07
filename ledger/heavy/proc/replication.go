@@ -44,6 +44,7 @@ type Replication struct {
 		indexes          object.IndexModifier
 		pcs              insolar.PlatformCryptographyScheme
 		pulses           pulse.Accessor
+		pulseCalculator  pulse.Calculator
 		drops            drop.Modifier
 		jets             jet.Modifier
 		keeper           executor.JetKeeper
@@ -64,6 +65,7 @@ func (p *Replication) Dep(
 	recordsPositions object.RecordPositionModifier,
 	pcs insolar.PlatformCryptographyScheme,
 	pulses pulse.Accessor,
+	pulseCalculator pulse.Calculator,
 	drops drop.Modifier,
 	jets jet.Modifier,
 	keeper executor.JetKeeper,
@@ -74,6 +76,7 @@ func (p *Replication) Dep(
 	p.dep.recordsPositions = recordsPositions
 	p.dep.pcs = pcs
 	p.dep.pulses = pulses
+	p.dep.pulseCalculator = pulseCalculator
 	p.dep.drops = drops
 	p.dep.jets = jets
 	p.dep.keeper = keeper
@@ -105,7 +108,7 @@ func (p *Replication) Proceed(ctx context.Context) error {
 		return errors.Wrapf(err, "failed to add jet to JetKeeper jet=%v", dr.JetID.DebugString())
 	}
 
-	FinalizePulse(ctx, p.dep.backuper, jetKeeper, dr.Pulse)
+	FinalizePulse(ctx, p.dep.pulseCalculator, p.dep.backuper, jetKeeper, dr.Pulse)
 
 	stats.Record(ctx,
 		statReceivedHeavyPayloadCount.M(1),
@@ -184,33 +187,51 @@ func storeRecords(
 }
 
 // FinalizePulse starts backup process if needed
-func FinalizePulse(ctx context.Context, backuper executor.BackupMaker, jetKeeper executor.JetKeeper, pulse insolar.PulseNumber) {
+func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper executor.BackupMaker, jetKeeper executor.JetKeeper, newPulse insolar.PulseNumber) {
 	logger := inslogger.FromContext(ctx)
-	if !jetKeeper.HasAllJetConfirms(ctx, pulse) {
+	if !jetKeeper.HasAllJetConfirms(ctx, newPulse) {
 		logger.Debug("not all jets confirmed. Do nothing")
 		return
 	}
+
+	nextTop, err := pulses.Forwards(ctx, jetKeeper.TopSyncPulse(), 1)
+	if err != nil {
+		logger.Warn("Can't get next pulse for topSynk: ", jetKeeper.TopSyncPulse())
+		return
+	}
+
+	if !nextTop.PulseNumber.Equal(newPulse) {
+		logger.Infof("Try to finalize not sequential pulse. Skip it. newTop: %d, target: %d", nextTop, newPulse)
+		return
+	}
+
 	go func() {
 		logger.Debug("FinalizePulse starts")
-		bkpError := backuper.Do(ctx, pulse)
+		bkpError := backuper.Do(ctx, newPulse)
 		if bkpError != nil && bkpError != executor.ErrAlreadyDone && bkpError != executor.ErrBackupDisabled {
 			logger.Fatalf("Can't do backup: ", bkpError)
 		}
 
 		if bkpError == executor.ErrAlreadyDone {
-			logger.Info("Pulse already backuped: ", pulse, bkpError)
+			logger.Info("Pulse already backuped: ", newPulse, bkpError)
 			return
 		}
 
-		err := jetKeeper.AddBackupConfirmation(ctx, pulse)
+		err := jetKeeper.AddBackupConfirmation(ctx, newPulse)
 		if err != nil {
 			logger.Fatalf("Can't add backup confirmation: ", err)
 		}
 
-		if bkpError == executor.ErrBackupDisabled {
+		inslogger.FromContext(ctx).Infof("Pulse %d completely finalized ( drops + hots + backup )", newPulse)
+
+		nextTop, err := pulses.Forwards(ctx, jetKeeper.TopSyncPulse(), 1)
+		if err != nil && err != pulse.ErrNotFound {
+			logger.Fatal("pulses.Forwards topSynk: ", jetKeeper.TopSyncPulse())
+		}
+		if err == pulse.ErrNotFound {
+			logger.Info("Stop propagating of backups")
 			return
 		}
-
-		inslogger.FromContext(ctx).Infof("Pulse %d completely finalized ( drops + hots + backup )", pulse)
+		go FinalizePulse(ctx, pulses, backuper, jetKeeper, nextTop.PulseNumber)
 	}()
 }

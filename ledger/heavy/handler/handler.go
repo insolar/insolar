@@ -95,6 +95,7 @@ func New(cfg configuration.Ledger) *Handler {
 				h.RecordPositions,
 				h.PCS,
 				h.PulseAccessor,
+				h.PulseCalculator,
 				h.DropModifier,
 				h.JetModifier,
 				h.JetKeeper,
@@ -309,5 +310,5 @@ func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Met
 		logger.Error(errors.Wrapf(err, "failed to add hot confitmation to JetKeeper jet=%v", confirm.String()))
 	}
 
-	proc.FinalizePulse(ctx, h.BackupMaker, h.JetKeeper, confirm.Pulse)
+	proc.FinalizePulse(ctx, h.PulseCalculator, h.BackupMaker, h.JetKeeper, confirm.Pulse)
 }
