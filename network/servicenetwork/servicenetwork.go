@@ -163,11 +163,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		}
 	})
 
-	// db, err := storage.NewBadgerDB(n.cfg.Service)
-	// if err != nil {
-	// 	return errors.Wrap(err, "failed to create BadgerDB")
-	// }
-
 	pulseStorage := storage.NewMemoryPulseStorage()
 	table := &routing.Table{}
 
@@ -186,13 +181,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		n.BaseGateway,
 		n.Gatewayer,
 	)
-
-	// n.PulseAccessor = pulseStorage
-	// n.PulseAppender = pulseStorage
-	//
-	// n.BaseGateway.PulseAppender = pulseStorage
-	// n.BaseGateway.PulseAccessor = pulseStorage
-	// table.PulseAccessor = pulseStorage
 
 	n.datagramHandler = adapters.NewDatagramHandler()
 	datagramTransport, err := n.TransportFactory.CreateDatagramTransport(n.datagramHandler)
