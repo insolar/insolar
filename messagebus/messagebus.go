@@ -350,7 +350,6 @@ func (mb *MessageBus) OnPulse(context.Context, insolar.Pulse) error {
 }
 
 func (mb *MessageBus) doDeliver(ctx context.Context, msg insolar.Parcel) (insolar.Reply, error) {
-
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "MessageBus.doDeliver")
 	defer span.End()

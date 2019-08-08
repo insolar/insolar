@@ -68,9 +68,18 @@ func NewPulseManager() *PulseManager {
 
 // Set set's new pulse.
 func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
+	logger := inslogger.FromContext(ctx)
+	logger.WithFields(map[string]interface{}{
+		"new_pulse": newPulse.PulseNumber,
+	}).Info("trying to set new pulse")
+
 	m.setLock.Lock()
 	defer m.setLock.Unlock()
+
+	logger.Debug("behind set lock")
+
 	if m.stopped {
+		logger.Error(errors.New("can't call Set method on PulseManager after stop"))
 		return errors.New("can't call Set method on PulseManager after stop")
 	}
 
@@ -82,30 +91,38 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	)
 	defer span.End()
 
+	logger.Debug("before calling to FinalizationKeeper.OnPulse")
 	err := m.FinalizationKeeper.OnPulse(ctx, newPulse.PulseNumber)
 	if err != nil {
+		logger.Error(err)
 		instracer.AddError(span, err)
 		return errors.Wrap(err, "got error calling FinalizationKeeper.OnPulse")
 	}
 
+	logger.Debug("before calling to setUnderGilSection")
 	err = m.setUnderGilSection(ctx, newPulse)
 	if err != nil {
+		logger.Error(err)
 		instracer.AddError(span, err)
 		if err == errZeroNodes {
-			inslogger.FromContext(ctx).Info("setUnderGilSection return error: ", err)
+			logger.Info("setUnderGilSection return error: ", err)
 			return nil
 		}
 		return err
 	}
+	logger.Debug("after calling to setUnderGilSection")
 
+	logger.Debug("before calling to StartPulse.SetStartPulse")
 	m.StartPulse.SetStartPulse(ctx, newPulse)
 
+	logger.Debug("before calling to Bus.OnPulse")
 	err = m.Bus.OnPulse(ctx, newPulse)
 	if err != nil {
 		instracer.AddError(span, err)
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
+		logger.Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
 	}
 
+	logger.Info("new pulse is set")
 	return nil
 }
 
@@ -113,7 +130,9 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	var (
 		oldPulse *insolar.Pulse
 	)
+	logger := inslogger.FromContext(ctx)
 
+	logger.Debug("before calling to GIL.Acquire")
 	m.GIL.Acquire(ctx)
 
 	ctx, span := instracer.StartSpan(ctx, "PulseManager.setUnderGilSection")
@@ -121,9 +140,11 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 
 	defer m.GIL.Release(ctx)
 
+	logger.Debug("before calling to PulseAccessor.Latest")
 	storagePulse, err := m.PulseAccessor.Latest(ctx)
 	if err != nil && err != pulse.ErrNotFound {
 		instracer.AddError(span, err)
+		logger.Error(err)
 		return errors.Wrap(err, "call of m.PulseAccessor.Latest failed")
 	}
 
@@ -131,14 +152,11 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		oldPulse = &storagePulse
 	}
 
-	logger := inslogger.FromContext(ctx)
-	logger.WithFields(map[string]interface{}{
-		"new_pulse": newPulse.PulseNumber,
-	}).Debugf("received pulse")
-
+	logger.Debug("set currentPulse")
 	// swap pulse
 	m.currentPulse = newPulse
 
+	logger.Debug("calling to GetWorkingNodes")
 	fromNetwork := m.NodeNet.GetAccessor(m.currentPulse.PulseNumber).GetWorkingNodes()
 	toSet := make([]insolar.Node, 0, len(fromNetwork))
 	if len(fromNetwork) == 0 {
@@ -148,22 +166,29 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	for _, node := range fromNetwork {
 		toSet = append(toSet, insolar.Node{ID: node.ID(), Role: node.Role()})
 	}
+	logger.Debug("calling to NodeSetter.Set")
 	err = m.NodeSetter.Set(newPulse.PulseNumber, toSet)
 	if err != nil {
+		logger.Error(err)
 		instracer.AddError(span, err)
 		return errors.Wrap(err, "call of SetActiveNodes failed")
 	}
 
+	logger.Debug("calling to JetModifier.Clone")
 	err = m.JetModifier.Clone(ctx, storagePulse.PulseNumber, newPulse.PulseNumber, true)
 	if err != nil {
+		logger.Error(err)
 		instracer.AddError(span, err)
 		return errors.Wrapf(err, "failed to clone jet.Tree fromPulse=%v toPulse=%v", storagePulse.PulseNumber, newPulse.PulseNumber)
 	}
 
 	if oldPulse != nil {
+		logger.Debug("calling to Nodes.All")
 		nodes, err := m.Nodes.All(oldPulse.PulseNumber)
 		if err != nil {
+			logger.Info("oldPulse isn't nil. append new")
 			if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
+				logger.Error(err)
 				return errors.Wrap(err, "call of AddPulse failed")
 			}
 			return nil
@@ -171,17 +196,22 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		// No active nodes for pulse. It means there was no processing (network start).
 		if len(nodes) == 0 {
 			// Activate zero jet for jet tree.
+			logger.Debug("calling to JetModifier.Update")
 			err := m.JetModifier.Update(ctx, newPulse.PulseNumber, false, insolar.ZeroJetID)
 			if err != nil {
+				logger.Error(err)
 				return errors.Wrapf(err, "failed to update zeroJet")
 			}
 			logger.Infof("[PulseManager] activate zeroJet pulse=%v", newPulse.PulseNumber)
 		}
 	}
 
+	logger.Info("save pulse to storage")
 	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
 		instracer.AddError(span, err)
+		logger.Error(err)
 		return errors.Wrap(err, "call of AddPulse failed")
 	}
+	logger.Info("pulse is saved to storage")
 	return nil
 }
