@@ -105,11 +105,11 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toM
 
 	toWallet := wallet.GetObject(memberWallet)
 	acceptErr := toWallet.Accept(amount.String())
-	if acceptErr == nil {
-		return member.TransferResponse{Fee: feeStr}, nil
+	if acceptErr != nil {
+		return nil, fmt.Errorf("failed to accept balance to wallet: %s", acceptErr.Error())
 	}
 
-	return nil, fmt.Errorf("failed to accept balance to wallet: %s", acceptErr.Error())
+	return member.TransferResponse{Fee: feeStr}, nil
 }
 
 // GetBalance gets total balance.
