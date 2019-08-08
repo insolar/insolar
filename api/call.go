@@ -118,7 +118,7 @@ func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBo
 	}
 
 	if contractErr != nil {
-		return nil, nil, errors.Wrap(errors.New(contractErr.S), "[ makeCall ] Error in called method")
+		return nil, ref, errors.Wrap(errors.New(contractErr.S), "[ makeCall ] Error in called method")
 	}
 
 	return result, ref, nil
