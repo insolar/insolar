@@ -360,6 +360,9 @@ func (jk *dbJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.
 		return false
 	}
 
+	inslogger.FromContext(ctx).Debug("expectedJets: ", insolar.JetIDCollection(expectedJets).DebugString(), "  |  ",
+		"actualJets: ", insolar.JetIDCollection(infoToList(actualJetsSet)).DebugString())
+
 	if len(actualJetsSet) != len(expectedJets) {
 		if len(actualJetsSet) > len(expectedJets) {
 			inslogger.FromContext(ctx).Warn("num actual jets is more then expected. it's too bad. Pulse: ", pulse,

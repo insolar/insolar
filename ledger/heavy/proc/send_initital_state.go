@@ -128,16 +128,26 @@ func (p *SendInitialState) sendForNetworkStart(
 		} else {
 			possibleIDs = append(possibleIDs, id)
 		}
-		logger.Debug("Possible jets: ", insolar.JetIDCollection(possibleIDs).DebugString())
+
+		logger.Debug("sendForNetworkStart. Split: ", dr.Split, ",  Possible jets: ", insolar.JetIDCollection(possibleIDs).DebugString())
+		var shouldAddDrop bool
 		for _, jetID := range possibleIDs {
+			err := p.dep.jetTree.Update(ctx, req.Pulse, true, jetID)
+			if err != nil {
+				logger.Fatal("sendForNetworkStart. Couldn't update jet tree", jetID.DebugString(), " ", err)
+			}
 			light, err := p.dep.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(jetID), req.Pulse)
 			if err != nil {
 				logger.Fatal("Couldn't receive light executor for jet (jet): ", jetID.DebugString(), " ", err)
 			}
 			if light.Equal(p.meta.Sender) {
+				shouldAddDrop = true
 				IDs = append(IDs, jetID)
-				drops = append(drops, drop.MustEncode(&dr))
 			}
+		}
+		// we should do it once to prevent override
+		if shouldAddDrop {
+			drops = append(drops, drop.MustEncode(&dr))
 		}
 	}
 	msg, err := payload.NewMessage(&payload.LightInitialState{

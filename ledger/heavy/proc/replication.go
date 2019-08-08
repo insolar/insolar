@@ -190,7 +190,7 @@ func storeRecords(
 func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper executor.BackupMaker, jetKeeper executor.JetKeeper, newPulse insolar.PulseNumber) {
 	logger := inslogger.FromContext(ctx)
 	if !jetKeeper.HasAllJetConfirms(ctx, newPulse) {
-		logger.Debug("not all jets confirmed. Do nothing")
+		logger.Debug("not all jets confirmed. Do nothing. Pulse: ", newPulse)
 		return
 	}
 
@@ -201,7 +201,7 @@ func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper execut
 	}
 
 	if !nextTop.PulseNumber.Equal(newPulse) {
-		logger.Infof("Try to finalize not sequential pulse. Skip it. newTop: %d, target: %d", nextTop, newPulse)
+		logger.Infof("Try to finalize not sequential pulse. Skip it. newTop: %d, target: %d", nextTop.PulseNumber, newPulse)
 		return
 	}
 
@@ -232,6 +232,7 @@ func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper execut
 			logger.Info("Stop propagating of backups")
 			return
 		}
+		logger.Info("Propagating finalization to next pulse: ", nextTop.PulseNumber)
 		go FinalizePulse(ctx, pulses, backuper, jetKeeper, nextTop.PulseNumber)
 	}()
 }

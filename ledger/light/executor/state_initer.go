@@ -197,10 +197,11 @@ func (s *StateIniterDefault) loadStateRetry(
 
 	// If not network start, we should wait for other lights to give us data.
 	if !state.NetworkStart {
+		inslogger.FromContext(ctx).Info("Not network start. Wait for other light")
 		return nil, nil
 	}
 
-	err = s.jetModifier.Update(ctx, prevPulse.PulseNumber, true, state.JetIDs...)
+	err = s.jetModifier.Update(ctx, pn, true, state.JetIDs...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to update jets")
 	}
