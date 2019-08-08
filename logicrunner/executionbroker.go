@@ -230,13 +230,12 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *Tra
 		inslogger.FromContext(ctx).Error("context in transcript is nil")
 	}
 
+	ctx, logger := inslogger.WithField(ctx, "request", transcript.RequestRef.String())
 	defer q.releaseTask(ctx, transcript)
 
 	if readyToExecute := q.Check(ctx); !readyToExecute {
 		return false
 	}
-
-	logger := inslogger.FromContext(ctx)
 
 	reply, err := q.requestsExecutor.ExecuteAndSave(ctx, transcript)
 	if err != nil {
@@ -252,7 +251,7 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *Tra
 	// note: ideally we should tell here that we've stopped executing
 	//       but we only hoped that OnPulse had already told us that
 	//       pulse changed and we should stop execution
-	logger.Debug("we finished request ", transcript.RequestRef, ", try to finish pending if needed")
+	logger.Debug("finished request, try to finish pending if needed")
 	q.finishPendingIfNeeded(ctx)
 
 	return true
