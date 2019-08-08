@@ -142,7 +142,7 @@ func TestTransferMoreThanAvailableAmount(t *testing.T) {
 
 	_, err := signedRequest(firstMember, "member.transfer", map[string]interface{}{"amount": amount.String(), "toMemberReference": secondMember.ref})
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "subtrahend must be smaller than minuend")
+	require.Contains(t, err.Error(), "balance is too low")
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 	require.Equal(t, oldFirstBalance, newFirstBalance)

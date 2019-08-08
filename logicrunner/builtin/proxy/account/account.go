@@ -70,10 +70,9 @@ func GetPrototype() insolar.Reference {
 }
 
 // New is constructor
-func New(name string, balance string) *ContractConstructorHolder {
-	var args [2]interface{}
-	args[0] = name
-	args[1] = balance
+func New(balance string) *ContractConstructorHolder {
+	var args [1]interface{}
+	args[0] = balance
 
 	var argsSerialized []byte
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
@@ -149,10 +148,10 @@ func (r *Account) GetCode() (insolar.Reference, error) {
 }
 
 // Transfer is proxy generated method
-func (r *Account) Transfer(amountStr string, toWallet *insolar.Reference) error {
+func (r *Account) Transfer(amountStr string, toAccount *insolar.Reference) error {
 	var args [2]interface{}
 	args[0] = amountStr
-	args[1] = toWallet
+	args[1] = toAccount
 
 	var argsSerialized []byte
 
@@ -182,10 +181,10 @@ func (r *Account) Transfer(amountStr string, toWallet *insolar.Reference) error 
 }
 
 // TransferNoWait is proxy generated method
-func (r *Account) TransferNoWait(amountStr string, toWallet *insolar.Reference) error {
+func (r *Account) TransferNoWait(amountStr string, toAccount *insolar.Reference) error {
 	var args [2]interface{}
 	args[0] = amountStr
-	args[1] = toWallet
+	args[1] = toAccount
 
 	var argsSerialized []byte
 
@@ -203,10 +202,10 @@ func (r *Account) TransferNoWait(amountStr string, toWallet *insolar.Reference) 
 }
 
 // TransferAsImmutable is proxy generated method
-func (r *Account) TransferAsImmutable(amountStr string, toWallet *insolar.Reference) error {
+func (r *Account) TransferAsImmutable(amountStr string, toAccount *insolar.Reference) error {
 	var args [2]interface{}
 	args[0] = amountStr
-	args[1] = toWallet
+	args[1] = toAccount
 
 	var argsSerialized []byte
 

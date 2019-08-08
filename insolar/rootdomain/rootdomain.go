@@ -19,6 +19,7 @@ package rootdomain
 import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/account"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/costcenter"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/deposit"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
@@ -36,20 +37,24 @@ const (
 )
 
 var predefinedPrototypes = map[string]insolar.Reference{
-	insolar.GenesisNameRootDomain + GenesisPrototypeSuffix:           *rootdomain.PrototypeReference,
-	insolar.GenesisNameNodeDomain + GenesisPrototypeSuffix:           *nodedomain.PrototypeReference,
-	insolar.GenesisNameNodeRecord + GenesisPrototypeSuffix:           *noderecord.PrototypeReference,
-	insolar.GenesisNameRootMember + GenesisPrototypeSuffix:           *member.PrototypeReference,
-	insolar.GenesisNameRootWallet + GenesisPrototypeSuffix:           *wallet.PrototypeReference,
-	insolar.GenesisNameCostCenter + GenesisPrototypeSuffix:           *costcenter.PrototypeReference,
-	insolar.GenesisNamePKShard + GenesisPrototypeSuffix:              *pkshard.PrototypeReference,
-	insolar.GenesisNameMigrationShard + GenesisPrototypeSuffix:       *migrationshard.PrototypeReference,
-	insolar.GenesisNameFeeWallet + GenesisPrototypeSuffix:            *wallet.PrototypeReference,
-	insolar.GenesisNameDeposit + GenesisPrototypeSuffix:              *deposit.PrototypeReference,
-	insolar.GenesisNameMember + GenesisPrototypeSuffix:               *member.PrototypeReference,
-	insolar.GenesisNameMigrationAdminMember + GenesisPrototypeSuffix: *member.PrototypeReference,
-	insolar.GenesisNameMigrationWallet + GenesisPrototypeSuffix:      *wallet.PrototypeReference,
-	insolar.GenesisNameWallet + GenesisPrototypeSuffix:               *wallet.PrototypeReference,
+	insolar.GenesisNameRootDomain + GenesisPrototypeSuffix:            *rootdomain.PrototypeReference,
+	insolar.GenesisNameNodeDomain + GenesisPrototypeSuffix:            *nodedomain.PrototypeReference,
+	insolar.GenesisNameNodeRecord + GenesisPrototypeSuffix:            *noderecord.PrototypeReference,
+	insolar.GenesisNameRootMember + GenesisPrototypeSuffix:            *member.PrototypeReference,
+	insolar.GenesisNameRootWallet + GenesisPrototypeSuffix:            *wallet.PrototypeReference,
+	insolar.GenesisNameRootAccount + GenesisPrototypeSuffix:           *account.PrototypeReference,
+	insolar.GenesisNameCostCenter + GenesisPrototypeSuffix:            *costcenter.PrototypeReference,
+	insolar.GenesisNamePKShard + GenesisPrototypeSuffix:               *pkshard.PrototypeReference,
+	insolar.GenesisNameMigrationShard + GenesisPrototypeSuffix:        *migrationshard.PrototypeReference,
+	insolar.GenesisNameFeeWallet + GenesisPrototypeSuffix:             *wallet.PrototypeReference,
+	insolar.GenesisNameFeeAccount + GenesisPrototypeSuffix:            *account.PrototypeReference,
+	insolar.GenesisNameDeposit + GenesisPrototypeSuffix:               *deposit.PrototypeReference,
+	insolar.GenesisNameMember + GenesisPrototypeSuffix:                *member.PrototypeReference,
+	insolar.GenesisNameMigrationAdminMember + GenesisPrototypeSuffix:  *member.PrototypeReference,
+	insolar.GenesisNameMigrationAdminWallet + GenesisPrototypeSuffix:  *wallet.PrototypeReference,
+	insolar.GenesisNameMigrationAdminAccount + GenesisPrototypeSuffix: *account.PrototypeReference,
+	insolar.GenesisNameWallet + GenesisPrototypeSuffix:                *wallet.PrototypeReference,
+	insolar.GenesisNameAccount + GenesisPrototypeSuffix:               *account.PrototypeReference,
 }
 
 func init() {

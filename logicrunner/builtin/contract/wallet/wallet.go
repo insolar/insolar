@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/costcenter"
 	proxyMember "github.com/insolar/insolar/logicrunner/builtin/proxy/member"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
+	proxyWallet "github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 )
 
 // Wallet - basic wallet contract.
@@ -36,15 +37,14 @@ type Wallet struct {
 }
 
 // New creates new wallet.
-func New(rootDomain insolar.Reference) (*Wallet, error) {
-	accs := make(foundation.StableMap)
+func New(accountReference insolar.Reference) (*Wallet, error) {
+	accounts := make(foundation.StableMap)
 	// TODO: Think about creating of new types of assets and initial balance
-	newAccount, _ := account.New("XNS", "0").AsChild(rootDomain)
 
-	accs["XNS"] = newAccount.GetReference().String()
+	accounts["XNS"] = accountReference.String()
 
 	return &Wallet{
-		Accounts: accs,
+		Accounts: accounts,
 	}, nil
 }
 
@@ -90,9 +90,16 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, assetName string, amo
 		return nil, fmt.Errorf("balance is too low: %s", currentBalanceStr)
 	}
 
-	toWallet, err := proxyMember.GetObject(*toMember).GetWallet()
+	toWalletRef, err := proxyMember.GetObject(*toMember).GetWallet()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get destination member wallet: %s", err.Error())
+	}
+
+	toWallet := proxyWallet.GetObject(toWalletRef)
+
+	toAccount, err := toWallet.GetAccount(assetName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get account by asset name: %s", err.Error())
 	}
 
 	accRef, err := w.GetAccount(assetName)
@@ -100,16 +107,29 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, assetName string, amo
 		return nil, fmt.Errorf("failed to get account by asset name: %s", err.Error())
 	}
 	acc := account.GetObject(*accRef)
-	err = acc.Transfer(amountStr, &toWallet)
+	err = acc.Transfer(amountStr, toAccount)
+	if err != nil {
+		return nil, fmt.Errorf("failed to transfer: %s", err.Error())
+	}
 
 	feeWalletRef, err := cc.GetFeeWalletRef()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get wallet ref: %s", err.Error())
 	}
 
-	err = acc.Transfer(feeStr, &feeWalletRef)
+	toFeeWallet := proxyWallet.GetObject(feeWalletRef)
 
-	return nil, fmt.Errorf("failed to accept balance to wallet: %s", err)
+	toFeeAccount, err := toFeeWallet.GetAccount(assetName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get account by asset name: %s", err.Error())
+	}
+
+	err = acc.Transfer(feeStr, toFeeAccount)
+	if err != nil {
+		return nil, fmt.Errorf("failed to transfer: %s", err.Error())
+	}
+
+	return nil, err
 }
 
 // GetBalance gets balance by asset name.

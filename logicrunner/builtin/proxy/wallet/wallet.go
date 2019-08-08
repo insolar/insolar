@@ -70,9 +70,9 @@ func GetPrototype() insolar.Reference {
 }
 
 // New is constructor
-func New(rootDomain insolar.Reference) *ContractConstructorHolder {
+func New(accountReference insolar.Reference) *ContractConstructorHolder {
 	var args [1]interface{}
-	args[0] = rootDomain
+	args[0] = accountReference
 
 	var argsSerialized []byte
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
