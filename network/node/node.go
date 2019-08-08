@@ -70,6 +70,7 @@ type MutableNode interface {
 	SetLeavingETA(number insolar.PulseNumber)
 	SetVersion(version string)
 	SetPower(power insolar.Power)
+	SetAddress(address string)
 }
 
 // GenerateUintShortID generate short ID for node without checking collisions
@@ -209,4 +210,8 @@ func (n *node) LeavingETA() insolar.PulseNumber {
 func (n *node) SetLeavingETA(number insolar.PulseNumber) {
 	n.SetState(insolar.NodeLeaving)
 	atomic.StoreUint32(&n.NodeLeavingETA, uint32(number))
+}
+
+func (n *node) SetAddress(address string) {
+	n.NodeAddress = address
 }

@@ -55,9 +55,9 @@ import (
 	"context"
 	"crypto/rand"
 
-	"github.com/insolar/insolar/network/storage"
-
 	"github.com/insolar/insolar/cryptography"
+	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/network/storage"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
@@ -77,10 +77,14 @@ import (
 	"github.com/insolar/insolar/network/gateway"
 	"github.com/insolar/insolar/network/gateway/bootstrap"
 	"github.com/insolar/insolar/network/hostnetwork"
-	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/routing"
 	"github.com/insolar/insolar/network/transport"
 )
+
+func getKeyStore(cryptographyService insolar.CryptographyService) insolar.KeyStore {
+	// TODO: hacked
+	return cryptographyService.(*cryptography.NodeCryptographyService).KeyStore
+}
 
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
@@ -191,20 +195,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 
 	// sign origin
 	origin := n.NodeKeeper.GetOrigin()
-	// TODO: hack
-	ks := n.CryptographyService.(*cryptography.NodeCryptographyService).KeyStore
-	digest, sign, err := getAnnounceSignature(
-		origin,
-		network.OriginIsDiscovery(cert),
-		n.KeyProcessor,
-		ks,
-		n.CryptographyScheme,
-	)
-	if err != nil {
-		return errors.Wrap(err, "failed to getAnnounceSignature")
-	}
-
-	origin.(node.MutableNode).SetSignature(digest, *sign)
 	n.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{origin})
 
 	err = n.cm.Init(ctx)
@@ -218,7 +208,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		KeyProcessor:        n.KeyProcessor,
 		Scheme:              n.CryptographyScheme,
 		CertificateManager:  n.CertificateManager,
-		KeyStore:            ks,
+		KeyStore:            getKeyStore(n.CryptographyService),
 		NodeKeeper:          n.NodeKeeper,
 		StateGetter:         n,
 		PulseChanger:        n,
@@ -256,6 +246,23 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to start component manager")
 	}
+
+	origin := n.NodeKeeper.GetOrigin()
+	mutableOrigin := origin.(node.MutableNode)
+	mutableOrigin.SetAddress(n.HostNetwork.PublicAddress())
+
+	digest, sign, err := getAnnounceSignature(
+		origin,
+		network.OriginIsDiscovery(n.CertificateManager.GetCertificate()),
+		n.KeyProcessor,
+		getKeyStore(n.CryptographyService),
+		n.CryptographyScheme,
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to getAnnounceSignature")
+	}
+
+	mutableOrigin.SetSignature(digest, *sign)
 
 	bootstrapPulse := gateway.GetBootstrapPulse(ctx, n.PulseAccessor)
 

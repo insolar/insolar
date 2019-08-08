@@ -85,6 +85,10 @@ func (g *JoinerBootstrap) Run(ctx context.Context, p insolar.Pulse) {
 		return
 	}
 
+	if g.originCandidate == nil {
+		g.createCandidateProfile()
+	}
+
 	resp, err := g.BootstrapRequester.Bootstrap(ctx, permit, *g.originCandidate, &p)
 	if err != nil {
 		logger.Warn("Failed to bootstrap: ", err.Error())

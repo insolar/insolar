@@ -132,7 +132,6 @@ func (g *Base) Init(ctx context.Context) error {
 		return g.HostNetwork.BuildResponse(ctx, req, &packet.Ping{}), nil
 	})
 
-	g.createCandidateProfile()
 	g.bootstrapETA = 0
 	return nil
 }
