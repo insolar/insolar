@@ -258,7 +258,7 @@ func pulseProcessingWatchdog(ctx context.Context, pulse insolar.Pulse, done chan
 	go func() {
 		select {
 		case <-time.After(time.Second * time.Duration(pulse.NextPulseNumber-pulse.PulseNumber)):
-			logger.Error("Node stopped due to long pulse processing")
+			logger.Errorf("Node stopped due to long pulse processing %v", pulse.PulseNumber)
 
 			proc, err := os.FindProcess(os.Getpid())
 			if err != nil {
