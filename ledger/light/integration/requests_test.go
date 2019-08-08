@@ -74,10 +74,10 @@ func Test_IncomingRequest_Check(t *testing.T) {
 		firstObjP := SendMessage(ctx, s, &msg)
 		RequireNotError(firstObjP)
 		reqInfo := firstObjP.(*payload.RequestInfo)
-		firstObjP, _ = CallActivateObject(ctx, s, reqInfo.RequestID)
-		RequireNotError(firstObjP)
+		// firstObjP, _ = CallActivateObject(ctx, s, reqInfo.RequestID)
+		// RequireNotError(firstObjP)
 
-		msg, _ = MakeSetIncomingRequest(gen.ID(), reqInfo.RequestID, true, false)
+		msg, _ = MakeSetIncomingRequestWReasonObject(gen.ID(), reqInfo.RequestID, reqInfo.RequestID, true, false)
 		secondObjP := SendMessage(ctx, s, &msg)
 		RequireNotError(secondObjP)
 		secondReqInfo := secondObjP.(*payload.RequestInfo)
@@ -148,7 +148,7 @@ func Test_IncomingRequest_Duplicate(t *testing.T) {
 		reasonID := rep.(*payload.RequestInfo).RequestID
 		objectID := reasonID
 
-		msg, _ = MakeSetIncomingRequest(objectID, reasonID, false, false)
+		msg, _ = MakeSetIncomingRequestWReasonObject(objectID, reasonID, objectID, false, false)
 
 		// Set first request.
 		rep = SendMessage(ctx, s, &msg)
@@ -176,7 +176,7 @@ func Test_IncomingRequest_Duplicate(t *testing.T) {
 		reasonID := rep.(*payload.RequestInfo).RequestID
 		objectID := reasonID
 
-		requestMsg, _ := MakeSetIncomingRequest(objectID, reasonID, false, false)
+		requestMsg, _ := MakeSetIncomingRequestWReasonObject(objectID, reasonID, objectID, false, false)
 
 		// Set first request.
 		rep = SendMessage(ctx, s, &requestMsg)
@@ -500,7 +500,7 @@ func Test_Requests_OutgoingReason(t *testing.T) {
 
 		// Creating wrong incoming
 		{
-			msg, _ := MakeSetIncomingRequestWReasonObject(rootID, reasonID, rootID, true, false)
+			msg, _ := MakeSetIncomingRequestWReasonObject(gen.ID(), reasonID, rootID, true, false)
 			rep := SendMessage(ctx, s, &msg)
 			RequireError(rep)
 		}
