@@ -32,6 +32,9 @@ type DB interface {
 
 // Backuper provides interface for making backups
 type Backuper interface {
+	// Backup does incremental backup starting from 'since' timestamp and write result to 'to' parameter.
+	// It returns a timestamp indicating when the entries were dumped which can be passed into a
+	// later invocation to generate an incremental dump.
 	Backup(to io.Writer, since uint64) (uint64, error)
 }
 
