@@ -28,7 +28,7 @@ type ContractRequesterMock struct {
 	beforeSendRequestCounter uint64
 	SendRequestMock          mContractRequesterMockSendRequest
 
-	funcSendRequestWithPulse          func(ctx context.Context, ref *mm_insolar.Reference, method string, argsIn []interface{}, pulse mm_insolar.PulseNumber) (r1 mm_insolar.Reply, err error)
+	funcSendRequestWithPulse          func(ctx context.Context, ref *mm_insolar.Reference, method string, argsIn []interface{}, pulse mm_insolar.PulseNumber) (r1 mm_insolar.Reply, reference *mm_insolar.Reference, err error)
 	inspectFuncSendRequestWithPulse   func(ctx context.Context, ref *mm_insolar.Reference, method string, argsIn []interface{}, pulse mm_insolar.PulseNumber)
 	afterSendRequestWithPulseCounter  uint64
 	beforeSendRequestWithPulseCounter uint64
@@ -568,7 +568,7 @@ func (mmSendRequestWithPulse *mContractRequesterMockSendRequestWithPulse) Return
 }
 
 //Set uses given function f to mock the ContractRequester.SendRequestWithPulse method
-func (mmSendRequestWithPulse *mContractRequesterMockSendRequestWithPulse) Set(f func(ctx context.Context, ref *mm_insolar.Reference, method string, argsIn []interface{}, pulse mm_insolar.PulseNumber) (r1 mm_insolar.Reply, err error)) *ContractRequesterMock {
+func (mmSendRequestWithPulse *mContractRequesterMockSendRequestWithPulse) Set(f func(ctx context.Context, ref *mm_insolar.Reference, method string, argsIn []interface{}, pulse mm_insolar.PulseNumber) (r1 mm_insolar.Reply, reference *mm_insolar.Reference, err error)) *ContractRequesterMock {
 	if mmSendRequestWithPulse.defaultExpectation != nil {
 		mmSendRequestWithPulse.mock.t.Fatalf("Default expectation is already set for the ContractRequester.SendRequestWithPulse method")
 	}
@@ -640,8 +640,8 @@ func (mmSendRequestWithPulse *ContractRequesterMock) SendRequestWithPulse(ctx co
 		return results.r1, nil, (*results).err
 	}
 	if mmSendRequestWithPulse.funcSendRequestWithPulse != nil {
-		r, err := mmSendRequestWithPulse.funcSendRequestWithPulse(ctx, ref, method, argsIn, pulse)
-		return r, nil, err
+		r, ref, err := mmSendRequestWithPulse.funcSendRequestWithPulse(ctx, ref, method, argsIn, pulse)
+		return r, ref, err
 	}
 	mmSendRequestWithPulse.t.Fatalf("Unexpected call to ContractRequesterMock.SendRequestWithPulse. %v %v %v %v %v", ctx, ref, method, argsIn, pulse)
 	return
