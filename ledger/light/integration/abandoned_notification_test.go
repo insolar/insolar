@@ -19,7 +19,6 @@ package integration_test
 import (
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
@@ -74,7 +73,6 @@ func Test_AbandonedNotification(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	cfg.Ledger.LightChainLimit = 5
-	cfg.Bus.ReplyTimeout = 3 * time.Minute
 
 	received := make(chan payload.AbandonedRequestsNotification)
 	receivedConfirmations := make(chan payload.GotHotConfirmation)
