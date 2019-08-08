@@ -65,6 +65,8 @@ import (
 
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/consensus"
+	"github.com/insolar/insolar/network/node"
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -197,7 +199,12 @@ func (s *consensusSuite) SetupTest() {
 	if UseFakeBootstrap {
 		bnodes := make([]insolar.NetworkNode, 0)
 		for _, n := range s.fixture().bootstrapNodes {
-			bnodes = append(bnodes, n.serviceNetwork.NodeKeeper.GetOrigin())
+			o := n.serviceNetwork.NodeKeeper.GetOrigin()
+			dig, sig := o.(node.MutableNode).GetSignature()
+			require.NotNil(s.t, dig)
+			require.NotNil(s.t, sig.Bytes())
+
+			bnodes = append(bnodes, o)
 		}
 		for _, n := range s.fixture().bootstrapNodes {
 			n.serviceNetwork.ConsensusMode = consensus.ReadyNetwork
