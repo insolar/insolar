@@ -31,7 +31,6 @@ var (
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner/writecontroller.Accessor -o ./ -s _mock.go -g
-
 type Accessor interface {
 	// Begin requests writing access for pulse number. If requested pulse is closed, ErrWriteClosed will be returned.
 	// The caller must call returned "done" function when finished writing.
@@ -42,7 +41,6 @@ type Accessor interface {
 }
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner/writecontroller.Manager -o ./ -s _mock.go -g
-
 type Manager interface {
 	// Open marks pulse number as opened for writing. It can be used later by Begin from accessor.
 	Open(context.Context, insolar.PulseNumber) error
@@ -50,7 +48,15 @@ type Manager interface {
 	CloseAndWait(context.Context, insolar.PulseNumber) error
 }
 
-type WriteController struct {
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/writecontroller.WriteController -o ./ -s _mock.go -g
+type WriteController interface {
+	Begin(ctx context.Context, pulse insolar.PulseNumber) (func(), error)
+	Open(ctx context.Context, pulse insolar.PulseNumber) error
+	WaitOpened(ctx context.Context)
+	CloseAndWait(ctx context.Context, pulse insolar.PulseNumber) error
+}
+
+type writeController struct {
 	lock    sync.RWMutex
 	current insolar.PulseNumber
 	closed  bool
@@ -58,18 +64,18 @@ type WriteController struct {
 	wg *sync.WaitGroup
 }
 
-func NewWriteController() *WriteController {
+func NewWriteController() WriteController {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 
-	return &WriteController{
+	return &writeController{
 		current: 0,
 		closed:  true,
 		wg:      wg,
 	}
 }
 
-func (m *WriteController) Begin(ctx context.Context, pulse insolar.PulseNumber) (func(), error) {
+func (m *writeController) Begin(ctx context.Context, pulse insolar.PulseNumber) (func(), error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
@@ -84,7 +90,7 @@ func (m *WriteController) Begin(ctx context.Context, pulse insolar.PulseNumber) 
 	return func() { m.wg.Done() }, nil
 }
 
-func (m *WriteController) Open(ctx context.Context, pulse insolar.PulseNumber) error {
+func (m *writeController) Open(ctx context.Context, pulse insolar.PulseNumber) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -107,7 +113,7 @@ func (m *WriteController) Open(ctx context.Context, pulse insolar.PulseNumber) e
 	return nil
 }
 
-func (m *WriteController) WaitOpened(ctx context.Context) {
+func (m *writeController) WaitOpened(ctx context.Context) {
 	m.lock.RLock()
 
 	if !m.closed {
@@ -124,7 +130,7 @@ func (m *WriteController) WaitOpened(ctx context.Context) {
 	wg.Wait()
 }
 
-func (m *WriteController) CloseAndWait(ctx context.Context, pulse insolar.PulseNumber) error {
+func (m *writeController) CloseAndWait(ctx context.Context, pulse insolar.PulseNumber) error {
 	m.lock.Lock()
 
 	if m.current == 0 {

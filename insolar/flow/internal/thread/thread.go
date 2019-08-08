@@ -18,9 +18,12 @@ package thread
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar/flow"
 )
@@ -59,9 +62,28 @@ func (f *Thread) Procedure(ctx context.Context, proc flow.Procedure, cancel bool
 		panic("procedure called with nil procedure")
 	}
 
+	var spanName string
+	procStringer, ok := proc.(fmt.Stringer)
+	if ok {
+		spanName = procStringer.String()
+	} else {
+		spanName = fmt.Sprintf("%T", proc)
+	}
+
+	ctx, span := instracer.StartSpan(ctx, spanName)
+	span.AddAttributes(
+		trace.StringAttribute("type", "flow_proc"),
+	)
+	defer span.End()
+
 	if !cancel {
 		res := f.procedure(ctx, proc)
 		<-res.done
+
+		if res.err != nil {
+			instracer.AddError(span, res.err)
+		}
+
 		return res.err
 	}
 
@@ -74,9 +96,15 @@ func (f *Thread) Procedure(ctx context.Context, proc flow.Procedure, cancel bool
 	select {
 	case <-f.cancel:
 		cl()
+		instracer.AddError(span, flow.ErrCancelled)
 		return flow.ErrCancelled
 	case <-res.done:
 		cl()
+
+		if res.err != nil {
+			instracer.AddError(span, res.err)
+		}
+
 		return res.err
 	}
 }

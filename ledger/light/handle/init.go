@@ -263,7 +263,8 @@ func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 		payload.TypeHasPendings,
 		payload.TypeGetJet,
 		payload.TypeGetRequest,
-		payload.TypePassState:
+		payload.TypePassState,
+		payload.TypeGetFilament:
 		return s.Present(ctx, f)
 	}
 

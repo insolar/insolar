@@ -27,8 +27,10 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 )
 
 type EnsureIndex struct {
@@ -78,6 +80,13 @@ func (p *EnsureIndex) Proceed(ctx context.Context) error {
 
 func (p *EnsureIndex) process(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
+
+	ctx, span := instracer.StartSpan(ctx, "EnsureIndex")
+	defer span.End()
+
+	span.AddAttributes(
+		trace.StringAttribute("object_id", p.object.DebugString()),
+	)
 
 	p.dep.indexLocker.Lock(p.object)
 	defer p.dep.indexLocker.Unlock(p.object)

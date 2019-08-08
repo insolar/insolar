@@ -50,7 +50,7 @@ var corePath = "github.com/insolar/insolar/insolar"
 
 var immutableFlag = "//ins:immutable"
 
-var sagaFlagStart = "//ins:saga("
+var sagaFlagStart = "ins:saga("
 var sagaFlagEnd = ")"
 var sagaFlagStartLength = len(sagaFlagStart)
 
@@ -428,7 +428,7 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 		currentMethodName := methodInfo["Name"].(string)
 		_, isRollback := sagaRollbackMethods[currentMethodName]
 		if isRollback {
-			break
+			continue
 		}
 		filteredMethodsProxies = append(filteredMethodsProxies, methodInfo)
 	}
@@ -764,9 +764,24 @@ func isImmutable(decl *ast.FuncDecl) bool {
 
 func extractSagaInfoFromComment(comment string, info *SagaInfo) bool {
 	slice := strings.Trim(comment, " \r\n\t")
+	sliceLen := len(slice)
+
+	// skip '//'
+	if !strings.HasPrefix(slice, "//") {
+		return false
+	}
+	slice = slice[2:sliceLen]
+	sliceLen -= 2
+
+	// skip all whitespaces after '//'
+	for sliceLen > 0 && (slice[0] == ' ' || slice[0] == '\t') {
+		slice = slice[1:sliceLen]
+		sliceLen--
+	}
+
 	if strings.HasPrefix(slice, sagaFlagStart) &&
 		strings.HasSuffix(slice, sagaFlagEnd) {
-		rollbackName := slice[sagaFlagStartLength : len(slice)-1]
+		rollbackName := slice[sagaFlagStartLength : sliceLen-len(sagaFlagEnd)]
 		rollbackNameLen := len(rollbackName)
 		if rollbackNameLen > 0 {
 			sliceCopy := make([]byte, rollbackNameLen)
