@@ -380,6 +380,18 @@ func (r *FullRealm) Blames() misbehavior.BlameFactory {
 	return r.populationHook.GetBlameFactory()
 }
 
+func (r *FullRealm) GetSelf() *pop.NodeAppearance {
+	return r.self
+}
+
+func (r *FullRealm) GetSelfNodeID() insolar.ShortNodeID {
+	return r.self.GetNodeID()
+}
+
+func (r *FullRealm) IsJoiner() bool {
+	return r.self.IsJoiner()
+}
+
 func (r *FullRealm) GetPacketSender() transport.PacketSender {
 	return r.packetSender
 }

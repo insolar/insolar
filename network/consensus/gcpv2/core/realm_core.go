@@ -61,7 +61,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -226,18 +225,6 @@ func (r *coreRealm) GetRoundContext() context.Context {
 
 func (r *coreRealm) GetLocalConfig() api.LocalNodeConfiguration {
 	return r.config
-}
-
-func (r *coreRealm) IsJoiner() bool {
-	return r.self.IsJoiner()
-}
-
-func (r *coreRealm) GetSelfNodeID() insolar.ShortNodeID {
-	return r.self.GetNodeID()
-}
-
-func (r *coreRealm) GetSelf() *population.NodeAppearance {
-	return r.self
 }
 
 // polling fn must be fast, and it will remain in polling until it returns false

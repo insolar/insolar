@@ -94,18 +94,23 @@ type PrepRealm struct {
 
 	limiters           sync.Map
 	lastCloudStateHash cryptkit.DigestHolder
-	disableEphemeral   bool // blocks polling
+	disableEphemeral   bool                       // blocks polling
+	prepSelf           *population.NodeAppearance /* local copy to avoid race */
 }
 
 func (p *PrepRealm) init(completeFn func(successful bool)) {
 	p.completeFn = completeFn
+	if p.coreRealm.self == nil {
+		panic("illegal state")
+	}
+	p.prepSelf = p.coreRealm.self
 }
 
 func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
 	verifyFlags coreapi.PacketVerifyFlags) error {
 
 	pt := packet.GetPacketType()
-	selfID := p.GetSelfNodeID()
+	selfID := p.prepSelf.GetNodeID()
 
 	var limiterKey string
 	switch {
