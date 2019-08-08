@@ -1347,7 +1347,7 @@ func (r *Three) DoNothing() (error) {
 	require.Empty(t, resp.Error)
 	require.Equal(t, float64(42), resp.ExtractedReply)
 
-	resp = callMethodExpectError(t, obj, "ExternalImmutableCallMakesExternalCall")
+	resp = callMethod(t, obj, "ExternalImmutableCallMakesExternalCall")
 }
 
 func TestMultipleConstructorsCall(t *testing.T) {
