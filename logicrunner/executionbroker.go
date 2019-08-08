@@ -248,10 +248,11 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *Tra
 	go q.requestsExecutor.SendReply(ctx, transcript, reply, err)
 
 	// we're checking here that pulse was changed and we should send
-	// a message that we've finished processing task
+	// a message that we've finished processing tasks
 	// note: ideally we should tell here that we've stopped executing
 	//       but we only hoped that OnPulse had already told us that
 	//       pulse changed and we should stop execution
+	logger.Debug("we finished request ", transcript.RequestRef, ", try to finish pending if needed")
 	q.finishPendingIfNeeded(ctx)
 
 	return true
@@ -456,13 +457,24 @@ func (q *ExecutionBroker) finishPending(ctx context.Context) {
 // If this is true as a side effect the function sends a PendingFinished
 // message to the current executor
 func (q *ExecutionBroker) finishPendingIfNeeded(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
 	if q.pending != insolar.InPending {
+		logger.Debug("we aren't in pending")
 		return
 	}
 
+	// we process mutable and immutable calls in parallel
+	// and use one pending state for all of them
+	// so pending is finish only when all of calls are finished
+	if !q.currentList.Empty() {
+		inslogger.FromContext(ctx).Debug("we are in pending but still have ", q.currentList.Length(), " requests to finish")
+		return
+	}
+
+	inslogger.FromContext(ctx).Debug("pending finished")
 	q.pending = insolar.NotPending
 	q.PendingConfirmed = false
 
