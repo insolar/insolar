@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto"
 	"fmt"
+	"github.com/insolar/insolar/network"
 	"math"
 	"sync"
 	"time"
@@ -32,39 +33,42 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/jetcoordinator"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/light/artifactmanager"
 	"github.com/insolar/insolar/ledger/light/executor"
-	"github.com/insolar/insolar/ledger/light/hot"
-	"github.com/insolar/insolar/ledger/light/pulsemanager"
-	"github.com/insolar/insolar/ledger/light/replication"
+	"github.com/insolar/insolar/ledger/light/handle"
+	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/log"
+	networknode "github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
 var (
 	light = nodeMock{
-		ref:  gen.Reference(),
-		role: insolar.StaticRoleLightMaterial,
+		ref:     gen.Reference(),
+		shortID: 1,
+		role:    insolar.StaticRoleLightMaterial,
 	}
 	heavy = nodeMock{
-		ref:  gen.Reference(),
-		role: insolar.StaticRoleHeavyMaterial,
+		ref:     gen.Reference(),
+		shortID: 2,
+		role:    insolar.StaticRoleHeavyMaterial,
 	}
 	virtual = nodeMock{
-		ref:  gen.Reference(),
-		role: insolar.StaticRoleVirtual,
+		ref:     gen.Reference(),
+		shortID: 3,
+		role:    insolar.StaticRoleVirtual,
 	}
 )
 
@@ -79,8 +83,8 @@ type Server struct {
 	pulse        insolar.Pulse
 	lock         sync.RWMutex
 	clientSender bus.Sender
-	replicator   replication.LightReplicator
-	cleaner      replication.Cleaner
+	replicator   executor.LightReplicator
+	cleaner      executor.Cleaner
 }
 
 func DefaultLightConfig() configuration.Configuration {
@@ -152,7 +156,7 @@ func NewServer(
 
 	// Network.
 	var (
-		NodeNetwork insolar.NodeNetwork
+		NodeNetwork network.NodeNetwork
 	)
 	{
 		NodeNetwork = newNodeNetMock(&light)
@@ -174,7 +178,7 @@ func NewServer(
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
-		c.NodeNet = NodeNetwork
+		c.OriginProvider = NodeNetwork
 		c.PlatformCryptographyScheme = CryptoScheme
 		c.Nodes = Nodes
 
@@ -185,12 +189,10 @@ func NewServer(
 
 	// Communication.
 	var (
-		Bus                        insolar.MessageBus
 		ServerBus, ClientBus       *bus.Bus
 		ServerPubSub, ClientPubSub message.PubSub
 	)
 	{
-		Bus = &stub{}
 		ServerPubSub = gochannel.NewGoChannel(gochannel.Config{}, logger)
 		ClientPubSub = gochannel.NewGoChannel(gochannel.Config{}, logger)
 		ServerBus = bus.NewBus(cfg.Bus, ServerPubSub, Pulses, Coordinator, CryptoScheme)
@@ -199,7 +201,7 @@ func NewServer(
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
-		c.NodeNet = newNodeNetMock(&virtual)
+		c.OriginProvider = newNodeNetMock(&virtual)
 		c.PlatformCryptographyScheme = CryptoScheme
 		c.Nodes = Nodes
 		ClientBus = bus.NewBus(cfg.Bus, ClientPubSub, Pulses, c, CryptoScheme)
@@ -207,10 +209,10 @@ func NewServer(
 
 	// Light components.
 	var (
-		PulseManager insolar.PulseManager
-		Handler      *artifactmanager.MessageHandler
-		Replicator   replication.LightReplicator
-		Cleaner      replication.Cleaner
+		PulseManager   insolar.PulseManager
+		Replicator     executor.LightReplicator
+		Cleaner        executor.Cleaner
+		FlowDispatcher dispatcher.Dispatcher
 	)
 	{
 		conf := cfg.Ledger
@@ -218,42 +220,22 @@ func NewServer(
 		drops := drop.NewStorageMemory()
 		records := object.NewRecordMemory()
 		indexes := object.NewIndexStorageMemory()
-		writeController := hot.NewWriteController()
-		waiter := hot.NewChannelWaiter()
+		writeController := executor.NewWriteController()
+		hotWaitReleaser := executor.NewChannelWaiter()
 
-		handler := artifactmanager.NewMessageHandler(&conf)
-		handler.PulseCalculator = Pulses
-		handler.FlowDispatcher.PulseAccessor = Pulses
-
-		handler.PCS = CryptoScheme
-		handler.JetCoordinator = Coordinator
-		handler.JetStorage = Jets
-		handler.DropModifier = drops
-		handler.IndexLocker = idLocker
-		handler.Records = records
-		handler.HotDataWaiter = waiter
-		handler.JetReleaser = waiter
-		handler.WriteAccessor = writeController
-		handler.Sender = ServerBus
-		handler.IndexStorage = indexes
-
-		jetTreeUpdater := executor.NewFetcher(Nodes, Jets, ServerBus, Coordinator)
+		jetFetcher := executor.NewFetcher(Nodes, Jets, ServerBus, Coordinator)
 		filamentCalculator := executor.NewFilamentCalculator(
 			indexes,
 			records,
 			Coordinator,
-			jetTreeUpdater,
+			jetFetcher,
 			ServerBus,
 			Pulses,
 		)
-		requestChecker := executor.NewRequestChecker(filamentCalculator, Coordinator, jetTreeUpdater, ServerBus)
-
-		handler.JetTreeUpdater = jetTreeUpdater
-		handler.FilamentCalculator = filamentCalculator
-		handler.RequestChecker = requestChecker
+		requestChecker := executor.NewRequestChecker(filamentCalculator, Coordinator, jetFetcher, ServerBus)
 
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
-		lightCleaner := replication.NewCleaner(
+		lightCleaner := executor.NewCleaner(
 			Jets.(jet.Cleaner),
 			Nodes,
 			drops,
@@ -262,13 +244,13 @@ func NewServer(
 			Pulses,
 			Pulses,
 			indexes,
-			handler.FilamentCalculator,
+			filamentCalculator,
 			conf.LightChainLimit,
 			conf.CleanerDelay,
 		)
 		Cleaner = lightCleaner
 
-		lthSyncer := replication.NewReplicatorDefault(
+		lthSyncer := executor.NewReplicatorDefault(
 			jetCalculator,
 			lightCleaner,
 			ServerBus,
@@ -291,30 +273,56 @@ func NewServer(
 			ServerBus,
 		)
 
-		stateIniter := executor.NewStateIniter(Jets, waiter, drops, Nodes, ServerBus, Pulses, Pulses, jetCalculator)
+		stateIniter := executor.NewStateIniter(
+			Jets, hotWaitReleaser, drops, Nodes, ServerBus, Pulses, Pulses, jetCalculator, indexes,
+		)
 
-		pm := pulsemanager.NewPulseManager(
+		dep := proc.NewDependencies(
+			CryptoScheme,
+			Coordinator,
+			Jets,
+			Pulses,
+			ServerBus,
+			drops,
+			idLocker,
+			records,
+			indexes,
+			hotWaitReleaser,
+			hotWaitReleaser,
+			writeController,
+			jetFetcher,
+			filamentCalculator,
+			requestChecker,
+		)
+
+		initHandle := func(msg *message.Message) *handle.Init {
+			return handle.NewInit(dep, ServerBus, msg)
+		}
+
+		FlowDispatcher = dispatcher.NewDispatcher(
+			Pulses,
+			func(msg *message.Message) flow.Handle {
+				return initHandle(msg).Present
+			}, func(msg *message.Message) flow.Handle {
+				return initHandle(msg).Future
+			}, func(msg *message.Message) flow.Handle {
+				return initHandle(msg).Past
+			},
+		)
+
+		PulseManager = executor.NewPulseManager(
+			NodeNetwork,
+			FlowDispatcher,
+			Nodes,
+			Pulses,
+			Pulses,
+			hotWaitReleaser,
 			jetSplitter,
 			lthSyncer,
-			writeController,
 			hotSender,
+			writeController,
 			stateIniter,
 		)
-		pm.MessageHandler = handler
-		pm.Bus = Bus
-		pm.NodeNet = NodeNetwork
-		pm.JetReleaser = waiter
-		pm.JetModifier = Jets
-		pm.NodeSetter = Nodes
-		pm.Nodes = Nodes
-		pm.PulseAccessor = Pulses
-		pm.PulseCalculator = Pulses
-		pm.PulseAppender = Pulses
-		pm.GIL = &stub{}
-		pm.NodeNet = NodeNetwork
-
-		PulseManager = pm
-		Handler = handler
 	}
 
 	// Start routers with handlers.
@@ -394,13 +402,13 @@ func NewServer(
 			"Incoming",
 			bus.TopicIncoming,
 			ServerPubSub,
-			Handler.FlowDispatcher.Process,
+			FlowDispatcher.Process,
 		)
 		inRouter.AddNoPublisherHandler(
 			"OutgoingFromClient",
 			bus.TopicOutgoing,
 			ClientPubSub,
-			Handler.FlowDispatcher.Process,
+			FlowDispatcher.Process,
 		)
 
 		startRouter(ctx, inRouter)
@@ -466,8 +474,9 @@ func (s *Server) Stop() {
 }
 
 type nodeMock struct {
-	ref  insolar.Reference
-	role insolar.StaticRole
+	ref     insolar.Reference
+	shortID insolar.ShortNodeID
+	role    insolar.StaticRole
 }
 
 func (n *nodeMock) ID() insolar.Reference {
@@ -475,7 +484,7 @@ func (n *nodeMock) ID() insolar.Reference {
 }
 
 func (n *nodeMock) ShortID() insolar.ShortNodeID {
-	panic("implement me")
+	return n.shortID
 }
 
 func (n *nodeMock) Role() insolar.StaticRole {
@@ -487,7 +496,7 @@ func (n *nodeMock) PublicKey() crypto.PublicKey {
 }
 
 func (n *nodeMock) Address() string {
-	panic("implement me")
+	return ""
 }
 
 func (n *nodeMock) GetGlobuleID() insolar.GlobuleID {
@@ -503,11 +512,19 @@ func (n *nodeMock) LeavingETA() insolar.PulseNumber {
 }
 
 func (n *nodeMock) GetState() insolar.NodeState {
-	panic("implement me")
+	return insolar.NodeReady
+}
+
+func (n *nodeMock) GetPower() insolar.Power {
+	return 1
 }
 
 type nodeNetMock struct {
 	me insolar.NetworkNode
+}
+
+func (n *nodeNetMock) GetAccessor(insolar.PulseNumber) network.Accessor {
+	return networknode.NewAccessor(networknode.NewSnapshot(insolar.GenesisPulse.PulseNumber, []insolar.NetworkNode{&virtual, &heavy, &light}))
 }
 
 func newNodeNetMock(me insolar.NetworkNode) *nodeNetMock {
@@ -516,45 +533,4 @@ func newNodeNetMock(me insolar.NetworkNode) *nodeNetMock {
 
 func (n *nodeNetMock) GetOrigin() insolar.NetworkNode {
 	return n.me
-}
-
-func (n *nodeNetMock) GetWorkingNode(ref insolar.Reference) insolar.NetworkNode {
-	panic("implement me")
-}
-
-func (n *nodeNetMock) GetWorkingNodes() []insolar.NetworkNode {
-	return []insolar.NetworkNode{
-		&virtual,
-		&heavy,
-		&light,
-	}
-}
-
-func (n *nodeNetMock) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference {
-	panic("implement me")
-}
-
-type stub struct{}
-
-func (*stub) Send(context.Context, insolar.Message, *insolar.MessageSendOptions) (insolar.Reply, error) {
-	return &reply.OK{}, nil
-}
-
-func (*stub) Register(p insolar.MessageType, handler insolar.MessageHandler) error {
-	return nil
-}
-
-func (*stub) MustRegister(p insolar.MessageType, handler insolar.MessageHandler) {
-}
-
-func (*stub) OnPulse(context.Context, insolar.Pulse) error {
-	return nil
-}
-
-func (*stub) Acquire(ctx context.Context) {}
-
-func (*stub) Release(ctx context.Context) {}
-
-func (*stub) MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error {
-	return nil
 }

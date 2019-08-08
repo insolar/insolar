@@ -30,7 +30,6 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
-	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/testutils"
@@ -47,7 +46,7 @@ func TestSetResult_Proceed(t *testing.T) {
 		flowPulse,
 	)
 
-	writeAccessor := hot.NewWriteAccessorMock(mc)
+	writeAccessor := executor.NewWriteAccessorMock(mc)
 	writeAccessor.BeginMock.Return(func() {}, nil)
 	pcs := testutils.NewPlatformCryptographyScheme()
 
@@ -162,7 +161,7 @@ func TestSetResult_Proceed_ResultDuplicated(t *testing.T) {
 	)
 	mc := minimock.NewController(t)
 
-	writeAccessor := hot.NewWriteAccessorMock(mc)
+	writeAccessor := executor.NewWriteAccessorMock(mc)
 	writeAccessor.BeginMock.Return(func() {}, nil)
 	records := object.NewAtomicRecordModifierMock(mc)
 	indexes := object.NewMemoryIndexStorageMock(mc)

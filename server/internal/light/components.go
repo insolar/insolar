@@ -19,10 +19,14 @@ package light
 import (
 	"context"
 
-	"github.com/insolar/insolar/network/rules"
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/flow/dispatcher"
+	"github.com/insolar/insolar/ledger/light/handle"
+	"github.com/insolar/insolar/ledger/light/proc"
+	"github.com/insolar/insolar/network"
 
 	"github.com/ThreeDotsLabs/watermill"
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
@@ -36,17 +40,12 @@ import (
 	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/jetcoordinator"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/light/artifactmanager"
 	"github.com/insolar/insolar/ledger/light/executor"
-	"github.com/insolar/insolar/ledger/light/hot"
-	"github.com/insolar/insolar/ledger/light/pulsemanager"
-	"github.com/insolar/insolar/ledger/light/replication"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -63,8 +62,8 @@ import (
 type components struct {
 	cmp               component.Manager
 	NodeRef, NodeRole string
-	replicator        replication.LightReplicator
-	cleaner           replication.Cleaner
+	replicator        executor.LightReplicator
+	cleaner           executor.Cleaner
 }
 
 func newComponents(ctx context.Context, cfg configuration.Configuration) (*components, error) {
@@ -116,7 +115,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	// Network.
 	var (
 		NetworkService *servicenetwork.ServiceNetwork
-		NodeNetwork    insolar.NodeNetwork
+		NodeNetwork    network.NodeNetwork
 		Termination    insolar.TerminationHandler
 	)
 	{
@@ -177,7 +176,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
-		c.NodeNet = NodeNetwork
+		c.OriginProvider = NodeNetwork
 		c.PlatformCryptographyScheme = CryptoScheme
 		c.Nodes = Nodes
 
@@ -186,20 +185,18 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 	// Communication.
 	var (
-		Tokens  insolar.DelegationTokenFactory
-		Parcels message.ParcelFactory
-		Bus     insolar.MessageBus
-		WmBus   *bus.Bus
+		Tokens insolar.DelegationTokenFactory
+		Bus    insolar.MessageBus
+		Sender *bus.Bus
 	)
 	{
 		var err error
 		Tokens = delegationtoken.NewDelegationTokenFactory()
-		Parcels = messagebus.NewParcelFactory()
 		Bus, err = messagebus.NewMessageBus(cfg)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start MessageBus")
 		}
-		WmBus = bus.NewBus(cfg.Bus, pubSub, Pulses, Coordinator, CryptoScheme)
+		Sender = bus.NewBus(cfg.Bus, pubSub, Pulses, Coordinator, CryptoScheme)
 	}
 
 	metricsHandler, err := metrics.NewMetrics(
@@ -214,8 +211,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 	// Light components.
 	var (
-		PulseManager insolar.PulseManager
-		Handler      *artifactmanager.MessageHandler
+		PulseManager   insolar.PulseManager
+		FlowDispatcher dispatcher.Dispatcher
 	)
 	{
 		conf := cfg.Ledger
@@ -223,46 +220,25 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		drops := drop.NewStorageMemory()
 		records := object.NewRecordMemory()
 		indexes := object.NewIndexStorageMemory()
-		writeController := hot.NewWriteController()
-		waiter := hot.NewChannelWaiter()
+		writeController := executor.NewWriteController()
+		hotWaitReleaser := executor.NewChannelWaiter()
 
 		c := component.Manager{}
 		c.Inject(CryptoScheme)
 
-		handler := artifactmanager.NewMessageHandler(&conf)
-		handler.PulseCalculator = Pulses
-		handler.FlowDispatcher.PulseAccessor = Pulses
-
-		handler.PCS = CryptoScheme
-		handler.JetCoordinator = Coordinator
-		handler.JetStorage = Jets
-		handler.DropModifier = drops
-		handler.IndexLocker = idLocker
-		handler.Records = records
-		handler.HotDataWaiter = waiter
-		handler.JetReleaser = waiter
-		handler.Sender = WmBus
-		handler.WriteAccessor = writeController
-		handler.Sender = WmBus
-		handler.IndexStorage = indexes
-
-		jetTreeUpdater := executor.NewFetcher(Nodes, Jets, WmBus, Coordinator)
+		jetFetcher := executor.NewFetcher(Nodes, Jets, Sender, Coordinator)
 		filamentCalculator := executor.NewFilamentCalculator(
 			indexes,
 			records,
 			Coordinator,
-			jetTreeUpdater,
-			WmBus,
+			jetFetcher,
+			Sender,
 			Pulses,
 		)
-		requestChecker := executor.NewRequestChecker(filamentCalculator, Coordinator, jetTreeUpdater, WmBus)
-
-		handler.JetTreeUpdater = jetTreeUpdater
-		handler.FilamentCalculator = filamentCalculator
-		handler.RequestChecker = requestChecker
+		requestChecker := executor.NewRequestChecker(filamentCalculator, Coordinator, jetFetcher, Sender)
 
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
-		lightCleaner := replication.NewCleaner(
+		lightCleaner := executor.NewCleaner(
 			Jets.(jet.Cleaner),
 			Nodes,
 			drops,
@@ -277,10 +253,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		)
 		comps.cleaner = lightCleaner
 
-		lthSyncer := replication.NewReplicatorDefault(
+		lthSyncer := executor.NewReplicatorDefault(
 			jetCalculator,
 			lightCleaner,
-			WmBus,
+			Sender,
 			Pulses,
 			drops,
 			records,
@@ -299,36 +275,63 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Pulses,
 			Jets,
 			conf.LightChainLimit,
-			WmBus,
+			Sender,
 		)
 
-		stateIniter := executor.NewStateIniter(Jets, waiter, drops, Nodes, WmBus, Pulses, Pulses, jetCalculator)
+		stateIniter := executor.NewStateIniter(
+			Jets, hotWaitReleaser, drops, Nodes, Sender, Pulses, Pulses, jetCalculator, indexes,
+		)
 
-		pm := pulsemanager.NewPulseManager(
+		dep := proc.NewDependencies(
+			CryptoScheme,
+			Coordinator,
+			Jets,
+			Pulses,
+			Sender,
+			drops,
+			idLocker,
+			records,
+			indexes,
+			hotWaitReleaser,
+			hotWaitReleaser,
+			writeController,
+			jetFetcher,
+			filamentCalculator,
+			requestChecker,
+		)
+
+		initHandle := func(msg *message.Message) *handle.Init {
+			return handle.NewInit(dep, Sender, msg)
+		}
+
+		FlowDispatcher = dispatcher.NewDispatcher(
+			Pulses,
+			func(msg *message.Message) flow.Handle {
+				return initHandle(msg).Present
+			}, func(msg *message.Message) flow.Handle {
+				return initHandle(msg).Future
+			}, func(msg *message.Message) flow.Handle {
+				return initHandle(msg).Past
+			},
+		)
+
+		PulseManager = executor.NewPulseManager(
+			NodeNetwork,
+			FlowDispatcher,
+			Nodes,
+			Pulses,
+			Pulses,
+			hotWaitReleaser,
 			jetSplitter,
 			lthSyncer,
-			writeController,
 			hotSender,
+			writeController,
 			stateIniter,
 		)
-		pm.MessageHandler = handler
-		pm.Bus = Bus
-		pm.NodeNet = NodeNetwork
-		pm.JetReleaser = waiter
-		pm.JetModifier = Jets
-		pm.NodeSetter = Nodes
-		pm.Nodes = Nodes
-		pm.PulseAccessor = Pulses
-		pm.PulseCalculator = Pulses
-		pm.PulseAppender = Pulses
-
-		PulseManager = pm
-		Handler = handler
 	}
 
 	comps.cmp.Inject(
-		WmBus,
-		Handler,
+		Sender,
 		Jets,
 		Pulses,
 		Coordinator,
@@ -337,8 +340,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Bus,
 		Requester,
 		Tokens,
-		Parcels,
-		artifacts.NewClient(WmBus),
+		artifacts.NewClient(Sender),
 		Genesis,
 		API,
 		KeyProcessor,
@@ -349,7 +351,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		NodeNetwork,
 		NetworkService,
 		pubSub,
-		rules.NewRules(),
+		messagebus.NewParcelFactory(),
 	)
 
 	err = comps.cmp.Init(ctx)
@@ -357,7 +359,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		return nil, errors.Wrap(err, "failed to init components")
 	}
 
-	comps.startWatermill(ctx, logger, pubSub, WmBus, NetworkService.SendMessageHandler, Handler.FlowDispatcher.Process)
+	comps.startWatermill(ctx, logger, pubSub, Sender, NetworkService.SendMessageHandler, FlowDispatcher.Process)
 
 	return comps, nil
 }
@@ -375,15 +377,15 @@ func (c *components) Stop(ctx context.Context) error {
 func (c *components) startWatermill(
 	ctx context.Context,
 	logger watermill.LoggerAdapter,
-	pubSub watermillMsg.PubSub,
+	pubSub message.Subscriber,
 	b *bus.Bus,
-	outHandler, inHandler watermillMsg.HandlerFunc,
+	outHandler, inHandler message.HandlerFunc,
 ) {
-	inRouter, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, logger)
+	inRouter, err := message.NewRouter(message.RouterConfig{}, logger)
 	if err != nil {
 		panic(err)
 	}
-	outRouter, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, logger)
+	outRouter, err := message.NewRouter(message.RouterConfig{}, logger)
 	if err != nil {
 		panic(err)
 	}
@@ -410,7 +412,7 @@ func (c *components) startWatermill(
 	startRouter(ctx, outRouter)
 }
 
-func startRouter(ctx context.Context, router *watermillMsg.Router) {
+func startRouter(ctx context.Context, router *message.Router) {
 	go func() {
 		if err := router.Run(); err != nil {
 			inslogger.FromContext(ctx).Error("Error while running router", err)

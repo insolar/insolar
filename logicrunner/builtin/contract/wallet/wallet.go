@@ -59,7 +59,7 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, assetName string, amo
 		return nil, fmt.Errorf("can't parse input amount")
 	}
 	zero, _ := new(big.Int).SetString("0", 10)
-	if amount.Cmp(zero) == -1 {
+	if amount.Cmp(zero) < 1 {
 		return nil, fmt.Errorf("amount must be larger then zero")
 	}
 

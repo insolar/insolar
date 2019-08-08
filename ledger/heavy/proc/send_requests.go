@@ -58,6 +58,7 @@ func (p *SendRequests) Proceed(ctx context.Context) error {
 	msg := payload.GetFilament{}
 	err := msg.Unmarshal(p.meta.Payload)
 	if err != nil {
+		instracer.AddError(span, err)
 		return errors.Wrap(err, "failed to decode GetFilament payload")
 	}
 
@@ -79,6 +80,7 @@ func (p *SendRequests) Proceed(ctx context.Context) error {
 		// Fetching filament record.
 		filamentRecord, err := p.dep.records.ForID(ctx, *iter)
 		if err != nil {
+			instracer.AddError(span, err)
 			return err
 		}
 		composite.MetaID = *iter
@@ -92,6 +94,7 @@ func (p *SendRequests) Proceed(ctx context.Context) error {
 		}
 		rec, err := p.dep.records.ForID(ctx, filament.RecordID)
 		if err != nil {
+			instracer.AddError(span, err)
 			return err
 		}
 		composite.RecordID = filament.RecordID
@@ -112,6 +115,7 @@ func (p *SendRequests) Proceed(ctx context.Context) error {
 		Records:  records,
 	})
 	if err != nil {
+		instracer.AddError(span, err)
 		return errors.Wrap(err, "failed to create a FilamentSegment message")
 	}
 	p.dep.sender.Reply(ctx, p.meta, rep)

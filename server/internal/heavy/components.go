@@ -19,10 +19,10 @@ package heavy
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network"
 	"net"
 
 	"github.com/insolar/insolar/ledger/heavy/exporter"
-	"github.com/insolar/insolar/network/rules"
 	"google.golang.org/grpc"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -36,7 +36,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/internal/ledger/artifact"
+	"github.com/insolar/insolar/ledger/artifact"
 	"github.com/insolar/insolar/ledger/genesis"
 
 	"github.com/pkg/errors"
@@ -56,7 +56,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/heavy/handler"
@@ -130,7 +130,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	// Network.
 	var (
 		NetworkService *servicenetwork.ServiceNetwork
-		NodeNetwork    insolar.NodeNetwork
+		NodeNetwork    network.NodeNetwork
 		Termination    insolar.TerminationHandler
 	)
 	{
@@ -197,7 +197,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
-		c.NodeNet = NodeNetwork
+		c.OriginProvider = NodeNetwork
 		c.PlatformCryptographyScheme = CryptoScheme
 		c.Nodes = Nodes
 
@@ -358,7 +358,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		NodeNetwork,
 		NetworkService,
 		pubSub,
-		rules.NewRules(),
 	)
 	err = c.cmp.Init(ctx)
 	if err != nil {

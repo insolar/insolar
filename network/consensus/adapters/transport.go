@@ -78,6 +78,6 @@ func (ps *PacketSender) SendPacketToTransport(ctx context.Context, to transport2
 
 	err := ps.datagramTransport.SendDatagram(ctx, addr, payload.([]byte))
 	if err != nil {
-		logger.Error("Failed to send datagram")
+		logger.Error("Failed to send datagram: ", err)
 	}
 }

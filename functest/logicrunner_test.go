@@ -20,11 +20,13 @@ package functest
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/insolar/utils"
+	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/insolar/utils"
 
 	"github.com/stretchr/testify/require"
 
@@ -870,13 +872,20 @@ func (r *One) Recursive() (error) {
 `
 	protoRef := uploadContractOnce(t, "recursive_call_one", contractOneCode)
 
-	obj := callConstructor(t, protoRef, "New")
-	resp := callMethodNoChecks(t, obj, "Recursive")
+	// for now Recursive calls may cause timeouts. Dont remove retries until we make new loop detection algorithm
+	var err string
+	for i := 0; i <= 5; i++ {
+		obj := callConstructor(t, protoRef, "New")
+		resp := callMethodNoChecks(t, obj, "Recursive")
 
-	errstr := resp.Error.Error()
-	require.NotEmpty(t, errstr)
-	// if you get a timeout here add a retry loop to the test as it was before
-	require.Contains(t, errstr, "loop detected")
+		err = resp.Error.Error()
+		if !strings.Contains(err, "timeout") {
+			break
+		}
+	}
+
+	require.NotEmpty(t, err)
+	require.Contains(t, err, "loop detected")
 }
 
 func TestGetParent(t *testing.T) {
@@ -1474,10 +1483,6 @@ func (r *Two) NoWaitGet(OneRef insolar.Reference) (int, error) {
 	firstObjRef := callConstructor(t, contractOneRef, "NewWithNumber", n)
 
 	contractTwoRef := uploadContractOnce(t, "second_nowait_contract", contractTwoCode)
-	secondObjRef := callConstructor(t, contractTwoRef, "New")
-	secondResult := callMethod(t, secondObjRef, "NoWaitGet", firstObjRef)
-	require.Empty(t, secondResult.Error)
-	require.Equal(t, float64(n), secondResult.ExtractedReply)
 
 	anon := func() api.CallMethodReply { return callMethod(t, firstObjRef, "Get") }
 	firstResultAfterWait, _ := waitUntilRequestProcessed(anon, time.Second+10, time.Millisecond+50, 10)

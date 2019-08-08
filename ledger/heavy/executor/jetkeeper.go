@@ -22,12 +22,11 @@ import (
 
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/storage"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/insolar/store"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/heavy/executor.JetKeeper -o ./ -s _gen_mock.go -g
@@ -53,7 +52,7 @@ func NewJetKeeper(jets jet.Storage, db store.DB, pulses pulse.Calculator) JetKee
 type dbJetKeeper struct {
 	jetTrees jet.Storage
 
-	pulses storage.PulseCalculator
+	pulses pulse.Calculator
 
 	sync.RWMutex
 	db store.DB
