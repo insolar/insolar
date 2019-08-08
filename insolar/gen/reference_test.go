@@ -41,7 +41,7 @@ func TestGen_JetID(t *testing.T) {
 }
 
 func TestGen_IDWithPulse(t *testing.T) {
-	// Empty slice for comparison
+	// Empty slice for comparison.
 	emptySlice := make([]byte, insolar.RecordHashSize)
 
 	for i := 0; i < 100; i++ {

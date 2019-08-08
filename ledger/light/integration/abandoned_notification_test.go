@@ -35,7 +35,7 @@ func HeavyResponse(pl payload.Payload) []payload.Payload {
 	switch p := pl.(type) {
 	case *payload.Replication, *payload.GotHotConfirmation:
 		return nil
-	case *payload.GetFilament:
+	case *payload.GetFilament: // Simulate heavy response when SetResult comes for filaments.
 		virtual := record.Wrap(&record.PendingFilament{
 			RecordID:       p.ObjectID,
 			PreviousRecord: nil,
@@ -99,18 +99,21 @@ func Test_AbandonedNotification(t *testing.T) {
 	s.SetPulse(ctx)
 
 	t.Run("abandoned notification", func(t *testing.T) {
+		// Set incoming request.
 		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), true, true)
 		rep := SendMessage(ctx, s, &msg)
 		RequireNotError(rep)
 		reqInfo := rep.(*payload.RequestInfo)
 		objectID := reqInfo.ObjectID
 
+		// Some pulses to reach the abandoned notification threshold.
 		<-receivedConfirmations
 		s.SetPulse(ctx)
 		<-receivedConfirmations
 		s.SetPulse(ctx)
 		<-receivedConfirmations
 
+		// Every pulse we must to send abandoned notifications (until it's processed).
 		for i := 0; i < 100; i++ {
 			s.SetPulse(ctx)
 			<-receivedConfirmations
@@ -121,11 +124,12 @@ func Test_AbandonedNotification(t *testing.T) {
 
 		requestID := reqInfo.RequestID
 
-		// Set result.
+		// Set result -> close incoming request -> stop to send notifications.
 		resMsg, _ := MakeSetResult(objectID, requestID)
 		rep = SendMessage(ctx, s, &resMsg)
 		RequireNotError(rep)
 
+		// Checking for no notifications.
 		for j := 0; j < 10; j++ {
 			s.SetPulse(ctx)
 			<-receivedConfirmations
