@@ -367,7 +367,7 @@ func getAnnounceSignature(
 	buf := &bytes.Buffer{}
 	err = brief.SerializeTo(nil, buf)
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 
 	data := buf.Bytes()
@@ -375,13 +375,13 @@ func getAnnounceSignature(
 
 	key, err := keystore.GetPrivateKey("")
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 
 	digest := scheme.IntegrityHasher().Hash(data)
 	sign, err := scheme.DigestSigner(key).Sign(digest)
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 
 	return digest, sign, nil
