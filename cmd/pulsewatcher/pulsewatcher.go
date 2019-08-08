@@ -181,7 +181,8 @@ func collectNodesStatuses(conf *pulsewatcher.Config, lastResults [][]string) ([]
 				strings.NewReader(`{"jsonrpc": "2.0", "method": "node.getStatus", "id": 0}`))
 			if err != nil {
 				errStr := err.Error()
-				if strings.Contains(errStr, "connection refused") {
+				if strings.Contains(errStr, "connection refused") ||
+					strings.Contains(errStr, "request canceled while waiting for connection") {
 					// Print compact error string when node is down.
 					// This prevents table distortion on small screens.
 					errStr = "NODE IS DOWN"
