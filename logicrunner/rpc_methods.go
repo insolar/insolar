@@ -164,10 +164,6 @@ func (m *executionProxyImplementation) RouteCall(
 ) error {
 	inslogger.FromContext(ctx).Debug("RPC.RouteCall")
 
-	if current.Request.Immutable {
-		return errors.New("Try to call route from immutable method")
-	}
-
 	outgoing := buildOutgoingRequest(ctx, current, req)
 
 	// Step 1. Register outgoing request.
