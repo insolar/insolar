@@ -246,6 +246,8 @@ Can be called from a polling function (for ephemeral), and happen BEFORE PrepRea
 */
 func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 
+	r._setStartedAt()
+
 	if !prepWasSuccessful {
 		r.roundWorker.OnPrepRoundFailed()
 		return

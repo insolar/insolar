@@ -163,7 +163,7 @@ func (p *SyncingWorker) TryStartWithDeadline(ctx context.Context, d time.Time) S
 	}
 
 	p.ctx, p.cancelFn = context.WithDeadline(ctx, d)
-	go p.run()
+	p.run()
 	return runStatusStarted
 }
 
@@ -173,7 +173,7 @@ func (p *SyncingWorker) TryStart(ctx context.Context) Status {
 	}
 
 	p.ctx, p.cancelFn = context.WithCancel(ctx)
-	go p.run()
+	p.run()
 	return runStatusStarted
 }
 
@@ -199,15 +199,18 @@ func (p *SyncingWorker) TryStartAttached() Status {
 		return status
 	}
 
-	go p.run()
+	p.run()
 	return runStatusStarted
 }
 
 func (p *SyncingWorker) run() {
-
 	p.beforeStartFn(p.ctx)
 	p.beforeStartFn = nil //avoid unnecessary retention
 
+	go p._run()
+}
+
+func (p *SyncingWorker) _run() {
 	err := p.runCommandsAndCleanup()
 
 	p.afterStopFn(p.ctx, err)

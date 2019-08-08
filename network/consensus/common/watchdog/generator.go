@@ -60,11 +60,11 @@ type HeartbeatGeneratorFactory interface {
 	CreateGenerator(name string) *HeartbeatGenerator
 }
 
-func NewHeartbeatGenerator(id uint32, heartbeatPeriod time.Duration, out chan<- Heartbeat) HeartbeatGenerator {
+func NewHeartbeatGenerator(id HeartbeatID, heartbeatPeriod time.Duration, out chan<- Heartbeat) HeartbeatGenerator {
 	return NewHeartbeatGeneratorWithRetries(id, heartbeatPeriod, 0, out)
 }
 
-func NewHeartbeatGeneratorWithRetries(id uint32, heartbeatPeriod time.Duration, retryCount uint8, out chan<- Heartbeat) HeartbeatGenerator {
+func NewHeartbeatGeneratorWithRetries(id HeartbeatID, heartbeatPeriod time.Duration, retryCount uint8, out chan<- Heartbeat) HeartbeatGenerator {
 	attempts := retryCount
 	if out == nil {
 		attempts = 0
@@ -93,7 +93,7 @@ func NewHeartbeatGeneratorWithRetries(id uint32, heartbeatPeriod time.Duration, 
 }
 
 type HeartbeatGenerator struct {
-	id              uint32
+	id              HeartbeatID
 	heartbeatPeriod uint32
 	atomicNano      int64
 	sendAttempts    uint8

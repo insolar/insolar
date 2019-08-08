@@ -187,17 +187,21 @@ func NewNodeProfileFactory(keyProcessor insolar.KeyProcessor) profiles.Factory {
 	return profiles.NewSimpleProfileIntroFactory(&keyStoreFactory{keyProcessor})
 }
 
-type ConsensusDigestFactory struct {
-	scheme insolar.PlatformCryptographyScheme
-}
-
 func NewConsensusDigestFactory(scheme insolar.PlatformCryptographyScheme) *ConsensusDigestFactory {
 	return &ConsensusDigestFactory{
 		scheme: scheme,
 	}
 }
 
-func (cdf *ConsensusDigestFactory) CreatePacketDigester() cryptkit.DataDigester {
+type ConsensusDigestFactory struct {
+	scheme insolar.PlatformCryptographyScheme
+}
+
+func (cdf *ConsensusDigestFactory) CreatePairDigester() cryptkit.PairDigester {
+	panic("implement me")
+}
+
+func (cdf *ConsensusDigestFactory) CreateDataDigester() cryptkit.DataDigester {
 	return NewSha3512Digester(cdf.scheme)
 }
 

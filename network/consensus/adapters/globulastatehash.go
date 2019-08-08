@@ -62,6 +62,10 @@ type SequenceDigester struct {
 	state        uint64
 }
 
+func (d *SequenceDigester) GetDigestSize() int {
+	return d.dataDigester.GetDigestSize()
+}
+
 func NewSequenceDigester(dataDigester cryptkit.DataDigester) *SequenceDigester {
 	return &SequenceDigester{
 		dataDigester: dataDigester,
@@ -78,7 +82,7 @@ func (d *SequenceDigester) addNext(state uint64) {
 
 func (d *SequenceDigester) FinishSequence() cryptkit.Digest {
 	bits64 := longbits.NewBits64(d.state)
-	return d.dataDigester.GetDigestOf(&bits64)
+	return d.dataDigester.DigestData(&bits64)
 }
 
 func (d *SequenceDigester) GetDigestMethod() cryptkit.DigestMethod {

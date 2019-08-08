@@ -254,9 +254,10 @@ func (r Data) IsValidEphemeralData() bool {
 	if !r.IsValidPulseData() {
 		return false
 	}
-	var expectedEntropy longbits.Bits256
-	fixedPulseEntropy(&expectedEntropy, r.PulseNumber)
-	return expectedEntropy == r.PulseEntropy
+	return true
+	//var expectedEntropy longbits.Bits256
+	//fixedPulseEntropy(&expectedEntropy, r.PulseNumber)
+	//return expectedEntropy == r.PulseEntropy
 }
 
 func (r Data) IsFromPulsar() bool {

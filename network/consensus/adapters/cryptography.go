@@ -74,7 +74,11 @@ func NewSha3512Digester(scheme insolar.PlatformCryptographyScheme) *Sha3512Diges
 	}
 }
 
-func (pd *Sha3512Digester) GetDigestOf(reader io.Reader) cryptkit.Digest {
+func (pd *Sha3512Digester) GetDigestSize() int {
+	return 64
+}
+
+func (pd *Sha3512Digester) DigestData(reader io.Reader) cryptkit.Digest {
 	hasher := pd.scheme.IntegrityHasher()
 
 	_, err := io.Copy(hasher, reader)
@@ -200,7 +204,7 @@ func (sv *ECDSASignatureVerifier) IsValidDataSignature(data io.Reader, signature
 		return false
 	}
 
-	digest := sv.digester.GetDigestOf(data)
+	digest := sv.digester.DigestData(data)
 
 	return sv.IsValidDigestSignature(digest.AsDigestHolder(), signature)
 }
