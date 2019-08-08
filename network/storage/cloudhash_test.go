@@ -64,7 +64,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCloudHashtStorage(t *testing.T) {
+func TestCloudHashStorage(t *testing.T) {
 
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
@@ -74,7 +74,7 @@ func TestCloudHashtStorage(t *testing.T) {
 	cm := component.NewManager(nil)
 	badgerDB, err := NewBadgerDB(configuration.ServiceNetwork{CacheDirectory: tmpdir})
 	defer badgerDB.Stop(ctx)
-	cs := NewCloudHashStorage()
+	cs := newCloudHashStorage()
 
 	cm.Register(badgerDB, cs)
 	cm.Inject()
@@ -82,13 +82,28 @@ func TestCloudHashtStorage(t *testing.T) {
 	pulse := insolar.Pulse{PulseNumber: 15}
 	cloudHash := []byte{1, 2, 3, 4, 5}
 
-	err = cs.Append(ctx, pulse.PulseNumber, cloudHash)
+	err = cs.Append(pulse.PulseNumber, cloudHash)
 	assert.NoError(t, err)
 
-	cloudHash2, err := cs.ForPulseNumber(ctx, pulse.PulseNumber)
+	cloudHash2, err := cs.ForPulseNumber(pulse.PulseNumber)
 	assert.NoError(t, err)
 
 	assert.Equal(t, cloudHash, cloudHash2)
 
 	err = cm.Stop(ctx)
+}
+
+func TestInMemoryCloudHashStorage(t *testing.T) {
+	cs := NewMemoryCloudHashStorage()
+
+	pulse := insolar.Pulse{PulseNumber: 15}
+	cloudHash := []byte{1, 2, 3, 4, 5}
+
+	err := cs.Append(pulse.PulseNumber, cloudHash)
+	assert.NoError(t, err)
+
+	cloudHash2, err := cs.ForPulseNumber(pulse.PulseNumber)
+	assert.NoError(t, err)
+
+	assert.Equal(t, cloudHash, cloudHash2)
 }

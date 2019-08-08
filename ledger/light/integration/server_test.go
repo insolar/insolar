@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto"
 	"fmt"
+	"github.com/insolar/insolar/network"
 	"math"
 	"sync"
 	"time"
@@ -48,22 +49,26 @@ import (
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/log"
+	networknode "github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
 var (
 	light = nodeMock{
-		ref:  gen.Reference(),
-		role: insolar.StaticRoleLightMaterial,
+		ref:     gen.Reference(),
+		shortID: 1,
+		role:    insolar.StaticRoleLightMaterial,
 	}
 	heavy = nodeMock{
-		ref:  gen.Reference(),
-		role: insolar.StaticRoleHeavyMaterial,
+		ref:     gen.Reference(),
+		shortID: 2,
+		role:    insolar.StaticRoleHeavyMaterial,
 	}
 	virtual = nodeMock{
-		ref:  gen.Reference(),
-		role: insolar.StaticRoleVirtual,
+		ref:     gen.Reference(),
+		shortID: 3,
+		role:    insolar.StaticRoleVirtual,
 	}
 )
 
@@ -151,7 +156,7 @@ func NewServer(
 
 	// Network.
 	var (
-		NodeNetwork insolar.NodeNetwork
+		NodeNetwork network.NodeNetwork
 	)
 	{
 		NodeNetwork = newNodeNetMock(&light)
@@ -173,7 +178,7 @@ func NewServer(
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
-		c.NodeNet = NodeNetwork
+		c.OriginProvider = NodeNetwork
 		c.PlatformCryptographyScheme = CryptoScheme
 		c.Nodes = Nodes
 
@@ -196,7 +201,7 @@ func NewServer(
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
-		c.NodeNet = newNodeNetMock(&virtual)
+		c.OriginProvider = newNodeNetMock(&virtual)
 		c.PlatformCryptographyScheme = CryptoScheme
 		c.Nodes = Nodes
 		ClientBus = bus.NewBus(cfg.Bus, ClientPubSub, Pulses, c, CryptoScheme)
@@ -268,7 +273,9 @@ func NewServer(
 			ServerBus,
 		)
 
-		stateIniter := executor.NewStateIniter(Jets, hotWaitReleaser, drops, Nodes, ServerBus, Pulses, Pulses, jetCalculator)
+		stateIniter := executor.NewStateIniter(
+			Jets, hotWaitReleaser, drops, Nodes, ServerBus, Pulses, Pulses, jetCalculator, indexes,
+		)
 
 		dep := proc.NewDependencies(
 			CryptoScheme,
@@ -467,8 +474,9 @@ func (s *Server) Stop() {
 }
 
 type nodeMock struct {
-	ref  insolar.Reference
-	role insolar.StaticRole
+	ref     insolar.Reference
+	shortID insolar.ShortNodeID
+	role    insolar.StaticRole
 }
 
 func (n *nodeMock) ID() insolar.Reference {
@@ -476,7 +484,7 @@ func (n *nodeMock) ID() insolar.Reference {
 }
 
 func (n *nodeMock) ShortID() insolar.ShortNodeID {
-	panic("implement me")
+	return n.shortID
 }
 
 func (n *nodeMock) Role() insolar.StaticRole {
@@ -488,7 +496,7 @@ func (n *nodeMock) PublicKey() crypto.PublicKey {
 }
 
 func (n *nodeMock) Address() string {
-	panic("implement me")
+	return ""
 }
 
 func (n *nodeMock) GetGlobuleID() insolar.GlobuleID {
@@ -504,11 +512,19 @@ func (n *nodeMock) LeavingETA() insolar.PulseNumber {
 }
 
 func (n *nodeMock) GetState() insolar.NodeState {
-	panic("implement me")
+	return insolar.NodeReady
+}
+
+func (n *nodeMock) GetPower() insolar.Power {
+	return 1
 }
 
 type nodeNetMock struct {
 	me insolar.NetworkNode
+}
+
+func (n *nodeNetMock) GetAccessor(insolar.PulseNumber) network.Accessor {
+	return networknode.NewAccessor(networknode.NewSnapshot(insolar.GenesisPulse.PulseNumber, []insolar.NetworkNode{&virtual, &heavy, &light}))
 }
 
 func newNodeNetMock(me insolar.NetworkNode) *nodeNetMock {
@@ -517,20 +533,4 @@ func newNodeNetMock(me insolar.NetworkNode) *nodeNetMock {
 
 func (n *nodeNetMock) GetOrigin() insolar.NetworkNode {
 	return n.me
-}
-
-func (n *nodeNetMock) GetWorkingNode(ref insolar.Reference) insolar.NetworkNode {
-	panic("implement me")
-}
-
-func (n *nodeNetMock) GetWorkingNodes() []insolar.NetworkNode {
-	return []insolar.NetworkNode{
-		&virtual,
-		&heavy,
-		&light,
-	}
-}
-
-func (n *nodeNetMock) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference {
-	panic("implement me")
 }

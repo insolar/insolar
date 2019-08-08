@@ -22,9 +22,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -194,7 +192,7 @@ func (m *executionProxyImplementation) RouteCall(
 	outgoingReqRef := insolar.NewReference(outReqInfo.RequestID)
 
 	var incoming *record.IncomingRequest
-	rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
+	_, rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
 	if incoming != nil {
 		current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
 	}
@@ -209,7 +207,7 @@ func (m *executionProxyImplementation) SaveAsChild(
 	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsChild")
 	defer span.End()
 
-	incoming, outgoing := buildIncomingAndOutgoingSaveAsChildRequests(ctx, current, req)
+	outgoing := buildOutgoingSaveAsChildRequest(ctx, current, req)
 
 	// Register outgoing request
 	outReqInfo, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
@@ -217,23 +215,13 @@ func (m *executionProxyImplementation) SaveAsChild(
 		return err
 	}
 
-	// Send the request
-	msg := &message.CallMethod{IncomingRequest: *incoming}
-	res, err := m.cr.Call(ctx, msg)
-	if err != nil {
-		return err
-	}
-
-	callReply := res.(*reply.CallMethod)
-	current.AddOutgoingRequest(ctx, *incoming, callReply.Result, callReply.Object, err)
-
-	rep.Reference = callReply.Object
-	rep.Result = callReply.Result
-
-	// Register result of the outgoing method
 	outgoingReqRef := insolar.NewReference(outReqInfo.RequestID)
-	reqResult := newRequestResult(rep.Result, req.Callee)
-	return m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
+	var incoming *record.IncomingRequest
+	rep.Reference, rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
+	if incoming != nil {
+		current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
+	}
+	return err
 }
 
 func (m *executionProxyImplementation) DeactivateObject(
@@ -300,7 +288,8 @@ func (m *validationProxyImplementation) RouteCall(
 func (m *validationProxyImplementation) SaveAsChild(
 	ctx context.Context, current *Transcript, req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp,
 ) error {
-	incoming, _ := buildIncomingAndOutgoingSaveAsChildRequests(ctx, current, req)
+	outgoing := buildOutgoingSaveAsChildRequest(ctx, current, req)
+	incoming := buildIncomingRequestFromOutgoing(outgoing)
 
 	reqRes := current.HasOutgoingRequest(ctx, *incoming)
 	if reqRes == nil {
@@ -339,6 +328,8 @@ func buildIncomingRequestFromOutgoing(outgoing *record.OutgoingRequest) *record.
 
 		Immutable: outgoing.Immutable,
 
+		CallType:  outgoing.CallType, // used only for CTSaveAsChild
+		Base:      outgoing.Base,     // used only for CTSaveAsChild
 		Object:    outgoing.Object,
 		Prototype: outgoing.Prototype,
 		Method:    outgoing.Method,
@@ -392,26 +383,11 @@ func buildOutgoingRequest(
 	return outgoing
 }
 
-func buildIncomingAndOutgoingSaveAsChildRequests(
+func buildOutgoingSaveAsChildRequest(
 	_ context.Context, current *Transcript, req rpctypes.UpSaveAsChildReq,
-) (*record.IncomingRequest, *record.OutgoingRequest) {
+) *record.OutgoingRequest {
 
 	current.Nonce++
-
-	incoming := record.IncomingRequest{
-		Caller:          req.Callee,
-		CallerPrototype: req.CalleePrototype,
-		Nonce:           current.Nonce,
-
-		CallType:  record.CTSaveAsChild,
-		Base:      &req.Parent,
-		Prototype: &req.Prototype,
-		Method:    req.ConstructorName,
-		Arguments: req.ArgsSerialized,
-
-		APIRequestID: current.Request.APIRequestID,
-		Reason:       current.RequestRef,
-	}
 
 	outgoing := record.OutgoingRequest{
 		Caller:          req.Callee,
@@ -428,5 +404,5 @@ func buildIncomingAndOutgoingSaveAsChildRequests(
 		Reason:       current.RequestRef,
 	}
 
-	return &incoming, &outgoing
+	return &outgoing
 }

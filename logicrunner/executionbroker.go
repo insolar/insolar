@@ -181,14 +181,6 @@ func (q *ExecutionBroker) getMutableTask(ctx context.Context) *Transcript {
 	return transcript
 }
 
-func (q *ExecutionBroker) storeCurrent(ctx context.Context, transcript *Transcript) {
-	err := q.currentList.SetOnce(transcript)
-	if err != nil {
-		inslogger.FromContext(ctx).Error("couldn't store task in current list: ", err.Error())
-	}
-	q.executionArchive.Archive(ctx, transcript)
-}
-
 func (q *ExecutionBroker) releaseTask(_ context.Context, transcript *Transcript) {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
@@ -223,7 +215,7 @@ func (q *ExecutionBroker) finishTask(ctx context.Context, transcript *Transcript
 	}
 }
 
-func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *Transcript) bool {
+func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *Transcript) {
 	if transcript.Context != nil {
 		ctx = transcript.Context
 	} else {
@@ -234,7 +226,7 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *Tra
 	defer q.releaseTask(ctx, transcript)
 
 	if readyToExecute := q.Check(ctx); !readyToExecute {
-		return false
+		return
 	}
 
 	reply, err := q.requestsExecutor.ExecuteAndSave(ctx, transcript)
@@ -253,8 +245,6 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *Tra
 	//       pulse changed and we should stop execution
 	logger.Debug("finished request, try to finish pending if needed")
 	q.finishPendingIfNeeded(ctx)
-
-	return true
 }
 
 func (q *ExecutionBroker) storeWithoutDuplication(ctx context.Context, transcript *Transcript) bool {
@@ -274,12 +264,13 @@ func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts .
 			continue
 		}
 
+		var list *TranscriptDequeue
 		if transcript.Request.Immutable {
-			q.storeCurrent(ctx, transcript)
-			go q.processTranscript(ctx, transcript)
+			list = q.immutable
 		} else {
-			q.mutable.Prepend(transcript)
+			list = q.mutable
 		}
+		list.Prepend(transcript)
 	}
 	if start {
 		q.StartProcessorIfNeeded(ctx)
@@ -293,12 +284,13 @@ func (q *ExecutionBroker) Put(ctx context.Context, start bool, transcripts ...*T
 			continue
 		}
 
+		var list *TranscriptDequeue
 		if transcript.Request.Immutable {
-			q.storeCurrent(ctx, transcript)
-			go q.processTranscript(ctx, transcript)
+			list = q.immutable
 		} else {
-			q.mutable.Push(transcript)
+			list = q.mutable
 		}
+		list.Push(transcript)
 	}
 	if start {
 		q.StartProcessorIfNeeded(ctx)
@@ -363,9 +355,11 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 	// processing mutable queue
 	for transcript := q.getMutableTask(ctx); transcript != nil; transcript = q.getMutableTask(ctx) {
 		q.fetchMoreFromLedgerIfNeeded(ctx)
-
-		if !q.processTranscript(ctx, transcript) {
-			break
+		q.processTranscript(ctx, transcript)
+		// processing immutable queue after every mutable task
+		// its temporary solution
+		for elem := q.getImmutableTask(ctx); elem != nil; elem = q.getImmutableTask(ctx) {
+			go q.processTranscript(ctx, elem)
 		}
 	}
 }

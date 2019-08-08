@@ -120,7 +120,7 @@ func (s *LeaveTestSuite) TestLeaveNow() {
 
 func (s *LeaveTestSuite) TestLeaveEta() {
 	mockPulseNumber := insolar.PulseNumber(2000000000)
-	testPulse := &insolar.Pulse{PulseNumber: insolar.PulseNumber(mockPulseNumber)}
+	testPulse := &insolar.Pulse{PulseNumber: mockPulseNumber}
 	pulseDelta := testPulse.NextPulseNumber - testPulse.PulseNumber
 	leaveAfter := insolar.PulseNumber(5)
 

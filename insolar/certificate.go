@@ -43,6 +43,7 @@ type Certificate interface {
 type DiscoveryNode interface {
 	NodeMeta
 
+	GetRole() StaticRole
 	GetHost() string
 }
 
