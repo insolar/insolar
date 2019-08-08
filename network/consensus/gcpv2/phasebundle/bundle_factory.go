@@ -51,7 +51,6 @@
 package phasebundle
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
@@ -146,23 +145,16 @@ func (p *standardBundleFactory) CreateControllersBundle(population census.Online
 
 	switch {
 	case mode.IsEvicted():
-		lockDown("EVICTED DETECTED")
-		panic("consensus can NOT be started for an evicted node")
+		panic("EVICTED DETECTED: consensus can NOT be started for an evicted node")
 	case lp.IsJoiner():
 		if population.GetIndexedCapacity() != 0 {
 			panic("joiner can only start with a zero node population")
 		}
 		return NewJoinerPhaseBundle(bf, bundleConfig)
 	case mode.IsSuspended() || !population.IsValid():
-		lockDown("SUSPENDED DETECTED")
+		panic("SUSPENDED DETECTED: not implemented")
 		// TODO work as suspected
-		return nil
 	default:
 		return NewRegularPhaseBundle(bf, bundleConfig)
 	}
-}
-
-func lockDown(msg string) { // TODO must be removed after debugging
-	fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>> DEBUG LOCK: ", msg)
-	<-(<-chan struct{})(nil)
 }
