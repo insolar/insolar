@@ -470,7 +470,7 @@ func (q *ExecutionBroker) finishPendingIfNeeded(ctx context.Context) {
 	// and use one pending state for all of them
 	// so pending is finish only when all of calls are finished
 	if !q.currentList.Empty() {
-		inslogger.FromContext(ctx).Debug("we are in pending but still have ", q.currentList.Length(), " requests to finish")
+		inslogger.FromContext(ctx).Debug("we are in pending and still have ", q.currentList.Length(), " requests to finish")
 		return
 	}
 
