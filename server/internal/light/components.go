@@ -278,7 +278,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Sender,
 		)
 
-		stateIniter := executor.NewStateIniter(Jets, hotWaitReleaser, drops, Nodes, Sender, Pulses, Pulses, jetCalculator)
+		stateIniter := executor.NewStateIniter(
+			Jets, hotWaitReleaser, drops, Nodes, Sender, Pulses, Pulses, jetCalculator, indexes,
+		)
 
 		dep := proc.NewDependencies(
 			CryptoScheme,

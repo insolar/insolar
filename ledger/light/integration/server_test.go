@@ -273,7 +273,9 @@ func NewServer(
 			ServerBus,
 		)
 
-		stateIniter := executor.NewStateIniter(Jets, hotWaitReleaser, drops, Nodes, ServerBus, Pulses, Pulses, jetCalculator)
+		stateIniter := executor.NewStateIniter(
+			Jets, hotWaitReleaser, drops, Nodes, ServerBus, Pulses, Pulses, jetCalculator, indexes,
+		)
 
 		dep := proc.NewDependencies(
 			CryptoScheme,
