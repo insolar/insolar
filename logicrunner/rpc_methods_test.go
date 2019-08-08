@@ -399,29 +399,28 @@ func TestSaveAsChildRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	req := rpctypes.UpSaveAsChildReq{}
 	resp := &rpctypes.UpSaveAsChildResp{}
 
-	var outreq *record.OutgoingRequest
-	outgoingReqID := gen.ID()
-	outgoingReqRef := insolar.NewReference(outgoingReqID)
-	// Make sure an outgoing request is registered
+	// Make sure the outgoing request was registered
+	var registeredReq *record.OutgoingRequest
 	am.RegisterOutgoingRequestMock.Set(func(ctx context.Context, r *record.OutgoingRequest) (*payload.RequestInfo, error) {
-		require.Nil(t, outreq)
-		outreq = r
-		id := outgoingReqID
+		require.Nil(t, registeredReq)
+		registeredReq = r
+		id := gen.ID()
 		return &payload.RequestInfo{RequestID: id}, nil
 	})
 
-	newObjRef := gen.Reference()
-	cr.CallMock.Return(&reply.CallMethod{Object:&newObjRef, Result: []byte{3,2,1}}, nil)
-
-	// Make sure the result of the outgoing request is registered as well
-	am.RegisterResultMock.Set(func(ctx context.Context, reqref insolar.Reference, result artifacts.RequestResult) (r error) {
-		require.Equal(t, outgoingReqRef, &reqref)
-		require.Equal(t, []byte{3,2,1}, result.Result())
-		return nil
+	// Make sure the result of the outgoing request was sent
+	var sentReq *record.OutgoingRequest
+	os.SendOutgoingRequestMock.Set(func(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest) (
+		insolar.Arguments, *record.IncomingRequest, error) {
+		require.Nil(t, sentReq)
+		sentReq = req
+		return []byte{3, 2, 1}, &record.IncomingRequest{}, nil
 	})
 
 	err := rpcm.SaveAsChild(ctx, transcript, req, resp)
 	require.NoError(t, err)
-	require.NotNil(t, outreq)
-	require.Equal(t, requestRef, outreq.Reason)
+	require.NotNil(t, registeredReq)
+	require.Equal(t, requestRef, registeredReq.Reason)
+	require.NotNil(t, sentReq)
+	require.Equal(t, registeredReq, sentReq)
 }

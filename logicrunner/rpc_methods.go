@@ -22,9 +22,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -210,7 +208,6 @@ func (m *executionProxyImplementation) SaveAsChild(
 	defer span.End()
 
 	outgoing := buildOutgoingSaveAsChildRequest(ctx, current, req)
-	incoming := buildIncomingRequestFromOutgoing(outgoing)
 
 	// Register outgoing request
 	outReqInfo, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
@@ -218,24 +215,13 @@ func (m *executionProxyImplementation) SaveAsChild(
 		return err
 	}
 
-	// AALEKSEEV TODO move CallConstructor to OutgoingRequestSender
-	// Send the request
-	msg := &message.CallMethod{IncomingRequest: *incoming}
-	res, err := m.cr.Call(ctx, msg)
-	if err != nil {
-		return err
-	}
-
-	callReply := res.(*reply.CallMethod)
-	current.AddOutgoingRequest(ctx, *incoming, callReply.Result, callReply.Object, err)
-
-	rep.Reference = callReply.Object
-	rep.Result = callReply.Result
-
-	// Register result of the outgoing method
 	outgoingReqRef := insolar.NewReference(outReqInfo.RequestID)
-	reqResult := newRequestResult(rep.Result, req.Callee)
-	return m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
+	var incoming *record.IncomingRequest
+	rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
+	if incoming != nil {
+		current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
+	}
+	return err
 }
 
 func (m *executionProxyImplementation) DeactivateObject(
