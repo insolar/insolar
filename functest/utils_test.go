@@ -201,23 +201,23 @@ func unmarshalCallResponse(t testing.TB, body []byte, response *requester.Contra
 	require.NoError(t, err)
 }
 
-func createMemberWithMigrationAddress(migrationAddress string) error {
+func createMemberWithMigrationAddress(migrationAddress string) (string, error) {
 	member, err := newUserWithKeys()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	_, err = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	_, err = retryableMemberMigrationCreate(member, true)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return member.ref, nil
 }
 
 func migrate(t *testing.T, memberRef string, amount string, tx string, ma string, mdNum int) map[string]interface{} {

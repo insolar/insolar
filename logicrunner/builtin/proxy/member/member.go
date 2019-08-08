@@ -37,6 +37,9 @@ type MigrationCreateResponse struct {
 	Reference        string `json:"reference"`
 	MigrationAddress string `json:"migrationAddress"`
 }
+type MigrationResponse struct {
+	Reference string `json:"memberReference"`
+}
 type Params struct {
 	Seed       string      `json:"seed"`
 	CallSite   string      `json:"callSite"`
