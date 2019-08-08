@@ -174,6 +174,9 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 	}
 	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
 
+	ctx, span := instracer.StartSpan(ctx, payloadType.String())
+	defer span.End()
+
 	switch payloadType {
 	case payload.TypeGetRequest:
 		p := proc.NewSendRequest(meta)
@@ -217,6 +220,7 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())
 	}
 	if err != nil {
+		instracer.AddError(span, err)
 		h.replyError(ctx, meta, err)
 	}
 	return err
