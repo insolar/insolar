@@ -313,26 +313,19 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			},
 		)
 
-		pm := executor.NewPulseManager(
+		PulseManager = executor.NewPulseManager(
+			NodeNetwork,
+			FlowDispatcher,
+			Nodes,
+			Pulses,
+			Pulses,
+			hotWaitReleaser,
 			jetSplitter,
 			lthSyncer,
-			writeController,
 			hotSender,
+			writeController,
 			stateIniter,
 		)
-		pm.Dispatcher = FlowDispatcher
-		pm.Bus = Bus
-		pm.NodeNet = NodeNetwork
-		pm.JetReleaser = hotWaitReleaser
-		pm.JetModifier = Jets
-		pm.NodeSetter = Nodes
-		pm.Nodes = Nodes
-		pm.PulseAccessor = Pulses
-		pm.PulseCalculator = Pulses
-		pm.PulseAppender = Pulses
-
-		PulseManager = pm
-
 	}
 
 	comps.cmp.Inject(

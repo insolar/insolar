@@ -41,7 +41,6 @@ import (
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger/drop"
@@ -156,7 +155,6 @@ func NewServer(
 	}
 
 	// Network.
-
 	var (
 		NodeNetwork network.NodeNetwork
 	)
@@ -191,12 +189,10 @@ func NewServer(
 
 	// Communication.
 	var (
-		Bus                        insolar.MessageBus
 		ServerBus, ClientBus       *bus.Bus
 		ServerPubSub, ClientPubSub message.PubSub
 	)
 	{
-		Bus = &stub{}
 		ServerPubSub = gochannel.NewGoChannel(gochannel.Config{}, logger)
 		ClientPubSub = gochannel.NewGoChannel(gochannel.Config{}, logger)
 		ServerBus = bus.NewBus(cfg.Bus, ServerPubSub, Pulses, Coordinator, CryptoScheme)
@@ -312,27 +308,19 @@ func NewServer(
 			},
 		)
 
-		pm := executor.NewPulseManager(
+		PulseManager = executor.NewPulseManager(
+			NodeNetwork,
+			FlowDispatcher,
+			Nodes,
+			Pulses,
+			Pulses,
+			hotWaitReleaser,
 			jetSplitter,
 			lthSyncer,
-			writeController,
 			hotSender,
+			writeController,
 			stateIniter,
 		)
-		pm.Bus = Bus
-		pm.NodeNet = NodeNetwork
-		pm.JetReleaser = hotWaitReleaser
-		pm.JetModifier = Jets
-		pm.NodeSetter = Nodes
-		pm.Nodes = Nodes
-		pm.PulseAccessor = Pulses
-		pm.PulseCalculator = Pulses
-		pm.PulseAppender = Pulses
-		pm.GIL = &stub{}
-		pm.NodeNet = NodeNetwork
-		pm.Dispatcher = FlowDispatcher
-
-		PulseManager = pm
 	}
 
 	// Start routers with handlers.
@@ -543,29 +531,4 @@ func newNodeNetMock(me insolar.NetworkNode) *nodeNetMock {
 
 func (n *nodeNetMock) GetOrigin() insolar.NetworkNode {
 	return n.me
-}
-
-type stub struct{}
-
-func (*stub) Send(context.Context, insolar.Message, *insolar.MessageSendOptions) (insolar.Reply, error) {
-	return &reply.OK{}, nil
-}
-
-func (*stub) Register(p insolar.MessageType, handler insolar.MessageHandler) error {
-	return nil
-}
-
-func (*stub) MustRegister(p insolar.MessageType, handler insolar.MessageHandler) {
-}
-
-func (*stub) OnPulse(context.Context, insolar.Pulse) error {
-	return nil
-}
-
-func (*stub) Acquire(ctx context.Context) {}
-
-func (*stub) Release(ctx context.Context) {}
-
-func (*stub) MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error {
-	return nil
 }
