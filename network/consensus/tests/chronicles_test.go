@@ -125,6 +125,7 @@ type EmuVersionedRegistries struct {
 
 func (c *EmuVersionedRegistries) GetNearestValidPulseData() pulse.Data {
 	return pulse.Data{}
+	// TODO panic("implement me")
 }
 
 func (c *EmuVersionedRegistries) GetCloudIdentity() cryptkit.DigestHolder {

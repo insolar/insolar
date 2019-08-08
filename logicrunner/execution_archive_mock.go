@@ -30,8 +30,8 @@ type ExecutionArchiveMock struct {
 	beforeDoneCounter uint64
 	DoneMock          mExecutionArchiveMockDone
 
-	funcFindRequestLoop          func(ctx context.Context, apiRequestID string) (b1 bool)
-	inspectFuncFindRequestLoop   func(ctx context.Context, apiRequestID string)
+	funcFindRequestLoop          func(ctx context.Context, reqRef insolar.Reference, apiRequestID string) (b1 bool)
+	inspectFuncFindRequestLoop   func(ctx context.Context, reqRef insolar.Reference, apiRequestID string)
 	afterFindRequestLoopCounter  uint64
 	beforeFindRequestLoopCounter uint64
 	FindRequestLoopMock          mExecutionArchiveMockFindRequestLoop
@@ -505,6 +505,7 @@ type ExecutionArchiveMockFindRequestLoopExpectation struct {
 // ExecutionArchiveMockFindRequestLoopParams contains parameters of the ExecutionArchive.FindRequestLoop
 type ExecutionArchiveMockFindRequestLoopParams struct {
 	ctx          context.Context
+	reqRef       insolar.Reference
 	apiRequestID string
 }
 
@@ -514,7 +515,7 @@ type ExecutionArchiveMockFindRequestLoopResults struct {
 }
 
 // Expect sets up expected params for ExecutionArchive.FindRequestLoop
-func (mmFindRequestLoop *mExecutionArchiveMockFindRequestLoop) Expect(ctx context.Context, apiRequestID string) *mExecutionArchiveMockFindRequestLoop {
+func (mmFindRequestLoop *mExecutionArchiveMockFindRequestLoop) Expect(ctx context.Context, reqRef insolar.Reference, apiRequestID string) *mExecutionArchiveMockFindRequestLoop {
 	if mmFindRequestLoop.mock.funcFindRequestLoop != nil {
 		mmFindRequestLoop.mock.t.Fatalf("ExecutionArchiveMock.FindRequestLoop mock is already set by Set")
 	}
@@ -523,7 +524,7 @@ func (mmFindRequestLoop *mExecutionArchiveMockFindRequestLoop) Expect(ctx contex
 		mmFindRequestLoop.defaultExpectation = &ExecutionArchiveMockFindRequestLoopExpectation{}
 	}
 
-	mmFindRequestLoop.defaultExpectation.params = &ExecutionArchiveMockFindRequestLoopParams{ctx, apiRequestID}
+	mmFindRequestLoop.defaultExpectation.params = &ExecutionArchiveMockFindRequestLoopParams{ctx, reqRef, apiRequestID}
 	for _, e := range mmFindRequestLoop.expectations {
 		if minimock.Equal(e.params, mmFindRequestLoop.defaultExpectation.params) {
 			mmFindRequestLoop.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmFindRequestLoop.defaultExpectation.params)
@@ -534,7 +535,7 @@ func (mmFindRequestLoop *mExecutionArchiveMockFindRequestLoop) Expect(ctx contex
 }
 
 // Inspect accepts an inspector function that has same arguments as the ExecutionArchive.FindRequestLoop
-func (mmFindRequestLoop *mExecutionArchiveMockFindRequestLoop) Inspect(f func(ctx context.Context, apiRequestID string)) *mExecutionArchiveMockFindRequestLoop {
+func (mmFindRequestLoop *mExecutionArchiveMockFindRequestLoop) Inspect(f func(ctx context.Context, reqRef insolar.Reference, apiRequestID string)) *mExecutionArchiveMockFindRequestLoop {
 	if mmFindRequestLoop.mock.inspectFuncFindRequestLoop != nil {
 		mmFindRequestLoop.mock.t.Fatalf("Inspect function is already set for ExecutionArchiveMock.FindRequestLoop")
 	}
@@ -558,7 +559,7 @@ func (mmFindRequestLoop *mExecutionArchiveMockFindRequestLoop) Return(b1 bool) *
 }
 
 //Set uses given function f to mock the ExecutionArchive.FindRequestLoop method
-func (mmFindRequestLoop *mExecutionArchiveMockFindRequestLoop) Set(f func(ctx context.Context, apiRequestID string) (b1 bool)) *ExecutionArchiveMock {
+func (mmFindRequestLoop *mExecutionArchiveMockFindRequestLoop) Set(f func(ctx context.Context, reqRef insolar.Reference, apiRequestID string) (b1 bool)) *ExecutionArchiveMock {
 	if mmFindRequestLoop.defaultExpectation != nil {
 		mmFindRequestLoop.mock.t.Fatalf("Default expectation is already set for the ExecutionArchive.FindRequestLoop method")
 	}
@@ -573,14 +574,14 @@ func (mmFindRequestLoop *mExecutionArchiveMockFindRequestLoop) Set(f func(ctx co
 
 // When sets expectation for the ExecutionArchive.FindRequestLoop which will trigger the result defined by the following
 // Then helper
-func (mmFindRequestLoop *mExecutionArchiveMockFindRequestLoop) When(ctx context.Context, apiRequestID string) *ExecutionArchiveMockFindRequestLoopExpectation {
+func (mmFindRequestLoop *mExecutionArchiveMockFindRequestLoop) When(ctx context.Context, reqRef insolar.Reference, apiRequestID string) *ExecutionArchiveMockFindRequestLoopExpectation {
 	if mmFindRequestLoop.mock.funcFindRequestLoop != nil {
 		mmFindRequestLoop.mock.t.Fatalf("ExecutionArchiveMock.FindRequestLoop mock is already set by Set")
 	}
 
 	expectation := &ExecutionArchiveMockFindRequestLoopExpectation{
 		mock:   mmFindRequestLoop.mock,
-		params: &ExecutionArchiveMockFindRequestLoopParams{ctx, apiRequestID},
+		params: &ExecutionArchiveMockFindRequestLoopParams{ctx, reqRef, apiRequestID},
 	}
 	mmFindRequestLoop.expectations = append(mmFindRequestLoop.expectations, expectation)
 	return expectation
@@ -593,15 +594,15 @@ func (e *ExecutionArchiveMockFindRequestLoopExpectation) Then(b1 bool) *Executio
 }
 
 // FindRequestLoop implements ExecutionArchive
-func (mmFindRequestLoop *ExecutionArchiveMock) FindRequestLoop(ctx context.Context, apiRequestID string) (b1 bool) {
+func (mmFindRequestLoop *ExecutionArchiveMock) FindRequestLoop(ctx context.Context, reqRef insolar.Reference, apiRequestID string) (b1 bool) {
 	mm_atomic.AddUint64(&mmFindRequestLoop.beforeFindRequestLoopCounter, 1)
 	defer mm_atomic.AddUint64(&mmFindRequestLoop.afterFindRequestLoopCounter, 1)
 
 	if mmFindRequestLoop.inspectFuncFindRequestLoop != nil {
-		mmFindRequestLoop.inspectFuncFindRequestLoop(ctx, apiRequestID)
+		mmFindRequestLoop.inspectFuncFindRequestLoop(ctx, reqRef, apiRequestID)
 	}
 
-	params := &ExecutionArchiveMockFindRequestLoopParams{ctx, apiRequestID}
+	params := &ExecutionArchiveMockFindRequestLoopParams{ctx, reqRef, apiRequestID}
 
 	// Record call args
 	mmFindRequestLoop.FindRequestLoopMock.mutex.Lock()
@@ -618,7 +619,7 @@ func (mmFindRequestLoop *ExecutionArchiveMock) FindRequestLoop(ctx context.Conte
 	if mmFindRequestLoop.FindRequestLoopMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmFindRequestLoop.FindRequestLoopMock.defaultExpectation.Counter, 1)
 		want := mmFindRequestLoop.FindRequestLoopMock.defaultExpectation.params
-		got := ExecutionArchiveMockFindRequestLoopParams{ctx, apiRequestID}
+		got := ExecutionArchiveMockFindRequestLoopParams{ctx, reqRef, apiRequestID}
 		if want != nil && !minimock.Equal(*want, got) {
 			mmFindRequestLoop.t.Errorf("ExecutionArchiveMock.FindRequestLoop got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
@@ -630,9 +631,9 @@ func (mmFindRequestLoop *ExecutionArchiveMock) FindRequestLoop(ctx context.Conte
 		return (*results).b1
 	}
 	if mmFindRequestLoop.funcFindRequestLoop != nil {
-		return mmFindRequestLoop.funcFindRequestLoop(ctx, apiRequestID)
+		return mmFindRequestLoop.funcFindRequestLoop(ctx, reqRef, apiRequestID)
 	}
-	mmFindRequestLoop.t.Fatalf("Unexpected call to ExecutionArchiveMock.FindRequestLoop. %v %v", ctx, apiRequestID)
+	mmFindRequestLoop.t.Fatalf("Unexpected call to ExecutionArchiveMock.FindRequestLoop. %v %v %v", ctx, reqRef, apiRequestID)
 	return
 }
 

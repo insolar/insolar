@@ -16,11 +16,14 @@ message Packet {
     bytes Receiver = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/network/hostnetwork/host.Host"];
     uint64 RequestID = 22;
     string TraceID = 23;
-    uint32 Type = 24;
+    bytes TraceSpanData = 24;
+
+    uint32 Type = 26;
+
 
     oneof Payload {
-        Request Request = 25;
-        Response Response = 26;
+        Request Request = 27;
+        Response Response = 28;
     }
 }
 
@@ -75,7 +78,6 @@ message CascadeRequest {
 
 message PulseRequest {
     pulse.PulseProto Pulse = 1;
-    bytes TraceSpanData = 2;
 }
 
 message UpdateScheduleRequest {
@@ -136,7 +138,7 @@ message PermitPayload {
 
 message BootstrapResponse {
     BootstrapResponseCode Code = 1;
-    uint32 ETA = 2;
+    uint32 ETASeconds = 2;
     pulse.PulseProto Pulse = 3 [(gogoproto.nullable) = false];
 }
 

@@ -57,7 +57,6 @@ import (
 	"sync/atomic"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 )
 
 type MutableNode interface {
@@ -70,8 +69,8 @@ type MutableNode interface {
 	ChangeState()
 	SetLeavingETA(number insolar.PulseNumber)
 	SetVersion(version string)
-	GetPower() member.Power
-	SetPower(power member.Power)
+	SetPower(power insolar.Power)
+	SetAddress(address string)
 }
 
 // GenerateUintShortID generate short ID for node without checking collisions
@@ -163,6 +162,9 @@ func (n *node) PublicKey() crypto.PublicKey {
 }
 
 func (n *node) Address() string {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+
 	return n.NodeAddress
 }
 
@@ -170,11 +172,11 @@ func (n *node) GetGlobuleID() insolar.GlobuleID {
 	return 0
 }
 
-func (n *node) GetPower() member.Power {
-	return member.Power(atomic.LoadUint32(&n.NodePower))
+func (n *node) GetPower() insolar.Power {
+	return insolar.Power(atomic.LoadUint32(&n.NodePower))
 }
 
-func (n *node) SetPower(power member.Power) {
+func (n *node) SetPower(power insolar.Power) {
 	atomic.StoreUint32(&n.NodePower, uint32(power))
 }
 
@@ -211,4 +213,11 @@ func (n *node) LeavingETA() insolar.PulseNumber {
 func (n *node) SetLeavingETA(number insolar.PulseNumber) {
 	n.SetState(insolar.NodeLeaving)
 	atomic.StoreUint32(&n.NodeLeavingETA, uint32(number))
+}
+
+func (n *node) SetAddress(address string) {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+
+	n.NodeAddress = address
 }

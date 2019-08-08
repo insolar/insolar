@@ -78,21 +78,21 @@ func TestSwitch(t *testing.T) {
 
 	// nodekeeper := testnet.NewNodeKeeperMock(t)
 	nodekeeper := testnet.NewNodeKeeperMock(t)
-	nodekeeper.MoveSyncToActiveMock.Set(func(p context.Context, p1 insolar.PulseNumber) (r error) { return nil })
+	nodekeeper.MoveSyncToActiveMock.Set(func(ctx context.Context, number insolar.PulseNumber) {})
 	gatewayer := testnet.NewGatewayerMock(t)
-	//pm := mockPulseManager(t)
+	// pm := mockPulseManager(t)
 
 	ge := emtygateway(t)
 
 	require.NotNil(t, ge)
 	require.Equal(t, "NoNetworkState", ge.GetState().String())
 
-	ge.Run(ctx)
+	ge.Run(ctx, *insolar.EphemeralPulse)
 
 	gatewayer.GatewayMock.Set(func() (g1 network.Gateway) {
 		return ge
 	})
-	gatewayer.SwitchStateMock.Set(func(ctx context.Context, state insolar.NetworkState) {
+	gatewayer.SwitchStateMock.Set(func(ctx context.Context, state insolar.NetworkState, pulse insolar.Pulse) {
 		ge = ge.NewGateway(ctx, state)
 	})
 	gilreleased := false
@@ -104,10 +104,10 @@ func TestSwitch(t *testing.T) {
 	cref := testutils.RandomRef()
 
 	for _, state := range []insolar.NetworkState{insolar.NoNetworkState,
-		insolar.JoinerBootstrap, insolar.DiscoveryBootstrap, insolar.CompleteNetworkState} {
+		insolar.JoinerBootstrap, insolar.CompleteNetworkState} {
 		ge = ge.NewGateway(ctx, state)
 		require.Equal(t, state, ge.GetState())
-		ge.Run(ctx)
+		ge.Run(ctx, *insolar.EphemeralPulse)
 		au := ge.Auther()
 
 		_, err := au.GetCert(ctx, &cref)
@@ -128,16 +128,16 @@ func TestDumbComplete_GetCert(t *testing.T) {
 
 	// nodekeeper := testnet.NewNodeKeeperMock(t)
 	nodekeeper := testnet.NewNodeKeeperMock(t)
-	nodekeeper.MoveSyncToActiveMock.Set(func(p context.Context, p1 insolar.PulseNumber) (r error) { return nil })
+	nodekeeper.MoveSyncToActiveMock.Set(func(ctx context.Context, number insolar.PulseNumber) {})
 
 	gatewayer := testnet.NewGatewayerMock(t)
 
 	CR := testutils.NewContractRequesterMock(t)
 	CM := testutils.NewCertificateManagerMock(t)
 	ge := emtygateway(t)
-	//pm := mockPulseManager(t)
+	// pm := mockPulseManager(t)
 
-	//ge := newNoNetwork(gatewayer, pm,
+	// ge := newNoNetwork(gatewayer, pm,
 	//	nodekeeper, CR,
 	//	testutils.NewCryptographyServiceMock(t),
 	//	testnet.NewHostNetworkMock(t),
@@ -146,10 +146,10 @@ func TestDumbComplete_GetCert(t *testing.T) {
 	require.NotNil(t, ge)
 	require.Equal(t, "NoNetworkState", ge.GetState().String())
 
-	ge.Run(ctx)
+	ge.Run(ctx, *insolar.EphemeralPulse)
 
 	gatewayer.GatewayMock.Set(func() (r network.Gateway) { return ge })
-	gatewayer.SwitchStateMock.Set(func(ctx context.Context, state insolar.NetworkState) {
+	gatewayer.SwitchStateMock.Set(func(ctx context.Context, state insolar.NetworkState, pulse insolar.Pulse) {
 		ge = ge.NewGateway(ctx, state)
 	})
 	gilreleased := false
@@ -184,13 +184,3 @@ func TestDumbComplete_GetCert(t *testing.T) {
 	require.NotNil(t, cert)
 	require.Equal(t, cert, &certificate.Certificate{})
 }
-
-//func TestSwitchWaitMinRoles(t *testing.T) {
-//	ctx := context.Background()
-//	b := &Base{}
-//	gatewayer := NewGatewayer(b.NewGateway(ctx, insolar.NoNetworkState), func(ctx context.Context, isNetworkOperable bool) {})
-//	gatewayer.Gateway().OnPulseFromPulsar(ctx, insolar.Pulse{}, nil)
-//
-//	gatewayer.SwitchState(ctx, insolar.WaitMinRoles)
-//	gatewayer.Gateway().OnPulseFromPulsar(ctx, insolar.Pulse{}, nil)
-//}

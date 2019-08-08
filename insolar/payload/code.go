@@ -22,4 +22,5 @@ const (
 	CodeFlowCanceled = 2
 	CodeNotFound     = 3
 	CodeNoPendings   = 4
+	CodeNoStartPulse = 5
 )

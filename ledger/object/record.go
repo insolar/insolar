@@ -19,6 +19,7 @@ package object
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"sync"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -27,7 +28,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/insolar/store"
 )
 
 // TypeID encodes a record object type.
@@ -90,6 +91,19 @@ type AtomicRecordModifier interface {
 type RecordCleaner interface {
 	// DeleteForPN method removes records from a storage for a pulse
 	DeleteForPN(ctx context.Context, pulse insolar.PulseNumber)
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordPositionModifier -o ./ -s _mock.go
+
+type RecordPositionModifier interface {
+	IncrementPosition(recID insolar.ID) error
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordPositionAccessor -o ./ -s _mock.go
+
+type RecordPositionAccessor interface {
+	LastKnownPosition(pn insolar.PulseNumber) (uint32, error)
+	AtPosition(pn insolar.PulseNumber, position uint32) (insolar.ID, error)
 }
 
 // RecordMemory is an in-indexStorage struct for record-storage.
@@ -295,4 +309,120 @@ func (r *RecordDB) get(id insolar.ID) (record.Material, error) {
 	err = rec.Unmarshal(buff)
 
 	return rec, err
+}
+
+// RecordPositionDB is a DB storage implementation. It saves records position to DB.
+type RecordPositionDB struct {
+	lock sync.RWMutex
+	db   store.DB
+}
+
+func NewRecordPositionDB(db store.DB) *RecordPositionDB {
+	return &RecordPositionDB{db: db}
+}
+
+const (
+	recordPositionKeyPrefix          = 0x01
+	lastKnownRecordPositionKeyPrefix = 0x02
+)
+
+type recordPositionKey struct {
+	pn     insolar.PulseNumber
+	number uint32
+}
+
+func newRecordPositionKey(pn insolar.PulseNumber, number uint32) recordPositionKey {
+	return recordPositionKey{pn: pn, number: number}
+}
+
+func (k recordPositionKey) Scope() store.Scope {
+	return store.ScopeRecordPosition
+}
+
+func (k recordPositionKey) ID() []byte {
+	parsedNum := make([]byte, 4)
+	binary.BigEndian.PutUint32(parsedNum, k.number)
+	return bytes.Join([][]byte{{recordPositionKeyPrefix}, k.pn.Bytes(), parsedNum}, nil)
+}
+
+type lastKnownRecordPositionKey struct {
+	pn insolar.PulseNumber
+}
+
+func (k lastKnownRecordPositionKey) Scope() store.Scope {
+	return store.ScopeRecordPosition
+}
+
+func (k lastKnownRecordPositionKey) ID() []byte {
+	return bytes.Join([][]byte{{lastKnownRecordPositionKeyPrefix}, k.pn.Bytes()}, nil)
+}
+
+func (r *RecordPositionDB) LastKnownPosition(pn insolar.PulseNumber) (uint32, error) {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+
+	return r.lastKnownPosition(pn)
+}
+
+func (r *RecordPositionDB) lastKnownPosition(pn insolar.PulseNumber) (uint32, error) {
+	buff, err := r.db.Get(lastKnownRecordPositionKey{pn: pn})
+	if err != nil {
+		return 0, err
+	}
+	return binary.BigEndian.Uint32(buff), nil
+}
+
+func (r *RecordPositionDB) AtPosition(pn insolar.PulseNumber, position uint32) (insolar.ID, error) {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+
+	lastKnownPosition, err := r.LastKnownPosition(pn)
+	if err != nil {
+		return insolar.ID{}, err
+	}
+	if position > lastKnownPosition {
+		return insolar.ID{}, store.ErrNotFound
+	}
+
+	positionKey := newRecordPositionKey(pn, position)
+	rawID, err := r.db.Get(positionKey)
+	if err != nil {
+		return insolar.ID{}, err
+	}
+
+	return *insolar.NewIDFromBytes(rawID), nil
+}
+
+func (r *RecordPositionDB) setLastKnownPosition(pn insolar.PulseNumber, order uint32) error {
+	lastOrderKey := lastKnownRecordPositionKey{pn: pn}
+	parsedOrder := make([]byte, 4)
+	binary.BigEndian.PutUint32(parsedOrder, order)
+	return r.db.Set(lastOrderKey, parsedOrder)
+}
+
+func (r *RecordPositionDB) IncrementPosition(recID insolar.ID) error {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
+	currentPosition, err := r.lastKnownPosition(recID.Pulse())
+	if err != nil && err != store.ErrNotFound {
+		return err
+	}
+
+	nextPosition := currentPosition
+	nextPosition++
+
+	orderKey := newRecordPositionKey(recID.Pulse(), nextPosition)
+
+	_, err = r.db.Get(orderKey)
+	if err == nil {
+		return ErrOverride
+	}
+
+	err = r.db.Set(orderKey, recID.Bytes())
+	if err != nil {
+		return err
+	}
+
+	return r.setLastKnownPosition(recID.Pulse(), nextPosition)
 }

@@ -58,13 +58,14 @@ import (
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/rules"
+	"github.com/insolar/insolar/network/storage"
 
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/instrumentation/inslogger" // TODO remove before merge
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/gateway/bootstrap"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
@@ -87,8 +88,8 @@ type Base struct {
 	CryptographyService insolar.CryptographyService `inject:""`
 	CertificateManager  insolar.CertificateManager  `inject:""`
 	HostNetwork         network.HostNetwork         `inject:""`
-	PulseAccessor       pulse.Accessor              `inject:""`
-	PulseAppender       pulse.Appender              `inject:""`
+	PulseAccessor       storage.PulseAccessor       `inject:""`
+	PulseAppender       storage.PulseAppender       `inject:""`
 	PulseManager        insolar.PulseManager        `inject:""`
 	BootstrapRequester  bootstrap.Requester         `inject:""`
 	KeyProcessor        insolar.KeyProcessor        `inject:""`
@@ -96,7 +97,7 @@ type Base struct {
 	ConsensusController   consensus.Controller
 	ConsensusPulseHandler network.PulseHandler
 
-	bootstrapETA    insolar.PulseNumber
+	bootstrapETA    time.Duration
 	originCandidate *adapters.Candidate
 }
 
@@ -112,6 +113,8 @@ func (g *Base) NewGateway(ctx context.Context, state insolar.NetworkState) netwo
 		g.Self = newJoinerBootstrap(g)
 	case insolar.WaitConsensus:
 		g.Self = newWaitConsensus(g)
+	case insolar.WaitMajority:
+		g.Self = newWaitMajority(g)
 	case insolar.WaitMinRoles:
 		g.Self = newWaitMinRoles(g)
 	default:
@@ -140,15 +143,23 @@ func (g *Base) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, original
 
 func (g *Base) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
 	g.NodeKeeper.MoveSyncToActive(ctx, pu.PulseNumber)
+	err := g.PulseAppender.(*storage.MemoryPulseStorage).AppendPulse(ctx, pu)
+	if err != nil {
+		panic("failed to append pulse:" + err.Error())
+	}
+
+	nodes := g.NodeKeeper.GetAccessor(pu.PulseNumber).GetActiveNodes()
+	inslogger.FromContext(ctx).Debugf("OnPulseFromConsensus: %d : epoch %d : nodes %d", pu.PulseNumber, pu.EpochPulseNumber, len(nodes))
 }
 
+// UpdateState called then Consensus done
 func (g *Base) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
-	g.NodeKeeper.Sync(ctx, nodes)
-	g.NodeKeeper.SetCloudHash(cloudStateHash)
+	g.NodeKeeper.Sync(ctx, pulseNumber, nodes)
+	g.NodeKeeper.SetCloudHash(pulseNumber, cloudStateHash)
 }
 
-func (g *Base) NeedLockMessageBus() bool {
-	return true
+func (g *Base) NetworkOperable() bool {
+	return false
 }
 
 // Auther casts us to Auther or obtain it in another way
@@ -180,28 +191,26 @@ func (g *Base) ValidateCert(ctx context.Context, certificate insolar.Authorizati
 // ============= Bootstrap =======
 
 func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
+	state := g.Gatewayer.Gateway().GetState()
+	if g.NodeKeeper.GetOrigin().Role() != insolar.StaticRoleHeavyMaterial && state <= insolar.WaitConsensus {
+		return nil, errors.Errorf("can't handle bootstrap in state: %s", state.String())
+	}
+
 	if request.GetRequest() == nil || request.GetRequest().GetBootstrap() == nil {
 		return nil, errors.Errorf("process bootstrap: got invalid protobuf request message: %s", request)
 	}
 
 	data := request.GetRequest().GetBootstrap()
 
-	if network.CheckShortIDCollision(g.NodeKeeper.GetAccessor().GetActiveNodes(), data.CandidateProfile.ShortID) {
+	bootstrapPulse := GetBootstrapPulse(ctx, g.PulseAccessor)
+
+	if network.CheckShortIDCollision(g.NodeKeeper.GetAccessor(bootstrapPulse.PulseNumber).GetActiveNodes(), data.CandidateProfile.ShortID) {
 		return g.HostNetwork.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.UpdateShortID}), nil
 	}
 
-	lastPulse, err := g.PulseAccessor.Latest(ctx)
+	err := bootstrap.ValidatePermit(data.Permit, g.CertificateManager.GetCertificate(), g.CryptographyService)
 	if err != nil {
-		lastPulse = *insolar.GenesisPulse
-	}
-
-	//if lastPulse.PulseNumber > data.Pulse.PulseNumber {
-	//	return g.HostNetwork.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.UpdateSchedule}), nil
-	//}
-
-	err = bootstrap.ValidatePermit(data.Permit, g.CertificateManager.GetCertificate(), g.CryptographyService)
-	if err != nil {
-		inslogger.FromContext(ctx).Errorf("Rejected bootstrap request from node %s: %s", request.GetSender(), err.Error())
+		inslogger.FromContext(ctx).Warnf("Rejected bootstrap request from node %s: %s", request.GetSender(), err.Error())
 		return g.HostNetwork.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.Reject}), nil
 	}
 
@@ -216,9 +225,9 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 
 	return g.HostNetwork.BuildResponse(ctx, request,
 		&packet.BootstrapResponse{
-			Code:  packet.Accepted,
-			Pulse: *pulse.ToProto(&lastPulse),
-			ETA:   uint32(lastPulse.PulseNumber) + 10, // TODO: move ETA to config
+			Code:       packet.Accepted,
+			Pulse:      *pulse.ToProto(&bootstrapPulse),
+			ETASeconds: uint32(30), // TODO: move ETA to config
 		}), nil
 }
 
@@ -236,6 +245,11 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.R
 		return nil, errors.Errorf("process authorize: got invalid protobuf request message: %s", request)
 	}
 	data := request.GetRequest().GetAuthorize().AuthorizeData
+	o := g.NodeKeeper.GetOrigin()
+
+	if data.Version != o.Version() {
+		return nil, errors.Errorf("wrong version in AuthorizeRequest, actual network version is: %s", o.Version())
+	}
 
 	// TODO: move time.Minute to config
 	if !validateTimestamp(data.Timestamp, time.Minute) {
@@ -258,25 +272,24 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.R
 
 		inslogger.FromContext(ctx).Warn(err.Error())
 		// FIXME integr tests certs signs
-		//return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{Code: packet.WrongMandate, Error: err.Error()}), nil
+		// return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{Code: packet.WrongMandate, Error: err.Error()}), nil
 	}
 
 	// TODO: get random reconnectHost
 	// nodes := g.NodeKeeper.GetAccessor().GetActiveNodes()
-	o := g.NodeKeeper.GetOrigin()
 
 	// workaround bootstrap to the origin node
 	reconnectHost, err := host.NewHostNS(o.Address(), o.ID(), o.ShortID())
 	if err != nil {
 		err = errors.Wrap(err, "Failed to get reconnectHost")
-		inslogger.FromContext(ctx).Error(err.Error())
+		inslogger.FromContext(ctx).Warn(err.Error())
 		return nil, err
 	}
 
 	pubKey, err := g.KeyProcessor.ExportPublicKeyPEM(o.PublicKey())
 	if err != nil {
 		err = errors.Wrap(err, "Failed to export public key")
-		inslogger.FromContext(ctx).Error(err.Error())
+		inslogger.FromContext(ctx).Warn(err.Error())
 		return nil, err
 	}
 
@@ -289,24 +302,22 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.R
 		return nil, err
 	}
 
-	p, err := g.PulseAccessor.Latest(ctx)
-	if err != nil {
-		inslogger.FromContext(ctx).Warn("Ephemeral pulse")
-		p = *insolar.EphemeralPulse
-	}
+	bootstrapPulse := GetBootstrapPulse(ctx, g.PulseAccessor)
+	discoveryCount := len(network.FindDiscoveriesInNodeList(
+		g.NodeKeeper.GetAccessor(bootstrapPulse.PulseNumber).GetActiveNodes(),
+		g.CertificateManager.GetCertificate(),
+	))
 
-	discoveryCount := len(network.FindDiscoveriesInNodeList(g.NodeKeeper.GetAccessor().GetActiveNodes(), g.CertificateManager.GetCertificate()))
 	return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{
 		Code:           packet.Success,
 		Timestamp:      time.Now().UTC().Unix(),
 		Permit:         permit,
 		DiscoveryCount: uint32(discoveryCount),
-		Pulse:          pulse.ToProto(&p),
+		Pulse:          pulse.ToProto(&bootstrapPulse),
 	}), nil
 }
 
 func (g *Base) HandleUpdateSchedule(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
-	//storage.NewSnapshotStorage()
 	// TODO:
 	return g.HostNetwork.BuildResponse(ctx, request, &packet.UpdateScheduleResponse{}), nil
 }
@@ -337,5 +348,8 @@ func (g *Base) createCandidateProfile() {
 }
 
 func (g *Base) EphemeralMode(nodes []insolar.NetworkNode) bool {
-	return !rules.CheckMinRole(g.CertificateManager.GetCertificate(), nodes)
+	majority, _ := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), nodes)
+	minRole := rules.CheckMinRole(g.CertificateManager.GetCertificate(), nodes)
+
+	return !majority || !minRole
 }

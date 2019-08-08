@@ -51,8 +51,9 @@
 package serialization
 
 import (
-	"github.com/insolar/insolar/network"
 	"io"
+
+	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"

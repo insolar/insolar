@@ -165,7 +165,7 @@ func (t *udpTransport) loop(ctx context.Context) {
 				return
 			}
 
-			logger.Error("[ loop ] failed to read UDP: ", err)
+			logger.Warn("[ loop ] failed to read UDP: ", err)
 			continue
 		}
 
@@ -187,7 +187,7 @@ func (t *udpTransport) Stop(ctx context.Context) error {
 			if !network.IsConnectionClosed(err) {
 				return err
 			}
-			logger.Error("[ Stop ] Connection already closed")
+			logger.Warn("[ Stop ] Connection already closed")
 		}
 	}
 	return nil

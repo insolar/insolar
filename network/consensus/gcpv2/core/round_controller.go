@@ -53,9 +53,10 @@ package core
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
 	"sync"
 	"time"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -316,10 +317,11 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 		// something from a previous round?
 		_, err := prev.HandlePacket(ctx, packet, from)
 		return api.KeepRound, err
-		//defaultOptions = coreapi.SkipVerify // validation was done by the prev controller
+		// defaultOptions = coreapi.SkipVerify // validation was done by the prev controller
 	}
 
-	if r.realm.ephemeralFeeder != nil && !packet.GetPacketType().IsEphemeralPacket() {
+	if r.realm.ephemeralFeeder != nil && !packet.GetPacketType().IsEphemeralPacket() && (prep == nil || !prep.disableEphemeral) { // TODO need fix, too ugly
+
 		_, err := r.realm.VerifyPacketAuthenticity(ctx, packet, from, nil, coreapi.DefaultVerify, nil, defaultOptions)
 		if err == nil {
 			err = r.realm.ephemeralFeeder.OnNonEphemeralPacket(ctx, packet, from)

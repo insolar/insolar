@@ -51,7 +51,6 @@
 package node
 
 import (
-	"math/rand"
 	"sort"
 
 	"github.com/insolar/insolar/insolar"
@@ -103,24 +102,6 @@ func (a *Accessor) GetWorkingNodes() []insolar.NetworkNode {
 	return result
 }
 
-func (a *Accessor) GetRandomWorkingNode() insolar.NetworkNode {
-	workingList := a.snapshot.nodeList[ListWorking]
-	l := len(workingList)
-	if l == 0 {
-		return nil
-	}
-	return workingList[rand.Intn(l)]
-}
-
-func (a *Accessor) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference {
-	staticRole := dynamicToStaticRole(role)
-	nodes := a.roleIndex[staticRole]
-	if nodes == nil {
-		return []insolar.Reference{}
-	}
-	return nodes.Collect()
-}
-
 func GetSnapshotActiveNodes(snapshot *Snapshot) []insolar.NetworkNode {
 	joining := snapshot.nodeList[ListJoiner]
 	idle := snapshot.nodeList[ListIdle]
@@ -142,7 +123,7 @@ func GetSnapshotActiveNodes(snapshot *Snapshot) []insolar.NetworkNode {
 	return result
 }
 
-func (a *Accessor) addToIndex(node MutableNode) {
+func (a *Accessor) addToIndex(node insolar.NetworkNode) {
 	a.refIndex[node.ID()] = node
 	a.sidIndex[node.ShortID()] = node
 	a.addrIndex[node.Address()] = node
@@ -170,24 +151,7 @@ func NewAccessor(snapshot *Snapshot) *Accessor {
 	}
 	result.active = GetSnapshotActiveNodes(snapshot)
 	for _, node := range result.active {
-		result.addToIndex(node.(MutableNode))
+		result.addToIndex(node)
 	}
 	return result
-}
-
-func dynamicToStaticRole(role insolar.DynamicRole) insolar.StaticRole {
-	switch role {
-	case insolar.DynamicRoleVirtualExecutor:
-		return insolar.StaticRoleVirtual
-	case insolar.DynamicRoleVirtualValidator:
-		return insolar.StaticRoleVirtual
-	case insolar.DynamicRoleLightExecutor:
-		return insolar.StaticRoleLightMaterial
-	case insolar.DynamicRoleLightValidator:
-		return insolar.StaticRoleLightMaterial
-	case insolar.DynamicRoleHeavyExecutor:
-		return insolar.StaticRoleHeavyMaterial
-	default:
-		return insolar.StaticRoleUnknown
-	}
 }

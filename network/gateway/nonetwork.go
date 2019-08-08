@@ -54,6 +54,7 @@ package gateway
 
 import (
 	"context"
+	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -69,7 +70,7 @@ type NoNetwork struct {
 	*Base
 }
 
-func (g *NoNetwork) Run(ctx context.Context) {
+func (g *NoNetwork) Run(ctx context.Context, pulse insolar.Pulse) {
 	cert := g.CertificateManager.GetCertificate()
 	origin := g.NodeKeeper.GetOrigin()
 	discoveryNodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), origin.ID())
@@ -77,23 +78,24 @@ func (g *NoNetwork) Run(ctx context.Context) {
 	g.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{origin})
 
 	if len(discoveryNodes) == 0 {
-		inslogger.FromContext(ctx).Warn("[ Bootstrap ] No discovery nodes found in certificate")
+		inslogger.FromContext(ctx).Warn("No discovery nodes found in certificate")
 		return
 	}
 
 	// run bootstrap
 	if !network.OriginIsDiscovery(cert) {
-		g.Gatewayer.SwitchState(ctx, insolar.JoinerBootstrap)
+		g.Gatewayer.SwitchState(ctx, insolar.JoinerBootstrap, pulse)
 		return
 	}
 
 	// Simplified bootstrap
 	if origin.Role() != insolar.StaticRoleHeavyMaterial {
-		g.Gatewayer.SwitchState(ctx, insolar.JoinerBootstrap)
+		g.Gatewayer.SwitchState(ctx, insolar.JoinerBootstrap, pulse)
 		return
 	}
 
-	g.Gatewayer.SwitchState(ctx, insolar.WaitMinRoles)
+	g.bootstrapETA = time.Minute // TODO: move to config
+	g.Gatewayer.SwitchState(ctx, insolar.WaitConsensus, pulse)
 }
 
 func (g *NoNetwork) GetState() insolar.NetworkState {

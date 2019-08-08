@@ -41,6 +41,7 @@ type Configuration struct {
 	CertificatePath string
 	Tracer          Tracer
 	Introspection   Introspection
+	Exporter        Exporter
 	Bus             Bus
 }
 
@@ -66,6 +67,7 @@ func NewConfiguration() Configuration {
 		CertificatePath: "",
 		Tracer:          NewTracer(),
 		Introspection:   NewIntrospection(),
+		Exporter:        NewExporter(),
 		Bus:             NewBus(),
 	}
 

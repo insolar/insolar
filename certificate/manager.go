@@ -18,7 +18,6 @@ package certificate
 
 import (
 	"crypto"
-	"io"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
@@ -87,27 +86,6 @@ func NewManagerReadCertificate(publicKey crypto.PublicKey, keyProcessor insolar.
 	cert, err := ReadCertificate(publicKey, keyProcessor, certPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NewManagerReadCertificate ] failed to read certificate:")
-	}
-	certManager := NewCertificateManager(cert)
-	return certManager, nil
-}
-
-// NewManagerReadCertificateFromReader constructor creates new CertificateManager component
-func NewManagerReadCertificateFromReader(publicKey crypto.PublicKey, keyProcessor insolar.KeyProcessor, reader io.Reader) (*CertificateManager, error) {
-	cert, err := ReadCertificateFromReader(publicKey, keyProcessor, reader)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NewManagerReadCertificateFromReader ] failed to read certificate data:")
-	}
-	certManager := NewCertificateManager(cert)
-	return certManager, nil
-}
-
-// NewManagerCertificateWithKeys generate manager with certificate from given keys
-// DEPRECATED, this method generates invalid certificate, remove it after pulsar tests refactor
-func NewManagerCertificateWithKeys(publicKey crypto.PublicKey, keyProcessor insolar.KeyProcessor) (*CertificateManager, error) {
-	cert, err := NewCertificatesWithKeys(publicKey, keyProcessor)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NewManagerCertificateWithKeys ] failed to create certificate:")
 	}
 	certManager := NewCertificateManager(cert)
 	return certManager, nil

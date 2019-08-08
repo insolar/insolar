@@ -54,8 +54,9 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/insolar/insolar/network/consensus/adapters"
 	"testing"
+
+	"github.com/insolar/insolar/network/consensus/adapters"
 
 	"github.com/insolar/insolar/testutils"
 

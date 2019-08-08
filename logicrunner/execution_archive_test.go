@@ -17,15 +17,18 @@
 package logicrunner
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
@@ -35,7 +38,18 @@ func TestExecutionArchive(t *testing.T) { suite.Run(t, new(ExecutionArchiveSuite
 
 func (s *ExecutionArchiveSuite) genTranscriptForObject() *Transcript {
 	ctx := inslogger.TestContext(s.T())
-	return NewTranscript(ctx, gen.Reference(), record.IncomingRequest{})
+	return NewTranscript(ctx, gen.Reference(), record.IncomingRequest{
+		ReturnMode:   record.ReturnResult,
+		APIRequestID: s.genAPIRequestID(),
+	})
+}
+
+func (s *ExecutionArchiveSuite) genAPIRequestID() string {
+	APIRequestID := utils.RandTraceID()
+	if strings.Contains(APIRequestID, "createRandomTraceIDFailed") {
+		panic("Failed to generate uuid: " + APIRequestID)
+	}
+	return APIRequestID
 }
 
 func (s *ExecutionArchiveSuite) TestArchive() {
@@ -122,7 +136,6 @@ func (s *ExecutionArchiveSuite) TestOnPulse() {
 		MeMock.Return(meRef)
 
 	archiveI := NewExecutionArchive(objectRef, jc)
-
 	{
 		msgs := archiveI.OnPulse(ctx)
 		s.Len(msgs, 0)
@@ -161,4 +174,87 @@ func (s *ExecutionArchiveSuite) TestOnPulse() {
 	}
 
 	mc.Finish()
+}
+
+func (s *ExecutionArchiveSuite) TestFindRequestLoop() {
+	ctx := inslogger.TestContext(s.T())
+	mc := minimock.NewController(s.T())
+
+	jc := jet.NewCoordinatorMock(mc)
+	objRef := gen.Reference()
+	reqRef := gen.Reference()
+
+	archiveI := NewExecutionArchive(objRef, jc)
+	{ // no requests with current apirequestid
+		id := s.genAPIRequestID()
+
+		s.False(archiveI.FindRequestLoop(ctx, reqRef, id))
+
+		// cleanup after
+		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*Transcript)
+	}
+
+	T := s.genTranscriptForObject()
+	{ // go request with current apirequestid (loop found)
+		archiveI.Archive(ctx, T)
+
+		s.True(archiveI.FindRequestLoop(ctx, reqRef, T.Request.APIRequestID))
+
+		// cleanup after
+		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*Transcript)
+	}
+
+	{ // go request with current apirequestid, but record returnnowait (loop not found)
+		id := s.genAPIRequestID()
+
+		T.Request.ReturnMode = record.ReturnNoWait
+		archiveI.Archive(ctx, T)
+
+		s.False(archiveI.FindRequestLoop(ctx, reqRef, id))
+
+		// cleanup after
+		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*Transcript)
+	}
+
+	T1 := s.genTranscriptForObject()
+	T2 := s.genTranscriptForObject()
+	T2.Request.ReturnMode = record.ReturnNoWait
+	{ // combined test
+		id := s.genAPIRequestID()
+
+		archiveI.Archive(ctx, T1)
+		archiveI.Archive(ctx, T2)
+
+		s.False(archiveI.FindRequestLoop(ctx, reqRef, T2.Request.APIRequestID))
+		s.True(archiveI.FindRequestLoop(ctx, reqRef, T1.Request.APIRequestID))
+		s.False(archiveI.FindRequestLoop(ctx, reqRef, id))
+
+		// cleanup after
+		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*Transcript)
+	}
+
+	mc.Finish()
+}
+
+func (s *ExecutionArchiveSuite) TestGetActiveTranscript() {
+	ctx := inslogger.TestContext(s.T())
+	mc := minimock.NewController(s.T())
+
+	jc := jet.NewCoordinatorMock(mc)
+	objRef := gen.Reference()
+
+	T := s.genTranscriptForObject()
+	archiveI := NewExecutionArchive(objRef, jc)
+	archiveI.Archive(ctx, T)
+	{ // have (put before)
+		s.NotNil(archiveI.GetActiveTranscript(T.RequestRef))
+	}
+	{ // don't have
+		s.Nil(archiveI.GetActiveTranscript(gen.Reference()))
+	}
+
+	archiveI.Done(T)
+	{ // don't have (done task)
+		s.Nil(archiveI.GetActiveTranscript(T.RequestRef))
+	}
 }

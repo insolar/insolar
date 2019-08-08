@@ -53,8 +53,9 @@ package adapters
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/insolar/insolar/network"
 	"time"
+
+	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -301,7 +302,7 @@ func NewNetworkNode(profile profiles.ActiveNode) insolar.NetworkNode {
 
 	mutableNode.SetShortID(profile.GetNodeID())
 	mutableNode.SetState(insolar.NodeReady)
-	mutableNode.SetPower(profile.GetDeclaredPower())
+	mutableNode.SetPower(insolar.Power(profile.GetDeclaredPower()))
 
 	sd := nip.GetBriefIntroSignedDigest()
 	mutableNode.SetSignature(

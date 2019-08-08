@@ -31,7 +31,8 @@ func TestMemberMigrationCreate(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	ba := testutils.RandomString()
-	_, _ = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
+	_, err = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
+	require.NoError(t, err)
 	result, err := retryableMemberMigrationCreate(member, true)
 	require.NoError(t, err)
 	output, ok := result.(map[string]interface{})
@@ -52,7 +53,7 @@ func TestMemberMigrationCreateWhenNoBurnAddressesLeft(t *testing.T) {
 
 	_, err = retryableMemberMigrationCreate(member2, true)
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "no more burn addresses left")
+	require.Contains(t, err.Error(), "no more migration addresses left in any shard")
 }
 
 func TestMemberMigrationCreateWithBadKey(t *testing.T) {
@@ -77,7 +78,7 @@ func TestMemberMigrationCreateWithSamePublicKey(t *testing.T) {
 
 	_, err = signedRequest(member, "member.migrationCreate", map[string]interface{}{})
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "member for this publicKey already exist")
+	require.Contains(t, err.Error(), "failed to set reference in public key shard: can't set reference because this key already exists")
 
 	memberForBurn, err := newUserWithKeys()
 	require.NoError(t, err)
@@ -100,5 +101,5 @@ func TestMemberMigrationCreateWithSameBurnAddress(t *testing.T) {
 
 	_, err = retryableMemberMigrationCreate(member2, true)
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "member for this burnAddress already exist")
+	require.Contains(t, err.Error(), "failed to set reference in migration address shard: can't set reference because this key already exists")
 }

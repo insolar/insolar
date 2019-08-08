@@ -39,6 +39,9 @@ type GlobuleID uint32
 // NodeState is the state of the node
 type NodeState uint8
 
+// Power is node power
+type Power uint8
+
 //go:generate stringer -type=NodeState
 const (
 	// NodeUndefined node started but is not connected to network yet
@@ -72,24 +75,6 @@ type NetworkNode interface {
 	LeavingETA() PulseNumber
 	// GetState get state of the node
 	GetState() NodeState
-}
-
-//go:generate minimock -i github.com/insolar/insolar/insolar.OriginProvider -o ../testutils/network -s _mock.go -g
-
-type OriginProvider interface {
-	// GetOrigin get origin node for the current insolard. Returns nil if the current insolard is not a working node.
-	GetOrigin() NetworkNode
-}
-
-//go:generate minimock -i github.com/insolar/insolar/insolar.NodeNetwork -o ../testutils/network -s _mock.go -g
-
-type NodeNetwork interface {
-	OriginProvider
-
-	// GetWorkingNode get working node by its reference. Returns nil if node is not found or is not working.
-	GetWorkingNode(ref Reference) NetworkNode
-	// GetWorkingNodes returns sorted list of all working nodes.
-	GetWorkingNodes() []NetworkNode
-	// GetWorkingNodesByRole get working nodes by role.
-	GetWorkingNodesByRole(role DynamicRole) []Reference
+	// GetPower get power of node
+	GetPower() Power
 }

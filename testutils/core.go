@@ -22,11 +22,9 @@ import (
 	"fmt"
 	"hash"
 	"math/big"
-	r "math/rand"
 
 	"github.com/gojuno/minimock"
-
-	uuid "github.com/satori/go.uuid"
+	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/insolar/insolar/insolar"
@@ -40,16 +38,6 @@ func RandomString() string {
 		panic(err)
 	}
 	return newUUID.String()
-}
-
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-func RandStringBytes(n int) string {
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letterBytes[r.Intn(len(letterBytes))]
-	}
-	return string(b)
 }
 
 // RandomRef generates random object reference

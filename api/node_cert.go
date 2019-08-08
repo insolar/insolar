@@ -18,12 +18,14 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/pkg/errors"
 )
 
@@ -51,14 +53,21 @@ func NewNodeCertService(runner *Runner) *NodeCertService {
 func (s *NodeCertService) Get(r *http.Request, args *NodeCertArgs, reply *NodeCertReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 
-	inslog.Infof("[ NodeCertService.Get ] Incoming request: %s", r.RequestURI)
+	_, span := instracer.StartSpan(ctx, "NodeCertService.Get")
+	defer span.End()
+
+	info := fmt.Sprintf("[ NodeCertService.Get ] Incoming request: %s", r.RequestURI)
+	inslog.Infof(info)
+	span.Annotate(nil, info)
 
 	nodeRef, err := insolar.NewReferenceFromBase58(args.Ref)
 	if err != nil {
+		instracer.AddError(span, err)
 		return errors.Wrap(err, "[ NodeCertService.Get ] failed to parse args.Ref")
 	}
 	cert, err := s.runner.ServiceNetwork.GetCert(ctx, nodeRef)
 	if err != nil {
+		instracer.AddError(span, err)
 		return errors.Wrap(err, "[ NodeCertService.Get ]")
 	}
 

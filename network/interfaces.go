@@ -60,7 +60,6 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
-	"github.com/insolar/insolar/network/node"
 )
 
 type Report struct {
@@ -135,27 +134,38 @@ type PulseHandler interface {
 	HandlePulse(ctx context.Context, pulse insolar.Pulse, originalPacket ReceivedPacket)
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network.OriginProvider -o ../testutils/network -s _mock.go -g
+
+type OriginProvider interface {
+	// GetOrigin get origin node for the current insolard. Returns nil if the current insolard is not a working node.
+	GetOrigin() insolar.NetworkNode
+}
+
+//go:generate minimock -i github.com/insolar/insolar/network.NodeNetwork -o ../testutils/network -s _mock.go -g
+
+type NodeNetwork interface {
+	OriginProvider
+
+	// GetAccessor get accessor to the internal snapshot for the current pulse
+	GetAccessor(insolar.PulseNumber) Accessor
+}
+
 //go:generate minimock -i github.com/insolar/insolar/network.NodeKeeper -o ../testutils/network -s _mock.go -g
 
 // NodeKeeper manages unsync, sync and active lists.
 type NodeKeeper interface {
-	insolar.NodeNetwork
+	NodeNetwork
 
 	// GetCloudHash returns current cloud hash
-	GetCloudHash() []byte
+	GetCloudHash(insolar.PulseNumber) []byte
 	// SetCloudHash set new cloud hash
-	SetCloudHash([]byte)
+	SetCloudHash(insolar.PulseNumber, []byte)
 	// SetInitialSnapshot set initial snapshot for nodekeeper
 	SetInitialSnapshot(nodes []insolar.NetworkNode)
-	// GetAccessor get accessor to the internal snapshot for the current pulse
-	// TODO: add pulse to the function signature to get data of various pulses
-	GetAccessor() Accessor
-	// GetSnapshotCopy get copy of the current nodekeeper snapshot
-	GetSnapshotCopy() *node.Snapshot
 	// Sync move unsync -> sync
-	Sync(context.Context, []insolar.NetworkNode)
+	Sync(context.Context, insolar.PulseNumber, []insolar.NetworkNode)
 	// MoveSyncToActive merge sync list with active nodes
-	MoveSyncToActive(ctx context.Context, number insolar.PulseNumber)
+	MoveSyncToActive(context.Context, insolar.PulseNumber)
 }
 
 // PartitionPolicy contains all rules how to initiate globule resharding.
@@ -169,10 +179,6 @@ type PartitionPolicy interface {
 type RoutingTable interface {
 	// Resolve NodeID -> ShortID, Address. Can initiate network requests.
 	Resolve(insolar.Reference) (*host.Host, error)
-	// AddToKnownHosts add host to routing table.
-	AddToKnownHosts(*host.Host)
-	// Rebalance recreate shards of routing table with known hosts according to new partition policy.
-	Rebalance(PartitionPolicy)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network.Accessor -o ../testutils/network -s _mock.go -g
@@ -183,10 +189,6 @@ type Accessor interface {
 	GetWorkingNode(ref insolar.Reference) insolar.NetworkNode
 	// GetWorkingNodes returns sorted list of all working nodes.
 	GetWorkingNodes() []insolar.NetworkNode
-	// GetWorkingNodesByRole get working nodes by role.
-	GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference
-	// GetRandomWorkingNode returns random node to bootstrap on it
-	GetRandomWorkingNode() insolar.NetworkNode
 
 	// GetActiveNode returns active node.
 	GetActiveNode(ref insolar.Reference) insolar.NetworkNode
@@ -198,33 +200,32 @@ type Accessor interface {
 	GetActiveNodeByAddr(address string) insolar.NetworkNode
 }
 
-// Mutator is interface that provides read and write access to a snapshot
-type Mutator interface {
-	Accessor
-	// AddWorkingNode adds active node to index and underlying snapshot so it is accessible via GetActiveNode(s).
-	AddWorkingNode(n insolar.NetworkNode)
-}
-
 //go:generate minimock -i github.com/insolar/insolar/network.Gatewayer -o ../testutils/network -s _mock.go -g
 
 // Gatewayer is a network which can change it's Gateway
 type Gatewayer interface {
 	Gateway() Gateway
-	SwitchState(ctx context.Context, state insolar.NetworkState)
+	SwitchState(ctx context.Context, state insolar.NetworkState, pulse insolar.Pulse)
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network.Gateway -o ../testutils/network -s _mock.go -g
 
 // Gateway responds for whole network state
 type Gateway interface {
-	Run(context.Context)
+	Run(ctx context.Context, pulse insolar.Pulse)
 	GetState() insolar.NetworkState
+	NewGateway(context.Context, insolar.NetworkState) Gateway
+
 	OnPulseFromPulsar(context.Context, insolar.Pulse, ReceivedPacket)
 	OnPulseFromConsensus(context.Context, insolar.Pulse)
 	OnConsensusFinished(ctx context.Context, report Report)
+
 	UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte)
-	NewGateway(context.Context, insolar.NetworkState) Gateway
+
 	Auther() Auther
-	NeedLockMessageBus() bool
 	Bootstrapper() Bootstrapper
+
+	NetworkOperable() bool
 	EphemeralMode(nodes []insolar.NetworkNode) bool
 }
 

@@ -52,9 +52,10 @@ package pulse
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"strings"
 	"time"
+
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 
 	"github.com/insolar/insolar/network/consensus/common/longbits"
 )

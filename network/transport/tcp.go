@@ -98,7 +98,7 @@ func (t *tcpTransport) Dial(ctx context.Context, address string) (io.ReadWriteCl
 
 	conn, err := net.DialTCP("tcp", nil, tcpAddress)
 	if err != nil {
-		logger.Error("[ Dial ] Failed to open connection: ", err)
+		logger.Warn("[ Dial ] Failed to open connection: ", err)
 		return nil, errors.Wrap(err, "[ Dial ] Failed to open connection")
 	}
 
@@ -146,7 +146,7 @@ func (t *tcpTransport) listen(ctx context.Context) {
 				return
 			}
 
-			logger.Error("[ listen ] Failed to accept connection: ", err)
+			logger.Warn("[ listen ] Failed to accept connection: ", err)
 			return
 		}
 		logger.Infof("[ listen ] Accepted new connection")
@@ -179,14 +179,14 @@ func setupConnection(ctx context.Context, conn *net.TCPConn) {
 	logger := inslogger.FromContext(ctx).WithField("address", conn.RemoteAddr())
 
 	if err := conn.SetNoDelay(true); err != nil {
-		logger.Error("[ setupConnection ] Failed to set connection no delay: ", err)
+		logger.Warn("[ setupConnection ] Failed to set connection no delay: ", err)
 	}
 
 	if err := conn.SetKeepAlivePeriod(keepAlivePeriod); err != nil {
-		logger.Error("[ setupConnection ] Failed to set keep alive period", err)
+		logger.Warn("[ setupConnection ] Failed to set keep alive period", err)
 	}
 
 	if err := conn.SetKeepAlive(true); err != nil {
-		logger.Error("[ setupConnection ] Failed to set keep alive", err)
+		logger.Warn("[ setupConnection ] Failed to set keep alive", err)
 	}
 }

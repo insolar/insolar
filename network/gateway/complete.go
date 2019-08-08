@@ -53,9 +53,12 @@ package gateway
 import (
 	"context"
 	"fmt"
+	"os"
+	"syscall"
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
@@ -84,7 +87,14 @@ type Complete struct {
 	*Base
 }
 
-func (g *Complete) Run(ctx context.Context) {
+func (g *Complete) Run(ctx context.Context, pulse insolar.Pulse) {
+	if pulse.EpochPulseNumber > insolar.EphemeralPulseEpoch {
+		err := g.PulseManager.Set(ctx, pulse)
+		if err != nil {
+			inslogger.FromContext(ctx).Panicf("failed to set start pulse: %d, %s", pulse.PulseNumber, err.Error())
+		}
+	}
+
 	g.HostNetwork.RegisterRequestHandler(types.SignCert, g.signCertHandler)
 	metrics.NetworkComplete.Set(float64(time.Now().Unix()))
 }
@@ -93,8 +103,8 @@ func (g *Complete) GetState() insolar.NetworkState {
 	return insolar.CompleteNetworkState
 }
 
-func (g *Complete) NeedLockMessageBus() bool {
-	return false
+func (g *Complete) NetworkOperable() bool {
+	return true
 }
 
 // ValidateCert validates node certificate
@@ -209,11 +219,11 @@ func (g *Complete) UpdateState(ctx context.Context, pulseNumber insolar.PulseNum
 	logger := inslogger.FromContext(ctx)
 
 	if ok, _ := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), nodes); !ok {
-		logger.Fatal("CheckMajorityRule() failed")
+		logger.Fatal("MajorityRule failed")
 	}
 
 	if !rules.CheckMinRole(g.CertificateManager.GetCertificate(), nodes) {
-		logger.Fatal("CheckMinRole() failed")
+		logger.Fatal("MinRole failed")
 	}
 
 	g.Base.UpdateState(ctx, pulseNumber, nodes, cloudStateHash)
@@ -248,7 +258,17 @@ func pulseProcessingWatchdog(ctx context.Context, pulse insolar.Pulse, done chan
 	go func() {
 		select {
 		case <-time.After(time.Second * time.Duration(pulse.NextPulseNumber-pulse.PulseNumber)):
-			logger.Error("Node stopped due to long pulse processing")
+			logger.Errorf("Node stopped due to long pulse processing %v", pulse.PulseNumber)
+
+			proc, err := os.FindProcess(os.Getpid())
+			if err != nil {
+				log.Error(err)
+			} else {
+				err := proc.Signal(syscall.SIGABRT)
+				if err != nil {
+					panic(err)
+				}
+			}
 		case <-done:
 		}
 	}()

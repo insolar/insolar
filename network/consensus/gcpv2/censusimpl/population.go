@@ -478,15 +478,6 @@ func (c *DynamicPopulation) GetCount() int {
 
 type LessFunc func(c profiles.ActiveNode, o profiles.ActiveNode) bool
 
-/* deprecated */
-func (c *DynamicPopulation) Sort(lessFn LessFunc) {
-	sorter := slotSorter{values: c.getUnorderedSlots(), lessFn: lessFn}
-	sort.Sort(&sorter)
-	for i, v := range sorter.values {
-		v.SetIndex(member.AsIndex(i))
-	}
-}
-
 func (c *DynamicPopulation) GetProfiles() []profiles.ActiveNode {
 	r := make([]profiles.ActiveNode, len(c.slotByID))
 	for _, v := range c.slotByID {

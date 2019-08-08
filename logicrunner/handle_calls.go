@@ -18,8 +18,8 @@ package logicrunner
 
 import (
 	"context"
+	"fmt"
 
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -46,18 +46,17 @@ func (h *HandleCall) sendToNextExecutor(
 	objectRef insolar.Reference,
 	requestRef insolar.Reference,
 	request record.IncomingRequest,
-	ps insolar.PendingState,
 ) {
 	// If the flow has canceled during ClarifyPendingState there are two possibilities.
 	// 1. It's possible that we were addding request to broker, the pulse has
-	// changed and the execution queue was sent to the next executor.
-	// This means that the next executor already queue element, it's OK.
+	//    changed and the execution queue was sent to the next executor.
+	//    This means that the next executor already queue element, it's OK.
 	// 2. It's also possible that the pulse has changed after registration, but
-	// before adding an item to the execution queue. In this case the queue was sent to the
-	// next executor without the last item. We could just return ErrCanceled to make the
-	// caller to resend the request. However this will cause a slow request deduplication
-	// process on the LME side (it will be caused anyway by another modifying request if
-	// the object is used a lot, but many requests are read-only and don't cause deduplication).
+	//    before adding an item to the execution queue. In this case the queue was sent to the
+	//    next executor without the last item. We could just return ErrCanceled to make the
+	//    caller to resend the request. However this will cause a slow request deduplication
+	//    process on the LME side (it will be caused anyway by another modifying request if
+	//    the object is used a lot, but many requests are read-only and don't cause deduplication).
 	// As an optimization we decided to send a special message type to the next executor.
 	// It's possible that while we send the message the pulse will change once again and
 	// the receiver will be not an executor of the object anymore. However in this case
@@ -73,16 +72,38 @@ func (h *HandleCall) sendToNextExecutor(
 		ServiceData:     serviceDataFromContext(ctx),
 	}
 
-	if ps == insolar.PendingUnknown {
-		additionalCallMsg.Pending = insolar.NotPending
-	} else {
-		additionalCallMsg.Pending = ps
-	}
-
 	_, err := h.dep.lr.MessageBus.Send(ctx, &additionalCallMsg, nil)
 	if err != nil {
 		logger.Error("[ HandleCall.handleActual.sendToNextExecutor ] mb.Send failed to send AdditionalCallFromPreviousExecutor, ", err)
 	}
+}
+
+func (h *HandleCall) checkExecutionLoop(
+	ctx context.Context, reqRef insolar.Reference, request record.IncomingRequest,
+) bool {
+
+	if request.ReturnMode == record.ReturnNoWait {
+		return false
+	}
+	if request.CallType != record.CTMethod {
+		return false
+	}
+	if request.Object == nil {
+		// should be catched by other code
+		return false
+	}
+
+	archive := h.dep.StateStorage.GetExecutionArchive(*request.Object)
+	if archive == nil {
+		return false
+	}
+
+	if !archive.FindRequestLoop(ctx, reqRef, request.APIRequestID) {
+		return false
+	}
+
+	inslogger.FromContext(ctx).Error("loop detected")
+	return true
 }
 
 func (h *HandleCall) handleActual(
@@ -111,23 +132,21 @@ func (h *HandleCall) handleActual(
 
 	request := msg.IncomingRequest
 
-	if h.checkExecutionLoop(ctx, request) {
-		return nil, errors.New("loop detected")
-	}
-
 	procRegisterRequest := NewRegisterIncomingRequest(request, h.dep)
-
 	if err := f.Procedure(ctx, procRegisterRequest, true); err != nil {
 		if err == flow.ErrCancelled {
+			inslogger.FromContext(ctx).Info("pulse change during registration, asking caller for retry")
 			// Requests need to be deduplicated. For now in case of ErrCancelled we may have 2 registered requests
 			return nil, err // message bus will retry on the calling side in ContractRequester
 		}
 		return nil, errors.Wrap(err, "[ HandleCall.handleActual ] can't create request")
 	}
-	requestRef := procRegisterRequest.getResult()
+
+	reqInfo := procRegisterRequest.getResult()
+	requestRef := insolar.NewReference(reqInfo.RequestID)
 
 	ctx, logger := inslogger.WithField(ctx, "request", requestRef.String())
-	logger.Debug("Registered request")
+	logger.Debug("registered request")
 
 	objRef := request.Object
 	if request.CallType != record.CTMethod {
@@ -136,21 +155,47 @@ func (h *HandleCall) handleActual(
 	if objRef == nil {
 		return nil, errors.New("can't get object reference")
 	}
+	if !objRef.Record().Equal(reqInfo.ObjectID) {
+		return nil, errors.New("object id we calculated doesn't match ledger")
+	}
 
-	broker := lr.StateStorage.UpsertExecutionState(*objRef)
+	registeredRequestReply := &reply.RegisterRequest{Request: *requestRef}
+
+	if len(reqInfo.Request) != 0 {
+		logger.Debug("duplicated request")
+	}
+
+	if len(reqInfo.Result) != 0 {
+		logger.Debug("request has result already")
+		go func() {
+			err := h.sendRequestResult(ctx, *objRef, *requestRef, request, *reqInfo)
+			if err != nil {
+				logger.Error("couldn't send request result: ", err.Error())
+			}
+		}()
+		return registeredRequestReply, nil
+	}
+
+	if h.checkExecutionLoop(ctx, *requestRef, request) {
+		return nil, errors.New("loop detected")
+	}
+
+	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
+	defer done()
+
+	if err != nil {
+		go h.sendToNextExecutor(ctx, *objRef, *requestRef, request)
+		return registeredRequestReply, nil
+	}
+
+	broker := h.dep.StateStorage.UpsertExecutionState(*objRef)
 
 	proc := AddFreshRequest{broker: broker, requestRef: *requestRef, request: request}
-	err := f.Procedure(ctx, &proc, true)
-	if err != nil {
-		if err == flow.ErrCancelled {
-			h.sendToNextExecutor(ctx, *objRef, *requestRef, request, broker.PendingState())
-		}
+	if err := f.Procedure(ctx, &proc, true); err != nil {
 		return nil, errors.Wrap(err, "couldn't pass request to broker")
 	}
 
-	return &reply.RegisterRequest{
-		Request: *requestRef,
-	}, nil
+	return registeredRequestReply, nil
 }
 
 func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
@@ -170,45 +215,37 @@ func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
 
 	rep, err := h.handleActual(ctx, msg, f)
 
-	var repMsg *watermillMsg.Message
 	if err != nil {
-		var newErr error
-		repMsg, newErr = payload.NewMessage(&payload.Error{Text: err.Error()})
-		if newErr != nil {
-			return newErr
-		}
-	} else {
-		repMsg = bus.ReplyAsMessage(ctx, rep)
+		return sendErrorMessage(ctx, h.dep.Sender, h.Message, err)
 	}
-	go h.dep.Sender.Reply(ctx, h.Message, repMsg)
-
+	go h.dep.Sender.Reply(ctx, h.Message, bus.ReplyAsMessage(ctx, rep))
 	return nil
 }
 
-func (h *HandleCall) checkExecutionLoop(
-	ctx context.Context, request record.IncomingRequest,
-) bool {
+func (h *HandleCall) sendRequestResult(
+	ctx context.Context,
+	objRef insolar.Reference,
+	reqRef insolar.Reference,
+	request record.IncomingRequest,
+	reqInfo payload.RequestInfo,
+) error {
+	logger := inslogger.FromContext(ctx)
+	logger.Debug("sending earlier")
 
-	if request.ReturnMode == record.ReturnNoWait {
-		return false
+	rec := record.Material{}
+	err := rec.Unmarshal(reqInfo.Result)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal record")
 	}
-	if request.CallType != record.CTMethod {
-		return false
-	}
-	if request.Object == nil {
-		// should be catched by other code
-		return false
-	}
-
-	archive := h.dep.StateStorage.GetExecutionArchive(*request.Object)
-	if archive == nil {
-		return false
-	}
-
-	if !archive.FindRequestLoop(ctx, request.APIRequestID) {
-		return false
+	virtual := record.Unwrap(&rec.Virtual)
+	resultRecord, ok := virtual.(*record.Result)
+	if !ok {
+		return fmt.Errorf("unexpected record %T", virtual)
 	}
 
-	inslogger.FromContext(ctx).Error("loop detected")
-	return true
+	repl := &reply.CallMethod{Result: resultRecord.Payload, Object: &objRef}
+	tr := NewTranscript(ctx, reqRef, request)
+	h.dep.RequestsExecutor.SendReply(ctx, tr, repl, nil)
+
+	return nil
 }

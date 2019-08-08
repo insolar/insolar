@@ -66,10 +66,8 @@ type WaitMinRoles struct {
 	*Base
 }
 
-func (g *WaitMinRoles) Run(ctx context.Context) {
-	if rules.CheckMinRole(g.CertificateManager.GetCertificate(), g.NodeKeeper.GetAccessor().GetWorkingNodes()) {
-		g.Gatewayer.SwitchState(ctx, insolar.CompleteNetworkState)
-	}
+func (g *WaitMinRoles) Run(ctx context.Context, pulse insolar.Pulse) {
+	g.switchOnMinRoles(ctx, pulse)
 }
 
 func (g *WaitMinRoles) GetState() insolar.NetworkState {
@@ -77,5 +75,16 @@ func (g *WaitMinRoles) GetState() insolar.NetworkState {
 }
 
 func (g *WaitMinRoles) OnConsensusFinished(ctx context.Context, report network.Report) {
-	g.Run(ctx)
+	g.switchOnMinRoles(ctx, EnsureGetPulse(ctx, g.PulseAccessor, report.PulseNumber))
+}
+
+func (g *WaitMinRoles) switchOnMinRoles(ctx context.Context, pulse insolar.Pulse) {
+	minRole := rules.CheckMinRole(
+		g.CertificateManager.GetCertificate(),
+		g.NodeKeeper.GetAccessor(pulse.PulseNumber).GetWorkingNodes(),
+	)
+
+	if minRole {
+		g.Gatewayer.SwitchState(ctx, insolar.CompleteNetworkState, pulse)
+	}
 }

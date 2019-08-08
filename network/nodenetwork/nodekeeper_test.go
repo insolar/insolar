@@ -101,20 +101,21 @@ func newNodeKeeper(t *testing.T, service insolar.CryptographyService) network.No
 
 func TestNewNodeKeeper(t *testing.T) {
 	nk := newNodeKeeper(t, nil)
-	assert.NotNil(t, nk.GetOrigin())
-	assert.NotNil(t, nk.GetAccessor())
-	assert.NotNil(t, nk.GetSnapshotCopy())
+	origin := nk.GetOrigin()
+	assert.NotNil(t, origin)
+	nk.SetInitialSnapshot([]insolar.NetworkNode{origin})
+	assert.NotNil(t, nk.GetAccessor(insolar.GenesisPulse.PulseNumber))
 }
 
 func TestNodekeeper_GetCloudHash(t *testing.T) {
 	nk := newNodeKeeper(t, nil)
 	cloudHash := make([]byte, 64)
-	rand.Read(cloudHash)
-	nk.SetCloudHash(cloudHash)
-	assert.Equal(t, cloudHash, nk.GetCloudHash())
+	_, _ = rand.Read(cloudHash)
+	nk.SetCloudHash(0, cloudHash)
+	assert.Equal(t, cloudHash, nk.GetCloudHash(0))
 }
 
-//func TestNodekeeper_GetWorkingNodes(t *testing.T) {
+// func TestNodekeeper_GetWorkingNodes(t *testing.T) {
 //	nk := newNodeKeeper(t, nil)
 //	assert.Empty(t, nk.GetAccessor().GetActiveNodes())
 //	assert.Empty(t, nk.GetWorkingNodes())
@@ -127,9 +128,6 @@ func TestNodekeeper_GetCloudHash(t *testing.T) {
 //	nk.SetInitialSnapshot([]insolar.NetworkNode{origin, node1, node2, node3, node4})
 //	assert.Equal(t, 5, len(nk.GetAccessor().GetActiveNodes()))
 //	assert.Equal(t, 3, len(nk.GetWorkingNodes()))
-//	assert.Equal(t, node2.ID(), nk.GetWorkingNodesByRole(insolar.DynamicRoleLightValidator)[0])
-//	assert.Equal(t, node3.ID(), nk.GetWorkingNodesByRole(insolar.DynamicRoleVirtualExecutor)[0])
-//	assert.Empty(t, nk.GetWorkingNodesByRole(insolar.DynamicRoleHeavyExecutor))
 //	assert.NotNil(t, nk.GetWorkingNode(node2.ID()))
 //	assert.Nil(t, nk.GetWorkingNode(node1.ID()))
 //
@@ -160,9 +158,9 @@ func TestNodekeeper_GetCloudHash(t *testing.T) {
 //	nodes = []insolar.NetworkNode{node1, node2, node3, node5}
 //	err = nk.Sync(context.Background(), nodes, nil)
 //	assert.Error(t, err)
-//}
+// }
 
-//func TestNodekeeper_GracefulStop(t *testing.T) {
+// func TestNodekeeper_GracefulStop(t *testing.T) {
 //	nk := newNodeKeeper(t, nil)
 //	nodeLeaveTriggered := false
 //	handler := testutils.NewTerminationHandlerMock(t)
@@ -184,4 +182,4 @@ func TestNodekeeper_GetCloudHash(t *testing.T) {
 //	assert.NoError(t, err)
 //
 //	assert.True(t, nodeLeaveTriggered)
-//}
+// }

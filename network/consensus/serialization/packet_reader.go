@@ -53,9 +53,10 @@ package serialization
 import (
 	"bytes"
 	"context"
-	"github.com/insolar/insolar/network"
 	"io"
 	"time"
+
+	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"

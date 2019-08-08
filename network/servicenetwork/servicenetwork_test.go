@@ -127,8 +127,8 @@ func TestSendMessageHandler_SameNode(t *testing.T) {
 		return n
 	})
 	pubMock := &PublisherMock{}
-	pulseMock := pulse.NewAccessorMock(t)
-	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
+	pulseMock := networkUtils.NewPulseAccessorMock(t)
+	pulseMock.GetLatestPulseMock.Return(*insolar.GenesisPulse, nil)
 	serviceNetwork.PulseAccessor = pulseMock
 	serviceNetwork.NodeKeeper = nodeN
 	serviceNetwork.Pub = pubMock
@@ -165,8 +165,8 @@ func TestSendMessageHandler_SendError(t *testing.T) {
 	rpc.SendBytesMock.Set(func(p context.Context, p1 insolar.Reference, p2 string, p3 []byte) (r []byte, r1 error) {
 		return nil, errors.New("test error")
 	})
-	pulseMock := pulse.NewAccessorMock(t)
-	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
+	pulseMock := networkUtils.NewPulseAccessorMock(t)
+	pulseMock.GetLatestPulseMock.Return(*insolar.GenesisPulse, nil)
 	serviceNetwork.PulseAccessor = pulseMock
 	serviceNetwork.RPC = rpc
 	serviceNetwork.NodeKeeper = nodeN
@@ -202,8 +202,8 @@ func TestSendMessageHandler_WrongReply(t *testing.T) {
 	rpc.SendBytesMock.Set(func(p context.Context, p1 insolar.Reference, p2 string, p3 []byte) (r []byte, r1 error) {
 		return nil, nil
 	})
-	pulseMock := pulse.NewAccessorMock(t)
-	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
+	pulseMock := networkUtils.NewPulseAccessorMock(t)
+	pulseMock.GetLatestPulseMock.Return(*insolar.GenesisPulse, nil)
 	serviceNetwork.PulseAccessor = pulseMock
 	serviceNetwork.RPC = rpc
 	serviceNetwork.NodeKeeper = nodeN
@@ -237,8 +237,8 @@ func TestSendMessageHandler(t *testing.T) {
 	rpc.SendBytesMock.Set(func(p context.Context, p1 insolar.Reference, p2 string, p3 []byte) (r []byte, r1 error) {
 		return ack, nil
 	})
-	pulseMock := pulse.NewAccessorMock(t)
-	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
+	pulseMock := networkUtils.NewPulseAccessorMock(t)
+	pulseMock.GetLatestPulseMock.Return(*insolar.GenesisPulse, nil)
 	serviceNetwork.PulseAccessor = pulseMock
 	serviceNetwork.RPC = rpc
 	serviceNetwork.NodeKeeper = nodeN

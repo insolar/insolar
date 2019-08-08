@@ -75,7 +75,7 @@ func TestNewSnapshotStorage(t *testing.T) {
 	cm := component.NewManager(nil)
 	badgerDB, err := NewBadgerDB(configuration.ServiceNetwork{CacheDirectory: tmpdir})
 	defer badgerDB.Stop(ctx)
-	ss := NewSnapshotStorage()
+	ss := newSnapshotStorage()
 
 	cm.Register(badgerDB, ss)
 	cm.Inject()
@@ -84,19 +84,35 @@ func TestNewSnapshotStorage(t *testing.T) {
 	p1, err := ks.GeneratePrivateKey()
 	n := node.NewNode(testutils.RandomRef(), insolar.StaticRoleVirtual, ks.ExtractPublicKey(p1), "127.0.0.1:22", "ver2")
 
-	nodes := make(map[insolar.Reference]insolar.NetworkNode)
-	nodes[testutils.RandomRef()] = n
-
 	pulse := insolar.Pulse{PulseNumber: 15}
-	snap := node.NewSnapshot(pulse.PulseNumber, nodes)
+	snap := node.NewSnapshot(pulse.PulseNumber, []insolar.NetworkNode{n})
 
-	err = ss.Append(ctx, pulse.PulseNumber, snap)
+	err = ss.Append(pulse.PulseNumber, snap)
 	assert.NoError(t, err)
 
-	snapshot2, err := ss.ForPulseNumber(ctx, pulse.PulseNumber)
+	snapshot2, err := ss.ForPulseNumber(pulse.PulseNumber)
 	assert.NoError(t, err)
 
 	assert.True(t, snap.Equal(snapshot2))
 
 	err = cm.Stop(ctx)
+}
+
+func TestNewMemorySnapshotStorage(t *testing.T) {
+	ss := NewMemorySnapshotStorage()
+
+	ks := platformpolicy.NewKeyProcessor()
+	p1, err := ks.GeneratePrivateKey()
+	n := node.NewNode(testutils.RandomRef(), insolar.StaticRoleVirtual, ks.ExtractPublicKey(p1), "127.0.0.1:22", "ver2")
+
+	pulse := insolar.Pulse{PulseNumber: 15}
+	snap := node.NewSnapshot(pulse.PulseNumber, []insolar.NetworkNode{n})
+
+	err = ss.Append(pulse.PulseNumber, snap)
+	assert.NoError(t, err)
+
+	snapshot2, err := ss.ForPulseNumber(pulse.PulseNumber)
+	assert.NoError(t, err)
+
+	assert.True(t, snap.Equal(snapshot2))
 }

@@ -54,9 +54,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/insolar/insolar/network/consensus/common/watchdog"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 	"math"
 	"time"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"

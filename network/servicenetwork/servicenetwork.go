@@ -55,13 +55,16 @@ import (
 	"context"
 	"crypto/rand"
 
+	"github.com/insolar/insolar/network/storage"
+
 	"github.com/insolar/insolar/cryptography"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
@@ -77,8 +80,12 @@ import (
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/routing"
 	"github.com/insolar/insolar/network/transport"
-	"github.com/pkg/errors"
 )
+
+func getKeyStore(cryptographyService insolar.CryptographyService) insolar.KeyStore {
+	// TODO: hacked
+	return cryptographyService.(*cryptography.NodeCryptographyService).KeyStore
+}
 
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
@@ -88,8 +95,6 @@ type ServiceNetwork struct {
 	// dependencies
 	CertificateManager  insolar.CertificateManager         `inject:""`
 	PulseManager        insolar.PulseManager               `inject:""`
-	PulseAccessor       pulse.Accessor                     `inject:""`
-	PulseAppender       pulse.Appender                     `inject:""`
 	CryptographyService insolar.CryptographyService        `inject:""`
 	CryptographyScheme  insolar.PlatformCryptographyScheme `inject:""`
 	KeyProcessor        insolar.KeyProcessor               `inject:""`
@@ -103,6 +108,9 @@ type ServiceNetwork struct {
 	// subcomponents
 	RPC              controller.RPCController `inject:"subcomponent"`
 	TransportFactory transport.Factory        `inject:"subcomponent"`
+	PulseAccessor    storage.PulseAccessor    `inject:"subcomponent"`
+	PulseAppender    storage.PulseAppender    `inject:"subcomponent"`
+	// DB               storage.DB               `inject:"subcomponent"`
 
 	HostNetwork network.HostNetwork
 
@@ -160,14 +168,21 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		}
 	})
 
+	pulseStorage := storage.NewMemoryPulseStorage()
+	table := &routing.Table{}
+
 	n.cm.Inject(n,
-		&routing.Table{},
+		table,
 		cert,
 		transport.NewFactory(n.cfg.Host.Transport),
 		hostNetwork,
 		controller.NewRPCController(options),
 		controller.NewPulseController(),
 		bootstrap.NewRequester(options),
+		// db,
+		pulseStorage,
+		storage.NewMemoryCloudHashStorage(),
+		storage.NewMemorySnapshotStorage(),
 		n.BaseGateway,
 		n.Gatewayer,
 	)
@@ -179,22 +194,28 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	}
 	n.datagramTransport = datagramTransport
 
+	err = n.datagramTransport.Start(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to start datagram transport")
+	}
+
 	// sign origin
 	origin := n.NodeKeeper.GetOrigin()
-	// TODO: hack
-	ks := n.CryptographyService.(*cryptography.NodeCryptographyService).KeyStore
+	mutableOrigin := origin.(node.MutableNode)
+	mutableOrigin.SetAddress(datagramTransport.Address())
+	keyStore := getKeyStore(n.CryptographyService)
+
 	digest, sign, err := getAnnounceSignature(
 		origin,
 		network.OriginIsDiscovery(cert),
 		n.KeyProcessor,
-		ks,
+		keyStore,
 		n.CryptographyScheme,
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to getAnnounceSignature")
 	}
-
-	origin.(node.MutableNode).SetSignature(digest, *sign)
+	mutableOrigin.SetSignature(digest, *sign)
 	n.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{origin})
 
 	err = n.cm.Init(ctx)
@@ -208,7 +229,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		KeyProcessor:        n.KeyProcessor,
 		Scheme:              n.CryptographyScheme,
 		CertificateManager:  n.CertificateManager,
-		KeyStore:            ks,
+		KeyStore:            keyStore,
 		NodeKeeper:          n.NodeKeeper,
 		StateGetter:         n,
 		PulseChanger:        n,
@@ -237,34 +258,15 @@ func (n *ServiceNetwork) initConsensus() {
 
 // Start implements component.Starter
 func (n *ServiceNetwork) Start(ctx context.Context) error {
-	err := n.datagramTransport.Start(ctx)
-	if err != nil {
-		return errors.Wrap(err, "failed to start datagram transport")
-	}
-
-	err = n.cm.Start(ctx)
+	err := n.cm.Start(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed to start component manager")
 	}
 
-	//if !n.cfg.Service.ConsensusEnabled {
-	//	cert := n.CertificateManager.GetCertificate()
-	//	nodes := make([]insolar.NetworkNode, len(cert.GetDiscoveryNodes()))
-	//	for i, dn := range cert.GetDiscoveryNodes() {
-	//		nodes[i] = node.NewNode(*dn.GetNodeRef(), dn.GetRole(), dn.GetPublicKey(), dn.GetHost(), "")
-	//		nodes[i].(node.MutableNode).SetEvidence(cryptkit.NewSignedDigest(
-	//			cryptkit.NewDigest(longbits.NewBits512FromBytes(dn.GetBriefDigest()), adapters.SHA3512Digest),
-	//			cryptkit.NewSignature(longbits.NewBits512FromBytes(dn.GetBriefSign()), adapters.SHA3512Digest.SignedBy(adapters.SECP256r1Sign)),
-	//		))
-	//	}
-	//	n.operableFunc(ctx, false)
-	//	n.NodeKeeper.SetInitialSnapshot(nodes)
-	//	n.Gatewayer.SwitchState(ctx, insolar.CompleteNetworkState)
-	//	n.ConsensusMode = consensus.ReadyNetwork
-	//}
+	bootstrapPulse := gateway.GetBootstrapPulse(ctx, n.PulseAccessor)
 
 	n.initConsensus()
-	n.Gatewayer.Gateway().Run(ctx)
+	n.Gatewayer.Gateway().Run(ctx, bootstrapPulse)
 
 	n.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
 
@@ -364,7 +366,7 @@ func getAnnounceSignature(
 	buf := &bytes.Buffer{}
 	err = brief.SerializeTo(nil, buf)
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 
 	data := buf.Bytes()
@@ -372,13 +374,13 @@ func getAnnounceSignature(
 
 	key, err := keystore.GetPrivateKey("")
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 
 	digest := scheme.IntegrityHasher().Hash(data)
 	sign, err := scheme.DigestSigner(key).Sign(digest)
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 
 	return digest, sign, nil

@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
-	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -40,7 +39,7 @@ type SetRequest struct {
 	jetID     insolar.JetID
 
 	dep struct {
-		writer      hot.WriteAccessor
+		writer      executor.WriteAccessor
 		filament    executor.FilamentCalculator
 		sender      bus.Sender
 		locker      object.IndexLocker
@@ -67,7 +66,7 @@ func NewSetRequest(
 }
 
 func (p *SetRequest) Dep(
-	w hot.WriteAccessor,
+	w executor.WriteAccessor,
 	f executor.FilamentCalculator,
 	s bus.Sender,
 	l object.IndexLocker,
@@ -122,8 +121,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	//   current executor.
 	if _, ok := p.request.(*record.IncomingRequest); ok && !p.request.IsTemporaryUploadCode() {
 		if p.message.Sender != *virtualExecutor {
-			// FIXME: virtuals don't pass this test.
-			logger.Errorf("sender isn't the executor. sender - %v, executor - %v", p.message.Sender, *virtualExecutor)
+			return errors.Errorf("sender isn't the executor. sender - %s, executor - %s", p.message.Sender, *virtualExecutor)
 		}
 	}
 
@@ -213,7 +211,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	// Start writing to db.
 	done, err := p.dep.writer.Begin(ctx, flow.Pulse(ctx))
 	if err != nil {
-		if err == hot.ErrWriteClosed {
+		if err == executor.ErrWriteClosed {
 			return flow.ErrCancelled
 		}
 		return err
@@ -222,9 +220,10 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 
 	// Create request record.
 	Request := record.Material{
-		Virtual: record.Wrap(p.request),
-		ID:      p.requestID,
-		JetID:   p.jetID,
+		Virtual:  record.Wrap(p.request),
+		ID:       p.requestID,
+		ObjectID: objectID,
+		JetID:    p.jetID,
 	}
 
 	// Create filament record.
@@ -237,9 +236,10 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		hash := record.HashVirtual(p.dep.pcs.ReferenceHasher(), virtual)
 		id := *insolar.NewID(p.requestID.Pulse(), hash)
 		material := record.Material{
-			Virtual: virtual,
-			ID:      id,
-			JetID:   p.jetID,
+			Virtual:  virtual,
+			ID:       id,
+			ObjectID: objectID,
+			JetID:    p.jetID,
 		}
 		Filament = material
 	}

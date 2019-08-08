@@ -118,6 +118,8 @@ func (cb *ContractsBuilder) Clean() {
 
 // Build ...
 func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]string) error {
+	logger := inslogger.FromContext(ctx)
+
 	for name := range contracts {
 		nonce := testutils.RandomRef()
 		pulse, err := cb.pulseAccessor.Latest(ctx)
@@ -125,7 +127,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 			return errors.Wrap(err, "can't get current pulse")
 		}
 		request := record.IncomingRequest{
-			CallType:  record.CTSaveAsChild,
+			CallType:  record.CTDeployPrototype,
 			Prototype: &nonce,
 			Reason:    api.MakeReason(pulse.PulseNumber, []byte(name)),
 			APINode:   cb.jetCoordinator.Me(),
@@ -135,11 +137,9 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterIncomingRequest")
 		}
-
-		protoRef := insolar.Reference{}
-		protoRef.SetRecord(*protoID)
-		log.Debugf("Registered prototype %q for contract %q in %q", protoRef.String(), name, cb.root)
-		cb.Prototypes[name] = &protoRef
+		protoRef := insolar.NewReference(*protoID)
+		logger.Debugf("Registered prototype %q for contract %q in %q", protoRef.String(), name, cb.root)
+		cb.Prototypes[name] = protoRef
 	}
 
 	re := regexp.MustCompile(`package\s+\S+`)
@@ -160,56 +160,32 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 	}
 
 	for name := range contracts {
-		log.Debugf("Building plugin for contract %q in %q", name, cb.root)
+		logger.Debug("Building plugin for contract ", name, " in ", cb.root)
+
 		err := cb.plugin(name)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't call plugin")
 		}
-		log.Debugf("Built plugin for contract %q", name)
+		logger.Debug("Built plugin for contract ", name)
 
 		pluginBinary, err := ioutil.ReadFile(filepath.Join(cb.root, "plugins", name+".so"))
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't ReadFile")
 		}
 
-		nonce := testutils.RandomRef()
-		pulse, err := cb.pulseAccessor.Latest(ctx)
-		if err != nil {
-			return errors.Wrap(err, "can't get current pulse")
-		}
-
-		req := record.IncomingRequest{
-			CallType:  record.CTSaveAsChild,
-			Prototype: &nonce,
-			Reason:    api.MakeReason(pulse.PulseNumber, []byte(name)),
-			APINode:   cb.jetCoordinator.Me(),
-		}
-
-		codeReq, err := cb.registerRequest(ctx, &req)
-		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't register request")
-		}
-
-		log.Debugf("Deploying code for contract %q", name)
+		logger.Debug("Deploying code for contract ", name)
 		codeID, err := cb.artifactManager.DeployCode(
 			ctx,
-			insolar.Reference{}, *insolar.NewReference(*codeReq),
+			insolar.Reference{}, insolar.Reference{},
 			pluginBinary, insolar.MachineTypeGoPlugin,
 		)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] DeployCode returns error")
 		}
 
-		res := newRequestResult(nil, *insolar.NewReference(*codeReq))
-		err = cb.artifactManager.RegisterResult(ctx, *insolar.NewReference(*codeReq), res)
-		if err != nil {
-			return errors.Wrap(err, "[ Build ] RegisterResult for code returns error")
-		}
+		codeRef := insolar.NewReference(*codeID)
 
-		codeRef := &insolar.Reference{}
-		codeRef.SetRecord(*codeID)
-
-		log.Debugf("Deployed code %q for contract %q in %q", codeRef.String(), name, cb.root)
+		logger.Debugf("Deployed code %q for contract %q in %q", codeRef.String(), name, cb.root)
 		cb.Codes[name] = codeRef
 
 		// FIXME: It's a temporary fix and should not be here. Ii will NOT work properly on production. Remove it ASAP!
@@ -238,8 +214,7 @@ func (cb *ContractsBuilder) registerRequest(ctx context.Context, request *record
 	logger := inslogger.FromContext(ctx)
 
 	if cb.pulseAccessor == nil {
-		logger.Warnf("[ registerRequest ] No pulse accessor passed: no retries for register request")
-		return cb.artifactManager.RegisterIncomingRequest(ctx, request)
+		return nil, errors.New("No pulse accessor")
 	}
 
 	for current := 1; current <= retries; current++ {
@@ -255,9 +230,10 @@ func (cb *ContractsBuilder) registerRequest(ctx context.Context, request *record
 		}
 		lastPulse = currentPulse.PulseNumber
 
-		contractID, err := cb.artifactManager.RegisterIncomingRequest(ctx, request)
+		reqInfo, err := cb.artifactManager.RegisterIncomingRequest(ctx, request)
 		if err == nil || !strings.Contains(err.Error(), flow.ErrCancelled.Error()) {
-			return contractID, err
+			reqID := reqInfo.RequestID
+			return &reqID, err
 		}
 
 		logger.Debugf("[ registerRequest ] retry. attempt: %d/%d", current, retries)
@@ -319,46 +295,4 @@ func (cb *ContractsBuilder) plugin(name string) error {
 		return errors.Wrap(err, "can't build contract: "+string(out))
 	}
 	return nil
-}
-
-type requestResult struct {
-	sideEffectType  artifacts.RequestResultType
-	result          []byte
-	objectReference insolar.Reference
-}
-
-func newRequestResult(result []byte, objectRef insolar.Reference) *requestResult {
-	return &requestResult{
-		sideEffectType:  artifacts.RequestSideEffectNone,
-		result:          result,
-		objectReference: objectRef,
-	}
-}
-
-func (s requestResult) Type() artifacts.RequestResultType {
-	return s.sideEffectType
-}
-
-func (s *requestResult) Result() []byte {
-	return s.result
-}
-
-func (s *requestResult) ObjectReference() insolar.Reference {
-	return s.objectReference
-}
-
-func (s *requestResult) Activate() (insolar.Reference, insolar.Reference, []byte) {
-	panic("not implemented")
-}
-
-func (s *requestResult) Amend() (insolar.ID, insolar.Reference, []byte) {
-	panic("not implemented")
-}
-
-func (s *requestResult) Deactivate() insolar.ID {
-	panic("not implemented")
-}
-
-func (s *requestResult) ConstructorError() string {
-	panic("not implemented")
 }

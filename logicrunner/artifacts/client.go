@@ -112,7 +112,7 @@ func NewClient(sender bus.Sender) *client { // nolint
 // registerRequest registers incoming or outgoing request.
 func (m *client) registerRequest(
 	ctx context.Context, req record.Request, msgPayload payload.Payload, sender bus.Sender,
-) (*insolar.ID, error) {
+) (*payload.RequestInfo, error) {
 	affinityRef, err := m.calculateAffinityReference(ctx, req)
 	if err != nil {
 		return nil, errors.Wrap(err, "registerRequest: failed to calculate affinity reference")
@@ -122,8 +122,7 @@ func (m *client) registerRequest(
 	instrumenter := instrument(ctx, "registerRequest").err(&err)
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.BoolAttribute("error", true))
-			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
+			instracer.AddError(span, err)
 		}
 		span.End()
 		instrumenter.end()
@@ -136,11 +135,13 @@ func (m *client) registerRequest(
 
 	switch p := pl.(type) {
 	case *payload.RequestInfo:
-		return &p.RequestID, nil
+		return p, nil
 	case *payload.Error:
-		return nil, errors.New(p.Text)
+		err = errors.New(p.Text)
+		return nil, err
 	default:
-		return nil, fmt.Errorf("registerRequest: unexpected reply: %#v", p)
+		err = fmt.Errorf("registerRequest: unexpected reply: %#v", p)
+		return nil, err
 	}
 }
 
@@ -156,29 +157,29 @@ func (m *client) calculateAffinityReference(ctx context.Context, requestRecord r
 
 // RegisterIncomingRequest sends message for incoming request registration,
 // returns request record Ref if request successfully created or already exists.
-func (m *client) RegisterIncomingRequest(ctx context.Context, request *record.IncomingRequest) (*insolar.ID, error) {
+func (m *client) RegisterIncomingRequest(ctx context.Context, request *record.IncomingRequest) (*payload.RequestInfo, error) {
 	incomingRequest := &payload.SetIncomingRequest{Request: record.Wrap(request)}
 
 	// retriesNumber is zero, because we don't retry registering of incoming requests - the caller should
 	// re-send the request instead.
-	id, err := m.registerRequest(ctx, request, incomingRequest, m.sender)
+	res, err := m.registerRequest(ctx, request, incomingRequest, m.sender)
 	if err != nil {
-		return id, errors.Wrap(err, "RegisterIncomingRequest")
+		return nil, errors.Wrap(err, "RegisterIncomingRequest")
 	}
-	return id, err
+	return res, err
 }
 
 // RegisterOutgoingRequest sends message for outgoing request registration,
 // returns request record Ref if request successfully created or already exists.
-func (m *client) RegisterOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) (*insolar.ID, error) {
+func (m *client) RegisterOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) (*payload.RequestInfo, error) {
 	outgoingRequest := &payload.SetOutgoingRequest{Request: record.Wrap(request)}
-	id, err := m.registerRequest(
-		ctx, request, outgoingRequest, bus.NewRetrySender(m.sender, 3),
+	res, err := m.registerRequest(
+		ctx, request, outgoingRequest, bus.NewRetrySender(m.sender, m.PulseAccessor, 3),
 	)
 	if err != nil {
-		return id, errors.Wrap(err, "RegisterOutgoingRequest")
+		return nil, errors.Wrap(err, "RegisterOutgoingRequest")
 	}
-	return id, err
+	return res, err
 }
 
 // GetCode returns code from code record by provided reference according to provided machine preference.
@@ -201,8 +202,7 @@ func (m *client) GetCode(
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetCode")
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", "true"))
-			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
+			instracer.AddError(span, err)
 		}
 		span.End()
 		instrumenter.end()
@@ -211,7 +211,7 @@ func (m *client) GetCode(
 	getCodePl := &payload.GetCode{CodeID: *code.Record()}
 
 	pl, err := m.sendToLight(
-		ctx, bus.NewRetrySender(m.sender, 3), getCodePl, code,
+		ctx, bus.NewRetrySender(m.sender, m.PulseAccessor, 3), getCodePl, code,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send GetCode")
@@ -227,7 +227,7 @@ func (m *client) GetCode(
 		virtual := record.Unwrap(&rec.Virtual)
 		codeRecord, ok := virtual.(*record.Code)
 		if !ok {
-			return nil, errors.Wrapf(err, "unexpected record %T", virtual)
+			return nil, fmt.Errorf("unexpected record %T", virtual)
 		}
 		desc = &codeDescriptor{
 			ref:         code,
@@ -236,9 +236,11 @@ func (m *client) GetCode(
 		}
 		return desc, nil
 	case *payload.Error:
-		return nil, errors.New(p.Text)
+		err = errors.New(p.Text)
+		return nil, err
 	default:
-		return nil, fmt.Errorf("GetObject: unexpected reply: %#v", p)
+		err = fmt.Errorf("GetObject: unexpected reply: %#v", p)
+		return nil, err
 	}
 }
 
@@ -262,8 +264,7 @@ func (m *client) GetObject(
 	instrumenter := instrument(ctx, "GetObject").err(&err)
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.BoolAttribute("error", true))
-			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
+			instracer.AddError(span, err)
 		}
 		span.End()
 		if err != nil && err == ErrObjectDeactivated {
@@ -281,7 +282,7 @@ func (m *client) GetObject(
 		return nil, errors.Wrap(err, "failed to marshal message")
 	}
 
-	r := bus.NewRetrySender(m.sender, 3)
+	r := bus.NewRetrySender(m.sender, m.PulseAccessor, 3)
 	reps, done := r.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, head)
 	defer done()
 
@@ -314,12 +315,16 @@ func (m *client) GetObject(
 			logger.Debug("reply error: ", p.Text)
 			switch p.Code {
 			case payload.CodeDeactivated:
-				return nil, insolar.ErrDeactivated
+				err = insolar.ErrDeactivated
+				return nil, err
 			default:
-				return nil, errors.New(p.Text)
+				logger.Errorf("reply error: %v, objectID: %v", p.Text, head.Record().DebugString())
+				err = errors.New(p.Text)
+				return nil, err
 			}
 		default:
-			return nil, fmt.Errorf("GetObject: unexpected reply: %#v", p)
+			err = fmt.Errorf("GetObject: unexpected reply: %#v", p)
+			return nil, err
 		}
 
 		if success() {
@@ -328,6 +333,7 @@ func (m *client) GetObject(
 	}
 	if !success() {
 		logger.Error(ErrNoReply)
+		err = ErrNoReply
 		return nil, ErrNoReply
 	}
 
@@ -339,7 +345,8 @@ func (m *client) GetObject(
 	virtual := record.Unwrap(&rec.Virtual)
 	s, ok := virtual.(record.State)
 	if !ok {
-		return nil, errors.New("wrong state record")
+		err = errors.New("wrong state record")
+		return nil, err
 	}
 	state := s
 
@@ -351,19 +358,18 @@ func (m *client) GetObject(
 		memory:      statePayload.Memory,
 		parent:      index.Parent,
 	}
-	return desc, err
+	return desc, nil
 }
 
-func (m *client) GetIncomingRequest(
+func (m *client) GetAbandonedRequest(
 	ctx context.Context, object, reqRef insolar.Reference,
-) (*record.IncomingRequest, error) {
+) (record.Request, error) {
 	var err error
-	instrumenter := instrument(ctx, "GetRequest").err(&err)
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetRequest")
+	instrumenter := instrument(ctx, "GetAbandonedRequest").err(&err)
+	ctx, span := instracer.StartSpan(ctx, "artifacts.GetAbandonedRequest")
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.BoolAttribute("error", true))
-			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
+			instracer.AddError(span, err)
 		}
 		span.End()
 		instrumenter.end()
@@ -380,16 +386,24 @@ func (m *client) GetIncomingRequest(
 	}
 	req, ok := pl.(*payload.Request)
 	if !ok {
-		return nil, fmt.Errorf("unexpected reply %T", pl)
+		err = fmt.Errorf("unexpected reply %T", pl)
+		return nil, err
 	}
 
 	concrete := record.Unwrap(&req.Request)
-	castedRecord, ok := concrete.(*record.IncomingRequest)
-	if !ok {
-		return nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", concrete)
+	var result record.Request
+
+	switch v := concrete.(type) {
+	case *record.IncomingRequest:
+		result = v
+	case *record.OutgoingRequest:
+		result = v
+	default:
+		err = fmt.Errorf("GetAbandonedRequest: unexpected message: %#v", concrete)
+		return nil, err
 	}
 
-	return castedRecord, nil
+	return result, nil
 }
 
 // GetPendings returns a list of pending requests
@@ -399,8 +413,7 @@ func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]i
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetPendings")
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.BoolAttribute("error", true))
-			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
+			instracer.AddError(span, err)
 		}
 		span.End()
 		instrumenter.end()
@@ -424,9 +437,11 @@ func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]i
 		return res, nil
 	case *payload.Error:
 		if concrete.Code == payload.CodeNoPendings {
+			err = insolar.ErrNoPendingRequest
 			return []insolar.Reference{}, insolar.ErrNoPendingRequest
 		}
-		return []insolar.Reference{}, errors.New(concrete.Text)
+		err = errors.New(concrete.Text)
+		return []insolar.Reference{}, err
 	default:
 		return []insolar.Reference{}, fmt.Errorf("unexpected reply %T", pl)
 	}
@@ -442,8 +457,7 @@ func (m *client) HasPendings(
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.HasPendings")
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.BoolAttribute("error", true))
-			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
+			instracer.AddError(span, err)
 		}
 		span.End()
 		instrumenter.end()
@@ -455,16 +469,19 @@ func (m *client) HasPendings(
 
 	pl, err := m.sendToLight(ctx, m.sender, hasPendingsPl, object)
 	if err != nil {
-		return false, errors.Wrap(err, "failed to send HasPendings")
+		err = errors.Wrap(err, "failed to send HasPendings")
+		return false, err
 	}
 
 	switch concrete := pl.(type) {
 	case *payload.PendingsInfo:
 		return concrete.HasPendings, nil
 	case *payload.Error:
-		return false, errors.New(concrete.Text)
+		err = errors.New(concrete.Text)
+		return false, err
 	default:
-		return false, fmt.Errorf("HasPendings: unexpected reply %T", pl)
+		err = fmt.Errorf("HasPendings: unexpected reply %T", pl)
+		return false, err
 	}
 }
 
@@ -483,8 +500,7 @@ func (m *client) DeployCode(
 	instrumenter := instrument(ctx, "DeployCode").err(&err)
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.BoolAttribute("error", true))
-			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
+			instracer.AddError(span, err)
 		}
 		span.End()
 		instrumenter.end()
@@ -497,7 +513,6 @@ func (m *client) DeployCode(
 
 	codeRec := record.Code{
 		Domain:      domain,
-		Request:     request,
 		Code:        code,
 		MachineType: machineType,
 	}
@@ -519,7 +534,7 @@ func (m *client) DeployCode(
 	}
 
 	pl, err := m.sendToLight(
-		ctx, bus.NewRetrySender(m.sender, 3),
+		ctx, bus.NewRetrySender(m.sender, m.PulseAccessor, 3),
 		psc, *insolar.NewReference(recID),
 	)
 	if err != nil {
@@ -530,9 +545,11 @@ func (m *client) DeployCode(
 	case *payload.ID:
 		return &p.ID, nil
 	case *payload.Error:
-		return nil, errors.New(p.Text)
+		err = errors.New(p.Text)
+		return nil, err
 	default:
-		return nil, fmt.Errorf("DeployCode: unexpected reply: %#v", p)
+		err = fmt.Errorf("DeployCode: unexpected reply: %#v", p)
+		return nil, err
 	}
 }
 
@@ -550,13 +567,12 @@ func (m *client) ActivatePrototype(
 	instrumenter := instrument(ctx, "ActivatePrototype").err(&err)
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.BoolAttribute("error", true))
-			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
+			instracer.AddError(span, err)
 		}
 		span.End()
 		instrumenter.end()
 	}()
-	err = m.activateObject(ctx, object, code, true, parent, false, memory)
+	err = m.activateObject(ctx, object, code, true, parent, memory)
 	return err
 }
 
@@ -577,7 +593,6 @@ func (m *client) activateObject(
 	prototype insolar.Reference,
 	isPrototype bool,
 	parent insolar.Reference,
-	asDelegate bool,
 	memory []byte,
 ) error {
 	_, err := m.GetObject(ctx, parent)
@@ -591,7 +606,6 @@ func (m *client) activateObject(
 		Image:       prototype,
 		IsPrototype: isPrototype,
 		Parent:      parent,
-		IsDelegate:  asDelegate,
 	}
 
 	result := record.Result{
@@ -616,7 +630,7 @@ func (m *client) activateObject(
 		Result: resultBuf,
 	}
 
-	pl, err := m.sendToLight(ctx, bus.NewRetrySender(m.sender, 3), pa, obj)
+	pl, err := m.sendToLight(ctx, bus.NewRetrySender(m.sender, m.PulseAccessor, 3), pa, obj)
 	if err != nil {
 		return errors.Wrap(err, "can't send activation and result records")
 	}
@@ -656,7 +670,7 @@ func (m *client) RegisterResult(
 	) (*insolar.ID, error) {
 
 		payloadOutput, err := m.sendToLight(
-			ctx, bus.NewRetrySender(m.sender, 3), payloadInput, obj,
+			ctx, bus.NewRetrySender(m.sender, m.PulseAccessor, 3), payloadInput, obj,
 		)
 		if err != nil {
 			return nil, err
@@ -681,8 +695,7 @@ func (m *client) RegisterResult(
 	instrumenter := instrument(ctx, "RegisterResult").err(&err)
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.BoolAttribute("error", true))
-			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
+			instracer.AddError(span, err)
 		}
 		span.End()
 		instrumenter.end()
@@ -786,7 +799,8 @@ func (m *client) RegisterResult(
 		pl = &plTyped
 
 	default:
-		return errors.Errorf("RegisterResult: Unknown side effect %d", result.Type())
+		err = errors.Errorf("RegisterResult: Unknown side effect %d", result.Type())
+		return err
 	}
 
 	_, err = sendResult(pl, result.ObjectReference())

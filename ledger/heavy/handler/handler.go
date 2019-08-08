@@ -42,11 +42,12 @@ import (
 type Handler struct {
 	cfg configuration.Ledger
 
-	Bus            insolar.MessageBus
-	JetCoordinator jet.Coordinator
-	PCS            insolar.PlatformCryptographyScheme
-	RecordAccessor object.RecordAccessor
-	RecordModifier object.RecordModifier
+	Bus             insolar.MessageBus
+	JetCoordinator  jet.Coordinator
+	PCS             insolar.PlatformCryptographyScheme
+	RecordAccessor  object.RecordAccessor
+	RecordModifier  object.RecordModifier
+	RecordPositions object.RecordPositionModifier
 
 	IndexAccessor object.IndexAccessor
 	IndexModifier object.IndexModifier
@@ -57,7 +58,11 @@ type Handler struct {
 	JetAccessor   jet.Accessor
 	JetKeeper     executor.JetKeeper
 
-	Sender bus.Sender
+	Sender          bus.Sender
+	StartPulse      pulse.StartPulse
+	PulseCalculator pulse.Calculator
+	JetTree         jet.Storage
+	DropDB          *drop.DB
 
 	jetID insolar.JetID
 	dep   *proc.Dependencies
@@ -73,6 +78,7 @@ func New(cfg configuration.Ledger) *Handler {
 		PassState: func(p *proc.PassState) {
 			p.Dep.Records = h.RecordAccessor
 			p.Dep.Sender = h.Sender
+			p.Dep.Pulses = h.PulseAccessor
 		},
 		SendCode: func(p *proc.SendCode) {
 			p.Dep.Sender = h.Sender
@@ -88,6 +94,7 @@ func New(cfg configuration.Ledger) *Handler {
 			p.Dep(
 				h.RecordModifier,
 				h.IndexModifier,
+				h.RecordPositions,
 				h.PCS,
 				h.PulseAccessor,
 				h.DropModifier,
@@ -103,6 +110,17 @@ func New(cfg configuration.Ledger) *Handler {
 		SendIndex: func(p *proc.SendIndex) {
 			p.Dep(
 				h.IndexAccessor,
+				h.Sender,
+			)
+		},
+		SendInitialState: func(p *proc.SendInitialState) {
+			p.Dep(
+				h.StartPulse,
+				h.JetKeeper,
+				h.JetTree,
+				h.JetCoordinator,
+				h.DropDB,
+				h.PulseAccessor,
 				h.Sender,
 			)
 		},
@@ -156,6 +174,9 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 	}
 	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
 
+	ctx, span := instracer.StartSpan(ctx, payloadType.String())
+	defer span.End()
+
 	switch payloadType {
 	case payload.TypeGetRequest:
 		p := proc.NewSendRequest(meta)
@@ -191,10 +212,15 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 		h.handleError(ctx, meta)
 	case payload.TypeGotHotConfirmation:
 		h.handleGotHotConfirmation(ctx, meta)
+	case payload.TypeGetLightInitialState:
+		p := proc.NewSendInitialState(meta)
+		h.dep.SendInitialState(p)
+		err = p.Proceed(ctx)
 	default:
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())
 	}
 	if err != nil {
+		instracer.AddError(span, err)
 		h.replyError(ctx, meta, err)
 	}
 	return err

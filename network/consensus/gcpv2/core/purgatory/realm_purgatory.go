@@ -53,9 +53,10 @@ package purgatory
 import (
 	"context"
 	"fmt"
+	"sync"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
-	"sync"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"

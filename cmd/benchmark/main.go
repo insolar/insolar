@@ -35,9 +35,9 @@ import (
 
 	"github.com/insolar/insolar/api/sdk"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/backoff"
 	"github.com/insolar/insolar/insolar/defaults"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/utils/backoff"
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 )
