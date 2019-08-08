@@ -27,7 +27,6 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/executor"
-	"github.com/insolar/insolar/ledger/light/hot"
 )
 
 type FetchJet struct {
@@ -121,7 +120,7 @@ type WaitHot struct {
 	message payload.Meta
 
 	dep struct {
-		waiter hot.JetWaiter
+		waiter executor.JetWaiter
 		sender bus.Sender
 	}
 }
@@ -135,7 +134,7 @@ func NewWaitHot(j insolar.JetID, pn insolar.PulseNumber, msg payload.Meta) *Wait
 }
 
 func (p *WaitHot) Dep(
-	w hot.JetWaiter,
+	w executor.JetWaiter,
 	s bus.Sender,
 ) {
 	p.dep.waiter = w

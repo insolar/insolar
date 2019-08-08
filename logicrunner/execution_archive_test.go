@@ -182,12 +182,13 @@ func (s *ExecutionArchiveSuite) TestFindRequestLoop() {
 
 	jc := jet.NewCoordinatorMock(mc)
 	objRef := gen.Reference()
+	reqRef := gen.Reference()
 
 	archiveI := NewExecutionArchive(objRef, jc)
 	{ // no requests with current apirequestid
 		id := s.genAPIRequestID()
 
-		s.False(archiveI.FindRequestLoop(ctx, id))
+		s.False(archiveI.FindRequestLoop(ctx, reqRef, id))
 
 		// cleanup after
 		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*Transcript)
@@ -197,7 +198,7 @@ func (s *ExecutionArchiveSuite) TestFindRequestLoop() {
 	{ // go request with current apirequestid (loop found)
 		archiveI.Archive(ctx, T)
 
-		s.True(archiveI.FindRequestLoop(ctx, T.Request.APIRequestID))
+		s.True(archiveI.FindRequestLoop(ctx, reqRef, T.Request.APIRequestID))
 
 		// cleanup after
 		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*Transcript)
@@ -209,7 +210,7 @@ func (s *ExecutionArchiveSuite) TestFindRequestLoop() {
 		T.Request.ReturnMode = record.ReturnNoWait
 		archiveI.Archive(ctx, T)
 
-		s.False(archiveI.FindRequestLoop(ctx, id))
+		s.False(archiveI.FindRequestLoop(ctx, reqRef, id))
 
 		// cleanup after
 		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*Transcript)
@@ -224,9 +225,9 @@ func (s *ExecutionArchiveSuite) TestFindRequestLoop() {
 		archiveI.Archive(ctx, T1)
 		archiveI.Archive(ctx, T2)
 
-		s.False(archiveI.FindRequestLoop(ctx, T2.Request.APIRequestID))
-		s.True(archiveI.FindRequestLoop(ctx, T1.Request.APIRequestID))
-		s.False(archiveI.FindRequestLoop(ctx, id))
+		s.False(archiveI.FindRequestLoop(ctx, reqRef, T2.Request.APIRequestID))
+		s.True(archiveI.FindRequestLoop(ctx, reqRef, T1.Request.APIRequestID))
+		s.False(archiveI.FindRequestLoop(ctx, reqRef, id))
 
 		// cleanup after
 		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*Transcript)

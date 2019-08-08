@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
@@ -141,7 +142,7 @@ func TestHandleCall_CheckExecutionLoop(t *testing.T) {
 			mc := minimock.NewController(t)
 
 			h, req := test.mocks(mc)
-			loop := h.checkExecutionLoop(ctx, *req)
+			loop := h.checkExecutionLoop(ctx, gen.Reference(), *req)
 			require.Equal(t, test.loop, loop)
 
 			mc.Wait(1 * time.Minute)
@@ -159,15 +160,15 @@ func TestHandleCall_Present(t *testing.T) {
 		mc := minimock.NewController(t)
 		defer mc.Wait(time.Second)
 
-		fm := flow.NewFlowMock(mc)
+		objRef := gen.Reference()
 
+		fm := flow.NewFlowMock(mc)
 		fm.ProcedureMock.Set(func(ctx context.Context, proc flow.Procedure, cancelable bool) (err error) {
 			switch p := proc.(type) {
 			case *CheckOurRole:
 				return nil
 			case *RegisterIncomingRequest:
-				requestID := gen.Reference()
-				p.result <- &requestID
+				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.Record()}
 				return nil
 			case *AddFreshRequest:
 				return nil
@@ -177,7 +178,6 @@ func TestHandleCall_Present(t *testing.T) {
 			return nil
 		})
 
-		objRef := gen.Reference()
 		handler := HandleCall{
 			dep: &Dependencies{
 				Publisher: nil,
@@ -217,15 +217,15 @@ func TestHandleCall_Present(t *testing.T) {
 		mc := minimock.NewController(t)
 		defer mc.Wait(time.Second)
 
-		fm := flow.NewFlowMock(mc)
+		objRef := gen.Reference()
 
+		fm := flow.NewFlowMock(mc)
 		fm.ProcedureMock.Set(func(ctx context.Context, proc flow.Procedure, cancelable bool) (err error) {
 			switch p := proc.(type) {
 			case *CheckOurRole:
 				return nil
 			case *RegisterIncomingRequest:
-				requestID := gen.Reference()
-				p.result <- &requestID
+				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.Record()}
 				return nil
 			case *AddFreshRequest:
 				return nil
@@ -235,13 +235,12 @@ func TestHandleCall_Present(t *testing.T) {
 			return nil
 		})
 
-		objRef := gen.Reference()
 		handler := HandleCall{
 			dep: &Dependencies{
 				Publisher: nil,
 				StateStorage: NewStateStorageMock(mc).
 					GetExecutionArchiveMock.Expect(objRef).Return(
-					NewExecutionArchiveMock(mc).FindRequestLoopMock.Return(false).IsEmptyMock.Return(true),
+					NewExecutionArchiveMock(mc).FindRequestLoopMock.Return(false),
 				),
 				ResultsMatcher: nil,
 				lr: &LogicRunner{
@@ -353,10 +352,6 @@ func TestHandleCall_Present(t *testing.T) {
 		handler := HandleCall{
 			dep: &Dependencies{
 				Publisher: nil,
-				StateStorage: NewStateStorageMock(mc).
-					GetExecutionArchiveMock.Expect(objRef).Return(
-					NewExecutionArchiveMock(mc).FindRequestLoopMock.Return(false),
-				),
 				ResultsMatcher: nil,
 				lr: &LogicRunner{
 					ArtifactManager: artifacts.NewClientMock(mc),
@@ -441,15 +436,15 @@ func TestHandleCall_Present(t *testing.T) {
 		mc := minimock.NewController(t)
 		defer mc.Wait(time.Second)
 
-		fm := flow.NewFlowMock(mc)
+		objRef := gen.Reference()
 
+		fm := flow.NewFlowMock(mc)
 		fm.ProcedureMock.Set(func(ctx context.Context, proc flow.Procedure, cancelable bool) (err error) {
 			switch p := proc.(type) {
 			case *CheckOurRole:
 				return nil
 			case *RegisterIncomingRequest:
-				requestID := gen.Reference()
-				p.result <- &requestID
+				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.Record()}
 				return nil
 			case *AddFreshRequest:
 				return nil
@@ -459,7 +454,6 @@ func TestHandleCall_Present(t *testing.T) {
 			return nil
 		})
 
-		objRef := gen.Reference()
 		handler := HandleCall{
 			dep: &Dependencies{
 				Publisher: nil,
@@ -494,4 +488,63 @@ func TestHandleCall_Present(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("already completed request", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
+		mc := minimock.NewController(t)
+		defer mc.Wait(time.Minute)
+
+		objRef := gen.Reference()
+		reqRef := gen.Reference()
+
+		resRecord := &record.Result{Payload: []byte{3,2,1}}
+		virtResRecord := record.Wrap(resRecord)
+		matRecord := record.Material{Virtual:virtResRecord}
+		matRecordSerialized, err := matRecord.Marshal()
+		require.NoError(t, err)
+
+		fm := flow.NewFlowMock(mc)
+		fm.ProcedureMock.Set(func(ctx context.Context, proc flow.Procedure, cancelable bool) (err error) {
+			switch p := proc.(type) {
+			case *CheckOurRole:
+				return nil
+			case *RegisterIncomingRequest:
+				p.result <- &payload.RequestInfo{
+					RequestID: *reqRef.Record(),
+					ObjectID: *objRef.Record(),
+					Request: []byte{1,2,3},
+					Result: matRecordSerialized,
+				}
+				return nil
+			case *AddFreshRequest:
+				return nil
+			default:
+				t.Fatalf("Unknown procedure: %T", proc)
+			}
+			return nil
+		})
+
+		handler := HandleCall{
+			dep: &Dependencies{
+				lr: &LogicRunner{
+					ArtifactManager: artifacts.NewClientMock(mc),
+				},
+				RequestsExecutor: NewRequestsExecutorMock(mc).SendReplyMock.Return(),
+			},
+			Message: payload.Meta{},
+			Parcel:  nil,
+		}
+
+		msg := message.CallMethod{
+			IncomingRequest: record.IncomingRequest{
+				CallType: record.CTMethod,
+				Object:   &objRef,
+			},
+		}
+
+		gotReply, err := handler.handleActual(ctx, &msg, fm)
+		require.NoError(t, err)
+		require.Equal(t, &reply.RegisterRequest{Request: reqRef}, gotReply)
+	})
 }
