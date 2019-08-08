@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
 )
@@ -33,7 +32,6 @@ type GetRequestInfo struct {
 	message   payload.Meta
 	objectID  insolar.ID
 	requestID insolar.ID
-	request   record.Request
 
 	dep struct {
 		filament executor.FilamentCalculator

@@ -121,6 +121,10 @@ func (c *RequestCheckerDefault) checkIncomingReason(ctx context.Context, request
 
 	rec := record.Material{}
 	err = rec.Unmarshal(reasonRequest.Request)
+	if err != nil {
+		return errors.Wrap(err, "Can't unmarshal reason request")
+	}
+
 	if !isIncomingRequest(rec.Virtual) {
 		return &payload.LedgerError{ErrorText: fmt.Sprintf("reason request must be Incoming, %T received", rec.Virtual.Union), ErrorCode: payload.ReasonIsWrong}
 	}
