@@ -142,6 +142,7 @@ func displayResultsJSON(results [][]string, _ bool, _ *bytes.Buffer) {
 		URL             string
 		NetworkState    string
 		NodeState       string
+		ID              uint32
 		PulseNumber     int64
 		ActiveListSize  int64
 		WorkingListSize int64
@@ -155,11 +156,12 @@ func displayResultsJSON(results [][]string, _ bool, _ *bytes.Buffer) {
 		doc[i].URL = res[0]
 		doc[i].NetworkState = res[1]
 		doc[i].NodeState = res[2]
-		doc[i].PulseNumber = parseInt64(res[3])
-		doc[i].ActiveListSize = parseInt64(res[4])
-		doc[i].WorkingListSize = parseInt64(res[5])
-		doc[i].Role = res[6]
-		doc[i].Error = res[7]
+		doc[i].ID = uint32(parseInt64(res[3]))
+		doc[i].PulseNumber = parseInt64(res[4])
+		doc[i].ActiveListSize = parseInt64(res[5])
+		doc[i].WorkingListSize = parseInt64(res[6])
+		doc[i].Role = res[7]
+		doc[i].Error = res[8]
 	}
 
 	jsonDoc, err := json.MarshalIndent(doc, "", "    ")
