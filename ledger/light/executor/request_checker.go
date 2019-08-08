@@ -59,20 +59,20 @@ func NewRequestChecker(
 
 func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID insolar.ID, request record.Request) error {
 	if request.ReasonRef().IsEmpty() {
-		return &payload.LedgerError{ErrorText: "reason id is empty", ErrorCode: payload.ReasonIsWrong}
+		return &payload.CodedError{ErrorText: "reason id is empty", ErrorCode: payload.ReasonIsWrong}
 	}
 	reasonRef := request.ReasonRef()
 	reasonID := *reasonRef.Record()
 
 	if reasonID.Pulse() > requestID.Pulse() {
-		return &payload.LedgerError{ErrorText: "request is older than its reason", ErrorCode: payload.ReasonIsWrong}
+		return &payload.CodedError{ErrorText: "request is older than its reason", ErrorCode: payload.ReasonIsWrong}
 	}
 
 	switch r := request.(type) {
 	case *record.IncomingRequest:
 		// Cannot be detached.
 		if r.IsDetached() {
-			return &payload.LedgerError{ErrorText: fmt.Sprintf("incoming request cannot be detached (got mode %v)", r.ReturnMode), ErrorCode: payload.IncomingRequestIsWrong}
+			return &payload.CodedError{ErrorText: fmt.Sprintf("incoming request cannot be detached (got mode %v)", r.ReturnMode), ErrorCode: payload.IncomingRequestIsWrong}
 		}
 
 		// FIXME: replace with remote request check.
@@ -85,7 +85,7 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 
 	case *record.OutgoingRequest:
 		if request.IsCreationRequest() {
-			return &payload.LedgerError{ErrorText: "outgoing cannot be creating request", ErrorCode: payload.ReasonIsWrong}
+			return &payload.CodedError{ErrorText: "outgoing cannot be creating request", ErrorCode: payload.ReasonIsWrong}
 		}
 
 		// FIXME: replace with "FindRequest" calculator method.
@@ -101,7 +101,7 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 
 		_, ok := findRecord(requests, reasonID)
 		if !ok {
-			return &payload.LedgerError{ErrorText: "request reason not found in opened requests", ErrorCode: payload.ReasonNotFound}
+			return &payload.CodedError{ErrorText: "request reason not found in opened requests", ErrorCode: payload.ReasonNotFound}
 		}
 	}
 
@@ -111,7 +111,7 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 func (c *RequestCheckerDefault) checkIncomingReason(ctx context.Context, request *record.IncomingRequest, reasonID insolar.ID) error {
 	reasonObject := request.ReasonAffinityRef()
 	if reasonObject.IsEmpty() {
-		return &payload.LedgerError{ErrorText: "reason affinity is not set on incoming request", ErrorCode: payload.ReasonIsWrong}
+		return &payload.CodedError{ErrorText: "reason affinity is not set on incoming request", ErrorCode: payload.ReasonIsWrong}
 	}
 
 	reasonRequest, err := c.getRequest(ctx, *reasonObject.Record(), reasonID)
@@ -126,11 +126,11 @@ func (c *RequestCheckerDefault) checkIncomingReason(ctx context.Context, request
 	}
 
 	if !isIncomingRequest(rec.Virtual) {
-		return &payload.LedgerError{ErrorText: fmt.Sprintf("reason request must be Incoming, %T received", rec.Virtual.Union), ErrorCode: payload.ReasonIsWrong}
+		return &payload.CodedError{ErrorText: fmt.Sprintf("reason request must be Incoming, %T received", rec.Virtual.Union), ErrorCode: payload.ReasonIsWrong}
 	}
 
 	if reasonRequest.Result != nil {
-		return &payload.LedgerError{ErrorText: "reason request is closed", ErrorCode: payload.ReasonIsWrong}
+		return &payload.CodedError{ErrorText: "reason request is closed", ErrorCode: payload.ReasonIsWrong}
 	}
 	return nil
 }

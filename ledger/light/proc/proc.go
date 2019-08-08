@@ -33,7 +33,7 @@ type Dependencies struct {
 	SendObject     func(*SendObject)
 	GetCode        func(*GetCode)
 	GetRequest     func(*GetRequest)
-	GetRequestInfo func(*GetRequestInfo)
+	GetRequestInfo func(*SendRequestInfo)
 	SetRequest     func(*SetRequest)
 	SetResult      func(*SetResult)
 	GetPendings    func(*GetPendings)
@@ -147,7 +147,7 @@ func NewDependencies(
 				jetFetcher,
 			)
 		},
-		GetRequestInfo: func(p *GetRequestInfo) {
+		GetRequestInfo: func(p *SendRequestInfo) {
 			p.Dep(
 				filaments,
 				sender,

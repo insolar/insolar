@@ -23,10 +23,10 @@ const (
 	CodeNotFound           = 1003
 	CodeNoPendings         = 1004
 	CodeNoStartPulse       = 1005
-	ReasonNotFound         = 1100
-	ReasonIsWrong          = 1101
-	IncomingRequestIsWrong = 1200
-	RequestNotFound        = 1300
+	ReasonNotFound         = 1006
+	ReasonIsWrong          = 1007
+	IncomingRequestIsWrong = 1008
+	RequestNotFound        = 1009
 )
 
 type ErrorCoder interface {
@@ -34,14 +34,14 @@ type ErrorCoder interface {
 	GetErrorCode() uint32
 }
 
-type LedgerError struct {
+type CodedError struct {
 	ErrorText string
 	ErrorCode uint32
 }
 
-func (e *LedgerError) GetErrorCode() uint32 {
+func (e *CodedError) GetErrorCode() uint32 {
 	return e.ErrorCode
 }
-func (e *LedgerError) Error() string {
+func (e *CodedError) Error() string {
 	return e.ErrorText
 }

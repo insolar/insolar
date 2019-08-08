@@ -28,7 +28,7 @@ import (
 	"github.com/insolar/insolar/ledger/light/executor"
 )
 
-type GetRequestInfo struct {
+type SendRequestInfo struct {
 	message   payload.Meta
 	objectID  insolar.ID
 	requestID insolar.ID
@@ -39,15 +39,15 @@ type GetRequestInfo struct {
 	}
 }
 
-func NewGetRequestInfo(msg payload.Meta, objectID insolar.ID, requestID insolar.ID) *GetRequestInfo {
-	return &GetRequestInfo{
+func NewGetRequestInfo(msg payload.Meta, objectID insolar.ID, requestID insolar.ID) *SendRequestInfo {
+	return &SendRequestInfo{
 		message:   msg,
 		objectID:  objectID,
 		requestID: requestID,
 	}
 }
 
-func (p *GetRequestInfo) Dep(
+func (p *SendRequestInfo) Dep(
 	filament executor.FilamentCalculator,
 	sender bus.Sender,
 ) {
@@ -55,7 +55,7 @@ func (p *GetRequestInfo) Dep(
 	p.dep.sender = sender
 }
 
-func (p *GetRequestInfo) Proceed(ctx context.Context) error {
+func (p *SendRequestInfo) Proceed(ctx context.Context) error {
 
 	if p.requestID.IsEmpty() {
 		return errors.New("request id is empty")
