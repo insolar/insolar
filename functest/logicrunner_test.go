@@ -1483,10 +1483,6 @@ func (r *Two) NoWaitGet(OneRef insolar.Reference) (int, error) {
 	firstObjRef := callConstructor(t, contractOneRef, "NewWithNumber", n)
 
 	contractTwoRef := uploadContractOnce(t, "second_nowait_contract", contractTwoCode)
-	secondObjRef := callConstructor(t, contractTwoRef, "New")
-	secondResult := callMethod(t, secondObjRef, "NoWaitGet", firstObjRef)
-	require.Empty(t, secondResult.Error)
-	require.Equal(t, float64(n), secondResult.ExtractedReply)
 
 	anon := func() api.CallMethodReply { return callMethod(t, firstObjRef, "Get") }
 	firstResultAfterWait, _ := waitUntilRequestProcessed(anon, time.Second+10, time.Millisecond+50, 10)
