@@ -31,7 +31,7 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/light/hot"
+	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
 
@@ -48,13 +48,14 @@ const timeout = 10 * time.Second
 // NewStateIniter creates StateIniterDefault with all required components.
 func NewStateIniter(
 	jetModifier jet.Modifier,
-	jetReleaser hot.JetReleaser,
+	jetReleaser JetReleaser,
 	drops drop.Modifier,
 	nodes node.Accessor,
 	sender bus.Sender,
 	pulseAppender pulse.Appender,
 	pulseAccessor pulse.Accessor,
 	calc JetCalculator,
+	indices object.MemoryIndexModifier,
 ) *StateIniterDefault {
 	return &StateIniterDefault{
 		jetModifier:   jetModifier,
@@ -65,6 +66,7 @@ func NewStateIniter(
 		pulseAppender: pulseAppender,
 		pulseAccessor: pulseAccessor,
 		jetCalculator: calc,
+		indices:       indices,
 		backoff: backoff.Backoff{
 			Factor: 2,
 			Jitter: true,
@@ -77,7 +79,7 @@ func NewStateIniter(
 // StateIniterDefault implements StateIniter.
 type StateIniterDefault struct {
 	jetModifier   jet.Modifier
-	jetReleaser   hot.JetReleaser
+	jetReleaser   JetReleaser
 	drops         drop.Modifier
 	nodes         node.Accessor
 	sender        bus.Sender
@@ -85,6 +87,7 @@ type StateIniterDefault struct {
 	pulseAccessor pulse.Accessor
 	jetCalculator JetCalculator
 	backoff       backoff.Backoff
+	indices       object.MemoryIndexModifier
 }
 
 func (s *StateIniterDefault) PrepareState(
@@ -224,6 +227,10 @@ func (s *StateIniterDefault) loadStateRetry(
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to set drop")
 		}
+	}
+
+	for _, idx := range state.Indices {
+		s.indices.Set(ctx, pn, idx)
 	}
 
 	return state.JetIDs, nil

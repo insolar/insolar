@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package hot
+package executor
 
 import (
 	"context"

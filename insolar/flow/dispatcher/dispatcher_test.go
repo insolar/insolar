@@ -60,7 +60,7 @@ func TestNewDispatcher(t *testing.T) {
 
 	ctx := context.Background()
 	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
-	d.PulseAccessor = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
+	d.pulses = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
@@ -92,7 +92,7 @@ func TestDispatcher_Process(t *testing.T) {
 
 	ctx := context.Background()
 	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
-	d.PulseAccessor = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
+	d.pulses = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
@@ -118,7 +118,7 @@ func TestDispatcher_Process_ReplyError(t *testing.T) {
 
 	ctx := context.Background()
 	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
-	d.PulseAccessor = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
+	d.pulses = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
@@ -146,7 +146,7 @@ func TestDispatcher_Process_CallFutureDispatcher(t *testing.T) {
 
 	ctx := context.Background()
 	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
-	d.PulseAccessor = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
+	d.pulses = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber+1)
 

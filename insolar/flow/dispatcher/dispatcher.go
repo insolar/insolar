@@ -49,14 +49,14 @@ type dispatcher struct {
 		future  flow.MakeHandle
 		past    flow.MakeHandle
 	}
-	controller    *thread.Controller
-	PulseAccessor insPulse.Accessor
+	controller *thread.Controller
+	pulses     insPulse.Accessor
 }
 
 func NewDispatcher(pulseAccessor insPulse.Accessor, present flow.MakeHandle, future flow.MakeHandle, past flow.MakeHandle) Dispatcher {
 	d := &dispatcher{
-		controller:    thread.NewController(),
-		PulseAccessor: pulseAccessor,
+		controller: thread.NewController(),
+		pulses:     pulseAccessor,
 	}
 
 	d.handles.present = present
@@ -80,7 +80,7 @@ func (d *dispatcher) ClosePulse(ctx context.Context, pulse insolar.Pulse) {
 
 func (d *dispatcher) getHandleByPulse(ctx context.Context, msgPulseNumber insolar.PulseNumber) flow.MakeHandle {
 	currentPulseNumber := insolar.PulseNumber(insolar.FirstPulseNumber)
-	p, err := d.PulseAccessor.Latest(ctx)
+	p, err := d.pulses.Latest(ctx)
 	if err == nil {
 		currentPulseNumber = p.PulseNumber
 	} else {
