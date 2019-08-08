@@ -132,16 +132,15 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 
 		createDrops := !justJoined
 
-		for _, jet := range jets {
-			if jet == insolar.ZeroJetID {
-				continue
-			}
-			received, err := m.hotStatusChecker.IsReceived(ctx, jet, endedPulse.PulseNumber)
-			if err != nil {
-				panic(errors.Wrap(err, "can't find waiter for pn/jet"))
-			}
-			if !received {
-				log.Fatal("hot data for jet:%v and pulse:%v wasn't received", jet.DebugString(), endedPulse.PulseNumber)
+		if !justJoined {
+			for _, jet := range jets {
+				received, err := m.hotStatusChecker.IsReceived(ctx, jet, endedPulse.PulseNumber)
+				if err != nil {
+					panic(errors.Wrap(err, "can't find waiter for pn/jet"))
+				}
+				if !received {
+					log.Fatal("hot data for jet:%v and pulse:%v wasn't received", jet.DebugString(), endedPulse.PulseNumber)
+				}
 			}
 		}
 
