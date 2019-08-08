@@ -41,8 +41,6 @@ var PredefinedPrototypes = map[string]insolar.Reference{
 	insolar.GenesisNameMember + PrototypeSuffix:               *GenerateFromContractID(PrototypeType, insolar.GenesisNameMember, 0),
 	insolar.GenesisNameMigrationAdminMember + PrototypeSuffix: *GenerateFromContractID(PrototypeType, insolar.GenesisNameMember, 0),
 	insolar.GenesisNameMigrationWallet + PrototypeSuffix:      *GenerateFromContractID(PrototypeType, insolar.GenesisNameWallet, 0),
-	insolar.GenesisNameStandardTariff + PrototypeSuffix:       *GenerateFromContractID(PrototypeType, insolar.GenesisNameTariff, 0),
-	insolar.GenesisNameTariff + PrototypeSuffix:               *GenerateFromContractID(PrototypeType, insolar.GenesisNameTariff, 0),
 	insolar.GenesisNameWallet + PrototypeSuffix:               *GenerateFromContractID(PrototypeType, insolar.GenesisNameWallet, 0),
 }
 
