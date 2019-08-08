@@ -267,7 +267,7 @@ func (s *ExecutionBrokerSuite) TestImmutable_InPending() {
 	s.Require().True(wait(processorStatus, b, false))
 	s.Require().Empty(waitMutableChannel)
 
-	b.StartProcessorIfNeeded(s.Context)
+	b.StartProcessorsIfNeeded(s.Context)
 	s.Require().True(wait(processorStatus, b, false))
 	s.Empty(waitMutableChannel)
 	s.Empty(waitImmutableChannel)
@@ -673,8 +673,6 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 				objectRef := gen.Reference()
 				broker := NewExecutionBroker(objectRef, nil, nil, nil, nil, nil, nil, nil, nil)
 				broker.pending = insolar.InPending
-				broker.requestsFetcher = NewRequestsFetcherMock(t).
-					FetchPendingsMock.Return()
 				return broker
 			},
 			numberOfMessages: 0,

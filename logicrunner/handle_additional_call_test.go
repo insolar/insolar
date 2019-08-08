@@ -36,12 +36,11 @@ import (
 
 func TestHandleAdditionalCallFromPreviousExecutor_Present(t *testing.T) {
 	table := []struct {
-		name                           string
-		clarifyPendingStateResult      error
-		startQueueProcessorResult      error
-		expectedStartQueueProcessorCtr int32
-		mocks                          func(t minimock.Tester) (*HandleAdditionalCallFromPreviousExecutor, flow.Flow)
-		error                          bool
+		name                      string
+		clarifyPendingStateResult error
+		startQueueProcessorResult error
+		mocks                     func(t minimock.Tester) (*HandleAdditionalCallFromPreviousExecutor, flow.Flow)
+		error                     bool
 	}{
 		{
 			name: "Happy path",

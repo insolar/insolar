@@ -125,11 +125,17 @@ func NewExecutionBroker(
 	}
 }
 
-func (q *ExecutionBroker) tryTakeProcessor(_ context.Context) bool {
+func (q *ExecutionBroker) tryTakeProcessor(_ context.Context, immutable bool) bool {
+	if immutable {
+		return true
+	}
 	return atomic.CompareAndSwapUint32(&q.processorActive, 0, 1)
 }
 
-func (q *ExecutionBroker) releaseProcessor(_ context.Context) {
+func (q *ExecutionBroker) releaseProcessor(_ context.Context, immutable bool) {
+	if immutable {
+		return
+	}
 	atomic.SwapUint32(&q.processorActive, 0)
 }
 
@@ -181,24 +187,6 @@ func (q *ExecutionBroker) getMutableTask(ctx context.Context) *Transcript {
 	return transcript
 }
 
-func (q *ExecutionBroker) releaseTask(_ context.Context, transcript *Transcript) {
-	q.stateLock.Lock()
-	defer q.stateLock.Unlock()
-
-	if !q.currentList.Has(transcript.RequestRef) {
-		return
-	}
-	q.currentList.Delete(transcript.RequestRef)
-	q.executionArchive.Done(transcript)
-
-	queue := q.mutable
-	if transcript.Request.Immutable {
-		queue = q.immutable
-	}
-
-	queue.Prepend(transcript)
-}
-
 func (q *ExecutionBroker) finishTask(ctx context.Context, transcript *Transcript) {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
@@ -221,8 +209,6 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *Tra
 	} else {
 		inslogger.FromContext(ctx).Error("context in transcript is nil")
 	}
-
-	defer q.releaseTask(ctx, transcript)
 
 	logger := inslogger.FromContext(ctx)
 
@@ -269,7 +255,7 @@ func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts .
 		list.Prepend(transcript)
 	}
 	if start {
-		q.StartProcessorIfNeeded(ctx)
+		q.StartProcessorsIfNeeded(ctx)
 	}
 }
 
@@ -289,7 +275,7 @@ func (q *ExecutionBroker) Put(ctx context.Context, start bool, transcripts ...*T
 		list.Push(transcript)
 	}
 	if start {
-		q.StartProcessorIfNeeded(ctx)
+		q.StartProcessorsIfNeeded(ctx)
 	}
 }
 
@@ -330,8 +316,8 @@ func (q *ExecutionBroker) GetByReference(_ context.Context, r *insolar.Reference
 	return q.mutable.PopByReference(*r)
 }
 
-func (q *ExecutionBroker) startProcessor(ctx context.Context) {
-	defer q.releaseProcessor(ctx)
+func (q *ExecutionBroker) commonStartProcessor(ctx context.Context, immutable bool) {
+	defer q.releaseProcessor(ctx, immutable)
 
 	q.clarifyPendingStateFromLedger(ctx)
 
@@ -342,37 +328,55 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 
 	q.fetchMoreFromLedgerIfNeeded(ctx)
 
-	// processing immutable queue (it can appear if we were in pending state)
-	// run simultaneously all immutable transcripts and forget about them
-	for elem := q.getImmutableTask(ctx); elem != nil; elem = q.getImmutableTask(ctx) {
-		go q.processTranscript(ctx, elem)
-	}
-
-	// processing mutable queue
-	for transcript := q.getMutableTask(ctx); transcript != nil; transcript = q.getMutableTask(ctx) {
-		q.fetchMoreFromLedgerIfNeeded(ctx)
-		q.processTranscript(ctx, transcript)
-		// processing immutable queue after every mutable task
-		// its temporary solution
+	if immutable {
 		for elem := q.getImmutableTask(ctx); elem != nil; elem = q.getImmutableTask(ctx) {
 			go q.processTranscript(ctx, elem)
+		}
+	} else {
+		for elem := q.getMutableTask(ctx); elem != nil; elem = q.getMutableTask(ctx) {
+			q.processTranscript(ctx, elem)
 		}
 	}
 }
 
-// StartProcessorIfNeeded processes queue messages in strict order
-// We need to start manually execution broker only if we were in pending and now we're not
-func (q *ExecutionBroker) StartProcessorIfNeeded(ctx context.Context) {
-	// i've removed "if we have tasks here"; we can be there in two cases:
-	// 1) we've put a task into queue and automatically start processor
-	// 2) we've explicitly ask broker to be here
-	// both cases means we knew what we are doing and so it's just an
-	// unneeded optimisation
-	if q.tryTakeProcessor(ctx) {
-		logger := inslogger.FromContext(ctx)
-		logger.Info("[ StartProcessorIfNeeded ] Starting a new queue processor")
-		go q.startProcessor(ctx)
+func getQueueName(immutable bool) string {
+	if immutable {
+		return "immutable"
 	}
+	return "mutable"
+}
+
+// StartProcessorIfNeeded processes queue messages in strict order (flag determines which
+// one, mutable or immutable)
+// We need to start manually execution broker only if we were in pending and now we're not.
+func (q *ExecutionBroker) StartProcessorIfNeeded(ctx context.Context, immutable bool) {
+	logger := inslogger.FromContext(ctx)
+
+	if q.tryTakeProcessor(ctx, immutable) {
+		shouldStart := false
+		if immutable && q.immutable.Length() > 0 {
+			shouldStart = true
+		} else if !immutable && q.mutable.Length() > 0 {
+			shouldStart = true
+		}
+
+		if !shouldStart {
+			logger.Debug("[ StartProcessorIfNeeded ] No tasks in ",
+				getQueueName(immutable),
+				" queue, do not start processor")
+
+			q.releaseProcessor(ctx, immutable)
+			return
+		}
+
+		logger.Info("[ StartProcessorIfNeeded ] Starting a new queue processor")
+		go q.commonStartProcessor(ctx, immutable)
+	}
+}
+
+func (q *ExecutionBroker) StartProcessorsIfNeeded(ctx context.Context) {
+	q.StartProcessorIfNeeded(ctx, false)
+	q.StartProcessorIfNeeded(ctx, true)
 }
 
 func (q *ExecutionBroker) fetchMoreFromLedgerIfNeeded(ctx context.Context) {
@@ -520,7 +524,7 @@ func (q *ExecutionBroker) onPulseWeNext(ctx context.Context) []insolar.Message {
 		q.pending = insolar.NotPending
 		q.ledgerHasMoreRequests = true
 		q.PendingConfirmed = false
-		go q.StartProcessorIfNeeded(ctx)
+		q.StartProcessorsIfNeeded(ctx)
 
 	default:
 		q.PendingConfirmed = false
@@ -624,7 +628,7 @@ func (q *ExecutionBroker) PrevExecutorFinishedPending(ctx context.Context) error
 	}
 
 	q.pending = insolar.NotPending
-	q.StartProcessorIfNeeded(ctx)
+	q.StartProcessorsIfNeeded(ctx)
 
 	return nil
 }
