@@ -245,7 +245,7 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
 		Signs:            currentPulsar.CurrentSlotSenderConfirmations,
 		NextPulseNumber:  currentPulsar.ProcessingPulseNumber + insolar.PulseNumber(currentPulsar.Config.NumberDelta),
 		PrevPulseNumber:  currentPulsar.lastPulse.PulseNumber,
-		EpochPulseNumber: 1,
+		EpochPulseNumber: int(currentPulsar.ProcessingPulseNumber),
 		OriginID:         [16]byte{206, 41, 229, 190, 7, 240, 162, 155, 121, 245, 207, 56, 161, 67, 189, 0},
 		PulseTimestamp:   time.Now().UnixNano(),
 	}

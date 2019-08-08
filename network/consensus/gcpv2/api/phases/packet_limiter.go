@@ -76,7 +76,7 @@ func NewPacketWithOptions(isJoiner bool, maxExtPhase2 uint8) PacketLimiter {
 	if !isJoiner {
 		joinerInits = 0
 	}
-	return PacketLimiter{counters: limits, received: joinerInits} //, sent: joinerInits}
+	return PacketLimiter{counters: limits, received: joinerInits} // , sent: joinerInits}
 }
 
 func (p PacketLimiter) ForJoiner() PacketLimiter {

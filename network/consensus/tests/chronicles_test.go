@@ -123,6 +123,10 @@ type EmuVersionedRegistries struct {
 	primingCloudStateHash proofs.CloudStateHash
 }
 
+func (c *EmuVersionedRegistries) GetNearestValidPulseData() pulse.Data {
+	panic("implement me")
+}
+
 func (c *EmuVersionedRegistries) GetCloudIdentity() cryptkit.DigestHolder {
 	return c.primingCloudStateHash
 }

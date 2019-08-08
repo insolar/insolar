@@ -218,12 +218,6 @@ func fillLimitCounters() (LimitCounters, uint16) {
 }
 
 func CreateLimitCounters(maxExtPhase2 uint8) (LimitCounters, uint16) {
-	if limitCounters[0] == 0 {
-		/* we don't need mutex here as parallel initialization will lead to identical results,
-		hence there will be no effect of a possible racing
-		*/
-		limitCounters, joinerInits = fillLimitCounters()
-	}
 	r := limitCounters
 	r[PacketExtPhase2.GetLimitCounterIndex()] = maxExtPhase2
 	return r, joinerInits
@@ -298,4 +292,8 @@ func (p PacketType) String() string {
 
 func (p PacketType) RuneName() rune {
 	return rune([]byte("01234   prxf")[p])
+}
+
+func init() {
+	limitCounters, joinerInits = fillLimitCounters()
 }

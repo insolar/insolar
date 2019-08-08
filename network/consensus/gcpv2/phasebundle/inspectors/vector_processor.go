@@ -52,8 +52,9 @@ package inspectors
 
 import (
 	"context"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 	"strings"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"

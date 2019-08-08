@@ -22,7 +22,6 @@ import (
 
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/storage"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -53,7 +52,7 @@ func NewJetKeeper(jets jet.Storage, db store.DB, pulses pulse.Calculator) JetKee
 type dbJetKeeper struct {
 	jetTrees jet.Storage
 
-	pulses storage.PulseCalculator
+	pulses pulse.Calculator
 
 	sync.RWMutex
 	db store.DB

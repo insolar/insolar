@@ -209,7 +209,8 @@ func (m *executionProxyImplementation) SaveAsChild(
 	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsChild")
 	defer span.End()
 
-	incoming, outgoing := buildIncomingAndOutgoingSaveAsChildRequests(ctx, current, req)
+	outgoing := buildOutgoingSaveAsChildRequest(ctx, current, req)
+	incoming := buildIncomingRequestFromOutgoing(outgoing)
 
 	// Register outgoing request
 	outReqInfo, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
@@ -300,7 +301,8 @@ func (m *validationProxyImplementation) RouteCall(
 func (m *validationProxyImplementation) SaveAsChild(
 	ctx context.Context, current *Transcript, req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp,
 ) error {
-	incoming, _ := buildIncomingAndOutgoingSaveAsChildRequests(ctx, current, req)
+	outgoing := buildOutgoingSaveAsChildRequest(ctx, current, req)
+	incoming := buildIncomingRequestFromOutgoing(outgoing)
 
 	reqRes := current.HasOutgoingRequest(ctx, *incoming)
 	if reqRes == nil {
@@ -339,6 +341,8 @@ func buildIncomingRequestFromOutgoing(outgoing *record.OutgoingRequest) *record.
 
 		Immutable: outgoing.Immutable,
 
+		CallType:  outgoing.CallType, // used only for CTSaveAsChild
+		Base:      outgoing.Base,     // used only for CTSaveAsChild
 		Object:    outgoing.Object,
 		Prototype: outgoing.Prototype,
 		Method:    outgoing.Method,
@@ -392,26 +396,11 @@ func buildOutgoingRequest(
 	return outgoing
 }
 
-func buildIncomingAndOutgoingSaveAsChildRequests(
+func buildOutgoingSaveAsChildRequest(
 	_ context.Context, current *Transcript, req rpctypes.UpSaveAsChildReq,
-) (*record.IncomingRequest, *record.OutgoingRequest) {
+) *record.OutgoingRequest {
 
 	current.Nonce++
-
-	incoming := record.IncomingRequest{
-		Caller:          req.Callee,
-		CallerPrototype: req.CalleePrototype,
-		Nonce:           current.Nonce,
-
-		CallType:  record.CTSaveAsChild,
-		Base:      &req.Parent,
-		Prototype: &req.Prototype,
-		Method:    req.ConstructorName,
-		Arguments: req.ArgsSerialized,
-
-		APIRequestID: current.Request.APIRequestID,
-		Reason:       current.RequestRef,
-	}
 
 	outgoing := record.OutgoingRequest{
 		Caller:          req.Callee,
@@ -428,5 +417,5 @@ func buildIncomingAndOutgoingSaveAsChildRequests(
 		Reason:       current.RequestRef,
 	}
 
-	return &incoming, &outgoing
+	return &outgoing
 }
