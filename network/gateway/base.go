@@ -244,6 +244,11 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.R
 		return nil, errors.Errorf("process authorize: got invalid protobuf request message: %s", request)
 	}
 	data := request.GetRequest().GetAuthorize().AuthorizeData
+	o := g.NodeKeeper.GetOrigin()
+
+	if data.Version != o.Version() {
+		return nil, errors.Errorf("wrong version in AuthorizeRequest, actual network version is: %s", o.Version())
+	}
 
 	// TODO: move time.Minute to config
 	if !validateTimestamp(data.Timestamp, time.Minute) {
@@ -271,7 +276,6 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.R
 
 	// TODO: get random reconnectHost
 	// nodes := g.NodeKeeper.GetAccessor().GetActiveNodes()
-	o := g.NodeKeeper.GetOrigin()
 
 	// workaround bootstrap to the origin node
 	reconnectHost, err := host.NewHostNS(o.Address(), o.ID(), o.ShortID())

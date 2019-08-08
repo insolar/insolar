@@ -54,9 +54,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
+
+	"github.com/insolar/insolar/network/consensus/adapters"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
@@ -68,7 +69,6 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
-	"github.com/insolar/insolar/version"
 )
 
 type Requester interface {
@@ -103,7 +103,7 @@ func (ac *requester) Authorize(ctx context.Context, host *host.Host, cert insola
 		return nil, errors.Wrap(err, "Error serializing certificate")
 	}
 
-	authData := &packet.AuthorizeData{Certificate: serializedCert, Version: version.Version}
+	authData := &packet.AuthorizeData{Certificate: serializedCert, Version: ac.OriginProvider.GetOrigin().Version()}
 	response, err := ac.authorizeWithTimestamp(ctx, host, authData, time.Now().Unix())
 	if err != nil {
 		return nil, err
