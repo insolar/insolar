@@ -74,6 +74,7 @@ const (
 	TypePendingFinished
 	TypeAdditionalCallFromPreviousExecutor
 	TypeStillExecuting
+	TypeOk
 
 	// should be the last (required by TypesMap)
 	_latestType
@@ -304,6 +305,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *UpdateJet:
 		pl.Polymorph = uint32(TypeUpdateJet)
 		return pl.Marshal()
+	case *Ok:
+		pl.Polymorph = uint32(TypeOk)
+		return pl.Marshal()
 	}
 
 	return nil, errors.New("unknown payload type")
@@ -473,7 +477,6 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeAbandonedRequestsNotification:
 		pl := AbandonedRequestsNotification{}
-		err := pl.Unmarshal(data)
 		return &pl, err
 	case TypeGetLightInitialState:
 		pl := GetLightInitialState{}
@@ -489,6 +492,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeUpdateJet:
 		pl := UpdateJet{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeOk:
+		pl := Ok{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}
