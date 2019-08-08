@@ -23,7 +23,7 @@ type OutgoingRequestSenderMock struct {
 	beforeSendAbandonedOutgoingRequestCounter uint64
 	SendAbandonedOutgoingRequestMock          mOutgoingRequestSenderMockSendAbandonedOutgoingRequest
 
-	funcSendOutgoingRequest          func(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest) (a1 insolar.Arguments, ip1 *record.IncomingRequest, err error)
+	funcSendOutgoingRequest          func(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest) (rp1 *insolar.Reference, a1 insolar.Arguments, ip1 *record.IncomingRequest, err error)
 	inspectFuncSendOutgoingRequest   func(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest)
 	afterSendOutgoingRequestCounter  uint64
 	beforeSendOutgoingRequestCounter uint64
@@ -261,6 +261,7 @@ type OutgoingRequestSenderMockSendOutgoingRequestParams struct {
 
 // OutgoingRequestSenderMockSendOutgoingRequestResults contains results of the OutgoingRequestSender.SendOutgoingRequest
 type OutgoingRequestSenderMockSendOutgoingRequestResults struct {
+	rp1 *insolar.Reference
 	a1  insolar.Arguments
 	ip1 *record.IncomingRequest
 	err error
@@ -298,7 +299,7 @@ func (mmSendOutgoingRequest *mOutgoingRequestSenderMockSendOutgoingRequest) Insp
 }
 
 // Return sets up results that will be returned by OutgoingRequestSender.SendOutgoingRequest
-func (mmSendOutgoingRequest *mOutgoingRequestSenderMockSendOutgoingRequest) Return(a1 insolar.Arguments, ip1 *record.IncomingRequest, err error) *OutgoingRequestSenderMock {
+func (mmSendOutgoingRequest *mOutgoingRequestSenderMockSendOutgoingRequest) Return(rp1 *insolar.Reference, a1 insolar.Arguments, ip1 *record.IncomingRequest, err error) *OutgoingRequestSenderMock {
 	if mmSendOutgoingRequest.mock.funcSendOutgoingRequest != nil {
 		mmSendOutgoingRequest.mock.t.Fatalf("OutgoingRequestSenderMock.SendOutgoingRequest mock is already set by Set")
 	}
@@ -306,12 +307,12 @@ func (mmSendOutgoingRequest *mOutgoingRequestSenderMockSendOutgoingRequest) Retu
 	if mmSendOutgoingRequest.defaultExpectation == nil {
 		mmSendOutgoingRequest.defaultExpectation = &OutgoingRequestSenderMockSendOutgoingRequestExpectation{mock: mmSendOutgoingRequest.mock}
 	}
-	mmSendOutgoingRequest.defaultExpectation.results = &OutgoingRequestSenderMockSendOutgoingRequestResults{a1, ip1, err}
+	mmSendOutgoingRequest.defaultExpectation.results = &OutgoingRequestSenderMockSendOutgoingRequestResults{rp1, a1, ip1, err}
 	return mmSendOutgoingRequest.mock
 }
 
 //Set uses given function f to mock the OutgoingRequestSender.SendOutgoingRequest method
-func (mmSendOutgoingRequest *mOutgoingRequestSenderMockSendOutgoingRequest) Set(f func(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest) (a1 insolar.Arguments, ip1 *record.IncomingRequest, err error)) *OutgoingRequestSenderMock {
+func (mmSendOutgoingRequest *mOutgoingRequestSenderMockSendOutgoingRequest) Set(f func(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest) (rp1 *insolar.Reference, a1 insolar.Arguments, ip1 *record.IncomingRequest, err error)) *OutgoingRequestSenderMock {
 	if mmSendOutgoingRequest.defaultExpectation != nil {
 		mmSendOutgoingRequest.mock.t.Fatalf("Default expectation is already set for the OutgoingRequestSender.SendOutgoingRequest method")
 	}
@@ -340,13 +341,13 @@ func (mmSendOutgoingRequest *mOutgoingRequestSenderMockSendOutgoingRequest) When
 }
 
 // Then sets up OutgoingRequestSender.SendOutgoingRequest return parameters for the expectation previously defined by the When method
-func (e *OutgoingRequestSenderMockSendOutgoingRequestExpectation) Then(a1 insolar.Arguments, ip1 *record.IncomingRequest, err error) *OutgoingRequestSenderMock {
-	e.results = &OutgoingRequestSenderMockSendOutgoingRequestResults{a1, ip1, err}
+func (e *OutgoingRequestSenderMockSendOutgoingRequestExpectation) Then(rp1 *insolar.Reference, a1 insolar.Arguments, ip1 *record.IncomingRequest, err error) *OutgoingRequestSenderMock {
+	e.results = &OutgoingRequestSenderMockSendOutgoingRequestResults{rp1, a1, ip1, err}
 	return e.mock
 }
 
 // SendOutgoingRequest implements OutgoingRequestSender
-func (mmSendOutgoingRequest *OutgoingRequestSenderMock) SendOutgoingRequest(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest) (a1 insolar.Arguments, ip1 *record.IncomingRequest, err error) {
+func (mmSendOutgoingRequest *OutgoingRequestSenderMock) SendOutgoingRequest(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest) (rp1 *insolar.Reference, a1 insolar.Arguments, ip1 *record.IncomingRequest, err error) {
 	mm_atomic.AddUint64(&mmSendOutgoingRequest.beforeSendOutgoingRequestCounter, 1)
 	defer mm_atomic.AddUint64(&mmSendOutgoingRequest.afterSendOutgoingRequestCounter, 1)
 
@@ -364,7 +365,7 @@ func (mmSendOutgoingRequest *OutgoingRequestSenderMock) SendOutgoingRequest(ctx 
 	for _, e := range mmSendOutgoingRequest.SendOutgoingRequestMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.a1, e.results.ip1, e.results.err
+			return e.results.rp1, e.results.a1, e.results.ip1, e.results.err
 		}
 	}
 
@@ -380,7 +381,7 @@ func (mmSendOutgoingRequest *OutgoingRequestSenderMock) SendOutgoingRequest(ctx 
 		if results == nil {
 			mmSendOutgoingRequest.t.Fatal("No results are set for the OutgoingRequestSenderMock.SendOutgoingRequest")
 		}
-		return (*results).a1, (*results).ip1, (*results).err
+		return (*results).rp1, (*results).a1, (*results).ip1, (*results).err
 	}
 	if mmSendOutgoingRequest.funcSendOutgoingRequest != nil {
 		return mmSendOutgoingRequest.funcSendOutgoingRequest(ctx, reqRef, req)
