@@ -178,7 +178,7 @@ func (m *executionProxyImplementation) RouteCall(
 	// we _already_ are processing the request. We should continue to execute and
 	// the next executor will wait for us in pending state. For this reason Flow is not
 	// used for registering the outgoing request.
-	outgoingReqID, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
+	outReqInfo, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
 	if err != nil {
 		return err
 	}
@@ -191,7 +191,7 @@ func (m *executionProxyImplementation) RouteCall(
 
 	// Step 2. Send the request and register the result (both is done by outgoingSender)
 
-	outgoingReqRef := insolar.NewReference(*outgoingReqID)
+	outgoingReqRef := insolar.NewReference(outReqInfo.RequestID)
 
 	var incoming *record.IncomingRequest
 	rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
@@ -212,7 +212,7 @@ func (m *executionProxyImplementation) SaveAsChild(
 	incoming, outgoing := buildIncomingAndOutgoingSaveAsChildRequests(ctx, current, req)
 
 	// Register outgoing request
-	outgoingReqID, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
+	outReqInfo, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
 	if err != nil {
 		return err
 	}
@@ -231,7 +231,7 @@ func (m *executionProxyImplementation) SaveAsChild(
 	rep.Result = callReply.Result
 
 	// Register result of the outgoing method
-	outgoingReqRef := insolar.NewReference(*outgoingReqID)
+	outgoingReqRef := insolar.NewReference(outReqInfo.RequestID)
 	reqResult := newRequestResult(rep.Result, req.Callee)
 	return m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
 }

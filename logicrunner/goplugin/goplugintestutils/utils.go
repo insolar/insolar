@@ -214,8 +214,7 @@ func (cb *ContractsBuilder) registerRequest(ctx context.Context, request *record
 	logger := inslogger.FromContext(ctx)
 
 	if cb.pulseAccessor == nil {
-		logger.Warnf("[ registerRequest ] No pulse accessor passed: no retries for register request")
-		return cb.artifactManager.RegisterIncomingRequest(ctx, request)
+		return nil, errors.New("No pulse accessor")
 	}
 
 	for current := 1; current <= retries; current++ {
@@ -231,9 +230,10 @@ func (cb *ContractsBuilder) registerRequest(ctx context.Context, request *record
 		}
 		lastPulse = currentPulse.PulseNumber
 
-		contractID, err := cb.artifactManager.RegisterIncomingRequest(ctx, request)
+		reqInfo, err := cb.artifactManager.RegisterIncomingRequest(ctx, request)
 		if err == nil || !strings.Contains(err.Error(), flow.ErrCancelled.Error()) {
-			return contractID, err
+			reqID := reqInfo.RequestID
+			return &reqID, err
 		}
 
 		logger.Debugf("[ registerRequest ] retry. attempt: %d/%d", current, retries)

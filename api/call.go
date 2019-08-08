@@ -17,6 +17,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
@@ -200,7 +201,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		traceID := utils.RandTraceID()
 		ctx, insLog := inslogger.WithTraceField(context.Background(), traceID)
 
-		ctx, span := instracer.StartSpan(ctx, "callHandler")
+		ctx, span := instracer.StartSpan(ctx, "ApiCallHandler.callHandler")
 		defer span.End()
 
 		contractRequest := &requester.Request{}
@@ -210,10 +211,13 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		startTime := time.Now()
 		defer observeResultStatus(contractRequest.Method, contractAnswer, startTime)
 
-		insLog.Infof("[ callHandler ] Incoming contractRequest: %s", req.RequestURI)
+		info := fmt.Sprintf("[ callHandler ] Incoming contractRequest: %s", req.RequestURI)
+		insLog.Infof(info)
+		span.Annotate(nil, info)
 
 		ctx, rawBody, err := processRequest(ctx, req, contractRequest, contractAnswer)
 		if err != nil {
+			instracer.AddError(span, err)
 			processError(err, err.Error(), contractAnswer, insLog, traceID)
 			return
 		}
@@ -224,18 +228,21 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 		if contractRequest.Method != "api.call" {
 			err := errors.New("rpc method does not exist")
+			instracer.AddError(span, err)
 			processError(err, err.Error(), contractAnswer, insLog, traceID)
 			return
 		}
 
 		signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), rawBody)
 		if err != nil {
+			instracer.AddError(span, err)
 			processError(err, err.Error(), contractAnswer, insLog, traceID)
 			return
 		}
 
 		seedPulse, err := ar.checkSeed(contractRequest.Params.Seed)
 		if err != nil {
+			instracer.AddError(span, err)
 			processError(err, err.Error(), contractAnswer, insLog, traceID)
 			return
 		}
@@ -253,6 +260,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 		case <-ch:
 			if err != nil {
+				instracer.AddError(span, err)
 				processError(err, err.Error(), contractAnswer, insLog, traceID)
 				return
 			}
@@ -261,6 +269,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 
 		case <-time.After(ar.timeout):
+			instracer.AddError(span, errors.New("API timeout exceeded"))
 			errResponse := &requester.Error{Message: "API timeout exceeded", Code: TimeoutError, Data: requester.Data{TraceID: traceID}}
 			contractAnswer.Error = errResponse
 			return
@@ -268,27 +277,54 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func validateRequestHeaders(digest string, richSignature string, body []byte) (string, error) {
+func validateRequestHeaders(digest string, signature string, body []byte) (string, error) {
 	// Digest = "SHA-256=<hashString>"
 	// Signature = "keyId="member-pub-key", algorithm="ecdsa", headers="digest", signature=<signatureString>"
-	if len(digest) < 15 || strings.Count(digest, "=") < 2 || len(richSignature) == 15 ||
-		strings.Count(richSignature, "=") < 4 || len(body) == 0 {
+	if len(digest) < 15 || strings.Count(digest, "=") < 2 || len(signature) == 15 ||
+		strings.Count(signature, "=") < 4 || len(body) == 0 {
 		return "", errors.Errorf("invalid input data length digest: %d, signature: %d, body: %d", len(digest),
-			len(richSignature), len(body))
+			len(signature), len(body))
 	}
 	h := sha256.New()
 	_, err := h.Write(body)
 	if err != nil {
-		return "", errors.Wrap(err, "Cant get hash")
+		return "", errors.Wrap(err, "cant calculate hash")
 	}
-	sha := base64.StdEncoding.EncodeToString(h.Sum(nil))
-	if sha == digest[strings.IndexByte(digest, '=')+1:] {
-		sig := richSignature[strings.Index(richSignature, "signature=")+10:]
-		if len(sig) == 0 {
-			return "", errors.New("empty signature")
-		}
-		return sig, nil
+	calculatedHash := h.Sum(nil)
+	digest, err = parseDigest(digest)
+	if err != nil {
+		return "", err
+	}
+	incomingHash, err := base64.StdEncoding.DecodeString(digest)
+	if err != nil {
+		return "", errors.Wrap(err, "cant decode digest")
+	}
 
+	if !bytes.Equal(calculatedHash, incomingHash) {
+		return "", errors.New("incorrect digest")
 	}
-	return "", errors.New("cant get signature from header")
+
+	signature, err = parseSignature(signature)
+	if err != nil {
+		return "", err
+	}
+	return signature, nil
+}
+
+func parseDigest(digest string) (string, error) {
+	index := strings.IndexByte(digest, '=')
+	if index < 1 || (index+1) >= len(digest) {
+		return "", errors.New("invalid digest")
+	}
+
+	return digest[index+1:], nil
+}
+
+func parseSignature(signature string) (string, error) {
+	index := strings.Index(signature, "signature=")
+	if index < 1 || (index+10) >= len(signature) {
+		return "", errors.New("invalid signature")
+	}
+
+	return signature[index+10:], nil
 }

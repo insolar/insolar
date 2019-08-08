@@ -22,7 +22,9 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 )
@@ -60,7 +62,7 @@ func (ch *CheckOurRole) Proceed(ctx context.Context) error {
 type RegisterIncomingRequest struct {
 	request record.IncomingRequest
 
-	result chan *Ref
+	result chan *payload.RequestInfo
 
 	ArtifactManager artifacts.Client
 }
@@ -69,16 +71,16 @@ func NewRegisterIncomingRequest(request record.IncomingRequest, dep *Dependencie
 	return &RegisterIncomingRequest{
 		request:         request,
 		ArtifactManager: dep.lr.ArtifactManager,
-		result:          make(chan *Ref, 1),
+		result:          make(chan *payload.RequestInfo, 1),
 	}
 }
 
-func (r *RegisterIncomingRequest) setResult(result *Ref) { // nolint
+func (r *RegisterIncomingRequest) setResult(result *payload.RequestInfo) { // nolint
 	r.result <- result
 }
 
 // getResult is blocking
-func (r *RegisterIncomingRequest) getResult() *Ref { // nolint
+func (r *RegisterIncomingRequest) getResult() *payload.RequestInfo { // nolint
 	return <-r.result
 }
 
@@ -86,12 +88,14 @@ func (r *RegisterIncomingRequest) Proceed(ctx context.Context) error {
 	ctx, span := instracer.StartSpan(ctx, "RegisterIncomingRequest.Proceed")
 	defer span.End()
 
-	id, err := r.ArtifactManager.RegisterIncomingRequest(ctx, &r.request)
+	inslogger.FromContext(ctx).Debug("registering incoming request")
+
+	reqInfo, err := r.ArtifactManager.RegisterIncomingRequest(ctx, &r.request)
 	if err != nil {
 		return err
 	}
 
-	r.setResult(insolar.NewReference(*id))
+	r.setResult(reqInfo)
 	return nil
 }
 

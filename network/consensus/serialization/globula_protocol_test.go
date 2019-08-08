@@ -329,19 +329,19 @@ func TestGlobulaConsensusPacketBody_Phases_Flag0(t *testing.T) {
 	tests := []struct {
 		name       string
 		packetType phases.PacketType
-		size       int
+		size       int64
 		packet     Packet
 	}{
 		{
 			"phase0",
 			phases.PacketPhase0,
-			432,
+			431,
 			phase1p,
 		},
 		{
 			"phase1",
 			phases.PacketPhase1,
-			435,
+			434,
 			phase1p,
 		},
 		{

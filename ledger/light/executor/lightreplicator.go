@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package replication
+package executor
 
 import (
 	"context"
@@ -31,7 +31,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -51,7 +50,7 @@ type LightReplicatorDefault struct {
 	once sync.Once
 	done chan struct{}
 
-	jetCalculator   executor.JetCalculator
+	jetCalculator   JetCalculator
 	cleaner         Cleaner
 	sender          bus.Sender
 	pulseCalculator pulse.Calculator
@@ -66,7 +65,7 @@ type LightReplicatorDefault struct {
 
 // NewReplicatorDefault creates new instance of LightReplicator
 func NewReplicatorDefault(
-	jetCalculator executor.JetCalculator,
+	jetCalculator JetCalculator,
 	cleaner Cleaner,
 	sender bus.Sender,
 	calculator pulse.Calculator,
@@ -139,8 +138,7 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 		for _, jetID := range jets {
 			msg, err := lr.heavyPayload(ctx, pn, jetID, allIndexes[jetID])
 			if err != nil {
-				span.AddAttributes(trace.BoolAttribute("error", true))
-				span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
+				instracer.AddError(span, err)
 				panic(
 					fmt.Sprintf(
 						"[Replicator][sync] Problems with gather data for a pulse - %v and jet - %v. err - %v",
@@ -152,8 +150,7 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 			}
 			err = lr.sendToHeavy(ctx, msg)
 			if err != nil {
-				span.AddAttributes(trace.BoolAttribute("error", true))
-				span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
+				instracer.AddError(span, err)
 
 				logger.Errorf("[Replicator][sync]  Problems with sending msg to a heavy node", err)
 			} else {

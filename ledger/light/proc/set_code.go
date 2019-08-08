@@ -26,7 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/ledger/light/hot"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -38,7 +38,7 @@ type SetCode struct {
 	jetID    insolar.JetID
 
 	dep struct {
-		writer  hot.WriteAccessor
+		writer  executor.WriteAccessor
 		records object.AtomicRecordModifier
 		pcs     insolar.PlatformCryptographyScheme
 		sender  bus.Sender
@@ -55,7 +55,7 @@ func NewSetCode(msg payload.Meta, rec record.Virtual, recID insolar.ID, jetID in
 }
 
 func (p *SetCode) Dep(
-	w hot.WriteAccessor,
+	w executor.WriteAccessor,
 	r object.AtomicRecordModifier,
 	pcs insolar.PlatformCryptographyScheme,
 	s bus.Sender,
@@ -69,7 +69,7 @@ func (p *SetCode) Dep(
 func (p *SetCode) Proceed(ctx context.Context) error {
 	done, err := p.dep.writer.Begin(ctx, flow.Pulse(ctx))
 	if err != nil {
-		if err == hot.ErrWriteClosed {
+		if err == executor.ErrWriteClosed {
 			return flow.ErrCancelled
 		}
 		return err

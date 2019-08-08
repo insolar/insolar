@@ -38,7 +38,7 @@ type ExecutionArchive interface {
 
 	IsEmpty() bool
 	OnPulse(ctx context.Context) []insolar.Message
-	FindRequestLoop(ctx context.Context, apiRequestID string) bool
+	FindRequestLoop(ctx context.Context, reqRef insolar.Reference, apiRequestID string) bool
 	GetActiveTranscript(req insolar.Reference) *Transcript
 }
 
@@ -122,9 +122,15 @@ func (ea *executionArchive) OnPulse(_ context.Context) []insolar.Message {
 	return messages
 }
 
-func (ea *executionArchive) FindRequestLoop(ctx context.Context, apiRequestID string) bool {
+func (ea *executionArchive) FindRequestLoop(ctx context.Context, reqRef insolar.Reference, apiRequestID string) bool {
 	ea.archiveLock.Lock()
 	defer ea.archiveLock.Unlock()
+
+	if _, ok := ea.archive[reqRef]; ok {
+		// we're executing this request right now
+		// de-duplication should deal with this case
+		return false
+	}
 
 	for _, transcript := range ea.archive {
 		req := transcript.Request
