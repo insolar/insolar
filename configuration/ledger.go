@@ -69,7 +69,7 @@ type Backup struct {
 	// TargetDirectory is directory where backups will be moved to
 	TargetDirectory string
 
-	// MetaInfoFile contains meta info about backup
+	// MetaInfoFile contains meta info about backup. It will be in json format
 	MetaInfoFile string
 
 	// ConfirmFile: we wait this file being created when backup was saved on remote host
@@ -109,7 +109,11 @@ func NewLedger() Ledger {
 		LightChainLimit: 5, // 5 pulses
 
 		Backup: Backup{
-			Enabled: false,
+			Enabled:          false,
+			DirNameTemplate:  "pulse-%d",
+			BackupWaitPeriod: 60,
+			MetaInfoFile:     "meta.json",
+			BackupFile:       "incr.bkp",
 		},
 
 		CleanerDelay: 3, // 3 pulses

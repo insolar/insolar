@@ -170,6 +170,7 @@ func (jk *dbJetKeeper) AddHotConfirmation(ctx context.Context, pn insolar.PulseN
 	return errors.Wrapf(err, "AddHotConfirmation. propagateConsistency returns error")
 }
 
+// AddDropConfirmation performs adding jet to storage and checks pulse completion.
 func (jk *dbJetKeeper) AddDropConfirmation(ctx context.Context, pn insolar.PulseNumber, id insolar.JetID, split bool) error {
 	jk.Lock()
 	defer jk.Unlock()
@@ -182,9 +183,10 @@ func (jk *dbJetKeeper) AddDropConfirmation(ctx context.Context, pn insolar.Pulse
 
 	err := jk.updateTopSyncPulse(ctx, pn)
 
-	return errors.Wrap(err, "propagateConsistency returns error")
+	return errors.Wrap(err, "updateTopSyncPulse returns error")
 }
 
+// AddBackupConfirmation performs adding backup confirmation to storage and checks pulse completion.
 func (jk *dbJetKeeper) AddBackupConfirmation(ctx context.Context, pn insolar.PulseNumber) error {
 	jk.Lock()
 	defer jk.Unlock()
@@ -197,7 +199,7 @@ func (jk *dbJetKeeper) AddBackupConfirmation(ctx context.Context, pn insolar.Pul
 
 	err := jk.updateTopSyncPulse(ctx, pn)
 
-	return errors.Wrap(err, "propagateConsistency returns error")
+	return errors.Wrap(err, "updateTopSyncPulse returns error")
 }
 
 func (jk *dbJetKeeper) updateBackup(pulse insolar.PulseNumber) error {
@@ -231,6 +233,7 @@ func (jk *dbJetKeeper) updateTopSyncPulse(ctx context.Context, pn insolar.PulseN
 
 	if prev.PulseNumber != top {
 		// We should sync pulses sequentially. We can't skip.
+		logger.Info("Try to updateTopSyncPulse for future pulse. Skip it. prev.PulseNumber: ", prev.PulseNumber, ", top: ", top)
 		return nil
 	}
 
@@ -255,6 +258,7 @@ func (jk *dbJetKeeper) updateTopSyncPulse(ctx context.Context, pn insolar.PulseN
 	return nil
 }
 
+// HasJetConfirms says if given pulse has drop and hot confirms. Ignore backups
 func (jk *dbJetKeeper) HasAllJetConfirms(ctx context.Context, pulse insolar.PulseNumber) bool {
 	jk.RLock()
 	defer jk.RUnlock()
@@ -262,6 +266,7 @@ func (jk *dbJetKeeper) HasAllJetConfirms(ctx context.Context, pulse insolar.Puls
 	return jk.checkPulseConsistency(ctx, pulse, false)
 }
 
+// TopSyncPulse provides access to highest synced (replicated) pulse.
 func (jk *dbJetKeeper) TopSyncPulse() insolar.PulseNumber {
 	jk.RLock()
 	defer jk.RUnlock()

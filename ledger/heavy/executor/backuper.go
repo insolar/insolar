@@ -1,4 +1,4 @@
-///
+//
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-///
+//
 
 package executor
 
@@ -128,8 +128,8 @@ func move(ctx context.Context, what string, toDirectory string) error {
 	return nil
 }
 
-// waitForBackup waits for file filePath appearance
-func waitForBackup(ctx context.Context, filePath string, numIterations uint) error {
+// waitForFile waits for file filePath appearance
+func waitForFile(ctx context.Context, filePath string, numIterations uint) error {
 	inslogger.FromContext(ctx).Debug("waiting for ", filePath)
 	for i := uint(0); i < numIterations; i++ {
 		if err := isPathExists(filePath); err != nil {
@@ -147,7 +147,12 @@ func waitForBackup(ctx context.Context, filePath string, numIterations uint) err
 }
 
 func writeBackupInfoFile(hash string, pulse insolar.PulseNumber, since uint64, upto uint64, to string) error {
-	bi := BackupInfo{SHA256: hash, Pulse: pulse, LastBackupedVersion: upto, Since: since}
+	bi := BackupInfo{
+		SHA256:              hash,
+		Pulse:               pulse,
+		LastBackupedVersion: upto,
+		Since:               since,
+	}
 
 	rawInfo, err := json.MarshalIndent(bi, "", "    ")
 	if err != nil {
@@ -167,7 +172,7 @@ func calculateFileHash(f *os.File) (string, error) {
 }
 
 // prepareBackup make incremental backup and write auxiliary file with meta info
-func (b *BackupMakerDefault) prepareBackup(dirHolder *tmpDirHolder, pulse insolar.PulseNumber) (uint64, error) {
+func (b *BackupMakerDefault) prepareBackup(dirHolder *tmpDirHolder, pulse insolar.PulseNumber) (currentBackupedVersion uint64, err error) {
 	currentBT, err := b.backuper.Backup(dirHolder.tmpFile, b.lastBackupedVersion)
 	if err != nil {
 		return 0, errors.Wrap(err, "Backup return error")
@@ -260,7 +265,7 @@ func (b *BackupMakerDefault) doBackup(ctx context.Context, lastFinalizedPulse in
 		return 0, errors.Wrap(err, "move returns error")
 	}
 
-	err = waitForBackup(ctx, filepath.Join(currentBkpDirPath, b.config.ConfirmFile), b.config.BackupWaitPeriod)
+	err = waitForFile(ctx, filepath.Join(currentBkpDirPath, b.config.ConfirmFile), b.config.BackupWaitPeriod)
 	if err != nil {
 		return 0, errors.Wrapf(err, "waitForBackup returns error. pulse: %d", lastFinalizedPulse)
 	}
