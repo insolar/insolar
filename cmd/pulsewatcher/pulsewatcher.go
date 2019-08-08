@@ -70,7 +70,6 @@ func displayResultsTable(results [][]string, ready bool, buffer *bytes.Buffer) {
 	table.SetHeader([]string{
 		"URL",
 		"Network State",
-		"NetworkNode State",
 		"ID",
 		"Network Pulse Number",
 		"Pulse Number",
@@ -95,12 +94,11 @@ func displayResultsTable(results [][]string, ready bool, buffer *bytes.Buffer) {
 	}
 
 	table.SetFooter([]string{
-		"", "", "", "", "", "",
+		"", "", "", "", "",
 		"Insolar State", stateString,
 		"Time", time.Now().Format(time.RFC3339),
 	})
 	table.SetFooterColor(
-		tablewriter.Colors{},
 		tablewriter.Colors{},
 		tablewriter.Colors{},
 		tablewriter.Colors{},
@@ -114,7 +112,6 @@ func displayResultsTable(results [][]string, ready bool, buffer *bytes.Buffer) {
 		tablewriter.Colors{},
 	)
 	table.SetColumnColor(
-		tablewriter.Colors{},
 		tablewriter.Colors{},
 		tablewriter.Colors{},
 		tablewriter.Colors{},
@@ -144,7 +141,6 @@ func displayResultsJSON(results [][]string, _ bool, _ *bytes.Buffer) {
 	type DocumentItem struct {
 		URL                string
 		NetworkState       string
-		NodeState          string
 		ID                 uint32
 		NetworkPulseNumber int64
 		PulseNumber        int64
@@ -159,7 +155,6 @@ func displayResultsJSON(results [][]string, _ bool, _ *bytes.Buffer) {
 	for i, res := range results {
 		doc[i].URL = res[0]
 		doc[i].NetworkState = res[1]
-		doc[i].NodeState = res[2]
 		doc[i].ID = uint32(parseInt64(res[3]))
 		doc[i].NetworkPulseNumber = parseInt64(res[4])
 		doc[i].PulseNumber = parseInt64(res[5])
@@ -205,7 +200,7 @@ func collectNodesStatuses(conf *pulsewatcher.Config, lastResults [][]string) ([]
 					results[i][0] = url
 					results[i][len(results[i])-1] = errStr
 				} else {
-					results[i] = []string{url, "", "", "", "", "", "", "", "", errStr}
+					results[i] = []string{url, "", "", "", "", "", "", "", errStr}
 				}
 				errored++
 				lock.Unlock()
@@ -222,7 +217,6 @@ func collectNodesStatuses(conf *pulsewatcher.Config, lastResults [][]string) ([]
 					NetworkPulseNumber uint32
 					PulseNumber        uint32
 					NetworkState       string
-					NodeState          string
 					Origin             struct {
 						Role string
 						ID   uint32
@@ -240,7 +234,6 @@ func collectNodesStatuses(conf *pulsewatcher.Config, lastResults [][]string) ([]
 			results[i] = []string{
 				url,
 				out.Result.NetworkState,
-				out.Result.NodeState,
 				strconv.Itoa(int(out.Result.Origin.ID)),
 				strconv.Itoa(int(out.Result.NetworkPulseNumber)),
 				strconv.Itoa(int(out.Result.PulseNumber)),
@@ -249,8 +242,7 @@ func collectNodesStatuses(conf *pulsewatcher.Config, lastResults [][]string) ([]
 				out.Result.Origin.Role,
 				"",
 			}
-			state = state && out.Result.NetworkState == insolar.CompleteNetworkState.String() &&
-				out.Result.NodeState == insolar.NodeReady.String()
+			state = state && out.Result.NetworkState == insolar.CompleteNetworkState.String()
 			lock.Unlock()
 			wg.Done()
 		}(url, i)
