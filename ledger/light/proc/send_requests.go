@@ -18,7 +18,6 @@ package proc
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -56,7 +55,7 @@ func (p *SendRequests) Dep(sender bus.Sender, filaments executor.FilamentCalcula
 }
 
 func (p *SendRequests) Proceed(ctx context.Context) error {
-	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("SendRequests"))
+	ctx, span := instracer.StartSpan(ctx, "SendRequests")
 	defer span.End()
 
 	span.AddAttributes(

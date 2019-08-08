@@ -18,9 +18,12 @@ package thread
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar/flow"
 )
@@ -28,6 +31,7 @@ import (
 type Thread struct {
 	controller *Controller
 	cancel     <-chan struct{}
+	canBegin   <-chan struct{}
 	procedures map[flow.Procedure]*result
 	message    *message.Message
 	migrated   bool
@@ -43,6 +47,7 @@ func NewThread(msg *message.Message, controller *Controller) *Thread {
 	return &Thread{
 		controller: controller,
 		cancel:     controller.Cancel(),
+		canBegin:   controller.CanBegin(),
 		procedures: map[flow.Procedure]*result{},
 		message:    msg,
 	}
@@ -57,9 +62,28 @@ func (f *Thread) Procedure(ctx context.Context, proc flow.Procedure, cancel bool
 		panic("procedure called with nil procedure")
 	}
 
+	var spanName string
+	procStringer, ok := proc.(fmt.Stringer)
+	if ok {
+		spanName = procStringer.String()
+	} else {
+		spanName = fmt.Sprintf("%T", proc)
+	}
+
+	ctx, span := instracer.StartSpan(ctx, spanName)
+	span.AddAttributes(
+		trace.StringAttribute("type", "flow_proc"),
+	)
+	defer span.End()
+
 	if !cancel {
 		res := f.procedure(ctx, proc)
 		<-res.done
+
+		if res.err != nil {
+			instracer.AddError(span, res.err)
+		}
+
 		return res.err
 	}
 
@@ -72,9 +96,15 @@ func (f *Thread) Procedure(ctx context.Context, proc flow.Procedure, cancel bool
 	select {
 	case <-f.cancel:
 		cl()
+		instracer.AddError(span, flow.ErrCancelled)
 		return flow.ErrCancelled
 	case <-res.done:
 		cl()
+
+		if res.err != nil {
+			instracer.AddError(span, res.err)
+		}
+
 		return res.err
 	}
 }
@@ -84,15 +114,15 @@ func (f *Thread) Migrate(ctx context.Context, to flow.Handle) error {
 		return errors.New("migrate called on migrated flow")
 	}
 
-	<-f.cancel
+	<-f.canBegin
 	f.migrated = true
 	subFlow := NewThread(f.message, f.controller)
 	return to(ctx, subFlow)
 }
 
 func (f *Thread) Continue(context.Context) {
-	<-f.cancel
-	f.cancel = f.controller.Cancel()
+	<-f.canBegin
+	f.canBegin = f.controller.CanBegin()
 }
 
 func (f *Thread) Run(ctx context.Context, h flow.Handle) error {

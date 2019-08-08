@@ -54,15 +54,15 @@ import (
 	"context"
 	"io"
 
-	"github.com/insolar/insolar/network/utils"
-
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/hostnetwork/future"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/pool"
+	"github.com/insolar/insolar/network/utils"
 )
 
 // RequestHandler is callback function for request handling
@@ -113,6 +113,12 @@ func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader
 			mainLogger.Error("[ HandleStream ] Failed to deserialize packet: ", err.Error())
 		} else {
 			packetCtx, logger := inslogger.WithTraceField(packetCtx, p.TraceID)
+			span, err := instracer.Deserialize(p.TraceSpanData)
+			if err == nil {
+				packetCtx = instracer.WithParentSpan(packetCtx, span)
+			} else {
+				inslogger.FromContext(packetCtx).Warn("Incoming packet without span")
+			}
 			logger.Debugf("[ HandleStream ] Handling packet RequestID = %d", p.RequestID)
 
 			if p.IsResponse() {

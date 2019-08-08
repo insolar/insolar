@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/pkg/errors"
 
@@ -108,6 +109,9 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 	}
 
 	sendPassState := func(stateID insolar.ID) error {
+		ctx, span := instracer.StartSpan(ctx, "SendObject.sendPassState")
+		defer span.End()
+
 		buf, err := p.message.Marshal()
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal origin meta message")
@@ -132,6 +136,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 				return errors.Wrap(err, "failed to calculate heavy")
 			}
 			node = *h
+			span.Annotate(nil, fmt.Sprintf("Send StateID:%v to heavy", stateID.DebugString()))
 		} else {
 			inslogger.FromContext(ctx).Warnf("State not found on light. Go to light. StateID:%v, CurrentPN:%v", stateID.DebugString(), flow.Pulse(ctx))
 			jetID, err := p.dep.jetFetcher.Fetch(ctx, p.objectID, stateID.Pulse())
@@ -143,6 +148,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 				return errors.Wrap(err, "failed to calculate role")
 			}
 			node = *l
+			span.Annotate(nil, fmt.Sprintf("Send StateID:%v to light", stateID.DebugString()))
 		}
 
 		go func() {

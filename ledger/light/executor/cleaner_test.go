@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package replication
+package executor
 
 import (
 	"context"
@@ -30,7 +30,6 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/stretchr/testify/require"
 )
@@ -66,7 +65,7 @@ func TestCleaner_cleanPulse(t *testing.T) {
 		{ObjID: objID, LifelineLastUsed: insolar.PulseNumber(110)},
 	})
 
-	fc := executor.NewFilamentCleanerMock(ctrl)
+	fc := NewFilamentCleanerMock(ctrl)
 	fc.ClearMock.Expect(objID)
 
 	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, nil, ia, fc, 0, 0)
@@ -128,7 +127,7 @@ func TestCleaner_clean(t *testing.T) {
 			{ObjID: objID, LifelineLastUsed: insolar.PulseNumber(110)},
 		}
 	})
-	fc := executor.NewFilamentCleanerMock(ctrl)
+	fc := NewFilamentCleanerMock(ctrl)
 	fc.ClearMock.Expect(objID)
 
 	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, pc, ia, fc, limit, 1)
@@ -186,7 +185,7 @@ func TestLightCleaner_NotifyAboutPulse(t *testing.T) {
 			{ObjID: objID, LifelineLastUsed: insolar.PulseNumber(110)},
 		}
 	})
-	fc := executor.NewFilamentCleanerMock(ctrl)
+	fc := NewFilamentCleanerMock(ctrl)
 	fc.ClearMock.Expect(objID)
 
 	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, pc, ia, fc, limit, 1)

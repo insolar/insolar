@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
-	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -40,7 +39,7 @@ type SetRequest struct {
 	jetID     insolar.JetID
 
 	dep struct {
-		writer      hot.WriteAccessor
+		writer      executor.WriteAccessor
 		filament    executor.FilamentCalculator
 		sender      bus.Sender
 		locker      object.IndexLocker
@@ -67,7 +66,7 @@ func NewSetRequest(
 }
 
 func (p *SetRequest) Dep(
-	w hot.WriteAccessor,
+	w executor.WriteAccessor,
 	f executor.FilamentCalculator,
 	s bus.Sender,
 	l object.IndexLocker,
@@ -212,7 +211,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	// Start writing to db.
 	done, err := p.dep.writer.Begin(ctx, flow.Pulse(ctx))
 	if err != nil {
-		if err == hot.ErrWriteClosed {
+		if err == executor.ErrWriteClosed {
 			return flow.ErrCancelled
 		}
 		return err

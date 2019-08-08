@@ -25,7 +25,12 @@ import (
 type contextKey struct{}
 
 func FromContext(ctx context.Context) insolar.PulseNumber {
-	return ctx.Value(contextKey{}).(insolar.PulseNumber)
+	val := ctx.Value(contextKey{})
+	pn, ok := val.(insolar.PulseNumber)
+	if !ok {
+		panic("pulse not found in context (probable reason: accessing pulse outside of flow)")
+	}
+	return pn
 }
 
 func ContextWith(ctx context.Context, pn insolar.PulseNumber) context.Context {

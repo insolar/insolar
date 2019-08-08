@@ -71,7 +71,8 @@ type LogicRunner struct {
 	StateStorage               StateStorage
 	ResultsMatcher             ResultMatcher
 	OutgoingSender             OutgoingRequestSender
-	WriteController            *writecontroller.WriteController
+	WriteController            writecontroller.WriteController
+	FlowDispatcher             dispatcher.Dispatcher
 
 	Cfg *configuration.LogicRunner
 
@@ -80,11 +81,6 @@ type LogicRunner struct {
 	stopLock   sync.Mutex
 	isStopping bool
 	stopChan   chan struct{}
-
-	// Inner dispatcher will be merged with FlowDispatcher after
-	// complete migration to watermill.
-	FlowDispatcher      *dispatcher.Dispatcher
-	InnerFlowDispatcher *dispatcher.Dispatcher
 }
 
 // NewLogicRunner is constructor for LogicRunner
@@ -93,9 +89,9 @@ func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publi
 		return nil, errors.New("LogicRunner have nil configuration")
 	}
 	res := LogicRunner{
-		Cfg:             cfg,
-		Publisher:       publisher,
-		Sender:          sender,
+		Cfg:       cfg,
+		Publisher: publisher,
+		Sender:    sender,
 	}
 
 	res.ResultsMatcher = newResultsMatcher(&res)
@@ -138,14 +134,15 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 
 func (lr *LogicRunner) initHandlers() {
 	dep := &Dependencies{
-		Publisher:      lr.Publisher,
-		StateStorage:   lr.StateStorage,
-		ResultsMatcher: lr.ResultsMatcher,
-		lr:             lr,
-		Sender:         lr.Sender,
-		JetStorage:     lr.JetStorage,
-		WriteAccessor:  lr.WriteController,
-		OutgoingSender: lr.OutgoingSender,
+		Publisher:        lr.Publisher,
+		StateStorage:     lr.StateStorage,
+		ResultsMatcher:   lr.ResultsMatcher,
+		lr:               lr,
+		Sender:           lr.Sender,
+		JetStorage:       lr.JetStorage,
+		WriteAccessor:    lr.WriteController,
+		OutgoingSender:   lr.OutgoingSender,
+		RequestsExecutor: lr.RequestsExecutor,
 	}
 
 	initHandle := func(msg *watermillMsg.Message) *Init {
@@ -154,32 +151,14 @@ func (lr *LogicRunner) initHandlers() {
 			Message: msg,
 		}
 	}
-	lr.FlowDispatcher = dispatcher.NewDispatcher(
+	lr.FlowDispatcher = dispatcher.NewDispatcher(lr.PulseAccessor,
 		func(msg *watermillMsg.Message) flow.Handle {
 			return initHandle(msg).Present
-		},
-		func(msg *watermillMsg.Message) flow.Handle {
+		}, func(msg *watermillMsg.Message) flow.Handle {
 			return initHandle(msg).Future
-		},
-		func(msg *watermillMsg.Message) flow.Handle {
+		}, func(msg *watermillMsg.Message) flow.Handle {
 			return initHandle(msg).Past
-		},
-	)
-
-	innerInitHandle := func(msg *watermillMsg.Message) *InnerInit {
-		return &InnerInit{
-			dep:     dep,
-			Message: msg,
-		}
-	}
-
-	lr.InnerFlowDispatcher = dispatcher.NewDispatcher(func(msg *watermillMsg.Message) flow.Handle {
-		return innerInitHandle(msg).Present
-	}, func(msg *watermillMsg.Message) flow.Handle {
-		return innerInitHandle(msg).Present
-	}, func(msg *watermillMsg.Message) flow.Handle {
-		return innerInitHandle(msg).Present
-	})
+		})
 }
 
 func (lr *LogicRunner) initializeBuiltin(_ context.Context) error {
@@ -231,7 +210,6 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 	}
 
 	lr.ArtifactManager.InjectFinish()
-	lr.FlowDispatcher.PulseAccessor = lr.PulseAccessor
 
 	return nil
 }
@@ -279,9 +257,6 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newP
 	lr.ResultsMatcher.Clear()
 
 	messages := lr.StateStorage.OnPulse(ctx, newPulse)
-
-	lr.FlowDispatcher.ChangePulse(ctx, newPulse)
-	lr.InnerFlowDispatcher.ChangePulse(ctx, newPulse)
 
 	err = lr.WriteController.Open(ctx, newPulse.PulseNumber)
 	if err != nil {
@@ -358,14 +333,6 @@ func convertQueueToMessageQueue(ctx context.Context, queue []*Transcript) []mess
 	return mq
 }
 
-func (lr *LogicRunner) pulse(ctx context.Context) *insolar.Pulse {
-	p, err := lr.PulseAccessor.Latest(ctx)
-	if err != nil {
-		panic(err)
-	}
-	return &p
-}
-
 func contextWithServiceData(ctx context.Context, data message.ServiceData) context.Context {
 	// ctx := inslogger.ContextWithTrace(context.Background(), data.LogTraceID)
 	ctx = inslogger.ContextWithTrace(ctx, data.LogTraceID)
@@ -398,6 +365,11 @@ func freshContextFromContext(ctx context.Context) context.Context {
 	if ok {
 		res = instracer.WithParentSpan(res, parentSpan)
 	}
+
+	if pctx := trace.FromContext(ctx); pctx != nil {
+		res = trace.NewContext(res, pctx)
+	}
+
 	return res
 }
 
@@ -411,6 +383,9 @@ func freshContextFromContextAndRequest(ctx context.Context, req record.IncomingR
 	parentSpan, ok := instracer.ParentSpan(ctx)
 	if ok {
 		res = instracer.WithParentSpan(res, parentSpan)
+	}
+	if pctx := trace.FromContext(ctx); pctx != nil {
+		res = trace.NewContext(res, pctx)
 	}
 	return res
 }

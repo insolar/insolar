@@ -23,31 +23,31 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 
-	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/jet"
 	insolarMsg "github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 const InnerMsgTopic = "InnerMsg"
 
 type Dependencies struct {
-	Publisher      message.Publisher
-	StateStorage   StateStorage
-	ResultsMatcher ResultMatcher
-	lr             *LogicRunner
-	Sender         bus.Sender
-	JetStorage     jet.Storage
-	WriteAccessor  writecontroller.Accessor
-	OutgoingSender OutgoingRequestSender
+	Publisher        message.Publisher
+	StateStorage     StateStorage
+	ResultsMatcher   ResultMatcher
+	lr               *LogicRunner
+	Sender           bus.Sender
+	JetStorage       jet.Storage
+	WriteAccessor    writecontroller.Accessor
+	OutgoingSender   OutgoingRequestSender
+	RequestsExecutor RequestsExecutor
 }
 
 type Init struct {
@@ -192,14 +192,4 @@ func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 	}
 
 	return s.Present(ctx, f)
-}
-
-type InnerInit struct {
-	dep *Dependencies
-
-	Message *message.Message
-}
-
-func (s *InnerInit) Present(ctx context.Context, f flow.Flow) error {
-	return fmt.Errorf("[ InnerInit.Present ] no handler for message type %s", s.Message.Metadata.Get("Type"))
 }

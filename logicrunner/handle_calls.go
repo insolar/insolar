@@ -18,6 +18,7 @@ package logicrunner
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -45,7 +46,6 @@ func (h *HandleCall) sendToNextExecutor(
 	objectRef insolar.Reference,
 	requestRef insolar.Reference,
 	request record.IncomingRequest,
-	ps insolar.PendingState,
 ) {
 	// If the flow has canceled during ClarifyPendingState there are two possibilities.
 	// 1. It's possible that we were addding request to broker, the pulse has
@@ -70,7 +70,6 @@ func (h *HandleCall) sendToNextExecutor(
 		RequestRef:      requestRef,
 		Request:         request,
 		ServiceData:     serviceDataFromContext(ctx),
-		Pending:         ps,
 	}
 
 	_, err := h.dep.lr.MessageBus.Send(ctx, &additionalCallMsg, nil)
@@ -80,7 +79,7 @@ func (h *HandleCall) sendToNextExecutor(
 }
 
 func (h *HandleCall) checkExecutionLoop(
-	ctx context.Context, request record.IncomingRequest,
+	ctx context.Context, reqRef insolar.Reference, request record.IncomingRequest,
 ) bool {
 
 	if request.ReturnMode == record.ReturnNoWait {
@@ -99,7 +98,7 @@ func (h *HandleCall) checkExecutionLoop(
 		return false
 	}
 
-	if !archive.FindRequestLoop(ctx, request.APIRequestID) {
+	if !archive.FindRequestLoop(ctx, reqRef, request.APIRequestID) {
 		return false
 	}
 
@@ -133,20 +132,18 @@ func (h *HandleCall) handleActual(
 
 	request := msg.IncomingRequest
 
-	if h.checkExecutionLoop(ctx, request) {
-		return nil, errors.New("loop detected")
-	}
-
 	procRegisterRequest := NewRegisterIncomingRequest(request, h.dep)
-
 	if err := f.Procedure(ctx, procRegisterRequest, true); err != nil {
 		if err == flow.ErrCancelled {
+			inslogger.FromContext(ctx).Info("pulse change during registration, asking caller for retry")
 			// Requests need to be deduplicated. For now in case of ErrCancelled we may have 2 registered requests
 			return nil, err // message bus will retry on the calling side in ContractRequester
 		}
 		return nil, errors.Wrap(err, "[ HandleCall.handleActual ] can't create request")
 	}
-	requestRef := procRegisterRequest.getResult()
+
+	reqInfo := procRegisterRequest.getResult()
+	requestRef := insolar.NewReference(reqInfo.RequestID)
 
 	ctx, logger := inslogger.WithField(ctx, "request", requestRef.String())
 	logger.Debug("registered request")
@@ -158,30 +155,47 @@ func (h *HandleCall) handleActual(
 	if objRef == nil {
 		return nil, errors.New("can't get object reference")
 	}
+	if !objRef.Record().Equal(reqInfo.ObjectID) {
+		return nil, errors.New("object id we calculated doesn't match ledger")
+	}
+
+	registeredRequestReply := &reply.RegisterRequest{Request: *requestRef}
+
+	if len(reqInfo.Request) != 0 {
+		logger.Debug("duplicated request")
+	}
+
+	if len(reqInfo.Result) != 0 {
+		logger.Debug("request has result already")
+		go func() {
+			err := h.sendRequestResult(ctx, *objRef, *requestRef, request, *reqInfo)
+			if err != nil {
+				logger.Error("couldn't send request result: ", err.Error())
+			}
+		}()
+		return registeredRequestReply, nil
+	}
+
+	if h.checkExecutionLoop(ctx, *requestRef, request) {
+		return nil, errors.New("loop detected")
+	}
 
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
 	defer done()
 
-	if err == nil {
-		broker := h.dep.StateStorage.UpsertExecutionState(*objRef)
-
-		proc := AddFreshRequest{broker: broker, requestRef: *requestRef, request: request}
-		if err := f.Procedure(ctx, &proc, true); err != nil {
-			return nil, errors.Wrap(err, "couldn't pass request to broker")
-		}
-	} else {
-		pendingState := insolar.PendingUnknown
-		archive := h.dep.StateStorage.GetExecutionArchive(*objRef)
-		if archive != nil && !archive.IsEmpty() {
-			pendingState = insolar.InPending
-		}
-
-		h.sendToNextExecutor(ctx, *objRef, *requestRef, request, pendingState)
+	if err != nil {
+		go h.sendToNextExecutor(ctx, *objRef, *requestRef, request)
+		return registeredRequestReply, nil
 	}
 
-	return &reply.RegisterRequest{
-		Request: *requestRef,
-	}, nil
+	broker := h.dep.StateStorage.UpsertExecutionState(*objRef)
+
+	proc := AddFreshRequest{broker: broker, requestRef: *requestRef, request: request}
+	if err := f.Procedure(ctx, &proc, true); err != nil {
+		return nil, errors.Wrap(err, "couldn't pass request to broker")
+	}
+
+	return registeredRequestReply, nil
 }
 
 func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
@@ -205,5 +219,33 @@ func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
 		return sendErrorMessage(ctx, h.dep.Sender, h.Message, err)
 	}
 	go h.dep.Sender.Reply(ctx, h.Message, bus.ReplyAsMessage(ctx, rep))
+	return nil
+}
+
+func (h *HandleCall) sendRequestResult(
+	ctx context.Context,
+	objRef insolar.Reference,
+	reqRef insolar.Reference,
+	request record.IncomingRequest,
+	reqInfo payload.RequestInfo,
+) error {
+	logger := inslogger.FromContext(ctx)
+	logger.Debug("sending earlier")
+
+	rec := record.Material{}
+	err := rec.Unmarshal(reqInfo.Result)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal record")
+	}
+	virtual := record.Unwrap(&rec.Virtual)
+	resultRecord, ok := virtual.(*record.Result)
+	if !ok {
+		return fmt.Errorf("unexpected record %T", virtual)
+	}
+
+	repl := &reply.CallMethod{Result: resultRecord.Payload, Object: &objRef}
+	tr := NewTranscript(ctx, reqRef, request)
+	h.dep.RequestsExecutor.SendReply(ctx, tr, repl, nil)
+
 	return nil
 }
