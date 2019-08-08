@@ -218,7 +218,6 @@ func (m *executionProxyImplementation) SaveAsChild(
 		return err
 	}
 
-	// AALEKSEEV TODO move CallConstructor to OutgoingRequestSender
 	// Send the request
 	msg := &message.CallMethod{IncomingRequest: *incoming}
 	res, err := m.cr.Call(ctx, msg)
