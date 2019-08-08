@@ -28,10 +28,8 @@ Usage
         -i index
                 index of migration_daemon_{index}_member_keys.json file
      
-        -i address 
-                Smart contract address in the Insolar platform 
-                   (for example "1tJDL5m9pKyq2mbanYfgwQ5rSQdrpsXbzc1Dk7a53d.1tJDJLGWcX3TCXZMzZodTYWZyJGVdsajgGqyq8Vidw",
-                   default using RootMember address)
+        -f file
+                filename of JSON file with params
 
 
 ### Params file structure
