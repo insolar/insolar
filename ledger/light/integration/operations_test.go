@@ -75,33 +75,11 @@ func CallGetCode(ctx context.Context, s *Server, id insolar.ID) payload.Payload 
 	return nil
 }
 
-func MakeSetIncomingRequest(objectID, reasonID insolar.ID, isCreation, isAPI bool) (payload.SetIncomingRequest, record.Virtual) {
-	args := make([]byte, 100)
-	_, err := rand.Read(args)
-	panicIfErr(err)
-
-	req := record.IncomingRequest{
-		Arguments: args,
-		Reason:    *insolar.NewReference(reasonID),
-	}
-	if isCreation {
-		req.CallType = record.CTSaveAsChild
-	} else {
-		req.Object = insolar.NewReference(objectID)
-	}
-	if isAPI {
-		req.APINode = gen.Reference()
-	} else {
-		req.Caller = gen.Reference()
-	}
-	rec := record.Wrap(&req)
-	pl := payload.SetIncomingRequest{
-		Request: rec,
-	}
-	return pl, rec
+func MakeSetIncomingRequestFromAPI(objectID, reasonID insolar.ID, isCreation bool) (payload.SetIncomingRequest, record.Virtual) {
+	return MakeSetIncomingRequest(objectID, reasonID, insolar.ID{}, isCreation, true)
 }
 
-func MakeSetIncomingRequestWReasonObject(objectID, reasonID insolar.ID, reasonObjectID insolar.ID, isCreation, isAPI bool) (payload.SetIncomingRequest, record.Virtual) {
+func MakeSetIncomingRequest(objectID, reasonID insolar.ID, reasonObjectID insolar.ID, isCreation, isAPI bool) (payload.SetIncomingRequest, record.Virtual) {
 	args := make([]byte, 100)
 	_, err := rand.Read(args)
 	panicIfErr(err)
