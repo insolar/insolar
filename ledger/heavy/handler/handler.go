@@ -57,6 +57,7 @@ type Handler struct {
 	JetModifier   jet.Modifier
 	JetAccessor   jet.Accessor
 	JetKeeper     executor.JetKeeper
+	BackupMaker   executor.BackupMaker
 
 	Sender          bus.Sender
 	StartPulse      pulse.StartPulse
@@ -64,15 +65,13 @@ type Handler struct {
 	JetTree         jet.Storage
 	DropDB          *drop.DB
 
-	jetID insolar.JetID
-	dep   *proc.Dependencies
+	dep *proc.Dependencies
 }
 
 // New creates a new handler.
 func New(cfg configuration.Ledger) *Handler {
 	h := &Handler{
-		cfg:   cfg,
-		jetID: insolar.ZeroJetID,
+		cfg: cfg,
 	}
 	dep := proc.Dependencies{
 		PassState: func(p *proc.PassState) {
@@ -97,9 +96,11 @@ func New(cfg configuration.Ledger) *Handler {
 				h.RecordPositions,
 				h.PCS,
 				h.PulseAccessor,
+				h.PulseCalculator,
 				h.DropModifier,
 				h.JetModifier,
 				h.JetKeeper,
+				h.BackupMaker,
 			)
 		},
 		SendJet: func(p *proc.SendJet) {
@@ -295,9 +296,15 @@ func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Met
 		return
 	}
 
-	logger.Debug("handleGotHotConfirmation. pulse: ", confirm.Pulse, ". jet: ", confirm.JetID.DebugString())
+	logger.Debug("handleGotHotConfirmation. pulse: ", confirm.Pulse, ". jet: ", confirm.JetID.DebugString(), ". Split: ", confirm.Split)
 
-	err = h.JetModifier.Update(ctx, confirm.Pulse, true, confirm.JetID)
+	next, err := h.PulseCalculator.Forwards(ctx, confirm.Pulse, 1)
+	if err != nil {
+		logger.Error("failed to get next pulse for ", confirm.Pulse, err)
+		return
+	}
+
+	err = h.JetModifier.Update(ctx, next.PulseNumber, true, confirm.JetID)
 	if err != nil {
 		logger.Error(errors.Wrapf(err, "failed to update jet %s", confirm.JetID.DebugString()))
 		return
@@ -306,7 +313,7 @@ func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Met
 	err = h.JetKeeper.AddHotConfirmation(ctx, confirm.Pulse, confirm.JetID, confirm.Split)
 	if err != nil {
 		logger.Error(errors.Wrapf(err, "failed to add hot confitmation to JetKeeper jet=%v", confirm.String()))
-	} else {
-		logger.Debug("got confirmation: ", confirm.String())
 	}
+
+	proc.FinalizePulse(ctx, h.PulseCalculator, h.BackupMaker, h.JetKeeper, confirm.Pulse)
 }

@@ -16,6 +16,8 @@
 
 package store
 
+import "io"
+
 //go:generate minimock -i github.com/insolar/insolar/insolar/store.DB -o ./ -s _gen_mock.go -g
 
 // DB provides a simple key-value store interface for persisting data.
@@ -26,6 +28,14 @@ type DB interface {
 	Set(key Key, value []byte) error
 	Delete(key Key) error
 	NewIterator(pivot Key, reverse bool) Iterator
+}
+
+// Backuper provides interface for making backups
+type Backuper interface {
+	// Backup does incremental backup starting from 'since' timestamp and write result to 'to' parameter.
+	// It returns a timestamp indicating when the entries were dumped which can be passed into a
+	// later invocation to generate an incremental dump.
+	Backup(to io.Writer, since uint64) (uint64, error)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/insolar/store.Iterator -o ./ -s _gen_mock.go -g

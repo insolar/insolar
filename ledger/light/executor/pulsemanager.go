@@ -127,10 +127,11 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	{
 		m.dispatcher.ClosePulse(ctx, newPulse)
 
-		createDrops := !justJoined
-		jets, err = m.jetSplitter.Do(ctx, endedPulse.PulseNumber, newPulse.PulseNumber, jets, createDrops)
-		if err != nil {
-			panic(errors.Wrap(err, "failed to split jets"))
+		if !justJoined {
+			jets, err = m.jetSplitter.Do(ctx, endedPulse.PulseNumber, newPulse.PulseNumber, jets, true)
+			if err != nil {
+				panic(errors.Wrap(err, "failed to split jets"))
+			}
 		}
 
 		m.jetReleaser.CloseAllUntil(ctx, endedPulse.PulseNumber)

@@ -116,16 +116,37 @@ func (p *SendInitialState) sendForNetworkStart(
 	var IDs []insolar.JetID
 	var drops [][]byte
 	for _, id := range p.dep.jetTree.All(ctx, topSyncPulse.PulseNumber) {
-		light, err := p.dep.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(id), req.Pulse)
+		dr, err := p.dep.dropDB.ForPulse(ctx, id, topSyncPulse.PulseNumber)
 		if err != nil {
-			logger.Fatal("Couldn't receive light executor for jet: ", id, " ", err)
+			logger.Fatal("Couldn't get drops for jet: ", id.DebugString(), " ", err)
 		}
-		if light.Equal(p.meta.Sender) {
-			IDs = append(IDs, id)
-			dr, err := p.dep.dropDB.ForPulse(ctx, id, topSyncPulse.PulseNumber)
+
+		var possibleIDs []insolar.JetID
+		if dr.Split {
+			left, right := jet.Siblings(id)
+			possibleIDs = append(possibleIDs, left, right)
+		} else {
+			possibleIDs = append(possibleIDs, id)
+		}
+
+		logger.Debug("sendForNetworkStart. Split: ", dr.Split, ",  Possible jets: ", insolar.JetIDCollection(possibleIDs).DebugString())
+		var shouldAddDrop bool
+		for _, jetID := range possibleIDs {
+			err := p.dep.jetTree.Update(ctx, req.Pulse, true, jetID)
 			if err != nil {
-				logger.Fatal("Couldn't get drops for jet: ", id, " ", err)
+				logger.Fatal("sendForNetworkStart. Couldn't update jet tree", jetID.DebugString(), " ", err)
 			}
+			light, err := p.dep.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(jetID), req.Pulse)
+			if err != nil {
+				logger.Fatal("Couldn't receive light executor for jet (jet): ", jetID.DebugString(), " ", err)
+			}
+			if light.Equal(p.meta.Sender) {
+				shouldAddDrop = true
+				IDs = append(IDs, jetID)
+			}
+		}
+		// we should do it once to prevent override
+		if shouldAddDrop {
 			drops = append(drops, drop.MustEncode(&dr))
 		}
 	}

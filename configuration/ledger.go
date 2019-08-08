@@ -50,9 +50,46 @@ type Ledger struct {
 	// IMPORTANT: It should be the same on ALL nodes.
 	LightChainLimit int
 
+	// Backup holds configuration of BackupMaker
+	Backup Backup
+
 	// CleanerDelay holds value of pulses, that should happen before end of LightChainLimit and start
 	// of LME's data cleaning
 	CleanerDelay int
+}
+
+// Backup holds configuration for backuping.
+type Backup struct {
+	// Enabled switches on backuping
+	Enabled bool
+
+	// TmpDirectory is directory for tmp storage of backup data. Must be created
+	TmpDirectory string
+
+	// TargetDirectory is directory where backups will be moved to
+	TargetDirectory string
+
+	// MetaInfoFile contains meta info about backup. It will be in json format
+	MetaInfoFile string
+
+	// ConfirmFile: we wait this file being created when backup was saved on remote host
+	ConfirmFile string
+
+	// BackupFile is file with incremental backup data
+	BackupFile string
+
+	// DirNameTemplate is template for saving current incremental backup. Should be like "pulse-%d"
+	DirNameTemplate string
+
+	// BackupWaitPeriod - how much time we will wait for appearing of file ConfirmFile
+	BackupWaitPeriod uint
+
+	// Paths:
+	// Every incremental backup live in  TargetDirectory/"DirNameTemplate"%<pulse_number>
+	// and it contains:
+	// incr.bkp - backup file
+	// MetaInfoFile - meta info about current backup
+	// ConfirmFile - must be set from inside. When it appear it means that we successfully saved the backup
 }
 
 // NewLedger creates new default Ledger configuration.
@@ -70,6 +107,15 @@ func NewLedger() Ledger {
 			DepthLimit:             10, // limit to 1024 jets
 		},
 		LightChainLimit: 5, // 5 pulses
-		CleanerDelay:    3, // 3 pulses
+
+		Backup: Backup{
+			Enabled:          false,
+			DirNameTemplate:  "pulse-%d",
+			BackupWaitPeriod: 60,
+			MetaInfoFile:     "meta.json",
+			BackupFile:       "incr.bkp",
+		},
+
+		CleanerDelay: 3, // 3 pulses
 	}
 }
