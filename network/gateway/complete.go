@@ -53,11 +53,17 @@ package gateway
 import (
 	"context"
 	"fmt"
+	"os"
+	"syscall"
 	"time"
 
+	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
+	"github.com/insolar/insolar/network/rules"
+	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/certificate"
 
@@ -71,15 +77,24 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-func NewComplete(b *Base) *Complete {
-	return &Complete{Base: b}
+func newComplete(b *Base) *Complete {
+	return &Complete{
+		Base: b,
+	}
 }
 
 type Complete struct {
 	*Base
 }
 
-func (g *Complete) Run(ctx context.Context) {
+func (g *Complete) Run(ctx context.Context, pulse insolar.Pulse) {
+	if pulse.EpochPulseNumber > insolar.EphemeralPulseEpoch {
+		err := g.PulseManager.Set(ctx, pulse)
+		if err != nil {
+			inslogger.FromContext(ctx).Panicf("failed to set start pulse: %d, %s", pulse.PulseNumber, err.Error())
+		}
+	}
+
 	g.HostNetwork.RegisterRequestHandler(types.SignCert, g.signCertHandler)
 	metrics.NetworkComplete.Set(float64(time.Now().Unix()))
 }
@@ -88,26 +103,8 @@ func (g *Complete) GetState() insolar.NetworkState {
 	return insolar.CompleteNetworkState
 }
 
-func (g *Complete) OnPulse(ctx context.Context, pu insolar.Pulse) error {
-
-	logger := inslogger.FromContext(ctx)
-	logger.Debugf("Gateway.Complete: pulse happens %d", pu.PulseNumber)
-	logger.Debugf("Before set new current pulse number: %d", pu.PulseNumber)
-	err := g.PulseManager.Set(ctx, pu)
-	if err != nil {
-		logger.Fatalf("Failed to set new pulse: %s", err.Error())
-	}
-	logger.Infof("Set new current pulse number: %d", pu.PulseNumber)
-
-	return nil
-}
-
-func (g *Complete) NeedLockMessageBus() bool {
-	return false
-}
-
-func (g *Complete) FilterJoinerNodes(certificate insolar.Certificate, nodes []insolar.NetworkNode) []insolar.NetworkNode {
-	return nodes
+func (g *Complete) NetworkOperable() bool {
+	return true
 }
 
 // ValidateCert validates node certificate
@@ -212,4 +209,67 @@ func (g *Complete) signCertHandler(ctx context.Context, request network.Received
 	}
 
 	return g.HostNetwork.BuildResponse(ctx, request, &packet.SignCertResponse{Sign: sign}), nil
+}
+
+func (g *Complete) EphemeralMode(nodes []insolar.NetworkNode) bool {
+	return false
+}
+
+func (g *Complete) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
+	logger := inslogger.FromContext(ctx)
+
+	if ok, _ := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), nodes); !ok {
+		logger.Fatal("MajorityRule failed")
+	}
+
+	if !rules.CheckMinRole(g.CertificateManager.GetCertificate(), nodes) {
+		logger.Fatal("MinRole failed")
+	}
+
+	g.Base.UpdateState(ctx, pulseNumber, nodes, cloudStateHash)
+}
+
+func (g *Complete) OnPulseFromConsensus(ctx context.Context, pulse insolar.Pulse) {
+	g.Base.OnPulseFromConsensus(ctx, pulse)
+
+	done := make(chan struct{})
+	defer close(done)
+	pulseProcessingWatchdog(ctx, pulse, done)
+
+	logger := inslogger.FromContext(ctx)
+
+	logger.Infof("Got new pulse number: %d", pulse.PulseNumber)
+	ctx, span := instracer.StartSpan(ctx, "ServiceNetwork.Handlepulse")
+	span.AddAttributes(
+		trace.Int64Attribute("pulse.PulseNumber", int64(pulse.PulseNumber)),
+	)
+	defer span.End()
+
+	err := g.PulseManager.Set(ctx, pulse)
+	if err != nil {
+		logger.Fatalf("Failed to set new pulse: %s", err.Error())
+	}
+	logger.Infof("Set new current pulse number: %d", pulse.PulseNumber)
+}
+
+func pulseProcessingWatchdog(ctx context.Context, pulse insolar.Pulse, done chan struct{}) {
+	logger := inslogger.FromContext(ctx)
+
+	go func() {
+		select {
+		case <-time.After(time.Second * time.Duration(pulse.NextPulseNumber-pulse.PulseNumber)):
+			logger.Errorf("Node stopped due to long pulse processing %v", pulse.PulseNumber)
+
+			proc, err := os.FindProcess(os.Getpid())
+			if err != nil {
+				log.Error(err)
+			} else {
+				err := proc.Signal(syscall.SIGABRT)
+				if err != nil {
+					panic(err)
+				}
+			}
+		case <-done:
+		}
+	}()
 }

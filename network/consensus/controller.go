@@ -51,6 +51,7 @@
 package consensus
 
 import (
+	"context"
 	"sync"
 
 	"github.com/insolar/insolar/network"
@@ -132,11 +133,11 @@ func (c *controller) RegisterFinishedNotifier(fn network.OnConsensusFinished) {
 	c.notifiers = append(c.notifiers, fn)
 }
 
-func (c *controller) onFinished(report network.Report) {
+func (c *controller) onFinished(ctx context.Context, report network.Report) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
 	for _, n := range c.notifiers {
-		go n(report)
+		go n(ctx, report)
 	}
 }

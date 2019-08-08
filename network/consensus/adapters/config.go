@@ -73,7 +73,7 @@ var defaultRoundTimings = api.RoundTimings{
 	BeforeInPhase3ChasingDelay: 0 * time.Millisecond,
 }
 
-//var _ api.LocalNodeConfiguration = &LocalNodeConfiguration{}
+// var _ api.LocalNodeConfiguration = &LocalNodeConfiguration{}
 
 type LocalNodeConfiguration struct {
 	ctx            context.Context

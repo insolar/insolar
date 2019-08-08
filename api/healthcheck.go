@@ -17,6 +17,10 @@
 package api
 
 import (
+	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
+	"github.com/pkg/errors"
 	"net/http"
 
 	"github.com/insolar/insolar/insolar"
@@ -25,19 +29,29 @@ import (
 // HealthChecker allows to check network status of a node.
 type HealthChecker struct {
 	CertificateManager insolar.CertificateManager
-	NodeNetwork        insolar.NodeNetwork
+	NodeNetwork        network.NodeNetwork
+	PulseAccessor      pulse.Accessor
 }
 
 // NewHealthChecker creates new HealthChecker.
-func NewHealthChecker(cm insolar.CertificateManager, nn insolar.NodeNetwork) *HealthChecker {
-	return &HealthChecker{CertificateManager: cm, NodeNetwork: nn}
+func NewHealthChecker(cm insolar.CertificateManager, nn network.NodeNetwork, pa pulse.Accessor) *HealthChecker {
+	return &HealthChecker{CertificateManager: cm, NodeNetwork: nn, PulseAccessor: pa}
 }
 
 // CheckHandler is a HTTP handler for health check.
 func (hc *HealthChecker) CheckHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
+
+	ctx := r.Context()
+	p, err := hc.PulseAccessor.Latest(ctx)
+	if err != nil {
+		err := errors.Wrap(err, "failed to get latest pulse")
+		inslogger.FromContext(ctx).Errorf("[ NodeService.GetStatus ] %s", err.Error())
+		_, _ = w.Write([]byte("FAIL"))
+		return
+	}
 	for _, node := range hc.CertificateManager.GetCertificate().GetDiscoveryNodes() {
-		if hc.NodeNetwork.GetWorkingNode(*node.GetNodeRef()) == nil {
+		if hc.NodeNetwork.GetAccessor(p.PulseNumber).GetWorkingNode(*node.GetNodeRef()) == nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			_, _ = w.Write([]byte("FAIL"))
 			return

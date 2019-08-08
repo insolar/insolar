@@ -578,29 +578,6 @@ func testLessFunc(c profiles.ActiveNode, o profiles.ActiveNode) bool {
 	return c.GetIndex() < o.GetIndex()
 }
 
-func TestSort(t *testing.T) {
-	t.Skip("blinking")
-
-	dp := DynamicPopulation{}
-	dp.slotByID = make(map[insolar.ShortNodeID]*updatableSlot, 2)
-	sp1 := profiles.NewStaticProfileMock(t)
-	nodeID1 := insolar.ShortNodeID(2)
-	sp1.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return nodeID1 })
-	dp.AddProfile(sp1)
-	sp2 := profiles.NewStaticProfileMock(t)
-	nodeID2 := insolar.ShortNodeID(1)
-	sp2.GetStaticNodeIDMock.Set(func() insolar.ShortNodeID { return nodeID2 })
-	dp.AddProfile(sp2)
-	require.Zero(t, dp.slotByID[1].index)
-
-	require.Zero(t, dp.slotByID[2].index)
-
-	dp.Sort(testLessFunc)
-	require.Equal(t, member.Index(1), dp.slotByID[1].index)
-
-	require.Zero(t, dp.slotByID[2].index)
-}
-
 func TestDPGetProfiles(t *testing.T) {
 	dp := DynamicPopulation{}
 	dp.slotByID = make(map[insolar.ShortNodeID]*updatableSlot, 1)
