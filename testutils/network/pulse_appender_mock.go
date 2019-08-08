@@ -16,11 +16,11 @@ import (
 type PulseAppenderMock struct {
 	t minimock.Tester
 
-	funcAppend          func(ctx context.Context, pulse insolar.Pulse) (err error)
-	inspectFuncAppend   func(ctx context.Context, pulse insolar.Pulse)
-	afterAppendCounter  uint64
-	beforeAppendCounter uint64
-	AppendMock          mPulseAppenderMockAppend
+	funcAppendPulse          func(ctx context.Context, pulse insolar.Pulse) (err error)
+	inspectFuncAppendPulse   func(ctx context.Context, pulse insolar.Pulse)
+	afterAppendPulseCounter  uint64
+	beforeAppendPulseCounter uint64
+	AppendPulseMock          mPulseAppenderMockAppendPulse
 }
 
 // NewPulseAppenderMock returns a mock for storage.PulseAppender
@@ -30,232 +30,232 @@ func NewPulseAppenderMock(t minimock.Tester) *PulseAppenderMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.AppendMock = mPulseAppenderMockAppend{mock: m}
-	m.AppendMock.callArgs = []*PulseAppenderMockAppendParams{}
+	m.AppendPulseMock = mPulseAppenderMockAppendPulse{mock: m}
+	m.AppendPulseMock.callArgs = []*PulseAppenderMockAppendPulseParams{}
 
 	return m
 }
 
-type mPulseAppenderMockAppend struct {
+type mPulseAppenderMockAppendPulse struct {
 	mock               *PulseAppenderMock
-	defaultExpectation *PulseAppenderMockAppendExpectation
-	expectations       []*PulseAppenderMockAppendExpectation
+	defaultExpectation *PulseAppenderMockAppendPulseExpectation
+	expectations       []*PulseAppenderMockAppendPulseExpectation
 
-	callArgs []*PulseAppenderMockAppendParams
+	callArgs []*PulseAppenderMockAppendPulseParams
 	mutex    sync.RWMutex
 }
 
-// PulseAppenderMockAppendExpectation specifies expectation struct of the PulseAppender.Append
-type PulseAppenderMockAppendExpectation struct {
+// PulseAppenderMockAppendPulseExpectation specifies expectation struct of the PulseAppender.AppendPulse
+type PulseAppenderMockAppendPulseExpectation struct {
 	mock    *PulseAppenderMock
-	params  *PulseAppenderMockAppendParams
-	results *PulseAppenderMockAppendResults
+	params  *PulseAppenderMockAppendPulseParams
+	results *PulseAppenderMockAppendPulseResults
 	Counter uint64
 }
 
-// PulseAppenderMockAppendParams contains parameters of the PulseAppender.Append
-type PulseAppenderMockAppendParams struct {
+// PulseAppenderMockAppendPulseParams contains parameters of the PulseAppender.AppendPulse
+type PulseAppenderMockAppendPulseParams struct {
 	ctx   context.Context
 	pulse insolar.Pulse
 }
 
-// PulseAppenderMockAppendResults contains results of the PulseAppender.Append
-type PulseAppenderMockAppendResults struct {
+// PulseAppenderMockAppendPulseResults contains results of the PulseAppender.AppendPulse
+type PulseAppenderMockAppendPulseResults struct {
 	err error
 }
 
-// Expect sets up expected params for PulseAppender.Append
-func (mmAppend *mPulseAppenderMockAppend) Expect(ctx context.Context, pulse insolar.Pulse) *mPulseAppenderMockAppend {
-	if mmAppend.mock.funcAppend != nil {
-		mmAppend.mock.t.Fatalf("PulseAppenderMock.Append mock is already set by Set")
+// Expect sets up expected params for PulseAppender.AppendPulse
+func (mmAppendPulse *mPulseAppenderMockAppendPulse) Expect(ctx context.Context, pulse insolar.Pulse) *mPulseAppenderMockAppendPulse {
+	if mmAppendPulse.mock.funcAppendPulse != nil {
+		mmAppendPulse.mock.t.Fatalf("PulseAppenderMock.AppendPulse mock is already set by Set")
 	}
 
-	if mmAppend.defaultExpectation == nil {
-		mmAppend.defaultExpectation = &PulseAppenderMockAppendExpectation{}
+	if mmAppendPulse.defaultExpectation == nil {
+		mmAppendPulse.defaultExpectation = &PulseAppenderMockAppendPulseExpectation{}
 	}
 
-	mmAppend.defaultExpectation.params = &PulseAppenderMockAppendParams{ctx, pulse}
-	for _, e := range mmAppend.expectations {
-		if minimock.Equal(e.params, mmAppend.defaultExpectation.params) {
-			mmAppend.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmAppend.defaultExpectation.params)
+	mmAppendPulse.defaultExpectation.params = &PulseAppenderMockAppendPulseParams{ctx, pulse}
+	for _, e := range mmAppendPulse.expectations {
+		if minimock.Equal(e.params, mmAppendPulse.defaultExpectation.params) {
+			mmAppendPulse.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmAppendPulse.defaultExpectation.params)
 		}
 	}
 
-	return mmAppend
+	return mmAppendPulse
 }
 
-// Inspect accepts an inspector function that has same arguments as the PulseAppender.Append
-func (mmAppend *mPulseAppenderMockAppend) Inspect(f func(ctx context.Context, pulse insolar.Pulse)) *mPulseAppenderMockAppend {
-	if mmAppend.mock.inspectFuncAppend != nil {
-		mmAppend.mock.t.Fatalf("Inspect function is already set for PulseAppenderMock.Append")
+// Inspect accepts an inspector function that has same arguments as the PulseAppender.AppendPulse
+func (mmAppendPulse *mPulseAppenderMockAppendPulse) Inspect(f func(ctx context.Context, pulse insolar.Pulse)) *mPulseAppenderMockAppendPulse {
+	if mmAppendPulse.mock.inspectFuncAppendPulse != nil {
+		mmAppendPulse.mock.t.Fatalf("Inspect function is already set for PulseAppenderMock.AppendPulse")
 	}
 
-	mmAppend.mock.inspectFuncAppend = f
+	mmAppendPulse.mock.inspectFuncAppendPulse = f
 
-	return mmAppend
+	return mmAppendPulse
 }
 
-// Return sets up results that will be returned by PulseAppender.Append
-func (mmAppend *mPulseAppenderMockAppend) Return(err error) *PulseAppenderMock {
-	if mmAppend.mock.funcAppend != nil {
-		mmAppend.mock.t.Fatalf("PulseAppenderMock.Append mock is already set by Set")
+// Return sets up results that will be returned by PulseAppender.AppendPulse
+func (mmAppendPulse *mPulseAppenderMockAppendPulse) Return(err error) *PulseAppenderMock {
+	if mmAppendPulse.mock.funcAppendPulse != nil {
+		mmAppendPulse.mock.t.Fatalf("PulseAppenderMock.AppendPulse mock is already set by Set")
 	}
 
-	if mmAppend.defaultExpectation == nil {
-		mmAppend.defaultExpectation = &PulseAppenderMockAppendExpectation{mock: mmAppend.mock}
+	if mmAppendPulse.defaultExpectation == nil {
+		mmAppendPulse.defaultExpectation = &PulseAppenderMockAppendPulseExpectation{mock: mmAppendPulse.mock}
 	}
-	mmAppend.defaultExpectation.results = &PulseAppenderMockAppendResults{err}
-	return mmAppend.mock
+	mmAppendPulse.defaultExpectation.results = &PulseAppenderMockAppendPulseResults{err}
+	return mmAppendPulse.mock
 }
 
-//Set uses given function f to mock the PulseAppender.Append method
-func (mmAppend *mPulseAppenderMockAppend) Set(f func(ctx context.Context, pulse insolar.Pulse) (err error)) *PulseAppenderMock {
-	if mmAppend.defaultExpectation != nil {
-		mmAppend.mock.t.Fatalf("Default expectation is already set for the PulseAppender.Append method")
+//Set uses given function f to mock the PulseAppender.AppendPulse method
+func (mmAppendPulse *mPulseAppenderMockAppendPulse) Set(f func(ctx context.Context, pulse insolar.Pulse) (err error)) *PulseAppenderMock {
+	if mmAppendPulse.defaultExpectation != nil {
+		mmAppendPulse.mock.t.Fatalf("Default expectation is already set for the PulseAppender.AppendPulse method")
 	}
 
-	if len(mmAppend.expectations) > 0 {
-		mmAppend.mock.t.Fatalf("Some expectations are already set for the PulseAppender.Append method")
+	if len(mmAppendPulse.expectations) > 0 {
+		mmAppendPulse.mock.t.Fatalf("Some expectations are already set for the PulseAppender.AppendPulse method")
 	}
 
-	mmAppend.mock.funcAppend = f
-	return mmAppend.mock
+	mmAppendPulse.mock.funcAppendPulse = f
+	return mmAppendPulse.mock
 }
 
-// When sets expectation for the PulseAppender.Append which will trigger the result defined by the following
+// When sets expectation for the PulseAppender.AppendPulse which will trigger the result defined by the following
 // Then helper
-func (mmAppend *mPulseAppenderMockAppend) When(ctx context.Context, pulse insolar.Pulse) *PulseAppenderMockAppendExpectation {
-	if mmAppend.mock.funcAppend != nil {
-		mmAppend.mock.t.Fatalf("PulseAppenderMock.Append mock is already set by Set")
+func (mmAppendPulse *mPulseAppenderMockAppendPulse) When(ctx context.Context, pulse insolar.Pulse) *PulseAppenderMockAppendPulseExpectation {
+	if mmAppendPulse.mock.funcAppendPulse != nil {
+		mmAppendPulse.mock.t.Fatalf("PulseAppenderMock.AppendPulse mock is already set by Set")
 	}
 
-	expectation := &PulseAppenderMockAppendExpectation{
-		mock:   mmAppend.mock,
-		params: &PulseAppenderMockAppendParams{ctx, pulse},
+	expectation := &PulseAppenderMockAppendPulseExpectation{
+		mock:   mmAppendPulse.mock,
+		params: &PulseAppenderMockAppendPulseParams{ctx, pulse},
 	}
-	mmAppend.expectations = append(mmAppend.expectations, expectation)
+	mmAppendPulse.expectations = append(mmAppendPulse.expectations, expectation)
 	return expectation
 }
 
-// Then sets up PulseAppender.Append return parameters for the expectation previously defined by the When method
-func (e *PulseAppenderMockAppendExpectation) Then(err error) *PulseAppenderMock {
-	e.results = &PulseAppenderMockAppendResults{err}
+// Then sets up PulseAppender.AppendPulse return parameters for the expectation previously defined by the When method
+func (e *PulseAppenderMockAppendPulseExpectation) Then(err error) *PulseAppenderMock {
+	e.results = &PulseAppenderMockAppendPulseResults{err}
 	return e.mock
 }
 
-// Append implements storage.PulseAppender
-func (mmAppend *PulseAppenderMock) Append(ctx context.Context, pulse insolar.Pulse) (err error) {
-	mm_atomic.AddUint64(&mmAppend.beforeAppendCounter, 1)
-	defer mm_atomic.AddUint64(&mmAppend.afterAppendCounter, 1)
+// AppendPulse implements storage.PulseAppender
+func (mmAppendPulse *PulseAppenderMock) AppendPulse(ctx context.Context, pulse insolar.Pulse) (err error) {
+	mm_atomic.AddUint64(&mmAppendPulse.beforeAppendPulseCounter, 1)
+	defer mm_atomic.AddUint64(&mmAppendPulse.afterAppendPulseCounter, 1)
 
-	if mmAppend.inspectFuncAppend != nil {
-		mmAppend.inspectFuncAppend(ctx, pulse)
+	if mmAppendPulse.inspectFuncAppendPulse != nil {
+		mmAppendPulse.inspectFuncAppendPulse(ctx, pulse)
 	}
 
-	params := &PulseAppenderMockAppendParams{ctx, pulse}
+	params := &PulseAppenderMockAppendPulseParams{ctx, pulse}
 
 	// Record call args
-	mmAppend.AppendMock.mutex.Lock()
-	mmAppend.AppendMock.callArgs = append(mmAppend.AppendMock.callArgs, params)
-	mmAppend.AppendMock.mutex.Unlock()
+	mmAppendPulse.AppendPulseMock.mutex.Lock()
+	mmAppendPulse.AppendPulseMock.callArgs = append(mmAppendPulse.AppendPulseMock.callArgs, params)
+	mmAppendPulse.AppendPulseMock.mutex.Unlock()
 
-	for _, e := range mmAppend.AppendMock.expectations {
+	for _, e := range mmAppendPulse.AppendPulseMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
 	}
 
-	if mmAppend.AppendMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmAppend.AppendMock.defaultExpectation.Counter, 1)
-		want := mmAppend.AppendMock.defaultExpectation.params
-		got := PulseAppenderMockAppendParams{ctx, pulse}
+	if mmAppendPulse.AppendPulseMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmAppendPulse.AppendPulseMock.defaultExpectation.Counter, 1)
+		want := mmAppendPulse.AppendPulseMock.defaultExpectation.params
+		got := PulseAppenderMockAppendPulseParams{ctx, pulse}
 		if want != nil && !minimock.Equal(*want, got) {
-			mmAppend.t.Errorf("PulseAppenderMock.Append got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+			mmAppendPulse.t.Errorf("PulseAppenderMock.AppendPulse got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
 
-		results := mmAppend.AppendMock.defaultExpectation.results
+		results := mmAppendPulse.AppendPulseMock.defaultExpectation.results
 		if results == nil {
-			mmAppend.t.Fatal("No results are set for the PulseAppenderMock.Append")
+			mmAppendPulse.t.Fatal("No results are set for the PulseAppenderMock.AppendPulse")
 		}
 		return (*results).err
 	}
-	if mmAppend.funcAppend != nil {
-		return mmAppend.funcAppend(ctx, pulse)
+	if mmAppendPulse.funcAppendPulse != nil {
+		return mmAppendPulse.funcAppendPulse(ctx, pulse)
 	}
-	mmAppend.t.Fatalf("Unexpected call to PulseAppenderMock.Append. %v %v", ctx, pulse)
+	mmAppendPulse.t.Fatalf("Unexpected call to PulseAppenderMock.AppendPulse. %v %v", ctx, pulse)
 	return
 }
 
-// AppendAfterCounter returns a count of finished PulseAppenderMock.Append invocations
-func (mmAppend *PulseAppenderMock) AppendAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmAppend.afterAppendCounter)
+// AppendPulseAfterCounter returns a count of finished PulseAppenderMock.AppendPulse invocations
+func (mmAppendPulse *PulseAppenderMock) AppendPulseAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmAppendPulse.afterAppendPulseCounter)
 }
 
-// AppendBeforeCounter returns a count of PulseAppenderMock.Append invocations
-func (mmAppend *PulseAppenderMock) AppendBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmAppend.beforeAppendCounter)
+// AppendPulseBeforeCounter returns a count of PulseAppenderMock.AppendPulse invocations
+func (mmAppendPulse *PulseAppenderMock) AppendPulseBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmAppendPulse.beforeAppendPulseCounter)
 }
 
-// Calls returns a list of arguments used in each call to PulseAppenderMock.Append.
+// Calls returns a list of arguments used in each call to PulseAppenderMock.AppendPulse.
 // The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmAppend *mPulseAppenderMockAppend) Calls() []*PulseAppenderMockAppendParams {
-	mmAppend.mutex.RLock()
+func (mmAppendPulse *mPulseAppenderMockAppendPulse) Calls() []*PulseAppenderMockAppendPulseParams {
+	mmAppendPulse.mutex.RLock()
 
-	argCopy := make([]*PulseAppenderMockAppendParams, len(mmAppend.callArgs))
-	copy(argCopy, mmAppend.callArgs)
+	argCopy := make([]*PulseAppenderMockAppendPulseParams, len(mmAppendPulse.callArgs))
+	copy(argCopy, mmAppendPulse.callArgs)
 
-	mmAppend.mutex.RUnlock()
+	mmAppendPulse.mutex.RUnlock()
 
 	return argCopy
 }
 
-// MinimockAppendDone returns true if the count of the Append invocations corresponds
+// MinimockAppendPulseDone returns true if the count of the AppendPulse invocations corresponds
 // the number of defined expectations
-func (m *PulseAppenderMock) MinimockAppendDone() bool {
-	for _, e := range m.AppendMock.expectations {
+func (m *PulseAppenderMock) MinimockAppendPulseDone() bool {
+	for _, e := range m.AppendPulseMock.expectations {
 		if mm_atomic.LoadUint64(&e.Counter) < 1 {
 			return false
 		}
 	}
 
 	// if default expectation was set then invocations count should be greater than zero
-	if m.AppendMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterAppendCounter) < 1 {
+	if m.AppendPulseMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterAppendPulseCounter) < 1 {
 		return false
 	}
 	// if func was set then invocations count should be greater than zero
-	if m.funcAppend != nil && mm_atomic.LoadUint64(&m.afterAppendCounter) < 1 {
+	if m.funcAppendPulse != nil && mm_atomic.LoadUint64(&m.afterAppendPulseCounter) < 1 {
 		return false
 	}
 	return true
 }
 
-// MinimockAppendInspect logs each unmet expectation
-func (m *PulseAppenderMock) MinimockAppendInspect() {
-	for _, e := range m.AppendMock.expectations {
+// MinimockAppendPulseInspect logs each unmet expectation
+func (m *PulseAppenderMock) MinimockAppendPulseInspect() {
+	for _, e := range m.AppendPulseMock.expectations {
 		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to PulseAppenderMock.Append with params: %#v", *e.params)
+			m.t.Errorf("Expected call to PulseAppenderMock.AppendPulse with params: %#v", *e.params)
 		}
 	}
 
 	// if default expectation was set then invocations count should be greater than zero
-	if m.AppendMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterAppendCounter) < 1 {
-		if m.AppendMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to PulseAppenderMock.Append")
+	if m.AppendPulseMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterAppendPulseCounter) < 1 {
+		if m.AppendPulseMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to PulseAppenderMock.AppendPulse")
 		} else {
-			m.t.Errorf("Expected call to PulseAppenderMock.Append with params: %#v", *m.AppendMock.defaultExpectation.params)
+			m.t.Errorf("Expected call to PulseAppenderMock.AppendPulse with params: %#v", *m.AppendPulseMock.defaultExpectation.params)
 		}
 	}
 	// if func was set then invocations count should be greater than zero
-	if m.funcAppend != nil && mm_atomic.LoadUint64(&m.afterAppendCounter) < 1 {
-		m.t.Error("Expected call to PulseAppenderMock.Append")
+	if m.funcAppendPulse != nil && mm_atomic.LoadUint64(&m.afterAppendPulseCounter) < 1 {
+		m.t.Error("Expected call to PulseAppenderMock.AppendPulse")
 	}
 }
 
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *PulseAppenderMock) MinimockFinish() {
 	if !m.minimockDone() {
-		m.MinimockAppendInspect()
+		m.MinimockAppendPulseInspect()
 		m.t.FailNow()
 	}
 }
@@ -279,5 +279,5 @@ func (m *PulseAppenderMock) MinimockWait(timeout mm_time.Duration) {
 func (m *PulseAppenderMock) minimockDone() bool {
 	done := true
 	return done &&
-		m.MinimockAppendDone()
+		m.MinimockAppendPulseDone()
 }

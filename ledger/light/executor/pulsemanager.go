@@ -18,6 +18,7 @@ package executor
 
 import (
 	"context"
+	"github.com/insolar/insolar/network"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -34,7 +35,7 @@ import (
 type PulseManager struct {
 	setLock sync.RWMutex
 
-	nodeNet         insolar.NodeNetwork
+	nodeNet         network.NodeNetwork
 	dispatcher      dispatcher.Dispatcher
 	nodeSetter      node.Modifier
 	pulseAccessor   pulse.Accessor
@@ -49,7 +50,7 @@ type PulseManager struct {
 
 // NewPulseManager creates PulseManager instance.
 func NewPulseManager(
-	nodeNet insolar.NodeNetwork,
+	nodeNet network.NodeNetwork,
 	disp dispatcher.Dispatcher,
 	nodeSetter node.Modifier,
 	pulseAccessor pulse.Accessor,
@@ -98,7 +99,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 
 	// Dealing with node lists.
 	{
-		fromNetwork := m.nodeNet.GetWorkingNodes()
+		fromNetwork := m.nodeNet.GetAccessor(newPulse.PulseNumber).GetWorkingNodes()
 		if len(fromNetwork) == 0 {
 			logger.Errorf("received zero nodes for pulse %d", newPulse.PulseNumber)
 			return nil

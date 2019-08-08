@@ -53,6 +53,7 @@ package ph01ctl
 import (
 	"context"
 	"fmt"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
@@ -100,9 +101,9 @@ func (c *Phase01PrepController) DispatchHostPacket(ctx context.Context, packet t
 		pp = p0.GetEmbeddedPulsePacket()
 	case phases.PacketPhase1:
 		p1 := packet.GetMemberPacket().AsPhase1Packet()
-		//if p1.HasFullIntro() || p1.HasCloudIntro() || p1.HasJoinerSecret() {
+		// if p1.HasFullIntro() || p1.HasCloudIntro() || p1.HasJoinerSecret() {
 		//	return fmt.Errorf("introduction data were not expected: from=%v", from)
-		//}
+		// }
 		nr = p1.GetAnnouncementReader().GetNodeRank()
 		if p1.HasPulseData() {
 			pp = p1.GetEmbeddedPulsePacket()
@@ -119,5 +120,5 @@ func (c *Phase01PrepController) DispatchHostPacket(ctx context.Context, packet t
 	if err != nil || !ok {
 		return err
 	}
-	return c.realm.ApplyPulseData(pp, false, from)
+	return c.realm.ApplyPulseData(ctx, pp, false, from)
 }
