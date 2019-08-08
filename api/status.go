@@ -36,15 +36,16 @@ type Node struct {
 
 // StatusReply is reply for Status service requests.
 type StatusReply struct {
-	NetworkState    string
-	Origin          Node
-	ActiveListSize  int
-	WorkingListSize int
-	Nodes           []Node
-	PulseNumber     uint32
-	Entropy         []byte
-	NodeState       string
-	Version         string
+	NetworkState       string
+	Origin             Node
+	ActiveListSize     int
+	WorkingListSize    int
+	Nodes              []Node
+	PulseNumber        uint32
+	NetworkPulseNumber uint32
+	Entropy            []byte
+	NodeState          string
+	Version            string
 }
 
 // Get returns status info
@@ -57,13 +58,18 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *Statu
 	reply.NetworkState = s.runner.ServiceNetwork.GetState().String()
 	reply.NodeState = s.runner.NodeNetwork.GetOrigin().GetState().String()
 
-	p, err := s.runner.ServiceNetwork.(*servicenetwork.ServiceNetwork).PulseAccessor.GetLatestPulse(ctx)
+	np, err := s.runner.ServiceNetwork.(*servicenetwork.ServiceNetwork).PulseAccessor.GetLatestPulse(ctx)
+	if err != nil {
+		np = *insolar.GenesisPulse
+	}
+
+	p, err := s.runner.PulseAccessor.Latest(ctx)
 	if err != nil {
 		p = *insolar.GenesisPulse
 	}
 
-	activeNodes := s.runner.NodeNetwork.GetAccessor(p.PulseNumber).GetActiveNodes()
-	workingNodes := s.runner.NodeNetwork.GetAccessor(p.PulseNumber).GetWorkingNodes()
+	activeNodes := s.runner.NodeNetwork.GetAccessor(np.PulseNumber).GetActiveNodes()
+	workingNodes := s.runner.NodeNetwork.GetAccessor(np.PulseNumber).GetWorkingNodes()
 
 	reply.ActiveListSize = len(activeNodes)
 	reply.WorkingListSize = len(workingNodes)
@@ -87,8 +93,9 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *Statu
 		ID:        uint32(origin.ShortID()),
 	}
 
+	reply.NetworkPulseNumber = uint32(np.PulseNumber)
 	reply.PulseNumber = uint32(p.PulseNumber)
-	reply.Entropy = p.Entropy[:]
+	reply.Entropy = np.Entropy[:]
 	reply.Version = version.Version
 
 	return nil
