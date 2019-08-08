@@ -17,10 +17,31 @@
 package payload
 
 const (
-	CodeUnknown      = 0
-	CodeDeactivated  = 1
-	CodeFlowCanceled = 2
-	CodeNotFound     = 3
-	CodeNoPendings   = 4
-	CodeNoStartPulse = 5
+	CodeUnknown            = 1000
+	CodeDeactivated        = 1001
+	CodeFlowCanceled       = 1002
+	CodeNotFound           = 1003
+	CodeNoPendings         = 1004
+	CodeNoStartPulse       = 1005
+	ReasonNotFound         = 1100
+	ReasonIsWrong          = 1101
+	IncomingRequestIsWrong = 1200
+	RequestNotFound        = 1300
 )
+
+type ErrorCoder interface {
+	Error() string
+	GetErrorCode() uint32
+}
+
+type LedgerError struct {
+	ErrorText string
+	ErrorCode uint32
+}
+
+func (e *LedgerError) GetErrorCode() uint32 {
+	return e.ErrorCode
+}
+func (e *LedgerError) Error() string {
+	return e.ErrorText
+}

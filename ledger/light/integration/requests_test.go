@@ -45,7 +45,7 @@ func Test_IncomingRequest_Check(t *testing.T) {
 	t.Run("registered is older than reason returns error", func(t *testing.T) {
 		msg, _ := MakeSetIncomingRequestFromAPI(gen.ID(), gen.IDWithPulse(s.Pulse()+1), true)
 		rep := SendMessage(ctx, s, &msg)
-		RequireError(rep)
+		RequireErrorCode(rep, payload.ReasonIsWrong)
 	})
 
 	t.Run("detached returns error", func(t *testing.T) {
@@ -53,7 +53,7 @@ func Test_IncomingRequest_Check(t *testing.T) {
 		// Faking detached request.
 		record.Unwrap(&msg.Request).(*record.IncomingRequest).ReturnMode = record.ReturnSaga
 		rep := SendMessage(ctx, s, &msg)
-		RequireError(rep)
+		RequireErrorCode(rep, payload.IncomingRequestIsWrong)
 	})
 
 	t.Run("registered API request appears in pendings", func(t *testing.T) {
@@ -74,8 +74,6 @@ func Test_IncomingRequest_Check(t *testing.T) {
 		firstObjP := SendMessage(ctx, s, &msg)
 		RequireNotError(firstObjP)
 		reqInfo := firstObjP.(*payload.RequestInfo)
-		// firstObjP, _ = CallActivateObject(ctx, s, reqInfo.RequestID)
-		// RequireNotError(firstObjP)
 
 		msg, _ = MakeSetIncomingRequest(gen.ID(), reqInfo.RequestID, reqInfo.RequestID, true, false)
 		secondObjP := SendMessage(ctx, s, &msg)
@@ -376,9 +374,6 @@ func Test_Result_Duplicate(t *testing.T) {
 }
 
 func Test_IncomingRequest_ClosedReason(t *testing.T) {
-	// todo uncomment after fix
-	// t.Skip()
-
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
@@ -418,7 +413,7 @@ func Test_IncomingRequest_ClosedReason(t *testing.T) {
 		{
 			msg, _ := MakeSetIncomingRequest(gen.ID(), reasonID, reasonID, true, false)
 			rep := SendMessage(ctx, s, &msg)
-			RequireError(rep)
+			RequireErrorCode(rep, payload.ReasonIsWrong)
 		}
 	})
 }
@@ -459,7 +454,7 @@ func Test_OutgoingRequest_ClosedReason(t *testing.T) {
 		{
 			pl, _ := MakeSetOutgoingRequest(reasonID, reasonID, false)
 			rep := SendMessage(ctx, s, &pl)
-			RequireError(rep)
+			RequireErrorCode(rep, payload.ReasonNotFound)
 		}
 	})
 }
@@ -502,14 +497,14 @@ func Test_Requests_OutgoingReason(t *testing.T) {
 		{
 			msg, _ := MakeSetIncomingRequest(gen.ID(), reasonID, rootID, true, false)
 			rep := SendMessage(ctx, s, &msg)
-			RequireError(rep)
+			RequireErrorCode(rep, payload.ReasonIsWrong)
 		}
 
 		// Creating wrong outgoing
 		{
 			msg, _ := MakeSetOutgoingRequest(rootID, reasonID, false)
 			rep := SendMessage(ctx, s, &msg)
-			RequireError(rep)
+			RequireErrorCode(rep, payload.ReasonNotFound)
 		}
 	})
 }
@@ -550,7 +545,7 @@ func Test_OutgoingRequests_DifferentObjects(t *testing.T) {
 		{
 			pl, _ := MakeSetOutgoingRequest(rootID, rootID2, false)
 			rep := SendMessage(ctx, s, &pl)
-			RequireError(rep)
+			RequireErrorCode(rep, payload.ReasonNotFound)
 		}
 	})
 }
@@ -648,7 +643,7 @@ func Test_IncomingRequest_DifferentResults(t *testing.T) {
 		{
 			resMsg, _ := MakeSetResult(reasonID, reasonID)
 			rep := SendMessage(ctx, s, &resMsg)
-			RequireError(rep)
+			RequireErrorCode(rep, payload.RequestNotFound)
 		}
 	})
 }

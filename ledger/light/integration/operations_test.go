@@ -422,8 +422,9 @@ func RequireError(pl payload.Payload) {
 	}
 }
 
-func RequireErrorCode(pl payload.Payload, code uint32) {
-	if err, ok := pl.(*payload.Error); !ok || err.Code != code {
-		panic(fmt.Sprintf("expected error code %d", code))
+func RequireErrorCode(pl payload.Payload, expectedCode uint32) {
+	err, ok := pl.(*payload.Error)
+	if !ok || err.Code != expectedCode {
+		panic(fmt.Sprintf("expected error code %d, got %d", expectedCode, err.Code))
 	}
 }

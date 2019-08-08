@@ -276,11 +276,20 @@ func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 }
 
 func (s *Init) replyError(ctx context.Context, replyTo payload.Meta, err error) {
-	errCode := payload.CodeUnknown
-	if err == flow.ErrCancelled {
-		errCode = payload.CodeFlowCanceled
+	errCode := uint32(payload.CodeUnknown)
+
+	// Throwing custom error code
+	cause := errors.Cause(err)
+	insError, ok := cause.(payload.ErrorCoder)
+	if ok {
+		errCode = insError.GetErrorCode()
 	}
-	errMsg, newErr := payload.NewMessage(&payload.Error{Text: err.Error(), Code: uint32(errCode)})
+
+	// todo refactor this
+	if err == flow.ErrCancelled {
+		errCode = uint32(payload.CodeFlowCanceled)
+	}
+	errMsg, newErr := payload.NewMessage(&payload.Error{Text: err.Error(), Code: errCode})
 	if newErr != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
 	}
