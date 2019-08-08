@@ -87,17 +87,17 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Refer
 		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Couldn't fetch current pulse")
 	}
 
-	r, err := cr.SendRequestWithPulse(ctx, ref, method, argsIn, pulse.PulseNumber)
-	return r.Reply, err
+	r, _, err := cr.SendRequestWithPulse(ctx, ref, method, argsIn, pulse.PulseNumber)
+	return r, err
 }
 
-func (cr *ContractRequester) SendRequestWithPulse(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{}, pulse insolar.PulseNumber) (*insolar.ReplyWithReference, error) {
+func (cr *ContractRequester) SendRequestWithPulse(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{}, pulse insolar.PulseNumber) (insolar.Reply, *insolar.Reference, error) {
 	ctx, span := instracer.StartSpan(ctx, "SendRequest "+method)
 	defer span.End()
 
 	args, err := insolar.MarshalArgs(argsIn...)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't marshal")
+		return nil, nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't marshal")
 	}
 
 	msg := &message.CallMethod{
@@ -111,12 +111,12 @@ func (cr *ContractRequester) SendRequestWithPulse(ctx context.Context, ref *inso
 		},
 	}
 
-	routResult, err := cr.Call(ctx, msg)
+	routResult, ref, err := cr.Call(ctx, msg)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't route call")
+		return nil, nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't route call")
 	}
 
-	return routResult, nil
+	return routResult, ref, nil
 }
 
 func (cr *ContractRequester) calcRequestHash(request record.IncomingRequest) ([insolar.RecordHashSize]byte, error) {
@@ -144,7 +144,7 @@ func (cr *ContractRequester) checkCall(_ context.Context, msg *message.CallMetho
 	return nil
 }
 
-func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (*insolar.ReplyWithReference, error) {
+func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (insolar.Reply, *insolar.Reference, error) {
 	ctx, span := instracer.StartSpan(ctx, "ContractRequester.Call")
 	defer span.End()
 
@@ -158,7 +158,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (*
 
 	err := cr.checkCall(ctx, msg)
 	if err != nil {
-		return nil, errors.Wrap(err, "incorrect request")
+		return nil, nil, errors.Wrap(err, "incorrect request")
 	}
 
 	var ch chan *message.ReturnResults
@@ -169,7 +169,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (*
 		var err error
 		reqHash, err = cr.calcRequestHash(msg.IncomingRequest)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ ContractRequester::Call ] Failed to calculate hash")
+			return nil, nil, errors.Wrap(err, "[ ContractRequester::Call ] Failed to calculate hash")
 		}
 		ch = make(chan *message.ReturnResults, 1)
 		cr.ResultMap[reqHash] = ch
@@ -185,20 +185,20 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (*
 
 	res, err := sender(ctx, msg, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "couldn't dispatch event")
+		return nil, nil, errors.Wrap(err, "couldn't dispatch event")
 	}
 
 	r, ok := res.(*reply.RegisterRequest)
 	if !ok {
-		return nil, errors.New("Got not reply.RegisterRequest in reply for CallMethod")
+		return nil, nil, errors.New("Got not reply.RegisterRequest in reply for CallMethod")
 	}
 
 	if async {
-		return &insolar.ReplyWithReference{Reply: res, RequestReference: r.Request}, nil
+		return res, &r.Request, nil
 	}
 
 	if !bytes.Equal(r.Request.Record().Hash(), reqHash[:]) {
-		return nil, errors.New("Registered request has different hash")
+		return nil, nil, errors.New("Registered request has different hash")
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, cr.callTimeout)
@@ -213,15 +213,15 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (*
 	case ret := <-ch:
 		logger.Debug("Got results of request")
 		if ret.Error != "" {
-			return nil, errors.Wrap(errors.New(ret.Error), "CallMethod returns error")
+			return nil, nil, errors.Wrap(errors.New(ret.Error), "CallMethod returns error")
 		}
-		return &insolar.ReplyWithReference{Reply: ret.Reply, RequestReference: r.Request}, nil
+		return ret.Reply, &r.Request, nil
 	case <-ctx.Done():
 		cr.ResultMutex.Lock()
 		delete(cr.ResultMap, reqHash)
 		cr.ResultMutex.Unlock()
 		logger.Error("Request timeout")
-		return nil, errors.Errorf("request to contract was canceled: timeout of %s was exceeded", cr.callTimeout)
+		return nil, nil, errors.Errorf("request to contract was canceled: timeout of %s was exceeded", cr.callTimeout)
 	}
 }
 

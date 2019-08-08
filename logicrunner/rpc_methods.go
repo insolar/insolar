@@ -219,12 +219,12 @@ func (m *executionProxyImplementation) SaveAsChild(
 
 	// Send the request
 	msg := &message.CallMethod{IncomingRequest: *incoming}
-	res, err := m.cr.Call(ctx, msg)
+	res, _, err := m.cr.Call(ctx, msg)
 	if err != nil {
 		return err
 	}
 
-	callReply := res.Reply.(*reply.CallMethod)
+	callReply := res.(*reply.CallMethod)
 	current.AddOutgoingRequest(ctx, *incoming, callReply.Result, callReply.Object, err)
 
 	rep.Reference = callReply.Object

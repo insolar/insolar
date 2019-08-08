@@ -211,13 +211,13 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 func (s *ContractService) call(ctx context.Context, msg insolar.Message, re *CallMethodReply) error {
 	inslog := inslogger.FromContext(ctx)
 
-	callReply, err := s.runner.ContractRequester.Call(ctx, msg)
+	callReply, _, err := s.runner.ContractRequester.Call(ctx, msg)
 	if err != nil {
 		inslog.Error("failed to call: ", err.Error())
 		return errors.Wrap(err, "CallMethod failed with error")
 	}
 
-	typedReply := callReply.Reply.(*reply.CallMethod)
+	typedReply := callReply.(*reply.CallMethod)
 	if typedReply.Object != nil {
 		re.Object = typedReply.Object.String()
 	}

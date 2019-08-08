@@ -98,7 +98,7 @@ func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBo
 		return nil, nil, errors.Wrap(err, "[ makeCall ] failed to marshal arguments")
 	}
 
-	res, err := ar.ContractRequester.SendRequestWithPulse(
+	res, ref, err := ar.ContractRequester.SendRequestWithPulse(
 		ctx,
 		reference,
 		"Call",
@@ -110,7 +110,7 @@ func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBo
 		return nil, nil, errors.Wrap(err, "[ makeCall ] Can't send request")
 	}
 
-	result, contractErr, err := extractor.CallResponse(res.Reply.(*reply.CallMethod).Result)
+	result, contractErr, err := extractor.CallResponse(res.(*reply.CallMethod).Result)
 
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ makeCall ] Can't extract response")
@@ -120,7 +120,7 @@ func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBo
 		return nil, nil, errors.Wrap(errors.New(contractErr.S), "[ makeCall ] Error in called method")
 	}
 
-	return result, &res.RequestReference, nil
+	return result, ref, nil
 }
 
 func processError(err error, extraMsg string, resp *requester.ContractAnswer, insLog insolar.Logger, traceID string) {

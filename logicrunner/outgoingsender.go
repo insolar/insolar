@@ -141,9 +141,9 @@ func (a *outgoingSenderActorState) sendOutgoingRequest(ctx context.Context, outg
 
 	// Actually make a call.
 	callMsg := &message.CallMethod{IncomingRequest: *incoming}
-	res, err := a.cr.Call(ctx, callMsg)
+	res, _, err := a.cr.Call(ctx, callMsg)
 	if err == nil {
-		switch v := res.Reply.(type) {
+		switch v := res.(type) {
 		case *reply.CallMethod: // regular call
 			result = v.Result
 		case *reply.RegisterRequest: // no-wait call
