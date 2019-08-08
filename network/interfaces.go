@@ -57,11 +57,9 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensusv1/packets"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
-	"github.com/insolar/insolar/network/node"
 )
 
 type Report struct {
@@ -72,7 +70,7 @@ type Report struct {
 	PopulationValid bool
 }
 
-type OnConsensusFinished func(report Report)
+type OnConsensusFinished func(ctx context.Context, report Report)
 
 type BootstrapResult struct {
 	Host *host.Host
@@ -103,26 +101,6 @@ type HostNetwork interface {
 	RegisterRequestHandler(t types.PacketType, handler RequestHandler)
 	// BuildResponse create response to an incoming request with Data set to responseData.
 	BuildResponse(ctx context.Context, request Packet, responseData interface{}) Packet
-}
-
-// ConsensusPacketHandler callback function for consensus packets handling
-type ConsensusPacketHandler func(incomingPacket packets.ConsensusPacket, sender insolar.Reference)
-
-//go:generate minimock -i github.com/insolar/insolar/network.ConsensusNetwork -o ../testutils/network -s _mock.go -g
-
-// ConsensusNetwork interface to send and handling consensus packets
-type ConsensusNetwork interface {
-	component.Initer
-	component.Starter
-	component.Stopper
-
-	// PublicAddress returns public address that can be published for all nodes.
-	PublicAddress() string
-
-	// SignAndSendPacket send request to a remote node.
-	SignAndSendPacket(packet packets.ConsensusPacket, receiver insolar.Reference, service insolar.CryptographyService) error
-	// RegisterPacketHandler register a handler function to process incoming requests of a specific type.
-	RegisterPacketHandler(t packets.PacketType, handler ConsensusPacketHandler)
 }
 
 // Packet is a packet that is transported via network by HostNetwork.
@@ -156,57 +134,38 @@ type PulseHandler interface {
 	HandlePulse(ctx context.Context, pulse insolar.Pulse, originalPacket ReceivedPacket)
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network.OriginProvider -o ../testutils/network -s _mock.go -g
+
+type OriginProvider interface {
+	// GetOrigin get origin node for the current insolard. Returns nil if the current insolard is not a working node.
+	GetOrigin() insolar.NetworkNode
+}
+
+//go:generate minimock -i github.com/insolar/insolar/network.NodeNetwork -o ../testutils/network -s _mock.go -g
+
+type NodeNetwork interface {
+	OriginProvider
+
+	// GetAccessor get accessor to the internal snapshot for the current pulse
+	GetAccessor(insolar.PulseNumber) Accessor
+}
+
 //go:generate minimock -i github.com/insolar/insolar/network.NodeKeeper -o ../testutils/network -s _mock.go -g
 
 // NodeKeeper manages unsync, sync and active lists.
 type NodeKeeper interface {
-	insolar.NodeNetwork
-
-	// IsBootstrapped method shows that all DiscoveryNodes finds each other
-	IsBootstrapped() bool
-	// SetIsBootstrapped method set is bootstrap completed
-	SetIsBootstrapped(isBootstrap bool)
+	NodeNetwork
 
 	// GetCloudHash returns current cloud hash
-	GetCloudHash() []byte
+	GetCloudHash(insolar.PulseNumber) []byte
 	// SetCloudHash set new cloud hash
-	SetCloudHash([]byte)
+	SetCloudHash(insolar.PulseNumber, []byte)
 	// SetInitialSnapshot set initial snapshot for nodekeeper
 	SetInitialSnapshot(nodes []insolar.NetworkNode)
-	// GetAccessor get accessor to the internal snapshot for the current pulse
-	// TODO: add pulse to the function signature to get data of various pulses
-	GetAccessor() Accessor
-	// GetOriginJoinClaim get origin NodeJoinClaim
-	GetOriginJoinClaim() (*packets.NodeJoinClaim, error)
-	// GetOriginAnnounceClaim get origin NodeAnnounceClaim
-	GetOriginAnnounceClaim(mapper packets.BitSetMapper) (*packets.NodeAnnounceClaim, error)
-	// GetClaimQueue get the internal queue of claims
-	GetClaimQueue() ClaimQueue
-	// GetSnapshotCopy get copy of the current nodekeeper snapshot
-	GetSnapshotCopy() *node.Snapshot
 	// Sync move unsync -> sync
-	Sync(context.Context, []insolar.NetworkNode, []packets.ReferendumClaim) error
+	Sync(context.Context, insolar.PulseNumber, []insolar.NetworkNode)
 	// MoveSyncToActive merge sync list with active nodes
-	MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error
-	// GetConsensusInfo get additional info for the current consensus process
-	GetConsensusInfo() ConsensusInfo
-}
-
-// ConsensusInfo additional info for the current consensus process
-// TODO: refactor code and make it not necessary
-type ConsensusInfo interface {
-	// NodesJoinedDuringPreviousPulse returns true if the last Sync call contained approved Join claims
-	NodesJoinedDuringPreviousPulse() bool
-	// AddTemporaryMapping add temporary mapping till the next pulse for consensus
-	AddTemporaryMapping(nodeID insolar.Reference, shortID insolar.ShortNodeID, address string) error
-	// ResolveConsensus get temporary mapping by short ID
-	ResolveConsensus(shortID insolar.ShortNodeID) *host.Host
-	// ResolveConsensusRef get temporary mapping by node ID
-	ResolveConsensusRef(nodeID insolar.Reference) *host.Host
-	// SetIsJoiner instruct current node whether it should perform consensus as joiner or not
-	SetIsJoiner(isJoiner bool)
-	// IsJoiner true if current node should perform consensus as joiner
-	IsJoiner() bool
+	MoveSyncToActive(context.Context, insolar.PulseNumber)
 }
 
 // PartitionPolicy contains all rules how to initiate globule resharding.
@@ -220,30 +179,6 @@ type PartitionPolicy interface {
 type RoutingTable interface {
 	// Resolve NodeID -> ShortID, Address. Can initiate network requests.
 	Resolve(insolar.Reference) (*host.Host, error)
-	// ResolveConsensus ShortID -> NodeID, Address for node inside current globe for current consensus.
-	ResolveConsensus(insolar.ShortNodeID) (*host.Host, error)
-	// ResolveConsensusRef NodeID -> ShortID, Address for node inside current globe for current consensus.
-	ResolveConsensusRef(insolar.Reference) (*host.Host, error)
-	// AddToKnownHosts add host to routing table.
-	AddToKnownHosts(*host.Host)
-	// Rebalance recreate shards of routing table with known hosts according to new partition policy.
-	Rebalance(PartitionPolicy)
-}
-
-//go:generate minimock -i github.com/insolar/insolar/network.ClaimQueue -o ../testutils/network -s _mock.go -g
-
-// ClaimQueue is the queue that contains consensus claims.
-type ClaimQueue interface {
-	// Pop takes claim from the queue.
-	Pop() packets.ReferendumClaim
-	// Front returns claim from the queue without removing it from the queue.
-	Front() packets.ReferendumClaim
-	// Length returns the length of the queue
-	Length() int
-	// Push adds claim to the queue.
-	Push(claim packets.ReferendumClaim)
-	// Clear removes all claims from queue
-	Clear()
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network.Accessor -o ../testutils/network -s _mock.go -g
@@ -254,8 +189,6 @@ type Accessor interface {
 	GetWorkingNode(ref insolar.Reference) insolar.NetworkNode
 	// GetWorkingNodes returns sorted list of all working nodes.
 	GetWorkingNodes() []insolar.NetworkNode
-	// GetWorkingNodesByRole get working nodes by role.
-	GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference
 
 	// GetActiveNode returns active node.
 	GetActiveNode(ref insolar.Reference) insolar.NetworkNode
@@ -267,29 +200,33 @@ type Accessor interface {
 	GetActiveNodeByAddr(address string) insolar.NetworkNode
 }
 
-// Mutator is interface that provides read and write access to a snapshot
-type Mutator interface {
-	Accessor
-	// AddWorkingNode adds active node to index and underlying snapshot so it is accessible via GetActiveNode(s).
-	AddWorkingNode(n insolar.NetworkNode)
-}
-
 //go:generate minimock -i github.com/insolar/insolar/network.Gatewayer -o ../testutils/network -s _mock.go -g
 
 // Gatewayer is a network which can change it's Gateway
 type Gatewayer interface {
 	Gateway() Gateway
-	SetGateway(Gateway)
+	SwitchState(ctx context.Context, state insolar.NetworkState, pulse insolar.Pulse)
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network.Gateway -o ../testutils/network -s _mock.go -g
 
 // Gateway responds for whole network state
 type Gateway interface {
-	Run(context.Context)
+	Run(ctx context.Context, pulse insolar.Pulse)
 	GetState() insolar.NetworkState
-	OnPulse(context.Context, insolar.Pulse) error
-	NewGateway(insolar.NetworkState) Gateway
+	NewGateway(context.Context, insolar.NetworkState) Gateway
+
+	OnPulseFromPulsar(context.Context, insolar.Pulse, ReceivedPacket)
+	OnPulseFromConsensus(context.Context, insolar.Pulse)
+	OnConsensusFinished(ctx context.Context, report Report)
+
+	UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte)
+
 	Auther() Auther
-	NeedLockMessageBus() bool
+	Bootstrapper() Bootstrapper
+
+	NetworkOperable() bool
+	EphemeralMode(nodes []insolar.NetworkNode) bool
 }
 
 type Auther interface {
@@ -298,16 +235,12 @@ type Auther interface {
 	// ValidateCert checks certificate signature
 	// TODO make this cert.validate()
 	ValidateCert(context.Context, insolar.AuthorizationCertificate) (bool, error)
-
-	// FilterJoinerNodes returns nodes which allowed to connect to this network in this state.
-	FilterJoinerNodes(certificate insolar.Certificate, nodes []insolar.NetworkNode) []insolar.NetworkNode
 }
 
-// Rules are responsible for a majority and minimum roles checking
-//go:generate minimock -i github.com/insolar/insolar/network.Rules -o ../testutils/network -s _mock.go -g
-type Rules interface {
-	// CheckMajorityRule returns true if MajorityRule check passed, also returns active discovery nodes count
-	CheckMajorityRule() (bool, int)
-	// CheckMinRole returns true if MinRole check passed
-	CheckMinRole() bool
+// Bootstrapper interface used to change behavior of handlers in different network states
+type Bootstrapper interface {
+	HandleNodeAuthorizeRequest(context.Context, Packet) (Packet, error)
+	HandleNodeBootstrapRequest(context.Context, Packet) (Packet, error)
+	HandleUpdateSchedule(context.Context, Packet) (Packet, error)
+	HandleReconnect(context.Context, Packet) (Packet, error)
 }

@@ -56,6 +56,8 @@ import (
 	"io"
 	"time"
 
+	"github.com/insolar/insolar/network"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/adapters"
@@ -66,7 +68,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"github.com/insolar/insolar/network/utils"
 )
 
 type packetData struct {
@@ -97,7 +98,7 @@ func newPacketParser(
 	keyProcessor insolar.KeyProcessor,
 ) (*PacketParser, error) {
 
-	capture := utils.NewCapturingReader(reader)
+	capture := network.NewCapturingReader(reader)
 	parser := &PacketParser{
 		packetData: packetData{
 			packet: new(Packet),

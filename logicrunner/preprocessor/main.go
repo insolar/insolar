@@ -297,6 +297,13 @@ func (pf *ParsedFile) WriteWrapper(out io.Writer, packageName string) error {
 		return err
 	}
 
+	functionsInfo := pf.functionInfoForWrapper(pf.constructors[pf.contract])
+	for _, fi := range functionsInfo {
+		if fi["SagaInfo"].(*SagaInfo).IsSaga {
+			return fmt.Errorf("semantic error: '%s' can't be a saga because it's a constructor", fi["Name"].(string))
+		}
+	}
+
 	methodsInfo := pf.functionInfoForWrapper(pf.methods[pf.contract])
 	err := pf.checkSagaRollbackMethodsExistAndMatch(methodsInfo)
 	if err != nil {
@@ -307,7 +314,7 @@ func (pf *ParsedFile) WriteWrapper(out io.Writer, packageName string) error {
 		"Package":            packageName,
 		"ContractType":       pf.contract,
 		"Methods":            methodsInfo,
-		"Functions":          pf.functionInfoForWrapper(pf.constructors[pf.contract]),
+		"Functions":          functionsInfo,
 		"ParsedCode":         pf.code,
 		"FoundationPath":     foundationPath,
 		"Imports":            pf.generateImports(true),
@@ -413,6 +420,11 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	}
 
 	constructorProxies := pf.functionInfoForProxy(pf.constructors[pf.contract])
+	for _, fi := range constructorProxies {
+		if fi["SagaInfo"].(*SagaInfo).IsSaga {
+			return fmt.Errorf("semantic error: '%s' can't be a saga because it's a constructor", fi["Name"].(string))
+		}
+	}
 
 	sagaRollbackMethods := make(map[string]struct{})
 	for _, methodInfo := range allMethodsProxies {

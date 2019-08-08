@@ -67,18 +67,14 @@ const (
 	Bootstrap
 	// Authorize is packet type to authorize bootstrapping node on discovery node.
 	Authorize
-	// Register is packet type to connect node to discovery node and add join claim to consensus
-	Register
-	// Genesis is packet type for active list exchange between discovery nodes
-	Genesis
-	// Challenge1 is packet type for first phase of double challenge response
-	Challenge1
-	// Challenge2 is packet type for first phase of double challenge response
-	Challenge2
 	// Disconnect is packet type to gracefully disconnect from network.
 	Disconnect
 	// SignCert used to request signature of certificate from another node
 	SignCert
+	// UpdateSchedule used for fetching pulse history
+	UpdateSchedule
+	// Reconnect used to notify nodes to reconnect to the bigger network
+	Reconnect
 )
 
 // RequestID is 64 bit unsigned int request id.

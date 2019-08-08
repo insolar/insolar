@@ -53,6 +53,7 @@ package announce
 import (
 	"context"
 	"fmt"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/purgatory"
@@ -318,7 +319,7 @@ func VerifyNeighbourhood(ctx context.Context, neighbourhood []transport.Membersh
 				if jar != nil {
 					// TODO fraud
 					log.Error("joiner profile is duplicated in neighbourhood")
-					//return nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner profile is duplicated in neighbourhood")
+					// return nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner profile is duplicated in neighbourhood")
 				}
 				joinerProfile = announcedJoiner
 			} else {

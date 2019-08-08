@@ -58,9 +58,9 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/transport"
-	"github.com/insolar/insolar/network/utils"
 )
 
 type onClose func(ctx context.Context, host *host.Host)
@@ -125,6 +125,6 @@ func (e *entry) close() {
 	defer e.Unlock()
 
 	if e.conn != nil {
-		utils.CloseVerbose(e.conn)
+		network.CloseVerbose(e.conn)
 	}
 }
