@@ -27,6 +27,8 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
@@ -50,7 +52,6 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/pkg/errors"
 )
 
 var (
@@ -367,8 +368,6 @@ func NewServer(
 				}
 				return nil, nil
 			}
-
-			// todo Add check that heavy is not available in test
 
 			clientHandler := func(msg *message.Message) (messages []*message.Message, e error) {
 				return nil, nil
