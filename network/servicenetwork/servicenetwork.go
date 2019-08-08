@@ -299,7 +299,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	go func() {
 		select {
 		case <-time.After(n.pulseTimeout):
-			log.Error("Node stopped due to long pulse processing")
+			log.Errorf("Node stopped due to long pulse processing %v", newPulse.PulseNumber)
 
 			proc, err := os.FindProcess(os.Getpid())
 			if err != nil {
