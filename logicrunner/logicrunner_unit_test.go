@@ -381,18 +381,18 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 				Pulse:   pulseNum,
 			}
 			buf, err := wrapper.Marshal()
-			suite.Require().NoError(err)
+			require.NoError(syncT, err)
 
 			wmMsg := message2.NewMessage(watermill.NewUUID(), buf)
 			wmMsg.Metadata.Set(bus.MetaPulse, pulseNum.String())
 			sp, err := instracer.Serialize(context.Background())
-			suite.Require().NoError(err)
+			require.NoError(syncT, err)
 			wmMsg.Metadata.Set(bus.MetaSpanData, string(sp))
 			wmMsg.Metadata.Set(bus.MetaType, fmt.Sprintf("%s", msg.Type()))
 			wmMsg.Metadata.Set(bus.MetaTraceID, "req-"+strconv.Itoa(i))
 
 			_, err = suite.lr.FlowDispatcher.Process(wmMsg)
-			suite.Require().NoError(err)
+			require.NoError(syncT, err)
 		}(i)
 	}
 

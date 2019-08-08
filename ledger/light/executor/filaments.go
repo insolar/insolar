@@ -655,10 +655,12 @@ func (i *fetchingIterator) fetchFromNetwork(
 		instracer.AddError(span, err)
 		return nil, errors.Wrap(err, "failed to unmarshal reply")
 	}
-	filaments, ok := pl.(*payload.FilamentSegment)
-	if !ok {
-		instracer.AddError(span, fmt.Errorf("unexpected reply %T", pl))
-		return nil, fmt.Errorf("unexpected reply %T", pl)
+	switch p := pl.(type) {
+	case *payload.FilamentSegment:
+		return p.Records, nil
+	case *payload.Error:
+		return nil, errors.New(p.Text)
 	}
-	return filaments.Records, nil
+	instracer.AddError(span, fmt.Errorf("unexpected reply %T", pl))
+	return nil, fmt.Errorf("unexpected reply %T", pl)
 }

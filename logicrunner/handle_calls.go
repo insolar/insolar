@@ -46,7 +46,6 @@ func (h *HandleCall) sendToNextExecutor(
 	objectRef insolar.Reference,
 	requestRef insolar.Reference,
 	request record.IncomingRequest,
-	ps insolar.PendingState,
 ) {
 	// If the flow has canceled during ClarifyPendingState there are two possibilities.
 	// 1. It's possible that we were addding request to broker, the pulse has
@@ -71,7 +70,6 @@ func (h *HandleCall) sendToNextExecutor(
 		RequestRef:      requestRef,
 		Request:         request,
 		ServiceData:     serviceDataFromContext(ctx),
-		Pending:         ps,
 	}
 
 	_, err := h.dep.lr.MessageBus.Send(ctx, &additionalCallMsg, nil)
@@ -185,21 +183,16 @@ func (h *HandleCall) handleActual(
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
 	defer done()
 
-	if err == nil {
-		broker := h.dep.StateStorage.UpsertExecutionState(*objRef)
+	if err != nil {
+		go h.sendToNextExecutor(ctx, *objRef, *requestRef, request)
+		return registeredRequestReply, nil
+	}
 
-		proc := AddFreshRequest{broker: broker, requestRef: *requestRef, request: request}
-		if err := f.Procedure(ctx, &proc, true); err != nil {
-			return nil, errors.Wrap(err, "couldn't pass request to broker")
-		}
-	} else {
-		pendingState := insolar.PendingUnknown
-		archive := h.dep.StateStorage.GetExecutionArchive(*objRef)
-		if archive != nil && !archive.IsEmpty() {
-			pendingState = insolar.InPending
-		}
+	broker := h.dep.StateStorage.UpsertExecutionState(*objRef)
 
-		h.sendToNextExecutor(ctx, *objRef, *requestRef, request, pendingState)
+	proc := AddFreshRequest{broker: broker, requestRef: *requestRef, request: request}
+	if err := f.Procedure(ctx, &proc, true); err != nil {
+		return nil, errors.Wrap(err, "couldn't pass request to broker")
 	}
 
 	return registeredRequestReply, nil
