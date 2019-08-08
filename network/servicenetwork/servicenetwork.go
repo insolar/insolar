@@ -53,7 +53,9 @@ package servicenetwork
 import (
 	"bytes"
 	"context"
+	"os"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/insolar/insolar/network/rules"
@@ -298,6 +300,16 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 		select {
 		case <-time.After(n.pulseTimeout):
 			log.Error("Node stopped due to long pulse processing")
+
+			proc, err := os.FindProcess(os.Getpid())
+			if err != nil {
+				log.Error(err)
+			} else {
+				err := proc.Signal(syscall.SIGABRT)
+				if err != nil {
+					panic(err)
+				}
+			}
 		case <-done:
 		}
 	}()
