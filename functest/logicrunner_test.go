@@ -409,23 +409,23 @@ import (
 "github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
-type SagaMagicFlagOneTwo struct {
+type SagaMagicFlagTwo struct {
 	foundation.BaseContract
 	Amount int
 }
 
-func New() (*SagaMagicFlagOneTwo, error) {
-	return &SagaMagicFlagOneTwo{Amount: 100}, nil
+func New() (*SagaMagicFlagTwo, error) {
+	return &SagaMagicFlagTwo{Amount: 100}, nil
 }
 
 var INSATTR_GetBalance_API = true
-func (w *SagaMagicFlagOneTwo) GetBalance() (int, error) {
+func (w *SagaMagicFlagTwo) GetBalance() (int, error) {
 	return w.Amount, nil
 }
 
 var INSATTR_Accept_API = true
 //ins:saga(INS_FLAG_NO_ROLLBACK_METHOD)
-func (w *SagaMagicFlagOneTwo) Accept(amount int) error {
+func (w *SagaMagicFlagTwo) Accept(amount int) error {
 	w.Amount += amount
 	return nil
 }
