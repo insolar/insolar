@@ -77,6 +77,16 @@ type FilamentCalculator interface {
 		foundResult *record.CompositeFilamentRecord,
 		err error,
 	)
+
+	// RequestInfo is searching for request and result by objectID and requestID
+	RequestInfo(
+		ctx context.Context,
+		objectID, requestID insolar.ID,
+	) (
+		foundRequest *record.CompositeFilamentRecord,
+		foundResult *record.CompositeFilamentRecord,
+		err error,
+	)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCleaner -o ./ -s _mock.go -g
@@ -351,6 +361,75 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 		if bytes.Equal(rec.RecordID.Hash(), requestID.Hash()) {
 			foundRequest = &rec
 			logger.Debugf("found duplicate %s", rec.RecordID.DebugString())
+		}
+
+		virtual := record.Unwrap(&rec.Record.Virtual)
+		if r, ok := virtual.(*record.Result); ok {
+			if bytes.Equal(r.Request.Record().Hash(), requestID.Hash()) {
+				foundResult = &rec
+				logger.Debugf("found result %s", rec.RecordID.DebugString())
+			}
+		}
+	}
+
+	return foundRequest, foundResult, nil
+}
+
+func (c *FilamentCalculatorDefault) RequestInfo(
+	ctx context.Context,
+	objectID, requestID insolar.ID,
+) (
+	*record.CompositeFilamentRecord,
+	*record.CompositeFilamentRecord,
+	error,
+) {
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"object_id":  objectID.DebugString(),
+		"request_id": requestID.DebugString(),
+	})
+
+	logger.Debug("start searching request info")
+	defer logger.Debug("finished searching request info")
+
+	var lifeline record.Lifeline
+
+	l, err := c.indexes.ForID(ctx, requestID.Pulse(), objectID)
+	if err != nil {
+		return nil, nil, err
+	}
+	lifeline = l.Lifeline
+
+	if lifeline.LatestRequest == nil {
+		return nil, nil, nil
+	}
+
+	cache := c.cache.Get(objectID)
+	cache.Lock()
+	defer cache.Unlock()
+
+	iter := newFetchingIterator(
+		ctx,
+		cache,
+		objectID,
+		*lifeline.LatestRequest,
+		requestID.Pulse(),
+		c.jetFetcher,
+		c.coordinator,
+		c.sender,
+	)
+
+	var foundRequest *record.CompositeFilamentRecord
+	var foundResult *record.CompositeFilamentRecord
+
+	for iter.HasPrev() {
+		rec, err := iter.Prev(ctx)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed to calculate pending")
+		}
+
+		if bytes.Equal(rec.RecordID.Hash(), requestID.Hash()) {
+			foundRequest = &rec
+			logger.Debugf("found request %s", rec.RecordID.DebugString())
 		}
 
 		virtual := record.Unwrap(&rec.Record.Virtual)

@@ -81,6 +81,9 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 	case payload.TypeGetRequest:
 		h := NewGetRequest(s.dep, meta, false)
 		err = f.Handle(ctx, h.Present)
+	case payload.TypeGetRequestInfo:
+		h := NewGetRequestInfo(s.dep, meta, false)
+		err = f.Handle(ctx, h.Present)
 	case payload.TypeGetFilament:
 		h := NewGetRequests(s.dep, meta)
 		return f.Handle(ctx, h.Present)

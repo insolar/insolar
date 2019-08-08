@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"strings"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
@@ -92,6 +93,32 @@ func MakeSetIncomingRequest(objectID, reasonID insolar.ID, isCreation, isAPI boo
 		req.APINode = gen.Reference()
 	} else {
 		req.Caller = gen.Reference()
+	}
+	rec := record.Wrap(&req)
+	pl := payload.SetIncomingRequest{
+		Request: rec,
+	}
+	return pl, rec
+}
+
+func MakeSetIncomingRequestWReasonObject(objectID, reasonID insolar.ID, reasonObjectID insolar.ID, isCreation, isAPI bool) (payload.SetIncomingRequest, record.Virtual) {
+	args := make([]byte, 100)
+	_, err := rand.Read(args)
+	panicIfErr(err)
+
+	req := record.IncomingRequest{
+		Arguments: args,
+		Reason:    *insolar.NewReference(reasonID),
+	}
+	if isCreation {
+		req.CallType = record.CTSaveAsChild
+	} else {
+		req.Object = insolar.NewReference(objectID)
+	}
+	if isAPI {
+		req.APINode = gen.Reference()
+	} else {
+		req.Caller = *insolar.NewReference(reasonObjectID)
 	}
 	rec := record.Wrap(&req)
 	pl := payload.SetIncomingRequest{
@@ -408,7 +435,17 @@ func RequireNotError(pl payload.Payload) {
 }
 
 func RequireError(pl payload.Payload) {
-	if _, ok := pl.(*payload.Error); !ok {
+	if err, ok := pl.(*payload.Error); !ok {
 		panic("expected error")
+	} else {
+		if strings.Contains(err.Text, "index not found") {
+			panic("wrong error")
+		}
+	}
+}
+
+func RequireErrorCode(pl payload.Payload, code uint32) {
+	if err, ok := pl.(*payload.Error); !ok || err.Code != code {
+		panic(fmt.Sprintf("expected error code %d", code))
 	}
 }

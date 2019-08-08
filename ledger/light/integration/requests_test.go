@@ -377,7 +377,7 @@ func Test_Result_Duplicate(t *testing.T) {
 
 func Test_IncomingRequest_ClosedReason(t *testing.T) {
 	// todo uncomment after fix
-	t.Skip()
+	// t.Skip()
 
 	t.Parallel()
 
@@ -416,7 +416,7 @@ func Test_IncomingRequest_ClosedReason(t *testing.T) {
 
 		// Creating incoming w closed reason request.
 		{
-			msg, _ := MakeSetIncomingRequest(gen.ID(), reasonID, true, false)
+			msg, _ := MakeSetIncomingRequestWReasonObject(gen.ID(), reasonID, reasonID, true, false)
 			rep := SendMessage(ctx, s, &msg)
 			RequireError(rep)
 		}
@@ -465,9 +465,6 @@ func Test_OutgoingRequest_ClosedReason(t *testing.T) {
 }
 
 func Test_Requests_OutgoingReason(t *testing.T) {
-	// todo uncomment after fix logic
-	t.Skip()
-
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
@@ -503,7 +500,7 @@ func Test_Requests_OutgoingReason(t *testing.T) {
 
 		// Creating wrong incoming
 		{
-			msg, _ := MakeSetIncomingRequest(rootID, reasonID, true, true)
+			msg, _ := MakeSetIncomingRequestWReasonObject(rootID, reasonID, rootID, true, false)
 			rep := SendMessage(ctx, s, &msg)
 			RequireError(rep)
 		}

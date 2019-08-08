@@ -1,3 +1,19 @@
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
 package executor
 
 import (
@@ -59,17 +75,11 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 			return errors.Errorf("incoming request cannot be detached (got mode %v)", r.ReturnMode)
 		}
 
-		// Reason should exist.
 		// FIXME: replace with remote request check.
 		if !request.IsAPIRequest() {
-			reasonObject := r.ReasonAffinityRef()
-			if reasonObject.IsEmpty() {
-				return errors.New("reason affinity is not set on incoming request")
-			}
-
-			err := c.checkReasonExists(ctx, *reasonObject.Record(), reasonID)
+			err := c.checkIncomingReason(ctx, r, reasonID)
 			if err != nil {
-				return errors.Wrap(err, "reason not found")
+				return errors.Wrap(err, "reason is wrong")
 			}
 		}
 
@@ -83,14 +93,14 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 			ctx,
 			requestID.Pulse(),
 			*request.AffinityRef().Record(),
-			false,
+			true,
 		)
 		if err != nil {
 			return errors.Wrap(err, "failed fetch pending requests")
 		}
 
-		reasonInPendings := contains(requests, reasonID)
-		if !reasonInPendings {
+		_, ok := findRecord(requests, reasonID)
+		if !ok {
 			return errors.New("request reason not found in opened requests")
 		}
 	}
@@ -98,65 +108,92 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 	return nil
 }
 
-func (c *RequestCheckerDefault) checkReasonExists(
-	ctx context.Context, objectID insolar.ID, reasonID insolar.ID,
-) error {
+func (c *RequestCheckerDefault) checkIncomingReason(ctx context.Context, request *record.IncomingRequest, reasonID insolar.ID) error {
+	reasonObject := request.ReasonAffinityRef()
+	if reasonObject.IsEmpty() {
+		return errors.New("reason affinity is not set on incoming request")
+	}
+
+	reasonRequest, err := c.getRequest(ctx, *reasonObject.Record(), reasonID)
+	if err != nil {
+		return errors.Wrap(err, "reason request not found")
+	}
+
+	rec := record.Material{}
+	err = rec.Unmarshal(reasonRequest.Request)
+	if !isIncomingRequest(rec.Virtual) {
+		return fmt.Errorf("reason request must be Incoming, %T received", rec.Virtual.Union)
+	}
+
+	if reasonRequest.Result != nil {
+		return errors.New("reason request is closed")
+	}
+	return nil
+}
+
+func (c *RequestCheckerDefault) getRequest(ctx context.Context, objectID insolar.ID, reasonID insolar.ID) (*payload.RequestInfo, error) {
+	emptyResp := payload.RequestInfo{}
 	isBeyond, err := c.coordinator.IsBeyondLimit(ctx, reasonID.Pulse())
 	if err != nil {
-		return errors.Wrap(err, "failed to calculate limit")
+		return &emptyResp, errors.Wrap(err, "failed to calculate limit")
 	}
 	var node *insolar.Reference
 	if isBeyond {
 		node, err = c.coordinator.Heavy(ctx)
 		if err != nil {
-			return errors.Wrap(err, "failed to calculate node")
+			return &emptyResp, errors.Wrap(err, "failed to calculate node")
 		}
 	} else {
 		jetID, err := c.fetcher.Fetch(ctx, objectID, reasonID.Pulse())
 		if err != nil {
-			return errors.Wrap(err, "failed to fetch jet")
+			return &emptyResp, errors.Wrap(err, "failed to fetch jet")
 		}
 		node, err = c.coordinator.NodeForJet(ctx, *jetID, reasonID.Pulse())
 		if err != nil {
-			return errors.Wrap(err, "failed to calculate node")
+			return &emptyResp, errors.Wrap(err, "failed to calculate node")
 		}
 	}
 	inslogger.FromContext(ctx).Debug("check reason. request: ", reasonID.DebugString())
-	msg, err := payload.NewMessage(&payload.GetRequest{
+	msg, err := payload.NewMessage(&payload.GetRequestInfo{
 		ObjectID:  objectID,
 		RequestID: reasonID,
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to check an object existence")
+		return &emptyResp, errors.Wrap(err, "failed to check an object existence")
 	}
 
 	reps, done := c.sender.SendTarget(ctx, msg, *node)
 	defer done()
 	res, ok := <-reps
 	if !ok {
-		return errors.New("no reply for reason check")
+		return &emptyResp, errors.New("no reply for reason check")
 	}
 
 	pl, err := payload.UnmarshalFromMeta(res.Payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal reply")
+		return &emptyResp, errors.Wrap(err, "failed to unmarshal reply")
 	}
 
 	switch concrete := pl.(type) {
-	case *payload.Request:
-		return nil
+	case *payload.RequestInfo:
+		return concrete, nil
 	case *payload.Error:
-		return errors.New(concrete.Text)
+		return &emptyResp, errors.New(concrete.Text)
 	default:
-		return fmt.Errorf("unexpected reply %T", pl)
+		return &emptyResp, fmt.Errorf("unexpected reply %T", pl)
 	}
 }
 
-func contains(pendings []record.CompositeFilamentRecord, requestID insolar.ID) bool {
-	for _, p := range pendings {
+func findRecord(filamentRecords []record.CompositeFilamentRecord, requestID insolar.ID) (record.CompositeFilamentRecord, bool) {
+	for _, p := range filamentRecords {
 		if p.RecordID == requestID {
-			return true
+			return p, true
 		}
 	}
-	return false
+	return record.CompositeFilamentRecord{}, false
+}
+
+func isIncomingRequest(rec record.Virtual) bool {
+	_, ok := rec.Union.(*record.Virtual_IncomingRequest)
+	return ok
 }

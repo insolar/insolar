@@ -29,6 +29,12 @@ type FilamentCalculatorMock struct {
 	beforeRequestDuplicateCounter uint64
 	RequestDuplicateMock          mFilamentCalculatorMockRequestDuplicate
 
+	funcRequestInfo          func(ctx context.Context, objectID insolar.ID, requestID insolar.ID) (foundRequest *record.CompositeFilamentRecord, foundResult *record.CompositeFilamentRecord, err error)
+	inspectFuncRequestInfo   func(ctx context.Context, objectID insolar.ID, requestID insolar.ID)
+	afterRequestInfoCounter  uint64
+	beforeRequestInfoCounter uint64
+	RequestInfoMock          mFilamentCalculatorMockRequestInfo
+
 	funcRequests          func(ctx context.Context, objectID insolar.ID, from insolar.ID, readUntil insolar.PulseNumber) (ca1 []record.CompositeFilamentRecord, err error)
 	inspectFuncRequests   func(ctx context.Context, objectID insolar.ID, from insolar.ID, readUntil insolar.PulseNumber)
 	afterRequestsCounter  uint64
@@ -54,6 +60,9 @@ func NewFilamentCalculatorMock(t minimock.Tester) *FilamentCalculatorMock {
 
 	m.RequestDuplicateMock = mFilamentCalculatorMockRequestDuplicate{mock: m}
 	m.RequestDuplicateMock.callArgs = []*FilamentCalculatorMockRequestDuplicateParams{}
+
+	m.RequestInfoMock = mFilamentCalculatorMockRequestInfo{mock: m}
+	m.RequestInfoMock.callArgs = []*FilamentCalculatorMockRequestInfoParams{}
 
 	m.RequestsMock = mFilamentCalculatorMockRequests{mock: m}
 	m.RequestsMock.callArgs = []*FilamentCalculatorMockRequestsParams{}
@@ -503,6 +512,225 @@ func (m *FilamentCalculatorMock) MinimockRequestDuplicateInspect() {
 	}
 }
 
+type mFilamentCalculatorMockRequestInfo struct {
+	mock               *FilamentCalculatorMock
+	defaultExpectation *FilamentCalculatorMockRequestInfoExpectation
+	expectations       []*FilamentCalculatorMockRequestInfoExpectation
+
+	callArgs []*FilamentCalculatorMockRequestInfoParams
+	mutex    sync.RWMutex
+}
+
+// FilamentCalculatorMockRequestInfoExpectation specifies expectation struct of the FilamentCalculator.RequestInfo
+type FilamentCalculatorMockRequestInfoExpectation struct {
+	mock    *FilamentCalculatorMock
+	params  *FilamentCalculatorMockRequestInfoParams
+	results *FilamentCalculatorMockRequestInfoResults
+	Counter uint64
+}
+
+// FilamentCalculatorMockRequestInfoParams contains parameters of the FilamentCalculator.RequestInfo
+type FilamentCalculatorMockRequestInfoParams struct {
+	ctx       context.Context
+	objectID  insolar.ID
+	requestID insolar.ID
+}
+
+// FilamentCalculatorMockRequestInfoResults contains results of the FilamentCalculator.RequestInfo
+type FilamentCalculatorMockRequestInfoResults struct {
+	foundRequest *record.CompositeFilamentRecord
+	foundResult  *record.CompositeFilamentRecord
+	err          error
+}
+
+// Expect sets up expected params for FilamentCalculator.RequestInfo
+func (mmRequestInfo *mFilamentCalculatorMockRequestInfo) Expect(ctx context.Context, objectID insolar.ID, requestID insolar.ID) *mFilamentCalculatorMockRequestInfo {
+	if mmRequestInfo.mock.funcRequestInfo != nil {
+		mmRequestInfo.mock.t.Fatalf("FilamentCalculatorMock.RequestInfo mock is already set by Set")
+	}
+
+	if mmRequestInfo.defaultExpectation == nil {
+		mmRequestInfo.defaultExpectation = &FilamentCalculatorMockRequestInfoExpectation{}
+	}
+
+	mmRequestInfo.defaultExpectation.params = &FilamentCalculatorMockRequestInfoParams{ctx, objectID, requestID}
+	for _, e := range mmRequestInfo.expectations {
+		if minimock.Equal(e.params, mmRequestInfo.defaultExpectation.params) {
+			mmRequestInfo.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmRequestInfo.defaultExpectation.params)
+		}
+	}
+
+	return mmRequestInfo
+}
+
+// Inspect accepts an inspector function that has same arguments as the FilamentCalculator.RequestInfo
+func (mmRequestInfo *mFilamentCalculatorMockRequestInfo) Inspect(f func(ctx context.Context, objectID insolar.ID, requestID insolar.ID)) *mFilamentCalculatorMockRequestInfo {
+	if mmRequestInfo.mock.inspectFuncRequestInfo != nil {
+		mmRequestInfo.mock.t.Fatalf("Inspect function is already set for FilamentCalculatorMock.RequestInfo")
+	}
+
+	mmRequestInfo.mock.inspectFuncRequestInfo = f
+
+	return mmRequestInfo
+}
+
+// Return sets up results that will be returned by FilamentCalculator.RequestInfo
+func (mmRequestInfo *mFilamentCalculatorMockRequestInfo) Return(foundRequest *record.CompositeFilamentRecord, foundResult *record.CompositeFilamentRecord, err error) *FilamentCalculatorMock {
+	if mmRequestInfo.mock.funcRequestInfo != nil {
+		mmRequestInfo.mock.t.Fatalf("FilamentCalculatorMock.RequestInfo mock is already set by Set")
+	}
+
+	if mmRequestInfo.defaultExpectation == nil {
+		mmRequestInfo.defaultExpectation = &FilamentCalculatorMockRequestInfoExpectation{mock: mmRequestInfo.mock}
+	}
+	mmRequestInfo.defaultExpectation.results = &FilamentCalculatorMockRequestInfoResults{foundRequest, foundResult, err}
+	return mmRequestInfo.mock
+}
+
+//Set uses given function f to mock the FilamentCalculator.RequestInfo method
+func (mmRequestInfo *mFilamentCalculatorMockRequestInfo) Set(f func(ctx context.Context, objectID insolar.ID, requestID insolar.ID) (foundRequest *record.CompositeFilamentRecord, foundResult *record.CompositeFilamentRecord, err error)) *FilamentCalculatorMock {
+	if mmRequestInfo.defaultExpectation != nil {
+		mmRequestInfo.mock.t.Fatalf("Default expectation is already set for the FilamentCalculator.RequestInfo method")
+	}
+
+	if len(mmRequestInfo.expectations) > 0 {
+		mmRequestInfo.mock.t.Fatalf("Some expectations are already set for the FilamentCalculator.RequestInfo method")
+	}
+
+	mmRequestInfo.mock.funcRequestInfo = f
+	return mmRequestInfo.mock
+}
+
+// When sets expectation for the FilamentCalculator.RequestInfo which will trigger the result defined by the following
+// Then helper
+func (mmRequestInfo *mFilamentCalculatorMockRequestInfo) When(ctx context.Context, objectID insolar.ID, requestID insolar.ID) *FilamentCalculatorMockRequestInfoExpectation {
+	if mmRequestInfo.mock.funcRequestInfo != nil {
+		mmRequestInfo.mock.t.Fatalf("FilamentCalculatorMock.RequestInfo mock is already set by Set")
+	}
+
+	expectation := &FilamentCalculatorMockRequestInfoExpectation{
+		mock:   mmRequestInfo.mock,
+		params: &FilamentCalculatorMockRequestInfoParams{ctx, objectID, requestID},
+	}
+	mmRequestInfo.expectations = append(mmRequestInfo.expectations, expectation)
+	return expectation
+}
+
+// Then sets up FilamentCalculator.RequestInfo return parameters for the expectation previously defined by the When method
+func (e *FilamentCalculatorMockRequestInfoExpectation) Then(foundRequest *record.CompositeFilamentRecord, foundResult *record.CompositeFilamentRecord, err error) *FilamentCalculatorMock {
+	e.results = &FilamentCalculatorMockRequestInfoResults{foundRequest, foundResult, err}
+	return e.mock
+}
+
+// RequestInfo implements FilamentCalculator
+func (mmRequestInfo *FilamentCalculatorMock) RequestInfo(ctx context.Context, objectID insolar.ID, requestID insolar.ID) (foundRequest *record.CompositeFilamentRecord, foundResult *record.CompositeFilamentRecord, err error) {
+	mm_atomic.AddUint64(&mmRequestInfo.beforeRequestInfoCounter, 1)
+	defer mm_atomic.AddUint64(&mmRequestInfo.afterRequestInfoCounter, 1)
+
+	if mmRequestInfo.inspectFuncRequestInfo != nil {
+		mmRequestInfo.inspectFuncRequestInfo(ctx, objectID, requestID)
+	}
+
+	params := &FilamentCalculatorMockRequestInfoParams{ctx, objectID, requestID}
+
+	// Record call args
+	mmRequestInfo.RequestInfoMock.mutex.Lock()
+	mmRequestInfo.RequestInfoMock.callArgs = append(mmRequestInfo.RequestInfoMock.callArgs, params)
+	mmRequestInfo.RequestInfoMock.mutex.Unlock()
+
+	for _, e := range mmRequestInfo.RequestInfoMock.expectations {
+		if minimock.Equal(e.params, params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.foundRequest, e.results.foundResult, e.results.err
+		}
+	}
+
+	if mmRequestInfo.RequestInfoMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmRequestInfo.RequestInfoMock.defaultExpectation.Counter, 1)
+		want := mmRequestInfo.RequestInfoMock.defaultExpectation.params
+		got := FilamentCalculatorMockRequestInfoParams{ctx, objectID, requestID}
+		if want != nil && !minimock.Equal(*want, got) {
+			mmRequestInfo.t.Errorf("FilamentCalculatorMock.RequestInfo got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		}
+
+		results := mmRequestInfo.RequestInfoMock.defaultExpectation.results
+		if results == nil {
+			mmRequestInfo.t.Fatal("No results are set for the FilamentCalculatorMock.RequestInfo")
+		}
+		return (*results).foundRequest, (*results).foundResult, (*results).err
+	}
+	if mmRequestInfo.funcRequestInfo != nil {
+		return mmRequestInfo.funcRequestInfo(ctx, objectID, requestID)
+	}
+	mmRequestInfo.t.Fatalf("Unexpected call to FilamentCalculatorMock.RequestInfo. %v %v %v", ctx, objectID, requestID)
+	return
+}
+
+// RequestInfoAfterCounter returns a count of finished FilamentCalculatorMock.RequestInfo invocations
+func (mmRequestInfo *FilamentCalculatorMock) RequestInfoAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmRequestInfo.afterRequestInfoCounter)
+}
+
+// RequestInfoBeforeCounter returns a count of FilamentCalculatorMock.RequestInfo invocations
+func (mmRequestInfo *FilamentCalculatorMock) RequestInfoBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmRequestInfo.beforeRequestInfoCounter)
+}
+
+// Calls returns a list of arguments used in each call to FilamentCalculatorMock.RequestInfo.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmRequestInfo *mFilamentCalculatorMockRequestInfo) Calls() []*FilamentCalculatorMockRequestInfoParams {
+	mmRequestInfo.mutex.RLock()
+
+	argCopy := make([]*FilamentCalculatorMockRequestInfoParams, len(mmRequestInfo.callArgs))
+	copy(argCopy, mmRequestInfo.callArgs)
+
+	mmRequestInfo.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockRequestInfoDone returns true if the count of the RequestInfo invocations corresponds
+// the number of defined expectations
+func (m *FilamentCalculatorMock) MinimockRequestInfoDone() bool {
+	for _, e := range m.RequestInfoMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.RequestInfoMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterRequestInfoCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcRequestInfo != nil && mm_atomic.LoadUint64(&m.afterRequestInfoCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockRequestInfoInspect logs each unmet expectation
+func (m *FilamentCalculatorMock) MinimockRequestInfoInspect() {
+	for _, e := range m.RequestInfoMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to FilamentCalculatorMock.RequestInfo with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.RequestInfoMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterRequestInfoCounter) < 1 {
+		if m.RequestInfoMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to FilamentCalculatorMock.RequestInfo")
+		} else {
+			m.t.Errorf("Expected call to FilamentCalculatorMock.RequestInfo with params: %#v", *m.RequestInfoMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcRequestInfo != nil && mm_atomic.LoadUint64(&m.afterRequestInfoCounter) < 1 {
+		m.t.Error("Expected call to FilamentCalculatorMock.RequestInfo")
+	}
+}
+
 type mFilamentCalculatorMockRequests struct {
 	mock               *FilamentCalculatorMock
 	defaultExpectation *FilamentCalculatorMockRequestsExpectation
@@ -948,6 +1176,8 @@ func (m *FilamentCalculatorMock) MinimockFinish() {
 
 		m.MinimockRequestDuplicateInspect()
 
+		m.MinimockRequestInfoInspect()
+
 		m.MinimockRequestsInspect()
 
 		m.MinimockResultDuplicateInspect()
@@ -976,6 +1206,7 @@ func (m *FilamentCalculatorMock) minimockDone() bool {
 	return done &&
 		m.MinimockOpenedRequestsDone() &&
 		m.MinimockRequestDuplicateDone() &&
+		m.MinimockRequestInfoDone() &&
 		m.MinimockRequestsDone() &&
 		m.MinimockResultDuplicateDone()
 }
