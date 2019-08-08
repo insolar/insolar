@@ -280,6 +280,54 @@ func (w *SagaTestWallet) TheRollbackMethod(amount string) error {
 		"They should be exactly the same.", err.Error())
 }
 
+// Make sure it's impossible to make a saga constructor.
+// This case is implicitly forbidden by the specification.
+func (s *SagasSuite) TestItsImpossibleToMakeASagaConstructor() {
+	var testSaga = `
+package main
+
+import (
+"github.com/insolar/insolar/insolar"
+"github.com/insolar/insolar/logicrunner/builtin/foundation"
+"github.com/insolar/insolar/application/proxy/test_saga_simple_contract"
+)
+
+type TestSagaSimpleCallContract struct {
+	foundation.BaseContract
+	Friend insolar.Reference
+	Amount int
+}
+
+//ins:saga(GetBalance)
+func New() (*TestSagaSimpleCallContract, error) {
+	return &TestSagaSimpleCallContract{Amount: 100}, nil
+}
+
+func (w *TestSagaSimpleCallContract) GetBalance() (int, error) {
+	return w.Amount, nil
+}
+`
+	tmpDir, err := ioutil.TempDir("", "test-")
+	s.NoError(err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+	err = goplugintestutils.WriteFile(tmpDir, testContract, testSaga)
+	s.NoError(err)
+
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	s.NoError(err)
+
+	var bufProxy bytes.Buffer
+	err = parsed.WriteWrapper(&bufProxy, parsed.ContractName())
+	s.Error(err)
+	s.Equal("semantic error: 'New' can't be a saga because it's a constructor", err.Error())
+
+	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
+	s.Error(err)
+	s.Equal("semantic error: 'New' can't be a saga because it's a constructor", err.Error())
+}
+
 // Low-level tests for extractSagaInfoFromComment procedure
 func (s *SagasSuite) TestExtractSagaInfoFromComment() {
 	info := &SagaInfo{}
