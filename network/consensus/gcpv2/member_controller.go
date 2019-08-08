@@ -161,6 +161,9 @@ func (h *ConsensusMemberController) discardInternal(terminateMember bool, toBeDi
 }
 
 func (h *ConsensusMemberController) discard(toBeDiscarded api.RoundController) bool {
+	if toBeDiscarded == nil {
+		return false
+	}
 	return h.discardInternal(false, toBeDiscarded)
 }
 
@@ -201,11 +204,13 @@ func (h *ConsensusMemberController) ProcessPacket(ctx context.Context, payload t
 		if isCreated {
 			return fmt.Errorf("illegal behavior - packet can not be re-processed for a just created round")
 		}
+		h.discard(round)
 	}
 
-	h.discard(round)
-
 	round, _ = h.getOrCreate()
+	if round == nil {
+		return fmt.Errorf("new round can not be created - controller was terminated")
+	}
 	retry, err := h.processPacket(ctx, round, payload, from)
 	if retry {
 		return fmt.Errorf("illegal behavior - packet can not be re-processed twice")

@@ -177,15 +177,15 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 		}
 	},
 		// both further handlers MUST not use round's lock inside
-		r.onConsensusStopper,
-		r.onConsensusFinished,
+		r._onConsensusStopper,
+		r._onConsensusFinished,
 	)
 
 	r.realm.coreRealm.pollingWorker.Start(r.realm.roundContext, 100*time.Millisecond)
 	r.prepR.prepareEphemeralPolling(prepCtx)
 }
 
-func (r *PhasedRoundController) onConsensusStopper() {
+func (r *PhasedRoundController) _onConsensusStopper() {
 	latest := r.chronicle.GetLatestCensus()
 
 	inslogger.FromContext(r.realm.roundContext).Debugf(
@@ -201,12 +201,6 @@ func (r *PhasedRoundController) onConsensusStopper() {
 	}
 
 	// TODO print purgatory
-}
-
-func (r *PhasedRoundController) onConsensusFinished() {
-	r.rw.Lock()
-	defer r.rw.Unlock()
-	r._onConsensusFinished()
 }
 
 func (r *PhasedRoundController) _onConsensusFinished() {

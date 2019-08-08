@@ -92,9 +92,9 @@ type PrepRealm struct {
 
 	/* Other fields - need mutex */
 
-	limiters                sync.Map
-	lastCloudStateHash      cryptkit.DigestHolder
-	disableEphemeralPolling bool //blocks polling
+	limiters           sync.Map
+	lastCloudStateHash cryptkit.DigestHolder
+	disableEphemeral   bool //blocks polling
 }
 
 func (p *PrepRealm) init(completeFn func(successful bool)) {
@@ -244,7 +244,7 @@ func (p *PrepRealm) pushEphemeralPulse(ctx context.Context) {
 	p.Lock()
 	defer p.Unlock()
 
-	if p.disableEphemeralPolling {
+	if p.disableEphemeral {
 		return // ephemeral mode was deactivated
 	}
 
@@ -317,6 +317,8 @@ func (p *PrepRealm) _applyPulseData(pdp proofs.OriginalPulsarPacket, fromPulsar 
 	case fromPulsar || p.ephemeralFeeder == nil:
 		// Pulsars are NEVER ALLOWED to send ephemeral pulses
 		valid = pd.IsValidPulsarData()
+	case pd.IsFromEphemeral():
+		valid = pd.IsValidEphemeralData()
 	default:
 		valid = pd.IsValidPulseData()
 	}
@@ -333,7 +335,7 @@ func (p *PrepRealm) _applyPulseData(pdp proofs.OriginalPulsarPacket, fromPulsar 
 		if !p.ephemeralFeeder.CanAcceptTimePulseToStopEphemeral(pd) {
 			return false, pulse.Unknown
 		}
-		p.disableEphemeralPolling = true
+		p.disableEphemeral = true
 		// real pulse can't be validated vs ephemeral pulse
 	default:
 		epn := pulse.Unknown

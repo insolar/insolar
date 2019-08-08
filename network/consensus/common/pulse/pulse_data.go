@@ -65,6 +65,7 @@ const EphemeralPulseEpoch = InvalidPulseEpoch + 1
 var _ DataReader = &Data{}
 
 type Data struct {
+	// ByteSize=48
 	PulseNumber Number
 	DataExt
 }
@@ -107,6 +108,17 @@ func NewPulsarData(pn Number, deltaNext uint16, deltaPrev uint16, entropy longbi
 
 func NewFirstEphemeralData() Data {
 	return newEphemeralData(MinTimePulse)
+}
+
+func NewEphemeralData(pn Number) Data {
+	if !pn.IsTimePulse() {
+		panic("illegal value")
+	}
+	pd := newEphemeralData(pn)
+	if pn != MinTimePulse {
+		pd.PrevPulseDelta = 1
+	}
+	return pd
 }
 
 type EntropyFunc func() longbits.Bits256
@@ -238,7 +250,12 @@ func (r Data) IsValidEphemeralData() bool {
 	if r.PulseEpoch != EphemeralPulseEpoch {
 		return false
 	}
-	return r.IsValidPulseData()
+	if !r.IsValidPulseData() {
+		return false
+	}
+	var expectedEntropy longbits.Bits256
+	fixedPulseEntropy(&expectedEntropy, r.PulseNumber)
+	return expectedEntropy == r.PulseEntropy
 }
 
 func (r Data) IsFromPulsar() bool {

@@ -52,7 +52,8 @@ package core
 
 import (
 	"context"
-	"github.com/insolar/insolar/network/consensus/common/watchdog"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/common/syncrun"
 	"sync/atomic"
 	"time"
 
@@ -60,14 +61,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
-)
-
-const (
-	runStatusUninitialized = iota
-	runStatusInitialized
-	runStatusStarted
-	runStatusStopping
-	runStatusStopped
 )
 
 type RoundState uint8
@@ -88,21 +81,12 @@ const (
 var _ api.RoundStateCallback = &RoundStateMachineWorker{}
 
 type RoundStateMachineWorker struct {
-	api.UpstreamController
+	worker   syncrun.SyncingWorker
+	upstream api.UpstreamController
 
-	ctx      context.Context
-	cancelFn context.CancelFunc
-
-	runStatus  int32 // atomic
-	roundState uint32
-
-	timeout <-chan time.Time
-
-	asyncCmd   chan func()
-	syncCmd    chan func()
-	starterFn  func()
-	stopperFn  func()
 	finishedFn func()
+
+	roundState uint32
 }
 
 func (p *RoundStateMachineWorker) OnPulseDetected() {
@@ -115,34 +99,37 @@ func (p *RoundStateMachineWorker) OnFullRoundStarting() {
 
 func (p *RoundStateMachineWorker) PreparePulseChange(report api.UpstreamReport, ch chan<- api.UpstreamState) {
 	p.applyState(RoundPulsePreparing)
-	p.UpstreamController.PreparePulseChange(report, ch)
+	p.upstream.PreparePulseChange(report, ch)
 }
 
 func (p *RoundStateMachineWorker) CommitPulseChange(report api.UpstreamReport, pd pulse.Data, activeCensus census.Operational) {
 	p.applyState(RoundPulseCommitted)
-	p.UpstreamController.CommitPulseChange(report, pd, activeCensus)
+	p.upstream.CommitPulseChange(report, pd, activeCensus)
 }
 
 func (p *RoundStateMachineWorker) CommitPulseChangeByStateless(report api.UpstreamReport, pd pulse.Data, activeCensus census.Operational) {
 	p.applyState(RoundPulsePreparing)
 	p.applyState(RoundPulseCommitted)
-	p.UpstreamController.CommitPulseChange(report, pd, activeCensus)
+	p.upstream.CommitPulseChange(report, pd, activeCensus)
 }
 
 func (p *RoundStateMachineWorker) CancelPulseChange() {
 	p.applyState(RoundPulseAccepted)
-	p.UpstreamController.CancelPulseChange()
+	p.upstream.CancelPulseChange()
 }
 
 func (p *RoundStateMachineWorker) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
 	p.applyState(RoundConsensusFinished)
-	p.UpstreamController.ConsensusFinished(report, expectedCensus)
+	p.upstream.ConsensusFinished(report, expectedCensus)
+}
+
+func (p *RoundStateMachineWorker) ConsensusAborted() {
+	p.applyState(RoundAborted)
+	p.upstream.ConsensusAborted()
 }
 
 func (p *RoundStateMachineWorker) SetTimeout(deadline time.Time) {
-	p.sync(func() {
-		p.timeout = time.After(time.Until(deadline))
-	})
+	p.worker.SetDynamicDeadline(deadline)
 }
 
 func (p *RoundStateMachineWorker) OnRoundStopped(ctx context.Context) {
@@ -162,36 +149,51 @@ func (p *RoundStateMachineWorker) OnPrepRoundFailed() {
 }
 
 func (p *RoundStateMachineWorker) onUnexpectedPulse(pulse.Number) {
-
 }
 
 func (p *RoundStateMachineWorker) onNextPulse(pulse.Number) {
-	p.cancelFn()
+	p.worker.Stop()
 }
 
 func (p *RoundStateMachineWorker) Stop() {
-	p.cancelFn()
+	p.worker.Stop()
 }
 
 func (p *RoundStateMachineWorker) preInit(ctx context.Context, upstream api.UpstreamController) context.Context {
-	if p.cancelFn != nil {
-		panic("illegal state - was initialized")
-	}
-
-	p.UpstreamController = upstream
-	p.asyncCmd = make(chan func(), 10)
-	p.syncCmd = make(chan func())
-	p.ctx, p.cancelFn = context.WithCancel(ctx)
-	return p.ctx
+	p.upstream = upstream
+	return p.worker.AttachContext(ctx)
 }
 
 func (p *RoundStateMachineWorker) init(starterFn func(), stopperFn func(), finishedFn func()) {
-	if !atomic.CompareAndSwapInt32(&p.runStatus, runStatusUninitialized, runStatusInitialized) {
-		panic("illegal state")
-	}
-	p.starterFn = starterFn
-	p.stopperFn = stopperFn
+	p.worker.Init(10,
+		func(ctx context.Context) {
+			if starterFn != nil {
+				starterFn()
+			}
+			atomic.CompareAndSwapUint32(&p.roundState, uint32(RoundInactive), uint32(RoundAwaitingPulse))
+		},
+		func(ctx context.Context, err interface{}) {
+			if stopperFn != nil {
+				stopperFn()
+			}
+			p.applyFinishStatus(err)
+		})
 	p.finishedFn = finishedFn
+}
+
+func (p *RoundStateMachineWorker) applyFinishStatus(err interface{}) {
+
+	finishStatus := RoundAborted
+	if err == nil {
+		if atomic.CompareAndSwapUint32(&p.roundState, uint32(RoundConsensusFinished), uint32(RoundStopped)) || p.GetState() == RoundStopped {
+			return
+		}
+	} else if err2, ok := err.(error); ok && err2 == context.DeadlineExceeded {
+		finishStatus = RoundTimedOut
+	}
+
+	p.applyState(finishStatus)
+	//	atomic.StoreUint32(&p.roundState, uint32(finishStatus))
 }
 
 func (p *RoundStateMachineWorker) SafeStartAndGetIsRunning() bool {
@@ -203,139 +205,34 @@ func (p *RoundStateMachineWorker) Start() {
 }
 
 func (p *RoundStateMachineWorker) startAndGetIsRunning(safe bool) bool {
-	if !atomic.CompareAndSwapInt32(&p.runStatus, runStatusInitialized, runStatusStarted) {
-		if atomic.LoadInt32(&p.runStatus) >= runStatusStopping {
-			if safe {
-				return false
-			}
-			panic("illegal state")
+	if p.worker.TryStartAttached().IsStoppingOrStopped() {
+		if safe {
+			return false
 		}
-		return true // isRunning
+		panic("illegal state")
 	}
-	if p.starterFn != nil {
-		p.starterFn()
-	}
-	atomic.CompareAndSwapUint32(&p.roundState, uint32(RoundInactive), uint32(RoundAwaitingPulse))
-	watchdog.Go(p.ctx, "RoundStateMachine", p.stateWorker)
 	return true
 }
 
-func (p *RoundStateMachineWorker) stateWorker(ctx context.Context) {
-
-	exitState := p.runToLastState(ctx)
-
-	switch {
-	case exitState == RoundStopped:
-		if atomic.CompareAndSwapUint32(&p.roundState, uint32(RoundConsensusFinished), uint32(RoundStopped)) ||
-			p.GetState() == RoundStopped {
-			break
-		}
-		exitState = RoundAborted
-		fallthrough
-	default:
-		atomic.StoreUint32(&p.roundState, uint32(exitState))
-	}
-	atomic.StoreInt32(&p.runStatus, runStatusStopped)
-}
-
-func (p *RoundStateMachineWorker) runToLastState(ctx context.Context) (exitState RoundState) {
-	defer func() {
-		p.cancelFn()
-		recovered := recover()
-		if recovered != nil {
-			exitState = RoundAborted
-			// TODO log
-		}
-		if p.stopperFn != nil {
-			p.stopperFn()
-		}
-	}()
-
-	exitState = RoundAborted
-	for {
-		select {
-		case <-watchdog.DoneOf(ctx):
-			close(p.asyncCmd)
-			close(p.syncCmd)
-		case <-p.timeout:
-			close(p.asyncCmd)
-			close(p.syncCmd)
-			exitState = RoundTimedOut
-		case cmd, ok := <-p.asyncCmd:
-			if ok {
-				cmd()
-				continue
-			}
-		case cmd, ok := <-p.syncCmd:
-			if ok {
-				p.flushAsync()
-				cmd()
-				continue
-			}
-		}
-
-		if !atomic.CompareAndSwapInt32(&p.runStatus, runStatusStarted, runStatusStopping) {
-			panic("illegal state")
-		}
-		p.cancelFn()
-
-		for cmd := range p.asyncCmd { // ensure that a queued command is read
-			cmd()
-		}
-		for cmd := range p.syncCmd { // ensure that a queued command is read
-			cmd()
-		}
-		return RoundStopped
-	}
-}
-
-func (p *RoundStateMachineWorker) flushAsync() {
-	p.asyncCmd <- nil // there is a chance of deadlock when asyncCmd is full ...
-	for {
-		select {
-		case cmd, ok := <-p.asyncCmd:
-			if !ok || cmd == nil {
-				return
-			}
-			cmd()
-		default:
-			return
-		}
-	}
-}
-
 func (p *RoundStateMachineWorker) IsStartedAndRunning() (bool, bool) {
-	s := atomic.LoadInt32(&p.runStatus)
-	return s >= runStatusStarted, s == runStatusStarted
+	s := p.worker.GetStatus()
+	return s.WasStarted(), s.IsRunning()
 }
 
 func (p *RoundStateMachineWorker) IsRunning() bool {
-	return atomic.LoadInt32(&p.runStatus) == runStatusStarted
+	return p.worker.GetStatus().IsRunning()
 }
 
 func (p *RoundStateMachineWorker) EnsureRunning() {
-	switch atomic.LoadInt32(&p.runStatus) {
-	case runStatusStarted:
+	s := p.worker.GetStatus()
+	switch {
+	case s.IsRunning():
 		return
-	case runStatusUninitialized, runStatusInitialized:
+	case !s.WasStarted():
 		panic("illegal state - not started")
 	default:
 		panic("illegal state - stopped")
 	}
-}
-
-func (p *RoundStateMachineWorker) sync(fn func()) {
-	defer func() {
-		_ = recover()
-	}()
-	p.syncCmd <- fn
-}
-
-func (p *RoundStateMachineWorker) async(fn func()) {
-	defer func() {
-		_ = recover()
-	}()
-	p.asyncCmd <- fn
 }
 
 func (p *RoundStateMachineWorker) GetState() RoundState {
@@ -343,46 +240,92 @@ func (p *RoundStateMachineWorker) GetState() RoundState {
 }
 
 func (p *RoundStateMachineWorker) applyState(newState RoundState) {
-	for {
-		attention := false
 
-		curState := p.GetState()
+	var transitionCompletionAction func()
+	var curState RoundState
+
+	logLevel := insolar.NoLevel
+	logMsg := ""
+
+loop:
+	for {
+		logLevel = insolar.NoLevel
+		logMsg = "state transition"
+		curState = p.GetState()
+
 		switch { // normal transitions
 		case curState == newState:
-			return // no transition
-		case newState == curState+1 && curState <= RoundConsensusFinished:
-			break // next non-stopped step
+			switch {
+			case curState == RoundPulseDetected:
+				return // OK
+			case curState > RoundConsensusFinished:
+				return // OK
+			default:
+				logLevel = insolar.WarnLevel
+				logMsg = "state self-loop transition"
+				break loop
+			}
+		case curState+1 == newState && curState < RoundConsensusFinished:
+			// next step from a non-stopped state
+			if newState == RoundConsensusFinished {
+				transitionCompletionAction = p.finishedFn
+			}
+		case curState == RoundInactive:
+			logMsg = "transition from inactive state"
+			logLevel = insolar.WarnLevel
 		case curState == RoundConsensusFinished && newState > RoundConsensusFinished:
-			break // stop
+			// classification of stop
 		case curState == RoundPulsePreparing && newState == RoundPulseAccepted:
-			break // prepare was cancelled by caller
+			// prepare was cancelled by caller
 		case curState > RoundConsensusFinished && newState > RoundConsensusFinished:
 			// the first state is correct, don't change
-			return
+			return // OK
 		case curState > RoundConsensusFinished:
 			// attempt to restart from a final state
-			inslogger.FromContext(p.ctx).Errorf("reset transition attempt: current=%v new=%v", curState, newState)
-			return
-		//case curState < RoundConsensusFinished && newState == RoundConsensusFinished:
-		//	break // early finish
+			logLevel = insolar.ErrorLevel
+			logMsg = "state reset transition"
+			break loop // NOT ALLOWED
 		default:
-			attention = true
+			if curState > newState {
+				logLevel = insolar.ErrorLevel
+				logMsg = "backward state transition"
+			} else {
+				logMsg = "fast-forward state transition"
+				logLevel = insolar.WarnLevel // InfoLevel?
+			}
+
 			switch { // transition from a state that require cancellation
 			case curState == RoundPulsePreparing:
-				p.UpstreamController.CancelPulseChange()
+				transitionCompletionAction = p.upstream.CancelPulseChange
 			case curState < RoundConsensusFinished && newState > RoundConsensusFinished:
-				p.UpstreamController.ConsensusAborted()
-			}
-		}
-		if atomic.CompareAndSwapUint32(&p.roundState, uint32(curState), uint32(newState)) {
-			if attention {
-				if newState < curState {
-					inslogger.FromContext(p.ctx).Warnf("backward state transition: current=%v new=%v", curState, newState)
-				} else {
-					inslogger.FromContext(p.ctx).Infof("fast-forward state transition: current=%v new=%v", curState, newState)
+				transitionCompletionAction = func() {
+					if p.finishedFn != nil {
+						p.finishedFn()
+					}
+					p.upstream.ConsensusAborted()
 				}
 			}
-			return
 		}
+
+		if atomic.CompareAndSwapUint32(&p.roundState, uint32(curState), uint32(newState)) {
+			if transitionCompletionAction != nil {
+				transitionCompletionAction()
+			}
+			break loop
+		}
+	}
+
+	if logLevel == insolar.NoLevel {
+		return
+	}
+
+	log := inslogger.FromContext(p.worker.GetContext())
+	switch logLevel {
+	case insolar.ErrorLevel:
+		log.Errorf("forbidden %s: current=%v new=%v", logMsg, curState, newState)
+	case insolar.WarnLevel:
+		log.Warnf("unexpected %s: current=%v new=%v", logMsg, curState, newState)
+	default:
+		log.Infof("unexpected %s: current=%v new=%v", logMsg, curState, newState)
 	}
 }
