@@ -326,8 +326,9 @@ message LightInitialState {
 
     bool NetworkStart = 20;
     repeated bytes JetIDs = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
-    repeated bytes Drops = 22;
-    pulse.PulseProto Pulse = 23 [ (gogoproto.nullable) = false];
+    repeated bytes Drops = 22 [(gogoproto.nullable) = false];
+    repeated record.Index Indices = 23 [(gogoproto.nullable) = false];
+    pulse.PulseProto Pulse = 24 [ (gogoproto.nullable) = false];
 }
 
 message GetIndex {
