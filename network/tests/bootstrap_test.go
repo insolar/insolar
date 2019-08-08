@@ -73,21 +73,18 @@ func (s *bootstrapSuite) SetupTest() {
 	s.fixture().pulsar, err = NewTestPulsar(reqTimeoutMs*10, pulseDelta*10)
 	require.NoError(s.t, err)
 
-	inslogger.FromContext(s.fixture().ctx).Info("SetupTest -- ")
+	inslogger.FromContext(s.fixture().ctx).Info("SetupTest")
 
 	for i := 0; i < s.bootstrapCount; i++ {
 		role := insolar.StaticRoleVirtual
 		if i == 0 {
 			role = insolar.StaticRoleHeavyMaterial
 		}
+
 		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, s.newNetworkNodeWithRole(fmt.Sprintf("bootstrap_%d", i), role))
 	}
 
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
-	// for _, n := range s.fixture().bootstrapNodes {
-	//	n.serviceNetwork.PhaseManager.(*phaseManagerWrapper).original = &fakeConsensus{n, s}
-	//
-	// }
 
 	pulseReceivers := make([]string, 0)
 	for _, node := range s.fixture().bootstrapNodes {
@@ -100,7 +97,7 @@ func (s *bootstrapSuite) SetupTest() {
 }
 
 func (s *bootstrapSuite) TearDownTest() {
-	inslogger.FromContext(s.fixture().ctx).Info("TearDownTest -- ")
+	inslogger.FromContext(s.fixture().ctx).Info("TearDownTest")
 
 	suiteLogger.Info("Stop bootstrap nodes")
 	for _, n := range s.fixture().bootstrapNodes {
@@ -124,38 +121,21 @@ func newBootstraptSuite(t *testing.T, bootstrapCount int) *bootstrapSuite {
 }
 
 func testBootstrap(t *testing.T) *bootstrapSuite {
-	s := newBootstraptSuite(t, 5)
+	s := newBootstraptSuite(t, 11)
 	s.SetupTest()
 	return s
 }
 
 func TestBootstrap(t *testing.T) {
-	// t.Skip("FIXME")
 	s := testBootstrap(t)
 	defer s.TearDownTest()
 
-	inslogger.FromContext(s.fixture().ctx).Info("Log -- ")
-	assert.True(s.t, true)
-
 	s.StartNodesNetwork(s.fixture().bootstrapNodes)
 
-	s.waitForConsensus(1)
+	s.waitForConsensus(2)
 	s.AssertActiveNodesCountDelta(0)
 
 	s.waitForConsensus(1)
 	s.AssertActiveNodesCountDelta(0)
-
-	//
-	//
-	// s.AssertActiveNodesCountDelta(0)
-	//
-	// s.waitForConsensus(1)
-	//
-	// s.AssertActiveNodesCountDelta(1)
-	// s.AssertWorkingNodesCountDelta(0)
-	//
-	// s.waitForConsensus(2)
-	//
-	// s.AssertActiveNodesCountDelta(1)
-	// s.AssertWorkingNodesCountDelta(1)
+	s.AssertWorkingNodesCountDelta(0)
 }

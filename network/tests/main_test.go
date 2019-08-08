@@ -88,7 +88,6 @@ func TestNetworkConsensusManyTimes(t *testing.T) {
 }
 
 func TestJoinerNodeConnect(t *testing.T) {
-	// t.Skip("FIXME")
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
@@ -108,26 +107,28 @@ func TestJoinerNodeConnect(t *testing.T) {
 	s.waitForConsensus(2)
 
 	s.AssertActiveNodesCountDelta(1)
-	// s.AssertWorkingNodesCountDelta(1)
-
-	// s.waitForConsensus(1)
-	//
-	// s.AssertActiveNodesCountDelta(1)
-	// s.AssertWorkingNodesCountDelta(1)
 }
 
 func TestNodeConnectInvalidVersion(t *testing.T) {
-	t.Skip("Behavior changed, fix assertion in test needed")
+	// t.Skip("Behavior changed, fix assertion in test needed")
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
 	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
 	testNode.serviceNetwork.NodeKeeper.GetOrigin().(node.MutableNode).SetVersion("ololo")
+	require.Equal(t, "ololo", testNode.serviceNetwork.NodeKeeper.GetOrigin().Version())
+
 	s.InitNode(testNode)
 	err := testNode.componentManager.Start(s.fixture().ctx)
-	assert.Error(t, err)
-	log.Infof("Error: %s", err)
+	defer func(s *consensusSuite) {
+		s.StopNode(testNode)
+	}(s)
+	assert.NoError(t, err)
+
+	s.waitForConsensus(2)
+	s.AssertActiveNodesCountDelta(0)
+
 }
 
 func TestNodeLeave(t *testing.T) {
