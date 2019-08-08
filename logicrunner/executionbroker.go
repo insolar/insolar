@@ -225,10 +225,6 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *Tra
 	ctx, logger := inslogger.WithField(ctx, "request", transcript.RequestRef.String())
 	defer q.releaseTask(ctx, transcript)
 
-	if readyToExecute := q.Check(ctx); !readyToExecute {
-		return
-	}
-
 	reply, err := q.requestsExecutor.ExecuteAndSave(ctx, transcript)
 	if err != nil {
 		logger.Warn("contract execution error: ", err)
