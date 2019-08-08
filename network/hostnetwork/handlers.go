@@ -54,6 +54,8 @@ import (
 	"context"
 	"io"
 
+	"github.com/insolar/insolar/network"
+
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -62,7 +64,6 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/future"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/pool"
-	"github.com/insolar/insolar/network/utils"
 )
 
 // RequestHandler is callback function for request handling
@@ -92,7 +93,7 @@ func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader
 	// context cancel monitoring
 	go func() {
 		<-ctx.Done()
-		utils.CloseVerbose(reader)
+		network.CloseVerbose(reader)
 	}()
 
 	for {
@@ -100,17 +101,17 @@ func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader
 
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
-				mainLogger.Info("[ HandleStream ] Connection closed by peer")
-				utils.CloseVerbose(reader)
+				mainLogger.Debug("[ HandleStream ] Connection closed by peer")
+				network.CloseVerbose(reader)
 				return
 			}
 
-			if utils.IsConnectionClosed(err) || utils.IsClosedPipe(err) {
+			if network.IsConnectionClosed(err) || network.IsClosedPipe(err) {
 				mainLogger.Info("[ HandleStream ] Connection closed.")
 				return
 			}
 
-			mainLogger.Error("[ HandleStream ] Failed to deserialize packet: ", err.Error())
+			mainLogger.Warnf("[ HandleStream ] Failed to deserialize packet: ", err.Error())
 		} else {
 			packetCtx, logger := inslogger.WithTraceField(packetCtx, p.TraceID)
 			span, err := instracer.Deserialize(p.TraceSpanData)

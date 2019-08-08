@@ -61,7 +61,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -207,8 +206,8 @@ func (r *coreRealm) GetSignatureVerifier(pks cryptkit.PublicKeyStore) cryptkit.S
 }
 
 func (r *coreRealm) GetStartedAt() time.Time {
-	//r.Lock()
-	//defer r.Unlock()
+	// r.Lock()
+	// defer r.Unlock()
 
 	if r.roundStartedAt.IsZero() {
 		panic("illegal state")
@@ -226,18 +225,6 @@ func (r *coreRealm) GetRoundContext() context.Context {
 
 func (r *coreRealm) GetLocalConfig() api.LocalNodeConfiguration {
 	return r.config
-}
-
-func (r *coreRealm) IsJoiner() bool {
-	return r.self.IsJoiner()
-}
-
-func (r *coreRealm) GetSelfNodeID() insolar.ShortNodeID {
-	return r.self.GetNodeID()
-}
-
-func (r *coreRealm) GetSelf() *population.NodeAppearance {
-	return r.self
 }
 
 // polling fn must be fast, and it will remain in polling until it returns false
@@ -293,10 +280,6 @@ func (r *coreRealm) VerifyPacketAuthenticity(ctx context.Context, packet transpo
 func (r *coreRealm) VerifyPacketPulseNumber(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
 	filterPN, nextPN pulse.Number) (bool, error) {
 
-	//if r.ephemeralFeeder != nil && !packet.GetPacketType().IsEphemeralPacket() {
-	//	return false, r.ephemeralFeeder.OnNonEphemeralPacket(ctx, packet, from)
-	//}
-
 	pn := packet.GetPulseNumber()
 	if filterPN == pn || filterPN.IsUnknown() || pn.IsUnknown() {
 		return true, nil
@@ -304,12 +287,6 @@ func (r *coreRealm) VerifyPacketPulseNumber(ctx context.Context, packet transpor
 
 	sourceID := packet.GetSourceID()
 	localID := r.self.GetNodeID()
-	msg := fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v, source=%v, local=%d", filterPN, pn, sourceID, localID)
 
-	if !nextPN.IsUnknown() && nextPN == pn {
-		// TODO verify new pulse data to match prevDelta
-		// is it time for the next round?
-		return false, errors.NewNextPulseArrivedError(pn, msg)
-	}
-	return false, errors.NewPulseRoundMismatchError(pn, msg)
+	return false, errors.NewPulseRoundMismatchErrorDef(pn, filterPN, localID, sourceID)
 }

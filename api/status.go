@@ -21,10 +21,9 @@ import (
 	"net/http"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/version"
 )
 
@@ -32,19 +31,21 @@ type Node struct {
 	Reference string
 	Role      string
 	IsWorking bool
+	ID        uint32
 }
 
 // StatusReply is reply for Status service requests.
 type StatusReply struct {
-	NetworkState    string
-	Origin          Node
-	ActiveListSize  int
-	WorkingListSize int
-	Nodes           []Node
-	PulseNumber     uint32
-	Entropy         []byte
-	NodeState       string
-	Version         string
+	NetworkState       string
+	Origin             Node
+	ActiveListSize     int
+	WorkingListSize    int
+	Nodes              []Node
+	PulseNumber        uint32
+	NetworkPulseNumber uint32
+	Entropy            []byte
+	NodeState          string
+	Version            string
 }
 
 // Get returns status info
@@ -57,8 +58,18 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *Statu
 	reply.NetworkState = s.runner.ServiceNetwork.GetState().String()
 	reply.NodeState = s.runner.NodeNetwork.GetOrigin().GetState().String()
 
-	activeNodes := s.runner.NodeNetwork.(network.NodeKeeper).GetAccessor().GetActiveNodes()
-	workingNodes := s.runner.NodeNetwork.GetWorkingNodes()
+	np, err := s.runner.ServiceNetwork.(*servicenetwork.ServiceNetwork).PulseAccessor.GetLatestPulse(ctx)
+	if err != nil {
+		np = *insolar.GenesisPulse
+	}
+
+	p, err := s.runner.PulseAccessor.Latest(ctx)
+	if err != nil {
+		p = *insolar.GenesisPulse
+	}
+
+	activeNodes := s.runner.NodeNetwork.GetAccessor(np.PulseNumber).GetActiveNodes()
+	workingNodes := s.runner.NodeNetwork.GetAccessor(np.PulseNumber).GetWorkingNodes()
 
 	reply.ActiveListSize = len(activeNodes)
 	reply.WorkingListSize = len(workingNodes)
@@ -69,6 +80,7 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *Statu
 			Reference: node.ID().String(),
 			Role:      node.Role().String(),
 			IsWorking: node.GetState() == insolar.NodeReady,
+			ID:        uint32(node.ShortID()),
 		}
 	}
 
@@ -78,19 +90,12 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *Statu
 		Reference: origin.ID().String(),
 		Role:      origin.Role().String(),
 		IsWorking: origin.GetState() == insolar.NodeReady,
+		ID:        uint32(origin.ShortID()),
 	}
 
-	p, err := s.runner.PulseAccessor.Latest(ctx)
-	if err != nil {
-		if err != pulse.ErrNotFound {
-			return err
-		}
-
-		p = *insolar.GenesisPulse
-	}
-
+	reply.NetworkPulseNumber = uint32(np.PulseNumber)
 	reply.PulseNumber = uint32(p.PulseNumber)
-	reply.Entropy = p.Entropy[:]
+	reply.Entropy = np.Entropy[:]
 	reply.Version = version.Version
 
 	return nil

@@ -65,7 +65,7 @@ func (s *NodeCertService) Get(r *http.Request, args *NodeCertArgs, reply *NodeCe
 		instracer.AddError(span, err)
 		return errors.Wrap(err, "[ NodeCertService.Get ] failed to parse args.Ref")
 	}
-	cert, err := s.runner.Gatewayer.Gateway().Auther().GetCert(ctx, nodeRef)
+	cert, err := s.runner.ServiceNetwork.GetCert(ctx, nodeRef)
 	if err != nil {
 		instracer.AddError(span, err)
 		return errors.Wrap(err, "[ NodeCertService.Get ]")

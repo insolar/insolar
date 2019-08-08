@@ -54,11 +54,8 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensusv1/packets"
-	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNode_Version(t *testing.T) {
@@ -96,25 +93,7 @@ func TestNode_LeavingETA(t *testing.T) {
 
 func TestNode_ShortID(t *testing.T) {
 	n := NewNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1", "123")
-	assert.EqualValues(t, utils.GenerateUintShortID(n.ID()), n.ShortID())
+	assert.EqualValues(t, GenerateUintShortID(n.ID()), n.ShortID())
 	n.(MutableNode).SetShortID(11)
 	assert.EqualValues(t, 11, n.ShortID())
-}
-
-func TestClaimToNode(t *testing.T) {
-	address, err := packets.NewNodeAddress("123.234.55.66:12345")
-	require.NoError(t, err)
-
-	claim := packets.NodeJoinClaim{
-		NodeRef:     testutils.RandomRef(),
-		NodePK:      [packets.PublicKeyLength]byte{},
-		ShortNodeID: 10,
-		NodeAddress: address,
-	}
-
-	n, err := ClaimToNode("", &claim)
-	assert.NoError(t, err)
-	assert.Equal(t, claim.NodeRef, n.ID())
-	assert.EqualValues(t, 10, n.ShortID())
-	assert.Equal(t, claim.NodeAddress.String(), n.Address())
 }
