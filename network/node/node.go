@@ -162,6 +162,9 @@ func (n *node) PublicKey() crypto.PublicKey {
 }
 
 func (n *node) Address() string {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+
 	return n.NodeAddress
 }
 
@@ -213,5 +216,8 @@ func (n *node) SetLeavingETA(number insolar.PulseNumber) {
 }
 
 func (n *node) SetAddress(address string) {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+
 	n.NodeAddress = address
 }
