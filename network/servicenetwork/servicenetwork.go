@@ -55,9 +55,9 @@ import (
 	"context"
 	"crypto/rand"
 
-	"github.com/insolar/insolar/cryptography"
-	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/storage"
+
+	"github.com/insolar/insolar/cryptography"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
@@ -77,6 +77,7 @@ import (
 	"github.com/insolar/insolar/network/gateway"
 	"github.com/insolar/insolar/network/gateway/bootstrap"
 	"github.com/insolar/insolar/network/hostnetwork"
+	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/routing"
 	"github.com/insolar/insolar/network/transport"
 )
@@ -193,8 +194,28 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	}
 	n.datagramTransport = datagramTransport
 
+	err = n.datagramTransport.Start(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to start datagram transport")
+	}
+
 	// sign origin
 	origin := n.NodeKeeper.GetOrigin()
+	mutableOrigin := origin.(node.MutableNode)
+	mutableOrigin.SetAddress(datagramTransport.Address())
+	keyStore := getKeyStore(n.CryptographyService)
+
+	digest, sign, err := getAnnounceSignature(
+		origin,
+		network.OriginIsDiscovery(cert),
+		n.KeyProcessor,
+		keyStore,
+		n.CryptographyScheme,
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to getAnnounceSignature")
+	}
+	mutableOrigin.SetSignature(digest, *sign)
 	n.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{origin})
 
 	err = n.cm.Init(ctx)
@@ -208,7 +229,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		KeyProcessor:        n.KeyProcessor,
 		Scheme:              n.CryptographyScheme,
 		CertificateManager:  n.CertificateManager,
-		KeyStore:            getKeyStore(n.CryptographyService),
+		KeyStore:            keyStore,
 		NodeKeeper:          n.NodeKeeper,
 		StateGetter:         n,
 		PulseChanger:        n,
@@ -237,32 +258,10 @@ func (n *ServiceNetwork) initConsensus() {
 
 // Start implements component.Starter
 func (n *ServiceNetwork) Start(ctx context.Context) error {
-	err := n.datagramTransport.Start(ctx)
-	if err != nil {
-		return errors.Wrap(err, "failed to start datagram transport")
-	}
-
-	err = n.cm.Start(ctx)
+	err := n.cm.Start(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed to start component manager")
 	}
-
-	origin := n.NodeKeeper.GetOrigin()
-	mutableOrigin := origin.(node.MutableNode)
-	mutableOrigin.SetAddress(n.HostNetwork.PublicAddress())
-
-	digest, sign, err := getAnnounceSignature(
-		origin,
-		network.OriginIsDiscovery(n.CertificateManager.GetCertificate()),
-		n.KeyProcessor,
-		getKeyStore(n.CryptographyService),
-		n.CryptographyScheme,
-	)
-	if err != nil {
-		return errors.Wrap(err, "failed to getAnnounceSignature")
-	}
-
-	mutableOrigin.SetSignature(digest, *sign)
 
 	bootstrapPulse := gateway.GetBootstrapPulse(ctx, n.PulseAccessor)
 
