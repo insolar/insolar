@@ -352,6 +352,11 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 	for transcript := q.getMutableTask(ctx); transcript != nil; transcript = q.getMutableTask(ctx) {
 		q.fetchMoreFromLedgerIfNeeded(ctx)
 		q.processTranscript(ctx, transcript)
+		// processing immutable queue after every mutable task
+		// its temporary solution
+		for elem := q.getImmutableTask(ctx); elem != nil; elem = q.getImmutableTask(ctx) {
+			go q.processTranscript(ctx, elem)
+		}
 	}
 }
 
