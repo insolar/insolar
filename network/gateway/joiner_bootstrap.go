@@ -92,6 +92,9 @@ func (g *JoinerBootstrap) Run(ctx context.Context, p insolar.Pulse) {
 		return
 	}
 
+	// Reset backoff if not insolar.NoNetworkState.
+	g.backoff = 0
+
 	responsePulse := pulse.FromProto(&resp.Pulse)
 
 	g.bootstrapETA = time.Second * time.Duration(resp.ETASeconds)
@@ -103,6 +106,7 @@ func (g *JoinerBootstrap) GetState() insolar.NetworkState {
 }
 
 func (g *JoinerBootstrap) authorize(ctx context.Context) (*packet.Permit, error) {
+	logger := inslogger.FromContext(ctx)
 	cert := g.CertificateManager.GetCertificate()
 	discoveryNodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), g.NodeKeeper.GetOrigin().ID())
 
@@ -120,16 +124,21 @@ func (g *JoinerBootstrap) authorize(ctx context.Context) (*packet.Permit, error)
 	bestResult := &packet.AuthorizeResponse{}
 
 	for _, n := range discoveryNodes {
-		h, _ := host.NewHostN(n.GetHost(), *n.GetNodeRef())
+		h, err := host.NewHostN(n.GetHost(), *n.GetNodeRef())
+		if err != nil {
+			logger.Warnf("Error authorizing to mallformed host %s[%s]: %s",
+				n.GetHost(), *n.GetNodeRef(), err.Error())
+			continue
+		}
 
 		res, err := g.BootstrapRequester.Authorize(ctx, h, cert)
 		if err != nil {
-			inslogger.FromContext(ctx).Warnf("Error authorizing to host %s: %s", h.String(), err.Error())
+			logger.Warnf("Error authorizing to host %s: %s", h.String(), err.Error())
 			continue
 		}
 
 		if int(res.DiscoveryCount) < cert.GetMajorityRule() {
-			inslogger.FromContext(ctx).Infof(
+			logger.Infof(
 				"Check MajorityRule failed on authorize, expect %d, got %d",
 				cert.GetMajorityRule(),
 				res.DiscoveryCount,

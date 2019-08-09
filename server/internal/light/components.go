@@ -327,6 +327,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			hotSender,
 			writeController,
 			stateIniter,
+			hotWaitReleaser,
 		)
 	}
 
