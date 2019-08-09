@@ -157,4 +157,13 @@ func TestExcludeOrigin(t *testing.T) {
 	discoveryNodes = []insolar.DiscoveryNode{originNode}
 	result = ExcludeOrigin(discoveryNodes, origin)
 	assert.Empty(t, result)
+
+	discoveryNodes = []insolar.DiscoveryNode{originNode, first, second}
+	result = ExcludeOrigin(discoveryNodes, origin)
+	assert.Equal(t, []insolar.DiscoveryNode{first, second}, result)
+
+	discoveryNodes = []insolar.DiscoveryNode{first, second, originNode}
+	result = ExcludeOrigin(discoveryNodes, origin)
+	assert.Equal(t, []insolar.DiscoveryNode{first, second}, result)
+
 }

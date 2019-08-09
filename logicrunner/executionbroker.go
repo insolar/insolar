@@ -181,14 +181,6 @@ func (q *ExecutionBroker) getMutableTask(ctx context.Context) *Transcript {
 	return transcript
 }
 
-func (q *ExecutionBroker) storeCurrent(ctx context.Context, transcript *Transcript) {
-	err := q.currentList.SetOnce(transcript)
-	if err != nil {
-		inslogger.FromContext(ctx).Error("couldn't store task in current list: ", err.Error())
-	}
-	q.executionArchive.Archive(ctx, transcript)
-}
-
 func (q *ExecutionBroker) releaseTask(_ context.Context, transcript *Transcript) {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
@@ -223,20 +215,15 @@ func (q *ExecutionBroker) finishTask(ctx context.Context, transcript *Transcript
 	}
 }
 
-func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *Transcript) bool {
+func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *Transcript) {
 	if transcript.Context != nil {
 		ctx = transcript.Context
 	} else {
 		inslogger.FromContext(ctx).Error("context in transcript is nil")
 	}
 
+	ctx, logger := inslogger.WithField(ctx, "request", transcript.RequestRef.String())
 	defer q.releaseTask(ctx, transcript)
-
-	if readyToExecute := q.Check(ctx); !readyToExecute {
-		return false
-	}
-
-	logger := inslogger.FromContext(ctx)
 
 	reply, err := q.requestsExecutor.ExecuteAndSave(ctx, transcript)
 	if err != nil {
@@ -248,13 +235,12 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *Tra
 	go q.requestsExecutor.SendReply(ctx, transcript, reply, err)
 
 	// we're checking here that pulse was changed and we should send
-	// a message that we've finished processing task
+	// a message that we've finished processing tasks
 	// note: ideally we should tell here that we've stopped executing
 	//       but we only hoped that OnPulse had already told us that
 	//       pulse changed and we should stop execution
+	logger.Debug("finished request, try to finish pending if needed")
 	q.finishPendingIfNeeded(ctx)
-
-	return true
 }
 
 func (q *ExecutionBroker) storeWithoutDuplication(ctx context.Context, transcript *Transcript) bool {
@@ -274,12 +260,13 @@ func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts .
 			continue
 		}
 
+		var list *TranscriptDequeue
 		if transcript.Request.Immutable {
-			q.storeCurrent(ctx, transcript)
-			go q.processTranscript(ctx, transcript)
+			list = q.immutable
 		} else {
-			q.mutable.Prepend(transcript)
+			list = q.mutable
 		}
+		list.Prepend(transcript)
 	}
 	if start {
 		q.StartProcessorIfNeeded(ctx)
@@ -293,12 +280,13 @@ func (q *ExecutionBroker) Put(ctx context.Context, start bool, transcripts ...*T
 			continue
 		}
 
+		var list *TranscriptDequeue
 		if transcript.Request.Immutable {
-			q.storeCurrent(ctx, transcript)
-			go q.processTranscript(ctx, transcript)
+			list = q.immutable
 		} else {
-			q.mutable.Push(transcript)
+			list = q.mutable
 		}
+		list.Push(transcript)
 	}
 	if start {
 		q.StartProcessorIfNeeded(ctx)
@@ -363,9 +351,11 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 	// processing mutable queue
 	for transcript := q.getMutableTask(ctx); transcript != nil; transcript = q.getMutableTask(ctx) {
 		q.fetchMoreFromLedgerIfNeeded(ctx)
-
-		if !q.processTranscript(ctx, transcript) {
-			break
+		q.processTranscript(ctx, transcript)
+		// processing immutable queue after every mutable task
+		// its temporary solution
+		for elem := q.getImmutableTask(ctx); elem != nil; elem = q.getImmutableTask(ctx) {
+			go q.processTranscript(ctx, elem)
 		}
 	}
 }
@@ -456,13 +446,24 @@ func (q *ExecutionBroker) finishPending(ctx context.Context) {
 // If this is true as a side effect the function sends a PendingFinished
 // message to the current executor
 func (q *ExecutionBroker) finishPendingIfNeeded(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
 	if q.pending != insolar.InPending {
+		logger.Debug("we aren't in pending")
 		return
 	}
 
+	// we process mutable and immutable calls in parallel
+	// and use one pending state for all of them
+	// so pending is finish only when all of calls are finished
+	if !q.currentList.Empty() {
+		inslogger.FromContext(ctx).Debug("we are in pending and still have ", q.currentList.Length(), " requests to finish")
+		return
+	}
+
+	inslogger.FromContext(ctx).Debug("pending finished")
 	q.pending = insolar.NotPending
 	q.PendingConfirmed = false
 
@@ -697,13 +698,6 @@ func (q *ExecutionBroker) AddFreshRequest(
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
-	select {
-	case <-ctx.Done():
-		inslogger.FromContext(ctx).Debug("pulse changed, skipping")
-		return
-	default:
-	}
-
 	if tr.Request.CallType != record.CTMethod {
 		// It's considered that we are not pending except someone calls a method.
 		q.pending = insolar.NotPending
@@ -731,13 +725,6 @@ func (q *ExecutionBroker) AddAdditionalRequestFromPrevExecutor(
 ) {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
-
-	select {
-	case <-ctx.Done():
-		inslogger.FromContext(ctx).Debug("pulse changed, skipping")
-		return
-	default:
-	}
 
 	q.Put(ctx, true, tr)
 }

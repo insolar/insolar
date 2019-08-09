@@ -28,6 +28,7 @@ import (
 	proxyMember "github.com/insolar/insolar/logicrunner/builtin/proxy/member"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
 	proxyWallet "github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 )
 
 // Wallet - basic wallet contract.
@@ -69,11 +70,7 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, assetName string, amo
 		return nil, fmt.Errorf("amount must be larger then zero")
 	}
 
-	rd := rootdomain.GetObject(rootDomainRef)
-	ccRef, err := rd.GetCostCenter()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get cost center reference: %s", err.Error())
-	}
+	ccRef := foundation.GetCostCenter()
 
 	cc := costcenter.GetObject(ccRef)
 	feeStr, err := cc.CalcFee(amountStr)

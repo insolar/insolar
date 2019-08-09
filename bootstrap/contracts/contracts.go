@@ -43,11 +43,7 @@ func RootDomain() insolar.GenesisContractState {
 		ParentName: "",
 
 		Memory: mustGenMemory(&rootdomain.RootDomain{
-			RootMember:             genesisrefs.ContractRootMember,
 			MigrationDaemonMembers: activeMigrationDaemonMembers,
-			MigrationAdminMember:   genesisrefs.ContractMigrationAdminMember,
-			MigrationWallet:        genesisrefs.ContractMigrationWallet,
-			CostCenter:             genesisrefs.ContractCostCenter,
 			MigrationAddressShards: genesisrefs.ContractMigrationAddressShards,
 			PublicKeyShards:        genesisrefs.ContractPublicKeyShards,
 			NodeDomain:             genesisrefs.ContractNodeDomain,
