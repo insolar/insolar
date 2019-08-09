@@ -48,7 +48,7 @@ var foundationPath = "github.com/insolar/insolar/logicrunner/builtin/foundation"
 var proxyctxPath = "github.com/insolar/insolar/logicrunner/common"
 var corePath = "github.com/insolar/insolar/insolar"
 
-var immutableFlag = "//ins:immutable"
+var immutableFlag = "// ins:immutable"
 
 var sagaFlagStart = "ins:saga("
 var sagaFlagEnd = ")"

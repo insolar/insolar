@@ -152,7 +152,7 @@ func (r *Deposit) GetCode() (insolar.Reference, error) {
 }
 
 // GetTxHash is proxy generated method
-func (r *Deposit) GetTxHash() (string, error) {
+func (r *Deposit) GetTxHashAsMutable() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -204,7 +204,7 @@ func (r *Deposit) GetTxHashNoWait() error {
 }
 
 // GetTxHashAsImmutable is proxy generated method
-func (r *Deposit) GetTxHashAsImmutable() (string, error) {
+func (r *Deposit) GetTxHash() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -237,7 +237,7 @@ func (r *Deposit) GetTxHashAsImmutable() (string, error) {
 }
 
 // GetAmount is proxy generated method
-func (r *Deposit) GetAmount() (string, error) {
+func (r *Deposit) GetAmountAsMutable() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -289,7 +289,7 @@ func (r *Deposit) GetAmountNoWait() error {
 }
 
 // GetAmountAsImmutable is proxy generated method
-func (r *Deposit) GetAmountAsImmutable() (string, error) {
+func (r *Deposit) GetAmount() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -322,7 +322,7 @@ func (r *Deposit) GetAmountAsImmutable() (string, error) {
 }
 
 // Itself is proxy generated method
-func (r *Deposit) Itself() (interface{}, error) {
+func (r *Deposit) ItselfAsMutable() (interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -374,7 +374,7 @@ func (r *Deposit) ItselfNoWait() error {
 }
 
 // ItselfAsImmutable is proxy generated method
-func (r *Deposit) ItselfAsImmutable() (interface{}, error) {
+func (r *Deposit) Itself() (interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte

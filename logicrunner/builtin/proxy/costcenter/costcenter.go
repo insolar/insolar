@@ -148,7 +148,7 @@ func (r *CostCenter) GetCode() (insolar.Reference, error) {
 }
 
 // GetFeeWalletRef is proxy generated method
-func (r *CostCenter) GetFeeWalletRef() (insolar.Reference, error) {
+func (r *CostCenter) GetFeeWalletRefAsMutable() (insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -200,7 +200,7 @@ func (r *CostCenter) GetFeeWalletRefNoWait() error {
 }
 
 // GetFeeWalletRefAsImmutable is proxy generated method
-func (r *CostCenter) GetFeeWalletRefAsImmutable() (insolar.Reference, error) {
+func (r *CostCenter) GetFeeWalletRef() (insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -233,7 +233,7 @@ func (r *CostCenter) GetFeeWalletRefAsImmutable() (insolar.Reference, error) {
 }
 
 // CalcFee is proxy generated method
-func (r *CostCenter) CalcFee(amountStr string) (string, error) {
+func (r *CostCenter) CalcFeeAsMutable(amountStr string) (string, error) {
 	var args [1]interface{}
 	args[0] = amountStr
 
@@ -287,7 +287,7 @@ func (r *CostCenter) CalcFeeNoWait(amountStr string) error {
 }
 
 // CalcFeeAsImmutable is proxy generated method
-func (r *CostCenter) CalcFeeAsImmutable(amountStr string) (string, error) {
+func (r *CostCenter) CalcFee(amountStr string) (string, error) {
 	var args [1]interface{}
 	args[0] = amountStr
 

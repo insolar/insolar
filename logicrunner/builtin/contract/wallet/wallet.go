@@ -172,6 +172,7 @@ func (w *Wallet) RollBack(amountStr string) (err error) {
 }
 
 // GetBalance gets total balance.
-func (w *Wallet) GetBalance() (string, error) {
+// ins:immutable
+func (w Wallet) GetBalance() (string, error) {
 	return w.Balance, nil
 }

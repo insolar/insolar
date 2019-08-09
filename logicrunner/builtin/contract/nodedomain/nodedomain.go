@@ -67,6 +67,7 @@ func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error
 }
 
 // GetNodeRefByPublicKey returns node reference.
+// ins:immutable
 func (nd *NodeDomain) GetNodeRefByPublicKey(publicKey string) (string, error) {
 	nodeRef, ok := nd.NodeIndexPublicKey[publicKey]
 	if !ok {

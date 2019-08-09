@@ -36,6 +36,7 @@ func New() (*PKShard, error) {
 }
 
 // GetRef gets ref by key.
+// ins:immutable
 func (s PKShard) GetRef(key string) (string, error) {
 	if ref, ok := s.Map[key]; !ok {
 		return "", errors.New("failed to find reference by key")

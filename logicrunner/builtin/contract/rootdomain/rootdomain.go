@@ -44,31 +44,37 @@ type RootDomain struct {
 }
 
 // GetMigrationAdminMemberRef gets migration admin member reference.
+// ins:immutable
 func (rd RootDomain) GetCostCenterRef() (insolar.Reference, error) {
 	return rd.MigrationAdminMember, nil
 }
 
 // GetMigrationWalletRef gets migration wallet reference.
+// ins:immutable
 func (rd RootDomain) GetMigrationWalletRef() (insolar.Reference, error) {
 	return rd.MigrationWallet, nil
 }
 
 // GetMigrationAdminMember gets migration admin member reference.
+// ins:immutable
 func (rd RootDomain) GetMigrationAdminMember() (insolar.Reference, error) {
 	return rd.MigrationAdminMember, nil
 }
 
 // GetActiveMigrationDaemonMembers gets migration daemon members references.
+// ins:immutable
 func (rd RootDomain) GetActiveMigrationDaemonMembers() ([3]insolar.Reference, error) {
 	return rd.MigrationDaemonMembers, nil
 }
 
 // GetRootMemberRef gets root member reference.
+// ins:immutable
 func (rd RootDomain) GetRootMemberRef() (insolar.Reference, error) {
 	return rd.RootMember, nil
 }
 
 // GetMemberByPublicKey gets member reference by public key.
+// ins:immutable
 func (rd RootDomain) GetMemberByPublicKey(publicKey string) (*insolar.Reference, error) {
 	trimmedPublicKey := trimPublicKey(publicKey)
 	i := foundation.GetShardIndex(trimmedPublicKey, insolar.GenesisAmountPublicKeyShards)
@@ -109,11 +115,13 @@ func (rd RootDomain) GetMemberByMigrationAddress(migrationAddress string) (*inso
 }
 
 // GetCostCenter gets cost center reference.
+// ins:immutable
 func (rd RootDomain) GetCostCenter() (insolar.Reference, error) {
 	return rd.CostCenter, nil
 }
 
 // GetNodeDomainRef returns reference of NodeDomain instance
+// ins:immutable
 func (rd RootDomain) GetNodeDomainRef() (insolar.Reference, error) {
 	return rd.NodeDomain, nil
 }
@@ -121,6 +129,7 @@ func (rd RootDomain) GetNodeDomainRef() (insolar.Reference, error) {
 var INSATTR_Info_API = true
 
 // Info returns information about basic objects
+// ins:immutable
 func (rd RootDomain) Info() (interface{}, error) {
 	migrationDaemonsMembersOut := []string{}
 	for _, ref := range rd.MigrationDaemonMembers {

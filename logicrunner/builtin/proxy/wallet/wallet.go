@@ -410,7 +410,7 @@ func (r *Wallet) RollBackAsImmutable(amountStr string) error {
 }
 
 // GetBalance is proxy generated method
-func (r *Wallet) GetBalance() (string, error) {
+func (r *Wallet) GetBalanceAsMutable() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -462,7 +462,7 @@ func (r *Wallet) GetBalanceNoWait() error {
 }
 
 // GetBalanceAsImmutable is proxy generated method
-func (r *Wallet) GetBalanceAsImmutable() (string, error) {
+func (r *Wallet) GetBalance() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
