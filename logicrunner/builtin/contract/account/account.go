@@ -56,6 +56,7 @@ func (a *Account) Transfer(amountStr string, toAccount *insolar.Reference) error
 }
 
 // Accept accepts transfer to balance.
+//ins:saga(INS_FLAG_NO_ROLLBACK_METHOD)
 func (a *Account) Accept(amountStr string) error {
 
 	amount := new(big.Int)

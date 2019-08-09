@@ -136,7 +136,7 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, assetName string, amo
 		return nil, fmt.Errorf("failed to transfer: %s", err.Error())
 	}
 
-	return nil, err
+	return member.TransferResponse{Fee: feeStr}, nil
 }
 
 // GetBalance gets balance by asset name.

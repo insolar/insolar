@@ -37,6 +37,14 @@ func (e *ExtendableError) Error() string {
 func INS_META_INFO() []map[string]string {
 	result := make([]map[string]string, 0)
 
+	{
+		info := make(map[string]string, 3)
+		info["Type"] = "SagaInfo"
+		info["MethodName"] = "Accept"
+		info["RollbackMethodName"] = "INS_FLAG_NO_ROLLBACK_METHOD"
+		result = append(result, info)
+	}
+
 	return result
 }
 
