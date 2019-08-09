@@ -40,11 +40,13 @@ type RootDomain struct {
 }
 
 // GetActiveMigrationDaemonMembers gets migration daemon members references.
+// ins:immutable
 func (rd RootDomain) GetActiveMigrationDaemonMembers() ([3]insolar.Reference, error) {
 	return rd.MigrationDaemonMembers, nil
 }
 
 // GetMemberByPublicKey gets member reference by public key.
+// ins:immutable
 func (rd RootDomain) GetMemberByPublicKey(publicKey string) (*insolar.Reference, error) {
 	trimmedPublicKey := trimPublicKey(publicKey)
 	i := foundation.GetShardIndex(trimmedPublicKey, insolar.GenesisAmountPublicKeyShards)
@@ -85,6 +87,7 @@ func (rd RootDomain) GetMemberByMigrationAddress(migrationAddress string) (*inso
 }
 
 // GetNodeDomainRef returns reference of NodeDomain instance
+// ins:immutable
 func (rd RootDomain) GetNodeDomainRef() (insolar.Reference, error) {
 	return rd.NodeDomain, nil
 }
@@ -92,6 +95,7 @@ func (rd RootDomain) GetNodeDomainRef() (insolar.Reference, error) {
 var INSATTR_Info_API = true
 
 // Info returns information about basic objects
+// ins:immutable
 func (rd RootDomain) Info() (interface{}, error) {
 	migrationDaemonsMembersOut := []string{}
 	for _, ref := range rd.MigrationDaemonMembers {

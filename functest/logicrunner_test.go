@@ -1303,7 +1303,7 @@ func (r *Two) ReturnNumber() (int, error) {
 }
 
 var INSATTR_Immutable_API = true
-//ins:immutable
+// ins:immutable
 func (r *Two) Immutable() (error) {
 	holder := three.New()
 	objThree, err := holder.AsChild(r.GetReference())

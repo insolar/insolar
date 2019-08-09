@@ -154,7 +154,7 @@ func (r *PKShard) GetCode() (insolar.Reference, error) {
 }
 
 // GetRef is proxy generated method
-func (r *PKShard) GetRef(key string) (string, error) {
+func (r *PKShard) GetRefAsMutable(key string) (string, error) {
 	var args [1]interface{}
 	args[0] = key
 
@@ -214,7 +214,7 @@ func (r *PKShard) GetRefNoWait(key string) error {
 }
 
 // GetRefAsImmutable is proxy generated method
-func (r *PKShard) GetRefAsImmutable(key string) (string, error) {
+func (r *PKShard) GetRef(key string) (string, error) {
 	var args [1]interface{}
 	args[0] = key
 

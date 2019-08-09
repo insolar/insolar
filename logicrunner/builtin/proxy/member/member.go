@@ -192,7 +192,7 @@ func (r *Member) GetCode() (insolar.Reference, error) {
 }
 
 // GetName is proxy generated method
-func (r *Member) GetName() (string, error) {
+func (r *Member) GetNameAsMutable() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -250,7 +250,7 @@ func (r *Member) GetNameNoWait() error {
 }
 
 // GetNameAsImmutable is proxy generated method
-func (r *Member) GetNameAsImmutable() (string, error) {
+func (r *Member) GetName() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -289,7 +289,7 @@ func (r *Member) GetNameAsImmutable() (string, error) {
 }
 
 // GetWallet is proxy generated method
-func (r *Member) GetWallet() (insolar.Reference, error) {
+func (r *Member) GetWalletAsMutable() (insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -347,7 +347,7 @@ func (r *Member) GetWalletNoWait() error {
 }
 
 // GetWalletAsImmutable is proxy generated method
-func (r *Member) GetWalletAsImmutable() (insolar.Reference, error) {
+func (r *Member) GetWallet() (insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -386,7 +386,7 @@ func (r *Member) GetWalletAsImmutable() (insolar.Reference, error) {
 }
 
 // GetPublicKey is proxy generated method
-func (r *Member) GetPublicKey() (string, error) {
+func (r *Member) GetPublicKeyAsMutable() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -444,7 +444,7 @@ func (r *Member) GetPublicKeyNoWait() error {
 }
 
 // GetPublicKeyAsImmutable is proxy generated method
-func (r *Member) GetPublicKeyAsImmutable() (string, error) {
+func (r *Member) GetPublicKey() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -583,7 +583,7 @@ func (r *Member) CallAsImmutable(signedRequest []byte) (interface{}, error) {
 }
 
 // GetDeposits is proxy generated method
-func (r *Member) GetDeposits() (map[string]interface{}, error) {
+func (r *Member) GetDepositsAsMutable() (map[string]interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -641,7 +641,7 @@ func (r *Member) GetDepositsNoWait() error {
 }
 
 // GetDepositsAsImmutable is proxy generated method
-func (r *Member) GetDepositsAsImmutable() (map[string]interface{}, error) {
+func (r *Member) GetDeposits() (map[string]interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -680,7 +680,7 @@ func (r *Member) GetDepositsAsImmutable() (map[string]interface{}, error) {
 }
 
 // FindDeposit is proxy generated method
-func (r *Member) FindDeposit(transactionsHash string) (bool, insolar.Reference, error) {
+func (r *Member) FindDepositAsMutable(transactionsHash string) (bool, insolar.Reference, error) {
 	var args [1]interface{}
 	args[0] = transactionsHash
 
@@ -742,7 +742,7 @@ func (r *Member) FindDepositNoWait(transactionsHash string) error {
 }
 
 // FindDepositAsImmutable is proxy generated method
-func (r *Member) FindDepositAsImmutable(transactionsHash string) (bool, insolar.Reference, error) {
+func (r *Member) FindDeposit(transactionsHash string) (bool, insolar.Reference, error) {
 	var args [1]interface{}
 	args[0] = transactionsHash
 
@@ -883,7 +883,7 @@ func (r *Member) AddDepositAsImmutable(txId string, deposit insolar.Reference) e
 }
 
 // GetBurnAddress is proxy generated method
-func (r *Member) GetBurnAddress() (string, error) {
+func (r *Member) GetBurnAddressAsMutable() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -941,7 +941,7 @@ func (r *Member) GetBurnAddressNoWait() error {
 }
 
 // GetBurnAddressAsImmutable is proxy generated method
-func (r *Member) GetBurnAddressAsImmutable() (string, error) {
+func (r *Member) GetBurnAddress() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte

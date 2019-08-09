@@ -161,7 +161,7 @@ func (r *NodeRecord) GetCode() (insolar.Reference, error) {
 }
 
 // GetNodeInfo is proxy generated method
-func (r *NodeRecord) GetNodeInfo() (RecordInfo, error) {
+func (r *NodeRecord) GetNodeInfoAsMutable() (RecordInfo, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -219,7 +219,7 @@ func (r *NodeRecord) GetNodeInfoNoWait() error {
 }
 
 // GetNodeInfoAsImmutable is proxy generated method
-func (r *NodeRecord) GetNodeInfoAsImmutable() (RecordInfo, error) {
+func (r *NodeRecord) GetNodeInfo() (RecordInfo, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -258,7 +258,7 @@ func (r *NodeRecord) GetNodeInfoAsImmutable() (RecordInfo, error) {
 }
 
 // GetPublicKey is proxy generated method
-func (r *NodeRecord) GetPublicKey() (string, error) {
+func (r *NodeRecord) GetPublicKeyAsMutable() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -316,7 +316,7 @@ func (r *NodeRecord) GetPublicKeyNoWait() error {
 }
 
 // GetPublicKeyAsImmutable is proxy generated method
-func (r *NodeRecord) GetPublicKeyAsImmutable() (string, error) {
+func (r *NodeRecord) GetPublicKey() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -355,7 +355,7 @@ func (r *NodeRecord) GetPublicKeyAsImmutable() (string, error) {
 }
 
 // GetRole is proxy generated method
-func (r *NodeRecord) GetRole() (insolar.StaticRole, error) {
+func (r *NodeRecord) GetRoleAsMutable() (insolar.StaticRole, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -413,7 +413,7 @@ func (r *NodeRecord) GetRoleNoWait() error {
 }
 
 // GetRoleAsImmutable is proxy generated method
-func (r *NodeRecord) GetRoleAsImmutable() (insolar.StaticRole, error) {
+func (r *NodeRecord) GetRole() (insolar.StaticRole, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte

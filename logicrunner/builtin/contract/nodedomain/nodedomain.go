@@ -38,7 +38,7 @@ func NewNodeDomain() (*NodeDomain, error) {
 	}, nil
 }
 
-func (nd *NodeDomain) getNodeRecord(ref insolar.Reference) *noderecord.NodeRecord {
+func (nd NodeDomain) getNodeRecord(ref insolar.Reference) *noderecord.NodeRecord {
 	return noderecord.GetObject(ref)
 }
 
@@ -63,7 +63,8 @@ func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error
 }
 
 // GetNodeRefByPublicKey returns node reference.
-func (nd *NodeDomain) GetNodeRefByPublicKey(publicKey string) (string, error) {
+// ins:immutable
+func (nd NodeDomain) GetNodeRefByPublicKey(publicKey string) (string, error) {
 	nodeRef, ok := nd.NodeIndexPublicKey[publicKey]
 	if !ok {
 		return "", fmt.Errorf("network node not found by public key: %s", publicKey)

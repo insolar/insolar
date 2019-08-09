@@ -257,7 +257,7 @@ func (r *NodeDomain) RegisterNodeAsImmutable(publicKey string, role string) (str
 }
 
 // GetNodeRefByPublicKey is proxy generated method
-func (r *NodeDomain) GetNodeRefByPublicKey(publicKey string) (string, error) {
+func (r *NodeDomain) GetNodeRefByPublicKeyAsMutable(publicKey string) (string, error) {
 	var args [1]interface{}
 	args[0] = publicKey
 
@@ -317,7 +317,7 @@ func (r *NodeDomain) GetNodeRefByPublicKeyNoWait(publicKey string) error {
 }
 
 // GetNodeRefByPublicKeyAsImmutable is proxy generated method
-func (r *NodeDomain) GetNodeRefByPublicKeyAsImmutable(publicKey string) (string, error) {
+func (r *NodeDomain) GetNodeRefByPublicKey(publicKey string) (string, error) {
 	var args [1]interface{}
 	args[0] = publicKey
 
