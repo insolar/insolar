@@ -610,20 +610,21 @@ func (r *Two) GetValue() (int, error) {
 	uploadContractOnce(t, "basic_notification_call_two", contractTwoCode)
 	obj := callConstructor(t, uploadContractOnce(t, "basic_notification_call_one", contractOneCode), "New")
 
-	resp := callMethod(t, obj, "Hello")
-	require.Empty(t, resp.Error)
+	resp := callMethodNoChecks(t, obj, "Hello")
+	require.NotEmpty(t, resp.Error)
+	require.Contains(t, resp.Error.Error(), "reason is wrong: reason request is not closed for a detached call")
 
-	for i := 0; i < 25; i++ {
-		resp = callMethod(t, obj, "Value")
-		require.Empty(t, resp.Error)
-
-		if float64(322) != resp.ExtractedReply {
-			break
-		}
-		time.Sleep(1000 * time.Millisecond)
-	}
-
-	require.Equal(t, float64(644), resp.ExtractedReply)
+	// for i := 0; i < 25; i++ {
+	// 	resp = callMethod(t, obj, "Value")
+	// 	require.Empty(t, resp.Error)
+	//
+	// 	if float64(322) != resp.ExtractedReply {
+	// 		break
+	// 	}
+	// 	time.Sleep(1000 * time.Millisecond)
+	// }
+	//
+	// require.Equal(t, float64(644), resp.ExtractedReply)
 }
 
 func TestContextPassing(t *testing.T) {
@@ -1172,8 +1173,9 @@ func (r *Two) GetCounter() (int, error) {
 	uploadContractOnce(t, "no_loops_while_notification_call_two", contractTwoCode)
 	obj := callConstructor(t, uploadContractOnce(t, "no_loops_while_notification_call_one", contractOneCode), "New")
 
-	resp := callMethod(t, obj, "IncrementBy100")
-	require.Empty(t, resp.Error)
+	resp := callMethodNoChecks(t, obj, "IncrementBy100")
+	require.NotEmpty(t, resp.Error)
+	require.Contains(t, resp.Error.Error(), "reason is wrong: reason request is not closed for a detached call")
 }
 
 func TestPrototypeMismatch(t *testing.T) {
@@ -1500,10 +1502,11 @@ func (r *Two) DoNothing() (error) {
 
 	contractTwoRef := uploadContractOnce(t, "second_contract", contractTwoCode)
 	secondObjRef := callConstructor(t, contractTwoRef, "NewWithOne", 100)
-	secondRresult := callMethod(t, secondObjRef, "Get")
-	require.Empty(t, secondRresult.Error)
+	secondRresult := callMethodNoChecks(t, secondObjRef, "Get")
+	require.NotEmpty(t, secondRresult.Error)
+	require.Contains(t, secondRresult.Error.Error(), "reason is wrong: reason request is not closed for a detached call")
 
-	require.Equal(t, 0.0, secondRresult.ExtractedReply)
+	// require.Equal(t, 0.0, secondRresult.ExtractedReply)
 }
 
 func TestMultiplyNoWaitCallsOnSomeObject(t *testing.T) {
@@ -1604,8 +1607,9 @@ func (r *Two) NoWaitGet(OneRef insolar.Reference) (int, error) {
 		for i := 0; i < 10; i++ {
 			go func() {
 				defer wg.Done()
-				result := callMethod(syncT, objectRef, "NoWaitGet", firstObjRef)
-				require.Empty(syncT, result.Error)
+				result := callMethodNoChecks(syncT, objectRef, "NoWaitGet", firstObjRef)
+				require.NotEmpty(t, result.Error)
+				require.Contains(t, result.Error.Error(), "reason is wrong: reason request is not closed for a detached call")
 			}()
 		}
 		wg.Wait()

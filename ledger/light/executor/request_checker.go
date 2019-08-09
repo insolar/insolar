@@ -70,9 +70,8 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 
 	switch r := request.(type) {
 	case *record.IncomingRequest:
-		// Cannot be detached.
-		if r.IsDetached() {
-			return &payload.CodedError{Text: fmt.Sprintf("incoming request cannot be detached (got mode %v)", r.ReturnMode), Code: payload.CodeIncomingRequestIsWrong}
+		if !r.IsValid() {
+			return &payload.CodedError{Text: fmt.Sprintf("incoming request is not valid (got mode %v)", r.ReturnMode), Code: payload.CodeIncomingRequestIsWrong}
 		}
 
 		// FIXME: replace with remote request check.
@@ -84,7 +83,7 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 		}
 
 	case *record.OutgoingRequest:
-		if request.IsCreationRequest() {
+		if !r.IsValid() {
 			return &payload.CodedError{Text: "outgoing cannot be creating request", Code: payload.CodeReasonIsWrong}
 		}
 
@@ -108,8 +107,8 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 	return nil
 }
 
-func (c *RequestCheckerDefault) checkIncomingReason(ctx context.Context, request *record.IncomingRequest, reasonID insolar.ID) error {
-	reasonObject := request.ReasonAffinityRef()
+func (c *RequestCheckerDefault) checkIncomingReason(ctx context.Context, incomingRequest *record.IncomingRequest, reasonID insolar.ID) error {
+	reasonObject := incomingRequest.ReasonAffinityRef()
 	if reasonObject.IsEmpty() {
 		return &payload.CodedError{Text: "reason affinity is not set on incoming request", Code: payload.CodeReasonIsWrong}
 	}
@@ -132,6 +131,17 @@ func (c *RequestCheckerDefault) checkIncomingReason(ctx context.Context, request
 	if reasonRequest.Result != nil {
 		return &payload.CodedError{Text: "reason request is closed", Code: payload.CodeReasonIsWrong}
 	}
+
+	isClosed := len(reasonRequest.Result) != 0
+	if !incomingRequest.IsDetachedCall() && isClosed {
+		// This is regular request, should NOT have closed reason
+		return &payload.CodedError{Text: "reason request is closed for a regular (not detached) call", Code: payload.CodeReasonIsWrong}
+
+	} else if incomingRequest.IsDetachedCall() && !isClosed {
+		// This is "detached incoming request", should have closed reason
+		return &payload.CodedError{Text: "reason request is not closed for a detached call", Code: payload.CodeReasonIsWrong}
+	}
+
 	return nil
 }
 

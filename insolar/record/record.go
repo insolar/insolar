@@ -158,8 +158,8 @@ type Request interface {
 	IsAPIRequest() bool
 	// IsCreationRequest checks a request-type.
 	IsCreationRequest() bool
-	// IsDetached check is request has detached state.
-	IsDetached() bool
+	// IsValid validates request params and its combinations
+	IsValid() bool
 	// IsTemporaryUploadCode tells us that that request is temporary hack
 	// for uploading code
 	IsTemporaryUploadCode() bool
@@ -192,9 +192,13 @@ func (r *IncomingRequest) IsCreationRequest() bool {
 	return r.GetCallType() == CTSaveAsChild || r.GetCallType() == CTDeployPrototype
 }
 
-func (r *IncomingRequest) IsDetached() bool {
+func (r *IncomingRequest) IsValid() bool {
 	// incoming requests never should't be in detached state, app code should check it and raise some kind of error.
-	return isDetached(r.ReturnMode)
+	return r.ReturnMode != ReturnSaga
+}
+
+func (r *IncomingRequest) IsDetachedCall() bool {
+	return r.ReturnMode == ReturnNoWait
 }
 
 func (r *IncomingRequest) IsTemporaryUploadCode() bool {
@@ -223,15 +227,15 @@ func (r *OutgoingRequest) IsCreationRequest() bool {
 }
 
 func (r *OutgoingRequest) IsDetached() bool {
-	return isDetached(r.ReturnMode)
+	return r.ReturnMode == ReturnSaga
+}
+
+func (r *OutgoingRequest) IsValid() bool {
+	return !r.IsCreationRequest()
 }
 
 func (r *OutgoingRequest) IsTemporaryUploadCode() bool {
 	return false
-}
-
-func isDetached(rm ReturnMode) bool {
-	return rm == ReturnSaga
 }
 
 func CalculateRequestAffinityRef(
