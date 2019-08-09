@@ -25,6 +25,9 @@ import (
 type CreateResponse struct {
 	Reference string `json:"reference"`
 }
+type DepositMigrationResult struct {
+	Reference string `json:"memberReference"`
+}
 type GetBalanceResponse struct {
 	Balance  string                 `json:"balance"`
 	Deposits map[string]interface{} `json:"deposits"`

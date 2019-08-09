@@ -162,7 +162,7 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 	case "member.transfer":
 		return m.transferCall(params)
 	case "deposit.migration":
-		return nil, m.depositMigrationCall(params)
+		return m.depositMigrationCall(params)
 	case "deposit.transfer":
 		return m.depositTransferCall(params)
 	}
@@ -318,29 +318,29 @@ func (m *Member) depositTransferCall(params map[string]interface{}) (interface{}
 	return d.Transfer(amount, m.Wallet)
 }
 
-func (m *Member) depositMigrationCall(params map[string]interface{}) error {
+func (m *Member) depositMigrationCall(params map[string]interface{}) (*DepositMigrationResult, error) {
 
 	amountStr, ok := params["amount"].(string)
 	if !ok {
-		return fmt.Errorf("incorect input: failed to get 'amount' param")
+		return nil, fmt.Errorf("incorect input: failed to get 'amount' param")
 	}
 
 	amount := new(big.Int)
 	amount, ok = amount.SetString(amountStr, 10)
 	if !ok {
-		return fmt.Errorf("failed to parse amount")
+		return nil, fmt.Errorf("failed to parse amount")
 	}
 	if amount.Cmp(big.NewInt(0)) != 1 {
-		return fmt.Errorf("amount must be greater than zero")
+		return nil, fmt.Errorf("amount must be greater than zero")
 	}
 	txId, ok := params["ethTxHash"].(string)
 	if !ok {
-		return fmt.Errorf("incorect input: failed to get 'ethTxHash' param")
+		return nil, fmt.Errorf("incorect input: failed to get 'ethTxHash' param")
 	}
 
 	burnAddress, ok := params["migrationAddress"].(string)
 	if !ok {
-		return fmt.Errorf("incorect input: failed to get 'migrationAddress' param")
+		return nil, fmt.Errorf("incorect input: failed to get 'migrationAddress' param")
 	}
 
 	return m.depositMigration(txId, burnAddress, amount)
@@ -443,13 +443,17 @@ func (m *Member) createMember(name string, key string, migrationAddress string) 
 }
 
 // Migration methods.
-func (m *Member) depositMigration(txHash string, burnAddress string, amount *big.Int) error {
+type DepositMigrationResult struct {
+	Reference string `json:"memberReference"`
+}
+
+func (m *Member) depositMigration(txHash string, burnAddress string, amount *big.Int) (*DepositMigrationResult, error) {
 	rd := rootdomain.GetObject(m.RootDomain)
 
 	// Get migration daemon members
 	migrationDaemonMembers, err := rd.GetActiveMigrationDaemonMembers()
 	if err != nil {
-		return fmt.Errorf("failed to get migraion daemons: %s", err.Error())
+		return nil, fmt.Errorf("failed to get migraion daemons: %s", err.Error())
 	}
 
 	// Check that caller is migration daemon
@@ -461,22 +465,23 @@ func (m *Member) depositMigration(txHash string, burnAddress string, amount *big
 		}
 	}
 	if mdIndex == -1 {
-		return fmt.Errorf("this migration daemon is not in the list of active daemons")
+		return nil, fmt.Errorf("this migration daemon is not in the list of active daemons")
 	}
 
 	// Get member by migration address
 	tokenHolderRef, err := rd.GetMemberByMigrationAddress(burnAddress)
 	if err != nil {
-		return fmt.Errorf("failed to get member by burn address")
+		return nil, fmt.Errorf("failed to get member by burn address")
 	}
 	tokenHolder := member.GetObject(*tokenHolderRef)
 
 	// Find deposit for txHash
 	found, txDepositRef, err := tokenHolder.FindDeposit(txHash)
 	if err != nil {
-		return fmt.Errorf("failed to get deposit: %s", err.Error())
+		return nil, fmt.Errorf("failed to get deposit: %s", err.Error())
 	}
 
+	depositMigrationResult := &DepositMigrationResult{Reference: tokenHolderRef.String()}
 	// If deposit doesn't exist - create new deposit
 	if !found {
 		migrationDaemonConfirms := [3]string{}
@@ -484,22 +489,22 @@ func (m *Member) depositMigration(txHash string, burnAddress string, amount *big
 		dHolder := deposit.New(migrationDaemonConfirms, txHash, amount.String())
 		txDeposit, err := dHolder.AsChild(*tokenHolderRef)
 		if err != nil {
-			return fmt.Errorf("failed to save as child: %s", err.Error())
+			return nil, fmt.Errorf("failed to save as child: %s", err.Error())
 		}
 
 		err = tokenHolder.AddDeposit(txHash, txDeposit.GetReference())
 		if err != nil {
-			return fmt.Errorf("failed to set deposit: %s", err.Error())
+			return nil, fmt.Errorf("failed to set deposit: %s", err.Error())
 		}
-		return nil
+		return depositMigrationResult, nil
 	}
 	// Confirm transaction by migration daemon
 	txDeposit := deposit.GetObject(txDepositRef)
 	err = txDeposit.Confirm(mdIndex, m.GetReference().String(), txHash, amount.String())
 	if err != nil {
-		return fmt.Errorf("confirmed failed: %s", err.Error())
+		return nil, fmt.Errorf("confirmed failed: %s", err.Error())
 	}
-	return nil
+	return depositMigrationResult, nil
 }
 
 // GetDeposits get all deposits for this member
