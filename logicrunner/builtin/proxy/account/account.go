@@ -373,7 +373,7 @@ func (r *Account) RollBackAsImmutable(amountStr string) error {
 }
 
 // GetBalance is proxy generated method
-func (r *Account) GetBalance() (string, error) {
+func (r *Account) GetBalanceAsMutable() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -431,7 +431,7 @@ func (r *Account) GetBalanceNoWait() error {
 }
 
 // GetBalanceAsImmutable is proxy generated method
-func (r *Account) GetBalanceAsImmutable() (string, error) {
+func (r *Account) GetBalance() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte

@@ -364,7 +364,7 @@ func (r *Wallet) TransferAsImmutable(rootDomainRef insolar.Reference, assetName 
 }
 
 // GetBalance is proxy generated method
-func (r *Wallet) GetBalanceAsMutable(assetName string) (string, error) {
+func (r *Wallet) GetBalance(assetName string) (string, error) {
 	var args [1]interface{}
 	args[0] = assetName
 
@@ -424,7 +424,7 @@ func (r *Wallet) GetBalanceNoWait(assetName string) error {
 }
 
 // GetBalanceAsImmutable is proxy generated method
-func (r *Wallet) GetBalance(assetName string) (string, error) {
+func (r *Wallet) GetBalanceAsImmutable(assetName string) (string, error) {
 	var args [1]interface{}
 	args[0] = assetName
 

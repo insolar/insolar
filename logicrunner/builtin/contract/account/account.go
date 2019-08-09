@@ -105,6 +105,7 @@ func (a *Account) RollBack(amountStr string) error {
 }
 
 // GetBalance gets total balance.
+// ins:immutable
 func (a *Account) GetBalance() (string, error) {
 	return a.Balance, nil
 }
