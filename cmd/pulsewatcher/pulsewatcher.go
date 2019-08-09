@@ -173,7 +173,7 @@ func displayResultsJSON(results [][]string, _ bool, _ *bytes.Buffer) {
 }
 
 func collectNodesStatuses(conf *pulsewatcher.Config, lastResults [][]string) ([][]string, bool) {
-	state := true
+	state := false
 	errored := 0
 	results := make([][]string, len(conf.Nodes))
 	lock := &sync.Mutex{}
@@ -242,7 +242,7 @@ func collectNodesStatuses(conf *pulsewatcher.Config, lastResults [][]string) ([]
 				out.Result.Origin.Role,
 				"",
 			}
-			state = state && out.Result.NetworkState == insolar.CompleteNetworkState.String()
+			state = state || out.Result.NetworkState == insolar.CompleteNetworkState.String()
 			lock.Unlock()
 			wg.Done()
 		}(url, i)
