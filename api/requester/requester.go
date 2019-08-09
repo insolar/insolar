@@ -19,16 +19,11 @@ package requester
 import (
 	"bytes"
 	"context"
-	"crypto"
-	"crypto/ecdsa"
-	"crypto/rand"
 	"crypto/sha256"
-	"encoding/asn1"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"math/big"
 	"net/http"
 	"strconv"
 	"time"
@@ -222,32 +217,6 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 	}
 
 	return body, nil
-}
-
-func Sign(privateKey crypto.PrivateKey, data []byte) (string, error) {
-	hash := sha256.Sum256(data)
-
-	r, s, err := ecdsa.Sign(rand.Reader, privateKey.(*ecdsa.PrivateKey), hash[:])
-	if err != nil {
-		return "", errors.Wrap(err, "[ sign ] Cant sign data")
-	}
-
-	return marshalSig(r, s)
-}
-
-// marshalSig encodes ECDSA signature to ASN.1.
-func marshalSig(r, s *big.Int) (string, error) {
-	var ecdsaSig struct {
-		R, S *big.Int
-	}
-	ecdsaSig.R, ecdsaSig.S = r, s
-
-	asnSig, err := asn1.Marshal(ecdsaSig)
-	if err != nil {
-		return "", err
-	}
-
-	return base64.StdEncoding.EncodeToString(asnSig), nil
 }
 
 // Send first gets seed and after that makes target request
