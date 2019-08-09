@@ -297,6 +297,10 @@ func INSCONSTRUCTOR_NewNodeRecord(data []byte) ([]byte, []byte, error) {
 		ret1 = &foundation.Error{S: "constructor returned nil"}
 	}
 
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
 	result := []byte{}
 	err = ph.Serialize(
 		foundation.Result{Returns: []interface{}{ret1}},
