@@ -19,10 +19,9 @@ package contracts
 import (
 	"fmt"
 
-	"github.com/insolar/insolar/logicrunner/builtin/contract/account"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
+	"github.com/insolar/insolar/logicrunner/builtin/contract/account"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/costcenter"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/migrationshard"
@@ -83,7 +82,6 @@ func GetMemberGenesisContractState(publicKey string, name string, parent string,
 }
 
 func GetWalletGenesisContractState(name string, parent string, accountRef insolar.Reference) insolar.GenesisContractState {
-
 	w, err := wallet.New(accountRef)
 	if err != nil {
 		panic("failed to create ` " + name + "` wallet instance")
@@ -99,7 +97,6 @@ func GetWalletGenesisContractState(name string, parent string, accountRef insola
 }
 
 func GetAccountGenesisContractState(balance string, name string, parent string) insolar.GenesisContractState {
-
 	w, err := account.New(balance)
 	if err != nil {
 		panic("failed to create ` " + name + "` account instance")
