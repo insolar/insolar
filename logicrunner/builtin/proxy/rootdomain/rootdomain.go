@@ -134,7 +134,7 @@ func (r *RootDomain) GetCode() (insolar.Reference, error) {
 }
 
 // GetActiveMigrationDaemonMembers is proxy generated method
-func (r *RootDomain) GetActiveMigrationDaemonMembers() ([3]insolar.Reference, error) {
+func (r *RootDomain) GetActiveMigrationDaemonMembersAsMutable() ([3]insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -186,7 +186,7 @@ func (r *RootDomain) GetActiveMigrationDaemonMembersNoWait() error {
 }
 
 // GetActiveMigrationDaemonMembersAsImmutable is proxy generated method
-func (r *RootDomain) GetActiveMigrationDaemonMembersAsImmutable() ([3]insolar.Reference, error) {
+func (r *RootDomain) GetActiveMigrationDaemonMembers() ([3]insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -219,7 +219,7 @@ func (r *RootDomain) GetActiveMigrationDaemonMembersAsImmutable() ([3]insolar.Re
 }
 
 // GetMemberByPublicKey is proxy generated method
-func (r *RootDomain) GetMemberByPublicKey(publicKey string) (*insolar.Reference, error) {
+func (r *RootDomain) GetMemberByPublicKeyAsMutable(publicKey string) (*insolar.Reference, error) {
 	var args [1]interface{}
 	args[0] = publicKey
 
@@ -273,7 +273,7 @@ func (r *RootDomain) GetMemberByPublicKeyNoWait(publicKey string) error {
 }
 
 // GetMemberByPublicKeyAsImmutable is proxy generated method
-func (r *RootDomain) GetMemberByPublicKeyAsImmutable(publicKey string) (*insolar.Reference, error) {
+func (r *RootDomain) GetMemberByPublicKey(publicKey string) (*insolar.Reference, error) {
 	var args [1]interface{}
 	args[0] = publicKey
 
@@ -395,7 +395,7 @@ func (r *RootDomain) GetMemberByMigrationAddressAsImmutable(migrationAddress str
 }
 
 // GetNodeDomainRef is proxy generated method
-func (r *RootDomain) GetNodeDomainRef() (insolar.Reference, error) {
+func (r *RootDomain) GetNodeDomainRefAsMutable() (insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -447,7 +447,7 @@ func (r *RootDomain) GetNodeDomainRefNoWait() error {
 }
 
 // GetNodeDomainRefAsImmutable is proxy generated method
-func (r *RootDomain) GetNodeDomainRefAsImmutable() (insolar.Reference, error) {
+func (r *RootDomain) GetNodeDomainRef() (insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -480,7 +480,7 @@ func (r *RootDomain) GetNodeDomainRefAsImmutable() (insolar.Reference, error) {
 }
 
 // Info is proxy generated method
-func (r *RootDomain) Info() (interface{}, error) {
+func (r *RootDomain) InfoAsMutable() (interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -532,7 +532,7 @@ func (r *RootDomain) InfoNoWait() error {
 }
 
 // InfoAsImmutable is proxy generated method
-func (r *RootDomain) InfoAsImmutable() (interface{}, error) {
+func (r *RootDomain) Info() (interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
