@@ -51,10 +51,11 @@ func New(accountReference insolar.Reference) (*Wallet, error) {
 }
 
 func (w *Wallet) GetAccount(assetName string) (*insolar.Reference, error) {
-	if w.Accounts[assetName] == "" || len(assetName) == 0 {
-		return nil, fmt.Errorf("failed to get account for asset: %s", assetName)
+	accountReference, ok := w.Accounts[assetName]
+	if !ok {
+		return nil, fmt.Errorf("asset not found: %s", assetName)
 	}
-	return insolar.NewReferenceFromBase58(w.Accounts[assetName])
+	return insolar.NewReferenceFromBase58(accountReference)
 }
 
 // Transfer transfers money to given wallet.
