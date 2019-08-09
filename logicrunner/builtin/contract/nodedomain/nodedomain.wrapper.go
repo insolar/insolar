@@ -21,10 +21,6 @@ import (
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-
-	"strings"
-	// TODO: this is the end of a horrible hack, please remove it
 )
 
 func INS_META_INFO() []map[string]string {
@@ -114,15 +110,7 @@ func INSMETHOD_RegisterNode(object []byte, data []byte) ([]byte, []byte, error) 
 
 	ret0, ret1 := self.RegisterNode(args0, args1)
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -173,15 +161,7 @@ func INSMETHOD_GetNodeRefByPublicKey(object []byte, data []byte) ([]byte, []byte
 
 	ret0, ret1 := self.GetNodeRefByPublicKey(args0)
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -232,15 +212,7 @@ func INSMETHOD_RemoveNode(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0 := self.RemoveNode(args0)
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 

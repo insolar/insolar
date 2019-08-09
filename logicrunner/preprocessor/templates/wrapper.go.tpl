@@ -23,11 +23,6 @@ import (
 {{ if $.GenerateInitialize -}}
     XXX_insolar "github.com/insolar/insolar/insolar"
 {{- end }}
-// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-{{ if .Methods }}
-    "strings"
-{{ end }}
-// TODO: this is the end of a horrible hack, please remove it
 )
 
 func INS_META_INFO() ([] map[string]string) {
@@ -127,15 +122,7 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, e
 	self.{{ $method.Name }}( {{ $method.Arguments }} )
 {{ end }}
 
-// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 

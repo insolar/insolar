@@ -21,10 +21,6 @@ import (
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-
-	"strings"
-	// TODO: this is the end of a horrible hack, please remove it
 )
 
 func INS_META_INFO() []map[string]string {
@@ -110,15 +106,7 @@ func INSMETHOD_GetActiveMigrationDaemonMembers(object []byte, data []byte) ([]by
 
 	ret0, ret1 := self.GetActiveMigrationDaemonMembers()
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -169,15 +157,7 @@ func INSMETHOD_GetMemberByPublicKey(object []byte, data []byte) ([]byte, []byte,
 
 	ret0, ret1 := self.GetMemberByPublicKey(args0)
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -228,15 +208,7 @@ func INSMETHOD_GetMemberByMigrationAddress(object []byte, data []byte) ([]byte, 
 
 	ret0, ret1 := self.GetMemberByMigrationAddress(args0)
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -285,15 +257,7 @@ func INSMETHOD_GetNodeDomainRef(object []byte, data []byte) ([]byte, []byte, err
 
 	ret0, ret1 := self.GetNodeDomainRef()
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -342,15 +306,7 @@ func INSMETHOD_Info(object []byte, data []byte) ([]byte, []byte, error) {
 
 	ret0, ret1 := self.Info()
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -401,15 +357,7 @@ func INSMETHOD_AddMigrationAddresses(object []byte, data []byte) ([]byte, []byte
 
 	ret0 := self.AddMigrationAddresses(args0)
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -460,15 +408,7 @@ func INSMETHOD_AddMigrationAddress(object []byte, data []byte) ([]byte, []byte, 
 
 	ret0 := self.AddMigrationAddress(args0)
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -519,15 +459,7 @@ func INSMETHOD_GetFreeMigrationAddress(object []byte, data []byte) ([]byte, []by
 
 	ret0, ret1 := self.GetFreeMigrationAddress(args0)
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -582,15 +514,7 @@ func INSMETHOD_AddNewMemberToMaps(object []byte, data []byte) ([]byte, []byte, e
 
 	ret0 := self.AddNewMemberToMaps(args0, args1, args2)
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -643,15 +567,7 @@ func INSMETHOD_AddNewMemberToPublicKeyMap(object []byte, data []byte) ([]byte, [
 
 	ret0 := self.AddNewMemberToPublicKeyMap(args0, args1)
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -700,15 +616,7 @@ func INSMETHOD_CreateHelloWorld(object []byte, data []byte) ([]byte, []byte, err
 
 	ret0, ret1 := self.CreateHelloWorld()
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 

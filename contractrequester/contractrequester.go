@@ -200,6 +200,19 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 		return nil, errors.Wrap(err, "couldn't dispatch event")
 	}
 
+	if _, earlyResult := res.(*reply.CallMethod); earlyResult {
+		inslogger.FromContext(ctx).Debug("early result for request, not registered")
+		if !async {
+			cr.ResultMutex.Lock()
+			defer cr.ResultMutex.Unlock()
+
+			delete(cr.ResultMap, reqHash)
+			close(ch)
+		}
+
+		return res, nil
+	}
+
 	r, ok := res.(*reply.RegisterRequest)
 	if !ok {
 		return nil, errors.New("Got not reply.RegisterRequest in reply for CallMethod")
