@@ -56,7 +56,7 @@ func (p *TestPulsar) SendPulse(ctx context.Context) error {
 		Entropy:          p.generator.GenerateEntropy(),
 		NextPulseNumber:  pulseNumber + insolar.PulseNumber(p.configuration.NumberDelta),
 		PrevPulseNumber:  pulseNumber - insolar.PulseNumber(p.configuration.NumberDelta),
-		EpochPulseNumber: 1,
+		EpochPulseNumber: int(pulseNumber),
 		OriginID:         [16]byte{206, 41, 229, 190, 7, 240, 162, 155, 121, 245, 207, 56, 161, 67, 189, 0},
 	}
 

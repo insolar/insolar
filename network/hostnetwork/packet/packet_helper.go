@@ -59,7 +59,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
-	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
 
@@ -78,12 +77,12 @@ func (p *Packet) SetRequest(request interface{}) {
 		r = &Request_Bootstrap{t}
 	case *AuthorizeRequest:
 		r = &Request_Authorize{t}
-	case *RegisterRequest:
-		r = &Request_Register{t}
-	case *GenesisRequest:
-		r = &Request_Genesis{t}
 	case *SignCertRequest:
 		r = &Request_SignCert{t}
+	case *UpdateScheduleRequest:
+		r = &Request_UpdateSchedule{t}
+	case *ReconnectRequest:
+		r = &Request_Reconnect{t}
 	default:
 		panic("Request payload is not a valid protobuf struct!")
 	}
@@ -103,14 +102,14 @@ func (p *Packet) SetResponse(response interface{}) {
 		r = &Response_Bootstrap{t}
 	case *AuthorizeResponse:
 		r = &Response_Authorize{t}
-	case *RegisterResponse:
-		r = &Response_Register{t}
-	case *GenesisResponse:
-		r = &Response_Genesis{t}
 	case *SignCertResponse:
 		r = &Response_SignCert{t}
 	case *ErrorResponse:
 		r = &Response_Error{t}
+	case *UpdateScheduleResponse:
+		r = &Response_UpdateSchedule{t}
+	case *ReconnectResponse:
+		r = &Response_Reconnect{t}
 	default:
 		panic("Response payload is not a valid protobuf struct!")
 	}
@@ -156,7 +155,7 @@ func SerializePacket(p *Packet) ([]byte, error) {
 }
 
 func DeserializePacketRaw(conn io.Reader) (*ReceivedPacket, error) {
-	reader := utils.NewCapturingReader(conn)
+	reader := NewCapturingReader(conn)
 
 	lengthBytes := make([]byte, 8)
 	if _, err := io.ReadFull(reader, lengthBytes); err != nil {
@@ -216,4 +215,23 @@ func NewPacket(sender, receiver *host.Host, packetType types.PacketType, id uint
 		Type:      uint32(packetType),
 		RequestID: id,
 	}
+}
+
+type CapturingReader struct {
+	io.Reader
+	buffer bytes.Buffer
+}
+
+func NewCapturingReader(reader io.Reader) *CapturingReader {
+	return &CapturingReader{Reader: reader}
+}
+
+func (r *CapturingReader) Read(p []byte) (int, error) {
+	n, err := r.Reader.Read(p)
+	r.buffer.Write(p)
+	return n, err
+}
+
+func (r *CapturingReader) Captured() []byte {
+	return r.buffer.Bytes()
 }

@@ -18,10 +18,12 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/pkg/errors"
 )
 
@@ -65,17 +67,24 @@ func NewNodeService(runner *Runner) *NodeService {
 //
 func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, reply *SeedReply) error {
 	traceID := utils.RandTraceID()
-	_, inslog := inslogger.WithTraceField(context.Background(), traceID)
+	ctx, inslog := inslogger.WithTraceField(context.Background(), traceID)
 
-	inslog.Infof("[ NodeService.GetSeed ] Incoming request: %s", r.RequestURI)
+	_, span := instracer.StartSpan(ctx, "NodeService.GetSeed")
+	defer span.End()
+
+	info := fmt.Sprintf("[ NodeService.GetSeed ] Incoming request: %s", r.RequestURI)
+	inslog.Infof(info)
+	span.Annotate(nil, info)
 
 	seed, err := s.runner.SeedGenerator.Next()
 	if err != nil {
+		instracer.AddError(span, err)
 		return errors.Wrap(err, "failed to get next seed")
 	}
 
 	pulse, err := s.runner.PulseAccessor.Latest(context.Background())
 	if err != nil {
+		instracer.AddError(span, err)
 		return errors.Wrap(err, "[ NodeService::GetSeed ] Couldn't receive pulse")
 	}
 	s.runner.SeedManager.Add(*seed, pulse.PulseNumber)

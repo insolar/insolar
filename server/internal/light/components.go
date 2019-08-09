@@ -23,7 +23,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/ledger/light/handle"
 	"github.com/insolar/insolar/ledger/light/proc"
-	"github.com/insolar/insolar/network/rules"
+	"github.com/insolar/insolar/network"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -115,7 +115,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	// Network.
 	var (
 		NetworkService *servicenetwork.ServiceNetwork
-		NodeNetwork    insolar.NodeNetwork
+		NodeNetwork    network.NodeNetwork
 		Termination    insolar.TerminationHandler
 	)
 	{
@@ -176,7 +176,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
-		c.NodeNet = NodeNetwork
+		c.OriginProvider = NodeNetwork
 		c.PlatformCryptographyScheme = CryptoScheme
 		c.Nodes = Nodes
 
@@ -278,7 +278,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Sender,
 		)
 
-		stateIniter := executor.NewStateIniter(Jets, hotWaitReleaser, drops, Nodes, Sender, Pulses, Pulses, jetCalculator)
+		stateIniter := executor.NewStateIniter(
+			Jets, hotWaitReleaser, drops, Nodes, Sender, Pulses, Pulses, jetCalculator, indexes,
+		)
 
 		dep := proc.NewDependencies(
 			CryptoScheme,
@@ -313,26 +315,19 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			},
 		)
 
-		pm := executor.NewPulseManager(
+		PulseManager = executor.NewPulseManager(
+			NodeNetwork,
+			FlowDispatcher,
+			Nodes,
+			Pulses,
+			Pulses,
+			hotWaitReleaser,
 			jetSplitter,
 			lthSyncer,
-			writeController,
 			hotSender,
+			writeController,
 			stateIniter,
 		)
-		pm.Dispatcher = FlowDispatcher
-		pm.Bus = Bus
-		pm.NodeNet = NodeNetwork
-		pm.JetReleaser = hotWaitReleaser
-		pm.JetModifier = Jets
-		pm.NodeSetter = Nodes
-		pm.Nodes = Nodes
-		pm.PulseAccessor = Pulses
-		pm.PulseCalculator = Pulses
-		pm.PulseAppender = Pulses
-
-		PulseManager = pm
-
 	}
 
 	comps.cmp.Inject(
@@ -356,7 +351,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		NodeNetwork,
 		NetworkService,
 		pubSub,
-		rules.NewRules(),
 		messagebus.NewParcelFactory(),
 	)
 

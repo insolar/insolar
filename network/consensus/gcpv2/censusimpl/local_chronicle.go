@@ -133,33 +133,57 @@ func (c *localChronicles) makeActive(ce census.Expected, ca localActiveCensus) {
 		panic("illegal state")
 	}
 
-	pd := ca.GetPulseData()
-	if ce != nil && !ce.GetExpectedPulseNumber().IsUnknownOrEqualTo(pd.PulseNumber) {
-		panic("illegal value")
-	}
-
-	if c.active != nil {
-		pda := c.active.GetPulseData()
-		if pda.IsEmpty() {
-			if pda.PulseEpoch == pulse.EphemeralPulseEpoch {
-				pd.EnsurePulseData()
-			} else {
-				pd.EnsurePulsarData()
-			}
-		} else {
-			if !pda.IsValidNext(pd) {
-				panic("illegal value - not a next pulse")
-			}
+	if c.active == nil {
+		// priming
+		if ce != nil {
+			panic("illegal state")
 		}
-		//pd.GetNextPulseNumber() // ensure that it cshould go before any updates as it may panic
-
-		registries := c.active.getVersionedRegistries().CommitNextPulse(pd, ca.GetOnlinePopulation())
-		ca.setVersionedRegistries(registries)
-	} else {
 		if ca.getVersionedRegistries() == nil {
-			panic("versioned registries are nil")
+			panic("versioned registries are missing")
 		}
-		//c.expectedPulseNumber = ca.GetExpectedPulseNumber()
+	} else {
+		pd := ca.GetPulseData()
+		if pd.IsEmpty() {
+			panic("illegal value")
+		}
+
+		lastRealPulse := c.active.getVersionedRegistries().GetNearestValidPulseData()
+
+		pda := c.active.GetPulseData()
+
+		checkExpectedPulse := true
+		switch {
+		case pda.PulseEpoch == pulse.EphemeralPulseEpoch: // supports empty with ephemeral
+			if pd.IsFromEphemeral() {
+				if !pda.IsEmpty() && !pda.IsValidNext(pd) {
+					panic("illegal value - ephemeral pulses must be consecutive")
+				}
+				break
+			}
+			// we can't check it vs last ephemeral, so lets take the last real one
+			pda = lastRealPulse
+			checkExpectedPulse = false
+			fallthrough
+		case pda.IsFromPulsar() || pda.IsEmpty():
+			// must be regular pulse
+			if !pd.IsValidPulsarData() {
+				panic("illegal value")
+			}
+
+			if !pda.IsEmpty() && pd.PulseNumber < pda.GetNextPulseNumber() {
+				panic("illegal value - pulse retroactive")
+			}
+		}
+
+		if checkExpectedPulse && !ce.GetPulseNumber().IsUnknownOrEqualTo(pd.PulseNumber) {
+			panic("illegal value")
+		}
+
+		registries := c.active.getVersionedRegistries()
+		if pd.IsFromPulsar() {
+			registries = registries.CommitNextPulse(pd, ca.GetOnlinePopulation())
+		}
+		ca.setVersionedRegistries(registries)
 	}
 
 	c.active = ca

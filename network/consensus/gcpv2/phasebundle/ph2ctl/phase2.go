@@ -52,9 +52,10 @@ package ph2ctl
 
 import (
 	"context"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 	"math"
 	"time"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -411,7 +412,7 @@ func (c *Phase2Controller) sendPhase2(ctx context.Context, neighbourhood []*popu
 func (c *Phase2Controller) workerRetryOnMissingNodes(ctx context.Context) {
 	log := inslogger.FromContext(ctx)
 
-	log.Info("Phase2 has started re-requesting Phase1")
+	log.Debug("Phase2 has started re-requesting Phase1")
 
 	s := c.R.GetSelf()
 	if s.IsNSHRequired() {
