@@ -25,11 +25,9 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"testing"
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/api"
@@ -63,13 +61,6 @@ func WriteFile(dir string, name string, text string) error {
 		return err
 	}
 	return ioutil.WriteFile(filepath.Join(dir, name), []byte(text), 0644)
-}
-
-// CBORMarshal - testing serialize helper
-func CBORMarshal(t testing.TB, o interface{}) []byte {
-	data, err := insolar.Serialize(o)
-	assert.NoError(t, err, "Marshal")
-	return data
 }
 
 // ContractsBuilder for tests

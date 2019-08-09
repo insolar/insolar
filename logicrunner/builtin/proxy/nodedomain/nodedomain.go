@@ -47,9 +47,16 @@ func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*NodeDoma
 	}
 
 	var constructorError *foundation.Error
-	err = common.CurrentProxyCtx.Deserialize(ret, []interface{}{&constructorError})
+	resultContainer := foundation.Result{
+		Returns: []interface{}{&constructorError},
+	}
+	err = common.CurrentProxyCtx.Deserialize(ret, &resultContainer)
 	if err != nil {
 		return nil, err
+	}
+
+	if resultContainer.Error != nil {
+		return nil, resultContainer.Error
 	}
 
 	if constructorError != nil {
@@ -154,7 +161,7 @@ func (r *NodeDomain) RegisterNode(publicKey string, role string) (string, error)
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 string
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -170,11 +177,17 @@ func (r *NodeDomain) RegisterNode(publicKey string, role string) (string, error)
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}
@@ -210,7 +223,7 @@ func (r *NodeDomain) RegisterNodeAsImmutable(publicKey string, role string) (str
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 string
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -226,11 +239,17 @@ func (r *NodeDomain) RegisterNodeAsImmutable(publicKey string, role string) (str
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}
@@ -244,7 +263,7 @@ func (r *NodeDomain) GetNodeRefByPublicKey(publicKey string) (string, error) {
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 string
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -260,11 +279,17 @@ func (r *NodeDomain) GetNodeRefByPublicKey(publicKey string) (string, error) {
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}
@@ -298,7 +323,7 @@ func (r *NodeDomain) GetNodeRefByPublicKeyAsImmutable(publicKey string) (string,
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 string
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -314,11 +339,17 @@ func (r *NodeDomain) GetNodeRefByPublicKeyAsImmutable(publicKey string) (string,
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}
@@ -332,7 +363,7 @@ func (r *NodeDomain) RemoveNode(nodeRef insolar.Reference) error {
 
 	var argsSerialized []byte
 
-	ret := [1]interface{}{}
+	ret := make([]interface{}, 1)
 	var ret0 *foundation.Error
 	ret[0] = &ret0
 
@@ -346,11 +377,17 @@ func (r *NodeDomain) RemoveNode(nodeRef insolar.Reference) error {
 		return err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return err
+	}
 	if ret0 != nil {
 		return ret0
 	}
@@ -384,7 +421,7 @@ func (r *NodeDomain) RemoveNodeAsImmutable(nodeRef insolar.Reference) error {
 
 	var argsSerialized []byte
 
-	ret := [1]interface{}{}
+	ret := make([]interface{}, 1)
 	var ret0 *foundation.Error
 	ret[0] = &ret0
 
@@ -398,11 +435,17 @@ func (r *NodeDomain) RemoveNodeAsImmutable(nodeRef insolar.Reference) error {
 		return err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return err
+	}
 	if ret0 != nil {
 		return ret0
 	}

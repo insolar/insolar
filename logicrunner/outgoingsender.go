@@ -3,19 +3,17 @@ package logicrunner
 import (
 	"context"
 	"fmt"
-	"strings"
 
-	"github.com/insolar/insolar/logicrunner/artifacts"
-
-	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/insolar/reply"
-
-	"github.com/insolar/insolar/insolar"
-
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/pkg/errors"
 
 	"github.com/insolar/go-actors/actor"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 )
 
 var OutgoingRequestSenderDefaultQueueLimit = 1000
@@ -137,41 +135,35 @@ func (a *outgoingSenderActorState) Receive(message actor.Message) (actor.Actor, 
 
 func (a *outgoingSenderActorState) sendOutgoingRequest(ctx context.Context, outgoingReqRef insolar.Reference, outgoing *record.OutgoingRequest) (*insolar.Reference, insolar.Arguments, *record.IncomingRequest, error) {
 	var object *insolar.Reference
-	var result insolar.Arguments
 
 	incoming := buildIncomingRequestFromOutgoing(outgoing)
 
 	// Actually make a call.
 	callMsg := &message.CallMethod{IncomingRequest: *incoming}
 	res, err := a.cr.Call(ctx, callMsg)
-	if err == nil {
-		switch v := res.(type) {
-		case *reply.CallMethod: // regular call
-			object = v.Object // only for CTSaveAsChild
-			result = v.Result
-		case *reply.RegisterRequest: // no-wait call
-			result = v.Request.Bytes()
-		default:
-			err = fmt.Errorf("sendOutgoingRequest: cr.Call returned unexpected type %T", v)
-			return nil, result, nil, err
-		}
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	if err != nil && !strings.Contains(err.Error(), "index not found") {
-		return object, result, incoming, err
+	var result []byte
+
+	switch v := res.(type) {
+	case *reply.CallMethod: // regular call
+		object = v.Object // only for CTSaveAsChild
+		result = v.Result
+	case *reply.RegisterRequest: // no-wait call
+		result = v.Request.Bytes()
+	default:
+		err = fmt.Errorf("sendOutgoingRequest: cr.Call returned unexpected type %T", v)
+		return nil, nil, nil, err
 	}
 
 	//  Register result of the outgoing method
 	reqResult := newRequestResult(result, outgoing.Caller)
-	registerResultErr := a.am.RegisterResult(ctx, outgoingReqRef, reqResult)
-
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	if err != nil && strings.Contains(err.Error(), "index not found") {
-		if registerResultErr != nil {
-			inslogger.FromContext(ctx).Errorf("Failed to register result for request %s, error: %s", outgoingReqRef.String(), registerResultErr.Error())
-		}
-		return object, result, incoming, err
+	err = a.am.RegisterResult(ctx, outgoingReqRef, reqResult)
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "can't register result")
 	}
-	return object, result, incoming, registerResultErr
+
+	return object, result, incoming, nil
 }
