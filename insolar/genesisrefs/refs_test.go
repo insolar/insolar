@@ -49,6 +49,10 @@ func TestReferences(t *testing.T) {
 			got:    ContractRootWallet,
 			expect: "1tJCLgYKxM4TABHW8tY3DBxeBZZixWua6iwReJAL4g.11111111111111111111111111111111",
 		},
+		insolar.GenesisNameRootAccount: {
+			got:    ContractRootAccount,
+			expect: "1tJC166eWveiffkDiF3zyqc3zhHyqULzkNUMn1VmSc.11111111111111111111111111111111",
+		},
 		insolar.GenesisNameDeposit: {
 			got:    ContractDeposit,
 			expect: "1tJCUhUMyeumaDA9wPksSjugbQ5uFJ5iYfpsX9yZ7j.11111111111111111111111111111111",
@@ -57,6 +61,10 @@ func TestReferences(t *testing.T) {
 			got:    ContractCostCenter,
 			expect: "1tJDyWCLK4y4JLw7dsCaD9KzEqYTgyGXN5Zp4HuteA.11111111111111111111111111111111",
 		},
+		insolar.GenesisNameFeeAccount: {
+			got:    ContractFeeAccount,
+			expect: "1tJEHA5P78QZLoboHnrVKNAxGys78xmBGVXDVca2HE.11111111111111111111111111111111",
+		},
 		insolar.GenesisNamePKShard: {
 			got:    ContractPublicKeyShards[0],
 			expect: "1tJCPZRjHWbFXQT5xNMzhm33ZWMQMSw2f5s39hYkNM.11111111111111111111111111111111",
@@ -64,6 +72,10 @@ func TestReferences(t *testing.T) {
 		insolar.GenesisNameMigrationShard: {
 			got:    ContractMigrationAddressShards[0],
 			expect: "1tJDMfQ7GmZ2AU4efkVyPYjQ9ExkpN9uMqpqBieYwA.11111111111111111111111111111111",
+		},
+		insolar.GenesisNameMigrationAdminAccount: {
+			got:    ContractMigrationAccount,
+			expect: "1tJEFK9k1NtRjxCVbTAshtt8CDuZjV6W8m6f6RYXxD.11111111111111111111111111111111",
 		},
 	}
 
