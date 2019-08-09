@@ -322,6 +322,7 @@ func NewServer(
 			hotSender,
 			writeController,
 			stateIniter,
+			hotWaitReleaser,
 		)
 	}
 
