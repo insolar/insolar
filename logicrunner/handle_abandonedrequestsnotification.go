@@ -67,6 +67,13 @@ func (h *HandleAbandonedRequestsNotification) Present(ctx context.Context, f flo
 	span.AddAttributes(trace.StringAttribute("msg.Type", payload.TypeAbandonedRequestsNotification.String()))
 	defer span.End()
 
+	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
+	defer done()
+
+	if err != nil {
+		return nil
+	}
+
 	procInitializeExecutionState := initializeAbandonedRequestsNotificationExecutionState{
 		dep: h.dep,
 		msg: abandoned,
