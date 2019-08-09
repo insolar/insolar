@@ -32,6 +32,7 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -47,7 +48,7 @@ func TestRequestsExecutor_ExecuteAndSave(t *testing.T) {
 
 	table := []struct {
 		name       string
-		transcript *Transcript
+		transcript *common.Transcript
 		am         artifacts.Client
 		le         LogicExecutor
 		reply      insolar.Reply
@@ -55,7 +56,7 @@ func TestRequestsExecutor_ExecuteAndSave(t *testing.T) {
 	}{
 		{
 			name: "success, constructor",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				RequestRef: requestRef,
 				Request: &record.IncomingRequest{
 					CallType:  record.CTSaveAsChild,
@@ -104,7 +105,7 @@ func TestRequestsExecutor_Execute(t *testing.T) {
 
 	table := []struct {
 		name       string
-		transcript *Transcript
+		transcript *common.Transcript
 		am         artifacts.Client
 		le         LogicExecutor
 		error      bool
@@ -112,7 +113,7 @@ func TestRequestsExecutor_Execute(t *testing.T) {
 	}{
 		{
 			name: "success, constructor",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				Request: &record.IncomingRequest{
 					CallType: record.CTSaveAsChild,
 				},
@@ -122,7 +123,7 @@ func TestRequestsExecutor_Execute(t *testing.T) {
 		},
 		{
 			name: "success, method",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				Request: &record.IncomingRequest{
 					Object: &objRef,
 				},
@@ -133,7 +134,7 @@ func TestRequestsExecutor_Execute(t *testing.T) {
 		},
 		{
 			name: "method, no object",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				Request: &record.IncomingRequest{
 					Object: &objRef,
 				},
@@ -143,7 +144,7 @@ func TestRequestsExecutor_Execute(t *testing.T) {
 		},
 		{
 			name: "method, execution error",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				Request: &record.IncomingRequest{
 					Object: &objRef,
 				},
@@ -185,14 +186,14 @@ func TestRequestsExecutor_Save(t *testing.T) {
 	table := []struct {
 		name       string
 		result     *requestResult
-		transcript *Transcript
+		transcript *common.Transcript
 		am         artifacts.Client
 		error      bool
 		reply      insolar.Reply
 	}{
 		{
 			name: "activation",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				RequestRef: requestRef,
 				Request: &record.IncomingRequest{
 					Base:      &baseRef,
@@ -208,7 +209,7 @@ func TestRequestsExecutor_Save(t *testing.T) {
 		},
 		{
 			name: "activation error",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				RequestRef: requestRef,
 				Request: &record.IncomingRequest{
 					Base:      &baseRef,
@@ -221,7 +222,7 @@ func TestRequestsExecutor_Save(t *testing.T) {
 		},
 		{
 			name: "deactivation",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				RequestRef: requestRef,
 				Request:    &record.IncomingRequest{},
 			},
@@ -237,7 +238,7 @@ func TestRequestsExecutor_Save(t *testing.T) {
 		},
 		{
 			name: "deactivation error",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				RequestRef: requestRef,
 				Request:    &record.IncomingRequest{},
 			},
@@ -247,7 +248,7 @@ func TestRequestsExecutor_Save(t *testing.T) {
 		},
 		{
 			name: "update",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				RequestRef: requestRef,
 				Request:    &record.IncomingRequest{},
 			},
@@ -265,7 +266,7 @@ func TestRequestsExecutor_Save(t *testing.T) {
 		},
 		{
 			name: "update error",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				RequestRef: requestRef,
 				Request:    &record.IncomingRequest{},
 			},
@@ -275,7 +276,7 @@ func TestRequestsExecutor_Save(t *testing.T) {
 		},
 		{
 			name: "result without update",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				RequestRef: requestRef,
 				Request:    &record.IncomingRequest{Object: &objRef},
 			},
@@ -292,7 +293,7 @@ func TestRequestsExecutor_Save(t *testing.T) {
 		},
 		{
 			name: "result without update, error",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				RequestRef: requestRef,
 				Request:    &record.IncomingRequest{Object: &objRef},
 			},
@@ -333,12 +334,12 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 		name       string
 		reply      insolar.Reply
 		err        error
-		transcript *Transcript
+		transcript *common.Transcript
 		mb         insolar.MessageBus
 	}{
 		{
 			name: "success",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				RequestRef: reqRef,
 				Request:    &record.IncomingRequest{},
 			},
@@ -353,7 +354,7 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 		},
 		{
 			name: "error",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				RequestRef: reqRef,
 				Request:    &record.IncomingRequest{},
 			},

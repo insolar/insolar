@@ -9,27 +9,29 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
+
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/common"
 )
 
 // LogicExecutorMock implements LogicExecutor
 type LogicExecutorMock struct {
 	t minimock.Tester
 
-	funcExecute          func(ctx context.Context, transcript *Transcript) (r1 artifacts.RequestResult, err error)
-	inspectFuncExecute   func(ctx context.Context, transcript *Transcript)
+	funcExecute          func(ctx context.Context, transcript *common.Transcript) (r1 artifacts.RequestResult, err error)
+	inspectFuncExecute   func(ctx context.Context, transcript *common.Transcript)
 	afterExecuteCounter  uint64
 	beforeExecuteCounter uint64
 	ExecuteMock          mLogicExecutorMockExecute
 
-	funcExecuteConstructor          func(ctx context.Context, transcript *Transcript) (r1 artifacts.RequestResult, err error)
-	inspectFuncExecuteConstructor   func(ctx context.Context, transcript *Transcript)
+	funcExecuteConstructor          func(ctx context.Context, transcript *common.Transcript) (r1 artifacts.RequestResult, err error)
+	inspectFuncExecuteConstructor   func(ctx context.Context, transcript *common.Transcript)
 	afterExecuteConstructorCounter  uint64
 	beforeExecuteConstructorCounter uint64
 	ExecuteConstructorMock          mLogicExecutorMockExecuteConstructor
 
-	funcExecuteMethod          func(ctx context.Context, transcript *Transcript) (r1 artifacts.RequestResult, err error)
-	inspectFuncExecuteMethod   func(ctx context.Context, transcript *Transcript)
+	funcExecuteMethod          func(ctx context.Context, transcript *common.Transcript) (r1 artifacts.RequestResult, err error)
+	inspectFuncExecuteMethod   func(ctx context.Context, transcript *common.Transcript)
 	afterExecuteMethodCounter  uint64
 	beforeExecuteMethodCounter uint64
 	ExecuteMethodMock          mLogicExecutorMockExecuteMethod
@@ -74,7 +76,7 @@ type LogicExecutorMockExecuteExpectation struct {
 // LogicExecutorMockExecuteParams contains parameters of the LogicExecutor.Execute
 type LogicExecutorMockExecuteParams struct {
 	ctx        context.Context
-	transcript *Transcript
+	transcript *common.Transcript
 }
 
 // LogicExecutorMockExecuteResults contains results of the LogicExecutor.Execute
@@ -84,7 +86,7 @@ type LogicExecutorMockExecuteResults struct {
 }
 
 // Expect sets up expected params for LogicExecutor.Execute
-func (mmExecute *mLogicExecutorMockExecute) Expect(ctx context.Context, transcript *Transcript) *mLogicExecutorMockExecute {
+func (mmExecute *mLogicExecutorMockExecute) Expect(ctx context.Context, transcript *common.Transcript) *mLogicExecutorMockExecute {
 	if mmExecute.mock.funcExecute != nil {
 		mmExecute.mock.t.Fatalf("LogicExecutorMock.Execute mock is already set by Set")
 	}
@@ -104,7 +106,7 @@ func (mmExecute *mLogicExecutorMockExecute) Expect(ctx context.Context, transcri
 }
 
 // Inspect accepts an inspector function that has same arguments as the LogicExecutor.Execute
-func (mmExecute *mLogicExecutorMockExecute) Inspect(f func(ctx context.Context, transcript *Transcript)) *mLogicExecutorMockExecute {
+func (mmExecute *mLogicExecutorMockExecute) Inspect(f func(ctx context.Context, transcript *common.Transcript)) *mLogicExecutorMockExecute {
 	if mmExecute.mock.inspectFuncExecute != nil {
 		mmExecute.mock.t.Fatalf("Inspect function is already set for LogicExecutorMock.Execute")
 	}
@@ -128,7 +130,7 @@ func (mmExecute *mLogicExecutorMockExecute) Return(r1 artifacts.RequestResult, e
 }
 
 //Set uses given function f to mock the LogicExecutor.Execute method
-func (mmExecute *mLogicExecutorMockExecute) Set(f func(ctx context.Context, transcript *Transcript) (r1 artifacts.RequestResult, err error)) *LogicExecutorMock {
+func (mmExecute *mLogicExecutorMockExecute) Set(f func(ctx context.Context, transcript *common.Transcript) (r1 artifacts.RequestResult, err error)) *LogicExecutorMock {
 	if mmExecute.defaultExpectation != nil {
 		mmExecute.mock.t.Fatalf("Default expectation is already set for the LogicExecutor.Execute method")
 	}
@@ -143,7 +145,7 @@ func (mmExecute *mLogicExecutorMockExecute) Set(f func(ctx context.Context, tran
 
 // When sets expectation for the LogicExecutor.Execute which will trigger the result defined by the following
 // Then helper
-func (mmExecute *mLogicExecutorMockExecute) When(ctx context.Context, transcript *Transcript) *LogicExecutorMockExecuteExpectation {
+func (mmExecute *mLogicExecutorMockExecute) When(ctx context.Context, transcript *common.Transcript) *LogicExecutorMockExecuteExpectation {
 	if mmExecute.mock.funcExecute != nil {
 		mmExecute.mock.t.Fatalf("LogicExecutorMock.Execute mock is already set by Set")
 	}
@@ -163,7 +165,7 @@ func (e *LogicExecutorMockExecuteExpectation) Then(r1 artifacts.RequestResult, e
 }
 
 // Execute implements LogicExecutor
-func (mmExecute *LogicExecutorMock) Execute(ctx context.Context, transcript *Transcript) (r1 artifacts.RequestResult, err error) {
+func (mmExecute *LogicExecutorMock) Execute(ctx context.Context, transcript *common.Transcript) (r1 artifacts.RequestResult, err error) {
 	mm_atomic.AddUint64(&mmExecute.beforeExecuteCounter, 1)
 	defer mm_atomic.AddUint64(&mmExecute.afterExecuteCounter, 1)
 
@@ -291,7 +293,7 @@ type LogicExecutorMockExecuteConstructorExpectation struct {
 // LogicExecutorMockExecuteConstructorParams contains parameters of the LogicExecutor.ExecuteConstructor
 type LogicExecutorMockExecuteConstructorParams struct {
 	ctx        context.Context
-	transcript *Transcript
+	transcript *common.Transcript
 }
 
 // LogicExecutorMockExecuteConstructorResults contains results of the LogicExecutor.ExecuteConstructor
@@ -301,7 +303,7 @@ type LogicExecutorMockExecuteConstructorResults struct {
 }
 
 // Expect sets up expected params for LogicExecutor.ExecuteConstructor
-func (mmExecuteConstructor *mLogicExecutorMockExecuteConstructor) Expect(ctx context.Context, transcript *Transcript) *mLogicExecutorMockExecuteConstructor {
+func (mmExecuteConstructor *mLogicExecutorMockExecuteConstructor) Expect(ctx context.Context, transcript *common.Transcript) *mLogicExecutorMockExecuteConstructor {
 	if mmExecuteConstructor.mock.funcExecuteConstructor != nil {
 		mmExecuteConstructor.mock.t.Fatalf("LogicExecutorMock.ExecuteConstructor mock is already set by Set")
 	}
@@ -321,7 +323,7 @@ func (mmExecuteConstructor *mLogicExecutorMockExecuteConstructor) Expect(ctx con
 }
 
 // Inspect accepts an inspector function that has same arguments as the LogicExecutor.ExecuteConstructor
-func (mmExecuteConstructor *mLogicExecutorMockExecuteConstructor) Inspect(f func(ctx context.Context, transcript *Transcript)) *mLogicExecutorMockExecuteConstructor {
+func (mmExecuteConstructor *mLogicExecutorMockExecuteConstructor) Inspect(f func(ctx context.Context, transcript *common.Transcript)) *mLogicExecutorMockExecuteConstructor {
 	if mmExecuteConstructor.mock.inspectFuncExecuteConstructor != nil {
 		mmExecuteConstructor.mock.t.Fatalf("Inspect function is already set for LogicExecutorMock.ExecuteConstructor")
 	}
@@ -345,7 +347,7 @@ func (mmExecuteConstructor *mLogicExecutorMockExecuteConstructor) Return(r1 arti
 }
 
 //Set uses given function f to mock the LogicExecutor.ExecuteConstructor method
-func (mmExecuteConstructor *mLogicExecutorMockExecuteConstructor) Set(f func(ctx context.Context, transcript *Transcript) (r1 artifacts.RequestResult, err error)) *LogicExecutorMock {
+func (mmExecuteConstructor *mLogicExecutorMockExecuteConstructor) Set(f func(ctx context.Context, transcript *common.Transcript) (r1 artifacts.RequestResult, err error)) *LogicExecutorMock {
 	if mmExecuteConstructor.defaultExpectation != nil {
 		mmExecuteConstructor.mock.t.Fatalf("Default expectation is already set for the LogicExecutor.ExecuteConstructor method")
 	}
@@ -360,7 +362,7 @@ func (mmExecuteConstructor *mLogicExecutorMockExecuteConstructor) Set(f func(ctx
 
 // When sets expectation for the LogicExecutor.ExecuteConstructor which will trigger the result defined by the following
 // Then helper
-func (mmExecuteConstructor *mLogicExecutorMockExecuteConstructor) When(ctx context.Context, transcript *Transcript) *LogicExecutorMockExecuteConstructorExpectation {
+func (mmExecuteConstructor *mLogicExecutorMockExecuteConstructor) When(ctx context.Context, transcript *common.Transcript) *LogicExecutorMockExecuteConstructorExpectation {
 	if mmExecuteConstructor.mock.funcExecuteConstructor != nil {
 		mmExecuteConstructor.mock.t.Fatalf("LogicExecutorMock.ExecuteConstructor mock is already set by Set")
 	}
@@ -380,7 +382,7 @@ func (e *LogicExecutorMockExecuteConstructorExpectation) Then(r1 artifacts.Reque
 }
 
 // ExecuteConstructor implements LogicExecutor
-func (mmExecuteConstructor *LogicExecutorMock) ExecuteConstructor(ctx context.Context, transcript *Transcript) (r1 artifacts.RequestResult, err error) {
+func (mmExecuteConstructor *LogicExecutorMock) ExecuteConstructor(ctx context.Context, transcript *common.Transcript) (r1 artifacts.RequestResult, err error) {
 	mm_atomic.AddUint64(&mmExecuteConstructor.beforeExecuteConstructorCounter, 1)
 	defer mm_atomic.AddUint64(&mmExecuteConstructor.afterExecuteConstructorCounter, 1)
 
@@ -508,7 +510,7 @@ type LogicExecutorMockExecuteMethodExpectation struct {
 // LogicExecutorMockExecuteMethodParams contains parameters of the LogicExecutor.ExecuteMethod
 type LogicExecutorMockExecuteMethodParams struct {
 	ctx        context.Context
-	transcript *Transcript
+	transcript *common.Transcript
 }
 
 // LogicExecutorMockExecuteMethodResults contains results of the LogicExecutor.ExecuteMethod
@@ -518,7 +520,7 @@ type LogicExecutorMockExecuteMethodResults struct {
 }
 
 // Expect sets up expected params for LogicExecutor.ExecuteMethod
-func (mmExecuteMethod *mLogicExecutorMockExecuteMethod) Expect(ctx context.Context, transcript *Transcript) *mLogicExecutorMockExecuteMethod {
+func (mmExecuteMethod *mLogicExecutorMockExecuteMethod) Expect(ctx context.Context, transcript *common.Transcript) *mLogicExecutorMockExecuteMethod {
 	if mmExecuteMethod.mock.funcExecuteMethod != nil {
 		mmExecuteMethod.mock.t.Fatalf("LogicExecutorMock.ExecuteMethod mock is already set by Set")
 	}
@@ -538,7 +540,7 @@ func (mmExecuteMethod *mLogicExecutorMockExecuteMethod) Expect(ctx context.Conte
 }
 
 // Inspect accepts an inspector function that has same arguments as the LogicExecutor.ExecuteMethod
-func (mmExecuteMethod *mLogicExecutorMockExecuteMethod) Inspect(f func(ctx context.Context, transcript *Transcript)) *mLogicExecutorMockExecuteMethod {
+func (mmExecuteMethod *mLogicExecutorMockExecuteMethod) Inspect(f func(ctx context.Context, transcript *common.Transcript)) *mLogicExecutorMockExecuteMethod {
 	if mmExecuteMethod.mock.inspectFuncExecuteMethod != nil {
 		mmExecuteMethod.mock.t.Fatalf("Inspect function is already set for LogicExecutorMock.ExecuteMethod")
 	}
@@ -562,7 +564,7 @@ func (mmExecuteMethod *mLogicExecutorMockExecuteMethod) Return(r1 artifacts.Requ
 }
 
 //Set uses given function f to mock the LogicExecutor.ExecuteMethod method
-func (mmExecuteMethod *mLogicExecutorMockExecuteMethod) Set(f func(ctx context.Context, transcript *Transcript) (r1 artifacts.RequestResult, err error)) *LogicExecutorMock {
+func (mmExecuteMethod *mLogicExecutorMockExecuteMethod) Set(f func(ctx context.Context, transcript *common.Transcript) (r1 artifacts.RequestResult, err error)) *LogicExecutorMock {
 	if mmExecuteMethod.defaultExpectation != nil {
 		mmExecuteMethod.mock.t.Fatalf("Default expectation is already set for the LogicExecutor.ExecuteMethod method")
 	}
@@ -577,7 +579,7 @@ func (mmExecuteMethod *mLogicExecutorMockExecuteMethod) Set(f func(ctx context.C
 
 // When sets expectation for the LogicExecutor.ExecuteMethod which will trigger the result defined by the following
 // Then helper
-func (mmExecuteMethod *mLogicExecutorMockExecuteMethod) When(ctx context.Context, transcript *Transcript) *LogicExecutorMockExecuteMethodExpectation {
+func (mmExecuteMethod *mLogicExecutorMockExecuteMethod) When(ctx context.Context, transcript *common.Transcript) *LogicExecutorMockExecuteMethodExpectation {
 	if mmExecuteMethod.mock.funcExecuteMethod != nil {
 		mmExecuteMethod.mock.t.Fatalf("LogicExecutorMock.ExecuteMethod mock is already set by Set")
 	}
@@ -597,7 +599,7 @@ func (e *LogicExecutorMockExecuteMethodExpectation) Then(r1 artifacts.RequestRes
 }
 
 // ExecuteMethod implements LogicExecutor
-func (mmExecuteMethod *LogicExecutorMock) ExecuteMethod(ctx context.Context, transcript *Transcript) (r1 artifacts.RequestResult, err error) {
+func (mmExecuteMethod *LogicExecutorMock) ExecuteMethod(ctx context.Context, transcript *common.Transcript) (r1 artifacts.RequestResult, err error) {
 	mm_atomic.AddUint64(&mmExecuteMethod.beforeExecuteMethodCounter, 1)
 	defer mm_atomic.AddUint64(&mmExecuteMethod.afterExecuteMethodCounter, 1)
 

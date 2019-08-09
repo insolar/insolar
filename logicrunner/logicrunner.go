@@ -307,7 +307,7 @@ func (lr *LogicRunner) AddUnwantedResponse(ctx context.Context, msg insolar.Mess
 	return lr.ResultsMatcher.AddUnwantedResponse(ctx, m)
 }
 
-func convertQueueToMessageQueue(ctx context.Context, queue []*Transcript) []message.ExecutionQueueElement {
+func convertQueueToMessageQueue(ctx context.Context, queue []*lrCommon.Transcript) []message.ExecutionQueueElement {
 	mq := make([]message.ExecutionQueueElement, 0)
 	var traces string
 	for _, elem := range queue {

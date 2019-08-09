@@ -27,13 +27,14 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/common"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.LogicExecutor -o ./ -s _mock.go -g
 type LogicExecutor interface {
-	Execute(ctx context.Context, transcript *Transcript) (artifacts.RequestResult, error)
-	ExecuteMethod(ctx context.Context, transcript *Transcript) (artifacts.RequestResult, error)
-	ExecuteConstructor(ctx context.Context, transcript *Transcript) (artifacts.RequestResult, error)
+	Execute(ctx context.Context, transcript *common.Transcript) (artifacts.RequestResult, error)
+	ExecuteMethod(ctx context.Context, transcript *common.Transcript) (artifacts.RequestResult, error)
+	ExecuteConstructor(ctx context.Context, transcript *common.Transcript) (artifacts.RequestResult, error)
 }
 
 type logicExecutor struct {
@@ -45,7 +46,7 @@ func NewLogicExecutor() LogicExecutor {
 	return &logicExecutor{}
 }
 
-func (le *logicExecutor) Execute(ctx context.Context, transcript *Transcript) (artifacts.RequestResult, error) {
+func (le *logicExecutor) Execute(ctx context.Context, transcript *common.Transcript) (artifacts.RequestResult, error) {
 	ctx, _ = inslogger.WithField(ctx, "name", transcript.Request.Method)
 
 	switch transcript.Request.CallType {
@@ -58,7 +59,7 @@ func (le *logicExecutor) Execute(ctx context.Context, transcript *Transcript) (a
 	}
 }
 
-func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *Transcript) (artifacts.RequestResult, error) {
+func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *common.Transcript) (artifacts.RequestResult, error) {
 	ctx, span := instracer.StartSpan(ctx, "logicExecutor.ExecuteMethod")
 	defer span.End()
 
@@ -113,7 +114,7 @@ func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *Transcri
 }
 
 func (le *logicExecutor) ExecuteConstructor(
-	ctx context.Context, transcript *Transcript,
+	ctx context.Context, transcript *common.Transcript,
 ) (
 	artifacts.RequestResult, error,
 ) {
@@ -157,7 +158,7 @@ func (le *logicExecutor) ExecuteConstructor(
 
 func (le *logicExecutor) genLogicCallContext(
 	ctx context.Context,
-	transcript *Transcript,
+	transcript *common.Transcript,
 	protoDesc artifacts.ObjectDescriptor,
 	codeDesc artifacts.CodeDescriptor,
 ) *insolar.LogicCallContext {

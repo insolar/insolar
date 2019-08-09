@@ -31,15 +31,16 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/common"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.ExecutionBrokerI -o ./ -s _mock.go -g
 
 type ExecutionBrokerI interface {
-	AddFreshRequest(ctx context.Context, transcript *Transcript)
-	AddRequestsFromPrevExecutor(ctx context.Context, transcripts ...*Transcript)
-	AddRequestsFromLedger(ctx context.Context, transcripts ...*Transcript)
-	AddAdditionalRequestFromPrevExecutor(ctx context.Context, transcript *Transcript)
+	AddFreshRequest(ctx context.Context, transcript *common.Transcript)
+	AddRequestsFromPrevExecutor(ctx context.Context, transcripts ...*common.Transcript)
+	AddRequestsFromLedger(ctx context.Context, transcripts ...*common.Transcript)
+	AddAdditionalRequestFromPrevExecutor(ctx context.Context, transcript *common.Transcript)
 
 	PendingState() insolar.PendingState
 	PrevExecutorStillExecuting(ctx context.Context)
@@ -48,7 +49,7 @@ type ExecutionBrokerI interface {
 	SetNotPending(ctx context.Context)
 
 	IsKnownRequest(ctx context.Context, req insolar.Reference) bool
-	GetActiveTranscript(req insolar.Reference) *Transcript
+	GetActiveTranscript(req insolar.Reference) *common.Transcript
 
 	AbandonedRequestsOnLedger(ctx context.Context)
 	MoreRequestsOnLedger(ctx context.Context)
@@ -144,12 +145,12 @@ func (q *ExecutionBroker) isActiveProcessor() bool { //nolint: unused
 }
 
 type ExecutionBrokerRotationResult struct {
-	Requests              []*Transcript
-	Finished              []*Transcript
+	Requests              []*common.Transcript
+	Finished              []*common.Transcript
 	LedgerHasMoreRequests bool
 }
 
-func (q *ExecutionBroker) getImmutableTask(ctx context.Context) *Transcript {
+func (q *ExecutionBroker) getImmutableTask(ctx context.Context) *common.Transcript {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
@@ -168,7 +169,7 @@ func (q *ExecutionBroker) getImmutableTask(ctx context.Context) *Transcript {
 	return transcript
 }
 
-func (q *ExecutionBroker) getMutableTask(ctx context.Context) *Transcript {
+func (q *ExecutionBroker) getMutableTask(ctx context.Context) *common.Transcript {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
@@ -187,7 +188,7 @@ func (q *ExecutionBroker) getMutableTask(ctx context.Context) *Transcript {
 	return transcript
 }
 
-func (q *ExecutionBroker) finishTask(ctx context.Context, transcript *Transcript) {
+func (q *ExecutionBroker) finishTask(ctx context.Context, transcript *common.Transcript) {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
@@ -203,7 +204,7 @@ func (q *ExecutionBroker) finishTask(ctx context.Context, transcript *Transcript
 	}
 }
 
-func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *Transcript) {
+func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *common.Transcript) {
 	if transcript.Context != nil {
 		ctx = transcript.Context
 	} else {
@@ -230,7 +231,7 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *Tra
 	q.finishPendingIfNeeded(ctx)
 }
 
-func (q *ExecutionBroker) storeWithoutDuplication(ctx context.Context, transcript *Transcript) bool {
+func (q *ExecutionBroker) storeWithoutDuplication(ctx context.Context, transcript *common.Transcript) bool {
 	if _, ok := q.deduplicationTable[transcript.RequestRef]; ok {
 		logger := inslogger.FromContext(ctx)
 		logger.Infof("Already know about request %s, skipping", transcript.RequestRef.String())
@@ -241,7 +242,7 @@ func (q *ExecutionBroker) storeWithoutDuplication(ctx context.Context, transcrip
 	return false
 }
 
-func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts ...*Transcript) {
+func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts ...*common.Transcript) {
 	for _, transcript := range transcripts {
 		if q.storeWithoutDuplication(ctx, transcript) {
 			continue
@@ -261,7 +262,7 @@ func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts .
 }
 
 // One shouldn't mix immutable calls and mutable ones
-func (q *ExecutionBroker) Put(ctx context.Context, start bool, transcripts ...*Transcript) {
+func (q *ExecutionBroker) Put(ctx context.Context, start bool, transcripts ...*common.Transcript) {
 	for _, transcript := range transcripts {
 		if q.storeWithoutDuplication(ctx, transcript) {
 			continue
@@ -292,14 +293,14 @@ func (q *ExecutionBroker) IsKnownRequest(ctx context.Context, req insolar.Refere
 
 func (q *ExecutionBroker) GetActiveTranscript(
 	reqRef insolar.Reference,
-) *Transcript {
+) *common.Transcript {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
 	return q.currentList.Get(reqRef)
 }
 
-func (q *ExecutionBroker) HasLedgerRequest(_ context.Context) *Transcript {
+func (q *ExecutionBroker) HasLedgerRequest(_ context.Context) *common.Transcript {
 	if obj := q.mutable.HasFromLedger(); obj != nil {
 		return obj
 	}
@@ -309,7 +310,7 @@ func (q *ExecutionBroker) HasLedgerRequest(_ context.Context) *Transcript {
 	return nil
 }
 
-func (q *ExecutionBroker) GetByReference(_ context.Context, r *insolar.Reference) *Transcript {
+func (q *ExecutionBroker) GetByReference(_ context.Context, r *insolar.Reference) *common.Transcript {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
@@ -682,7 +683,7 @@ func (q *ExecutionBroker) stopRequestsFetcher(ctx context.Context) {
 }
 
 func (q *ExecutionBroker) AddFreshRequest(
-	ctx context.Context, tr *Transcript,
+	ctx context.Context, tr *common.Transcript,
 ) {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
@@ -695,14 +696,14 @@ func (q *ExecutionBroker) AddFreshRequest(
 	q.Put(ctx, true, tr)
 }
 
-func (q *ExecutionBroker) AddRequestsFromPrevExecutor(ctx context.Context, transcripts ...*Transcript) {
+func (q *ExecutionBroker) AddRequestsFromPrevExecutor(ctx context.Context, transcripts ...*common.Transcript) {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
 	q.Prepend(ctx, true, transcripts...)
 }
 
-func (q *ExecutionBroker) AddRequestsFromLedger(ctx context.Context, transcripts ...*Transcript) {
+func (q *ExecutionBroker) AddRequestsFromLedger(ctx context.Context, transcripts ...*common.Transcript) {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
@@ -710,7 +711,7 @@ func (q *ExecutionBroker) AddRequestsFromLedger(ctx context.Context, transcripts
 }
 
 func (q *ExecutionBroker) AddAdditionalRequestFromPrevExecutor(
-	ctx context.Context, tr *Transcript,
+	ctx context.Context, tr *common.Transcript,
 ) {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()

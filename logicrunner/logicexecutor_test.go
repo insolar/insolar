@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -41,7 +42,7 @@ func TestLogicExecutor_Execute(t *testing.T) {
 	// success tested in ExecuteMethod and ExecuteConstructor
 	ctx := inslogger.TestContext(t)
 	le := &logicExecutor{}
-	res, err := le.Execute(ctx, &Transcript{Request: &record.IncomingRequest{CallType: 322}})
+	res, err := le.Execute(ctx, &common.Transcript{Request: &record.IncomingRequest{CallType: 322}})
 	require.Error(t, err)
 	require.Nil(t, res)
 }
@@ -57,7 +58,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		transcript *Transcript
+		transcript *common.Transcript
 		error      bool
 		dc         artifacts.DescriptorsCache
 		mm         MachinesManager
@@ -65,7 +66,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 	}{
 		{
 			name: "success",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).
 					ParentMock.Return(nil).
 					MemoryMock.Return(nil).
@@ -104,7 +105,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 		},
 		{
 			name: "success, no memory change",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).
 					ParentMock.Return(nil).
 					MemoryMock.Return([]byte{1, 2, 3}).
@@ -138,7 +139,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 		},
 		{
 			name: "success, immutable call, no change",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).
 					ParentMock.Return(nil).
 					MemoryMock.Return([]byte{1, 2, 3}).
@@ -173,7 +174,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 		},
 		{
 			name: "success, deactivation",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).
 					ParentMock.Return(nil).
 					MemoryMock.Return(nil).
@@ -210,7 +211,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 		},
 		{
 			name: "parent mismatch",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc),
 				Request: &record.IncomingRequest{
 					Prototype: &insolar.Reference{},
@@ -228,7 +229,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 		},
 		{
 			name: "error, descriptors trouble",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc),
 				Request: &record.IncomingRequest{
 					Prototype: &protoRef,
@@ -244,7 +245,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 		},
 		{
 			name: "error, no such machine executor",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc),
 				Request: &record.IncomingRequest{
 					Prototype: &protoRef,
@@ -268,7 +269,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 		},
 		{
 			name: "error, execution failed",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).
 					ParentMock.Return(nil).
 					MemoryMock.Return(nil).
@@ -326,7 +327,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		transcript *Transcript
+		transcript *common.Transcript
 		error      bool
 		dc         artifacts.DescriptorsCache
 		mm         MachinesManager
@@ -334,7 +335,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 	}{
 		{
 			name: "success",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				Request: &record.IncomingRequest{
 					Base:      &baseRef,
 					CallType:  record.CTSaveAsChild,
@@ -369,7 +370,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 		},
 		{
 			name: "error, executor problem",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				Request: &record.IncomingRequest{
 					Base:      &baseRef,
 					CallType:  record.CTSaveAsChild,
@@ -400,7 +401,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 		},
 		{
 			name: "error, no machine type executor",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				Request: &record.IncomingRequest{
 					Base:      &baseRef,
 					CallType:  record.CTSaveAsChild,
@@ -423,7 +424,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 		},
 		{
 			name: "error, no descriptors",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				Request: &record.IncomingRequest{
 					CallType:  record.CTSaveAsChild,
 					Caller:    gen.Reference(),
@@ -440,7 +441,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 		},
 		{
 			name: "error, nil prototype",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				Request: &record.IncomingRequest{
 					CallType:  record.CTSaveAsChild,
 					Caller:    gen.Reference(),

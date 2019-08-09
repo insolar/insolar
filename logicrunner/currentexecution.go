@@ -17,88 +17,26 @@
 package logicrunner
 
 import (
-	"context"
 	"errors"
-	"reflect"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/common"
 )
-
-type OutgoingRequest struct {
-	Request   record.IncomingRequest
-	NewObject *insolar.Reference
-	Response  []byte
-	Error     error
-}
-
-type Transcript struct {
-	ObjectDescriptor artifacts.ObjectDescriptor
-	Context          context.Context
-	LogicContext     *insolar.LogicCallContext
-	Request          *record.IncomingRequest
-	RequestRef       insolar.Reference
-	Nonce            uint64
-	Deactivate       bool
-	OutgoingRequests []OutgoingRequest
-	FromLedger       bool
-}
-
-func NewTranscript(
-	ctx context.Context,
-	requestRef insolar.Reference,
-	request record.IncomingRequest,
-) *Transcript {
-
-	return &Transcript{
-		Context:    ctx,
-		Request:    &request,
-		RequestRef: requestRef,
-		Nonce:      0,
-		Deactivate: false,
-
-		FromLedger: false,
-	}
-}
-
-func (t *Transcript) AddOutgoingRequest(
-	ctx context.Context, request record.IncomingRequest, result []byte, newObject *insolar.Reference, err error,
-) {
-	rec := OutgoingRequest{
-		Request:   request,
-		Response:  result,
-		NewObject: newObject,
-		Error:     err,
-	}
-	t.OutgoingRequests = append(t.OutgoingRequests, rec)
-}
-
-func (t *Transcript) HasOutgoingRequest(
-	ctx context.Context, request record.IncomingRequest,
-) *OutgoingRequest {
-	for i := range t.OutgoingRequests {
-		if reflect.DeepEqual(t.OutgoingRequests[i].Request, request) {
-			return &t.OutgoingRequests[i]
-		}
-	}
-	return nil
-}
 
 type CurrentExecutionList struct {
 	lock       sync.RWMutex
-	executions map[insolar.Reference]*Transcript
+	executions map[insolar.Reference]*common.Transcript
 }
 
-func (ces *CurrentExecutionList) Get(requestRef insolar.Reference) *Transcript {
+func (ces *CurrentExecutionList) Get(requestRef insolar.Reference) *common.Transcript {
 	ces.lock.RLock()
 	rv := ces.executions[requestRef]
 	ces.lock.RUnlock()
 	return rv
 }
 
-func (ces *CurrentExecutionList) SetOnce(t *Transcript) error {
+func (ces *CurrentExecutionList) SetOnce(t *common.Transcript) error {
 	ces.lock.Lock()
 	defer ces.lock.Unlock()
 
@@ -116,7 +54,7 @@ func (ces *CurrentExecutionList) Delete(requestRef insolar.Reference) {
 	ces.lock.Unlock()
 }
 
-func (ces *CurrentExecutionList) GetByTraceID(traceid string) *Transcript {
+func (ces *CurrentExecutionList) GetByTraceID(traceid string) *common.Transcript {
 	ces.lock.RLock()
 	defer ces.lock.RUnlock()
 	for _, ce := range ces.executions {
@@ -127,7 +65,7 @@ func (ces *CurrentExecutionList) GetByTraceID(traceid string) *Transcript {
 	return nil
 }
 
-func (ces *CurrentExecutionList) GetMutable() *Transcript {
+func (ces *CurrentExecutionList) GetMutable() *common.Transcript {
 	ces.lock.RLock()
 	for _, ce := range ces.executions {
 		if !ce.Request.Immutable {
@@ -141,7 +79,7 @@ func (ces *CurrentExecutionList) GetMutable() *Transcript {
 
 func (ces *CurrentExecutionList) Cleanup() {
 	ces.lock.Lock()
-	ces.executions = make(map[insolar.Reference]*Transcript)
+	ces.executions = make(map[insolar.Reference]*common.Transcript)
 	ces.lock.Unlock()
 }
 

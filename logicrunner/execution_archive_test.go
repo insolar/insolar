@@ -30,15 +30,16 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/common"
 )
 
 type ExecutionArchiveSuite struct{ suite.Suite }
 
 func TestExecutionArchive(t *testing.T) { suite.Run(t, new(ExecutionArchiveSuite)) }
 
-func (s *ExecutionArchiveSuite) genTranscriptForObject() *Transcript {
+func (s *ExecutionArchiveSuite) genTranscriptForObject() *common.Transcript {
 	ctx := inslogger.TestContext(s.T())
-	return NewTranscript(ctx, gen.Reference(), record.IncomingRequest{
+	return common.NewTranscript(ctx, gen.Reference(), record.IncomingRequest{
 		ReturnMode:   record.ReturnResult,
 		APIRequestID: s.genAPIRequestID(),
 	})
@@ -191,7 +192,7 @@ func (s *ExecutionArchiveSuite) TestFindRequestLoop() {
 		s.False(archiveI.FindRequestLoop(ctx, reqRef, id))
 
 		// cleanup after
-		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*Transcript)
+		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*common.Transcript)
 	}
 
 	T := s.genTranscriptForObject()
@@ -201,7 +202,7 @@ func (s *ExecutionArchiveSuite) TestFindRequestLoop() {
 		s.True(archiveI.FindRequestLoop(ctx, reqRef, T.Request.APIRequestID))
 
 		// cleanup after
-		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*Transcript)
+		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*common.Transcript)
 	}
 
 	{ // go request with current apirequestid, but record returnnowait (loop not found)
@@ -213,7 +214,7 @@ func (s *ExecutionArchiveSuite) TestFindRequestLoop() {
 		s.False(archiveI.FindRequestLoop(ctx, reqRef, id))
 
 		// cleanup after
-		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*Transcript)
+		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*common.Transcript)
 	}
 
 	T1 := s.genTranscriptForObject()
@@ -230,7 +231,7 @@ func (s *ExecutionArchiveSuite) TestFindRequestLoop() {
 		s.False(archiveI.FindRequestLoop(ctx, reqRef, id))
 
 		// cleanup after
-		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*Transcript)
+		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*common.Transcript)
 	}
 
 	mc.Finish()

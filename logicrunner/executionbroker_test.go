@@ -38,6 +38,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -109,7 +110,7 @@ func processorStatus(args ...interface{}) bool {
 func (s *ExecutionBrokerSuite) TestPut() {
 	waitChannel := make(chan struct{})
 	rem := NewRequestsExecutorMock(s.T())
-	rem.ExecuteAndSaveMock.Set(func(_ context.Context, t *Transcript) (r insolar.Reply, r1 error) {
+	rem.ExecuteAndSaveMock.Set(func(_ context.Context, t *common.Transcript) (r insolar.Reply, r1 error) {
 		if !t.Request.Immutable {
 			waitChannel <- struct{}{}
 		}
@@ -123,12 +124,12 @@ func (s *ExecutionBrokerSuite) TestPut() {
 	b := NewExecutionBroker(objectRef, nil, rem, nil, nil, nil, nil, ea, nil)
 	b.pending = insolar.NotPending
 
-	tr := NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{})
+	tr := common.NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{})
 
 	b.Put(s.Context, false, tr)
 	s.Equal(b.mutable.Length(), 1)
 
-	tr = NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{})
+	tr = common.NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{})
 
 	b.Put(s.Context, true, tr)
 	s.True(waitOnChannel(waitChannel), "failed to wait until put triggers start of queue processor")
@@ -150,7 +151,7 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 
 	waitChannel := make(chan struct{})
 	rem := NewRequestsExecutorMock(s.T())
-	rem.ExecuteAndSaveMock.Set(func(_ context.Context, t *Transcript) (r insolar.Reply, r1 error) {
+	rem.ExecuteAndSaveMock.Set(func(_ context.Context, t *common.Transcript) (r insolar.Reply, r1 error) {
 		if !t.Request.Immutable {
 			waitChannel <- struct{}{}
 		}
@@ -165,12 +166,12 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 	b.pending = insolar.NotPending
 
 	reqRef1 := gen.Reference()
-	tr := NewTranscript(s.Context, reqRef1, record.IncomingRequest{})
+	tr := common.NewTranscript(s.Context, reqRef1, record.IncomingRequest{})
 	b.Prepend(s.Context, false, tr)
 	s.Equal(b.mutable.Length(), 1)
 
 	reqRef2 := gen.Reference()
-	tr = NewTranscript(s.Context, reqRef2, record.IncomingRequest{})
+	tr = common.NewTranscript(s.Context, reqRef2, record.IncomingRequest{})
 	b.Prepend(s.Context, true, tr)
 	s.Require().True(waitOnChannel(waitChannel), "failed to wait until put triggers start of queue processor")
 	s.Require().True(waitOnChannel(waitChannel), "failed to wait until queue processor'll finish processing")
@@ -192,7 +193,7 @@ func (s *ExecutionBrokerSuite) TestImmutable_NotPending() {
 	waitImmutableChannel := make(chan struct{})
 
 	rem := NewRequestsExecutorMock(s.T())
-	rem.ExecuteAndSaveMock.Set(func(_ context.Context, t *Transcript) (r insolar.Reply, r1 error) {
+	rem.ExecuteAndSaveMock.Set(func(_ context.Context, t *common.Transcript) (r insolar.Reply, r1 error) {
 		if !t.Request.Immutable {
 			waitMutableChannel <- struct{}{}
 		} else {
@@ -208,13 +209,13 @@ func (s *ExecutionBrokerSuite) TestImmutable_NotPending() {
 	b := NewExecutionBroker(objectRef, nil, rem, nil, nil, nil, nil, ea, nil)
 	b.pending = insolar.NotPending
 
-	tr := NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{Immutable: true})
+	tr := common.NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{Immutable: true})
 
 	b.Prepend(s.Context, false, tr)
 	s.Equal(b.immutable.Length(), 1)
 
 	reqRef2 := gen.Reference()
-	tr = NewTranscript(s.Context, reqRef2, record.IncomingRequest{Immutable: true})
+	tr = common.NewTranscript(s.Context, reqRef2, record.IncomingRequest{Immutable: true})
 
 	b.Prepend(s.Context, true, tr)
 	s.Require().True(waitOnChannel(waitImmutableChannel), "failed to wait while processing is finished")
@@ -237,7 +238,7 @@ func (s *ExecutionBrokerSuite) TestImmutable_InPending() {
 	waitImmutableChannel := make(chan struct{})
 
 	rem := NewRequestsExecutorMock(s.T())
-	rem.ExecuteAndSaveMock.Set(func(_ context.Context, t *Transcript) (r insolar.Reply, r1 error) {
+	rem.ExecuteAndSaveMock.Set(func(_ context.Context, t *common.Transcript) (r insolar.Reply, r1 error) {
 		if !t.Request.Immutable {
 			waitMutableChannel <- struct{}{}
 		} else {
@@ -253,13 +254,13 @@ func (s *ExecutionBrokerSuite) TestImmutable_InPending() {
 	b := NewExecutionBroker(objectRef, nil, rem, nil, nil, nil, nil, ea, nil)
 	b.pending = insolar.InPending
 
-	tr := NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{Immutable: true})
+	tr := common.NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{Immutable: true})
 
 	b.Prepend(s.Context, false, tr)
 	s.Require().True(wait(immutableCount, b, 1), "failed to wait until immutable was put")
 	s.Require().True(wait(processorStatus, b, false))
 
-	tr = NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{Immutable: true})
+	tr = common.NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{Immutable: true})
 
 	b.Prepend(s.Context, true, tr)
 
@@ -285,8 +286,8 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 
 	for i := 0; i < 4; i++ {
 		b.stateLock.Lock()
-		b.immutable.Push(&Transcript{})
-		b.mutable.Push(&Transcript{})
+		b.immutable.Push(&common.Transcript{})
+		b.mutable.Push(&common.Transcript{})
 		b.stateLock.Unlock()
 	}
 
@@ -300,7 +301,7 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 
 	for i := 0; i < 4; i++ {
 		b.stateLock.Lock()
-		b.immutable.Push(&Transcript{})
+		b.immutable.Push(&common.Transcript{})
 		b.stateLock.Unlock()
 	}
 
@@ -313,8 +314,8 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 	s.False(rotationResults.LedgerHasMoreRequests)
 
 	for i := 0; i < 5; i++ {
-		b.mutable.Push(&Transcript{})
-		b.immutable.Push(&Transcript{})
+		b.mutable.Push(&common.Transcript{})
+		b.immutable.Push(&common.Transcript{})
 	}
 
 	rotationResults = b.rotate(10)
@@ -326,8 +327,8 @@ func (s *ExecutionBrokerSuite) TestRotate() {
 	s.False(rotationResults.LedgerHasMoreRequests)
 
 	for i := 0; i < 6; i++ {
-		b.mutable.Push(&Transcript{})
-		b.immutable.Push(&Transcript{})
+		b.mutable.Push(&common.Transcript{})
+		b.immutable.Push(&common.Transcript{})
 	}
 
 	rotationResults = b.rotate(10)
@@ -346,16 +347,16 @@ func (s *ExecutionBrokerSuite) TestDeduplication() {
 	b.pending = insolar.InPending
 
 	reqRef1 := gen.Reference()
-	b.Put(s.Context, false, NewTranscript(s.Context, reqRef1, record.IncomingRequest{})) // no duplication
+	b.Put(s.Context, false, common.NewTranscript(s.Context, reqRef1, record.IncomingRequest{})) // no duplication
 	s.Equal(b.mutable.Length(), 1)
 
-	b.Put(s.Context, false, NewTranscript(s.Context, reqRef1, record.IncomingRequest{})) // duplication
+	b.Put(s.Context, false, common.NewTranscript(s.Context, reqRef1, record.IncomingRequest{})) // duplication
 	s.Equal(b.mutable.Length(), 1)
 }
 
 func TestExecutionBroker_FinishPendingIfNeed(t *testing.T) {
 	notEmptyCurrentList := NewCurrentExecutionList()
-	transcript := NewTranscript(inslogger.TestContext(t), gen.Reference(), record.IncomingRequest{})
+	transcript := common.NewTranscript(inslogger.TestContext(t), gen.Reference(), record.IncomingRequest{})
 	err := notEmptyCurrentList.SetOnce(transcript)
 	require.NoError(t, err)
 
@@ -469,7 +470,7 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 		APIRequestID: utils.RandTraceID(),
 		Immutable:    false,
 	}
-	mutableTranscript := NewTranscript(s.ctx, mutableRequestRef, mutableRequest)
+	mutableTranscript := common.NewTranscript(s.ctx, mutableRequestRef, mutableRequest)
 
 	immutableRequest1 := record.IncomingRequest{
 		ReturnMode:   record.ReturnResult,
@@ -477,7 +478,7 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 		APIRequestID: utils.RandTraceID(),
 		Immutable:    true,
 	}
-	immutableTranscript1 := NewTranscript(s.ctx, immutableRequestRef1, immutableRequest1)
+	immutableTranscript1 := common.NewTranscript(s.ctx, immutableRequestRef1, immutableRequest1)
 
 	immutableRequest2 := record.IncomingRequest{
 		ReturnMode:   record.ReturnResult,
@@ -485,7 +486,7 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 		APIRequestID: utils.RandTraceID(),
 		Immutable:    true,
 	}
-	immutableTranscript2 := NewTranscript(s.ctx, immutableRequestRef2, immutableRequest2)
+	immutableTranscript2 := common.NewTranscript(s.ctx, immutableRequestRef2, immutableRequest2)
 
 	// Set custom executor, that'll:
 	// 1) mutable will start execution and wait until something will ping it on channel 1
@@ -499,7 +500,7 @@ func (s *LogicRunnerTestSuite) TestImmutableOrder() {
 	var immutableLock = sync.Mutex{}
 
 	s.re.SendReplyMock.Return()
-	s.re.ExecuteAndSaveMock.Set(func(ctx context.Context, transcript *Transcript) (insolar.Reply, error) {
+	s.re.ExecuteAndSaveMock.Set(func(ctx context.Context, transcript *common.Transcript) (insolar.Reply, error) {
 
 		if transcript.RequestRef.Equal(mutableRequestRef) {
 			log.Debug("mutableChan 1")
@@ -567,7 +568,7 @@ func TestExecutionBroker_ExecuteImmutable(t *testing.T) {
 		APIRequestID: utils.RandTraceID(),
 		Immutable:    true,
 	}
-	immutableTranscript1 := NewTranscript(ctx, immutableRequestRef1, immutableRequest1)
+	immutableTranscript1 := common.NewTranscript(ctx, immutableRequestRef1, immutableRequest1)
 
 	re.ExecuteAndSaveMock.Return(&reply.CallMethod{Result: []byte{1, 2, 3}}, nil)
 	re.SendReplyMock.Return()
@@ -576,9 +577,9 @@ func TestExecutionBroker_ExecuteImmutable(t *testing.T) {
 }
 
 func TestExecutionBroker_OnPulse(t *testing.T) {
-	randTranscript := func(ctx context.Context) *Transcript {
+	randTranscript := func(ctx context.Context) *common.Transcript {
 		reqRef := gen.Reference()
-		return NewTranscript(ctx, reqRef, record.IncomingRequest{})
+		return common.NewTranscript(ctx, reqRef, record.IncomingRequest{})
 	}
 
 	table := []struct {
@@ -775,7 +776,7 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 				broker := NewExecutionBroker(objectRef, nil, re, nil, jc, nil, am, ea, nil)
 
 				var msgs []insolar.Message
-				re.ExecuteAndSaveMock.Set(func(ctx context.Context, tr *Transcript) (insolar.Reply, error) {
+				re.ExecuteAndSaveMock.Set(func(ctx context.Context, tr *common.Transcript) (insolar.Reply, error) {
 					msgs = broker.OnPulse(ctx, false)
 					return &reply.OK{}, nil
 				})
@@ -802,7 +803,7 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 			broker, msgs := test.mocks(ctx, mc)
 
 			reqRef := gen.Reference()
-			broker.AddFreshRequest(ctx, NewTranscript(ctx, reqRef, record.IncomingRequest{}))
+			broker.AddFreshRequest(ctx, common.NewTranscript(ctx, reqRef, record.IncomingRequest{}))
 
 			mc.Wait(1 * time.Minute)
 			mc.Finish()

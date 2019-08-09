@@ -11,21 +11,23 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
+
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/common"
 )
 
 // ExecutionArchiveMock implements ExecutionArchive
 type ExecutionArchiveMock struct {
 	t minimock.Tester
 
-	funcArchive          func(ctx context.Context, transcript *Transcript)
-	inspectFuncArchive   func(ctx context.Context, transcript *Transcript)
+	funcArchive          func(ctx context.Context, transcript *common.Transcript)
+	inspectFuncArchive   func(ctx context.Context, transcript *common.Transcript)
 	afterArchiveCounter  uint64
 	beforeArchiveCounter uint64
 	ArchiveMock          mExecutionArchiveMockArchive
 
-	funcDone          func(transcript *Transcript) (b1 bool)
-	inspectFuncDone   func(transcript *Transcript)
+	funcDone          func(transcript *common.Transcript) (b1 bool)
+	inspectFuncDone   func(transcript *common.Transcript)
 	afterDoneCounter  uint64
 	beforeDoneCounter uint64
 	DoneMock          mExecutionArchiveMockDone
@@ -36,7 +38,7 @@ type ExecutionArchiveMock struct {
 	beforeFindRequestLoopCounter uint64
 	FindRequestLoopMock          mExecutionArchiveMockFindRequestLoop
 
-	funcGetActiveTranscript          func(req insolar.Reference) (tp1 *Transcript)
+	funcGetActiveTranscript          func(req insolar.Reference) (tp1 *common.Transcript)
 	inspectFuncGetActiveTranscript   func(req insolar.Reference)
 	afterGetActiveTranscriptCounter  uint64
 	beforeGetActiveTranscriptCounter uint64
@@ -102,11 +104,11 @@ type ExecutionArchiveMockArchiveExpectation struct {
 // ExecutionArchiveMockArchiveParams contains parameters of the ExecutionArchive.Archive
 type ExecutionArchiveMockArchiveParams struct {
 	ctx        context.Context
-	transcript *Transcript
+	transcript *common.Transcript
 }
 
 // Expect sets up expected params for ExecutionArchive.Archive
-func (mmArchive *mExecutionArchiveMockArchive) Expect(ctx context.Context, transcript *Transcript) *mExecutionArchiveMockArchive {
+func (mmArchive *mExecutionArchiveMockArchive) Expect(ctx context.Context, transcript *common.Transcript) *mExecutionArchiveMockArchive {
 	if mmArchive.mock.funcArchive != nil {
 		mmArchive.mock.t.Fatalf("ExecutionArchiveMock.Archive mock is already set by Set")
 	}
@@ -126,7 +128,7 @@ func (mmArchive *mExecutionArchiveMockArchive) Expect(ctx context.Context, trans
 }
 
 // Inspect accepts an inspector function that has same arguments as the ExecutionArchive.Archive
-func (mmArchive *mExecutionArchiveMockArchive) Inspect(f func(ctx context.Context, transcript *Transcript)) *mExecutionArchiveMockArchive {
+func (mmArchive *mExecutionArchiveMockArchive) Inspect(f func(ctx context.Context, transcript *common.Transcript)) *mExecutionArchiveMockArchive {
 	if mmArchive.mock.inspectFuncArchive != nil {
 		mmArchive.mock.t.Fatalf("Inspect function is already set for ExecutionArchiveMock.Archive")
 	}
@@ -150,7 +152,7 @@ func (mmArchive *mExecutionArchiveMockArchive) Return() *ExecutionArchiveMock {
 }
 
 //Set uses given function f to mock the ExecutionArchive.Archive method
-func (mmArchive *mExecutionArchiveMockArchive) Set(f func(ctx context.Context, transcript *Transcript)) *ExecutionArchiveMock {
+func (mmArchive *mExecutionArchiveMockArchive) Set(f func(ctx context.Context, transcript *common.Transcript)) *ExecutionArchiveMock {
 	if mmArchive.defaultExpectation != nil {
 		mmArchive.mock.t.Fatalf("Default expectation is already set for the ExecutionArchive.Archive method")
 	}
@@ -164,7 +166,7 @@ func (mmArchive *mExecutionArchiveMockArchive) Set(f func(ctx context.Context, t
 }
 
 // Archive implements ExecutionArchive
-func (mmArchive *ExecutionArchiveMock) Archive(ctx context.Context, transcript *Transcript) {
+func (mmArchive *ExecutionArchiveMock) Archive(ctx context.Context, transcript *common.Transcript) {
 	mm_atomic.AddUint64(&mmArchive.beforeArchiveCounter, 1)
 	defer mm_atomic.AddUint64(&mmArchive.afterArchiveCounter, 1)
 
@@ -289,7 +291,7 @@ type ExecutionArchiveMockDoneExpectation struct {
 
 // ExecutionArchiveMockDoneParams contains parameters of the ExecutionArchive.Done
 type ExecutionArchiveMockDoneParams struct {
-	transcript *Transcript
+	transcript *common.Transcript
 }
 
 // ExecutionArchiveMockDoneResults contains results of the ExecutionArchive.Done
@@ -298,7 +300,7 @@ type ExecutionArchiveMockDoneResults struct {
 }
 
 // Expect sets up expected params for ExecutionArchive.Done
-func (mmDone *mExecutionArchiveMockDone) Expect(transcript *Transcript) *mExecutionArchiveMockDone {
+func (mmDone *mExecutionArchiveMockDone) Expect(transcript *common.Transcript) *mExecutionArchiveMockDone {
 	if mmDone.mock.funcDone != nil {
 		mmDone.mock.t.Fatalf("ExecutionArchiveMock.Done mock is already set by Set")
 	}
@@ -318,7 +320,7 @@ func (mmDone *mExecutionArchiveMockDone) Expect(transcript *Transcript) *mExecut
 }
 
 // Inspect accepts an inspector function that has same arguments as the ExecutionArchive.Done
-func (mmDone *mExecutionArchiveMockDone) Inspect(f func(transcript *Transcript)) *mExecutionArchiveMockDone {
+func (mmDone *mExecutionArchiveMockDone) Inspect(f func(transcript *common.Transcript)) *mExecutionArchiveMockDone {
 	if mmDone.mock.inspectFuncDone != nil {
 		mmDone.mock.t.Fatalf("Inspect function is already set for ExecutionArchiveMock.Done")
 	}
@@ -342,7 +344,7 @@ func (mmDone *mExecutionArchiveMockDone) Return(b1 bool) *ExecutionArchiveMock {
 }
 
 //Set uses given function f to mock the ExecutionArchive.Done method
-func (mmDone *mExecutionArchiveMockDone) Set(f func(transcript *Transcript) (b1 bool)) *ExecutionArchiveMock {
+func (mmDone *mExecutionArchiveMockDone) Set(f func(transcript *common.Transcript) (b1 bool)) *ExecutionArchiveMock {
 	if mmDone.defaultExpectation != nil {
 		mmDone.mock.t.Fatalf("Default expectation is already set for the ExecutionArchive.Done method")
 	}
@@ -357,7 +359,7 @@ func (mmDone *mExecutionArchiveMockDone) Set(f func(transcript *Transcript) (b1 
 
 // When sets expectation for the ExecutionArchive.Done which will trigger the result defined by the following
 // Then helper
-func (mmDone *mExecutionArchiveMockDone) When(transcript *Transcript) *ExecutionArchiveMockDoneExpectation {
+func (mmDone *mExecutionArchiveMockDone) When(transcript *common.Transcript) *ExecutionArchiveMockDoneExpectation {
 	if mmDone.mock.funcDone != nil {
 		mmDone.mock.t.Fatalf("ExecutionArchiveMock.Done mock is already set by Set")
 	}
@@ -377,7 +379,7 @@ func (e *ExecutionArchiveMockDoneExpectation) Then(b1 bool) *ExecutionArchiveMoc
 }
 
 // Done implements ExecutionArchive
-func (mmDone *ExecutionArchiveMock) Done(transcript *Transcript) (b1 bool) {
+func (mmDone *ExecutionArchiveMock) Done(transcript *common.Transcript) (b1 bool) {
 	mm_atomic.AddUint64(&mmDone.beforeDoneCounter, 1)
 	defer mm_atomic.AddUint64(&mmDone.afterDoneCounter, 1)
 
@@ -726,7 +728,7 @@ type ExecutionArchiveMockGetActiveTranscriptParams struct {
 
 // ExecutionArchiveMockGetActiveTranscriptResults contains results of the ExecutionArchive.GetActiveTranscript
 type ExecutionArchiveMockGetActiveTranscriptResults struct {
-	tp1 *Transcript
+	tp1 *common.Transcript
 }
 
 // Expect sets up expected params for ExecutionArchive.GetActiveTranscript
@@ -761,7 +763,7 @@ func (mmGetActiveTranscript *mExecutionArchiveMockGetActiveTranscript) Inspect(f
 }
 
 // Return sets up results that will be returned by ExecutionArchive.GetActiveTranscript
-func (mmGetActiveTranscript *mExecutionArchiveMockGetActiveTranscript) Return(tp1 *Transcript) *ExecutionArchiveMock {
+func (mmGetActiveTranscript *mExecutionArchiveMockGetActiveTranscript) Return(tp1 *common.Transcript) *ExecutionArchiveMock {
 	if mmGetActiveTranscript.mock.funcGetActiveTranscript != nil {
 		mmGetActiveTranscript.mock.t.Fatalf("ExecutionArchiveMock.GetActiveTranscript mock is already set by Set")
 	}
@@ -774,7 +776,7 @@ func (mmGetActiveTranscript *mExecutionArchiveMockGetActiveTranscript) Return(tp
 }
 
 //Set uses given function f to mock the ExecutionArchive.GetActiveTranscript method
-func (mmGetActiveTranscript *mExecutionArchiveMockGetActiveTranscript) Set(f func(req insolar.Reference) (tp1 *Transcript)) *ExecutionArchiveMock {
+func (mmGetActiveTranscript *mExecutionArchiveMockGetActiveTranscript) Set(f func(req insolar.Reference) (tp1 *common.Transcript)) *ExecutionArchiveMock {
 	if mmGetActiveTranscript.defaultExpectation != nil {
 		mmGetActiveTranscript.mock.t.Fatalf("Default expectation is already set for the ExecutionArchive.GetActiveTranscript method")
 	}
@@ -803,13 +805,13 @@ func (mmGetActiveTranscript *mExecutionArchiveMockGetActiveTranscript) When(req 
 }
 
 // Then sets up ExecutionArchive.GetActiveTranscript return parameters for the expectation previously defined by the When method
-func (e *ExecutionArchiveMockGetActiveTranscriptExpectation) Then(tp1 *Transcript) *ExecutionArchiveMock {
+func (e *ExecutionArchiveMockGetActiveTranscriptExpectation) Then(tp1 *common.Transcript) *ExecutionArchiveMock {
 	e.results = &ExecutionArchiveMockGetActiveTranscriptResults{tp1}
 	return e.mock
 }
 
 // GetActiveTranscript implements ExecutionArchive
-func (mmGetActiveTranscript *ExecutionArchiveMock) GetActiveTranscript(req insolar.Reference) (tp1 *Transcript) {
+func (mmGetActiveTranscript *ExecutionArchiveMock) GetActiveTranscript(req insolar.Reference) (tp1 *common.Transcript) {
 	mm_atomic.AddUint64(&mmGetActiveTranscript.beforeGetActiveTranscriptCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetActiveTranscript.afterGetActiveTranscriptCounter, 1)
 
