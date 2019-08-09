@@ -37,7 +37,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/insolar/genesisrefs"
 
 	"github.com/insolar/insolar/insolar"
 
@@ -394,12 +394,6 @@ func (pf *ParsedFile) functionInfoForWrapper(list []*ast.FuncDecl) []map[string]
 	return res
 }
 
-func generateTextReference(pulse insolar.PulseNumber, code []byte) *insolar.Reference {
-	hasher := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher()
-	codeHash := hasher.Hash(code)
-	return insolar.NewReference(*insolar.NewID(pulse, codeHash))
-}
-
 // WriteProxy generates and writes into `out` source code of contract's proxy
 func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	proxyPackageName, err := pf.ProxyPackageName()
@@ -408,7 +402,7 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	}
 
 	if classReference == "" {
-		classReference = generateTextReference(0, pf.code).String()
+		classReference = genesisrefs.GenerateFromCode(0, pf.code).String()
 	}
 
 	_, err = insolar.NewReferenceFromBase58(classReference)
@@ -861,11 +855,6 @@ const (
 	PrototypeType = "prototype"
 )
 
-func (e *ContractListEntry) GenerateReference(tp string) *insolar.Reference {
-	contractID := fmt.Sprintf("%s::%s::v%02d", tp, e.Name, e.Version)
-	return generateTextReference(insolar.BuiltinContractPulseNumber, []byte(contractID))
-}
-
 type ContractList []ContractListEntry
 
 func generateContractList(contracts ContractList) interface{} {
@@ -875,8 +864,8 @@ func generateContractList(contracts ContractList) interface{} {
 			"Name":               contract.Name,
 			"ImportName":         contract.Name,
 			"ImportPath":         contract.ImportPath,
-			"CodeReference":      contract.GenerateReference(CodeType).String(),
-			"PrototypeReference": contract.GenerateReference(PrototypeType).String(),
+			"CodeReference":      genesisrefs.GenerateFromContractID(CodeType, contract.Name, contract.Version).String(),
+			"PrototypeReference": genesisrefs.GenerateFromContractID(PrototypeType, contract.Name, contract.Version).String(),
 		}
 		importList = append(importList, data)
 	}
