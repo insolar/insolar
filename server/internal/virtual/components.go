@@ -153,7 +153,7 @@ func initComponents(
 	contractRequester, err := contractrequester.New(logicRunner)
 	checkError(ctx, err, "failed to start ContractRequester")
 
-	pm := pulsemanager.NewPulseManager()
+	pm := pulsemanager.NewPulseManager(logicRunner.ResultsMatcher)
 
 	cm.Register(
 		terminationHandler,
