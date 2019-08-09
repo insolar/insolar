@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package logicrunner
+package currentexecution
 
 import (
 	"errors"
@@ -22,21 +22,22 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/logicrunner/executionarchive"
 )
 
-type CurrentExecutionList struct {
+type List struct {
 	lock       sync.RWMutex
 	executions map[insolar.Reference]*common.Transcript
 }
 
-func (ces *CurrentExecutionList) Get(requestRef insolar.Reference) *common.Transcript {
+func (ces *List) Get(requestRef insolar.Reference) *common.Transcript {
 	ces.lock.RLock()
 	rv := ces.executions[requestRef]
 	ces.lock.RUnlock()
 	return rv
 }
 
-func (ces *CurrentExecutionList) SetOnce(t *common.Transcript) error {
+func (ces *List) SetOnce(t *common.Transcript) error {
 	ces.lock.Lock()
 	defer ces.lock.Unlock()
 
@@ -48,13 +49,13 @@ func (ces *CurrentExecutionList) SetOnce(t *common.Transcript) error {
 	return nil
 }
 
-func (ces *CurrentExecutionList) Delete(requestRef insolar.Reference) {
+func (ces *List) Delete(requestRef insolar.Reference) {
 	ces.lock.Lock()
 	delete(ces.executions, requestRef)
 	ces.lock.Unlock()
 }
 
-func (ces *CurrentExecutionList) GetByTraceID(traceid string) *common.Transcript {
+func (ces *List) GetByTraceID(traceid string) *common.Transcript {
 	ces.lock.RLock()
 	defer ces.lock.RUnlock()
 	for _, ce := range ces.executions {
@@ -65,7 +66,7 @@ func (ces *CurrentExecutionList) GetByTraceID(traceid string) *common.Transcript
 	return nil
 }
 
-func (ces *CurrentExecutionList) GetMutable() *common.Transcript {
+func (ces *List) GetMutable() *common.Transcript {
 	ces.lock.RLock()
 	for _, ce := range ces.executions {
 		if !ce.Request.Immutable {
@@ -77,31 +78,31 @@ func (ces *CurrentExecutionList) GetMutable() *common.Transcript {
 	return nil
 }
 
-func (ces *CurrentExecutionList) Cleanup() {
+func (ces *List) Cleanup() {
 	ces.lock.Lock()
 	ces.executions = make(map[insolar.Reference]*common.Transcript)
 	ces.lock.Unlock()
 }
 
-func (ces *CurrentExecutionList) Length() int {
+func (ces *List) Length() int {
 	ces.lock.RLock()
 	rv := len(ces.executions)
 	ces.lock.RUnlock()
 	return rv
 }
 
-func (ces *CurrentExecutionList) Empty() bool {
+func (ces *List) Empty() bool {
 	return ces.Length() == 0
 }
 
-func (ces *CurrentExecutionList) Has(requestRef insolar.Reference) bool {
+func (ces *List) Has(requestRef insolar.Reference) bool {
 	ces.lock.RLock()
 	defer ces.lock.RUnlock()
 	_, has := ces.executions[requestRef]
 	return has
 }
 
-func (ces *CurrentExecutionList) GetAllRequestRefs() []insolar.Reference {
+func (ces *List) GetAllRequestRefs() []insolar.Reference {
 	ces.lock.RLock()
 	defer ces.lock.RUnlock()
 	out := make([]insolar.Reference, len(ces.executions))
@@ -113,7 +114,7 @@ func (ces *CurrentExecutionList) GetAllRequestRefs() []insolar.Reference {
 	return out
 }
 
-func (ces *CurrentExecutionList) Archive(archiver Archiver) {
+func (ces *List) Archive(archiver executionarchive.Archiver) {
 	ces.lock.RLock()
 	defer ces.lock.RUnlock()
 
@@ -122,8 +123,8 @@ func (ces *CurrentExecutionList) Archive(archiver Archiver) {
 	}
 }
 
-func NewCurrentExecutionList() *CurrentExecutionList {
-	rv := &CurrentExecutionList{}
+func NewList() *List {
+	rv := &List{}
 	rv.Cleanup()
 	return rv
 }

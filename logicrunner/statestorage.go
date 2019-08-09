@@ -27,13 +27,14 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/executionarchive"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.StateStorage -o ./ -s _mock.go -g
 type StateStorage interface {
 	UpsertExecutionState(ref insolar.Reference) ExecutionBrokerI
 	GetExecutionState(ref insolar.Reference) ExecutionBrokerI
-	GetExecutionArchive(ref insolar.Reference) ExecutionArchive
+	GetExecutionArchive(ref insolar.Reference) executionarchive.ExecutionArchive
 
 	IsEmpty() bool
 	OnPulse(ctx context.Context, pulse insolar.Pulse) []insolar.Message
@@ -51,7 +52,7 @@ type stateStorage struct {
 	outgoingSender   OutgoingRequestSender
 
 	brokers  map[insolar.Reference]ExecutionBrokerI
-	archives map[insolar.Reference]ExecutionArchive
+	archives map[insolar.Reference]executionarchive.ExecutionArchive
 }
 
 func NewStateStorage(
@@ -65,7 +66,7 @@ func NewStateStorage(
 ) StateStorage {
 	ss := &stateStorage{
 		brokers:  make(map[insolar.Reference]ExecutionBrokerI),
-		archives: make(map[insolar.Reference]ExecutionArchive),
+		archives: make(map[insolar.Reference]executionarchive.ExecutionArchive),
 
 		publisher:        publisher,
 		requestsExecutor: requestsExecutor,
@@ -78,12 +79,12 @@ func NewStateStorage(
 	return ss
 }
 
-func (ss *stateStorage) upsertExecutionArchive(ref insolar.Reference) ExecutionArchive {
+func (ss *stateStorage) upsertExecutionArchive(ref insolar.Reference) executionarchive.ExecutionArchive {
 	if res, ok := ss.archives[ref]; ok {
 		return res
 	}
 
-	ss.archives[ref] = NewExecutionArchive(ref, ss.jetCoordinator)
+	ss.archives[ref] = executionarchive.New(ref, ss.jetCoordinator)
 	return ss.archives[ref]
 }
 
@@ -121,7 +122,7 @@ func (ss *stateStorage) GetExecutionState(ref insolar.Reference) ExecutionBroker
 	return ss.brokers[ref]
 }
 
-func (ss *stateStorage) GetExecutionArchive(ref insolar.Reference) ExecutionArchive {
+func (ss *stateStorage) GetExecutionArchive(ref insolar.Reference) executionarchive.ExecutionArchive {
 	ss.RLock()
 	defer ss.RUnlock()
 	return ss.archives[ref]

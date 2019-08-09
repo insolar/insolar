@@ -32,6 +32,9 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/logicrunner/currentexecution"
+	"github.com/insolar/insolar/logicrunner/executionarchive"
+	"github.com/insolar/insolar/logicrunner/transcriptdequeue"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.ExecutionBrokerI -o ./ -s _mock.go -g
@@ -64,15 +67,15 @@ type ExecutionBroker struct {
 
 	stateLock sync.Mutex
 
-	mutable   *TranscriptDequeue
-	immutable *TranscriptDequeue
-	finished  *TranscriptDequeue
+	mutable   *transcriptdequeue.TranscriptDequeue
+	immutable *transcriptdequeue.TranscriptDequeue
+	finished  *transcriptdequeue.TranscriptDequeue
 
 	outgoingSender OutgoingRequestSender
 
-	currentList *CurrentExecutionList
+	currentList *currentexecution.List
 
-	executionArchive ExecutionArchive
+	executionArchive executionarchive.ExecutionArchive
 
 	publisher        watermillMsg.Publisher
 	requestsExecutor RequestsExecutor
@@ -100,16 +103,16 @@ func NewExecutionBroker(
 	jetCoordinator jet.Coordinator,
 	_ pulse.Accessor,
 	artifactsManager artifacts.Client,
-	executionArchive ExecutionArchive,
+	executionArchive executionarchive.ExecutionArchive,
 	outgoingSender OutgoingRequestSender,
 ) *ExecutionBroker {
 	return &ExecutionBroker{
 		Ref: ref,
 
-		mutable:     NewTranscriptDequeue(),
-		immutable:   NewTranscriptDequeue(),
-		finished:    NewTranscriptDequeue(),
-		currentList: NewCurrentExecutionList(),
+		mutable:     transcriptdequeue.New(),
+		immutable:   transcriptdequeue.New(),
+		finished:    transcriptdequeue.New(),
+		currentList: currentexecution.NewList(),
 
 		outgoingSender: outgoingSender,
 
@@ -248,7 +251,7 @@ func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts .
 			continue
 		}
 
-		var list *TranscriptDequeue
+		var list *transcriptdequeue.TranscriptDequeue
 		if transcript.Request.Immutable {
 			list = q.immutable
 		} else {
@@ -268,7 +271,7 @@ func (q *ExecutionBroker) Put(ctx context.Context, start bool, transcripts ...*c
 			continue
 		}
 
-		var list *TranscriptDequeue
+		var list *transcriptdequeue.TranscriptDequeue
 		if transcript.Request.Immutable {
 			list = q.immutable
 		} else {

@@ -36,6 +36,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/insolar/insolar/logicrunner/executionarchive"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/testutils"
 )
@@ -57,7 +58,7 @@ func TestHandleCall_CheckExecutionLoop(t *testing.T) {
 						StateStorage: NewStateStorageMock(t).
 							GetExecutionArchiveMock.Expect(obj).
 							Return(
-								NewExecutionArchiveMock(t).
+								executionarchive.NewExecutionArchiveMock(t).
 									FindRequestLoopMock.Return(true),
 							),
 					},
@@ -76,7 +77,7 @@ func TestHandleCall_CheckExecutionLoop(t *testing.T) {
 						StateStorage: NewStateStorageMock(t).
 							GetExecutionArchiveMock.Expect(obj).
 							Return(
-								NewExecutionArchiveMock(t).
+								executionarchive.NewExecutionArchiveMock(t).
 									FindRequestLoopMock.Return(false),
 							),
 					},
@@ -185,7 +186,7 @@ func TestHandleCall_Present(t *testing.T) {
 				Publisher: nil,
 				StateStorage: NewStateStorageMock(mc).
 					GetExecutionArchiveMock.Expect(objRef).Return(
-					NewExecutionArchiveMock(mc).FindRequestLoopMock.Return(false),
+					executionarchive.NewExecutionArchiveMock(mc).FindRequestLoopMock.Return(false),
 				).
 					UpsertExecutionStateMock.Expect(objRef).Return(nil),
 				ResultsMatcher: nil,
@@ -242,7 +243,7 @@ func TestHandleCall_Present(t *testing.T) {
 				Publisher: nil,
 				StateStorage: NewStateStorageMock(mc).
 					GetExecutionArchiveMock.Expect(objRef).Return(
-					NewExecutionArchiveMock(mc).FindRequestLoopMock.Return(false),
+					executionarchive.NewExecutionArchiveMock(mc).FindRequestLoopMock.Return(false),
 				),
 				ResultsMatcher: nil,
 				lr: &LogicRunner{
@@ -353,7 +354,7 @@ func TestHandleCall_Present(t *testing.T) {
 		objRef := gen.Reference()
 		handler := HandleCall{
 			dep: &Dependencies{
-				Publisher: nil,
+				Publisher:      nil,
 				ResultsMatcher: nil,
 				lr: &LogicRunner{
 					ArtifactManager: artifacts.NewClientMock(mc),
@@ -500,9 +501,9 @@ func TestHandleCall_Present(t *testing.T) {
 		objRef := gen.Reference()
 		reqRef := gen.Reference()
 
-		resRecord := &record.Result{Payload: []byte{3,2,1}}
+		resRecord := &record.Result{Payload: []byte{3, 2, 1}}
 		virtResRecord := record.Wrap(resRecord)
-		matRecord := record.Material{Virtual:virtResRecord}
+		matRecord := record.Material{Virtual: virtResRecord}
 		matRecordSerialized, err := matRecord.Marshal()
 		require.NoError(t, err)
 
@@ -514,9 +515,9 @@ func TestHandleCall_Present(t *testing.T) {
 			case *RegisterIncomingRequest:
 				p.result <- &payload.RequestInfo{
 					RequestID: *reqRef.Record(),
-					ObjectID: *objRef.Record(),
-					Request: []byte{1,2,3},
-					Result: matRecordSerialized,
+					ObjectID:  *objRef.Record(),
+					Request:   []byte{1, 2, 3},
+					Result:    matRecordSerialized,
 				}
 				return nil
 			case *AddFreshRequest:
@@ -594,7 +595,7 @@ func TestHandleCall_Present(t *testing.T) {
 		expectedResult, err := foundation.MarshalMethodErrorResult(errors.New("index not found"))
 		require.NoError(t, err)
 
-		expectedReply :=  &reply.CallMethod{Result: expectedResult}
+		expectedReply := &reply.CallMethod{Result: expectedResult}
 		gotReply, err := handler.handleActual(ctx, &msg, fm)
 		require.NoError(t, err)
 		require.Equal(t, expectedReply, gotReply)

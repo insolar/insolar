@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package logicrunner
+package executionarchive
 
 import (
 	"context"
@@ -32,7 +32,7 @@ type Archiver interface {
 	Archive(transcript *common.Transcript)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner.ExecutionArchive -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/executionarchive.ExecutionArchive -o ./ -s _mock.go -g
 type ExecutionArchive interface {
 	Archive(ctx context.Context, transcript *common.Transcript)
 	Done(transcript *common.Transcript) bool
@@ -53,7 +53,7 @@ type executionArchive struct {
 	jetCoordinator jet.Coordinator
 }
 
-func NewExecutionArchive(
+func New(
 	objectRef insolar.Reference,
 	jetCoordinator jet.Coordinator,
 ) ExecutionArchive {

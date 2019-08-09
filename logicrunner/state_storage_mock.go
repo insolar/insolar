@@ -10,13 +10,14 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/executionarchive"
 )
 
 // StateStorageMock implements StateStorage
 type StateStorageMock struct {
 	t minimock.Tester
 
-	funcGetExecutionArchive          func(ref insolar.Reference) (e1 ExecutionArchive)
+	funcGetExecutionArchive          func(ref insolar.Reference) (e1 executionarchive.ExecutionArchive)
 	inspectFuncGetExecutionArchive   func(ref insolar.Reference)
 	afterGetExecutionArchiveCounter  uint64
 	beforeGetExecutionArchiveCounter uint64
@@ -95,7 +96,7 @@ type StateStorageMockGetExecutionArchiveParams struct {
 
 // StateStorageMockGetExecutionArchiveResults contains results of the StateStorage.GetExecutionArchive
 type StateStorageMockGetExecutionArchiveResults struct {
-	e1 ExecutionArchive
+	e1 executionarchive.ExecutionArchive
 }
 
 // Expect sets up expected params for StateStorage.GetExecutionArchive
@@ -130,7 +131,7 @@ func (mmGetExecutionArchive *mStateStorageMockGetExecutionArchive) Inspect(f fun
 }
 
 // Return sets up results that will be returned by StateStorage.GetExecutionArchive
-func (mmGetExecutionArchive *mStateStorageMockGetExecutionArchive) Return(e1 ExecutionArchive) *StateStorageMock {
+func (mmGetExecutionArchive *mStateStorageMockGetExecutionArchive) Return(e1 executionarchive.ExecutionArchive) *StateStorageMock {
 	if mmGetExecutionArchive.mock.funcGetExecutionArchive != nil {
 		mmGetExecutionArchive.mock.t.Fatalf("StateStorageMock.GetExecutionArchive mock is already set by Set")
 	}
@@ -143,7 +144,7 @@ func (mmGetExecutionArchive *mStateStorageMockGetExecutionArchive) Return(e1 Exe
 }
 
 //Set uses given function f to mock the StateStorage.GetExecutionArchive method
-func (mmGetExecutionArchive *mStateStorageMockGetExecutionArchive) Set(f func(ref insolar.Reference) (e1 ExecutionArchive)) *StateStorageMock {
+func (mmGetExecutionArchive *mStateStorageMockGetExecutionArchive) Set(f func(ref insolar.Reference) (e1 executionarchive.ExecutionArchive)) *StateStorageMock {
 	if mmGetExecutionArchive.defaultExpectation != nil {
 		mmGetExecutionArchive.mock.t.Fatalf("Default expectation is already set for the StateStorage.GetExecutionArchive method")
 	}
@@ -172,13 +173,13 @@ func (mmGetExecutionArchive *mStateStorageMockGetExecutionArchive) When(ref inso
 }
 
 // Then sets up StateStorage.GetExecutionArchive return parameters for the expectation previously defined by the When method
-func (e *StateStorageMockGetExecutionArchiveExpectation) Then(e1 ExecutionArchive) *StateStorageMock {
+func (e *StateStorageMockGetExecutionArchiveExpectation) Then(e1 executionarchive.ExecutionArchive) *StateStorageMock {
 	e.results = &StateStorageMockGetExecutionArchiveResults{e1}
 	return e.mock
 }
 
 // GetExecutionArchive implements StateStorage
-func (mmGetExecutionArchive *StateStorageMock) GetExecutionArchive(ref insolar.Reference) (e1 ExecutionArchive) {
+func (mmGetExecutionArchive *StateStorageMock) GetExecutionArchive(ref insolar.Reference) (e1 executionarchive.ExecutionArchive) {
 	mm_atomic.AddUint64(&mmGetExecutionArchive.beforeGetExecutionArchiveCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetExecutionArchive.afterGetExecutionArchiveCounter, 1)
 

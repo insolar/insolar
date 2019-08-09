@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package logicrunner
+package executionarchive
 
 import (
 	"strings"
@@ -60,7 +60,7 @@ func (s *ExecutionArchiveSuite) TestArchive() {
 	objectRef := gen.Reference()
 	jc := jet.NewCoordinatorMock(mc)
 
-	archiveI := NewExecutionArchive(objectRef, jc)
+	archiveI := New(objectRef, jc)
 	archive := archiveI.(*executionArchive)
 	firstTranscript := s.genTranscriptForObject()
 
@@ -86,7 +86,7 @@ func (s *ExecutionArchiveSuite) TestDone() {
 	objectRef := gen.Reference()
 	jc := jet.NewCoordinatorMock(mc)
 
-	archiveI := NewExecutionArchive(objectRef, jc)
+	archiveI := New(objectRef, jc)
 	archive := archiveI.(*executionArchive)
 	T1, T2, T3 := s.genTranscriptForObject(), s.genTranscriptForObject(), s.genTranscriptForObject()
 
@@ -110,7 +110,7 @@ func (s *ExecutionArchiveSuite) TestIsEmpty() {
 	objectRef := gen.Reference()
 	jc := jet.NewCoordinatorMock(mc)
 
-	archiveI := NewExecutionArchive(objectRef, jc)
+	archiveI := New(objectRef, jc)
 	archive := archiveI.(*executionArchive)
 
 	s.True(archiveI.IsEmpty())
@@ -136,7 +136,7 @@ func (s *ExecutionArchiveSuite) TestOnPulse() {
 	jc := jet.NewCoordinatorMock(mc).
 		MeMock.Return(meRef)
 
-	archiveI := NewExecutionArchive(objectRef, jc)
+	archiveI := New(objectRef, jc)
 	{
 		msgs := archiveI.OnPulse(ctx)
 		s.Len(msgs, 0)
@@ -185,7 +185,7 @@ func (s *ExecutionArchiveSuite) TestFindRequestLoop() {
 	objRef := gen.Reference()
 	reqRef := gen.Reference()
 
-	archiveI := NewExecutionArchive(objRef, jc)
+	archiveI := New(objRef, jc)
 	{ // no requests with current apirequestid
 		id := s.genAPIRequestID()
 
@@ -245,7 +245,7 @@ func (s *ExecutionArchiveSuite) TestGetActiveTranscript() {
 	objRef := gen.Reference()
 
 	T := s.genTranscriptForObject()
-	archiveI := NewExecutionArchive(objRef, jc)
+	archiveI := New(objRef, jc)
 	archiveI.Archive(ctx, T)
 	{ // have (put before)
 		s.NotNil(archiveI.GetActiveTranscript(T.RequestRef))

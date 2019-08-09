@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package logicrunner
+package logicexecutor
 
 import (
 	"bytes"
@@ -28,9 +28,11 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/logicrunner/machinesmanager"
+	"github.com/insolar/insolar/logicrunner/requestresult"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner.LogicExecutor -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/logicexecutor.LogicExecutor -o ./ -s _mock.go -g
 type LogicExecutor interface {
 	Execute(ctx context.Context, transcript *common.Transcript) (artifacts.RequestResult, error)
 	ExecuteMethod(ctx context.Context, transcript *common.Transcript) (artifacts.RequestResult, error)
@@ -38,8 +40,8 @@ type LogicExecutor interface {
 }
 
 type logicExecutor struct {
-	MachinesManager  MachinesManager            `inject:""`
-	DescriptorsCache artifacts.DescriptorsCache `inject:""`
+	MachinesManager  machinesmanager.MachinesManager `inject:""`
+	DescriptorsCache artifacts.DescriptorsCache      `inject:""`
 }
 
 func NewLogicExecutor() LogicExecutor {
@@ -97,7 +99,7 @@ func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *common.T
 		return nil, errors.New("result is NIL")
 	}
 
-	res := newRequestResult(result, *objDesc.HeadRef())
+	res := requestresult.New(result, *objDesc.HeadRef())
 
 	if request.Immutable {
 		return res, nil
@@ -149,7 +151,7 @@ func (le *logicExecutor) ExecuteConstructor(
 		return nil, errors.New("result is NIL")
 	}
 
-	res := newRequestResult(result, transcript.RequestRef)
+	res := requestresult.New(result, transcript.RequestRef)
 	if newData != nil {
 		res.SetActivate(*request.Base, *request.Prototype, newData)
 	}

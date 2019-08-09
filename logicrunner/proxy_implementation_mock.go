@@ -9,7 +9,6 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
-
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )

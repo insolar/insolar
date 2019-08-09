@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/logicrunner/logicexecutor"
 	"github.com/insolar/insolar/messagebus"
 )
 
@@ -43,10 +44,10 @@ type RequestsExecutor interface {
 }
 
 type requestsExecutor struct {
-	MessageBus      insolar.MessageBus `inject:""`
-	LogicExecutor   LogicExecutor      `inject:""`
-	ArtifactManager artifacts.Client   `inject:""`
-	PulseAccessor   pulse.Accessor     `inject:""`
+	MessageBus      insolar.MessageBus          `inject:""`
+	LogicExecutor   logicexecutor.LogicExecutor `inject:""`
+	ArtifactManager artifacts.Client            `inject:""`
+	PulseAccessor   pulse.Accessor              `inject:""`
 }
 
 func NewRequestsExecutor() RequestsExecutor {

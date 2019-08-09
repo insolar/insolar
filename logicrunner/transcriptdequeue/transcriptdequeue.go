@@ -1,4 +1,4 @@
-//
+///
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,9 +12,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+///
 
-package logicrunner
+package transcriptdequeue
 
 import (
 	"sync"
@@ -23,21 +23,21 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
-type TranscriptDequeueElement struct {
-	prev  *TranscriptDequeueElement
-	next  *TranscriptDequeueElement
+type Element struct {
+	prev  *Element
+	next  *Element
 	value *common.Transcript
 }
 
 // TODO: probably it's better to rewrite it using linked list
 type TranscriptDequeue struct {
 	lock   sync.Locker
-	first  *TranscriptDequeueElement
-	last   *TranscriptDequeueElement
+	first  *Element
+	last   *Element
 	length int
 }
 
-func NewTranscriptDequeue() *TranscriptDequeue {
+func New() *TranscriptDequeue {
 	return &TranscriptDequeue{
 		lock:   &sync.Mutex{},
 		first:  nil,
@@ -47,7 +47,7 @@ func NewTranscriptDequeue() *TranscriptDequeue {
 }
 
 func (d *TranscriptDequeue) pushOne(el *common.Transcript) {
-	newElement := &TranscriptDequeueElement{value: el}
+	newElement := &Element{value: el}
 	lastElement := d.last
 
 	if lastElement != nil {
@@ -71,7 +71,7 @@ func (d *TranscriptDequeue) Push(els ...*common.Transcript) {
 }
 
 func (d *TranscriptDequeue) prependOne(el *common.Transcript) {
-	newElement := &TranscriptDequeueElement{value: el}
+	newElement := &Element{value: el}
 	firstElement := d.first
 
 	if firstElement != nil {
@@ -152,14 +152,14 @@ func (d *TranscriptDequeue) HasFromLedger() *common.Transcript {
 	return nil
 }
 
-func (d *TranscriptDequeue) commonPeek(count int) (*TranscriptDequeueElement, []*common.Transcript) {
+func (d *TranscriptDequeue) commonPeek(count int) (*Element, []*common.Transcript) {
 	if d.length < count {
 		count = d.length
 	}
 
 	rv := make([]*common.Transcript, count)
 
-	var lastElement *TranscriptDequeueElement
+	var lastElement *Element
 	for i := 0; i < count; i++ {
 		if lastElement == nil {
 			lastElement = d.first

@@ -1,4 +1,4 @@
-//
+///
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,9 +12,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+///
 
-package logicrunner
+package transcriptdequeue
 
 import (
 	"testing"
@@ -30,7 +30,7 @@ type TranscriptDequeueSuite struct{ suite.Suite }
 func TestTranscriptDequeue(t *testing.T) { suite.Run(t, new(TranscriptDequeueSuite)) }
 
 func (s *TranscriptDequeueSuite) TestBasic() {
-	d := NewTranscriptDequeue()
+	d := New()
 	s.Require().NotNil(d)
 
 	// [] + [1, 2]
@@ -64,7 +64,7 @@ func (s *TranscriptDequeueSuite) TestBasic() {
 }
 
 func (s *TranscriptDequeueSuite) TestRotate() {
-	d := NewTranscriptDequeue()
+	d := New()
 	s.Require().NotNil(d)
 
 	d.Push(&common.Transcript{Nonce: 1}, &common.Transcript{Nonce: 2})
@@ -81,7 +81,7 @@ func (s *TranscriptDequeueSuite) TestRotate() {
 }
 
 func (s *TranscriptDequeueSuite) TestHasFromLedger() {
-	d := NewTranscriptDequeue()
+	d := New()
 	s.Require().NotNil(d)
 
 	d.Prepend(&common.Transcript{Nonce: 3}, &common.Transcript{Nonce: 4})
@@ -95,7 +95,7 @@ func (s *TranscriptDequeueSuite) TestHasFromLedger() {
 }
 
 func (s *TranscriptDequeueSuite) TestPopByReference() {
-	d := NewTranscriptDequeue()
+	d := New()
 	s.Require().NotNil(d)
 
 	ref1, ref2, ref3 := gen.Reference(), gen.Reference(), gen.Reference()
@@ -124,7 +124,7 @@ func (s *TranscriptDequeueSuite) TestPopByReference() {
 }
 
 func (s *TranscriptDequeueSuite) TestPopByReferenceHead() {
-	d := NewTranscriptDequeue()
+	d := New()
 	s.Require().NotNil(d)
 
 	ref1, ref2, ref3 := gen.Reference(), gen.Reference(), gen.Reference()
@@ -148,7 +148,7 @@ func (s *TranscriptDequeueSuite) TestPopByReferenceHead() {
 }
 
 func (s *TranscriptDequeueSuite) TestPopByReferenceTail() {
-	d := NewTranscriptDequeue()
+	d := New()
 	s.Require().NotNil(d)
 
 	ref1, ref2, ref3 := gen.Reference(), gen.Reference(), gen.Reference()
@@ -172,7 +172,7 @@ func (s *TranscriptDequeueSuite) TestPopByReferenceTail() {
 }
 
 func (s *TranscriptDequeueSuite) TestPopByReferenceOneElement() {
-	d := NewTranscriptDequeue()
+	d := New()
 	s.Require().NotNil(d)
 
 	ref1 := gen.Reference()
@@ -191,7 +191,7 @@ func (s *TranscriptDequeueSuite) TestPopByReferenceOneElement() {
 }
 
 func (s *TranscriptDequeueSuite) TestTake() {
-	d := NewTranscriptDequeue()
+	d := New()
 	s.Require().NotNil(d)
 
 	for i := 0; i < 15; i++ {

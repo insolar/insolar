@@ -27,6 +27,7 @@ import (
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/go-actors/actor/system"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -43,6 +44,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin"
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin"
+	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/network"
 )
@@ -61,7 +63,7 @@ type LogicRunner struct {
 	DescriptorsCache           artifacts.DescriptorsCache         `inject:""`
 	JetCoordinator             jet.Coordinator                    `inject:""`
 	RequestsExecutor           RequestsExecutor                   `inject:""`
-	MachinesManager            MachinesManager                    `inject:""`
+	MachinesManager            machinesmanager.MachinesManager    `inject:""`
 	JetStorage                 jet.Storage                        `inject:""`
 	Publisher                  watermillMsg.Publisher
 	Sender                     bus.Sender
