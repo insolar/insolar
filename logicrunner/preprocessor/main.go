@@ -48,8 +48,7 @@ var foundationPath = "github.com/insolar/insolar/logicrunner/builtin/foundation"
 var proxyctxPath = "github.com/insolar/insolar/logicrunner/common"
 var corePath = "github.com/insolar/insolar/insolar"
 
-var immutableFlag = "//ins:immutable"
-
+var immutableFlag = "ins:immutable"
 var sagaFlagStart = "ins:saga("
 var sagaFlagEnd = ")"
 var sagaFlagStartLength = len(sagaFlagStart)
@@ -775,7 +774,12 @@ func isImmutable(decl *ast.FuncDecl) bool {
 	var isImmutable = false
 	if decl.Doc != nil && decl.Doc.List != nil {
 		for _, comment := range decl.Doc.List {
-			if comment.Text == immutableFlag {
+			slice, err := skipCommentBeginning(comment.Text)
+			if err != nil {
+				// invalid comment beginning
+				continue
+			}
+			if slice == immutableFlag {
 				isImmutable = true
 			}
 		}
@@ -783,13 +787,15 @@ func isImmutable(decl *ast.FuncDecl) bool {
 	return isImmutable
 }
 
-func extractSagaInfoFromComment(comment string, info *SagaInfo) bool {
+// skipCommentBegin converts '//comment' or '//[spaces]comment' to 'comment'
+// The procedure returns an error if the string is not started with '//'
+func skipCommentBeginning(comment string) (string, error) {
 	slice := strings.Trim(comment, " \r\n\t")
 	sliceLen := len(slice)
 
 	// skip '//'
 	if !strings.HasPrefix(slice, "//") {
-		return false
+		return "", fmt.Errorf("invalid comment begigning")
 	}
 	slice = slice[2:sliceLen]
 	sliceLen -= 2
@@ -800,9 +806,17 @@ func extractSagaInfoFromComment(comment string, info *SagaInfo) bool {
 		sliceLen--
 	}
 
+	return slice, nil
+}
+
+func extractSagaInfoFromComment(comment string, info *SagaInfo) bool {
+	slice, err := skipCommentBeginning(comment)
+	if err != nil {
+		return false
+	}
 	if strings.HasPrefix(slice, sagaFlagStart) &&
 		strings.HasSuffix(slice, sagaFlagEnd) {
-		rollbackName := slice[sagaFlagStartLength : sliceLen-len(sagaFlagEnd)]
+		rollbackName := slice[sagaFlagStartLength : len(slice)-len(sagaFlagEnd)]
 		rollbackNameLen := len(rollbackName)
 		if rollbackNameLen > 0 {
 			sliceCopy := make([]byte, rollbackNameLen)
