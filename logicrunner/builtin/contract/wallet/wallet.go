@@ -112,11 +112,6 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toM
 	return member.TransferResponse{Fee: feeStr}, nil
 }
 
-// GetBalance gets total balance.
-func (w *Wallet) GetBalance() (string, error) {
-	return w.Balance, nil
-}
-
 // Accept accepts transfer to balance.
 //ins:saga(INS_FLAG_NO_ROLLBACK_METHOD)
 func (w *Wallet) Accept(amountStr string) (err error) {
@@ -164,4 +159,9 @@ func (w *Wallet) Rollback(amountStr string) (err error) {
 	w.Balance = b.String()
 
 	return nil
+}
+
+// GetBalance gets total balance.
+func (w *Wallet) GetBalance() (string, error) {
+	return w.Balance, nil
 }
