@@ -57,6 +57,7 @@ import (
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/rules"
 	"github.com/insolar/insolar/network/storage"
 
@@ -97,8 +98,13 @@ type Base struct {
 	ConsensusController   consensus.Controller
 	ConsensusPulseHandler network.PulseHandler
 
+	Options *common.Options
+
 	bootstrapETA    time.Duration
 	originCandidate *adapters.Candidate
+
+	// Next request backoff.
+	backoff time.Duration // nolint
 }
 
 // NewGateway creates new gateway on top of existing
